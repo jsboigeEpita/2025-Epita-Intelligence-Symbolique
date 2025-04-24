@@ -43,3 +43,11 @@ Vous avez également la possibilité d'intégrer les Large Language Models (LLMs
 
 - Une utilisation directe des LLM pour assister la conception ou la résolution de CSP complexes.
 - Le recours au "function calling" : fournir à un LLM un accès direct à votre CSP, permettant ainsi au modèle de piloter la résolution du problème de manière plus flexible et intuitive. Le notebook agentique fourni constitue un exemple pratique et efficace de cette méthodologie légère mais puissante. La normalisation en cours des MCPs constitue également un excellent exemple d'application de cette approche (vous développez un MCP utilisant la PrCon dans le cadre de votre projet).
+
+## Exemples de Sujets
+
+Ces exemples couvrent des problématiques variées et réelles, illustrant la diversité des domaines applicatifs potentiels (planification de ressources, optimisation logistique, jeux de logique, gestion des plannings, etc.) en lien direct avec les compétences acquises dans ce cours. Vous pouvez choisir l'un de ces sujets ou proposer le vôtre en prenant soin de le faire valider au préalable
+
+### Argumentation
+
+
