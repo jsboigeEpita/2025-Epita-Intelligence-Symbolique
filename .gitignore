@@ -1,0 +1,44 @@
+# Fichier .gitignore pour le projet d'analyse rhétorique
+
+# Fichiers de configuration sensibles
+.env # Ne JAMAIS commiter le fichier .env contenant les secrets !
+
+# Fichiers Bytecode Python et Cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Artefacts de Distribution/Build Python
+build/
+dist/
+*.egg-info/
+*.egg
+wheels/
+pip-wheel-metadata/
+develop-eggs/
+parts/
+sdist/
+var/
+
+# Fichiers temporaires Jupyter Notebook
+.ipynb_checkpoints/
+
+# Fichiers de configuration IDE / Editeur
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+*.swp
+*.swo
+*~
+#*#
+
+# Fichiers spécifiques OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
