@@ -174,7 +174,7 @@ def configure_analysis_task() -> Optional[str]:
 
     def on_load_config_click_ui(b):
         nonlocal config_output_area, source_doc_dropdown, save_config_button, extract_dropdown, main_output_area, local_current_extract_definitions
-        with main_output_area: clear_output(wait=True); app_logger.info("⏳ Chargement définitions...")
+        with main_output_area: clear_output(wait=True); app_logger.info("⏳ Chargement définitions depuis fichier chiffré...")
         # Met à jour la variable locale
         local_current_extract_definitions = load_extract_definitions(CONFIG_FILE, ENCRYPTION_KEY)
         valid_defs = [s for s in local_current_extract_definitions if isinstance(s, dict) and "source_name" in s]

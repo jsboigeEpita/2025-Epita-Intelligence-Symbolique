@@ -4,6 +4,10 @@ Ce répertoire gère l'interface utilisateur (basée sur `ipywidgets`) permettan
 
 [Retour au README Principal](../README.md)
 
+## Point d'entrée pour instance VSCode dédiée
+
+Ce README sert de point d'entrée pour une instance VSCode dédiée au développement et à la maintenance de l'interface utilisateur. Cette approche multi-instance permet de travailler spécifiquement sur l'UI sans avoir à gérer l'ensemble du projet.
+
 ## Objectif 🎯
 
 L'interface utilisateur a pour but de :
@@ -16,7 +20,7 @@ L'interface utilisateur a pour but de :
 3.  📐 Appliquer des marqueurs de début/fin pour isoler un extrait spécifique (principalement pour URL/Fichier/Texte Direct).
 4.  💾 Gérer un cache fichier (`text_cache/`) pour les textes complets récupérés depuis des sources externes, afin d'éviter les téléchargements/extractions répétés.
 5.  🔐 Charger/Sauvegarder la configuration des sources prédéfinies depuis/vers un fichier chiffré (`data/extract_sources.json.gz.enc`) en utilisant une phrase secrète définie dans `.env`.
-6.  ➡️ Retourner le texte final préparé au notebook orchestrateur principal (`main_orchestrator.ipynb`).
+6.  ➡️ Retourner le texte final préparé au script orchestrateur principal (`main_orchestrator.py`).
 
 ## Structure 🏗️
 
@@ -48,7 +52,112 @@ jupyter notebook extract_editor/extract_marker_editor.ipynb
 
 Pour plus de détails, consultez le [README de l'éditeur de marqueurs](./extract_editor/README.md).
 
+## Développement de l'interface utilisateur
 
-## Fin (Note du Notebook Original)
+### Test indépendant de l'interface
 
-Ce module `ui` contient la logique nécessaire pour l'interface utilisateur, la gestion des sources, le cache et le chiffrement. Le notebook exécuteur principal importe et utilise la fonction `configure_analysis_task` définie dans `ui.app` pour obtenir le texte préparé.
+Pour tester l'interface utilisateur de manière indépendante, vous pouvez créer un script de test dans ce répertoire :
+
+```python
+# test_ui.py
+import sys
+import os
+from pathlib import Path
+
+# Ajouter le répertoire parent au chemin de recherche des modules
+current_dir = Path(__file__).parent
+parent_dir = current_dir.parent
+if str(parent_dir) not in sys.path:
+    sys.path.append(str(parent_dir))
+
+from dotenv import load_dotenv
+load_dotenv(override=True)
+
+from ui.app import configure_analysis_task
+
+def main():
+    print("Lancement de l'interface utilisateur...")
+    text = configure_analysis_task()
+    if text:
+        print(f"Texte récupéré ({len(text)} caractères)")
+        print(f"Aperçu: {text[:100]}...")
+    else:
+        print("Aucun texte récupéré")
+
+if __name__ == "__main__":
+    main()
+```
+
+Exécutez le test avec :
+```bash
+python ui/test_ui.py
+```
+
+### Création d'un script d'exécution autonome
+
+Pour faciliter le développement et le test de l'interface utilisateur, vous pouvez créer un script d'exécution autonome :
+
+```python
+# run_ui.py
+import sys
+import os
+from pathlib import Path
+import argparse
+
+# Ajouter le répertoire parent au chemin de recherche des modules
+current_dir = Path(__file__).parent
+parent_dir = current_dir.parent
+if str(parent_dir) not in sys.path:
+    sys.path.append(str(parent_dir))
+
+from dotenv import load_dotenv
+load_dotenv(override=True)
+
+from ui.app import configure_analysis_task, initialize_text_cache
+
+def main():
+    parser = argparse.ArgumentParser(description="Interface utilisateur pour l'analyse argumentative")
+    parser.add_argument("--init-cache", action="store_true", help="Initialiser le cache des textes")
+    args = parser.parse_args()
+    
+    if args.init_cache:
+        print("Initialisation du cache des textes...")
+        initialize_text_cache()
+    
+    print("Lancement de l'interface utilisateur...")
+    text = configure_analysis_task()
+    if text:
+        print(f"Texte récupéré ({len(text)} caractères)")
+        print(f"Aperçu: {text[:100]}...")
+    else:
+        print("Aucun texte récupéré")
+
+if __name__ == "__main__":
+    main()
+```
+
+## Développement avec l'approche multi-instance
+
+1. Ouvrez ce répertoire (`ui/`) comme dossier racine dans une instance VSCode dédiée
+2. Travaillez sur l'interface utilisateur sans être distrait par les autres parties du projet
+3. Testez vos modifications avec les scripts de test indépendants
+4. Une fois les modifications validées, intégrez-les dans le projet principal
+
+## Bonnes pratiques
+
+- Gardez la logique UI séparée de la logique métier
+- Utilisez des noms explicites pour les widgets et les fonctions
+- Documentez clairement les paramètres et le comportement des fonctions
+- Testez l'interface avec différentes sources de texte
+- Gérez correctement les erreurs et affichez des messages clairs à l'utilisateur
+- Utilisez des commentaires pour expliquer les parties complexes du code
+- Maintenez une structure cohérente pour tous les composants UI
+
+## Intégration avec le projet principal
+
+L'interface utilisateur est intégrée au projet principal via la fonction `configure_analysis_task()` qui est appelée par le script orchestrateur principal (`main_orchestrator.py`). Cette fonction retourne le texte préparé qui sera ensuite analysé par les agents.
+
+Pour modifier l'intégration, vous devez :
+1. Mettre à jour la fonction `configure_analysis_task()` dans `app.py`
+2. Tester les modifications avec le script de test indépendant
+3. Vérifier l'intégration avec le script orchestrateur principal

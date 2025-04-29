@@ -10,13 +10,14 @@ Ce projet implémente une analyse rhétorique multi-agents en utilisant Python e
 * [Prérequis](#prérequis)
 * [Installation](#installation)
 * [Exécution](#exécution)
+* [Approche Multi-Instance](#approche-multi-instance)
 * [Pistes d'Amélioration Futures](#pistes-damélioration-futures)
 
 ## Structure du Projet
 
 Le projet est organisé en modules Python pour une meilleure maintenabilité :
 
-* [`main_orchestrator.ipynb`](./main_orchestrator.ipynb) : Point d'entrée principal.
+* [`main_orchestrator.py`](./main_orchestrator.py) : Script principal d'orchestration (remplace le notebook).
 * [`config/`](./config/) : Fichiers de configuration (`.env.template`).
 * [`core/`](./core/README.md) 🧱 : Composants fondamentaux partagés (État, StateManager, Stratégies, Setup JVM & LLM).
 * [`utils/`](./utils/README.md) 🔧 : Fonctions utilitaires générales.
@@ -28,6 +29,7 @@ Le projet est organisé en modules Python pour une meilleure maintenabilité :
 * [`libs/`](./libs/) : Contient les JARs TweetyProject (téléchargés ou manuels).
 * [`data/`](./data/) : Données utilisées/générées (config UI sauvegardée, CSV sophismes).
 * [`requirements.txt`](./requirements.txt) : Dépendances Python.
+* [`run_analysis.py`](./run_analysis.py) : Script pour lancer l'analyse argumentative.
 * [`run_extract_editor.py`](./run_extract_editor.py) : Script pour lancer l'éditeur de marqueurs d'extraits.
 * [`run_extract_repair.py`](./run_extract_repair.py) : Script pour lancer la réparation des bornes défectueuses.
 * [`README.md`](./README.md) : Ce fichier.
@@ -67,14 +69,79 @@ Le projet est organisé en modules Python pour une meilleure maintenabilité :
 
 ## Exécution
 
-1.  Lancez Jupyter Lab ou Notebook depuis la **racine du projet** (où se trouve ce README) : `jupyter lab`
+### Utilisation des scripts Python
+
+Le projet a été transformé pour utiliser des scripts Python dédiés au lieu des notebooks, ce qui permet une meilleure intégration avec VSCode et une approche multi-instance.
+
+#### Analyse Argumentative
+
+Pour lancer l'analyse argumentative :
+
+```bash
+# Avec l'interface utilisateur
+python run_analysis.py --ui
+
+# Avec un fichier texte
+python run_analysis.py --file chemin/vers/fichier.txt
+
+# Avec du texte direct
+python run_analysis.py --text "Votre texte à analyser ici"
+
+# Avec logs détaillés
+python run_analysis.py --ui --verbose
+```
+
+#### Orchestrateur Principal
+
+Pour lancer l'orchestrateur principal (équivalent au notebook) :
+
+```bash
+# Avec l'interface utilisateur (comportement par défaut)
+python main_orchestrator.py
+
+# Sans l'interface, avec un fichier texte
+python main_orchestrator.py --skip-ui --text-file chemin/vers/fichier.txt
+```
+
+#### Outils d'édition et de réparation des extraits
+
+```bash
+# Éditeur de marqueurs d'extraits
+python run_extract_editor.py
+
+# Réparation des bornes défectueuses
+python run_extract_repair.py
+```
+
+### Utilisation des notebooks (méthode alternative)
+
+Les notebooks originaux sont toujours disponibles pour une utilisation interactive :
+
+1.  Lancez Jupyter Lab ou Notebook depuis la **racine du projet** : `jupyter lab`
 2.  Ouvrez le notebook principal : `main_orchestrator.ipynb`
-3.  (Recommandé pour la première fois ou après modifs `.py`) Redémarrez le noyau : `Kernel -> Restart Kernel...`
-4.  Exécutez les cellules séquentiellement.
-5.  L'initialisation de la JVM (Cellule 3) téléchargera les JARs Tweety si nécessaire (peut prendre du temps la première fois).
-6.  L'interface utilisateur apparaîtra (Cellule 5). Interagissez pour sélectionner une source, préparer le texte et cliquez sur **"Lancer l'Analyse"**.
-7.  La cellule 6 exécutera la conversation multi-agents. Observez les sorties et les logs.
-8.  L'état final de l'analyse sera affiché à la fin de l'exécution de la cellule 6.
+3.  Exécutez les cellules séquentiellement.
+4.  L'interface utilisateur apparaîtra. Interagissez pour sélectionner une source, préparer le texte et cliquez sur **"Lancer l'Analyse"**.
+
+## Approche Multi-Instance
+
+La nouvelle structure du projet permet une approche multi-instance dans VSCode, où chaque sous-module peut être exécuté indépendamment dans sa propre instance VSCode. Cela facilite le développement parallèle et la maintenance des différentes parties du projet.
+
+### Organisation des instances
+
+Chaque sous-répertoire contient un README.md qui sert de point d'entrée pour une instance VSCode dédiée :
+
+* **Instance principale** : Racine du projet, pour l'orchestration globale
+* **Instance Agents** : Dossier `agents/`, pour le développement des agents spécialisés
+* **Instance UI** : Dossier `ui/`, pour le développement de l'interface utilisateur
+* **Instance Extract Editor** : Dossier `ui/extract_editor/`, pour l'éditeur de marqueurs
+* **Instance Extract Repair** : Dossier `utils/extract_repair/`, pour la réparation des bornes
+
+### Avantages de l'approche multi-instance
+
+* **Développement parallèle** : Plusieurs développeurs peuvent travailler simultanément sur différentes parties du projet
+* **Isolation des dépendances** : Chaque module peut avoir ses propres dépendances spécifiques
+* **Meilleure organisation** : Séparation claire des responsabilités et des fonctionnalités
+* **Mise à jour incrémentielle** : Les modules peuvent être mis à jour indépendamment les uns des autres
 
 ## Outils d'édition et de réparation des extraits
 

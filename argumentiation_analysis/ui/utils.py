@@ -85,12 +85,12 @@ def decrypt_data(encrypted_data: bytes, key: bytes) -> Optional[bytes]:
         return None
 
 def load_extract_definitions(config_file: Path, key: bytes) -> list:
-    """Charge, déchiffre et décompresse les définitions depuis le fichier."""
+    """Charge, déchiffre et décompresse les définitions depuis le fichier chiffré."""
     # Utilise les variables globales du module config
     fallback_definitions = ui_config.EXTRACT_SOURCES if ui_config.EXTRACT_SOURCES else ui_config.DEFAULT_EXTRACT_SOURCES
 
     if not config_file.exists():
-        utils_logger.info(f"Fichier config '{config_file}' non trouvé. Utilisation définitions par défaut.")
+        utils_logger.info(f"Fichier config chiffré '{config_file}' non trouvé. Utilisation définitions par défaut.")
         # Important: retourner une COPIE pour éviter modification accidentelle de l'original
         return [item.copy() for item in fallback_definitions]
     if not key:

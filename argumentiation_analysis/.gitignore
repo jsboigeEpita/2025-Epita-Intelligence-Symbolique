@@ -59,9 +59,11 @@ libs/
 # Si vous voulez versionner un fichier spécifique DANS data, utilisez une règle d'exception,
 # par exemple : !data/fichier_a_garder.txt ou !data/.gitkeep pour garder le dossier vide.
 data/
+# Exception pour le fichier de configuration chiffré qui doit être versionné
+!data/extract_sources.json.gz.enc
 
-# Configuration UI sauvegardée (si vous préférez l'ignorer explicitement)
-# data/extract_sources.json.gz.enc
+# Configuration UI non chiffrée (ne doit jamais être versionnée)
+data/extract_sources.json
 
 # Rapports de tests et couverture
 .pytest_cache/

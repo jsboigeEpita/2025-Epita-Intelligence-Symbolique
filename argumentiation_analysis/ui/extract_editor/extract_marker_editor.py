@@ -22,6 +22,7 @@ import json
 import logging
 import os
 import traceback
+import asyncio
 from pathlib import Path
 import ipywidgets as widgets
 from IPython.display import display, clear_output, HTML
@@ -36,6 +37,9 @@ try:
         load_extract_definitions_safely, save_extract_definitions_safely,
         export_definitions_to_json, import_definitions_from_json
     )
+    from ...core.llm_service import create_llm_service
+    # Import de l'agent d'extraction
+    from ...agents.extract import setup_extract_agent
     config_import_success = True
 except ImportError as e:
     # Fallback pour les imports absolus
@@ -47,6 +51,9 @@ except ImportError as e:
             load_extract_definitions_safely, save_extract_definitions_safely,
             export_definitions_to_json, import_definitions_from_json
         )
+        from core.llm_service import create_llm_service
+        # Import de l'agent d'extraction
+        from agents.extract import setup_extract_agent
         config_import_success = True
     except ImportError as e:
         config_import_success = False
@@ -143,6 +150,12 @@ def create_marker_editor_ui():
         description='Suggérer corrections',
         button_style='warning',
         icon='search'
+    )
+    
+    extract_auto_button = widgets.Button(
+        description='Extraire automatiquement',
+        button_style='primary',
+        icon='magic'
     )
 
     save_button = widgets.Button(
@@ -620,11 +633,81 @@ def create_marker_editor_ui():
             else:
                 print(result)  # Afficher le message d'erreur
 
+    # Fonction pour extraire automatiquement
+    async def extract_automatically(b):
+        source_idx = source_dropdown.value
+        extract_idx = extract_dropdown.value
+        
+        if source_idx is None or extract_idx is None:
+            with status_output:
+                clear_output(wait=True)
+                print("Veuillez sélectionner une source et un extrait.")
+            return
+        
+        source_info = extract_definitions[source_idx]
+        extract_info = source_info.get("extracts", [])[extract_idx]
+        extract_name = extract_info.get("extract_name", f"Extrait #{extract_idx}")
+        
+        with status_output:
+            clear_output(wait=True)
+            print(f"Initialisation de l'agent d'extraction pour '{extract_name}'...")
+        
+        try:
+            # Créer le service LLM
+            llm_service = create_llm_service()
+            if not llm_service:
+                with status_output:
+                    clear_output(wait=True)
+                    print("❌ Impossible de créer le service LLM.")
+                return
+            
+            # Initialiser l'agent d'extraction
+            kernel, extract_agent = await setup_extract_agent(llm_service)
+            if not extract_agent:
+                with status_output:
+                    clear_output(wait=True)
+                    print("❌ Impossible d'initialiser l'agent d'extraction.")
+                return
+            
+            with status_output:
+                clear_output(wait=True)
+                print(f"Extraction automatique en cours pour '{extract_name}'...")
+            
+            # Réparer l'extrait
+            result = await extract_agent.repair_extract(extract_definitions, source_idx, extract_idx)
+            
+            if result.status == "valid":
+                # Mettre à jour les champs d'édition
+                start_marker_input.value = result.start_marker
+                end_marker_input.value = result.end_marker
+                if result.template_start:
+                    template_start_input.value = result.template_start
+                
+                # Vérifier les marqueurs
+                verify_markers(None)
+                
+                with status_output:
+                    clear_output(wait=True)
+                    print(f"✅ Extraction automatique réussie pour '{extract_name}'.")
+                    print(f"Explication: {result.explanation}")
+            else:
+                with status_output:
+                    clear_output(wait=True)
+                    print(f"❌ Échec de l'extraction automatique: {result.message}")
+                    if result.explanation:
+                        print(f"Explication: {result.explanation}")
+        except Exception as e:
+            with status_output:
+                clear_output(wait=True)
+                print(f"❌ Erreur lors de l'extraction automatique: {str(e)}")
+                traceback.print_exc()
+    
     # Lier les callbacks
     source_dropdown.observe(update_extract_list, names='value')
     extract_dropdown.observe(load_extract_details, names='value')
     verify_button.on_click(verify_markers)
     suggest_button.on_click(suggest_corrections)
+    extract_auto_button.on_click(lambda b: asyncio.create_task(extract_automatically(b)))
     save_button.on_click(save_modifications)
     search_button.on_click(search_text)
     export_button.on_click(export_definitions)
@@ -648,7 +731,7 @@ def create_marker_editor_ui():
         start_marker_input,
         end_marker_input,
         template_start_input,
-        widgets.HBox([verify_button, suggest_button, save_button]),
+        widgets.HBox([verify_button, suggest_button, extract_auto_button, save_button]),
         status_output,
         widgets.HTML("<h3>Prévisualisation</h3>"),
         preview_checkbox,
