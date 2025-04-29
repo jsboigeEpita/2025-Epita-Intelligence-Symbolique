@@ -7,6 +7,7 @@ from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 from cryptography.hazmat.backends import default_backend
 import base64
+import json
 
 config_logger = logging.getLogger("App.UI.Config")
 if not config_logger.handlers and not config_logger.propagate:
@@ -45,7 +46,9 @@ JINA_READER_PREFIX = "https://r.jina.ai/"
 _project_root = Path(__file__).parent.parent # Remonte de ui/ vers la racine
 CACHE_DIR = _project_root / "text_cache"
 CONFIG_DIR = _project_root / "data" # Fichier de config UI dans data/
-CONFIG_FILE = CONFIG_DIR / "extract_sources.json.gz.enc"
+CONFIG_FILE_JSON = CONFIG_DIR / "extract_sources.json" # Chemin vers le fichier JSON non chiffré
+CONFIG_FILE_ENC = CONFIG_DIR / "extract_sources.json.gz.enc" # Chemin vers le futur fichier chiffré
+CONFIG_FILE = CONFIG_FILE_ENC  # Variable utilisée par app.py pour charger les définitions
 TEMP_DOWNLOAD_DIR = _project_root / "temp_downloads" # Pour cache brut Tika
 
 # Extensions texte simple
@@ -70,64 +73,46 @@ DEFAULT_EXTRACT_SOURCES = [
      "extracts": []}
 ]
 
-# Définition initiale (utilisée si CONFIG_FILE non trouvé/déchiffrable)
-EXTRACT_SOURCES = [
-     {
-         "source_name": "Lincoln-Douglas Débat 1 (NPS)", "source_type": "jina",
-         "schema": "https:", "host_parts": ["www", "nps", "gov"], "path": "/liho/learn/historyculture/debate1.htm",
-         "extracts": [
-             {"extract_name": "1. Débat Complet (Ottawa, 1858)", "start_marker": "**August 21, 1858**", "end_marker": "(Three times three cheers were here given for Senator Douglas.)"},
-             {"extract_name": "2. Discours Principal de Lincoln", "start_marker": "MY FELLOW-CITIZENS: When a man hears himself", "end_marker": "The Judge can take his half hour."},
-             {"extract_name": "3. Discours d'Ouverture de Douglas", "start_marker": "Ladies and gentlemen: I appear before you", "end_marker": "occupy an half hour in replying to him."},
-             {"extract_name": "4. Lincoln sur Droits Naturels/Égalité", "start_marker": "I will say here, while upon this subject,", "end_marker": "equal of every living man._ [Great applause.]"},
-             {"extract_name": "5. Douglas sur Race/Dred Scott", "start_marker": "utterly opposed to the Dred Scott decision,", "end_marker": "equality with the white man. (\"Good.\")"},
-         ]
-     },
-     {
-         "source_name": "Lincoln-Douglas Débat 2 (NPS)", "source_type": "jina",
-         "schema": "https:", "host_parts": ["www", "nps", "gov"], "path": "/liho/learn/historyculture/debate2.htm",
-         "extracts": [
-              {"extract_name": "1. Débat Complet (Freeport, 1858)", "start_marker": "It was a cloudy, cool, and damp day.", "end_marker": "I cannot, gentlemen, my time has expired."},
-              {"extract_name": "2. Discours Principal de Douglas", "start_marker": "**Mr. Douglas' Speech**\n\nLadies and Gentlemen-", "end_marker": "stopped on the moment."},
-              {"extract_name": "3. Discours d'Ouverture de Lincoln", "start_marker": "LADIES AND GENTLEMEN - On Saturday last,", "end_marker": "Go on, Judge Douglas."},
-              {"extract_name": "4. Doctrine de Freeport (Douglas)", "start_marker": "The next question propounded to me by Mr. Lincoln is,", "end_marker": "satisfactory on that point."},
-              {"extract_name": "5. Lincoln répond aux 7 questions", "start_marker": "The first one of these interrogatories is in these words:,", "end_marker": "aggravate the slavery question among ourselves. [Cries of good, good.]"},
-         ]
-     },
-     {
-         "source_name": "Kremlin Discours 21/02/2022", "source_type": "jina",
-         "schema": "http:", "host_parts": ["en", "kremlin", "ru"], "path": "/events/president/transcripts/67828",
-         "extracts": [
-             {"extract_name": "1. Discours Complet", "start_marker": "Citizens of Russia, friends,", "end_marker": "Thank you."},
-             {"extract_name": "2. Argument Historique Ukraine", "start_marker": "So, I will start with the fact that modern Ukraine", "end_marker": "He was its creator and architect."},
-             {"extract_name": "3. Menace OTAN", "start_marker": "Ukraine is home to NATO training missions", "end_marker": "These principled proposals of ours have been ignored."},
-             {"extract_name": "4. Décommunisation selon Poutine", "start_marker": "And today the “grateful progeny”", "end_marker": "what real decommunizations would mean for Ukraine."},
-             {"extract_name": "5. Décision Reconnaissance Donbass", "start_marker": "Everything was in vain.", "end_marker": "These two documents will be prepared and signed shortly."},
-            ]
-     },
-     {
-         "source_name": "Hitler Discours Collection (PDF)", "source_type": "tika",
-         "schema": "https:",
-         "host_parts": ["drive", "google", "com"],
-         "path": "/uc?export=download&id=1D6ZESrdeuWvlPlsNq0rbVaUyxqUOB-KQ",
-         "extracts": [
-             {"extract_name": "1. 1923.04.13 - Munich", "start_marker": "n our view, the times when", "end_marker": "build a new Germany!36"},
-             {"extract_name": "2. 1923.04.24 - Munich", "start_marker": "reject the word 'Proletariat.'", "end_marker": "the greatest social achievement.38"},
-             {"extract_name": "3. 1923.04.27 - Munich", "start_marker": "hat we need if we are to have", "end_marker": "the Germany of fighters which yet shall be."},
-             {"extract_name": "4. 1933.03.23 - Duel Otto Wels", "start_marker": "You are talking today about your achievements", "end_marker": "Germany will be liberated, but not by you!125"},
-             {"extract_name": "5. 1933.05.01 - Lustgarten", "start_marker": "hree cheers for our Reich President,", "end_marker": "thus our German Volk und Vaterland!”"},
-             {"extract_name": "6. 1936.03.09 - Interview Ward Price", "start_marker": "irst question: Does the Fuhrer’s offer", "end_marker": "service to Europe and to the cause of peace.313"},
-             {"extract_name": "7. 1936.03.12 - Karlsruhe", "start_marker": "know no regime of the bourgeoisie,", "end_marker": "now and for all time to come!316"},
-             {"extract_name": "8. 1936.03.20 - Hambourg", "start_marker": "t is a pity that the statesmen-", "end_marker": "now give me your faith!"},
-             {"extract_name": "9. 1939.01.30 - Reichstag (Prophétie)", "start_marker": "Once again I will be a prophet:", "end_marker": "complementary nature of these economies to the German one.549"},
-             {"extract_name": "10. 1942.11.09 - Löwenbräukeller", "start_marker": "care of this. This danger has been recognized", "end_marker": "will always be a prayer for our Germany!"},
-         ]
-     },
-]
+# --- Chargement des Sources d'Extraction ---
+
+def load_extract_sources(config_path: Path) -> list:
+    """Charge les définitions des sources depuis un fichier JSON."""
+    if config_path.exists() and config_path.is_file():
+        try:
+            with open(config_path, 'r', encoding='utf-8') as f:
+                sources = json.load(f)
+            config_logger.info(f"✅ Configuration chargée depuis {config_path.name}")
+            return sources
+        except json.JSONDecodeError as e:
+            config_logger.warning(f"⚠️ Erreur décodage JSON dans {config_path.name}: {e}. Utilisation config par défaut.")
+            return DEFAULT_EXTRACT_SOURCES
+        except Exception as e:
+            config_logger.error(f"❌ Erreur lecture fichier config {config_path.name}: {e}. Utilisation config par défaut.", exc_info=True)
+            return DEFAULT_EXTRACT_SOURCES
+    else:
+        config_logger.warning(f"⚠️ Fichier config {config_path.name} non trouvé. Utilisation config par défaut.")
+        return DEFAULT_EXTRACT_SOURCES
+
+# Chargement des sources depuis le fichier JSON non chiffré
+EXTRACT_SOURCES = load_extract_sources(CONFIG_FILE_JSON)
+
+# Si la clé de chiffrement est disponible et que le fichier JSON existe mais que le fichier chiffré n'existe pas,
+# créer automatiquement le fichier chiffré à partir du fichier JSON
+if ENCRYPTION_KEY and CONFIG_FILE_JSON.exists() and not CONFIG_FILE_ENC.exists():
+    try:
+        from .utils import save_extract_definitions
+        config_logger.info(f"Tentative de création initiale du fichier chiffré à partir de {CONFIG_FILE_JSON.name}...")
+        success = save_extract_definitions(EXTRACT_SOURCES, CONFIG_FILE_ENC, ENCRYPTION_KEY)
+        if success:
+            config_logger.info(f"✅ Fichier chiffré {CONFIG_FILE_ENC.name} créé avec succès à partir de {CONFIG_FILE_JSON.name}.")
+        else:
+            config_logger.warning(f"⚠️ Échec de la création du fichier chiffré. Les extraits seront chargés depuis {CONFIG_FILE_JSON.name}.")
+    except Exception as e:
+        config_logger.error(f"❌ Erreur lors de la création du fichier chiffré: {e}", exc_info=True)
 
 # --- État Global (pour ce module UI) ---
 # Note: Utiliser global ici est une simplification liée à la structure UI originale.
 # Une approche plus orientée objet pourrait encapsuler cela.
 current_extract_definitions = [] # Sera peuplé par load_extract_definitions
 
-config_logger.info(f"Config UI chargée. {len(EXTRACT_SOURCES)} sources initiales définies.")
+config_logger.info(f"Config UI initialisée. {len(EXTRACT_SOURCES)} sources chargées.")

@@ -23,7 +23,31 @@ L'interface utilisateur a pour but de :
 * **[`config.py`](./config.py)** : Constantes (URLs, chemins), chargement/dérivation de la clé de chiffrement (`ENCRYPTION_KEY`), définition des sources par défaut (`EXTRACT_SOURCES`, `DEFAULT_EXTRACT_SOURCES`).
 * **[`utils.py`](./utils.py)** : Fonctions utilitaires pour le cache, le chiffrement/déchiffrement, la reconstruction d'URL, le fetch de données (Jina, Tika, direct), et la vérification des marqueurs des sources prédéfinies.
 * **[`app.py`](./app.py)** : Définit la fonction principale `configure_analysis_task`. C'est elle qui crée les widgets `ipywidgets`, définit les callbacks (logique événementielle), assemble l'interface, l'affiche (`display()`) et gère la boucle d'attente (`jupyter-ui-poll`). Contient aussi `initialize_text_cache` pour le pré-remplissage optionnel du cache.
+* **[`extract_utils.py`](./extract_utils.py)** : Fonctions utilitaires spécifiques à l'extraction de texte.
 * **[`__init__.py`](./__init__.py)** : Marque le dossier comme un package.
+* **[`extract_editor/`](./extract_editor/README.md)** ✏️ : Sous-module pour l'édition des marqueurs d'extraits.
+
+## Sous-modules
+
+### Éditeur de marqueurs d'extraits (`extract_editor/`) ✏️
+
+Ce sous-module contient les outils pour éditer les marqueurs de début et de fin des extraits de texte:
+
+* **[`extract_marker_editor.py`](./extract_editor/extract_marker_editor.py)** : Module principal pour l'édition des marqueurs.
+* **[`extract_marker_editor.ipynb`](./extract_editor/extract_marker_editor.ipynb)** : Notebook interactif pour l'édition des marqueurs.
+
+Pour lancer l'éditeur de marqueurs, vous pouvez utiliser le script à la racine du projet:
+```bash
+python ../run_extract_editor.py
+```
+
+Ou ouvrir directement le notebook:
+```bash
+jupyter notebook extract_editor/extract_marker_editor.ipynb
+```
+
+Pour plus de détails, consultez le [README de l'éditeur de marqueurs](./extract_editor/README.md).
+
 
 ## Fin (Note du Notebook Original)
 

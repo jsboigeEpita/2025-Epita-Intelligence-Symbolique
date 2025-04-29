@@ -309,9 +309,35 @@ def configure_analysis_task() -> Optional[str]:
                    # ... [Code identique pour appliquer marqueurs] ...
                     app_logger.info("\n-> Application marqueurs...")
                     start_index = 0; end_index = len(texte_brut_source);
+                    
+                    # Récupérer le template si disponible (pour les extraits avec lettres manquantes)
+                    template_start = None
+                    if selected_tab_index == 0 and extract_info and extract_info.get("extract_name") != "Texte Complet":
+                        template_start = extract_info.get("template_start")
+                    
                     if start_marker_final:
-                        try: found_start = texte_brut_source.index(start_marker_final); start_index = found_start + len(start_marker_final); app_logger.info(f"   -> Début trouvé.")
-                        except ValueError: app_logger.warning(f"   ⚠️ Marqueur début non trouvé."); start_index = 0
+                        try:
+                            # Essayer d'abord avec le marqueur tel quel
+                            found_start = texte_brut_source.index(start_marker_final)
+                            start_index = found_start + len(start_marker_final)
+                            app_logger.info(f"   -> Début trouvé.")
+                        except ValueError:
+                            # Si échec et template disponible, essayer avec le template
+                            if template_start:
+                                app_logger.info(f"   -> Tentative avec template '{template_start}' pour marqueur début...")
+                                # Le template est de la forme "X{0}" où X est la lettre manquante
+                                # et {0} est remplacé par le reste du marqueur
+                                try:
+                                    # Remplacer {0} dans le template par le marqueur original
+                                    complete_marker = template_start.replace("{0}", start_marker_final)
+                                    found_start = texte_brut_source.index(complete_marker)
+                                    start_index = found_start + len(complete_marker)
+                                    app_logger.info(f"   -> Début trouvé avec template: '{complete_marker}'")
+                                except ValueError:
+                                    app_logger.warning(f"   ⚠️ Marqueur début non trouvé même avec template."); start_index = 0
+                            else:
+                                app_logger.warning(f"   ⚠️ Marqueur début non trouvé."); start_index = 0
+                    
                     if end_marker_final:
                         try: found_end = texte_brut_source.index(end_marker_final, start_index); end_index = found_end; app_logger.info(f"   -> Fin trouvée.")
                         except ValueError: app_logger.warning(f"   ⚠️ Marqueur fin non trouvé (après début)."); end_index = len(texte_brut_source)

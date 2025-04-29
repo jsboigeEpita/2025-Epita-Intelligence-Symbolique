@@ -20,12 +20,16 @@ Le projet est organisé en modules Python pour une meilleure maintenabilité :
 * [`config/`](./config/) : Fichiers de configuration (`.env.template`).
 * [`core/`](./core/README.md) 🧱 : Composants fondamentaux partagés (État, StateManager, Stratégies, Setup JVM & LLM).
 * [`utils/`](./utils/README.md) 🔧 : Fonctions utilitaires générales.
+  * [`utils/extract_repair/`](./utils/extract_repair/) 🔄 : Outils de réparation des bornes d'extraits défectueuses.
 * [`ui/`](./ui/README.md) 🎨 : Logique de l'interface utilisateur (configuration du texte).
+  * [`ui/extract_editor/`](./ui/extract_editor/) ✏️ : Éditeur de marqueurs d'extraits.
 * [`agents/`](./agents/README.md) 🧠 : Définitions des agents spécialisés (PM, Informal, PL).
 * [`orchestration/`](./orchestration/README.md) ⚙️ : Logique d'exécution de la conversation (`analysis_runner.py`).
 * [`libs/`](./libs/) : Contient les JARs TweetyProject (téléchargés ou manuels).
 * [`data/`](./data/) : Données utilisées/générées (config UI sauvegardée, CSV sophismes).
 * [`requirements.txt`](./requirements.txt) : Dépendances Python.
+* [`run_extract_editor.py`](./run_extract_editor.py) : Script pour lancer l'éditeur de marqueurs d'extraits.
+* [`run_extract_repair.py`](./run_extract_repair.py) : Script pour lancer la réparation des bornes défectueuses.
 * [`README.md`](./README.md) : Ce fichier.
 
 ## Prérequis
@@ -72,6 +76,41 @@ Le projet est organisé en modules Python pour une meilleure maintenabilité :
 7.  La cellule 6 exécutera la conversation multi-agents. Observez les sorties et les logs.
 8.  L'état final de l'analyse sera affiché à la fin de l'exécution de la cellule 6.
 
+## Outils d'édition et de réparation des extraits
+
+Le projet inclut des outils spécialisés pour l'édition et la réparation des extraits de texte:
+
+### Éditeur de marqueurs d'extraits
+
+L'éditeur de marqueurs permet de définir et modifier les bornes des extraits de texte à analyser:
+
+```bash
+python run_extract_editor.py
+```
+
+Ou ouvrez le notebook interactif:
+```bash
+jupyter notebook ui/extract_editor/extract_marker_editor.ipynb
+```
+
+### Réparation des bornes défectueuses
+
+L'outil de réparation permet de corriger automatiquement les bornes d'extraits défectueuses:
+
+```bash
+python run_extract_repair.py
+```
+
+Ou ouvrez le notebook interactif:
+```bash
+jupyter notebook utils/extract_repair/repair_extract_markers.ipynb
+```
+
+Pour plus de détails, consultez les README spécifiques:
+- [Éditeur de marqueurs d'extraits](./ui/extract_editor/README.md)
+- [Réparation des bornes défectueuses](./utils/extract_repair/README.md)
+
+
 ## Pistes d'Amélioration Futures
 
 *(Liste reprise des notebooks)*
@@ -83,3 +122,4 @@ Le projet est organisé en modules Python pour une meilleure maintenabilité :
 * **Nouveaux Agents/Capacités:** Agents FOL, Modale, tâches (résumé, entités), outils (web, DB).
 * **État RDF/KG:** Explorer `rdflib` ou base graphe pour état plus sémantique.
 * **Interface Utilisateur:** Alternative type Gradio/Streamlit pour visualisation/interaction post-analyse.
+* **Amélioration des outils d'édition:** Enrichir les fonctionnalités de l'éditeur de marqueurs et de l'outil de réparation.
