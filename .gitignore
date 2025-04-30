@@ -9,6 +9,7 @@ ENV/
 # Fichiers de configuration sensibles
 .env # Ne JAMAIS commiter le fichier .env contenant les secrets !
 *.env # Ignorer aussi les fichiers .env spécifiques (s'ils existent)
+**/.env # Ignorer les fichiers .env dans tous les sous-répertoires
 
 # Fichiers Bytecode Python et Cache
 __pycache__/
