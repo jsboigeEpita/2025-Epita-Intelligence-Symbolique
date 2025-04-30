@@ -27,6 +27,8 @@ from core.strategies import SimpleTerminationStrategy, DelegatingSelectionStrate
 from agents.pm.pm_definitions import setup_pm_kernel, PM_INSTRUCTIONS
 from agents.informal.informal_definitions import setup_informal_kernel, INFORMAL_AGENT_INSTRUCTIONS
 from agents.pl.pl_definitions import setup_pl_kernel, PL_AGENT_INSTRUCTIONS
+from agents.extract.extract_agent import setup_extract_agent
+from agents.extract.prompts import EXTRACT_AGENT_INSTRUCTIONS
 
 # Logger principal pour cette fonction
 logger = logging.getLogger("Orchestration.Run")
@@ -97,6 +99,8 @@ async def run_analysis_conversation(
         setup_pm_kernel(local_kernel, llm_service)
         setup_informal_kernel(local_kernel, llm_service)
         setup_pl_kernel(local_kernel, llm_service) # Cette fonction vérifie maintenant la JVM en interne
+        # Configuration de l'agent d'extraction
+        extract_kernel, extract_agent_instance = await setup_extract_agent(llm_service)
         run_logger.info("   Plugins agents configurés.")
         run_logger.debug(f"   Plugins enregistrés: {list(local_kernel.plugins.keys())}")
 
@@ -120,7 +124,12 @@ async def run_analysis_conversation(
             kernel=local_kernel, service=llm_service, name="PropositionalLogicAgent",
             instructions=PL_AGENT_INSTRUCTIONS, arguments=KernelArguments(settings=prompt_exec_settings)
         )
-        agent_list_local = [local_pm_agent, local_informal_agent, local_pl_agent]
+        # Création de l'agent d'extraction
+        local_extract_agent = ChatCompletionAgent(
+            kernel=local_kernel, service=llm_service, name="ExtractAgent",
+            instructions=EXTRACT_AGENT_INSTRUCTIONS, arguments=KernelArguments(settings=prompt_exec_settings)
+        )
+        agent_list_local = [local_pm_agent, local_informal_agent, local_pl_agent, local_extract_agent]
         run_logger.info(f"   Instances agents créées: {[agent.name for agent in agent_list_local]}.")
 
         # 6. Créer instances stratégies locales
