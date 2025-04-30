@@ -1,8 +1,10 @@
-# Tests d'Orchestration
+# âš™ï¸ Tests d'Orchestration
 
-Ce répertoire contient les scripts de test pour l'orchestration entre les différents agents.
+Ce rÃ©pertoire contient les scripts de test pour l'orchestration entre les diffÃ©rents agents.
+
+[Retour au README des Tests](../README.md)
 
 ## Fichiers
 
-- 	est_orchestration_complete.py : Test d'orchestration complète avec tous les agents
-- 	est_orchestration_scale.py : Test d'orchestration à grande échelle
+- test_orchestration_complete.py : Test d'orchestration complÃ¨te avec tous les agents
+- test_orchestration_scale.py : Test d'orchestration Ã  grande Ã©chelle

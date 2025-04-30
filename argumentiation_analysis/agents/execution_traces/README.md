@@ -1,12 +1,14 @@
-# Traces d'Exécution
+# ğŸ“ Traces d'ExÃ©cution
 
-Ce répertoire contient les traces d'exécution des agents.
+Ce rÃ©pertoire contient les traces d'exÃ©cution des agents.
+
+[Retour au README Agents](../README.md)
 
 ## Structure
 
-- informal/ : Traces d'exécution de l'agent d'analyse informelle
-- orchestration/ : Traces d'exécution de l'orchestration
+- informal/ : Traces d'exÃ©cution de l'agent d'analyse informelle
+- orchestration/ : Traces d'exÃ©cution de l'orchestration
 
 ## Utilisation
 
-Les traces d'exécution sont générées automatiquement lors de l'exécution des tests et peuvent être analysées pour améliorer les performances des agents.
+Les traces d'exÃ©cution sont gÃ©nÃ©rÃ©es automatiquement lors de l'exÃ©cution des tests et peuvent Ãªtre analysÃ©es pour amÃ©liorer les performances des agents.

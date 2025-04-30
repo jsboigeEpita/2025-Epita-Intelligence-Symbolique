@@ -1,10 +1,12 @@
-# Documentation
+# 📚 Documentation
 
-Ce r�pertoire contient la documentation du projet.
+Ce répertoire contient la documentation du projet.
+
+[Retour au README Agents](../README.md)
 
 ## Structure
 
-- eports/ : Rapports d'analyse et de test
+- reports/ : Rapports d'analyse et de test
 
 ## Fichiers
 

@@ -28,11 +28,11 @@ PROPOSITION is a sequence of characters excluding |,&,!,(),=,<,> and whitespace.
 
 ## Composants 🛠️
 
-  * **[`pl_definitions.py`](https://www.google.com/search?q=./pl_definitions.py)** :
+  * **[`pl_definitions.py`](./pl_definitions.py)** :
       * `PropositionalLogicPlugin`: Classe gérant l'interface JPype \<-\> Tweety. Elle charge les classes Java (`PlParser`, `SatReasoner`, `PlFormula`), contient la logique de parsing et d'exécution des requêtes, et expose la fonction native `execute_pl_query`. Gère l'état d'initialisation de ses composants Java.
       * `setup_pl_kernel`: Configure le kernel SK. Vérifie si la JVM est prête avant d'ajouter le plugin.
       * `PL_AGENT_INSTRUCTIONS`: Instructions système très détaillées, incluant le rappel de la syntaxe et les workflows pour chaque tâche.
-  * **[`prompts.py`](https://www.google.com/search?q=./prompts.py)** :
+  * **[`prompts.py`](./prompts.py)** :
       * `prompt_text_to_pl_v*`: Traduction Texte -\> Belief Set PL.
       * `prompt_gen_pl_queries_v*`: Génération de requêtes PL.
       * `prompt_interpret_pl_v*`: Interprétation des résultats Tweety.

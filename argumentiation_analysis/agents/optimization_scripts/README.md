@@ -1,6 +1,8 @@
-# Scripts d'Optimisation
+# âš™ï¸ Scripts d'Optimisation
 
-Ce répertoire contient les scripts d'optimisation des agents.
+Ce rÃ©pertoire contient les scripts d'optimisation des agents.
+
+[Retour au README Agents](../README.md)
 
 ## Structure
 
@@ -8,4 +10,4 @@ Ce répertoire contient les scripts d'optimisation des agents.
 
 ## Utilisation
 
-Les scripts d'optimisation peuvent être exécutés après l'analyse pour améliorer les performances des agents.
+Les scripts d'optimisation peuvent Ãªtre exÃ©cutÃ©s aprÃ¨s l'analyse pour amÃ©liorer les performances des agents.

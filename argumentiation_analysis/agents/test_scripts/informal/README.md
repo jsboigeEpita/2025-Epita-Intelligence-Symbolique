@@ -1,7 +1,9 @@
-# Tests de l'Agent Informel
+# ğŸ§ Tests de l'Agent Informel
 
-Ce répertoire contient les scripts de test spécifiques à l'agent d'analyse informelle.
+Ce rÃ©pertoire contient les scripts de test spÃ©cifiques Ã  l'agent d'analyse informelle.
+
+[Retour au README des Tests](../README.md)
 
 ## Fichiers
 
-- 	est_informal_agent.py : Test de l'agent informel sur plusieurs extraits de texte
+- test_informal_agent.py : Test de l'agent informel sur plusieurs extraits de texte

@@ -73,8 +73,8 @@ Le projet est organisé en modules Python pour une meilleure maintenabilité :
 1.  Clonez ce dépôt.
 2.  Créez un environnement virtuel : `python -m venv venv`
 3.  Activez l'environnement :
-    * Windows PowerShell : `.\venv\Scripts\activate` (peut nécessiter `Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope Process`)
-    * Windows CMD : `.\venv\Scripts\activate.bat`
+    * Windows PowerShell : `..\venv\Scripts\activate` (peut nécessiter `Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope Process`)
+    * Windows CMD : `..\venv\Scripts\activate.bat`
     * Linux/macOS : `source venv/bin/activate`
 4.  Installez les dépendances : `pip install -r requirements.txt`
 5.  Créez et configurez votre fichier `.env` (voir Prérequis).
@@ -190,7 +190,6 @@ Pour plus de détails, consultez les README spécifiques:
 - [Éditeur de marqueurs d'extraits](./ui/extract_editor/README.md)
 - [Réparation des bornes défectueuses](./utils/extract_repair/README.md)
 
-
 ## Pistes d'Amélioration Futures
 
 *(Liste reprise des notebooks et enrichie)*
@@ -220,7 +219,3 @@ Pour plus de détails, consultez les README spécifiques:
 * **Tests à Grande Échelle:** Étendre les tests d'orchestration à grande échelle.
 * **Métriques d'Évaluation:** Développer des métriques pour évaluer la qualité des analyses.
 * **Benchmarks:** Créer des benchmarks pour comparer différentes configurations d'agents.
-
-### Intégration MCP
-* **Serveur MCP:** Exposer les fonctionnalités du projet via un serveur MCP.
-* **Outils MCP:** Créer des outils MCP spécifiques pour l'analyse argumentative.

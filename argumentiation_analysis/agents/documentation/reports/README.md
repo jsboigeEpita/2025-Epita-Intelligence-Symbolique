@@ -1,7 +1,9 @@
-# Rapports
+# ðŸ“Š Rapports
 
-Ce répertoire contient les rapports d'analyse et de test.
+Ce rÃ©pertoire contient les rapports d'analyse et de test.
+
+[Retour au README de la Documentation](../README.md)
 
 ## Fichiers
 
-- apport_test_orchestration_echelle.md : Rapport sur les tests d'orchestration à grande échelle
+- rapport_test_orchestration_echelle.md : Rapport sur les tests d'orchestration Ã  grande Ã©chelle

@@ -1,12 +1,14 @@
-# Scripts de Test
+# ğŸ§ª Scripts de Test
 
-Ce répertoire contient les scripts de test pour les différents agents et l'orchestration.
+Ce rÃ©pertoire contient les scripts de test pour les diffÃ©rents agents et l'orchestration.
+
+[Retour au README Agents](../README.md)
 
 ## Structure
 
-- informal/ : Tests spécifiques à l'agent d'analyse informelle
-- orchestration/ : Tests d'orchestration entre les différents agents
+- informal/ : Tests spÃ©cifiques Ã  l'agent d'analyse informelle
+- orchestration/ : Tests d'orchestration entre les diffÃ©rents agents
 
 ## Utilisation
 
-Les scripts de test peuvent être exécutés individuellement pour tester des fonctionnalités spécifiques.
+Les scripts de test peuvent Ãªtre exÃ©cutÃ©s individuellement pour tester des fonctionnalitÃ©s spÃ©cifiques.

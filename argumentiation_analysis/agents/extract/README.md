@@ -1,6 +1,8 @@
-# Agent d'Extraction pour l'Analyse Argumentative
+# 📑 Agent d'Extraction pour l'Analyse Argumentative
 
 Ce module fournit un agent d'extraction intelligent capable de proposer des extraits pertinents dans un texte source en se basant sur la dénomination de l'extrait et le contexte.
+
+[Retour au README Agents](../README.md)
 
 ## Fonctionnalités
 

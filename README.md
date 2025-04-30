@@ -387,6 +387,9 @@ Les sujets proposés ci-dessous couvrent différents aspects de l'IA symbolique,
 - **Agents de logique formelle** : Développer de nouveaux agents spécialisés utilisant différentes parties de Tweety.
 - **Agent de détection de sophismes** : Améliorer la détection et la classification des sophismes dans les textes.
 - **Agent de génération de contre-arguments** : Créer un agent capable de générer des contre-arguments pertinents.
+- **Intégration de LLMs locaux légers** : Explorer l'utilisation de modèles de langage locaux de petite taille pour effectuer l'analyse argumentative, en particulier les modèles Qwen 3 récemment sortis. Cette approche permettrait de réduire la dépendance aux API externes, d'améliorer la confidentialité des données et potentiellement d'accélérer le traitement. Le projet pourrait inclure une comparaison des performances entre différents modèles locaux et les grands modèles via API, ainsi que des stratégies d'optimisation pour les cas d'usage spécifiques à l'analyse argumentative.
+  - *Technologies clés* : Qwen 3, llama.cpp, GGUF, quantization, techniques d'optimisation pour l'inférence locale.
+  - *Références* : Documentation Qwen 3, benchmarks HELM, recherches sur la distillation de modèles et l'optimisation pour l'inférence.
 
 #### Indexation Sémantique
 
@@ -458,173 +461,73 @@ Les sujets proposés ci-dessous couvrent différents aspects de l'IA symbolique,
   - *Technologies clés* : Modération assistée par IA, visualisation d'opinions, mécanismes de vote et de consensus.
   - *Références* : "Democracy in the Digital Age" de Wilhelm, plateformes comme Decidim, Consul, ou vTaiwan.
 
-## Directives de Contribution
+## Directives de Contribution et Organisation
 
-Cette section présente les lignes directrices pour contribuer efficacement au projet Intelligence Symbolique. Ces directives sont conçues pour faciliter la collaboration entre les équipes d'étudiants et assurer la qualité et la cohérence du code produit.
+Cette section présente une approche flexible pour contribuer au projet Intelligence Symbolique, favorisant l'auto-organisation des équipes d'étudiants tout en maintenant la qualité et la cohérence du code produit.
 
-### Workflow de développement
+### Organisation des Équipes et Gestion de Projet
 
-#### Fork et clone du dépôt
+Plutôt que d'imposer un protocole de contribution strict, nous encourageons les étudiants à s'organiser selon leurs préférences et compétences. Certains étudiants sont invités à prendre en main l'aspect gestion de projet, en assumant des rôles tels que :
 
-1. **Fork du dépôt** : Commencez par créer un fork du dépôt principal sur votre compte GitHub personnel ou celui de votre équipe.
-   ```bash
-   # Via l'interface GitHub : cliquez sur le bouton "Fork" en haut à droite du dépôt
-   ```
+- **Chef de projet** : Coordination générale, planification des sprints, suivi de l'avancement
+- **Responsable technique** : Architecture, standards de code, revue technique
+- **Responsable qualité** : Tests, documentation, processus de revue
+- **Responsable intégration** : Gestion des pull requests, résolution des conflits, déploiements
 
-2. **Clone de votre fork** : Clonez votre fork sur votre machine locale.
-   ```bash
-   git clone https://github.com/votre-nom-utilisateur/intelligence-symbolique.git
-   cd intelligence-symbolique
-   ```
+**Les étudiants qui démontreront des compétences en gestion de projet et en coordination d'équipe se verront attribuer des droits d'administrateur sur le dépôt principal**, leur permettant de faciliter le processus d'intégration des contributions.
 
-3. **Ajout du dépôt upstream** : Configurez le dépôt original comme source upstream pour pouvoir synchroniser votre fork.
-   ```bash
-   git remote add upstream https://github.com/organisation-principale/intelligence-symbolique.git
-   ```
+### Principes de Base pour la Contribution
 
-#### Stratégie de branches
+Bien que nous privilégions l'auto-organisation, voici quelques principes fondamentaux pour assurer une collaboration efficace :
 
-Pour maintenir une organisation claire du développement, suivez cette convention de nommage des branches :
+#### Workflow Git Recommandé
 
-- `feature/nom-sujet` : Pour le développement de nouvelles fonctionnalités (ex: `feature/detection-sophismes`)
-- `fix/description-bug` : Pour la correction de bugs (ex: `fix/extraction-arguments`)
-- `docs/description` : Pour les mises à jour de documentation (ex: `docs/agent-pl`)
-- `refactor/description` : Pour les refactorisations de code (ex: `refactor/orchestration`)
+1. **Fork et clone** : Créez un fork du dépôt principal et clonez-le localement
+2. **Branches thématiques** : Créez des branches dédiées à chaque fonctionnalité ou correction
+3. **Pull Requests régulières** : Soumettez des PR fréquentes pour faciliter l'intégration continue
+4. **Communication** : Documentez clairement l'objectif et les changements de chaque contribution
 
-#### Processus de Pull Request
+#### Standards de Code Suggérés
 
-1. **Synchronisation avec upstream** : Avant de commencer à travailler, assurez-vous que votre branche principale est à jour.
-   ```bash
-   git checkout main
-   git pull upstream main
-   git push origin main
-   ```
+- **Lisibilité** : Privilégiez un code clair et bien commenté
+- **Cohérence** : Respectez les conventions existantes du projet
+- **Tests** : Incluez des tests appropriés pour vos contributions
+- **Documentation** : Mettez à jour la documentation concernée
 
-2. **Création d'une branche de travail** :
-   ```bash
-   git checkout -b feature/votre-fonctionnalite
-   ```
+### Documentation et Partage de Connaissances
 
-3. **Développement et commits** : Travaillez sur votre fonctionnalité et effectuez des commits réguliers avec des messages clairs.
-   ```bash
-   git add .
-   git commit -m "Description claire et concise des modifications"
-   ```
+La documentation est essentielle pour la collaboration et la pérennité du projet :
 
-4. **Push de votre branche** :
-   ```bash
-   git push origin feature/votre-fonctionnalite
-   ```
+- **READMEs** : Chaque module devrait avoir une documentation claire de son fonctionnement
+- **Exemples** : Fournissez des exemples d'utilisation pour les fonctionnalités complexes
+- **Partage d'expérience** : Organisez des sessions de partage de connaissances entre équipes
 
-5. **Création de la Pull Request** : Via l'interface GitHub, créez une Pull Request depuis votre branche vers la branche principale du dépôt upstream.
-   - Utilisez le template de PR s'il existe
-   - Incluez une description détaillée de vos modifications
-   - Référencez les issues concernées avec `#numero-issue`
-   - Assignez des reviewers pertinents (membres de l'équipe enseignante ou autres étudiants)
+### Revue et Intégration
 
-### Standards de codage
+Le processus de revue devrait être collaboratif et constructif :
 
-#### Python (PEP 8)
+- **Revue par les pairs** : Encouragez la revue de code entre équipes
+- **Feedback constructif** : Formulez des commentaires précis et bienveillants
+- **Amélioration continue** : Utilisez les retours pour améliorer vos contributions futures
 
-- **Indentation** : Utilisez 4 espaces (pas de tabulations)
-- **Longueur de ligne** : Limitez les lignes à 88 caractères maximum (compatible avec Black)
-- **Imports** : Organisez les imports en trois sections séparées par une ligne vide :
-  1. Bibliothèques standard
-  2. Bibliothèques tierces
-  3. Modules locaux
-- **Nommage** :
-  - `snake_case` pour les variables, fonctions et méthodes
-  - `PascalCase` pour les classes
-  - `UPPER_CASE` pour les constantes
-  - Préfixez les variables "privées" par un underscore (`_variable_privee`)
-
-#### Documentation du code
-
-- **Docstrings** : Utilisez le format Google pour les docstrings Python
-  ```python
-  def fonction_exemple(param1, param2):
-      """Description courte de la fonction.
-      
-      Description plus détaillée si nécessaire.
-      
-      Args:
-          param1 (type): Description du paramètre 1.
-          param2 (type): Description du paramètre 2.
-          
-      Returns:
-          type: Description de la valeur de retour.
-          
-      Raises:
-          ExceptionType: Description des conditions qui déclenchent l'exception.
-      """
-      # Corps de la fonction
-  ```
-
-- **Commentaires** : Ajoutez des commentaires pour expliquer le "pourquoi" plutôt que le "comment"
-
-#### Organisation du code
-
-- **Structure des modules** : Suivez la structure existante du projet
-- **Séparation des préoccupations** : Séparez clairement la logique métier, l'interface utilisateur et l'accès aux données
-- **Tests** : Placez les tests dans un répertoire `tests/` parallèle au code testé
-
-### Documentation
-
-#### Documentation du code
-
-- **Docstrings** : Chaque module, classe et fonction doit être documenté avec des docstrings appropriés
-- **Exemples d'utilisation** : Incluez des exemples d'utilisation dans les docstrings des fonctions principales
-- **Types** : Utilisez les annotations de type Python (type hints) pour améliorer la lisibilité et permettre la vérification statique
-
-#### Documentation des fonctionnalités
-
-- **README par module** : Chaque module ou composant majeur doit avoir son propre README.md expliquant :
-  - Son objectif et ses fonctionnalités
-  - Comment l'utiliser (avec exemples)
-  - Son architecture interne
-  - Les dépendances et prérequis
-
-- **Notebooks explicatifs** : Pour les fonctionnalités complexes, créez des notebooks Jupyter démontrant leur utilisation
-
-#### Mise à jour de la documentation
-
-- Mettez à jour la documentation en même temps que le code
-- Assurez-vous que les exemples et les instructions restent valides après vos modifications
-- Signalez les changements majeurs dans le README principal
-
-### Processus de revue
-
-#### Critères d'acceptation
-
-Pour qu'une contribution soit acceptée, elle doit respecter les critères suivants :
-
-1. **Fonctionnalité** : Le code doit fonctionner comme prévu et répondre aux exigences spécifiées
-2. **Qualité** : Le code doit être propre, lisible et suivre les standards de codage
-3. **Tests** : Des tests appropriés doivent être inclus (unitaires, d'intégration)
-4. **Documentation** : La documentation doit être complète et à jour
-5. **Intégration** : Le code doit s'intégrer harmonieusement avec le reste du projet
-
-#### Processus de revue par les pairs
-
-1. **Revue initiale** : Au moins un membre de l'équipe doit examiner le code avant la soumission
-2. **Revue externe** : Au moins un membre d'une autre équipe doit examiner la Pull Request
-3. **Revue enseignante** : L'équipe enseignante effectuera une revue finale avant l'acceptation
-
-#### Gestion des retours et itérations
-
-1. **Réponse aux commentaires** : Répondez à tous les commentaires de revue, soit en apportant les modifications demandées, soit en expliquant pourquoi vous ne le faites pas
-2. **Itérations** : Effectuez les modifications nécessaires et poussez-les sur la même branche
-3. **Résolution des discussions** : Marquez les discussions comme résolues une fois traitées
-4. **Notification** : Informez les reviewers lorsque vous avez traité tous leurs commentaires
-
-#### Contexte académique
+### Contexte Académique
 
 En tant que projet académique, certaines spécificités s'appliquent :
 
-- **Attribution claire** : Identifiez clairement les contributeurs de chaque partie du code
-- **Apprentissage collaboratif** : Les revues de code sont aussi des opportunités d'apprentissage
-- **Évaluation** : La qualité des contributions et des revues fait partie de l'évaluation
-- **Calendrier académique** : Respectez les échéances du cours pour vos contributions
+- **Attribution** : Identifiez clairement les contributeurs de chaque partie du code
+- **Apprentissage** : Les revues de code sont aussi des opportunités d'apprentissage
+- **Évaluation** : La qualité des contributions et l'implication dans la gestion de projet font partie de l'évaluation
+- **Échéances** : Respectez le calendrier académique pour vos contributions
+
+### Ressources pour la Gestion de Projet
+
+Pour les étudiants souhaitant prendre en charge la gestion de projet, voici quelques ressources utiles :
+
+- **Outils** : GitHub Projects, Trello, Jira (version académique gratuite)
+- **Méthodologies** : Scrum, Kanban, ou approches hybrides adaptées au contexte académique
+- **Documentation** : Templates de documentation, guides de contribution, checklists de revue
+
+Les étudiants intéressés par la prise en charge de la gestion de projet sont invités à se manifester auprès de l'équipe enseignante pour discuter des responsabilités et des droits d'administration sur le dépôt.
 
 ## Ressources et Documentation
 

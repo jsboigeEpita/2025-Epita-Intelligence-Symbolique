@@ -1,12 +1,14 @@
-# Scripts d'Analyse
+# ğŸ“Š Scripts d'Analyse
 
-Ce répertoire contient les scripts d'analyse des résultats des agents.
+Ce rÃ©pertoire contient les scripts d'analyse des rÃ©sultats des agents.
+
+[Retour au README Agents](../README.md)
 
 ## Structure
 
-- informal/ : Analyse des résultats de l'agent d'analyse informelle
-- orchestration/ : Analyse des résultats de l'orchestration
+- informal/ : Analyse des rÃ©sultats de l'agent d'analyse informelle
+- orchestration/ : Analyse des rÃ©sultats de l'orchestration
 
 ## Utilisation
 
-Les scripts d'analyse peuvent être exécutés après les tests pour analyser les résultats obtenus.
+Les scripts d'analyse peuvent Ãªtre exÃ©cutÃ©s aprÃ¨s les tests pour analyser les rÃ©sultats obtenus.

@@ -1,7 +1,9 @@
-# Analyse de l'Agent Informel
+# üßê Analyse de l'Agent Informel
 
-Ce rÈpertoire contient les scripts d'analyse des rÈsultats de l'agent d'analyse informelle.
+Ce r√©pertoire contient les scripts d'analyse des r√©sultats de l'agent d'analyse informelle.
+
+[Retour au README des Analyses](../README.md)
 
 ## Fichiers
 
-- nalyse_traces_informal.py : Analyse des traces de conversation de l'agent informel
+- analyse_traces_informal.py : Analyse des traces de conversation de l'agent informel
