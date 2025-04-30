@@ -20,27 +20,37 @@ Chaque agent est organisé dans son propre sous-répertoire :
 * **[`extract/`](./extract/README.md)** 📑 : Agent d'Extraction - Gère l'extraction et la réparation des extraits de texte.
 * **`(student_template/)`** : *(À créer)* Un template pour guider les étudiants dans l'ajout de leur propre agent.
 
-### Fichiers de Test et d'Optimisation
+### Scripts et Utilitaires
 
-* **[`test_informal_agent.py`](./test_informal_agent.py)** : Script de test pour l'agent d'analyse informelle.
-* **[`test_orchestration_scale.py`](./test_orchestration_scale.py)** : Script de test pour l'orchestration à grande échelle.
-* **[`rapport_test_orchestration_echelle.md`](./rapport_test_orchestration_echelle.md)** : Rapport sur les tests d'orchestration à grande échelle.
+* **[`test_scripts/`](./test_scripts/README.md)** 🧪 : Scripts de test pour les différents agents et l'orchestration.
+  * **[`test_scripts/informal/`](./test_scripts/informal/README.md)** : Tests spécifiques à l'agent d'analyse informelle.
+  * **[`test_scripts/orchestration/`](./test_scripts/orchestration/README.md)** : Tests d'orchestration entre les différents agents.
 
-### Utilitaires pour les Agents
+* **[`analysis_scripts/`](./analysis_scripts/README.md)** 📊 : Scripts d'analyse des résultats des agents.
+  * **[`analysis_scripts/informal/`](./analysis_scripts/informal/README.md)** : Analyse des résultats de l'agent d'analyse informelle.
+  * **[`analysis_scripts/orchestration/`](./analysis_scripts/orchestration/README.md)** : Analyse des résultats de l'orchestration.
 
-* **[`utils/`](./utils/)** : Utilitaires spécifiques aux agents.
+* **[`optimization_scripts/`](./optimization_scripts/README.md)** ⚙️ : Scripts d'optimisation des agents.
+  * **[`optimization_scripts/informal/`](./optimization_scripts/informal/README.md)** : Optimisation de l'agent d'analyse informelle.
+
+* **[`run_scripts/`](./run_scripts/README.md)** 🚀 : Scripts d'exécution pour lancer les tests et les analyses.
+
+* **[`utils/`](./utils/)** 🛠️ : Utilitaires spécifiques aux agents.
   * **[`utils/informal_optimization/`](./utils/informal_optimization/README.md)** : Outils pour l'optimisation de l'agent d'analyse informelle.
-    * **[`analyze_taxonomy_usage.py`](./utils/informal_optimization/analyze_taxonomy_usage.py)** : Analyse l'utilisation de la taxonomie des sophismes.
-    * **[`improve_informal_agent.py`](./utils/informal_optimization/improve_informal_agent.py)** : Améliore les performances de l'agent informel.
-    * **[`optimize_informal_agent.py`](./utils/informal_optimization/optimize_informal_agent.py)** : Optimise les prompts et définitions de l'agent informel.
-    * **[`documentation.md`](./utils/informal_optimization/documentation.md)** : Documentation sur l'optimisation de l'agent informel.
-    * **[`taxonomy_analysis/`](./utils/informal_optimization/taxonomy_analysis/)** : Visualisations et analyses de la taxonomie des sophismes.
-      * **[`rapport_analyse_taxonomie.md`](./utils/informal_optimization/taxonomy_analysis/rapport_analyse_taxonomie.md)** : Rapport d'analyse de la taxonomie des sophismes.
 
-### Traces d'Exécution
+### Documentation et Traces
 
-* **[`traces_informal_agent/`](./traces_informal_agent/)** : Traces d'exécution de l'agent d'analyse informelle.
-  * Contient plusieurs fichiers JSON avec les résultats d'analyse de l'agent informel.
+* **[`documentation/`](./documentation/README.md)** 📚 : Documentation du projet.
+  * **[`documentation/reports/`](./documentation/reports/README.md)** : Rapports d'analyse et de test.
+
+* **[`execution_traces/`](./execution_traces/README.md)** 📝 : Traces d'exécution des agents.
+  * **[`execution_traces/informal/`](./execution_traces/informal/README.md)** : Traces d'exécution de l'agent d'analyse informelle.
+  * **[`execution_traces/orchestration/`](./execution_traces/orchestration/README.md)** : Traces d'exécution de l'orchestration.
+
+### Données et Bibliothèques
+
+* **[`data/`](./data/)** 📁 : Données utilisées par les agents.
+* **[`libs/`](./libs/)** 📦 : Bibliothèques partagées.
 
 ### Structure des Agents
 
@@ -68,10 +78,10 @@ Pour créer un nouvel agent, suivez ces étapes :
 
 ### Test indépendant des agents
 
-Pour tester un agent de manière indépendante, vous pouvez créer un script de test dans son sous-répertoire. Exemple :
+Pour tester un agent de manière indépendante, vous pouvez créer un script de test dans le répertoire `test_scripts/[agent_name]/`. Exemple :
 
 ```python
-# test_new_agent.py
+# test_scripts/new_agent/test_new_agent.py
 import asyncio
 import sys
 import os
@@ -79,7 +89,7 @@ from pathlib import Path
 
 # Ajouter le répertoire parent au chemin de recherche des modules
 current_dir = Path(__file__).parent
-parent_dir = current_dir.parent.parent
+parent_dir = current_dir.parent.parent.parent
 if str(parent_dir) not in sys.path:
     sys.path.append(str(parent_dir))
 
@@ -87,7 +97,7 @@ from dotenv import load_dotenv
 load_dotenv(override=True)
 
 from core.llm_service import create_llm_service
-from new_agent.new_agent_definitions import setup_new_agent
+from agents.new_agent.new_agent_definitions import setup_new_agent
 
 async def test_agent():
     # Créer le service LLM
@@ -106,7 +116,7 @@ if __name__ == "__main__":
 
 Exécutez le test avec :
 ```bash
-python agents/new_agent/test_new_agent.py
+python agents/test_scripts/new_agent/test_new_agent.py
 ```
 
 ## Intégration avec l'orchestrateur principal
@@ -140,29 +150,29 @@ Pour intégrer un nouvel agent dans l'analyse complète, vous devez :
 
 ### Optimisation de l'Agent Informel
 
-Le dossier `utils/informal_optimization/` contient des outils pour analyser et améliorer les performances de l'agent d'analyse informelle :
+Le dossier `optimization_scripts/informal/` contient des scripts pour analyser et améliorer les performances de l'agent d'analyse informelle :
 
 - **Analyse de la taxonomie** : Visualisation et analyse de la structure de la taxonomie des sophismes.
 - **Optimisation des prompts** : Amélioration des instructions et des prompts de l'agent.
-- **Sauvegarde automatique** : Création de backups avant modification des fichiers.
-- **Rapports d'analyse** : Documentation des améliorations apportées.
+- **Amélioration des performances** : Scripts pour améliorer les performances de l'agent.
+- **Comparaison des versions** : Outils pour comparer différentes versions de l'agent.
 
 ### Tests à Grande Échelle
 
-Le fichier `test_orchestration_scale.py` permet de tester l'orchestration des agents sur un grand nombre de textes, afin d'évaluer :
+Le fichier `test_scripts/orchestration/test_orchestration_scale.py` permet de tester l'orchestration des agents sur un grand nombre de textes, afin d'évaluer :
 
 - La robustesse du système
 - Les performances des agents
 - La qualité des analyses produites
 - Les temps d'exécution
 
-Les résultats de ces tests sont documentés dans `rapport_test_orchestration_echelle.md`.
+Les résultats de ces tests sont documentés dans `documentation/reports/rapport_test_orchestration_echelle.md`.
 
 ### Traces d'Exécution
 
-Le dossier `traces_informal_agent/` contient les traces d'exécution de l'agent d'analyse informelle, permettant :
+Le dossier `execution_traces/` contient les traces d'exécution des agents, permettant :
 
-- D'analyser le comportement de l'agent
+- D'analyser le comportement des agents
 - D'identifier les points d'amélioration
-- De comparer différentes versions de l'agent
+- De comparer différentes versions des agents
 - De documenter les performances sur différents types de textes
