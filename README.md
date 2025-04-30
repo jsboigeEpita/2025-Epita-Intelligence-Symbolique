@@ -1,10 +1,169 @@
 # Projet Intelligence Symbolique
 
+## Table des Matières
+- [Introduction](#introduction)
+- [Modalités du projet](#modalités-du-projet)
+  - [Composition des équipes](#composition-des-équipes)
+  - [Livrables](#livrables)
+  - [Présentation](#présentation)
+  - [Évaluation](#évaluation)
+- [Utilisation des LLMs et IA Symbolique](#utilisation-des-llms-et-ia-symbolique)
+  - [Outils à disposition](#outils-à-disposition)
+  - [Combinaison IA Générative et IA Symbolique](#combinaison-ia-générative-et-ia-symbolique)
+- [Sujets de Projets](#sujets-de-projets)
+  - [Domaines Fondamentaux](#domaines-fondamentaux)
+  - [Frameworks d'Argumentation Avancés](#frameworks-dargumentation-avancés)
+  - [Planification et Raisonnement](#planification-et-raisonnement)
+  - [Ingénierie des Connaissances](#ingénierie-des-connaissances)
+  - [Maintenance de la Vérité](#maintenance-de-la-vérité)
+  - [Smart Contracts](#smart-contracts)
+  - [Développements Transversaux](#développements-transversaux)
+  - [Conduite de Projet et Orchestration](#conduite-de-projet-et-orchestration)
+  - [Gestion des Sources](#gestion-des-sources)
+  - [Moteur Agentique](#moteur-agentique)
+  - [Intégration MCP (Model Context Protocol)](#intégration-mcp-model-context-protocol)
+  - [Agents Spécialistes](#agents-spécialistes)
+  - [Indexation Sémantique](#indexation-sémantique)
+  - [Automatisation](#automatisation)
+  - [Développement d'Interfaces Utilisateurs](#développement-dinterfaces-utilisateurs)
+  - [Projets Intégrateurs](#projets-intégrateurs)
+- [Directives de Contribution](#directives-de-contribution)
+  - [Workflow de développement](#workflow-de-développement)
+  - [Standards de codage](#standards-de-codage)
+  - [Documentation](#documentation)
+  - [Processus de revue](#processus-de-revue)
+- [Ressources et Documentation](#ressources-et-documentation)
+
 ## Introduction
 
 Ce projet a pour but de vous permettre d'appliquer concrètement les méthodes et outils vus en cours sur l'intelligence symbolique. Vous serez amenés à résoudre des problèmes réels ou réalistes à l'aide de ces techniques en développant un projet complet, depuis la modélisation jusqu'à la solution opérationnelle.
 
 Cette année, contrairement au cours précédent de programmation par contrainte où vous avez livré des travaux indépendants, vous travaillerez tous de concert sur ce dépôt. Un tronc commun est fourni sous la forme d'une infrastructure d'analyse argumentative multi-agents que vous pourrez explorer à travers les nombreux README du projet.
+
+## Guide de Démarrage Rapide
+
+Ce guide vous permettra de configurer rapidement l'environnement de développement et d'exécuter le projet d'analyse argumentative multi-agents.
+
+### 1. Cloner le dépôt
+
+```bash
+git clone https://github.com/votre-organisation/intelligence-symbolique.git
+cd intelligence-symbolique
+```
+
+### 2. Configurer l'environnement de développement
+
+#### Prérequis
+
+- **Python 3.9+** : Nécessaire pour exécuter le code Python
+- **Java JDK 11+** : Requis pour l'intégration avec Tweety via JPype
+- **Pip** : Gestionnaire de paquets Python
+
+#### Installation de Java
+
+Le projet utilise JPype pour intégrer la bibliothèque Java Tweety. Assurez-vous d'avoir installé Java JDK 11 ou supérieur :
+
+- **Windows** : Téléchargez et installez depuis [Oracle JDK](https://www.oracle.com/java/technologies/downloads/) ou [OpenJDK](https://adoptium.net/)
+- **macOS** : Utilisez Homebrew `brew install --cask temurin` ou téléchargez depuis [Oracle JDK](https://www.oracle.com/java/technologies/downloads/)
+- **Linux** : Utilisez votre gestionnaire de paquets, par exemple `sudo apt install openjdk-17-jdk`
+
+Vérifiez l'installation avec :
+```bash
+java -version
+```
+
+#### Configuration de JAVA_HOME
+
+Le système tentera de détecter automatiquement votre installation Java, mais il est recommandé de définir la variable d'environnement JAVA_HOME :
+
+- **Windows** : Ajoutez une variable d'environnement système `JAVA_HOME` pointant vers votre répertoire JDK (ex: `C:\Program Files\Java\jdk-17`)
+- **macOS/Linux** : Ajoutez à votre `.bashrc` ou `.zshrc` :
+  ```bash
+  export JAVA_HOME=/chemin/vers/votre/jdk
+  ```
+
+### 3. Installer les dépendances Python
+
+Naviguez vers le dossier principal du projet et installez les dépendances :
+
+```bash
+cd argumentiation_analysis
+pip install -r requirements.txt
+```
+
+### 4. Configurer les variables d'environnement
+
+Créez ou modifiez le fichier `.env` dans le dossier `argumentiation_analysis` avec les informations suivantes :
+
+```
+GLOBAL_LLM_SERVICE="OpenAI"
+OPENAI_API_KEY="votre-clé-api-openai"
+OPENAI_CHAT_MODEL_ID="gpt-4o-mini"
+TEXT_CONFIG_PASSPHRASE="votre-phrase-secrète"
+```
+
+Remplacez `votre-clé-api-openai` par votre clé API OpenAI et `votre-phrase-secrète` par une phrase de passe pour le chiffrement des configurations.
+
+### 5. Téléchargement automatique de Tweety
+
+Lors de la première exécution, le système téléchargera automatiquement les JARs Tweety nécessaires dans le dossier `libs`. Vous n'avez pas besoin de les télécharger manuellement.
+
+### 6. Lancer l'application
+
+Plusieurs points d'entrée sont disponibles selon vos besoins :
+
+#### Notebook d'orchestration principal
+
+Pour une expérience interactive avec visualisation des résultats :
+
+```bash
+jupyter notebook main_orchestrator.ipynb
+```
+
+#### Interface utilisateur
+
+Pour lancer l'interface web :
+
+```bash
+python -m ui.app
+```
+
+#### Analyse via script Python
+
+Pour exécuter une analyse complète via script :
+
+```bash
+python run_analysis.py --input votre_texte.txt
+```
+
+### 7. Exemple simple
+
+Voici un exemple minimal pour tester que tout fonctionne correctement :
+
+```python
+from core.jvm_setup import initialize_jvm
+from core.llm_service import LLMService
+from agents.extract.extract_agent import ExtractAgent
+
+# Initialiser la JVM pour Tweety
+initialize_jvm()
+
+# Créer un service LLM
+llm_service = LLMService()
+
+# Créer un agent d'extraction
+extract_agent = ExtractAgent(llm_service)
+
+# Analyser un texte simple
+text = "La Terre est plate car l'horizon semble plat. Cependant, les photos satellites montrent clairement que la Terre est sphérique."
+result = extract_agent.extract_arguments(text)
+
+print("Arguments extraits :")
+for arg in result:
+    print(f"- {arg}")
+```
+
+Enregistrez ce code dans un fichier `test_extraction.py` et exécutez-le avec `python test_extraction.py`.
 
 ## Modalités du projet
 
@@ -262,6 +421,174 @@ Les sujets proposés ci-dessous couvrent différents aspects de l'IA symbolique,
 - **Plateforme de délibération citoyenne** : Créer un espace numérique pour faciliter les délibérations citoyennes sur des sujets complexes, en structurant les échanges selon des principes argumentatifs rigoureux et en favorisant la construction collaborative de consensus.
   - *Technologies clés* : Modération assistée par IA, visualisation d'opinions, mécanismes de vote et de consensus.
   - *Références* : "Democracy in the Digital Age" de Wilhelm, plateformes comme Decidim, Consul, ou vTaiwan.
+
+## Directives de Contribution
+
+Cette section présente les lignes directrices pour contribuer efficacement au projet Intelligence Symbolique. Ces directives sont conçues pour faciliter la collaboration entre les équipes d'étudiants et assurer la qualité et la cohérence du code produit.
+
+### Workflow de développement
+
+#### Fork et clone du dépôt
+
+1. **Fork du dépôt** : Commencez par créer un fork du dépôt principal sur votre compte GitHub personnel ou celui de votre équipe.
+   ```bash
+   # Via l'interface GitHub : cliquez sur le bouton "Fork" en haut à droite du dépôt
+   ```
+
+2. **Clone de votre fork** : Clonez votre fork sur votre machine locale.
+   ```bash
+   git clone https://github.com/votre-nom-utilisateur/intelligence-symbolique.git
+   cd intelligence-symbolique
+   ```
+
+3. **Ajout du dépôt upstream** : Configurez le dépôt original comme source upstream pour pouvoir synchroniser votre fork.
+   ```bash
+   git remote add upstream https://github.com/organisation-principale/intelligence-symbolique.git
+   ```
+
+#### Stratégie de branches
+
+Pour maintenir une organisation claire du développement, suivez cette convention de nommage des branches :
+
+- `feature/nom-sujet` : Pour le développement de nouvelles fonctionnalités (ex: `feature/detection-sophismes`)
+- `fix/description-bug` : Pour la correction de bugs (ex: `fix/extraction-arguments`)
+- `docs/description` : Pour les mises à jour de documentation (ex: `docs/agent-pl`)
+- `refactor/description` : Pour les refactorisations de code (ex: `refactor/orchestration`)
+
+#### Processus de Pull Request
+
+1. **Synchronisation avec upstream** : Avant de commencer à travailler, assurez-vous que votre branche principale est à jour.
+   ```bash
+   git checkout main
+   git pull upstream main
+   git push origin main
+   ```
+
+2. **Création d'une branche de travail** :
+   ```bash
+   git checkout -b feature/votre-fonctionnalite
+   ```
+
+3. **Développement et commits** : Travaillez sur votre fonctionnalité et effectuez des commits réguliers avec des messages clairs.
+   ```bash
+   git add .
+   git commit -m "Description claire et concise des modifications"
+   ```
+
+4. **Push de votre branche** :
+   ```bash
+   git push origin feature/votre-fonctionnalite
+   ```
+
+5. **Création de la Pull Request** : Via l'interface GitHub, créez une Pull Request depuis votre branche vers la branche principale du dépôt upstream.
+   - Utilisez le template de PR s'il existe
+   - Incluez une description détaillée de vos modifications
+   - Référencez les issues concernées avec `#numero-issue`
+   - Assignez des reviewers pertinents (membres de l'équipe enseignante ou autres étudiants)
+
+### Standards de codage
+
+#### Python (PEP 8)
+
+- **Indentation** : Utilisez 4 espaces (pas de tabulations)
+- **Longueur de ligne** : Limitez les lignes à 88 caractères maximum (compatible avec Black)
+- **Imports** : Organisez les imports en trois sections séparées par une ligne vide :
+  1. Bibliothèques standard
+  2. Bibliothèques tierces
+  3. Modules locaux
+- **Nommage** :
+  - `snake_case` pour les variables, fonctions et méthodes
+  - `PascalCase` pour les classes
+  - `UPPER_CASE` pour les constantes
+  - Préfixez les variables "privées" par un underscore (`_variable_privee`)
+
+#### Documentation du code
+
+- **Docstrings** : Utilisez le format Google pour les docstrings Python
+  ```python
+  def fonction_exemple(param1, param2):
+      """Description courte de la fonction.
+      
+      Description plus détaillée si nécessaire.
+      
+      Args:
+          param1 (type): Description du paramètre 1.
+          param2 (type): Description du paramètre 2.
+          
+      Returns:
+          type: Description de la valeur de retour.
+          
+      Raises:
+          ExceptionType: Description des conditions qui déclenchent l'exception.
+      """
+      # Corps de la fonction
+  ```
+
+- **Commentaires** : Ajoutez des commentaires pour expliquer le "pourquoi" plutôt que le "comment"
+
+#### Organisation du code
+
+- **Structure des modules** : Suivez la structure existante du projet
+- **Séparation des préoccupations** : Séparez clairement la logique métier, l'interface utilisateur et l'accès aux données
+- **Tests** : Placez les tests dans un répertoire `tests/` parallèle au code testé
+
+### Documentation
+
+#### Documentation du code
+
+- **Docstrings** : Chaque module, classe et fonction doit être documenté avec des docstrings appropriés
+- **Exemples d'utilisation** : Incluez des exemples d'utilisation dans les docstrings des fonctions principales
+- **Types** : Utilisez les annotations de type Python (type hints) pour améliorer la lisibilité et permettre la vérification statique
+
+#### Documentation des fonctionnalités
+
+- **README par module** : Chaque module ou composant majeur doit avoir son propre README.md expliquant :
+  - Son objectif et ses fonctionnalités
+  - Comment l'utiliser (avec exemples)
+  - Son architecture interne
+  - Les dépendances et prérequis
+
+- **Notebooks explicatifs** : Pour les fonctionnalités complexes, créez des notebooks Jupyter démontrant leur utilisation
+
+#### Mise à jour de la documentation
+
+- Mettez à jour la documentation en même temps que le code
+- Assurez-vous que les exemples et les instructions restent valides après vos modifications
+- Signalez les changements majeurs dans le README principal
+
+### Processus de revue
+
+#### Critères d'acceptation
+
+Pour qu'une contribution soit acceptée, elle doit respecter les critères suivants :
+
+1. **Fonctionnalité** : Le code doit fonctionner comme prévu et répondre aux exigences spécifiées
+2. **Qualité** : Le code doit être propre, lisible et suivre les standards de codage
+3. **Tests** : Des tests appropriés doivent être inclus (unitaires, d'intégration)
+4. **Documentation** : La documentation doit être complète et à jour
+5. **Intégration** : Le code doit s'intégrer harmonieusement avec le reste du projet
+
+#### Processus de revue par les pairs
+
+1. **Revue initiale** : Au moins un membre de l'équipe doit examiner le code avant la soumission
+2. **Revue externe** : Au moins un membre d'une autre équipe doit examiner la Pull Request
+3. **Revue enseignante** : L'équipe enseignante effectuera une revue finale avant l'acceptation
+
+#### Gestion des retours et itérations
+
+1. **Réponse aux commentaires** : Répondez à tous les commentaires de revue, soit en apportant les modifications demandées, soit en expliquant pourquoi vous ne le faites pas
+2. **Itérations** : Effectuez les modifications nécessaires et poussez-les sur la même branche
+3. **Résolution des discussions** : Marquez les discussions comme résolues une fois traitées
+4. **Notification** : Informez les reviewers lorsque vous avez traité tous leurs commentaires
+
+#### Contexte académique
+
+En tant que projet académique, certaines spécificités s'appliquent :
+
+- **Attribution claire** : Identifiez clairement les contributeurs de chaque partie du code
+- **Apprentissage collaboratif** : Les revues de code sont aussi des opportunités d'apprentissage
+- **Évaluation** : La qualité des contributions et des revues fait partie de l'évaluation
+- **Calendrier académique** : Respectez les échéances du cours pour vos contributions
 
 ## Ressources et Documentation
 
