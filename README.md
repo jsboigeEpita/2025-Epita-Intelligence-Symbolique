@@ -40,6 +40,20 @@ Ce projet a pour but de vous permettre d'appliquer concrètement les méthodes e
 
 Cette année, contrairement au cours précédent de programmation par contrainte où vous avez livré des travaux indépendants, vous travaillerez tous de concert sur ce dépôt. Un tronc commun est fourni sous la forme d'une infrastructure d'analyse argumentative multi-agents que vous pourrez explorer à travers les nombreux README du projet.
 
+### Structure du Projet
+
+Le projet est organisé en plusieurs modules principaux :
+
+- **[`argumentiation_analysis/`](./argumentiation_analysis/README.md)** : Dossier principal contenant l'infrastructure d'analyse argumentative multi-agents.
+  - **[`agents/`](./argumentiation_analysis/agents/README.md)** : Agents spécialisés pour l'analyse (PM, Informal, PL, Extract).
+  - **[`core/`](./argumentiation_analysis/core/README.md)** : Composants fondamentaux partagés (État, LLM, JVM).
+  - **[`orchestration/`](./argumentiation_analysis/orchestration/README.md)** : Logique d'exécution de la conversation.
+  - **[`ui/`](./argumentiation_analysis/ui/README.md)** : Interface utilisateur pour la configuration des analyses.
+  - **[`utils/`](./argumentiation_analysis/utils/README.md)** : Utilitaires généraux et outils de réparation d'extraits.
+  - **[`tests/`](./argumentiation_analysis/tests/README.md)** : Tests unitaires et d'intégration.
+
+Chaque module dispose de son propre README détaillé expliquant son fonctionnement et son utilisation.
+
 ## Guide de Démarrage Rapide
 
 Ce guide vous permettra de configurer rapidement l'environnement de développement et d'exécuter le projet d'analyse argumentative multi-agents.
@@ -213,6 +227,10 @@ Pour faciliter la réalisation du projet, vous aurez accès à plusieurs ressour
 
 Le projet se concentre sur l'intégration de l'IA générative agentique orchestrée avec des techniques d'IA symbolique, notamment pour l'analyse argumentative. Cette approche hybride permet de combiner la flexibilité et la puissance des LLMs avec la rigueur et la formalisation des méthodes symboliques.
 
+Cette combinaison s'inscrit dans la tendance actuelle de l'IA neurosymbolique, comme décrite dans "Neurosymbolic AI - The 3rd Wave" (2020), qui vise à intégrer les capacités d'apprentissage des réseaux neuronaux avec les capacités de raisonnement des systèmes symboliques. Cette approche permet de bénéficier des avantages des deux paradigmes : l'adaptabilité et la gestion de l'incertitude des approches connexionnistes, et l'explicabilité et la rigueur logique des approches symboliques.
+
+Les travaux récents comme "Learning Explanatory Rules from Noisy Data" (Evans, 2018) et "DeepProbLog: Neural Probabilistic Logic Programming" (2018) montrent comment les techniques d'apprentissage profond peuvent être combinées avec la programmation logique pour résoudre des problèmes complexes nécessitant à la fois des capacités de perception et de raisonnement.
+
 ## Sujets de Projets
 
 Les sujets proposés ci-dessous couvrent différents aspects de l'IA symbolique, avec un focus particulier sur l'argumentation et son intégration par l'IA générative agentique orchestrée. Chaque groupe devra choisir un sujet et contribuer à l'amélioration du projet global.
@@ -222,38 +240,48 @@ Les sujets proposés ci-dessous couvrent différents aspects de l'IA symbolique,
 #### Logiques Formelles et Argumentation
 
 - **Intégration des logiques propositionnelles avancées** : Améliorer l'agent PL existant pour exploiter davantage les fonctionnalités du module `logics.pl` de Tweety, notamment les solveurs SAT (SAT4J interne ou solveurs externes comme Lingeling, CaDiCaL), la conversion DIMACS, et les opérations avancées sur les formules (DNF, CNF, simplification). Implémenter des requêtes plus sophistiquées comme la vérification de satisfiabilité, la recherche de modèles, et l'analyse d'implications logiques. Le notebook Tweety démontre comment manipuler des formules propositionnelles, créer des mondes possibles, et utiliser différents raisonneurs pour vérifier la satisfiabilité et trouver des modèles.
+  - *Références* : "SAT_SMT_by_example.pdf" (2023), "Artificial Intelligence: A Modern Approach" (Chapitres sur la logique propositionnelle).
 
 - **Logique du premier ordre (FOL)** : Développer un nouvel agent utilisant le module `logics.fol` de Tweety pour analyser des arguments plus complexes impliquant des quantificateurs (`∀`, `∃`) et des prédicats. Cet agent pourrait tenter de traduire des arguments exprimés en langage naturel (avec quantificateurs) en formules FOL, définir des signatures logiques (types/sorts, constantes, prédicats, fonctions), et utiliser les raisonneurs intégrés (`SimpleFolReasoner`, `EFOLReasoner`). Un défi majeur est la traduction robuste du langage naturel vers FOL. L'intégration d'un prouveur externe comme EProver (via `EFOLReasoner`) permettrait de vérifier des implications logiques plus complexes. Le notebook Tweety montre comment définir une signature FOL avec des sorts (types), des constantes, des prédicats, et comment effectuer des requêtes sur une base de connaissances FOL. *Application* : Analyser des arguments généraux portant sur des propriétés d'objets ou des relations entre eux (ex: "Tous les hommes sont mortels", "Certains arguments sont fallacieux").
-  - *Références* : "Artificial Intelligence: A Modern Approach" de Russell & Norvig (Chapitres sur FOL), Documentation Tweety `logics.fol`.
+  - *Références* : "Artificial Intelligence: A Modern Approach" de Russell & Norvig (Chapitres sur FOL), "Automated Theorem Proving" (2002), Documentation Tweety `logics.fol`.
 
 - **Logique modale** : Créer un agent spécialisé utilisant le module `logics.ml` de Tweety pour raisonner sur des modalités comme la nécessité (`[]`), la possibilité (`<>`), les croyances ou les connaissances. Cet agent pourrait analyser des arguments impliquant des notions de possibilité, nécessité, obligation ou permission, en utilisant SimpleMlReasoner ou SPASSMlReasoner (avec intégration de SPASS). Le notebook Tweety illustre comment parser des formules modales et effectuer des raisonnements avec différents prouveurs, y compris l'intégration avec le prouveur externe SPASS. Les applications incluent l'analyse d'arguments déontiques, épistémiques ou temporels.
+  - *Références* : "Handbook of Modal Logic", "Artificial Intelligence: A Modern Approach" (Sections sur la logique modale).
 
 - **Logique de description (DL)** : Développer un agent utilisant le module `logics.dl` de Tweety pour modéliser des connaissances structurées sous forme de concepts, rôles et individus. Cet agent pourrait construire des TBox (axiomes terminologiques) et ABox (assertions sur les individus), et raisonner sur la subsomption, l'instanciation et la consistance. Le notebook Tweety montre comment définir des concepts atomiques, des rôles, des individus, et comment construire des axiomes d'équivalence et des assertions pour créer une base de connaissances DL complète. Applications possibles pour la modélisation d'ontologies argumentatives.
+  - *Références* : "The Description Logic Handbook - Theory, Implementation and Applications" (2003), "What is an Ontology" (2009), "Foundations of Semantic Web Technologies" (2008).
 
 - **Formules booléennes quantifiées (QBF)** : Explorer l'utilisation du module `logics.qbf` de Tweety pour modéliser et résoudre des problèmes PSPACE-complets. Cet agent pourrait traiter des problèmes de planification conditionnelle, de jeux à deux joueurs, ou de vérification formelle qui dépassent la portée de SAT. Le notebook Tweety présente comment créer des formules QBF avec des quantificateurs existentiels sur des variables propositionnelles et comment les convertir au format QDIMACS standard.
+  - *Références* : "SAT_SMT_by_example.pdf" (2023), "Handbook of Satisfiability".
 
 - **Logique conditionnelle (CL)** : Implémenter un agent utilisant le module `logics.cl` de Tweety pour raisonner sur des conditionnels de la forme "Si A est vrai, alors B est typiquement vrai". Le notebook Tweety démontre comment créer une base conditionnelle avec des conditionnels comme (f|b), (b|p), (¬f|p), et comment calculer une fonction de classement (ranking) pour évaluer ces conditionnels. Applications pour le raisonnement non-monotone et la modélisation des défauts dans l'argumentation.
+  - *Références* : "Reasoning-with-probabilistic-and-deterministic-graphical-models-exact-algorithms" (2013).
 
 - **Cadres d'argumentation abstraits (Dung)** : Développer un agent utilisant le module `arg.dung` de Tweety pour modéliser et analyser des structures argumentatives abstraites (AAF). Cet agent devrait permettre de construire des graphes d'arguments et d'attaques (`DungTheory`), et surtout de calculer l'acceptabilité des arguments selon différentes sémantiques (admissible, complète, préférée, stable, fondée, idéale, semi-stable, CF2...). Il est crucial de comprendre la signification de chaque sémantique (ex: stable = point de vue cohérent et maximal, fondée = sceptique et bien fondée). Le notebook Tweety illustre en détail comment construire des cadres d'argumentation, ajouter des arguments et des attaques, et calculer les extensions selon différentes sémantiques. Il montre également comment générer des cadres aléatoires et traiter des cas particuliers comme les cycles. L'agent pourrait visualiser ces graphes et les extensions résultantes. *Extensions possibles* : Intégrer des préférences (PAF) ou des valeurs (VAF), bien que Tweety ait des modules dédiés pour certains frameworks étendus.
-  - *Références* : Article fondateur de P. M. Dung (1995) "On the acceptability of arguments...", Survey de Baroni, Caminada, Giacomin (2011) "An introduction to argumentation semantics". Documentation Tweety `arg.dung`.
+  - *Références* : Article fondateur de P. M. Dung (1995) "On the acceptability of arguments...", Survey de Baroni, Caminada, Giacomin (2011) "An introduction to argumentation semantics", "Implementing KR Approaches with Tweety" (2018).
 
 - **Argumentation structurée (ASPIC+)** : Créer un agent utilisant le module `arg.aspic` de Tweety pour construire des arguments à partir de règles strictes et défaisables. Cet agent pourrait modéliser des bases de connaissances avec axiomes et règles, gérer les préférences entre règles, et analyser les attaques (rebutting, undercutting, undermining). Le notebook Tweety montre comment créer une théorie ASPIC+ avec des règles défaisables (=>), des axiomes, et comment la convertir en un cadre de Dung équivalent pour appliquer les sémantiques standard.
+  - *Références* : "Implementing KR Approaches with Tweety" (2018), "Argumentation in Artificial Intelligence" (Chapitres sur ASPIC+).
 
 - **Programmation logique défaisable (DeLP)** : Implémenter un agent utilisant le module `arg.delp` de Tweety pour raisonner avec des règles strictes et défaisables dans un cadre de programmation logique. Le notebook Tweety démontre comment charger un programme DeLP à partir d'un fichier (comme birds2.txt) et effectuer des requêtes sur ce programme, en utilisant la spécificité généralisée comme critère de comparaison. Applications pour la résolution de conflits et le raisonnement dialectique.
+  - *Références* : "Implementing KR Approaches with Tweety" (2018), "Defeasible Logic Programming: An Argumentative Approach".
 
 - **Argumentation basée sur les hypothèses (ABA)** : Développer un agent utilisant le module `arg.aba` de Tweety pour modéliser l'argumentation où certains littéraux sont désignés comme hypothèses. Cet agent pourrait analyser les attaques entre arguments dérivés de ces hypothèses et déterminer leur acceptabilité. Le notebook Tweety illustre comment charger une théorie ABA à partir de fichiers (comme example2.aba ou smp_fol.aba) et effectuer des requêtes avec différents raisonneurs (FlatAbaReasoner, PreferredReasoner), en utilisant soit la logique propositionnelle soit la logique du premier ordre comme langage sous-jacent.
+  - *Références* : "Implementing KR Approaches with Tweety" (2018), "Assumption-Based Argumentation".
 
 - **Argumentation déductive** : Créer un agent utilisant le module `arg.deductive` de Tweety pour construire des arguments comme des paires (Support, Conclusion) où le support est un sous-ensemble minimal et consistant de la base de connaissances qui implique logiquement la conclusion. Le notebook Tweety montre comment créer une base de connaissances déductive, effectuer des requêtes, et utiliser différents catégoriseurs (ClassicalCategorizer) et accumulateurs (SimpleAccumulator) pour évaluer les arguments.
+  - *Références* : "Implementing KR Approaches with Tweety" (2018), "Logical Models of Argument".
 
 - **Answer Set Programming (ASP)** : Développer un agent utilisant le module `lp.asp` de Tweety pour modéliser et résoudre des problèmes combinatoires complexes. Cet agent pourrait intégrer Clingo pour le raisonnement ASP et l'appliquer à des problèmes d'argumentation. Le notebook Tweety démontre comment construire des programmes ASP avec des règles, des faits et des contraintes, et comment utiliser ClingoSolver pour calculer les answer sets et effectuer du grounding.
+  - *Références* : "Answer Set Programming: A Primer", "Handbook of Knowledge Representation" (Chapitre sur ASP).
 
 #### Frameworks d'Argumentation Avancés
 
 - **Abstract Dialectical Frameworks (ADF)** : Implémenter un agent utilisant le module `arg.adf` de Tweety. Les ADF généralisent les AAF de Dung en associant à chaque argument une condition d'acceptation (une formule propositionnelle sur l'état des autres arguments), permettant de modéliser des dépendances plus complexes que la simple attaque (ex: support, attaque conjointe). L'agent devrait permettre de définir ces conditions et de calculer les sémantiques ADF (admissible, complète, préférée, stable, fondée, modèle à 2 valeurs). Le notebook Tweety explique que le raisonnement ADF nécessite des solveurs SAT incrémentaux natifs (comme NativeMinisatSolver) et comment configurer correctement l'environnement pour les utiliser. *Application* : Modéliser des scénarios argumentatifs où l'acceptation d'un argument dépend de combinaisons spécifiques d'autres arguments.
-  - *Références* : Article fondateur de Brewka et al. (2013) "Abstract Dialectical Frameworks", Documentation Tweety `arg.adf`.
+  - *Références* : Article fondateur de Brewka et al. (2013) "Abstract Dialectical Frameworks", "Implementing KR Approaches with Tweety" (2018), Documentation Tweety `arg.adf`.
 
 - **Frameworks bipolaires (BAF)** : Développer un agent utilisant le module `arg.bipolar` de Tweety pour modéliser des cadres d'argumentation incluant à la fois des relations d'attaque et de support entre arguments. Comprendre les différentes interprétations du support (déductif, nécessaire, évidentiel...) et les sémantiques associées proposées dans la littérature et implémentées dans Tweety. Le notebook Tweety présente plusieurs variantes de frameworks bipolaires : EAF (support simple), PEAF (support probabiliste), Evidential AF (avec arguments prima facie) et Necessity AF (où tous les arguments supportants sont requis). Il montre comment construire ces frameworks et calculer leurs extensions selon différentes sémantiques. L'agent pourrait visualiser ces graphes bipolaires et comparer les résultats des différentes sémantiques.
-  - *Références* : Travaux de Cayrol et Lagasquie-Schiex sur les BAF, Survey de Cohen et al. (2014) sur l'argumentation bipolaire. Documentation Tweety `arg.bipolar`.
+  - *Références* : Travaux de Cayrol et Lagasquie-Schiex sur les BAF, Survey de Cohen et al. (2014) sur l'argumentation bipolaire, "Implementing KR Approaches with Tweety" (2018), Documentation Tweety `arg.bipolar`.
 
 - **Frameworks pondérés (WAF)** : Créer un agent utilisant le module `arg.weighted` de Tweety pour modéliser des cadres où les attaques ont des poids/forces. Cet agent pourrait utiliser différents semi-anneaux (WeightedSemiring, FuzzySemiring, ProbabilisticSemiring) et raisonneurs pondérés. Le notebook Tweety montre comment créer un WAF avec des attaques pondérées numériquement, et comment utiliser différents raisonneurs pondérés (SimpleWeightedConflictFreeReasoner, SimpleWeightedAdmissibleReasoner, etc.) avec des seuils alpha et gamma pour déterminer quand un argument est "suffisamment défendu" ou quand une attaque est "suffisamment forte".
 
@@ -269,39 +297,47 @@ Les sujets proposés ci-dessous couvrent différents aspects de l'IA symbolique,
 
 #### Planification et Raisonnement
 
-- **Intégration d'un planificateur symbolique** : Développer un agent capable de générer des plans d'action basés sur des objectifs argumentatifs, en explorant le module `action` de Tweety pour la modélisation des actions et la planification.
+- **Intégration d'un planificateur symbolique** : Développer un agent capable de générer des plans d'action basés sur des objectifs argumentatifs, en explorant le module `action` de Tweety pour la modélisation des actions et la planification. Ce travail pourrait s'appuyer sur les techniques de planification automatique décrites dans "Automated planning" (2010) et "Automated planning and acting - book" (2016), en les adaptant spécifiquement au contexte de l'argumentation. L'agent pourrait générer des plans pour atteindre des objectifs comme "faire accepter un argument spécifique" ou "réfuter un ensemble d'arguments adverses".
+  - *Références* : "Automated planning" (2010), "Automated planning and acting - book" (2016), "Integrated Task and motion planning" (2020).
 
-- **Logiques sociales et planification** : Explorer l'intégration du module `arg.social` de Tweety avec des techniques de planification pour modéliser des interactions argumentatives multi-agents, en utilisant la sémantique ISS (Iterated Schema Semantics) pour calculer des scores d'acceptabilité évolutifs.
+- **Logiques sociales et planification** : Explorer l'intégration du module `arg.social` de Tweety avec des techniques de planification pour modéliser des interactions argumentatives multi-agents, en utilisant la sémantique ISS (Iterated Schema Semantics) pour calculer des scores d'acceptabilité évolutifs. Cette approche permettrait de simuler l'évolution d'un débat ou d'une négociation au fil du temps, en tenant compte des stratégies des différents participants.
+  - *Références* : "Multi Agent Systems" (2010), "A review of cooperative multi-agent deep reinforcement learning" (2021).
 
 #### Ingénierie des Connaissances
 
 - **Intégration d'ontologies AIF.owl** : Développer un moteur sémantique basé sur l'ontologie AIF (Argument Interchange Format) en OWL. L'objectif est de représenter la structure fine des arguments extraits (prémisses, conclusion, schémas d'inférence, relations d'attaque/support) en utilisant les classes AIF (I-Nodes, RA-Nodes, CA-Nodes). Utiliser le module `logics.dl` de Tweety ou une bibliothèque OWL externe (comme Owlready2) pour manipuler l'ontologie, vérifier sa consistance, et potentiellement inférer de nouvelles relations. *Défi* : Mapper de manière fiable les arguments extraits (souvent informels) vers la structure formelle AIF.
-  - *Références* : Spécification AIF (Rahwan, Reed et al.), Documentation AIFdb, "Argumentation Mining" de Stede & Schneider (Chapitre sur la représentation).
+  - *Références* : Spécification AIF (Rahwan, Reed et al.), Documentation AIFdb, "Argumentation Mining" de Stede & Schneider (Chapitre sur la représentation), "What is an Ontology" (2009), "Foundations of Semantic Web Technologies" (2008).
 
 - **Classification des arguments fallacieux** : Corriger, compléter et intégrer l'ontologie des sophismes (inspirée du projet Argumentum ou autre source). L'objectif est de disposer d'une taxonomie formelle des types de sophismes. Utiliser cette ontologie pour guider l'agent de détection de sophismes et pour structurer les résultats de l'analyse. Exploiter les capacités de modélisation ontologique (ex: `logics.dl` de Tweety) pour définir les propriétés de chaque sophisme et les relations entre eux. *Ressources nécessaires* : Accès à l'ontologie existante et à sa documentation si elle existe.
-  - *Références* : "Logically Fallacious" de Bo Bennett, Taxonomie des sophismes sur Wikipedia, Projet Argumentum (si accessible).
+  - *Références* : "Logically Fallacious" de Bo Bennett, Taxonomie des sophismes sur Wikipedia, Projet Argumentum (si accessible), "Ontology-based systems engineering - a state-of-the-art review" (2019).
 
-- **Knowledge Graph argumentatif** : Remplacer la structure JSON actuelle de l'état partagé par un graphe de connaissances plus expressif et interrogeable, en s'inspirant des structures de graphe utilisées dans les différents frameworks d'argumentation de Tweety.
+- **Knowledge Graph argumentatif** : Remplacer la structure JSON actuelle de l'état partagé par un graphe de connaissances plus expressif et interrogeable, en s'inspirant des structures de graphe utilisées dans les différents frameworks d'argumentation de Tweety. Cette approche permettrait une représentation plus riche des relations entre arguments et faciliterait les requêtes complexes sur la structure argumentative.
+  - *Références* : "Knowledge graphs - 3447772.pdf" (2021), "Making sense of sensory input" (2019).
 
 #### Maintenance de la Vérité
 
 - **Intégration des modules de maintenance de la vérité** : Résoudre les problèmes d'import potentiels des modules `beliefdynamics` de Tweety et les intégrer au système. Ces modules sont cruciaux pour gérer l'évolution des connaissances et la résolution des conflits. Explorer les opérateurs de révision de croyances (pour intégrer de nouvelles informations en préservant la cohérence, ex: `LeviMultipleBaseRevisionOperator`), de contraction (pour retirer une croyance, ex: `KernelContractionOperator`), et d'update. Le notebook Tweety souligne l'importance de configurer correctement l'environnement Java et les chemins des JARs pour éviter les problèmes d'import avec ces modules. *Application* : Mettre à jour l'état partagé du système lorsque de nouvelles analyses d'agents arrivent, en gérant les contradictions potentielles. *Ressources nécessaires* : Informations sur les problèmes d'import spécifiques rencontrés.
-  - *Références* : Théorie AGM (Alchourrón, Gärdenfors, Makinson), Travaux de Katsuno & Mendelzon, Documentation Tweety `beliefdynamics`.
+  - *Références* : Théorie AGM (Alchourrón, Gärdenfors, Makinson), Travaux de Katsuno & Mendelzon, "Reasoning-with-probabilistic-and-deterministic-graphical-models-exact-algorithms" (2013), Documentation Tweety `beliefdynamics`.
 
-- **Révision de croyances multi-agents** : Développer un agent utilisant le module `beliefdynamics.mas` de Tweety pour modéliser la révision de croyances dans un contexte multi-agents, où chaque information est associée à un agent source et où un ordre de crédibilité existe entre les agents. Implémenter différents opérateurs de révision: CrMasRevisionWrapper (priorisé), CrMasSimpleRevisionOperator (non-priorisé), CrMasArgumentativeRevisionOperator (basé sur l'argumentation).
+- **Révision de croyances multi-agents** : Développer un agent utilisant le module `beliefdynamics.mas` de Tweety pour modéliser la révision de croyances dans un contexte multi-agents, où chaque information est associée à un agent source et où un ordre de crédibilité existe entre les agents. Implémenter différents opérateurs de révision: CrMasRevisionWrapper (priorisé), CrMasSimpleRevisionOperator (non-priorisé), CrMasArgumentativeRevisionOperator (basé sur l'argumentation). Cette approche est particulièrement pertinente dans un contexte d'analyse argumentative où différents agents spécialisés peuvent avoir des niveaux de confiance variables selon leur domaine d'expertise.
+  - *Références* : "Multi Agent Systems" (2010), "A review of cooperative multi-agent deep reinforcement learning" (2021).
 
 - **Mesures d'incohérence** : Intégrer les mesures d'incohérence de Tweety (`logics.pl.analysis`) pour quantifier le degré d'incohérence d'un ensemble d'informations (ex: les conclusions des différents agents sur un même texte). Comprendre les différentes approches (basées sur les MUS, les modèles partiels, etc.) et leur signification (ex: `ContensionInconsistencyMeasure`, `DSumInconsistencyMeasure`). *Application* : Utiliser ces mesures pour évaluer la fiabilité d'une analyse, déclencher des processus de résolution de conflits, ou guider la révision de croyances.
-  - *Références* : Survey de Hunter et Konieczny sur les mesures d'incohérence, Documentation Tweety `logics.pl.analysis`.
+  - *Références* : Survey de Hunter et Konieczny sur les mesures d'incohérence, "Reasoning-with-probabilistic-and-deterministic-graphical-models-exact-algorithms" (2013), Documentation Tweety `logics.pl.analysis`.
 
-- **Énumération de MUS (Minimal Unsatisfiable Subsets)** : Implémenter un agent capable d'identifier les sous-ensembles minimaux inconsistants d'une base de connaissances, en utilisant NaiveMusEnumerator ou MarcoMusEnumerator (avec intégration de MARCO).
+- **Énumération de MUS (Minimal Unsatisfiable Subsets)** : Implémenter un agent capable d'identifier les sous-ensembles minimaux inconsistants d'une base de connaissances, en utilisant NaiveMusEnumerator ou MarcoMusEnumerator (avec intégration de MARCO). Cette fonctionnalité est essentielle pour diagnostiquer précisément les sources d'incohérence dans une base de connaissances argumentative complexe.
+  - *Références* : "SAT_SMT_by_example.pdf" (2023), "Handbook of Satisfiability".
 
-- **MaxSAT pour la résolution d'incohérences** : Développer un agent utilisant les capacités MaxSAT de Tweety (via OpenWboSolver) pour trouver des assignations qui satisfont toutes les clauses "dures" et minimisent le coût des clauses "molles" violées, permettant ainsi de résoudre des incohérences de manière optimale.
+- **MaxSAT pour la résolution d'incohérences** : Développer un agent utilisant les capacités MaxSAT de Tweety (via OpenWboSolver) pour trouver des assignations qui satisfont toutes les clauses "dures" et minimisent le coût des clauses "molles" violées, permettant ainsi de résoudre des incohérences de manière optimale. Cette approche permet de préserver au maximum l'information tout en restaurant la cohérence.
+  - *Références* : "SAT_SMT_by_example.pdf" (2023), "Constraint Integer Programming" (2011).
 
 #### Smart Contracts
 
-- **Formalisation de contrats argumentatifs** : Explorer l'utilisation de smart contracts pour formaliser et exécuter des protocoles d'argumentation, en s'appuyant sur les différents formalismes d'argumentation disponibles dans Tweety.
+- **Formalisation de contrats argumentatifs** : Explorer l'utilisation de smart contracts pour formaliser et exécuter des protocoles d'argumentation, en s'appuyant sur les différents formalismes d'argumentation disponibles dans Tweety. Cette approche permettrait d'automatiser l'exécution de débats structurés ou de processus de résolution de conflits selon des règles prédéfinies et vérifiables.
+  - *Références* : "Bitcoin and Beyond - Cryptocurrencies, blockchain and global governance" (2018), "Survey on blockchain based smart contracts - Applications, opportunities and challenges" (2021).
 
-- **Vérification formelle d'arguments** : Développer des méthodes de vérification formelle pour garantir la validité des arguments dans un contexte contractuel, en utilisant potentiellement les capacités QBF ou FOL de Tweety.
+- **Vérification formelle d'arguments** : Développer des méthodes de vérification formelle pour garantir la validité des arguments dans un contexte contractuel, en utilisant potentiellement les capacités QBF ou FOL de Tweety. L'objectif est d'assurer que les arguments utilisés dans un contrat respectent certaines propriétés formelles (cohérence, non-circularité, etc.) avant leur exécution.
+  - *Références* : "The Lean theorem prover" (2015), "The Lean 4 Theorem Prover and Programming Language" (2021), "SAT_SMT_by_example.pdf" (2023).
 
 ### Développements Transversaux
 
@@ -600,3 +636,40 @@ Pour vous aider dans la réalisation de votre projet, vous trouverez dans ce dé
 - Une documentation sur l'architecture du système
 
 N'hésitez pas à explorer les différents répertoires du projet pour mieux comprendre son fonctionnement et identifier les opportunités d'amélioration.
+
+## Fichiers Récemment Ajoutés
+
+Voici les fichiers récemment ajoutés au projet qui méritent une attention particulière :
+
+### Optimisation de l'Agent Informel
+
+- **[`agents/utils/informal_optimization/`](./argumentiation_analysis/agents/utils/informal_optimization/README.md)** : Outils pour l'optimisation de l'agent d'analyse informelle.
+  - **[`analyze_taxonomy_usage.py`](./argumentiation_analysis/agents/utils/informal_optimization/analyze_taxonomy_usage.py)** : Analyse l'utilisation de la taxonomie des sophismes.
+  - **[`improve_informal_agent.py`](./argumentiation_analysis/agents/utils/informal_optimization/improve_informal_agent.py)** : Améliore les performances de l'agent informel.
+  - **[`optimize_informal_agent.py`](./argumentiation_analysis/agents/utils/informal_optimization/optimize_informal_agent.py)** : Optimise les prompts et définitions de l'agent informel.
+  - **[`taxonomy_analysis/`](./argumentiation_analysis/agents/utils/informal_optimization/taxonomy_analysis/)** : Visualisations et analyses de la taxonomie des sophismes.
+
+### Tests et Orchestration à Grande Échelle
+
+- **[`agents/test_orchestration_scale.py`](./argumentiation_analysis/agents/test_orchestration_scale.py)** : Test d'orchestration à grande échelle.
+- **[`agents/test_informal_agent.py`](./argumentiation_analysis/agents/test_informal_agent.py)** : Test spécifique de l'agent d'analyse informelle.
+- **[`agents/rapport_test_orchestration_echelle.md`](./argumentiation_analysis/agents/rapport_test_orchestration_echelle.md)** : Rapport sur les tests d'orchestration à grande échelle.
+
+### Outils de Vérification et Réparation
+
+- **[`utils/run_verify_extracts.py`](./argumentiation_analysis/utils/run_verify_extracts.py)** : Script pour vérifier la validité des extraits.
+- **[`utils/extract_repair/verify_extracts.py`](./argumentiation_analysis/utils/extract_repair/verify_extracts.py)** : Vérifie la validité des extraits de texte.
+- **[`utils/extract_repair/verify_extracts_with_llm.py`](./argumentiation_analysis/utils/extract_repair/verify_extracts_with_llm.py)** : Utilise un LLM pour vérifier les extraits.
+- **[`utils/extract_repair/fix_missing_first_letter.py`](./argumentiation_analysis/utils/extract_repair/fix_missing_first_letter.py)** : Corrige le problème de première lettre manquante dans les extraits.
+
+### Scripts d'Exécution
+
+- **[`run_analysis.py`](./argumentiation_analysis/run_analysis.py)** : Script principal pour lancer l'analyse argumentative.
+- **[`run_extract_editor.py`](./argumentiation_analysis/run_extract_editor.py)** : Lance l'éditeur de marqueurs d'extraits.
+- **[`run_extract_repair.py`](./argumentiation_analysis/run_extract_repair.py)** : Lance la réparation des bornes défectueuses.
+- **[`run_orchestration.py`](./argumentiation_analysis/run_orchestration.py)** : Lance l'orchestration des agents.
+
+### Rapports et Documentation
+
+- **[`rapport_verification.html`](./argumentiation_analysis/rapport_verification.html)** : Rapport de vérification des extraits.
+- **[`repair_report.html`](./argumentiation_analysis/repair_report.html)** : Rapport de réparation des extraits.
