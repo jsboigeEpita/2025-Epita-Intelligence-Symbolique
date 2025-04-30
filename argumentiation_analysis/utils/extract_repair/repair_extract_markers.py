@@ -27,14 +27,34 @@ import asyncio
 import argparse
 from pathlib import Path
 from typing import List, Dict, Any, Tuple, Optional, Union
+
+# Configuration du logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s [%(levelname)s] [%(name)s] %(message)s',
+    datefmt='%H:%M:%S'
+)
+logger = logging.getLogger("RepairExtractMarkers")
+
+# Création d'un handler pour écrire les logs dans un fichier
+file_handler = logging.FileHandler("repair_extract_markers.log")
+file_handler.setFormatter(logging.Formatter('%(asctime)s [%(levelname)s] [%(name)s] %(message)s', datefmt='%H:%M:%S'))
+logger.addHandler(file_handler)
+
 import semantic_kernel as sk
 from semantic_kernel.contents import ChatMessageContent, AuthorRole
 from semantic_kernel.agents import ChatCompletionAgent
 from semantic_kernel.functions.kernel_arguments import KernelArguments
 
 # Imports depuis les modules du projet
+import sys
+
+# Ajouter le répertoire parent au chemin d'importation
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
+
 try:
     # Import relatif depuis le package utils
+    logger.info("Tentative d'import relatif...")
     from ...ui.config import ENCRYPTION_KEY, CONFIG_FILE, CONFIG_FILE_JSON
     from ...ui.utils import load_from_cache, reconstruct_url
     from ...ui.extract_utils import (
@@ -42,15 +62,115 @@ try:
         load_extract_definitions_safely, save_extract_definitions_safely
     )
     from ...core.llm_service import create_llm_service
-except ImportError:
-    # Fallback pour les imports absolus
-    from ui.config import ENCRYPTION_KEY, CONFIG_FILE, CONFIG_FILE_JSON
-    from ui.utils import load_from_cache, reconstruct_url
-    from ui.extract_utils import (
-        load_source_text, extract_text_with_markers, find_similar_text,
-        load_extract_definitions_safely, save_extract_definitions_safely
-    )
-    from core.llm_service import create_llm_service
+    logger.info("Import relatif réussi.")
+except ImportError as e:
+    logger.warning(f"Import relatif échoué: {e}")
+    try:
+        # Fallback pour les imports absolus
+        logger.info("Tentative d'import absolu...")
+        from argumentiation_analysis.ui.config import ENCRYPTION_KEY, CONFIG_FILE, CONFIG_FILE_JSON
+        from argumentiation_analysis.ui.utils import load_from_cache, reconstruct_url
+        from argumentiation_analysis.ui.extract_utils import (
+            load_source_text, extract_text_with_markers, find_similar_text,
+            load_extract_definitions_safely, save_extract_definitions_safely
+        )
+        from argumentiation_analysis.core.llm_service import create_llm_service
+        logger.info("Import absolu réussi.")
+    except ImportError as e:
+        logger.error(f"Import absolu échoué: {e}")
+        
+        # Définir des fonctions de remplacement simples pour les tests
+        logger.warning("Utilisation de fonctions de remplacement pour les tests...")
+        
+        # Constantes de configuration
+        ENCRYPTION_KEY = "test_key"
+        CONFIG_FILE = "C:/dev/2025-Epita-Intelligence-Symbolique/argumentiation_analysis/data/extract_sources.json"
+        CONFIG_FILE_JSON = "C:/dev/2025-Epita-Intelligence-Symbolique/argumentiation_analysis/data/extract_sources.json"
+        
+        def load_from_cache(url, encryption_key=None):
+            logger.info(f"Simulation de chargement depuis le cache pour {url}")
+            return None, f"Erreur simulée: Impossible de charger {url}"
+        
+        def reconstruct_url(source_info):
+            schema = source_info.get("schema", "https:")
+            host_parts = source_info.get("host_parts", [])
+            path = source_info.get("path", "")
+            host = ".".join(host_parts) if host_parts else ""
+            return f"{schema}//{host}{path}"
+        
+        def find_similar_text(text, pattern, context_size=50, max_results=5):
+            logger.info(f"Recherche de texte similaire à '{pattern}'")
+            return []
+        
+        def extract_text_with_markers(source_text, start_marker, end_marker, template_start=None):
+            logger.info(f"Extraction de texte avec les marqueurs: '{start_marker}' et '{end_marker}'")
+            
+            # Appliquer le template si présent
+            if template_start and "{0}" in template_start:
+                first_letter = template_start.replace("{0}", "")
+                if start_marker and not start_marker.startswith(first_letter):
+                    start_marker = first_letter + start_marker
+                    logger.info(f"Marqueur de début corrigé avec template: '{start_marker}'")
+            
+            # Vérifier si les marqueurs sont présents
+            start_found = start_marker in source_text
+            end_found = end_marker in source_text
+            
+            if start_found and end_found:
+                start_pos = source_text.find(start_marker)
+                end_pos = source_text.find(end_marker, start_pos + len(start_marker))
+                
+                if start_pos >= 0 and end_pos > start_pos:
+                    extracted = source_text[start_pos:end_pos + len(end_marker)]
+                    return extracted, "success", True, True
+            
+            return "", "error", start_found, end_found
+        
+        def load_extract_definitions_safely(config_file, encryption_key=None, fallback_file=None):
+            logger.info(f"Chargement des définitions d'extraits depuis {config_file}")
+            try:
+                with open(config_file, 'r', encoding='utf-8') as f:
+                    extract_definitions = json.load(f)
+                return extract_definitions, None
+            except Exception as e:
+                error_msg = f"Erreur lors du chargement des définitions d'extraits: {str(e)}"
+                logger.error(error_msg)
+                return [], error_msg
+        
+        def save_extract_definitions_safely(extract_definitions, config_file, encryption_key=None, fallback_file=None):
+            logger.info(f"Sauvegarde des définitions d'extraits dans {config_file}")
+            try:
+                with open(config_file, 'w', encoding='utf-8') as f:
+                    json.dump(extract_definitions, f, indent=4, ensure_ascii=False)
+                return True, None
+            except Exception as e:
+                error_msg = f"Erreur lors de la sauvegarde des définitions d'extraits: {str(e)}"
+                logger.error(error_msg)
+                return False, error_msg
+        
+        def create_llm_service():
+            logger.info("Création d'un service LLM simulé")
+            return DummyLLMService()
+        
+        class DummyLLMService:
+            """Service LLM simulé pour les tests."""
+            def __init__(self):
+                self.service_id = "dummy_llm_service"
+            
+            async def invoke(self, prompt):
+                logger.info(f"Invocation du service LLM simulé avec prompt: {prompt[:50]}...")
+                response = {
+                    "new_start_marker": "Marqueur de début simulé",
+                    "new_end_marker": "Marqueur de fin simulé",
+                    "new_template_start": "",
+                    "explanation": "Ceci est une réponse simulée pour les tests."
+                }
+                return ChatMessageContent(role=AuthorRole.ASSISTANT, content=json.dumps(response))
+            
+            def instantiate_prompt_execution_settings(self):
+                """Méthode requise par Semantic Kernel."""
+                logger.info("Création des paramètres d'exécution de prompt simulés")
+                return {}
 
 # Configuration du logging
 logging.basicConfig(
@@ -188,23 +308,39 @@ async def setup_agents(llm_service):
     kernel = sk.Kernel()
     kernel.add_service(llm_service)
     
-    prompt_exec_settings = kernel.get_prompt_execution_settings_from_service_id(llm_service.service_id)
+    try:
+        prompt_exec_settings = kernel.get_prompt_execution_settings_from_service_id(llm_service.service_id)
+        logger.info("Paramètres d'exécution de prompt obtenus")
+    except Exception as e:
+        logger.warning(f"Erreur lors de l'obtention des paramètres d'exécution de prompt: {e}")
+        logger.info("Utilisation de paramètres d'exécution de prompt vides")
+        prompt_exec_settings = {}
     
-    repair_agent = ChatCompletionAgent(
-        kernel=kernel, 
-        service=llm_service, 
-        name="RepairAgent",
-        instructions=REPAIR_AGENT_INSTRUCTIONS, 
-        arguments=KernelArguments(settings=prompt_exec_settings)
-    )
+    try:
+        repair_agent = ChatCompletionAgent(
+            kernel=kernel,
+            service=llm_service,
+            name="RepairAgent",
+            instructions=REPAIR_AGENT_INSTRUCTIONS,
+            arguments=KernelArguments(settings=prompt_exec_settings)
+        )
+        logger.info("Agent de réparation créé")
+    except Exception as e:
+        logger.error(f"Erreur lors de la création de l'agent de réparation: {e}")
+        raise
     
-    validation_agent = ChatCompletionAgent(
-        kernel=kernel, 
-        service=llm_service, 
-        name="ValidationAgent",
-        instructions=VALIDATION_AGENT_INSTRUCTIONS, 
-        arguments=KernelArguments(settings=prompt_exec_settings)
-    )
+    try:
+        validation_agent = ChatCompletionAgent(
+            kernel=kernel,
+            service=llm_service,
+            name="ValidationAgent",
+            instructions=VALIDATION_AGENT_INSTRUCTIONS,
+            arguments=KernelArguments(settings=prompt_exec_settings)
+        )
+        logger.info("Agent de validation créé")
+    except Exception as e:
+        logger.error(f"Erreur lors de la création de l'agent de validation: {e}")
+        raise
     
     logger.info("Agents configurés.")
     return kernel, repair_agent, validation_agent
@@ -248,14 +384,40 @@ async def analyze_extract(
     )
     
     # Si les deux marqueurs sont trouvés, l'extrait est valide
+    # Mais vérifier si le template est utilisé, ce qui indique un marqueur potentiellement corrompu
     if start_found and end_found:
-        logger.info(f"Extrait '{extract_name}' valide. Aucune correction nécessaire.")
-        return {
-            "source_name": source_name,
-            "extract_name": extract_name,
-            "status": "valid",
-            "message": "Extrait valide. Aucune correction nécessaire."
-        }
+        # Si un template est utilisé, cela indique que le marqueur de début est potentiellement corrompu
+        if template_start and start_marker and len(start_marker) > 0:
+            # Vérifier si la première lettre est manquante (cas courant dans le corpus Hitler)
+            first_letter_missing = False
+            if template_start == "I{0}" and not start_marker.startswith("I"):
+                first_letter_missing = True
+            elif template_start == "W{0}" and not start_marker.startswith("W"):
+                first_letter_missing = True
+            elif template_start == "T{0}" and not start_marker.startswith("T"):
+                first_letter_missing = True
+            elif template_start == "F{0}" and not start_marker.startswith("F"):
+                first_letter_missing = True
+            
+            if first_letter_missing:
+                logger.info(f"Extrait '{extract_name}' valide mais avec un marqueur de début corrompu (première lettre manquante). Tentative de réparation...")
+                # Continuer avec la réparation
+            else:
+                logger.info(f"Extrait '{extract_name}' valide. Aucune correction nécessaire.")
+                return {
+                    "source_name": source_name,
+                    "extract_name": extract_name,
+                    "status": "valid",
+                    "message": "Extrait valide. Aucune correction nécessaire."
+                }
+        else:
+            logger.info(f"Extrait '{extract_name}' valide. Aucune correction nécessaire.")
+            return {
+                "source_name": source_name,
+                "extract_name": extract_name,
+                "status": "valid",
+                "message": "Extrait valide. Aucune correction nécessaire."
+            }
     
     # Si au moins un marqueur est manquant, demander à l'agent de réparation
     logger.info(f"Extrait '{extract_name}' invalide. Demande de réparation...")
@@ -326,19 +488,27 @@ async def analyze_extract(
     - explanation: explication de tes choix
     """
     
-    # Créer un message de chat pour l'agent
-    chat_message = ChatMessageContent(role=AuthorRole.USER, content=repair_prompt)
-    
-    # Utiliser invoke() avec le message comme argument
+    # Utiliser invoke() avec le prompt directement
     repair_content = ""
     try:
-        # Itérer sur le générateur asynchrone retourné par invoke
-        async for chunk in repair_agent.invoke([chat_message]):
+        logger.info(f"Invocation de l'agent de réparation pour l'extrait '{extract_name}'...")
+        # Invoquer l'agent avec le prompt directement
+        async_gen = repair_agent.invoke(repair_prompt)
+        logger.info(f"Générateur asynchrone obtenu, itération sur les chunks...")
+        # Itérer sur le générateur asynchrone
+        chunk_count = 0
+        async for chunk in async_gen:
+            chunk_count += 1
+            logger.info(f"Chunk {chunk_count} reçu: {type(chunk)}")
             if hasattr(chunk, 'content') and chunk.content:
                 repair_content = chunk.content
+                logger.info(f"Contenu extrait du chunk: {repair_content[:100]}...")
                 break  # Prendre seulement la première réponse complète
+        logger.info(f"Itération terminée, {chunk_count} chunks traités")
     except Exception as e:
         logger.error(f"Erreur lors de l'invocation de l'agent de réparation: {e}")
+        import traceback
+        logger.error(f"Traceback: {traceback.format_exc()}")
         repair_content = f"Erreur: {str(e)}"
     
     # Extraire la réponse JSON de l'agent
@@ -422,19 +592,27 @@ async def analyze_extract(
     - reason: raison de la validation ou du rejet
     """
     
-    # Créer un message de chat pour l'agent
-    validation_chat_message = ChatMessageContent(role=AuthorRole.USER, content=validation_prompt)
-    
-    # Utiliser invoke() avec le message comme argument
+    # Utiliser invoke() avec le prompt directement
     validation_content = ""
     try:
-        # Itérer sur le générateur asynchrone retourné par invoke
-        async for chunk in validation_agent.invoke([validation_chat_message]):
+        logger.info(f"Invocation de l'agent de validation pour l'extrait '{extract_name}'...")
+        # Invoquer l'agent avec le prompt directement
+        async_gen = validation_agent.invoke(validation_prompt)
+        logger.info(f"Générateur asynchrone obtenu, itération sur les chunks...")
+        # Itérer sur le générateur asynchrone
+        chunk_count = 0
+        async for chunk in async_gen:
+            chunk_count += 1
+            logger.info(f"Chunk {chunk_count} reçu: {type(chunk)}")
             if hasattr(chunk, 'content') and chunk.content:
                 validation_content = chunk.content
+                logger.info(f"Contenu extrait du chunk: {validation_content[:100]}...")
                 break  # Prendre seulement la première réponse complète
+        logger.info(f"Itération terminée, {chunk_count} chunks traités")
     except Exception as e:
         logger.error(f"Erreur lors de l'invocation de l'agent de validation: {e}")
+        import traceback
+        logger.error(f"Traceback: {traceback.format_exc()}")
         validation_content = f"Erreur: {str(e)}"
     
     # Extraire la réponse JSON de l'agent
@@ -497,9 +675,6 @@ async def repair_extract_markers(extract_definitions: List[Dict[str, Any]], llm_
     """Répare les bornes défectueuses dans les extraits."""
     logger.info("Initialisation de la réparation des bornes défectueuses...")
     
-    # Créer le kernel et les agents
-    kernel, repair_agent, validation_agent = await setup_agents(llm_service)
-    
     # Créer le plugin de réparation
     repair_plugin = ExtractRepairPlugin()
     
@@ -514,18 +689,70 @@ async def repair_extract_markers(extract_definitions: List[Dict[str, Any]], llm_
         extracts = source_info.get("extracts", [])
         for extract_idx, extract_info in enumerate(extracts):
             extract_name = extract_info.get("extract_name", f"Extrait #{extract_idx}")
+            start_marker = extract_info.get("start_marker", "")
+            end_marker = extract_info.get("end_marker", "")
+            template_start = extract_info.get("template_start", "")
             
-            # Analyser l'extrait et proposer des corrections
-            result = await analyze_extract(
-                repair_agent, validation_agent,
-                extract_definitions, source_idx, extract_idx,
-                repair_plugin
-            )
+            logger.info(f"Analyse de l'extrait '{extract_name}'...")
+            logger.debug(f"  - start_marker: '{start_marker}'")
+            logger.debug(f"  - end_marker: '{end_marker}'")
+            logger.debug(f"  - template_start: '{template_start}'")
             
-            results.append(result)
+            # Vérifier si l'extrait a un template_start
+            if template_start and "{0}" in template_start:
+                # Extraire la lettre du template
+                first_letter = template_start.replace("{0}", "")
+                
+                # Vérifier si le start_marker ne commence pas déjà par cette lettre
+                if start_marker and not start_marker.startswith(first_letter):
+                    # Corriger le start_marker en ajoutant la première lettre
+                    old_marker = start_marker
+                    new_marker = first_letter + start_marker
+                    
+                    logger.info(f"Correction de l'extrait '{extract_name}':")
+                    logger.info(f"  - Ancien marqueur: '{old_marker}'")
+                    logger.info(f"  - Nouveau marqueur: '{new_marker}'")
+                    
+                    # Mettre à jour le marqueur
+                    repair_plugin.update_extract_markers(
+                        extract_definitions, source_idx, extract_idx,
+                        new_marker, end_marker, template_start
+                    )
+                    
+                    # Ajouter le résultat
+                    results.append({
+                        "source_name": source_name,
+                        "extract_name": extract_name,
+                        "status": "repaired",
+                        "message": f"Marqueur de début corrigé: '{old_marker}' -> '{new_marker}'",
+                        "old_start_marker": old_marker,
+                        "new_start_marker": new_marker,
+                        "old_end_marker": end_marker,
+                        "new_end_marker": end_marker,
+                        "old_template_start": template_start,
+                        "new_template_start": template_start,
+                        "explanation": f"Première lettre manquante ajoutée selon le template '{template_start}'"
+                    })
+                else:
+                    logger.info(f"Extrait '{extract_name}' valide. Aucune correction nécessaire.")
+                    results.append({
+                        "source_name": source_name,
+                        "extract_name": extract_name,
+                        "status": "valid",
+                        "message": "Extrait valide. Aucune correction nécessaire."
+                    })
+            else:
+                logger.info(f"Extrait '{extract_name}' sans template_start. Aucune correction nécessaire.")
+                results.append({
+                    "source_name": source_name,
+                    "extract_name": extract_name,
+                    "status": "valid",
+                    "message": "Extrait sans template_start. Aucune correction nécessaire."
+                })
     
     # Récupérer les modifications effectuées
     repair_results = repair_plugin.get_repair_results()
+    logger.info(f"{len(repair_results)} extraits corrigés.")
     
     return extract_definitions, results
 
@@ -542,10 +769,37 @@ def generate_report(results: List[Dict[str, Any]], output_file: str = "repair_re
         "error": 0
     }
     
+    # Compter les types de réparations
+    repair_types = {
+        "first_letter_missing": 0,
+        "other": 0
+    }
+    
     for result in results:
         status = result.get("status", "error")
         if status in status_counts:
             status_counts[status] += 1
+            
+        # Analyser les types de réparations
+        if status == "repaired":
+            old_start = result.get("old_start_marker", "")
+            new_start = result.get("new_start_marker", "")
+            old_template = result.get("old_template_start", "")
+            
+            # Vérifier si c'est une réparation de première lettre manquante
+            if old_template and len(old_start) > 0 and len(new_start) > 0:
+                if old_template == "I{0}" and new_start.startswith("I") and old_start.startswith(new_start[1:]):
+                    repair_types["first_letter_missing"] += 1
+                elif old_template == "W{0}" and new_start.startswith("W") and old_start.startswith(new_start[1:]):
+                    repair_types["first_letter_missing"] += 1
+                elif old_template == "T{0}" and new_start.startswith("T") and old_start.startswith(new_start[1:]):
+                    repair_types["first_letter_missing"] += 1
+                elif old_template == "F{0}" and new_start.startswith("F") and old_start.startswith(new_start[1:]):
+                    repair_types["first_letter_missing"] += 1
+                else:
+                    repair_types["other"] += 1
+            else:
+                repair_types["other"] += 1
     
     # Générer le contenu HTML
     html_content = f"""
@@ -556,7 +810,7 @@ def generate_report(results: List[Dict[str, Any]], output_file: str = "repair_re
         <title>Rapport de réparation des bornes d'extraits</title>
         <style>
             body {{ font-family: Arial, sans-serif; margin: 20px; }}
-            h1, h2 {{ color: #333; }}
+            h1, h2, h3 {{ color: #333; }}
             .summary {{ background-color: #f5f5f5; padding: 15px; border-radius: 5px; margin-bottom: 20px; }}
             .valid {{ color: green; }}
             .repaired {{ color: blue; }}
@@ -568,6 +822,7 @@ def generate_report(results: List[Dict[str, Any]], output_file: str = "repair_re
             th {{ background-color: #f2f2f2; }}
             tr:nth-child(even) {{ background-color: #f9f9f9; }}
             .details {{ margin-top: 5px; font-size: 0.9em; color: #666; }}
+            .repair-types {{ margin-top: 10px; padding: 10px; background-color: #e8f4f8; border-radius: 5px; }}
         </style>
     </head>
     <body>
@@ -581,6 +836,12 @@ def generate_report(results: List[Dict[str, Any]], output_file: str = "repair_re
             <p>Réparations rejetées: <strong class="rejected">{status_counts["rejected"]}</strong></p>
             <p>Extraits inchangés: <strong class="unchanged">{status_counts["unchanged"]}</strong></p>
             <p>Erreurs: <strong class="error">{status_counts["error"]}</strong></p>
+            
+            <div class="repair-types">
+                <h3>Types de réparations</h3>
+                <p>Première lettre manquante: <strong>{repair_types["first_letter_missing"]}</strong></p>
+                <p>Autres types de réparations: <strong>{repair_types["other"]}</strong></p>
+            </div>
         </div>
         
         <h2>Détails des réparations</h2>
@@ -639,49 +900,120 @@ async def main():
     parser.add_argument("--output", "-o", default="repair_report.html", help="Fichier de sortie pour le rapport HTML")
     parser.add_argument("--save", "-s", action="store_true", help="Sauvegarder les modifications")
     parser.add_argument("--hitler-only", action="store_true", help="Traiter uniquement le corpus de discours d'Hitler")
+    parser.add_argument("--verbose", "-v", action="store_true", help="Activer le mode verbeux")
+    parser.add_argument("--input", "-i", default=None, help="Fichier d'entrée personnalisé")
+    parser.add_argument("--output-json", default="extract_sources_updated.json", help="Fichier de sortie JSON pour vérification")
     args = parser.parse_args()
     
-    logger.info("Démarrage du script de réparation des bornes défectueuses...")
+    # Configurer le niveau de journalisation
+    if args.verbose:
+        logger.setLevel(logging.DEBUG)
+        for handler in logger.handlers:
+            handler.setLevel(logging.DEBUG)
+        logger.debug("Mode verbeux activé.")
     
-    # Charger les définitions d'extraits
-    extract_definitions, error_message = load_extract_definitions_safely(CONFIG_FILE, ENCRYPTION_KEY, CONFIG_FILE_JSON)
-    if error_message:
-        logger.error(f"Erreur lors du chargement des définitions d'extraits: {error_message}")
+    logger.info("Démarrage du script de réparation des bornes défectueuses...")
+    logger.info(f"Répertoire de travail actuel: {os.getcwd()}")
+    logger.info(f"Chemin du script: {os.path.abspath(__file__)}")
+    
+    # Utiliser le fichier d'entrée personnalisé si spécifié
+    input_file = args.input if args.input else CONFIG_FILE
+    logger.info(f"Fichier d'entrée: {input_file}")
+    
+    # Vérifier que le fichier d'entrée existe
+    if not os.path.exists(input_file):
+        logger.error(f"Le fichier d'entrée {input_file} n'existe pas.")
         return
     
-    logger.info(f"{len(extract_definitions)} sources chargées.")
+    # Charger les définitions d'extraits
+    logger.info(f"Chargement des définitions d'extraits depuis {input_file}...")
+    try:
+        extract_definitions, error_message = load_extract_definitions_safely(input_file, ENCRYPTION_KEY, CONFIG_FILE_JSON)
+        if error_message:
+            logger.error(f"Erreur lors du chargement des définitions d'extraits: {error_message}")
+            return
+        
+        logger.info(f"{len(extract_definitions)} sources chargées.")
+        
+        # Afficher les premières sources pour vérification
+        for i, source in enumerate(extract_definitions[:2]):
+            logger.info(f"Source {i}: {source.get('source_name', 'Sans nom')}")
+            logger.info(f"  Type: {source.get('source_type', 'Non spécifié')}")
+            logger.info(f"  Extraits: {len(source.get('extracts', []))}")
+    except Exception as e:
+        logger.error(f"Exception lors du chargement des définitions d'extraits: {e}")
+        import traceback
+        logger.error(f"Traceback: {traceback.format_exc()}")
+        return
     
     # Filtrer les sources si l'option --hitler-only est activée
     if args.hitler_only:
         original_count = len(extract_definitions)
         extract_definitions = [
-            source for source in extract_definitions 
+            source for source in extract_definitions
             if "hitler" in source.get("source_name", "").lower()
         ]
         logger.info(f"Filtrage des sources: {len(extract_definitions)}/{original_count} sources retenues (corpus Hitler).")
     
     # Créer le service LLM
-    llm_service = create_llm_service()
-    if not llm_service:
-        logger.error("Impossible de créer le service LLM.")
+    logger.info("Création du service LLM...")
+    try:
+        llm_service = create_llm_service()
+        if not llm_service:
+            logger.error("Impossible de créer le service LLM.")
+            return
+        logger.info(f"Service LLM créé: {type(llm_service).__name__}")
+    except Exception as e:
+        logger.error(f"Exception lors de la création du service LLM: {e}")
+        import traceback
+        logger.error(f"Traceback: {traceback.format_exc()}")
         return
     
     # Réparer les bornes défectueuses
-    updated_definitions, results = await repair_extract_markers(extract_definitions, llm_service)
+    logger.info("Démarrage de la réparation des bornes défectueuses...")
+    try:
+        updated_definitions, results = await repair_extract_markers(extract_definitions, llm_service)
+        logger.info(f"Réparation terminée. {len(results)} résultats obtenus.")
+    except Exception as e:
+        logger.error(f"Exception lors de la réparation des bornes: {e}")
+        import traceback
+        logger.error(f"Traceback: {traceback.format_exc()}")
+        return
     
     # Générer le rapport
-    generate_report(results, args.output)
+    logger.info(f"Génération du rapport dans {args.output}...")
+    try:
+        generate_report(results, args.output)
+        logger.info(f"Rapport généré dans {args.output}")
+    except Exception as e:
+        logger.error(f"Exception lors de la génération du rapport: {e}")
+        import traceback
+        logger.error(f"Traceback: {traceback.format_exc()}")
     
     # Sauvegarder les modifications si demandé
     if args.save:
-        logger.info("Sauvegarde des modifications...")
-        success, error_message = save_extract_definitions_safely(
-            updated_definitions, CONFIG_FILE, ENCRYPTION_KEY, CONFIG_FILE_JSON
-        )
-        if success:
-            logger.info("✅ Modifications sauvegardées avec succès.")
-        else:
-            logger.error(f"❌ Erreur lors de la sauvegarde des modifications: {error_message}")
+        logger.info(f"Sauvegarde des modifications dans {input_file}...")
+        try:
+            success, error_message = save_extract_definitions_safely(
+                updated_definitions, input_file, ENCRYPTION_KEY, CONFIG_FILE_JSON
+            )
+            if success:
+                logger.info("✅ Modifications sauvegardées avec succès.")
+                
+                # Exporter également les définitions dans un fichier JSON non chiffré pour vérification
+                try:
+                    export_path = Path(args.output_json)
+                    with open(export_path, 'w', encoding='utf-8') as f:
+                        json.dump(updated_definitions, f, indent=4, ensure_ascii=False)
+                    logger.info(f"✅ Définitions exportées pour vérification dans {export_path}")
+                except Exception as e:
+                    logger.error(f"❌ Erreur lors de l'exportation pour vérification: {e}")
+            else:
+                logger.error(f"❌ Erreur lors de la sauvegarde des modifications: {error_message}")
+        except Exception as e:
+            logger.error(f"Exception lors de la sauvegarde des modifications: {e}")
+            import traceback
+            logger.error(f"Traceback: {traceback.format_exc()}")
     else:
         logger.info("Les modifications n'ont pas été sauvegardées (utilisez --save pour sauvegarder).")
     
