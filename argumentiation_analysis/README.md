@@ -17,21 +17,34 @@ Ce projet implémente une analyse rhétorique multi-agents en utilisant Python e
 
 Le projet est organisé en modules Python pour une meilleure maintenabilité :
 
-* [`main_orchestrator.py`](./main_orchestrator.py) : Script principal d'orchestration (remplace le notebook).
-* [`config/`](./config/) : Fichiers de configuration (`.env.template`).
-* [`core/`](./core/README.md) 🧱 : Composants fondamentaux partagés (État, StateManager, Stratégies, Setup JVM & LLM).
-* [`utils/`](./utils/README.md) 🔧 : Fonctions utilitaires générales.
-  * [`utils/extract_repair/`](./utils/extract_repair/) 🔄 : Outils de réparation des bornes d'extraits défectueuses.
-* [`ui/`](./ui/README.md) 🎨 : Logique de l'interface utilisateur (configuration du texte).
-  * [`ui/extract_editor/`](./ui/extract_editor/) ✏️ : Éditeur de marqueurs d'extraits.
-* [`agents/`](./agents/README.md) 🧠 : Définitions des agents spécialisés (PM, Informal, PL).
-* [`orchestration/`](./orchestration/README.md) ⚙️ : Logique d'exécution de la conversation (`analysis_runner.py`).
-* [`libs/`](./libs/) : Contient les JARs TweetyProject (téléchargés ou manuels).
-* [`data/`](./data/) : Données utilisées/générées (config UI sauvegardée, CSV sophismes).
-* [`requirements.txt`](./requirements.txt) : Dépendances Python.
+### Scripts Principaux
+* [`main_orchestrator.py`](./main_orchestrator.py) : Script principal d'orchestration (version Python du notebook).
+* [`main_orchestrator.ipynb`](./main_orchestrator.ipynb) : Notebook interactif pour l'orchestration.
 * [`run_analysis.py`](./run_analysis.py) : Script pour lancer l'analyse argumentative.
 * [`run_extract_editor.py`](./run_extract_editor.py) : Script pour lancer l'éditeur de marqueurs d'extraits.
 * [`run_extract_repair.py`](./run_extract_repair.py) : Script pour lancer la réparation des bornes défectueuses.
+* [`run_orchestration.py`](./run_orchestration.py) : Script pour lancer l'orchestration des agents.
+
+### Modules Principaux
+* [`core/`](./core/README.md) 🧱 : Composants fondamentaux partagés (État, StateManager, Stratégies, Setup JVM & LLM).
+* [`agents/`](./agents/README.md) 🧠 : Définitions des agents spécialisés (PM, Informal, PL, Extract).
+* [`orchestration/`](./orchestration/README.md) ⚙️ : Logique d'exécution de la conversation (`analysis_runner.py`).
+* [`ui/`](./ui/README.md) 🎨 : Logique de l'interface utilisateur (configuration du texte).
+  * [`ui/extract_editor/`](./ui/extract_editor/README.md) ✏️ : Éditeur de marqueurs d'extraits.
+* [`utils/`](./utils/README.md) 🔧 : Fonctions utilitaires générales.
+  * [`utils/extract_repair/`](./utils/extract_repair/README.md) 🔄 : Outils de réparation des bornes d'extraits défectueuses.
+* [`tests/`](./tests/README.md) 🧪 : Tests unitaires et d'intégration.
+
+### Ressources et Configuration
+* [`config/`](./config/) : Fichiers de configuration (`.env.template`).
+* [`libs/`](./libs/) : Contient les JARs TweetyProject (téléchargés ou manuels).
+* [`data/`](./data/) : Données utilisées/générées (config UI sauvegardée, CSV sophismes).
+* [`requirements.txt`](./requirements.txt) : Dépendances Python.
+* [`.env`](./.env) : Fichier de configuration des variables d'environnement (à créer à partir de `.env.template`).
+
+### Rapports et Documentation
+* [`rapport_verification.html`](./rapport_verification.html) : Rapport de vérification des extraits.
+* [`repair_report.html`](./repair_report.html) : Rapport de réparation des extraits.
 * [`README.md`](./README.md) : Ce fichier.
 
 ## Prérequis
@@ -180,13 +193,34 @@ Pour plus de détails, consultez les README spécifiques:
 
 ## Pistes d'Amélioration Futures
 
-*(Liste reprise des notebooks)*
+*(Liste reprise des notebooks et enrichie)*
 
+### Améliorations des Agents Existants
 * **Activer & Finaliser PL:** Implémenter réellement les appels JPype/Tweety dans `PropositionalLogicPlugin._internal_execute_query`.
 * **Affiner Analyse Sophismes:** Améliorer instructions `InformalAnalysisAgent` (profondeur, choix branches...).
+* **Optimisation de l'Agent Informel:** Utiliser les outils dans `agents/utils/informal_optimization/` pour améliorer les performances.
+
+### Architecture et Infrastructure
 * **Externaliser Prompts & Config:** Utiliser fichiers externes (YAML, JSON) via `kernel.import_plugin_from_directory`.
 * **Gestion Erreurs Agents:** Renforcer capacité des agents à gérer `FUNC_ERROR:` (clarification, retry...).
-* **Nouveaux Agents/Capacités:** Agents FOL, Modale, tâches (résumé, entités), outils (web, DB).
 * **État RDF/KG:** Explorer `rdflib` ou base graphe pour état plus sémantique.
-* **Interface Utilisateur:** Alternative type Gradio/Streamlit pour visualisation/interaction post-analyse.
-* **Amélioration des outils d'édition:** Enrichir les fonctionnalités de l'éditeur de marqueurs et de l'outil de réparation.
+* **Orchestration Avancée:** Implémenter des stratégies d'orchestration plus sophistiquées.
+
+### Nouveaux Agents et Fonctionnalités
+* **Nouveaux Agents Logiques:** Agents FOL, Logique Modale, Logique de Description, etc.
+* **Agents de Tâches Spécifiques:** Agents pour résumé, extraction d'entités, etc.
+* **Intégration d'Outils Externes:** Web, bases de données, etc.
+
+### Interface Utilisateur et Expérience Utilisateur
+* **Interface Web Avancée:** Alternative type Gradio/Streamlit pour visualisation/interaction post-analyse.
+* **Amélioration des Outils d'Édition:** Enrichir les fonctionnalités de l'éditeur de marqueurs et de l'outil de réparation.
+* **Visualisation des Résultats:** Améliorer la visualisation des résultats d'analyse (graphes, tableaux, etc.).
+
+### Tests et Évaluation
+* **Tests à Grande Échelle:** Étendre les tests d'orchestration à grande échelle.
+* **Métriques d'Évaluation:** Développer des métriques pour évaluer la qualité des analyses.
+* **Benchmarks:** Créer des benchmarks pour comparer différentes configurations d'agents.
+
+### Intégration MCP
+* **Serveur MCP:** Exposer les fonctionnalités du projet via un serveur MCP.
+* **Outils MCP:** Créer des outils MCP spécifiques pour l'analyse argumentative.

@@ -21,14 +21,21 @@ L'interface utilisateur a pour but de :
 4.  💾 Gérer un cache fichier (`text_cache/`) pour les textes complets récupérés depuis des sources externes, afin d'éviter les téléchargements/extractions répétés.
 5.  🔐 Charger/Sauvegarder la configuration des sources prédéfinies depuis/vers un fichier chiffré (`data/extract_sources.json.gz.enc`) en utilisant une phrase secrète définie dans `.env`.
 6.  ➡️ Retourner le texte final préparé au script orchestrateur principal (`main_orchestrator.py`).
+7.  🔍 Permettre l'édition et la vérification des marqueurs d'extraits via des outils dédiés.
+8.  📊 Visualiser les résultats d'analyse et les rapports de vérification.
 
 ## Structure 🏗️
 
-* **[`config.py`](./config.py)** : Constantes (URLs, chemins), chargement/dérivation de la clé de chiffrement (`ENCRYPTION_KEY`), définition des sources par défaut (`EXTRACT_SOURCES`, `DEFAULT_EXTRACT_SOURCES`).
-* **[`utils.py`](./utils.py)** : Fonctions utilitaires pour le cache, le chiffrement/déchiffrement, la reconstruction d'URL, le fetch de données (Jina, Tika, direct), et la vérification des marqueurs des sources prédéfinies.
+### Fichiers principaux
 * **[`app.py`](./app.py)** : Définit la fonction principale `configure_analysis_task`. C'est elle qui crée les widgets `ipywidgets`, définit les callbacks (logique événementielle), assemble l'interface, l'affiche (`display()`) et gère la boucle d'attente (`jupyter-ui-poll`). Contient aussi `initialize_text_cache` pour le pré-remplissage optionnel du cache.
+* **[`config.py`](./config.py)** : Constantes (URLs, chemins), chargement/dérivation de la clé de chiffrement (`ENCRYPTION_KEY`), définition des sources par défaut (`EXTRACT_SOURCES`, `DEFAULT_EXTRACT_SOURCES`).
+
+### Utilitaires
+* **[`utils.py`](./utils.py)** : Fonctions utilitaires pour le cache, le chiffrement/déchiffrement, la reconstruction d'URL, le fetch de données (Jina, Tika, direct), et la vérification des marqueurs des sources prédéfinies.
 * **[`extract_utils.py`](./extract_utils.py)** : Fonctions utilitaires spécifiques à l'extraction de texte.
 * **[`__init__.py`](./__init__.py)** : Marque le dossier comme un package.
+
+### Sous-modules
 * **[`extract_editor/`](./extract_editor/README.md)** ✏️ : Sous-module pour l'édition des marqueurs d'extraits.
 
 ## Sous-modules
@@ -161,3 +168,62 @@ Pour modifier l'intégration, vous devez :
 1. Mettre à jour la fonction `configure_analysis_task()` dans `app.py`
 2. Tester les modifications avec le script de test indépendant
 3. Vérifier l'intégration avec le script orchestrateur principal
+
+## Fonctionnalités récemment ajoutées
+
+### Visualisation des résultats d'analyse
+
+L'interface utilisateur a été enrichie pour permettre la visualisation des résultats d'analyse :
+
+- Affichage des arguments identifiés avec mise en évidence dans le texte
+- Visualisation des sophismes détectés avec leur description et leur classification
+- Représentation graphique des relations entre arguments (attaques, supports)
+- Affichage des formules logiques et des résultats de requêtes
+
+### Amélioration de l'éditeur de marqueurs
+
+L'éditeur de marqueurs d'extraits a été amélioré avec les fonctionnalités suivantes :
+
+- Recherche avancée dans le texte (expressions régulières)
+- Suggestions automatiques de marqueurs basées sur l'analyse du texte
+- Prévisualisation en temps réel des extraits sélectionnés
+- Validation automatique des marqueurs pour éviter les erreurs
+
+### Intégration avec les outils de vérification
+
+L'interface utilisateur est maintenant intégrée avec les outils de vérification des extraits :
+
+- Lancement de la vérification directement depuis l'interface
+- Affichage des rapports de vérification avec mise en évidence des problèmes
+- Correction assistée des problèmes détectés
+- Sauvegarde automatique des corrections
+
+## Exemples d'utilisation avancée
+
+### Lancement de l'interface avec options avancées
+
+```python
+from ui.app import configure_analysis_task
+
+# Lancer l'interface avec pré-chargement du cache
+text = configure_analysis_task(
+    preload_cache=True,
+    default_source_type="url",
+    default_url="https://example.com/article.html"
+)
+```
+
+### Intégration avec l'éditeur de marqueurs
+
+```python
+from ui.app import configure_analysis_task
+from ui.extract_editor.extract_marker_editor import edit_markers
+
+# Configurer le texte
+text = configure_analysis_task()
+
+# Ouvrir l'éditeur de marqueurs avec le texte sélectionné
+if text:
+    markers = edit_markers(text)
+    print(f"Marqueurs définis: {markers}")
+```

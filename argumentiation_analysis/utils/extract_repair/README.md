@@ -20,12 +20,22 @@ Cet outil est essentiel pour maintenir la qualité des extraits utilisés dans l
 
 ## Contenu 📁
 
+### Scripts de réparation
 * **[`repair_extract_markers.py`](./repair_extract_markers.py)** : Script principal pour la réparation automatique des bornes.
 * **[`repair_extract_markers.ipynb`](./repair_extract_markers.ipynb)** : Notebook interactif pour la réparation des bornes.
+* **[`fix_missing_first_letter.py`](./fix_missing_first_letter.py)** : Script spécifique pour corriger le problème de première lettre manquante dans les extraits.
+
+### Scripts de vérification
+* **[`verify_extracts.py`](./verify_extracts.py)** : Script pour vérifier la validité des extraits de texte.
+* **[`verify_extracts_with_llm.py`](./verify_extracts_with_llm.py)** : Utilise un LLM pour vérifier la pertinence des extraits.
+
+### Documentation et rapports
 * **[`__init__.py`](./__init__.py)** : Marque le dossier comme un package Python.
 * **[`docs/`](./docs/)** : Documentation et rapports générés:
   * **[`repair_extract_markers_report.md`](./docs/repair_extract_markers_report.md)** : Documentation détaillée sur la réparation des bornes.
   * **[`repair_report.html`](./docs/repair_report.html)** : Rapport HTML généré par le script de réparation.
+  * **[`verify_extracts_report.html`](./docs/verify_extracts_report.html)** : Rapport HTML généré par le script de vérification.
+  * **[`extract_sources_updated.json`](./docs/extract_sources_updated.json)** : Version mise à jour des sources d'extraits après réparation.
 
 ## Utilisation 🚀
 
@@ -168,6 +178,7 @@ Pour ajouter de nouvelles fonctionnalités à l'outil de réparation, suivez ces
 
 ## Fonctionnalités 🛠️
 
+### Réparation des bornes
 - Détection automatique des bornes défectueuses
 - Algorithmes de correction intelligents basés sur la correspondance de texte
 - Utilisation d'agents IA pour proposer des corrections
@@ -176,6 +187,20 @@ Pour ajouter de nouvelles fonctionnalités à l'outil de réparation, suivez ces
 - Interface utilisateur interactive via notebook Jupyter
 - Sauvegarde automatique des extraits réparés
 - Traitement spécifique pour le corpus de discours d'Hitler
+
+### Vérification des extraits
+- Vérification de la validité syntaxique des extraits
+- Vérification de la pertinence sémantique des extraits via LLM
+- Détection des extraits incomplets ou tronqués
+- Identification des extraits ne correspondant pas à leur dénomination
+- Génération de rapports de vérification détaillés
+- Suggestions d'amélioration pour les extraits problématiques
+
+### Correction de problèmes spécifiques
+- Correction du problème de première lettre manquante
+- Détection et correction des problèmes d'encodage
+- Ajustement des bornes pour inclure des paragraphes complets
+- Normalisation des marqueurs de début et de fin
 
 ## Documentation 📚
 
@@ -187,10 +212,13 @@ La documentation détaillée sur le fonctionnement de l'outil de réparation est
 ## Dépendances 📦
 
 - semantic-kernel (pour les agents IA)
-- pandas
+- pandas (pour la manipulation des données)
 - difflib (pour la comparaison de texte)
 - jinja2 (pour la génération de rapports HTML)
 - asyncio (pour les opérations asynchrones)
+- requests (pour le téléchargement de contenu)
+- beautifulsoup4 (pour le parsing HTML, utilisé dans certaines vérifications)
+- cryptography (pour le chiffrement/déchiffrement des configurations)
 
 ## Bonnes pratiques
 

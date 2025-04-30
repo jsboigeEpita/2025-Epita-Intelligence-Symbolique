@@ -10,6 +10,8 @@ Ce README sert de point d'entrée pour une instance VSCode dédiée au développ
 
 ## Structure
 
+### Agents Principaux
+
 Chaque agent est organisé dans son propre sous-répertoire :
 
 * **[`pm/`](./pm/README.md)** 🧑‍🏫 : Agent Project Manager - Orchestre l'analyse.
@@ -18,11 +20,36 @@ Chaque agent est organisé dans son propre sous-répertoire :
 * **[`extract/`](./extract/README.md)** 📑 : Agent d'Extraction - Gère l'extraction et la réparation des extraits de texte.
 * **`(student_template/)`** : *(À créer)* Un template pour guider les étudiants dans l'ajout de leur propre agent.
 
-Chaque sous-répertoire contient typiquement :
+### Fichiers de Test et d'Optimisation
+
+* **[`test_informal_agent.py`](./test_informal_agent.py)** : Script de test pour l'agent d'analyse informelle.
+* **[`test_orchestration_scale.py`](./test_orchestration_scale.py)** : Script de test pour l'orchestration à grande échelle.
+* **[`rapport_test_orchestration_echelle.md`](./rapport_test_orchestration_echelle.md)** : Rapport sur les tests d'orchestration à grande échelle.
+
+### Utilitaires pour les Agents
+
+* **[`utils/`](./utils/)** : Utilitaires spécifiques aux agents.
+  * **[`utils/informal_optimization/`](./utils/informal_optimization/README.md)** : Outils pour l'optimisation de l'agent d'analyse informelle.
+    * **[`analyze_taxonomy_usage.py`](./utils/informal_optimization/analyze_taxonomy_usage.py)** : Analyse l'utilisation de la taxonomie des sophismes.
+    * **[`improve_informal_agent.py`](./utils/informal_optimization/improve_informal_agent.py)** : Améliore les performances de l'agent informel.
+    * **[`optimize_informal_agent.py`](./utils/informal_optimization/optimize_informal_agent.py)** : Optimise les prompts et définitions de l'agent informel.
+    * **[`documentation.md`](./utils/informal_optimization/documentation.md)** : Documentation sur l'optimisation de l'agent informel.
+    * **[`taxonomy_analysis/`](./utils/informal_optimization/taxonomy_analysis/)** : Visualisations et analyses de la taxonomie des sophismes.
+      * **[`rapport_analyse_taxonomie.md`](./utils/informal_optimization/taxonomy_analysis/rapport_analyse_taxonomie.md)** : Rapport d'analyse de la taxonomie des sophismes.
+
+### Traces d'Exécution
+
+* **[`traces_informal_agent/`](./traces_informal_agent/)** : Traces d'exécution de l'agent d'analyse informelle.
+  * Contient plusieurs fichiers JSON avec les résultats d'analyse de l'agent informel.
+
+### Structure des Agents
+
+Chaque sous-répertoire d'agent contient typiquement :
 * `__init__.py`: Fichier vide ou avec des imports pour faciliter l'accès aux fonctions.
 * `*_definitions.py`: Classes Plugin (si besoin), fonction `setup_*_kernel`, constante `*_INSTRUCTIONS`.
 * `prompts.py`: Constantes contenant les prompts sémantiques pour l'agent.
 * `*_agent.py`: Classe principale de l'agent avec ses méthodes spécifiques.
+* `README.md`: Documentation spécifique à l'agent.
 
 ## Développement des agents
 
@@ -105,3 +132,37 @@ Pour intégrer un nouvel agent dans l'analyse complète, vous devez :
 - Utilisez des tests unitaires pour valider le comportement des agents
 - Suivez une structure cohérente pour tous les agents
 - Utilisez des noms explicites pour les fonctions et les variables
+- Créez des backups des fichiers avant de les modifier (voir `utils/informal_optimization/backups/`)
+- Documentez les modifications apportées aux agents dans des rapports dédiés
+- Utilisez les outils d'optimisation pour améliorer les performances des agents
+
+## Nouveaux Développements
+
+### Optimisation de l'Agent Informel
+
+Le dossier `utils/informal_optimization/` contient des outils pour analyser et améliorer les performances de l'agent d'analyse informelle :
+
+- **Analyse de la taxonomie** : Visualisation et analyse de la structure de la taxonomie des sophismes.
+- **Optimisation des prompts** : Amélioration des instructions et des prompts de l'agent.
+- **Sauvegarde automatique** : Création de backups avant modification des fichiers.
+- **Rapports d'analyse** : Documentation des améliorations apportées.
+
+### Tests à Grande Échelle
+
+Le fichier `test_orchestration_scale.py` permet de tester l'orchestration des agents sur un grand nombre de textes, afin d'évaluer :
+
+- La robustesse du système
+- Les performances des agents
+- La qualité des analyses produites
+- Les temps d'exécution
+
+Les résultats de ces tests sont documentés dans `rapport_test_orchestration_echelle.md`.
+
+### Traces d'Exécution
+
+Le dossier `traces_informal_agent/` contient les traces d'exécution de l'agent d'analyse informelle, permettant :
+
+- D'analyser le comportement de l'agent
+- D'identifier les points d'amélioration
+- De comparer différentes versions de l'agent
+- De documenter les performances sur différents types de textes
