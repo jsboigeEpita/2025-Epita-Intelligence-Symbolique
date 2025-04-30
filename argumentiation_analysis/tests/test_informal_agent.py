@@ -10,8 +10,8 @@ import pandas as pd
 from unittest.mock import MagicMock, patch, mock_open
 from pathlib import Path
 import semantic_kernel as sk
-from agents.informal.informal_definitions import InformalAnalysisPlugin, setup_informal_kernel
-from tests.async_test_case import AsyncTestCase
+from argumentiation_analysis.agents.informal.informal_definitions import InformalAnalysisPlugin, setup_informal_kernel
+from argumentiation_analysis.tests.async_test_case import AsyncTestCase
 
 
 class TestInformalAnalysisPlugin(unittest.TestCase):
@@ -33,8 +33,8 @@ class TestInformalAnalysisPlugin(unittest.TestCase):
         })
         self.test_df.set_index('PK', inplace=True)
 
-    @patch('agents.informal.informal_definitions.pd.read_csv')
-    @patch('agents.informal.informal_definitions.requests.get')
+    @patch('argumentiation_analysis.agents.informal.informal_definitions.pd.read_csv')
+    @patch('argumentiation_analysis.agents.informal.informal_definitions.requests.get')
     @patch('builtins.open', new_callable=mock_open)
     def test_internal_load_and_prepare_dataframe(self, mock_file, mock_requests, mock_read_csv):
         """Teste le chargement et la préparation du DataFrame."""
@@ -204,9 +204,9 @@ class TestSetupInformalKernel(AsyncTestCase):
         self.llm_service = MagicMock()
         self.llm_service.service_id = "test_service"
 
-    @patch('agents.informal.informal_definitions.prompt_identify_args_v8')
-    @patch('agents.informal.informal_definitions.prompt_analyze_fallacies_v1')
-    @patch('agents.informal.informal_definitions.prompt_justify_fallacy_attribution_v1')
+    @patch('argumentiation_analysis.agents.informal.informal_definitions.prompt_identify_args_v8')
+    @patch('argumentiation_analysis.agents.informal.informal_definitions.prompt_analyze_fallacies_v1')
+    @patch('argumentiation_analysis.agents.informal.informal_definitions.prompt_justify_fallacy_attribution_v1')
     def test_setup_informal_kernel(self, mock_justify, mock_analyze, mock_identify):
         """Teste la configuration du kernel pour l'agent informel."""
         # Configurer les mocks

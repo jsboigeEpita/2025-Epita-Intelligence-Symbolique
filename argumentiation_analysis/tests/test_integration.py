@@ -6,15 +6,15 @@ import unittest
 import asyncio
 from unittest.mock import MagicMock, AsyncMock, patch
 import semantic_kernel as sk
-from core.shared_state import RhetoricalAnalysisState
-from core.state_manager_plugin import StateManagerPlugin
-from core.strategies import SimpleTerminationStrategy, DelegatingSelectionStrategy
-from orchestration.analysis_runner import run_analysis_conversation
-from agents.extract.extract_agent import ExtractAgent
-from agents.pl.pl_definitions import setup_pl_kernel
-from agents.informal.informal_definitions import setup_informal_kernel
-from agents.pm.pm_definitions import setup_pm_kernel
-from tests.async_test_case import AsyncTestCase
+from argumentiation_analysis.core.shared_state import RhetoricalAnalysisState
+from argumentiation_analysis.core.state_manager_plugin import StateManagerPlugin
+from argumentiation_analysis.core.strategies import SimpleTerminationStrategy, DelegatingSelectionStrategy
+from argumentiation_analysis.orchestration.analysis_runner import run_analysis_conversation
+from argumentiation_analysis.agents.extract.extract_agent import ExtractAgent
+from argumentiation_analysis.agents.pl.pl_definitions import setup_pl_kernel
+from argumentiation_analysis.agents.informal.informal_definitions import setup_informal_kernel
+from argumentiation_analysis.agents.pm.pm_definitions import setup_pm_kernel
+from argumentiation_analysis.tests.async_test_case import AsyncTestCase
 
 
 class TestBasicIntegration(AsyncTestCase):
@@ -102,7 +102,7 @@ class TestSimulatedAnalysisFlow(AsyncTestCase):
         # Créer un état partagé
         self.state = RhetoricalAnalysisState(self.test_text)
 
-    @patch('orchestration.analysis_runner.run_analysis_conversation')
+    @patch('argumentiation_analysis.orchestration.analysis_runner.run_analysis_conversation')
     async def test_simulated_analysis_flow(self, mock_run_analysis):
         """Simule un flux d'analyse complet."""
         # Configurer le mock pour simuler une analyse réussie

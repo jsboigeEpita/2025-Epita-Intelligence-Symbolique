@@ -20,6 +20,9 @@ sys.path.append(root_dir)
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger("TestInformalIntegration")
 
+# Ajouter le chemin pour l'importation
+sys.path.insert(0, str(Path(__file__).parent.parent))
+
 def test_informal_integration():
     """
     Teste l'intégration de l'utilitaire de lazy loading avec l'agent d'analyse informelle.
@@ -28,8 +31,7 @@ def test_informal_integration():
     
     try:
         # Importer la classe InformalAnalysisPlugin
-        sys.path.insert(0, str(Path(__file__).parent.parent))
-        from agents.informal.informal_definitions import InformalAnalysisPlugin
+        from argumentiation_analysis.agents.informal.informal_definitions import InformalAnalysisPlugin
         
         # Créer une instance de la classe
         logger.info("Création d'une instance de InformalAnalysisPlugin...")

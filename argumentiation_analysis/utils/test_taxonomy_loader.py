@@ -15,7 +15,7 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(level
 logger = logging.getLogger("TestTaxonomyLoader")
 
 # Import de l'utilitaire de lazy loading
-from taxonomy_loader import get_taxonomy_path, validate_taxonomy_file
+from argumentiation_analysis.utils.taxonomy_loader import get_taxonomy_path, validate_taxonomy_file
 
 def test_taxonomy_loader():
     """
