@@ -54,6 +54,71 @@ Le projet est organisé en plusieurs modules principaux :
 
 Chaque module dispose de son propre README détaillé expliquant son fonctionnement et son utilisation.
 
+## Architecture Technique
+
+Cette section présente l'architecture technique du projet d'analyse argumentative multi-agents, expliquant comment les différents composants interagissent pour former un système cohérent.
+
+### Vue d'ensemble
+
+Le projet est construit autour d'une architecture multi-agents où différents agents spécialisés collaborent pour analyser des textes argumentatifs. Cette architecture permet une séparation claire des responsabilités et facilite l'extension du système avec de nouveaux agents ou fonctionnalités.
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                      Interface Utilisateur                   │
+└───────────────────────────────┬─────────────────────────────┘
+                                │
+┌───────────────────────────────▼─────────────────────────────┐
+│                        Orchestration                         │
+└───────┬─────────────────┬─────────────────┬─────────────────┘
+        │                 │                 │
+┌───────▼───────┐ ┌───────▼───────┐ ┌───────▼───────┐
+│  Agent Extract │ │ Agent Informal│ │   Agent PL    │ ...
+└───────┬───────┘ └───────┬───────┘ └───────┬───────┘
+        │                 │                 │
+┌───────▼─────────────────▼─────────────────▼───────┐
+│                   État Partagé                     │
+└───────────────────────────────────────────────────┘
+        │                 │                 │
+┌───────▼───────┐ ┌───────▼───────┐ ┌───────▼───────┐
+│  LLM Service  │ │  JVM (Tweety) │ │ Autres Services│
+└───────────────┘ └───────────────┘ └───────────────┘
+```
+
+### Flux de données et cycle de vie d'une analyse
+
+Le cycle de vie d'une analyse argumentative suit les étapes suivantes:
+
+1. **Ingestion des données**: Le texte à analyser est fourni via l'interface utilisateur ou un script.
+2. **Extraction des arguments**: L'agent Extract identifie les arguments présents dans le texte.
+3. **Analyse informelle**: L'agent Informal analyse les arguments pour détecter les sophismes et évaluer leur qualité.
+4. **Analyse formelle**: L'agent PL (Propositional Logic) formalise les arguments en logique propositionnelle et vérifie leur validité.
+5. **Synthèse des résultats**: Les résultats des différents agents sont combinés dans l'état partagé.
+6. **Présentation**: Les résultats sont formatés et présentés à l'utilisateur.
+
+Chaque étape est gérée par un agent spécialisé, et l'orchestration assure la coordination entre ces agents.
+
+### Approche multi-instance
+
+Le système est conçu pour permettre le déploiement de plusieurs instances d'agents, ce qui offre plusieurs avantages:
+
+- **Parallélisation**: Traitement simultané de différentes parties d'une analyse.
+- **Spécialisation**: Instances d'agents configurées pour des tâches spécifiques.
+- **Redondance**: Amélioration de la fiabilité grâce à la duplication des agents critiques.
+- **Évolutivité**: Ajout dynamique d'instances selon la charge de travail.
+
+Cette approche multi-instance est particulièrement utile pour les analyses complexes ou volumineuses, où différents agents peuvent travailler en parallèle sur différentes parties du texte.
+
+### Gestion de l'état partagé
+
+Le module `core/shared_state.py` implémente un système de gestion d'état partagé qui permet aux différents agents de communiquer et de partager des informations. Ce système:
+
+- Maintient une représentation cohérente de l'état de l'analyse
+- Gère les dépendances entre les résultats des différents agents
+- Résout les conflits potentiels entre les analyses des agents
+- Fournit des mécanismes de persistance pour sauvegarder et restaurer l'état
+
+L'état partagé est structuré comme un graphe de connaissances, où les nœuds représentent des entités (arguments, prémisses, conclusions) et les arêtes représentent des relations (support, attaque, implication).
+
 ## Guide de Démarrage Rapide
 
 Ce guide vous permettra de configurer rapidement l'environnement de développement et d'exécuter le projet d'analyse argumentative multi-agents.
@@ -61,8 +126,8 @@ Ce guide vous permettra de configurer rapidement l'environnement de développeme
 ### 1. Cloner le dépôt
 
 ```bash
-git clone https://github.com/votre-organisation/intelligence-symbolique.git
-cd intelligence-symbolique
+git clone https://github.com/jsboigeEpita/2025-Epita-Intelligence-Symbolique.git
+cd 2025-Epita-Intelligence-Symbolique
 ```
 
 ### 2. Configurer l'environnement de développement
@@ -110,45 +175,191 @@ pip install -r requirements.txt
 Créez ou modifiez le fichier `.env` dans le dossier `argumentiation_analysis` avec les informations suivantes :
 
 ```
+# Service LLM à utiliser (obligatoire)
 GLOBAL_LLM_SERVICE="OpenAI"
+
+# Clé API OpenAI (obligatoire si GLOBAL_LLM_SERVICE="OpenAI")
 OPENAI_API_KEY="votre-clé-api-openai"
+
+# Modèle OpenAI à utiliser (obligatoire si GLOBAL_LLM_SERVICE="OpenAI")
 OPENAI_CHAT_MODEL_ID="gpt-4o-mini"
+
+# Phrase secrète pour le chiffrement des configurations (obligatoire)
 TEXT_CONFIG_PASSPHRASE="votre-phrase-secrète"
+
+# Chemin vers l'installation Java (optionnel, détecté automatiquement si non spécifié)
+JAVA_HOME="/chemin/vers/votre/jdk"
 ```
 
-Remplacez `votre-clé-api-openai` par votre clé API OpenAI et `votre-phrase-secrète` par une phrase de passe pour le chiffrement des configurations.
+#### Explication des variables d'environnement
 
-### 5. Téléchargement automatique de Tweety
+- **GLOBAL_LLM_SERVICE**: Définit le service de modèle de langage à utiliser. Actuellement, seul "OpenAI" est pleinement supporté.
+  
+- **OPENAI_API_KEY**: Votre clé API OpenAI personnelle. Vous pouvez l'obtenir sur [la plateforme OpenAI](https://platform.openai.com/api-keys).
+  
+- **OPENAI_CHAT_MODEL_ID**: Le modèle OpenAI à utiliser pour les analyses. Les modèles recommandés sont "gpt-4o-mini" (bon équilibre performance/coût) ou "gpt-4o" (performances maximales).
+  
+- **TEXT_CONFIG_PASSPHRASE**: Phrase secrète utilisée pour chiffrer les configurations sensibles, notamment les extraits de textes et leurs sources. Cette phrase doit être complexe et sécurisée.
+  
+- **JAVA_HOME**: Chemin vers votre installation Java JDK. Si non spécifié, le système tentera de détecter automatiquement l'installation Java.
 
-Lors de la première exécution, le système téléchargera automatiquement les JARs Tweety nécessaires dans le dossier `libs`. Vous n'avez pas besoin de les télécharger manuellement.
+#### Sécurité des données
+
+Le système utilise un mécanisme de chiffrement pour protéger les données sensibles:
+
+- Les configurations sont chiffrées avec AES-256 en utilisant la phrase secrète comme clé
+- Les fichiers chiffrés ont l'extension `.enc`
+- Les utilitaires dans `utils/crypto_service.py` gèrent le chiffrement et le déchiffrement
+
+Pour des environnements de production, il est recommandé de:
+1. Ne jamais partager votre fichier `.env`
+2. Utiliser un fichier `.env.example` comme modèle sans valeurs sensibles
+3. Stocker les clés API comme variables d'environnement système plutôt que dans le fichier `.env`
+
+### 5. Intégration avec Tweety
+
+#### Présentation de Tweety
+
+[TweetyProject](https://tweetyproject.org/) est une collection complète de bibliothèques Java pour l'intelligence artificielle symbolique et la représentation des connaissances. Elle offre des implémentations pour de nombreux formalismes:
+
+- Logiques classiques (propositionnelle, premier ordre, description)
+- Logiques non-classiques (modale, conditionnelle, temporelle)
+- Frameworks d'argumentation (Dung, ASPIC+, DeLP, ABA, bipolaire, pondéré)
+- Révision de croyances et maintenance de la vérité
+- Answer Set Programming (ASP)
+
+#### Téléchargement automatique
+
+Lors de la première exécution, le système téléchargera automatiquement les JARs Tweety nécessaires dans le dossier `libs`. Vous n'avez pas besoin de les télécharger manuellement. Les fichiers suivants seront téléchargés:
+
+- `tweety-full.jar`: La bibliothèque Tweety complète
+- `tweety-arg-dung.jar`: Module pour les frameworks d'argumentation de Dung
+- `tweety-logics-pl.jar`: Module pour la logique propositionnelle
+- `tweety-logics-fol.jar`: Module pour la logique du premier ordre
+- Et d'autres modules selon les besoins
+
+#### Initialisation de la JVM
+
+L'intégration avec Tweety se fait via JPype, qui permet d'accéder aux classes Java depuis Python. Avant d'utiliser les fonctionnalités de Tweety, vous devez initialiser la JVM:
+
+```python
+from core.jvm_setup import initialize_jvm
+
+# Initialiser la JVM pour Tweety
+initialize_jvm()
+```
+
+Cette initialisation n'est nécessaire qu'une seule fois par session Python.
+
+#### Modules Tweety utilisés
+
+Le projet utilise principalement les modules suivants de Tweety:
+
+- `org.tweetyproject.logics.pl`: Logique propositionnelle
+- `org.tweetyproject.arg.dung`: Frameworks d'argumentation abstraits
+- `org.tweetyproject.arg.aspic`: Argumentation structurée
+- `org.tweetyproject.commons`: Utilitaires communs
+
+#### Exemple d'utilisation dans l'agent PropositionalLogicAgent
+
+L'agent PL utilise Tweety pour formaliser et analyser les arguments en logique propositionnelle:
+
+```python
+# Accès aux classes Java via JPype
+PlParser = jpype.JClass("org.tweetyproject.logics.pl.parser.PlParser")
+PlFormula = jpype.JClass("org.tweetyproject.logics.pl.syntax.PlFormula")
+
+# Créer un parser pour la logique propositionnelle
+parser = PlParser()
+
+# Parser une formule
+formula = parser.parseFormula("a && (b || !c)")
+
+# Vérifier la satisfiabilité
+is_satisfiable = formula.isConsistent()
+```
+
+#### Syntaxe pour la logique propositionnelle
+
+La syntaxe utilisée par le parser de Tweety pour la logique propositionnelle est:
+
+- `&&` pour la conjonction (ET)
+- `||` pour la disjonction (OU)
+- `!` pour la négation (NON)
+- `>>` pour l'implication
+- `<=>` pour l'équivalence
 
 ### 6. Lancer l'application
 
-Plusieurs points d'entrée sont disponibles selon vos besoins :
+Plusieurs points d'entrée sont disponibles selon vos besoins et cas d'utilisation. Choisissez celui qui correspond le mieux à votre objectif:
 
 #### Notebook d'orchestration principal
 
-Pour une expérience interactive avec visualisation des résultats :
+Pour une expérience interactive avec visualisation des résultats et exploration des données:
 
 ```bash
 jupyter notebook main_orchestrator.ipynb
 ```
 
-#### Interface utilisateur
+Ce notebook offre:
+- Visualisation interactive des résultats
+- Exécution pas à pas de l'analyse
+- Personnalisation des paramètres en temps réel
+- Graphiques et visualisations avancées
 
-Pour lancer l'interface web :
+#### Interface utilisateur web
+
+Pour une utilisation via interface graphique conviviale:
 
 ```bash
 python -m ui.app
 ```
 
+L'interface web permet:
+- Configuration intuitive des analyses
+- Visualisation des résultats sans code
+- Gestion des extraits et des sources
+- Sauvegarde et chargement des configurations
+
 #### Analyse via script Python
 
-Pour exécuter une analyse complète via script :
+Pour exécuter une analyse complète via script, idéal pour l'automatisation:
 
 ```bash
-python run_analysis.py --input votre_texte.txt
+python run_analysis.py --input votre_texte.txt --output resultats.json
 ```
+
+Options disponibles:
+- `--input`: Chemin vers le fichier texte à analyser (obligatoire)
+- `--output`: Chemin pour sauvegarder les résultats (optionnel)
+- `--config`: Chemin vers un fichier de configuration personnalisé (optionnel)
+- `--verbose`: Niveau de détail des logs (0-3, défaut: 1)
+
+#### Orchestration personnalisée
+
+Pour une orchestration avancée avec des agents personnalisés:
+
+```bash
+python run_orchestration.py --config config/custom_orchestration.json
+```
+
+#### Éditeur de marqueurs d'extraits
+
+Pour éditer et gérer les marqueurs d'extraits dans les textes:
+
+```bash
+python run_extract_editor.py
+```
+
+#### Tableau comparatif des points d'entrée
+
+| Point d'entrée | Interactivité | Interface graphique | Automatisation | Personnalisation | Cas d'utilisation typique |
+|----------------|---------------|---------------------|----------------|------------------|---------------------------|
+| Notebook       | ★★★★★         | ★★★★☆               | ★★☆☆☆          | ★★★★★            | Exploration et analyse détaillée |
+| Interface web  | ★★★★☆         | ★★★★★               | ★★☆☆☆          | ★★★☆☆            | Utilisateurs non-techniques |
+| Script Python  | ★☆☆☆☆         | ☆☆☆☆☆               | ★★★★★          | ★★★☆☆            | Traitement par lots |
+| Orchestration  | ★★☆☆☆         | ☆☆☆☆☆               | ★★★★☆          | ★★★★★            | Workflows personnalisés |
+| Extract Editor | ★★★★☆         | ★★★★☆               | ★☆☆☆☆          | ★★★☆☆            | Préparation des données |
 
 ### 7. Exemple simple
 
@@ -379,8 +590,61 @@ Les sujets proposés ci-dessous couvrent différents aspects de l'IA symbolique,
 
 #### Intégration MCP (Model Context Protocol)
 
-- **Développement d'un serveur MCP** : Publier le travail collectif sous forme d'un serveur MCP utilisable dans des applications comme Roo, Claude Desktop ou Semantic Kernel.
-- **Outils MCP pour l'analyse argumentative** : Créer des outils MCP spécifiques pour l'analyse et la manipulation d'arguments.
+##### Qu'est-ce que le Model Context Protocol (MCP) ?
+
+Le Model Context Protocol (MCP) est un protocole ouvert standardisé qui permet aux applications d'IA de se connecter à des sources de données externes et des outils. Comparable à un "USB-C pour l'IA", il standardise la façon dont les modèles d'IA interagissent avec différentes sources de données et outils.
+
+Le MCP offre plusieurs avantages clés:
+- **Interopérabilité**: Connexion standardisée entre modèles et outils
+- **Extensibilité**: Ajout facile de nouvelles capacités aux systèmes d'IA
+- **Sécurité**: Contrôle précis des accès aux ressources externes
+- **Flexibilité**: Support de différents mécanismes de transport
+
+##### Projets d'intégration MCP proposés
+
+- **Développement d'un serveur MCP pour l'analyse argumentative**: Publier le travail collectif sous forme d'un serveur MCP utilisable dans des applications comme Roo, Claude Desktop ou Semantic Kernel.
+
+- **Outils MCP pour l'analyse argumentative**: Créer des outils MCP spécifiques pour:
+  - Extraction d'arguments à partir de textes
+  - Détection de sophismes
+  - Formalisation logique d'arguments
+  - Évaluation de la qualité argumentative
+
+- **Ressources MCP pour l'argumentation**: Développer des ressources MCP donnant accès à:
+  - Taxonomies de sophismes
+  - Exemples d'arguments formels et informels
+  - Schémas d'argumentation
+
+##### Exemple d'utilisation avec un client MCP
+
+```python
+# Exemple d'utilisation du serveur MCP d'analyse argumentative
+from mcp_client import MCPClient
+
+# Connexion au serveur MCP
+client = MCPClient("http://localhost:8080")
+
+# Utilisation de l'outil d'extraction d'arguments
+result = client.use_tool(
+    "extract_arguments",
+    {
+        "text": "La Terre est plate car l'horizon semble plat. Cependant, les photos satellites montrent clairement que la Terre est sphérique."
+    }
+)
+
+# Affichage des arguments extraits
+for arg in result["arguments"]:
+    print(f"- {arg['conclusion']} car {', '.join(arg['premises'])}")
+```
+
+##### Implémentation future
+
+L'implémentation du serveur MCP est prévue comme l'un des projets intégrateurs, permettant de rendre les capacités d'analyse argumentative accessibles à un large éventail d'applications d'IA. Les étudiants intéressés par ce projet devront se familiariser avec:
+
+- La spécification du protocole MCP
+- Le développement de serveurs HTTP/WebSocket
+- La sérialisation/désérialisation JSON
+- La gestion des requêtes asynchrones
 
 #### Agents Spécialistes
 
