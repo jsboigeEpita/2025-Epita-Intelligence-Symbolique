@@ -1,0 +1,76 @@
+{
+  "error_type": "service",
+  "error_scenarios": [
+    {
+      "name": "llm_service_error",
+      "service": "llm_service",
+      "error_code": "rate_limit_exceeded",
+      "status_code": 429,
+      "message": "Rate limit exceeded. Please try again in 20 seconds.",
+      "retry_after": 20,
+      "context": {
+        "model": "gpt-4",
+        "prompt_tokens": 1250,
+        "max_tokens": 2000
+      }
+    },
+    {
+      "name": "llm_service_invalid_api_key",
+      "service": "llm_service",
+      "error_code": "invalid_api_key",
+      "status_code": 401,
+      "message": "Invalid API key provided.",
+      "retry_after": null,
+      "context": {
+        "model": "gpt-4"
+      }
+    },
+    {
+      "name": "crypto_service_invalid_key",
+      "service": "crypto_service",
+      "error_code": "invalid_key",
+      "status_code": null,
+      "message": "Invalid encryption key: Key must be 32 url-safe base64-encoded bytes.",
+      "retry_after": null,
+      "context": {
+        "operation": "decrypt_data"
+      }
+    },
+    {
+      "name": "cache_service_permission_denied",
+      "service": "cache_service",
+      "error_code": "permission_denied",
+      "status_code": null,
+      "message": "Permission denied: Unable to write to cache directory.",
+      "retry_after": null,
+      "context": {
+        "operation": "save_to_cache",
+        "cache_dir": "./text_cache"
+      }
+    },
+    {
+      "name": "definition_service_file_not_found",
+      "service": "definition_service",
+      "error_code": "file_not_found",
+      "status_code": null,
+      "message": "Configuration file not found: extract_sources.json",
+      "retry_after": null,
+      "context": {
+        "operation": "load_definitions",
+        "file_path": "./config/extract_sources.json"
+      }
+    },
+    {
+      "name": "fetch_service_invalid_url",
+      "service": "fetch_service",
+      "error_code": "invalid_url",
+      "status_code": null,
+      "message": "Invalid URL: Missing scheme (http/https)",
+      "retry_after": null,
+      "context": {
+        "operation": "fetch_text",
+        "url": "example.com/page"
+      }
+    }
+  ]
+}
