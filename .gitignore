@@ -74,6 +74,7 @@ data/extract_sources.json
 .pytest_cache/
 htmlcov/
 .coverage*
+coverage.xml
 
 # Rapports générés par les scripts
 verify_report.html
@@ -93,6 +94,9 @@ log_suppression_section.md
 **/backups/
 # Exception pour le fichier __init__.py dans les dossiers backups
 !**/backups/__init__.py
+
+# Dossier d'archives créé par le script cleanup_obsolete_files.py
+_archives/
 
 # Dossier config vide (à supprimer s'il n'est pas utilisé)
 config/
