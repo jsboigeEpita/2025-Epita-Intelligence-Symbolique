@@ -2,97 +2,116 @@
 # -*- coding: utf-8 -*-
 
 """
-Script pour exécuter tous les tests unitaires du projet.
+Script pour exécuter tous les tests unitaires et d'intégration du projet.
 
-Ce script découvre et exécute tous les tests unitaires dans le répertoire tests.
-Il génère également un rapport de couverture de code si le module coverage est installé.
+Ce script utilise pytest pour découvrir et exécuter tous les tests dans le répertoire tests.
+Il génère également un rapport de couverture de code si le module pytest-cov est installé.
 """
 
-import unittest
 import sys
 import os
+import subprocess
 from pathlib import Path
 
-# Ajouter le répertoire parent au chemin de recherche des modules
+# Ajouter les répertoires nécessaires au chemin de recherche des modules
 current_dir = Path(__file__).parent
 parent_dir = current_dir.parent
-if str(parent_dir) not in sys.path:
-    sys.path.append(str(parent_dir))
+project_dir = parent_dir.parent
 
-# Essayer d'importer coverage pour générer un rapport de couverture
+# Ajouter le répertoire parent au chemin de recherche des modules
+if str(parent_dir) not in sys.path:
+    sys.path.insert(0, str(parent_dir))
+
+# Ajouter le répertoire du projet au chemin de recherche des modules
+if str(project_dir) not in sys.path:
+    sys.path.insert(0, str(project_dir))
+
+# Configurer le chemin pour les imports relatifs
+os.environ["PYTHONPATH"] = str(parent_dir)
+
+# Essayer d'importer pytest et pytest-cov
 try:
-    import coverage
+    import pytest
+    has_pytest = True
+except ImportError:
+    has_pytest = False
+    print("Module 'pytest' non trouvé. Veuillez l'installer avec: pip install pytest")
+    sys.exit(1)
+
+try:
+    import pytest_cov
     has_coverage = True
 except ImportError:
     has_coverage = False
-    print("Module 'coverage' non trouvé. Le rapport de couverture ne sera pas généré.")
-    print("Pour installer coverage: pip install coverage")
+    print("Module 'pytest-cov' non trouvé. Le rapport de couverture ne sera pas généré.")
+    print("Pour installer pytest-cov: pip install pytest-cov")
 
 
 def run_tests():
-    """Exécute tous les tests unitaires."""
-    # Découvrir et charger tous les tests
-    loader = unittest.TestLoader()
-    tests = loader.discover(start_dir=current_dir, pattern="test_*.py")
+    """Exécute tous les tests unitaires et d'intégration avec pytest."""
+    print("=== Tests Unitaires et d'Intégration - Projet d'Analyse Argumentative ===\n")
     
-    # Créer un runner de test
-    runner = unittest.TextTestRunner(verbosity=2)
+    # Construire les arguments pytest
+    pytest_args = ["-v"]  # Mode verbeux
     
-    # Exécuter les tests
-    result = runner.run(tests)
+    # Ajouter la couverture si disponible
+    if has_coverage:
+        pytest_args.extend([
+            "--cov=" + str(parent_dir),
+            "--cov-report=term",
+            "--cov-report=html:./tests/htmlcov",
+            "--cov-report=xml:./tests/coverage.xml",
+            "--cov-config=./tests/.coveragerc"
+        ])
     
-    # Retourner le code de sortie approprié
-    return 0 if result.wasSuccessful() else 1
-
-
-def run_tests_with_coverage():
-    """Exécute tous les tests unitaires avec couverture de code."""
-    # Initialiser coverage
-    cov = coverage.Coverage(
-        source=[str(parent_dir)],
-        omit=[
-            "*/__pycache__/*",
-            "*/tests/*",
-            "*/venv/*",
-            "*/env/*",
-            "*/site-packages/*"
-        ]
-    )
+    # Exécuter pytest avec les arguments
+    result = pytest.main(pytest_args)
     
-    # Démarrer la mesure de couverture
-    cov.start()
+    # Afficher un message de résultat
+    if result == 0:
+        print("\n✅ Tous les tests ont réussi!")
+    else:
+        print("\n❌ Certains tests ont échoué.")
     
-    try:
-        # Exécuter les tests
-        result = run_tests()
+    # Afficher le chemin du rapport de couverture si généré
+    if has_coverage:
+        htmlcov_dir = current_dir / "htmlcov"
+        if htmlcov_dir.exists():
+            print(f"\nRapport HTML de couverture généré dans {htmlcov_dir}")
         
-        # Arrêter la mesure de couverture
-        cov.stop()
-        
-        # Générer le rapport
-        print("\n--- Rapport de couverture ---")
-        cov.report()
-        
-        # Générer un rapport HTML si le répertoire htmlcov existe ou peut être créé
-        try:
-            htmlcov_dir = current_dir / "htmlcov"
-            htmlcov_dir.mkdir(exist_ok=True)
-            cov.html_report(directory=str(htmlcov_dir))
-            print(f"\nRapport HTML généré dans {htmlcov_dir}")
-        except Exception as e:
-            print(f"Impossible de générer le rapport HTML: {e}")
-        
-        return result
-    except Exception as e:
-        print(f"Erreur lors de l'exécution des tests avec couverture: {e}")
-        return 1
+        coverage_xml = current_dir / "coverage.xml"
+        if coverage_xml.exists():
+            print(f"Rapport XML de couverture généré dans {coverage_xml}")
+    
+    return result
 
 
 if __name__ == "__main__":
-    print("=== Tests Unitaires - Projet d'Analyse Argumentative ===\n")
+    # Créer le fichier .coveragerc s'il n'existe pas
+    coveragerc_path = current_dir / ".coveragerc"
+    if not coveragerc_path.exists():
+        with open(coveragerc_path, "w") as f:
+            f.write("""[run]
+source = argumentiation_analysis
+omit =
+    */__pycache__/*
+    */tests/*
+    */venv/*
+    */env/*
+    */.venv/*
+    */site-packages/*
+    */dist-packages/*
+
+[report]
+exclude_lines =
+    pragma: no cover
+    def __repr__
+    raise NotImplementedError
+    if __name__ == .__main__.:
+    pass
+    raise ImportError
+""")
+        print(f"Fichier de configuration de couverture créé: {coveragerc_path}")
     
-    # Exécuter les tests avec ou sans couverture
-    if has_coverage:
-        sys.exit(run_tests_with_coverage())
-    else:
-        sys.exit(run_tests())
+    # Exécuter les tests
+    sys.exit(run_tests())

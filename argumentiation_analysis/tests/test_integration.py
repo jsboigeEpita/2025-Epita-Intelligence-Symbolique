@@ -1,20 +1,33 @@
 """
 Tests d'intégration pour le projet d'analyse argumentative.
+
+Ce module contient des tests d'intégration qui vérifient l'interaction
+entre les différents composants du système.
 """
 
 import unittest
 import asyncio
+import pytest
 from unittest.mock import MagicMock, AsyncMock, patch
 import semantic_kernel as sk
-from argumentiation_analysis.core.shared_state import RhetoricalAnalysisState
-from argumentiation_analysis.core.state_manager_plugin import StateManagerPlugin
-from argumentiation_analysis.core.strategies import SimpleTerminationStrategy, DelegatingSelectionStrategy
-from argumentiation_analysis.orchestration.analysis_runner import run_analysis_conversation
-from argumentiation_analysis.agents.extract.extract_agent import ExtractAgent
-from argumentiation_analysis.agents.pl.pl_definitions import setup_pl_kernel
-from argumentiation_analysis.agents.informal.informal_definitions import setup_informal_kernel
-from argumentiation_analysis.agents.pm.pm_definitions import setup_pm_kernel
-from argumentiation_analysis.tests.async_test_case import AsyncTestCase
+
+# Utiliser la fonction setup_import_paths pour résoudre les problèmes d'imports relatifs
+from tests import setup_import_paths
+setup_import_paths()
+
+from core.shared_state import RhetoricalAnalysisState
+from core.state_manager_plugin import StateManagerPlugin
+from core.strategies import SimpleTerminationStrategy, DelegatingSelectionStrategy
+from orchestration.analysis_runner import run_analysis_conversation
+from agents.extract.extract_agent import ExtractAgent
+from agents.pl.pl_definitions import setup_pl_kernel
+from agents.informal.informal_definitions import setup_informal_kernel
+from agents.pm.pm_definitions import setup_pm_kernel
+from tests.async_test_case import AsyncTestCase
+from models.extract_definition import ExtractDefinitions
+from models.extract_result import ExtractResult
+from services.extract_service import ExtractService
+from services.fetch_service import FetchService
 
 
 class TestBasicIntegration(AsyncTestCase):
@@ -159,5 +172,48 @@ class TestSimulatedAnalysisFlow(AsyncTestCase):
         self.assertIsNotNone(self.state.final_conclusion)
 
 
+class TestExtractIntegration(AsyncTestCase):
+    """Tests d'intégration pour les composants d'extraction."""
+
+    def setUp(self):
+        """Initialisation avant chaque test."""
+        # Créer un texte de test
+        self.test_text = """
+        Ceci est un exemple de texte source.
+        Il contient plusieurs paragraphes.
+        
+        Voici un marqueur de début: DEBUT_EXTRAIT
+        Ceci est le contenu de l'extrait.
+        Il peut contenir plusieurs lignes.
+        Voici un marqueur de fin: FIN_EXTRAIT
+        
+        Et voici la suite du texte après l'extrait.
+        """
+
+    @pytest.mark.usefixtures("mock_fetch_service", "mock_extract_service")
+    async def test_extract_integration(self, mock_fetch_service, mock_extract_service, integration_sample_definitions):
+        """Teste l'intégration entre les services d'extraction et de récupération."""
+        # Récupérer la source et l'extrait de test
+        source = integration_sample_definitions.sources[0]
+        extract = source.extracts[0]
+        
+        # Récupérer le texte source via le service de récupération mocké
+        source_text, url = mock_fetch_service.fetch_text(source.to_dict())
+        
+        # Vérifier que le texte source a été récupéré
+        self.assertIsNotNone(source_text)
+        self.assertEqual(url, "https://example.com/test")
+        
+        # Extraire le texte avec les marqueurs
+        extracted_text, status, start_found, end_found = mock_extract_service.extract_text_with_markers(
+            source_text, extract.start_marker, extract.end_marker
+        )
+        
+        # Vérifier que l'extraction a réussi
+        self.assertTrue(start_found)
+        self.assertTrue(end_found)
+        self.assertIn("Extraction réussie", status)
+
+
 if __name__ == '__main__':
-    unittest.main()
+    pytest.main(['-xvs', __file__])
