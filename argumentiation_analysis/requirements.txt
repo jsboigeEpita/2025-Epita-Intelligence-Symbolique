@@ -31,5 +31,14 @@ cryptography>=42.0.0 # Utilise Fernet et PBKDF2
 nest-asyncio>=1.6.0
 
 # --- Jupyter Kernel Support ---
-ipykernel>=6.0.0 
+ipykernel>=6.0.0
 
+# --- Testing Tools ---
+pytest>=7.0.0
+pytest-cov>=4.0.0
+pytest-asyncio>=0.21.0  # Pour les tests asynchrones
+coverage>=7.0.0
+
+# --- CI/CD Tools ---
+pylint>=3.0.0  # Analyse statique du code
+mypy>=1.0.0    # Vérification des types (optionnel)

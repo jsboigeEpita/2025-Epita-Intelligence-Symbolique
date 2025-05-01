@@ -7,6 +7,8 @@
 *rapport_verification*.html
 *repair_report*.html
 *verify_extracts_report*.html
+*verify_report*.html
+*repair_extract_markers_report*.html
 
 # Environnements virtuels Python
 venv/
@@ -56,6 +58,8 @@ Thumbs.db
 # Logs
 *.log
 logs/
+verify_extracts.log
+repair_extract_markers.log
 
 # Cache, Téléchargements et Bibliothèques Externes
 text_cache/
@@ -82,3 +86,9 @@ htmlcov/
 # Fichiers de configuration sensibles (ajoutés par cleanup_sensitive_files.py)
 extract_repair/docs/extract_sources_updated.json
 extract_repair/docs/extract_sources_*.json
+extract_sources_updated.json
+scripts/extract_sources_updated.json
+
+# Fichiers générés par les scripts refactorisés
+scripts/verify_report.html
+scripts/repair_report.html
