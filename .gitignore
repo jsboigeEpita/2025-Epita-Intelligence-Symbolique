@@ -49,11 +49,15 @@ Thumbs.db
 # Logs
 *.log
 logs/
+verify_extracts.log
+repair_extract_markers.log
 
 # Cache, Téléchargements et Bibliothèques Externes
 text_cache/
 temp_downloads/
 libs/
+argumentiation_analysis/text_cache/
+argumentiation_analysis/temp_downloads/
 
 # Données (à adapter si certains fichiers DOIVENT être versionnés)
 # Ignore le contenu du dossier data (CSV téléchargé, config UI sauvegardée...)
@@ -70,6 +74,19 @@ data/extract_sources.json
 .pytest_cache/
 htmlcov/
 .coverage*
+
+# Rapports générés par les scripts
+verify_report.html
+repair_report.html
+*verify_extracts_report*.html
+*repair_extract_markers_report*.html
+extract_sources_updated.json
+rapport_*.md
+rapport_*.html
+log_suppression_section.md
+
+# Fichiers de sauvegarde
+*.backup
 
 # Dossiers de backups générés par les scripts d'optimisation
 # Ces fichiers sont des sauvegardes temporaires et ne devraient pas être versionnés
