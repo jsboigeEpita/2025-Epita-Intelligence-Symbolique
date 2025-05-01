@@ -20,7 +20,7 @@ from semantic_kernel.functions.kernel_arguments import KernelArguments
 # Imports depuis les modules du projet
 from core.shared_state import RhetoricalAnalysisState
 from core.state_manager_plugin import StateManagerPlugin
-from core.strategies import SimpleTerminationStrategy, DelegatingSelectionStrategy
+from core.strategies import SimpleTerminationStrategy, BalancedParticipationStrategy
 # NOTE: create_llm_service n'est plus importé ici, le service est passé en argument
 
 # Imports des définitions d'agents (setup + instructions)
@@ -135,7 +135,13 @@ async def run_analysis_conversation(
         # 6. Créer instances stratégies locales
         run_logger.info("6. Création instances stratégies locales...")
         local_termination_strategy = SimpleTerminationStrategy(local_state, max_steps=15)
-        local_selection_strategy = DelegatingSelectionStrategy(agents=agent_list_local, state=local_state)
+        
+        # Utilisation de la nouvelle stratégie d'équilibrage de participation
+        local_selection_strategy = BalancedParticipationStrategy(
+            agents=agent_list_local,
+            state=local_state,
+            default_agent_name="ProjectManagerAgent"
+        )
         run_logger.info(f"   Instances stratégies créées (Terminaison id: {id(local_termination_strategy)}, Sélection id: {id(local_selection_strategy)}).")
 
         # 7. Créer instance AgentGroupChat locale
