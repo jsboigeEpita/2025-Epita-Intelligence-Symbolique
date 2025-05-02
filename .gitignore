@@ -107,3 +107,15 @@ config/
 
 # Fichiers JAR (généralement volumineux)
 *.jar
+# Ajouté par le script de nettoyage
+# Fichiers temporaires Python
+*.py[cod]
+*$py.class
+*.so
+.Python
+.env
+*.env
+**/.env
+# Fichiers de logs
+# Cache et téléchargements
+!data/.gitkeep

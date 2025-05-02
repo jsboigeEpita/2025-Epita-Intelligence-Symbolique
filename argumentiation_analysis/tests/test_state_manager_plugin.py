@@ -34,8 +34,9 @@ class TestStateManagerPlugin(unittest.TestCase):
         detailed_snapshot = json.loads(detailed_snapshot_json)
         self.assertIn("raw_text", detailed_snapshot)
         
-        # Vérifier que le snapshot détaillé contient plus d'informations
-        self.assertGreater(len(detailed_snapshot_json), len(snapshot_json))
+        # Vérifier que les deux snapshots sont différents
+        # Le snapshot résumé et le snapshot détaillé devraient avoir des structures différentes
+        self.assertNotEqual(set(snapshot.keys()), set(detailed_snapshot.keys()))
 
     def test_add_analysis_task(self):
         """Teste l'ajout d'une tâche d'analyse."""

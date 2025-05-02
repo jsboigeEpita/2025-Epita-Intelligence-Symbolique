@@ -49,10 +49,10 @@ class TestAnalysisRunner(AsyncTestCase):
         mock_plugin = MagicMock(spec=StateManagerPlugin)
         mock_state_manager_plugin.return_value = mock_plugin
         
-        mock_kernel_instance = MagicMock(spec=sk.Kernel)
+        mock_kernel_instance = MagicMock()  # Ne pas utiliser spec=sk.Kernel car sk.Kernel est déjà un mock
         mock_kernel.return_value = mock_kernel_instance
         
-        mock_extract_kernel = MagicMock(spec=sk.Kernel)
+        mock_extract_kernel = MagicMock()  # Ne pas utiliser spec=sk.Kernel car sk.Kernel est déjà un mock
         mock_extract_agent = MagicMock(spec=ChatCompletionAgent)
         mock_setup_extract_agent.return_value = (mock_extract_kernel, mock_extract_agent)
         
@@ -169,10 +169,10 @@ class TestAnalysisRunner(AsyncTestCase):
         mock_plugin = MagicMock(spec=StateManagerPlugin)
         mock_state_manager_plugin.return_value = mock_plugin
         
-        mock_kernel_instance = MagicMock(spec=sk.Kernel)
+        mock_kernel_instance = MagicMock()  # Ne pas utiliser spec=sk.Kernel car sk.Kernel est déjà un mock
         mock_kernel.return_value = mock_kernel_instance
         
-        mock_extract_kernel = MagicMock(spec=sk.Kernel)
+        mock_extract_kernel = MagicMock()  # Ne pas utiliser spec=sk.Kernel car sk.Kernel est déjà un mock
         mock_extract_agent = MagicMock(spec=ChatCompletionAgent)
         mock_setup_extract_agent.return_value = (mock_extract_kernel, mock_extract_agent)
         

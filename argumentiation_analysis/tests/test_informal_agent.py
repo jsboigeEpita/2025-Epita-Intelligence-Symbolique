@@ -35,12 +35,16 @@ class TestInformalAnalysisPlugin(unittest.TestCase):
 
     @patch('argumentiation_analysis.agents.informal.informal_definitions.pd.read_csv')
     @patch('argumentiation_analysis.agents.informal.informal_definitions.requests.get')
+    @patch('argumentiation_analysis.agents.informal.informal_definitions.validate_taxonomy_file')
+    @patch('argumentiation_analysis.agents.informal.informal_definitions.get_taxonomy_path')
     @patch('builtins.open', new_callable=mock_open)
-    def test_internal_load_and_prepare_dataframe(self, mock_file, mock_requests, mock_read_csv):
+    def test_internal_load_and_prepare_dataframe(self, mock_file, mock_get_path, mock_validate, mock_requests, mock_read_csv):
         """Teste le chargement et la préparation du DataFrame."""
         # Configurer les mocks
         mock_read_csv.return_value = self.test_df.reset_index()
         mock_requests.return_value.status_code = 200
+        mock_validate.return_value = True  # Simuler que le fichier de taxonomie est valide
+        mock_get_path.return_value = Path("mock_taxonomy_path.csv")  # Simuler un chemin de fichier valide
         
         # Appeler la méthode à tester
         df = self.plugin._internal_load_and_prepare_dataframe()
