@@ -1,4 +1,4 @@
-# Projet Intelligence Symbolique
+﻿# Projet Intelligence Symbolique
 
 ## Table des Matières
 - [Introduction](#introduction)
@@ -464,7 +464,7 @@ Chaque sujet est présenté avec une structure standardisée :
 
 ##### 1.1.1 Intégration des logiques propositionnelles avancées
 - **Contexte** : La logique propositionnelle constitue la base de nombreux systèmes de raisonnement automatique. Le module `logics.pl` de Tweety offre des fonctionnalités avancées encore peu exploitées dans le projet.
-- **Objectifs** : Améliorer l'agent PL existant pour exploiter davantage les fonctionnalités du module, notamment les solveurs SAT (SAT4J interne ou solveurs externes comme Lingeling, CaDiCaL), la conversion DIMACS, et les opérations avancées sur les formules (DNF, CNF, simplification). Implémenter des requêtes plus sophistiquées comme la vérification de satisfiabilité, la recherche de modèles, et l'analyse d'implications logiques.
+- **Objectifs** : Améliorer l'agent PL existant pour exploiter davantage les fonctionnalités du module, notamment les solveurs SAT (SAT4J interne ou solveurs externes comme Lingeling, CaDiCaL), la conversion DIMACS, et les opérations avancées sur les formules (DNF, CNF, simplification). Implémenter des requêtes plus sophistiquées comme la vérification de satisfiabilité, la recherche de modèles, et l'analyse d'implications logiques. Le notebook Tweety démontre comment manipuler des formules propositionnelles, créer des mondes possibles, et utiliser différents raisonneurs pour vérifier la satisfiabilité et trouver des modèles.
 - **Technologies clés** : Tweety `logics.pl`, solveurs SAT, Java-Python bridge
 - **Niveau de difficulté** : ⭐⭐⭐
 - **Interdépendances** : Base pour les projets de maintenance de la vérité (1.4) et d'argumentation formelle (1.2)
@@ -472,8 +472,652 @@ Chaque sujet est présenté avec une structure standardisée :
   - "SAT_SMT_by_example.pdf" (2023)
   - "Artificial Intelligence: A Modern Approach" (Chapitres sur la logique propositionnelle)
   - Documentation Tweety `logics.pl`
+##### 1.1.2 Logique du premier ordre (FOL)
+- **Contexte** : La logique du premier ordre permet d'exprimer des relations plus complexes que la logique propositionnelle, avec des quantificateurs et des prédicats.
+- **Objectifs** : Développer un nouvel agent utilisant le module `logics.fol` de Tweety pour analyser des arguments plus complexes impliquant des quantificateurs (`∀`, `∃`) et des prédicats. Cet agent pourrait tenter de traduire des arguments exprimés en langage naturel (avec quantificateurs) en formules FOL, définir des signatures logiques (types/sorts, constantes, prédicats, fonctions), et utiliser les raisonneurs intégrés (`SimpleFolReasoner`, `EFOLReasoner`). L'intégration d'un prouveur externe comme EProver permettrait de vérifier des implications logiques plus complexes.
+- **Technologies clés** : Tweety `logics.fol`, prouveurs FOL, traduction langage naturel vers FOL
+- **Niveau de difficulté** : ⭐⭐⭐⭐
+- **Interdépendances** : Extension de 1.1.1, base pour 1.2.4 (ABA)
+- **Références** :
+  - "Artificial Intelligence: A Modern Approach" de Russell & Norvig (Chapitres sur FOL)
+  - "Automated Theorem Proving" (2002)
+  - Documentation Tweety `logics.fol`
 
-## Directives de Contribution et Organisation
+##### 1.1.3 Logique modale
+- **Contexte** : Les logiques modales permettent de raisonner sur des notions comme la nécessité, la possibilité, les croyances ou les connaissances.
+- **Objectifs** : Créer un agent spécialisé utilisant le module `logics.ml` de Tweety pour raisonner sur des modalités comme la nécessité (`[]`), la possibilité (`<>`), les croyances ou les connaissances. Cet agent pourrait analyser des arguments impliquant des notions de possibilité, nécessité, obligation ou permission, en utilisant SimpleMlReasoner ou SPASSMlReasoner (avec intégration de SPASS).
+- **Technologies clés** : Tweety `logics.ml`, raisonneurs modaux, SPASS
+- **Niveau de difficulté** : ⭐⭐⭐⭐
+- **Interdépendances** : Peut être combiné avec 1.4 (maintenance de la vérité)
+- **Références** :
+  - "Handbook of Modal Logic"
+  - "Artificial Intelligence: A Modern Approach" (Sections sur la logique modale)
+  - Documentation Tweety `logics.ml`
+
+##### 1.1.4 Logique de description (DL)
+- **Contexte** : Les logiques de description sont utilisées pour représenter des connaissances structurées sous forme de concepts, rôles et individus.
+- **Objectifs** : Développer un agent utilisant le module `logics.dl` de Tweety pour modéliser des connaissances structurées. Cet agent pourrait construire des TBox (axiomes terminologiques) et ABox (assertions sur les individus), et raisonner sur la subsomption, l'instanciation et la consistance. Le notebook Tweety montre comment définir des concepts atomiques, des rôles, des individus, et comment construire des axiomes d'équivalence et des assertions pour créer une base de connaissances DL complète.
+- **Technologies clés** : Tweety `logics.dl`, ontologies, raisonneurs DL
+- **Niveau de difficulté** : ⭐⭐⭐⭐
+- **Interdépendances** : Lié à 1.3.1 (ontologies AIF.owl)
+- **Références** :
+  - "The Description Logic Handbook - Theory, Implementation and Applications" (2003)
+  - "What is an Ontology" (2009)
+  - "Foundations of Semantic Web Technologies" (2008)
+
+##### 1.1.5 Formules booléennes quantifiées (QBF)
+- **Contexte** : Les QBF étendent la logique propositionnelle avec des quantificateurs, permettant de modéliser des problèmes PSPACE-complets.
+- **Objectifs** : Explorer l'utilisation du module `logics.qbf` de Tweety pour modéliser et résoudre des problèmes PSPACE-complets. Cet agent pourrait traiter des problèmes de planification conditionnelle, de jeux à deux joueurs, ou de vérification formelle qui dépassent la portée de SAT.
+- **Technologies clés** : Tweety `logics.qbf`, solveurs QBF, format QDIMACS
+- **Niveau de difficulté** : ⭐⭐⭐⭐⭐
+- **Interdépendances** : Extension de 1.1.1, peut être utilisé dans 1.5.2 (vérification formelle)
+- **Références** :
+  - "SAT_SMT_by_example.pdf" (2023)
+  - "Handbook of Satisfiability"
+  - Documentation Tweety `logics.qbf`
+
+##### 1.1.6 Logique conditionnelle (CL)
+- **Contexte** : Les logiques conditionnelles permettent de raisonner sur des énoncés de la forme "Si A est vrai, alors B est typiquement vrai".
+- **Objectifs** : Implémenter un agent utilisant le module `logics.cl` de Tweety pour raisonner sur des conditionnels. Le notebook Tweety démontre comment créer une base conditionnelle avec des conditionnels comme (f|b), (b|p), (¬f|p), et comment calculer une fonction de classement (ranking) pour évaluer ces conditionnels.
+- **Technologies clés** : Tweety `logics.cl`, raisonnement non-monotone
+- **Niveau de difficulté** : ⭐⭐⭐⭐
+- **Interdépendances** : Peut être combiné avec 1.2 (frameworks d'argumentation)
+- **Références** :
+  - "Reasoning-with-probabilistic-and-deterministic-graphical-models-exact-algorithms" (2013)
+  - Documentation Tweety `logics.cl`
+#### 1.2 Frameworks d'argumentation
+
+##### 1.2.1 Cadres d'argumentation abstraits (Dung)
+- **Contexte** : Les cadres d'argumentation abstraits (AAF) de Dung sont fondamentaux en théorie de l'argumentation formelle.
+- **Objectifs** : Développer un agent utilisant le module `arg.dung` de Tweety pour modéliser et analyser des structures argumentatives abstraites (AAF). Cet agent devrait permettre de construire des graphes d'arguments et d'attaques (`DungTheory`), et surtout de calculer l'acceptabilité des arguments selon différentes sémantiques (admissible, complète, préférée, stable, fondée, idéale, semi-stable, CF2...). Il est crucial de comprendre la signification de chaque sémantique (ex: stable = point de vue cohérent et maximal, fondée = sceptique et bien fondée).
+- **Technologies clés** : Tweety `arg.dung`, théorie des graphes, sémantiques d'argumentation
+- **Niveau de difficulté** : ⭐⭐⭐
+- **Interdépendances** : Base pour tous les autres frameworks d'argumentation (1.2.x)
+- **Références** :
+  - Article fondateur de P. M. Dung (1995) "On the acceptability of arguments..."
+  - Survey de Baroni, Caminada, Giacomin (2011) "An introduction to argumentation semantics"
+  - "Implementing KR Approaches with Tweety" (2018)
+
+##### 1.2.2 Argumentation structurée (ASPIC+)
+- **Contexte** : ASPIC+ est un framework qui permet de construire des arguments à partir de règles strictes et défaisables.
+- **Objectifs** : Créer un agent utilisant le module `arg.aspic` de Tweety pour construire des arguments à partir de règles strictes et défaisables. Cet agent pourrait modéliser des bases de connaissances avec axiomes et règles, gérer les préférences entre règles, et analyser les attaques (rebutting, undercutting, undermining).
+- **Technologies clés** : Tweety `arg.aspic`, règles défaisables, préférences
+- **Niveau de difficulté** : ⭐⭐⭐⭐
+- **Interdépendances** : Basé sur 1.2.1, peut être combiné avec 1.4 (maintenance de la vérité)
+- **Références** :
+  - "Implementing KR Approaches with Tweety" (2018)
+  - "Argumentation in Artificial Intelligence" (Chapitres sur ASPIC+)
+  - Documentation Tweety `arg.aspic`
+
+##### 1.2.3 Programmation logique défaisable (DeLP)
+- **Contexte** : DeLP combine programmation logique et argumentation pour gérer les connaissances contradictoires.
+- **Objectifs** : Implémenter un agent utilisant le module `arg.delp` de Tweety pour raisonner avec des règles strictes et défaisables dans un cadre de programmation logique. Le notebook Tweety démontre comment charger un programme DeLP à partir d'un fichier (comme birds2.txt) et effectuer des requêtes sur ce programme, en utilisant la spécificité généralisée comme critère de comparaison.
+- **Technologies clés** : Tweety `arg.delp`, programmation logique, raisonnement dialectique
+- **Niveau de difficulté** : ⭐⭐⭐⭐
+- **Interdépendances** : Lié à 1.2.2 (ASPIC+) et 1.1.1 (logique propositionnelle)
+- **Références** :
+  - "Implementing KR Approaches with Tweety" (2018)
+  - "Defeasible Logic Programming: An Argumentative Approach"
+  - Documentation Tweety `arg.delp`
+
+##### 1.2.4 Argumentation basée sur les hypothèses (ABA)
+- **Contexte** : ABA est un framework où certains littéraux sont désignés comme hypothèses pouvant être remises en question.
+- **Objectifs** : Développer un agent utilisant le module `arg.aba` de Tweety pour modéliser l'argumentation où certains littéraux sont désignés comme hypothèses. Cet agent pourrait analyser les attaques entre arguments dérivés de ces hypothèses et déterminer leur acceptabilité.
+- **Technologies clés** : Tweety `arg.aba`, raisonnement avec hypothèses
+- **Niveau de difficulté** : ⭐⭐⭐⭐
+- **Interdépendances** : Lié à 1.1.2 (FOL) et 1.2.1 (Dung)
+- **Références** :
+  - "Implementing KR Approaches with Tweety" (2018)
+  - "Assumption-Based Argumentation"
+  - Documentation Tweety `arg.aba`
+
+##### 1.2.5 Argumentation déductive
+- **Contexte** : L'argumentation déductive représente les arguments comme des paires (Support, Conclusion) où le support implique logiquement la conclusion.
+- **Objectifs** : Créer un agent utilisant le module `arg.deductive` de Tweety pour construire des arguments comme des paires (Support, Conclusion) où le support est un sous-ensemble minimal et consistant de la base de connaissances qui implique logiquement la conclusion.
+- **Technologies clés** : Tweety `arg.deductive`, logique déductive, catégoriseurs
+- **Niveau de difficulté** : ⭐⭐⭐
+- **Interdépendances** : Lié à 1.1.1 (logique propositionnelle) et 1.2.1 (Dung)
+- **Références** :
+  - "Implementing KR Approaches with Tweety" (2018)
+  - "Logical Models of Argument"
+  - Documentation Tweety `arg.deductive`
+
+##### 1.2.6 Abstract Dialectical Frameworks (ADF)
+- **Contexte** : Les ADF généralisent les AAF de Dung en associant à chaque argument une condition d'acceptation.
+- **Objectifs** : Implémenter un agent utilisant le module `arg.adf` de Tweety. Les ADF généralisent les AAF de Dung en associant à chaque argument une condition d'acceptation (une formule propositionnelle sur l'état des autres arguments), permettant de modéliser des dépendances plus complexes que la simple attaque (ex: support, attaque conjointe). L'agent devrait permettre de définir ces conditions et de calculer les sémantiques ADF (admissible, complète, préférée, stable, fondée, modèle à 2 valeurs).
+- **Technologies clés** : Tweety `arg.adf`, solveurs SAT incrémentaux, formules propositionnelles
+- **Niveau de difficulté** : ⭐⭐⭐⭐⭐
+- **Interdépendances** : Extension de 1.2.1 (Dung), utilise 1.1.1 (logique propositionnelle)
+- **Références** :
+  - Article fondateur de Brewka et al. (2013) "Abstract Dialectical Frameworks"
+  - "Implementing KR Approaches with Tweety" (2018)
+  - Documentation Tweety `arg.adf`
+
+##### 1.2.7 Frameworks bipolaires (BAF)
+- **Contexte** : Les BAF étendent les AAF en incluant des relations de support en plus des attaques.
+- **Objectifs** : Développer un agent utilisant le module `arg.bipolar` de Tweety pour modéliser des cadres d'argumentation incluant à la fois des relations d'attaque et de support entre arguments. Comprendre les différentes interprétations du support (déductif, nécessaire, évidentiel...) et les sémantiques associées proposées dans la littérature et implémentées dans Tweety.
+- **Technologies clés** : Tweety `arg.bipolar`, relations de support, graphes bipolaires
+- **Niveau de difficulté** : ⭐⭐⭐⭐
+- **Interdépendances** : Extension de 1.2.1 (Dung)
+- **Références** :
+  - Travaux de Cayrol et Lagasquie-Schiex sur les BAF
+  - Survey de Cohen et al. (2014) sur l'argumentation bipolaire
+  - "Implementing KR Approaches with Tweety" (2018)
+  - Documentation Tweety `arg.bipolar`
+
+##### 1.2.8 Frameworks avancés et extensions
+- **Contexte** : De nombreuses extensions des frameworks d'argumentation de base ont été proposées pour modéliser des aspects spécifiques.
+- **Objectifs** : Explorer et implémenter différentes extensions des frameworks d'argumentation, telles que les frameworks pondérés (WAF), sociaux (SAF), SetAF, frameworks étendus (attaques sur attaques), et les sémantiques basées sur le classement ou probabilistes.
+- **Technologies clés** : Modules Tweety `arg.weighted`, `arg.social`, `arg.setaf`, `arg.extended`, `arg.rankings`, `arg.prob`
+- **Niveau de difficulté** : ⭐⭐⭐⭐⭐
+- **Interdépendances** : Extension de tous les frameworks précédents (1.2.1-1.2.7)
+- **Références** :
+  - "Implementing KR Approaches with Tweety" (2018)
+  - Documentation des modules Tweety correspondants
+  - Littérature spécifique à chaque extension
+#### 1.3 Ingénierie des connaissances
+
+##### 1.3.1 Intégration d'ontologies AIF.owl
+- **Contexte** : L'Argument Interchange Format (AIF) est un standard pour représenter la structure des arguments.
+- **Objectifs** : Développer un moteur sémantique basé sur l'ontologie AIF (Argument Interchange Format) en OWL. L'objectif est de représenter la structure fine des arguments extraits (prémisses, conclusion, schémas d'inférence, relations d'attaque/support) en utilisant les classes AIF (I-Nodes, RA-Nodes, CA-Nodes).
+- **Technologies clés** : Tweety `logics.dl`, OWL, ontologies, Owlready2
+- **Niveau de difficulté** : ⭐⭐⭐⭐
+- **Interdépendances** : Lié à 1.1.4 (logique de description) et 1.3.3 (Knowledge Graph)
+- **Références** :
+  - Spécification AIF (Rahwan, Reed et al.)
+  - Documentation AIFdb
+  - "Argumentation Mining" de Stede & Schneider (Chapitre sur la représentation)
+  - "What is an Ontology" (2009)
+  - "Foundations of Semantic Web Technologies" (2008)
+
+##### 1.3.2 Classification des arguments fallacieux
+- **Contexte** : Les sophismes sont des erreurs de raisonnement qui peuvent sembler valides mais ne le sont pas.
+- **Objectifs** : Corriger, compléter et intégrer l'ontologie des sophismes (inspirée du projet Argumentum ou autre source). L'objectif est de disposer d'une taxonomie formelle des types de sophismes. Utiliser cette ontologie pour guider l'agent de détection de sophismes et pour structurer les résultats de l'analyse.
+- **Technologies clés** : Ontologies, taxonomies, logique de description
+- **Niveau de difficulté** : ⭐⭐⭐
+- **Interdépendances** : Lié à 2.3.2 (agent de détection de sophismes) et 1.3.1 (ontologies AIF)
+- **Références** :
+  - "Logically Fallacious" de Bo Bennett
+  - Taxonomie des sophismes sur Wikipedia
+  - Projet Argumentum (si accessible)
+  - "Ontology-based systems engineering - a state-of-the-art review" (2019)
+
+##### 1.3.3 Knowledge Graph argumentatif
+- **Contexte** : Les graphes de connaissances permettent de représenter des informations complexes et leurs relations.
+- **Objectifs** : Remplacer la structure JSON actuelle de l'état partagé par un graphe de connaissances plus expressif et interrogeable, en s'inspirant des structures de graphe utilisées dans les différents frameworks d'argumentation de Tweety.
+- **Technologies clés** : Graphes de connaissances, bases de données de graphes, requêtes SPARQL
+- **Niveau de difficulté** : ⭐⭐⭐⭐
+- **Interdépendances** : Lié à 1.3.1 (ontologies AIF) et 2.1.2 (orchestration des agents)
+- **Références** :
+  - "Knowledge graphs - 3447772.pdf" (2021)
+  - "Making sense of sensory input" (2019)
+  - Documentation sur les bases de données de graphes (Neo4j, etc.)
+
+#### 1.4 Maintenance de la vérité et résolution de conflits
+
+##### 1.4.1 Intégration des modules de maintenance de la vérité
+- **Contexte** : La maintenance de la vérité est essentielle pour gérer l'évolution des connaissances et résoudre les conflits.
+- **Objectifs** : Résoudre les problèmes d'import potentiels des modules `beliefdynamics` de Tweety et les intégrer au système. Ces modules sont cruciaux pour gérer l'évolution des connaissances et la résolution des conflits. Explorer les opérateurs de révision de croyances, de contraction, et d'update.
+- **Technologies clés** : Tweety `beliefdynamics`, théorie AGM, opérateurs de révision
+- **Niveau de difficulté** : ⭐⭐⭐⭐
+- **Interdépendances** : Utilise 1.1.1 (logique propositionnelle), peut être combiné avec 1.4.2 (révision multi-agents)
+- **Références** :
+  - Théorie AGM (Alchourrón, Gärdenfors, Makinson)
+  - Travaux de Katsuno & Mendelzon
+  - "Reasoning-with-probabilistic-and-deterministic-graphical-models-exact-algorithms" (2013)
+  - Documentation Tweety `beliefdynamics`
+
+##### 1.4.2 Révision de croyances multi-agents
+- **Contexte** : Dans un système multi-agents, chaque agent peut avoir ses propres croyances qui doivent être réconciliées.
+- **Objectifs** : Développer un agent utilisant le module `beliefdynamics.mas` de Tweety pour modéliser la révision de croyances dans un contexte multi-agents, où chaque information est associée à un agent source et où un ordre de crédibilité existe entre les agents.
+- **Technologies clés** : Tweety `beliefdynamics.mas`, révision de croyances, crédibilité des sources
+- **Niveau de difficulté** : ⭐⭐⭐⭐
+- **Interdépendances** : Extension de 1.4.1, lié à 2.1.6 (gouvernance multi-agents)
+- **Références** :
+  - "Multi Agent Systems" (2010)
+  - "A review of cooperative multi-agent deep reinforcement learning" (2021)
+  - Documentation Tweety `beliefdynamics.mas`
+
+##### 1.4.3 Mesures d'incohérence et résolution
+- **Contexte** : Quantifier et résoudre les incohérences est crucial pour maintenir la qualité des bases de connaissances.
+- **Objectifs** : Intégrer les mesures d'incohérence de Tweety (`logics.pl.analysis`) pour quantifier le degré d'incohérence d'un ensemble d'informations, et implémenter des méthodes de résolution comme l'énumération de MUS (Minimal Unsatisfiable Subsets) et MaxSAT.
+- **Technologies clés** : Tweety `logics.pl.analysis`, MUS, MaxSAT, mesures d'incohérence
+- **Niveau de difficulté** : ⭐⭐⭐⭐⭐
+- **Interdépendances** : Utilise 1.1.1 (logique propositionnelle), lié à 1.4.1 (maintenance de la vérité)
+- **Références** :
+  - Survey de Hunter et Konieczny sur les mesures d'incohérence
+  - "Reasoning-with-probabilistic-and-deterministic-graphical-models-exact-algorithms" (2013)
+  - "SAT_SMT_by_example.pdf" (2023)
+  - "Handbook of Satisfiability"
+  - Documentation Tweety `logics.pl.analysis`
+
+#### 1.5 Planification et vérification formelle
+
+##### 1.5.1 Intégration d'un planificateur symbolique
+- **Contexte** : La planification automatique permet de générer des séquences d'actions pour atteindre des objectifs.
+- **Objectifs** : Développer un agent capable de générer des plans d'action basés sur des objectifs argumentatifs, en explorant le module `action` de Tweety pour la modélisation des actions et la planification.
+- **Technologies clés** : Tweety `action`, planification automatique, PDDL
+- **Niveau de difficulté** : ⭐⭐⭐⭐
+- **Interdépendances** : Peut utiliser 1.1.5 (QBF) pour la planification conditionnelle
+- **Références** :
+  - "Automated planning" (2010)
+  - "Automated planning and acting - book" (2016)
+  - "Integrated Task and motion planning" (2020)
+  - Documentation Tweety `action`
+
+##### 1.5.2 Vérification formelle d'arguments
+- **Contexte** : La vérification formelle permet de garantir que les arguments respectent certaines propriétés.
+- **Objectifs** : Développer des méthodes de vérification formelle pour garantir la validité des arguments dans un contexte contractuel, en utilisant potentiellement les capacités QBF ou FOL de Tweety.
+- **Technologies clés** : Vérification formelle, model checking, prouveurs de théorèmes
+- **Niveau de difficulté** : ⭐⭐⭐⭐⭐
+- **Interdépendances** : Utilise 1.1.1-1.1.5 (logiques formelles), lié à 1.5.3 (contrats argumentatifs)
+- **Références** :
+  - "The Lean theorem prover" (2015)
+  - "The Lean 4 Theorem Prover and Programming Language" (2021)
+  - "SAT_SMT_by_example.pdf" (2023)
+  - Documentation sur les prouveurs de théorèmes
+
+##### 1.5.3 Formalisation de contrats argumentatifs
+- **Contexte** : Les smart contracts peuvent être utilisés pour formaliser et exécuter des protocoles d'argumentation.
+- **Objectifs** : Explorer l'utilisation de smart contracts pour formaliser et exécuter des protocoles d'argumentation, en s'appuyant sur les différents formalismes d'argumentation disponibles dans Tweety.
+- **Technologies clés** : Smart contracts, blockchain, protocoles d'argumentation
+- **Niveau de difficulté** : ⭐⭐⭐⭐
+- **Interdépendances** : Lié à 1.2 (frameworks d'argumentation) et 1.5.2 (vérification formelle)
+- **Références** :
+  - "Bitcoin and Beyond - Cryptocurrencies, blockchain and global governance" (2018)
+  - "Survey on blockchain based smart contracts - Applications, opportunities and challenges" (2021)
+  - Documentation sur les plateformes de smart contracts (Ethereum, etc.)
+### 2. Développement système et infrastructure
+
+#### 2.1 Architecture et orchestration
+
+##### 2.1.1 Gestion de projet agile
+- **Contexte** : Une méthodologie de gestion de projet adaptée est essentielle pour coordonner efficacement les contributions.
+- **Objectifs** : Mettre en place une méthodologie agile adaptée au contexte du projet, avec définition des rôles, des cérémonies et des artefacts. Implémenter un système de suivi basé sur Scrum ou Kanban, avec des sprints adaptés au calendrier académique.
+- **Technologies clés** : Jira, Trello, GitHub Projects, méthodologies agiles
+- **Niveau de difficulté** : ⭐⭐
+- **Interdépendances** : Base pour tous les autres projets, particulièrement 2.1.5 (intégration continue)
+- **Références** :
+  - "Agile Practice Guide" du PMI
+  - "Scrum: The Art of Doing Twice the Work in Half the Time" de Jeff Sutherland
+  - Framework SAFe pour l'agilité à l'échelle
+
+##### 2.1.2 Orchestration des agents spécialisés
+- **Contexte** : La coordination efficace des agents spécialisés est cruciale pour le bon fonctionnement du système.
+- **Objectifs** : Développer un système d'orchestration avancé permettant de coordonner efficacement les différents agents spécialisés. S'inspirer des architectures de microservices et des patterns d'orchestration comme le Saga pattern ou le Choreography pattern. Implémenter un mécanisme de communication asynchrone entre agents basé sur des événements.
+- **Technologies clés** : Architecture event-driven, patterns d'orchestration, communication asynchrone
+- **Niveau de difficulté** : ⭐⭐⭐⭐
+- **Interdépendances** : Lié à 2.3 (moteur agentique) et 2.1.6 (gouvernance multi-agents)
+- **Références** :
+  - "Building Microservices" de Sam Newman
+  - "Designing Data-Intensive Applications" de Martin Kleppmann
+  - "Enterprise Integration Patterns" de Gregor Hohpe et Bobby Woolf
+
+##### 2.1.3 Monitoring et évaluation
+- **Contexte** : Le suivi des performances et la détection des problèmes sont essentiels pour maintenir la qualité du système.
+- **Objectifs** : Créer des outils de suivi et d'évaluation des performances du système multi-agents. Développer des métriques spécifiques pour mesurer l'efficacité de l'analyse argumentative, la qualité des extractions, et la performance globale du système. Implémenter un système de logging avancé et des dashboards de visualisation.
+- **Technologies clés** : Prometheus, Grafana, ELK Stack, métriques personnalisées
+- **Niveau de difficulté** : ⭐⭐⭐
+- **Interdépendances** : Lié à 3.1.2 (dashboard de monitoring)
+- **Références** :
+  - "Site Reliability Engineering" de Google
+  - "Prometheus: Up & Running" de Brian Brazil
+  - Documentation sur les systèmes de monitoring
+
+##### 2.1.4 Documentation et transfert de connaissances
+- **Contexte** : Une documentation claire et complète est essentielle pour la maintenance et l'évolution du projet.
+- **Objectifs** : Mettre en place un système de documentation continue et de partage des connaissances entre les différentes équipes. Créer une documentation technique détaillée, des guides d'utilisation, et des tutoriels pour faciliter l'onboarding de nouveaux contributeurs.
+- **Technologies clés** : Notion, Confluence, GitBook, GitHub Pages
+- **Niveau de difficulté** : ⭐⭐
+- **Interdépendances** : Transversal à tous les projets
+- **Références** :
+  - "Documentation System" de Divio
+  - "Building a Second Brain" de Tiago Forte
+  - Bonnes pratiques de documentation technique
+
+##### 2.1.5 Intégration continue et déploiement
+- **Contexte** : L'automatisation des tests et du déploiement permet d'assurer la qualité et la disponibilité du système.
+- **Objectifs** : Développer un pipeline CI/CD adapté au contexte du projet pour faciliter l'intégration des contributions et le déploiement des nouvelles fonctionnalités. Automatiser les tests, la vérification de la qualité du code, et le déploiement des différentes composantes du système.
+- **Technologies clés** : GitHub Actions, Jenkins, GitLab CI/CD
+- **Niveau de difficulté** : ⭐⭐⭐
+- **Interdépendances** : Lié à 2.1.1 (gestion de projet) et 2.5 (automatisation)
+- **Références** :
+  - "Continuous Delivery" de Jez Humble et David Farley
+  - "DevOps Handbook" de Gene Kim et al.
+  - Documentation sur les outils CI/CD
+
+##### 2.1.6 Gouvernance multi-agents
+- **Contexte** : La coordination de multiples agents nécessite des mécanismes de gouvernance pour résoudre les conflits et assurer la cohérence.
+- **Objectifs** : Concevoir un système de gouvernance pour gérer les conflits entre agents, établir des priorités, et assurer la cohérence globale du système. S'inspirer des modèles de gouvernance des systèmes distribués et des organisations autonomes décentralisées (DAO).
+- **Technologies clés** : Systèmes multi-agents, mécanismes de consensus, résolution de conflits
+- **Niveau de difficulté** : ⭐⭐⭐⭐⭐
+- **Interdépendances** : Lié à 1.4.2 (révision de croyances multi-agents) et 2.1.2 (orchestration)
+- **Références** :
+  - "Governing the Commons" d'Elinor Ostrom
+  - Recherches sur les systèmes multi-agents (SMA) du LIRMM et du LIP6
+  - Littérature sur les mécanismes de gouvernance distribuée
+
+#### 2.2 Gestion des sources et données
+
+##### 2.2.1 Amélioration du moteur d'extraction
+- **Contexte** : L'extraction précise des sources est fondamentale pour l'analyse argumentative.
+- **Objectifs** : Perfectionner le système actuel qui combine paramétrage d'extraits et sources correspondantes. Améliorer la robustesse, la précision et la performance du moteur d'extraction.
+- **Technologies clés** : Extraction de texte, parsing, gestion de métadonnées
+- **Niveau de difficulté** : ⭐⭐⭐
+- **Interdépendances** : Base pour l'analyse argumentative, lié à 2.2.2 (formats étendus)
+- **Références** :
+  - Documentation sur les techniques d'extraction de texte
+  - Littérature sur les systèmes de gestion de corpus
+  - Bonnes pratiques en matière d'extraction de données
+
+##### 2.2.2 Support de formats étendus
+- **Contexte** : La diversité des sources nécessite la prise en charge de multiples formats de fichiers.
+- **Objectifs** : Étendre les capacités du moteur d'extraction pour supporter davantage de formats de fichiers (PDF, DOCX, HTML, etc.) et de sources web. Implémenter des parsers spécifiques pour chaque format et assurer une extraction cohérente des données.
+- **Technologies clés** : Bibliothèques de parsing (PyPDF2, python-docx, BeautifulSoup), OCR
+- **Niveau de difficulté** : ⭐⭐⭐
+- **Interdépendances** : Extension de 2.2.1 (moteur d'extraction)
+- **Références** :
+  - Documentation des bibliothèques de parsing
+  - Littérature sur l'extraction de texte structuré
+  - Bonnes pratiques en matière de conversion de formats
+
+##### 2.2.3 Sécurisation des données
+- **Contexte** : La protection des données sensibles est essentielle, particulièrement pour les sources confidentielles.
+- **Objectifs** : Améliorer le système de chiffrement des sources et configurations d'extraits pour garantir la confidentialité. Implémenter des mécanismes de contrôle d'accès, d'audit, et de gestion des clés.
+- **Technologies clés** : Cryptographie (AES, RSA), gestion de clés, contrôle d'accès
+- **Niveau de difficulté** : ⭐⭐⭐⭐
+- **Interdépendances** : Transversal à tous les projets manipulant des données
+- **Références** :
+  - "Cryptography Engineering" de Ferguson, Schneier et Kohno
+  - Documentation sur les bibliothèques cryptographiques
+  - Standards de sécurité des données (NIST, ISO 27001)
+#### 2.3 Moteur agentique et agents spécialistes
+
+##### 2.3.1 Abstraction du moteur agentique
+- **Contexte** : Un moteur agentique flexible permet d'intégrer différents frameworks et modèles.
+- **Objectifs** : Créer une couche d'abstraction permettant d'utiliser différents frameworks agentiques (au-delà de Semantic Kernel). Implémenter des adaptateurs pour différents frameworks et assurer une interface commune.
+- **Technologies clés** : Semantic Kernel, LangChain, AutoGen, design patterns d'abstraction
+- **Niveau de difficulté** : ⭐⭐⭐⭐
+- **Interdépendances** : Base pour 2.3.2-2.3.5 (agents spécialistes)
+- **Références** :
+  - Documentation Semantic Kernel, LangChain, AutoGen
+  - "Design Patterns" de Gamma et al. (patterns d'abstraction)
+  - Littérature sur les architectures agentiques
+
+##### 2.3.2 Agent de détection de sophismes
+- **Contexte** : La détection des sophismes est essentielle pour évaluer la qualité argumentative.
+- **Objectifs** : Améliorer la détection et la classification des sophismes dans les textes. Développer des techniques spécifiques pour chaque type de sophisme et intégrer l'ontologie des sophismes (1.3.2).
+- **Technologies clés** : NLP, classification, taxonomie des sophismes
+- **Niveau de difficulté** : ⭐⭐⭐⭐
+- **Interdépendances** : Utilise 1.3.2 (classification des sophismes)
+- **Références** :
+  - "Logically Fallacious" de Bo Bennett
+  - Littérature sur la détection automatique de sophismes
+  - Recherches en argumentation computationnelle
+
+##### 2.3.3 Agent de génération de contre-arguments
+- **Contexte** : La génération de contre-arguments permet d'évaluer la robustesse des arguments.
+- **Objectifs** : Créer un agent capable de générer des contre-arguments pertinents et solides en réponse à des arguments donnés. Implémenter différentes stratégies de contre-argumentation basées sur les frameworks formels.
+- **Technologies clés** : LLMs, frameworks d'argumentation, stratégies dialectiques
+- **Niveau de difficulté** : ⭐⭐⭐⭐
+- **Interdépendances** : Lié à 1.2 (frameworks d'argumentation) et 2.3.2 (détection de sophismes)
+- **Références** :
+  - "Computational Models of Argument" (COMMA)
+  - Littérature sur les systèmes dialectiques
+  - Recherches sur la génération d'arguments
+
+##### 2.3.4 Agents de logique formelle
+- **Contexte** : Les agents de logique formelle permettent d'analyser rigoureusement la validité des arguments.
+- **Objectifs** : Développer de nouveaux agents spécialisés utilisant différentes parties de Tweety pour l'analyse logique formelle des arguments. Étendre les capacités de l'agent PL existant et créer des agents pour d'autres logiques (FOL, modale, etc.).
+- **Technologies clés** : Tweety, logiques formelles, raisonneurs automatiques
+- **Niveau de difficulté** : ⭐⭐⭐⭐
+- **Interdépendances** : Utilise 1.1 (logiques formelles)
+- **Références** :
+  - Documentation Tweety
+  - "Handbook of Practical Logic and Automated Reasoning"
+  - Littérature sur les assistants de preuve
+
+##### 2.3.5 Intégration de LLMs locaux légers
+- **Contexte** : Les LLMs locaux permettent une analyse plus rapide et confidentielle.
+- **Objectifs** : Explorer l'utilisation de modèles de langage locaux de petite taille pour effectuer l'analyse argumentative, en particulier les modèles Qwen 3 récemment sortis. Cette approche permettrait de réduire la dépendance aux API externes, d'améliorer la confidentialité des données et potentiellement d'accélérer le traitement.
+- **Technologies clés** : Qwen 3, llama.cpp, GGUF, quantization
+- **Niveau de difficulté** : ⭐⭐⭐⭐
+- **Interdépendances** : Lié à 2.3.1 (abstraction du moteur agentique)
+- **Références** :
+  - Documentation Qwen 3
+  - Benchmarks HELM
+  - Recherches sur la distillation de modèles et l'optimisation pour l'inférence
+
+#### 2.4 Indexation sémantique
+
+##### 2.4.1 Index sémantique d'arguments
+- **Contexte** : L'indexation sémantique permet de rechercher efficacement des arguments similaires.
+- **Objectifs** : Indexer les définitions, exemples et instances d'arguments fallacieux pour permettre des recherches par proximité sémantique. Implémenter un système d'embedding et de recherche vectorielle pour les arguments.
+- **Technologies clés** : Embeddings, bases de données vectorielles, similarité sémantique
+- **Niveau de difficulté** : ⭐⭐⭐
+- **Interdépendances** : Lié à 2.4.2 (vecteurs de types d'arguments)
+- **Références** :
+  - "Vector Databases: The New Way to Store and Query Data" (2023)
+  - Documentation sur les bases de données vectorielles (Pinecone, Weaviate, etc.)
+  - Littérature sur les embeddings sémantiques
+
+##### 2.4.2 Vecteurs de types d'arguments
+- **Contexte** : La représentation vectorielle des types d'arguments facilite leur classification et découverte.
+- **Objectifs** : Définir par assemblage des vecteurs de types d'arguments fallacieux pour faciliter la découverte de nouvelles instances. Créer un espace vectoriel où les arguments similaires sont proches les uns des autres.
+- **Technologies clés** : Embeddings spécialisés, clustering, réduction de dimensionnalité
+- **Niveau de difficulté** : ⭐⭐⭐⭐
+- **Interdépendances** : Extension de 2.4.1 (index sémantique)
+- **Références** :
+  - "Embeddings in Natural Language Processing" (2021)
+  - Littérature sur les représentations vectorielles spécialisées
+  - Recherches sur les espaces sémantiques
+
+#### 2.5 Automatisation et intégration MCP
+
+##### 2.5.1 Automatisation de l'analyse
+- **Contexte** : L'automatisation permet de traiter efficacement de grands volumes de textes.
+- **Objectifs** : Développer des outils pour lancer l'équivalent du notebook d'analyse dans le cadre d'automates longs sur des corpus. Créer des scripts de traitement par lots et des mécanismes de parallélisation.
+- **Technologies clés** : Automatisation de notebooks, traitement par lots, parallélisation
+- **Niveau de difficulté** : ⭐⭐⭐
+- **Interdépendances** : Lié à 2.5.2 (pipeline de traitement)
+- **Références** :
+  - Documentation sur l'automatisation de notebooks (Papermill, etc.)
+  - Littérature sur le traitement parallèle
+  - Bonnes pratiques en matière d'automatisation
+
+##### 2.5.2 Pipeline de traitement
+- **Contexte** : Un pipeline complet permet d'intégrer toutes les étapes de l'analyse argumentative.
+- **Objectifs** : Créer un pipeline complet pour l'ingestion, l'analyse et la visualisation des résultats d'analyse argumentative. Implémenter des mécanismes de reprise sur erreur, de monitoring, et de reporting.
+- **Technologies clés** : Pipelines de données, workflow engines, ETL
+- **Niveau de difficulté** : ⭐⭐⭐⭐
+- **Interdépendances** : Intègre 2.5.1 (automatisation) et 3.1 (interfaces utilisateurs)
+- **Références** :
+  - "Building Data Pipelines with Python" (2021)
+  - Documentation sur les outils de workflow (Airflow, Luigi, etc.)
+  - Littérature sur les architectures de pipelines de données
+
+##### 2.5.3 Développement d'un serveur MCP pour l'analyse argumentative
+- **Contexte** : Le Model Context Protocol (MCP) permet d'exposer des capacités d'IA à d'autres applications.
+- **Objectifs** : Publier le travail collectif sous forme d'un serveur MCP utilisable dans des applications comme Roo, Claude Desktop ou Semantic Kernel. Implémenter les spécifications MCP pour exposer les fonctionnalités d'analyse argumentative.
+- **Technologies clés** : MCP, API REST/WebSocket, JSON Schema
+- **Niveau de difficulté** : ⭐⭐⭐⭐
+- **Interdépendances** : Intègre toutes les fonctionnalités d'analyse argumentative
+- **Références** :
+  - Spécification du protocole MCP
+  - Documentation sur le développement de serveurs HTTP/WebSocket
+  - Exemples de serveurs MCP existants
+
+##### 2.5.4 Outils et ressources MCP pour l'argumentation
+- **Contexte** : Des outils et ressources MCP spécifiques enrichissent les capacités d'analyse argumentative.
+- **Objectifs** : Créer des outils MCP spécifiques pour l'extraction d'arguments, la détection de sophismes, la formalisation logique, et l'évaluation de la qualité argumentative. Développer des ressources MCP donnant accès à des taxonomies de sophismes, des exemples d'arguments, et des schémas d'argumentation.
+- **Technologies clés** : MCP, JSON Schema, conception d'API
+- **Niveau de difficulté** : ⭐⭐⭐
+- **Interdépendances** : Extension de 2.5.3 (serveur MCP)
+- **Références** :
+  - Spécification du protocole MCP
+  - Documentation sur la conception d'API
+  - Exemples d'outils et ressources MCP existants
+### 3. Expérience utilisateur et applications
+
+#### 3.1 Interfaces utilisateurs
+
+##### 3.1.1 Interface web pour l'analyse argumentative
+- **Contexte** : Une interface web intuitive facilite l'utilisation du système d'analyse argumentative.
+- **Objectifs** : Développer une interface web moderne et intuitive permettant de visualiser et d'interagir avec les analyses argumentatives. Créer une expérience utilisateur fluide pour naviguer dans les structures argumentatives complexes, avec possibilité de filtrage, recherche et annotation.
+- **Technologies clés** : React/Vue.js/Angular, D3.js, Cytoscape.js
+- **Niveau de difficulté** : ⭐⭐⭐
+- **Interdépendances** : Intègre les fonctionnalités d'analyse argumentative, lié à 3.1.4 (visualisation)
+- **Références** :
+  - "Argument Visualization Tools in the Classroom" de Scheuer et al.
+  - Interfaces de Kialo ou Arguman comme inspiration
+  - Documentation sur les frameworks web modernes
+
+##### 3.1.2 Dashboard de monitoring
+- **Contexte** : Un tableau de bord permet de suivre l'activité du système et d'identifier les problèmes.
+- **Objectifs** : Créer un tableau de bord permettant de suivre en temps réel l'activité des différents agents et l'état du système. Visualiser les métriques clés, les goulots d'étranglement, et l'utilisation des ressources. Implémenter des alertes et des notifications pour les événements critiques.
+- **Technologies clés** : Grafana, Tableau, D3.js
+- **Niveau de difficulté** : ⭐⭐⭐
+- **Interdépendances** : Utilise 2.1.3 (monitoring et évaluation)
+- **Références** :
+  - "Information Dashboard Design" de Stephen Few
+  - Dashboards de Datadog ou New Relic comme inspiration
+  - Documentation sur la visualisation de données
+
+##### 3.1.3 Éditeur visuel d'arguments
+- **Contexte** : Un éditeur visuel facilite la construction et la manipulation de structures argumentatives.
+- **Objectifs** : Concevoir un éditeur permettant de construire et de manipuler visuellement des structures argumentatives. Permettre la création, l'édition et la connexion d'arguments, de prémisses et de conclusions de manière intuitive, avec support pour différents formalismes argumentatifs.
+- **Technologies clés** : JointJS, mxGraph (draw.io), GoJS
+- **Niveau de difficulté** : ⭐⭐⭐⭐
+- **Interdépendances** : Lié à 1.2 (frameworks d'argumentation) et 3.1.4 (visualisation)
+- **Références** :
+  - "Argument Mapping" de Tim van Gelder
+  - Outils comme Rationale ou Argunaut
+  - Documentation sur les frameworks de diagrammes
+
+##### 3.1.4 Visualisation de graphes d'argumentation
+- **Contexte** : La visualisation des graphes d'argumentation aide à comprendre les relations entre arguments.
+- **Objectifs** : Développer des outils de visualisation avancés pour les différents frameworks d'argumentation (Dung, bipolaire, pondéré, etc.). Implémenter des algorithmes de layout optimisés pour les graphes argumentatifs, avec support pour l'interaction et l'exploration.
+- **Technologies clés** : Sigma.js, Cytoscape.js, vis.js
+- **Niveau de difficulté** : ⭐⭐⭐⭐
+- **Interdépendances** : Lié à 1.2 (frameworks d'argumentation)
+- **Références** :
+  - "Computational Models of Argument: Proceedings of COMMA" (conférences biennales)
+  - Travaux de Floris Bex sur la visualisation d'arguments
+  - Documentation sur les bibliothèques de visualisation de graphes
+
+##### 3.1.5 Interface mobile
+- **Contexte** : Une interface mobile permet d'accéder au système d'analyse argumentative en déplacement.
+- **Objectifs** : Adapter l'interface utilisateur pour une utilisation sur appareils mobiles. Concevoir une expérience responsive ou développer une application mobile native/hybride permettant d'accéder aux fonctionnalités principales du système d'analyse argumentative.
+- **Technologies clés** : React Native, Flutter, PWA
+- **Niveau de difficulté** : ⭐⭐⭐
+- **Interdépendances** : Extension de 3.1.1 (interface web)
+- **Références** :
+  - "Mobile First" de Luke Wroblewski
+  - "Responsive Web Design" d'Ethan Marcotte
+  - Documentation sur le développement mobile
+
+##### 3.1.6 Accessibilité
+- **Contexte** : L'accessibilité garantit que le système peut être utilisé par tous, y compris les personnes en situation de handicap.
+- **Objectifs** : Améliorer l'accessibilité des interfaces pour les personnes en situation de handicap. Implémenter les standards WCAG 2.1 AA, avec support pour les lecteurs d'écran, la navigation au clavier, et les contrastes adaptés.
+- **Technologies clés** : ARIA, axe-core, pa11y
+- **Niveau de difficulté** : ⭐⭐⭐
+- **Interdépendances** : Transversal à toutes les interfaces (3.1.x)
+- **Références** :
+  - "Inclusive Design Patterns" de Heydon Pickering
+  - Ressources du W3C Web Accessibility Initiative (WAI)
+  - Documentation sur les standards d'accessibilité
+
+##### 3.1.7 Système de collaboration en temps réel
+- **Contexte** : La collaboration en temps réel permet à plusieurs utilisateurs de travailler ensemble sur une analyse.
+- **Objectifs** : Développer des fonctionnalités permettant à plusieurs utilisateurs de travailler simultanément sur la même analyse argumentative, avec gestion des conflits et visualisation des contributions de chacun.
+- **Technologies clés** : Socket.io, Yjs, ShareDB
+- **Niveau de difficulté** : ⭐⭐⭐⭐⭐
+- **Interdépendances** : Extension de 3.1.1 (interface web) et 3.1.3 (éditeur)
+- **Références** :
+  - "Building Real-time Applications with WebSockets" de Vanessa Wang et al.
+  - Systèmes comme Google Docs ou Figma comme inspiration
+  - Documentation sur les technologies de collaboration en temps réel
+
+#### 3.2 Projets intégrateurs
+
+##### 3.2.1 Système de débat assisté par IA
+- **Contexte** : Un système de débat assisté par IA peut aider à structurer et améliorer les échanges argumentatifs.
+- **Objectifs** : Développer une application complète permettant à des utilisateurs de débattre avec l'assistance d'agents IA qui analysent et améliorent leurs arguments. Le système pourrait identifier les faiblesses argumentatives, suggérer des contre-arguments, et aider à structurer les débats de manière constructive.
+- **Technologies clés** : LLMs, frameworks d'argumentation, interface interactive
+- **Niveau de difficulté** : ⭐⭐⭐⭐
+- **Interdépendances** : Intègre 1.2 (frameworks d'argumentation), 2.3 (agents spécialistes), 3.1 (interfaces)
+- **Références** :
+  - "Computational Models of Argument" (COMMA)
+  - Plateforme Kialo
+  - Recherches de Chris Reed sur les technologies d'argumentation
+
+##### 3.2.2 Plateforme d'éducation à l'argumentation
+- **Contexte** : Une plateforme éducative peut aider à développer les compétences argumentatives.
+- **Objectifs** : Créer un outil éducatif pour enseigner les principes de l'argumentation et aider à identifier les sophismes. Intégrer des tutoriels interactifs, des exercices pratiques, et un système de feedback automatisé basé sur l'analyse argumentative.
+- **Technologies clés** : Gamification, visualisation d'arguments, agents pédagogiques
+- **Niveau de difficulté** : ⭐⭐⭐⭐
+- **Interdépendances** : Utilise 1.3.2 (classification des sophismes), 2.3.2 (détection de sophismes), 3.1 (interfaces)
+- **Références** :
+  - "Critical Thinking: A Concise Guide" de Tracy Bowell et Gary Kemp
+  - "Argumentation Mining" de Stede et Schneider
+  - Plateforme ArgTeach
+
+##### 3.2.3 Système d'aide à la décision argumentative
+- **Contexte** : Un système d'aide à la décision basé sur l'argumentation peut faciliter la prise de décisions complexes.
+- **Objectifs** : Développer un système qui aide à la prise de décision en analysant et évaluant les arguments pour et contre différentes options. Implémenter des méthodes de pondération des arguments, d'analyse multicritère, et de visualisation des compromis.
+- **Technologies clés** : Frameworks d'argumentation pondérés, méthodes MCDM, visualisation interactive
+- **Niveau de difficulté** : ⭐⭐⭐⭐
+- **Interdépendances** : Utilise 1.2.8 (frameworks avancés), 3.1.4 (visualisation)
+- **Références** :
+  - "Decision Support Systems" de Power et Sharda
+  - "Argumentation-based Decision Support" de Karacapilidis et Papadias
+  - Outils comme Rationale ou bCisive
+
+##### 3.2.4 Plateforme collaborative d'analyse de textes
+- **Contexte** : Une plateforme collaborative facilite l'analyse argumentative de textes complexes par plusieurs utilisateurs.
+- **Objectifs** : Créer un environnement permettant à plusieurs utilisateurs de collaborer sur l'analyse argumentative de textes complexes. Intégrer des fonctionnalités de partage, d'annotation, de commentaire, et de révision collaborative.
+- **Technologies clés** : Collaboration en temps réel, gestion de versions, annotation de documents
+- **Niveau de difficulté** : ⭐⭐⭐⭐
+- **Interdépendances** : Utilise 3.1.7 (collaboration en temps réel)
+- **Références** :
+  - "Computer Supported Cooperative Work" de Grudin
+  - Systèmes comme Hypothesis, PeerLibrary, ou CommentPress
+  - Littérature sur les systèmes d'annotation collaborative
+
+##### 3.2.5 Assistant d'écriture argumentative
+- **Contexte** : Un assistant d'écriture peut aider à améliorer la qualité argumentative des textes.
+- **Objectifs** : Développer un outil d'aide à la rédaction qui suggère des améliorations pour renforcer la qualité argumentative des textes. Analyser la structure argumentative, identifier les faiblesses logiques, et proposer des reformulations ou des arguments supplémentaires.
+- **Technologies clés** : NLP avancé, analyse rhétorique automatisée, génération de texte
+- **Niveau de difficulté** : ⭐⭐⭐⭐
+- **Interdépendances** : Utilise 2.3.2 (détection de sophismes), 2.3.3 (génération de contre-arguments)
+- **Références** :
+  - "Automated Essay Scoring" de Shermis et Burstein
+  - Recherches sur l'argumentation computationnelle de l'ARG-tech Centre
+  - Outils comme Grammarly ou Hemingway comme inspiration
+
+##### 3.2.6 Système d'analyse de débats politiques
+- **Contexte** : L'analyse des débats politiques peut aider à évaluer objectivement la qualité argumentative des discours.
+- **Objectifs** : Développer un outil d'analyse des débats politiques en temps réel, capable d'identifier les arguments, les sophismes, et les stratégies rhétoriques utilisées par les participants. Fournir une évaluation objective de la qualité argumentative et factuelle des interventions.
+- **Technologies clés** : Traitement du langage en temps réel, fact-checking automatisé, analyse de sentiment
+- **Niveau de difficulté** : ⭐⭐⭐⭐⭐
+- **Interdépendances** : Utilise 2.3.2 (détection de sophismes), 2.4 (indexation sémantique)
+- **Références** :
+  - "Computational Approaches to Analyzing Political Discourse" de Hovy et Lim
+  - Projets comme FactCheck.org ou PolitiFact
+  - Littérature sur l'analyse automatique du discours politique
+
+##### 3.2.7 Plateforme de délibération citoyenne
+- **Contexte** : Une plateforme de délibération peut faciliter la participation citoyenne aux décisions publiques.
+- **Objectifs** : Créer un espace numérique pour faciliter les délibérations citoyennes sur des sujets complexes, en structurant les échanges selon des principes argumentatifs rigoureux et en favorisant la construction collaborative de consensus.
+- **Technologies clés** : Modération assistée par IA, visualisation d'opinions, mécanismes de vote et de consensus
+- **Niveau de difficulté** : ⭐⭐⭐⭐⭐
+- **Interdépendances** : Intègre 3.2.1 (débat assisté), 3.2.3 (aide à la décision)
+- **Références** :
+  - "Democracy in the Digital Age" de Wilhelm
+  - Plateformes comme Decidim, Consul, ou vTaiwan
+  - Littérature sur la démocratie délibérative
+
+
 
 Cette section présente une approche flexible pour contribuer au projet Intelligence Symbolique, favorisant l'auto-organisation des équipes d'étudiants tout en maintenant la qualité et la cohérence du code produit.
 
