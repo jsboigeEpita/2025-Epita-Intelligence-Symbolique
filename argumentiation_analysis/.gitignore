@@ -70,9 +70,12 @@ libs/
 # Ignore le contenu du dossier data (CSV téléchargé, config UI sauvegardée...)
 # Si vous voulez versionner un fichier spécifique DANS data, utilisez une règle d'exception,
 # par exemple : !data/fichier_a_garder.txt ou !data/.gitkeep pour garder le dossier vide.
-data/
-# Exception pour le fichier de configuration chiffré qui doit être versionné
-!data/extract_sources.json.gz.enc
+# Règles modifiées pour permettre le suivi du fichier extract_sources.json.gz.enc
+# data/
+# !data/extract_sources.json.gz.enc
+
+# Nouvelle approche : ne pas ignorer data/ dans ce fichier
+# Le fichier .gitignore racine s'occupera d'ignorer les autres fichiers
 
 # Configuration UI non chiffrée (ne doit jamais être versionnée)
 data/extract_sources.json

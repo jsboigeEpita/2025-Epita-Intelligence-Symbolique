@@ -66,6 +66,10 @@ argumentiation_analysis/temp_downloads/
 data/
 # Exception pour le fichier de configuration chiffré qui doit être versionné
 !data/extract_sources.json.gz.enc
+# Exception pour le fichier de configuration chiffré dans le sous-répertoire argumentiation_analysis
+!argumentiation_analysis/data/
+argumentiation_analysis/data/*
+!argumentiation_analysis/data/extract_sources.json.gz.enc
 
 # Configuration UI non chiffrée (ne doit jamais être versionnée)
 data/extract_sources.json
