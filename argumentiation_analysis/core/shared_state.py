@@ -33,6 +33,8 @@ class RhetoricalAnalysisState:
         self.belief_sets = {}
         self.query_log = []
         self.answers = {}
+        self.extracts = []
+        self.errors = []
         self.final_conclusion = None
         self._next_agent_designated = None
         state_logger.debug(f"Nouvelle instance RhetoricalAnalysisState créée (id: {id(self)}) avec texte (longueur: {len(initial_text)}).")
@@ -122,6 +124,28 @@ class RhetoricalAnalysisState:
         self._next_agent_designated = agent_name
         state_logger.info(f"Prochain agent désigné: '{agent_name}'")
         state_logger.debug(f"État _next_agent_designated après désignation: '{self._next_agent_designated}'")
+    
+    def add_extract(self, name: str, content: str) -> str:
+        """Ajoute un extrait de texte et retourne son ID."""
+        if not hasattr(self, 'extracts'):
+            self.extracts = []
+        extract_id = self._generate_id("extract", self.extracts)
+        extract = {"id": extract_id, "name": name, "content": content}
+        self.extracts.append(extract)
+        state_logger.info(f"Extrait ajouté: {extract_id} - '{name}'")
+        state_logger.debug(f"État extracts après ajout {extract_id}: {self.extracts}")
+        return extract_id
+    
+    def log_error(self, agent_name: str, message: str) -> str:
+        """Enregistre une erreur et retourne son ID."""
+        if not hasattr(self, 'errors'):
+            self.errors = []
+        error_id = self._generate_id("error", self.errors)
+        error = {"id": error_id, "agent_name": agent_name, "message": message, "timestamp": None}
+        self.errors.append(error)
+        state_logger.warning(f"Erreur enregistrée: {error_id} - Agent: {agent_name} - '{message}'")
+        state_logger.debug(f"État errors après ajout {error_id}: {self.errors}")
+        return error_id
 
     def consume_next_agent_designation(self) -> Optional[str]:
         """Récupère le nom de l'agent désigné et réinitialise la désignation."""
@@ -144,12 +168,18 @@ class RhetoricalAnalysisState:
         assert not self.answers, "Reset answers failed"
         assert self.final_conclusion is None, "Reset final_conclusion failed"
         assert self._next_agent_designated is None, "Reset _next_agent_designated failed"
+        # Réinitialiser les attributs extracts et errors s'ils existent
+        if hasattr(self, 'extracts'):
+            self.extracts = []
+        if hasattr(self, 'errors'):
+            self.errors = []
         state_logger.info("<<< Réinitialisation de l'état terminée et vérifiée.")
 
     def get_state_snapshot(self, summarize: bool = False) -> Dict[str, Any]:
         """Retourne un dictionnaire représentant l'état actuel (complet ou résumé)."""
         if summarize:
              return {
+                 "raw_text": self.raw_text[:150] + "..." if len(self.raw_text) > 150 else self.raw_text,
                  "raw_text_snippet": self.raw_text[:150] + "..." if len(self.raw_text) > 150 else self.raw_text,
                  "task_count": len(self.analysis_tasks),
                  "tasks_defined": list(self.analysis_tasks.keys()),
@@ -158,6 +188,8 @@ class RhetoricalAnalysisState:
                  "belief_set_count": len(self.belief_sets),
                  "query_log_count": len(self.query_log),
                  "answer_count": len(self.answers),
+                 "extract_count": len(getattr(self, 'extracts', [])),
+                 "error_count": len(getattr(self, 'errors', [])),
                  "tasks_answered": list(self.answers.keys()),
                  "conclusion_present": self.final_conclusion is not None,
                  "next_agent_designated": self._next_agent_designated
@@ -185,6 +217,8 @@ class RhetoricalAnalysisState:
         state.belief_sets = data.get('belief_sets', {})
         state.query_log = data.get('query_log', [])
         state.answers = data.get('answers', {})
+        state.extracts = data.get('extracts', [])
+        state.errors = data.get('errors', [])
         state.final_conclusion = data.get('final_conclusion', None)
         state._next_agent_designated = data.get('_next_agent_designated', None)
         state_logger.debug(f"Instance RhetoricalAnalysisState créée depuis dict (id: {id(state)}).")

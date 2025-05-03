@@ -53,7 +53,7 @@ except ImportError as e:
         )
         from core.llm_service import create_llm_service
         # Import de l'agent d'extraction
-        from agents.extract import setup_extract_agent
+        from agents.core.extract.extract_agent import setup_extract_agent
         config_import_success = True
     except ImportError as e:
         config_import_success = False

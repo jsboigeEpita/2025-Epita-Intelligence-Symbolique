@@ -24,11 +24,11 @@ from core.strategies import SimpleTerminationStrategy, BalancedParticipationStra
 # NOTE: create_llm_service n'est plus importé ici, le service est passé en argument
 
 # Imports des définitions d'agents (setup + instructions)
-from agents.pm.pm_definitions import setup_pm_kernel, PM_INSTRUCTIONS
-from agents.informal.informal_definitions import setup_informal_kernel, INFORMAL_AGENT_INSTRUCTIONS
-from agents.pl.pl_definitions import setup_pl_kernel, PL_AGENT_INSTRUCTIONS
-from agents.extract.extract_agent import setup_extract_agent
-from agents.extract.prompts import EXTRACT_AGENT_INSTRUCTIONS
+from agents.core.pm.pm_definitions import setup_pm_kernel, PM_INSTRUCTIONS
+from agents.core.informal.informal_definitions import setup_informal_kernel, INFORMAL_AGENT_INSTRUCTIONS
+from agents.core.pl.pl_definitions import setup_pl_kernel, PL_AGENT_INSTRUCTIONS
+from agents.core.extract.extract_agent import setup_extract_agent
+from agents.core.extract.prompts import EXTRACT_AGENT_INSTRUCTIONS
 
 # Logger principal pour cette fonction
 logger = logging.getLogger("Orchestration.Run")
