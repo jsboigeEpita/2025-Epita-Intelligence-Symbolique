@@ -5,7 +5,7 @@ Tests unitaires pour l'agent Project Manager (PM).
 import unittest
 from unittest.mock import MagicMock, patch
 import semantic_kernel as sk
-from agents.pm.pm_definitions import setup_pm_kernel
+from agents.core.pm.pm_definitions import setup_pm_kernel
 from tests.async_test_case import AsyncTestCase
 
 
@@ -22,11 +22,11 @@ class TestPMAgent(AsyncTestCase):
         self.execution_settings = MagicMock()
         self.kernel.get_prompt_execution_settings_from_service_id = MagicMock(return_value=self.execution_settings)
 
-    @patch('agents.pm.pm_definitions.PM_AGENT_INSTRUCTIONS')
-    @patch('agents.pm.pm_definitions.prompt_analyze_text')
-    @patch('agents.pm.pm_definitions.prompt_plan_analysis')
-    @patch('agents.pm.pm_definitions.prompt_delegate_task')
-    @patch('agents.pm.pm_definitions.prompt_synthesize_results')
+    @patch('agents.core.pm.pm_definitions.PM_AGENT_INSTRUCTIONS')
+    @patch('agents.core.pm.pm_definitions.prompt_analyze_text')
+    @patch('agents.core.pm.pm_definitions.prompt_plan_analysis')
+    @patch('agents.core.pm.pm_definitions.prompt_delegate_task')
+    @patch('agents.core.pm.pm_definitions.prompt_synthesize_results')
     def test_setup_pm_kernel(self, mock_synthesize, mock_delegate, mock_plan, mock_analyze, mock_instructions):
         """Teste la configuration du kernel pour l'agent PM."""
         # Configurer les mocks
