@@ -5,8 +5,8 @@ Tests unitaires pour l'agent d'extraction.
 import unittest
 import asyncio
 from unittest.mock import MagicMock, patch, AsyncMock
-from agents.extract.extract_agent import ExtractAgent
-from agents.extract.extract_definitions import ExtractAgentPlugin, ExtractResult
+from agents.core.extract.extract_agent import ExtractAgent
+from agents.core.extract.extract_definitions import ExtractAgentPlugin, ExtractResult
 from tests.async_test_case import AsyncTestCase
 
 
@@ -39,7 +39,7 @@ class TestExtractAgent(AsyncTestCase):
         }
         self.extract_name = "Extrait de test"
 
-    @patch('agents.extract.extract_agent.load_source_text')
+    @patch('agents.core.extract.extract_agent.load_source_text')
     async def test_extract_from_name_success(self, mock_load_source_text):
         """Teste l'extraction réussie à partir du nom."""
         # Configurer les mocks
@@ -78,7 +78,7 @@ class TestExtractAgent(AsyncTestCase):
         )
         self.validation_agent_mock.invoke.assert_called_once()
 
-    @patch('agents.extract.extract_agent.load_source_text')
+    @patch('agents.core.extract.extract_agent.load_source_text')
     async def test_extract_from_name_invalid_markers(self, mock_load_source_text):
         """Teste l'extraction avec des marqueurs invalides."""
         # Configurer les mocks
@@ -102,7 +102,7 @@ class TestExtractAgent(AsyncTestCase):
         self.extract_text_mock.assert_not_called()
         self.validation_agent_mock.assert_not_called()
 
-    @patch('agents.extract.extract_agent.load_source_text')
+    @patch('agents.core.extract.extract_agent.load_source_text')
     async def test_extract_from_name_markers_not_found(self, mock_load_source_text):
         """Teste l'extraction avec des marqueurs non trouvés dans le texte."""
         # Configurer les mocks
@@ -129,7 +129,7 @@ class TestExtractAgent(AsyncTestCase):
         self.extract_text_mock.assert_called_once()
         self.validation_agent_mock.assert_not_called()
 
-    @patch('agents.extract.extract_agent.load_source_text')
+    @patch('agents.core.extract.extract_agent.load_source_text')
     async def test_extract_from_name_validation_rejected(self, mock_load_source_text):
         """Teste l'extraction avec validation rejetée."""
         # Configurer les mocks
@@ -161,7 +161,7 @@ class TestExtractAgent(AsyncTestCase):
         self.extract_text_mock.assert_called_once()
         self.validation_agent_mock.invoke.assert_called_once()
 
-    @patch('agents.extract.extract_agent.load_source_text')
+    @patch('agents.core.extract.extract_agent.load_source_text')
     async def test_repair_extract_valid(self, mock_load_source_text):
         """Teste la réparation d'un extrait valide."""
         # Configurer les mocks
@@ -199,7 +199,7 @@ class TestExtractAgent(AsyncTestCase):
         self.extract_agent_mock.invoke.assert_not_called()
         self.validation_agent_mock.invoke.assert_not_called()
 
-    @patch('agents.extract.extract_agent.load_source_text')
+    @patch('agents.core.extract.extract_agent.load_source_text')
     async def test_update_extract_markers(self, mock_load_source_text):
         """Teste la mise à jour des marqueurs d'un extrait."""
         # Configurer le mock extract_results

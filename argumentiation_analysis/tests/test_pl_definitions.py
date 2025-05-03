@@ -6,7 +6,7 @@ import unittest
 from unittest.mock import MagicMock, patch
 import jpype
 import semantic_kernel as sk
-from agents.pl.pl_definitions import PropositionalLogicPlugin, setup_pl_kernel
+from agents.core.pl.pl_definitions import PropositionalLogicPlugin, setup_pl_kernel
 
 
 class TestPropositionalLogicPlugin(unittest.TestCase):
@@ -212,7 +212,7 @@ class TestSetupPLKernel(unittest.TestCase):
         kernel_mock.add_plugin.assert_not_called()
 
     @patch('jpype.isJVMStarted')
-    @patch('agents.pl.pl_definitions.PropositionalLogicPlugin')
+    @patch('agents.core.pl.pl_definitions.PropositionalLogicPlugin')
     def test_setup_pl_kernel_jvm_started(self, mock_plugin_class, mock_is_jvm_started):
         """Teste la configuration du kernel lorsque la JVM est démarrée."""
         # Configurer les mocks

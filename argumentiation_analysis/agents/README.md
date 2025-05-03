@@ -1,6 +1,6 @@
 # 🧠 Agents IA (`agents/`)
 
-Ce répertoire contient les définitions spécifiques à chaque agent IA participant à l'analyse rhétorique collaborative. L'objectif est que chaque agent ait son propre sous-répertoire pour une meilleure modularité.
+Ce répertoire contient les définitions spécifiques à chaque agent IA participant à l'analyse rhétorique collaborative. La structure a été réorganisée pour une meilleure modularité et maintenabilité.
 
 [Retour au README Principal](../README.md)
 
@@ -12,49 +12,48 @@ Ce README sert de point d'entrée pour une instance VSCode dédiée au développ
 
 ### Agents Principaux
 
-Chaque agent est organisé dans son propre sous-répertoire :
+* **[`core/`](./core/README.md)** : Répertoire contenant les agents principaux du système
+  * **[`core/pm/`](./core/pm/README.md)** 🧑‍🏫 : Agent Project Manager - Orchestre l'analyse.
+  * **[`core/informal/`](./core/informal/README.md)** 🧐 : Agent d'Analyse Informelle - Identifie arguments et sophismes.
+  * **[`core/pl/`](./core/pl/README.md)** 📐 : Agent de Logique Propositionnelle - Gère la formalisation et l'interrogation logique via Tweety.
+  * **[`core/extract/`](./core/extract/README.md)** 📑 : Agent d'Extraction - Gère l'extraction et la réparation des extraits de texte.
 
-* **[`pm/`](./pm/README.md)** 🧑‍🏫 : Agent Project Manager - Orchestre l'analyse.
-* **[`informal/`](./informal/README.md)** 🧐 : Agent d'Analyse Informelle - Identifie arguments et sophismes.
-* **[`pl/`](./pl/README.md)** 📐 : Agent de Logique Propositionnelle - Gère la formalisation et l'interrogation logique via Tweety.
-* **[`extract/`](./extract/README.md)** 📑 : Agent d'Extraction - Gère l'extraction et la réparation des extraits de texte.
-* **`(student_template/)`** : *(À créer)* Un template pour guider les étudiants dans l'ajout de leur propre agent.
+### Outils et Utilitaires
 
-### Scripts et Utilitaires
+* **[`tools/`](./tools/README.md)** 🛠️ : Outils et utilitaires utilisés par les agents
+  * **[`tools/optimization/`](./tools/optimization/README.md)** ⚙️ : Outils d'optimisation des agents
+  * **[`tools/analysis/`](./tools/analysis/README.md)** 📊 : Outils d'analyse des résultats des agents
+  * **[`tools/encryption/`](./tools/encryption/README.md)** 🔒 : Système d'encryption pour sécuriser les données sensibles
 
-* **[`test_scripts/`](./test_scripts/README.md)** 🧪 : Scripts de test pour les différents agents et l'orchestration.
-  * **[`test_scripts/informal/`](./test_scripts/informal/README.md)** : Tests spécifiques à l'agent d'analyse informelle.
-  * **[`test_scripts/orchestration/`](./test_scripts/orchestration/README.md)** : Tests d'orchestration entre les différents agents.
+### Scripts d'Exécution
 
-* **[`analysis_scripts/`](./analysis_scripts/README.md)** 📊 : Scripts d'analyse des résultats des agents.
-  * **[`analysis_scripts/informal/`](./analysis_scripts/informal/README.md)** : Analyse des résultats de l'agent d'analyse informelle.
-  * **[`analysis_scripts/orchestration/`](./analysis_scripts/orchestration/README.md)** : Analyse des résultats de l'orchestration.
-
-* **[`optimization_scripts/`](./optimization_scripts/README.md)** ⚙️ : Scripts d'optimisation des agents.
-  * **[`optimization_scripts/informal/`](./optimization_scripts/informal/README.md)** : Optimisation de l'agent d'analyse informelle.
-
-* **[`run_scripts/`](./run_scripts/README.md)** 🚀 : Scripts d'exécution pour lancer les tests et les analyses.
-
-* **[`utils/`](./utils/)** 🛠️ : Utilitaires spécifiques aux agents.
-  * **[`utils/informal_optimization/`](./utils/informal_optimization/README.md)** : Outils pour l'optimisation de l'agent d'analyse informelle.
-
-### Documentation et Traces
-
-* **[`documentation/`](./documentation/README.md)** 📚 : Documentation du projet.
-  * **[`documentation/reports/`](./documentation/reports/README.md)** : Rapports d'analyse et de test.
-
-* **[`execution_traces/`](./execution_traces/README.md)** 📝 : Traces d'exécution des agents.
-  * **[`execution_traces/informal/`](./execution_traces/informal/README.md)** : Traces d'exécution de l'agent d'analyse informelle.
-  * **[`execution_traces/orchestration/`](./execution_traces/orchestration/README.md)** : Traces d'exécution de l'orchestration.
+* **[`runners/`](./runners/README.md)** 🚀 : Scripts d'exécution pour les agents
+  * **[`runners/test/`](./runners/test/README.md)** 🧪 : Scripts pour l'exécution des tests
+  * **[`runners/deploy/`](./runners/deploy/README.md)** 📦 : Scripts de déploiement
+  * **[`runners/integration/`](./runners/integration/README.md)** 🔄 : Scripts d'intégration
 
 ### Données et Bibliothèques
 
-* **[`data/`](./data/)** 📁 : Données utilisées par les agents.
-* **[`libs/`](./libs/)** 📦 : Bibliothèques partagées.
+* **[`data/`](./data/)** 📁 : Données utilisées par les agents
+* **[`libs/`](./libs/)** 📦 : Bibliothèques partagées
 
-### Structure des Agents
+### Documentation et Traces
 
-Chaque sous-répertoire d'agent contient typiquement :
+* **[`docs/`](./docs/README.md)** 📚 : Documentation du projet
+  * **[`docs/reports/`](./docs/reports/README.md)** 📝 : Rapports d'analyse et de test
+
+* **[`traces/`](./traces/README.md)** 📝 : Traces d'exécution des agents (séparées du code)
+  * **[`traces/informal/`](./traces/informal/README.md)** 🧐 : Traces de l'agent d'analyse informelle
+  * **[`traces/orchestration/`](./traces/orchestration/README.md)** 🎮 : Traces de l'orchestration
+
+### Templates
+
+* **[`templates/`](./templates/README.md)** 📋 : Templates pour nouveaux agents
+  * **[`templates/student_template/`](./templates/student_template/README.md)** 🎓 : Template pour les étudiants
+
+## Structure des Agents
+
+Chaque sous-répertoire d'agent dans `core/` contient typiquement :
 * `__init__.py`: Fichier vide ou avec des imports pour faciliter l'accès aux fonctions.
 * `*_definitions.py`: Classes Plugin (si besoin), fonction `setup_*_kernel`, constante `*_INSTRUCTIONS`.
 * `prompts.py`: Constantes contenant les prompts sémantiques pour l'agent.
@@ -67,21 +66,18 @@ Chaque sous-répertoire d'agent contient typiquement :
 
 Pour créer un nouvel agent, suivez ces étapes :
 
-1. Créez un nouveau sous-répertoire avec le nom de l'agent (ex: `new_agent/`)
-2. Créez les fichiers de base :
-   - `__init__.py`
-   - `new_agent_definitions.py`
-   - `prompts.py`
-   - `new_agent.py`
-3. Implémentez les fonctionnalités spécifiques à l'agent
-4. Mettez à jour l'orchestrateur principal pour intégrer le nouvel agent
+1. Utilisez le template étudiant comme base (`templates/student_template/`)
+2. Créez un nouveau sous-répertoire dans `core/` avec le nom de l'agent (ex: `core/new_agent/`)
+3. Copiez les fichiers du template et adaptez-les à votre agent
+4. Implémentez les fonctionnalités spécifiques à l'agent
+5. Mettez à jour l'orchestrateur principal pour intégrer le nouvel agent
 
 ### Test indépendant des agents
 
-Pour tester un agent de manière indépendante, vous pouvez créer un script de test dans le répertoire `test_scripts/[agent_name]/`. Exemple :
+Pour tester un agent de manière indépendante, vous pouvez créer un script de test dans le répertoire `runners/test/[agent_name]/`. Exemple :
 
 ```python
-# test_scripts/new_agent/test_new_agent.py
+# runners/test/new_agent/test_new_agent.py
 import asyncio
 import sys
 import os
@@ -97,7 +93,7 @@ from dotenv import load_dotenv
 load_dotenv(override=True)
 
 from core.llm_service import create_llm_service
-from agents.new_agent.new_agent_definitions import setup_new_agent
+from agents.core.new_agent.new_agent_definitions import setup_new_agent
 
 async def test_agent():
     # Créer le service LLM
@@ -116,7 +112,7 @@ if __name__ == "__main__":
 
 Exécutez le test avec :
 ```bash
-python agents/test_scripts/new_agent/test_new_agent.py
+python agents/runners/test/new_agent/test_new_agent.py
 ```
 
 ## Intégration avec l'orchestrateur principal
@@ -142,15 +138,15 @@ Pour intégrer un nouvel agent dans l'analyse complète, vous devez :
 - Utilisez des tests unitaires pour valider le comportement des agents
 - Suivez une structure cohérente pour tous les agents
 - Utilisez des noms explicites pour les fonctions et les variables
-- Créez des backups des fichiers avant de les modifier (voir `utils/informal_optimization/backups/`)
+- Créez des backups des fichiers avant de les modifier
 - Documentez les modifications apportées aux agents dans des rapports dédiés
 - Utilisez les outils d'optimisation pour améliorer les performances des agents
 
 ## Nouveaux Développements
 
-### Optimisation de l'Agent Informel
+### Optimisation des Agents
 
-Le dossier `optimization_scripts/informal/` contient des scripts pour analyser et améliorer les performances de l'agent d'analyse informelle :
+Le dossier `tools/optimization/` contient des outils pour analyser et améliorer les performances des agents :
 
 - **Analyse de la taxonomie** : Visualisation et analyse de la structure de la taxonomie des sophismes.
 - **Optimisation des prompts** : Amélioration des instructions et des prompts de l'agent.
@@ -159,18 +155,18 @@ Le dossier `optimization_scripts/informal/` contient des scripts pour analyser e
 
 ### Tests à Grande Échelle
 
-Le fichier `test_scripts/orchestration/test_orchestration_scale.py` permet de tester l'orchestration des agents sur un grand nombre de textes, afin d'évaluer :
+Les scripts dans `runners/integration/` permettent de tester l'orchestration des agents sur un grand nombre de textes, afin d'évaluer :
 
 - La robustesse du système
 - Les performances des agents
 - La qualité des analyses produites
 - Les temps d'exécution
 
-Les résultats de ces tests sont documentés dans `documentation/reports/rapport_test_orchestration_echelle.md`.
+Les résultats de ces tests sont documentés dans `docs/reports/`.
 
 ### Traces d'Exécution
 
-Le dossier `execution_traces/` contient les traces d'exécution des agents, permettant :
+Le dossier `traces/` contient les traces d'exécution des agents, permettant :
 
 - D'analyser le comportement des agents
 - D'identifier les points d'amélioration

@@ -19,10 +19,10 @@ from core.shared_state import RhetoricalAnalysisState
 from core.state_manager_plugin import StateManagerPlugin
 from core.strategies import SimpleTerminationStrategy, DelegatingSelectionStrategy
 from orchestration.analysis_runner import run_analysis_conversation
-from agents.extract.extract_agent import ExtractAgent
-from agents.pl.pl_definitions import setup_pl_kernel
-from agents.informal.informal_definitions import setup_informal_kernel
-from agents.pm.pm_definitions import setup_pm_kernel
+from agents.core.extract.extract_agent import ExtractAgent
+from agents.core.pl.pl_definitions import setup_pl_kernel
+from agents.core.informal.informal_definitions import setup_informal_kernel
+from agents.core.pm.pm_definitions import setup_pm_kernel
 from tests.async_test_case import AsyncTestCase
 from models.extract_definition import ExtractDefinitions
 from models.extract_result import ExtractResult
