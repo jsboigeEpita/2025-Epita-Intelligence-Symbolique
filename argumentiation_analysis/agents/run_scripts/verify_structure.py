@@ -106,10 +106,10 @@ def check_imports():
     
     # Liste des modules à importer pour vérifier qu'ils sont accessibles
     modules_to_check = [
-        "agents.informal.informal_definitions",
-        "agents.pl.pl_definitions",
-        "agents.pm.pm_definitions",
-        "agents.extract.extract_definitions"
+        "agents.core.informal.informal_definitions",
+        "agents.core.pl.pl_definitions",
+        "agents.core.pm.pm_definitions",
+        "agents.core.extract.extract_definitions"
     ]
     
     all_imports_ok = True
