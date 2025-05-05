@@ -24,7 +24,7 @@ from agents.core.pl.pl_definitions import setup_pl_kernel
 from agents.core.informal.informal_definitions import setup_informal_kernel
 from agents.core.pm.pm_definitions import setup_pm_kernel
 from tests.async_test_case import AsyncTestCase
-from models.extract_definition import ExtractDefinitions
+from models.extract_definition import ExtractDefinitions, Extract, SourceDefinition
 from models.extract_result import ExtractResult
 from services.extract_service import ExtractService
 from services.fetch_service import FetchService
@@ -190,22 +190,67 @@ class TestExtractIntegration(AsyncTestCase):
         Et voici la suite du texte après l'extrait.
         """
 
-    @pytest.mark.usefixtures("mock_fetch_service", "mock_extract_service")
-    async def test_extract_integration(self, mock_fetch_service, mock_extract_service, integration_sample_definitions):
+    @pytest.fixture(autouse=True)
+    def setup_mocks(self, request):
+        """Configure les mocks nécessaires pour le test."""
+        # Créer des mocks pour les services
+        self.mock_fetch_service = MagicMock(spec=FetchService)
+        self.mock_extract_service = MagicMock(spec=ExtractService)
+        
+        # Configurer le mock pour fetch_text
+        sample_text = """
+        Ceci est un exemple de texte source.
+        Il contient plusieurs paragraphes.
+        
+        Voici un marqueur de début: DEBUT_EXTRAIT
+        Ceci est le contenu de l'extrait.
+        Il peut contenir plusieurs lignes.
+        Voici un marqueur de fin: FIN_EXTRAIT
+        
+        Et voici la suite du texte après l'extrait.
+        """
+        self.mock_fetch_service.fetch_text.return_value = (sample_text, "https://example.com/test")
+        
+        # Configurer le mock pour extract_text_with_markers
+        self.mock_extract_service.extract_text_with_markers.return_value = (
+            "Ceci est le contenu de l'extrait.\nIl peut contenir plusieurs lignes.",
+            "✅ Extraction réussie",
+            True,
+            True
+        )
+        
+        # Créer un échantillon de définitions d'extraits
+        source = SourceDefinition(
+            source_name="Source d'intégration",
+            source_type="url",
+            schema="https",
+            host_parts=["example", "com"],
+            path="/test",
+            extracts=[
+                Extract(
+                    extract_name="Extrait d'intégration 1",
+                    start_marker="DEBUT_EXTRAIT",
+                    end_marker="FIN_EXTRAIT"
+                )
+            ]
+        )
+        self.integration_sample_definitions = ExtractDefinitions(sources=[source])
+    
+    async def test_extract_integration(self):
         """Teste l'intégration entre les services d'extraction et de récupération."""
         # Récupérer la source et l'extrait de test
-        source = integration_sample_definitions.sources[0]
+        source = self.integration_sample_definitions.sources[0]
         extract = source.extracts[0]
         
         # Récupérer le texte source via le service de récupération mocké
-        source_text, url = mock_fetch_service.fetch_text(source.to_dict())
+        source_text, url = self.mock_fetch_service.fetch_text(source.to_dict())
         
         # Vérifier que le texte source a été récupéré
         self.assertIsNotNone(source_text)
         self.assertEqual(url, "https://example.com/test")
         
         # Extraire le texte avec les marqueurs
-        extracted_text, status, start_found, end_found = mock_extract_service.extract_text_with_markers(
+        extracted_text, status, start_found, end_found = self.mock_extract_service.extract_text_with_markers(
             source_text, extract.start_marker, extract.end_marker
         )
         
