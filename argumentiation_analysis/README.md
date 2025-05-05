@@ -28,6 +28,7 @@ Le projet est organisé en modules Python pour une meilleure maintenabilité :
 ### Modules Principaux
 * [`core/`](./core/README.md) 🧱 : Composants fondamentaux partagés (État, StateManager, Stratégies, Setup JVM & LLM).
 * [`agents/`](./agents/README.md) 🧠 : Définitions des agents spécialisés (PM, Informal, PL, Extract).
+  * [`agents/tools/encryption/`](./agents/tools/encryption/README_encryption_system.md) 🔒 : Outils de gestion des configurations chiffrées.
 * [`orchestration/`](./orchestration/README.md) ⚙️ : Logique d'exécution de la conversation (`analysis_runner.py`).
 * [`ui/`](./ui/README.md) 🎨 : Logique de l'interface utilisateur (configuration du texte).
   * [`ui/extract_editor/`](./ui/extract_editor/README.md) ✏️ : Éditeur de marqueurs d'extraits.
@@ -124,6 +125,30 @@ python run_extract_editor.py
 
 # Réparation des bornes défectueuses
 python run_extract_repair.py
+```
+
+#### Outils de gestion des configurations chiffrées
+
+Les outils de gestion des configurations chiffrées sont maintenant disponibles dans le répertoire `agents/tools/encryption/` :
+
+```bash
+# Créer et archiver une configuration chiffrée complète
+python -m agents.tools.encryption.create_and_archive_encrypted_config
+
+# Créer une configuration chiffrée complète
+python -m agents.tools.encryption.create_complete_encrypted_config
+
+# Charger une configuration chiffrée
+python -m agents.tools.encryption.load_complete_encrypted_config
+
+# Nettoyer les fichiers après chiffrement
+python -m agents.tools.encryption.cleanup_after_encryption
+
+# Inspecter un fichier chiffré
+python -m agents.tools.encryption.inspect_encrypted_file
+
+# Vérifier une configuration chiffrée
+python -m agents.tools.encryption.verify_encrypted_config
 ```
 
 ### Utilisation des notebooks (méthode alternative)
