@@ -43,6 +43,8 @@ class TestInformalAnalysisPlugin(unittest.TestCase):
         # Configurer les mocks
         mock_read_csv.return_value = self.test_df.reset_index()
         mock_requests.return_value.status_code = 200
+        mock_validate.return_value = True  # Simuler que le fichier de taxonomie est valide
+        mock_get_path.return_value = Path("mock_taxonomy_path.csv")  # Simuler un chemin de fichier valide
         
         # Appeler la méthode à tester
         df = self.plugin._internal_load_and_prepare_dataframe()

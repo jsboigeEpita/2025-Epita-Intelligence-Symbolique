@@ -178,6 +178,8 @@ class RhetoricalAnalysisState:
     def get_state_snapshot(self, summarize: bool = False) -> Dict[str, Any]:
         """Retourne un dictionnaire représentant l'état actuel (complet ou résumé)."""
         if summarize:
+             # Assurer que le texte est tronqué dans le résumé
+             truncated_text = self.raw_text[:50] + "..." if len(self.raw_text) > 50 else self.raw_text
              return {
                  "raw_text": self.raw_text[:150] + "..." if len(self.raw_text) > 150 else self.raw_text,
                  "raw_text_snippet": self.raw_text[:150] + "..." if len(self.raw_text) > 150 else self.raw_text,

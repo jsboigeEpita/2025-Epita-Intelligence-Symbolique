@@ -1,109 +1,73 @@
-# Fichier .gitignore pour le projet d'analyse rhétorique
+# Ignorer les fichiers JDK
+jdk11/
+openjdk11.zip
 
-# Environnements virtuels Python
-venv/
-.venv/
-env/
-ENV/
+# Fichiers compilés
+*.class
+*.jar
+*.war
+*.ear
+*.zip
+*.tar.gz
+*.rar
 
-# Fichiers de configuration sensibles
-.env # Ne JAMAIS commiter le fichier .env contenant les secrets !
-*.env # Ignorer aussi les fichiers .env spécifiques (s'ils existent)
-**/.env # Ignorer les fichiers .env dans tous les sous-répertoires
-
-# Fichiers Bytecode Python et Cache
-__pycache__/
-*.pyc
-*.pyo
-*.pyd
-
-# Artefacts de Distribution/Build Python
+# Fichiers de build
+bin/
 build/
+target/
+out/
 dist/
-*.egg-info/
-*.egg
-wheels/
-pip-wheel-metadata/
-develop-eggs/
-parts/
-sdist/
-var/
 
-# Fichiers temporaires Jupyter Notebook
-.ipynb_checkpoints/
-
-# Fichiers de configuration IDE / Editeur
-.vscode/
-.idea/
-*.sublime-project
-*.sublime-workspace
-*.swp
-*.swo
-*~
-#*#
-
-# Fichiers spécifiques OS
-.DS_Store
-Thumbs.db
-
-# Logs
+# Fichiers de logs
 *.log
 logs/
-verify_extracts.log
-repair_extract_markers.log
+log/
 
-# Cache, Téléchargements et Bibliothèques Externes
-text_cache/
-temp_downloads/
-libs/
-argumentiation_analysis/text_cache/
-argumentiation_analysis/temp_downloads/
+# Fichiers temporaires
+*.tmp
+*.bak
+*.swp
+*~.nib
+*.DS_Store
+Thumbs.db
 
-# Données (à adapter si certains fichiers DOIVENT être versionnés)
-# Ignore le contenu du dossier data (CSV téléchargé, config UI sauvegardée...)
-# Si vous voulez versionner un fichier spécifique DANS data, utilisez une règle d'exception,
-# par exemple : !data/fichier_a_garder.txt ou !data/.gitkeep pour garder le dossier vide.
-data/
-# Exception pour le fichier de configuration chiffré qui doit être versionné
-!data/extract_sources.json.gz.enc
-# Exception pour le fichier de configuration chiffré dans le sous-répertoire argumentiation_analysis
-!argumentiation_analysis/data/
-argumentiation_analysis/data/*
-!argumentiation_analysis/data/extract_sources.json.gz.enc
+# Fichiers d'IDE
+.idea/
+.vscode/
+*.iml
+*.iws
+*.ipr
+.classpath
+.project
+.settings/
+.metadata/
+nbproject/
+nb-configuration.xml
 
-# Configuration UI non chiffrée (ne doit jamais être versionnée)
-data/extract_sources.json
+# Fichiers spécifiques à Maven
+.mvn/
+mvnw
+mvnw.cmd
 
-# Rapports de tests et couverture
-.pytest_cache/
+# Fichiers spécifiques à Gradle
+.gradle/
+gradle/
+gradlew
+gradlew.bat
+
+# Fichiers spécifiques à Python
+__pycache__/
+*.py[cod]
+*$py.class
+.Python
+env/
+venv/
+ENV/
+.env
+.venv
+.coverage
 htmlcov/
-.coverage*
-coverage.xml
-
-# Rapports générés par les scripts
-verify_report.html
-repair_report.html
-*verify_extracts_report*.html
-*repair_extract_markers_report*.html
-extract_sources_updated.json
-rapport_*.md
-rapport_*.html
-log_suppression_section.md
-
-# Fichiers de sauvegarde
-*.backup
-
-# Dossiers de backups générés par les scripts d'optimisation
-# Ces fichiers sont des sauvegardes temporaires et ne devraient pas être versionnés
-**/backups/
-# Exception pour le fichier __init__.py dans les dossiers backups
-!**/backups/__init__.py
-
-# Dossier d'archives créé par le script cleanup_obsolete_files.py
-_archives/
-
-# Dossier config vide (à supprimer s'il n'est pas utilisé)
-config/
-
-# Fichiers JAR (généralement volumineux)
-*.jar
+.tox/
+.nox/
+.hypothesis/
+.pytest_cache/
