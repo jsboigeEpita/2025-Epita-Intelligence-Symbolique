@@ -1,0 +1,56 @@
+{
+  "argumentiation_analysis/utils/extract_repair/repair_extract_markers.py": {
+    "original_path": "argumentiation_analysis/utils/extract_repair/repair_extract_markers.py",
+    "archive_path": "_archives\\backup_20250501_091439\\argumentiation_analysis/utils/extract_repair/repair_extract_markers.py",
+    "size": 48332,
+    "modified_time": "2025-04-30T09:02:00.903597",
+    "original_hash": "c1ea839909ca83494449a500df68f732d621f3191d92ba1f5d02f9dcadf20b95",
+    "archived_hash": "c1ea839909ca83494449a500df68f732d621f3191d92ba1f5d02f9dcadf20b95",
+    "backup_time": "2025-05-01T09:14:39.885924"
+  },
+  "argumentiation_analysis/utils/extract_repair/verify_extracts.py": {
+    "original_path": "argumentiation_analysis/utils/extract_repair/verify_extracts.py",
+    "archive_path": "_archives\\backup_20250501_091439\\argumentiation_analysis/utils/extract_repair/verify_extracts.py",
+    "size": 25387,
+    "modified_time": "2025-04-30T09:02:00.903597",
+    "original_hash": "c3fe6461526831ebb350fb6452e7a76fd44a684102622069f1e493909bb96b3d",
+    "archived_hash": "c3fe6461526831ebb350fb6452e7a76fd44a684102622069f1e493909bb96b3d",
+    "backup_time": "2025-05-01T09:14:39.918687"
+  },
+  "argumentiation_analysis/utils/extract_repair/fix_missing_first_letter.py": {
+    "original_path": "argumentiation_analysis/utils/extract_repair/fix_missing_first_letter.py",
+    "archive_path": "_archives\\backup_20250501_091439\\argumentiation_analysis/utils/extract_repair/fix_missing_first_letter.py",
+    "size": 6266,
+    "modified_time": "2025-04-30T09:02:00.902323",
+    "original_hash": "6a2f8b06f7a85f6906a57c4f033986b2806126d1557d63def4370cd6f4ab6803",
+    "archived_hash": "6a2f8b06f7a85f6906a57c4f033986b2806126d1557d63def4370cd6f4ab6803",
+    "backup_time": "2025-05-01T09:14:39.939622"
+  },
+  "argumentiation_analysis/utils/extract_repair/verify_extracts_with_llm.py": {
+    "original_path": "argumentiation_analysis/utils/extract_repair/verify_extracts_with_llm.py",
+    "archive_path": "_archives\\backup_20250501_091439\\argumentiation_analysis/utils/extract_repair/verify_extracts_with_llm.py",
+    "size": 33726,
+    "modified_time": "2025-04-30T09:02:00.906088",
+    "original_hash": "ceba118b81171ab5321a606e9697f5a2a8875a8f27550f7025f50e289b84c92f",
+    "archived_hash": "ceba118b81171ab5321a606e9697f5a2a8875a8f27550f7025f50e289b84c92f",
+    "backup_time": "2025-05-01T09:14:39.967655"
+  },
+  "argumentiation_analysis/utils/extract_repair/repair_extract_markers.ipynb": {
+    "original_path": "argumentiation_analysis/utils/extract_repair/repair_extract_markers.ipynb",
+    "archive_path": "_archives\\backup_20250501_091439\\argumentiation_analysis/utils/extract_repair/repair_extract_markers.ipynb",
+    "size": 41290,
+    "modified_time": "2025-04-29T22:04:35.053124",
+    "original_hash": "195070bd923e96990083f7fcf40a4bb1f20fa5a75aafafbba18045572721f4de",
+    "archived_hash": "195070bd923e96990083f7fcf40a4bb1f20fa5a75aafafbba18045572721f4de",
+    "backup_time": "2025-05-01T09:14:39.987108"
+  },
+  "argumentiation_analysis/ui/extract_utils.py": {
+    "original_path": "argumentiation_analysis/ui/extract_utils.py",
+    "archive_path": "_archives\\backup_20250501_091439\\argumentiation_analysis/ui/extract_utils.py",
+    "size": 16422,
+    "modified_time": "2025-04-29T20:51:09.884136",
+    "original_hash": "7558c55cf47f189517678bb0ee1199d9f2460b469b22f7889f82e8528ddfeb9e",
+    "archived_hash": "7558c55cf47f189517678bb0ee1199d9f2460b469b22f7889f82e8528ddfeb9e",
+    "backup_time": "2025-05-01T09:14:40.009782"
+  }
+}
