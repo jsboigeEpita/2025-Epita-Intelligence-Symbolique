@@ -71,3 +71,7 @@ htmlcov/
 .nox/
 .hypothesis/
 .pytest_cache/
+
+# Fichiers et répertoires spécifiques au projet
+argumentiation_analysis/temp_downloads/
+argumentiation_analysis/text_cache/
