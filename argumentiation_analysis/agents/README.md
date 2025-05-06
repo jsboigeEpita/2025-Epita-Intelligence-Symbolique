@@ -60,76 +60,166 @@ Chaque sous-répertoire d'agent dans `core/` contient typiquement :
 * `*_agent.py`: Classe principale de l'agent avec ses méthodes spécifiques.
 * `README.md`: Documentation spécifique à l'agent.
 
-## Développement des agents
+## Guide de Contribution pour Étudiants
+
+Cette section explique comment contribuer efficacement au développement des agents en tant qu'étudiant, que vous travailliez seul ou en groupe.
+
+### Choix d'un agent à développer ou améliorer
+
+Voici quelques suggestions pour choisir un agent sur lequel travailler :
+
+1. **Amélioration d'un agent existant** :
+   - Agent Informal : Améliorer la détection des sophismes
+   - Agent PL : Finaliser l'intégration avec Tweety
+   - Agent Extract : Améliorer la robustesse de l'extraction
+
+2. **Création d'un nouvel agent** :
+   - Agent FOL (First Order Logic) : Étendre l'analyse à la logique du premier ordre
+   - Agent Modal : Ajouter des capacités d'analyse en logique modale
+   - Agent Résumé : Créer un agent capable de résumer les analyses
 
 ### Création d'un nouvel agent
 
 Pour créer un nouvel agent, suivez ces étapes :
 
-1. Utilisez le template étudiant comme base (`templates/student_template/`)
-2. Créez un nouveau sous-répertoire dans `core/` avec le nom de l'agent (ex: `core/new_agent/`)
-3. Copiez les fichiers du template et adaptez-les à votre agent
-4. Implémentez les fonctionnalités spécifiques à l'agent
-5. Mettez à jour l'orchestrateur principal pour intégrer le nouvel agent
+1. **Utilisez le template étudiant comme base** :
+   - Explorez le contenu du dossier `templates/student_template/`
+   - Comprenez la structure et les fichiers nécessaires
+
+2. **Créez un nouveau sous-répertoire** :
+   ```bash
+   mkdir -p core/nom_de_votre_agent
+   ```
+
+3. **Copiez les fichiers du template** :
+   ```bash
+   cp templates/student_template/* core/nom_de_votre_agent/
+   ```
+
+4. **Adaptez les fichiers à votre agent** :
+   - Renommez les fichiers selon la convention (ex: `nom_agent_definitions.py`)
+   - Modifiez le contenu pour implémenter les fonctionnalités spécifiques
+   - Mettez à jour le README.md avec la documentation de votre agent
+
+5. **Intégrez votre agent dans l'orchestrateur** :
+   - Modifiez `orchestration/analysis_runner.py` pour inclure votre agent
+   - Ajoutez les importations nécessaires
+   - Mettez à jour la fonction `setup_agents()`
 
 ### Test indépendant des agents
 
-Pour tester un agent de manière indépendante, vous pouvez créer un script de test dans le répertoire `runners/test/[agent_name]/`. Exemple :
+Pour tester un agent de manière indépendante, créez un script de test dédié :
 
-```python
-# runners/test/new_agent/test_new_agent.py
-import asyncio
-import sys
-import os
-from pathlib import Path
+1. **Créez un répertoire de test** :
+   ```bash
+   mkdir -p runners/test/nom_de_votre_agent
+   ```
 
-# Ajouter le répertoire parent au chemin de recherche des modules
-current_dir = Path(__file__).parent
-parent_dir = current_dir.parent.parent.parent
-if str(parent_dir) not in sys.path:
-    sys.path.append(str(parent_dir))
+2. **Créez un script de test** :
+   ```python
+   # runners/test/nom_de_votre_agent/test_nom_de_votre_agent.py
+   import asyncio
+   import sys
+   import os
+   from pathlib import Path
 
-from dotenv import load_dotenv
-load_dotenv(override=True)
+   # Ajouter le répertoire parent au chemin de recherche des modules
+   current_dir = Path(__file__).parent
+   parent_dir = current_dir.parent.parent.parent
+   if str(parent_dir) not in sys.path:
+       sys.path.append(str(parent_dir))
 
-from core.llm_service import create_llm_service
-from agents.core.new_agent.new_agent_definitions import setup_new_agent
+   from dotenv import load_dotenv
+   load_dotenv(override=True)
 
-async def test_agent():
-    # Créer le service LLM
-    llm_service = create_llm_service()
-    
-    # Initialiser l'agent
-    kernel, agent = await setup_new_agent(llm_service)
-    
-    # Tester une fonctionnalité spécifique
-    result = await agent.some_function("Texte de test")
-    print(f"Résultat: {result}")
+   from core.llm_service import create_llm_service
+   from agents.core.nom_de_votre_agent.nom_agent_definitions import setup_nom_agent
 
-if __name__ == "__main__":
-    asyncio.run(test_agent())
-```
+   async def test_agent():
+       # Créer le service LLM
+       llm_service = create_llm_service()
+       
+       # Initialiser l'agent
+       kernel, agent = await setup_nom_agent(llm_service)
+       
+       # Tester une fonctionnalité spécifique
+       result = await agent.some_function("Texte de test")
+       print(f"Résultat: {result}")
 
-Exécutez le test avec :
-```bash
-python agents/runners/test/new_agent/test_new_agent.py
-```
+   if __name__ == "__main__":
+       asyncio.run(test_agent())
+   ```
 
-## Intégration avec l'orchestrateur principal
+3. **Exécutez le test** :
+   ```bash
+   python agents/runners/test/nom_de_votre_agent/test_nom_de_votre_agent.py
+   ```
 
-Pour intégrer un nouvel agent dans l'analyse complète, vous devez :
+### Workflow de contribution en groupe
 
-1. Ajouter l'importation de l'agent dans `orchestration/analysis_runner.py`
-2. Initialiser l'agent dans la fonction `setup_agents()`
-3. Ajouter l'agent à la liste des agents disponibles
-4. Mettre à jour la logique d'orchestration pour utiliser le nouvel agent
+#### Pour les groupes de 2 étudiants
 
-## Développement avec l'approche multi-instance
+1. **Répartissez les tâches** :
+   - Un étudiant peut travailler sur la logique principale de l'agent
+   - L'autre peut se concentrer sur les tests et l'intégration
 
-1. Ouvrez ce répertoire (`agents/`) comme dossier racine dans une instance VSCode dédiée
-2. Travaillez sur les agents sans être distrait par les autres parties du projet
-3. Testez vos modifications avec les scripts de test indépendants
-4. Une fois les modifications validées, intégrez-les dans le projet principal
+2. **Utilisez des branches Git dédiées** :
+   ```bash
+   # Étudiant 1
+   git checkout -b feature/agent-logique
+
+   # Étudiant 2
+   git checkout -b feature/agent-tests
+   ```
+
+3. **Synchronisez régulièrement votre travail** :
+   - Faites des commits fréquents
+   - Poussez vos branches vers votre fork
+   - Faites des revues de code mutuelles
+
+#### Pour les groupes de 3-4 étudiants
+
+1. **Divisez le travail en modules** :
+   - Un étudiant pour la structure de base de l'agent
+   - Un étudiant pour les prompts et définitions
+   - Un étudiant pour les tests
+   - Un étudiant pour l'intégration et la documentation
+
+2. **Créez une branche par fonctionnalité** :
+   ```bash
+   git checkout -b feature/agent-structure
+   git checkout -b feature/agent-prompts
+   git checkout -b feature/agent-tests
+   git checkout -b feature/agent-integration
+   ```
+
+3. **Utilisez les issues GitHub** pour suivre l'avancement :
+   - Créez une issue pour chaque tâche
+   - Assignez les issues aux membres du groupe
+   - Référencez les issues dans vos commits
+
+4. **Organisez des réunions régulières** pour synchroniser le travail
+
+### Soumission de votre travail
+
+Une fois votre agent développé et testé, soumettez-le au dépôt principal :
+
+1. **Assurez-vous que tous les tests passent** :
+   ```bash
+   python -m tests.run_tests
+   ```
+
+2. **Mettez à jour la documentation** :
+   - Complétez le README.md de votre agent
+   - Ajoutez des exemples d'utilisation
+   - Documentez les limitations connues
+
+3. **Créez une Pull Request** :
+   - Poussez votre branche vers votre fork
+   - Créez une PR vers le dépôt principal
+   - Remplissez le template de PR avec une description détaillée
+
+4. **Répondez aux commentaires** des mainteneurs du projet
 
 ## Bonnes pratiques
 
@@ -172,3 +262,20 @@ Le dossier `traces/` contient les traces d'exécution des agents, permettant :
 - D'identifier les points d'amélioration
 - De comparer différentes versions des agents
 - De documenter les performances sur différents types de textes
+
+## Ressources pour les étudiants
+
+### Documentation de référence
+- [Documentation Semantic Kernel](https://learn.microsoft.com/fr-fr/semantic-kernel/)
+- [Documentation Tweety Project](https://tweetyproject.org/doc/)
+- [Guide des prompts efficaces](https://platform.openai.com/docs/guides/prompt-engineering)
+
+### Tutoriels et exemples
+- Explorez les agents existants pour comprendre leur fonctionnement
+- Consultez les traces d'exécution dans le dossier `traces/` pour voir des exemples concrets
+- Utilisez les scripts de test comme point de départ pour vos propres tests
+
+### Aide et support
+- N'hésitez pas à créer des issues GitHub pour poser des questions
+- Consultez la documentation existante avant de demander de l'aide
+- Partagez vos découvertes et solutions avec les autres étudiants

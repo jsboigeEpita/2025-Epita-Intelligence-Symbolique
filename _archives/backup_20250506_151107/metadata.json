@@ -1,0 +1,38 @@
+{
+  "docs/rapport_analyse_comparative.md": {
+    "original_path": "docs/rapport_analyse_comparative.md",
+    "archive_path": "_archives\\backup_20250506_151107\\docs/rapport_analyse_comparative.md",
+    "size": 12996,
+    "modified_time": "2025-05-06T03:21:33.513783",
+    "original_hash": "a7211064b4a9f63f8d4cb93214c933b9aad879add302131f9aa58c0bd6c67034",
+    "archived_hash": "a7211064b4a9f63f8d4cb93214c933b9aad879add302131f9aa58c0bd6c67034",
+    "backup_time": "2025-05-06T15:11:07.638827"
+  },
+  "docs/rapport_final.md": {
+    "original_path": "docs/rapport_final.md",
+    "archive_path": "_archives\\backup_20250506_151107\\docs/rapport_final.md",
+    "size": 8617,
+    "modified_time": "2025-05-06T01:18:45.947590",
+    "original_hash": "dda1b1df57fe5530e7f75f1a40f119d37948e3a970934313b5f7f6edeffc5d12",
+    "archived_hash": "dda1b1df57fe5530e7f75f1a40f119d37948e3a970934313b5f7f6edeffc5d12",
+    "backup_time": "2025-05-06T15:11:07.656847"
+  },
+  "docs/rapport_refactorisation_extraits.md": {
+    "original_path": "docs/rapport_refactorisation_extraits.md",
+    "archive_path": "_archives\\backup_20250506_151107\\docs/rapport_refactorisation_extraits.md",
+    "size": 6428,
+    "modified_time": "2025-05-06T03:21:33.513783",
+    "original_hash": "367944b3b6d19702bc90b0c62193750d6961806821df87fa5f0538db005bd3b9",
+    "archived_hash": "367944b3b6d19702bc90b0c62193750d6961806821df87fa5f0538db005bd3b9",
+    "backup_time": "2025-05-06T15:11:07.662863"
+  },
+  "docs/README_ENVIRONNEMENT.md": {
+    "original_path": "docs/README_ENVIRONNEMENT.md",
+    "archive_path": "_archives\\backup_20250506_151107\\docs/README_ENVIRONNEMENT.md",
+    "size": 3787,
+    "modified_time": "2025-05-06T01:18:45.944821",
+    "original_hash": "047a2f28c7c16dcdfdf82b34aeb4cd7a40d458085ff75f052f95ae6566be3aec",
+    "archived_hash": "047a2f28c7c16dcdfdf82b34aeb4cd7a40d458085ff75f052f95ae6566be3aec",
+    "backup_time": "2025-05-06T15:11:07.666304"
+  }
+}
