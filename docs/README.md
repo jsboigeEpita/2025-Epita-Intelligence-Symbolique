@@ -17,9 +17,9 @@ Documentation détaillée pour le script `cleanup_obsolete_files.py` qui permet 
 - Mécanismes de sécurité implémentés
 - Bonnes pratiques recommandées
 
-### 2. nouvelle_section_sujets_projets.md
+### 2. Sujets de Projets
 
-Contenu de la section "Sujets de Projets" intégrée dans le README.md principal.
+Les sujets de projets sont maintenant intégrés directement dans la section "Sujets de Projets" du README.md principal.
 
 **Contenu :**
 - Introduction aux sujets de projets
@@ -36,7 +36,7 @@ Contenu de la section "Sujets de Projets" intégrée dans le README.md principal
 1. Commencez par lire le [README.md](../README.md) principal à la racine du projet
 2. Référez-vous aux documents spécifiques selon vos besoins :
    - Pour le nettoyage du projet : [README_cleanup_obsolete_files.md](README_cleanup_obsolete_files.md)
-3. Explorez les sujets de projets dans [nouvelle_section_sujets_projets.md](nouvelle_section_sujets_projets.md)
+3. Explorez les sujets de projets dans la section [Sujets de Projets](../README.md#sujets-de-projets) du README principal
 
 #### Pour les mainteneurs
 

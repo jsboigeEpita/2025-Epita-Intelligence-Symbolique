@@ -231,7 +231,7 @@ Cette approche hybride représente une direction prometteuse pour développer de
 
 ## Sujets de Projets
 
-Pour consulter la liste complète des sujets de projets proposés, veuillez vous référer au document [Sujets de Projets](./docs/nouvelle_section_sujets_projets.md).
+Pour consulter la liste complète des sujets de projets proposés, veuillez vous référer à la section [Sujets de Projets](#sujets-de-projets) ci-dessus.
 
 Les sujets sont organisés par catégories et niveaux de difficulté. Chaque sujet comprend :
 - Une description détaillée
