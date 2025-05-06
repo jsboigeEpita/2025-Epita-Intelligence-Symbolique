@@ -10,6 +10,7 @@ Ce projet implémente une analyse rhétorique multi-agents en utilisant Python e
 * [Prérequis](#prérequis)
 * [Installation](#installation)
 * [Exécution](#exécution)
+* [Guide de Contribution pour Étudiants](#guide-de-contribution-pour-étudiants)
 * [Approche Multi-Instance](#approche-multi-instance)
 * [Pistes d'Amélioration Futures](#pistes-damélioration-futures)
 
@@ -34,7 +35,7 @@ Le projet est organisé en modules Python pour une meilleure maintenabilité :
   * [`ui/extract_editor/`](./ui/extract_editor/README.md) ✏️ : Éditeur de marqueurs d'extraits.
 * [`utils/`](./utils/README.md) 🔧 : Fonctions utilitaires générales.
   * [`utils/extract_repair/`](./utils/extract_repair/README.md) 🔄 : Outils de réparation des bornes d'extraits défectueuses.
-* [`tests/`](./tests/README.md) 🧪 : Tests unitaires et d'intégration.
+* [`tests/`](./tests/) 🧪 : Tests unitaires et d'intégration.
 
 ### Ressources et Configuration
 * [`config/`](./config/) : Fichiers de configuration (`.env.template`).
@@ -53,7 +54,7 @@ Le projet est organisé en modules Python pour une meilleure maintenabilité :
 * **Python :** Version 3.10+ recommandée.
 * **Java :** JDK >= 11. La variable d'environnement `JAVA_HOME` **doit pointer vers le répertoire racine du JDK** pour une détection fiable par JPype (bien qu'une détection automatique soit tentée). Voir [instructions détaillées](#configuration-java).
 * **Dépendances Python :** Installer via `pip install -r requirements.txt`. Inclut `semantic-kernel`, `python-dotenv`, `ipywidgets`, `jupyter-ui-poll`, `requests`, `pandas`, `jpype1`, `cryptography`, `ipykernel`, `nest-asyncio`.
-* **Fichier `.env` :** Un fichier `.env` à la racine du projet est **indispensable**. Créez-le à partir de `config/.env.template` et remplissez :
+* **Fichier `.env` :** Un fichier `.env` à la racine du projet est **indispensable**. Créez-le à partir de `.env.example` et remplissez :
     * Vos clés API LLM (OpenAI ou Azure OpenAI).
     * Vos identifiants de modèle/déploiement (`OPENAI_CHAT_MODEL_ID`, `OPENAI_ENDPOINT` si Azure).
     * Une phrase secrète pour chiffrer la configuration UI (`TEXT_CONFIG_PASSPHRASE`).
@@ -71,15 +72,41 @@ Le projet est organisé en modules Python pour une meilleure maintenabilité :
 
 ## Installation
 
-1.  Clonez ce dépôt.
-2.  Créez un environnement virtuel : `python -m venv venv`
-3.  Activez l'environnement :
-    * Windows PowerShell : `..\venv\Scripts\activate` (peut nécessiter `Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope Process`)
-    * Windows CMD : `..\venv\Scripts\activate.bat`
-    * Linux/macOS : `source venv/bin/activate`
-4.  Installez les dépendances : `pip install -r requirements.txt`
-5.  Créez et configurez votre fichier `.env` (voir Prérequis).
-6.  Assurez-vous que `JAVA_HOME` est correctement configuré.
+1. **Créez un fork du dépôt principal** :
+   - Connectez-vous à votre compte GitHub
+   - Accédez au dépôt principal : [https://github.com/jsboigeEpita/2025-Epita-Intelligence-Symbolique](https://github.com/jsboigeEpita/2025-Epita-Intelligence-Symbolique)
+   - Cliquez sur le bouton "Fork" en haut à droite de la page
+   - Sélectionnez votre compte comme destination du fork
+
+2. **Clonez votre fork** :
+   ```bash
+   git clone https://github.com/VOTRE_NOM_UTILISATEUR/2025-Epita-Intelligence-Symbolique.git
+   cd 2025-Epita-Intelligence-Symbolique
+   ```
+
+3. **Créez un environnement virtuel** :
+   ```bash
+   python -m venv venv
+   ```
+
+4. **Activez l'environnement** :
+   - Windows PowerShell : `..\venv\Scripts\activate` (peut nécessiter `Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope Process`)
+   - Windows CMD : `..\venv\Scripts\activate.bat`
+   - Linux/macOS : `source venv/bin/activate`
+
+5. **Installez les dépendances** :
+   ```bash
+   cd argumentiation_analysis
+   pip install -r requirements.txt
+   ```
+
+6. **Créez et configurez votre fichier `.env`** :
+   ```bash
+   cp .env.example .env
+   ```
+   Puis modifiez le fichier `.env` avec vos propres informations (clés API, etc.).
+
+7. **Assurez-vous que `JAVA_HOME` est correctement configuré**.
 
 ## Exécution
 
@@ -155,10 +182,74 @@ python -m agents.tools.encryption.verify_encrypted_config
 
 Les notebooks originaux sont toujours disponibles pour une utilisation interactive :
 
-1.  Lancez Jupyter Lab ou Notebook depuis la **racine du projet** : `jupyter lab`
-2.  Ouvrez le notebook principal : `main_orchestrator.ipynb`
-3.  Exécutez les cellules séquentiellement.
-4.  L'interface utilisateur apparaîtra. Interagissez pour sélectionner une source, préparer le texte et cliquez sur **"Lancer l'Analyse"**.
+1. Lancez Jupyter Lab ou Notebook depuis la **racine du projet** : `jupyter lab`
+2. Ouvrez le notebook principal : `main_orchestrator.ipynb`
+3. Exécutez les cellules séquentiellement.
+4. L'interface utilisateur apparaîtra. Interagissez pour sélectionner une source, préparer le texte et cliquez sur **"Lancer l'Analyse"**.
+
+## Guide de Contribution pour Étudiants
+
+Cette section explique comment contribuer efficacement au projet en tant qu'étudiant, que vous travailliez seul ou en groupe.
+
+### Préparation de l'environnement de travail
+
+1. **Assurez-vous d'avoir créé un fork** du dépôt principal comme expliqué dans la section [Installation](#installation)
+2. **Configurez votre environnement de développement** en suivant les instructions détaillées
+3. **Familiarisez-vous avec la structure du projet** en explorant les différents modules et leurs README
+
+### Workflow de contribution
+
+1. **Créez une branche** pour votre fonctionnalité ou correction :
+   ```bash
+   git checkout -b feature/nom-de-votre-fonctionnalite
+   ```
+
+2. **Développez votre fonctionnalité** en suivant les bonnes pratiques :
+   - Respectez les conventions de nommage existantes
+   - Commentez votre code de manière claire
+   - Écrivez des tests pour vos fonctionnalités
+
+3. **Committez vos changements** avec des messages descriptifs :
+   ```bash
+   git add .
+   git commit -m "Description claire de vos modifications"
+   ```
+
+4. **Poussez votre branche** vers votre fork :
+   ```bash
+   git push origin feature/nom-de-votre-fonctionnalite
+   ```
+
+5. **Créez une Pull Request (PR)** depuis votre branche vers le dépôt principal :
+   - Accédez à votre fork sur GitHub
+   - Cliquez sur "Pull Request"
+   - Sélectionnez votre branche et le dépôt principal comme cible
+   - Remplissez le formulaire avec une description détaillée de vos modifications
+
+### Conseils pour le travail en groupe
+
+#### Groupe de 2 étudiants
+- Répartissez clairement les tâches entre les membres
+- Utilisez des branches distinctes pour travailler en parallèle
+- Faites des revues de code mutuelles avant de soumettre une PR
+
+#### Groupe de 3-4 étudiants
+- Désignez un chef de projet pour coordonner le travail
+- Divisez le projet en sous-modules indépendants
+- Utilisez les issues GitHub pour suivre l'avancement
+- Organisez des réunions régulières pour synchroniser le travail
+
+### Bonnes pratiques
+
+- **Maintenez votre fork à jour** avec le dépôt principal :
+  ```bash
+  git remote add upstream https://github.com/jsboigeEpita/2025-Epita-Intelligence-Symbolique.git
+  git fetch upstream
+  git merge upstream/main
+  ```
+- **Testez vos modifications** avant de soumettre une PR
+- **Documentez vos changements** dans les README appropriés
+- **Communiquez clairement** dans vos messages de commit et descriptions de PR
 
 ## Approche Multi-Instance
 
