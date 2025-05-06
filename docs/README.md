@@ -17,15 +17,15 @@ Documentation détaillée pour le script `cleanup_obsolete_files.py` qui permet 
 - Mécanismes de sécurité implémentés
 - Bonnes pratiques recommandées
 
-### 2. Sujets de Projets
+### 2. Sujets de Projets Détaillés
 
-Les sujets de projets sont maintenant intégrés directement dans la section "Sujets de Projets" du README.md principal.
+Les sujets de projets sont maintenant disponibles dans le fichier [sujets_projets_detailles.md](./sujets_projets_detailles.md) et référencés dans la section "Sujets de Projets" du README.md principal.
 
 **Contenu :**
 - Introduction aux sujets de projets
-- Organisation des projets en catégories
+- Organisation des projets en trois catégories principales
 - Structure standardisée de présentation des sujets
-- Liste des sujets proposés par catégorie
+- Liste complète et détaillée des sujets proposés par catégorie
 
 ## Guide de contribution pour les étudiants
 

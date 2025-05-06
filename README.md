@@ -231,14 +231,20 @@ Cette approche hybride représente une direction prometteuse pour développer de
 
 ## Sujets de Projets
 
-Pour consulter la liste complète des sujets de projets proposés, veuillez vous référer à la section [Sujets de Projets](#sujets-de-projets) ci-dessus.
+Pour consulter la liste complète des sujets de projets proposés, veuillez vous référer au document [Sujets de Projets Détaillés](./docs/sujets_projets_detailles.md).
 
-Les sujets sont organisés par catégories et niveaux de difficulté. Chaque sujet comprend :
-- Une description détaillée
-- Les objectifs pédagogiques
-- Les compétences requises et à développer
-- Des ressources recommandées
-- Des critères d'évaluation spécifiques
+Les sujets sont organisés en trois catégories principales :
+1. **Fondements théoriques et techniques** : Projets centrés sur les aspects formels, logiques et théoriques de l'argumentation
+2. **Développement système et infrastructure** : Projets axés sur l'architecture, l'orchestration et les composants techniques
+3. **Expérience utilisateur et applications** : Projets orientés vers les interfaces, visualisations et cas d'usage concrets
+
+Chaque sujet est présenté avec une structure standardisée :
+- **Contexte** : Présentation du domaine et de son importance
+- **Objectifs** : Ce que le projet vise à accomplir
+- **Technologies clés** : Outils, frameworks et concepts essentiels
+- **Niveau de difficulté** : ⭐ (Accessible) à ⭐⭐⭐⭐⭐ (Très avancé)
+- **Interdépendances** : Liens avec d'autres sujets de projets
+- **Références** : Sources et documentation pour approfondir
 
 Lors du choix de votre sujet, tenez compte de :
 - La taille de votre groupe
