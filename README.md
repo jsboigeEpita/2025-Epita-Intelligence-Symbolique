@@ -445,6 +445,8 @@ Les travaux récents comme "Learning Explanatory Rules from Noisy Data" (Evans, 
 
 Les sujets proposés ci-dessous couvrent différents aspects de l'IA symbolique, avec un focus particulier sur l'argumentation et son intégration par l'IA générative agentique orchestrée. Chaque groupe devra choisir un sujet et contribuer à l'amélioration du projet global.
 
+Pour une description détaillée de tous les sujets de projets, veuillez consulter le document [**Sujets de Projets Détaillés**](./docs/sujets_projets_detailles.md) qui présente l'ensemble des projets possibles avec leurs spécifications complètes.
+
 Les projets sont organisés en trois catégories principales :
 1. **Fondements théoriques et techniques** : Projets centrés sur les aspects formels, logiques et théoriques de l'argumentation
 2. **Développement système et infrastructure** : Projets axés sur l'architecture, l'orchestration et les composants techniques
@@ -455,8 +457,10 @@ Chaque sujet est présenté avec une structure standardisée :
 - **Objectifs** : Ce que le projet vise à accomplir
 - **Technologies clés** : Outils, frameworks et concepts essentiels
 - **Niveau de difficulté** : ⭐ (Accessible) à ⭐⭐⭐⭐⭐ (Très avancé)
+- **Estimation d'effort** : Temps de développement estimé en semaines-personnes
 - **Interdépendances** : Liens avec d'autres sujets de projets
 - **Références** : Sources et documentation pour approfondir
+- **Livrables attendus** : Résultats concrets à produire
 
 ### 1. Fondements théoriques et techniques
 
