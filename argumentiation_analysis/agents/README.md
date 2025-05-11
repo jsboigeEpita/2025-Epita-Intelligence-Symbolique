@@ -1,6 +1,6 @@
 # 🧠 Agents IA (`agents/`)
 
-Ce répertoire contient les définitions spécifiques à chaque agent IA participant à l'analyse rhétorique collaborative. La structure a été réorganisée pour une meilleure modularité et maintenabilité.
+Ce répertoire contient les définitions spécifiques à chaque agent IA participant à l'analyse rhétorique collaborative. La structure est organisée pour une modularité et maintenabilité optimales.
 
 [Retour au README Principal](../README.md)
 

@@ -1,4 +1,4 @@
-# Projet Intelligence Symbolique
+﻿# Projet Intelligence Symbolique
 
 ## Table des Matières
 - [Introduction](#introduction)
@@ -231,9 +231,9 @@ Cette approche hybride représente une direction prometteuse pour développer de
 
 ## Sujets de Projets
 
-Pour consulter la liste complète des sujets de projets proposés, veuillez vous référer au document [Sujets de Projets Détaillés](./docs/sujets_projets_detailles.md).
+Pour une description détaillée de tous les sujets de projets, veuillez consulter le document [**Sujets de Projets Détaillés**](./docs/sujets_projets_detailles.md) qui présente l'ensemble des projets possibles avec leurs spécifications complètes.
 
-Les sujets sont organisés en trois catégories principales :
+Les projets sont organisés en trois catégories principales :
 1. **Fondements théoriques et techniques** : Projets centrés sur les aspects formels, logiques et théoriques de l'argumentation
 2. **Développement système et infrastructure** : Projets axés sur l'architecture, l'orchestration et les composants techniques
 3. **Expérience utilisateur et applications** : Projets orientés vers les interfaces, visualisations et cas d'usage concrets
@@ -243,8 +243,10 @@ Chaque sujet est présenté avec une structure standardisée :
 - **Objectifs** : Ce que le projet vise à accomplir
 - **Technologies clés** : Outils, frameworks et concepts essentiels
 - **Niveau de difficulté** : ⭐ (Accessible) à ⭐⭐⭐⭐⭐ (Très avancé)
+- **Estimation d'effort** : Temps de développement estimé en semaines-personnes
 - **Interdépendances** : Liens avec d'autres sujets de projets
 - **Références** : Sources et documentation pour approfondir
+- **Livrables attendus** : Résultats concrets à produire
 
 Lors du choix de votre sujet, tenez compte de :
 - La taille de votre groupe

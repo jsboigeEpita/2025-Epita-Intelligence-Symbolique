@@ -230,7 +230,7 @@ async def run_and_save_analysis():
 asyncio.run(run_and_save_analysis())
 ```
 
-## Développements récents
+## Fonctionnalités avancées supplémentaires
 
 - **Support pour l'orchestration à grande échelle** : Capacité à traiter des lots de textes en parallèle
 - **Métriques de performance** : Collecte et analyse des temps d'exécution et de l'utilisation des ressources

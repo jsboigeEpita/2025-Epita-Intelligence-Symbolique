@@ -308,8 +308,6 @@ Pour plus de détails, consultez les README spécifiques:
 
 ## Pistes d'Amélioration Futures
 
-*(Liste reprise des notebooks et enrichie)*
-
 ### Améliorations des Agents Existants
 * **Activer & Finaliser PL:** Implémenter réellement les appels JPype/Tweety dans `PropositionalLogicPlugin._internal_execute_query`.
 * **Affiner Analyse Sophismes:** Améliorer instructions `InformalAnalysisAgent` (profondeur, choix branches...).
