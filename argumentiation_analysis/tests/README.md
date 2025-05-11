@@ -255,9 +255,9 @@ Les zones délibérément exclues de la couverture sont:
 - Code spécifique aux notebooks
 - Fichiers de configuration et d'environnement
 
-### Tests récemment ajoutés
+### Couverture des tests
 
-Plusieurs nouveaux tests ont été ajoutés pour couvrir les fonctionnalités récemment développées:
+Le projet comprend une suite complète de tests couvrant les différents aspects du système :
 
 - **Tests des modèles de données**: Vérifient la structure et le comportement des modèles `Extract`, `SourceDefinition`, et `ExtractResult`.
 - **Tests des services**: Testent les services de cache, chiffrement, définition, extraction et récupération.
