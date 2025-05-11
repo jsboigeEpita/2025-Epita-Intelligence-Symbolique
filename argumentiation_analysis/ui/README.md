@@ -169,20 +169,20 @@ Pour modifier l'intégration, vous devez :
 2. Tester les modifications avec le script de test indépendant
 3. Vérifier l'intégration avec le script orchestrateur principal
 
-## Fonctionnalités récemment ajoutées
+## Fonctionnalités avancées
 
 ### Visualisation des résultats d'analyse
 
-L'interface utilisateur a été enrichie pour permettre la visualisation des résultats d'analyse :
+L'interface utilisateur permet la visualisation des résultats d'analyse :
 
 - Affichage des arguments identifiés avec mise en évidence dans le texte
 - Visualisation des sophismes détectés avec leur description et leur classification
 - Représentation graphique des relations entre arguments (attaques, supports)
 - Affichage des formules logiques et des résultats de requêtes
 
-### Amélioration de l'éditeur de marqueurs
+### Éditeur de marqueurs
 
-L'éditeur de marqueurs d'extraits a été amélioré avec les fonctionnalités suivantes :
+L'éditeur de marqueurs d'extraits offre les fonctionnalités suivantes :
 
 - Recherche avancée dans le texte (expressions régulières)
 - Suggestions automatiques de marqueurs basées sur l'analyse du texte
@@ -191,7 +191,7 @@ L'éditeur de marqueurs d'extraits a été amélioré avec les fonctionnalités 
 
 ### Intégration avec les outils de vérification
 
-L'interface utilisateur est maintenant intégrée avec les outils de vérification des extraits :
+L'interface utilisateur s'intègre avec les outils de vérification des extraits :
 
 - Lancement de la vérification directement depuis l'interface
 - Affichage des rapports de vérification avec mise en évidence des problèmes
