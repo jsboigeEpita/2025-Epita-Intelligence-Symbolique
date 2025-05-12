@@ -141,21 +141,26 @@ Chaque sujet est présenté avec une structure standardisée :
   - Cas d'étude démontrant l'application à un problème concret
 
 #### 1.1.6 Logique conditionnelle (CL)
-- **Contexte** : Les logiques conditionnelles permettent de raisonner sur des énoncés de la forme "Si A est vrai, alors B est typiquement vrai".
-- **Objectifs** : Implémenter un agent utilisant le module `logics.cl` de Tweety pour raisonner sur des conditionnels. Le notebook Tweety démontre comment créer une base conditionnelle avec des conditionnels comme (f|b), (b|p), (¬f|p), et comment calculer une fonction de classement (ranking) pour évaluer ces conditionnels.
+- **Contexte** : Les logiques conditionnelles permettent de raisonner sur des énoncés de la forme "Si A est vrai, alors B est typiquement vrai". Elles constituent un formalisme puissant pour représenter des connaissances incertaines et des règles par défaut.
+- **Objectifs** : Implémenter un agent utilisant le module `logics.cl` de Tweety pour raisonner sur des conditionnels. Le notebook Tweety démontre comment créer une base conditionnelle avec des conditionnels comme (f|b), (b|p), (¬f|p), et comment calculer une fonction de classement (ranking) pour évaluer ces conditionnels. L'agent devra permettre la création de bases de connaissances conditionnelles, l'évaluation de requêtes conditionnelles, et la visualisation des fonctions de classement.
 - **Technologies clés** :
   * Tweety `logics.cl`
   * Raisonnement non-monotone
-  * Fonctions de classement (ranking)
+  * Fonctions de classement (ranking) ou OCF (Ordinal Conditional Functions)
+  * Sémantique des mondes possibles
 - **Niveau de difficulté** : ⭐⭐⭐⭐
 - **Estimation d'effort** : 4-6 semaines-personnes
-- **Interdépendances** : Peut être combiné avec 1.2 (frameworks d'argumentation)
+- **Interdépendances** : Peut être combiné avec 1.2 (frameworks d'argumentation) et 1.4.3 (raisonnement non-monotone)
 - **Références** :
+  - "Conditionals in Nonmonotonic Reasoning and Belief Revision" de Gabriele Kern-Isberner (2001)
+  - "A Ranking Semantics for First-Order Conditionals" de Wilhelm Kötter et al. (2019)
   - "Reasoning-with-probabilistic-and-deterministic-graphical-models-exact-algorithms" (2013)
   - Documentation Tweety `logics.cl`
 - **Livrables attendus** :
   - Agent de logique conditionnelle
   - Fonctions pour la création et l'évaluation de bases conditionnelles
+  - Visualisation des fonctions de classement (OCF)
+  - Interface pour la formulation de requêtes conditionnelles
   - Documentation et exemples d'utilisation
   - Tests unitaires et d'intégration
 ### 1.2 Frameworks d'argumentation
@@ -423,21 +428,27 @@ Chaque sujet est présenté avec une structure standardisée :
   - Tests unitaires et d'intégration
 
 #### 1.4.3 Raisonnement non-monotone
-- **Contexte** : Le raisonnement non-monotone permet de tirer des conclusions provisoires qui peuvent être révisées à la lumière de nouvelles informations.
-- **Objectifs** : Implémenter des mécanismes de raisonnement non-monotone pour gérer l'incertitude et l'incomplétude dans l'analyse argumentative. Explorer différentes approches comme la logique par défaut, la circonscription, et la logique autoépistémique.
+- **Contexte** : Le raisonnement non-monotone permet de tirer des conclusions provisoires qui peuvent être révisées à la lumière de nouvelles informations. Contrairement à la logique classique où l'ajout d'informations préserve les conclusions (monotonie), le raisonnement non-monotone permet de modéliser des situations où de nouvelles informations peuvent invalider des conclusions précédentes.
+- **Objectifs** : Implémenter des mécanismes de raisonnement non-monotone pour gérer l'incertitude et l'incomplétude dans l'analyse argumentative. Explorer différentes approches comme la logique par défaut, la circonscription, la logique autoépistémique, et les conditionnels non-monotones basés sur les fonctions de classement (OCF).
 - **Technologies clés** :
-  * Logique par défaut
-  * Circonscription
-  * Logique autoépistémique
+  * Logique par défaut (Reiter)
+  * Circonscription (McCarthy)
+  * Logique autoépistémique (Moore)
+  * Fonctions de classement (OCF) de Spohn
+  * Module `logics.cl` de TweetyProject
 - **Niveau de difficulté** : ⭐⭐⭐⭐⭐
 - **Estimation d'effort** : 6-8 semaines-personnes
-- **Interdépendances** : Lié à 1.1 (logiques formelles) et 1.4.2 (révision de croyances)
+- **Interdépendances** : Lié à 1.1 (logiques formelles), 1.1.6 (logique conditionnelle) et 1.4.2 (révision de croyances)
 - **Références** :
   - "Nonmonotonic Reasoning: Logical Foundations of Commonsense" (2022)
   - "Default Logic and Its Applications" (2023)
   - "Autoepistemic Logic and Its Applications" (2022)
+  - "Ordinal conditional functions: a dynamic theory of epistemic states" de W. Spohn (1988)
+  - "A Comparative Study of Nonmonotonic Inference Systems" de Brewka et al. (2019)
 - **Livrables attendus** :
   - Implémentation d'au moins une approche de raisonnement non-monotone
+  - Comparaison des différentes approches sur des exemples classiques (Yale Shooting Problem, Nixon Diamond, etc.)
+  - Visualisation des processus de raisonnement non-monotone
   - Intégration avec l'état partagé du système
   - Documentation et exemples d'utilisation
   - Tests unitaires et d'intégration
