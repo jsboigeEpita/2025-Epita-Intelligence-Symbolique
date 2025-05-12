@@ -1,35 +1,113 @@
-# Documentation du Projet Intelligence Symbolique
+# Système d'Analyse Rhétorique Amélioré
 
-Ce répertoire contient la documentation détaillée du projet Intelligence Symbolique, organisée de manière à faciliter la compréhension de l'architecture, des composants et des sujets de projets proposés.
+Ce document présente les nouvelles fonctionnalités du système d'analyse rhétorique intégrées dans la branche `integration-modifications-locales`. Ces améliorations visent à fournir des outils plus puissants et flexibles pour l'analyse des arguments et des sophismes dans différents contextes.
 
-## Contenu du Répertoire
+## Nouvelles Fonctionnalités
 
-- [**Sujets de Projets Détaillés**](./sujets_projets_detailles.md) : Description complète des sujets de projets proposés, organisés en trois catégories principales (Fondements théoriques et techniques, Développement système et infrastructure, Expérience utilisateur et applications) et 16 domaines spécifiques. Chaque sujet inclut le contexte, les objectifs, les technologies clés, le niveau de difficulté, l'estimation d'effort, les interdépendances, les références et les livrables attendus.
+### 1. Outils d'Analyse Rhétorique Améliorés
 
-## Structure de la Documentation
+#### 1.1 Analyseur de Résultats Rhétoriques Amélioré
+L'`EnhancedRhetoricalResultAnalyzer` offre des capacités d'analyse plus avancées que la version de base, notamment :
+- Analyse approfondie des sophismes et de leur impact persuasif
+- Évaluation de la cohérence argumentative
+- Identification des stratégies de persuasion et des appels rhétoriques (ethos, pathos, logos)
+- Génération de recommandations personnalisées pour améliorer l'argumentation
 
-La documentation est organisée de manière hiérarchique :
+```python
+from argumentiation_analysis.agents.tools.analysis.enhanced.rhetorical_result_analyzer import EnhancedRhetoricalResultAnalyzer
 
-1. Le [README principal](../README.md) à la racine du projet fournit une vue d'ensemble du projet, sa structure, et les informations essentielles pour démarrer.
-2. Ce répertoire `docs/` contient la documentation détaillée des différents aspects du projet.
-3. Chaque sous-module du projet dispose également de son propre README dans son répertoire respectif.
+analyzer = EnhancedRhetoricalResultAnalyzer()
+results = {
+    "complex_fallacy_analysis": {...},
+    "contextual_fallacy_analysis": {...},
+    "argument_coherence_evaluation": {...}
+}
+analysis = analyzer.analyze_rhetorical_results(results, context="politique")
+```
 
-## Contribution à la Documentation
+#### 1.2 Analyseur de Sophismes Complexes Amélioré
+L'`EnhancedComplexFallacyAnalyzer` permet d'identifier et d'analyser des structures sophistiquées de sophismes :
+- Détection de combinaisons de sophismes avancées
+- Analyse de la structure argumentative
+- Évaluation de la cohérence inter-arguments
 
-La documentation est un élément essentiel du projet. Si vous souhaitez contribuer à son amélioration :
+#### 1.3 Évaluateur de Gravité des Sophismes Amélioré
+L'`EnhancedFallacySeverityEvaluator` fournit une évaluation plus nuancée de l'impact des sophismes :
+- Prise en compte du contexte dans l'évaluation
+- Analyse de l'impact persuasif
+- Évaluation de la gravité composite des sophismes
 
-1. Assurez-vous que vos modifications respectent la structure et le style existants.
-2. Mettez à jour les liens et références si nécessaire.
-3. Soumettez vos modifications via une pull request pour revue.
+### 2. Nouveaux Outils d'Analyse Rhétorique
 
-## Ressources Additionnelles
+#### 2.1 Visualiseur de Structure Argumentative
+L'`ArgumentStructureVisualizer` permet de visualiser graphiquement la structure des arguments :
+- Génération de cartes de chaleur des sophismes
+- Visualisation des relations entre arguments
+- Support pour différents formats de sortie (HTML, PNG, JSON)
 
-Pour plus d'informations sur les différents composants du projet, consultez les README spécifiques dans les sous-répertoires correspondants :
+```python
+from argumentiation_analysis.agents.tools.analysis.new.argument_structure_visualizer import ArgumentStructureVisualizer
 
-- [Infrastructure d'analyse argumentative](../argumentiation_analysis/README.md)
-- [Agents spécialisés](../argumentiation_analysis/agents/README.md)
-- [Composants fondamentaux](../argumentiation_analysis/core/README.md)
-- [Orchestration](../argumentiation_analysis/orchestration/README.md)
-- [Interface utilisateur](../argumentiation_analysis/ui/README.md)
-- [Utilitaires](../argumentiation_analysis/utils/README.md)
-- [Tests](../argumentiation_analysis/tests/README.md)
+visualizer = ArgumentStructureVisualizer()
+visualization = visualizer.visualize_argument_structure(
+    arguments=["Argument 1", "Argument 2", "Argument 3"],
+    context="scientifique",
+    output_format="html"
+)
+```
+
+#### 2.2 Évaluateur de Cohérence Argumentative
+L'`ArgumentCoherenceEvaluator` analyse la cohérence logique et thématique entre les arguments :
+- Détection des contradictions
+- Évaluation de la cohérence thématique
+- Analyse de la structure logique
+
+#### 2.3 Analyseur Sémantique d'Arguments
+Le `SemanticArgumentAnalyzer` fournit une analyse sémantique approfondie des arguments :
+- Identification des thèmes principaux
+- Analyse des relations sémantiques entre arguments
+- Évaluation de la richesse sémantique
+
+#### 2.4 Détecteur Contextuel de Sophismes
+Le `ContextualFallacyDetector` détecte les sophismes en tenant compte du contexte spécifique :
+- Adaptation au domaine (politique, scientifique, commercial, etc.)
+- Prise en compte de l'audience cible
+- Analyse contextuelle des sophismes
+
+## Intégration dans le Système d'Orchestration
+
+Ces outils sont intégrés dans le système d'orchestration hiérarchique à trois niveaux via l'adaptateur `RhetoricalToolsAdapter`, qui permet aux agents opérationnels d'utiliser ces outils de manière transparente.
+
+```python
+from argumentiation_analysis.orchestration.hierarchical.operational.adapters.rhetorical_tools_adapter import RhetoricalToolsAdapter
+
+adapter = RhetoricalToolsAdapter()
+adapter.initialize()
+
+task = {
+    "id": "task-1",
+    "description": "Analyser les sophismes dans le texte",
+    "techniques": [
+        {
+            "name": "complex_fallacy_analysis",
+            "parameters": {"context": "politique"}
+        }
+    ],
+    "text_extracts": [{"content": "Texte à analyser..."}]
+}
+
+result = await adapter.process_task(task)
+```
+
+## Exemples d'Utilisation
+
+Vous trouverez des exemples d'utilisation détaillés dans le répertoire `examples/` :
+- `examples/rhetorical_analysis_example.py` : Exemple d'utilisation des outils d'analyse rhétorique
+- `examples/hierarchical_architecture_example.py` : Exemple d'intégration dans l'architecture hiérarchique
+
+## Documentation Détaillée
+
+Pour une documentation plus détaillée sur chaque outil, consultez les fichiers suivants :
+- `docs/outils/complex_fallacy_analyzer.md` : Documentation de l'analyseur de sophismes complexes
+- `docs/outils/argument_coherence_evaluator.md` : Documentation de l'évaluateur de cohérence argumentative
+- `docs/outils/visualizer.md` : Documentation du visualiseur de structure argumentative
