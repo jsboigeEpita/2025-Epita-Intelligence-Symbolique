@@ -2,6 +2,8 @@
 
 Les sujets proposés ci-dessous couvrent différents aspects de l'IA symbolique, avec un focus particulier sur l'argumentation et son intégration par l'IA générative agentique orchestrée. Chaque groupe devra choisir un sujet et contribuer à l'amélioration du projet global.
 
+Plusieurs projets proposés s'appuient sur **TweetyProject**, une bibliothèque Java open-source pour l'intelligence artificielle symbolique. TweetyProject offre un ensemble riche de modules pour la représentation de connaissances et l'argumentation computationnelle, permettant aux étudiants de travailler avec des formalismes logiques variés (propositionnelle, premier ordre, description, modale) et des frameworks d'argumentation (Dung, ASPIC+, ABA, etc.) sans avoir à les implémenter de zéro. L'utilisation de TweetyProject via JPype permet de combiner la puissance des implémentations Java avec la flexibilité de Python pour le prototypage rapide et l'expérimentation.
+
 ## Organisation des Sujets
 
 Les projets sont organisés en trois catégories principales :
@@ -41,11 +43,12 @@ Chaque sujet est présenté avec une structure standardisée :
 ### 1.1 Logiques formelles et raisonnement
 
 #### 1.1.1 Intégration des logiques propositionnelles avancées
-- **Contexte** : La logique propositionnelle constitue la base de nombreux systèmes de raisonnement automatique. Le module `logics.pl` de Tweety offre des fonctionnalités avancées encore peu exploitées dans le projet.
+- **Contexte** : La logique propositionnelle constitue la base de nombreux systèmes de raisonnement automatique. Le module `logics.pl` de Tweety offre des fonctionnalités avancées encore peu exploitées dans le projet. Ce module permet non seulement de représenter et manipuler des formules propositionnelles, mais aussi d'effectuer des opérations complexes comme la conversion en formes normales (DNF/CNF), la simplification, et l'utilisation de solveurs SAT pour le raisonnement efficace.
 - **Objectifs** : Améliorer l'agent PL existant pour exploiter davantage les fonctionnalités du module, notamment les solveurs SAT (SAT4J interne ou solveurs externes comme Lingeling, CaDiCaL), la conversion DIMACS, et les opérations avancées sur les formules (DNF, CNF, simplification). Implémenter des requêtes plus sophistiquées comme la vérification de satisfiabilité, la recherche de modèles, et l'analyse d'implications logiques.
 - **Technologies clés** :
-  * Tweety `logics.pl`
-  * Solveurs SAT modernes
+  * Tweety `logics.pl` (syntaxe, sémantique, parsing)
+  * Solveurs SAT modernes (SAT4J interne, intégration avec Lingeling, CaDiCaL)
+  * Format DIMACS pour l'échange avec solveurs externes
   * Java-Python bridge via JPype
 - **Niveau de difficulté** : ⭐⭐⭐
 - **Estimation d'effort** : 3-4 semaines-personnes
@@ -61,12 +64,13 @@ Chaque sujet est présenté avec une structure standardisée :
   - Tests unitaires et d'intégration
 
 #### 1.1.2 Logique du premier ordre (FOL)
-- **Contexte** : La logique du premier ordre permet d'exprimer des relations plus complexes que la logique propositionnelle, avec des quantificateurs et des prédicats.
+- **Contexte** : La logique du premier ordre permet d'exprimer des relations plus complexes que la logique propositionnelle, avec des quantificateurs et des prédicats. Le module `logics.fol` de Tweety fournit une implémentation complète pour définir des signatures logiques (types/sorts, constantes, prédicats, fonctions), construire des formules quantifiées, et raisonner sur ces formules via des prouveurs intégrés ou externes.
 - **Objectifs** : Développer un nouvel agent utilisant le module `logics.fol` de Tweety pour analyser des arguments plus complexes impliquant des quantificateurs (`∀`, `∃`) et des prédicats. Cet agent pourrait tenter de traduire des arguments exprimés en langage naturel (avec quantificateurs) en formules FOL, définir des signatures logiques (types/sorts, constantes, prédicats, fonctions), et utiliser les raisonneurs intégrés.
 - **Technologies clés** :
-  * Tweety `logics.fol`
-  * Prouveurs FOL modernes (Vampire, E-prover, Z3)
+  * Tweety `logics.fol` (signatures, formules, parsing)
+  * Prouveurs FOL modernes (intégration avec Vampire, E-prover, Z3)
   * Techniques de traduction langage naturel vers FOL
+  * Manipulation de formules quantifiées
 - **Niveau de difficulté** : ⭐⭐⭐⭐
 - **Estimation d'effort** : 4-6 semaines-personnes
 - **Interdépendances** : Extension de 1.1.1, base pour 1.2.4 (ABA)
@@ -81,7 +85,7 @@ Chaque sujet est présenté avec une structure standardisée :
   - Documentation et exemples d'utilisation
 
 #### 1.1.3 Logique modale
-- **Contexte** : Les logiques modales permettent de raisonner sur des notions comme la nécessité, la possibilité, les croyances ou les connaissances.
+- **Contexte** : Les logiques modales permettent de raisonner sur des notions comme la nécessité, la possibilité, les croyances ou les connaissances. Le module `logics.ml` de Tweety implémente les concepts fondamentaux des logiques modales, permettant de représenter et raisonner avec des opérateurs modaux comme la nécessité (`[]`) et la possibilité (`<>`), ainsi que d'utiliser différents systèmes modaux (K, T, S4, S5).
 - **Objectifs** : Créer un agent spécialisé utilisant le module `logics.ml` de Tweety pour raisonner sur des modalités comme la nécessité (`[]`), la possibilité (`<>`), les croyances ou les connaissances. Cet agent pourrait analyser des arguments impliquant des notions de possibilité, nécessité, obligation ou permission.
 - **Technologies clés** :
   * Tweety `logics.ml`
@@ -101,7 +105,7 @@ Chaque sujet est présenté avec une structure standardisée :
   - Tests unitaires et d'intégration
 
 #### 1.1.4 Logique de description (DL)
-- **Contexte** : Les logiques de description sont utilisées pour représenter des connaissances structurées sous forme de concepts, rôles et individus.
+- **Contexte** : Les logiques de description sont utilisées pour représenter des connaissances structurées sous forme de concepts, rôles et individus. Le module `logics.dl` de Tweety permet de définir des TBox (axiomes terminologiques) et ABox (assertions sur les individus), et de raisonner sur la subsomption, l'instanciation et la consistance. Cette logique est particulièrement pertinente pour les ontologies et le web sémantique.
 - **Objectifs** : Développer un agent utilisant le module `logics.dl` de Tweety pour modéliser des connaissances structurées. Cet agent pourrait construire des TBox (axiomes terminologiques) et ABox (assertions sur les individus), et raisonner sur la subsomption, l'instanciation et la consistance.
 - **Technologies clés** :
   * Tweety `logics.dl`
@@ -141,7 +145,7 @@ Chaque sujet est présenté avec une structure standardisée :
   - Cas d'étude démontrant l'application à un problème concret
 
 #### 1.1.6 Logique conditionnelle (CL)
-- **Contexte** : Les logiques conditionnelles permettent de raisonner sur des énoncés de la forme "Si A est vrai, alors B est typiquement vrai". Elles constituent un formalisme puissant pour représenter des connaissances incertaines et des règles par défaut.
+- **Contexte** : Les logiques conditionnelles permettent de raisonner sur des énoncés de la forme "Si A est vrai, alors B est typiquement vrai". Elles constituent un formalisme puissant pour représenter des connaissances incertaines et des règles par défaut. Le module `logics.cl` de Tweety implémente les fonctions de classement (ranking) ou OCF (Ordinal Conditional Functions) pour évaluer ces conditionnels et raisonner de manière non-monotone.
 - **Objectifs** : Implémenter un agent utilisant le module `logics.cl` de Tweety pour raisonner sur des conditionnels. Le notebook Tweety démontre comment créer une base conditionnelle avec des conditionnels comme (f|b), (b|p), (¬f|p), et comment calculer une fonction de classement (ranking) pour évaluer ces conditionnels. L'agent devra permettre la création de bases de connaissances conditionnelles, l'évaluation de requêtes conditionnelles, et la visualisation des fonctions de classement.
 - **Technologies clés** :
   * Tweety `logics.cl`
@@ -166,11 +170,12 @@ Chaque sujet est présenté avec une structure standardisée :
 ### 1.2 Frameworks d'argumentation
 
 #### 1.2.1 Argumentation abstraite de Dung
-- **Contexte** : Les frameworks d'argumentation abstraite de Dung (AF) fournissent un cadre mathématique pour représenter et évaluer des arguments en conflit.
+- **Contexte** : Les frameworks d'argumentation abstraite de Dung (AF) fournissent un cadre mathématique pour représenter et évaluer des arguments en conflit. Le module `arg.dung` de Tweety offre une implémentation complète de ce formalisme, permettant de construire des graphes d'arguments et d'attaques (`DungTheory`), et de calculer l'acceptabilité des arguments selon différentes sémantiques (admissible, complète, préférée, stable, fondée, idéale, semi-stable, CF2, etc.).
 - **Objectifs** : Implémenter un agent spécialisé utilisant le module `arg.dung` de Tweety pour représenter et évaluer des arguments abstraits. Cet agent devrait permettre de construire des graphes d'arguments et d'attaques (`DungTheory`), et surtout de calculer l'acceptabilité des arguments selon différentes sémantiques (admissible, complète, préférée, stable, fondée, idéale, semi-stable, CF2...).
 - **Technologies clés** :
-  * Tweety `arg.dung`
-  * Algorithmes de calcul d'extensions
+  * Tweety `arg.dung` (construction, manipulation, visualisation)
+  * Algorithmes de calcul d'extensions pour différentes sémantiques
+  * Techniques d'apprentissage et de génération de frameworks
   * Visualisation de graphes d'argumentation
 - **Niveau de difficulté** : ⭐⭐⭐
 - **Estimation d'effort** : 3-4 semaines-personnes
@@ -186,7 +191,7 @@ Chaque sujet est présenté avec une structure standardisée :
   - Documentation et exemples d'utilisation
 
 #### 1.2.2 Argumentation bipolaire
-- **Contexte** : L'argumentation bipolaire étend les frameworks de Dung en distinguant deux types de relations entre arguments : l'attaque et le support.
+- **Contexte** : L'argumentation bipolaire étend les frameworks de Dung en distinguant deux types de relations entre arguments : l'attaque et le support. Le module `arg.bipolar` de Tweety implémente plusieurs variantes de frameworks bipolaires, avec différentes interprétations du support (déductif, nécessaire, évidentiel) et leurs sémantiques associées. Ces frameworks permettent de modéliser des relations plus nuancées entre arguments.
 - **Objectifs** : Développer un agent utilisant le module `arg.bipolar` de Tweety pour représenter et évaluer des arguments avec relations d'attaque et de support. Comprendre les différentes interprétations du support (déductif, nécessaire, évidentiel...) et les sémantiques associées proposées dans la littérature et implémentées dans Tweety.
 - **Technologies clés** :
   * Tweety `arg.bipolar`
@@ -206,7 +211,7 @@ Chaque sujet est présenté avec une structure standardisée :
   - Documentation et exemples d'utilisation
 
 #### 1.2.3 Argumentation pondérée
-- **Contexte** : L'argumentation pondérée associe des poids numériques aux arguments ou aux attaques pour représenter leur force relative.
+- **Contexte** : L'argumentation pondérée associe des poids numériques aux arguments ou aux attaques pour représenter leur force relative. Les modules `arg.prob` et `arg.social` de Tweety permettent de manipuler des frameworks d'argumentation avec poids, en utilisant différents semi-anneaux (WeightedSemiring, FuzzySemiring, ProbabilisticSemiring) pour l'agrégation des poids et le calcul de l'acceptabilité.
 - **Objectifs** : Créer un agent utilisant le module `arg.prob` ou `arg.social` de Tweety pour manipuler des frameworks d'argumentation avec poids. Cet agent pourrait utiliser différents semi-anneaux (WeightedSemiring, FuzzySemiring, ProbabilisticSemiring) et raisonneurs pondérés.
 - **Technologies clés** :
   * Tweety `arg.prob` et `arg.social`
@@ -306,7 +311,7 @@ Chaque sujet est présenté avec une structure standardisée :
   - Documentation et exemples d'utilisation
 
 #### 1.2.8 Abstract Dialectical Frameworks (ADF)
-- **Contexte** : Les ADF généralisent les AAF de Dung en associant à chaque argument une condition d'acceptation.
+- **Contexte** : Les ADF généralisent les AAF de Dung en associant à chaque argument une condition d'acceptation. Le module `arg.adf` de Tweety implémente ce formalisme avancé où chaque argument est associé à une formule propositionnelle (sa condition d'acceptation) qui détermine son statut en fonction de l'état des autres arguments. Cette approche permet de modéliser des dépendances complexes comme le support, l'attaque conjointe, ou des combinaisons arbitraires de relations.
 - **Objectifs** : Implémenter un agent utilisant le module `arg.adf` de Tweety. Les ADF généralisent les AAF de Dung en associant à chaque argument une condition d'acceptation (une formule propositionnelle sur l'état des autres arguments), permettant de modéliser des dépendances plus complexes que la simple attaque (ex: support, attaque conjointe).
 - **Technologies clés** :
   * Tweety `arg.adf`
@@ -323,6 +328,27 @@ Chaque sujet est présenté avec une structure standardisée :
   - Agent ADF
   - Intégration avec solveurs SAT incrémentaux
   - Visualisation des ADF
+  - Documentation et exemples d'utilisation
+
+#### 1.2.9 Analyse probabiliste d'arguments
+- **Contexte** : L'argumentation probabiliste permet de gérer l'incertitude dans les frameworks d'argumentation. Le module `arg.prob` de Tweety implémente l'approche de Li, Hunter et Thimm, où des probabilités sont associées aux arguments ou aux sous-ensembles d'arguments. Cette approche permet d'évaluer la robustesse des conclusions face à l'incertitude et de calculer des degrés de croyance dans l'acceptabilité des arguments.
+- **Objectifs** : Développer un agent utilisant le module `arg.prob` de Tweety pour analyser des arguments avec incertitude. Implémenter différentes distributions de probabilité sur les arguments, calculer des degrés d'acceptabilité, et visualiser l'impact de l'incertitude sur les conclusions argumentatives.
+- **Technologies clés** :
+  * Tweety `arg.prob`
+  * Distributions de probabilité sur les arguments
+  * Calcul de degrés d'acceptabilité
+  * Visualisation de l'incertitude argumentative
+- **Niveau de difficulté** : ⭐⭐⭐⭐
+- **Estimation d'effort** : 5-7 semaines-personnes
+- **Interdépendances** : Extension de 1.2.1 (Dung AF) et 1.2.3 (Argumentation pondérée)
+- **Références** :
+  - "A Probabilistic Framework for Modelling Legal Argument" (2022)
+  - "Probabilistic Argumentation: An Approach Based on a Conditional Logics" (2023)
+  - "Handling Uncertainty in Argumentation Frameworks" (2022)
+- **Livrables attendus** :
+  - Agent d'argumentation probabiliste
+  - Implémentation de différentes distributions de probabilité
+  - Visualisation des degrés d'acceptabilité
   - Documentation et exemples d'utilisation
 ### 1.3 Taxonomies et classification
 
@@ -471,6 +497,27 @@ Chaque sujet est présenté avec une structure standardisée :
   - Implémentation de plusieurs mesures d'incohérence
   - Algorithmes d'énumération de MUS
   - Résolution d'incohérences via MaxSAT
+  - Documentation et exemples d'utilisation
+
+#### 1.4.5 Révision de croyances multi-agents
+- **Contexte** : La révision de croyances multi-agents étudie comment plusieurs agents peuvent mettre à jour leurs croyances de manière cohérente face à de nouvelles informations, potentiellement contradictoires. Le module `beliefdynamics` de Tweety fournit des outils pour modéliser ce processus, en permettant de représenter les croyances de différents agents et de simuler leur évolution au fil du temps et des interactions.
+- **Objectifs** : Développer un système de révision de croyances multi-agents basé sur le module `beliefdynamics` de Tweety. Implémenter différentes stratégies de révision (crédulité, scepticisme, consensus) et analyser leur impact sur la convergence des croyances dans un groupe d'agents.
+- **Technologies clés** :
+  * Tweety `beliefdynamics`
+  * Stratégies de révision multi-agents
+  * Modèles de confiance entre agents
+  * Visualisation de l'évolution des croyances
+- **Niveau de difficulté** : ⭐⭐⭐⭐
+- **Estimation d'effort** : 5-7 semaines-personnes
+- **Interdépendances** : Lié à 1.4.2 (Révision de croyances) et 2.1.6 (Gouvernance multi-agents)
+- **Références** :
+  - "Belief Revision in Multi-Agent Systems" (2022)
+  - "Social Choice Theory and Belief Merging" (2023)
+  - "Trust-Based Belief Revision in Multi-Agent Settings" (2022)
+- **Livrables attendus** :
+  - Système de révision de croyances multi-agents
+  - Implémentation de différentes stratégies de révision
+  - Visualisation de l'évolution des croyances
   - Documentation et exemples d'utilisation
 ### 1.5 Planification et vérification formelle
 
@@ -1025,6 +1072,27 @@ Chaque sujet est présenté avec une structure standardisée :
   - Ressources MCP pour l'argumentation
   - Documentation et exemples d'utilisation
   - Tests de fonctionnalité et de performance
+
+#### 2.5.5 Serveur MCP pour les frameworks d'argumentation Tweety
+- **Contexte** : Les frameworks d'argumentation de Tweety offrent des fonctionnalités puissantes pour l'analyse argumentative, mais leur utilisation nécessite une connaissance approfondie de l'API Java. Un serveur MCP dédié aux frameworks d'argumentation de Tweety permettrait d'exposer ces fonctionnalités de manière standardisée et accessible.
+- **Objectifs** : Développer un serveur MCP spécifique pour les frameworks d'argumentation de Tweety, exposant des outils pour la construction, l'analyse et la visualisation de différents types de frameworks (Dung, bipolaire, pondéré, ADF, etc.). Implémenter des ressources MCP donnant accès aux différentes sémantiques d'acceptabilité et aux algorithmes de calcul d'extensions.
+- **Technologies clés** :
+  * MCP (Model Context Protocol)
+  * Tweety `arg.*` (tous les modules d'argumentation)
+  * JPype pour l'interface Java-Python
+  * JSON Schema pour la définition des outils et ressources
+- **Niveau de difficulté** : ⭐⭐⭐⭐
+- **Estimation d'effort** : 5-7 semaines-personnes
+- **Interdépendances** : Extension de 2.5.3 (serveur MCP) et 2.5.4 (outils MCP), utilise 1.2 (frameworks d'argumentation)
+- **Références** :
+  - Spécification du protocole MCP (version 2023-2024)
+  - Documentation de l'API Tweety pour les frameworks d'argumentation
+  - "Building Interoperable AI Systems" (2023)
+- **Livrables attendus** :
+  - Serveur MCP pour les frameworks d'argumentation Tweety
+  - Outils MCP pour différents types de frameworks
+  - Documentation de l'API
+  - Exemples d'intégration avec différentes applications
 ## 3. Expérience utilisateur et applications
 
 ### 3.1 Interfaces utilisateurs
@@ -1289,6 +1357,60 @@ Chaque sujet est présenté avec une structure standardisée :
   - Détection de sophismes et de stratégies rhétoriques
   - Évaluation de la qualité argumentative
   - Documentation et guide d'utilisation
+
+## Ressources générales sur TweetyProject
+
+### Documentation et tutoriels
+- **Site officiel** : [TweetyProject](https://tweetyproject.org/) - Documentation, téléchargements et exemples
+- **GitHub** : [TweetyProjectTeam/TweetyProject](https://github.com/TweetyProjectTeam/TweetyProject) - Code source, issues et contributions
+- **Tutoriel JPype** : Guide d'utilisation de Tweety avec Python via JPype (voir notebook Tweety.ipynb)
+
+### Modules principaux
+- **Logiques formelles** :
+  * `logics.pl` - Logique propositionnelle, solveurs SAT, analyse d'incohérence
+  * `logics.fol` - Logique du premier ordre, signatures, quantificateurs
+  * `logics.ml` - Logique modale, opérateurs de nécessité et possibilité
+  * `logics.dl` - Logique de description, concepts, rôles, TBox/ABox
+  * `logics.cl` - Logique conditionnelle, fonctions de classement (OCF)
+  * `logics.qbf` - Formules booléennes quantifiées
+  * `logics.pcl` - Logique conditionnelle probabiliste
+  * `logics.rcl` - Logique conditionnelle relationnelle
+  * `logics.mln` - Markov Logic Networks
+  * `logics.bpm` - Business Process Management
+
+- **Argumentation computationnelle** :
+  * `arg.dung` - Frameworks d'argumentation abstraite de Dung
+  * `arg.bipolar` - Frameworks d'argumentation bipolaire (support/attaque)
+  * `arg.weighted` - Frameworks d'argumentation pondérée
+  * `arg.social` - Frameworks d'argumentation sociale
+  * `arg.prob` - Argumentation probabiliste
+  * `arg.aspic` - Argumentation structurée ASPIC+
+  * `arg.aba` - Argumentation basée sur les hypothèses (ABA)
+  * `arg.delp` - Defeasible Logic Programming (DeLP)
+  * `arg.deductive` - Argumentation déductive
+  * `arg.adf` - Abstract Dialectical Frameworks
+  * `arg.setaf` - Set Argumentation Frameworks
+  * `arg.rankings` - Sémantiques basées sur le classement
+  * `arg.extended` - Frameworks étendus (attaques sur attaques)
+
+- **Autres modules** :
+  * `beliefdynamics` - Révision de croyances multi-agents
+  * `agents` - Modélisation d'agents et dialogues
+  * `action` - Planification et langages d'action
+  * `math` - Utilitaires mathématiques
+  * `commons` - Classes et interfaces communes
+
+### Configuration et utilisation
+- **Prérequis** : Java Development Kit (JDK 11+), Python 3.x, JPype
+- **Installation** : Téléchargement des JARs Tweety et configuration du classpath
+- **Intégration avec outils externes** : Solveurs SAT (Lingeling, CaDiCaL), prouveurs FOL (EProver, SPASS), solveurs ASP (Clingo)
+
+### Exemples d'applications
+- Analyse formelle d'arguments et détection de sophismes
+- Modélisation de débats et évaluation de la qualité argumentative
+- Révision de croyances et gestion de l'incohérence
+- Raisonnement avec incertitude et information incomplète
+- Aide à la décision basée sur l'argumentation
 
 #### 3.2.7 Plateforme de délibération citoyenne
 - **Contexte** : Une plateforme de délibération peut faciliter la participation citoyenne aux décisions publiques.
