@@ -71,6 +71,7 @@ htmlcov/
 .nox/
 .hypothesis/
 .pytest_cache/
+*.egg-info/
 
 # Fichiers et répertoires spécifiques au projet
 argumentiation_analysis/temp_downloads/
