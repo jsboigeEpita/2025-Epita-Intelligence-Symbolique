@@ -15,6 +15,9 @@ from argumentiation_analysis.orchestration.hierarchical.operational.state import
 from argumentiation_analysis.orchestration.hierarchical.operational.agent_registry import OperationalAgentRegistry
 from argumentiation_analysis.orchestration.hierarchical.interfaces.tactical_operational import TacticalOperationalInterface
 from argumentiation_analysis.core.communication import (
+
+from argumentiation_analysis.paths import RESULTS_DIR
+
     MessageMiddleware, OperationalAdapter, Message,
     ChannelType, MessagePriority, MessageType, AgentLevel
 )
@@ -268,7 +271,7 @@ class OperationalManager:
             return {
                 "task_id": tactical_task.get("id"),
                 "completion_status": "failed",
-                "results": {},
+                RESULTS_DIR: {},
                 "execution_metrics": {},
                 "issues": [{
                     "type": "interface_error",
@@ -303,7 +306,7 @@ class OperationalManager:
             return {
                 "task_id": tactical_task.get("id"),
                 "completion_status": "failed",
-                "results": {},
+                RESULTS_DIR: {},
                 "execution_metrics": {},
                 "issues": [{
                     "type": "processing_error",

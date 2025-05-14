@@ -58,6 +58,7 @@ argumentiation_analysis/
 ├── __init__.py
 ├── main_orchestrator.ipynb      # Notebook interactif pour l'orchestration
 ├── main_orchestrator.py         # Script principal d'orchestration
+├── paths.py                     # Gestion centralisée des chemins du projet
 ├── run_analysis.py              # Script pour lancer l'analyse argumentative
 ├── run_extract_editor.py        # Script pour lancer l'éditeur de marqueurs d'extraits
 ├── run_extract_repair.py        # Script pour lancer la réparation des bornes défectueuses
@@ -65,13 +66,39 @@ argumentiation_analysis/
 ├── run_tests.py                 # Script pour exécuter les tests
 ├── requirements.txt             # Dépendances Python
 ├── agents/                      # Agents spécialistes
+│   ├── core/                    # Implémentations des agents spécialistes
+│   ├── extract/                 # Module de redirection vers agents.core.extract
+│   └── tools/                   # Outils utilisés par les agents
+├── config/                      # Fichiers de configuration
+│   └── .env.template            # Template pour les variables d'environnement
 ├── core/                        # Composants fondamentaux
+│   ├── communication/           # Système de communication entre agents
+│   ├── jvm_setup.py             # Configuration de l'environnement JVM
+│   ├── llm_service.py           # Service d'accès aux modèles de langage
+│   ├── shared_state.py          # Gestion de l'état partagé
+│   ├── state_manager_plugin.py  # Plugin pour la gestion de l'état
+│   └── strategies.py            # Stratégies d'orchestration
+├── data/                        # Données et ressources
+├── libs/                        # Bibliothèques externes
+│   └── native/                  # Bibliothèques natives
 ├── models/                      # Modèles de données
 ├── orchestration/               # Mécanismes d'orchestration
+├── results/                     # Résultats des analyses
 ├── services/                    # Services partagés
+│   ├── cache_service.py         # Service de mise en cache
+│   ├── crypto_service.py        # Service de chiffrement
+│   ├── definition_service.py    # Service de gestion des définitions
+│   ├── extract_service.py       # Service d'extraction de texte
+│   └── fetch_service.py         # Service de récupération de texte
 ├── tests/                       # Tests unitaires et d'intégration
 ├── ui/                          # Interface utilisateur
+│   ├── extract_editor/          # Éditeur de marqueurs d'extraits
+│   ├── app.py                   # Application principale
+│   ├── config.py                # Configuration de l'interface
+│   ├── extract_utils.py         # Utilitaires pour l'extraction
+│   └── utils.py                 # Utilitaires généraux pour l'UI
 └── utils/                       # Utilitaires généraux
+    └── extract_repair/          # Outils de réparation des extraits
 ```
 
 Cette organisation modulaire permet une séparation claire des responsabilités et facilite la maintenance et l'extension du système.
@@ -99,23 +126,28 @@ Le module `core` contient les classes et fonctions fondamentales partagées par 
 
 Le module `agents` contient les définitions spécifiques à chaque agent IA participant à l'analyse rhétorique collaborative. Chaque agent est spécialisé dans un aspect particulier de l'analyse.
 
-**Agents principaux :**
-- **Agent Project Manager (PM)** : Orchestre l'analyse et coordonne les autres agents.
-- **Agent d'Analyse Informelle** : Identifie les arguments et les sophismes dans le texte.
-- **Agent de Logique Propositionnelle (PL)** : Gère la formalisation et l'interrogation logique via Tweety.
-- **Agent d'Extraction** : Gère l'extraction et la réparation des extraits de texte.
-
-**Outils et utilitaires :**
-- `tools/analysis/` : Outils d'analyse des résultats des agents (analyseur contextuel de sophismes, évaluateur de gravité des sophismes, etc.).
-- `tools/encryption/` : Système d'encryption pour sécuriser les données sensibles.
-- `utils/informal_optimization/` : Outils d'optimisation pour l'agent d'analyse informelle.
+**Structure du module agents :**
+- **`agents/core/`** : Contient les implémentations des agents spécialistes
+  - **Agent Project Manager (PM)** : Orchestre l'analyse et coordonne les autres agents
+  - **Agent d'Analyse Informelle** : Identifie les arguments et les sophismes dans le texte
+  - **Agent de Logique Propositionnelle (PL)** : Gère la formalisation et l'interrogation logique via Tweety
+  - **Agent d'Extraction** : Gère l'extraction et la réparation des extraits de texte
+- **`agents/extract/`** : Module de redirection vers `agents.core.extract` pour maintenir la compatibilité
+- **`agents/tools/`** : Outils utilisés par les agents
+  - Outils d'analyse des résultats (analyseur contextuel de sophismes, évaluateur de gravité des sophismes, etc.)
+  - Système d'encryption pour sécuriser les données sensibles
+- **`agents/utils/`** : Utilitaires spécifiques aux agents
+  - Outils d'optimisation pour l'agent d'analyse informelle
 
 **Structure d'un agent :**
 Chaque agent est généralement composé de :
-- `*_definitions.py` : Classes Plugin, fonction `setup_*_kernel`, constante `*_INSTRUCTIONS`.
-- `prompts.py` : Constantes contenant les prompts sémantiques pour l'agent.
-- `*_agent.py` : Classe principale de l'agent avec ses méthodes spécifiques.
-- `README.md` : Documentation spécifique à l'agent.
+- `*_definitions.py` : Classes Plugin, fonction `setup_*_kernel`, constante `*_INSTRUCTIONS`
+- `prompts.py` : Constantes contenant les prompts sémantiques pour l'agent
+- `*_agent.py` : Classe principale de l'agent avec ses méthodes spécifiques
+- `README.md` : Documentation spécifique à l'agent
+
+**Mécanismes de redirection :**
+Le projet utilise des mécanismes de redirection pour maintenir la compatibilité avec le code existant. Par exemple, le module `agents/extract` redirige vers `agents/core/extract` pour permettre aux importations existantes de continuer à fonctionner.
 
 ### Services : Services partagés
 
@@ -324,17 +356,18 @@ Le système est conçu pour être facilement extensible, permettant l'ajout de n
 
 Pour ajouter un nouvel agent au système, il suffit de :
 
-1. Créer un nouveau sous-répertoire dans `agents/core/` avec le nom de l'agent.
-2. Implémenter les fichiers nécessaires (`*_definitions.py`, `prompts.py`, `*_agent.py`).
-3. Mettre à jour l'orchestrateur principal pour intégrer le nouvel agent.
+1. Créer un nouveau sous-répertoire dans `agents/core/` avec le nom de l'agent
+2. Implémenter les fichiers nécessaires (`*_definitions.py`, `prompts.py`, `*_agent.py`)
+3. Mettre à jour l'orchestrateur principal pour intégrer le nouvel agent
+4. Si nécessaire, créer un module de redirection dans `agents/` pour maintenir la compatibilité
 
 ### Ajout de nouveaux outils d'analyse
 
 Pour ajouter un nouvel outil d'analyse, il suffit de :
 
-1. Créer un nouveau fichier dans `agents/tools/analysis/` avec le nom de l'outil.
-2. Implémenter les classes et fonctions nécessaires.
-3. Mettre à jour les agents qui utiliseront cet outil.
+1. Créer un nouveau fichier dans `agents/tools/analysis/` avec le nom de l'outil
+2. Implémenter les classes et fonctions nécessaires
+3. Mettre à jour les agents qui utiliseront cet outil
 
 ### Ajout de nouveaux services
 

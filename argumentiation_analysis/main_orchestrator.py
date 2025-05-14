@@ -91,10 +91,10 @@ async def main():
     setup_logging()
 
     # 3. Initialisation de la JVM
-    from core.jvm_setup import initialize_jvm
+    from argumentiation_analysis.core.jvm_setup import initialize_jvm
     logging.info("Tentative d'initialisation de la JVM...")
     # La fonction initialize_jvm gère maintenant aussi le téléchargement des JARs
-    jvm_ready_status = initialize_jvm(lib_dir_path="libs")
+    jvm_ready_status = initialize_jvm(lib_dir_path=LIBS_DIR)
 
     if jvm_ready_status:
         logging.info("✅ JVM initialisée avec succès ou déjà active.")
@@ -102,7 +102,7 @@ async def main():
         logging.warning("⚠️ JVM n'a pas pu être initialisée. L'agent PropositionalLogicAgent ne fonctionnera pas.")
 
     # 4. Création du Service LLM
-    from core.llm_service import create_llm_service
+    from argumentiation_analysis.core.llm_service import create_llm_service
     llm_service = None
     try:
         logging.info("Création du service LLM...")
@@ -134,7 +134,7 @@ async def main():
         # Mode normal avec UI
         try:
             # Importer la fonction UI depuis le module .py
-            from ui.app import configure_analysis_task
+            from argumentiation_analysis.ui.app import configure_analysis_task
             logging.info("Fonction 'configure_analysis_task' importée depuis ui.app.")
 
             # Appeler la fonction pour afficher l'UI et obtenir le texte
@@ -168,7 +168,10 @@ async def main():
         print("\n🚀 Lancement de l'analyse collaborative (peut prendre du temps)... ")
         try:
             # Importer la fonction d'orchestration
-            from orchestration.analysis_runner import run_analysis_conversation
+            from argumentiation_analysis.orchestration.analysis_runner import run_analysis_conversation
+
+from argumentiation_analysis.paths import LIBS_DIR
+
 
             # Exécuter la fonction d'analyse en passant le texte et le service LLM
             await run_analysis_conversation(

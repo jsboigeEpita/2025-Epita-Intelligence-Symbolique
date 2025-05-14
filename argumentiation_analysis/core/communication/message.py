@@ -10,6 +10,9 @@ import enum
 from datetime import datetime
 from typing import Dict, Any, Optional, List, Union
 
+from argumentiation_analysis.paths import DATA_DIR
+
+
 
 class MessageType(enum.Enum):
     """Types de messages supportés par le système."""
@@ -286,7 +289,7 @@ class InformationMessage(Message):
         """
         content = {
             "info_type": info_type,
-            "data": data
+            DATA_DIR: data
         }
         
         super().__init__(

@@ -21,7 +21,7 @@ if str(parent_dir) not in sys.path:
 load_dotenv(override=True)
 
 # Importer les modules nécessaires
-from ui.config import CONFIG_FILE_ENC
+from argumentiation_analysis.ui.config import CONFIG_FILE_ENC
 
 # Importer les fonctions des autres scripts
 from create_complete_encrypted_config import create_complete_encrypted_config
@@ -103,7 +103,7 @@ def main():
     print("\nATTENTION: Cette opération va supprimer définitivement les fichiers suivants:")
     print(f"   - Tous les fichiers de cache dans '{temp_cache_dir}'")
     print(f"   - Le répertoire de cache original '{original_cache_dir}' s'il existe")
-    print(f"   - Le fichier 'data/extract_sources.json' s'il existe")
+    print(f"   - Le fichier DATA_DIR / 'extract_sources.json' s'il existe")
     
     confirmation = input("\nSouhaitez-vous nettoyer les fichiers non nécessaires? (o/n): ")
     if confirmation.lower() in ["o", "oui", "y", "yes"]:
@@ -129,7 +129,7 @@ def main():
                 print(f"⚠️ Erreur lors de la suppression du répertoire de cache original: {e}")
         
         # Supprimer le fichier extract_sources.json
-        extract_sources_json = parent_dir / "data" / "extract_sources.json"
+        extract_sources_json = parent_dir / DATA_DIR / "extract_sources.json"
         if extract_sources_json.exists():
             try:
                 extract_sources_json.unlink()
@@ -146,6 +146,9 @@ def main():
             if temp_cache_dir.exists():
                 try:
                     import shutil
+
+from argumentiation_analysis.paths import DATA_DIR
+
                     shutil.rmtree(temp_cache_dir)
                 except Exception:
                     pass

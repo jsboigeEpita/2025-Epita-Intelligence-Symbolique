@@ -24,8 +24,8 @@ if str(parent_dir) not in sys.path:
 load_dotenv(override=True)
 
 # Importer les modules nécessaires
-from ui.config import ENCRYPTION_KEY, CONFIG_FILE_ENC
-from ui.utils import reconstruct_url, get_cache_filepath
+from argumentiation_analysis.ui.config import ENCRYPTION_KEY, CONFIG_FILE_ENC
+from argumentiation_analysis.ui.utils import reconstruct_url, get_cache_filepath
 
 # Définir les constantes
 EXTRACT_SOURCES_UPDATED_PATH = parent_dir / "utils" / "extract_repair" / "docs" / "extract_sources_updated.json"

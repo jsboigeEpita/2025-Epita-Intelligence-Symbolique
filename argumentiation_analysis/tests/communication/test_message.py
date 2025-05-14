@@ -7,6 +7,9 @@ from datetime import datetime
 import json
 
 from argumentiation_analysis.core.communication.message import (
+
+from argumentiation_analysis.paths import DATA_DIR
+
     Message, MessageType, MessagePriority, AgentLevel,
     CommandMessage, InformationMessage, RequestMessage, EventMessage
 )
@@ -83,7 +86,7 @@ class TestMessage(unittest.TestCase):
             message_type=MessageType.RESPONSE,
             sender="operational-agent-1",
             sender_level=AgentLevel.OPERATIONAL,
-            content={"status": "success", "data": {"result": "some data"}},
+            content={"status": "success", DATA_DIR: {"result": "some data"}},
             recipient="tactical-agent-1",
             priority=MessagePriority.NORMAL,
             metadata={"reply_to": request.id}
@@ -116,7 +119,7 @@ class TestMessage(unittest.TestCase):
     def test_create_response(self):
         """Test de la création d'une réponse à un message."""
         response = self.message.create_response(
-            content={"status": "success", "data": {"result": "analysis complete"}}
+            content={"status": "success", DATA_DIR: {"result": "analysis complete"}}
         )
         
         self.assertEqual(response.type, MessageType.RESPONSE)
@@ -174,8 +177,8 @@ class TestSpecializedMessages(unittest.TestCase):
         
         self.assertEqual(info.type, MessageType.INFORMATION)
         self.assertEqual(info.content["info_type"], "analysis_result")
-        self.assertEqual(info.content["data"]["result"], "some data")
-        self.assertEqual(info.content["data"]["confidence"], 0.95)
+        self.assertEqual(info.content[DATA_DIR]["result"], "some data")
+        self.assertEqual(info.content[DATA_DIR]["confidence"], 0.95)
     
     def test_request_message(self):
         """Test de la création d'un message de requête."""

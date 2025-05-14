@@ -10,7 +10,7 @@ import pandas as pd
 from unittest.mock import MagicMock, patch, mock_open
 from pathlib import Path
 import semantic_kernel as sk
-from agents.core.informal.informal_definitions import InformalAnalysisPlugin, setup_informal_kernel
+from argumentiation_analysis.agents.core.informal.informal_definitions import InformalAnalysisPlugin, setup_informal_kernel
 from tests.async_test_case import AsyncTestCase
 
 

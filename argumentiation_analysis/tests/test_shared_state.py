@@ -3,7 +3,7 @@ Tests unitaires pour le module shared_state.
 """
 
 import unittest
-from core.shared_state import RhetoricalAnalysisState
+from argumentiation_analysis.core.shared_state import RhetoricalAnalysisState
 
 
 class TestRhetoricalAnalysisState(unittest.TestCase):

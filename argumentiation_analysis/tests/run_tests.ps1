@@ -9,10 +9,40 @@
 Write-Host "=== Tests Unitaires - Projet d'Analyse Argumentative ===" -ForegroundColor Cyan
 Write-Host ""
 
-# Ajouter le répertoire parent au chemin Python
+# Ajouter le répertoire racine du projet au chemin Python
 $currentDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $parentDir = Split-Path -Parent $currentDir
-$env:PYTHONPATH = $parentDir
+$rootDir = Split-Path -Parent $parentDir
+$env:PYTHONPATH = $rootDir
+
+# Vérifier si les JARs de test sont présents
+$testLibsDir = Join-Path -Path $currentDir -ChildPath "resources\libs"
+$testJarsExist = Test-Path -Path $testLibsDir -PathType Container
+$testJarsCount = 0
+if ($testJarsExist) {
+    $testJarsCount = (Get-ChildItem -Path $testLibsDir -Filter "*.jar").Count
+}
+
+if (-not $testJarsExist -or $testJarsCount -eq 0) {
+    Write-Host "JARs de test non trouvés. Tentative de téléchargement..." -ForegroundColor Yellow
+    try {
+        $scriptPath = Join-Path -Path $parentDir -ChildPath "scripts\download_test_jars.py"
+        if (Test-Path -Path $scriptPath) {
+            python $scriptPath
+            if ($LASTEXITCODE -ne 0) {
+                Write-Host "Échec du téléchargement des JARs de test. Certains tests pourraient être sautés." -ForegroundColor Yellow
+            } else {
+                Write-Host "JARs de test téléchargés avec succès." -ForegroundColor Green
+            }
+        } else {
+            Write-Host "Script de téléchargement des JARs de test non trouvé: $scriptPath" -ForegroundColor Yellow
+            Write-Host "Certains tests pourraient être sautés." -ForegroundColor Yellow
+        }
+    } catch {
+        Write-Host "Erreur lors du téléchargement des JARs de test: $_" -ForegroundColor Yellow
+        Write-Host "Certains tests pourraient être sautés." -ForegroundColor Yellow
+    }
+}
 
 # Vérifier si coverage est installé
 $hasCoverage = $false
@@ -29,7 +59,7 @@ catch {
 # Fonction pour exécuter les tests sans couverture
 function Run-Tests {
     Write-Host "Exécution des tests unitaires..." -ForegroundColor Cyan
-    python -m unittest discover -s $currentDir -p "test_*.py" -v
+    py -m unittest discover -s $currentDir -p "test_*.py" -v
     return $LASTEXITCODE
 }
 
@@ -38,7 +68,7 @@ function Run-Tests-With-Coverage {
     Write-Host "Exécution des tests unitaires avec couverture..." -ForegroundColor Cyan
     
     # Démarrer la couverture
-    python -m coverage run --source=$parentDir --omit="*/__pycache__/*,*/tests/*,*/venv/*,*/env/*,*/site-packages/*" -m unittest discover -s $currentDir -p "test_*.py" -v
+    py -m coverage run --source=$parentDir --omit="*/__pycache__/*,*/tests/*,*/venv/*,*/env/*,*/site-packages/*" -m unittest discover -s $currentDir -p "test_*.py" -v
     $testResult = $LASTEXITCODE
     
     # Générer le rapport de couverture
@@ -48,7 +78,7 @@ function Run-Tests-With-Coverage {
         Write-Host "`n--- Rapport de couverture ---" -ForegroundColor Yellow
     }
     
-    python -m coverage report
+    py -m coverage report
     
     # Générer un rapport HTML
     $htmlcovDir = Join-Path -Path $currentDir -ChildPath "htmlcov"
@@ -56,7 +86,7 @@ function Run-Tests-With-Coverage {
         New-Item -ItemType Directory -Path $htmlcovDir | Out-Null
     }
     
-    python -m coverage html -d $htmlcovDir
+    py -m coverage html -d $htmlcovDir
     Write-Host "`nRapport HTML généré dans $htmlcovDir" -ForegroundColor Cyan
     
     return $testResult

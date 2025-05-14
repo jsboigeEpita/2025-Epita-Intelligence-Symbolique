@@ -63,7 +63,7 @@ class ContextualFallacyAnalyzer:
         """
         try:
             # Utiliser l'utilitaire de lazy loading pour obtenir le chemin du fichier
-            from utils.taxonomy_loader import get_taxonomy_path, validate_taxonomy_file
+            from argumentiation_analysis.utils.taxonomy_loader import get_taxonomy_path, validate_taxonomy_file
             
             path = taxonomy_path or get_taxonomy_path()
             self.logger.info(f"Chargement de la taxonomie depuis {path}")

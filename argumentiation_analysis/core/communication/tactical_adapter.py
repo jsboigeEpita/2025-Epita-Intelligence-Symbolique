@@ -15,6 +15,9 @@ from .message import Message, MessageType, MessagePriority, AgentLevel
 from .channel_interface import ChannelType
 from .middleware import MessageMiddleware
 
+from argumentiation_analysis.paths import DATA_DIR
+
+
 
 class TacticalAdapter:
     """
@@ -174,7 +177,7 @@ class TacticalAdapter:
             content={
                 "info_type": "report",
                 "report_type": report_type,
-                "data": content
+                DATA_DIR: content
             },
             recipient=recipient_id,
             channel=ChannelType.HIERARCHICAL.value,
@@ -274,7 +277,7 @@ class TacticalAdapter:
             
             if response:
                 self.logger.info(f"Received guidance from {recipient_id} for {request_type} request")
-                return response.content.get("data")
+                return response.content.get(DATA_DIR)
             
             self.logger.warning(f"Request {request_type} to {recipient_id} timed out")
             return None
@@ -319,7 +322,7 @@ class TacticalAdapter:
             
             if response:
                 self.logger.info(f"Received guidance from {recipient_id} for {request_type} request")
-                return response.content.get("data")
+                return response.content.get(DATA_DIR)
             
             self.logger.warning(f"Request {request_type} to {recipient_id} timed out")
             return None
@@ -373,7 +376,7 @@ class TacticalAdapter:
             content={
                 "info_type": "collaboration",
                 "collaboration_type": collaboration_type,
-                "data": content
+                DATA_DIR: content
             },
             recipient=None,  # Destiné au groupe
             channel=ChannelType.COLLABORATION.value,
@@ -587,7 +590,7 @@ class TacticalAdapter:
             content={
                 "info_type": "tactical_update",
                 "update_type": update_type,
-                "data": status
+                DATA_DIR: status
             },
             recipient=recipient_id,
             channel=ChannelType.HIERARCHICAL.value,

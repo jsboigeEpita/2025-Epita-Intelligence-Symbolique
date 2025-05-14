@@ -12,8 +12,8 @@ from pathlib import Path
 sys.path.append(str(Path(__file__).parent.parent))
 
 # Importer les modules nécessaires
-from ui.utils import save_extract_definitions
-from ui import config as ui_config
+from argumentiation_analysis.ui.utils import save_extract_definitions
+from argumentiation_analysis.ui import config as ui_config
 
 def update_encrypted_config():
     """

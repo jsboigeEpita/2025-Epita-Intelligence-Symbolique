@@ -29,6 +29,9 @@ from argumentiation_analysis.services.crypto_service import CryptoService
 from argumentiation_analysis.services.definition_service import DefinitionService
 from argumentiation_analysis.models.extract_definition import ExtractDefinitions
 
+from argumentiation_analysis.paths import DATA_DIR
+
+
 def verify_encrypted_config():
     """Vérifie le fichier de configuration encrypté."""
     # Vérifier si la variable d'environnement TEXT_CONFIG_PASSPHRASE est définie
@@ -48,7 +51,7 @@ def verify_encrypted_config():
     logger.info("✅ Service de chiffrement initialisé avec succès.")
     
     # Définir les chemins des fichiers
-    config_file = current_dir / "data" / "extract_sources.json.gz.enc"
+    config_file = current_dir / DATA_DIR / "extract_sources.json.gz.enc"
     
     # Vérifier si le fichier existe
     if not config_file.exists():

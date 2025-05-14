@@ -5,7 +5,7 @@ Tests unitaires pour l'agent Project Manager (PM).
 import unittest
 from unittest.mock import MagicMock, patch
 import semantic_kernel as sk
-from agents.core.pm.pm_definitions import setup_pm_kernel
+from argumentiation_analysis.agents.core.pm.pm_definitions import setup_pm_kernel
 from tests.async_test_case import AsyncTestCase
 
 

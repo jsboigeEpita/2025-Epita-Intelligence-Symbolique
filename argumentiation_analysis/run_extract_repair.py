@@ -17,7 +17,7 @@ async def main():
     """Fonction principale pour lancer la réparation des bornes défectueuses."""
     # Importer le module depuis son nouvel emplacement
     try:
-        from utils.extract_repair.repair_extract_markers import main as repair_main
+        from argumentiation_analysis.utils.extract_repair.repair_extract_markers import main as repair_main
         print("✅ Module repair_extract_markers importé avec succès.")
         
         # Lancer le script de réparation

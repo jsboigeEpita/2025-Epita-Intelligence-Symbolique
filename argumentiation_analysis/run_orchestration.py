@@ -52,15 +52,15 @@ async def setup_environment():
     logging.info(f".env chargé: {loaded}")
 
     # 2. Initialisation de la JVM
-    from core.jvm_setup import initialize_jvm
+    from argumentiation_analysis.core.jvm_setup import initialize_jvm
     logging.info("Initialisation de la JVM...")
-    jvm_ready_status = initialize_jvm(lib_dir_path="libs")
+    jvm_ready_status = initialize_jvm(lib_dir_path=LIBS_DIR)
     
     if not jvm_ready_status:
         logging.warning("⚠️ JVM n'a pas pu être initialisée. L'agent PropositionalLogicAgent ne fonctionnera pas.")
 
     # 3. Création du Service LLM
-    from core.llm_service import create_llm_service
+    from argumentiation_analysis.core.llm_service import create_llm_service
     logging.info("Création du service LLM...")
     try:
         llm_service = create_llm_service()
@@ -80,7 +80,7 @@ async def run_orchestration(text_content, llm_service, agents=None, verbose=Fals
     logging.info(f"Lancement de l'orchestration sur un texte de {len(text_content)} caractères...")
     
     try:
-        from orchestration.analysis_runner import run_analysis_conversation
+        from argumentiation_analysis.orchestration.analysis_runner import run_analysis_conversation
         
         # Configuration des agents à utiliser
         agent_config = {}
@@ -149,7 +149,10 @@ async def main():
     
     elif args.ui:
         try:
-            from ui.app import configure_analysis_task
+            from argumentiation_analysis.ui.app import configure_analysis_task
+
+from argumentiation_analysis.paths import LIBS_DIR
+
             logging.info("Lancement de l'interface utilisateur...")
             text_content = configure_analysis_task()
             if not text_content:

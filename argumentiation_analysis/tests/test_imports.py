@@ -13,9 +13,9 @@ print(f"Répertoire parent ajouté au PYTHONPATH: {parent_dir}")
 
 # Test d'importation simple
 try:
-    from core import shared_state
-    from agents.extract import extract_agent
-    from orchestration import analysis_runner
+    from argumentiation_analysis.core import shared_state
+    from argumentiation_analysis.agents.extract import extract_agent
+    from argumentiation_analysis.orchestration import analysis_runner
     print("[SUCCES] Importations réussies!")
 except ImportError as e:
     print(f"[ERREUR] Erreur d'importation: {e}")

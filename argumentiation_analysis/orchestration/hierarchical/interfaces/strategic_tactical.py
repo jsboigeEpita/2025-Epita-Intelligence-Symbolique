@@ -13,6 +13,9 @@ import uuid
 from argumentiation_analysis.orchestration.hierarchical.strategic.state import StrategicState
 from argumentiation_analysis.orchestration.hierarchical.tactical.state import TacticalState
 from argumentiation_analysis.core.communication import (
+
+from argumentiation_analysis.paths import DATA_DIR
+
     MessageMiddleware, StrategicAdapter, TacticalAdapter,
     ChannelType, MessagePriority, Message, MessageType, AgentLevel
 )
@@ -580,7 +583,7 @@ class StrategicTacticalInterface:
         pending_reports = self.strategic_adapter.get_pending_reports(max_count=10)
         
         for tactical_report in pending_reports:
-            report_content = tactical_report.content.get("data", {})
+            report_content = tactical_report.content.get(DATA_DIR, {})
             report_type = tactical_report.content.get("report_type")
             
             if report_type == "progress_update":

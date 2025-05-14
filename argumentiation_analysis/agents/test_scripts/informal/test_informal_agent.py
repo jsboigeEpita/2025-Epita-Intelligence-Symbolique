@@ -130,7 +130,7 @@ async def setup_informal_agent(llm_service):
     Configure et retourne l'agent Informel pour les tests.
     """
     from semantic_kernel import Kernel
-    from agents.informal.informal_definitions import setup_informal_kernel
+    from argumentiation_analysis.agents.informal.informal_definitions import setup_informal_kernel
     
     # Créer un nouveau kernel
     kernel = Kernel()

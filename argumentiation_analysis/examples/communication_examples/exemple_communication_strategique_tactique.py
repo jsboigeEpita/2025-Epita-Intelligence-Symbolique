@@ -18,6 +18,9 @@ from argumentiation_analysis.orchestration.hierarchical.interfaces.strategic_tac
 from argumentiation_analysis.orchestration.hierarchical.strategic.state import StrategicState
 from argumentiation_analysis.orchestration.hierarchical.tactical.state import TacticalState
 
+from argumentiation_analysis.paths import RESULTS_DIR
+
+
 
 def main():
     # Créer et initialiser le middleware
@@ -95,7 +98,7 @@ def main():
                         "directive_id": directive.id,
                         "status": "completed",
                         "completion": 100,
-                        "results": {
+                        RESULTS_DIR: {
                             "success": True,
                             "output": f"Résultat de la directive {directives_received}",
                             "metrics": {

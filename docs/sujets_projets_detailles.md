@@ -1,6 +1,6 @@
 # Sujets de Projets Détaillés
 
-Les sujets proposés ci-dessous couvrent différents aspects de l'IA symbolique, avec un focus particulier sur l'argumentation et son intégration par l'IA générative agentique orchestrée. Chaque groupe devra choisir un sujet et contribuer à l'amélioration du projet global.
+Les sujets proposés ci-dessous couvrent différents aspects de l'IA symbolique, avec un focus particulier sur l'argumentation et son intégration par l'IA générative agentique orchestrée. Chaque groupe devra choisir un sujet et contribuer à l'amélioration du projet global dans un délai d'un mois.
 
 Plusieurs projets proposés s'appuient sur **TweetyProject**, une bibliothèque Java open-source pour l'intelligence artificielle symbolique. TweetyProject offre un ensemble riche de modules pour la représentation de connaissances et l'argumentation computationnelle, permettant aux étudiants de travailler avec des formalismes logiques variés (propositionnelle, premier ordre, description, modale) et des frameworks d'argumentation (Dung, ASPIC+, ABA, etc.) sans avoir à les implémenter de zéro. L'utilisation de TweetyProject via JPype permet de combiner la puissance des implémentations Java avec la flexibilité de Python pour le prototypage rapide et l'expérimentation.
 
@@ -33,8 +33,8 @@ Chaque sujet est présenté avec une structure standardisée :
 - **Contexte** : Présentation du domaine et de son importance
 - **Objectifs** : Ce que le projet vise à accomplir
 - **Technologies clés** : Outils, frameworks et concepts essentiels
-- **Niveau de difficulté** : ⭐ (Accessible) à ⭐⭐⭐⭐⭐ (Très avancé)
-- **Estimation d'effort** : Temps de développement estimé en semaines-personnes
+- **Niveau de difficulté** : ⭐ (Accessible) à ⭐⭐⭐⭐ (Avancé)
+- **Estimation d'effort** : Temps de développement estimé en semaines-personnes (maximum 4 semaines)
 - **Interdépendances** : Liens avec d'autres sujets de projets
 - **Références** : Sources et documentation pour approfondir
 - **Livrables attendus** : Résultats concrets à produire
@@ -52,6 +52,7 @@ Chaque sujet est présenté avec une structure standardisée :
   * Java-Python bridge via JPype
 - **Niveau de difficulté** : ⭐⭐⭐
 - **Estimation d'effort** : 3-4 semaines-personnes
+- **Portée ajustée** : Se concentrer sur l'intégration d'un seul solveur SAT et la conversion DNF/CNF
 - **Interdépendances** : Base pour les projets de maintenance de la vérité (1.4) et d'argumentation formelle (1.2)
 - **Références** :
   - "SAT_SMT_by_example.pdf" (2023)
@@ -71,8 +72,9 @@ Chaque sujet est présenté avec une structure standardisée :
   * Prouveurs FOL modernes (intégration avec Vampire, E-prover, Z3)
   * Techniques de traduction langage naturel vers FOL
   * Manipulation de formules quantifiées
-- **Niveau de difficulté** : ⭐⭐⭐⭐
-- **Estimation d'effort** : 4-6 semaines-personnes
+- **Niveau de difficulté** : ⭐⭐⭐
+- **Estimation d'effort** : 4 semaines-personnes
+- **Portée ajustée** : Se concentrer sur la traduction d'arguments simples en FOL sans intégration de prouveurs externes
 - **Interdépendances** : Extension de 1.1.1, base pour 1.2.4 (ABA)
 - **Références** :
   - "Automated Theorem Proving: Theory and Practice" (2022)
@@ -91,8 +93,9 @@ Chaque sujet est présenté avec une structure standardisée :
   * Tweety `logics.ml`
   * Raisonneurs modaux (SPASS-XDB, MleanCoP)
   * Sémantique des mondes possibles de Kripke
-- **Niveau de difficulté** : ⭐⭐⭐⭐
-- **Estimation d'effort** : 4-6 semaines-personnes
+- **Niveau de difficulté** : ⭐⭐⭐
+- **Estimation d'effort** : 4 semaines-personnes
+- **Portée ajustée** : Se concentrer sur la représentation des modalités de base (nécessité, possibilité) sans intégration de raisonneurs externes
 - **Interdépendances** : Peut être combiné avec 1.4 (maintenance de la vérité)
 - **Références** :
   - "Handbook of Modal Logic" (2022)
@@ -111,8 +114,9 @@ Chaque sujet est présenté avec une structure standardisée :
   * Tweety `logics.dl`
   * Ontologies OWL
   * Raisonneurs DL (HermiT, ELK, Pellet)
-- **Niveau de difficulté** : ⭐⭐⭐⭐
-- **Estimation d'effort** : 4-6 semaines-personnes
+- **Niveau de difficulté** : ⭐⭐⭐
+- **Estimation d'effort** : 4 semaines-personnes
+- **Portée ajustée** : Se concentrer sur la définition de TBox et ABox simples sans intégration de raisonneurs externes
 - **Interdépendances** : Peut être combiné avec 1.3 (taxonomies de sophismes)
 - **Références** :
   - "The Description Logic Handbook" (2022)
@@ -131,8 +135,9 @@ Chaque sujet est présenté avec une structure standardisée :
   * Tweety `logics.qbf`
   * Solveurs QBF
   * Format QDIMACS
-- **Niveau de difficulté** : ⭐⭐⭐⭐⭐
-- **Estimation d'effort** : 6-8 semaines-personnes
+- **Niveau de difficulté** : ⭐⭐⭐⭐
+- **Estimation d'effort** : 4 semaines-personnes
+- **Portée ajustée** : Se concentrer sur la modélisation de problèmes simples sans intégration de solveurs externes
 - **Interdépendances** : Extension de 1.1.1, peut être utilisé dans 1.5.2 (vérification formelle)
 - **Références** :
   - "SAT_SMT_by_example.pdf" (2023)
@@ -152,8 +157,9 @@ Chaque sujet est présenté avec une structure standardisée :
   * Raisonnement non-monotone
   * Fonctions de classement (ranking) ou OCF (Ordinal Conditional Functions)
   * Sémantique des mondes possibles
-- **Niveau de difficulté** : ⭐⭐⭐⭐
-- **Estimation d'effort** : 4-6 semaines-personnes
+- **Niveau de difficulté** : ⭐⭐⭐
+- **Estimation d'effort** : 4 semaines-personnes
+- **Portée ajustée** : Se concentrer sur la création de bases conditionnelles simples et l'évaluation de requêtes basiques
 - **Interdépendances** : Peut être combiné avec 1.2 (frameworks d'argumentation) et 1.4.3 (raisonnement non-monotone)
 - **Références** :
   - "Conditionals in Nonmonotonic Reasoning and Belief Revision" de Gabriele Kern-Isberner (2001)
@@ -179,6 +185,7 @@ Chaque sujet est présenté avec une structure standardisée :
   * Visualisation de graphes d'argumentation
 - **Niveau de difficulté** : ⭐⭐⭐
 - **Estimation d'effort** : 3-4 semaines-personnes
+- **Portée ajustée** : Se concentrer sur les sémantiques principales (admissible, complète, préférée) et une visualisation simple
 - **Interdépendances** : Base pour les autres frameworks d'argumentation (1.2.x)
 - **Références** :
   - "On the Acceptability of Arguments and its Fundamental Role in Nonmonotonic Reasoning" (Dung, 1995)
@@ -199,6 +206,7 @@ Chaque sujet est présenté avec une structure standardisée :
   * Extraction de relations de support
 - **Niveau de difficulté** : ⭐⭐⭐
 - **Estimation d'effort** : 3-4 semaines-personnes
+- **Portée ajustée** : Se concentrer sur une seule interprétation du support (déductif ou nécessaire)
 - **Interdépendances** : Extension de 1.2.1 (Dung AF)
 - **Références** :
   - "Bipolar Argumentation Frameworks" (2022)
@@ -217,8 +225,9 @@ Chaque sujet est présenté avec une structure standardisée :
   * Tweety `arg.prob` et `arg.social`
   * Méthodes d'agrégation de poids
   * Estimation automatique de la force des arguments
-- **Niveau de difficulté** : ⭐⭐⭐⭐
-- **Estimation d'effort** : 4-6 semaines-personnes
+- **Niveau de difficulté** : ⭐⭐⭐
+- **Estimation d'effort** : 4 semaines-personnes
+- **Portée ajustée** : Se concentrer sur un seul type de semi-anneau (WeightedSemiring ou ProbabilisticSemiring)
 - **Interdépendances** : Extension de 1.2.1 (Dung AF)
 - **Références** :
   - "Weighted Argument Systems" (2022)
@@ -237,8 +246,9 @@ Chaque sujet est présenté avec une structure standardisée :
   * Tweety `arg.aba`
   * Logiques non-monotones
   * Traduction langage naturel vers ABA
-- **Niveau de difficulté** : ⭐⭐⭐⭐⭐
-- **Estimation d'effort** : 6-8 semaines-personnes
+- **Niveau de difficulté** : ⭐⭐⭐⭐
+- **Estimation d'effort** : 4 semaines-personnes
+- **Portée ajustée** : Se concentrer sur des cas simples d'ABA sans traduction depuis le langage naturel
 - **Interdépendances** : Lié à 1.1.2 (FOL) et 1.2.1 (Dung AF)
 - **Références** :
   - "Assumption-Based Argumentation" (2022)
@@ -257,8 +267,9 @@ Chaque sujet est présenté avec une structure standardisée :
   * Frameworks d'argumentation basés sur les valeurs
   * Identification automatique de valeurs
   * Modélisation de préférences sur les valeurs
-- **Niveau de difficulté** : ⭐⭐⭐⭐
-- **Estimation d'effort** : 4-6 semaines-personnes
+- **Niveau de difficulté** : ⭐⭐⭐
+- **Estimation d'effort** : 4 semaines-personnes
+- **Portée ajustée** : Se concentrer sur la modélisation de préférences simples sur les valeurs
 - **Interdépendances** : Extension de 1.2.1 (Dung AF)
 - **Références** :
   - "Argumentation Based on Value" (2022)
@@ -277,8 +288,9 @@ Chaque sujet est présenté avec une structure standardisée :
   * Framework ASPIC+
   * Règles strictes et défaisables
   * Gestion des préférences
-- **Niveau de difficulté** : ⭐⭐⭐⭐⭐
-- **Estimation d'effort** : 6-8 semaines-personnes
+- **Niveau de difficulté** : ⭐⭐⭐⭐
+- **Estimation d'effort** : 4 semaines-personnes
+- **Portée ajustée** : Se concentrer sur un sous-ensemble du framework avec des règles strictes uniquement
 - **Interdépendances** : Lié à 1.1 (logiques formelles) et 1.2.1 (Dung AF)
 - **Références** :
   - "ASPIC+: An Argumentation Framework for Structured Argumentation" (2022)
@@ -297,8 +309,9 @@ Chaque sujet est présenté avec une structure standardisée :
   * Protocoles de dialogue argumentatif
   * Stratégies argumentatives
   * Apprentissage par renforcement
-- **Niveau de difficulté** : ⭐⭐⭐⭐
-- **Estimation d'effort** : 5-7 semaines-personnes
+- **Niveau de difficulté** : ⭐⭐⭐
+- **Estimation d'effort** : 4 semaines-personnes
+- **Portée ajustée** : Se concentrer sur un seul protocole de dialogue simple
 - **Interdépendances** : Peut utiliser n'importe quel framework d'argumentation (1.2.x)
 - **Références** :
   - "Dialogue-Based Argumentation" (2022)
@@ -317,8 +330,9 @@ Chaque sujet est présenté avec une structure standardisée :
   * Tweety `arg.adf`
   * Solveurs SAT incrémentaux
   * Formules propositionnelles
-- **Niveau de difficulté** : ⭐⭐⭐⭐⭐
-- **Estimation d'effort** : 6-8 semaines-personnes
+- **Niveau de difficulté** : ⭐⭐⭐⭐
+- **Estimation d'effort** : 4 semaines-personnes
+- **Portée ajustée** : Se concentrer sur des ADF simples avec des conditions d'acceptation basiques
 - **Interdépendances** : Extension de 1.2.1 (Dung), utilise 1.1.1 (logique propositionnelle)
 - **Références** :
   - Article fondateur de Brewka et al. (2013) "Abstract Dialectical Frameworks"
@@ -338,8 +352,9 @@ Chaque sujet est présenté avec une structure standardisée :
   * Distributions de probabilité sur les arguments
   * Calcul de degrés d'acceptabilité
   * Visualisation de l'incertitude argumentative
-- **Niveau de difficulté** : ⭐⭐⭐⭐
-- **Estimation d'effort** : 5-7 semaines-personnes
+- **Niveau de difficulté** : ⭐⭐⭐
+- **Estimation d'effort** : 4 semaines-personnes
+- **Portée ajustée** : Se concentrer sur un modèle probabiliste simple avec visualisation basique
 - **Interdépendances** : Extension de 1.2.1 (Dung AF) et 1.2.3 (Argumentation pondérée)
 - **Références** :
   - "A Probabilistic Framework for Modelling Legal Argument" (2022)
@@ -360,7 +375,8 @@ Chaque sujet est présenté avec une structure standardisée :
   * Classification automatique de schémas
   * Questions critiques associées aux schémas
 - **Niveau de difficulté** : ⭐⭐⭐
-- **Estimation d'effort** : 3-5 semaines-personnes
+- **Estimation d'effort** : 3-4 semaines-personnes
+- **Portée ajustée** : Se concentrer sur un sous-ensemble de schémas argumentatifs courants
 - **Interdépendances** : Base pour 2.3.1 (extraction d'arguments)
 - **Références** :
   - "Argumentation Schemes" de Walton, Reed & Macagno (édition mise à jour, 2022)
@@ -380,7 +396,8 @@ Chaque sujet est présenté avec une structure standardisée :
   * Détection automatique de sophismes
   * Apprentissage automatique pour la classification
 - **Niveau de difficulté** : ⭐⭐⭐
-- **Estimation d'effort** : 3-5 semaines-personnes
+- **Estimation d'effort** : 3-4 semaines-personnes
+- **Portée ajustée** : Se concentrer sur une catégorie spécifique de sophismes
 - **Interdépendances** : Base pour 2.3.2 (détection de sophismes)
 - **Références** :
   - "Fallacies: Classical and Contemporary Readings" (édition mise à jour, 2022)
@@ -399,8 +416,9 @@ Chaque sujet est présenté avec une structure standardisée :
   * Ontologies OWL
   * Protégé
   * Raisonneurs ontologiques
-- **Niveau de difficulté** : ⭐⭐⭐⭐
-- **Estimation d'effort** : 5-7 semaines-personnes
+- **Niveau de difficulté** : ⭐⭐⭐
+- **Estimation d'effort** : 4 semaines-personnes
+- **Portée ajustée** : Se concentrer sur une ontologie simple couvrant les concepts de base
 - **Interdépendances** : Intègre 1.1.4 (DL), 1.3.1 (schémas), 1.3.2 (sophismes)
 - **Références** :
   - "Building Ontologies with Basic Formal Ontology" (2022)
@@ -420,8 +438,9 @@ Chaque sujet est présenté avec une structure standardisée :
   * JTMS (Justification-based TMS)
   * ATMS (Assumption-based TMS)
   * Graphes de dépendances
-- **Niveau de difficulté** : ⭐⭐⭐⭐
-- **Estimation d'effort** : 5-7 semaines-personnes
+- **Niveau de difficulté** : ⭐⭐⭐
+- **Estimation d'effort** : 4 semaines-personnes
+- **Portée ajustée** : Se concentrer sur l'implémentation d'un JTMS simple
 - **Interdépendances** : Peut être combiné avec 1.1 (logiques formelles) et 1.2 (frameworks d'argumentation)
 - **Références** :
   - "Building Problem Solvers" (édition mise à jour, 2022)
@@ -440,8 +459,9 @@ Chaque sujet est présenté avec une structure standardisée :
   * AGM (Alchourrón-Gärdenfors-Makinson)
   * Opérateurs de révision et contraction
   * Ordres épistémiques
-- **Niveau de difficulté** : ⭐⭐⭐⭐
-- **Estimation d'effort** : 5-7 semaines-personnes
+- **Niveau de difficulté** : ⭐⭐⭐
+- **Estimation d'effort** : 4 semaines-personnes
+- **Portée ajustée** : Se concentrer sur un opérateur de révision simple
 - **Interdépendances** : Lié à 1.4.1 (TMS) et 1.2 (frameworks d'argumentation)
 - **Références** :
   - "Belief Revision" (Gärdenfors, édition mise à jour, 2022)
@@ -462,8 +482,9 @@ Chaque sujet est présenté avec une structure standardisée :
   * Logique autoépistémique (Moore)
   * Fonctions de classement (OCF) de Spohn
   * Module `logics.cl` de TweetyProject
-- **Niveau de difficulté** : ⭐⭐⭐⭐⭐
-- **Estimation d'effort** : 6-8 semaines-personnes
+- **Niveau de difficulté** : ⭐⭐⭐⭐
+- **Estimation d'effort** : 4 semaines-personnes
+- **Portée ajustée** : Se concentrer sur une approche spécifique (logique par défaut ou conditionnels)
 - **Interdépendances** : Lié à 1.1 (logiques formelles), 1.1.6 (logique conditionnelle) et 1.4.2 (révision de croyances)
 - **Références** :
   - "Nonmonotonic Reasoning: Logical Foundations of Commonsense" (2022)
@@ -486,8 +507,9 @@ Chaque sujet est présenté avec une structure standardisée :
   * Tweety `logics.pl.analysis`
   * MUS (Minimal Unsatisfiable Subsets)
   * MaxSAT
-- **Niveau de difficulté** : ⭐⭐⭐⭐⭐
-- **Estimation d'effort** : 6-8 semaines-personnes
+- **Niveau de difficulté** : ⭐⭐⭐⭐
+- **Estimation d'effort** : 4 semaines-personnes
+- **Portée ajustée** : Se concentrer sur l'implémentation d'une mesure d'incohérence simple
 - **Interdépendances** : Utilise 1.1.1 (logique propositionnelle), lié à 1.4.1 (maintenance de la vérité)
 - **Références** :
   - Survey de Hunter et Konieczny sur les mesures d'incohérence
@@ -507,8 +529,9 @@ Chaque sujet est présenté avec une structure standardisée :
   * Stratégies de révision multi-agents
   * Modèles de confiance entre agents
   * Visualisation de l'évolution des croyances
-- **Niveau de difficulté** : ⭐⭐⭐⭐
-- **Estimation d'effort** : 5-7 semaines-personnes
+- **Niveau de difficulté** : ⭐⭐⭐
+- **Estimation d'effort** : 4 semaines-personnes
+- **Portée ajustée** : Se concentrer sur un scénario simple avec deux agents
 - **Interdépendances** : Lié à 1.4.2 (Révision de croyances) et 2.1.6 (Gouvernance multi-agents)
 - **Références** :
   - "Belief Revision in Multi-Agent Systems" (2022)
@@ -528,8 +551,9 @@ Chaque sujet est présenté avec une structure standardisée :
   * Tweety `action`
   * Planification automatique
   * PDDL (Planning Domain Definition Language)
-- **Niveau de difficulté** : ⭐⭐⭐⭐
-- **Estimation d'effort** : 5-7 semaines-personnes
+- **Niveau de difficulté** : ⭐⭐⭐
+- **Estimation d'effort** : 4 semaines-personnes
+- **Portée ajustée** : Se concentrer sur un domaine de planification simple
 - **Interdépendances** : Peut utiliser 1.1.5 (QBF) pour la planification conditionnelle
 - **Références** :
   - "Automated planning" (2010)
@@ -548,8 +572,9 @@ Chaque sujet est présenté avec une structure standardisée :
   * Vérification formelle
   * Model checking
   * Prouveurs de théorèmes
-- **Niveau de difficulté** : ⭐⭐⭐⭐⭐
-- **Estimation d'effort** : 6-8 semaines-personnes
+- **Niveau de difficulté** : ⭐⭐⭐⭐
+- **Estimation d'effort** : 4 semaines-personnes
+- **Portée ajustée** : Se concentrer sur la vérification de propriétés simples
 - **Interdépendances** : Utilise 1.1.1-1.1.5 (logiques formelles), lié à 1.5.3 (contrats argumentatifs)
 - **Références** :
   - "The Lean theorem prover" (2015)
@@ -568,8 +593,9 @@ Chaque sujet est présenté avec une structure standardisée :
   * Smart contracts
   * Blockchain
   * Protocoles d'argumentation
-- **Niveau de difficulté** : ⭐⭐⭐⭐
-- **Estimation d'effort** : 5-7 semaines-personnes
+- **Niveau de difficulté** : ⭐⭐⭐
+- **Estimation d'effort** : 4 semaines-personnes
+- **Portée ajustée** : Se concentrer sur un protocole d'argumentation simple
 - **Interdépendances** : Lié à 1.2 (frameworks d'argumentation) et 1.5.2 (vérification formelle)
 - **Références** :
   - "Bitcoin and Beyond - Cryptocurrencies, blockchain and global governance" (2018)
@@ -591,8 +617,9 @@ Chaque sujet est présenté avec une structure standardisée :
   * Frameworks multi-agents
   * Protocoles de communication
   * Mécanismes de coordination
-- **Niveau de difficulté** : ⭐⭐⭐⭐
-- **Estimation d'effort** : 5-7 semaines-personnes
+- **Niveau de difficulté** : ⭐⭐⭐
+- **Estimation d'effort** : 4 semaines-personnes
+- **Portée ajustée** : Se concentrer sur l'architecture de base sans implémentation complète
 - **Interdépendances** : Base pour tous les agents spécialisés (2.3.x)
 - **Références** :
   - "Multi-Agent Systems: Algorithmic, Game-Theoretic, and Logical Foundations" (2022)
@@ -611,8 +638,9 @@ Chaque sujet est présenté avec une structure standardisée :
   * Planification de tâches
   * Gestion de workflows
   * Résolution de conflits
-- **Niveau de difficulté** : ⭐⭐⭐⭐
-- **Estimation d'effort** : 5-7 semaines-personnes
+- **Niveau de difficulté** : ⭐⭐⭐
+- **Estimation d'effort** : 4 semaines-personnes
+- **Portée ajustée** : Se concentrer sur un workflow simple avec quelques agents
 - **Interdépendances** : Extension de 2.1.1 (architecture multi-agents)
 - **Références** :
   - "Workflow Management Systems" (2022)
@@ -632,7 +660,8 @@ Chaque sujet est présenté avec une structure standardisée :
   * Logging et traçage
   * Visualisation de métriques
 - **Niveau de difficulté** : ⭐⭐⭐
-- **Estimation d'effort** : 3-5 semaines-personnes
+- **Estimation d'effort** : 3-4 semaines-personnes
+- **Portée ajustée** : Se concentrer sur quelques métriques clés
 - **Interdépendances** : Lié à 3.1.2 (dashboard de monitoring)
 - **Références** :
   - "Monitoring Distributed Systems" (2022)
@@ -672,7 +701,8 @@ Chaque sujet est présenté avec une structure standardisée :
   * Jenkins
   * GitLab CI/CD
 - **Niveau de difficulté** : ⭐⭐⭐
-- **Estimation d'effort** : 3-5 semaines-personnes
+- **Estimation d'effort** : 3-4 semaines-personnes
+- **Portée ajustée** : Se concentrer sur l'automatisation des tests et du déploiement
 - **Interdépendances** : Lié à 2.1.1 (gestion de projet) et 2.5 (automatisation)
 - **Références** :
   - "Continuous Delivery" de Jez Humble et David Farley
@@ -691,8 +721,9 @@ Chaque sujet est présenté avec une structure standardisée :
   * Systèmes multi-agents
   * Mécanismes de consensus
   * Résolution de conflits
-- **Niveau de difficulté** : ⭐⭐⭐⭐⭐
-- **Estimation d'effort** : 6-8 semaines-personnes
+- **Niveau de difficulté** : ⭐⭐⭐⭐
+- **Estimation d'effort** : 4 semaines-personnes
+- **Portée ajustée** : Se concentrer sur un mécanisme de résolution de conflits simple
 - **Interdépendances** : Lié à 1.4.2 (révision de croyances multi-agents) et 2.1.2 (orchestration)
 - **Références** :
   - "Governing the Commons" d'Elinor Ostrom
@@ -713,7 +744,8 @@ Chaque sujet est présenté avec une structure standardisée :
   * Parsing
   * Gestion de métadonnées
 - **Niveau de difficulté** : ⭐⭐⭐
-- **Estimation d'effort** : 3-5 semaines-personnes
+- **Estimation d'effort** : 3-4 semaines-personnes
+- **Portée ajustée** : Se concentrer sur l'amélioration d'aspects spécifiques du moteur
 - **Interdépendances** : Base pour l'analyse argumentative, lié à 2.2.2 (formats étendus)
 - **Références** :
   - Documentation sur les techniques d'extraction de texte
@@ -733,7 +765,8 @@ Chaque sujet est présenté avec une structure standardisée :
   * OCR (Reconnaissance optique de caractères)
   * Extraction de données structurées
 - **Niveau de difficulté** : ⭐⭐⭐
-- **Estimation d'effort** : 3-5 semaines-personnes
+- **Estimation d'effort** : 3-4 semaines-personnes
+- **Portée ajustée** : Se concentrer sur le support de 1-2 formats supplémentaires
 - **Interdépendances** : Extension de 2.2.1 (moteur d'extraction)
 - **Références** :
   - Documentation des bibliothèques de parsing
@@ -752,8 +785,9 @@ Chaque sujet est présenté avec une structure standardisée :
   * Cryptographie (AES, RSA)
   * Gestion de clés
   * Contrôle d'accès
-- **Niveau de difficulté** : ⭐⭐⭐⭐
-- **Estimation d'effort** : 4-6 semaines-personnes
+- **Niveau de difficulté** : ⭐⭐⭐
+- **Estimation d'effort** : 4 semaines-personnes
+- **Portée ajustée** : Se concentrer sur le chiffrement et le contrôle d'accès basique
 - **Interdépendances** : Transversal à tous les projets manipulant des données
 - **Références** :
   - "Cryptography Engineering" de Ferguson, Schneier et Kohno
@@ -772,8 +806,9 @@ Chaque sujet est présenté avec une structure standardisée :
   * Bases de données documentaires
   * Indexation de texte
   * Métadonnées et taxonomies
-- **Niveau de difficulté** : ⭐⭐⭐⭐
-- **Estimation d'effort** : 4-6 semaines-personnes
+- **Niveau de difficulté** : ⭐⭐⭐
+- **Estimation d'effort** : 4 semaines-personnes
+- **Portée ajustée** : Se concentrer sur l'indexation et la recherche basique
 - **Interdépendances** : Lié à 2.2.1 (moteur d'extraction) et 2.4 (indexation sémantique)
 - **Références** :
   - "Managing Gigabytes: Compressing and Indexing Documents and Images"
@@ -795,7 +830,8 @@ Chaque sujet est présenté avec une structure standardisée :
   * AutoGen
   * Design patterns d'abstraction
 - **Niveau de difficulté** : ⭐⭐⭐⭐
-- **Estimation d'effort** : 5-7 semaines-personnes
+- **Estimation d'effort** : 4 semaines-personnes
+- **Portée ajustée** : Se concentrer sur l'abstraction pour un framework spécifique
 - **Interdépendances** : Base pour 2.3.2-2.3.5 (agents spécialistes)
 - **Références** :
   - Documentation Semantic Kernel, LangChain, AutoGen
@@ -815,8 +851,9 @@ Chaque sujet est présenté avec une structure standardisée :
   * Classification de sophismes
   * Analyse rhétorique
   * Explainability
-- **Niveau de difficulté** : ⭐⭐⭐⭐
-- **Estimation d'effort** : 5-7 semaines-personnes
+- **Niveau de difficulté** : ⭐⭐⭐
+- **Estimation d'effort** : 4 semaines-personnes
+- **Portée ajustée** : Se concentrer sur quelques types de sophismes courants
 - **Interdépendances** : Utilise 1.3.2 (classification des sophismes)
 - **Références** :
   - "Automated Fallacy Detection" (2022)
@@ -835,8 +872,9 @@ Chaque sujet est présenté avec une structure standardisée :
   * Génération de texte contrôlée
   * Analyse de vulnérabilités argumentatives
   * Stratégies de réfutation
-- **Niveau de difficulté** : ⭐⭐⭐⭐
-- **Estimation d'effort** : 5-7 semaines-personnes
+- **Niveau de difficulté** : ⭐⭐⭐
+- **Estimation d'effort** : 4 semaines-personnes
+- **Portée ajustée** : Se concentrer sur une stratégie de contre-argumentation spécifique
 - **Interdépendances** : Lié à 1.2 (frameworks d'argumentation) et 2.3.1 (extraction d'arguments)
 - **Références** :
   - "Automated Counter-Argument Generation" (2022)
@@ -855,8 +893,9 @@ Chaque sujet est présenté avec une structure standardisée :
   * Traduction langage naturel vers logique
   * Logiques formelles
   * Vérification de validité
-- **Niveau de difficulté** : ⭐⭐⭐⭐⭐
-- **Estimation d'effort** : 6-8 semaines-personnes
+- **Niveau de difficulté** : ⭐⭐⭐⭐
+- **Estimation d'effort** : 4 semaines-personnes
+- **Portée ajustée** : Se concentrer sur la traduction vers la logique propositionnelle uniquement
 - **Interdépendances** : Utilise 1.1 (logiques formelles)
 - **Références** :
   - "Natural Language to Logic Translation" (2022)
@@ -875,8 +914,9 @@ Chaque sujet est présenté avec une structure standardisée :
   * Métriques de qualité argumentative
   * Évaluation multi-critères
   * Feedback explicable
-- **Niveau de difficulté** : ⭐⭐⭐⭐
-- **Estimation d'effort** : 5-7 semaines-personnes
+- **Niveau de difficulté** : ⭐⭐⭐
+- **Estimation d'effort** : 4 semaines-personnes
+- **Portée ajustée** : Se concentrer sur un critère d'évaluation spécifique
 - **Interdépendances** : Intègre les résultats de tous les autres agents
 - **Références** :
   - "Argument Quality Assessment" (2022)
@@ -898,7 +938,8 @@ Chaque sujet est présenté avec une structure standardisée :
   * Quantization
   * Techniques d'optimisation pour l'inférence
 - **Niveau de difficulté** : ⭐⭐⭐⭐
-- **Estimation d'effort** : 5-7 semaines-personnes
+- **Estimation d'effort** : 4 semaines-personnes
+- **Portée ajustée** : Se concentrer sur l'intégration d'un seul modèle local léger
 - **Interdépendances** : Lié à 2.3.1 (abstraction du moteur agentique)
 - **Références** :
   - Documentation Qwen 3
@@ -919,7 +960,8 @@ Chaque sujet est présenté avec une structure standardisée :
   * Bases de données vectorielles
   * Similarité sémantique
 - **Niveau de difficulté** : ⭐⭐⭐
-- **Estimation d'effort** : 3-5 semaines-personnes
+- **Estimation d'effort** : 3-4 semaines-personnes
+- **Portée ajustée** : Se concentrer sur l'indexation d'un corpus limité
 - **Interdépendances** : Lié à 2.4.2 (vecteurs de types d'arguments)
 - **Références** :
   - "Vector Databases: The New Way to Store and Query Data" (2023)
@@ -938,8 +980,9 @@ Chaque sujet est présenté avec une structure standardisée :
   * Embeddings spécialisés
   * Clustering
   * Réduction de dimensionnalité
-- **Niveau de difficulté** : ⭐⭐⭐⭐
-- **Estimation d'effort** : 4-6 semaines-personnes
+- **Niveau de difficulté** : ⭐⭐⭐
+- **Estimation d'effort** : 4 semaines-personnes
+- **Portée ajustée** : Se concentrer sur quelques types d'arguments spécifiques
 - **Interdépendances** : Extension de 2.4.1 (index sémantique)
 - **Références** :
   - "Embeddings in Natural Language Processing" (2021)
@@ -958,8 +1001,9 @@ Chaque sujet est présenté avec une structure standardisée :
   * Bases de données graphes
   * Systèmes de gestion de connaissances
   * Indexation sémantique
-- **Niveau de difficulté** : ⭐⭐⭐⭐
-- **Estimation d'effort** : 5-7 semaines-personnes
+- **Niveau de difficulté** : ⭐⭐⭐
+- **Estimation d'effort** : 4 semaines-personnes
+- **Portée ajustée** : Se concentrer sur une structure simple avec requêtes basiques
 - **Interdépendances** : Lié à 1.3 (taxonomies) et 2.4.2 (indexation sémantique)
 - **Références** :
   - "Knowledge Graphs for Argumentation" (2022)
@@ -978,8 +1022,9 @@ Chaque sujet est présenté avec une structure standardisée :
   * Extraction d'affirmations vérifiables
   * Recherche et vérification d'informations
   * Évaluation de fiabilité des sources
-- **Niveau de difficulté** : ⭐⭐⭐⭐⭐
-- **Estimation d'effort** : 6-8 semaines-personnes
+- **Niveau de difficulté** : ⭐⭐⭐⭐
+- **Estimation d'effort** : 4 semaines-personnes
+- **Portée ajustée** : Se concentrer sur l'extraction d'affirmations vérifiables uniquement
 - **Interdépendances** : Lié à 2.3.5 (évaluation de qualité)
 - **Références** :
   - "Automated Fact-Checking: Current Status and Future Directions" (2022)
@@ -1001,7 +1046,8 @@ Chaque sujet est présenté avec une structure standardisée :
   * Traitement par lots
   * Parallélisation
 - **Niveau de difficulté** : ⭐⭐⭐
-- **Estimation d'effort** : 3-5 semaines-personnes
+- **Estimation d'effort** : 3-4 semaines-personnes
+- **Portée ajustée** : Se concentrer sur l'automatisation d'un aspect spécifique
 - **Interdépendances** : Lié à 2.5.2 (pipeline de traitement)
 - **Références** :
   - Documentation sur l'automatisation de notebooks (Papermill, etc.)
@@ -1020,8 +1066,9 @@ Chaque sujet est présenté avec une structure standardisée :
   * Pipelines de données (Apache Airflow, Luigi)
   * Workflow engines
   * ETL/ELT
-- **Niveau de difficulté** : ⭐⭐⭐⭐
-- **Estimation d'effort** : 5-7 semaines-personnes
+- **Niveau de difficulté** : ⭐⭐⭐
+- **Estimation d'effort** : 4 semaines-personnes
+- **Portée ajustée** : Se concentrer sur un pipeline simple pour un type d'analyse
 - **Interdépendances** : Intègre 2.5.1 (automatisation) et 3.1 (interfaces utilisateurs)
 - **Références** :
   - "Building Data Pipelines with Python" (2021)
@@ -1041,7 +1088,8 @@ Chaque sujet est présenté avec une structure standardisée :
   * API REST/WebSocket
   * JSON Schema
 - **Niveau de difficulté** : ⭐⭐⭐⭐
-- **Estimation d'effort** : 5-7 semaines-personnes
+- **Estimation d'effort** : 4 semaines-personnes
+- **Portée ajustée** : Se concentrer sur l'exposition d'une fonctionnalité spécifique
 - **Interdépendances** : Intègre toutes les fonctionnalités d'analyse argumentative
 - **Références** :
   - Spécification du protocole MCP (version 2023-2024)
@@ -1061,7 +1109,8 @@ Chaque sujet est présenté avec une structure standardisée :
   * JSON Schema
   * Conception d'API
 - **Niveau de difficulté** : ⭐⭐⭐
-- **Estimation d'effort** : 3-5 semaines-personnes
+- **Estimation d'effort** : 3-4 semaines-personnes
+- **Portée ajustée** : Se concentrer sur quelques outils et ressources spécifiques
 - **Interdépendances** : Extension de 2.5.3 (serveur MCP)
 - **Références** :
   - Spécification du protocole MCP (version 2023-2024)
@@ -1082,7 +1131,8 @@ Chaque sujet est présenté avec une structure standardisée :
   * JPype pour l'interface Java-Python
   * JSON Schema pour la définition des outils et ressources
 - **Niveau de difficulté** : ⭐⭐⭐⭐
-- **Estimation d'effort** : 5-7 semaines-personnes
+- **Estimation d'effort** : 4 semaines-personnes
+- **Portée ajustée** : Se concentrer sur un type de framework spécifique
 - **Interdépendances** : Extension de 2.5.3 (serveur MCP) et 2.5.4 (outils MCP), utilise 1.2 (frameworks d'argumentation)
 - **Références** :
   - Spécification du protocole MCP (version 2023-2024)
@@ -1105,7 +1155,8 @@ Chaque sujet est présenté avec une structure standardisée :
   * D3.js, Cytoscape.js
   * Design systems (Material UI, Tailwind)
 - **Niveau de difficulté** : ⭐⭐⭐
-- **Estimation d'effort** : 4-6 semaines-personnes
+- **Estimation d'effort** : 4 semaines-personnes
+- **Portée ajustée** : Se concentrer sur les fonctionnalités essentielles uniquement
 - **Interdépendances** : Intègre les fonctionnalités d'analyse argumentative, lié à 3.1.4 (visualisation)
 - **Références** :
   - "Argument Visualization Tools in the Classroom" (2022)
@@ -1125,7 +1176,8 @@ Chaque sujet est présenté avec une structure standardisée :
   * D3.js, Plotly, ECharts
   * Streaming de données en temps réel
 - **Niveau de difficulté** : ⭐⭐⭐
-- **Estimation d'effort** : 3-5 semaines-personnes
+- **Estimation d'effort** : 3-4 semaines-personnes
+- **Portée ajustée** : Se concentrer sur quelques métriques clés uniquement
 - **Interdépendances** : Utilise 2.1.3 (monitoring et évaluation)
 - **Références** :
   - "Information Dashboard Design" de Stephen Few (édition 2023)
@@ -1144,8 +1196,9 @@ Chaque sujet est présenté avec une structure standardisée :
   * JointJS, mxGraph (draw.io), GoJS
   * Éditeurs de graphes interactifs
   * Validation en temps réel
-- **Niveau de difficulté** : ⭐⭐⭐⭐
-- **Estimation d'effort** : 5-7 semaines-personnes
+- **Niveau de difficulté** : ⭐⭐⭐
+- **Estimation d'effort** : 4 semaines-personnes
+- **Portée ajustée** : Se concentrer sur un formalisme argumentatif simple
 - **Interdépendances** : Lié à 1.2 (frameworks d'argumentation) et 3.1.4 (visualisation)
 - **Références** :
   - "Argument Mapping" de Tim van Gelder (édition 2023)
@@ -1164,8 +1217,9 @@ Chaque sujet est présenté avec une structure standardisée :
   * Sigma.js, Cytoscape.js, vis.js
   * Algorithmes de layout de graphes
   * Techniques de visualisation interactive
-- **Niveau de difficulté** : ⭐⭐⭐⭐
-- **Estimation d'effort** : 5-7 semaines-personnes
+- **Niveau de difficulté** : ⭐⭐⭐
+- **Estimation d'effort** : 4 semaines-personnes
+- **Portée ajustée** : Se concentrer sur un type de framework avec layout simple
 - **Interdépendances** : Lié à 1.2 (frameworks d'argumentation)
 - **Références** :
   - "Computational Models of Argument: Proceedings of COMMA" (conférences biennales, 2022-2024)
@@ -1185,7 +1239,8 @@ Chaque sujet est présenté avec une structure standardisée :
   * Design responsive
   * Optimisation pour appareils mobiles
 - **Niveau de difficulté** : ⭐⭐⭐
-- **Estimation d'effort** : 4-6 semaines-personnes
+- **Estimation d'effort** : 4 semaines-personnes
+- **Portée ajustée** : Se concentrer sur une interface responsive sans application native
 - **Interdépendances** : Extension de 3.1.1 (interface web)
 - **Références** :
   - "Mobile First" de Luke Wroblewski
@@ -1205,7 +1260,8 @@ Chaque sujet est présenté avec une structure standardisée :
   * axe-core, pa11y
   * Tests d'accessibilité
 - **Niveau de difficulté** : ⭐⭐⭐
-- **Estimation d'effort** : 3-5 semaines-personnes
+- **Estimation d'effort** : 3-4 semaines-personnes
+- **Portée ajustée** : Se concentrer sur les aspects essentiels de l'accessibilité
 - **Interdépendances** : Transversal à toutes les interfaces (3.1.x)
 - **Références** :
   - "Inclusive Design Patterns" de Heydon Pickering
@@ -1224,8 +1280,9 @@ Chaque sujet est présenté avec une structure standardisée :
   * Socket.io, Yjs, ShareDB
   * Résolution de conflits
   * Awareness (présence et activité des utilisateurs)
-- **Niveau de difficulté** : ⭐⭐⭐⭐⭐
-- **Estimation d'effort** : 6-8 semaines-personnes
+- **Niveau de difficulté** : ⭐⭐⭐⭐
+- **Estimation d'effort** : 4 semaines-personnes
+- **Portée ajustée** : Se concentrer sur une fonctionnalité collaborative simple
 - **Interdépendances** : Extension de 3.1.1 (interface web) et 3.1.3 (éditeur)
 - **Références** :
   - "Building Real-time Applications with WebSockets" de Vanessa Wang et al.
@@ -1246,7 +1303,8 @@ Chaque sujet est présenté avec une structure standardisée :
   * Frameworks d'argumentation de Tweety pour l'évaluation formelle
   * Interface web interactive
 - **Niveau de difficulté** : ⭐⭐⭐⭐
-- **Estimation d'effort** : 6-8 semaines-personnes
+- **Estimation d'effort** : 4 semaines-personnes
+- **Portée ajustée** : Se concentrer sur un aspect spécifique du débat assisté
 - **Interdépendances** : Intègre 1.2 (frameworks d'argumentation), 2.3 (agents spécialistes), 3.1 (interfaces)
 - **Références** :
   - "Computational Models of Argument" (COMMA)
@@ -1265,8 +1323,9 @@ Chaque sujet est présenté avec une structure standardisée :
   * Gamification
   * Visualisation d'arguments
   * Agents pédagogiques
-- **Niveau de difficulté** : ⭐⭐⭐⭐
-- **Estimation d'effort** : 6-8 semaines-personnes
+- **Niveau de difficulté** : ⭐⭐⭐
+- **Estimation d'effort** : 4 semaines-personnes
+- **Portée ajustée** : Se concentrer sur un module éducatif spécifique
 - **Interdépendances** : Utilise 1.3.2 (classification des sophismes), 2.3.2 (détection de sophismes), 3.1 (interfaces)
 - **Références** :
   - "Critical Thinking: A Concise Guide" de Tracy Bowell et Gary Kemp
@@ -1285,8 +1344,9 @@ Chaque sujet est présenté avec une structure standardisée :
   * Frameworks d'argumentation pondérés
   * Méthodes MCDM (Multi-Criteria Decision Making)
   * Visualisation interactive de compromis
-- **Niveau de difficulté** : ⭐⭐⭐⭐
-- **Estimation d'effort** : 5-7 semaines-personnes
+- **Niveau de difficulté** : ⭐⭐⭐
+- **Estimation d'effort** : 4 semaines-personnes
+- **Portée ajustée** : Se concentrer sur un cas d'utilisation simple
 - **Interdépendances** : Utilise 1.2.8 (frameworks avancés), 3.1.4 (visualisation)
 - **Références** :
   - "Decision Support Systems" de Power et Sharda
@@ -1305,8 +1365,9 @@ Chaque sujet est présenté avec une structure standardisée :
   * Collaboration en temps réel
   * Gestion de versions
   * Annotation de documents
-- **Niveau de difficulté** : ⭐⭐⭐⭐
-- **Estimation d'effort** : 5-7 semaines-personnes
+- **Niveau de difficulté** : ⭐⭐⭐
+- **Estimation d'effort** : 4 semaines-personnes
+- **Portée ajustée** : Se concentrer sur des fonctionnalités d'annotation simples
 - **Interdépendances** : Utilise 3.1.7 (collaboration en temps réel)
 - **Références** :
   - "Computer Supported Cooperative Work" de Grudin
@@ -1325,8 +1386,9 @@ Chaque sujet est présenté avec une structure standardisée :
   * NLP avancé
   * Analyse rhétorique automatisée
   * Génération de texte contrôlée
-- **Niveau de difficulté** : ⭐⭐⭐⭐
-- **Estimation d'effort** : 5-7 semaines-personnes
+- **Niveau de difficulté** : ⭐⭐⭐
+- **Estimation d'effort** : 4 semaines-personnes
+- **Portée ajustée** : Se concentrer sur l'analyse de structures argumentatives simples
 - **Interdépendances** : Utilise 2.3.2 (détection de sophismes), 2.3.3 (génération de contre-arguments)
 - **Références** :
   - "Automated Essay Scoring" de Shermis et Burstein
@@ -1345,8 +1407,9 @@ Chaque sujet est présenté avec une structure standardisée :
   * Traitement du langage en temps réel
   * Fact-checking automatisé
   * Analyse de sentiment et de rhétorique
-- **Niveau de difficulté** : ⭐⭐⭐⭐⭐
-- **Estimation d'effort** : 7-9 semaines-personnes
+- **Niveau de difficulté** : ⭐⭐⭐⭐
+- **Estimation d'effort** : 4 semaines-personnes
+- **Portée ajustée** : Se concentrer sur l'analyse d'un débat spécifique
 - **Interdépendances** : Utilise 2.3.2 (détection de sophismes), 2.4 (indexation sémantique)
 - **Références** :
   - "Computational Approaches to Analyzing Political Discourse" de Hovy et Lim
@@ -1419,8 +1482,9 @@ Chaque sujet est présenté avec une structure standardisée :
   * Modération assistée par IA
   * Visualisation d'opinions
   * Mécanismes de vote et de consensus
-- **Niveau de difficulté** : ⭐⭐⭐⭐⭐
-- **Estimation d'effort** : 7-9 semaines-personnes
+- **Niveau de difficulté** : ⭐⭐⭐⭐
+- **Estimation d'effort** : 4 semaines-personnes
+- **Portée ajustée** : Se concentrer sur un mécanisme de délibération simple
 - **Interdépendances** : Intègre 3.2.1 (débat assisté), 3.2.3 (aide à la décision)
 - **Références** :
   - "Democracy in the Digital Age" de Wilhelm

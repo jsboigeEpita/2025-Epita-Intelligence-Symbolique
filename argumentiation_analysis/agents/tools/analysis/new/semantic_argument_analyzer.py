@@ -18,6 +18,9 @@ from pathlib import Path
 from datetime import datetime
 from collections import defaultdict
 
+from argumentiation_analysis.paths import DATA_DIR
+
+
 # Configuration du logging
 logging.basicConfig(
     level=logging.INFO,
@@ -93,7 +96,7 @@ class SemanticArgumentAnalyzer:
                 "description": "Affirmation principale de l'argument",
                 "markers": ["donc", "ainsi", "par conséquent", "en conclusion", "il s'ensuit que"]
             },
-            "data": {
+            DATA_DIR: {
                 "description": "Données ou prémisses soutenant l'affirmation",
                 "markers": ["parce que", "car", "puisque", "étant donné que", "considérant que"]
             },
@@ -167,7 +170,7 @@ class SemanticArgumentAnalyzer:
         # Identifier les composants de Toulmin (simulation)
         if "parce que" in argument.lower() or "car" in argument.lower():
             components.append({
-                "component_type": "data",
+                "component_type": DATA_DIR,
                 "text": argument.split("parce que")[0] if "parce que" in argument.lower() else argument.split("car")[0],
                 "confidence": 0.8
             })

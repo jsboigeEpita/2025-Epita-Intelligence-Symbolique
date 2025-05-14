@@ -17,12 +17,15 @@ if str(parent_dir) not in sys.path:
     sys.path.append(str(parent_dir))
 
 # Importer les modules nécessaires
-from ui.config import CONFIG_FILE_ENC
+from argumentiation_analysis.ui.config import CONFIG_FILE_ENC
+
+from argumentiation_analysis.paths import DATA_DIR
+
 
 # Définir les constantes
 TEXT_CACHE_DIR = parent_dir / "text_cache"
 TEMP_DOWNLOADS_DIR = parent_dir / "temp_downloads"
-EXTRACT_SOURCES_JSON = parent_dir / "data" / "extract_sources.json"
+EXTRACT_SOURCES_JSON = parent_dir / DATA_DIR / "extract_sources.json"
 
 # Afficher les chemins pour le débogage
 print(f"Chemin du fichier encrypté: {CONFIG_FILE_ENC}")

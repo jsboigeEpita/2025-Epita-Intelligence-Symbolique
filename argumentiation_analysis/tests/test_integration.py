@@ -15,14 +15,14 @@ import semantic_kernel as sk
 from tests import setup_import_paths
 setup_import_paths()
 
-from core.shared_state import RhetoricalAnalysisState
-from core.state_manager_plugin import StateManagerPlugin
-from core.strategies import SimpleTerminationStrategy, DelegatingSelectionStrategy
-from orchestration.analysis_runner import run_analysis_conversation
-from agents.core.extract.extract_agent import ExtractAgent
-from agents.core.pl.pl_definitions import setup_pl_kernel
-from agents.core.informal.informal_definitions import setup_informal_kernel
-from agents.core.pm.pm_definitions import setup_pm_kernel
+from argumentiation_analysis.core.shared_state import RhetoricalAnalysisState
+from argumentiation_analysis.core.state_manager_plugin import StateManagerPlugin
+from argumentiation_analysis.core.strategies import SimpleTerminationStrategy, DelegatingSelectionStrategy
+from argumentiation_analysis.orchestration.analysis_runner import run_analysis_conversation
+from argumentiation_analysis.agents.core.extract.extract_agent import ExtractAgent
+from argumentiation_analysis.agents.core.pl.pl_definitions import setup_pl_kernel
+from argumentiation_analysis.agents.core.informal.informal_definitions import setup_informal_kernel
+from argumentiation_analysis.agents.core.pm.pm_definitions import setup_pm_kernel
 from tests.async_test_case import AsyncTestCase
 from models.extract_definition import ExtractDefinitions, Extract, SourceDefinition
 from models.extract_result import ExtractResult

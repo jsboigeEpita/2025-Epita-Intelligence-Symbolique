@@ -15,6 +15,9 @@ from argumentiation_analysis.core.communication.channel_interface import (
 )
 from argumentiation_analysis.core.communication.hierarchical_channel import HierarchicalChannel
 
+from argumentiation_analysis.paths import DATA_DIR
+
+
 
 class TestHierarchicalChannel(unittest.TestCase):
     """Tests pour le canal hiérarchique."""
@@ -46,7 +49,7 @@ class TestHierarchicalChannel(unittest.TestCase):
             message_type=MessageType.INFORMATION,
             sender="operational-agent-1",
             sender_level=AgentLevel.OPERATIONAL,
-            content={"info_type": "task_result", "data": {"result": "extraction complete"}},
+            content={"info_type": "task_result", DATA_DIR: {"result": "extraction complete"}},
             recipient="tactical-agent-1",
             priority=MessagePriority.NORMAL
         )
@@ -107,7 +110,7 @@ class TestHierarchicalChannel(unittest.TestCase):
             message_type=MessageType.INFORMATION,
             sender="operational-agent-1",
             sender_level=AgentLevel.OPERATIONAL,
-            content={"info_type": "status", "data": {"status": "idle"}},
+            content={"info_type": "status", DATA_DIR: {"status": "idle"}},
             recipient="tactical-agent-1",
             priority=MessagePriority.LOW
         )
@@ -116,7 +119,7 @@ class TestHierarchicalChannel(unittest.TestCase):
             message_type=MessageType.INFORMATION,
             sender="operational-agent-1",
             sender_level=AgentLevel.OPERATIONAL,
-            content={"info_type": "status", "data": {"status": "working"}},
+            content={"info_type": "status", DATA_DIR: {"status": "working"}},
             recipient="tactical-agent-1",
             priority=MessagePriority.NORMAL
         )
@@ -125,7 +128,7 @@ class TestHierarchicalChannel(unittest.TestCase):
             message_type=MessageType.INFORMATION,
             sender="operational-agent-1",
             sender_level=AgentLevel.OPERATIONAL,
-            content={"info_type": "status", "data": {"status": "critical"}},
+            content={"info_type": "status", DATA_DIR: {"status": "critical"}},
             recipient="tactical-agent-1",
             priority=MessagePriority.HIGH
         )
@@ -134,7 +137,7 @@ class TestHierarchicalChannel(unittest.TestCase):
             message_type=MessageType.INFORMATION,
             sender="operational-agent-1",
             sender_level=AgentLevel.OPERATIONAL,
-            content={"info_type": "status", "data": {"status": "emergency"}},
+            content={"info_type": "status", DATA_DIR: {"status": "emergency"}},
             recipient="tactical-agent-1",
             priority=MessagePriority.CRITICAL
         )
@@ -284,7 +287,7 @@ class TestConcurrentAccess(unittest.TestCase):
                     message_type=MessageType.INFORMATION,
                     sender=f"sender-{threading.get_ident()}",
                     sender_level=AgentLevel.OPERATIONAL,
-                    content={"info_type": "status", "data": {"index": i}},
+                    content={"info_type": "status", DATA_DIR: {"index": i}},
                     recipient="receiver",
                     priority=MessagePriority.NORMAL
                 )

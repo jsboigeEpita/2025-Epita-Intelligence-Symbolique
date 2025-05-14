@@ -40,6 +40,9 @@ from argumentiation_analysis.agents.tools.analysis.new.argument_structure_visual
 # Importer l'adaptateur des outils rhétoriques
 from argumentiation_analysis.orchestration.hierarchical.operational.adapters.rhetorical_tools_adapter import RhetoricalToolsAdapter
 
+from argumentiation_analysis.paths import RESULTS_DIR
+
+
 
 class TestRhetoricalToolsIntegration(unittest.TestCase):
     """Tests d'intégration pour les outils d'analyse rhétorique."""
@@ -303,9 +306,9 @@ class TestRhetoricalToolsIntegration(unittest.TestCase):
         # Si le traitement a réussi, vérifier les résultats
         if result["status"] in ["completed", "completed_with_issues"]:
             outputs = result["outputs"]
-            self.assertIn("results", outputs)
+            self.assertIn(RESULTS_DIR, outputs)
             
-            results = outputs["results"]
+            results = outputs[RESULTS_DIR]
             self.assertGreater(len(results), 0)
             
             # Vérifier que les résultats contiennent des analyses de sophismes

@@ -24,9 +24,9 @@
 
 ## Introduction
 
-Ce document présente une sélection de sujets de projets destinés aux étudiants en spécialité NLP de l'EPITA, dans le cadre du Système d'Orchestration Agentique d'Analyse Rhétorique. Ces projets visent à permettre aux étudiants d'approfondir leurs connaissances en traitement du langage naturel tout en contribuant à l'amélioration et à l'extension du système existant.
+Ce document présente une sélection de sujets de projets destinés aux étudiants en spécialité NLP de l'EPITA, dans le cadre du Système d'Orchestration Agentique d'Analyse Rhétorique. Ces projets sont conçus pour être réalisables dans un délai d'un mois et visent à permettre aux étudiants d'approfondir leurs connaissances en traitement du langage naturel tout en contribuant à l'amélioration et à l'extension du système existant.
 
-Les projets proposés couvrent un large éventail de compétences et de niveaux de difficulté, allant de projets d'initiation accessibles aux débutants jusqu'à des projets de recherche plus avancés. Chaque projet est conçu pour développer des compétences spécifiques en NLP, en programmation, en analyse rhétorique et en conception de systèmes multi-agents.
+Les projets proposés couvrent un large éventail de compétences et de niveaux de difficulté, allant de projets d'initiation accessibles aux débutants jusqu'à des projets plus avancés. Chaque projet est conçu pour développer des compétences spécifiques en NLP, en programmation, en analyse rhétorique et en conception de systèmes multi-agents, tout en étant réalisable dans le délai imparti.
 
 ## Comment choisir un projet
 
@@ -36,7 +36,7 @@ Le choix d'un projet doit être guidé par plusieurs facteurs :
 
 2. **Intérêts personnels** : Sélectionnez un projet qui correspond à vos intérêts personnels et professionnels. Vous serez plus motivé à travailler sur un sujet qui vous passionne.
 
-3. **Temps disponible** : Tenez compte du temps que vous pouvez consacrer au projet. Certains projets peuvent être réalisés en quelques semaines, tandis que d'autres nécessitent plusieurs mois de travail.
+3. **Temps disponible** : Tenez compte du temps que vous pouvez consacrer au projet. Tous les projets sont conçus pour être réalisables en un mois, mais certains peuvent nécessiter plus ou moins de temps selon votre niveau de compétence et votre disponibilité.
 
 4. **Ressources disponibles** : Assurez-vous de disposer des ressources nécessaires (matériel, logiciels, données) pour mener à bien votre projet.
 
@@ -68,8 +68,12 @@ N'hésitez pas à adapter les projets proposés en fonction de vos besoins et de
 - Bibliothèques Python pour le NLP (NLTK, spaCy)
 - Corpus de textes annotés avec des figures de style (à créer ou à trouver)
 
-**Difficulté** : ★★☆☆☆ (Facile à Modérée)  
+**Difficulté** : ★★☆☆☆ (Facile à Modérée)
 **Temps estimé** : 3-4 semaines
+**Livrables minimaux** :
+- Agent fonctionnel capable d'identifier au moins 3 figures de style courantes
+- Documentation de l'agent et de son intégration
+- Jeu de tests avec exemples annotés
 
 **Pistes de démarrage** :
 1. Étudier la documentation des agents existants
@@ -98,8 +102,12 @@ N'hésitez pas à adapter les projets proposés en fonction de vos besoins et de
 - Bibliothèques de visualisation (D3.js, Plotly, etc.)
 - Exemples de textes analysés avec des sophismes identifiés
 
-**Difficulté** : ★★☆☆☆ (Facile à Modérée)  
+**Difficulté** : ★★☆☆☆ (Facile à Modérée)
 **Temps estimé** : 2-3 semaines
+**Livrables minimaux** :
+- Module de visualisation pour au moins 2 types de sophismes
+- Interface utilisateur simple et intuitive
+- Documentation d'utilisation
 
 **Pistes de démarrage** :
 1. Étudier les résultats produits par les agents d'analyse de sophismes
@@ -127,8 +135,12 @@ N'hésitez pas à adapter les projets proposés en fonction de vos besoins et de
 - Taxonomie existante des sophismes
 - Ressources bibliographiques sur les sophismes et l'argumentation
 
-**Difficulté** : ★☆☆☆☆ (Facile)  
+**Difficulté** : ★☆☆☆☆ (Facile)
 **Temps estimé** : 2-3 semaines
+**Livrables minimaux** :
+- Extension de la taxonomie avec au moins 5 nouveaux types de sophismes
+- Exemples annotés pour chaque nouveau type
+- Documentation de la taxonomie étendue
 
 **Pistes de démarrage** :
 1. Analyser la taxonomie existante des sophismes
@@ -161,8 +173,12 @@ N'hésitez pas à adapter les projets proposés en fonction de vos besoins et de
 - Corpus de textes annotés avec des biais cognitifs (à créer)
 - Ressources bibliographiques sur les biais cognitifs
 
-**Difficulté** : ★★★☆☆ (Modérée)  
-**Temps estimé** : 4-6 semaines
+**Difficulté** : ★★★☆☆ (Modérée)
+**Temps estimé** : 4 semaines
+**Livrables minimaux** :
+- Agent capable d'identifier au moins 3 types de biais cognitifs
+- Documentation de l'agent et de son fonctionnement
+- Jeu de tests avec exemples annotés
 
 **Pistes de démarrage** :
 1. Créer une taxonomie des biais cognitifs à détecter
@@ -193,8 +209,13 @@ N'hésitez pas à adapter les projets proposés en fonction de vos besoins et de
 - Bibliothèques Python pour le NLP et la recherche d'information
 - Corpus de textes avec des affirmations factuelles annotées
 
-**Difficulté** : ★★★★☆ (Modérée à Difficile)  
-**Temps estimé** : 6-8 semaines
+**Difficulté** : ★★★☆☆ (Modérée)
+**Temps estimé** : 4 semaines
+**Portée réduite** : Ce projet se concentrera sur l'identification des affirmations vérifiables et la conception de l'architecture du module, sans nécessairement implémenter la vérification complète.
+**Livrables minimaux** :
+- Module d'extraction d'affirmations vérifiables
+- Architecture du système de vérification
+- Preuve de concept avec quelques exemples simples
 
 **Pistes de démarrage** :
 1. Développer un système d'extraction des affirmations factuelles
@@ -225,8 +246,12 @@ N'hésitez pas à adapter les projets proposés en fonction de vos besoins et de
 - Bibliothèques Python pour le NLP et l'apprentissage automatique
 - Corpus de textes annotés avec des informations contextuelles
 
-**Difficulté** : ★★★☆☆ (Modérée)  
-**Temps estimé** : 4-6 semaines
+**Difficulté** : ★★★☆☆ (Modérée)
+**Temps estimé** : 4 semaines
+**Livrables minimaux** :
+- Amélioration de l'agent existant pour au moins un aspect contextuel
+- Documentation des améliorations apportées
+- Évaluation comparative avant/après
 
 **Pistes de démarrage** :
 1. Analyser les limitations de l'agent d'analyse contextuelle existant
@@ -258,8 +283,13 @@ N'hésitez pas à adapter les projets proposés en fonction de vos besoins et de
 - Bibliothèques Python pour le NLP et l'analyse de texte
 - Ressources bibliographiques sur la rhétorique politique
 
-**Difficulté** : ★★★☆☆ (Modérée)  
-**Temps estimé** : 5-7 semaines
+**Difficulté** : ★★★☆☆ (Modérée)
+**Temps estimé** : 4 semaines
+**Portée réduite** : Ce projet se concentrera sur l'analyse d'un corpus limité de débats politiques plutôt que sur le développement d'outils spécifiques.
+**Livrables minimaux** :
+- Corpus annoté d'au moins 3 extraits de débats politiques
+- Analyse des stratégies argumentatives identifiées
+- Rapport d'analyse avec visualisations
 
 **Pistes de démarrage** :
 1. Constituer un corpus de transcriptions de débats politiques
@@ -290,8 +320,13 @@ N'hésitez pas à adapter les projets proposés en fonction de vos besoins et de
 - Frameworks pour le développement d'interfaces utilisateur (Streamlit, Gradio, etc.)
 - Corpus de textes argumentatifs de différentes qualités
 
-**Difficulté** : ★★★★☆ (Modérée à Difficile)  
-**Temps estimé** : 6-8 semaines
+**Difficulté** : ★★★☆☆ (Modérée)
+**Temps estimé** : 4 semaines
+**Portée réduite** : Ce projet se concentrera sur l'identification des faiblesses argumentatives et la génération de suggestions simples.
+**Livrables minimaux** :
+- Prototype d'interface utilisateur
+- Module d'identification de faiblesses argumentatives basiques
+- Documentation du système et exemples d'utilisation
 
 **Pistes de démarrage** :
 1. Concevoir l'architecture du système d'aide à la rédaction
@@ -323,8 +358,13 @@ N'hésitez pas à adapter les projets proposés en fonction de vos besoins et de
 - Bibliothèques JavaScript pour l'extraction de contenu web
 - Serveur pour héberger l'API d'analyse rhétorique
 
-**Difficulté** : ★★★★☆ (Modérée à Difficile)  
-**Temps estimé** : 6-8 semaines
+**Difficulté** : ★★★☆☆ (Modérée)
+**Temps estimé** : 4 semaines
+**Portée réduite** : Ce projet se concentrera sur l'extraction du contenu et l'analyse basique, sans nécessairement implémenter l'analyse en temps réel.
+**Livrables minimaux** :
+- Extension de navigateur fonctionnelle pour l'extraction de contenu
+- Intégration avec une API d'analyse simplifiée
+- Documentation et guide d'installation
 
 **Pistes de démarrage** :
 1. Concevoir l'architecture de l'extension et de l'API
@@ -359,8 +399,13 @@ N'hésitez pas à adapter les projets proposés en fonction de vos besoins et de
 - Corpus annotés de structures argumentatives (AraucariaDB, AIFdb, etc.)
 - Ressources bibliographiques sur la théorie de l'argumentation
 
-**Difficulté** : ★★★★★ (Difficile)  
-**Temps estimé** : 8-12 semaines
+**Difficulté** : ★★★★☆ (Difficile)
+**Temps estimé** : 4 semaines
+**Portée réduite** : Ce projet se concentrera sur la détection de structures argumentatives simples et prédéfinies.
+**Livrables minimaux** :
+- Prototype de système de détection pour structures simples
+- Documentation de l'approche et des limitations
+- Évaluation sur un petit corpus de test
 
 **Pistes de démarrage** :
 1. Étudier les théories de la structure argumentative
@@ -393,8 +438,13 @@ N'hésitez pas à adapter les projets proposés en fonction de vos besoins et de
 - Corpus de textes persuasifs avec annotations d'efficacité
 - Ressources bibliographiques sur la psychologie de la persuasion
 
-**Difficulté** : ★★★★★ (Difficile)  
-**Temps estimé** : 8-12 semaines
+**Difficulté** : ★★★★☆ (Difficile)
+**Temps estimé** : 4 semaines
+**Portée réduite** : Ce projet se concentrera sur l'évaluation d'un aspect spécifique de la persuasion plutôt que sur un modèle complet.
+**Livrables minimaux** :
+- Modèle d'évaluation pour un aspect spécifique de la persuasion
+- Documentation de l'approche et méthodologie
+- Évaluation sur un petit corpus de test
 
 **Pistes de démarrage** :
 1. Étudier les théories de la persuasion et les facteurs d'efficacité
@@ -428,8 +478,13 @@ N'hésitez pas à adapter les projets proposés en fonction de vos besoins et de
 - Corpus multilingues de textes argumentatifs
 - Ressources bibliographiques sur la rhétorique dans différentes langues
 
-**Difficulté** : ★★★★★ (Difficile)  
-**Temps estimé** : 10-14 semaines
+**Difficulté** : ★★★★☆ (Difficile)
+**Temps estimé** : 4 semaines
+**Portée réduite** : Ce projet se concentrera sur l'adaptation du système à une seule langue supplémentaire.
+**Livrables minimaux** :
+- Adaptation du système pour une langue supplémentaire
+- Documentation des adaptations nécessaires
+- Évaluation comparative avec la version monolingue
 
 **Pistes de démarrage** :
 1. Analyser les spécificités rhétoriques des langues cibles

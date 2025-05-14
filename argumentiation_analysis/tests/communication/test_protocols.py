@@ -17,6 +17,9 @@ from argumentiation_analysis.core.communication.hierarchical_channel import Hier
 from argumentiation_analysis.core.communication.request_response import RequestResponseProtocol
 from argumentiation_analysis.core.communication.pub_sub import PublishSubscribeProtocol
 
+from argumentiation_analysis.paths import DATA_DIR
+
+
 
 class TestRequestResponseProtocol(unittest.TestCase):
     """Tests pour le protocole de requête-réponse."""
@@ -50,7 +53,7 @@ class TestRequestResponseProtocol(unittest.TestCase):
                     message_type=MessageType.RESPONSE,
                     sender="tactical-agent-2",
                     sender_level=AgentLevel.TACTICAL,
-                    content={"status": "success", "data": {"result": "assistance provided"}},
+                    content={"status": "success", DATA_DIR: {"result": "assistance provided"}},
                     recipient=request.sender,
                     priority=request.priority,
                     metadata={"reply_to": request.id, "conversation_id": request.metadata.get("conversation_id")}
@@ -119,7 +122,7 @@ class TestRequestResponseProtocol(unittest.TestCase):
             message_type=MessageType.RESPONSE,
             sender="tactical-agent-2",
             sender_level=AgentLevel.TACTICAL,
-            content={"status": "success", "data": {"result": "assistance provided"}},
+            content={"status": "success", DATA_DIR: {"result": "assistance provided"}},
             recipient="tactical-agent-1",
             priority=MessagePriority.NORMAL,
             metadata={"reply_to": request_id, "conversation_id": conversation_id}
@@ -154,7 +157,7 @@ class TestRequestResponseProtocol(unittest.TestCase):
                         message_type=MessageType.RESPONSE,
                         sender="tactical-agent-2",
                         sender_level=AgentLevel.TACTICAL,
-                        content={"status": "success", "data": {"request_id": request.id}},
+                        content={"status": "success", DATA_DIR: {"request_id": request.id}},
                         recipient=request.sender,
                         priority=request.priority,
                         metadata={"reply_to": request.id, "conversation_id": request.metadata.get("conversation_id")}
@@ -230,7 +233,7 @@ class TestPublishSubscribeProtocol(unittest.TestCase):
             topic_id="test-topic",
             sender="strategic-agent-1",
             sender_level=AgentLevel.STRATEGIC,
-            content={"data": "test data"},
+            content={DATA_DIR: "test data"},
             priority=MessagePriority.NORMAL
         )
         
@@ -239,7 +242,7 @@ class TestPublishSubscribeProtocol(unittest.TestCase):
         
         # Vérifier que le callback a été appelé
         callback.assert_called_once()
-        self.assertEqual(callback.call_args[0][0].content["data"], "test data")
+        self.assertEqual(callback.call_args[0][0].content[DATA_DIR], "test data")
     
     def test_unsubscribe(self):
         """Test du désabonnement."""
@@ -409,7 +412,7 @@ class TestAsyncProtocols(unittest.IsolatedAsyncioTestCase):
                     message_type=MessageType.RESPONSE,
                     sender="tactical-agent-2",
                     sender_level=AgentLevel.TACTICAL,
-                    content={"status": "success", "data": {"result": "assistance provided"}},
+                    content={"status": "success", DATA_DIR: {"result": "assistance provided"}},
                     recipient=request.sender,
                     priority=request.priority,
                     metadata={"reply_to": request.id, "conversation_id": request.metadata.get("conversation_id")}

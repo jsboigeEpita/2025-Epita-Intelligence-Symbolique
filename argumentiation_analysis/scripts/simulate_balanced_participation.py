@@ -18,8 +18,8 @@ from unittest.mock import MagicMock
 import sys
 import os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-from core.strategies import BalancedParticipationStrategy
-from core.shared_state import RhetoricalAnalysisState
+from argumentiation_analysis.core.strategies import BalancedParticipationStrategy
+from argumentiation_analysis.core.shared_state import RhetoricalAnalysisState
 
 
 # Configuration du logging

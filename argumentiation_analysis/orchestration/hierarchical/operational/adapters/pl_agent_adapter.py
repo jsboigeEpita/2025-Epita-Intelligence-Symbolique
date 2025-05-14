@@ -26,6 +26,9 @@ from argumentiation_analysis.agents.core.pl.pl_definitions import PropositionalL
 from argumentiation_analysis.core.llm_service import create_llm_service
 from argumentiation_analysis.core.jvm_setup import initialize_jvm
 
+from argumentiation_analysis.paths import RESULTS_DIR
+
+
 
 class PLAgentAdapter(OperationalAgent):
     """
@@ -258,7 +261,7 @@ class PLAgentAdapter(OperationalAgent):
                                 "source": extract.get("source"),
                                 "belief_set": belief_set,
                                 "queries": queries_results.get("queries", []),
-                                "results": queries_results.get("results", []),
+                                RESULTS_DIR: queries_results.get(RESULTS_DIR, []),
                                 "interpretation": queries_results.get("interpretation", ""),
                                 "confidence": 0.8  # Valeur arbitraire pour l'exemple
                             })
@@ -481,7 +484,7 @@ class PLAgentAdapter(OperationalAgent):
             
             return {
                 "queries": queries,
-                "results": results,
+                RESULTS_DIR: results,
                 "interpretation": interpretation
             }
         

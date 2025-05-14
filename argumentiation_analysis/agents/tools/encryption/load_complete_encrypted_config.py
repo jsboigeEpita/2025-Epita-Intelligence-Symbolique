@@ -24,7 +24,7 @@ if str(parent_dir) not in sys.path:
 load_dotenv(override=True)
 
 # Importer les modules nécessaires
-from ui.config import ENCRYPTION_KEY, CONFIG_FILE_ENC
+from argumentiation_analysis.ui.config import ENCRYPTION_KEY, CONFIG_FILE_ENC
 
 # Définir les constantes
 TEXT_CACHE_DIR = parent_dir / "text_cache"

@@ -26,6 +26,9 @@ from argumentiation_analysis.core.communication.strategic_adapter import Strateg
 from argumentiation_analysis.core.communication.tactical_adapter import TacticalAdapter
 from argumentiation_analysis.core.communication.operational_adapter import OperationalAdapter
 
+from argumentiation_analysis.paths import DATA_DIR
+
+
 
 class TestCommunicationPerformance(unittest.TestCase):
     """Tests de performance pour le système de communication multi-canal."""
@@ -38,7 +41,7 @@ class TestCommunicationPerformance(unittest.TestCase):
         # Enregistrer les canaux
         self.hierarchical_channel = HierarchicalChannel("hierarchical")
         self.collaboration_channel = CollaborationChannel("collaboration")
-        self.data_channel = DataChannel("data")
+        self.data_channel = DataChannel(DATA_DIR)
         
         self.middleware.register_channel(self.hierarchical_channel)
         self.middleware.register_channel(self.collaboration_channel)
@@ -186,7 +189,7 @@ class TestCommunicationPerformance(unittest.TestCase):
                     message_type=MessageType.INFORMATION,
                     sender=f"agent-{channel_type.value}-{i}",
                     sender_level=AgentLevel.SYSTEM,
-                    content={"info_type": "test", "data": {"value": i}},
+                    content={"info_type": "test", DATA_DIR: {"value": i}},
                     recipient=f"recipient-{channel_type.value}",
                     channel=channel_type.value,
                     priority=MessagePriority.NORMAL
@@ -250,7 +253,7 @@ class TestCommunicationPerformance(unittest.TestCase):
                 if request:
                     # Créer une réponse
                     response = request.create_response(
-                        content={"status": "success", "data": {"value": request.content.get("value", 0) * 2}}
+                        content={"status": "success", DATA_DIR: {"value": request.content.get("value", 0) * 2}}
                     )
                     response.sender = "responder"
                     response.sender_level = AgentLevel.TACTICAL
@@ -283,7 +286,7 @@ class TestCommunicationPerformance(unittest.TestCase):
             # Vérifier que la réponse a été reçue
             self.assertIsNotNone(response)
             self.assertEqual(response.content["status"], "success")
-            self.assertEqual(response.content["data"]["value"], i * 2)
+            self.assertEqual(response.content[DATA_DIR]["value"], i * 2)
             
             # Calculer le temps de réponse
             response_time = end_time - start_time
@@ -373,7 +376,7 @@ class TestCommunicationPerformance(unittest.TestCase):
         
         for size in data_sizes:
             # Créer des données de test
-            test_data = {"data": "x" * size}
+            test_data = {DATA_DIR: "x" * size}
             
             # Mesurer le temps de stockage
             start_time = time.time()
@@ -399,7 +402,7 @@ class TestCommunicationPerformance(unittest.TestCase):
                 )
                 
                 # Vérifier que les données sont correctes
-                self.assertEqual(len(data["data"]), size)
+                self.assertEqual(len(data[DATA_DIR]), size)
             
             end_time = time.time()
             retrieve_time = end_time - start_time
@@ -534,7 +537,7 @@ class TestAsyncCommunicationPerformance(unittest.IsolatedAsyncioTestCase):
                 if request:
                     # Créer une réponse
                     response = request.create_response(
-                        content={"status": "success", "data": {"value": request.content.get("value", 0) * 2}}
+                        content={"status": "success", DATA_DIR: {"value": request.content.get("value", 0) * 2}}
                     )
                     response.sender = "responder"
                     response.sender_level = AgentLevel.TACTICAL
@@ -566,7 +569,7 @@ class TestAsyncCommunicationPerformance(unittest.IsolatedAsyncioTestCase):
             # Vérifier que la réponse a été reçue
             self.assertIsNotNone(response)
             self.assertEqual(response.content["status"], "success")
-            self.assertEqual(response.content["data"]["value"], i * 2)
+            self.assertEqual(response.content[DATA_DIR]["value"], i * 2)
             
             # Calculer le temps de réponse
             response_time = end_time - start_time

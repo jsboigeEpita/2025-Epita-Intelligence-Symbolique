@@ -1,3 +1,5 @@
+from argumentiation_analysis.paths import RESULTS_DIR
+
 # Template d'outil d'analyse pour l'architecture hiérarchique
 
 class BaseAnalysisTool:
@@ -48,7 +50,7 @@ class BaseAnalysisTool:
         return {
             'tool': self.name,
             'status': 'completed',
-            'results': {}
+            RESULTS_DIR: {}
         }
 
 # Exemple de configuration

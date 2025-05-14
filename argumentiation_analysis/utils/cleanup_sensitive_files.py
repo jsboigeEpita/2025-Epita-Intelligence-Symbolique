@@ -32,8 +32,8 @@ sys.path.append(str(Path(__file__).parent.parent))
 
 # Importer les modules nécessaires
 try:
-    from ui import config as ui_config
-    from ui.extract_utils import load_extract_definitions_safely
+    from argumentiation_analysis.ui import config as ui_config
+    from argumentiation_analysis.ui.extract_utils import load_extract_definitions_safely
     logger.info("Import réussi.")
 except ImportError as e:
     logger.error(f"Erreur d'importation: {e}")

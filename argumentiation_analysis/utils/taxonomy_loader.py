@@ -19,6 +19,7 @@ Limitations connues:
 import os
 import logging
 from pathlib import Path
+from argumentiation_analysis.paths import DATA_DIR
 
 # Configuration du logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
@@ -27,7 +28,7 @@ logger = logging.getLogger(__name__)
 # URL de la taxonomie des sophismes (pour référence uniquement)
 TAXONOMY_URL = "https://raw.githubusercontent.com/ArgumentumGames/Argumentum/master/Cards/Fallacies/Argumentum%20Fallacies%20-%20Taxonomy.csv"
 # Chemin local où sera stocké le fichier
-DATA_DIR = Path(__file__).parent.parent / "data"
+DATA_DIR = Path(__file__).parent.parent / DATA_DIR
 TAXONOMY_FILE = DATA_DIR / "argumentum_fallacies_taxonomy.csv"
 
 # Variable globale pour contrôler le mode mock
@@ -80,6 +81,9 @@ def get_taxonomy_path():
         logger.info(f"Téléchargement de la taxonomie depuis {TAXONOMY_URL}")
         try:
             import requests
+
+from argumentiation_analysis.paths import DATA_DIR
+
             response = requests.get(TAXONOMY_URL)
             response.raise_for_status()
             

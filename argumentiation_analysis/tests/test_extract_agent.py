@@ -5,8 +5,8 @@ Tests unitaires pour l'agent d'extraction.
 import unittest
 import asyncio
 from unittest.mock import MagicMock, patch, AsyncMock
-from agents.core.extract.extract_agent import ExtractAgent
-from agents.core.extract.extract_definitions import ExtractAgentPlugin, ExtractResult
+from argumentiation_analysis.agents.core.extract.extract_agent import ExtractAgent
+from argumentiation_analysis.agents.core.extract.extract_definitions import ExtractAgentPlugin, ExtractResult
 from tests.async_test_case import AsyncTestCase
 
 

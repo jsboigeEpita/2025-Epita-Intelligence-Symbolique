@@ -19,6 +19,9 @@ from argumentiation_analysis.core.communication.hierarchical_channel import Hier
 from argumentiation_analysis.core.communication.collaboration_channel import CollaborationChannel
 from argumentiation_analysis.core.communication.data_channel import DataChannel
 
+from argumentiation_analysis.paths import DATA_DIR
+
+
 
 class TestMessageMiddleware(unittest.TestCase):
     """Tests pour le middleware de messagerie."""
@@ -50,7 +53,7 @@ class TestMessageMiddleware(unittest.TestCase):
             message_type=MessageType.INFORMATION,
             sender="operational-agent-1",
             sender_level=AgentLevel.OPERATIONAL,
-            content={"info_type": "task_result", "data": {"result": "extraction complete"}},
+            content={"info_type": "task_result", DATA_DIR: {"result": "extraction complete"}},
             recipient="tactical-agent-1",
             priority=MessagePriority.NORMAL
         )
@@ -305,7 +308,7 @@ class TestMessageMiddleware(unittest.TestCase):
                 message_type=MessageType.RESPONSE,
                 sender="tactical-agent-2",
                 sender_level=AgentLevel.TACTICAL,
-                content={"status": "success", "data": {"result": "assistance provided"}},
+                content={"status": "success", DATA_DIR: {"result": "assistance provided"}},
                 recipient="tactical-agent-1",
                 priority=MessagePriority.NORMAL,
                 metadata={"reply_to": ""}  # Sera mis à jour avec l'ID de la requête
@@ -372,7 +375,7 @@ class TestMessageMiddleware(unittest.TestCase):
             topic_id="test-topic",
             sender="strategic-agent-1",
             sender_level=AgentLevel.STRATEGIC,
-            content={"data": "test data"},
+            content={DATA_DIR: "test data"},
             priority=MessagePriority.NORMAL
         )
         
@@ -381,7 +384,7 @@ class TestMessageMiddleware(unittest.TestCase):
         
         # Vérifier que le callback a été appelé
         callback.assert_called_once()
-        self.assertEqual(callback.call_args[0][0].content["data"], "test data")
+        self.assertEqual(callback.call_args[0][0].content[DATA_DIR], "test data")
 
 
 class TestAsyncMiddleware(unittest.IsolatedAsyncioTestCase):
@@ -434,7 +437,7 @@ class TestAsyncMiddleware(unittest.IsolatedAsyncioTestCase):
                 message_type=MessageType.RESPONSE,
                 sender="tactical-agent-2",
                 sender_level=AgentLevel.TACTICAL,
-                content={"status": "success", "data": {"result": "assistance provided"}},
+                content={"status": "success", DATA_DIR: {"result": "assistance provided"}},
                 recipient="tactical-agent-1",
                 priority=MessagePriority.NORMAL,
                 metadata={"reply_to": ""}  # Sera mis à jour avec l'ID de la requête

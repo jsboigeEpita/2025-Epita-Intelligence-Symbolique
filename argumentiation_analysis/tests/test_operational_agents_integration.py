@@ -24,6 +24,9 @@ from argumentiation_analysis.orchestration.hierarchical.operational.manager impo
 from argumentiation_analysis.orchestration.hierarchical.interfaces.tactical_operational import TacticalOperationalInterface
 from argumentiation_analysis.orchestration.hierarchical.tactical.state import TacticalState
 
+from argumentiation_analysis.paths import RESULTS_DIR
+
+
 
 # Désactiver les logs pendant les tests
 logging.basicConfig(level=logging.ERROR)
@@ -129,7 +132,7 @@ class TestOperationalAgentsIntegration(AsyncTestCase):
         # Vérifier le résultat
         self.assertEqual(result["task_id"], "task-extract-1")
         self.assertEqual(result["completion_status"], "completed")
-        self.assertIn("results", result)
+        self.assertIn(RESULTS_DIR, result)
         self.assertIn("execution_metrics", result)
     
     @patch("argumentiation_analysis.orchestration.hierarchical.operational.adapters.informal_agent_adapter.InformalAgentAdapter.process_task")
@@ -187,7 +190,7 @@ class TestOperationalAgentsIntegration(AsyncTestCase):
         # Vérifier le résultat
         self.assertEqual(result["task_id"], "task-informal-1")
         self.assertEqual(result["completion_status"], "completed")
-        self.assertIn("results", result)
+        self.assertIn(RESULTS_DIR, result)
         self.assertIn("execution_metrics", result)
     
     @patch("argumentiation_analysis.orchestration.hierarchical.operational.adapters.pl_agent_adapter.PLAgentAdapter.process_task")
@@ -242,7 +245,7 @@ class TestOperationalAgentsIntegration(AsyncTestCase):
         # Vérifier le résultat
         self.assertEqual(result["task_id"], "task-pl-1")
         self.assertEqual(result["completion_status"], "completed")
-        self.assertIn("results", result)
+        self.assertIn(RESULTS_DIR, result)
         self.assertIn("execution_metrics", result)
     
     async def test_agent_selection(self):
@@ -401,7 +404,7 @@ class TestOperationalAgentsIntegration(AsyncTestCase):
             # Vérifier le résultat
             self.assertEqual(result["task_id"], "task-test-1")
             self.assertEqual(result["completion_status"], "completed")
-            self.assertIn("results", result)
+            self.assertIn(RESULTS_DIR, result)
             self.assertIn("execution_metrics", result)
             
             # Vérifier que les métriques ont été correctement traduites

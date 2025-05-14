@@ -6,7 +6,7 @@ import unittest
 from unittest.mock import MagicMock, patch
 import jpype
 import semantic_kernel as sk
-from agents.core.pl.pl_definitions import PropositionalLogicPlugin, setup_pl_kernel
+from argumentiation_analysis.agents.core.pl.pl_definitions import PropositionalLogicPlugin, setup_pl_kernel
 
 
 class TestPropositionalLogicPlugin(unittest.TestCase):

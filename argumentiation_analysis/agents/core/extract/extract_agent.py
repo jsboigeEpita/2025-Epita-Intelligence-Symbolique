@@ -37,13 +37,13 @@ try:
     )
 except ImportError:
     # Fallback pour les imports absolus
-    from ui.config import ENCRYPTION_KEY, CONFIG_FILE, CONFIG_FILE_JSON
-    from ui.utils import load_from_cache, reconstruct_url
-    from ui.extract_utils import (
+    from argumentiation_analysis.ui.config import ENCRYPTION_KEY, CONFIG_FILE, CONFIG_FILE_JSON
+    from argumentiation_analysis.ui.utils import load_from_cache, reconstruct_url
+    from argumentiation_analysis.ui.extract_utils import (
         load_source_text, extract_text_with_markers, find_similar_text,
         load_extract_definitions_safely, save_extract_definitions_safely
     )
-    from core.llm_service import create_llm_service
+    from argumentiation_analysis.core.llm_service import create_llm_service
     
     # Import des définitions et prompts (chemin absolu)
     import sys
