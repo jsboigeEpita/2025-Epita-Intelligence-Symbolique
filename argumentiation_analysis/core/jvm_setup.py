@@ -12,6 +12,9 @@ from tqdm.auto import tqdm # Ajout pour barre de progression
 import stat # Ajout pour chmod (Linux/Mac)
 import shutil # Ajout pour shutil.which
 
+from argumentiation_analysis.paths import LIBS_DIR
+
+
 logger = logging.getLogger("Orchestration.JPype")
 # Assurer logger configuré
 if not logger.handlers and not logger.propagate:
@@ -77,7 +80,7 @@ def _download_file_with_progress(file_url: str, target_path: pathlib.Path, descr
 # --- Fonction Principale de Téléchargement Tweety ---
 def download_tweety_jars(
     version: str = TWEETY_VERSION,
-    target_dir: str = "libs",
+    target_dir: str = LIBS_DIR,
     native_subdir: str = "native"
     ) -> bool:
     """
@@ -303,7 +306,7 @@ def find_valid_java_home() -> Optional[str]:
 
 # --- Fonction d'Initialisation JVM (modifiée pour appeler download_tweety_jars) ---
 def initialize_jvm(
-    lib_dir_path: str = "libs",
+    lib_dir_path: str = LIBS_DIR,
     native_lib_subdir: str = "native",
     tweety_version: str = TWEETY_VERSION # Utiliser la constante définie plus haut
     ) -> bool:

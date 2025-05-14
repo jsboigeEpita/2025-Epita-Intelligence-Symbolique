@@ -15,6 +15,9 @@ from .message import Message, MessageType, MessagePriority, AgentLevel
 from .channel_interface import ChannelType
 from .middleware import MessageMiddleware
 
+from argumentiation_analysis.paths import DATA_DIR
+
+
 
 class OperationalAdapter:
     """
@@ -122,7 +125,7 @@ class OperationalAdapter:
                 "info_type": "task_result",
                 "task_id": task_id,
                 "result_type": result_type,
-                "data": result
+                DATA_DIR: result
             },
             recipient=recipient_id,
             channel=ChannelType.HIERARCHICAL.value,
@@ -185,7 +188,7 @@ class OperationalAdapter:
             
             if response:
                 self.logger.info(f"Received clarification from {recipient_id} for task {task_id}")
-                return response.content.get("data")
+                return response.content.get(DATA_DIR)
             
             self.logger.warning(f"Clarification request for task {task_id} timed out")
             return None
@@ -236,7 +239,7 @@ class OperationalAdapter:
             
             if response:
                 self.logger.info(f"Received clarification from {recipient_id} for task {task_id}")
-                return response.content.get("data")
+                return response.content.get(DATA_DIR)
             
             self.logger.warning(f"Clarification request for task {task_id} timed out")
             return None
@@ -290,7 +293,7 @@ class OperationalAdapter:
             content={
                 "info_type": "collaboration",
                 "collaboration_type": collaboration_type,
-                "data": content
+                DATA_DIR: content
             },
             recipient=None,  # Destiné au groupe
             channel=ChannelType.COLLABORATION.value,
@@ -472,7 +475,7 @@ class OperationalAdapter:
                 )
                 
                 if is_response:
-                    responses.append(response.content.get("data", {}))
+                    responses.append(response.content.get(DATA_DIR, {}))
                     
                     # Si tous les agents ont répondu, on peut arrêter
                     if len(responses) >= len(recipient_ids):

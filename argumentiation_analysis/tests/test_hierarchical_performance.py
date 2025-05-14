@@ -55,7 +55,7 @@ class TestPerformanceComparison(AsyncTestCase):
         self.test_texts = self._load_test_texts()
         
         # Préparer les résultats
-        self.results_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "results", "performance_tests")
+        self.results_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), RESULTS_DIR, "performance_tests")
         os.makedirs(self.results_dir, exist_ok=True)
     
     def _load_test_texts(self) -> Dict[str, str]:
@@ -112,7 +112,7 @@ class TestPerformanceComparison(AsyncTestCase):
         results = {
             "timestamp": datetime.now().isoformat(),
             "test_name": "execution_time_comparison",
-            "results": {}
+            RESULTS_DIR: {}
         }
         
         for text_size, text in self.test_texts.items():
@@ -149,7 +149,7 @@ class TestPerformanceComparison(AsyncTestCase):
             improvement = (legacy_mean - hierarchical_mean) / legacy_mean * 100
             
             # Enregistrer les résultats
-            results["results"][text_size] = {
+            results[RESULTS_DIR][text_size] = {
                 "hierarchical": {
                     "times": hierarchical_times,
                     "mean": hierarchical_mean,
@@ -191,6 +191,9 @@ class TestPerformanceComparison(AsyncTestCase):
         # Si psutil n'est pas disponible, le test sera ignoré
         try:
             import psutil
+
+from argumentiation_analysis.paths import RESULTS_DIR
+
         except ImportError:
             self.logger.warning("Module psutil non disponible, test d'utilisation des ressources ignoré")
             self.skipTest("Module psutil non disponible")
@@ -199,7 +202,7 @@ class TestPerformanceComparison(AsyncTestCase):
         results = {
             "timestamp": datetime.now().isoformat(),
             "test_name": "resource_usage_comparison",
-            "results": {}
+            RESULTS_DIR: {}
         }
         
         process = psutil.Process()
@@ -263,7 +266,7 @@ class TestPerformanceComparison(AsyncTestCase):
             self.logger.info(f"  Temps: {time_improvement:.2f}%")
             
             # Enregistrer les résultats
-            results["results"][text_size] = {
+            results[RESULTS_DIR][text_size] = {
                 "hierarchical": {
                     "memory_usage": hierarchical_memory_usage,
                     "cpu_percent": hierarchical_cpu_percent,
@@ -306,7 +309,7 @@ class TestPerformanceComparison(AsyncTestCase):
         results = {
             "timestamp": datetime.now().isoformat(),
             "test_name": "quality_comparison",
-            "results": {}
+            RESULTS_DIR: {}
         }
         
         # Définir les résultats attendus pour chaque texte
@@ -372,7 +375,7 @@ class TestPerformanceComparison(AsyncTestCase):
             self.logger.info(f"    F1-score: {f1_improvement:.2f}%")
             
             # Enregistrer les résultats
-            results["results"][text_size] = {
+            results[RESULTS_DIR][text_size] = {
                 "hierarchical": hierarchical_quality,
                 "legacy": legacy_quality,
                 "improvements": {
@@ -406,9 +409,9 @@ class TestPerformanceComparison(AsyncTestCase):
         """
         # Compter les résultats
         actual = {
-            "arguments": len(result.get("results", {}).get("arguments", [])),
-            "fallacies": len(result.get("results", {}).get("fallacies", [])),
-            "formal_analyses": len(result.get("results", {}).get("formal_analyses", []))
+            "arguments": len(result.get(RESULTS_DIR, {}).get("arguments", [])),
+            "fallacies": len(result.get(RESULTS_DIR, {}).get("fallacies", [])),
+            "formal_analyses": len(result.get(RESULTS_DIR, {}).get("formal_analyses", []))
         }
         
         # Calculer les métriques
@@ -447,7 +450,7 @@ async def generate_performance_report():
     logger.info("Génération du rapport de performance...")
     
     # Créer le répertoire des résultats
-    results_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "results", "performance_tests")
+    results_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), RESULTS_DIR, "performance_tests")
     os.makedirs(results_dir, exist_ok=True)
     
     # Exécuter les tests de performance
@@ -484,7 +487,7 @@ Ce rapport présente les résultats des tests de performance comparant l'archite
 """
     
     if "execution_time_comparison" in results:
-        for text_size, data in results["execution_time_comparison"]["results"].items():
+        for text_size, data in results["execution_time_comparison"][RESULTS_DIR].items():
             report += f"| {text_size} | {data['hierarchical']['mean']:.3f} ± {data['hierarchical']['stdev']:.3f} s | {data['legacy']['mean']:.3f} ± {data['legacy']['stdev']:.3f} s | {data['improvement']:.2f}% |\n"
     
     report += """
@@ -495,7 +498,7 @@ Ce rapport présente les résultats des tests de performance comparant l'archite
 """
     
     if "resource_usage_comparison" in results:
-        for text_size, data in results["resource_usage_comparison"]["results"].items():
+        for text_size, data in results["resource_usage_comparison"][RESULTS_DIR].items():
             report += f"| {text_size} | Mémoire | {data['hierarchical']['memory_usage']:.2f} MB | {data['legacy']['memory_usage']:.2f} MB | {data['improvements']['memory']:.2f}% |\n"
             report += f"| {text_size} | CPU | {data['hierarchical']['cpu_percent']:.2f}% | {data['legacy']['cpu_percent']:.2f}% | {data['improvements']['cpu']:.2f}% |\n"
             report += f"| {text_size} | Temps | {data['hierarchical']['execution_time']:.3f} s | {data['legacy']['execution_time']:.3f} s | {data['improvements']['time']:.2f}% |\n"
@@ -508,7 +511,7 @@ Ce rapport présente les résultats des tests de performance comparant l'archite
 """
     
     if "quality_comparison" in results:
-        for text_size, data in results["quality_comparison"]["results"].items():
+        for text_size, data in results["quality_comparison"][RESULTS_DIR].items():
             report += f"| {text_size} | Précision | {data['hierarchical']['precision']:.3f} | {data['legacy']['precision']:.3f} | {data['improvements']['precision']:.2f}% |\n"
             report += f"| {text_size} | Rappel | {data['hierarchical']['recall']:.3f} | {data['legacy']['recall']:.3f} | {data['improvements']['recall']:.2f}% |\n"
             report += f"| {text_size} | F1-score | {data['hierarchical']['f1_score']:.3f} | {data['legacy']['f1_score']:.3f} | {data['improvements']['f1_score']:.2f}% |\n"

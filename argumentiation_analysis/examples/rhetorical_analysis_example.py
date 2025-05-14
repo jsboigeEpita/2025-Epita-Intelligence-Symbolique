@@ -33,6 +33,9 @@ from argumentiation_analysis.orchestration.hierarchical.interfaces.tactical_oper
 from argumentiation_analysis.orchestration.hierarchical.operational.agent_registry import OperationalAgentRegistry
 from argumentiation_analysis.orchestration.hierarchical.operational.feedback_mechanism import FeedbackManager
 
+from argumentiation_analysis.paths import RESULTS_DIR
+
+
 # Configuration du logging
 logging.basicConfig(
     level=logging.INFO,
@@ -182,7 +185,7 @@ async def run_rhetorical_analysis_example():
     
     if result['status'] == "completed" or result['status'] == "completed_with_issues":
         # Extraire les résultats
-        outputs = result.get("outputs", {}).get("results", [])
+        outputs = result.get("outputs", {}).get(RESULTS_DIR, [])
         
         logger.info(f"Nombre de résultats: {len(outputs)}")
         

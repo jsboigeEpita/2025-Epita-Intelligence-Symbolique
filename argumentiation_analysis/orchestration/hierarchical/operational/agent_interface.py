@@ -13,6 +13,9 @@ import uuid
 
 from argumentiation_analysis.orchestration.hierarchical.operational.state import OperationalState
 from argumentiation_analysis.core.communication import (
+
+from argumentiation_analysis.paths import RESULTS_DIR
+
     MessageMiddleware, OperationalAdapter, Message,
     ChannelType, MessagePriority, MessageType, AgentLevel
 )
@@ -123,7 +126,7 @@ class OperationalAgent(ABC):
             # Formater le résultat
             formatted_result = self.format_result(
                 task,
-                result.get("results", []),
+                result.get(RESULTS_DIR, []),
                 result.get("metrics", {}),
                 result.get("issues", [])
             )

@@ -145,7 +145,7 @@ async def run_orchestration_test():
     
     # Initialisation de la JVM
     from argumentiation_analysis.core.jvm_setup import initialize_jvm
-    jvm_ready_status = initialize_jvm(lib_dir_path="libs")
+    jvm_ready_status = initialize_jvm(lib_dir_path=LIBS_DIR)
     
     if not jvm_ready_status:
         logger.warning("⚠️ JVM n'a pas pu être initialisée. L'agent PropositionalLogicAgent ne fonctionnera pas.")
@@ -163,6 +163,9 @@ async def run_orchestration_test():
     
     # Exécuter l'orchestration avec tous les agents
     from argumentiation_analysis.orchestration.analysis_runner import run_analysis_conversation
+
+from argumentiation_analysis.paths import LIBS_DIR
+
     
     logger.info("Lancement de l'orchestration avec tous les agents...")
     start_time = asyncio.get_event_loop().time()

@@ -1,3 +1,5 @@
+from argumentiation_analysis.paths import RESULTS_DIR
+
 # Template de type d'analyse pour l'architecture hiérarchique
 
 class BaseAnalysisType:
@@ -47,7 +49,7 @@ class BaseAnalysisType:
         """
         return {
             'analysis_type': self.name,
-            'results': {
+            RESULTS_DIR: {
                 # Structure à implémenter selon le type d'analyse
             }
         }

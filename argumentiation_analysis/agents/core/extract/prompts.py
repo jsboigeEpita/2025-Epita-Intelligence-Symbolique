@@ -125,3 +125,25 @@ Propose des corrections pour les marqueurs défectueux. Réponds au format JSON 
 - new_template_start: le nouveau template de début (optionnel)
 - explanation: explication de tes choix
 """
+
+# Template général pour les prompts d'extraction
+EXTRACT_PROMPT_TEMPLATE = """
+Analysez ce texte source et identifiez les passages pertinents selon les critères spécifiés.
+
+SOURCE: {source_name}
+
+TEXTE SOURCE:
+{extract_context}
+
+CRITÈRES D'EXTRACTION:
+{extraction_criteria}
+
+Proposez des bornes précises qui délimitent un extrait pertinent correspondant aux critères.
+Les bornes doivent exister exactement dans le texte source.
+
+Réponds au format JSON avec les champs:
+- start_marker: le marqueur de début proposé
+- end_marker: le marqueur de fin proposé
+- template_start: un template de début si nécessaire (optionnel)
+- explanation: explication de tes choix
+"""

@@ -13,6 +13,9 @@ import uuid
 
 from argumentiation_analysis.orchestration.hierarchical.strategic.state import StrategicState
 from argumentiation_analysis.core.communication import (
+
+from argumentiation_analysis.paths import DATA_DIR, RESULTS_DIR
+
     MessageMiddleware, StrategicAdapter, MessagePriority,
     ChannelType, Message, MessageType, AgentLevel
 )
@@ -212,7 +215,7 @@ class StrategicManager:
         pending_reports = self.adapter.get_pending_reports(max_count=10)
         
         for report in pending_reports:
-            report_content = report.content.get("data", {})
+            report_content = report.content.get(DATA_DIR, {})
             report_type = report.content.get("report_type")
             
             if report_type == "progress_update":
@@ -383,8 +386,8 @@ class StrategicManager:
         
         if response:
             # Fusionner les résultats reçus avec ceux fournis en paramètre
-            if "results" in response:
-                for key, value in response["results"].items():
+            if RESULTS_DIR in response:
+                for key, value in response[RESULTS_DIR].items():
                     if key in results:
                         # Si la clé existe déjà, fusionner les valeurs
                         if isinstance(results[key], list) and isinstance(value, list):

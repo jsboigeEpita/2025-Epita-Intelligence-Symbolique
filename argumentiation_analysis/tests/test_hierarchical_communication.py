@@ -24,6 +24,9 @@ from argumentiation_analysis.core.communication.strategic_adapter import Strateg
 from argumentiation_analysis.core.communication.tactical_adapter import TacticalAdapter
 from argumentiation_analysis.core.communication.operational_adapter import OperationalAdapter
 
+from argumentiation_analysis.paths import DATA_DIR
+
+
 
 class TestHierarchicalCommunication(unittest.TestCase):
     """Tests pour la communication hiérarchique entre les trois niveaux d'agents."""
@@ -36,7 +39,7 @@ class TestHierarchicalCommunication(unittest.TestCase):
         # Enregistrer les canaux
         self.hierarchical_channel = HierarchicalChannel("hierarchical")
         self.collaboration_channel = CollaborationChannel("collaboration")
-        self.data_channel = DataChannel("data")
+        self.data_channel = DataChannel(DATA_DIR)
         
         self.middleware.register_channel(self.hierarchical_channel)
         self.middleware.register_channel(self.collaboration_channel)
@@ -121,12 +124,12 @@ class TestHierarchicalCommunication(unittest.TestCase):
             self.assertIsNotNone(result)
             self.assertEqual(result.sender, "operational-agent-1")
             self.assertEqual(result.content["info_type"], "task_result")
-            self.assertEqual(result.content["data"]["arguments"], ["arg1", "arg2"])
+            self.assertEqual(result.content[DATA_DIR]["arguments"], ["arg1", "arg2"])
             
             # Envoyer un rapport à l'agent stratégique
             self.tactical_adapter.send_report(
                 report_type="analysis_complete",
-                content={"text_id": "text-123", "arguments": result.content["data"]["arguments"]},
+                content={"text_id": "text-123", "arguments": result.content[DATA_DIR]["arguments"]},
                 recipient_id="strategic-agent-1",
                 priority=MessagePriority.NORMAL
             )
@@ -145,7 +148,7 @@ class TestHierarchicalCommunication(unittest.TestCase):
         self.assertIsNotNone(report)
         self.assertEqual(report.sender, "tactical-agent-1")
         self.assertEqual(report.content["report_type"], "analysis_complete")
-        self.assertEqual(report.content["data"]["arguments"], ["arg1", "arg2"])
+        self.assertEqual(report.content[DATA_DIR]["arguments"], ["arg1", "arg2"])
         
         # Attendre que les threads se terminent
         operational_thread.join()
@@ -230,7 +233,7 @@ class TestHierarchicalCommunication(unittest.TestCase):
             
             # Vérifier que la mise à jour de statut a été reçue
             self.assertIsNotNone(status_update)
-            self.assertEqual(status_update.content["data"]["status"], "in_progress")
+            self.assertEqual(status_update.content[DATA_DIR]["status"], "in_progress")
             
             # Envoyer une mise à jour à l'agent stratégique
             self.tactical_adapter.send_status_update(
@@ -246,7 +249,7 @@ class TestHierarchicalCommunication(unittest.TestCase):
             # Vérifier que le résultat a été reçu
             self.assertIsNotNone(result)
             self.assertEqual(result.sender, "operational-agent-1")
-            self.assertEqual(result.content["data"]["arguments"], ["arg1", "arg2"])
+            self.assertEqual(result.content[DATA_DIR]["arguments"], ["arg1", "arg2"])
             
             # Envoyer un rapport à l'agent stratégique
             self.tactical_adapter.send_report(
@@ -254,8 +257,8 @@ class TestHierarchicalCommunication(unittest.TestCase):
                 content={
                     "directive_id": directive.id,
                     "text_id": directive.content["parameters"]["text_id"],
-                    "arguments": result.content["data"]["arguments"],
-                    "confidence": result.content["data"]["confidence"]
+                    "arguments": result.content[DATA_DIR]["arguments"],
+                    "confidence": result.content[DATA_DIR]["confidence"]
                 },
                 recipient_id="strategic-agent-1",
                 priority=MessagePriority.NORMAL
@@ -301,7 +304,7 @@ class TestHierarchicalCommunication(unittest.TestCase):
         # Vérifier que l'accusé de réception a été reçu
         self.assertIsNotNone(ack)
         self.assertEqual(ack.sender, "tactical-agent-1")
-        self.assertEqual(ack.content["data"]["directive_id"], directive_id)
+        self.assertEqual(ack.content[DATA_DIR]["directive_id"], directive_id)
         
         # Recevoir une mise à jour de progression
         progress = None
@@ -326,7 +329,7 @@ class TestHierarchicalCommunication(unittest.TestCase):
         # Vérifier que la mise à jour de progression a été reçue
         self.assertIsNotNone(progress)
         self.assertEqual(progress.sender, "tactical-agent-1")
-        self.assertEqual(progress.content["data"]["progress"], 50)
+        self.assertEqual(progress.content[DATA_DIR]["progress"], 50)
         
         # Recevoir le rapport final
         report = self.strategic_adapter.receive_report(timeout=5.0)
@@ -335,10 +338,10 @@ class TestHierarchicalCommunication(unittest.TestCase):
         self.assertIsNotNone(report)
         self.assertEqual(report.sender, "tactical-agent-1")
         self.assertEqual(report.content["report_type"], "analysis_complete")
-        self.assertEqual(report.content["data"]["directive_id"], directive_id)
-        self.assertEqual(report.content["data"]["text_id"], "text-123")
-        self.assertEqual(report.content["data"]["arguments"], ["arg1", "arg2"])
-        self.assertEqual(report.content["data"]["confidence"], 0.95)
+        self.assertEqual(report.content[DATA_DIR]["directive_id"], directive_id)
+        self.assertEqual(report.content[DATA_DIR]["text_id"], "text-123")
+        self.assertEqual(report.content[DATA_DIR]["arguments"], ["arg1", "arg2"])
+        self.assertEqual(report.content[DATA_DIR]["confidence"], 0.95)
         
         # Attendre que les threads se terminent
         operational_thread.join()
@@ -364,7 +367,7 @@ class TestHierarchicalCommunication(unittest.TestCase):
             response = request.create_response(
                 content={
                     "status": "success",
-                    "data": {
+                    DATA_DIR: {
                         "recommendation": "Focus on fallacies",
                         "priority": "high",
                         "additional_resources": ["resource1", "resource2"]
@@ -419,7 +422,7 @@ class TestHierarchicalCommunication(unittest.TestCase):
             response = request.create_response(
                 content={
                     "status": "success",
-                    "data": {
+                    DATA_DIR: {
                         "solution": "Use pattern X",
                         "example": "example data",
                         "reference": "reference document"
@@ -550,7 +553,7 @@ class TestAsyncHierarchicalCommunication(unittest.IsolatedAsyncioTestCase):
             response = request.create_response(
                 content={
                     "status": "success",
-                    "data": {
+                    DATA_DIR: {
                         "recommendation": "Focus on fallacies",
                         "priority": "high",
                         "additional_resources": ["resource1", "resource2"]
@@ -604,7 +607,7 @@ class TestAsyncHierarchicalCommunication(unittest.IsolatedAsyncioTestCase):
             response = request.create_response(
                 content={
                     "status": "success",
-                    "data": {
+                    DATA_DIR: {
                         "solution": "Use pattern X",
                         "example": "example data",
                         "reference": "reference document"

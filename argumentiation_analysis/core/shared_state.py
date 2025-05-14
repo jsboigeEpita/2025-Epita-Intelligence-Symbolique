@@ -229,3 +229,6 @@ class RhetoricalAnalysisState:
 # Optionnel : Ajouter un log à la fin du fichier pour confirmer le chargement du module
 module_logger = logging.getLogger(__name__)
 module_logger.debug("Module core.shared_state chargé.")
+
+# Créer un alias SharedState pour maintenir la compatibilité avec le code existant
+SharedState = RhetoricalAnalysisState

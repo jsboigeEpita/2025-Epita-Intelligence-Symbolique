@@ -20,6 +20,9 @@ from argumentiation_analysis.core.communication.strategic_adapter import Strateg
 from argumentiation_analysis.core.communication.tactical_adapter import TacticalAdapter
 from argumentiation_analysis.core.communication.operational_adapter import OperationalAdapter
 
+from argumentiation_analysis.paths import DATA_DIR
+
+
 
 class TestStrategicAdapter(unittest.TestCase):
     """Tests pour l'adaptateur des agents stratégiques."""
@@ -73,7 +76,7 @@ class TestStrategicAdapter(unittest.TestCase):
             content={
                 "info_type": "report",
                 "report_type": "status_update",
-                "data": {"status": "in_progress", "completion": 50}
+                DATA_DIR: {"status": "in_progress", "completion": 50}
             },
             recipient="strategic-agent-1",
             channel=ChannelType.HIERARCHICAL.value,
@@ -90,7 +93,7 @@ class TestStrategicAdapter(unittest.TestCase):
         self.assertIsNotNone(received_report)
         self.assertEqual(received_report.sender, "tactical-agent-1")
         self.assertEqual(received_report.content["report_type"], "status_update")
-        self.assertEqual(received_report.content["data"]["completion"], 50)
+        self.assertEqual(received_report.content[DATA_DIR]["completion"], 50)
     
     def test_allocate_resources(self):
         """Test de l'allocation de ressources."""
@@ -274,7 +277,7 @@ class TestTacticalAdapter(unittest.TestCase):
         self.assertEqual(pending[0].sender, "tactical-agent-1")
         self.assertEqual(pending[0].content["info_type"], "report")
         self.assertEqual(pending[0].content["report_type"], "status_update")
-        self.assertEqual(pending[0].content["data"]["completion"], 50)
+        self.assertEqual(pending[0].content[DATA_DIR]["completion"], 50)
     
     def test_receive_task_result(self):
         """Test de la réception d'un résultat de tâche."""
@@ -286,7 +289,7 @@ class TestTacticalAdapter(unittest.TestCase):
             content={
                 "info_type": "task_result",
                 "task_type": "extract_arguments",
-                "data": {"arguments": ["arg1", "arg2"], "confidence": 0.95}
+                DATA_DIR: {"arguments": ["arg1", "arg2"], "confidence": 0.95}
             },
             recipient="tactical-agent-1",
             channel=ChannelType.HIERARCHICAL.value,
@@ -304,7 +307,7 @@ class TestTacticalAdapter(unittest.TestCase):
         self.assertEqual(received_result.sender, "operational-agent-1")
         self.assertEqual(received_result.content["info_type"], "task_result")
         self.assertEqual(received_result.content["task_type"], "extract_arguments")
-        self.assertEqual(received_result.content["data"]["arguments"], ["arg1", "arg2"])
+        self.assertEqual(received_result.content[DATA_DIR]["arguments"], ["arg1", "arg2"])
     
     def test_request_strategic_guidance(self):
         """Test de la demande de conseils stratégiques."""
@@ -326,7 +329,7 @@ class TestTacticalAdapter(unittest.TestCase):
                     sender_level=AgentLevel.STRATEGIC,
                     content={
                         "status": "success",
-                        "data": {"recommendation": "Focus on fallacies", "priority": "high"}
+                        DATA_DIR: {"recommendation": "Focus on fallacies", "priority": "high"}
                     },
                     recipient=request.sender,
                     channel=ChannelType.HIERARCHICAL.value,
@@ -446,7 +449,7 @@ class TestOperationalAdapter(unittest.TestCase):
         self.assertEqual(pending[0].sender, "operational-agent-1")
         self.assertEqual(pending[0].content["info_type"], "task_result")
         self.assertEqual(pending[0].content["task_id"], "task-123")
-        self.assertEqual(pending[0].content["data"]["arguments"], ["arg1", "arg2"])
+        self.assertEqual(pending[0].content[DATA_DIR]["arguments"], ["arg1", "arg2"])
     
     def test_request_assistance(self):
         """Test de la demande d'assistance."""
@@ -468,7 +471,7 @@ class TestOperationalAdapter(unittest.TestCase):
                     sender_level=AgentLevel.TACTICAL,
                     content={
                         "status": "success",
-                        "data": {"solution": "Use pattern X", "example": "example data"}
+                        DATA_DIR: {"solution": "Use pattern X", "example": "example data"}
                     },
                     recipient=request.sender,
                     channel=ChannelType.HIERARCHICAL.value,
@@ -521,8 +524,8 @@ class TestOperationalAdapter(unittest.TestCase):
         self.assertEqual(pending[0].type, MessageType.INFORMATION)
         self.assertEqual(pending[0].sender, "operational-agent-1")
         self.assertEqual(pending[0].content["info_type"], "status_update")
-        self.assertEqual(pending[0].content["data"]["status"], "in_progress")
-        self.assertEqual(pending[0].content["data"]["progress"], 75)
+        self.assertEqual(pending[0].content[DATA_DIR]["status"], "in_progress")
+        self.assertEqual(pending[0].content[DATA_DIR]["progress"], 75)
     
     def test_access_shared_data(self):
         """Test de l'accès aux données partagées."""
@@ -588,7 +591,7 @@ class TestAsyncAdapters(unittest.IsolatedAsyncioTestCase):
                     sender_level=AgentLevel.STRATEGIC,
                     content={
                         "status": "success",
-                        "data": {"recommendation": "Focus on fallacies", "priority": "high"}
+                        DATA_DIR: {"recommendation": "Focus on fallacies", "priority": "high"}
                     },
                     recipient=request.sender,
                     channel=ChannelType.HIERARCHICAL.value,
@@ -636,7 +639,7 @@ class TestAsyncAdapters(unittest.IsolatedAsyncioTestCase):
                     sender_level=AgentLevel.TACTICAL,
                     content={
                         "status": "success",
-                        "data": {"solution": "Use pattern X", "example": "example data"}
+                        DATA_DIR: {"solution": "Use pattern X", "example": "example data"}
                     },
                     recipient=request.sender,
                     channel=ChannelType.HIERARCHICAL.value,

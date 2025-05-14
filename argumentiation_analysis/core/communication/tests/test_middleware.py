@@ -11,6 +11,9 @@ from argumentiation_analysis.core.communication.message import Message, MessageT
 from argumentiation_analysis.core.communication.channel_interface import Channel, ChannelType
 from argumentiation_analysis.core.communication.middleware import MessageMiddleware
 
+from argumentiation_analysis.paths import DATA_DIR
+
+
 
 class MockChannel(Channel):
     """Canal simulé pour les tests."""
@@ -70,7 +73,7 @@ class TestMessageMiddleware(unittest.TestCase):
         # Enregistrer des canaux simulés
         self.hierarchical_channel = MockChannel("hierarchical", ChannelType.HIERARCHICAL)
         self.collaboration_channel = MockChannel("collaboration", ChannelType.COLLABORATION)
-        self.data_channel = MockChannel("data", ChannelType.DATA)
+        self.data_channel = MockChannel(DATA_DIR, ChannelType.DATA)
         
         self.middleware.register_channel(self.hierarchical_channel)
         self.middleware.register_channel(self.collaboration_channel)
@@ -140,7 +143,7 @@ class TestMessageMiddleware(unittest.TestCase):
             message_type=MessageType.INFORMATION,
             sender="operational-agent-1",
             sender_level=AgentLevel.OPERATIONAL,
-            content={"info_type": "analysis_result", "data": {"result": "some data"}},
+            content={"info_type": "analysis_result", DATA_DIR: {"result": "some data"}},
             recipient="tactical-agent-1"
         )
         
@@ -194,7 +197,7 @@ class TestMessageMiddleware(unittest.TestCase):
                 message_type=MessageType.INFORMATION,
                 sender="operational-agent-1",
                 sender_level=AgentLevel.OPERATIONAL,
-                content={"info_type": "task_result", "data": {"result": "some data"}},
+                content={"info_type": "task_result", DATA_DIR: {"result": "some data"}},
                 recipient=recipient,
                 priority=MessagePriority.NORMAL
             )

@@ -252,3 +252,57 @@ class ExtractAgentPlugin:
     def get_extract_results(self) -> List[Dict[str, Any]]:
         """Récupère les résultats des extractions effectuées."""
         return self.extract_results
+
+
+class ExtractDefinition:
+    """Classe représentant la définition d'une extraction."""
+    
+    def __init__(
+        self,
+        source_name: str,
+        extract_name: str,
+        start_marker: str,
+        end_marker: str,
+        template_start: str = "",
+        description: str = ""
+    ):
+        """
+        Initialise une définition d'extraction.
+        
+        Args:
+            source_name: Nom de la source
+            extract_name: Nom de l'extrait
+            start_marker: Marqueur de début
+            end_marker: Marqueur de fin
+            template_start: Template pour le marqueur de début
+            description: Description de l'extraction
+        """
+        self.source_name = source_name
+        self.extract_name = extract_name
+        self.start_marker = start_marker
+        self.end_marker = end_marker
+        self.template_start = template_start
+        self.description = description
+    
+    def to_dict(self) -> Dict[str, Any]:
+        """Convertit la définition en dictionnaire."""
+        return {
+            "source_name": self.source_name,
+            "extract_name": self.extract_name,
+            "start_marker": self.start_marker,
+            "end_marker": self.end_marker,
+            "template_start": self.template_start,
+            "description": self.description
+        }
+    
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> 'ExtractDefinition':
+        """Crée une définition à partir d'un dictionnaire."""
+        return cls(
+            source_name=data.get("source_name", ""),
+            extract_name=data.get("extract_name", ""),
+            start_marker=data.get("start_marker", ""),
+            end_marker=data.get("end_marker", ""),
+            template_start=data.get("template_start", ""),
+            description=data.get("description", "")
+        )

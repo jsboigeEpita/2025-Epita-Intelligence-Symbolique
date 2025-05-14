@@ -8,6 +8,9 @@ from argumentiation_analysis.orchestration.hierarchical.operational.manager impo
 from argumentiation_analysis.orchestration.hierarchical.interfaces.strategic_tactical import StrategicTacticalInterface
 from argumentiation_analysis.orchestration.hierarchical.interfaces.tactical_operational import TacticalOperationalInterface
 
+from argumentiation_analysis.paths import RESULTS_DIR
+
+
 async def run_complex_hierarchy():
     """
     Exemple complexe d'architecture hiérarchique à trois niveaux
@@ -77,7 +80,7 @@ async def run_complex_hierarchy():
         "text_analyzed": text,
         "strategic_plan": strategic_plan,
         "tactical_plan": tactical_plan,
-        "results": results,
+        RESULTS_DIR: results,
         "summary": {
             "total_arguments_identified": len(results.get("arguments", [])),
             "fallacies_detected": len(results.get("fallacies", [])),

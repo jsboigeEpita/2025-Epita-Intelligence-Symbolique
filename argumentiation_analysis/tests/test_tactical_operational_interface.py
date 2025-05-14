@@ -10,6 +10,9 @@ from datetime import datetime
 from argumentiation_analysis.orchestration.hierarchical.tactical.state import TacticalState
 from argumentiation_analysis.orchestration.hierarchical.interfaces.tactical_operational import TacticalOperationalInterface
 from argumentiation_analysis.core.communication import (
+
+from argumentiation_analysis.paths import DATA_DIR, RESULTS_DIR
+
     MessageMiddleware, TacticalAdapter, OperationalAdapter,
     ChannelType, MessagePriority, Message, MessageType, AgentLevel
 )
@@ -399,7 +402,7 @@ class TestTacticalOperationalInterface(unittest.TestCase):
         
         # Configurer le mock pour receive_task_result
         mock_message = MagicMock(spec=Message)
-        mock_message.content = {"data": {}}
+        mock_message.content = {DATA_DIR: {}}
         mock_message.sender = "operational_agent"
         self.mock_tactical_adapter.receive_task_result.return_value = mock_message
         
@@ -416,7 +419,7 @@ class TestTacticalOperationalInterface(unittest.TestCase):
         self.assertIsInstance(result, dict)
         self.assertIn("task_id", result)
         self.assertIn("completion_status", result)
-        self.assertIn("results", result)
+        self.assertIn(RESULTS_DIR, result)
         self.assertIn("execution_metrics", result)
         self.assertIn("issues", result)
         
@@ -427,7 +430,7 @@ class TestTacticalOperationalInterface(unittest.TestCase):
         self.assertEqual(result["completion_status"], "completed")
         
         # Vérifier que les résultats sont correctement traduits
-        self.assertIn("identified_arguments", result["results"])
+        self.assertIn("identified_arguments", result[RESULTS_DIR])
         
         # Vérifier que les métriques sont correctement traduites
         self.assertIn("processing_time", result["execution_metrics"])

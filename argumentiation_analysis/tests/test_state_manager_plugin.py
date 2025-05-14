@@ -5,8 +5,8 @@ Tests unitaires pour le module state_manager_plugin.
 import unittest
 import json
 from unittest.mock import MagicMock, patch
-from core.state_manager_plugin import StateManagerPlugin
-from core.shared_state import RhetoricalAnalysisState
+from argumentiation_analysis.core.state_manager_plugin import StateManagerPlugin
+from argumentiation_analysis.core.shared_state import RhetoricalAnalysisState
 
 
 class TestStateManagerPlugin(unittest.TestCase):

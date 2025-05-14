@@ -13,6 +13,9 @@ import uuid
 from argumentiation_analysis.orchestration.hierarchical.tactical.state import TacticalState
 from argumentiation_analysis.orchestration.hierarchical.operational.state import OperationalState
 from argumentiation_analysis.core.communication import (
+
+from argumentiation_analysis.paths import DATA_DIR, RESULTS_DIR
+
     MessageMiddleware, TacticalAdapter, OperationalAdapter,
     ChannelType, MessagePriority, Message, MessageType, AgentLevel
 )
@@ -739,7 +742,7 @@ class TacticalOperationalInterface:
         tactical_result = {
             "task_id": tactical_task_id,
             "completion_status": result.get("status", "completed"),
-            "results": self._translate_outputs(outputs),
+            RESULTS_DIR: self._translate_outputs(outputs),
             "execution_metrics": self._translate_metrics(metrics),
             "issues": self._translate_issues(issues)
         }
@@ -752,10 +755,10 @@ class TacticalOperationalInterface:
         
         if pending_results:
             # Mettre à jour le résultat avec les informations reçues
-            result_content = pending_results.content.get("data", {})
+            result_content = pending_results.content.get(DATA_DIR, {})
             
             if "outputs" in result_content:
-                tactical_result["results"].update(self._translate_outputs(result_content["outputs"]))
+                tactical_result[RESULTS_DIR].update(self._translate_outputs(result_content["outputs"]))
             
             if "metrics" in result_content:
                 tactical_result["execution_metrics"].update(self._translate_metrics(result_content["metrics"]))

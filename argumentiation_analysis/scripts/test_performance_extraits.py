@@ -38,7 +38,7 @@ logging.basicConfig(
 logger = logging.getLogger("TestPerformanceExtraits")
 
 # Créer un répertoire pour les résultats
-RESULTS_DIR = Path(root_dir) / "results" / "performance_tests"
+RESULTS_DIR = Path(root_dir) / RESULTS_DIR / "performance_tests"
 RESULTS_DIR.mkdir(exist_ok=True, parents=True)
 
 # Chemins des extraits à tester
@@ -111,7 +111,7 @@ async def setup_informal_agent(llm_service):
     Configure et retourne l'agent Informel pour les tests.
     """
     from semantic_kernel import Kernel
-    from agents.informal.informal_definitions import setup_informal_kernel
+    from argumentiation_analysis.agents.informal.informal_definitions import setup_informal_kernel
     
     # Créer un nouveau kernel
     kernel = Kernel()
@@ -322,6 +322,9 @@ async def run_performance_test(extrait):
     
     # Création du Service LLM
     from argumentiation_analysis.core.llm_service import create_llm_service
+
+from argumentiation_analysis.paths import RESULTS_DIR
+
     llm_service = create_llm_service()
     
     if not llm_service:

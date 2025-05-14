@@ -289,14 +289,14 @@ class HierarchicalOrchestrator:
         # Extraire les résultats des tâches
         task_results = {}
         for task_id, task in self.tactical_state.get_completed_tasks().items():
-            task_results[task_id] = task.get("results", {})
+            task_results[task_id] = task.get(RESULTS_DIR, {})
         
         # Créer le rapport final
         final_report = {
             "timestamp": datetime.now().isoformat(),
             "overall_progress": strategic_report["metrics"]["progress"],
             "quality_score": strategic_report["metrics"]["quality_indicators"]["quality_score"],
-            "results": {
+            RESULTS_DIR: {
                 "arguments": self._extract_arguments(task_results),
                 "fallacies": self._extract_fallacies(task_results),
                 "formal_analyses": self._extract_formal_analyses(task_results),
@@ -420,6 +420,9 @@ async def main():
     # Afficher les résultats
     if args.output:
         import json
+
+from argumentiation_analysis.paths import RESULTS_DIR
+
         try:
             with open(args.output, "w", encoding="utf-8") as f:
                 json.dump(results, f, indent=2, ensure_ascii=False)
@@ -433,24 +436,24 @@ async def main():
         print(f"Score de qualité: {results['quality_score'] * 100:.1f}%")
         
         print("\nArguments identifiés:")
-        for arg in results["results"]["arguments"]:
+        for arg in results[RESULTS_DIR]["arguments"]:
             print(f"- {arg['id']}: {arg['conclusion']} (confiance: {arg['confidence'] * 100:.1f}%)")
         
         print("\nSophismes détectés:")
-        for fallacy in results["results"]["fallacies"]:
+        for fallacy in results[RESULTS_DIR]["fallacies"]:
             print(f"- {fallacy['id']}: {fallacy['type']} (confiance: {fallacy['confidence'] * 100:.1f}%)")
             print(f"  Segment: {fallacy['segment']}")
             print(f"  Explication: {fallacy['explanation']}")
         
         print("\nAnalyses formelles:")
-        for analysis in results["results"]["formal_analyses"]:
+        for analysis in results[RESULTS_DIR]["formal_analyses"]:
             validity = "valide" if analysis["is_valid"] else "invalide"
             print(f"- Argument {analysis['argument_id']}: {validity}")
             print(f"  Formalisation: {analysis['formalization']}")
             print(f"  Explication: {analysis['explanation']}")
         
         print("\nÉvaluation de la cohérence:")
-        coherence = results["results"]["coherence_evaluation"]
+        coherence = results[RESULTS_DIR]["coherence_evaluation"]
         print(f"Score de cohérence: {coherence['score'] * 100:.1f}%")
         print(f"Explication: {coherence['explanation']}")
         

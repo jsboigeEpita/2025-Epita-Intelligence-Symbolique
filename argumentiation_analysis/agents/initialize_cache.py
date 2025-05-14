@@ -24,8 +24,8 @@ sys.path.append(str(parent_dir.parent))
 load_dotenv(override=True)
 
 # Importer les modules nécessaires
-from ui.app import initialize_text_cache
-from ui.utils import get_cache_filepath
+from argumentiation_analysis.ui.app import initialize_text_cache
+from argumentiation_analysis.ui.utils import get_cache_filepath
 
 if __name__ == "__main__":
     print("\n=== Initialisation du cache des textes ===\n")

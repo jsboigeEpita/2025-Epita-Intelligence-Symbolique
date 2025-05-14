@@ -10,12 +10,15 @@ import abc
 from typing import Dict, Any, Optional, List, Callable, Union
 from .message import Message, MessageType, MessagePriority
 
+from argumentiation_analysis.paths import DATA_DIR
+
+
 
 class ChannelType(enum.Enum):
     """Types de canaux supportés par le système."""
     HIERARCHICAL = "hierarchical"  # Communication verticale entre niveaux hiérarchiques
     COLLABORATION = "collaboration"  # Communication horizontale entre agents de même niveau
-    DATA = "data"  # Transfert de données volumineuses
+    DATA = DATA_DIR  # Transfert de données volumineuses
     NEGOTIATION = "negotiation"  # Résolution de conflits et allocation de ressources
     FEEDBACK = "feedback"  # Remontée d'informations et suggestions
     SYSTEM = "system"  # Messages de contrôle du système

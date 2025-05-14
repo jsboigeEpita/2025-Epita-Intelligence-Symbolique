@@ -16,7 +16,7 @@ def main():
     """Fonction principale pour lancer l'éditeur de marqueurs."""
     # Importer le module depuis son nouvel emplacement
     try:
-        from ui.extract_editor.extract_marker_editor import main as editor_main
+        from argumentiation_analysis.ui.extract_editor.extract_marker_editor import main as editor_main
         print("✅ Module extract_marker_editor importé avec succès.")
         
         # Lancer l'interface

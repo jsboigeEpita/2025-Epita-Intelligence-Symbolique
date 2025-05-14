@@ -22,18 +22,34 @@ Cette année, contrairement au cours précédent de programmation par contrainte
 Le projet est organisé en plusieurs modules principaux :
 
 - **[`argumentiation_analysis/`](./argumentiation_analysis/README.md)** : Dossier principal contenant l'infrastructure d'analyse argumentative multi-agents.
-  - **[`agents/`](./argumentiation_analysis/agents/README.md)** : Agents spécialisés pour l'analyse (PM, Informal, PL, Extract).
+  - **[`agents/`](./argumentiation_analysis/agents/README.md)** : Agents spécialisés pour l'analyse.
+    - **`core/`** : Implémentations des agents spécialistes (PM, Informal, PL, Extract).
+    - **`extract/`** : Module de redirection vers agents.core.extract.
+    - **`tools/`** : Outils utilisés par les agents.
+  - **[`config/`](./argumentiation_analysis/config/)** : Fichiers de configuration du projet.
   - **[`core/`](./argumentiation_analysis/core/README.md)** : Composants fondamentaux partagés (État, LLM, JVM).
+    - **`communication/`** : Système de communication entre agents.
+  - **[`data/`](./argumentiation_analysis/data/)** : Données et ressources utilisées par le projet.
+  - **[`libs/`](./argumentiation_analysis/libs/)** : Bibliothèques externes et natives.
+  - **[`models/`](./argumentiation_analysis/models/)** : Modèles de données du projet.
   - **[`orchestration/`](./argumentiation_analysis/orchestration/README.md)** : Logique d'exécution de la conversation.
+  - **[`results/`](./argumentiation_analysis/results/)** : Résultats des analyses.
+  - **[`services/`](./argumentiation_analysis/services/README.md)** : Services partagés (cache, crypto, extraction, etc.).
   - **[`ui/`](./argumentiation_analysis/ui/README.md)** : Interface utilisateur pour la configuration des analyses.
+    - **`extract_editor/`** : Éditeur de marqueurs d'extraits.
   - **[`utils/`](./argumentiation_analysis/utils/README.md)** : Utilitaires généraux et outils de réparation d'extraits.
+    - **`extract_repair/`** : Outils de réparation des extraits.
   - **[`tests/`](./argumentiation_analysis/tests/)** : Tests unitaires et d'intégration.
 
 - **[`scripts/`](./scripts/)** : Scripts utilitaires pour le projet.
   - **[`cleanup/`](./scripts/cleanup/README.md)** : Scripts de nettoyage du projet.
   - **[`execution/`](./scripts/execution/README.md)** : Scripts d'exécution des fonctionnalités principales.
+  - **[`utils/`](./scripts/utils/README.md)** : Utilitaires pour les scripts.
+  - **[`validation/`](./scripts/validation/README.md)** : Scripts de validation du projet.
 
 - **[`docs/`](./docs/README.md)** : Documentation supplémentaire du projet.
+  - **[`conventions_importation.md`](./docs/conventions_importation.md)** : Conventions d'importation et mécanismes de redirection.
+  - **[`structure_projet.md`](./docs/structure_projet.md)** : Description détaillée de la structure du projet.
 
 - **[`examples/`](./examples/README.md)** : Exemples de textes et données pour les tests.
 

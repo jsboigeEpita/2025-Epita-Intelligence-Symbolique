@@ -38,6 +38,9 @@ logger = logging.getLogger("InformalDefinitions")
 # Import des prompts
 from .prompts import prompt_identify_args_v8, prompt_analyze_fallacies_v1, prompt_justify_fallacy_attribution_v1, prompt_analyze_fallacies_v1, prompt_justify_fallacy_attribution_v1
 
+from argumentiation_analysis.paths import DATA_DIR
+
+
 # --- Classe InformalAnalysisPlugin (V12) ---
 class InformalAnalysisPlugin:
     """
@@ -57,7 +60,7 @@ class InformalAnalysisPlugin:
         
         # Constantes pour le CSV - Utilisation du chemin fourni par l'utilitaire de lazy loading
         self.FALLACY_CSV_URL = "https://raw.githubusercontent.com/ArgumentumGames/Argumentum/master/Cards/Fallacies/Argumentum%20Fallacies%20-%20Taxonomy.csv"
-        self.DATA_DIR = Path(__file__).parent.parent.parent.parent / "data"
+        self.DATA_DIR = Path(__file__).parent.parent.parent.parent / DATA_DIR
         self.FALLACY_CSV_LOCAL_PATH = self.DATA_DIR / "argumentum_fallacies_taxonomy.csv"
         
         # Cache pour le DataFrame de taxonomie

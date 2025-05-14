@@ -8,7 +8,7 @@ import sys
 import tempfile
 from unittest.mock import patch, MagicMock
 from pathlib import Path
-from utils.system_utils import ensure_directory_exists, get_project_root, is_running_in_notebook
+from argumentiation_analysis.utils.system_utils import ensure_directory_exists, get_project_root, is_running_in_notebook
 from tests.async_test_case import AsyncTestCase
 
 

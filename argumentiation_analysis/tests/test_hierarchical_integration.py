@@ -28,6 +28,9 @@ from argumentiation_analysis.orchestration.hierarchical.operational.adapters.pl_
 
 from argumentiation_analysis.tests.async_test_case import AsyncTestCase
 
+from argumentiation_analysis.paths import RESULTS_DIR
+
+
 
 class TestHierarchicalIntegration(AsyncTestCase):
     """Tests d'intégration pour l'architecture hiérarchique à trois niveaux."""
@@ -314,7 +317,7 @@ class TestHierarchicalIntegration(AsyncTestCase):
         for result in tactical_results:
             self.assertIn("task_id", result)
             self.assertIn("completion_status", result)
-            self.assertIn("results", result)
+            self.assertIn(RESULTS_DIR, result)
             self.assertIn("execution_metrics", result)
         
         # 8. Créer un rapport tactique

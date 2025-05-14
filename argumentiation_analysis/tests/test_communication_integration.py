@@ -23,6 +23,9 @@ from argumentiation_analysis.core.communication.strategic_adapter import Strateg
 from argumentiation_analysis.core.communication.tactical_adapter import TacticalAdapter
 from argumentiation_analysis.core.communication.operational_adapter import OperationalAdapter
 
+from argumentiation_analysis.paths import DATA_DIR
+
+
 
 class TestCommunicationIntegration(unittest.TestCase):
     """Tests d'intégration pour le système de communication multi-canal."""
@@ -35,7 +38,7 @@ class TestCommunicationIntegration(unittest.TestCase):
         # Enregistrer les canaux
         self.hierarchical_channel = HierarchicalChannel("hierarchical")
         self.collaboration_channel = CollaborationChannel("collaboration")
-        self.data_channel = DataChannel("data")
+        self.data_channel = DataChannel(DATA_DIR)
         
         self.middleware.register_channel(self.hierarchical_channel)
         self.middleware.register_channel(self.collaboration_channel)
@@ -89,7 +92,7 @@ class TestCommunicationIntegration(unittest.TestCase):
         self.assertIsNotNone(report)
         self.assertEqual(report.sender, "tactical-agent-1")
         self.assertEqual(report.content["report_type"], "status_update")
-        self.assertEqual(report.content["data"]["completion"], 50)
+        self.assertEqual(report.content[DATA_DIR]["completion"], 50)
         
         # Attendre que le thread se termine
         tactical_thread.join()
@@ -134,7 +137,7 @@ class TestCommunicationIntegration(unittest.TestCase):
         self.assertIsNotNone(result)
         self.assertEqual(result.sender, "operational-agent-1")
         self.assertEqual(result.content["info_type"], "task_result")
-        self.assertEqual(result.content["data"]["arguments"], ["arg1", "arg2"])
+        self.assertEqual(result.content[DATA_DIR]["arguments"], ["arg1", "arg2"])
         
         # Attendre que le thread se termine
         operational_thread.join()
@@ -157,7 +160,7 @@ class TestCommunicationIntegration(unittest.TestCase):
             
             # Créer une réponse
             response = request.create_response(
-                content={"status": "success", "data": {"solution": "Use pattern X"}}
+                content={"status": "success", DATA_DIR: {"solution": "Use pattern X"}}
             )
             response.sender = "tactical-agent-2"
             response.sender_level = AgentLevel.TACTICAL
@@ -208,7 +211,7 @@ class TestCommunicationIntegration(unittest.TestCase):
             topic_id="events.system",
             sender="system",
             sender_level=AgentLevel.SYSTEM,
-            content={"event_type": "resource_update", "data": {"cpu_available": 8}},
+            content={"event_type": "resource_update", DATA_DIR: {"cpu_available": 8}},
             priority=MessagePriority.NORMAL
         )
         
@@ -218,7 +221,7 @@ class TestCommunicationIntegration(unittest.TestCase):
         # Vérifier que le callback a été appelé
         callback.assert_called_once()
         self.assertEqual(callback.call_args[0][0].content["event_type"], "resource_update")
-        self.assertEqual(callback.call_args[0][0].content["data"]["cpu_available"], 8)
+        self.assertEqual(callback.call_args[0][0].content[DATA_DIR]["cpu_available"], 8)
     
     def test_data_sharing(self):
         """Test du partage de données."""
@@ -310,7 +313,7 @@ class TestCommunicationIntegration(unittest.TestCase):
             
             # Vérifier que la mise à jour de statut a été reçue
             self.assertIsNotNone(status_update)
-            self.assertEqual(status_update.content["data"]["status"], "in_progress")
+            self.assertEqual(status_update.content[DATA_DIR]["status"], "in_progress")
             
             # Recevoir le résultat
             result = self.tactical_adapter.receive_task_result(timeout=2.0)
@@ -348,8 +351,8 @@ class TestCommunicationIntegration(unittest.TestCase):
         # Vérifier que le rapport a été reçu
         self.assertIsNotNone(report)
         self.assertEqual(report.content["report_type"], "analysis_complete")
-        self.assertEqual(report.content["data"]["text_id"], "text-123")
-        self.assertEqual(report.content["data"]["arguments"], ["arg1", "arg2"])
+        self.assertEqual(report.content[DATA_DIR]["text_id"], "text-123")
+        self.assertEqual(report.content[DATA_DIR]["arguments"], ["arg1", "arg2"])
         
         # Attendre que les threads se terminent
         operational_thread.join()
@@ -367,7 +370,7 @@ class TestAsyncCommunicationIntegration(unittest.IsolatedAsyncioTestCase):
         # Enregistrer les canaux
         self.hierarchical_channel = HierarchicalChannel("hierarchical")
         self.collaboration_channel = CollaborationChannel("collaboration")
-        self.data_channel = DataChannel("data")
+        self.data_channel = DataChannel(DATA_DIR)
         
         self.middleware.register_channel(self.hierarchical_channel)
         self.middleware.register_channel(self.collaboration_channel)
@@ -399,7 +402,7 @@ class TestAsyncCommunicationIntegration(unittest.IsolatedAsyncioTestCase):
             
             # Créer une réponse
             response = request.create_response(
-                content={"status": "success", "data": {"solution": "Use pattern X"}}
+                content={"status": "success", DATA_DIR: {"solution": "Use pattern X"}}
             )
             response.sender = "tactical-agent-2"
             response.sender_level = AgentLevel.TACTICAL
@@ -445,7 +448,7 @@ class TestAsyncCommunicationIntegration(unittest.IsolatedAsyncioTestCase):
                 if request:
                     # Créer une réponse
                     response = request.create_response(
-                        content={"status": "success", "data": {"request_id": request.id}}
+                        content={"status": "success", DATA_DIR: {"request_id": request.id}}
                     )
                     response.sender = "tactical-agent-2"
                     response.sender_level = AgentLevel.TACTICAL

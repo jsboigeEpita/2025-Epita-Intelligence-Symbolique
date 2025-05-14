@@ -16,6 +16,9 @@ from argumentiation_analysis.core.communication.channel_interface import Channel
 from argumentiation_analysis.core.communication.agent_adapter import AgentAdapter
 from argumentiation_analysis.core.communication.message import Message, MessageType, MessagePriority, AgentLevel
 
+from argumentiation_analysis.paths import DATA_DIR
+
+
 
 # 1. Définition d'un nouveau type de message pour les alertes
 class ExtendedMessageType(Enum):
@@ -289,7 +292,7 @@ class VisualizationAdapter(AgentAdapter):
         content = {
             "info_type": "visualization",
             "visualization_type": visualization_type,
-            "data": data
+            DATA_DIR: data
         }
         
         # Préparer les métadonnées

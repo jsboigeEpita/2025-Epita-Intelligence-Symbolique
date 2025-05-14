@@ -9,6 +9,9 @@ import uuid
 
 from argumentiation_analysis.orchestration.hierarchical.tactical.state import TacticalState
 from argumentiation_analysis.core.communication import (
+
+from argumentiation_analysis.paths import RESULTS_DIR
+
     MessageMiddleware, TacticalAdapter, OperationalAdapter,
     ChannelType, MessagePriority, Message, MessageType, AgentLevel
 )
@@ -577,7 +580,7 @@ class TaskCoordinator:
                     content={
                         "objective_id": objective_id,
                         "status": "completed",
-                        "results": self.state.get_objective_results(objective_id)
+                        RESULTS_DIR: self.state.get_objective_results(objective_id)
                     },
                     recipient_id="strategic_manager",
                     priority=MessagePriority.HIGH

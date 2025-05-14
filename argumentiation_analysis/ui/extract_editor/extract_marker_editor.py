@@ -44,16 +44,16 @@ try:
 except ImportError as e:
     # Fallback pour les imports absolus
     try:
-        from ui.config import ENCRYPTION_KEY, CONFIG_FILE, CONFIG_FILE_JSON, CACHE_DIR
-        from ui.extract_utils import (
+        from argumentiation_analysis.ui.config import ENCRYPTION_KEY, CONFIG_FILE, CONFIG_FILE_JSON, CACHE_DIR
+        from argumentiation_analysis.ui.extract_utils import (
             load_source_text, extract_text_with_markers, find_similar_text,
             highlight_text, search_in_text, highlight_search_results,
             load_extract_definitions_safely, save_extract_definitions_safely,
             export_definitions_to_json, import_definitions_from_json
         )
-        from core.llm_service import create_llm_service
+        from argumentiation_analysis.core.llm_service import create_llm_service
         # Import de l'agent d'extraction
-        from agents.core.extract.extract_agent import setup_extract_agent
+        from argumentiation_analysis.agents.core.extract.extract_agent import setup_extract_agent
         config_import_success = True
     except ImportError as e:
         config_import_success = False

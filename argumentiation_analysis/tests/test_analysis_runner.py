@@ -7,9 +7,9 @@ from unittest.mock import MagicMock, patch, AsyncMock
 import asyncio
 import semantic_kernel as sk
 from semantic_kernel.agents import ChatCompletionAgent, AgentGroupChat
-from orchestration.analysis_runner import run_analysis_conversation
-from core.shared_state import RhetoricalAnalysisState
-from core.state_manager_plugin import StateManagerPlugin
+from argumentiation_analysis.orchestration.analysis_runner import run_analysis_conversation
+from argumentiation_analysis.core.shared_state import RhetoricalAnalysisState
+from argumentiation_analysis.core.state_manager_plugin import StateManagerPlugin
 from tests.async_test_case import AsyncTestCase
 
 

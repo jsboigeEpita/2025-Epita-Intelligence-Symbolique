@@ -7,8 +7,8 @@ from unittest.mock import MagicMock, AsyncMock, patch
 import asyncio
 from semantic_kernel.agents import Agent
 from semantic_kernel.contents import ChatMessageContent, AuthorRole
-from core.strategies import SimpleTerminationStrategy, DelegatingSelectionStrategy, BalancedParticipationStrategy
-from core.shared_state import RhetoricalAnalysisState
+from argumentiation_analysis.core.strategies import SimpleTerminationStrategy, DelegatingSelectionStrategy, BalancedParticipationStrategy
+from argumentiation_analysis.core.shared_state import RhetoricalAnalysisState
 from tests.async_test_case import AsyncTestCase
 
 

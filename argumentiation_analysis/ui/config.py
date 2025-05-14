@@ -8,6 +8,7 @@ from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 from cryptography.hazmat.backends import default_backend
 import base64
 import json
+from argumentiation_analysis.paths import DATA_DIR
 
 config_logger = logging.getLogger("App.UI.Config")
 if not config_logger.handlers and not config_logger.propagate:
@@ -45,7 +46,7 @@ JINA_READER_PREFIX = "https://r.jina.ai/"
 # Chemins relatifs au projet
 _project_root = Path(__file__).parent.parent # Remonte de ui/ vers la racine
 CACHE_DIR = _project_root / "text_cache"
-CONFIG_DIR = _project_root / "data" # Fichier de config UI dans data/
+CONFIG_DIR = _project_root / DATA_DIR # Fichier de config UI dans data/
 CONFIG_FILE_JSON = CONFIG_DIR / "extract_sources.json" # Chemin vers le fichier JSON non chiffré
 CONFIG_FILE_ENC = CONFIG_DIR / "extract_sources.json.gz.enc" # Chemin vers le futur fichier chiffré
 CONFIG_FILE = CONFIG_FILE_ENC  # Variable utilisée par app.py pour charger les définitions

@@ -26,7 +26,7 @@ except ImportError:
     from services.extract_service import ExtractService
     from services.fetch_service import FetchService
     from models.extract_definition import ExtractDefinitions
-    from ui.config import ENCRYPTION_KEY, CONFIG_FILE, CONFIG_FILE_JSON, CACHE_DIR
+    from argumentiation_analysis.ui.config import ENCRYPTION_KEY, CONFIG_FILE, CONFIG_FILE_JSON, CACHE_DIR
     from services.crypto_service import CryptoService
 
 # Configuration du logging
@@ -44,7 +44,7 @@ try:
 except ImportError:
     # Import absolu
     from services.cache_service import CacheService
-    from ui.config import CACHE_DIR
+    from argumentiation_analysis.ui.config import CACHE_DIR
     cache_service = CacheService(CACHE_DIR)
 
 fetch_service = FetchService(cache_service)

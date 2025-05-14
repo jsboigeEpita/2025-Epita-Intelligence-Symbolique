@@ -29,6 +29,9 @@ from argumentiation_analysis.agents.tools.analysis.new.argument_coherence_evalua
 from argumentiation_analysis.agents.tools.analysis.new.semantic_argument_analyzer import SemanticArgumentAnalyzer
 from argumentiation_analysis.agents.tools.analysis.new.contextual_fallacy_detector import ContextualFallacyDetector
 
+from argumentiation_analysis.paths import RESULTS_DIR
+
+
 
 class RhetoricalToolsAdapter(OperationalAgent):
     """
@@ -472,7 +475,7 @@ class RhetoricalToolsAdapter(OperationalAgent):
             "tactical_task_id": task.get("tactical_task_id"),
             "status": "completed_with_issues" if issues else "completed",
             "outputs": {
-                "results": results
+                RESULTS_DIR: results
             },
             "metrics": metrics,
             "issues": issues

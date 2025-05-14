@@ -33,6 +33,9 @@ try:
     import transformers
     from transformers import AutoTokenizer, AutoModelForSequenceClassification, pipeline
     from sklearn.metrics.pairwise import cosine_similarity
+
+from argumentiation_analysis.paths import DATA_DIR
+
     HAS_TRANSFORMERS = True
 except ImportError:
     HAS_TRANSFORMERS = False
@@ -128,7 +131,7 @@ class EnhancedContextualFallacyAnalyzer(BaseAnalyzer):
         }
         
         try:
-            learning_data_path = Path(current_dir) / "data" / "learning_data.json"
+            learning_data_path = Path(current_dir) / DATA_DIR / "learning_data.json"
             if learning_data_path.exists():
                 with open(learning_data_path, "r", encoding="utf-8") as f:
                     learning_data = json.load(f)
@@ -143,7 +146,7 @@ class EnhancedContextualFallacyAnalyzer(BaseAnalyzer):
         Sauvegarde les données d'apprentissage.
         """
         try:
-            learning_data_dir = Path(current_dir) / "data"
+            learning_data_dir = Path(current_dir) / DATA_DIR
             learning_data_dir.mkdir(exist_ok=True, parents=True)
             
             learning_data_path = learning_data_dir / "learning_data.json"

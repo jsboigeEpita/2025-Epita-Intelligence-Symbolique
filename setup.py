@@ -1,0 +1,21 @@
+from setuptools import setup, find_packages
+
+setup(
+    name="argumentiation_analysis",
+    version="0.1.0",
+    packages=find_packages(),
+    install_requires=[
+        "semantic-kernel",
+        "pytest",
+        "pytest-cov",
+        "pandas",
+        "numpy",
+        "matplotlib",
+        "jpype1",
+        "cryptography",
+    ],
+    python_requires=">=3.8",
+    description="Système d'analyse argumentative",
+    author="EPITA",
+    author_email="contact@epita.fr",
+)

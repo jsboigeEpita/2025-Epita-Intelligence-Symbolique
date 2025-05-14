@@ -11,7 +11,7 @@ from typing import List, Optional, Dict, Any, Union
 
 # Importer les composants UI depuis les autres modules .py
 from . import config as ui_config
-from . import utils as ui_utils
+from . import argumentiation_analysis.utils as ui_utils
 
 # Importer spécifiquement les fonctions/classes nécessaires des utils
 from .utils import (
@@ -22,7 +22,7 @@ from .utils import (
 from .config import ENCRYPTION_KEY, CONFIG_FILE, EXTRACT_SOURCES, DEFAULT_EXTRACT_SOURCES, TEMP_DOWNLOAD_DIR
 
 # Event loop pour Jupyter
-from jupyter_ui_poll import ui_events
+from jupyter_ui_poll import argumentiation_analysis.ui_events
 
 app_logger = logging.getLogger("App.UI.App")
 # Assurer un handler de base si non configuré globalement

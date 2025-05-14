@@ -13,6 +13,9 @@ import semantic_kernel as sk
 # Importer les prompts
 from .prompts import prompt_identify_args_v7
 
+from argumentiation_analysis.paths import DATA_DIR
+
+
 # Loggers
 logger = logging.getLogger("Orchestration.AgentInformal.Defs")
 plugin_logger = logging.getLogger("Orchestration.InformalAnalysisPlugin")
@@ -25,7 +28,7 @@ if not plugin_logger.handlers and not plugin_logger.propagate:
 # --- Constantes pour le CSV ---
 FALLACY_CSV_URL = "https://raw.githubusercontent.com/ArgumentumGames/Argumentum/master/Cards/Fallacies/Argumentum%20Fallacies%20-%20Taxonomy.csv"
 # Utiliser un chemin relatif au fichier courant pour data/
-DATA_DIR = pathlib.Path(__file__).parent.parent.parent / "data" # Remonte de informal/ et agents/ pour trouver data/
+DATA_DIR = pathlib.Path(__file__).parent.parent.parent / DATA_DIR # Remonte de informal/ et agents/ pour trouver data/
 FALLACY_CSV_LOCAL_PATH = DATA_DIR / "argumentum_fallacies_taxonomy.csv"
 ROOT_PK = 0
 

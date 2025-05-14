@@ -18,17 +18,17 @@ from semantic_kernel.connectors.ai.function_choice_behavior import FunctionChoic
 from semantic_kernel.functions.kernel_arguments import KernelArguments
 
 # Imports depuis les modules du projet
-from core.shared_state import RhetoricalAnalysisState
-from core.state_manager_plugin import StateManagerPlugin
-from core.strategies import SimpleTerminationStrategy, BalancedParticipationStrategy
+from argumentiation_analysis.core.shared_state import RhetoricalAnalysisState
+from argumentiation_analysis.core.state_manager_plugin import StateManagerPlugin
+from argumentiation_analysis.core.strategies import SimpleTerminationStrategy, BalancedParticipationStrategy
 # NOTE: create_llm_service n'est plus importé ici, le service est passé en argument
 
 # Imports des définitions d'agents (setup + instructions)
-from agents.core.pm.pm_definitions import setup_pm_kernel, PM_INSTRUCTIONS
-from agents.core.informal.informal_definitions import setup_informal_kernel, INFORMAL_AGENT_INSTRUCTIONS
-from agents.core.pl.pl_definitions import setup_pl_kernel, PL_AGENT_INSTRUCTIONS
-from agents.core.extract.extract_agent import setup_extract_agent
-from agents.core.extract.prompts import EXTRACT_AGENT_INSTRUCTIONS
+from argumentiation_analysis.agents.core.pm.pm_definitions import setup_pm_kernel, PM_INSTRUCTIONS
+from argumentiation_analysis.agents.core.informal.informal_definitions import setup_informal_kernel, INFORMAL_AGENT_INSTRUCTIONS
+from argumentiation_analysis.agents.core.pl.pl_definitions import setup_pl_kernel, PL_AGENT_INSTRUCTIONS
+from argumentiation_analysis.agents.core.extract.extract_agent import setup_extract_agent
+from argumentiation_analysis.agents.core.extract.prompts import EXTRACT_AGENT_INSTRUCTIONS
 
 # Logger principal pour cette fonction
 logger = logging.getLogger("Orchestration.Run")

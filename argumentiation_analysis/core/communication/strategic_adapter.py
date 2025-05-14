@@ -15,6 +15,9 @@ from .message import Message, MessageType, MessagePriority, AgentLevel
 from .channel_interface import ChannelType
 from .middleware import MessageMiddleware
 
+from argumentiation_analysis.paths import DATA_DIR
+
+
 
 class StrategicAdapter:
     """
@@ -117,7 +120,7 @@ class StrategicAdapter:
             content={
                 "info_type": "global_objective",
                 "objective_type": objective_type,
-                "data": content
+                DATA_DIR: content
             },
             recipient=None,  # Broadcast
             channel=ChannelType.HIERARCHICAL.value,
@@ -223,7 +226,7 @@ class StrategicAdapter:
             
             if response:
                 self.logger.info(f"Received response to {request_type} request from {recipient_id}")
-                return response.content.get("data")
+                return response.content.get(DATA_DIR)
             
             self.logger.warning(f"Request {request_type} to {recipient_id} timed out")
             return None
@@ -268,7 +271,7 @@ class StrategicAdapter:
             
             if response:
                 self.logger.info(f"Received response to {request_type} request from {recipient_id}")
-                return response.content.get("data")
+                return response.content.get(DATA_DIR)
             
             self.logger.warning(f"Request {request_type} to {recipient_id} timed out")
             return None
@@ -322,7 +325,7 @@ class StrategicAdapter:
             content={
                 "info_type": "collaboration",
                 "collaboration_type": collaboration_type,
-                "data": content
+                DATA_DIR: content
             },
             recipient=None,  # Destiné au groupe
             channel=ChannelType.COLLABORATION.value,
