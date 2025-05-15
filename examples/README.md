@@ -10,11 +10,10 @@ Exemple de texte contenant plusieurs sophismes (erreurs de raisonnement) sur le 
 
 **Description :**
 Ce texte est un exemple fictif d'argumentation contenant plusieurs sophismes courants, notamment :
-- Argument d'autorité
-- Pente glissante
-- Appel à la popularité
-- Corrélation impliquant causalité
-- Faux dilemme
+- Argument d'autorité : "Le professeur Dubois, éminent chercheur en informatique à l'Université de Paris, a récemment déclaré que..."
+- Pente glissante : "D'abord, les algorithmes prendront le contrôle de nos systèmes financiers. Ensuite, ils s'infiltreront dans nos infrastructures critiques..."
+- Appel à la popularité : "Un sondage récent montre que 78% des Français s'inquiètent des dangers potentiels de l'IA. Cette majorité écrasante prouve bien que la menace est réelle..."
+- Faux dilemme : "Il n'y a que deux options possibles : soit nous imposons immédiatement un moratoire complet sur le développement de l'IA, soit nous acceptons la fin de la civilisation humaine..."
 
 **Utilisation :**
 Ce texte peut être utilisé pour tester les capacités d'analyse argumentative du système, en particulier la détection de sophismes par l'agent Informal.
@@ -29,6 +28,91 @@ python -c "from argumentiation_analysis.agents.informal.informal_agent import In
                text = f.read(); \
            result = agent.analyze_informal_fallacies(text); \
            print(result)"
+```
+
+### 2. texte_sans_marqueurs.txt
+
+Texte informatif sur la pensée critique sans sophismes évidents.
+
+**Description :**
+Ce texte présente une structure claire et bien construite sur le thème de la pensée critique. Il est caractérisé par :
+- Une introduction claire du sujet
+- Des définitions précises
+- Des arguments logiques
+- Des recommandations pratiques
+- Une conclusion qui résume les points principaux
+
+**Utilisation :**
+Ce texte sert de "contrôle négatif" pour tester si l'agent peut correctement identifier l'absence de sophismes dans un texte bien construit. Il est particulièrement utile pour évaluer le taux de faux positifs du système.
+
+```bash
+# Exemple d'utilisation pour tester la précision du système
+python scripts/execution/run_analysis.py --file examples/texte_sans_marqueurs.txt --mode verification
+```
+
+### 3. article_scientifique.txt
+
+Article académique sur l'analyse d'arguments par NLP avec une structure formelle.
+
+**Description :**
+Cet article scientifique présente une structure formelle typique avec :
+- Un résumé (abstract)
+- Une introduction
+- Une méthodologie
+- Des résultats quantitatifs
+- Une discussion
+- Une conclusion
+
+Il contient des données chiffrées et des références à des travaux antérieurs, ce qui en fait un excellent exemple pour tester la capacité du système à analyser un discours technique et à distinguer entre affirmations factuelles et interprétations.
+
+**Utilisation :**
+Ce texte est idéal pour tester les capacités d'analyse structurelle et la compréhension des arguments basés sur des données.
+
+```bash
+# Exemple d'utilisation pour l'analyse structurelle
+python scripts/execution/run_analysis.py --file examples/article_scientifique.txt --mode structure
+```
+
+### 4. discours_politique.txt
+
+Discours politique avec une structure rhétorique claire.
+
+**Description :**
+Ce discours politique présente une structure rhétorique typique avec :
+- Une introduction qui établit le contact avec l'audience
+- Une présentation des enjeux
+- Une énumération de propositions concrètes
+- Une conclusion qui appelle à l'action
+
+Ce texte permet de tester la capacité de l'agent à analyser un discours persuasif qui utilise des techniques rhétoriques sans nécessairement tomber dans le sophisme.
+
+**Utilisation :**
+Particulièrement utile pour tester la distinction entre rhétorique légitime et sophismes.
+
+```bash
+# Exemple d'utilisation pour l'analyse rhétorique
+python scripts/execution/run_analysis.py --file examples/discours_politique.txt --mode rhetorique
+```
+
+### 5. discours_avec_template.txt
+
+Allocution présidentielle avec des marqueurs explicites de structure.
+
+**Description :**
+Cette allocution présidentielle est très structurée avec des marqueurs explicites :
+- Formule d'introduction protocolaire
+- Annonce explicite du plan ("J'aborderai trois points essentiels")
+- Marqueurs d'énumération clairs ("Premièrement", "Deuxièmement", "Troisièmement")
+- Conclusion formelle
+
+Ce texte permet de tester la capacité de l'agent à suivre une structure argumentative très explicite.
+
+**Utilisation :**
+Idéal pour tester les capacités d'extraction de structure argumentative du système.
+
+```bash
+# Exemple d'utilisation pour l'extraction de structure
+python scripts/execution/run_analysis.py --file examples/discours_avec_template.txt --mode extraction
 ```
 
 ## Guide de contribution pour les étudiants
@@ -156,8 +240,62 @@ async def test_avec_exemple():
     print(resultat)
 ```
 
+## Cas d'utilisation avancés
+
+### Analyse comparative
+
+Vous pouvez utiliser les différents exemples pour effectuer une analyse comparative des performances du système :
+
+```python
+import os
+import json
+from argumentation_analysis.agents.informal.informal_agent import InformalAgent
+from argumentation_analysis.core.llm_service import LLMService
+
+def run_comparative_analysis():
+    # Initialiser l'agent
+    llm = LLMService()
+    agent = InformalAgent(llm)
+    
+    # Liste des exemples à analyser
+    examples = [
+        'exemple_sophisme.txt',
+        'texte_sans_marqueurs.txt',
+        'article_scientifique.txt',
+        'discours_politique.txt',
+        'discours_avec_template.txt'
+    ]
+    
+    # Analyser chaque exemple
+    results = {}
+    for example in examples:
+        with open(f'examples/{example}', 'r', encoding='utf-8') as f:
+            text = f.read()
+        result = agent.analyze_informal_fallacies(text)
+        results[example] = result
+    
+    # Sauvegarder les résultats
+    with open('results/comparative_analysis.json', 'w', encoding='utf-8') as f:
+        json.dump(results, f, indent=2)
+    
+    return results
+```
+
+### Génération de rapports
+
+Vous pouvez générer des rapports détaillés à partir des analyses des exemples :
+
+```python
+from argumentation_analysis.utils.report_generator import generate_report
+
+# Générer un rapport d'analyse pour un exemple
+generate_report('examples/exemple_sophisme.txt', 'results/rapport_exemple_sophisme.md')
+```
+
 ## Ressources pour créer de bons exemples
 
 - [Liste des sophismes courants](https://fr.wikipedia.org/wiki/Liste_de_sophismes)
 - [Guide d'argumentation](https://www.cairn.info/revue-l-argumentation-politique--9782200928261.htm)
 - [Techniques rhétoriques](https://www.persee.fr/doc/comm_0588-8018_1970_num_16_1_1234)
+- [Analyse du discours](https://www.erudit.org/fr/revues/as/2006-v30-n1-as1384/014702ar/)
+- [Structures argumentatives](https://www.cairn.info/revue-hermes-la-revue-2011-1-page-25.htm)
