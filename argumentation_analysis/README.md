@@ -28,19 +28,32 @@ Le projet est organisé en modules Python pour une meilleure maintenabilité :
 
 ### Modules Principaux
 * [`core/`](./core/README.md) 🧱 : Composants fondamentaux partagés (État, StateManager, Stratégies, Setup JVM & LLM).
+* [`core/communication/`](./core/communication/) 📡 : Système de communication entre agents.
 * [`agents/`](./agents/README.md) 🧠 : Définitions des agents spécialisés (PM, Informal, PL, Extract).
+* [`agents/core/`](./agents/core/) 🧠 : Implémentations des agents spécialistes.
+  * [`agents/extract/`](./agents/extract/) 📋 : Module de redirection vers agents.core.extract.
+  * [`agents/tools/`](./agents/tools/) 🛠️ : Outils utilisés par les agents.
   * [`agents/tools/encryption/`](./agents/tools/encryption/README_encryption_system.md) 🔒 : Outils de gestion des configurations chiffrées.
+* [`orchestration/hierarchical/`](./orchestration/hierarchical/) 🔄 : Implémentation de l'orchestration hiérarchique.
 * [`orchestration/`](./orchestration/README.md) ⚙️ : Logique d'exécution de la conversation (`analysis_runner.py`).
 * [`ui/`](./ui/README.md) 🎨 : Logique de l'interface utilisateur (configuration du texte).
   * [`ui/extract_editor/`](./ui/extract_editor/README.md) ✏️ : Éditeur de marqueurs d'extraits.
 * [`utils/`](./utils/README.md) 🔧 : Fonctions utilitaires générales.
   * [`utils/extract_repair/`](./utils/extract_repair/README.md) 🔄 : Outils de réparation des bornes d'extraits défectueuses.
 * [`tests/`](./tests/) 🧪 : Tests unitaires et d'intégration.
+* [`tests/tools/`](./tests/tools/README.md) 🧪 : Tests des outils rhétoriques.
+* [`models/`](./models/README.md) 📊 : Modèles de données du projet.
+* [`services/`](./services/README.md) 🔌 : Services partagés (cache, crypto, extraction, etc.).
+* [`examples/`](./examples/README.md) 📝 : Exemples d'utilisation du système.
+* [`results/`](./results/README.md) 📈 : Résultats des analyses.
+* [`temp_downloads/`](./temp_downloads/README.md) 📥 : Répertoire de téléchargements temporaires.
+* [`text_cache/`](./text_cache/README.md) 📋 : Répertoire de cache de textes.
+* [`scripts/`](./scripts/README.md) 📜 : Scripts utilitaires pour le projet.
 
 ### Ressources et Configuration
 * [`config/`](./config/) : Fichiers de configuration (`.env.template`).
 * [`libs/`](./libs/) : Contient les JARs TweetyProject (téléchargés ou manuels).
-* [`data/`](./data/) : Données utilisées/générées (config UI sauvegardée, CSV sophismes).
+* [`data/`](./data/README.md) : Données utilisées/générées (config UI sauvegardée, CSV sophismes).
 * [`requirements.txt`](./requirements.txt) : Dépendances Python.
 * [`.env`](./.env) : Fichier de configuration des variables d'environnement (à créer à partir de `.env.template`).
 
