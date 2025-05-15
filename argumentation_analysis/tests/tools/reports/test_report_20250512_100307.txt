@@ -1,0 +1,759 @@
+Rapport de Tests des Outils d'Analyse Rhétorique Améliorés
+==========================================================
+
+Date: 2025-05-12 10:03:07
+Type de tests: all
+
+Résultats des tests:
+  - Tests exécutés: 77
+  - Tests réussis: 22
+  - Tests échoués: 2
+  - Erreurs: 53
+  - Temps d'exécution: 1.61 secondes
+
+Tests échoués:
+  1. test_generate_correction_suggestion (argumentation_analysis.tests.tools.test_enhanced_contextual_fallacy_analyzer.TestEnhancedContextualFallacyAnalyzer.test_generate_correction_suggestion)
+Traceback (most recent call last):
+  File "D:\Dev\2025-Epita-Intelligence-Symbolique\argumentation_analysis\tests\tools\test_enhanced_contextual_fallacy_analyzer.py", line 262, in test_generate_correction_suggestion
+    self.assertIn("Appel à l'autorité", suggestion) or self.assertIn("experts", suggestion)
+    ~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: "Appel à l'autorité" not found in "Au lieu de dire 'Les experts affirment que ce produit est sûr.', il serait préférable de présenter des preuves concrètes ou des données pertinentes qui soutiennent directement l'argument, ou de citer une autorité dont l'expertise est directement liée au sujet."
+
+
+  2. test_generate_fallacy_explanation (argumentation_analysis.tests.tools.test_enhanced_contextual_fallacy_analyzer.TestEnhancedContextualFallacyAnalyzer.test_generate_fallacy_explanation)
+Traceback (most recent call last):
+  File "D:\Dev\2025-Epita-Intelligence-Symbolique\argumentation_analysis\tests\tools\test_enhanced_contextual_fallacy_analyzer.py", line 247, in test_generate_fallacy_explanation
+    self.assertIn("Appel à l'autorité", explanation)
+    ~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: "Appel à l'autorité" not found in "Dans un contexte commercial, 'Les experts affirment que ce produit est sûr.' est un sophisme car il utilise l'autorité pour persuader plutôt que de présenter les mérites réels du produit ou service."
+
+
+Erreurs:
+  1. test_analyze_argument_structure (argumentation_analysis.tests.tools.test_enhanced_complex_fallacy_analyzer.TestEnhancedComplexFallacyAnalyzer.test_analyze_argument_structure)
+Traceback (most recent call last):
+  File "D:\Dev\2025-Epita-Intelligence-Symbolique\argumentation_analysis\tests\tools\test_enhanced_complex_fallacy_analyzer.py", line 54, in test_analyze_argument_structure
+    result = self.analyzer.analyze_argument_structure(self.test_arguments, self.test_context)
+  File "D:\Dev\2025-Epita-Intelligence-Symbolique\argumentation_analysis\agents\tools\analysis\enhanced\complex_fallacy_analyzer.py", line 196, in analyze_argument_structure
+    coherence_evaluation = self._evaluate_argument_coherence(arguments, argument_relations)
+  File "D:\Dev\2025-Epita-Intelligence-Symbolique\argumentation_analysis\agents\tools\analysis\enhanced\complex_fallacy_analyzer.py", line 382, in _evaluate_argument_coherence
+    circular_reasoning = self._detect_circular_reasoning(graph)
+                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'EnhancedComplexFallacyAnalyzer' object has no attribute '_detect_circular_reasoning'. Did you mean: '_detect_circular_arguments'?
+
+
+  2. test_analyze_inter_argument_coherence (argumentation_analysis.tests.tools.test_enhanced_complex_fallacy_analyzer.TestEnhancedComplexFallacyAnalyzer.test_analyze_inter_argument_coherence)
+Traceback (most recent call last):
+  File "D:\Dev\2025-Epita-Intelligence-Symbolique\argumentation_analysis\tests\tools\test_enhanced_complex_fallacy_analyzer.py", line 91, in test_analyze_inter_argument_coherence
+    result = self.analyzer.analyze_inter_argument_coherence(self.test_arguments, self.test_context)
+  File "D:\Dev\2025-Epita-Intelligence-Symbolique\argumentation_analysis\agents\tools\analysis\enhanced\complex_fallacy_analyzer.py", line 910, in analyze_inter_argument_coherence
+    structure_analysis = self.analyze_argument_structure(arguments, context)
+  File "D:\Dev\2025-Epita-Intelligence-Symbolique\argumentation_analysis\agents\tools\analysis\enhanced\complex_fallacy_analyzer.py", line 196, in analyze_argument_structure
+    coherence_evaluation = self._evaluate_argument_coherence(arguments, argument_relations)
+  File "D:\Dev\2025-Epita-Intelligence-Symbolique\argumentation_analysis\agents\tools\analysis\enhanced\complex_fallacy_analyzer.py", line 382, in _evaluate_argument_coherence
+    circular_reasoning = self._detect_circular_reasoning(graph)
+                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'EnhancedComplexFallacyAnalyzer' object has no attribute '_detect_circular_reasoning'. Did you mean: '_detect_circular_arguments'?
+
+
+  3. test_analyze_structure_vulnerabilities (argumentation_analysis.tests.tools.test_enhanced_complex_fallacy_analyzer.TestEnhancedComplexFallacyAnalyzer.test_analyze_structure_vulnerabilities)
+Traceback (most recent call last):
+  File "D:\Dev\2025-Epita-Intelligence-Symbolique\argumentation_analysis\tests\tools\test_enhanced_complex_fallacy_analyzer.py", line 229, in test_analyze_structure_vulnerabilities
+    vulnerabilities = self.analyzer._analyze_structure_vulnerabilities(argument_structures, argument_relations)
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'EnhancedComplexFallacyAnalyzer' object has no attribute '_analyze_structure_vulnerabilities'
+
+
+  4. test_detect_circular_reasoning (argumentation_analysis.tests.tools.test_enhanced_complex_fallacy_analyzer.TestEnhancedComplexFallacyAnalyzer.test_detect_circular_reasoning)
+Traceback (most recent call last):
+  File "D:\Dev\2025-Epita-Intelligence-Symbolique\argumentation_analysis\tests\tools\test_enhanced_complex_fallacy_analyzer.py", line 195, in test_detect_circular_reasoning
+    self.assertTrue(self.analyzer._detect_circular_reasoning(circular_graph))
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'EnhancedComplexFallacyAnalyzer' object has no attribute '_detect_circular_reasoning'. Did you mean: '_detect_circular_arguments'?
+
+
+  5. test_evaluate_argument_coherence (argumentation_analysis.tests.tools.test_enhanced_complex_fallacy_analyzer.TestEnhancedComplexFallacyAnalyzer.test_evaluate_argument_coherence)
+Traceback (most recent call last):
+  File "D:\Dev\2025-Epita-Intelligence-Symbolique\argumentation_analysis\tests\tools\test_enhanced_complex_fallacy_analyzer.py", line 173, in test_evaluate_argument_coherence
+    coherence = self.analyzer._evaluate_argument_coherence(coherent_arguments, relations)
+  File "D:\Dev\2025-Epita-Intelligence-Symbolique\argumentation_analysis\agents\tools\analysis\enhanced\complex_fallacy_analyzer.py", line 382, in _evaluate_argument_coherence
+    circular_reasoning = self._detect_circular_reasoning(graph)
+                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'EnhancedComplexFallacyAnalyzer' object has no attribute '_detect_circular_reasoning'. Did you mean: '_detect_circular_arguments'?
+
+
+  6. test_enhanced_rhetorical_result_analyzer (unittest.loader._FailedTest.test_enhanced_rhetorical_result_analyzer)
+ImportError: Failed to import test module: test_enhanced_rhetorical_result_analyzer
+Traceback (most recent call last):
+  File "C:\Python313\Lib\unittest\loader.py", line 137, in loadTestsFromName
+    module = __import__(module_name)
+  File "D:\Dev\2025-Epita-Intelligence-Symbolique\argumentation_analysis\tests\tools\test_enhanced_rhetorical_result_analyzer.py", line 24, in <module>
+    from argumentation_analysis.agents.tools.analysis.enhanced.rhetorical_result_analyzer import EnhancedRhetoricalResultAnalyzer
+ModuleNotFoundError: No module named 'argumentation_analysis.agents.tools.analysis.enhanced.rhetorical_result_analyzer'
+
+
+
+  7. test_enhanced_rhetorical_result_visualizer (unittest.loader._FailedTest.test_enhanced_rhetorical_result_visualizer)
+ImportError: Failed to import test module: test_enhanced_rhetorical_result_visualizer
+Traceback (most recent call last):
+  File "C:\Python313\Lib\unittest\loader.py", line 137, in loadTestsFromName
+    module = __import__(module_name)
+  File "D:\Dev\2025-Epita-Intelligence-Symbolique\argumentation_analysis\tests\tools\test_enhanced_rhetorical_result_visualizer.py", line 25, in <module>
+    from argumentation_analysis.agents.tools.analysis.enhanced.rhetorical_result_visualizer import EnhancedRhetoricalResultVisualizer
+ModuleNotFoundError: No module named 'argumentation_analysis.agents.tools.analysis.enhanced.rhetorical_result_visualizer'
+
+
+
+  8. test_analyze_argument (argumentation_analysis.tests.tools.test_semantic_argument_analyzer.TestSemanticArgumentAnalyzer.test_analyze_argument)
+Traceback (most recent call last):
+  File "D:\Dev\2025-Epita-Intelligence-Symbolique\argumentation_analysis\tests\tools\test_semantic_argument_analyzer.py", line 34, in setUp
+    self.transformers_patcher.start()
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "C:\Python313\Lib\unittest\mock.py", line 1654, in start
+    result = self.__enter__()
+  File "C:\Python313\Lib\unittest\mock.py", line 1497, in __enter__
+    original, local = self.get_original()
+                      ~~~~~~~~~~~~~~~~~^^
+  File "C:\Python313\Lib\unittest\mock.py", line 1467, in get_original
+    raise AttributeError(
+        "%s does not have the attribute %r" % (target, name)
+    )
+AttributeError: <module 'argumentation_analysis.agents.tools.analysis.new.semantic_argument_analyzer' from 'D:\\Dev\\2025-Epita-Intelligence-Symbolique\\argumentation_analysis\\agents\\tools\\analysis\\new\\semantic_argument_analyzer.py'> does not have the attribute 'HAS_TRANSFORMERS'
+
+
+  9. test_analyze_argument_structure (argumentation_analysis.tests.tools.test_semantic_argument_analyzer.TestSemanticArgumentAnalyzer.test_analyze_argument_structure)
+Traceback (most recent call last):
+  File "D:\Dev\2025-Epita-Intelligence-Symbolique\argumentation_analysis\tests\tools\test_semantic_argument_analyzer.py", line 34, in setUp
+    self.transformers_patcher.start()
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "C:\Python313\Lib\unittest\mock.py", line 1654, in start
+    result = self.__enter__()
+  File "C:\Python313\Lib\unittest\mock.py", line 1497, in __enter__
+    original, local = self.get_original()
+                      ~~~~~~~~~~~~~~~~~^^
+  File "C:\Python313\Lib\unittest\mock.py", line 1467, in get_original
+    raise AttributeError(
+        "%s does not have the attribute %r" % (target, name)
+    )
+AttributeError: <module 'argumentation_analysis.agents.tools.analysis.new.semantic_argument_analyzer' from 'D:\\Dev\\2025-Epita-Intelligence-Symbolique\\argumentation_analysis\\agents\\tools\\analysis\\new\\semantic_argument_analyzer.py'> does not have the attribute 'HAS_TRANSFORMERS'
+
+
+  10. test_analyze_multiple_arguments (argumentation_analysis.tests.tools.test_semantic_argument_analyzer.TestSemanticArgumentAnalyzer.test_analyze_multiple_arguments)
+Traceback (most recent call last):
+  File "D:\Dev\2025-Epita-Intelligence-Symbolique\argumentation_analysis\tests\tools\test_semantic_argument_analyzer.py", line 34, in setUp
+    self.transformers_patcher.start()
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "C:\Python313\Lib\unittest\mock.py", line 1654, in start
+    result = self.__enter__()
+  File "C:\Python313\Lib\unittest\mock.py", line 1497, in __enter__
+    original, local = self.get_original()
+                      ~~~~~~~~~~~~~~~~~^^
+  File "C:\Python313\Lib\unittest\mock.py", line 1467, in get_original
+    raise AttributeError(
+        "%s does not have the attribute %r" % (target, name)
+    )
+AttributeError: <module 'argumentation_analysis.agents.tools.analysis.new.semantic_argument_analyzer' from 'D:\\Dev\\2025-Epita-Intelligence-Symbolique\\argumentation_analysis\\agents\\tools\\analysis\\new\\semantic_argument_analyzer.py'> does not have the attribute 'HAS_TRANSFORMERS'
+
+
+  11. test_analyze_semantic_relationships (argumentation_analysis.tests.tools.test_semantic_argument_analyzer.TestSemanticArgumentAnalyzer.test_analyze_semantic_relationships)
+Traceback (most recent call last):
+  File "D:\Dev\2025-Epita-Intelligence-Symbolique\argumentation_analysis\tests\tools\test_semantic_argument_analyzer.py", line 34, in setUp
+    self.transformers_patcher.start()
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "C:\Python313\Lib\unittest\mock.py", line 1654, in start
+    result = self.__enter__()
+  File "C:\Python313\Lib\unittest\mock.py", line 1497, in __enter__
+    original, local = self.get_original()
+                      ~~~~~~~~~~~~~~~~~^^
+  File "C:\Python313\Lib\unittest\mock.py", line 1467, in get_original
+    raise AttributeError(
+        "%s does not have the attribute %r" % (target, name)
+    )
+AttributeError: <module 'argumentation_analysis.agents.tools.analysis.new.semantic_argument_analyzer' from 'D:\\Dev\\2025-Epita-Intelligence-Symbolique\\argumentation_analysis\\agents\\tools\\analysis\\new\\semantic_argument_analyzer.py'> does not have the attribute 'HAS_TRANSFORMERS'
+
+
+  12. test_analyze_sentiment (argumentation_analysis.tests.tools.test_semantic_argument_analyzer.TestSemanticArgumentAnalyzer.test_analyze_sentiment)
+Traceback (most recent call last):
+  File "D:\Dev\2025-Epita-Intelligence-Symbolique\argumentation_analysis\tests\tools\test_semantic_argument_analyzer.py", line 34, in setUp
+    self.transformers_patcher.start()
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "C:\Python313\Lib\unittest\mock.py", line 1654, in start
+    result = self.__enter__()
+  File "C:\Python313\Lib\unittest\mock.py", line 1497, in __enter__
+    original, local = self.get_original()
+                      ~~~~~~~~~~~~~~~~~^^
+  File "C:\Python313\Lib\unittest\mock.py", line 1467, in get_original
+    raise AttributeError(
+        "%s does not have the attribute %r" % (target, name)
+    )
+AttributeError: <module 'argumentation_analysis.agents.tools.analysis.new.semantic_argument_analyzer' from 'D:\\Dev\\2025-Epita-Intelligence-Symbolique\\argumentation_analysis\\agents\\tools\\analysis\\new\\semantic_argument_analyzer.py'> does not have the attribute 'HAS_TRANSFORMERS'
+
+
+  13. test_evaluate_logical_flow (argumentation_analysis.tests.tools.test_semantic_argument_analyzer.TestSemanticArgumentAnalyzer.test_evaluate_logical_flow)
+Traceback (most recent call last):
+  File "D:\Dev\2025-Epita-Intelligence-Symbolique\argumentation_analysis\tests\tools\test_semantic_argument_analyzer.py", line 34, in setUp
+    self.transformers_patcher.start()
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "C:\Python313\Lib\unittest\mock.py", line 1654, in start
+    result = self.__enter__()
+  File "C:\Python313\Lib\unittest\mock.py", line 1497, in __enter__
+    original, local = self.get_original()
+                      ~~~~~~~~~~~~~~~~~^^
+  File "C:\Python313\Lib\unittest\mock.py", line 1467, in get_original
+    raise AttributeError(
+        "%s does not have the attribute %r" % (target, name)
+    )
+AttributeError: <module 'argumentation_analysis.agents.tools.analysis.new.semantic_argument_analyzer' from 'D:\\Dev\\2025-Epita-Intelligence-Symbolique\\argumentation_analysis\\agents\\tools\\analysis\\new\\semantic_argument_analyzer.py'> does not have the attribute 'HAS_TRANSFORMERS'
+
+
+  14. test_evaluate_thematic_coherence (argumentation_analysis.tests.tools.test_semantic_argument_analyzer.TestSemanticArgumentAnalyzer.test_evaluate_thematic_coherence)
+Traceback (most recent call last):
+  File "D:\Dev\2025-Epita-Intelligence-Symbolique\argumentation_analysis\tests\tools\test_semantic_argument_analyzer.py", line 34, in setUp
+    self.transformers_patcher.start()
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "C:\Python313\Lib\unittest\mock.py", line 1654, in start
+    result = self.__enter__()
+  File "C:\Python313\Lib\unittest\mock.py", line 1497, in __enter__
+    original, local = self.get_original()
+                      ~~~~~~~~~~~~~~~~~^^
+  File "C:\Python313\Lib\unittest\mock.py", line 1467, in get_original
+    raise AttributeError(
+        "%s does not have the attribute %r" % (target, name)
+    )
+AttributeError: <module 'argumentation_analysis.agents.tools.analysis.new.semantic_argument_analyzer' from 'D:\\Dev\\2025-Epita-Intelligence-Symbolique\\argumentation_analysis\\agents\\tools\\analysis\\new\\semantic_argument_analyzer.py'> does not have the attribute 'HAS_TRANSFORMERS'
+
+
+  15. test_extract_key_concepts (argumentation_analysis.tests.tools.test_semantic_argument_analyzer.TestSemanticArgumentAnalyzer.test_extract_key_concepts)
+Traceback (most recent call last):
+  File "D:\Dev\2025-Epita-Intelligence-Symbolique\argumentation_analysis\tests\tools\test_semantic_argument_analyzer.py", line 34, in setUp
+    self.transformers_patcher.start()
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "C:\Python313\Lib\unittest\mock.py", line 1654, in start
+    result = self.__enter__()
+  File "C:\Python313\Lib\unittest\mock.py", line 1497, in __enter__
+    original, local = self.get_original()
+                      ~~~~~~~~~~~~~~~~~^^
+  File "C:\Python313\Lib\unittest\mock.py", line 1467, in get_original
+    raise AttributeError(
+        "%s does not have the attribute %r" % (target, name)
+    )
+AttributeError: <module 'argumentation_analysis.agents.tools.analysis.new.semantic_argument_analyzer' from 'D:\\Dev\\2025-Epita-Intelligence-Symbolique\\argumentation_analysis\\agents\\tools\\analysis\\new\\semantic_argument_analyzer.py'> does not have the attribute 'HAS_TRANSFORMERS'
+
+
+  16. test_identify_claim (argumentation_analysis.tests.tools.test_semantic_argument_analyzer.TestSemanticArgumentAnalyzer.test_identify_claim)
+Traceback (most recent call last):
+  File "D:\Dev\2025-Epita-Intelligence-Symbolique\argumentation_analysis\tests\tools\test_semantic_argument_analyzer.py", line 34, in setUp
+    self.transformers_patcher.start()
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "C:\Python313\Lib\unittest\mock.py", line 1654, in start
+    result = self.__enter__()
+  File "C:\Python313\Lib\unittest\mock.py", line 1497, in __enter__
+    original, local = self.get_original()
+                      ~~~~~~~~~~~~~~~~~^^
+  File "C:\Python313\Lib\unittest\mock.py", line 1467, in get_original
+    raise AttributeError(
+        "%s does not have the attribute %r" % (target, name)
+    )
+AttributeError: <module 'argumentation_analysis.agents.tools.analysis.new.semantic_argument_analyzer' from 'D:\\Dev\\2025-Epita-Intelligence-Symbolique\\argumentation_analysis\\agents\\tools\\analysis\\new\\semantic_argument_analyzer.py'> does not have the attribute 'HAS_TRANSFORMERS'
+
+
+  17. test_identify_evidence (argumentation_analysis.tests.tools.test_semantic_argument_analyzer.TestSemanticArgumentAnalyzer.test_identify_evidence)
+Traceback (most recent call last):
+  File "D:\Dev\2025-Epita-Intelligence-Symbolique\argumentation_analysis\tests\tools\test_semantic_argument_analyzer.py", line 34, in setUp
+    self.transformers_patcher.start()
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "C:\Python313\Lib\unittest\mock.py", line 1654, in start
+    result = self.__enter__()
+  File "C:\Python313\Lib\unittest\mock.py", line 1497, in __enter__
+    original, local = self.get_original()
+                      ~~~~~~~~~~~~~~~~~^^
+  File "C:\Python313\Lib\unittest\mock.py", line 1467, in get_original
+    raise AttributeError(
+        "%s does not have the attribute %r" % (target, name)
+    )
+AttributeError: <module 'argumentation_analysis.agents.tools.analysis.new.semantic_argument_analyzer' from 'D:\\Dev\\2025-Epita-Intelligence-Symbolique\\argumentation_analysis\\agents\\tools\\analysis\\new\\semantic_argument_analyzer.py'> does not have the attribute 'HAS_TRANSFORMERS'
+
+
+  18. test_initialization (argumentation_analysis.tests.tools.test_semantic_argument_analyzer.TestSemanticArgumentAnalyzer.test_initialization)
+Traceback (most recent call last):
+  File "D:\Dev\2025-Epita-Intelligence-Symbolique\argumentation_analysis\tests\tools\test_semantic_argument_analyzer.py", line 34, in setUp
+    self.transformers_patcher.start()
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "C:\Python313\Lib\unittest\mock.py", line 1654, in start
+    result = self.__enter__()
+  File "C:\Python313\Lib\unittest\mock.py", line 1497, in __enter__
+    original, local = self.get_original()
+                      ~~~~~~~~~~~~~~~~~^^
+  File "C:\Python313\Lib\unittest\mock.py", line 1467, in get_original
+    raise AttributeError(
+        "%s does not have the attribute %r" % (target, name)
+    )
+AttributeError: <module 'argumentation_analysis.agents.tools.analysis.new.semantic_argument_analyzer' from 'D:\\Dev\\2025-Epita-Intelligence-Symbolique\\argumentation_analysis\\agents\\tools\\analysis\\new\\semantic_argument_analyzer.py'> does not have the attribute 'HAS_TRANSFORMERS'
+
+
+  19. test_analyze_context (argumentation_analysis.tests.tools.test_contextual_fallacy_detector.TestContextualFallacyDetector.test_analyze_context)
+Traceback (most recent call last):
+  File "D:\Dev\2025-Epita-Intelligence-Symbolique\argumentation_analysis\tests\tools\test_contextual_fallacy_detector.py", line 34, in setUp
+    self.transformers_patcher.start()
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "C:\Python313\Lib\unittest\mock.py", line 1654, in start
+    result = self.__enter__()
+  File "C:\Python313\Lib\unittest\mock.py", line 1497, in __enter__
+    original, local = self.get_original()
+                      ~~~~~~~~~~~~~~~~~^^
+  File "C:\Python313\Lib\unittest\mock.py", line 1467, in get_original
+    raise AttributeError(
+        "%s does not have the attribute %r" % (target, name)
+    )
+AttributeError: <module 'argumentation_analysis.agents.tools.analysis.new.contextual_fallacy_detector' from 'D:\\Dev\\2025-Epita-Intelligence-Symbolique\\argumentation_analysis\\agents\\tools\\analysis\\new\\contextual_fallacy_detector.py'> does not have the attribute 'HAS_TRANSFORMERS'
+
+
+  20. test_analyze_fallacy_relationships (argumentation_analysis.tests.tools.test_contextual_fallacy_detector.TestContextualFallacyDetector.test_analyze_fallacy_relationships)
+Traceback (most recent call last):
+  File "D:\Dev\2025-Epita-Intelligence-Symbolique\argumentation_analysis\tests\tools\test_contextual_fallacy_detector.py", line 34, in setUp
+    self.transformers_patcher.start()
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "C:\Python313\Lib\unittest\mock.py", line 1654, in start
+    result = self.__enter__()
+  File "C:\Python313\Lib\unittest\mock.py", line 1497, in __enter__
+    original, local = self.get_original()
+                      ~~~~~~~~~~~~~~~~~^^
+  File "C:\Python313\Lib\unittest\mock.py", line 1467, in get_original
+    raise AttributeError(
+        "%s does not have the attribute %r" % (target, name)
+    )
+AttributeError: <module 'argumentation_analysis.agents.tools.analysis.new.contextual_fallacy_detector' from 'D:\\Dev\\2025-Epita-Intelligence-Symbolique\\argumentation_analysis\\agents\\tools\\analysis\\new\\contextual_fallacy_detector.py'> does not have the attribute 'HAS_TRANSFORMERS'
+
+
+  21. test_calculate_detection_confidence (argumentation_analysis.tests.tools.test_contextual_fallacy_detector.TestContextualFallacyDetector.test_calculate_detection_confidence)
+Traceback (most recent call last):
+  File "D:\Dev\2025-Epita-Intelligence-Symbolique\argumentation_analysis\tests\tools\test_contextual_fallacy_detector.py", line 34, in setUp
+    self.transformers_patcher.start()
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "C:\Python313\Lib\unittest\mock.py", line 1654, in start
+    result = self.__enter__()
+  File "C:\Python313\Lib\unittest\mock.py", line 1497, in __enter__
+    original, local = self.get_original()
+                      ~~~~~~~~~~~~~~~~~^^
+  File "C:\Python313\Lib\unittest\mock.py", line 1467, in get_original
+    raise AttributeError(
+        "%s does not have the attribute %r" % (target, name)
+    )
+AttributeError: <module 'argumentation_analysis.agents.tools.analysis.new.contextual_fallacy_detector' from 'D:\\Dev\\2025-Epita-Intelligence-Symbolique\\argumentation_analysis\\agents\\tools\\analysis\\new\\contextual_fallacy_detector.py'> does not have the attribute 'HAS_TRANSFORMERS'
+
+
+  22. test_detect_contextual_fallacies (argumentation_analysis.tests.tools.test_contextual_fallacy_detector.TestContextualFallacyDetector.test_detect_contextual_fallacies)
+Traceback (most recent call last):
+  File "D:\Dev\2025-Epita-Intelligence-Symbolique\argumentation_analysis\tests\tools\test_contextual_fallacy_detector.py", line 34, in setUp
+    self.transformers_patcher.start()
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "C:\Python313\Lib\unittest\mock.py", line 1654, in start
+    result = self.__enter__()
+  File "C:\Python313\Lib\unittest\mock.py", line 1497, in __enter__
+    original, local = self.get_original()
+                      ~~~~~~~~~~~~~~~~~^^
+  File "C:\Python313\Lib\unittest\mock.py", line 1467, in get_original
+    raise AttributeError(
+        "%s does not have the attribute %r" % (target, name)
+    )
+AttributeError: <module 'argumentation_analysis.agents.tools.analysis.new.contextual_fallacy_detector' from 'D:\\Dev\\2025-Epita-Intelligence-Symbolique\\argumentation_analysis\\agents\\tools\\analysis\\new\\contextual_fallacy_detector.py'> does not have the attribute 'HAS_TRANSFORMERS'
+
+
+  23. test_detect_fallacies_in_argument (argumentation_analysis.tests.tools.test_contextual_fallacy_detector.TestContextualFallacyDetector.test_detect_fallacies_in_argument)
+Traceback (most recent call last):
+  File "D:\Dev\2025-Epita-Intelligence-Symbolique\argumentation_analysis\tests\tools\test_contextual_fallacy_detector.py", line 34, in setUp
+    self.transformers_patcher.start()
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "C:\Python313\Lib\unittest\mock.py", line 1654, in start
+    result = self.__enter__()
+  File "C:\Python313\Lib\unittest\mock.py", line 1497, in __enter__
+    original, local = self.get_original()
+                      ~~~~~~~~~~~~~~~~~^^
+  File "C:\Python313\Lib\unittest\mock.py", line 1467, in get_original
+    raise AttributeError(
+        "%s does not have the attribute %r" % (target, name)
+    )
+AttributeError: <module 'argumentation_analysis.agents.tools.analysis.new.contextual_fallacy_detector' from 'D:\\Dev\\2025-Epita-Intelligence-Symbolique\\argumentation_analysis\\agents\\tools\\analysis\\new\\contextual_fallacy_detector.py'> does not have the attribute 'HAS_TRANSFORMERS'
+
+
+  24. test_generate_context_specific_insights (argumentation_analysis.tests.tools.test_contextual_fallacy_detector.TestContextualFallacyDetector.test_generate_context_specific_insights)
+Traceback (most recent call last):
+  File "D:\Dev\2025-Epita-Intelligence-Symbolique\argumentation_analysis\tests\tools\test_contextual_fallacy_detector.py", line 34, in setUp
+    self.transformers_patcher.start()
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "C:\Python313\Lib\unittest\mock.py", line 1654, in start
+    result = self.__enter__()
+  File "C:\Python313\Lib\unittest\mock.py", line 1497, in __enter__
+    original, local = self.get_original()
+                      ~~~~~~~~~~~~~~~~~^^
+  File "C:\Python313\Lib\unittest\mock.py", line 1467, in get_original
+    raise AttributeError(
+        "%s does not have the attribute %r" % (target, name)
+    )
+AttributeError: <module 'argumentation_analysis.agents.tools.analysis.new.contextual_fallacy_detector' from 'D:\\Dev\\2025-Epita-Intelligence-Symbolique\\argumentation_analysis\\agents\\tools\\analysis\\new\\contextual_fallacy_detector.py'> does not have the attribute 'HAS_TRANSFORMERS'
+
+
+  25. test_get_context_profile (argumentation_analysis.tests.tools.test_contextual_fallacy_detector.TestContextualFallacyDetector.test_get_context_profile)
+Traceback (most recent call last):
+  File "D:\Dev\2025-Epita-Intelligence-Symbolique\argumentation_analysis\tests\tools\test_contextual_fallacy_detector.py", line 34, in setUp
+    self.transformers_patcher.start()
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "C:\Python313\Lib\unittest\mock.py", line 1654, in start
+    result = self.__enter__()
+  File "C:\Python313\Lib\unittest\mock.py", line 1497, in __enter__
+    original, local = self.get_original()
+                      ~~~~~~~~~~~~~~~~~^^
+  File "C:\Python313\Lib\unittest\mock.py", line 1467, in get_original
+    raise AttributeError(
+        "%s does not have the attribute %r" % (target, name)
+    )
+AttributeError: <module 'argumentation_analysis.agents.tools.analysis.new.contextual_fallacy_detector' from 'D:\\Dev\\2025-Epita-Intelligence-Symbolique\\argumentation_analysis\\agents\\tools\\analysis\\new\\contextual_fallacy_detector.py'> does not have the attribute 'HAS_TRANSFORMERS'
+
+
+  26. test_get_fallacy_examples (argumentation_analysis.tests.tools.test_contextual_fallacy_detector.TestContextualFallacyDetector.test_get_fallacy_examples)
+Traceback (most recent call last):
+  File "D:\Dev\2025-Epita-Intelligence-Symbolique\argumentation_analysis\tests\tools\test_contextual_fallacy_detector.py", line 34, in setUp
+    self.transformers_patcher.start()
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "C:\Python313\Lib\unittest\mock.py", line 1654, in start
+    result = self.__enter__()
+  File "C:\Python313\Lib\unittest\mock.py", line 1497, in __enter__
+    original, local = self.get_original()
+                      ~~~~~~~~~~~~~~~~~^^
+  File "C:\Python313\Lib\unittest\mock.py", line 1467, in get_original
+    raise AttributeError(
+        "%s does not have the attribute %r" % (target, name)
+    )
+AttributeError: <module 'argumentation_analysis.agents.tools.analysis.new.contextual_fallacy_detector' from 'D:\\Dev\\2025-Epita-Intelligence-Symbolique\\argumentation_analysis\\agents\\tools\\analysis\\new\\contextual_fallacy_detector.py'> does not have the attribute 'HAS_TRANSFORMERS'
+
+
+  27. test_initialization (argumentation_analysis.tests.tools.test_contextual_fallacy_detector.TestContextualFallacyDetector.test_initialization)
+Traceback (most recent call last):
+  File "D:\Dev\2025-Epita-Intelligence-Symbolique\argumentation_analysis\tests\tools\test_contextual_fallacy_detector.py", line 34, in setUp
+    self.transformers_patcher.start()
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "C:\Python313\Lib\unittest\mock.py", line 1654, in start
+    result = self.__enter__()
+  File "C:\Python313\Lib\unittest\mock.py", line 1497, in __enter__
+    original, local = self.get_original()
+                      ~~~~~~~~~~~~~~~~~^^
+  File "C:\Python313\Lib\unittest\mock.py", line 1467, in get_original
+    raise AttributeError(
+        "%s does not have the attribute %r" % (target, name)
+    )
+AttributeError: <module 'argumentation_analysis.agents.tools.analysis.new.contextual_fallacy_detector' from 'D:\\Dev\\2025-Epita-Intelligence-Symbolique\\argumentation_analysis\\agents\\tools\\analysis\\new\\contextual_fallacy_detector.py'> does not have the attribute 'HAS_TRANSFORMERS'
+
+
+  28. test_match_fallacy_patterns (argumentation_analysis.tests.tools.test_contextual_fallacy_detector.TestContextualFallacyDetector.test_match_fallacy_patterns)
+Traceback (most recent call last):
+  File "D:\Dev\2025-Epita-Intelligence-Symbolique\argumentation_analysis\tests\tools\test_contextual_fallacy_detector.py", line 34, in setUp
+    self.transformers_patcher.start()
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "C:\Python313\Lib\unittest\mock.py", line 1654, in start
+    result = self.__enter__()
+  File "C:\Python313\Lib\unittest\mock.py", line 1497, in __enter__
+    original, local = self.get_original()
+                      ~~~~~~~~~~~~~~~~~^^
+  File "C:\Python313\Lib\unittest\mock.py", line 1467, in get_original
+    raise AttributeError(
+        "%s does not have the attribute %r" % (target, name)
+    )
+AttributeError: <module 'argumentation_analysis.agents.tools.analysis.new.contextual_fallacy_detector' from 'D:\\Dev\\2025-Epita-Intelligence-Symbolique\\argumentation_analysis\\agents\\tools\\analysis\\new\\contextual_fallacy_detector.py'> does not have the attribute 'HAS_TRANSFORMERS'
+
+
+  29. test_calculate_overall_coherence (argumentation_analysis.tests.tools.test_argument_coherence_evaluator.TestArgumentCoherenceEvaluator.test_calculate_overall_coherence)
+Traceback (most recent call last):
+  File "D:\Dev\2025-Epita-Intelligence-Symbolique\argumentation_analysis\tests\tools\test_argument_coherence_evaluator.py", line 275, in test_calculate_overall_coherence
+    overall_coherence, coherence_level = self.evaluator._calculate_overall_coherence(
+                                         ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        thematic_score, logical_score, structural_score, contextual_score
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+TypeError: ArgumentCoherenceEvaluator._calculate_overall_coherence() takes 2 positional arguments but 5 were given
+
+
+  30. test_determine_coherence_level (argumentation_analysis.tests.tools.test_argument_coherence_evaluator.TestArgumentCoherenceEvaluator.test_determine_coherence_level)
+Traceback (most recent call last):
+  File "D:\Dev\2025-Epita-Intelligence-Symbolique\argumentation_analysis\tests\tools\test_argument_coherence_evaluator.py", line 294, in test_determine_coherence_level
+    self.assertEqual(self.evaluator._determine_coherence_level(0.1), "Très faible")
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'ArgumentCoherenceEvaluator' object has no attribute '_determine_coherence_level'
+
+
+  31. test_evaluate_argument_coherence (argumentation_analysis.tests.tools.test_argument_coherence_evaluator.TestArgumentCoherenceEvaluator.test_evaluate_argument_coherence)
+Traceback (most recent call last):
+  File "D:\Dev\2025-Epita-Intelligence-Symbolique\argumentation_analysis\tests\tools\test_argument_coherence_evaluator.py", line 69, in test_evaluate_argument_coherence
+    result = self.evaluator.evaluate_argument_coherence(self.test_arguments, self.test_context)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'ArgumentCoherenceEvaluator' object has no attribute 'evaluate_argument_coherence'
+
+
+  32. test_evaluate_contextual_coherence (argumentation_analysis.tests.tools.test_argument_coherence_evaluator.TestArgumentCoherenceEvaluator.test_evaluate_contextual_coherence)
+Traceback (most recent call last):
+  File "D:\Dev\2025-Epita-Intelligence-Symbolique\argumentation_analysis\tests\tools\test_argument_coherence_evaluator.py", line 159, in test_evaluate_contextual_coherence
+    coherent_result = self.evaluator._evaluate_contextual_coherence(self.test_arguments, self.test_context)
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'ArgumentCoherenceEvaluator' object has no attribute '_evaluate_contextual_coherence'. Did you mean: '_evaluate_logical_coherence'?
+
+
+  33. test_evaluate_logical_coherence (argumentation_analysis.tests.tools.test_argument_coherence_evaluator.TestArgumentCoherenceEvaluator.test_evaluate_logical_coherence)
+Traceback (most recent call last):
+  File "D:\Dev\2025-Epita-Intelligence-Symbolique\argumentation_analysis\tests\tools\test_argument_coherence_evaluator.py", line 117, in test_evaluate_logical_coherence
+    coherent_result = self.evaluator._evaluate_logical_coherence(self.test_arguments)
+TypeError: ArgumentCoherenceEvaluator._evaluate_logical_coherence() missing 1 required positional argument: 'semantic_analysis'
+
+
+  34. test_evaluate_structural_coherence (argumentation_analysis.tests.tools.test_argument_coherence_evaluator.TestArgumentCoherenceEvaluator.test_evaluate_structural_coherence)
+Traceback (most recent call last):
+  File "D:\Dev\2025-Epita-Intelligence-Symbolique\argumentation_analysis\tests\tools\test_argument_coherence_evaluator.py", line 138, in test_evaluate_structural_coherence
+    coherent_result = self.evaluator._evaluate_structural_coherence(self.test_arguments)
+TypeError: ArgumentCoherenceEvaluator._evaluate_structural_coherence() missing 1 required positional argument: 'semantic_analysis'
+
+
+  35. test_evaluate_thematic_coherence (argumentation_analysis.tests.tools.test_argument_coherence_evaluator.TestArgumentCoherenceEvaluator.test_evaluate_thematic_coherence)
+Traceback (most recent call last):
+  File "D:\Dev\2025-Epita-Intelligence-Symbolique\argumentation_analysis\tests\tools\test_argument_coherence_evaluator.py", line 96, in test_evaluate_thematic_coherence
+    coherent_result = self.evaluator._evaluate_thematic_coherence(self.test_arguments)
+TypeError: ArgumentCoherenceEvaluator._evaluate_thematic_coherence() missing 1 required positional argument: 'semantic_analysis'
+
+
+  36. test_extract_main_themes (argumentation_analysis.tests.tools.test_argument_coherence_evaluator.TestArgumentCoherenceEvaluator.test_extract_main_themes)
+Traceback (most recent call last):
+  File "D:\Dev\2025-Epita-Intelligence-Symbolique\argumentation_analysis\tests\tools\test_argument_coherence_evaluator.py", line 302, in test_extract_main_themes
+    themes = self.evaluator._extract_main_themes(self.test_arguments)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'ArgumentCoherenceEvaluator' object has no attribute '_extract_main_themes'
+
+
+  37. test_generate_improvement_suggestions (argumentation_analysis.tests.tools.test_argument_coherence_evaluator.TestArgumentCoherenceEvaluator.test_generate_improvement_suggestions)
+Traceback (most recent call last):
+  File "D:\Dev\2025-Epita-Intelligence-Symbolique\argumentation_analysis\tests\tools\test_argument_coherence_evaluator.py", line 255, in test_generate_improvement_suggestions
+    suggestions = self.evaluator._generate_improvement_suggestions(coherence_issues, self.test_context)
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'ArgumentCoherenceEvaluator' object has no attribute '_generate_improvement_suggestions'
+
+
+  38. test_identify_coherence_issues (argumentation_analysis.tests.tools.test_argument_coherence_evaluator.TestArgumentCoherenceEvaluator.test_identify_coherence_issues)
+Traceback (most recent call last):
+  File "D:\Dev\2025-Epita-Intelligence-Symbolique\argumentation_analysis\tests\tools\test_argument_coherence_evaluator.py", line 207, in test_identify_coherence_issues
+    issues = self.evaluator._identify_coherence_issues(
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'ArgumentCoherenceEvaluator' object has no attribute '_identify_coherence_issues'
+
+
+  39. test_identify_logical_relationships (argumentation_analysis.tests.tools.test_argument_coherence_evaluator.TestArgumentCoherenceEvaluator.test_identify_logical_relationships)
+Traceback (most recent call last):
+  File "D:\Dev\2025-Epita-Intelligence-Symbolique\argumentation_analysis\tests\tools\test_argument_coherence_evaluator.py", line 315, in test_identify_logical_relationships
+    relationships = self.evaluator._identify_logical_relationships(self.test_arguments)
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'ArgumentCoherenceEvaluator' object has no attribute '_identify_logical_relationships'
+
+
+  40. test_identify_structural_patterns (argumentation_analysis.tests.tools.test_argument_coherence_evaluator.TestArgumentCoherenceEvaluator.test_identify_structural_patterns)
+Traceback (most recent call last):
+  File "D:\Dev\2025-Epita-Intelligence-Symbolique\argumentation_analysis\tests\tools\test_argument_coherence_evaluator.py", line 331, in test_identify_structural_patterns
+    patterns = self.evaluator._identify_structural_patterns(self.test_arguments)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'ArgumentCoherenceEvaluator' object has no attribute '_identify_structural_patterns'
+
+
+  41. test_initialization (argumentation_analysis.tests.tools.test_argument_coherence_evaluator.TestArgumentCoherenceEvaluator.test_initialization)
+Traceback (most recent call last):
+  File "D:\Dev\2025-Epita-Intelligence-Symbolique\argumentation_analysis\tests\tools\test_argument_coherence_evaluator.py", line 64, in test_initialization
+    self.assertIsNotNone(self.evaluator.coherence_metrics)
+                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'ArgumentCoherenceEvaluator' object has no attribute 'coherence_metrics'. Did you mean: 'coherence_types'?
+
+
+  42. test_analyze_argument_structure (argumentation_analysis.tests.tools.test_argument_structure_visualizer.TestArgumentStructureVisualizer.test_analyze_argument_structure)
+Traceback (most recent call last):
+  File "D:\Dev\2025-Epita-Intelligence-Symbolique\argumentation_analysis\tests\tools\test_argument_structure_visualizer.py", line 35, in setUp
+    self.matplotlib_mock = self.matplotlib_patcher.start()
+                           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "C:\Python313\Lib\unittest\mock.py", line 1654, in start
+    result = self.__enter__()
+  File "C:\Python313\Lib\unittest\mock.py", line 1497, in __enter__
+    original, local = self.get_original()
+                      ~~~~~~~~~~~~~~~~~^^
+  File "C:\Python313\Lib\unittest\mock.py", line 1467, in get_original
+    raise AttributeError(
+        "%s does not have the attribute %r" % (target, name)
+    )
+AttributeError: <module 'argumentation_analysis.agents.tools.analysis.new.argument_structure_visualizer' from 'D:\\Dev\\2025-Epita-Intelligence-Symbolique\\argumentation_analysis\\agents\\tools\\analysis\\new\\argument_structure_visualizer.py'> does not have the attribute 'plt'
+
+
+  43. test_create_graph_visualization (argumentation_analysis.tests.tools.test_argument_structure_visualizer.TestArgumentStructureVisualizer.test_create_graph_visualization)
+Traceback (most recent call last):
+  File "D:\Dev\2025-Epita-Intelligence-Symbolique\argumentation_analysis\tests\tools\test_argument_structure_visualizer.py", line 35, in setUp
+    self.matplotlib_mock = self.matplotlib_patcher.start()
+                           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "C:\Python313\Lib\unittest\mock.py", line 1654, in start
+    result = self.__enter__()
+  File "C:\Python313\Lib\unittest\mock.py", line 1497, in __enter__
+    original, local = self.get_original()
+                      ~~~~~~~~~~~~~~~~~^^
+  File "C:\Python313\Lib\unittest\mock.py", line 1467, in get_original
+    raise AttributeError(
+        "%s does not have the attribute %r" % (target, name)
+    )
+AttributeError: <module 'argumentation_analysis.agents.tools.analysis.new.argument_structure_visualizer' from 'D:\\Dev\\2025-Epita-Intelligence-Symbolique\\argumentation_analysis\\agents\\tools\\analysis\\new\\argument_structure_visualizer.py'> does not have the attribute 'plt'
+
+
+  44. test_create_html_visualization (argumentation_analysis.tests.tools.test_argument_structure_visualizer.TestArgumentStructureVisualizer.test_create_html_visualization)
+Traceback (most recent call last):
+  File "D:\Dev\2025-Epita-Intelligence-Symbolique\argumentation_analysis\tests\tools\test_argument_structure_visualizer.py", line 35, in setUp
+    self.matplotlib_mock = self.matplotlib_patcher.start()
+                           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "C:\Python313\Lib\unittest\mock.py", line 1654, in start
+    result = self.__enter__()
+  File "C:\Python313\Lib\unittest\mock.py", line 1497, in __enter__
+    original, local = self.get_original()
+                      ~~~~~~~~~~~~~~~~~^^
+  File "C:\Python313\Lib\unittest\mock.py", line 1467, in get_original
+    raise AttributeError(
+        "%s does not have the attribute %r" % (target, name)
+    )
+AttributeError: <module 'argumentation_analysis.agents.tools.analysis.new.argument_structure_visualizer' from 'D:\\Dev\\2025-Epita-Intelligence-Symbolique\\argumentation_analysis\\agents\\tools\\analysis\\new\\argument_structure_visualizer.py'> does not have the attribute 'plt'
+
+
+  45. test_create_json_visualization (argumentation_analysis.tests.tools.test_argument_structure_visualizer.TestArgumentStructureVisualizer.test_create_json_visualization)
+Traceback (most recent call last):
+  File "D:\Dev\2025-Epita-Intelligence-Symbolique\argumentation_analysis\tests\tools\test_argument_structure_visualizer.py", line 35, in setUp
+    self.matplotlib_mock = self.matplotlib_patcher.start()
+                           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "C:\Python313\Lib\unittest\mock.py", line 1654, in start
+    result = self.__enter__()
+  File "C:\Python313\Lib\unittest\mock.py", line 1497, in __enter__
+    original, local = self.get_original()
+                      ~~~~~~~~~~~~~~~~~^^
+  File "C:\Python313\Lib\unittest\mock.py", line 1467, in get_original
+    raise AttributeError(
+        "%s does not have the attribute %r" % (target, name)
+    )
+AttributeError: <module 'argumentation_analysis.agents.tools.analysis.new.argument_structure_visualizer' from 'D:\\Dev\\2025-Epita-Intelligence-Symbolique\\argumentation_analysis\\agents\\tools\\analysis\\new\\argument_structure_visualizer.py'> does not have the attribute 'plt'
+
+
+  46. test_determine_structure_type (argumentation_analysis.tests.tools.test_argument_structure_visualizer.TestArgumentStructureVisualizer.test_determine_structure_type)
+Traceback (most recent call last):
+  File "D:\Dev\2025-Epita-Intelligence-Symbolique\argumentation_analysis\tests\tools\test_argument_structure_visualizer.py", line 35, in setUp
+    self.matplotlib_mock = self.matplotlib_patcher.start()
+                           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "C:\Python313\Lib\unittest\mock.py", line 1654, in start
+    result = self.__enter__()
+  File "C:\Python313\Lib\unittest\mock.py", line 1497, in __enter__
+    original, local = self.get_original()
+                      ~~~~~~~~~~~~~~~~~^^
+  File "C:\Python313\Lib\unittest\mock.py", line 1467, in get_original
+    raise AttributeError(
+        "%s does not have the attribute %r" % (target, name)
+    )
+AttributeError: <module 'argumentation_analysis.agents.tools.analysis.new.argument_structure_visualizer' from 'D:\\Dev\\2025-Epita-Intelligence-Symbolique\\argumentation_analysis\\agents\\tools\\analysis\\new\\argument_structure_visualizer.py'> does not have the attribute 'plt'
+
+
+  47. test_generate_text_summary (argumentation_analysis.tests.tools.test_argument_structure_visualizer.TestArgumentStructureVisualizer.test_generate_text_summary)
+Traceback (most recent call last):
+  File "D:\Dev\2025-Epita-Intelligence-Symbolique\argumentation_analysis\tests\tools\test_argument_structure_visualizer.py", line 35, in setUp
+    self.matplotlib_mock = self.matplotlib_patcher.start()
+                           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "C:\Python313\Lib\unittest\mock.py", line 1654, in start
+    result = self.__enter__()
+  File "C:\Python313\Lib\unittest\mock.py", line 1497, in __enter__
+    original, local = self.get_original()
+                      ~~~~~~~~~~~~~~~~~^^
+  File "C:\Python313\Lib\unittest\mock.py", line 1467, in get_original
+    raise AttributeError(
+        "%s does not have the attribute %r" % (target, name)
+    )
+AttributeError: <module 'argumentation_analysis.agents.tools.analysis.new.argument_structure_visualizer' from 'D:\\Dev\\2025-Epita-Intelligence-Symbolique\\argumentation_analysis\\agents\\tools\\analysis\\new\\argument_structure_visualizer.py'> does not have the attribute 'plt'
+
+
+  48. test_identify_argument_roles (argumentation_analysis.tests.tools.test_argument_structure_visualizer.TestArgumentStructureVisualizer.test_identify_argument_roles)
+Traceback (most recent call last):
+  File "D:\Dev\2025-Epita-Intelligence-Symbolique\argumentation_analysis\tests\tools\test_argument_structure_visualizer.py", line 35, in setUp
+    self.matplotlib_mock = self.matplotlib_patcher.start()
+                           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "C:\Python313\Lib\unittest\mock.py", line 1654, in start
+    result = self.__enter__()
+  File "C:\Python313\Lib\unittest\mock.py", line 1497, in __enter__
+    original, local = self.get_original()
+                      ~~~~~~~~~~~~~~~~~^^
+  File "C:\Python313\Lib\unittest\mock.py", line 1467, in get_original
+    raise AttributeError(
+        "%s does not have the attribute %r" % (target, name)
+    )
+AttributeError: <module 'argumentation_analysis.agents.tools.analysis.new.argument_structure_visualizer' from 'D:\\Dev\\2025-Epita-Intelligence-Symbolique\\argumentation_analysis\\agents\\tools\\analysis\\new\\argument_structure_visualizer.py'> does not have the attribute 'plt'
+
+
+  49. test_infer_argument_relationships (argumentation_analysis.tests.tools.test_argument_structure_visualizer.TestArgumentStructureVisualizer.test_infer_argument_relationships)
+Traceback (most recent call last):
+  File "D:\Dev\2025-Epita-Intelligence-Symbolique\argumentation_analysis\tests\tools\test_argument_structure_visualizer.py", line 35, in setUp
+    self.matplotlib_mock = self.matplotlib_patcher.start()
+                           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "C:\Python313\Lib\unittest\mock.py", line 1654, in start
+    result = self.__enter__()
+  File "C:\Python313\Lib\unittest\mock.py", line 1497, in __enter__
+    original, local = self.get_original()
+                      ~~~~~~~~~~~~~~~~~^^
+  File "C:\Python313\Lib\unittest\mock.py", line 1467, in get_original
+    raise AttributeError(
+        "%s does not have the attribute %r" % (target, name)
+    )
+AttributeError: <module 'argumentation_analysis.agents.tools.analysis.new.argument_structure_visualizer' from 'D:\\Dev\\2025-Epita-Intelligence-Symbolique\\argumentation_analysis\\agents\\tools\\analysis\\new\\argument_structure_visualizer.py'> does not have the attribute 'plt'
+
+
+  50. test_initialization (argumentation_analysis.tests.tools.test_argument_structure_visualizer.TestArgumentStructureVisualizer.test_initialization)
+Traceback (most recent call last):
+  File "D:\Dev\2025-Epita-Intelligence-Symbolique\argumentation_analysis\tests\tools\test_argument_structure_visualizer.py", line 35, in setUp
+    self.matplotlib_mock = self.matplotlib_patcher.start()
+                           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "C:\Python313\Lib\unittest\mock.py", line 1654, in start
+    result = self.__enter__()
+  File "C:\Python313\Lib\unittest\mock.py", line 1497, in __enter__
+    original, local = self.get_original()
+                      ~~~~~~~~~~~~~~~~~^^
+  File "C:\Python313\Lib\unittest\mock.py", line 1467, in get_original
+    raise AttributeError(
+        "%s does not have the attribute %r" % (target, name)
+    )
+AttributeError: <module 'argumentation_analysis.agents.tools.analysis.new.argument_structure_visualizer' from 'D:\\Dev\\2025-Epita-Intelligence-Symbolique\\argumentation_analysis\\agents\\tools\\analysis\\new\\argument_structure_visualizer.py'> does not have the attribute 'plt'
+
+
+  51. test_visualize_argument_structure (argumentation_analysis.tests.tools.test_argument_structure_visualizer.TestArgumentStructureVisualizer.test_visualize_argument_structure)
+Traceback (most recent call last):
+  File "D:\Dev\2025-Epita-Intelligence-Symbolique\argumentation_analysis\tests\tools\test_argument_structure_visualizer.py", line 35, in setUp
+    self.matplotlib_mock = self.matplotlib_patcher.start()
+                           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "C:\Python313\Lib\unittest\mock.py", line 1654, in start
+    result = self.__enter__()
+  File "C:\Python313\Lib\unittest\mock.py", line 1497, in __enter__
+    original, local = self.get_original()
+                      ~~~~~~~~~~~~~~~~~^^
+  File "C:\Python313\Lib\unittest\mock.py", line 1467, in get_original
+    raise AttributeError(
+        "%s does not have the attribute %r" % (target, name)
+    )
+AttributeError: <module 'argumentation_analysis.agents.tools.analysis.new.argument_structure_visualizer' from 'D:\\Dev\\2025-Epita-Intelligence-Symbolique\\argumentation_analysis\\agents\\tools\\analysis\\new\\argument_structure_visualizer.py'> does not have the attribute 'plt'
+
+
+  52. test_rhetorical_tools_integration (unittest.loader._FailedTest.test_rhetorical_tools_integration)
+ImportError: Failed to import test module: test_rhetorical_tools_integration
+Traceback (most recent call last):
+  File "C:\Python313\Lib\unittest\loader.py", line 137, in loadTestsFromName
+    module = __import__(module_name)
+  File "D:\Dev\2025-Epita-Intelligence-Symbolique\argumentation_analysis\tests\tools\test_rhetorical_tools_integration.py", line 31, in <module>
+    from argumentation_analysis.agents.tools.analysis.enhanced.rhetorical_result_analyzer import EnhancedRhetoricalResultAnalyzer
+ModuleNotFoundError: No module named 'argumentation_analysis.agents.tools.analysis.enhanced.rhetorical_result_analyzer'
+
+
+
+  53. test_rhetorical_tools_performance (unittest.loader._FailedTest.test_rhetorical_tools_performance)
+ImportError: Failed to import test module: test_rhetorical_tools_performance
+Traceback (most recent call last):
+  File "C:\Python313\Lib\unittest\loader.py", line 137, in loadTestsFromName
+    module = __import__(module_name)
+  File "D:\Dev\2025-Epita-Intelligence-Symbolique\argumentation_analysis\tests\tools\test_rhetorical_tools_performance.py", line 39, in <module>
+    from argumentation_analysis.agents.tools.analysis.enhanced.rhetorical_result_analyzer import EnhancedRhetoricalResultAnalyzer
+ModuleNotFoundError: No module named 'argumentation_analysis.agents.tools.analysis.enhanced.rhetorical_result_analyzer'
+
+
+
