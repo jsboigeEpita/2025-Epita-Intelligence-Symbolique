@@ -4,6 +4,8 @@ Les sujets proposés ci-dessous couvrent différents aspects de l'IA symbolique,
 
 Plusieurs projets proposés s'appuient sur **TweetyProject**, une bibliothèque Java open-source pour l'intelligence artificielle symbolique. TweetyProject offre un ensemble riche de modules pour la représentation de connaissances et l'argumentation computationnelle, permettant aux étudiants de travailler avec des formalismes logiques variés (propositionnelle, premier ordre, description, modale) et des frameworks d'argumentation (Dung, ASPIC+, ABA, etc.) sans avoir à les implémenter de zéro. L'utilisation de TweetyProject via JPype permet de combiner la puissance des implémentations Java avec la flexibilité de Python pour le prototypage rapide et l'expérimentation.
 
+> **Note**: Pour une présentation alternative des projets organisée par niveau de difficulté plutôt que par domaine technique, consultez le document [Sujets de Projets](./sujets_projets.md) qui présente les projets selon quatre catégories: projets d'initiation, d'extension, d'application et de recherche.
+
 ## Organisation des Sujets
 
 Les projets sont organisés en trois catégories principales :
