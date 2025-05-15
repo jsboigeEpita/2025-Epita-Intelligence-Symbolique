@@ -1,0 +1,49 @@
+{
+  "cache_type": "file",
+  "cache_dir": "./text_cache",
+  "cache_settings": {
+    "max_size_mb": 500,
+    "max_entries": 10000,
+    "ttl_seconds": 604800,
+    "cleanup_interval": 86400
+  },
+  "compression": {
+    "enabled": true,
+    "level": 6,
+    "algorithm": "gzip"
+  },
+  "storage_format": {
+    "use_json": true,
+    "include_metadata": true,
+    "metadata_fields": [
+      "timestamp",
+      "source_url",
+      "content_type",
+      "content_length",
+      "hash"
+    ]
+  },
+  "logging": {
+    "enabled": true,
+    "log_level": "INFO",
+    "log_hits": true,
+    "log_misses": true,
+    "log_evictions": true
+  },
+  "fallback_cache": {
+    "enabled": false,
+    "cache_type": "memory",
+    "max_size_mb": 100,
+    "ttl_seconds": 3600
+  },
+  "cache_validation": {
+    "validate_on_load": true,
+    "repair_corrupted": true,
+    "max_repair_attempts": 3
+  },
+  "performance": {
+    "use_async_io": true,
+    "buffer_size": 8192,
+    "max_concurrent_operations": 4
+  }
+}
