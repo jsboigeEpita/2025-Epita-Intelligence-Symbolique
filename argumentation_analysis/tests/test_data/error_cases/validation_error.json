@@ -1,0 +1,107 @@
+{
+  "error_type": "validation",
+  "error_scenarios": [
+    {
+      "name": "missing_required_fields",
+      "entity_type": "extract_definition",
+      "data": {
+        "source_name": "Source incomplète",
+        "source_type": "url",
+        "schema": "https",
+        "host_parts": ["example", "com"],
+        "extracts": [
+          {
+            "extract_name": "Extrait incomplet",
+            "start_marker": "Début",
+            "end_marker": ""
+          }
+        ]
+      },
+      "expected_errors": [
+        "Source 'Source incomplète': Chemin manquant",
+        "Source 'Source incomplète', Extrait 'Extrait incomplet': Marqueur de fin manquant"
+      ]
+    },
+    {
+      "name": "invalid_data_types",
+      "entity_type": "extract_definition",
+      "data": {
+        "source_name": "Source avec types invalides",
+        "source_type": "url",
+        "schema": "https",
+        "host_parts": "example.com",
+        "path": "/page",
+        "extracts": [
+          {
+            "extract_name": 42,
+            "start_marker": "Début",
+            "end_marker": "Fin"
+          }
+        ]
+      },
+      "expected_errors": [
+        "Source 'Source avec types invalides': Le champ 'host_parts' doit être une liste",
+        "Source 'Source avec types invalides', Extrait #1: Le champ 'extract_name' doit être une chaîne de caractères"
+      ]
+    },
+    {
+      "name": "invalid_extract_result",
+      "entity_type": "extract_result",
+      "data": {
+        "source_name": "Source test",
+        "extract_name": "Extrait test",
+        "status": "unknown",
+        "message": "Statut inconnu",
+        "start_marker": "Début",
+        "end_marker": "Fin",
+        "extracted_text": ""
+      },
+      "expected_errors": [
+        "Résultat d'extraction 'Extrait test': Statut invalide 'unknown', doit être 'valid', 'rejected' ou 'error'"
+      ]
+    },
+    {
+      "name": "invalid_url_components",
+      "entity_type": "source_definition",
+      "data": {
+        "source_name": "Source avec URL invalide",
+        "source_type": "url",
+        "schema": "invalid",
+        "host_parts": ["example", ""],
+        "path": "page-sans-slash",
+        "extracts": []
+      },
+      "expected_errors": [
+        "Source 'Source avec URL invalide': Schéma invalide 'invalid', doit être 'http' ou 'https'",
+        "Source 'Source avec URL invalide': Parties d'hôte invalides, ne doivent pas contenir de chaînes vides",
+        "Source 'Source avec URL invalide': Chemin invalide, doit commencer par '/'"
+      ]
+    },
+    {
+      "name": "duplicate_extract_names",
+      "entity_type": "source_definition",
+      "data": {
+        "source_name": "Source avec extraits dupliqués",
+        "source_type": "url",
+        "schema": "https",
+        "host_parts": ["example", "com"],
+        "path": "/page",
+        "extracts": [
+          {
+            "extract_name": "Extrait dupliqué",
+            "start_marker": "Début 1",
+            "end_marker": "Fin 1"
+          },
+          {
+            "extract_name": "Extrait dupliqué",
+            "start_marker": "Début 2",
+            "end_marker": "Fin 2"
+          }
+        ]
+      },
+      "expected_errors": [
+        "Source 'Source avec extraits dupliqués': Noms d'extraits dupliqués 'Extrait dupliqué'"
+      ]
+    }
+  ]
+}
