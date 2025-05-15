@@ -74,7 +74,7 @@ htmlcov/
 *.egg-info/
 
 # Fichiers et répertoires spécifiques au projet
-argumentiation_analysis/temp_downloads/
-argumentiation_analysis/text_cache/
-argumentiation_analysis/agents/tools/analysis/enhanced/data/
-argumentiation_analysis/tests/tools/reports/
+argumentation_analysis/temp_downloads/
+argumentation_analysis/text_cache/
+argumentation_analysis/agents/tools/analysis/enhanced/data/
+argumentation_analysis/tests/tools/reports/

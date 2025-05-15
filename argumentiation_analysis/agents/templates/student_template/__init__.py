@@ -1,1 +1,0 @@
-# Ce fichier permet d'importer le module comme un package Python
