@@ -226,12 +226,13 @@ Pour chaque projet, vous devrez fournir :
 
 ### Évaluation
 
-L'évaluation portera sur :
-- La qualité du code et de l'architecture
-- La pertinence de l'approche choisie
-- La couverture des tests
-- La qualité de la documentation
-- La présentation orale du projet
+L'évaluation des présentations avec slides et démo sera collégiale. La note de l'enseignant comptera pour moitié.
+
+L'évaluation portera sur 4 critères :
+1. **Forme/communication** : Qualité de la présentation, clarté des explications, structure des slides et de la démo
+2. **Théorie** : Exploration et explication de l'état de l'art et des techniques utilisées
+3. **Technique** : Réalisations, performances, tests et qualité du code
+4. **Gestion de projet/collaboration** : Gestion intelligente de GitHub et du travail collaboratif durant la durée du projet
 
 ## Utilisation des LLMs et IA Symbolique
 
