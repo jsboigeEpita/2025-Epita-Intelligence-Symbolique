@@ -8,7 +8,12 @@ Cette section présente les sujets de projets proposés aux étudiants dans le c
 Présentation générale des sujets de projets proposés aux étudiants.
 
 ### [Sujets de Projets Détaillés](./sujets_projets_detailles.md)
-Description détaillée de tous les sujets de projets avec leurs spécifications complètes.
+Page d'accueil des sujets de projets avec des liens vers les descriptions détaillées par catégorie.
+
+### Catégories de projets détaillés
+- [Fondements théoriques et techniques](./fondements_theoriques.md) - Projets centrés sur les aspects formels, logiques et théoriques de l'argumentation
+- [Développement système et infrastructure](./developpement_systeme.md) - Projets axés sur l'architecture, l'orchestration et les composants techniques
+- [Expérience utilisateur et applications](./experience_utilisateur.md) - Projets orientés vers les interfaces, visualisations et cas d'usage concrets
 
 ## Organisation des Projets
 
@@ -77,4 +82,4 @@ Lors du choix de votre sujet, tenez compte de :
 - Vos compétences et intérêts
 - Le temps disponible pour réaliser le projet
 
-Pour une description détaillée de tous les sujets de projets, consultez le document [Sujets de Projets Détaillés](./sujets_projets_detailles.md).
+Pour une description détaillée de tous les sujets de projets, consultez le document [Sujets de Projets Détaillés](./sujets_projets_detailles.md) et les pages spécifiques à chaque catégorie.
