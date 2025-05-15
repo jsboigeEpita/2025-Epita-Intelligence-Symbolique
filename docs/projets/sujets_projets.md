@@ -26,6 +26,8 @@
 
 Ce document présente une sélection de sujets de projets destinés aux étudiants en spécialité NLP de l'EPITA, dans le cadre du Système d'Orchestration Agentique d'Analyse Rhétorique. Ces projets sont conçus pour être réalisables dans un délai d'un mois et visent à permettre aux étudiants d'approfondir leurs connaissances en traitement du langage naturel tout en contribuant à l'amélioration et à l'extension du système existant.
 
+> **Note**: Pour une organisation alternative des projets par domaine technique plutôt que par niveau de difficulté, consultez le document [Sujets de Projets Détaillés](./sujets_projets_detailles.md) qui présente les projets selon trois catégories principales: fondements théoriques, développement système et expérience utilisateur.
+
 Les projets proposés couvrent un large éventail de compétences et de niveaux de difficulté, allant de projets d'initiation accessibles aux débutants jusqu'à des projets plus avancés. Chaque projet est conçu pour développer des compétences spécifiques en NLP, en programmation, en analyse rhétorique et en conception de systèmes multi-agents, tout en étant réalisable dans le délai imparti.
 
 ## Comment choisir un projet

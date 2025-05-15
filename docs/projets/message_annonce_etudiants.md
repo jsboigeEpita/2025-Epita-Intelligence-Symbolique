@@ -1,10 +1,10 @@
-# Annonce du projet "argumentiation_analysis" pour les étudiants de l'EPITA
+# Annonce du projet "argumentation_analysis" pour les étudiants de l'EPITA
 
 ## Présentation du projet
 
 Chers étudiants de l'EPITA,
 
-Nous avons le plaisir de vous annoncer le lancement du projet **"argumentiation_analysis"**, une opportunité exceptionnelle de mettre en pratique vos connaissances en intelligence symbolique dans un contexte concret et innovant.
+Nous avons le plaisir de vous annoncer le lancement du projet **"argumentation_analysis"**, une opportunité exceptionnelle de mettre en pratique vos connaissances en intelligence symbolique dans un contexte concret et innovant.
 
 Ce projet s'articule autour d'un **Système d'Orchestration Agentique d'Analyse Rhétorique**, une plateforme avancée qui utilise plusieurs agents IA spécialisés collaborant pour analyser des textes argumentatifs sous différents angles. Cette architecture multi-agents combine :
 
@@ -169,7 +169,7 @@ Pour commencer à travailler sur le projet, suivez ces étapes :
 
 ## Conclusion
 
-Le projet "argumentiation_analysis" représente une opportunité unique de mettre en pratique vos connaissances en intelligence symbolique dans un contexte concret et innovant. En combinant des approches symboliques traditionnelles avec des techniques modernes basées sur les LLMs, vous explorerez les frontières de l'analyse argumentative automatisée.
+Le projet "argumentation_analysis" représente une opportunité unique de mettre en pratique vos connaissances en intelligence symbolique dans un contexte concret et innovant. En combinant des approches symboliques traditionnelles avec des techniques modernes basées sur les LLMs, vous explorerez les frontières de l'analyse argumentative automatisée.
 
 Nous sommes impatients de découvrir vos contributions à ce projet passionnant et restons à votre disposition pour vous accompagner tout au long de ce mois de développement.
 
