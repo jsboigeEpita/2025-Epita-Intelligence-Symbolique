@@ -29,11 +29,11 @@ Le projet est organisé en plusieurs modules principaux :
   - **[`config/`](./argumentiation_analysis/config/)** : Fichiers de configuration du projet.
   - **[`core/`](./argumentiation_analysis/core/README.md)** : Composants fondamentaux partagés (État, LLM, JVM).
     - **`communication/`** : Système de communication entre agents.
-  - **[`data/`](./argumentiation_analysis/data/)** : Données et ressources utilisées par le projet.
+  - **[`data/`](./argumentiation_analysis/data/README.md)** : Données et ressources utilisées par le projet.
   - **[`libs/`](./argumentiation_analysis/libs/)** : Bibliothèques externes et natives.
   - **[`models/`](./argumentiation_analysis/models/)** : Modèles de données du projet.
   - **[`orchestration/`](./argumentiation_analysis/orchestration/README.md)** : Logique d'exécution de la conversation.
-  - **[`results/`](./argumentiation_analysis/results/)** : Résultats des analyses.
+  - **[`results/`](./argumentiation_analysis/results/README.md)** : Résultats des analyses.
   - **[`services/`](./argumentiation_analysis/services/README.md)** : Services partagés (cache, crypto, extraction, etc.).
   - **[`ui/`](./argumentiation_analysis/ui/README.md)** : Interface utilisateur pour la configuration des analyses.
     - **`extract_editor/`** : Éditeur de marqueurs d'extraits.
@@ -49,9 +49,27 @@ Le projet est organisé en plusieurs modules principaux :
 
 - **[`docs/`](./docs/README.md)** : Documentation supplémentaire du projet.
   - **[`conventions_importation.md`](./docs/conventions_importation.md)** : Conventions d'importation et mécanismes de redirection.
+- **[`architecture/`](./docs/architecture/README.md)** : Documentation de l'architecture du système.
+  - **[`composants/`](./docs/composants/README.md)** : Description des composants du système.
+  - **[`guides/`](./docs/guides/README.md)** : Guides d'utilisation et tutoriels.
+  - **[`integration/`](./docs/integration/README.md)** : Documentation des processus d'intégration.
+  - **[`outils/`](./docs/outils/README.md)** : Documentation des outils d'analyse rhétorique.
+  - **[`projets/`](./docs/projets/README.md)** : Présentation des sujets de projets.
+  - **[`reference/`](./docs/reference/README.md)** : Documentation de référence pour les API.
+  - **[`images/`](./docs/images/README.md)** : Diagrammes et schémas illustrant l'architecture.
   - **[`structure_projet.md`](./docs/structure_projet.md)** : Description détaillée de la structure du projet.
 
-- **[`examples/`](./examples/README.md)** : Exemples de textes et données pour les tests.
+- **[`examples/`](./examples/README.md)** : Exemples de textes et données pour les tests et démonstrations.
+
+- **[`libs/`](./libs/README.md)** : Bibliothèques externes utilisées par le projet.
+  - **[`native/`](./libs/native/)** : Bibliothèques natives (DLL) pour les solveurs SAT.
+
+- **[`logs/`](./logs/README.md)** : Journaux d'exécution du système.
+
+- **[`results/`](./results/README.md)** : Résultats des analyses et des tests.
+  - **[`performance_tests/`](./results/performance_tests/)** : Résultats des tests de performance.
+
+- **[`tutorials/`](./tutorials/README.md)** : Tutoriels pour prendre en main le système.
 
 Chaque module dispose de son propre README détaillé expliquant son fonctionnement et son utilisation.
 
