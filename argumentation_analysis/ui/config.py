@@ -39,8 +39,12 @@ else:
     config_logger.warning(f"⚠️ Variable '{PASSPHRASE_VAR_NAME}' non trouvée dans .env. Chiffrement désactivé.")
 
 # --- URLs et Chemins ---
-TIKA_URL_PARTS = ["https:", "", "tika", "open-webui", "myia", "io", "tika"]
-TIKA_SERVER_URL = f"{TIKA_URL_PARTS[0]}//{'.'.join(TIKA_URL_PARTS[2:-1])}/{TIKA_URL_PARTS[-1]}"
+# Utiliser l'URL du serveur Tika depuis le fichier .env ou utiliser l'URL par défaut
+# Assurez-vous que l'URL du serveur Tika se termine par '/tika'
+tika_url = os.getenv("TIKA_SERVER_ENDPOINT", "https://tika.open-webui.myia.io/tika")
+TIKA_SERVER_URL = tika_url if tika_url.endswith('/tika') else f"{tika_url.rstrip('/')}/tika"
+TIKA_SERVER_TIMEOUT = int(os.getenv("TIKA_SERVER_TIMEOUT", "30"))
+config_logger.info(f"URL du serveur Tika: {TIKA_SERVER_URL}")
 JINA_READER_PREFIX = "https://r.jina.ai/"
 
 # Chemins relatifs au projet

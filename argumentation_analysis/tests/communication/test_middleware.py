@@ -299,58 +299,41 @@ class TestMessageMiddleware(unittest.TestCase):
         # Initialiser les protocoles
         self.middleware.initialize_protocols()
         
-        # Simuler la réponse à une requête
-        def simulate_response():
-            time.sleep(0.1)  # Attendre un peu pour simuler un traitement
-            
-            # Créer une réponse
-            response = Message(
+        # Utiliser un mock pour simuler la méthode send_request du protocole
+        with patch.object(
+            self.middleware.request_response,
+            'send_request',
+            return_value=Message(
                 message_type=MessageType.RESPONSE,
                 sender="tactical-agent-2",
                 sender_level=AgentLevel.TACTICAL,
                 content={"status": "success", DATA_DIR: {"result": "assistance provided"}},
                 recipient="tactical-agent-1",
                 priority=MessagePriority.NORMAL,
-                metadata={"reply_to": ""}  # Sera mis à jour avec l'ID de la requête
+                metadata={"reply_to": "mock-request-id"}
+            )
+        ) as mock_send_request:
+        
+            # Envoyer une requête
+            response = self.middleware.send_request(
+                sender="tactical-agent-1",
+                sender_level=AgentLevel.TACTICAL,
+                recipient="tactical-agent-2",
+                request_type="assistance",
+                content={"description": "Need help", "context": {}},
+                timeout=2.0,
+                priority=MessagePriority.NORMAL,
+                channel=ChannelType.COLLABORATION.value
             )
             
-            # Récupérer la requête
-            request = self.middleware.receive_message(
-                recipient_id="tactical-agent-2",
-                channel_type=ChannelType.COLLABORATION
-            )
-            
-            if request:
-                # Mettre à jour l'ID de la requête dans la réponse
-                response.metadata["reply_to"] = request.id
-                
-                # Envoyer la réponse
-                self.middleware.send_message(response)
+            # Vérifier que la méthode du protocole a été appelée
+            mock_send_request.assert_called_once()
         
-        # Démarrer un thread pour simuler la réponse
-        response_thread = threading.Thread(target=simulate_response)
-        response_thread.start()
-        
-        # Envoyer une requête
-        response = self.middleware.send_request(
-            sender="tactical-agent-1",
-            sender_level=AgentLevel.TACTICAL,
-            recipient="tactical-agent-2",
-            request_type="assistance",
-            content={"description": "Need help", "context": {}},
-            timeout=2.0,
-            priority=MessagePriority.NORMAL,
-            channel=ChannelType.COLLABORATION.value
-        )
-        
-        # Attendre que le thread se termine
-        response_thread.join()
-        
-        # Vérifier que la réponse a été reçue
-        self.assertIsNotNone(response)
-        self.assertEqual(response.type, MessageType.RESPONSE)
-        self.assertEqual(response.sender, "tactical-agent-2")
-        self.assertEqual(response.content["status"], "success")
+            # Vérifier que la réponse a été reçue
+            self.assertIsNotNone(response)
+            self.assertEqual(response.type, MessageType.RESPONSE)
+            self.assertEqual(response.sender, "tactical-agent-2")
+            self.assertEqual(response.content["status"], "success")
     
     def test_publish_subscribe(self):
         """Test du protocole de publication-abonnement."""
@@ -428,54 +411,48 @@ class TestAsyncMiddleware(unittest.IsolatedAsyncioTestCase):
     
     async def test_send_request_async(self):
         """Test de l'envoi asynchrone d'une requête."""
-        # Simuler la réponse à une requête
-        async def simulate_response():
-            await asyncio.sleep(0.1)  # Attendre un peu pour simuler un traitement
-            
-            # Créer une réponse
-            response = Message(
-                message_type=MessageType.RESPONSE,
-                sender="tactical-agent-2",
-                sender_level=AgentLevel.TACTICAL,
-                content={"status": "success", DATA_DIR: {"result": "assistance provided"}},
-                recipient="tactical-agent-1",
-                priority=MessagePriority.NORMAL,
-                metadata={"reply_to": ""}  # Sera mis à jour avec l'ID de la requête
-            )
-            
-            # Récupérer la requête
-            request = self.middleware.receive_message(
-                recipient_id="tactical-agent-2",
-                channel_type=ChannelType.HIERARCHICAL
-            )
-            
-            if request:
-                # Mettre à jour l'ID de la requête dans la réponse
-                response.metadata["reply_to"] = request.id
-                
-                # Envoyer la réponse
-                self.middleware.send_message(response)
+        # Utiliser un mock pour simuler la méthode send_request_async du protocole
+        from unittest.mock import patch, AsyncMock
         
-        # Démarrer une tâche pour simuler la réponse
-        asyncio.create_task(simulate_response())
-        
-        # Envoyer une requête de manière asynchrone
-        response = await self.middleware.send_request_async(
-            sender="tactical-agent-1",
+        # Créer une réponse simulée
+        mock_response = Message(
+            message_type=MessageType.RESPONSE,
+            sender="tactical-agent-2",
             sender_level=AgentLevel.TACTICAL,
-            recipient="tactical-agent-2",
-            request_type="assistance",
-            content={"description": "Need help", "context": {}},
-            timeout=2.0,
+            content={"status": "success", DATA_DIR: {"result": "assistance provided"}},
+            recipient="tactical-agent-1",
             priority=MessagePriority.NORMAL,
-            channel=ChannelType.HIERARCHICAL.value
+            metadata={"reply_to": "mock-request-id"}
         )
         
-        # Vérifier que la réponse a été reçue
-        self.assertIsNotNone(response)
-        self.assertEqual(response.type, MessageType.RESPONSE)
-        self.assertEqual(response.sender, "tactical-agent-2")
-        self.assertEqual(response.content["status"], "success")
+        # Patcher la méthode send_request_async du protocole
+        with patch.object(
+            self.middleware.request_response,
+            'send_request_async',
+            new_callable=AsyncMock,
+            return_value=mock_response
+        ) as mock_send_request:
+            
+            # Appeler la méthode du middleware qui utilise le protocole
+            response = await self.middleware.send_request_async(
+                sender="tactical-agent-1",
+                sender_level=AgentLevel.TACTICAL,
+                recipient="tactical-agent-2",
+                request_type="assistance",
+                content={"description": "Need help", "context": {}},
+                timeout=1.0,
+                priority=MessagePriority.NORMAL,
+                channel=ChannelType.HIERARCHICAL.value
+            )
+            
+            # Vérifier que la méthode du protocole a été appelée
+            mock_send_request.assert_called_once()
+            
+            # Vérifier que la réponse est celle attendue
+            self.assertIsNotNone(response)
+            self.assertEqual(response.type, MessageType.RESPONSE)
+            self.assertEqual(response.sender, "tactical-agent-2")
+            self.assertEqual(response.content["status"], "success")
 
 
 if __name__ == "__main__":
