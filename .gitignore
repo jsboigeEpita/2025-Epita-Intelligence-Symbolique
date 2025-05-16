@@ -78,3 +78,13 @@ argumentation_analysis/temp_downloads/
 argumentation_analysis/text_cache/
 argumentation_analysis/agents/tools/analysis/enhanced/data/
 argumentation_analysis/tests/tools/reports/
+
+# Contenu sensible
+**/Discours_*
+**/summaries/Discours_*
+rapport_contenu_sensible_*.md
+*sensitive_content*.py
+*sensitive_content*.md
+
+# Fichiers temporaires additionnels
+temp_extracts/
