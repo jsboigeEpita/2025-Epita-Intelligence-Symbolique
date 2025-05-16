@@ -13,6 +13,8 @@ setup(
         "matplotlib",
         "jpype1",
         "cryptography",
+        "seaborn",
+        "tqdm",
     ],
     python_requires=">=3.8",
     description="Système d'analyse argumentative",

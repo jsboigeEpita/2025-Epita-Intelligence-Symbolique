@@ -1,0 +1,8 @@
+Agent,Sophismes détectés,Score de confiance,Richesse contextuelle
+base_contextual,35,0.0,4.0
+advanced_contextual,14,0.0,2.0
+advanced_complex,14,0.0,0.0
+base_coherence,0,0.7068000000000001,0.0
+advanced_rhetorical,0,0.5095839999999999,4.56
+advanced_coherence,0,0.5,0.0
+advanced_severity,0,0.0,0.0

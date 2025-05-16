@@ -56,6 +56,9 @@ Présentation des outils d'analyse rhétorique disponibles dans le système.
 ### [API des Outils Rhétoriques](./api_outils_rhetorique.md)
 Documentation de l'API des outils d'analyse rhétorique.
 
+### [Extraits Chiffrés](./extraits_chiffres.md)
+Documentation détaillée sur le système d'extraits chiffrés utilisé pour l'analyse rhétorique, incluant la structure du fichier, les mécanismes de chiffrement et les outils de manipulation.
+
 ### [Intégration des Outils Rhétoriques](./integration_outils_rhetorique.md)
 Guide pour l'intégration des outils d'analyse rhétorique dans le système.
 
@@ -73,6 +76,7 @@ Si vous débutez avec le système d'analyse argumentative, nous vous recommandon
 2. Explorez l'[Architecture](./architecture/README.md) pour comprendre les principes de conception
 3. Suivez les [Guides](./guides/README.md) pour apprendre à utiliser le système
 4. Consultez la documentation des [Outils](./outils/README.md) pour comprendre les fonctionnalités disponibles
+5. Familiarisez-vous avec le [système d'extraits chiffrés](./extraits_chiffres.md) pour comprendre comment les contenus sensibles sont gérés
 
 ## Contribution à la Documentation
 

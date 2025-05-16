@@ -1,0 +1,3723 @@
+[
+  {
+    "extract_name": "1. Débat Complet (Ottawa, 1858)",
+    "source_name": "Lincoln-Douglas Débat 1 (NPS)",
+    "argument_count": 6,
+    "timestamp": "2025-05-15T23:19:11.857453",
+    "analyses": {
+      "complex_fallacies": {
+        "individual_fallacies_count": 0,
+        "basic_combinations": [],
+        "advanced_combinations": [],
+        "fallacy_patterns": [],
+        "composite_severity": {
+          "basic_severity": 0.0,
+          "advanced_severity": 0.0,
+          "pattern_severity": 0.0,
+          "composite_severity": 0.0,
+          "context_modifier": 0.0,
+          "adjusted_severity": 0.0,
+          "severity_level": "Faible"
+        },
+        "context": "Lincoln-Douglas Débat 1 (NPS)",
+        "analysis_timestamp": "2025-05-15T23:19:11.862033"
+      },
+      "contextual_fallacies": {
+        "context_analysis": {
+          "context_type": "général",
+          "context_subtypes": [],
+          "audience_characteristics": [],
+          "formality_level": "moyen",
+          "confidence": 0.7
+        },
+        "potential_fallacies_count": 0,
+        "contextual_fallacies_count": 0,
+        "contextual_fallacies": [],
+        "fallacy_relations": [],
+        "analysis_timestamp": "2025-05-15T23:19:11.862339"
+      },
+      "fallacy_severity": {
+        "overall_severity": 0.0,
+        "severity_level": "Faible",
+        "fallacy_evaluations": [],
+        "context_analysis": {
+          "context_type": "général",
+          "audience_type": "général",
+          "domain_type": "général",
+          "context_severity_modifier": 0.0,
+          "audience_severity_modifier": 0.0,
+          "domain_severity_modifier": 0.0
+        },
+        "analysis_timestamp": "2025-05-15T23:19:11.862487"
+      },
+      "rhetorical_results": {
+        "overall_analysis": {
+          "rhetorical_quality": 0.44999999999999996,
+          "rhetorical_quality_level": "Modéré",
+          "main_strengths": [
+            "Absence de sophismes détectés"
+          ],
+          "main_weaknesses": [
+            "Faible cohérence logique",
+            "Argumentation peu persuasive"
+          ],
+          "context_relevance": 0.48999999999999994
+        },
+        "fallacy_analysis": {
+          "total_fallacies": 0,
+          "fallacy_types_distribution": {},
+          "most_common_fallacies": [],
+          "most_severe_fallacies": [],
+          "composite_fallacies": 0,
+          "overall_severity": 0.0,
+          "severity_level": "Faible"
+        },
+        "coherence_analysis": {
+          "overall_coherence": 0.5,
+          "coherence_level": "Modéré",
+          "thematic_coherence": 0.7,
+          "logical_coherence": 0.3,
+          "structure_quality": 0.5,
+          "main_coherence_issues": [
+            "Logical gaps"
+          ]
+        },
+        "persuasion_analysis": {
+          "persuasion_score": 0.0,
+          "persuasion_level": "Très faible",
+          "emotional_appeal": 0.0,
+          "logical_appeal": 0.0,
+          "credibility_appeal": 0.0,
+          "context_appropriateness": 0.0,
+          "audience_alignment": 0.0
+        },
+        "recommendations": {
+          "general_recommendations": [
+            "Revoir la stratégie persuasive globale"
+          ],
+          "fallacy_recommendations": [
+            "Adapter les sophismes au contexte spécifique de l'argumentation"
+          ],
+          "coherence_recommendations": [
+            "Améliorer la cohérence globale de l'argumentation",
+            "Combler les lacunes logiques entre les arguments"
+          ],
+          "persuasion_recommendations": [
+            "Renforcer l'efficacité persuasive globale"
+          ],
+          "context_specific_recommendations": []
+        },
+        "context": "Lincoln-Douglas Débat 1 (NPS)",
+        "analysis_timestamp": "2025-05-15T23:19:11.862762"
+      }
+    },
+    "comparison_with_base": {
+      "timestamp": "2025-05-15T23:19:11.862771",
+      "fallacy_detection_comparison": {
+        "advanced_fallacy_count": 0,
+        "base_fallacy_count": 6,
+        "difference": -6,
+        "additional_fallacies_detected": [],
+        "fallacies_not_detected_in_base": []
+      },
+      "coherence_analysis_comparison": {
+        "advanced_coherence_score": 0.5,
+        "base_coherence_score": 0.0,
+        "difference": 0.5,
+        "advanced_coherence_level": "Modéré",
+        "base_coherence_level": "N/A"
+      },
+      "overall_comparison": {
+        "advanced_analysis_depth": "Élevée",
+        "base_analysis_depth": "Modérée",
+        "advanced_quality_score": 0.44999999999999996,
+        "key_improvements": [
+          "Détection de sophismes complexes et composites",
+          "Évaluation de la gravité des sophismes",
+          "Analyse contextuelle approfondie",
+          "Recommandations plus détaillées"
+        ]
+      }
+    }
+  },
+  {
+    "extract_name": "2. Discours Principal de Lincoln",
+    "source_name": "Lincoln-Douglas Débat 1 (NPS)",
+    "argument_count": 6,
+    "timestamp": "2025-05-15T23:19:11.863000",
+    "analyses": {
+      "complex_fallacies": {
+        "individual_fallacies_count": 0,
+        "basic_combinations": [],
+        "advanced_combinations": [],
+        "fallacy_patterns": [],
+        "composite_severity": {
+          "basic_severity": 0.0,
+          "advanced_severity": 0.0,
+          "pattern_severity": 0.0,
+          "composite_severity": 0.0,
+          "context_modifier": 0.0,
+          "adjusted_severity": 0.0,
+          "severity_level": "Faible"
+        },
+        "context": "Lincoln-Douglas Débat 1 (NPS)",
+        "analysis_timestamp": "2025-05-15T23:19:11.867849"
+      },
+      "contextual_fallacies": {
+        "context_analysis": {
+          "context_type": "général",
+          "context_subtypes": [],
+          "audience_characteristics": [],
+          "formality_level": "moyen",
+          "confidence": 0.7
+        },
+        "potential_fallacies_count": 0,
+        "contextual_fallacies_count": 0,
+        "contextual_fallacies": [],
+        "fallacy_relations": [],
+        "analysis_timestamp": "2025-05-15T23:19:11.868197"
+      },
+      "fallacy_severity": {
+        "overall_severity": 0.0,
+        "severity_level": "Faible",
+        "fallacy_evaluations": [],
+        "context_analysis": {
+          "context_type": "général",
+          "audience_type": "général",
+          "domain_type": "général",
+          "context_severity_modifier": 0.0,
+          "audience_severity_modifier": 0.0,
+          "domain_severity_modifier": 0.0
+        },
+        "analysis_timestamp": "2025-05-15T23:19:11.868297"
+      },
+      "rhetorical_results": {
+        "overall_analysis": {
+          "rhetorical_quality": 0.44999999999999996,
+          "rhetorical_quality_level": "Modéré",
+          "main_strengths": [
+            "Absence de sophismes détectés"
+          ],
+          "main_weaknesses": [
+            "Faible cohérence logique",
+            "Argumentation peu persuasive"
+          ],
+          "context_relevance": 0.48999999999999994
+        },
+        "fallacy_analysis": {
+          "total_fallacies": 0,
+          "fallacy_types_distribution": {},
+          "most_common_fallacies": [],
+          "most_severe_fallacies": [],
+          "composite_fallacies": 0,
+          "overall_severity": 0.0,
+          "severity_level": "Faible"
+        },
+        "coherence_analysis": {
+          "overall_coherence": 0.5,
+          "coherence_level": "Modéré",
+          "thematic_coherence": 0.7,
+          "logical_coherence": 0.3,
+          "structure_quality": 0.5,
+          "main_coherence_issues": [
+            "Logical gaps"
+          ]
+        },
+        "persuasion_analysis": {
+          "persuasion_score": 0.0,
+          "persuasion_level": "Très faible",
+          "emotional_appeal": 0.0,
+          "logical_appeal": 0.0,
+          "credibility_appeal": 0.0,
+          "context_appropriateness": 0.0,
+          "audience_alignment": 0.0
+        },
+        "recommendations": {
+          "general_recommendations": [
+            "Revoir la stratégie persuasive globale"
+          ],
+          "fallacy_recommendations": [
+            "Adapter les sophismes au contexte spécifique de l'argumentation"
+          ],
+          "coherence_recommendations": [
+            "Améliorer la cohérence globale de l'argumentation",
+            "Combler les lacunes logiques entre les arguments"
+          ],
+          "persuasion_recommendations": [
+            "Renforcer l'efficacité persuasive globale"
+          ],
+          "context_specific_recommendations": []
+        },
+        "context": "Lincoln-Douglas Débat 1 (NPS)",
+        "analysis_timestamp": "2025-05-15T23:19:11.868409"
+      }
+    },
+    "comparison_with_base": {
+      "timestamp": "2025-05-15T23:19:11.868414",
+      "fallacy_detection_comparison": {
+        "advanced_fallacy_count": 0,
+        "base_fallacy_count": 6,
+        "difference": -6,
+        "additional_fallacies_detected": [],
+        "fallacies_not_detected_in_base": []
+      },
+      "coherence_analysis_comparison": {
+        "advanced_coherence_score": 0.5,
+        "base_coherence_score": 0.0,
+        "difference": 0.5,
+        "advanced_coherence_level": "Modéré",
+        "base_coherence_level": "N/A"
+      },
+      "overall_comparison": {
+        "advanced_analysis_depth": "Élevée",
+        "base_analysis_depth": "Modérée",
+        "advanced_quality_score": 0.44999999999999996,
+        "key_improvements": [
+          "Détection de sophismes complexes et composites",
+          "Évaluation de la gravité des sophismes",
+          "Analyse contextuelle approfondie",
+          "Recommandations plus détaillées"
+        ]
+      }
+    }
+  },
+  {
+    "extract_name": "3. Discours d'Ouverture de Douglas",
+    "source_name": "Lincoln-Douglas Débat 1 (NPS)",
+    "argument_count": 6,
+    "timestamp": "2025-05-15T23:19:11.868593",
+    "analyses": {
+      "complex_fallacies": {
+        "individual_fallacies_count": 0,
+        "basic_combinations": [],
+        "advanced_combinations": [],
+        "fallacy_patterns": [],
+        "composite_severity": {
+          "basic_severity": 0.0,
+          "advanced_severity": 0.0,
+          "pattern_severity": 0.0,
+          "composite_severity": 0.0,
+          "context_modifier": 0.0,
+          "adjusted_severity": 0.0,
+          "severity_level": "Faible"
+        },
+        "context": "Lincoln-Douglas Débat 1 (NPS)",
+        "analysis_timestamp": "2025-05-15T23:19:11.874574"
+      },
+      "contextual_fallacies": {
+        "context_analysis": {
+          "context_type": "général",
+          "context_subtypes": [],
+          "audience_characteristics": [],
+          "formality_level": "moyen",
+          "confidence": 0.7
+        },
+        "potential_fallacies_count": 0,
+        "contextual_fallacies_count": 0,
+        "contextual_fallacies": [],
+        "fallacy_relations": [],
+        "analysis_timestamp": "2025-05-15T23:19:11.875096"
+      },
+      "fallacy_severity": {
+        "overall_severity": 0.0,
+        "severity_level": "Faible",
+        "fallacy_evaluations": [],
+        "context_analysis": {
+          "context_type": "général",
+          "audience_type": "général",
+          "domain_type": "général",
+          "context_severity_modifier": 0.0,
+          "audience_severity_modifier": 0.0,
+          "domain_severity_modifier": 0.0
+        },
+        "analysis_timestamp": "2025-05-15T23:19:11.875304"
+      },
+      "rhetorical_results": {
+        "overall_analysis": {
+          "rhetorical_quality": 0.44999999999999996,
+          "rhetorical_quality_level": "Modéré",
+          "main_strengths": [
+            "Absence de sophismes détectés"
+          ],
+          "main_weaknesses": [
+            "Faible cohérence logique",
+            "Argumentation peu persuasive"
+          ],
+          "context_relevance": 0.48999999999999994
+        },
+        "fallacy_analysis": {
+          "total_fallacies": 0,
+          "fallacy_types_distribution": {},
+          "most_common_fallacies": [],
+          "most_severe_fallacies": [],
+          "composite_fallacies": 0,
+          "overall_severity": 0.0,
+          "severity_level": "Faible"
+        },
+        "coherence_analysis": {
+          "overall_coherence": 0.5,
+          "coherence_level": "Modéré",
+          "thematic_coherence": 0.7,
+          "logical_coherence": 0.3,
+          "structure_quality": 0.5,
+          "main_coherence_issues": [
+            "Logical gaps"
+          ]
+        },
+        "persuasion_analysis": {
+          "persuasion_score": 0.0,
+          "persuasion_level": "Très faible",
+          "emotional_appeal": 0.0,
+          "logical_appeal": 0.0,
+          "credibility_appeal": 0.0,
+          "context_appropriateness": 0.0,
+          "audience_alignment": 0.0
+        },
+        "recommendations": {
+          "general_recommendations": [
+            "Revoir la stratégie persuasive globale"
+          ],
+          "fallacy_recommendations": [
+            "Adapter les sophismes au contexte spécifique de l'argumentation"
+          ],
+          "coherence_recommendations": [
+            "Améliorer la cohérence globale de l'argumentation",
+            "Combler les lacunes logiques entre les arguments"
+          ],
+          "persuasion_recommendations": [
+            "Renforcer l'efficacité persuasive globale"
+          ],
+          "context_specific_recommendations": []
+        },
+        "context": "Lincoln-Douglas Débat 1 (NPS)",
+        "analysis_timestamp": "2025-05-15T23:19:11.875487"
+      }
+    },
+    "comparison_with_base": {
+      "timestamp": "2025-05-15T23:19:11.875494",
+      "fallacy_detection_comparison": {
+        "advanced_fallacy_count": 0,
+        "base_fallacy_count": 6,
+        "difference": -6,
+        "additional_fallacies_detected": [],
+        "fallacies_not_detected_in_base": []
+      },
+      "coherence_analysis_comparison": {
+        "advanced_coherence_score": 0.5,
+        "base_coherence_score": 0.0,
+        "difference": 0.5,
+        "advanced_coherence_level": "Modéré",
+        "base_coherence_level": "N/A"
+      },
+      "overall_comparison": {
+        "advanced_analysis_depth": "Élevée",
+        "base_analysis_depth": "Modérée",
+        "advanced_quality_score": 0.44999999999999996,
+        "key_improvements": [
+          "Détection de sophismes complexes et composites",
+          "Évaluation de la gravité des sophismes",
+          "Analyse contextuelle approfondie",
+          "Recommandations plus détaillées"
+        ]
+      }
+    }
+  },
+  {
+    "extract_name": "4. Lincoln sur Droits Naturels/Égalité",
+    "source_name": "Lincoln-Douglas Débat 1 (NPS)",
+    "argument_count": 6,
+    "timestamp": "2025-05-15T23:19:11.875799",
+    "analyses": {
+      "complex_fallacies": {
+        "individual_fallacies_count": 0,
+        "basic_combinations": [],
+        "advanced_combinations": [],
+        "fallacy_patterns": [],
+        "composite_severity": {
+          "basic_severity": 0.0,
+          "advanced_severity": 0.0,
+          "pattern_severity": 0.0,
+          "composite_severity": 0.0,
+          "context_modifier": 0.0,
+          "adjusted_severity": 0.0,
+          "severity_level": "Faible"
+        },
+        "context": "Lincoln-Douglas Débat 1 (NPS)",
+        "analysis_timestamp": "2025-05-15T23:19:11.881540"
+      },
+      "contextual_fallacies": {
+        "context_analysis": {
+          "context_type": "général",
+          "context_subtypes": [],
+          "audience_characteristics": [],
+          "formality_level": "moyen",
+          "confidence": 0.7
+        },
+        "potential_fallacies_count": 0,
+        "contextual_fallacies_count": 0,
+        "contextual_fallacies": [],
+        "fallacy_relations": [],
+        "analysis_timestamp": "2025-05-15T23:19:11.882317"
+      },
+      "fallacy_severity": {
+        "overall_severity": 0.0,
+        "severity_level": "Faible",
+        "fallacy_evaluations": [],
+        "context_analysis": {
+          "context_type": "général",
+          "audience_type": "général",
+          "domain_type": "général",
+          "context_severity_modifier": 0.0,
+          "audience_severity_modifier": 0.0,
+          "domain_severity_modifier": 0.0
+        },
+        "analysis_timestamp": "2025-05-15T23:19:11.882527"
+      },
+      "rhetorical_results": {
+        "overall_analysis": {
+          "rhetorical_quality": 0.44999999999999996,
+          "rhetorical_quality_level": "Modéré",
+          "main_strengths": [
+            "Absence de sophismes détectés"
+          ],
+          "main_weaknesses": [
+            "Faible cohérence logique",
+            "Argumentation peu persuasive"
+          ],
+          "context_relevance": 0.48999999999999994
+        },
+        "fallacy_analysis": {
+          "total_fallacies": 0,
+          "fallacy_types_distribution": {},
+          "most_common_fallacies": [],
+          "most_severe_fallacies": [],
+          "composite_fallacies": 0,
+          "overall_severity": 0.0,
+          "severity_level": "Faible"
+        },
+        "coherence_analysis": {
+          "overall_coherence": 0.5,
+          "coherence_level": "Modéré",
+          "thematic_coherence": 0.7,
+          "logical_coherence": 0.3,
+          "structure_quality": 0.5,
+          "main_coherence_issues": [
+            "Logical gaps"
+          ]
+        },
+        "persuasion_analysis": {
+          "persuasion_score": 0.0,
+          "persuasion_level": "Très faible",
+          "emotional_appeal": 0.0,
+          "logical_appeal": 0.0,
+          "credibility_appeal": 0.0,
+          "context_appropriateness": 0.0,
+          "audience_alignment": 0.0
+        },
+        "recommendations": {
+          "general_recommendations": [
+            "Revoir la stratégie persuasive globale"
+          ],
+          "fallacy_recommendations": [
+            "Adapter les sophismes au contexte spécifique de l'argumentation"
+          ],
+          "coherence_recommendations": [
+            "Améliorer la cohérence globale de l'argumentation",
+            "Combler les lacunes logiques entre les arguments"
+          ],
+          "persuasion_recommendations": [
+            "Renforcer l'efficacité persuasive globale"
+          ],
+          "context_specific_recommendations": []
+        },
+        "context": "Lincoln-Douglas Débat 1 (NPS)",
+        "analysis_timestamp": "2025-05-15T23:19:11.882695"
+      }
+    },
+    "comparison_with_base": {
+      "timestamp": "2025-05-15T23:19:11.882702",
+      "fallacy_detection_comparison": {
+        "advanced_fallacy_count": 0,
+        "base_fallacy_count": 6,
+        "difference": -6,
+        "additional_fallacies_detected": [],
+        "fallacies_not_detected_in_base": []
+      },
+      "coherence_analysis_comparison": {
+        "advanced_coherence_score": 0.5,
+        "base_coherence_score": 0.0,
+        "difference": 0.5,
+        "advanced_coherence_level": "Modéré",
+        "base_coherence_level": "N/A"
+      },
+      "overall_comparison": {
+        "advanced_analysis_depth": "Élevée",
+        "base_analysis_depth": "Modérée",
+        "advanced_quality_score": 0.44999999999999996,
+        "key_improvements": [
+          "Détection de sophismes complexes et composites",
+          "Évaluation de la gravité des sophismes",
+          "Analyse contextuelle approfondie",
+          "Recommandations plus détaillées"
+        ]
+      }
+    }
+  },
+  {
+    "extract_name": "5. Douglas sur Race/Dred Scott",
+    "source_name": "Lincoln-Douglas Débat 1 (NPS)",
+    "argument_count": 6,
+    "timestamp": "2025-05-15T23:19:11.883371",
+    "analyses": {
+      "complex_fallacies": {
+        "individual_fallacies_count": 0,
+        "basic_combinations": [],
+        "advanced_combinations": [],
+        "fallacy_patterns": [],
+        "composite_severity": {
+          "basic_severity": 0.0,
+          "advanced_severity": 0.0,
+          "pattern_severity": 0.0,
+          "composite_severity": 0.0,
+          "context_modifier": 0.0,
+          "adjusted_severity": 0.0,
+          "severity_level": "Faible"
+        },
+        "context": "Lincoln-Douglas Débat 1 (NPS)",
+        "analysis_timestamp": "2025-05-15T23:19:11.892396"
+      },
+      "contextual_fallacies": {
+        "context_analysis": {
+          "context_type": "général",
+          "context_subtypes": [],
+          "audience_characteristics": [],
+          "formality_level": "moyen",
+          "confidence": 0.7
+        },
+        "potential_fallacies_count": 0,
+        "contextual_fallacies_count": 0,
+        "contextual_fallacies": [],
+        "fallacy_relations": [],
+        "analysis_timestamp": "2025-05-15T23:19:11.893268"
+      },
+      "fallacy_severity": {
+        "overall_severity": 0.0,
+        "severity_level": "Faible",
+        "fallacy_evaluations": [],
+        "context_analysis": {
+          "context_type": "général",
+          "audience_type": "général",
+          "domain_type": "général",
+          "context_severity_modifier": 0.0,
+          "audience_severity_modifier": 0.0,
+          "domain_severity_modifier": 0.0
+        },
+        "analysis_timestamp": "2025-05-15T23:19:11.893387"
+      },
+      "rhetorical_results": {
+        "overall_analysis": {
+          "rhetorical_quality": 0.44999999999999996,
+          "rhetorical_quality_level": "Modéré",
+          "main_strengths": [
+            "Absence de sophismes détectés"
+          ],
+          "main_weaknesses": [
+            "Faible cohérence logique",
+            "Argumentation peu persuasive"
+          ],
+          "context_relevance": 0.48999999999999994
+        },
+        "fallacy_analysis": {
+          "total_fallacies": 0,
+          "fallacy_types_distribution": {},
+          "most_common_fallacies": [],
+          "most_severe_fallacies": [],
+          "composite_fallacies": 0,
+          "overall_severity": 0.0,
+          "severity_level": "Faible"
+        },
+        "coherence_analysis": {
+          "overall_coherence": 0.5,
+          "coherence_level": "Modéré",
+          "thematic_coherence": 0.7,
+          "logical_coherence": 0.3,
+          "structure_quality": 0.5,
+          "main_coherence_issues": [
+            "Logical gaps"
+          ]
+        },
+        "persuasion_analysis": {
+          "persuasion_score": 0.0,
+          "persuasion_level": "Très faible",
+          "emotional_appeal": 0.0,
+          "logical_appeal": 0.0,
+          "credibility_appeal": 0.0,
+          "context_appropriateness": 0.0,
+          "audience_alignment": 0.0
+        },
+        "recommendations": {
+          "general_recommendations": [
+            "Revoir la stratégie persuasive globale"
+          ],
+          "fallacy_recommendations": [
+            "Adapter les sophismes au contexte spécifique de l'argumentation"
+          ],
+          "coherence_recommendations": [
+            "Améliorer la cohérence globale de l'argumentation",
+            "Combler les lacunes logiques entre les arguments"
+          ],
+          "persuasion_recommendations": [
+            "Renforcer l'efficacité persuasive globale"
+          ],
+          "context_specific_recommendations": []
+        },
+        "context": "Lincoln-Douglas Débat 1 (NPS)",
+        "analysis_timestamp": "2025-05-15T23:19:11.893500"
+      }
+    },
+    "comparison_with_base": {
+      "timestamp": "2025-05-15T23:19:11.893506",
+      "fallacy_detection_comparison": {
+        "advanced_fallacy_count": 0,
+        "base_fallacy_count": 6,
+        "difference": -6,
+        "additional_fallacies_detected": [],
+        "fallacies_not_detected_in_base": []
+      },
+      "coherence_analysis_comparison": {
+        "advanced_coherence_score": 0.5,
+        "base_coherence_score": 0.0,
+        "difference": 0.5,
+        "advanced_coherence_level": "Modéré",
+        "base_coherence_level": "N/A"
+      },
+      "overall_comparison": {
+        "advanced_analysis_depth": "Élevée",
+        "base_analysis_depth": "Modérée",
+        "advanced_quality_score": 0.44999999999999996,
+        "key_improvements": [
+          "Détection de sophismes complexes et composites",
+          "Évaluation de la gravité des sophismes",
+          "Analyse contextuelle approfondie",
+          "Recommandations plus détaillées"
+        ]
+      }
+    }
+  },
+  {
+    "extract_name": "1. Débat Complet (Freeport, 1858)",
+    "source_name": "Lincoln-Douglas Débat 2 (NPS)",
+    "argument_count": 6,
+    "timestamp": "2025-05-15T23:19:11.893782",
+    "analyses": {
+      "complex_fallacies": {
+        "individual_fallacies_count": 0,
+        "basic_combinations": [],
+        "advanced_combinations": [],
+        "fallacy_patterns": [],
+        "composite_severity": {
+          "basic_severity": 0.0,
+          "advanced_severity": 0.0,
+          "pattern_severity": 0.0,
+          "composite_severity": 0.0,
+          "context_modifier": 0.0,
+          "adjusted_severity": 0.0,
+          "severity_level": "Faible"
+        },
+        "context": "Lincoln-Douglas Débat 2 (NPS)",
+        "analysis_timestamp": "2025-05-15T23:19:11.900876"
+      },
+      "contextual_fallacies": {
+        "context_analysis": {
+          "context_type": "général",
+          "context_subtypes": [],
+          "audience_characteristics": [],
+          "formality_level": "moyen",
+          "confidence": 0.7
+        },
+        "potential_fallacies_count": 0,
+        "contextual_fallacies_count": 0,
+        "contextual_fallacies": [],
+        "fallacy_relations": [],
+        "analysis_timestamp": "2025-05-15T23:19:11.901703"
+      },
+      "fallacy_severity": {
+        "overall_severity": 0.0,
+        "severity_level": "Faible",
+        "fallacy_evaluations": [],
+        "context_analysis": {
+          "context_type": "général",
+          "audience_type": "général",
+          "domain_type": "général",
+          "context_severity_modifier": 0.0,
+          "audience_severity_modifier": 0.0,
+          "domain_severity_modifier": 0.0
+        },
+        "analysis_timestamp": "2025-05-15T23:19:11.901940"
+      },
+      "rhetorical_results": {
+        "overall_analysis": {
+          "rhetorical_quality": 0.44999999999999996,
+          "rhetorical_quality_level": "Modéré",
+          "main_strengths": [
+            "Absence de sophismes détectés"
+          ],
+          "main_weaknesses": [
+            "Faible cohérence logique",
+            "Argumentation peu persuasive"
+          ],
+          "context_relevance": 0.48999999999999994
+        },
+        "fallacy_analysis": {
+          "total_fallacies": 0,
+          "fallacy_types_distribution": {},
+          "most_common_fallacies": [],
+          "most_severe_fallacies": [],
+          "composite_fallacies": 0,
+          "overall_severity": 0.0,
+          "severity_level": "Faible"
+        },
+        "coherence_analysis": {
+          "overall_coherence": 0.5,
+          "coherence_level": "Modéré",
+          "thematic_coherence": 0.7,
+          "logical_coherence": 0.3,
+          "structure_quality": 0.5,
+          "main_coherence_issues": [
+            "Logical gaps"
+          ]
+        },
+        "persuasion_analysis": {
+          "persuasion_score": 0.0,
+          "persuasion_level": "Très faible",
+          "emotional_appeal": 0.0,
+          "logical_appeal": 0.0,
+          "credibility_appeal": 0.0,
+          "context_appropriateness": 0.0,
+          "audience_alignment": 0.0
+        },
+        "recommendations": {
+          "general_recommendations": [
+            "Revoir la stratégie persuasive globale"
+          ],
+          "fallacy_recommendations": [
+            "Adapter les sophismes au contexte spécifique de l'argumentation"
+          ],
+          "coherence_recommendations": [
+            "Améliorer la cohérence globale de l'argumentation",
+            "Combler les lacunes logiques entre les arguments"
+          ],
+          "persuasion_recommendations": [
+            "Renforcer l'efficacité persuasive globale"
+          ],
+          "context_specific_recommendations": []
+        },
+        "context": "Lincoln-Douglas Débat 2 (NPS)",
+        "analysis_timestamp": "2025-05-15T23:19:11.902167"
+      }
+    },
+    "comparison_with_base": {
+      "timestamp": "2025-05-15T23:19:11.902178",
+      "fallacy_detection_comparison": {
+        "advanced_fallacy_count": 0,
+        "base_fallacy_count": 6,
+        "difference": -6,
+        "additional_fallacies_detected": [],
+        "fallacies_not_detected_in_base": []
+      },
+      "coherence_analysis_comparison": {
+        "advanced_coherence_score": 0.5,
+        "base_coherence_score": 0.0,
+        "difference": 0.5,
+        "advanced_coherence_level": "Modéré",
+        "base_coherence_level": "N/A"
+      },
+      "overall_comparison": {
+        "advanced_analysis_depth": "Élevée",
+        "base_analysis_depth": "Modérée",
+        "advanced_quality_score": 0.44999999999999996,
+        "key_improvements": [
+          "Détection de sophismes complexes et composites",
+          "Évaluation de la gravité des sophismes",
+          "Analyse contextuelle approfondie",
+          "Recommandations plus détaillées"
+        ]
+      }
+    }
+  },
+  {
+    "extract_name": "2. Discours Principal de Douglas",
+    "source_name": "Lincoln-Douglas Débat 2 (NPS)",
+    "argument_count": 6,
+    "timestamp": "2025-05-15T23:19:11.902498",
+    "analyses": {
+      "complex_fallacies": {
+        "individual_fallacies_count": 0,
+        "basic_combinations": [],
+        "advanced_combinations": [],
+        "fallacy_patterns": [],
+        "composite_severity": {
+          "basic_severity": 0.0,
+          "advanced_severity": 0.0,
+          "pattern_severity": 0.0,
+          "composite_severity": 0.0,
+          "context_modifier": 0.0,
+          "adjusted_severity": 0.0,
+          "severity_level": "Faible"
+        },
+        "context": "Lincoln-Douglas Débat 2 (NPS)",
+        "analysis_timestamp": "2025-05-15T23:19:11.909265"
+      },
+      "contextual_fallacies": {
+        "context_analysis": {
+          "context_type": "général",
+          "context_subtypes": [],
+          "audience_characteristics": [],
+          "formality_level": "moyen",
+          "confidence": 0.7
+        },
+        "potential_fallacies_count": 0,
+        "contextual_fallacies_count": 0,
+        "contextual_fallacies": [],
+        "fallacy_relations": [],
+        "analysis_timestamp": "2025-05-15T23:19:11.909646"
+      },
+      "fallacy_severity": {
+        "overall_severity": 0.0,
+        "severity_level": "Faible",
+        "fallacy_evaluations": [],
+        "context_analysis": {
+          "context_type": "général",
+          "audience_type": "général",
+          "domain_type": "général",
+          "context_severity_modifier": 0.0,
+          "audience_severity_modifier": 0.0,
+          "domain_severity_modifier": 0.0
+        },
+        "analysis_timestamp": "2025-05-15T23:19:11.909780"
+      },
+      "rhetorical_results": {
+        "overall_analysis": {
+          "rhetorical_quality": 0.44999999999999996,
+          "rhetorical_quality_level": "Modéré",
+          "main_strengths": [
+            "Absence de sophismes détectés"
+          ],
+          "main_weaknesses": [
+            "Faible cohérence logique",
+            "Argumentation peu persuasive"
+          ],
+          "context_relevance": 0.48999999999999994
+        },
+        "fallacy_analysis": {
+          "total_fallacies": 0,
+          "fallacy_types_distribution": {},
+          "most_common_fallacies": [],
+          "most_severe_fallacies": [],
+          "composite_fallacies": 0,
+          "overall_severity": 0.0,
+          "severity_level": "Faible"
+        },
+        "coherence_analysis": {
+          "overall_coherence": 0.5,
+          "coherence_level": "Modéré",
+          "thematic_coherence": 0.7,
+          "logical_coherence": 0.3,
+          "structure_quality": 0.5,
+          "main_coherence_issues": [
+            "Logical gaps"
+          ]
+        },
+        "persuasion_analysis": {
+          "persuasion_score": 0.0,
+          "persuasion_level": "Très faible",
+          "emotional_appeal": 0.0,
+          "logical_appeal": 0.0,
+          "credibility_appeal": 0.0,
+          "context_appropriateness": 0.0,
+          "audience_alignment": 0.0
+        },
+        "recommendations": {
+          "general_recommendations": [
+            "Revoir la stratégie persuasive globale"
+          ],
+          "fallacy_recommendations": [
+            "Adapter les sophismes au contexte spécifique de l'argumentation"
+          ],
+          "coherence_recommendations": [
+            "Améliorer la cohérence globale de l'argumentation",
+            "Combler les lacunes logiques entre les arguments"
+          ],
+          "persuasion_recommendations": [
+            "Renforcer l'efficacité persuasive globale"
+          ],
+          "context_specific_recommendations": []
+        },
+        "context": "Lincoln-Douglas Débat 2 (NPS)",
+        "analysis_timestamp": "2025-05-15T23:19:11.909899"
+      }
+    },
+    "comparison_with_base": {
+      "timestamp": "2025-05-15T23:19:11.909904",
+      "fallacy_detection_comparison": {
+        "advanced_fallacy_count": 0,
+        "base_fallacy_count": 6,
+        "difference": -6,
+        "additional_fallacies_detected": [],
+        "fallacies_not_detected_in_base": []
+      },
+      "coherence_analysis_comparison": {
+        "advanced_coherence_score": 0.5,
+        "base_coherence_score": 0.0,
+        "difference": 0.5,
+        "advanced_coherence_level": "Modéré",
+        "base_coherence_level": "N/A"
+      },
+      "overall_comparison": {
+        "advanced_analysis_depth": "Élevée",
+        "base_analysis_depth": "Modérée",
+        "advanced_quality_score": 0.44999999999999996,
+        "key_improvements": [
+          "Détection de sophismes complexes et composites",
+          "Évaluation de la gravité des sophismes",
+          "Analyse contextuelle approfondie",
+          "Recommandations plus détaillées"
+        ]
+      }
+    }
+  },
+  {
+    "extract_name": "3. Discours d'Ouverture de Lincoln",
+    "source_name": "Lincoln-Douglas Débat 2 (NPS)",
+    "argument_count": 6,
+    "timestamp": "2025-05-15T23:19:11.910087",
+    "analyses": {
+      "complex_fallacies": {
+        "individual_fallacies_count": 0,
+        "basic_combinations": [],
+        "advanced_combinations": [],
+        "fallacy_patterns": [],
+        "composite_severity": {
+          "basic_severity": 0.0,
+          "advanced_severity": 0.0,
+          "pattern_severity": 0.0,
+          "composite_severity": 0.0,
+          "context_modifier": 0.0,
+          "adjusted_severity": 0.0,
+          "severity_level": "Faible"
+        },
+        "context": "Lincoln-Douglas Débat 2 (NPS)",
+        "analysis_timestamp": "2025-05-15T23:19:11.919586"
+      },
+      "contextual_fallacies": {
+        "context_analysis": {
+          "context_type": "général",
+          "context_subtypes": [],
+          "audience_characteristics": [],
+          "formality_level": "moyen",
+          "confidence": 0.7
+        },
+        "potential_fallacies_count": 0,
+        "contextual_fallacies_count": 0,
+        "contextual_fallacies": [],
+        "fallacy_relations": [],
+        "analysis_timestamp": "2025-05-15T23:19:11.920025"
+      },
+      "fallacy_severity": {
+        "overall_severity": 0.0,
+        "severity_level": "Faible",
+        "fallacy_evaluations": [],
+        "context_analysis": {
+          "context_type": "général",
+          "audience_type": "général",
+          "domain_type": "général",
+          "context_severity_modifier": 0.0,
+          "audience_severity_modifier": 0.0,
+          "domain_severity_modifier": 0.0
+        },
+        "analysis_timestamp": "2025-05-15T23:19:11.920224"
+      },
+      "rhetorical_results": {
+        "overall_analysis": {
+          "rhetorical_quality": 0.44999999999999996,
+          "rhetorical_quality_level": "Modéré",
+          "main_strengths": [
+            "Absence de sophismes détectés"
+          ],
+          "main_weaknesses": [
+            "Faible cohérence logique",
+            "Argumentation peu persuasive"
+          ],
+          "context_relevance": 0.48999999999999994
+        },
+        "fallacy_analysis": {
+          "total_fallacies": 0,
+          "fallacy_types_distribution": {},
+          "most_common_fallacies": [],
+          "most_severe_fallacies": [],
+          "composite_fallacies": 0,
+          "overall_severity": 0.0,
+          "severity_level": "Faible"
+        },
+        "coherence_analysis": {
+          "overall_coherence": 0.5,
+          "coherence_level": "Modéré",
+          "thematic_coherence": 0.7,
+          "logical_coherence": 0.3,
+          "structure_quality": 0.5,
+          "main_coherence_issues": [
+            "Logical gaps"
+          ]
+        },
+        "persuasion_analysis": {
+          "persuasion_score": 0.0,
+          "persuasion_level": "Très faible",
+          "emotional_appeal": 0.0,
+          "logical_appeal": 0.0,
+          "credibility_appeal": 0.0,
+          "context_appropriateness": 0.0,
+          "audience_alignment": 0.0
+        },
+        "recommendations": {
+          "general_recommendations": [
+            "Revoir la stratégie persuasive globale"
+          ],
+          "fallacy_recommendations": [
+            "Adapter les sophismes au contexte spécifique de l'argumentation"
+          ],
+          "coherence_recommendations": [
+            "Améliorer la cohérence globale de l'argumentation",
+            "Combler les lacunes logiques entre les arguments"
+          ],
+          "persuasion_recommendations": [
+            "Renforcer l'efficacité persuasive globale"
+          ],
+          "context_specific_recommendations": []
+        },
+        "context": "Lincoln-Douglas Débat 2 (NPS)",
+        "analysis_timestamp": "2025-05-15T23:19:11.920420"
+      }
+    },
+    "comparison_with_base": {
+      "timestamp": "2025-05-15T23:19:11.920430",
+      "fallacy_detection_comparison": {
+        "advanced_fallacy_count": 0,
+        "base_fallacy_count": 6,
+        "difference": -6,
+        "additional_fallacies_detected": [],
+        "fallacies_not_detected_in_base": []
+      },
+      "coherence_analysis_comparison": {
+        "advanced_coherence_score": 0.5,
+        "base_coherence_score": 0.0,
+        "difference": 0.5,
+        "advanced_coherence_level": "Modéré",
+        "base_coherence_level": "N/A"
+      },
+      "overall_comparison": {
+        "advanced_analysis_depth": "Élevée",
+        "base_analysis_depth": "Modérée",
+        "advanced_quality_score": 0.44999999999999996,
+        "key_improvements": [
+          "Détection de sophismes complexes et composites",
+          "Évaluation de la gravité des sophismes",
+          "Analyse contextuelle approfondie",
+          "Recommandations plus détaillées"
+        ]
+      }
+    }
+  },
+  {
+    "extract_name": "4. Doctrine de Freeport (Douglas)",
+    "source_name": "Lincoln-Douglas Débat 2 (NPS)",
+    "argument_count": 6,
+    "timestamp": "2025-05-15T23:19:11.920686",
+    "analyses": {
+      "complex_fallacies": {
+        "individual_fallacies_count": 0,
+        "basic_combinations": [],
+        "advanced_combinations": [],
+        "fallacy_patterns": [],
+        "composite_severity": {
+          "basic_severity": 0.0,
+          "advanced_severity": 0.0,
+          "pattern_severity": 0.0,
+          "composite_severity": 0.0,
+          "context_modifier": 0.0,
+          "adjusted_severity": 0.0,
+          "severity_level": "Faible"
+        },
+        "context": "Lincoln-Douglas Débat 2 (NPS)",
+        "analysis_timestamp": "2025-05-15T23:19:11.928390"
+      },
+      "contextual_fallacies": {
+        "context_analysis": {
+          "context_type": "général",
+          "context_subtypes": [],
+          "audience_characteristics": [],
+          "formality_level": "moyen",
+          "confidence": 0.7
+        },
+        "potential_fallacies_count": 0,
+        "contextual_fallacies_count": 0,
+        "contextual_fallacies": [],
+        "fallacy_relations": [],
+        "analysis_timestamp": "2025-05-15T23:19:11.929028"
+      },
+      "fallacy_severity": {
+        "overall_severity": 0.0,
+        "severity_level": "Faible",
+        "fallacy_evaluations": [],
+        "context_analysis": {
+          "context_type": "général",
+          "audience_type": "général",
+          "domain_type": "général",
+          "context_severity_modifier": 0.0,
+          "audience_severity_modifier": 0.0,
+          "domain_severity_modifier": 0.0
+        },
+        "analysis_timestamp": "2025-05-15T23:19:11.929183"
+      },
+      "rhetorical_results": {
+        "overall_analysis": {
+          "rhetorical_quality": 0.44999999999999996,
+          "rhetorical_quality_level": "Modéré",
+          "main_strengths": [
+            "Absence de sophismes détectés"
+          ],
+          "main_weaknesses": [
+            "Faible cohérence logique",
+            "Argumentation peu persuasive"
+          ],
+          "context_relevance": 0.48999999999999994
+        },
+        "fallacy_analysis": {
+          "total_fallacies": 0,
+          "fallacy_types_distribution": {},
+          "most_common_fallacies": [],
+          "most_severe_fallacies": [],
+          "composite_fallacies": 0,
+          "overall_severity": 0.0,
+          "severity_level": "Faible"
+        },
+        "coherence_analysis": {
+          "overall_coherence": 0.5,
+          "coherence_level": "Modéré",
+          "thematic_coherence": 0.7,
+          "logical_coherence": 0.3,
+          "structure_quality": 0.5,
+          "main_coherence_issues": [
+            "Logical gaps"
+          ]
+        },
+        "persuasion_analysis": {
+          "persuasion_score": 0.0,
+          "persuasion_level": "Très faible",
+          "emotional_appeal": 0.0,
+          "logical_appeal": 0.0,
+          "credibility_appeal": 0.0,
+          "context_appropriateness": 0.0,
+          "audience_alignment": 0.0
+        },
+        "recommendations": {
+          "general_recommendations": [
+            "Revoir la stratégie persuasive globale"
+          ],
+          "fallacy_recommendations": [
+            "Adapter les sophismes au contexte spécifique de l'argumentation"
+          ],
+          "coherence_recommendations": [
+            "Améliorer la cohérence globale de l'argumentation",
+            "Combler les lacunes logiques entre les arguments"
+          ],
+          "persuasion_recommendations": [
+            "Renforcer l'efficacité persuasive globale"
+          ],
+          "context_specific_recommendations": []
+        },
+        "context": "Lincoln-Douglas Débat 2 (NPS)",
+        "analysis_timestamp": "2025-05-15T23:19:11.929366"
+      }
+    },
+    "comparison_with_base": {
+      "timestamp": "2025-05-15T23:19:11.929380",
+      "fallacy_detection_comparison": {
+        "advanced_fallacy_count": 0,
+        "base_fallacy_count": 6,
+        "difference": -6,
+        "additional_fallacies_detected": [],
+        "fallacies_not_detected_in_base": []
+      },
+      "coherence_analysis_comparison": {
+        "advanced_coherence_score": 0.5,
+        "base_coherence_score": 0.0,
+        "difference": 0.5,
+        "advanced_coherence_level": "Modéré",
+        "base_coherence_level": "N/A"
+      },
+      "overall_comparison": {
+        "advanced_analysis_depth": "Élevée",
+        "base_analysis_depth": "Modérée",
+        "advanced_quality_score": 0.44999999999999996,
+        "key_improvements": [
+          "Détection de sophismes complexes et composites",
+          "Évaluation de la gravité des sophismes",
+          "Analyse contextuelle approfondie",
+          "Recommandations plus détaillées"
+        ]
+      }
+    }
+  },
+  {
+    "extract_name": "5. Lincoln répond aux 7 questions",
+    "source_name": "Lincoln-Douglas Débat 2 (NPS)",
+    "argument_count": 6,
+    "timestamp": "2025-05-15T23:19:11.929696",
+    "analyses": {
+      "complex_fallacies": {
+        "individual_fallacies_count": 0,
+        "basic_combinations": [],
+        "advanced_combinations": [],
+        "fallacy_patterns": [],
+        "composite_severity": {
+          "basic_severity": 0.0,
+          "advanced_severity": 0.0,
+          "pattern_severity": 0.0,
+          "composite_severity": 0.0,
+          "context_modifier": 0.0,
+          "adjusted_severity": 0.0,
+          "severity_level": "Faible"
+        },
+        "context": "Lincoln-Douglas Débat 2 (NPS)",
+        "analysis_timestamp": "2025-05-15T23:19:11.939083"
+      },
+      "contextual_fallacies": {
+        "context_analysis": {
+          "context_type": "général",
+          "context_subtypes": [],
+          "audience_characteristics": [],
+          "formality_level": "moyen",
+          "confidence": 0.7
+        },
+        "potential_fallacies_count": 0,
+        "contextual_fallacies_count": 0,
+        "contextual_fallacies": [],
+        "fallacy_relations": [],
+        "analysis_timestamp": "2025-05-15T23:19:11.939730"
+      },
+      "fallacy_severity": {
+        "overall_severity": 0.0,
+        "severity_level": "Faible",
+        "fallacy_evaluations": [],
+        "context_analysis": {
+          "context_type": "général",
+          "audience_type": "général",
+          "domain_type": "général",
+          "context_severity_modifier": 0.0,
+          "audience_severity_modifier": 0.0,
+          "domain_severity_modifier": 0.0
+        },
+        "analysis_timestamp": "2025-05-15T23:19:11.939968"
+      },
+      "rhetorical_results": {
+        "overall_analysis": {
+          "rhetorical_quality": 0.44999999999999996,
+          "rhetorical_quality_level": "Modéré",
+          "main_strengths": [
+            "Absence de sophismes détectés"
+          ],
+          "main_weaknesses": [
+            "Faible cohérence logique",
+            "Argumentation peu persuasive"
+          ],
+          "context_relevance": 0.48999999999999994
+        },
+        "fallacy_analysis": {
+          "total_fallacies": 0,
+          "fallacy_types_distribution": {},
+          "most_common_fallacies": [],
+          "most_severe_fallacies": [],
+          "composite_fallacies": 0,
+          "overall_severity": 0.0,
+          "severity_level": "Faible"
+        },
+        "coherence_analysis": {
+          "overall_coherence": 0.5,
+          "coherence_level": "Modéré",
+          "thematic_coherence": 0.7,
+          "logical_coherence": 0.3,
+          "structure_quality": 0.5,
+          "main_coherence_issues": [
+            "Logical gaps"
+          ]
+        },
+        "persuasion_analysis": {
+          "persuasion_score": 0.0,
+          "persuasion_level": "Très faible",
+          "emotional_appeal": 0.0,
+          "logical_appeal": 0.0,
+          "credibility_appeal": 0.0,
+          "context_appropriateness": 0.0,
+          "audience_alignment": 0.0
+        },
+        "recommendations": {
+          "general_recommendations": [
+            "Revoir la stratégie persuasive globale"
+          ],
+          "fallacy_recommendations": [
+            "Adapter les sophismes au contexte spécifique de l'argumentation"
+          ],
+          "coherence_recommendations": [
+            "Améliorer la cohérence globale de l'argumentation",
+            "Combler les lacunes logiques entre les arguments"
+          ],
+          "persuasion_recommendations": [
+            "Renforcer l'efficacité persuasive globale"
+          ],
+          "context_specific_recommendations": []
+        },
+        "context": "Lincoln-Douglas Débat 2 (NPS)",
+        "analysis_timestamp": "2025-05-15T23:19:11.940169"
+      }
+    },
+    "comparison_with_base": {
+      "timestamp": "2025-05-15T23:19:11.940179",
+      "fallacy_detection_comparison": {
+        "advanced_fallacy_count": 0,
+        "base_fallacy_count": 6,
+        "difference": -6,
+        "additional_fallacies_detected": [],
+        "fallacies_not_detected_in_base": []
+      },
+      "coherence_analysis_comparison": {
+        "advanced_coherence_score": 0.5,
+        "base_coherence_score": 0.0,
+        "difference": 0.5,
+        "advanced_coherence_level": "Modéré",
+        "base_coherence_level": "N/A"
+      },
+      "overall_comparison": {
+        "advanced_analysis_depth": "Élevée",
+        "base_analysis_depth": "Modérée",
+        "advanced_quality_score": 0.44999999999999996,
+        "key_improvements": [
+          "Détection de sophismes complexes et composites",
+          "Évaluation de la gravité des sophismes",
+          "Analyse contextuelle approfondie",
+          "Recommandations plus détaillées"
+        ]
+      }
+    }
+  },
+  {
+    "extract_name": "1. Discours Complet",
+    "source_name": "Kremlin Discours 21/02/2022",
+    "argument_count": 5,
+    "timestamp": "2025-05-15T23:19:11.940508",
+    "analyses": {
+      "complex_fallacies": {
+        "individual_fallacies_count": 0,
+        "basic_combinations": [],
+        "advanced_combinations": [],
+        "fallacy_patterns": [],
+        "composite_severity": {
+          "basic_severity": 0.0,
+          "advanced_severity": 0.0,
+          "pattern_severity": 0.0,
+          "composite_severity": 0.0,
+          "context_modifier": 0.0,
+          "adjusted_severity": 0.0,
+          "severity_level": "Faible"
+        },
+        "context": "Kremlin Discours 21/02/2022",
+        "analysis_timestamp": "2025-05-15T23:19:11.949742"
+      },
+      "contextual_fallacies": {
+        "context_analysis": {
+          "context_type": "général",
+          "context_subtypes": [],
+          "audience_characteristics": [],
+          "formality_level": "moyen",
+          "confidence": 0.7
+        },
+        "potential_fallacies_count": 0,
+        "contextual_fallacies_count": 0,
+        "contextual_fallacies": [],
+        "fallacy_relations": [],
+        "analysis_timestamp": "2025-05-15T23:19:11.950383"
+      },
+      "fallacy_severity": {
+        "overall_severity": 0.0,
+        "severity_level": "Faible",
+        "fallacy_evaluations": [],
+        "context_analysis": {
+          "context_type": "général",
+          "audience_type": "général",
+          "domain_type": "général",
+          "context_severity_modifier": 0.0,
+          "audience_severity_modifier": 0.0,
+          "domain_severity_modifier": 0.0
+        },
+        "analysis_timestamp": "2025-05-15T23:19:11.950599"
+      },
+      "rhetorical_results": {
+        "overall_analysis": {
+          "rhetorical_quality": 0.44999999999999996,
+          "rhetorical_quality_level": "Modéré",
+          "main_strengths": [
+            "Absence de sophismes détectés"
+          ],
+          "main_weaknesses": [
+            "Faible cohérence logique",
+            "Argumentation peu persuasive"
+          ],
+          "context_relevance": 0.48999999999999994
+        },
+        "fallacy_analysis": {
+          "total_fallacies": 0,
+          "fallacy_types_distribution": {},
+          "most_common_fallacies": [],
+          "most_severe_fallacies": [],
+          "composite_fallacies": 0,
+          "overall_severity": 0.0,
+          "severity_level": "Faible"
+        },
+        "coherence_analysis": {
+          "overall_coherence": 0.5,
+          "coherence_level": "Modéré",
+          "thematic_coherence": 0.7,
+          "logical_coherence": 0.3,
+          "structure_quality": 0.5,
+          "main_coherence_issues": [
+            "Logical gaps"
+          ]
+        },
+        "persuasion_analysis": {
+          "persuasion_score": 0.0,
+          "persuasion_level": "Très faible",
+          "emotional_appeal": 0.0,
+          "logical_appeal": 0.0,
+          "credibility_appeal": 0.0,
+          "context_appropriateness": 0.0,
+          "audience_alignment": 0.0
+        },
+        "recommendations": {
+          "general_recommendations": [
+            "Revoir la stratégie persuasive globale"
+          ],
+          "fallacy_recommendations": [
+            "Adapter les sophismes au contexte spécifique de l'argumentation"
+          ],
+          "coherence_recommendations": [
+            "Améliorer la cohérence globale de l'argumentation",
+            "Combler les lacunes logiques entre les arguments"
+          ],
+          "persuasion_recommendations": [
+            "Renforcer l'efficacité persuasive globale"
+          ],
+          "context_specific_recommendations": []
+        },
+        "context": "Kremlin Discours 21/02/2022",
+        "analysis_timestamp": "2025-05-15T23:19:11.950803"
+      }
+    },
+    "comparison_with_base": {
+      "timestamp": "2025-05-15T23:19:11.950814",
+      "fallacy_detection_comparison": {
+        "advanced_fallacy_count": 0,
+        "base_fallacy_count": 5,
+        "difference": -5,
+        "additional_fallacies_detected": [],
+        "fallacies_not_detected_in_base": []
+      },
+      "coherence_analysis_comparison": {
+        "advanced_coherence_score": 0.5,
+        "base_coherence_score": 0.0,
+        "difference": 0.5,
+        "advanced_coherence_level": "Modéré",
+        "base_coherence_level": "N/A"
+      },
+      "overall_comparison": {
+        "advanced_analysis_depth": "Élevée",
+        "base_analysis_depth": "Modérée",
+        "advanced_quality_score": 0.44999999999999996,
+        "key_improvements": [
+          "Détection de sophismes complexes et composites",
+          "Évaluation de la gravité des sophismes",
+          "Analyse contextuelle approfondie",
+          "Recommandations plus détaillées"
+        ]
+      }
+    }
+  },
+  {
+    "extract_name": "2. Argument Historique Ukraine",
+    "source_name": "Kremlin Discours 21/02/2022",
+    "argument_count": 5,
+    "timestamp": "2025-05-15T23:19:11.951118",
+    "analyses": {
+      "complex_fallacies": {
+        "individual_fallacies_count": 1,
+        "basic_combinations": [],
+        "advanced_combinations": [],
+        "fallacy_patterns": [],
+        "composite_severity": {
+          "basic_severity": 0.0,
+          "advanced_severity": 0.0,
+          "pattern_severity": 0.0,
+          "composite_severity": 0.0,
+          "context_modifier": 0.0,
+          "adjusted_severity": 0.0,
+          "severity_level": "Faible"
+        },
+        "context": "Kremlin Discours 21/02/2022",
+        "analysis_timestamp": "2025-05-15T23:19:11.959091"
+      },
+      "contextual_fallacies": {
+        "context_analysis": {
+          "context_type": "général",
+          "context_subtypes": [],
+          "audience_characteristics": [],
+          "formality_level": "moyen",
+          "confidence": 0.7
+        },
+        "potential_fallacies_count": 1,
+        "contextual_fallacies_count": 1,
+        "contextual_fallacies": [
+          {
+            "fallacy_type": "Ad hominem",
+            "keyword": "crédibilité",
+            "context_text": "e argumentative est essentielle pour maintenir la crédibilité d'un discours.\n        En conclusion, l'analyse r",
+            "confidence": 0.5
+          }
+        ],
+        "fallacy_relations": [],
+        "analysis_timestamp": "2025-05-15T23:19:11.959647"
+      },
+      "fallacy_severity": {
+        "overall_severity": 0.0,
+        "severity_level": "Faible",
+        "fallacy_evaluations": [],
+        "context_analysis": {
+          "context_type": "général",
+          "audience_type": "général",
+          "domain_type": "général",
+          "context_severity_modifier": 0.0,
+          "audience_severity_modifier": 0.0,
+          "domain_severity_modifier": 0.0
+        },
+        "analysis_timestamp": "2025-05-15T23:19:11.959856"
+      },
+      "rhetorical_results": {
+        "overall_analysis": {
+          "rhetorical_quality": 0.5564,
+          "rhetorical_quality_level": "Modéré",
+          "main_strengths": [
+            "Utilisation modérée de sophismes",
+            "Fort appel à la crédibilité"
+          ],
+          "main_weaknesses": [
+            "Faible cohérence logique",
+            "Argumentation peu persuasive"
+          ],
+          "context_relevance": 0.48999999999999994
+        },
+        "fallacy_analysis": {
+          "total_fallacies": 1,
+          "fallacy_types_distribution": {
+            "Ad hominem": 1
+          },
+          "most_common_fallacies": [
+            "Ad hominem"
+          ],
+          "most_severe_fallacies": [
+            "Ad hominem"
+          ],
+          "composite_fallacies": 0,
+          "overall_severity": 0.0,
+          "severity_level": "Faible"
+        },
+        "coherence_analysis": {
+          "overall_coherence": 0.5,
+          "coherence_level": "Modéré",
+          "thematic_coherence": 0.7,
+          "logical_coherence": 0.3,
+          "structure_quality": 0.5,
+          "main_coherence_issues": [
+            "Logical gaps"
+          ]
+        },
+        "persuasion_analysis": {
+          "persuasion_score": 0.266,
+          "persuasion_level": "Faible",
+          "emotional_appeal": 0.0,
+          "logical_appeal": 0.0,
+          "credibility_appeal": 1.0,
+          "context_appropriateness": 0.33,
+          "audience_alignment": 0.33
+        },
+        "recommendations": {
+          "general_recommendations": [
+            "Revoir la stratégie persuasive globale"
+          ],
+          "fallacy_recommendations": [
+            "Adapter les sophismes au contexte spécifique de l'argumentation"
+          ],
+          "coherence_recommendations": [
+            "Améliorer la cohérence globale de l'argumentation",
+            "Combler les lacunes logiques entre les arguments"
+          ],
+          "persuasion_recommendations": [
+            "Renforcer l'efficacité persuasive globale"
+          ],
+          "context_specific_recommendations": []
+        },
+        "context": "Kremlin Discours 21/02/2022",
+        "analysis_timestamp": "2025-05-15T23:19:11.960115"
+      }
+    },
+    "comparison_with_base": {
+      "timestamp": "2025-05-15T23:19:11.960123",
+      "fallacy_detection_comparison": {
+        "advanced_fallacy_count": 1,
+        "base_fallacy_count": 5,
+        "difference": -4,
+        "additional_fallacies_detected": [],
+        "fallacies_not_detected_in_base": []
+      },
+      "coherence_analysis_comparison": {
+        "advanced_coherence_score": 0.5,
+        "base_coherence_score": 0.0,
+        "difference": 0.5,
+        "advanced_coherence_level": "Modéré",
+        "base_coherence_level": "N/A"
+      },
+      "overall_comparison": {
+        "advanced_analysis_depth": "Élevée",
+        "base_analysis_depth": "Modérée",
+        "advanced_quality_score": 0.5564,
+        "key_improvements": [
+          "Détection de sophismes complexes et composites",
+          "Évaluation de la gravité des sophismes",
+          "Analyse contextuelle approfondie",
+          "Recommandations plus détaillées"
+        ]
+      }
+    }
+  },
+  {
+    "extract_name": "3. Menace OTAN",
+    "source_name": "Kremlin Discours 21/02/2022",
+    "argument_count": 5,
+    "timestamp": "2025-05-15T23:19:11.960673",
+    "analyses": {
+      "complex_fallacies": {
+        "individual_fallacies_count": 1,
+        "basic_combinations": [],
+        "advanced_combinations": [],
+        "fallacy_patterns": [],
+        "composite_severity": {
+          "basic_severity": 0.0,
+          "advanced_severity": 0.0,
+          "pattern_severity": 0.0,
+          "composite_severity": 0.0,
+          "context_modifier": 0.0,
+          "adjusted_severity": 0.0,
+          "severity_level": "Faible"
+        },
+        "context": "Kremlin Discours 21/02/2022",
+        "analysis_timestamp": "2025-05-15T23:19:11.967036"
+      },
+      "contextual_fallacies": {
+        "context_analysis": {
+          "context_type": "général",
+          "context_subtypes": [],
+          "audience_characteristics": [],
+          "formality_level": "moyen",
+          "confidence": 0.7
+        },
+        "potential_fallacies_count": 1,
+        "contextual_fallacies_count": 1,
+        "contextual_fallacies": [
+          {
+            "fallacy_type": "Ad hominem",
+            "keyword": "crédibilité",
+            "context_text": "e argumentative est essentielle pour maintenir la crédibilité d'un discours.\n        En conclusion, l'analyse r",
+            "confidence": 0.5
+          }
+        ],
+        "fallacy_relations": [],
+        "analysis_timestamp": "2025-05-15T23:19:11.967458"
+      },
+      "fallacy_severity": {
+        "overall_severity": 0.0,
+        "severity_level": "Faible",
+        "fallacy_evaluations": [],
+        "context_analysis": {
+          "context_type": "général",
+          "audience_type": "général",
+          "domain_type": "général",
+          "context_severity_modifier": 0.0,
+          "audience_severity_modifier": 0.0,
+          "domain_severity_modifier": 0.0
+        },
+        "analysis_timestamp": "2025-05-15T23:19:11.967674"
+      },
+      "rhetorical_results": {
+        "overall_analysis": {
+          "rhetorical_quality": 0.5564,
+          "rhetorical_quality_level": "Modéré",
+          "main_strengths": [
+            "Utilisation modérée de sophismes",
+            "Fort appel à la crédibilité"
+          ],
+          "main_weaknesses": [
+            "Faible cohérence logique",
+            "Argumentation peu persuasive"
+          ],
+          "context_relevance": 0.48999999999999994
+        },
+        "fallacy_analysis": {
+          "total_fallacies": 1,
+          "fallacy_types_distribution": {
+            "Ad hominem": 1
+          },
+          "most_common_fallacies": [
+            "Ad hominem"
+          ],
+          "most_severe_fallacies": [
+            "Ad hominem"
+          ],
+          "composite_fallacies": 0,
+          "overall_severity": 0.0,
+          "severity_level": "Faible"
+        },
+        "coherence_analysis": {
+          "overall_coherence": 0.5,
+          "coherence_level": "Modéré",
+          "thematic_coherence": 0.7,
+          "logical_coherence": 0.3,
+          "structure_quality": 0.5,
+          "main_coherence_issues": [
+            "Logical gaps"
+          ]
+        },
+        "persuasion_analysis": {
+          "persuasion_score": 0.266,
+          "persuasion_level": "Faible",
+          "emotional_appeal": 0.0,
+          "logical_appeal": 0.0,
+          "credibility_appeal": 1.0,
+          "context_appropriateness": 0.33,
+          "audience_alignment": 0.33
+        },
+        "recommendations": {
+          "general_recommendations": [
+            "Revoir la stratégie persuasive globale"
+          ],
+          "fallacy_recommendations": [
+            "Adapter les sophismes au contexte spécifique de l'argumentation"
+          ],
+          "coherence_recommendations": [
+            "Améliorer la cohérence globale de l'argumentation",
+            "Combler les lacunes logiques entre les arguments"
+          ],
+          "persuasion_recommendations": [
+            "Renforcer l'efficacité persuasive globale"
+          ],
+          "context_specific_recommendations": []
+        },
+        "context": "Kremlin Discours 21/02/2022",
+        "analysis_timestamp": "2025-05-15T23:19:11.967889"
+      }
+    },
+    "comparison_with_base": {
+      "timestamp": "2025-05-15T23:19:11.967897",
+      "fallacy_detection_comparison": {
+        "advanced_fallacy_count": 1,
+        "base_fallacy_count": 5,
+        "difference": -4,
+        "additional_fallacies_detected": [],
+        "fallacies_not_detected_in_base": []
+      },
+      "coherence_analysis_comparison": {
+        "advanced_coherence_score": 0.5,
+        "base_coherence_score": 0.0,
+        "difference": 0.5,
+        "advanced_coherence_level": "Modéré",
+        "base_coherence_level": "N/A"
+      },
+      "overall_comparison": {
+        "advanced_analysis_depth": "Élevée",
+        "base_analysis_depth": "Modérée",
+        "advanced_quality_score": 0.5564,
+        "key_improvements": [
+          "Détection de sophismes complexes et composites",
+          "Évaluation de la gravité des sophismes",
+          "Analyse contextuelle approfondie",
+          "Recommandations plus détaillées"
+        ]
+      }
+    }
+  },
+  {
+    "extract_name": "4. Décommunisation selon Poutine",
+    "source_name": "Kremlin Discours 21/02/2022",
+    "argument_count": 5,
+    "timestamp": "2025-05-15T23:19:11.968115",
+    "analyses": {
+      "complex_fallacies": {
+        "individual_fallacies_count": 1,
+        "basic_combinations": [],
+        "advanced_combinations": [],
+        "fallacy_patterns": [],
+        "composite_severity": {
+          "basic_severity": 0.0,
+          "advanced_severity": 0.0,
+          "pattern_severity": 0.0,
+          "composite_severity": 0.0,
+          "context_modifier": 0.0,
+          "adjusted_severity": 0.0,
+          "severity_level": "Faible"
+        },
+        "context": "Kremlin Discours 21/02/2022",
+        "analysis_timestamp": "2025-05-15T23:19:11.979597"
+      },
+      "contextual_fallacies": {
+        "context_analysis": {
+          "context_type": "général",
+          "context_subtypes": [],
+          "audience_characteristics": [],
+          "formality_level": "moyen",
+          "confidence": 0.7
+        },
+        "potential_fallacies_count": 1,
+        "contextual_fallacies_count": 1,
+        "contextual_fallacies": [
+          {
+            "fallacy_type": "Ad hominem",
+            "keyword": "crédibilité",
+            "context_text": "e argumentative est essentielle pour maintenir la crédibilité d'un discours.\n        En conclusion, l'analyse r",
+            "confidence": 0.5
+          }
+        ],
+        "fallacy_relations": [],
+        "analysis_timestamp": "2025-05-15T23:19:11.981322"
+      },
+      "fallacy_severity": {
+        "overall_severity": 0.0,
+        "severity_level": "Faible",
+        "fallacy_evaluations": [],
+        "context_analysis": {
+          "context_type": "général",
+          "audience_type": "général",
+          "domain_type": "général",
+          "context_severity_modifier": 0.0,
+          "audience_severity_modifier": 0.0,
+          "domain_severity_modifier": 0.0
+        },
+        "analysis_timestamp": "2025-05-15T23:19:11.981525"
+      },
+      "rhetorical_results": {
+        "overall_analysis": {
+          "rhetorical_quality": 0.5564,
+          "rhetorical_quality_level": "Modéré",
+          "main_strengths": [
+            "Utilisation modérée de sophismes",
+            "Fort appel à la crédibilité"
+          ],
+          "main_weaknesses": [
+            "Faible cohérence logique",
+            "Argumentation peu persuasive"
+          ],
+          "context_relevance": 0.48999999999999994
+        },
+        "fallacy_analysis": {
+          "total_fallacies": 1,
+          "fallacy_types_distribution": {
+            "Ad hominem": 1
+          },
+          "most_common_fallacies": [
+            "Ad hominem"
+          ],
+          "most_severe_fallacies": [
+            "Ad hominem"
+          ],
+          "composite_fallacies": 0,
+          "overall_severity": 0.0,
+          "severity_level": "Faible"
+        },
+        "coherence_analysis": {
+          "overall_coherence": 0.5,
+          "coherence_level": "Modéré",
+          "thematic_coherence": 0.7,
+          "logical_coherence": 0.3,
+          "structure_quality": 0.5,
+          "main_coherence_issues": [
+            "Logical gaps"
+          ]
+        },
+        "persuasion_analysis": {
+          "persuasion_score": 0.266,
+          "persuasion_level": "Faible",
+          "emotional_appeal": 0.0,
+          "logical_appeal": 0.0,
+          "credibility_appeal": 1.0,
+          "context_appropriateness": 0.33,
+          "audience_alignment": 0.33
+        },
+        "recommendations": {
+          "general_recommendations": [
+            "Revoir la stratégie persuasive globale"
+          ],
+          "fallacy_recommendations": [
+            "Adapter les sophismes au contexte spécifique de l'argumentation"
+          ],
+          "coherence_recommendations": [
+            "Améliorer la cohérence globale de l'argumentation",
+            "Combler les lacunes logiques entre les arguments"
+          ],
+          "persuasion_recommendations": [
+            "Renforcer l'efficacité persuasive globale"
+          ],
+          "context_specific_recommendations": []
+        },
+        "context": "Kremlin Discours 21/02/2022",
+        "analysis_timestamp": "2025-05-15T23:19:11.981926"
+      }
+    },
+    "comparison_with_base": {
+      "timestamp": "2025-05-15T23:19:11.981938",
+      "fallacy_detection_comparison": {
+        "advanced_fallacy_count": 1,
+        "base_fallacy_count": 5,
+        "difference": -4,
+        "additional_fallacies_detected": [],
+        "fallacies_not_detected_in_base": []
+      },
+      "coherence_analysis_comparison": {
+        "advanced_coherence_score": 0.5,
+        "base_coherence_score": 0.0,
+        "difference": 0.5,
+        "advanced_coherence_level": "Modéré",
+        "base_coherence_level": "N/A"
+      },
+      "overall_comparison": {
+        "advanced_analysis_depth": "Élevée",
+        "base_analysis_depth": "Modérée",
+        "advanced_quality_score": 0.5564,
+        "key_improvements": [
+          "Détection de sophismes complexes et composites",
+          "Évaluation de la gravité des sophismes",
+          "Analyse contextuelle approfondie",
+          "Recommandations plus détaillées"
+        ]
+      }
+    }
+  },
+  {
+    "extract_name": "5. Décision Reconnaissance Donbass",
+    "source_name": "Kremlin Discours 21/02/2022",
+    "argument_count": 5,
+    "timestamp": "2025-05-15T23:19:11.982544",
+    "analyses": {
+      "complex_fallacies": {
+        "individual_fallacies_count": 1,
+        "basic_combinations": [],
+        "advanced_combinations": [],
+        "fallacy_patterns": [],
+        "composite_severity": {
+          "basic_severity": 0.0,
+          "advanced_severity": 0.0,
+          "pattern_severity": 0.0,
+          "composite_severity": 0.0,
+          "context_modifier": 0.0,
+          "adjusted_severity": 0.0,
+          "severity_level": "Faible"
+        },
+        "context": "Kremlin Discours 21/02/2022",
+        "analysis_timestamp": "2025-05-15T23:19:11.995383"
+      },
+      "contextual_fallacies": {
+        "context_analysis": {
+          "context_type": "général",
+          "context_subtypes": [],
+          "audience_characteristics": [],
+          "formality_level": "moyen",
+          "confidence": 0.7
+        },
+        "potential_fallacies_count": 1,
+        "contextual_fallacies_count": 1,
+        "contextual_fallacies": [
+          {
+            "fallacy_type": "Ad hominem",
+            "keyword": "crédibilité",
+            "context_text": "e argumentative est essentielle pour maintenir la crédibilité d'un discours.\n        En conclusion, l'analyse r",
+            "confidence": 0.5
+          }
+        ],
+        "fallacy_relations": [],
+        "analysis_timestamp": "2025-05-15T23:19:11.996259"
+      },
+      "fallacy_severity": {
+        "overall_severity": 0.0,
+        "severity_level": "Faible",
+        "fallacy_evaluations": [],
+        "context_analysis": {
+          "context_type": "général",
+          "audience_type": "général",
+          "domain_type": "général",
+          "context_severity_modifier": 0.0,
+          "audience_severity_modifier": 0.0,
+          "domain_severity_modifier": 0.0
+        },
+        "analysis_timestamp": "2025-05-15T23:19:11.996498"
+      },
+      "rhetorical_results": {
+        "overall_analysis": {
+          "rhetorical_quality": 0.5564,
+          "rhetorical_quality_level": "Modéré",
+          "main_strengths": [
+            "Utilisation modérée de sophismes",
+            "Fort appel à la crédibilité"
+          ],
+          "main_weaknesses": [
+            "Faible cohérence logique",
+            "Argumentation peu persuasive"
+          ],
+          "context_relevance": 0.48999999999999994
+        },
+        "fallacy_analysis": {
+          "total_fallacies": 1,
+          "fallacy_types_distribution": {
+            "Ad hominem": 1
+          },
+          "most_common_fallacies": [
+            "Ad hominem"
+          ],
+          "most_severe_fallacies": [
+            "Ad hominem"
+          ],
+          "composite_fallacies": 0,
+          "overall_severity": 0.0,
+          "severity_level": "Faible"
+        },
+        "coherence_analysis": {
+          "overall_coherence": 0.5,
+          "coherence_level": "Modéré",
+          "thematic_coherence": 0.7,
+          "logical_coherence": 0.3,
+          "structure_quality": 0.5,
+          "main_coherence_issues": [
+            "Logical gaps"
+          ]
+        },
+        "persuasion_analysis": {
+          "persuasion_score": 0.266,
+          "persuasion_level": "Faible",
+          "emotional_appeal": 0.0,
+          "logical_appeal": 0.0,
+          "credibility_appeal": 1.0,
+          "context_appropriateness": 0.33,
+          "audience_alignment": 0.33
+        },
+        "recommendations": {
+          "general_recommendations": [
+            "Revoir la stratégie persuasive globale"
+          ],
+          "fallacy_recommendations": [
+            "Adapter les sophismes au contexte spécifique de l'argumentation"
+          ],
+          "coherence_recommendations": [
+            "Améliorer la cohérence globale de l'argumentation",
+            "Combler les lacunes logiques entre les arguments"
+          ],
+          "persuasion_recommendations": [
+            "Renforcer l'efficacité persuasive globale"
+          ],
+          "context_specific_recommendations": []
+        },
+        "context": "Kremlin Discours 21/02/2022",
+        "analysis_timestamp": "2025-05-15T23:19:11.996734"
+      }
+    },
+    "comparison_with_base": {
+      "timestamp": "2025-05-15T23:19:11.996746",
+      "fallacy_detection_comparison": {
+        "advanced_fallacy_count": 1,
+        "base_fallacy_count": 5,
+        "difference": -4,
+        "additional_fallacies_detected": [],
+        "fallacies_not_detected_in_base": []
+      },
+      "coherence_analysis_comparison": {
+        "advanced_coherence_score": 0.5,
+        "base_coherence_score": 0.0,
+        "difference": 0.5,
+        "advanced_coherence_level": "Modéré",
+        "base_coherence_level": "N/A"
+      },
+      "overall_comparison": {
+        "advanced_analysis_depth": "Élevée",
+        "base_analysis_depth": "Modérée",
+        "advanced_quality_score": 0.5564,
+        "key_improvements": [
+          "Détection de sophismes complexes et composites",
+          "Évaluation de la gravité des sophismes",
+          "Analyse contextuelle approfondie",
+          "Recommandations plus détaillées"
+        ]
+      }
+    }
+  },
+  {
+    "extract_name": "1. 1923.04.13 - Munich",
+    "source_name": "Hitler Discours Collection (PDF)",
+    "argument_count": 5,
+    "timestamp": "2025-05-15T23:19:11.997150",
+    "analyses": {
+      "complex_fallacies": {
+        "individual_fallacies_count": 1,
+        "basic_combinations": [],
+        "advanced_combinations": [],
+        "fallacy_patterns": [],
+        "composite_severity": {
+          "basic_severity": 0.0,
+          "advanced_severity": 0.0,
+          "pattern_severity": 0.0,
+          "composite_severity": 0.0,
+          "context_modifier": 0.0,
+          "adjusted_severity": 0.0,
+          "severity_level": "Faible"
+        },
+        "context": "Hitler Discours Collection (PDF)",
+        "analysis_timestamp": "2025-05-15T23:19:12.005975"
+      },
+      "contextual_fallacies": {
+        "context_analysis": {
+          "context_type": "général",
+          "context_subtypes": [],
+          "audience_characteristics": [],
+          "formality_level": "moyen",
+          "confidence": 0.7
+        },
+        "potential_fallacies_count": 1,
+        "contextual_fallacies_count": 1,
+        "contextual_fallacies": [
+          {
+            "fallacy_type": "Ad hominem",
+            "keyword": "crédibilité",
+            "context_text": "e argumentative est essentielle pour maintenir la crédibilité d'un discours.\n        En conclusion, l'analyse r",
+            "confidence": 0.5
+          }
+        ],
+        "fallacy_relations": [],
+        "analysis_timestamp": "2025-05-15T23:19:12.007201"
+      },
+      "fallacy_severity": {
+        "overall_severity": 0.0,
+        "severity_level": "Faible",
+        "fallacy_evaluations": [],
+        "context_analysis": {
+          "context_type": "général",
+          "audience_type": "général",
+          "domain_type": "général",
+          "context_severity_modifier": 0.0,
+          "audience_severity_modifier": 0.0,
+          "domain_severity_modifier": 0.0
+        },
+        "analysis_timestamp": "2025-05-15T23:19:12.007831"
+      },
+      "rhetorical_results": {
+        "overall_analysis": {
+          "rhetorical_quality": 0.5564,
+          "rhetorical_quality_level": "Modéré",
+          "main_strengths": [
+            "Utilisation modérée de sophismes",
+            "Fort appel à la crédibilité"
+          ],
+          "main_weaknesses": [
+            "Faible cohérence logique",
+            "Argumentation peu persuasive"
+          ],
+          "context_relevance": 0.48999999999999994
+        },
+        "fallacy_analysis": {
+          "total_fallacies": 1,
+          "fallacy_types_distribution": {
+            "Ad hominem": 1
+          },
+          "most_common_fallacies": [
+            "Ad hominem"
+          ],
+          "most_severe_fallacies": [
+            "Ad hominem"
+          ],
+          "composite_fallacies": 0,
+          "overall_severity": 0.0,
+          "severity_level": "Faible"
+        },
+        "coherence_analysis": {
+          "overall_coherence": 0.5,
+          "coherence_level": "Modéré",
+          "thematic_coherence": 0.7,
+          "logical_coherence": 0.3,
+          "structure_quality": 0.5,
+          "main_coherence_issues": [
+            "Logical gaps"
+          ]
+        },
+        "persuasion_analysis": {
+          "persuasion_score": 0.266,
+          "persuasion_level": "Faible",
+          "emotional_appeal": 0.0,
+          "logical_appeal": 0.0,
+          "credibility_appeal": 1.0,
+          "context_appropriateness": 0.33,
+          "audience_alignment": 0.33
+        },
+        "recommendations": {
+          "general_recommendations": [
+            "Revoir la stratégie persuasive globale"
+          ],
+          "fallacy_recommendations": [
+            "Adapter les sophismes au contexte spécifique de l'argumentation"
+          ],
+          "coherence_recommendations": [
+            "Améliorer la cohérence globale de l'argumentation",
+            "Combler les lacunes logiques entre les arguments"
+          ],
+          "persuasion_recommendations": [
+            "Renforcer l'efficacité persuasive globale"
+          ],
+          "context_specific_recommendations": []
+        },
+        "context": "Hitler Discours Collection (PDF)",
+        "analysis_timestamp": "2025-05-15T23:19:12.008115"
+      }
+    },
+    "comparison_with_base": {
+      "timestamp": "2025-05-15T23:19:12.008129",
+      "fallacy_detection_comparison": {
+        "advanced_fallacy_count": 1,
+        "base_fallacy_count": 5,
+        "difference": -4,
+        "additional_fallacies_detected": [],
+        "fallacies_not_detected_in_base": []
+      },
+      "coherence_analysis_comparison": {
+        "advanced_coherence_score": 0.5,
+        "base_coherence_score": 0.0,
+        "difference": 0.5,
+        "advanced_coherence_level": "Modéré",
+        "base_coherence_level": "N/A"
+      },
+      "overall_comparison": {
+        "advanced_analysis_depth": "Élevée",
+        "base_analysis_depth": "Modérée",
+        "advanced_quality_score": 0.5564,
+        "key_improvements": [
+          "Détection de sophismes complexes et composites",
+          "Évaluation de la gravité des sophismes",
+          "Analyse contextuelle approfondie",
+          "Recommandations plus détaillées"
+        ]
+      }
+    }
+  },
+  {
+    "extract_name": "2. 1923.04.24 - Munich",
+    "source_name": "Hitler Discours Collection (PDF)",
+    "argument_count": 5,
+    "timestamp": "2025-05-15T23:19:12.008597",
+    "analyses": {
+      "complex_fallacies": {
+        "individual_fallacies_count": 1,
+        "basic_combinations": [],
+        "advanced_combinations": [],
+        "fallacy_patterns": [],
+        "composite_severity": {
+          "basic_severity": 0.0,
+          "advanced_severity": 0.0,
+          "pattern_severity": 0.0,
+          "composite_severity": 0.0,
+          "context_modifier": 0.0,
+          "adjusted_severity": 0.0,
+          "severity_level": "Faible"
+        },
+        "context": "Hitler Discours Collection (PDF)",
+        "analysis_timestamp": "2025-05-15T23:19:12.017490"
+      },
+      "contextual_fallacies": {
+        "context_analysis": {
+          "context_type": "général",
+          "context_subtypes": [],
+          "audience_characteristics": [],
+          "formality_level": "moyen",
+          "confidence": 0.7
+        },
+        "potential_fallacies_count": 1,
+        "contextual_fallacies_count": 1,
+        "contextual_fallacies": [
+          {
+            "fallacy_type": "Ad hominem",
+            "keyword": "crédibilité",
+            "context_text": "e argumentative est essentielle pour maintenir la crédibilité d'un discours.\n        En conclusion, l'analyse r",
+            "confidence": 0.5
+          }
+        ],
+        "fallacy_relations": [],
+        "analysis_timestamp": "2025-05-15T23:19:12.018032"
+      },
+      "fallacy_severity": {
+        "overall_severity": 0.0,
+        "severity_level": "Faible",
+        "fallacy_evaluations": [],
+        "context_analysis": {
+          "context_type": "général",
+          "audience_type": "général",
+          "domain_type": "général",
+          "context_severity_modifier": 0.0,
+          "audience_severity_modifier": 0.0,
+          "domain_severity_modifier": 0.0
+        },
+        "analysis_timestamp": "2025-05-15T23:19:12.018157"
+      },
+      "rhetorical_results": {
+        "overall_analysis": {
+          "rhetorical_quality": 0.5564,
+          "rhetorical_quality_level": "Modéré",
+          "main_strengths": [
+            "Utilisation modérée de sophismes",
+            "Fort appel à la crédibilité"
+          ],
+          "main_weaknesses": [
+            "Faible cohérence logique",
+            "Argumentation peu persuasive"
+          ],
+          "context_relevance": 0.48999999999999994
+        },
+        "fallacy_analysis": {
+          "total_fallacies": 1,
+          "fallacy_types_distribution": {
+            "Ad hominem": 1
+          },
+          "most_common_fallacies": [
+            "Ad hominem"
+          ],
+          "most_severe_fallacies": [
+            "Ad hominem"
+          ],
+          "composite_fallacies": 0,
+          "overall_severity": 0.0,
+          "severity_level": "Faible"
+        },
+        "coherence_analysis": {
+          "overall_coherence": 0.5,
+          "coherence_level": "Modéré",
+          "thematic_coherence": 0.7,
+          "logical_coherence": 0.3,
+          "structure_quality": 0.5,
+          "main_coherence_issues": [
+            "Logical gaps"
+          ]
+        },
+        "persuasion_analysis": {
+          "persuasion_score": 0.266,
+          "persuasion_level": "Faible",
+          "emotional_appeal": 0.0,
+          "logical_appeal": 0.0,
+          "credibility_appeal": 1.0,
+          "context_appropriateness": 0.33,
+          "audience_alignment": 0.33
+        },
+        "recommendations": {
+          "general_recommendations": [
+            "Revoir la stratégie persuasive globale"
+          ],
+          "fallacy_recommendations": [
+            "Adapter les sophismes au contexte spécifique de l'argumentation"
+          ],
+          "coherence_recommendations": [
+            "Améliorer la cohérence globale de l'argumentation",
+            "Combler les lacunes logiques entre les arguments"
+          ],
+          "persuasion_recommendations": [
+            "Renforcer l'efficacité persuasive globale"
+          ],
+          "context_specific_recommendations": []
+        },
+        "context": "Hitler Discours Collection (PDF)",
+        "analysis_timestamp": "2025-05-15T23:19:12.018381"
+      }
+    },
+    "comparison_with_base": {
+      "timestamp": "2025-05-15T23:19:12.018393",
+      "fallacy_detection_comparison": {
+        "advanced_fallacy_count": 1,
+        "base_fallacy_count": 5,
+        "difference": -4,
+        "additional_fallacies_detected": [],
+        "fallacies_not_detected_in_base": []
+      },
+      "coherence_analysis_comparison": {
+        "advanced_coherence_score": 0.5,
+        "base_coherence_score": 0.0,
+        "difference": 0.5,
+        "advanced_coherence_level": "Modéré",
+        "base_coherence_level": "N/A"
+      },
+      "overall_comparison": {
+        "advanced_analysis_depth": "Élevée",
+        "base_analysis_depth": "Modérée",
+        "advanced_quality_score": 0.5564,
+        "key_improvements": [
+          "Détection de sophismes complexes et composites",
+          "Évaluation de la gravité des sophismes",
+          "Analyse contextuelle approfondie",
+          "Recommandations plus détaillées"
+        ]
+      }
+    }
+  },
+  {
+    "extract_name": "3. 1923.04.27 - Munich",
+    "source_name": "Hitler Discours Collection (PDF)",
+    "argument_count": 5,
+    "timestamp": "2025-05-15T23:19:12.018777",
+    "analyses": {
+      "complex_fallacies": {
+        "individual_fallacies_count": 1,
+        "basic_combinations": [],
+        "advanced_combinations": [],
+        "fallacy_patterns": [],
+        "composite_severity": {
+          "basic_severity": 0.0,
+          "advanced_severity": 0.0,
+          "pattern_severity": 0.0,
+          "composite_severity": 0.0,
+          "context_modifier": 0.0,
+          "adjusted_severity": 0.0,
+          "severity_level": "Faible"
+        },
+        "context": "Hitler Discours Collection (PDF)",
+        "analysis_timestamp": "2025-05-15T23:19:12.026423"
+      },
+      "contextual_fallacies": {
+        "context_analysis": {
+          "context_type": "général",
+          "context_subtypes": [],
+          "audience_characteristics": [],
+          "formality_level": "moyen",
+          "confidence": 0.7
+        },
+        "potential_fallacies_count": 1,
+        "contextual_fallacies_count": 1,
+        "contextual_fallacies": [
+          {
+            "fallacy_type": "Ad hominem",
+            "keyword": "crédibilité",
+            "context_text": "e argumentative est essentielle pour maintenir la crédibilité d'un discours.\n        En conclusion, l'analyse r",
+            "confidence": 0.5
+          }
+        ],
+        "fallacy_relations": [],
+        "analysis_timestamp": "2025-05-15T23:19:12.027133"
+      },
+      "fallacy_severity": {
+        "overall_severity": 0.0,
+        "severity_level": "Faible",
+        "fallacy_evaluations": [],
+        "context_analysis": {
+          "context_type": "général",
+          "audience_type": "général",
+          "domain_type": "général",
+          "context_severity_modifier": 0.0,
+          "audience_severity_modifier": 0.0,
+          "domain_severity_modifier": 0.0
+        },
+        "analysis_timestamp": "2025-05-15T23:19:12.027295"
+      },
+      "rhetorical_results": {
+        "overall_analysis": {
+          "rhetorical_quality": 0.5564,
+          "rhetorical_quality_level": "Modéré",
+          "main_strengths": [
+            "Utilisation modérée de sophismes",
+            "Fort appel à la crédibilité"
+          ],
+          "main_weaknesses": [
+            "Faible cohérence logique",
+            "Argumentation peu persuasive"
+          ],
+          "context_relevance": 0.48999999999999994
+        },
+        "fallacy_analysis": {
+          "total_fallacies": 1,
+          "fallacy_types_distribution": {
+            "Ad hominem": 1
+          },
+          "most_common_fallacies": [
+            "Ad hominem"
+          ],
+          "most_severe_fallacies": [
+            "Ad hominem"
+          ],
+          "composite_fallacies": 0,
+          "overall_severity": 0.0,
+          "severity_level": "Faible"
+        },
+        "coherence_analysis": {
+          "overall_coherence": 0.5,
+          "coherence_level": "Modéré",
+          "thematic_coherence": 0.7,
+          "logical_coherence": 0.3,
+          "structure_quality": 0.5,
+          "main_coherence_issues": [
+            "Logical gaps"
+          ]
+        },
+        "persuasion_analysis": {
+          "persuasion_score": 0.266,
+          "persuasion_level": "Faible",
+          "emotional_appeal": 0.0,
+          "logical_appeal": 0.0,
+          "credibility_appeal": 1.0,
+          "context_appropriateness": 0.33,
+          "audience_alignment": 0.33
+        },
+        "recommendations": {
+          "general_recommendations": [
+            "Revoir la stratégie persuasive globale"
+          ],
+          "fallacy_recommendations": [
+            "Adapter les sophismes au contexte spécifique de l'argumentation"
+          ],
+          "coherence_recommendations": [
+            "Améliorer la cohérence globale de l'argumentation",
+            "Combler les lacunes logiques entre les arguments"
+          ],
+          "persuasion_recommendations": [
+            "Renforcer l'efficacité persuasive globale"
+          ],
+          "context_specific_recommendations": []
+        },
+        "context": "Hitler Discours Collection (PDF)",
+        "analysis_timestamp": "2025-05-15T23:19:12.027511"
+      }
+    },
+    "comparison_with_base": {
+      "timestamp": "2025-05-15T23:19:12.027523",
+      "fallacy_detection_comparison": {
+        "advanced_fallacy_count": 1,
+        "base_fallacy_count": 5,
+        "difference": -4,
+        "additional_fallacies_detected": [],
+        "fallacies_not_detected_in_base": []
+      },
+      "coherence_analysis_comparison": {
+        "advanced_coherence_score": 0.5,
+        "base_coherence_score": 0.0,
+        "difference": 0.5,
+        "advanced_coherence_level": "Modéré",
+        "base_coherence_level": "N/A"
+      },
+      "overall_comparison": {
+        "advanced_analysis_depth": "Élevée",
+        "base_analysis_depth": "Modérée",
+        "advanced_quality_score": 0.5564,
+        "key_improvements": [
+          "Détection de sophismes complexes et composites",
+          "Évaluation de la gravité des sophismes",
+          "Analyse contextuelle approfondie",
+          "Recommandations plus détaillées"
+        ]
+      }
+    }
+  },
+  {
+    "extract_name": "4. 1933.03.23 - Duel Otto Wels",
+    "source_name": "Hitler Discours Collection (PDF)",
+    "argument_count": 5,
+    "timestamp": "2025-05-15T23:19:12.027919",
+    "analyses": {
+      "complex_fallacies": {
+        "individual_fallacies_count": 1,
+        "basic_combinations": [],
+        "advanced_combinations": [],
+        "fallacy_patterns": [],
+        "composite_severity": {
+          "basic_severity": 0.0,
+          "advanced_severity": 0.0,
+          "pattern_severity": 0.0,
+          "composite_severity": 0.0,
+          "context_modifier": 0.0,
+          "adjusted_severity": 0.0,
+          "severity_level": "Faible"
+        },
+        "context": "Hitler Discours Collection (PDF)",
+        "analysis_timestamp": "2025-05-15T23:19:12.035228"
+      },
+      "contextual_fallacies": {
+        "context_analysis": {
+          "context_type": "général",
+          "context_subtypes": [],
+          "audience_characteristics": [],
+          "formality_level": "moyen",
+          "confidence": 0.7
+        },
+        "potential_fallacies_count": 1,
+        "contextual_fallacies_count": 1,
+        "contextual_fallacies": [
+          {
+            "fallacy_type": "Ad hominem",
+            "keyword": "crédibilité",
+            "context_text": "e argumentative est essentielle pour maintenir la crédibilité d'un discours.\n        En conclusion, l'analyse r",
+            "confidence": 0.5
+          }
+        ],
+        "fallacy_relations": [],
+        "analysis_timestamp": "2025-05-15T23:19:12.035764"
+      },
+      "fallacy_severity": {
+        "overall_severity": 0.0,
+        "severity_level": "Faible",
+        "fallacy_evaluations": [],
+        "context_analysis": {
+          "context_type": "général",
+          "audience_type": "général",
+          "domain_type": "général",
+          "context_severity_modifier": 0.0,
+          "audience_severity_modifier": 0.0,
+          "domain_severity_modifier": 0.0
+        },
+        "analysis_timestamp": "2025-05-15T23:19:12.035937"
+      },
+      "rhetorical_results": {
+        "overall_analysis": {
+          "rhetorical_quality": 0.5564,
+          "rhetorical_quality_level": "Modéré",
+          "main_strengths": [
+            "Utilisation modérée de sophismes",
+            "Fort appel à la crédibilité"
+          ],
+          "main_weaknesses": [
+            "Faible cohérence logique",
+            "Argumentation peu persuasive"
+          ],
+          "context_relevance": 0.48999999999999994
+        },
+        "fallacy_analysis": {
+          "total_fallacies": 1,
+          "fallacy_types_distribution": {
+            "Ad hominem": 1
+          },
+          "most_common_fallacies": [
+            "Ad hominem"
+          ],
+          "most_severe_fallacies": [
+            "Ad hominem"
+          ],
+          "composite_fallacies": 0,
+          "overall_severity": 0.0,
+          "severity_level": "Faible"
+        },
+        "coherence_analysis": {
+          "overall_coherence": 0.5,
+          "coherence_level": "Modéré",
+          "thematic_coherence": 0.7,
+          "logical_coherence": 0.3,
+          "structure_quality": 0.5,
+          "main_coherence_issues": [
+            "Logical gaps"
+          ]
+        },
+        "persuasion_analysis": {
+          "persuasion_score": 0.266,
+          "persuasion_level": "Faible",
+          "emotional_appeal": 0.0,
+          "logical_appeal": 0.0,
+          "credibility_appeal": 1.0,
+          "context_appropriateness": 0.33,
+          "audience_alignment": 0.33
+        },
+        "recommendations": {
+          "general_recommendations": [
+            "Revoir la stratégie persuasive globale"
+          ],
+          "fallacy_recommendations": [
+            "Adapter les sophismes au contexte spécifique de l'argumentation"
+          ],
+          "coherence_recommendations": [
+            "Améliorer la cohérence globale de l'argumentation",
+            "Combler les lacunes logiques entre les arguments"
+          ],
+          "persuasion_recommendations": [
+            "Renforcer l'efficacité persuasive globale"
+          ],
+          "context_specific_recommendations": []
+        },
+        "context": "Hitler Discours Collection (PDF)",
+        "analysis_timestamp": "2025-05-15T23:19:12.036096"
+      }
+    },
+    "comparison_with_base": {
+      "timestamp": "2025-05-15T23:19:12.036102",
+      "fallacy_detection_comparison": {
+        "advanced_fallacy_count": 1,
+        "base_fallacy_count": 5,
+        "difference": -4,
+        "additional_fallacies_detected": [],
+        "fallacies_not_detected_in_base": []
+      },
+      "coherence_analysis_comparison": {
+        "advanced_coherence_score": 0.5,
+        "base_coherence_score": 0.0,
+        "difference": 0.5,
+        "advanced_coherence_level": "Modéré",
+        "base_coherence_level": "N/A"
+      },
+      "overall_comparison": {
+        "advanced_analysis_depth": "Élevée",
+        "base_analysis_depth": "Modérée",
+        "advanced_quality_score": 0.5564,
+        "key_improvements": [
+          "Détection de sophismes complexes et composites",
+          "Évaluation de la gravité des sophismes",
+          "Analyse contextuelle approfondie",
+          "Recommandations plus détaillées"
+        ]
+      }
+    }
+  },
+  {
+    "extract_name": "5. 1933.05.01 - Lustgarten",
+    "source_name": "Hitler Discours Collection (PDF)",
+    "argument_count": 5,
+    "timestamp": "2025-05-15T23:19:12.036309",
+    "analyses": {
+      "complex_fallacies": {
+        "individual_fallacies_count": 1,
+        "basic_combinations": [],
+        "advanced_combinations": [],
+        "fallacy_patterns": [],
+        "composite_severity": {
+          "basic_severity": 0.0,
+          "advanced_severity": 0.0,
+          "pattern_severity": 0.0,
+          "composite_severity": 0.0,
+          "context_modifier": 0.0,
+          "adjusted_severity": 0.0,
+          "severity_level": "Faible"
+        },
+        "context": "Hitler Discours Collection (PDF)",
+        "analysis_timestamp": "2025-05-15T23:19:12.043395"
+      },
+      "contextual_fallacies": {
+        "context_analysis": {
+          "context_type": "général",
+          "context_subtypes": [],
+          "audience_characteristics": [],
+          "formality_level": "moyen",
+          "confidence": 0.7
+        },
+        "potential_fallacies_count": 1,
+        "contextual_fallacies_count": 1,
+        "contextual_fallacies": [
+          {
+            "fallacy_type": "Ad hominem",
+            "keyword": "crédibilité",
+            "context_text": "e argumentative est essentielle pour maintenir la crédibilité d'un discours.\n        En conclusion, l'analyse r",
+            "confidence": 0.5
+          }
+        ],
+        "fallacy_relations": [],
+        "analysis_timestamp": "2025-05-15T23:19:12.043883"
+      },
+      "fallacy_severity": {
+        "overall_severity": 0.0,
+        "severity_level": "Faible",
+        "fallacy_evaluations": [],
+        "context_analysis": {
+          "context_type": "général",
+          "audience_type": "général",
+          "domain_type": "général",
+          "context_severity_modifier": 0.0,
+          "audience_severity_modifier": 0.0,
+          "domain_severity_modifier": 0.0
+        },
+        "analysis_timestamp": "2025-05-15T23:19:12.044020"
+      },
+      "rhetorical_results": {
+        "overall_analysis": {
+          "rhetorical_quality": 0.5564,
+          "rhetorical_quality_level": "Modéré",
+          "main_strengths": [
+            "Utilisation modérée de sophismes",
+            "Fort appel à la crédibilité"
+          ],
+          "main_weaknesses": [
+            "Faible cohérence logique",
+            "Argumentation peu persuasive"
+          ],
+          "context_relevance": 0.48999999999999994
+        },
+        "fallacy_analysis": {
+          "total_fallacies": 1,
+          "fallacy_types_distribution": {
+            "Ad hominem": 1
+          },
+          "most_common_fallacies": [
+            "Ad hominem"
+          ],
+          "most_severe_fallacies": [
+            "Ad hominem"
+          ],
+          "composite_fallacies": 0,
+          "overall_severity": 0.0,
+          "severity_level": "Faible"
+        },
+        "coherence_analysis": {
+          "overall_coherence": 0.5,
+          "coherence_level": "Modéré",
+          "thematic_coherence": 0.7,
+          "logical_coherence": 0.3,
+          "structure_quality": 0.5,
+          "main_coherence_issues": [
+            "Logical gaps"
+          ]
+        },
+        "persuasion_analysis": {
+          "persuasion_score": 0.266,
+          "persuasion_level": "Faible",
+          "emotional_appeal": 0.0,
+          "logical_appeal": 0.0,
+          "credibility_appeal": 1.0,
+          "context_appropriateness": 0.33,
+          "audience_alignment": 0.33
+        },
+        "recommendations": {
+          "general_recommendations": [
+            "Revoir la stratégie persuasive globale"
+          ],
+          "fallacy_recommendations": [
+            "Adapter les sophismes au contexte spécifique de l'argumentation"
+          ],
+          "coherence_recommendations": [
+            "Améliorer la cohérence globale de l'argumentation",
+            "Combler les lacunes logiques entre les arguments"
+          ],
+          "persuasion_recommendations": [
+            "Renforcer l'efficacité persuasive globale"
+          ],
+          "context_specific_recommendations": []
+        },
+        "context": "Hitler Discours Collection (PDF)",
+        "analysis_timestamp": "2025-05-15T23:19:12.044179"
+      }
+    },
+    "comparison_with_base": {
+      "timestamp": "2025-05-15T23:19:12.044185",
+      "fallacy_detection_comparison": {
+        "advanced_fallacy_count": 1,
+        "base_fallacy_count": 5,
+        "difference": -4,
+        "additional_fallacies_detected": [],
+        "fallacies_not_detected_in_base": []
+      },
+      "coherence_analysis_comparison": {
+        "advanced_coherence_score": 0.5,
+        "base_coherence_score": 0.0,
+        "difference": 0.5,
+        "advanced_coherence_level": "Modéré",
+        "base_coherence_level": "N/A"
+      },
+      "overall_comparison": {
+        "advanced_analysis_depth": "Élevée",
+        "base_analysis_depth": "Modérée",
+        "advanced_quality_score": 0.5564,
+        "key_improvements": [
+          "Détection de sophismes complexes et composites",
+          "Évaluation de la gravité des sophismes",
+          "Analyse contextuelle approfondie",
+          "Recommandations plus détaillées"
+        ]
+      }
+    }
+  },
+  {
+    "extract_name": "6. 1936.03.09 - Interview Ward Price",
+    "source_name": "Hitler Discours Collection (PDF)",
+    "argument_count": 5,
+    "timestamp": "2025-05-15T23:19:12.044357",
+    "analyses": {
+      "complex_fallacies": {
+        "individual_fallacies_count": 1,
+        "basic_combinations": [],
+        "advanced_combinations": [],
+        "fallacy_patterns": [],
+        "composite_severity": {
+          "basic_severity": 0.0,
+          "advanced_severity": 0.0,
+          "pattern_severity": 0.0,
+          "composite_severity": 0.0,
+          "context_modifier": 0.0,
+          "adjusted_severity": 0.0,
+          "severity_level": "Faible"
+        },
+        "context": "Hitler Discours Collection (PDF)",
+        "analysis_timestamp": "2025-05-15T23:19:12.049651"
+      },
+      "contextual_fallacies": {
+        "context_analysis": {
+          "context_type": "général",
+          "context_subtypes": [],
+          "audience_characteristics": [],
+          "formality_level": "moyen",
+          "confidence": 0.7
+        },
+        "potential_fallacies_count": 1,
+        "contextual_fallacies_count": 1,
+        "contextual_fallacies": [
+          {
+            "fallacy_type": "Ad hominem",
+            "keyword": "crédibilité",
+            "context_text": "e argumentative est essentielle pour maintenir la crédibilité d'un discours.\n        En conclusion, l'analyse r",
+            "confidence": 0.5
+          }
+        ],
+        "fallacy_relations": [],
+        "analysis_timestamp": "2025-05-15T23:19:12.050107"
+      },
+      "fallacy_severity": {
+        "overall_severity": 0.0,
+        "severity_level": "Faible",
+        "fallacy_evaluations": [],
+        "context_analysis": {
+          "context_type": "général",
+          "audience_type": "général",
+          "domain_type": "général",
+          "context_severity_modifier": 0.0,
+          "audience_severity_modifier": 0.0,
+          "domain_severity_modifier": 0.0
+        },
+        "analysis_timestamp": "2025-05-15T23:19:12.050216"
+      },
+      "rhetorical_results": {
+        "overall_analysis": {
+          "rhetorical_quality": 0.5564,
+          "rhetorical_quality_level": "Modéré",
+          "main_strengths": [
+            "Utilisation modérée de sophismes",
+            "Fort appel à la crédibilité"
+          ],
+          "main_weaknesses": [
+            "Faible cohérence logique",
+            "Argumentation peu persuasive"
+          ],
+          "context_relevance": 0.48999999999999994
+        },
+        "fallacy_analysis": {
+          "total_fallacies": 1,
+          "fallacy_types_distribution": {
+            "Ad hominem": 1
+          },
+          "most_common_fallacies": [
+            "Ad hominem"
+          ],
+          "most_severe_fallacies": [
+            "Ad hominem"
+          ],
+          "composite_fallacies": 0,
+          "overall_severity": 0.0,
+          "severity_level": "Faible"
+        },
+        "coherence_analysis": {
+          "overall_coherence": 0.5,
+          "coherence_level": "Modéré",
+          "thematic_coherence": 0.7,
+          "logical_coherence": 0.3,
+          "structure_quality": 0.5,
+          "main_coherence_issues": [
+            "Logical gaps"
+          ]
+        },
+        "persuasion_analysis": {
+          "persuasion_score": 0.266,
+          "persuasion_level": "Faible",
+          "emotional_appeal": 0.0,
+          "logical_appeal": 0.0,
+          "credibility_appeal": 1.0,
+          "context_appropriateness": 0.33,
+          "audience_alignment": 0.33
+        },
+        "recommendations": {
+          "general_recommendations": [
+            "Revoir la stratégie persuasive globale"
+          ],
+          "fallacy_recommendations": [
+            "Adapter les sophismes au contexte spécifique de l'argumentation"
+          ],
+          "coherence_recommendations": [
+            "Améliorer la cohérence globale de l'argumentation",
+            "Combler les lacunes logiques entre les arguments"
+          ],
+          "persuasion_recommendations": [
+            "Renforcer l'efficacité persuasive globale"
+          ],
+          "context_specific_recommendations": []
+        },
+        "context": "Hitler Discours Collection (PDF)",
+        "analysis_timestamp": "2025-05-15T23:19:12.050357"
+      }
+    },
+    "comparison_with_base": {
+      "timestamp": "2025-05-15T23:19:12.050363",
+      "fallacy_detection_comparison": {
+        "advanced_fallacy_count": 1,
+        "base_fallacy_count": 5,
+        "difference": -4,
+        "additional_fallacies_detected": [],
+        "fallacies_not_detected_in_base": []
+      },
+      "coherence_analysis_comparison": {
+        "advanced_coherence_score": 0.5,
+        "base_coherence_score": 0.0,
+        "difference": 0.5,
+        "advanced_coherence_level": "Modéré",
+        "base_coherence_level": "N/A"
+      },
+      "overall_comparison": {
+        "advanced_analysis_depth": "Élevée",
+        "base_analysis_depth": "Modérée",
+        "advanced_quality_score": 0.5564,
+        "key_improvements": [
+          "Détection de sophismes complexes et composites",
+          "Évaluation de la gravité des sophismes",
+          "Analyse contextuelle approfondie",
+          "Recommandations plus détaillées"
+        ]
+      }
+    }
+  },
+  {
+    "extract_name": "7. 1936.03.12 - Karlsruhe",
+    "source_name": "Hitler Discours Collection (PDF)",
+    "argument_count": 5,
+    "timestamp": "2025-05-15T23:19:12.050526",
+    "analyses": {
+      "complex_fallacies": {
+        "individual_fallacies_count": 1,
+        "basic_combinations": [],
+        "advanced_combinations": [],
+        "fallacy_patterns": [],
+        "composite_severity": {
+          "basic_severity": 0.0,
+          "advanced_severity": 0.0,
+          "pattern_severity": 0.0,
+          "composite_severity": 0.0,
+          "context_modifier": 0.0,
+          "adjusted_severity": 0.0,
+          "severity_level": "Faible"
+        },
+        "context": "Hitler Discours Collection (PDF)",
+        "analysis_timestamp": "2025-05-15T23:19:12.055703"
+      },
+      "contextual_fallacies": {
+        "context_analysis": {
+          "context_type": "général",
+          "context_subtypes": [],
+          "audience_characteristics": [],
+          "formality_level": "moyen",
+          "confidence": 0.7
+        },
+        "potential_fallacies_count": 1,
+        "contextual_fallacies_count": 1,
+        "contextual_fallacies": [
+          {
+            "fallacy_type": "Ad hominem",
+            "keyword": "crédibilité",
+            "context_text": "e argumentative est essentielle pour maintenir la crédibilité d'un discours.\n        En conclusion, l'analyse r",
+            "confidence": 0.5
+          }
+        ],
+        "fallacy_relations": [],
+        "analysis_timestamp": "2025-05-15T23:19:12.056211"
+      },
+      "fallacy_severity": {
+        "overall_severity": 0.0,
+        "severity_level": "Faible",
+        "fallacy_evaluations": [],
+        "context_analysis": {
+          "context_type": "général",
+          "audience_type": "général",
+          "domain_type": "général",
+          "context_severity_modifier": 0.0,
+          "audience_severity_modifier": 0.0,
+          "domain_severity_modifier": 0.0
+        },
+        "analysis_timestamp": "2025-05-15T23:19:12.056334"
+      },
+      "rhetorical_results": {
+        "overall_analysis": {
+          "rhetorical_quality": 0.5564,
+          "rhetorical_quality_level": "Modéré",
+          "main_strengths": [
+            "Utilisation modérée de sophismes",
+            "Fort appel à la crédibilité"
+          ],
+          "main_weaknesses": [
+            "Faible cohérence logique",
+            "Argumentation peu persuasive"
+          ],
+          "context_relevance": 0.48999999999999994
+        },
+        "fallacy_analysis": {
+          "total_fallacies": 1,
+          "fallacy_types_distribution": {
+            "Ad hominem": 1
+          },
+          "most_common_fallacies": [
+            "Ad hominem"
+          ],
+          "most_severe_fallacies": [
+            "Ad hominem"
+          ],
+          "composite_fallacies": 0,
+          "overall_severity": 0.0,
+          "severity_level": "Faible"
+        },
+        "coherence_analysis": {
+          "overall_coherence": 0.5,
+          "coherence_level": "Modéré",
+          "thematic_coherence": 0.7,
+          "logical_coherence": 0.3,
+          "structure_quality": 0.5,
+          "main_coherence_issues": [
+            "Logical gaps"
+          ]
+        },
+        "persuasion_analysis": {
+          "persuasion_score": 0.266,
+          "persuasion_level": "Faible",
+          "emotional_appeal": 0.0,
+          "logical_appeal": 0.0,
+          "credibility_appeal": 1.0,
+          "context_appropriateness": 0.33,
+          "audience_alignment": 0.33
+        },
+        "recommendations": {
+          "general_recommendations": [
+            "Revoir la stratégie persuasive globale"
+          ],
+          "fallacy_recommendations": [
+            "Adapter les sophismes au contexte spécifique de l'argumentation"
+          ],
+          "coherence_recommendations": [
+            "Améliorer la cohérence globale de l'argumentation",
+            "Combler les lacunes logiques entre les arguments"
+          ],
+          "persuasion_recommendations": [
+            "Renforcer l'efficacité persuasive globale"
+          ],
+          "context_specific_recommendations": []
+        },
+        "context": "Hitler Discours Collection (PDF)",
+        "analysis_timestamp": "2025-05-15T23:19:12.056594"
+      }
+    },
+    "comparison_with_base": {
+      "timestamp": "2025-05-15T23:19:12.056602",
+      "fallacy_detection_comparison": {
+        "advanced_fallacy_count": 1,
+        "base_fallacy_count": 5,
+        "difference": -4,
+        "additional_fallacies_detected": [],
+        "fallacies_not_detected_in_base": []
+      },
+      "coherence_analysis_comparison": {
+        "advanced_coherence_score": 0.5,
+        "base_coherence_score": 0.0,
+        "difference": 0.5,
+        "advanced_coherence_level": "Modéré",
+        "base_coherence_level": "N/A"
+      },
+      "overall_comparison": {
+        "advanced_analysis_depth": "Élevée",
+        "base_analysis_depth": "Modérée",
+        "advanced_quality_score": 0.5564,
+        "key_improvements": [
+          "Détection de sophismes complexes et composites",
+          "Évaluation de la gravité des sophismes",
+          "Analyse contextuelle approfondie",
+          "Recommandations plus détaillées"
+        ]
+      }
+    }
+  },
+  {
+    "extract_name": "8. 1936.03.20 - Hambourg",
+    "source_name": "Hitler Discours Collection (PDF)",
+    "argument_count": 5,
+    "timestamp": "2025-05-15T23:19:12.056891",
+    "analyses": {
+      "complex_fallacies": {
+        "individual_fallacies_count": 1,
+        "basic_combinations": [],
+        "advanced_combinations": [],
+        "fallacy_patterns": [],
+        "composite_severity": {
+          "basic_severity": 0.0,
+          "advanced_severity": 0.0,
+          "pattern_severity": 0.0,
+          "composite_severity": 0.0,
+          "context_modifier": 0.0,
+          "adjusted_severity": 0.0,
+          "severity_level": "Faible"
+        },
+        "context": "Hitler Discours Collection (PDF)",
+        "analysis_timestamp": "2025-05-15T23:19:12.061435"
+      },
+      "contextual_fallacies": {
+        "context_analysis": {
+          "context_type": "général",
+          "context_subtypes": [],
+          "audience_characteristics": [],
+          "formality_level": "moyen",
+          "confidence": 0.7
+        },
+        "potential_fallacies_count": 1,
+        "contextual_fallacies_count": 1,
+        "contextual_fallacies": [
+          {
+            "fallacy_type": "Ad hominem",
+            "keyword": "crédibilité",
+            "context_text": "e argumentative est essentielle pour maintenir la crédibilité d'un discours.\n        En conclusion, l'analyse r",
+            "confidence": 0.5
+          }
+        ],
+        "fallacy_relations": [],
+        "analysis_timestamp": "2025-05-15T23:19:12.061813"
+      },
+      "fallacy_severity": {
+        "overall_severity": 0.0,
+        "severity_level": "Faible",
+        "fallacy_evaluations": [],
+        "context_analysis": {
+          "context_type": "général",
+          "audience_type": "général",
+          "domain_type": "général",
+          "context_severity_modifier": 0.0,
+          "audience_severity_modifier": 0.0,
+          "domain_severity_modifier": 0.0
+        },
+        "analysis_timestamp": "2025-05-15T23:19:12.061944"
+      },
+      "rhetorical_results": {
+        "overall_analysis": {
+          "rhetorical_quality": 0.5564,
+          "rhetorical_quality_level": "Modéré",
+          "main_strengths": [
+            "Utilisation modérée de sophismes",
+            "Fort appel à la crédibilité"
+          ],
+          "main_weaknesses": [
+            "Faible cohérence logique",
+            "Argumentation peu persuasive"
+          ],
+          "context_relevance": 0.48999999999999994
+        },
+        "fallacy_analysis": {
+          "total_fallacies": 1,
+          "fallacy_types_distribution": {
+            "Ad hominem": 1
+          },
+          "most_common_fallacies": [
+            "Ad hominem"
+          ],
+          "most_severe_fallacies": [
+            "Ad hominem"
+          ],
+          "composite_fallacies": 0,
+          "overall_severity": 0.0,
+          "severity_level": "Faible"
+        },
+        "coherence_analysis": {
+          "overall_coherence": 0.5,
+          "coherence_level": "Modéré",
+          "thematic_coherence": 0.7,
+          "logical_coherence": 0.3,
+          "structure_quality": 0.5,
+          "main_coherence_issues": [
+            "Logical gaps"
+          ]
+        },
+        "persuasion_analysis": {
+          "persuasion_score": 0.266,
+          "persuasion_level": "Faible",
+          "emotional_appeal": 0.0,
+          "logical_appeal": 0.0,
+          "credibility_appeal": 1.0,
+          "context_appropriateness": 0.33,
+          "audience_alignment": 0.33
+        },
+        "recommendations": {
+          "general_recommendations": [
+            "Revoir la stratégie persuasive globale"
+          ],
+          "fallacy_recommendations": [
+            "Adapter les sophismes au contexte spécifique de l'argumentation"
+          ],
+          "coherence_recommendations": [
+            "Améliorer la cohérence globale de l'argumentation",
+            "Combler les lacunes logiques entre les arguments"
+          ],
+          "persuasion_recommendations": [
+            "Renforcer l'efficacité persuasive globale"
+          ],
+          "context_specific_recommendations": []
+        },
+        "context": "Hitler Discours Collection (PDF)",
+        "analysis_timestamp": "2025-05-15T23:19:12.062090"
+      }
+    },
+    "comparison_with_base": {
+      "timestamp": "2025-05-15T23:19:12.062096",
+      "fallacy_detection_comparison": {
+        "advanced_fallacy_count": 1,
+        "base_fallacy_count": 5,
+        "difference": -4,
+        "additional_fallacies_detected": [],
+        "fallacies_not_detected_in_base": []
+      },
+      "coherence_analysis_comparison": {
+        "advanced_coherence_score": 0.5,
+        "base_coherence_score": 0.0,
+        "difference": 0.5,
+        "advanced_coherence_level": "Modéré",
+        "base_coherence_level": "N/A"
+      },
+      "overall_comparison": {
+        "advanced_analysis_depth": "Élevée",
+        "base_analysis_depth": "Modérée",
+        "advanced_quality_score": 0.5564,
+        "key_improvements": [
+          "Détection de sophismes complexes et composites",
+          "Évaluation de la gravité des sophismes",
+          "Analyse contextuelle approfondie",
+          "Recommandations plus détaillées"
+        ]
+      }
+    }
+  },
+  {
+    "extract_name": "9. 1939.01.30 - Reichstag (Prophétie)",
+    "source_name": "Hitler Discours Collection (PDF)",
+    "argument_count": 5,
+    "timestamp": "2025-05-15T23:19:12.062274",
+    "analyses": {
+      "complex_fallacies": {
+        "individual_fallacies_count": 1,
+        "basic_combinations": [],
+        "advanced_combinations": [],
+        "fallacy_patterns": [],
+        "composite_severity": {
+          "basic_severity": 0.0,
+          "advanced_severity": 0.0,
+          "pattern_severity": 0.0,
+          "composite_severity": 0.0,
+          "context_modifier": 0.0,
+          "adjusted_severity": 0.0,
+          "severity_level": "Faible"
+        },
+        "context": "Hitler Discours Collection (PDF)",
+        "analysis_timestamp": "2025-05-15T23:19:12.068710"
+      },
+      "contextual_fallacies": {
+        "context_analysis": {
+          "context_type": "général",
+          "context_subtypes": [],
+          "audience_characteristics": [],
+          "formality_level": "moyen",
+          "confidence": 0.7
+        },
+        "potential_fallacies_count": 1,
+        "contextual_fallacies_count": 1,
+        "contextual_fallacies": [
+          {
+            "fallacy_type": "Ad hominem",
+            "keyword": "crédibilité",
+            "context_text": "e argumentative est essentielle pour maintenir la crédibilité d'un discours.\n        En conclusion, l'analyse r",
+            "confidence": 0.5
+          }
+        ],
+        "fallacy_relations": [],
+        "analysis_timestamp": "2025-05-15T23:19:12.069459"
+      },
+      "fallacy_severity": {
+        "overall_severity": 0.0,
+        "severity_level": "Faible",
+        "fallacy_evaluations": [],
+        "context_analysis": {
+          "context_type": "général",
+          "audience_type": "général",
+          "domain_type": "général",
+          "context_severity_modifier": 0.0,
+          "audience_severity_modifier": 0.0,
+          "domain_severity_modifier": 0.0
+        },
+        "analysis_timestamp": "2025-05-15T23:19:12.069717"
+      },
+      "rhetorical_results": {
+        "overall_analysis": {
+          "rhetorical_quality": 0.5564,
+          "rhetorical_quality_level": "Modéré",
+          "main_strengths": [
+            "Utilisation modérée de sophismes",
+            "Fort appel à la crédibilité"
+          ],
+          "main_weaknesses": [
+            "Faible cohérence logique",
+            "Argumentation peu persuasive"
+          ],
+          "context_relevance": 0.48999999999999994
+        },
+        "fallacy_analysis": {
+          "total_fallacies": 1,
+          "fallacy_types_distribution": {
+            "Ad hominem": 1
+          },
+          "most_common_fallacies": [
+            "Ad hominem"
+          ],
+          "most_severe_fallacies": [
+            "Ad hominem"
+          ],
+          "composite_fallacies": 0,
+          "overall_severity": 0.0,
+          "severity_level": "Faible"
+        },
+        "coherence_analysis": {
+          "overall_coherence": 0.5,
+          "coherence_level": "Modéré",
+          "thematic_coherence": 0.7,
+          "logical_coherence": 0.3,
+          "structure_quality": 0.5,
+          "main_coherence_issues": [
+            "Logical gaps"
+          ]
+        },
+        "persuasion_analysis": {
+          "persuasion_score": 0.266,
+          "persuasion_level": "Faible",
+          "emotional_appeal": 0.0,
+          "logical_appeal": 0.0,
+          "credibility_appeal": 1.0,
+          "context_appropriateness": 0.33,
+          "audience_alignment": 0.33
+        },
+        "recommendations": {
+          "general_recommendations": [
+            "Revoir la stratégie persuasive globale"
+          ],
+          "fallacy_recommendations": [
+            "Adapter les sophismes au contexte spécifique de l'argumentation"
+          ],
+          "coherence_recommendations": [
+            "Améliorer la cohérence globale de l'argumentation",
+            "Combler les lacunes logiques entre les arguments"
+          ],
+          "persuasion_recommendations": [
+            "Renforcer l'efficacité persuasive globale"
+          ],
+          "context_specific_recommendations": []
+        },
+        "context": "Hitler Discours Collection (PDF)",
+        "analysis_timestamp": "2025-05-15T23:19:12.069985"
+      }
+    },
+    "comparison_with_base": {
+      "timestamp": "2025-05-15T23:19:12.069994",
+      "fallacy_detection_comparison": {
+        "advanced_fallacy_count": 1,
+        "base_fallacy_count": 5,
+        "difference": -4,
+        "additional_fallacies_detected": [],
+        "fallacies_not_detected_in_base": []
+      },
+      "coherence_analysis_comparison": {
+        "advanced_coherence_score": 0.5,
+        "base_coherence_score": 0.0,
+        "difference": 0.5,
+        "advanced_coherence_level": "Modéré",
+        "base_coherence_level": "N/A"
+      },
+      "overall_comparison": {
+        "advanced_analysis_depth": "Élevée",
+        "base_analysis_depth": "Modérée",
+        "advanced_quality_score": 0.5564,
+        "key_improvements": [
+          "Détection de sophismes complexes et composites",
+          "Évaluation de la gravité des sophismes",
+          "Analyse contextuelle approfondie",
+          "Recommandations plus détaillées"
+        ]
+      }
+    }
+  },
+  {
+    "extract_name": "10. 1942.11.09 - Löwenbräukeller",
+    "source_name": "Hitler Discours Collection (PDF)",
+    "argument_count": 5,
+    "timestamp": "2025-05-15T23:19:12.070434",
+    "analyses": {
+      "complex_fallacies": {
+        "individual_fallacies_count": 1,
+        "basic_combinations": [],
+        "advanced_combinations": [],
+        "fallacy_patterns": [],
+        "composite_severity": {
+          "basic_severity": 0.0,
+          "advanced_severity": 0.0,
+          "pattern_severity": 0.0,
+          "composite_severity": 0.0,
+          "context_modifier": 0.0,
+          "adjusted_severity": 0.0,
+          "severity_level": "Faible"
+        },
+        "context": "Hitler Discours Collection (PDF)",
+        "analysis_timestamp": "2025-05-15T23:19:12.075443"
+      },
+      "contextual_fallacies": {
+        "context_analysis": {
+          "context_type": "général",
+          "context_subtypes": [],
+          "audience_characteristics": [],
+          "formality_level": "moyen",
+          "confidence": 0.7
+        },
+        "potential_fallacies_count": 1,
+        "contextual_fallacies_count": 1,
+        "contextual_fallacies": [
+          {
+            "fallacy_type": "Ad hominem",
+            "keyword": "crédibilité",
+            "context_text": "e argumentative est essentielle pour maintenir la crédibilité d'un discours.\n        En conclusion, l'analyse r",
+            "confidence": 0.5
+          }
+        ],
+        "fallacy_relations": [],
+        "analysis_timestamp": "2025-05-15T23:19:12.075993"
+      },
+      "fallacy_severity": {
+        "overall_severity": 0.0,
+        "severity_level": "Faible",
+        "fallacy_evaluations": [],
+        "context_analysis": {
+          "context_type": "général",
+          "audience_type": "général",
+          "domain_type": "général",
+          "context_severity_modifier": 0.0,
+          "audience_severity_modifier": 0.0,
+          "domain_severity_modifier": 0.0
+        },
+        "analysis_timestamp": "2025-05-15T23:19:12.076092"
+      },
+      "rhetorical_results": {
+        "overall_analysis": {
+          "rhetorical_quality": 0.5564,
+          "rhetorical_quality_level": "Modéré",
+          "main_strengths": [
+            "Utilisation modérée de sophismes",
+            "Fort appel à la crédibilité"
+          ],
+          "main_weaknesses": [
+            "Faible cohérence logique",
+            "Argumentation peu persuasive"
+          ],
+          "context_relevance": 0.48999999999999994
+        },
+        "fallacy_analysis": {
+          "total_fallacies": 1,
+          "fallacy_types_distribution": {
+            "Ad hominem": 1
+          },
+          "most_common_fallacies": [
+            "Ad hominem"
+          ],
+          "most_severe_fallacies": [
+            "Ad hominem"
+          ],
+          "composite_fallacies": 0,
+          "overall_severity": 0.0,
+          "severity_level": "Faible"
+        },
+        "coherence_analysis": {
+          "overall_coherence": 0.5,
+          "coherence_level": "Modéré",
+          "thematic_coherence": 0.7,
+          "logical_coherence": 0.3,
+          "structure_quality": 0.5,
+          "main_coherence_issues": [
+            "Logical gaps"
+          ]
+        },
+        "persuasion_analysis": {
+          "persuasion_score": 0.266,
+          "persuasion_level": "Faible",
+          "emotional_appeal": 0.0,
+          "logical_appeal": 0.0,
+          "credibility_appeal": 1.0,
+          "context_appropriateness": 0.33,
+          "audience_alignment": 0.33
+        },
+        "recommendations": {
+          "general_recommendations": [
+            "Revoir la stratégie persuasive globale"
+          ],
+          "fallacy_recommendations": [
+            "Adapter les sophismes au contexte spécifique de l'argumentation"
+          ],
+          "coherence_recommendations": [
+            "Améliorer la cohérence globale de l'argumentation",
+            "Combler les lacunes logiques entre les arguments"
+          ],
+          "persuasion_recommendations": [
+            "Renforcer l'efficacité persuasive globale"
+          ],
+          "context_specific_recommendations": []
+        },
+        "context": "Hitler Discours Collection (PDF)",
+        "analysis_timestamp": "2025-05-15T23:19:12.076214"
+      }
+    },
+    "comparison_with_base": {
+      "timestamp": "2025-05-15T23:19:12.076221",
+      "fallacy_detection_comparison": {
+        "advanced_fallacy_count": 1,
+        "base_fallacy_count": 5,
+        "difference": -4,
+        "additional_fallacies_detected": [],
+        "fallacies_not_detected_in_base": []
+      },
+      "coherence_analysis_comparison": {
+        "advanced_coherence_score": 0.5,
+        "base_coherence_score": 0.0,
+        "difference": 0.5,
+        "advanced_coherence_level": "Modéré",
+        "base_coherence_level": "N/A"
+      },
+      "overall_comparison": {
+        "advanced_analysis_depth": "Élevée",
+        "base_analysis_depth": "Modérée",
+        "advanced_quality_score": 0.5564,
+        "key_improvements": [
+          "Détection de sophismes complexes et composites",
+          "Évaluation de la gravité des sophismes",
+          "Analyse contextuelle approfondie",
+          "Recommandations plus détaillées"
+        ]
+      }
+    }
+  }
+]
