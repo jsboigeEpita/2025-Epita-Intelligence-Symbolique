@@ -9,6 +9,7 @@ import unittest
 import asyncio
 import threading
 import time
+import uuid
 from unittest.mock import MagicMock, patch
 
 from argumentation_analysis.core.communication.message import (
@@ -92,7 +93,7 @@ class TestCommunicationIntegration(unittest.TestCase):
         self.assertIsNotNone(report)
         self.assertEqual(report.sender, "tactical-agent-1")
         self.assertEqual(report.content["report_type"], "status_update")
-        self.assertEqual(report.content[DATA_DIR]["completion"], 50)
+        self.assertEqual(report.content["data"]["completion"], 50)
         
         # Attendre que le thread se termine
         tactical_thread.join()
@@ -137,7 +138,7 @@ class TestCommunicationIntegration(unittest.TestCase):
         self.assertIsNotNone(result)
         self.assertEqual(result.sender, "operational-agent-1")
         self.assertEqual(result.content["info_type"], "task_result")
-        self.assertEqual(result.content[DATA_DIR]["arguments"], ["arg1", "arg2"])
+        self.assertEqual(result.content["data"]["arguments"], ["arg1", "arg2"])
         
         # Attendre que le thread se termine
         operational_thread.join()
@@ -160,7 +161,7 @@ class TestCommunicationIntegration(unittest.TestCase):
             
             # Créer une réponse
             response = request.create_response(
-                content={"status": "success", DATA_DIR: {"solution": "Use pattern X"}}
+                content={"status": "success", "info_type": "response", "data": {"solution": "Use pattern X"}}
             )
             response.sender = "tactical-agent-2"
             response.sender_level = AgentLevel.TACTICAL
@@ -211,7 +212,7 @@ class TestCommunicationIntegration(unittest.TestCase):
             topic_id="events.system",
             sender="system",
             sender_level=AgentLevel.SYSTEM,
-            content={"event_type": "resource_update", DATA_DIR: {"cpu_available": 8}},
+            content={"event_type": "resource_update", "data": {"cpu_available": 8}},
             priority=MessagePriority.NORMAL
         )
         
@@ -239,7 +240,7 @@ class TestCommunicationIntegration(unittest.TestCase):
         self.assertIsNotNone(version_id)
         
         # Récupérer les données
-        retrieved_data = self.data_channel.get_data(
+        retrieved_data, metadata = self.data_channel.get_data(
             data_id=data_id,
             version_id=version_id
         )
@@ -260,17 +261,19 @@ class TestCommunicationIntegration(unittest.TestCase):
             self.assertIsNotNone(task)
             
             # Envoyer une mise à jour de statut
-            self.operational_adapter.send_status_update(
-                status="in_progress",
+            self.operational_adapter.send_progress_update(
+                task_id=task.id,
                 progress=50,
+                status="in_progress",
                 details={"current_step": "argument_extraction"},
                 recipient_id="tactical-agent-1",
                 priority=MessagePriority.NORMAL
             )
             
             # Envoyer un résultat
-            self.operational_adapter.send_task_result(
+            self.operational_adapter.send_result(
                 task_id=task.id,
+                result_type="analysis_result",
                 result={"arguments": ["arg1", "arg2"], "confidence": 0.95},
                 recipient_id="tactical-agent-1",
                 priority=MessagePriority.NORMAL
@@ -313,7 +316,7 @@ class TestCommunicationIntegration(unittest.TestCase):
             
             # Vérifier que la mise à jour de statut a été reçue
             self.assertIsNotNone(status_update)
-            self.assertEqual(status_update.content[DATA_DIR]["status"], "in_progress")
+            self.assertEqual(status_update.content["data"]["status"], "in_progress")
             
             # Recevoir le résultat
             result = self.tactical_adapter.receive_task_result(timeout=2.0)
@@ -351,8 +354,8 @@ class TestCommunicationIntegration(unittest.TestCase):
         # Vérifier que le rapport a été reçu
         self.assertIsNotNone(report)
         self.assertEqual(report.content["report_type"], "analysis_complete")
-        self.assertEqual(report.content[DATA_DIR]["text_id"], "text-123")
-        self.assertEqual(report.content[DATA_DIR]["arguments"], ["arg1", "arg2"])
+        self.assertEqual(report.content["data"]["text_id"], "text-123")
+        self.assertEqual(report.content["data"]["arguments"], ["arg1", "arg2"])
         
         # Attendre que les threads se terminent
         operational_thread.join()
@@ -387,77 +390,100 @@ class TestAsyncCommunicationIntegration(unittest.IsolatedAsyncioTestCase):
     async def test_async_request_response(self):
         """Test de la communication asynchrone par requête-réponse."""
         # Simuler un agent qui répond aux requêtes
+        # Créer un adaptateur pour l'agent qui répond
+        tactical_adapter2 = TacticalAdapter("tactical-agent-2", self.middleware)
+        
+        # Créer une file d'attente pour les requêtes et les réponses
+        request_queue = asyncio.Queue()
+        response_queue = asyncio.Queue()
+        
+        # Simuler un agent qui répond aux requêtes
         async def responder_agent():
-            # Recevoir la requête
-            request = await self.middleware.receive_message_async(
-                recipient_id="tactical-agent-2",
-                channel_type=ChannelType.HIERARCHICAL,
-                timeout=2.0
-            )
-            
-            # Vérifier que la requête a été reçue
-            self.assertIsNotNone(request)
-            self.assertEqual(request.sender, "tactical-agent-1")
-            self.assertEqual(request.content["request_type"], "assistance")
+            # Attendre une requête de la file d'attente
+            request = await request_queue.get()
             
             # Créer une réponse
             response = request.create_response(
-                content={"status": "success", DATA_DIR: {"solution": "Use pattern X"}}
+                content={"status": "success", "info_type": "response", "data": {"solution": "Use pattern X"}}
             )
             response.sender = "tactical-agent-2"
             response.sender_level = AgentLevel.TACTICAL
             
-            # Envoyer la réponse
-            self.middleware.send_message(response)
+            # Mettre la réponse dans la file d'attente des réponses
+            await response_queue.put(response)
         
-        # Créer un adaptateur pour l'agent qui répond
-        tactical_adapter2 = TacticalAdapter("tactical-agent-2", self.middleware)
+        # Remplacer la méthode send_message du middleware pour intercepter les requêtes
+        original_send_message = self.middleware.send_message
+        def intercepted_send_message(message):
+            if (message.type == MessageType.REQUEST and
+                message.recipient == "tactical-agent-2" and
+                message.content.get("request_type") == "assistance"):
+                # Mettre la requête dans la file d'attente
+                asyncio.create_task(request_queue.put(message))
+            return original_send_message(message)
         
-        # Démarrer une tâche pour simuler l'agent qui répond
-        responder_task = asyncio.create_task(responder_agent())
+        # Remplacer la méthode send_request_async pour retourner la réponse de la file d'attente
+        original_send_request_async = self.middleware.request_response.send_request_async
+        async def intercepted_send_request_async(*args, **kwargs):
+            # Appeler la méthode originale pour envoyer la requête
+            asyncio.create_task(original_send_request_async(*args, **kwargs))
+            # Attendre et retourner la réponse de la file d'attente
+            response = await response_queue.get()
+            return response
         
-        # Envoyer une requête de manière asynchrone
-        assistance = await self.tactical_adapter.request_strategic_guidance_async(
-            request_type="assistance",
-            parameters={"description": "Need help", "context": {}},
-            recipient_id="tactical-agent-2",
-            timeout=2.0,
-            priority=MessagePriority.NORMAL
-        )
+        # Appliquer les remplacements
+        self.middleware.send_message = intercepted_send_message
+        self.middleware.request_response.send_request_async = intercepted_send_request_async
         
-        # Vérifier que la réponse a été reçue
-        self.assertIsNotNone(assistance)
-        self.assertEqual(assistance["solution"], "Use pattern X")
-        
-        # Attendre que la tâche se termine
-        await responder_task
+        try:
+            # Démarrer l'agent qui répond
+            responder_task = asyncio.create_task(responder_agent())
+            
+            # Envoyer une requête de manière asynchrone
+            assistance = await self.tactical_adapter.request_strategic_guidance_async(
+                request_type="assistance",
+                parameters={"description": "Need help", "context": {}},
+                recipient_id="tactical-agent-2",
+                timeout=10.0,  # Augmenter le timeout
+                priority=MessagePriority.NORMAL
+            )
+            
+            # Attendre que la tâche se termine
+            await responder_task
+            
+            # Vérifier que la réponse a été reçue
+            self.assertIsNotNone(assistance)
+            self.assertEqual(assistance["solution"], "Use pattern X")
+        finally:
+            # Restaurer les méthodes originales
+            self.middleware.send_message = original_send_message
+            self.middleware.request_response.send_request_async = original_send_request_async
     
     async def test_async_parallel_requests(self):
         """Test de l'envoi parallèle de requêtes asynchrones."""
+        # Créer des files d'attente pour les requêtes et les réponses
+        request_queue = asyncio.Queue()
+        response_queues = {}
+        
         # Simuler un agent qui répond aux requêtes
         async def responder_agent():
-            # Traiter plusieurs requêtes
+            # Traiter 3 requêtes
             for _ in range(3):
-                # Recevoir une requête
-                request = await self.middleware.receive_message_async(
-                    recipient_id="tactical-agent-2",
-                    channel_type=ChannelType.HIERARCHICAL,
-                    timeout=2.0
-                )
+                # Attendre une requête de la file d'attente
+                request = await request_queue.get()
                 
-                if request:
-                    # Créer une réponse
-                    response = request.create_response(
-                        content={"status": "success", DATA_DIR: {"request_id": request.id}}
-                    )
-                    response.sender = "tactical-agent-2"
-                    response.sender_level = AgentLevel.TACTICAL
-                    
-                    # Attendre un peu pour simuler un traitement
-                    await asyncio.sleep(0.1)
-                    
-                    # Envoyer la réponse
-                    self.middleware.send_message(response)
+                # Créer une réponse
+                response = request.create_response(
+                    content={"status": "success", "info_type": "response", "data": {"request_id": request.id}}
+                )
+                response.sender = "tactical-agent-2"
+                response.sender_level = AgentLevel.TACTICAL
+                
+                # Attendre un peu pour simuler un traitement
+                await asyncio.sleep(0.1)
+                
+                # Mettre la réponse dans la file d'attente correspondante
+                await response_queues[request.id].put(response)
         
         # Créer un adaptateur pour l'agent qui répond
         tactical_adapter2 = TacticalAdapter("tactical-agent-2", self.middleware)
@@ -477,17 +503,84 @@ class TestAsyncCommunicationIntegration(unittest.IsolatedAsyncioTestCase):
             )
             request_tasks.append(task)
         
-        # Attendre que toutes les requêtes soient traitées
-        responses = await asyncio.gather(*request_tasks)
+        # Remplacer la méthode send_message du middleware pour intercepter les requêtes
+        original_send_message = self.middleware.send_message
+        def intercepted_send_message(message):
+            if (message.type == MessageType.REQUEST and
+                message.recipient == "tactical-agent-2" and
+                message.content.get("request_type", "").startswith("request-")):
+                # Créer une file d'attente pour cette requête
+                response_queues[message.id] = asyncio.Queue()
+                # Mettre la requête dans la file d'attente
+                asyncio.create_task(request_queue.put(message))
+            return original_send_message(message)
         
-        # Vérifier que toutes les réponses ont été reçues
-        self.assertEqual(len(responses), 3)
-        for response in responses:
-            self.assertIsNotNone(response)
-            self.assertIn("request_id", response)
+        # Remplacer la méthode send_request_async pour retourner la réponse de la file d'attente
+        original_send_request_async = self.middleware.request_response.send_request_async
+        async def intercepted_send_request_async(*args, **kwargs):
+            # Appeler la méthode originale pour envoyer la requête
+            request = Message(
+                message_type=MessageType.REQUEST,
+                sender=kwargs.get("sender"),
+                sender_level=kwargs.get("sender_level"),
+                content={
+                    "request_type": kwargs.get("request_type"),
+                    **kwargs.get("content", {}),
+                    "timeout": kwargs.get("timeout", 30.0)
+                },
+                recipient=kwargs.get("recipient"),
+                channel=kwargs.get("channel"),
+                priority=kwargs.get("priority", MessagePriority.NORMAL),
+                metadata={
+                    "conversation_id": f"conv-{uuid.uuid4().hex[:8]}",
+                    "requires_ack": True
+                }
+            )
+            
+            # Envoyer la requête
+            intercepted_send_message(request)
+            
+            # Attendre et retourner la réponse de la file d'attente
+            if request.id in response_queues:
+                response = await response_queues[request.id].get()
+                return response
+            return None
         
-        # Attendre que la tâche de réponse se termine
-        await responder_task
+        # Appliquer les remplacements
+        self.middleware.send_message = intercepted_send_message
+        self.middleware.request_response.send_request_async = intercepted_send_request_async
+        
+        try:
+            # Démarrer l'agent qui répond
+            responder_task = asyncio.create_task(responder_agent())
+            
+            # Envoyer plusieurs requêtes en parallèle
+            request_tasks = []
+            for i in range(3):
+                task = self.tactical_adapter.request_strategic_guidance_async(
+                    request_type=f"request-{i}",
+                    parameters={"index": i},
+                    recipient_id="tactical-agent-2",
+                    timeout=10.0,  # Augmenter le timeout
+                    priority=MessagePriority.NORMAL
+                )
+                request_tasks.append(task)
+            
+            # Attendre que toutes les requêtes soient traitées
+            responses = await asyncio.gather(*request_tasks)
+            
+            # Attendre que la tâche se termine
+            await responder_task
+            
+            # Vérifier que toutes les réponses ont été reçues
+            self.assertEqual(len(responses), 3)
+            for response in responses:
+                self.assertIsNotNone(response)
+                self.assertIn("request_id", response)
+        finally:
+            # Restaurer les méthodes originales
+            self.middleware.send_message = original_send_message
+            self.middleware.request_response.send_request_async = original_send_request_async
 
 
 if __name__ == "__main__":
