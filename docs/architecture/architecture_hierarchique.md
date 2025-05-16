@@ -65,6 +65,12 @@
     - [Défis potentiels et mitigations](#112-défis-potentiels-et-mitigations)
     - [Perspectives d'évolution future](#113-perspectives-dévolution-future)
 
+12. [État d'avancement de l'implémentation](./etat_avancement.md)
+    - [Composants implémentés](./etat_avancement.md#composants-implémentés)
+    - [Composants en cours de développement](./etat_avancement.md#composants-en-cours-de-développement)
+    - [Prochaines étapes](./etat_avancement.md#prochaines-étapes)
+    - [Correspondance avec la conception](./etat_avancement.md#correspondance-avec-la-conception)
+
 ## 1. Introduction
 
 ### 1.1 Contexte et objectifs

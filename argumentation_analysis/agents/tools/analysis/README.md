@@ -9,6 +9,28 @@ Ce répertoire contient des outils spécialisés pour l'analyse rhétorique, con
 - `complex_fallacy_analyzer.py` - Outil pour l'analyse des sophismes complexes
 - `rhetorical_result_analyzer.py` - Outil pour l'analyse des résultats d'une analyse rhétorique
 - `rhetorical_result_visualizer.py` - Outil pour la visualisation des résultats d'une analyse rhétorique
+- `enhanced/` - Versions améliorées des outils d'analyse rhétorique
+- `new/` - Nouveaux outils d'analyse rhétorique
+
+## Versions améliorées et nouvelles
+
+Le répertoire contient également des versions améliorées et de nouveaux outils d'analyse rhétorique :
+
+### Outils améliorés
+
+Les [outils améliorés](./enhanced/README.md) offrent des fonctionnalités plus avancées et une meilleure précision par rapport aux versions de base :
+- `EnhancedComplexFallacyAnalyzer` - Version améliorée de l'analyseur de sophismes complexes
+- `EnhancedContextualFallacyAnalyzer` - Version améliorée de l'analyseur contextuel de sophismes
+- `EnhancedFallacySeverityEvaluator` - Version améliorée de l'évaluateur de gravité des sophismes
+- `EnhancedRhetoricalResultAnalyzer` - Version améliorée de l'analyseur de résultats rhétoriques
+
+### Nouveaux outils
+
+Les [nouveaux outils](./new/README.md) introduisent des fonctionnalités innovantes :
+- `SemanticArgumentAnalyzer` - Analyseur sémantique d'arguments basé sur le modèle de Toulmin
+- `ArgumentCoherenceEvaluator` - Évaluateur de cohérence entre arguments
+- `ArgumentStructureVisualizer` - Visualiseur interactif de structures argumentatives
+- `ContextualFallacyDetector` - Détecteur avancé de sophismes contextuels
 
 ## Utilisation
 
@@ -71,3 +93,10 @@ Pour étendre ces outils ou en créer de nouveaux, suivez ces principes:
 2. **Compatibilité** - Les outils doivent être compatibles avec l'architecture existante et les conventions du projet.
 3. **Documentation** - Chaque outil doit être bien documenté, avec des exemples d'utilisation.
 4. **Tests** - Chaque outil doit être accompagné de tests unitaires et d'intégration.
+
+## Voir aussi
+
+- [Documentation des outils améliorés](./enhanced/README.md)
+- [Documentation des nouveaux outils](./new/README.md)
+- [Documentation des tests des outils](../../tests/tools/README.md)
+- [Documentation de l'architecture hiérarchique](../../../orchestration/hierarchical/README.md)
