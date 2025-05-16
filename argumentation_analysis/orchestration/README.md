@@ -10,6 +10,14 @@ Ce README sert de point d'entrée pour une instance VSCode dédiée au développ
 
 ## Contenu
 
+### Architectures d'Orchestration
+
+* **[`hierarchical/`](./hierarchical/README.md)**: Implémentation de l'architecture hiérarchique à trois niveaux (stratégique, tactique, opérationnel) pour l'orchestration du système d'analyse argumentative.
+    * **Niveau Stratégique**: Planification globale et allocation des ressources
+    * **Niveau Tactique**: Coordination des tâches et résolution des conflits
+    * **Niveau Opérationnel**: Exécution des tâches spécifiques via des agents spécialistes
+    * **Interfaces**: Communication entre les différents niveaux de l'architecture
+
 ### Composants Principaux
 
 * **[`analysis_runner.py`](./analysis_runner.py)**: Définit la fonction asynchrone principale `run_analysis_conversation(texte_a_analyser, llm_service)`.
@@ -162,6 +170,7 @@ def setup_strategies(agents):
 - Utilisez des logs détaillés pour suivre le flux de la conversation
 - Gérez correctement les erreurs et les cas limites
 - Maintenez une séparation claire entre l'état partagé et la logique d'orchestration
+- Pour les systèmes complexes, utilisez l'[architecture hiérarchique](./hierarchical/README.md) à trois niveaux
 
 ## Exemples d'utilisation avancée
 
@@ -236,3 +245,16 @@ asyncio.run(run_and_save_analysis())
 - **Métriques de performance** : Collecte et analyse des temps d'exécution et de l'utilisation des ressources
 - **Intégration avec les outils d'optimisation** : Utilisation des résultats d'analyse pour améliorer les agents
 - **Gestion améliorée des erreurs** : Mécanismes robustes pour gérer les erreurs des agents et assurer la continuité de l'analyse
+
+## Architectures alternatives
+
+### Architecture Hiérarchique à Trois Niveaux
+
+Pour les systèmes d'analyse argumentative complexes, nous avons développé une [architecture hiérarchique](./hierarchical/README.md) à trois niveaux qui offre une meilleure séparation des responsabilités et une orchestration plus structurée.
+
+Cette architecture est particulièrement adaptée pour :
+- Les analyses argumentatives complexes nécessitant plusieurs agents spécialisés
+- Les systèmes nécessitant une planification stratégique et une coordination tactique
+- L'intégration avec les outils rhétoriques améliorés et nouveaux
+
+Pour en savoir plus, consultez la [documentation de l'architecture hiérarchique](./hierarchical/README.md).
