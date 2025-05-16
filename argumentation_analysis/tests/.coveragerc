@@ -1,5 +1,5 @@
 [run]
-source = argumentiation_analysis
+source = argumentation_analysis
 omit =
     */__pycache__/*
     */tests/*
@@ -17,3 +17,10 @@ exclude_lines =
     if __name__ == .__main__.:
     pass
     raise ImportError
+
+[html]
+directory = tests/htmlcov
+title = Rapport de couverture - Projet d'Analyse Argumentative
+
+[xml]
+output = tests/coverage.xml

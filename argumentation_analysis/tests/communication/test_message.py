@@ -6,10 +6,8 @@ import unittest
 from datetime import datetime
 import json
 
-from argumentation_analysis.core.communication.message import (
-
 from argumentation_analysis.paths import DATA_DIR
-
+from argumentation_analysis.core.communication.message import (
     Message, MessageType, MessagePriority, AgentLevel,
     CommandMessage, InformationMessage, RequestMessage, EventMessage
 )

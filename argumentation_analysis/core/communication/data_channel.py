@@ -292,8 +292,9 @@ class DataChannel(Channel):
         }
         
         # Configuration
-        self.compression_threshold = config.get("compression_threshold", 1024)
-        self.max_inline_data_size = config.get("max_inline_data_size", 10240)
+        self.config = config or {}  # S'assurer que config n'est jamais None
+        self.compression_threshold = self.config.get("compression_threshold", 1024)
+        self.max_inline_data_size = self.config.get("max_inline_data_size", 10240)
     
     def send_message(self, message: Message) -> bool:
         """

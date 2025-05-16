@@ -7,11 +7,16 @@ avec prise en charge de différentes méthodes (direct, Jina, Tika) et gestion d
 
 import hashlib
 import logging
+import os
 import requests
 from pathlib import Path
 from typing import Optional, Tuple, List, Dict, Any, Union
+from dotenv import load_dotenv, find_dotenv
 
 from .cache_service import CacheService
+
+# Charger les variables d'environnement
+load_dotenv(find_dotenv())
 
 # Configuration du logging
 logger = logging.getLogger("Services.FetchService")
@@ -24,7 +29,8 @@ class FetchService:
         self,
         cache_service: CacheService,
         jina_reader_prefix: str = "https://r.jina.ai/",
-        tika_server_url: str = "https://tika.open-webui.myia.io/tika",
+        tika_server_url: Optional[str] = None,
+        tika_server_timeout: Optional[int] = None,
         temp_download_dir: Optional[Path] = None,
         plaintext_extensions: Optional[List[str]] = None
     ):
@@ -40,10 +46,18 @@ class FetchService:
         """
         self.cache_service = cache_service
         self.jina_reader_prefix = jina_reader_prefix
-        self.tika_server_url = tika_server_url
+        
+        # Utiliser les valeurs du fichier .env si elles ne sont pas fournies
+        # Assurez-vous que l'URL du serveur Tika se termine par '/tika'
+        tika_url = tika_server_url or os.getenv("TIKA_SERVER_ENDPOINT", "https://tika.open-webui.myia.io/tika")
+        self.tika_server_url = tika_url if tika_url.endswith('/tika') else f"{tika_url.rstrip('/')}/tika"
+        self.tika_server_timeout = tika_server_timeout or int(os.getenv("TIKA_SERVER_TIMEOUT", "30"))
+        
         self.temp_download_dir = temp_download_dir
         self.plaintext_extensions = plaintext_extensions or ['.txt', '.md', '.json', '.csv', '.xml', '.py', '.js', '.html', '.htm']
         self.logger = logger
+        
+        self.logger.info(f"FetchService initialisé avec Tika URL: {self.tika_server_url}, timeout: {self.tika_server_timeout}s")
         
         # S'assurer que le répertoire temporaire existe
         if self.temp_download_dir:
@@ -192,7 +206,7 @@ class FetchService:
         file_name: str = "fichier",
         raw_file_cache_path: Optional[Union[Path, str]] = None,
         timeout_dl: int = 60,
-        timeout_tika: int = 600
+        timeout_tika: Optional[int] = None
     ) -> Optional[str]:
         """
         Traite une source via Tika.
@@ -282,8 +296,11 @@ class FetchService:
             self.cache_service.save_to_cache(cache_key, "")
             return ""
         
+        # Utiliser le timeout configuré ou celui fourni en paramètre
+        effective_timeout = timeout_tika or self.tika_server_timeout
+        
         # Envoyer à Tika
-        self.logger.info(f"Envoi contenu à Tika ({self.tika_server_url})... (Timeout={timeout_tika}s)")
+        self.logger.info(f"Envoi contenu à Tika ({self.tika_server_url})... (Timeout={effective_timeout}s)")
         
         headers = {
             'Accept': 'text/plain',
@@ -292,7 +309,7 @@ class FetchService:
         }
         
         try:
-            response_tika = requests.put(self.tika_server_url, data=content_to_send, headers=headers, timeout=timeout_tika)
+            response_tika = requests.put(self.tika_server_url, data=content_to_send, headers=headers, timeout=effective_timeout)
             response_tika.raise_for_status()
             
             texte_brut = response_tika.text
@@ -307,7 +324,7 @@ class FetchService:
             
             return texte_brut
         except requests.exceptions.Timeout:
-            self.logger.error(f"❌ Timeout Tika ({timeout_tika}s).")
+            self.logger.error(f"❌ Timeout Tika ({effective_timeout}s).")
             return None
         except requests.exceptions.RequestException as e:
             self.logger.error(f"Erreur Tika: {e}")

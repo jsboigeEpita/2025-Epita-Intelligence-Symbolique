@@ -44,7 +44,7 @@ class StrategicAdapter:
     def issue_directive(
         self,
         directive_type: str,
-        content: Dict[str, Any],
+        parameters: Dict[str, Any],
         recipient_id: Optional[str] = None,
         priority: MessagePriority = MessagePriority.HIGH,
         requires_ack: bool = True,
@@ -71,7 +71,7 @@ class StrategicAdapter:
             sender_level=AgentLevel.STRATEGIC,
             content={
                 "command_type": directive_type,
-                "parameters": content
+                "parameters": parameters
             },
             recipient=recipient_id,
             channel=ChannelType.HIERARCHICAL.value,
@@ -483,3 +483,203 @@ class StrategicAdapter:
         
         self.logger.info(f"Subscribed to tactical updates: {', '.join(update_types)}")
         return subscription_id
+        
+    def allocate_resources(
+        self,
+        resource_type: str,
+        amount: int,
+        recipient_id: str,
+        priority: MessagePriority = MessagePriority.HIGH,
+        requires_ack: bool = True,
+        metadata: Optional[Dict[str, Any]] = None
+    ) -> str:
+        """
+        Alloue des ressources à un agent tactique.
+        
+        Args:
+            resource_type: Type de ressource (cpu, memory, etc.)
+            amount: Quantité de ressources à allouer
+            recipient_id: Identifiant de l'agent tactique
+            priority: Priorité de l'allocation
+            requires_ack: Indique si un accusé de réception est requis
+            metadata: Métadonnées additionnelles (optionnel)
+            
+        Returns:
+            L'identifiant de l'allocation émise
+        """
+        # Créer le message d'allocation
+        message = Message(
+            message_type=MessageType.COMMAND,
+            sender=self.agent_id,
+            sender_level=AgentLevel.STRATEGIC,
+            content={
+                "command_type": "allocate_resources",
+                "parameters": {
+                    "resource_type": resource_type,
+                    "amount": amount
+                }
+            },
+            recipient=recipient_id,
+            channel=ChannelType.HIERARCHICAL.value,
+            priority=priority,
+            metadata={
+                "conversation_id": f"alloc-{uuid.uuid4().hex[:8]}",
+                "requires_ack": requires_ack,
+                **(metadata or {})
+            }
+        )
+        
+        # Envoyer le message via le middleware
+        success = self.middleware.send_message(message)
+        
+        if success:
+            self.logger.info(f"Resources {resource_type} allocated to {recipient_id}")
+        else:
+            self.logger.error(f"Failed to allocate resources {resource_type} to {recipient_id}")
+        
+        return message.id
+        
+    def broadcast_announcement(
+        self,
+        announcement_type: str,
+        content: Dict[str, Any],
+        priority: MessagePriority = MessagePriority.NORMAL,
+        metadata: Optional[Dict[str, Any]] = None
+    ) -> str:
+        """
+        Diffuse une annonce à tous les agents.
+        
+        Args:
+            announcement_type: Type d'annonce (system_update, policy_change, etc.)
+            content: Contenu de l'annonce
+            priority: Priorité de l'annonce
+            metadata: Métadonnées additionnelles (optionnel)
+            
+        Returns:
+            L'identifiant de l'annonce diffusée
+        """
+        # Créer le message d'annonce
+        message = Message(
+            message_type=MessageType.INFORMATION,
+            sender=self.agent_id,
+            sender_level=AgentLevel.STRATEGIC,
+            content={
+                "info_type": "announcement",
+                "announcement_type": announcement_type,
+                DATA_DIR: content
+            },
+            recipient=None,  # Broadcast
+            channel=ChannelType.HIERARCHICAL.value,
+            priority=priority,
+            metadata={
+                "broadcast": True,
+                **(metadata or {})
+            }
+        )
+        
+        # Publier le message via le middleware
+        topic_id = f"announcements.{announcement_type}"
+        recipients = self.middleware.publish(
+            topic_id=topic_id,
+            sender=self.agent_id,
+            sender_level=AgentLevel.STRATEGIC,
+            content=message.content,
+            priority=priority,
+            metadata=message.metadata
+        )
+        
+        self.logger.info(f"Announcement {announcement_type} broadcasted to {len(recipients)} agents")
+        return message.id
+        
+    def receive_guidance_request(
+        self,
+        timeout: Optional[float] = None,
+        filter_criteria: Optional[Dict[str, Any]] = None
+    ) -> Optional[Message]:
+        """
+        Reçoit une demande de conseils d'un agent tactique.
+        
+        Args:
+            timeout: Délai d'attente maximum en secondes (None pour attente indéfinie)
+            filter_criteria: Critères de filtrage des demandes (optionnel)
+            
+        Returns:
+            La demande reçue ou None si timeout
+        """
+        # Recevoir un message via le middleware
+        message = self.middleware.receive_message(
+            recipient_id=self.agent_id,
+            channel_type=ChannelType.HIERARCHICAL,
+            timeout=timeout
+        )
+        
+        if message:
+            # Vérifier si le message est une demande de conseils
+            is_guidance_request = (
+                message.type == MessageType.REQUEST and
+                message.sender_level == AgentLevel.TACTICAL and
+                message.content.get("request_type") == "guidance"
+            )
+            
+            if is_guidance_request:
+                # Vérifier les critères de filtrage
+                if filter_criteria:
+                    for key, value in filter_criteria.items():
+                        if key in message.content:
+                            if isinstance(value, list):
+                                if message.content[key] not in value:
+                                    return None
+                            elif message.content[key] != value:
+                                return None
+                
+                self.logger.info(f"Guidance request received from {message.sender}")
+                return message
+        
+        return None
+        
+    def provide_guidance(
+        self,
+        request_id: str,
+        guidance: Dict[str, Any],
+        priority: MessagePriority = MessagePriority.HIGH,
+        metadata: Optional[Dict[str, Any]] = None
+    ) -> str:
+        """
+        Fournit des conseils en réponse à une demande.
+        
+        Args:
+            request_id: Identifiant de la demande
+            guidance: Contenu des conseils
+            priority: Priorité de la réponse
+            metadata: Métadonnées additionnelles (optionnel)
+            
+        Returns:
+            L'identifiant de la réponse envoyée
+        """
+        # Créer le message de réponse
+        message = Message(
+            message_type=MessageType.RESPONSE,
+            sender=self.agent_id,
+            sender_level=AgentLevel.STRATEGIC,
+            content={
+                "status": "success",
+                DATA_DIR: guidance
+            },
+            recipient=None,  # Sera défini par le middleware
+            channel=ChannelType.HIERARCHICAL.value,
+            priority=priority,
+            metadata={
+                "reply_to": request_id,
+                **(metadata or {})
+            }
+        )
+        
+        # Envoyer le message via le middleware
+        success = self.middleware.send_message(message)
+        
+        if success:
+            self.logger.info(f"Guidance provided in response to request {request_id}")
+        else:
+            self.logger.error(f"Failed to provide guidance for request {request_id}")
+        
+        return message.id

@@ -317,7 +317,7 @@ class RequestResponseProtocol:
         """
         # Vérifier si la réponse correspond à une requête en attente
         request_id = response.metadata.get("reply_to")
-        if not request_id:
+        if request_id is None or request_id == "":
             return False
         
         with self.lock:
