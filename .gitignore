@@ -88,3 +88,7 @@ rapport_contenu_sensible_*.md
 
 # Fichiers temporaires additionnels
 temp_extracts/
+
+# Éviter les répertoires mal orthographiés
+argumentiation_analysis/
+argumentiation_analysis.egg-info/
