@@ -159,7 +159,8 @@ class Message:
     def create_response(
         self,
         content: Dict[str, Any],
-        priority: Optional[MessagePriority] = None
+        priority: Optional[MessagePriority] = None,
+        sender_level: Optional[AgentLevel] = None
     ) -> 'Message':
         """
         Crée un message de réponse à ce message.
@@ -167,23 +168,34 @@ class Message:
         Args:
             content: Contenu de la réponse
             priority: Priorité de la réponse (par défaut: même priorité que la requête)
+            sender_level: Niveau de l'expéditeur (par défaut: niveau du destinataire de la requête)
             
         Returns:
             Un nouveau message de type RESPONSE
         """
-        return Message(
+        # Assurer que le champ reply_to est correctement défini
+        metadata = {
+            "reply_to": self.id,
+            "conversation_id": self.metadata.get("conversation_id"),
+            "is_response": True  # Marquer explicitement comme réponse
+        }
+        
+        # Créer la réponse
+        response = Message(
             message_type=MessageType.RESPONSE,
             sender=self.recipient,
-            sender_level=AgentLevel.SYSTEM,  # À remplacer par le niveau réel de l'agent
+            sender_level=sender_level or AgentLevel.SYSTEM,  # Utiliser le niveau fourni ou SYSTEM par défaut
             content=content,
             recipient=self.sender,
             channel=self.channel,
             priority=priority or self.priority,
-            metadata={
-                "reply_to": self.id,
-                "conversation_id": self.metadata.get("conversation_id")
-            }
+            metadata=metadata
         )
+        
+        # Ajouter un log pour le débogage
+        print(f"Created response {response.id} to request {self.id} with reply_to={metadata['reply_to']}")
+        
+        return response
     
     def create_acknowledgement(self) -> 'Message':
         """
