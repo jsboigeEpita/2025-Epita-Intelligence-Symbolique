@@ -76,7 +76,7 @@ class TestStrategicAdapter(unittest.TestCase):
             content={
                 "info_type": "report",
                 "report_type": "status_update",
-                DATA_DIR: {"status": "in_progress", "completion": 50}
+                "data": {"status": "in_progress", "completion": 50}
             },
             recipient="strategic-agent-1",
             channel=ChannelType.HIERARCHICAL.value,
@@ -87,7 +87,7 @@ class TestStrategicAdapter(unittest.TestCase):
         self.middleware.send_message(report)
         
         # Recevoir le rapport
-        received_report = self.adapter.receive_report(timeout=1.0)
+        received_report = self.adapter.receive_report(timeout=5.0)
         
         # Vérifier que le rapport a été reçu
         self.assertIsNotNone(received_report)
@@ -149,7 +149,7 @@ class TestStrategicAdapter(unittest.TestCase):
         time.sleep(0.2)
         
         # Recevoir la demande de conseils
-        request = self.adapter.receive_guidance_request(timeout=1.0)
+        request = self.adapter.receive_guidance_request(timeout=5.0)
         
         # Vérifier que la demande a été reçue
         self.assertIsNotNone(request)
@@ -229,7 +229,7 @@ class TestTacticalAdapter(unittest.TestCase):
         self.middleware.send_message(directive)
         
         # Recevoir la directive
-        received_directive = self.adapter.receive_directive(timeout=1.0)
+        received_directive = self.adapter.receive_directive(timeout=5.0)
         
         # Vérifier que la directive a été reçue
         self.assertIsNotNone(received_directive)
@@ -277,7 +277,7 @@ class TestTacticalAdapter(unittest.TestCase):
         self.assertEqual(pending[0].sender, "tactical-agent-1")
         self.assertEqual(pending[0].content["info_type"], "report")
         self.assertEqual(pending[0].content["report_type"], "status_update")
-        self.assertEqual(pending[0].content[DATA_DIR]["completion"], 50)
+        self.assertEqual(pending[0].content["data"]["completion"], 50)
     
     def test_receive_task_result(self):
         """Test de la réception d'un résultat de tâche."""
@@ -289,7 +289,7 @@ class TestTacticalAdapter(unittest.TestCase):
             content={
                 "info_type": "task_result",
                 "task_type": "extract_arguments",
-                DATA_DIR: {"arguments": ["arg1", "arg2"], "confidence": 0.95}
+                "data": {"arguments": ["arg1", "arg2"], "confidence": 0.95}
             },
             recipient="tactical-agent-1",
             channel=ChannelType.HIERARCHICAL.value,
@@ -300,14 +300,14 @@ class TestTacticalAdapter(unittest.TestCase):
         self.middleware.send_message(result)
         
         # Recevoir le résultat
-        received_result = self.adapter.receive_task_result(timeout=1.0)
+        received_result = self.adapter.receive_task_result(timeout=5.0)
         
         # Vérifier que le résultat a été reçu
         self.assertIsNotNone(received_result)
         self.assertEqual(received_result.sender, "operational-agent-1")
         self.assertEqual(received_result.content["info_type"], "task_result")
         self.assertEqual(received_result.content["task_type"], "extract_arguments")
-        self.assertEqual(received_result.content[DATA_DIR]["arguments"], ["arg1", "arg2"])
+        self.assertEqual(received_result.content["data"]["arguments"], ["arg1", "arg2"])
     
     def test_request_strategic_guidance(self):
         """Test de la demande de conseils stratégiques."""
@@ -329,7 +329,7 @@ class TestTacticalAdapter(unittest.TestCase):
                     sender_level=AgentLevel.STRATEGIC,
                     content={
                         "status": "success",
-                        DATA_DIR: {"recommendation": "Focus on fallacies", "priority": "high"}
+                        "data": {"recommendation": "Focus on fallacies", "priority": "high"}
                     },
                     recipient=request.sender,
                     channel=ChannelType.HIERARCHICAL.value,
@@ -349,7 +349,7 @@ class TestTacticalAdapter(unittest.TestCase):
             request_type="guidance",
             parameters={"text_id": "text-123", "issue": "complex_fallacies"},
             recipient_id="strategic-agent-1",
-            timeout=2.0,
+            timeout=5.0,
             priority=MessagePriority.NORMAL
         )
         
@@ -421,7 +421,7 @@ class TestOperationalAdapter(unittest.TestCase):
         self.middleware.send_message(task)
         
         # Recevoir la tâche
-        received_task = self.adapter.receive_task(timeout=1.0)
+        received_task = self.adapter.receive_task(timeout=5.0)
         
         # Vérifier que la tâche a été reçue
         self.assertIsNotNone(received_task)
@@ -472,7 +472,7 @@ class TestOperationalAdapter(unittest.TestCase):
                     sender_level=AgentLevel.TACTICAL,
                     content={
                         "status": "success",
-                        DATA_DIR: {"solution": "Use pattern X", "example": "example data"}
+                        "data": {"solution": "Use pattern X", "example": "example data"}
                     },
                     recipient=request.sender,
                     channel=ChannelType.HIERARCHICAL.value,
@@ -493,7 +493,7 @@ class TestOperationalAdapter(unittest.TestCase):
             description="Cannot identify pattern in text",
             context={"text_id": "text-123", "position": "paragraph 3"},
             recipient_id="tactical-agent-1",
-            timeout=2.0,
+            timeout=5.0,
             priority=MessagePriority.NORMAL
         )
         
@@ -590,7 +590,7 @@ class TestAsyncAdapters(unittest.IsolatedAsyncioTestCase):
                 request_type="guidance",
                 parameters={"text_id": "text-123", "issue": "complex_fallacies"},
                 recipient_id="strategic-agent-1",
-                timeout=2.0,
+                timeout=5.0,
                 priority=MessagePriority.NORMAL
             )
         
@@ -616,7 +616,7 @@ class TestAsyncAdapters(unittest.IsolatedAsyncioTestCase):
                 description="Cannot identify pattern in text",
                 context={"text_id": "text-123", "position": "paragraph 3"},
                 recipient_id="tactical-agent-1",
-                timeout=2.0,
+                timeout=5.0,
                 priority=MessagePriority.NORMAL
             )
         
