@@ -232,26 +232,33 @@ class HierarchicalChannel(Channel):
             if recipient_id not in self.message_queues:
                 return []
             
-            # Créer une copie temporaire de la file d'attente
-            temp_queue = queue.PriorityQueue()
+            # Créer une nouvelle file d'attente pour stocker les messages
+            new_queue = queue.PriorityQueue()
             original_queue = self.message_queues[recipient_id]
             
-            # Récupérer tous les messages
+            # Récupérer tous les messages tout en les préservant
             count = 0
-            while not original_queue.empty() and (max_count is None or count < max_count):
+            items = []
+            
+            # Extraire tous les éléments de la file d'origine
+            while not original_queue.empty():
                 item = original_queue.get()
-                messages.append(item[2])  # Le message est le 3ème élément du tuple
-                temp_queue.put(item)  # Remettre l'élément dans la file temporaire
-                count += 1
+                items.append(item)
             
-            # Restaurer la file d'attente originale
-            self.message_queues[recipient_id] = temp_queue
+            # Traiter les éléments extraits
+            for item in items:
+                # Ajouter le message à la liste de résultats si la limite n'est pas atteinte
+                if max_count is None or count < max_count:
+                    messages.append(item[2])  # Le message est le 3ème élément du tuple
+                    count += 1
+                
+                # Remettre l'élément dans la nouvelle file d'attente
+                new_queue.put(item)
             
-            # Remettre les messages dans la file d'attente originale
-            while not temp_queue.empty():
-                original_queue.put(temp_queue.get())
+            # Remplacer la file d'origine par la nouvelle
+            self.message_queues[recipient_id] = new_queue
             
-            self.message_queues[recipient_id] = original_queue
+            self.logger.info(f"Retrieved {len(messages)} pending messages for {recipient_id}")
         
         return messages
     

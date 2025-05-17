@@ -263,45 +263,28 @@ class TacticalAdapter:
             Les conseils demandés ou None si timeout
         """
         try:
-            # Créer le message de requête
-            request = Message(
-                message_type=MessageType.REQUEST,
+            # Utiliser le protocole de requête-réponse du middleware
+            response = self.middleware.send_request(
                 sender=self.agent_id,
                 sender_level=AgentLevel.TACTICAL,
-                content={
-                    "request_type": request_type,
-                    "parameters": parameters
-                },
                 recipient=recipient_id,
-                channel=ChannelType.HIERARCHICAL.value,
+                request_type=request_type,
+                content=parameters,
+                timeout=timeout,
+                retry_count=1,  # Ajouter un réessai pour plus de robustesse
+                retry_delay=1.0,
                 priority=priority,
-                metadata={
-                    "conversation_id": f"guid-{uuid.uuid4().hex[:8]}"
-                }
+                channel=ChannelType.HIERARCHICAL.value
             )
             
-            # Envoyer la requête directement
-            self.middleware.send_message(request)
+            if response:
+                self.logger.info(f"Received guidance from {recipient_id} for {request_type} request")
+                return response.content.get(DATA_DIR)
             
-            # Attendre la réponse
-            start_time = datetime.now()
-            while (datetime.now() - start_time).total_seconds() < timeout:
-                # Recevoir un message
-                response = self.middleware.receive_message(
-                    recipient_id=self.agent_id,
-                    channel_type=ChannelType.HIERARCHICAL,
-                    timeout=0.5  # Petit timeout pour vérifier régulièrement
-                )
-                
-                if response and response.type == MessageType.RESPONSE and response.metadata.get("reply_to") == request.id:
-                    self.logger.info(f"Received guidance from {recipient_id} for {request_type} request")
-                    return response.content.get(DATA_DIR)
-            
-            self.logger.warning(f"Request {request_type} to {recipient_id} timed out")
             return None
             
         except Exception as e:
-            self.logger.error(f"Error requesting guidance from {recipient_id}: '{request.id}'")
+            self.logger.error(f"Error requesting guidance from {recipient_id}: {str(e)}")
             return None
     
     async def request_strategic_guidance_async(
