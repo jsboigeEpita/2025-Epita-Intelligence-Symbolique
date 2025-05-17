@@ -10,6 +10,7 @@ import uuid
 import time
 import threading
 import asyncio
+import logging
 from typing import Dict, Any, Optional, Callable, Tuple, List
 from datetime import datetime, timedelta
 
@@ -40,6 +41,12 @@ class RequestResponseProtocol:
         self.pending_requests = {}  # Dictionnaire des requêtes en attente de réponse
         self.response_callbacks = {}  # Callbacks pour les réponses asynchrones
         self.lock = threading.RLock()  # Verrou pour les opérations concurrentes
+        self.early_responses = {}  # File d'attente pour les réponses anticipées
+        self.early_responses_by_conversation = {}  # Réponses anticipées indexées par conversation_id
+        
+        # Configuration du logger
+        self.logger = logging.getLogger("RequestResponseProtocol")
+        self.logger.setLevel(logging.INFO)
         
         # Démarrer le thread de surveillance des timeouts
         self.running = True
@@ -100,6 +107,26 @@ class RequestResponseProtocol:
             }
         )
         
+        # Vérifier s'il y a une réponse anticipée pour cette requête
+        conversation_id = request.metadata.get("conversation_id")
+        with self.lock:
+            # Vérifier par ID de requête (cas peu probable mais possible)
+            if request.id in self.early_responses:
+                early_response = self.early_responses[request.id]["response"]
+                del self.early_responses[request.id]
+                self.logger.info(f"Using early response for request {request.id}")
+                return early_response
+            
+            # Vérifier par ID de conversation
+            if conversation_id and conversation_id in self.early_responses_by_conversation:
+                early_response = self.early_responses_by_conversation[conversation_id]["response"]
+                request_id = early_response.metadata.get("reply_to")
+                if request_id in self.early_responses:
+                    del self.early_responses[request_id]
+                del self.early_responses_by_conversation[conversation_id]
+                self.logger.info(f"Using early response for conversation {conversation_id}")
+                return early_response
+        
         # Tentatives d'envoi avec réessais
         for attempt in range(retry_count + 1):
             try:
@@ -130,7 +157,8 @@ class RequestResponseProtocol:
                 # Récupérer la réponse
                 with self.lock:
                     response = pending["response"]
-                    del self.pending_requests[request.id]
+                    if request.id in self.pending_requests:
+                        del self.pending_requests[request.id]
                 
                 return response
                 
@@ -140,6 +168,7 @@ class RequestResponseProtocol:
                     time.sleep(retry_delay)
                 else:
                     # Échec définitif
+                    self.logger.error(f"Error in send_request: {e}")
                     raise e
     
     async def send_request_async(
@@ -195,6 +224,28 @@ class RequestResponseProtocol:
             }
         )
         
+        self.logger.info(f"Created request {request.id} from {sender} to {recipient}")
+        
+        # Vérifier s'il y a une réponse anticipée pour cette requête
+        conversation_id = request.metadata.get("conversation_id")
+        with self.lock:
+            # D'abord, vérifier si une réponse anticipée existe pour cette requête spécifique
+            if request.id in self.early_responses:
+                early_response = self.early_responses[request.id]["response"]
+                del self.early_responses[request.id]
+                self.logger.info(f"Using early response for request {request.id}")
+                return early_response
+            
+            # Vérifier par ID de conversation
+            if conversation_id and conversation_id in self.early_responses_by_conversation:
+                early_response = self.early_responses_by_conversation[conversation_id]["response"]
+                request_id = early_response.metadata.get("reply_to")
+                if request_id in self.early_responses:
+                    del self.early_responses[request_id]
+                del self.early_responses_by_conversation[conversation_id]
+                self.logger.info(f"Using early response for conversation {conversation_id}")
+                return early_response
+        
         # Tentatives d'envoi avec réessais
         for attempt in range(retry_count + 1):
             try:
@@ -210,29 +261,75 @@ class RequestResponseProtocol:
                         "completed": threading.Event(),
                         "future": response_future
                     }
+                    self.logger.info(f"Registered request {request.id} in pending_requests")
+                    
+                    # Vérifier à nouveau s'il y a une réponse anticipée après avoir enregistré la requête
+                    # Cela permet de capturer les réponses qui sont arrivées entre-temps
+                    if request.id in self.early_responses:
+                        early_response = self.early_responses[request.id]["response"]
+                        del self.early_responses[request.id]
+                        self.logger.info(f"Using early response for request {request.id} after registration")
+                        
+                        # Compléter le futur avec la réponse anticipée
+                        response_future.set_result(early_response)
+                        
+                        # Supprimer la requête des requêtes en attente
+                        del self.pending_requests[request.id]
+                        
+                        return early_response
+                    
+                    # Vérifier par ID de conversation
+                    if conversation_id and conversation_id in self.early_responses_by_conversation:
+                        early_response = self.early_responses_by_conversation[conversation_id]["response"]
+                        request_id = early_response.metadata.get("reply_to")
+                        if request_id in self.early_responses:
+                            del self.early_responses[request_id]
+                        del self.early_responses_by_conversation[conversation_id]
+                        self.logger.info(f"Using early response for conversation {conversation_id} after registration")
+                        
+                        # Compléter le futur avec la réponse anticipée
+                        response_future.set_result(early_response)
+                        
+                        # Supprimer la requête des requêtes en attente
+                        del self.pending_requests[request.id]
+                        
+                        return early_response
                 
                 # Envoyer la requête
                 self.middleware.send_message(request)
+                self.logger.info(f"Sent request {request.id} to {recipient}")
                 
                 # Attendre la réponse avec timeout
                 try:
+                    self.logger.info(f"Waiting for response to request {request.id} with timeout {timeout}s")
                     return await asyncio.wait_for(response_future, timeout=timeout)
                 except asyncio.TimeoutError:
                     # Timeout atteint
                     if attempt < retry_count:
                         # Réessayer
+                        self.logger.warning(f"Timeout for request {request.id}, retrying ({attempt+1}/{retry_count+1})")
                         await asyncio.sleep(retry_delay)
                         continue
                     else:
                         # Échec définitif
+                        self.logger.error(f"Request {request.id} timed out after {retry_count + 1} attempts")
                         raise RequestTimeoutError(f"Request {request.id} timed out after {retry_count + 1} attempts")
                 
+            except asyncio.CancelledError:
+                # Gérer l'annulation de la tâche
+                with self.lock:
+                    if request.id in self.pending_requests:
+                        del self.pending_requests[request.id]
+                self.logger.warning(f"Request {request.id} was cancelled")
+                raise
             except Exception as e:
                 if attempt < retry_count:
                     # Réessayer
+                    self.logger.warning(f"Error for request {request.id}, retrying: {e}")
                     await asyncio.sleep(retry_delay)
                 else:
                     # Échec définitif
+                    self.logger.error(f"Error in send_request_async: {e}")
                     raise e
     
     def send_request_async_callback(
@@ -318,46 +415,84 @@ class RequestResponseProtocol:
         # Vérifier si la réponse correspond à une requête en attente
         request_id = response.metadata.get("reply_to")
         if request_id is None or request_id == "":
+            self.logger.warning(f"Response {response.id} has no reply_to metadata")
             return False
         
-        with self.lock:
-            if request_id not in self.pending_requests:
-                return False
-            
-            pending = self.pending_requests[request_id]
-            
-            # Stocker la réponse
-            pending["response"] = response
-            
-            # Signaler que la requête est complétée
-            pending["completed"].set()
-            
-            # Si un futur est présent, le compléter
-            if "future" in pending and not pending["future"].done():
-                pending["future"].set_result(response)
-            
-            # Si un callback est présent, l'appeler
-            if "callback" in pending:
-                try:
-                    pending["callback"](response, None)
-                except Exception as e:
-                    print(f"Error in response callback: {e}")
-            
-            # Si pas de callback ou de futur, la requête peut être supprimée
-            if "callback" not in pending and "future" not in pending:
-                del self.pending_requests[request_id]
+        self.logger.info(f"Handling response {response.id} for request {request_id}")
         
-        return True
+        with self.lock:
+            # Vérifier si la requête est en attente
+            if request_id in self.pending_requests:
+                pending = self.pending_requests[request_id]
+                
+                # Stocker la réponse
+                pending["response"] = response
+                
+                # Signaler que la requête est complétée
+                pending["completed"].set()
+                
+                # Si un futur est présent, le compléter
+                if "future" in pending and not pending["future"].done():
+                    try:
+                        self.logger.info(f"Setting future result for request {request_id}")
+                        pending["future"].set_result(response)
+                    except Exception as e:
+                        self.logger.error(f"Error setting future result: {e}")
+                
+                # Si un callback est présent, l'appeler
+                if "callback" in pending:
+                    try:
+                        self.logger.info(f"Calling callback for request {request_id}")
+                        pending["callback"](response, None)
+                    except Exception as e:
+                        self.logger.error(f"Error in response callback: {e}")
+                
+                # Si pas de callback ou de futur, la requête peut être supprimée
+                if "callback" not in pending and "future" not in pending:
+                    self.logger.info(f"Removing request {request_id} from pending requests")
+                    del self.pending_requests[request_id]
+                
+                return True
+            else:
+                # Vérifier si la réponse est pour une requête qui n'a pas encore été enregistrée
+                # Cela peut arriver en raison de problèmes de synchronisation
+                self.logger.warning(f"Request {request_id} not found in pending requests. Storing as early response.")
+                
+                # Stocker la réponse anticipée pour une future requête
+                self.early_responses[request_id] = {
+                    "response": response,
+                    "timestamp": datetime.now()
+                }
+                
+                # Stocker également par ID de conversation si disponible
+                conversation_id = response.metadata.get("conversation_id")
+                if conversation_id:
+                    self.early_responses_by_conversation[conversation_id] = {
+                        "response": response,
+                        "timestamp": datetime.now()
+                    }
+                    self.logger.info(f"Stored early response for conversation {conversation_id}")
+                
+                self.logger.info(f"Stored early response for request {request_id}")
+                
+                # Afficher les requêtes en attente pour le débogage
+                self.logger.info(f"Current pending requests: {list(self.pending_requests.keys())}")
+                self.logger.info(f"Current early responses: {list(self.early_responses.keys())}")
+                self.logger.info(f"Current early responses by conversation: {list(self.early_responses_by_conversation.keys())}")
+                
+                return True
     
     def _monitor_timeouts(self):
-        """Thread qui surveille les timeouts des requêtes en attente."""
+        """Thread qui surveille les timeouts des requêtes en attente et nettoie les réponses anticipées."""
         while self.running:
             try:
                 now = datetime.now()
                 timed_out_requests = []
+                expired_early_responses = []
                 
                 # Identifier les requêtes expirées
                 with self.lock:
+                    # Vérifier les requêtes en attente
                     for request_id, pending in list(self.pending_requests.items()):
                         if now > pending["expires_at"] and not pending["completed"].is_set():
                             # Vérifier s'il reste des tentatives
@@ -372,45 +507,77 @@ class RequestResponseProtocol:
                                     # Renvoyer la requête
                                     self.middleware.send_message(pending["request"])
                                     
-                                    # Attendre le délai de réessai
-                                    time.sleep(pending["retry_delay"])
+                                    # Attendre le délai de réessai sans bloquer le verrou
                                     continue
                             
                             # Plus de tentatives ou pas de réessai configuré
                             timed_out_requests.append(request_id)
+                    
+                    # Nettoyer les réponses anticipées expirées (plus de 5 minutes)
+                    for request_id, early_response in list(self.early_responses.items()):
+                        if (now - early_response["timestamp"]).total_seconds() > 300:  # 5 minutes
+                            expired_early_responses.append(("request", request_id))
+                    
+                    # Nettoyer les réponses anticipées par conversation expirées
+                    for conv_id, early_response in list(self.early_responses_by_conversation.items()):
+                        if (now - early_response["timestamp"]).total_seconds() > 300:  # 5 minutes
+                            expired_early_responses.append(("conversation", conv_id))
                 
-                # Traiter les requêtes expirées
+                # Traiter les requêtes expirées (en dehors du bloc verrouillé)
                 for request_id in timed_out_requests:
-                    with self.lock:
-                        if request_id in self.pending_requests:
-                            pending = self.pending_requests[request_id]
-                            
-                            # Créer l'erreur de timeout
-                            error = RequestTimeoutError(f"Request {request_id} timed out")
-                            
-                            # Si un futur est présent, le compléter avec une erreur
-                            if "future" in pending and not pending["future"].done():
-                                pending["future"].set_exception(error)
-                            
-                            # Si un callback est présent, l'appeler avec l'erreur
-                            if "callback" in pending:
-                                try:
-                                    pending["callback"](None, error)
-                                except Exception as e:
-                                    print(f"Error in timeout callback: {e}")
-                            
-                            # Signaler que la requête est complétée (avec erreur)
-                            pending["completed"].set()
-                            
-                            # Supprimer la requête
-                            del self.pending_requests[request_id]
+                    self._handle_timeout(request_id)
+                
+                # Supprimer les réponses anticipées expirées
+                with self.lock:
+                    for type_id, id_value in expired_early_responses:
+                        if type_id == "request" and id_value in self.early_responses:
+                            del self.early_responses[id_value]
+                            self.logger.info(f"Removed expired early response for request {id_value}")
+                        elif type_id == "conversation" and id_value in self.early_responses_by_conversation:
+                            del self.early_responses_by_conversation[id_value]
+                            self.logger.info(f"Removed expired early response for conversation {id_value}")
                 
                 # Attendre un peu avant la prochaine vérification
                 time.sleep(0.1)
                 
             except Exception as e:
-                print(f"Error in timeout monitor: {e}")
+                self.logger.error(f"Error in timeout monitor: {e}")
                 time.sleep(1)
+    
+    def _handle_timeout(self, request_id):
+        """
+        Gère le timeout d'une requête.
+        
+        Args:
+            request_id: L'identifiant de la requête expirée
+        """
+        with self.lock:
+            if request_id in self.pending_requests:
+                pending = self.pending_requests[request_id]
+                
+                # Créer l'erreur de timeout
+                error = RequestTimeoutError(f"Request {request_id} timed out")
+                
+                # Si un futur est présent, le compléter avec une erreur
+                if "future" in pending and not pending["future"].done():
+                    try:
+                        pending["future"].set_exception(error)
+                    except Exception as e:
+                        self.logger.error(f"Error setting future exception: {e}")
+                
+                # Si un callback est présent, l'appeler avec l'erreur
+                if "callback" in pending:
+                    try:
+                        pending["callback"](None, error)
+                    except Exception as e:
+                        self.logger.error(f"Error in timeout callback: {e}")
+                
+                # Signaler que la requête est complétée (avec erreur)
+                pending["completed"].set()
+                
+                # Supprimer la requête
+                del self.pending_requests[request_id]
+                self.logger.info(f"Request {request_id} timed out and was removed")
     
     def shutdown(self):
         """Arrête proprement le protocole."""
@@ -432,10 +599,12 @@ class RequestResponseProtocol:
                     try:
                         pending["callback"](None, error)
                     except Exception as e:
-                        print(f"Error in shutdown callback: {e}")
+                        self.logger.error(f"Error in shutdown callback: {e}")
                 
                 # Signaler que la requête est complétée (avec erreur)
                 pending["completed"].set()
             
-            # Vider le dictionnaire
+            # Vider les dictionnaires
             self.pending_requests.clear()
+            self.early_responses.clear()
+            self.early_responses_by_conversation.clear()

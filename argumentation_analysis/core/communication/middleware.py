@@ -238,6 +238,14 @@ class MessageMiddleware:
                         self.stats["messages_received"] += 1
                         self.stats["by_channel"][channel_type.value]["received"] += 1
                     
+                    # Vérifier si c'est une réponse à une requête en attente
+                    if message.type == MessageType.RESPONSE and self.request_response:
+                        request_id = message.metadata.get("reply_to")
+                        if request_id:
+                            self.logger.info(f"Received response {message.id} for request {request_id}")
+                            result = self.request_response.handle_response(message)
+                            self.logger.info(f"Response handler result: {result}")
+                    
                     # Appeler les gestionnaires de messages
                     self._handle_message(message)
                 
@@ -263,6 +271,14 @@ class MessageMiddleware:
                         with self.lock:
                             self.stats["messages_received"] += 1
                             self.stats["by_channel"][channel.type.value]["received"] += 1
+                        
+                        # Vérifier si c'est une réponse à une requête en attente
+                        if message.type == MessageType.RESPONSE and self.request_response:
+                            request_id = message.metadata.get("reply_to")
+                            if request_id:
+                                self.logger.info(f"Received response {message.id} for request {request_id}")
+                                result = self.request_response.handle_response(message)
+                                self.logger.info(f"Response handler result: {result}")
                         
                         # Appeler les gestionnaires de messages
                         self._handle_message(message)
@@ -313,13 +329,30 @@ class MessageMiddleware:
         Args:
             message: Le message à traiter
         """
+        # Traitement spécial pour les réponses
+        if message.type == MessageType.RESPONSE and self.request_response:
+            request_id = message.metadata.get("reply_to")
+            if request_id:
+                self.logger.info(f"Handling response {message.id} for request {request_id}")
+                try:
+                    result = self.request_response.handle_response(message)
+                    self.logger.info(f"Response handler result: {result}")
+                    
+                    # Si la réponse a été traitée avec succès, ne pas continuer avec les autres gestionnaires
+                    if result:
+                        return
+                except Exception as e:
+                    self.logger.error(f"Error in response handler: {str(e)}")
+        
         # Appeler les gestionnaires spécifiques au type de message
-        handlers = self.message_handlers.get(message.type, [])
-        for handler in handlers:
-            try:
-                handler(message)
-            except Exception as e:
-                self.logger.error(f"Error in message handler: {str(e)}")
+        # Éviter d'appeler à nouveau le gestionnaire de réponses si c'est une réponse
+        if message.type != MessageType.RESPONSE or not self.request_response:
+            handlers = self.message_handlers.get(message.type, [])
+            for handler in handlers:
+                try:
+                    handler(message)
+                except Exception as e:
+                    self.logger.error(f"Error in message handler: {str(e)}")
         
         # Appeler les gestionnaires globaux
         for handler in self.global_handlers:
@@ -410,11 +443,20 @@ class MessageMiddleware:
         self.request_response = RequestResponseProtocol(self)
         self.publish_subscribe = PublishSubscribeProtocol(self)
         
-        # Enregistrer les gestionnaires de messages pour les protocoles
-        self.register_message_handler(
-            MessageType.RESPONSE,
-            self.request_response.handle_response
-        )
+        # Ne pas enregistrer le gestionnaire de réponses ici car il est déjà appelé dans _handle_message
+        # Cela évite le double traitement des réponses
+        
+        # Ajouter un gestionnaire global pour déboguer tous les messages
+        self.register_global_handler(self._debug_message_handler)
+    
+    def _debug_message_handler(self, message: Message) -> None:
+        """Gestionnaire de débogage pour tous les messages."""
+        if message.type == MessageType.RESPONSE:
+            request_id = message.metadata.get("reply_to")
+            self.logger.info(f"DEBUG: Received response {message.id} for request {request_id}")
+            
+            # Ne pas appeler directement le gestionnaire de réponses ici
+            # car il est déjà appelé dans _handle_message
     
     def send_request(self, *args, **kwargs):
         """
