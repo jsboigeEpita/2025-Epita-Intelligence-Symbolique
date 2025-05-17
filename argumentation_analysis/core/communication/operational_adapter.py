@@ -414,41 +414,35 @@ class OperationalAdapter:
         Returns:
             L'assistance reçue ou None si timeout
         """
-        # Créer le message de requête
-        request = Message(
-            message_type=MessageType.REQUEST,
-            sender=self.agent_id,
-            sender_level=AgentLevel.OPERATIONAL,
-            content={
-                "request_type": "assistance",
-                "issue_type": issue_type,
-                "description": description,
-                "context": context
-            },
-            recipient=recipient_id,
-            channel=ChannelType.HIERARCHICAL.value,
-            priority=priority,
-            metadata={
-                "conversation_id": f"assist-{uuid.uuid4().hex[:8]}"
-            }
-        )
-        
-        # Envoyer la requête via le middleware
-        self.middleware.send_message(request)
-        
-        # Attendre la réponse
-        response = self.middleware.receive_message(
-            recipient_id=self.agent_id,
-            channel_type=ChannelType.HIERARCHICAL,
-            timeout=timeout
-        )
-        
-        if response and response.type == MessageType.RESPONSE:
-            self.logger.info(f"Received assistance from {recipient_id} for issue {issue_type}")
-            return response.content.get(DATA_DIR, {})
-        
-        self.logger.warning(f"Assistance request for issue {issue_type} timed out")
-        return None
+        try:
+            # Utiliser le protocole de requête-réponse du middleware
+            response = self.middleware.send_request(
+                sender=self.agent_id,
+                sender_level=AgentLevel.OPERATIONAL,
+                recipient=recipient_id,
+                request_type="assistance",
+                content={
+                    "issue_type": issue_type,
+                    "description": description,
+                    "context": context
+                },
+                timeout=timeout,
+                retry_count=1,  # Ajouter un réessai pour plus de robustesse
+                retry_delay=1.0,
+                priority=priority,
+                channel=ChannelType.HIERARCHICAL.value
+            )
+            
+            if response:
+                self.logger.info(f"Received assistance from {recipient_id} for issue {issue_type}")
+                return response.content.get(DATA_DIR, {})
+            
+            self.logger.warning(f"Assistance request for issue {issue_type} timed out")
+            return None
+            
+        except Exception as e:
+            self.logger.error(f"Error requesting assistance for issue {issue_type}: {str(e)}")
+            return None
     
     def get_pending_tasks(self, max_count: Optional[int] = None) -> List[Message]:
         """
