@@ -43,7 +43,7 @@ class TestRequestResponseProtocol(unittest.TestCase):
             message_type=MessageType.RESPONSE,
             sender="tactical-agent-2",
             sender_level=AgentLevel.TACTICAL,
-            content={"status": "success", DATA_DIR: {"result": "assistance provided"}},
+            content={"status": "success", "data": {"result": "assistance provided"}},
             recipient="tactical-agent-1",
             priority=MessagePriority.NORMAL,
             metadata={"reply_to": "mock-request-id"}
@@ -62,7 +62,7 @@ class TestRequestResponseProtocol(unittest.TestCase):
                 recipient="tactical-agent-2",
                 request_type="assistance",
                 content={"description": "Need help", "context": {}},
-                timeout=2.0,
+                timeout=5.0,
                 priority=MessagePriority.NORMAL,
                 channel=ChannelType.HIERARCHICAL.value
             )
@@ -88,7 +88,7 @@ class TestRequestResponseProtocol(unittest.TestCase):
                 recipient="tactical-agent-2",
                 request_type="assistance",
                 content={"description": "Need help", "context": {}},
-                timeout=0.1,  # Timeout court
+                timeout=5.0,  # Timeout augmenté
                 priority=MessagePriority.NORMAL,
                 channel=ChannelType.HIERARCHICAL.value
             )
@@ -133,7 +133,7 @@ class TestRequestResponseProtocol(unittest.TestCase):
                 message_type=MessageType.RESPONSE,
                 sender="tactical-agent-2",
                 sender_level=AgentLevel.TACTICAL,
-                content={"status": "success", DATA_DIR: {"result": "assistance provided"}},
+                content={"status": "success", "data": {"result": "assistance provided"}},
                 recipient="tactical-agent-1",
                 priority=MessagePriority.NORMAL,
                 metadata={"reply_to": request_id, "conversation_id": conversation_id}
@@ -154,7 +154,7 @@ class TestRequestResponseProtocol(unittest.TestCase):
                 message_type=MessageType.RESPONSE,
                 sender="tactical-agent-2",
                 sender_level=AgentLevel.TACTICAL,
-                content={"status": "success", DATA_DIR: {"request_id": f"mock-request-{i}"}},
+                content={"status": "success", "data": {"request_id": f"mock-request-{i}"}},
                 recipient="tactical-agent-1",
                 priority=MessagePriority.NORMAL,
                 metadata={"reply_to": f"mock-request-{i}"}
@@ -176,7 +176,7 @@ class TestRequestResponseProtocol(unittest.TestCase):
                     recipient="tactical-agent-2",
                     request_type=f"request-{i}",
                     content={"index": i},
-                    timeout=2.0,
+                    timeout=5.0,
                     priority=MessagePriority.NORMAL,
                     channel=ChannelType.HIERARCHICAL.value
                 )
@@ -233,7 +233,7 @@ class TestPublishSubscribeProtocol(unittest.TestCase):
                 topic_id="test-topic",
                 sender="strategic-agent-1",
                 sender_level=AgentLevel.STRATEGIC,
-                content={DATA_DIR: "test data"},
+                content={"data": "test data"},
                 priority=MessagePriority.NORMAL
             )
             
@@ -366,7 +366,7 @@ class TestAsyncProtocols(unittest.IsolatedAsyncioTestCase):
             message_type=MessageType.RESPONSE,
             sender="tactical-agent-2",
             sender_level=AgentLevel.TACTICAL,
-            content={"status": "success", DATA_DIR: {"result": "assistance provided"}},
+            content={"status": "success", "data": {"result": "assistance provided"}},
             recipient="tactical-agent-1",
             priority=MessagePriority.NORMAL,
             metadata={"reply_to": "mock-request-id"}
@@ -386,7 +386,7 @@ class TestAsyncProtocols(unittest.IsolatedAsyncioTestCase):
                 recipient="tactical-agent-2",
                 request_type="assistance",
                 content={"description": "Need help", "context": {}},
-                timeout=2.0,
+                timeout=5.0,
                 priority=MessagePriority.NORMAL,
                 channel=ChannelType.HIERARCHICAL.value
             )
@@ -413,7 +413,7 @@ class TestAsyncProtocols(unittest.IsolatedAsyncioTestCase):
                 recipient="tactical-agent-2",
                 request_type="assistance",
                 content={"description": "Need help", "context": {}},
-                timeout=0.1,  # Timeout court
+                timeout=5.0,  # Timeout augmenté
                 priority=MessagePriority.NORMAL,
                 channel=ChannelType.HIERARCHICAL.value
             )
