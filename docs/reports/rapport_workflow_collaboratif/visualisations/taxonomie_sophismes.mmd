@@ -1,0 +1,56 @@
+graph TD
+    subgraph "Taxonomie des Sophismes"
+        S[Sophismes] --> AI[Appel Inapproprié]
+        S --> FD[Faux Dilemme]
+        S --> PG[Pente Glissante]
+        S --> GH[Généralisation Hâtive]
+        S --> HP[Homme de Paille]
+        
+        AI --> AIA[Autorité]
+        AI --> AIP[Popularité]
+        AI --> AIT[Tradition]
+        AI --> AIN[Nouveauté]
+        AI --> AIE[Émotion]
+        
+        AIA --> AIAC[Citation]
+        AIA --> AIANC[Nombre de Citations]
+        
+        AIP --> AIPAP[Ad Populum]
+        
+        AIE --> AIEC[Culpabilisation]
+        
+        GH --> GHFA[Fausse Analogie]
+    end
+    
+    subgraph "Exploration Progressive par l'Agent Informel"
+        E1[Étape 1: Identification<br>des sophismes de base] --> E2[Étape 2: Exploration<br>des branches pertinentes]
+        E2 --> E3[Étape 3: Affinement<br>de l'analyse]
+        E3 --> E4[Étape 4: Analyse<br>contextuelle]
+        
+        E1 -.-> AI
+        E1 -.-> FD
+        E1 -.-> PG
+        
+        E2 -.-> AIA
+        E2 -.-> AIP
+        E2 -.-> AIE
+        
+        E3 -.-> AIAC
+        E3 -.-> AIPAP
+        E3 -.-> AIEC
+        E3 -.-> GHFA
+        
+        E4 -.-> GHFA
+        E4 -.-> HP
+        E4 -.-> AIEC
+    end
+    
+    classDef base fill:#f9f,stroke:#333,stroke-width:2px
+    classDef branch fill:#bbf,stroke:#333,stroke-width:1px
+    classDef leaf fill:#bfb,stroke:#333,stroke-width:1px
+    classDef step fill:#fbb,stroke:#333,stroke-width:2px,stroke-dasharray: 5 5
+    
+    class S,AI,FD,PG,GH,HP base
+    class AIA,AIP,AIT,AIN,AIE branch
+    class AIAC,AIANC,AIPAP,AIEC,GHFA leaf
+    class E1,E2,E3,E4 step
