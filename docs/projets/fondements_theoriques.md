@@ -2,6 +2,8 @@
 
 Cette section présente les projets centrés sur les aspects formels, logiques et théoriques de l'argumentation.
 
+> **Note importante pour les étudiants**: Pour chaque projet ci-dessous, vous trouverez une référence à des exemples de code spécifiques à la fin de la description du projet. Ces exemples sont extraits du notebook `Tweety.ipynb` et organisés dans le document [Exemples TweetyProject par projet](./exemples_tweety_par_projet.md). Ils vous fourniront un point de départ concret pour implémenter votre projet.
+
 ## 1.1 Logiques formelles et raisonnement
 
 ### 1.1.1 Intégration des logiques propositionnelles avancées
@@ -25,6 +27,8 @@ Cette section présente les projets centrés sur les aspects formels, logiques e
   - Fonctions pour la manipulation avancée de formules (conversion DNF/CNF, simplification)
   - Documentation et exemples d'utilisation
   - Tests unitaires et d'intégration
+
+> **Exemple de code**: Voir [Exemples TweetyProject par projet](./exemples_tweety_par_projet.md#111-intégration-des-logiques-propositionnelles-avancées) pour des snippets sur la création de formules propositionnelles, l'utilisation de solveurs SAT et la conversion en formes normales.
 ### 1.1.2 Logique du premier ordre (FOL)
 - **Contexte** : La logique du premier ordre permet d'exprimer des relations plus complexes que la logique propositionnelle, avec des quantificateurs et des prédicats. Le module `logics.fol` de Tweety fournit une implémentation complète pour définir des signatures logiques (types/sorts, constantes, prédicats, fonctions), construire des formules quantifiées, et raisonner sur ces formules via des prouveurs intégrés ou externes.
 - **Objectifs** : Développer un nouvel agent utilisant le module `logics.fol` de Tweety pour analyser des arguments plus complexes impliquant des quantificateurs (`∀`, `∃`) et des prédicats. Cet agent pourrait tenter de traduire des arguments exprimés en langage naturel (avec quantificateurs) en formules FOL, définir des signatures logiques (types/sorts, constantes, prédicats, fonctions), et utiliser les raisonneurs intégrés.
@@ -47,6 +51,8 @@ Cette section présente les projets centrés sur les aspects formels, logiques e
   - Intégration avec au moins un prouveur externe
   - Documentation et exemples d'utilisation
 
+> **Exemple de code**: Voir [Exemples TweetyProject par projet](./exemples_tweety_par_projet.md#112-logique-du-premier-ordre-fol) pour des snippets sur la définition de signatures FOL et la création de formules avec quantificateurs.
+
 ### 1.1.3 Logique modale
 - **Contexte** : Les logiques modales permettent de raisonner sur des notions comme la nécessité, la possibilité, les croyances ou les connaissances. Le module `logics.ml` de Tweety implémente les concepts fondamentaux des logiques modales, permettant de représenter et raisonner avec des opérateurs modaux comme la nécessité (`[]`) et la possibilité (`<>`), ainsi que d'utiliser différents systèmes modaux (K, T, S4, S5).
 - **Objectifs** : Créer un agent spécialisé utilisant le module `logics.ml` de Tweety pour raisonner sur des modalités comme la nécessité (`[]`), la possibilité (`<>`), les croyances ou les connaissances. Cet agent pourrait analyser des arguments impliquant des notions de possibilité, nécessité, obligation ou permission.
@@ -67,6 +73,8 @@ Cette section présente les projets centrés sur les aspects formels, logiques e
   - Intégration avec SPASS ou autre raisonneur modal
   - Documentation et exemples d'utilisation
   - Tests unitaires et d'intégration
+
+> **Exemple de code**: Voir [Exemples TweetyProject par projet](./exemples_tweety_par_projet.md#113-logique-modale) pour des snippets sur la création de formules modales et le raisonnement avec SimpleMlReasoner.
 ### 1.1.4 Logique de description (DL)
 - **Contexte** : Les logiques de description sont utilisées pour représenter des connaissances structurées sous forme de concepts, rôles et individus. Le module `logics.dl` de Tweety permet de définir des TBox (axiomes terminologiques) et ABox (assertions sur les individus), et de raisonner sur la subsomption, l'instanciation et la consistance. Cette logique est particulièrement pertinente pour les ontologies et le web sémantique.
 - **Objectifs** : Développer un agent utilisant le module `logics.dl` de Tweety pour modéliser des connaissances structurées. Cet agent pourrait construire des TBox (axiomes terminologiques) et ABox (assertions sur les individus), et raisonner sur la subsomption, l'instanciation et la consistance.
@@ -88,6 +96,8 @@ Cette section présente les projets centrés sur les aspects formels, logiques e
   - Documentation et exemples d'utilisation
   - Tests unitaires et d'intégration
 
+> **Exemple de code**: Voir [Exemples TweetyProject par projet](./exemples_tweety_par_projet.md#114-logique-de-description-dl) pour des snippets sur la définition de concepts, rôles et axiomes DL.
+
 ### 1.1.5 Formules booléennes quantifiées (QBF)
 - **Contexte** : Les QBF étendent la logique propositionnelle avec des quantificateurs, permettant de modéliser des problèmes PSPACE-complets.
 - **Objectifs** : Explorer l'utilisation du module `logics.qbf` de Tweety pour modéliser et résoudre des problèmes PSPACE-complets. Cet agent pourrait traiter des problèmes de planification conditionnelle, de jeux à deux joueurs, ou de vérification formelle qui dépassent la portée de SAT.
@@ -107,6 +117,8 @@ Cette section présente les projets centrés sur les aspects formels, logiques e
   - Agent QBF pour la modélisation et résolution de problèmes complexes
   - Intégration avec au moins un solveur QBF
   - Documentation et exemples d'utilisation
+
+> **Exemple de code**: Voir [Exemples TweetyProject par projet](./exemples_tweety_par_projet.md#115-formules-booléennes-quantifiées-qbf) pour des snippets sur la création et manipulation de formules QBF.
 ### 1.1.6 Logique conditionnelle (CL)
 - **Contexte** : Les logiques conditionnelles permettent de raisonner sur des énoncés de la forme "Si A est vrai, alors B est typiquement vrai". Elles constituent un formalisme puissant pour représenter des connaissances incertaines et des règles par défaut. Le module `logics.cl` de Tweety implémente les fonctions de classement (ranking) ou OCF (Ordinal Conditional Functions) pour évaluer ces conditionnels et raisonner de manière non-monotone.
 - **Objectifs** : Implémenter un agent utilisant le module `logics.cl` de Tweety pour raisonner sur des conditionnels. Le notebook Tweety démontre comment créer une base conditionnelle avec des conditionnels comme (f|b), (b|p), (¬f|p), et comment calculer une fonction de classement (ranking) pour évaluer ces conditionnels. L'agent devra permettre la création de bases de connaissances conditionnelles, l'évaluation de requêtes conditionnelles, et la visualisation des fonctions de classement.
@@ -132,6 +144,8 @@ Cette section présente les projets centrés sur les aspects formels, logiques e
   - Documentation et exemples d'utilisation
   - Tests unitaires et d'intégration
 
+> **Exemple de code**: Voir [Exemples TweetyProject par projet](./exemples_tweety_par_projet.md#116-logique-conditionnelle-cl) pour des snippets sur la création et l'évaluation de bases conditionnelles.
+
 ## 1.2 Frameworks d'argumentation
 
 ### 1.2.1 Argumentation abstraite de Dung
@@ -156,6 +170,8 @@ Cette section présente les projets centrés sur les aspects formels, logiques e
   - Visualisation des graphes d'argumentation
   - Documentation et exemples d'utilisation
   - Cas d'étude démontrant l'application à un problème concret
+
+> **Exemple de code**: Voir [Exemples TweetyProject par projet](./exemples_tweety_par_projet.md#121-argumentation-abstraite-de-dung) pour des snippets sur la création de frameworks d'argumentation et le calcul d'extensions selon différentes sémantiques.
 ### 1.2.2 Argumentation bipolaire
 - **Contexte** : L'argumentation bipolaire étend les frameworks de Dung en distinguant deux types de relations entre arguments : l'attaque et le support. Le module `arg.bipolar` de Tweety implémente plusieurs variantes de frameworks bipolaires, avec différentes interprétations du support (déductif, nécessaire, évidentiel) et leurs sémantiques associées. Ces frameworks permettent de modéliser des relations plus nuancées entre arguments.
 - **Objectifs** : Développer un agent utilisant le module `arg.bipolar` de Tweety pour représenter et évaluer des arguments avec relations d'attaque et de support. Comprendre les différentes interprétations du support (déductif, nécessaire, évidentiel...) et les sémantiques associées proposées dans la littérature et implémentées dans Tweety.
@@ -176,6 +192,8 @@ Cette section présente les projets centrés sur les aspects formels, logiques e
   - Implémentation des principales sémantiques pour BAF
   - Visualisation des graphes bipolaires
   - Documentation et exemples d'utilisation
+
+> **Exemple de code**: Voir [Exemples TweetyProject par projet](./exemples_tweety_par_projet.md#123-argumentation-bipolaire) pour des snippets sur la création de frameworks bipolaires avec relations d'attaque et de support.
 
 ### 1.2.3 Argumentation pondérée
 - **Contexte** : L'argumentation pondérée associe des poids numériques aux arguments ou aux attaques pour représenter leur force relative. Les modules `arg.prob` et `arg.social` de Tweety permettent de manipuler des frameworks d'argumentation avec poids, en utilisant différents semi-anneaux (WeightedSemiring, FuzzySemiring, ProbabilisticSemiring) pour l'agrégation des poids et le calcul de l'acceptabilité.
@@ -198,6 +216,8 @@ Cette section présente les projets centrés sur les aspects formels, logiques e
   - Visualisation des graphes pondérés
   - Documentation et exemples d'utilisation
 
+> **Exemple de code**: Voir [Exemples TweetyProject par projet](./exemples_tweety_par_projet.md#125-argumentation-pondérée-waf) pour des snippets sur la création de frameworks pondérés avec attaques de différentes forces.
+
 ### 1.2.4 Argumentation basée sur les hypothèses (ABA)
 - **Contexte** : L'argumentation basée sur les hypothèses (ABA) est un framework qui représente les arguments comme des déductions à partir d'hypothèses.
 - **Objectifs** : Développer un agent utilisant le module `arg.aba` de Tweety pour représenter et évaluer des arguments basés sur des hypothèses. Cet agent pourrait analyser les attaques entre arguments dérivés de ces hypothèses et déterminer leur acceptabilité.
@@ -217,6 +237,8 @@ Cette section présente les projets centrés sur les aspects formels, logiques e
   - Agent ABA
   - Module de traduction langage naturel vers ABA
   - Documentation et exemples d'utilisation
+
+> **Exemple de code**: Voir [Exemples TweetyProject par projet](./exemples_tweety_par_projet.md#124-argumentation-basée-sur-les-hypothèses-aba) pour des snippets sur la création de frameworks ABA avec règles, hypothèses et contraires.
 ### 1.2.5 Argumentation basée sur les valeurs (VAF)
 - **Contexte** : L'argumentation basée sur les valeurs (VAF) étend les frameworks abstraits en associant des valeurs aux arguments.
 - **Objectifs** : Créer un agent spécialisé pour représenter et évaluer des arguments basés sur des valeurs. Cet agent devrait permettre de modéliser des préférences sur les valeurs et d'évaluer l'acceptabilité des arguments en fonction de ces préférences.
@@ -300,6 +322,8 @@ Cette section présente les projets centrés sur les aspects formels, logiques e
   - Intégration avec solveurs SAT incrémentaux
   - Visualisation des ADF
   - Documentation et exemples d'utilisation
+
+> **Exemple de code**: Voir [Exemples TweetyProject par projet](./exemples_tweety_par_projet.md#122-frameworks-dialectiques-abstraits-adf) pour des snippets sur la création d'ADF avec conditions d'acceptation personnalisées.
 
 ### 1.2.9 Analyse probabiliste d'arguments
 - **Contexte** : L'argumentation probabiliste permet de gérer l'incertitude dans les frameworks d'argumentation. Le module `arg.prob` de Tweety implémente l'approche de Li, Hunter et Thimm, où des probabilités sont associées aux arguments ou aux sous-ensembles d'arguments. Cette approche permet d'évaluer la robustesse des conclusions face à l'incertitude et de calculer des degrés de croyance dans l'acceptabilité des arguments.
@@ -479,6 +503,8 @@ Cette section présente les projets centrés sur les aspects formels, logiques e
   - Résolution d'incohérences via MaxSAT
   - Documentation et exemples d'utilisation
 
+> **Exemple de code**: Voir [Exemples TweetyProject par projet](./exemples_tweety_par_projet.md#144-mesures-dincohérence-et-résolution) pour des snippets sur l'utilisation de mesures d'incohérence et l'énumération de MUS.
+
 ### 1.4.5 Révision de croyances multi-agents
 - **Contexte** : La révision de croyances multi-agents étudie comment plusieurs agents peuvent mettre à jour leurs croyances de manière cohérente face à de nouvelles informations, potentiellement contradictoires. Le module `beliefdynamics` de Tweety fournit des outils pour modéliser ce processus, en permettant de représenter les croyances de différents agents et de simuler leur évolution au fil du temps et des interactions.
 - **Objectifs** : Développer un système de révision de croyances multi-agents basé sur le module `beliefdynamics` de Tweety. Implémenter différentes stratégies de révision (crédulité, scepticisme, consensus) et analyser leur impact sur la convergence des croyances dans un groupe d'agents.
@@ -500,6 +526,8 @@ Cette section présente les projets centrés sur les aspects formels, logiques e
   - Implémentation de différentes stratégies de révision
   - Visualisation de l'évolution des croyances
   - Documentation et exemples d'utilisation
+
+> **Exemple de code**: Voir [Exemples TweetyProject par projet](./exemples_tweety_par_projet.md#145-révision-de-croyances-multi-agents) pour des snippets sur la création de bases de croyances multi-agents et l'application d'opérateurs de révision.
 ## 1.5 Planification et vérification formelle
 
 ### 1.5.1 Intégration d'un planificateur symbolique
