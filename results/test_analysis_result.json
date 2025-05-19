@@ -1,0 +1,413 @@
+[
+  {
+    "extract_name": "La nécessité de réguler l'intelligence artificielle",
+    "source_name": "Exemple de sophismes",
+    "argument_count": 12,
+    "timestamp": "2025-05-17T14:31:29.215526",
+    "analyses": {
+      "contextual_fallacies": {
+        "argument_count": 12,
+        "context_description": "Extrait 'La nécessité de réguler l'intelligence artificielle' de la source 'Exemple de sophismes'",
+        "contextual_factors": {
+          "domain": "général",
+          "audience": "généraliste",
+          "medium": "écrit",
+          "purpose": "informer"
+        },
+        "argument_results": [
+          {
+            "argument_index": 0,
+            "argument": "La nécessité de réguler l'intelligence artificielle\n\nL'intelligence artificielle se développe à une vitesse alarmante et représente une menace existentielle pour l'humanité",
+            "detected_fallacies": []
+          },
+          {
+            "argument_index": 1,
+            "argument": "Le professeur Dubois, éminent chercheur en informatique à l'Université de Paris, a récemment déclaré que \"l'IA pourrait dépasser l'intelligence humaine d'ici 2030\"",
+            "detected_fallacies": []
+          },
+          {
+            "argument_index": 2,
+            "argument": "Son expertise dans ce domaine ne peut être remise en question",
+            "detected_fallacies": []
+          },
+          {
+            "argument_index": 3,
+            "argument": "Si nous permettons aux entreprises de développer l'IA sans régulation stricte, nous ouvrons la porte à une série de conséquences catastrophiques",
+            "detected_fallacies": []
+          },
+          {
+            "argument_index": 4,
+            "argument": "D'abord, les algorithmes prendront le contrôle de nos systèmes financiers",
+            "detected_fallacies": []
+          },
+          {
+            "argument_index": 5,
+            "argument": "Ensuite, ils s'infiltreront dans nos infrastructures critiques comme les centrales électriques et les réseaux de distribution d'eau",
+            "detected_fallacies": []
+          },
+          {
+            "argument_index": 6,
+            "argument": "Finalement, nous nous retrouverons dans un monde où les machines prendront toutes les décisions importantes, réduisant l'humanité à un état de servitude",
+            "detected_fallacies": []
+          },
+          {
+            "argument_index": 7,
+            "argument": "Un sondage récent montre que 78% des Français s'inquiètent des dangers potentiels de l'IA",
+            "detected_fallacies": [
+              {
+                "fallacy_type": "appel_inapproprié_nouveauté",
+                "description": "Simulation de sophisme: appel_inapproprié_nouveauté",
+                "context_text": "Un sondage récent montre que 78% des Français s'in...",
+                "severity": 0.85,
+                "contextual_factors": {
+                  "domain": "scientifique",
+                  "audience": "académique"
+                }
+              }
+            ]
+          },
+          {
+            "argument_index": 8,
+            "argument": "Cette majorité écrasante prouve bien que la menace est réelle et imminente",
+            "detected_fallacies": []
+          },
+          {
+            "argument_index": 9,
+            "argument": "D'ailleurs, tous les pays qui ont investi massivement dans l'IA ont connu une augmentation du chômage, ce qui démontre clairement que l'IA détruit nos emplois",
+            "detected_fallacies": [
+              {
+                "fallacy_type": "appel_inapproprié_émotion",
+                "description": "Simulation de sophisme: appel_inapproprié_émotion",
+                "context_text": "D'ailleurs, tous les pays qui ont investi massivem...",
+                "severity": 0.53,
+                "contextual_factors": {
+                  "domain": "général",
+                  "audience": "expert"
+                }
+              }
+            ]
+          },
+          {
+            "argument_index": 10,
+            "argument": "Il n'y a que deux options possibles : soit nous imposons immédiatement un moratoire complet sur le développement de l'IA, soit nous acceptons la fin de la civilisation humaine telle que nous la connaissons",
+            "detected_fallacies": []
+          },
+          {
+            "argument_index": 11,
+            "argument": "Le choix devrait être évident pour toute personne raisonnable.",
+            "detected_fallacies": [
+              {
+                "fallacy_type": "appel_inapproprié_tradition",
+                "description": "Simulation de sophisme: appel_inapproprié_tradition",
+                "context_text": "Le choix devrait être évident pour toute personne ...",
+                "severity": 0.5,
+                "contextual_factors": {
+                  "domain": "juridique",
+                  "audience": "généraliste"
+                }
+              }
+            ]
+          }
+        ],
+        "analysis_timestamp": "2025-05-17T14:31:29.215563",
+        "note": "Analyse simulée - résultats générés aléatoirement"
+      },
+      "argument_coherence": {
+        "overall_coherence": {
+          "score": 0.69,
+          "level": "Bon",
+          "strengths": [
+            "Bonne cohérence logique (0.79)",
+            "Bonne cohérence épistémique (0.78)"
+          ],
+          "weaknesses": []
+        },
+        "coherence_evaluations": {
+          "logique": {
+            "score": 0.79,
+            "level": "Bon",
+            "criteria_scores": {
+              "critère_1": 0.59,
+              "critère_2": 0.52,
+              "critère_3": 0.44,
+              "critère_4": 0.72
+            },
+            "specific_issues": [],
+            "importance": 0.21
+          },
+          "thématique": {
+            "score": 0.7,
+            "level": "Bon",
+            "criteria_scores": {
+              "critère_1": 0.68,
+              "critère_2": 0.54,
+              "critère_3": 0.59,
+              "critère_4": 0.85
+            },
+            "specific_issues": [],
+            "importance": 0.21
+          },
+          "structurelle": {
+            "score": 0.53,
+            "level": "Moyen",
+            "criteria_scores": {
+              "critère_1": 0.68,
+              "critère_2": 0.44,
+              "critère_3": 0.58,
+              "critère_4": 0.88
+            },
+            "specific_issues": [],
+            "importance": 0.21
+          },
+          "rhétorique": {
+            "score": 0.69,
+            "level": "Bon",
+            "criteria_scores": {
+              "critère_1": 0.86,
+              "critère_2": 0.63,
+              "critère_3": 0.67,
+              "critère_4": 0.78
+            },
+            "specific_issues": [],
+            "importance": 0.29
+          },
+          "épistémique": {
+            "score": 0.78,
+            "level": "Bon",
+            "criteria_scores": {
+              "critère_1": 0.44,
+              "critère_2": 0.65,
+              "critère_3": 0.86,
+              "critère_4": 0.87
+            },
+            "specific_issues": [],
+            "importance": 0.11
+          }
+        },
+        "recommendations": [
+          "La cohérence globale des arguments est bon.",
+          "Maintenir une structure logique claire entre les arguments.",
+          "Assurer une progression thématique cohérente."
+        ],
+        "context": "Extrait 'La nécessité de réguler l'intelligence artificielle'",
+        "timestamp": "2025-05-17T14:31:29.215601",
+        "note": "Analyse simulée - résultats générés aléatoirement"
+      },
+      "semantic_analysis": {
+        "argument_count": 12,
+        "argument_analyses": [
+          {
+            "argument_index": 0,
+            "argument": "La nécessité de réguler l'intelligence artificielle\n\nL'intelligence artificielle se développe à une vitesse alarmante et représente une menace existentielle pour l'humanité",
+            "semantic_components": [
+              {
+                "component_type": "claim",
+                "text": "La nécessité de réguler l'intelligence artificiell...",
+                "confidence": 0.71
+              },
+              {
+                "component_type": "data",
+                "text": "La nécessité de réguler l'inte...",
+                "confidence": 0.6
+              }
+            ],
+            "analysis_timestamp": "2025-05-17T14:31:29.215608"
+          },
+          {
+            "argument_index": 1,
+            "argument": "Le professeur Dubois, éminent chercheur en informatique à l'Université de Paris, a récemment déclaré que \"l'IA pourrait dépasser l'intelligence humaine d'ici 2030\"",
+            "semantic_components": [
+              {
+                "component_type": "claim",
+                "text": "Le professeur Dubois, éminent chercheur en informa...",
+                "confidence": 0.65
+              },
+              {
+                "component_type": "data",
+                "text": "Le professeur Dubois, éminent ...",
+                "confidence": 0.78
+              }
+            ],
+            "analysis_timestamp": "2025-05-17T14:31:29.215612"
+          },
+          {
+            "argument_index": 2,
+            "argument": "Son expertise dans ce domaine ne peut être remise en question",
+            "semantic_components": [
+              {
+                "component_type": "claim",
+                "text": "Son expertise dans ce domaine ne peut être remise ...",
+                "confidence": 0.61
+              }
+            ],
+            "analysis_timestamp": "2025-05-17T14:31:29.215615"
+          },
+          {
+            "argument_index": 3,
+            "argument": "Si nous permettons aux entreprises de développer l'IA sans régulation stricte, nous ouvrons la porte à une série de conséquences catastrophiques",
+            "semantic_components": [
+              {
+                "component_type": "claim",
+                "text": "Si nous permettons aux entreprises de développer l...",
+                "confidence": 0.79
+              }
+            ],
+            "analysis_timestamp": "2025-05-17T14:31:29.215617"
+          },
+          {
+            "argument_index": 4,
+            "argument": "D'abord, les algorithmes prendront le contrôle de nos systèmes financiers",
+            "semantic_components": [
+              {
+                "component_type": "claim",
+                "text": "D'abord, les algorithmes prendront le contrôle de ...",
+                "confidence": 0.74
+              },
+              {
+                "component_type": "data",
+                "text": "D'abord, les algorithmes prend...",
+                "confidence": 0.65
+              }
+            ],
+            "analysis_timestamp": "2025-05-17T14:31:29.215620"
+          },
+          {
+            "argument_index": 5,
+            "argument": "Ensuite, ils s'infiltreront dans nos infrastructures critiques comme les centrales électriques et les réseaux de distribution d'eau",
+            "semantic_components": [
+              {
+                "component_type": "claim",
+                "text": "Ensuite, ils s'infiltreront dans nos infrastructur...",
+                "confidence": 0.67
+              }
+            ],
+            "analysis_timestamp": "2025-05-17T14:31:29.215622"
+          },
+          {
+            "argument_index": 6,
+            "argument": "Finalement, nous nous retrouverons dans un monde où les machines prendront toutes les décisions importantes, réduisant l'humanité à un état de servitude",
+            "semantic_components": [
+              {
+                "component_type": "claim",
+                "text": "Finalement, nous nous retrouverons dans un monde o...",
+                "confidence": 0.86
+              }
+            ],
+            "analysis_timestamp": "2025-05-17T14:31:29.215624"
+          },
+          {
+            "argument_index": 7,
+            "argument": "Un sondage récent montre que 78% des Français s'inquiètent des dangers potentiels de l'IA",
+            "semantic_components": [
+              {
+                "component_type": "claim",
+                "text": "Un sondage récent montre que 78% des Français s'inquiètent des dangers potentiels de l'IA",
+                "confidence": 0.5
+              }
+            ],
+            "analysis_timestamp": "2025-05-17T14:31:29.215626"
+          },
+          {
+            "argument_index": 8,
+            "argument": "Cette majorité écrasante prouve bien que la menace est réelle et imminente",
+            "semantic_components": [
+              {
+                "component_type": "claim",
+                "text": "Cette majorité écrasante prouve bien que la menace...",
+                "confidence": 0.7
+              }
+            ],
+            "analysis_timestamp": "2025-05-17T14:31:29.215628"
+          },
+          {
+            "argument_index": 9,
+            "argument": "D'ailleurs, tous les pays qui ont investi massivement dans l'IA ont connu une augmentation du chômage, ce qui démontre clairement que l'IA détruit nos emplois",
+            "semantic_components": [
+              {
+                "component_type": "claim",
+                "text": "D'ailleurs, tous les pays qui ont investi massivem...",
+                "confidence": 0.67
+              }
+            ],
+            "analysis_timestamp": "2025-05-17T14:31:29.215631"
+          },
+          {
+            "argument_index": 10,
+            "argument": "Il n'y a que deux options possibles : soit nous imposons immédiatement un moratoire complet sur le développement de l'IA, soit nous acceptons la fin de la civilisation humaine telle que nous la connaissons",
+            "semantic_components": [
+              {
+                "component_type": "claim",
+                "text": "Il n'y a que deux options possibles : soit nous imposons immédiatement un moratoire complet sur le développement de l'IA, soit nous acceptons la fin de la civilisation humaine telle que nous la connaissons",
+                "confidence": 0.5
+              }
+            ],
+            "analysis_timestamp": "2025-05-17T14:31:29.215632"
+          },
+          {
+            "argument_index": 11,
+            "argument": "Le choix devrait être évident pour toute personne raisonnable.",
+            "semantic_components": [
+              {
+                "component_type": "claim",
+                "text": "Le choix devrait être évident pour toute personne ...",
+                "confidence": 0.84
+              },
+              {
+                "component_type": "data",
+                "text": "Le choix devrait être évident ...",
+                "confidence": 0.6
+              }
+            ],
+            "analysis_timestamp": "2025-05-17T14:31:29.215635"
+          }
+        ],
+        "semantic_relations": [
+          {
+            "relation_type": "support",
+            "source_index": 1,
+            "target_index": 2,
+            "confidence": 0.61
+          },
+          {
+            "relation_type": "causality",
+            "source_index": 2,
+            "target_index": 3,
+            "confidence": 0.53
+          },
+          {
+            "relation_type": "support",
+            "source_index": 4,
+            "target_index": 5,
+            "confidence": 0.78
+          },
+          {
+            "relation_type": "opposition",
+            "source_index": 5,
+            "target_index": 6,
+            "confidence": 0.53
+          },
+          {
+            "relation_type": "support",
+            "source_index": 6,
+            "target_index": 7,
+            "confidence": 0.9
+          },
+          {
+            "relation_type": "support",
+            "source_index": 7,
+            "target_index": 8,
+            "confidence": 0.63
+          },
+          {
+            "relation_type": "causality",
+            "source_index": 8,
+            "target_index": 9,
+            "confidence": 0.84
+          }
+        ],
+        "analysis_timestamp": "2025-05-17T14:31:29.215646",
+        "note": "Analyse simulée - résultats générés aléatoirement"
+      }
+    }
+  }
+]

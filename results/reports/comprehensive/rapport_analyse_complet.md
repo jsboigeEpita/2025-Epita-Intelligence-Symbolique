@@ -1,6 +1,6 @@
 # Rapport d'analyse complet des agents d'analyse rhétorique
 
-Date: 2025-05-15 23:40:52
+Date: 2025-05-17 15:25:53
 
 ## Résumé exécutif
 
@@ -17,9 +17,9 @@ Ce rapport présente une synthèse complète des résultats des analyses rhétor
 
 ### Corpus analysés
 
-- **Autres corpus**: 5 extraits analysés avec les agents de base, 5 extraits analysés avec les agents avancés
-- **Discours d'Hitler**: 10 extraits analysés avec les agents de base, 10 extraits analysés avec les agents avancés
-- **Débats Lincoln-Douglas**: 10 extraits analysés avec les agents de base, 10 extraits analysés avec les agents avancés
+- **Autres corpus**: 1 extraits analysés avec les agents de base, 5 extraits analysés avec les agents avancés
+- **Discours d'Hitler**: 0 extraits analysés avec les agents de base, 10 extraits analysés avec les agents avancés
+- **Débats Lincoln-Douglas**: 0 extraits analysés avec les agents de base, 10 extraits analysés avec les agents avancés
 
 ### Agents évalués
 
@@ -56,7 +56,7 @@ Les agents ont été évalués sur les critères suivants:
 
 | Agent | Sophismes détectés | Score d'efficacité |
 |-------|-------------------|-------------------|
-| contextual_fallacy_detector | 5 | 1.00 |
+| contextual_fallacy_detector | 3 | 3.00 |
 | argument_coherence_evaluator | 0 | 0.00 |
 | semantic_argument_analyzer | 0 | 0.00 |
 
@@ -77,15 +77,7 @@ Les agents ont été évalués sur les critères suivants:
 
 ### Discours d'Hitler
 
-**Agent le plus efficace**: contextual_fallacy_detector
-
-#### Agents de base
-
-| Agent | Sophismes détectés | Score d'efficacité |
-|-------|-------------------|-------------------|
-| contextual_fallacy_detector | 12 | 1.20 |
-| argument_coherence_evaluator | 0 | 0.00 |
-| semantic_argument_analyzer | 0 | 0.00 |
+**Agent le plus efficace**: enhanced_contextual_fallacy_analyzer
 
 #### Agents avancés
 
@@ -104,15 +96,7 @@ Les agents ont été évalués sur les critères suivants:
 
 ### Débats Lincoln-Douglas
 
-**Agent le plus efficace**: contextual_fallacy_detector
-
-#### Agents de base
-
-| Agent | Sophismes détectés | Score d'efficacité |
-|-------|-------------------|-------------------|
-| contextual_fallacy_detector | 18 | 1.80 |
-| argument_coherence_evaluator | 0 | 0.00 |
-| semantic_argument_analyzer | 0 | 0.00 |
+**Agent le plus efficace**: enhanced_rhetorical_result_analyzer
 
 #### Agents avancés
 
@@ -133,15 +117,15 @@ Les agents ont été évalués sur les critères suivants:
 
 ### Sophismes Par Corpus
 
-![Sophismes Par Corpus](comprehensive_report\visualizations\sophismes_par_corpus.png)
+![Sophismes Par Corpus](comprehensive\visualizations\sophismes_par_corpus.png)
 
 ### Efficacite Agents
 
-![Efficacite Agents](comprehensive_report\visualizations\efficacite_agents_par_corpus.png)
+![Efficacite Agents](comprehensive\visualizations\efficacite_agents_par_corpus.png)
 
 ### Forces Faiblesses
 
-![Forces Faiblesses](comprehensive_report\visualizations\forces_faiblesses_agents.png)
+![Forces Faiblesses](comprehensive\visualizations\forces_faiblesses_agents.png)
 
 ## Recommandations
 

@@ -53,6 +53,7 @@ async def setup_environment():
 
     # 2. Initialisation de la JVM
     from argumentation_analysis.core.jvm_setup import initialize_jvm
+    from argumentation_analysis.paths import LIBS_DIR
     logging.info("Initialisation de la JVM...")
     jvm_ready_status = initialize_jvm(lib_dir_path=LIBS_DIR)
     
@@ -82,16 +83,13 @@ async def run_orchestration(text_content, llm_service, agents=None, verbose=Fals
     try:
         from argumentation_analysis.orchestration.analysis_runner import run_analysis_conversation
         
-        # Configuration des agents à utiliser
-        agent_config = {}
-        if agents:
-            agent_config["enabled_agents"] = agents
+        # Note: La fonction run_analysis_conversation n'accepte pas le paramètre enabled_agents
+        # Les agents sont configurés en interne dans la fonction
         
         # Exécution de l'analyse
         await run_analysis_conversation(
             texte_a_analyser=text_content,
-            llm_service=llm_service,
-            **agent_config
+            llm_service=llm_service
         )
         
         logging.info("🏁 Orchestration terminée avec succès.")
