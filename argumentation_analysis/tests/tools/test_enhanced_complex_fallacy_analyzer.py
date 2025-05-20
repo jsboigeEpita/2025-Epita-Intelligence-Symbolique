@@ -236,6 +236,25 @@ class TestEnhancedComplexFallacyAnalyzer(unittest.TestCase):
         # Vérifier qu'au moins une vulnérabilité a été identifiée
         self.assertGreater(len(vulnerabilities["specific_vulnerabilities"]), 0)
 
+    @patch('numpy.array')
+    @patch('numpy.mean')
+    def test_analyze_complex_fallacies_with_numpy_dependency(self, mock_mean, mock_array):
+        """Teste l'analyse des sophismes complexes avec mock de numpy."""
+        # Configurer les mocks numpy
+        mock_array.return_value = [0.7, 0.8, 0.9]
+        mock_mean.return_value = 0.8
+        
+        # Appeler la méthode qui utilise numpy
+        result = self.analyzer.detect_composite_fallacies(self.test_arguments, self.test_context)
+        
+        # Vérifier que le résultat est correct
+        self.assertIsNotNone(result)
+        self.assertIn("composite_severity", result)
+        
+        # Vérifier que les mocks ont été appelés
+        mock_array.assert_called()
+        mock_mean.assert_called()
+
 
 if __name__ == "__main__":
     unittest.main()

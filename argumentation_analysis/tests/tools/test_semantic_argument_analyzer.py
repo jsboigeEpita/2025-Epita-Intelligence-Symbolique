@@ -302,6 +302,27 @@ class TestSemanticArgumentAnalyzer(unittest.TestCase):
         # Vérifier que la qualité du flux est valide
         self.assertIn(logical_flow["flow_quality"], ["Très faible", "Faible", "Modéré", "Bon", "Excellent"])
 
+    @patch('numpy.array')
+    @patch('numpy.mean')
+    @patch('numpy.dot')
+    def test_analyze_semantic_arguments_with_numpy_dependency(self, mock_dot, mock_mean, mock_array):
+        """Teste l'analyse des arguments sémantiques avec mock de numpy."""
+        # Configurer les mocks numpy
+        mock_array.return_value = [[0.1, 0.2, 0.3], [0.4, 0.5, 0.6]]
+        mock_mean.return_value = 0.7
+        mock_dot.return_value = [[0.8, 0.9], [0.9, 0.8]]
+        
+        # Appeler la méthode qui utilise numpy
+        result = self.analyzer.analyze_multiple_arguments(self.test_arguments)
+        
+        # Vérifier que le résultat est correct
+        self.assertIsNotNone(result)
+        self.assertIn("semantic_relationships", result)
+        self.assertIn("thematic_coherence", result)
+        
+        # Vérifier que les mocks ont été appelés
+        mock_array.assert_called() or mock_mean.assert_called() or mock_dot.assert_called()
+
 
 if __name__ == "__main__":
     unittest.main()

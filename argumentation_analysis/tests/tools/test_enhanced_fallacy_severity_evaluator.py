@@ -210,6 +210,28 @@ class TestEnhancedFallacySeverityEvaluator(unittest.TestCase):
         # Vérifier que la gravité globale est influencée par la gravité la plus élevée
         self.assertGreaterEqual(overall_severity, 0.6)  # Au moins la moyenne des gravités
 
+    @patch('numpy.mean')
+    @patch('numpy.array')
+    @patch('numpy.max')
+    def test_evaluate_fallacy_severity_with_numpy_dependency(self, mock_max, mock_array, mock_mean):
+        """Teste l'évaluation de la gravité des sophismes avec mock de numpy."""
+        # Configurer les mocks numpy
+        mock_array.return_value = [0.5, 0.6, 0.8]
+        mock_mean.return_value = 0.63
+        mock_max.return_value = 0.8
+        
+        # Appeler la méthode qui utilise numpy
+        result = self.evaluator.evaluate_fallacy_list(self.test_fallacies, self.test_context)
+        
+        # Vérifier que le résultat est correct
+        self.assertIsNotNone(result)
+        self.assertIn("overall_severity", result)
+        self.assertIn("severity_level", result)
+        
+        # Vérifier que les mocks ont été appelés
+        mock_array.assert_called()
+        mock_mean.assert_called() or mock_max.assert_called()
+
 
 if __name__ == "__main__":
     unittest.main()
