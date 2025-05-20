@@ -235,26 +235,32 @@ Cette section présente les projets axés sur l'architecture, l'orchestration et
   - Adaptateurs pour différents frameworks
   - Documentation et exemples d'utilisation
   - Tests unitaires et d'intégration
-### 2.3.2 Agent de détection de sophismes
-- **Contexte** : La détection des sophismes est essentielle pour évaluer la qualité argumentative.
-- **Objectifs** : Améliorer la détection et la classification des sophismes dans les textes. Développer des techniques spécifiques pour chaque type de sophisme et intégrer l'ontologie des sophismes (1.3.2). Améliorer l'agent Informal pour détecter plus précisément différents types de sophismes et fournir des explications claires sur leur nature.
+### 2.3.2 Agent de détection de sophismes et biais cognitifs
+- **Contexte** : La détection des sophismes et des biais cognitifs est essentielle pour évaluer la qualité argumentative et lutter contre la désinformation.
+- **Objectifs** : Améliorer la détection et la classification des sophismes et biais cognitifs dans les textes. Développer des techniques spécifiques pour chaque type de sophisme et intégrer l'ontologie des sophismes (1.3.2). Améliorer l'agent Informal pour détecter plus précisément différents types de sophismes et fournir des explications claires sur leur nature. Intégrer des capacités d'analyse des biais cognitifs pour identifier les mécanismes psychologiques exploités dans les arguments fallacieux.
 - **Technologies clés** :
   * NLP avancé
-  * Classification de sophismes
+  * Classification de sophismes et biais cognitifs
   * Analyse rhétorique
   * Explainability
+  * Modèles de psychologie cognitive
+  * Techniques de lutte contre la désinformation
 - **Niveau de difficulté** : ⭐⭐⭐
 - **Estimation d'effort** : 4 semaines-personnes
-- **Portée ajustée** : Se concentrer sur quelques types de sophismes courants
-- **Interdépendances** : Utilise 1.3.2 (classification des sophismes)
+- **Portée ajustée** : Se concentrer sur quelques types de sophismes courants et biais cognitifs fondamentaux
+- **Interdépendances** : Utilise 1.3.2 (classification des sophismes), lié à 2.4.4 (fact-checking automatisé)
 - **Références** :
   - "Automated Fallacy Detection" (2022)
   - "Computational Approaches to Rhetorical Analysis" (2023)
   - "Explainable Fallacy Detection" (2022)
+  - "Cognitive Biases in Argumentation" (2024)
+  - "Psychological Mechanisms of Misinformation" (2023)
 - **Livrables attendus** :
-  - Agent de détection de sophismes amélioré
-  - Modèles de classification pour différents types de sophismes
-  - Système d'explication des détections
+  - Agent de détection de sophismes et biais cognitifs amélioré
+  - Modèles de classification pour différents types de sophismes et biais
+  - Système d'explication des détections avec contexte psychologique
+  - Mécanismes d'évaluation de l'impact persuasif des sophismes détectés
+  - Intégration avec des systèmes de lutte contre la désinformation
   - Documentation et exemples d'utilisation
 
 ### 2.3.3 Agent de génération de contre-arguments
@@ -407,20 +413,33 @@ Cette section présente les projets axés sur l'architecture, l'orchestration et
   - Documentation et exemples d'utilisation
   - Tests de performance et d'efficacité
 
-### 2.4.4 Fact-checking automatisé
-- **Contexte** : La vérification des faits est essentielle pour évaluer la solidité factuelle des arguments.
-- **Objectifs** : Développer des mécanismes de fact-checking automatisé pour vérifier les affirmations factuelles dans les arguments. Ce système devrait pouvoir extraire les affirmations vérifiables, rechercher des informations pertinentes, et évaluer la fiabilité des sources.
+### 2.4.4 Fact-checking automatisé et détection de désinformation
+- **Contexte** : La vérification des faits et la détection de désinformation sont essentielles pour évaluer la solidité factuelle des arguments et protéger l'intégrité du débat public.
+- **Objectifs** : Développer des mécanismes avancés de fact-checking automatisé pour vérifier les affirmations factuelles dans les arguments et détecter les patterns de désinformation. Ce système devrait pouvoir extraire les affirmations vérifiables, rechercher des informations pertinentes, évaluer la fiabilité des sources, et identifier les techniques de manipulation informationnelle. Intégrer des capacités d'analyse de propagation pour comprendre comment la désinformation se diffuse à travers différents canaux.
 - **Technologies clés** :
   * Extraction d'affirmations vérifiables
   * Recherche et vérification d'informations
   * Évaluation de fiabilité des sources
+  * Détection de fake news et contenus manipulés
+  * Analyse de propagation de l'information
+  * Détection de campagnes coordonnées
 - **Niveau de difficulté** : ⭐⭐⭐⭐
 - **Estimation d'effort** : 4 semaines-personnes
-- **Portée ajustée** : Se concentrer sur l'extraction d'affirmations vérifiables uniquement
-- **Interdépendances** : Lié à 2.3.5 (évaluation de qualité)
+- **Portée ajustée** : Se concentrer sur l'extraction d'affirmations vérifiables et la détection basique de désinformation
+- **Interdépendances** : Lié à 2.3.5 (évaluation de qualité), 2.3.2 (détection de sophismes et biais cognitifs)
 - **Références** :
   - "Automated Fact-Checking: Current Status and Future Directions" (2022)
   - "Claim Extraction and Verification" (2023)
+  - "Detecting Coordinated Disinformation Campaigns" (2024)
+  - "Information Disorder: Toward an interdisciplinary framework" (2023)
+  - "Source Credibility Assessment in the Era of Fake News" (2024)
+- **Livrables attendus** :
+  - Système de fact-checking automatisé
+  - Détecteur de désinformation et fake news
+  - Analyseur de fiabilité des sources
+  - Visualisation de propagation de l'information
+  - API pour intégration avec d'autres systèmes
+  - Documentation et guide d'utilisation
   - "Source Reliability Assessment" (2022)
 - **Livrables attendus** :
   - Système de fact-checking automatisé
@@ -490,6 +509,31 @@ Cette section présente les projets axés sur l'architecture, l'orchestration et
   - Serveur MCP pour l'analyse argumentative
   - Documentation de l'API
   - Exemples d'intégration avec différentes applications
+
+### 2.5.6 Protection des systèmes d'IA contre les attaques adversariales
+- **Contexte** : Les systèmes d'IA d'analyse argumentative sont vulnérables à diverses formes d'attaques adversariales visant à manipuler leurs résultats ou à compromettre leur fonctionnement.
+- **Objectifs** : Développer des mécanismes de protection pour renforcer la robustesse des systèmes d'IA contre les attaques adversariales. Implémenter des techniques de détection d'entrées malveillantes, de renforcement de modèles, et de validation des résultats. Créer un framework de sécurité complet pour les systèmes d'analyse argumentative.
+- **Technologies clés** :
+  * Détection d'attaques adversariales
+  * Techniques de robustesse pour modèles de NLP
+  * Validation et sanitisation d'entrées
+  * Surveillance d'anomalies
+  * Tests de pénétration pour IA
+- **Niveau de difficulté** : ⭐⭐⭐⭐
+- **Estimation d'effort** : 4 semaines-personnes
+- **Portée ajustée** : Se concentrer sur la protection contre quelques types d'attaques spécifiques
+- **Interdépendances** : Lié à 2.3.1 (abstraction du moteur agentique), 2.3.6 (intégration de LLMs locaux)
+- **Références** :
+  - "Adversarial Attacks and Defenses in NLP" (2023)
+  - "Robustness Certification for Language Models" (2024)
+  - "Security Evaluation of LLM-based Systems" (2024)
+  - "Defending Against Prompt Injection Attacks" (2023)
+- **Livrables attendus** :
+  - Framework de sécurité pour systèmes d'analyse argumentative
+  - Détecteur d'attaques adversariales
+  - Mécanismes de renforcement de robustesse
+  - Outils de test et d'évaluation de sécurité
+  - Documentation et guide des meilleures pratiques
   - Tests de performance et de conformité
 
 ### 2.5.4 Outils et ressources MCP pour l'argumentation
