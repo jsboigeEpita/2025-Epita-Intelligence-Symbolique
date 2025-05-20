@@ -338,6 +338,31 @@ class TestEnhancedRhetoricalResultAnalyzer(unittest.TestCase):
         self.assertGreater(len(strengths), 0)
         self.assertGreater(len(weaknesses), 0)
 
+    @patch('pandas.DataFrame')
+    @patch('pandas.Series')
+    def test_analyze_rhetorical_results_with_pandas_dependency(self, mock_series, mock_dataframe):
+        """Teste l'analyse des résultats rhétoriques avec mock de pandas."""
+        # Configurer les mocks pandas
+        mock_df = MagicMock()
+        mock_df.groupby.return_value = mock_df
+        mock_df.count.return_value = mock_series
+        mock_df.sort_values.return_value = mock_df
+        mock_df.head.return_value = mock_df
+        mock_df.to_dict.return_value = {'fallacy_type': {'Appel à l\'émotion': 2, 'Ad hominem': 1}}
+        
+        mock_dataframe.return_value = mock_df
+        mock_series.return_value = [2, 1]
+        
+        # Appeler la méthode qui utilise pandas
+        result = self.analyzer.analyze_rhetorical_results(self.test_results, self.test_context)
+        
+        # Vérifier que le résultat est correct
+        self.assertIsNotNone(result)
+        self.assertIn("fallacy_analysis", result)
+        
+        # Vérifier que les mocks ont été appelés
+        mock_dataframe.assert_called() or mock_series.assert_called()
+
 
 if __name__ == "__main__":
     unittest.main()

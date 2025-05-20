@@ -261,6 +261,35 @@ class TestEnhancedContextualFallacyAnalyzer(unittest.TestCase):
         # Vérifier que la suggestion contient des informations pertinentes
         self.assertIn("Appel à l'autorité", suggestion) or self.assertIn("experts", suggestion)
 
+    @patch('pandas.DataFrame')
+    @patch('pandas.read_csv')
+    def test_analyze_contextual_fallacies_with_pandas_dependency(self, mock_read_csv, mock_dataframe):
+        """Teste l'analyse des sophismes contextuels avec mock de pandas."""
+        # Configurer les mocks pandas
+        mock_df = MagicMock()
+        mock_df.__len__.return_value = 4
+        mock_df.index = [0, 1, 2, 3]
+        mock_df.columns = ['fallacy_type', 'keywords', 'description', 'examples']
+        mock_df.to_dict.return_value = {
+            'fallacy_type': {0: 'Appel à l\'autorité', 1: 'Appel à la popularité'},
+            'keywords': {0: 'expert,autorité', 1: 'populaire,tout le monde'},
+            'description': {0: 'Description 1', 1: 'Description 2'},
+            'examples': {0: 'Exemple 1', 1: 'Exemple 2'}
+        }
+        
+        mock_read_csv.return_value = mock_df
+        mock_dataframe.return_value = mock_df
+        
+        # Appeler la méthode qui utilise pandas
+        result = self.analyzer.analyze_context(self.test_text, self.test_context)
+        
+        # Vérifier que le résultat est correct
+        self.assertIsNotNone(result)
+        self.assertIn("contextual_fallacies", result)
+        
+        # Vérifier que les mocks ont été appelés
+        mock_read_csv.assert_called() or mock_dataframe.assert_called()
+
 
 if __name__ == "__main__":
     unittest.main()
