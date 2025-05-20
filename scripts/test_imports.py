@@ -57,32 +57,32 @@ def main():
     # Liste des modules à tester
     modules_to_test = [
         # Modules principaux
-        "argumentiation_analysis",
-        "argumentiation_analysis.core",
-        "argumentiation_analysis.agents",
-        "argumentiation_analysis.orchestration",
-        "argumentiation_analysis.paths",
+        "argumentation_analysis",
+        "argumentation_analysis.core",
+        "argumentation_analysis.agents",
+        "argumentation_analysis.orchestration",
+        "argumentation_analysis.paths",
         
         # Sous-modules
-        "argumentiation_analysis.core.llm_service",
-        "argumentiation_analysis.core.jvm_setup",
-        "argumentiation_analysis.core.shared_state",
+        "argumentation_analysis.core.llm_service",
+        "argumentation_analysis.core.jvm_setup",
+        "argumentation_analysis.core.shared_state",
         
         # Modules avec redirection
-        "argumentiation_analysis.agents.core.extract",
-        "argumentiation_analysis.agents.extract",  # Devrait être redirigé vers agents.core.extract
+        "argumentation_analysis.agents.core.extract",
+        "argumentation_analysis.agents.extract",  # Devrait être redirigé vers agents.core.extract
     ]
     
     # Liste des attributs à tester
     attributes_to_test = [
         # Fonctions et classes exposées
-        ("argumentiation_analysis.core.llm_service", "create_llm_service"),
-        ("argumentiation_analysis.core.jvm_setup", "initialize_jvm"),
-        ("argumentiation_analysis.core.jvm_setup", "download_tweety_jars"),
+        ("argumentation_analysis.core.llm_service", "create_llm_service"),
+        ("argumentation_analysis.core.jvm_setup", "initialize_jvm"),
+        ("argumentation_analysis.core.jvm_setup", "download_tweety_jars"),
         
         # Classes et fonctions via redirection
-        ("argumentiation_analysis.agents.extract", "extract_agent"),
-        ("argumentiation_analysis.agents.core.extract", "extract_agent"),
+        ("argumentation_analysis.agents.extract", "extract_agent"),
+        ("argumentation_analysis.agents.core.extract", "extract_agent"),
     ]
     
     # Tester les modules

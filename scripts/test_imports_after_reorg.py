@@ -20,7 +20,7 @@ def run_tests():
     modules_to_test = [
         "scripts/testing/simulation_agent_informel.py",
         "scripts/testing/test_agent_informel.py",
-        "scripts/utils/test_imports.py"
+        "scripts/utils/test_imports_utils.py"
     ]
     
     print("Test des importations après réorganisation:")
