@@ -66,25 +66,34 @@ Cette section présente les projets orientés vers les interfaces, visualisation
   - Support pour différents formalismes
   - Fonctionnalités d'édition et de validation
   - Documentation utilisateur
-### 3.1.4 Visualisation de graphes d'argumentation
-- **Contexte** : La visualisation des graphes d'argumentation aide à comprendre les relations entre arguments.
-- **Objectifs** : Développer des outils de visualisation avancés pour les différents frameworks d'argumentation (Dung, bipolaire, pondéré, etc.). Implémenter des algorithmes de layout optimisés pour les graphes argumentatifs, avec support pour l'interaction et l'exploration.
+### 3.1.4 Visualisation avancée de graphes d'argumentation et de réseaux de désinformation
+- **Contexte** : La visualisation des graphes d'argumentation et des réseaux de désinformation aide à comprendre les relations complexes entre arguments et à identifier les patterns de propagation de fausses informations.
+- **Objectifs** : Développer des outils de visualisation avancés pour les différents frameworks d'argumentation (Dung, bipolaire, pondéré, etc.) et pour l'analyse des réseaux de désinformation. Implémenter des algorithmes de layout optimisés pour les graphes argumentatifs, avec support pour l'interaction et l'exploration. Intégrer des techniques de visualisation cognitive pour faciliter la compréhension des structures argumentatives complexes et des mécanismes de propagation de la désinformation.
 - **Technologies clés** :
-  * Sigma.js, Cytoscape.js, vis.js
+  * Sigma.js, Cytoscape.js, vis.js, D3.js
   * Algorithmes de layout de graphes
   * Techniques de visualisation interactive
+  * Visualisation de données temporelles
+  * Analyse visuelle de réseaux sociaux
+  * Techniques de visualisation cognitive
 - **Niveau de difficulté** : ⭐⭐⭐
 - **Estimation d'effort** : 4 semaines-personnes
-- **Portée ajustée** : Se concentrer sur un type de framework avec layout simple
-- **Interdépendances** : Lié à 1.2 (frameworks d'argumentation)
+- **Portée ajustée** : Se concentrer sur un type de framework avec layout avancé et visualisation de propagation
+- **Interdépendances** : Lié à 1.2 (frameworks d'argumentation), 2.4.4 (fact-checking et détection de désinformation)
 - **Références** :
   - "Computational Models of Argument: Proceedings of COMMA" (conférences biennales, 2022-2024)
   - "Travaux de Floris Bex sur la visualisation d'arguments" (2022-2023)
   - "Graph Drawing: Algorithms for the Visualization of Graphs" (édition mise à jour, 2023)
+  - "Visual Analytics for Disinformation Detection" (2024)
+  - "Cognitive Visualization Techniques for Complex Arguments" (2023)
+  - "Temporal Visualization of Information Spread" (2024)
 - **Livrables attendus** :
-  - Bibliothèque de visualisation de graphes d'argumentation
-  - Algorithmes de layout optimisés
-  - Fonctionnalités d'interaction et d'exploration
+  - Bibliothèque de visualisation de graphes d'argumentation et réseaux de désinformation
+  - Algorithmes de layout optimisés pour différents types de structures
+  - Visualisations temporelles de propagation d'information
+  - Techniques de visualisation cognitive pour faciliter la compréhension
+  - Outils interactifs d'exploration et d'analyse
+  - Intégration avec des systèmes de détection de désinformation
   - Documentation et exemples d'utilisation
 
 ### 3.1.5 Interface mobile
@@ -256,17 +265,37 @@ Cette section présente les projets orientés vers les interfaces, visualisation
   - Suggestions d'amélioration
   - Documentation et guide d'utilisation
 
-### 3.2.6 Système d'analyse de débats politiques
-- **Contexte** : L'analyse des débats politiques peut aider à évaluer objectivement la qualité argumentative des discours.
-- **Objectifs** : Développer un outil d'analyse des débats politiques en temps réel, capable d'identifier les arguments, les sophismes, et les stratégies rhétoriques utilisées par les participants. Fournir une évaluation objective de la qualité argumentative et factuelle des interventions.
+### 3.2.6 Système d'analyse de débats politiques et surveillance des médias
+- **Contexte** : L'analyse des débats politiques et la surveillance des médias peuvent aider à évaluer objectivement la qualité argumentative des discours et à détecter les campagnes de désinformation dans l'espace public.
+- **Objectifs** : Développer un système complet d'analyse des débats politiques et de surveillance médiatique, capable d'identifier les arguments, les sophismes, et les stratégies rhétoriques utilisées par les participants. Fournir une évaluation objective de la qualité argumentative et factuelle des interventions. Détecter les tendances émergentes, les narratifs dominants et les campagnes coordonnées de désinformation. Analyser la propagation des arguments et contre-arguments à travers différents médias et réseaux sociaux.
 - **Technologies clés** :
   * Traitement du langage en temps réel
   * Fact-checking automatisé
   * Analyse de sentiment et de rhétorique
+  * Détection de campagnes coordonnées
+  * Analyse de tendances médiatiques
+  * Visualisation de propagation d'information
+  * Analyse de réseaux sociaux
 - **Niveau de difficulté** : ⭐⭐⭐⭐
 - **Estimation d'effort** : 4 semaines-personnes
-- **Portée ajustée** : Se concentrer sur l'analyse d'un débat spécifique
-- **Interdépendances** : Utilise 2.3.2 (détection de sophismes), 2.4 (indexation sémantique)
+- **Portée ajustée** : Se concentrer sur l'analyse d'un débat spécifique et le suivi de sa couverture médiatique
+- **Interdépendances** : Utilise 2.3.2 (détection de sophismes et biais cognitifs), 2.4.4 (fact-checking et détection de désinformation), 3.1.4 (visualisation de graphes d'argumentation)
+- **Références** :
+  - "Computational Approaches to Analyzing Political Discourse" de Hovy et Lim
+  - "Projets comme FactCheck.org ou PolitiFact" (études de cas, 2022)
+  - "Automated Fact-Checking: Current Status and Future Directions" (2022)
+  - "Media Monitoring in the Digital Age" (2024)
+  - "Detecting Coordinated Inauthentic Behavior in Social Media" (2023)
+  - "Temporal Analysis of Information Diffusion" (2024)
+- **Livrables attendus** :
+  - Système d'analyse de débats politiques en temps réel
+  - Plateforme de surveillance médiatique
+  - Détection de sophismes, biais et stratégies rhétoriques
+  - Fact-checking automatisé des affirmations
+  - Analyse de propagation des arguments dans les médias
+  - Détection de campagnes coordonnées de désinformation
+  - Visualisations interactives des tendances et narratifs
+  - Documentation et guide d'utilisation
 - **Références** :
   - "Computational Approaches to Analyzing Political Discourse" de Hovy et Lim
   - "Projets comme FactCheck.org ou PolitiFact" (études de cas, 2022)
@@ -297,3 +326,61 @@ Cette section présente les projets orientés vers les interfaces, visualisation
   - Mécanismes de structuration des échanges
   - Outils de construction de consensus
   - Documentation et guide d'utilisation
+
+### 3.2.8 Plateforme éducative d'apprentissage de l'argumentation
+- **Contexte** : L'éducation à l'argumentation et à la pensée critique est essentielle pour former des citoyens capables de naviguer dans un environnement informationnel complexe et de résister à la désinformation.
+- **Objectifs** : Développer une plateforme éducative complète dédiée à l'apprentissage de l'argumentation, à la détection des sophismes et à la pensée critique. Créer des parcours d'apprentissage personnalisés avec des tutoriels interactifs, des exercices pratiques et des évaluations adaptatives. Intégrer des mécanismes de gamification pour favoriser l'engagement et la progression des apprenants.
+- **Technologies clés** :
+  * Tutoriels interactifs
+  * Systèmes d'apprentissage adaptatif
+  * Gamification
+  * Évaluation automatisée
+  * Feedback personnalisé
+  * Visualisation de progression
+- **Niveau de difficulté** : ⭐⭐⭐
+- **Estimation d'effort** : 4 semaines-personnes
+- **Portée ajustée** : Se concentrer sur un module éducatif spécifique avec quelques exercices
+- **Interdépendances** : Lié à 3.2.2 (plateforme d'éducation à l'argumentation), 2.3.2 (détection de sophismes et biais cognitifs)
+- **Références** :
+  - "Learning Analytics for Argumentation Skills" (2023)
+  - "Gamification in Critical Thinking Education" (2024)
+  - "Adaptive Learning Systems: Design and Implementation" (2023)
+  - "Measuring and Developing Argumentation Skills" (2022)
+  - "Educational Interventions Against Misinformation" (2024)
+- **Livrables attendus** :
+  - Plateforme éducative d'apprentissage de l'argumentation
+  - Tutoriels interactifs sur les sophismes et biais cognitifs
+  - Exercices pratiques avec feedback automatisé
+  - Système d'évaluation des compétences argumentatives
+  - Mécanismes de gamification et de progression
+  - Tableau de bord de suivi des apprentissages
+  - Documentation pédagogique et guide d'utilisation
+
+### 3.2.9 Applications commerciales d'analyse argumentative
+- **Contexte** : Les technologies d'analyse argumentative et de lutte contre la désinformation ont de nombreuses applications commerciales dans divers secteurs comme les médias, les entreprises, et les institutions.
+- **Objectifs** : Développer des applications commerciales basées sur l'analyse argumentative pour répondre à des besoins spécifiques du marché. Explorer différents modèles d'affaires et cas d'usage comme l'analyse de réputation, l'intelligence compétitive, ou la protection de marque. Créer des prototypes de produits avec propositions de valeur claires et stratégies de mise sur le marché.
+- **Technologies clés** :
+  * Analyse de réputation
+  * Surveillance de marque
+  * Intelligence compétitive
+  * Analyse de feedback client
+  * Intégration avec des outils d'entreprise
+  * Tableaux de bord décisionnels
+- **Niveau de difficulté** : ⭐⭐⭐
+- **Estimation d'effort** : 4 semaines-personnes
+- **Portée ajustée** : Se concentrer sur une application commerciale spécifique avec prototype fonctionnel
+- **Interdépendances** : Lié à 2.4.4 (fact-checking et détection de désinformation), 3.2.6 (analyse de débats et surveillance des médias)
+- **Références** :
+  - "Business Models for AI Applications" (2023)
+  - "Market Analysis of Media Intelligence Tools" (2024)
+  - "Brand Protection in the Digital Age" (2023)
+  - "Monetizing NLP Technologies" (2024)
+  - "Customer Feedback Analysis: From Data to Insights" (2023)
+- **Livrables attendus** :
+  - Prototype d'application commerciale d'analyse argumentative
+  - Étude de marché et analyse de la concurrence
+  - Modèle d'affaires détaillé
+  - Proposition de valeur et positionnement
+  - Stratégie de mise sur le marché
+  - Démonstration fonctionnelle
+  - Documentation et matériel de présentation

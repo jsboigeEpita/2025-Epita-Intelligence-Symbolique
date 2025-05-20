@@ -20,6 +20,11 @@
   - [Projet 10: Détection automatique de la structure argumentative](#projet-10-détection-automatique-de-la-structure-argumentative)
   - [Projet 11: Modèle d'évaluation de la persuasion](#projet-11-modèle-dévaluation-de-la-persuasion)
   - [Projet 12: Analyse rhétorique multilingue](#projet-12-analyse-rhétorique-multilingue)
+- [Projets de lutte contre la désinformation](#projets-de-lutte-contre-la-désinformation)
+  - [Projet 13: Protection des systèmes d'IA contre les attaques adversariales](#projet-13-protection-des-systèmes-dia-contre-les-attaques-adversariales)
+  - [Projet 14: Détection et analyse de campagnes de désinformation](#projet-14-détection-et-analyse-de-campagnes-de-désinformation)
+  - [Projet 15: Plateforme éducative sur la pensée critique](#projet-15-plateforme-éducative-sur-la-pensée-critique)
+  - [Projet 16: Applications commerciales d'analyse argumentative](#projet-16-applications-commerciales-danalyse-argumentative)
 - [Ressources complémentaires](#ressources-complémentaires)
 
 ## Introduction
@@ -497,6 +502,154 @@ N'hésitez pas à adapter les projets proposés en fonction de vos besoins et de
 6. Explorer les différences culturelles dans l'argumentation et la rhétorique
 7. Intégrer des mécanismes de traduction automatique si nécessaire
 
+## Projets de lutte contre la désinformation
+
+Cette nouvelle catégorie de projets se concentre sur la détection et la lutte contre la désinformation, les fake news et les manipulations informationnelles, ainsi que sur l'éducation à la pensée critique.
+
+### Projet 13: Protection des systèmes d'IA contre les attaques adversariales
+
+**Description** : Développer des mécanismes de protection pour renforcer la robustesse des systèmes d'IA d'analyse argumentative contre les attaques adversariales visant à manipuler leurs résultats.
+
+**Objectifs pédagogiques** :
+- Comprendre les vulnérabilités des systèmes d'IA
+- Maîtriser les techniques de détection d'attaques adversariales
+- Apprendre à renforcer la robustesse des modèles de NLP
+- Développer des compétences en sécurité des systèmes d'IA
+
+**Prérequis techniques** :
+- Programmation Python (niveau intermédiaire à avancé)
+- Connaissances en apprentissage automatique et NLP
+- Familiarité avec les concepts de sécurité informatique
+
+**Ressources nécessaires** :
+- Bibliothèques Python pour le NLP et l'apprentissage automatique
+- Documentation sur les attaques adversariales
+- Jeux de données pour tester la robustesse des modèles
+
+**Difficulté** : ★★★★☆ (Difficile)
+**Temps estimé** : 4 semaines
+**Livrables minimaux** :
+- Framework de détection d'attaques adversariales
+- Mécanismes de renforcement de robustesse
+- Documentation et guide des meilleures pratiques
+- Tests de sécurité et évaluation
+
+**Pistes de démarrage** :
+1. Étudier les différents types d'attaques adversariales contre les systèmes de NLP
+2. Développer des méthodes de détection pour les entrées malveillantes
+3. Implémenter des techniques de robustesse pour les modèles
+4. Créer un système de validation des résultats
+5. Évaluer l'efficacité des protections mises en place
+6. Documenter les meilleures pratiques de sécurité
+
+### Projet 14: Détection et analyse de campagnes de désinformation
+
+**Description** : Créer un système capable de détecter et d'analyser les campagnes coordonnées de désinformation dans les médias et réseaux sociaux, en identifiant les patterns de propagation et les techniques de manipulation.
+
+**Objectifs pédagogiques** :
+- Comprendre les mécanismes de propagation de la désinformation
+- Maîtriser les techniques d'analyse de réseaux sociaux
+- Apprendre à détecter les comportements coordonnés
+- Développer des compétences en visualisation de tendances informationnelles
+
+**Prérequis techniques** :
+- Programmation Python (niveau intermédiaire)
+- Connaissances en analyse de données et réseaux sociaux
+- Familiarité avec les API de plateformes médiatiques
+
+**Ressources nécessaires** :
+- Bibliothèques Python pour l'analyse de réseaux et le NLP
+- Accès aux API de réseaux sociaux ou jeux de données
+- Outils de visualisation de données
+
+**Difficulté** : ★★★☆☆ (Modérée)
+**Temps estimé** : 4 semaines
+**Livrables minimaux** :
+- Système de détection de campagnes coordonnées
+- Analyse de propagation d'information
+- Visualisations des tendances et patterns
+- Documentation et exemples d'utilisation
+
+**Pistes de démarrage** :
+1. Étudier les caractéristiques des campagnes de désinformation connues
+2. Développer des méthodes de détection de comportements coordonnés
+3. Implémenter des techniques d'analyse de propagation
+4. Créer des visualisations temporelles et spatiales
+5. Évaluer l'efficacité du système sur des cas réels
+6. Documenter les patterns et techniques identifiés
+
+### Projet 15: Plateforme éducative sur la pensée critique
+
+**Description** : Développer une plateforme éducative interactive pour enseigner la pensée critique, la détection de sophismes et l'évaluation des sources d'information, avec des parcours d'apprentissage personnalisés.
+
+**Objectifs pédagogiques** :
+- Comprendre les principes pédagogiques de l'enseignement de la pensée critique
+- Maîtriser les techniques de création de contenu éducatif interactif
+- Apprendre à concevoir des systèmes d'évaluation des compétences
+- Développer des mécanismes de gamification pour l'engagement
+
+**Prérequis techniques** :
+- Programmation web (HTML, CSS, JavaScript)
+- Connaissances en développement d'applications éducatives
+- Familiarité avec les concepts de pensée critique et d'argumentation
+
+**Ressources nécessaires** :
+- Frameworks de développement web
+- Contenu pédagogique sur la pensée critique
+- Bibliothèques de gamification
+
+**Difficulté** : ★★★☆☆ (Modérée)
+**Temps estimé** : 4 semaines
+**Livrables minimaux** :
+- Plateforme éducative fonctionnelle
+- Tutoriels interactifs sur les sophismes
+- Exercices pratiques avec feedback automatisé
+- Documentation et guide pédagogique
+
+**Pistes de démarrage** :
+1. Concevoir un curriculum d'apprentissage de la pensée critique
+2. Développer des tutoriels interactifs sur les sophismes courants
+3. Créer des exercices pratiques avec évaluation automatique
+4. Implémenter des mécanismes de progression et de gamification
+5. Tester la plateforme avec des utilisateurs réels
+6. Itérer sur la base des retours utilisateurs
+
+### Projet 16: Applications commerciales d'analyse argumentative
+
+**Description** : Explorer et développer des applications commerciales basées sur l'analyse argumentative, comme l'analyse de réputation, l'intelligence compétitive ou la protection de marque, avec des modèles d'affaires viables.
+
+**Objectifs pédagogiques** :
+- Comprendre les besoins du marché en matière d'analyse argumentative
+- Maîtriser la conception de produits basés sur le NLP
+- Apprendre à développer des modèles d'affaires
+- Développer des compétences en présentation et pitch de produit
+
+**Prérequis techniques** :
+- Programmation Python (niveau intermédiaire)
+- Connaissances en développement de produits
+- Familiarité avec les concepts de business development
+
+**Ressources nécessaires** :
+- Bibliothèques Python pour le NLP et l'analyse de données
+- Documentation sur les modèles d'affaires pour l'IA
+- Études de marché et analyses sectorielles
+
+**Difficulté** : ★★★☆☆ (Modérée)
+**Temps estimé** : 4 semaines
+**Livrables minimaux** :
+- Prototype d'application commerciale
+- Modèle d'affaires détaillé
+- Analyse de marché et positionnement
+- Présentation et démonstration du produit
+
+**Pistes de démarrage** :
+1. Identifier des besoins commerciaux non satisfaits en analyse argumentative
+2. Développer un prototype ciblant un cas d'usage spécifique
+3. Concevoir un modèle d'affaires viable
+4. Créer une proposition de valeur claire
+5. Préparer une démonstration convaincante
+6. Élaborer une stratégie de mise sur le marché
+
 ## Ressources complémentaires
 
 ### Bibliographie
@@ -507,6 +660,10 @@ N'hésitez pas à adapter les projets proposés en fonction de vos besoins et de
 4. Tindale, C. W. (2007). *Fallacies and Argument Appraisal*. Cambridge University Press.
 5. Lawrence, J., & Reed, C. (2020). *Argument Mining: A Survey*. Computational Linguistics, 45(4), 765-818.
 6. Stede, M., & Schneider, J. (2018). *Argumentation Mining*. Synthesis Lectures on Human Language Technologies, 11(2), 1-191.
+7. Wardle, C., & Derakhshan, H. (2018). *Information Disorder: Toward an interdisciplinary framework for research and policy making*. Council of Europe.
+8. Kahneman, D. (2011). *Thinking, Fast and Slow*. Farrar, Straus and Giroux.
+9. Lazer, D. et al. (2018). *The science of fake news*. Science, 359(6380), 1094-1096.
+10. Pennycook, G., & Rand, D. G. (2021). *The Psychology of Fake News*. Trends in Cognitive Sciences, 25(5), 388-402.
 
 ### Ressources en ligne
 
@@ -515,6 +672,9 @@ N'hésitez pas à adapter les projets proposés en fonction de vos besoins et de
 3. [ArgumenText](https://www.argumentext.de/) - Corpus et outils pour l'analyse d'arguments
 4. [Fallacy Files](https://www.fallacyfiles.org/) - Taxonomie détaillée des sophismes
 5. [Your Logical Fallacy Is](https://yourlogicalfallacyis.com/) - Ressource pédagogique sur les sophismes
+6. [First Draft](https://firstdraftnews.org/resources/) - Ressources sur la vérification des faits et la lutte contre la désinformation
+7. [Media Bias/Fact Check](https://mediabiasfactcheck.com/) - Évaluation de la fiabilité des sources médiatiques
+8. [The Debunking Handbook](https://www.climatechangecommunication.org/debunking-handbook-2020/) - Guide pour contrer efficacement la désinformation
 
 ### Outils et bibliothèques
 
@@ -524,6 +684,11 @@ N'hésitez pas à adapter les projets proposés en fonction de vos besoins et de
 4. [Plotly](https://plotly.com/) - Bibliothèque de visualisation interactive
 5. [D3.js](https://d3js.org/) - Bibliothèque JavaScript pour la visualisation de données
 6. [Semantic Kernel](https://github.com/microsoft/semantic-kernel) - Framework pour l'orchestration d'agents IA
+7. [ClaimBuster](https://idir.uta.edu/claimbuster/) - Outil de détection d'affirmations vérifiables
+8. [Botometer](https://botometer.osome.iu.edu/) - Outil de détection de bots sur les réseaux sociaux
+9. [NetworkX](https://networkx.org/) - Bibliothèque Python pour l'analyse de réseaux sociaux
+10. [TensorFlow Privacy](https://github.com/tensorflow/privacy) - Bibliothèque pour l'apprentissage machine préservant la confidentialité
+11. [Adversarial Robustness Toolbox](https://github.com/Trusted-AI/adversarial-robustness-toolbox) - Bibliothèque pour la protection contre les attaques adversariales
 
 ### Cours et tutoriels
 

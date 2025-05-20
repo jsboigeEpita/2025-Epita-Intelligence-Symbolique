@@ -13,7 +13,7 @@ Les projets sont organisés en trois catégories principales :
 2. **[Développement système et infrastructure](./developpement_systeme.md)** : Projets axés sur l'architecture, l'orchestration et les composants techniques
 3. **[Expérience utilisateur et applications](./experience_utilisateur.md)** : Projets orientés vers les interfaces, visualisations et cas d'usage concrets
 
-Ces catégories se déclinent en 16 domaines spécifiques :
+Ces catégories se déclinent en 17 domaines spécifiques :
 1. Logiques formelles et raisonnement
 2. Frameworks d'argumentation
 3. Taxonomies et classification
@@ -30,6 +30,7 @@ Ces catégories se déclinent en 16 domaines spécifiques :
 14. Smart Contracts
 15. Conduite de projet
 16. Développement d'interfaces avancées
+17. Lutte contre la désinformation
 
 Chaque sujet est présenté avec une structure standardisée :
 - **Contexte** : Présentation du domaine et de son importance
