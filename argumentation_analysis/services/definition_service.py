@@ -21,8 +21,8 @@ parent_dir = current_dir.parent
 if str(parent_dir) not in sys.path:
     sys.path.insert(0, str(parent_dir))
 
-from models.extract_definition import ExtractDefinitions, SourceDefinition, Extract
-from services.crypto_service import CryptoService
+from argumentation_analysis.models.extract_definition import ExtractDefinitions, SourceDefinition, Extract
+from argumentation_analysis.services.crypto_service import CryptoService
 
 # Configuration du logging
 logger = logging.getLogger("Services.DefinitionService")

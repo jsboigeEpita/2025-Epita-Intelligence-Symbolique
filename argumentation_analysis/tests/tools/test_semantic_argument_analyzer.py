@@ -15,12 +15,6 @@ from unittest.mock import patch, MagicMock
 from pathlib import Path
 from datetime import datetime
 
-# Ajouter le répertoire parent au chemin de recherche des modules
-current_dir = Path(__file__).parent
-parent_dir = current_dir.parent.parent
-if str(parent_dir) not in sys.path:
-    sys.path.append(str(parent_dir))
-
 from argumentation_analysis.agents.tools.analysis.new.semantic_argument_analyzer import SemanticArgumentAnalyzer
 
 

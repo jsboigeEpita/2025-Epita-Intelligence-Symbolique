@@ -142,7 +142,7 @@ def main():
     
     # Vérifier les importations
     if not args.skip_tests:
-        test_imports_cmd = [sys.executable, str(script_dir / "test_imports.py")]
+        test_imports_cmd = [sys.executable, str(script_dir / "utils/test_imports_utils.py")]
         run_command(test_imports_cmd, "Vérification des importations")
     
     logging.info("\n=== Résumé ===")

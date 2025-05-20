@@ -19,7 +19,7 @@ from argumentation_analysis.orchestration.hierarchical.interfaces.strategic_tact
 from argumentation_analysis.orchestration.hierarchical.interfaces.tactical_operational import TacticalOperationalInterface
 
 from argumentation_analysis.orchestration.hierarchical.strategic.manager import StrategicManager
-from argumentation_analysis.orchestration.hierarchical.tactical.coordinator import TacticalCoordinator
+from argumentation_analysis.orchestration.hierarchical.tactical.coordinator import TaskCoordinator as TacticalCoordinator
 from argumentation_analysis.orchestration.hierarchical.operational.manager import OperationalManager
 
 from argumentation_analysis.orchestration.hierarchical.operational.adapters.extract_agent_adapter import ExtractAgentAdapter

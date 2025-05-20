@@ -275,6 +275,68 @@ async def run_analysis_conversation(
          run_logger.info(f"État final JVM: {jvm_status}")
          run_logger.info(f"--- Fin Run_{run_id} ---")
 
+# Classe AnalysisRunner pour encapsuler la fonction run_analysis_conversation
+class AnalysisRunner:
+   """
+   Classe pour encapsuler la fonction run_analysis_conversation.
+   
+   Cette classe permet d'exécuter une analyse rhétorique en utilisant
+   la fonction run_analysis_conversation avec des paramètres supplémentaires.
+   """
+   
+   def __init__(self, strategy=None):
+       """
+       Initialise un AnalysisRunner.
+       
+       Args:
+           strategy: La stratégie à utiliser pour l'analyse (non utilisée actuellement)
+       """
+       self.strategy = strategy
+       self.logger = logging.getLogger("AnalysisRunner")
+       self.logger.info("AnalysisRunner initialisé.")
+   
+   async def run_analysis(self, text_content, llm_service=None, use_informal_agent=True, use_pl_agent=True, message_hook=None):
+       """
+       Exécute une analyse rhétorique sur le texte fourni.
+       
+       Args:
+           text_content: Le texte à analyser
+           llm_service: Le service LLM à utiliser
+           use_informal_agent: Indique si l'agent informel doit être utilisé
+           use_pl_agent: Indique si l'agent PL doit être utilisé
+           message_hook: Hook pour intercepter les messages entre agents
+           
+       Returns:
+           Les résultats de l'analyse
+       """
+       # Créer le service LLM si non fourni
+       if llm_service is None:
+           from argumentation_analysis.core.llm_service import create_llm_service
+           llm_service = create_llm_service()
+           
+       # Exécuter l'analyse
+       self.logger.info(f"Exécution de l'analyse sur un texte de {len(text_content)} caractères")
+       
+       # Appeler la fonction run_analysis_conversation
+       # Note: Les paramètres use_informal_agent, use_pl_agent et message_hook sont ignorés
+       # car la fonction run_analysis_conversation ne les accepte pas
+       return await run_analysis_conversation(
+           texte_a_analyser=text_content,
+           llm_service=llm_service
+       )
+
+# Fonction pour exécuter l'analyse depuis l'extérieur du module
+async def run_analysis(text_content, llm_service=None):
+   """Fonction wrapper pour exécuter l'analyse depuis l'extérieur du module."""
+   if llm_service is None:
+       from argumentation_analysis.core.llm_service import create_llm_service
+       llm_service = create_llm_service()
+   
+   return await run_analysis_conversation(
+       texte_a_analyser=text_content,
+       llm_service=llm_service
+   )
+
 # Log de chargement
 module_logger = logging.getLogger(__name__)
 module_logger.debug("Module orchestration.analysis_runner chargé.")

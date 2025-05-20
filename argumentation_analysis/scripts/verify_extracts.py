@@ -35,13 +35,13 @@ file_handler.setFormatter(logging.Formatter('%(asctime)s [%(levelname)s] [%(name
 logger.addHandler(file_handler)
 
 # Imports des services et modèles
-from ..models.extract_definition import ExtractDefinitions, SourceDefinition, Extract
-from ..services.cache_service import CacheService
-from ..services.crypto_service import CryptoService
-from ..services.definition_service import DefinitionService
-from ..services.extract_service import ExtractService
-from ..services.fetch_service import FetchService
-from ..ui.config import ENCRYPTION_KEY, CONFIG_FILE, CONFIG_FILE_JSON
+from argumentation_analysis.models.extract_definition import ExtractDefinitions, SourceDefinition, Extract
+from argumentation_analysis.services.cache_service import CacheService
+from argumentation_analysis.services.crypto_service import CryptoService
+from argumentation_analysis.services.definition_service import DefinitionService
+from argumentation_analysis.services.extract_service import ExtractService
+from argumentation_analysis.services.fetch_service import FetchService
+from argumentation_analysis.ui.config import ENCRYPTION_KEY, CONFIG_FILE, CONFIG_FILE_JSON
 
 
 def verify_extracts(

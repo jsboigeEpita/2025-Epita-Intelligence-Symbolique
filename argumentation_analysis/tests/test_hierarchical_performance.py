@@ -27,12 +27,12 @@ from argumentation_analysis.orchestration.hierarchical.interfaces.strategic_tact
 from argumentation_analysis.orchestration.hierarchical.interfaces.tactical_operational import TacticalOperationalInterface
 
 from argumentation_analysis.orchestration.hierarchical.strategic.manager import StrategicManager
-from argumentation_analysis.orchestration.hierarchical.tactical.coordinator import TacticalCoordinator
+from argumentation_analysis.orchestration.hierarchical.tactical.coordinator import TaskCoordinator as TacticalCoordinator
 from argumentation_analysis.orchestration.hierarchical.operational.manager import OperationalManager
 
 # Importer les composants de l'ancienne architecture
 from argumentation_analysis.orchestration.analysis_runner import AnalysisRunner
-from argumentation_analysis.core.strategies import BalancedStrategy
+from argumentation_analysis.core.strategies import BalancedParticipationStrategy as BalancedStrategy
 
 # Importer l'exemple d'utilisation de la nouvelle architecture
 from argumentation_analysis.examples.run_hierarchical_orchestration import HierarchicalOrchestrator

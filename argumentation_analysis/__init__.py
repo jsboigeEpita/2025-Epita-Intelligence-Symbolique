@@ -14,6 +14,9 @@ import argumentation_analysis.agents
 import argumentation_analysis.orchestration
 import argumentation_analysis.ui
 import argumentation_analysis.utils
+import argumentation_analysis.examples
+import argumentation_analysis.services
+import argumentation_analysis.scripts
 from . import paths
 
 # Exposer certaines fonctions couramment utilisées
