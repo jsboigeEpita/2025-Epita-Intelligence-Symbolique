@@ -4,7 +4,7 @@ Tests unitaires pour le middleware de messagerie du système de communication mu
 
 import unittest
 import asyncio
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock, patch, AsyncMock
 from datetime import datetime
 
 from argumentation_analysis.core.communication.message import Message, MessageType, MessagePriority, AgentLevel
@@ -158,8 +158,8 @@ class TestMessageMiddleware(unittest.TestCase):
         
         # Vérifier la détermination des canaux
         self.assertEqual(self.middleware.determine_channel(command_message), ChannelType.HIERARCHICAL)
-        self.assertEqual(self.middleware.determine_channel(data_message), ChannelType.HIERARCHICAL)  # Basé sur le type d'info
-        self.assertEqual(self.middleware.determine_channel(collab_message), ChannelType.HIERARCHICAL)  # Par défaut
+        self.assertEqual(self.middleware.determine_channel(data_message), ChannelType.DATA)  # Basé sur le type d'info
+        self.assertEqual(self.middleware.determine_channel(collab_message), ChannelType.COLLABORATION)  # Basé sur le type de requête
         
         # Forcer le canal pour le message de données
         data_message.content["info_type"] = "analysis_result"
@@ -279,6 +279,195 @@ class TestMessageMiddleware(unittest.TestCase):
         # Vérifier les statistiques
         self.assertEqual(stats["messages_sent"], 5)
         self.assertEqual(stats["by_channel"][ChannelType.HIERARCHICAL.value]["sent"], 5)
+
+
+    def test_global_handler(self):
+        """Test des gestionnaires globaux de messages."""
+        # Créer un gestionnaire global simulé
+        global_handler = MagicMock()
+        
+        # Enregistrer le gestionnaire global
+        self.middleware.register_global_handler(global_handler)
+        
+        # Créer et envoyer un message
+        message = Message(
+            message_type=MessageType.INFORMATION,
+            sender="operational-agent-1",
+            sender_level=AgentLevel.OPERATIONAL,
+            content={"info_type": "status_update", DATA_DIR: {"status": "running"}},
+            recipient="tactical-agent-1"
+        )
+        
+        # Envoyer le message
+        self.middleware.send_message(message)
+        
+        # Recevoir le message (ce qui devrait déclencher le gestionnaire global)
+        self.middleware.receive_message("tactical-agent-1", ChannelType.HIERARCHICAL)
+        
+        # Vérifier que le gestionnaire global a été appelé
+        global_handler.assert_called_once()
+        self.assertEqual(global_handler.call_args[0][0].id, message.id)
+    
+    def test_initialize_protocols(self):
+        """Test de l'initialisation des protocoles de communication."""
+        # Initialiser les protocoles
+        self.middleware.initialize_protocols()
+        
+        # Vérifier que les protocoles ont été initialisés
+        self.assertIsNotNone(self.middleware.request_response)
+        self.assertIsNotNone(self.middleware.publish_subscribe)
+    
+    @patch('argumentation_analysis.core.communication.request_response.RequestResponseProtocol')
+    def test_send_request(self, mock_request_response):
+        """Test de la méthode send_request."""
+        # Configurer le mock
+        mock_protocol = MagicMock()
+        mock_request_response.return_value = mock_protocol
+        
+        # Initialiser les protocoles
+        self.middleware.initialize_protocols()
+        
+        # Appeler send_request
+        self.middleware.send_request(
+            sender="strategic-agent-1",
+            sender_level=AgentLevel.STRATEGIC,
+            request_type="get_analysis",
+            description="Besoin d'une analyse",
+            context={"text_id": "text-123"},
+            recipient="tactical-agent-1",
+            timeout=30
+        )
+        
+        # Vérifier que la méthode du protocole a été appelée
+        mock_protocol.send_request.assert_called_once()
+    
+    @patch('argumentation_analysis.core.communication.pub_sub.PublishSubscribeProtocol')
+    def test_publish(self, mock_pub_sub):
+        """Test de la méthode publish."""
+        # Configurer le mock
+        mock_protocol = MagicMock()
+        mock_pub_sub.return_value = mock_protocol
+        
+        # Initialiser les protocoles
+        self.middleware.initialize_protocols()
+        
+        # Appeler publish
+        self.middleware.publish(
+            sender="strategic-agent-1",
+            sender_level=AgentLevel.STRATEGIC,
+            topic="analysis_results",
+            data={"text_id": "text-123", "results": {"score": 0.85}}
+        )
+        
+        # Vérifier que la méthode du protocole a été appelée
+        mock_protocol.publish.assert_called_once()
+    
+    @patch('argumentation_analysis.core.communication.pub_sub.PublishSubscribeProtocol')
+    def test_subscribe(self, mock_pub_sub):
+        """Test de la méthode subscribe."""
+        # Configurer le mock
+        mock_protocol = MagicMock()
+        mock_pub_sub.return_value = mock_protocol
+        
+        # Initialiser les protocoles
+        self.middleware.initialize_protocols()
+        
+        # Créer un callback simulé
+        callback = MagicMock()
+        
+        # Appeler subscribe
+        self.middleware.subscribe(
+            subscriber_id="tactical-agent-1",
+            topic="analysis_results",
+            callback=callback
+        )
+        
+        # Vérifier que la méthode du protocole a été appelée
+        mock_protocol.subscribe.assert_called_once()
+    
+    @patch('argumentation_analysis.core.communication.request_response.RequestResponseProtocol')
+    @patch('argumentation_analysis.core.communication.pub_sub.PublishSubscribeProtocol')
+    def test_shutdown(self, mock_pub_sub, mock_request_response):
+        """Test de la méthode shutdown."""
+        # Configurer les mocks
+        mock_req_resp_protocol = MagicMock()
+        mock_pub_sub_protocol = MagicMock()
+        mock_request_response.return_value = mock_req_resp_protocol
+        mock_pub_sub.return_value = mock_pub_sub_protocol
+        
+        # Initialiser les protocoles
+        self.middleware.initialize_protocols()
+        
+        # Appeler shutdown
+        self.middleware.shutdown()
+        
+        # Vérifier que les méthodes shutdown des protocoles ont été appelées
+        mock_req_resp_protocol.shutdown.assert_called_once()
+        mock_pub_sub_protocol.shutdown.assert_called_once()
+
+
+class TestMessageMiddlewareAsync(unittest.IsolatedAsyncioTestCase):
+    """Tests pour les méthodes asynchrones du middleware de messagerie."""
+    
+    async def asyncSetUp(self):
+        """Initialisation avant chaque test."""
+        self.middleware = MessageMiddleware()
+        
+        # Enregistrer des canaux simulés
+        self.hierarchical_channel = MockChannel("hierarchical", ChannelType.HIERARCHICAL)
+        self.middleware.register_channel(self.hierarchical_channel)
+    
+    async def test_receive_message_async(self):
+        """Test de la méthode receive_message_async."""
+        # Créer et envoyer un message
+        message = Message(
+            message_type=MessageType.COMMAND,
+            sender="strategic-agent-1",
+            sender_level=AgentLevel.STRATEGIC,
+            content={"command_type": "analyze_text", "parameters": {"text_id": "text-123"}},
+            recipient="tactical-agent-1"
+        )
+        
+        self.middleware.send_message(message)
+        
+        # Recevoir le message de manière asynchrone
+        received_message = await self.middleware.receive_message_async(
+            "tactical-agent-1",
+            ChannelType.HIERARCHICAL
+        )
+        
+        # Vérifier que le message reçu est correct
+        self.assertIsNotNone(received_message)
+        self.assertEqual(received_message.id, message.id)
+        self.assertEqual(received_message.sender, "strategic-agent-1")
+        self.assertEqual(received_message.recipient, "tactical-agent-1")
+    
+    @patch('argumentation_analysis.core.communication.request_response.RequestResponseProtocol')
+    async def test_send_request_async(self, mock_request_response):
+        """Test de la méthode send_request_async."""
+        # Configurer le mock
+        mock_protocol = MagicMock()
+        mock_protocol.send_request_async = AsyncMock()
+        mock_protocol.send_request_async.return_value = {"status": "success"}
+        mock_request_response.return_value = mock_protocol
+        
+        # Initialiser les protocoles
+        self.middleware.initialize_protocols()
+        
+        # Appeler send_request_async
+        result = await self.middleware.send_request_async(
+            sender="strategic-agent-1",
+            sender_level=AgentLevel.STRATEGIC,
+            request_type="get_analysis",
+            description="Besoin d'une analyse",
+            context={"text_id": "text-123"},
+            recipient="tactical-agent-1",
+            timeout=30
+        )
+        
+        # Vérifier que la méthode du protocole a été appelée
+        mock_protocol.send_request_async.assert_called_once()
+        self.assertEqual(result, {"status": "success"})
 
 
 if __name__ == "__main__":
