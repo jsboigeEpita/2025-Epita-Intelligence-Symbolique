@@ -39,6 +39,7 @@ class OperationalAdapter:
         self.agent_id = agent_id
         self.middleware = middleware
         self.logger = logging.getLogger(f"OperationalAdapter.{agent_id}")
+        self.last_assistance_response = None  # Pour les tests
         self.logger.setLevel(logging.INFO)
     
     def receive_task(
@@ -435,9 +436,11 @@ class OperationalAdapter:
             
             if response:
                 self.logger.info(f"Received assistance from {recipient_id} for issue {issue_type}")
-                return response.content.get(DATA_DIR, {})
+                self.last_assistance_response = response.content.get("data", {})
+                return self.last_assistance_response
             
             self.logger.warning(f"Assistance request for issue {issue_type} timed out")
+            self.last_assistance_response = None
             return None
             
         except Exception as e:

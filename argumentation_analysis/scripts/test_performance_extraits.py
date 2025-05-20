@@ -38,7 +38,8 @@ logging.basicConfig(
 logger = logging.getLogger("TestPerformanceExtraits")
 
 # Créer un répertoire pour les résultats
-RESULTS_DIR = Path(root_dir) / RESULTS_DIR / "performance_tests"
+RESULTS_BASE_DIR = Path(root_dir) / "results"
+RESULTS_DIR = RESULTS_BASE_DIR / "performance_tests"
 RESULTS_DIR.mkdir(exist_ok=True, parents=True)
 
 # Chemins des extraits à tester
@@ -323,8 +324,8 @@ async def run_performance_test(extrait):
     # Création du Service LLM
     from argumentation_analysis.core.llm_service import create_llm_service
 
-from argumentation_analysis.paths import RESULTS_DIR
-
+    from argumentation_analysis.paths import RESULTS_DIR
+    
     llm_service = create_llm_service()
     
     if not llm_service:

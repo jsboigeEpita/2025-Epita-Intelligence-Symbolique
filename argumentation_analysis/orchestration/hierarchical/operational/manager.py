@@ -13,8 +13,11 @@ import uuid
 
 from argumentation_analysis.orchestration.hierarchical.operational.state import OperationalState
 from argumentation_analysis.orchestration.hierarchical.operational.agent_registry import OperationalAgentRegistry
-from argumentation_analysis.orchestration.hierarchical.interfaces.tactical_operational import TacticalOperationalInterface
+# Import différé pour éviter l'importation circulaire
 from argumentation_analysis.paths import RESULTS_DIR
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from argumentation_analysis.orchestration.hierarchical.interfaces.tactical_operational import TacticalOperationalInterface
 from argumentation_analysis.core.communication import (
     MessageMiddleware, OperationalAdapter, Message,
     ChannelType, MessagePriority, MessageType, AgentLevel
@@ -30,7 +33,7 @@ class OperationalManager:
     """
     
     def __init__(self, operational_state: Optional[OperationalState] = None,
-                tactical_operational_interface: Optional[TacticalOperationalInterface] = None,
+                tactical_operational_interface: Optional['TacticalOperationalInterface'] = None,
                 middleware: Optional[MessageMiddleware] = None):
         """
         Initialise un nouveau gestionnaire opérationnel.
@@ -62,7 +65,7 @@ class OperationalManager:
         # S'abonner aux tâches et aux messages
         self._subscribe_to_messages()
     
-    def set_tactical_operational_interface(self, interface: TacticalOperationalInterface) -> None:
+    def set_tactical_operational_interface(self, interface: 'TacticalOperationalInterface') -> None:
         """
         Définit l'interface tactique-opérationnelle.
         

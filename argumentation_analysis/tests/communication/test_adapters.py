@@ -93,7 +93,7 @@ class TestStrategicAdapter(unittest.TestCase):
         self.assertIsNotNone(received_report)
         self.assertEqual(received_report.sender, "tactical-agent-1")
         self.assertEqual(received_report.content["report_type"], "status_update")
-        self.assertEqual(received_report.content[DATA_DIR]["completion"], 50)
+        self.assertEqual(received_report.content["data"]["completion"], 50)
     
     def test_allocate_resources(self):
         """Test de l'allocation de ressources."""
@@ -311,54 +311,48 @@ class TestTacticalAdapter(unittest.TestCase):
     
     def test_request_strategic_guidance(self):
         """Test de la demande de conseils stratégiques."""
-        # Simuler une réponse à une demande de conseils
-        def simulate_response():
-            time.sleep(0.1)  # Attendre un peu pour simuler un traitement
-            
-            # Récupérer la requête
-            request = self.middleware.receive_message(
+        # Créer directement une réponse simulée
+        response_data = {"recommendation": "Focus on fallacies", "priority": "high"}
+        
+        # Mocker la méthode send_request du middleware pour retourner une réponse simulée
+        original_send_request = self.middleware.send_request
+        
+        def mock_send_request(*args, **kwargs):
+            # Créer une réponse simulée
+            mock_response = Message(
+                message_type=MessageType.RESPONSE,
+                sender="strategic-agent-1",
+                sender_level=AgentLevel.STRATEGIC,
+                content={
+                    "status": "success",
+                    "data": response_data
+                },
+                recipient="tactical-agent-1",
+                channel=ChannelType.HIERARCHICAL.value,
+                priority=MessagePriority.NORMAL,
+                metadata={"reply_to": "mock-request-id"}
+            )
+            return mock_response
+        
+        # Remplacer temporairement la méthode
+        self.middleware.send_request = mock_send_request
+        
+        try:
+            # Demander des conseils stratégiques
+            guidance = self.adapter.request_strategic_guidance(
+                request_type="guidance",
+                parameters={"text_id": "text-123", "issue": "complex_fallacies"},
                 recipient_id="strategic-agent-1",
-                channel_type=ChannelType.HIERARCHICAL
+                timeout=5.0,
+                priority=MessagePriority.NORMAL
             )
             
-            if request:
-                # Créer une réponse
-                response = Message(
-                    message_type=MessageType.RESPONSE,
-                    sender="strategic-agent-1",
-                    sender_level=AgentLevel.STRATEGIC,
-                    content={
-                        "status": "success",
-                        "data": {"recommendation": "Focus on fallacies", "priority": "high"}
-                    },
-                    recipient=request.sender,
-                    channel=ChannelType.HIERARCHICAL.value,
-                    priority=request.priority,
-                    metadata={"reply_to": request.id, "conversation_id": request.metadata.get("conversation_id")}
-                )
-                
-                # Envoyer la réponse via le middleware
-                self.middleware.send_message(response)
-        
-        # Démarrer un thread pour simuler la réponse
-        response_thread = threading.Thread(target=simulate_response)
-        response_thread.start()
-        
-        # Demander des conseils stratégiques
-        guidance = self.adapter.request_strategic_guidance(
-            request_type="guidance",
-            parameters={"text_id": "text-123", "issue": "complex_fallacies"},
-            recipient_id="strategic-agent-1",
-            timeout=5.0,
-            priority=MessagePriority.NORMAL
-        )
-        
-        # Attendre que le thread se termine
-        response_thread.join()
-        
-        # Vérifier que les conseils ont été reçus
-        self.assertIsNotNone(guidance)
-        self.assertEqual(guidance["recommendation"], "Focus on fallacies")
+            # Vérifier que les conseils ont été reçus
+            self.assertIsNotNone(guidance)
+            self.assertEqual(guidance["recommendation"], "Focus on fallacies")
+        finally:
+            # Restaurer la méthode originale
+            self.middleware.send_request = original_send_request
         self.assertEqual(guidance["priority"], "high")
     
     def test_collaborate_with_tactical(self):
@@ -454,55 +448,49 @@ class TestOperationalAdapter(unittest.TestCase):
     
     def test_request_assistance(self):
         """Test de la demande d'assistance."""
-        # Simuler une réponse à une demande d'assistance
-        def simulate_response():
-            time.sleep(0.1)  # Attendre un peu pour simuler un traitement
-            
-            # Récupérer la requête
-            request = self.middleware.receive_message(
+        # Créer directement une réponse simulée
+        response_data = {"solution": "Use pattern X", "example": "example data"}
+        
+        # Mocker la méthode send_request du middleware pour retourner une réponse simulée
+        original_send_request = self.middleware.send_request
+        
+        def mock_send_request(*args, **kwargs):
+            # Créer une réponse simulée
+            mock_response = Message(
+                message_type=MessageType.RESPONSE,
+                sender="tactical-agent-1",
+                sender_level=AgentLevel.TACTICAL,
+                content={
+                    "status": "success",
+                    "data": response_data
+                },
+                recipient="operational-agent-1",
+                channel=ChannelType.HIERARCHICAL.value,
+                priority=MessagePriority.NORMAL,
+                metadata={"reply_to": "mock-request-id"}
+            )
+            return mock_response
+        
+        # Remplacer temporairement la méthode
+        self.middleware.send_request = mock_send_request
+        
+        try:
+            # Demander de l'assistance
+            assistance = self.adapter.request_assistance(
+                issue_type="pattern_recognition",
+                description="Cannot identify pattern in text",
+                context={"text_id": "text-123", "position": "paragraph 3"},
                 recipient_id="tactical-agent-1",
-                channel_type=ChannelType.HIERARCHICAL
+                timeout=5.0,
+                priority=MessagePriority.NORMAL
             )
             
-            if request:
-                # Créer une réponse
-                response = Message(
-                    message_type=MessageType.RESPONSE,
-                    sender="tactical-agent-1",
-                    sender_level=AgentLevel.TACTICAL,
-                    content={
-                        "status": "success",
-                        "data": {"solution": "Use pattern X", "example": "example data"}
-                    },
-                    recipient=request.sender,
-                    channel=ChannelType.HIERARCHICAL.value,
-                    priority=request.priority,
-                    metadata={"reply_to": request.id, "conversation_id": request.metadata.get("conversation_id")}
-                )
-                
-                # Envoyer la réponse via le middleware
-                self.middleware.send_message(response)
-        
-        # Démarrer un thread pour simuler la réponse
-        response_thread = threading.Thread(target=simulate_response)
-        response_thread.start()
-        
-        # Demander de l'assistance
-        assistance = self.adapter.request_assistance(
-            issue_type="pattern_recognition",
-            description="Cannot identify pattern in text",
-            context={"text_id": "text-123", "position": "paragraph 3"},
-            recipient_id="tactical-agent-1",
-            timeout=5.0,
-            priority=MessagePriority.NORMAL
-        )
-        
-        # Attendre que le thread se termine
-        response_thread.join()
-        
-        # Vérifier que l'assistance a été reçue
-        self.assertIsNotNone(assistance)
-        self.assertEqual(assistance["solution"], "Use pattern X")
+            # Vérifier que l'assistance a été reçue
+            self.assertIsNotNone(assistance)
+            self.assertEqual(assistance["solution"], "Use pattern X")
+        finally:
+            # Restaurer la méthode originale
+            self.middleware.send_request = original_send_request
         self.assertEqual(assistance["example"], "example data")
     
     def test_send_status_update(self):

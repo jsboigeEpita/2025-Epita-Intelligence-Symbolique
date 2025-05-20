@@ -177,7 +177,7 @@ class TacticalAdapter:
             content={
                 "info_type": "report",
                 "report_type": report_type,
-                DATA_DIR: content
+                "data": content
             },
             recipient=recipient_id,
             channel=ChannelType.HIERARCHICAL.value,
@@ -279,7 +279,7 @@ class TacticalAdapter:
             
             if response:
                 self.logger.info(f"Received guidance from {recipient_id} for {request_type} request")
-                return response.content.get(DATA_DIR)
+                return response.content.get("data")
             
             return None
             
@@ -323,7 +323,7 @@ class TacticalAdapter:
             
             if response:
                 self.logger.info(f"Received guidance from {recipient_id} for {request_type} request")
-                return response.content.get(DATA_DIR)
+                return response.content.get("data")
             
             self.logger.warning(f"Request {request_type} to {recipient_id} timed out")
             return None

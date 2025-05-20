@@ -12,7 +12,7 @@ def verify_files():
         'docs/reports/rapport_workflow_collaboratif/rapport_analyse_workflow_collaboratif.md',
         'scripts/testing/simulation_agent_informel.py',
         'scripts/testing/test_agent_informel.py',
-        'scripts/utils/test_imports.py',
+        'scripts/utils/test_imports_utils.py',
         'examples/test_data/test_sophismes_complexes.txt'
     ]
     

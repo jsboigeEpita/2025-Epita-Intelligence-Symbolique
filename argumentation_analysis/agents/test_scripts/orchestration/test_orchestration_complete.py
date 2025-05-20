@@ -163,9 +163,7 @@ async def run_orchestration_test():
     
     # Exécuter l'orchestration avec tous les agents
     from argumentation_analysis.orchestration.analysis_runner import run_analysis_conversation
-
-from argumentation_analysis.paths import LIBS_DIR
-
+    from argumentation_analysis.paths import LIBS_DIR
     
     logger.info("Lancement de l'orchestration avec tous les agents...")
     start_time = asyncio.get_event_loop().time()

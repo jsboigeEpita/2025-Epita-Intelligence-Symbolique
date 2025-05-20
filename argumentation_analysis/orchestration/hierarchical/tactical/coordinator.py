@@ -667,3 +667,6 @@ class TaskCoordinator:
         self.logger.info("Rapport de statut généré et envoyé au niveau stratégique")
         
         return report
+
+# Alias pour compatibilité avec les tests
+TacticalCoordinator = TaskCoordinator
