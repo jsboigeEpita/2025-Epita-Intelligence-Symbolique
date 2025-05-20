@@ -24,6 +24,8 @@ from .data_channel import DataChannel
 from .strategic_adapter import StrategicAdapter
 from .tactical_adapter import TacticalAdapter
 from .operational_adapter import OperationalAdapter
+# Importer le patch pour ajouter la méthode get_adapter à MessageMiddleware
+from .middleware_patch import *
 
 __all__ = [
     'Message', 'MessageType', 'MessagePriority', 'AgentLevel',

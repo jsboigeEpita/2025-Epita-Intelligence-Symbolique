@@ -23,25 +23,25 @@ if str(parent_dir) not in sys.path:
 # Liste des modules à vérifier
 modules_to_check = [
     # Modules principaux
-    "argumentiation_analysis",
-    "argumentiation_analysis.core",
-    "argumentiation_analysis.agents",
-    "argumentiation_analysis.orchestration",
-    "argumentiation_analysis.paths",
+    "argumentation_analysis",
+    "argumentation_analysis.core",
+    "argumentation_analysis.agents",
+    "argumentation_analysis.orchestration",
+    "argumentation_analysis.paths",
     
     # Sous-modules
-    "argumentiation_analysis.core.llm_service",
-    "argumentiation_analysis.core.jvm_setup",
-    "argumentiation_analysis.core.shared_state",
+    "argumentation_analysis.core.llm_service",
+    "argumentation_analysis.core.jvm_setup",
+    "argumentation_analysis.core.shared_state",
     
     # Modules avec redirection
-    "argumentiation_analysis.agents.core.extract",
-    "argumentiation_analysis.agents.extract",  # Devrait être redirigé vers agents.core.extract
+    "argumentation_analysis.agents.core.extract",
+    "argumentation_analysis.agents.extract",  # Devrait être redirigé vers agents.core.extract
     
     # Classes et fonctions spécifiques
-    "argumentiation_analysis.core.llm_service.create_llm_service",
-    "argumentiation_analysis.agents.core.extract.extract_agent.ExtractAgent",
-    "argumentiation_analysis.agents.extract.ExtractAgent",  # Devrait fonctionner via la redirection
+    "argumentation_analysis.core.llm_service.create_llm_service",
+    "argumentation_analysis.agents.core.extract.extract_agent.ExtractAgent",
+    "argumentation_analysis.agents.extract.ExtractAgent",  # Devrait fonctionner via la redirection
 ]
 
 # Vérifier chaque module
