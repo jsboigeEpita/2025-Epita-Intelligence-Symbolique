@@ -33,10 +33,10 @@ class TestInformalAnalysisPlugin(unittest.TestCase):
         })
         self.test_df.set_index('PK', inplace=True)
 
-    @patch('agents.core.informal.informal_definitions.pd.read_csv')
-    @patch('agents.core.informal.informal_definitions.requests.get')
-    @patch('agents.core.informal.informal_definitions.validate_taxonomy_file', return_value=True)
-    @patch('agents.core.informal.informal_definitions.get_taxonomy_path', return_value='mock_path.csv')
+    @patch('argumentation_analysis.agents.core.informal.informal_definitions.pd.read_csv')
+    @patch('argumentation_analysis.agents.core.informal.informal_definitions.requests.get')
+    @patch('argumentation_analysis.agents.core.informal.informal_definitions.validate_taxonomy_file', return_value=True)
+    @patch('argumentation_analysis.agents.core.informal.informal_definitions.get_taxonomy_path', return_value='mock_path.csv')
     @patch('builtins.open', new_callable=mock_open)
     def test_internal_load_and_prepare_dataframe(self, mock_file, mock_get_path, mock_validate, mock_requests, mock_read_csv):
         """Teste le chargement et la préparation du DataFrame."""
@@ -208,9 +208,9 @@ class TestSetupInformalKernel(AsyncTestCase):
         self.llm_service = MagicMock()
         self.llm_service.service_id = "test_service"
 
-    @patch('agents.core.informal.informal_definitions.prompt_identify_args_v8')
-    @patch('agents.core.informal.informal_definitions.prompt_analyze_fallacies_v1')
-    @patch('agents.core.informal.informal_definitions.prompt_justify_fallacy_attribution_v1')
+    @patch('argumentation_analysis.agents.core.informal.informal_definitions.prompt_identify_args_v8')
+    @patch('argumentation_analysis.agents.core.informal.informal_definitions.prompt_analyze_fallacies_v1')
+    @patch('argumentation_analysis.agents.core.informal.informal_definitions.prompt_justify_fallacy_attribution_v1')
     def test_setup_informal_kernel(self, mock_justify, mock_analyze, mock_identify):
         """Teste la configuration du kernel pour l'agent informel."""
         # Configurer les mocks
