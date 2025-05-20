@@ -9,10 +9,8 @@ from datetime import datetime
 
 from argumentation_analysis.orchestration.hierarchical.tactical.state import TacticalState
 from argumentation_analysis.orchestration.hierarchical.interfaces.tactical_operational import TacticalOperationalInterface
-from argumentation_analysis.core.communication import (
-
 from argumentation_analysis.paths import DATA_DIR, RESULTS_DIR
-
+from argumentation_analysis.core.communication import (
     MessageMiddleware, TacticalAdapter, OperationalAdapter,
     ChannelType, MessagePriority, Message, MessageType, AgentLevel
 )
