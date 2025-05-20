@@ -66,6 +66,7 @@ ENV/
 .env
 .venv
 .coverage
+coverage.xml
 htmlcov/
 .tox/
 .nox/
