@@ -27,12 +27,12 @@ from argumentation_analysis.orchestration.hierarchical.strategic.manager import 
 from argumentation_analysis.orchestration.hierarchical.strategic.planner import StrategicPlanner
 from argumentation_analysis.orchestration.hierarchical.strategic.allocator import ResourceAllocator
 
-from argumentation_analysis.orchestration.hierarchical.tactical.coordinator import TacticalCoordinator
-from argumentation_analysis.orchestration.hierarchical.tactical.monitor import TaskMonitor
+from argumentation_analysis.orchestration.hierarchical.tactical.coordinator import TaskCoordinator as TacticalCoordinator
+from argumentation_analysis.orchestration.hierarchical.tactical.monitor import ProgressMonitor as TaskMonitor
 from argumentation_analysis.orchestration.hierarchical.tactical.resolver import ConflictResolver
 
 from argumentation_analysis.orchestration.hierarchical.operational.manager import OperationalManager
-from argumentation_analysis.orchestration.hierarchical.operational.agent_registry import AgentRegistry
+from argumentation_analysis.orchestration.hierarchical.operational.agent_registry import OperationalAgentRegistry as AgentRegistry
 
 from argumentation_analysis.orchestration.hierarchical.operational.adapters.extract_agent_adapter import ExtractAgentAdapter
 from argumentation_analysis.orchestration.hierarchical.operational.adapters.informal_agent_adapter import InformalAgentAdapter
@@ -420,8 +420,7 @@ async def main():
     # Afficher les résultats
     if args.output:
         import json
-
-from argumentation_analysis.paths import RESULTS_DIR
+        from argumentation_analysis.paths import RESULTS_DIR
 
         try:
             with open(args.output, "w", encoding="utf-8") as f:
