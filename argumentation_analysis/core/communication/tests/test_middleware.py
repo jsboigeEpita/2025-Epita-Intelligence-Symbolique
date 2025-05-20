@@ -143,7 +143,7 @@ class TestMessageMiddleware(unittest.TestCase):
             message_type=MessageType.INFORMATION,
             sender="operational-agent-1",
             sender_level=AgentLevel.OPERATIONAL,
-            content={"info_type": "analysis_result", DATA_DIR: {"result": "some data"}},
+            content={"info_type": "analysis_result", "data": {"result": "some data"}},
             recipient="tactical-agent-1"
         )
         
@@ -158,8 +158,8 @@ class TestMessageMiddleware(unittest.TestCase):
         
         # Vérifier la détermination des canaux
         self.assertEqual(self.middleware.determine_channel(command_message), ChannelType.HIERARCHICAL)
-        self.assertEqual(self.middleware.determine_channel(data_message), ChannelType.HIERARCHICAL)  # Basé sur le type d'info
-        self.assertEqual(self.middleware.determine_channel(collab_message), ChannelType.HIERARCHICAL)  # Par défaut
+        self.assertEqual(self.middleware.determine_channel(data_message), ChannelType.DATA)  # Messages avec info_type="analysis_result" vont sur le canal DATA
+        self.assertEqual(self.middleware.determine_channel(collab_message), ChannelType.COLLABORATION)  # Messages avec request_type="assistance" vont sur le canal COLLABORATION
         
         # Forcer le canal pour le message de données
         data_message.content["info_type"] = "analysis_result"
@@ -197,7 +197,7 @@ class TestMessageMiddleware(unittest.TestCase):
                 message_type=MessageType.INFORMATION,
                 sender="operational-agent-1",
                 sender_level=AgentLevel.OPERATIONAL,
-                content={"info_type": "task_result", DATA_DIR: {"result": "some data"}},
+                content={"info_type": "task_result", "data": {"result": "some data"}},
                 recipient=recipient,
                 priority=MessagePriority.NORMAL
             )
