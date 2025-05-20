@@ -1,94 +1,26 @@
-# Ignorer les fichiers JDK
-jdk11/
-openjdk11.zip
-
-# Fichiers compilés
-*.class
-*.jar
-*.war
-*.ear
-*.zip
-*.tar.gz
-*.rar
-
-# Fichiers de build
-bin/
-build/
-target/
-out/
-dist/
-
-# Fichiers de logs
-*.log
-logs/
-log/
-
-# Fichiers temporaires
-*.tmp
-*.bak
-*.swp
-*~.nib
-*.DS_Store
-Thumbs.db
-
-# Fichiers d'IDE
-.idea/
-.vscode/
-*.iml
-*.iws
-*.ipr
-.classpath
-.project
-.settings/
-.metadata/
-nbproject/
-nb-configuration.xml
-
-# Fichiers spécifiques à Maven
-.mvn/
-mvnw
-mvnw.cmd
-
-# Fichiers spécifiques à Gradle
-.gradle/
-gradle/
-gradlew
-gradlew.bat
-
-# Fichiers spécifiques à Python
+# Python bytecode
 __pycache__/
 *.py[cod]
 *$py.class
-.Python
-env/
-venv/
-ENV/
-.env
-.venv
+
+# Test coverage
 .coverage
+coverage.xml
 htmlcov/
-.tox/
-.nox/
-.hypothesis/
-.pytest_cache/
-*.egg-info/
+coverage.json
 
-# Fichiers et répertoires spécifiques au projet
-argumentation_analysis/temp_downloads/
-argumentation_analysis/text_cache/
-argumentation_analysis/agents/tools/analysis/enhanced/data/
-argumentation_analysis/tests/tools/reports/
+# Environnements virtuels
+venv_test/
+venv/
+env/
+ENV/
 
-# Contenu sensible
-**/Discours_*
-**/summaries/Discours_*
-rapport_contenu_sensible_*.md
-*sensitive_content*.py
-*sensitive_content*.md
-
-# Fichiers temporaires additionnels
+# Fichiers temporaires
+*.tmp
+*.log
+*.bak
 temp_extracts/
+logs/
 
-# Éviter les répertoires mal orthographiés
-argumentiation_analysis/
-argumentiation_analysis.egg-info/
+# Fichiers spécifiques au projet
+*.egg-info/
