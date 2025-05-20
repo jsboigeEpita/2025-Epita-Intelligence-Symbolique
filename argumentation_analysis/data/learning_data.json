@@ -7,9 +7,15 @@
       "is_correct": true,
       "feedback_text": "Bonne détection",
       "timestamp": "2025-05-17T14:25:49.690337"
+    },
+    {
+      "fallacy_id": "fallacy_0",
+      "is_correct": true,
+      "feedback_text": "Bonne détection",
+      "timestamp": "2025-05-19T20:02:43.271393"
     }
   ],
   "confidence_adjustments": {
-    "Appel à l'autorité": 0.05
+    "Appel à l'autorité": 0.1
   }
 }

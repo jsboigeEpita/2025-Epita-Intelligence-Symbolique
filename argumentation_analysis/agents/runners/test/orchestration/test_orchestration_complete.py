@@ -16,6 +16,7 @@ import asyncio
 import logging
 from pathlib import Path
 from datetime import datetime
+from argumentation_analysis.paths import LIBS_DIR
 
 # Ajouter le répertoire racine au chemin de recherche des modules
 current_dir = Path(__file__).parent
@@ -163,9 +164,6 @@ async def run_orchestration_test():
     
     # Exécuter l'orchestration avec tous les agents
     from argumentation_analysis.orchestration.analysis_runner import run_analysis_conversation
-
-from argumentation_analysis.paths import LIBS_DIR
-
     
     logger.info("Lancement de l'orchestration avec tous les agents...")
     start_time = asyncio.get_event_loop().time()

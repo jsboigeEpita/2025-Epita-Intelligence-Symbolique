@@ -313,7 +313,7 @@ class DataChannel(Channel):
                 return False
             
             # Vérifier si le message contient des données volumineuses
-            data = message.content.get(DATA_DIR)
+            data = message.content.get("data")
             if data and isinstance(data, dict) and len(str(data)) > self.max_inline_data_size:
                 # Stocker les données séparément
                 data_id = f"data-{uuid.uuid4().hex[:8]}"
@@ -330,7 +330,7 @@ class DataChannel(Channel):
                 )
                 
                 # Remplacer les données par une référence
-                message.content[DATA_DIR] = None
+                message.content["data"] = None
                 message.content["data_reference"] = {
                     "data_id": data_id,
                     "version_id": version_id,
@@ -396,7 +396,7 @@ class DataChannel(Channel):
                                     )
                                     
                                     # Remplacer la référence par les données
-                                    message.content[DATA_DIR] = data
+                                    message.content["data"] = data
                                     message.content.pop("data_reference", None)
                                     
                                     # Mettre à jour les statistiques
@@ -503,7 +503,7 @@ class DataChannel(Channel):
                                     message_type=message.type,
                                     sender=message.sender,
                                     sender_level=message.sender_level,
-                                    content={**message.content, DATA_DIR: data, "data_reference": None},
+                                    content={**message.content, "data": data, "data_reference": None},
                                     recipient=message.recipient,
                                     channel=message.channel,
                                     priority=message.priority,
