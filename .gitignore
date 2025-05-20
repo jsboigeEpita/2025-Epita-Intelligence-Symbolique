@@ -24,3 +24,15 @@ logs/
 
 # Fichiers spécifiques au projet
 *.egg-info/
+
+# Fichiers de configuration locale
+.env
+.vscode/
+.idea/
+
+# Bibliothèques externes
+libs/*.jar
+vendor/
+
+# Fichiers de documentation spécifiques
+README_TESTS.md
