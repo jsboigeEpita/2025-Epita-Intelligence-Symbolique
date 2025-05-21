@@ -9,7 +9,7 @@ Les projets sont organisés en quatre catégories thématiques principales :
 1. [**Fondements théoriques et techniques**](./categories/fondements_theoriques.md) - Projets centrés sur les aspects formels, logiques et théoriques de l'argumentation
 2. [**Développement système et infrastructure**](./categories/developpement_systeme.md) - Projets axés sur l'architecture, l'orchestration et les composants techniques
 3. [**Expérience utilisateur et applications**](./categories/experience_utilisateur.md) - Projets orientés vers les interfaces, visualisations et cas d'usage concrets
-4. [**Lutte contre la désinformation**](./experience_utilisateur.md#33-projets-de-lutte-contre-la-désinformation) - Projets axés sur la détection, l'analyse et la lutte contre la désinformation
+4. [**Lutte contre la désinformation**](./categories/experience_utilisateur.md#326-système-danalyse-de-débats-politiques-et-surveillance-des-médias) - Projets axés sur la détection, l'analyse et la lutte contre la désinformation
 
 Chaque catégorie regroupe des projets partageant des objectifs et des approches similaires, permettant aux étudiants de se concentrer sur un domaine spécifique de l'intelligence symbolique et de l'argumentation.
 
@@ -21,7 +21,7 @@ Les projets sont documentés à travers plusieurs fichiers complémentaires :
    - [fondements_theoriques.md](./categories/fondements_theoriques.md)
    - [developpement_systeme.md](./categories/developpement_systeme.md)
    - [experience_utilisateur.md](./categories/experience_utilisateur.md)
-   - [lutte_desinformation.md](./experience_utilisateur.md#33-projets-de-lutte-contre-la-désinformation)
+   - [lutte_desinformation.md](./categories/experience_utilisateur.md#326-système-danalyse-de-débats-politiques-et-surveillance-des-médias)
 
 2. **Fichiers thématiques complémentaires** :
    - [modeles_affaires_ia.md](./modeles_affaires_ia.md) - Présente les modèles d'affaires et cas d'usage commerciaux pour les systèmes d'analyse argumentative. Ce document est particulièrement pertinent pour les projets de la section 3.2.9 "Applications commerciales d'analyse argumentative" du fichier experience_utilisateur.md.
@@ -67,15 +67,15 @@ Ces projets sont plus complexes et nécessitent une expertise technique solide a
 - [Argumentation basée sur les hypothèses (ABA)](./categories/fondements_theoriques.md#124-argumentation-basée-sur-les-hypothèses-aba)
 - [Argumentation structurée (ASPIC+)](./categories/fondements_theoriques.md#126-argumentation-structurée-aspic)
 - [Abstract Dialectical Frameworks (ADF)](./categories/fondements_theoriques.md#128-abstract-dialectical-frameworks-adf)
-- [Fact-checking automatisé et détection de désinformation](./experience_utilisateur.md#331-fact-checking-automatisé-et-détection-de-désinformation)
-- [Système d'analyse de débats politiques et surveillance des médias](./experience_utilisateur.md#326-système-danalyse-de-débats-politiques-et-surveillance-des-médias)
-- [Protection des systèmes d'IA contre les attaques adversariales](./experience_utilisateur.md#333-protection-des-systèmes-dia-contre-les-attaques-adversariales)
+- [Fact-checking automatisé et détection de désinformation](./categories/experience_utilisateur.md#326-système-danalyse-de-débats-politiques-et-surveillance-des-médias)
+- [Système d'analyse de débats politiques et surveillance des médias](./categories/experience_utilisateur.md#326-système-danalyse-de-débats-politiques-et-surveillance-des-médias)
+- [Protection des systèmes d'IA contre les attaques adversariales](./categories/experience_utilisateur.md#326-système-danalyse-de-débats-politiques-et-surveillance-des-médias)
 
 ### Niveau ⭐⭐⭐⭐⭐ (Très avancé)
 Ces projets représentent les défis les plus ambitieux et nécessitent une expertise technique de haut niveau ainsi qu'une compréhension approfondie des concepts théoriques.
 
-- [ArgumentuMind: Système cognitif de compréhension argumentative](./experience_utilisateur.md#334-argumentumind-système-cognitif-de-compréhension-argumentative)
-- [ArgumentuShield: Système de protection cognitive contre la désinformation](./experience_utilisateur.md#335-argumentushield-système-de-protection-cognitive-contre-la-désinformation)
+- [ArgumentuMind: Système cognitif de compréhension argumentative](./categories/experience_utilisateur.md#326-système-danalyse-de-débats-politiques-et-surveillance-des-médias)
+- [ArgumentuShield: Système de protection cognitive contre la désinformation](./categories/experience_utilisateur.md#326-système-danalyse-de-débats-politiques-et-surveillance-des-médias)
 
 ## Filtrage par Durée Estimée
 
@@ -113,13 +113,13 @@ Ces projets représentent les défis les plus ambitieux, nécessitant un investi
 - [Abstraction du moteur agentique](./categories/developpement_systeme.md#231-abstraction-du-moteur-agentique)
 - [Agent de formalisation logique](./categories/developpement_systeme.md#234-agent-de-formalisation-logique)
 - [Intégration de LLMs locaux légers](./categories/developpement_systeme.md#236-intégration-de-llms-locaux-légers)
-- [Fact-checking automatisé et détection de désinformation](./experience_utilisateur.md#331-fact-checking-automatisé-et-détection-de-désinformation)
+- [Fact-checking automatisé et détection de désinformation](./categories/experience_utilisateur.md#326-système-danalyse-de-débats-politiques-et-surveillance-des-médias)
 - [Développement d'un serveur MCP pour l'analyse argumentative](./categories/developpement_systeme.md#253-développement-dun-serveur-mcp-pour-lanalyse-argumentative)
 - [Serveur MCP pour les frameworks d'argumentation Tweety](./categories/developpement_systeme.md#255-serveur-mcp-pour-les-frameworks-dargumentation-tweety)
-- [Protection des systèmes d'IA contre les attaques adversariales](./experience_utilisateur.md#333-protection-des-systèmes-dia-contre-les-attaques-adversariales)
+- [Protection des systèmes d'IA contre les attaques adversariales](./categories/experience_utilisateur.md#326-système-danalyse-de-débats-politiques-et-surveillance-des-médias)
 - [Système de collaboration en temps réel](./categories/experience_utilisateur.md#317-système-de-collaboration-en-temps-réel)
-- [ArgumentuMind: Système cognitif de compréhension argumentative](./experience_utilisateur.md#334-argumentumind-système-cognitif-de-compréhension-argumentative)
-- [ArgumentuShield: Système de protection cognitive contre la désinformation](./experience_utilisateur.md#335-argumentushield-système-de-protection-cognitive-contre-la-désinformation)
+- [ArgumentuMind: Système cognitif de compréhension argumentative](./categories/experience_utilisateur.md#326-système-danalyse-de-débats-politiques-et-surveillance-des-médias)
+- [ArgumentuShield: Système de protection cognitive contre la désinformation](./categories/experience_utilisateur.md#326-système-danalyse-de-débats-politiques-et-surveillance-des-médias)
 
 ## Filtrage par Technologie
 
@@ -144,7 +144,7 @@ TweetyProject est une bibliothèque Java pour l'intelligence artificielle symbol
 - [Analyse de texte et extraction d'information](./categories/developpement_systeme.md#221-amélioration-du-moteur-dextraction)
 - [Détection de sophismes et biais](./categories/developpement_systeme.md#232-agent-de-détection-de-sophismes-et-biais-cognitifs)
 - [Génération de texte et contre-arguments](./categories/developpement_systeme.md#233-agent-de-génération-de-contre-arguments)
-- [Fact-checking et vérification](./experience_utilisateur.md#331-fact-checking-automatisé-et-détection-de-désinformation)
+- [Fact-checking et vérification](./categories/experience_utilisateur.md#326-système-danalyse-de-débats-politiques-et-surveillance-des-médias)
 - [Formalisation logique](./categories/developpement_systeme.md#234-agent-de-formalisation-logique)
 - [Modèles de langage (LLMs)](./categories/developpement_systeme.md#236-intégration-de-llms-locaux-légers)
 
@@ -178,8 +178,8 @@ TweetyProject est une bibliothèque Java pour l'intelligence artificielle symbol
 - [Systèmes délibératifs](./categories/experience_utilisateur.md#327-plateforme-de-délibération-citoyenne)
 
 ### Systèmes Cognitifs Avancés
-- [Modélisation cognitive](./experience_utilisateur.md#334-argumentumind-système-cognitif-de-compréhension-argumentative)
-- [Protection cognitive](./experience_utilisateur.md#335-argumentushield-système-de-protection-cognitive-contre-la-désinformation)
+- [Modélisation cognitive](./categories/experience_utilisateur.md#326-système-danalyse-de-débats-politiques-et-surveillance-des-médias)
+- [Protection cognitive](./categories/experience_utilisateur.md#326-système-danalyse-de-débats-politiques-et-surveillance-des-médias)
 
 ## Modalités de Réalisation
 
@@ -234,4 +234,4 @@ Consultez les pages spécifiques à chaque catégorie pour une description déta
 - [Fondements théoriques et techniques](./categories/fondements_theoriques.md)
 - [Développement système et infrastructure](./categories/developpement_systeme.md)
 - [Expérience utilisateur et applications](./categories/experience_utilisateur.md)
-- [Lutte contre la désinformation](./experience_utilisateur.md#33-projets-de-lutte-contre-la-désinformation)
+- [Lutte contre la désinformation](./categories/experience_utilisateur.md#326-système-danalyse-de-débats-politiques-et-surveillance-des-médias)
