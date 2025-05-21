@@ -88,7 +88,7 @@
 
 ## 5. Plan d'action pour les problèmes restants
 
-Un plan d'action détaillé a été élaboré pour résoudre les problèmes restants et atteindre l'objectif de 80% de couverture de code. Ce plan est disponible dans le fichier `plan_action_tests.md` et comprend :
+Un plan d'action détaillé a été élaboré pour résoudre les problèmes restants et atteindre l'objectif de 80% de couverture de code. Ce plan est disponible dans le fichier `docs/tests/plan_action_tests.md` et comprend :
 
 1. Une stratégie pour améliorer la couverture de code
 2. Une approche pour corriger les tests fonctionnels défaillants
