@@ -4,6 +4,7 @@ Ce répertoire contient les différents rapports d'analyse générés dans le ca
 
 ## Structure du Répertoire
 
+- `etat_depot_couverture_tests.md` : Rapport sur l'état du dépôt Git et la couverture des tests
 - `extraits_chiffres.md` : Données chiffrées et extraits statistiques des analyses
 - `rapport_workflow_collaboratif/` : Analyses détaillées du workflow collaboratif entre agents
   - `rapport_analyse_workflow_collaboratif.html` : Version HTML du rapport d'analyse
@@ -18,6 +19,10 @@ Ces rapports présentent les métriques de performance des différents agents et
 ### Rapports d'Analyse de Workflow
 
 Ces rapports analysent les interactions entre les différents agents et composants du système, avec un focus particulier sur les flux de travail collaboratifs.
+
+### Rapports de Couverture de Tests
+
+Le fichier `etat_depot_couverture_tests.md` présente l'état actuel de la couverture des tests du projet, identifie les problèmes et propose des recommandations pour améliorer la qualité du code et la fiabilité du projet.
 
 ### Extraits Chiffrés
 
