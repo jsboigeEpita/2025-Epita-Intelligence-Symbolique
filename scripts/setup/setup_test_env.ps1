@@ -12,7 +12,8 @@ function Write-Step {
 }
 
 # Vérifier le répertoire courant
-$projectDir = Get-Location
+$scriptDir = Get-Location
+$projectDir = (Get-Item $scriptDir).Parent.Parent.FullName
 Write-Step "Configuration de l'environnement de test dans $projectDir"
 
 # Vérifier si un environnement virtuel existe déjà

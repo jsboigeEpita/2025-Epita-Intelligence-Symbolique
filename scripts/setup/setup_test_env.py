@@ -42,7 +42,7 @@ def main():
     print(f"Système d'exploitation détecté: {system}")
     
     # Déterminer le chemin du projet
-    project_dir = Path(os.path.dirname(os.path.abspath(__file__)))
+    project_dir = Path(os.path.dirname(os.path.abspath(__file__))).parent.parent
     print(f"Répertoire du projet: {project_dir}")
     
     # Vérifier si un environnement virtuel existe déjà
