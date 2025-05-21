@@ -101,7 +101,9 @@ def load_extract_definitions(config_file: Path, key: bytes) -> list:
     try:
         with open(config_file, 'rb') as f: encrypted_data = f.read()
         decrypted_compressed_data = decrypt_data(encrypted_data, key)
-        if not decrypted_compressed_data: raise ValueError("Échec déchiffrement.")
+        if not decrypted_compressed_data:
+            utils_logger.warning("Échec déchiffrement. Utilisation définitions par défaut.")
+            return [item.copy() for item in fallback_definitions]
         decompressed_data = gzip.decompress(decrypted_compressed_data)
         definitions = json.loads(decompressed_data.decode('utf-8'))
         utils_logger.info("✅ Définitions chargées et déchiffrées.")
