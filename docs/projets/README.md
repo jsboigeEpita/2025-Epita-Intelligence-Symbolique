@@ -21,7 +21,7 @@ Les projets sont documentés à travers plusieurs fichiers complémentaires :
    - [fondements_theoriques.md](./categories/fondements_theoriques.md)
    - [developpement_systeme.md](./categories/developpement_systeme.md)
    - [experience_utilisateur.md](./categories/experience_utilisateur.md)
-   - [lutte_desinformation.md](./experience_utilisateur.md#33-projets-de-lutte-contre-la-désinformation) (intégré dans experience_utilisateur.md)
+   - [lutte_desinformation.md](./experience_utilisateur.md#33-projets-de-lutte-contre-la-désinformation)
 
 2. **Fichiers thématiques complémentaires** :
    - [modeles_affaires_ia.md](./modeles_affaires_ia.md) - Présente les modèles d'affaires et cas d'usage commerciaux pour les systèmes d'analyse argumentative. Ce document est particulièrement pertinent pour les projets de la section 3.2.9 "Applications commerciales d'analyse argumentative" du fichier experience_utilisateur.md.
@@ -144,7 +144,7 @@ TweetyProject est une bibliothèque Java pour l'intelligence artificielle symbol
 - [Analyse de texte et extraction d'information](./categories/developpement_systeme.md#221-amélioration-du-moteur-dextraction)
 - [Détection de sophismes et biais](./categories/developpement_systeme.md#232-agent-de-détection-de-sophismes-et-biais-cognitifs)
 - [Génération de texte et contre-arguments](./categories/developpement_systeme.md#233-agent-de-génération-de-contre-arguments)
-- [Fact-checking et vérification](./categories/lutte_desinformation.md#fact-checking-automatisé-et-détection-de-désinformation)
+- [Fact-checking et vérification](./experience_utilisateur.md#331-fact-checking-automatisé-et-détection-de-désinformation)
 - [Formalisation logique](./categories/developpement_systeme.md#234-agent-de-formalisation-logique)
 - [Modèles de langage (LLMs)](./categories/developpement_systeme.md#236-intégration-de-llms-locaux-légers)
 
