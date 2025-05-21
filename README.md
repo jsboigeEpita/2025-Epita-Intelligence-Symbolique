@@ -266,12 +266,13 @@ Cette approche hybride représente une direction prometteuse pour développer de
 
 ## Sujets de Projets
 
-Pour une description détaillée de tous les sujets de projets, veuillez consulter le document [**Sujets de Projets Détaillés**](./docs/projets/sujets_projets_detailles.md) qui présente l'ensemble des projets possibles avec leurs spécifications complètes.
+Pour une description détaillée de tous les sujets de projets, veuillez consulter le document [**Sujets de Projets**](./docs/projets/README.md) qui présente l'ensemble des projets possibles avec leurs spécifications complètes.
 
-Les projets sont organisés en trois catégories principales :
+Les projets sont organisés en quatre catégories principales :
 1. **Fondements théoriques et techniques** : Projets centrés sur les aspects formels, logiques et théoriques de l'argumentation
 2. **Développement système et infrastructure** : Projets axés sur l'architecture, l'orchestration et les composants techniques
 3. **Expérience utilisateur et applications** : Projets orientés vers les interfaces, visualisations et cas d'usage concrets
+4. **Lutte contre la désinformation** : Projets axés sur la détection, l'analyse et la lutte contre la désinformation
 
 Chaque sujet est présenté avec une structure standardisée :
 - **Contexte** : Présentation du domaine et de son importance
@@ -287,6 +288,13 @@ Lors du choix de votre sujet, tenez compte de :
 - La taille de votre groupe
 - Vos compétences et intérêts
 - Le temps disponible pour réaliser le projet
+- Les interdépendances avec d'autres projets
+
+Pour faciliter votre choix, plusieurs vues transversales sont disponibles :
+- [Projets par niveau de difficulté](./docs/projets/projets_par_difficulte.md) - Pour choisir selon vos compétences
+- [Projets par technologie](./docs/projets/projets_par_technologie.md) - Pour choisir selon vos intérêts techniques
+- [Projets par durée estimée](./docs/projets/projets_par_duree.md) - Pour choisir selon votre disponibilité
+- [Matrice d'interdépendances](./docs/projets/matrice_interdependances.md) - Pour comprendre les relations entre projets
 
 ## Guide de Contribution
 
