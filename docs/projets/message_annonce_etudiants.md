@@ -1,10 +1,10 @@
-# Annonce du projet "argumentation_analysis" pour les étudiants de l'EPITA
+# Annonce du projet "argumentiation_analysis" pour les étudiants de l'EPITA
 
 ## Présentation du projet
 
 Chers étudiants de l'EPITA,
 
-Nous avons le plaisir de vous annoncer le lancement du projet **"argumentation_analysis"**, une opportunité exceptionnelle de mettre en pratique vos connaissances en intelligence symbolique dans un contexte concret et innovant.
+Nous avons le plaisir de vous annoncer le lancement du projet **"argumentiation_analysis"**, une opportunité exceptionnelle de mettre en pratique vos connaissances en intelligence symbolique dans un contexte concret et innovant.
 
 Ce projet s'articule autour d'un **Système d'Orchestration Agentique d'Analyse Rhétorique**, une plateforme avancée qui utilise plusieurs agents IA spécialisés collaborant pour analyser des textes argumentatifs sous différents angles. Cette architecture multi-agents combine :
 
@@ -89,36 +89,37 @@ Pour vous aider dans la réalisation de votre projet, vous disposez de :
 
 ## Critères d'évaluation
 
-L'évaluation des présentations avec slides et démo sera collégiale. La note de l'enseignant comptera pour moitié.
+L'évaluation de votre projet portera sur les aspects suivants :
 
-L'évaluation portera sur 4 critères principaux :
-
-1. **Forme/communication**
-   - Qualité de la présentation orale
-   - Clarté des explications
-   - Structure des slides
-   - Efficacité de la démonstration
-   - Capacité à répondre aux questions
-
-2. **Théorie**
-   - Exploration et explication de l'état de l'art
-   - Compréhension des techniques utilisées
-   - Justification des choix théoriques
-   - Pertinence des références et sources
-
-3. **Technique**
-   - Qualité des réalisations
-   - Performances et optimisation
-   - Tests et validation
-   - Qualité du code
+1. **Qualité du code et de l'architecture** (30%)
+   - Respect des conventions de code
+   - Modularité et extensibilité
    - Gestion des erreurs et robustesse
+   - Intégration harmonieuse avec le système existant
 
-4. **Gestion de projet/collaboration**
-   - Utilisation efficace de GitHub (branches, commits, pull requests)
-   - Organisation du travail collaboratif
-   - Répartition des tâches
-   - Suivi de l'avancement
-   - Documentation du processus de développement
+2. **Pertinence de l'approche choisie** (25%)
+   - Adéquation des solutions techniques aux problèmes posés
+   - Originalité et innovation
+   - Efficacité des algorithmes et méthodes utilisés
+   - Prise en compte des contraintes du projet
+
+3. **Couverture des tests** (15%)
+   - Tests unitaires
+   - Tests d'intégration
+   - Tests de performance
+   - Gestion des cas limites et des erreurs
+
+4. **Qualité de la documentation** (15%)
+   - Documentation du code
+   - Documentation utilisateur
+   - Documentation technique
+   - Clarté et exhaustivité
+
+5. **Présentation orale du projet** (15%)
+   - Clarté de la présentation
+   - Démonstration des fonctionnalités
+   - Réponses aux questions
+   - Analyse critique du travail réalisé
 
 ## Calendrier suggéré
 
@@ -146,12 +147,12 @@ Pour vous aider à organiser votre travail sur le mois alloué, voici un calendr
 
 ## Choix des sujets de projets
 
-Pour une description détaillée de tous les sujets de projets disponibles, veuillez consulter le document [**Sujets de Projets Détaillés**](./sujets_projets_detailles.md) qui présente l'ensemble des projets possibles avec leurs spécifications complètes.
+Pour une description détaillée de tous les sujets de projets disponibles, veuillez consulter le document [**Sujets de Projets Détaillés**](./projets/sujets_projets_detailles.md) qui présente l'ensemble des projets possibles avec leurs spécifications complètes.
 
 Les projets sont organisés en trois catégories principales :
-1. **[Fondements théoriques et techniques](./fondements_theoriques.md)** : Projets centrés sur les aspects formels, logiques et théoriques de l'argumentation
-2. **[Développement système et infrastructure](./developpement_systeme.md)** : Projets axés sur l'architecture, l'orchestration et les composants techniques
-3. **[Expérience utilisateur et applications](./experience_utilisateur.md)** : Projets orientés vers les interfaces, visualisations et cas d'usage concrets
+1. **[Fondements théoriques et techniques](./projets/fondements_theoriques.md)** : Projets centrés sur les aspects formels, logiques et théoriques de l'argumentation
+2. **[Développement système et infrastructure](./projets/developpement_systeme.md)** : Projets axés sur l'architecture, l'orchestration et les composants techniques
+3. **[Expérience utilisateur et applications](./projets/experience_utilisateur.md)** : Projets orientés vers les interfaces, visualisations et cas d'usage concrets
 
 Chaque sujet est présenté avec une structure standardisée incluant le contexte, les objectifs, les technologies clés, le niveau de difficulté, l'estimation d'effort, les interdépendances, les références et les livrables attendus.
 
@@ -169,7 +170,7 @@ Pour commencer à travailler sur le projet, suivez ces étapes :
 
 ## Conclusion
 
-Le projet "argumentation_analysis" représente une opportunité unique de mettre en pratique vos connaissances en intelligence symbolique dans un contexte concret et innovant. En combinant des approches symboliques traditionnelles avec des techniques modernes basées sur les LLMs, vous explorerez les frontières de l'analyse argumentative automatisée.
+Le projet "argumentiation_analysis" représente une opportunité unique de mettre en pratique vos connaissances en intelligence symbolique dans un contexte concret et innovant. En combinant des approches symboliques traditionnelles avec des techniques modernes basées sur les LLMs, vous explorerez les frontières de l'analyse argumentative automatisée.
 
 Nous sommes impatients de découvrir vos contributions à ce projet passionnant et restons à votre disposition pour vous accompagner tout au long de ce mois de développement.
 
