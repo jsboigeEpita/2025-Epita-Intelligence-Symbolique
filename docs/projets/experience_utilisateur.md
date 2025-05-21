@@ -358,7 +358,7 @@ Cette section présente les projets orientés vers les interfaces, visualisation
 
 ### 3.2.9 Applications commerciales d'analyse argumentative
 - **Contexte** : Les technologies d'analyse argumentative et de lutte contre la désinformation ont de nombreuses applications commerciales dans divers secteurs comme les médias, les entreprises, et les institutions.
-- **Objectifs** : Développer des applications commerciales basées sur l'analyse argumentative pour répondre à des besoins spécifiques du marché. Explorer différents modèles d'affaires et cas d'usage comme l'analyse de réputation, l'intelligence compétitive, ou la protection de marque. Créer des prototypes de produits avec propositions de valeur claires et stratégies de mise sur le marché.
+- **Objectifs** : Développer des applications commerciales basées sur l'analyse argumentative pour répondre à des besoins spécifiques du marché. Créer des prototypes de produits avec propositions de valeur claires en s'appuyant sur les modèles d'affaires décrits dans le document de référence.
 - **Technologies clés** :
   * Analyse de réputation
   * Surveillance de marque
@@ -369,18 +369,226 @@ Cette section présente les projets orientés vers les interfaces, visualisation
 - **Niveau de difficulté** : ⭐⭐⭐
 - **Estimation d'effort** : 4 semaines-personnes
 - **Portée ajustée** : Se concentrer sur une application commerciale spécifique avec prototype fonctionnel
-- **Interdépendances** : Lié à 2.4.4 (fact-checking et détection de désinformation), 3.2.6 (analyse de débats et surveillance des médias)
+- **Interdépendances** :
+  * Lié à 2.4.4 (fact-checking et détection de désinformation)
+  * Lié à 3.2.6 (analyse de débats et surveillance des médias)
+  * **Se référer au document [modeles_affaires_ia.md](modeles_affaires_ia.md) pour les détails complets sur les modèles d'affaires, secteurs d'application, études de cas et stratégies de mise sur le marché**
 - **Références** :
-  - "Business Models for AI Applications" (2023)
-  - "Market Analysis of Media Intelligence Tools" (2024)
-  - "Brand Protection in the Digital Age" (2023)
-  - "Monetizing NLP Technologies" (2024)
-  - "Customer Feedback Analysis: From Data to Insights" (2023)
+  - Voir le document [modeles_affaires_ia.md](modeles_affaires_ia.md) pour une bibliographie complète
 - **Livrables attendus** :
   - Prototype d'application commerciale d'analyse argumentative
   - Étude de marché et analyse de la concurrence
-  - Modèle d'affaires détaillé
+  - Modèle d'affaires détaillé (en s'appuyant sur les modèles présentés dans [modeles_affaires_ia.md](modeles_affaires_ia.md))
   - Proposition de valeur et positionnement
-  - Stratégie de mise sur le marché
   - Démonstration fonctionnelle
   - Documentation et matériel de présentation
+## 3.3 Projets de lutte contre la désinformation
+
+Cette section présente les projets axés sur la détection, l'analyse et la lutte contre la désinformation. Ces projets visent à développer des outils et des méthodes pour identifier, analyser et contrer les informations trompeuses ou manipulatoires.
+
+### 3.3.1 Fact-checking automatisé et détection de désinformation
+
+#### Contexte
+La prolifération de la désinformation représente un défi majeur pour nos sociétés démocratiques. Les méthodes traditionnelles de fact-checking manuel ne peuvent pas suivre le rythme de production et de diffusion des fausses informations. L'automatisation partielle du processus de vérification des faits est donc devenue une nécessité.
+
+#### Objectifs
+- Développer un système capable d'extraire automatiquement les affirmations vérifiables dans un texte
+- Créer un moteur de recherche spécialisé pour trouver des sources fiables permettant de vérifier ces affirmations
+- Implémenter un système d'évaluation de la fiabilité des sources
+- Concevoir un algorithme de détection des patterns typiques de désinformation
+- Intégrer ces composants dans un pipeline complet de fact-checking semi-automatisé
+
+#### Technologies clés
+- Extraction d'affirmations vérifiables (claim extraction)
+- Recherche d'information (information retrieval)
+- Évaluation de fiabilité des sources
+- Détection de patterns de désinformation
+- Techniques de NLP avancées
+
+#### Niveau de difficulté
+⭐⭐⭐⭐
+
+#### Estimation d'effort
+4 semaines-personnes
+
+#### Interdépendances
+- Utilise : Agent de détection de sophismes et biais cognitifs
+- Est utilisé par : Système d'analyse de débats politiques, ArgumentuShield
+
+#### Références
+- Hassan, N., et al. (2017). "Toward automated fact-checking: Detecting check-worthy factual claims by ClaimBuster"
+- Graves, L. (2018). "Understanding the Promise and Limits of Automated Fact-Checking"
+- Thorne, J., & Vlachos, A. (2018). "Automated Fact Checking: Task formulations, methods and future directions"
+
+#### Livrables attendus
+1. Un système d'extraction d'affirmations vérifiables
+2. Un moteur de recherche de sources pour la vérification
+3. Un système d'évaluation de fiabilité des sources
+4. Un algorithme de détection de patterns de désinformation
+5. Une API intégrant ces composants
+6. Une documentation détaillée du système
+7. Une évaluation des performances sur un corpus de test
+
+### 3.3.2 Agent de détection de sophismes et biais cognitifs
+
+#### Contexte
+Les sophismes et biais cognitifs sont des outils fréquemment utilisés dans la désinformation pour manipuler l'opinion. Leur détection automatique constitue un élément clé dans la lutte contre la désinformation.
+
+#### Objectifs
+- Améliorer l'agent existant de détection de sophismes
+- Étendre la taxonomie des sophismes et biais cognitifs
+- Développer des méthodes spécifiques pour chaque type de sophisme
+- Intégrer des techniques d'apprentissage automatique pour améliorer la précision
+- Créer un système d'explication des détections pour les utilisateurs
+
+#### Technologies clés
+- Classification de sophismes
+- Détection automatique de sophismes
+- Apprentissage automatique pour la classification
+- Génération d'explications
+
+#### Niveau de difficulté
+⭐⭐⭐
+
+#### Estimation d'effort
+3-4 semaines-personnes
+
+#### Interdépendances
+- Utilise : Classification des sophismes
+- Est utilisé par : Fact-checking, Plateforme éducative
+
+#### Références
+- Habernal, I., et al. (2018). "The Argument Reasoning Comprehension Task: Identification and Reconstruction of Implicit Warrants"
+- Savelka, J., et al. (2020). "Improving Fallacy Detection by Leveraging Implicit Premises"
+- Lawrence, J., & Reed, C. (2019). "Argument Mining: A Survey"
+
+#### Livrables attendus
+1. Un agent amélioré de détection de sophismes
+2. Une taxonomie étendue des sophismes et biais cognitifs
+3. Des modèles spécifiques pour chaque type de sophisme
+4. Un système d'explication des détections
+5. Une évaluation des performances sur un corpus de test
+
+### 3.3.3 Protection des systèmes d'IA contre les attaques adversariales
+
+#### Contexte
+Les systèmes d'IA, en particulier ceux basés sur l'apprentissage profond, sont vulnérables aux attaques adversariales qui peuvent les amener à produire des résultats erronés ou biaisés. Dans le contexte de la lutte contre la désinformation, ces attaques peuvent compromettre l'efficacité des outils de détection.
+
+#### Objectifs
+- Étudier les vulnérabilités des systèmes d'IA utilisés dans la détection de désinformation
+- Développer des méthodes de détection d'attaques adversariales
+- Implémenter des techniques de robustesse pour les modèles de NLP
+- Concevoir des systèmes de validation et de sanitisation des entrées
+- Créer des mécanismes de défense en profondeur
+
+#### Technologies clés
+- Détection d'attaques adversariales
+- Techniques de robustesse pour modèles de NLP
+- Validation et sanitisation d'entrées
+- Défense en profondeur
+
+#### Niveau de difficulté
+⭐⭐⭐⭐
+
+#### Estimation d'effort
+4 semaines-personnes
+
+#### Interdépendances
+- Utilise : Abstraction du moteur agentique
+- Est utilisé par : ArgumentuShield
+
+#### Références
+- Goodfellow, I. J., et al. (2014). "Explaining and Harnessing Adversarial Examples"
+- Ebrahimi, J., et al. (2018). "HotFlip: White-Box Adversarial Examples for Text Classification"
+- Morris, J., et al. (2020). "TextAttack: A Framework for Adversarial Attacks, Data Augmentation, and Adversarial Training in NLP"
+
+#### Livrables attendus
+1. Une étude des vulnérabilités des systèmes d'IA utilisés dans la détection de désinformation
+2. Des méthodes de détection d'attaques adversariales
+3. Des techniques de robustesse pour les modèles de NLP
+4. Des systèmes de validation et de sanitisation des entrées
+5. Des mécanismes de défense en profondeur
+6. Une documentation détaillée des méthodes développées
+7. Une évaluation de l'efficacité des défenses proposées
+
+### 3.3.4 ArgumentuMind: Système cognitif de compréhension argumentative
+
+#### Contexte
+La compréhension profonde des mécanismes cognitifs impliqués dans l'argumentation et la persuasion est essentielle pour développer des systèmes plus efficaces de lutte contre la désinformation.
+
+#### Objectifs
+- Développer un système cognitif avancé capable de modéliser les processus mentaux impliqués dans la compréhension, l'évaluation et la génération d'arguments
+- Créer des modèles computationnels des biais cognitifs et de leur influence sur le raisonnement
+- Implémenter des mécanismes de simulation de raisonnement humain face à des arguments fallacieux
+- Concevoir des méthodes d'adaptation dynamique aux différents profils cognitifs des utilisateurs
+
+#### Technologies clés
+- Modèles cognitifs computationnels
+- Simulation de raisonnement
+- Modélisation des biais cognitifs
+- Adaptation dynamique aux profils utilisateurs
+
+#### Niveau de difficulté
+⭐⭐⭐⭐⭐
+
+#### Estimation d'effort
+4+ semaines-personnes
+
+#### Interdépendances
+- Utilise : Détection de sophismes, Frameworks d'argumentation
+- Est utilisé par : ArgumentuShield
+
+#### Références
+- Mercier, H., & Sperber, D. (2017). "The Enigma of Reason"
+- Kahneman, D. (2011). "Thinking, Fast and Slow"
+- Stanovich, K. E., & West, R. F. (2000). "Individual differences in reasoning: Implications for the rationality debate"
+
+#### Livrables attendus
+1. Un système cognitif de compréhension argumentative
+2. Des modèles computationnels des biais cognitifs
+3. Des mécanismes de simulation de raisonnement humain
+4. Des méthodes d'adaptation aux profils cognitifs
+5. Une documentation scientifique détaillée
+6. Une évaluation expérimentale des performances
+
+### 3.3.5 ArgumentuShield: Système de protection cognitive contre la désinformation
+
+#### Contexte
+Face à la sophistication croissante des techniques de désinformation, il devient nécessaire de développer des systèmes de protection cognitive qui renforcent les défenses naturelles des individus contre la manipulation informationnelle.
+
+#### Objectifs
+- Développer un système innovant conçu pour renforcer les défenses cognitives contre la désinformation
+- Créer des méthodes d'inoculation cognitive contre les techniques de manipulation
+- Implémenter des outils personnalisés d'analyse critique adaptés aux vulnérabilités spécifiques de chaque utilisateur
+- Concevoir des interfaces qui favorisent la réflexion critique sans interrompre l'expérience utilisateur
+- Intégrer des mécanismes d'apprentissage continu qui s'adaptent à l'évolution des techniques de désinformation
+
+#### Technologies clés
+- Inoculation cognitive
+- Analyse personnalisée des vulnérabilités
+- Interfaces favorisant la réflexion critique
+- Apprentissage continu et adaptation
+
+#### Niveau de difficulté
+⭐⭐⭐⭐⭐
+
+#### Estimation d'effort
+4+ semaines-personnes
+
+#### Interdépendances
+- Utilise : ArgumentuMind, Plateforme éducative, Protection contre attaques adversariales
+- Est utilisé par : -
+
+#### Références
+- Roozenbeek, J., & van der Linden, S. (2019). "The fake news game: actively inoculating against the risk of misinformation"
+- Lewandowsky, S., et al. (2012). "Misinformation and Its Correction: Continued Influence and Successful Debiasing"
+- Cook, J., et al. (2017). "Neutralizing misinformation through inoculation: Exposing misleading argumentation techniques reduces their influence"
+
+#### Livrables attendus
+1. Un système de protection cognitive contre la désinformation
+2. Des méthodes d'inoculation cognitive
+3. Des outils personnalisés d'analyse critique
+4. Des interfaces favorisant la réflexion critique
+5. Des mécanismes d'apprentissage continu
+6. Une documentation scientifique détaillée
+7. Une évaluation expérimentale de l'efficacité du système
