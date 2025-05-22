@@ -52,7 +52,7 @@ if (-not $?) {
 
 # Installer les dépendances de test
 Write-Step "Installation des dépendances de test"
-$requirementsFile = Join-Path -Path $projectDir -ChildPath "requirements-test.txt"
+$requirementsFile = Join-Path -Path $projectDir -ChildPath "config\requirements-test.txt"
 python -m pip install -r $requirementsFile
 if (-not $?) {
     Write-Host "Échec de l'installation des dépendances de test." -ForegroundColor Red

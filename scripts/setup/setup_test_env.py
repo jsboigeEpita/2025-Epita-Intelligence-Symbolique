@@ -79,7 +79,7 @@ def main():
     
     # Installer les dépendances de test
     print_step("Installation des dépendances de test")
-    requirements_file = project_dir / "requirements-test.txt"
+    requirements_file = project_dir / "config" / "requirements-test.txt"
     
     if system == "Windows":
         install_cmd = f"{pip_cmd} install -r {requirements_file}"
