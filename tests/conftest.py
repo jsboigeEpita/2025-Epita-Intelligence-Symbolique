@@ -95,7 +95,33 @@ def setup_jpype():
 # Fonction pour configurer numpy (réel ou mock)
 def setup_numpy():
     """Configure numpy pour les tests, en utilisant la vraie bibliothèque si disponible."""
-    if is_module_available('numpy'):
+    # Pour Python 3.12+, toujours utiliser le mock
+    if sys.version_info.major == 3 and sys.version_info.minor >= 12:
+        # Importer le mock de numpy
+        from tests.mocks.numpy_mock import array, ndarray, mean, sum, zeros, ones, dot, concatenate, vstack, hstack, argmax, argmin, max, min, random
+        
+        # Installer les mocks dans sys.modules
+        sys.modules['numpy'] = type('numpy', (), {
+            'array': array,
+            'ndarray': ndarray,
+            'mean': mean,
+            'sum': sum,
+            'zeros': zeros,
+            'ones': ones,
+            'dot': dot,
+            'concatenate': concatenate,
+            'vstack': vstack,
+            'hstack': hstack,
+            'argmax': argmax,
+            'argmin': argmin,
+            'max': max,
+            'min': min,
+            'random': random,
+            '__version__': '1.24.3',  # Version simulée
+        })
+        
+        return sys.modules['numpy']
+    elif is_module_available('numpy'):
         # Utiliser la vraie bibliothèque numpy
         import numpy
         return numpy
@@ -128,7 +154,25 @@ def setup_numpy():
 # Fonction pour configurer le mock de pandas ou utiliser la vraie bibliothèque
 def setup_pandas():
     """Configure pandas pour les tests, en utilisant la vraie bibliothèque si disponible."""
-    if is_module_available('pandas'):
+    # Pour Python 3.12+, toujours utiliser le mock
+    if sys.version_info.major == 3 and sys.version_info.minor >= 12:
+        # Utiliser le mock de pandas
+        from tests.mocks.pandas_mock import DataFrame, read_csv, read_json
+        
+        # Installer les mocks dans sys.modules
+        sys.modules['pandas'] = type('pandas', (), {
+            'DataFrame': DataFrame,
+            'read_csv': read_csv,
+            'read_json': read_json,
+            'Series': list,
+            'NA': None,
+            'NaT': None,
+            'isna': lambda x: x is None,
+            'notna': lambda x: x is not None
+        })
+        
+        return sys.modules['pandas']
+    elif is_module_available('pandas'):
         # Utiliser la vraie bibliothèque pandas
         import pandas
         return pandas

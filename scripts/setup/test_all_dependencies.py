@@ -13,6 +13,7 @@ import os
 import logging
 import importlib
 import subprocess
+import platform
 from pathlib import Path
 
 # Configuration du logging
@@ -236,7 +237,47 @@ def test_pytest(pytest):
     plugins = pytest.config.getini("plugins") if hasattr(pytest, "config") else []
     logger.info(f"pytest plugins: {plugins}")
 
+def check_build_tools():
+    """
+    Vérifie si Visual Studio Build Tools est installé.
+    
+    Returns:
+        True si Visual Studio Build Tools est installé, False sinon
+    """
+    # Vérifier si on est sous Windows
+    if platform.system() != "Windows":
+        logger.info("Système non-Windows détecté, pas besoin de Visual Studio Build Tools.")
+        return True
+    
+    # Vérifier si vswhere.exe existe
+    program_files = os.environ.get("ProgramFiles(x86)", "C:\\Program Files (x86)")
+    vswhere_path = os.path.join(program_files, "Microsoft Visual Studio", "Installer", "vswhere.exe")
+    
+    if not os.path.exists(vswhere_path):
+        logger.warning("Visual Studio Build Tools ne semble pas être installé (vswhere.exe non trouvé).")
+        return False
+    
+    # Exécuter vswhere pour trouver les Build Tools
+    cmd = [vswhere_path, "-products", "Microsoft.VisualStudio.Product.BuildTools",
+           "-requires", "Microsoft.VisualCpp.Tools.Host.x86", "-latest", "-property", "installationPath"]
+    returncode, stdout, stderr = run_command(cmd)
+    
+    if returncode != 0 or not stdout.strip():
+        logger.warning("Visual Studio Build Tools avec les outils C++ ne semble pas être installé.")
+        return False
+    
+    logger.info(f"Visual Studio Build Tools trouvé à: {stdout.strip()}")
+    return True
+
 def test_all_dependencies():
+    # Vérifier si Visual Studio Build Tools est installé
+    build_tools_installed = check_build_tools()
+    if not build_tools_installed:
+        logger.warning("Les outils de compilation C++ ne sont pas installés, ce qui peut causer des problèmes lors de l'installation de numpy, pandas et jpype.")
+        logger.warning("Pour installer les outils de compilation, exécutez le script install_build_tools.ps1")
+        logger.warning("Pour plus d'informations, consultez le fichier README_INSTALLATION_OUTILS_COMPILATION.md")
+    else:
+        logger.info("Visual Studio Build Tools est installé, les extensions C++ pourront être compilées.")
     """
     Teste toutes les dépendances.
     
@@ -328,5 +369,14 @@ if __name__ == "__main__":
         sys.exit(0)
     else:
         logger.error("Certaines dépendances ne sont pas correctement installées ou fonctionnelles.")
-        logger.error("Exécutez le script fix_all_dependencies.py pour résoudre les problèmes.")
+        
+        # Vérifier si Visual Studio Build Tools est installé
+        build_tools_installed = check_build_tools()
+        if not build_tools_installed:
+            logger.error("Les outils de compilation C++ ne sont pas installés, ce qui est probablement la cause des problèmes.")
+            logger.error("Exécutez d'abord le script install_build_tools.ps1 pour installer les outils de compilation.")
+            logger.error("Puis exécutez le script fix_all_dependencies.py pour résoudre les problèmes.")
+        else:
+            logger.error("Exécutez le script fix_all_dependencies.py pour résoudre les problèmes.")
+        
         sys.exit(1)
