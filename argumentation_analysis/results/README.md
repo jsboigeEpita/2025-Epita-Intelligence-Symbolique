@@ -1,4 +1,16 @@
-# Répertoire des résultats d'analyse d'argumentation
+# Résultats d'évaluation du système
+
+## À propos de ce dossier
+Ce dossier contient les **résultats d'évaluation du système** d'analyse argumentative, notamment les tests de performance, la précision des détections et l'efficacité des différents composants.
+
+## Distinction avec le dossier `results/` à la racine
+⚠️ **Note importante** : Ne pas confondre avec le dossier `results/` à la racine du projet qui contient les **résultats des analyses rhétoriques** effectuées sur différents corpus de textes.
+
+| Ce dossier (`argumentation_analysis/results/`) | Dossier `results/` à la racine |
+|-----------------------------------------------|--------------------------------|
+| Résultats d'évaluation du système | Résultats d'analyse de textes |
+| Tests de performance | Analyses, rapports, visualisations |
+| Orienté vers les performances du système | Orienté vers le contenu analysé |
 
 Ce répertoire contient les résultats générés par le système d'analyse d'argumentation, notamment les rapports de tests de performance et les analyses de données.
 
