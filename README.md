@@ -64,7 +64,7 @@ Le projet est organisé en plusieurs modules principaux :
 - **[`libs/`](./libs/README.md)** : Bibliothèques externes utilisées par le projet.
   - **[`native/`](./libs/native/)** : Bibliothèques natives (DLL) pour les solveurs SAT.
 
-- **[`logs/`](./logs/README.md)** : Journaux d'exécution du système.
+- **`logs/`** : Journaux d'exécution du système (dossier créé dynamiquement lors de l'exécution, non inclus dans le dépôt).
 
 - **[`results/`](./results/README.md)** : Résultats des analyses et des tests.
   - **[`performance_tests/`](./results/performance_tests/)** : Résultats des tests de performance.
@@ -291,9 +291,9 @@ Lors du choix de votre sujet, tenez compte de :
 - Les interdépendances avec d'autres projets
 
 Pour faciliter votre choix, plusieurs vues transversales sont disponibles :
-- [Projets par niveau de difficulté](./docs/projets/projets_par_difficulte.md) - Pour choisir selon vos compétences
-- [Projets par technologie](./docs/projets/projets_par_technologie.md) - Pour choisir selon vos intérêts techniques
-- [Projets par durée estimée](./docs/projets/projets_par_duree.md) - Pour choisir selon votre disponibilité
+- [Projets par niveau de difficulté](./docs/projets/README.md#filtrage-par-niveau-de-difficulté) - Pour choisir selon vos compétences
+- [Projets par technologie](./docs/projets/README.md#filtrage-par-technologie) - Pour choisir selon vos intérêts techniques
+- [Projets par durée estimée](./docs/projets/README.md#filtrage-par-durée-estimée) - Pour choisir selon votre disponibilité
 - [Matrice d'interdépendances](./docs/projets/matrice_interdependances.md) - Pour comprendre les relations entre projets
 
 ## Guide de Contribution

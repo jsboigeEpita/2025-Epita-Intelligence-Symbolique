@@ -7,6 +7,12 @@ Cette section contient la documentation de référence pour les API du système 
 ### [Référence API du Système de Communication](./reference_api.md)
 Documentation complète de l'API du système de communication entre agents.
 
+### [API des Agents](./agents/README.md)
+Documentation des agents spécialistes et de leurs interfaces.
+
+### [API d'Orchestration](./orchestration/README.md)
+Documentation des systèmes d'orchestration et de l'architecture hiérarchique.
+
 ## Organisation de la Référence API
 
 La documentation de référence est organisée selon les principaux modules du système :
@@ -23,14 +29,16 @@ L'API du système de communication définit les interfaces et les classes permet
 
 L'API des agents définit les interfaces et les classes pour l'implémentation des agents spécialistes. Elle inclut :
 
-- **Interfaces d'agent** : Contrats que doivent respecter les agents
-- **Classes de base** : Implémentations de base pour les agents
-- **Utilitaires d'agent** : Fonctions utilitaires pour les agents
+- **[Agent Project Manager (PM)](./agents/pm_agent_api.md)** : Documentation de l'agent orchestrateur principal
+- **[Agent d'Analyse Informelle](./agents/informal_agent_api.md)** : Documentation de l'agent d'analyse des arguments et sophismes
+- **[Agent de Logique Propositionnelle (PL)](./agents/pl_agent_api.md)** : Documentation de l'agent de formalisation logique
+- **[Agent d'Extraction](./agents/extract_agent_api.md)** : Documentation de l'agent d'extraction de segments pertinents
 
 ### API d'Orchestration
 
 L'API d'orchestration définit les interfaces et les classes pour la coordination des agents. Elle inclut :
 
+- **[Architecture Hiérarchique](./orchestration/hierarchical_architecture_api.md)** : Documentation de l'architecture à trois niveaux
 - **Interfaces d'orchestration** : Contrats pour les orchestrateurs
 - **Stratégies d'orchestration** : Implémentations de différentes stratégies
 - **Gestionnaires d'état** : Composants pour la gestion de l'état partagé
@@ -71,3 +79,22 @@ L'API du système suit les principes du versionnement sémantique (SemVer) :
 - **Correctifs** : Corrections de bugs sans modification de l'API
 
 Pour plus d'informations sur les changements d'API, consultez le [CHANGELOG](../../CHANGELOG.md).
+
+## Structure de la Documentation
+
+```
+docs/reference/
+├── README.md                           # Ce fichier
+├── reference_api.md                    # API du système de communication
+├── agents/                             # Documentation des agents
+│   ├── README.md                       # Vue d'ensemble des agents
+│   ├── pm_agent_api.md                 # API de l'agent Project Manager
+│   ├── informal_agent_api.md           # API de l'agent d'analyse informelle
+│   ├── pl_agent_api.md                 # API de l'agent de logique propositionnelle
+│   └── extract_agent_api.md            # API de l'agent d'extraction
+└── orchestration/                      # Documentation de l'orchestration
+    ├── README.md                       # Vue d'ensemble de l'orchestration
+    ├── hierarchical_architecture_api.md # Architecture hiérarchique
+    ├── strategic_level_api.md          # Niveau stratégique
+    ├── tactical_level_api.md           # Niveau tactique
+    └── operational_level_api.md        # Niveau opérationnel
