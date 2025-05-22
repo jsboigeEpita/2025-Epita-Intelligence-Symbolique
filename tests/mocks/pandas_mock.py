@@ -53,8 +53,12 @@ class DataFrame:
             if not self.columns:
                 self.columns = list(self._data.keys())
         
-        self.index = index or list(range(len(self._data[self.columns[0]]) if self.columns else 0))
+        self.index = index or list(range(len(self._data[self.columns[0]]) if self.columns and self._data else 0))
         self.shape = (len(self.index), len(self.columns))
+    
+    def __len__(self):
+        """Retourne le nombre de lignes du DataFrame."""
+        return len(self.index)
     
     def __getitem__(self, key):
         """Accès aux colonnes ou lignes du DataFrame."""
@@ -149,7 +153,7 @@ class DataFrame:
         # Créer un objet GroupBy mock
         return GroupBy(result, by)
     
-    def set_index(self, keys):
+    def set_index(self, keys, inplace=False, drop=True):
         """Définit l'index du DataFrame."""
         if isinstance(keys, str):
             keys = [keys]
@@ -162,16 +166,28 @@ class DataFrame:
             else:
                 new_index.append(tuple(self._data[k][i] for k in keys))
         
-        # Créer un nouveau DataFrame avec le nouvel index
-        new_df = DataFrame(self._data, columns=self.columns, index=new_index)
-        
-        # Supprimer les colonnes utilisées comme index
-        for key in keys:
-            if key in new_df.columns:
-                new_df.columns.remove(key)
-                del new_df._data[key]
-        
-        return new_df
+        if inplace:
+            self.index = new_index
+            
+            # Supprimer les colonnes utilisées comme index si drop=True
+            if drop:
+                for key in keys:
+                    if key in self.columns:
+                        self.columns.remove(key)
+                        del self._data[key]
+            return None
+        else:
+            # Créer un nouveau DataFrame avec le nouvel index
+            new_df = DataFrame(self._data, columns=self.columns, index=new_index)
+            
+            # Supprimer les colonnes utilisées comme index si drop=True
+            if drop:
+                for key in keys:
+                    if key in new_df.columns:
+                        new_df.columns.remove(key)
+                        del new_df._data[key]
+            
+            return new_df
     
     def reset_index(self, drop=False):
         """Réinitialise l'index du DataFrame."""
