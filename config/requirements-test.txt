@@ -1,13 +1,14 @@
 # Dépendances principales
-numpy>=1.20.0
-pandas>=1.3.0
+# Versions spécifiques pour résoudre les problèmes d'importation et d'incompatibilités
+numpy==1.24.3  # Version spécifique pour éviter les incompatibilités avec l'environnement de test
+pandas==2.0.3  # Version spécifique pour assurer la compatibilité avec numpy
 matplotlib>=3.5.0
-jpype1>=1.3.0
+jpype1==1.4.1  # Version spécifique pour résoudre les erreurs d'initialisation
 cryptography>=37.0.0
 cffi>=1.15.0
 
 # Dépendances pour l'intégration Java
-jpype1>=1.3.0
+# jpype1 déjà spécifié ci-dessus
 psutil>=5.9.0
 
 # Dépendances pour le traitement de texte
@@ -24,7 +25,8 @@ scikit-learn>=1.0.0
 networkx>=2.6.0
 
 # Dépendances pour l'IA et le ML
-torch>=1.12.0
+# Versions spécifiques pour assurer la compatibilité avec numpy et pandas
+torch==2.0.1  # Version compatible avec numpy 1.24.3
 transformers>=4.20.0
 
 # Dépendances pour l'interface utilisateur

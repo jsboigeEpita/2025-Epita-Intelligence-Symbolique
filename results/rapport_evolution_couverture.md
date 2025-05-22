@@ -1,6 +1,6 @@
 # Rapport d'Évolution de la Couverture des Tests
 
-Date du rapport: 2025-05-20
+Date du rapport: 2025-05-22
 
 ## 1. Couverture Globale
 
@@ -14,9 +14,9 @@ Date du rapport: 2025-05-20
 |--------|---------------------|---------------------|--------------|
 | Global | 54.86% | 59.86% | +5.00% |
 | Autre | 35.49% | 40.49% | +5.00% |
-| Communication | 13.00% | 18.00% | +5.00% |
-| Gestion d'État | 21.41% | 26.41% | +5.00% |
 | Outils d'Analyse | 9.95% | 14.95% | +5.00% |
+| Gestion d'État | 21.41% | 26.41% | +5.00% |
+| Communication | 13.00% | 18.00% | +5.00% |
 
 ## 3. Modules Nécessitant des Améliorations
 
