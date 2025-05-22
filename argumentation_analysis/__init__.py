@@ -9,15 +9,24 @@ y compris les modèles de données, les services, les agents et les utilitaires.
 __version__ = '1.0.0'
 
 # Importations pour faciliter l'accès aux modules principaux
-import argumentation_analysis.core
-import argumentation_analysis.agents
-import argumentation_analysis.orchestration
-import argumentation_analysis.ui
-import argumentation_analysis.utils
-import argumentation_analysis.examples
-import argumentation_analysis.services
-import argumentation_analysis.scripts
 from . import paths
+from . import core
+
+# Utilisation d'importations conditionnelles pour éviter les importations circulaires
+def _lazy_import():
+    """Importe les modules de manière paresseuse pour éviter les importations circulaires."""
+    global agents, orchestration, ui, utils, examples, services, scripts
+    
+    import argumentation_analysis.agents as agents
+    import argumentation_analysis.orchestration as orchestration
+    import argumentation_analysis.ui as ui
+    import argumentation_analysis.utils as utils
+    import argumentation_analysis.examples as examples
+    import argumentation_analysis.services as services
+    import argumentation_analysis.scripts as scripts
+
+# Appeler la fonction d'importation paresseuse
+_lazy_import()
 
 # Exposer certaines fonctions couramment utilisées
 try:

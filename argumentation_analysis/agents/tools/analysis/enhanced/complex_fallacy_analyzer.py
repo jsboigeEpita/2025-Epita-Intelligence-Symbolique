@@ -28,9 +28,14 @@ if str(parent_dir) not in sys.path:
 # Importer l'analyseur de sophismes complexes de base
 from argumentation_analysis.agents.tools.analysis.complex_fallacy_analyzer import ComplexFallacyAnalyzer as BaseAnalyzer
 
-# Importer les analyseurs améliorés
-from argumentation_analysis.agents.tools.analysis.enhanced.contextual_fallacy_analyzer import EnhancedContextualFallacyAnalyzer
-from argumentation_analysis.agents.tools.analysis.enhanced.fallacy_severity_evaluator import EnhancedFallacySeverityEvaluator
+# Fonction d'importation paresseuse pour éviter les importations circulaires
+def _lazy_imports():
+    """Importe les modules de manière paresseuse pour éviter les importations circulaires."""
+    global EnhancedContextualFallacyAnalyzer, EnhancedFallacySeverityEvaluator
+    
+    # Importer les analyseurs améliorés
+    from argumentation_analysis.agents.tools.analysis.enhanced.contextual_fallacy_analyzer import EnhancedContextualFallacyAnalyzer
+    from argumentation_analysis.agents.tools.analysis.enhanced.fallacy_severity_evaluator import EnhancedFallacySeverityEvaluator
 
 # Configuration du logging
 logging.basicConfig(
@@ -56,6 +61,9 @@ class EnhancedComplexFallacyAnalyzer(BaseAnalyzer):
         """
         super().__init__()
         self.logger = logger
+        
+        # Appeler la fonction d'importation paresseuse
+        _lazy_imports()
         
         # Initialiser les analyseurs améliorés
         self.contextual_analyzer = EnhancedContextualFallacyAnalyzer()

@@ -18,42 +18,43 @@ from semantic_kernel.contents import ChatMessageContent, AuthorRole
 from semantic_kernel.agents import ChatCompletionAgent
 from semantic_kernel.functions.kernel_arguments import KernelArguments
 
-# Imports depuis les modules du projet
-try:
-    # Import relatif depuis le package agents/core
-    from ....ui.config import ENCRYPTION_KEY, CONFIG_FILE, CONFIG_FILE_JSON
-    from ....ui.utils import load_from_cache, reconstruct_url
-    from ....ui.extract_utils import (
-        load_source_text, extract_text_with_markers, find_similar_text,
-        load_extract_definitions_safely, save_extract_definitions_safely
-    )
-    from ....core.llm_service import create_llm_service
+# Import des définitions et prompts locaux qui ne causent pas d'importations circulaires
+from .extract_definitions import ExtractAgentPlugin, ExtractResult
+from .prompts import (
+    EXTRACT_AGENT_INSTRUCTIONS, VALIDATION_AGENT_INSTRUCTIONS,
+    EXTRACT_FROM_NAME_PROMPT, VALIDATE_EXTRACT_PROMPT, REPAIR_EXTRACT_PROMPT
+)
+
+# Fonction d'importation paresseuse pour éviter les importations circulaires
+def _lazy_imports():
+    """Importe les modules de manière paresseuse pour éviter les importations circulaires."""
+    global ENCRYPTION_KEY, CONFIG_FILE, CONFIG_FILE_JSON
+    global load_from_cache, reconstruct_url
+    global load_source_text, extract_text_with_markers, find_similar_text
+    global load_extract_definitions_safely, save_extract_definitions_safely
+    global create_llm_service
     
-    # Import des définitions et prompts
-    from .extract_definitions import ExtractAgentPlugin, ExtractResult
-    from .prompts import (
-        EXTRACT_AGENT_INSTRUCTIONS, VALIDATION_AGENT_INSTRUCTIONS,
-        EXTRACT_FROM_NAME_PROMPT, VALIDATE_EXTRACT_PROMPT, REPAIR_EXTRACT_PROMPT
-    )
-except ImportError:
-    # Fallback pour les imports absolus
-    from argumentation_analysis.ui.config import ENCRYPTION_KEY, CONFIG_FILE, CONFIG_FILE_JSON
-    from argumentation_analysis.ui.utils import load_from_cache, reconstruct_url
-    from argumentation_analysis.ui.extract_utils import (
-        load_source_text, extract_text_with_markers, find_similar_text,
-        load_extract_definitions_safely, save_extract_definitions_safely
-    )
-    from argumentation_analysis.core.llm_service import create_llm_service
-    
-    # Import des définitions et prompts (chemin absolu)
-    import sys
-    import os
-    sys.path.append(os.path.dirname(os.path.abspath(__file__)))
-    from extract_definitions import ExtractAgentPlugin, ExtractResult
-    from prompts import (
-        EXTRACT_AGENT_INSTRUCTIONS, VALIDATION_AGENT_INSTRUCTIONS,
-        EXTRACT_FROM_NAME_PROMPT, VALIDATE_EXTRACT_PROMPT, REPAIR_EXTRACT_PROMPT
-    )
+    try:
+        # Import relatif depuis le package agents/core
+        from ....ui.config import ENCRYPTION_KEY, CONFIG_FILE, CONFIG_FILE_JSON
+        from ....ui.utils import load_from_cache, reconstruct_url
+        from ....ui.extract_utils import (
+            load_source_text, extract_text_with_markers, find_similar_text,
+            load_extract_definitions_safely, save_extract_definitions_safely
+        )
+        from ....core.llm_service import create_llm_service
+    except ImportError:
+        # Fallback pour les imports absolus
+        from argumentation_analysis.ui.config import ENCRYPTION_KEY, CONFIG_FILE, CONFIG_FILE_JSON
+        from argumentation_analysis.ui.utils import load_from_cache, reconstruct_url
+        from argumentation_analysis.ui.extract_utils import (
+            load_source_text, extract_text_with_markers, find_similar_text,
+            load_extract_definitions_safely, save_extract_definitions_safely
+        )
+        from argumentation_analysis.core.llm_service import create_llm_service
+
+# Appeler la fonction d'importation paresseuse
+_lazy_imports()
 
 # Configuration du logging
 logging.basicConfig(
