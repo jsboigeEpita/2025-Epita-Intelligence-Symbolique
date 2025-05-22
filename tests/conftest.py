@@ -66,9 +66,14 @@ def setup_jpype():
                   f"utilisation du mock JPype1 (JPype1 n'est pas compatible avec Python 3.12+)")
         else:
             print("JPype1 non disponible, utilisation du mock")
-            
+        
+        # Ajouter le répertoire parent au chemin de recherche de Python
+        import os
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        sys.path.insert(0, current_dir)
+        
         # Importer le mock de jpype
-        from tests.mocks.jpype_mock import (
+        from mocks.jpype_mock import (
             isJVMStarted, startJVM, getJVMPath, getJVMVersion, getDefaultJVMPath,
             JClass, JException, JObject, JVMNotFoundException, imports, _jpype
         )
@@ -98,7 +103,13 @@ def setup_numpy():
     # Pour Python 3.12+, toujours utiliser le mock
     if sys.version_info.major == 3 and sys.version_info.minor >= 12:
         # Importer le mock de numpy
-        from tests.mocks.numpy_mock import array, ndarray, mean, sum, zeros, ones, dot, concatenate, vstack, hstack, argmax, argmin, max, min, random
+        # Assurons-nous que le répertoire parent est dans le chemin de recherche
+        import os
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        if current_dir not in sys.path:
+            sys.path.insert(0, current_dir)
+            
+        from mocks.numpy_mock import array, ndarray, mean, sum, zeros, ones, dot, concatenate, vstack, hstack, argmax, argmin, max, min, random
         
         # Installer les mocks dans sys.modules
         sys.modules['numpy'] = type('numpy', (), {
@@ -157,7 +168,13 @@ def setup_pandas():
     # Pour Python 3.12+, toujours utiliser le mock
     if sys.version_info.major == 3 and sys.version_info.minor >= 12:
         # Utiliser le mock de pandas
-        from tests.mocks.pandas_mock import DataFrame, read_csv, read_json
+        # Assurons-nous que le répertoire parent est dans le chemin de recherche
+        import os
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        if current_dir not in sys.path:
+            sys.path.insert(0, current_dir)
+            
+        from mocks.pandas_mock import DataFrame, read_csv, read_json
         
         # Installer les mocks dans sys.modules
         sys.modules['pandas'] = type('pandas', (), {
