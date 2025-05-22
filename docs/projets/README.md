@@ -9,7 +9,6 @@ Les projets sont organisés en quatre catégories thématiques principales :
 1. [**Fondements théoriques et techniques**](./categories/fondements_theoriques.md) - Projets centrés sur les aspects formels, logiques et théoriques de l'argumentation
 2. [**Développement système et infrastructure**](./categories/developpement_systeme.md) - Projets axés sur l'architecture, l'orchestration et les composants techniques
 3. [**Expérience utilisateur et applications**](./categories/experience_utilisateur.md) - Projets orientés vers les interfaces, visualisations et cas d'usage concrets
-4. [**Lutte contre la désinformation**](./categories/experience_utilisateur.md#326-système-danalyse-de-débats-politiques-et-surveillance-des-médias) - Projets axés sur la détection, l'analyse et la lutte contre la désinformation
 
 Chaque catégorie regroupe des projets partageant des objectifs et des approches similaires, permettant aux étudiants de se concentrer sur un domaine spécifique de l'intelligence symbolique et de l'argumentation.
 
