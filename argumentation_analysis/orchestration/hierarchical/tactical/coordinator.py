@@ -542,12 +542,11 @@ class TaskCoordinator:
         # Mettre à jour le statut de la tâche
         self.state.update_task_status(
             tactical_task_id,
-            "completed" if result.get("status") == "completed" else "failed",
-            {"result_id": result.get("id")}
+            "completed" if result.get("status") == "completed" else "failed"
         )
         
         # Enregistrer le résultat
-        self.state.add_task_result(tactical_task_id, result)
+        self.state.add_intermediate_result(tactical_task_id, result)
         
         # Vérifier si toutes les tâches d'un objectif sont terminées
         objective_id = None
@@ -636,10 +635,15 @@ class TaskCoordinator:
                 "progress": completed_obj_tasks / total_obj_tasks if total_obj_tasks > 0 else 0.0
             }
         
-        # Collecter les problèmes
+        # Collecter les problèmes (utiliser identified_conflicts si issues n'existe pas)
         issues = []
-        for issue in self.state.issues:
-            issues.append(issue)
+        if hasattr(self.state, 'issues'):
+            for issue in self.state.issues:
+                issues.append(issue)
+        else:
+            # Utiliser identified_conflicts comme fallback
+            for conflict in self.state.identified_conflicts:
+                issues.append(conflict)
         
         # Créer le rapport
         report = {
