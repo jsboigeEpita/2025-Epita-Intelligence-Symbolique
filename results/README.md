@@ -1,4 +1,16 @@
-# Résultats d'Analyse Rhétorique
+# Résultats d'analyse de textes
+
+## À propos de ce dossier
+Ce dossier contient les **résultats des analyses rhétoriques** effectuées sur différents corpus de textes. Il stocke les analyses, rapports, visualisations et comparaisons générés par le système.
+
+## Distinction avec `argumentation_analysis/results/`
+⚠️ **Note importante** : Ne pas confondre avec le dossier `argumentation_analysis/results/` qui contient les **résultats d'évaluation du système** lui-même (performance, précision, etc.).
+
+| Ce dossier (`results/`) | Dossier `argumentation_analysis/results/` |
+|-------------------------|-------------------------------------------|
+| Résultats d'analyse de textes | Résultats d'évaluation du système |
+| Analyses, rapports, visualisations | Tests de performance |
+| Orienté vers le contenu analysé | Orienté vers les performances du système |
 
 Ce répertoire contient les résultats des analyses rhétoriques effectuées sur différents corpus de textes. Il est organisé de manière à faciliter l'accès aux différents types de résultats et leur interprétation.
 

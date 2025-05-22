@@ -36,3 +36,7 @@ vendor/
 
 # Fichiers de documentation spécifiques
 README_TESTS.md
+
+# Fichiers de rapports de tests et d'analyses
+argumentation_analysis/tests/tools/reports/test_report_*.txt
+results/rhetorical_analysis_*.json
