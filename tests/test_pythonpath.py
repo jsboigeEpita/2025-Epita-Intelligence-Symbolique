@@ -3,7 +3,8 @@ import os
 
 # Ajouter le répertoire du projet au PYTHONPATH
 current_dir = os.path.dirname(os.path.abspath(__file__))
-sys.path.insert(0, current_dir)
+parent_dir = os.path.dirname(current_dir)
+sys.path.insert(0, parent_dir)
 
 print(f"Répertoire courant: {current_dir}")
 print("\nPYTHONPATH:")
