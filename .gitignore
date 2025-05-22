@@ -21,6 +21,7 @@ ENV/
 *.bak
 temp_extracts/
 logs/
+temp/
 
 # Fichiers spécifiques au projet
 *.egg-info/
