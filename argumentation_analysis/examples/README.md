@@ -1,4 +1,16 @@
-# Exemples d'utilisation du système d'analyse d'argumentation
+# Exemples de code pour l'analyse argumentative
+
+## À propos de ce dossier
+Ce dossier contient des **exemples de code** démontrant l'utilisation et l'implémentation du système d'analyse argumentative. Ces exemples servent de guide pour comprendre comment utiliser les différentes fonctionnalités du système.
+
+## Distinction avec le dossier `examples/` à la racine
+⚠️ **Note importante** : Ne pas confondre avec le dossier `examples/` à la racine du projet qui contient des **exemples de textes et données** utilisés comme entrées pour le système.
+
+| Ce dossier (`argumentation_analysis/examples/`) | Dossier `examples/` à la racine |
+|------------------------------------------------|--------------------------------|
+| Contient des fichiers Python (`.py`) | Contient des fichiers texte (`.txt`) |
+| Exemples de code d'implémentation | Exemples de données d'entrée |
+| Utilisé pour apprendre à utiliser le système | Utilisé pour tester l'analyse |
 
 Ce répertoire contient des exemples de code démontrant l'utilisation des différentes fonctionnalités du système d'analyse d'argumentation.
 
