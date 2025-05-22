@@ -79,11 +79,11 @@ except Exception as e:
             return $true
         } else {
             $errorMessage = ($output | Select-Object -SkipLast 1) -join "`n"
-            Log-Message -Level "ERROR" -Message "Erreur lors du test de $Name: $errorMessage"
+            Log-Message -Level "ERROR" -Message "Erreur lors du test de $Name : $($errorMessage)"
             return $false
         }
     } catch {
-        Log-Message -Level "ERROR" -Message "Exception lors du test de $Name: $_"
+        Log-Message -Level "ERROR" -Message "Exception lors du test de $Name : $($_.Exception.Message)"
         return $false
     }
 }
@@ -377,8 +377,37 @@ except Exception as e:
     }
 }
 
+# Fonction pour vérifier si Visual Studio Build Tools est installé
+function Check-BuildTools {
+    $vsWhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
+    
+    if (-not (Test-Path -Path $vsWhere)) {
+        Log-Message -Level "WARNING" -Message "Visual Studio Build Tools ne semble pas être installé (vswhere.exe non trouvé)."
+        return $false
+    }
+    
+    $buildTools = & $vsWhere -products Microsoft.VisualStudio.Product.BuildTools -requires Microsoft.VisualCpp.Tools.Host.x86 -latest -property installationPath
+    
+    if (-not $buildTools) {
+        Log-Message -Level "WARNING" -Message "Visual Studio Build Tools avec les outils C++ ne semble pas être installé."
+        return $false
+    }
+    
+    Log-Message -Level "INFO" -Message "Visual Studio Build Tools trouvé à: $buildTools"
+    return $true
+}
+
 # Fonction principale pour tester toutes les dépendances
 function Test-AllDependencies {
+    # Vérifier si Visual Studio Build Tools est installé
+    $buildToolsInstalled = Check-BuildTools
+    if (-not $buildToolsInstalled) {
+        Log-Message -Level "WARNING" -Message "Les outils de compilation C++ ne sont pas installés, ce qui peut causer des problèmes lors de l'installation de numpy, pandas et jpype."
+        Log-Message -Level "WARNING" -Message "Pour installer les outils de compilation, exécutez le script install_build_tools.ps1"
+        Log-Message -Level "WARNING" -Message "Pour plus d'informations, consultez le fichier README_INSTALLATION_OUTILS_COMPILATION.md"
+    } else {
+        Log-Message -Level "INFO" -Message "Visual Studio Build Tools est installé, les extensions C++ pourront être compilées."
+    }
     $dependencies = @(
         @{Name="numpy"; MinVersion="1.24.0"; Test=$true},
         @{Name="pandas"; MinVersion="2.0.0"; Test=$true},
@@ -458,6 +487,16 @@ if ($dependenciesOk -and $projectImportsOk) {
     exit 0
 } else {
     Log-Message -Level "ERROR" -Message "Certaines dépendances ne sont pas correctement installées ou fonctionnelles."
-    Log-Message -Level "ERROR" -Message "Exécutez le script fix_all_dependencies.ps1 pour résoudre les problèmes."
+    
+    # Vérifier si Visual Studio Build Tools est installé
+    $buildToolsInstalled = Check-BuildTools
+    if (-not $buildToolsInstalled) {
+        Log-Message -Level "ERROR" -Message "Les outils de compilation C++ ne sont pas installés, ce qui est probablement la cause des problèmes."
+        Log-Message -Level "ERROR" -Message "Exécutez d'abord le script install_build_tools.ps1 pour installer les outils de compilation."
+        Log-Message -Level "ERROR" -Message "Puis exécutez le script fix_all_dependencies.ps1 pour résoudre les problèmes."
+    } else {
+        Log-Message -Level "ERROR" -Message "Exécutez le script fix_all_dependencies.ps1 pour résoudre les problèmes."
+    }
+    
     exit 1
 }

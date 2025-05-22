@@ -7,6 +7,21 @@ et de résoudre les avertissements liés à @pytest.mark.asyncio.
 """
 
 import pytest
+# Initialisation du mock JPype1 pour Python 3.12+
+import sys
+try:
+    if sys.version_info.major == 3 and sys.version_info.minor >= 12:
+        print("Python 3.12+ détecté, utilisation directe du mock JPype1")
+        # Importer directement le mock JPype1
+        from tests.mocks import jpype_mock
+        # Installer le mock dans sys.modules
+        sys.modules['jpype'] = jpype_mock
+        sys.modules['_jpype'] = jpype_mock._jpype
+    else:
+        print(f"Python {sys.version_info.major}.{sys.version_info.minor} détecté, pas besoin de mock JPype1")
+except ImportError:
+    print("Avertissement: Mock JPype1 non trouvé")
+
 
 
 def pytest_configure(config):

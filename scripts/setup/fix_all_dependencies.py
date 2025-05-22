@@ -16,6 +16,7 @@ import platform
 import tempfile
 import venv
 import shutil
+import ctypes
 from pathlib import Path
 
 # Configuration du logging
@@ -309,6 +310,48 @@ def test_installation_in_venv(venv_path):
         except Exception as e:
             logger.warning(f"Erreur lors de la suppression de l'environnement virtuel: {e}")
 
+def check_build_tools():
+    """
+    Vérifie si Visual Studio Build Tools ou Visual Studio avec outils C++ est installé.
+    
+    Returns:
+        True si Visual Studio Build Tools ou Visual Studio avec outils C++ est installé, False sinon
+    """
+    # Vérifier si on est sous Windows
+    if platform.system() != "Windows":
+        logger.info("Système non-Windows détecté, pas besoin de Visual Studio Build Tools.")
+        return True
+    
+    # Vérifier si vswhere.exe existe
+    program_files = os.environ.get("ProgramFiles(x86)", "C:\\Program Files (x86)")
+    vswhere_path = os.path.join(program_files, "Microsoft Visual Studio", "Installer", "vswhere.exe")
+    
+    if not os.path.exists(vswhere_path):
+        logger.warning("Visual Studio ne semble pas être installé (vswhere.exe non trouvé).")
+        return False
+    
+    # Rechercher d'abord Visual Studio Community/Professional/Enterprise avec les outils C++
+    cmd = [vswhere_path, "-products", "*",
+           "-requires", "Microsoft.VisualStudio.Component.VC.Tools.x86.x64",
+           "-latest", "-property", "installationPath"]
+    returncode, stdout, stderr = run_command(cmd)
+    
+    if returncode == 0 and stdout.strip():
+        logger.info(f"Visual Studio avec outils C++ trouvé à: {stdout.strip()}")
+        return True
+    
+    # Si Visual Studio n'est pas trouvé, rechercher les Build Tools autonomes
+    cmd = [vswhere_path, "-products", "Microsoft.VisualStudio.Product.BuildTools",
+           "-requires", "Microsoft.VisualCpp.Tools.Host.x86", "-latest", "-property", "installationPath"]
+    returncode, stdout, stderr = run_command(cmd)
+    
+    if returncode != 0 or not stdout.strip():
+        logger.warning("Ni Visual Studio ni Visual Studio Build Tools avec les outils C++ ne semblent être installés.")
+        return False
+    
+    logger.info(f"Visual Studio Build Tools trouvé à: {stdout.strip()}")
+    return True
+
 def fix_all_dependencies():
     """
     Résout tous les problèmes de dépendances.
@@ -317,6 +360,14 @@ def fix_all_dependencies():
         True si toutes les résolutions ont réussi, False sinon
     """
     success = True
+    
+    # Vérifier si Visual Studio Build Tools est installé
+    build_tools_installed = check_build_tools()
+    if not build_tools_installed:
+        logger.warning("Les outils de compilation C++ ne sont pas installés, ce qui peut causer des problèmes lors de l'installation de numpy, pandas et jpype.")
+        logger.info("Veuillez installer Visual Studio Build Tools 2022 avec les composants 'Développement Desktop en C++' depuis https://aka.ms/vs/17/release/vs_BuildTools.exe")
+    else:
+        logger.info("Visual Studio Build Tools est installé, les extensions C++ pourront être compilées.")
     
     # Mettre à jour pip
     logger.info("Mise à jour de pip...")
@@ -327,20 +378,28 @@ def fix_all_dependencies():
     install_package("setuptools", upgrade=True)
     install_package("wheel", upgrade=True)
     
+    # Configurer l'environnement pour utiliser les outils de compilation
+    if build_tools_installed:
+        logger.info("Configuration de l'environnement pour utiliser les outils de compilation...")
+        os.environ["DISTUTILS_USE_SDK"] = "1"
+    
     # Résoudre les problèmes de numpy
     logger.info("Résolution des problèmes de numpy...")
     if not fix_numpy():
         success = False
+        logger.error("Échec de l'installation de numpy. Vérifiez que Visual Studio Build Tools est correctement installé.")
     
     # Résoudre les problèmes de pandas
     logger.info("Résolution des problèmes de pandas...")
     if not fix_pandas():
         success = False
+        logger.error("Échec de l'installation de pandas. Vérifiez que Visual Studio Build Tools est correctement installé.")
     
     # Résoudre les problèmes de jpype
     logger.info("Résolution des problèmes de jpype...")
     if not fix_jpype():
         success = False
+        logger.error("Échec de l'installation de jpype. Vérifiez que Visual Studio Build Tools est correctement installé.")
     
     # Résoudre les problèmes de cryptography
     logger.info("Résolution des problèmes de cryptography...")

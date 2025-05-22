@@ -249,9 +249,47 @@ function Test-InstallationInVenv {
     }
 }
 
+# Fonction pour vérifier si Visual Studio Build Tools ou Visual Studio avec outils C++ est installé
+function Check-BuildTools {
+    $vsWhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
+    
+    if (-not (Test-Path -Path $vsWhere)) {
+        Log-Message -Level "WARNING" -Message "Visual Studio ne semble pas être installé (vswhere.exe non trouvé)."
+        return $false
+    }
+    
+    # Rechercher d'abord Visual Studio Community/Professional/Enterprise avec les outils C++
+    $vsInstallPath = & $vsWhere -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -latest -property installationPath
+    
+    if ($vsInstallPath) {
+        Log-Message -Level "INFO" -Message "Visual Studio avec outils C++ trouvé à: $vsInstallPath"
+        return $true
+    }
+    
+    # Si Visual Studio n'est pas trouvé, rechercher les Build Tools autonomes
+    $buildTools = & $vsWhere -products Microsoft.VisualStudio.Product.BuildTools -requires Microsoft.VisualCpp.Tools.Host.x86 -latest -property installationPath
+    
+    if (-not $buildTools) {
+        Log-Message -Level "WARNING" -Message "Ni Visual Studio ni Visual Studio Build Tools avec les outils C++ ne semblent être installés."
+        return $false
+    }
+    
+    Log-Message -Level "INFO" -Message "Visual Studio Build Tools trouvé à: $buildTools"
+    return $true
+}
+
 # Fonction principale pour résoudre tous les problèmes de dépendances
 function Fix-AllDependencies {
     $success = $true
+    
+    # Vérifier si Visual Studio Build Tools est installé
+    $buildToolsInstalled = Check-BuildTools
+    if (-not $buildToolsInstalled) {
+        Log-Message -Level "WARNING" -Message "Les outils de compilation C++ ne sont pas installés, ce qui peut causer des problèmes lors de l'installation de numpy, pandas et jpype."
+        Log-Message -Level "INFO" -Message "Veuillez installer Visual Studio Build Tools 2022 avec les composants 'Développement Desktop en C++' depuis https://aka.ms/vs/17/release/vs_BuildTools.exe"
+    } else {
+        Log-Message -Level "INFO" -Message "Visual Studio Build Tools est installé, les extensions C++ pourront être compilées."
+    }
     
     # Mettre à jour pip
     Log-Message -Level "INFO" -Message "Mise à jour de pip..."
@@ -262,22 +300,31 @@ function Fix-AllDependencies {
     Install-Package -Package "setuptools" -Upgrade | Out-Null
     Install-Package -Package "wheel" -Upgrade | Out-Null
     
+    # Configurer l'environnement pour utiliser les outils de compilation
+    if ($buildToolsInstalled) {
+        Log-Message -Level "INFO" -Message "Configuration de l'environnement pour utiliser les outils de compilation..."
+        $env:DISTUTILS_USE_SDK = "1"
+    }
+    
     # Résoudre les problèmes de numpy
     Log-Message -Level "INFO" -Message "Résolution des problèmes de numpy..."
     if (-not (Fix-Numpy)) {
         $success = $false
+        Log-Message -Level "ERROR" -Message "Échec de l'installation de numpy. Vérifiez que Visual Studio Build Tools est correctement installé."
     }
     
     # Résoudre les problèmes de pandas
     Log-Message -Level "INFO" -Message "Résolution des problèmes de pandas..."
     if (-not (Fix-Pandas)) {
         $success = $false
+        Log-Message -Level "ERROR" -Message "Échec de l'installation de pandas. Vérifiez que Visual Studio Build Tools est correctement installé."
     }
     
     # Résoudre les problèmes de jpype
     Log-Message -Level "INFO" -Message "Résolution des problèmes de jpype..."
     if (-not (Fix-Jpype)) {
         $success = $false
+        Log-Message -Level "ERROR" -Message "Échec de l'installation de jpype. Vérifiez que Visual Studio Build Tools est correctement installé."
     }
     
     # Résoudre les problèmes de cryptography
