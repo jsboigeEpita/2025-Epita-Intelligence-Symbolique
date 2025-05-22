@@ -30,16 +30,25 @@ from argumentation_analysis.agents.tools.analysis.contextual_fallacy_analyzer im
 # Importations pour les modèles de langage avancés
 from argumentation_analysis.paths import DATA_DIR
 
-try:
-    import torch
-    import transformers
-    from transformers import AutoTokenizer, AutoModelForSequenceClassification, pipeline
-    from sklearn.metrics.pairwise import cosine_similarity
-    HAS_TRANSFORMERS = True
-except ImportError:
-    HAS_TRANSFORMERS = False
-    logging.warning("Les bibliothèques transformers et/ou torch ne sont pas installées. "
-                   "L'analyseur utilisera des méthodes alternatives.")
+# Définir HAS_TRANSFORMERS comme variable globale
+HAS_TRANSFORMERS = False
+
+# Fonction d'importation paresseuse pour éviter les importations circulaires
+def _lazy_imports():
+    """Importe les modules de manière paresseuse pour éviter les importations circulaires."""
+    global torch, transformers, AutoTokenizer, AutoModelForSequenceClassification, pipeline, cosine_similarity
+    global HAS_TRANSFORMERS
+    
+    try:
+        import torch
+        import transformers
+        from transformers import AutoTokenizer, AutoModelForSequenceClassification, pipeline
+        from sklearn.metrics.pairwise import cosine_similarity
+        HAS_TRANSFORMERS = True
+    except ImportError:
+        HAS_TRANSFORMERS = False
+        logging.warning("Les bibliothèques transformers et/ou torch ne sont pas installées. "
+                       "L'analyseur utilisera des méthodes alternatives.")
 
 # Configuration du logging
 logging.basicConfig(
@@ -67,6 +76,9 @@ class EnhancedContextualFallacyAnalyzer(BaseAnalyzer):
             taxonomy_path: Chemin vers le fichier de taxonomie des sophismes (optionnel)
             model_name: Nom du modèle de langage à utiliser (optionnel)
         """
+        # Appeler la fonction d'importation paresseuse
+        _lazy_imports()
+        
         super().__init__(taxonomy_path)
         self.logger = logger
         self.model_name = model_name

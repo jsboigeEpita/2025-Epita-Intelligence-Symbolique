@@ -23,12 +23,23 @@ from argumentation_analysis.core.state_manager_plugin import StateManagerPlugin
 from argumentation_analysis.core.strategies import SimpleTerminationStrategy, BalancedParticipationStrategy
 # NOTE: create_llm_service n'est plus importé ici, le service est passé en argument
 
-# Imports des définitions d'agents (setup + instructions)
-from argumentation_analysis.agents.core.pm.pm_definitions import setup_pm_kernel, PM_INSTRUCTIONS
-from argumentation_analysis.agents.core.informal.informal_definitions import setup_informal_kernel, INFORMAL_AGENT_INSTRUCTIONS
-from argumentation_analysis.agents.core.pl.pl_definitions import setup_pl_kernel, PL_AGENT_INSTRUCTIONS
-from argumentation_analysis.agents.core.extract.extract_agent import setup_extract_agent
-from argumentation_analysis.agents.core.extract.prompts import EXTRACT_AGENT_INSTRUCTIONS
+# Fonction d'importation paresseuse pour éviter les importations circulaires
+def _lazy_imports():
+    """Importe les modules de manière paresseuse pour éviter les importations circulaires."""
+    global setup_pm_kernel, PM_INSTRUCTIONS
+    global setup_informal_kernel, INFORMAL_AGENT_INSTRUCTIONS
+    global setup_pl_kernel, PL_AGENT_INSTRUCTIONS
+    global setup_extract_agent, EXTRACT_AGENT_INSTRUCTIONS
+    
+    # Imports des définitions d'agents (setup + instructions)
+    from argumentation_analysis.agents.core.pm.pm_definitions import setup_pm_kernel, PM_INSTRUCTIONS
+    from argumentation_analysis.agents.core.informal.informal_definitions import setup_informal_kernel, INFORMAL_AGENT_INSTRUCTIONS
+    from argumentation_analysis.agents.core.pl.pl_definitions import setup_pl_kernel, PL_AGENT_INSTRUCTIONS
+    from argumentation_analysis.agents.core.extract.extract_agent import setup_extract_agent
+    from argumentation_analysis.agents.core.extract.prompts import EXTRACT_AGENT_INSTRUCTIONS
+
+# Appeler la fonction d'importation paresseuse
+_lazy_imports()
 
 # Logger principal pour cette fonction
 logger = logging.getLogger("Orchestration.Run")
