@@ -1,118 +1,233 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
 """
-Mock pour le module numpy.
-
-Ce module fournit des implémentations factices des fonctionnalités de numpy
-qui sont utilisées dans le projet, permettant d'exécuter les tests sans avoir besoin
-de numpy.
+Mock pour numpy pour les tests.
+Ce mock permet d'exécuter les tests sans avoir besoin d'installer numpy.
 """
 
-import sys
-from unittest.mock import MagicMock
+import logging
+from typing import Any, Dict, List, Optional, Union, Callable, Tuple
 
-# Créer un mock pour numpy.array
-def array(data, dtype=None):
-    """Mock pour numpy.array."""
-    return data
+# Configuration du logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s [%(levelname)s] [%(name)s] %(message)s',
+    datefmt='%H:%M:%S'
+)
+logger = logging.getLogger("NumpyMock")
 
-# Créer un mock pour numpy.ndarray
-class ndarray(list):
+# Version
+__version__ = "1.24.3"
+
+# Classes de base
+class ndarray:
     """Mock pour numpy.ndarray."""
     
-    def __init__(self, data=None):
-        super().__init__(data or [])
-        self.shape = (len(self),)
+    def __init__(self, shape=None, dtype=None, buffer=None, offset=0,
+                 strides=None, order=None):
+        self.shape = shape if shape is not None else (0,)
+        self.dtype = dtype
+        self.data = buffer
+        self.size = 0
+        if shape:
+            self.size = 1
+            for dim in shape:
+                self.size *= dim
+    
+    def __getitem__(self, key):
+        """Simule l'accès aux éléments."""
+        return 0
+    
+    def __setitem__(self, key, value):
+        """Simule la modification des éléments."""
+        pass
+    
+    def __len__(self):
+        """Retourne la taille du premier axe."""
+        return self.shape[0] if self.shape else 0
+    
+    def __str__(self):
+        return f"ndarray(shape={self.shape}, dtype={self.dtype})"
+    
+    def __repr__(self):
+        return self.__str__()
+    
+    def reshape(self, *args):
+        """Simule le changement de forme."""
+        if len(args) == 1 and isinstance(args[0], tuple):
+            new_shape = args[0]
+        else:
+            new_shape = args
+        return ndarray(shape=new_shape, dtype=self.dtype)
     
     def mean(self, axis=None):
-        """Mock pour ndarray.mean."""
-        if not self:
-            return 0
-        return sum(self) / len(self)
+        """Simule le calcul de la moyenne."""
+        return 0.0
     
     def sum(self, axis=None):
-        """Mock pour ndarray.sum."""
-        return sum(self)
+        """Simule le calcul de la somme."""
+        return 0.0
     
-    def reshape(self, *shape):
-        """Mock pour ndarray.reshape."""
-        return self
+    def max(self, axis=None):
+        """Simule le calcul du maximum."""
+        return 0.0
     
-    def dot(self, other):
-        """Mock pour ndarray.dot."""
-        if not self or not other:
-            return 0
-        return sum(a * b for a, b in zip(self, other))
+    def min(self, axis=None):
+        """Simule le calcul du minimum."""
+        return 0.0
 
-# Créer des mocks pour les fonctions numpy couramment utilisées
-mean = lambda x, axis=None: sum(x) / len(x) if x else 0
-sum = lambda x, axis=None: sum(x)
-zeros = lambda shape, dtype=None: [0] * shape[0] if isinstance(shape, tuple) else [0] * shape
-ones = lambda shape, dtype=None: [1] * shape[0] if isinstance(shape, tuple) else [1] * shape
-dot = lambda a, b: sum(a_i * b_i for a_i, b_i in zip(a, b)) if a and b else 0
-concatenate = lambda arrays, axis=0: [item for sublist in arrays for item in sublist]
-vstack = lambda arrays: arrays
-hstack = lambda arrays: [item for sublist in arrays for item in sublist]
-argmax = lambda a, axis=None: a.index(max(a)) if a else 0
-argmin = lambda a, axis=None: a.index(min(a)) if a else 0
-max = lambda a, axis=None: max(a) if a else 0
-min = lambda a, axis=None: min(a) if a else 0
+# Fonctions principales
+def array(object, dtype=None, copy=True, order='K', subok=False, ndmin=0):
+    """Crée un tableau numpy."""
+    if isinstance(object, (list, tuple)):
+        shape = (len(object),)
+        if object and isinstance(object[0], (list, tuple)):
+            shape = (len(object), len(object[0]))
+    else:
+        shape = (1,)
+    return ndarray(shape=shape, dtype=dtype)
 
-# Créer un mock pour numpy.random
-class RandomMock:
+def zeros(shape, dtype=None):
+    """Crée un tableau de zéros."""
+    return ndarray(shape=shape, dtype=dtype)
+
+def ones(shape, dtype=None):
+    """Crée un tableau de uns."""
+    return ndarray(shape=shape, dtype=dtype)
+
+def empty(shape, dtype=None):
+    """Crée un tableau vide."""
+    return ndarray(shape=shape, dtype=dtype)
+
+def arange(start, stop=None, step=1, dtype=None):
+    """Crée un tableau avec des valeurs espacées régulièrement."""
+    if stop is None:
+        stop = start
+        start = 0
+    size = max(0, int((stop - start) / step))
+    return ndarray(shape=(size,), dtype=dtype)
+
+def linspace(start, stop, num=50, endpoint=True, retstep=False, dtype=None):
+    """Crée un tableau avec des valeurs espacées linéairement."""
+    arr = ndarray(shape=(num,), dtype=dtype)
+    if retstep:
+        return arr, (stop - start) / (num - 1 if endpoint else num)
+    return arr
+
+def random_sample(size=None):
+    """Génère des nombres aléatoires uniformes."""
+    if size is None:
+        return 0.5
+    if isinstance(size, int):
+        size = (size,)
+    return ndarray(shape=size, dtype=float)
+
+# Fonctions supplémentaires requises par conftest.py
+def mean(a, axis=None):
+    """Calcule la moyenne d'un tableau."""
+    if isinstance(a, ndarray):
+        return a.mean(axis)
+    return 0.0
+
+def sum(a, axis=None):
+    """Calcule la somme d'un tableau."""
+    if isinstance(a, ndarray):
+        return a.sum(axis)
+    return 0.0
+
+def max(a, axis=None):
+    """Calcule le maximum d'un tableau."""
+    if isinstance(a, ndarray):
+        return a.max(axis)
+    return 0.0
+
+def min(a, axis=None):
+    """Calcule le minimum d'un tableau."""
+    if isinstance(a, ndarray):
+        return a.min(axis)
+    return 0.0
+
+def dot(a, b):
+    """Calcule le produit scalaire de deux tableaux."""
+    return ndarray(shape=(1,))
+
+def concatenate(arrays, axis=0):
+    """Concatène des tableaux."""
+    return ndarray(shape=(1,))
+
+def vstack(arrays):
+    """Empile des tableaux verticalement."""
+    return ndarray(shape=(1,))
+
+def hstack(arrays):
+    """Empile des tableaux horizontalement."""
+    return ndarray(shape=(1,))
+
+def argmax(a, axis=None):
+    """Retourne l'indice du maximum."""
+    return 0
+
+def argmin(a, axis=None):
+    """Retourne l'indice du minimum."""
+    return 0
+
+# Sous-modules
+class random:
     """Mock pour numpy.random."""
     
-    def rand(self, *args):
-        """Mock pour numpy.random.rand."""
+    @staticmethod
+    def rand(*args):
+        """Génère des nombres aléatoires uniformes."""
         if not args:
             return 0.5
-        if len(args) == 1:
-            return [0.5] * args[0]
-        return [[0.5 for _ in range(args[1])] for _ in range(args[0])]
+        shape = args
+        return ndarray(shape=shape, dtype=float)
     
-    def randn(self, *args):
-        """Mock pour numpy.random.randn."""
-        return self.rand(*args)
+    @staticmethod
+    def randn(*args):
+        """Génère des nombres aléatoires normaux."""
+        if not args:
+            return 0.0
+        shape = args
+        return ndarray(shape=shape, dtype=float)
     
-    def randint(self, low, high=None, size=None):
-        """Mock pour numpy.random.randint."""
+    @staticmethod
+    def randint(low, high=None, size=None, dtype=int):
+        """Génère des entiers aléatoires."""
         if high is None:
             high = low
             low = 0
         if size is None:
-            return (low + high) // 2
+            return low
         if isinstance(size, int):
-            return [(low + high) // 2] * size
-        return [[(low + high) // 2 for _ in range(size[1])] for _ in range(size[0])]
+            size = (size,)
+        return ndarray(shape=size, dtype=dtype)
     
-    def choice(self, a, size=None, replace=True, p=None):
-        """Mock pour numpy.random.choice."""
+    @staticmethod
+    def normal(loc=0.0, scale=1.0, size=None):
+        """Génère des nombres aléatoires normaux."""
         if size is None:
-            return a[0] if a else None
+            return loc
         if isinstance(size, int):
-            return [a[0] if a else None] * size
-        return [[a[0] if a else None for _ in range(size[1])] for _ in range(size[0])]
+            size = (size,)
+        return ndarray(shape=size, dtype=float)
     
-    def shuffle(self, x):
-        """Mock pour numpy.random.shuffle."""
-        pass
+    @staticmethod
+    def uniform(low=0.0, high=1.0, size=None):
+        """Génère des nombres aléatoires uniformes."""
+        if size is None:
+            return (low + high) / 2
+        if isinstance(size, int):
+            size = (size,)
+        return ndarray(shape=size, dtype=float)
 
-# Créer l'instance de RandomMock
-random = RandomMock()
+# Types de données
+float64 = "float64"
+float32 = "float32"
+int64 = "int64"
+int32 = "int32"
+bool_ = "bool"
 
-# Installer le mock dans sys.modules pour qu'il soit utilisé lors des importations
-sys.modules['numpy'] = sys.modules.get('numpy', MagicMock(
-    array=array,
-    ndarray=ndarray,
-    mean=mean,
-    sum=sum,
-    zeros=zeros,
-    ones=ones,
-    dot=dot,
-    concatenate=concatenate,
-    vstack=vstack,
-    hstack=hstack,
-    argmax=argmax,
-    argmin=argmin,
-    max=max,
-    min=min,
-    random=random
-))
+# Log de chargement
+logger.info("Module numpy_mock chargé")
