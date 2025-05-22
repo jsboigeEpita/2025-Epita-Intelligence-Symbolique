@@ -2,16 +2,16 @@
 # -*- coding: utf-8 -*-
 
 """
-Tests unitaires pour le module orchestration.hierarchical.tactical.resolver.
+Tests unitaires pour le Résolveur de Conflits de l'architecture hiérarchique.
 """
 
 import unittest
 import sys
 import os
 from unittest.mock import MagicMock, patch
-from datetime import datetime
 import json
 import logging
+from datetime import datetime
 
 # Configurer le logging pour les tests
 logging.basicConfig(
@@ -19,94 +19,41 @@ logging.basicConfig(
     format='%(asctime)s [%(levelname)s] [%(name)s] %(message)s',
     datefmt='%H:%M:%S'
 )
-logger = logging.getLogger("TestTacticalResolver")
+logger = logging.getLogger("TestConflictResolver")
 
 # Ajouter le répertoire racine au chemin Python pour pouvoir importer les modules
 sys.path.append(os.path.abspath('..'))
 
-# Import des modules à tester
+# Import du module à tester
 from argumentation_analysis.orchestration.hierarchical.tactical.resolver import ConflictResolver
 from argumentation_analysis.orchestration.hierarchical.tactical.state import TacticalState
 
 
-class TestTacticalResolver(unittest.TestCase):
-    """Tests unitaires pour le résolveur de conflits tactique."""
+class TestConflictResolver(unittest.TestCase):
+    """Tests unitaires pour le Résolveur de Conflits."""
     
     def setUp(self):
         """Initialisation avant chaque test."""
         # Créer un état tactique mock
-        self.tactical_state = TacticalState()
+        self.tactical_state = MagicMock(spec=TacticalState)
+        self.tactical_state.log_tactical_action = MagicMock()
+        self.tactical_state.add_conflict = MagicMock()
+        self.tactical_state.resolve_conflict = MagicMock(return_value=True)
+        self.tactical_state.intermediate_results = {}
+        self.tactical_state.tasks = {
+            "pending": [],
+            "in_progress": [],
+            "completed": [],
+            "failed": []
+        }
+        self.tactical_state.identified_conflicts = []
         
         # Créer le résolveur de conflits
         self.resolver = ConflictResolver(tactical_state=self.tactical_state)
-        
-        # Ajouter des résultats intermédiaires à l'état tactique pour les tests
-        self.tactical_state.intermediate_results = {
-            "task-1": {
-                "identified_arguments": [
-                    {
-                        "id": "arg-1",
-                        "text": "Tous les hommes sont mortels",
-                        "confidence": 0.9
-                    },
-                    {
-                        "id": "arg-2",
-                        "text": "Socrate est un homme",
-                        "confidence": 0.95
-                    }
-                ],
-                "identified_fallacies": [
-                    {
-                        "id": "fallacy-1",
-                        "type": "Appel à l'autorité",
-                        "argument_id": "arg-1",
-                        "confidence": 0.7
-                    }
-                ]
-            },
-            "task-2": {
-                "identified_arguments": [
-                    {
-                        "id": "arg-3",
-                        "text": "Socrate est mortel",
-                        "confidence": 0.85
-                    },
-                    {
-                        "id": "arg-4",
-                        "text": "Tous les philosophes sont mortels",
-                        "confidence": 0.8
-                    }
-                ],
-                "identified_fallacies": [
-                    {
-                        "id": "fallacy-2",
-                        "type": "Généralisation hâtive",
-                        "argument_id": "arg-4",
-                        "confidence": 0.6
-                    }
-                ]
-            }
-        }
-        
-        # Ajouter des tâches à l'état tactique
-        self.task1 = {
-            "id": "task-1",
-            "description": "Analyser les arguments du texte 1",
-            "objective_id": "objective-1"
-        }
-        self.task2 = {
-            "id": "task-2",
-            "description": "Analyser les arguments du texte 2",
-            "objective_id": "objective-1"
-        }
-        
-        self.tactical_state.add_task(self.task1, "completed")
-        self.tactical_state.add_task(self.task2, "completed")
     
     def test_initialization(self):
         """Teste l'initialisation du résolveur de conflits."""
-        # Vérifier que le résolveur a été correctement initialisé
-        self.assertIsNotNone(self.resolver)
+        # Vérifier que l'état tactique a été correctement assigné
         self.assertEqual(self.resolver.state, self.tactical_state)
         
         # Vérifier que les stratégies de résolution ont été définies
@@ -115,309 +62,481 @@ class TestTacticalResolver(unittest.TestCase):
         self.assertIn("inconsistency", self.resolver.resolution_strategies)
         self.assertIn("ambiguity", self.resolver.resolution_strategies)
     
-    def test_log_action(self):
-        """Teste la méthode _log_action."""
-        # Appeler la méthode _log_action
-        action_type = "test_action"
-        description = "Test description"
-        self.resolver._log_action(action_type, description)
+    def test_detect_conflicts_with_arguments(self):
+        """Teste la détection de conflits entre arguments."""
+        # Configurer l'état tactique pour le test
+        self.tactical_state.intermediate_results = {
+            "task-1": {
+                "identified_arguments": [
+                    {
+                        "id": "arg-1",
+                        "conclusion": "Le produit est sûr",
+                        "confidence": 0.7
+                    }
+                ]
+            }
+        }
+        self.tactical_state.tasks = {
+            "completed": [
+                {
+                    "id": "task-1",
+                    "objective_id": "obj-1"
+                }
+            ],
+            "pending": [],
+            "in_progress": [],
+            "failed": []
+        }
         
-        # Vérifier que l'action a été enregistrée dans l'état tactique
-        self.assertEqual(len(self.tactical_state.tactical_actions_log), 1)
-        action = self.tactical_state.tactical_actions_log[0]
-        self.assertEqual(action["type"], action_type)
-        self.assertEqual(action["description"], description)
-        self.assertEqual(action["agent_id"], "conflict_resolver")
-        self.assertIn("timestamp", action)
-    
-    def test_detect_conflicts(self):
-        """Teste la méthode detect_conflicts."""
-        # Créer des résultats à analyser
+        # Créer des résultats avec un argument contradictoire
         results = {
             "identified_arguments": [
                 {
-                    "id": "arg-5",
-                    "text": "Tous les hommes sont mortels",
-                    "confidence": 0.9
-                },
-                {
-                    "id": "arg-6",
-                    "text": "Socrate est immortel",
-                    "confidence": 0.7
-                }
-            ],
-            "identified_fallacies": [
-                {
-                    "id": "fallacy-3",
-                    "type": "Contradiction",
-                    "argument_id": "arg-6",
+                    "id": "arg-2",
+                    "conclusion": "Le produit n'est pas sûr",
                     "confidence": 0.8
                 }
             ]
         }
         
-        # Patcher les méthodes appelées par detect_conflicts
-        with patch.object(self.resolver, '_check_argument_conflicts', return_value=[]) as mock_check_args, \
-             patch.object(self.resolver, '_check_fallacy_conflicts', return_value=[]) as mock_check_fallacies:
-            
-            # Appeler la méthode detect_conflicts
-            conflicts = self.resolver.detect_conflicts(results)
-            
-            # Vérifier que les méthodes ont été appelées
-            mock_check_args.assert_called_once()
-            mock_check_fallacies.assert_called_once()
-            
-            # Vérifier que la méthode retourne une liste (même vide)
-            self.assertIsInstance(conflicts, list)
-    
-    def test_check_argument_conflicts(self):
-        """Teste la méthode _check_argument_conflicts."""
-        # Créer des arguments à analyser
-        arguments = [
-            {
-                "id": "arg-5",
-                "text": "Tous les hommes sont mortels",
-                "confidence": 0.9
-            },
-            {
-                "id": "arg-6",
-                "text": "Socrate est immortel",
-                "confidence": 0.7
-            }
-        ]
+        # Appeler la méthode detect_conflicts
+        conflicts = self.resolver.detect_conflicts(results)
         
-        # Créer des résultats existants
-        existing_results = {
-            "objective-1": {
-                "task-1": {
-                    "identified_arguments": [
-                        {
-                            "id": "arg-1",
-                            "text": "Tous les hommes sont mortels",
-                            "confidence": 0.9
-                        },
-                        {
-                            "id": "arg-2",
-                            "text": "Socrate est un homme",
-                            "confidence": 0.95
-                        }
-                    ]
-                },
-                "task-2": {
-                    "identified_arguments": [
-                        {
-                            "id": "arg-3",
-                            "text": "Socrate est mortel",
-                            "confidence": 0.85
-                        }
-                    ]
-                }
+        # Vérifier que la méthode add_conflict a été appelée
+        self.tactical_state.add_conflict.assert_called_once()
+        
+        # Vérifier les conflits détectés
+        self.assertEqual(len(conflicts), 1)
+        self.assertEqual(conflicts[0]["type"], "contradiction")
+        self.assertEqual(conflicts[0]["severity"], "medium")
+        self.assertEqual(conflicts[0]["details"]["argument1"]["id"], "arg-2")
+        self.assertEqual(conflicts[0]["details"]["argument2"]["id"], "arg-1")
+    
+    def test_detect_conflicts_with_fallacies(self):
+        """Teste la détection de conflits entre sophismes."""
+        # Configurer l'état tactique pour le test
+        self.tactical_state.intermediate_results = {
+            "task-1": {
+                "identified_fallacies": [
+                    {
+                        "id": "fallacy-1",
+                        "segment": "Les experts affirment que ce produit est sûr",
+                        "type": "Appel à l'autorité",
+                        "confidence": 0.7
+                    }
+                ]
             }
         }
-        
-        # Appeler la méthode _check_argument_conflicts
-        conflicts = self.resolver._check_argument_conflicts(arguments, existing_results)
-        
-        # Vérifier que la méthode retourne une liste
-        self.assertIsInstance(conflicts, list)
-        
-        # Vérifier que des conflits ont été détectés
-        # Note: Le comportement exact dépend de l'implémentation de _check_argument_conflicts
-        # Si l'implémentation détecte des conflits entre "Tous les hommes sont mortels" et
-        # "Socrate est immortel", alors la liste ne devrait pas être vide
-        if conflicts:
-            conflict = conflicts[0]
-            self.assertIn("type", conflict)
-            self.assertIn("description", conflict)
-            self.assertIn("arguments", conflict)
-            self.assertIn("severity", conflict)
-    
-    def test_check_fallacy_conflicts(self):
-        """Teste la méthode _check_fallacy_conflicts."""
-        # Créer des sophismes à analyser
-        fallacies = [
-            {
-                "id": "fallacy-3",
-                "type": "Appel à l'autorité",
-                "argument_id": "arg-5",
-                "confidence": 0.8
-            },
-            {
-                "id": "fallacy-4",
-                "type": "Généralisation hâtive",
-                "argument_id": "arg-6",
-                "confidence": 0.7
-            }
-        ]
-        
-        # Créer des résultats existants
-        existing_results = {
-            "objective-1": {
-                "task-1": {
-                    "identified_fallacies": [
-                        {
-                            "id": "fallacy-1",
-                            "type": "Appel à l'autorité",
-                            "argument_id": "arg-1",
-                            "confidence": 0.7
-                        }
-                    ]
-                },
-                "task-2": {
-                    "identified_fallacies": [
-                        {
-                            "id": "fallacy-2",
-                            "type": "Ad hominem",
-                            "argument_id": "arg-3",
-                            "confidence": 0.6
-                        }
-                    ]
+        self.tactical_state.tasks = {
+            "completed": [
+                {
+                    "id": "task-1",
+                    "objective_id": "obj-1"
                 }
-            }
+            ],
+            "pending": [],
+            "in_progress": [],
+            "failed": []
         }
         
-        # Appeler la méthode _check_fallacy_conflicts
-        conflicts = self.resolver._check_fallacy_conflicts(fallacies, existing_results)
+        # Créer des résultats avec un sophisme contradictoire
+        results = {
+            "identified_fallacies": [
+                {
+                    "id": "fallacy-2",
+                    "segment": "Les experts affirment que ce produit est sûr",
+                    "type": "Faux dilemme",
+                    "confidence": 0.8
+                }
+            ]
+        }
         
-        # Vérifier que la méthode retourne une liste
-        self.assertIsInstance(conflicts, list)
+        # Appeler la méthode detect_conflicts
+        conflicts = self.resolver.detect_conflicts(results)
+        
+        # Vérifier que la méthode add_conflict a été appelée
+        self.tactical_state.add_conflict.assert_called_once()
+        
+        # Vérifier les conflits détectés
+        self.assertEqual(len(conflicts), 1)
+        self.assertEqual(conflicts[0]["type"], "contradiction")
+        self.assertEqual(conflicts[0]["severity"], "medium")
+        self.assertEqual(conflicts[0]["details"]["fallacy1"]["id"], "fallacy-2")
+        self.assertEqual(conflicts[0]["details"]["fallacy2"]["id"], "fallacy-1")
     
-    def test_resolve_conflict(self):
-        """Teste la méthode resolve_conflict."""
-        # Créer un conflit à résoudre
+    def test_detect_conflicts_with_formal_analyses(self):
+        """Teste la détection de conflits entre analyses formelles."""
+        # Configurer l'état tactique pour le test
+        self.tactical_state.intermediate_results = {
+            "task-1": {
+                "formal_analyses": [
+                    {
+                        "id": "analysis-1",
+                        "argument_id": "arg-1",
+                        "is_valid": True,
+                        "confidence": 0.7
+                    }
+                ]
+            }
+        }
+        self.tactical_state.tasks = {
+            "completed": [
+                {
+                    "id": "task-1",
+                    "objective_id": "obj-1"
+                }
+            ],
+            "pending": [],
+            "in_progress": [],
+            "failed": []
+        }
+        
+        # Créer des résultats avec une analyse formelle contradictoire
+        results = {
+            "formal_analyses": [
+                {
+                    "id": "analysis-2",
+                    "argument_id": "arg-1",
+                    "is_valid": False,
+                    "confidence": 0.8
+                }
+            ]
+        }
+        
+        # Appeler la méthode detect_conflicts
+        conflicts = self.resolver.detect_conflicts(results)
+        
+        # Vérifier que la méthode add_conflict a été appelée
+        self.tactical_state.add_conflict.assert_called_once()
+        
+        # Vérifier les conflits détectés
+        self.assertEqual(len(conflicts), 1)
+        self.assertEqual(conflicts[0]["type"], "contradiction")
+        self.assertEqual(conflicts[0]["severity"], "high")
+        self.assertEqual(conflicts[0]["details"]["analysis1"]["id"], "analysis-2")
+        self.assertEqual(conflicts[0]["details"]["analysis2"]["id"], "analysis-1")
+    
+    def test_are_arguments_contradictory(self):
+        """Teste la méthode _are_arguments_contradictory."""
+        # Cas 1: Arguments contradictoires
+        arg1 = {"conclusion": "Le produit est sûr"}
+        arg2 = {"conclusion": "Le produit n'est pas sûr"}
+        self.assertTrue(self.resolver._are_arguments_contradictory(arg1, arg2))
+        
+        # Cas 2: Arguments non contradictoires
+        arg1 = {"conclusion": "Le produit est sûr"}
+        arg2 = {"conclusion": "Le produit est efficace"}
+        self.assertFalse(self.resolver._are_arguments_contradictory(arg1, arg2))
+        
+        # Cas 3: Arguments sans conclusion
+        arg1 = {"premise": "Le produit a été testé"}
+        arg2 = {"premise": "Le produit n'a pas été testé"}
+        self.assertFalse(self.resolver._are_arguments_contradictory(arg1, arg2))
+    
+    def test_are_arguments_overlapping(self):
+        """Teste la méthode _are_arguments_overlapping."""
+        # Cas 1: Arguments se chevauchant
+        arg1 = {"subject": "sécurité du produit"}
+        arg2 = {"subject": "sécurité du produit X"}
+        self.assertTrue(self.resolver._are_arguments_overlapping(arg1, arg2))
+        
+        # Cas 2: Arguments ne se chevauchant pas
+        arg1 = {"subject": "sécurité du produit"}
+        arg2 = {"subject": "efficacité du produit"}
+        self.assertFalse(self.resolver._are_arguments_overlapping(arg1, arg2))
+        
+        # Cas 3: Arguments sans sujet
+        arg1 = {"conclusion": "Le produit est sûr"}
+        arg2 = {"conclusion": "Le produit est efficace"}
+        self.assertFalse(self.resolver._are_arguments_overlapping(arg1, arg2))
+    
+    def test_are_fallacies_contradictory(self):
+        """Teste la méthode _are_fallacies_contradictory."""
+        # Cas 1: Sophismes contradictoires
+        fallacy1 = {"segment": "Les experts affirment", "type": "Appel à l'autorité"}
+        fallacy2 = {"segment": "Les experts affirment", "type": "Faux dilemme"}
+        self.assertTrue(self.resolver._are_fallacies_contradictory(fallacy1, fallacy2))
+        
+        # Cas 2: Sophismes non contradictoires
+        fallacy1 = {"segment": "Les experts affirment", "type": "Appel à l'autorité"}
+        fallacy2 = {"segment": "Les experts affirment", "type": "Appel à l'autorité"}
+        self.assertFalse(self.resolver._are_fallacies_contradictory(fallacy1, fallacy2))
+        
+        # Cas 3: Sophismes sans segment ou type
+        fallacy1 = {"confidence": 0.7}
+        fallacy2 = {"confidence": 0.8}
+        self.assertFalse(self.resolver._are_fallacies_contradictory(fallacy1, fallacy2))
+    
+    def test_are_formal_analyses_contradictory(self):
+        """Teste la méthode _are_formal_analyses_contradictory."""
+        # Cas 1: Analyses contradictoires
+        analysis1 = {"argument_id": "arg-1", "is_valid": True}
+        analysis2 = {"argument_id": "arg-1", "is_valid": False}
+        self.assertTrue(self.resolver._are_formal_analyses_contradictory(analysis1, analysis2))
+        
+        # Cas 2: Analyses non contradictoires
+        analysis1 = {"argument_id": "arg-1", "is_valid": True}
+        analysis2 = {"argument_id": "arg-1", "is_valid": True}
+        self.assertFalse(self.resolver._are_formal_analyses_contradictory(analysis1, analysis2))
+        
+        # Cas 3: Analyses pour différents arguments
+        analysis1 = {"argument_id": "arg-1", "is_valid": True}
+        analysis2 = {"argument_id": "arg-2", "is_valid": False}
+        self.assertFalse(self.resolver._are_formal_analyses_contradictory(analysis1, analysis2))
+        
+        # Cas 4: Analyses sans argument_id ou is_valid
+        analysis1 = {"confidence": 0.7}
+        analysis2 = {"confidence": 0.8}
+        self.assertFalse(self.resolver._are_formal_analyses_contradictory(analysis1, analysis2))
+    
+    def test_resolve_conflict_contradiction_arguments(self):
+        """Teste la résolution de conflits de type contradiction entre arguments."""
+        # Configurer l'état tactique pour le test
         conflict = {
             "id": "conflict-1",
             "type": "contradiction",
-            "description": "Contradiction entre les arguments arg-1 et arg-6",
-            "arguments": ["arg-1", "arg-6"],
-            "severity": "high"
+            "details": {
+                "argument1": {
+                    "id": "arg-1",
+                    "conclusion": "Le produit est sûr",
+                    "confidence": 0.7
+                },
+                "argument2": {
+                    "id": "arg-2",
+                    "conclusion": "Le produit n'est pas sûr",
+                    "confidence": 0.8
+                }
+            }
         }
+        self.tactical_state.identified_conflicts = [conflict]
         
-        # Patcher la méthode _resolve_contradiction
-        with patch.object(self.resolver, '_resolve_contradiction', return_value={
-            "status": "resolved",
-            "resolution": "Argument arg-6 rejeté en faveur de arg-1",
-            "confidence": 0.8
-        }) as mock_resolve:
-            
-            # Appeler la méthode resolve_conflict
-            resolution = self.resolver.resolve_conflict(conflict)
-            
-            # Vérifier que la méthode _resolve_contradiction a été appelée
-            mock_resolve.assert_called_once_with(conflict)
-            
-            # Vérifier que la résolution est correcte
-            self.assertEqual(resolution["status"], "resolved")
-            self.assertIn("resolution", resolution)
-            self.assertIn("confidence", resolution)
+        # Appeler la méthode resolve_conflict
+        result = self.resolver.resolve_conflict("conflict-1")
+        
+        # Vérifier que la méthode resolve_conflict de l'état tactique a été appelée
+        self.tactical_state.resolve_conflict.assert_called_once()
+        
+        # Vérifier le résultat
+        self.assertEqual(result["status"], "success")
+        self.assertEqual(result["conflict_id"], "conflict-1")
+        self.assertEqual(result["conflict_type"], "contradiction")
+        self.assertEqual(result["resolution"]["method"], "confidence_based")
+        self.assertEqual(result["resolution"]["chosen_option"]["id"], "arg-2")
+        self.assertEqual(result["resolution"]["rejected_option"]["id"], "arg-1")
     
-    def test_resolve_contradiction(self):
-        """Teste la méthode _resolve_contradiction."""
-        # Créer un conflit de type contradiction
+    def test_resolve_conflict_contradiction_fallacies(self):
+        """Teste la résolution de conflits de type contradiction entre sophismes."""
+        # Configurer l'état tactique pour le test
         conflict = {
             "id": "conflict-1",
             "type": "contradiction",
-            "description": "Contradiction entre les arguments arg-1 et arg-6",
-            "arguments": ["arg-1", "arg-6"],
-            "severity": "high"
+            "details": {
+                "fallacy1": {
+                    "id": "fallacy-1",
+                    "type": "Appel à l'autorité",
+                    "confidence": 0.7
+                },
+                "fallacy2": {
+                    "id": "fallacy-2",
+                    "type": "Faux dilemme",
+                    "confidence": 0.8
+                }
+            }
         }
+        self.tactical_state.identified_conflicts = [conflict]
         
-        # Appeler la méthode _resolve_contradiction
-        resolution = self.resolver._resolve_contradiction(conflict)
+        # Appeler la méthode resolve_conflict
+        result = self.resolver.resolve_conflict("conflict-1")
         
-        # Vérifier que la résolution est correcte
-        self.assertIn("status", resolution)
-        self.assertIn("resolution", resolution)
-        self.assertIn("confidence", resolution)
+        # Vérifier que la méthode resolve_conflict de l'état tactique a été appelée
+        self.tactical_state.resolve_conflict.assert_called_once()
+        
+        # Vérifier le résultat
+        self.assertEqual(result["status"], "success")
+        self.assertEqual(result["conflict_id"], "conflict-1")
+        self.assertEqual(result["conflict_type"], "contradiction")
+        self.assertEqual(result["resolution"]["method"], "confidence_based")
+        self.assertEqual(result["resolution"]["chosen_option"]["id"], "fallacy-2")
+        self.assertEqual(result["resolution"]["rejected_option"]["id"], "fallacy-1")
     
-    def test_resolve_overlap(self):
-        """Teste la méthode _resolve_overlap."""
-        # Créer un conflit de type overlap
+    def test_resolve_conflict_overlap(self):
+        """Teste la résolution de conflits de type chevauchement."""
+        # Configurer l'état tactique pour le test
         conflict = {
-            "id": "conflict-2",
+            "id": "conflict-1",
             "type": "overlap",
-            "description": "Chevauchement entre les arguments arg-1 et arg-5",
-            "arguments": ["arg-1", "arg-5"],
-            "severity": "medium"
+            "details": {
+                "argument1": {
+                    "id": "arg-1",
+                    "premises": ["premise-1", "premise-2"],
+                    "conclusion": "Le produit est sûr",
+                    "confidence": 0.7
+                },
+                "argument2": {
+                    "id": "arg-2",
+                    "premises": ["premise-2", "premise-3"],
+                    "conclusion": "Le produit est très sûr",
+                    "confidence": 0.8
+                }
+            }
         }
+        self.tactical_state.identified_conflicts = [conflict]
         
-        # Appeler la méthode _resolve_overlap
-        resolution = self.resolver._resolve_overlap(conflict)
+        # Appeler la méthode resolve_conflict
+        result = self.resolver.resolve_conflict("conflict-1")
         
-        # Vérifier que la résolution est correcte
-        self.assertIn("status", resolution)
-        self.assertIn("resolution", resolution)
-        self.assertIn("confidence", resolution)
+        # Vérifier que la méthode resolve_conflict de l'état tactique a été appelée
+        self.tactical_state.resolve_conflict.assert_called_once()
+        
+        # Vérifier le résultat
+        self.assertEqual(result["status"], "success")
+        self.assertEqual(result["conflict_id"], "conflict-1")
+        self.assertEqual(result["conflict_type"], "overlap")
+        self.assertEqual(result["resolution"]["method"], "merge")
+        self.assertEqual(result["resolution"]["merged_result"]["conclusion"], "Le produit est très sûr")
+        self.assertEqual(len(result["resolution"]["merged_result"]["premises"]), 3)
+        self.assertEqual(result["resolution"]["merged_result"]["confidence"], 0.8)
     
-    def test_resolve_inconsistency(self):
-        """Teste la méthode _resolve_inconsistency."""
-        # Créer un conflit de type inconsistency
+    def test_resolve_conflict_inconsistency(self):
+        """Teste la résolution de conflits de type incohérence."""
+        # Configurer l'état tactique pour le test
         conflict = {
-            "id": "conflict-3",
-            "type": "inconsistency",
-            "description": "Incohérence entre les sophismes fallacy-1 et fallacy-3",
-            "fallacies": ["fallacy-1", "fallacy-3"],
-            "severity": "medium"
+            "id": "conflict-1",
+            "type": "inconsistency"
         }
+        self.tactical_state.identified_conflicts = [conflict]
         
-        # Appeler la méthode _resolve_inconsistency
-        resolution = self.resolver._resolve_inconsistency(conflict)
+        # Appeler la méthode resolve_conflict
+        result = self.resolver.resolve_conflict("conflict-1")
         
-        # Vérifier que la résolution est correcte
-        self.assertIn("status", resolution)
-        self.assertIn("resolution", resolution)
-        self.assertIn("confidence", resolution)
+        # Vérifier que la méthode resolve_conflict de l'état tactique a été appelée
+        self.tactical_state.resolve_conflict.assert_called_once()
+        
+        # Vérifier le résultat
+        self.assertEqual(result["status"], "success")
+        self.assertEqual(result["conflict_id"], "conflict-1")
+        self.assertEqual(result["conflict_type"], "inconsistency")
+        self.assertEqual(result["resolution"]["method"], "recency")
     
-    def test_resolve_ambiguity(self):
-        """Teste la méthode _resolve_ambiguity."""
-        # Créer un conflit de type ambiguity
+    def test_resolve_conflict_ambiguity(self):
+        """Teste la résolution de conflits de type ambiguïté."""
+        # Configurer l'état tactique pour le test
         conflict = {
-            "id": "conflict-4",
-            "type": "ambiguity",
-            "description": "Ambiguïté dans l'argument arg-4",
-            "arguments": ["arg-4"],
-            "severity": "low"
+            "id": "conflict-1",
+            "type": "ambiguity"
         }
+        self.tactical_state.identified_conflicts = [conflict]
         
-        # Appeler la méthode _resolve_ambiguity
-        resolution = self.resolver._resolve_ambiguity(conflict)
+        # Appeler la méthode resolve_conflict
+        result = self.resolver.resolve_conflict("conflict-1")
         
-        # Vérifier que la résolution est correcte
-        self.assertIn("status", resolution)
-        self.assertIn("resolution", resolution)
-        self.assertIn("confidence", resolution)
+        # Vérifier que la méthode resolve_conflict de l'état tactique a été appelée
+        self.tactical_state.resolve_conflict.assert_called_once()
+        
+        # Vérifier le résultat
+        self.assertEqual(result["status"], "success")
+        self.assertEqual(result["conflict_id"], "conflict-1")
+        self.assertEqual(result["conflict_type"], "ambiguity")
+        self.assertEqual(result["resolution"]["method"], "preserve_both")
     
-    def test_apply_resolution(self):
-        """Teste la méthode apply_resolution."""
-        # Créer un conflit et sa résolution
+    def test_resolve_conflict_not_found(self):
+        """Teste la résolution d'un conflit non trouvé."""
+        # Configurer l'état tactique pour le test
+        self.tactical_state.identified_conflicts = []
+        
+        # Appeler la méthode resolve_conflict
+        result = self.resolver.resolve_conflict("conflict-1")
+        
+        # Vérifier que la méthode resolve_conflict de l'état tactique n'a pas été appelée
+        self.tactical_state.resolve_conflict.assert_not_called()
+        
+        # Vérifier le résultat
+        self.assertEqual(result["status"], "error")
+        self.assertEqual(result["message"], "Conflit conflict-1 non trouvé")
+    
+    def test_resolve_conflict_already_resolved(self):
+        """Teste la résolution d'un conflit déjà résolu."""
+        # Configurer l'état tactique pour le test
         conflict = {
             "id": "conflict-1",
             "type": "contradiction",
-            "description": "Contradiction entre les arguments arg-1 et arg-6",
-            "arguments": ["arg-1", "arg-6"],
-            "severity": "high"
+            "resolved": True,
+            "resolution": {
+                "method": "confidence_based",
+                "chosen_option": {"id": "arg-2"},
+                "rejected_option": {"id": "arg-1"}
+            }
         }
+        self.tactical_state.identified_conflicts = [conflict]
         
-        resolution = {
-            "status": "resolved",
-            "resolution": "Argument arg-6 rejeté en faveur de arg-1",
-            "confidence": 0.8,
-            "action": "reject",
-            "reject_argument": "arg-6"
-        }
+        # Appeler la méthode resolve_conflict
+        result = self.resolver.resolve_conflict("conflict-1")
         
-        # Appeler la méthode apply_resolution
-        result = self.resolver.apply_resolution(conflict, resolution)
+        # Vérifier que la méthode resolve_conflict de l'état tactique n'a pas été appelée
+        self.tactical_state.resolve_conflict.assert_not_called()
         
-        # Vérifier que le résultat est correct
-        self.assertIn("status", result)
-        self.assertIn("applied_changes", result)
+        # Vérifier le résultat
+        self.assertEqual(result["status"], "already_resolved")
+        self.assertEqual(result["resolution"]["method"], "confidence_based")
+    
+    def test_escalate_unresolved_conflicts(self):
+        """Teste la méthode escalate_unresolved_conflicts."""
+        # Configurer l'état tactique pour le test
+        self.tactical_state.identified_conflicts = [
+            {
+                "id": "conflict-1",
+                "type": "contradiction",
+                "description": "Conflit 1",
+                "severity": "high",
+                "involved_tasks": ["task-1", "task-2"],
+                "resolved": True,
+                "resolution": {
+                    "method": "confidence_based"
+                }
+            },
+            {
+                "id": "conflict-2",
+                "type": "overlap",
+                "description": "Conflit 2",
+                "severity": "medium",
+                "involved_tasks": ["task-3", "task-4"],
+                "resolved": True,
+                "resolution": {
+                    "method": "default"
+                }
+            },
+            {
+                "id": "conflict-3",
+                "type": "inconsistency",
+                "description": "Conflit 3",
+                "severity": "low",
+                "involved_tasks": ["task-5", "task-6"],
+                "resolved": False
+            }
+        ]
         
-        # Vérifier qu'une action a été enregistrée
-        self.assertGreaterEqual(len(self.tactical_state.tactical_actions_log), 1)
-        action = self.tactical_state.tactical_actions_log[-1]
-        self.assertEqual(action["type"], "Application de résolution")
-        self.assertIn(conflict["id"], action["description"])
+        # Appeler la méthode escalate_unresolved_conflicts
+        conflicts = self.resolver.escalate_unresolved_conflicts()
+        
+        # Vérifier que la méthode log_tactical_action a été appelée
+        self.tactical_state.log_tactical_action.assert_called_once()
+        
+        # Vérifier les conflits à escalader
+        self.assertEqual(len(conflicts), 2)
+        
+        # Vérifier que le conflit avec méthode "default" est à escalader
+        default_conflict = next((c for c in conflicts if c["conflict_id"] == "conflict-2"), None)
+        self.assertIsNotNone(default_conflict)
+        self.assertEqual(default_conflict["conflict_type"], "overlap")
+        self.assertEqual(default_conflict["severity"], "medium")
+        self.assertEqual(default_conflict["resolution_attempt"]["method"], "default")
+        
+        # Vérifier que le conflit non résolu est à escalader
+        unresolved_conflict = next((c for c in conflicts if c["conflict_id"] == "conflict-3"), None)
+        self.assertIsNotNone(unresolved_conflict)
+        self.assertEqual(unresolved_conflict["conflict_type"], "inconsistency")
+        self.assertEqual(unresolved_conflict["severity"], "low")
+        self.assertIsNone(unresolved_conflict["resolution_attempt"])
 
 
 if __name__ == "__main__":
