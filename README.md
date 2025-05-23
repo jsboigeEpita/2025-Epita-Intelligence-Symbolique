@@ -367,7 +367,9 @@ Pour vous aider dans la réalisation de votre projet, vous trouverez dans ce dé
 Documentation supplémentaire :
 - [Changelog](./CHANGELOG.md) : Journal des modifications apportées au projet
 - [Documentation supplémentaire](./docs/README.md) : Documentation additionnelle sur divers aspects du projet
-- [Extraits chiffrés](./docs/extraits_chiffres.md) : Documentation détaillée sur le système d'extraits chiffrés
+- [Architecture Globale](./docs/architecture/architecture_globale.md) : Description de l'architecture complète du système
+- [Documentation des Tests](./tests/README.md) : Stratégie de test, exécution et interprétation des tests
+- [Extraits chiffrés](./docs/reports/extraits_chiffres.md) : Documentation détaillée sur le système d'extraits chiffrés
 - [Exemples](./examples/README.md) : Exemples de textes et données pour les tests
 
 ### Ressources externes utiles

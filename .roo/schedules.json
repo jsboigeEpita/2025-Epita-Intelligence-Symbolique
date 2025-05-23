@@ -1,0 +1,39 @@
+{
+  "schedules": [
+    {
+      "id": "1747987069314",
+      "name": "Epita 2025 Symbolique - Project Director",
+      "mode": "code",
+      "taskInstructions": "Tu dois aider à la bonne conduite du projet Epita 2025 en intelligence Symbolique.\nLes élèves vont effectuer des développement sur ce dépôt. Les sujets sélectionnés sont accessible, et l'objectif est d'accompagner les groupes d'étudants dans leur intégration.",
+      "scheduleType": "time",
+      "timeInterval": "1",
+      "timeUnit": "day",
+      "selectedDays": {
+        "sun": true,
+        "mon": true,
+        "tue": true,
+        "wed": true,
+        "thu": true,
+        "fri": true,
+        "sat": true
+      },
+      "startDate": "",
+      "startHour": "",
+      "startMinute": "00",
+      "expirationDate": "",
+      "expirationHour": "00",
+      "expirationMinute": "00",
+      "requireActivity": false,
+      "active": true,
+      "taskInteraction": "wait",
+      "inactivityDelay": "10",
+      "lastExecutionTime": "",
+      "lastSkippedTime": "",
+      "lastTaskId": "",
+      "nextExecutionTime": "2025-05-24T08:00:00.000Z",
+      "modeDisplayName": "Code",
+      "createdAt": "2025-05-23T07:57:49.314Z",
+      "updatedAt": "2025-05-23T08:17:44.227Z"
+    }
+  ]
+}

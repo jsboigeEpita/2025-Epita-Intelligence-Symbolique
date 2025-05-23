@@ -51,8 +51,6 @@ python scripts/cleanup/cleanup_obsolete_files.py --verbose
 python scripts/cleanup/cleanup_obsolete_files.py --restore
 ```
 
-Pour plus d'informations, consultez la [documentation détaillée](../../docs/README_cleanup_obsolete_files.md).
-
 ### 3. cleanup_repository.py
 
 Script de nettoyage du dépôt Git qui effectue les opérations suivantes :

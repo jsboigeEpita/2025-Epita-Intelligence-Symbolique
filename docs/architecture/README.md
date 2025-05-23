@@ -4,6 +4,9 @@ Cette section documente l'architecture du système d'analyse argumentative, incl
 
 ## Documents Disponibles
 
+### [Architecture Globale](./architecture_globale.md)
+Vue d'ensemble de l'architecture du système, des composants principaux et de leurs interactions.
+
 ### [Architecture Hiérarchique à Trois Niveaux](./architecture_hierarchique.md)
 Description détaillée de l'architecture hiérarchique à trois niveaux (stratégique, tactique, opérationnel) qui structure le système d'analyse argumentative.
 
