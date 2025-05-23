@@ -83,4 +83,3 @@ Le script propose un menu interactif avec les options suivantes :
 1. **Exécuter les scripts depuis la racine du projet** pour garantir que les chemins relatifs fonctionnent correctement.
 2. **Valider les ancres avant de committer** des modifications aux fichiers Markdown pour éviter les liens brisés.
 3. **Utiliser le script compare_markdown.ps1** pour vérifier visuellement les modifications apportées au README.md.
-4. **Suivre le workflow recommandé** dans le [README_ENVIRONNEMENT.md](../../docs/README_ENVIRONNEMENT.md) pour l'intégration de nouvelles sections.

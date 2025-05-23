@@ -44,7 +44,7 @@ Analyse approfondie de l'architecture d'orchestration du système.
 ### [Architecture Hiérarchique à Trois Niveaux](./architecture_hierarchique_trois_niveaux.md)
 Description détaillée de l'architecture hiérarchique à trois niveaux qui structure le système.
 
-### [Système de Communication entre Agents](./analyse_systeme_communication_agents.md)
+### [Système de Communication entre Agents](./architecture/communication_agents.md)
 Analyse du système de communication permettant aux agents de collaborer efficacement.
 
 ### [Conception du Système de Communication Multi-Canal](./conception_systeme_communication_multi_canal.md)
