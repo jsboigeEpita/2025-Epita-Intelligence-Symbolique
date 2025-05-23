@@ -135,6 +135,18 @@ Pour exécuter les tests avec couverture pour un module spécifique :
 pytest --cov=argumentation_analysis.orchestration.hierarchical.tactical tests/test_tactical_*
 ```
 
+### Interprétation des Résultats des Tests
+
+Lorsque vous exécutez `pytest`, vous obtiendrez un résumé des résultats :
+- **`.` (point)** : Indique un test réussi.
+- **`F` (FAIL)** : Indique un test qui a échoué à cause d'une assertion (`assert`) incorrecte. Le rapport détaillera quelle assertion a échoué.
+- **`E` (ERROR)** : Indique un test qui a provoqué une erreur inattendue (par exemple, une exception non gérée dans le code testé ou dans le test lui-même).
+- **`s` (skip)** : Indique un test qui a été sauté (généralement marqué avec `@pytest.mark.skip` ou une condition de saut).
+- **`x` (xfail)** : Indique un test qui était attendu comme échouant (`@pytest.mark.xfail`) et qui a effectivement échoué.
+- **`X` (XPASS)** : Indique un test qui était attendu comme échouant (`@pytest.mark.xfail`) mais qui a réussi. Cela peut indiquer que le bug attendu a été corrigé.
+
+Le rapport de couverture (généré avec `--cov`) vous montrera quelles parties de votre code ont été exécutées par les tests. Un taux de couverture élevé est souhaitable, mais ne garantit pas l'absence de bugs. Concentrez-vous sur le test des logiques critiques et des cas limites. Le rapport HTML (`--cov-report=html`) est particulièrement utile pour explorer la couverture en détail.
+
 ## Conventions de Test
 
 1. **Nommage des fichiers de test** :
