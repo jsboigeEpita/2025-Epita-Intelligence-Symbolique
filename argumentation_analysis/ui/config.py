@@ -104,8 +104,10 @@ EXTRACT_SOURCES = DEFAULT_EXTRACT_SOURCES
 # Si la clé de chiffrement est disponible, essayer de charger depuis le fichier chiffré
 if ENCRYPTION_KEY and CONFIG_FILE_ENC.exists():
     try:
-        from .utils import load_extract_definitions
         config_logger.info(f"Tentative de chargement depuis le fichier chiffré {CONFIG_FILE_ENC.name}...")
+        # Import local pour éviter l'import circulaire
+        from .file_operations import load_extract_definitions
+        # load_extract_definitions de file_operations n'a pas besoin d'app_config pour le chargement simple
         loaded_sources = load_extract_definitions(CONFIG_FILE_ENC, ENCRYPTION_KEY)
         if loaded_sources:
             EXTRACT_SOURCES = loaded_sources
@@ -117,10 +119,17 @@ if ENCRYPTION_KEY and CONFIG_FILE_ENC.exists():
 elif CONFIG_FILE_JSON.exists() and ENCRYPTION_KEY:
     # Migration: si le fichier JSON existe mais pas le fichier chiffré, créer le fichier chiffré
     try:
-        from .utils import save_extract_definitions
+        from .file_operations import save_extract_definitions # MODIFIÉ
         config_logger.info(f"Migration: création du fichier chiffré à partir de {CONFIG_FILE_JSON.name}...")
         json_sources = load_extract_sources(CONFIG_FILE_JSON)
-        success = save_extract_definitions(json_sources, CONFIG_FILE_ENC, ENCRYPTION_KEY)
+        # save_extract_definitions de file_operations attend encryption_key et config_file
+        # et le paramètre 'config' (app_config) est optionnel si embed_full_text=False
+        success = save_extract_definitions(
+            extract_definitions=json_sources,
+            config_file=CONFIG_FILE_ENC,
+            encryption_key=ENCRYPTION_KEY,
+            embed_full_text=False # Pour la migration initiale, ne pas essayer de fetch
+        )
         if success:
             config_logger.info(f"✅ Fichier chiffré {CONFIG_FILE_ENC.name} créé avec succès à partir de {CONFIG_FILE_JSON.name}.")
             EXTRACT_SOURCES = json_sources
