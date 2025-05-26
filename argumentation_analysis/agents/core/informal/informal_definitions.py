@@ -146,6 +146,9 @@ class InformalAnalysisPlugin:
         if 'FK_Parent' in df.columns:
             # Si FK_Parent existe, l'utiliser pour trouver les enfants
             children = df[df['FK_Parent'] == current_pk]
+        elif 'parent_pk' in df.columns:
+            # Si parent_pk existe, l'utiliser pour trouver les enfants
+            children = df[df['parent_pk'] == current_pk]
         elif 'path' in df.columns and current_path:
             # Si path existe, l'utiliser pour trouver les enfants
             children = df[df['path'].str.startswith(current_path + '.', na=False) &
@@ -201,7 +204,12 @@ class InformalAnalysisPlugin:
             df['FK_Parent'] = pd.to_numeric(df['FK_Parent'], errors='coerce')
         
         # Trouver les enfants (nœuds dont le parent est le nœud courant)
-        child_nodes = df[df['FK_Parent'] == pk]
+        if 'FK_Parent' in df.columns:
+            child_nodes = df[df['FK_Parent'] == pk]
+        elif 'parent_pk' in df.columns:
+            child_nodes = df[df['parent_pk'] == pk]
+        else:
+            child_nodes = pd.DataFrame()
         
         # Limiter le nombre d'enfants si nécessaire
         if max_children > 0 and len(child_nodes) > max_children:
@@ -256,6 +264,10 @@ class InformalAnalysisPlugin:
             # Si FK_Parent existe, l'utiliser pour trouver le parent
             parent_pk = int(row.get('FK_Parent'))
             parent = df.loc[[parent_pk]] if parent_pk in df.index else pd.DataFrame()
+        elif 'parent_pk' in df.columns and pd.notna(row.get('parent_pk')):
+            # Si parent_pk existe, l'utiliser pour trouver le parent
+            parent_pk = int(row.get('parent_pk'))
+            parent = df.loc[[parent_pk]] if parent_pk in df.index else pd.DataFrame()
         elif 'path' in df.columns:
             # Sinon, essayer d'utiliser path
             path = row.get('path', '')
@@ -266,18 +278,21 @@ class InformalAnalysisPlugin:
                 parent = pd.DataFrame()
         else:
             parent = pd.DataFrame()
-            if len(parent) > 0:
-                parent_row = parent.iloc[0]
-                result["parent"] = {
-                    "pk": int(parent_row.name),
-                    "nom_vulgarisé": parent_row.get('nom_vulgarisé', ''),
-                    "text_fr": parent_row.get('text_fr', '')
-                }
+        if len(parent) > 0:
+            parent_row = parent.iloc[0]
+            result["parent"] = {
+                "pk": int(parent_row.name),
+                "nom_vulgarisé": parent_row.get('nom_vulgarisé', ''),
+                "text_fr": parent_row.get('text_fr', '')
+            }
         
         # Trouver les enfants
         if 'FK_Parent' in df.columns:
             # Si FK_Parent existe, l'utiliser pour trouver les enfants
             children = df[df['FK_Parent'] == pk]
+        elif 'parent_pk' in df.columns:
+            # Si parent_pk existe, l'utiliser pour trouver les enfants
+            children = df[df['parent_pk'] == pk]
         elif 'path' in df.columns and hasattr(row, 'get') and row.get('path', ''):
             # Si path existe, l'utiliser pour trouver les enfants
             path = row.get('path', '')

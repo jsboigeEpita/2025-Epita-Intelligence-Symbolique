@@ -514,3 +514,44 @@ class TacticalState:
             state.tactical_actions_log = state_dict["tactical_actions_log"]
         
         return state
+        
+    def get_objective_results(self, objective_id: str) -> Dict[str, Any]:
+        """
+        Récupère les résultats associés à un objectif.
+        
+        Args:
+            objective_id: Identifiant de l'objectif
+            
+        Returns:
+            Un dictionnaire contenant les résultats de l'objectif
+        """
+        results = {}
+        
+        # Collecter les résultats intermédiaires des tâches associées à cet objectif
+        for task_id, result in self.intermediate_results.items():
+            # Trouver la tâche correspondante
+            task_found = False
+            task_obj = None
+            
+            for status, tasks in self.tasks.items():
+                for task in tasks:
+                    if task["id"] == task_id and task.get("objective_id") == objective_id:
+                        task_found = True
+                        task_obj = task
+                        break
+                if task_found:
+                    break
+            
+            if task_found and task_obj:
+                if "results" not in results:
+                    results["results"] = []
+                
+                # Ajouter le résultat avec des métadonnées de la tâche
+                result_with_metadata = {
+                    "task_id": task_id,
+                    "task_description": task_obj.get("description", ""),
+                    "result": result
+                }
+                results["results"].append(result_with_metadata)
+        
+        return results
