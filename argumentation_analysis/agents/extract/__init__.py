@@ -7,19 +7,21 @@ de fonctionner correctement.
 """
 
 try:
-    from argumentation_analysis.agents.core.extract.extract_agent import *
-    from argumentation_analysis.agents.core.extract.extract_definitions import *
-    from argumentation_analysis.agents.core.extract.prompts import *
+    # Utiliser des imports relatifs pour éviter les problèmes d'initialisation circulaire
+    from ..core.extract.extract_agent import *
+    from ..core.extract.extract_definitions import *
+    from ..core.extract.prompts import *
     
     # Exposer explicitement la classe ExtractAgent et la fonction setup_extract_agent
     # pour les importations de la forme:
     # from argumentation_analysis.agents.extract import extract_agent
-    from argumentation_analysis.agents.core.extract.extract_agent import ExtractAgent, setup_extract_agent
+    from ..core.extract.extract_agent import ExtractAgent, setup_extract_agent
     
     # Créer un alias pour le module extract_agent
     import sys
-    import argumentation_analysis.agents.core.extract.extract_agent
-    sys.modules['argumentation_analysis.agents.extract.extract_agent'] = argumentation_analysis.agents.core.extract.extract_agent
+    # Importer le module directement par son chemin relatif
+    from ..core.extract import extract_agent as core_extract_agent_module
+    sys.modules['argumentation_analysis.agents.extract.extract_agent'] = core_extract_agent_module
 except ImportError as e:
     import logging
     import sys

@@ -13,11 +13,12 @@ import asyncio
 from typing import Dict, List, Any, Optional, Union
 from datetime import datetime
 import time
+import uuid # Ajout de l'import uuid
 
 from argumentation_analysis.orchestration.hierarchical.operational.agent_interface import OperationalAgent
 from argumentation_analysis.orchestration.hierarchical.operational.state import OperationalState
+from argumentation_analysis.core.communication import MessageMiddleware 
 
-# Import de l'agent d'extraction existant
 from argumentation_analysis.agents.core.extract.extract_agent import ExtractAgent, setup_extract_agent
 from argumentation_analysis.agents.core.extract.extract_definitions import ExtractResult
 
@@ -30,15 +31,18 @@ class ExtractAgentAdapter(OperationalAgent):
     comme un agent opérationnel dans l'architecture hiérarchique.
     """
     
-    def __init__(self, name: str = "ExtractAgent", operational_state: Optional[OperationalState] = None):
+    def __init__(self, name: str = "ExtractAgent", 
+                 operational_state: Optional[OperationalState] = None,
+                 middleware: Optional[MessageMiddleware] = None): 
         """
         Initialise un nouvel adaptateur pour l'agent d'extraction.
         
         Args:
             name: Nom de l'agent
             operational_state: État opérationnel à utiliser. Si None, un nouvel état est créé.
+            middleware: Le middleware de communication à utiliser.
         """
-        super().__init__(name, operational_state)
+        super().__init__(name, operational_state, middleware=middleware) 
         self.extract_agent = None
         self.kernel = None
         self.initialized = False
@@ -92,15 +96,12 @@ class ExtractAgentAdapter(OperationalAgent):
         Returns:
             True si l'agent peut traiter la tâche, False sinon
         """
-        # Vérifier si l'agent est initialisé
         if not self.initialized:
             return False
         
-        # Vérifier si les capacités requises sont fournies par cet agent
         required_capabilities = task.get("required_capabilities", [])
         agent_capabilities = self.get_capabilities()
         
-        # Vérifier si au moins une des capacités requises est fournie par l'agent
         return any(cap in agent_capabilities for cap in required_capabilities)
     
     async def process_task(self, task: Dict[str, Any]) -> Dict[str, Any]:
@@ -113,13 +114,14 @@ class ExtractAgentAdapter(OperationalAgent):
         Returns:
             Le résultat du traitement de la tâche
         """
-        # Vérifier si l'agent est initialisé
+        task_original_id = task.get("id", f"unknown_task_{uuid.uuid4().hex[:8]}")
+
         if not self.initialized:
             success = await self.initialize()
             if not success:
                 return {
-                    "id": f"result-{task.get('id')}",
-                    "task_id": task.get("id"),
+                    "id": f"result-{task_original_id}",
+                    "task_id": task_original_id,
                     "tactical_task_id": task.get("tactical_task_id"),
                     "status": "failed",
                     "outputs": {},
@@ -131,40 +133,30 @@ class ExtractAgentAdapter(OperationalAgent):
                     }]
                 }
         
-        # Enregistrer la tâche dans l'état opérationnel
-        task_id = self.register_task(task)
+        task_id_registered = self.register_task(task) 
         
-        # Mettre à jour le statut de la tâche
-        self.update_task_status(task_id, "in_progress", {
+        self.update_task_status(task_id_registered, "in_progress", {
             "message": "Traitement de la tâche en cours",
             "agent": self.name
         })
         
-        # Mesurer le temps d'exécution
         start_time = time.time()
         
         try:
-            # Extraire les informations nécessaires de la tâche
             techniques = task.get("techniques", [])
             text_extracts = task.get("text_extracts", [])
-            parameters = task.get("parameters", {})
             
-            # Vérifier si des extraits de texte sont fournis
             if not text_extracts:
                 raise ValueError("Aucun extrait de texte fourni dans la tâche.")
             
-            # Préparer les résultats
             results = []
             issues = []
             
-            # Traiter chaque technique
             for technique in techniques:
                 technique_name = technique.get("name", "")
                 technique_params = technique.get("parameters", {})
                 
-                # Exécuter la technique appropriée
                 if technique_name == "relevant_segment_extraction":
-                    # Traiter chaque extrait de texte
                     for extract in text_extracts:
                         extract_result = await self._process_extract(extract, technique_params)
                         
@@ -177,7 +169,7 @@ class ExtractAgentAdapter(OperationalAgent):
                                 "end_marker": extract_result.end_marker,
                                 "template_start": extract_result.template_start,
                                 "extracted_text": extract_result.extracted_text,
-                                "confidence": 0.9  # Valeur arbitraire pour l'exemple
+                                "confidence": 0.9 
                             })
                         else:
                             issues.append({
@@ -191,7 +183,6 @@ class ExtractAgentAdapter(OperationalAgent):
                                 }
                             })
                 elif technique_name == "text_normalization":
-                    # Normaliser les extraits de texte
                     for extract in text_extracts:
                         normalized_text = self._normalize_text(extract.get("content", ""), technique_params)
                         
@@ -200,7 +191,7 @@ class ExtractAgentAdapter(OperationalAgent):
                             "extract_id": extract.get("id"),
                             "source": extract.get("source"),
                             "normalized_text": normalized_text,
-                            "confidence": 1.0  # La normalisation est déterministe
+                            "confidence": 1.0
                         })
                 else:
                     issues.append({
@@ -213,58 +204,49 @@ class ExtractAgentAdapter(OperationalAgent):
                         }
                     })
             
-            # Calculer les métriques
             execution_time = time.time() - start_time
             metrics = {
                 "execution_time": execution_time,
                 "confidence": 0.9 if results else 0.0,
                 "coverage": 1.0 if text_extracts and results else 0.0,
-                "resource_usage": 0.5  # Valeur arbitraire pour l'exemple
+                "resource_usage": 0.5 
             }
             
-            # Mettre à jour les métriques dans l'état opérationnel
-            self.update_metrics(task_id, metrics)
+            self.update_metrics(task_id_registered, metrics)
             
-            # Déterminer le statut final
             status = "completed"
             if issues:
                 status = "completed_with_issues"
             
-            # Mettre à jour le statut de la tâche
-            self.update_task_status(task_id, status, {
+            self.update_task_status(task_id_registered, status, {
                 "message": f"Traitement terminé avec statut: {status}",
                 "results_count": len(results),
                 "issues_count": len(issues)
             })
             
-            # Formater et retourner le résultat
-            return self.format_result(task, results, metrics, issues)
+            return self.format_result(task, results, metrics, issues, task_id_to_report=task_id_registered) 
         
         except Exception as e:
-            self.logger.error(f"Erreur lors du traitement de la tâche {task_id}: {e}")
+            self.logger.error(f"Erreur lors du traitement de la tâche {task_id_registered}: {e}")
             
-            # Mettre à jour le statut de la tâche
-            self.update_task_status(task_id, "failed", {
+            self.update_task_status(task_id_registered, "failed", {
                 "message": f"Erreur lors du traitement: {str(e)}",
                 "exception": str(e)
             })
             
-            # Calculer les métriques
             execution_time = time.time() - start_time
             metrics = {
                 "execution_time": execution_time,
                 "confidence": 0.0,
                 "coverage": 0.0,
-                "resource_usage": 0.5  # Valeur arbitraire pour l'exemple
+                "resource_usage": 0.5 
             }
             
-            # Mettre à jour les métriques dans l'état opérationnel
-            self.update_metrics(task_id, metrics)
+            self.update_metrics(task_id_registered, metrics)
             
-            # Retourner un résultat d'erreur
             return {
-                "id": f"result-{task_id}",
-                "task_id": task_id,
+                "id": f"result-{task_id_registered}", 
+                "task_id": task_id_registered, 
                 "tactical_task_id": task.get("tactical_task_id"),
                 "status": "failed",
                 "outputs": {},
@@ -280,57 +262,64 @@ class ExtractAgentAdapter(OperationalAgent):
             }
     
     async def _process_extract(self, extract: Dict[str, Any], parameters: Dict[str, Any]) -> ExtractResult:
-        """
-        Traite un extrait de texte.
-        
-        Args:
-            extract: L'extrait à traiter
-            parameters: Les paramètres de traitement
-            
-        Returns:
-            Le résultat du traitement
-        """
-        # Vérifier si l'agent est initialisé
         if not self.initialized:
-            await self.initialize()
-        
-        # Créer une source factice pour l'agent d'extraction
+            await self.initialize() 
+            if not self.initialized: 
+                return ExtractResult(status="error", message="Agent non initialisé pour _process_extract", explanation="Initialisation échouée")
+
         source_info = {
             "source_name": extract.get("source", "Source inconnue"),
             "source_text": extract.get("content", "")
         }
         
-        # Extraire à partir du nom
         extract_name = extract.get("id", "Extrait sans nom")
         
-        # Appeler l'agent d'extraction
         result = await self.extract_agent.extract_from_name(source_info, extract_name)
         
         return result
     
     def _normalize_text(self, text: str, parameters: Dict[str, Any]) -> str:
-        """
-        Normalise un texte.
-        
-        Args:
-            text: Le texte à normaliser
-            parameters: Les paramètres de normalisation
-            
-        Returns:
-            Le texte normalisé
-        """
         normalized_text = text
         
-        # Appliquer les normalisations selon les paramètres
         if parameters.get("remove_stopwords", False):
-            # Implémentation simplifiée pour l'exemple
-            stopwords = ["le", "la", "les", "un", "une", "des", "et", "ou", "mais", "donc", "car", "ni", "or"]
+            stopwords = ["le", "la", "les", "un", "une", "des", "et", "ou", "mais", "donc", "car", "ni", "or", "de", "est"] 
             words = normalized_text.split()
             normalized_text = " ".join([word for word in words if word.lower() not in stopwords])
         
         if parameters.get("lemmatize", False):
-            # Implémentation simplifiée pour l'exemple
-            # Dans une implémentation réelle, on utiliserait une bibliothèque de NLP
             self.logger.info("Lemmatisation demandée mais non implémentée.")
         
         return normalized_text
+
+    async def shutdown(self) -> bool:
+        """
+        Arrête l'agent d'extraction et nettoie les ressources.
+        
+        Returns:
+            True si l'arrêt a réussi, False sinon
+        """
+        try:
+            self.logger.info("Arrêt de l'agent d'extraction...")
+            
+            # Nettoyer les ressources
+            self.extract_agent = None
+            self.kernel = None
+            self.initialized = False
+            
+            self.logger.info("Agent d'extraction arrêté avec succès.")
+            return True
+        except Exception as e:
+            self.logger.error(f"Erreur lors de l'arrêt de l'agent d'extraction: {e}")
+            return False
+    
+    def format_result(self, task: Dict[str, Any], results: List[Dict[str, Any]], metrics: Dict[str, Any], issues: List[Dict[str, Any]], task_id_to_report: Optional[str] = None) -> Dict[str, Any]:
+        final_task_id = task_id_to_report if task_id_to_report else task.get("id", f"unknown_task_{uuid.uuid4().hex[:8]}")
+        return {
+            "id": f"result-{final_task_id}",
+            "task_id": final_task_id,
+            "tactical_task_id": task.get("tactical_task_id"),
+            "status": "completed" if not issues else "completed_with_issues",
+            "outputs": self._format_outputs(results),
+            "metrics": metrics,
+            "issues": issues
+        }
