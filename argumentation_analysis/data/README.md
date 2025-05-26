@@ -17,6 +17,8 @@ Ce fichier est:
 
 Une fois déchiffré et décompressé, il contient une liste de sources avec leurs extraits associés, utilisés pour l'analyse rhétorique.
 
+La structure détaillée de ce fichier, y compris l'intégration récente du champ `full_text` pour embarquer directement le contenu des sources, est décrite dans la [documentation des extraits chiffrés](../../docs/reports/extraits_chiffres.md#structure-des-données). L'objectif principal de `full_text` est de stocker le texte source directement dans ce fichier, la récupération via `source_url` devenant un mécanisme de fallback. Le champ `full_text` peut être peuplé en utilisant le script [`scripts/embed_all_sources.py`](../../scripts/embed_all_sources.py).
+
 ## Utilisation
 
 ### Accès au fichier chiffré

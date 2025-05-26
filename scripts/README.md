@@ -86,6 +86,22 @@ python scripts/analyze_directory_usage.py
 python scripts/check_imports.py
 ```
 
+- **`embed_all_sources.py`** : S'assure que toutes les sources dans un fichier de configuration d'extraits ont leur texte source complet (`full_text`) embarqué. Il lit un fichier de configuration d'extraits chiffré, récupère le texte complet pour chaque source où il est manquant (en utilisant les informations `source_url` ou `path` et les services de `fetch_service`), puis sauvegarde la configuration mise à jour dans un nouveau fichier chiffré.
+
+```bash
+# Exemple d'utilisation du script d'embarquement
+python scripts/embed_all_sources.py \
+  --input-config chemin/vers/votre/extract_sources.json.gz.enc \
+  --output-config chemin/vers/votre/extract_sources_embedded.json.gz.enc \
+  --passphrase "votre_phrase_secrete" \
+  --force
+```
+  **Arguments pour `embed_all_sources.py`**:
+  - `--input-config` (requis): Chemin vers le fichier de configuration chiffré d'entrée.
+  - `--output-config` (requis): Chemin vers le fichier de configuration chiffré de sortie.
+  - `--passphrase` (optionnel): Passphrase pour le déchiffrement/chiffrement. Utilise `TEXT_CONFIG_PASSPHRASE` de l'environnement si non fourni.
+  - `--force` (optionnel): Écrase le fichier de sortie s'il existe déjà.
+
 ## Utilisation recommandée
 
 1. **Analyse des problèmes** : Exécutez d'abord les scripts en mode dry-run pour analyser les problèmes sans modifier les fichiers.
