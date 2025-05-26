@@ -81,44 +81,52 @@ class CryptoService:
         self.encryption_key = key
         self.logger.info("Clé de chiffrement mise à jour.")
     
-    def encrypt_data(self, data: bytes) -> Optional[bytes]:
+    def encrypt_data(self, data: bytes, key: Optional[bytes] = None) -> Optional[bytes]:
         """
         Chiffre des données binaires.
         
         Args:
             data: Données à chiffrer
+            key: Clé de chiffrement optionnelle (utilise self.encryption_key si None)
             
         Returns:
             Données chiffrées ou None en cas d'erreur
         """
-        if not self.encryption_key:
+        # Utiliser la clé fournie ou celle de l'instance
+        encryption_key = key if key is not None else self.encryption_key
+        
+        if not encryption_key:
             self.logger.error("Erreur de chiffrement: Clé de chiffrement manquante.")
             return None
         
         try:
-            f = Fernet(self.encryption_key)
+            f = Fernet(encryption_key)
             encrypted_data = f.encrypt(data)
             return encrypted_data
         except Exception as e:
             self.logger.error(f"Erreur de chiffrement: {e}")
             return None
     
-    def decrypt_data(self, encrypted_data: bytes) -> Optional[bytes]:
+    def decrypt_data(self, encrypted_data: bytes, key: Optional[bytes] = None) -> Optional[bytes]:
         """
         Déchiffre des données binaires.
         
         Args:
             encrypted_data: Données chiffrées
+            key: Clé de chiffrement optionnelle (utilise self.encryption_key si None)
             
         Returns:
             Données déchiffrées ou None en cas d'erreur
         """
-        if not self.encryption_key:
+        # Utiliser la clé fournie ou celle de l'instance
+        encryption_key = key if key is not None else self.encryption_key
+        
+        if not encryption_key:
             self.logger.error("Erreur de déchiffrement: Clé de chiffrement manquante.")
             return None
         
         try:
-            f = Fernet(self.encryption_key)
+            f = Fernet(encryption_key)
             decrypted_data = f.decrypt(encrypted_data)
             return decrypted_data
         except (InvalidToken, InvalidSignature) as e:

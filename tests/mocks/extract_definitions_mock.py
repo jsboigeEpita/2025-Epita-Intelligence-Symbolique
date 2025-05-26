@@ -120,7 +120,9 @@ def setup_extract_definitions_mock():
             """
             try:
                 import json
+                import gzip
                 from pathlib import Path
+                from argumentation_analysis.services.crypto_service import CryptoService
                 
                 # Convertir l'objet en liste si nécessaire
                 if hasattr(definitions_obj, 'to_dict_list'):
@@ -135,10 +137,38 @@ def setup_extract_definitions_mock():
                 # Sauvegarder le fichier
                 if definitions_path:
                     file_path = Path(definitions_path)
-                    with open(file_path, 'w', encoding='utf-8') as f:
-                        json.dump(data_to_save, f, indent=2, ensure_ascii=False)
-                    logger.info(f"Définitions sauvegardées dans {definitions_path}")
-                    return True
+                    
+                    # Si un key_path est fourni, chiffrer les données
+                    if key_path and Path(key_path).exists():
+                        # Charger la clé
+                        with open(key_path, 'rb') as f:
+                            encryption_key = f.read()
+                        
+                        # Créer un service de chiffrement
+                        crypto_service = CryptoService(encryption_key)
+                        
+                        # Convertir en JSON et compresser
+                        json_data = json.dumps(data_to_save, indent=2, ensure_ascii=False).encode('utf-8')
+                        compressed_data = gzip.compress(json_data)
+                        
+                        # Chiffrer
+                        encrypted_data = crypto_service.encrypt_data(compressed_data)
+                        
+                        if encrypted_data:
+                            # Sauvegarder les données chiffrées
+                            with open(file_path, 'wb') as f:
+                                f.write(encrypted_data)
+                            logger.info(f"Définitions chiffrées sauvegardées dans {definitions_path}")
+                            return True
+                        else:
+                            logger.error("Échec du chiffrement des données")
+                            return False
+                    else:
+                        # Sauvegarder en JSON non chiffré
+                        with open(file_path, 'w', encoding='utf-8') as f:
+                            json.dump(data_to_save, f, indent=2, ensure_ascii=False)
+                        logger.info(f"Définitions sauvegardées dans {definitions_path}")
+                        return True
                 
                 return False
                 

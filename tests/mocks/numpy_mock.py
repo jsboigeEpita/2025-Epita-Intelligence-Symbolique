@@ -21,6 +21,19 @@ logger = logging.getLogger("NumpyMock")
 __version__ = "1.24.3"
 
 # Classes de base
+class dtype:
+    """Mock pour numpy.dtype."""
+    
+    def __init__(self, type_spec):
+        self.type = type_spec
+        self.name = str(type_spec)
+    
+    def __str__(self):
+        return self.name
+    
+    def __repr__(self):
+        return f"dtype('{self.name}')"
+
 class ndarray:
     """Mock pour numpy.ndarray."""
     
@@ -173,8 +186,69 @@ def argmin(a, axis=None):
     return 0
 
 # Sous-modules
+class BitGenerator:
+    """Mock pour numpy.random.BitGenerator."""
+    
+    def __init__(self, seed=None):
+        self.seed = seed
+
+class RandomState:
+    """Mock pour numpy.random.RandomState."""
+    
+    def __init__(self, seed=None):
+        self.seed = seed
+    
+    def random(self, size=None):
+        """Génère des nombres aléatoires uniformes."""
+        if size is None:
+            return 0.5
+        if isinstance(size, int):
+            size = (size,)
+        return ndarray(shape=size, dtype=float)
+    
+    def randint(self, low, high=None, size=None, dtype=int):
+        """Génère des entiers aléatoires."""
+        if high is None:
+            high = low
+            low = 0
+        if size is None:
+            return low
+        if isinstance(size, int):
+            size = (size,)
+        return ndarray(shape=size, dtype=dtype)
+
+class Generator:
+    """Mock pour numpy.random.Generator."""
+    
+    def __init__(self, bit_generator=None):
+        self.bit_generator = bit_generator
+    
+    def random(self, size=None, dtype=float, out=None):
+        """Génère des nombres aléatoires uniformes."""
+        if size is None:
+            return 0.5
+        if isinstance(size, int):
+            size = (size,)
+        return ndarray(shape=size, dtype=dtype)
+    
+    def integers(self, low, high=None, size=None, dtype=int, endpoint=False):
+        """Génère des entiers aléatoires."""
+        if high is None:
+            high = low
+            low = 0
+        if size is None:
+            return low
+        if isinstance(size, int):
+            size = (size,)
+        return ndarray(shape=size, dtype=dtype)
+
 class random:
     """Mock pour numpy.random."""
+    
+    # Classes pour pandas
+    BitGenerator = BitGenerator
+    Generator = Generator
+    RandomState = RandomState
     
     @staticmethod
     def rand(*args):
@@ -266,6 +340,82 @@ uint = "uint64"  # Type unsigned int
 uint64 = "uint64"
 uint32 = "uint32"
 bool_ = "bool"
+
+# Types de données temporelles requis par pandas
+datetime64 = "datetime64"
+timedelta64 = "timedelta64"
+
+# Types de données supplémentaires requis par pandas
+float_ = "float64"  # Alias pour float64
+object_ = "object"
+str_ = "str"
+unicode_ = "unicode"
+
+# Types numériques supplémentaires
+integer = "int64"  # Type entier générique
+number = "float64"  # Type numérique générique
+floating = "float64"  # Type flottant générique
+complexfloating = "complex128"  # Type complexe
+signedinteger = "int64"  # Type entier signé
+unsignedinteger = "uint64"  # Type entier non signé
+
+# Types de données complexes
+complex64 = "complex64"
+complex128 = "complex128"
+complex_ = "complex128"
+
+# Types de données entiers supplémentaires
+int8 = "int8"
+int16 = "int16"
+uint8 = "uint8"
+uint16 = "uint16"
+
+# Types de données flottants supplémentaires
+float16 = "float16"
+
+# Classes utilitaires pour pandas
+class busdaycalendar:
+    """Mock pour numpy.busdaycalendar."""
+    
+    def __init__(self, weekmask='1111100', holidays=None):
+        self.weekmask = weekmask
+        self.holidays = holidays or []
+
+# Fonctions utilitaires supplémentaires
+def busday_count(begindates, enddates, weekmask='1111100', holidays=None, busdaycal=None, out=None):
+    """Mock pour numpy.busday_count."""
+    return 0
+
+def is_busday(dates, weekmask='1111100', holidays=None, busdaycal=None, out=None):
+    """Mock pour numpy.is_busday."""
+    return True
+
+def busday_offset(dates, offsets, roll='raise', weekmask='1111100', holidays=None, busdaycal=None, out=None):
+    """Mock pour numpy.busday_offset."""
+    return dates
+
+# Sous-modules internes pour pandas
+class _core:
+    """Mock pour numpy._core."""
+    
+    class multiarray:
+        """Mock pour numpy._core.multiarray."""
+        pass
+    
+    class umath:
+        """Mock pour numpy._core.umath."""
+        pass
+
+class core:
+    """Mock pour numpy.core."""
+    
+    class multiarray:
+        """Mock pour numpy.core.multiarray."""
+        pass
+    
+    class umath:
+        """Mock pour numpy.core.umath."""
+        pass
 
 # Log de chargement
 logger.info("Module numpy_mock chargé")
