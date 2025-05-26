@@ -204,13 +204,37 @@ class TestInformalAgentCreation(unittest.TestCase):
         invalid_tool = "not a tool"
         
         # Vérifier que l'initialisation avec un outil invalide lève une exception
+        # Utiliser strict_validation=False pour tester seulement la validation de type
         with self.assertRaises(TypeError):
             agent = InformalAgent(
                 agent_id="invalid_agent",
                 tools={
                     "invalid_tool": invalid_tool
-                }
+                },
+                strict_validation=False
             )
+    
+    def test_initialization_with_missing_required_tool_flexible(self):
+        """Teste l'initialisation de l'agent informel sans l'outil requis en mode flexible."""
+        # Vérifier que l'initialisation sans le détecteur de sophismes fonctionne en mode flexible
+        agent = InformalAgent(
+            agent_id="flexible_agent",
+            tools={
+                "rhetorical_analyzer": self.rhetorical_analyzer
+            },
+            strict_validation=False
+        )
+        
+        # Vérifier que l'agent a été correctement initialisé
+        self.assertIsNotNone(agent)
+        self.assertEqual(agent.agent_id, "flexible_agent")
+        self.assertNotIn("fallacy_detector", agent.tools)
+        self.assertIn("rhetorical_analyzer", agent.tools)
+        
+        # Vérifier que les capacités reflètent les outils disponibles
+        capabilities = agent.get_agent_capabilities()
+        self.assertFalse(capabilities["fallacy_detection"])
+        self.assertTrue(capabilities["rhetorical_analysis"])
     
     def test_initialization_with_empty_tools(self):
         """Teste l'initialisation de l'agent informel sans outils."""
