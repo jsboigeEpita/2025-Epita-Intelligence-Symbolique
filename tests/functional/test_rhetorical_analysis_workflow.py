@@ -44,6 +44,20 @@ class TestRhetoricalAnalysisWorkflow(unittest.TestCase):
     def setUp(self):
         """Initialisation avant chaque test."""
         self.middleware = MessageMiddleware()
+        
+        # Créer et enregistrer les canaux nécessaires
+        from argumentation_analysis.core.communication.channel_interface import LocalChannel, ChannelType
+        
+        # Canal hiérarchique pour les communications tactiques
+        self.hierarchical_channel = LocalChannel("hierarchical", self.middleware)
+        self.hierarchical_channel.type = ChannelType.HIERARCHICAL
+        self.middleware.register_channel(self.hierarchical_channel)
+        
+        # Autres canaux nécessaires
+        self.data_channel = LocalChannel("data", self.middleware)
+        self.data_channel.type = ChannelType.DATA
+        self.middleware.register_channel(self.data_channel)
+        
         self.tactical_state = TacticalState()
         self.coordinator = TaskCoordinator(tactical_state=self.tactical_state, middleware=self.middleware)
         
@@ -55,7 +69,7 @@ class TestRhetoricalAnalysisWorkflow(unittest.TestCase):
         self.informal_agent = MagicMock(spec=InformalAgent)
         self.informal_agent.agent_id = "informal_agent"
         
-        self.analysis_runner = RhetoricalAnalysisRunner(middleware=self.middleware)
+        self.analysis_runner = RhetoricalAnalysisRunner()
         
         os.makedirs("results/test", exist_ok=True)
     
@@ -63,8 +77,8 @@ class TestRhetoricalAnalysisWorkflow(unittest.TestCase):
         """Nettoyage après chaque test."""
         # self.middleware.shutdown() # Si applicable
 
-    @patch('argumentation_analysis.orchestration.analysis_runner.ExtractAgentAdapter') # Patcher la classe où elle est utilisée
-    @patch('argumentation_analysis.agents.core.informal.informal_agent.InformalAgent') # Patcher la classe où elle est utilisée
+    @patch('argumentation_analysis.orchestration.hierarchical.operational.adapters.extract_agent_adapter.ExtractAgentAdapter') # Patcher la classe où elle est définie
+    @patch('argumentation_analysis.agents.core.informal.informal_agent.InformalAgent') # Patcher la classe où elle est définie
     def test_complete_rhetorical_analysis_workflow(self, MockInformalAgent, MockExtractAgentAdapter):
         """
         Teste le flux de travail complet d'analyse rhétorique,
@@ -141,7 +155,7 @@ class TestRhetoricalAnalysisWorkflow(unittest.TestCase):
             self.assertIsNotNone(result_file)
             self.assertTrue(result_file.endswith(".json"))
     
-    @patch('argumentation_analysis.orchestration.analysis_runner.ExtractAgentAdapter')
+    @patch('argumentation_analysis.orchestration.hierarchical.operational.adapters.extract_agent_adapter.ExtractAgentAdapter')
     @patch('argumentation_analysis.agents.core.informal.informal_agent.InformalAgent')
     def test_multi_document_analysis(self, MockInformalAgent, MockExtractAgentAdapter):
         mock_extract_adapter_instance = MockExtractAgentAdapter.return_value
