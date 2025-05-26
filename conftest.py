@@ -24,6 +24,15 @@ except ImportError:
 
 
 
+import sys
+from tests.mocks import numpy_mock
+
+# Installer le mock numpy dans sys.modules
+sys.modules['numpy'] = numpy_mock
+sys.modules['numpy.rec'] = numpy_mock.rec
+sys.modules['numpy.rec.recarray'] = numpy_mock.rec.recarray
+
+
 def pytest_configure(config):
     """
     Configure pytest avec les paramètres nécessaires pour pytest-asyncio.
