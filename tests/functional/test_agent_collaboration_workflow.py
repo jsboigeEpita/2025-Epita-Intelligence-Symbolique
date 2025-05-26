@@ -67,6 +67,18 @@ class TestAgentCollaborationWorkflow(AsyncTestCase):
         self.tactical_channel = LocalChannel("tactical_commands", self.middleware)
         self.operational_channel = LocalChannel("operational_tasks", self.middleware)
         self.feedback_channel = LocalChannel("feedback", self.middleware)
+        
+        # Enregistrer les canaux dans le middleware
+        from argumentation_analysis.core.communication.channel_interface import ChannelType
+        self.middleware.register_channel(self.strategic_channel)
+        self.middleware.register_channel(self.tactical_channel)
+        self.middleware.register_channel(self.operational_channel)
+        self.middleware.register_channel(self.feedback_channel)
+        
+        # Créer et enregistrer un canal hiérarchique pour les communications tactiques
+        self.hierarchical_channel = LocalChannel("hierarchical", self.middleware)
+        self.hierarchical_channel.type = ChannelType.HIERARCHICAL  # Définir le bon type
+        self.middleware.register_channel(self.hierarchical_channel)
 
         # Création des managers et coordinateurs
         self.strategic_manager = StrategicManager(middleware=self.middleware)
@@ -90,9 +102,9 @@ class TestAgentCollaborationWorkflow(AsyncTestCase):
         self.mock_pl_adapter.process_task = AsyncMock(return_value={"status": "completed", "outputs": {"belief_set_id": "bs1"}, "metrics": {}, "issues": []})
 
         # Enregistrement des agents mocks dans le manager opérationnel
-        self.operational_manager.agent_registry.register_agent(self.mock_extract_adapter)
-        self.operational_manager.agent_registry.register_agent(self.mock_informal_adapter)
-        self.operational_manager.agent_registry.register_agent(self.mock_pl_adapter)
+        self.operational_manager.agent_registry.register_agent_class("extract", self.mock_extract_adapter)
+        self.operational_manager.agent_registry.register_agent_class("informal", self.mock_informal_adapter)
+        self.operational_manager.agent_registry.register_agent_class("pl", self.mock_pl_adapter)
 
 
     async def test_full_collaboration_workflow(self):
