@@ -48,8 +48,10 @@ DATA_DIR = None
 
 try:
     # Import des modules nécessaires
+    from argumentation_analysis.ui.file_operations import (
+        load_extract_definitions
+    )
     from argumentation_analysis.ui.utils import (
-        load_extract_definitions,
         decrypt_data
     )
     from argumentation_analysis.paths import DATA_DIR

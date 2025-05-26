@@ -192,3 +192,67 @@ class CryptoService:
             True si le chiffrement est activé, False sinon
         """
         return self.encryption_key is not None
+    
+    def generate_key(self) -> bytes:
+        """
+        Génère une nouvelle clé de chiffrement.
+        
+        Returns:
+            Nouvelle clé de chiffrement générée
+        """
+        try:
+            key = Fernet.generate_key()
+            self.logger.info("Nouvelle clé de chiffrement générée avec succès.")
+            return key
+        except Exception as e:
+            self.logger.error(f"Erreur lors de la génération de la clé: {e}")
+            raise
+    
+    def save_key(self, key: bytes, key_file: str) -> bool:
+        """
+        Sauvegarde une clé de chiffrement dans un fichier.
+        
+        Args:
+            key: Clé de chiffrement à sauvegarder
+            key_file: Chemin du fichier où sauvegarder la clé
+            
+        Returns:
+            True si la sauvegarde a réussi, False sinon
+        """
+        try:
+            with open(key_file, 'wb') as f:
+                f.write(key)
+            self.logger.info(f"Clé de chiffrement sauvegardée dans {key_file}")
+            return True
+        except Exception as e:
+            self.logger.error(f"Erreur lors de la sauvegarde de la clé: {e}")
+            return False
+    
+    def load_key(self, key_file: str) -> Optional[bytes]:
+        """
+        Charge une clé de chiffrement depuis un fichier.
+        
+        Args:
+            key_file: Chemin du fichier contenant la clé
+            
+        Returns:
+            Clé de chiffrement ou None en cas d'erreur
+        """
+        try:
+            with open(key_file, 'rb') as f:
+                key = f.read()
+            self.logger.info(f"Clé de chiffrement chargée depuis {key_file}")
+            return key
+        except Exception as e:
+            self.logger.error(f"Erreur lors du chargement de la clé: {e}")
+            return None
+    
+    @staticmethod
+    def generate_static_key() -> bytes:
+        """
+        Génère une nouvelle clé de chiffrement de manière statique.
+        
+        Returns:
+            Nouvelle clé de chiffrement générée
+        """
+        return Fernet.generate_key()
