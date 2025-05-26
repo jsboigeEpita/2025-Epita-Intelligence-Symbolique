@@ -10,332 +10,156 @@ automatiquement utilisé en raison de problèmes de compatibilité.
 import sys
 import os
 import pytest
-from unittest.mock import patch
+from unittest.mock import patch, MagicMock
 import importlib.util
 
-# Ajouter le répertoire parent au PYTHONPATH pour pouvoir importer les modules du projet
+# --- Mock Matplotlib et NetworkX au plus tôt ---
+try:
+    current_dir_for_mock = os.path.dirname(os.path.abspath(__file__))
+    mocks_dir_for_mock = os.path.join(current_dir_for_mock, 'mocks')
+    if mocks_dir_for_mock not in sys.path:
+        sys.path.insert(0, mocks_dir_for_mock) # Ajoute tests/mocks au path
+
+    # Matplotlib
+    from matplotlib_mock import pyplot as mock_pyplot_instance # Import direct car mocks_dir_for_mock est dans le path
+    from matplotlib_mock import cm as mock_cm_instance
+    from matplotlib_mock import MatplotlibMock as MockMatplotlibModule_class
+    
+    sys.modules['matplotlib.pyplot'] = mock_pyplot_instance
+    sys.modules['matplotlib.cm'] = mock_cm_instance
+    mock_mpl_module = MockMatplotlibModule_class()
+    mock_mpl_module.pyplot = mock_pyplot_instance
+    mock_mpl_module.cm = mock_cm_instance
+    sys.modules['matplotlib'] = mock_mpl_module
+    print("INFO: Matplotlib mocké globalement.")
+
+    # NetworkX
+    from networkx_mock import NetworkXMock as MockNetworkXModule_class # Import direct
+    sys.modules['networkx'] = MockNetworkXModule_class()
+    print("INFO: NetworkX mocké globalement.")
+
+except ImportError as e:
+    print(f"ERREUR CRITIQUE lors du mocking global de matplotlib ou networkx: {e}")
+    # Fallback à des MagicMock génériques
+    if 'matplotlib' not in str(e).lower():
+        sys.modules['matplotlib.pyplot'] = MagicMock()
+        sys.modules['matplotlib.cm'] = MagicMock()
+        sys.modules['matplotlib'] = MagicMock()
+        sys.modules['matplotlib'].pyplot = sys.modules['matplotlib.pyplot']
+        sys.modules['matplotlib'].cm = sys.modules['matplotlib.cm']
+    if 'networkx' not in str(e).lower():
+        sys.modules['networkx'] = MagicMock()
+# --- Fin des Mocks Globaux ---
+
+# --- Mock JPype ---
+# mocks_dir_for_mock (tests/mocks) est déjà dans sys.path depuis le bloc ci-dessus.
+try:
+    from jpype_mock import ( # Import direct car tests/mocks est dans sys.path
+        isJVMStarted, startJVM, getJVMPath, getJVMVersion, getDefaultJVMPath,
+        JClass, JException, JObject, JVMNotFoundException, _jpype as mock_dot_jpype_module
+    )
+
+    mock_jpype_imports_module = MagicMock(name="jpype.imports_mock")
+    sys.modules['jpype.imports'] = mock_jpype_imports_module
+
+    jpype_module_mock_obj = MagicMock(name="jpype_module_mock")
+    jpype_module_mock_obj.__path__ = [] 
+    jpype_module_mock_obj.isJVMStarted = isJVMStarted
+    jpype_module_mock_obj.startJVM = startJVM
+    jpype_module_mock_obj.getJVMPath = getJVMPath
+    jpype_module_mock_obj.getJVMVersion = getJVMVersion
+    jpype_module_mock_obj.getDefaultJVMPath = getDefaultJVMPath
+    jpype_module_mock_obj.JClass = JClass
+    jpype_module_mock_obj.JException = JException
+    jpype_module_mock_obj.JObject = JObject
+    jpype_module_mock_obj.JVMNotFoundException = JVMNotFoundException
+    jpype_module_mock_obj.__version__ = '1.4.1.mock'
+    jpype_module_mock_obj.imports = mock_jpype_imports_module
+
+    sys.modules['jpype'] = jpype_module_mock_obj
+    sys.modules['_jpype'] = mock_dot_jpype_module
+    print("INFO: JPype (et jpype.imports) mocké globalement.")
+except ImportError as e_jpype:
+    print(f"ERREUR CRITIQUE lors du mocking global de JPype: {e_jpype}")
+    sys.modules['jpype'] = MagicMock(name="jpype_fallback_mock")
+    sys.modules['jpype.imports'] = MagicMock(name="jpype.imports_fallback_mock")
+    sys.modules['_jpype'] = MagicMock(name="_jpype_fallback_mock")
+# --- Fin Mock JPype ---
+
+
 parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if parent_dir not in sys.path:
     sys.path.insert(0, parent_dir)
 
-# Fonction pour vérifier si un module est disponible
 def is_module_available(module_name):
-    """Vérifie si un module Python est disponible."""
+    if module_name in sys.modules:
+        # Vérifier si c'est un de nos mocks principaux ou un MagicMock générique
+        if isinstance(sys.modules[module_name], MagicMock) or \
+           (module_name == 'jpype' and sys.modules[module_name] is jpype_module_mock_obj):
+            return True
     try:
-        __import__(module_name)
-        return True
-    except ImportError:
+        spec = importlib.util.find_spec(module_name)
+        return spec is not None
+    except (ImportError, ValueError):
         return False
 
 def is_python_version_compatible_with_jpype():
-    """
-    Vérifie si la version actuelle de Python est compatible avec JPype1.
-    JPype1 n'est pas compatible avec Python 3.12 et supérieur.
-    """
     major = sys.version_info.major
     minor = sys.version_info.minor
-    
-    # Python 3.12 et supérieur n'est pas compatible avec JPype1
     if (major == 3 and minor >= 12) or major > 3:
         return False
-    
     return True
 
-# Fonction pour configurer jpype (réel ou mock)
-def setup_jpype():
-    """
-    Configure jpype pour les tests, en utilisant la vraie bibliothèque si disponible
-    et compatible avec la version de Python actuelle.
-    """
-    # Vérifier si la version de Python est compatible avec JPype1
-    python_compatible = is_python_version_compatible_with_jpype()
-    
-    if python_compatible and is_module_available('jpype'):
-        # Utiliser la vraie bibliothèque jpype
-        import jpype
-        
-        # Créer un mock pour _jpype car la structure a changé dans la version 1.5.2
-        _jpype_mock = type('_jpype', (), {})
-        
-        print(f"Utilisation de la vraie bibliothèque JPype1 (version {getattr(jpype, '__version__', 'inconnue')})")
-        return jpype, _jpype_mock
-    else:
-        # Si Python 3.12+ ou JPype1 n'est pas disponible, utiliser le mock
-        if not python_compatible:
-            print(f"Python {sys.version_info.major}.{sys.version_info.minor} détecté, "
-                  f"utilisation du mock JPype1 (JPype1 n'est pas compatible avec Python 3.12+)")
-        else:
-            print("JPype1 non disponible, utilisation du mock")
-        
-        # Ajouter le répertoire parent au chemin de recherche de Python
-        import os
-        current_dir = os.path.dirname(os.path.abspath(__file__))
-        sys.path.insert(0, current_dir)
-        
-        # Importer le mock de jpype
-        from mocks.jpype_mock import (
-            isJVMStarted, startJVM, getJVMPath, getJVMVersion, getDefaultJVMPath,
-            JClass, JException, JObject, JVMNotFoundException, imports, _jpype
-        )
-        
-        # Installer les mocks dans sys.modules
-        sys.modules['jpype'] = type('jpype', (), {
-            'isJVMStarted': isJVMStarted,
-            'startJVM': startJVM,
-            'getJVMPath': getJVMPath,
-            'getJVMVersion': getJVMVersion,
-            'getDefaultJVMPath': getDefaultJVMPath,
-            'JClass': JClass,
-            'JException': JException,
-            'JObject': JObject,
-            'JVMNotFoundException': JVMNotFoundException,
-            'imports': imports,
-            '__version__': '1.4.1',  # Version simulée
-        })
-        
-        sys.modules['_jpype'] = _jpype
-        
-        return sys.modules['jpype'], sys.modules['_jpype']
-
-# Fonction pour configurer numpy (réel ou mock)
 def setup_numpy():
-    """Configure numpy pour les tests, en utilisant la vraie bibliothèque si disponible."""
-    # Pour Python 3.12+, toujours utiliser le mock
-    if sys.version_info.major == 3 and sys.version_info.minor >= 12:
-        # Importer le mock de numpy
-        # Assurons-nous que le répertoire parent est dans le chemin de recherche
-        import os
-        current_dir = os.path.dirname(os.path.abspath(__file__))
-        if current_dir not in sys.path:
-            sys.path.insert(0, current_dir)
-            
-        from mocks.numpy_mock import array, ndarray, mean, sum, zeros, ones, dot, concatenate, vstack, hstack, argmax, argmin, max, min, random
-        
-        # Installer les mocks dans sys.modules
+    if (sys.version_info.major == 3 and sys.version_info.minor >= 12) or not is_module_available('numpy'):
+        if not is_module_available('numpy'): print("NumPy non disponible, utilisation du mock.")
+        else: print("Python 3.12+ détecté, utilisation du mock NumPy.")
+        # mocks_dir_for_mock (tests/mocks) est déjà dans sys.path
+        from numpy_mock import array, ndarray, mean, sum, zeros, ones, dot, concatenate, vstack, hstack, argmax, argmin, max, min, random
         sys.modules['numpy'] = type('numpy', (), {
-            'array': array,
-            'ndarray': ndarray,
-            'mean': mean,
-            'sum': sum,
-            'zeros': zeros,
-            'ones': ones,
-            'dot': dot,
-            'concatenate': concatenate,
-            'vstack': vstack,
-            'hstack': hstack,
-            'argmax': argmax,
-            'argmin': argmin,
-            'max': max,
-            'min': min,
-            'random': random,
-            '__version__': '1.24.3',  # Version simulée
+            'array': array, 'ndarray': ndarray, 'mean': mean, 'sum': sum, 'zeros': zeros, 'ones': ones,
+            'dot': dot, 'concatenate': concatenate, 'vstack': vstack, 'hstack': hstack,
+            'argmax': argmax, 'argmin': argmin, 'max': max, 'min': min, 'random': random, '__version__': '1.24.3',
         })
-        
         return sys.modules['numpy']
-    elif is_module_available('numpy'):
-        # Utiliser la vraie bibliothèque numpy
+    else: 
         import numpy
+        print(f"Utilisation de la vraie bibliothèque NumPy (version {getattr(numpy, '__version__', 'inconnue')})")
         return numpy
-    else:
-        # Importer le mock de numpy
-        from tests.mocks.numpy_mock import array, ndarray, mean, sum, zeros, ones, dot, concatenate, vstack, hstack, argmax, argmin, max, min, random
-        
-        # Installer les mocks dans sys.modules
-        sys.modules['numpy'] = type('numpy', (), {
-            'array': array,
-            'ndarray': ndarray,
-            'mean': mean,
-            'sum': sum,
-            'zeros': zeros,
-            'ones': ones,
-            'dot': dot,
-            'concatenate': concatenate,
-            'vstack': vstack,
-            'hstack': hstack,
-            'argmax': argmax,
-            'argmin': argmin,
-            'max': max,
-            'min': min,
-            'random': random,
-            '__version__': '1.24.3',  # Version simulée
-        })
-        
-        return sys.modules['numpy']
 
-# Fonction pour configurer le mock de pandas ou utiliser la vraie bibliothèque
 def setup_pandas():
-    """Configure pandas pour les tests, en utilisant la vraie bibliothèque si disponible."""
-    # Pour Python 3.12+, toujours utiliser le mock
-    if sys.version_info.major == 3 and sys.version_info.minor >= 12:
-        # Utiliser le mock de pandas
-        # Assurons-nous que le répertoire parent est dans le chemin de recherche
-        import os
-        current_dir = os.path.dirname(os.path.abspath(__file__))
-        if current_dir not in sys.path:
-            sys.path.insert(0, current_dir)
-            
-        from mocks.pandas_mock import DataFrame, read_csv, read_json
-        
-        # Installer les mocks dans sys.modules
+    if (sys.version_info.major == 3 and sys.version_info.minor >= 12) or not is_module_available('pandas'):
+        if not is_module_available('pandas'): print("Pandas non disponible, utilisation du mock.")
+        else: print("Python 3.12+ détecté, utilisation du mock Pandas.")
+        # mocks_dir_for_mock (tests/mocks) est déjà dans sys.path
+        from pandas_mock import DataFrame, read_csv, read_json
         sys.modules['pandas'] = type('pandas', (), {
-            'DataFrame': DataFrame,
-            'read_csv': read_csv,
-            'read_json': read_json,
-            'Series': list,
-            'NA': None,
-            'NaT': None,
-            'isna': lambda x: x is None,
-            'notna': lambda x: x is not None
+            'DataFrame': DataFrame, 'read_csv': read_csv, 'read_json': read_json, 'Series': list,
+            'NA': None, 'NaT': None, 'isna': lambda x: x is None, 'notna': lambda x: x is not None,
+            '__version__': '1.5.3', 
         })
-        
         return sys.modules['pandas']
-    elif is_module_available('pandas'):
-        # Utiliser la vraie bibliothèque pandas
+    else: 
         import pandas
+        print(f"Utilisation de la vraie bibliothèque Pandas (version {getattr(pandas, '__version__', 'inconnue')})")
         return pandas
-    else:
-        # Utiliser le mock de pandas
-        from tests.mocks.pandas_mock import DataFrame, read_csv, read_json
-        
-        # Installer les mocks dans sys.modules
-        sys.modules['pandas'] = type('pandas', (), {
-            'DataFrame': DataFrame,
-            'read_csv': read_csv,
-            'read_json': read_json,
-            'Series': list,
-            'NA': None,
-            'NaT': None,
-            'isna': lambda x: x is None,
-            'notna': lambda x: x is not None
-        })
-        
-        return sys.modules['pandas']
 
-# Fixture pour configurer jpype (réel ou mock)
 @pytest.fixture(scope="session", autouse=True)
-def setup_jpype_for_tests():
-    """Fixture pour configurer jpype pour tous les tests."""
-    # Vérifier si nous sommes en mode test
+def setup_numpy_for_tests_fixture(): 
     if 'PYTEST_CURRENT_TEST' in os.environ:
-        # Configurer jpype (réel ou mock)
-        jpype_module, _jpype_module = setup_jpype()
-        
-        # Modules qui utilisent jpype
-        modules_to_patch = [
-            'argumentation_analysis.core.jvm_setup',
-            'argumentation_analysis.agents.core.pl.pl_definitions',
-            'argumentation_analysis.orchestration.analysis_runner',
-            'argumentation_analysis.orchestration.hierarchical.operational.adapters.pl_agent_adapter',
-        ]
-        
-        # Patcher jpype directement dans sys.modules si ce n'est pas déjà la vraie bibliothèque
-        if 'jpype' not in sys.modules or not is_module_available('jpype'):
-            sys.modules['jpype'] = jpype_module
-            sys.modules['_jpype'] = _jpype_module
-        
-        for module_name in modules_to_patch:
-            if module_name in sys.modules:
-                try:
-                    # Si le module utilise jpype via import jpype
-                    if not hasattr(sys.modules[module_name], 'jpype'):
-                        sys.modules[module_name].jpype = jpype_module
-                    
-                    # Si le module utilise _jpype
-                    if hasattr(sys.modules[module_name], '_jpype'):
-                        sys.modules[module_name]._jpype = _jpype_module
-                except Exception as e:
-                    print(f"Erreur lors du patch de jpype pour {module_name}: {e}")
-        
-        yield
-    else:
-        yield
-
-# Fixture pour configurer numpy (réel ou mock)
-@pytest.fixture(scope="session", autouse=True)
-def setup_numpy_for_tests():
-    """Fixture pour configurer numpy pour tous les tests."""
-    # Vérifier si nous sommes en mode test
-    if 'PYTEST_CURRENT_TEST' in os.environ:
-        # Configurer numpy (réel ou mock)
         numpy_module = setup_numpy()
-        
-        # Modules qui utilisent numpy
-        modules_to_patch = [
-            'argumentation_analysis.agents.tools.analysis.enhanced.complex_fallacy_analyzer',
-            'argumentation_analysis.agents.tools.analysis.enhanced.contextual_fallacy_analyzer',
-            'argumentation_analysis.agents.tools.analysis.enhanced.fallacy_severity_evaluator',
-            'argumentation_analysis.agents.tools.analysis.enhanced.rhetorical_result_analyzer',
-            'argumentation_analysis.agents.tools.analysis.complex_fallacy_analyzer',
-            'argumentation_analysis.agents.tools.analysis.contextual_fallacy_analyzer',
-            'argumentation_analysis.agents.tools.analysis.fallacy_severity_evaluator',
-            'argumentation_analysis.agents.tools.analysis.rhetorical_result_analyzer',
-        ]
-        
-        # Patcher numpy directement dans sys.modules si ce n'est pas déjà la vraie bibliothèque
-        if 'numpy' not in sys.modules or not is_module_available('numpy'):
+        if sys.modules.get('numpy') is not numpy_module:
             sys.modules['numpy'] = numpy_module
-        
-        patches = []
-        for module_name in modules_to_patch:
-            if module_name in sys.modules:
-                try:
-                    # Vérifier si le module a déjà un attribut numpy
-                    if not hasattr(sys.modules[module_name], 'numpy'):
-                        # Si le module utilise numpy via import numpy
-                        sys.modules[module_name].numpy = numpy_module
-                    
-                    # Vérifier si le module a déjà un attribut np (alias courant pour numpy)
-                    if hasattr(sys.modules[module_name], 'np'):
-                        # Si le module utilise numpy via import numpy as np
-                        sys.modules[module_name].np = numpy_module
-                except Exception as e:
-                    print(f"Erreur lors du patch de numpy pour {module_name}: {e}")
-        
         yield
-        
-        # Pas besoin de nettoyer les patches car nous avons modifié les modules directement
     else:
         yield
 
-# Fixture pour configurer pandas (réel ou mock)
 @pytest.fixture(scope="session", autouse=True)
-def setup_pandas_for_tests():
-    """Fixture pour configurer pandas pour tous les tests."""
-    # Vérifier si nous sommes en mode test
+def setup_pandas_for_tests_fixture(): 
     if 'PYTEST_CURRENT_TEST' in os.environ:
-        # Configurer pandas (réel ou mock)
         pandas_module = setup_pandas()
-        
-        # Modules qui utilisent pandas
-        modules_to_patch = [
-            'argumentation_analysis.agents.tools.analysis.enhanced.complex_fallacy_analyzer',
-            'argumentation_analysis.agents.tools.analysis.enhanced.contextual_fallacy_analyzer',
-            'argumentation_analysis.agents.tools.analysis.enhanced.fallacy_severity_evaluator',
-            'argumentation_analysis.agents.tools.analysis.enhanced.rhetorical_result_analyzer',
-            'argumentation_analysis.agents.tools.analysis.complex_fallacy_analyzer',
-            'argumentation_analysis.agents.tools.analysis.contextual_fallacy_analyzer',
-            'argumentation_analysis.agents.tools.analysis.fallacy_severity_evaluator',
-            'argumentation_analysis.agents.tools.analysis.rhetorical_result_analyzer',
-            'argumentation_analysis.agents.core.informal.informal_definitions',
-        ]
-        
-        # Patcher pandas directement dans sys.modules si ce n'est pas déjà la vraie bibliothèque
-        if 'pandas' not in sys.modules or not is_module_available('pandas'):
+        if sys.modules.get('pandas') is not pandas_module:
             sys.modules['pandas'] = pandas_module
-        
-        for module_name in modules_to_patch:
-            if module_name in sys.modules:
-                try:
-                    # Si le module utilise pandas via import pandas
-                    if not hasattr(sys.modules[module_name], 'pandas'):
-                        sys.modules[module_name].pandas = pandas_module
-                    
-                    # Si le module utilise pandas via import pandas as pd
-                    if hasattr(sys.modules[module_name], 'pd'):
-                        sys.modules[module_name].pd = pandas_module
-                except Exception as e:
-                    print(f"Erreur lors du patch de pandas pour {module_name}: {e}")
-        
         yield
     else:
         yield

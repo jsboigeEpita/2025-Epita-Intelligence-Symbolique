@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Tests avancés pour le module orchestration.hierarchical.tactical.coordinator.
+Tests supplémentaires pour améliorer la couverture du module coordinator.py.
 """
 
 import unittest
@@ -19,7 +19,7 @@ logging.basicConfig(
     format='%(asctime)s [%(levelname)s] [%(name)s] %(message)s',
     datefmt='%H:%M:%S'
 )
-logger = logging.getLogger("TestTacticalCoordinatorAdvanced")
+logger = logging.getLogger("TestTacticalCoordinatorCoverage")
 
 # Ajouter le répertoire racine au chemin Python pour pouvoir importer les modules
 sys.path.append(os.path.abspath('..'))
@@ -27,7 +27,10 @@ sys.path.append(os.path.abspath('..'))
 # Import des modules à tester
 from argumentation_analysis.orchestration.hierarchical.tactical.coordinator import TaskCoordinator
 from argumentation_analysis.orchestration.hierarchical.tactical.state import TacticalState
-from argumentation_analysis.core.communication import MessagePriority, MessageType, AgentLevel
+from argumentation_analysis.core.communication import (
+    MessageMiddleware, TacticalAdapter, OperationalAdapter,
+    ChannelType, MessagePriority, Message, MessageType, AgentLevel
+)
 
 
 class MockMessage:
@@ -67,6 +70,7 @@ class MockChannel:
             "callback": callback,
             "filter_criteria": filter_criteria or {}
         }
+        return callback  # Retourner le callback pour pouvoir le tester
     
     def publish(self, message):
         """Publie un message sur le canal."""
@@ -96,6 +100,7 @@ class MockMiddleware:
     def __init__(self):
         self.messages = []
         self.channels = {}
+        self.published_topics = []
     
     def send_message(self, message):
         """Envoie un message."""
@@ -126,7 +131,15 @@ class MockMiddleware:
     
     def publish(self, topic_id, sender, sender_level, content, priority=None, metadata=None):
         """Publie un message sur un topic."""
-        # Simuler la publication d'un message
+        # Enregistrer la publication pour les tests
+        self.published_topics.append({
+            "topic_id": topic_id,
+            "sender": sender,
+            "sender_level": sender_level,
+            "content": content,
+            "priority": priority,
+            "metadata": metadata or {}
+        })
         return True
     
     def initialize_protocols(self):
@@ -201,12 +214,12 @@ class MockAdapter:
         return self.middleware.receive_message(self.agent_id, None, timeout)
 
 
-class TestTacticalCoordinatorAdvanced(unittest.TestCase):
-    """Tests avancés pour le coordinateur tactique."""
+class TestTacticalCoordinatorCoverage(unittest.TestCase):
+    """Tests supplémentaires pour améliorer la couverture du module coordinator.py."""
     
     def setUp(self):
         """Initialisation avant chaque test."""
-        # Créer un état tactique mock
+        # Créer un état tactique
         self.tactical_state = TacticalState()
         
         # Créer un middleware mock
@@ -216,13 +229,13 @@ class TestTacticalCoordinatorAdvanced(unittest.TestCase):
         self.patches = []
         
         # Patcher MessageMiddleware
-        message_middleware_patch = patch('argumentation_analysis.orchestration.hierarchical.tactical.coordinator.MessageMiddleware',
+        message_middleware_patch = patch('argumentation_analysis.orchestration.hierarchical.tactical.coordinator.MessageMiddleware', 
                                          return_value=self.middleware)
         self.patches.append(message_middleware_patch)
         message_middleware_patch.start()
         
         # Patcher TacticalAdapter
-        tactical_adapter_patch = patch('argumentation_analysis.orchestration.hierarchical.tactical.coordinator.TacticalAdapter',
+        tactical_adapter_patch = patch('argumentation_analysis.orchestration.hierarchical.tactical.coordinator.TacticalAdapter', 
                                        side_effect=lambda agent_id, middleware: MockAdapter(agent_id, middleware))
         self.patches.append(tactical_adapter_patch)
         tactical_adapter_patch.start()
@@ -242,290 +255,113 @@ class TestTacticalCoordinatorAdvanced(unittest.TestCase):
         for patcher in self.patches:
             patcher.stop()
     
-    def test_process_strategic_objectives(self):
-        """Teste la méthode process_strategic_objectives."""
-        # Créer des objectifs stratégiques
-        objectives = [
-            {
-                "id": "obj-1",
-                "description": "Identifier les arguments dans le texte",
-                "priority": "high",
-                "text": "Ceci est un texte d'exemple pour l'analyse des arguments.",
-                "type": "argument_identification"
-            },
-            {
-                "id": "obj-2",
-                "description": "Détecter les sophismes dans le texte",
-                "priority": "medium",
-                "text": "Ceci est un texte d'exemple pour la détection des sophismes.",
-                "type": "fallacy_detection"
-            }
-        ]
+    def test_subscribe_to_strategic_directives(self):
+        """Teste la méthode _subscribe_to_strategic_directives et le callback handle_directive."""
+        # Vérifier que l'abonnement a été effectué lors de l'initialisation
+        self.assertIn(ChannelType.HIERARCHICAL, self.middleware.channels)
+        channel = self.middleware.get_channel(ChannelType.HIERARCHICAL)
+        self.assertIn("tactical_coordinator", channel.subscribers)
         
-        # Patcher les méthodes appelées par process_strategic_objectives
+        # Récupérer le callback
+        callback = channel.subscribers["tactical_coordinator"]["callback"]
+        
+        # Tester le callback avec une directive d'objectif
+        objective_message = MockMessage(
+            sender="strategic_manager",
+            recipient="tactical_coordinator",
+            content={
+                "directive_type": "objective",
+                "content": {
+                    "objective": {
+                        "id": "obj-test",
+                        "description": "Objectif de test",
+                        "priority": "high"
+                    }
+                }
+            },
+            message_type=MessageType.COMMAND,
+            sender_level=AgentLevel.STRATEGIC
+        )
+        
+        # Patcher les méthodes appelées par le callback
         with patch.object(self.coordinator, '_decompose_objective_to_tasks') as mock_decompose, \
-             patch.object(self.coordinator, '_establish_task_dependencies') as mock_establish, \
-             patch.object(self.coordinator, '_assign_task_to_operational_agent') as mock_assign:
+             patch.object(self.coordinator, '_establish_task_dependencies') as mock_establish:
             
             # Simuler le comportement de _decompose_objective_to_tasks
-            mock_decompose.side_effect = lambda obj: [
+            mock_decompose.return_value = [
                 {
-                    "id": f"task-{obj['id']}-1",
-                    "description": f"Tâche 1 pour {obj['description']}",
-                    "objective_id": obj["id"],
+                    "id": "task-obj-test-1",
+                    "description": "Tâche 1 pour l'objectif de test",
+                    "objective_id": "obj-test",
                     "estimated_duration": "short",
                     "required_capabilities": ["text_extraction"],
-                    "priority": obj["priority"]
-                },
-                {
-                    "id": f"task-{obj['id']}-2",
-                    "description": f"Tâche 2 pour {obj['description']}",
-                    "objective_id": obj["id"],
-                    "estimated_duration": "medium",
-                    "required_capabilities": ["argument_identification" if obj["type"] == "argument_identification" else "fallacy_detection"],
-                    "priority": obj["priority"]
+                    "priority": "high"
                 }
             ]
             
-            # Appeler la méthode process_strategic_objectives
-            result = self.coordinator.process_strategic_objectives(objectives)
+            # Appeler le callback
+            callback(objective_message)
             
             # Vérifier que les méthodes ont été appelées
-            self.assertEqual(mock_decompose.call_count, 2)
-            mock_decompose.assert_has_calls([
-                call(objectives[0]),
-                call(objectives[1])
-            ])
-            
+            mock_decompose.assert_called_once()
             mock_establish.assert_called_once()
             
-            # Vérifier que les tâches ont été assignées
-            self.assertEqual(mock_assign.call_count, 4)  # 2 tâches par objectif
+            # Vérifier que l'objectif a été ajouté à l'état tactique
+            self.assertEqual(len(self.tactical_state.assigned_objectives), 1)
+            self.assertEqual(self.tactical_state.assigned_objectives[0]["id"], "obj-test")
             
-            # Vérifier que les objectifs ont été ajoutés à l'état tactique
-            self.assertEqual(len(self.tactical_state.assigned_objectives), 2)
-            self.assertEqual(self.tactical_state.assigned_objectives[0], objectives[0])
-            self.assertEqual(self.tactical_state.assigned_objectives[1], objectives[1])
-            
-            # Vérifier le résultat
-            self.assertIn("tasks_created", result)
-            self.assertEqual(result["tasks_created"], 4)
-            self.assertIn("tasks_by_objective", result)
-            self.assertIn("obj-1", result["tasks_by_objective"])
-            self.assertIn("obj-2", result["tasks_by_objective"])
-    
-    def test_assign_task_to_operational_agent(self):
-        """Teste la méthode _assign_task_to_operational_agent."""
-        # Créer une tâche
-        task = {
-            "id": "task-1",
-            "description": "Extraire le texte",
-            "objective_id": "obj-1",
-            "estimated_duration": "short",
-            "required_capabilities": ["text_extraction"],
-            "priority": "high"
-        }
+            # Vérifier qu'un accusé de réception a été envoyé
+            self.assertEqual(len(self.adapter.sent_reports), 1)
+            report = self.adapter.sent_reports[0]
+            self.assertEqual(report["report_type"], "directive_acknowledgement")
+            self.assertEqual(report["content"]["objective_id"], "obj-test")
+            self.assertEqual(report["recipient_id"], "strategic_manager")
         
-        # Patcher la méthode _determine_appropriate_agent
-        with patch.object(self.coordinator, '_determine_appropriate_agent', return_value="extract_processor") as mock_determine:
-            
-            # Appeler la méthode _assign_task_to_operational_agent
-            self.coordinator._assign_task_to_operational_agent(task)
-            
-            # Vérifier que la méthode _determine_appropriate_agent a été appelée
-            mock_determine.assert_called_once_with(["text_extraction"])
-            
-            # Vérifier que la tâche a été assignée via l'adaptateur
-            self.assertEqual(len(self.adapter.sent_tasks), 1)
-            sent_task = self.adapter.sent_tasks[0]
-            self.assertEqual(sent_task["task_type"], "operational_task")
-            self.assertEqual(sent_task["parameters"], task)
-            self.assertEqual(sent_task["recipient_id"], "extract_processor")
-            self.assertEqual(sent_task["priority"], MessagePriority.HIGH)
-            self.assertTrue(sent_task["requires_ack"])
-            self.assertEqual(sent_task["metadata"]["objective_id"], "obj-1")
-    
-    def test_assign_task_to_operational_agent_no_specific_agent(self):
-        """Teste la méthode _assign_task_to_operational_agent quand aucun agent spécifique n'est déterminé."""
-        # Créer une tâche
-        task = {
-            "id": "task-2",
-            "description": "Analyser les sophismes",
-            "objective_id": "obj-1",
-            "estimated_duration": "medium",
-            "required_capabilities": ["fallacy_detection", "rhetorical_analysis"],
-            "priority": "medium"
-        }
-        
-        # Patcher la méthode _determine_appropriate_agent
-        with patch.object(self.coordinator, '_determine_appropriate_agent', return_value=None) as mock_determine:
-            
-            # Appeler la méthode _assign_task_to_operational_agent
-            self.coordinator._assign_task_to_operational_agent(task)
-            
-            # Vérifier que la méthode _determine_appropriate_agent a été appelée
-            mock_determine.assert_called_once_with(["fallacy_detection", "rhetorical_analysis"])
-            
-            # Vérifier que la tâche a été publiée via le middleware
-            # Comme nous avons patché le middleware, nous ne pouvons pas vérifier directement la publication
-            # Mais nous pouvons vérifier que la méthode assign_task n'a pas été appelée
-            self.assertEqual(len(self.adapter.sent_tasks), 0)
-    
-    def test_determine_appropriate_agent(self):
-        """Teste la méthode _determine_appropriate_agent."""
-        # Cas 1: Une seule capacité requise
-        agent = self.coordinator._determine_appropriate_agent(["text_extraction"])
-        self.assertEqual(agent, "extract_processor")
-        
-        # Cas 2: Plusieurs capacités requises, un agent les possède toutes
-        agent = self.coordinator._determine_appropriate_agent(["argument_identification", "fallacy_detection", "rhetorical_analysis"])
-        self.assertEqual(agent, "informal_analyzer")
-        
-        # Cas 3: Plusieurs capacités requises, plusieurs agents les possèdent partiellement
-        agent = self.coordinator._determine_appropriate_agent(["formal_logic", "validity_checking"])
-        self.assertEqual(agent, "logic_analyzer")
-        
-        # Cas 4: Capacité non reconnue
-        agent = self.coordinator._determine_appropriate_agent(["capacité_inconnue"])
-        self.assertIsNone(agent)
-    
-    def test_handle_task_result(self):
-        """Teste la méthode handle_task_result."""
-        # Ajouter un objectif et des tâches à l'état tactique
-        objective = {
-            "id": "obj-1",
-            "description": "Identifier les arguments dans le texte",
-            "priority": "high"
-        }
-        self.tactical_state.add_assigned_objective(objective)
-        
-        task1 = {
-            "id": "task-1",
-            "description": "Extraire le texte",
-            "objective_id": "obj-1",
-            "estimated_duration": "short",
-            "required_capabilities": ["text_extraction"],
-            "priority": "high"
-        }
-        task2 = {
-            "id": "task-2",
-            "description": "Identifier les arguments",
-            "objective_id": "obj-1",
-            "estimated_duration": "medium",
-            "required_capabilities": ["argument_identification"],
-            "priority": "high"
-        }
-        
-        self.tactical_state.add_task(task1, "completed")
-        self.tactical_state.add_task(task2, "in_progress")
-        
-        # Créer un résultat de tâche
-        result = {
-            "id": "result-1",
-            "task_id": "op-task-1",
-            "tactical_task_id": "task-2",
-            "status": "completed",
-            "outputs": {
-                "identified_arguments": [
-                    {"id": "arg-1", "text": "Argument 1", "confidence": 0.8},
-                    {"id": "arg-2", "text": "Argument 2", "confidence": 0.9}
-                ]
+        # Tester le callback avec un ajustement stratégique
+        adjustment_message = MockMessage(
+            sender="strategic_manager",
+            recipient="tactical_coordinator",
+            content={
+                "directive_type": "strategic_adjustment",
+                "content": {
+                    "objective_modifications": [
+                        {
+                            "id": "obj-test",
+                            "action": "modify",
+                            "updates": {
+                                "priority": "medium"
+                            }
+                        }
+                    ],
+                    "resource_reallocation": {
+                        "extract_processor": {
+                            "priority": "high",
+                            "allocation": 0.8
+                        }
+                    }
+                }
             },
-            "metrics": {
-                "execution_time": 1.5,
-                "confidence": 0.85
-            }
-        }
+            message_type=MessageType.COMMAND,
+            sender_level=AgentLevel.STRATEGIC
+        )
         
-        # Ajouter temporairement la méthode get_objective_results à TacticalState
-        self.tactical_state.get_objective_results = MagicMock(return_value={"results": "test"})
-        
-        # Patcher les méthodes
-        with patch.object(self.tactical_state, 'update_task_status') as mock_update_status, \
-             patch.object(self.tactical_state, 'add_intermediate_result') as mock_add_result:
+        # Patcher la méthode _apply_strategic_adjustments
+        with patch.object(self.coordinator, '_apply_strategic_adjustments') as mock_apply:
+            # Appeler le callback
+            callback(adjustment_message)
             
-            # Appeler la méthode handle_task_result
-            response = self.coordinator.handle_task_result(result)
+            # Vérifier que la méthode a été appelée
+            mock_apply.assert_called_once_with(adjustment_message.content["content"])
             
-            # Vérifier que les méthodes ont été appelées
-            mock_update_status.assert_called_once_with("task-2", "completed")
-            mock_add_result.assert_called_once_with("task-2", result)
-        
-        # Nous ne vérifions pas directement l'état des tâches car nous avons patché update_task_status
-        # Nous vérifions plutôt que la méthode a été appelée correctement
-        # La vérification est déjà faite avec mock_update_status.assert_called_once_with("task-2", "completed")
-        
-        # Nous ne vérifions pas directement que le résultat a été enregistré car nous avons patché add_intermediate_result
-        # La vérification est déjà faite avec mock_add_result.assert_called_once_with("task-2", result)
-        
-        # Vérifier que la réponse est correcte
-        self.assertEqual(response["status"], "success")
-        self.assertIn("message", response)
-        
-        # Nous ne vérifions pas l'envoi de rapport car nous avons patché les méthodes qui déclenchent cet envoi
-        # Dans un test réel, nous devrions vérifier que le rapport est envoyé, mais ici nous nous concentrons
-        # sur la vérification que les méthodes update_task_status et add_intermediate_result sont appelées correctement
+            # Vérifier qu'un accusé de réception a été envoyé
+            self.assertEqual(len(self.adapter.sent_reports), 2)
+            report = self.adapter.sent_reports[1]
+            self.assertEqual(report["report_type"], "adjustment_acknowledgement")
+            self.assertEqual(report["content"]["status"], "applied")
+            self.assertEqual(report["recipient_id"], "strategic_manager")
     
-    def test_generate_status_report(self):
-        """Teste la méthode generate_status_report."""
-        # Ajouter un objectif et des tâches à l'état tactique
-        objective = {
-            "id": "obj-1",
-            "description": "Identifier les arguments dans le texte",
-            "priority": "high"
-        }
-        self.tactical_state.add_assigned_objective(objective)
-        
-        task1 = {
-            "id": "task-1",
-            "description": "Extraire le texte",
-            "objective_id": "obj-1",
-            "estimated_duration": "short",
-            "required_capabilities": ["text_extraction"],
-            "priority": "high"
-        }
-        task2 = {
-            "id": "task-2",
-            "description": "Identifier les arguments",
-            "objective_id": "obj-1",
-            "estimated_duration": "medium",
-            "required_capabilities": ["argument_identification"],
-            "priority": "high"
-        }
-        
-        self.tactical_state.add_task(task1, "completed")
-        self.tactical_state.add_task(task2, "in_progress")
-        
-        # Appeler la méthode generate_status_report
-        report = self.coordinator.generate_status_report()
-        
-        # Vérifier que le rapport est correct
-        self.assertIn("timestamp", report)
-        self.assertIn("overall_progress", report)
-        self.assertIn("tasks_summary", report)
-        self.assertIn("progress_by_objective", report)
-        
-        # Vérifier les détails du rapport
-        self.assertEqual(report["tasks_summary"]["total"], 2)
-        self.assertEqual(report["tasks_summary"]["completed"], 1)
-        self.assertEqual(report["tasks_summary"]["in_progress"], 1)
-        self.assertEqual(report["tasks_summary"]["pending"], 0)
-        self.assertEqual(report["tasks_summary"]["failed"], 0)
-        
-        # Vérifier la progression par objectif
-        self.assertIn("obj-1", report["progress_by_objective"])
-        self.assertEqual(report["progress_by_objective"]["obj-1"]["total_tasks"], 2)
-        self.assertEqual(report["progress_by_objective"]["obj-1"]["completed_tasks"], 1)
-        
-        # Vérifier qu'un rapport a été envoyé au niveau stratégique
-        self.assertEqual(len(self.adapter.sent_reports), 1)
-        sent_report = self.adapter.sent_reports[0]
-        self.assertEqual(sent_report["report_type"], "status_update")
-        self.assertEqual(sent_report["recipient_id"], "strategic_manager")
-        self.assertEqual(sent_report["priority"], MessagePriority.NORMAL)
-    
-    def test_apply_strategic_adjustments(self):
-        """Teste la méthode _apply_strategic_adjustments."""
+    def test_apply_strategic_adjustments_complete(self):
+        """Teste la méthode _apply_strategic_adjustments de manière plus complète."""
         # Ajouter un objectif et des tâches à l'état tactique
         objective = {
             "id": "obj-1",
@@ -563,19 +399,36 @@ class TestTacticalCoordinatorAdvanced(unittest.TestCase):
                     "updates": {
                         "priority": "high"
                     }
+                },
+                {
+                    "id": "obj-2",  # Objectif inexistant
+                    "action": "modify",
+                    "updates": {
+                        "priority": "low"
+                    }
+                },
+                {
+                    "id": "obj-1",
+                    "action": "unknown_action",  # Action inconnue
+                    "updates": {
+                        "priority": "low"
+                    }
                 }
             ],
             "resource_reallocation": {
                 "extract_processor": {
                     "priority": "high",
                     "allocation": 0.8
+                },
+                "unknown_agent": {  # Agent inconnu
+                    "priority": "medium",
+                    "allocation": 0.5
                 }
             }
         }
         
         # Patcher la méthode _determine_appropriate_agent
         with patch.object(self.coordinator, '_determine_appropriate_agent', return_value="extract_processor") as mock_determine:
-            
             # Appeler la méthode _apply_strategic_adjustments
             self.coordinator._apply_strategic_adjustments(adjustments)
             
@@ -585,8 +438,8 @@ class TestTacticalCoordinatorAdvanced(unittest.TestCase):
                     self.assertEqual(task["priority"], "high")
             
             # Vérifier que des mises à jour de statut ont été envoyées
-            # Note: Le nombre peut varier en fonction de l'implémentation
-            self.assertGreaterEqual(len(self.adapter.sent_status_updates), 2)  # Au moins 1 pour la tâche, 1 pour la ressource
+            # Le nombre peut varier en fonction de l'implémentation
+            self.assertGreaterEqual(len(self.adapter.sent_status_updates), 2)
             
             # Vérifier la mise à jour de la tâche
             task_update = next((update for update in self.adapter.sent_status_updates
@@ -603,6 +456,175 @@ class TestTacticalCoordinatorAdvanced(unittest.TestCase):
             self.assertEqual(resource_update["status"]["resource"], "extract_processor")
             self.assertEqual(resource_update["status"]["updates"]["priority"], "high")
             self.assertEqual(resource_update["status"]["updates"]["allocation"], 0.8)
+    
+    def test_handle_task_result_complete(self):
+        """Teste la méthode handle_task_result de manière plus complète."""
+        # Ajouter un objectif et des tâches à l'état tactique
+        objective = {
+            "id": "obj-1",
+            "description": "Identifier les arguments dans le texte",
+            "priority": "high"
+        }
+        self.tactical_state.add_assigned_objective(objective)
+        
+        task1 = {
+            "id": "task-1",
+            "description": "Extraire le texte",
+            "objective_id": "obj-1",
+            "estimated_duration": "short",
+            "required_capabilities": ["text_extraction"],
+            "priority": "high"
+        }
+        task2 = {
+            "id": "task-2",
+            "description": "Identifier les arguments",
+            "objective_id": "obj-1",
+            "estimated_duration": "medium",
+            "required_capabilities": ["argument_identification"],
+            "priority": "high"
+        }
+        
+        self.tactical_state.add_task(task1, "completed")
+        self.tactical_state.add_task(task2, "in_progress")
+        
+        # Créer un résultat de tâche sans identifiant de tâche tactique
+        result_without_id = {
+            "id": "result-0",
+            "task_id": "op-task-0",
+            "status": "completed"
+        }
+        
+        # Appeler la méthode handle_task_result
+        response = self.coordinator.handle_task_result(result_without_id)
+        
+        # Vérifier que la réponse indique une erreur
+        self.assertEqual(response["status"], "error")
+        self.assertIn("Identifiant de tâche tactique manquant", response["message"])
+        
+        # Créer un résultat de tâche avec identifiant de tâche tactique
+        result = {
+            "id": "result-1",
+            "task_id": "op-task-1",
+            "tactical_task_id": "task-2",
+            "status": "completed",
+            "outputs": {
+                "identified_arguments": [
+                    {"id": "arg-1", "text": "Argument 1", "confidence": 0.8},
+                    {"id": "arg-2", "text": "Argument 2", "confidence": 0.9}
+                ]
+            },
+            "metrics": {
+                "execution_time": 1.5,
+                "confidence": 0.85
+            }
+        }
+        
+        # Patcher la méthode update_task_status pour qu'elle accepte 3 arguments
+        with patch.object(self.tactical_state, 'update_task_status') as mock_update_status, \
+             patch.object(self.tactical_state, 'add_intermediate_result') as mock_add_result, \
+             patch.object(self.tactical_state, 'get_objective_results', return_value={"results": "test"}) as mock_get_results:
+            
+            # Appeler la méthode handle_task_result
+            response = self.coordinator.handle_task_result(result)
+            
+            # Vérifier que les méthodes ont été appelées
+            mock_update_status.assert_called_once_with("task-2", "completed")
+            mock_add_result.assert_called_once_with("task-2", result)
+            
+            # Vérifier que la réponse est correcte
+            self.assertEqual(response["status"], "success")
+            self.assertIn("message", response)
+            
+            # Nous ne vérifions pas l'envoi de rapport car nous avons patché les méthodes qui déclenchent cet envoi
+    
+    def test_generate_status_report_with_issues(self):
+        """Teste la méthode generate_status_report avec des problèmes."""
+        # Ajouter un objectif et des tâches à l'état tactique
+        objective = {
+            "id": "obj-1",
+            "description": "Identifier les arguments dans le texte",
+            "priority": "high"
+        }
+        self.tactical_state.add_assigned_objective(objective)
+        
+        task1 = {
+            "id": "task-1",
+            "description": "Extraire le texte",
+            "objective_id": "obj-1",
+            "estimated_duration": "short",
+            "required_capabilities": ["text_extraction"],
+            "priority": "high"
+        }
+        task2 = {
+            "id": "task-2",
+            "description": "Identifier les arguments",
+            "objective_id": "obj-1",
+            "estimated_duration": "medium",
+            "required_capabilities": ["argument_identification"],
+            "priority": "high"
+        }
+        
+        self.tactical_state.add_task(task1, "completed")
+        self.tactical_state.add_task(task2, "in_progress")
+        
+        # Ajouter des problèmes
+        self.tactical_state.issues = [
+            {
+                "id": "issue-1",
+                "description": "Problème 1",
+                "severity": "high"
+            },
+            {
+                "id": "issue-2",
+                "description": "Problème 2",
+                "severity": "medium"
+            }
+        ]
+        
+        # Appeler la méthode generate_status_report
+        report = self.coordinator.generate_status_report()
+        
+        # Vérifier que le rapport est correct
+        self.assertIn("timestamp", report)
+        self.assertIn("overall_progress", report)
+        self.assertIn("tasks_summary", report)
+        self.assertIn("progress_by_objective", report)
+        self.assertIn("issues", report)
+        
+        # Vérifier les détails du rapport
+        self.assertEqual(report["tasks_summary"]["total"], 2)
+        self.assertEqual(report["tasks_summary"]["completed"], 1)
+        self.assertEqual(report["tasks_summary"]["in_progress"], 1)
+        self.assertEqual(report["tasks_summary"]["pending"], 0)
+        self.assertEqual(report["tasks_summary"]["failed"], 0)
+        
+        # Vérifier la progression par objectif
+        self.assertIn("obj-1", report["progress_by_objective"])
+        self.assertEqual(report["progress_by_objective"]["obj-1"]["total_tasks"], 2)
+        self.assertEqual(report["progress_by_objective"]["obj-1"]["completed_tasks"], 1)
+        
+        # Vérifier les problèmes
+        self.assertEqual(len(report["issues"]), 2)
+        
+        # Vérifier qu'un rapport a été envoyé au niveau stratégique
+        self.assertEqual(len(self.adapter.sent_reports), 1)
+        sent_report = self.adapter.sent_reports[0]
+        self.assertEqual(sent_report["report_type"], "status_update")
+        self.assertEqual(sent_report["recipient_id"], "strategic_manager")
+        self.assertEqual(sent_report["priority"], MessagePriority.NORMAL)
+    
+    def test_log_action(self):
+        """Teste la méthode _log_action."""
+        # Appeler la méthode _log_action
+        self.coordinator._log_action("Test", "Description du test")
+        
+        # Vérifier que l'action a été enregistrée
+        self.assertEqual(len(self.tactical_state.tactical_actions_log), 1)
+        action = self.tactical_state.tactical_actions_log[0]
+        self.assertEqual(action["type"], "Test")
+        self.assertEqual(action["description"], "Description du test")
+        self.assertEqual(action["agent_id"], "task_coordinator")
+        self.assertIn("timestamp", action)
 
 
 if __name__ == "__main__":

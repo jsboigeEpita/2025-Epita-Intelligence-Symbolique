@@ -252,19 +252,34 @@ def configure_analysis_task() -> Optional[str]:
                     reconstructed_url = reconstruct_url(source_info.get("schema"), source_info.get("host_parts", []), source_info.get("path"))
                     if not reconstructed_url: raise ValueError("URL source invalide.")
                     source_description = f"Biblio: {source_info.get('source_name','?')} ({extract_info.get('extract_name','?')})"
-                    # ... [Code fetch texte brut identique] ...
-                    cached_text = load_from_cache(reconstructed_url)
-                    if cached_text is not None: texte_brut_source = cached_text
+                    
+                    # Vérifier d'abord si full_text est disponible dans source_info
+                    texte_brut_source = source_info.get("full_text")
+                    if texte_brut_source:
+                        app_logger.info(f"-> Texte chargé depuis le champ 'full_text' embarqué pour: {source_info.get('source_name')}")
                     else:
-                        source_type = source_info.get("source_type"); original_path_str = source_info.get("path", ""); is_plaintext_url = any(original_path_str.lower().endswith(ext) for ext in ui_config.PLAINTEXT_EXTENSIONS)
-                        app_logger.info(f"-> Cache vide. Récupération (Type: {source_type}, URL: ...)...")
-                        if source_type == "jina": texte_brut_source = fetch_with_jina(reconstructed_url)
-                        elif source_type == "direct_download": texte_brut_source = fetch_direct_text(reconstructed_url)
-                        elif source_type == "tika":
-                            if is_plaintext_url: app_logger.info("    (URL type texte, fetch direct)"); texte_brut_source = fetch_direct_text(reconstructed_url)
-                            else: url_hash = hashlib.sha256(reconstructed_url.encode()).hexdigest(); temp_save_path = ui_config.TEMP_DOWNLOAD_DIR / f"{url_hash}.download_debug"; texte_brut_source = fetch_with_tika(source_url=reconstructed_url, raw_file_cache_path=temp_save_path)
-                        else: raise ValueError(f"Type source inconnu '{source_type}'.")
-
+                        app_logger.info(f"-> 'full_text' non trouvé ou vide pour {source_info.get('source_name')}. Tentative de récupération classique...")
+                        cached_text = load_from_cache(reconstructed_url)
+                        if cached_text is not None:
+                            texte_brut_source = cached_text
+                            app_logger.info(f"   -> Texte chargé depuis cache fichier pour: {reconstructed_url}")
+                        else:
+                            source_type = source_info.get("source_type"); original_path_str = source_info.get("path", ""); is_plaintext_url = any(original_path_str.lower().endswith(ext) for ext in ui_config.PLAINTEXT_EXTENSIONS)
+                            app_logger.info(f"   -> Cache vide. Récupération (Type: {source_type}, URL: ...)...")
+                            if source_type == "jina": texte_brut_source = fetch_with_jina(reconstructed_url)
+                            elif source_type == "direct_download": texte_brut_source = fetch_direct_text(reconstructed_url)
+                            elif source_type == "tika":
+                                if is_plaintext_url: app_logger.info("    (URL type texte, fetch direct)"); texte_brut_source = fetch_direct_text(reconstructed_url)
+                                else: url_hash = hashlib.sha256(reconstructed_url.encode()).hexdigest(); temp_save_path = ui_config.TEMP_DOWNLOAD_DIR / f"{url_hash}.download_debug"; texte_brut_source = fetch_with_tika(source_url=reconstructed_url, raw_file_cache_path=temp_save_path)
+                            else: raise ValueError(f"Type source inconnu '{source_type}'.")
+                    
+                        # Si le texte a été fetché (et non chargé depuis full_text initial), le stocker dans source_info
+                        # pour les utilisations futures au sein de cette session.
+                        # Cela n'affecte pas le fichier extract_sources.json.gz.enc sans sauvegarde explicite.
+                        if source_info and texte_brut_source is not None and not source_info.get("full_text"):
+                            source_info['full_text'] = texte_brut_source # Mettre à jour l'objet en mémoire
+                            app_logger.info(f"   -> Champ 'full_text' mis à jour en mémoire pour la source biblio: {source_info.get('source_name')} après fetch.")
+                
                 elif selected_tab_index in [1, 2, 3]: # URL, Fichier, Texte Direct
                     start_marker_final = start_marker_input.value.strip()
                     end_marker_final = end_marker_input.value.strip()

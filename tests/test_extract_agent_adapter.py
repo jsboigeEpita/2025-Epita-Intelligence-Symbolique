@@ -111,7 +111,7 @@ class TestExtractAgentAdapter(unittest.TestCase):
         # Vérifier que l'adaptateur a été correctement initialisé
         self.assertIsNotNone(self.adapter)
         self.assertEqual(self.adapter.name, "TestExtractAgent")
-        self.assertEqual(self.adapter.state, self.operational_state)
+        self.assertEqual(self.adapter.operational_state, self.operational_state)
         self.assertIsNotNone(self.adapter.extract_agent)
         self.assertIsNotNone(self.adapter.kernel)
         self.assertTrue(self.adapter.initialized)
