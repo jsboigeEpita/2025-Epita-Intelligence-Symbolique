@@ -222,11 +222,49 @@ class random:
             size = (size,)
         return ndarray(shape=size, dtype=float)
 
+# Module rec pour les record arrays
+class rec:
+    """Mock pour numpy.rec (record arrays)."""
+    
+    class recarray(ndarray):
+        """Mock pour numpy.rec.recarray."""
+        
+        def __init__(self, shape=None, dtype=None, formats=None, names=None, **kwargs):
+            # Gérer les différents formats d'arguments pour recarray
+            if isinstance(shape, tuple):
+                super().__init__(shape=shape, dtype=dtype)
+            elif shape is not None:
+                super().__init__(shape=(shape,), dtype=dtype)
+            else:
+                super().__init__(shape=(0,), dtype=dtype)
+            
+            self._names = names or []
+            self._formats = formats or []
+        
+        @property
+        def names(self):
+            return self._names
+        
+        @property
+        def formats(self):
+            return self._formats
+        
+        def __getattr__(self, name):
+            # Simule l'accès aux champs par nom
+            return ndarray(shape=(len(self),))
+
+# Instance du module rec pour l'exposition
+rec.recarray = rec.recarray
+
 # Types de données
 float64 = "float64"
 float32 = "float32"
 int64 = "int64"
 int32 = "int32"
+int_ = "int64"  # Alias pour int64
+uint = "uint64"  # Type unsigned int
+uint64 = "uint64"
+uint32 = "uint32"
 bool_ = "bool"
 
 # Log de chargement
