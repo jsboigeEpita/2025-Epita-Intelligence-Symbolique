@@ -159,9 +159,9 @@ class TestInformalErrorHandling(unittest.TestCase):
         
         # Vérifier le résultat
         self.assertIsInstance(result, dict)
-        self.assertIn("error_contextual", result)
-        self.assertIn("Erreur lors de l'analyse contextuelle", result["error_contextual"])
-        self.assertIn("Erreur de l'analyseur contextuel", result["error_contextual"])
+        self.assertIn("contextual_analysis", result)
+        self.assertIn("error", result["contextual_analysis"])
+        self.assertIn("Erreur de l'analyseur contextuel", result["contextual_analysis"]["error"])
         
         # Vérifier que le détecteur de sophismes et l'analyseur rhétorique ont été appelés
         self.fallacy_detector.detect.assert_called_once_with(self.text)
