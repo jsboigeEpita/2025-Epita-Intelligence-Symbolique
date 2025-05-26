@@ -177,7 +177,9 @@ class TestInformalAnalysisMethods(unittest.TestCase):
         self.assertIsInstance(result, dict)
         self.assertIn("fallacies", result)
         self.assertIn("rhetorical_analysis", result)
-        self.assertIn("analysis_timestamp", result)
+        self.assertIn("text", result)
+        self.assertIn("context", result)
+        self.assertIn("categories", result)
         
         # Vérifier les sophismes détectés
         self.assertIsInstance(result["fallacies"], list)

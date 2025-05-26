@@ -1,1 +1,0 @@
-{"sources": [{"source_name": "Test Source 1", "source_type": "url", "schema": "https", "host_parts": ["example", "com"], "path": "/page1", "extracts": [{"extract_name": "Extract 1.1", "start_marker": "START1", "end_marker": "END1"}]}]}

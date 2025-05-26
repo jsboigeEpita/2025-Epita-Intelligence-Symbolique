@@ -99,11 +99,11 @@ class TestInformalDefinitions(unittest.TestCase):
         os.makedirs(self.test_data_dir, exist_ok=True)
         
         self.test_taxonomy_path = os.path.join(self.test_data_dir, 'test_taxonomy.csv')
-        with open(self.test_taxonomy_path, 'w') as f:
+        with open(self.test_taxonomy_path, 'w', encoding='utf-8') as f:
             f.write("PK,Name,Category,Description,Example,Counter_Example\n")
-            f.write("1,Appel à l'autorité,Fallacy,Invoquer une autorité non pertinente,\"Einstein a dit que Dieu ne joue pas aux dés, donc la mécanique quantique est fausse.\",\"Selon le consensus scientifique, le réchauffement climatique est réel.\"\n")
-            f.write("2,Pente glissante,Fallacy,Suggérer qu'une action mènera inévitablement à une chaîne d'événements indésirables,\"Si nous légalisons la marijuana, bientôt toutes les drogues seront légales.\",\"Si nous augmentons le salaire minimum, certaines entreprises pourraient réduire leurs effectifs.\"\n")
-            f.write("3,Ad hominem,Fallacy,Attaquer la personne plutôt que ses idées,\"Vous êtes trop jeune pour comprendre la politique.\",\"Votre argument est basé sur des données obsolètes.\"\n")
+            f.write("1,Appel a l'autorite,Fallacy,Invoquer une autorite non pertinente,\"Einstein a dit que Dieu ne joue pas aux des, donc la mecanique quantique est fausse.\",\"Selon le consensus scientifique, le rechauffement climatique est reel.\"\n")
+            f.write("2,Pente glissante,Fallacy,Suggerer qu'une action menera inevitablement a une chaine d'evenements indesirables,\"Si nous legalisons la marijuana, bientot toutes les drogues seront legales.\",\"Si nous augmentons le salaire minimum, certaines entreprises pourraient reduire leurs effectifs.\"\n")
+            f.write("3,Ad hominem,Fallacy,Attaquer la personne plutot que ses idees,\"Vous etes trop jeune pour comprendre la politique.\",\"Votre argument est base sur des donnees obsoletes.\"\n")
         
         self.get_taxonomy_path_patcher = patch('argumentation_analysis.agents.core.informal.informal_definitions.get_taxonomy_path', 
                                               return_value=self.test_taxonomy_path)
