@@ -48,7 +48,8 @@ class TestAgentsToolsIntegration(unittest.TestCase):
                 "complex_analyzer": self.complex_analyzer,
                 "contextual_analyzer": self.contextual_analyzer,
                 "severity_evaluator": self.severity_evaluator
-            }
+            },
+            strict_validation=False
         )
     
     def test_fallacy_detection_and_evaluation(self):

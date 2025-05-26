@@ -86,6 +86,17 @@ except ImportError as e_jpype:
     sys.modules['_jpype'] = MagicMock(name="_jpype_fallback_mock")
 # --- Fin Mock JPype ---
 
+# --- Mock ExtractDefinitions ---
+try:
+    # mocks_dir_for_mock (tests/mocks) est déjà dans sys.path
+    from extract_definitions_mock import setup_extract_definitions_mock
+    setup_extract_definitions_mock()
+    print("INFO: ExtractDefinitions mocké globalement.")
+except ImportError as e_extract:
+    print(f"ERREUR lors du mocking d'ExtractDefinitions: {e_extract}")
+except Exception as e_extract_setup:
+    print(f"ERREUR lors de la configuration du mock ExtractDefinitions: {e_extract_setup}")
+# --- Fin Mock ExtractDefinitions ---
 
 parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if parent_dir not in sys.path:
@@ -115,11 +126,11 @@ def setup_numpy():
         if not is_module_available('numpy'): print("NumPy non disponible, utilisation du mock.")
         else: print("Python 3.12+ détecté, utilisation du mock NumPy.")
         # mocks_dir_for_mock (tests/mocks) est déjà dans sys.path
-        from numpy_mock import array, ndarray, mean, sum, zeros, ones, dot, concatenate, vstack, hstack, argmax, argmin, max, min, random
+        from numpy_mock import array, ndarray, mean, sum, zeros, ones, dot, concatenate, vstack, hstack, argmax, argmin, max, min, random, rec
         sys.modules['numpy'] = type('numpy', (), {
             'array': array, 'ndarray': ndarray, 'mean': mean, 'sum': sum, 'zeros': zeros, 'ones': ones,
             'dot': dot, 'concatenate': concatenate, 'vstack': vstack, 'hstack': hstack,
-            'argmax': argmax, 'argmin': argmin, 'max': max, 'min': min, 'random': random, '__version__': '1.24.3',
+            'argmax': argmax, 'argmin': argmin, 'max': max, 'min': min, 'random': random, 'rec': rec, '__version__': '1.24.3',
         })
         return sys.modules['numpy']
     else: 
