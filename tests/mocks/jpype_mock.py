@@ -31,7 +31,29 @@ class JVMNotFoundException(Exception):
 
 class JException(Exception):
     """Exception Java."""
-    pass
+    
+    def __init__(self, message="Java Exception", *args):
+        super().__init__(message, *args)
+        self.message = message
+        self.args = args
+        # Ajouter les attributs manquants pour la compatibilité
+        self.stacktrace = None
+        self.cause = None
+    
+    def getMessage(self):
+        """Retourne le message de l'exception."""
+        return self.message
+    
+    def toString(self):
+        """Retourne la représentation string de l'exception."""
+        return f"JException: {self.message}"
+    
+    def getClass(self):
+        """Retourne la classe de l'exception."""
+        class MockClass:
+            def getName(self):
+                return "org.mockexception.MockException"
+        return MockClass()
 
 class JObject:
     """Mock pour les objets Java."""
@@ -68,6 +90,9 @@ class JClass:
         # Ajouter quelques méthodes et champs communs
         self._methods["toString"] = lambda: class_name
         self._fields["class"] = self
+        
+        # Ajouter l'attribut class_name pour la compatibilité
+        self.class_name = class_name
     
     def __call__(self, *args, **kwargs):
         """Simule la création d'une instance de la classe."""
@@ -76,6 +101,10 @@ class JClass:
     
     def __getattr__(self, name):
         """Simule l'accès aux méthodes et champs statiques."""
+        # Vérifier d'abord les attributs spéciaux
+        if name == "class_name":
+            return self._class_name
+            
         if name in self._methods:
             return self._methods[name]
         
@@ -114,7 +143,7 @@ def getJVMVersion() -> str:
     """Retourne la version de la JVM."""
     return "Mock JVM 1.8.0"
 
-def startJVM(jvmpath: str, *args, **kwargs) -> None:
+def startJVM(jvmpath: Optional[str] = None, *args, **kwargs) -> None:
     """Démarre la JVM."""
     global _jvm_started, _jvm_path, _jvm_options
     
@@ -123,10 +152,20 @@ def startJVM(jvmpath: str, *args, **kwargs) -> None:
         return
     
     _jvm_started = True
-    _jvm_path = jvmpath
+    _jvm_path = jvmpath or getDefaultJVMPath()
     _jvm_options = list(args)
     
-    logger.info(f"Mock JVM started with path: {jvmpath}")
+    # Traiter les arguments nommés courants
+    classpath = kwargs.get('classpath', kwargs.get('-Djava.class.path', ''))
+    if classpath:
+        _jvm_options.append(f'-Djava.class.path={classpath}')
+    
+    # Traiter d'autres options JVM courantes
+    for key, value in kwargs.items():
+        if key.startswith('-D') or key.startswith('-X'):
+            _jvm_options.append(f'{key}={value}' if value else key)
+    
+    logger.info(f"Mock JVM started with path: {_jvm_path}")
     logger.info(f"JVM options: {_jvm_options}")
 
 def imports(package_or_class: str) -> Any:

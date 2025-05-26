@@ -17,11 +17,11 @@ L'interface utilisateur a pour but de :
     * 📄 Fichier local (traité par Tika si nécessaire).
     * ✍️ Texte direct collé par l'utilisateur.
 2.  ✂️ Extraire le contenu textuel via [Jina Reader](https://github.com/jina-ai/reader) ou [Apache Tika](https://tika.apache.org/) si la source n'est pas en texte brut.
-3.  📐 Appliquer des marqueurs de début/fin pour isoler un extrait spécifique (principalement pour URL/Fichier/Texte Direct).
-4.  💾 Gérer un cache fichier (`text_cache/`) pour les textes complets récupérés depuis des sources externes, afin d'éviter les téléchargements/extractions répétés.
-5.  🔐 Charger/Sauvegarder la configuration des sources prédéfinies depuis/vers un fichier chiffré (`data/extract_sources.json.gz.enc`) en utilisant une phrase secrète définie dans `.env`.
-6.  ➡️ Retourner le texte final préparé au script orchestrateur principal (`main_orchestrator.py`).
-7.  🔍 Permettre l'édition et la vérification des marqueurs d'extraits via des outils dédiés.
+3.  📐 Appliquer des marqueurs de début/fin pour isoler un extrait spécifique (principalement pour URL/Fichier/Texte Direct). Ces marqueurs s'appliquent au texte source, qui est prioritairement lu depuis le champ `full_text` du fichier `extract_sources.json.gz.enc` si celui-ci est présent.
+4.  💾 Gérer un cache fichier (`text_cache/`) pour les textes complets récupérés depuis des sources externes (utilisé lorsque `full_text` n'est pas disponible dans `extract_sources.json.gz.enc`), afin d'éviter les téléchargements/extractions répétés.
+5.  🔐 Charger/Sauvegarder la configuration des sources prédéfinies, y compris le nouveau champ `full_text` qui embarque le contenu source, depuis/vers un fichier chiffré (`data/extract_sources.json.gz.enc`) en utilisant une phrase secrète définie dans `.env`. La lecture des sources privilégie désormais le contenu `full_text` embarqué, la récupération dynamique via URL/fichier étant un fallback. La fonction `save_extract_definitions_safely` dans [`extract_utils.py`](./extract_utils.py:1) permet cette sauvegarde. Pour un embarquement systématique de tous les textes sources, le script [`scripts/embed_all_sources.py`](../../scripts/embed_all_sources.py) peut être utilisé.
+6.  ➡️ Retourner le texte final préparé (obtenu via `full_text` ou récupération dynamique) au script orchestrateur principal (`main_orchestrator.py`).
+7.  🔍 Permettre l'édition et la vérification des marqueurs d'extraits via des outils dédiés, en tenant compte de la source (embarquée ou externe).
 8.  📊 Visualiser les résultats d'analyse et les rapports de vérification.
 
 ## Structure 🏗️

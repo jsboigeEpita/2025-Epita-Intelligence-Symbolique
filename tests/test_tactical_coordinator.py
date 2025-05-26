@@ -321,12 +321,11 @@ class TestTaskCoordinator(unittest.TestCase):
         # Vérifier que le statut de la tâche a été mis à jour
         self.tactical_state.update_task_status.assert_called_once_with(
             "task-obj-1-3",
-            "completed",
-            {"result_id": "result-1"}
+            "completed"
         )
         
         # Vérifier que le résultat a été ajouté
-        self.tactical_state.add_task_result.assert_called_once_with("task-obj-1-3", result)
+        self.tactical_state.add_intermediate_result.assert_called_once_with("task-obj-1-3", result)
         
         # Vérifier la réponse
         self.assertEqual(response["status"], "success")
