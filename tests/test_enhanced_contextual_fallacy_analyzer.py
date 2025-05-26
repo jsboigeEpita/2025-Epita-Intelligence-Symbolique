@@ -194,7 +194,13 @@ class TestEnhancedContextualFallacyAnalyzer(unittest.TestCase):
             {"fallacy_type": "Appel à l'autorité", "keyword": "experts", "context_text": "Les experts...", "confidence": 0.7, "detection_method": "keyword_matching"},
             {"fallacy_type": "Appel à la popularité", "keyword": "millions", "context_text": "Des millions...", "confidence": 0.6, "detection_method": "keyword_matching"}
         ]
-        context_analysis = {"context_type": "commercial", "confidence": 0.8}
+        context_analysis = {
+            "context_type": "commercial",
+            "context_subtypes": ["publicitaire"],
+            "audience_characteristics": ["généraliste"],
+            "formality_level": "informel",
+            "confidence": 0.8
+        }
         result = self.analyzer._filter_by_context_semantic(potential_fallacies, context_analysis)
         self.assertIsInstance(result, list)
         self.assertEqual(len(result), 2)
