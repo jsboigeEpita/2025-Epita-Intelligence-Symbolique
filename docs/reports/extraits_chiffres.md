@@ -32,7 +32,8 @@ La structure des données dans le fichier est la suivante:
   {
     "source_name": "Nom de la source",
     "source_type": "Type de source (url, file, etc.)",
-    "source_url": "URL ou chemin du fichier source",
+    "source_url": "URL ou chemin du fichier source (utilisé en fallback)",
+    "full_text": "Contenu textuel complet de la source (optionnel, prioritaire si présent)",
     "extracts": [
       {
         "extract_name": "Nom de l'extrait",
@@ -51,8 +52,9 @@ La structure des données dans le fichier est la suivante:
 
 - **source_name**: Nom identifiant la source (ex: "Discours d'Hitler à Nuremberg")
 - **source_type**: Type de source ("url", "file", "text")
-- **source_url**: URL ou chemin d'accès au fichier source
-- **extracts**: Liste des extraits définis pour cette source
+- **source_url**: URL ou chemin d'accès au fichier source. Ce champ est maintenant utilisé comme fallback si `full_text` n'est pas fourni ou est vide.
+- **full_text**: (Optionnel) Contenu textuel complet de la source. Si ce champ est présent et non vide, il est utilisé en priorité pour l'extraction des textes. Cela permet d'embarquer directement les contenus dans le fichier `extract_sources.json.gz.enc`, réduisant la dépendance aux sources externes et potentiellement améliorant les performances de récupération initiale. Ce champ peut être peuplé manuellement ou à l'aide du script [`scripts/embed_all_sources.py`](../../scripts/embed_all_sources.py).
+- **extracts**: Liste des extraits définis pour cette source. Les marqueurs (`start_marker`, `end_marker`) s'appliquent au `full_text` si disponible, sinon au texte récupéré via `source_url`.
 
 ### Champs des extraits
 
@@ -104,11 +106,27 @@ Dans l'architecture hiérarchique à trois niveaux du système:
 
 ### Flux de travail typique
 
-1. Chargement des définitions d'extraits depuis le fichier chiffré
-2. Récupération des textes sources correspondants
-3. Extraction des segments de texte délimités par les marqueurs
-4. Analyse rhétorique des extraits par différents agents spécialisés
-5. Consolidation des résultats d'analyse
+1. Chargement des définitions d'extraits depuis le fichier chiffré.
+2. Pour chaque source :
+    a. Vérification de la présence du champ `full_text`.
+    b. Si `full_text` est présent et non vide, il est utilisé comme texte source.
+    c. Sinon (si `full_text` est absent ou vide), récupération du texte source via `source_url` (mécanisme de fallback).
+3. Extraction des segments de texte (définis par les `extracts` avec leurs marqueurs) à partir du texte source obtenu à l'étape 2.
+4. Analyse rhétorique des extraits par différents agents spécialisés.
+5. Consolidation des résultats d'analyse.
+
+### Impact de l'intégration de `full_text`
+
+L'ajout du champ `full_text` a plusieurs implications :
+
+- **Taille du fichier :** Le fichier `extract_sources.json.gz.enc` peut devenir significativement plus volumineux si les textes complets de nombreuses sources y sont stockés.
+- **Performances :**
+    - La récupération initiale des textes sources peut être plus rapide car elle évite des accès disque ou réseau si `full_text` est utilisé.
+    - Le chargement du fichier `extract_sources.json.gz.enc` lui-même peut prendre plus de temps en raison de sa taille accrue.
+- **Autonomie :** Le système devient plus autonome car les textes sources peuvent être embarqués, réduisant la dépendance à la disponibilité des URLs externes ou des fichiers locaux.
+- **Gestion des données :** La mise à jour des sources nécessite de mettre à jour le champ `full_text` si celui-ci est utilisé.
+
+Pour une analyse détaillée de ces impacts, veuillez vous référer au "Rapport d'Évaluation de l'Impact" du projet.
 
 ## Outils de manipulation des extraits
 
@@ -128,6 +146,10 @@ Les fonctions principales pour manipuler le fichier sont définies dans `argumen
   ```python
   from argumentation_analysis.ui.extract_utils import save_extract_definitions_safely
   
+  # Note: La fonction save_extract_definitions_safely sauvegarde les définitions telles quelles.
+  # Pour forcer l'embarquement des textes sources complets lors de la sauvegarde,
+  # il faut s'assurer que le champ 'full_text' est déjà peuplé dans 'extract_definitions'
+  # ou utiliser des outils spécifiques comme le script embed_all_sources.py.
   success, message = save_extract_definitions_safely(extract_definitions, CONFIG_FILE, ENCRYPTION_KEY, CONFIG_FILE_JSON)
   ```
 
@@ -160,6 +182,31 @@ similar_texts = find_similar_text(
     max_results=5
 )
 ```
+
+### Script d'embarquement des textes sources
+
+Le script [`scripts/embed_all_sources.py`](../../scripts/embed_all_sources.py) est un outil dédié pour s'assurer que toutes les sources dans un fichier de configuration d'extraits ont leur champ `full_text` renseigné. Il parcourt chaque source, récupère le texte complet si `full_text` est manquant ou vide, puis sauvegarde la configuration mise à jour.
+
+**Utilité :**
+- Garantir l'autonomie du fichier de configuration en embarquant tous les textes.
+- Préparer un fichier de configuration pour des environnements sans accès aux sources externes.
+- Faciliter la distribution d'un dataset complet et autonome.
+
+**Arguments du script :**
+- `--input-config` (requis) : Chemin vers le fichier de configuration chiffré d'entrée (ex: `extract_sources.json.gz.enc`).
+- `--output-config` (requis) : Chemin vers le fichier de configuration chiffré de sortie où sera sauvegardée la version avec les textes embarqués.
+- `--passphrase` (optionnel) : Passphrase pour déchiffrer le fichier d'entrée et chiffrer celui de sortie. Si non fournie, le script tente d'utiliser la variable d'environnement `TEXT_CONFIG_PASSPHRASE`.
+- `--force` (optionnel) : Si présent, écrase le fichier de sortie s'il existe déjà.
+
+**Exemple d'utilisation :**
+```bash
+python scripts/embed_all_sources.py \
+  --input-config argumentation_analysis/data/extract_sources.json.gz.enc \
+  --output-config argumentation_analysis/data/extract_sources_embedded.json.gz.enc \
+  --passphrase "votre_passphrase_secrete" \
+  --force
+```
+Ce script utilise les fonctions `load_extract_definitions` et `save_extract_definitions` (la sauvegarde via ce script s'assure que `full_text` est traité pour l'embarquement) du module `argumentation_analysis.ui.file_operations` pour lire et écrire le fichier de configuration.
 
 ## Réparation des extraits
 
@@ -212,25 +259,35 @@ extract_service = ExtractService()
 extract_definitions, _ = load_extract_definitions_safely(CONFIG_FILE, ENCRYPTION_KEY, CONFIG_FILE_JSON)
 
 # Pour chaque source
-for source in extract_definitions:
-    # Récupérer le texte source
-    source_text, _ = fetch_service.fetch_text(source)
+for source_definition in extract_definitions:
+    source_text = None
+    # Priorité au full_text si disponible
+    if "full_text" in source_definition and source_definition["full_text"]:
+        source_text = source_definition["full_text"]
+        print(f"Utilisation de full_text pour la source : {source_definition['source_name']}")
+    else:
+        # Fallback: Récupérer le texte source via fetch_service
+        print(f"Récupération dynamique pour la source : {source_definition['source_name']}")
+        source_text, _ = fetch_service.fetch_text(source_definition) # fetch_text doit pouvoir gérer l'objet source_definition
     
-    # Pour chaque extrait
-    for extract in source.get("extracts", []):
-        # Extraire le texte
-        extracted_text, status, start_found, end_found = extract_service.extract_text_with_markers(
-            source_text,
-            extract["start_marker"],
-            extract["end_marker"],
-            extract.get("template_start")
-        )
-        
-        if start_found and end_found:
-            print(f"Extrait '{extract['extract_name']}' trouvé:")
-            print(extracted_text[:100] + "...")  # Afficher le début de l'extrait
-        else:
-            print(f"Extrait '{extract['extract_name']}' non trouvé.")
+    if source_text:
+        # Pour chaque extrait
+        for extract_definition in source_definition.get("extracts", []):
+            # Extraire le texte
+            extracted_text, status, start_found, end_found = extract_service.extract_text_with_markers(
+                source_text,
+                extract_definition["start_marker"],
+                extract_definition["end_marker"],
+                extract_definition.get("template_start")
+            )
+            
+            if start_found and end_found:
+                print(f"Extrait '{extract_definition['extract_name']}' trouvé:")
+                print(extracted_text[:100] + "...")  # Afficher le début de l'extrait
+            else:
+                print(f"Extrait '{extract_definition['extract_name']}' non trouvé dans la source '{source_definition['source_name']}'.")
+    else:
+        print(f"Impossible d'obtenir le texte source pour : {source_definition['source_name']}")
 ```
 
 ### Exemple 2: Réparation des extraits

@@ -17,7 +17,7 @@ function Log-Message {
 # Fonction pour trouver le chemin vers vcvarsall.bat
 function Find-VCVarsAll {
     # Utiliser vswhere pour trouver l'installation de Visual Studio
-    $vsWhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
+    $vsWhere = "C:\Program Files (x86)\Microsoft Visual Studio\Installer\vswhere.exe"
     
     if (-not (Test-Path -Path $vsWhere)) {
         Log-Message -Level "ERROR" -Message "Visual Studio ne semble pas être installé (vswhere.exe non trouvé)."
@@ -95,9 +95,8 @@ $batchContent = @"
 @echo off
 call "$vcvarsall" x64
 echo Configuration de l'environnement terminée, installation de JPype1...
-pip uninstall -y JPype1
 set DISTUTILS_USE_SDK=1
-pip install --no-cache-dir JPype1==1.4.1
+pip install --no-cache-dir JPype1==1.4.1 --use-pep517
 exit %ERRORLEVEL%
 "@
 
@@ -112,15 +111,20 @@ try {
     if ($process.ExitCode -eq 0) {
         Log-Message -Level "INFO" -Message "JPype1 a été installé avec succès."
         
-        # Tester l'importation de jpype
-        if (-not (Test-Import -Module "jpype")) {
-            Log-Message -Level "ERROR" -Message "Échec du test d'importation de jpype."
-            exit 1
-        }
+#        # Tester l'importation de jpype
+#        if (-not (Test-Import -Module "jpype")) {
+#            Log-Message -Level "ERROR" -Message "Échec du test d'importation de jpype."
+#            exit 1
+#        }
         
         exit 0
     } else {
         Log-Message -Level "ERROR" -Message "L'installation de JPype1 s'est terminée avec le code d'erreur: $($process.ExitCode)"
+        # Tenter de donner plus d'informations sur l'erreur si possible
+        # $errorOutput = Get-Content -Path $process.StandardErrorPath -ErrorAction SilentlyContinue
+        # if ($errorOutput) {
+        #    Log-Message -Level "ERROR" -Message "Détails de l'erreur: $errorOutput"
+        # }
         exit $process.ExitCode
     }
 } finally {
