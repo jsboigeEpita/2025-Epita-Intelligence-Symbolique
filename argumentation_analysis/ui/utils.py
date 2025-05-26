@@ -5,7 +5,7 @@ import gzip
 import hashlib
 import logging
 from pathlib import Path
-from typing import Optional, List, Dict, Any, Union 
+from typing import Optional, List, Dict, Any, Union
 from cryptography.fernet import Fernet, InvalidToken
 from cryptography.exceptions import InvalidSignature
 
@@ -22,10 +22,15 @@ if not utils_logger.handlers and not utils_logger.propagate:
 
 def reconstruct_url(schema: str, host_parts: list, path: str) -> Optional[str]:
     """Reconstruit une URL à partir de schema, host_parts, et path."""
-    if not schema or not host_parts or not path: return None
+    if not schema or not host_parts: return None # Path peut être vide et géré ci-dessous
     host = ".".join(part for part in host_parts if part)
-    path = path if path.startswith('/') or not path else '/' + path
-    return f"{schema}//{host}{path}"
+    # Si path est None, on le traite comme une chaîne vide pour la logique suivante
+    current_path = path if path is not None else ""
+    current_path = current_path if current_path.startswith('/') or not current_path else '/' + current_path
+    # S'assurer qu'un path vide après traitement devienne au moins "/"
+    if not current_path:
+        current_path = "/"
+    return f"{schema}://{host}{current_path}"
 
 def get_cache_filepath(url: str) -> Path:
     """Génère le chemin du fichier cache pour une URL."""
@@ -84,73 +89,8 @@ def decrypt_data(encrypted_data: bytes, key: bytes) -> Optional[bytes]:
         utils_logger.error(f"Erreur déchiffrement: {e}")
         return None
 
-def load_extract_definitions(config_file: Path, key: bytes) -> list:
-    """Charge, déchiffre et décompresse les définitions depuis le fichier chiffré."""
-    # Utilise les variables globales du module config
-    fallback_definitions = ui_config.EXTRACT_SOURCES if ui_config.EXTRACT_SOURCES else ui_config.DEFAULT_EXTRACT_SOURCES
-
-    if not config_file.exists():
-        utils_logger.info(f"Fichier config chiffré '{config_file}' non trouvé. Utilisation définitions par défaut.")
-        # Important: retourner une COPIE pour éviter modification accidentelle de l'original
-        return [item.copy() for item in fallback_definitions]
-    if not key:
-        utils_logger.warning("Clé chiffrement absente. Chargement config impossible. Utilisation définitions par défaut.")
-        return [item.copy() for item in fallback_definitions]
-
-    utils_logger.info(f"Chargement et déchiffrement de '{config_file}'...")
-    try:
-        with open(config_file, 'rb') as f: encrypted_data = f.read()
-        decrypted_compressed_data = decrypt_data(encrypted_data, key)
-        if not decrypted_compressed_data:
-            utils_logger.warning("Échec déchiffrement. Utilisation définitions par défaut.")
-            return [item.copy() for item in fallback_definitions]
-        decompressed_data = gzip.decompress(decrypted_compressed_data)
-        definitions = json.loads(decompressed_data.decode('utf-8'))
-        utils_logger.info("✅ Définitions chargées et déchiffrées.")
-
-        # Validation (peut être externalisée)
-        if not isinstance(definitions, list) or not all(
-            isinstance(item, dict) and
-            "source_name" in item and "source_type" in item and "schema" in item and
-            "host_parts" in item and "path" in item and isinstance(item.get("extracts"), list)
-            for item in definitions
-        ):
-            utils_logger.warning("⚠️ Format définitions invalide après chargement. Utilisation définitions par défaut.")
-            return [item.copy() for item in fallback_definitions]
-
-        # Mettre à jour la variable dans ui.config si chargement OK
-        # Attention: modifier une variable importée peut avoir des effets de bord inattendus
-        # Il serait préférable de retourner les définitions et de les gérer dans app.py
-        # ui_config.EXTRACT_SOURCES = definitions # <- Eviter ceci si possible
-        utils_logger.info(f"-> {len(definitions)} définitions chargées depuis fichier.")
-        # Plutôt retourner les définitions chargées
-        return definitions
-    except Exception as e:
-        utils_logger.error(f"❌ Erreur chargement/traitement '{config_file}': {e}. Utilisation définitions par défaut.", exc_info=True)
-        return [item.copy() for item in fallback_definitions]
-
-def save_extract_definitions(definitions: list, config_file: Path, key: bytes) -> bool:
-    """Sauvegarde, compresse et chiffre les définitions dans le fichier."""
-    if not key:
-        utils_logger.error("Clé chiffrement absente. Sauvegarde annulée.")
-        return False
-    if not isinstance(definitions, list):
-        utils_logger.error("Erreur sauvegarde: définitions non valides.")
-        return False
-    utils_logger.info(f"Préparation sauvegarde vers '{config_file}'...")
-    try:
-        json_data = json.dumps(definitions, indent=2, ensure_ascii=False).encode('utf-8')
-        compressed_data = gzip.compress(json_data)
-        encrypted_data = encrypt_data(compressed_data, key)
-        if not encrypted_data: raise ValueError("Échec chiffrement.")
-        config_file.parent.mkdir(parents=True, exist_ok=True)
-        with open(config_file, 'wb') as f: f.write(encrypted_data)
-        utils_logger.info(f"✅ Définitions sauvegardées dans '{config_file}'.")
-        return True
-    except Exception as e:
-        utils_logger.error(f"❌ Erreur sauvegarde chiffrée: {e}", exc_info=True)
-        return False
-
+# Les fonctions load_extract_definitions et save_extract_definitions ont été déplacées
+# vers argumentation_analysis/ui/file_operations.py pour éviter les imports circulaires.
 def fetch_direct_text(source_url: str, timeout: int = 60) -> str:
     """Récupère contenu texte brut d'URL, utilise cache fichier."""
     # Utilise les fonctions de cache de ce module
@@ -169,12 +109,19 @@ def fetch_direct_text(source_url: str, timeout: int = 60) -> str:
         utils_logger.error(f"Erreur téléchargement direct ({source_url}): {e}")
         raise ConnectionError(f"Erreur téléchargement direct ({source_url}): {e}") from e
 
-def fetch_with_jina(source_url: str, timeout: int = 90) -> str:
+def fetch_with_jina(
+    source_url: str,
+    timeout: int = 90,
+    jina_reader_prefix_override: Optional[str] = None
+) -> str:
     """Récupère et extrait via Jina, utilise cache fichier."""
-    # Utilise les fonctions de cache de ce module et config JINA_READER_PREFIX
+    # Utilise les fonctions de cache de ce module
     cached_text = load_from_cache(source_url)
     if cached_text is not None: return cached_text
-    jina_url = f"{ui_config.JINA_READER_PREFIX}{source_url}"
+
+    _jina_reader_prefix = jina_reader_prefix_override if jina_reader_prefix_override is not None else ui_config.JINA_READER_PREFIX
+    jina_url = f"{_jina_reader_prefix}{source_url}"
+
     utils_logger.info(f"-> Récupération via Jina : {jina_url}...")
     headers = {'Accept': 'text/markdown', 'User-Agent': 'ArgumentAnalysisApp/1.0'}
     try:
@@ -197,30 +144,35 @@ def fetch_with_tika(
     file_name: str = "fichier",
     raw_file_cache_path: Optional[Union[Path, str]] = None,
     timeout_dl: int = 60,
-    timeout_tika: int = 600
+    timeout_tika: int = 600,
+    tika_server_url_override: Optional[str] = None,
+    plaintext_extensions_override: Optional[List[str]] = None,
+    temp_download_dir_override: Optional[Path] = None
     ) -> str:
     """Traite une source via Tika avec gestion cache brut et type texte."""
-    # Utilise cache, config (TIKA_SERVER_URL, PLAINTEXT_EXTENSIONS, TEMP_DOWNLOAD_DIR)
+    _tika_server_url = tika_server_url_override if tika_server_url_override is not None else ui_config.TIKA_SERVER_URL
+    _plaintext_extensions = plaintext_extensions_override if plaintext_extensions_override is not None else ui_config.PLAINTEXT_EXTENSIONS
+    _temp_download_dir = temp_download_dir_override if temp_download_dir_override is not None else ui_config.TEMP_DOWNLOAD_DIR
+
     cache_key = source_url if source_url else f"file://{file_name}"
     cached_text = load_from_cache(cache_key)
     if cached_text is not None: return cached_text
 
     content_to_send = None
-    temp_download_dir = ui_config.TEMP_DOWNLOAD_DIR # Utiliser le chemin depuis config
+    # temp_download_dir = ui_config.TEMP_DOWNLOAD_DIR # Utiliser le chemin depuis config
+    # Remplacé par _temp_download_dir
 
     if source_url:
         original_filename = Path(source_url).name
-        if any(source_url.lower().endswith(ext) for ext in ui_config.PLAINTEXT_EXTENSIONS):
+        if any(source_url.lower().endswith(ext) for ext in _plaintext_extensions):
             utils_logger.info(f"   -> URL détectée comme texte simple ({source_url}). Fetch direct.")
-            return fetch_direct_text(source_url) # Appel fonction de ce module
+            return fetch_direct_text(source_url)
 
-        # Gestion cache brut
         url_hash = hashlib.sha256(source_url.encode()).hexdigest()
         file_extension = Path(original_filename).suffix if Path(original_filename).suffix else ".download"
-        effective_raw_cache_path = Path(raw_file_cache_path) if raw_file_cache_path else temp_download_dir / f"{url_hash}{file_extension}"
+        effective_raw_cache_path = Path(raw_file_cache_path) if raw_file_cache_path else _temp_download_dir / f"{url_hash}{file_extension}"
 
         if effective_raw_cache_path.exists() and effective_raw_cache_path.stat().st_size > 0:
-             # ... [Code identique pour lire cache brut] ...
              try:
                 utils_logger.info(f"   -> Lecture fichier brut depuis cache local : {effective_raw_cache_path.name}")
                 content_to_send = effective_raw_cache_path.read_bytes()
@@ -229,7 +181,6 @@ def fetch_with_tika(
                 content_to_send = None
 
         if content_to_send is None:
-             # ... [Code identique pour télécharger et sauvegarder cache brut] ...
              utils_logger.info(f"-> Téléchargement (pour Tika) depuis : {source_url}...")
              try:
                  response_dl = requests.get(source_url, stream=True, timeout=timeout_dl)
@@ -247,31 +198,28 @@ def fetch_with_tika(
                  raise ConnectionError(f"Erreur téléchargement {source_url}: {e}") from e
 
     elif file_content:
-        # ... [Code identique pour gérer file_content] ...
         utils_logger.info(f"-> Utilisation contenu fichier '{file_name}' ({len(file_content)} bytes)...")
         content_to_send = file_content
-        if any(file_name.lower().endswith(ext) for ext in ui_config.PLAINTEXT_EXTENSIONS):
+        if any(file_name.lower().endswith(ext) for ext in _plaintext_extensions):
             utils_logger.info("   -> Fichier uploadé détecté comme texte simple. Lecture directe.")
             try:
                 texte_brut = file_content.decode('utf-8', errors='ignore')
-                save_to_cache(cache_key, texte_brut) # Appel fonction de ce module
+                save_to_cache(cache_key, texte_brut)
                 return texte_brut
             except Exception as e_decode:
                 utils_logger.warning(f"   -> Erreur décodage fichier texte '{file_name}': {e_decode}. Tentative avec Tika...")
-
     else:
         raise ValueError("fetch_with_tika: Il faut soit source_url soit file_content.")
 
-    # ... [Code identique pour envoyer à Tika et sauvegarder cache texte final] ...
     if not content_to_send:
         utils_logger.warning("   -> Contenu brut vide ou non récupéré. Impossible d'envoyer à Tika.")
-        save_to_cache(cache_key, "")
+        save_to_cache(cache_key, "") # Sauvegarder une chaîne vide pour éviter re-fetch inutile
         return ""
 
-    utils_logger.info(f"-> Envoi contenu à Tika ({ui_config.TIKA_SERVER_URL})... (Timeout={timeout_tika}s)")
+    utils_logger.info(f"-> Envoi contenu à Tika ({_tika_server_url})... (Timeout={timeout_tika}s)")
     headers = { 'Accept': 'text/plain', 'Content-Type': 'application/octet-stream', 'X-Tika-OCRLanguage': 'fra+eng' }
     try:
-        response_tika = requests.put(ui_config.TIKA_SERVER_URL, data=content_to_send, headers=headers, timeout=timeout_tika)
+        response_tika = requests.put(_tika_server_url, data=content_to_send, headers=headers, timeout=timeout_tika)
         response_tika.raise_for_status()
         texte_brut = response_tika.text
         if not texte_brut: utils_logger.warning(f"   -> Warning: Tika status {response_tika.status_code} sans texte.")
@@ -285,6 +233,108 @@ def fetch_with_tika(
         utils_logger.error(f"Erreur Tika: {e}")
         raise ConnectionError(f"Erreur Tika: {e}") from e
 
+
+        if not texte_brut: utils_logger.warning(f"   -> Warning: Tika status {response_tika.status_code} sans texte.")
+        else: utils_logger.info(f"   -> Texte Tika extrait (longueur {len(texte_brut)}).")
+        save_to_cache(cache_key, texte_brut)
+        return texte_brut
+    except requests.exceptions.Timeout:
+        utils_logger.error(f"   -> ❌ Timeout Tika ({timeout_tika}s).")
+        raise ConnectionError(f"Timeout Tika ({timeout_tika}s)") # Renvoyer une erreur plus spécifique
+    except requests.exceptions.RequestException as e:
+        utils_logger.error(f"Erreur Tika: {e}")
+        raise ConnectionError(f"Erreur Tika: {e}") from e
+
+
+def get_full_text_for_source(source_info: Dict[str, Any], app_config: Optional[Dict[str, Any]] = None) -> Optional[str]:
+    """
+    Récupère le texte complet pour une source donnée, en utilisant le cache et les configurations appropriées.
+    Centralise la logique de récupération de texte (Jina, Tika, téléchargement direct).
+
+    Args:
+        source_info: Dictionnaire contenant les informations de la source.
+                     Doit contenir "schema", "host_parts", "path", et "source_type".
+        app_config: Dictionnaire optionnel de configuration de l'application.
+                    Peut contenir des surcharges pour JINA_READER_PREFIX, TIKA_SERVER_URL,
+                    PLAINTEXT_EXTENSIONS, TEMP_DOWNLOAD_DIR.
+
+    Returns:
+        Le texte complet de la source, ou None en cas d'erreur.
+    """
+    source_name_for_log = source_info.get('source_name', 'Source inconnue')
+    utils_logger.debug(f"get_full_text_for_source appelée pour: {source_name_for_log}")
+
+    reconstructed_url = reconstruct_url(
+        source_info.get("schema"), source_info.get("host_parts", []), source_info.get("path")
+    )
+    if not reconstructed_url:
+        utils_logger.error(f"URL invalide pour source: {source_name_for_log}")
+        return None
+
+    # Essayer de charger depuis le cache fichier d'abord
+    cached_text = load_from_cache(reconstructed_url)
+    if cached_text is not None:
+        utils_logger.info(f"Texte chargé depuis cache fichier pour URL '{reconstructed_url}' ({source_name_for_log})")
+        return cached_text
+
+    source_type = source_info.get("source_type")
+    texte_brut_source: Optional[str] = None
+
+    # Récupérer les configurations, en privilégiant app_config si fourni
+    jina_prefix_val = ui_config.JINA_READER_PREFIX
+    tika_server_url_val = ui_config.TIKA_SERVER_URL
+    plaintext_extensions_val = ui_config.PLAINTEXT_EXTENSIONS
+    temp_download_dir_val = ui_config.TEMP_DOWNLOAD_DIR
+
+    if app_config:
+        jina_prefix_val = app_config.get('JINA_READER_PREFIX', jina_prefix_val)
+        tika_server_url_val = app_config.get('TIKA_SERVER_URL', tika_server_url_val)
+        plaintext_extensions_val = app_config.get('PLAINTEXT_EXTENSIONS', plaintext_extensions_val)
+        # Pour TEMP_DOWNLOAD_DIR, s'assurer que c'est un objet Path si surchargé
+        temp_download_dir_str_or_path = app_config.get('TEMP_DOWNLOAD_DIR')
+        if temp_download_dir_str_or_path is not None:
+            temp_download_dir_val = Path(temp_download_dir_str_or_path)
+
+
+    utils_logger.info(f"Cache texte absent pour '{reconstructed_url}' ({source_name_for_log}). Récupération (type: {source_type})...")
+    try:
+        if source_type == "jina":
+            texte_brut_source = fetch_with_jina(
+                reconstructed_url,
+                jina_reader_prefix_override=jina_prefix_val
+            )
+        elif source_type == "direct_download":
+            # fetch_direct_text n'a pas de config spécifique à surcharger via app_config pour l'instant
+            texte_brut_source = fetch_direct_text(reconstructed_url)
+        elif source_type == "tika":
+            # fetch_with_tika gère déjà la logique plaintext vs binaire en interne
+            # On passe les configs potentiellement surchargées
+            texte_brut_source = fetch_with_tika(
+                source_url=reconstructed_url,
+                tika_server_url_override=tika_server_url_val,
+                plaintext_extensions_override=plaintext_extensions_val,
+                temp_download_dir_override=temp_download_dir_val
+                # raw_file_cache_path n'est pas géré par app_config ici, fetch_with_tika le déduit si besoin
+            )
+        else:
+            utils_logger.warning(f"Type de source inconnu '{source_type}' pour '{reconstructed_url}' ({source_name_for_log}). Impossible de récupérer le texte.")
+            return None
+
+        if texte_brut_source is not None:
+            utils_logger.info(f"Texte récupéré pour '{reconstructed_url}' ({source_name_for_log}), sauvegarde dans le cache...")
+            save_to_cache(reconstructed_url, texte_brut_source)
+        else:
+            utils_logger.warning(f"Aucun texte brut retourné par la fonction fetch pour '{reconstructed_url}' ({source_name_for_log}).")
+
+
+        return texte_brut_source
+
+    except ConnectionError as e: # Erreurs spécifiques levées par les fetch_*
+        utils_logger.error(f"Erreur de connexion lors de la récupération de '{reconstructed_url}' ({source_name_for_log}, type: {source_type}): {e}")
+        return None
+    except Exception as e:
+        utils_logger.error(f"Erreur inattendue lors de la récupération de '{reconstructed_url}' ({source_name_for_log}, type: {source_type}): {e}", exc_info=True)
+        return None
 
 def verify_extract_definitions(definitions_list: list) -> str:
     """Vérifie la présence des marqueurs start/end pour chaque extrait défini."""
