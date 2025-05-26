@@ -55,6 +55,11 @@ class OperationalAgent(ABC):
     
     def _subscribe_to_tasks(self) -> None:
         """S'abonne aux tâches opérationnelles."""
+        # Vérifier si le middleware est disponible
+        if not self.middleware:
+            self.logger.warning(f"Agent {self.name}: Middleware non disponible, abonnement aux tâches ignoré")
+            return
+        
         # Définir le callback pour les tâches
         def handle_task(message: Message) -> None:
             task_type = message.content.get("task_type")
@@ -64,30 +69,38 @@ class OperationalAgent(ABC):
                 # Traiter la tâche de manière asynchrone
                 asyncio.create_task(self._process_task_async(task_data, message.sender))
         
-        # S'abonner aux tâches opérationnelles directes
-        self.middleware.get_channel(ChannelType.HIERARCHICAL).subscribe(
-            subscriber_id=self.name,
-            callback=handle_task,
-            filter_criteria={
-                "recipient": self.name,
-                "type": MessageType.COMMAND,
-                "sender_level": AgentLevel.TACTICAL
-            }
-        )
-        
-        # S'abonner aux tâches publiées pour les capacités que cet agent possède
-        capabilities = self.get_capabilities()
-        for capability in capabilities:
-            self.middleware.get_channel(ChannelType.COLLABORATION).subscribe(
-                subscriber_id=f"{self.name}_{capability}",
-                callback=handle_task,
-                filter_criteria={
-                    "topic": f"operational_tasks.{capability}",
-                    "sender_level": AgentLevel.TACTICAL
-                }
-            )
-        
-        self.logger.info(f"Agent {self.name} abonné aux tâches opérationnelles")
+        try:
+            # S'abonner aux tâches opérationnelles directes
+            hierarchical_channel = self.middleware.get_channel(ChannelType.HIERARCHICAL)
+            if hierarchical_channel:
+                hierarchical_channel.subscribe(
+                    subscriber_id=self.name,
+                    callback=handle_task,
+                    filter_criteria={
+                        "recipient": self.name,
+                        "type": MessageType.COMMAND,
+                        "sender_level": AgentLevel.TACTICAL
+                    }
+                )
+            
+            # S'abonner aux tâches publiées pour les capacités que cet agent possède
+            capabilities = self.get_capabilities()
+            collaboration_channel = self.middleware.get_channel(ChannelType.COLLABORATION)
+            if collaboration_channel:
+                for capability in capabilities:
+                    collaboration_channel.subscribe(
+                        subscriber_id=f"{self.name}_{capability}",
+                        callback=handle_task,
+                        filter_criteria={
+                            "topic": f"operational_tasks.{capability}",
+                            "sender_level": AgentLevel.TACTICAL
+                        }
+                    )
+            
+            self.logger.info(f"Agent {self.name} abonné aux tâches opérationnelles")
+            
+        except Exception as e:
+            self.logger.error(f"Erreur lors de l'abonnement aux tâches pour l'agent {self.name}: {e}")
     
     async def _process_task_async(self, task: Dict[str, Any], sender_id: str) -> None:
         """

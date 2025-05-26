@@ -336,6 +336,271 @@ class InformalAgent:
         except Exception as e:
             self.logger.error(f"Erreur lors de la récupération des détails du sophisme: {e}")
             return {"error": str(e)}
+    def categorize_fallacies(self, fallacies: List[Dict[str, Any]]) -> Dict[str, List[str]]:
+        """
+        Catégorise les sophismes détectés selon leur type.
+        
+        Args:
+            fallacies: Liste des sophismes à catégoriser
+        
+        Returns:
+            Dictionnaire des catégories avec les types de sophismes
+        """
+        self.logger.info(f"Catégorisation de {len(fallacies)} sophismes...")
+        
+        categories = {
+            "RELEVANCE": [],
+            "INDUCTION": [],
+            "CAUSALITE": [],
+            "AMBIGUITE": [],
+            "PRESUPPOSITION": [],
+            "AUTRES": []
+        }
+        
+        # Mapping des types de sophismes vers les catégories
+        fallacy_mapping = {
+            "ad_hominem": "RELEVANCE",
+            "appel_autorite": "RELEVANCE",
+            "appel_emotion": "RELEVANCE",
+            "appel_popularite": "INDUCTION",
+            "generalisation_hative": "INDUCTION",
+            "pente_glissante": "CAUSALITE",
+            "fausse_cause": "CAUSALITE",
+            "equivoque": "AMBIGUITE",
+            "amphibologie": "AMBIGUITE",
+            "petitio_principii": "PRESUPPOSITION",
+            "fausse_dichotomie": "PRESUPPOSITION"
+        }
+        
+        for fallacy in fallacies:
+            fallacy_type = fallacy.get("fallacy_type", "").lower().replace(" ", "_")
+            category = fallacy_mapping.get(fallacy_type, "AUTRES")
+            
+            if fallacy_type not in categories[category]:
+                categories[category].append(fallacy_type)
+        
+        self.logger.info(f"Sophismes catégorisés: {sum(len(v) for v in categories.values())} types")
+        return categories
+    
+    def perform_complete_analysis(self, text: str, context: Optional[str] = None) -> Dict[str, Any]:
+        """
+        Effectue une analyse complète d'un texte (sophismes, rhétorique, contexte).
+        
+        Args:
+            text: Texte à analyser
+            context: Contexte optionnel pour l'analyse
+        
+        Returns:
+            Résultats de l'analyse complète
+        """
+        self.logger.info(f"Analyse complète d'un texte de {len(text)} caractères...")
+        
+        results = {
+            "text": text,
+            "context": context,
+            "fallacies": [],
+            "rhetorical_analysis": {},
+            "contextual_analysis": {},
+            "categories": {}
+        }
+        
+        try:
+            # Analyse des sophismes
+            fallacies = self.analyze_fallacies(text)
+            results["fallacies"] = fallacies
+            
+            # Catégorisation des sophismes
+            if fallacies:
+                results["categories"] = self.categorize_fallacies(fallacies)
+            
+            # Analyse rhétorique si disponible
+            if "rhetorical_analyzer" in self.tools:
+                try:
+                    results["rhetorical_analysis"] = self.analyze_rhetoric(text)
+                except Exception as e:
+                    self.logger.error(f"Erreur lors de l'analyse rhétorique: {e}")
+                    results["rhetorical_analysis"] = {"error": str(e)}
+            
+            # Analyse contextuelle si disponible et contexte fourni
+            if "contextual_analyzer" in self.tools and (context or self.config.get("include_context", False)):
+                try:
+                    results["contextual_analysis"] = self.analyze_context(text)
+                except Exception as e:
+                    self.logger.error(f"Erreur lors de l'analyse contextuelle: {e}")
+                    results["contextual_analysis"] = {"error": str(e)}
+            
+            self.logger.info("Analyse complète terminée avec succès")
+            return results
+            
+        except Exception as e:
+            self.logger.error(f"Erreur lors de l'analyse complète: {e}")
+            results["error"] = str(e)
+            return results
+    
+    def _extract_arguments(self, text: str) -> List[Dict[str, Any]]:
+        """
+        Extrait les arguments d'un texte de manière structurée.
+        
+        Args:
+            text: Texte à analyser
+        
+        Returns:
+            Liste des arguments extraits avec leurs composants
+        """
+        self.logger.info(f"Extraction des arguments d'un texte de {len(text)} caractères...")
+        
+        arguments = []
+        
+        try:
+            # Utiliser le kernel sémantique si disponible
+            if self.semantic_kernel:
+                semantic_args = self.identify_arguments(text)
+                for i, arg_text in enumerate(semantic_args):
+                    arguments.append({
+                        "id": f"arg-{i+1}",
+                        "text": arg_text,
+                        "type": "semantic",
+                        "confidence": 0.8
+                    })
+            else:
+                # Méthode de base : diviser par paragraphes ou phrases
+                paragraphs = [p.strip() for p in text.split('\n\n') if p.strip()]
+                
+                if not paragraphs:
+                    # Diviser par phrases si pas de paragraphes
+                    import re
+                    sentences = [s.strip() for s in re.split(r'[.!?]+', text) if s.strip()]
+                    
+                    # Regrouper les phrases en arguments
+                    for i in range(0, len(sentences), 2):
+                        arg_text = '. '.join(sentences[i:i+2])
+                        if arg_text:
+                            arguments.append({
+                                "id": f"arg-{len(arguments)+1}",
+                                "text": arg_text + '.',
+                                "type": "sentence_group",
+                                "confidence": 0.6
+                            })
+                else:
+                    # Utiliser les paragraphes comme arguments
+                    for i, paragraph in enumerate(paragraphs):
+                        arguments.append({
+                            "id": f"arg-{i+1}",
+                            "text": paragraph,
+                            "type": "paragraph",
+                            "confidence": 0.7
+                        })
+            
+            self.logger.info(f"{len(arguments)} arguments extraits")
+            return arguments
+            
+        except Exception as e:
+            self.logger.error(f"Erreur lors de l'extraction des arguments: {e}")
+            return []
+    
+    def _process_text(self, text: str) -> Dict[str, Any]:
+        """
+        Traite et analyse les propriétés de base d'un texte.
+        
+        Args:
+            text: Texte à traiter
+        
+        Returns:
+            Dictionnaire avec les propriétés du texte
+        """
+        self.logger.info(f"Traitement d'un texte de {len(text)} caractères...")
+        
+        try:
+            import re
+            
+            # Compter les mots
+            words = re.findall(r'\b\w+\b', text.lower())
+            word_count = len(words)
+            
+            # Compter les phrases
+            sentences = re.split(r'[.!?]+', text)
+            sentence_count = len([s for s in sentences if s.strip()])
+            
+            # Compter les paragraphes
+            paragraphs = text.split('\n\n')
+            paragraph_count = len([p for p in paragraphs if p.strip()])
+            
+            # Détecter la langue (simple heuristique)
+            french_words = ['le', 'la', 'les', 'de', 'du', 'des', 'et', 'ou', 'est', 'sont', 'dans', 'pour', 'avec', 'sur']
+            english_words = ['the', 'and', 'or', 'is', 'are', 'in', 'for', 'with', 'on', 'at', 'to', 'of']
+            
+            french_count = sum(1 for word in words if word in french_words)
+            english_count = sum(1 for word in words if word in english_words)
+            
+            language = "fr" if french_count > english_count else "en" if english_count > 0 else "unknown"
+            
+            # Calculer la complexité (mots par phrase)
+            avg_words_per_sentence = word_count / sentence_count if sentence_count > 0 else 0
+            
+            result = {
+                "processed_text": text,
+                "word_count": word_count,
+                "sentence_count": sentence_count,
+                "paragraph_count": paragraph_count,
+                "language": language,
+                "avg_words_per_sentence": round(avg_words_per_sentence, 2),
+                "complexity": "high" if avg_words_per_sentence > 20 else "medium" if avg_words_per_sentence > 10 else "low"
+            }
+            
+            self.logger.info(f"Texte traité: {word_count} mots, {sentence_count} phrases, langue: {language}")
+            return result
+            
+        except Exception as e:
+            self.logger.error(f"Erreur lors du traitement du texte: {e}")
+            return {
+                "processed_text": text,
+                "word_count": 0,
+                "sentence_count": 0,
+                "paragraph_count": 0,
+                "language": "unknown",
+                "error": str(e)
+            }
+    
+    def analyze_and_categorize(self, text: str) -> Dict[str, Any]:
+        """
+        Analyse un texte et catégorise les sophismes trouvés.
+        
+        Args:
+            text: Texte à analyser
+        
+        Returns:
+            Résultats de l'analyse avec catégorisation
+        """
+        self.logger.info(f"Analyse et catégorisation d'un texte de {len(text)} caractères...")
+        
+        try:
+            # Analyser les sophismes
+            fallacies = self.analyze_fallacies(text)
+            
+            # Catégoriser les sophismes
+            categories = self.categorize_fallacies(fallacies) if fallacies else {}
+            
+            result = {
+                "text": text,
+                "fallacies": fallacies,
+                "categories": categories,
+                "summary": {
+                    "total_fallacies": len(fallacies),
+                    "categories_count": len([cat for cat, items in categories.items() if items])
+                }
+            }
+            
+            self.logger.info(f"Analyse terminée: {len(fallacies)} sophismes trouvés")
+            return result
+            
+        except Exception as e:
+            self.logger.error(f"Erreur lors de l'analyse et catégorisation: {e}")
+            return {
+                "text": text,
+                "fallacies": [],
+                "categories": {},
+                "error": str(e)
+            }
 
 # Log de chargement
 logging.getLogger(__name__).debug("Module agents.core.informal.informal_agent chargé.")

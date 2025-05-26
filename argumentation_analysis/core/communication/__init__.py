@@ -14,7 +14,7 @@ Composants principaux:
 """
 
 from .message import Message, MessageType, MessagePriority, AgentLevel
-from .channel_interface import Channel, ChannelType
+from .channel_interface import Channel, ChannelType, LocalChannel # Ajout de LocalChannel
 from .middleware import MessageMiddleware
 from .request_response import RequestResponseProtocol
 from .pub_sub import PublishSubscribeProtocol
@@ -29,7 +29,7 @@ from .middleware_patch import *
 
 __all__ = [
     'Message', 'MessageType', 'MessagePriority', 'AgentLevel',
-    'Channel', 'ChannelType',
+    'Channel', 'ChannelType', 'LocalChannel', # Ajout de LocalChannel
     'MessageMiddleware',
     'RequestResponseProtocol', 'PublishSubscribeProtocol',
     'HierarchicalChannel', 'CollaborationChannel', 'DataChannel',
