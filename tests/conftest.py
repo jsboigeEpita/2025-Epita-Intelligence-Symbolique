@@ -51,6 +51,57 @@ except ImportError as e:
         sys.modules['networkx'] = MagicMock()
 # --- Fin des Mocks Globaux ---
 
+# --- Mock NumPy Immédiat ---
+# Installation immédiate du mock NumPy pour éviter les problèmes d'import pandas
+def _install_numpy_mock_immediately():
+    """Installe le mock NumPy immédiatement pour éviter les conflits avec pandas."""
+    if 'numpy' not in sys.modules:
+        try:
+            from numpy_mock import array, ndarray, mean, sum, zeros, ones, dot, concatenate, vstack, hstack, argmax, argmin, max, min, random, rec, _core, core
+            sys.modules['numpy'] = type('numpy', (), {
+                'array': array, 'ndarray': ndarray, 'mean': mean, 'sum': sum, 'zeros': zeros, 'ones': ones,
+                'dot': dot, 'concatenate': concatenate, 'vstack': vstack, 'hstack': hstack,
+                'argmax': argmax, 'argmin': argmin, 'max': max, 'min': min, 'random': random, 'rec': rec,
+                '_core': _core, 'core': core, '__version__': '1.24.3',
+            })
+            # Installation explicite des sous-modules dans sys.modules
+            sys.modules['numpy._core'] = _core
+            sys.modules['numpy.core'] = core
+            sys.modules['numpy._core.multiarray'] = _core.multiarray
+            sys.modules['numpy.core.multiarray'] = core.multiarray
+            print("INFO: Mock NumPy installé immédiatement dans conftest.py")
+        except ImportError as e:
+            print(f"ERREUR lors de l'installation immédiate du mock NumPy: {e}")
+
+# Installation immédiate si Python 3.12+ ou si numpy n'est pas disponible
+if (sys.version_info.major == 3 and sys.version_info.minor >= 12):
+    _install_numpy_mock_immediately()
+
+# --- Mock Pandas Immédiat ---
+# Installation immédiate du mock Pandas pour éviter les problèmes d'import
+def _install_pandas_mock_immediately():
+    """Installe le mock Pandas immédiatement pour éviter les conflits avec numpy."""
+    if 'pandas' not in sys.modules:
+        try:
+            from pandas_mock import DataFrame, read_csv, read_json
+            sys.modules['pandas'] = type('pandas', (), {
+                'DataFrame': DataFrame, 'read_csv': read_csv, 'read_json': read_json, 'Series': list,
+                'NA': None, 'NaT': None, 'isna': lambda x: x is None, 'notna': lambda x: x is not None,
+                '__version__': '1.5.3',
+            })
+            # Installation des sous-modules pandas critiques
+            sys.modules['pandas.core'] = type('pandas.core', (), {})
+            sys.modules['pandas.core.api'] = type('pandas.core.api', (), {})
+            sys.modules['pandas._libs'] = type('pandas._libs', (), {})
+            sys.modules['pandas._libs.pandas_datetime'] = type('pandas._libs.pandas_datetime', (), {})
+            print("INFO: Mock Pandas installé immédiatement dans conftest.py")
+        except ImportError as e:
+            print(f"ERREUR lors de l'installation immédiate du mock Pandas: {e}")
+
+# Installation immédiate si Python 3.12+ ou si pandas n'est pas disponible
+if (sys.version_info.major == 3 and sys.version_info.minor >= 12):
+    _install_pandas_mock_immediately()
+
 # --- Mock JPype ---
 # mocks_dir_for_mock (tests/mocks) est déjà dans sys.path depuis le bloc ci-dessus.
 try:
@@ -126,12 +177,18 @@ def setup_numpy():
         if not is_module_available('numpy'): print("NumPy non disponible, utilisation du mock.")
         else: print("Python 3.12+ détecté, utilisation du mock NumPy.")
         # mocks_dir_for_mock (tests/mocks) est déjà dans sys.path
-        from numpy_mock import array, ndarray, mean, sum, zeros, ones, dot, concatenate, vstack, hstack, argmax, argmin, max, min, random, rec
+        from numpy_mock import array, ndarray, mean, sum, zeros, ones, dot, concatenate, vstack, hstack, argmax, argmin, max, min, random, rec, _core, core
         sys.modules['numpy'] = type('numpy', (), {
             'array': array, 'ndarray': ndarray, 'mean': mean, 'sum': sum, 'zeros': zeros, 'ones': ones,
             'dot': dot, 'concatenate': concatenate, 'vstack': vstack, 'hstack': hstack,
-            'argmax': argmax, 'argmin': argmin, 'max': max, 'min': min, 'random': random, 'rec': rec, '__version__': '1.24.3',
+            'argmax': argmax, 'argmin': argmin, 'max': max, 'min': min, 'random': random, 'rec': rec,
+            '_core': _core, 'core': core, '__version__': '1.24.3',
         })
+        # Installation explicite des sous-modules dans sys.modules
+        sys.modules['numpy._core'] = _core
+        sys.modules['numpy.core'] = core
+        sys.modules['numpy._core.multiarray'] = _core.multiarray
+        sys.modules['numpy.core.multiarray'] = core.multiarray
         return sys.modules['numpy']
     else: 
         import numpy
