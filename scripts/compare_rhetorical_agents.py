@@ -470,6 +470,8 @@ def analyze_result_complexity(results: List[Dict[str, Any]]) -> Dict[str, Dict[s
             elif isinstance(obj, list):
                 return depth + sum(calculate_complexity(v, depth + 1) for v in obj) / max(1, len(obj))
             else:
+                return depth
+
 def generate_performance_metrics(
     base_results: List[Dict[str, Any]],
     advanced_results: List[Dict[str, Any]]
@@ -667,9 +669,6 @@ def generate_performance_metrics(
             metrics[agent]["complexity"] = 0
     
     return metrics
-                return depth
-        
-        # Calculer la complexité pour chaque type d'analyse
 def generate_performance_visualizations(metrics: Dict[str, Dict[str, Any]], output_dir: Path) -> None:
     """
     Génère des visualisations comparatives des performances des agents.
@@ -1193,8 +1192,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-        for analysis_type, analysis in result.get("analyses", {}).items():
-            complexity = calculate_complexity(analysis)
-            complexity_scores[extract_name][analysis_type] = complexity
-    
-    return complexity_scores
