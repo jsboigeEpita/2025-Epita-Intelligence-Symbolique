@@ -17,19 +17,22 @@
   - Ajout de scripts d'installation et de configuration (`scripts/setup/`)
   - Ajout de mocks pour les tests (`tests/mocks/activate_jpype_mock.py`)
   - Ajout de données de test (`tests/test_data/`)
+  - Création d'un dossier `rapports/` et déplacement de tous les rapports dans ce dossier
 
 ### 2. Synchronisation avec le Dépôt Distant
 
 - **Commits locaux** :
   - Commit de nettoyage des fichiers temporaires et de debug
   - Commit d'ajout des fichiers de configuration, documentation et données de test
+  - Commit d'organisation des rapports dans un dossier dédié
+  - Commit de suppression des fichiers de rapport à la racine
 
 - **Récupération des modifications distantes** :
   - Pull réussi avec fusion automatique (merge)
   - Résolution des conflits automatique
 
 - **Publication des modifications locales** :
-  - Push des 3 commits locaux vers le dépôt distant
+  - Push des 5 commits locaux vers le dépôt distant
 
 ## Nouveaux Éléments Identifiés
 
