@@ -1,0 +1,121 @@
+# Analyse Structurelle d'une Argumentation Complexe
+
+## Introduction à l'Analyse Structurelle
+
+Ce document présente un exemple d'argumentation complexe avec une structure hiérarchique et des relations argumentatives variées. Il est conçu pour tester et démontrer les capacités d'analyse structurelle du système.
+
+## Texte à Analyser
+
+### Débat sur la Taxation des Robots
+
+La question de la taxation des robots et systèmes d'intelligence artificielle qui remplacent des emplois humains fait l'objet d'un débat croissant dans nos sociétés modernes. Je soutiendrai ici qu'une telle taxation est non seulement justifiée mais nécessaire, en m'appuyant sur trois arguments principaux.
+
+Premièrement, la taxation des robots est une question d'équité fiscale. Lorsqu'un travailleur humain est employé, son salaire est soumis à diverses taxes et cotisations sociales qui financent notre système de protection sociale. Si ce travailleur est remplacé par un robot, ces recettes fiscales disparaissent, créant un manque à gagner pour l'État. Comme l'a souligné l'économiste Robert Reich, "si les robots prennent les emplois des humains, ils devraient être taxés à un niveau comparable". Cette position est renforcée par le fait que la productivité générée par l'automatisation bénéficie principalement aux propriétaires du capital, accentuant les inégalités économiques. Par conséquent, une taxation équivalente permettrait de maintenir les recettes fiscales nécessaires au fonctionnement de nos services publics.
+
+Deuxièmement, la taxation des robots pourrait financer la transition économique et sociale. L'automatisation transforme rapidement le marché du travail, rendant obsolètes certaines compétences et professions. Les revenus générés par une taxe sur les robots pourraient être spécifiquement alloués à des programmes de formation professionnelle, permettant aux travailleurs déplacés d'acquérir de nouvelles compétences adaptées au marché du travail émergent. De plus, ces fonds pourraient soutenir des initiatives comme le revenu universel de base, qui devient de plus en plus pertinent dans une économie hautement automatisée. Bien que certains objectent que cette taxation pourrait ralentir l'innovation technologique, je soutiens que ses bénéfices sociaux l'emportent sur ce risque potentiel, d'autant plus qu'une taxation bien conçue peut préserver les incitations à l'innovation tout en redistribuant une partie des gains.
+
+Troisièmement, la taxation des robots pourrait contribuer à une automatisation plus réfléchie et socialement responsable. Sans mécanisme fiscal, les entreprises sont uniquement incitées à automatiser pour réduire les coûts, sans considération pour les externalités sociales. Une taxe bien calibrée encouragerait les entreprises à déployer des technologies d'automatisation uniquement lorsqu'elles génèrent une valeur substantielle au-delà de la simple réduction des coûts de main-d'œuvre. Comme l'a argumenté l'économiste Daron Acemoglu, nous devrions distinguer "l'automatisation favorable à la productivité" de "l'automatisation excessive" qui remplace simplement le travail humain sans gains significatifs de productivité. Une taxation progressive basée sur le ratio de remplacement d'emplois pourrait ainsi orienter l'innovation vers des technologies complémentaires au travail humain plutôt que purement substitutives.
+
+On pourrait objecter que la définition même d'un "robot" pose problème pour l'implémentation d'une telle taxe. Cependant, cette difficulté n'est pas insurmontable. Une approche pragmatique consisterait à taxer non pas les robots en tant qu'entités physiques, mais plutôt la valeur ajoutée générée par l'automatisation dans les secteurs où elle remplace significativement l'emploi humain. Cette méthode éviterait les problèmes de classification tout en ciblant le phénomène économique que nous cherchons à réguler.
+
+Une autre objection concerne la compétitivité internationale : un pays qui taxerait unilatéralement les robots pourrait voir ses entreprises désavantagées sur le marché mondial. Cette préoccupation est légitime, mais elle appelle à une coordination internationale plutôt qu'à l'inaction. L'OCDE a déjà démontré sa capacité à coordonner des politiques fiscales internationales, comme l'illustre l'accord récent sur l'imposition minimale des multinationales. Un cadre similaire pourrait être développé pour la taxation de l'automatisation.
+
+En conclusion, la taxation des robots représente une réponse nécessaire aux défis économiques et sociaux posés par l'automatisation croissante. Elle permettrait de maintenir l'équité fiscale, de financer la transition économique pour les travailleurs déplacés, et d'encourager une automatisation socialement bénéfique. Bien que sa mise en œuvre présente des défis, ceux-ci ne sont pas insurmontables et ne devraient pas nous détourner d'une politique qui pourrait contribuer significativement à une économie plus équitable et durable à l'ère de l'automatisation.
+
+## Structure Argumentative
+
+### Argument Principal
+- **Thèse principale**: La taxation des robots est justifiée et nécessaire
+
+### Arguments de Premier Niveau
+1. **Argument A**: Équité fiscale
+2. **Argument B**: Financement de la transition économique et sociale
+3. **Argument C**: Promotion d'une automatisation responsable
+
+### Sous-arguments et Preuves
+- **Sous-argument A1**: Les robots remplaçant des travailleurs créent un manque à gagner fiscal
+  - *Preuve A1.1*: Citation de Robert Reich
+  - *Preuve A1.2*: Observation sur la concentration des bénéfices de l'automatisation
+
+- **Sous-argument B1**: Financement de programmes de formation
+  - *Preuve B1.1*: Nécessité de requalification face à l'obsolescence des compétences
+
+- **Sous-argument B2**: Soutien à des initiatives comme le revenu universel
+  - *Objection B2.1*: Risque de ralentissement de l'innovation
+  - *Réfutation B2.1.1*: Une taxation bien conçue préserve les incitations à l'innovation
+
+- **Sous-argument C1**: Distinction entre automatisation productive et excessive
+  - *Preuve C1.1*: Référence aux travaux de Daron Acemoglu
+  - *Proposition C1.2*: Taxation progressive basée sur le ratio de remplacement d'emplois
+
+### Objections et Réfutations
+- **Objection 1**: Difficulté de définition d'un "robot"
+  - *Réfutation 1*: Taxer la valeur ajoutée par l'automatisation plutôt que les robots physiques
+
+- **Objection 2**: Risque pour la compétitivité internationale
+  - *Réfutation 2*: Nécessité d'une coordination internationale
+  - *Preuve 2.1*: Précédent de l'accord OCDE sur l'imposition des multinationales
+
+## Cas d'Utilisation pour l'Analyse
+
+### 1. Extraction de la Structure Hiérarchique
+Utilisez cet exemple pour tester la capacité du système à identifier la hiérarchie des arguments (arguments principaux, sous-arguments, preuves) et à reconstruire l'arborescence argumentative complète.
+
+```python
+from argumentation_analysis.agents.pm.structure_analyzer import StructureAnalyzer
+from argumentation_analysis.core.llm_service import LLMService
+
+llm = LLMService()
+analyzer = StructureAnalyzer(llm)
+
+with open('examples/analyse_structurelle_complexe.txt', 'r', encoding='utf-8') as f:
+    text = f.read()
+
+structure = analyzer.extract_argument_structure(text)
+print(structure.to_hierarchical_representation())
+```
+
+### 2. Identification des Relations Argumentatives
+Testez la capacité du système à identifier les différents types de relations entre arguments :
+- Support (un argument qui renforce un autre)
+- Objection (un argument qui s'oppose à un autre)
+- Réfutation (un argument qui répond à une objection)
+
+```python
+relations = analyzer.identify_argument_relations(text)
+for relation in relations:
+    print(f"Type: {relation.type}, Source: {relation.source_id}, Target: {relation.target_id}")
+```
+
+### 3. Évaluation de la Cohérence Structurelle
+Évaluez la cohérence globale de la structure argumentative, en vérifiant si les arguments sont bien connectés et si la conclusion découle logiquement des prémisses.
+
+```python
+coherence_score = analyzer.evaluate_structural_coherence(text)
+print(f"Cohérence structurelle: {coherence_score}/10")
+```
+
+### 4. Visualisation de la Structure Argumentative
+Générez une représentation visuelle de la structure argumentative pour faciliter sa compréhension.
+
+```python
+from argumentation_analysis.utils.visualizer import ArgumentVisualizer
+
+visualizer = ArgumentVisualizer()
+graph = visualizer.create_argument_graph(structure)
+visualizer.save_graph(graph, 'results/structure_visualization.png')
+```
+
+## Notes pour les Développeurs
+
+Ce texte est conçu pour tester des fonctionnalités avancées d'analyse structurelle :
+- Structure hiérarchique à plusieurs niveaux
+- Présence d'objections et de réfutations
+- Citations et références à des autorités
+- Propositions conditionnelles et nuancées
+- Connecteurs logiques variés (premièrement, deuxièmement, cependant, par conséquent, etc.)
+
+Pour améliorer les performances du système sur ce type de texte, considérez :
+1. L'implémentation d'un prétraitement qui identifie les marqueurs de structure explicites
+2. L'utilisation de techniques d'analyse de discours pour identifier les relations implicites
+3. L'intégration d'un modèle de détection des connecteurs logiques et de leur portée
