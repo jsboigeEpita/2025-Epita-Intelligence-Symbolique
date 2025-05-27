@@ -27,13 +27,13 @@
       "active": true,
       "taskInteraction": "wait",
       "inactivityDelay": "0",
-      "lastExecutionTime": "2025-05-26T08:00:01.884Z",
+      "lastExecutionTime": "2025-05-27T08:00:01.593Z",
       "lastSkippedTime": "",
-      "lastTaskId": "1693c28e-ad07-4f65-8ec7-8fd1cdfa5be1",
+      "lastTaskId": "ef9c95ae-39e9-43f1-b974-0854607c334d",
       "modeDisplayName": "Orchestrator",
       "createdAt": "2025-05-23T07:57:49.314Z",
       "updatedAt": "2025-05-23T10:50:51.384Z",
-      "nextExecutionTime": "2025-05-27T08:00:00.884Z"
+      "nextExecutionTime": "2025-05-28T08:00:00.593Z"
     }
   ]
 }

@@ -21,8 +21,10 @@ class TestJPypeMock(unittest.TestCase):
     
     def setUp(self):
         """Configuration avant chaque test."""
-        # Réinitialiser l'état du mock
-        jpype_mock._jvm_started = False
+        # Réinitialiser l'état du mock via shutdownJVM
+        import jpype
+        if hasattr(jpype, 'shutdownJVM'):
+            jpype.shutdownJVM()
     
     def test_start_jvm(self):
         """Tester le démarrage de la JVM."""

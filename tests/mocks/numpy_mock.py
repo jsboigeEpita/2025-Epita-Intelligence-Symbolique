@@ -330,34 +330,91 @@ class rec:
 # Instance du module rec pour l'exposition
 rec.recarray = rec.recarray
 
-# Types de données
-float64 = "float64"
-float32 = "float32"
-int64 = "int64"
-int32 = "int32"
-int_ = "int64"  # Alias pour int64
-uint = "uint64"  # Type unsigned int
-uint64 = "uint64"
-uint32 = "uint32"
-bool_ = "bool"
+# Classes de types de données pour compatibilité PyTorch
+class dtype_base(type):
+    """Métaclasse de base pour les types de données NumPy."""
+    def __new__(cls, name, bases=(), attrs=None):
+        if attrs is None:
+            attrs = {}
+        attrs['__name__'] = name
+        attrs['__module__'] = 'numpy'
+        return super().__new__(cls, name, bases, attrs)
+    
+    def __str__(cls):
+        return cls.__name__
+    
+    def __repr__(cls):
+        return f"<class 'numpy.{cls.__name__}'>"
+
+class bool_(metaclass=dtype_base):
+    """Type booléen NumPy."""
+    __name__ = 'bool_'
+    __module__ = 'numpy'
+    
+    def __new__(cls, value=False):
+        return bool(value)
+
+class number(metaclass=dtype_base):
+    """Type numérique de base NumPy."""
+    __name__ = 'number'
+    __module__ = 'numpy'
+
+class object_(metaclass=dtype_base):
+    """Type objet NumPy."""
+    __name__ = 'object_'
+    __module__ = 'numpy'
+    
+    def __new__(cls, value=None):
+        return object() if value is None else value
+
+# Types de données (classes, pas instances)
+class float64(metaclass=dtype_base):
+    __name__ = 'float64'
+    __module__ = 'numpy'
+
+class float32(metaclass=dtype_base):
+    __name__ = 'float32'
+    __module__ = 'numpy'
+
+class int64(metaclass=dtype_base):
+    __name__ = 'int64'
+    __module__ = 'numpy'
+
+class int32(metaclass=dtype_base):
+    __name__ = 'int32'
+    __module__ = 'numpy'
+
+class uint64(metaclass=dtype_base):
+    __name__ = 'uint64'
+    __module__ = 'numpy'
+
+class uint32(metaclass=dtype_base):
+    __name__ = 'uint32'
+    __module__ = 'numpy'
+
+# Alias pour compatibilité
+int_ = int64
+uint = uint64
+
+# Ajouter des logs pour diagnostiquer l'utilisation par PyTorch
+logger.info(f"Types NumPy définis: bool_={bool_}, number={number}, object_={object_}")
+logger.info(f"Type de bool_: {type(bool_)}, Type de number: {type(number)}, Type de object_: {type(object_)}")
 
 # Types de données temporelles requis par pandas
 datetime64 = "datetime64"
 timedelta64 = "timedelta64"
 
 # Types de données supplémentaires requis par pandas
-float_ = "float64"  # Alias pour float64
-object_ = "object"
+float_ = dtype_base("float64")  # Alias pour float64
 str_ = "str"
 unicode_ = "unicode"
 
 # Types numériques supplémentaires
-integer = "int64"  # Type entier générique
-number = "float64"  # Type numérique générique
-floating = "float64"  # Type flottant générique
-complexfloating = "complex128"  # Type complexe
-signedinteger = "int64"  # Type entier signé
-unsignedinteger = "uint64"  # Type entier non signé
+integer = dtype_base("int64")  # Type entier générique
+floating = dtype_base("float64")  # Type flottant générique
+complexfloating = dtype_base("complex128")  # Type complexe
+signedinteger = dtype_base("int64")  # Type entier signé
+unsignedinteger = dtype_base("uint64")  # Type entier non signé
 
 # Types de données complexes
 complex64 = "complex64"
