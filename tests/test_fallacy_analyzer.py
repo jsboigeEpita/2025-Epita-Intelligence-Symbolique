@@ -6,6 +6,7 @@ Tests unitaires pour le module agents.tools.analysis.fallacy_analyzer.
 """
 
 import unittest
+from unittest import skipIf
 import sys
 import os
 import pytest # Ajout de pytest pour le skip
