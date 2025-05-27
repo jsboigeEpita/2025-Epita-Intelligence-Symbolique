@@ -1,0 +1,1385 @@
+# 1.2.7 Argumentation Dialogique
+
+**Étudiants :** aurelien.daudin, khaled.mili, maxim.bocquillion  
+**Niveau :** Intermédiaire  
+**Prérequis :** Logique propositionnelle, Théorie de l'argumentation, Programmation Java  
+
+## Table des Matières
+
+1. [Fondements Théoriques](#1-fondements-théoriques)
+2. [Modélisation Formelle](#2-modélisation-formelle)
+3. [Implémentation Computationnelle](#3-implémentation-computationnelle)
+4. [Intégration TweetyProject](#4-intégration-tweetyproject)
+5. [Exemples Pratiques](#5-exemples-pratiques)
+6. [Métriques d'Évaluation](#6-métriques-dévaluation)
+7. [Applications](#7-applications)
+8. [Ressources et Références](#8-ressources-et-références)
+
+---
+
+## 1. Fondements Théoriques
+
+### 1.1 Introduction à l'Argumentation Dialogique
+
+L'argumentation dialogique étudie comment les agents rationnels échangent des arguments dans des conversations structurées pour atteindre des objectifs spécifiques. Contrairement à l'argumentation monologique (un seul agent), l'argumentation dialogique implique plusieurs participants qui interagissent selon des règles précises.
+
+**Définition formelle :**
+Un dialogue argumentatif est un tuple `D = ⟨A, P, R, T⟩` où :
+- `A` : ensemble des agents participants
+- `P` : protocole de dialogue (règles de communication)
+- `R` : base de connaissances et règles d'argumentation
+- `T` : condition de terminaison
+
+### 1.2 Théorie de Walton-Krabbe
+
+Douglas Walton et Erik Krabbe ont établi une typologie fondamentale des dialogues argumentatifs basée sur les objectifs des participants.
+
+#### 1.2.1 Types de Dialogues Principaux
+
+**1. Dialogue de Persuasion**
+- **Objectif :** Convaincre l'autre partie d'accepter une proposition
+- **Situation initiale :** Conflit d'opinions
+- **Méthode :** Arguments rationnels et preuves
+- **Condition de succès :** Changement d'opinion de l'interlocuteur
+
+```
+Exemple :
+Agent A : "Le réchauffement climatique est causé par l'activité humaine"
+Agent B : "Je ne suis pas convaincu, quelles sont vos preuves ?"
+Agent A : "Voici les données du GIEC montrant la corrélation..."
+```
+
+**2. Dialogue de Négociation**
+- **Objectif :** Trouver un compromis acceptable pour toutes les parties
+- **Situation initiale :** Conflit d'intérêts
+- **Méthode :** Concessions mutuelles et échanges
+- **Condition de succès :** Accord satisfaisant toutes les parties
+
+**3. Dialogue d'Enquête**
+- **Objectif :** Découvrir la vérité sur une question
+- **Situation initiale :** Ignorance partagée
+- **Méthode :** Investigation collaborative
+- **Condition de succès :** Établissement de la vérité
+
+**4. Dialogue de Délibération**
+- **Objectif :** Décider d'une action à entreprendre
+- **Situation initiale :** Besoin de prendre une décision
+- **Méthode :** Évaluation des options
+- **Condition de succès :** Choix d'une action
+
+### 1.3 Protocoles Conversationnels
+
+Un protocole de dialogue définit les règles qui gouvernent l'interaction entre les agents.
+
+#### 1.3.1 Éléments d'un Protocole
+
+**Structure des Tours de Parole :**
+```
+Tour(agent, acte_de_parole, contenu, timestamp)
+```
+
+**Types d'Actes de Parole :**
+- `CLAIM(φ)` : Affirmer une proposition φ
+- `QUESTION(φ)` : Questionner une proposition φ
+- `CHALLENGE(φ)` : Contester une proposition φ
+- `ARGUE(φ, ψ)` : Argumenter φ en utilisant ψ comme support
+- `CONCEDE(φ)` : Concéder une proposition φ
+- `RETRACT(φ)` : Retirer une proposition φ
+
+#### 1.3.2 Règles de Transition
+
+**Règle de Cohérence :**
+Un agent ne peut pas simultanément affirmer φ et ¬φ.
+
+**Règle de Charge de la Preuve :**
+Celui qui affirme une proposition doit être capable de la justifier si elle est contestée.
+
+**Règle de Pertinence :**
+Chaque intervention doit être pertinente par rapport au sujet du dialogue.
+
+---
+
+## 2. Modélisation Formelle
+
+### 2.1 Structures de Dialogue
+
+#### 2.1.1 Graphe de Dialogue
+
+Un dialogue peut être représenté comme un graphe dirigé `G = (N, E)` où :
+- `N` : ensemble des nœuds (interventions)
+- `E` : ensemble des arêtes (relations entre interventions)
+
+```mermaid
+graph TD
+    A[Agent A: CLAIM(p)] --> B[Agent B: CHALLENGE(p)]
+    B --> C[Agent A: ARGUE(p, q)]
+    C --> D[Agent B: CHALLENGE(q)]
+    D --> E[Agent A: ARGUE(q, r)]
+    E --> F[Agent B: CONCEDE(p)]
+```
+
+#### 2.1.2 État du Dialogue
+
+L'état d'un dialogue à un instant t est défini par :
+```
+État(t) = ⟨Commitments(t), Focus(t), History(t)⟩
+```
+
+Où :
+- `Commitments(t)` : ensemble des engagements de chaque agent
+- `Focus(t)` : sujet actuel de la discussion
+- `History(t)` : historique des interventions
+
+### 2.2 Sémantique des Dialogues
+
+#### 2.2.1 Logique des Engagements
+
+Chaque agent maintient un ensemble d'engagements `CS(agent)` qui évolue selon les règles :
+
+**Règle d'Assertion :**
+```
+Si agent dit CLAIM(φ), alors φ ∈ CS(agent)
+```
+
+**Règle de Concession :**
+```
+Si agent dit CONCEDE(φ), alors φ ∈ CS(agent)
+```
+
+**Règle de Rétractation :**
+```
+Si agent dit RETRACT(φ), alors φ ∉ CS(agent)
+```
+
+#### 2.2.2 Conditions de Victoire
+
+Dans un dialogue de persuasion, l'agent A gagne si :
+1. L'agent B concède la thèse de A, ou
+2. L'agent B ne peut plus défendre sa position de manière cohérente
+
+### 2.3 Stratégies Dialogiques
+
+#### 2.3.1 Stratégie Agressive
+
+L'agent conteste systématiquement les affirmations de l'adversaire :
+```
+Si adversaire dit CLAIM(φ) et φ ∉ CS(agent), 
+alors agent répond CHALLENGE(φ)
+```
+
+#### 2.3.2 Stratégie Coopérative
+
+L'agent cherche à construire un terrain d'entente :
+```
+Si adversaire dit CLAIM(φ) et φ est compatible avec CS(agent),
+alors agent répond CONCEDE(φ)
+```
+
+#### 2.3.3 Stratégie Prudente
+
+L'agent évite de s'engager sur des propositions incertaines :
+```
+Si incertitude(φ) > seuil,
+alors agent répond QUESTION(φ) au lieu de CLAIM(φ)
+```
+
+---
+
+## 3. Implémentation Computationnelle
+
+### 3.1 Architectures d'Agents Dialogiques
+
+#### 3.1.1 Architecture BDI pour le Dialogue
+
+Un agent dialogique peut être modélisé avec l'architecture BDI (Beliefs-Desires-Intentions) :
+
+```java
+public class DialogueAgent {
+    private BeliefBase beliefs;           // Croyances de l'agent
+    private Set<Goal> goals;             // Objectifs du dialogue
+    private DialogueStrategy strategy;    // Stratégie conversationnelle
+    private CommitmentStore commitments; // Engagements pris
+    
+    public Move selectMove(DialogueState state) {
+        // Sélectionner le prochain mouvement selon la stratégie
+        return strategy.selectMove(state, beliefs, goals);
+    }
+    
+    public void updateBeliefs(Move opponentMove) {
+        // Mettre à jour les croyances selon le mouvement de l'adversaire
+        beliefs.update(opponentMove);
+    }
+}
+```
+
+#### 3.1.2 Gestion des Tours de Parole
+
+```java
+public class TurnManager {
+    private Queue<Agent> turnOrder;
+    private Agent currentSpeaker;
+    
+    public Agent getNextSpeaker() {
+        currentSpeaker = turnOrder.poll();
+        turnOrder.offer(currentSpeaker);
+        return currentSpeaker;
+    }
+    
+    public boolean canSpeak(Agent agent, DialogueState state) {
+        return agent.equals(currentSpeaker) && 
+               !state.isTerminated();
+    }
+}
+```
+
+### 3.2 Moteur de Dialogue
+
+#### 3.2.1 Boucle Principale
+
+```java
+public class DialogueEngine {
+    private List<Agent> agents;
+    private DialogueProtocol protocol;
+    private DialogueState state;
+    private TurnManager turnManager;
+    
+    public DialogueResult runDialogue() {
+        state = new DialogueState();
+        
+        while (!protocol.isTerminated(state)) {
+            Agent speaker = turnManager.getNextSpeaker();
+            Move move = speaker.selectMove(state);
+            
+            if (protocol.isLegalMove(move, state)) {
+                state = protocol.applyMove(move, state);
+                notifyAgents(move);
+            } else {
+                handleIllegalMove(speaker, move);
+            }
+        }
+        
+        return protocol.determineOutcome(state);
+    }
+    
+    private void notifyAgents(Move move) {
+        for (Agent agent : agents) {
+            if (!agent.equals(move.getSpeaker())) {
+                agent.updateBeliefs(move);
+            }
+        }
+    }
+}
+### 3.3 Stratégies de Sélection d'Actions
+
+#### 3.3.1 Sélection Basée sur l'Utilité
+
+```java
+public class UtilityBasedStrategy implements DialogueStrategy {
+    
+    @Override
+    public Move selectMove(DialogueState state, BeliefBase beliefs, Set<Goal> goals) {
+        List<Move> legalMoves = generateLegalMoves(state);
+        Move bestMove = null;
+        double maxUtility = Double.NEGATIVE_INFINITY;
+        
+        for (Move move : legalMoves) {
+            double utility = calculateUtility(move, state, beliefs, goals);
+            if (utility > maxUtility) {
+                maxUtility = utility;
+                bestMove = move;
+            }
+        }
+        
+        return bestMove;
+    }
+    
+    private double calculateUtility(Move move, DialogueState state, 
+                                  BeliefBase beliefs, Set<Goal> goals) {
+        double utility = 0.0;
+        
+        // Évaluer l'impact sur les objectifs
+        for (Goal goal : goals) {
+            utility += goal.getWeight() * evaluateImpact(move, goal, state);
+        }
+        
+        // Pénaliser les mouvements risqués
+        utility -= calculateRisk(move, beliefs);
+        
+        return utility;
+    }
+}
+```
+
+#### 3.3.2 Sélection par Loterie (Lottery-based)
+
+Inspirée des exemples TweetyProject, cette stratégie utilise des distributions de probabilité :
+
+```java
+public class LotteryStrategy implements DialogueStrategy {
+    private Random random = new Random();
+    
+    @Override
+    public Move selectMove(DialogueState state, BeliefBase beliefs, Set<Goal> goals) {
+        List<Move> legalMoves = generateLegalMoves(state);
+        double[] probabilities = calculateProbabilities(legalMoves, state, beliefs);
+        
+        return selectByLottery(legalMoves, probabilities);
+    }
+    
+    private Move selectByLottery(List<Move> moves, double[] probabilities) {
+        double randomValue = random.nextDouble();
+        double cumulativeProbability = 0.0;
+        
+        for (int i = 0; i < moves.size(); i++) {
+            cumulativeProbability += probabilities[i];
+            if (randomValue <= cumulativeProbability) {
+                return moves.get(i);
+            }
+        }
+        
+        return moves.get(moves.size() - 1); // Fallback
+    }
+}
+```
+
+---
+
+## 4. Intégration TweetyProject
+
+### 4.1 Classes Principales
+
+TweetyProject fournit une infrastructure complète pour les systèmes de dialogue dans le package `org.tweetyproject.agents.dialogues`.
+
+#### 4.1.1 Configuration de Base
+
+```java
+import org.tweetyproject.agents.dialogues.*;
+import org.tweetyproject.arg.dung.syntax.*;
+import org.tweetyproject.arg.dung.semantics.*;
+
+public class DialogueSystemSetup {
+    
+    public static void main(String[] args) {
+        // Créer les agents
+        ArgumentationAgent agent1 = new ArgumentationAgent("Alice");
+        ArgumentationAgent agent2 = new ArgumentationAgent("Bob");
+        
+        // Configurer leurs bases de connaissances
+        setupKnowledgeBases(agent1, agent2);
+        
+        // Créer le système de dialogue
+        DialogueSystem system = new DialogueSystem();
+        system.addAgent(agent1);
+        system.addAgent(agent2);
+        
+        // Lancer le dialogue
+        DialogueTrace trace = system.runDialogue();
+        
+        // Analyser les résultats
+        analyzeResults(trace);
+    }
+    
+    private static void setupKnowledgeBases(ArgumentationAgent agent1, 
+                                          ArgumentationAgent agent2) {
+        // Configuration des frameworks d'argumentation pour chaque agent
+        DungTheory theory1 = new DungTheory();
+        theory1.add(new Argument("a"));
+        theory1.add(new Argument("b"));
+        theory1.add(new Attack(new Argument("a"), new Argument("b")));
+        
+        agent1.setArgumentationFramework(theory1);
+        
+        // Configuration similaire pour agent2...
+    }
+}
+```
+
+#### 4.1.2 Exemple Basé sur GroundedTest
+
+Inspiré de l'exemple [`GroundedTest.java`](https://github.com/TweetyProjectTeam/TweetyProject/tree/main/org-tweetyproject-agents-dialogues/src/main/java/org/tweetyproject/agents/dialogues/examples/GroundedTest.java) :
+
+```java
+public class GroundedDialogueExample {
+    
+    public static void runGroundedDialogue() {
+        // Créer des agents avec différents niveaux de sophistication
+        GroundedAgent simpleAgent = new GroundedAgent("Simple", 
+                                                     OpponentModel.SIMPLE);
+        GroundedAgent complexAgent = new GroundedAgent("Complex", 
+                                                      OpponentModel.COMPLEX);
+        
+        // Définir le sujet du dialogue
+        Proposition topic = new Proposition("climate_change_is_real");
+        
+        // Configurer le protocole de dialogue
+        PersuasionProtocol protocol = new PersuasionProtocol();
+        protocol.setTopic(topic);
+        protocol.setMaxTurns(20);
+        
+        // Créer et lancer le dialogue
+        Dialogue dialogue = new Dialogue(protocol);
+        dialogue.addParticipant(simpleAgent, Position.PRO);
+        dialogue.addParticipant(complexAgent, Position.CONTRA);
+        
+        DialogueResult result = dialogue.run();
+        
+        // Afficher les résultats
+        System.out.println("Dialogue terminé:");
+        System.out.println("Gagnant: " + result.getWinner());
+        System.out.println("Nombre de tours: " + result.getTurnCount());
+        System.out.println("Trace: " + result.getTrace());
+    }
+}
+```
+
+### 4.2 Intégration avec les Frameworks d'Argumentation
+
+#### 4.2.1 Utilisation de Dung Theory
+
+```java
+public class ArgumentativeDialogue {
+    
+    public void setupArgumentationFramework() {
+        // Créer un framework d'argumentation de Dung
+        DungTheory theory = new DungTheory();
+        
+        // Ajouter des arguments
+        Argument arg1 = new Argument("renewable_energy_is_viable");
+        Argument arg2 = new Argument("renewable_energy_is_expensive");
+        Argument arg3 = new Argument("fossil_fuels_cause_pollution");
+        
+        theory.add(arg1);
+        theory.add(arg2);
+        theory.add(arg3);
+        
+        // Ajouter des attaques
+        theory.add(new Attack(arg2, arg1)); // L'argument 2 attaque l'argument 1
+        theory.add(new Attack(arg3, arg2)); // L'argument 3 attaque l'argument 2
+        
+        // Calculer les extensions
+        GroundedReasoner reasoner = new GroundedReasoner();
+        Extension groundedExtension = reasoner.getModel(theory);
+        
+        System.out.println("Extension fondée: " + groundedExtension);
+    }
+}
+```
+
+#### 4.2.2 Stratégies Basées sur les Sémantiques
+
+```java
+public class SemanticBasedStrategy implements DialogueStrategy {
+    private AbstractExtensionReasoner reasoner;
+    
+    public SemanticBasedStrategy(AbstractExtensionReasoner reasoner) {
+        this.reasoner = reasoner;
+    }
+    
+    @Override
+    public Move selectMove(DialogueState state, BeliefBase beliefs, Set<Goal> goals) {
+        DungTheory currentTheory = state.getArgumentationFramework();
+        Collection<Extension> extensions = reasoner.getModels(currentTheory);
+        
+        // Sélectionner l'argument le plus fort selon la sémantique
+        Argument strongestArg = findStrongestArgument(extensions, goals);
+        
+        if (strongestArg != null && !state.hasBeenClaimed(strongestArg)) {
+            return new ClaimMove(strongestArg);
+        } else {
+            // Chercher des contre-arguments
+            return findCounterArgument(state, extensions);
+        }
+    }
+    
+    private Argument findStrongestArgument(Collection<Extension> extensions, 
+                                         Set<Goal> goals) {
+        // Logique pour trouver l'argument le plus pertinent
+        // selon les extensions et les objectifs
+        return null; // Implémentation simplifiée
+    }
+}
+```
+
+### 4.3 Configuration Avancée
+
+#### 4.3.1 Modèles d'Adversaire
+
+```java
+public enum OpponentModelType {
+    SIMPLE,     // Modèle basique de l'adversaire
+    COMPLEX,    // Modèle sophistiqué avec apprentissage
+    ADAPTIVE    // Modèle qui s'adapte pendant le dialogue
+}
+
+public class OpponentModel {
+    private OpponentModelType type;
+    private Map<Argument, Double> believedStrengths;
+    private DialogueHistory history;
+    
+    public double predictResponse(Move proposedMove) {
+        switch (type) {
+            case SIMPLE:
+                return simplePredict(proposedMove);
+            case COMPLEX:
+                return complexPredict(proposedMove);
+            case ADAPTIVE:
+                return adaptivePredict(proposedMove);
+            default:
+                return 0.5; // Incertitude maximale
+        }
+    }
+    
+    private double simplePredict(Move move) {
+        // Prédiction basée sur des heuristiques simples
+        if (move instanceof ClaimMove) {
+            Argument arg = ((ClaimMove) move).getArgument();
+            return believedStrengths.getOrDefault(arg, 0.5);
+        }
+        return 0.5;
+    }
+}
+```
+
+---
+
+## 5. Exemples Pratiques
+
+### 5.1 Dialogue de Persuasion : Changement Climatique
+
+#### 5.1.1 Configuration du Scénario
+
+```java
+public class ClimateChangeDialogue {
+    
+    public static void main(String[] args) {
+        // Créer les agents
+        PersuasionAgent scientist = new PersuasionAgent("Dr. Smith");
+        PersuasionAgent skeptic = new PersuasionAgent("Mr. Jones");
+        
+        // Configurer leurs positions
+        setupScientistKnowledge(scientist);
+        setupSkepticKnowledge(skeptic);
+        
+        // Définir le sujet
+        Proposition mainTopic = new Proposition("human_activity_causes_climate_change");
+        
+        // Créer le protocole
+        PersuasionProtocol protocol = new PersuasionProtocol();
+        protocol.setTopic(mainTopic);
+        protocol.setMaxTurns(15);
+        protocol.setBurdenOfProof(scientist); // Le scientifique doit prouver
+        
+        // Lancer le dialogue
+        runDialogue(scientist, skeptic, protocol);
+    }
+    
+    private static void setupScientistKnowledge(PersuasionAgent scientist) {
+        DungTheory theory = new DungTheory();
+        
+        // Arguments du scientifique
+        Argument co2Increase = new Argument("CO2_levels_increasing");
+        Argument tempIncrease = new Argument("global_temperature_rising");
+        Argument correlation = new Argument("CO2_temp_correlation");
+        Argument humanCO2 = new Argument("humans_emit_CO2");
+        Argument conclusion = new Argument("humans_cause_climate_change");
+        
+        theory.add(co2Increase);
+        theory.add(tempIncrease);
+        theory.add(correlation);
+        theory.add(humanCO2);
+        theory.add(conclusion);
+        
+        // Relations d'argumentation
+        theory.add(new Support(co2Increase, correlation));
+        theory.add(new Support(tempIncrease, correlation));
+        theory.add(new Support(correlation, conclusion));
+        theory.add(new Support(humanCO2, conclusion));
+        
+        scientist.setArgumentationFramework(theory);
+    }
+}
+```
+
+#### 5.1.2 Trace de Dialogue Simulée
+
+```
+Tour 1 - Dr. Smith: CLAIM(CO2_levels_increasing)
+  "Les niveaux de CO2 ont augmenté de 40% depuis l'ère préindustrielle."
+
+Tour 2 - Mr. Jones: QUESTION(CO2_levels_increasing)
+  "Comment pouvez-vous être certain de ces mesures ?"
+
+Tour 3 - Dr. Smith: ARGUE(CO2_levels_increasing, ice_core_data)
+  "Les carottes de glace montrent des données sur 800 000 ans."
+
+Tour 4 - Mr. Jones: CHALLENGE(ice_core_data)
+  "Les carottes de glace peuvent être contaminées."
+
+Tour 5 - Dr. Smith: ARGUE(ice_core_data, multiple_sources)
+  "Nous avons des confirmations par satellites et stations météo."
+
+Tour 6 - Mr. Jones: CONCEDE(CO2_levels_increasing)
+  "D'accord, les niveaux de CO2 augmentent."
+
+Tour 7 - Dr. Smith: CLAIM(global_temperature_rising)
+  "Les températures globales augmentent parallèlement."
+
+...
+```
+
+### 5.2 Dialogue de Négociation : Allocation de Ressources
+
+#### 5.2.1 Scénario Multi-Agents
+
+```java
+public class ResourceAllocationNegotiation {
+    
+    public static void runNegotiation() {
+        // Créer les agents négociateurs
+        NegotiationAgent hospital = new NegotiationAgent("Hospital");
+        NegotiationAgent school = new NegotiationAgent("School");
+        NegotiationAgent transport = new NegotiationAgent("Transport");
+        
+        // Définir les ressources à allouer
+        Resource budget = new Resource("municipal_budget", 1000000);
+        
+        // Configurer les préférences
+        hospital.addPreference(new ResourcePreference("healthcare", 0.8));
+        school.addPreference(new ResourcePreference("education", 0.9));
+        transport.addPreference(new ResourcePreference("infrastructure", 0.7));
+        
+        // Protocole de négociation
+        NegotiationProtocol protocol = new MonotonicConcessionProtocol();
+        protocol.setResource(budget);
+        protocol.setDeadline(10); // 10 tours maximum
+        
+        // Lancer la négociation
+        NegotiationResult result = runNegotiation(
+            Arrays.asList(hospital, school, transport), 
+            protocol
+        );
+        
+        displayResult(result);
+    }
+}
+```
+
+### 5.3 Dialogue d'Enquête Collaborative
+
+#### 5.3.1 Investigation Distribuée
+
+```java
+public class CollaborativeInquiry {
+    
+    public static void investigateProblem() {
+        // Créer les agents enquêteurs
+        InquiryAgent detective = new InquiryAgent("Detective");
+        InquiryAgent forensic = new InquiryAgent("Forensic");
+        InquiryAgent witness = new InquiryAgent("Witness");
+        
+        // Définir le problème à résoudre
+        Problem mystery = new Problem("who_committed_the_crime");
+        
+        // Distribuer les indices
+        detective.addEvidence(new Evidence("fingerprints_on_weapon"));
+        forensic.addEvidence(new Evidence("DNA_analysis_results"));
+        witness.addEvidence(new Evidence("saw_suspect_at_scene"));
+        
+        // Protocole d'enquête
+        InquiryProtocol protocol = new CollaborativeInquiryProtocol();
+        protocol.setProblem(mystery);
+        protocol.setGoal(InquiryGoal.FIND_TRUTH);
+        
+        // Processus d'enquête
+        InquiryResult result = conductInquiry(
+            Arrays.asList(detective, forensic, witness),
+            protocol
+        );
+        
+        System.out.println("Conclusion de l'enquête: " + result.getConclusion());
+        System.out.println("Niveau de certitude: " + result.getCertaintyLevel());
+    }
+}
+```
+
+---
+
+## 6. Métriques d'Évaluation
+
+### 6.1 Mesures de Cohérence Dialogique
+
+#### 6.1.1 Cohérence Interne
+
+La cohérence interne mesure si un agent maintient des positions compatibles :
+
+```java
+public class CoherenceMetrics {
+    
+    public static double calculateInternalCoherence(Agent agent, DialogueTrace trace) {
+        Set<Proposition> commitments = extractCommitments(agent, trace);
+        int contradictions = 0;
+        int totalPairs = 0;
+        
+        for (Proposition p1 : commitments) {
+            for (Proposition p2 : commitments) {
+                if (!p1.equals(p2)) {
+                    totalPairs++;
+                    if (areContradictory(p1, p2)) {
+                        contradictions++;
+                    }
+                }
+            }
+        }
+        
+        return totalPairs > 0 ? 1.0 - (double) contradictions / totalPairs : 1.0;
+    }
+    
+    private static boolean areContradictory(Proposition p1, Proposition p2) {
+        // Vérifier si p1 et p2 sont logiquement contradictoires
+        return p1.isNegationOf(p2) || p2.isNegationOf(p1);
+    }
+}
+```
+
+#### 6.1.2 Cohérence Dialogique
+
+Mesure la cohérence globale du dialogue :
+
+```java
+public static double calculateDialogueCoherence(DialogueTrace trace) {
+    double totalCoherence = 0.0;
+    int agentCount = 0;
+    
+    for (Agent agent : trace.getParticipants()) {
+        totalCoherence += calculateInternalCoherence(agent, trace);
+        agentCount++;
+    }
+    
+    return agentCount > 0 ? totalCoherence / agentCount : 0.0;
+}
+```
+
+### 6.2 Efficacité Dialogique
+
+#### 6.2.1 Convergence
+
+Mesure la rapidité avec laquelle le dialogue atteint son objectif :
+
+```java
+public class EfficiencyMetrics {
+    
+    public static double calculateConvergenceRate(DialogueTrace trace) {
+        int totalTurns = trace.getTurnCount();
+        int convergenceTurn = findConvergenceTurn(trace);
+        
+        if (convergenceTurn == -1) {
+            return 0.0; // Pas de convergence
+        }
+        
+        return 1.0 - (double) convergenceTurn / totalTurns;
+    }
+    
+    private static int findConvergenceTurn(DialogueTrace trace) {
+        // Identifier le tour où les agents atteignent un accord
+        for (int i = 0; i < trace.getTurnCount(); i++) {
+            if (hasReachedAgreement(trace, i)) {
+                return i;
+            }
+        }
+        return -1;
+    }
+}
+```
+
+#### 6.2.2 Productivité Argumentative
+
+Mesure la qualité des arguments échangés :
+
+```java
+public static double calculateArgumentativeProductivity(DialogueTrace trace) {
+    int totalMoves = trace.getMoveCount();
+    int productiveMoves = 0;
+    
+    for (Move move : trace.getMoves()) {
+        if (isProductiveMove(move)) {
+            productiveMoves++;
+        }
+    }
+    
+    return totalMoves > 0 ? (double) productiveMoves / totalMoves : 0.0;
+}
+
+private static boolean isProductiveMove(Move move) {
+    // Un mouvement est productif s'il apporte de nouvelles informations
+    // ou fait progresser le dialogue vers son objectif
+    return move instanceof ClaimMove || 
+           move instanceof ArgueMove || 
+           move instanceof ConcedeMove;
+}
+```
+
+### 6.3 Validation Formelle
+
+#### 6.3.1 Vérification de Protocole
+
+```java
+public class ProtocolValidator {
+    
+    public static ValidationResult validateDialogue(DialogueTrace trace, 
+                                                   DialogueProtocol protocol) {
+        ValidationResult result = new ValidationResult();
+        
+        for (int i = 0; i < trace.getTurnCount(); i++) {
+            Move move = trace.getMove(i);
+            DialogueState stateBefore = trace.getStateBefore(i);
+            
+            if (!protocol.isLegalMove(move, stateBefore)) {
+                result.addViolation(new ProtocolViolation(i, move, 
+                    "Mouvement illégal selon le protocole"));
+            }
+        }
+        
+        return result;
+    }
+}
+```
+
+#### 6.3.2 Propriétés de Terminaison
+
+```java
+public static boolean verifyTermination(DialogueProtocol protocol) {
+    // Vérifier que le protocole garantit la terminaison
+    return protocol.hasMaxTurnLimit() || 
+           protocol.hasProgressRequirement() ||
+           protocol.hasTimeLimit();
+}
+```
+
+---
+
+## 7. Applications
+
+### 7.1 Systèmes de Recommandation Argumentés
+
+#### 7.1.1 Architecture du Système
+
+```java
+public class ArgumentativeRecommendationSystem {
+    private UserModel userModel;
+    private ItemDatabase itemDatabase;
+    private ArgumentationEngine argEngine;
+    
+    public Recommendation generateRecommendation(User user, Context context) {
+        // Générer des arguments pour différentes options
+        List<Item> candidates = itemDatabase.getCandidates(user, context);
+        Map<Item, ArgumentSet> arguments = new HashMap<>();
+        
+        for (Item item : candidates) {
+            ArgumentSet args = generateArguments(item, user, context);
+            arguments.put(item, args);
+        }
+        
+        // Simuler un dialogue interne pour évaluer les options
+        DialogueResult result = argEngine.evaluateOptions(arguments);
+        
+        return new Recommendation(result.getBestOption(), 
+                                result.getJustification());
+    }
+    
+    private ArgumentSet generateArguments(Item item, User user, Context context) {
+        ArgumentSet args = new ArgumentSet();
+        
+        // Arguments basés sur les préférences utilisateur
+        if (matchesUserPreferences(item, user)) {
+            args.add(new Argument("matches_preferences", 0.8));
+        }
+        
+        // Arguments basés sur la popularité
+        if (item.getPopularity() > 0.7) {
+            args.add(new Argument("popular_choice", 0.6));
+        }
+        
+        // Arguments contextuels
+        if (isContextuallyRelevant(item, context)) {
+            args.add(new Argument("contextually_relevant", 0.9));
+        }
+        
+        return args;
+    }
+}
+```
+
+### 7.2 Aide à la Décision Collaborative
+
+#### 7.2.1 Système Multi-Critères
+
+```java
+public class CollaborativeDecisionSupport {
+    
+    public Decision makeCollaborativeDecision(List<Stakeholder> stakeholders,
+                                            DecisionProblem problem) {
+        // Créer des agents pour chaque partie prenante
+        List<DecisionAgent> agents = new ArrayList<>();
+        for (Stakeholder stakeholder : stakeholders) {
+            DecisionAgent agent = new DecisionAgent(stakeholder);
+            agent.setPreferences(stakeholder.getPreferences());
+            agent.setConstraints(stakeholder.getConstraints());
+            agents.add(agent);
+        }
+        
+        // Protocole de délibération
+        DeliberationProtocol protocol = new DeliberationProtocol();
+        protocol.setProblem(problem);
+        protocol.setConsensusThreshold(0.8);
+        
+        // Processus de délibération
+        DeliberationResult result = conductDeliberation(agents, protocol);
+        
+        return result.getConsensusDecision();
+    }
+    
+    private DeliberationResult conductDeliberation(List<DecisionAgent> agents,
+                                                  DeliberationProtocol protocol) {
+        DeliberationEngine engine = new DeliberationEngine();
+        engine.setAgents(agents);
+        engine.setProtocol(protocol);
+        
+        return engine.run();
+    }
+}
+```
+
+### 7.3 Éducation et Formation
+
+#### 7.3.1 Tuteur Argumentatif
+
+```java
+public class ArgumentativeTutor {
+    private KnowledgeBase domainKnowledge;
+    private StudentModel studentModel;
+    private PedagogicalStrategy strategy;
+    
+    public TutoringSession createSession(Student student, Topic topic) {
+        // Adapter la stratégie au niveau de l'étudiant
+        strategy.adaptToStudent(student);
+        
+        // Créer un agent tuteur
+        TutorAgent tutor = new TutorAgent("Tutor");
+        tutor.setKnowledge(domainKnowledge.getTopicKnowledge(topic));
+        tutor.setStrategy(strategy);
+        
+        // Créer un agent étudiant
+        StudentAgent studentAgent = new StudentAgent(student.getName());
+        studentAgent.setCurrentKnowledge(studentModel.getKnowledge(student));
+        
+        // Protocole pédagogique
+        SocraticProtocol protocol = new SocraticProtocol();
+        protocol.setTopic(topic);
+        protocol.setLearningObjectives(topic.getObjectives());
+        
+        return new TutoringSession(tutor, studentAgent, protocol);
+    }
+}
+```
+
+### 7.4 Négociation Automatisée
+
+#### 7.4.1 Agent de Négociation
+
+```java
+public class AutomatedNegotiationAgent {
+    private NegotiationStrategy strategy;
+    private PreferenceModel preferences;
+    private OpponentModel opponentModel;
+    
+    public NegotiationOutcome negotiate(NegotiationProblem problem,
+                                      List<Agent> opponents) {
+        // Initialiser la négociation
+        NegotiationProtocol protocol = selectProtocol(problem);
+        NegotiationState state = new NegotiationState(problem);
+        
+        // Boucle de négociation
+        while (!protocol.isTerminated(state)) {
+            if (isMyTurn(state)) {
+                Offer offer = strategy.generateOffer(state, preferences, 
+                                                   opponentModel);
+                state = protocol.makeOffer(this, offer, state);
+            } else {
+                Offer opponentOffer = waitForOpponentOffer(state);
+                boolean accept = strategy.shouldAccept(opponentOffer, 
+                                                     preferences, state);
+                
+                if (accept) {
+                    return new NegotiationOutcome(opponentOffer, true);
+                } else {
+                    Offer counterOffer = strategy.generateCounterOffer(
+                        opponentOffer, preferences, state);
+                    state = protocol.makeOffer(this, counterOffer, state);
+                }
+            }
+            
+            // Mettre à jour le modèle d'adversaire
+            opponentModel.update(state.getLastMove());
+        }
+        
+        return new NegotiationOutcome(null, false); // Échec de négociation
+    }
+}
+```
+
+---
+
+## 8. Ressources et Références
+
+### 8.1 Bibliographie Fondamentale
+
+#### 8.1.1 Ouvrages de Référence
+
+1. **Walton, D., & Krabbe, E. C. W. (1995)**  
+   *Commitment in Dialogue: Basic Concepts of Interpersonal Reasoning*  
+   State University of New York Press  
+   - Ouvrage fondateur sur la typologie des dialogues
+   - Introduction des concepts d'engagement et de charge de la preuve
+
+2. **Prakken, H. (2006)**  
+   *Formal systems for persuasion dialogue*  
+   The Knowledge Engineering Review, 21(2), 163-188  
+   - Formalisation mathématique des dialogues de persuasion
+   - Protocoles et stratégies optimales
+
+3. **McBurney, P., & Parsons, S. (2009)**  
+   *Dialogue Games for Agent Argumentation*  
+   In: Argumentation in Artificial Intelligence, pp. 261-280  
+   - Théorie des jeux appliquée aux dialogues argumentatifs
+   - Stratégies d'équilibre et optimalité
+
+#### 8.1.2 Articles Récents
+
+4. **Thimm, M., & García, A. J. (2018)**  
+   *Classification and strategical issues of argumentation games*  
+   Artificial Intelligence, 262, 320-357  
+   - Classification moderne des jeux argumentatifs
+   - Analyse stratégique et complexité computationnelle
+
+5. **Hunter, A., & Thimm, M. (2017)**  
+   *Probabilistic reasoning with abstract argumentation frameworks*  
+   Journal of Artificial Intelligence Research, 59, 565-611  
+   - Intégration de l'incertitude dans l'argumentation dialogique
+   - Modèles probabilistes pour la sélection d'actions
+
+### 8.2 Ressources TweetyProject
+
+#### 8.2.1 Documentation Officielle
+
+- **Site principal :** [https://tweetyproject.org/](https://tweetyproject.org/)
+- **Documentation API :** [https://tweetyproject.org/doc/](https://tweetyproject.org/doc/)
+- **Exemples de code :** [https://github.com/TweetyProjectTeam/TweetyProject](https://github.com/TweetyProjectTeam/TweetyProject)
+
+#### 8.2.2 Modules Pertinents
+
+1. **org.tweetyproject.agents.dialogues**
+   - Classes principales pour les systèmes de dialogue
+   - Exemples : [`GroundedTest.java`](https://github.com/TweetyProjectTeam/TweetyProject/tree/main/org-tweetyproject-agents-dialogues/src/main/java/org/tweetyproject/agents/dialogues/examples/GroundedTest.java), [`LotteryDialogueTest.java`](https://github.com/TweetyProjectTeam/TweetyProject/tree/main/org-tweetyproject-agents-dialogues/src/main/java/org/tweetyproject/agents/dialogues/examples/LotteryDialogueTest.java)
+
+2. **org.tweetyproject.arg.dung**
+   - Frameworks d'argumentation abstraite
+   - Sémantiques et raisonneurs
+
+3. **org.tweetyproject.agents**
+   - Architecture générale des agents
+   - Modèles BDI et systèmes multi-agents
+
+### 8.3 Outils et Plateformes
+
+#### 8.3.1 Simulateurs de Dialogue
+
+1. **ASPIC+ Simulator**
+   - Simulation de dialogues ASPIC+
+   - Interface graphique pour la visualisation
+
+2. **Carneades Argumentation System**
+   - Plateforme complète d'argumentation
+   - Support pour différents types de dialogues
+
+3. **ArgTech Argument Web**
+   - Outils d'analyse d'arguments
+   - Visualisation de structures argumentatives
+
+####
+#### 8.3.2 Environnements de Développement
+
+1. **Eclipse avec TweetyProject**
+   ```xml
+   <!-- Dépendance Maven pour TweetyProject -->
+   <dependency>
+       <groupId>org.tweetyproject</groupId>
+       <artifactId>tweetyproject-agents-dialogues</artifactId>
+       <version>1.19</version>
+   </dependency>
+   ```
+
+2. **IntelliJ IDEA avec Support Argumentation**
+   - Plugin pour la visualisation de graphes d'argumentation
+   - Débogage interactif des dialogues
+
+### 8.4 Datasets et Benchmarks
+
+#### 8.4.1 Corpus de Dialogues
+
+1. **Persuasion for Good Dataset**
+   - 1,017 dialogues de persuasion annotés
+   - Objectif : convaincre de faire un don à une association
+
+2. **Internet Argument Corpus (IAC)**
+   - 390,704 posts de forums de discussion
+   - Annotations d'arguments et de relations argumentatives
+
+3. **Cornell Movie Dialogs Corpus**
+   - 220,579 échanges conversationnels
+   - Utilisable pour l'entraînement d'agents dialogiques
+
+#### 8.4.2 Benchmarks d'Évaluation
+
+1. **ICCMA (International Competition on Computational Models of Argumentation)**
+   - Compétition annuelle sur les solveurs d'argumentation
+   - Benchmarks standardisés pour l'évaluation
+
+2. **Dialogue System Technology Challenge (DSTC)**
+   - Évaluation de systèmes de dialogue
+   - Métriques standardisées
+
+### 8.5 Exercices Pratiques
+
+#### 8.5.1 Exercice 1 : Implémentation d'un Dialogue Simple
+
+**Objectif :** Implémenter un dialogue de persuasion basique avec TweetyProject.
+
+**Énoncé :**
+Créez deux agents qui débattent sur le sujet "Les voitures électriques sont meilleures que les voitures à essence". L'agent A défend les voitures électriques, l'agent B défend les voitures à essence.
+
+**Code de départ :**
+```java
+public class ElectricCarDebate {
+    public static void main(String[] args) {
+        // TODO: Créer les agents
+        // TODO: Configurer leurs arguments
+        // TODO: Lancer le dialogue
+        // TODO: Analyser les résultats
+    }
+}
+```
+
+**Solution attendue :**
+- Configuration de 2 agents avec des frameworks d'argumentation opposés
+- Protocole de persuasion avec maximum 10 tours
+- Affichage de la trace complète du dialogue
+- Détermination du gagnant selon les règles de persuasion
+
+#### 8.5.2 Exercice 2 : Stratégies Avancées
+
+**Objectif :** Implémenter et comparer différentes stratégies de dialogue.
+
+**Énoncé :**
+Implémentez trois stratégies différentes :
+1. Stratégie agressive (conteste tout)
+2. Stratégie coopérative (cherche des accords)
+3. Stratégie adaptative (s'adapte à l'adversaire)
+
+Faites-les s'affronter dans un tournoi et analysez les résultats.
+
+**Métriques à calculer :**
+- Taux de victoire de chaque stratégie
+- Nombre moyen de tours par dialogue
+- Cohérence des arguments présentés
+
+#### 8.5.3 Exercice 3 : Dialogue Multi-Agents
+
+**Objectif :** Créer un dialogue à trois agents sur l'allocation d'un budget municipal.
+
+**Participants :**
+- Agent Santé (priorité : hôpitaux)
+- Agent Éducation (priorité : écoles)
+- Agent Transport (priorité : infrastructure)
+
+**Contraintes :**
+- Budget total : 1 000 000 €
+- Chaque secteur doit recevoir au minimum 200 000 €
+- Protocole de négociation avec concessions monotones
+
+#### 8.5.4 Exercice 4 : Évaluation et Métriques
+
+**Objectif :** Implémenter un système d'évaluation complet pour les dialogues.
+
+**Métriques à implémenter :**
+1. Cohérence interne des agents
+2. Efficacité dialogique (convergence)
+3. Qualité argumentative
+4. Respect du protocole
+
+**Livrables :**
+- Classe `DialogueEvaluator` avec toutes les métriques
+- Rapport d'évaluation automatique
+- Visualisation graphique des résultats
+
+### 8.6 Projets Avancés
+
+#### 8.6.1 Projet 1 : Système de Recommandation Argumenté
+
+**Description :** Développer un système de recommandation qui justifie ses suggestions par des arguments.
+
+**Fonctionnalités requises :**
+- Base de données de produits avec caractéristiques
+- Modèle utilisateur avec préférences
+- Génération d'arguments pour/contre chaque recommandation
+- Interface de dialogue pour expliquer les choix
+
+**Technologies :**
+- TweetyProject pour l'argumentation
+- Base de données relationnelle
+- Interface web (optionnel)
+
+#### 8.6.2 Projet 2 : Tuteur Intelligent Argumentatif
+
+**Description :** Créer un tuteur qui enseigne par le dialogue socratique.
+
+**Domaine d'application :** Logique propositionnelle
+
+**Fonctionnalités :**
+- Détection du niveau de l'étudiant
+- Génération de questions adaptées
+- Correction argumentée des erreurs
+- Suivi des progrès
+
+#### 8.6.3 Projet 3 : Plateforme de Débat en Ligne
+
+**Description :** Développer une plateforme où des humains et des agents IA peuvent débattre.
+
+**Composants :**
+- Interface web pour les utilisateurs humains
+- Agents IA avec différentes personnalités
+- Modération automatique des débats
+- Analyse en temps réel de la qualité argumentative
+
+### 8.7 Évaluation et Critères de Réussite
+
+#### 8.7.1 Critères d'Évaluation
+
+**Compréhension Théorique (30%)**
+- Maîtrise des concepts de Walton-Krabbe
+- Compréhension des protocoles de dialogue
+- Connaissance des stratégies argumentatives
+
+**Implémentation Technique (40%)**
+- Qualité du code TweetyProject
+- Respect des bonnes pratiques
+- Fonctionnalité et robustesse
+
+**Innovation et Créativité (20%)**
+- Originalité des solutions proposées
+- Intégration de concepts avancés
+- Amélioration des méthodes existantes
+
+**Documentation et Présentation (10%)**
+- Clarté de la documentation
+- Qualité de la présentation
+- Reproductibilité des résultats
+
+#### 8.7.2 Livrables Attendus
+
+1. **Code Source Complet**
+   - Implémentation des exercices
+   - Projet avancé au choix
+   - Tests unitaires
+
+2. **Rapport Technique**
+   - Analyse théorique (10 pages)
+   - Description de l'implémentation (15 pages)
+   - Évaluation expérimentale (10 pages)
+   - Conclusion et perspectives (5 pages)
+
+3. **Présentation Orale**
+   - Durée : 20 minutes + 10 minutes de questions
+   - Démonstration du système développé
+   - Discussion des résultats obtenus
+
+#### 8.7.3 Planning Suggéré
+
+**Semaine 1-2 : Fondements Théoriques**
+- Étude de la littérature
+- Compréhension des concepts clés
+- Exercices théoriques
+
+**Semaine 3-4 : Prise en Main de TweetyProject**
+- Installation et configuration
+- Exercices pratiques simples
+- Familiarisation avec l'API
+
+**Semaine 5-8 : Développement du Projet**
+- Implémentation du projet choisi
+- Tests et débogage
+- Optimisation des performances
+
+**Semaine 9-10 : Évaluation et Documentation**
+- Expérimentations complètes
+- Rédaction du rapport
+- Préparation de la présentation
+
+### 8.8 Ressources Complémentaires
+
+#### 8.8.1 Lectures Recommandées
+
+1. **Pour Approfondir la Théorie :**
+   - Reed, C., & Norman, T. J. (Eds.). (2003). *Argumentation Machines: New Frontiers in Argument and Computation*
+   - Bench-Capon, T. J., & Dunne, P. E. (2007). *Argumentation in artificial intelligence*
+
+2. **Pour l'Implémentation :**
+   - Documentation officielle TweetyProject
+   - Tutoriels sur les systèmes multi-agents
+   - Guides de bonnes pratiques Java
+
+#### 8.8.2 Communauté et Support
+
+1. **Forums et Discussions :**
+   - TweetyProject Google Group
+   - Stack Overflow (tag: argumentation)
+   - Reddit r/artificial
+
+2. **Conférences et Workshops :**
+   - COMMA (Computational Models of Argument)
+   - AAMAS (Autonomous Agents and Multi-Agent Systems)
+   - IJCAI (International Joint Conference on AI)
+
+#### 8.8.3 Outils de Développement
+
+1. **Environnements Recommandés :**
+   - IntelliJ IDEA Community Edition
+   - Eclipse IDE for Java Developers
+   - Visual Studio Code avec extensions Java
+
+2. **Outils de Visualisation :**
+   - Graphviz pour les graphes d'argumentation
+   - D3.js pour les visualisations web interactives
+   - Matplotlib/Seaborn pour l'analyse de données
+
+3. **Outils de Test et Validation :**
+   - JUnit pour les tests unitaires
+   - Mockito pour les mocks
+   - JMH pour les benchmarks de performance
+
+---
+
+## Conclusion
+
+L'argumentation dialogique représente un domaine fascinant à l'intersection de la logique, de l'intelligence artificielle et des sciences cognitives. Ce guide vous a fourni les bases théoriques et pratiques nécessaires pour comprendre et implémenter des systèmes de dialogue argumentatif.
+
+Les concepts de Walton-Krabbe, combinés aux outils modernes comme TweetyProject, ouvrent de nombreuses possibilités d'application : des systèmes de recommandation intelligents aux tuteurs adaptatifs, en passant par les plateformes de négociation automatisée.
+
+L'avenir de ce domaine s'annonce prometteur avec l'intégration croissante de l'apprentissage automatique, le développement de nouveaux protocoles de dialogue, et l'émergence d'applications dans des domaines variés comme la santé, l'éducation et la gouvernance numérique.
+
+Nous espérons que ce guide vous donnera les clés pour contribuer à ces développements passionnants et pour explorer les frontières de l'argumentation computationnelle.
+
+---
+
+**Dernière mise à jour :** Janvier 2025  
+**Version :** 1.0  
+**Auteurs :** Guide pédagogique pour aurelien.daudin, khaled.mili, maxim.bocquillion
