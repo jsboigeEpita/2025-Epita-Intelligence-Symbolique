@@ -302,6 +302,8 @@ Cette section présente les projets centrés sur les aspects formels, logiques e
   - Interface pour l'interaction avec l'agent
   - Documentation et exemples d'utilisation
 
+> **📖 Guide pédagogique détaillé** : [1.2.7 Argumentation Dialogique](./sujets/1.2.7_Argumentation_Dialogique.md)
+
 ### 1.2.8 Abstract Dialectical Frameworks (ADF)
 - **Contexte** : Les ADF généralisent les AAF de Dung en associant à chaque argument une condition d'acceptation. Le module `arg.adf` de Tweety implémente ce formalisme avancé où chaque argument est associé à une formule propositionnelle (sa condition d'acceptation) qui détermine son statut en fonction de l'état des autres arguments. Cette approche permet de modéliser des dépendances complexes comme le support, l'attaque conjointe, ou des combinaisons arbitraires de relations.
 - **Objectifs** : Implémenter un agent utilisant le module `arg.adf` de Tweety. Les ADF généralisent les AAF de Dung en associant à chaque argument une condition d'acceptation (une formule propositionnelle sur l'état des autres arguments), permettant de modéliser des dépendances plus complexes que la simple attaque (ex: support, attaque conjointe).
@@ -433,6 +435,8 @@ Cette section présente les projets centrés sur les aspects formels, logiques e
   - Intégration avec l'état partagé du système
   - Documentation et exemples d'utilisation
   - Tests unitaires et d'intégration
+
+> **📖 Guide pédagogique détaillé** : [1.4.1 Systèmes de Maintenance de la Vérité (TMS)](./sujets/1.4.1_Systemes_Maintenance_Verite_TMS.md)
 
 ### 1.4.2 Révision de croyances
 - **Contexte** : La révision de croyances étudie comment mettre à jour un ensemble de croyances de manière cohérente face à de nouvelles informations.
