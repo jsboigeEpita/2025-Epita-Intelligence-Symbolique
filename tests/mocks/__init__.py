@@ -6,6 +6,7 @@ Package de mocks pour les tests.
 """
 
 import logging
+import importlib.util
 
 # Configuration du logging
 logging.basicConfig(
@@ -33,3 +34,46 @@ except ImportError:
     sys.modules['semantic_kernel.connectors'] = semantic_kernel.connectors
     sys.modules['semantic_kernel.connectors.ai'] = semantic_kernel.connectors.ai
     sys.modules['semantic_kernel.connectors.ai.open_ai'] = semantic_kernel.connectors.ai.open_ai
+
+# Mock pour numpy_mock
+try:
+    from . import numpy_mock
+    import sys
+    sys.modules['numpy_mock'] = numpy_mock
+except ImportError:
+    logger.warning("Impossible d'importer numpy_mock")
+
+# Mock pour pandas_mock
+try:
+    from . import pandas_mock
+    import sys
+    sys.modules['pandas_mock'] = pandas_mock
+except ImportError:
+    logger.warning("Impossible d'importer pandas_mock")
+
+# Mock pour NetworkX
+try:
+    import networkx
+    logger.info("NetworkX déjà installé")
+except ImportError:
+    try:
+        from . import networkx_mock
+        import sys
+        sys.modules['networkx'] = networkx_mock
+        logger.info("Mock NetworkX activé")
+    except ImportError:
+        logger.warning("Impossible d'importer networkx_mock")
+
+# Mock pour JPype
+try:
+    import jpype1
+    logger.info("JPype1 déjà installé")
+except ImportError:
+    try:
+        from . import jpype_mock
+        import sys
+        sys.modules['jpype1'] = jpype_mock
+        sys.modules['jpype'] = jpype_mock
+        logger.info("Mock JPype activé")
+    except ImportError:
+        logger.warning("Impossible d'importer jpype_mock")
