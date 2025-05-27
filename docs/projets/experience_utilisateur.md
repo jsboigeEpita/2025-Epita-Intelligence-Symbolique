@@ -25,6 +25,8 @@ Cette section présente les projets orientés vers les interfaces, visualisation
   - Documentation utilisateur
   - Tests d'utilisabilité
 
+> **📖 Guide pédagogique détaillé** : [3.1.1 Interface Web pour l'Analyse Argumentative](./sujets/3.1.1_Interface_Web_Analyse_Argumentative.md)
+
 ### 3.1.2 Dashboard de monitoring
 - **Contexte** : Un tableau de bord permet de suivre l'activité du système et d'identifier les problèmes.
 - **Objectifs** : Créer un tableau de bord permettant de suivre en temps réel l'activité des différents agents et l'état du système. Visualiser les métriques clés, les goulots d'étranglement, et l'utilisation des ressources. Implémenter des alertes et des notifications pour les événements critiques.

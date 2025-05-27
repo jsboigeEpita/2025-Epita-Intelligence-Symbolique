@@ -127,6 +127,8 @@ Cette section présente les projets axés sur l'architecture, l'orchestration et
   - Protocoles de prise de décision collective
   - Documentation et exemples d'utilisation
 
+> **📖 Guide pédagogique détaillé** : [2.1.6 Gouvernance Multi-Agents](./sujets/2.1.6_Gouvernance_Multi_Agents.md)
+
 ## 2.2 Gestion des sources et données
 
 ### 2.2.1 Amélioration du moteur d'extraction
@@ -263,6 +265,8 @@ Cette section présente les projets axés sur l'architecture, l'orchestration et
   - Intégration avec des systèmes de lutte contre la désinformation
   - Documentation et exemples d'utilisation
 
+> **📖 Guide pédagogique détaillé** : [2.3.2 Agent de Détection de Sophismes et Biais Cognitifs](./sujets/2.3.2_Agent_Detection_Sophismes_Biais_Cognitifs.md)
+
 ### 2.3.3 Agent de génération de contre-arguments
 - **Contexte** : La génération de contre-arguments permet d'évaluer la robustesse des arguments.
 - **Objectifs** : Créer un agent capable de générer des contre-arguments pertinents et solides en réponse à des arguments donnés. Implémenter différentes stratégies de contre-argumentation basées sur les frameworks formels.
@@ -283,6 +287,8 @@ Cette section présente les projets axés sur l'architecture, l'orchestration et
   - Implémentation de différentes stratégies de réfutation
   - Évaluation de la qualité des contre-arguments
   - Documentation et exemples d'utilisation
+
+> **📖 Guide pédagogique détaillé** : [2.3.3 Agent de Génération de Contre-Arguments](./sujets/2.3.3_Agent_Generation_Contre_Arguments.md)
 
 ### 2.3.4 Agent de formalisation logique
 - **Contexte** : La formalisation logique des arguments permet d'appliquer des méthodes formelles pour évaluer leur validité.
@@ -348,6 +354,33 @@ Cette section présente les projets axés sur l'architecture, l'orchestration et
   - Comparaison de performances avec les modèles via API
   - Optimisations pour l'inférence
   - Documentation et guide d'utilisation
+
+> **📖 Guide pédagogique détaillé** : [2.3.6 Intégration de LLMs Locaux Légers](./sujets/2.3.6_Integration_LLMs_locaux_legers.md)
+
+### 2.3.7 Speech to Text et Analyse d'arguments fallacieux
+- **Contexte** : L'analyse d'arguments fallacieux dans le contenu audio nécessite une approche intégrée combinant reconnaissance vocale et analyse argumentative.
+- **Objectifs** : Développer un système complet capable de traiter des contenus audio (discours, débats, podcasts) pour en extraire le texte et analyser automatiquement les arguments fallacieux présents. Intégrer des capacités de reconnaissance vocale avec les agents d'analyse argumentative existants.
+- **Technologies clés** :
+  * Speech-to-Text (Whisper, Azure Speech, Google Speech-to-Text)
+  * Traitement audio en temps réel
+  * Analyse argumentative automatisée
+  * Détection de sophismes dans le contenu oral
+- **Niveau de difficulté** : ⭐⭐⭐
+- **Estimation d'effort** : 4 semaines-personnes
+- **Portée ajustée** : Se concentrer sur l'intégration d'un moteur STT avec l'analyse de sophismes
+- **Interdépendances** : Utilise 2.3.2 (détection de sophismes), lié à 2.3.1 (abstraction du moteur agentique)
+- **Références** :
+  - Documentation OpenAI Whisper
+  - "Speech Recognition and Argumentation Mining" (2023)
+  - "Real-time Audio Processing for Argument Analysis" (2022)
+- **Livrables attendus** :
+  - Système intégré Speech-to-Text et analyse argumentative
+  - Pipeline de traitement audio en temps réel
+  - Interface pour l'analyse de contenus audio
+  - Documentation et exemples d'utilisation
+
+> **📖 Guide pédagogique détaillé** : [Custom Speech to Text et Analyse d'Arguments Fallacieux](./sujets/Custom_Speech_to_Text_Analyse_Arguments_Fallacieux.md)
+
 ## 2.4 Indexation sémantique
 
 ### 2.4.1 Index sémantique d'arguments
@@ -370,6 +403,8 @@ Cette section présente les projets axés sur l'architecture, l'orchestration et
   - Interface de recherche par similarité
   - Documentation et exemples d'utilisation
   - Tests de performance et d'efficacité
+
+> **📖 Guide pédagogique détaillé** : [2.4.1 Index Sémantique d'Arguments](./sujets/2.4.1_Index_Semantique_Arguments.md)
 
 ### 2.4.2 Vecteurs de types d'arguments
 - **Contexte** : La représentation vectorielle des types d'arguments facilite leur classification et découverte.
@@ -510,6 +545,8 @@ Cette section présente les projets axés sur l'architecture, l'orchestration et
   - Documentation de l'API
   - Exemples d'intégration avec différentes applications
 
+> **📖 Guide pédagogique détaillé** : [2.5.3 Développement d'un Serveur MCP pour l'Analyse Argumentative](./sujets/2.5.3_Developpement_Serveur_MCP_Analyse_Argumentative.md)
+
 ### 2.5.6 Protection des systèmes d'IA contre les attaques adversariales
 - **Contexte** : Les systèmes d'IA d'analyse argumentative sont vulnérables à diverses formes d'attaques adversariales visant à manipuler leurs résultats ou à compromettre leur fonctionnement.
 - **Objectifs** : Développer des mécanismes de protection pour renforcer la robustesse des systèmes d'IA contre les attaques adversariales. Implémenter des techniques de détection d'entrées malveillantes, de renforcement de modèles, et de validation des résultats. Créer un framework de sécurité complet pour les systèmes d'analyse argumentative.
@@ -535,6 +572,8 @@ Cette section présente les projets axés sur l'architecture, l'orchestration et
   - Outils de test et d'évaluation de sécurité
   - Documentation et guide des meilleures pratiques
   - Tests de performance et de conformité
+
+> **📖 Guide pédagogique détaillé** : [2.5.6 Protection des Systèmes d'IA contre les Attaques Adversariales](./sujets/2.5.6_Protection_Systemes_IA_Attaques_Adversariales.md)
 
 ### 2.5.4 Outils et ressources MCP pour l'argumentation
 - **Contexte** : Des outils et ressources MCP spécifiques enrichissent les capacités d'analyse argumentative.
