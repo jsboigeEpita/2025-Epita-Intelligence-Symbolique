@@ -1,0 +1,118 @@
+{
+  "python_info": {
+    "version": "3.13.2 (tags/v3.13.2:4f8bb39, Feb  4 2025, 15:23:48) [MSC v.1942 64 bit (AMD64)]",
+    "executable": "C:\\Python313\\python.exe",
+    "platform": "Windows-11-10.0.26100-SP0",
+    "architecture": [
+      "64bit",
+      "WindowsPE"
+    ],
+    "in_venv": false,
+    "pythonpath": [
+      "c:\\dev\\2025-Epita-Intelligence-Symbolique\\scripts\\setup",
+      "C:\\Python313\\python313.zip",
+      "C:\\Python313\\DLLs",
+      "C:\\Python313\\Lib",
+      "C:\\Python313"
+    ]
+  },
+  "package_installation": {
+    "installed": true,
+    "editable": false,
+    "location": "c:\\dev\\2025-Epita-Intelligence-Symbolique\\argumentation_analysis",
+    "error": null
+  },
+  "dependencies": {
+    "essential": {
+      "numpy": {
+        "installed": true,
+        "version": "2.2.1"
+      },
+      "pandas": {
+        "installed": true,
+        "version": "2.2.3"
+      },
+      "matplotlib": {
+        "installed": true,
+        "version": "3.10.0"
+      },
+      "cryptography": {
+        "installed": true,
+        "version": "42.0.8"
+      },
+      "cffi": {
+        "installed": true,
+        "version": "1.17.1"
+      },
+      "psutil": {
+        "installed": true,
+        "version": "7.0.0"
+      }
+    },
+    "optional": {
+      "pytest": {
+        "installed": false,
+        "version": null
+      },
+      "pytest-cov": {
+        "installed": false,
+        "version": null
+      },
+      "scikit-learn": {
+        "installed": false,
+        "version": null
+      },
+      "networkx": {
+        "installed": false,
+        "version": null
+      },
+      "torch": {
+        "installed": false,
+        "version": null
+      },
+      "transformers": {
+        "installed": false,
+        "version": null
+      },
+      "notebook": {
+        "installed": false,
+        "version": null
+      }
+    },
+    "missing_essential": [],
+    "missing_optional": [
+      "pytest",
+      "pytest-cov",
+      "scikit-learn",
+      "networkx",
+      "torch",
+      "transformers",
+      "notebook"
+    ]
+  },
+  "java_config": {
+    "java_home": null,
+    "java_executable": null,
+    "java_version": "java version \"21.0.7\" 2025-04-15 LTS",
+    "jpype_available": false,
+    "jpype_version": null,
+    "jpype_mock_available": true,
+    "recommendations": [
+      "Définir la variable d'environnement JAVA_HOME",
+      "Utiliser le mock JPype pour les tests"
+    ]
+  },
+  "api_keys": {
+    "env_file_exists": true,
+    "openai_key": true,
+    "azure_key": false,
+    "recommendations": []
+  },
+  "recommendations": [
+    "⚠️  Recommandation: Utilisez un environnement virtuel pour éviter les conflits de dépendances",
+    "⚠️  RECOMMANDÉ: Utiliser un environnement virtuel:",
+    "   python -m venv venv",
+    "   venv\\Scripts\\activate  # Windows",
+    "   source venv/bin/activate  # Linux/Mac"
+  ]
+}
