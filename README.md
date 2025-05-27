@@ -69,6 +69,9 @@ Le projet est organisé en plusieurs modules principaux :
 - **[`results/`](./results/README.md)** : Résultats des analyses et des tests.
   - **[`performance_tests/`](./results/performance_tests/)** : Résultats des tests de performance.
 
+- **[`services/`](./services/README.md)** : Services web et API pour l'intégration externe.
+  - **[`web_api/`](./services/web_api/)** : API REST Flask pour l'analyse argumentative, permettant l'intégration avec des interfaces web modernes.
+
 - **[`tutorials/`](./tutorials/README.md)** : Tutoriels pour prendre en main le système.
 
 Chaque module dispose de son propre README détaillé expliquant son fonctionnement et son utilisation.
@@ -263,6 +266,43 @@ Le projet montre comment ces deux approches peuvent être intégrées efficaceme
 - Les résultats sont réintégrés dans un format compréhensible
 
 Cette approche hybride représente une direction prometteuse pour développer des systèmes d'IA plus robustes et explicables.
+
+## API Web et Interfaces Modernes
+
+Le projet inclut une **API REST complète** dans [`services/web_api/`](./services/web_api/) qui expose toutes les fonctionnalités d'analyse argumentative via des endpoints HTTP. Cette API permet aux étudiants de créer facilement des interfaces web modernes (React, Vue, Angular) sans avoir à gérer directement la complexité du moteur d'analyse.
+
+### Fonctionnalités de l'API
+
+- **Analyse complète de textes** : Endpoint `/api/analyze` pour l'analyse argumentative complète
+- **Validation d'arguments** : Endpoint `/api/validate` pour la validation logique
+- **Détection de sophismes** : Endpoint `/api/fallacies` pour identifier les erreurs de raisonnement
+- **Construction de frameworks** : Endpoint `/api/framework` pour créer des frameworks de Dung
+- **Documentation interactive** : Endpoint `/api/endpoints` listant tous les services disponibles
+
+### Démarrage rapide de l'API
+
+```bash
+# Naviguer vers l'API
+cd services/web_api
+
+# Installer les dépendances
+pip install -r requirements.txt
+
+# Démarrer l'API
+python app.py
+```
+
+L'API sera accessible sur `http://localhost:5000` avec une documentation complète des endpoints.
+
+### Guides pédagogiques spécialisés
+
+Pour faciliter le développement d'interfaces web, consultez les **guides pédagogiques détaillés** dans [`docs/projets/sujets/`](./docs/projets/sujets/) :
+
+- **[Interface Web d'Analyse Argumentative](./docs/projets/sujets/3.1.1_Interface_Web_Analyse_Argumentative.md)** : Guide complet pour créer des interfaces web modernes
+- **[Aide spécialisée Interface Web](./docs/projets/sujets/aide/interface-web/)** : Ressources pratiques, exemples de code React, et guides de démarrage rapide
+- **[Démarrage Rapide Interface Web](./docs/projets/sujets/aide/interface-web/DEMARRAGE_RAPIDE.md)** : Checklist étape par étape pour être opérationnel en 50 minutes
+
+Ces ressources incluent des exemples pratiques, des composants React prêts à l'emploi, et des solutions aux problèmes courants.
 
 ## Sujets de Projets
 
