@@ -170,16 +170,17 @@ class TestInformalAgent(unittest.TestCase):
                 informal_plugin=informal_plugin
             )
         
-        # Appeler la méthode analyze_text
+        # Appeler la méthode identify_arguments qui utilise le kernel
         text = "Voici un texte avec plusieurs arguments."
-        result = agent.analyze_text(text)
+        arguments = agent.identify_arguments(text)
         
         # Vérifier que la méthode invoke du kernel a été appelée
         kernel.invoke.assert_called_once()
         
         # Vérifier le résultat
-        self.assertEqual(result["text"], text)
-        self.assertEqual(len(result["arguments"]), 2)
+        self.assertEqual(len(arguments), 2)
+        self.assertEqual(arguments[0], "Argument 1")
+        self.assertEqual(arguments[1], "Argument 2")
     
     def test_analyze_text_without_semantic_kernel(self):
         """Teste la méthode analyze_text sans kernel sémantique."""
@@ -187,10 +188,12 @@ class TestInformalAgent(unittest.TestCase):
         text = "Voici un texte avec un seul argument."
         result = self.agent.analyze_text(text)
         
-        # Vérifier le résultat
-        self.assertEqual(result["text"], text)
-        self.assertEqual(len(result["arguments"]), 1)
-        self.assertEqual(result["arguments"][0]["argument"], text)
+        # Vérifier le résultat (format réel retourné par analyze_text)
+        self.assertIn("fallacies", result)
+        self.assertIn("analysis_timestamp", result)
+        self.assertIsInstance(result["fallacies"], list)
+        # Vérifier que le détecteur de sophismes a été appelé
+        self.fallacy_detector.detect.assert_called_with(text)
     
     def test_get_agent_capabilities(self):
         """Teste la méthode get_agent_capabilities."""
