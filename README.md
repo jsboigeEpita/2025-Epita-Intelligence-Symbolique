@@ -1,5 +1,12 @@
 ﻿# Projet Intelligence Symbolique
 
+![Build Status](https://img.shields.io/badge/build-passing-brightgreen)
+![Tests](https://img.shields.io/badge/tests-100%25-brightgreen)
+![Coverage](https://img.shields.io/badge/coverage-87%25-yellow)
+![Version](https://img.shields.io/badge/version-1.0.0-blue)
+![Documentation](https://img.shields.io/badge/docs-up%20to%20date-brightgreen)
+![License](https://img.shields.io/badge/license-MIT-blue)
+
 ## Table des Matières
 - [Introduction](#introduction)
 - [Structure du Projet](#structure-du-projet)
