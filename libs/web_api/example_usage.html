@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Exemple d'utilisation - API d'Analyse Argumentative</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        h1, h2 {
+            color: #333;
+        }
+        .endpoint {
+            border-left: 4px solid #007bff;
+            padding-left: 15px;
+            margin: 20px 0;
+        }
+        textarea {
+            width: 100%;
+            height: 100px;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-family: monospace;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        .result {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            padding: 15px;
+            margin-top: 10px;
+            white-space: pre-wrap;
+            font-family: monospace;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .error {
+            background: #f8d7da;
+            border-color: #f5c6cb;
+            color: #721c24;
+        }
+        .success {
+            background: #d4edda;
+            border-color: #c3e6cb;
+            color: #155724;
+        }
+        .loading {
+            color: #007bff;
+            font-style: italic;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧠 API d'Analyse Argumentative - Démonstration</h1>
+        <p>Cette page démontre l'utilisation de l'API d'analyse argumentative pour les étudiants du projet 3.1.1 Interface Web.</p>
+        <p><strong>API Base URL:</strong> <code>http://localhost:5000</code></p>
+    </div>
+
+    <div class="container">
+        <div class="endpoint">
+            <h2>📊 Analyse Complète</h2>
+            <p>Analyse un texte pour détecter les sophismes et évaluer la structure argumentative.</p>
+            
+            <textarea id="analyzeText" placeholder="Entrez votre texte à analyser...">Tous les politiciens sont corrompus. Jean est politicien. Donc Jean est corrompu.</textarea>
+            <br>
+            <button onclick="analyzeText()">Analyser le texte</button>
+            <div id="analyzeResult" class="result" style="display: none;"></div>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="endpoint">
+            <h2>✅ Validation d'Argument</h2>
+            <p>Valide la logique d'un argument en analysant prémisses et conclusion.</p>
+            
+            <h4>Prémisses (une par ligne):</h4>
+            <textarea id="premises" placeholder="Entrez les prémisses, une par ligne...">Tous les hommes sont mortels
+Socrate est un homme</textarea>
+            
+            <h4>Conclusion:</h4>
+            <textarea id="conclusion" placeholder="Entrez la conclusion...">Socrate est mortel</textarea>
+            
+            <button onclick="validateArgument()">Valider l'argument</button>
+            <div id="validateResult" class="result" style="display: none;"></div>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="endpoint">
+            <h2>🚫 Détection de Sophismes</h2>
+            <p>Détecte spécifiquement les sophismes dans un texte.</p>
+            
+            <textarea id="fallacyText" placeholder="Entrez votre texte...">Vous ne pouvez pas critiquer ce projet car vous n'êtes pas expert en la matière.</textarea>
+            <br>
+            <button onclick="detectFallacies()">Détecter les sophismes</button>
+            <div id="fallacyResult" class="result" style="display: none;"></div>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="endpoint">
+            <h2>🕸️ Framework de Dung</h2>
+            <p>Construit un framework d'argumentation et calcule ses extensions.</p>
+            
+            <textarea id="frameworkArgs" placeholder="Arguments au format JSON...">
+[
+  {
+    "id": "arg1",
+    "content": "Il faut réduire les impôts pour stimuler l'économie",
+    "attacks": ["arg2"]
+  },
+  {
+    "id": "arg2",
+    "content": "Réduire les impôts diminue les services publics",
+    "attacks": ["arg1"]
+  },
+  {
+    "id": "arg3",
+    "content": "Les services publics sont essentiels au bien-être social",
+    "supports": ["arg2"]
+  }
+]</textarea>
+            <br>
+            <button onclick="buildFramework()">Construire le framework</button>
+            <div id="frameworkResult" class="result" style="display: none;"></div>
+        </div>
+    </div>
+
+    <div class="container">
+        <h2>📝 Code JavaScript pour votre projet React</h2>
+        <p>Voici comment utiliser cette API dans votre projet React :</p>
+        <div class="result">
+// Service API pour React
+class ArgumentationAPI {
+  constructor(baseURL = 'http://localhost:5000') {
+    this.baseURL = baseURL;
+  }
+
+  async analyzeText(text, options = {}) {
+    const response = await fetch(`${this.baseURL}/api/analyze`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text, options })
+    });
+    return response.json();
+  }
+
+  async validateArgument(premises, conclusion, argumentType = 'deductive') {
+    const response = await fetch(`${this.baseURL}/api/validate`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        premises,
+        conclusion,
+        argument_type: argumentType
+      })
+    });
+    return response.json();
+  }
+
+  async detectFallacies(text, options = {}) {
+    const response = await fetch(`${this.baseURL}/api/fallacies`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text, options })
+    });
+    return response.json();
+  }
+
+  async buildFramework(arguments, options = {}) {
+    const response = await fetch(`${this.baseURL}/api/framework`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ arguments, options })
+    });
+    return response.json();
+  }
+}
+
+// Utilisation dans un composant React
+const api = new ArgumentationAPI();
+
+function MyComponent() {
+  const [result, setResult] = useState(null);
+  
+  const handleAnalyze = async (text) => {
+    const analysis = await api.analyzeText(text);
+    setResult(analysis);
+  };
+  
+  return (
+    &lt;div&gt;
+      &lt;button onClick={() => handleAnalyze("Mon texte")}&gt;
+        Analyser
+      &lt;/button&gt;
+      {result && &lt;pre&gt;{JSON.stringify(result, null, 2)}&lt;/pre&gt;}
+    &lt;/div&gt;
+  );
+}
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:5000';
+
+        function showResult(elementId, data, isError = false) {
+            const element = document.getElementById(elementId);
+            element.style.display = 'block';
+            element.className = `result ${isError ? 'error' : 'success'}`;
+            element.textContent = JSON.stringify(data, null, 2);
+        }
+
+        function showLoading(elementId) {
+            const element = document.getElementById(elementId);
+            element.style.display = 'block';
+            element.className = 'result loading';
+            element.textContent = 'Chargement...';
+        }
+
+        async function analyzeText() {
+            const text = document.getElementById('analyzeText').value;
+            if (!text.trim()) {
+                alert('Veuillez entrer un texte à analyser');
+                return;
+            }
+
+            showLoading('analyzeResult');
+            
+            try {
+                const response = await fetch(`${API_BASE}/api/analyze`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        text: text,
+                        options: {
+                            detect_fallacies: true,
+                            analyze_structure: true,
+                            evaluate_coherence: true
+                        }
+                    })
+                });
+                
+                const data = await response.json();
+                showResult('analyzeResult', data);
+            } catch (error) {
+                showResult('analyzeResult', { error: error.message }, true);
+            }
+        }
+
+        async function validateArgument() {
+            const premisesText = document.getElementById('premises').value;
+            const conclusion = document.getElementById('conclusion').value;
+            
+            if (!premisesText.trim() || !conclusion.trim()) {
+                alert('Veuillez entrer les prémisses et la conclusion');
+                return;
+            }
+
+            const premises = premisesText.split('\n').filter(p => p.trim());
+            showLoading('validateResult');
+            
+            try {
+                const response = await fetch(`${API_BASE}/api/validate`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        premises: premises,
+                        conclusion: conclusion,
+                        argument_type: 'deductive'
+                    })
+                });
+                
+                const data = await response.json();
+                showResult('validateResult', data);
+            } catch (error) {
+                showResult('validateResult', { error: error.message }, true);
+            }
+        }
+
+        async function detectFallacies() {
+            const text = document.getElementById('fallacyText').value;
+            if (!text.trim()) {
+                alert('Veuillez entrer un texte à analyser');
+                return;
+            }
+
+            showLoading('fallacyResult');
+            
+            try {
+                const response = await fetch(`${API_BASE}/api/fallacies`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        text: text,
+                        options: {
+                            severity_threshold: 0.3,
+                            include_context: true
+                        }
+                    })
+                });
+                
+                const data = await response.json();
+                showResult('fallacyResult', data);
+            } catch (error) {
+                showResult('fallacyResult', { error: error.message }, true);
+            }
+        }
+
+        async function buildFramework() {
+            const argsText = document.getElementById('frameworkArgs').value;
+            if (!argsText.trim()) {
+                alert('Veuillez entrer les arguments au format JSON');
+                return;
+            }
+
+            showLoading('frameworkResult');
+            
+            try {
+                const arguments = JSON.parse(argsText);
+                const response = await fetch(`${API_BASE}/api/framework`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        arguments: arguments,
+                        options: {
+                            compute_extensions: true,
+                            semantics: 'preferred',
+                            include_visualization: true
+                        }
+                    })
+                });
+                
+                const data = await response.json();
+                showResult('frameworkResult', data);
+            } catch (error) {
+                showResult('frameworkResult', { error: error.message }, true);
+            }
+        }
+    </script>
+</body>
+</html>
