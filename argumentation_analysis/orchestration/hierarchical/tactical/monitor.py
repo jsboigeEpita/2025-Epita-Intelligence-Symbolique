@@ -321,29 +321,39 @@ class ProgressMonitor:
         
         critical_issues = []
         
-        # Vérifier les tâches bloquées
-        for task in self.state.tasks["pending"]:
-            dependencies = self.state.get_task_dependencies(task["id"])
-            blocked_by_failed = False
-            
-            for dep_id in dependencies:
-                for failed_task in self.state.tasks["failed"]:
-                    if failed_task["id"] == dep_id:
-                        blocked_by_failed = True
-                        break
+        # Vérifier les tâches bloquées (pending et in_progress)
+        # Chercher les tâches qui dépendent de tâches échouées
+        failed_task_ids = [task["id"] for task in self.state.tasks["failed"]]
+        
+        if failed_task_ids:
+            tasks_to_check = self.state.tasks["pending"] + self.state.tasks["in_progress"]
+            for task in tasks_to_check:
+                task_id = task["id"]
+                
+                # Chercher dans toutes les dépendances si cette tâche dépend d'une tâche échouée
+                blocked_by_failed = []
+                for failed_id in failed_task_ids:
+                    # Vérifier si cette tâche dépend de la tâche échouée
+                    if failed_id in self.state.get_task_dependencies(task_id):
+                        blocked_by_failed.append(failed_id)
+                
+                # Aussi vérifier l'inverse : si une tâche échouée dépend de cette tâche
+                # (dans ce cas, cette tâche pourrait être bloquée indirectement)
+                for other_task_id, deps in self.state.task_dependencies.items():
+                    if task_id in deps and other_task_id in failed_task_ids:
+                        # Cette tâche est une dépendance d'une tâche échouée
+                        # Donc les tâches qui dépendent de cette tâche sont potentiellement bloquées
+                        pass
+                
                 if blocked_by_failed:
-                    break
-            
-            if blocked_by_failed:
-                critical_issues.append({
-                    "type": "blocked_task",
-                    "description": f"Tâche bloquée par une dépendance échouée: {task.get('description', '')}",
-                    "severity": "critical",
-                    "task_id": task["id"],
-                    "objective_id": task.get("objective_id"),
-                    "blocked_by": [dep_id for dep_id in dependencies if any(
-                        failed_task["id"] == dep_id for failed_task in self.state.tasks["failed"])]
-                })
+                    critical_issues.append({
+                        "type": "blocked_task",
+                        "description": f"Tâche bloquée par une dépendance échouée: {task.get('description', '')}",
+                        "severity": "critical",
+                        "task_id": task_id,
+                        "objective_id": task.get("objective_id"),
+                        "blocked_by": blocked_by_failed
+                    })
         
         # Vérifier les tâches en retard
         for task in self.state.tasks["in_progress"]:
@@ -458,3 +468,95 @@ class ProgressMonitor:
                         f"Suggestion de {len(corrective_actions)} actions correctives")
         
         return corrective_actions
+    
+    def _evaluate_overall_coherence(self, structure_coherence: Dict[str, Any],
+                                   thematic_coherence: Dict[str, Any],
+                                   logical_coherence: Dict[str, Any],
+                                   contradictions: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """
+        Évalue la cohérence globale en combinant les différents types de cohérence.
+        
+        Args:
+            structure_coherence: Données de cohérence structurelle
+            thematic_coherence: Données de cohérence thématique
+            logical_coherence: Données de cohérence logique
+            contradictions: Liste des contradictions détectées
+            
+        Returns:
+            Un dictionnaire contenant l'évaluation de la cohérence globale
+        """
+        self.logger.info("Évaluation de la cohérence globale")
+        
+        # Extraire les scores de cohérence
+        structure_score = structure_coherence.get("coherence_score", 0.0)
+        thematic_score = thematic_coherence.get("coherence_score", 0.0)
+        logical_score = logical_coherence.get("coherence_score", 0.0)
+        
+        # Calculer la pénalité pour les contradictions
+        contradiction_penalty = 0.0
+        if contradictions:
+            # Pénalité basée sur le nombre et la sévérité des contradictions
+            severity_weights = {"low": 0.1, "medium": 0.2, "high": 0.3, "critical": 0.5}
+            total_penalty = 0.0
+            
+            for contradiction in contradictions:
+                severity = contradiction.get("severity", "medium")
+                weight = severity_weights.get(severity, 0.2)
+                total_penalty += weight
+            
+            # Normaliser la pénalité (maximum 0.5 pour ne pas annuler complètement le score)
+            contradiction_penalty = min(total_penalty, 0.5)
+        
+        # Pondération des différents types de cohérence
+        weights = {
+            "structure": 0.3,
+            "thematic": 0.3,
+            "logical": 0.4
+        }
+        
+        # Calculer le score global pondéré
+        weighted_score = (
+            structure_score * weights["structure"] +
+            thematic_score * weights["thematic"] +
+            logical_score * weights["logical"]
+        )
+        
+        # Appliquer la pénalité des contradictions
+        overall_score = max(0.0, weighted_score - contradiction_penalty)
+        
+        # Déterminer le niveau de cohérence
+        if overall_score >= 0.8:
+            coherence_level = "Élevé"
+        elif overall_score >= 0.6:
+            coherence_level = "Modéré"
+        elif overall_score >= 0.4:
+            coherence_level = "Faible"
+        else:
+            coherence_level = "Très faible"
+        
+        # Calculer les contributions individuelles
+        structure_contribution = structure_score * weights["structure"]
+        thematic_contribution = thematic_score * weights["thematic"]
+        logical_contribution = logical_score * weights["logical"]
+        
+        result = {
+            "overall_score": overall_score,
+            "coherence_level": coherence_level,
+            "structure_contribution": structure_contribution,
+            "thematic_contribution": thematic_contribution,
+            "logical_contribution": logical_contribution,
+            "contradiction_penalty": contradiction_penalty,
+            "weights_used": weights,
+            "component_scores": {
+                "structure": structure_score,
+                "thematic": thematic_score,
+                "logical": logical_score
+            },
+            "contradictions_count": len(contradictions)
+        }
+        
+        # Journaliser l'action
+        self._log_action("Évaluation de cohérence",
+                        f"Cohérence globale évaluée: {overall_score:.2f} ({coherence_level})")
+        
+        return result

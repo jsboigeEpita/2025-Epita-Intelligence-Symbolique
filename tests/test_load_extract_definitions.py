@@ -126,7 +126,7 @@ class TestLoadExtractDefinitions(unittest.TestCase):
 
     def test_save_definitions_unencrypted(self):
         new_definitions_file = self.test_dir / "new_extract_definitions.json"
-        definitions_obj = ExtractDefinitions.parse_obj(self.sample_data)
+        definitions_obj = ExtractDefinitions.model_validate(self.sample_data)
         
         save_extract_definitions(definitions_obj, definitions_path=str(new_definitions_file))
         self.assertTrue(new_definitions_file.exists())
@@ -141,7 +141,7 @@ class TestLoadExtractDefinitions(unittest.TestCase):
     def test_save_definitions_encrypted(self):
         new_encrypted_file = self.test_dir / "new_extract_definitions.json.enc"
         new_key_file = self.test_dir / "new_key.key"
-        definitions_obj = ExtractDefinitions.parse_obj(self.sample_data)
+        definitions_obj = ExtractDefinitions.model_validate(self.sample_data)
         
         # Générer une nouvelle clé pour la sauvegarde
         new_key = self.crypto_service.generate_key()

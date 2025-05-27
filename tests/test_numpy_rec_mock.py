@@ -10,6 +10,11 @@ import unittest
 import sys
 import os
 
+# Forcer l'utilisation du mock numpy
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'mocks'))
+import numpy_mock
+sys.modules['numpy'] = numpy_mock
+
 class TestNumpyRecMock(unittest.TestCase):
     """Tests pour vérifier que numpy.rec est correctement mocké."""
     
@@ -30,8 +35,8 @@ class TestNumpyRecMock(unittest.TestCase):
         """Test que numpy.rec.recarray peut être instancié."""
         import numpy
         
-        # Test avec shape simple
-        arr1 = numpy.rec.recarray((2, 2))
+        # Test avec shape et formats requis
+        arr1 = numpy.rec.recarray((2, 2), formats=['i4', 'f8'], names=['id', 'value'])
         self.assertIsNotNone(arr1)
         self.assertEqual(arr1.shape, (2, 2))
         

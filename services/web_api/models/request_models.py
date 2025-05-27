@@ -138,3 +138,86 @@ class FrameworkRequest(BaseModel):
                     raise ValueError(f"Argument supporté '{support_id}' non trouvé")
         
         return v
+
+
+# Modèles pour les opérations logiques
+
+class LogicOptions(BaseModel):
+    """Options pour les opérations logiques."""
+    include_explanation: bool = Field(default=True, description="Inclure une explication détaillée")
+    max_queries: int = Field(default=5, ge=1, le=20, description="Nombre maximum de requêtes à générer")
+    timeout: float = Field(default=10.0, ge=0.1, le=60.0, description="Timeout en secondes")
+
+
+class LogicBeliefSetRequest(BaseModel):
+    """Requête pour la conversion d'un texte en ensemble de croyances logiques."""
+    text: str = Field(..., min_length=1, description="Texte à convertir")
+    logic_type: str = Field(..., description="Type de logique (propositional, first_order, modal)")
+    options: Optional[LogicOptions] = Field(default_factory=LogicOptions, description="Options de conversion")
+    
+    @validator('text')
+    def validate_text(cls, v):
+        if not v or not v.strip():
+            raise ValueError("Le texte ne peut pas être vide")
+        return v.strip()
+    
+    @validator('logic_type')
+    def validate_logic_type(cls, v):
+        valid_types = ['propositional', 'first_order', 'modal']
+        if v not in valid_types:
+            raise ValueError(f"Type de logique invalide. Utilisez: {', '.join(valid_types)}")
+        return v
+
+
+class LogicQueryRequest(BaseModel):
+    """Requête pour l'exécution d'une requête logique sur un ensemble de croyances."""
+    belief_set_id: str = Field(..., min_length=1, description="ID de l'ensemble de croyances")
+    query: str = Field(..., min_length=1, description="Requête logique à exécuter")
+    logic_type: str = Field(..., description="Type de logique (propositional, first_order, modal)")
+    options: Optional[LogicOptions] = Field(default_factory=LogicOptions, description="Options d'exécution")
+    
+    @validator('belief_set_id')
+    def validate_belief_set_id(cls, v):
+        if not v or not v.strip():
+            raise ValueError("L'ID de l'ensemble de croyances ne peut pas être vide")
+        return v.strip()
+    
+    @validator('query')
+    def validate_query(cls, v):
+        if not v or not v.strip():
+            raise ValueError("La requête ne peut pas être vide")
+        return v.strip()
+    
+    @validator('logic_type')
+    def validate_logic_type(cls, v):
+        valid_types = ['propositional', 'first_order', 'modal']
+        if v not in valid_types:
+            raise ValueError(f"Type de logique invalide. Utilisez: {', '.join(valid_types)}")
+        return v
+
+
+class LogicGenerateQueriesRequest(BaseModel):
+    """Requête pour la génération de requêtes logiques pertinentes."""
+    belief_set_id: str = Field(..., min_length=1, description="ID de l'ensemble de croyances")
+    text: str = Field(..., min_length=1, description="Texte source pour la génération de requêtes")
+    logic_type: str = Field(..., description="Type de logique (propositional, first_order, modal)")
+    options: Optional[LogicOptions] = Field(default_factory=LogicOptions, description="Options de génération")
+    
+    @validator('belief_set_id')
+    def validate_belief_set_id(cls, v):
+        if not v or not v.strip():
+            raise ValueError("L'ID de l'ensemble de croyances ne peut pas être vide")
+        return v.strip()
+    
+    @validator('text')
+    def validate_text(cls, v):
+        if not v or not v.strip():
+            raise ValueError("Le texte ne peut pas être vide")
+        return v.strip()
+    
+    @validator('logic_type')
+    def validate_logic_type(cls, v):
+        valid_types = ['propositional', 'first_order', 'modal']
+        if v not in valid_types:
+            raise ValueError(f"Type de logique invalide. Utilisez: {', '.join(valid_types)}")
+        return v
