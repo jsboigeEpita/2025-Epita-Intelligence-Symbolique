@@ -135,3 +135,15 @@ class ExtractDefinitions:
         if 0 <= index < len(self.sources):
             return self.sources[index]
         return None
+    
+    @classmethod
+    def model_validate(cls, data):
+        """Méthode de compatibilité pour Pydantic v1/v2"""
+        if hasattr(cls, 'parse_obj'):
+            return cls.parse_obj(data)
+        elif isinstance(data, dict):
+            return cls.from_dict_list(data.get('sources', []))
+        elif isinstance(data, list):
+            return cls.from_dict_list(data)
+        else:
+            return cls(**data if isinstance(data, dict) else {})

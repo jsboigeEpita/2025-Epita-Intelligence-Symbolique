@@ -128,7 +128,7 @@ class TestLoadExtractDefinitions(unittest.TestCase):
         new_definitions_file = self.test_dir / "new_extract_definitions.json"
         definitions_obj = ExtractDefinitions.model_validate(self.sample_data)
         
-        save_extract_definitions(definitions_obj, definitions_path=str(new_definitions_file))
+        save_extract_definitions(definitions_obj, file_path=str(new_definitions_file))
         self.assertTrue(new_definitions_file.exists())
         
         # Vérifier le contenu
@@ -147,7 +147,7 @@ class TestLoadExtractDefinitions(unittest.TestCase):
         new_key = self.crypto_service.generate_key()
         self.crypto_service.save_key(new_key, new_key_file)
 
-        save_extract_definitions(definitions_obj, definitions_path=str(new_encrypted_file), key_path=str(new_key_file))
+        save_extract_definitions(definitions_obj, file_path=str(new_encrypted_file), key_path=str(new_key_file))
         self.assertTrue(new_encrypted_file.exists())
         
         # Vérifier en déchiffrant
