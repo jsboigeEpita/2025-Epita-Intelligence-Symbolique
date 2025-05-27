@@ -107,6 +107,7 @@ class TestAgentCollaborationWorkflow(AsyncTestCase):
         self.operational_manager.agent_registry.register_agent_class("pl", self.mock_pl_adapter)
 
 
+    @pytest.mark.asyncio
     async def test_full_collaboration_workflow(self):
         """Teste un workflow de collaboration complet entre les niveaux hiérarchiques."""
         

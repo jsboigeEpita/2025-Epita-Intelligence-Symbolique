@@ -57,12 +57,16 @@ def _install_numpy_mock_immediately():
     """Installe le mock NumPy immédiatement pour éviter les conflits avec pandas."""
     if 'numpy' not in sys.modules:
         try:
-            from numpy_mock import array, ndarray, mean, sum, zeros, ones, dot, concatenate, vstack, hstack, argmax, argmin, max, min, random, rec, _core, core
+            from numpy_mock import array, ndarray, mean, sum, zeros, ones, dot, concatenate, vstack, hstack, argmax, argmin, max, min, random, rec, _core, core, bool_, number, object_, float64, float32, int64, int32, int_, uint, uint64, uint32
             sys.modules['numpy'] = type('numpy', (), {
                 'array': array, 'ndarray': ndarray, 'mean': mean, 'sum': sum, 'zeros': zeros, 'ones': ones,
                 'dot': dot, 'concatenate': concatenate, 'vstack': vstack, 'hstack': hstack,
                 'argmax': argmax, 'argmin': argmin, 'max': max, 'min': min, 'random': random, 'rec': rec,
                 '_core': _core, 'core': core, '__version__': '1.24.3',
+                # Types de données pour compatibilité PyTorch
+                'bool_': bool_, 'number': number, 'object_': object_,
+                'float64': float64, 'float32': float32, 'int64': int64, 'int32': int32, 'int_': int_,
+                'uint': uint, 'uint64': uint64, 'uint32': uint32,
             })
             # Installation explicite des sous-modules dans sys.modules
             sys.modules['numpy._core'] = _core
@@ -107,14 +111,14 @@ if (sys.version_info.major == 3 and sys.version_info.minor >= 12):
 try:
     from jpype_mock import ( # Import direct car tests/mocks est dans sys.path
         isJVMStarted, startJVM, getJVMPath, getJVMVersion, getDefaultJVMPath,
-        JClass, JException, JObject, JVMNotFoundException, _jpype as mock_dot_jpype_module
+        JClass, JException, JObject, JVMNotFoundException
     )
 
     mock_jpype_imports_module = MagicMock(name="jpype.imports_mock")
     sys.modules['jpype.imports'] = mock_jpype_imports_module
 
     jpype_module_mock_obj = MagicMock(name="jpype_module_mock")
-    jpype_module_mock_obj.__path__ = [] 
+    jpype_module_mock_obj.__path__ = []
     jpype_module_mock_obj.isJVMStarted = isJVMStarted
     jpype_module_mock_obj.startJVM = startJVM
     jpype_module_mock_obj.getJVMPath = getJVMPath
@@ -128,11 +132,92 @@ try:
     jpype_module_mock_obj.imports = mock_jpype_imports_module
 
     sys.modules['jpype'] = jpype_module_mock_obj
-    sys.modules['_jpype'] = mock_dot_jpype_module
+    sys.modules['_jpype'] = MagicMock(name="_jpype_mock")
     print("INFO: JPype (et jpype.imports) mocké globalement.")
 except ImportError as e_jpype:
     print(f"ERREUR CRITIQUE lors du mocking global de JPype: {e_jpype}")
-    sys.modules['jpype'] = MagicMock(name="jpype_fallback_mock")
+    # Créer un mock JPype plus robuste avec les méthodes nécessaires
+    fallback_jpype = MagicMock(name="jpype_fallback_mock")
+    
+    # Variables globales pour simuler l'état de la JVM
+    class JVMState:
+        def __init__(self):
+            self.started = False
+    
+    jvm_state = JVMState()
+    
+    def mock_isJVMStarted():
+        return jvm_state.started
+    
+    def mock_startJVM(*args, **kwargs):
+        jvm_state.started = True
+    
+    def mock_shutdownJVM():
+        jvm_state.started = False
+    
+    class MockJClass:
+        def __init__(self, name):
+            self.__name__ = name
+            self.class_name = name
+        
+        def __call__(self, *args, **kwargs):
+            """Permet d'instancier la classe Java mockée."""
+            return MagicMock()
+    
+    def mock_JClass(name):
+        return MockJClass(name)
+    
+    class MockJException(Exception):
+        def __init__(self, message="Mock Java Exception"):
+            super().__init__(message)
+            self.message = message
+        
+        def getClass(self):
+            class MockClass:
+                def getName(self):
+                    return "org.mockexception.MockException"
+            return MockClass()
+        
+        def getMessage(self):
+            return self.message
+    
+    # Configurer le mock fallback
+    fallback_jpype.isJVMStarted = mock_isJVMStarted
+    fallback_jpype.startJVM = mock_startJVM
+    fallback_jpype.shutdownJVM = mock_shutdownJVM
+    fallback_jpype.JClass = mock_JClass
+    fallback_jpype.JException = MockJException
+    fallback_jpype.getDefaultJVMPath = lambda: "C:\\Program Files\\Java\\jdk-11\\bin\\server\\jvm.dll"
+    
+    # Ajouter des attributs pour la compatibilité avec les tests
+    def get_jvm_started():
+        return jvm_state.started
+    
+    def set_jvm_started(value):
+        jvm_state.started = value
+    
+    fallback_jpype._jvm_started = property(get_jvm_started, set_jvm_started)
+    
+    # Permettre aussi l'accès direct comme attribut
+    class JPypeMockWrapper:
+        def __getattr__(self, name):
+            if name == '_jvm_started':
+                return jvm_state.started
+            return getattr(fallback_jpype, name)
+        
+        def __setattr__(self, name, value):
+            if name == '_jvm_started':
+                jvm_state.started = value
+            else:
+                setattr(fallback_jpype, name, value)
+    
+    jpype_wrapper = JPypeMockWrapper()
+    # Copier tous les attributs du fallback_jpype vers le wrapper
+    for attr_name in dir(fallback_jpype):
+        if not attr_name.startswith('_'):
+            setattr(jpype_wrapper, attr_name, getattr(fallback_jpype, attr_name))
+    
+    sys.modules['jpype'] = jpype_wrapper
     sys.modules['jpype.imports'] = MagicMock(name="jpype.imports_fallback_mock")
     sys.modules['_jpype'] = MagicMock(name="_jpype_fallback_mock")
 # --- Fin Mock JPype ---
@@ -177,12 +262,16 @@ def setup_numpy():
         if not is_module_available('numpy'): print("NumPy non disponible, utilisation du mock.")
         else: print("Python 3.12+ détecté, utilisation du mock NumPy.")
         # mocks_dir_for_mock (tests/mocks) est déjà dans sys.path
-        from numpy_mock import array, ndarray, mean, sum, zeros, ones, dot, concatenate, vstack, hstack, argmax, argmin, max, min, random, rec, _core, core
+        from numpy_mock import array, ndarray, mean, sum, zeros, ones, dot, concatenate, vstack, hstack, argmax, argmin, max, min, random, rec, _core, core, bool_, number, object_, float64, float32, int64, int32, int_, uint, uint64, uint32
         sys.modules['numpy'] = type('numpy', (), {
             'array': array, 'ndarray': ndarray, 'mean': mean, 'sum': sum, 'zeros': zeros, 'ones': ones,
             'dot': dot, 'concatenate': concatenate, 'vstack': vstack, 'hstack': hstack,
             'argmax': argmax, 'argmin': argmin, 'max': max, 'min': min, 'random': random, 'rec': rec,
             '_core': _core, 'core': core, '__version__': '1.24.3',
+            # Types de données pour compatibilité PyTorch
+            'bool_': bool_, 'number': number, 'object_': object_,
+            'float64': float64, 'float32': float32, 'int64': int64, 'int32': int32, 'int_': int_,
+            'uint': uint, 'uint64': uint64, 'uint32': uint32,
         })
         # Installation explicite des sous-modules dans sys.modules
         sys.modules['numpy._core'] = _core

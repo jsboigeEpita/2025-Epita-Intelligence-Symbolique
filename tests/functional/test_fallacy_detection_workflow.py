@@ -55,6 +55,7 @@ class TestFallacyDetectionWorkflow(AsyncTestCase):
         """
         self.sample_context = "Débat public sur la logique et la persuasion."
 
+    @pytest.mark.asyncio
     async def test_full_fallacy_detection_workflow(self):
         """Teste le workflow complet de détection de sophismes."""
         

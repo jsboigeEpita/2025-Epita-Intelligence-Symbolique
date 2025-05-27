@@ -12,6 +12,10 @@ import os
 import sys
 from pathlib import Path
 import json
+import base64
+from cryptography.hazmat.primitives import hashes
+from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
+from cryptography.hazmat.backends import default_backend
 
 # Assurer que le répertoire racine du projet est dans sys.path
 # pour permettre les imports relatifs (ex: from argumentation_analysis.ui import utils)
@@ -35,6 +39,27 @@ except ImportError as e:
 logging.basicConfig(level=logging.INFO,
                     format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
+
+# Salt fixe pour la dérivation de clé (même que dans le vrai code)
+FIXED_SALT = b'argumentation_analysis_salt_2024'
+
+def derive_key_from_passphrase(passphrase: str) -> bytes:
+    """
+    Dérive une clé Fernet à partir d'une passphrase.
+    Utilise la même logique que le vrai code.
+    """
+    if not passphrase:
+        raise ValueError("Passphrase vide")
+    
+    kdf = PBKDF2HMAC(
+        algorithm=hashes.SHA256(),
+        length=32,
+        salt=FIXED_SALT,
+        iterations=480000,
+        backend=default_backend()
+    )
+    derived_key_raw = kdf.derive(passphrase.encode('utf-8'))
+    return base64.urlsafe_b64encode(derived_key_raw)
 
 
 def main():
@@ -102,19 +127,20 @@ def main():
     # Créer le répertoire parent pour le fichier de sortie s'il n'existe pas
     args.output_config.parent.mkdir(parents=True, exist_ok=True)
 
-    # 4. Charger les définitions d'extraits
+    # 4. Charger les définitions d'extraits avec déchiffrement Fernet
     try:
-        logger.info(f"Chargement des définitions d'extraits depuis le fichier JSON non chiffré: {args.input_config}...")
-        with open(args.input_config, 'r', encoding='utf-8') as f:
-            data = json.load(f)
-        
-        # Le fichier JSON reconstruit contient une clé "sources"
-        extract_definitions = data.get("sources", [])
+        logger.info(f"Chargement et déchiffrement des définitions d'extraits depuis: {args.input_config}...")
+        # Dériver la clé Fernet à partir de la passphrase
+        encryption_key = derive_key_from_passphrase(passphrase)
+        extract_definitions = load_extract_definitions(
+            config_file=args.input_config,
+            key=encryption_key
+        )
         
         if not extract_definitions:
              logger.warning(f"Aucune définition d'extrait trouvée dans {args.input_config}.")
              extract_definitions = []
-        logger.info(f"{len(extract_definitions)} définitions d'extraits chargées depuis le fichier JSON.")
+        logger.info(f"{len(extract_definitions)} définitions d'extraits chargées et déchiffrées.")
 
     except Exception as e:
         logger.error(f"Erreur lors du chargement ou du déchiffrement de {args.input_config}: {e}")
@@ -158,7 +184,7 @@ def main():
             save_extract_definitions(
                 extract_definitions=extract_definitions,
                 config_file=args.output_config,
-                encryption_key=passphrase,
+                encryption_key=encryption_key,
                 embed_full_text=True
             )
             logger.info(f"Définitions d'extraits sauvegardées avec succès dans {args.output_config}.")

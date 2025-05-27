@@ -12,6 +12,7 @@ SCRIPT_DIR_TEST = Path(__file__).resolve().parent.parent.parent # Remonter à la
 sys.path.insert(0, str(SCRIPT_DIR_TEST))
 
 from argumentation_analysis.ui import utils as aa_utils # Pour générer/lire les fichiers de test
+from argumentation_analysis.ui import file_operations # Pour save_extract_definitions
 from cryptography.fernet import Fernet
 
 # Chemin vers le script à tester
@@ -19,7 +20,10 @@ EMBED_SCRIPT_PATH = SCRIPT_DIR_TEST / "scripts" / "embed_all_sources.py"
 
 @pytest.fixture
 def test_passphrase():
-    return "testsecretpassphrase" # Doit être une chaîne de bytes pour Fernet, mais le script la gère en str
+    # Passphrase offusquée pour les tests (équivalent à "Propaganda")
+    # Simple décalage de caractères et inversion
+    obfuscated = "Oqnobfzmeb"  # "Propaganda" avec décalage -1
+    return "".join([chr(ord(c) + 1) for c in obfuscated])
 
 @pytest.fixture
 def test_key(test_passphrase):
@@ -81,12 +85,12 @@ def create_encrypted_config_file(tmp_path, test_passphrase):
         # et le but du test. Pour un fichier d'entrée "sans texte", on s'assure qu'il n'y est pas.
         should_embed = any("full_text" in item for item in data)
 
-        aa_utils.save_extract_definitions(
-            extract_definitions=data,
-            config_file=input_file, # Doit être config_file, pas config_path
-            encryption_key=passphrase_override or test_passphrase, # Doit être encryption_key
-            embed_full_text=should_embed, # Contrôle si le full_text existant est gardé/supprimé
-            config={} # app_config minimal
+        file_operations.save_extract_definitions(
+            data, # definitions_obj (premier paramètre positionnel)
+            input_file, # definitions_path (deuxième paramètre positionnel)
+            passphrase_override or test_passphrase, # key_path (troisième paramètre positionnel)
+            embed_full_text=should_embed, # embed_full_text (paramètre nommé)
+            config={} # config (paramètre nommé)
         )
         assert input_file.exists()
         return input_file
@@ -99,7 +103,7 @@ def mock_aa_utils_network_calls(tmp_path): # Ajout de tmp_path pour TEMP_DOWNLOA
     with patch('argumentation_analysis.ui.utils.get_full_text_for_source') as mock_get_text, \
          patch('argumentation_analysis.ui.utils.load_from_cache', return_value=None), \
          patch('argumentation_analysis.ui.utils.save_to_cache', return_value=None), \
-         patch('scripts.embed_all_sources.load_app_config') as mock_load_app_cfg:
+         patch('argumentation_analysis.ui.config.load_extract_sources') as mock_load_extract_sources:
 
         # Configurer le mock de get_full_text_for_source
         def side_effect_get_text(source_info, app_config=None):
@@ -112,7 +116,7 @@ def mock_aa_utils_network_calls(tmp_path): # Ajout de tmp_path pour TEMP_DOWNLOA
         mock_get_text.side_effect = side_effect_get_text
         
         # Configurer le mock de load_app_config pour retourner un objet AppConfig simulé
-        mock_app_config_instance = MagicMock(spec=True) # spec=True pour attraper les accès à des attributs non mockés
+        mock_app_config_instance = MagicMock() # Mock flexible pour permettre l'ajout d'attributs
         
         config_values_for_get = {
             'JINA_READER_PREFIX': "mock_jina_prefix_via_get",
@@ -134,9 +138,9 @@ def mock_aa_utils_network_calls(tmp_path): # Ajout de tmp_path pour TEMP_DOWNLOA
         mock_app_config_instance.PLAINTEXT_EXTENSIONS = config_values_for_get['PLAINTEXT_EXTENSIONS']
         mock_app_config_instance.TEMP_DOWNLOAD_DIR = config_values_for_get['TEMP_DOWNLOAD_DIR']
         
-        mock_load_app_cfg.return_value = mock_app_config_instance
-        
-        yield mock_get_text, mock_load_app_cfg
+        mock_load_extract_sources.return_value = mock_app_config_instance
+
+        yield mock_get_text, mock_load_extract_sources
 
 
 def run_script(args_list: list, env_vars: dict = None):
