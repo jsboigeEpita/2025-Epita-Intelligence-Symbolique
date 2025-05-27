@@ -6,6 +6,7 @@ Tests unitaires pour le module orchestration.hierarchical.operational.adapters.e
 """
 
 import unittest
+from unittest.mock import Mock, MagicMock, patch
 import sys
 import os
 from unittest.mock import MagicMock, patch, AsyncMock
