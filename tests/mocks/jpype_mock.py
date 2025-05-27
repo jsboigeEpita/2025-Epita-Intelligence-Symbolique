@@ -77,6 +77,17 @@ class JException(Exception):
     def __init__(self, message="Mock Java Exception"):
         super().__init__(message)
         self.message = message
+    
+    def getClass(self):
+        """Simule la méthode getClass() de Java."""
+        class MockClass:
+            def getName(self):
+                return "org.mockexception.MockException"
+        return MockClass()
+    
+    def getMessage(self):
+        """Simule la méthode getMessage() de Java."""
+        return self.message
 
 # Installer le mock dans sys.modules
 sys.modules['jpype1'] = sys.modules[__name__]
