@@ -28,11 +28,14 @@ try:
     from services.validation_service import ValidationService
     from services.fallacy_service import FallacyService
     from services.framework_service import FrameworkService
+    from services.logic_service import LogicService
     from models.request_models import (
-        AnalysisRequest, ValidationRequest, FallacyRequest, FrameworkRequest
+        AnalysisRequest, ValidationRequest, FallacyRequest, FrameworkRequest,
+        LogicBeliefSetRequest, LogicQueryRequest, LogicGenerateQueriesRequest
     )
     from models.response_models import (
-        AnalysisResponse, ValidationResponse, FallacyResponse, FrameworkResponse, ErrorResponse
+        AnalysisResponse, ValidationResponse, FallacyResponse, FrameworkResponse, ErrorResponse,
+        LogicBeliefSetResponse, LogicQueryResponse, LogicGenerateQueriesResponse, LogicInterpretationResponse
     )
 except ImportError:
     # Fallback pour les imports relatifs
@@ -40,11 +43,14 @@ except ImportError:
     from .services.validation_service import ValidationService
     from .services.fallacy_service import FallacyService
     from .services.framework_service import FrameworkService
+    from .services.logic_service import LogicService
     from .models.request_models import (
-        AnalysisRequest, ValidationRequest, FallacyRequest, FrameworkRequest
+        AnalysisRequest, ValidationRequest, FallacyRequest, FrameworkRequest,
+        LogicBeliefSetRequest, LogicQueryRequest, LogicGenerateQueriesRequest
     )
     from .models.response_models import (
-        AnalysisResponse, ValidationResponse, FallacyResponse, FrameworkResponse, ErrorResponse
+        AnalysisResponse, ValidationResponse, FallacyResponse, FrameworkResponse, ErrorResponse,
+        LogicBeliefSetResponse, LogicQueryResponse, LogicGenerateQueriesResponse, LogicInterpretationResponse
     )
 
 # Configuration du logging
@@ -68,6 +74,7 @@ analysis_service = AnalysisService()
 validation_service = ValidationService()
 fallacy_service = FallacyService()
 framework_service = FrameworkService()
+logic_service = LogicService()
 
 
 @app.errorhandler(Exception)
@@ -93,7 +100,8 @@ def health_check():
                 "analysis": analysis_service.is_healthy(),
                 "validation": validation_service.is_healthy(),
                 "fallacy": fallacy_service.is_healthy(),
-                "framework": framework_service.is_healthy()
+                "framework": framework_service.is_healthy(),
+                "logic": logic_service.is_healthy()
             }
         })
     except Exception as e:
@@ -339,6 +347,47 @@ def list_endpoints():
                 "options": "object (optionnel) - Options du framework"
             },
             "response": "Framework construit avec extensions"
+        },
+        "POST /api/logic/belief-set": {
+            "description": "Conversion d'un texte en ensemble de croyances logiques",
+            "parameters": {
+                "text": "string (requis) - Texte à convertir",
+                "logic_type": "string (requis) - Type de logique (propositional, first_order, modal)",
+                "options": "object (optionnel) - Options de conversion"
+            },
+            "response": "Ensemble de croyances créé"
+        },
+        "POST /api/logic/query": {
+            "description": "Exécution d'une requête logique",
+            "parameters": {
+                "belief_set_id": "string (requis) - ID de l'ensemble de croyances",
+                "query": "string (requis) - Requête logique à exécuter",
+                "logic_type": "string (requis) - Type de logique",
+                "options": "object (optionnel) - Options d'exécution"
+            },
+            "response": "Résultat de la requête"
+        },
+        "POST /api/logic/generate-queries": {
+            "description": "Génération de requêtes logiques pertinentes",
+            "parameters": {
+                "belief_set_id": "string (requis) - ID de l'ensemble de croyances",
+                "text": "string (requis) - Texte source",
+                "logic_type": "string (requis) - Type de logique",
+                "options": "object (optionnel) - Options de génération"
+            },
+            "response": "Liste des requêtes générées"
+        },
+        "POST /api/logic/interpret": {
+            "description": "Interprétation des résultats de requêtes logiques",
+            "parameters": {
+                "belief_set_id": "string (requis) - ID de l'ensemble de croyances",
+                "logic_type": "string (requis) - Type de logique",
+                "text": "string (requis) - Texte source",
+                "queries": "array (requis) - Requêtes exécutées",
+                "results": "array (requis) - Résultats des requêtes",
+                "options": "object (optionnel) - Options d'interprétation"
+            },
+            "response": "Interprétation des résultats"
         }
     }
     
@@ -347,6 +396,235 @@ def list_endpoints():
         "version": "1.0.0",
         "endpoints": endpoints
     })
+
+
+@app.route('/api/logic/belief-set', methods=['POST'])
+def create_belief_set():
+    """
+    Convertit un texte en ensemble de croyances logiques.
+    
+    Body JSON:
+    {
+        "text": "Texte à convertir",
+        "logic_type": "propositional",
+        "options": {
+            "include_explanation": true,
+            "max_queries": 5
+        }
+    }
+    """
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify(ErrorResponse(
+                error="Données manquantes",
+                message="Le body JSON est requis",
+                status_code=400
+            ).dict()), 400
+        
+        # Validation de la requête
+        try:
+            belief_set_request = LogicBeliefSetRequest(**data)
+        except Exception as e:
+            return jsonify(ErrorResponse(
+                error="Données invalides",
+                message=f"Erreur de validation: {str(e)}",
+                status_code=400
+            ).dict()), 400
+        
+        # Conversion du texte en ensemble de croyances
+        result = logic_service.text_to_belief_set(belief_set_request)
+        
+        return jsonify(result.dict())
+        
+    except Exception as e:
+        logger.error(f"Erreur lors de la conversion en ensemble de croyances: {str(e)}")
+        return jsonify(ErrorResponse(
+            error="Erreur de conversion",
+            message=str(e),
+            status_code=500
+        ).dict()), 500
+
+
+@app.route('/api/logic/query', methods=['POST'])
+def execute_logic_query():
+    """
+    Exécute une requête logique sur un ensemble de croyances.
+    
+    Body JSON:
+    {
+        "belief_set_id": "id-de-l-ensemble-de-croyances",
+        "query": "a => b",
+        "logic_type": "propositional",
+        "options": {
+            "include_explanation": true
+        }
+    }
+    """
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify(ErrorResponse(
+                error="Données manquantes",
+                message="Le body JSON est requis",
+                status_code=400
+            ).dict()), 400
+        
+        # Validation de la requête
+        try:
+            query_request = LogicQueryRequest(**data)
+        except Exception as e:
+            return jsonify(ErrorResponse(
+                error="Données invalides",
+                message=f"Erreur de validation: {str(e)}",
+                status_code=400
+            ).dict()), 400
+        
+        # Exécution de la requête
+        result = logic_service.execute_query(query_request)
+        
+        return jsonify(result.dict())
+        
+    except Exception as e:
+        logger.error(f"Erreur lors de l'exécution de la requête logique: {str(e)}")
+        return jsonify(ErrorResponse(
+            error="Erreur d'exécution",
+            message=str(e),
+            status_code=500
+        ).dict()), 500
+
+
+@app.route('/api/logic/generate-queries', methods=['POST'])
+def generate_logic_queries():
+    """
+    Génère des requêtes logiques pertinentes.
+    
+    Body JSON:
+    {
+        "belief_set_id": "id-de-l-ensemble-de-croyances",
+        "text": "Texte source",
+        "logic_type": "propositional",
+        "options": {
+            "max_queries": 5
+        }
+    }
+    """
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify(ErrorResponse(
+                error="Données manquantes",
+                message="Le body JSON est requis",
+                status_code=400
+            ).dict()), 400
+        
+        # Validation de la requête
+        try:
+            generate_request = LogicGenerateQueriesRequest(**data)
+        except Exception as e:
+            return jsonify(ErrorResponse(
+                error="Données invalides",
+                message=f"Erreur de validation: {str(e)}",
+                status_code=400
+            ).dict()), 400
+        
+        # Génération des requêtes
+        result = logic_service.generate_queries(generate_request)
+        
+        return jsonify(result.dict())
+        
+    except Exception as e:
+        logger.error(f"Erreur lors de la génération de requêtes logiques: {str(e)}")
+        return jsonify(ErrorResponse(
+            error="Erreur de génération",
+            message=str(e),
+            status_code=500
+        ).dict()), 500
+
+
+@app.route('/api/logic/interpret', methods=['POST'])
+def interpret_logic_results():
+    """
+    Interprète les résultats de requêtes logiques.
+    
+    Body JSON:
+    {
+        "belief_set_id": "id-de-l-ensemble-de-croyances",
+        "logic_type": "propositional",
+        "text": "Texte source",
+        "queries": ["a", "b", "a => b"],
+        "results": [
+            {
+                "query": "a",
+                "result": true,
+                "formatted_result": "Tweety Result: Query 'a' is ACCEPTED (True)."
+            },
+            ...
+        ],
+        "options": {
+            "include_explanation": true
+        }
+    }
+    """
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify(ErrorResponse(
+                error="Données manquantes",
+                message="Le body JSON est requis",
+                status_code=400
+            ).dict()), 400
+        
+        # Extraction des données
+        try:
+            belief_set_id = data.get("belief_set_id")
+            logic_type = data.get("logic_type")
+            text = data.get("text")
+            queries = data.get("queries", [])
+            results_data = data.get("results", [])
+            options_data = data.get("options", {})
+            
+            if not belief_set_id or not logic_type or not text or not queries or not results_data:
+                return jsonify(ErrorResponse(
+                    error="Données manquantes",
+                    message="Les champs belief_set_id, logic_type, text, queries et results sont requis",
+                    status_code=400
+                ).dict()), 400
+            
+            # Conversion des résultats en objets LogicQueryResult
+            from ..models.response_models import LogicQueryResult
+            results = [LogicQueryResult(**result) for result in results_data]
+            
+            # Conversion des options en objet LogicOptions
+            from ..models.request_models import LogicOptions
+            options = LogicOptions(**options_data) if options_data else None
+            
+        except Exception as e:
+            return jsonify(ErrorResponse(
+                error="Données invalides",
+                message=f"Erreur de validation: {str(e)}",
+                status_code=400
+            ).dict()), 400
+        
+        # Interprétation des résultats
+        result = logic_service.interpret_results(
+            belief_set_id=belief_set_id,
+            logic_type=logic_type,
+            text=text,
+            queries=queries,
+            results=results,
+            options=options
+        )
+        
+        return jsonify(result.dict())
+        
+    except Exception as e:
+        logger.error(f"Erreur lors de l'interprétation des résultats logiques: {str(e)}")
+        return jsonify(ErrorResponse(
+            error="Erreur d'interprétation",
+            message=str(e),
+            status_code=500
+        ).dict()), 500
 
 
 if __name__ == '__main__':
