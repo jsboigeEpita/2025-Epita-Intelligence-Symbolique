@@ -3,8 +3,8 @@
     {
       "id": "1747987069314",
       "name": "Epita 2025 Symbolique - Project Director",
-      "mode": "Orchestrator",
-      "taskInstructions": "# Schedule : Tâche de maintenance \nTu dois aider à la bonne conduite du projet Epita 2025 en intelligence Symbolique.\nLes élèves vont effectuer des développement sur ce dépôt. Les sujets sélectionnés sont accessible, et l'objectif est d'accompagner les groupes d'étudants dans leur intégration.",
+      "mode": "code",
+      "taskInstructions": "Tu dois aider à la bonne conduite du projet Epita 2025 en intelligence Symbolique.\nLes élèves vont effectuer des développement sur ce dépôt. Les sujets sélectionnés sont accessible, et l'objectif est d'accompagner les groupes d'étudants dans leur intégration.",
       "scheduleType": "time",
       "timeInterval": "1",
       "timeUnit": "day",
@@ -26,14 +26,14 @@
       "requireActivity": false,
       "active": true,
       "taskInteraction": "wait",
-      "inactivityDelay": "0",
-      "lastExecutionTime": "2025-05-26T08:00:01.884Z",
+      "inactivityDelay": "10",
+      "lastExecutionTime": "2025-05-27T13:00:00.336Z",
       "lastSkippedTime": "",
-      "lastTaskId": "1693c28e-ad07-4f65-8ec7-8fd1cdfa5be1",
-      "modeDisplayName": "Orchestrator",
+      "lastTaskId": "24f1cd97-7a22-4aea-80ec-a9c65a150d41",
+      "nextExecutionTime": "2025-05-28T13:00:00.336Z",
+      "modeDisplayName": "Code",
       "createdAt": "2025-05-23T07:57:49.314Z",
-      "updatedAt": "2025-05-23T10:50:51.384Z",
-      "nextExecutionTime": "2025-05-27T08:00:00.884Z"
+      "updatedAt": "2025-05-23T08:17:44.227Z"
     }
   ]
 }
