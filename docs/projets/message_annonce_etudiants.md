@@ -147,12 +147,12 @@ Pour vous aider à organiser votre travail sur le mois alloué, voici un calendr
 
 ## Choix des sujets de projets
 
-Pour une description détaillée de tous les sujets de projets disponibles, veuillez consulter le document [**Sujets de Projets Détaillés**](./projets/sujets_projets_detailles.md) qui présente l'ensemble des projets possibles avec leurs spécifications complètes.
+Pour une description détaillée de tous les sujets de projets disponibles, veuillez consulter le document [**Sujets de Projets Détaillés**](./sujets_projets_detailles.md) qui présente l'ensemble des projets possibles avec leurs spécifications complètes.
 
 Les projets sont organisés en trois catégories principales :
-1. **[Fondements théoriques et techniques](./projets/fondements_theoriques.md)** : Projets centrés sur les aspects formels, logiques et théoriques de l'argumentation
-2. **[Développement système et infrastructure](./projets/developpement_systeme.md)** : Projets axés sur l'architecture, l'orchestration et les composants techniques
-3. **[Expérience utilisateur et applications](./projets/experience_utilisateur.md)** : Projets orientés vers les interfaces, visualisations et cas d'usage concrets
+1. **[Fondements théoriques et techniques](./fondements_theoriques.md)** : Projets centrés sur les aspects formels, logiques et théoriques de l'argumentation
+2. **[Développement système et infrastructure](./developpement_systeme.md)** : Projets axés sur l'architecture, l'orchestration et les composants techniques
+3. **[Expérience utilisateur et applications](./experience_utilisateur.md)** : Projets orientés vers les interfaces, visualisations et cas d'usage concrets
 
 Chaque sujet est présenté avec une structure standardisée incluant le contexte, les objectifs, les technologies clés, le niveau de difficulté, l'estimation d'effort, les interdépendances, les références et les livrables attendus.
 

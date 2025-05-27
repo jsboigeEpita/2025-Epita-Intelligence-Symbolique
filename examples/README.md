@@ -127,6 +127,54 @@ Idéal pour tester les capacités d'extraction de structure argumentative du sys
 python scripts/execution/run_analysis.py --file examples/discours_avec_template.txt --mode extraction
 ```
 
+### 6. exemple_sophismes_avances.txt
+
+Exemple enrichi de texte contenant une variété de sophismes avec annotations et cas d'utilisation avancés.
+
+**Description :**
+Ce texte est une version enrichie et annotée de l'exemple de sophismes sur la régulation de l'intelligence artificielle. Il contient :
+- Des sophismes clairement identifiés et expliqués
+- Une structure argumentative plus complexe avec introduction, développement, conclusion et réfutation
+- Des sophismes plus subtils et imbriqués
+- Des notes explicatives pour l'analyse
+
+**Utilisation :**
+Ce texte est particulièrement utile pour des cas d'utilisation avancés comme :
+- La détection de sophismes imbriqués
+- L'analyse de la structure argumentative globale
+- L'évaluation de la cohérence des arguments
+- La reconstruction d'arguments valides à partir d'arguments fallacieux
+
+```bash
+# Exemple d'utilisation pour l'analyse avancée
+python scripts/execution/run_analysis.py --file examples/exemple_sophismes_avances.txt --mode complet
+```
+
+### 7. analyse_structurelle_complexe.txt
+
+Exemple détaillé d'une argumentation complexe avec structure hiérarchique et relations argumentatives variées.
+
+**Description :**
+Ce document présente un débat structuré sur la taxation des robots avec :
+- Une thèse principale clairement énoncée
+- Trois arguments principaux de premier niveau
+- Des sous-arguments et preuves pour chaque argument principal
+- Des objections et réfutations
+- Une structure hiérarchique explicite
+- Des connecteurs logiques variés
+
+**Utilisation :**
+Cet exemple est conçu pour tester les capacités avancées d'analyse structurelle :
+- Extraction de la structure hiérarchique des arguments
+- Identification des relations entre arguments (support, objection, réfutation)
+- Évaluation de la cohérence structurelle
+- Visualisation de la structure argumentative
+
+```bash
+# Exemple d'utilisation pour l'analyse structurelle avancée
+python scripts/execution/run_analysis.py --file examples/analyse_structurelle_complexe.txt --mode structure
+```
+
 ## Guide de contribution pour les étudiants
 
 ### Ajout de nouveaux exemples
