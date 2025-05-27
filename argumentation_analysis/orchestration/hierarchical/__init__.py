@@ -9,3 +9,24 @@ L'architecture est structurée comme suit:
 - Niveau tactique: Responsable de la coordination et de la décomposition des objectifs en tâches
 - Niveau opérationnel: Responsable de l'exécution des tâches spécifiques d'analyse
 """
+
+# Imports des modules hiérarchiques
+try:
+    from . import strategic
+    from . import tactical
+    from . import operational
+    from . import interfaces
+    from . import templates
+except ImportError as e:
+    import logging
+    logger = logging.getLogger(__name__)
+    logger.warning(f"Erreur d'import dans le module hiérarchique: {e}")
+
+# Exposition des modules principaux
+__all__ = [
+    'strategic',
+    'tactical',
+    'operational',
+    'interfaces',
+    'templates'
+]

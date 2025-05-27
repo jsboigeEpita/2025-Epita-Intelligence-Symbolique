@@ -125,7 +125,7 @@ def setup_extract_definitions_mock():
             Returns:
                 Instance d'ExtractDefinitions
             """
-            return cls.parse_obj(data)
+            return cls.model_validate(data)
         
         # Patcher la classe avec les nouvelles méthodes
         ExtractDefinitions.parse_obj = parse_obj
