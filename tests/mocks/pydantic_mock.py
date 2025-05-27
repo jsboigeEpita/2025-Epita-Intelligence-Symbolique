@@ -132,7 +132,7 @@ class BaseModel:
     def parse_raw(cls: Type[T], b: str, **kwargs) -> T:
         """Crée un modèle à partir d'une chaîne JSON."""
         obj = json.loads(b)
-        return cls.parse_obj(obj)
+        return cls.model_validate(obj)
     
     @classmethod
     def schema(cls) -> Dict[str, Any]:
