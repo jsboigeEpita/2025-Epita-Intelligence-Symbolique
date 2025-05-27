@@ -72,7 +72,11 @@ class MockExtractAgent:
 async def mock_setup_extract_agent():
     """Mock pour la fonction setup_extract_agent."""
     kernel = MagicMock()
-    extract_agent = MockExtractAgent()
+    extract_agent = MockExtractAgent(
+        extract_agent=Mock(),
+        validation_agent=Mock(),
+        extract_plugin=Mock()
+    )
     return kernel, extract_agent
 
 

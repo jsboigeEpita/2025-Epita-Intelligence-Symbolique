@@ -7,6 +7,8 @@ Tests unitaires pour l'agent informel.
 
 import unittest
 import sys
+from pathlib import Path
+import sys
 import os
 from unittest.mock import MagicMock, patch
 import json
