@@ -77,11 +77,10 @@ docs/
 │       └── visualizer.md
 ├── projets/                            # Projets pour les étudiants
 │   ├── README.md                       # Vue d'ensemble et index des projets
-│   ├── categories/                     # Projets par catégorie thématique
-│   │   ├── developpement_systeme.md    # Projets de développement système
-│   │   ├── experience_utilisateur.md   # Projets d'expérience utilisateur
-│   │   ├── fondements_theoriques.md    # Projets de fondements théoriques
-│   │   └── lutte_desinformation.md     # Projets de lutte contre la désinformation
+│   ├── developpement_systeme.md        # Projets de développement système
+│   ├── experience_utilisateur.md       # Projets d'expérience utilisateur
+│   ├── fondements_theoriques.md        # Projets de fondements théoriques
+│   └── lutte_desinformation.md         # Projets de lutte contre la désinformation
 │   ├── exemples_tweety.md              # Exemples d'utilisation de Tweety
 │   ├── matrice_interdependances.md     # Matrice d'interdépendances entre projets
 │   └── message_annonce_etudiants.md    # Message d'annonce aux étudiants
@@ -183,11 +182,10 @@ graph TD
     A --> H[reference]
     A --> I[reports]
     
-    G --> J[categories]
-    J --> K[developpement_systeme.md]
-    J --> L[experience_utilisateur.md]
-    J --> M[fondements_theoriques.md]
-    J --> N[lutte_desinformation.md]
+    G --> K[developpement_systeme.md]
+    G --> L[experience_utilisateur.md]
+    G --> M[fondements_theoriques.md]
+    G --> N[lutte_desinformation.md]
     
     F --> O[reference]
     O --> P[argument_coherence_evaluator.md]
@@ -306,11 +304,10 @@ La nouvelle structure proposée pour le répertoire `docs/projets/` est la suiva
 ```
 projets/
 ├── README.md                       # Index principal avec filtres et métadonnées
-├── categories/                     # Organisation principale par catégorie thématique
-│   ├── developpement_systeme.md    # Projets de développement système
-│   ├── experience_utilisateur.md   # Projets d'expérience utilisateur
-│   ├── fondements_theoriques.md    # Projets de fondements théoriques
-│   └── lutte_desinformation.md     # Projets de lutte contre la désinformation
+├── developpement_systeme.md        # Projets de développement système
+├── experience_utilisateur.md       # Projets d'expérience utilisateur
+├── fondements_theoriques.md        # Projets de fondements théoriques
+└── lutte_desinformation.md         # Projets de lutte contre la désinformation
 ├── exemples_tweety.md              # Exemples d'utilisation de Tweety
 ├── matrice_interdependances.md     # Matrice d'interdépendances entre projets
 └── message_annonce_etudiants.md    # Message d'annonce aux étudiants
@@ -350,20 +347,20 @@ Le nouveau fichier `README.md` du répertoire `projets/` servira d'index princip
 ## Filtrage par Niveau de Difficulté
 
 ### Niveau ⭐⭐ (Accessible)
-- [Documentation et transfert de connaissances](./categories/developpement_systeme.md#214-documentation-et-transfert-de-connaissances)
+- [Documentation et transfert de connaissances](./developpement_systeme.md#214-documentation-et-transfert-de-connaissances)
 
 ### Niveau ⭐⭐⭐ (Intermédiaire)
-- [Taxonomie des schémas argumentatifs](./categories/fondements_theoriques.md#131-taxonomie-des-schémas-argumentatifs)
-- [Classification des sophismes](./categories/fondements_theoriques.md#132-classification-des-sophismes)
-- [Ontologie de l'argumentation](./categories/fondements_theoriques.md#133-ontologie-de-largumentation)
+- [Taxonomie des schémas argumentatifs](./fondements_theoriques.md#131-taxonomie-des-schémas-argumentatifs)
+- [Classification des sophismes](./fondements_theoriques.md#132-classification-des-sophismes)
+- [Ontologie de l'argumentation](./fondements_theoriques.md#133-ontologie-de-largumentation)
 
 ### Niveau ⭐⭐⭐⭐ (Avancé)
-- [Formules booléennes quantifiées (QBF)](./categories/fondements_theoriques.md#115-formules-booléennes-quantifiées-qbf)
-- [Argumentation basée sur les hypothèses (ABA)](./categories/fondements_theoriques.md#124-argumentation-basée-sur-les-hypothèses-aba)
+- [Formules booléennes quantifiées (QBF)](./fondements_theoriques.md#115-formules-booléennes-quantifiées-qbf)
+- [Argumentation basée sur les hypothèses (ABA)](./fondements_theoriques.md#124-argumentation-basée-sur-les-hypothèses-aba)
 
 ### Niveau ⭐⭐⭐⭐⭐ (Très avancé)
-- [ArgumentuMind: Système cognitif de compréhension argumentative](./categories/lutte_desinformation.md#argumentumind-système-cognitif-de-compréhension-argumentative)
-- [ArgumentuShield: Système de protection cognitive contre la désinformation](./categories/lutte_desinformation.md#argumentushield-système-de-protection-cognitive-contre-la-désinformation)
+- [ArgumentuMind: Système cognitif de compréhension argumentative](./lutte_desinformation.md#argumentumind-système-cognitif-de-compréhension-argumentative)
+- [ArgumentuShield: Système de protection cognitive contre la désinformation](./lutte_desinformation.md#argumentushield-système-de-protection-cognitive-contre-la-désinformation)
 ```
 
 Cette approche permettra de conserver toutes les informations utiles des vues actuelles tout en éliminant les redondances et en améliorant la navigation.
