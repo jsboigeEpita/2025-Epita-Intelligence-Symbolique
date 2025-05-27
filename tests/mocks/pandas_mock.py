@@ -295,14 +295,24 @@ def read_json(path_or_buf, **kwargs):
         return DataFrame()
 
 
+# Créer un mock avec __spec__ pour la compatibilité avec transformers
+class PandasMock:
+    """Mock pour le module pandas avec __spec__."""
+    def __init__(self):
+        self.DataFrame = DataFrame
+        self.read_csv = read_csv
+        self.read_json = read_json
+        self.Series = list
+        self.NA = None
+        self.NaT = None
+        self.isna = lambda x: x is None
+        self.notna = lambda x: x is not None
+        # Ajouter __spec__ pour la compatibilité avec transformers
+        self.__spec__ = type('ModuleSpec', (), {
+            'name': 'pandas',
+            'origin': 'mock',
+            'submodule_search_locations': None
+        })()
+
 # Installer le mock dans sys.modules pour qu'il soit utilisé lors des importations
-sys.modules['pandas'] = sys.modules.get('pandas', MagicMock(
-    DataFrame=DataFrame,
-    read_csv=read_csv,
-    read_json=read_json,
-    Series=list,
-    NA=None,
-    NaT=None,
-    isna=lambda x: x is None,
-    notna=lambda x: x is not None
-))
+sys.modules['pandas'] = sys.modules.get('pandas', PandasMock())
