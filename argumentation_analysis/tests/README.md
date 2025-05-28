@@ -6,124 +6,150 @@ Ce répertoire contient les tests unitaires et d'intégration pour le projet d'a
 
 Les tests sont organisés comme suit:
 
-### Tests des composants fondamentaux (Core)
-- `test_shared_state.py`: Tests pour le module `core.shared_state`
-- `test_state_manager_plugin.py`: Tests pour le module `core.state_manager_plugin`
-- `test_strategies.py`: Tests pour le module `core.strategies`
-- `test_llm_service.py`: Tests pour le module `core.llm_service`
-
-### Tests des modèles
-- `test_extract_definition.py`: Tests pour le modèle de définition d'extraits
-- `test_extract_result.py`: Tests pour le modèle de résultat d'extraction
-
-### Tests des services
-- `test_cache_service.py`: Tests pour le service de cache
-- `test_crypto_service.py`: Tests pour le service de chiffrement
-- `test_definition_service.py`: Tests pour le service de définition
-- `test_extract_service.py`: Tests pour le service d'extraction
-- `test_fetch_service.py`: Tests pour le service de récupération
-
-### Tests des agents
-- `test_extract_agent.py`: Tests pour l'agent d'extraction
-- `test_pl_definitions.py`: Tests pour le module de logique propositionnelle
-- `test_informal_agent.py`: Tests pour l'agent d'analyse informelle
-- `test_pm_agent.py`: Tests pour l'agent Project Manager
-
-### Tests des scripts
-- `test_repair_extract_markers.py`: Tests pour le script de réparation des marqueurs d'extraits
-- `test_verify_extracts.py`: Tests pour le script de vérification des extraits
-
-### Tests d'orchestration
-- `test_analysis_runner.py`: Tests pour le module d'orchestration
-
-### Tests d'intégration
-- `test_integration.py`: Tests d'intégration entre les différents composants
-- `test_integration_example.py`: Exemples de tests d'intégration
-
-### Scripts d'exécution des tests
-- `run_tests.py`: Script pour exécuter tous les tests avec pytest
-- `run_tests.ps1`: Script PowerShell pour exécuter tous les tests
-- `run_coverage.py`: Script pour exécuter les tests avec couverture de code
-- `async_test_case.py`: Classe de base pour les tests asynchrones
-- `conftest.py`: Configuration et fixtures pour pytest
+- **Tests des composants fondamentaux (Core)**:
+    - `test_shared_state.py`: Tests pour le module `core.shared_state`
+    - `test_state_manager_plugin.py`: Tests pour le module `core.state_manager_plugin`
+    - `test_strategies.py`: Tests pour le module `core.strategies`
+    - `test_llm_service.py`: Tests pour le module `core.llm_service`
+- **Tests des modèles**:
+    - `test_extract_definition.py`: Tests pour le modèle de définition d'extraits
+    - `test_extract_result.py`: Tests pour le modèle de résultat d'extraction
+- **Tests des services**:
+    - `test_cache_service.py`: Tests pour le service de cache
+    - `test_crypto_service.py`: Tests pour le service de chiffrement
+    - `test_definition_service.py`: Tests pour le service de définition
+    - `test_extract_service.py`: Tests pour le service d'extraction
+    - `test_fetch_service.py`: Tests pour le service de récupération
+- **Tests des agents**:
+    - `test_extract_agent.py`: Tests pour l'agent d'extraction
+    - `test_pl_definitions.py`: Tests pour le module de logique propositionnelle
+    - `test_informal_agent.py`: Tests pour l'agent d'analyse informelle
+    - `test_pm_agent.py`: Tests pour l'agent Project Manager
+- **Tests des scripts (si pertinents et non couverts par des tests d'intégration plus larges)**:
+    - `test_repair_extract_markers.py`: Tests pour le script de réparation des marqueurs d'extraits
+    - `test_verify_extracts.py`: Tests pour le script de vérification des extraits
+- **Tests d'orchestration**:
+    - `test_analysis_runner.py`: Tests pour le module d'orchestration
+- **Tests d'intégration**:
+    - `test_integration.py`: Tests d'intégration généraux entre les différents composants.
+    - `test_integration_example.py`: Exemples de tests d'intégration.
+    - `test_integration_balanced_strategy.py`: Tests pour la stratégie d'équilibrage.
+    - `test_integration_end_to_end.py`: Tests du flux complet d'analyse.
+    - `test_agent_interaction.py`: Tests des interactions entre agents.
+    - Pour plus de détails sur les tests d'intégration, les mocks et fixtures, consultez les READMEs spécifiques :
+        - [`README_integration_tests.md`](README_integration_tests.md) (mocks et fixtures de base)
+        - [`README_integration_tests_extended.md`](README_integration_tests_extended.md) (stratégie d'équilibrage et interactions avancées)
+- **Données de test**:
+    - Les données de test sont situées dans le sous-dossier [`test_data/`](test_data/). Voir [`test_data/README.md`](test_data/README.md) pour plus de détails sur leur structure et utilisation.
+- **Tests des outils d'analyse rhétorique**:
+    - Les tests spécifiques aux outils d'analyse rhétorique sont dans le sous-dossier [`tools/`](tools/). Voir [`tools/README.md`](tools/README.md) pour les instructions d'exécution et [`tools/test_data/README.md`](tools/test_data/README.md) pour les données de test associées.
+- **Configuration et utilitaires de test**:
+    - `async_test_case.py`: Classe de base pour les tests asynchrones `unittest`.
+    - `conftest.py`: Configuration et fixtures globales pour `pytest`.
+    - `jvm_test_case.py`: Classe de base pour les tests nécessitant une JVM.
+- **Scripts d'exécution restants (à évaluer pour suppression/intégration)**:
+    - `run_fixed_tests.py`: Script pour exécuter des tests spécifiques avec une logique de fallback.
+    - `run_tests.ps1`: Script PowerShell pour exécuter les tests avec `unittest discover` et gérer les JARs.
+    - `update_rapport_suivi.py`: (Fonctionnalité à déterminer)
 
 ## Exécution des Tests
 
-### Exécuter tous les tests
+### Prérequis
 
-#### Avec pytest (recommandé)
-
+Assurez-vous d'avoir installé `pytest` et les dépendances nécessaires :
 ```bash
-cd argumentation_analysis
-python -m pytest
+pip install pytest pytest-asyncio pytest-cov
+# Autres dépendances du projet listées dans requirements.txt
 ```
 
-Ou avec le script `run_tests.py`:
+### Configuration de Pytest
 
+La configuration de `pytest` (y compris le mode `asyncio`, les chemins, et la couverture) est gérée dans le fichier [`pytest.ini`](../../pytest.ini) à la racine du projet.
+
+### Exécuter tous les tests (recommandé)
+
+Depuis la racine du projet (`c:/dev/2025-Epita-Intelligence-Symbolique`):
 ```bash
-cd argumentation_analysis
-python -m tests.run_tests
+pytest
+```
+Ou de manière plus explicite pour cibler le package :
+```bash
+python -m pytest argumentation_analysis/
 ```
 
-#### Sous Windows (PowerShell)
+Pour plus de détails (mode verbeux) :
+```bash
+pytest -v
+```
 
+### Exécuter un fichier ou un répertoire de test spécifique
+
+```bash
+# Exécuter tous les tests dans un fichier
+pytest argumentation_analysis/tests/test_shared_state.py
+
+# Exécuter tous les tests dans un répertoire
+pytest argumentation_analysis/tests/services/
+```
+
+### Exécuter un test spécifique par nom (mot-clé)
+
+```bash
+pytest -k "test_extract_creation" -v
+```
+Ceci exécutera tous les tests dont le nom contient "test_extract_creation".
+
+### Exécuter des tests avec des marqueurs
+
+Si des marqueurs sont définis (ex: `@pytest.mark.integration`), vous pouvez les utiliser :
+```bash
+pytest -m integration
+```
+
+### Exécution avec le script PowerShell (pour `unittest discover` et gestion des JARs)
+
+Si vous avez besoin de la logique spécifique du script PowerShell (par exemple, pour le téléchargement des JARs pour certains tests `unittest`) :
 ```powershell
-cd argumentation_analysis
-.\tests\run_tests.ps1
+cd argumentation_analysis/tests
+.\run_tests.ps1
 ```
 
-### Exécuter un test spécifique
+## Couverture de Code
 
-Pour exécuter un test spécifique avec pytest:
+La couverture de code est configurée dans [`pytest.ini`](../../pytest.ini). Pour générer un rapport :
 
 ```bash
-cd argumentation_analysis
-python -m pytest tests/test_shared_state.py -v
+pytest --cov
 ```
+Cela affichera un résumé dans le terminal.
 
-Pour exécuter un groupe de tests spécifique:
-
+Pour générer un rapport HTML détaillé (dans `tests/htmlcov/`) :
 ```bash
-cd argumentation_analysis
-python -m pytest tests/test_*_service.py -v
+pytest --cov --cov-report=html
 ```
+Ouvrez `tests/htmlcov/index.html` dans votre navigateur.
 
-### Exécuter les tests avec couverture de code
-
-Pour exécuter les tests avec couverture de code et générer un rapport détaillé:
-
+Pour générer un rapport XML (dans `tests/coverage.xml`), utile pour l'intégration continue :
 ```bash
-cd argumentation_analysis
-python -m tests.run_coverage
+pytest --cov --cov-report=xml
 ```
 
-Ce script amélioré:
-1. Installe automatiquement le module `pytest-cov` s'il n'est pas déjà présent
-2. Exécute tous les tests avec mesure de couverture
-3. Génère un rapport de couverture dans la console
-4. Analyse la couverture par module et affiche un tableau récapitulatif
-5. Crée un rapport HTML détaillé dans le répertoire `tests/htmlcov`
-6. Crée un rapport XML pour l'intégration CI/CD dans `tests/coverage.xml`
-7. Vérifie si l'objectif de couverture minimal (80%) est atteint
-8. Ouvre automatiquement le rapport HTML dans le navigateur
+L'objectif de couverture minimal est de 80%.
 
 ## Ajouter de Nouveaux Tests
 
 ### Avec pytest (recommandé)
 
-Pour ajouter de nouveaux tests avec pytest, suivez ces étapes:
+1.  Créez un nouveau fichier de test dans le répertoire `argumentation_analysis/tests/` (ou un sous-répertoire approprié) avec le préfixe `test_` (ex: `test_nouveau_module.py`).
+2.  Importez `pytest` et les modules à tester.
+3.  Écrivez des fonctions de test avec le préfixe `test_` (ex: `def test_ma_fonctionnalite():`).
+4.  Utilisez les assertions Python standard (`assert`) ou les fonctions d'assertion de `pytest`.
+5.  Utilisez des fixtures (définies dans `conftest.py` ou localement) pour partager la configuration et les données de test.
 
-1. Créez un nouveau fichier de test dans le répertoire `tests` avec le préfixe `test_`.
-2. Importez le module `pytest` et les modules à tester.
-3. Écrivez des fonctions de test avec le préfixe `test_`.
-4. Utilisez les assertions Python standard ou les fonctions d'assertion de pytest.
-5. Utilisez des fixtures pour partager la configuration entre les tests.
-
-Exemple avec pytest:
-
+Exemple :
 ```python
 import pytest
-from models.extract_definition import Extract
+from argumentation_analysis.models.extract_definition import Extract # Assurez-vous que le chemin est correct
 
 def test_extract_creation():
     """Teste la création d'un extrait."""
@@ -152,185 +178,50 @@ def test_extract_with_different_markers(start_marker, end_marker):
     assert extract.end_marker == end_marker
 ```
 
-### Avec unittest (alternative)
+### Tests Asynchrones avec pytest
 
-Vous pouvez également utiliser unittest si vous préférez:
-
-```python
-import unittest
-from models.extract_definition import Extract
-
-class TestExtract(unittest.TestCase):
-    def test_extract_creation(self):
-        """Teste la création d'un extrait."""
-        extract = Extract(
-            extract_name="Test Extract",
-            start_marker="START",
-            end_marker="END"
-        )
-        self.assertEqual(extract.extract_name, "Test Extract")
-        self.assertEqual(extract.start_marker, "START")
-        self.assertEqual(extract.end_marker, "END")
-
-if __name__ == '__main__':
-    unittest.main()
-```
-
-### Imports et Chemins
-
-Les tests doivent utiliser des imports absolus ou relatifs selon le contexte:
-
-```python
-# Import absolu (recommandé pour pytest)
-from argumentation_analysis.models.extract_definition import Extract
-
-# Import relatif (si setup_import_paths() est utilisé)
-from models.extract_definition import Extract
-```
-
-Le fichier `__init__.py` du package de tests contient une fonction `setup_import_paths()` qui configure correctement les chemins d'importation.
-
-## Bonnes Pratiques
-
-- **Indépendance des tests**: Chaque test doit être indépendant des autres tests.
-- **Fixtures**: Utilisez des fixtures pytest pour partager la configuration entre les tests.
-- **Mocks**: Utilisez des mocks pour isoler les dépendances externes.
-- **Tests paramétrés**: Utilisez `@pytest.mark.parametrize` pour tester plusieurs cas avec une seule fonction.
-- **Tests clairs**: Écrivez des tests clairs et concis avec des noms descriptifs.
-- **Documentation**: Commentez vos tests pour expliquer ce qu'ils testent.
-- **Couverture**: Visez une couverture de code élevée, mais privilégiez la qualité des tests à la quantité.
-
-### Tests Asynchrones
-
-Pour tester des fonctions asynchrones avec pytest:
-
+Pour tester des fonctions `async` :
 ```python
 import pytest
 
 @pytest.mark.asyncio
-async def test_async_function():
-    """Teste une fonction asynchrone."""
-    result = await async_function()
-    assert result == expected_result
+async def test_ma_fonction_async():
+    result = await ma_fonction_async()
+    assert result == "valeur attendue"
 ```
+Assurez-vous que `asyncio_mode = auto` est défini dans [`pytest.ini`](../../pytest.ini).
 
-Vous pouvez également utiliser la classe `AsyncTestCase` pour unittest:
+## Bonnes Pratiques
 
-```python
-from tests.async_test_case import AsyncTestCase
+-   **Indépendance des tests**: Chaque test doit être indépendant.
+-   **Fixtures**: Utilisez des fixtures `pytest` pour la configuration et les données.
+-   **Mocks**: Utilisez `unittest.mock` ou des fixtures de mock `pytest` pour isoler les dépendances.
+-   **Tests paramétrés**: Utilisez `@pytest.mark.parametrize` pour tester plusieurs cas.
+-   **Clarté**: Écrivez des tests clairs avec des noms descriptifs.
+-   **Documentation**: Commentez vos tests.
+-   **Couverture**: Visez une couverture élevée et de qualité.
 
-class TestAsyncFunctions(AsyncTestCase):
-    async def test_async_function(self):
-        """Teste une fonction asynchrone."""
-        result = await async_function()
-        self.assertEqual(result, expected_result)
-```
+## Intégration Continue (CI/CD)
 
-### Tests d'Intégration
+Le projet utilise GitHub Actions pour l'intégration continue. Le workflow exécute automatiquement les tests et vérifie la couverture à chaque push et pull request. Voir `.github/workflows/python-tests.yml`.
 
-Les tests d'intégration vérifient l'interaction entre les différents composants du système. Ils sont définis dans les fichiers `test_integration.py` et `test_integration_example.py`.
+## Outils d'Analyse et Qualité
 
-Pour exécuter uniquement les tests d'intégration:
+-   **pytest**: Framework de test.
+-   **pytest-cov**: Mesure de couverture.
+-   **Pylint / Flake8**: Analyse statique (configuration à vérifier/ajouter au projet).
+-   **Mypy**: Vérification de types (configuration à vérifier/ajouter au projet).
 
-```bash
-cd argumentation_analysis
-python -m pytest tests/test_integration*.py -v
-```
+## Résolution des problèmes courants
 
-### Objectifs de Couverture
+### Problèmes d'imports
+Assurez-vous que `PYTHONPATH` est correctement configuré (généralement géré par `pytest` via `pytest.ini` ou la structure du projet) et que les fichiers `__init__.py` sont présents dans les répertoires de packages. Exécutez `pytest` depuis la racine du projet.
 
-Le projet vise une couverture de code minimale de 80%. Les modules prioritaires pour la couverture sont:
-
-1. `models`: Modèles de données
-2. `services`: Services de base
-3. `core`: Modules fondamentaux du système
-4. `scripts`: Scripts utilitaires
-5. `agents`: Agents d'analyse
-6. `orchestration`: Orchestration des agents
-7. `utils`: Utilitaires généraux
-
-Les zones délibérément exclues de la couverture sont:
-- Interface utilisateur (`ui`)
-- Scripts d'exécution principaux (`main_*.py`, `run_*.py`)
-- Code spécifique aux notebooks
-- Fichiers de configuration et d'environnement
-
-### Couverture des tests
-
-Le projet comprend une suite complète de tests couvrant les différents aspects du système :
-
-- **Tests des modèles de données**: Vérifient la structure et le comportement des modèles `Extract`, `SourceDefinition`, et `ExtractResult`.
-- **Tests des services**: Testent les services de cache, chiffrement, définition, extraction et récupération.
-- **Tests d'optimisation de l'agent informel**: Vérifient les outils d'analyse et d'amélioration de l'agent informel.
-- **Tests de vérification des extraits**: Testent les fonctionnalités de vérification et de réparation des extraits.
-- **Tests d'orchestration à grande échelle**: Évaluent la robustesse du système sur un grand nombre de textes.
-
-### Intégration CI/CD
-
-Le projet est configuré avec GitHub Actions pour l'intégration continue et le déploiement continu. Le workflow exécute automatiquement les tests et vérifie la couverture de code à chaque push et pull request.
-
-Pour voir la configuration CI/CD:
-```bash
-cat .github/workflows/python-tests.yml
-```
-
-Le workflow CI/CD:
-1. Exécute les tests sur plusieurs versions de Python
-2. Génère un rapport de couverture de code
-3. Télécharge le rapport sur Codecov
-4. Vérifie que la couverture atteint l'objectif minimal de 80%
-
-### Outils d'analyse et de qualité de code
-
-Les tests sont intégrés avec plusieurs outils d'analyse:
-
-- **pytest**: Framework de test principal
-- **pytest-cov**: Mesure la couverture de code des tests
-- **Pylint**: Analyse statique du code pour détecter les problèmes potentiels
-- **Mypy** (optionnel): Vérification des types pour les annotations de type Python
-
-Pour exécuter l'analyse statique du code:
-
-```bash
-# Installation des outils
-pip install pylint mypy
-
-# Exécution de Pylint
-pylint argumentation_analysis
-
-# Exécution de Mypy
-mypy argumentation_analysis
-```
-
-### Mocks et fixtures
-
-Le projet utilise des mocks et des fixtures pour isoler les composants et simuler les dépendances externes:
-
-```python
-# Exemple de mock pour une fonction asynchrone
-from unittest.mock import AsyncMock
-
-mock_async_function = AsyncMock()
-mock_async_function.return_value = "résultat"
-
-# Exemple de fixture pytest
-@pytest.fixture
-def sample_extract():
-    """Fixture pour un extrait de test."""
-    return Extract(
-        extract_name="Test Extract",
-        start_marker="DEBUT_EXTRAIT",
-        end_marker="FIN_EXTRAIT"
-    )
-```
-
-Pour plus de détails sur les fixtures disponibles, consultez le fichier `conftest.py`.
+### Tests asynchrones
+Vérifiez la configuration `asyncio_mode` dans `pytest.ini` et l'utilisation de `@pytest.mark.asyncio`.
 
 ## Ressources
-
 - [Documentation pytest](https://docs.pytest.org/)
 - [Documentation pytest-cov](https://pytest-cov.readthedocs.io/)
-- [Documentation unittest](https://docs.python.org/3/library/unittest.html)
-- [Documentation coverage](https://coverage.readthedocs.io/)
-- [Python Mock Object Library](https://docs.python.org/3/library/unittest.mock.html)
-- [GitHub Actions Documentation](https://docs.github.com/en/actions)
+- [Documentation pytest-asyncio](https://pytest-asyncio.readthedocs.io/)
+- [Documentation unittest.mock](https://docs.python.org/3/library/unittest.mock.html)
