@@ -48,7 +48,7 @@ sys.modules['argumentation_analysis.services'] = argumentation_analysis.services
 # Importer les modules réels dans les modules factices
 import models.extract_definition
 import models.extract_result
-import services.cache_service
+# import services.cache_service
 import services.crypto_service
 import services.definition_service
 import services.extract_service
@@ -57,7 +57,7 @@ import services.fetch_service
 # Assigner les modules réels aux modules factices
 argumentation_analysis.models.extract_definition = models.extract_definition
 argumentation_analysis.models.extract_result = models.extract_result
-argumentation_analysis.services.cache_service = services.cache_service
+# argumentation_analysis.services.cache_service = services.cache_service
 argumentation_analysis.services.crypto_service = services.crypto_service
 argumentation_analysis.services.definition_service = services.definition_service
 argumentation_analysis.services.extract_service = services.extract_service
@@ -66,7 +66,7 @@ argumentation_analysis.services.fetch_service = services.fetch_service
 # Utiliser des imports directs
 from models.extract_definition import Extract, SourceDefinition, ExtractDefinitions
 from models.extract_result import ExtractResult
-from services.cache_service import CacheService
+# from services.cache_service import CacheService
 from services.crypto_service import CryptoService
 from services.definition_service import DefinitionService
 from services.extract_service import ExtractService
