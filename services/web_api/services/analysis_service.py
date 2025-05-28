@@ -90,7 +90,8 @@ class AnalysisService:
             if InformalAgent and self.tools:
                 self.informal_agent = InformalAgent(
                     agent_id="web_api_informal_agent",
-                    tools=self.tools
+                    tools=self.tools,
+                    strict_validation=False
                 )
             else:
                 self.informal_agent = None

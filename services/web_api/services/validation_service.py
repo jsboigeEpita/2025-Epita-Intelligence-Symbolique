@@ -58,6 +58,13 @@ class ValidationService:
         start_time = time.time()
         
         try:
+            # Vérification des entrées
+            if not request.premises:
+                raise ValueError("Aucune prémisse fournie. Un argument valide nécessite au moins une prémisse.")
+            
+            if not request.conclusion or not request.conclusion.strip():
+                raise ValueError("Aucune conclusion fournie. Un argument valide doit avoir une conclusion claire.")
+            
             # Analyse des prémisses
             premise_analysis = self._analyze_premises(request.premises)
             
@@ -109,11 +116,11 @@ class ValidationService:
                 processing_time=processing_time
             )
             
-        except Exception as e:
-            self.logger.error(f"Erreur lors de la validation: {e}")
+        except ValueError as ve:
+            self.logger.error(f"Erreur de validation (Valeur): {ve}")
             processing_time = time.time() - start_time
             
-            # Réponse d'erreur
+            # Réponse d'erreur avec description détaillée
             result = ValidationResult(
                 is_valid=False,
                 validity_score=0.0,
@@ -121,8 +128,37 @@ class ValidationService:
                 premise_analysis=[],
                 conclusion_analysis={},
                 logical_structure={},
-                issues=[f"Erreur de validation: {str(e)}"],
-                suggestions=["Vérifiez la structure de votre argument"]
+                issues=[str(ve)],
+                suggestions=["Vérifiez que vous avez fourni au moins une prémisse et une conclusion claire."]
+            )
+            
+            return ValidationResponse(
+                success=False,
+                premises=request.premises,
+                conclusion=request.conclusion,
+                argument_type=request.argument_type or "unknown",
+                result=result,
+                processing_time=processing_time
+            )
+            
+        except Exception as e:
+            self.logger.error(f"Erreur lors de la validation: {e}")
+            processing_time = time.time() - start_time
+            
+            # Réponse d'erreur avec description détaillée
+            result = ValidationResult(
+                is_valid=False,
+                validity_score=0.0,
+                soundness_score=0.0,
+                premise_analysis=[],
+                conclusion_analysis={},
+                logical_structure={},
+                issues=[f"Une erreur s'est produite lors de l'analyse de votre argument : {str(e)}"],
+                suggestions=[
+                    "Vérifiez que votre argument est bien formaté.",
+                    "Assurez-vous que vos prémisses et votre conclusion sont clairement énoncées.",
+                    "Vérifiez que vous utilisez des connecteurs logiques appropriés."
+                ]
             )
             
             return ValidationResponse(
@@ -364,47 +400,83 @@ class ValidationService:
         """Identifie les problèmes dans l'argument."""
         issues = []
         
-        # Problèmes avec les prémisses
-        weak_premises = [p for p in premise_analysis if p['strength'] < 0.4]
-        if weak_premises:
-            issues.append(f"{len(weak_premises)} prémisse(s) faible(s) détectée(s)")
+        # Vérification des prémisses
+        if not premise_analysis:
+            issues.append("Aucune prémisse fournie. Un argument valide nécessite au moins une prémisse.")
+        else:
+            # Vérification de la clarté des prémisses
+            unclear_premises = [p for p in premise_analysis if p['clarity_score'] < 0.5]
+            if unclear_premises:
+                issues.append(f"{len(unclear_premises)} prémisse(s) manque(nt) de clarté. Reformulez-les pour les rendre plus explicites.")
+            
+            # Vérification de la crédibilité
+            low_credibility = [p for p in premise_analysis if p['credibility_score'] < 0.4]
+            if low_credibility:
+                issues.append(f"{len(low_credibility)} prémisse(s) manque(nt) de crédibilité. Ajoutez des sources ou des preuves pour les renforcer.")
         
-        # Problèmes avec la conclusion
-        if conclusion_analysis['strength'] < 0.4:
-            issues.append("Conclusion peu claire ou peu spécifique")
+        # Vérification de la conclusion
+        if not conclusion_analysis['text'].strip():
+            issues.append("Aucune conclusion fournie. Un argument valide doit avoir une conclusion claire.")
+        elif conclusion_analysis['clarity_score'] < 0.5:
+            issues.append("La conclusion manque de clarté. Reformulez-la pour la rendre plus explicite.")
         
-        # Problèmes structurels
-        if structure['premise_relevance'] < 0.3:
-            issues.append("Prémisses peu pertinentes pour la conclusion")
+        # Vérification de la structure logique
+        if structure['premise_relevance'] < 0.4:
+            issues.append("Les prémisses ne sont pas suffisamment pertinentes pour la conclusion. Assurez-vous que vos prémisses soutiennent directement votre conclusion.")
         
         if structure['logical_flow'] < 0.4:
-            issues.append("Flux logique déficient")
+            issues.append("Le raisonnement manque de fluidité logique. Utilisez des connecteurs logiques appropriés pour lier vos prémisses à votre conclusion.")
         
-        # Ajout des lacunes identifiées
-        issues.extend(structure['gap_analysis'])
+        if structure['completeness'] < 0.4:
+            issues.append("L'argument est incomplet. Ajoutez des prémisses intermédiaires pour renforcer le lien entre vos prémisses et votre conclusion.")
+        
+        if structure['consistency'] < 0.4:
+            issues.append("Les prémisses sont contradictoires entre elles. Assurez-vous que vos prémisses ne se contredisent pas.")
+        
+        # Vérification des écarts logiques
+        gaps = structure['gap_analysis']
+        if gaps:
+            issues.extend([f"Écart logique détecté : {gap}" for gap in gaps])
         
         return issues
     
     def _generate_suggestions(self, issues: List[str], structure: Dict) -> List[str]:
-        """Génère des suggestions d'amélioration."""
+        """Génère des suggestions pour améliorer l'argument."""
         suggestions = []
         
-        if "prémisse(s) faible(s)" in str(issues):
-            suggestions.append("Renforcez vos prémisses avec des données ou des sources fiables")
+        # Suggestions générales
+        if not issues:
+            suggestions.append("Votre argument est bien structuré. Pour le renforcer davantage, vous pourriez ajouter des exemples concrets ou des contre-arguments.")
+            return suggestions
         
-        if "Conclusion peu claire" in str(issues):
-            suggestions.append("Reformulez votre conclusion de manière plus précise et spécifique")
+        # Suggestions basées sur les problèmes identifiés
+        for issue in issues:
+            if "prémisse" in issue.lower():
+                if "clarté" in issue.lower():
+                    suggestions.append("Pour améliorer la clarté de vos prémisses : utilisez des phrases courtes et directes, évitez le jargon inutile, et définissez les termes techniques.")
+                elif "crédibilité" in issue.lower():
+                    suggestions.append("Pour renforcer la crédibilité de vos prémisses : citez des sources fiables, utilisez des statistiques vérifiables, ou appuyez-vous sur des faits établis.")
+                elif "pertinence" in issue.lower():
+                    suggestions.append("Pour améliorer la pertinence de vos prémisses : assurez-vous que chaque prémisse contribue directement à votre conclusion, et éliminez les informations non essentielles.")
+            
+            elif "conclusion" in issue.lower():
+                if "clarté" in issue.lower():
+                    suggestions.append("Pour clarifier votre conclusion : utilisez des termes précis, évitez les ambiguïtés, et assurez-vous qu'elle découle logiquement de vos prémisses.")
+                else:
+                    suggestions.append("Votre conclusion devrait être clairement liée à vos prémisses. Utilisez des connecteurs logiques comme 'donc', 'par conséquent', ou 'ainsi'.")
+            
+            elif "logique" in issue.lower():
+                if "fluidité" in issue.lower():
+                    suggestions.append("Pour améliorer la fluidité logique : utilisez des connecteurs logiques appropriés, structurez vos idées de manière progressive, et assurez-vous que chaque étape découle naturellement de la précédente.")
+                elif "incomplet" in issue.lower():
+                    suggestions.append("Pour compléter votre argument : ajoutez des prémisses intermédiaires qui renforcent le lien entre vos prémisses principales et votre conclusion.")
+                elif "contradictoire" in issue.lower():
+                    suggestions.append("Pour résoudre les contradictions : revoyez vos prémisses pour vous assurer qu'elles sont cohérentes entre elles, et reformulez-les si nécessaire.")
         
-        if "peu pertinentes" in str(issues):
-            suggestions.append("Assurez-vous que vos prémisses sont directement liées à votre conclusion")
-        
-        if "Flux logique déficient" in str(issues):
-            suggestions.append("Utilisez des connecteurs logiques (donc, par conséquent, ainsi...)")
-        
-        if "Nombre insuffisant de prémisses" in str(issues):
-            suggestions.append("Ajoutez des prémisses supplémentaires pour renforcer votre argument")
-        
-        if not suggestions:
-            suggestions.append("Votre argument semble bien structuré")
+        # Suggestions spécifiques basées sur le type d'argument
+        if structure['argument_type'] == 'deductive':
+            suggestions.append("Pour un argument déductif, assurez-vous que vos prémisses sont universellement vraies et que votre conclusion en découle nécessairement.")
+        elif structure['argument_type'] == 'inductive':
+            suggestions.append("Pour un argument inductif, renforcez vos prémisses avec des exemples variés et représentatifs pour augmenter la probabilité de votre conclusion.")
         
         return suggestions
