@@ -73,7 +73,9 @@ const ValidationForm = () => {
 
     try {
       const response = await validateArgument(validPremises, conclusion.trim(), argumentType);
-      setResult(response);
+      // Fix: Extract the result object from the API response
+      const validationResult = response.result || response;
+      setResult(validationResult);
     } catch (err) {
       setError(err.message);
       console.error('Erreur lors de la validation:', err);
@@ -216,42 +218,46 @@ const ValidationForm = () => {
               {result.is_valid ? 'Argument valide' : 'Argument invalide'}
             </h4>
             <p className="status-description">
-              {result.validation_message || 'Aucune description disponible'}
+              {result.validation_message || 'Analyse de la structure argumentative complétée'}
             </p>
           </div>
-          {result.confidence && (
+          {(result.validity_score || result.confidence) && (
             <div className="confidence-score">
-              <span className="confidence-label">Confiance:</span>
+              <span className="confidence-label">Score de validité:</span>
               <span className="confidence-value">
-                {Math.round(result.confidence * 100)}%
+                {Math.round((result.validity_score || result.confidence) * 100)}%
               </span>
             </div>
           )}
         </div>
 
         {/* Détails de validation */}
-        {result.details && (
+        {(result.logical_structure || result.details) && (
           <div className="validation-details">
             <h4>🔍 Détails de l'analyse</h4>
             
-            {result.details.structure_analysis && (
-              <div className="detail-item">
-                <strong>Structure logique:</strong>
-                <p>{result.details.structure_analysis}</p>
-              </div>
+            {result.logical_structure && (
+              <>
+                <div className="detail-item">
+                  <strong>Structure logique:</strong>
+                  <p>Type: {result.logical_structure.argument_type}</p>
+                  <p>Complétude: {Math.round(result.logical_structure.completeness * 100)}%</p>
+                  <p>Cohérence: {Math.round(result.logical_structure.consistency * 100)}%</p>
+                </div>
+                
+                <div className="detail-item">
+                  <strong>Analyse des connecteurs:</strong>
+                  <p>{result.logical_structure.has_logical_connectors ? 
+                    'Connecteurs logiques présents' : 
+                    'Connecteurs logiques manquants'}</p>
+                </div>
+              </>
             )}
             
-            {result.details.logical_validity && (
+            {result.soundness_score && (
               <div className="detail-item">
-                <strong>Validité logique:</strong>
-                <p>{result.details.logical_validity}</p>
-              </div>
-            )}
-            
-            {result.details.soundness_check && (
-              <div className="detail-item">
-                <strong>Vérification de solidité:</strong>
-                <p>{result.details.soundness_check}</p>
+                <strong>Score de solidité:</strong>
+                <p>{Math.round(result.soundness_score * 100)}%</p>
               </div>
             )}
           </div>
@@ -263,17 +269,30 @@ const ValidationForm = () => {
             <h4>⚠️ Problèmes identifiés</h4>
             <div className="issues-list">
               {result.issues.map((issue, index) => (
-                <div key={index} className={`issue-item ${issue.severity || 'warning'}`}>
+                <div key={index} className="issue-item warning">
                   <div className="issue-header">
-                    <span className="issue-type">{issue.type || 'Problème'}</span>
-                    <span className="issue-severity">{issue.severity || 'Avertissement'}</span>
+                    <span className="issue-type">Problème structurel</span>
+                    <span className="issue-severity">Avertissement</span>
                   </div>
-                  <div className="issue-message">{issue.message}</div>
-                  {issue.suggestion && (
-                    <div className="issue-suggestion">
-                      <strong>Suggestion:</strong> {issue.suggestion}
-                    </div>
-                  )}
+                  <div className="issue-message">{issue}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Analyse des lacunes */}
+        {result.logical_structure?.gap_analysis && result.logical_structure.gap_analysis.length > 0 && (
+          <div className="validation-issues">
+            <h4>🔍 Analyse des lacunes</h4>
+            <div className="issues-list">
+              {result.logical_structure.gap_analysis.map((gap, index) => (
+                <div key={index} className="issue-item info">
+                  <div className="issue-header">
+                    <span className="issue-type">Lacune logique</span>
+                    <span className="issue-severity">Information</span>
+                  </div>
+                  <div className="issue-message">{gap}</div>
                 </div>
               ))}
             </div>
@@ -295,17 +314,17 @@ const ValidationForm = () => {
         )}
 
         {/* Score de qualité */}
-        {result.quality_score && (
+        {(result.quality_score || result.validity_score) && (
           <div className="quality-score">
             <h4>📈 Score de qualité</h4>
             <div className="score-bar">
               <div 
                 className="score-fill"
-                style={{ width: `${result.quality_score * 100}%` }}
+                style={{ width: `${(result.quality_score || result.validity_score) * 100}%` }}
               ></div>
             </div>
             <div className="score-text">
-              {Math.round(result.quality_score * 100)}/100
+              {Math.round((result.quality_score || result.validity_score) * 100)}/100
             </div>
           </div>
         )}
