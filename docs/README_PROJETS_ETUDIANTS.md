@@ -1,5 +1,12 @@
 # Guide de démarrage des projets étudiants "argumentiation_analysis"
 
+## 0. Support et Accompagnement (NOUVEAU)
+
+Pour des conseils, la liste des problèmes connus et des ressources centralisées pour vous aider durant votre projet, consultez :
+
+- **Guide d'Accompagnement des Étudiants** : [`projets/ACCOMPAGNEMENT_ETUDIANTS.md`](projets/ACCOMPAGNEMENT_ETUDIANTS.md)
+
+---
 > **NOUVEAU : Pour un démarrage rapide et une vue d'ensemble, consultez notre [Synthèse d'Accueil pour les Étudiants](projets/ACCUEIL_ETUDIANTS_SYNTHESE.md) !**
 
 Bienvenue dans le projet "argumentiation_analysis" ! Ce document a pour but de vous aider à naviguer dans les ressources disponibles et à choisir votre sujet de projet.
