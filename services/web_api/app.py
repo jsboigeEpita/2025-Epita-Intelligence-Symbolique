@@ -12,7 +12,7 @@ import os
 import sys
 import logging
 from pathlib import Path
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, redirect, url_for
 from flask_cors import CORS
 from typing import Dict, Any, Optional
 
@@ -625,6 +625,17 @@ def interpret_logic_results():
             message=str(e),
             status_code=500
         ).dict()), 500
+
+
+@app.route('/', methods=['GET'])
+def index():
+    """Redirection vers la documentation de l'API."""
+    return redirect('/api/endpoints')
+
+@app.route('/favicon.ico', methods=['GET'])
+def favicon():
+    """Gestion du favicon."""
+    return '', 204  # No content
 
 
 if __name__ == '__main__':
