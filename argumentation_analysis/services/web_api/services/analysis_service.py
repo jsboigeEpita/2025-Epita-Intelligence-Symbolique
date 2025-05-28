@@ -114,7 +114,7 @@ class AnalysisService:
         :rtype: bool
         """
         return self.is_initialized and (
-            self.informal_agent is not None or 
+            self.informal_agent is not None or
             any([self.complex_analyzer, self.contextual_analyzer, self.severity_evaluator])
         )
     
