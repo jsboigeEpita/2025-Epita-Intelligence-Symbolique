@@ -1,0 +1,556 @@
+/* FallacyDetector Component Styles */
+
+.fallacy-detector {
+  max-width: 100%;
+  margin: 0 auto;
+}
+
+/* Header */
+.detector-header {
+  text-align: center;
+  margin-bottom: 2rem;
+}
+
+.detector-header h2 {
+  margin: 0 0 1rem 0;
+  color: var(--text-primary);
+  font-size: 2rem;
+  font-weight: 700;
+}
+
+.detector-header p {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 1.125rem;
+  line-height: 1.6;
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+/* Fallacy Examples */
+.fallacy-examples {
+  background: var(--bg-primary);
+  border-radius: var(--border-radius);
+  padding: 2rem;
+  margin-bottom: 2rem;
+  box-shadow: var(--shadow);
+}
+
+.fallacy-examples h3 {
+  margin: 0 0 1.5rem 0;
+  color: var(--text-primary);
+  font-size: 1.5rem;
+  font-weight: 600;
+}
+
+.examples-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+  gap: 1.5rem;
+}
+
+.fallacy-example-card {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius);
+  padding: 1.5rem;
+  transition: all 0.2s ease;
+}
+
+.fallacy-example-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.1);
+  border-color: var(--primary-color);
+}
+
+.example-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.example-header h4 {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: 1.125rem;
+  font-weight: 600;
+}
+
+.example-text {
+  background: var(--bg-primary);
+  border-left: 3px solid var(--warning-color);
+  padding: 1rem;
+  margin: 1rem 0;
+  font-style: italic;
+  color: var(--text-primary);
+  border-radius: 0 var(--border-radius) var(--border-radius) 0;
+}
+
+.example-description {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
+/* Detector Form */
+.detector-form {
+  background: var(--bg-primary);
+  border-radius: var(--border-radius);
+  padding: 2rem;
+  box-shadow: var(--shadow);
+  margin-bottom: 2rem;
+}
+
+/* Detection Options */
+.detection-options {
+  margin: 2rem 0;
+  padding: 1.5rem;
+  background: var(--bg-secondary);
+  border-radius: var(--border-radius);
+  border: 1px solid var(--border-color);
+}
+
+.detection-options h4 {
+  margin: 0 0 1.5rem 0;
+  color: var(--text-primary);
+  font-size: 1.125rem;
+  font-weight: 600;
+}
+
+.option-group {
+  margin-bottom: 1.5rem;
+}
+
+.severity-slider {
+  width: 100%;
+  margin: 0.5rem 0;
+  accent-color: var(--primary-color);
+}
+
+.severity-labels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin-top: 0.25rem;
+}
+
+.option-checkboxes {
+  display: grid;
+  gap: 1rem;
+  margin-top: 1.5rem;
+}
+
+.fallacy-types-selector {
+  margin-top: 1rem;
+}
+
+/* Results */
+.detection-results {
+  background: var(--bg-primary);
+  border-radius: var(--border-radius);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+  animation: slideInUp 0.4s ease-out;
+}
+
+.results-header {
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+  color: white;
+  padding: 1.5rem 2rem;
+}
+
+.results-header h3 {
+  margin: 0 0 1rem 0;
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+
+.results-stats {
+  display: flex;
+  gap: 2rem;
+  flex-wrap: wrap;
+}
+
+.stat-item {
+  font-size: 0.875rem;
+  opacity: 0.9;
+}
+
+.stat-item strong {
+  font-weight: 700;
+}
+
+/* Fallacies Summary */
+.fallacies-detected {
+  padding: 2rem;
+}
+
+.fallacies-summary {
+  margin-bottom: 2rem;
+  padding: 1.5rem;
+  background: var(--bg-secondary);
+  border-radius: var(--border-radius);
+}
+
+.fallacies-summary h4 {
+  margin: 0 0 1rem 0;
+  color: var(--text-primary);
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+
+.severity-distribution {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.severity-count {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  border-radius: 9999px;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.severity-count.severity-critical {
+  background: rgba(220, 38, 38, 0.1);
+  color: #991b1b;
+  border: 1px solid rgba(220, 38, 38, 0.2);
+}
+
+.severity-count.severity-high {
+  background: rgba(245, 158, 11, 0.1);
+  color: #92400e;
+  border: 1px solid rgba(245, 158, 11, 0.2);
+}
+
+.severity-count.severity-medium {
+  background: rgba(59, 130, 246, 0.1);
+  color: #1e40af;
+  border: 1px solid rgba(59, 130, 246, 0.2);
+}
+
+.severity-count.severity-low {
+  background: rgba(107, 114, 128, 0.1);
+  color: #374151;
+  border: 1px solid rgba(107, 114, 128, 0.2);
+}
+
+.severity-count .count {
+  background: currentColor;
+  color: white;
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+/* Fallacies List */
+.fallacies-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.fallacy-detection {
+  background: var(--bg-secondary);
+  border-radius: var(--border-radius);
+  border-left: 4px solid;
+  overflow: hidden;
+  transition: all 0.2s ease;
+}
+
+.fallacy-detection:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.1);
+}
+
+.fallacy-detection.severity-critical {
+  border-left-color: var(--danger-color);
+  background: linear-gradient(135deg, #fef2f2, var(--bg-secondary));
+}
+
+.fallacy-detection.severity-high {
+  border-left-color: #f59e0b;
+  background: linear-gradient(135deg, #fffbeb, var(--bg-secondary));
+}
+
+.fallacy-detection.severity-medium {
+  border-left-color: #3b82f6;
+  background: linear-gradient(135deg, #eff6ff, var(--bg-secondary));
+}
+
+.fallacy-detection.severity-low {
+  border-left-color: #6b7280;
+  background: linear-gradient(135deg, #f9fafb, var(--bg-secondary));
+}
+
+.fallacy-detection-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.5rem 1.5rem 0 1.5rem;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.fallacy-info {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.fallacy-icon {
+  font-size: 2rem;
+  flex-shrink: 0;
+}
+
+.fallacy-title h5 {
+  margin: 0 0 0.25rem 0;
+  color: var(--text-primary);
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+
+.fallacy-type {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.025em;
+  font-weight: 500;
+}
+
+.severity-indicator {
+  flex-shrink: 0;
+}
+
+.severity-badge {
+  padding: 0.375rem 0.875rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.025em;
+}
+
+.severity-badge.severity-critical {
+  background: var(--danger-color);
+  color: white;
+}
+
+.severity-badge.severity-high {
+  background: #f59e0b;
+  color: white;
+}
+
+.severity-badge.severity-medium {
+  background: #3b82f6;
+  color: white;
+}
+
+.severity-badge.severity-low {
+  background: #6b7280;
+  color: white;
+}
+
+/* Fallacy Content */
+.fallacy-content {
+  padding: 1rem 1.5rem 1.5rem 1.5rem;
+}
+
+.fallacy-description {
+  margin: 0 0 1rem 0;
+  color: var(--text-primary);
+  line-height: 1.6;
+  font-size: 1rem;
+}
+
+.fallacy-location {
+  background: rgba(59, 130, 246, 0.1);
+  border: 1px solid rgba(59, 130, 246, 0.2);
+  border-radius: 4px;
+  padding: 0.75rem;
+  margin: 1rem 0;
+  font-size: 0.875rem;
+  color: #1e40af;
+}
+
+.fallacy-explanation,
+.fallacy-suggestion,
+.fallacy-examples-detail {
+  margin: 1.5rem 0;
+  padding: 1rem;
+  border-radius: var(--border-radius);
+}
+
+.fallacy-explanation {
+  background: linear-gradient(135deg, #eff6ff, #ffffff);
+  border: 1px solid #bfdbfe;
+}
+
+.fallacy-suggestion {
+  background: linear-gradient(135deg, #f0fdf4, #ffffff);
+  border: 1px solid #bbf7d0;
+}
+
+.fallacy-examples-detail {
+  background: linear-gradient(135deg, #fefce8, #ffffff);
+  border: 1px solid #fde047;
+}
+
+.fallacy-explanation h6,
+.fallacy-suggestion h6,
+.fallacy-examples-detail h6 {
+  margin: 0 0 0.75rem 0;
+  color: var(--text-primary);
+  font-size: 0.875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.025em;
+}
+
+.fallacy-explanation p,
+.fallacy-suggestion p {
+  margin: 0;
+  color: var(--text-primary);
+  line-height: 1.5;
+}
+
+.fallacy-examples-detail ul {
+  margin: 0;
+  padding-left: 1.5rem;
+  color: var(--text-primary);
+}
+
+.fallacy-examples-detail li {
+  margin-bottom: 0.5rem;
+  line-height: 1.5;
+}
+
+/* No Fallacies State */
+.no-fallacies {
+  text-align: center;
+  padding: 3rem 2rem;
+  background: var(--bg-secondary);
+  margin: 2rem;
+  border-radius: var(--border-radius);
+}
+
+.no-fallacies-icon {
+  font-size: 4rem;
+  margin-bottom: 1rem;
+}
+
+.no-fallacies h4 {
+  margin: 0 0 1rem 0;
+  color: var(--success-color);
+  font-size: 1.5rem;
+  font-weight: 600;
+}
+
+.no-fallacies p {
+  margin: 0 0 2rem 0;
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+
+/* Results Actions */
+.results-actions {
+  padding: 1.5rem 2rem;
+  background: var(--bg-tertiary);
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .detector-header h2 {
+    font-size: 1.75rem;
+  }
+  
+  .detector-header p {
+    font-size: 1rem;
+  }
+  
+  .examples-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .fallacy-examples {
+    padding: 1.5rem;
+  }
+  
+  .detector-form {
+    padding: 1.5rem;
+  }
+  
+  .detection-options {
+    padding: 1rem;
+  }
+  
+  .results-header {
+    padding: 1rem 1.5rem;
+  }
+  
+  .fallacies-detected {
+    padding: 1.5rem;
+  }
+  
+  .fallacy-detection-header {
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 1rem 1rem 0 1rem;
+  }
+  
+  .fallacy-content {
+    padding: 1rem;
+  }
+  
+  .results-stats {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  
+  .severity-distribution {
+    justify-content: center;
+  }
+  
+  .results-actions {
+    padding: 1rem 1.5rem;
+    flex-direction: column;
+  }
+}
+
+@media (max-width: 480px) {
+  .example-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.75rem;
+  }
+  
+  .fallacy-info {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+  
+  .fallacy-icon {
+    font-size: 1.5rem;
+  }
+  
+  .severity-distribution {
+    flex-direction: column;
+    align-items: center;
+  }
+} 
