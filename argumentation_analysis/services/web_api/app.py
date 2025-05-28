@@ -12,24 +12,61 @@ import os
 import sys
 import logging
 from pathlib import Path
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, redirect, url_for
 from flask_cors import CORS
 from typing import Dict, Any, Optional
 
-# Import des services
-from argumentation_analysis.services.web_api.services.analysis_service import AnalysisService
-from argumentation_analysis.services.web_api.services.validation_service import ValidationService
-from argumentation_analysis.services.web_api.services.fallacy_service import FallacyService
-from argumentation_analysis.services.web_api.services.framework_service import FrameworkService
-from argumentation_analysis.services.web_api.services.logic_service import LogicService
-from argumentation_analysis.services.web_api.models.request_models import (
-    AnalysisRequest, ValidationRequest, FallacyRequest, FrameworkRequest,
-    LogicBeliefSetRequest, LogicQueryRequest, LogicGenerateQueriesRequest, LogicOptions
-)
-from argumentation_analysis.services.web_api.models.response_models import (
-    AnalysisResponse, ValidationResponse, FallacyResponse, FrameworkResponse, ErrorResponse,
-    LogicBeliefSetResponse, LogicQueryResponse, LogicGenerateQueriesResponse, LogicInterpretationResponse, LogicQueryResult
-)
+# Ajouter le répertoire racine au chemin Python
+current_dir = Path(__file__).parent
+# La structure du projet est c:/dev/2025-Epita-Intelligence-Symbolique/argumentation_analysis/services/web_api/app.py
+# root_dir doit pointer vers c:/dev/2025-Epita-Intelligence-Symbolique/argumentation_analysis
+# donc current_dir.parent.parent
+root_dir = current_dir.parent.parent
+if str(root_dir) not in sys.path:
+    # Ceci ajoute 'c:/dev/2025-Epita-Intelligence-Symbolique/argumentation_analysis' au path
+    sys.path.append(str(root_dir))
+    # Pour que les imports comme `from services.web_api...` fonctionnent,
+    # il faudrait que `c:/dev/2025-Epita-Intelligence-Symbolique` soit dans le path,
+    # ou que les imports soient `from argumentation_analysis.services.web_api...`
+    # La version HEAD utilise `from argumentation_analysis.services.web_api...` ce qui est plus propre.
+    # Nous allons donc conserver les imports de HEAD et supprimer cette manipulation de sys.path
+    # qui est spécifique à pr-student-1 et potentiellement source de confusion.
+    pass # On ne modifie plus sys.path ici, on se fie aux imports de HEAD.
+
+# Import des services (style HEAD, mais avec les try-except de pr-student-1 pour la robustesse)
+try:
+    # Utilisation des imports absolus depuis la racine du module `argumentation_analysis` (style HEAD)
+    from argumentation_analysis.services.web_api.services.analysis_service import AnalysisService
+    from argumentation_analysis.services.web_api.services.validation_service import ValidationService
+    from argumentation_analysis.services.web_api.services.fallacy_service import FallacyService
+    from argumentation_analysis.services.web_api.services.framework_service import FrameworkService
+    from argumentation_analysis.services.web_api.services.logic_service import LogicService
+    from argumentation_analysis.services.web_api.models.request_models import (
+        AnalysisRequest, ValidationRequest, FallacyRequest, FrameworkRequest,
+        LogicBeliefSetRequest, LogicQueryRequest, LogicGenerateQueriesRequest, LogicOptions # Ajout de LogicOptions depuis HEAD
+    )
+    from argumentation_analysis.services.web_api.models.response_models import (
+        AnalysisResponse, ValidationResponse, FallacyResponse, FrameworkResponse, ErrorResponse,
+        LogicBeliefSetResponse, LogicQueryResponse, LogicGenerateQueriesResponse, LogicInterpretationResponse, LogicQueryResult # Ajout de LogicQueryResult depuis HEAD
+    )
+except ImportError as e_abs:
+    logger.warning(f"ImportError avec imports absolus ({e_abs}). Tentative d'imports relatifs (style pr-student-1).")
+    # Fallback pour les imports relatifs (style pr-student-1)
+    # Ceci est conservé au cas où l'environnement d'exécution ne trouverait pas `argumentation_analysis` comme top-level package.
+    from .services.analysis_service import AnalysisService
+    from .services.validation_service import ValidationService
+    from .services.fallacy_service import FallacyService
+    from .services.framework_service import FrameworkService
+    from .services.logic_service import LogicService
+    from .models.request_models import (
+        AnalysisRequest, ValidationRequest, FallacyRequest, FrameworkRequest,
+        LogicBeliefSetRequest, LogicQueryRequest, LogicGenerateQueriesRequest, LogicOptions # Ajout de LogicOptions
+    )
+    from .models.response_models import (
+        AnalysisResponse, ValidationResponse, FallacyResponse, FrameworkResponse, ErrorResponse,
+        LogicBeliefSetResponse, LogicQueryResponse, LogicGenerateQueriesResponse, LogicInterpretationResponse, LogicQueryResult # Ajout de LogicQueryResult
+    )
+
 
 # Configuration du logging
 logging.basicConfig(
@@ -570,9 +607,11 @@ def interpret_logic_results():
                 ).dict()), 400
             
             # Conversion des résultats en objets LogicQueryResult
+            # Utilisation de l'import global de LogicQueryResult (style HEAD)
             results = [LogicQueryResult(**result) for result in results_data]
             
             # Conversion des options en objet LogicOptions
+            # Utilisation de l'import global de LogicOptions (style HEAD)
             options = LogicOptions(**options_data) if options_data else None
             
         except Exception as e:
@@ -601,6 +640,17 @@ def interpret_logic_results():
             message=str(e),
             status_code=500
         ).dict()), 500
+
+# Ajout des routes de pr-student-1
+@app.route('/', methods=['GET'])
+def index():
+    """Redirection vers la documentation de l'API."""
+    return redirect('/api/endpoints')
+
+@app.route('/favicon.ico', methods=['GET'])
+def favicon():
+    """Gestion du favicon."""
+    return '', 204  # No content
 
 
 if __name__ == '__main__':
