@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 Tests d'intégration end-to-end pour le système d'analyse argumentative.
 

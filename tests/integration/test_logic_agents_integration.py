@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # tests/integration/test_logic_agents_integration.py
 """
 Tests d'intégration pour les agents logiques.

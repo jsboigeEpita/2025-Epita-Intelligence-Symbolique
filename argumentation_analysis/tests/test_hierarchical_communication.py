@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 Tests d'intégration pour la communication hiérarchique entre les trois niveaux d'agents.
 

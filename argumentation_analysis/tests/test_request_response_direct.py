@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 Test direct du protocole de requête-réponse pour isoler les problèmes.
 """

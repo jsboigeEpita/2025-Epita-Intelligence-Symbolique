@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 Script temporaire pour tester les importations.
 """

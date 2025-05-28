@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 Tests unitaires pour le middleware de messagerie du système de communication multi-canal.
 """

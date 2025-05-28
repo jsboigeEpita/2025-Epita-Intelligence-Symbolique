@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 Tests unitaires pour le module shared_state.py qui gère l'état partagé d'une analyse rhétorique.
 """

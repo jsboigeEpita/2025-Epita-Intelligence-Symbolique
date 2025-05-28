@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # tests/agents/core/logic/test_modal_logic_agent.py
 """
 Tests unitaires pour la classe ModalLogicAgent.

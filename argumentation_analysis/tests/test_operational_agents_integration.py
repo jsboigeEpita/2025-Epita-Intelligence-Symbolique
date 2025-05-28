@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 Tests d'intégration pour les agents opérationnels dans l'architecture hiérarchique.
 

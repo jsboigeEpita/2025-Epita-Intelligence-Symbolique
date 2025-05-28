@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 Tests d'intégration pour la stratégie d'équilibrage de participation des agents.
 

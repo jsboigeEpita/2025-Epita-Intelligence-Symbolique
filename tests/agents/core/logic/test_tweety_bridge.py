@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # tests/agents/core/logic/test_tweety_bridge.py
 """
 Tests unitaires pour la classe TweetyBridge.

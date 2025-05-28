@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 Tests pour le module state.py du niveau tactique.
 """

@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # tests/agents/core/logic/test_belief_set.py
 """
 Tests unitaires pour les classes BeliefSet.

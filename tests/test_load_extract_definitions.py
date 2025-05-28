@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import unittest
 import os
 import json
@@ -124,11 +125,11 @@ class TestLoadExtractDefinitions(unittest.TestCase):
         if wrong_key_file.exists(): wrong_key_file.unlink()
 
 
-    def test_save_definitions_unencrypted(self):
+    def test_save_definitions_unencrypted(self, config={}):
         new_definitions_file = self.test_dir / "new_extract_definitions.json"
         definitions_obj = ExtractDefinitions.model_validate(self.sample_data)
         
-        save_extract_definitions(definitions_obj, file_path=str(new_definitions_file))
+        save_extract_definitions(definitions_obj, config_file=str(new_definitions_file))
         self.assertTrue(new_definitions_file.exists())
         
         # Vérifier le contenu
@@ -138,7 +139,7 @@ class TestLoadExtractDefinitions(unittest.TestCase):
         
         if new_definitions_file.exists(): new_definitions_file.unlink()
 
-    def test_save_definitions_encrypted(self):
+    def test_save_definitions_encrypted(self, embed_full_text=True):
         new_encrypted_file = self.test_dir / "new_extract_definitions.json.enc"
         new_key_file = self.test_dir / "new_key.key"
         definitions_obj = ExtractDefinitions.model_validate(self.sample_data)
@@ -147,7 +148,7 @@ class TestLoadExtractDefinitions(unittest.TestCase):
         new_key = self.crypto_service.generate_key()
         self.crypto_service.save_key(new_key, new_key_file)
 
-        save_extract_definitions(definitions_obj, file_path=str(new_encrypted_file), key_path=str(new_key_file))
+        save_extract_definitions(definitions_obj, config_file=str(new_encrypted_file), key_path=str(new_key_file))
         self.assertTrue(new_encrypted_file.exists())
         
         # Vérifier en déchiffrant

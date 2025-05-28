@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 Tests unitaires pour les adaptateurs du système de communication multi-canal.
 """

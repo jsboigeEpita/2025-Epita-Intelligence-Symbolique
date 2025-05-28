@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 Tests unitaires pour la fonction run_analysis_conversation du module analysis_runner.
 """

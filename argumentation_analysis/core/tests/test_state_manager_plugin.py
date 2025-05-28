@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 Tests unitaires pour le module state_manager_plugin.py qui fournit une interface
 entre le kernel et l'état partagé d'une analyse rhétorique.

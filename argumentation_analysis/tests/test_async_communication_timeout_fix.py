@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 Module de correction pour les tests asynchrones qui se bloquent.
 
