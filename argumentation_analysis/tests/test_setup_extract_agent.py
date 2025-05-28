@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 Tests unitaires pour la fonction setup_extract_agent.
 """

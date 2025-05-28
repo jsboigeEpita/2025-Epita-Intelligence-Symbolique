@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 
 from unittest.mock import Mock, MagicMock, patch
 import tempfile

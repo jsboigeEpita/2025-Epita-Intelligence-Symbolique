@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 Tests unitaires pour l'agent d'analyse informelle.
 """

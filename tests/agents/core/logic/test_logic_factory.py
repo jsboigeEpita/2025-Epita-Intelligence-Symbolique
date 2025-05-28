@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # tests/agents/core/logic/test_logic_factory.py
 """
 Tests unitaires pour la classe LogicAgentFactory.

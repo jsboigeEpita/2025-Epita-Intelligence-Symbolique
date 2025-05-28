@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import pytest
 from unittest.mock import MagicMock, patch
 from argumentation_analysis.orchestration.hierarchical.tactical.coordinator import TaskCoordinator

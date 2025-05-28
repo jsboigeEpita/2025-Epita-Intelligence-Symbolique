@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 Tests d'intégration pour le flux complet d'analyse rhétorique.
 

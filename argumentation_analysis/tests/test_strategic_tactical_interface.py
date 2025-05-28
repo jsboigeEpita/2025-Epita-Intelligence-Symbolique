@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 Tests pour l'interface entre les niveaux stratégique et tactique.
 """

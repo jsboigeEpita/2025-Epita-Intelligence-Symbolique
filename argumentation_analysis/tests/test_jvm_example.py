@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 Exemple de test utilisant la classe JVMTestCase.
 

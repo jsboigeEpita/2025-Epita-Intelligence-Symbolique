@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 print("Test d'installation réussi")
 
 # Essayons d'importer quelques bibliothèques importantes

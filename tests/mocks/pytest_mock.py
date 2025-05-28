@@ -1,54 +1,32 @@
-#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 """
-Mock pour pytest
+Mock pour pytest - Compatibilité avec les tests existants
 """
 
-from unittest.mock import Mock, MagicMock
+class MockPytest:
+    """Mock simple pour pytest"""
+    
+    @staticmethod
+    def skip(reason=""):
+        """Mock pour pytest.skip"""
+        def decorator(func):
+            def wrapper(*args, **kwargs):
+                print(f"Test skipped: {reason}")
+                return None
+            return wrapper
+        return decorator
+    
+    @staticmethod
+    def mark():
+        """Mock pour pytest.mark"""
+        class Mark:
+            @staticmethod
+            def parametrize(*args, **kwargs):
+                def decorator(func):
+                    return func
+                return decorator
+        return Mark()
 
-# Mock principal de pytest
-pytest = Mock()
-
-# Fonctions principales de pytest
-def main(*args, **kwargs):
-    return 0
-
-def raises(*args, **kwargs):
-    class RaisesContext:
-        def __enter__(self):
-            return self
-        def __exit__(self, exc_type, exc_val, exc_tb):
-            return True
-    return RaisesContext()
-
-def mark(*args, **kwargs):
-    def decorator(func):
-        return func
-    return decorator
-
-def fixture(*args, **kwargs):
-    def decorator(func):
-        return func
-    return decorator
-
-def skip(*args, **kwargs):
-    def decorator(func):
-        return func
-    return decorator
-
-def parametrize(*args, **kwargs):
-    def decorator(func):
-        return func
-    return decorator
-
-# Configuration du mock
-pytest.main = main
-pytest.raises = raises
-pytest.mark = Mock()
-pytest.mark.parametrize = parametrize
-pytest.mark.skip = skip
-pytest.mark.timeout = mark
-pytest.fixture = fixture
-pytest.skip = skip
-
-# Export
-__all__ = ['pytest', 'main', 'raises', 'mark', 'fixture', 'skip', 'parametrize']
+# Remplacer pytest par le mock
+import sys
+sys.modules['pytest'] = MockPytest()
