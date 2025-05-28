@@ -53,58 +53,58 @@ except ImportError as e:
 
 # --- Mock NumPy Immédiat ---
 # Installation immédiate du mock NumPy pour éviter les problèmes d'import pandas
-def _install_numpy_mock_immediately():
-    """Installe le mock NumPy immédiatement pour éviter les conflits avec pandas."""
-    if 'numpy' not in sys.modules:
-        try:
-            from numpy_mock import array, ndarray, mean, sum, zeros, ones, dot, concatenate, vstack, hstack, argmax, argmin, max, min, random, rec, _core, core, bool_, number, object_, float64, float32, int64, int32, int_, uint, uint64, uint32
-            sys.modules['numpy'] = type('numpy', (), {
-                'array': array, 'ndarray': ndarray, 'mean': mean, 'sum': sum, 'zeros': zeros, 'ones': ones,
-                'dot': dot, 'concatenate': concatenate, 'vstack': vstack, 'hstack': hstack,
-                'argmax': argmax, 'argmin': argmin, 'max': max, 'min': min, 'random': random, 'rec': rec,
-                '_core': _core, 'core': core, '__version__': '1.24.3',
-                # Types de données pour compatibilité PyTorch
-                'bool_': bool_, 'number': number, 'object_': object_,
-                'float64': float64, 'float32': float32, 'int64': int64, 'int32': int32, 'int_': int_,
-                'uint': uint, 'uint64': uint64, 'uint32': uint32,
-            })
-            # Installation explicite des sous-modules dans sys.modules
-            sys.modules['numpy._core'] = _core
-            sys.modules['numpy.core'] = core
-            sys.modules['numpy._core.multiarray'] = _core.multiarray
-            sys.modules['numpy.core.multiarray'] = core.multiarray
-            print("INFO: Mock NumPy installé immédiatement dans conftest.py")
-        except ImportError as e:
-            print(f"ERREUR lors de l'installation immédiate du mock NumPy: {e}")
+# def _install_numpy_mock_immediately():
+#     """Installe le mock NumPy immédiatement pour éviter les conflits avec pandas."""
+#     if 'numpy' not in sys.modules:
+#         try:
+#             from numpy_mock import array, ndarray, mean, sum, zeros, ones, dot, concatenate, vstack, hstack, argmax, argmin, max, min, random, rec, _core, core, bool_, number, object_, float64, float32, int64, int32, int_, uint, uint64, uint32
+#             sys.modules['numpy'] = type('numpy', (), {
+#                 'array': array, 'ndarray': ndarray, 'mean': mean, 'sum': sum, 'zeros': zeros, 'ones': ones,
+#                 'dot': dot, 'concatenate': concatenate, 'vstack': vstack, 'hstack': hstack,
+#                 'argmax': argmax, 'argmin': argmin, 'max': max, 'min': min, 'random': random, 'rec': rec,
+#                 '_core': _core, 'core': core, '__version__': '1.24.3',
+#                 # Types de données pour compatibilité PyTorch
+#                 'bool_': bool_, 'number': number, 'object_': object_,
+#                 'float64': float64, 'float32': float32, 'int64': int64, 'int32': int32, 'int_': int_,
+#                 'uint': uint, 'uint64': uint64, 'uint32': uint32,
+#             })
+#             # Installation explicite des sous-modules dans sys.modules
+#             sys.modules['numpy._core'] = _core
+#             sys.modules['numpy.core'] = core
+#             sys.modules['numpy._core.multiarray'] = _core.multiarray
+#             sys.modules['numpy.core.multiarray'] = core.multiarray
+#             print("INFO: Mock NumPy installé immédiatement dans conftest.py")
+#         except ImportError as e:
+#             print(f"ERREUR lors de l'installation immédiate du mock NumPy: {e}")
 
 # Installation immédiate si Python 3.12+ ou si numpy n'est pas disponible
-if (sys.version_info.major == 3 and sys.version_info.minor >= 12):
-    _install_numpy_mock_immediately()
+# if (sys.version_info.major == 3 and sys.version_info.minor >= 12):
+#     _install_numpy_mock_immediately()
 
 # --- Mock Pandas Immédiat ---
 # Installation immédiate du mock Pandas pour éviter les problèmes d'import
-def _install_pandas_mock_immediately():
-    """Installe le mock Pandas immédiatement pour éviter les conflits avec numpy."""
-    if 'pandas' not in sys.modules:
-        try:
-            from pandas_mock import DataFrame, read_csv, read_json
-            sys.modules['pandas'] = type('pandas', (), {
-                'DataFrame': DataFrame, 'read_csv': read_csv, 'read_json': read_json, 'Series': list,
-                'NA': None, 'NaT': None, 'isna': lambda x: x is None, 'notna': lambda x: x is not None,
-                '__version__': '1.5.3',
-            })
-            # Installation des sous-modules pandas critiques
-            sys.modules['pandas.core'] = type('pandas.core', (), {})
-            sys.modules['pandas.core.api'] = type('pandas.core.api', (), {})
-            sys.modules['pandas._libs'] = type('pandas._libs', (), {})
-            sys.modules['pandas._libs.pandas_datetime'] = type('pandas._libs.pandas_datetime', (), {})
-            print("INFO: Mock Pandas installé immédiatement dans conftest.py")
-        except ImportError as e:
-            print(f"ERREUR lors de l'installation immédiate du mock Pandas: {e}")
+# def _install_pandas_mock_immediately():
+#     """Installe le mock Pandas immédiatement pour éviter les conflits avec numpy."""
+#     if 'pandas' not in sys.modules:
+#         try:
+#             from pandas_mock import DataFrame, read_csv, read_json
+#             sys.modules['pandas'] = type('pandas', (), {
+#                 'DataFrame': DataFrame, 'read_csv': read_csv, 'read_json': read_json, 'Series': list,
+#                 'NA': None, 'NaT': None, 'isna': lambda x: x is None, 'notna': lambda x: x is not None,
+#                 '__version__': '1.5.3',
+#             })
+#             # Installation des sous-modules pandas critiques
+#             sys.modules['pandas.core'] = type('pandas.core', (), {})
+#             sys.modules['pandas.core.api'] = type('pandas.core.api', (), {})
+#             sys.modules['pandas._libs'] = type('pandas._libs', (), {})
+#             sys.modules['pandas._libs.pandas_datetime'] = type('pandas._libs.pandas_datetime', (), {})
+#             print("INFO: Mock Pandas installé immédiatement dans conftest.py")
+#         except ImportError as e:
+#             print(f"ERREUR lors de l'installation immédiate du mock Pandas: {e}")
 
 # Installation immédiate si Python 3.12+ ou si pandas n'est pas disponible
-if (sys.version_info.major == 3 and sys.version_info.minor >= 12):
-    _install_pandas_mock_immediately()
+# if (sys.version_info.major == 3 and sys.version_info.minor >= 12):
+#     _install_pandas_mock_immediately()
 
 # --- Mock JPype ---
 # mocks_dir_for_mock (tests/mocks) est déjà dans sys.path depuis le bloc ci-dessus.
@@ -257,69 +257,75 @@ def is_python_version_compatible_with_jpype():
         return False
     return True
 
-def setup_numpy():
-    if (sys.version_info.major == 3 and sys.version_info.minor >= 12) or not is_module_available('numpy'):
-        if not is_module_available('numpy'): print("NumPy non disponible, utilisation du mock.")
-        else: print("Python 3.12+ détecté, utilisation du mock NumPy.")
-        # mocks_dir_for_mock (tests/mocks) est déjà dans sys.path
-        from numpy_mock import array, ndarray, mean, sum, zeros, ones, dot, concatenate, vstack, hstack, argmax, argmin, max, min, random, rec, _core, core, bool_, number, object_, float64, float32, int64, int32, int_, uint, uint64, uint32
-        sys.modules['numpy'] = type('numpy', (), {
-            'array': array, 'ndarray': ndarray, 'mean': mean, 'sum': sum, 'zeros': zeros, 'ones': ones,
-            'dot': dot, 'concatenate': concatenate, 'vstack': vstack, 'hstack': hstack,
-            'argmax': argmax, 'argmin': argmin, 'max': max, 'min': min, 'random': random, 'rec': rec,
-            '_core': _core, 'core': core, '__version__': '1.24.3',
-            # Types de données pour compatibilité PyTorch
-            'bool_': bool_, 'number': number, 'object_': object_,
-            'float64': float64, 'float32': float32, 'int64': int64, 'int32': int32, 'int_': int_,
-            'uint': uint, 'uint64': uint64, 'uint32': uint32,
-        })
-        # Installation explicite des sous-modules dans sys.modules
-        sys.modules['numpy._core'] = _core
-        sys.modules['numpy.core'] = core
-        sys.modules['numpy._core.multiarray'] = _core.multiarray
-        sys.modules['numpy.core.multiarray'] = core.multiarray
-        return sys.modules['numpy']
-    else: 
-        import numpy
-        print(f"Utilisation de la vraie bibliothèque NumPy (version {getattr(numpy, '__version__', 'inconnue')})")
-        return numpy
+# def setup_numpy():
+#     if (sys.version_info.major == 3 and sys.version_info.minor >= 12) or not is_module_available('numpy'):
+#         if not is_module_available('numpy'): print("NumPy non disponible, utilisation du mock.")
+#         else: print("Python 3.12+ détecté, utilisation du mock NumPy.")
+#         # mocks_dir_for_mock (tests/mocks) est déjà dans sys.path
+#         from numpy_mock import array, ndarray, mean, sum, zeros, ones, dot, concatenate, vstack, hstack, argmax, argmin, max, min, random, rec, _core, core, bool_, number, object_, float64, float32, int64, int32, int_, uint, uint64, uint32
+#         sys.modules['numpy'] = type('numpy', (), {
+#             'array': array, 'ndarray': ndarray, 'mean': mean, 'sum': sum, 'zeros': zeros, 'ones': ones,
+#             'dot': dot, 'concatenate': concatenate, 'vstack': vstack, 'hstack': hstack,
+#             'argmax': argmax, 'argmin': argmin, 'max': max, 'min': min, 'random': random, 'rec': rec,
+#             '_core': _core, 'core': core, '__version__': '1.24.3',
+#             # Types de données pour compatibilité PyTorch
+#             'bool_': bool_, 'number': number, 'object_': object_,
+#             'float64': float64, 'float32': float32, 'int64': int64, 'int32': int32, 'int_': int_,
+#             'uint': uint, 'uint64': uint64, 'uint32': uint32,
+#         })
+#         # Installation explicite des sous-modules dans sys.modules
+#         sys.modules['numpy._core'] = _core
+#         sys.modules['numpy.core'] = core
+#         sys.modules['numpy._core.multiarray'] = _core.multiarray
+#         sys.modules['numpy.core.multiarray'] = core.multiarray
+#         return sys.modules['numpy']
+#     else:
+#         import numpy
+#         print(f"Utilisation de la vraie bibliothèque NumPy (version {getattr(numpy, '__version__', 'inconnue')})")
+#         return numpy
 
-def setup_pandas():
-    if (sys.version_info.major == 3 and sys.version_info.minor >= 12) or not is_module_available('pandas'):
-        if not is_module_available('pandas'): print("Pandas non disponible, utilisation du mock.")
-        else: print("Python 3.12+ détecté, utilisation du mock Pandas.")
-        # mocks_dir_for_mock (tests/mocks) est déjà dans sys.path
-        from pandas_mock import DataFrame, read_csv, read_json
-        sys.modules['pandas'] = type('pandas', (), {
-            'DataFrame': DataFrame, 'read_csv': read_csv, 'read_json': read_json, 'Series': list,
-            'NA': None, 'NaT': None, 'isna': lambda x: x is None, 'notna': lambda x: x is not None,
-            '__version__': '1.5.3', 
-        })
-        return sys.modules['pandas']
-    else: 
-        import pandas
-        print(f"Utilisation de la vraie bibliothèque Pandas (version {getattr(pandas, '__version__', 'inconnue')})")
-        return pandas
+# def setup_pandas():
+#     if (sys.version_info.major == 3 and sys.version_info.minor >= 12) or not is_module_available('pandas'):
+#         if not is_module_available('pandas'): print("Pandas non disponible, utilisation du mock.")
+#         else: print("Python 3.12+ détecté, utilisation du mock Pandas.")
+#         # mocks_dir_for_mock (tests/mocks) est déjà dans sys.path
+#         from pandas_mock import DataFrame, read_csv, read_json
+#         sys.modules['pandas'] = type('pandas', (), {
+#             'DataFrame': DataFrame, 'read_csv': read_csv, 'read_json': read_json, 'Series': list,
+#             'NA': None, 'NaT': None, 'isna': lambda x: x is None, 'notna': lambda x: x is not None,
+#             '__version__': '1.5.3',
+#         })
+#         return sys.modules['pandas']
+#     else:
+#         import pandas
+#         print(f"Utilisation de la vraie bibliothèque Pandas (version {getattr(pandas, '__version__', 'inconnue')})")
+#         return pandas
 
-@pytest.fixture(scope="session", autouse=True)
-def setup_numpy_for_tests_fixture(): 
-    if 'PYTEST_CURRENT_TEST' in os.environ:
-        numpy_module = setup_numpy()
-        if sys.modules.get('numpy') is not numpy_module:
-            sys.modules['numpy'] = numpy_module
-        yield
-    else:
-        yield
+# @pytest.fixture(scope="session", autouse=True)
+# def setup_numpy_for_tests_fixture():
+#     if 'PYTEST_CURRENT_TEST' in os.environ:
+#         # numpy_module = setup_numpy() # Commenté
+#         import numpy # Forcer l'utilisation du vrai numpy
+#         sys.modules['numpy'] = numpy
+#         if sys.modules.get('numpy') is not numpy:
+#              sys.modules['numpy'] = numpy
+#         print(f"INFO: conftest.py force l'utilisation du vrai NumPy (version {getattr(numpy, '__version__', 'inconnue')})")
+#         yield
+#     else:
+#         yield
 
-@pytest.fixture(scope="session", autouse=True)
-def setup_pandas_for_tests_fixture(): 
-    if 'PYTEST_CURRENT_TEST' in os.environ:
-        pandas_module = setup_pandas()
-        if sys.modules.get('pandas') is not pandas_module:
-            sys.modules['pandas'] = pandas_module
-        yield
-    else:
-        yield
+# @pytest.fixture(scope="session", autouse=True)
+# def setup_pandas_for_tests_fixture():
+#     if 'PYTEST_CURRENT_TEST' in os.environ:
+#         # pandas_module = setup_pandas() # Commenté
+#         import pandas # Forcer l'utilisation du vrai pandas
+#         sys.modules['pandas'] = pandas
+#         if sys.modules.get('pandas') is not pandas:
+#             sys.modules['pandas'] = pandas
+#         print(f"INFO: conftest.py force l'utilisation du vrai Pandas (version {getattr(pandas, '__version__', 'inconnue')})")
+#         yield
+#     else:
+#         yield
 # Ajouter le répertoire racine au chemin Python
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 

@@ -26,8 +26,8 @@ logger = logging.getLogger("TestEnhancedContextualFallacyAnalyzer")
 
 # Importer les mocks pour numpy et pandas
 # Le répertoire tests/mocks est ajouté à sys.path par conftest.py
-from numpy_mock import *
-from pandas_mock import *
+# from numpy_mock import * # Commenté pour tester
+# from pandas_mock import * # Commenté pour tester si cela résout l'erreur pandas.__spec__
 
 # Patcher numpy et pandas avant d'importer le module à tester
 # Redondant si conftest.py gère bien sys.modules

@@ -19,7 +19,7 @@ parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, parent_dir)
 
 # Importer les modules à tester
-from argumentation_analysis.scripts.verify_extracts import verify_extracts, generate_report
+from argumentation_analysis.utils.extract_repair.marker_verification_logic import verify_all_extracts as verify_extracts, generate_verification_report as generate_report
 from argumentation_analysis.models.extract_definition import ExtractDefinitions, Extract, SourceDefinition
 from argumentation_analysis.services.extract_service import ExtractService
 from argumentation_analysis.services.fetch_service import FetchService

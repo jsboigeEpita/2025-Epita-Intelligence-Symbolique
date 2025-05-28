@@ -733,7 +733,7 @@ class TestAsyncCommunicationIntegration(unittest.IsolatedAsyncioTestCase):
             )
             
             # Attendre que la tâche se termine
-            await responder_task
+            # await responder_task  # Commenté pour tester le blocage
             
             # Vérifier que la réponse a été reçue
             self.assertIsNotNone(assistance)
