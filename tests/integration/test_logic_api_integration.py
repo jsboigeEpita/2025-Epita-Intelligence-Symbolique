@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # tests/integration/test_logic_api_integration.py
 """
 Tests d'intégration pour l'API Web avec les agents logiques.
@@ -18,7 +19,7 @@ from argumentation_analysis.agents.core.logic.belief_set import (
     PropositionalBeliefSet, FirstOrderBeliefSet, ModalBeliefSet
 )
 
-from services.web_api.app import app
+from libs.web_api.app import app
 from services.web_api.services.logic_service import LogicService
 from services.web_api.models.request_models import (
     LogicBeliefSetRequest, LogicQueryRequest, LogicGenerateQueriesRequest

@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 Script de test pour vérifier l'importation des modules principaux
 du projet Intelligence Symbolique.

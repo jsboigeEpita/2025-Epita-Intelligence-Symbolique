@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 Tests fonctionnels pour le workflow de détection de sophismes.
 

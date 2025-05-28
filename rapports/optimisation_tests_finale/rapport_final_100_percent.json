@@ -1,0 +1,34 @@
+{
+  "timestamp": "2025-05-28T02:16:40.132739",
+  "corrections_applied": 13,
+  "total_tests": 4,
+  "passed": 3,
+  "failed": 0,
+  "errors": 2,
+  "success_rate": 75.0,
+  "test_details": [
+    {
+      "test": "TestExtractAgentAdapter.import_error",
+      "status": "ERROR",
+      "error": "No module named 'networkx'"
+    },
+    {
+      "test": "TestLoadExtractDefinitions.test_load_definitions_no_file",
+      "status": "PASSED"
+    },
+    {
+      "test": "TestLoadExtractDefinitions.test_save_definitions_unencrypted",
+      "status": "ERROR",
+      "error": "Traceback (most recent call last):\n  File \"c:\\dev\\2025-Epita-Intelligence-Symbolique\\tests\\test_load_extract_definitions.py\", line 132, in test_save_definitions_unencrypted\n    save_extract_definition..."
+    },
+    {
+      "test": "TestProgressMonitor.test_initialization",
+      "status": "PASSED"
+    },
+    {
+      "test": "TestProgressMonitor.test_update_task_progress",
+      "status": "PASSED"
+    }
+  ],
+  "objective_achieved": false
+}

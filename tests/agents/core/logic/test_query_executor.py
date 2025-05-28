@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # tests/agents/core/logic/test_query_executor.py
 """
 Tests unitaires pour la classe QueryExecutor.

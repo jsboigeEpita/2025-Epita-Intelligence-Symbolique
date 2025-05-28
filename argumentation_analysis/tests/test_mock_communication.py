@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 Version simplifiée des tests de communication avec des mocks.
 

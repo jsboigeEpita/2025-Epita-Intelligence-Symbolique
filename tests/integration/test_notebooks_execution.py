@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # tests/integration/test_notebooks_execution.py
 """
 Tests d'intégration pour vérifier que les notebooks ont une structure valide.

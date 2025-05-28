@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 Tests d'intégration pour le système de communication multi-canal.
 

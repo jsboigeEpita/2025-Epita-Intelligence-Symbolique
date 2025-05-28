@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import unittest
 from unittest.mock import patch, MagicMock, DEFAULT
 import pandas as pd

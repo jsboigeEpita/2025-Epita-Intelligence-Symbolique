@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # tests/agents/core/logic/test_examples.py
 """
 Tests unitaires pour vérifier que les exemples de code fonctionnent correctement.

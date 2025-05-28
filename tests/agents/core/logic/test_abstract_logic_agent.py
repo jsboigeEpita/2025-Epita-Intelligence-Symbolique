@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # tests/agents/core/logic/test_abstract_logic_agent.py
 """
 Tests unitaires pour la classe AbstractLogicAgent.

@@ -320,3 +320,5 @@ def setup_pandas_for_tests_fixture():
         yield
     else:
         yield
+# Ajouter le répertoire racine au chemin Python
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))

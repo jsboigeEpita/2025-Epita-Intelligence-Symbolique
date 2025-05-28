@@ -31,7 +31,58 @@ from argumentation_analysis.orchestration.hierarchical.operational.state import 
 
 # Mock pour ExtractAgent
 class MockExtractAgent:
-    """Mock pour la classe ExtractAgent."""
+    def __init__(self, extract_agent=None, validation_agent=None, extract_plugin=None):
+        self.extract_agent = extract_agent or Mock()
+        self.validation_agent = validation_agent or Mock()
+        self.extract_plugin = extract_plugin or Mock()
+        self.state = Mock()
+        self.state.task_dependencies = {}
+        self.state.tasks = {}
+        
+        # Configuration des méthodes pour retourner les bons statuts
+        self.extract_text = AsyncMock(return_value={
+            "status": "success",
+            "extracts": [
+                {
+                    "id": "extract-1",
+                    "text": "Ceci est un extrait de test",
+                    "source": "test-source",
+                    "confidence": 0.9
+                }
+            ]
+        })
+        
+        self.validate_extracts = AsyncMock(return_value={
+            "status": "success",
+            "valid_extracts": [
+                {
+                    "id": "extract-1",
+                    "text": "Ceci est un extrait de test",
+                    "source": "test-source",
+                    "confidence": 0.9,
+                    "validation_score": 0.95
+                }
+            ]
+        })
+        
+        self.preprocess_text = AsyncMock(return_value={
+            "status": "success",
+            "preprocessed_text": "Ceci est un texte prétraité",
+            "metadata": {
+                "word_count": 5,
+                "language": "fr"
+            }
+        })
+        
+    def process_extract(self, *args, **kwargs):
+        return {"status": "success", "data": []}
+    
+    def validate_extract(self, *args, **kwargs):
+        return True
+
+
+class MockValidationAgent:
+    """Mock pour ValidationAgent."""
     
     def __init__(self):
         self.extract_text = AsyncMock(return_value={
@@ -86,6 +137,17 @@ class TestExtractAgentAdapter(unittest.TestCase):
     
     def setUp(self):
         """Initialisation avant chaque test."""
+        # Créer les mocks
+        self.mock_extract_agent = Mock()
+        self.mock_validation_agent = Mock()
+        self.mock_extract_plugin = Mock()
+        
+        # Configuration des mocks pour les tests
+        self.mock_extract_agent.process_extract.return_value = {"status": "success"}
+        self.mock_validation_agent.validate.return_value = True
+        self.mock_extract_plugin.extract.return_value = []
+        self.mock_extract_plugin.process_text.return_value = {"status": "success", "data": []}
+        self.mock_extract_plugin.get_supported_formats.return_value = ["txt", "pdf", "docx"]
         # Créer un état opérationnel mock
         self.operational_state = OperationalState()
         

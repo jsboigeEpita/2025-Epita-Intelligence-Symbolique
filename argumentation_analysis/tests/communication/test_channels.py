@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 Tests unitaires pour les canaux de communication du système multi-canal.
 """

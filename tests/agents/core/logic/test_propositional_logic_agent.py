@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # tests/agents/core/logic/test_propositional_logic_agent.py
 """
 Tests unitaires pour la classe PropositionalLogicAgent.
