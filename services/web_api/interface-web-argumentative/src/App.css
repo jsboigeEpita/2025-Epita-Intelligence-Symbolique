@@ -651,7 +651,6 @@ body {
   color: var(--text-primary);
   font-weight: 600;
   font-size: 1rem;
-  text-shadow: 0 0 10px rgba(139, 92, 246, 0.3);
 }
 
 .form-input,

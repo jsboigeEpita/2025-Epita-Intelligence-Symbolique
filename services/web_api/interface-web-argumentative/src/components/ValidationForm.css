@@ -466,9 +466,8 @@
 
 .issue-item.info {
   background: linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(59, 130, 246, 0.05));
-  border-color: var(--info-color);
-  color: var(--text-primary);
-  backdrop-filter: var(--backdrop-blur);
+  border: 1px solid var(--info-color);
+  border-radius: var(--border-radius);
 }
 
 .issue-header {
