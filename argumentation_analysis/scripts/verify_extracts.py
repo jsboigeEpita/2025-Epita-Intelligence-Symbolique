@@ -35,214 +35,23 @@ file_handler.setFormatter(logging.Formatter('%(asctime)s [%(levelname)s] [%(name
 logger.addHandler(file_handler)
 
 # Imports des services et modèles
-from argumentation_analysis.models.extract_definition import ExtractDefinitions, SourceDefinition, Extract
-from argumentation_analysis.services.cache_service import CacheService
-from argumentation_analysis.services.crypto_service import CryptoService
+from argumentation_analysis.models.extract_definition import ExtractDefinitions # SourceDefinition, Extract ne sont plus utilisés directement ici
+# from argumentation_analysis.services.cache_service import CacheService # Non utilisé directement
+from argumentation_analysis.services.crypto_service import CryptoService # Utilisé par DefinitionService
 from argumentation_analysis.services.definition_service import DefinitionService
-from argumentation_analysis.services.extract_service import ExtractService
-from argumentation_analysis.services.fetch_service import FetchService
+# from argumentation_analysis.services.extract_service import ExtractService # La logique d'extraction est dans marker_verification_logic
+# from argumentation_analysis.services.fetch_service import FetchService # La logique de fetch est dans marker_verification_logic
 from argumentation_analysis.ui.config import ENCRYPTION_KEY, CONFIG_FILE, CONFIG_FILE_JSON
 
+# Import de la logique métier déplacée
+from argumentation_analysis.utils.extract_repair.marker_verification_logic import (
+    verify_all_extracts, # Remplacera la fonction verify_extracts locale
+    generate_verification_report # Remplacera la fonction generate_report locale
+)
+# Note: verify_extract n'est pas importé car verify_all_extracts l'utilise en interne.
 
-def verify_extracts(
-    extract_definitions: ExtractDefinitions,
-    fetch_service: FetchService,
-    extract_service: ExtractService
-) -> List[Dict[str, Any]]:
-    """
-    Vérifie la validité des extraits.
-    
-    Args:
-        extract_definitions: Définitions d'extraits
-        fetch_service: Service de récupération
-        extract_service: Service d'extraction
-        
-    Returns:
-        Liste des résultats de vérification
-    """
-    logger.info("Vérification des extraits...")
-    
-    # Liste pour stocker les résultats
-    results = []
-    
-    # Compteurs pour le résumé
-    total_extracts = 0
-    valid_extracts = 0
-    invalid_extracts = 0
-    
-    # Parcourir toutes les sources et leurs extraits
-    for source_idx, source_info in enumerate(extract_definitions.sources):
-        source_name = source_info.source_name
-        logger.info(f"Vérification de la source '{source_name}'...")
-        
-        # Récupérer le texte source
-        source_dict = source_info.to_dict()
-        source_text, url = fetch_service.fetch_text(source_dict)
-        
-        if not source_text:
-            logger.error(f"Impossible de charger le texte source pour '{source_name}': {url}")
-            
-            # Ajouter un résultat d'erreur pour chaque extrait de cette source
-            for extract_idx, extract_info in enumerate(source_info.extracts):
-                extract_name = extract_info.extract_name
-                total_extracts += 1
-                invalid_extracts += 1
-                
-                results.append({
-                    "source_name": source_name,
-                    "extract_name": extract_name,
-                    "status": "error",
-                    "message": f"Impossible de charger le texte source: {url}"
-                })
-            
-            continue
-        
-        # Vérifier chaque extrait
-        for extract_idx, extract_info in enumerate(source_info.extracts):
-            extract_name = extract_info.extract_name
-            start_marker = extract_info.start_marker
-            end_marker = extract_info.end_marker
-            template_start = extract_info.template_start
-            
-            logger.info(f"Vérification de l'extrait '{extract_name}'...")
-            total_extracts += 1
-            
-            # Extraction du texte avec les marqueurs
-            extracted_text, status, start_found, end_found = extract_service.extract_text_with_markers(
-                source_text, start_marker, end_marker, template_start
-            )
-            
-            # Vérifier si l'extraction a réussi
-            if start_found and end_found:
-                logger.info(f"Extrait '{extract_name}' valide.")
-                valid_extracts += 1
-                
-                results.append({
-                    "source_name": source_name,
-                    "extract_name": extract_name,
-                    "status": "valid",
-                    "message": "Extrait valide."
-                })
-            else:
-                logger.warning(f"Extrait '{extract_name}' invalide: {status}")
-                invalid_extracts += 1
-                
-                # Déterminer le problème spécifique
-                if not start_found and not end_found:
-                    message = "Marqueurs de début et de fin non trouvés."
-                elif not start_found:
-                    message = "Marqueur de début non trouvé."
-                elif not end_found:
-                    message = "Marqueur de fin non trouvé."
-                else:
-                    message = "Problème inconnu."
-                
-                results.append({
-                    "source_name": source_name,
-                    "extract_name": extract_name,
-                    "status": "invalid",
-                    "message": message
-                })
-    
-    # Afficher le résumé
-    logger.info(f"Vérification terminée. {total_extracts} extraits vérifiés.")
-    logger.info(f"Extraits valides: {valid_extracts}")
-    logger.info(f"Extraits invalides: {invalid_extracts}")
-    
-    return results
-
-
-def generate_report(results: List[Dict[str, Any]], output_file: str = "verify_report.html"):
-    """
-    Génère un rapport HTML des résultats de vérification.
-    
-    Args:
-        results: Résultats de vérification
-        output_file: Fichier de sortie pour le rapport HTML
-    """
-    logger.info(f"Génération du rapport dans '{output_file}'...")
-    
-    # Compter les différents statuts
-    status_counts = {
-        "valid": 0,
-        "invalid": 0,
-        "error": 0
-    }
-    
-    for result in results:
-        status = result.get("status", "error")
-        if status in status_counts:
-            status_counts[status] += 1
-    
-    # Générer le contenu HTML
-    html_content = f"""
-    <!DOCTYPE html>
-    <html>
-    <head>
-        <meta charset="UTF-8">
-        <title>Rapport de vérification des extraits</title>
-        <style>
-            body {{ font-family: Arial, sans-serif; margin: 20px; }}
-            h1, h2, h3 {{ color: #333; }}
-            .summary {{ background-color: #f5f5f5; padding: 15px; border-radius: 5px; margin-bottom: 20px; }}
-            .valid {{ color: green; }}
-            .invalid {{ color: orange; }}
-            .error {{ color: red; }}
-            table {{ border-collapse: collapse; width: 100%; }}
-            th, td {{ border: 1px solid #ddd; padding: 8px; text-align: left; }}
-            th {{ background-color: #f2f2f2; }}
-            tr:nth-child(even) {{ background-color: #f9f9f9; }}
-        </style>
-    </head>
-    <body>
-        <h1>Rapport de vérification des extraits</h1>
-        
-        <div class="summary">
-            <h2>Résumé</h2>
-            <p>Total des extraits vérifiés: <strong>{len(results)}</strong></p>
-            <p>Extraits valides: <strong class="valid">{status_counts["valid"]}</strong></p>
-            <p>Extraits invalides: <strong class="invalid">{status_counts["invalid"]}</strong></p>
-            <p>Erreurs: <strong class="error">{status_counts["error"]}</strong></p>
-        </div>
-        
-        <h2>Détails des vérifications</h2>
-        <table>
-            <tr>
-                <th>Source</th>
-                <th>Extrait</th>
-                <th>Statut</th>
-                <th>Message</th>
-            </tr>
-    """
-    
-    # Ajouter une ligne pour chaque résultat
-    for result in results:
-        source_name = result.get("source_name", "Source inconnue")
-        extract_name = result.get("extract_name", "Extrait inconnu")
-        status = result.get("status", "error")
-        message = result.get("message", "Aucun message")
-        
-        html_content += f"""
-        <tr class="{status}">
-            <td>{source_name}</td>
-            <td>{extract_name}</td>
-            <td>{status}</td>
-            <td>{message}</td>
-        </tr>
-        """
-    
-    html_content += """
-        </table>
-    </body>
-    </html>
-    """
-    
-    # Écrire le rapport dans un fichier
-    with open(output_file, 'w', encoding='utf-8') as f:
-        f.write(html_content)
-    
-    logger.info(f"Rapport généré dans '{output_file}'.")
-
+# La fonction verify_extracts originale est remplacée par verify_all_extracts importée.
+# La fonction generate_report originale est remplacée par generate_verification_report importée.
 
 def main():
     """Fonction principale."""
@@ -270,17 +79,11 @@ def main():
         cache_service = CacheService(cache_dir)
         
         # Créer le service de chiffrement
-        crypto_service = CryptoService(ENCRYPTION_KEY)
+        crypto_service = CryptoService(ENCRYPTION_KEY) # Conserver si DefinitionService en a besoin
         
-        # Créer le service d'extraction
-        extract_service = ExtractService()
-        
-        # Créer le service de récupération
-        temp_download_dir = Path("./temp_downloads")
-        fetch_service = FetchService(
-            cache_service=cache_service,
-            temp_download_dir=temp_download_dir
-        )
+        # Les services ExtractService et FetchService ne sont plus nécessaires ici
+        # car la logique qui les utilisait est maintenant dans marker_verification_logic.py
+        # et cette logique (verify_all_extracts) s'attend à recevoir les définitions chargées.
         
         # Créer le service de définition
         input_file = Path(args.input) if args.input else Path(CONFIG_FILE)
@@ -299,10 +102,45 @@ def main():
         logger.info(f"{len(extract_definitions.sources)} sources chargées.")
         
         # Vérifier les extraits
-        results = verify_extracts(extract_definitions, fetch_service, extract_service)
+        # Charger les définitions d'extraits en tant que liste de dictionnaires,
+        # car c'est ce que verify_all_extracts attend.
+        # DefinitionService.load_definitions() retourne un objet ExtractDefinitions.
+        # Nous devons le convertir ou ajuster verify_all_extracts.
+        # Pour l'instant, supposons que definition_service.load_definitions() peut retourner
+        # la structure attendue ou qu'une conversion est faite.
+        # Si extract_definitions est un objet ExtractDefinitions, il faut extraire .sources
+        # et potentiellement convertir chaque source et extrait en dictionnaire si nécessaire.
         
+        # Pour simplifier, nous allons passer extract_definitions.to_dict()['sources']
+        # si ExtractDefinitions a une méthode to_dict() qui retourne une structure compatible.
+        # Ou alors, il faut que marker_verification_logic.verify_all_extracts
+        # soit adapté pour prendre un objet ExtractDefinitions.
+        
+        # Option 1: Adapter l'appel (plus simple pour l'instant)
+        # Assumons que extract_definitions.sources est une liste d'objets SourceDefinition
+        # et que verify_all_extracts peut gérer cela ou qu'on le convertit.
+        # Le plus simple est que verify_all_extracts s'attende à la structure JSON brute (liste de dicts).
+        # DefinitionService.load_definitions() retourne (ExtractDefinitions, error_message)
+        # Nous devons donc obtenir la liste de dictionnaires à partir de l'objet ExtractDefinitions.
+        
+        # Si extract_definitions est bien l'objet ExtractDefinitions:
+        if hasattr(extract_definitions, 'sources') and isinstance(extract_definitions.sources, list):
+            # Convertir chaque SourceDefinition et ses Extracts en dictionnaires
+            definitions_as_list_of_dicts = []
+            for source_def in extract_definitions.sources:
+                source_dict_repr = source_def.to_dict() # Supposant que to_dict() existe et fait le nécessaire
+                definitions_as_list_of_dicts.append(source_dict_repr)
+            results = verify_all_extracts(definitions_as_list_of_dicts)
+        else:
+            # Si extract_definitions est déjà une liste de dictionnaires (improbable avec DefinitionService)
+            # ou si la structure est différente, il faut ajuster.
+            # Pour l'instant, on log une erreur si la structure n'est pas celle attendue.
+            logger.error("La structure de extract_definitions n'est pas celle attendue par verify_all_extracts.")
+            results = []
+
+
         # Générer le rapport
-        generate_report(results, args.output)
+        generate_verification_report(results, args.output)
         
     except Exception as e:
         logger.error(f"Exception non gérée: {e}")

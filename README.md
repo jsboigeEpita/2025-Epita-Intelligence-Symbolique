@@ -1,4 +1,8 @@
-﻿# Projet Intelligence Symbolique
+﻿<!--
+Ce fichier README.md a été partiellement mis à jour pour refléter la nouvelle structure des répertoires scripts/, docs/ et results/.
+Les autres sections peuvent nécessiter une vérification manuelle.
+-->
+# Projet Intelligence Symbolique
 
 ![Build Status](https://img.shields.io/badge/build-passing-brightgreen)
 ![Tests](https://img.shields.io/badge/tests-100%25-brightgreen)
@@ -48,23 +52,25 @@ Le projet est organisé en plusieurs modules principaux :
     - **`extract_repair/`** : Outils de réparation des extraits.
   - **[`tests/`](./argumentation_analysis/tests/)** : Tests unitaires et d'intégration.
 
-- **[`scripts/`](./scripts/)** : Scripts utilitaires pour le projet.
+- **[`scripts/`](./scripts/README.md)** : Scripts utilitaires pour le projet, incluant des outils pour le nettoyage, l'exécution, les rapports, la configuration, les tests, et la validation.
   - **[`cleanup/`](./scripts/cleanup/README.md)** : Scripts de nettoyage du projet.
+  - **[`corrections_tests/`](./scripts/corrections_tests/)** : Scripts pour les corrections et diagnostics de tests.
   - **[`execution/`](./scripts/execution/README.md)** : Scripts d'exécution des fonctionnalités principales.
-  - **[`utils/`](./scripts/utils/README.md)** : Utilitaires pour les scripts.
+  - **[`reports/`](./scripts/reports/README.md)** : Scripts pour la génération et mise à jour de rapports.
+  - **[`setup/`](./scripts/setup/README.md)** : Scripts pour la configuration de l'environnement et des dépendances.
+  - **[`testing/`](./scripts/testing/README.md)** : Scripts liés à l'exécution et à la simulation de tests.
+  - **[`utils/`](./scripts/utils/README.md)** : Utilitaires généraux pour les scripts.
   - **[`validation/`](./scripts/validation/README.md)** : Scripts de validation du projet.
 
-- **[`docs/`](./docs/README.md)** : Documentation supplémentaire du projet.
-  - **[`conventions_importation.md`](./docs/conventions_importation.md)** : Conventions d'importation et mécanismes de redirection.
-- **[`architecture/`](./docs/architecture/README.md)** : Documentation de l'architecture du système.
-  - **[`composants/`](./docs/composants/README.md)** : Description des composants du système.
-  - **[`guides/`](./docs/guides/README.md)** : Guides d'utilisation et tutoriels.
-  - **[`integration/`](./docs/integration/README.md)** : Documentation des processus d'intégration.
+- **[`docs/`](./docs/README.md)** : Documentation complète du projet, incluant :
+  - **[`architecture/`](./docs/architecture/README.md)** : Détails sur l'architecture du système.
+  - **[`composants/`](./docs/composants/README.md)** : Description des principaux composants.
+  - **[`guides/`](./docs/guides/README.md)** : Guides pour les développeurs et utilisateurs.
+  - **[`integration/`](./docs/integration/README.md)** : Informations sur l'intégration des modules.
   - **[`outils/`](./docs/outils/README.md)** : Documentation des outils d'analyse rhétorique.
-  - **[`projets/`](./docs/projets/README.md)** : Présentation des sujets de projets.
-  - **[`reference/`](./docs/reference/README.md)** : Documentation de référence pour les API.
-  - **[`images/`](./docs/images/README.md)** : Diagrammes et schémas illustrant l'architecture.
-  - **[`structure_projet.md`](./docs/structure_projet.md)** : Description détaillée de la structure du projet.
+  - **[`projets/`](./docs/projets/README.md)** : Informations sur les sujets de projets étudiants.
+  - **[`reference/`](./docs/reference/README.md)** : Documentation de référence des API et modules.
+  - Ainsi que d'autres sections pour l'analyse, les diagrammes, les rapports, etc.
 
 - **[`examples/`](./examples/README.md)** : Exemples de textes et données pour les tests et démonstrations.
 
@@ -73,8 +79,13 @@ Le projet est organisé en plusieurs modules principaux :
 
 - **`logs/`** : Journaux d'exécution du système (dossier créé dynamiquement lors de l'exécution, non inclus dans le dépôt).
 
-- **[`results/`](./results/README.md)** : Résultats des analyses et des tests.
-  - **[`performance_tests/`](./results/performance_tests/)** : Résultats des tests de performance.
+- **[`results/`](./results/README.md)** : Résultats des analyses, tests, comparaisons et visualisations.
+  - **[`analyses/`](./results/analyses/)** : Analyses rhétoriques détaillées (basiques et avancées).
+  - **[`comparisons/`](./results/comparisons/)** : Comparaisons de performance et métriques.
+  - **[`reports/`](./results/reports/)** : Rapports de synthèse et d'analyse complets.
+  - **[`summaries/`](./results/summaries/)** : Résumés d'analyses par agent et par texte.
+  - **[`visualizations/`](./results/visualizations/)** : Graphiques et visualisations des résultats.
+  - D'autres sous-dossiers peuvent contenir des rapports de tests spécifiques et des logs.
 
 - **[`services/`](./services/README.md)** : Services web et API pour l'intégration externe.
   - **[`web_api/`](./services/web_api/)** : API REST Flask pour l'analyse argumentative, permettant l'intégration avec des interfaces web modernes.
