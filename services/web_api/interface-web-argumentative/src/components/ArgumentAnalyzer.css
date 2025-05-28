@@ -152,7 +152,7 @@
 }
 
 .example-button strong {
-  color: var(--primary-purple-light);
+  color: #fff;
   font-weight: 700;
   font-size: 1rem;
   text-shadow: 0 0 10px rgba(139, 92, 246, 0.3);
