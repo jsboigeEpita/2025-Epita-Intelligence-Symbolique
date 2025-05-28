@@ -54,9 +54,8 @@ L'architecture du système est conçue autour d'un état partagé central qui pe
 Le projet est organisé en plusieurs modules principaux, chacun ayant une responsabilité spécifique :
 
 ```
-argumentiation_analysis/
+argumentation_analysis/
 ├── __init__.py
-├── main_orchestrator.ipynb      # Notebook interactif pour l'orchestration
 ├── main_orchestrator.py         # Script principal d'orchestration
 ├── paths.py                     # Gestion centralisée des chemins du projet
 ├── run_analysis.py              # Script pour lancer l'analyse argumentative

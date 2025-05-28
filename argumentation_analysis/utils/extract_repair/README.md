@@ -31,11 +31,70 @@ Cet outil est essentiel pour maintenir la qualité des extraits utilisés dans l
 
 ### Documentation et rapports
 * **[`__init__.py`](./__init__.py)** : Marque le dossier comme un package Python.
-* **[`docs/`](./docs/)** : Documentation et rapports générés:
+* **[`docs/`](./docs/)** : Documentation et rapports générés (voir détails ci-dessous):
   * **[`repair_extract_markers_report.md`](./docs/repair_extract_markers_report.md)** : Documentation détaillée sur la réparation des bornes.
   * **[`repair_report.html`](./docs/repair_report.html)** : Rapport HTML généré par le script de réparation.
   * **[`verify_extracts_report.html`](./docs/verify_extracts_report.html)** : Rapport HTML généré par le script de vérification.
   * **[`extract_sources_updated.json`](./docs/extract_sources_updated.json)** : Version mise à jour des sources d'extraits après réparation.
+
+#### Vue d'ensemble du contenu de `docs/`
+
+Le module de réparation des extraits (`extract_repair`) est conçu pour résoudre les problèmes liés aux marqueurs de début et de fin dans les définitions d'extraits. Cette documentation fournit des informations détaillées sur :
+
+- Les problématiques adressées par le module
+- Les solutions techniques implémentées
+- Les résultats des processus de réparation
+- Les données de référence pour la validation
+
+#### Documents disponibles dans `docs/`
+
+##### repair_extract_markers_report.md
+
+Ce rapport détaille le processus de réparation des bornes défectueuses dans les extraits. Il couvre :
+
+- Le contexte et la problématique des bornes défectueuses
+- La solution développée et son approche technique
+- Les résultats obtenus sur différents corpus
+- Les recommandations pour l'amélioration continue du système
+
+Ce document est essentiel pour comprendre les défis spécifiques liés à l'extraction de texte et les stratégies mises en œuvre pour les surmonter.
+
+##### extract_sources_updated.json
+
+Ce fichier contient les définitions d'extraits mises à jour après le processus de réparation. Il sert de référence pour :
+
+- Comparer les définitions avant et après réparation
+- Valider l'efficacité des algorithmes de réparation
+- Fournir des exemples de cas corrigés pour la documentation
+
+Ce fichier est utilisé comme source de vérité pour les tests et la validation du module de réparation.
+
+#### Relation du module `extract_repair` avec les autres composants
+
+Le module de réparation des extraits est étroitement lié à plusieurs autres composants du système :
+
+- **Agent d'extraction** : Utilise les définitions réparées pour extraire correctement les textes
+- **Service de définition** : Charge et gère les définitions d'extraits
+- **Interface utilisateur** : Permet la visualisation et l'édition manuelle des extraits
+- **Tests d'intégration** : Valide que les extraits réparés fonctionnent correctement dans le système global
+
+#### Utilisation de la documentation du module `extract_repair`
+
+Cette documentation est destinée à plusieurs publics :
+
+- **Développeurs** : Pour comprendre le fonctionnement technique du module et contribuer à son amélioration
+- **Chercheurs** : Pour comprendre les défis liés à l'extraction de texte dans l'analyse argumentative
+- **Testeurs** : Pour valider que les réparations sont conformes aux attentes
+- **Utilisateurs avancés** : Pour comprendre les limites et capacités du système d'extraction
+
+#### Processus de mise à jour de la documentation du module `extract_repair`
+
+La documentation est mise à jour selon le processus suivant :
+
+1. Chaque modification significative du module de réparation doit être documentée
+2. Les rapports de réparation sont générés automatiquement après chaque exécution complète
+3. Les statistiques et métriques sont mises à jour pour refléter l'état actuel du système
+4. Les cas d'échec sont documentés pour guider les améliorations futures
 
 ## Utilisation 🚀
 

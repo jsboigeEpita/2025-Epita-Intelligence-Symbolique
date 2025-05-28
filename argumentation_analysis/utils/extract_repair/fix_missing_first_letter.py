@@ -98,44 +98,5 @@ def fix_missing_first_letter(input_file, output_file=None):
     logger.info(f"Terminé. {fixed_count} extraits corrigés.")
     return fixed_count, corrections
 
-def main():
-    """Fonction principale."""
-    import argparse
-    
-    parser = argparse.ArgumentParser(description="Correction des marqueurs de début corrompus")
-    parser.add_argument("--input", "-i", default="C:/dev/2025-Epita-Intelligence-Symbolique/argumentation_analysis/data/extract_sources.json", 
-                        help="Fichier d'entrée (extract_sources.json)")
-    parser.add_argument("--output", "-o", default=None, 
-                        help="Fichier de sortie (si non spécifié, écrase le fichier d'entrée)")
-    parser.add_argument("--report", "-r", action="store_true", 
-                        help="Générer un rapport détaillé des corrections")
-    
-    args = parser.parse_args()
-    
-    # Vérifier que le fichier d'entrée existe
-    input_path = Path(args.input)
-    if not input_path.exists():
-        logger.error(f"Le fichier {args.input} n'existe pas.")
-        return
-    
-    # Corriger les marqueurs
-    fixed_count, corrections = fix_missing_first_letter(args.input, args.output)
-    
-    # Générer un rapport si demandé
-    if args.report and corrections:
-        report_path = Path("fix_missing_first_letter_report.md")
-        with open(report_path, 'w', encoding='utf-8') as f:
-            f.write("# Rapport de correction des marqueurs de début\n\n")
-            f.write(f"**Nombre d'extraits corrigés:** {fixed_count}\n\n")
-            f.write("## Détails des corrections\n\n")
-            
-            for i, correction in enumerate(corrections, 1):
-                f.write(f"### {i}. {correction['source_name']} - {correction['extract_name']}\n\n")
-                f.write(f"- **Template:** `{correction['template']}`\n")
-                f.write(f"- **Ancien marqueur:** `{correction['old_marker']}`\n")
-                f.write(f"- **Nouveau marqueur:** `{correction['new_marker']}`\n\n")
-        
-        logger.info(f"Rapport généré dans {report_path}")
-
-if __name__ == "__main__":
-    main()
+# La fonction main() et la section if __name__ == "__main__": ont été déplacées
+# vers argumentation_analysis/scripts/run_fix_missing_first_letter.py

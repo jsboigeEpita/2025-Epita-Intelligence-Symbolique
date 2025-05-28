@@ -19,8 +19,7 @@ Ce projet implémente une analyse rhétorique multi-agents en utilisant Python e
 Le projet est organisé en modules Python pour une meilleure maintenabilité :
 
 ### Scripts Principaux
-* [`main_orchestrator.py`](./main_orchestrator.py) : Script principal d'orchestration (version Python du notebook).
-* [`main_orchestrator.ipynb`](./main_orchestrator.ipynb) : Notebook interactif pour l'orchestration.
+* [`main_orchestrator.py`](./main_orchestrator.py) : Script principal d'orchestration.
 * [`run_analysis.py`](./run_analysis.py) : Script pour lancer l'analyse argumentative.
 * [`run_extract_editor.py`](./run_extract_editor.py) : Script pour lancer l'éditeur de marqueurs d'extraits.
 * [`run_extract_repair.py`](./run_extract_repair.py) : Script pour lancer la réparation des bornes défectueuses.
@@ -196,7 +195,7 @@ python -m agents.tools.encryption.verify_encrypted_config
 Les notebooks originaux sont toujours disponibles pour une utilisation interactive :
 
 1. Lancez Jupyter Lab ou Notebook depuis la **racine du projet** : `jupyter lab`
-2. Ouvrez le notebook principal : `main_orchestrator.ipynb`
+2. Ouvrez le notebook `argumentation_analysis/main_orchestrator.ipynb` (si vous souhaitez l'utiliser)
 3. Exécutez les cellules séquentiellement.
 4. L'interface utilisateur apparaîtra. Interagissez pour sélectionner une source, préparer le texte et cliquez sur **"Lancer l'Analyse"**.
 
