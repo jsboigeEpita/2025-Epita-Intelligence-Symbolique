@@ -480,6 +480,12 @@ def initialize_jvm(
             logger.info(f"   Argument JVM natif ajouté: {native_path_arg}")
         else:
             logger.info(f"   (Pas de bibliothèques natives trouvées dans '{NATIVE_LIBS_DIR.resolve()}', -Djava.library.path non ajouté)")
+        
+        # Ajout des options de mémoire pour la JVM
+        jvm_memory_options = ["-Xms256m", "-Xmx512m"]
+        jvm_args.extend(jvm_memory_options)
+        logger.info(f"   Options de mémoire JVM ajoutées: {jvm_memory_options}")
+        
         jpype.startJVM(*jvm_args, convertStrings=False, ignoreUnrecognized=True)
         if hasattr(jpype, 'imports') and jpype.imports is not None:
             jpype.imports.registerDomain("org", alias="org")
