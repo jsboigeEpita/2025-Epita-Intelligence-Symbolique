@@ -32,14 +32,14 @@ def main():
     
     try:
         # Importer la fonction de téléchargement
-        from argumentiation_analysis.core.jvm_setup import download_tweety_jars
+        from argumentation_analysis.core.jvm_setup import download_tweety_jars
     except ImportError as e:
         logging.error(f"Erreur d'importation: {e}")
-        logging.error("Assurez-vous que le package argumentiation_analysis est installé ou dans le PYTHONPATH.")
+        logging.error("Assurez-vous que le package argumentation_analysis est installé ou dans le PYTHONPATH.")
         sys.exit(1)
     
     # Définir le répertoire cible
-    test_resources_dir = parent_dir / "argumentiation_analysis" / "tests" / "resources" / "libs"
+    test_resources_dir = parent_dir / "argumentation_analysis" / "tests" / "resources" / "libs"
     test_resources_dir.mkdir(parents=True, exist_ok=True)
     
     # Vérifier si les JARs existent déjà
@@ -49,17 +49,13 @@ def main():
     
     logging.info(f"Téléchargement des JARs minimaux pour les tests dans {test_resources_dir}...")
     
-    # Liste des modules minimaux nécessaires pour les tests
-    minimal_modules = [
-        "logics.pl",  # Module de logique propositionnelle
-        "commons"     # Module de base
-    ]
-    
-    # Télécharger les JARs minimaux
+    # Télécharger les JARs minimaux (la fonction appelée téléchargera tous les modules requis par jvm_setup)
     try:
         success = download_tweety_jars(
-            target_dir=str(test_resources_dir),
-            minimal_modules=minimal_modules
+            target_dir=str(test_resources_dir)
+            # L'argument minimal_modules n'est plus supporté par la fonction download_tweety_jars
+            # dans argumentation_analysis.core.jvm_setup. La fonction téléchargera
+            # l'ensemble des modules définis dans REQUIRED_MODULES de jvm_setup.py.
         )
         
         if success:
@@ -72,7 +68,7 @@ def main():
             gitkeep_file.touch()
             
             # Créer un fichier README.md pour expliquer le contenu du répertoire
-            readme_content = """# JARs de test pour argumentiation_analysis
+            readme_content = """# JARs de test pour argumentation_analysis
 
 Ce répertoire contient les JARs minimaux nécessaires pour exécuter les tests
 qui dépendent de la JVM. Ces JARs sont une version réduite des JARs Tweety

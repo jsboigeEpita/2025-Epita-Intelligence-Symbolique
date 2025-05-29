@@ -22,7 +22,7 @@ def _lazy_import():
     import argumentation_analysis.ui as ui
     import argumentation_analysis.utils as utils
     import argumentation_analysis.examples as examples
-    import argumentation_analysis.services as services
+    # import argumentation_analysis.services as services
     import argumentation_analysis.scripts as scripts
 
 # Appeler la fonction d'importation paresseuse

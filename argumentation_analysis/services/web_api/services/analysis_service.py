@@ -35,8 +35,8 @@ except ImportError as e:
     OperationalManager = None
 
 # Imports des modèles
-from services.web_api.models.request_models import AnalysisRequest
-from services.web_api.models.response_models import (
+from ..models.request_models import AnalysisRequest
+from ..models.response_models import (
     AnalysisResponse, FallacyDetection, ArgumentStructure
 )
 

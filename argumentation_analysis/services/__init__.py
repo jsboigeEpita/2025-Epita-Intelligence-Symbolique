@@ -6,8 +6,9 @@ de cache, de chiffrement, de définition, d'extraction et de récupération.
 """
 
 # Importation explicite des services pour faciliter leur utilisation
-from argumentation_analysis.services.cache_service import CacheService
-from argumentation_analysis.services.crypto_service import CryptoService
-from argumentation_analysis.services.definition_service import DefinitionService
-from argumentation_analysis.services.extract_service import ExtractService
-from argumentation_analysis.services.fetch_service import FetchService
+from . import web_api # Assurer que web_api est reconnu comme un sous-module
+from .cache_service import CacheService
+from .crypto_service import CryptoService
+from .definition_service import DefinitionService
+from .extract_service import ExtractService
+from .fetch_service import FetchService
