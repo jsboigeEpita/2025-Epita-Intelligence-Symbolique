@@ -30,7 +30,7 @@ DEPENDENCIES = [
     {"name": "numpy", "min_version": "1.24.0"},
     {"name": "pandas", "min_version": "2.0.0"},
     {"name": "matplotlib", "min_version": "3.5.0"},
-    {"name": "jpype", "min_version": "1.4.0", "import_name": "jpype1"},
+    {"name": "jpype", "min_version": "1.4.0", "import_name": "jpype"},
     {"name": "cryptography", "min_version": "37.0.0"},
     {"name": "cffi", "min_version": "1.15.0"},
     

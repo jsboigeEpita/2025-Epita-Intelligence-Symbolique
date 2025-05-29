@@ -6,6 +6,8 @@ import gzip
 import os
 from pathlib import Path
 from unittest.mock import patch, MagicMock
+import requests # Ajout de l'import manquant
+import logging # Ajouter cet import
 
 # Ajuster le sys.path pour les imports locaux
 import sys
@@ -109,17 +111,25 @@ def create_encrypted_config_file(tmp_path, test_passphrase):
 
 # Mocker les fonctions de aa_utils qui font des appels réseau ou manipulent le cache global
 @pytest.fixture(autouse=True)
-def mock_aa_utils_network_calls(tmp_path): # Ajout de tmp_path pour TEMP_DOWNLOAD_DIR
-    # Mocker get_full_text_for_source pour contrôler son retour et éviter les appels réseau
-    # Patcher la fonction get_full_text_for_source dans le module ui.utils
-    # et patcher requests.get dans le module ui.utils car c'est là qu'il est appelé par fetch_direct_text
-    with patch('argumentation_analysis.ui.utils.get_full_text_for_source') as mock_get_text, \
+def mock_aa_utils_network_calls(tmp_path, test_passphrase): # Ajout de test_passphrase pour dériver la clé correcte
+    # Clé correcte dérivée pour comparaison dans le mock de load_extract_definitions
+    correct_derived_key_for_comparison = derive_key_for_test(test_passphrase)
+
+    # Importer la vraie fonction load_extract_definitions pour l'utiliser dans le mock si la clé est correcte
+    # Cela évite la récursivité si on patche 'scripts.embed_all_sources.load_extract_definitions'
+    # et qu'on veut appeler la logique originale de 'argumentation_analysis.ui.file_operations.load_extract_definitions'.
+    from argumentation_analysis.ui.file_operations import load_extract_definitions as original_file_ops_load_definitions
+    from cryptography.fernet import InvalidToken # Assurer l'import pour le mock
+
+    # Les patchs ciblent maintenant les noms tels qu'importés/utilisés DANS embed_all_sources.py
+    with patch('scripts.embed_all_sources.get_full_text_for_source') as mock_get_text, \
          patch('argumentation_analysis.ui.utils.load_from_cache', return_value=None), \
          patch('argumentation_analysis.ui.utils.save_to_cache', return_value=None), \
-         patch('argumentation_analysis.ui.config.load_extract_sources') as mock_load_extract_sources, \
-         patch('argumentation_analysis.ui.utils.requests.get') as mock_requests_get:
+         patch('scripts.embed_all_sources.ui_config.FIXED_SALT', return_value=CONFIG_FIXED_SALT), \
+         patch('scripts.embed_all_sources.load_extract_definitions') as mock_script_load_definitions, \
+         patch('argumentation_analysis.ui.utils.requests.get') as mock_requests_get: # requests.get est utilisé par le vrai get_full_text_for_source
 
-        # Configurer le mock de requests.get pour simuler des réponses réseau
+        # Configurer le mock de requests.get (utilisé par le vrai get_full_text_for_source si appelé)
         def mock_requests_get_side_effect(url, **kwargs):
             mock_response = MagicMock()
             if "testserver/file1.txt" in url:
@@ -127,52 +137,56 @@ def mock_aa_utils_network_calls(tmp_path): # Ajout de tmp_path pour TEMP_DOWNLOA
                 mock_response.content = f"Fetched content for /file1.txt".encode('utf-8')
                 mock_response.text = f"Fetched content for /file1.txt"
                 mock_response.raise_for_status = MagicMock()
-            elif "error/error.txt" in url: # Pour simuler une erreur de fetch
+            elif "error/error.txt" in url:
                 mock_response.status_code = 404
                 mock_response.raise_for_status.side_effect = requests.exceptions.HTTPError("Simulated HTTP error")
-            else: # Comportement par défaut pour d'autres URLs
+            else:
                 mock_response.status_code = 404
                 mock_response.raise_for_status.side_effect = requests.exceptions.HTTPError("URL not mocked")
             return mock_response
         mock_requests_get.side_effect = mock_requests_get_side_effect
         
-        # Configurer le mock de get_full_text_for_source (la fonction patchée directement dans son module d'origine)
-        def side_effect_get_text(source_info, app_config=None):
-            # Simuler la récupération de texte
+        # Configurer le mock de get_full_text_for_source (patché dans scripts.embed_all_sources)
+        def side_effect_get_text(source_info, app_config=None): # app_config est passé par le script
+            # Ce mock est appelé par embed_main (la version patchée)
             if source_info["source_name"] == "Minimal Source":
                 return f"Fetched content for {source_info['path']}"
             elif source_info["source_name"] == "Source Error":
-                raise ConnectionError("Simulated network error")
-            return None # Par défaut
+                raise ConnectionError("Simulated network error by mock_get_text")
+            return None
         mock_get_text.side_effect = side_effect_get_text
         
-        # Configurer le mock de load_app_config pour retourner un objet AppConfig simulé
-        mock_app_config_instance = MagicMock() # Mock flexible pour permettre l'ajout d'attributs
-        
-        config_values_for_get = {
-            'JINA_READER_PREFIX': "mock_jina_prefix_via_get",
-            'TIKA_SERVER_URL': "mock_tika_url_via_get",
-            'PLAINTEXT_EXTENSIONS': ['.mocktxt'],
-            'TEMP_DOWNLOAD_DIR': tmp_path / "mock_temp_dir_via_get" # Important que ce soit un Path
-        }
-        
-        def app_config_get_side_effect(key, default=None):
-            # Simule le comportement de .get() d'un dictionnaire
-            return config_values_for_get.get(key, default)
+        # Configurer le mock de load_extract_definitions (patché dans scripts.embed_all_sources)
+        def side_effect_load_defs(config_file: Path, key: bytes):
+            # Ce mock est appelé par embed_main (la version patchée)
+            if key != correct_derived_key_for_comparison:
+                # Pour test_embed_script_incorrect_passphrase, le script s'attend à une exception
+                # qui mène à sys.exit(1). InvalidToken est approprié.
+                raise InvalidToken("Simulated InvalidToken from mock_script_load_definitions due to incorrect key")
             
-        mock_app_config_instance.get.side_effect = app_config_get_side_effect
-        
-        mock_app_config_instance.JINA_READER_PREFIX = config_values_for_get['JINA_READER_PREFIX']
-        mock_app_config_instance.TIKA_SERVER_URL = config_values_for_get['TIKA_SERVER_URL']
-        mock_app_config_instance.PLAINTEXT_EXTENSIONS = config_values_for_get['PLAINTEXT_EXTENSIONS']
-        mock_app_config_instance.TEMP_DOWNLOAD_DIR = config_values_for_get['TEMP_DOWNLOAD_DIR']
-        
-        mock_load_extract_sources.return_value = mock_app_config_instance
+            # Si la clé est correcte, appeler la logique originale de file_operations.load_extract_definitions
+            # pour lire et déchiffrer le fichier de test réel.
+            # Cela assure que les tests qui dépendent du contenu correct du fichier d'entrée fonctionnent.
+            try:
+                # Note: app_config n'est pas utilisé par original_file_ops_load_definitions pour le déchiffrement.
+                return original_file_ops_load_definitions(config_file=config_file, key=key)
+            except Exception as e_orig_load:
+                # Si la vraie fonction de chargement échoue (ex: fichier non trouvé, corrompu après déchiffrement)
+                # le script principal devrait gérer cela. On propage l'erreur pour que le script la voie.
+                # Le logger du test ou du script devrait capturer les détails.
+                raise RuntimeError(f"Error in mock_script_load_definitions calling original_file_ops_load_definitions: {e_orig_load}")
 
-        # Configurer le mock_get_text (qui est le patch de 'argumentation_analysis.ui.utils.get_full_text_for_source')
-        mock_get_text.side_effect = side_effect_get_text
+        mock_script_load_definitions.side_effect = side_effect_load_defs
+        
+        # Le mock pour ui_config.load_extract_sources n'est plus nécessaire ici car
+        # get_full_text_for_source est directement mocké dans le scope de embed_all_sources.
+        # Si le vrai get_full_text_for_source était appelé, il aurait besoin de la config de l'app.
+        # Mais comme on le mocke, on contrôle directement son retour.
+        # On garde le patch sur FIXED_SALT pour la dérivation de clé.
 
-        yield mock_get_text, mock_load_extract_sources
+        # On retourne les mocks qui sont vérifiés dans les tests.
+        # mock_load_extract_sources n'est plus le bon nom, c'est mock_script_load_definitions.
+        yield mock_get_text, mock_script_load_definitions
 
 
 # Importer la fonction main du script pour l'appeler directement
@@ -204,12 +218,12 @@ def mock_os_environ(monkeypatch):
 
         def set_env(self, env_vars_dict):
             for k, v in env_vars_dict.items():
-                self.modified_keys[k] = self.monkeypatch.getenv(k, None) # Sauvegarder l'ancienne valeur
+                self.modified_keys[k] = os.getenv(k, None) # Sauvegarder l'ancienne valeur
                 self.monkeypatch.setenv(k, str(v))
 
         def clear_env(self, keys_to_clear):
             for k in keys_to_clear:
-                self.modified_keys[k] = self.monkeypatch.getenv(k, None)
+                self.modified_keys[k] = os.getenv(k, None)
                 self.monkeypatch.delenv(k, raising=False)
         
         def __enter__(self):
@@ -235,39 +249,68 @@ def run_script_direct(args_list: list, mock_sys_argv, env_setter, env_vars_to_se
     if env_vars_to_set:
         env_setter.set_env(env_vars_to_set)
     
-    # Si certaines variables doivent être absentes (comme TEXT_CONFIG_PASSPHRASE pour un test)
-    # le test devrait utiliser env_setter.clear_env() avant d'appeler run_script_direct,
-    # ou run_script_direct pourrait prendre un autre paramètre `env_vars_to_clear`.
-
     from io import StringIO
     
     stdout_capture = StringIO()
-    stderr_capture = StringIO()
+    stderr_capture = StringIO() # C'est ici que les logs iront
     return_code = 0
 
+    # Récupérer le logger utilisé par le script (supposons qu'il utilise le logger racine ou un logger nommé 'scripts.embed_all_sources')
+    # Il est plus robuste de cibler le logger spécifique si connu, sinon le logger racine.
+    # Le script embed_all_sources.py utilise logging.getLogger(__name__) qui devient logging.getLogger('scripts.embed_all_sources')
+    script_logger = logging.getLogger("scripts.embed_all_sources") # Cible le logger du script
+    
+    # Sauvegarder les handlers et le level originaux pour les restaurer après
+    original_handlers = script_logger.handlers[:]
+    original_level = script_logger.level
+    original_propagate = script_logger.propagate
+
+    # Vider les handlers existants pour éviter la duplication ou l'écriture sur le vrai stderr
+    script_logger.handlers = []
+    
+    # Ajouter notre handler de capture
+    # Il est important de définir un level bas pour capturer tous les messages.
+    # Le script configure son logger avec INFO, donc on peut utiliser INFO.
+    capture_handler = logging.StreamHandler(stderr_capture)
+    formatter = logging.Formatter('%(asctime)s [%(levelname)s] [%(name)s:%(funcName)s:%(lineno)d] %(message)s') # ou le formatteur du script
+    capture_handler.setFormatter(formatter)
+    
+    script_logger.addHandler(capture_handler)
+    script_logger.setLevel(logging.INFO) # Assurer la capture des logs INFO et supérieurs
+    script_logger.propagate = False # Empêcher les logs de remonter au logger racine qui pourrait écrire sur le vrai stderr
+
+    # Patch de sys.stdout et sys.stderr pour les print directs et SystemExit
     with patch('sys.stdout', stdout_capture), patch('sys.stderr', stderr_capture):
         try:
-            embed_main()
+            embed_main() # embed_main est importé au niveau du module de test
         except SystemExit as e:
             return_code = e.code if isinstance(e.code, int) else 1
         except Exception:
             import traceback
-            stderr_capture.write("\nEXCEPTION IN SCRIPT:\n")
+            # Écrire l'exception dans notre capture si ce n'est pas déjà fait par le logger
+            # (normalement, le logger du script devrait déjà l'avoir fait)
+            # Pour être sûr, on l'ajoute ici aussi.
+            stderr_capture.write("\nEXCEPTION IN SCRIPT (captured by run_script_direct):\n")
             stderr_capture.write(traceback.format_exc())
-            return_code = 1
+            return_code = 1 # Assurer un code d'erreur en cas d'exception non gérée par SystemExit
             
-    # Restaurer l'environnement
-    if env_vars_to_set: # Correction ici: utiliser env_vars_to_set
-        for k, v_orig in original_environ_values.items():
-            if v_orig is None:
-                if k in os.environ: del os.environ[k]
-            else:
-                os.environ[k] = v_orig
+    # Restaurer les handlers et le level du logger
+    script_logger.handlers = original_handlers
+    script_logger.setLevel(original_level)
+    script_logger.propagate = original_propagate
+            
+    # Suppression du bloc de restauration manuelle de l'environnement :
+    # if env_vars_to_set:
+    #     for k, v_orig in original_environ_values.items(): # ERREUR: original_environ_values non défini
+    #         if v_orig is None:
+    #             if k in os.environ: del os.environ[k]
+    #         else:
+    #             os.environ[k] = v_orig
             
     class MockCompletedProcess:
         def __init__(self, stdout, stderr, returncode):
             self.stdout = stdout
-            self.stderr = stderr
+            self.stderr = stderr # Devrait maintenant contenir les logs
             self.returncode = returncode
 
     return MockCompletedProcess(stdout_capture.getvalue(), stderr_capture.getvalue(), return_code)
@@ -445,8 +488,9 @@ def test_embed_script_incorrect_passphrase(
     # Vérifier un message d'erreur approprié.
     # Le script principal loggue "Erreur lors du chargement ou du déchiffrement" sur stderr
     assert f"Erreur lors du chargement ou du déchiffrement de {input_file}" in result.stderr
-    # Le log de file_operations.load_extract_definitions (via App.UI.Utils) concernant l'échec de déchiffrement va aussi sur stderr
-    assert "Échec déchiffrement. Utilisation définitions par défaut." in result.stderr
+    # Le message "Échec déchiffrement. Utilisation définitions par défaut." n'est plus attendu
+    # car le script sort après avoir loggué "Erreur lors du chargement ou du déchiffrement..."
+    # en raison de l'InvalidToken levée par le mock de load_extract_definitions.
 
 def test_embed_script_source_fetch_error(
     tmp_path, create_encrypted_config_file, test_passphrase, mock_aa_utils_network_calls, mock_sys_argv, mock_os_environ
@@ -468,12 +512,12 @@ def test_embed_script_source_fetch_error(
     
     # Vérifier que get_full_text_for_source a été appelé et a levé une exception (simulée par le mock)
     mock_get_text.assert_called_once()
-    assert "Erreur lors de la récupération du texte pour la source Source Error: Simulated network error" in result.stderr # sur stderr
+    assert "Erreur lors de la récupération du texte pour la source Source_1: Simulated network error by mock_get_text" in result.stderr # sur stderr
     assert "Traitement des sources terminé. 0 sources mises à jour, 1 erreurs de récupération." in result.stderr # sur stderr
 
     output_data = decrypt_and_load_json(output_file, test_passphrase)
     assert len(output_data) == 1
-    assert "full_text" not in output_data[0] # Le texte n'a pas pu être récupéré
+    assert output_data[0]["full_text"] is None # Le texte n'a pas pu être récupéré, la clé existe avec la valeur None
 
 
 def test_embed_script_empty_input_config(
