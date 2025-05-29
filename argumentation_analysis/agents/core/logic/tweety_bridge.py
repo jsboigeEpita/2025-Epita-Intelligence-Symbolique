@@ -51,7 +51,11 @@ class TweetyBridge:
         self._modal_reasoner_instance = None
         
         # Tenter l'initialisation des composants JVM
-        self._initialize_jvm_components()
+        if jpype.isJVMStarted():
+            self._initialize_jvm_components()
+        else:
+            self._logger.warning("JVM non démarrée à l'initialisation de TweetyBridge. Composants non chargés.")
+            self._jvm_ok = False # S'assurer que _jvm_ok est False
     
     def is_jvm_ready(self) -> bool:
         """
@@ -206,12 +210,14 @@ class TweetyBridge:
             error_msg = f"Erreur de syntaxe: {e_java.getMessage()}"
             
             # Ajouter contexte sur la ligne potentielle causant l'erreur si possible
-            if hasattr(e_java, 'message') and 'line ' in e_java.message():
+            # Utiliser getMessage() qui est la méthode standard et mockée
+            java_error_message = e_java.getMessage()
+            if java_error_message and 'line ' in java_error_message:
                 try:
-                    line_info = e_java.message().split('line ')[1].split(',')[0]
+                    line_info = java_error_message.split('line ')[1].split(',')[0]
                     error_msg += f" (Probablement près de la ligne {line_info})"
                 except Exception:
-                    pass
+                    pass # Ignorer si l'extraction de la ligne échoue
             
             return False, error_msg
         
@@ -329,13 +335,14 @@ class TweetyBridge:
             self._logger.error(error_msg)
             
             # Ajouter contexte sur la ligne potentielle causant l'erreur si possible
-            if hasattr(e_java, 'message') and 'line ' in e_java.message():
+            java_error_message = e_java.getMessage()
+            if java_error_message and 'line ' in java_error_message:
                 try:
-                    line_info = e_java.message().split('line ')[1].split(',')[0]
+                    line_info = java_error_message.split('line ')[1].split(',')[0]
                     error_context = f" (Probablement près de la ligne {line_info} du belief set)"
                     error_msg += error_context
                 except Exception:
-                    pass
+                    pass # Ignorer si l'extraction de la ligne échoue
             
             raise RuntimeError(f"Erreur Parsing Belief Set: {e_java.getMessage()}") from e_java
         
@@ -447,12 +454,13 @@ class TweetyBridge:
             error_msg = f"Erreur de syntaxe FOL: {e_java.getMessage()}"
             
             # Ajouter contexte sur la ligne potentielle causant l'erreur si possible
-            if hasattr(e_java, 'message') and 'line ' in e_java.message():
+            java_error_message = e_java.getMessage()
+            if java_error_message and 'line ' in java_error_message:
                 try:
-                    line_info = e_java.message().split('line ')[1].split(',')[0]
+                    line_info = java_error_message.split('line ')[1].split(',')[0]
                     error_msg += f" (Probablement près de la ligne {line_info})"
                 except Exception:
-                    pass
+                    pass # Ignorer si l'extraction de la ligne échoue
             
             return False, error_msg
         
@@ -570,13 +578,14 @@ class TweetyBridge:
             self._logger.error(error_msg)
             
             # Ajouter contexte sur la ligne potentielle causant l'erreur si possible
-            if hasattr(e_java, 'message') and 'line ' in e_java.message():
+            java_error_message = e_java.getMessage()
+            if java_error_message and 'line ' in java_error_message:
                 try:
-                    line_info = e_java.message().split('line ')[1].split(',')[0]
+                    line_info = java_error_message.split('line ')[1].split(',')[0]
                     error_context = f" (Probablement près de la ligne {line_info} du belief set)"
                     error_msg += error_context
                 except Exception:
-                    pass
+                    pass # Ignorer si l'extraction de la ligne échoue
             
             raise RuntimeError(f"Erreur Parsing Belief Set FOL: {e_java.getMessage()}") from e_java
         
@@ -686,12 +695,13 @@ class TweetyBridge:
             error_msg = f"Erreur de syntaxe modale: {e_java.getMessage()}"
             
             # Ajouter contexte sur la ligne potentielle causant l'erreur si possible
-            if hasattr(e_java, 'message') and 'line ' in e_java.message():
+            java_error_message = e_java.getMessage()
+            if java_error_message and 'line ' in java_error_message:
                 try:
-                    line_info = e_java.message().split('line ')[1].split(',')[0]
+                    line_info = java_error_message.split('line ')[1].split(',')[0]
                     error_msg += f" (Probablement près de la ligne {line_info})"
                 except Exception:
-                    pass
+                    pass # Ignorer si l'extraction de la ligne échoue
             
             return False, error_msg
         
@@ -809,13 +819,14 @@ class TweetyBridge:
             self._logger.error(error_msg)
             
             # Ajouter contexte sur la ligne potentielle causant l'erreur si possible
-            if hasattr(e_java, 'message') and 'line ' in e_java.message():
+            java_error_message = e_java.getMessage()
+            if java_error_message and 'line ' in java_error_message:
                 try:
-                    line_info = e_java.message().split('line ')[1].split(',')[0]
+                    line_info = java_error_message.split('line ')[1].split(',')[0]
                     error_context = f" (Probablement près de la ligne {line_info} du belief set)"
                     error_msg += error_context
                 except Exception:
-                    pass
+                    pass # Ignorer si l'extraction de la ligne échoue
             
             raise RuntimeError(f"Erreur Parsing Belief Set Modal: {e_java.getMessage()}") from e_java
         

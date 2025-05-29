@@ -57,6 +57,7 @@ class TestQueryExecutor(unittest.TestCase):
     def test_execute_query_propositional_accepted(self):
         """Test de l'exécution d'une requête propositionnelle acceptée."""
         # Configurer le mock de TweetyBridge
+        self.mock_tweety_bridge.validate_formula.return_value = (True, "OK") # Ajout du mock pour la validation
         self.mock_tweety_bridge.execute_pl_query.return_value = "Tweety Result: Query 'a' is ACCEPTED (True)."
         
         # Exécuter une requête
@@ -64,6 +65,7 @@ class TestQueryExecutor(unittest.TestCase):
         result, message = self.query_executor.execute_query(belief_set, "a")
         
         # Vérifier que la méthode appropriée a été appelée
+        self.mock_tweety_bridge.validate_formula.assert_called_once_with("a")
         self.mock_tweety_bridge.execute_pl_query.assert_called_once_with("a => b", "a")
         
         # Vérifier le résultat
@@ -73,6 +75,7 @@ class TestQueryExecutor(unittest.TestCase):
     def test_execute_query_propositional_rejected(self):
         """Test de l'exécution d'une requête propositionnelle rejetée."""
         # Configurer le mock de TweetyBridge
+        self.mock_tweety_bridge.validate_formula.return_value = (True, "OK") # Ajout du mock pour la validation
         self.mock_tweety_bridge.execute_pl_query.return_value = "Tweety Result: Query 'a' is REJECTED (False)."
         
         # Exécuter une requête
@@ -80,6 +83,7 @@ class TestQueryExecutor(unittest.TestCase):
         result, message = self.query_executor.execute_query(belief_set, "a")
         
         # Vérifier que la méthode appropriée a été appelée
+        self.mock_tweety_bridge.validate_formula.assert_called_once_with("a")
         self.mock_tweety_bridge.execute_pl_query.assert_called_once_with("a => b", "a")
         
         # Vérifier le résultat
@@ -89,6 +93,7 @@ class TestQueryExecutor(unittest.TestCase):
     def test_execute_query_propositional_error(self):
         """Test de l'exécution d'une requête propositionnelle avec erreur."""
         # Configurer le mock de TweetyBridge
+        self.mock_tweety_bridge.validate_formula.return_value = (True, "OK") # Ajout du mock pour la validation
         self.mock_tweety_bridge.execute_pl_query.return_value = "FUNC_ERROR: Erreur de syntaxe"
         
         # Exécuter une requête
@@ -96,6 +101,7 @@ class TestQueryExecutor(unittest.TestCase):
         result, message = self.query_executor.execute_query(belief_set, "a")
         
         # Vérifier que la méthode appropriée a été appelée
+        self.mock_tweety_bridge.validate_formula.assert_called_once_with("a")
         self.mock_tweety_bridge.execute_pl_query.assert_called_once_with("a => b", "a")
         
         # Vérifier le résultat
@@ -105,6 +111,7 @@ class TestQueryExecutor(unittest.TestCase):
     def test_execute_query_first_order_accepted(self):
         """Test de l'exécution d'une requête du premier ordre acceptée."""
         # Configurer le mock de TweetyBridge
+        self.mock_tweety_bridge.validate_fol_formula.return_value = (True, "OK") # Ajout du mock pour la validation
         self.mock_tweety_bridge.execute_fol_query.return_value = "Tweety Result: FOL Query 'P(a)' is ACCEPTED (True)."
         
         # Exécuter une requête
@@ -112,6 +119,7 @@ class TestQueryExecutor(unittest.TestCase):
         result, message = self.query_executor.execute_query(belief_set, "P(a)")
         
         # Vérifier que la méthode appropriée a été appelée
+        self.mock_tweety_bridge.validate_fol_formula.assert_called_once_with("P(a)")
         self.mock_tweety_bridge.execute_fol_query.assert_called_once_with("forall X: (P(X) => Q(X))", "P(a)")
         
         # Vérifier le résultat
@@ -121,6 +129,7 @@ class TestQueryExecutor(unittest.TestCase):
     def test_execute_query_modal_accepted(self):
         """Test de l'exécution d'une requête modale acceptée."""
         # Configurer le mock de TweetyBridge
+        self.mock_tweety_bridge.validate_modal_formula.return_value = (True, "OK") # Ajout du mock pour la validation
         self.mock_tweety_bridge.execute_modal_query.return_value = "Tweety Result: Modal Query '[]p' is ACCEPTED (True)."
         
         # Exécuter une requête
@@ -128,6 +137,7 @@ class TestQueryExecutor(unittest.TestCase):
         result, message = self.query_executor.execute_query(belief_set, "[]p")
         
         # Vérifier que la méthode appropriée a été appelée
+        self.mock_tweety_bridge.validate_modal_formula.assert_called_once_with("[]p")
         self.mock_tweety_bridge.execute_modal_query.assert_called_once_with("[]p => <>q", "[]p")
         
         # Vérifier le résultat
@@ -152,10 +162,16 @@ class TestQueryExecutor(unittest.TestCase):
     def test_execute_queries(self):
         """Test de l'exécution de plusieurs requêtes."""
         # Configurer le mock de TweetyBridge
+        # Configurer les mocks pour la validation et l'exécution
+        self.mock_tweety_bridge.validate_formula.side_effect = [
+            (True, "OK"),  # Pour la requête "a"
+            (True, "OK"),  # Pour la requête "b"
+            (False, "Syntax Error in c") # Pour la requête "c" - simule une validation échouée
+        ]
         self.mock_tweety_bridge.execute_pl_query.side_effect = [
-            "Tweety Result: Query 'a' is ACCEPTED (True).",
-            "Tweety Result: Query 'b' is REJECTED (False).",
-            "FUNC_ERROR: Erreur de syntaxe"
+            "Tweety Result: Query 'a' is ACCEPTED (True).", # Sera appelé pour "a"
+            "Tweety Result: Query 'b' is REJECTED (False)." # Sera appelé pour "b"
+            # Ne sera pas appelé pour "c" car la validation échoue
         ]
         
         # Exécuter plusieurs requêtes
@@ -163,7 +179,8 @@ class TestQueryExecutor(unittest.TestCase):
         results = self.query_executor.execute_queries(belief_set, ["a", "b", "c"])
         
         # Vérifier que la méthode appropriée a été appelée
-        self.assertEqual(self.mock_tweety_bridge.execute_pl_query.call_count, 3)
+        self.assertEqual(self.mock_tweety_bridge.validate_formula.call_count, 3) # Doit être appelé pour chaque requête
+        self.assertEqual(self.mock_tweety_bridge.execute_pl_query.call_count, 2) # Appelé seulement si la validation réussit
         
         # Vérifier le résultat
         self.assertEqual(len(results), 3)
@@ -184,7 +201,7 @@ class TestQueryExecutor(unittest.TestCase):
         query3, result3, message3 = results[2]
         self.assertEqual(query3, "c")
         self.assertIsNone(result3)
-        self.assertEqual(message3, "FUNC_ERROR: Erreur de syntaxe")
+        self.assertEqual(message3, "FUNC_ERROR: Requête invalide: Syntax Error in c")
 
 
 if __name__ == "__main__":

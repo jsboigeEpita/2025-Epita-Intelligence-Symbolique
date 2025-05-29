@@ -134,31 +134,37 @@ def setup_extract_definitions_mock():
         ExtractDefinitions.json = json
         
         # Mock pour save_extract_definitions pour compatibilité avec les tests
-        def mock_save_extract_definitions(definitions_obj, definitions_path=None, key_path=None, embed_full_text=False, config=None, **kwargs):
+        def mock_save_extract_definitions(extract_definitions: List[Dict[str, Any]],
+                                          config_file: Path,
+                                          encryption_key: bytes, # Correspond à la signature réelle
+                                          embed_full_text: bool = False,
+                                          config: Optional[Dict[str, Any]] = None,
+                                          **kwargs): # Garder kwargs au cas où
             """Mock simplifié de save_extract_definitions."""
             try:
-                logger.info(f"Mock save_extract_definitions appelé avec: definitions_path={definitions_path}")
+                logger.info(f"Mock save_extract_definitions appelé avec: config_file={config_file}")
                 
                 # Convertir l'objet en liste si nécessaire
-                if hasattr(definitions_obj, 'to_dict_list'):
-                    data_to_save = {"sources": definitions_obj.to_dict_list()}
-                elif hasattr(definitions_obj, 'dict'):
-                    data_to_save = definitions_obj.dict()
-                elif hasattr(definitions_obj, '__iter__') and not isinstance(definitions_obj, str):
-                    data_to_save = {"sources": list(definitions_obj)}
+                # extract_definitions est déjà supposé être une List[Dict]
+                if isinstance(extract_definitions, list):
+                    data_to_save = {"sources": extract_definitions}
+                elif hasattr(extract_definitions, 'to_dict_list'): # Pour l'objet ExtractDefinitions
+                    data_to_save = {"sources": extract_definitions.to_dict_list()}
+                elif hasattr(extract_definitions, 'dict'): # Pour un objet Pydantic
+                    data_to_save = extract_definitions.dict()
                 else:
-                    data_to_save = {"sources": []}
+                    logger.warning(f"Type inattendu pour extract_definitions: {type(extract_definitions)}. Tentative de sauvegarde directe.")
+                    data_to_save = {"sources": []} # Fallback
                 
                 # Sauvegarder le fichier
-                if definitions_path:
-                    file_path = Path(str(definitions_path))
+                if config_file:
+                    file_path = Path(str(config_file))
                     file_path.parent.mkdir(parents=True, exist_ok=True)
                     
-                    # Si un key_path est fourni, chiffrer les données avec Fernet
-                    if key_path:
-                        # Dériver la clé Fernet à partir de la passphrase
-                        fernet_key = derive_key_from_passphrase(key_path)
-                        f = Fernet(fernet_key)
+                    # Si une encryption_key est fournie, chiffrer les données avec Fernet
+                    if encryption_key:
+                        # La clé est déjà dérivée et en bytes
+                        f = Fernet(encryption_key)
                         
                         # Chiffrement avec Fernet
                         json_data = json_module.dumps(data_to_save, indent=2, ensure_ascii=False).encode('utf-8')
@@ -167,12 +173,12 @@ def setup_extract_definitions_mock():
                         
                         with open(str(file_path), 'wb') as f_file:
                             f_file.write(encrypted_data)
-                        logger.info(f"Définitions chiffrées avec Fernet sauvegardées dans {definitions_path}")
+                        logger.info(f"Définitions chiffrées avec Fernet sauvegardées dans {config_file}")
                     else:
                         # Sauvegarder en JSON non chiffré
-                        with open(str(file_path), 'w', encoding='utf-8') as f:
-                            json_module.dump(data_to_save, f, indent=2, ensure_ascii=False)
-                        logger.info(f"Définitions sauvegardées dans {definitions_path}")
+                        with open(str(file_path), 'w', encoding='utf-8') as f_file: # Renommer f en f_file pour éviter conflit
+                            json_module.dump(data_to_save, f_file, indent=2, ensure_ascii=False)
+                        logger.info(f"Définitions sauvegardées dans {config_file}")
                     
                     return True
                 
@@ -183,6 +189,8 @@ def setup_extract_definitions_mock():
                 return False
         
         # Mock pour load_extract_definitions compatible avec le mock de sauvegarde
+        # La signature de mock_load_extract_definitions semble correcte par rapport à son usage dans les tests
+        # (key est la passphrase, qui est ensuite dérivée en clé Fernet à l'intérieur du mock)
         def mock_load_extract_definitions(config_file, key, app_config=None):
             """Mock simplifié de load_extract_definitions."""
             try:
@@ -210,10 +218,13 @@ def setup_extract_definitions_mock():
                     encrypted_data = f.read()
                 
                 # Déchiffrement avec Fernet
-                fernet_key = derive_key_from_passphrase(key)
-                f_cipher = Fernet(fernet_key)
-                compressed_data = f_cipher.decrypt(encrypted_data)
-                logger.info("Données déchiffrées avec succès (Fernet)")
+                # 'key' ici est la passphrase fournie au mock, qui doit être dérivée.
+                derived_fernet_key = derive_key_from_passphrase(key)
+                f_cipher = Fernet(derived_fernet_key)
+                # Le try/except pour InvalidToken doit englober decrypt ET le reste du traitement
+                # pour s'assurer qu'on ne retourne pas de fallback si le déchiffrement échoue.
+                compressed_data = f_cipher.decrypt(encrypted_data) # Peut lever InvalidToken
+                logger.info(f"Mock: Données déchiffrées avec succès pour {config_file_path}")
                 
                 # Décompresser
                 decompressed_data = gzip.decompress(compressed_data)
@@ -259,10 +270,12 @@ def setup_extract_definitions_mock():
                     logger.warning("Aucune définition valide trouvée. Utilisation définitions par défaut.")
                     return fallback_definitions[:]
                     
-            except Exception as e:
-                logger.error(f"[ERREUR] Erreur lors du chargement mock: {e}")
-                return [{"source_name": "Default", "source_type": "direct_download", "schema": "https", 
-                        "host_parts": ["example", "com"], "path": "/", "extracts": []}]
+            except InvalidToken as e_token_outer:
+                logger.error(f"Mock: Échec du déchiffrement (InvalidToken) pour {config_file_path} lors de l'appel à decrypt. Clé dérivée de passphrase commençant par: {key[:5]}...")
+                raise e_token_outer # S'assurer que InvalidToken est bien relancée
+            except Exception as e_other: # Renommer pour clarté
+                logger.error(f"Mock: [ERREUR] Autre erreur non-InvalidToken lors du chargement mock pour {config_file_path}: {e_other}")
+                return fallback_definitions[:]
         
         # Patcher les fonctions save_extract_definitions et load_extract_definitions
         from argumentation_analysis.ui import file_operations
