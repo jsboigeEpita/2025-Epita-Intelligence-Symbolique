@@ -47,7 +47,7 @@ class TestLogicApiIntegration(unittest.TestCase):
         self.client = app.test_client()
         
         # Patcher LogicService
-        self.logic_service_patcher = patch('argumentation_analysis.services.web_api.app.logic_service')
+        self.logic_service_patcher = patch('libs.web_api.app.logic_service') # Correction du chemin du patch
         self.mock_logic_service = self.logic_service_patcher.start()
         
         # Patcher LogicAgentFactory
