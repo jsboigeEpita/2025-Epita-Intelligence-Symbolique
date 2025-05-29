@@ -8,12 +8,14 @@ __pycache__/
 coverage.xml
 htmlcov/
 coverage.json
+.pytest_cache/
 
 # Environnements virtuels
 venv_test/
 venv/
 env/
 ENV/
+/.venv/
 
 # Fichiers temporaires
 *.tmp

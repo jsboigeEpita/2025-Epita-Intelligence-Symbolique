@@ -21,6 +21,15 @@ current_dir = Path(__file__).parent
 if str(current_dir) not in sys.path:
     sys.path.append(str(current_dir))
 
+# Importer les chemins définis
+try:
+    from .paths import LIBS_DIR
+except ImportError:
+    # Essayer une importation absolue si l'exécution se fait directement sur le fichier
+    # et non comme un module, bien que -m soit la méthode préférée.
+    from paths import LIBS_DIR
+
+
 def setup_logging():
     """Configuration du logging pour l'analyse"""
     logging.basicConfig(

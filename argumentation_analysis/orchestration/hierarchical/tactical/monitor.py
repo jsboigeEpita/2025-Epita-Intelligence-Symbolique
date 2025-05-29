@@ -326,7 +326,7 @@ class ProgressMonitor:
         failed_task_ids = [task["id"] for task in self.state.tasks["failed"]]
         
         if failed_task_ids:
-            tasks_to_check = self.state.tasks["pending"] + self.state.tasks["in_progress"]
+            tasks_to_check = self.state.tasks["pending"]
             for task in tasks_to_check:
                 task_id = task["id"]
                 

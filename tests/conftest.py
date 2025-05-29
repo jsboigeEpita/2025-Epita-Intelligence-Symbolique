@@ -10,6 +10,7 @@ automatiquement utilisé en raison de problèmes de compatibilité.
 import sys
 import os
 import pytest
+import atexit # Ajout pour désenregistrer le callback JPype
 from unittest.mock import patch, MagicMock
 import importlib.util
 
@@ -405,3 +406,111 @@ def pytest_collection_modifyitems(items):
         if hasattr(item.function, '__code__'):
             if item.function.__code__.co_flags & 0x80:  # 0x80 est le flag pour les fonctions async
                 item.add_marker(pytest.mark.asyncio)
+
+@pytest.fixture(scope="function", autouse=True)
+def manage_jpype_jvm_shutdown_v2(request):
+    """
+    Fixture pour s'assurer que la JVM JPype est arrêtée après chaque test
+    si elle a été démarrée, et pour diagnostiquer l'import de jpype.config.
+    """
+    print("INFO: manage_jpype_jvm_shutdown_v2: Début de la fixture (avant yield).")
+    yield # Laisse le test s'exécuter
+    print("INFO: manage_jpype_jvm_shutdown_v2: Fin de la fixture (après yield).")
+
+    original_jpype_in_sys_modules = sys.modules.get('jpype')
+    jpype_path_before_del = "N/A"
+    if original_jpype_in_sys_modules is not None and hasattr(original_jpype_in_sys_modules, '__file__') and original_jpype_in_sys_modules.__file__:
+        jpype_path_before_del = original_jpype_in_sys_modules.__file__
+    
+    print(f"INFO: manage_jpype_jvm_shutdown_v2: 'jpype' dans sys.modules AVANT del/import: {jpype_path_before_del}")
+
+    actual_jpype_module = None
+    try:
+        # Tentative de forcer le chargement du vrai module jpype
+        # Sauvegarder les modules liés à jpype qui pourraient être des mocks
+        saved_modules = {}
+        jpype_related_keys = ['jpype', 'jpype.imports', '_jpype']
+        for key in jpype_related_keys:
+            if key in sys.modules:
+                saved_modules[key] = sys.modules[key]
+                del sys.modules[key]
+                print(f"INFO: manage_jpype_jvm_shutdown_v2: Supprimé sys.modules['{key}'] (était {type(saved_modules[key])} @ {getattr(saved_modules[key], '__file__', 'N/A')})")
+
+        import jpype as freshly_imported_jpype
+        actual_jpype_module = freshly_imported_jpype
+        print(f"INFO: manage_jpype_jvm_shutdown_v2: 'jpype' réimporté. Type: {type(actual_jpype_module)}, Chemin: {getattr(actual_jpype_module, '__file__', 'N/A')}")
+
+        # Essayer d'importer jpype.config avec le module fraîchement importé
+        try:
+            import jpype.config as freshly_imported_config
+            if freshly_imported_config:
+                print(f"INFO: manage_jpype_jvm_shutdown_v2: jpype.config (fraîchement importé) accessible. onexit={getattr(freshly_imported_config, 'onexit', 'N/A')}")
+            else:
+                print("WARNING: manage_jpype_jvm_shutdown_v2: jpype.config (fraîchement importé) n'a pas pu être accédé.")
+        except ImportError as e_cfg_imp:
+            print(f"INFO: manage_jpype_jvm_shutdown_v2: Échec de l'import frais de jpype.config: {e_cfg_imp}")
+        except Exception as e_cfg:
+            print(f"ERREUR: manage_jpype_jvm_shutdown_v2: Échec de l'accès à jpype.config (fraîchement importé): {e_cfg}")
+
+        if hasattr(actual_jpype_module, 'isJVMStarted') and callable(actual_jpype_module.isJVMStarted):
+            if actual_jpype_module.isJVMStarted():
+                print("INFO: manage_jpype_jvm_shutdown_v2: JVM est démarrée (selon freshly_imported_jpype.isJVMStarted()). Tentative d'arrêt...")
+                if hasattr(actual_jpype_module, 'shutdownJVM') and callable(actual_jpype_module.shutdownJVM):
+                    actual_jpype_module.shutdownJVM()
+                    print("INFO: manage_jpype_jvm_shutdown_v2: freshly_imported_jpype.shutdownJVM() appelé.")
+
+                    # Tenter de désenregistrer le callback atexit de JPype (_JTerminate)
+                    # _JTerminate est généralement dans jpype._core
+                    if hasattr(actual_jpype_module, '_core') and hasattr(actual_jpype_module._core, '_JTerminate'):
+                        try:
+                            # La fonction _JTerminate est celle qui tente d'importer jpype.config
+                            atexit.unregister(actual_jpype_module._core._JTerminate)
+                            print("INFO: manage_jpype_jvm_shutdown_v2: Callback atexit jpype._core._JTerminate désenregistré.")
+                        except Exception as e_unregister:
+                            # atexit.unregister ne lève pas d'erreur si la fonction n'est pas trouvée,
+                            # mais attraper d'autres exceptions potentielles.
+                            print(f"WARNING: manage_jpype_jvm_shutdown_v2: Exception lors de la tentative de désenregistrement du callback atexit de JPype: {e_unregister}")
+                    else:
+                        print("WARNING: manage_jpype_jvm_shutdown_v2: Ne peut pas trouver actual_jpype_module._core._JTerminate pour le désenregistrement.")
+                else:
+                    print("WARNING: manage_jpype_jvm_shutdown_v2: freshly_imported_jpype n'a pas d'attribut shutdownJVM callable.")
+            else:
+                print("INFO: manage_jpype_jvm_shutdown_v2: JVM non démarrée (selon freshly_imported_jpype.isJVMStarted()).")
+        else:
+            print("WARNING: manage_jpype_jvm_shutdown_v2: freshly_imported_jpype n'a pas d'attribut isJVMStarted callable.")
+
+    except Exception as e_import_or_shutdown:
+        print(f"ERREUR: manage_jpype_jvm_shutdown_v2: Exception lors de la tentative de réimport/shutdown: {e_import_or_shutdown}")
+    finally:
+        # Si nous avons réussi à importer et utiliser le vrai jpype,
+        # et que nous avons appelé shutdownJVM, nous le laissons potentiellement
+        # dans sys.modules pour que le handler atexit _JTerminate le trouve.
+        # Si l'import du vrai jpype a échoué, ou si nous n'avons pas touché à la JVM,
+        # il est plus sûr de restaurer les mocks pour l'isolation des tests suivants.
+
+        if actual_jpype_module is not None and hasattr(actual_jpype_module, 'isJVMStarted'):
+            # Le vrai JPype a été chargé et potentiellement utilisé.
+            # Ne restaurons pas sys.modules['jpype'] au mock pour l'instant.
+            # Restaurons seulement les autres (jpype.imports, _jpype) s'ils étaient mockés.
+            print(f"INFO: manage_jpype_jvm_shutdown_v2: Vrai JPype ({getattr(actual_jpype_module, '__file__', 'N/A')}) a été manipulé.")
+            if 'jpype' in saved_modules and actual_jpype_module is not saved_modules['jpype']:
+                 print(f"INFO: manage_jpype_jvm_shutdown_v2: sys.modules['jpype'] reste {getattr(sys.modules.get('jpype'), '__file__', 'N/A')}")
+            
+            for key, module_obj in saved_modules.items():
+                if key != 'jpype': # Ne pas restaurer 'jpype' s'il a été remplacé par le vrai
+                    if key not in sys.modules or sys.modules[key] is not module_obj : # Éviter de restaurer si inchangé ou si le vrai est là
+                        sys.modules[key] = module_obj
+                        print(f"INFO: manage_jpype_jvm_shutdown_v2: sys.modules['{key}'] restauré à {type(module_obj)} ({getattr(module_obj, '__file__', 'N/A')}).")
+        else:
+            # Le vrai JPype n'a pas été chargé ou utilisé, restaurons tout.
+            print("INFO: manage_jpype_jvm_shutdown_v2: Vrai JPype non chargé/utilisé, restauration complète des mocks.")
+            for key, module_obj in saved_modules.items():
+                sys.modules[key] = module_obj
+                print(f"INFO: manage_jpype_jvm_shutdown_v2: sys.modules['{key}'] restauré à {type(module_obj)} ({getattr(module_obj, '__file__', 'N/A')}).")
+
+        # Vérification finale de l'état de jpype dans sys.modules
+        final_jpype_in_sys = sys.modules.get('jpype')
+        if final_jpype_in_sys:
+            print(f"INFO: manage_jpype_jvm_shutdown_v2: État final de sys.modules['jpype']: {type(final_jpype_in_sys)} @ {getattr(final_jpype_in_sys, '__file__', 'N/A')}")
+        else:
+            print("INFO: manage_jpype_jvm_shutdown_v2: État final: 'jpype' n'est pas dans sys.modules.")

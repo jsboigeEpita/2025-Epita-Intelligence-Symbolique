@@ -24,31 +24,35 @@ class TestLogicAgentFactory(unittest.TestCase):
         # Mock du kernel
         self.kernel = MagicMock(spec=Kernel)
         
-        # Patcher les classes d'agents
-        self.propositional_agent_patcher = patch('argumentation_analysis.agents.core.logic.logic_factory.PropositionalLogicAgent')
-        self.first_order_agent_patcher = patch('argumentation_analysis.agents.core.logic.logic_factory.FirstOrderLogicAgent')
-        self.modal_agent_patcher = patch('argumentation_analysis.agents.core.logic.logic_factory.ModalLogicAgent')
-        
-        # Démarrer les patchers
-        self.mock_propositional_agent_class = self.propositional_agent_patcher.start()
-        self.mock_first_order_agent_class = self.first_order_agent_patcher.start()
-        self.mock_modal_agent_class = self.modal_agent_patcher.start()
-        
-        # Configurer les mocks des instances d'agents
+        # Mock du kernel
+        self.kernel = MagicMock(spec=Kernel)
+
+        # Mocks pour les classes d'agents et leurs instances
         self.mock_propositional_agent = MagicMock(spec=PropositionalLogicAgent)
         self.mock_first_order_agent = MagicMock(spec=FirstOrderLogicAgent)
         self.mock_modal_agent = MagicMock(spec=ModalLogicAgent)
+
+        self.mock_propositional_agent_class = MagicMock(spec=PropositionalLogicAgent, return_value=self.mock_propositional_agent)
+        self.mock_first_order_agent_class = MagicMock(spec=FirstOrderLogicAgent, return_value=self.mock_first_order_agent)
+        self.mock_modal_agent_class = MagicMock(spec=ModalLogicAgent, return_value=self.mock_modal_agent)
+
+        # Patcher le dictionnaire _agent_classes de la factory
+        # Conserver une copie de l'original pour la restauration si nécessaire, bien que patch.dict gère cela.
+        # self.original_agent_classes = LogicAgentFactory._agent_classes.copy()
+
+        self.agent_classes_patcher = patch.dict(LogicAgentFactory._agent_classes, {
+            "propositional": self.mock_propositional_agent_class,
+            "first_order": self.mock_first_order_agent_class,
+            "modal": self.mock_modal_agent_class
+        }, clear=False) # clear=False pour ne pas affecter d'autres types potentiellement enregistrés
         
-        # Configurer les mocks des classes d'agents
-        self.mock_propositional_agent_class.return_value = self.mock_propositional_agent
-        self.mock_first_order_agent_class.return_value = self.mock_first_order_agent
-        self.mock_modal_agent_class.return_value = self.mock_modal_agent
-    
+        self.agent_classes_patcher.start()
+        self.addCleanup(self.agent_classes_patcher.stop)
+
     def tearDown(self):
         """Nettoyage après chaque test."""
-        self.propositional_agent_patcher.stop()
-        self.first_order_agent_patcher.stop()
-        self.modal_agent_patcher.stop()
+        # addCleanup s'occupe de self.agent_classes_patcher.stop()
+        pass
     
     def test_create_propositional_agent(self):
         """Test de la création d'un agent de logique propositionnelle."""
@@ -131,44 +135,39 @@ class TestLogicAgentFactory(unittest.TestCase):
     
     def test_register_agent_class(self):
         """Test de l'enregistrement d'une nouvelle classe d'agent."""
-        # Créer une classe d'agent de test
+        # Créer une classe d'agent de test (sa définition réelle n'importe pas tant pour le mock)
         class TestLogicAgent(AbstractLogicAgent):
-            def setup_kernel(self, llm_service):
-                pass
-            
-            def text_to_belief_set(self, text):
-                pass
-            
-            def generate_queries(self, text, belief_set):
-                pass
-            
-            def execute_query(self, belief_set, query):
-                pass
-            
-            def interpret_results(self, text, belief_set, queries, results):
-                pass
-            
-            def _create_belief_set_from_data(self, belief_set_data):
-                pass
-        
-        # Enregistrer la classe d'agent
-        LogicAgentFactory.register_agent_class("test", TestLogicAgent)
+            def setup_kernel(self, llm_service): pass
+            def text_to_belief_set(self, text): pass
+            def generate_queries(self, text, belief_set): pass
+            def execute_query(self, belief_set, query): pass
+            def interpret_results(self, text, belief_set, queries, results): pass
+            def _create_belief_set_from_data(self, belief_set_data): pass
+
+        test_logic_type = f"test_agent_type_{id(self)}"
+
+        # Mock pour simuler le constructeur de TestLogicAgent et l'instance retournée
+        mock_test_agent_instance = MagicMock(spec=TestLogicAgent)
+        # Ce mock représente la classe TestLogicAgent elle-même (son constructeur)
+        mock_test_agent_constructor = MagicMock(return_value=mock_test_agent_instance)
+        mock_test_agent_constructor.__name__ = "MockedTestLogicAgent" # Pour satisfaire le logger dans register_agent_class
+
+        # Enregistrer notre mock constructeur au lieu de la vraie classe TestLogicAgent
+        LogicAgentFactory.register_agent_class(test_logic_type, mock_test_agent_constructor)
+        # S'assurer que cette clé de test est retirée après le test pour ne pas polluer les autres tests
+        self.addCleanup(LogicAgentFactory._agent_classes.pop, test_logic_type, None)
         
         # Vérifier que la classe a été enregistrée
-        self.assertIn("test", LogicAgentFactory.get_supported_logic_types())
+        self.assertIn(test_logic_type, LogicAgentFactory.get_supported_logic_types())
         
         # Créer un agent avec le nouveau type
-        with patch('argumentation_analysis.agents.core.logic.logic_factory.TestLogicAgent') as mock_test_agent_class:
-            mock_test_agent = MagicMock(spec=TestLogicAgent)
-            mock_test_agent_class.return_value = mock_test_agent
-            
-            agent = LogicAgentFactory.create_agent("test", self.kernel)
-            
-            # Vérifier que la classe d'agent a été appelée
-            mock_test_agent_class.assert_called_once_with(self.kernel)
-            
-            # Vérifier le résultat
-            self.assertEqual(agent, mock_test_agent)
+        agent = LogicAgentFactory.create_agent(test_logic_type, self.kernel)
+        
+        # Vérifier que notre mock constructeur (qui simule la classe) a été appelé
+        mock_test_agent_constructor.assert_called_once_with(self.kernel)
+        
+        # Vérifier le résultat
+        self.assertEqual(agent, mock_test_agent_instance)
     
     def test_get_supported_logic_types(self):
         """Test de la récupération des types de logique supportés."""

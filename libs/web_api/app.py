@@ -27,12 +27,25 @@ from libs.web_api.services.analysis_service import AnalysisService
 from libs.web_api.services.validation_service import ValidationService
 from libs.web_api.services.fallacy_service import FallacyService
 from libs.web_api.services.framework_service import FrameworkService
+# Import pour LogicService
+from argumentation_analysis.services.web_api.services.logic_service import LogicService
+from argumentation_analysis.services.web_api.models.request_models import (
+    LogicBeliefSetRequest, LogicQueryRequest, LogicGenerateQueriesRequest
+)
+# Les modèles de réponse pour la logique sont dans un chemin différent, comme corrigé précédemment
+from services.web_api.models.response_models import (
+    LogicBeliefSetResponse, LogicQueryResponse, LogicGenerateQueriesResponse
+)
+
 from libs.web_api.models.request_models import (
     AnalysisRequest, ValidationRequest, FallacyRequest, FrameworkRequest
 )
 from libs.web_api.models.response_models import (
     AnalysisResponse, ValidationResponse, FallacyResponse, FrameworkResponse, ErrorResponse
 )
+
+# Import du Blueprint pour les routes logiques
+from libs.web_api.routes.logic_routes import logic_bp # initialize_logic_blueprint n'est plus nécessaire
 
 # Configuration du logging
 logging.basicConfig(
@@ -55,6 +68,11 @@ analysis_service = AnalysisService()
 validation_service = ValidationService()
 fallacy_service = FallacyService()
 framework_service = FrameworkService()
+logic_service = LogicService()
+
+# Initialiser et enregistrer les blueprints
+# initialize_logic_blueprint(logic_service) # N'est plus nécessaire
+app.register_blueprint(logic_bp)
 
 
 @app.errorhandler(Exception)
@@ -80,7 +98,8 @@ def health_check():
                 "analysis": analysis_service.is_healthy(),
                 "validation": validation_service.is_healthy(),
                 "fallacy": fallacy_service.is_healthy(),
-                "framework": framework_service.is_healthy()
+                "framework": framework_service.is_healthy(),
+                "logic": logic_service.is_healthy() # Ajout du health check pour LogicService
             }
         })
     except Exception as e:
@@ -283,8 +302,8 @@ def build_framework():
             message=str(e),
             status_code=500
         ).dict()), 500
-
-
+    
+    
 @app.route('/api/endpoints', methods=['GET'])
 def list_endpoints():
     """Liste tous les endpoints disponibles avec leur documentation."""
@@ -334,7 +353,6 @@ def list_endpoints():
         "version": "1.0.0",
         "endpoints": endpoints
     })
-
 
 if __name__ == '__main__':
     # Configuration pour le développement
