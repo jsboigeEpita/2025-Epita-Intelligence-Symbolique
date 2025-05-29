@@ -12,31 +12,16 @@ import logging
 from pathlib import Path
 from typing import Dict, List, Any, Optional
 
-# Ajouter le répertoire racine au chemin Python
-current_dir = Path(__file__).parent
-root_dir = current_dir.parent.parent.parent
-if str(root_dir) not in sys.path:
-    sys.path.append(str(root_dir))
-
 # Imports du moteur d'analyse
-try:
-    from argumentation_analysis.agents.core.informal.informal_agent import InformalAgent
-    from argumentation_analysis.agents.tools.analysis.complex_fallacy_analyzer import ComplexFallacyAnalyzer
-    from argumentation_analysis.agents.tools.analysis.contextual_fallacy_analyzer import ContextualFallacyAnalyzer
-    from argumentation_analysis.agents.tools.analysis.fallacy_severity_evaluator import FallacySeverityEvaluator
-    from argumentation_analysis.orchestration.hierarchical.operational.manager import OperationalManager
-except ImportError as e:
-    logging.warning(f"Impossible d'importer les modules d'analyse: {e}")
-    # Mode dégradé pour les tests
-    InformalAgent = None
-    ComplexFallacyAnalyzer = None
-    ContextualFallacyAnalyzer = None
-    FallacySeverityEvaluator = None
-    OperationalManager = None
+from argumentation_analysis.agents.core.informal.informal_agent import InformalAgent
+from argumentation_analysis.agents.tools.analysis.complex_fallacy_analyzer import ComplexFallacyAnalyzer
+from argumentation_analysis.agents.tools.analysis.contextual_fallacy_analyzer import ContextualFallacyAnalyzer
+from argumentation_analysis.agents.tools.analysis.fallacy_severity_evaluator import FallacySeverityEvaluator
+from argumentation_analysis.orchestration.hierarchical.operational.manager import OperationalManager
 
 # Imports des modèles
-from services.web_api.models.request_models import AnalysisRequest
-from services.web_api.models.response_models import (
+from argumentation_analysis.services.web_api.models.request_models import AnalysisRequest
+from argumentation_analysis.services.web_api.models.response_models import (
     AnalysisResponse, FallacyDetection, ArgumentStructure
 )
 

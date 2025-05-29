@@ -15,7 +15,7 @@ if project_root not in sys.path:
     sys.path.insert(0, project_root)
 import pytest
 from unittest.mock import Mock, patch, MagicMock
-from argumentation_analysis.services.web_api.models.request_models import (
+from libs.web_api.models.request_models import (
     AnalysisRequest, ValidationRequest, FallacyRequest, FrameworkRequest,
     AnalysisOptions, FallacyOptions, FrameworkOptions, Argument
 )
@@ -34,7 +34,7 @@ class TestAnalysisService:
             'argumentation_analysis.agents.tools.analysis.fallacy_severity_evaluator': Mock(),
             'argumentation_analysis.orchestration.hierarchical.operational.manager': Mock(),
         }):
-            from ..services.analysis_service import AnalysisService
+            from argumentation_analysis.services.web_api.services.analysis_service import AnalysisService
             return AnalysisService()
     
     def test_service_initialization(self, analysis_service):
@@ -104,7 +104,7 @@ class TestValidationService:
     @pytest.fixture
     def validation_service(self):
         """Instance du service de validation."""
-        from ..services.validation_service import ValidationService
+        from argumentation_analysis.services.web_api.services.validation_service import ValidationService
         return ValidationService()
     
     def test_service_initialization(self, validation_service):
@@ -177,7 +177,7 @@ class TestFallacyService:
             'argumentation_analysis.agents.tools.analysis.enhanced.complex_fallacy_analyzer': Mock(),
             'argumentation_analysis.agents.tools.analysis.enhanced.fallacy_severity_evaluator': Mock(),
         }):
-            from ..services.fallacy_service import FallacyService
+            from argumentation_analysis.services.web_api.services.fallacy_service import FallacyService
             return FallacyService()
     
     def test_service_initialization(self, fallacy_service):
@@ -244,7 +244,7 @@ class TestFrameworkService:
     @pytest.fixture
     def framework_service(self):
         """Instance du service de framework."""
-        from ..services.framework_service import FrameworkService
+        from argumentation_analysis.services.web_api.services.framework_service import FrameworkService
         return FrameworkService()
     
     def test_service_initialization(self, framework_service):
@@ -334,10 +334,10 @@ class TestServiceIntegration:
             'argumentation_analysis.agents.tools.analysis.enhanced.complex_fallacy_analyzer': Mock(),
             'argumentation_analysis.agents.tools.analysis.enhanced.fallacy_severity_evaluator': Mock(),
         }):
-            from ..services.analysis_service import AnalysisService
-            from ..services.validation_service import ValidationService
-            from ..services.fallacy_service import FallacyService
-            from ..services.framework_service import FrameworkService
+            from argumentation_analysis.services.web_api.services.analysis_service import AnalysisService
+            from argumentation_analysis.services.web_api.services.validation_service import ValidationService
+            from argumentation_analysis.services.web_api.services.fallacy_service import FallacyService
+            from argumentation_analysis.services.web_api.services.framework_service import FrameworkService
             
             services = [
                 AnalysisService(),
@@ -355,7 +355,7 @@ class TestServiceIntegration:
         with patch.dict('sys.modules', {
             'argumentation_analysis.agents.core.informal.informal_agent': Mock(),
         }):
-            from ..services.analysis_service import AnalysisService
+            from argumentation_analysis.services.web_api.services.analysis_service import AnalysisService
             
             service = AnalysisService()
             

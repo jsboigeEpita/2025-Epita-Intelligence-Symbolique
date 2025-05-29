@@ -8,6 +8,13 @@ Script de test simple pour l'API d'analyse argumentative.
 import requests
 import json
 import time
+import sys
+import os
+
+# Ajout du répertoire racine du projet au PYTHONPATH
+project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
+if project_root not in sys.path:
+    sys.path.insert(0, project_root)
 
 # Configuration
 API_BASE_URL = "http://localhost:5000"
