@@ -30,6 +30,8 @@ try:
     from argumentation_analysis.ui.utils import get_full_text_for_source
     # Importer les configurations UI si nécessaire (par exemple, pour TIKA_SERVER_URL)
     from argumentation_analysis.ui import config as ui_config
+    # Importer FIXED_SALT depuis la configuration UI
+    from argumentation_analysis.ui.config import FIXED_SALT as CONFIG_FIXED_SALT
 except ImportError as e:
     print(f"Erreur d'importation: {e}. Assurez-vous que le script est exécuté depuis la racine du projet "
           "et que l'environnement est correctement configuré.")
@@ -40,8 +42,7 @@ logging.basicConfig(level=logging.INFO,
                     format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
-# Salt fixe pour la dérivation de clé (même que dans le vrai code)
-FIXED_SALT = b'argumentation_analysis_salt_2024'
+# FIXED_SALT est maintenant importé sous CONFIG_FIXED_SALT
 
 def derive_key_from_passphrase(passphrase: str) -> bytes:
     """
@@ -54,7 +55,7 @@ def derive_key_from_passphrase(passphrase: str) -> bytes:
     kdf = PBKDF2HMAC(
         algorithm=hashes.SHA256(),
         length=32,
-        salt=FIXED_SALT,
+        salt=CONFIG_FIXED_SALT,  # Utilisation du sel importé
         iterations=480000,
         backend=default_backend()
     )
