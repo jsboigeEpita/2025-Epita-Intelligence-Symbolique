@@ -330,7 +330,13 @@
       "fallacy_id": "fallacy_0",
       "is_correct": true,
       "feedback_text": "Bonne détection",
-      "timestamp": "2025-05-29T10:42:10.697511"
+      "timestamp": "2025-05-29T11:31:40.836850"
+    },
+    {
+      "fallacy_id": "fallacy_0",
+      "is_correct": true,
+      "feedback_text": "Bonne détection",
+      "timestamp": "2025-05-29T11:32:46.657663"
     },
     {
       "fallacy_id": "fallacy_0",

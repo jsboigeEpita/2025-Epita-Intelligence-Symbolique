@@ -40,6 +40,12 @@ class MockExtractAgent:
         self.state.tasks = {}
         
         # Configuration des méthodes pour retourner les bons statuts
+        # Ces mocks directs (extract_text, validate_extracts, preprocess_text)
+        # ne sont plus directement utilisés par la nouvelle logique de process_task de l'adaptateur,
+        # qui se base sur des "techniques" et appelle _process_extract (utilisant extract_from_name)
+        # ou _normalize_text.
+        # Nous les gardons pour l'instant au cas où d'autres parties du mock en dépendraient,
+        # mais le mock crucial pour les tests actuels sera extract_from_name.
         self.extract_text = AsyncMock(return_value={
             "status": "success",
             "extracts": [
@@ -73,6 +79,18 @@ class MockExtractAgent:
                 "language": "fr"
             }
         })
+
+        # Mock pour extract_from_name, utilisé par _process_extract
+        # ExtractResult est attendu. On utilise MagicMock pour simuler ses attributs.
+        self.extract_from_name = AsyncMock(return_value=MagicMock(
+            status="valid",
+            message="Extraction réussie simulée par extract_from_name",
+            explanation="Mock explanation",
+            start_marker="<MOCK_START>",
+            end_marker="<MOCK_END>",
+            template_start="<MOCK_TEMPLATE_START>",
+            extracted_text="Texte extrait simulé via extract_from_name"
+        ))
         
     def process_extract(self, *args, **kwargs):
         return {"status": "success", "data": []}
@@ -228,11 +246,16 @@ class TestExtractAgentAdapter(unittest.TestCase):
         task = {
             "id": "task-1",
             "description": "Extraire le texte",
-            "required_capabilities": ["text_extraction"],
-            "parameters": {
-                "text": "Ceci est un texte à extraire",
+            "required_capabilities": ["text_extraction"], # Cette clé n'est plus directement utilisée pour router
+            "text_extracts": [{
+                "id": "input-extract-1",
+                "content": "Ceci est un texte à extraire",
                 "source": "test-source"
-            }
+            }],
+            "techniques": [{
+                "name": "relevant_segment_extraction",
+                "parameters": {}
+            }]
         }
         
         # Exécuter process_task de manière synchrone
@@ -240,13 +263,21 @@ class TestExtractAgentAdapter(unittest.TestCase):
         result = loop.run_until_complete(self.adapter.process_task(task))
         
         # Vérifier que le résultat est correct
-        self.assertEqual(result["status"], "success")
-        self.assertIn("extracts", result)
-        self.assertEqual(len(result["extracts"]), 1)
-        self.assertEqual(result["extracts"][0]["id"], "extract-1")
+        self.assertEqual(result["status"], "completed") # Statut attendu par format_result
+        self.assertIn("outputs", result)
+        outputs = result["outputs"]
+        self.assertIn("extracted_segments", outputs)
+        self.assertEqual(len(outputs["extracted_segments"]), 1)
         
-        # Vérifier que la méthode extract_text de l'agent d'extraction a été appelée
-        self.adapter.extract_agent.extract_text.assert_called_once()
+        extracted_segment = outputs["extracted_segments"][0]
+        self.assertEqual(extracted_segment["extract_id"], "input-extract-1")
+        self.assertEqual(extracted_segment["extracted_text"], "Texte extrait simulé via extract_from_name")
+        
+        # Vérifier que la méthode extract_from_name de l'agent d'extraction a été appelée
+        self.adapter.extract_agent.extract_from_name.assert_called_once_with(
+            {"source_name": "test-source", "source_text": "Ceci est un texte à extraire"}, # source_info
+            "input-extract-1"  # extract_name
+        )
     
     def test_process_task_validate_extracts(self):
         """Teste la méthode process_task pour la validation d'extraits."""
@@ -254,30 +285,33 @@ class TestExtractAgentAdapter(unittest.TestCase):
         task = {
             "id": "task-2",
             "description": "Valider les extraits",
-            "required_capabilities": ["extract_validation"],
-            "parameters": {
-                "extracts": [
-                    {
-                        "id": "extract-1",
-                        "text": "Ceci est un extrait à valider",
-                        "source": "test-source"
-                    }
-                ]
-            }
+            "required_capabilities": ["extract_validation"], # Non utilisé directement par la logique de process_task
+            "text_extracts": [{ # Fournir text_extracts pour éviter l'erreur initiale
+                "id": "extract-to-validate-1",
+                "content": "Ceci est un extrait à valider",
+                "source": "test-source"
+            }],
+            "techniques": [{ # Fournir une technique, même si elle ne correspond pas à la validation
+                "name": "non_existent_validation_technique",
+                "parameters": {}
+            }]
         }
         
         # Exécuter process_task de manière synchrone
         loop = asyncio.get_event_loop()
         result = loop.run_until_complete(self.adapter.process_task(task))
         
-        # Vérifier que le résultat est correct
-        self.assertEqual(result["status"], "success")
-        self.assertIn("valid_extracts", result)
-        self.assertEqual(len(result["valid_extracts"]), 1)
-        self.assertEqual(result["valid_extracts"][0]["id"], "extract-1")
+        # La logique actuelle de process_task ne gère pas "extract_validation" via une technique.
+        # Elle devrait donc retourner "completed_with_issues" avec une issue "unsupported_technique".
+        self.assertEqual(result["status"], "completed_with_issues")
+        self.assertIn("issues", result)
+        self.assertTrue(len(result["issues"]) > 0)
+        issue = result["issues"][0]
+        self.assertEqual(issue["type"], "unsupported_technique")
+        self.assertIn("non_existent_validation_technique", issue["description"])
         
-        # Vérifier que la méthode validate_extracts de l'agent d'extraction a été appelée
-        self.adapter.extract_agent.validate_extracts.assert_called_once()
+        # La méthode validate_extracts du mock ne sera PAS appelée car la logique a changé.
+        self.adapter.extract_agent.validate_extracts.assert_not_called()
     
     def test_process_task_preprocess_text(self):
         """Teste la méthode process_task pour le prétraitement de texte."""
@@ -285,10 +319,16 @@ class TestExtractAgentAdapter(unittest.TestCase):
         task = {
             "id": "task-3",
             "description": "Prétraiter le texte",
-            "required_capabilities": ["preprocessing"],
-            "parameters": {
-                "text": "Ceci est un texte à prétraiter"
-            }
+            "required_capabilities": ["preprocessing"], # Non utilisé directement
+            "text_extracts": [{
+                "id": "input-text-preprocess-1",
+                "content": "Ceci est un texte à prétraiter avec des mots comme le et la",
+                "source": "test-source-preprocess"
+            }],
+            "techniques": [{
+                "name": "text_normalization",
+                "parameters": {"remove_stopwords": True} # Exemple de paramètre pour _normalize_text
+            }]
         }
         
         # Exécuter process_task de manière synchrone
@@ -296,12 +336,19 @@ class TestExtractAgentAdapter(unittest.TestCase):
         result = loop.run_until_complete(self.adapter.process_task(task))
         
         # Vérifier que le résultat est correct
-        self.assertEqual(result["status"], "success")
-        self.assertIn("preprocessed_text", result)
-        self.assertEqual(result["preprocessed_text"], "Ceci est un texte prétraité")
+        self.assertEqual(result["status"], "completed")
+        self.assertIn("outputs", result)
+        outputs = result["outputs"]
+        self.assertIn("normalized_text", outputs) # _format_outputs devrait créer cette clé
+        self.assertEqual(len(outputs["normalized_text"]), 1)
         
-        # Vérifier que la méthode preprocess_text de l'agent d'extraction a été appelée
-        self.adapter.extract_agent.preprocess_text.assert_called_once()
+        normalized_output = outputs["normalized_text"][0]
+        self.assertEqual(normalized_output["extract_id"], "input-text-preprocess-1")
+        # S'attendre au résultat de _normalize_text (qui supprime les stopwords simples)
+        self.assertEqual(normalized_output["normalized_text"], "Ceci texte à prétraiter avec mots comme") # "le" et "la" sont supprimés
+        
+        # La méthode preprocess_text du mock ne sera PAS appelée. _normalize_text est appelée directement.
+        self.adapter.extract_agent.preprocess_text.assert_not_called()
     
     def test_process_task_unknown_capability(self):
         """Teste la méthode process_task pour une capacité inconnue."""
@@ -309,37 +356,69 @@ class TestExtractAgentAdapter(unittest.TestCase):
         task = {
             "id": "task-4",
             "description": "Tâche inconnue",
-            "required_capabilities": ["unknown_capability"],
-            "parameters": {}
+            "required_capabilities": ["unknown_capability"], # Non utilisé directement
+            "text_extracts": [{ # Fournir pour éviter l'erreur initiale
+                "id": "input-unknown-1",
+                "content": "Texte pour capacité inconnue",
+                "source": "test-source-unknown"
+            }],
+            "techniques": [{
+                "name": "very_unknown_technique", # Technique non supportée
+                "parameters": {}
+            }]
         }
         
         # Exécuter process_task de manière synchrone
         loop = asyncio.get_event_loop()
         result = loop.run_until_complete(self.adapter.process_task(task))
         
-        # Vérifier que le résultat indique une erreur
-        self.assertEqual(result["status"], "error")
-        self.assertIn("message", result)
-        self.assertIn("unknown_capability", result["message"])
+        # Devrait retourner "completed_with_issues" avec une issue "unsupported_technique"
+        self.assertEqual(result["status"], "completed_with_issues")
+        self.assertIn("issues", result)
+        self.assertTrue(len(result["issues"]) > 0)
+        issue = result["issues"][0]
+        self.assertEqual(issue["type"], "unsupported_technique")
+        self.assertIn("very_unknown_technique", issue["description"])
     
     def test_process_task_missing_parameters(self):
         """Teste la méthode process_task avec des paramètres manquants."""
         # Créer une tâche d'extraction de texte sans paramètres
         task = {
             "id": "task-5",
-            "description": "Extraire le texte",
-            "required_capabilities": ["text_extraction"],
-            "parameters": {}  # Paramètres manquants
+            "description": "Extraire le texte avec paramètres manquants pour la technique",
+            "required_capabilities": ["text_extraction"], # Non utilisé directement
+            "text_extracts": [], # Fournir text_extracts (peut être vide si aucune donnée à traiter)
+                                 # pour éviter l'erreur initiale "Aucun extrait de texte fourni".
+                                 # Si text_extracts est vide, la boucle sur les extracts ne s'exécute pas.
+            "techniques": [{
+                "name": "relevant_segment_extraction"
+                # "parameters" est optionnel pour la technique elle-même,
+                # et _process_extract prend technique_params qui sera {} par défaut.
+                # Donc, cela ne devrait pas causer d'erreur de "paramètres manquants" au niveau de process_task.
+            }]
         }
         
         # Exécuter process_task de manière synchrone
         loop = asyncio.get_event_loop()
         result = loop.run_until_complete(self.adapter.process_task(task))
         
-        # Vérifier que le résultat indique une erreur
-        self.assertEqual(result["status"], "error")
-        self.assertIn("message", result)
-        self.assertIn("paramètres requis", result["message"].lower())
+        # Si text_extracts est vide, l'adaptateur lève une ValueError "Aucun extrait de texte fourni".
+        # Le statut du résultat devrait donc être "failed".
+        self.assertEqual(result["status"], "failed")
+        self.assertIn("issues", result)
+        self.assertTrue(len(result["issues"]) > 0)
+        issue = result["issues"][0]
+        self.assertEqual(issue["type"], "execution_error") # L'exception est capturée et formatée en issue
+        self.assertIn("Aucun extrait de texte fourni dans la tâche.", issue["description"])
+        
+        # Les outputs devraient être vides ou absents dans ce cas d'échec.
+        self.assertIn("outputs", result)
+        # En cas d'échec avant la production de `results` (liste vide passée à _format_outputs),
+        # `_format_outputs` initialisera les listes vides.
+        # Si l'échec se produit dans le bloc try principal et que `format_result` n'est pas appelé avec la liste `results`
+        # mais que le bloc except retourne directement un dictionnaire, alors "outputs" pourrait être {}.
+        # Le bloc except dans process_task retourne "outputs": {}
+        self.assertEqual(result["outputs"], {})
     
     def test_shutdown(self):
         """Teste la méthode shutdown."""

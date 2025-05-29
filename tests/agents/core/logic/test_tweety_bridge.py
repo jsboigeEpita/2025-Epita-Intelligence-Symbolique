@@ -6,6 +6,7 @@ Tests unitaires pour la classe TweetyBridge.
 
 import unittest
 from unittest.mock import MagicMock, patch, PropertyMock
+from tests.mocks.jpype_mock import JException as MockedJException
 
 import jpype
 
@@ -20,6 +21,7 @@ class TestTweetyBridge(unittest.TestCase):
         # Patcher jpype
         self.jpype_patcher = patch('argumentation_analysis.agents.core.logic.tweety_bridge.jpype')
         self.mock_jpype = self.jpype_patcher.start()
+        self.mock_jpype.JException = MockedJException # Assigner la classe mockée
         
         # Configurer le mock de jpype
         self.mock_jpype.isJVMStarted.return_value = True
@@ -109,6 +111,7 @@ class TestTweetyBridge(unittest.TestCase):
         """Test de l'initialisation lorsque la JVM n'est pas prête."""
         # Configurer le mock de jpype
         self.mock_jpype.isJVMStarted.return_value = False
+        self.mock_jpype.JClass.reset_mock() # Réinitialiser les appels pour ce test spécifique
         
         # Créer l'instance de TweetyBridge
         tweety_bridge = TweetyBridge()
@@ -137,9 +140,10 @@ class TestTweetyBridge(unittest.TestCase):
     def test_validate_formula_invalid(self):
         """Test de la validation d'une formule propositionnelle invalide."""
         # Configurer le mock du parser pour lever une exception
-        java_exception = MagicMock(spec=jpype.JException)
-        java_exception.getMessage.return_value = "Erreur de syntaxe"
-        self.mock_pl_parser_instance.parseFormula.side_effect = java_exception
+        java_exception_instance = self.mock_jpype.JException("Erreur de syntaxe")
+        # Configurer getMessage sur l'instance si nécessaire, bien que le constructeur du mock le fasse déjà.
+        # java_exception_instance.getMessage = MagicMock(return_value="Erreur de syntaxe")
+        self.mock_pl_parser_instance.parseFormula.side_effect = java_exception_instance
         
         # Valider une formule
         is_valid, message = self.tweety_bridge.validate_formula("a ==> b")
@@ -188,10 +192,9 @@ class TestTweetyBridge(unittest.TestCase):
     def test_validate_belief_set_invalid(self):
         """Test de la validation d'un ensemble de croyances propositionnelles invalide."""
         # Configurer le mock du parser pour lever une exception
-        java_exception = MagicMock(spec=jpype.JException)
-        java_exception.getMessage.return_value = "Erreur de syntaxe à la ligne 2"
-        java_exception.message.return_value = "Erreur de syntaxe à la ligne 2"
-        self.mock_pl_parser_instance.parseBeliefBase.side_effect = java_exception
+        java_exception_instance = self.mock_jpype.JException("Erreur de syntaxe à la ligne 2")
+        # java_exception_instance.getMessage = MagicMock(return_value="Erreur de syntaxe à la ligne 2")
+        self.mock_pl_parser_instance.parseBeliefBase.side_effect = java_exception_instance
         
         # Valider un ensemble de croyances
         is_valid, message = self.tweety_bridge.validate_belief_set("a ==> b")
