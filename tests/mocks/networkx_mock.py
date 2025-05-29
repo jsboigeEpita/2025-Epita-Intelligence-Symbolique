@@ -11,6 +11,10 @@ from collections import defaultdict
 # Version du mock
 __version__ = "3.0-mock"
 
+class NetworkXMock: # Ajout de la classe manquante
+    """Classe mock pour NetworkX, si attendue par d'autres modules."""
+    pass
+
 class MockGraph:
     """Mock pour networkx.Graph."""
     

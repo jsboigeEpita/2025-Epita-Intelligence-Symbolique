@@ -9,7 +9,7 @@ import time
 import logging
 from typing import Dict, List, Any, Optional, Set, Tuple
 
-from argumentation_analysis.services.web_api.models.request_models import FrameworkRequest, Argument
+from argumentation_analysis.services.web_api.models.request_models import FrameworkRequest, Argument, FrameworkOptions
 from argumentation_analysis.services.web_api.models.response_models import (
     FrameworkResponse, ArgumentNode, Extension, FrameworkVisualization
 )

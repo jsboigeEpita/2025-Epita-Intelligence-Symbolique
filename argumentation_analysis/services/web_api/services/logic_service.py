@@ -17,7 +17,7 @@ import uuid
 from typing import Dict, List, Any, Optional, Tuple
 from datetime import datetime
 
-from semantic_kernel import Kernel
+from semantic_kernel import Kernel # Déjà présent, pas de changement nécessaire
 
 from argumentation_analysis.agents.core.logic.logic_factory import LogicAgentFactory
 from argumentation_analysis.agents.core.logic.abstract_logic_agent import AbstractLogicAgent
