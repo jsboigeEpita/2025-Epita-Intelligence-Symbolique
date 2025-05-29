@@ -1,0 +1,12 @@
+pip install llama-cpp-python huggingface-hub
+CMAKE_ARGS="-DGGML_CUDA=on" FORCE_CMAKE=1 pip install --upgrade --no-cache-dir llama-cpp-python
+
+huggingface-cli download TheBloke/Llama-2-7B-GGUF llama-2-7b.Q4_K_M.gguf --local-dir . --local-dir-use-symlinks False
+
+huggingface-cli download bartowski/Llama-3SOME-8B-v2-GGUF Llama-3SOME-8B-v2-Q6_K.gguf --local-dir . --local-dir-use-symlinks False
+
+huggingface-cli download TheDrummer/Gemmasutra-Small-4B-v1-GGUF Gemmasutra-Small-4B-v1a-Q8_0.gguf --local-dir . --local-dir-use-symlinks False
+
+huggingface-cli download Qwen/Qwen3-32B-GGUF Qwen3-32B-Q4_K_M.gguf --local-dir . --local-dir-use-symlinks False
+
+huggingface-cli download Qwen/Qwen3-8B-GGUF Qwen3-8B-Q8_0.gguf --local-dir . --local-dir-use-symlinks False
