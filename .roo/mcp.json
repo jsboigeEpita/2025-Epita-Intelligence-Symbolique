@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "argumentation_analysis": {
+      "command": "uv",
+      "args": [
+        "--directory",
+        "./mcp",
+        "run",
+        "main.py"
+      ]
+    }
+  }
+}
