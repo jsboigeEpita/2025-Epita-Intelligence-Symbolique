@@ -337,6 +337,30 @@
       "is_correct": true,
       "feedback_text": "Bonne détection",
       "timestamp": "2025-05-29T11:16:18.458437"
+    },
+    {
+      "fallacy_id": "fallacy_0",
+      "is_correct": true,
+      "feedback_text": "Bonne détection",
+      "timestamp": "2025-05-29T17:13:03.683150"
+    },
+    {
+      "fallacy_id": "fallacy_0",
+      "is_correct": true,
+      "feedback_text": "Bonne détection",
+      "timestamp": "2025-05-29T17:15:55.102652"
+    },
+    {
+      "fallacy_id": "fallacy_0",
+      "is_correct": true,
+      "feedback_text": "Bonne détection",
+      "timestamp": "2025-05-29T17:26:48.204101"
+    },
+    {
+      "fallacy_id": "fallacy_0",
+      "is_correct": true,
+      "feedback_text": "Bonne détection",
+      "timestamp": "2025-05-29T17:48:50.522061"
     }
   ],
   "confidence_adjustments": {
