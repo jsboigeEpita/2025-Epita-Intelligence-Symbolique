@@ -13,9 +13,21 @@
       "is_correct": true,
       "feedback_text": "Bonne détection",
       "timestamp": "2025-05-19T20:02:43.271393"
+    },
+    {
+      "fallacy_id": "fallacy_0",
+      "is_correct": true,
+      "feedback_text": "Bonne détection",
+      "timestamp": "2025-05-29T11:37:10.657660"
+    },
+    {
+      "fallacy_id": "fallacy_0",
+      "is_correct": true,
+      "feedback_text": "Bonne détection",
+      "timestamp": "2025-05-29T11:40:33.036677"
     }
   ],
   "confidence_adjustments": {
-    "Appel à l'autorité": 0.1
+    "Appel à l'autorité": 0.2
   }
 }

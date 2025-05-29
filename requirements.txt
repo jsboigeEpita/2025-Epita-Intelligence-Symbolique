@@ -1,0 +1,4 @@
+flask
+jpype1
+Flask-CORS
+matplotlib

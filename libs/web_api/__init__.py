@@ -16,7 +16,7 @@ __description__ = "API Web pour l'analyse argumentative"
 
 from .app import app
 from .models import *
-from .services import *
+from .services import AnalysisService, ValidationService, FallacyService, FrameworkService # Ne pas importer LogicService ici pour l'instant
 
 __all__ = [
     'app',
