@@ -32,6 +32,7 @@ Ce script:
 
 import os
 import sys
+import io
 import json
 import logging
 import argparse
@@ -46,6 +47,16 @@ from typing import Dict, List, Any, Optional, Tuple, Union
 from tqdm import tqdm
 import markdown
 import shutil
+
+# Configuration pour gérer les erreurs d'encodage sur stdout/stderr
+# Cela rendra print() et logging.StreamHandler plus robustes
+# Note: sys.stdout.encoding peut être None si la sortie est redirigée.
+# Dans ce cas, on utilise 'utf-8' par défaut.
+_stdout_encoding = sys.stdout.encoding if sys.stdout.encoding else 'utf-8'
+sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding=_stdout_encoding, errors='replace', line_buffering=True)
+
+_stderr_encoding = sys.stderr.encoding if sys.stderr.encoding else 'utf-8'
+sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding=_stderr_encoding, errors='replace', line_buffering=True)
 
 # Configuration du logging
 logging.basicConfig(
@@ -81,12 +92,38 @@ def load_results(file_path: Path) -> List[Dict[str, Any]]:
     
     try:
         with open(file_path, 'r', encoding='utf-8') as f:
-            results = json.load(f)
+            loaded_data = json.load(f)
+
+        # Vérifier si loaded_data est une chaîne qui doit être parsée à nouveau
+        if isinstance(loaded_data, str):
+            logger.info(f"Le contenu chargé de {file_path} est une chaîne, tentative de re-parse JSON.")
+            try:
+                results = json.loads(loaded_data)
+            except json.JSONDecodeError as e_inner:
+                logger.error(f"❌ Erreur lors du re-parse de la chaîne JSON depuis {file_path}: {e_inner}")
+                logger.error(f"Contenu de la chaîne (premiers 500 caractères): {loaded_data[:500]}")
+                return [] 
+        else:
+            results = loaded_data
         
-        logger.info(f"✅ {len(results)} résultats chargés avec succès")
+        # Vérification supplémentaire: s'assurer que 'results' est une liste
+        if not isinstance(results, list):
+            logger.warning(f"Les données chargées et parsées depuis {file_path} ne sont pas une liste comme attendu, mais de type {type(results)}.")
+            # Si ce n'est pas une liste, cela pourrait causer des problèmes plus tard.
+            # Pour être plus strict, on pourrait retourner une liste vide ou lever une erreur.
+            # Pour l'instant, on retourne les données telles quelles après l'avertissement,
+            # car la fonction appelante pourrait avoir sa propre gestion d'erreur.
+            # Cependant, pour adhérer à la signature de type List[Dict[str, Any]],
+            # il serait plus sûr de retourner [] si ce n'est pas une liste.
+            # Modifions pour être plus strict :
+            if not isinstance(results, list): # Double vérification au cas où loaded_data était une liste mais json.loads l'a transformé en autre chose (improbable)
+                logger.error(f"Les données finales de {file_path} après traitement ne sont pas une liste. Type: {type(results)}. Contenu (premiers 500 caractères): {str(results)[:500]}")
+                return []
+
+        logger.info(f"✅ {len(results) if isinstance(results, list) else 'Données non-liste'} résultats chargés avec succès depuis {file_path}")
         return results
     except Exception as e:
-        logger.error(f"❌ Erreur lors du chargement des résultats: {e}")
+        logger.error(f"❌ Erreur lors du chargement des résultats depuis {file_path}: {e}")
         return []
 
 def load_performance_report(file_path: Path) -> str:
@@ -124,7 +161,7 @@ def load_performance_metrics(file_path: Path) -> pd.DataFrame:
     logger.info(f"Chargement des métriques de performance depuis {file_path}")
     
     try:
-        metrics = pd.read_csv(file_path)
+        metrics = pd.read_csv(file_path, encoding='utf-8')
         logger.info(f"✅ Métriques de performance chargées avec succès")
         return metrics
     except Exception as e:
@@ -874,7 +911,7 @@ def generate_markdown_report(
     report.append("Les recommandations formulées dans ce rapport visent à optimiser l'utilisation des agents existants et à guider le développement de nouveaux agents spécialistes pour améliorer encore la qualité et la pertinence des analyses rhétoriques.")
     
     # Écrire le rapport dans un fichier
-    with open(output_file, 'w', encoding='utf-8') as f:
+    with open(output_file, 'w', encoding='utf-8', errors="replace") as f:
         f.write('\n'.join(report))
     
     logger.info(f"✅ Rapport Markdown généré: {output_file}")
@@ -995,7 +1032,7 @@ def generate_html_report(markdown_file: Path, output_file: Path, visualization_d
         """
         
         # Écrire le contenu HTML dans un fichier
-        with open(output_file, 'w', encoding='utf-8') as f:
+        with open(output_file, 'w', encoding='utf-8', errors="replace") as f:
             f.write(html)
         
         logger.info(f"✅ Rapport HTML généré: {output_file}")
@@ -1059,161 +1096,168 @@ def main():
         logger.setLevel(logging.DEBUG)
         logger.debug("Mode verbeux activé")
     
-    logger.info("Démarrage de la génération du rapport d'analyse complet...")
-    
-    # Trouver le fichier de résultats de base le plus récent si non spécifié
-    base_results_file = args.base_results
-    if not base_results_file:
-        results_dir = Path("results")
-        if results_dir.exists():
-            result_files = list(results_dir.glob("rhetorical_analysis_*.json"))
-            if result_files:
-                # Trier par date de modification (la plus récente en premier)
-                result_files.sort(key=lambda x: x.stat().st_mtime, reverse=True)
-                base_results_file = result_files[0]
-                logger.info(f"Utilisation du fichier de résultats de base le plus récent: {base_results_file}")
-    
-    if not base_results_file:
-        logger.error("Aucun fichier de résultats de base spécifié et aucun fichier de résultats trouvé.")
-        sys.exit(1)
-    
-    base_results_path = Path(base_results_file)
-    if not base_results_path.exists():
-        logger.error(f"Le fichier de résultats de base {base_results_path} n'existe pas.")
-        sys.exit(1)
-    
-    # Trouver le fichier de résultats avancés le plus récent si non spécifié
-    advanced_results_file = args.advanced_results
-    if not advanced_results_file:
-        results_dir = Path("results")
-        if results_dir.exists():
-            result_files = list(results_dir.glob("advanced_rhetorical_analysis_*.json"))
-            if result_files:
-                # Trier par date de modification (la plus récente en premier)
-                result_files.sort(key=lambda x: x.stat().st_mtime, reverse=True)
-                advanced_results_file = result_files[0]
-                logger.info(f"Utilisation du fichier de résultats avancés le plus récent: {advanced_results_file}")
-    
-    if not advanced_results_file:
-        logger.error("Aucun fichier de résultats avancés spécifié et aucun fichier de résultats trouvé.")
-        sys.exit(1)
-    
-    advanced_results_path = Path(advanced_results_file)
-    if not advanced_results_path.exists():
-        logger.error(f"Le fichier de résultats avancés {advanced_results_path} n'existe pas.")
-        sys.exit(1)
-    
-    # Trouver le fichier de rapport de performance le plus récent si non spécifié
-    performance_report_file = args.performance_report
-    if not performance_report_file:
-        performance_dir = Path("results/performance_comparison")
-        if performance_dir.exists():
-            report_files = list(performance_dir.glob("rapport_performance.md"))
-            if report_files:
-                performance_report_file = report_files[0]
-                logger.info(f"Utilisation du fichier de rapport de performance: {performance_report_file}")
-    
-    if not performance_report_file:
-        logger.warning("Aucun fichier de rapport de performance spécifié et aucun fichier de rapport trouvé.")
-        logger.warning("Le rapport de performance ne sera pas inclus dans le rapport complet.")
-        performance_report = ""
-    else:
-        performance_report_path = Path(performance_report_file)
-        if not performance_report_path.exists():
-            logger.warning(f"Le fichier de rapport de performance {performance_report_path} n'existe pas.")
+    try:
+        logger.info("Démarrage de la génération du rapport d'analyse complet...")
+        
+        # Trouver le fichier de résultats de base le plus récent si non spécifié
+        base_results_file = args.base_results
+        if not base_results_file:
+            results_dir = Path("results")
+            if results_dir.exists():
+                result_files = list(results_dir.glob("rhetorical_analysis_*.json"))
+                if result_files:
+                    # Trier par date de modification (la plus récente en premier)
+                    result_files.sort(key=lambda x: x.stat().st_mtime, reverse=True)
+                    base_results_file = result_files[0]
+                    logger.info(f"Utilisation du fichier de résultats de base le plus récent: {base_results_file}")
+        
+        if not base_results_file:
+            logger.error("Aucun fichier de résultats de base spécifié et aucun fichier de résultats trouvé.")
+            sys.exit(1)
+        
+        base_results_path = Path(base_results_file)
+        if not base_results_path.exists():
+            logger.error(f"Le fichier de résultats de base {base_results_path} n'existe pas.")
+            sys.exit(1)
+        
+        # Trouver le fichier de résultats avancés le plus récent si non spécifié
+        advanced_results_file = args.advanced_results
+        if not advanced_results_file:
+            results_dir = Path("results")
+            if results_dir.exists():
+                result_files = list(results_dir.glob("advanced_rhetorical_analysis_*.json"))
+                if result_files:
+                    # Trier par date de modification (la plus récente en premier)
+                    result_files.sort(key=lambda x: x.stat().st_mtime, reverse=True)
+                    advanced_results_file = result_files[0]
+                    logger.info(f"Utilisation du fichier de résultats avancés le plus récent: {advanced_results_file}")
+        
+        if not advanced_results_file:
+            logger.error("Aucun fichier de résultats avancés spécifié et aucun fichier de résultats trouvé.")
+            sys.exit(1)
+        
+        advanced_results_path = Path(advanced_results_file)
+        if not advanced_results_path.exists():
+            logger.error(f"Le fichier de résultats avancés {advanced_results_path} n'existe pas.")
+            sys.exit(1)
+        
+        # Trouver le fichier de rapport de performance le plus récent si non spécifié
+        performance_report_file = args.performance_report
+        if not performance_report_file:
+            performance_dir = Path("results/performance_comparison")
+            if performance_dir.exists():
+                report_files = list(performance_dir.glob("rapport_performance.md"))
+                if report_files:
+                    performance_report_file = report_files[0]
+                    logger.info(f"Utilisation du fichier de rapport de performance: {performance_report_file}")
+        
+        if not performance_report_file:
+            logger.warning("Aucun fichier de rapport de performance spécifié et aucun fichier de rapport trouvé.")
             logger.warning("Le rapport de performance ne sera pas inclus dans le rapport complet.")
             performance_report = ""
         else:
-            # Charger le rapport de performance
-            performance_report = load_performance_report(performance_report_path)
-    
-    # Trouver le fichier de métriques de performance le plus récent si non spécifié
-    performance_metrics_file = args.performance_metrics
-    if not performance_metrics_file:
-        performance_dir = Path("results/performance_comparison")
-        if performance_dir.exists():
-            metrics_files = list(performance_dir.glob("performance_metrics.csv"))
-            if metrics_files:
-                performance_metrics_file = metrics_files[0]
-                logger.info(f"Utilisation du fichier de métriques de performance: {performance_metrics_file}")
-    
-    if not performance_metrics_file:
-        logger.warning("Aucun fichier de métriques de performance spécifié et aucun fichier de métriques trouvé.")
-        logger.warning("Les métriques de performance ne seront pas incluses dans le rapport complet.")
-        performance_metrics = pd.DataFrame()
-    else:
-        performance_metrics_path = Path(performance_metrics_file)
-        if not performance_metrics_path.exists():
-            logger.warning(f"Le fichier de métriques de performance {performance_metrics_path} n'existe pas.")
+            performance_report_path = Path(performance_report_file)
+            if not performance_report_path.exists():
+                logger.warning(f"Le fichier de rapport de performance {performance_report_path} n'existe pas.")
+                logger.warning("Le rapport de performance ne sera pas inclus dans le rapport complet.")
+                performance_report = ""
+            else:
+                # Charger le rapport de performance
+                performance_report = load_performance_report(performance_report_path)
+        
+        # Trouver le fichier de métriques de performance le plus récent si non spécifié
+        performance_metrics_file = args.performance_metrics
+        if not performance_metrics_file:
+            performance_dir = Path("results/performance_comparison")
+            if performance_dir.exists():
+                metrics_files = list(performance_dir.glob("performance_metrics.csv"))
+                if metrics_files:
+                    performance_metrics_file = metrics_files[0]
+                    logger.info(f"Utilisation du fichier de métriques de performance: {performance_metrics_file}")
+        
+        if not performance_metrics_file:
+            logger.warning("Aucun fichier de métriques de performance spécifié et aucun fichier de métriques trouvé.")
             logger.warning("Les métriques de performance ne seront pas incluses dans le rapport complet.")
             performance_metrics = pd.DataFrame()
         else:
-            # Charger les métriques de performance
-            performance_metrics = load_performance_metrics(performance_metrics_path)
-    
-    # Définir le répertoire de sortie
-    output_dir = Path(args.output_dir)
-    output_dir.mkdir(parents=True, exist_ok=True)
-    
-    # Définir les chemins de sortie
-    visualization_dir = output_dir / "visualizations"
-    visualization_dir.mkdir(parents=True, exist_ok=True)
-    
-    markdown_file = output_dir / "rapport_analyse_complet.md"
-    html_file = output_dir / "rapport_analyse_complet.html"
-    
-    # Charger les résultats
-    base_results = load_results(base_results_path)
-    advanced_results = load_results(advanced_results_path)
-    
-    if not base_results:
-        logger.error("Aucun résultat de base n'a pu être chargé.")
+            performance_metrics_path = Path(performance_metrics_file)
+            if not performance_metrics_path.exists():
+                logger.warning(f"Le fichier de métriques de performance {performance_metrics_path} n'existe pas.")
+                logger.warning("Les métriques de performance ne seront pas incluses dans le rapport complet.")
+                performance_metrics = pd.DataFrame()
+            else:
+                # Charger les métriques de performance
+                performance_metrics = load_performance_metrics(performance_metrics_path)
+        
+        # Définir le répertoire de sortie
+        output_dir = Path(args.output_dir)
+        output_dir.mkdir(parents=True, exist_ok=True)
+        
+        # Définir les chemins de sortie
+        visualization_dir = output_dir / "visualizations"
+        visualization_dir.mkdir(parents=True, exist_ok=True)
+        
+        markdown_file = output_dir / "rapport_analyse_complet.md"
+        html_file = output_dir / "rapport_analyse_complet.html"
+        
+        # Charger les résultats
+        base_results = load_results(base_results_path)
+        advanced_results = load_results(advanced_results_path)
+        
+        if not base_results:
+            logger.error("Aucun résultat de base n'a pu être chargé.")
+            sys.exit(1)
+        
+        if not advanced_results:
+            logger.error("Aucun résultat avancé n'a pu être chargé.")
+            sys.exit(1)
+        
+        # Analyser l'efficacité des agents
+        logger.info("Analyse de l'efficacité des agents...")
+        effectiveness = analyze_agent_effectiveness(base_results, advanced_results, performance_metrics)
+        
+        # Générer des recommandations pour l'amélioration des agents existants
+        logger.info("Génération des recommandations pour l'amélioration des agents existants...")
+        improvement_recommendations = generate_agent_improvement_recommendations()
+        
+        # Générer des recommandations pour le développement de nouveaux agents
+        logger.info("Génération des recommandations pour le développement de nouveaux agents...")
+        new_agent_recommendations = generate_new_agent_recommendations()
+        
+        # Générer des visualisations
+        logger.info("Génération des visualisations...")
+        visualization_paths = generate_visualizations(base_results, advanced_results, effectiveness, visualization_dir)
+        
+        # Générer le rapport Markdown
+        logger.info("Génération du rapport Markdown...")
+        generate_markdown_report(
+            base_results,
+            advanced_results,
+            performance_report,
+            performance_metrics,
+            effectiveness,
+            improvement_recommendations,
+            new_agent_recommendations,
+            visualization_paths,
+            markdown_file
+        )
+        
+        # Générer le rapport HTML
+        logger.info("Génération du rapport HTML...")
+        generate_html_report(markdown_file, html_file, visualization_dir)
+        
+        logger.info(f"✅ Génération du rapport d'analyse complet terminée. Résultats sauvegardés dans {output_dir}")
+        logger.info(f"Rapport Markdown: {markdown_file}")
+        logger.info(f"Rapport HTML: {html_file}")
+
+        if missing_packages:
+            logger.warning(f"Les packages suivants sont manquants: {', '.join(missing_packages)}")
+            logger.warning("Certaines fonctionnalités peuvent être limitées.")
+            logger.warning(f"Pour installer les packages manquants: pip install {' '.join(missing_packages)}")
+
+    except Exception as e:
+        logger.exception("Une erreur critique est survenue pendant la génération du rapport.")
         sys.exit(1)
-    
-    if not advanced_results:
-        logger.error("Aucun résultat avancé n'a pu être chargé.")
-        sys.exit(1)
-    
-    # Analyser l'efficacité des agents
-    logger.info("Analyse de l'efficacité des agents...")
-    effectiveness = analyze_agent_effectiveness(base_results, advanced_results, performance_metrics)
-    
-    # Générer des recommandations pour l'amélioration des agents existants
-    logger.info("Génération des recommandations pour l'amélioration des agents existants...")
-    improvement_recommendations = generate_agent_improvement_recommendations()
-    
-    # Générer des recommandations pour le développement de nouveaux agents
-    logger.info("Génération des recommandations pour le développement de nouveaux agents...")
-    new_agent_recommendations = generate_new_agent_recommendations()
-    
-    # Générer des visualisations
-    logger.info("Génération des visualisations...")
-    visualization_paths = generate_visualizations(base_results, advanced_results, effectiveness, visualization_dir)
-    
-    # Générer le rapport Markdown
-    logger.info("Génération du rapport Markdown...")
-    generate_markdown_report(
-        base_results,
-        advanced_results,
-        performance_report,
-        performance_metrics,
-        effectiveness,
-        improvement_recommendations,
-        new_agent_recommendations,
-        visualization_paths,
-        markdown_file
-    )
-    
-    # Générer le rapport HTML
-    logger.info("Génération du rapport HTML...")
-    generate_html_report(markdown_file, html_file, visualization_dir)
-    
-    logger.info(f"✅ Génération du rapport d'analyse complet terminée. Résultats sauvegardés dans {output_dir}")
-    logger.info(f"Rapport Markdown: {markdown_file}")
-    logger.info(f"Rapport HTML: {html_file}")
 
 if __name__ == "__main__":
     main()
-    logger.warning(f"Les packages suivants sont manquants: {', '.join(missing_packages)}")
-    logger.warning(f"Certaines fonctionnalités peuvent être limitées.")
-    logger.warning(f"Pour installer les packages manquants: pip install {' '.join(missing_packages)}")

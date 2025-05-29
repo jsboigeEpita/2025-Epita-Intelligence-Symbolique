@@ -22,7 +22,7 @@ if str(root_dir) not in sys.path:
 try:
     from argumentation_analysis.agents.tools.analysis.contextual_fallacy_analyzer import ContextualFallacyAnalyzer
     from argumentation_analysis.agents.tools.analysis.fallacy_severity_evaluator import FallacySeverityEvaluator
-    from argumentation_analysis.agents.tools.analysis.enhanced.contextual_fallacy_analyzer import ContextualFallacyAnalyzer as EnhancedContextualAnalyzer
+    from argumentation_analysis.agents.tools.analysis.enhanced.contextual_fallacy_analyzer import EnhancedContextualFallacyAnalyzer as EnhancedContextualAnalyzer
 except ImportError as e:
     logging.warning(f"Impossible d'importer les analyseurs de sophismes: {e}")
     ContextualFallacyAnalyzer = None

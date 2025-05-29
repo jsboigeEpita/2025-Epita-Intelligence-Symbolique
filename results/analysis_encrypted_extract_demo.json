@@ -1,0 +1,13 @@
+[
+    {
+        "extract_id": "1. DAcbat Complet (Ottawa, 1858)",
+        "analysis_type": "Rhetorical Analysis (RealInformalAgent (depuis agents.core.informal) avec LLM Service réel (via create_llm_service))",
+        "analysis_details": [
+            {
+                "fallacy_type": "Mock Fallacy",
+                "description": "Ceci est un sophisme mocké.",
+                "confidence": 0.99
+            }
+        ]
+    }
+]

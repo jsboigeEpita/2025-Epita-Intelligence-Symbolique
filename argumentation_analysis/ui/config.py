@@ -2,7 +2,7 @@
 import os
 import logging
 from pathlib import Path
-from dotenv import load_dotenv, find_dotenv
+from dotenv import load_dotenv, find_dotenv # Gardé au cas où d'autres variables .env sont utilisées
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 from cryptography.hazmat.backends import default_backend
@@ -15,15 +15,17 @@ if not config_logger.handlers and not config_logger.propagate:
      handler = logging.StreamHandler(); formatter = logging.Formatter('%(asctime)s [%(levelname)s] [%(name)s] %(message)s', datefmt='%H:%M:%S'); handler.setFormatter(formatter); config_logger.addHandler(handler); config_logger.setLevel(logging.INFO)
 
 # --- Chargement .env et Dérivation Clé ---
-load_dotenv(find_dotenv())
-PASSPHRASE_VAR_NAME = "TEXT_CONFIG_PASSPHRASE"
-passphrase = os.getenv(PASSPHRASE_VAR_NAME)
+load_dotenv(find_dotenv()) # Gardé au cas où d'autres variables .env sont utilisées
+
+# MODIFICATION: Utiliser directement "Propaganda" comme passphrase
+TEXT_CONFIG_PASSPHRASE = "Propaganda"
+passphrase = TEXT_CONFIG_PASSPHRASE # Assignation directe
 ENCRYPTION_KEY = None
 FIXED_SALT = b'q\x8b\t\x97\x8b\xe9\xa3\xf2\xe4\x8e\xea\xf5\xe8\xb7\xd6\x8c' # Sel fixe
 
-config_logger.info(f"Vérification de la phrase secrète '{PASSPHRASE_VAR_NAME}' dans .env...")
-if passphrase:
-    config_logger.info(f"✅ Phrase secrète trouvée. Dérivation de la clé...")
+config_logger.info(f"Utilisation de la phrase secrète fixe pour la dérivation de la clé.")
+if passphrase: # Cette condition sera toujours vraie maintenant
+    config_logger.info(f"✅ Phrase secrète définie sur \"{passphrase}\". Dérivation de la clé...")
     try:
         kdf = PBKDF2HMAC(
             algorithm=hashes.SHA256(), length=32, salt=FIXED_SALT,
@@ -36,7 +38,9 @@ if passphrase:
         config_logger.error(f"⚠️ Erreur dérivation clé : {e}. Chiffrement désactivé.", exc_info=True)
         ENCRYPTION_KEY = None
 else:
-    config_logger.warning(f"⚠️ Variable '{PASSPHRASE_VAR_NAME}' non trouvée dans .env. Chiffrement désactivé.")
+    # Ce bloc ne devrait plus être atteint car passphrase est maintenant fixée.
+    config_logger.critical(f"⚠️ La phrase secrète n'est pas définie malgré la modification. Problème inattendu.")
+    ENCRYPTION_KEY = None
 
 # --- URLs et Chemins ---
 # Utiliser l'URL du serveur Tika depuis le fichier .env ou utiliser l'URL par défaut
