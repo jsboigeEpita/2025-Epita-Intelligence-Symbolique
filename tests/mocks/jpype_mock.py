@@ -225,6 +225,7 @@ class MockJClass:
         # Logique spécifique pour peupler les collections lors de l'appel au constructeur
         # Exemple: DungTheory(arguments_collection)
         if self.class_name == "org.tweetyproject.arg.dung.syntax.DungTheory":
+            print(f"[MOCK TRACE] Entrée dans la section de configuration pour DungTheory (constructeur args: {args})")
             # Si le constructeur de DungTheory prend une collection d'arguments
             if len(args) == 1 and isinstance(args[0], MagicMock) and hasattr(args[0], "__iter__"):
                 # On suppose que args[0] est une collection itérable d'arguments mockés
@@ -235,7 +236,9 @@ class MockJClass:
             # La méthode 'add' d'une DungTheory ajoute un Argument à 'nodes' et potentiellement 'arguments'
             # et une Attack à 'attacks'. Il faut surcharger 'add'.
             def dung_theory_add(element):
+                print(f"[MOCK TRACE] dung_theory_add appelée avec element: {str(element)[:100]}")
                 if hasattr(element, 'class_name'):
+                    print(f"[MOCK TRACE] dung_theory_add: element a class_name: {element.class_name}")
                     if element.class_name == "org.tweetyproject.arg.dung.syntax.Argument":
                         nodes_coll = get_collection_for_type("nodes")
                         nodes_coll.append(element)
@@ -741,46 +744,56 @@ def JArray(type_): # type_ est la classe des éléments, ex: JClass("org.tweetyp
     
     def array_len():
         return len(array_mock._mock_jpype_array_elements)
-
+ 
     def array_iter():
         return iter(array_mock._mock_jpype_array_elements)
-
+ 
     def array_getitem(index):
         return array_mock._mock_jpype_array_elements[index]
-
+ 
     array_mock.add = MagicMock(side_effect=array_add)
     array_mock.__len__ = MagicMock(side_effect=array_len) # Pour que len(jarray_mock) fonctionne
     array_mock.__iter__ = MagicMock(side_effect=array_iter) # Pour que for el in jarray_mock fonctionne
     array_mock.__getitem__ = MagicMock(side_effect=array_getitem) # Pour accès par index
-
+ 
     # Si le constructeur de JArray est appelé avec une taille (ex: JArray(JString, 5))
     # ou avec une liste d'initialisation (plus complexe à mocker ici sans savoir comment JPype le fait)
     # Pour l'instant, on se concentre sur un JArray vide auquel on ajoute des éléments.
     return array_mock
-
+ 
 def JString(value):
     """Simule jpype.JString()."""
     # Retourne un mock qui se comporte comme une chaîne mais stocke la valeur originale
     jstring_mock = MagicMock(name=f"MockJString_{str(value)[:20]}")
     jstring_mock._mock_jpype_jstring_value = str(value)
     jstring_mock.toString.return_value = str(value)
-    jstring_mock.__str__.return_value = str(value)
-    jstring_mock.__repr__.return_value = f"JString('{str(value)}')"
+    jstring_mock.__str__ = lambda _: str(value)
+    jstring_mock.__repr__ = lambda _: f"JString('{str(value)}')"
     # Permettre la comparaison directe avec des chaînes Python
     jstring_mock.__eq__.side_effect = lambda other: str(value) == other
     jstring_mock.__hash__.side_effect = lambda: hash(str(value))
     return jstring_mock
+ 
+# Mock pour jpype.imports
+class MockJpypeImports:
+    def registerDomain(self, domain, alias=None):
+        """Simule jpype.imports.registerDomain()."""
+        print(f"[MOCK] jpype.imports.registerDomain('{domain}', alias='{alias}') appelé.")
+        # Ne fait rien, car c'est un mock.
+        pass
 
+imports = MockJpypeImports() # Crée une instance du mock d'imports
+ 
 # Classes Java simulées
 class JObject:
     """Simule jpype.JObject."""
     def __init__(self, *args, **kwargs):
         self.args = args  # Conserver pour débogage ou compatibilité
         self.kwargs = kwargs
-
+ 
         self._actual_value = None
         self._java_type_name = None  # Stocker le nom de la classe Java, ex: "java.lang.Double"
-
+ 
         if len(args) == 2:
             self._actual_value = args[0]  # La valeur Python primitive
             java_type_arg = args[1]     # Le type Java mocké, ex: JClass("java.lang.Double")
@@ -792,42 +805,42 @@ class JObject:
             # et les appels à xxxValue() lèveront une AttributeError.
         # Si args n'a pas la longueur 2, _actual_value et _java_type_name restent None,
         # ce qui est un état invalide pour appeler xxxValue().
-
+ 
     def doubleValue(self):
         if self._java_type_name == "java.lang.Double":
             return float(self._actual_value)
         raise AttributeError(f"'JObject' of type '{self._java_type_name or 'unknown'}' has no attribute 'doubleValue'")
-
+ 
     def intValue(self):
         if self._java_type_name == "java.lang.Integer":
             return int(self._actual_value)
         raise AttributeError(f"'JObject' of type '{self._java_type_name or 'unknown'}' has no attribute 'intValue'")
-
+ 
     def booleanValue(self):
         if self._java_type_name == "java.lang.Boolean":
             return bool(self._actual_value)
         raise AttributeError(f"'JObject' of type '{self._java_type_name or 'unknown'}' has no attribute 'booleanValue'")
-
+ 
     def longValue(self):
         if self._java_type_name == "java.lang.Long":
             return int(self._actual_value) # Python int gère les longs
         raise AttributeError(f"'JObject' of type '{self._java_type_name or 'unknown'}' has no attribute 'longValue'")
-
+ 
     def floatValue(self):
         if self._java_type_name == "java.lang.Float":
             return float(self._actual_value)
         raise AttributeError(f"'JObject' of type '{self._java_type_name or 'unknown'}' has no attribute 'floatValue'")
-
+ 
     def shortValue(self):
         if self._java_type_name == "java.lang.Short":
             return int(self._actual_value)
         raise AttributeError(f"'JObject' of type '{self._java_type_name or 'unknown'}' has no attribute 'shortValue'")
-
+ 
     def byteValue(self):
         if self._java_type_name == "java.lang.Byte":
             return int(self._actual_value) # Java byte est -128 à 127, Python int convient
         raise AttributeError(f"'JObject' of type '{self._java_type_name or 'unknown'}' has no attribute 'byteValue'")
-
+ 
     def charValue(self):
         if self._java_type_name == "java.lang.Character":
             # Assurer que la valeur est une chaîne et, idéalement, d'un seul caractère.
@@ -839,7 +852,7 @@ class JObject:
             # Pour un mock, retourner str() est une approximation raisonnable.
             return char_val
         raise AttributeError(f"'JObject' of type '{self._java_type_name or 'unknown'}' has no attribute 'charValue'")
-
+ 
 class JException(Exception):
     """Simule jpype.JException."""
     def __init__(self, message="Mock Java Exception"):
@@ -856,13 +869,37 @@ class JException(Exception):
     def getMessage(self):
         """Simule la méthode getMessage() de Java."""
         return self.message
-
+ 
 class JVMNotFoundException(Exception):
     """Simule jpype.JVMNotFoundException."""
     pass
+ 
+import types
+
+# L'instance 'imports' (MockJpypeImports) est définie plus haut (ligne 782).
+# Renommons l'instance originale pour éviter la confusion et la réassignation.
+_the_actual_imports_object = imports
+
+# Créer un objet module factice pour 'jpype.imports'
+_jpype_imports_module = types.ModuleType('jpype.imports')
+
+# Attribuer les fonctionnalités de notre instance '_the_actual_imports_object' à ce module factice.
+# Si le code fait 'from jpype.imports import registerDomain', alors registerDomain
+# doit être un attribut de _jpype_imports_module.
+if hasattr(_the_actual_imports_object, 'registerDomain'):
+    _jpype_imports_module.registerDomain = _the_actual_imports_object.registerDomain
+# Copier d'autres attributs/méthodes de l'objet '_the_actual_imports_object' si nécessaire.
+
+# Mettre ce module factice dans sys.modules pour qu'il soit trouvable par 'import jpype.imports'
+sys.modules['jpype.imports'] = _jpype_imports_module
+
+# Le module 'jpype' (ce fichier mock) doit aussi avoir un attribut 'imports' qui est le module.
+# Remplacer l'instance 'imports' par le module nouvellement créé.
+imports = _jpype_imports_module
+
 
 # Installer le mock dans sys.modules
 sys.modules['jpype1'] = sys.modules[__name__]
 sys.modules['jpype'] = sys.modules[__name__]
-
+ 
 print("[MOCK] Mock JPype1 activé pour la compatibilité Python 3.12+")
