@@ -66,7 +66,7 @@ argumentation_analysis.services.fetch_service = services.fetch_service
 # Utiliser des imports directs
 from models.extract_definition import Extract, SourceDefinition, ExtractDefinitions
 from models.extract_result import ExtractResult
-# from services.cache_service import CacheService
+from services.cache_service import CacheService
 from services.crypto_service import CryptoService
 from services.definition_service import DefinitionService
 from services.extract_service import ExtractService
@@ -352,6 +352,39 @@ def mock_llm_service():
     return mock_service
 
 @pytest.fixture
+def mock_analysis_service():
+    """Fixture pour un service d'analyse mocké."""
+    mock_service = MagicMock()
+    mock_service.service_id = "mock_analysis_service"
+
+    # Simuler une méthode d'analyse typique
+    async def mock_analyze_async(data, **kwargs):
+        # Retourner une réponse d'analyse simple
+        return {"analysis_id": "mock_id_123", "status": "completed", "result": "Mock analysis result"}
+
+    mock_service.analyze_async = AsyncMock(side_effect=mock_analyze_async)
+    # Ajouter d'autres méthodes mockées si nécessaire pour ce service
+    # Par exemple: mock_service.get_analysis_status_async = AsyncMock(return_value={"status": "pending"})
+    return mock_service
+@pytest.fixture
+def sample_analysis_request():
+    """Fixture pour une requête d'analyse simple."""
+    return {
+        "text_to_analyze": "Ceci est un texte d'exemple pour l'analyse.",
+        "options": {
+            "depth": "full",
+            "model_preference": "accuracy"
+        }
+    }
+@pytest.fixture
+def module_name():
+    """Fixture pour un nom de module de test."""
+    return "test_module_sample"
+
+@pytest.fixture
+def module_path():
+    """Fixture pour un chemin de module de test."""
+    return "path/to/test_module_sample.py"
 def integration_sample_source():
     """Fixture pour une source de test pour l'intégration."""
     return SourceDefinition(

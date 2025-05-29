@@ -48,7 +48,8 @@ def getJVMPath():
 
 def getJVMVersion():
     """Simule jpype.getJVMVersion()."""
-    return (11, 0, 0) # Exemple de version, à adapter si besoin
+    # Retourne un tuple similaire à celui de JPype: (version_string, major, minor, patch)
+    return ("Mock JVM Version 1.0 (Java 11 compatible)", 11, 0, 0)
 
 class MockJClass:
     """Mock pour JClass avec attributs spécifiques."""

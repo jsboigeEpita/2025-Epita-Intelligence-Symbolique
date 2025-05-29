@@ -30,6 +30,9 @@ Les sujets de projets sont organisés en trois grandes catégories. Chaque caté
 - **Expérience utilisateur et applications** : Concentrez-vous sur les interfaces, les visualisations et les cas d'usage concrets.
   - Détails : [`projets/experience_utilisateur.md`](projets/experience_utilisateur.md)
 
+Pour une **synthèse thématique** qui regroupe les projets par grands domaines et met en évidence les synergies possibles, consultez :
+- **Synthèse Thématique des Projets** : [`projets/SYNTHESE_THEMATIQUE_PROJETS.md`](projets/SYNTHESE_THEMATIQUE_PROJETS.md)
+
 Pour une vue d'ensemble de tous les sujets avec leur structure standardisée (contexte, objectifs, technologies, difficulté, etc.), consultez :
 
 - **Sujets de Projets Détaillés** : [`projets/sujets_projets_detailles.md`](projets/sujets_projets_detailles.md)

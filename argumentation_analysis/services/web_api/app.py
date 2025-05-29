@@ -16,42 +16,20 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 from typing import Dict, Any, Optional
 
-# Ajouter le répertoire racine au chemin Python
-current_dir = Path(__file__).parent
-root_dir = current_dir.parent.parent
-if str(root_dir) not in sys.path:
-    sys.path.append(str(root_dir))
-
 # Import des services
-try:
-    from services.web_api.services.analysis_service import AnalysisService
-    from services.web_api.services.validation_service import ValidationService
-    from services.web_api.services.fallacy_service import FallacyService
-    from services.web_api.services.framework_service import FrameworkService
-    from services.web_api.services.logic_service import LogicService
-    from services.web_api.models.request_models import (
-        AnalysisRequest, ValidationRequest, FallacyRequest, FrameworkRequest,
-        LogicBeliefSetRequest, LogicQueryRequest, LogicGenerateQueriesRequest
-    )
-    from services.web_api.models.response_models import (
-        AnalysisResponse, ValidationResponse, FallacyResponse, FrameworkResponse, ErrorResponse,
-        LogicBeliefSetResponse, LogicQueryResponse, LogicGenerateQueriesResponse, LogicInterpretationResponse
-    )
-except ImportError:
-    # Fallback pour les imports relatifs
-    from .services.analysis_service import AnalysisService
-    from .services.validation_service import ValidationService
-    from .services.fallacy_service import FallacyService
-    from .services.framework_service import FrameworkService
-    from .services.logic_service import LogicService
-    from .models.request_models import (
-        AnalysisRequest, ValidationRequest, FallacyRequest, FrameworkRequest,
-        LogicBeliefSetRequest, LogicQueryRequest, LogicGenerateQueriesRequest
-    )
-    from .models.response_models import (
-        AnalysisResponse, ValidationResponse, FallacyResponse, FrameworkResponse, ErrorResponse,
-        LogicBeliefSetResponse, LogicQueryResponse, LogicGenerateQueriesResponse, LogicInterpretationResponse
-    )
+from argumentation_analysis.services.web_api.services.analysis_service import AnalysisService
+from argumentation_analysis.services.web_api.services.validation_service import ValidationService
+from argumentation_analysis.services.web_api.services.fallacy_service import FallacyService
+from argumentation_analysis.services.web_api.services.framework_service import FrameworkService
+from argumentation_analysis.services.web_api.services.logic_service import LogicService
+from argumentation_analysis.services.web_api.models.request_models import (
+    AnalysisRequest, ValidationRequest, FallacyRequest, FrameworkRequest,
+    LogicBeliefSetRequest, LogicQueryRequest, LogicGenerateQueriesRequest, LogicOptions
+)
+from argumentation_analysis.services.web_api.models.response_models import (
+    AnalysisResponse, ValidationResponse, FallacyResponse, FrameworkResponse, ErrorResponse,
+    LogicBeliefSetResponse, LogicQueryResponse, LogicGenerateQueriesResponse, LogicInterpretationResponse, LogicQueryResult
+)
 
 # Configuration du logging
 logging.basicConfig(
@@ -592,11 +570,9 @@ def interpret_logic_results():
                 ).dict()), 400
             
             # Conversion des résultats en objets LogicQueryResult
-            from .models.response_models import LogicQueryResult
             results = [LogicQueryResult(**result) for result in results_data]
             
             # Conversion des options en objet LogicOptions
-            from .models.request_models import LogicOptions
             options = LogicOptions(**options_data) if options_data else None
             
         except Exception as e:

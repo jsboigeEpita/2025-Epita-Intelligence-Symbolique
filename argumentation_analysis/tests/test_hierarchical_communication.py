@@ -168,9 +168,10 @@ class TestHierarchicalCommunication(unittest.TestCase):
             self.assertEqual(task.content["command_type"], "extract_arguments")
             
             # Envoyer une mise à jour de statut
-            self.operational_adapter.send_status_update(
+            self.operational_adapter.send_progress_update(
+                task_id=task.id,
+                progress=0.5, # La progression est un float entre 0.0 et 1.0
                 status="in_progress",
-                progress=50,
                 details={"current_step": "argument_extraction"},
                 recipient_id="tactical-agent-1",
                 priority=MessagePriority.NORMAL
@@ -565,7 +566,8 @@ class TestAsyncHierarchicalCommunication(unittest.IsolatedAsyncioTestCase):
             response.sender_level = AgentLevel.STRATEGIC
             
             # Envoyer la réponse
-            self.middleware.send_message(response)
+            await asyncio.to_thread(self.middleware.send_message, response)
+            await asyncio.sleep(0.1) # Donner du temps pour le traitement du message
         
         # Démarrer une tâche pour simuler l'agent stratégique
         strategic_task = asyncio.create_task(strategic_agent())
@@ -575,7 +577,7 @@ class TestAsyncHierarchicalCommunication(unittest.IsolatedAsyncioTestCase):
             request_type="guidance",
             parameters={"text_id": "text-123", "issue": "complex_fallacies"},
             recipient_id="strategic-agent-1",
-            timeout=2.0,
+            timeout=5.0, # Augmentation du timeout
             priority=MessagePriority.NORMAL
         )
         

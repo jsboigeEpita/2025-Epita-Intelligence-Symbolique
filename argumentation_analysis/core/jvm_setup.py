@@ -28,7 +28,7 @@ logger = logging.getLogger("Orchestration.JPype")
 if not logger.handlers and not logger.propagate:
     handler = logging.StreamHandler(); formatter = logging.Formatter('%(asctime)s [%(levelname)s] [%(name)s] %(message)s', datefmt='%H:%M:%S'); handler.setFormatter(formatter); logger.addHandler(handler); logger.setLevel(logging.INFO)
 
-MIN_JAVA_VERSION = 11
+MIN_JAVA_VERSION = 15
 TWEETY_VERSION = "1.28" # Version de Tweety à télécharger
 
 # --- Classe Tqdm pour barre de progression ---
@@ -177,80 +177,245 @@ def download_tweety_jars(
     return core_present and modules_present_count > 0
 
 
-# --- Fonction de détection JAVA_HOME (inchangée) ---
+# --- Fonction de détection JAVA_HOME (modifiée pour prioriser Java >= MIN_JAVA_VERSION) ---
 def find_valid_java_home() -> Optional[str]:
-    logger.debug("Début recherche répertoire Java Home valide...")
-    found_home_path = None
-    java_home_env = os.getenv("JAVA_HOME")
-    if java_home_env:
-        logger.info(f"ℹ️ Variable JAVA_HOME trouvée: '{java_home_env}'")
-        java_home_path = pathlib.Path(java_home_env)
+    logger.debug(f"Début recherche répertoire Java Home valide (priorité Java >= {MIN_JAVA_VERSION})...")
+
+    system = platform.system()
+    exe_suffix = ".exe" if system == "Windows" else ""
+    # Stocke un JAVA_HOME valide trouvé dans l'env, mais qui ne correspond pas à MIN_JAVA_VERSION (pour fallback)
+    java_home_from_env_fallback: Optional[str] = None
+    
+    # Chemin spécifique prioritaire pour Java 21 (car mentionné comme disponible sur le système cible)
+    # Cela peut être adapté ou supprimé si une détection plus générique est préférée.
+    specific_java_21_path_str = "C:\\Program Files\\Java\\jdk-21"
+    specific_java_21_path = pathlib.Path(specific_java_21_path_str)
+
+    # 0. Vérifier le chemin spécifique priorisé pour Java 21 (ou autre version >= MIN_JAVA_VERSION si pertinent)
+    if system == "Windows" and specific_java_21_path.is_dir():
+        java_exe_specific = specific_java_21_path / "bin" / f"java{exe_suffix}"
+        if java_exe_specific.is_file():
+            # Ici, on pourrait ajouter une vérification de version si le chemin n'est pas garanti >= MIN_JAVA_VERSION
+            logger.info(f"🎉 Java >= {MIN_JAVA_VERSION} (spécifiquement Java 21) trouvé au chemin priorisé: '{specific_java_21_path_str}'. Utilisation.")
+            return str(specific_java_21_path)
+        else:
+            logger.info(f"ℹ️ Chemin spécifique Java 21 '{specific_java_21_path_str}' existe mais 'bin/java{exe_suffix}' non trouvé.")
+    elif system == "Windows":
+        logger.info(f"ℹ️ Chemin spécifique Java 21 '{specific_java_21_path_str}' non trouvé ou n'est pas un dossier.")
+
+    # 1. Vérifier la variable d'environnement JAVA_HOME
+    java_home_env_var = os.getenv("JAVA_HOME")
+    if java_home_env_var:
+        logger.info(f"ℹ️ Variable JAVA_HOME trouvée: '{java_home_env_var}'")
+        java_home_path = pathlib.Path(java_home_env_var)
         if java_home_path.is_dir():
-            exe_suffix = ".exe" if platform.system() == "Windows" else ""
             java_exe = java_home_path / "bin" / f"java{exe_suffix}"
             if java_exe.is_file():
-                logger.info(f"✔️ JAVA_HOME ('{java_home_env}') semble valide.")
-                return str(java_home_path)
+                logger.info(f"✔️ JAVA_HOME ('{java_home_env_var}') pointe vers une installation Java avec 'bin/java'.")
+                # Tentative de déduire la version à partir du nom du chemin
+                # C'est une heuristique et pourrait nécessiter d'exécuter `java -version` pour une certitude
+                path_name_lower = java_home_path.name.lower()
+                version_in_name = -1
+                try:
+                    # Cherche des nombres comme "15", "17", "21" dans le nom du dossier
+                    import re
+                    match = re.search(r'(?:jdk-|java-|openjdk-)?(\d+)', path_name_lower)
+                    if match:
+                        version_in_name = int(match.group(1))
+                except: # noqa
+                    pass # Ignorer les erreurs de parsing, version_in_name restera -1
+
+                if version_in_name >= MIN_JAVA_VERSION:
+                    logger.info(f"🎉 JAVA_HOME ('{java_home_env_var}') semble être une version Java >= {MIN_JAVA_VERSION} (version {version_in_name} déduite). Utilisation prioritaire.")
+                    return str(java_home_path)
+                elif version_in_name != -1 : # Version déduite mais < MIN_JAVA_VERSION
+                    logger.info(f"   JAVA_HOME ('{java_home_env_var}') est valide (version {version_in_name} déduite) mais < {MIN_JAVA_VERSION}. Conservé comme fallback.")
+                    java_home_from_env_fallback = str(java_home_path)
+                else: # Impossible de déduire la version, on suppose qu'elle pourrait être bonne si l'utilisateur l'a mise
+                    logger.info(f"   JAVA_HOME ('{java_home_env_var}') est valide, version non déduite du nom. On suppose qu'elle est >= {MIN_JAVA_VERSION} si définie par l'utilisateur.")
+                    # On pourrait ici ajouter une vérification réelle de la version si nécessaire,
+                    # mais pour l'instant, on fait confiance à l'utilisateur s'il a défini JAVA_HOME.
+                    # Si on veut être strict, on ne le retourne que si on peut confirmer la version.
+                    # Pour l'instant, on le retourne, en priorisant les détections explicites.
+                    # Si on veut être plus strict, on le mettrait dans java_home_from_env_fallback
+                    # et on ne le retournerait que si aucune autre option >= MIN_JAVA_VERSION n'est trouvée.
+                    # Pour l'instant, on le retourne directement.
+                    return str(java_home_path) # Optionnel: être plus strict et le mettre en fallback
             else:
-                logger.warning(f"⚠️ JAVA_HOME trouvé mais 'bin/java' non trouvé ou n'est pas un fichier dans: {java_home_path}")
+                logger.warning(f"⚠️ JAVA_HOME ('{java_home_env_var}') trouvé mais 'bin/java{exe_suffix}' non trouvé ou n'est pas un fichier.")
         else:
-            logger.warning(f"⚠️ JAVA_HOME ('{java_home_env}') n'est pas un dossier valide.")
+            logger.warning(f"⚠️ JAVA_HOME ('{java_home_env_var}') n'est pas un dossier valide.")
     else:
-        logger.info("ℹ️ Variable d'environnement JAVA_HOME non définie.")
-    logger.info("ℹ️ Tentative de détection via heuristiques spécifiques à l'OS...")
-    system = platform.system()
+        logger.info(f"ℹ️ Variable d'environnement JAVA_HOME non définie.")
+
+    # 2. Tentative de détection via heuristiques spécifiques à l'OS
+    logger.info(f"ℹ️ Tentative de détection via heuristiques (priorité Java >= {MIN_JAVA_VERSION}, après JAVA_HOME et chemin spécifique)...")
     potential_homes_dirs = []
+    
+    # Logique de collecte des chemins potentiels (inchangée pour la collecte, le filtrage se fera après)
     if system == "Windows":
         logger.debug("-> Recherche Windows...")
-        program_files_paths = [os.getenv("ProgramFiles", "C:/Program Files"),
-                               os.getenv("ProgramFiles(x86)", "C:/Program Files (x86)")]
-        vendors = ["Java", "OpenJDK", "Eclipse Adoptium", "Amazon Corretto", "Microsoft", "Semeru"]
-        for pf_path in filter(None, program_files_paths):
+        program_files_paths_str = [os.getenv("ProgramFiles", "C:/Program Files"),
+                                   os.getenv("ProgramFiles(x86)", "C:/Program Files (x86)")]
+        # Ajout de "GraalVM" qui peut fournir des JDKs
+        vendors = ["Java", "OpenJDK", "Eclipse Adoptium", "Amazon Corretto", "Microsoft", "Semeru", "Azul Systems", "BellSoft", "RedHat", "GraalVM"]
+        for pf_path_str in filter(None, program_files_paths_str):
+            pf_path = pathlib.Path(pf_path_str)
             for vendor in vendors:
-                vendor_dir = pathlib.Path(pf_path) / vendor
+                vendor_dir = pf_path / vendor
                 if vendor_dir.is_dir():
                     logger.debug(f"  Scan du dossier: {vendor_dir}")
-                    potential_homes_dirs.extend(list(vendor_dir.glob("jdk*")))
-                    potential_homes_dirs.extend(list(vendor_dir.glob("jre*")))
-    elif system == "Darwin": 
+                    potential_homes_dirs.extend(vendor_dir.glob("jdk*"))
+                    potential_homes_dirs.extend(vendor_dir.glob("jre*"))
+                    potential_homes_dirs.extend(vendor_dir.glob("zulu*"))
+                    potential_homes_dirs.extend(vendor_dir.glob("corretto*"))
+                    potential_homes_dirs.extend(vendor_dir.glob("semeru*"))
+                    potential_homes_dirs.extend(vendor_dir.glob("liberica*"))
+                    potential_homes_dirs.extend(vendor_dir.glob("graalvm*")) # Pour GraalVM
+
+    elif system == "Darwin": # macOS
         logger.debug("-> Recherche macOS...")
-        mac_paths = ["/Library/Java/JavaVirtualMachines", "/System/Library/Frameworks/JavaVM.framework/Versions", os.path.expanduser("~/Library/Java/JavaVirtualMachines")]
-        if os.path.exists("/opt/homebrew/opt"): mac_paths.append("/opt/homebrew/opt")
-        for base_path in mac_paths:
-            base_path_p = pathlib.Path(base_path)
+        mac_paths_str = ["/Library/Java/JavaVirtualMachines",
+                         os.path.expanduser("~/Library/Java/JavaVirtualMachines")]
+        for brew_prefix in ["/opt/homebrew", "/usr/local"]: # Homebrew paths
+            if os.path.exists(f"{brew_prefix}/opt"): mac_paths_str.append(f"{brew_prefix}/opt")
+            if os.path.exists(f"{brew_prefix}/Cellar"):
+                cellar_path = pathlib.Path(f"{brew_prefix}/Cellar")
+                potential_homes_dirs.extend(cellar_path.glob("openjdk*/*"))
+                potential_homes_dirs.extend(cellar_path.glob("java*/*"))
+                potential_homes_dirs.extend(cellar_path.glob("graalvm-ce-java*/*")) # GraalVM via Homebrew
+
+        for base_path_str in mac_paths_str:
+            base_path_p = pathlib.Path(base_path_str)
             if base_path_p.is_dir():
-                 potential_homes_dirs.extend(list(base_path_p.glob("*.jdk"))) 
-                 potential_homes_dirs.extend([p / "Contents" / "Home" for p in base_path_p.glob("*/Contents/Home") if (p / "Contents" / "Home").is_dir()])
+                logger.debug(f"  Scan du dossier: {base_path_p}")
+                potential_homes_dirs.extend(base_path_p.glob("*.jdk"))
+                potential_homes_dirs.extend(base_path_p.glob("openjdk*"))
+                potential_homes_dirs.extend(base_path_p.glob("zulu*"))
+                potential_homes_dirs.extend(base_path_p.glob("corretto*"))
+                potential_homes_dirs.extend(base_path_p.glob("semeru*"))
+                potential_homes_dirs.extend(base_path_p.glob("liberica*"))
+                potential_homes_dirs.extend(base_path_p.glob("graalvm*"))
+                for jdk_path in base_path_p.glob("*.jdk"):
+                    if (jdk_path / "Contents" / "Home").is_dir():
+                        potential_homes_dirs.append(jdk_path / "Contents" / "Home")
+                for opt_path in base_path_p.glob("openjdk*"):
+                    if (opt_path / "libexec" / "openjdk.jdk" / "Contents" / "Home").is_dir():
+                        potential_homes_dirs.append(opt_path / "libexec" / "openjdk.jdk" / "Contents" / "Home")
+                    elif (opt_path / "Contents" / "Home").is_dir():
+                         potential_homes_dirs.append(opt_path / "Contents" / "Home")
+                # GraalVM peut aussi avoir une structure Contents/Home
+                for graal_path in base_path_p.glob("graalvm*"):
+                     if (graal_path / "Contents" / "Home").is_dir():
+                        potential_homes_dirs.append(graal_path / "Contents" / "Home")
+
+
     elif system == "Linux":
         logger.debug("-> Recherche Linux...")
-        linux_paths = ["/usr/lib/jvm", "/usr/java", "/opt/java"]
-        for base_path in linux_paths:
-            base_path_p = pathlib.Path(base_path)
+        linux_paths_str = ["/usr/lib/jvm", "/usr/java", "/opt/java", "/usr/local/lib/jvm", "/opt/jdk", "/opt/jdks", "/opt/graalvm"]
+        for base_path_str in linux_paths_str:
+            base_path_p = pathlib.Path(base_path_str)
             if base_path_p.is_dir():
-                potential_homes_dirs.extend(list(base_path_p.glob("java-*")))
-                potential_homes_dirs.extend(list(base_path_p.glob("jdk*")))
-                potential_homes_dirs.extend(list(base_path_p.glob("jre*")))
-    if potential_homes_dirs:
-        logger.info(f"  {len(potential_homes_dirs)} installations Java potentielles trouvées par heuristique.")
-        potential_homes_dirs.sort(key=lambda x: x.name, reverse=True) 
-        for home in potential_homes_dirs:
-            actual_home = home
-            if system == "Darwin" and str(home).endswith("/Contents/Home"):
-                 pass 
-            elif system == "Darwin" and (home / "Contents" / "Home").is_dir():
-                 actual_home = home / "Contents" / "Home" 
-            logger.debug(f"  Vérification home potentiel: {actual_home}")
-            exe_suffix = ".exe" if system == "Windows" else ""
+                logger.debug(f"  Scan du dossier: {base_path_p}")
+                potential_homes_dirs.extend(base_path_p.glob("java-*"))
+                potential_homes_dirs.extend(base_path_p.glob("jdk*"))
+                potential_homes_dirs.extend(base_path_p.glob("jre*"))
+                potential_homes_dirs.extend(base_path_p.glob("openjdk*"))
+                potential_homes_dirs.extend(base_path_p.glob("zulu*"))
+                potential_homes_dirs.extend(base_path_p.glob("corretto*"))
+                potential_homes_dirs.extend(base_path_p.glob("semeru*"))
+                potential_homes_dirs.extend(base_path_p.glob("liberica*"))
+                potential_homes_dirs.extend(base_path_p.glob("graalvm*"))
+
+
+    unique_potential_homes = sorted(list(set(p for p in potential_homes_dirs if p.is_dir())), key=lambda p: p.name, reverse=True)
+
+    if unique_potential_homes:
+        logger.info(f"  {len(unique_potential_homes)} installations Java potentielles (uniques, dossiers) trouvées par heuristique.")
+        
+        suitable_java_candidates = [] # Candidats >= MIN_JAVA_VERSION
+        other_valid_candidates = []   # Candidats valides mais < MIN_JAVA_VERSION (pour fallback)
+        
+        logger.info(f"  Filtrage et validation des candidats Java (recherche >= {MIN_JAVA_VERSION})...")
+        for home_candidate_path in unique_potential_homes:
+            actual_home = home_candidate_path
+            # Ajustements spécifiques OS (macOS .jdk, Homebrew, GraalVM)
+            if system == "Darwin":
+                if home_candidate_path.name.endswith(".jdk") and (home_candidate_path / "Contents" / "Home").is_dir():
+                    actual_home = home_candidate_path / "Contents" / "Home"
+                elif "Cellar" in str(home_candidate_path) and ("openjdk" in home_candidate_path.parent.name or "graalvm" in home_candidate_path.parent.name):
+                    if (home_candidate_path / "libexec" / "openjdk.jdk" / "Contents" / "Home").is_dir(): # OpenJDK
+                         actual_home = home_candidate_path / "libexec" / "openjdk.jdk" / "Contents" / "Home"
+                    elif (home_candidate_path / "Contents" / "Home").is_dir(): # GraalVM ou autre
+                         actual_home = home_candidate_path / "Contents" / "Home"
+            
             java_exe = actual_home / "bin" / f"java{exe_suffix}"
             if java_exe.is_file():
-                logger.info(f"✔️ Répertoire Java Home valide trouvé via heuristique: {actual_home}")
-                return str(actual_home) 
+                path_name_lower = actual_home.name.lower()
+                version_in_name = -1
+                try:
+                    import re
+                    # Regex améliorée pour extraire la version majeure (ex: jdk-17.0.1 -> 17, java-21-openjdk -> 21)
+                    # Prend en compte les numéros seuls (11, 15, 21), ou avec préfixe (jdk-17, openjdk-11)
+                    # ou avec séparateurs (java-11-openjdk, corretto-17.0.3)
+                    match = re.search(r'(?:jdk-|jre-|java-|openjdk-|corretto-|zulu-|semeru-|liberica-|graalvm-ce-java)?(\d{1,2})(?:[.\-_]|$)', path_name_lower)
+                    if not match and "jdk" in path_name_lower: # Cas comme "jdk17" sans séparateur
+                         match = re.search(r'jdk(\d+)', path_name_lower)
+                    if match:
+                        version_in_name = int(match.group(1))
+                except: # noqa
+                    pass
+
+                if version_in_name >= MIN_JAVA_VERSION:
+                    logger.debug(f"    -> Candidat Java >= {MIN_JAVA_VERSION} (version {version_in_name} déduite, avec bin/java) trouvé: {actual_home}")
+                    suitable_java_candidates.append(actual_home)
+                elif version_in_name != -1: # Version déduite mais < MIN_JAVA_VERSION
+                    logger.debug(f"    -> Candidat Java (version {version_in_name} déduite, < {MIN_JAVA_VERSION}, avec bin/java) trouvé: {actual_home}. Conservé pour fallback.")
+                    other_valid_candidates.append(actual_home)
+                else: # Impossible de déduire, on ne le considère pas prioritaire
+                    logger.debug(f"    -> Candidat Java (version non déduite, avec bin/java) trouvé: {actual_home}. Conservé pour fallback si aucune version >= {MIN_JAVA_VERSION} n'est trouvée.")
+                    other_valid_candidates.append(actual_home) # Peut être utilisé en dernier recours
             else:
-                logger.debug(f"    -> 'bin/java' non trouvé dans {actual_home}")
-        logger.warning("⚠️ Heuristique a trouvé des dossiers Java mais aucun avec 'bin/java' valide.")
+                logger.debug(f"    -> 'bin/java{exe_suffix}' non trouvé dans {actual_home} (candidat ignoré).")
+        
+        # Trier les candidats valides (>= MIN_JAVA_VERSION) par version (plus haute d'abord), puis par nom
+        suitable_java_candidates.sort(key=lambda x: (
+            int(re.search(r'(\d+)', x.name.lower()).group(1)) if re.search(r'(\d+)', x.name.lower()) else 0,
+            x.name
+        ), reverse=True)
+        
+        if suitable_java_candidates:
+            selected_java = suitable_java_candidates[0]
+            logger.info(f"🎉 Java >= {MIN_JAVA_VERSION} trouvé par heuristique: '{selected_java}'. Utilisation.")
+            return str(selected_java)
+        else:
+            logger.info(f"  Aucune installation Java >= {MIN_JAVA_VERSION} valide trouvée par heuristique.")
+        
+        # Fallback 1: Utiliser JAVA_HOME s'il était valide mais < MIN_JAVA_VERSION (et pas déjà retourné)
+        if java_home_from_env_fallback:
+            logger.info(f"✔️ JAVA_HOME ('{java_home_from_env_fallback}') était valide (mais < {MIN_JAVA_VERSION}), utilisation en fallback (après heuristique Java >= {MIN_JAVA_VERSION}).")
+            return java_home_from_env_fallback
+
+        # Fallback 2: Utiliser une autre version valide (< MIN_JAVA_VERSION) trouvée par heuristique (la plus récente par nom/version)
+        if other_valid_candidates:
+            other_valid_candidates.sort(key=lambda x: (
+                int(re.search(r'(\d+)', x.name.lower()).group(1)) if re.search(r'(\d+)', x.name.lower()) else 0,
+                x.name
+            ), reverse=True)
+            selected_other_home = other_valid_candidates[0]
+            logger.info(f"✔️ Aucun Java >= {MIN_JAVA_VERSION} trouvé, utilisation d'une autre version Java valide trouvée par heuristique: '{selected_other_home}'.")
+            return str(selected_other_home)
+        
+        logger.warning(f"⚠️ Heuristique a trouvé des dossiers Java mais aucun avec 'bin/java' valide (ni >= {MIN_JAVA_VERSION}, ni autre).")
+
+    # Si aucune heuristique n'a rien donné, mais que JAVA_HOME était valide (et < MIN_JAVA_VERSION, et pas déjà retourné)
+    elif java_home_from_env_fallback:
+        logger.info(f"✔️ Aucune installation trouvée par heuristique, mais JAVA_HOME ('{java_home_from_env_fallback}') était valide (< {MIN_JAVA_VERSION}). Utilisation.")
+        return java_home_from_env_fallback
     else:
-        logger.info("  Aucune installation Java trouvée via heuristiques OS standard.")
-    logger.error("❌ Recherche finale: Aucun répertoire Java Home valide n'a pu être localisé.")
+        logger.info(f"  Aucune installation Java trouvée via heuristiques et JAVA_HOME non défini, non valide, ou déjà traité comme non prioritaire.")
+
+    logger.error(f"❌ Recherche finale: Aucun répertoire Java Home valide n'a pu être localisé (Java >= {MIN_JAVA_VERSION} priorisé, puis autres).")
     return None
 
 
