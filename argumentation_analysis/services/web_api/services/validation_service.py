@@ -9,8 +9,8 @@ import time
 import logging
 from typing import Dict, List, Any, Optional
 
-from services.web_api.models.request_models import ValidationRequest
-from services.web_api.models.response_models import ValidationResponse, ValidationResult
+from ..models.request_models import ValidationRequest
+from ..models.response_models import ValidationResponse, ValidationResult
 
 logger = logging.getLogger("ValidationService")
 
