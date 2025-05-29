@@ -10,7 +10,7 @@ import sys
 from pathlib import Path
 
 # Ajouter le projet au PYTHONPATH
-project_root = Path(r"c:\dev\2025-Epita-Intelligence-Symbolique")
+project_root = Path(r"d:\Dev\2025-Epita-Intelligence-Symbolique")
 if str(project_root) not in sys.path:
     sys.path.insert(0, str(project_root))
 

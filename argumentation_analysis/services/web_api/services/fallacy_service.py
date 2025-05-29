@@ -29,8 +29,8 @@ except ImportError as e:
     FallacySeverityEvaluator = None
     EnhancedContextualAnalyzer = None
 
-from argumentation_analysis.services.web_api.models.request_models import FallacyRequest
-from argumentation_analysis.services.web_api.models.response_models import FallacyResponse, FallacyDetection
+from ..models.request_models import FallacyRequest, FallacyOptions
+from ..models.response_models import FallacyResponse, FallacyDetection
 
 logger = logging.getLogger("FallacyService")
 

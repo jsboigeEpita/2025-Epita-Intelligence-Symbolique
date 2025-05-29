@@ -23,10 +23,10 @@ if str(root_dir) not in sys.path:
     sys.path.append(str(root_dir))
 
 # Import des services
-from libs.web_api.services.analysis_service import AnalysisService
-from libs.web_api.services.validation_service import ValidationService
-from libs.web_api.services.fallacy_service import FallacyService
-from libs.web_api.services.framework_service import FrameworkService
+from .services.analysis_service import AnalysisService
+from .services.validation_service import ValidationService
+from .services.fallacy_service import FallacyService
+from .services.framework_service import FrameworkService
 # Import pour LogicService
 from argumentation_analysis.services.web_api.services.logic_service import LogicService
 from argumentation_analysis.services.web_api.models.request_models import (

@@ -607,7 +607,53 @@ def initialize_jvm(
             logger.info(f"   Argument JVM natif ajouté: {native_path_arg}")
         else:
             logger.info(f"   (Pas de bibliothèques natives trouvées dans '{NATIVE_LIBS_DIR.resolve()}', -Djava.library.path non ajouté)")
-        jpype.startJVM(*jvm_args, convertStrings=False, ignoreUnrecognized=True)
+        
+        # Ajout des options de mémoire pour la JVM
+        jvm_memory_options = ["-Xms256m", "-Xmx512m"]
+        jvm_args.extend(jvm_memory_options)
+        logger.info(f"   Options de mémoire JVM ajoutées: {jvm_memory_options}")
+
+        # Déterminer le chemin JVM à utiliser explicitement basé sur java_home_to_set
+        jvm_path_to_use_explicit: Optional[str] = None
+        if java_home_to_set: # java_home_to_set est le résultat de find_valid_java_home()
+            _java_home_path = pathlib.Path(java_home_to_set)
+            _system = platform.system()
+            _jvm_dll_path: Optional[pathlib.Path] = None
+            if _system == "Windows":
+                _jvm_dll_path = _java_home_path / "bin" / "server" / "jvm.dll"
+            elif _system == "Darwin": # macOS
+                # Pour macOS, le chemin peut varier (ex: /lib/server/libjvm.dylib ou Contents/Home/lib/server/libjvm.dylib)
+                # On essaie le chemin le plus courant pour les JDKs non-framés.
+                _jvm_dll_path = _java_home_path / "lib" / "server" / "libjvm.dylib"
+                if not _jvm_dll_path.is_file() and (_java_home_path / "Contents" / "Home" / "lib" / "server" / "libjvm.dylib").is_file():
+                     _jvm_dll_path = _java_home_path / "Contents" / "Home" / "lib" / "server" / "libjvm.dylib"
+                elif not _jvm_dll_path.is_file(): # Fallback pour certaines structures OpenJDK sur Mac
+                     _jvm_dll_path = _java_home_path / "jre" / "lib" / "server" / "libjvm.dylib"
+
+            else: # Linux et autres
+                _jvm_dll_path = _java_home_path / "lib" / "server" / "libjvm.so"
+                if not _jvm_dll_path.is_file(): # Fallback pour certaines structures OpenJDK sur Linux (ex: /jre/lib/amd64/server/)
+                    # Essayer de trouver dans les sous-dossiers courants de 'lib'
+                    lib_server_paths = list((_java_home_path / "lib").glob("**/server/libjvm.so"))
+                    if lib_server_paths:
+                        _jvm_dll_path = lib_server_paths[0]
+                    else: # Dernier recours pour JRE
+                         jre_lib_server_paths = list((_java_home_path / "jre" / "lib").glob("**/server/libjvm.so"))
+                         if jre_lib_server_paths:
+                              _jvm_dll_path = jre_lib_server_paths[0]
+            
+            if _jvm_dll_path and _jvm_dll_path.is_file():
+                jvm_path_to_use_explicit = str(_jvm_dll_path.resolve())
+                logger.info(f"   Chemin JVM explicite déterminé pour startJVM: {jvm_path_to_use_explicit}")
+            else:
+                logger.warning(f"   Impossible de construire un chemin JVM valide depuis JAVA_HOME '{java_home_to_set}' (chemin testé: {_jvm_dll_path}). JPype utilisera sa détection par défaut.")
+        
+        if jvm_path_to_use_explicit:
+            jpype.startJVM(jvm_path_to_use_explicit, *jvm_args, convertStrings=False, ignoreUnrecognized=True)
+        else:
+            logger.warning("   Aucun chemin JVM explicite fourni à startJVM, utilisation de la détection interne de JPype.")
+            jpype.startJVM(*jvm_args, convertStrings=False, ignoreUnrecognized=True)
+            
         if hasattr(jpype, 'imports') and jpype.imports is not None:
             jpype.imports.registerDomain("org", alias="org")
             jpype.imports.registerDomain("java", alias="java")
