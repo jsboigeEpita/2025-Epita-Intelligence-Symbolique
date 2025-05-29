@@ -10,6 +10,7 @@
 
 1. [Introduction et contexte](#1-introduction-et-contexte)
 2. [Architecture du pipeline Speech-to-Text + Analyse](#2-architecture-du-pipeline-speech-to-text--analyse)
+    * [2.3 Approche d'Intégration Légère et Temps Réel](#23-approche-dintégration-légère-et-temps-réel)
 3. [Intégration avec Whisper-WebUI](#3-intégration-avec-whisper-webui)
 4. [Analyse d'arguments fallacieux](#4-analyse-darguments-fallacieux)
 5. [Intégration avec TweetyProject](#5-intégration-avec-tweetyproject)
@@ -29,7 +30,9 @@ Ce projet innovant combine deux domaines technologiques en pleine expansion :
 - **Speech-to-Text (STT)** : Conversion automatique de la parole en texte
 - **Analyse argumentative** : Détection et classification des sophismes et biais cognitifs
 
-L'objectif est de créer un système capable d'analyser en temps réel ou en différé des contenus audio (débats, discours, conversations) pour identifier automatiquement les arguments fallacieux et les sophismes logiques.
+L'objectif est de développer un **pipeline "temps réel"** capable de s'intégrer aux autres composants du projet d'analyse argumentative, en analysant des contenus audio (débats, discours, conversations) pour identifier automatiquement les arguments fallacieux et les sophismes logiques. Les étudiants se concentreront sur l'utilisation de l'API d'une instance **Whisper WebUI haute performance (insanely fast whisper large 3)** qui leur sera fournie.
+
+Vous pouvez commencer votre développement dans un dossier dédié à la racine du projet. L'intégration plus profonde dans l'architecture existante pourra être envisagée par la suite.
 
 ### 1.2 Positionnement dans l'écosystème d'IA symbolique
 
@@ -201,6 +204,12 @@ class SpeechToTextPipeline:
         return any(critical.value in stage.stage_name for critical in critical_stages)
 ```
 
+### 2.3 Approche d'Intégration Légère et Temps Réel
+
+Bien que ce document décrive des pipelines potentiellement complets et complexes, l'objectif principal pour ce sujet est de réaliser une **intégration ciblée et légère**, en se concentrant sur un flux "temps réel".
+Votre pipeline STT pourrait, par exemple, prendre un flux audio, le transcrire via l'API Whisper WebUI fournie, puis transmettre le texte à un agent existant du projet, comme l'agent de détection de sophismes informels, pour une analyse instantanée. Cela évite de réimplémenter toute la chaîne d'analyse.
+Le diagramme Mermaid (Section 1.4) et les exemples de code de pipeline (Section 2.1, 2.2) servent d'illustration des possibilités et des concepts architecturaux. Votre implémentation doit se concentrer sur les modules STT et leur interfaçage efficace avec les autres composants du projet.
+
 ---
 
 ## 3. Intégration avec Whisper-WebUI
@@ -220,6 +229,10 @@ class WhisperWebUIClient:
     def __init__(self, base_url: str = "http://localhost:7860"):
         self.base_url = base_url
         self.session = None
+        
+        # NOTE: L'URL de base (`base_url`) et potentiellement certains paramètres du modèle
+        # (ex: `model: "large-v3"`) seront spécifiques à l'instance Whisper WebUI
+        # fournie par l'enseignant.
         
     async def __aenter__(self):
         self.session = httpx.AsyncClient(timeout=300.0)
@@ -330,6 +343,8 @@ class ArgumentativeTranscriptionConfig:
 ---
 
 ## 4. Analyse d'arguments fallacieux
+
+> **Note :** Pour ce sujet spécifique axé sur le STT et son intégration, la réimplémentation complète de ces modules d'analyse n'est pas l'objectif principal. L'idée est plutôt de **fournir le texte transcrit à des agents ou modules d'analyse déjà existants dans le projet global**. Les sections suivantes servent de contexte sur ce que ces agents pourraient faire avec le texte que votre pipeline leur fournira.
 
 ### 4.1 Taxonomie des sophismes pour l'audio
 
@@ -444,6 +459,8 @@ class AudioFallacyDetector:
 ---
 
 ## 5. Intégration avec TweetyProject
+
+> **Note :** Comme pour la section précédente, pour ce sujet spécifique axé sur le STT et son intégration, la réimplémentation complète de ces modules d'analyse n'est pas l'objectif principal. L'idée est plutôt de **fournir le texte transcrit à des agents ou modules d'analyse déjà existants dans le projet global**. Les sections suivantes servent de contexte sur ce que ces agents pourraient faire avec le texte que votre pipeline leur fournira.
 
 ### 5.1 Formalisation logique des arguments audio
 
@@ -1012,6 +1029,8 @@ class WhisperAPIService:
 ---
 
 ## 7. Implémentation pratique
+
+> **Note importante sur le code fourni :** Le code Python présenté dans cette fiche est très complet et illustre de nombreuses possibilités et architectures logicielles. Pour votre projet, concentrez-vous sur les aspects essentiels à la mise en place du pipeline STT via l'API Whisper WebUI et à son intégration avec les autres composants du système. Vous n'aurez pas nécessairement à implémenter toutes les classes ou fonctionnalités présentées ici verbatim. Adaptez et simplifiez en fonction des besoins spécifiques de votre intégration "temps réel" et légère.
 
 ### 7.1 Exemple complet d'implémentation
 
