@@ -1,6 +1,6 @@
 import pytest
 import jpype
-import jpype.imports
+import jpype.imports # Assurer que jpype.imports est disponible si jpype est importé
 import os
 import subprocess # Ajouté
 import sys      # Ajouté

@@ -6,8 +6,67 @@ en s'assurant que la JVM est correctement initialisée avant l'exécution
 des tests et en sautant les tests si la JVM n'est pas disponible.
 """
 
-import unittest
+import sys
 import os
+
+# Ajouter le répertoire site-packages utilisateur au sys.path si JPype1 n'est pas trouvé
+# Ceci est un contournement pour les environnements où le site-packages utilisateur n'est pas automatiquement inclus.
+try:
+    import jpype
+    # Si l'import réussit, jpype est accessible.
+    # On peut vérifier son chemin pour s'assurer que ce n'est pas le mock.
+    if hasattr(jpype, '__file__') and 'tests.mocks.jpype_mock' in jpype.__file__:
+        print(f"[JVMTestCase WARNING] L'import de 'jpype' a chargé le mock: {jpype.__file__}. Cela ne devrait pas arriver ici si le vrai jpype est attendu.")
+    else:
+        print(f"[JVMTestCase INFO] 'jpype' trouvé dans sys.path: {getattr(jpype, '__file__', 'Chemin inconnu')}")
+
+except ModuleNotFoundError:
+    print("[JVMTestCase INFO] 'jpype' non trouvé initialement. Tentative d'ajout du site-packages utilisateur.")
+    # Construire le chemin vers le site-packages utilisateur.
+    # Note: Python{sys.version_info.major}{sys.version_info.minor} est une convention commune.
+    # Pour Python 3.13, ce serait Python313.
+    # Le chemin exact peut varier légèrement (ex: PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\LocalCache\Roaming...)
+    # La sortie de `pip install` montrait: c:\users\jsboi\appdata\roaming\python\python313\site-packages
+    
+    # Tentative 1: Chemin exact vu dans pip
+    user_site_packages_specific = os.path.join(os.path.expanduser('~'), 'AppData', 'Roaming', 'Python', f'Python{sys.version_info.major}{sys.version_info.minor}', 'site-packages')
+    
+    # Tentative 2: Structure plus générique pour les installations utilisateur via pip (souvent via `python -m site --user-site`)
+    # Ceci est plus portable mais peut ne pas correspondre à toutes les configurations Windows.
+    # Pour Windows, `site.USER_SITE` est généralement le bon chemin.
+    user_site_packages_generic = None
+    try:
+        import site
+        if hasattr(site, 'USER_SITE') and site.USER_SITE:
+            user_site_packages_generic = site.USER_SITE
+            print(f"[JVMTestCase DEBUG] site.USER_SITE trouvé: {user_site_packages_generic}")
+    except ImportError:
+        print("[JVMTestCase DEBUG] Module 'site' non trouvé, ne peut pas utiliser site.USER_SITE.")
+        
+    path_to_add = None
+    if os.path.isdir(user_site_packages_specific):
+        path_to_add = user_site_packages_specific
+    elif user_site_packages_generic and os.path.isdir(user_site_packages_generic):
+        path_to_add = user_site_packages_generic
+        
+    if path_to_add:
+        if path_to_add not in sys.path:
+            print(f"[JVMTestCase INFO] Ajout de {path_to_add} à sys.path pour trouver 'jpype'.")
+            sys.path.insert(0, path_to_add)
+            # Essayer à nouveau d'importer après avoir ajouté le chemin
+            try:
+                import jpype
+                print(f"[JVMTestCase INFO] 'jpype' importé avec succès après ajout de {path_to_add} à sys.path. Chemin: {getattr(jpype, '__file__', 'Inconnu')}")
+            except ModuleNotFoundError:
+                print(f"[JVMTestCase ERROR] 'jpype' toujours non trouvé après ajout de {path_to_add} à sys.path.")
+        else:
+            # Si le chemin est déjà là, et que l'import initial a échoué, le problème est ailleurs.
+            print(f"[JVMTestCase INFO] Le chemin {path_to_add} est déjà dans sys.path, mais 'jpype' n'a pas été trouvé initialement. Vérifiez l'installation de JPype1.")
+    else:
+        print(f"[JVMTestCase WARNING] 'jpype' non trouvé et les répertoires site-packages utilisateur potentiels ({user_site_packages_specific}, {user_site_packages_generic}) n'existent pas ou n'ont pas pu être déterminés.")
+
+import unittest
+# os a déjà été importé
 from pathlib import Path
 import logging
 import shutil
