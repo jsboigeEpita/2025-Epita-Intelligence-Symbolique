@@ -7,6 +7,20 @@ Ce mock simule les fonctionnalités essentielles de JPype1 utilisées par le pro
 import sys
 import os
 from unittest.mock import MagicMock
+import logging
+
+# Configuration du logging pour le mock lui-même
+mock_logger = logging.getLogger(__name__)
+# S'assurer que le logger a un handler pour afficher les messages, même si le projet principal
+# configure le logging plus tard. Ceci est utile pour le débogage du mock lui-même.
+if not mock_logger.hasHandlers():
+    handler = logging.StreamHandler(sys.stdout)
+    formatter = logging.Formatter('[MOCK JPYPE LOG] %(asctime)s - %(levelname)s - %(message)s')
+    handler.setFormatter(formatter)
+    mock_logger.addHandler(handler)
+mock_logger.setLevel(logging.INFO) # ou logging.DEBUG pour plus de verbosité
+
+mock_logger.info("Module jpype_mock.py en cours de chargement.")
 
 # Version du mock
 __version__ = "1.4.0-mock"
@@ -14,6 +28,48 @@ __version__ = "1.4.0-mock"
 # Variables globales pour simuler l'état de la JVM
 _jvm_started = False
 _jvm_path = None
+
+# Simuler jpype.config
+class MockConfig:
+    def __init__(self):
+        self.jvm_path = None # Initialement None, peut être défini par startJVM
+        self.convertStrings = False # Valeur par défaut typique
+        # Ajouter d'autres attributs de config si besoin
+config = MockConfig()
+
+
+# Simuler jpype.java (pour accès comme jpype.java.lang.String)
+class MockJavaNamespace:
+    def __init__(self, path_prefix=""):
+        self._path_prefix = path_prefix
+
+    def __getattr__(self, name):
+        # Si on demande jpype.java.lang, on retourne un nouveau MockJavaNamespace pour 'lang'
+        # Si on demande jpype.java.lang.String, on retourne JClass('java.lang.String')
+        new_path = f"{self._path_prefix}.{name}" if self._path_prefix else name
+        
+        # Heuristique: si le nom commence par une majuscule, c'est probablement une classe.
+        # Sinon, c'est un sous-package.
+        # Ceci n'est pas parfait mais couvre de nombreux cas.
+        # Ex: java.lang.String vs java.util.List
+        # java.lang -> sous-package
+        # java.lang.String -> classe
+        
+        # Pour éviter une récursion infinie avec des noms comme 'some.package.MyClass.MyInnerClass'
+        # on pourrait avoir une liste de classes connues ou une logique plus fine.
+        # Pour l'instant, si le dernier segment commence par une majuscule, on suppose que c'est une classe.
+        final_segment = new_path.split('.')[-1]
+        if final_segment and final_segment[0].isupper():
+            mock_logger.debug(f"Accès à jpype.java...{new_path}, interprété comme JClass('{new_path}')")
+            return JClass(new_path) # Retourne une instance de MockJClass
+        else:
+            mock_logger.debug(f"Accès à jpype.java...{new_path}, interprété comme sous-namespace")
+            return MockJavaNamespace(new_path)
+
+java = MockJavaNamespace("java") # Pour jpype.java.xxx
+# On pourrait aussi avoir besoin de simuler d'autres packages de haut niveau comme 'org', 'net', etc.
+# si le code fait jpype.org.tweetyproject...
+# Pour l'instant, on se concentre sur 'java'.
 
 def isJVMStarted():
     """Simule jpype.isJVMStarted()."""
@@ -24,13 +80,15 @@ def startJVM(jvmpath=None, *args, **kwargs):
     global _jvm_started, _jvm_path
     _jvm_started = True
     _jvm_path = jvmpath or getDefaultJVMPath()
-    print(f"[MOCK] JVM démarrée avec le chemin: {_jvm_path}")
+    # Mettre à jour config.jvm_path aussi, car c'est souvent là que le code le cherche après démarrage
+    config.jvm_path = _jvm_path
+    mock_logger.info(f"JVM démarrée avec le chemin: {_jvm_path}")
 
 def shutdownJVM():
     """Simule jpype.shutdownJVM()."""
     global _jvm_started
     _jvm_started = False
-    print("[MOCK] JVM arrêtée")
+    mock_logger.info("JVM arrêtée")
 
 def getDefaultJVMPath():
     """Simule jpype.getDefaultJVMPath()."""
@@ -771,6 +829,20 @@ def JString(value):
     jstring_mock.__hash__.side_effect = lambda: hash(str(value))
     return jstring_mock
 
+def JBoolean(value):
+    """Simule jpype.JBoolean()."""
+    # Utilise JObject pour encapsuler la valeur booléenne et son type Java.
+    # JClass("java.lang.Boolean") est un mock de la classe Java Boolean.
+    return JObject(value, JClass("java.lang.Boolean"))
+
+def JInt(value):
+    """Simule jpype.JInt()."""
+    return JObject(value, JClass("java.lang.Integer"))
+
+def JDouble(value):
+    """Simule jpype.JDouble()."""
+    return JObject(value, JClass("java.lang.Double"))
+
 # Classes Java simulées
 class JObject:
     """Simule jpype.JObject."""
@@ -861,8 +933,38 @@ class JVMNotFoundException(Exception):
     """Simule jpype.JVMNotFoundException."""
     pass
 
-# Installer le mock dans sys.modules
-sys.modules['jpype1'] = sys.modules[__name__]
-sys.modules['jpype'] = sys.modules[__name__]
+# Mock pour jpype.imports
+class MockImportsModule:
+    def __init__(self):
+        self._registered_domains = {}
 
-print("[MOCK] Mock JPype1 activé pour la compatibilité Python 3.12+")
+    def registerDomain(self, domain_name, alias=None):
+        # Simule l'enregistrement d'un domaine.
+        # Pour l'instant, on ne fait rien de spécial avec, mais on pourrait stocker l'info.
+        actual_alias = alias if alias else domain_name
+        self._registered_domains[domain_name] = actual_alias
+        mock_logger.info(f"jpype.imports.registerDomain: Registered domain '{domain_name}' with alias '{actual_alias}'")
+
+    # Ajouter d'autres méthodes de jpype.imports si nécessaire
+    # par exemple, getDomain(domain_name)
+
+imports = MockImportsModule()
+
+
+# Installer le mock dans sys.modules
+# ATTENTION: Ces lignes sont commentées car elles causent des problèmes avec les tests d'intégration
+# qui ont besoin du vrai module jpype. Les tests nécessitant le mock devraient l'activer explicitement.
+# if 'jpype' not in sys.modules or 'tests.mocks.jpype_mock' not in sys.modules['jpype'].__file__:
+#     sys.modules['jpype'] = sys.modules[__name__]
+#     mock_logger.info("Mock activé pour 'jpype'")
+# else:
+#     mock_logger.info("Mock pour 'jpype' déjà présent ou est le vrai module, non remplacé.")
+
+# if 'jpype1' not in sys.modules or 'tests.mocks.jpype_mock' not in sys.modules['jpype1'].__file__:
+#     sys.modules['jpype1'] = sys.modules[__name__]
+#     mock_logger.info("Mock activé pour 'jpype1'")
+# else:
+#     mock_logger.info("Mock pour 'jpype1' déjà présent ou est le vrai module, non remplacé.")
+
+
+mock_logger.info("Mock JPype1 (jpype_mock.py) initialisé. Le patch global sys.modules est DÉSACTIVÉ.")
