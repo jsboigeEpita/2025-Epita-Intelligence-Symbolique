@@ -29,8 +29,32 @@ def startJVM(jvmpath=None, *args, **kwargs):
 def shutdownJVM():
     """Simule jpype.shutdownJVM()."""
     global _jvm_started
+    print("[MOCK DEBUG] Avant opérations dans shutdownJVM:")
+    jpype_module = sys.modules.get('jpype')
+    print(f"[MOCK DEBUG] sys.modules.get('jpype'): {jpype_module}")
+    print(f"[MOCK DEBUG] getattr(jpype_module, '__file__', 'N/A'): {getattr(jpype_module, '__file__', 'N/A')}")
+    print(f"[MOCK DEBUG] hasattr(jpype_module, 'config'): {hasattr(jpype_module, 'config')}")
+    has_core = hasattr(jpype_module, '_core')
+    print(f"[MOCK DEBUG] hasattr(jpype_module, '_core'): {has_core}")
+    if has_core and jpype_module._core is not None: # Vérifier aussi que _core n'est pas None
+        print(f"[MOCK DEBUG] hasattr(jpype_module._core, '_JTerminate'): {hasattr(jpype_module._core, '_JTerminate')}")
+    elif has_core and jpype_module._core is None:
+        print(f"[MOCK DEBUG] jpype_module._core est None.")
+    
     _jvm_started = False
     print("[MOCK] JVM arrêtée")
+    
+    print("[MOCK DEBUG] Après opérations dans shutdownJVM (état similaire attendu):")
+    jpype_module_after = sys.modules.get('jpype')
+    print(f"[MOCK DEBUG] sys.modules.get('jpype'): {jpype_module_after}")
+    print(f"[MOCK DEBUG] getattr(jpype_module_after, '__file__', 'N/A'): {getattr(jpype_module_after, '__file__', 'N/A')}")
+    print(f"[MOCK DEBUG] hasattr(jpype_module_after, 'config'): {hasattr(jpype_module_after, 'config')}")
+    has_core_after = hasattr(jpype_module_after, '_core')
+    print(f"[MOCK DEBUG] hasattr(jpype_module_after, '_core'): {has_core_after}")
+    if has_core_after and jpype_module_after._core is not None:
+        print(f"[MOCK DEBUG] hasattr(jpype_module_after._core, '_JTerminate'): {hasattr(jpype_module_after._core, '_JTerminate')}")
+    elif has_core_after and jpype_module_after._core is None:
+        print(f"[MOCK DEBUG] jpype_module_after._core est None.")
 
 def getDefaultJVMPath():
     """Simule jpype.getDefaultJVMPath()."""
