@@ -34,8 +34,9 @@ try:
     print("INFO: Matplotlib mocké globalement.")
 
     # NetworkX
-    from networkx_mock import NetworkXMock as MockNetworkXModule_class # Import direct
-    sys.modules['networkx'] = MockNetworkXModule_class()
+    import tests.mocks.networkx_mock # Laisse networkx_mock.py s'enregistrer
+    # from networkx_mock import NetworkXMock as MockNetworkXModule_class # Import direct
+    # sys.modules['networkx'] = MockNetworkXModule_class()
     print("INFO: NetworkX mocké globalement.")
 
 except ImportError as e:
@@ -108,34 +109,69 @@ except ImportError as e:
 
 # --- Mock JPype ---
 # mocks_dir_for_mock (tests/mocks) est déjà dans sys.path depuis le bloc ci-dessus.
-try:
-    from jpype_mock import ( # Import direct car tests/mocks est dans sys.path
-        isJVMStarted, startJVM, getJVMPath, getJVMVersion, getDefaultJVMPath,
-        JClass, JException, JObject, JVMNotFoundException
-    )
+    # L'import suivant permet à tests/mocks/jpype_mock.py de s'auto-enregistrer.
+    import tests.mocks.jpype_mock
+    # L'ancien code ci-dessous est conservé pour référence mais commenté.
+# try:
+#     from jpype_mock import ( # Import direct car tests/mocks est dans sys.path
+#         isJVMStarted, startJVM, getJVMPath, getJVMVersion, getDefaultJVMPath,
+#         JClass, JException, JObject, JVMNotFoundException, shutdownJVM, JString, JArray
+#     )
 
-    mock_jpype_imports_module = MagicMock(name="jpype.imports_mock")
-    sys.modules['jpype.imports'] = mock_jpype_imports_module
+#     mock_jpype_imports_module = MagicMock(name="jpype.imports_mock")
+#     sys.modules['jpype.imports'] = mock_jpype_imports_module
 
-    jpype_module_mock_obj = MagicMock(name="jpype_module_mock")
-    jpype_module_mock_obj.__path__ = []
-    jpype_module_mock_obj.isJVMStarted = isJVMStarted
-    jpype_module_mock_obj.startJVM = startJVM
-    jpype_module_mock_obj.getJVMPath = getJVMPath
-    jpype_module_mock_obj.getJVMVersion = getJVMVersion
-    jpype_module_mock_obj.getDefaultJVMPath = getDefaultJVMPath
-    jpype_module_mock_obj.JClass = JClass
-    jpype_module_mock_obj.JException = JException
-    jpype_module_mock_obj.JObject = JObject
-    jpype_module_mock_obj.JVMNotFoundException = JVMNotFoundException
-    jpype_module_mock_obj.__version__ = '1.4.1.mock'
-    jpype_module_mock_obj.imports = mock_jpype_imports_module
+#     jpype_module_mock_obj = MagicMock(name="jpype_module_mock")
+#     jpype_module_mock_obj.__path__ = []
+#     jpype_module_mock_obj.isJVMStarted = isJVMStarted
+#     jpype_module_mock_obj.startJVM = startJVM
+#     # Assurez-vous que toutes les fonctions nécessaires sont assignées
+#     # Par exemple, shutdownJVM, JString, JArray manquaient dans la version précédente du diff
+#     if 'shutdownJVM' in locals(): jpype_module_mock_obj.shutdownJVM = shutdownJVM
+#     if 'JString' in locals(): jpype_module_mock_obj.JString = JString
+#     if 'JArray' in locals(): jpype_module_mock_obj.JArray = JArray
 
-    sys.modules['jpype'] = jpype_module_mock_obj
-    sys.modules['_jpype'] = MagicMock(name="_jpype_mock")
-    print("INFO: JPype (et jpype.imports) mocké globalement.")
-except ImportError as e_jpype:
-    print(f"ERREUR CRITIQUE lors du mocking global de JPype: {e_jpype}")
+#     jpype_module_mock_obj.getJVMPath = getJVMPath
+#     jpype_module_mock_obj.getJVMVersion = getJVMVersion
+#     jpype_module_mock_obj.getDefaultJVMPath = getDefaultJVMPath
+#     jpype_module_mock_obj.JClass = JClass
+#     jpype_module_mock_obj.JException = JException
+#     jpype_module_mock_obj.JObject = JObject
+#     jpype_module_mock_obj.JVMNotFoundException = JVMNotFoundException
+#     jpype_module_mock_obj.__version__ = '1.4.1.mock' # ou la version de jpype_mock
+#     jpype_module_mock_obj.imports = mock_jpype_imports_module
+
+
+#     sys.modules['jpype'] = jpype_module_mock_obj
+#     sys.modules['jpype1'] = jpype_module_mock_obj # Pour couvrir les deux noms d'importation
+#     sys.modules['_jpype'] = MagicMock(name="_jpype_mock") # Mock du module C interne si nécessaire
+#     print("INFO: JPype (et jpype.imports) mocké globalement via MagicMock.")
+# except ImportError as e_jpype:
+#     print(f"ERREUR CRITIQUE lors du mocking global de JPype: {e_jpype}")
+#     # Fallback si l'import initial échoue, bien que ce ne devrait pas être le cas si jpype_mock.py est correct
+#     # et que getJVMVersion y est défini.
+#     # Ce fallback est probablement redondant maintenant.
+#     fallback_jpype = MagicMock(name="jpype_fallback_mock")
+#     class JVMState:
+#         def __init__(self): self.started = False
+#     jvm_state = JVMState()
+#     def mock_isJVMStarted(): return jvm_state.started
+#     def mock_startJVM(*args, **kwargs): jvm_state.started = True
+#     def mock_shutdownJVM(): jvm_state.started = False
+#     class MockJClass:
+#         def __init__(self, name): self.__name__ = name; self.class_name = name
+#         def __call__(self, *args, **kwargs): return MagicMock()
+#     def mock_JClass(name): return MockJClass(name)
+#     class MockJException(Exception):
+#         def __init__(self, message="Mock Java Exception"): super().__init__(message)
+#     fallback_jpype.isJVMStarted = mock_isJVMStarted
+#     fallback_jpype.startJVM = mock_startJVM
+#     fallback_jpype.shutdownJVM = mock_shutdownJVM
+#     fallback_jpype.JClass = mock_JClass
+#     fallback_jpype.JException = MockJException
+#     # Ajoutez d'autres attributs nécessaires au fallback_jpype ici
+#     sys.modules['jpype'] = fallback_jpype
+#     sys.modules['jpype1'] = fallback_jpype
     # Créer un mock JPype plus robuste avec les méthodes nécessaires
     fallback_jpype = MagicMock(name="jpype_fallback_mock")
     

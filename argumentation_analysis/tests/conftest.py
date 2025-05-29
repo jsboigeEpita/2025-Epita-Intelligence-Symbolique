@@ -66,7 +66,7 @@ argumentation_analysis.services.fetch_service = services.fetch_service
 # Utiliser des imports directs
 from models.extract_definition import Extract, SourceDefinition, ExtractDefinitions
 from models.extract_result import ExtractResult
-# from services.cache_service import CacheService
+from services.cache_service import CacheService
 from services.crypto_service import CryptoService
 from services.definition_service import DefinitionService
 from services.extract_service import ExtractService
