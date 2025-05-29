@@ -1,4 +1,4 @@
-pip install llama-cpp-python huggingface-hub
+pip install huggingface-hub
 CMAKE_ARGS="-DGGML_CUDA=on" FORCE_CMAKE=1 pip install --upgrade --no-cache-dir llama-cpp-python
 
 huggingface-cli download TheBloke/Llama-2-7B-GGUF llama-2-7b.Q4_K_M.gguf --local-dir . --local-dir-use-symlinks False
