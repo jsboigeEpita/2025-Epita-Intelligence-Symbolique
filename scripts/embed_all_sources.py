@@ -176,22 +176,26 @@ def main():
     logger.info(f"Traitement des sources terminé. {updated_sources_count} sources mises à jour, {sources_with_errors_count} erreurs de récupération.")
 
     # 6. Sauvegarder les définitions mises à jour
-    if not extract_definitions and updated_sources_count == 0:
-        logger.info("Aucune définition d'extrait à sauvegarder ou aucune mise à jour effectuée.")
-    else:
-        try:
-            logger.info(f"Sauvegarde des définitions d'extraits mises à jour dans {args.output_config}...")
-            # Note: la fonction save_extract_definitions dans file_operations attend 'config_file' et 'encryption_key'
-            save_extract_definitions(
-                extract_definitions=extract_definitions,
-                config_file=args.output_config,
-                encryption_key=encryption_key,
-                embed_full_text=True
-            )
+    # Toujours tenter de sauvegarder, même si extract_definitions est vide, pour créer le fichier de sortie.
+    # La fonction save_extract_definitions gérera une liste vide.
+    try:
+        logger.info(f"Sauvegarde des définitions d'extraits (mises à jour ou vides) dans {args.output_config}...")
+        # Note: la fonction save_extract_definitions dans file_operations attend 'config_file' et 'encryption_key'
+        save_success = save_extract_definitions(
+            extract_definitions=extract_definitions, # Peut être une liste vide
+            config_file=args.output_config,
+            encryption_key=encryption_key,
+            embed_full_text=True # embed_full_text=True est important pour que le script tente d'ajouter les textes
+        )
+        if save_success:
             logger.info(f"Définitions d'extraits sauvegardées avec succès dans {args.output_config}.")
-        except Exception as e:
-            logger.error(f"Erreur lors de la sauvegarde des définitions dans {args.output_config}: {e}")
-            sys.exit(1)
+        else:
+            # L'erreur aura déjà été logguée par save_extract_definitions
+            logger.error(f"Échec de la sauvegarde des définitions dans {args.output_config}.")
+            # sys.exit(1) # On pourrait choisir de sortir ici si la sauvegarde est critique même pour un fichier vide
+    except Exception as e:
+        logger.error(f"Erreur majeure lors de la tentative de sauvegarde des définitions dans {args.output_config}: {e}")
+        sys.exit(1)
 
     logger.info("Script d'embarquement des sources terminé avec succès.")
 

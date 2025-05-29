@@ -94,6 +94,8 @@ class JException(Exception):
         """Simule la méthode getMessage() de Java."""
         return self.message
 
+config = MagicMock() # Ajout pour simuler jpype.config
+
 # Installer le mock dans sys.modules
 sys.modules['jpype1'] = sys.modules[__name__]
 sys.modules['jpype'] = sys.modules[__name__]
