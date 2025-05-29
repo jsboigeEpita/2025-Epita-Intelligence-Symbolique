@@ -8,12 +8,14 @@ __pycache__/
 coverage.xml
 htmlcov/
 coverage.json
+.pytest_cache/
 
 # Environnements virtuels
 venv_test/
 venv/
 env/
 ENV/
+/.venv/
 
 # Fichiers temporaires
 *.tmp
@@ -41,3 +43,7 @@ README_TESTS.md
 # Fichiers de rapports de tests et d'analyses
 argumentation_analysis/tests/tools/reports/test_report_*.txt
 results/rhetorical_analysis_*.json
+
+# JDK local et temporaire
+/portable_jdk/
+/_temp/OpenJDK*.zip

@@ -19,8 +19,10 @@ import urllib.request # Ajout pour téléchargement
 from tqdm.auto import tqdm # Ajout pour barre de progression
 import stat # Ajout pour chmod (Linux/Mac)
 import shutil # Ajout pour shutil.which
+import zipfile # Ajout pour l'extraction du JDK portable
+import sys # Pour platform.system si non global, déjà importé via platform
 
-from argumentation_analysis.paths import LIBS_DIR
+from argumentation_analysis.paths import LIBS_DIR, PROJECT_ROOT_DIR # Ajout de PROJECT_ROOT_DIR
 
 
 logger = logging.getLogger("Orchestration.JPype")
@@ -30,6 +32,8 @@ if not logger.handlers and not logger.propagate:
 
 MIN_JAVA_VERSION = 15
 TWEETY_VERSION = "1.28" # Version de Tweety à télécharger
+
+PORTABLE_JDK_DOWNLOAD_URL = "https://github.com/adoptium/temurin17-binaries/releases/download/jdk-17.0.15%2B6/OpenJDK17U-jdk_x64_windows_hotspot_17.0.15_6.zip"
 
 # --- Classe Tqdm pour barre de progression ---
 class TqdmUpTo(tqdm):
@@ -177,11 +181,134 @@ def download_tweety_jars(
     return core_present and modules_present_count > 0
 
 
+PORTABLE_JDK_DIR_NAME = "portable_jdk"
+PORTABLE_JDK_ZIP_NAME = "OpenJDK17U-jdk_x64_windows_hotspot_17.0.15_6_new.zip"
+TEMP_DIR_NAME = "_temp"
+
+def _extract_portable_jdk(project_root: pathlib.Path, portable_jdk_parent_dir: pathlib.Path, portable_jdk_zip_path: pathlib.Path) -> Optional[pathlib.Path]:
+    """
+    Extrait le JDK portable de l'archive ZIP vers le répertoire portable_jdk.
+    Retourne le chemin vers le dossier racine du JDK extrait (ex: portable_jdk/jdk-17.0.15+6) ou None si échec.
+    """
+    logger.info(f"Tentative d'extraction du JDK portable depuis '{portable_jdk_zip_path}' vers '{portable_jdk_parent_dir}'...")
+    try:
+        with zipfile.ZipFile(portable_jdk_zip_path, 'r') as zip_ref:
+            # Obtenir le nom du premier membre (souvent le dossier racine)
+            # Cela suppose que l'archive a un dossier racine unique.
+            # Si ce n'est pas le cas, il faudra ajuster la logique pour trouver le bon dossier JDK.
+            # Pour l'instant, on extrait tout et on cherche un dossier commençant par "jdk-"
+            zip_ref.extractall(portable_jdk_parent_dir)
+        logger.info(f"JDK portable extrait avec succès dans '{portable_jdk_parent_dir}'.")
+
+        # Essayer de trouver le dossier racine du JDK extrait
+        # On s'attend à un nom comme "jdk-17.0.15+6" ou similaire
+        for item in portable_jdk_parent_dir.iterdir():
+            if item.is_dir() and item.name.startswith("jdk-"):
+                logger.info(f"Dossier racine du JDK portable détecté : '{item}'")
+                return item
+        logger.warning(f"Impossible de déterminer le dossier racine du JDK dans '{portable_jdk_parent_dir}' après extraction. Recherche d'un dossier 'jdk-*' a échoué.")
+        # Fallback: si un seul dossier est présent, on le suppose être le bon
+        extracted_items = [d for d in portable_jdk_parent_dir.iterdir() if d.is_dir()]
+        if len(extracted_items) == 1:
+            logger.info(f"Un seul dossier trouvé après extraction: '{extracted_items[0]}', en supposant que c'est le JDK.")
+            return extracted_items[0]
+        
+        return None # Échec de la détection du dossier JDK
+    except FileNotFoundError:
+        logger.error(f"L'archive ZIP du JDK portable '{portable_jdk_zip_path}' n'a pas été trouvée.")
+        return None
+    except zipfile.BadZipFile:
+        logger.error(f"L'archive ZIP du JDK portable '{portable_jdk_zip_path}' est corrompue.")
+        return None
+    except Exception as e:
+        logger.error(f"Erreur lors de l'extraction du JDK portable: {e}", exc_info=True)
+        return None
+
 # --- Fonction de détection JAVA_HOME (modifiée pour prioriser Java >= MIN_JAVA_VERSION) ---
 def find_valid_java_home() -> Optional[str]:
     logger.debug(f"Début recherche répertoire Java Home valide (priorité Java >= {MIN_JAVA_VERSION})...")
-
+    
     system = platform.system()
+    exe_suffix = ".exe" if system == "Windows" else ""
+
+    # Chemins relatifs au projet
+    project_root = PROJECT_ROOT_DIR # Assurez-vous que PROJECT_ROOT_DIR est défini dans paths.py
+    portable_jdk_parent_dir = project_root / PORTABLE_JDK_DIR_NAME
+    portable_jdk_zip_path = project_root / TEMP_DIR_NAME / PORTABLE_JDK_ZIP_NAME
+
+    # 0. Vérifier le JDK portable intégré
+    logger.info(f"Vérification du JDK portable intégré dans '{portable_jdk_parent_dir}'...")
+    
+    # Chercher un dossier JDK existant (ex: jdk-17.0.15+6)
+    potential_jdk_root_dir = None
+    if portable_jdk_parent_dir.is_dir():
+        for item in portable_jdk_parent_dir.iterdir():
+            if item.is_dir() and item.name.startswith("jdk-"): # Heuristique pour trouver le dossier JDK
+                java_exe_portable = item / "bin" / f"java{exe_suffix}"
+                if java_exe_portable.is_file():
+                    logger.info(f"JDK portable trouvé et valide dans: '{item}'")
+                    potential_jdk_root_dir = item
+                    break # Premier trouvé suffit
+    
+    if potential_jdk_root_dir:
+        logger.info(f"🎉 Utilisation du JDK portable intégré: '{potential_jdk_root_dir}'")
+        return str(potential_jdk_root_dir.resolve())
+
+    # Si le JDK portable n'est pas trouvé extrait, mais que l'archive ZIP existe, tenter de l'extraire
+    logger.info(f"JDK portable non trouvé dans '{portable_jdk_parent_dir}'. Vérification de l'archive ZIP '{portable_jdk_zip_path}'...")
+    if portable_jdk_zip_path.is_file():
+        logger.info(f"Archive ZIP du JDK portable trouvée. Tentative d'extraction...")
+        # S'assurer que le répertoire parent pour l'extraction existe
+        portable_jdk_parent_dir.mkdir(parents=True, exist_ok=True)
+        
+        extracted_jdk_root = _extract_portable_jdk(project_root, portable_jdk_parent_dir, portable_jdk_zip_path)
+        
+        if extracted_jdk_root:
+            java_exe_portable = extracted_jdk_root / "bin" / f"java{exe_suffix}"
+            if java_exe_portable.is_file():
+                logger.info(f"🎉 JDK portable extrait et validé avec succès: '{extracted_jdk_root}'. Utilisation.")
+                # Optionnel: supprimer l'archive ZIP après extraction réussie
+                # try:
+                #     portable_jdk_zip_path.unlink()
+                #     logger.info(f"Archive ZIP '{portable_jdk_zip_path.name}' supprimée après extraction.")
+                # except OSError as e_unlink:
+                #     logger.warning(f"Impossible de supprimer l'archive ZIP '{portable_jdk_zip_path.name}': {e_unlink}")
+                return str(extracted_jdk_root.resolve())
+            else:
+                logger.error(f"JDK portable extrait dans '{extracted_jdk_root}', mais 'bin/java{exe_suffix}' non trouvé.")
+        else:
+            logger.error(f"Échec de l'extraction ou de la validation du JDK portable depuis '{portable_jdk_zip_path}'.")
+    else:
+        logger.info(f"Archive ZIP du JDK portable '{portable_jdk_zip_path.name}' non trouvée. Tentative de téléchargement...")
+        # S'assurer que le répertoire _temp existe
+        temp_dir = project_root / TEMP_DIR_NAME
+        temp_dir.mkdir(parents=True, exist_ok=True)
+
+        jdk_downloaded, _ = _download_file_with_progress(
+            PORTABLE_JDK_DOWNLOAD_URL,
+            portable_jdk_zip_path, # Sauvegarde directement avec le nom attendu _new.zip
+            description="JDK Portable (OpenJDK 17.0.15+6)"
+        )
+
+        if jdk_downloaded and portable_jdk_zip_path.is_file():
+            logger.info(f"JDK portable téléchargé avec succès : '{portable_jdk_zip_path}'. Tentative d'extraction...")
+            # S'assurer que le répertoire parent pour l'extraction existe
+            portable_jdk_parent_dir.mkdir(parents=True, exist_ok=True)
+            extracted_jdk_root = _extract_portable_jdk(project_root, portable_jdk_parent_dir, portable_jdk_zip_path)
+            if extracted_jdk_root:
+                java_exe_portable = extracted_jdk_root / "bin" / f"java{exe_suffix}"
+                if java_exe_portable.is_file():
+                    logger.info(f"🎉 JDK portable téléchargé, extrait et validé avec succès: '{extracted_jdk_root}'. Utilisation.")
+                    return str(extracted_jdk_root.resolve())
+                else:
+                    logger.error(f"JDK portable téléchargé et extrait dans '{extracted_jdk_root}', mais 'bin/java{exe_suffix}' non trouvé.")
+            else:
+                logger.error(f"Échec de l'extraction ou de la validation du JDK portable après téléchargement depuis '{portable_jdk_zip_path}'.")
+        else:
+            logger.error(f"Échec du téléchargement du JDK portable depuis '{PORTABLE_JDK_DOWNLOAD_URL}'. Le JDK portable ne sera pas utilisé.")
+
+    # Si le JDK portable n'est pas utilisé, continuer avec la logique existante
+    logger.info("Poursuite avec la détection standard de JAVA_HOME (variables d'environnement, heuristiques système)...")
     exe_suffix = ".exe" if system == "Windows" else ""
     # Stocke un JAVA_HOME valide trouvé dans l'env, mais qui ne correspond pas à MIN_JAVA_VERSION (pour fallback)
     java_home_from_env_fallback: Optional[str] = None

@@ -218,7 +218,7 @@ async def test_process_task_extraction_error(extract_agent_adapter_initialized, 
     
     assert result["status"] == "completed_with_issues"
     assert result["task_id"] == task_data["id"]
-    assert not result["outputs"] 
+    assert result["outputs"] == {'extracted_segments': [], 'normalized_text': []}
     assert len(result["issues"]) == 1
     assert result["issues"][0]["type"] == "extraction_error"
     assert result["issues"][0]["description"] == "Extraction failed"
@@ -259,7 +259,7 @@ async def test_process_task_unsupported_technique(extract_agent_adapter_initiali
 
     assert result["status"] == "completed_with_issues"
     assert result["task_id"] == task_id_original
-    assert not result["outputs"] 
+    assert result["outputs"] == {'extracted_segments': [], 'normalized_text': []}
     assert len(result["issues"]) == 1
     assert result["issues"][0]["type"] == "unsupported_technique"
 
