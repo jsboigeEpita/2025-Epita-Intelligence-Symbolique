@@ -43,3 +43,7 @@ README_TESTS.md
 # Fichiers de rapports de tests et d'analyses
 argumentation_analysis/tests/tools/reports/test_report_*.txt
 results/rhetorical_analysis_*.json
+
+# JDK local et temporaire
+/portable_jdk/
+/_temp/OpenJDK*.zip
