@@ -90,7 +90,7 @@ class InformalAgent:
         
         # Si un kernel sémantique est fourni, configurer le plugin informel
         if self.semantic_kernel:
-            setup_informal_kernel(self.semantic_kernel, None, self.informal_plugin)
+            setup_informal_kernel(self.semantic_kernel, self.informal_plugin)
         
         self.logger.info(f"Agent informel {agent_id} initialisé avec {len(tools)} outils")
     
