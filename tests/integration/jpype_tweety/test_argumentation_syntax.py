@@ -26,9 +26,9 @@ def test_create_dung_theory_with_arguments_and_attacks(dung_classes):
     dung_theory = DungTheory()
 
     # Création des arguments
-    arg_a = Argument("a")
-    arg_b = Argument("b")
-    arg_c = Argument("c")
+    arg_a = Argument(jpype.JString("a"))
+    arg_b = Argument(jpype.JString("b"))
+    arg_c = Argument(jpype.JString("c"))
 
     # Ajout des arguments à la théorie
     dung_theory.add(arg_a)
@@ -88,9 +88,9 @@ def test_argument_equality_and_hashcode(dung_classes):
     Important pour leur utilisation dans des collections (Set, Map).
     """
     Argument = dung_classes["Argument"]
-    arg1_a = Argument("a")
-    arg2_a = Argument("a")
-    arg_b = Argument("b")
+    arg1_a = Argument(jpype.JString("a"))
+    arg2_a = Argument(jpype.JString("a"))
+    arg_b = Argument(jpype.JString("b"))
 
     # Égalité
     assert arg1_a.equals(arg2_a), "Deux arguments avec le même nom devraient être égaux."
@@ -131,12 +131,12 @@ def test_attack_equality_and_hashcode(dung_classes):
     Argument = dung_classes["Argument"]
     Attack = dung_classes["Attack"]
 
-    a = Argument("a")
-    b = Argument("b")
-    c = Argument("c")
+    a = Argument(jpype.JString("a"))
+    b = Argument(jpype.JString("b"))
+    c = Argument(jpype.JString("c"))
 
     attack1_ab = Attack(a, b)
-    attack2_ab = Attack(Argument("a"), Argument("b")) # Nouveaux objets Argument mais mêmes noms
+    attack2_ab = Attack(Argument(jpype.JString("a")), Argument(jpype.JString("b"))) # Nouveaux objets Argument mais mêmes noms
     attack_ac = Attack(a, c)
     attack_ba = Attack(b, a)
 

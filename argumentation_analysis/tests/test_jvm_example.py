@@ -10,6 +10,7 @@ disponible ou si les JARs nécessaires ne sont pas présents.
 import logging
 import pytest # Ajout de l'import pytest
 from argumentation_analysis.tests.jvm_test_case import JVMTestCase
+import sys # Pour vérifier le module importé
 
 # Configuration du logging
 logging.basicConfig(
@@ -21,15 +22,36 @@ logging.basicConfig(
 class TestJVMExample(JVMTestCase):
     """Exemple de test utilisant la classe JVMTestCase."""
     
-    @pytest.mark.skip(reason="Investigation en cours sur un crash JVM (access violation). Logs ajoutés. Fournir la sortie pytest -s pour analyse.")
     def test_jvm_initialized(self):
         """Teste si la JVM est correctement initialisée."""
         # Ce test sera sauté si la JVM n'est pas disponible
-        import jpype
+        try:
+            import jpype
+            # Vérifier que ce n'est pas le mock
+            if hasattr(jpype, '__file__') and 'tests.mocks.jpype_mock' in jpype.__file__:
+                logging.error("ERREUR CRITIQUE: Le mock jpype_mock.py a été importé dans test_jvm_example.py!")
+                # Tenter de supprimer le mock et de réimporter le vrai jpype (qui devrait être jpype1)
+                # Cette situation ne devrait pas arriver si le sys.path est correct et que le mock n'est pas prioritaire.
+                if 'jpype' in sys.modules:
+                    del sys.modules['jpype']
+                # Tenter d'importer le vrai module (qui s'appelle 'jpype' à l'import)
+                import jpype as temp_jpype
+                if hasattr(temp_jpype, '__file__') and 'tests.mocks.jpype_mock' in temp_jpype.__file__:
+                    self.fail("Échec de chargement du vrai module jpype, le mock persiste.")
+                else:
+                    jpype = temp_jpype # Réassigner jpype au vrai module
+                    logging.info(f"Le vrai module jpype a été chargé après suppression du mock: {jpype.__file__}")
+            elif not hasattr(jpype, '__file__'):
+                 logging.warning(f"Le module jpype importé ({jpype}) n'a pas d'attribut __file__. Supposé être le vrai.")
+            else:
+                logging.info(f"Module jpype importé avec succès: {jpype.__file__}")
+        except ImportError:
+            self.fail("Impossible d'importer jpype. Assurez-vous que JPype1 est installé et accessible.")
+        
         self.assertTrue(jpype.isJVMStarted(), "La JVM devrait être démarrée")
         
         # Vérifier que les domaines sont enregistrés
-        self.assertTrue(hasattr(jpype.imports, "registerDomain"), "La méthode registerDomain devrait être disponible")
+        self.assertTrue(hasattr(jpype.imports, "registerDomain"), "La méthode registerDomain devrait être disponible sur jpype.imports")
         
         # Afficher des informations sur la JVM
         logging.info(f"JVM Version: {jpype.getJVMVersion()}")
@@ -54,14 +76,33 @@ class TestJVMExample(JVMTestCase):
         except Exception as e:
             logging.warning(f"Impossible de récupérer le chemin JVM via jpype.config.jvm_path: {e}")
     
-    @pytest.mark.skip(reason="Investigation en cours sur un crash JVM (access violation) suspecté dans ce test ou après. Logs ajoutés. Fournir la sortie pytest -s pour analyse.")
     def test_tweety_jars_loaded(self):
         """Teste si les JARs Tweety sont correctement chargés."""
         # Ce test sera sauté si la JVM n'est pas disponible
         logging.info("test_tweety_jars_loaded: Début du test")
-        logging.info("test_tweety_jars_loaded: Avant import jpype")
-        import jpype
-        logging.info(f"test_tweety_jars_loaded: Après import jpype. jpype: {jpype}")
+        
+        try:
+            # L'import jpype devrait déjà avoir été fait par test_jvm_initialized ou la portée de classe
+            # Mais pour être sûr, on le refait ici.
+            import jpype
+            if hasattr(jpype, '__file__') and 'tests.mocks.jpype_mock' in jpype.__file__:
+                logging.error("ERREUR CRITIQUE: Le mock jpype_mock.py a été importé dans test_tweety_jars_loaded!")
+                if 'jpype' in sys.modules:
+                    del sys.modules['jpype']
+                import jpype as temp_jpype
+                if hasattr(temp_jpype, '__file__') and 'tests.mocks.jpype_mock' in temp_jpype.__file__:
+                     self.fail("Échec de chargement du vrai module jpype pour test_tweety_jars_loaded, le mock persiste.")
+                else:
+                    jpype = temp_jpype
+                    logging.info(f"Le vrai module jpype a été chargé pour test_tweety_jars_loaded après suppression du mock: {jpype.__file__}")
+            elif not hasattr(jpype, '__file__'):
+                logging.warning(f"Le module jpype importé ({jpype}) pour test_tweety_jars_loaded n'a pas d'attribut __file__. Supposé être le vrai.")
+            else:
+                 logging.info(f"Vrai module jpype importé avec succès pour test_tweety_jars_loaded: {jpype.__file__}")
+        except ImportError:
+            self.fail("Impossible d'importer jpype dans test_tweety_jars_loaded.")
+            
+        logging.info(f"test_tweety_jars_loaded: Utilisation de jpype: {jpype}")
         
         # Essayer d'importer une classe de Tweety
         try:
