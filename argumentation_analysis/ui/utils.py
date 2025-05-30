@@ -450,7 +450,7 @@ def verify_extract_definitions(definitions_list: list) -> str:
          if total_checks > 0: summary += "<br/>Tous les marqueurs semblent corrects."
          else: summary += "<br/>Aucun extrait n'a pu être vérifié."
 
-    utils_logger.info(f"\n{summary.replace('<br/>', '\n').replace('<li>', '- ').replace('</li>', '').replace('<ul>', '').replace('</ul>', '').replace('<strong>', '').replace('</strong>', '')}")
+    utils_logger.info("\n" + f"{summary.replace('<br/>', chr(10)).replace('<li>', '- ').replace('</li>', '').replace('<ul>', '').replace('</ul>', '').replace('<strong>', '').replace('</strong>', '')}")
     return summary
 
 

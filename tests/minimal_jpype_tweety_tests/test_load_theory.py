@@ -8,30 +8,21 @@ import os
 # ou que le CLASSPATH est déjà configuré.
 # Pour cet exemple, nous allons supposer que le CLASSPATH est configuré
 # ou que les JARs sont accessibles via les options JVM.
-
-def main():
+def test_load_theory():
     try:
         print("Démarrage du test de chargement de théorie...")
 
         # Démarrer la JVM si ce n'est pas déjà fait
+        # L'initialisation de la JVM est maintenant gérée globalement par conftest.py
         if not jpype.isJVMStarted():
-            # Adaptez le classpath si nécessaire.
-            # Exemple: jpype.startJVM(classpath=['path/to/tweety.jar', 'path/to/other.jar'])
-            # Pour cet exemple, nous supposons que le CLASSPATH est configuré
-            # ou que les JARs sont dans le répertoire de travail ou un chemin connu.
-            # Vous devrez peut-être spécifier le chemin vers les JARs de Tweety ici.
-            # Par exemple, si les JARs sont dans un dossier 'libs' à la racine du projet:
-            # project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
-            # tweety_libs_path = os.path.join(project_root, "libs", "*") # Chemin vers les JARs
-            # jpype.startJVM(classpath=[tweety_libs_path])
-            # Pour une configuration plus robuste, utilisez les chemins exacts des JARs.
-            # Exemple simplifié, en supposant que les JARs sont trouvables:
-            jpype.startJVM(convertStrings=False) # convertStrings=False est souvent recommandé
-
+            # Cette condition ne devrait plus être vraie si conftest.py fonctionne correctement.
+            print("ERREUR CRITIQUE: La JVM n'a pas été démarrée par conftest.py comme attendu dans test_load_theory.")
+            # Lever une exception pour que le test échoue clairement si la JVM n'est pas prête.
+            raise RuntimeError("JVM non démarrée par conftest.py, test_load_theory ne peut pas continuer.")
         # Importer les classes Java nécessaires de Tweety
         # Assurez-vous que les noms de package sont corrects pour votre version de Tweety
-        from net.sf.tweety.logics.pl import PlBeliefSet
-        from net.sf.tweety.logics.pl.parser import PlParser
+        from org.tweetyproject.logics.pl.syntax import PlBeliefSet
+        from org.tweetyproject.logics.pl.parser import PlParser
 
         print("JVM démarrée et classes Tweety importées.")
 
@@ -63,7 +54,7 @@ def main():
         # Tentative de chargement direct
         # Note: La signature exacte peut varier. Vérifiez la documentation de Tweety.
         # Si PlParser().parseBeliefBaseFromFile(java_file) est la bonne méthode:
-        parsed_belief_set = parser.parseBeliefBaseFromFile(java_file)
+        parsed_belief_set = parser.parseBeliefBaseFromFile(theory_file_path)
         
         # Copier les formules dans notre belief_set ou utiliser directement parsed_belief_set
         # Pour cet exemple, nous allons considérer que parsed_belief_set est ce que nous voulons.
@@ -77,18 +68,27 @@ def main():
 
         print("Test de chargement de théorie RÉUSSI.")
 
-    except Exception as e:
-        print(f"Test de chargement de théorie ÉCHOUÉ : {e}")
+    except Exception as e_main: # Renommé pour clarté
+        print(f"Test de chargement de théorie ÉCHOUÉ : {e_main}")
         import traceback
         traceback.print_exc()
-        raise # Relancer l'exception pour indiquer l'échec du test
-
+        # L'exception sera levée dans le finally si elle existe
+        
     finally:
+        if jpype.isJVMStarted():
+            try:
+                System = jpype.JClass("java.lang.System")
+                actual_classpath = System.getProperty("java.class.path")
+                print(f"DEBUG_FINALLY_CLASSPATH (test_load_theory): {actual_classpath}")
+            except Exception as e_jvm_debug_finally:
+                print(f"DEBUG_FINALLY_CLASSPATH_ERROR (test_load_theory): {e_jvm_debug_finally}")
+        
         # Optionnel: arrêter la JVM si ce script est le seul utilisateur
         # if jpype.isJVMStarted():
         #     jpype.shutdownJVM()
         #     print("JVM arrêtée.")
-        pass # Laisser la JVM active pour d'autres tests potentiels dans la même session
-
-if __name__ == "__main__":
-    main()
+        
+        # Relancer l'exception originale si elle a eu lieu pour que le test échoue
+        if 'e_main' in locals() and isinstance(e_main, Exception):
+            raise e_main # s'assure que le test échoue si une exception a été attrapée
+        pass
