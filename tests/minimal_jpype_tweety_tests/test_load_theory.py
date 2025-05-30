@@ -26,7 +26,73 @@ def main():
             # jpype.startJVM(classpath=[tweety_libs_path])
             # Pour une configuration plus robuste, utilisez les chemins exacts des JARs.
             # Exemple simplifié, en supposant que les JARs sont trouvables:
-            jpype.startJVM(convertStrings=False) # convertStrings=False est souvent recommandé
+            # Construire le chemin vers jvm.dll dynamiquement
+            project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+            jvm_dll_path = os.path.join(project_root, "portable_jdk", "jdk-17.0.15+6", "bin", "server", "jvm.dll")
+
+            if not os.path.exists(jvm_dll_path):
+                # Essayer le chemin client si le chemin serveur n'existe pas (moins courant pour les JDK récents)
+                jvm_dll_path_client = os.path.join(project_root, "portable_jdk", "jdk-17.0.15+6", "bin", "client", "jvm.dll")
+                if os.path.exists(jvm_dll_path_client):
+                    jvm_dll_path = jvm_dll_path_client
+                else:
+                    # Tenter de récupérer JAVA_HOME si défini, sinon lever une erreur plus informative
+                    java_home = os.environ.get("JAVA_HOME")
+                    if java_home:
+                        # Tenter de construire le chemin à partir de JAVA_HOME
+                        # Cela suppose une structure JDK standard
+                        potential_jvm_path_server = os.path.join(java_home, "bin", "server", "jvm.dll")
+                        potential_jvm_path_client = os.path.join(java_home, "bin", "client", "jvm.dll")
+                        if os.path.exists(potential_jvm_path_server):
+                            jvm_dll_path = potential_jvm_path_server
+                        elif os.path.exists(potential_jvm_path_client):
+                            jvm_dll_path = potential_jvm_path_client
+                        else:
+                            print(f"AVERTISSEMENT: jvm.dll non trouvée dans le JDK portable ({jvm_dll_path}) ni dans JAVA_HOME ({java_home}). Tentative de démarrage sans jvmpath explicite.")
+                            jpype.startJVM(convertStrings=False) # Tentative sans jvmpath explicite
+                            # Le reste du code continue après cet appel
+                    else:
+                        print(f"ERREUR: jvm.dll non trouvée dans le JDK portable ({jvm_dll_path}) et JAVA_HOME n'est pas défini.")
+                        # Lever une exception ou gérer l'erreur comme il convient
+                        raise FileNotFoundError(f"jvm.dll non trouvée. Vérifiez le chemin du JDK portable: {jvm_dll_path} ou configurez JAVA_HOME.")
+            
+            print(f"Utilisation de jvm.dll : {jvm_dll_path}")
+            
+            # Configurer le classpath pour les JARs de Tweety
+            tweety_libs_path_glob = os.path.join(project_root, "libs", "*")
+            # jpype.startJVM(jvm_dll_path, classpath=[tweety_libs_path_glob], convertStrings=False)
+            # Utiliser une liste de fichiers JAR explicites est plus robuste que le glob '*'
+            libs_dir = os.path.join(project_root, "libs")
+            if os.path.isdir(libs_dir):
+                tweety_jars = [os.path.join(libs_dir, f) for f in os.listdir(libs_dir) if f.endswith(".jar")]
+                if not tweety_jars:
+                    print(f"AVERTISSEMENT: Aucun fichier .jar trouvé dans {libs_dir}. Le classpath pourrait être incorrect.")
+                    # Si aucun JAR n'est trouvé, on ne définit pas de classpath explicite pour JPype,
+                    # en espérant une configuration globale ou un fallback au glob (qui a échoué).
+                    # Cela mènera probablement à une erreur, mais c'est pour être cohérent.
+                    jpype.startJVM(jvm_dll_path, convertStrings=False)
+                else:
+                    # Construire la chaîne CLASSPATH
+                    # Essayer de lire CLASSPATH depuis l'environnement et le passer explicitement
+                    env_classpath = os.environ.get("CLASSPATH")
+                    if env_classpath:
+                        print(f"Utilisation de CLASSPATH depuis l'environnement : {env_classpath}")
+                        # JPype s'attend à une liste de chemins pour l'argument classpath
+                        classpath_list = env_classpath.split(os.pathsep)
+                        jpype.startJVM(jvm_dll_path, classpath=classpath_list, convertStrings=False)
+                    else:
+                        print("AVERTISSEMENT: CLASSPATH non trouvé dans l'environnement. Tentative de démarrage sans classpath explicite.")
+                        jpype.startJVM(jvm_dll_path, convertStrings=False)
+            else:
+                print(f"ERREUR: Le répertoire libs ({libs_dir}) n'a pas été trouvé. Vérifiez la structure du projet.")
+                # Essayer de lire CLASSPATH depuis l'environnement si libs n'est pas trouvé
+                env_classpath = os.environ.get("CLASSPATH")
+                if env_classpath:
+                    print(f"Utilisation de CLASSPATH depuis l'environnement (fallback libs non trouvé): {env_classpath}")
+                    jpype.startJVM(jvm_dll_path, classpath=[env_classpath], convertStrings=False) # Passer comme liste
+                else:
+                    print("AVERTISSEMENT: CLASSPATH non trouvé dans l'environnement et répertoire libs non trouvé.")
+                    jpype.startJVM(jvm_dll_path, convertStrings=False) # Démarrer sans classpath explicite
 
         # Importer les classes Java nécessaires de Tweety
         # Assurez-vous que les noms de package sont corrects pour votre version de Tweety

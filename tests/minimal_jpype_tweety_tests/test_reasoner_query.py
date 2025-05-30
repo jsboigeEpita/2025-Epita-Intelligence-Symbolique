@@ -8,8 +8,50 @@ def main():
         print("Démarrage du test du raisonneur et de requête simple...")
 
         if not jpype.isJVMStarted():
-            # Adaptez le classpath si nécessaire.
-            jpype.startJVM(convertStrings=False)
+            project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+            jvm_dll_path = os.path.join(project_root, "portable_jdk", "jdk-17.0.15+6", "bin", "server", "jvm.dll")
+
+            if not os.path.exists(jvm_dll_path):
+                jvm_dll_path_client = os.path.join(project_root, "portable_jdk", "jdk-17.0.15+6", "bin", "client", "jvm.dll")
+                if os.path.exists(jvm_dll_path_client):
+                    jvm_dll_path = jvm_dll_path_client
+                else:
+                    java_home = os.environ.get("JAVA_HOME")
+                    if java_home:
+                        potential_jvm_path_server = os.path.join(java_home, "bin", "server", "jvm.dll")
+                        potential_jvm_path_client = os.path.join(java_home, "bin", "client", "jvm.dll")
+                        if os.path.exists(potential_jvm_path_server):
+                            jvm_dll_path = potential_jvm_path_server
+                        elif os.path.exists(potential_jvm_path_client):
+                            jvm_dll_path = potential_jvm_path_client
+                        else:
+                            print(f"AVERTISSEMENT: jvm.dll non trouvée dans le JDK portable ({jvm_dll_path}) ni dans JAVA_HOME ({java_home}).")
+                            # On ne spécifie pas de jvm_dll_path si non trouvé, JPype essaiera de trouver par défaut
+                            jvm_dll_path = None
+                    else:
+                        print(f"ERREUR: jvm.dll non trouvée dans le JDK portable ({jvm_dll_path}) et JAVA_HOME n'est pas défini.")
+                        jvm_dll_path = None # Laisser JPype essayer de trouver par défaut ou échouer
+
+            if jvm_dll_path:
+                 print(f"Utilisation de jvm.dll : {jvm_dll_path}")
+            else:
+                print("Aucun chemin jvm.dll explicite fourni à JPype. Tentative de détection automatique.")
+
+            # Essayer de lire CLASSPATH depuis l'environnement et le passer explicitement
+            env_classpath = os.environ.get("CLASSPATH")
+            if env_classpath:
+                print(f"Utilisation de CLASSPATH depuis l'environnement : {env_classpath}")
+                classpath_list = env_classpath.split(os.pathsep)
+                if jvm_dll_path:
+                    jpype.startJVM(jvm_dll_path, classpath=classpath_list, convertStrings=False)
+                else:
+                    jpype.startJVM(classpath=classpath_list, convertStrings=False) # Sans jvm_dll_path explicite
+            else:
+                print("AVERTISSEMENT: CLASSPATH non trouvé dans l'environnement. Tentative de démarrage sans classpath explicite.")
+                if jvm_dll_path:
+                    jpype.startJVM(jvm_dll_path, convertStrings=False)
+                else:
+                    jpype.startJVM(convertStrings=False) # Sans jvm_dll_path et sans classpath explicite
 
         from net.sf.tweety.logics.pl import PlBeliefSet
         from net.sf.tweety.logics.pl.parser import PlParser
