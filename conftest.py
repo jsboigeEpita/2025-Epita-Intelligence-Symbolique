@@ -128,13 +128,13 @@ def belief_revision_classes():
             "Negation": jpype.JClass("org.tweetyproject.logics.pl.syntax.Negation", loader=loader_to_use),
             "KernelContractionOperator": jpype.JClass("org.tweetyproject.beliefdynamics.kernels.KernelContractionOperator", loader=loader_to_use),
             "RandomIncisionFunction": jpype.JClass("org.tweetyproject.beliefdynamics.kernels.RandomIncisionFunction", loader=loader_to_use),
-            "DefaultMultipleBaseExpansionOperator": jpype.JClass("org.tweetyproject.beliefdynamics.operators.DefaultMultipleBaseExpansionOperator", loader=loader_to_use),
-            "LeviMultipleBaseRevisionOperator": jpype.JClass("org.tweetyproject.beliefdynamics.operators.LeviMultipleBaseRevisionOperator", loader=loader_to_use),
+            "DefaultMultipleBaseExpansionOperator": jpype.JClass("org.tweetyproject.beliefdynamics.DefaultMultipleBaseExpansionOperator", loader=loader_to_use), # Correction du chemin
+            "LeviMultipleBaseRevisionOperator": jpype.JClass("org.tweetyproject.beliefdynamics.LeviMultipleBaseRevisionOperator", loader=loader_to_use), # Correction du chemin
             "CrMasBeliefSet": jpype.JClass("org.tweetyproject.beliefdynamics.mas.CrMasBeliefSet", loader=loader_to_use),
             "InformationObject": jpype.JClass("org.tweetyproject.beliefdynamics.mas.InformationObject", loader=loader_to_use),
             "CrMasRevisionWrapper": jpype.JClass("org.tweetyproject.beliefdynamics.mas.CrMasRevisionWrapper", loader=loader_to_use),
-            "CrMasSimpleRevisionOperator": jpype.JClass("org.tweetyproject.beliefdynamics.mas.CrMasSimpleRevisionOperator", loader=loader_to_use),
-            "CrMasArgumentativeRevisionOperator": jpype.JClass("org.tweetyproject.beliefdynamics.mas.CrMasArgumentativeRevisionOperator", loader=loader_to_use),
+            "CrMasSimpleRevisionOperator": jpype.JClass("org.tweetyproject.beliefdynamics.operators.CrMasSimpleRevisionOperator", loader=loader_to_use), # Correction du chemin
+            "CrMasArgumentativeRevisionOperator": jpype.JClass("org.tweetyproject.beliefdynamics.operators.CrMasArgumentativeRevisionOperator", loader=loader_to_use), # Correction du chemin
             "DummyAgent": jpype.JClass("org.tweetyproject.agents.DummyAgent", loader=loader_to_use),
             "Order": jpype.JClass("org.tweetyproject.commons.util.Order", loader=loader_to_use),
             "PlSignature": jpype.JClass("org.tweetyproject.logics.pl.syntax.PlSignature", loader=loader_to_use),
