@@ -594,24 +594,48 @@ def initialize_jvm(
             logger.warning("   (JPype n'a pas trouvé de JVM par défaut - dépendra de JAVA_HOME)")
             jvm_path_final = None
         classpath_separator = os.pathsep
-        jar_list = sorted([str(p.resolve()) for p in LIB_DIR.glob("*.jar")])
-        if not jar_list:
-             logger.error("❌ Aucun JAR trouvé dans le classpath après téléchargement/vérification ! Démarrage annulé.")
+        # Construire la liste des JARs principaux depuis lib_dir_path (qui est LIB_DIR ici)
+        main_jar_list = sorted([str(p.resolve()) for p in LIB_DIR.glob("*.jar")])
+        logger.info(f"   JARs principaux trouvés dans '{LIB_DIR}': {len(main_jar_list)}")
+
+        # Chemin vers les JARs de test
+        # PROJECT_ROOT_DIR doit être accessible ici (importé depuis .paths)
+        test_libs_dir_path_obj = PROJECT_ROOT_DIR / "argumentation_analysis" / "tests" / "resources" / "libs"
+        test_jar_list = []
+        if test_libs_dir_path_obj.is_dir():
+            test_jar_list = sorted([str(p.resolve()) for p in test_libs_dir_path_obj.glob("*.jar")])
+            logger.info(f"   JARs de test trouvés dans '{test_libs_dir_path_obj}': {len(test_jar_list)}")
+        else:
+            logger.info(f"   Répertoire des JARs de test '{test_libs_dir_path_obj}' non trouvé ou non accessible.")
+
+        # Combiner les listes de JARs, en donnant la priorité aux JARs de test
+        main_jars_map = {pathlib.Path(p).name: p for p in main_jar_list}
+        test_jars_map = {pathlib.Path(p).name: p for p in test_jar_list}
+        
+        final_jars_map = {**main_jars_map, **test_jars_map} # Les JARs de test écrasent les JARs principaux pour les mêmes noms
+        
+        combined_jar_list = sorted(list(final_jars_map.values()))
+        logger.info(f"   Nombre total de JARs après fusion (priorité aux tests): {len(combined_jar_list)}")
+
+        if not combined_jar_list:
+             logger.error("❌ Aucun JAR trouvé (ni principal, ni de test après fusion) pour le classpath ! Démarrage annulé.")
              return False
         
-        # Construire la chaîne de classpath
-        classpath_str = classpath_separator.join(jar_list)
-        logger.info(f"   Classpath construit ({len(jar_list)} JARs depuis '{LIB_DIR}'). Valeur: {classpath_str}")
+        # Construire la chaîne de classpath pour l'environnement et le log
+        classpath_str_for_env_and_log = classpath_separator.join(combined_jar_list)
+        logger.info(f"   Classpath combiné construit ({len(combined_jar_list)} JARs). Valeur pour env: {classpath_str_for_env_and_log}")
 
         # Définir la variable d'environnement CLASSPATH
         try:
-            os.environ['CLASSPATH'] = classpath_str
-            logger.info(f"   Variable d'environnement CLASSPATH définie à: {classpath_str}")
+            os.environ['CLASSPATH'] = classpath_str_for_env_and_log
+            logger.info(f"   Variable d'environnement CLASSPATH définie.")
         except Exception as e_set_classpath_env:
             logger.error(f"   ❌ Impossible de définir la variable d'environnement CLASSPATH: {e_set_classpath_env}")
             # Continuer quand même, JPype pourrait la trouver via d'autres moyens ou le paramètre direct
 
-        jvm_args = [] # Initialiser jvm_args
+        # Utiliser combined_jar_list pour le paramètre classpath de startJVM
+        # jvm_args sera initialisé plus bas
+        jvm_args = []
         if NATIVE_LIBS_DIR.exists() and any(NATIVE_LIBS_DIR.iterdir()):
             native_path_arg = f"-Djava.library.path={NATIVE_LIBS_DIR.resolve()}"
             jvm_args.append(native_path_arg)
@@ -661,11 +685,11 @@ def initialize_jvm(
         
         if jvm_path_to_use_explicit:
             # On passe toujours jar_list au paramètre classpath, même si CLASSPATH est défini, par sécurité.
-            jpype.startJVM(jvm_path_to_use_explicit, classpath=jar_list, *jvm_args, convertStrings=False, ignoreUnrecognized=True)
+            jpype.startJVM(jvm_path_to_use_explicit, classpath=combined_jar_list, *jvm_args, convertStrings=False, ignoreUnrecognized=True)
         else:
             logger.warning("   Aucun chemin JVM explicite fourni à startJVM, utilisation de la détection interne de JPype.")
-            # On passe toujours jar_list au paramètre classpath
-            jpype.startJVM(classpath=jar_list, *jvm_args, convertStrings=False, ignoreUnrecognized=True)
+            # On passe toujours combined_jar_list au paramètre classpath
+            jpype.startJVM(classpath=combined_jar_list, *jvm_args, convertStrings=False, ignoreUnrecognized=True)
             
         if hasattr(jpype, 'imports') and jpype.imports is not None:
             try:
