@@ -171,3 +171,7 @@ def dialogue_classes():
             "DefaultStrategy": jpype.JClass("org.tweetyproject.agents.dialogues.strategies.DefaultStrategy", loader=loader_to_use),
         }
     except Exception as e: pytest.fail(f"Erreur chargement dialogue_classes: {e}")
+# Forcer anyio à utiliser uniquement le backend asyncio
+@pytest.fixture(autouse=True)
+def anyio_backend():
+    return "asyncio"
