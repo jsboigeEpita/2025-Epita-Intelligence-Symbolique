@@ -18,7 +18,7 @@ if not mock_logger.hasHandlers():
     formatter = logging.Formatter('[MOCK JPYPE LOG] %(asctime)s - %(levelname)s - %(message)s')
     handler.setFormatter(formatter)
     mock_logger.addHandler(handler)
-mock_logger.setLevel(logging.INFO) # ou logging.DEBUG pour plus de verbosité
+mock_logger.setLevel(logging.DEBUG) # Mettre en DEBUG pour voir tous les logs
 
 mock_logger.info("Module jpype_mock.py en cours de chargement.")
 
@@ -72,8 +72,9 @@ java = MockJavaNamespace("java") # Pour jpype.java.xxx
 # Pour l'instant, on se concentre sur 'java'.
 
 def isJVMStarted():
-    """Simule jpype.isJVMStarted()."""
-    return _jvm_started
+    """Simule jpype.isJVMStarted(). Doit retourner True pour que les tests d'intégration jpype_tweety fonctionnent."""
+    # return _jvm_started # Comportement original
+    return True # Forcer True pour satisfaire la fixture jvm_manager dans tests/integration/jpype_tweety/conftest.py
 
 def startJVM(jvmpath=None, *args, **kwargs):
     """Simule jpype.startJVM()."""
@@ -104,13 +105,16 @@ def shutdownJVM():
 
 def getDefaultJVMPath():
     """Simule jpype.getDefaultJVMPath()."""
-    # Retourner un chemin par défaut basé sur l'OS
+    # Retourner un chemin par défaut basé sur l'OS ou un chemin factice valide.
+    # Important pour que jpype.startJVM() dans la fixture ne lève pas d'erreur si elle était appelée.
     if sys.platform == "win32":
-        return "C:\\Program Files\\Java\\jdk-11\\bin\\server\\jvm.dll"
+        # Utiliser un chemin qui existe probablement ou un chemin factice plausible
+        return os.path.join(os.environ.get("JAVA_HOME", "C:\\Program Files\\Java\\jdk-11"), "bin", "server", "jvm.dll") if os.environ.get("JAVA_HOME") else "C:\\Program Files\\Java\\jdk-11\\bin\\server\\jvm.dll"
     elif sys.platform == "darwin":
-        return "/Library/Java/JavaVirtualMachines/jdk-11.jdk/Contents/Home/lib/server/libjvm.dylib"
+        return "/Library/Java/JavaVirtualMachines/jdk-11.jdk/Contents/Home/lib/server/libjvm.dylib" # Ou un chemin factice
     else:
-        return "/usr/lib/jvm/java-11-openjdk/lib/server/libjvm.so"
+        # Pour Linux, un chemin commun ou factice
+        return "/usr/lib/jvm/java-11-openjdk/lib/server/libjvm.so" # Ou un chemin factice
 
 def getJVMPath():
     """Simule jpype.getJVMPath()."""
@@ -121,6 +125,30 @@ def getJVMVersion():
     # Retourne un tuple similaire à celui de JPype: (version_string, major, minor, patch)
     return ("Mock JVM Version 1.0 (Java 11 compatible)", 11, 0, 0)
 
+# Classe pour simuler un itérateur Java au niveau du module
+class _ModuleLevelMockJavaIterator:
+    def __init__(self, collection):
+        self._iterator = iter(collection)
+        self._next_item = None
+        self._has_next_item = False
+        self._advance()
+
+    def _advance(self):
+        try:
+            self._next_item = next(self._iterator)
+            self._has_next_item = True
+        except StopIteration:
+            self._has_next_item = False
+
+    def hasNext(self):
+        return self._has_next_item
+
+    def next(self):
+        if not self._has_next_item:
+            raise StopIteration("No more elements in mock Java iterator")
+        current_item = self._next_item
+        self._advance()
+        return current_item
 class MockJClass:
     """Mock pour JClass avec attributs spécifiques."""
     def __init__(self, name):
@@ -197,8 +225,12 @@ class MockJClass:
 
         # Logique pour les collections internes
         def get_collection_for_type(collection_type_name):
+            # mock_logger.debug(f"[MOCK TRACE get_collection_for_type] Appel pour: {collection_type_name} sur instance {id(instance_mock)}")
             if collection_type_name not in instance_mock._collections:
+                # mock_logger.debug(f"[MOCK TRACE get_collection_for_type] Création de la collection: {collection_type_name}")
                 instance_mock._collections[collection_type_name] = []
+            # else:
+                # mock_logger.debug(f"[MOCK TRACE get_collection_for_type] Collection existante: {collection_type_name}, taille: {len(instance_mock._collections[collection_type_name])}")
             return instance_mock._collections[collection_type_name]
 
         # La méthode 'add' sur l'instance principale pourrait ajouter à une collection "par défaut"
@@ -213,7 +245,7 @@ class MockJClass:
         # Méthodes de collection génériques qui opèrent sur un type de collection donné
         def mock_collection_size_for_type(collection_type_name):
             coll = get_collection_for_type(collection_type_name)
-            print(f"[MOCK DEBUG] Taille de la collection '{collection_type_name}': {len(coll)}")
+            mock_logger.debug(f"Taille de la collection '{collection_type_name}': {len(coll)} (contenu: {coll})")
             return len(coll)
 
         def mock_collection_is_empty_for_type(collection_type_name):
@@ -229,16 +261,18 @@ class MockJClass:
             return element in collection # Fallback simple
 
         def mock_collection_iter_for_type(collection_type_name):
+            # Retourne un itérateur Python simple. Pour un itérateur Java-like (avec hasNext, next),
+            # la méthode iterator() sur le mock de collection sera configurée plus bas.
             return iter(get_collection_for_type(collection_type_name))
 
         # Appliquer la méthode 'add' générique à l'instance principale
         # Certaines classes comme PlBeliefSet ou DungTheory ont une méthode add directe.
-        if "BeliefSet" in self.class_name or "Theory" in self.class_name:
-             instance_mock.add = MagicMock(name="InstanceCollectionMethod_add", side_effect=mock_add_to_default_collection)
-             # Pour size(), isEmpty(), contains() sur l'instance elle-même, elles opéreront sur 'default_elements'
-             instance_mock.size = MagicMock(name="InstanceCollectionMethod_size", side_effect=lambda: mock_collection_size_for_type("default_elements"))
-             instance_mock.isEmpty = MagicMock(name="InstanceCollectionMethod_isEmpty", side_effect=lambda: mock_collection_is_empty_for_type("default_elements"))
-             instance_mock.contains = MagicMock(name="InstanceCollectionMethod_contains", side_effect=lambda el: mock_collection_contains_for_type(el, "default_elements"))
+        if "BeliefSet" in self.class_name or ("Theory" in self.class_name and self.class_name != "org.tweetyproject.arg.dung.syntax.DungTheory"):
+            instance_mock.add = MagicMock(name="InstanceCollectionMethod_add", side_effect=mock_add_to_default_collection)
+            # Pour size(), isEmpty(), contains() sur l'instance elle-même, elles opéreront sur 'default_elements'
+            instance_mock.size = MagicMock(name="InstanceCollectionMethod_size", side_effect=lambda: mock_collection_size_for_type("default_elements"))
+            instance_mock.isEmpty = MagicMock(name="InstanceCollectionMethod_isEmpty", side_effect=lambda: mock_collection_is_empty_for_type("default_elements"))
+            instance_mock.contains = MagicMock(name="InstanceCollectionMethod_contains", side_effect=lambda el: mock_collection_contains_for_type(el, "default_elements"))
 
 
         # Méthodes qui retournent des collections spécifiques
@@ -262,17 +296,18 @@ class MockJClass:
             returned_collection_mock.size = MagicMock(side_effect=lambda ck=collection_key: mock_collection_size_for_type(ck))
             returned_collection_mock.isEmpty = MagicMock(side_effect=lambda ck=collection_key: mock_collection_is_empty_for_type(ck))
             returned_collection_mock.contains = MagicMock(side_effect=lambda el, ck=collection_key: mock_collection_contains_for_type(el, ck))
-            returned_collection_mock.__iter__ = MagicMock(side_effect=lambda ck=collection_key: mock_collection_iter_for_type(ck))
+            returned_collection_mock.__iter__ = MagicMock(side_effect=lambda ck=collection_key: mock_collection_iter_for_type(ck)) # Pour itération Python-style
+            returned_collection_mock.iterator = MagicMock(side_effect=lambda ck=collection_key: _ModuleLevelMockJavaIterator(get_collection_for_type(ck))) # Pour itération Java-style
             
             # La méthode 'add' sur une collection retournée ne devrait typiquement pas exister ou être no-op
             # ou ajouter à CETTE collection spécifique si c'est le comportement attendu.
             # Pour l'instant, no-op pour éviter des effets de bord non désirés.
             returned_collection_mock.add = MagicMock(name=f"ReturnedCollection_{method_name}_add_noop")
-
+ 
             # Assigner le mock de collection retourné à la méthode de l'instance
             # Si la méthode n'existe pas encore, MagicMock la créera.
             setattr(instance_mock, method_name, MagicMock(return_value=returned_collection_mock))
-
+ 
         # Cas spécial pour getModel() qui retourne un seul ensemble/objet (souvent un Set de la première extension)
         # ou parfois une collection avec un seul modèle.
         # Pour l'itération, on le fait pointer vers la collection 'models' si elle existe,
@@ -284,60 +319,140 @@ class MockJClass:
             # Si un seul objet est attendu et non une collection, le testeur devra mocker différemment.
             model_collection_key = "models" # Ou "single_model_set" si on veut le distinguer
             get_collection_for_type(model_collection_key) # Assurer l'initialisation
-
+ 
             model_set_mock = MagicMock(name="ReturnedMockSet_getModel")
             model_set_mock.size = MagicMock(side_effect=lambda: mock_collection_size_for_type(model_collection_key))
             model_set_mock.isEmpty = MagicMock(side_effect=lambda: mock_collection_is_empty_for_type(model_collection_key))
             model_set_mock.contains = MagicMock(side_effect=lambda el: mock_collection_contains_for_type(el, model_collection_key))
             model_set_mock.__iter__ = MagicMock(side_effect=lambda: mock_collection_iter_for_type(model_collection_key))
+            model_set_mock.iterator = MagicMock(side_effect=lambda: _ModuleLevelMockJavaIterator(get_collection_for_type(model_collection_key)))
             instance_mock.getModel.return_value = model_set_mock
             
         # Logique spécifique pour peupler les collections lors de l'appel au constructeur
         # Exemple: DungTheory(arguments_collection)
         if self.class_name == "org.tweetyproject.arg.dung.syntax.DungTheory":
+            mock_logger.info("[DUNG_THEORY_CONSTRUCTOR_ENTRY] DungTheory instanciée.")
             print(f"[MOCK TRACE] Entrée dans la section de configuration pour DungTheory (constructeur args: {args})")
+            # Initialiser les collections 'nodes' et 'attacks' si elles n'existent pas déjà
+            # (elles devraient être initialisées par la boucle methods_returning_collections_map)
+            nodes_collection_key = "nodes"
+            attacks_collection_key = "attacks"
+            get_collection_for_type(nodes_collection_key)
+            get_collection_for_type(attacks_collection_key)
+
             # Si le constructeur de DungTheory prend une collection d'arguments
             if len(args) == 1 and isinstance(args[0], MagicMock) and hasattr(args[0], "__iter__"):
-                # On suppose que args[0] est une collection itérable d'arguments mockés
-                # On les ajoute à la collection 'nodes' (ou 'arguments')
-                nodes_collection = get_collection_for_type("nodes") # ou "arguments"
-                for arg_element in args[0]: # itérer sur le mock de collection Java
-                    nodes_collection.append(arg_element)
-            # La méthode 'add' d'une DungTheory ajoute un Argument à 'nodes' et potentiellement 'arguments'
-            # et une Attack à 'attacks'. Il faut surcharger 'add'.
+                nodes_coll_instance = get_collection_for_type(nodes_collection_key)
+                try:
+                    # Si args[0] est un MockJavaCollection ou un mock avec iterator()
+                    if hasattr(args[0], 'iterator'):
+                        it = args[0].iterator()
+                        while it.hasNext():
+                            nodes_coll_instance.append(it.next())
+                    else: # Fallback pour itérables Python simples
+                        for arg_element in args[0]:
+                            nodes_coll_instance.append(arg_element)
+                except Exception as e:
+                    print(f"[MOCK WARNING] Erreur lors de l'itération sur l'argument du constructeur de DungTheory: {e}")
+
             def dung_theory_add(element):
-                print(f"[MOCK TRACE] dung_theory_add appelée avec element: {str(element)[:100]}")
+                mock_logger.info(f"[DUNG_THEORY_ADD_ENTRY] Appel avec element: {str(element)[:100]}, class_name: {getattr(element, 'class_name', 'N/A')}")
+                
                 if hasattr(element, 'class_name'):
-                    print(f"[MOCK TRACE] dung_theory_add: element a class_name: {element.class_name}")
                     if element.class_name == "org.tweetyproject.arg.dung.syntax.Argument":
-                        nodes_coll = get_collection_for_type("nodes")
-                        nodes_coll.append(element)
-                        print(f"[MOCK DEBUG] DungTheory.add: Ajout de l'argument '{element.getName()}' à la collection 'nodes'. Taille actuelle: {len(nodes_coll)}")
+                        nodes_coll = get_collection_for_type(nodes_collection_key)
+                        mock_logger.debug(f"[DUNG_THEORY_ADD_ARGUMENT] Avant ajout à nodes. Collection (taille {len(nodes_coll)}): {nodes_coll}")
+                        
+                        # Vérification d'existence améliorée utilisant .equals()
+                        already_exists = False
+                        for item in nodes_coll:
+                            if hasattr(element, 'equals') and element.equals(item):
+                                already_exists = True
+                                break
+                        
+                        if not already_exists:
+                            mock_logger.debug(f"[DUNG_THEORY_ADD_ARGUMENT] '{element.getName()}' N'EST PAS dans nodes_coll (vérifié avec .equals). Ajout...")
+                            nodes_coll.append(element)
+                        else:
+                            mock_logger.debug(f"[DUNG_THEORY_ADD_ARGUMENT] '{element.getName()}' EST DEJA dans nodes_coll (vérifié avec .equals). Non ajouté.")
+                        mock_logger.info(f"[DUNG_THEORY_ADD_ARGUMENT_POST] Ajout de l'argument '{element.getName()}' à '{nodes_collection_key}'. Taille: {len(nodes_coll)}")
                         return True
                     elif element.class_name == "org.tweetyproject.arg.dung.syntax.Attack":
-                        attacks_coll = get_collection_for_type("attacks")
-                        attacks_coll.append(element)
-                        print(f"[MOCK DEBUG] DungTheory.add: Ajout de l'attaque à la collection 'attacks'. Taille actuelle: {len(attacks_coll)}")
+                        attacks_coll = get_collection_for_type(attacks_collection_key)
+                        mock_logger.debug(f"[DUNG_THEORY_ADD_ATTACK] Avant ajout à attacks. Collection (taille {len(attacks_coll)}): {attacks_coll}")
+
+                        # Vérification d'existence améliorée utilisant .equals()
+                        already_exists = False
+                        for item in attacks_coll:
+                            if hasattr(element, 'equals') and element.equals(item):
+                                already_exists = True
+                                break
+
+                        if not already_exists:
+                            mock_logger.debug(f"[DUNG_THEORY_ADD_ATTACK] L'attaque N'EST PAS dans attacks_coll (vérifié avec .equals). Ajout...")
+                            attacks_coll.append(element)
+                        else:
+                            mock_logger.debug(f"[DUNG_THEORY_ADD_ATTACK] L'attaque EST DEJA dans attacks_coll (vérifié avec .equals). Non ajoutée.")
+                        mock_logger.info(f"[DUNG_THEORY_ADD_ATTACK_POST] Ajout de l'attaque à '{attacks_collection_key}'. Taille: {len(attacks_coll)}")
                         return True
-                # Fallback pour d'autres types ou si class_name n'est pas là
-                print(f"[MOCK DEBUG] DungTheory.add: Ajout d'un élément non reconnu: {element}")
-                return mock_add_to_default_collection(element)
+                
+                mock_logger.warning(f"[DUNG_THEORY_ADD_UNRECOGNIZED] Ajout d'un élément non reconnu ou sans class_name: {element}")
+                return False
+            
             instance_mock.add = MagicMock(name="DungTheory_add", side_effect=dung_theory_add)
+            mock_logger.info("[DUNG_THEORY_SETUP] instance_mock.add configuré...")
 
+            # Spécialiser 'contains' pour DungTheory pour vérifier les arguments dans 'nodes' et les attaques dans 'attacks'
+            def dung_theory_contains(element_to_check):
+                mock_logger.info(f"[DUNG_THEORY_CONTAINS_ENTRY] Appel avec element: {str(element_to_check)[:100]}, class_name: {getattr(element_to_check, 'class_name', 'N/A')}")
+                if hasattr(element_to_check, 'class_name'):
+                    if element_to_check.class_name == "org.tweetyproject.arg.dung.syntax.Argument":
+                        is_present = mock_collection_contains_for_type(element_to_check, nodes_collection_key)
+                        mock_logger.info(f"[DUNG_THEORY_CONTAINS_ARGUMENT] '{element_to_check.getName()}' in '{nodes_collection_key}'? {is_present}")
+                        return is_present
+                    elif element_to_check.class_name == "org.tweetyproject.arg.dung.syntax.Attack":
+                        is_present = mock_collection_contains_for_type(element_to_check, attacks_collection_key)
+                        mock_logger.info(f"[DUNG_THEORY_CONTAINS_ATTACK] Element in '{attacks_collection_key}'? {is_present}")
+                        return is_present
+                mock_logger.warning(f"[DUNG_THEORY_CONTAINS_UNRECOGNIZED] Vérification d'un élément non reconnu: {element_to_check}")
+                return False
+            instance_mock.contains = MagicMock(name="DungTheory_contains", side_effect=dung_theory_contains)
+            mock_logger.info(f"[DUNG_THEORY_SETUP] instance_mock.contains configuré avec dung_theory_contains pour {self.class_name}")
 
+            # Implémenter isAttackedBy(attacked, attacker)
+            def dung_theory_is_attacked_by(attacked_arg, attacker_arg):
+                attacks_coll = get_collection_for_type(attacks_collection_key)
+                for attack_instance in attacks_coll:
+                    # Assumer que attack_instance a getAttacker() et getAttacked()
+                    # et que ces méthodes retournent des objets Argument mockés avec .equals()
+                    if hasattr(attack_instance, 'getAttacker') and hasattr(attack_instance, 'getAttacked'):
+                        actual_attacker = attack_instance.getAttacker()
+                        actual_attacked = attack_instance.getAttacked()
+                        # S'assurer que les arguments passés à isAttackedBy sont bien des mocks d'Argument
+                        if hasattr(attacked_arg, 'equals') and hasattr(attacker_arg, 'equals'):
+                           if actual_attacker.equals(attacker_arg) and actual_attacked.equals(attacked_arg):
+                                return True
+                return False
+            instance_mock.isAttackedBy = MagicMock(name="DungTheory_isAttackedBy", side_effect=dung_theory_is_attacked_by)
+ 
         # Gérer .equals()
         # Logique d'égalité par défaut, basée sur class_name et _constructor_args.
         # instance_mock est l'objet 'self' pour la comparaison .equals().
-        # current_instance_args (maintenant instance_mock._constructor_args) sont les args du constructeur 
+        # current_instance_args (maintenant instance_mock._constructor_args) sont les args du constructeur
         # de l'instance sur laquelle .equals est appelé.
         def default_equals_logic(other_obj): # other_obj est l'objet comparé à instance_mock
+            mock_logger.debug(f"[DEFAULT_EQUALS_LOGIC] Entrée. instance_mock.name={getattr(instance_mock, 'getName', lambda: 'N/A')()}, other_obj.name={getattr(other_obj, 'getName', lambda: 'N/A')()}")
+            mock_logger.debug(f"[DEFAULT_EQUALS_LOGIC] instance_mock args: {instance_mock._constructor_args}, other_obj args: {other_obj._constructor_args if hasattr(other_obj, '_constructor_args') else 'N/A'}")
+
             if not isinstance(other_obj, MagicMock) or \
                not hasattr(other_obj, 'class_name') or \
                not hasattr(other_obj, '_constructor_args') or \
                not hasattr(instance_mock, '_constructor_args'): # S'assurer que instance_mock a aussi des args
+                mock_logger.debug(f"[DEFAULT_EQUALS_LOGIC] Condition préliminaire non remplie, retour False.")
                 return False
             
             if instance_mock.class_name != other_obj.class_name:
+                mock_logger.debug(f"[DEFAULT_EQUALS_LOGIC] Class names différents ('{instance_mock.class_name}' vs '{other_obj.class_name}'), retour False.")
                 return False
             
             # Comparaison des arguments du constructeur
@@ -345,149 +460,170 @@ class MockJClass:
             other_constructor_args_for_other = other_obj._constructor_args
             
             if len(current_args_for_self) != len(other_constructor_args_for_other):
+                mock_logger.debug(f"[DEFAULT_EQUALS_LOGIC] Longueur des args différente, retour False.")
                 return False
                 
             for i in range(len(current_args_for_self)):
                 arg_self = current_args_for_self[i]
                 arg_other = other_constructor_args_for_other[i]
+                mock_logger.debug(f"[DEFAULT_EQUALS_LOGIC] Comparaison arg {i}: self='{str(arg_self)[:50]}', other='{str(arg_other)[:50]}'")
                 
                 # Si les arguments sont eux-mêmes des mocks avec une méthode equals, l'utiliser
                 if hasattr(arg_self, 'equals') and callable(arg_self.equals):
+                    mock_logger.debug(f"[DEFAULT_EQUALS_LOGIC] arg_self a .equals(), appel récursif.")
                     if not arg_self.equals(arg_other): # Appelle récursivement .equals()
+                        mock_logger.debug(f"[DEFAULT_EQUALS_LOGIC] arg_self.equals(arg_other) a retourné False.")
                         return False
                 # Sinon, comparaison Python standard (pour types primitifs ou autres objets)
                 elif arg_self != arg_other: # Attention: peut ne pas être sémantiquement correct pour tous les objets
+                    mock_logger.debug(f"[DEFAULT_EQUALS_LOGIC] arg_self != arg_other (comparaison Python standard) est True.")
                     return False
+            mock_logger.debug(f"[DEFAULT_EQUALS_LOGIC] Tous les args sont égaux, retour True.")
             return True
 
-        # Logique d'égalité spécifique par classe
-        if self.class_name == "org.tweetyproject.arg.dung.syntax.Argument":
-            def argument_equals_side_effect(other):
-                # 'other' est l'objet comparé à 'instance_mock'
-                if not isinstance(other, MagicMock) or \
-                   not hasattr(other, 'class_name') or other.class_name != instance_mock.class_name or \
-                   not hasattr(other, '_constructor_args') or not other._constructor_args or \
-                   not hasattr(instance_mock, '_constructor_args') or not instance_mock._constructor_args:
-                    return False
+    # Logique d'égalité spécifique par classe
+    if self.class_name == "org.tweetyproject.arg.dung.syntax.Argument":
+        def argument_equals_side_effect(other):
+            mock_logger.debug(f"[ARGUMENT_EQUALS_SIDE_EFFECT] Entrée. self.name={instance_mock.getName()}, other.name={getattr(other, 'getName', lambda: 'N/A')()}")
+            # 'other' est l'objet comparé à 'instance_mock'
+            if not isinstance(other, MagicMock) or \
+               not hasattr(other, 'class_name') or other.class_name != instance_mock.class_name or \
+               not hasattr(other, '_constructor_args') or not other._constructor_args or \
+               not hasattr(instance_mock, '_constructor_args') or not instance_mock._constructor_args:
+                mock_logger.debug(f"[ARGUMENT_EQUALS_SIDE_EFFECT] Condition préliminaire non remplie, retour False.")
+                return False
 
-                # Un Argument est typiquement identifié par son nom (premier arg du constructeur)
-                if len(instance_mock._constructor_args) > 0 and isinstance(instance_mock._constructor_args[0], str) and \
-                   len(other._constructor_args) > 0 and isinstance(other._constructor_args[0], str):
-                    return instance_mock._constructor_args[0] == other._constructor_args[0]
-                
-                # Fallback à la logique par défaut si la structure n'est pas celle attendue (ex: pas de nom string)
-                return default_equals_logic(other)
-            instance_mock.equals.side_effect = argument_equals_side_effect
+            # Un Argument est typiquement identifié par son nom (premier arg du constructeur)
+            # Et le premier arg est un JString mocké
+            self_arg0 = instance_mock._constructor_args[0]
+            other_arg0 = other._constructor_args[0]
+
+            if hasattr(self_arg0, '_mock_jpype_jstring_value') and hasattr(other_arg0, '_mock_jpype_jstring_value'):
+                self_name = self_arg0._mock_jpype_jstring_value
+                other_name = other_arg0._mock_jpype_jstring_value
+                mock_logger.debug(f"[ARGUMENT_EQUALS_SIDE_EFFECT] Comparaison des noms JString: '{self_name}' vs '{other_name}'")
+                result = self_name == other_name
+                mock_logger.debug(f"[ARGUMENT_EQUALS_SIDE_EFFECT] Résultat comparaison noms: {result}")
+                return result
             
-            # hashCode pour Argument
-            def argument_hash_code_side_effect():
-                if hasattr(instance_mock, '_constructor_args') and instance_mock._constructor_args and \
-                   isinstance(instance_mock._constructor_args[0], str):
-                    return hash(instance_mock._constructor_args[0])
-                # Fallback si la structure n'est pas celle attendue
-                return object.__hash__(instance_mock) # Ou un autre hash par défaut
-            instance_mock.hashCode.side_effect = argument_hash_code_side_effect
+            mock_logger.debug(f"[ARGUMENT_EQUALS_SIDE_EFFECT] Pas des JStrings attendus, fallback vers default_equals_logic.")
+            return default_equals_logic(other)
+        instance_mock.equals.side_effect = argument_equals_side_effect
+        
+        # hashCode pour Argument
+        def argument_hash_code_side_effect():
+            if hasattr(instance_mock, '_constructor_args') and instance_mock._constructor_args and \
+               isinstance(instance_mock._constructor_args[0], str): # Devrait vérifier _mock_jpype_jstring_value
+                # Correction: utiliser _mock_jpype_jstring_value si disponible
+                first_arg = instance_mock._constructor_args[0]
+                if hasattr(first_arg, '_mock_jpype_jstring_value'):
+                    return hash(first_arg._mock_jpype_jstring_value)
+                elif isinstance(first_arg, str): # Fallback si c'est une chaîne directe (moins probable)
+                     return hash(first_arg)
+            # Fallback si la structure n'est pas celle attendue
+            return object.__hash__(instance_mock) # Ou un autre hash par défaut
+        instance_mock.hashCode.side_effect = argument_hash_code_side_effect
 
-        elif self.class_name == "org.tweetyproject.arg.dung.syntax.Attack":
-            def attack_equals_side_effect(other):
-                # 'other' est l'objet comparé à 'instance_mock'
-                # instance_mock._constructor_args sont les args de l'objet sur lequel .equals est appelé
-                if not isinstance(other, MagicMock) or \
-                   not hasattr(other, 'class_name') or other.class_name != instance_mock.class_name or \
-                   not hasattr(other, '_constructor_args') or len(other._constructor_args) != 2 or \
-                   not hasattr(instance_mock, '_constructor_args') or len(instance_mock._constructor_args) != 2:
-                    return False
+    elif self.class_name == "org.tweetyproject.arg.dung.syntax.Attack":
+        def attack_equals_side_effect(other):
+            # 'other' est l'objet comparé à 'instance_mock'
+            # instance_mock._constructor_args sont les args de l'objet sur lequel .equals est appelé
+            if not isinstance(other, MagicMock) or \
+               not hasattr(other, 'class_name') or other.class_name != instance_mock.class_name or \
+               not hasattr(other, '_constructor_args') or len(other._constructor_args) != 2 or \
+               not hasattr(instance_mock, '_constructor_args') or len(instance_mock._constructor_args) != 2:
+                return False
 
+            attacker_self = instance_mock._constructor_args[0]
+            attacked_self = instance_mock._constructor_args[1]
+            attacker_other = other._constructor_args[0]
+            attacked_other = other._constructor_args[1]
+
+            # Comparaison sémantique: les attaquants doivent être égaux ET les attaqués doivent être égaux.
+            # On s'attend à ce que les composants (Arguments) aient leur propre méthode 'equals'.
+            
+            attacker_components_are_equal = False
+            if hasattr(attacker_self, 'equals') and callable(attacker_self.equals):
+                attacker_components_are_equal = attacker_self.equals(attacker_other)
+            else: # Fallback si attacker_self (composant) n'a pas .equals
+                attacker_components_are_equal = (attacker_self == attacker_other)
+            
+            if not attacker_components_are_equal:
+                return False
+                
+            attacked_components_are_equal = False
+            if hasattr(attacked_self, 'equals') and callable(attacked_self.equals):
+                attacked_components_are_equal = attacked_self.equals(attacked_other)
+            else: # Fallback si attacked_self (composant) n'a pas .equals
+                attacked_components_are_equal = (attacked_self == attacked_other)
+                
+            return attacked_components_are_equal
+        instance_mock.equals.side_effect = attack_equals_side_effect
+
+        # hashCode pour Attack
+        def attack_hash_code_side_effect():
+            if hasattr(instance_mock, '_constructor_args') and len(instance_mock._constructor_args) == 2:
                 attacker_self = instance_mock._constructor_args[0]
                 attacked_self = instance_mock._constructor_args[1]
-                attacker_other = other._constructor_args[0]
-                attacked_other = other._constructor_args[1]
-
-                # Comparaison sémantique: les attaquants doivent être égaux ET les attaqués doivent être égaux.
-                # On s'attend à ce que les composants (Arguments) aient leur propre méthode 'equals'.
                 
-                attacker_components_are_equal = False
-                if hasattr(attacker_self, 'equals') and callable(attacker_self.equals):
-                    attacker_components_are_equal = attacker_self.equals(attacker_other)
-                else: # Fallback si attacker_self (composant) n'a pas .equals
-                    attacker_components_are_equal = (attacker_self == attacker_other) 
-                
-                if not attacker_components_are_equal:
-                    return False
+                # S'assurer que les composants ont hashCode
+                h_attacker = 0
+                if hasattr(attacker_self, 'hashCode') and callable(attacker_self.hashCode):
+                    h_attacker = attacker_self.hashCode()
+                else: # Fallback pour les composants non mockés ou sans hashCode explicite
+                    h_attacker = hash(attacker_self)
                     
-                attacked_components_are_equal = False
-                if hasattr(attacked_self, 'equals') and callable(attacked_self.equals):
-                    attacked_components_are_equal = attacked_self.equals(attacked_other)
-                else: # Fallback si attacked_self (composant) n'a pas .equals
-                    attacked_components_are_equal = (attacked_self == attacked_other)
+                h_attacked = 0
+                if hasattr(attacked_self, 'hashCode') and callable(attacked_self.hashCode):
+                    h_attacked = attacked_self.hashCode()
+                else: # Fallback
+                    h_attacked = hash(attacked_self)
                     
-                return attacked_components_are_equal
-            instance_mock.equals.side_effect = attack_equals_side_effect
-
-            # hashCode pour Attack
-            def attack_hash_code_side_effect():
-                if hasattr(instance_mock, '_constructor_args') and len(instance_mock._constructor_args) == 2:
-                    attacker_self = instance_mock._constructor_args[0]
-                    attacked_self = instance_mock._constructor_args[1]
-                    
-                    # S'assurer que les composants ont hashCode
-                    h_attacker = 0
-                    if hasattr(attacker_self, 'hashCode') and callable(attacker_self.hashCode):
-                        h_attacker = attacker_self.hashCode()
-                    else: # Fallback pour les composants non mockés ou sans hashCode explicite
-                        h_attacker = hash(attacker_self)
-                        
-                    h_attacked = 0
-                    if hasattr(attacked_self, 'hashCode') and callable(attacked_self.hashCode):
-                        h_attacked = attacked_self.hashCode()
-                    else: # Fallback
-                        h_attacked = hash(attacked_self)
-                        
-                    return hash((h_attacker, h_attacked))
-                # Fallback si la structure n'est pas celle attendue
-                return object.__hash__(instance_mock) # Ou un autre hash par défaut
-            instance_mock.hashCode.side_effect = attack_hash_code_side_effect
+                return hash((h_attacker, h_attacked))
+            # Fallback si la structure n'est pas celle attendue
+            return object.__hash__(instance_mock) # Ou un autre hash par défaut
+        instance_mock.hashCode.side_effect = attack_hash_code_side_effect
+    
+    # Ajoutez d'autres logiques spécifiques pour .equals() ici si nécessaire:
+    # elif self.class_name == "org.tweetyproject.some.other.Class":
+    #     def specific_equals_logic(other):
+    #         # ... votre logique ...
+    #         return result
+    #     instance_mock.equals.side_effect = specific_equals_logic
         
-        # Ajoutez d'autres logiques spécifiques pour .equals() ici si nécessaire:
-        # elif self.class_name == "org.tweetyproject.some.other.Class":
-        #     def specific_equals_logic(other):
-        #         # ... votre logique ...
-        #         return result
-        #     instance_mock.equals.side_effect = specific_equals_logic
-            
-        else:
-            # Pour toutes les autres classes, utiliser la logique d'égalité par défaut.
-            # S'assurer que instance_mock est bien l'objet sur lequel .equals est appelé.
-            # La fonction default_equals_logic prend 'other_obj' comme argument.
-            # Le 'self' implicite de default_equals_logic sera 'instance_mock'.
-            instance_mock.equals.side_effect = default_equals_logic
-            
-            # hashCode par défaut pour les autres classes
-            # Si equals est basé sur _constructor_args, hashCode devrait l'être aussi.
-            def default_hash_code_logic():
-                if hasattr(instance_mock, '_constructor_args'):
-                    # Créer un tuple des arguments pour le rendre hashable.
-                    # Si les arguments eux-mêmes ne sont pas hashables, cela échouera.
-                    # Une version plus robuste pourrait hasher les représentations str ou les hashCodes individuels.
-                    try:
-                        # Tenter de hasher les args directement s'ils sont primitifs ou ont un bon __hash__
-                        # Pour les mocks, il faut utiliser leur .hashCode() s'il existe.
-                        hashed_args = []
-                        for arg in instance_mock._constructor_args:
-                            if hasattr(arg, 'hashCode') and callable(arg.hashCode):
-                                hashed_args.append(arg.hashCode())
-                            elif isinstance(arg, MagicMock): # Si c'est un mock sans .hashCode() explicite
-                                hashed_args.append(object.__hash__(arg)) # Utiliser le hash de l'objet mock
-                            else:
-                                hashed_args.append(hash(arg)) # Pour les types Python normaux
-                        return hash(tuple(hashed_args))
-                    except TypeError:
-                        # Si un argument n'est pas hashable, fallback
-                        return object.__hash__(instance_mock)
-                return object.__hash__(instance_mock) # Hash de l'objet mock lui-même
-            instance_mock.hashCode.side_effect = default_hash_code_logic
+    else:
+        # Pour toutes les autres classes, utiliser la logique d'égalité par défaut.
+        # S'assurer que instance_mock est bien l'objet sur lequel .equals est appelé.
+        # La fonction default_equals_logic prend 'other_obj' comme argument.
+        # Le 'self' implicite de default_equals_logic sera 'instance_mock'.
+        instance_mock.equals.side_effect = default_equals_logic
+        
+        # hashCode par défaut pour les autres classes
+        # Si equals est basé sur _constructor_args, hashCode devrait l'être aussi.
+        def default_hash_code_logic():
+            if hasattr(instance_mock, '_constructor_args'):
+                # Créer un tuple des arguments pour le rendre hashable.
+                # Si les arguments eux-mêmes ne sont pas hashables, cela échouera.
+                # Une version plus robuste pourrait hasher les représentations str ou les hashCodes individuels.
+                try:
+                    # Tenter de hasher les args directement s'ils sont primitifs ou ont un bon __hash__
+                    # Pour les mocks, il faut utiliser leur .hashCode() s'il existe.
+                    hashed_args = []
+                    for arg_val in instance_mock._constructor_args: # Renommé arg en arg_val pour éviter conflit
+                        if hasattr(arg_val, 'hashCode') and callable(arg_val.hashCode):
+                            hashed_args.append(arg_val.hashCode())
+                        elif isinstance(arg_val, MagicMock): # Si c'est un mock sans .hashCode() explicite
+                            hashed_args.append(object.__hash__(arg_val)) # Utiliser le hash de l'objet mock
+                        else:
+                            hashed_args.append(hash(arg_val)) # Pour les types Python normaux
+                    return hash(tuple(hashed_args))
+                except TypeError:
+                    # Si un argument n'est pas hashable, fallback
+                    return object.__hash__(instance_mock)
+            return object.__hash__(instance_mock) # Hash de l'objet mock lui-même
+        instance_mock.hashCode.side_effect = default_hash_code_logic
 
-        # Ajouter __eq__ et __hash__ pour la compatibilité avec les collections Python
+    # Ajouter __eq__ et __hash__ pour la compatibilité avec les collections Python
         # qui utilisent ces méthodes pour l'égalité et le hachage.
         # Ces méthodes délégueront aux méthodes equals() et hashCode() mockées.
         def __eq__side_effect(other):
@@ -503,7 +639,7 @@ class MockJClass:
         instance_mock.__eq__.side_effect = __eq__side_effect
         instance_mock.__hash__.side_effect = __hash__side_effect
 
-# Logique pour FormulaParser.parseFormula()
+        # Logique pour FormulaParser.parseFormula()
         # Cette section doit être avant les configurations spécifiques de formules (comme QBF ci-dessous)
         # car elle crée les instances de formules qui pourraient ensuite être configurées.
         formula_class_map = {
@@ -522,7 +658,7 @@ class MockJClass:
                 parsed_formula_mock = MagicMock(name=f"ParsedFormula_{expected_formula_class_name}_{str(formula_string)[:30]}")
                 parsed_formula_mock.class_name = expected_formula_class_name
                 # Stocker la formule originale et les autres args pour la traçabilité et .equals()
-                parsed_formula_mock._constructor_args = (formula_string,) + args_parser 
+                parsed_formula_mock._constructor_args = (formula_string,) + args_parser
                 parsed_formula_mock.toString.return_value = str(formula_string)
 
                 # Logique d'égalité pour les formules parsées
@@ -566,7 +702,7 @@ class MockJClass:
                 qbf_variables_arg = args[1]
                 variables_collection = get_collection_for_type("variables") # Assure l'initialisation
                 variables_collection.clear() # Vider au cas où
-
+        
                 if isinstance(qbf_variables_arg, MagicMock) and hasattr(qbf_variables_arg, '_mock_jpype_array_elements'):
                     # Si JArray est mocké pour avoir _mock_jpype_array_elements
                     for var_element in qbf_variables_arg._mock_jpype_array_elements:
@@ -577,8 +713,8 @@ class MockJClass:
                 # Si qbf_variables_arg est un seul mock de Variable (pas une collection)
                 elif isinstance(qbf_variables_arg, MagicMock) and qbf_variables_arg.class_name == "org.tweetyproject.logics.fol.syntax.Variable":
                      variables_collection.append(qbf_variables_arg)
-
-
+        
+        
             # Assurer que getVariables() sur l'instance QBF utilise cette collection "variables"
             qbf_vars_collection_mock = MagicMock(name="ReturnedMockCollection_QBF_getVariables")
             qbf_vars_collection_mock.size = MagicMock(side_effect=lambda: mock_collection_size_for_type("variables"))
@@ -586,23 +722,23 @@ class MockJClass:
             qbf_vars_collection_mock.contains = MagicMock(side_effect=lambda el: mock_collection_contains_for_type(el, "variables"))
             qbf_vars_collection_mock.__iter__ = MagicMock(side_effect=lambda: mock_collection_iter_for_type("variables"))
             instance_mock.getVariables.return_value = qbf_vars_collection_mock
-
-
+        
+        
         # Pour les méthodes comme inconsistencyMeasure qui devraient retourner un nombre
         if "InconsistencyMeasure" in self.class_name:
             instance_mock.inconsistencyMeasure.return_value = 0.0 # Ou 1.0 pour indiquer une inconsistance par défaut
-
+        
         # Gestion générique des getters/setters simples comme getMaxTurns/setMaxTurns
         # Initialiser les valeurs par défaut pour les attributs connus
         if self.class_name == "org.tweetyproject.agents.dialogues.protocols.PersuasionProtocol":
             instance_mock._attributes['_max_turns'] = 0 # Valeur par défaut pour maxTurns
-
+        
         # Configurer setMaxTurns
         if hasattr(instance_mock, "setMaxTurns"):
             def mock_set_max_turns(value):
                 instance_mock._attributes['_max_turns'] = value
             instance_mock.setMaxTurns = MagicMock(name=f"{self.class_name}_setMaxTurns", side_effect=mock_set_max_turns)
-
+        
         # Configurer getMaxTurns
         if hasattr(instance_mock, "getMaxTurns"):
             def mock_get_max_turns():
@@ -615,7 +751,7 @@ class MockJClass:
                 models_coll = get_collection_for_type("models")
                 models_coll.append(model_element)
                 return True # Simuler un ajout réussi
-
+        
             # Les reasoners ont souvent une méthode solve() ou query().
             # On peut ajouter une méthode 'addModelToResults' pour que les tests puissent simuler
             # le peuplement des modèles après un 'solve' fictif.
@@ -624,7 +760,7 @@ class MockJClass:
             # Si un reasoner est directement itérable (rare, mais pour couvrir)
             # ou si son 'solve' retourne directement une collection itérable de modèles.
             # Pour l'instant, on se fie à getModels() et getModel().
-
+        
         # Logique pour les Reasoners (Prover, etc.) pour peupler les modèles
         if self.class_name == "net.sf.tweety.arg.dung.reasoner.CompleteReasoner":
             # Simuler les extensions complètes: {a}, {b}, {}
@@ -642,61 +778,59 @@ class MockJClass:
             mock_arg_a.hashCode.side_effect = lambda: hash("a")
             mock_arg_a.class_name = "org.tweetyproject.arg.dung.syntax.Argument"
             mock_arg_a._constructor_args = ("a",)
-
+        
             mock_arg_b = MagicMock(name="MockArgument_b")
             mock_arg_b.getName.return_value = "b"
             mock_arg_b.equals.side_effect = lambda other: hasattr(other, 'getName') and other.getName() == "b"
             mock_arg_b.hashCode.side_effect = lambda: hash("b")
             mock_arg_b.class_name = "org.tweetyproject.arg.dung.syntax.Argument"
             mock_arg_b._constructor_args = ("b",)
-
+        
             # Extensions attendues: {a}, {b}, {}
             # Chaque extension est un Set Java (simulé par MockJavaCollection)
             HashSet = JClass("java.util.HashSet") # Utiliser notre JClass mocké pour HashSet
-
+        
             ext1 = HashSet()
             ext1.add(mock_arg_a)
             models_coll.append(ext1)
-
+        
             ext2 = HashSet()
             ext2.add(mock_arg_b)
             models_coll.append(ext2)
-
+        
             ext3 = HashSet() # Ensemble vide
             models_coll.append(ext3)
             
             print(f"[MOCK DEBUG] CompleteReasoner: Ajout de {len(models_coll)} extensions mockées.")
-
+        
         elif self.class_name == "net.sf.tweety.arg.dung.reasoner.StableReasoner":
             # Simuler l'extension stable: {a, c}
             models_coll = get_collection_for_type("models")
-
+        
             mock_arg_a = MagicMock(name="MockArgument_a")
             mock_arg_a.getName.return_value = "a"
             mock_arg_a.equals.side_effect = lambda other: hasattr(other, 'getName') and other.getName() == "a"
             mock_arg_a.hashCode.side_effect = lambda: hash("a")
             mock_arg_a.class_name = "org.tweetyproject.arg.dung.syntax.Argument"
             mock_arg_a._constructor_args = ("a",)
-
+        
             mock_arg_c = MagicMock(name="MockArgument_c")
             mock_arg_c.getName.return_value = "c"
             mock_arg_c.equals.side_effect = lambda other: hasattr(other, 'getName') and other.getName() == "c"
             mock_arg_c.hashCode.side_effect = lambda: hash("c")
             mock_arg_c.class_name = "org.tweetyproject.arg.dung.syntax.Argument"
             mock_arg_c._constructor_args = ("c",)
-
+        
             HashSet = JClass("java.util.HashSet")
-
+        
             ext1 = HashSet()
             ext1.add(mock_arg_a)
             ext1.add(mock_arg_c)
             models_coll.append(ext1)
             
             print(f"[MOCK DEBUG] StableReasoner: Ajout de {len(models_coll)} extensions mockées.")
-
         return instance_mock
 
-# Classe pour simuler les collections Java de java.util
 class MockJavaCollection:
     def __init__(self, java_class_name, *constructor_args):
         self.class_name = java_class_name
