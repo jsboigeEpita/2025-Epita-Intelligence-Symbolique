@@ -21,11 +21,35 @@ if not mock_logger.hasHandlers():
     mock_logger.addHandler(handler)
 mock_logger.setLevel(logging.DEBUG) # Mettre en DEBUG pour voir tous les logs
 
-mock_logger.info("Module jpype_mock.py en cours de chargement.")
+# Simuler le module _jpype interne que jpype.imports pourrait utiliser
+# Ceci est placé tôt pour s'assurer qu'il est disponible si jpype.imports est chargé.
+class _MockInternalJpypeModule:
+    def isStarted(self):
+        # Cette fonction est cruciale. Elle doit refléter si startJVM a été appelé.
+        # Utilise la variable globale _jvm_started du mock jpype_mock.py.
+        mock_logger.debug(f"[MOCK jpype._jpype.isStarted()] Appelée. Retourne: {_jvm_started}")
+        return _jvm_started
+
+    # Vous pouvez ajouter d'autres méthodes de _jpype ici si elles sont nécessaires.
+    def getVersion(self): # Exemple
+        return "Mocked _jpype module (simulated in jpype_mock.py)"
+
+    def isPackage(self, name):
+        # Simule la vérification de l'existence d'un package.
+        # Si la JVM est "démarrée" (selon notre mock _jvm_started), on suppose que le package existe.
+        # Ceci est une simplification grossière.
+        # Simule la vérification de l'existence d'un package.
+        # Retourne True si notre mock considère la JVM comme démarrée.
+        mock_logger.debug(f"[MOCK jpype._jpype.isPackage('{name}')] Appelée. _jvm_started: {_jvm_started}. Retourne: {_jvm_started}")
+        return _jvm_started # Dépend uniquement de notre état mocké
+
+_jpype = _MockInternalJpypeModule()
+sys.modules['jpype._jpype'] = _jpype # Forcer le remplacement pour jpype.imports
+
+mock_logger.info("Module jpype_mock.py en cours de chargement. Mock _jpype interne injecté.")
 
 # Version du mock
 __version__ = "1.4.0-mock"
-
 # Variables globales pour simuler l'état de la JVM
 _jvm_started = False
 _jvm_path = None
@@ -84,6 +108,8 @@ def startJVM(jvmpath=None, *args, **kwargs):
     _jvm_path = jvmpath or getDefaultJVMPath()
     # Mettre à jour config.jvm_path aussi, car c'est souvent là que le code le cherche après démarrage
     config.jvm_path = _jvm_path
+    # Log ajouté pour débogage
+    mock_logger.info(f"[MOCK jpype.startJVM] Appelée. _jvm_started mis à True. _jpype ID: {id(_jpype)}. Classpath: {kwargs.get('classpath')}")
     mock_logger.info(f"JVM démarrée avec le chemin: {_jvm_path}")
 
 def shutdownJVM():
@@ -741,21 +767,12 @@ class MockJClass:
         instance_mock.hashCode.side_effect = default_hash_code_logic
 
         # Ajouter __eq__ et __hash__ pour la compatibilité avec les collections Python
-<<<<<<< Updated upstream
         # qui utilisent ces méthodes pour l'égalité et le hachage.
         # Ces méthodes délégueront aux méthodes equals() et hashCode() mockées.
         def __eq__side_effect(other):
             if hasattr(instance_mock, 'equals') and callable(instance_mock.equals):
                 return instance_mock.equals(other)
             return NotImplemented # Indique que la comparaison n'est pas implémentée par ce type
-=======
-            # qui utilisent ces méthodes pour l'égalité et le hachage.
-            # Ces méthodes délégueront aux méthodes equals() et hashCode() mockées.
-            def __eq__side_effect(other):
-                if hasattr(instance_mock, 'equals') and callable(instance_mock.equals):
-                    return instance_mock.equals(other)
-                return NotImplemented # Indique que la comparaison n'est pas implémentée par ce type
->>>>>>> Stashed changes
 
             def __hash__side_effect():
                 if hasattr(instance_mock, 'hashCode') and callable(instance_mock.hashCode):
@@ -1436,6 +1453,31 @@ imports = _jpype_imports_module
 # else:
 #     mock_logger.info("Mock pour 'jpype' déjà présent ou est le vrai module, non remplacé.")
 
+# Tentative de patcher le _jpype potentiellement déjà importé par jpype.imports
+try:
+    import jpype.imports # Assurer que jpype.imports est chargé
+    if hasattr(jpype.imports, '_jpype') and jpype.imports._jpype is not _jpype:
+        mock_logger.warning(f"Patching jpype.imports._jpype ({id(jpype.imports._jpype)}) to use our mock _jpype ({id(_jpype)})")
+        # Garder une référence à l'original au cas où, bien que non utilisé pour l'instant
+        # jpype.imports._original_jpype_before_mock_patch = jpype.imports._jpype
+        # Remplacer les méthodes nécessaires sur l'objet _jpype existant
+        # ou remplacer l'objet entier si possible et sûr.
+        # Pour l'instant, on remplace la méthode critique.
+        def _patched_isStarted_for_real_jpype_imports():
+            mock_logger.debug(f"[MOCK _patched_isStarted_for_real_jpype_imports] Appelée. Retourne: {_jvm_started}")
+            return _jvm_started
+
+        jpype.imports._jpype.isStarted = _patched_isStarted_for_real_jpype_imports
+        mock_logger.info("Patch appliqué à jpype.imports._jpype.isStarted")
+    elif not hasattr(jpype.imports, '_jpype'):
+        mock_logger.warning("jpype.imports n'a pas d'attribut _jpype. Le patch ne peut pas être appliqué.")
+    else: # jpype.imports._jpype is _jpype
+        mock_logger.info("jpype.imports._jpype est déjà notre mock _jpype. Aucun patch nécessaire.")
+
+except ImportError:
+    mock_logger.error("Impossible d'importer jpype.imports pour le patch.")
+except Exception as e:
+    mock_logger.error(f"Erreur lors de la tentative de patch de jpype.imports._jpype: {e}")
 # if 'jpype1' not in sys.modules or 'tests.mocks.jpype_mock' not in sys.modules['jpype1'].__file__:
 #     sys.modules['jpype1'] = sys.modules[__name__]
 #     mock_logger.info("Mock activé pour 'jpype1'")
