@@ -3,34 +3,76 @@ import jpype.imports
 from jpype.types import JString
 import os
 
-def main():
+def test_list_models():
     try:
         print("Démarrage du test de listage des modèles...")
 
+        # L'initialisation de la JVM est maintenant gérée globalement par conftest.py
         if not jpype.isJVMStarted():
-            jpype.startJVM(convertStrings=False)
-
-        from net.sf.tweety.logics.pl import PlBeliefSet
-        from net.sf.tweety.logics.pl.parser import PlParser
-        from net.sf.tweety.logics.pl.reasoner import SimpleReasoner
-        # Pour afficher les modèles, nous pourrions avoir besoin de PlInterpretation ou similaire
-        from net.sf.tweety.logics.pl.syntax import PlInterpretation # Ou PlPossibleWorld
-
+            # Cette condition ne devrait plus être vraie si conftest.py fonctionne correctement.
+            # Lever une erreur ou un skip si la JVM n'est pas démarrée comme attendu.
+            print("ERREUR CRITIQUE: La JVM n'a pas été démarrée par conftest.py comme attendu.")
+            # On pourrait utiliser pytest.skip ou lever une exception pour arrêter le test.
+            # Pour l'instant, on logue et on laisse le test échouer plus loin si les imports Java échouent.
+            # raise RuntimeError("JVM non démarrée par conftest.py") # Optionnel: être plus strict
+        from org.tweetyproject.logics.pl.syntax import PlBeliefSet
+        from org.tweetyproject.logics.pl.parser import PlParser
+        # from org.tweetyproject.logics.pl.reasoner import SimplePlReasoner, SatReasoner
+        from org.tweetyproject.logics.pl.sat import SatSolver, Sat4jSolver, SimpleModelEnumerator
+        from org.tweetyproject.logics.pl.syntax import Proposition, Implication, Negation # Ajout Implication, Negation
+        from org.tweetyproject.logics.pl.semantics import PossibleWorld # PossibleWorld est un alias pour PlInterpretation
+        JArrayList = jpype.JClass("java.util.ArrayList")
+        # from org.tweetyproject.commons import InterpretationSet # Pas nécessaire d'importer directement si on itère sur le résultat de getModels
+        
         print("JVM démarrée et classes Tweety importées.")
+        
+        # Configuration du solveur SAT par défaut
+        SatSolver_JClass = jpype.JClass("org.tweetyproject.logics.pl.sat.SatSolver")
+        Sat4jSolver_JClass = jpype.JClass("org.tweetyproject.logics.pl.sat.Sat4jSolver")
+        if not SatSolver_JClass.hasDefaultSolver(): # Correction: isDefaultSolverSet -> hasDefaultSolver
+            SatSolver_JClass.setDefaultSolver(Sat4jSolver_JClass())
+            print("INFO: Sat4jSolver configuré comme solveur par défaut pour PL.")
+        else:
+            print("INFO: Un solveur SAT par défaut est déjà configuré.")
 
-        theory_file_path = os.path.join(os.path.dirname(__file__), "sample_theory.lp")
-        print(f"Chemin du fichier de théorie : {theory_file_path}")
+        # Construction manuelle de la PlBeliefSet pour isoler du parsing
+        print("Construction manuelle de la PlBeliefSet...")
+        belief_set = PlBeliefSet()
+        p_a = Proposition("a")
+        p_b = Proposition("b")
+        p_c = Proposition("c")
+        p_d = Proposition("d")
 
-        if not os.path.exists(theory_file_path):
-            raise FileNotFoundError(f"Le fichier de théorie {theory_file_path} n'a pas été trouvé.")
+        # b.
+        belief_set.add(p_b)
+        # a :- b.  (b => a)
+        belief_set.add(Implication(p_b, p_a))
+        # c :- not d. (not d => c)
+        belief_set.add(Implication(Negation(p_d), p_c))
+        # d :- not c. (not c => d)
+        belief_set.add(Implication(Negation(p_c), p_d))
+        print(f"PlBeliefSet construite manuellement. Nombre de formules : {belief_set.size()}")
+        
+        # theory_file_path = os.path.join(os.path.dirname(__file__), "sample_theory.lp")
+        # print(f"Chemin du fichier de théorie : {theory_file_path}")
 
-        parser = PlParser()
-        JFile = jpype.JClass("java.io.File")
-        java_file = JFile(JString(theory_file_path))
-        belief_set = parser.parseBeliefBaseFromFile(java_file)
+        # if not os.path.exists(theory_file_path):
+        #     raise FileNotFoundError(f"Le fichier de théorie {theory_file_path} n'a pas été trouvé.")
 
-        print(f"Théorie chargée avec succès. Nombre de formules : {belief_set.size()}")
+        # parser = PlParser()
+        # JFile = jpype.JClass("java.io.File")
+        # java_file = JFile(JString(theory_file_path))
+        # belief_set = parser.parseBeliefBaseFromFile(theory_file_path)
 
+        # print(f"Théorie chargée avec succès. Nombre de formules : {belief_set.size()}") # Commenté car belief_set est manuel
+        print("Formules dans le belief_set (construites manuellement):")
+        formulas_iterator = belief_set.iterator()
+        formula_idx = 0
+        while formulas_iterator.hasNext():
+            formula = formulas_iterator.next()
+            print(f"- Formule {formula_idx}: {formula.toString()}")
+            formula_idx += 1
+        
         # Instancier un raisonneur simple
         # Note: SimpleReasoner ne fournit pas directement une méthode getModels().
         # Pour obtenir les modèles, on utilise souvent un solver spécifique ou un raisonneur plus avancé,
@@ -41,7 +83,7 @@ def main():
         # from net.sf.tweety.arg.dung.reasoner import SatReasoner <- Ceci est pour l'argumentation
         # Pour la logique PL, il faut un solveur SAT. Tweety intègre des solveurs.
         # Par exemple, net.sf.tweety.logics.pl.sat.Sat4jSolver
-        # from net.sf.tweety.logics.pl.sat import Sat4jSolver # ou un autre solveur SAT disponible
+        # from org.tweetyproject.logics.pl.sat import Sat4jSolver, SimpleModelEnumerator, SimpleModelEnumerator # ou un autre solveur SAT disponible
 
         # Si SimpleReasoner ne peut pas lister les modèles, ce test devra être adapté
         # ou utiliser un autre raisonneur.
@@ -55,53 +97,105 @@ def main():
 
         # Tentative avec un solveur SAT si SimpleReasoner ne suffit pas.
         # Assurez-vous que le JAR de Sat4j (ou un autre solveur configuré) est dans le classpath.
-        try:
-            from net.sf.tweety.logics.pl.sat import Sat4jSolver
-            solver = Sat4jSolver()
-            print("Utilisation de Sat4jSolver.")
-        except jpype.JClassNotfoundException:
-            print("Sat4jSolver non trouvé, tentative avec SimpleReasoner (peut ne pas lister les modèles).")
-            # SimpleReasoner est principalement pour les requêtes d'implication.
-            # Il ne liste pas les modèles. Ce test échouera probablement ou nécessitera une adaptation.
-            # Pour l'objectif de "lister les modèles", SimpleReasoner n'est pas le bon outil.
-            # Nous allons lever une exception si Sat4jSolver n'est pas disponible,
-            # car le but du test est de lister les modèles.
-            raise RuntimeError("Sat4jSolver non trouvé. Impossible de lister les modèles avec SimpleReasoner.")
+        # Suppression du bloc try-except pour Sat4jSolver et setDefaultSolver (lignes 64-78)
+        # et de l'instanciation de SimpleModelEnumerator
 
+        # Obtenir les modèles de la base de connaissances en utilisant SimpleModelEnumerator.
+        # Tentative de définition du solveur SAT par défaut sur Sat4jSolver,
+        # en espérant que SimpleModelEnumerator() l'utilisera et trouvera tous les modèles.
 
-        # Obtenir les modèles de la base de connaissances
-        # La méthode pour obtenir les modèles peut être `getModels(belief_set)` ou similaire.
-        models = solver.getModels(belief_set) # Sat4jSolver a cette méthode
+        # Utilisation directe de SimpleModelEnumerator(), car les tentatives de configuration du solveur
+        # via constructeur ou setDefaultSolver avec setFindAllModels n'ont pas fonctionné comme attendu
+        # ou ont causé des erreurs.
+        # SimpleModelEnumerator() est la seule forme qui n'a pas levé d'AttributeError/TypeError pour l'appel getModels.
+        # Instancier Sat4jSolver explicitement
+        # explicit_sat4j_solver = Sat4jSolver_JClass() # Plus nécessaire si le défaut est bien pris
+        # print("Sat4jSolver instancié explicitement.") # Commenté
 
-        print(f"Nombre de modèles trouvés : {models.size()}")
+        # Tenter d'utiliser SimpleModelEnumerator avec ce solveur spécifique si possible,
+        # ou s'assurer que le solveur par défaut est bien celui-ci.
+        # La documentation de SimpleModelEnumerator ne montre pas de constructeur acceptant un solver.
+        # On continue de se fier à setDefaultSolver.
+        
+        print("Utilisation de SimpleModelEnumerator (après configuration du solveur par défaut).")
 
-        if models.isEmpty():
+        # Instancier SimpleModelEnumerator. Il utilisera le solveur configuré par défaut.
+        model_enumerator = SimpleModelEnumerator()
+        
+        # PlBeliefSet est une Collection<PlFormula>.
+        # La méthode getModels(Collection<? extends PlFormula>) de SimpleModelEnumerator retourne Set<InterpretationSet>.
+        java_models_set = model_enumerator.getModels(belief_set) # Doit retourner Set<InterpretationSet>
+
+        model_count = java_models_set.size() # Obtenir la taille directement
+        print(f"Nombre de modèles trouvés : {model_count}")
+
+        if java_models_set.isEmpty():
             print("Aucun modèle trouvé. La théorie est incohérente.")
-            # Pour notre sample_theory.lp, elle est cohérente.
             raise AssertionError("ÉCHEC : Aucun modèle trouvé pour une théorie cohérente.")
         else:
-            print("Modèles trouvés :")
-            # Un modèle est souvent une collection de littéraux vrais (ou une interprétation)
-            # L'itération sur `models` (qui est une Collection<PlInterpretation>)
-            model_count = 0
-            for model in models: # model est un PlInterpretation
-                model_str = model.toString() # Ou une autre méthode pour obtenir une représentation textuelle
-                print(f"- {model_str}")
-                model_count += 1
+            print("Modèles trouvés (détail de l'interprétation via InterpretationSet) :")
             
-            # Vérification du nombre de modèles attendus (3 pour notre théorie)
-            # a, b, (c v d)
-            # Modèles: {a,b,c,d}, {a,b,c,~d}, {a,b,~c,d}
-            # Les représentations de Tweety peuvent varier (par ex. seulement les atomes positifs)
-            # {a,b,c}, {a,b,d} si on ne liste que les positifs et que d est vrai si c est faux et vice-versa
-            # Pour c v d: (c=T, d=T), (c=T, d=F), (c=F, d=T)
-            # Donc 3 modèles pour (c,d), et a,b sont toujours vrais.
-            # Le nombre de modèles attendu est 3.
-            expected_models = 3
+            # Obtenir la signature de la belief_set
+            # signature = belief_set.getMinimalSignature() # Ne semble pas retourner les atomes simples.
+            
+            # Définir manuellement les propositions atomiques d'intérêt pour l'affichage
+            Proposition_JClass = jpype.JClass("org.tweetyproject.logics.pl.syntax.Proposition")
+            propositions_for_interpretation = [
+                Proposition_JClass("a"),
+                Proposition_JClass("b"),
+                Proposition_JClass("c"),
+                Proposition_JClass("d")
+            ]
+            print(f"Propositions utilisées pour l'interprétation des modèles: {[p.getName() for p in propositions_for_interpretation]}")
+        
+            actual_model_index = 0
+            # java_models_set est un java.util.Set<org.tweetyproject.logics.pl.semantics.PossibleWorld>
+            java_set_iterator = java_models_set.iterator()
+            while java_set_iterator.hasNext():
+                possible_world = java_set_iterator.next() # C'est un PossibleWorld (PlInterpretation)
+                actual_model_index += 1
+                current_model_py = {}
+            
+                # Itérer sur les propositions d'intérêt définies manuellement
+                for prop_object in propositions_for_interpretation:
+                    atom_name = str(prop_object.getName()) # Convertir en chaîne Python
+                    # Un PossibleWorld contient les propositions qui sont vraies.
+                    is_true_in_model = possible_world.contains(prop_object)
+                    current_model_py[atom_name] = bool(is_true_in_model)
+            
+                # Trier le dictionnaire par nom de proposition pour un affichage cohérent
+                sorted_model_items = sorted(current_model_py.items())
+                model_representation_list = [f"'{key}': {value}" for key, value in sorted_model_items]
+                model_representation = ", ".join(model_representation_list)
+                print(f"Modèle {actual_model_index} (Python dict): {{{model_representation}}}")
+                # Affichage brut si souhaité (InterpretationSet a aussi une méthode toString())
+                # print(f"Modèle {actual_model_index} (Java toString()): {interpretation_set.toString()}")
+            
+            # model_count est déjà défini par java_models_set.size()
+            # L'itération ci-dessus sert à l'affichage et à la vérification.
+            
+            # Vérification du nombre de modèles attendus.
+            # La théorie est:
+            # a :- b.
+            # b.
+            # c :- not d.
+            # d :- not c.
+            # 'a' et 'b' sont toujours vrais.
+            # Les règles pour c et d (c XOR d en pratique pour les modèles stables) donnent deux scénarios:
+            # 1. c=True, d=False
+            # 2. c=False, d=True
+            # Donc, les modèles sont {a,b,c} et {a,b,d}. (Ceci est pour les modèles stables)
+            # En logique propositionnelle classique, c :- not d (d V c) et d :- not c (c V d)
+            # combiné avec a et b vrais, donne 3 modèles:
+            # {a:T,b:T, c:T,d:F}, {a:T,b:T, c:F,d:T}, {a:T,b:T, c:T,d:T}
+            expected_models = 3 # Ajusté pour la logique propositionnelle classique
+            # model_count est déjà calculé à partir de java_models_set.size()
             if model_count == expected_models:
-                 print(f"Test de listage des modèles RÉUSSI. {model_count} modèles trouvés comme attendu.")
+                 print(f"Test de listage des modèles (logique PL classique) RÉUSSI. {model_count} modèles trouvés comme attendu.")
             else:
-                raise AssertionError(f"ÉCHEC : Nombre de modèles incorrect. Attendu : {expected_models}, Trouvé : {model_count}")
+                # L'affichage détaillé des modèles ci-dessus aide au débogage si cette assertion échoue.
+                print(f"ATTENTION: Le nombre de modèles attendu ({expected_models}) pour la logique PL classique ne correspond pas au nombre trouvé ({model_count}).")
+                raise AssertionError(f"ÉCHEC : Nombre de modèles incorrect pour la logique PL classique. Attendu : {expected_models}, Trouvé : {model_count}")
 
 
     except Exception as e:
@@ -110,11 +204,8 @@ def main():
         traceback.print_exc()
         raise
 
-    finally:
+    # finally: # Commenté pour permettre à pytest de gérer la JVM via conftest
         # if jpype.isJVMStarted():
         #     jpype.shutdownJVM()
         #     print("JVM arrêtée.")
         pass
-
-if __name__ == "__main__":
-    main()

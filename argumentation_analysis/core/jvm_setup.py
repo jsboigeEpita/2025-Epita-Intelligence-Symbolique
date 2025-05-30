@@ -694,6 +694,11 @@ def initialize_jvm(
             else:
                 logger.warning(f"   Impossible de construire un chemin JVM valide depuis JAVA_HOME '{java_home_to_set}' (chemin testé: {_jvm_dll_path}). JPype utilisera sa détection par défaut.")
         
+        logger.info(f"DEBUG_JVM_SETUP: JAVA_HOME avant startJVM: {os.getenv('JAVA_HOME')}")
+        logger.info(f"DEBUG_JVM_SETUP: Path avant startJVM: {os.getenv('PATH')}")
+        logger.info(f"DEBUG_JVM_SETUP: CLASSPATH avant startJVM: {os.getenv('CLASSPATH')}")
+        logger.info(f"DEBUG_JVM_SETUP: Tentative de démarrage avec jvm_path_to_use_explicit='{jvm_path_to_use_explicit}', classpath='{len(combined_jar_list)} JARs', args='{jvm_args}'")
+
         if jvm_path_to_use_explicit:
             jpype.startJVM(jvm_path_to_use_explicit, classpath=combined_jar_list, *jvm_args, convertStrings=False, ignoreUnrecognized=True)
         else:
