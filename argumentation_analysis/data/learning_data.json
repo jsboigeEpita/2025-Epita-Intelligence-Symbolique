@@ -367,6 +367,12 @@
       "is_correct": true,
       "feedback_text": "Bonne détection",
       "timestamp": "2025-05-29T17:48:50.522061"
+    },
+    {
+      "fallacy_id": "fallacy_0",
+      "is_correct": true,
+      "feedback_text": "Bonne détection",
+      "timestamp": "2025-05-30T11:51:17.445463"
     }
   ],
   "confidence_adjustments": {
