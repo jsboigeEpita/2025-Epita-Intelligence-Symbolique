@@ -595,12 +595,23 @@ def initialize_jvm(
             jvm_path_final = None
         classpath_separator = os.pathsep
         jar_list = sorted([str(p.resolve()) for p in LIB_DIR.glob("*.jar")])
-        if not jar_list: 
+        if not jar_list:
              logger.error("❌ Aucun JAR trouvé dans le classpath après téléchargement/vérification ! Démarrage annulé.")
              return False
-        classpath = classpath_separator.join(jar_list)
-        logger.info(f"   Classpath construit ({len(jar_list)} JARs depuis '{LIB_DIR}').")
-        jvm_args = [f"-Djava.class.path={classpath}"]
+        
+        # Construire la chaîne de classpath
+        classpath_str = classpath_separator.join(jar_list)
+        logger.info(f"   Classpath construit ({len(jar_list)} JARs depuis '{LIB_DIR}'). Valeur: {classpath_str}")
+
+        # Définir la variable d'environnement CLASSPATH
+        try:
+            os.environ['CLASSPATH'] = classpath_str
+            logger.info(f"   Variable d'environnement CLASSPATH définie à: {classpath_str}")
+        except Exception as e_set_classpath_env:
+            logger.error(f"   ❌ Impossible de définir la variable d'environnement CLASSPATH: {e_set_classpath_env}")
+            # Continuer quand même, JPype pourrait la trouver via d'autres moyens ou le paramètre direct
+
+        jvm_args = [] # Initialiser jvm_args
         if NATIVE_LIBS_DIR.exists() and any(NATIVE_LIBS_DIR.iterdir()):
             native_path_arg = f"-Djava.library.path={NATIVE_LIBS_DIR.resolve()}"
             jvm_args.append(native_path_arg)
@@ -649,16 +660,25 @@ def initialize_jvm(
                 logger.warning(f"   Impossible de construire un chemin JVM valide depuis JAVA_HOME '{java_home_to_set}' (chemin testé: {_jvm_dll_path}). JPype utilisera sa détection par défaut.")
         
         if jvm_path_to_use_explicit:
-            jpype.startJVM(jvm_path_to_use_explicit, *jvm_args, convertStrings=False, ignoreUnrecognized=True)
+            # On passe toujours jar_list au paramètre classpath, même si CLASSPATH est défini, par sécurité.
+            jpype.startJVM(jvm_path_to_use_explicit, classpath=jar_list, *jvm_args, convertStrings=False, ignoreUnrecognized=True)
         else:
             logger.warning("   Aucun chemin JVM explicite fourni à startJVM, utilisation de la détection interne de JPype.")
-            jpype.startJVM(*jvm_args, convertStrings=False, ignoreUnrecognized=True)
+            # On passe toujours jar_list au paramètre classpath
+            jpype.startJVM(classpath=jar_list, *jvm_args, convertStrings=False, ignoreUnrecognized=True)
             
         if hasattr(jpype, 'imports') and jpype.imports is not None:
-            jpype.imports.registerDomain("org", alias="org")
-            jpype.imports.registerDomain("java", alias="java")
-            jpype.imports.registerDomain("net", alias="net")
-            logger.info("✅ JVM démarrée avec succès et domaines enregistrés.")
+            try:
+                jpype.imports.registerDomain("java", alias="java")
+                jpype.imports.registerDomain("org", alias="org")
+                jpype.imports.registerDomain("net", alias="net")
+                # Enregistrer les domaines plus spécifiques ici aussi
+                jpype.imports.registerDomain("net.sf", alias="sf")
+                jpype.imports.registerDomain("net.sf.tweety", alias="tweety")
+                logger.info("✅ JVM démarrée avec succès et domaines (java, org, net, sf, tweety) enregistrés.")
+            except Exception as e_reg_domain_jvm_setup:
+                logger.error(f"❌ Erreur lors de l'enregistrement des domaines JPype dans jvm_setup: {e_reg_domain_jvm_setup}")
+                # Ne pas considérer la JVM comme non prête juste pour ça, mais c'est un problème.
         else:
             logger.warning("✅ JVM démarrée mais jpype.imports non disponible pour enregistrer les domaines (possible si mock partiel).")
         jvm_ready = True
