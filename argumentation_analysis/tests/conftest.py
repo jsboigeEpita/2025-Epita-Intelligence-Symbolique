@@ -48,29 +48,29 @@ sys.modules['argumentation_analysis.services'] = argumentation_analysis.services
 # Importer les modules réels dans les modules factices
 import models.extract_definition
 import models.extract_result
-# import services.cache_service
-import services.crypto_service
-import services.definition_service
-import services.extract_service
-import services.fetch_service
+# from argumentation_analysis.services import cache_service
+from argumentation_analysis.services import crypto_service
+from argumentation_analysis.services import definition_service
+from argumentation_analysis.services import extract_service
+from argumentation_analysis.services import fetch_service
 
 # Assigner les modules réels aux modules factices
 argumentation_analysis.models.extract_definition = models.extract_definition
 argumentation_analysis.models.extract_result = models.extract_result
 # argumentation_analysis.services.cache_service = services.cache_service
-argumentation_analysis.services.crypto_service = services.crypto_service
-argumentation_analysis.services.definition_service = services.definition_service
-argumentation_analysis.services.extract_service = services.extract_service
-argumentation_analysis.services.fetch_service = services.fetch_service
+argumentation_analysis.services.crypto_service = crypto_service
+argumentation_analysis.services.definition_service = definition_service
+argumentation_analysis.services.extract_service = extract_service
+argumentation_analysis.services.fetch_service = fetch_service
 
 # Utiliser des imports directs
 from models.extract_definition import Extract, SourceDefinition, ExtractDefinitions
 from models.extract_result import ExtractResult
-from services.cache_service import CacheService
-from services.crypto_service import CryptoService
-from services.definition_service import DefinitionService
-from services.extract_service import ExtractService
-from services.fetch_service import FetchService
+from argumentation_analysis.services.cache_service import CacheService
+from argumentation_analysis.services.crypto_service import CryptoService
+from argumentation_analysis.services.definition_service import DefinitionService
+from argumentation_analysis.services.extract_service import ExtractService
+from argumentation_analysis.services.fetch_service import FetchService
 
 # ===== Fixtures pour les tests unitaires =====
 

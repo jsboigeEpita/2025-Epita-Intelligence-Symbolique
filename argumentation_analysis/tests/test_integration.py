@@ -27,8 +27,8 @@ from argumentation_analysis.agents.core.pm.pm_definitions import setup_pm_kernel
 from tests.async_test_case import AsyncTestCase
 from models.extract_definition import ExtractDefinitions, Extract, SourceDefinition # Ces imports pourraient poser problème si 'models' n'est pas accessible
 from models.extract_result import ExtractResult # Idem
-from services.extract_service import ExtractService # Idem pour 'services'
-from services.fetch_service import FetchService # Idem
+from argumentation_analysis.services.extract_service import ExtractService # Idem pour 'services'
+from argumentation_analysis.services.fetch_service import FetchService # Idem
 
 
 class TestBasicIntegration(AsyncTestCase):

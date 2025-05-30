@@ -22,8 +22,8 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import requests
 
 # Importer les modules à tester
-from services.fetch_service import FetchService
-from services.cache_service import CacheService
+from argumentation_analysis.services.fetch_service import FetchService
+from argumentation_analysis.services.cache_service import CacheService
 
 
 @pytest.fixture
