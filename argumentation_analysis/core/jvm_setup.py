@@ -612,7 +612,9 @@ def initialize_jvm(
         main_jars_map = {pathlib.Path(p).name: p for p in main_jar_list}
         test_jars_map = {pathlib.Path(p).name: p for p in test_jar_list}
         
-        final_jars_map = {**main_jars_map, **test_jars_map} # Les JARs de test écrasent les JARs principaux pour les mêmes noms
+        # Inverser la priorité: les JARs principaux écrasent les JARs de test pour les mêmes noms.
+        # Cela assure que nous utilisons les JARs de LIBS_DIR (PROJECT_ROOT/libs) s'ils existent.
+        final_jars_map = {**test_jars_map, **main_jars_map}
         
         combined_jar_list = sorted(list(final_jars_map.values()))
         logger.info(f"   Nombre total de JARs après fusion (priorité aux tests): {len(combined_jar_list)}")
