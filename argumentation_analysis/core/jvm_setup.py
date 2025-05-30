@@ -624,6 +624,8 @@ def initialize_jvm(
         # Construire la chaîne de classpath pour l'environnement et le log
         classpath_str_for_env_and_log = classpath_separator.join(combined_jar_list)
         logger.info(f"   Classpath combiné construit ({len(combined_jar_list)} JARs). Valeur pour env: {classpath_str_for_env_and_log}")
+        logger.debug(f"   CLASSPATH pour JVM (avant définition env var): {classpath_str_for_env_and_log}")
+
 
         # Définir la variable d'environnement CLASSPATH
         try:
@@ -633,9 +635,20 @@ def initialize_jvm(
             logger.error(f"   ❌ Impossible de définir la variable d'environnement CLASSPATH: {e_set_classpath_env}")
             # Continuer quand même, JPype pourrait la trouver via d'autres moyens ou le paramètre direct
 
-        # Utiliser combined_jar_list pour le paramètre classpath de startJVM
-        # jvm_args sera initialisé plus bas
-        jvm_args = []
+        # Gestion de java.library.path pour les bibliothèques natives
+        # (Cette section vient des "Stashed changes" et est intégrée ici)
+        # Priorité aux natives du lib_dir_path principal, puis celles des tests si différentes et présentes.
+        # Cependant, initialize_jvm utilise NATIVE_LIBS_DIR qui est dérivé de lib_dir_path.
+        # Si les tests ont leurs propres natives dans un sous-dossier "native" de TEST_LIBS_DIR,
+        # et que lib_dir_path pointe vers les libs principales, alors les natives des tests ne seraient pas prises.
+        # Pour l'instant, on se fie à NATIVE_LIBS_DIR calculé à partir du lib_dir_path principal.
+        # Si les tests nécessitent des natives spécifiques qui ne sont PAS dans LIBS_DIR/native,
+        # cela nécessitera une gestion plus complexe de java.library.path.
+        # Le code actuel utilise NATIVE_LIBS_DIR qui est LIB_DIR / native_lib_subdir.
+        # Si lib_dir_path est LIBS_DIR, alors NATIVE_LIBS_DIR est LIBS_DIR / "native".
+        
+        jvm_args = [] # Initialisation de jvm_args
+        
         if NATIVE_LIBS_DIR.exists() and any(NATIVE_LIBS_DIR.iterdir()):
             native_path_arg = f"-Djava.library.path={NATIVE_LIBS_DIR.resolve()}"
             jvm_args.append(native_path_arg)
@@ -657,22 +670,18 @@ def initialize_jvm(
             if _system == "Windows":
                 _jvm_dll_path = _java_home_path / "bin" / "server" / "jvm.dll"
             elif _system == "Darwin": # macOS
-                # Pour macOS, le chemin peut varier (ex: /lib/server/libjvm.dylib ou Contents/Home/lib/server/libjvm.dylib)
-                # On essaie le chemin le plus courant pour les JDKs non-framés.
                 _jvm_dll_path = _java_home_path / "lib" / "server" / "libjvm.dylib"
                 if not _jvm_dll_path.is_file() and (_java_home_path / "Contents" / "Home" / "lib" / "server" / "libjvm.dylib").is_file():
                      _jvm_dll_path = _java_home_path / "Contents" / "Home" / "lib" / "server" / "libjvm.dylib"
-                elif not _jvm_dll_path.is_file(): # Fallback pour certaines structures OpenJDK sur Mac
+                elif not _jvm_dll_path.is_file():
                      _jvm_dll_path = _java_home_path / "jre" / "lib" / "server" / "libjvm.dylib"
-
             else: # Linux et autres
                 _jvm_dll_path = _java_home_path / "lib" / "server" / "libjvm.so"
-                if not _jvm_dll_path.is_file(): # Fallback pour certaines structures OpenJDK sur Linux (ex: /jre/lib/amd64/server/)
-                    # Essayer de trouver dans les sous-dossiers courants de 'lib'
+                if not _jvm_dll_path.is_file():
                     lib_server_paths = list((_java_home_path / "lib").glob("**/server/libjvm.so"))
                     if lib_server_paths:
                         _jvm_dll_path = lib_server_paths[0]
-                    else: # Dernier recours pour JRE
+                    else:
                          jre_lib_server_paths = list((_java_home_path / "jre" / "lib").glob("**/server/libjvm.so"))
                          if jre_lib_server_paths:
                               _jvm_dll_path = jre_lib_server_paths[0]
@@ -684,11 +693,9 @@ def initialize_jvm(
                 logger.warning(f"   Impossible de construire un chemin JVM valide depuis JAVA_HOME '{java_home_to_set}' (chemin testé: {_jvm_dll_path}). JPype utilisera sa détection par défaut.")
         
         if jvm_path_to_use_explicit:
-            # On passe toujours jar_list au paramètre classpath, même si CLASSPATH est défini, par sécurité.
             jpype.startJVM(jvm_path_to_use_explicit, classpath=combined_jar_list, *jvm_args, convertStrings=False, ignoreUnrecognized=True)
         else:
             logger.warning("   Aucun chemin JVM explicite fourni à startJVM, utilisation de la détection interne de JPype.")
-            # On passe toujours combined_jar_list au paramètre classpath
             jpype.startJVM(classpath=combined_jar_list, *jvm_args, convertStrings=False, ignoreUnrecognized=True)
             
         if hasattr(jpype, 'imports') and jpype.imports is not None:
@@ -696,13 +703,15 @@ def initialize_jvm(
                 jpype.imports.registerDomain("java", alias="java")
                 jpype.imports.registerDomain("org", alias="org")
                 jpype.imports.registerDomain("net", alias="net")
-                # Enregistrer les domaines plus spécifiques ici aussi
                 jpype.imports.registerDomain("net.sf", alias="sf")
                 jpype.imports.registerDomain("net.sf.tweety", alias="tweety")
                 logger.info("✅ JVM démarrée avec succès et domaines (java, org, net, sf, tweety) enregistrés.")
+                try:
+                    logger.info(f"   Classpath rapporté par jpype.getClassPath() juste après startJVM: {jpype.getClassPath()}")
+                except Exception as e_cp:
+                    logger.warning(f"   Impossible d'obtenir jpype.getClassPath() juste après startJVM: {e_cp}")
             except Exception as e_reg_domain_jvm_setup:
                 logger.error(f"❌ Erreur lors de l'enregistrement des domaines JPype dans jvm_setup: {e_reg_domain_jvm_setup}")
-                # Ne pas considérer la JVM comme non prête juste pour ça, mais c'est un problème.
         else:
             logger.warning("✅ JVM démarrée mais jpype.imports non disponible pour enregistrer les domaines (possible si mock partiel).")
         jvm_ready = True
