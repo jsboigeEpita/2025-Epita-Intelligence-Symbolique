@@ -9,6 +9,7 @@ import uuid
 import enum
 from datetime import datetime
 from typing import Dict, Any, Optional, List, Union
+import functools
 
 from argumentation_analysis.paths import DATA_DIR
 
@@ -42,6 +43,7 @@ class AgentLevel(enum.Enum):
     SYSTEM = "system"
 
 
+@functools.total_ordering
 class Message:
     """
     Représentation d'un message dans le système de communication multi-canal.
@@ -87,7 +89,33 @@ class Message:
         self.content = content
         self.metadata = metadata or {}
         self.timestamp = timestamp or datetime.now()
+
+        # Pour la comparaison, mapper les priorités à des valeurs numériques
+        self._priority_map = {
+            MessagePriority.LOW: 0,
+            MessagePriority.NORMAL: 1,
+            MessagePriority.HIGH: 2,
+            MessagePriority.CRITICAL: 3
+        }
     
+    def __eq__(self, other):
+        if not isinstance(other, Message):
+            return NotImplemented
+        return (self.priority == other.priority and
+                self.timestamp == other.timestamp and
+                self.id == other.id) # Ajouter l'id pour une égalité stricte si nécessaire
+
+    def __lt__(self, other):
+        if not isinstance(other, Message):
+            return NotImplemented
+        
+        # Les priorités plus élevées (valeur numérique plus grande) viennent en premier
+        if self._priority_map[self.priority] != self._priority_map[other.priority]:
+            return self._priority_map[self.priority] > self._priority_map[other.priority]
+        
+        # Si les priorités sont égales, le message le plus ancien (timestamp plus petit) vient en premier
+        return self.timestamp < other.timestamp
+            
     def to_dict(self) -> Dict[str, Any]:
         """
         Convertit le message en dictionnaire pour la sérialisation.
