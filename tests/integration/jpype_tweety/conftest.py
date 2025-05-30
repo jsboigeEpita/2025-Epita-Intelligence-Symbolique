@@ -139,183 +139,187 @@ def jvm_manager():
         if jpype.isJVMStarted():
             print("INFO: La JVM restera active jusqu'à la fin du processus de test principal (géré par conftest racine).")
 
-# Fixture pour importer les classes communes de Dung
-@pytest.fixture(scope="module")
-def dung_classes():
-    try:
-        DungTheory = jpype.JClass("net.sf.tweety.arg.dung.syntax.DungTheory")
-        Argument = jpype.JClass("net.sf.tweety.arg.dung.syntax.Argument")
-        Attack = jpype.JClass("net.sf.tweety.arg.dung.syntax.Attack")
-        PreferredReasoner = jpype.JClass("net.sf.tweety.arg.dung.reasoner.PreferredReasoner")
-        GroundedReasoner = jpype.JClass("net.sf.tweety.arg.dung.reasoner.GroundedReasoner")
-        CompleteReasoner = jpype.JClass("net.sf.tweety.arg.dung.reasoner.CompleteReasoner")
-        StableReasoner = jpype.JClass("net.sf.tweety.arg.dung.reasoner.StableReasoner")
-        # Ajoutez d'autres classes communes ici si nécessaire
-        return {
-            "DungTheory": DungTheory,
-            "Argument": Argument,
-            "Attack": Attack,
-            "PreferredReasoner": PreferredReasoner,
-            "GroundedReasoner": GroundedReasoner,
-            "CompleteReasoner": CompleteReasoner,
-            "StableReasoner": StableReasoner
-        }
-    except jpype.JException as e:
-        pytest.fail(f"Échec de l'importation des classes Java pour Dung: {e.stacktrace()}")
+# Les fixtures de classes suivantes sont maintenant définies dans le conftest.py racine.
+# Elles sont commentées ici pour éviter les conflits et s'assurer que les versions
+# du conftest racine (qui utilisent un ClassLoader spécifique) sont utilisées.
 
-# Fixture pour importer les classes communes de QBF
-@pytest.fixture(scope="module")
-def qbf_classes():
-    try:
-        QuantifiedBooleanFormula = jpype.JClass("org.tweetyproject.logics.qbf.syntax.QuantifiedBooleanFormula")
-        Quantifier = jpype.JClass("org.tweetyproject.logics.qbf.syntax.Quantifier")
-        QbfParser = jpype.JClass("org.tweetyproject.logics.qbf.parser.QbfParser")
-        # QBFSolver = jpype.JClass("org.tweetyproject.logics.qbf.solver.QBFSolver") # Peut nécessiter une config
-        Variable = jpype.JClass("org.tweetyproject.logics.commons.syntax.Variable")
-        # Opérateurs logiques (les noms peuvent varier, ex: Or, And, Not de commons.syntax ou qbf.syntax)
-        # Par exemple:
-        # Or = jpype.JClass("org.tweetyproject.logics.pl.syntax.Or") # Si on utilise la logique propositionnelle pour la base
-        # Not = jpype.JClass("org.tweetyproject.logics.pl.syntax.Not")
-        # Il faudra vérifier les classes exactes pour les opérateurs dans le contexte QBF de Tweety.
-        # Pour l'instant, on se concentre sur le parsing et la création de base.
-        return {
-            "QuantifiedBooleanFormula": QuantifiedBooleanFormula,
-            "Quantifier": Quantifier,
-            "QbfParser": QbfParser,
-            # "QBFSolver": QBFSolver,
-            "Variable": Variable,
-            # "Or": Or,
-            # "Not": Not
-        }
-    except jpype.JException as e:
-        pytest.fail(f"Échec de l'importation des classes Java pour QBF: {e.stacktrace()}")
+# # Fixture pour importer les classes communes de Dung
+# @pytest.fixture(scope="module")
+# def dung_classes():
+#     try:
+#         DungTheory = jpype.JClass("net.sf.tweety.arg.dung.syntax.DungTheory")
+#         Argument = jpype.JClass("net.sf.tweety.arg.dung.syntax.Argument")
+#         Attack = jpype.JClass("net.sf.tweety.arg.dung.syntax.Attack")
+#         PreferredReasoner = jpype.JClass("net.sf.tweety.arg.dung.reasoner.PreferredReasoner")
+#         GroundedReasoner = jpype.JClass("net.sf.tweety.arg.dung.reasoner.GroundedReasoner")
+#         CompleteReasoner = jpype.JClass("net.sf.tweety.arg.dung.reasoner.CompleteReasoner")
+#         StableReasoner = jpype.JClass("net.sf.tweety.arg.dung.reasoner.StableReasoner")
+#         # Ajoutez d'autres classes communes ici si nécessaire
+#         return {
+#             "DungTheory": DungTheory,
+#             "Argument": Argument,
+#             "Attack": Attack,
+#             "PreferredReasoner": PreferredReasoner,
+#             "GroundedReasoner": GroundedReasoner,
+#             "CompleteReasoner": CompleteReasoner,
+#             "StableReasoner": StableReasoner
+#         }
+#     except jpype.JException as e:
+#         pytest.fail(f"Échec de l'importation des classes Java pour Dung: {e.stacktrace()}")
 
-# Fixture pour importer les classes communes de révision de croyances
-@pytest.fixture(scope="module")
-def belief_revision_classes():
-    try:
-        # Classes de base pour la logique propositionnelle
-        PlFormula = jpype.JClass("org.tweetyproject.logics.pl.syntax.PlFormula")
-        PlBeliefSet = jpype.JClass("org.tweetyproject.logics.pl.syntax.PlBeliefSet")
-        PlParser = jpype.JClass("org.tweetyproject.logics.pl.parser.PlParser")
-        SimplePlReasoner = jpype.JClass("org.tweetyproject.logics.pl.reasoner.SimplePlReasoner")
-        Negation = jpype.JClass("org.tweetyproject.logics.pl.syntax.Negation")
+# # Fixture pour importer les classes communes de QBF
+# @pytest.fixture(scope="module")
+# def qbf_classes():
+#     try:
+#         QuantifiedBooleanFormula = jpype.JClass("org.tweetyproject.logics.qbf.syntax.QuantifiedBooleanFormula")
+#         Quantifier = jpype.JClass("org.tweetyproject.logics.qbf.syntax.Quantifier")
+#         QbfParser = jpype.JClass("org.tweetyproject.logics.qbf.parser.QbfParser")
+#         # QBFSolver = jpype.JClass("org.tweetyproject.logics.qbf.solver.QBFSolver") # Peut nécessiter une config
+#         Variable = jpype.JClass("org.tweetyproject.logics.commons.syntax.Variable")
+#         # Opérateurs logiques (les noms peuvent varier, ex: Or, And, Not de commons.syntax ou qbf.syntax)
+#         # Par exemple:
+#         # Or = jpype.JClass("org.tweetyproject.logics.pl.syntax.Or") # Si on utilise la logique propositionnelle pour la base
+#         # Not = jpype.JClass("org.tweetyproject.logics.pl.syntax.Not")
+#         # Il faudra vérifier les classes exactes pour les opérateurs dans le contexte QBF de Tweety.
+#         # Pour l'instant, on se concentre sur le parsing et la création de base.
+#         return {
+#             "QuantifiedBooleanFormula": QuantifiedBooleanFormula,
+#             "Quantifier": Quantifier,
+#             "QbfParser": QbfParser,
+#             # "QBFSolver": QBFSolver,
+#             "Variable": Variable,
+#             # "Or": Or,
+#             # "Not": Not
+#         }
+#     except jpype.JException as e:
+#         pytest.fail(f"Échec de l'importation des classes Java pour QBF: {e.stacktrace()}")
 
-        # Opérateurs de révision
-        KernelContractionOperator = jpype.JClass("org.tweetyproject.beliefdynamics.operators.KernelContractionOperator")
-        RandomIncisionFunction = jpype.JClass("org.tweetyproject.beliefdynamics.kernels.RandomIncisionFunction")
-        DefaultMultipleBaseExpansionOperator = jpype.JClass("org.tweetyproject.beliefdynamics.operators.DefaultMultipleBaseExpansionOperator")
-        LeviMultipleBaseRevisionOperator = jpype.JClass("org.tweetyproject.beliefdynamics.operators.LeviMultipleBaseRevisionOperator")
+# # Fixture pour importer les classes communes de révision de croyances
+# @pytest.fixture(scope="module")
+# def belief_revision_classes():
+#     try:
+#         # Classes de base pour la logique propositionnelle
+#         PlFormula = jpype.JClass("org.tweetyproject.logics.pl.syntax.PlFormula")
+#         PlBeliefSet = jpype.JClass("org.tweetyproject.logics.pl.syntax.PlBeliefSet")
+#         PlParser = jpype.JClass("org.tweetyproject.logics.pl.parser.PlParser")
+#         SimplePlReasoner = jpype.JClass("org.tweetyproject.logics.pl.reasoner.SimplePlReasoner")
+#         Negation = jpype.JClass("org.tweetyproject.logics.pl.syntax.Negation")
 
-        # Classes pour la révision multi-agents (CrMas)
-        CrMasBeliefSet = jpype.JClass("org.tweetyproject.beliefdynamics.mas.CrMasBeliefSet")
-        InformationObject = jpype.JClass("org.tweetyproject.beliefdynamics.mas.InformationObject")
-        CrMasRevisionWrapper = jpype.JClass("org.tweetyproject.beliefdynamics.mas.CrMasRevisionWrapper")
-        CrMasSimpleRevisionOperator = jpype.JClass("org.tweetyproject.beliefdynamics.mas.CrMasSimpleRevisionOperator")
-        CrMasArgumentativeRevisionOperator = jpype.JClass("org.tweetyproject.beliefdynamics.mas.CrMasArgumentativeRevisionOperator")
-        DummyAgent = jpype.JClass("org.tweetyproject.agents.DummyAgent") # Pour les exemples CrMas
-        Order = jpype.JClass("org.tweetyproject.commons.util.Order") # Pour la crédibilité des agents
-        PlSignature = jpype.JClass("org.tweetyproject.logics.pl.syntax.PlSignature")
+#         # Opérateurs de révision
+#         KernelContractionOperator = jpype.JClass("org.tweetyproject.beliefdynamics.operators.KernelContractionOperator")
+#         RandomIncisionFunction = jpype.JClass("org.tweetyproject.beliefdynamics.kernels.RandomIncisionFunction")
+#         DefaultMultipleBaseExpansionOperator = jpype.JClass("org.tweetyproject.beliefdynamics.operators.DefaultMultipleBaseExpansionOperator")
+#         LeviMultipleBaseRevisionOperator = jpype.JClass("org.tweetyproject.beliefdynamics.operators.LeviMultipleBaseRevisionOperator")
 
-
-        # Mesures d'incohérence
-        ContensionInconsistencyMeasure = jpype.JClass("org.tweetyproject.logics.pl.analysis.ContensionInconsistencyMeasure")
-        NaiveMusEnumerator = jpype.JClass("org.tweetyproject.logics.pl.analysis.NaiveMusEnumerator")
-        SatSolver = jpype.JClass("org.tweetyproject.logics.pl.sat.SatSolver") # Nécessaire pour NaiveMusEnumerator
-        MaInconsistencyMeasure = jpype.JClass("org.tweetyproject.logics.pl.analysis.MaInconsistencyMeasure")
-        McscInconsistencyMeasure = jpype.JClass("org.tweetyproject.logics.pl.analysis.McscInconsistencyMeasure")
-        PossibleWorldIterator = jpype.JClass("org.tweetyproject.logics.pl.syntax.PossibleWorldIterator")
-        DalalDistance = jpype.JClass("org.tweetyproject.logics.pl.util.DalalDistance")
-        DSumInconsistencyMeasure = jpype.JClass("org.tweetyproject.logics.pl.analysis.DSumInconsistencyMeasure")
-        DMaxInconsistencyMeasure = jpype.JClass("org.tweetyproject.logics.pl.analysis.DMaxInconsistencyMeasure")
-        DHitInconsistencyMeasure = jpype.JClass("org.tweetyproject.logics.pl.analysis.DHitInconsistencyMeasure")
-        ProductNorm = jpype.JClass("org.tweetyproject.math.tnorms.ProductNorm")
-        FuzzyInconsistencyMeasure = jpype.JClass("org.tweetyproject.logics.pl.analysis.FuzzyInconsistencyMeasure")
-        PriorityIncisionFunction = jpype.JClass("org.tweetyproject.beliefdynamics.kernels.PriorityIncisionFunction")
+#         # Classes pour la révision multi-agents (CrMas)
+#         CrMasBeliefSet = jpype.JClass("org.tweetyproject.beliefdynamics.mas.CrMasBeliefSet")
+#         InformationObject = jpype.JClass("org.tweetyproject.beliefdynamics.mas.InformationObject")
+#         CrMasRevisionWrapper = jpype.JClass("org.tweetyproject.beliefdynamics.mas.CrMasRevisionWrapper")
+#         CrMasSimpleRevisionOperator = jpype.JClass("org.tweetyproject.beliefdynamics.mas.CrMasSimpleRevisionOperator")
+#         CrMasArgumentativeRevisionOperator = jpype.JClass("org.tweetyproject.beliefdynamics.mas.CrMasArgumentativeRevisionOperator")
+#         DummyAgent = jpype.JClass("org.tweetyproject.agents.DummyAgent") # Pour les exemples CrMas
+#         Order = jpype.JClass("org.tweetyproject.commons.util.Order") # Pour la crédibilité des agents
+#         PlSignature = jpype.JClass("org.tweetyproject.logics.pl.syntax.PlSignature")
 
 
-        return {
-            "PlFormula": PlFormula,
-            "PlBeliefSet": PlBeliefSet,
-            "PlParser": PlParser,
-            "SimplePlReasoner": SimplePlReasoner,
-            "Negation": Negation,
-            "KernelContractionOperator": KernelContractionOperator,
-            "RandomIncisionFunction": RandomIncisionFunction,
-            "DefaultMultipleBaseExpansionOperator": DefaultMultipleBaseExpansionOperator,
-            "LeviMultipleBaseRevisionOperator": LeviMultipleBaseRevisionOperator,
-            "CrMasBeliefSet": CrMasBeliefSet,
-            "InformationObject": InformationObject,
-            "CrMasRevisionWrapper": CrMasRevisionWrapper,
-            "CrMasSimpleRevisionOperator": CrMasSimpleRevisionOperator,
-            "CrMasArgumentativeRevisionOperator": CrMasArgumentativeRevisionOperator,
-            "DummyAgent": DummyAgent,
-            "Order": Order,
-            "PlSignature": PlSignature,
-            "ContensionInconsistencyMeasure": ContensionInconsistencyMeasure,
-            "NaiveMusEnumerator": NaiveMusEnumerator,
-            "SatSolver": SatSolver,
-            "MaInconsistencyMeasure": MaInconsistencyMeasure,
-            "McscInconsistencyMeasure": McscInconsistencyMeasure,
-            "PossibleWorldIterator": PossibleWorldIterator,
-            "DalalDistance": DalalDistance,
-            "DSumInconsistencyMeasure": DSumInconsistencyMeasure,
-            "DMaxInconsistencyMeasure": DMaxInconsistencyMeasure,
-            "DHitInconsistencyMeasure": DHitInconsistencyMeasure,
-            "ProductNorm": ProductNorm,
-            "FuzzyInconsistencyMeasure": FuzzyInconsistencyMeasure,
-            "PriorityIncisionFunction": PriorityIncisionFunction,
-        }
-    except jpype.JException as e:
-        pytest.fail(f"Échec de l'importation des classes Java pour la révision de croyances: {e.stacktrace()}")
+#         # Mesures d'incohérence
+#         ContensionInconsistencyMeasure = jpype.JClass("org.tweetyproject.logics.pl.analysis.ContensionInconsistencyMeasure")
+#         NaiveMusEnumerator = jpype.JClass("org.tweetyproject.logics.pl.analysis.NaiveMusEnumerator")
+#         SatSolver = jpype.JClass("org.tweetyproject.logics.pl.sat.SatSolver") # Nécessaire pour NaiveMusEnumerator
+#         MaInconsistencyMeasure = jpype.JClass("org.tweetyproject.logics.pl.analysis.MaInconsistencyMeasure")
+#         McscInconsistencyMeasure = jpype.JClass("org.tweetyproject.logics.pl.analysis.McscInconsistencyMeasure")
+#         PossibleWorldIterator = jpype.JClass("org.tweetyproject.logics.pl.syntax.PossibleWorldIterator")
+#         DalalDistance = jpype.JClass("org.tweetyproject.logics.pl.util.DalalDistance")
+#         DSumInconsistencyMeasure = jpype.JClass("org.tweetyproject.logics.pl.analysis.DSumInconsistencyMeasure")
+#         DMaxInconsistencyMeasure = jpype.JClass("org.tweetyproject.logics.pl.analysis.DMaxInconsistencyMeasure")
+#         DHitInconsistencyMeasure = jpype.JClass("org.tweetyproject.logics.pl.analysis.DHitInconsistencyMeasure")
+#         ProductNorm = jpype.JClass("org.tweetyproject.math.tnorms.ProductNorm")
+#         FuzzyInconsistencyMeasure = jpype.JClass("org.tweetyproject.logics.pl.analysis.FuzzyInconsistencyMeasure")
+#         PriorityIncisionFunction = jpype.JClass("org.tweetyproject.beliefdynamics.kernels.PriorityIncisionFunction")
 
-# Fixture pour importer les classes communes d'argumentation dialogique
-@pytest.fixture(scope="module")
-def dialogue_classes(): # jpype_is_running n'est pas une fixture définie, jvm_manager s'en occupe.
-    """Importe les classes Java nécessaires pour l'argumentation dialogique."""
-    if not jpype.isJVMStarted(): # Vérification directe de l'état de la JVM
-        pytest.skip("JVM non démarrée ou JPype non initialisé correctement.")
-    try:
-        ArgumentationAgent = jpype.JClass("org.tweetyproject.agents.dialogues.ArgumentationAgent")
-        GroundedAgent = jpype.JClass("org.tweetyproject.agents.dialogues.GroundedAgent")
-        OpponentModel = jpype.JClass("org.tweetyproject.agents.dialogues.OpponentModel")
-        Dialogue = jpype.JClass("org.tweetyproject.agents.dialogues.Dialogue")
-        DialogueTrace = jpype.JClass("org.tweetyproject.agents.dialogues.DialogueTrace")
-        DialogueResult = jpype.JClass("org.tweetyproject.agents.dialogues.DialogueResult")
-        PersuasionProtocol = jpype.JClass("org.tweetyproject.agents.dialogues.PersuasionProtocol")
-        # NegotiationProtocol = jpype.JClass("org.tweetyproject.agents.dialogues.NegotiationProtocol") # Interface
-        # InquiryProtocol = jpype.JClass("org.tweetyproject.agents.dialogues.InquiryProtocol") # Interface
-        Position = jpype.JClass("org.tweetyproject.agents.dialogues.Position")
-        SimpleBeliefSet = jpype.JClass("org.tweetyproject.logics.commons.syntax.SimpleBeliefSet")
-        # Moves - peuvent être utiles pour des assertions plus fines sur la trace
-        # Move = jpype.JClass("org.tweetyproject.agents.dialogues.moves.Move")
-        # Claim = jpype.JClass("org.tweetyproject.agents.dialogues.moves.Claim")
-        # DialogueStrategy = jpype.JClass("org.tweetyproject.agents.dialogues.strategies.DialogueStrategy") # Interface
-        DefaultStrategy = jpype.JClass("org.tweetyproject.agents.dialogues.strategies.DefaultStrategy")
+
+#         return {
+#             "PlFormula": PlFormula,
+#             "PlBeliefSet": PlBeliefSet,
+#             "PlParser": PlParser,
+#             "SimplePlReasoner": SimplePlReasoner,
+#             "Negation": Negation,
+#             "KernelContractionOperator": KernelContractionOperator,
+#             "RandomIncisionFunction": RandomIncisionFunction,
+#             "DefaultMultipleBaseExpansionOperator": DefaultMultipleBaseExpansionOperator,
+#             "LeviMultipleBaseRevisionOperator": LeviMultipleBaseRevisionOperator,
+#             "CrMasBeliefSet": CrMasBeliefSet,
+#             "InformationObject": InformationObject,
+#             "CrMasRevisionWrapper": CrMasRevisionWrapper,
+#             "CrMasSimpleRevisionOperator": CrMasSimpleRevisionOperator,
+#             "CrMasArgumentativeRevisionOperator": CrMasArgumentativeRevisionOperator,
+#             "DummyAgent": DummyAgent,
+#             "Order": Order,
+#             "PlSignature": PlSignature,
+#             "ContensionInconsistencyMeasure": ContensionInconsistencyMeasure,
+#             "NaiveMusEnumerator": NaiveMusEnumerator,
+#             "SatSolver": SatSolver,
+#             "MaInconsistencyMeasure": MaInconsistencyMeasure,
+#             "McscInconsistencyMeasure": McscInconsistencyMeasure,
+#             "PossibleWorldIterator": PossibleWorldIterator,
+#             "DalalDistance": DalalDistance,
+#             "DSumInconsistencyMeasure": DSumInconsistencyMeasure,
+#             "DMaxInconsistencyMeasure": DMaxInconsistencyMeasure,
+#             "DHitInconsistencyMeasure": DHitInconsistencyMeasure,
+#             "ProductNorm": ProductNorm,
+#             "FuzzyInconsistencyMeasure": FuzzyInconsistencyMeasure,
+#             "PriorityIncisionFunction": PriorityIncisionFunction,
+#         }
+#     except jpype.JException as e:
+#         pytest.fail(f"Échec de l'importation des classes Java pour la révision de croyances: {e.stacktrace()}")
+
+# # Fixture pour importer les classes communes d'argumentation dialogique
+# @pytest.fixture(scope="module")
+# def dialogue_classes(): # jpype_is_running n'est pas une fixture définie, jvm_manager s'en occupe.
+#     """Importe les classes Java nécessaires pour l'argumentation dialogique."""
+#     if not jpype.isJVMStarted(): # Vérification directe de l'état de la JVM
+#         pytest.skip("JVM non démarrée ou JPype non initialisé correctement.")
+#     try:
+#         ArgumentationAgent = jpype.JClass("org.tweetyproject.agents.dialogues.ArgumentationAgent")
+#         GroundedAgent = jpype.JClass("org.tweetyproject.agents.dialogues.GroundedAgent")
+#         OpponentModel = jpype.JClass("org.tweetyproject.agents.dialogues.OpponentModel")
+#         Dialogue = jpype.JClass("org.tweetyproject.agents.dialogues.Dialogue")
+#         DialogueTrace = jpype.JClass("org.tweetyproject.agents.dialogues.DialogueTrace")
+#         DialogueResult = jpype.JClass("org.tweetyproject.agents.dialogues.DialogueResult")
+#         PersuasionProtocol = jpype.JClass("org.tweetyproject.agents.dialogues.PersuasionProtocol")
+#         # NegotiationProtocol = jpype.JClass("org.tweetyproject.agents.dialogues.NegotiationProtocol") # Interface
+#         # InquiryProtocol = jpype.JClass("org.tweetyproject.agents.dialogues.InquiryProtocol") # Interface
+#         Position = jpype.JClass("org.tweetyproject.agents.dialogues.Position")
+#         SimpleBeliefSet = jpype.JClass("org.tweetyproject.logics.commons.syntax.SimpleBeliefSet")
+#         # Moves - peuvent être utiles pour des assertions plus fines sur la trace
+#         # Move = jpype.JClass("org.tweetyproject.agents.dialogues.moves.Move")
+#         # Claim = jpype.JClass("org.tweetyproject.agents.dialogues.moves.Claim")
+#         # DialogueStrategy = jpype.JClass("org.tweetyproject.agents.dialogues.strategies.DialogueStrategy") # Interface
+#         DefaultStrategy = jpype.JClass("org.tweetyproject.agents.dialogues.strategies.DefaultStrategy")
         
-        # Pour les protocoles spécifiques si besoin (exemples de la fiche)
-        # MonotonicConcessionProtocol = jpype.JClass("org.tweetyproject.agents.dialogues.MonotonicConcessionProtocol")
-        # CollaborativeInquiryProtocol = jpype.JClass("org.tweetyproject.agents.dialogues.CollaborativeInquiryProtocol")
+#         # Pour les protocoles spécifiques si besoin (exemples de la fiche)
+#         # MonotonicConcessionProtocol = jpype.JClass("org.tweetyproject.agents.dialogues.MonotonicConcessionProtocol")
+#         # CollaborativeInquiryProtocol = jpype.JClass("org.tweetyproject.agents.dialogues.CollaborativeInquiryProtocol")
 
 
-        return {
-            "ArgumentationAgent": ArgumentationAgent,
-            "GroundedAgent": GroundedAgent,
-            "OpponentModel": OpponentModel,
-            "Dialogue": Dialogue,
-            "DialogueTrace": DialogueTrace,
-            "DialogueResult": DialogueResult,
-            "PersuasionProtocol": PersuasionProtocol,
-            # "NegotiationProtocol": NegotiationProtocol,
-            # "InquiryProtocol": InquiryProtocol,
-            "Position": Position,
-            "SimpleBeliefSet": SimpleBeliefSet,
-            # "Move": Move,
-            # "Claim": Claim,
-            # "DialogueStrategy": DialogueStrategy,
-            "DefaultStrategy": DefaultStrategy,
-            # "MonotonicConcessionProtocol": MonotonicConcessionProtocol,
-            # "CollaborativeInquiryProtocol": CollaborativeInquiryProtocol,
-        }
-    except jpype.JException as e:
-        pytest.fail(f"Échec de l'importation des classes Java pour l'argumentation dialogique: {e.stacktrace()}")
+#         return {
+#             "ArgumentationAgent": ArgumentationAgent,
+#             "GroundedAgent": GroundedAgent,
+#             "OpponentModel": OpponentModel,
+#             "Dialogue": Dialogue,
+#             "DialogueTrace": DialogueTrace,
+#             "DialogueResult": DialogueResult,
+#             "PersuasionProtocol": PersuasionProtocol,
+#             # "NegotiationProtocol": NegotiationProtocol,
+#             # "InquiryProtocol": InquiryProtocol,
+#             "Position": Position,
+#             "SimpleBeliefSet": SimpleBeliefSet,
+#             # "Move": Move,
+#             # "Claim": Claim,
+#             # "DialogueStrategy": DialogueStrategy,
+#             "DefaultStrategy": DefaultStrategy,
+#             # "MonotonicConcessionProtocol": MonotonicConcessionProtocol,
+#             # "CollaborativeInquiryProtocol": CollaborativeInquiryProtocol,
+#         }
+#     except jpype.JException as e:
+#         pytest.fail(f"Échec de l'importation des classes Java pour l'argumentation dialogique: {e.stacktrace()}")

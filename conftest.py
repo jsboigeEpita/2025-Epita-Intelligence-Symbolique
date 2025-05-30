@@ -101,6 +101,7 @@ def dung_classes():
 def qbf_classes():
     import jpype
     if not jpype.isJVMStarted(): pytest.skip("JVM non démarrée")
+    print(f"DEBUG QBF_CLASSES: Classpath: {jpype.getClassPath(True)}") # Ajout du log classpath
     loader_to_use = jpype.JClass("java.lang.Thread").currentThread().getContextClassLoader() or jpype.java.lang.ClassLoader.getSystemClassLoader()
     try:
         return {
@@ -115,6 +116,7 @@ def qbf_classes():
 def belief_revision_classes():
     import jpype
     if not jpype.isJVMStarted(): pytest.skip("JVM non démarrée")
+    print(f"DEBUG BELIEF_REVISION_CLASSES: Classpath: {jpype.getClassPath(True)}") # Ajout du log classpath
     loader_to_use = jpype.JClass("java.lang.Thread").currentThread().getContextClassLoader() or jpype.java.lang.ClassLoader.getSystemClassLoader()
     try:
         return {
@@ -124,7 +126,7 @@ def belief_revision_classes():
             # ... (ajouter toutes les autres classes avec org.tweetyproject et loader_to_use)
             "SimplePlReasoner": jpype.JClass("org.tweetyproject.logics.pl.reasoner.SimplePlReasoner", loader=loader_to_use),
             "Negation": jpype.JClass("org.tweetyproject.logics.pl.syntax.Negation", loader=loader_to_use),
-            "KernelContractionOperator": jpype.JClass("org.tweetyproject.beliefdynamics.operators.KernelContractionOperator", loader=loader_to_use),
+            "KernelContractionOperator": jpype.JClass("org.tweetyproject.beliefdynamics.kernels.KernelContractionOperator", loader=loader_to_use),
             "RandomIncisionFunction": jpype.JClass("org.tweetyproject.beliefdynamics.kernels.RandomIncisionFunction", loader=loader_to_use),
             "DefaultMultipleBaseExpansionOperator": jpype.JClass("org.tweetyproject.beliefdynamics.operators.DefaultMultipleBaseExpansionOperator", loader=loader_to_use),
             "LeviMultipleBaseRevisionOperator": jpype.JClass("org.tweetyproject.beliefdynamics.operators.LeviMultipleBaseRevisionOperator", loader=loader_to_use),
@@ -156,6 +158,7 @@ def belief_revision_classes():
 def dialogue_classes():
     import jpype
     if not jpype.isJVMStarted(): pytest.skip("JVM non démarrée")
+    print(f"DEBUG DIALOGUE_CLASSES: Classpath: {jpype.getClassPath(True)}") # Ajout du log classpath
     loader_to_use = jpype.JClass("java.lang.Thread").currentThread().getContextClassLoader() or jpype.java.lang.ClassLoader.getSystemClassLoader()
     try:
         return {
