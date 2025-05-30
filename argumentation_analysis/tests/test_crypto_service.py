@@ -23,7 +23,7 @@ from cryptography.fernet import Fernet, InvalidToken
 from cryptography.exceptions import InvalidSignature
 
 # Importer les modules à tester
-from services.crypto_service import CryptoService
+from argumentation_analysis.services.crypto_service import CryptoService
 
 
 @pytest.fixture

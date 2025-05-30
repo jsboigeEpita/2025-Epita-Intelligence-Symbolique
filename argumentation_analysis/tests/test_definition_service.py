@@ -19,8 +19,8 @@ from unittest.mock import patch, MagicMock, mock_open
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 # Importer les modules à tester
-from services.definition_service import DefinitionService
-from services.crypto_service import CryptoService
+from argumentation_analysis.services.definition_service import DefinitionService
+from argumentation_analysis.services.crypto_service import CryptoService
 from models.extract_definition import ExtractDefinitions, SourceDefinition, Extract
 
 

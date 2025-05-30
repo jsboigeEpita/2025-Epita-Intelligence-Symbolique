@@ -19,7 +19,7 @@ from unittest.mock import patch, MagicMock
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 # Importer les modules à tester
-from services.cache_service import CacheService
+from argumentation_analysis.services.cache_service import CacheService
 
 
 @pytest.fixture
