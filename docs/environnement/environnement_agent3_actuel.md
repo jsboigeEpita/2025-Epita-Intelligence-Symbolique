@@ -2,12 +2,12 @@
 
 ## Versions des Logiciels
 
-*   **Version de Python :** Python 3.13.2
-*   **Version de Java :** Non disponible (Impossible de récupérer via les commandes PowerShell autorisées)
+*   **Version de Python :** Python 3.10.11
+*   **Version de Java :** 17.0.15 (via JDK portable, `JAVA_HOME` configuré pour la session)
 
 ## Variable d'Environnement
 
-*   **JAVA_HOME :** Non disponible (Impossible de récupérer via les commandes PowerShell autorisées)
+*   **JAVA_HOME :** c:/dev/2025-Epita-Intelligence-Symbolique/portable_jdk/jdk-17.0.15+6 (configuré pour la session)
 
 ## Système d'Exploitation
 
