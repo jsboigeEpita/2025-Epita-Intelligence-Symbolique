@@ -700,7 +700,6 @@ class MockJClass:
                 # Fallback si la structure n'est pas celle attendue
                 return object.__hash__(instance_mock) # Ou un autre hash par défaut
             instance_mock.hashCode.side_effect = attack_hash_code_side_effect
-    
         # Ajoutez d'autres logiques spécifiques pour .equals() ici si nécessaire:
         # elif self.class_name == "org.tweetyproject.some.other.Class":
         #     def specific_equals_logic(other):
@@ -714,7 +713,6 @@ class MockJClass:
             # La fonction default_equals_logic prend 'other_obj' comme argument.
             # Le 'self' implicite de default_equals_logic sera 'instance_mock'.
             instance_mock.equals.side_effect = default_equals_logic
-        
         # hashCode par défaut pour les autres classes
         # Si equals est basé sur _constructor_args, hashCode devrait l'être aussi.
         def default_hash_code_logic():
@@ -741,21 +739,12 @@ class MockJClass:
         instance_mock.hashCode.side_effect = default_hash_code_logic
 
         # Ajouter __eq__ et __hash__ pour la compatibilité avec les collections Python
-<<<<<<< Updated upstream
         # qui utilisent ces méthodes pour l'égalité et le hachage.
         # Ces méthodes délégueront aux méthodes equals() et hashCode() mockées.
         def __eq__side_effect(other):
             if hasattr(instance_mock, 'equals') and callable(instance_mock.equals):
                 return instance_mock.equals(other)
             return NotImplemented # Indique que la comparaison n'est pas implémentée par ce type
-=======
-            # qui utilisent ces méthodes pour l'égalité et le hachage.
-            # Ces méthodes délégueront aux méthodes equals() et hashCode() mockées.
-            def __eq__side_effect(other):
-                if hasattr(instance_mock, 'equals') and callable(instance_mock.equals):
-                    return instance_mock.equals(other)
-                return NotImplemented # Indique que la comparaison n'est pas implémentée par ce type
->>>>>>> Stashed changes
 
             def __hash__side_effect():
                 if hasattr(instance_mock, 'hashCode') and callable(instance_mock.hashCode):
