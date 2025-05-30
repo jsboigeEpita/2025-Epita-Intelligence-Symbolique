@@ -18,7 +18,7 @@ from unittest.mock import patch, MagicMock
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 # Importer les modules à tester
-from services.extract_service import ExtractService
+from argumentation_analysis.services.extract_service import ExtractService
 
 
 @pytest.fixture
