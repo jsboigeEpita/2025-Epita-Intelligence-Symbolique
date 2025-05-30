@@ -1,19 +1,14 @@
 import pytest
 import os
-import sys # Ajouté
-import subprocess # Ajouté pour l'exécution de scripts
-import jpype # Ajouté pour l'interaction Java
-from pathlib import Path # Ajouté
+import sys
+import subprocess
+from pathlib import Path
+import logging # Importation ajoutée pour mock_logger
 
 # Déterminer le chemin du répertoire du projet
 PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
 # Chemin vers les JARs de Tweety (devrait correspondre à celui utilisé par le conftest.py racine)
 TWEETY_LIBS_PATH = os.path.join(PROJECT_ROOT, "libs")
-
-# La fixture jvm_manager et les fixtures de classes (dung_classes, qbf_classes, etc.)
-# sont maintenant définies dans le conftest.py racine pour une gestion centralisée de JPype.
-# Ce fichier est conservé pour d'éventuelles configurations spécifiques à ce sous-répertoire de tests,
-# mais ne doit plus gérer l'initialisation de JPype ni la définition des classes Java globales.
 
 def get_tweety_classpath():
     """Construit le classpath à partir des JARs trouvés dans TWEETY_LIBS_PATH."""
@@ -22,7 +17,7 @@ def get_tweety_classpath():
     if not jars:
         print(f"AVERTISSEMENT: Aucun fichier JAR trouvé dans '{TWEETY_LIBS_PATH}'.")
         print("Veuillez vérifier que les JARs de Tweety sont présents.")
-        return [] # Ou lever une exception
+        return []
     return jars
 
 @pytest.fixture(scope="session", autouse=True)
@@ -33,9 +28,22 @@ def jvm_manager():
     'autouse=True' garantit que cette fixture est utilisée pour toutes les tests de la session
     dans ce répertoire (et sous-répertoires) où conftest.py est actif.
     """
+    import jpype # Importation locale initiale
+    
+    # Forcer l'utilisation du mock pour les tests jpype_tweety
+    # car le conftest.py racine a sa logique de mock neutralisée.
+    import tests.mocks.jpype_mock as jpype_mock_module
+    sys.modules['jpype'] = jpype_mock_module
+    sys.modules['jpype1'] = jpype_mock_module
+    # Ré-assigner la variable locale jpype pour qu'elle pointe vers le mock chargé
+    jpype = jpype_mock_module
+    print("INFO: [jpype_tweety/conftest.py] Mock JPype activé de force pour cette session de tests.")
+
+    # Obtenir le logger du mock pour y ajouter des messages
+    mock_logger = logging.getLogger("tests.mocks.jpype_mock")
+
     try:
         # --- Début de l'intégration du téléchargement des JARs ---
-        # PROJECT_ROOT et TWEETY_LIBS_PATH sont définis globalement dans ce fichier.
         script_path = Path(PROJECT_ROOT) / "scripts" / "download_test_jars.py"
         target_jars_dir = Path(TWEETY_LIBS_PATH)
 
@@ -56,12 +64,10 @@ def jvm_manager():
                     [sys.executable, str(script_path)],
                     capture_output=True,
                     text=True,
-                    check=False  # Gérer manuellement le code de retour
+                    check=False
                 )
                 
-                # print(f"DEBUG: Script stdout:\n{process.stdout}")
                 if process.stderr:
-                    # print(f"DEBUG: Script stderr:\n{process.stderr}")
                     pass
 
                 if process.returncode != 0:
@@ -74,7 +80,6 @@ def jvm_manager():
                     raise RuntimeError(error_message)
                 
                 print(f"INFO: Script de téléchargement exécuté avec succès (code {process.returncode}).")
-                # Re-vérifier si les JARs sont maintenant présents
                 if not any(target_jars_dir.glob("*.jar")):
                     warning_message = (
                         f"AVERTISSEMENT: Le script de téléchargement s'est terminé avec succès "
@@ -82,13 +87,10 @@ def jvm_manager():
                         f"Vérifiez les logs du script."
                     )
                     print(warning_message)
-                    # On ne lève pas d'erreur ici, car get_tweety_classpath() le fera si nécessaire.
                 else:
                     print(f"INFO: Les fichiers JAR sont maintenant présents dans {target_jars_dir}.")
 
             except Exception as e:
-                # Capturer les exceptions de subprocess.run (comme FileNotFoundError pour sys.executable)
-                # ou d'autres problèmes inattendus.
                 critical_error_message = (
                     f"ERREUR CRITIQUE lors de l'exécution du script de téléchargement {script_path}: {e}"
                 )
@@ -97,13 +99,12 @@ def jvm_manager():
         # --- Fin de l'intégration du téléchargement des JARs ---
 
         print("DEBUG: Checking if JVM is started...")
-        if not jpype.isJVMStarted():
+        if False: # Force le mock, ne démarre pas la vraie JVM
+            mock_logger.info("[JPYPE_TWEETY_CONFTEST] Démarrage de la vraie JVM ignoré car le mock est forcé.")
             print("INFO: Démarrage de la JVM pour les tests d'intégration Tweety...")
             tweety_classpath_list = get_tweety_classpath() 
             
             if not tweety_classpath_list:
-                # Cette condition est cruciale. Si après la tentative de téléchargement,
-                # le classpath est toujours vide, c'est une erreur fatale.
                 critical_error_msg = (
                     f"ERREUR CRITIQUE: Aucun fichier JAR trouvé dans {TWEETY_LIBS_PATH} "
                     f"même après la tentative de téléchargement. Le classpath est vide."
@@ -115,34 +116,30 @@ def jvm_manager():
             print(f"DEBUG: jpype.getDefaultJVMPath() = {jpype.getDefaultJVMPath()}")
             print(f"DEBUG: Tentative de démarrage de la JVM avec le classpath: {tweety_classpath_list}...")
             try:
-                # Démarrage de la JVM
                 jpype.startJVM(
                     jpype.getDefaultJVMPath(),
-                    "-ea",  # Enable assertions
+                    "-ea",
                     classpath=tweety_classpath_list,
-                    convertStrings=False # Recommandé pour éviter les conversions automatiques
+                    convertStrings=False
                 )
                 print(f"DEBUG: jpype.isJVMStarted() après startJVM (classpath list) = {jpype.isJVMStarted()}")
                 if jpype.isJVMStarted():
                     print("INFO: JVM démarrée avec succès.")
                 else:
-                    # Ce cas indique un problème si startJVM n'a pas levé d'exception mais la JVM n'est pas démarrée.
                     raise RuntimeError("jpype.startJVM a été appelé, mais jpype.isJVMStarted() renvoie False.")
             except Exception as e:
-                # Capturer les erreurs spécifiques au démarrage de la JVM
                 jvm_start_error_msg = (
                     f"ERREUR CRITIQUE lors du démarrage de la JVM: {e}\n"
                     f"Classpath utilisé: {tweety_classpath_list}\n"
                     f"Chemin JVM par défaut: {jpype.getDefaultJVMPath()}"
                 )
                 print(jvm_start_error_msg)
-                if hasattr(e, 'stacktrace'): # Pour les JException
+                if hasattr(e, 'stacktrace'):
                     print(f"Stacktrace Java:\n{e.stacktrace()}")
                 raise RuntimeError(jvm_start_error_msg) from e
 
         print(f"DEBUG: jpype.isJVMStarted() à la fin de la section de démarrage = {jpype.isJVMStarted()}")
         
-        # Vérification finale et robuste que la JVM est bien démarrée
         if not jpype.isJVMStarted(): 
             final_error_msg = "ERREUR CRITIQUE: La JVM n'a pas pu démarrer malgré les tentatives."
             print(final_error_msg)
@@ -150,37 +147,46 @@ def jvm_manager():
         else:
             print("INFO: La JVM est démarrée (ou était déjà démarrée).")
 
-        # Rendre les classes Java importables
         jpype.imports.registerDomain("net", alias="net")
         jpype.imports.registerDomain("org", alias="org")
         jpype.imports.registerDomain("java", alias="java") 
 
-        yield # C'est ici que les tests s'exécuteront
+        yield
 
     except Exception as e:
-        # Capturer toute autre exception non gérée pendant la configuration de la fixture
-        # pour s'assurer qu'elle est loggée et que Pytest est informé.
         print(f"Erreur critique inattendue dans la fixture jvm_manager: {e}")
-        raise # Propager l'exception pour que Pytest marque les tests comme échoués ou erronés
+        raise
     finally:
-        # La logique finally reste la même, gérant l'arrêt (ou non-arrêt) de la JVM.
         if jpype.isJVMStarted():
             print("INFO: La JVM restera active jusqu'à la fin du processus de test principal.")
-            # Laisser la JVM s'arrêter naturellement à la fin du processus Python
-            # pour éviter les problèmes avec jpype.shutdownJVM() dans certains contextes de test.
 
-# Fixture pour importer les classes communes de Dung
+@pytest.fixture(scope="session")
+def mocked_jpype(jvm_manager):
+    """
+    Fournit le module jpype (qui devrait être le mock après l'exécution de jvm_manager).
+    jvm_manager est une dépendance pour s'assurer que le patching a eu lieu.
+    """
+    import jpype # À ce stade, jpype dans sys.modules est le mock.
+    return jpype
+
 @pytest.fixture(scope="module")
-def dung_classes():
+def dung_classes(mocked_jpype): # Dépend de mocked_jpype
+    jpype = mocked_jpype # Utiliser le jpype fourni par la fixture
     try:
-        DungTheory = jpype.JClass("net.sf.tweety.arg.dung.syntax.DungTheory")
-        Argument = jpype.JClass("net.sf.tweety.arg.dung.syntax.Argument")
-        Attack = jpype.JClass("net.sf.tweety.arg.dung.syntax.Attack")
-        PreferredReasoner = jpype.JClass("net.sf.tweety.arg.dung.reasoner.PreferredReasoner")
-        GroundedReasoner = jpype.JClass("net.sf.tweety.arg.dung.reasoner.GroundedReasoner")
-        CompleteReasoner = jpype.JClass("net.sf.tweety.arg.dung.reasoner.CompleteReasoner")
-        StableReasoner = jpype.JClass("net.sf.tweety.arg.dung.reasoner.StableReasoner")
-        # Ajoutez d'autres classes communes ici si nécessaire
+        # Utiliser les noms de classes complets comme dans le mock jpype_mock.py
+        # et comme ils seraient utilisés avec le vrai Tweety.
+        DungTheory = jpype.JClass("org.tweetyproject.arg.dung.syntax.DungTheory")
+        Argument = jpype.JClass("org.tweetyproject.arg.dung.syntax.Argument")
+        Attack = jpype.JClass("org.tweetyproject.arg.dung.syntax.Attack")
+        
+        # Les reasoners peuvent être différents si le chemin net.sf.tweety est utilisé ailleurs,
+        # mais pour la cohérence avec DungTheory, Argument, Attack, utilisons org.tweetyproject
+        # Si les tests échouent à cause de cela, il faudra ajuster les noms de classes des reasoners.
+        PreferredReasoner = jpype.JClass("org.tweetyproject.arg.dung.reasoner.SimplePreferredReasoner") # ou PreferredReasoner si c'est le nom exact
+        GroundedReasoner = jpype.JClass("org.tweetyproject.arg.dung.reasoner.SimpleGroundedReasoner")
+        CompleteReasoner = jpype.JClass("org.tweetyproject.arg.dung.reasoner.SimpleCompleteReasoner")
+        StableReasoner = jpype.JClass("org.tweetyproject.arg.dung.reasoner.SimpleStableReasoner")
+        
         return {
             "DungTheory": DungTheory,
             "Argument": Argument,
@@ -191,67 +197,57 @@ def dung_classes():
             "StableReasoner": StableReasoner
         }
     except jpype.JException as e:
-        pytest.fail(f"Échec de l'importation des classes Java pour Dung: {e.stacktrace()}")
+        # Tenter d'obtenir un stacktrace plus détaillé si possible
+        stacktrace = getattr(e, 'stacktrace', lambda: str(e))()
+        pytest.fail(f"Échec de l'importation des classes Java pour Dung (via mocked_jpype): {stacktrace}")
+    except Exception as e_gen:
+        pytest.fail(f"Erreur générale lors de la création de dung_classes (via mocked_jpype): {e_gen}")
 
-# Fixture pour importer les classes communes de QBF
+
 @pytest.fixture(scope="module")
 def qbf_classes():
+    import jpype
     try:
         QuantifiedBooleanFormula = jpype.JClass("org.tweetyproject.logics.qbf.syntax.QuantifiedBooleanFormula")
         Quantifier = jpype.JClass("org.tweetyproject.logics.qbf.syntax.Quantifier")
         QbfParser = jpype.JClass("org.tweetyproject.logics.qbf.parser.QbfParser")
-        # QBFSolver = jpype.JClass("org.tweetyproject.logics.qbf.solver.QBFSolver") # Peut nécessiter une config
         Variable = jpype.JClass("org.tweetyproject.logics.commons.syntax.Variable")
-        # Opérateurs logiques (les noms peuvent varier, ex: Or, And, Not de commons.syntax ou qbf.syntax)
-        # Par exemple:
-        # Or = jpype.JClass("org.tweetyproject.logics.pl.syntax.Or") # Si on utilise la logique propositionnelle pour la base
-        # Not = jpype.JClass("org.tweetyproject.logics.pl.syntax.Not")
-        # Il faudra vérifier les classes exactes pour les opérateurs dans le contexte QBF de Tweety.
-        # Pour l'instant, on se concentre sur le parsing et la création de base.
         return {
             "QuantifiedBooleanFormula": QuantifiedBooleanFormula,
             "Quantifier": Quantifier,
             "QbfParser": QbfParser,
-            # "QBFSolver": QBFSolver,
             "Variable": Variable,
-            # "Or": Or,
-            # "Not": Not
         }
     except jpype.JException as e:
         pytest.fail(f"Échec de l'importation des classes Java pour QBF: {e.stacktrace()}")
 
-# Fixture pour importer les classes communes de révision de croyances
 @pytest.fixture(scope="module")
 def belief_revision_classes():
+    import jpype
     try:
-        # Classes de base pour la logique propositionnelle
         PlFormula = jpype.JClass("org.tweetyproject.logics.pl.syntax.PlFormula")
         PlBeliefSet = jpype.JClass("org.tweetyproject.logics.pl.syntax.PlBeliefSet")
         PlParser = jpype.JClass("org.tweetyproject.logics.pl.parser.PlParser")
         SimplePlReasoner = jpype.JClass("org.tweetyproject.logics.pl.reasoner.SimplePlReasoner")
         Negation = jpype.JClass("org.tweetyproject.logics.pl.syntax.Negation")
 
-        # Opérateurs de révision
         KernelContractionOperator = jpype.JClass("org.tweetyproject.beliefdynamics.operators.KernelContractionOperator")
         RandomIncisionFunction = jpype.JClass("org.tweetyproject.beliefdynamics.kernels.RandomIncisionFunction")
         DefaultMultipleBaseExpansionOperator = jpype.JClass("org.tweetyproject.beliefdynamics.operators.DefaultMultipleBaseExpansionOperator")
         LeviMultipleBaseRevisionOperator = jpype.JClass("org.tweetyproject.beliefdynamics.operators.LeviMultipleBaseRevisionOperator")
 
-        # Classes pour la révision multi-agents (CrMas)
         CrMasBeliefSet = jpype.JClass("org.tweetyproject.beliefdynamics.mas.CrMasBeliefSet")
         InformationObject = jpype.JClass("org.tweetyproject.beliefdynamics.mas.InformationObject")
         CrMasRevisionWrapper = jpype.JClass("org.tweetyproject.beliefdynamics.mas.CrMasRevisionWrapper")
         CrMasSimpleRevisionOperator = jpype.JClass("org.tweetyproject.beliefdynamics.mas.CrMasSimpleRevisionOperator")
         CrMasArgumentativeRevisionOperator = jpype.JClass("org.tweetyproject.beliefdynamics.mas.CrMasArgumentativeRevisionOperator")
-        DummyAgent = jpype.JClass("org.tweetyproject.agents.DummyAgent") # Pour les exemples CrMas
-        Order = jpype.JClass("org.tweetyproject.commons.util.Order") # Pour la crédibilité des agents
+        DummyAgent = jpype.JClass("org.tweetyproject.agents.DummyAgent")
+        Order = jpype.JClass("org.tweetyproject.commons.util.Order")
         PlSignature = jpype.JClass("org.tweetyproject.logics.pl.syntax.PlSignature")
 
-
-        # Mesures d'incohérence
         ContensionInconsistencyMeasure = jpype.JClass("org.tweetyproject.logics.pl.analysis.ContensionInconsistencyMeasure")
         NaiveMusEnumerator = jpype.JClass("org.tweetyproject.logics.pl.analysis.NaiveMusEnumerator")
-        SatSolver = jpype.JClass("org.tweetyproject.logics.pl.sat.SatSolver") # Nécessaire pour NaiveMusEnumerator
+        SatSolver = jpype.JClass("org.tweetyproject.logics.pl.sat.SatSolver")
         MaInconsistencyMeasure = jpype.JClass("org.tweetyproject.logics.pl.analysis.MaInconsistencyMeasure")
         McscInconsistencyMeasure = jpype.JClass("org.tweetyproject.logics.pl.analysis.McscInconsistencyMeasure")
         PossibleWorldIterator = jpype.JClass("org.tweetyproject.logics.pl.syntax.PossibleWorldIterator")
@@ -262,7 +258,6 @@ def belief_revision_classes():
         ProductNorm = jpype.JClass("org.tweetyproject.math.tnorms.ProductNorm")
         FuzzyInconsistencyMeasure = jpype.JClass("org.tweetyproject.logics.pl.analysis.FuzzyInconsistencyMeasure")
         PriorityIncisionFunction = jpype.JClass("org.tweetyproject.beliefdynamics.kernels.PriorityIncisionFunction")
-
 
         return {
             "PlFormula": PlFormula,
@@ -299,11 +294,11 @@ def belief_revision_classes():
     except jpype.JException as e:
         pytest.fail(f"Échec de l'importation des classes Java pour la révision de croyances: {e.stacktrace()}")
 
-# Fixture pour importer les classes communes d'argumentation dialogique
 @pytest.fixture(scope="module")
-def dialogue_classes(): # jpype_is_running n'est pas une fixture définie, jvm_manager s'en occupe.
+def dialogue_classes():
     """Importe les classes Java nécessaires pour l'argumentation dialogique."""
-    if not jpype.isJVMStarted(): # Vérification directe de l'état de la JVM
+    import jpype
+    if not jpype.isJVMStarted():
         pytest.skip("JVM non démarrée ou JPype non initialisé correctement.")
     try:
         ArgumentationAgent = jpype.JClass("org.tweetyproject.agents.dialogues.ArgumentationAgent")
@@ -313,21 +308,10 @@ def dialogue_classes(): # jpype_is_running n'est pas une fixture définie, jvm_m
         DialogueTrace = jpype.JClass("org.tweetyproject.agents.dialogues.DialogueTrace")
         DialogueResult = jpype.JClass("org.tweetyproject.agents.dialogues.DialogueResult")
         PersuasionProtocol = jpype.JClass("org.tweetyproject.agents.dialogues.PersuasionProtocol")
-        # NegotiationProtocol = jpype.JClass("org.tweetyproject.agents.dialogues.NegotiationProtocol") # Interface
-        # InquiryProtocol = jpype.JClass("org.tweetyproject.agents.dialogues.InquiryProtocol") # Interface
         Position = jpype.JClass("org.tweetyproject.agents.dialogues.Position")
         SimpleBeliefSet = jpype.JClass("org.tweetyproject.logics.commons.syntax.SimpleBeliefSet")
-        # Moves - peuvent être utiles pour des assertions plus fines sur la trace
-        # Move = jpype.JClass("org.tweetyproject.agents.dialogues.moves.Move")
-        # Claim = jpype.JClass("org.tweetyproject.agents.dialogues.moves.Claim")
-        # DialogueStrategy = jpype.JClass("org.tweetyproject.agents.dialogues.strategies.DialogueStrategy") # Interface
         DefaultStrategy = jpype.JClass("org.tweetyproject.agents.dialogues.strategies.DefaultStrategy")
         
-        # Pour les protocoles spécifiques si besoin (exemples de la fiche)
-        # MonotonicConcessionProtocol = jpype.JClass("org.tweetyproject.agents.dialogues.MonotonicConcessionProtocol")
-        # CollaborativeInquiryProtocol = jpype.JClass("org.tweetyproject.agents.dialogues.CollaborativeInquiryProtocol")
-
-
         return {
             "ArgumentationAgent": ArgumentationAgent,
             "GroundedAgent": GroundedAgent,
@@ -336,16 +320,9 @@ def dialogue_classes(): # jpype_is_running n'est pas une fixture définie, jvm_m
             "DialogueTrace": DialogueTrace,
             "DialogueResult": DialogueResult,
             "PersuasionProtocol": PersuasionProtocol,
-            # "NegotiationProtocol": NegotiationProtocol,
-            # "InquiryProtocol": InquiryProtocol,
             "Position": Position,
             "SimpleBeliefSet": SimpleBeliefSet,
-            # "Move": Move,
-            # "Claim": Claim,
-            # "DialogueStrategy": DialogueStrategy,
             "DefaultStrategy": DefaultStrategy,
-            # "MonotonicConcessionProtocol": MonotonicConcessionProtocol,
-            # "CollaborativeInquiryProtocol": CollaborativeInquiryProtocol,
         }
     except jpype.JException as e:
         pytest.fail(f"Échec de l'importation des classes Java pour l'argumentation dialogique: {e.stacktrace()}")
