@@ -75,9 +75,10 @@ def jvm_manager():
                     check=False  # Gérer manuellement le code de retour
                 )
                 
-                print(f"DEBUG: Script stdout:\n{process.stdout}")
+                # print(f"DEBUG: Script stdout:\n{process.stdout}")
                 if process.stderr:
-                    print(f"DEBUG: Script stderr:\n{process.stderr}")
+                    # print(f"DEBUG: Script stderr:\n{process.stderr}")
+                    pass
 
                 if process.returncode != 0:
                     error_message = (

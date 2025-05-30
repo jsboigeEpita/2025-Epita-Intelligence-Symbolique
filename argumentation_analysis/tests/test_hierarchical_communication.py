@@ -181,7 +181,7 @@ class TestHierarchicalCommunication(unittest.TestCase):
             time.sleep(0.2)
             
             # Envoyer un résultat
-            self.operational_adapter.send_task_result(
+            self.operational_adapter.send_result( # Corrigé: send_task_result -> send_result
                 task_id=task.id,
                 result={"arguments": ["arg1", "arg2"], "confidence": 0.95},
                 recipient_id="tactical-agent-1",
@@ -627,7 +627,9 @@ class TestAsyncHierarchicalCommunication(unittest.IsolatedAsyncioTestCase):
         tactical_task = asyncio.create_task(tactical_agent())
         
         # Demander de l'assistance de manière asynchrone
-        assistance = await self.operational_adapter.request_assistance_async(
+        # Utiliser asyncio.to_thread si request_assistance est synchrone
+        assistance = await asyncio.to_thread(
+            self.operational_adapter.request_assistance,
             issue_type="pattern_recognition",
             description="Cannot identify pattern in text",
             context={"text_id": "text-123", "position": "paragraph 3"},
