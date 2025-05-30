@@ -1,51 +1,55 @@
 import pytest
 import os
-import sys # Ajouté
-import subprocess # Ajouté pour l'exécution de scripts
-import jpype # Ajouté pour l'interaction Java
-from pathlib import Path # Ajouté
+import sys
+import subprocess
+import jpype
+from pathlib import Path
+from argumentation_analysis.core.jvm_setup import LIBS_DIR as CORE_LIBS_DIR # Gardons CORE_LIBS_DIR pour info
 
 # Déterminer le chemin du répertoire du projet
 PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
 # Chemin vers les JARs de Tweety (devrait correspondre à celui utilisé par le conftest.py racine)
-TWEETY_LIBS_PATH = os.path.join(PROJECT_ROOT, "libs")
+TWEETY_LIBS_PATH = os.path.join(PROJECT_ROOT, "libs") # Ce chemin est utilisé par la logique de téléchargement ci-dessous
 
 # La fixture jvm_manager et les fixtures de classes (dung_classes, qbf_classes, etc.)
 # sont maintenant définies dans le conftest.py racine pour une gestion centralisée de JPype.
 # Ce fichier est conservé pour d'éventuelles configurations spécifiques à ce sous-répertoire de tests,
 # mais ne doit plus gérer l'initialisation de JPype ni la définition des classes Java globales.
 
-def get_tweety_classpath():
+def get_tweety_classpath(): # Cette fonction n'est plus utilisée pour démarrer la JVM ici.
     """Construit le classpath à partir des JARs trouvés dans TWEETY_LIBS_PATH."""
     jars = [os.path.join(TWEETY_LIBS_PATH, f) for f in os.listdir(TWEETY_LIBS_PATH) if f.endswith(".jar")]
     print(f"DEBUG: get_tweety_classpath: JARs trouvés = {jars}")
     if not jars:
         print(f"AVERTISSEMENT: Aucun fichier JAR trouvé dans '{TWEETY_LIBS_PATH}'.")
         print("Veuillez vérifier que les JARs de Tweety sont présents.")
-        return [] # Ou lever une exception
+        return []
     return jars
 
 @pytest.fixture(scope="session", autouse=True)
 def jvm_manager():
-    print("DEBUG: jvm_manager fixture CALLED")
+    print("DEBUG: jvm_manager fixture CALLED (tests/integration/jpype_tweety/conftest.py)")
     """
-    Fixture pour démarrer et arrêter la JVM pour la session de test.
-    'autouse=True' garantit que cette fixture est utilisée pour toutes les tests de la session
-    dans ce répertoire (et sous-répertoires) où conftest.py est actif.
+    Fixture pour s'assurer que les JARs de test sont présents et vérifier l'état de la JVM.
+    La JVM doit être démarrée par le conftest.py racine.
     """
     try:
-        # --- Début de l'intégration du téléchargement des JARs ---
-        # PROJECT_ROOT et TWEETY_LIBS_PATH sont définis globalement dans ce fichier.
+        # S'assurer que les JARs de test/application sont présents (téléchargés si besoin)
+        # Utilisation de la version "Updated upstream" (plus robuste) pour le téléchargement.
         script_path = Path(PROJECT_ROOT) / "scripts" / "download_test_jars.py"
-        target_jars_dir = Path(TWEETY_LIBS_PATH)
-
-        jars_present = False
-        if target_jars_dir.is_dir() and any(target_jars_dir.glob("*.jar")):
-            jars_present = True
-            print(f"INFO: Des fichiers JAR existent déjà dans {target_jars_dir}.")
-
-        if not jars_present:
-            print(f"INFO: Les fichiers JAR semblent manquants dans {target_jars_dir}. Tentative de téléchargement...")
+        target_jars_dir = Path(TWEETY_LIBS_PATH) # TWEETY_LIBS_PATH pointe vers PROJECT_ROOT/libs
+        
+        # On vérifie si le répertoire libs contient des JARs.
+        # Si ce n'est pas le cas, ou si le répertoire n'existe pas, on tente le téléchargement.
+        # Note: download_test_jars.py est supposé télécharger dans PROJECT_ROOT/libs.
+        # Le fichier jvm_setup.py (appelé par le root conftest) gère le téléchargement des JARs principaux
+        # et la construction du classpath combiné (incluant les JARs de tests/resources/libs).
+        # Cette section de téléchargement ici pourrait être redondante si jvm_setup.py fait déjà tout.
+        # Cependant, la version "Updated upstream" avait cette logique explicitement pour les tests jpype_tweety.
+        # On la conserve pour l'instant, en s'assurant qu'elle cible bien TWEETY_LIBS_PATH (PROJECT_ROOT/libs).
+        
+        if not (target_jars_dir.is_dir() and any(target_jars_dir.glob("*.jar"))):
+            print(f"INFO: Les JARs de test/application semblent manquants dans {target_jars_dir}. Tentative de téléchargement via {script_path}...")
             if not script_path.is_file():
                 print(f"ERREUR CRITIQUE: Le script de téléchargement {script_path} n'a pas été trouvé.")
                 raise FileNotFoundError(f"Script de téléchargement non trouvé: {script_path}")
@@ -59,10 +63,10 @@ def jvm_manager():
                     check=False  # Gérer manuellement le code de retour
                 )
                 
-                # print(f"DEBUG: Script stdout:\n{process.stdout}")
-                if process.stderr:
-                    # print(f"DEBUG: Script stderr:\n{process.stderr}")
-                    pass
+                if process.stderr and "Traceback" in process.stderr:
+                    print(f"ERREUR (stderr du script {script_path.name}):\n{process.stderr}")
+                elif process.stderr:
+                     print(f"DEBUG (stderr du script {script_path.name}):\n{process.stderr}")
 
                 if process.returncode != 0:
                     error_message = (
@@ -73,101 +77,67 @@ def jvm_manager():
                     print(error_message)
                     raise RuntimeError(error_message)
                 
-                print(f"INFO: Script de téléchargement exécuté avec succès (code {process.returncode}).")
-                # Re-vérifier si les JARs sont maintenant présents
+                print(f"INFO: Script de téléchargement exécuté (code {process.returncode}). Sortie:\n{process.stdout}")
                 if not any(target_jars_dir.glob("*.jar")):
                     warning_message = (
-                        f"AVERTISSEMENT: Le script de téléchargement s'est terminé avec succès "
+                        f"AVERTISSEMENT: Le script de téléchargement s'est terminé "
                         f"mais aucun JAR n'a été trouvé dans {target_jars_dir}. "
-                        f"Vérifiez les logs du script."
+                        f"Vérifiez les logs du script et le script lui-même ({script_path})."
                     )
                     print(warning_message)
-                    # On ne lève pas d'erreur ici, car get_tweety_classpath() le fera si nécessaire.
                 else:
-                    print(f"INFO: Les fichiers JAR sont maintenant présents dans {target_jars_dir}.")
+                    print(f"INFO: Les fichiers JAR sont maintenant (ou étaient déjà) présents dans {target_jars_dir}.")
 
             except Exception as e:
-                # Capturer les exceptions de subprocess.run (comme FileNotFoundError pour sys.executable)
-                # ou d'autres problèmes inattendus.
                 critical_error_message = (
                     f"ERREUR CRITIQUE lors de l'exécution du script de téléchargement {script_path}: {e}"
                 )
                 print(critical_error_message)
                 raise RuntimeError(critical_error_message) from e
-        # --- Fin de l'intégration du téléchargement des JARs ---
-
-        print("DEBUG: Checking if JVM is started...")
-        if not jpype.isJVMStarted():
-            print("INFO: Démarrage de la JVM pour les tests d'intégration Tweety...")
-            tweety_classpath_list = get_tweety_classpath() 
-            
-            if not tweety_classpath_list:
-                # Cette condition est cruciale. Si après la tentative de téléchargement,
-                # le classpath est toujours vide, c'est une erreur fatale.
-                critical_error_msg = (
-                    f"ERREUR CRITIQUE: Aucun fichier JAR trouvé dans {TWEETY_LIBS_PATH} "
-                    f"même après la tentative de téléchargement. Le classpath est vide."
-                )
-                print(critical_error_msg)
-                raise RuntimeError(critical_error_msg)
-            
-            print(f"INFO: Utilisation de la liste de JARs pour Tweety: {tweety_classpath_list}")
-            print(f"DEBUG: jpype.getDefaultJVMPath() = {jpype.getDefaultJVMPath()}")
-            print(f"DEBUG: Tentative de démarrage de la JVM avec le classpath: {tweety_classpath_list}...")
-            try:
-                # Démarrage de la JVM
-                jpype.startJVM(
-                    jpype.getDefaultJVMPath(),
-                    "-ea",  # Enable assertions
-                    classpath=tweety_classpath_list,
-                    convertStrings=False # Recommandé pour éviter les conversions automatiques
-                )
-                print(f"DEBUG: jpype.isJVMStarted() après startJVM (classpath list) = {jpype.isJVMStarted()}")
-                if jpype.isJVMStarted():
-                    print("INFO: JVM démarrée avec succès.")
-                else:
-                    # Ce cas indique un problème si startJVM n'a pas levé d'exception mais la JVM n'est pas démarrée.
-                    raise RuntimeError("jpype.startJVM a été appelé, mais jpype.isJVMStarted() renvoie False.")
-            except Exception as e:
-                # Capturer les erreurs spécifiques au démarrage de la JVM
-                jvm_start_error_msg = (
-                    f"ERREUR CRITIQUE lors du démarrage de la JVM: {e}\n"
-                    f"Classpath utilisé: {tweety_classpath_list}\n"
-                    f"Chemin JVM par défaut: {jpype.getDefaultJVMPath()}"
-                )
-                print(jvm_start_error_msg)
-                if hasattr(e, 'stacktrace'): # Pour les JException
-                    print(f"Stacktrace Java:\n{e.stacktrace()}")
-                raise RuntimeError(jvm_start_error_msg) from e
-
-        print(f"DEBUG: jpype.isJVMStarted() à la fin de la section de démarrage = {jpype.isJVMStarted()}")
-        
-        # Vérification finale et robuste que la JVM est bien démarrée
-        if not jpype.isJVMStarted(): 
-            final_error_msg = "ERREUR CRITIQUE: La JVM n'a pas pu démarrer malgré les tentatives."
-            print(final_error_msg)
-            raise RuntimeError(final_error_msg)
         else:
-            print("INFO: La JVM est démarrée (ou était déjà démarrée).")
+            print(f"INFO: Les JARs de test/application sont déjà présents dans {target_jars_dir}.")
+        # --- Fin de la logique de téléchargement ---
 
-        # Rendre les classes Java importables
+        # Logique de "Stashed changes" pour vérifier la JVM et afficher les infos
+        print("DEBUG: jvm_manager (tests/integration/jpype_tweety): Vérification de l'état de la JVM (doit être démarrée par le conftest racine).")
+        if not jpype.isJVMStarted():
+            error_msg = ("ERREUR CRITIQUE: La JVM n'est pas démarrée comme attendu (devrait être fait par un conftest racine). "
+                         "Les tests jpype_tweety ne peuvent pas continuer.")
+            print(error_msg)
+            # Ne pas tenter de démarrer la JVM ici, cela doit être géré centralement.
+            raise RuntimeError(error_msg)
+
+        print("INFO: jvm_manager (tests/integration/jpype_tweety): La JVM est (ou devrait être) déjà démarrée.")
+        
+        try:
+            print(f"       jpype.config.java_home: {jpype.config.java_home if hasattr(jpype, 'config') else 'N/A'}")
+            print(f"       jpype.config.jvm_path: {jpype.config.jvm_path if hasattr(jpype, 'config') else 'N/A'}")
+            current_classpath_reported = jpype.getClassPath()
+            print(f"       Classpath rapporté par jpype.getClassPath(): '{current_classpath_reported}' (longueur: {len(str(current_classpath_reported))})")
+            if not current_classpath_reported:
+                print("       AVERTISSEMENT: jpype.getClassPath() est vide ou None!")
+        except Exception as e_config:
+            print(f"       Erreur lors de la tentative d'affichage de la config JPype: {e_config}")
+
+        # CORE_LIBS_DIR est le chemin des JARs principaux (argumentation_analysis/libs)
+        # TWEETY_LIBS_PATH est défini sur PROJECT_ROOT/libs, donc c'est la même chose.
+        # Les JARs de test sont dans argumentation_analysis/tests/resources/libs
+        # jvm_setup.py est censé combiner CORE_LIBS_DIR et les JARs de test.
+        print(f"       Les tests jpype_tweety s'attendent à ce que les JARs de {CORE_LIBS_DIR} et ceux de tests/resources/libs soient accessibles.")
+        print(f"       La JVM a été démarrée par le conftest racine via jvm_setup.py.")
+
         jpype.imports.registerDomain("net", alias="net")
         jpype.imports.registerDomain("org", alias="org")
-        jpype.imports.registerDomain("java", alias="java") 
+        jpype.imports.registerDomain("java", alias="java")
 
-        yield # C'est ici que les tests s'exécuteront
+        yield
 
     except Exception as e:
-        # Capturer toute autre exception non gérée pendant la configuration de la fixture
-        # pour s'assurer qu'elle est loggée et que Pytest est informé.
         print(f"Erreur critique inattendue dans la fixture jvm_manager: {e}")
-        raise # Propager l'exception pour que Pytest marque les tests comme échoués ou erronés
+        raise
     finally:
-        # La logique finally reste la même, gérant l'arrêt (ou non-arrêt) de la JVM.
         if jpype.isJVMStarted():
-            print("INFO: La JVM restera active jusqu'à la fin du processus de test principal.")
-            # Laisser la JVM s'arrêter naturellement à la fin du processus Python
-            # pour éviter les problèmes avec jpype.shutdownJVM() dans certains contextes de test.
+            print("INFO: La JVM restera active jusqu'à la fin du processus de test principal (géré par conftest racine).")
 
 # Fixture pour importer les classes communes de Dung
 @pytest.fixture(scope="module")
