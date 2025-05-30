@@ -1,1 +1,1 @@
-# This file makes the 'integration' directory a Python package.
+# This file makes Python treat the `tests/integration` directory as a package.
