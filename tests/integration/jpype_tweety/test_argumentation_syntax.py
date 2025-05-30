@@ -1,19 +1,19 @@
 import pytest
-import jpype
+# import jpype # Supprimé, sera injecté via fixture
 
 
 # Les classes Java sont importées via la fixture 'dung_classes' de conftest.py
 
-def test_create_argument(dung_classes):
+def test_create_argument(dung_classes, mocked_jpype): # Ajout de mocked_jpype
     """Teste la création d'un argument simple."""
     Argument = dung_classes["Argument"]
     arg_name = "test_argument"
-    arg = Argument(jpype.JString(arg_name)) # Assurer que le type est correct pour le constructeur Java
+    arg = Argument(mocked_jpype.JString(arg_name)) # Utilisation de mocked_jpype
     assert arg is not None
     assert arg.getName() == arg_name
     print(f"Argument créé: {arg.toString()}")
 
-def test_create_dung_theory_with_arguments_and_attacks(dung_classes):
+def test_create_dung_theory_with_arguments_and_attacks(dung_classes, mocked_jpype): # Ajout de mocked_jpype
     """
     Teste la création d'une théorie de Dung, l'ajout d'arguments et d'attaques,
     en se basant sur l'exemple de la section 4.1.2 de la fiche sujet 1.2.7.
@@ -26,9 +26,9 @@ def test_create_dung_theory_with_arguments_and_attacks(dung_classes):
     dung_theory = DungTheory()
 
     # Création des arguments
-    arg_a = Argument(jpype.JString("a"))
-    arg_b = Argument(jpype.JString("b"))
-    arg_c = Argument(jpype.JString("c"))
+    arg_a = Argument(mocked_jpype.JString("a")) # Utilisation de mocked_jpype
+    arg_b = Argument(mocked_jpype.JString("b")) # Utilisation de mocked_jpype
+    arg_c = Argument(mocked_jpype.JString("c")) # Utilisation de mocked_jpype
 
     # Ajout des arguments à la théorie
     dung_theory.add(arg_a)
@@ -82,21 +82,21 @@ def test_create_dung_theory_with_arguments_and_attacks(dung_classes):
     print(f"Attaques dans la théorie: {[str(att) for att in dung_theory.getAttacks()]}")
 
 
-def test_argument_equality_and_hashcode(dung_classes):
+def test_argument_equality_and_hashcode(dung_classes, mocked_jpype): # Ajout de mocked_jpype
     """
     Teste l'égalité et le hashcode des objets Argument.
     Important pour leur utilisation dans des collections (Set, Map).
     """
     Argument = dung_classes["Argument"]
-    arg1_a = Argument(jpype.JString("a"))
-    arg2_a = Argument(jpype.JString("a"))
-    arg_b = Argument(jpype.JString("b"))
+    arg1_a = Argument(mocked_jpype.JString("a")) # Utilisation de mocked_jpype
+    arg2_a = Argument(mocked_jpype.JString("a")) # Utilisation de mocked_jpype
+    arg_b = Argument(mocked_jpype.JString("b")) # Utilisation de mocked_jpype
 
     # Égalité
     assert arg1_a.equals(arg2_a), "Deux arguments avec le même nom devraient être égaux."
     assert not arg1_a.equals(arg_b), "Deux arguments avec des noms différents ne devraient pas être égaux."
     # assert not arg1_a.equals(None), "Un argument ne devrait pas être égal à None." # Cause NullPointerException dans l'implémentation Java de Tweety
-    assert not arg1_a.equals(jpype.JString("a")), "Un argument ne devrait pas être égal à une simple chaîne."
+    assert not arg1_a.equals(mocked_jpype.JString("a")), "Un argument ne devrait pas être égal à une simple chaîne." # Utilisation de mocked_jpype
 
 
     # Hashcode
@@ -111,7 +111,7 @@ def test_argument_equality_and_hashcode(dung_classes):
     # avec les méthodes equals/hashCode sous-jacentes de Java.
     
     # Pour un test JPype plus direct de la sémantique des collections Java:
-    HashSet = jpype.JClass("java.util.HashSet")
+    HashSet = mocked_jpype.JClass("java.util.HashSet") # Utilisation de mocked_jpype
     java_set = HashSet()
     java_set.add(arg1_a)
     
@@ -126,17 +126,17 @@ def test_argument_equality_and_hashcode(dung_classes):
     assert java_set.size() == 2
 
 
-def test_attack_equality_and_hashcode(dung_classes):
+def test_attack_equality_and_hashcode(dung_classes, mocked_jpype): # Ajout de mocked_jpype
     """Teste l'égalité et le hashcode des objets Attack."""
     Argument = dung_classes["Argument"]
     Attack = dung_classes["Attack"]
 
-    a = Argument(jpype.JString("a"))
-    b = Argument(jpype.JString("b"))
-    c = Argument(jpype.JString("c"))
+    a = Argument(mocked_jpype.JString("a")) # Utilisation de mocked_jpype
+    b = Argument(mocked_jpype.JString("b")) # Utilisation de mocked_jpype
+    c = Argument(mocked_jpype.JString("c")) # Utilisation de mocked_jpype
 
     attack1_ab = Attack(a, b)
-    attack2_ab = Attack(Argument(jpype.JString("a")), Argument(jpype.JString("b"))) # Nouveaux objets Argument mais mêmes noms
+    attack2_ab = Attack(Argument(mocked_jpype.JString("a")), Argument(mocked_jpype.JString("b"))) # Nouveaux objets Argument mais mêmes noms
     attack_ac = Attack(a, c)
     attack_ba = Attack(b, a)
 
@@ -147,7 +147,7 @@ def test_attack_equality_and_hashcode(dung_classes):
     assert attack1_ab.hashCode() == attack2_ab.hashCode(), "Hashcodes d'attaques égales devraient être identiques."
 
     # Test avec un HashSet Java
-    HashSet = jpype.JClass("java.util.HashSet")
+    HashSet = mocked_jpype.JClass("java.util.HashSet") # Utilisation de mocked_jpype
     java_set = HashSet()
     java_set.add(attack1_ab)
 
@@ -166,7 +166,7 @@ def test_attack_equality_and_hashcode(dung_classes):
 # (ex: si Tweety a des classes spécifiques pour les ensembles d'arguments, les frameworks structurés, etc.)
 # TODO: Tester la création de formules logiques si elles sont utilisées dans la définition des arguments
 # (ex: si un argument est défini par une formule propositionnelle).
-def test_complete_reasoner_simple_example(dung_classes):
+def test_complete_reasoner_simple_example(dung_classes, mocked_jpype): # Ajout de mocked_jpype
     """
     Teste le CompleteReasoner sur un exemple simple.
     Framework: a <-> b
@@ -176,8 +176,8 @@ def test_complete_reasoner_simple_example(dung_classes):
     Argument = dung_classes["Argument"]
     Attack = dung_classes["Attack"]
     CompleteReasoner = dung_classes["CompleteReasoner"]
-    Collection = jpype.JClass("java.util.Collection")
-    HashSet = jpype.JClass("java.util.HashSet")
+    Collection = mocked_jpype.JClass("java.util.Collection") # Utilisation de mocked_jpype
+    HashSet = mocked_jpype.JClass("java.util.HashSet") # Utilisation de mocked_jpype
 
     dt = DungTheory()
     a = Argument("a")
@@ -216,7 +216,7 @@ def test_complete_reasoner_simple_example(dung_classes):
     py_extensions = "Iteration commented out" # Placeholder
     print(f"Extensions complètes pour a<->b : {py_extensions}")
 
-def test_stable_reasoner_simple_example(dung_classes):
+def test_stable_reasoner_simple_example(dung_classes, mocked_jpype): # Ajout de mocked_jpype
     """
     Teste le StableReasoner sur un exemple simple.
     Framework: a -> b, b -> c
@@ -226,8 +226,8 @@ def test_stable_reasoner_simple_example(dung_classes):
     Argument = dung_classes["Argument"]
     Attack = dung_classes["Attack"]
     StableReasoner = dung_classes["StableReasoner"]
-    Collection = jpype.JClass("java.util.Collection")
-    HashSet = jpype.JClass("java.util.HashSet")
+    Collection = mocked_jpype.JClass("java.util.Collection") # Utilisation de mocked_jpype
+    HashSet = mocked_jpype.JClass("java.util.HashSet") # Utilisation de mocked_jpype
 
     dt = DungTheory()
     a = Argument("a")
@@ -259,7 +259,7 @@ def test_stable_reasoner_simple_example(dung_classes):
     assert py_extensions == expected_extensions, f"Extension stable attendue {expected_extensions}, obtenue {py_extensions}"
     print(f"Extensions stables pour a->b, b->c : {py_extensions}")
 
-def test_stable_reasoner_no_stable_extension(dung_classes):
+def test_stable_reasoner_no_stable_extension(dung_classes, mocked_jpype): # Ajout de mocked_jpype
     """
     Teste le StableReasoner sur un framework qui n'a pas d'extension stable.
     Framework: a -> a (cycle impair simple)
@@ -282,7 +282,7 @@ def test_stable_reasoner_no_stable_extension(dung_classes):
     assert extensions.isEmpty(), f"Attendu 0 extension stable pour un cycle a->a, obtenu {extensions.size()}"
     print(f"Extensions stables pour a->a : {extensions.size()} (attendu 0)")
 @pytest.mark.skip(reason="Besoin de confirmer la classe exacte et la méthode pour le parsing TGF.")
-def test_parse_dung_theory_from_tgf_string(dung_classes):
+def test_parse_dung_theory_from_tgf_string(dung_classes, mocked_jpype): # Ajout de mocked_jpype
     """
     Teste le parsing d'un DAF depuis une chaîne au format TGF.
     Exemple TGF:
@@ -298,11 +298,11 @@ def test_parse_dung_theory_from_tgf_string(dung_classes):
     try:
         # Tentative de localisation du parser TGF
         # Les packages communs sont .io ou .parser
-        TgfParser = jpype.JClass("org.tweetyproject.arg.dung.io.TgfParser")
-    except jpype.JException:
+        TgfParser = mocked_jpype.JClass("org.tweetyproject.arg.dung.io.TgfParser") # Utilisation de mocked_jpype
+    except mocked_jpype.JException: # Utilisation de mocked_jpype
         try:
-            TgfParser = jpype.JClass("org.tweetyproject.arg.dung.parser.TgfParser")
-        except jpype.JException as e:
+            TgfParser = mocked_jpype.JClass("org.tweetyproject.arg.dung.parser.TgfParser") # Utilisation de mocked_jpype
+        except mocked_jpype.JException as e: # Utilisation de mocked_jpype
             pytest.skip(f"Classe TgfParser non trouvée dans les packages usuels: {e}. Test sauté.")
             return
 
@@ -316,20 +316,20 @@ def test_parse_dung_theory_from_tgf_string(dung_classes):
     try:
         # La méthode de parsing pourrait être parse, parseString, read, etc.
         # Elle pourrait prendre un StringReader ou directement une String.
-        # java.io.StringReader = jpype.JClass("java.io.StringReader")
-        # string_reader = java.io.StringReader(JString(tgf_content))
+        # java.io.StringReader = mocked_jpype.JClass("java.io.StringReader") # Utilisation de mocked_jpype
+        # string_reader = java.io.StringReader(mocked_jpype.JString(tgf_content)) # Utilisation de mocked_jpype
         # parsed_theory = parser.parse(string_reader)
 
         # Autre tentative plus directe si une méthode parse(String) existe
         if hasattr(parser, "parseFromString"): # Nom de méthode hypothétique
-             parsed_theory = parser.parseFromString(JString(tgf_content))
+             parsed_theory = parser.parseFromString(mocked_jpype.JString(tgf_content)) # Utilisation de mocked_jpype
         elif hasattr(parser, "parse"): # Méthode commune
             # Vérifier si parse prend une String ou un Reader.
             # Pour cet exemple, on suppose qu'elle peut prendre une String.
             # Cela pourrait nécessiter une inspection plus poussée de l'API de TgfParser.
             # Si parse attend un Reader:
-            StringReader = jpype.JClass("java.io.StringReader")
-            reader = StringReader(JString(tgf_content))
+            StringReader = mocked_jpype.JClass("java.io.StringReader") # Utilisation de mocked_jpype
+            reader = StringReader(mocked_jpype.JString(tgf_content)) # Utilisation de mocked_jpype
             parsed_theory = parser.parse(reader)
             # Si parse attend un File, ce test n'est pas adapté et il faudrait un test avec un fichier réel.
         else:
@@ -366,7 +366,7 @@ def test_parse_dung_theory_from_tgf_string(dung_classes):
 
         print(f"Théorie parsée depuis TGF: {parsed_theory.toString()}")
 
-    except jpype.JException as e:
+    except mocked_jpype.JException as e: # Utilisation de mocked_jpype
         if "NoSuchMethodException" in str(e) or "method not found" in str(e).lower() or "Could not find class" in str(e):
             pytest.skip(f"Méthode ou classe de parsing TGF non trouvée ou incompatible: {e}")
         else:

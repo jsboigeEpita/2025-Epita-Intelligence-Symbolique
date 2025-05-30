@@ -23,7 +23,7 @@ try:
 except Exception as e_import_jvm_setup:
     print(f"ERREUR CRITIQUE: conftest.py (RACINE): Échec de l'import de 'initialize_jvm': {e_import_jvm_setup}")
 
-USE_REAL_JVM = True
+USE_REAL_JVM = False
 jpype_real_jvm_initialized_value = "0"
 
 if initialize_jvm_func is None:

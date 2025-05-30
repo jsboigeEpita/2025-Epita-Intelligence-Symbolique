@@ -4,12 +4,11 @@ import sys
 import subprocess
 import jpype
 from pathlib import Path
-from argumentation_analysis.core.jvm_setup import LIBS_DIR as CORE_LIBS_DIR # Gardons CORE_LIBS_DIR pour info
+import logging
+from argumentation_analysis.core.jvm_setup import LIBS_DIR as CORE_LIBS_DIR
 
-# Déterminer le chemin du répertoire du projet
 PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
-# Chemin vers les JARs de Tweety (devrait correspondre à celui utilisé par le conftest.py racine)
-TWEETY_LIBS_PATH = os.path.join(PROJECT_ROOT, "libs") # Ce chemin est utilisé par la logique de téléchargement ci-dessous
+TWEETY_LIBS_PATH = os.path.join(PROJECT_ROOT, "libs")
 
 # La fixture jvm_manager et les fixtures de classes (dung_classes, qbf_classes, etc.)
 # sont maintenant définies dans le conftest.py racine pour une gestion centralisée de JPype.
@@ -33,20 +32,26 @@ def jvm_manager():
     Fixture pour s'assurer que les JARs de test sont présents et vérifier l'état de la JVM.
     La JVM doit être démarrée par le conftest.py racine.
     """
+    import jpype # Importation locale initiale
+    
+    # Forcer l'utilisation du mock pour les tests jpype_tweety
+    # car le conftest.py racine a sa logique de mock neutralisée.
+    import tests.mocks.jpype_mock as jpype_mock_module
+    sys.modules['jpype'] = jpype_mock_module
+    sys.modules['jpype1'] = jpype_mock_module
+    # Ré-assigner la variable locale jpype pour qu'elle pointe vers le mock chargé
+    jpype = jpype_mock_module
+    print("INFO: [jpype_tweety/conftest.py] Mock JPype activé de force pour cette session de tests.")
+
+    # Obtenir le logger du mock pour y ajouter des messages
+    mock_logger = logging.getLogger("tests.mocks.jpype_mock")
+
     try:
         # S'assurer que les JARs de test/application sont présents (téléchargés si besoin)
         # Utilisation de la version "Updated upstream" (plus robuste) pour le téléchargement.
+        # --- Début de l'intégration du téléchargement des JARs ---
         script_path = Path(PROJECT_ROOT) / "scripts" / "download_test_jars.py"
-        target_jars_dir = Path(TWEETY_LIBS_PATH) # TWEETY_LIBS_PATH pointe vers PROJECT_ROOT/libs
-        
-        # On vérifie si le répertoire libs contient des JARs.
-        # Si ce n'est pas le cas, ou si le répertoire n'existe pas, on tente le téléchargement.
-        # Note: download_test_jars.py est supposé télécharger dans PROJECT_ROOT/libs.
-        # Le fichier jvm_setup.py (appelé par le root conftest) gère le téléchargement des JARs principaux
-        # et la construction du classpath combiné (incluant les JARs de tests/resources/libs).
-        # Cette section de téléchargement ici pourrait être redondante si jvm_setup.py fait déjà tout.
-        # Cependant, la version "Updated upstream" avait cette logique explicitement pour les tests jpype_tweety.
-        # On la conserve pour l'instant, en s'assurant qu'elle cible bien TWEETY_LIBS_PATH (PROJECT_ROOT/libs).
+        target_jars_dir = Path(TWEETY_LIBS_PATH)
         
         if not (target_jars_dir.is_dir() and any(target_jars_dir.glob("*.jar"))):
             print(f"INFO: Les JARs de test/application semblent manquants dans {target_jars_dir}. Tentative de téléchargement via {script_path}...")
@@ -60,7 +65,7 @@ def jvm_manager():
                     [sys.executable, str(script_path)],
                     capture_output=True,
                     text=True,
-                    check=False  # Gérer manuellement le code de retour
+                    check=False
                 )
                 
                 if process.stderr and "Traceback" in process.stderr:
@@ -94,6 +99,7 @@ def jvm_manager():
                 )
                 print(critical_error_message)
                 raise RuntimeError(critical_error_message) from e
+        # --- Fin de l'intégration du téléchargement des JARs ---
         else:
             print(f"INFO: Les JARs de test/application sont déjà présents dans {target_jars_dir}.")
         # --- Fin de la logique de téléchargement ---
@@ -104,7 +110,6 @@ def jvm_manager():
             error_msg = ("ERREUR CRITIQUE: La JVM n'est pas démarrée comme attendu (devrait être fait par un conftest racine). "
                          "Les tests jpype_tweety ne peuvent pas continuer.")
             print(error_msg)
-            # Ne pas tenter de démarrer la JVM ici, cela doit être géré centralement.
             raise RuntimeError(error_msg)
 
         print("INFO: jvm_manager (tests/integration/jpype_tweety): La JVM est (ou devrait être) déjà démarrée.")
@@ -119,10 +124,6 @@ def jvm_manager():
         except Exception as e_config:
             print(f"       Erreur lors de la tentative d'affichage de la config JPype: {e_config}")
 
-        # CORE_LIBS_DIR est le chemin des JARs principaux (argumentation_analysis/libs)
-        # TWEETY_LIBS_PATH est défini sur PROJECT_ROOT/libs, donc c'est la même chose.
-        # Les JARs de test sont dans argumentation_analysis/tests/resources/libs
-        # jvm_setup.py est censé combiner CORE_LIBS_DIR et les JARs de test.
         print(f"       Les tests jpype_tweety s'attendent à ce que les JARs de {CORE_LIBS_DIR} et ceux de tests/resources/libs soient accessibles.")
         print(f"       La JVM a été démarrée par le conftest racine via jvm_setup.py.")
 
