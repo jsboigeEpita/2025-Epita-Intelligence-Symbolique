@@ -1,9 +1,11 @@
-import jpype
-import jpype.imports
-from jpype.types import JString
-import os
+import os # jpype et jpype.imports seront importés dans la fonction
+# from jpype.types import JString # Sera importé si nécessaire
 
-def test_reasoner_query():
+def test_reasoner_query(integration_jvm): # Ajout de la fixture integration_jvm
+    import jpype # Importation locale
+    import jpype.imports
+    from jpype.types import JString
+
     try:
         print("Démarrage du test du raisonneur et de requête simple...")
 
