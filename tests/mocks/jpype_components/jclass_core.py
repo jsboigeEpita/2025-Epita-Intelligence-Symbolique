@@ -3,6 +3,7 @@ import logging
 import sys
 from itertools import chain, combinations # Pour les helpers de sémantique d'argumentation
 from . import tweety_reasoners # Ajout pour les configurations de reasoners
+from . import tweety_agents # Ajout pour les configurations des agents
 
 # Configuration du logging pour ce module
 mock_logger = logging.getLogger(__name__)
@@ -365,6 +366,15 @@ class MockJClassCore:
             else:
                 mock_logger.error("Impossible de configurer GroundedReasoner: JClass provider manquant.")
         # --- Fin de la configuration des Reasoners ---
+
+        # --- Configuration spécifique pour les Agents Tweety ---
+        if self.class_name.startswith("org.tweetyproject.agents."):
+            if self._jclass_provider: # Le configurateur d'agent pourrait en avoir besoin
+                mock_logger.debug(f"Appel de la configuration spécifique pour la classe d'agent: {self.class_name}")
+                tweety_agents.configure_tweety_agent_class(instance_mock)
+            else:
+                mock_logger.warning(f"JClass provider non disponible pour MockJClassCore('{self.class_name}'), la configuration des agents pourrait être limitée.")
+        # --- Fin de la configuration des Agents Tweety ---
 
         mock_logger.info(f"Instance mockée de '{self.class_name}' créée et retournée.")
         return instance_mock
