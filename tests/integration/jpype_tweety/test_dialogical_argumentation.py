@@ -179,11 +179,16 @@ def test_complex_dung_theory_preferred_extensions(dung_classes):
     theory.add(Attack(args["c"], args["a"])) # c attacks a
     theory.add(Attack(args["d"], args["b"])) # d attacks b
 
-    print(f"Théorie complexe pour PreferredReasoner : {theory.toString()}")
+    print(f"Théorie complexe pour PreferredReasoner : {theory.toString()}") # LOG 1
 
     try:
+        print("DEBUG: test_complex_dung_theory_preferred_extensions - Avant PreferredReasoner()") # LOG 2
         pr = PreferredReasoner() # Appel du constructeur par défaut
+        print(f"DEBUG: test_complex_dung_theory_preferred_extensions - Après PreferredReasoner(), pr type: {type(pr)}, pr: {pr}") # LOG 3
+        
+        print(f"DEBUG: test_complex_dung_theory_preferred_extensions - Avant pr.getModels(theory), theory: {theory.toString()}") # LOG 4
         preferred_extensions_collection = pr.getModels(theory) # Passage de la théorie à getModels
+        print("DEBUG: test_complex_dung_theory_preferred_extensions - Après pr.getModels(theory)") # LOG 5
 
         py_extensions = []
         iterator = preferred_extensions_collection.iterator()
