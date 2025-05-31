@@ -1,7 +1,7 @@
 from unittest.mock import MagicMock
 import logging
 import sys
-from itertools import chain, combinations # Pour les helpers de sémantique d'argumentation
+# from itertools import chain, combinations # Supprimé, plus utilisé directement ici
 from . import tweety_reasoners # Ajout pour les configurations de reasoners
 from . import tweety_agents # Ajout pour les configurations des agents
 from . import tweety_enums # Ajout pour les configurations des enums
