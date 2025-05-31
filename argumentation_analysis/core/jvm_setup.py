@@ -670,6 +670,11 @@ def initialize_jvm(
         jvm_args.extend(jvm_memory_options)
         logger.info(f"   Options de mémoire JVM ajoutées: {jvm_memory_options}")
 
+        # Ajout des options de débogage JPype
+        jpype_debug_options = ["-Djpype.debug=true", "-Djpype.trace=true"]
+        jvm_args.extend(jpype_debug_options)
+        logger.info(f"   Options de débogage JPype ajoutées: {jpype_debug_options}")
+
         # Déterminer le chemin JVM à utiliser explicitement basé sur java_home_to_set
         jvm_path_to_use_explicit: Optional[str] = None
         if java_home_to_set: # java_home_to_set est le résultat de find_valid_java_home()
