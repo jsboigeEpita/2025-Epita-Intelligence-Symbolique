@@ -6,6 +6,7 @@ Tests unitaires pour le module orchestration.hierarchical.operational.adapters.e
 """
 
 import pytest
+import pytest_asyncio # Ajout de l'import
 import sys
 import os
 from unittest.mock import MagicMock, patch, AsyncMock, Mock # Mock est toujours utilisé pour les instances de mock_extract_agent etc.
@@ -143,8 +144,8 @@ async def mock_setup_extract_agent():
 class TestExtractAgentAdapter:
     """Tests unitaires pour l'adaptateur d'agent d'extraction."""
 
-    @pytest.fixture(autouse=True)
-    async def setup_adapter(self): # Retrait de mocker ici
+    @pytest_asyncio.fixture(autouse=True) # Changement ici
+    async def setup_adapter(self, mocker):
         """Initialisation avant chaque test."""
         # Créer les mocks
         self.mock_extract_agent = Mock()
