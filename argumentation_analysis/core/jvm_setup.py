@@ -560,10 +560,11 @@ def initialize_jvm(
     LIB_DIR = pathlib.Path(lib_dir_path)
     NATIVE_LIBS_DIR = LIB_DIR / native_lib_subdir
     jvm_ready = False
+    logger.info(f"DEBUG_JVM_SETUP: Appel de jpype.isJVMStarted() au début de initialize_jvm. Résultat: {jpype.isJVMStarted()}")
     if jpype.isJVMStarted():
-        logger.warning("ℹ️ JVM déjà démarrée. Utilisation existante.")
+        logger.warning("ℹ️ JVM déjà démarrée (détecté au début de initialize_jvm). Utilisation existante.")
         jvm_ready = True
-        try: 
+        try:
             if hasattr(jpype, 'imports') and jpype.imports is not None:
                  jpype.imports.registerDomain("org", alias="org")
                  jpype.imports.registerDomain("java", alias="java")
@@ -572,7 +573,7 @@ def initialize_jvm(
             else:
                 logger.warning("   jpype.imports non disponible pour enregistrer les domaines (possible si mock partiel).")
         except Exception: pass
-        return True 
+        return True
     java_home_to_set = find_valid_java_home()
     if java_home_to_set and not os.getenv("JAVA_HOME"):
         try:
@@ -612,6 +613,12 @@ def initialize_jvm(
         main_jars_map = {pathlib.Path(p).name: p for p in main_jar_list}
         test_jars_map = {pathlib.Path(p).name: p for p in test_jar_list}
         
+        # Inverser la priorité: les JARs principaux écrasent les JARs de test pour les mêmes noms.
+        # Cela assure que nous utilisons les JARs de LIBS_DIR (PROJECT_ROOT/libs) s'ils existent.
+        # final_jars_map = {**test_jars_map, **main_jars_map}
+        # combined_jar_list_original = sorted(list(final_jars_map.values()))
+        # logger.info(f"   Nombre total de JARs après fusion (priorité aux tests): {len(combined_jar_list_original)}")
+
         # Inverser la priorité: les JARs principaux écrasent les JARs de test pour les mêmes noms.
         # Cela assure que nous utilisons les JARs de LIBS_DIR (PROJECT_ROOT/libs) s'ils existent.
         final_jars_map = {**test_jars_map, **main_jars_map}
@@ -698,13 +705,13 @@ def initialize_jvm(
         logger.info(f"DEBUG_JVM_SETUP: Path avant startJVM: {os.getenv('PATH')}")
         logger.info(f"DEBUG_JVM_SETUP: CLASSPATH avant startJVM: {os.getenv('CLASSPATH')}")
         logger.info(f"DEBUG_JVM_SETUP: Tentative de démarrage avec jvm_path_to_use_explicit='{jvm_path_to_use_explicit}', classpath='{len(combined_jar_list)} JARs', args='{jvm_args}'")
-
+        logger.info(f"DEBUG_JVM_SETUP: APPEL IMMINENT DE jpype.startJVM()")
         if jvm_path_to_use_explicit:
             jpype.startJVM(jvm_path_to_use_explicit, classpath=combined_jar_list, *jvm_args, convertStrings=False, ignoreUnrecognized=True)
         else:
             logger.warning("   Aucun chemin JVM explicite fourni à startJVM, utilisation de la détection interne de JPype.")
             jpype.startJVM(classpath=combined_jar_list, *jvm_args, convertStrings=False, ignoreUnrecognized=True)
-            
+        logger.info(f"DEBUG_JVM_SETUP: jpype.startJVM() APPELÉ. Vérification avec jpype.isJVMStarted(): {jpype.isJVMStarted()}")
         if hasattr(jpype, 'imports') and jpype.imports is not None:
             try:
                 jpype.imports.registerDomain("java", alias="java")
