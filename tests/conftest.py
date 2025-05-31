@@ -7,6 +7,12 @@ import importlib
 import logging
 # Note: Autres imports comme pytest, unittest.mock sont omis car les mocks/fixtures sont désactivés.
 
+# Ajout du répertoire des mocks au sys.path
+mocks_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'mocks')
+if mocks_dir not in sys.path:
+    sys.path.insert(0, mocks_dir)
+    print(f"INFO: tests/conftest.py: Ajout de {mocks_dir} à sys.path.")
+
 # Configuration du logger
 logger = logging.getLogger(__name__)
 # Pour activer les logs pendant l'exécution des tests, décommenter les lignes suivantes :
