@@ -182,3 +182,6 @@ mock_logger.info("Les composants sont maintenant dans le package 'jpype_componen
 #     # Les classes MockJClassCore, MockJavaCollection ne sont pas typiquement accédées directement
 #     # par l'utilisateur du mock, mais via JClass() ou des méthodes retournant des collections.
 # ]
+
+# Export _jpype pour compatibilité avec conftest.py
+_jpype = _jpype_internal_module_instance

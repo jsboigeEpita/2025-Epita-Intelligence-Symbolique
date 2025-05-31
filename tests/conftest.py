@@ -17,11 +17,10 @@ import logging
 # Nécessaire pour la fixture integration_jvm
 _integration_jvm_started_session_scope = False
 try:
-    from argumentation_analysis.core.jvm_setup import initialize_jvm
-    # Supposition pour LIBS_DIR et TWEETY_VERSION, à ajuster si nécessaire
-    from config.settings import LIBS_DIR, TWEETY_VERSION
+    from argumentation_analysis.core.jvm_setup import initialize_jvm, TWEETY_VERSION # Importer TWEETY_VERSION directement
+    from argumentation_analysis.paths import LIBS_DIR # Importer LIBS_DIR depuis paths.py
 except ImportError as e_jvm_related_import:
-    print(f"AVERTISSEMENT: tests/conftest.py: Échec de l'import pour jvm_setup ou config.settings: {e_jvm_related_import}")
+    print(f"AVERTISSEMENT: tests/conftest.py: Échec de l'import pour initialize_jvm, TWEETY_VERSION ou LIBS_DIR: {e_jvm_related_import}")
     initialize_jvm = None
     LIBS_DIR = None
     TWEETY_VERSION = None
