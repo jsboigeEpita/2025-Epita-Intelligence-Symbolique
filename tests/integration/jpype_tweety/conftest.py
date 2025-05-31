@@ -7,6 +7,18 @@ from pathlib import Path
 import logging
 from argumentation_analysis.core.jvm_setup import LIBS_DIR as CORE_LIBS_DIR
 
+# Configuration du logger pour ce fichier conftest spécifique
+logger = logging.getLogger(__name__)
+# Pour s'assurer que les logs de ce fichier sont visibles si besoin,
+# on peut ajouter un handler basique s'il n'y en a pas.
+# Cependant, la configuration globale de pytest ou du conftest racine devrait suffire.
+if not logger.handlers:
+    handler = logging.StreamHandler(sys.stdout)
+    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    handler.setFormatter(formatter)
+    logger.addHandler(handler)
+    logger.setLevel(logging.INFO) # Ou logging.DEBUG pour plus de détails
+
 PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
 TWEETY_LIBS_PATH = os.path.join(PROJECT_ROOT, "libs")
 
@@ -350,6 +362,10 @@ def logic_classes(integration_jvm): # Dépend de integration_jvm pour s'assurer 
         pytest.skip("JVM non démarrée, impossible de charger les classes de logique.")
 
     try:
+        # loader_to_use = jpype.JClass("java.lang.Thread").currentThread().getContextClassLoader() or jpype.java.lang.ClassLoader.getSystemClassLoader()
+        # logger.info(f"logic_classes: Utilisation du loader: {loader_to_use}")
+        logger.info(f"logic_classes: Tentative de chargement des classes SANS loader explicite.")
+
         # Classes pour la logique propositionnelle (PL)
         PlBeliefSet = jpype.JClass("org.tweetyproject.logics.pl.syntax.PlBeliefSet")
         PlParser = jpype.JClass("org.tweetyproject.logics.pl.parser.PlParser")
@@ -361,7 +377,7 @@ def logic_classes(integration_jvm): # Dépend de integration_jvm pour s'assurer 
         Implication = jpype.JClass("org.tweetyproject.logics.pl.syntax.Implication")
         Equivalence = jpype.JClass("org.tweetyproject.logics.pl.syntax.Equivalence")
         SimplePlReasoner = jpype.JClass("org.tweetyproject.logics.pl.reasoner.SimplePlReasoner") # Pour requêtes simples
-        PossibleWorldIterator = jpype.JClass("org.tweetyproject.logics.pl.syntax.PossibleWorldIterator")
+        PossibleWorldIterator = jpype.JClass("org.tweetyproject.logics.pl.semantics.PossibleWorldIterator") # Corrigé: syntax -> semantics
         PlSignature = jpype.JClass("org.tweetyproject.logics.pl.syntax.PlSignature")
 
         # Classes pour la logique du premier ordre (FOL) - si nécessaire plus tard
