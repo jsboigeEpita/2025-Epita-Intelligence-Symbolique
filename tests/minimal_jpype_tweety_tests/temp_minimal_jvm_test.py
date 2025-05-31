@@ -13,7 +13,7 @@ if not logger.hasHandlers():
     formatter = logging.Formatter('%(asctime)s [%(levelname)s] [%(name)s] %(message)s', datefmt='%H:%M:%S')
     handler.setFormatter(formatter)
     logger.addHandler(handler)
-logger.setLevel(logging.INFO) # Mettre DEBUG pour plus de détails de jvm_setup
+logger.setLevel(logging.DEBUG) # Mettre DEBUG pour plus de détails de jvm_setup
 
 # Importer initialize_jvm depuis le chemin relatif correct
 # Supposons que ce test est exécuté depuis la racine du projet
