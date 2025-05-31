@@ -104,10 +104,11 @@ java = MockJavaNamespace("java") # Pour jpype.java.xxx
 # Elle utilisera MockJClassCore et appliquera des configurations spécifiques.
 _jclass_cache = {} # Cache simple pour les instances de MockJClassCore
 
-def JClass(name: str):
+def JClass(name: str, *args, **kwargs): # Ajout de *args, **kwargs pour ignorer les arguments non supportés comme 'loader'
     """
     Simule jpype.JClass(). Retourne une instance de MockJClassCore configurée.
     """
+    mock_logger.info(f"[MOCK JPYPE JClass] Appelée avec name='{name}', args={args}, kwargs={kwargs}") # Log ajouté
     if name in _jclass_cache:
         # mock_logger.debug(f"JClass('{name}') trouvé dans le cache.")
         return _jclass_cache[name]
