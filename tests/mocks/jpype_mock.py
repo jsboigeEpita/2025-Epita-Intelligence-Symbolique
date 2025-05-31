@@ -183,5 +183,6 @@ mock_logger.info("Les composants sont maintenant dans le package 'jpype_componen
 #     # par l'utilisateur du mock, mais via JClass() ou des méthodes retournant des collections.
 # ]
 
-# Export _jpype pour compatibilité avec conftest.py
+# Exposer l'instance du mock interne _jpype pour que conftest.py puisse l'importer
+_jpype = _jpype_internal_module_instance
 _jpype = _jpype_internal_module_instance
