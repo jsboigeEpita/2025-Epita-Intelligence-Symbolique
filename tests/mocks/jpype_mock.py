@@ -36,7 +36,7 @@ from .jpype_components.types import (
     JChar
 )
 from .jpype_components.exceptions import JException, JVMNotFoundException
-from .jpype_components.jclass_core import MockJClassCore, MockJavaCollection, _ModuleLevelMockJavaIterator
+from .jpype_components.jclass_core import MockJClassCore # MockJavaCollection et _ModuleLevelMockJavaIterator sont maintenant gérés par jclass_core
 from .jpype_components import tweety_enums # Ajout pour les énumérations
 
 # Configuration du logging pour le mock principal
