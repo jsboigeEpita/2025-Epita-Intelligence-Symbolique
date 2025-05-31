@@ -18,7 +18,7 @@ if str(root_dir) not in sys.path:
     sys.path.append(str(root_dir))
 
 # Import de l'application Flask
-from app import app
+from argumentation_analysis.services.web_api.app import app # MODIFIÉ
 
 
 @pytest.fixture
