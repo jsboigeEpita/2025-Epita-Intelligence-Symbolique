@@ -22,13 +22,13 @@ class TestJPypeMock(unittest.TestCase):
     def setUp(self):
         """Configuration avant chaque test."""
         # Réinitialiser l'état du mock via shutdownJVM
-        import jpype
+        from tests.mocks import jpype_mock as jpype # MODIFIÉ
         if hasattr(jpype, 'shutdownJVM'):
             jpype.shutdownJVM()
     
     def test_start_jvm(self):
         """Tester le démarrage de la JVM."""
-        import jpype
+        from tests.mocks import jpype_mock as jpype # MODIFIÉ
         
         # Vérifier que la JVM n'est pas démarrée initialement
         self.assertFalse(jpype.isJVMStarted())
@@ -41,7 +41,7 @@ class TestJPypeMock(unittest.TestCase):
     
     def test_jclass(self):
         """Tester la création de classes Java."""
-        import jpype
+        from tests.mocks import jpype_mock as jpype # MODIFIÉ
         
         # Démarrer la JVM
         jpype.startJVM()
@@ -60,7 +60,7 @@ class TestJPypeMock(unittest.TestCase):
     
     def test_jexception(self):
         """Tester les exceptions Java."""
-        import jpype
+        from tests.mocks import jpype_mock as jpype # MODIFIÉ
         
         # Créer une exception Java
         exception = jpype.JException("Mock Java Exception")
