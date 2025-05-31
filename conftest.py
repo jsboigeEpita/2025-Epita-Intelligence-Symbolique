@@ -29,15 +29,17 @@ jpype_real_jvm_initialized_value = "0"
 if initialize_jvm_func is None:
     print("ERREUR CRITIQUE: conftest.py (RACINE): initialize_jvm_func non disponible. La JVM ne sera pas démarrée par ce conftest.")
 elif USE_REAL_JVM:
-    print("INFO: conftest.py (RACINE): Tentative d'initialisation de la VRAIE JVM...")
-    try:
-        if initialize_jvm_func():
-            print("INFO: conftest.py (RACINE): VRAIE JVM initialisée avec succès par initialize_jvm_func().")
-            jpype_real_jvm_initialized_value = "1"
-        else:
-            print("ERREUR: conftest.py (RACINE): initialize_jvm_func() a retourné False (échec de l'initialisation).")
-    except Exception as e_init_jvm_conftest:
-        print(f"ERREUR CRITIQUE: conftest.py (RACINE) lors de l'appel à initialize_jvm_func: {e_init_jvm_conftest}")
+    print("INFO: conftest.py (RACINE): Initialisation JVM via initialize_jvm_func() COMMENTÉE ICI.")
+    print("INFO: conftest.py (RACINE): La gestion de la JVM est déléguée à tests/conftest.py::integration_jvm.")
+    # print("INFO: conftest.py (RACINE): Tentative d'initialisation de la VRAIE JVM...")
+    # try:
+    #     if initialize_jvm_func():
+    #         print("INFO: conftest.py (RACINE): VRAIE JVM initialisée avec succès par initialize_jvm_func().")
+    #         jpype_real_jvm_initialized_value = "1"
+    #     else:
+    #         print("ERREUR: conftest.py (RACINE): initialize_jvm_func() a retourné False (échec de l'initialisation).")
+    # except Exception as e_init_jvm_conftest:
+    #     print(f"ERREUR CRITIQUE: conftest.py (RACINE) lors de l'appel à initialize_jvm_func: {e_init_jvm_conftest}")
 else:
     print("INFO: conftest.py (RACINE): USE_REAL_JVM est False. Initialisation de la vraie JVM sautée.")
 

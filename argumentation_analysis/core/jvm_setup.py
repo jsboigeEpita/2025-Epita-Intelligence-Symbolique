@@ -1,14 +1,9 @@
 # core/jvm_setup.py
-import jpype
-try:
-    import jpype.imports
-except (ImportError, ModuleNotFoundError):
-    # Si jpype est un mock ou si jpype.imports n'est pas disponible,
-    # cela sera géré par le mock de jpype dans conftest.py qui fournira 
-    # un attribut jpype.imports mocké au module jpype mocké.
-    # Si le vrai jpype est utilisé mais que .imports n'est pas là (improbable pour les versions récentes),
-    # alors le code qui l'utilise pourrait échouer plus tard si le mock de conftest n'est pas actif.
-    pass
+# import jpype # Commenté pour déplacer l'import dans les fonctions
+# try:
+#     import jpype.imports # Commenté également
+# except (ImportError, ModuleNotFoundError):
+#     pass
 import os
 import pathlib
 import platform
@@ -550,8 +545,13 @@ def find_valid_java_home() -> Optional[str]:
 def initialize_jvm(
     lib_dir_path: str = LIBS_DIR,
     native_lib_subdir: str = "native",
-    tweety_version: str = TWEETY_VERSION 
+    tweety_version: str = TWEETY_VERSION
     ) -> bool:
+    import jpype # Importation locale
+    try:
+        import jpype.imports # Importation locale
+    except (ImportError, ModuleNotFoundError):
+        pass # Géré comme avant
     logger.info("\n--- Préparation et Initialisation de la JVM via JPype ---")
     libs_ok = download_tweety_jars(version=tweety_version, target_dir=lib_dir_path, native_subdir=native_lib_subdir)
     if not libs_ok:
@@ -590,7 +590,7 @@ def initialize_jvm(
         try:
             jvm_path_final = jpype.getDefaultJVMPath()
             logger.info(f"   (Chemin JVM par défaut détecté par JPype: {jvm_path_final})")
-        except jpype.JVMNotFoundException:
+        except jpype.JVMNotFoundException: # Nécessite jpype importé
             logger.warning("   (JPype n'a pas trouvé de JVM par défaut - dépendra de JAVA_HOME)")
             jvm_path_final = None
         classpath_separator = os.pathsep

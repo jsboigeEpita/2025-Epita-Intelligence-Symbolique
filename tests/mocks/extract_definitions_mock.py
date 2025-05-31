@@ -8,7 +8,7 @@ Version corrigée qui évite les erreurs isinstance.
 """
 
 import logging
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional # MODIFIÉ
 from unittest.mock import patch
 import json as json_module
 import gzip
