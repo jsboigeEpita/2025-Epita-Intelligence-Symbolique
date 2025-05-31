@@ -18,7 +18,7 @@ if str(root_dir) not in sys.path:
     sys.path.append(str(root_dir))
 
 # Import de l'application Flask
-from app import app
+from argumentation_analysis.services.web_api.app import app # MODIFIÉ
 
 
 @pytest.fixture
@@ -35,12 +35,12 @@ def client():
 @pytest.fixture
 def mock_analysis_service():
     """Mock du service d'analyse."""
-    with patch('services.web_api.app.analysis_service') as mock:
+    with patch('argumentation_analysis.services.web_api.app.analysis_service') as mock: # MODIFIÉ
         # Configuration du mock pour is_healthy
         mock.is_healthy.return_value = True
         
         # Configuration du mock pour analyze_text
-        from ..models.response_models import AnalysisResponse, ArgumentStructure
+        from argumentation_analysis.services.web_api.models.response_models import AnalysisResponse, ArgumentStructure # MODIFIÉ
         mock_response = AnalysisResponse(
             success=True,
             text_analyzed="Texte de test",
@@ -65,10 +65,10 @@ def mock_analysis_service():
 @pytest.fixture
 def mock_validation_service():
     """Mock du service de validation."""
-    with patch('services.web_api.app.validation_service') as mock:
+    with patch('argumentation_analysis.services.web_api.app.validation_service') as mock: # MODIFIÉ
         mock.is_healthy.return_value = True
         
-        from ..models.response_models import ValidationResponse, ValidationResult
+        from argumentation_analysis.services.web_api.models.response_models import ValidationResponse, ValidationResult # MODIFIÉ
         mock_response = ValidationResponse(
             success=True,
             premises=["Prémisse 1"],
@@ -93,10 +93,10 @@ def mock_validation_service():
 @pytest.fixture
 def mock_fallacy_service():
     """Mock du service de détection de sophismes."""
-    with patch('services.web_api.app.fallacy_service') as mock:
+    with patch('argumentation_analysis.services.web_api.app.fallacy_service') as mock: # MODIFIÉ
         mock.is_healthy.return_value = True
         
-        from ..models.response_models import FallacyResponse, FallacyDetection
+        from argumentation_analysis.services.web_api.models.response_models import FallacyResponse, FallacyDetection # MODIFIÉ
         mock_response = FallacyResponse(
             success=True,
             text_analyzed="Texte de test",
@@ -123,10 +123,10 @@ def mock_fallacy_service():
 @pytest.fixture
 def mock_framework_service():
     """Mock du service de framework."""
-    with patch('services.web_api.app.framework_service') as mock:
+    with patch('argumentation_analysis.services.web_api.app.framework_service') as mock: # MODIFIÉ
         mock.is_healthy.return_value = True
         
-        from ..models.response_models import FrameworkResponse, ArgumentNode, Extension
+        from argumentation_analysis.services.web_api.models.response_models import FrameworkResponse, ArgumentNode, Extension # MODIFIÉ
         mock_response = FrameworkResponse(
             success=True,
             arguments=[

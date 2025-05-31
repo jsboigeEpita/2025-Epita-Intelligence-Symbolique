@@ -1,24 +1,20 @@
 import pytest
-import jpype
-# Patch pour jpype.types si nécessaire
-if not hasattr(jpype, 'types'):
-    class JpypeTypesPlaceholder:
-        pass
-    jpype.types = JpypeTypesPlaceholder()
-    # Vous devrez peut-être mocker les types spécifiques si jpype.types est complètement absent
-    # Par exemple:
-    # jpype.types.JArray = type('JArray', (object,), {})
-    # jpype.types.JString = type('JString', (object,), {})
-    # etc. pour tous les types utilisés.
-    # Une meilleure solution est de s'assurer que jpype est correctement installé et accessible.
-from jpype import JArray, JString, JObject, JBoolean, JInt, JDouble # Utiliser les types directement depuis jpype
-import jpype.imports # Nécessaire pour importer des classes Java
-import jpype
+# import jpype # Commenté, sera importé localement
+# # Patch pour jpype.types si nécessaire
+# if not hasattr(jpype, 'types'): # Supposons que jpype est correctement installé
+#     class JpypeTypesPlaceholder:
+#         pass
+#     jpype.types = JpypeTypesPlaceholder()
+# from jpype import JArray, JString, JObject, JBoolean, JInt, JDouble # Sera importé localement ou via jpype.*
+# import jpype.imports # Commenté, sera importé localement
+# import jpype # Commenté
+
 # L'import de java.util.Arrays sera fait dans les fonctions de test après démarrage JVM
 
 # Les classes Java sont importées via la fixture 'belief_revision_classes' de conftest.py
 
 def test_pl_belief_set_creation_and_addition(belief_revision_classes):
+    import jpype # Import local
     """Teste la création d'un PlBeliefSet et l'ajout de formules."""
     PlBeliefSet = belief_revision_classes["PlBeliefSet"]
     PlParser = belief_revision_classes["PlParser"]
@@ -81,6 +77,7 @@ def test_simple_levi_revision(belief_revision_classes):
         "penguin(tweety)",
         "penguin(X) -> abnormal(X)"
     ]
+    import jpype # Import local pour jpype.java...
     new_information_list = jpype.java.util.ArrayList()
     for f_str in new_info_formulas_str:
         new_information_list.add(parser.parseFormula(f_str))
@@ -155,6 +152,7 @@ def test_crmas_belief_set_creation(belief_revision_classes):
     parser = PlParser()
 
     # Création des agents
+    import jpype # Import local
     agent_expert = DummyAgent("Expert")
     agent_witness = DummyAgent("Witness")
     
@@ -207,10 +205,12 @@ def test_inconsistency_measure_contension(belief_revision_classes):
         # Pour {a, !a}, la contension est souvent 1.
         # Pour {a, !a, b&c, !(b&c)}, elle pourrait être 2 ou une autre valeur normalisée.
         # On s'attend à ce qu'elle soit > 0 pour un ensemble inconsistant.
+        import jpype # Import local pour JObject, JDouble
+        from jpype import JObject, JDouble # Assurer que ces types sont accessibles
         assert value is not None
         assert JObject(value, JDouble).doubleValue() > 0.0
 
-    except jpype.JException as e:
+    except jpype.JException as e: # jpype doit être importé pour jpype.JException
         pytest.fail(f"Erreur Java lors du calcul de la mesure de contension : {e.stacktrace()}")
 
 # TODO: Ajouter des tests pour d'autres opérateurs de révision (CrMasSimple, CrMasArgumentative)
@@ -264,7 +264,9 @@ def test_kernel_contraction_with_priority_incision(belief_revision_classes):
     PriorityIncisionFunction = belief_revision_classes["PriorityIncisionFunction"]
     SimplePlReasoner = belief_revision_classes["SimplePlReasoner"]
     PlFormula = belief_revision_classes["PlFormula"]
-    import java.util.HashMap
+    import jpype # Import local
+    from jpype import JDouble # Pour JDouble
+    # import java.util.HashMap # Ceci n'est pas un import Python valide
     HashMap = jpype.JClass("java.util.HashMap")
 
     parser = PlParser()
@@ -327,7 +329,7 @@ def test_kernel_contraction_with_priority_incision(belief_revision_classes):
         assert contracted_set.contains(f2)     # 'b' devrait rester
         assert contracted_set.contains(f4)     # 'b -> x' devrait rester
 
-    except jpype.JException as e:
+    except jpype.JException as e: # jpype doit être importé
         pytest.fail(f"Erreur Java lors de la contraction par kernel avec priorité : {e.stacktrace()}")
 
 
@@ -341,7 +343,8 @@ def test_levi_multiple_base_revision_operator_detailed(belief_revision_classes):
     DefaultMultipleBaseExpansionOperator = belief_revision_classes["DefaultMultipleBaseExpansionOperator"]
     LeviMultipleBaseRevisionOperator = belief_revision_classes["LeviMultipleBaseRevisionOperator"]
     PlFormula = belief_revision_classes["PlFormula"]
-    import java.util.ArrayList
+    import jpype # Import local
+    # import java.util.ArrayList # Non valide
     ArrayList = jpype.JClass("java.util.ArrayList")
 
     parser = PlParser()
@@ -372,7 +375,7 @@ def test_levi_multiple_base_revision_operator_detailed(belief_revision_classes):
         assert revised_set1.contains(parser.parseFormula("c"))
         assert revised_set1.size() == 3
 
-    except jpype.JException as e:
+    except jpype.JException as e: # jpype doit être importé
         pytest.fail(f"Erreur Java (Cas 1) LeviMultipleBaseRevisionOperator : {e.stacktrace()}")
 
     # Cas 2: Révision avec incohérence (similaire à test_simple_levi_revision)
@@ -404,7 +407,7 @@ def test_levi_multiple_base_revision_operator_detailed(belief_revision_classes):
         assert not revised_q_present # q ne doit plus être une conséquence
         assert revised_set2.size() <= 3 # Au plus !q, et un des {p, p->q}
 
-    except jpype.JException as e:
+    except jpype.JException as e: # jpype doit être importé
         pytest.fail(f"Erreur Java (Cas 2) LeviMultipleBaseRevisionOperator : {e.stacktrace()}")
 
 
@@ -417,6 +420,7 @@ def test_crmas_simple_revision_operator(belief_revision_classes):
     InformationObject = belief_revision_classes["InformationObject"]
     PlParser = belief_revision_classes["PlParser"]
     CrMasSimpleRevisionOperator = belief_revision_classes["CrMasSimpleRevisionOperator"]
+    import jpype # Import local
     ArrayList = jpype.JClass("java.util.ArrayList")
 
     parser = PlParser()
@@ -462,7 +466,7 @@ def test_crmas_simple_revision_operator(belief_revision_classes):
         assert str(revised_info_obj.getFormula()) == "!rainy_day"
         assert revised_info_obj.getSource().getName() == "Expert"
 
-    except jpype.JException as e:
+    except jpype.JException as e: # jpype doit être importé
         pytest.fail(f"Erreur Java lors de la révision CrMasSimple : {e.stacktrace()}")
 
 
@@ -523,10 +527,12 @@ def test_inconsistency_measure_dsum(belief_revision_classes):
         # Somme des distances minimales des modèles aux formules de la base.
         # La définition exacte de DSum dans Tweety peut varier.
         # On s'attend à ce qu'elle soit > 0 pour un ensemble inconsistant.
+        import jpype # Import local
+        from jpype import JObject, JDouble # Assurer l'accès
         assert value is not None
         assert JObject(value, JDouble).doubleValue() > 0.0
 
-    except jpype.JException as e:
+    except jpype.JException as e: # jpype doit être importé
         # Afficher plus de détails sur l'erreur Java, notamment le type d'exception
         java_exception = jpype.JavaException(e)
         print(f"Exception Java de type: {java_exception.java_class().getName()}")

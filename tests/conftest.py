@@ -1,157 +1,258 @@
-print("INFO: conftest.py: Fichier en cours de lecture par pytest (version minimale pour débogage JVM).")
+"""
+Configuration pour les tests pytest.
+
+Ce fichier est automatiquement chargé par pytest avant l'exécution des tests.
+Il configure les mocks nécessaires pour les tests et utilise les vraies bibliothèques
+lorsqu'elles sont disponibles. Pour Python 3.12 et supérieur, le mock JPype1 est
+automatiquement utilisé en raison de problèmes de compatibilité.
+"""
 
 import sys
 import os
-import atexit
-import importlib
-import logging
-# Note: Autres imports comme pytest, unittest.mock sont omis car les mocks/fixtures sont désactivés.
+import pytest
+from unittest.mock import patch, MagicMock
+import importlib.util
+import logging # Ajout de l'import pour le logger
 
-# Ajout du répertoire des mocks au sys.path
-mocks_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'mocks')
-if mocks_dir not in sys.path:
-    sys.path.insert(0, mocks_dir)
-    print(f"INFO: tests/conftest.py: Ajout de {mocks_dir} à sys.path.")
+# --- Gestion du Path pour les Mocks ---
+# Assurer que le répertoire des mocks est dans sys.path
+current_dir_for_mock = os.path.dirname(os.path.abspath(__file__))
+mocks_dir_for_mock = os.path.join(current_dir_for_mock, 'mocks')
+if mocks_dir_for_mock not in sys.path:
+    sys.path.insert(0, mocks_dir_for_mock) # Ajoute tests/mocks au path
+    print(f"INFO: tests/conftest.py: Ajout de {mocks_dir_for_mock} à sys.path.")
 
-# Configuration du logger
+# --- Configuration du Logger (pris de la branche HEAD) ---
 logger = logging.getLogger(__name__)
 # Pour activer les logs pendant l'exécution des tests, décommenter les lignes suivantes :
-handler = logging.StreamHandler(sys.stdout)
-formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-handler.setFormatter(formatter)
-logger.addHandler(handler)
-logger.setLevel(logging.INFO)
-print("INFO: conftest.py: Logger configuré pour pytest hooks jpype.") # Log de confirmation
+# handler = logging.StreamHandler(sys.stdout)
+# formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+# handler.setFormatter(formatter)
+# logger.addHandler(handler)
+# logger.setLevel(logging.INFO)
+# print("INFO: conftest.py: Logger configuré pour pytest hooks jpype.")
 
-# Ajout précoce du chemin pour trouver argumentation_analysis
-# Cela doit se faire avant d'importer initialize_jvm si jvm_setup est dans ce package
-current_script_dir_for_path = os.path.dirname(os.path.abspath(__file__))
-project_root_for_path = os.path.dirname(current_script_dir_for_path) # tests -> project root
-if project_root_for_path not in sys.path:
-    sys.path.insert(0, project_root_for_path)
-    print(f"INFO: conftest.py: Ajout de {project_root_for_path} à sys.path.")
-
-# La logique d'initialisation de la JVM est maintenant gérée
-# uniquement par le conftest.py à la racine du projet pour éviter les conflits.
-print("INFO: tests/conftest.py: Logique d'initialisation JVM désactivée dans ce fichier.")
-# S'assurer que la variable d'environnement est lue si elle a été définie par le conftest parent,
-# ou qu'elle a une valeur par défaut si ce conftest est exécuté isolément (moins probable).
-# Cependant, pour éviter de masquer des problèmes, il est préférable de ne pas la redéfinir ici.
-# Si le conftest racine ne s'exécute pas avant, JPYPE_REAL_JVM_INITIALIZED pourrait ne pas être défini.
-# Pour l'instant, on suppose que le conftest racine s'exécute toujours en premier.
-
-# Le reste du fichier original est neutralisé pour ce test.
-print("INFO: conftest.py: Reste du contenu original (mocks, fixtures) neutralisé pour le débogage JVM.")
-
-# Conserver l'ajout du parent_dir au sys.path qui était à la fin du fichier original,
-# au cas où il serait nécessaire pour pytest lui-même ou d'autres découvertes de tests.
-# Bien que nous l'ayons déjà fait pour argumentation_analysis, cela ne fait pas de mal de le répéter
-# si la structure originale du fichier l'avait à un endroit spécifique pour une raison.
-# Cependant, pour la version minimale, celui du début devrait suffire.
-# parent_dir_original_placement = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-# if parent_dir_original_placement not in sys.path:
-#    sys.path.insert(0, parent_dir_original_placement)
-
-def pytest_sessionstart(session):
-    """
-    Au début de la session de test, essaie de sauvegarder la fonction
-    de nettoyage originale de jpype si le vrai module est chargé.
-    """
-    print("DEBUG CONTEST.PY: pytest_sessionstart HOOK IS FIRING")
-    logger.info("pytest_sessionstart: Début de la routine de sauvegarde de jpype._core._JTerminate.")
-    session._original_jpype_jterminate = None
-    try:
-        jpype_real = None
-        # Vérifier d'abord si 'jpype' est dans sys.modules
-        if 'jpype' in sys.modules:
-            existing_jpype = sys.modules['jpype']
-            module_path = getattr(existing_jpype, '__file__', None)
-            # Si c'est déjà le mock, ne rien faire.
-            if module_path and 'mocks' in module_path and 'jpype_mock.py' in module_path:
-                logger.info(f"pytest_sessionstart: jpype ({module_path}) est déjà mocké au démarrage. Aucune action de sauvegarde.")
-                return
-            # Sinon, on suppose que c'est le vrai ou un état non mocké pertinent
-            jpype_real = existing_jpype
-            logger.info(f"pytest_sessionstart: jpype trouvé dans sys.modules. Chemin: {module_path if module_path else 'N/A'}")
-
-        if jpype_real is None:
-            # Si non trouvé ou si on veut forcer un import frais (attention aux effets de bord)
-            # Pour ce cas, on se contente d'importer s'il n'est pas déjà là ou s'il n'est pas le mock.
-            try:
-                logger.info("pytest_sessionstart: Tentative d'import de 'jpype' via importlib.")
-                jpype_real = importlib.import_module('jpype')
-                logger.info(f"pytest_sessionstart: jpype importé via importlib. Chemin: {getattr(jpype_real, '__file__', 'N/A')}")
-            except ModuleNotFoundError:
-                logger.warning("pytest_sessionstart: Le module jpype réel n'a pas pu être importé (ModuleNotFoundError). Il n'est peut-être pas installé.")
-                return
-            except Exception as e:
-                logger.error(f"pytest_sessionstart: Exception lors de l'import de jpype via importlib: {e}")
-                return
-        
-        # Vérification finale que ce n'est pas le mock (si importlib l'a ramené)
-        module_path_after_import = getattr(jpype_real, '__file__', None)
-        if module_path_after_import and 'mocks' in module_path_after_import and 'jpype_mock.py' in module_path_after_import:
-            logger.info(f"pytest_sessionstart: jpype ({module_path_after_import}) est le mock après import. Aucune action de sauvegarde.")
-            return
-
-        if hasattr(jpype_real, '_core') and hasattr(jpype_real._core, '_JTerminate'):
-            session._original_jpype_jterminate = jpype_real._core._JTerminate
-            logger.info(f"pytest_sessionstart: jpype._core._JTerminate original sauvegardé: {session._original_jpype_jterminate}")
-        else:
-            logger.warning(f"pytest_sessionstart: jpype._core._JTerminate non trouvé dans le module jpype ({module_path_after_import if module_path_after_import else 'N/A'}). Le module est-il complet/correctement initialisé?")
-
-    except AttributeError as e:
-        logger.error(f"pytest_sessionstart: AttributeError lors de l'accès à jpype._core._JTerminate: {e}")
-    except Exception as e:
-        logger.error(f"pytest_sessionstart: Erreur générale inattendue dans pytest_sessionstart: {e}")
-    finally:
-        logger.info("pytest_sessionstart: Fin de la routine.")
-
-
-def pytest_sessionfinish(session, exitstatus):
-    """
-    À la fin de la session de test, si jpype a été mocké et que nous avions
-    sauvegardé une fonction de nettoyage originale, la désenregistre d'atexit.
-    """
-    print("DEBUG CONTEST.PY: pytest_sessionfinish HOOK IS FIRING")
-    logger.info("pytest_sessionfinish: Début de la routine de désinscription de jpype._core._JTerminate.")
-    original_jterminate = getattr(session, '_original_jpype_jterminate', None)
-
-    if not original_jterminate:
-        logger.info("pytest_sessionfinish: Aucune fonction _JTerminate originale n'a été sauvegardée. Aucune action.")
-        logger.info("pytest_sessionfinish: Fin de la routine.")
-        return
-
-    logger.info(f"pytest_sessionfinish: Fonction _JTerminate originale trouvée: {original_jterminate}")
-    current_jpype_module = sys.modules.get('jpype')
-
-    if not current_jpype_module:
-        logger.info("pytest_sessionfinish: Le module 'jpype' n'est pas dans sys.modules à la fin de la session. Aucune action de désinscription.")
-        logger.info("pytest_sessionfinish: Fin de la routine.")
-        return
-        
-    logger.info(f"pytest_sessionfinish: Module jpype actuel trouvé dans sys.modules.")
-    is_mock = False
-    try:
-        module_path = getattr(current_jpype_module, '__file__', None)
-        if module_path and 'mocks' in module_path and 'jpype_mock.py' in module_path:
-            is_mock = True
-            logger.info(f"pytest_sessionfinish: Le module jpype actuel ({module_path}) est identifié comme le mock.")
-        else:
-            logger.info(f"pytest_sessionfinish: Le module jpype actuel ({module_path if module_path else 'N/A, pas d attribut __file__'}) n'est PAS le mock.")
-    except Exception as e:
-        # Ne pas planter si la vérification échoue, mais logguer l'erreur.
-        logger.error(f"pytest_sessionfinish: Erreur lors de la vérification du fichier du module jpype: {e}. On suppose que ce n'est pas le mock.")
-
-    if is_mock:
-        try:
-            atexit.unregister(original_jterminate)
-            logger.info(f"pytest_sessionfinish: Désinscription de {original_jterminate} de atexit réussie.")
-        except ValueError:
-            logger.warning(f"pytest_sessionfinish: {original_jterminate} n'était pas enregistrée avec atexit (ou déjà désinscrite). Désinscription ignorée.")
-        except Exception as e:
-            logger.error(f"pytest_sessionfinish: Exception lors de la tentative de désinscription de {original_jterminate}: {e}")
-    else:
-        logger.info("pytest_sessionfinish: jpype n'est pas le mock à la fin de la session, aucune désinscription de la fonction originale n'est tentée.")
+# --- Mock Matplotlib et NetworkX au plus tôt ---
+try:
+    # Matplotlib
+    from matplotlib_mock import pyplot as mock_pyplot_instance # Import direct car mocks_dir_for_mock est dans le path
+    from matplotlib_mock import cm as mock_cm_instance
+    from matplotlib_mock import MatplotlibMock as MockMatplotlibModule_class
     
-    logger.info("pytest_sessionfinish: Fin de la routine.")
+    sys.modules['matplotlib.pyplot'] = mock_pyplot_instance
+    sys.modules['matplotlib.cm'] = mock_cm_instance
+    mock_mpl_module = MockMatplotlibModule_class()
+    mock_mpl_module.pyplot = mock_pyplot_instance
+    mock_mpl_module.cm = mock_cm_instance
+    sys.modules['matplotlib'] = mock_mpl_module
+    print("INFO: Matplotlib mocké globalement.")
+
+    # NetworkX
+    from networkx_mock import NetworkXMock as MockNetworkXModule_class # Import direct
+    sys.modules['networkx'] = MockNetworkXModule_class()
+    print("INFO: NetworkX mocké globalement.")
+
+except ImportError as e:
+    print(f"ERREUR CRITIQUE lors du mocking global de matplotlib ou networkx: {e}")
+    # Fallback à des MagicMock génériques
+    if 'matplotlib' not in str(e).lower():
+        sys.modules['matplotlib.pyplot'] = MagicMock()
+        sys.modules['matplotlib.cm'] = MagicMock()
+        sys.modules['matplotlib'] = MagicMock()
+        sys.modules['matplotlib'].pyplot = sys.modules['matplotlib.pyplot']
+        sys.modules['matplotlib'].cm = sys.modules['matplotlib.cm']
+    if 'networkx' not in str(e).lower():
+        sys.modules['networkx'] = MagicMock()
+# --- Fin des Mocks Globaux ---
+
+# --- Mock NumPy Immédiat ---
+# Installation immédiate du mock NumPy pour éviter les problèmes d'import pandas
+def _install_numpy_mock_immediately():
+    """Installe le mock NumPy immédiatement pour éviter les conflits avec pandas."""
+    if 'numpy' not in sys.modules:
+        try:
+            from numpy_mock import array, ndarray, mean, sum, zeros, ones, dot, concatenate, vstack, hstack, argmax, argmin, max, min, random, rec, _core, core
+            sys.modules['numpy'] = type('numpy', (), {
+                'array': array, 'ndarray': ndarray, 'mean': mean, 'sum': sum, 'zeros': zeros, 'ones': ones,
+                'dot': dot, 'concatenate': concatenate, 'vstack': vstack, 'hstack': hstack,
+                'argmax': argmax, 'argmin': argmin, 'max': max, 'min': min, 'random': random, 'rec': rec,
+                '_core': _core, 'core': core, '__version__': '1.24.3',
+            })
+            # Installation explicite des sous-modules dans sys.modules
+            sys.modules['numpy._core'] = _core
+            sys.modules['numpy.core'] = core
+            sys.modules['numpy._core.multiarray'] = _core.multiarray
+            sys.modules['numpy.core.multiarray'] = core.multiarray
+            print("INFO: Mock NumPy installé immédiatement dans conftest.py")
+        except ImportError as e:
+            print(f"ERREUR lors de l'installation immédiate du mock NumPy: {e}")
+
+# Installation immédiate si Python 3.12+ ou si numpy n'est pas disponible
+if (sys.version_info.major == 3 and sys.version_info.minor >= 12):
+    _install_numpy_mock_immediately()
+
+# --- Mock Pandas Immédiat ---
+# Installation immédiate du mock Pandas pour éviter les problèmes d'import
+def _install_pandas_mock_immediately():
+    """Installe le mock Pandas immédiatement pour éviter les conflits avec numpy."""
+    if 'pandas' not in sys.modules:
+        try:
+            from pandas_mock import DataFrame, read_csv, read_json
+            sys.modules['pandas'] = type('pandas', (), {
+                'DataFrame': DataFrame, 'read_csv': read_csv, 'read_json': read_json, 'Series': list,
+                'NA': None, 'NaT': None, 'isna': lambda x: x is None, 'notna': lambda x: x is not None,
+                '__version__': '1.5.3',
+            })
+            # Installation des sous-modules pandas critiques
+            sys.modules['pandas.core'] = type('pandas.core', (), {})
+            sys.modules['pandas.core.api'] = type('pandas.core.api', (), {})
+            sys.modules['pandas._libs'] = type('pandas._libs', (), {})
+            sys.modules['pandas._libs.pandas_datetime'] = type('pandas._libs.pandas_datetime', (), {})
+            print("INFO: Mock Pandas installé immédiatement dans conftest.py")
+        except ImportError as e:
+            print(f"ERREUR lors de l'installation immédiate du mock Pandas: {e}")
+
+# Installation immédiate si Python 3.12+ ou si pandas n'est pas disponible
+if (sys.version_info.major == 3 and sys.version_info.minor >= 12):
+    _install_pandas_mock_immediately()
+
+# --- Mock JPype ---
+# mocks_dir_for_mock (tests/mocks) est déjà dans sys.path depuis le bloc ci-dessus.
+try:
+    from jpype_mock import ( # Import direct car tests/mocks est dans sys.path
+        isJVMStarted, startJVM, getJVMPath, getJVMVersion, getDefaultJVMPath,
+        JClass, JException, JObject, JVMNotFoundException, _jpype as mock_dot_jpype_module
+    )
+
+    mock_jpype_imports_module = MagicMock(name="jpype.imports_mock")
+    sys.modules['jpype.imports'] = mock_jpype_imports_module
+
+    jpype_module_mock_obj = MagicMock(name="jpype_module_mock")
+    jpype_module_mock_obj.__path__ = [] 
+    jpype_module_mock_obj.isJVMStarted = isJVMStarted
+    jpype_module_mock_obj.startJVM = startJVM
+    jpype_module_mock_obj.getJVMPath = getJVMPath
+    jpype_module_mock_obj.getJVMVersion = getJVMVersion
+    jpype_module_mock_obj.getDefaultJVMPath = getDefaultJVMPath
+    jpype_module_mock_obj.JClass = JClass
+    jpype_module_mock_obj.JException = JException
+    jpype_module_mock_obj.JObject = JObject
+    jpype_module_mock_obj.JVMNotFoundException = JVMNotFoundException
+    jpype_module_mock_obj.__version__ = '1.4.1.mock'
+    jpype_module_mock_obj.imports = mock_jpype_imports_module
+
+    sys.modules['jpype'] = jpype_module_mock_obj
+    sys.modules['_jpype'] = mock_dot_jpype_module
+    print("INFO: JPype (et jpype.imports) mocké globalement.")
+except ImportError as e_jpype:
+    print(f"ERREUR CRITIQUE lors du mocking global de JPype: {e_jpype}")
+    sys.modules['jpype'] = MagicMock(name="jpype_fallback_mock")
+    sys.modules['jpype.imports'] = MagicMock(name="jpype.imports_fallback_mock")
+    sys.modules['_jpype'] = MagicMock(name="_jpype_fallback_mock")
+# --- Fin Mock JPype ---
+
+# --- Mock ExtractDefinitions ---
+try:
+    # mocks_dir_for_mock (tests/mocks) est déjà dans sys.path
+    from extract_definitions_mock import setup_extract_definitions_mock
+    setup_extract_definitions_mock()
+    print("INFO: ExtractDefinitions mocké globalement.")
+except ImportError as e_extract:
+    print(f"ERREUR lors du mocking d'ExtractDefinitions: {e_extract}")
+except Exception as e_extract_setup:
+    print(f"ERREUR lors de la configuration du mock ExtractDefinitions: {e_extract_setup}")
+# --- Fin Mock ExtractDefinitions ---
+
+parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if parent_dir not in sys.path:
+    sys.path.insert(0, parent_dir)
+
+def is_module_available(module_name):
+    if module_name in sys.modules:
+        # Vérifier si c'est un de nos mocks principaux ou un MagicMock générique
+        if isinstance(sys.modules[module_name], MagicMock) or \
+           (module_name == 'jpype' and sys.modules[module_name] is jpype_module_mock_obj): # jpype_module_mock_obj doit être défini globalement ou passé
+            return True
+    try:
+        spec = importlib.util.find_spec(module_name)
+        return spec is not None
+    except (ImportError, ValueError):
+        return False
+
+def is_python_version_compatible_with_jpype():
+    major = sys.version_info.major
+    minor = sys.version_info.minor
+    if (major == 3 and minor >= 12) or major > 3:
+        return False
+    return True
+
+def setup_numpy():
+    if (sys.version_info.major == 3 and sys.version_info.minor >= 12) or not is_module_available('numpy'):
+        if not is_module_available('numpy'): print("NumPy non disponible, utilisation du mock.")
+        else: print("Python 3.12+ détecté, utilisation du mock NumPy.")
+        # mocks_dir_for_mock (tests/mocks) est déjà dans sys.path
+        from numpy_mock import array, ndarray, mean, sum, zeros, ones, dot, concatenate, vstack, hstack, argmax, argmin, max, min, random, rec, _core, core, bool_, number, object_, float64, float32, int64, int32, int_, uint, uint64, uint32
+        sys.modules['numpy'] = type('numpy', (), {
+            'array': array, 'ndarray': ndarray, 'mean': mean, 'sum': sum, 'zeros': zeros, 'ones': ones,
+            'dot': dot, 'concatenate': concatenate, 'vstack': vstack, 'hstack': hstack,
+            'argmax': argmax, 'argmin': argmin, 'max': max, 'min': min, 'random': random, 'rec': rec,
+            '_core': _core, 'core': core, '__version__': '1.24.3',
+            # Types de données pour compatibilité PyTorch
+            'bool_': bool_, 'number': number, 'object_': object_,
+            'float64': float64, 'float32': float32, 'int64': int64, 'int32': int32, 'int_': int_,
+            'uint': uint, 'uint64': uint64, 'uint32': uint32,
+        })
+        # Installation explicite des sous-modules dans sys.modules
+        sys.modules['numpy._core'] = _core
+        sys.modules['numpy.core'] = core
+        sys.modules['numpy._core.multiarray'] = _core.multiarray
+        sys.modules['numpy.core.multiarray'] = core.multiarray
+        return sys.modules['numpy']
+    else: 
+        import numpy
+        print(f"Utilisation de la vraie bibliothèque NumPy (version {getattr(numpy, '__version__', 'inconnue')})")
+        return numpy
+
+def setup_pandas():
+    if (sys.version_info.major == 3 and sys.version_info.minor >= 12) or not is_module_available('pandas'):
+        if not is_module_available('pandas'): print("Pandas non disponible, utilisation du mock.")
+        else: print("Python 3.12+ détecté, utilisation du mock Pandas.")
+        # mocks_dir_for_mock (tests/mocks) est déjà dans sys.path
+        from pandas_mock import DataFrame, read_csv, read_json
+        sys.modules['pandas'] = type('pandas', (), {
+            'DataFrame': DataFrame, 'read_csv': read_csv, 'read_json': read_json, 'Series': list,
+            'NA': None, 'NaT': None, 'isna': lambda x: x is None, 'notna': lambda x: x is not None,
+            '__version__': '1.5.3', 
+        })
+        return sys.modules['pandas']
+    else: 
+        import pandas
+        print(f"Utilisation de la vraie bibliothèque Pandas (version {getattr(pandas, '__version__', 'inconnue')})")
+        return pandas
+
+@pytest.fixture(scope="session", autouse=True)
+def setup_numpy_for_tests_fixture(): 
+    if 'PYTEST_CURRENT_TEST' in os.environ:
+        numpy_module = setup_numpy()
+        if sys.modules.get('numpy') is not numpy_module: # Vérifier si le module a réellement changé
+            sys.modules['numpy'] = numpy_module
+        yield
+    else:
+        yield
+
+@pytest.fixture(scope="session", autouse=True)
+def setup_pandas_for_tests_fixture(): 
+    if 'PYTEST_CURRENT_TEST' in os.environ:
+        pandas_module = setup_pandas()
+        if sys.modules.get('pandas') is not pandas_module: # Vérifier si le module a réellement changé
+            sys.modules['pandas'] = pandas_module
+        yield
+    else:
+        yield
+
+# NOTE: La fixture integration_jvm et les fixtures de classes (dung_classes, etc.)
+# qui étaient dans la version "neutralisée" ne sont PAS présentes dans cette version b3e1a1bb...
+# Elles ont été ajoutées plus récemment (commit 05d8d175...).
+# Si nous restaurons cette version b3e1a1bb..., ces fixtures spécifiques aux tests d'intégration JPype disparaîtront.
+# Il faudra alors soit les réintégrer, soit s'assurer que le conftest.py racine gère correctement la JVM
+# pour ces tests d'intégration.
