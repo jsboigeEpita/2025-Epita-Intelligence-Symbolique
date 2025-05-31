@@ -5,3 +5,4 @@ matplotlib
 networkx==3.4.2
 pydantic>=2.0,<2.10
 semantic-kernel==1.29.0
+pytest-mock

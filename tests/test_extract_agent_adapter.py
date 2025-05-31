@@ -161,14 +161,20 @@ class TestExtractAgentAdapter:
         # Créer un état opérationnel mock
         self.operational_state = OperationalState()
 
-        # Patcher setup_extract_agent
-        mocker.patch('argumentation_analysis.orchestration.hierarchical.operational.adapters.extract_agent_adapter.setup_extract_agent',
+        # Patcher setup_extract_agent avec unittest.mock.patch
+        self.patcher = patch('argumentation_analysis.orchestration.hierarchical.operational.adapters.extract_agent_adapter.setup_extract_agent',
                                          side_effect=mock_setup_extract_agent)
+        self.mock_setup_extract_agent = self.patcher.start()
 
         # Créer l'adaptateur d'agent d'extraction
         self.adapter = ExtractAgentAdapter(name="TestExtractAgent", operational_state=self.operational_state)
 
         await self.adapter.initialize()
+
+    def tearDown(self):
+        """Nettoyage après chaque test."""
+        if hasattr(self, 'patcher'): # S'assurer que le patcher a été initialisé
+            self.patcher.stop()
 
     @pytest.mark.asyncio
     async def test_initialization(self):
