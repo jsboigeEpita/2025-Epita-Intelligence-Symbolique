@@ -23,9 +23,9 @@ class TestSemanticArgumentAnalyzer(unittest.TestCase):
 
     def setUp(self):
         """Initialise l'environnement de test."""
-        # Patcher les dépendances externes pour éviter les erreurs d'importation
-        self.transformers_patcher = patch('argumentation_analysis.agents.tools.analysis.new.semantic_argument_analyzer.HAS_TRANSFORMERS', False)
-        self.transformers_patcher.start()
+        # Le patch HAS_TRANSFORMERS a été supprimé car la variable
+        # has_nlp_libs dans SemanticArgumentAnalyzer._initialize_nlp_models
+        # est initialisée à False et non modifiée, rendant le patch obsolète.
         
         self.analyzer = SemanticArgumentAnalyzer()
         
@@ -41,7 +41,7 @@ class TestSemanticArgumentAnalyzer(unittest.TestCase):
 
     def tearDown(self):
         """Nettoie l'environnement de test."""
-        self.transformers_patcher.stop()
+        # self.transformers_patcher.stop() # Supprimé car le patcher a été enlevé
 
     def test_initialization(self):
         """Teste l'initialisation de l'analyseur."""

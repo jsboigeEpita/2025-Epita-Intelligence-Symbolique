@@ -49,15 +49,22 @@ class TestLogicApiIntegration(unittest.TestCase):
         self.client = app.test_client()
         
         # Patcher LogicService
-        self.logic_service_patcher = patch('libs.web_api.app.logic_service') # Correction du chemin du patch
+        # Le service est maintenant importé depuis argumentation_analysis.services.web_api.logic_service
+        # et est utilisé directement dans libs.web_api.app.
+        # Le patch doit cibler l'endroit où il est UTILISÉ, donc libs.web_api.app.LogicService
+        self.logic_service_patcher = patch('libs.web_api.app.LogicService')
         self.mock_logic_service = self.logic_service_patcher.start()
         
         # Patcher LogicAgentFactory
-        self.logic_factory_patcher = patch('libs.web_api.services.logic_service.LogicAgentFactory')
+        # LogicAgentFactory est utilisé DANS LogicService, qui est lui-même patché.
+        # Cependant, pour contrôler le comportement de LogicAgentFactory, il faut le patcher
+        # à son emplacement d'origine.
+        self.logic_factory_patcher = patch('argumentation_analysis.services.web_api.logic_service.LogicAgentFactory')
         self.mock_logic_factory = self.logic_factory_patcher.start()
         
         # Patcher Kernel
-        self.kernel_patcher = patch('libs.web_api.services.logic_service.Kernel')
+        # Kernel est utilisé DANS LogicService.
+        self.kernel_patcher = patch('argumentation_analysis.services.web_api.logic_service.Kernel')
         self.mock_kernel_class = self.kernel_patcher.start()
         self.mock_kernel = MagicMock(spec=Kernel)
         self.mock_kernel_class.return_value = self.mock_kernel
@@ -300,11 +307,11 @@ class TestLogicServiceIntegration(unittest.TestCase):
     def setUp(self):
         """Initialisation avant chaque test."""
         # Patcher LogicAgentFactory
-        self.logic_factory_patcher = patch('libs.web_api.services.logic_service.LogicAgentFactory')
+        self.logic_factory_patcher = patch('argumentation_analysis.services.web_api.logic_service.LogicAgentFactory')
         self.mock_logic_factory = self.logic_factory_patcher.start()
         
         # Patcher Kernel
-        self.kernel_patcher = patch('libs.web_api.services.logic_service.Kernel')
+        self.kernel_patcher = patch('argumentation_analysis.services.web_api.logic_service.Kernel')
         self.mock_kernel_class = self.kernel_patcher.start()
         self.mock_kernel = MagicMock(spec=Kernel)
         self.mock_kernel_class.return_value = self.mock_kernel
