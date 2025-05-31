@@ -49,12 +49,21 @@ class MockJavaEnumInstance(MagicMock):
     def __repr__(self):
         return f"<MockJavaEnumInstance {self._enum_class_name}.{self._enum_name}>"
 
+    def _get_child_mock(self, **kwargs):
+        """
+        Surcharge pour s'assurer que les mocks enfants sont des MagicMock standard
+        et n'essaient pas de réinstancier MockJavaEnumInstance sans les arguments requis.
+        """
+        return MagicMock(**kwargs)
+
 class MockEnumMetaclass(type(MockJClassCore)):
     def __init__(cls, name, bases, dct):
         super().__init__(name, bases, dct)
         cls._enum_members = {} # Initialisé ici pour chaque classe d'enum
 
-        if hasattr(cls, '_initialize_enum_members'):
+        # Ne pas appeler _initialize_enum_members pour la classe de base MockTweetyEnum elle-même,
+        # seulement pour ses sous-classes concrètes.
+        if hasattr(cls, '_initialize_enum_members') and cls.__name__ != "MockTweetyEnum":
             cls._initialize_enum_members()
 
         def values_method(klass):
