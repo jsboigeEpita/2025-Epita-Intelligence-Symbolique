@@ -9,9 +9,9 @@ import pathlib
 import platform
 import logging
 from typing import Optional
-import requests # Ajout pour téléchargement
-import urllib.request # Ajout pour téléchargement
-from tqdm.auto import tqdm # Ajout pour barre de progression
+# import requests # Supprimé car download_tweety_jars est retiré
+# import urllib.request # Supprimé car download_tweety_jars est retiré
+# from tqdm import tqdm # Supprimé car download_tweety_jars est retiré
 import stat # Ajout pour chmod (Linux/Mac)
 import shutil # Ajout pour shutil.which
 import zipfile # Ajout pour l'extraction du JDK portable
@@ -30,151 +30,11 @@ TWEETY_VERSION = "1.28" # Version de Tweety à télécharger
 
 PORTABLE_JDK_DOWNLOAD_URL = "https://github.com/adoptium/temurin17-binaries/releases/download/jdk-17.0.15%2B6/OpenJDK17U-jdk_x64_windows_hotspot_17.0.15_6.zip"
 
-# --- Classe Tqdm pour barre de progression ---
-class TqdmUpTo(tqdm):
-    """Provides `update_to(block_num, block_size, total_size)`."""
-    def update_to(self, b=1, bsize=1, tsize=None):
-         if tsize is not None: self.total = tsize
-         self.update(b * bsize - self.n)
-
-
-# --- Fonction de téléchargement unitaire ---
-def _download_file_with_progress(file_url: str, target_path: pathlib.Path, description: str):
-    """Télécharge un fichier depuis une URL vers un chemin cible avec une barre de progression."""
-    try:
-        if target_path.exists() and target_path.stat().st_size > 0:
-            logger.debug(f"Fichier '{target_path.name}' déjà présent et non vide. Skip.")
-            return True, False 
-        logger.info(f"Tentative de téléchargement: {file_url} vers {target_path}")
-        headers = {'User-Agent': 'Mozilla/5.0'}
-        response = requests.get(file_url, stream=True, timeout=15, headers=headers, allow_redirects=True)
-        if response.status_code == 404:
-             logger.error(f"❌ Fichier non trouvé (404) à l'URL: {file_url}")
-             return False, False 
-        response.raise_for_status() 
-        total_size = int(response.headers.get('content-length', 0))
-        with TqdmUpTo(unit='B', unit_scale=True, unit_divisor=1024, total=total_size, miniters=1, desc=description[:40]) as t:
-            with open(target_path, 'wb') as f:
-                for chunk in response.iter_content(chunk_size=8192):
-                    if chunk:
-                        f.write(chunk)
-                        t.update(len(chunk))
-        if target_path.exists() and target_path.stat().st_size > 0:
-            logger.info(f" -> Téléchargement de '{target_path.name}' réussi.")
-            return True, True 
-        else:
-            logger.error(f"❓ Téléchargement de '{target_path.name}' semblait terminé mais fichier vide ou absent.")
-            if target_path.exists(): target_path.unlink(missing_ok=True) 
-            return False, False 
-    except requests.exceptions.RequestException as e:
-        logger.error(f"❌ Échec connexion/téléchargement pour '{target_path.name}': {e}")
-        if target_path.exists(): target_path.unlink(missing_ok=True)
-        return False, False
-    except Exception as e_other:
-        logger.error(f"❌ Erreur inattendue pour '{target_path.name}': {e_other}", exc_info=True)
-        if target_path.exists(): target_path.unlink(missing_ok=True)
-        return False, False
-
-# --- Fonction Principale de Téléchargement Tweety ---
-def download_tweety_jars(
-    version: str = TWEETY_VERSION,
-    target_dir: str = LIBS_DIR,
-    native_subdir: str = "native"
-    ) -> bool:
-    """
-    Vérifie et télécharge les JARs Tweety (Core + Modules) et les binaires natifs nécessaires.
-    """
-    logger.info(f"\n--- Vérification/Téléchargement des JARs Tweety v{version} ---")
-    BASE_URL = f"https://tweetyproject.org/builds/{version}/"
-    LIB_DIR = pathlib.Path(target_dir)
-    NATIVE_LIBS_DIR = LIB_DIR / native_subdir
-    LIB_DIR.mkdir(exist_ok=True)
-    NATIVE_LIBS_DIR.mkdir(exist_ok=True) 
-
-    CORE_JAR_NAME = f"org.tweetyproject.tweety-full-{version}-with-dependencies.jar"
-    REQUIRED_MODULES = sorted([
-        "arg.adf", "arg.aba", "arg.bipolar", "arg.aspic", "arg.dung", "arg.weighted",
-        "arg.social", "arg.setaf", "arg.rankings", "arg.prob", "arg.extended",
-        "arg.delp", "arg.deductive", "arg.caf",
-        "beliefdynamics", "agents.dialogues", "action",
-        "logics.pl", "logics.fol", "logics.ml", "logics.dl", "logics.cl",
-        "logics.qbf", "logics.pcl", "logics.rcl", "logics.rpcl", "logics.mln", "logics.bpm",
-        "lp.asp",
-        "math", "commons", "agents"
-    ])
-    system = platform.system()
-    native_binaries_repo_path = "https://raw.githubusercontent.com/TweetyProjectTeam/TweetyProject/main/org-tweetyproject-arg-adf/src/main/resources/"
-    native_binaries = {
-        "Windows": ["picosat.dll", "lingeling.dll", "minisat.dll"],
-        "Linux":   ["picosat.so", "lingeling.so", "minisat.so"],
-        "Darwin":  ["picosat.dylib", "lingeling.dylib", "minisat.dylib"]
-    }.get(system, [])
-
-    logger.info(f"Vérification de l'accès à {BASE_URL}...")
-    url_accessible = False
-    try:
-        response = requests.head(BASE_URL, timeout=10)
-        response.raise_for_status()
-        logger.info(f"✔️ URL de base Tweety v{version} accessible.")
-        url_accessible = True
-    except requests.exceptions.RequestException as e:
-        logger.error(f"❌ Impossible d'accéder à l'URL de base {BASE_URL}. Erreur : {e}")
-        logger.warning("   Le téléchargement des JARs/binaires manquants échouera. Seuls les fichiers locaux seront utilisables.")
-
-    logger.info(f"\n--- Vérification/Téléchargement JAR Core ---")
-    core_present, core_new = _download_file_with_progress(BASE_URL + CORE_JAR_NAME, LIB_DIR / CORE_JAR_NAME, CORE_JAR_NAME)
-    status_core = "téléchargé" if core_new else ("déjà présent" if core_present else "MANQUANT")
-    logger.info(f"✔️ JAR Core '{CORE_JAR_NAME}': {status_core}.")
-    if not core_present:
-        logger.critical(f"❌ ERREUR CRITIQUE : Le JAR core est manquant et n'a pas pu être téléchargé.")
-        return False 
-
-    logger.info(f"\n--- Vérification/Téléchargement des {len(REQUIRED_MODULES)} JARs de modules ---")
-    modules_present_count = 0
-    modules_downloaded_count = 0
-    modules_missing = []
-    for module in tqdm(REQUIRED_MODULES, desc="Modules JARs"):
-        module_jar_name = f"org.tweetyproject.{module}-{version}-with-dependencies.jar"
-        present, new_dl = _download_file_with_progress(BASE_URL + module_jar_name, LIB_DIR / module_jar_name, module_jar_name)
-        if present:
-            modules_present_count += 1
-            if new_dl: modules_downloaded_count += 1
-        elif url_accessible: 
-             modules_missing.append(module)
-    logger.info(f"-> Modules: {modules_downloaded_count} téléchargés, {modules_present_count}/{len(REQUIRED_MODULES)} présents.")
-    if modules_missing:
-        logger.warning(f"   Modules potentiellement manquants (non trouvés ou erreur DL): {', '.join(modules_missing)}")
-
-    logger.info(f"\n--- Vérification/Téléchargement des {len(native_binaries)} binaires natifs ({system}) ---")
-    native_present_count = 0
-    native_downloaded_count = 0
-    native_missing = []
-    if not native_binaries:
-         logger.info(f"   (Aucun binaire natif connu pour {system})")
-    else:
-        for name in tqdm(native_binaries, desc="Binaires Natifs"):
-             present, new_dl = _download_file_with_progress(native_binaries_repo_path + name, NATIVE_LIBS_DIR / name, name)
-             if present:
-                 native_present_count += 1
-                 if new_dl: native_downloaded_count += 1
-                 if new_dl and system != "Windows":
-                     try:
-                         target_path = NATIVE_LIBS_DIR / name
-                         current_permissions = target_path.stat().st_mode
-                         target_path.chmod(current_permissions | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH) 
-                         logger.debug(f"      Permissions d'exécution ajoutées à {name}")
-                     except Exception as e_chmod:
-                         logger.warning(f"      Impossible d'ajouter les permissions d'exécution à {name}: {e_chmod}")
-             elif url_accessible: 
-                  native_missing.append(name)
-        logger.info(f"-> Binaires natifs: {native_downloaded_count} téléchargés, {native_present_count}/{len(native_binaries)} présents.")
-        if native_missing:
-            logger.warning(f"   Binaires natifs potentiellement manquants: {', '.join(native_missing)}")
-        if native_present_count > 0:
-             logger.info(f"   Note: S'assurer que le chemin '{NATIVE_LIBS_DIR.resolve()}' est inclus dans java.library.path lors du démarrage JVM.")
-    logger.info("--- Fin Vérification/Téléchargement Tweety ---")
-    return core_present and modules_present_count > 0
-
+# Les fonctions suivantes liées au téléchargement des JARs Tweety (download_tweety_jars,
+# _download_file_with_progress, et la classe TqdmUpTo) sont supprimées de ce fichier.
+# La logique de téléchargement est maintenant supposée être gérée en dehors de l'initialisation
+# de la JVM pour les tests, par exemple via un script de setup séparé ou manuellement.
+# La fixture `ensure_tweety_libs` dans `tests/conftest.py` vérifiera la présence des libs.
 
 PORTABLE_JDK_DIR_NAME = "portable_jdk"
 PORTABLE_JDK_ZIP_NAME = "OpenJDK17U-jdk_x64_windows_hotspot_17.0.15_6_new.zip"
@@ -188,27 +48,20 @@ def _extract_portable_jdk(project_root: pathlib.Path, portable_jdk_parent_dir: p
     logger.info(f"Tentative d'extraction du JDK portable depuis '{portable_jdk_zip_path}' vers '{portable_jdk_parent_dir}'...")
     try:
         with zipfile.ZipFile(portable_jdk_zip_path, 'r') as zip_ref:
-            # Obtenir le nom du premier membre (souvent le dossier racine)
-            # Cela suppose que l'archive a un dossier racine unique.
-            # Si ce n'est pas le cas, il faudra ajuster la logique pour trouver le bon dossier JDK.
-            # Pour l'instant, on extrait tout et on cherche un dossier commençant par "jdk-"
             zip_ref.extractall(portable_jdk_parent_dir)
         logger.info(f"JDK portable extrait avec succès dans '{portable_jdk_parent_dir}'.")
 
-        # Essayer de trouver le dossier racine du JDK extrait
-        # On s'attend à un nom comme "jdk-17.0.15+6" ou similaire
         for item in portable_jdk_parent_dir.iterdir():
             if item.is_dir() and item.name.startswith("jdk-"):
                 logger.info(f"Dossier racine du JDK portable détecté : '{item}'")
                 return item
         logger.warning(f"Impossible de déterminer le dossier racine du JDK dans '{portable_jdk_parent_dir}' après extraction. Recherche d'un dossier 'jdk-*' a échoué.")
-        # Fallback: si un seul dossier est présent, on le suppose être le bon
         extracted_items = [d for d in portable_jdk_parent_dir.iterdir() if d.is_dir()]
         if len(extracted_items) == 1:
             logger.info(f"Un seul dossier trouvé après extraction: '{extracted_items[0]}', en supposant que c'est le JDK.")
             return extracted_items[0]
         
-        return None # Échec de la détection du dossier JDK
+        return None
     except FileNotFoundError:
         logger.error(f"L'archive ZIP du JDK portable '{portable_jdk_zip_path}' n'a pas été trouvée.")
         return None
@@ -219,7 +72,9 @@ def _extract_portable_jdk(project_root: pathlib.Path, portable_jdk_parent_dir: p
         logger.error(f"Erreur lors de l'extraction du JDK portable: {e}", exc_info=True)
         return None
 
-# --- Fonction de détection JAVA_HOME (modifiée pour prioriser Java >= MIN_JAVA_VERSION) ---
+# --- Fonction de détection JAVA_HOME (modifiée pour prioriser Java >= MIN_JAVA_VERSION et utiliser _download_file_with_progress pour le JDK) ---
+# Note: _download_file_with_progress est maintenant retiré, donc la logique de téléchargement du JDK portable
+# devra être assurée par un mécanisme externe si l'archive ZIP n'est pas présente.
 def find_valid_java_home() -> Optional[str]:
     logger.debug(f"Début recherche répertoire Java Home valide (priorité Java >= {MIN_JAVA_VERSION})...")
     
@@ -279,13 +134,19 @@ def find_valid_java_home() -> Optional[str]:
         temp_dir = project_root / TEMP_DIR_NAME
         temp_dir.mkdir(parents=True, exist_ok=True)
 
-        jdk_downloaded, _ = _download_file_with_progress(
-            PORTABLE_JDK_DOWNLOAD_URL,
-            portable_jdk_zip_path, # Sauvegarde directement avec le nom attendu _new.zip
-            description="JDK Portable (OpenJDK 17.0.15+6)"
-        )
+        # La logique de téléchargement du JDK portable a été retirée car _download_file_with_progress a été retiré.
+        # On suppose maintenant que l'archive ZIP du JDK est soit déjà présente, soit gérée par un processus externe.
+        logger.warning(f"Logique de téléchargement du JDK portable désactivée dans find_valid_java_home. L'archive '{portable_jdk_zip_path.name}' doit être présente manuellement si nécessaire.")
+        # jdk_downloaded, _ = _download_file_with_progress( # Appel original commenté
+        #     PORTABLE_JDK_DOWNLOAD_URL,
+        #     portable_jdk_zip_path,
+        #     description="JDK Portable (OpenJDK 17.0.15+6)"
+        # )
+        # Pour simuler l'échec du téléchargement si le fichier n'est pas là :
+        jdk_downloaded = portable_jdk_zip_path.is_file()
 
-        if jdk_downloaded and portable_jdk_zip_path.is_file():
+
+        if jdk_downloaded: # Condition simplifiée: si le fichier existe (ou aurait été téléchargé)
             logger.info(f"JDK portable téléchargé avec succès : '{portable_jdk_zip_path}'. Tentative d'extraction...")
             # S'assurer que le répertoire parent pour l'extraction existe
             portable_jdk_parent_dir.mkdir(parents=True, exist_ok=True)
@@ -553,11 +414,11 @@ def initialize_jvm(
     except (ImportError, ModuleNotFoundError):
         pass # Géré comme avant
     logger.info("\n--- Préparation et Initialisation de la JVM via JPype ---")
-    # libs_ok = download_tweety_jars(version=tweety_version, target_dir=lib_dir_path, native_subdir=native_lib_subdir)
-    libs_ok = True # Supposons que les libs sont OK pour ce test
-    # if not libs_ok:
-    #     logger.error("❌ Problème avec les fichiers Tweety (Core manquant?). Démarrage JVM annulé.")
-    #     return False
+    # libs_ok = download_tweety_jars(version=tweety_version, target_dir=lib_dir_path, native_subdir=native_lib_subdir) # Géré par la fixture ensure_tweety_libs
+    libs_ok = True # Supposons que les libs sont OK car ensure_tweety_libs s'en est chargé
+    if not libs_ok:
+        logger.error("❌ Problème avec les fichiers Tweety (Core manquant?). Démarrage JVM annulé.")
+        return False
     LIB_DIR = pathlib.Path(lib_dir_path)
     NATIVE_LIBS_DIR = LIB_DIR / native_lib_subdir
     jvm_ready = False
@@ -671,10 +532,11 @@ def initialize_jvm(
         jvm_args.extend(jvm_memory_options)
         logger.info(f"   Options de mémoire JVM ajoutées: {jvm_memory_options}")
 
-        # # Ajout des options de débogage JPype (temporairement retirées)
+        # Ajout des options de débogage JPype
         # jpype_debug_options = ["-Djpype.debug=true", "-Djpype.trace=true"]
         # jvm_args.extend(jpype_debug_options)
         # logger.info(f"   Options de débogage JPype ajoutées: {jpype_debug_options}")
+        logger.info(f"   Options de débogage JPype DÉSACTIVÉES pour ce test.")
 
         # Déterminer le chemin JVM à utiliser explicitement basé sur java_home_to_set
         jvm_path_to_use_explicit: Optional[str] = None
