@@ -235,7 +235,7 @@ class TestCommunicationPerformance(unittest.TestCase):
         self.assertGreater(data_throughput, 100, "Le débit sur le canal de données est trop faible")
         self.assertGreater(total_throughput, 300, "Le débit total est trop faible")
     
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_request_response_performance(self):
         """Test des performances du protocole de requête-réponse."""
         # Paramètres du test
@@ -574,7 +574,7 @@ class TestAsyncCommunicationPerformance(unittest.IsolatedAsyncioTestCase):
         # Initialiser les protocoles
         self.middleware.initialize_protocols()
     
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_async_request_response_performance(self):
         """Test des performances du protocole de requête-réponse asynchrone."""
         # Paramètres du test
