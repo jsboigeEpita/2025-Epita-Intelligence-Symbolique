@@ -24,6 +24,7 @@ ENV/
 temp_extracts/
 logs/
 temp/
+temp_*.py
 
 # Fichiers spécifiques au projet
 *.egg-info/

@@ -20,7 +20,7 @@ except ImportError as e:
 # Exposer les fonctions et classes importantes
 try:
     from .llm_service import create_llm_service
-    from .jvm_setup import initialize_jvm, download_tweety_jars
+    from .jvm_setup import initialize_jvm # download_tweety_jars retiré
     from .shared_state import SharedState
 except ImportError as e:
     import logging
