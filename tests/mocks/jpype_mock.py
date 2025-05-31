@@ -112,9 +112,12 @@ def JClass(name: str):
         return _jclass_cache[name]
 
     mock_logger.debug(f"JClass('{name}') demandé. Création d'une nouvelle instance de MockJClassCore.")
-    core_class_mock = MockJClassCore(name)
+    # Passer la fonction JClass elle-même pour que MockJClassCore puisse la fournir aux configurateurs.
+    core_class_mock = MockJClassCore(name, jclass_provider_func=JClass)
 
     # TODO: Logique de configuration spécifique à Tweety (sera ajoutée par d'autres agents/tâches)
+    # La configuration des reasoners est maintenant gérée dans MockJClassCore.__call__
+    # via le module tweety_reasoners.
     # Exemple:
     # if name.startswith("org.tweetyproject.arg"):
     #     from .jpype_components import tweety_syntax # ou autre module pertinent
