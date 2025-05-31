@@ -2,7 +2,7 @@ import pytest
 import os
 import sys
 import subprocess
-import jpype
+# import jpype # Commenté pour éviter le démarrage prématuré de la JVM
 from pathlib import Path
 import logging
 from argumentation_analysis.core.jvm_setup import LIBS_DIR as CORE_LIBS_DIR
@@ -338,3 +338,63 @@ def get_tweety_classpath(): # Cette fonction n'est plus utilisée pour démarrer
 #         }
 #     except jpype.JException as e:
 #         pytest.fail(f"Échec de l'importation des classes Java pour l'argumentation dialogique: {e.stacktrace()}")
+
+@pytest.fixture(scope="module")
+def logic_classes(integration_jvm): # Dépend de integration_jvm pour s'assurer que la JVM est prête
+    """
+    Fournit les classes Java Tweety nécessaires pour les tests de logique.
+    """
+    # S'assurer que jpype est importé et la JVM démarrée (géré par integration_jvm)
+    import jpype
+    if not jpype.isJVMStarted():
+        pytest.skip("JVM non démarrée, impossible de charger les classes de logique.")
+
+    try:
+        # Classes pour la logique propositionnelle (PL)
+        PlBeliefSet = jpype.JClass("org.tweetyproject.logics.pl.syntax.PlBeliefSet")
+        PlParser = jpype.JClass("org.tweetyproject.logics.pl.parser.PlParser")
+        PlFormula = jpype.JClass("org.tweetyproject.logics.pl.syntax.PlFormula")
+        Proposition = jpype.JClass("org.tweetyproject.logics.pl.syntax.Proposition")
+        Negation = jpype.JClass("org.tweetyproject.logics.pl.syntax.Negation")
+        Conjunction = jpype.JClass("org.tweetyproject.logics.pl.syntax.Conjunction")
+        Disjunction = jpype.JClass("org.tweetyproject.logics.pl.syntax.Disjunction")
+        Implication = jpype.JClass("org.tweetyproject.logics.pl.syntax.Implication")
+        Equivalence = jpype.JClass("org.tweetyproject.logics.pl.syntax.Equivalence")
+        SimplePlReasoner = jpype.JClass("org.tweetyproject.logics.pl.reasoner.SimplePlReasoner") # Pour requêtes simples
+        PossibleWorldIterator = jpype.JClass("org.tweetyproject.logics.pl.syntax.PossibleWorldIterator")
+        PlSignature = jpype.JClass("org.tweetyproject.logics.pl.syntax.PlSignature")
+
+        # Classes pour la logique du premier ordre (FOL) - si nécessaire plus tard
+        # FolBeliefSet = jpype.JClass("org.tweetyproject.logics.fol.syntax.FolBeliefSet")
+        # FolParser = jpype.JClass("org.tweetyproject.logics.fol.parser.FolParser")
+
+        # Reasoners génériques (peuvent nécessiter des adaptations selon la logique)
+        # CredulousReasoner = jpype.JClass("org.tweetyproject.arg.reasoner.CredulousReasoner") # Exemple, vérifier le package exact
+        # SkepticalReasoner = jpype.JClass("org.tweetyproject.arg.reasoner.SkepticalReasoner") # Exemple
+
+        # Agents logiques (génériques ou spécifiques)
+        # LogicalAgent = jpype.JClass("org.tweetyproject.agents.LogicalAgent") # Vérifier le nom exact
+
+        return {
+            "PlBeliefSet": PlBeliefSet,
+            "PlParser": PlParser,
+            "PlFormula": PlFormula,
+            "Proposition": Proposition,
+            "Negation": Negation,
+            "Conjunction": Conjunction,
+            "Disjunction": Disjunction,
+            "Implication": Implication,
+            "Equivalence": Equivalence,
+            "SimplePlReasoner": SimplePlReasoner,
+            "PossibleWorldIterator": PossibleWorldIterator,
+            "PlSignature": PlSignature,
+            # "CredulousReasoner": CredulousReasoner, # A décommenter/adapter si utilisé
+            # "SkepticalReasoner": SkepticalReasoner, # A décommenter/adapter si utilisé
+            # "LogicalAgent": LogicalAgent, # A décommenter/adapter si utilisé
+        }
+    except jpype.JException as e:
+        # Afficher la stacktrace Java complète pour un meilleur diagnostic
+        stacktrace = e.stacktrace() if hasattr(e, 'stacktrace') else str(e)
+        pytest.fail(f"Échec de l'importation d'une ou plusieurs classes Java pour la logique: {stacktrace}")
+    except Exception as e_py:
+        pytest.fail(f"Erreur Python lors de la configuration de logic_classes: {str(e_py)}")
