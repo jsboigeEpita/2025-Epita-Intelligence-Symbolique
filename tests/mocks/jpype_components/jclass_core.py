@@ -2,6 +2,7 @@ from unittest.mock import MagicMock
 import logging
 import sys
 from itertools import chain, combinations # Pour les helpers de sémantique d'argumentation
+from . import tweety_reasoners # Ajout pour les configurations de reasoners
 
 # Configuration du logging pour ce module
 mock_logger = logging.getLogger(__name__)
@@ -190,12 +191,13 @@ class MockJavaCollection:
 
 
 class MockJClassCore:
-    def __init__(self, name):
+    def __init__(self, name, jclass_provider_func=None):
         self.__name__ = name # Nom qualifié de la classe Java, ex: "java.lang.String"
-        self.class_name = name 
+        self.class_name = name
         self._static_attributes = {}
         self._instance_specific_config = {} # Pour stocker des configs spécifiques à une classe
-        mock_logger.debug(f"MockJClassCore pour '{name}' initialisée.")
+        self._jclass_provider = jclass_provider_func # Pour que les configurateurs puissent créer des JClass
+        mock_logger.debug(f"MockJClassCore pour '{name}' initialisée (jclass_provider: {jclass_provider_func is not None}).")
 
         # Logique de base pour java.lang.ClassLoader.getSystemClassLoader()
         if self.class_name == "java.lang.ClassLoader":
@@ -334,6 +336,35 @@ class MockJClassCore:
         # le module tweety_syntax.py pourrait avoir une fonction qui prend instance_mock
         # et configure .getName(), .equals(), .hashCode() spécifiquement pour Argument.
         # Cette logique de "patching" sera dans le jpype_mock.py principal ou dans les modules tweety_*.
+
+        # --- Configuration spécifique pour les Reasoners ---
+        # Les reasoners prennent souvent une DungTheory en argument constructeur
+        dung_theory_instance_arg = args[0] if args else None
+
+        if self._jclass_provider is None:
+            mock_logger.warning(f"JClass provider non disponible pour MockJClassCore('{self.class_name}'), la configuration des reasoners pourrait être limitée.")
+        
+        if self.class_name == "net.sf.tweety.arg.dung.reasoner.CompleteReasoner":
+            if self._jclass_provider:
+                tweety_reasoners.configure_complete_reasoner_mock(instance_mock, dung_theory_instance_arg, self._jclass_provider)
+            else:
+                mock_logger.error("Impossible de configurer CompleteReasoner: JClass provider manquant.")
+        elif self.class_name == "net.sf.tweety.arg.dung.reasoner.StableReasoner":
+            if self._jclass_provider:
+                tweety_reasoners.configure_stable_reasoner_mock(instance_mock, dung_theory_instance_arg, self._jclass_provider)
+            else:
+                mock_logger.error("Impossible de configurer StableReasoner: JClass provider manquant.")
+        elif self.class_name == "net.sf.tweety.arg.dung.reasoner.PreferredReasoner":
+            if self._jclass_provider:
+                tweety_reasoners.configure_preferred_reasoner_mock(instance_mock, dung_theory_instance_arg, self._jclass_provider)
+            else:
+                mock_logger.error("Impossible de configurer PreferredReasoner: JClass provider manquant.")
+        elif self.class_name == "net.sf.tweety.arg.dung.reasoner.GroundedReasoner":
+            if self._jclass_provider:
+                tweety_reasoners.configure_grounded_reasoner_mock(instance_mock, dung_theory_instance_arg, self._jclass_provider)
+            else:
+                mock_logger.error("Impossible de configurer GroundedReasoner: JClass provider manquant.")
+        # --- Fin de la configuration des Reasoners ---
 
         mock_logger.info(f"Instance mockée de '{self.class_name}' créée et retournée.")
         return instance_mock
