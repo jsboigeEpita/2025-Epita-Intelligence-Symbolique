@@ -122,12 +122,13 @@ class TweetyBridge:
         try:
             # Charger les classes
             self._FolParser = jpype.JClass("org.tweetyproject.logics.fol.parser.FolParser")
-            self._FolReasoner = jpype.JClass("org.tweetyproject.logics.fol.reasoner.FolReasoner")
+            self._FolReasoner = jpype.JClass("org.tweetyproject.logics.fol.reasoner.FolReasoner") # Pour type hinting
+            self._SimpleFolReasoner = jpype.JClass("org.tweetyproject.logics.fol.reasoner.SimpleFolReasoner") # Classe concrète
             self._FolFormula = jpype.JClass("org.tweetyproject.logics.fol.syntax.FolFormula")
             
             # Créer les instances
             self._fol_parser_instance = self._FolParser()
-            self._fol_reasoner_instance = self._FolReasoner()
+            self._fol_reasoner_instance = self._SimpleFolReasoner() # Utiliser la classe concrète
             
             self._logger.info("✅ Composants pour la logique du premier ordre initialisés.")
         
@@ -142,13 +143,14 @@ class TweetyBridge:
         """
         try:
             # Charger les classes
-            self._ModalParser = jpype.JClass("org.tweetyproject.logics.ml.parser.ModalParser")
-            self._ModalReasoner = jpype.JClass("org.tweetyproject.logics.ml.reasoner.ModalReasoner")
+            self._ModalParser = jpype.JClass("org.tweetyproject.logics.ml.parser.MlParser") # Nom corrigé
+            self._AbstractModalReasoner = jpype.JClass("org.tweetyproject.logics.ml.reasoner.AbstractMlReasoner") # Pour type hinting
+            self._SimpleModalReasoner = jpype.JClass("org.tweetyproject.logics.ml.reasoner.SimpleMlReasoner") # Classe concrète
             self._ModalFormula = jpype.JClass("org.tweetyproject.logics.ml.syntax.ModalFormula")
             
             # Créer les instances
             self._modal_parser_instance = self._ModalParser()
-            self._modal_reasoner_instance = self._ModalReasoner()
+            self._modal_reasoner_instance = self._SimpleModalReasoner() # Utiliser la classe concrète
             
             self._logger.info("✅ Composants pour la logique modale initialisés.")
         
