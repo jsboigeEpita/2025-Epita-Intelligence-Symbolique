@@ -4,6 +4,7 @@ import sys
 from itertools import chain, combinations # Pour les helpers de sémantique d'argumentation
 from . import tweety_reasoners # Ajout pour les configurations de reasoners
 from . import tweety_agents # Ajout pour les configurations des agents
+from . import tweety_enums # Ajout pour les configurations des enums
 
 # Configuration du logging pour ce module
 mock_logger = logging.getLogger(__name__)
@@ -200,6 +201,18 @@ class MockJClassCore:
         self._jclass_provider = jclass_provider_func # Pour que les configurateurs puissent créer des JClass
         mock_logger.debug(f"MockJClassCore pour '{name}' initialisée (jclass_provider: {jclass_provider_func is not None}).")
 
+        # Vérifier si le nom correspond à une énumération Tweety connue
+        if name in tweety_enums.ENUM_MAPPINGS:
+            # Si c'est une enum, nous ne voulons pas créer une instance de MockJClassCore standard.
+            # La classe d'enum elle-même (ex: TruthValue) est ce qui doit être retourné par JClass("...TruthValue").
+            # Cela est géré par la logique de JClass() dans jpype_mock.py qui devrait maintenant
+            # vérifier ENUM_MAPPINGS. Ici, on s'assure juste que MockJClassCore ne la traite pas comme une classe normale.
+            # Normalement, JClass() devrait directement retourner tweety_enums.ENUM_MAPPINGS[name]
+            # et ne pas appeler MockJClassCore(name) pour les enums.
+            # Cette note est pour la cohérence. Le constructeur de MockJClassCore est appelé
+            # par la métaclasse de MockTweetyEnum, donc ce chemin est pris.
+            pass # La métaclasse de MockTweetyEnum gère l'initialisation.
+
         # Logique de base pour java.lang.ClassLoader.getSystemClassLoader()
         if self.class_name == "java.lang.ClassLoader":
             def mock_get_system_class_loader():
@@ -231,6 +244,10 @@ class MockJClassCore:
 
     def __call__(self, *args, **kwargs):
         mock_logger.debug(f"MockJClassCore('{self.class_name}').__call__ avec args: {args}, kwargs: {kwargs}")
+
+        # Si la classe est une énumération Tweety, lever une erreur car on ne peut pas instancier une enum.
+        if self.class_name in tweety_enums.ENUM_MAPPINGS:
+            raise TypeError(f"Les classes Enum Java ({self.class_name}) ne peuvent pas être instanciées directement. Utilisez les membres statiques (ex: {self.class_name}.MEMBER_NAME).")
 
         # Gestion spécifique pour les collections java.util.*
         # Si on instancie une classe de java.util (ex: HashSet()), on retourne un MockJavaCollection.

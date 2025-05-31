@@ -37,6 +37,7 @@ from .jpype_components.types import (
 )
 from .jpype_components.exceptions import JException, JVMNotFoundException
 from .jpype_components.jclass_core import MockJClassCore, MockJavaCollection, _ModuleLevelMockJavaIterator
+from .jpype_components import tweety_enums # Ajout pour les énumérations
 
 # Configuration du logging pour le mock principal
 mock_logger = logging.getLogger(__name__)
@@ -111,12 +112,29 @@ def JClass(name: str):
         # mock_logger.debug(f"JClass('{name}') trouvé dans le cache.")
         return _jclass_cache[name]
 
-    mock_logger.debug(f"JClass('{name}') demandé. Création d'une nouvelle instance de MockJClassCore.")
+    mock_logger.debug(f"JClass('{name}') demandé.")
+
+    # Vérifier si c'est une énumération Tweety connue
+    if name in tweety_enums.ENUM_MAPPINGS:
+        enum_class_mock = tweety_enums.ENUM_MAPPINGS[name]
+        # Assurer que les membres de l'enum sont initialisés si ce n'est pas déjà fait
+        # Normalement, la métaclasse s'en charge, mais une vérification ici peut être utile.
+        # hasattr(enum_class_mock, '_initialize_enum_members') and enum_class_mock._initialize_enum_members()
+        # La métaclasse devrait avoir déjà appelé _initialize_enum_members.
+        # On s'assure que la classe retournée a bien le jclass_provider si besoin (pas typique pour les enums statiques)
+        # et que son __name__ correspond bien au nom Java demandé.
+        # Les classes Enum mockées héritent de MockJClassCore, donc elles ont un __name__ et un class_name.
+        # Il faut s'assurer que le nom Java est bien celui attendu.
+        # Le MOCK_JAVA_CLASS_NAME est utilisé pour cela.
+        mock_logger.info(f"JClass('{name}') identifié comme une énumération Tweety. Retourne la classe mockée: {enum_class_mock}.")
+        _jclass_cache[name] = enum_class_mock
+        return enum_class_mock
+
+    mock_logger.debug(f"JClass('{name}'): Pas une énumération Tweety connue. Création d'une instance de MockJClassCore.")
     # Passer la fonction JClass elle-même pour que MockJClassCore puisse la fournir aux configurateurs.
     core_class_mock = MockJClassCore(name, jclass_provider_func=JClass)
 
-    # TODO: Logique de configuration spécifique à Tweety (sera ajoutée par d'autres agents/tâches)
-    # La configuration des reasoners est maintenant gérée dans MockJClassCore.__call__
+    # La configuration des reasoners et agents est maintenant gérée dans MockJClassCore.__call__
     # via le module tweety_reasoners.
     # Exemple:
     # if name.startswith("org.tweetyproject.arg"):
