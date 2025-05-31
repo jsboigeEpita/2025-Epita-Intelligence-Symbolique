@@ -21,30 +21,20 @@ class TestJPypeMock(unittest.TestCase):
     
     def setUp(self):
         """Configuration avant chaque test."""
-        # Réinitialiser l'état du mock via shutdownJVM
-        from tests.mocks import jpype_mock as jpype # MODIFIÉ
-        if hasattr(jpype, 'shutdownJVM'):
-            jpype.shutdownJVM()
+        """Configuration avant chaque test."""
+        # La gestion de la JVM est maintenant centralisée dans conftest.py.
+        # Plus besoin de shutdownJVM ici.
+        pass
     
-    def test_start_jvm(self):
-        """Tester le démarrage de la JVM."""
-        from tests.mocks import jpype_mock as jpype # MODIFIÉ
-        
-        # Vérifier que la JVM n'est pas démarrée initialement
-        self.assertFalse(jpype.isJVMStarted())
-        
-        # Démarrer la JVM
-        jpype.startJVM()
-        
-        # Vérifier que la JVM est démarrée
-        self.assertTrue(jpype.isJVMStarted())
-    
+    # test_start_jvm supprimé car la gestion de la JVM est centralisée
+    # et ne doit plus être testée au niveau unitaire des mocks de cette manière.
+
     def test_jclass(self):
         """Tester la création de classes Java."""
         from tests.mocks import jpype_mock as jpype # MODIFIÉ
         
-        # Démarrer la JVM
-        jpype.startJVM()
+        # La JVM est supposée être démarrée par conftest.py
+        # jpype.startJVM() # Supprimé
         
         # Créer une classe Java
         String = jpype.JClass("java.lang.String")
