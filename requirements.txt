@@ -17,5 +17,7 @@ semantic-kernel==1.29.0
 spacy
 coverage
 clingo
-
 markdown
+gradio_client
+gradio
+dotenv
