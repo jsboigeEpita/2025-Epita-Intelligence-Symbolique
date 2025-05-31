@@ -5,9 +5,11 @@ Ce module gère la configuration des mocks pour les classes d'agents Tweety.
 import logging
 import sys
 from unittest.mock import MagicMock
+import typing
 
 # Importation relative pour MockJClassCore et potentiellement d'autres utilitaires
-from .jclass_core import MockJClassCore # Assurez-vous que ce chemin est correct
+if typing.TYPE_CHECKING:
+   from .jclass_core import MockJClassCore # Pour les type hints, évite l'import circulaire au runtime
 
 # Logger spécifique pour ce module
 tweety_agents_logger = logging.getLogger(__name__)
@@ -25,7 +27,7 @@ tweety_agents_logger.info("tweety_agents.py mock component loading.")
 # Valeur: une fonction qui configure l'instance MockJClassCore
 _agent_class_configs = {}
 
-def configure_tweety_agent_class(jclass_core_instance: MockJClassCore):
+def configure_tweety_agent_class(jclass_core_instance: 'MockJClassCore'):
     """
     Configure une instance MockJClassCore pour une classe d'agent Tweety spécifique.
     Cette fonction est appelée par MockJClassCore lors de l'instanciation d'une classe
@@ -46,7 +48,7 @@ def configure_tweety_agent_class(jclass_core_instance: MockJClassCore):
 
 # --- Fonctions de configuration spécifiques pour chaque classe d'agent ---
 # Exemple pour ArgumentationAgent (à adapter/compléter)
-def _configure_ArgumentationAgent(jclass_instance: MockJClassCore):
+def _configure_ArgumentationAgent(jclass_instance: 'MockJClassCore'):
     """Configure le mock pour org.tweetyproject.agents.ArgumentationAgent."""
     tweety_agents_logger.debug(f"Configuring MockJClassCore for ArgumentationAgent: {jclass_instance.class_name}")
     # Exemple: mocker une méthode spécifique
@@ -63,12 +65,12 @@ def _configure_ArgumentationAgent(jclass_instance: MockJClassCore):
     # Pour l'instant, on ne fait rien de spécifique, MockJClassCore fournira un MagicMock par défaut
     pass
 
-def _configure_OpponentModel(jclass_instance: MockJClassCore):
+def _configure_OpponentModel(jclass_instance: 'MockJClassCore'):
     """Configure le mock pour org.tweetyproject.agents.OpponentModel."""
     tweety_agents_logger.debug(f"Configuring MockJClassCore for OpponentModel: {jclass_instance.class_name}")
     pass # Ajouter la logique de mock spécifique ici
 
-def _configure_PersuasionProtocol(jclass_instance: MockJClassCore):
+def _configure_PersuasionProtocol(jclass_instance: 'MockJClassCore'):
     """Configure le mock pour org.tweetyproject.agents.PersuasionProtocol."""
     tweety_agents_logger.debug(f"Configuring MockJClassCore for PersuasionProtocol: {jclass_instance.class_name}")
     pass # Ajouter la logique de mock spécifique ici

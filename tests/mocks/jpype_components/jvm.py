@@ -25,12 +25,8 @@ config = MinimalMockConfig()
 
 def isJVMStarted():
     """Simule jpype.isJVMStarted()."""
-    # return _jvm_started # Comportement original
-    # Forcer True pour satisfaire la fixture jvm_manager dans tests/integration/jpype_tweety/conftest.py
-    # Cette logique devra peut-être être revue globalement plus tard.
-    # Pour l'instant, on garde le comportement qui permet aux tests de passer.
-    mock_logger.debug(f"isJVMStarted() appelée. Retourne: True (valeur forcée pour les tests)")
-    return True
+    mock_logger.debug(f"isJVMStarted() appelée. Retourne: {_jvm_started}")
+    return _jvm_started # Retourne l'état réel simulé
 
 def startJVM(jvmpath=None, *args, **kwargs):
     """Simule jpype.startJVM()."""

@@ -7,7 +7,8 @@ from unittest.mock import MagicMock
 # JClass sera probablement importé depuis le module principal du mock jpype
 # from ..jpype_mock import JClass
 # MockJavaCollection et potentiellement MockJClassCore depuis jclass_core
-from .jclass_core import MockJavaCollection, MockJClassCore 
+from .collections import MockJavaCollection # Import direct depuis son emplacement d'origine
+# from .jclass_core import MockJClassCore # MockJClassCore n'est pas utilisé directement ici
 # Pour éviter une dépendance circulaire immédiate avec jpype_mock pour JClass,
 # on va supposer que JClass("java.util.HashSet") est passé ou accessible.
 # Pour l'instant, on va le définir localement ou le passer en argument.
