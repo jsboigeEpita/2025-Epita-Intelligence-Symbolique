@@ -9,7 +9,7 @@ import logging
 from unittest.mock import MagicMock # Gardé pour _MockInternalJpypeModule si besoin, ou autres mocks directs
 
 # Importer les composants nécessaires depuis le package jpype_components
-from .jpype_components.jvm import (
+from tests.mocks.jpype_components.jvm import ( # MODIFIÉ
     isJVMStarted,
     startJVM,
     shutdownJVM,
@@ -20,9 +20,9 @@ from .jpype_components.jvm import (
     _jvm_started, # Exposer pour _MockInternalJpypeModule
     _jvm_path # Exposer si nécessaire globalement
 )
-from .jpype_components.config import config # Importer l'instance config
-from .jpype_components.imports import imports # Importer le module d'imports patché
-from .jpype_components.types import (
+from tests.mocks.jpype_components.config import config # MODIFIÉ
+from tests.mocks.jpype_components.imports import imports # MODIFIÉ
+from tests.mocks.jpype_components.types import ( # MODIFIÉ
     JString,
     JArray,
     JObject,
@@ -35,9 +35,9 @@ from .jpype_components.types import (
     JByte,
     JChar
 )
-from .jpype_components.exceptions import JException, JVMNotFoundException
-from .jpype_components.jclass_core import MockJClassCore # MockJavaCollection et _ModuleLevelMockJavaIterator sont maintenant gérés par jclass_core
-from .jpype_components import tweety_enums # Ajout pour les énumérations
+from tests.mocks.jpype_components.exceptions import JException, JVMNotFoundException # MODIFIÉ
+from tests.mocks.jpype_components.jclass_core import MockJClassCore # MODIFIÉ
+from tests.mocks.jpype_components import tweety_enums # MODIFIÉ
 
 # Configuration du logging pour le mock principal
 mock_logger = logging.getLogger(__name__)
