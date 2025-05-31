@@ -25,120 +25,134 @@ def get_tweety_classpath(): # Cette fonction n'est plus utilisée pour démarrer
         return []
     return jars
 
-@pytest.fixture(scope="session", autouse=True)
-def jvm_manager():
-    print("DEBUG: jvm_manager fixture CALLED (tests/integration/jpype_tweety/conftest.py)")
-    """
-    Fixture pour s'assurer que les JARs de test sont présents et vérifier l'état de la JVM.
-    La JVM doit être démarrée par le conftest.py racine.
-    """
-    import jpype # Importation locale initiale
+# @pytest.fixture(scope="session", autouse=True)
+# def jvm_manager():
+#     print("DEBUG: jvm_manager fixture CALLED (tests/integration/jpype_tweety/conftest.py) - MAIS MAINTENANT COMMENTÉE")
+#     """
+#     Fixture pour s'assurer que les JARs de test sont présents et vérifier l'état de la JVM.
+#     La JVM doit être démarrée par le conftest.py racine.
+#     """
+#     import jpype # Importation locale initiale
     
-    # Forcer l'utilisation du mock pour les tests jpype_tweety
-    # car le conftest.py racine a sa logique de mock neutralisée.
-    import tests.mocks.jpype_mock as jpype_mock_module
-    sys.modules['jpype'] = jpype_mock_module
-    sys.modules['jpype1'] = jpype_mock_module
-    # Ré-assigner la variable locale jpype pour qu'elle pointe vers le mock chargé
-    jpype = jpype_mock_module
-    print("INFO: [jpype_tweety/conftest.py] Mock JPype activé de force pour cette session de tests.")
+#     # # Forcer l'utilisation du mock pour les tests jpype_tweety
+#     # # car le conftest.py racine a sa logique de mock neutralisée.
+#     # import tests.mocks.jpype_mock as jpype_mock_module
+#     # sys.modules['jpype'] = jpype_mock_module
+#     # sys.modules['jpype1'] = jpype_mock_module
+#     # # Ré-assigner la variable locale jpype pour qu'elle pointe vers le mock chargé
+#     # jpype = jpype_mock_module
+#     # print("INFO: [jpype_tweety/conftest.py] Forçage du Mock JPype COMMENTÉ. Utilisation du jpype global (réel ou mock global).")
 
-    # Obtenir le logger du mock pour y ajouter des messages
-    mock_logger = logging.getLogger("tests.mocks.jpype_mock")
+#     # # Obtenir le logger du mock pour y ajouter des messages
+#     # mock_logger = logging.getLogger("tests.mocks.jpype_mock")
 
-    try:
-        # S'assurer que les JARs de test/application sont présents (téléchargés si besoin)
-        # Utilisation de la version "Updated upstream" (plus robuste) pour le téléchargement.
-        # --- Début de l'intégration du téléchargement des JARs ---
-        script_path = Path(PROJECT_ROOT) / "scripts" / "download_test_jars.py"
-        target_jars_dir = Path(TWEETY_LIBS_PATH)
+#     # # Démarrer le mock JVM pour cette session de test si ce n'est pas déjà fait par ce mock
+#     # # (même si le conftest racine est censé gérer la vraie JVM ou un mock global,
+#     # # ce conftest spécifique force son propre usage du mock)
+#     # # if hasattr(jpype, '_jvm_started') and not jpype.isJVMStarted(): # Vérifie si c'est notre mock et s'il a besoin d'être démarré
+#     # #     if mock_logger: # S'assurer que mock_logger est défini
+#     # #          mock_logger.info("[jpype_tweety/conftest.py] Appel de jpype.startJVM() (du mock) car isJVMStarted() est False.")
+#     # #     jpype.startJVM() # Ceci mettra _jvm_started à True dans le mock
+#     # # elif hasattr(jpype, '_jvm_started'):
+#     # #      if mock_logger:
+#     # #          mock_logger.info("[jpype_tweety/conftest.py] jpype.isJVMStarted() (du mock) est déjà True.")
+#     # # else:
+#     # #     # Si jpype n'a pas _jvm_started, c'est probablement le vrai jpype
+#     # #     print("INFO: [jpype_tweety/conftest.py] jpype semble être le vrai module, pas le mock. Pas d'appel à startJVM() du mock.")
+    
+#     try:
+#         # S'assurer que les JARs de test/application sont présents (téléchargés si besoin)
+#         # Utilisation de la version "Updated upstream" (plus robuste) pour le téléchargement.
+#         # --- Début de l'intégration du téléchargement des JARs ---
+#         script_path = Path(PROJECT_ROOT) / "scripts" / "download_test_jars.py"
+#         target_jars_dir = Path(TWEETY_LIBS_PATH)
         
-        if not (target_jars_dir.is_dir() and any(target_jars_dir.glob("*.jar"))):
-            print(f"INFO: Les JARs de test/application semblent manquants dans {target_jars_dir}. Tentative de téléchargement via {script_path}...")
-            if not script_path.is_file():
-                print(f"ERREUR CRITIQUE: Le script de téléchargement {script_path} n'a pas été trouvé.")
-                raise FileNotFoundError(f"Script de téléchargement non trouvé: {script_path}")
+#         if not (target_jars_dir.is_dir() and any(target_jars_dir.glob("*.jar"))):
+#             print(f"INFO: Les JARs de test/application semblent manquants dans {target_jars_dir}. Tentative de téléchargement via {script_path}...")
+#             if not script_path.is_file():
+#                 print(f"ERREUR CRITIQUE: Le script de téléchargement {script_path} n'a pas été trouvé.")
+#                 raise FileNotFoundError(f"Script de téléchargement non trouvé: {script_path}")
             
-            try:
-                print(f"INFO: Exécution du script de téléchargement: {sys.executable} {script_path}")
-                process = subprocess.run(
-                    [sys.executable, str(script_path)],
-                    capture_output=True,
-                    text=True,
-                    check=False
-                )
+#             try:
+#                 print(f"INFO: Exécution du script de téléchargement: {sys.executable} {script_path}")
+#                 process = subprocess.run(
+#                     [sys.executable, str(script_path)],
+#                     capture_output=True,
+#                     text=True,
+#                     check=False
+#                 )
                 
-                if process.stderr and "Traceback" in process.stderr:
-                    print(f"ERREUR (stderr du script {script_path.name}):\n{process.stderr}")
-                elif process.stderr:
-                     print(f"DEBUG (stderr du script {script_path.name}):\n{process.stderr}")
+#                 if process.stderr and "Traceback" in process.stderr:
+#                     print(f"ERREUR (stderr du script {script_path.name}):\n{process.stderr}")
+#                 elif process.stderr:
+#                      print(f"DEBUG (stderr du script {script_path.name}):\n{process.stderr}")
 
-                if process.returncode != 0:
-                    error_message = (
-                        f"ERREUR: Le script de téléchargement des JARs ({script_path}) "
-                        f"a échoué avec le code de retour {process.returncode}.\n"
-                        f"Stderr: {process.stderr}\nStdout: {process.stdout}"
-                    )
-                    print(error_message)
-                    raise RuntimeError(error_message)
+#                 if process.returncode != 0:
+#                     error_message = (
+#                         f"ERREUR: Le script de téléchargement des JARs ({script_path}) "
+#                         f"a échoué avec le code de retour {process.returncode}.\n"
+#                         f"Stderr: {process.stderr}\nStdout: {process.stdout}"
+#                     )
+#                     print(error_message)
+#                     raise RuntimeError(error_message)
                 
-                print(f"INFO: Script de téléchargement exécuté (code {process.returncode}). Sortie:\n{process.stdout}")
-                if not any(target_jars_dir.glob("*.jar")):
-                    warning_message = (
-                        f"AVERTISSEMENT: Le script de téléchargement s'est terminé "
-                        f"mais aucun JAR n'a été trouvé dans {target_jars_dir}. "
-                        f"Vérifiez les logs du script et le script lui-même ({script_path})."
-                    )
-                    print(warning_message)
-                else:
-                    print(f"INFO: Les fichiers JAR sont maintenant (ou étaient déjà) présents dans {target_jars_dir}.")
+#                 print(f"INFO: Script de téléchargement exécuté (code {process.returncode}). Sortie:\n{process.stdout}")
+#                 if not any(target_jars_dir.glob("*.jar")):
+#                     warning_message = (
+#                         f"AVERTISSEMENT: Le script de téléchargement s'est terminé "
+#                         f"mais aucun JAR n'a été trouvé dans {target_jars_dir}. "
+#                         f"Vérifiez les logs du script et le script lui-même ({script_path})."
+#                     )
+#                     print(warning_message)
+#                 else:
+#                     print(f"INFO: Les fichiers JAR sont maintenant (ou étaient déjà) présents dans {target_jars_dir}.")
 
-            except Exception as e:
-                critical_error_message = (
-                    f"ERREUR CRITIQUE lors de l'exécution du script de téléchargement {script_path}: {e}"
-                )
-                print(critical_error_message)
-                raise RuntimeError(critical_error_message) from e
-        # --- Fin de l'intégration du téléchargement des JARs ---
-        else:
-            print(f"INFO: Les JARs de test/application sont déjà présents dans {target_jars_dir}.")
-        # --- Fin de la logique de téléchargement ---
+#             except Exception as e:
+#                 critical_error_message = (
+#                     f"ERREUR CRITIQUE lors de l'exécution du script de téléchargement {script_path}: {e}"
+#                 )
+#                 print(critical_error_message)
+#                 raise RuntimeError(critical_error_message) from e
+#         # --- Fin de l'intégration du téléchargement des JARs ---
+#         else:
+#             print(f"INFO: Les JARs de test/application sont déjà présents dans {target_jars_dir}.")
+#         # --- Fin de la logique de téléchargement ---
 
-        # Logique de "Stashed changes" pour vérifier la JVM et afficher les infos
-        print("DEBUG: jvm_manager (tests/integration/jpype_tweety): Vérification de l'état de la JVM (doit être démarrée par le conftest racine).")
-        if not jpype.isJVMStarted():
-            error_msg = ("ERREUR CRITIQUE: La JVM n'est pas démarrée comme attendu (devrait être fait par un conftest racine). "
-                         "Les tests jpype_tweety ne peuvent pas continuer.")
-            print(error_msg)
-            raise RuntimeError(error_msg)
+#         # Logique de "Stashed changes" pour vérifier la JVM et afficher les infos
+#         print("DEBUG: jvm_manager (tests/integration/jpype_tweety): Vérification de l'état de la JVM (doit être démarrée par le conftest racine).")
+#         if not jpype.isJVMStarted():
+#             error_msg = ("ERREUR CRITIQUE: La JVM n'est pas démarrée comme attendu (devrait être fait par un conftest racine). "
+#                          "Les tests jpype_tweety ne peuvent pas continuer.")
+#             print(error_msg)
+#             raise RuntimeError(error_msg)
 
-        print("INFO: jvm_manager (tests/integration/jpype_tweety): La JVM est (ou devrait être) déjà démarrée.")
+#         print("INFO: jvm_manager (tests/integration/jpype_tweety): La JVM est (ou devrait être) déjà démarrée.")
         
-        try:
-            print(f"       jpype.config.java_home: {jpype.config.java_home if hasattr(jpype, 'config') else 'N/A'}")
-            print(f"       jpype.config.jvm_path: {jpype.config.jvm_path if hasattr(jpype, 'config') else 'N/A'}")
-            current_classpath_reported = jpype.getClassPath()
-            print(f"       Classpath rapporté par jpype.getClassPath(): '{current_classpath_reported}' (longueur: {len(str(current_classpath_reported))})")
-            if not current_classpath_reported:
-                print("       AVERTISSEMENT: jpype.getClassPath() est vide ou None!")
-        except Exception as e_config:
-            print(f"       Erreur lors de la tentative d'affichage de la config JPype: {e_config}")
+#         try:
+#             print(f"       jpype.config.java_home: {jpype.config.java_home if hasattr(jpype, 'config') else 'N/A'}")
+#             print(f"       jpype.config.jvm_path: {jpype.config.jvm_path if hasattr(jpype, 'config') else 'N/A'}")
+#             current_classpath_reported = jpype.getClassPath()
+#             print(f"       Classpath rapporté par jpype.getClassPath(): '{current_classpath_reported}' (longueur: {len(str(current_classpath_reported))})")
+#             if not current_classpath_reported:
+#                 print("       AVERTISSEMENT: jpype.getClassPath() est vide ou None!")
+#         except Exception as e_config:
+#             print(f"       Erreur lors de la tentative d'affichage de la config JPype: {e_config}")
 
-        print(f"       Les tests jpype_tweety s'attendent à ce que les JARs de {CORE_LIBS_DIR} et ceux de tests/resources/libs soient accessibles.")
-        print(f"       La JVM a été démarrée par le conftest racine via jvm_setup.py.")
+#         print(f"       Les tests jpype_tweety s'attendent à ce que les JARs de {CORE_LIBS_DIR} et ceux de tests/resources/libs soient accessibles.")
+#         print(f"       La JVM a été démarrée par le conftest racine via jvm_setup.py.")
 
-        jpype.imports.registerDomain("net", alias="net")
-        jpype.imports.registerDomain("org", alias="org")
-        jpype.imports.registerDomain("java", alias="java")
+#         jpype.imports.registerDomain("net", alias="net")
+#         jpype.imports.registerDomain("org", alias="org")
+#         jpype.imports.registerDomain("java", alias="java")
 
-        yield
+#         yield
 
-    except Exception as e:
-        print(f"Erreur critique inattendue dans la fixture jvm_manager: {e}")
-        raise
-    finally:
-        if jpype.isJVMStarted():
-            print("INFO: La JVM restera active jusqu'à la fin du processus de test principal (géré par conftest racine).")
+#     except Exception as e:
+#         print(f"Erreur critique inattendue dans la fixture jvm_manager: {e}")
+#         raise
+#     finally:
+#         if jpype.isJVMStarted():
+#             print("INFO: La JVM restera active jusqu'à la fin du processus de test principal (géré par conftest racine).")
 
 # Les fixtures de classes suivantes sont maintenant définies dans le conftest.py racine.
 # Elles sont commentées ici pour éviter les conflits et s'assurer que les versions

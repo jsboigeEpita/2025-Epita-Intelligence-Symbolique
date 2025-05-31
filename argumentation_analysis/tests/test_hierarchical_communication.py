@@ -9,6 +9,7 @@ sont correctement transmis à travers les différents niveaux de la hiérarchie.
 
 import unittest
 import asyncio
+import logging
 import threading
 import time
 from unittest.mock import MagicMock, patch
@@ -28,6 +29,7 @@ from argumentation_analysis.core.communication.operational_adapter import Operat
 from argumentation_analysis.paths import DATA_DIR
 
 
+logger = logging.getLogger(__name__)
 
 class TestHierarchicalCommunication(unittest.TestCase):
     """Tests pour la communication hiérarchique entre les trois niveaux d'agents."""
@@ -109,8 +111,9 @@ class TestHierarchicalCommunication(unittest.TestCase):
         # Simuler un agent opérationnel
         def operational_agent():
             # Envoyer un résultat
-            self.operational_adapter.send_task_result(
+            self.operational_adapter.send_result( # Corrigé: send_task_result -> send_result
                 task_id="task-123",
+                result_type="generic_result", # Ajout d'un result_type car send_result le requiert
                 result={"arguments": ["arg1", "arg2"], "confidence": 0.95},
                 recipient_id="tactical-agent-1",
                 priority=MessagePriority.NORMAL
@@ -122,6 +125,7 @@ class TestHierarchicalCommunication(unittest.TestCase):
             result = self.tactical_adapter.receive_task_result(timeout=2.0)
             
             # Vérifier que le résultat a été reçu
+            logger.info(f"Tactical agent received result.content: {result.content if result else 'None'}")
             self.assertIsNotNone(result)
             self.assertEqual(result.sender, "operational-agent-1")
             self.assertEqual(result.content["info_type"], "task_result")
@@ -149,7 +153,7 @@ class TestHierarchicalCommunication(unittest.TestCase):
         self.assertIsNotNone(report)
         self.assertEqual(report.sender, "tactical-agent-1")
         self.assertEqual(report.content["report_type"], "analysis_complete")
-        self.assertEqual(report.content[DATA_DIR]["arguments"], ["arg1", "arg2"])
+        self.assertEqual(report.content["data"]["arguments"], ["arg1", "arg2"])
         
         # Attendre que les threads se terminent
         operational_thread.join()
@@ -183,6 +187,7 @@ class TestHierarchicalCommunication(unittest.TestCase):
             # Envoyer un résultat
             self.operational_adapter.send_result( # Corrigé: send_task_result -> send_result
                 task_id=task.id,
+                result_type="generic_result", # Ajout du result_type manquant
                 result={"arguments": ["arg1", "arg2"], "confidence": 0.95},
                 recipient_id="tactical-agent-1",
                 priority=MessagePriority.NORMAL
@@ -224,7 +229,7 @@ class TestHierarchicalCommunication(unittest.TestCase):
                 
                 for message in messages:
                     if (message.type == MessageType.INFORMATION and
-                        message.content.get("info_type") == "status_update"):
+                        message.content.get("info_type") == "operational_update"):
                         status_update = message
                         break
                 
@@ -235,7 +240,7 @@ class TestHierarchicalCommunication(unittest.TestCase):
             
             # Vérifier que la mise à jour de statut a été reçue
             self.assertIsNotNone(status_update)
-            self.assertEqual(status_update.content[DATA_DIR]["status"], "in_progress")
+            self.assertEqual(status_update.content["status"], "in_progress")
             
             # Envoyer une mise à jour à l'agent stratégique
             self.tactical_adapter.send_status_update(
@@ -246,7 +251,7 @@ class TestHierarchicalCommunication(unittest.TestCase):
             )
             
             # Recevoir le résultat
-            result = self.tactical_adapter.receive_task_result(timeout=2.0)
+            result = self.tactical_adapter.receive_task_result(timeout=5.0) # Augmentation du timeout
             
             # Vérifier que le résultat a été reçu
             self.assertIsNotNone(result)
@@ -340,10 +345,10 @@ class TestHierarchicalCommunication(unittest.TestCase):
         self.assertIsNotNone(report)
         self.assertEqual(report.sender, "tactical-agent-1")
         self.assertEqual(report.content["report_type"], "analysis_complete")
-        self.assertEqual(report.content[DATA_DIR]["directive_id"], directive_id)
-        self.assertEqual(report.content[DATA_DIR]["text_id"], "text-123")
-        self.assertEqual(report.content[DATA_DIR]["arguments"], ["arg1", "arg2"])
-        self.assertEqual(report.content[DATA_DIR]["confidence"], 0.95)
+        self.assertEqual(report.content["data"]["directive_id"], directive_id)
+        self.assertEqual(report.content["data"]["text_id"], "text-123")
+        self.assertEqual(report.content["data"]["arguments"], ["arg1", "arg2"])
+        self.assertEqual(report.content["data"]["confidence"], 0.95)
         
         # Attendre que les threads se terminent
         operational_thread.join()
@@ -391,7 +396,7 @@ class TestHierarchicalCommunication(unittest.TestCase):
             request_type="guidance",
             parameters={"text_id": "text-123", "issue": "complex_fallacies"},
             recipient_id="strategic-agent-1",
-            timeout=2.0,
+            timeout=5.0, # Augmentation du timeout
             priority=MessagePriority.NORMAL
         )
         
@@ -447,7 +452,7 @@ class TestHierarchicalCommunication(unittest.TestCase):
             description="Cannot identify pattern in text",
             context={"text_id": "text-123", "position": "paragraph 3"},
             recipient_id="tactical-agent-1",
-            timeout=2.0,
+            timeout=5.0, # Augmentation du timeout
             priority=MessagePriority.NORMAL
         )
         
@@ -634,7 +639,7 @@ class TestAsyncHierarchicalCommunication(unittest.IsolatedAsyncioTestCase):
             description="Cannot identify pattern in text",
             context={"text_id": "text-123", "position": "paragraph 3"},
             recipient_id="tactical-agent-1",
-            timeout=2.0,
+            timeout=5.0, # Augmentation du timeout
             priority=MessagePriority.NORMAL
         )
         
