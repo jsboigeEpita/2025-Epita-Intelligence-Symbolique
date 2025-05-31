@@ -17,15 +17,22 @@ class MockJavaEnumInstance(MagicMock):
     Représente une instance spécifique d'une énumération Java mockée (par exemple, TruthValue.TRUE).
     Elle doit avoir des méthodes comme name() et ordinal().
     """
-    def __init__(self, enum_class_name, enum_name, enum_ordinal, *args, **kwargs):
+    def __init__(self, enum_class_name=None, enum_name=None, enum_ordinal=None, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self._enum_class_name = enum_class_name
-        self._enum_name = enum_name
-        self._enum_ordinal = enum_ordinal
+        if enum_class_name is None or enum_name is None or enum_ordinal is None:
+            logger.warning(f"MockJavaEnumInstance initialisée sans arguments spécifiques (probablement par un mécanisme de mock interne). class_name: {enum_class_name}, name: {enum_name}, ordinal: {enum_ordinal}")
+            self._enum_class_name = enum_class_name or "UnknownEnumClass"
+            self._enum_name = enum_name or "UnknownEnumName"
+            self._enum_ordinal = enum_ordinal if enum_ordinal is not None else -1
+        else:
+            self._enum_class_name = enum_class_name
+            self._enum_name = enum_name
+            self._enum_ordinal = enum_ordinal
         
         # Configurer les méthodes standard d'une enum Java
-        self.name = MagicMock(return_value=self._enum_name)
-        self.ordinal = MagicMock(return_value=self._enum_ordinal)
+        # Utiliser des fonctions lambda pour capturer les valeurs actuelles de self._enum_name/ordinal
+        self.name = MagicMock(side_effect=lambda: self._enum_name)
+        self.ordinal = MagicMock(side_effect=lambda: self._enum_ordinal)
 
     def toString(self): # Rendre toString appelable
         return self._enum_name
@@ -95,6 +102,10 @@ class MockTweetyEnum(MockJClassCore, metaclass=MockEnumMetaclass):
     @classmethod
     def _initialize_enum_members(cls):
         # Les sous-classes doivent surcharger cette méthode.
+        # Si cette méthode est appelée sur MockTweetyEnum elle-même, c'est une erreur de logique.
+        if cls.__name__ == "MockTweetyEnum":
+             logger.warning("MockTweetyEnum._initialize_enum_members appelée directement sur la classe de base. Cela ne devrait pas arriver.")
+             return
         raise NotImplementedError(f"{cls.__name__} doit implémenter _initialize_enum_members.")
 
     @classmethod

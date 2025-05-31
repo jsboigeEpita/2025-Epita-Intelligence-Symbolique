@@ -3,12 +3,9 @@ import sys
 from unittest.mock import MagicMock
 # from itertools import chain, combinations # Supprimé car la logique de calcul d'extension est retirée
 
-# Importations relatives (anticipées)
-# JClass sera probablement importé depuis le module principal du mock jpype
-# from ..jpype_mock import JClass
-# MockJavaCollection et potentiellement MockJClassCore depuis jclass_core
-from .collections import MockJavaCollection # Import direct depuis son emplacement d'origine
-# from .jclass_core import MockJClassCore # MockJClassCore n'est pas utilisé directement ici
+# Importations relatives
+from . import types # MockJavaCollection est maintenant dans types.py
+from .jclass_core import MockJClassCore 
 # Pour éviter une dépendance circulaire immédiate avec jpype_mock pour JClass,
 # on va supposer que JClass("java.util.HashSet") est passé ou accessible.
 # Pour l'instant, on va le définir localement ou le passer en argument.
@@ -44,14 +41,6 @@ def configure_complete_reasoner_mock(reasoner_instance_mock, dung_theory_instanc
     models_coll.clear() # Vider les modèles précédents
 
     # Simplification: Ne plus calculer d'extensions.
-    # Retourner une collection vide ou un mock simple si nécessaire pour la structure.
-    # Les tests utiliseront jpype.JClass pour les vrais reasoners.
-    
-    # Exemple: retourner une collection vide par défaut
-    # HashSet = JClass_provider("java.util.HashSet") # Peut être nécessaire si MockJavaCollection est utilisé
-    # empty_extension = HashSet()
-    # models_coll.append(empty_extension)
-    
     mock_logger.info(f"[CONFIGURE CompleteReasoner] Configuration simplifiée. Les calculs d'extensions sont retirés.")
 
 def configure_stable_reasoner_mock(reasoner_instance_mock, dung_theory_instance, JClass_provider):
@@ -75,8 +64,6 @@ def configure_preferred_reasoner_mock(reasoner_instance_mock, dung_theory_instan
         models_coll = reasoner_instance_mock._collections["models"]
     models_coll.clear()
     
-    # Simplification: Ne plus calculer d'extensions.
-    # dung_theory_instance et JClass_provider ne sont plus utilisés ici pour la logique Tweety.
     mock_logger.info(f"[CONFIGURE PreferredReasoner] Configuration simplifiée pour {reasoner_instance_mock} avec théorie {dung_theory_instance}. Les calculs d'extensions sont retirés.")
 
 
@@ -89,19 +76,13 @@ def configure_grounded_reasoner_mock(reasoner_instance_mock, dung_theory_instanc
         models_coll = reasoner_instance_mock._collections["models"]
     models_coll.clear()
 
-    # Simplification: Ne plus calculer d'extensions.
-    # dung_theory_instance et JClass_provider ne sont plus utilisés ici pour la logique Tweety.
     mock_logger.info(f"[CONFIGURE GroundedReasoner] Configuration simplifiée pour {reasoner_instance_mock} avec théorie {dung_theory_instance}. Les calculs d'extensions sont retirés.")
 
-    # Pour GroundedReasoner, getModel() doit retourner une instance unique (potentiellement vide).
-    # On peut la créer ici si MockJavaCollection est toujours utilisé, ou laisser le test la mocker.
     if hasattr(reasoner_instance_mock, 'getModel'):
-        # HashSet = JClass_provider("java.util.HashSet") # Si MockJavaCollection est utilisé
-        # empty_model = HashSet()
-        empty_model = MagicMock(spec=MockJavaCollection) # Ou un simple MagicMock
+        empty_model = MagicMock(spec=types.MockJavaCollection) 
         empty_model.size = MagicMock(return_value=0)
         empty_model.isEmpty = MagicMock(return_value=True)
-        empty_model.iterator = MagicMock(return_value=iter([])) # Simuler un itérateur vide
+        empty_model.iterator = MagicMock(return_value=iter([])) 
         reasoner_instance_mock.getModel.return_value = empty_model
         mock_logger.debug(f"[CONFIGURE GroundedReasoner] getModel() configuré pour retourner un mock d'ensemble vide/simple.")
 
