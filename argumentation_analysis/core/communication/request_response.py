@@ -259,7 +259,8 @@ class RequestResponseProtocol:
                         "expires_at": datetime.now() + timedelta(seconds=timeout),
                         "response": None,
                         "completed": threading.Event(),
-                        "future": response_future
+                        "future": response_future,
+                        "loop": asyncio.get_running_loop() # Stocker la boucle actuelle
                     }
                     self.logger.info(f"Registered request {request.id} in pending_requests")
                     
@@ -435,9 +436,14 @@ class RequestResponseProtocol:
                 if "future" in pending and not pending["future"].done():
                     try:
                         self.logger.info(f"Setting future result for request {request_id}")
-                        pending["future"].set_result(response)
+                        loop = pending.get("loop")
+                        if loop:
+                            loop.call_soon_threadsafe(pending["future"].set_result, response)
+                        else: # Fallback si la boucle n'a pas été stockée (ne devrait pas arriver pour les futures async)
+                            self.logger.warning(f"Asyncio loop not found for future of request {request_id}, setting result directly.")
+                            pending["future"].set_result(response)
                     except Exception as e:
-                        self.logger.error(f"Error setting future result: {e}")
+                        self.logger.error(f"Error setting future result for request {request_id}: {e}")
                 
                 # Si un callback est présent, l'appeler
                 if "callback" in pending:
@@ -561,9 +567,14 @@ class RequestResponseProtocol:
                 # Si un futur est présent, le compléter avec une erreur
                 if "future" in pending and not pending["future"].done():
                     try:
-                        pending["future"].set_exception(error)
+                        loop = pending.get("loop")
+                        if loop:
+                            loop.call_soon_threadsafe(pending["future"].set_exception, error)
+                        else: # Fallback
+                            self.logger.warning(f"Asyncio loop not found for future of request {request_id}, setting exception directly.")
+                            pending["future"].set_exception(error)
                     except Exception as e:
-                        self.logger.error(f"Error setting future exception: {e}")
+                        self.logger.error(f"Error setting future exception for request {request_id}: {e}")
                 
                 # Si un callback est présent, l'appeler avec l'erreur
                 if "callback" in pending:
@@ -592,7 +603,12 @@ class RequestResponseProtocol:
                 
                 # Si un futur est présent, le compléter avec une erreur
                 if "future" in pending and not pending["future"].done():
-                    pending["future"].set_exception(error)
+                    loop = pending.get("loop")
+                    if loop:
+                        loop.call_soon_threadsafe(pending["future"].set_exception, error)
+                    else: # Fallback
+                        self.logger.warning(f"Asyncio loop not found for future of request {request_id} during shutdown, setting exception directly.")
+                        pending["future"].set_exception(error)
                 
                 # Si un callback est présent, l'appeler avec l'erreur
                 if "callback" in pending:
