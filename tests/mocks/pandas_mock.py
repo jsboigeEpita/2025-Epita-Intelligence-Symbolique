@@ -12,6 +12,43 @@ import csv
 import json
 from collections import defaultdict
 
+# Options globales pour get_option et set_option
+_pandas_mock_options = {
+    'display.max_columns': None,
+    'display.width': None,
+    'display.max_rows': None,
+}
+
+def get_option(key):
+    """Mock pour pandas.get_option."""
+    return _pandas_mock_options.get(key)
+
+def set_option(key, value):
+    """Mock pour pandas.set_option."""
+    _pandas_mock_options[key] = value
+
+# Mock pour pandas.io.formats.console
+class MockPandasIOFormatsConsole:
+    """Mock pour pandas.io.formats.console."""
+    def get_console_size(self):
+        """Retourne une taille de console par défaut."""
+        # Utilise les options globales si disponibles, sinon des valeurs par défaut.
+        width = get_option('display.width') or 80
+        height = get_option('display.max_rows') or 24 # Ou une autre option pertinente pour la hauteur
+        return (width, height)
+
+# Mock pour pandas.io.formats
+class MockPandasIOFormats:
+    """Mock pour pandas.io.formats."""
+    def __init__(self):
+        self.console = MockPandasIOFormatsConsole()
+
+# Mock pour pandas.io
+class MockPandasIO:
+    """Mock pour pandas.io."""
+    def __init__(self):
+        self.formats = MockPandasIOFormats()
+
 # Mock pour pandas.DataFrame
 class DataFrame:
     """Mock pour pandas.DataFrame."""
@@ -307,6 +344,9 @@ class PandasMock:
         self.NaT = None
         self.isna = lambda x: x is None
         self.notna = lambda x: x is not None
+        # Assigner les fonctions globales aux attributs d'instance
+        self.get_option = get_option
+        self.set_option = set_option
         # Ajouter __spec__ pour la compatibilité avec transformers
         self.__spec__ = type('ModuleSpec', (), {
             'name': 'pandas',
@@ -315,4 +355,16 @@ class PandasMock:
         })()
 
 # Installer le mock dans sys.modules pour qu'il soit utilisé lors des importations
-sys.modules['pandas'] = sys.modules.get('pandas', PandasMock())
+_pandas_module_instance = PandasMock()
+sys.modules['pandas'] = _pandas_module_instance
+
+# Installer les mocks pour les sous-modules io
+sys.modules['pandas.io'] = MockPandasIO()
+sys.modules['pandas.io.formats'] = sys.modules['pandas.io'].formats # Réutiliser l'instance
+sys.modules['pandas.io.formats.console'] = sys.modules['pandas.io'].formats.console # Réutiliser l'instance
+
+
+# Assurer que get_option et set_option sont aussi accessibles comme attributs du module mocké
+# pour les imports directs comme `from pandas import get_option`
+setattr(sys.modules['pandas'], 'get_option', get_option)
+setattr(sys.modules['pandas'], 'set_option', set_option)

@@ -51,115 +51,34 @@ except ImportError as e:
         LIBS_DIR = PROJECT_ROOT_DIR / "libs"
 
 
-def test_minimal_jvm_startup_and_shutdown():
+def test_minimal_jvm_startup_and_shutdown(integration_jvm): # Utilise la fixture
     """
-    Teste uniquement le démarrage et l'arrêt de la JVM en utilisant la logique
-    de jvm_setup.py si possible, ou un démarrage JPype basique sinon.
+    Teste que la JVM est démarrée lorsque la fixture integration_jvm est utilisée.
     """
-    logging.info("Début du test minimal de la JVM.")
-    jvm_started_by_this_test = False
+    # L'import de jpype doit se faire ici, APRES que les fixtures aient potentiellement
+    # modifié sys.modules pour utiliser le vrai jpype.
+    import jpype
+    import jpype.imports # Nécessaire pour jpype.java...
+
+    logging.info("Début du test minimal de la JVM (utilisant la fixture integration_jvm).")
+    
+    # La fixture integration_jvm (via activate_jpype_mock_if_needed) devrait avoir:
+    # 1. Mis le vrai module jpype dans sys.modules.
+    # 2. Démarré la JVM.
+    
+    assert jpype.isJVMStarted(), "La JVM devrait être démarrée par la fixture integration_jvm."
+    logging.info("Assertion jpype.isJVMStarted() est VRAIE.")
+    
+    # Vérification simple que nous pouvons interagir avec la JVM
     try:
-        if jpype.isJVMStarted():
-            logging.info("La JVM est déjà démarrée (probablement par conftest.py ou un test précédent).")
-            # On ne peut pas vraiment tester l'arrêt/redémarrage proprement dans ce cas
-            # sans affecter d'autres tests si la JVM est partagée.
-            # Pour ce test isolé, on va juste vérifier qu'on peut interagir.
-            java_version = jpype.java.lang.System.getProperty("java.version")
-            logging.info(f"Version Java (depuis JVM existante): {java_version}")
-            assert java_version is not None
-            return
-
-        logging.info("Tentative d'initialisation de la JVM via initialize_jvm...")
-        
-        # Utiliser la logique d'initialisation du projet si disponible
-        if initialize_jvm:
-            # S'assurer que LIBS_DIR est un str pour initialize_jvm
-            # et que PROJECT_ROOT_DIR est bien défini.
-            # Note: initialize_jvm s'attend à ce que PROJECT_ROOT_DIR soit défini dans argumentation_analysis.paths
-            # et LIBS_DIR aussi.
-            # Si on les a importés, ils devraient être corrects.
-            
-            # On s'assure que les répertoires nécessaires existent ou sont créés par jvm_setup
-            # (comme _temp et portable_jdk s'ils sont utilisés)
-            
-            # Afficher le JAVA_HOME que find_valid_java_home trouverait
-            if find_valid_java_home:
-                logging.info(f"JAVA_HOME qui serait utilisé par find_valid_java_home: {find_valid_java_home()}")
-
-            # Afficher le chemin de la JVM par défaut que JPype utiliserait
-            try:
-                default_jvm_path = jpype.getDefaultJVMPath()
-                logging.info(f"Chemin JVM par défaut selon JPype (avant startJVM): {default_jvm_path}")
-            except jpype.JVMNotFoundException:
-                logging.info("JPype ne trouve pas de JVM par défaut (avant startJVM).")
-
-
-            success = initialize_jvm(lib_dir_path=str(LIBS_DIR)) # Utilise les valeurs par défaut pour native_subdir et tweety_version
-            
-            if not success:
-                # initialize_jvm loggue déjà beaucoup, mais on peut ajouter un message ici.
-                logging.error("initialize_jvm a retourné False. La JVM n'a pas pu être démarrée correctement par la logique du projet.")
-                # On pourrait lever une exception ici pour faire échouer le test clairement.
-                # Pour l'instant, on laisse la vérification isJVMStarted() plus bas gérer cela.
-            assert jpype.isJVMStarted(), "La JVM devrait être démarrée par initialize_jvm"
-            jvm_started_by_this_test = True # Marquer que cette fonction a démarré la JVM
-            logging.info("JVM démarrée avec succès via initialize_jvm.")
-
-        else: # Fallback à un démarrage JPype basique si initialize_jvm n'a pas pu être importé
-            logging.warning("initialize_jvm non disponible. Tentative de démarrage JPype basique.")
-            # Essayer de trouver JAVA_HOME manuellement ou laisser JPype faire
-            java_home = os.getenv("JAVA_HOME")
-            jvm_path = None
-            if java_home:
-                logging.info(f"Utilisation de JAVA_HOME: {java_home}")
-                # Construire le chemin vers jvm.dll/libjvm.so si possible
-                # Ceci est une simplification et peut ne pas être robuste
-                system = platform.system()
-                if system == "Windows":
-                    jvm_path_try = pathlib.Path(java_home) / "bin" / "server" / "jvm.dll"
-                    if jvm_path_try.is_file(): jvm_path = str(jvm_path_try)
-                elif system == "Darwin": # macOS
-                    jvm_path_try = pathlib.Path(java_home) / "lib" / "server" / "libjvm.dylib"
-                    if jvm_path_try.is_file(): jvm_path = str(jvm_path_try)
-                else: # Linux
-                    jvm_path_try = pathlib.Path(java_home) / "lib" / "server" / "libjvm.so"
-                    if jvm_path_try.is_file(): jvm_path = str(jvm_path_try)
-                
-                if jvm_path:
-                    logging.info(f"Chemin JVM explicite pour startJVM (basique): {jvm_path}")
-                    jpype.startJVM(jvm_path, convertStrings=False)
-                else:
-                    logging.info("Chemin JVM non construit depuis JAVA_HOME, démarrage JPype sans chemin explicite.")
-                    jpype.startJVM(convertStrings=False)
-            else:
-                logging.info("JAVA_HOME non défini, démarrage JPype sans chemin explicite.")
-                jpype.startJVM(convertStrings=False) # Laisse JPype trouver la JVM
-            
-            assert jpype.isJVMStarted(), "La JVM devrait être démarrée par jpype.startJVM (basique)"
-            jvm_started_by_this_test = True
-            logging.info("JVM démarrée avec succès (mode basique).")
-
-        # Vérification simple
         java_version = jpype.java.lang.System.getProperty("java.version")
-        logging.info(f"Version Java (après démarrage): {java_version}")
+        logging.info(f"Version Java (depuis JVM gérée par fixture): {java_version}")
         assert java_version is not None
-
     except Exception as e:
-        logging.error(f"Une exception est survenue pendant le test minimal de la JVM: {e}", exc_info=True)
-        # Afficher le statut de la JVM en cas d'erreur
-        logging.error(f"Statut JVM au moment de l'exception: {'Démarrée' if jpype.isJVMStarted() else 'Arrêtée'}")
-        raise # Propager l'exception pour faire échouer le test
-    finally:
-        # N'arrêter la JVM que si ce test l'a démarrée ET qu'elle est effectivement démarrée.
-        # Cela évite d'arrêter une JVM partagée par conftest.py ou d'autres tests.
-        if jvm_started_by_this_test and jpype.isJVMStarted():
-            logging.info("Arrêt de la JVM démarrée par ce test.")
-            jpype.shutdownJVM()
-            logging.info("JVM arrêtée.")
-        elif not jvm_started_by_this_test and jpype.isJVMStarted():
-            logging.info("La JVM était déjà démarrée avant ce test et ne sera pas arrêtée par celui-ci.")
-        elif not jpype.isJVMStarted():
-            logging.info("La JVM n'est pas (ou plus) démarrée à la fin du test.")
+        logging.error(f"Erreur lors de l'interaction avec la JVM démarrée: {e}", exc_info=True)
+        pytest.fail(f"Erreur interaction JVM: {e}")
+    
+    logging.info("Test minimal de la JVM (avec fixture) terminé avec succès.")
 
 if __name__ == "__main__":
     # Permet d'exécuter ce fichier directement avec `python tests/minimal_jpype_tweety_tests/temp_minimal_jvm_test.py`
