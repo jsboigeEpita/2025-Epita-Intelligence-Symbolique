@@ -8,7 +8,7 @@ import unittest
 from unittest.mock import MagicMock, patch, PropertyMock
 from tests.mocks.jpype_mock import JException as MockedJException
 
-import jpype
+import jpype # Gardé pour référence si des types réels sont nécessaires, mais les tests devraient utiliser le mock.
 
 from argumentation_analysis.agents.core.logic.tweety_bridge import TweetyBridge
 
@@ -267,9 +267,9 @@ class TestTweetyBridge(unittest.TestCase):
     def test_execute_pl_query_error(self):
         """Test de l'exécution d'une requête propositionnelle avec erreur."""
         # Configurer le mock du parser pour lever une exception
-        java_exception = MagicMock(spec=jpype.JException)
-        java_exception.getMessage.return_value = "Erreur de syntaxe"
-        java_exception.getClass().getName.return_value = "org.tweetyproject.SyntaxException"
+        java_exception = self.mock_jpype.JException("Erreur de syntaxe") # Utiliser le JException mocké via self.mock_jpype
+        # java_exception.getMessage.return_value = "Erreur de syntaxe" # Déjà géré par MockedJException
+        # java_exception.getClass().getName.return_value = "org.tweetyproject.SyntaxException" # MockedJException ne simule pas getClass().getName() ainsi
         self.mock_pl_parser_instance.parseBeliefBase.side_effect = java_exception
         
         # Exécuter une requête
@@ -280,6 +280,7 @@ class TestTweetyBridge(unittest.TestCase):
         
         # Vérifier le résultat
         self.assertIn("FUNC_ERROR", result)
+        self.assertIn("Erreur de syntaxe", result) # Vérifier que le message de l'exception est dans le résultat
     
     # Tests similaires pour les méthodes FOL et modales
     def test_validate_fol_formula(self):
