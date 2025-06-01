@@ -10,10 +10,10 @@ from semantic_kernel.agents import Agent
 from semantic_kernel.contents import ChatMessageContent, AuthorRole
 from argumentation_analysis.core.strategies import SimpleTerminationStrategy, DelegatingSelectionStrategy, BalancedParticipationStrategy
 from argumentation_analysis.core.shared_state import RhetoricalAnalysisState
-from tests.async_test_case import AsyncTestCase
+# from tests.async_test_case import AsyncTestCase # Suppression de l'import
 
 
-class TestSimpleTerminationStrategy(AsyncTestCase):
+class TestSimpleTerminationStrategy: # Suppression de l'héritage AsyncTestCase
     """Tests pour la classe SimpleTerminationStrategy."""
 
     def setUp(self):
@@ -69,7 +69,7 @@ class TestSimpleTerminationStrategy(AsyncTestCase):
         self.assertEqual(self.strategy._step_count, 0)
 
 
-class TestDelegatingSelectionStrategy(AsyncTestCase):
+class TestDelegatingSelectionStrategy: # Suppression de l'héritage AsyncTestCase
     """Tests pour la classe DelegatingSelectionStrategy."""
 
     def setUp(self):
@@ -171,7 +171,7 @@ class TestDelegatingSelectionStrategy(AsyncTestCase):
         self.assertIsNone(self.state._next_agent_designated)
 
 
-class TestBalancedParticipationStrategy(AsyncTestCase):
+class TestBalancedParticipationStrategy: # Suppression de l'héritage AsyncTestCase
     """Tests pour la classe BalancedParticipationStrategy."""
 
     def setUp(self):

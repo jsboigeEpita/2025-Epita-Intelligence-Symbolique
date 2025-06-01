@@ -27,10 +27,10 @@ from argumentation_analysis.agents.core.extract.extract_agent import ExtractAgen
 from argumentation_analysis.agents.core.pl.pl_definitions import setup_pl_kernel
 from argumentation_analysis.agents.core.informal.informal_definitions import setup_informal_kernel
 from argumentation_analysis.agents.core.pm.pm_definitions import setup_pm_kernel
-from tests.async_test_case import AsyncTestCase # Cet import pourrait encore poser problème si async_test_case est vide
+# from tests.async_test_case import AsyncTestCase # Suppression de l'import
 
 
-class TestAgentInteraction(AsyncTestCase):
+class TestAgentInteraction: # Suppression de l'héritage AsyncTestCase
     """Tests d'intégration pour l'interaction entre les différents agents."""
 
     def setUp(self):
@@ -258,7 +258,7 @@ class TestAgentInteraction(AsyncTestCase):
         self.assertEqual(self.balanced_strategy._total_turns, 4)
 
 
-class TestAgentInteractionWithErrors(AsyncTestCase):
+class TestAgentInteractionWithErrors: # Suppression de l'héritage AsyncTestCase
     """Tests d'intégration pour l'interaction entre les agents avec des erreurs."""
 
     def setUp(self):
