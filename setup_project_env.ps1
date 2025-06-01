@@ -1,7 +1,8 @@
 # Script d'installation de l'environnement du projet
 
 param (
-    [string]$Python310Path = "" # Chemin optionnel vers python.exe pour la version 3.10
+    [string]$Python310Path = "", # Chemin optionnel vers python.exe pour la version 3.10
+    [switch]$NonInteractive = $false # Pour supprimer automatiquement les venv et l'environnement conda existant
 )
 
 # --- Configuration ---
@@ -292,9 +293,8 @@ $oldVenvDirs = @("venv", ".venv", "venv_py310") # Ajoutez d'autres noms si néce
 foreach ($dirName in $oldVenvDirs) {
     $fullOldVenvPath = Join-Path $PSScriptRoot $dirName
     if (Test-Path -Path $fullOldVenvPath -PathType Container) {
-        $confirmation = Read-Host "L'ancien répertoire d'environnement virtuel '$dirName' a été trouvé. Voulez-vous le supprimer ? (O/N)"
-        if ($confirmation -eq 'O' -or $confirmation -eq 'o') {
-            Write-Host "Suppression de l'ancien répertoire $fullOldVenvPath..."
+        if ($NonInteractive) {
+            Write-Host "Mode non interactif : Suppression automatique de l'ancien répertoire $fullOldVenvPath..."
             try {
                 Remove-Item -Recurse -Force $fullOldVenvPath -ErrorAction Stop
                 Write-Host "Répertoire $fullOldVenvPath supprimé."
@@ -303,7 +303,19 @@ foreach ($dirName in $oldVenvDirs) {
                 Write-Warning "Vous devrez peut-être le supprimer manuellement."
             }
         } else {
-            Write-Host "Le répertoire '$fullOldVenvPath' n'a pas été supprimé."
+            $confirmation = Read-Host "L'ancien répertoire d'environnement virtuel '$dirName' a été trouvé. Voulez-vous le supprimer ? (O/N)"
+            if ($confirmation -eq 'O' -or $confirmation -eq 'o') {
+                Write-Host "Suppression de l'ancien répertoire $fullOldVenvPath..."
+                try {
+                    Remove-Item -Recurse -Force $fullOldVenvPath -ErrorAction Stop
+                    Write-Host "Répertoire $fullOldVenvPath supprimé."
+                } catch {
+                    Write-Warning "Impossible de supprimer complètement $fullOldVenvPath. Erreur: $($_.Exception.Message)"
+                    Write-Warning "Vous devrez peut-être le supprimer manuellement."
+                }
+            } else {
+                Write-Host "Le répertoire '$fullOldVenvPath' n'a pas été supprimé."
+            }
         }
     }
 }
@@ -311,6 +323,42 @@ Write-Host "Nettoyage des anciens venv terminé."
 
 Write-Host ""
 Write-Host "--- Configuration de l'environnement Conda '$condaEnvName' ---"
+
+# Vérifier si l'environnement Conda existe déjà et demander s'il faut le supprimer pour une installation propre
+$condaEnvExistsForCleanup = conda env list | Select-String -Pattern "\s$condaEnvName\s" -Quiet
+if ($condaEnvExistsForCleanup) {
+    if ($NonInteractive) {
+        Write-Host "Mode non interactif : Suppression automatique de l'environnement Conda '$condaEnvName'..."
+        try {
+            conda env remove --name $condaEnvName -y
+            if ($LASTEXITCODE -ne 0) {
+                Write-Warning "La suppression de l'environnement Conda '$condaEnvName' a rencontré un problème. Il se peut qu'il ne soit pas complètement supprimé."
+            } else {
+                Write-Host "Environnement Conda '$condaEnvName' supprimé."
+            }
+        } catch {
+            Write-Warning "Une exception s'est produite lors de la suppression de l'environnement Conda '$condaEnvName': $($_.Exception.Message)"
+        }
+    } else {
+        $cleanupConfirmation = Read-Host "L'environnement Conda '$condaEnvName' existe déjà. Voulez-vous le supprimer pour une installation propre ? (O/N)"
+        if ($cleanupConfirmation -eq 'O' -or $cleanupConfirmation -eq 'o') {
+            Write-Host "Suppression de l'environnement Conda '$condaEnvName'..."
+            try {
+                conda env remove --name $condaEnvName -y
+                if ($LASTEXITCODE -ne 0) {
+                    Write-Warning "La suppression de l'environnement Conda '$condaEnvName' a rencontré un problème. Il se peut qu'il ne soit pas complètement supprimé."
+                } else {
+                    Write-Host "Environnement Conda '$condaEnvName' supprimé."
+                }
+            } catch {
+                Write-Warning "Une exception s'est produite lors de la suppression de l'environnement Conda '$condaEnvName': $($_.Exception.Message)"
+            }
+        } else {
+            Write-Host "L'environnement Conda '$condaEnvName' ne sera pas supprimé. Le script tentera une mise à jour."
+        }
+    }
+}
+
 $envFilePath = Join-Path $PSScriptRoot $environmentYmlFile
 if (-not (Test-Path $envFilePath)) {
     Write-Error "Le fichier d'environnement '$environmentYmlFile' est introuvable à la racine du projet: $envFilePath"
