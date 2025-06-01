@@ -70,9 +70,9 @@ class TestArgumentCoherenceEvaluator(unittest.TestCase):
         
         # Vérifier la structure du résultat
         self.assertIn("overall_coherence", result)
-        self.assertIn("level", result["overall_coherence"]) # Corrigé: Clé déplacée dans le sous-dictionnaire
+        self.assertIn("level", result["overall_coherence"])
         self.assertIn("coherence_evaluations", result)
-        self.assertIn("thematic", result["coherence_evaluations"])
+        self.assertIn("thématique", result["coherence_evaluations"]) # Corrigé: thematic -> thématique
         self.assertIn("logique", result["coherence_evaluations"])
         self.assertIn("structurelle", result["coherence_evaluations"])
         # self.assertIn("contextual_coherence", result) # Cette clé n'est plus au premier niveau
