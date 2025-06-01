@@ -390,10 +390,10 @@ def initialize_jvm(
         # Ajout des options de débogage JVM et JPype (de origin/main)
         jvm_debug_options = ["-Xcheck:jni"] # Option de débogage JNI
         jpype_debug_options = ["-Djpype.debug=True", "-Djpype.jni_debug=True"] # Options JPype
-        jvm_args.extend(jvm_debug_options)
-        jvm_args.extend(jpype_debug_options)
-        logger.info(f"   Options de débogage JVM (-Xcheck:jni) ACTIVÉES: {jvm_debug_options}")
-        logger.info(f"   Options de débogage JPype (debug, jni_debug) ACTIVÉES: {jpype_debug_options}")
+        # jvm_args.extend(jvm_debug_options) # Toujours désactivé pour tester la stabilité
+        # jvm_args.extend(jpype_debug_options) # Également désactivé pour ce test
+        logger.info(f"   Options de débogage JVM (-Xcheck:jni) TEMPORAIREMENT DÉSACTIVÉES.")
+        logger.info(f"   Options de débogage JPype (debug, jni_debug) TEMPORAIREMENT DÉSACTIVÉES.")
         # logger.info(f"   [DEBUG] Toutes les options jvm_args (débogage JNI/JPype) sont DÉSACTIVÉES pour ce test.")
         # Fin de la section fusionnée pour Conflit 2
         # logger.info(f"   [DEBUG] Options de débogage JVM (-Xcheck:jni) temporairement désactivées.") # Commenté pour test
