@@ -118,27 +118,43 @@ Ce script est la première étape recommandée pour tester votre installation. I
 
 ### 5.2. Script de Démonstration Complet (Optionnel - Pour aller plus loin) : `scripts/demonstration_epita.py`
 
-Le script [`scripts/demonstration_epita.py`](scripts/demonstration_epita.py:1) est une démonstration plus exhaustive des capacités du projet. Il est plus complexe et illustre des interactions plus avancées avec Tweety.
+Le script [`scripts/demonstration_epita.py`](scripts/demonstration_epita.py:1) est une démonstration plus exhaustive des capacités du projet. Il illustre des interactions avancées avec les services réels du projet, tels que l'analyse de texte via des LLMs et le déchiffrement de données.
 
-**Ce que ce script démontre (entre autres) :**
-*   Des opérations logiques plus complexes (satisfiabilité, calcul de modèles).
-*   L'utilisation potentielle de mocks pour simuler certains comportements.
-*   Des exemples d'analyse de sophismes ou d'autres fonctionnalités avancées du projet.
+**Prérequis Important : Configuration du Fichier `.env`**
+
+Pour un fonctionnement complet de ce script, notamment l'utilisation des services LLM et le déchiffrement de textes, un fichier `.env` doit être correctement configuré. Ce fichier contient les clés d'API et autres configurations sensibles.
+
+*   **Emplacement attendu :** Le fichier `.env` doit se trouver dans le répertoire `argumentation_analysis` à la racine du projet, c'est-à-dire : `2025-Epita-Intelligence-Symbolique/argumentation_analysis/.env`.
+*   **Variables d'environnement clés :**
+    *   `OPENAI_API_KEY`: Votre clé d'API OpenAI pour accéder aux modèles de langage.
+    *   `TEXT_CONFIG_PASSPHRASE`: La phrase de passe pour déchiffrer certains textes de configuration.
+    *   `ENCRYPTION_KEY`: La clé de chiffrement principale pour les données sensibles.
+    *   D'autres variables peuvent être nécessaires en fonction des services activés.
+*   **Fichier d'exemple :** Un fichier nommé `.env.example` peut exister (ou devrait être créé s'il n'est pas présent) dans le répertoire `argumentation_analysis`. Ce fichier sert de modèle et liste les variables d'environnement attendues. Copiez-le sous le nom `.env` et remplissez-le avec vos propres valeurs.
+
+**Ce que ce script démontre :**
+*   L'initialisation et l'utilisation du module de bootstrap ([`project_core/bootstrap.py`](project_core/bootstrap.py:1)) pour charger la configuration et les services.
+*   L'interaction avec des services réels (LLM, déchiffrement, analyse logique) plutôt que des mocks internes pour ses fonctionnalités principales.
+*   Des opérations logiques complexes via Tweety (satisfiabilité, calcul de modèles).
+*   Des exemples d'analyse de sophismes et d'autres fonctionnalités avancées du projet en utilisant les données et services configurés.
 
 **Étapes :**
 
 1.  Assurez-vous que votre environnement est activé (voir Section 3).
-2.  Exécutez le script de démonstration complet :
+2.  **Assurez-vous d'avoir configuré votre fichier `argumentation_analysis/.env`** comme décrit ci-dessus.
+3.  Exécutez le script de démonstration complet :
     ```powershell
     python scripts/demonstration_epita.py
     ```
-3.  **Sortie Attendue :**
-    Le script exécutera une série d'opérations avec Tweety. Vous devriez voir en sortie :
-    *   Des messages indiquant le démarrage de la JVM.
-    *   La création et l'affichage de formules logiques variées.
-    *   Les résultats de l'analyse de ces formules (par exemple, vérification de la satisfiabilité, calcul de modèles).
-    *   Des exemples d'utilisation d'agents logiques ou d'autres fonctionnalités spécifiques au projet.
-    Une exécution sans erreurs et affichant les résultats des opérations logiques indique que votre environnement est prêt pour utiliser les fonctionnalités plus avancées du projet.
+4.  **Sortie Attendue :**
+    Le script exécutera une série d'opérations. Vous devriez voir en sortie :
+    *   Des messages indiquant le démarrage de la JVM (si des opérations logiques Tweety sont effectuées).
+    *   Des messages indiquant l'initialisation des services via le bootstrap (par exemple, "OpenAIService initialisé", "EncryptionService initialisé").
+    *   **Si des clés API ou des configurations sont manquantes dans `.env`**, vous pourriez voir des avertissements ou des erreurs indiquant que certains services ne peuvent pas fonctionner (par exemple, "OPENAI_API_KEY non trouvée, le service LLM sera désactivé").
+    *   La création et l'affichage de formules logiques variées (si applicable).
+    *   Les résultats des analyses réelles effectuées par les services (par exemple, résultats d'analyse de texte par un LLM, résultats d'analyse logique).
+    *   Des exemples d'utilisation d'agents logiques ou d'autres fonctionnalités spécifiques au projet, opérant sur des données potentiellement déchiffrées et analysées par des services réels.
+    Une exécution affichant l'initialisation des services et les résultats des analyses réelles (ou des avertissements clairs en cas de configuration manquante) indique que votre environnement est prêt pour utiliser les fonctionnalités avancées du projet.
 
 ## 6. Dépannage des Problèmes JPype Courants
 
