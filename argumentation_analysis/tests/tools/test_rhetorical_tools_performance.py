@@ -481,7 +481,7 @@ class TestRhetoricalToolsPerformance(unittest.TestCase):
                     for _ in range(self.num_runs):
                         start_time = time.time()
                         self.argument_structure_visualizer.visualize_argument_structure(
-                            dataset, context, "json", output_dir=str(output_dir)
+                            dataset, context, "json", output_path=str(output_dir)
                         )
                         execution_time = time.time() - start_time
                         
