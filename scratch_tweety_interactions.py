@@ -166,36 +166,53 @@ def main():
         try:
             parser = _PlParser()
             print(f"   PlParser instancié: {parser}")
+            print(f"   Type de l'objet parser: {type(parser)}")
+            print(f"   Attributs de l'objet parser (dir):")
+            for attr in dir(parser):
+                print(f"     - {attr}")
             
             # Tenter de parser une formule simple
             # Cela dépendra si _PropositionalFormula a pu être chargé et est le type retourné par parse.
             formula_str_ok = "a"
             formula_str_complex = "b && c"
+            formula_to_test = "p && q"
             
+            print(f"\n   Tentative de parsing de '{formula_to_test}':")
             try:
-                # Appel direct de la méthode Java .parse()
-                parsed_prop = parser.parse(formula_str_ok)
-                print(f"   Proposition '{formula_str_ok}' parsée: {parsed_prop} (type: {type(parsed_prop)})")
-                if _PropositionalFormula and isinstance(parsed_prop, _PropositionalFormula):
-                     print("     Type confirmé comme PropositionalFormula.")
-                elif not _PropositionalFormula and hasattr(parsed_prop, 'getClass') and "Proposition" in parsed_prop.getClass().getSimpleName(): # Heuristique améliorée
-                     print("     Type semble être une proposition de base (PropositionalFormula non chargée).")
-
-
-                if _PropositionalFormula: # Ne tenter que si PF est censé être disponible
-                    parsed_complex = parser.parse(formula_str_complex)
-                    print(f"   Formule '{formula_str_complex}' parsée: {parsed_complex} (type: {type(parsed_complex)})")
+                # Tentative avec parser.parseFormula()
+                print(f"     Tentative 1: parser.parseFormula(\"{formula_to_test}\")")
+                parsed_formula = parser.parseFormula(formula_to_test)
+                print(f"       Formule '{formula_to_test}' parsée: {parsed_formula}")
+                print(f"       Type de l'objet retourné: {type(parsed_formula)}")
+                print(f"       Attributs de l'objet retourné (dir):")
+                for attr in dir(parsed_formula):
+                    print(f"         - {attr}")
+                
+                # Vérification heuristique du type de retour
+                if hasattr(parsed_formula, 'getClass'):
+                    class_name = parsed_formula.getClass().getName()
+                    print(f"       Nom de la classe Java: {class_name}")
+                    if "PropositionalFormula" in class_name or "Conjunction" in class_name or "Disjunction" in class_name or "Negation" in class_name or "Proposition" in class_name:
+                        print("         Le type semble correspondre à une formule propositionnelle de Tweety.")
+                        print("       Test 2 (PlParser.parseFormula) Réussi.")
+                    else:
+                        print("         ATTENTION: Le type retourné ne semble pas être une formule propositionnelle standard de Tweety.")
                 else:
-                    print(f"   Parsing de formule complexe '{formula_str_complex}' sauté (PropositionalFormula non chargée).")
+                    print("         ATTENTION: L'objet retourné n'a pas de méthode getClass(), introspection limitée.")
 
-                print("   Test 2 (PlParser) partiellement réussi (vérifier la sortie).")
+            except AttributeError as ae:
+                print(f"     ERREUR AttributeError: {ae}")
+                print(f"       La méthode 'parseFormula' (ou 'parse') n'est pas directement accessible comme attribut.")
+                # Ici, on pourrait ajouter d'autres tentatives si parseFormula échoue aussi, mais c'est moins probable.
             except jpype.JException as je:
-                print(f"   Erreur Java lors du parsing: {je}")
-                print(f"      Message Java: {je.message()}")
+                print(f"     Erreur Java lors du parsing avec parseFormula: {je}")
+                print(f"        Message Java: {je.message()}")
                 if hasattr(je, 'stacktrace') and callable(je.stacktrace):
-                    print(f"      Stacktrace Java: {je.stacktrace()}")
-            except Exception as e_parse: # Attraper les erreurs Python plus génériques ici
-                print(f"   Erreur Python lors du parsing: {e_parse}")
+                    print(f"        Stacktrace Java:\n{je.stacktrace()}")
+            except Exception as e_parse:
+                print(f"     Erreur Python lors du parsing avec parseFormula: {e_parse}")
+                import traceback
+                print(traceback.format_exc())
 
         except Exception as e_parser_init:
             print(f"   Erreur lors de l'initialisation/utilisation de PlParser: {e_parser_init}")
