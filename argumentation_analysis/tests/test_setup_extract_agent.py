@@ -33,9 +33,9 @@ class TestSetupExtractAgent: # Suppression de l'héritage AsyncTestCase
             kernel, agent = await setup_extract_agent()
             
             # Vérifier les résultats
-            self.assertIsNotNone(kernel)
-            self.assertIsNotNone(agent)
-            self.assertIsInstance(agent, ExtractAgent)
+            assert kernel is not None
+            assert agent is not None
+            assert isinstance(agent, ExtractAgent)
             
             # Vérifier que les mocks ont été appelés correctement
             mock_create_llm_service.assert_called_once()
@@ -61,9 +61,9 @@ class TestSetupExtractAgent: # Suppression de l'héritage AsyncTestCase
             kernel, agent = await setup_extract_agent(mock_llm_service)
             
             # Vérifier les résultats
-            self.assertIsNotNone(kernel)
-            self.assertIsNotNone(agent)
-            self.assertIsInstance(agent, ExtractAgent)
+            assert kernel is not None
+            assert agent is not None
+            assert isinstance(agent, ExtractAgent)
             
             # Vérifier que les mocks ont été appelés correctement
             mock_create_llm_service.assert_not_called()  # Ne devrait pas être appelé car le service est fourni
@@ -80,12 +80,9 @@ class TestSetupExtractAgent: # Suppression de l'héritage AsyncTestCase
         kernel, agent = await setup_extract_agent()
         
         # Vérifier les résultats
-        self.assertIsNone(kernel)
-        self.assertIsNone(agent)
+        assert kernel is None
+        assert agent is None
         
         # Vérifier que les mocks ont été appelés correctement
         mock_create_llm_service.assert_called_once()
 
-
-if __name__ == '__main__':
-    unittest.main()
