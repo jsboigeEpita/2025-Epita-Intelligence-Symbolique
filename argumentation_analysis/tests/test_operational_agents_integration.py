@@ -6,10 +6,11 @@ Ce module contient des tests pour valider le fonctionnement des agents adaptés
 dans la nouvelle architecture hiérarchique à trois niveaux.
 """
 
-import unittest
+import pytest # Ajout de pytest
+import pytest_asyncio # Ajout de pytest_asyncio
 import asyncio
 import logging
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock, patch # unittest.mock est toujours utilisé
 import json
 import os
 import sys
@@ -18,7 +19,7 @@ from pathlib import Path
 # Ajouter le répertoire parent au chemin de recherche des modules
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
-from argumentation_analysis.tests.async_test_case import AsyncTestCase
+# from argumentation_analysis.tests.async_test_case import AsyncTestCase # Supprimé
 from argumentation_analysis.orchestration.hierarchical.operational.state import OperationalState
 from argumentation_analysis.orchestration.hierarchical.operational.agent_registry import OperationalAgentRegistry
 from argumentation_analysis.orchestration.hierarchical.operational.manager import OperationalManager
@@ -33,56 +34,51 @@ from argumentation_analysis.paths import RESULTS_DIR
 logging.basicConfig(level=logging.ERROR)
 
 
-class TestOperationalAgentsIntegration(AsyncTestCase):
+class TestOperationalAgentsIntegration:
     """Tests d'intégration pour les agents opérationnels."""
-    
-    async def asyncSetUp(self):
+
+    @pytest_asyncio.fixture
+    async def operational_components(self):
         """Initialise les objets nécessaires pour les tests."""
-        # Créer les états
-        self.tactical_state = TacticalState()
-        self.operational_state = OperationalState()
+        tactical_state = TacticalState()
+        operational_state = OperationalState()
+        interface = TacticalOperationalInterface(tactical_state, operational_state)
+        manager = OperationalManager(operational_state, interface)
+        await manager.start()
         
-        # Créer l'interface tactique-opérationnelle
-        self.interface = TacticalOperationalInterface(self.tactical_state, self.operational_state)
-        
-        # Créer le gestionnaire opérationnel
-        self.manager = OperationalManager(self.operational_state, self.interface)
-        await self.manager.start()
-        
-        # Texte d'exemple pour les tests
-        self.sample_text = """
+        sample_text = """
         La vaccination devrait être obligatoire pour tous les enfants. Les vaccins ont été prouvés sûrs par de nombreuses études scientifiques. De plus, la vaccination de masse crée une immunité collective qui protège les personnes vulnérables qui ne peuvent pas être vaccinées pour des raisons médicales.
         """
+        tactical_state.raw_text = sample_text
         
-        # Ajouter le texte à l'état tactique
-        self.tactical_state.raw_text = self.sample_text
+        yield tactical_state, operational_state, interface, manager, sample_text
+        
+        await manager.stop()
     
-    async def asyncTearDown(self):
-        """Nettoie les objets après les tests."""
-        await self.manager.stop()
-    
-    async def test_agent_registry_initialization(self):
+    async def test_agent_registry_initialization(self, operational_components):
         """Teste l'initialisation du registre d'agents."""
-        registry = OperationalAgentRegistry(self.operational_state)
+        _, operational_state, _, _, _ = operational_components
+        registry = OperationalAgentRegistry(operational_state)
         
         # Vérifier les types d'agents disponibles
         agent_types = registry.get_agent_types()
-        self.assertIn("extract", agent_types)
-        self.assertIn("informal", agent_types)
-        self.assertIn("pl", agent_types)
+        assert "extract" in agent_types
+        assert "informal" in agent_types
+        assert "pl" in agent_types
         
         # Vérifier que les agents peuvent être créés
         extract_agent = await registry.get_agent("extract")
-        self.assertIsNotNone(extract_agent)
-        self.assertEqual(extract_agent.name, "ExtractAgent")
+        assert extract_agent is not None
+        assert extract_agent.name == "ExtractAgent"
         
         # Vérifier les capacités des agents
         capabilities = extract_agent.get_capabilities()
-        self.assertIn("text_extraction", capabilities)
+        assert "text_extraction" in capabilities
     
     @patch("argumentation_analysis.orchestration.hierarchical.operational.adapters.extract_agent_adapter.ExtractAgentAdapter.process_task")
-    async def test_extract_agent_task_processing(self, mock_process_task):
+    async def test_extract_agent_task_processing(self, mock_process_task, operational_components):
         """Teste le traitement d'une tâche par l'agent d'extraction."""
+        tactical_state, _, _, manager, sample_text = operational_components
         # Configurer le mock
         mock_result = {
             "id": "result-task-extract-1",
@@ -96,7 +92,7 @@ class TestOperationalAgentsIntegration(AsyncTestCase):
                         "source": "sample_text",
                         "start_marker": "La vaccination",
                         "end_marker": "raisons médicales.",
-                        "extracted_text": self.sample_text.strip(),
+                        "extracted_text": sample_text.strip(),
                         "confidence": 0.9
                     }
                 ]
@@ -122,23 +118,24 @@ class TestOperationalAgentsIntegration(AsyncTestCase):
         }
         
         # Ajouter la tâche à l'état tactique
-        self.tactical_state.add_task(tactical_task)
+        tactical_state.add_task(tactical_task)
         
         # Traiter la tâche
-        result = await self.manager.process_tactical_task(tactical_task)
+        result = await manager.process_tactical_task(tactical_task)
         
         # Vérifier que le mock a été appelé
-        self.assertTrue(mock_process_task.called)
+        assert mock_process_task.called is True
         
         # Vérifier le résultat
-        self.assertEqual(result["task_id"], "task-extract-1")
-        self.assertEqual(result["completion_status"], "completed")
-        self.assertIn(RESULTS_DIR, result)
-        self.assertIn("execution_metrics", result)
+        assert result["task_id"] == "task-extract-1"
+        assert result["completion_status"] == "completed"
+        assert RESULTS_DIR in result
+        assert "execution_metrics" in result
     
     @patch("argumentation_analysis.orchestration.hierarchical.operational.adapters.informal_agent_adapter.InformalAgentAdapter.process_task")
-    async def test_informal_agent_task_processing(self, mock_process_task):
+    async def test_informal_agent_task_processing(self, mock_process_task, operational_components):
         """Teste le traitement d'une tâche par l'agent informel."""
+        tactical_state, _, _, manager, _ = operational_components
         # Configurer le mock
         mock_result = {
             "id": "result-task-informal-1",
@@ -180,23 +177,24 @@ class TestOperationalAgentsIntegration(AsyncTestCase):
         }
         
         # Ajouter la tâche à l'état tactique
-        self.tactical_state.add_task(tactical_task)
+        tactical_state.add_task(tactical_task)
         
         # Traiter la tâche
-        result = await self.manager.process_tactical_task(tactical_task)
+        result = await manager.process_tactical_task(tactical_task)
         
         # Vérifier que le mock a été appelé
-        self.assertTrue(mock_process_task.called)
+        assert mock_process_task.called is True
         
         # Vérifier le résultat
-        self.assertEqual(result["task_id"], "task-informal-1")
-        self.assertEqual(result["completion_status"], "completed")
-        self.assertIn(RESULTS_DIR, result)
-        self.assertIn("execution_metrics", result)
+        assert result["task_id"] == "task-informal-1"
+        assert result["completion_status"] == "completed"
+        assert RESULTS_DIR in result
+        assert "execution_metrics" in result
     
     @patch("argumentation_analysis.orchestration.hierarchical.operational.adapters.pl_agent_adapter.PLAgentAdapter.process_task")
-    async def test_pl_agent_task_processing(self, mock_process_task):
+    async def test_pl_agent_task_processing(self, mock_process_task, operational_components):
         """Teste le traitement d'une tâche par l'agent de logique propositionnelle."""
+        tactical_state, _, _, manager, _ = operational_components
         # Configurer le mock
         mock_result = {
             "id": "result-task-pl-1",
@@ -235,23 +233,24 @@ class TestOperationalAgentsIntegration(AsyncTestCase):
         }
         
         # Ajouter la tâche à l'état tactique
-        self.tactical_state.add_task(tactical_task)
+        tactical_state.add_task(tactical_task)
         
         # Traiter la tâche
-        result = await self.manager.process_tactical_task(tactical_task)
+        result = await manager.process_tactical_task(tactical_task)
         
         # Vérifier que le mock a été appelé
-        self.assertTrue(mock_process_task.called)
+        assert mock_process_task.called is True
         
         # Vérifier le résultat
-        self.assertEqual(result["task_id"], "task-pl-1")
-        self.assertEqual(result["completion_status"], "completed")
-        self.assertIn(RESULTS_DIR, result)
-        self.assertIn("execution_metrics", result)
+        assert result["task_id"] == "task-pl-1"
+        assert result["completion_status"] == "completed"
+        assert RESULTS_DIR in result
+        assert "execution_metrics" in result
     
-    async def test_agent_selection(self):
+    async def test_agent_selection(self, operational_components):
         """Teste la sélection de l'agent approprié pour une tâche."""
-        registry = OperationalAgentRegistry(self.operational_state)
+        _, operational_state, _, _, _ = operational_components
+        registry = OperationalAgentRegistry(operational_state)
         
         # Tâche pour l'agent d'extraction
         extract_task = {
@@ -283,16 +282,16 @@ class TestOperationalAgentsIntegration(AsyncTestCase):
         pl_agent = await registry.select_agent_for_task(pl_task)
         
         # Vérifier les agents sélectionnés
-        self.assertIsNotNone(extract_agent)
-        self.assertEqual(extract_agent.name, "ExtractAgent")
+        assert extract_agent is not None
+        assert extract_agent.name == "ExtractAgent"
         
-        self.assertIsNotNone(informal_agent)
-        self.assertEqual(informal_agent.name, "InformalAgent")
+        assert informal_agent is not None
+        assert informal_agent.name == "InformalAgent"
         
-        self.assertIsNotNone(pl_agent)
-        self.assertEqual(pl_agent.name, "PLAgent")
+        assert pl_agent is not None
+        assert pl_agent.name == "PLAgent"
     
-    async def test_operational_state_management(self):
+    async def test_operational_state_management(self): # Ne dépend pas de la fixture operational_components
         """Teste la gestion de l'état opérationnel."""
         state = OperationalState()
         
@@ -304,16 +303,16 @@ class TestOperationalAgentsIntegration(AsyncTestCase):
             "priority": "medium"
         }
         task_id = state.add_task(task)
-        self.assertEqual(task_id, "op-task-1")
+        assert task_id == "op-task-1"
         
         # Mettre à jour le statut de la tâche
         success = state.update_task_status(task_id, "in_progress", {"message": "Traitement en cours"})
-        self.assertTrue(success)
+        assert success is True
         
         # Récupérer la tâche
         retrieved_task = state.get_task(task_id)
-        self.assertIsNotNone(retrieved_task)
-        self.assertEqual(retrieved_task["status"], "in_progress")
+        assert retrieved_task is not None
+        assert retrieved_task["status"] == "in_progress"
         
         # Ajouter un résultat d'analyse
         result_data = {
@@ -322,7 +321,7 @@ class TestOperationalAgentsIntegration(AsyncTestCase):
             "content": "Résultat de test"
         }
         result_id = state.add_analysis_result("test_results", result_data)
-        self.assertEqual(result_id, "result-1")
+        assert result_id == "result-1"
         
         # Ajouter un problème
         issue = {
@@ -332,7 +331,7 @@ class TestOperationalAgentsIntegration(AsyncTestCase):
             "task_id": task_id
         }
         issue_id = state.add_issue(issue)
-        self.assertTrue(issue_id.startswith("issue-"))
+        assert issue_id.startswith("issue-")
         
         # Mettre à jour les métriques
         metrics = {
@@ -341,15 +340,16 @@ class TestOperationalAgentsIntegration(AsyncTestCase):
             "coverage": 1.0
         }
         success = state.update_metrics(task_id, metrics)
-        self.assertTrue(success)
+        assert success is True
         
         # Récupérer les métriques
         retrieved_metrics = state.get_task_metrics(task_id)
-        self.assertIsNotNone(retrieved_metrics)
-        self.assertEqual(retrieved_metrics["execution_time"], 1.0)
+        assert retrieved_metrics is not None
+        assert retrieved_metrics["execution_time"] == 1.0
     
-    async def test_end_to_end_task_processing(self):
+    async def test_end_to_end_task_processing(self, operational_components):
         """Teste le traitement complet d'une tâche de bout en bout."""
+        tactical_state, _, _, manager, sample_text = operational_components
         # Cette méthode utilise des mocks pour simuler le comportement des agents
         # mais teste l'intégration complète du gestionnaire opérationnel avec l'interface tactique-opérationnelle
         
@@ -364,7 +364,7 @@ class TestOperationalAgentsIntegration(AsyncTestCase):
         }
         
         # Ajouter la tâche à l'état tactique
-        self.tactical_state.add_task(tactical_task)
+        tactical_state.add_task(tactical_task)
         
         # Patcher la méthode process_task de l'agent d'extraction
         with patch("argumentation_analysis.orchestration.hierarchical.operational.adapters.extract_agent_adapter.ExtractAgentAdapter.process_task") as mock_process_task:
@@ -381,7 +381,7 @@ class TestOperationalAgentsIntegration(AsyncTestCase):
                             "source": "sample_text",
                             "start_marker": "La vaccination",
                             "end_marker": "raisons médicales.",
-                            "extracted_text": self.sample_text.strip(),
+                            "extracted_text": sample_text.strip(),
                             "confidence": 0.9
                         }
                     ]
@@ -397,21 +397,17 @@ class TestOperationalAgentsIntegration(AsyncTestCase):
             mock_process_task.return_value = mock_result
             
             # Traiter la tâche
-            result = await self.manager.process_tactical_task(tactical_task)
+            result = await manager.process_tactical_task(tactical_task)
             
             # Vérifier que le mock a été appelé
-            self.assertTrue(mock_process_task.called)
+            assert mock_process_task.called is True
             
             # Vérifier le résultat
-            self.assertEqual(result["task_id"], "task-test-1")
-            self.assertEqual(result["completion_status"], "completed")
-            self.assertIn(RESULTS_DIR, result)
-            self.assertIn("execution_metrics", result)
+            assert result["task_id"] == "task-test-1"
+            assert result["completion_status"] == "completed"
+            assert RESULTS_DIR in result
+            assert "execution_metrics" in result
             
             # Vérifier que les métriques ont été correctement traduites
-            self.assertEqual(result["execution_metrics"]["processing_time"], 1.5)
-            self.assertEqual(result["execution_metrics"]["confidence_score"], 0.9)
-
-
-if __name__ == "__main__":
-    unittest.main()
+            assert result["execution_metrics"]["processing_time"] == 1.5
+            assert result["execution_metrics"]["confidence_score"] == 0.9

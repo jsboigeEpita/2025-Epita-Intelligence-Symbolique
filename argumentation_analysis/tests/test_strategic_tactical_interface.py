@@ -3,7 +3,7 @@
 Tests pour l'interface entre les niveaux stratégique et tactique.
 """
 
-import unittest
+import pytest # Ajout de pytest
 from unittest.mock import MagicMock, patch
 import json
 from datetime import datetime
@@ -17,38 +17,26 @@ from argumentation_analysis.core.communication import (
 )
 
 
-class TestStrategicTacticalInterface(unittest.TestCase):
+class TestStrategicTacticalInterface:
     """Tests pour la classe StrategicTacticalInterface."""
-    
-    def setUp(self):
+
+    @pytest.fixture
+    def interface_components(self):
         """Initialise les objets nécessaires pour les tests."""
-        # Créer des mocks pour les états
-        self.mock_strategic_state = MagicMock(spec=StrategicState)
-        self.mock_tactical_state = MagicMock(spec=TacticalState)
-        
-        # Créer un mock pour le middleware
-        self.mock_middleware = MagicMock(spec=MessageMiddleware)
-        
-        # Créer des mocks pour les adaptateurs
-        self.mock_strategic_adapter = MagicMock(spec=StrategicAdapter)
-        self.mock_tactical_adapter = MagicMock(spec=TacticalAdapter)
-        
-        # Configurer le mock du middleware pour retourner les adaptateurs mockés
-        self.mock_middleware.get_adapter.side_effect = lambda agent_id, level: (
-            self.mock_strategic_adapter if level == AgentLevel.STRATEGIC else self.mock_tactical_adapter
+        mock_strategic_state = MagicMock(spec=StrategicState)
+        mock_tactical_state = MagicMock(spec=TacticalState)
+        mock_middleware = MagicMock(spec=MessageMiddleware)
+        mock_strategic_adapter = MagicMock(spec=StrategicAdapter)
+        mock_tactical_adapter = MagicMock(spec=TacticalAdapter)
+
+        mock_middleware.get_adapter.side_effect = lambda agent_id, level: (
+            mock_strategic_adapter if level == AgentLevel.STRATEGIC else mock_tactical_adapter
         )
-        
-        # Configurer les mocks
-        self.mock_strategic_state.strategic_plan = {
+
+        mock_strategic_state.strategic_plan = {
             "phases": [
-                {
-                    "id": "phase-1",
-                    "objectives": ["obj-1", "obj-2"]
-                },
-                {
-                    "id": "phase-2",
-                    "objectives": ["obj-3"]
-                }
+                {"id": "phase-1", "objectives": ["obj-1", "obj-2"]},
+                {"id": "phase-2", "objectives": ["obj-3"]}
             ],
             "success_criteria": {
                 "phase-1": "Critères de succès pour la phase 1",
@@ -59,51 +47,29 @@ class TestStrategicTacticalInterface(unittest.TestCase):
                 "secondary": "fallacy_detection"
             }
         }
-        
-        self.mock_strategic_state.global_objectives = [
-            {
-                "id": "obj-1",
-                "description": "Identifier les arguments principaux",
-                "priority": "high"
-            },
-            {
-                "id": "obj-2",
-                "description": "Détecter les sophismes dans le texte",
-                "priority": "medium"
-            },
-            {
-                "id": "obj-3",
-                "description": "Analyser la structure logique des arguments",
-                "priority": "low"
-            }
+        mock_strategic_state.global_objectives = [
+            {"id": "obj-1", "description": "Identifier les arguments principaux", "priority": "high"},
+            {"id": "obj-2", "description": "Détecter les sophismes dans le texte", "priority": "medium"},
+            {"id": "obj-3", "description": "Analyser la structure logique des arguments", "priority": "low"}
         ]
-        
-        self.mock_strategic_state.global_metrics = {
-            "progress": 0.4,
-            "quality": 0.7,
-            "resource_utilization": 0.6
+        mock_strategic_state.global_metrics = {"progress": 0.4, "quality": 0.7, "resource_utilization": 0.6}
+        mock_strategic_state.resource_allocation = {
+            "agent_assignments": {"agent-1": ["obj-1"], "agent-2": ["obj-2", "obj-3"]}
         }
-        
-        self.mock_strategic_state.resource_allocation = {
-            "agent_assignments": {
-                "agent-1": ["obj-1"],
-                "agent-2": ["obj-2", "obj-3"]
-            }
-        }
-        
-        # Créer l'interface avec les mocks
-        self.interface = StrategicTacticalInterface(
-            strategic_state=self.mock_strategic_state,
-            tactical_state=self.mock_tactical_state,
-            middleware=self.mock_middleware
+
+        interface = StrategicTacticalInterface(
+            strategic_state=mock_strategic_state,
+            tactical_state=mock_tactical_state,
+            middleware=mock_middleware
         )
+        interface.strategic_adapter = mock_strategic_adapter
+        interface.tactical_adapter = mock_tactical_adapter
         
-        # Remplacer les adaptateurs de l'interface par nos mocks
-        self.interface.strategic_adapter = self.mock_strategic_adapter
-        self.interface.tactical_adapter = self.mock_tactical_adapter
-    
-    def test_translate_objectives(self):
+        return interface, mock_strategic_state, mock_tactical_state, mock_middleware, mock_strategic_adapter, mock_tactical_adapter
+
+    def test_translate_objectives(self, interface_components):
         """Teste la traduction des objectifs stratégiques en directives tactiques."""
+        interface, _, _, _, mock_strategic_adapter, _ = interface_components
         # Définir les objectifs à traduire
         objectives = [
             {
@@ -119,28 +85,29 @@ class TestStrategicTacticalInterface(unittest.TestCase):
         ]
         
         # Appeler la méthode à tester
-        result = self.interface.translate_objectives(objectives)
+        result = interface.translate_objectives(objectives)
         
-        # Vérifier que la méthode send_directive a été appelée
-        self.mock_strategic_adapter.send_directive.assert_called()
+        # Vérifier que la méthode issue_directive a été appelée (corrigé selon l'erreur)
+        mock_strategic_adapter.issue_directive.assert_called()
         
         # Vérifier le résultat
-        self.assertIsInstance(result, dict)
-        self.assertIn("objectives", result)
-        self.assertIn("global_context", result)
-        self.assertIn("control_parameters", result)
+        assert isinstance(result, dict)
+        assert "objectives" in result
+        assert "global_context" in result
+        assert "control_parameters" in result
         
         # Vérifier que les objectifs ont été enrichis
-        self.assertEqual(len(result["objectives"]), 2)
+        assert len(result["objectives"]) == 2
         for obj in result["objectives"]:
-            self.assertIn("context", obj)
-            self.assertIn("global_plan_phase", obj["context"])
-            self.assertIn("related_objectives", obj["context"])
-            self.assertIn("priority_level", obj["context"])
-            self.assertIn("success_criteria", obj["context"])
+            assert "context" in obj
+            assert "global_plan_phase" in obj["context"]
+            assert "related_objectives" in obj["context"]
+            assert "priority_level" in obj["context"]
+            assert "success_criteria" in obj["context"]
     
-    def test_process_tactical_report(self):
+    def test_process_tactical_report(self, interface_components):
         """Teste le traitement d'un rapport tactique."""
+        interface, mock_strategic_state, _, _, mock_strategic_adapter, _ = interface_components
         # Définir un rapport tactique
         tactical_report = {
             "timestamp": datetime.now().isoformat(),
@@ -201,37 +168,38 @@ class TestStrategicTacticalInterface(unittest.TestCase):
         self.mock_strategic_adapter.get_pending_reports.return_value = []
         
         # Appeler la méthode à tester
-        result = self.interface.process_tactical_report(tactical_report)
+        result = interface.process_tactical_report(tactical_report)
         
         # Vérifier que la méthode get_pending_reports a été appelée
-        self.mock_strategic_adapter.get_pending_reports.assert_called_once()
+        mock_strategic_adapter.get_pending_reports.assert_called_once()
         
         # Vérifier le résultat
-        self.assertIsInstance(result, dict)
-        self.assertIn("metrics", result)
-        self.assertIn("issues", result)
-        self.assertIn("adjustments", result)
-        self.assertIn("progress_by_objective", result)
+        assert isinstance(result, dict)
+        assert "metrics" in result
+        assert "issues" in result
+        assert "adjustments" in result
+        assert "progress_by_objective" in result
         
         # Vérifier les métriques
-        self.assertIn("progress", result["metrics"])
-        self.assertIn("quality_indicators", result["metrics"])
-        self.assertIn("resource_utilization", result["metrics"])
+        assert "progress" in result["metrics"]
+        assert "quality_indicators" in result["metrics"]
+        assert "resource_utilization" in result["metrics"]
         
         # Vérifier les problèmes stratégiques
-        self.assertIsInstance(result["issues"], list)
-        self.assertTrue(len(result["issues"]) > 0)
+        assert isinstance(result["issues"], list)
+        assert len(result["issues"]) > 0
         
         # Vérifier les ajustements
-        self.assertIn("plan_updates", result["adjustments"])
-        self.assertIn("resource_reallocation", result["adjustments"])
-        self.assertIn("objective_modifications", result["adjustments"])
+        assert "plan_updates" in result["adjustments"]
+        assert "resource_reallocation" in result["adjustments"]
+        assert "objective_modifications" in result["adjustments"]
         
         # Vérifier que la méthode update_global_metrics a été appelée
-        self.mock_strategic_state.update_global_metrics.assert_called_once()
+        mock_strategic_state.update_global_metrics.assert_called_once()
     
-    def test_determine_phase_for_objective(self):
+    def test_determine_phase_for_objective(self, interface_components):
         """Teste la détermination de la phase pour un objectif."""
+        interface, _, _, _, _, _ = interface_components
         # Définir un objectif
         objective = {
             "id": "obj-1",
@@ -240,10 +208,10 @@ class TestStrategicTacticalInterface(unittest.TestCase):
         }
         
         # Appeler la méthode à tester
-        result = self.interface._determine_phase_for_objective(objective)
+        result = interface._determine_phase_for_objective(objective)
         
         # Vérifier le résultat
-        self.assertEqual(result, "phase-1")
+        assert result == "phase-1"
         
         # Tester avec un objectif inconnu
         unknown_objective = {
@@ -252,11 +220,12 @@ class TestStrategicTacticalInterface(unittest.TestCase):
             "priority": "medium"
         }
         
-        result = self.interface._determine_phase_for_objective(unknown_objective)
-        self.assertEqual(result, "unknown")
+        result = interface._determine_phase_for_objective(unknown_objective)
+        assert result == "unknown"
     
-    def test_find_related_objectives(self):
+    def test_find_related_objectives(self, interface_components):
         """Teste la recherche d'objectifs liés."""
+        interface, _, _, _, _, _ = interface_components
         # Définir un objectif
         objective = {
             "id": "obj-1",
@@ -280,36 +249,38 @@ class TestStrategicTacticalInterface(unittest.TestCase):
         ]
         
         # Appeler la méthode à tester
-        result = self.interface._find_related_objectives(objective, all_objectives)
+        result = interface._find_related_objectives(objective, all_objectives)
         
         # Vérifier le résultat
-        self.assertIsInstance(result, list)
-        self.assertIn("obj-2", result)  # Car "arguments" est présent dans les deux descriptions
-        self.assertNotIn("obj-3", result)  # Car pas de mots-clés communs
+        assert isinstance(result, list)
+        assert "obj-2" in result  # Car "arguments" est présent dans les deux descriptions
+        assert "obj-3" not in result  # Car pas de mots-clés communs
     
-    def test_translate_priority(self):
+    def test_translate_priority(self, interface_components):
         """Teste la traduction de la priorité stratégique."""
+        interface, _, _, _, _, _ = interface_components
         # Tester avec différentes priorités
-        high_result = self.interface._translate_priority("high")
-        medium_result = self.interface._translate_priority("medium")
-        low_result = self.interface._translate_priority("low")
-        unknown_result = self.interface._translate_priority("unknown")
+        high_result = interface._translate_priority("high")
+        medium_result = interface._translate_priority("medium")
+        low_result = interface._translate_priority("low")
+        unknown_result = interface._translate_priority("unknown")
         
         # Vérifier les résultats
-        self.assertIsInstance(high_result, dict)
-        self.assertIn("urgency", high_result)
-        self.assertIn("resource_allocation", high_result)
-        self.assertIn("quality_threshold", high_result)
+        assert isinstance(high_result, dict)
+        assert "urgency" in high_result
+        assert "resource_allocation" in high_result
+        assert "quality_threshold" in high_result
         
-        self.assertEqual(high_result["urgency"], "high")
-        self.assertEqual(medium_result["urgency"], "medium")
-        self.assertEqual(low_result["urgency"], "low")
+        assert high_result["urgency"] == "high"
+        assert medium_result["urgency"] == "medium"
+        assert low_result["urgency"] == "low"
         
         # La priorité inconnue devrait être traitée comme "medium"
-        self.assertEqual(unknown_result["urgency"], "medium")
+        assert unknown_result["urgency"] == "medium"
     
-    def test_extract_success_criteria(self):
+    def test_extract_success_criteria(self, interface_components):
         """Teste l'extraction des critères de succès."""
+        interface, _, _, _, _, _ = interface_components
         # Définir un objectif
         objective = {
             "id": "obj-1",
@@ -318,13 +289,13 @@ class TestStrategicTacticalInterface(unittest.TestCase):
         }
         
         # Appeler la méthode à tester
-        result = self.interface._extract_success_criteria(objective)
+        result = interface._extract_success_criteria(objective)
         
         # Vérifier le résultat
-        self.assertIsInstance(result, dict)
-        self.assertIn("criteria", result)
-        self.assertIn("threshold", result)
-        self.assertEqual(result["criteria"], "Critères de succès pour la phase 1")
+        assert isinstance(result, dict)
+        assert "criteria" in result
+        assert "threshold" in result
+        assert result["criteria"] == "Critères de succès pour la phase 1"
         
         # Tester avec un objectif sans critères de succès définis
         unknown_objective = {
@@ -333,86 +304,77 @@ class TestStrategicTacticalInterface(unittest.TestCase):
             "priority": "medium"
         }
         
-        result = self.interface._extract_success_criteria(unknown_objective)
-        self.assertIsInstance(result, dict)
-        self.assertIn("criteria", result)
-        self.assertIn("threshold", result)
+        result = interface._extract_success_criteria(unknown_objective)
+        assert isinstance(result, dict)
+        assert "criteria" in result
+        assert "threshold" in result
         # Devrait utiliser les critères par défaut
-        self.assertEqual(result["criteria"], "Complétion satisfaisante de l'objectif")
+        assert result["criteria"] == "Complétion satisfaisante de l'objectif"
     
-    def test_determine_current_phase(self):
+    def test_determine_current_phase(self, interface_components):
         """Teste la détermination de la phase actuelle."""
+        interface, mock_strategic_state, _, _, _, _ = interface_components
         # Configurer le mock pour différentes valeurs de progression
         
         # Phase initiale (progress < 0.3)
-        self.mock_strategic_state.global_metrics = {"progress": 0.2}
-        result = self.interface._determine_current_phase()
-        self.assertEqual(result, "initial")
+        mock_strategic_state.global_metrics = {"progress": 0.2}
+        result = interface._determine_current_phase()
+        assert result == "initial"
         
         # Phase intermédiaire (0.3 <= progress < 0.7)
-        self.mock_strategic_state.global_metrics = {"progress": 0.5}
-        result = self.interface._determine_current_phase()
-        self.assertEqual(result, "intermediate")
+        mock_strategic_state.global_metrics = {"progress": 0.5}
+        result = interface._determine_current_phase()
+        assert result == "intermediate"
         
         # Phase finale (progress >= 0.7)
-        self.mock_strategic_state.global_metrics = {"progress": 0.8}
-        result = self.interface._determine_current_phase()
-        self.assertEqual(result, "final")
+        mock_strategic_state.global_metrics = {"progress": 0.8}
+        result = interface._determine_current_phase()
+        assert result == "final"
     
-    def test_determine_primary_focus(self):
+    def test_determine_primary_focus(self, interface_components):
         """Teste la détermination du focus principal."""
+        interface, mock_strategic_state, _, _, _, _ = interface_components
         # Le focus devrait être déterminé en fonction des objectifs
-        result = self.interface._determine_primary_focus()
+        result = interface._determine_primary_focus()
         
-        # Avec les objectifs définis dans setUp, le focus devrait être "argument_identification"
-        self.assertEqual(result, "argument_identification")
+        # Avec les objectifs définis dans la fixture, le focus devrait être "argument_identification"
+        assert result == "argument_identification"
         
         # Modifier les objectifs pour changer le focus
-        self.mock_strategic_state.global_objectives = [
-            {
-                "id": "obj-1",
-                "description": "Détecter les sophismes dans le texte",
-                "priority": "high"
-            },
-            {
-                "id": "obj-2",
-                "description": "Détecter d'autres sophismes",
-                "priority": "high"
-            },
-            {
-                "id": "obj-3",
-                "description": "Identifier quelques arguments",
-                "priority": "low"
-            }
+        mock_strategic_state.global_objectives = [
+            {"id": "obj-1", "description": "Détecter les sophismes dans le texte", "priority": "high"},
+            {"id": "obj-2", "description": "Détecter d'autres sophismes", "priority": "high"},
+            {"id": "obj-3", "description": "Identifier quelques arguments", "priority": "low"}
         ]
         
-        result = self.interface._determine_primary_focus()
-        self.assertEqual(result, "fallacy_detection")
+        result = interface._determine_primary_focus()
+        assert result == "fallacy_detection"
 
-
-    def test_request_tactical_status(self):
+    def test_request_tactical_status(self, interface_components):
         """Teste la demande de statut tactique."""
-        # Configurer le mock pour request_tactical_status
+        interface, _, _, _, mock_strategic_adapter, _ = interface_components
+        # Configurer le mock pour request_tactical_info (corrigé)
         expected_response = {
             "status": "ok",
             "progress": 0.5
         }
-        self.mock_strategic_adapter.request_tactical_status.return_value = expected_response
+        mock_strategic_adapter.request_tactical_info.return_value = expected_response # Corrigé ici
         
         # Appeler la méthode à tester
-        result = self.interface.request_tactical_status(timeout=5.0)
+        result = interface.request_tactical_status(timeout=5.0)
         
         # Vérifier le résultat
-        self.assertEqual(result, expected_response)
+        assert result == expected_response
         
-        # Vérifier que la méthode request_tactical_status a été appelée
-        self.mock_strategic_adapter.request_tactical_status.assert_called_once_with(
+        # Vérifier que la méthode request_tactical_info a été appelée (corrigé)
+        mock_strategic_adapter.request_tactical_info.assert_called_once_with( # Corrigé ici
             recipient_id="tactical_coordinator",
             timeout=5.0
         )
     
-    def test_send_strategic_adjustment(self):
+    def test_send_strategic_adjustment(self, interface_components):
         """Teste l'envoi d'un ajustement stratégique."""
+        interface, _, _, _, mock_strategic_adapter, _ = interface_components
         # Définir un ajustement
         adjustment = {
             "plan_updates": {
@@ -424,30 +386,27 @@ class TestStrategicTacticalInterface(unittest.TestCase):
         }
         
         # Configurer le mock pour send_directive
-        self.mock_strategic_adapter.send_directive.return_value = "message-id-123"
+        mock_strategic_adapter.issue_directive.return_value = "message-id-123" # Corrigé ici
         
         # Appeler la méthode à tester
-        result = self.interface.send_strategic_adjustment(adjustment)
+        result = interface.send_strategic_adjustment(adjustment)
         
         # Vérifier le résultat
-        self.assertTrue(result)
+        assert result is True
         
-        # Vérifier que la méthode send_directive a été appelée
-        self.mock_strategic_adapter.send_directive.assert_called_once_with(
+        # Vérifier que la méthode issue_directive a été appelée (corrigé)
+        mock_strategic_adapter.issue_directive.assert_called_once_with( # Corrigé ici
             directive_type="strategic_adjustment",
             content=adjustment,
             recipient_id="tactical_coordinator",
             priority=MessagePriority.HIGH
         )
     
-    def test_map_priority_to_enum(self):
+    def test_map_priority_to_enum(self, interface_components):
         """Teste la conversion de priorité textuelle en énumération."""
+        interface, _, _, _, _, _ = interface_components
         # Tester avec différentes priorités
-        self.assertEqual(self.interface._map_priority_to_enum("high"), MessagePriority.HIGH)
-        self.assertEqual(self.interface._map_priority_to_enum("medium"), MessagePriority.NORMAL)
-        self.assertEqual(self.interface._map_priority_to_enum("low"), MessagePriority.LOW)
-        self.assertEqual(self.interface._map_priority_to_enum("unknown"), MessagePriority.NORMAL)
-
-
-if __name__ == "__main__":
-    unittest.main()
+        assert interface._map_priority_to_enum("high") == MessagePriority.HIGH
+        assert interface._map_priority_to_enum("medium") == MessagePriority.NORMAL
+        assert interface._map_priority_to_enum("low") == MessagePriority.LOW
+        assert interface._map_priority_to_enum("unknown") == MessagePriority.NORMAL

@@ -31,7 +31,7 @@ def test_informal_integration():
     
     try:
         # Importer la classe InformalAnalysisPlugin
-        from argumentation_analysis.agents.informal.informal_definitions import InformalAnalysisPlugin
+        from argumentation_analysis.agents.core.informal.informal_definitions import InformalAnalysisPlugin
         
         # Créer une instance de la classe
         logger.info("Création d'une instance de InformalAnalysisPlugin...")

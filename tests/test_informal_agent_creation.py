@@ -190,7 +190,9 @@ class TestInformalAgentCreation(unittest.TestCase):
             )
             
             # Vérifier que la fonction setup_informal_kernel a été appelée
-            mock_setup.assert_called_once_with(kernel, None, plugin)
+            # L'appel réel est setup_informal_kernel(kernel, plugin)
+            # car InformalAgent.__init__ passe self.informal_plugin comme deuxième argument.
+            mock_setup.assert_called_once_with(kernel, plugin)
             
             # Vérifier que l'agent a été correctement initialisé
             self.assertIsNotNone(agent)

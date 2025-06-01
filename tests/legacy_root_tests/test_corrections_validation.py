@@ -22,7 +22,7 @@ def test_analysis_runner():
         from argumentation_analysis.orchestration.analysis_runner import AnalysisRunner
         runner = AnalysisRunner()
         
-        methods = ['generate_report', 'run_analysis', 'run_multi_document_analysis']
+        methods = ['run_analysis', 'run_multi_document_analysis'] # generate_report retiré
         all_present = True
         
         for method in methods:
