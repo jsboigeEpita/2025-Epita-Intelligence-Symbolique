@@ -52,6 +52,7 @@ class EnhancedRhetoricalResultVisualizer(RhetoricalResultVisualizer):
         """
         super().__init__()
         self.logger = logger
+        self.visualization_history = []  # Initialiser l'historique
         self.logger.info("Visualiseur amélioré de résultats rhétoriques initialisé.")
     
     def visualize_argument_network(self, state: Dict[str, Any], output_path: Optional[str] = None) -> str:
@@ -332,6 +333,14 @@ class EnhancedRhetoricalResultVisualizer(RhetoricalResultVisualizer):
             "argument_quality": argument_quality_path,
             "html_report": html_report_path
         }
+        
+        # Ajouter à l'historique
+        self.visualization_history.append({
+            "type": "rhetorical_results_visualization",
+            "output_directory": output_dir,
+            "timestamp": datetime.now().isoformat(),
+            "generated_visualizations": list(visualization_paths.keys())
+        })
         
         return visualization_paths
     
