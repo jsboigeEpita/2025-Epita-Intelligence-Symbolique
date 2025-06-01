@@ -4,6 +4,7 @@ import sys
 from pathlib import Path
 from dotenv import load_dotenv
 import logging
+from typing import Dict, List, Any # Ajout pour List et Dict dans l'adaptateur
 
 # Configuration du logger pour ce module
 logger = logging.getLogger(__name__)
@@ -87,6 +88,34 @@ try:
 except ImportError as e:
     logger.error(f"Failed to import ContextualFallacyDetector: {e}")
 
+# Adapter pour ContextualFallacyDetector
+class ContextualFallacyDetectorAdapter:
+    def __init__(self, actual_detector):
+        self.actual_detector = actual_detector
+        self.logger = logging.getLogger("ContextualFallacyDetectorAdapter")
+
+    def detect(self, text: str, context_description: str = "général") -> List[Dict[str, Any]]:
+        """
+        Adapte l'appel à ContextualFallacyDetector.detect_contextual_fallacies.
+        """
+        self.logger.info(f"Adapter: Appel de detect_contextual_fallacies pour le texte: {text[:50]}...")
+        try:
+            # L'agent informel ne fournit pas de description de contexte spécifique pour l'instant,
+            # nous utilisons une valeur par défaut.
+            # Si des facteurs contextuels plus précis sont nécessaires,
+            # InformalAgent devra être modifié pour les fournir.
+            results = self.actual_detector.detect_contextual_fallacies(
+                argument=text,
+                context_description=context_description 
+            )
+            detected_fallacies = results.get("detected_fallacies", [])
+            if not isinstance(detected_fallacies, list):
+                self.logger.warning(f"Adapter: 'detected_fallacies' n'est pas une liste, mais {type(detected_fallacies)}. Retourne [].")
+                return []
+            return detected_fallacies
+        except Exception as e:
+            self.logger.error(f"Adapter: Erreur lors de l'appel à detect_contextual_fallacies: {e}", exc_info=True)
+            return []
 class ProjectContext:
     """Classe pour contenir les services initialisés."""
     def __init__(self):
@@ -252,10 +281,13 @@ def initialize_project_environment(env_path_str: str = None, root_path_str: str 
     if ContextualFallacyDetector_class:
         logger.info("Initialisation de ContextualFallacyDetector...")
         try:
-            context.fallacy_detector = ContextualFallacyDetector_class()
-            logger.info("ContextualFallacyDetector initialisé.")
+            # Instancier le détecteur original
+            original_detector = ContextualFallacyDetector_class()
+            # Envelopper le détecteur original avec l'adaptateur
+            context.fallacy_detector = ContextualFallacyDetectorAdapter(original_detector)
+            logger.info("ContextualFallacyDetector initialisé et enveloppé dans l'adaptateur.")
         except Exception as e:
-            logger.error(f"Erreur lors de l'initialisation de ContextualFallacyDetector : {e}", exc_info=True)
+            logger.error(f"Erreur lors de l'initialisation de ContextualFallacyDetector ou de son adaptateur : {e}", exc_info=True)
     else:
         logger.error("ContextualFallacyDetector_class n'a pas pu être importé.")
 
