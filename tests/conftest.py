@@ -128,7 +128,14 @@ def _install_numpy_mock_immediately():
             if hasattr(numpy_mock, 'core'):
                 sys.modules['numpy.core'] = numpy_mock.core
             if hasattr(numpy_mock, 'rec'):
-                 sys.modules['numpy.rec'] = numpy_mock.rec
+                sys.modules['numpy.rec'] = numpy_mock.rec
+                if not hasattr(numpy_mock.rec, 'recarray'):
+                    # Créer un mock simple pour recarray si numpy_mock.rec ne le fournit pas
+                    setattr(numpy_mock.rec, 'recarray', type('recarray', (), {}))
+            elif 'numpy.rec' not in sys.modules: # Si numpy_mock n'a pas 'rec', créer un mock basique
+                mock_rec_module = type('rec', (), {})
+                mock_rec_module.recarray = type('recarray', (), {})
+                sys.modules['numpy.rec'] = mock_rec_module
             # Assurer que les multiarray sont là si _core/core les ont
             if hasattr(numpy_mock, '_core') and hasattr(numpy_mock._core, 'multiarray'):
                  sys.modules['numpy._core.multiarray'] = numpy_mock._core.multiarray
@@ -161,9 +168,9 @@ def _install_numpy_mock_immediately():
         except ImportError as e:
             print(f"ERREUR lors de l'installation immédiate du mock NumPy: {e}")
 
-if (sys.version_info.major == 3 and sys.version_info.minor >= 12):
-    # _install_numpy_mock_immediately() # Commenté pour débogage
-    print("INFO: Installation immédiate du mock NumPy commentée pour débogage.")
+if (sys.version_info.major == 3 and sys.version_info.minor >= 10): # Modifié pour inclure 3.10
+    _install_numpy_mock_immediately()
+    # print("INFO: Installation immédiate du mock NumPy commentée pour débogage.") # Commenté pour activer
 
 # --- Mock Pandas Immédiat ---
 # def _install_pandas_mock_immediately():
@@ -277,6 +284,12 @@ def setup_numpy():
             sys.modules['numpy.core'] = numpy_mock.core
         if hasattr(numpy_mock, 'rec'):
             sys.modules['numpy.rec'] = numpy_mock.rec
+            if not hasattr(numpy_mock.rec, 'recarray'):
+                 setattr(numpy_mock.rec, 'recarray', type('recarray', (), {}))
+        elif 'numpy.rec' not in sys.modules: # Si numpy_mock n'a pas 'rec', créer un mock basique
+            mock_rec_module = type('rec', (), {})
+            mock_rec_module.recarray = type('recarray', (), {})
+            sys.modules['numpy.rec'] = mock_rec_module
         if hasattr(numpy_mock, '_core') and hasattr(numpy_mock._core, 'multiarray'):
             sys.modules['numpy._core.multiarray'] = numpy_mock._core.multiarray
         if hasattr(numpy_mock, 'core') and hasattr(numpy_mock.core, 'multiarray'):
