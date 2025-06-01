@@ -939,8 +939,8 @@ logger.info(f"Types NumPy définis: bool_={bool_}, number={number}, object_={obj
 logger.info(f"Type de bool_: {type(bool_)}, Type de number: {type(number)}, Type de object_: {type(object_)}")
 
 # Types de données temporelles requis par pandas
-datetime64 = "datetime64"
-timedelta64 = "timedelta64"
+datetime64 = MagicMock(name="numpy.datetime64")
+timedelta64 = MagicMock(name="numpy.timedelta64")
 
 # Types de données supplémentaires requis par pandas
 float_ = float64  # Alias pour float64 (maintenant une instance de classe)

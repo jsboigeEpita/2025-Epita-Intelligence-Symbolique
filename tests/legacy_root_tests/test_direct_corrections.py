@@ -33,33 +33,57 @@ def test_analysis_runner_file():
         print(f"ERREUR lecture analysis_runner: {e}")
         raise
 
-def test_conftest_file():
-    """Test direct du fichier conftest.py"""
+def test_numpy_mocks_structure():
+    """Test la structure des fichiers de mock NumPy après refactoring."""
+    found_all = True
+    
+    # Vérifications pour tests/mocks/numpy_setup.py
     try:
-        file_path = "tests/conftest.py"
-        with open(file_path, 'r', encoding='utf-8') as f:
-            content = f.read()
+        file_path_setup = "tests/mocks/numpy_setup.py"
+        with open(file_path_setup, 'r', encoding='utf-8') as f:
+            content_setup = f.read()
         
-        # Vérifier la présence des mocks numpy
-        checks = [
-            'numpy_mock',
-            'rec = MagicMock()',
-            'datetime64 = MagicMock()',
-            'timedelta64 = MagicMock()',
+        checks_setup = [
+            'import numpy_mock',
+            'class MockRecarray',
         ]
-        
-        found_checks = []
-        for check in checks:
-            if check in content:
-                found_checks.append(check)
-                print(f"OK: {check} trouvé")
+        print(f"\n--- Vérification de {file_path_setup} ---")
+        for check in checks_setup:
+            if check in content_setup:
+                print(f"OK: \"{check}\" trouvé dans {file_path_setup}")
             else:
-                print(f"ERREUR: {check} manquant")
-        
-        assert len(found_checks) >= 3  # Au moins 3 sur 4
+                print(f"ERREUR: \"{check}\" manquant dans {file_path_setup}")
+                found_all = False
     except Exception as e:
-        print(f"ERREUR lecture conftest: {e}")
-        raise
+        print(f"ERREUR lecture {file_path_setup}: {e}")
+        found_all = False
+        # Ne pas lever d'exception ici pour permettre aux autres vérifications de continuer si possible
+        # mais le test global échouera à cause de found_all = False
+
+    # Vérifications pour tests/mocks/numpy_mock.py
+    try:
+        file_path_mock = "tests/mocks/numpy_mock.py"
+        with open(file_path_mock, 'r', encoding='utf-8') as f:
+            content_mock = f.read()
+
+        checks_mock = [
+            'datetime64 = MagicMock', # Vérification plus générique
+            'timedelta64 = MagicMock', # Vérification plus générique
+        ]
+        print(f"\n--- Vérification de {file_path_mock} ---")
+        for check in checks_mock:
+            if check in content_mock:
+                print(f"OK: \"{check}\" trouvé dans {file_path_mock}")
+            else:
+                print(f"ERREUR: \"{check}\" manquant dans {file_path_mock}")
+                found_all = False
+    except Exception as e:
+        print(f"ERREUR lecture {file_path_mock}: {e}")
+        found_all = False
+        # Idem, ne pas lever d'exception ici
+
+    assert found_all, "Des éléments de la structure des mocks NumPy sont manquants."
+    return found_all # Retourner True si tout est OK pour la fonction main()
 
 def test_integration_file():
     """Test du fichier d'intégration corrigé"""
@@ -93,7 +117,7 @@ def main():
     
     tests = [
         ("AnalysisRunner méthodes", test_analysis_runner_file),
-        ("Conftest mocks", test_conftest_file),
+        ("Structure Mocks NumPy", test_numpy_mocks_structure),
         ("Tests intégration", test_integration_file),
     ]
     
