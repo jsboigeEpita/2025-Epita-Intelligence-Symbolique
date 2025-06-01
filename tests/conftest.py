@@ -141,7 +141,18 @@ def _install_numpy_mock_immediately():
         
         # Création explicite du mock pour numpy.rec et numpy.rec.recarray
         _mock_rec_submodule = type('rec', (), {})
-        _mock_rec_submodule.recarray = type('recarray', (), {}) # Un type simple suffit pour isinstance
+        # Remplacer par MagicMock pour permettre l'appel avec des arguments
+        _mock_rec_submodule.recarray = MagicMock(name="numpy.rec.recarray_mock")
+        # Simuler un comportement minimal si nécessaire, par exemple, retourner un mock de tableau
+        def mock_recarray_constructor(*args, **kwargs):
+            # Pour l'instant, retourne juste une autre MagicMock simulant un tableau
+            # On pourrait ajouter des attributs comme .shape, .dtype si les tests en ont besoin
+            mock_array_instance = MagicMock(name="recarray_instance")
+            # Exemple: mock_array_instance.shape = args[0] if args else (0,)
+            # mock_array_instance.dtype = MagicMock() # ou un mock de dtype plus spécifique
+            # mock_array_instance.dtype.names = kwargs.get('names')
+            return mock_array_instance
+        _mock_rec_submodule.recarray.side_effect = mock_recarray_constructor
 
         # Mettre le sous-module mocké dans sys.modules pour les imports directs `from numpy import rec` ou `import numpy.rec`
         sys.modules['numpy.rec'] = _mock_rec_submodule
@@ -315,7 +326,12 @@ def setup_numpy():
 
         # Création explicite et assignation du mock pour numpy.rec et numpy.rec.recarray
         _mock_rec_submodule_setup = type('rec', (), {})
-        _mock_rec_submodule_setup.recarray = type('recarray', (), {}) # Un type simple suffit pour isinstance
+        # Remplacer par MagicMock pour permettre l'appel avec des arguments
+        _mock_rec_submodule_setup.recarray = MagicMock(name="numpy.rec.recarray_mock_setup")
+        def mock_recarray_constructor_setup(*args, **kwargs):
+            mock_array_instance = MagicMock(name="recarray_instance_setup")
+            return mock_array_instance
+        _mock_rec_submodule_setup.recarray.side_effect = mock_recarray_constructor_setup
 
         # Mettre le sous-module mocké dans sys.modules pour les imports directs `from numpy import rec` ou `import numpy.rec`
         sys.modules['numpy.rec'] = _mock_rec_submodule_setup
