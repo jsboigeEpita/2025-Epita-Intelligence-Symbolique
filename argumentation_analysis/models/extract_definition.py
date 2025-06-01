@@ -17,13 +17,15 @@ class Extract:
     start_marker: str
     end_marker: str
     template_start: str = ""
+    text_content: str = ""
     
     def to_dict(self) -> Dict[str, Any]:
         """Convertit l'extrait en dictionnaire."""
         result = {
             "extract_name": self.extract_name,
             "start_marker": self.start_marker,
-            "end_marker": self.end_marker
+            "end_marker": self.end_marker,
+            "text_content": self.text_content
         }
         
         if self.template_start:
@@ -38,7 +40,8 @@ class Extract:
             extract_name=data.get("extract_name", ""),
             start_marker=data.get("start_marker", ""),
             end_marker=data.get("end_marker", ""),
-            template_start=data.get("template_start", "")
+            template_start=data.get("template_start", ""),
+            text_content=data.get("text_content", "")
         )
 
 
