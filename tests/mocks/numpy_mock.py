@@ -422,10 +422,25 @@ complex128 = "complex128"
 complex_ = "complex128"
 
 # Types de données entiers supplémentaires
-int8 = "int8"
-int16 = "int16"
-uint8 = "uint8"
-uint16 = "uint16"
+class int8(metaclass=dtype_base):
+    __name__ = 'int8'
+    __module__ = 'numpy'
+
+class int16(metaclass=dtype_base):
+    __name__ = 'int16'
+    __module__ = 'numpy'
+
+class uint8(metaclass=dtype_base):
+    __name__ = 'uint8'
+    __module__ = 'numpy'
+
+class uint16(metaclass=dtype_base):
+    __name__ = 'uint16'
+    __module__ = 'numpy'
+
+# Alias pour compatibilité avec scipy (intc, intp)
+intc = int32
+intp = int64
 
 # Types de données flottants supplémentaires
 float16 = "float16"

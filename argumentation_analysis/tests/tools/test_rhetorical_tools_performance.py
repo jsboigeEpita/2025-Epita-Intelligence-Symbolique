@@ -451,13 +451,17 @@ class TestRhetoricalToolsPerformance(unittest.TestCase):
                 # Tester le détecteur de sophismes contextuels
                 for _ in range(self.num_runs):
                     start_time = time.time()
-                    detector_result = self.contextual_fallacy_detector.detect_contextual_fallacies(dataset, context)
+                    detector_result = self.contextual_fallacy_detector.detect_multiple_contextual_fallacies(dataset, context)
                     execution_time = time.time() - start_time
                     
                     results["contextual_fallacy_detector"]["execution_times"].append(execution_time)
-                    results["contextual_fallacy_detector"]["fallacy_counts"].append(
-                        len(detector_result.get("detected_fallacies", []))
-                    )
+                    # La structure de retour de detect_multiple_contextual_fallacies est différente
+                    # Elle contient une liste "argument_results", chacun ayant "detected_fallacies"
+                    total_fallacies_in_dataset = 0
+                    if "argument_results" in detector_result:
+                        for arg_res in detector_result["argument_results"]:
+                            total_fallacies_in_dataset += len(arg_res.get("detected_fallacies", []))
+                    results["contextual_fallacy_detector"]["fallacy_counts"].append(total_fallacies_in_dataset)
                 
                 # Tester l'évaluateur de cohérence d'arguments
                 for _ in range(self.num_runs):

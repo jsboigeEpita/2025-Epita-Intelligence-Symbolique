@@ -6,12 +6,18 @@ Il configure les mocks nécessaires pour les tests et utilise les vraies bibliot
 lorsqu'elles sont disponibles. Pour Python 3.12 et supérieur, le mock JPype1 est
 automatiquement utilisé en raison de problèmes de compatibilité.
 """
+# Ignorer la collecte de run_tests.py qui n'est pas un fichier de test
+# Déplacé plus bas pour avoir accès à os
+# collect_ignore = ["../argumentation_analysis/run_tests.py"]
 
 import sys
 import os
 import pytest
 from unittest.mock import patch, MagicMock
 import importlib.util
+# Ignorer la collecte de run_tests.py qui n'est pas un fichier de test
+# Chemin relatif depuis tests/conftest.py vers argumentation_analysis/run_tests.py
+# collect_ignore = ["../argumentation_analysis/run_tests.py"] # Commenté pour tester l'effet de python_classes
 import logging
 import threading # Ajout de l'import pour l'inspection des threads
 
@@ -39,7 +45,6 @@ else:
         logger.warning(f"Le vrai module JPype n'a pas pu être importé fraîchement: {e_fresh_import}")
     except NameError as e_name_error_fresh_import: # Capturer le NameError potentiel ici aussi
         logger.error(f"NameError lors de l'import frais de JPype: {e_name_error_fresh_import}. Cela indique un problème d'installation/configuration de JPype.")
-
 
 # Nécessaire pour la fixture integration_jvm
 _integration_jvm_started_session_scope = False
@@ -146,7 +151,8 @@ try:
         isJVMStarted, startJVM, getJVMPath, getJVMVersion, getDefaultJVMPath,
         JClass, JException, JObject, JVMNotFoundException, _jpype as mock_dot_jpype_module
     )
-    mock_jpype_imports_module = MagicMock(name="jpype.imports_mock")
+    # Importer le vrai module mock d'imports
+    from tests.mocks.jpype_components.imports import imports_module as actual_mock_jpype_imports_module
     # sys.modules['jpype.imports'] = mock_jpype_imports_module # Commenté: sera géré par la logique de _REAL_JPYPE_MODULE ou _JPYPE_MODULE_MOCK_OBJ_GLOBAL
     jpype_module_mock_obj = MagicMock(name="jpype_module_mock")
     jpype_module_mock_obj.__path__ = [] 
@@ -160,7 +166,7 @@ try:
     jpype_module_mock_obj.JObject = JObject
     jpype_module_mock_obj.JVMNotFoundException = JVMNotFoundException
     jpype_module_mock_obj.__version__ = '1.4.1.mock'
-    jpype_module_mock_obj.imports = mock_jpype_imports_module
+    jpype_module_mock_obj.imports = actual_mock_jpype_imports_module # Utiliser le vrai mock
     _JPYPE_MODULE_MOCK_OBJ_GLOBAL = jpype_module_mock_obj
     _MOCK_DOT_JPYPE_MODULE_GLOBAL = mock_dot_jpype_module
     print("INFO: Mock JPype préparé (sera installé conditionnellement par activate_jpype_mock_if_needed).")
@@ -348,30 +354,111 @@ def activate_jpype_mock_if_needed(request):
         else:
             logger.error(f"Test {request.node.name} demande REAL JPype, mais _REAL_JPYPE_MODULE n'est pas disponible. Test échouera probablement.")
         yield
-    else: 
+    else:
         logger.info(f"Test {request.node.name} utilise MOCK JPype.")
-        original_sys_jpype = sys.modules.get('jpype')
-        original_sys_dot_jpype = sys.modules.get('_jpype')
-        original_sys_jpype_imports = sys.modules.get('jpype.imports')
+        
+        original_modules = {}
+        # Modules à potentiellement supprimer et remplacer par des mocks
+        modules_to_handle = ['jpype', '_jpype', 'jpype._core', 'jpype.imports', 'jpype.types', 'jpype.config', 'jpype.JProxy']
+        
+        # Tentative de patcher directement jpype.imports._jpype si le vrai jpype.imports est déjà chargé
+        # Cela doit se faire AVANT de supprimer jpype.imports de sys.modules
+        # et seulement si _MOCK_DOT_JPYPE_MODULE_GLOBAL est bien notre mock avec isStarted()
+        if 'jpype.imports' in sys.modules and \
+           hasattr(sys.modules['jpype.imports'], '_jpype') and \
+           _MOCK_DOT_JPYPE_MODULE_GLOBAL is not None and \
+           hasattr(_MOCK_DOT_JPYPE_MODULE_GLOBAL, 'isStarted'):
+            
+            # Sauvegarder l'original pour la restauration, seulement s'il n'est pas déjà notre mock
+            if sys.modules['jpype.imports']._jpype is not _MOCK_DOT_JPYPE_MODULE_GLOBAL:
+                if 'jpype.imports._jpype_original' not in original_modules: # Sauvegarder une seule fois
+                     original_modules['jpype.imports._jpype_original'] = sys.modules['jpype.imports']._jpype
+                logger.debug(f"Patch direct de sys.modules['jpype.imports']._jpype ({getattr(sys.modules['jpype.imports']._jpype, '__name__', 'N/A') if sys.modules['jpype.imports']._jpype else 'None'}) avec notre mock _jpype ({_MOCK_DOT_JPYPE_MODULE_GLOBAL.__class__.__name__})")
+                sys.modules['jpype.imports']._jpype = _MOCK_DOT_JPYPE_MODULE_GLOBAL
+            else:
+                logger.debug("sys.modules['jpype.imports']._jpype est déjà notre mock, pas de patch direct nécessaire.")
+        
+        for module_name in modules_to_handle:
+            if module_name in sys.modules:
+                # Sauvegarder seulement si ce n'est pas déjà notre mock et si pas déjà sauvegardé
+                is_current_module_our_mock = False
+                # Vérifier si le module actuel est l'un de nos mocks globaux pour éviter de le sauvegarder s'il a été mis en place avant la fixture
+                if module_name == 'jpype' and sys.modules[module_name] is _JPYPE_MODULE_MOCK_OBJ_GLOBAL: is_current_module_our_mock = True
+                elif module_name in ['_jpype', 'jpype._core'] and sys.modules[module_name] is _MOCK_DOT_JPYPE_MODULE_GLOBAL: is_current_module_our_mock = True
+                elif module_name == 'jpype.imports' and sys.modules[module_name] is _JPYPE_MODULE_MOCK_OBJ_GLOBAL.imports: is_current_module_our_mock = True
+                elif module_name == 'jpype.config' and sys.modules[module_name] is _JPYPE_MODULE_MOCK_OBJ_GLOBAL.config: is_current_module_our_mock = True
+                
+                if not is_current_module_our_mock and module_name not in original_modules:
+                    original_modules[module_name] = sys.modules.pop(module_name)
+                    logger.debug(f"Supprimé et sauvegardé sys.modules['{module_name}'] (était {original_modules.get(module_name)})")
+                elif module_name in sys.modules and is_current_module_our_mock: # S'il est là mais est notre mock, juste le supprimer
+                    del sys.modules[module_name]
+                    logger.debug(f"Supprimé notre mock préexistant pour sys.modules['{module_name}'].")
+                elif module_name in sys.modules: # S'il est là et déjà sauvegardé (cas de jpype.imports._jpype_original), le supprimer
+                    del sys.modules[module_name]
+                    logger.debug(f"Supprimé sys.modules['{module_name}'] qui avait une sauvegarde prioritaire.")
 
+
+        # Mettre en place nos mocks principaux
         sys.modules['jpype'] = _JPYPE_MODULE_MOCK_OBJ_GLOBAL
         sys.modules['_jpype'] = _MOCK_DOT_JPYPE_MODULE_GLOBAL
+        sys.modules['jpype._core'] = _MOCK_DOT_JPYPE_MODULE_GLOBAL
         sys.modules['jpype.imports'] = _JPYPE_MODULE_MOCK_OBJ_GLOBAL.imports
-        assert sys.modules['jpype'] is _JPYPE_MODULE_MOCK_OBJ_GLOBAL, "Mock JPype global n'a pas été correctement appliqué!"
-        yield
+        sys.modules['jpype.config'] = _JPYPE_MODULE_MOCK_OBJ_GLOBAL.config
         
-        if original_sys_jpype is not None:
-            sys.modules['jpype'] = original_sys_jpype
-        elif 'jpype' in sys.modules:
-             del sys.modules['jpype']
-        if original_sys_dot_jpype is not None:
-            sys.modules['_jpype'] = original_sys_dot_jpype
-        elif '_jpype' in sys.modules:
-            del sys.modules['_jpype']
-        if original_sys_jpype_imports is not None:
-            sys.modules['jpype.imports'] = original_sys_jpype_imports
-        elif 'jpype.imports' in sys.modules:
-            del sys.modules['jpype.imports']
+        # Créer un mock pour jpype.types
+        mock_types_module = MagicMock(name="jpype.types_mock_module_dynamic_in_fixture")
+        for type_name in ["JString", "JArray", "JObject", "JBoolean", "JInt", "JDouble", "JLong", "JFloat", "JShort", "JByte", "JChar"]:
+            if hasattr(_JPYPE_MODULE_MOCK_OBJ_GLOBAL, type_name):
+                setattr(mock_types_module, type_name, getattr(_JPYPE_MODULE_MOCK_OBJ_GLOBAL, type_name))
+            else:
+                setattr(mock_types_module, type_name, MagicMock(name=f"Mock{type_name}_in_fixture"))
+        sys.modules['jpype.types'] = mock_types_module
+        
+        sys.modules['jpype.JProxy'] = MagicMock(name="jpype.JProxy_mock_module_dynamic_in_fixture")
+
+        logger.debug(f"Mock JPype (ID: {id(sys.modules['jpype'])}) mis en place.")
+        logger.debug(f"Mock _jpype/_core (ID: {id(sys.modules['_jpype'])}) mis en place.")
+        logger.debug(f"Mock jpype.imports (ID: {id(sys.modules['jpype.imports'])}) mis en place.")
+        logger.debug(f"Mock jpype.config (ID: {id(sys.modules['jpype.config'])}) mis en place.")
+        logger.debug(f"Mock jpype.types (ID: {id(sys.modules['jpype.types'])}) mis en place.")
+        logger.debug(f"Mock jpype.JProxy (ID: {id(sys.modules['jpype.JProxy'])}) mis en place.")
+
+        yield # Exécution du test
+        
+        logger.debug(f"Nettoyage après test {request.node.name} (utilisation du mock).")
+        
+        # Restaurer _jpype de jpype.imports s'il a été patché directement
+        if 'jpype.imports._jpype_original' in original_modules:
+            # S'assurer que jpype.imports existe et a _jpype avant de tenter la restauration
+            if 'jpype.imports' in sys.modules and hasattr(sys.modules['jpype.imports'], '_jpype'):
+                sys.modules['jpype.imports']._jpype = original_modules['jpype.imports._jpype_original']
+                logger.debug("Restauré jpype.imports._jpype à sa valeur originale.")
+            del original_modules['jpype.imports._jpype_original'] # Retirer de la liste des originaux à restaurer
+
+        # Supprimer les mocks que nous avons mis en place
+        modules_we_set_up_in_fixture = ['jpype', '_jpype', 'jpype._core', 'jpype.imports', 'jpype.config', 'jpype.types', 'jpype.JProxy']
+        for module_name in modules_we_set_up_in_fixture:
+            current_module_in_sys = sys.modules.get(module_name)
+            is_our_specific_mock_from_fixture = False
+            if module_name == 'jpype' and current_module_in_sys is _JPYPE_MODULE_MOCK_OBJ_GLOBAL: is_our_specific_mock_from_fixture = True
+            elif module_name in ['_jpype', 'jpype._core'] and current_module_in_sys is _MOCK_DOT_JPYPE_MODULE_GLOBAL: is_our_specific_mock_from_fixture = True
+            elif module_name == 'jpype.imports' and current_module_in_sys is _JPYPE_MODULE_MOCK_OBJ_GLOBAL.imports: is_our_specific_mock_from_fixture = True
+            elif module_name == 'jpype.config' and current_module_in_sys is _JPYPE_MODULE_MOCK_OBJ_GLOBAL.config: is_our_specific_mock_from_fixture = True
+            elif module_name == 'jpype.types' and current_module_in_sys is mock_types_module: is_our_specific_mock_from_fixture = True
+            elif module_name == 'jpype.JProxy' and isinstance(current_module_in_sys, MagicMock) and hasattr(current_module_in_sys, 'name') and current_module_in_sys.name == "jpype.JProxy_mock_module_dynamic_in_fixture": is_our_specific_mock_from_fixture = True
+            
+            if is_our_specific_mock_from_fixture:
+                if module_name in sys.modules:
+                    del sys.modules[module_name]
+                    logger.debug(f"Supprimé notre mock pour sys.modules['{module_name}']")
+            # Ne pas logger d'avertissement ici si ce n'est pas notre mock, car il pourrait avoir été restauré par original_modules
+
+        # Restaurer les modules originaux qui ont été sauvegardés au début de la section 'else'
+        for module_name, original_module in original_modules.items():
+            sys.modules[module_name] = original_module
+            logger.debug(f"Restauré sys.modules['{module_name}'] à {original_module}")
+        
         logger.info(f"État de JPype restauré après test {request.node.name} (utilisation du mock).")
 
 @pytest.fixture(scope="session")

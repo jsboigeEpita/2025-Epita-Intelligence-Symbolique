@@ -14,8 +14,10 @@ class MockConfig:
     def __init__(self):
         self.jvm_path = None # Initialement None, peut être défini par startJVM
         self.convertStrings = False # Valeur par défaut typique
+        self.onexit = True # Attribut manquant pour la callback atexit
+        self.destroy_jvm = True # Attribut pour la terminaison de la JVM
         # Ajouter d'autres attributs de config si besoin
-        mock_logger.debug(f"MockConfig instance créée. jvm_path: {self.jvm_path}, convertStrings: {self.convertStrings}")
+        mock_logger.debug(f"MockConfig instance créée. jvm_path: {self.jvm_path}, convertStrings: {self.convertStrings}, onexit: {self.onexit}, destroy_jvm: {self.destroy_jvm}")
 
 config = MockConfig()
 mock_logger.info("Instance 'config' de MockConfig créée.")
