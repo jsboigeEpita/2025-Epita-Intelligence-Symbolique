@@ -22,10 +22,10 @@ def test_analysis_runner():
                 print(f"ERREUR: {method} manquant")
                 all_present = False
         
-        return all_present
+        assert all_present is True
     except Exception as e:
         print(f"ERREUR AnalysisRunner: {e}")
-        return False
+        raise  # Re-raise the exception to fail the test
 
 def test_imports_basic():
     """Test imports de base"""
@@ -38,10 +38,11 @@ def test_imports_basic():
         from argumentation_analysis.orchestration import analysis_runner
         print("OK: analysis_runner importé")
         
-        return True
+        # If imports succeed, the test passes implicitly
+        pass
     except Exception as e:
         print(f"ERREUR imports: {e}")
-        return False
+        raise  # Re-raise the exception to fail the test
 
 def main():
     print("=== VALIDATION SIMPLE DES CORRECTIONS ===")
