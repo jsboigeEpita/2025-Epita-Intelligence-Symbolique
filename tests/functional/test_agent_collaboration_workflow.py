@@ -31,7 +31,7 @@ from argumentation_analysis.agents.core.extract.extract_agent import ExtractAgen
 from argumentation_analysis.agents.core.pl.pl_definitions import setup_pl_kernel
 from argumentation_analysis.agents.core.informal.informal_definitions import setup_informal_kernel
 from argumentation_analysis.agents.core.pm.pm_definitions import setup_pm_kernel
-from tests.async_test_case import AsyncTestCase
+# from tests.async_test_case import AsyncTestCase # Suppression de l'import
 
 # Imports spécifiques pour ce test
 from argumentation_analysis.orchestration.hierarchical.strategic.manager import StrategicManager
@@ -45,7 +45,7 @@ from argumentation_analysis.orchestration.hierarchical.operational.adapters.pl_a
 from argumentation_analysis.core.communication import MessageMiddleware, LocalChannel
 
 
-class TestAgentCollaborationWorkflow(AsyncTestCase):
+class TestAgentCollaborationWorkflow: # Suppression de l'héritage AsyncTestCase
     """Tests fonctionnels pour le workflow de collaboration entre agents."""
 
     def setUp(self):
