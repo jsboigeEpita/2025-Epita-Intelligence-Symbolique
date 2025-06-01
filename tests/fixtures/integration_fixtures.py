@@ -37,62 +37,35 @@ def integration_jvm():
         return None
 
     # S'assurer que sys.modules['jpype'] est le vrai module pour cette fixture
-    # Bloc de manipulation de sys.modules pour jpype temporairement désactivé pour investigation de l'Access Violation.
-    # L'objectif est de se comporter comme le script minimal_jpype_test.py qui fonctionne.
-    logger.info("integration_fixtures.py: Bloc de manipulation de sys.modules pour jpype (lignes ~40-64) TEMPORAIREMENT DÉSACTIVÉ.")
-    # original_sys_jpype = sys.modules.get('jpype')
-    # original_sys_jpype_core = sys.modules.get('jpype._core')
-    # original_sys_jpype_imports = sys.modules.get('jpype.imports')
+    original_sys_jpype = sys.modules.get('jpype')
+    original_sys_jpype_core = sys.modules.get('jpype._core')
+    original_sys_jpype_imports = sys.modules.get('jpype.imports')
 
-    # sys.modules['jpype'] = _REAL_JPYPE_MODULE
-    # logger.info(f"integration_fixtures.py: sys.modules['jpype'] (ID: {id(sys.modules['jpype'])}) mis à _REAL_JPYPE_MODULE (ID: {id(_REAL_JPYPE_MODULE)}).")
+    sys.modules['jpype'] = _REAL_JPYPE_MODULE
+    logger.info(f"integration_fixtures.py: sys.modules['jpype'] (ID: {id(sys.modules['jpype'])}) mis à _REAL_JPYPE_MODULE (ID: {id(_REAL_JPYPE_MODULE)}).")
 
-    # if hasattr(_REAL_JPYPE_MODULE, '_jpype'):
-    #     sys.modules['jpype._core'] = _REAL_JPYPE_MODULE._jpype
-    #     logger.info(f"integration_fixtures.py: sys.modules['jpype._core'] mis à _REAL_JPYPE_MODULE._jpype (ID: {id(_REAL_JPYPE_MODULE._jpype)}).")
-    # elif '_jpype' in sys.modules and sys.modules['_jpype'] is not getattr(_REAL_JPYPE_MODULE, '_jpype', None):
-    #      # Si _jpype existe mais n'est pas celui du REAL_JPYPE_MODULE, on le supprime pour éviter confusion
-    #     del sys.modules['_jpype']
-    #     logger.info("integration_fixtures.py: Ancien sys.modules['_jpype'] supprimé car différent de _REAL_JPYPE_MODULE._jpype.")
+    if hasattr(_REAL_JPYPE_MODULE, '_jpype'):
+        sys.modules['jpype._core'] = _REAL_JPYPE_MODULE._jpype
+        logger.info(f"integration_fixtures.py: sys.modules['jpype._core'] mis à _REAL_JPYPE_MODULE._jpype (ID: {id(_REAL_JPYPE_MODULE._jpype)}).")
+    elif '_jpype' in sys.modules and sys.modules['_jpype'] is not getattr(_REAL_JPYPE_MODULE, '_jpype', None):
+         # Si _jpype existe mais n'est pas celui du REAL_JPYPE_MODULE, on le supprime pour éviter confusion
+        del sys.modules['_jpype']
+        logger.info("integration_fixtures.py: Ancien sys.modules['_jpype'] supprimé car différent de _REAL_JPYPE_MODULE._jpype.")
 
-    # if hasattr(_REAL_JPYPE_MODULE, 'imports'):
-    #     sys.modules['jpype.imports'] = _REAL_JPYPE_MODULE.imports
-    #     logger.info(f"integration_fixtures.py: sys.modules['jpype.imports'] mis à _REAL_JPYPE_MODULE.imports (ID: {id(_REAL_JPYPE_MODULE.imports)}).")
-    # elif 'jpype.imports' in sys.modules and sys.modules['jpype.imports'] is not getattr(_REAL_JPYPE_MODULE, 'imports', None):
-    #     del sys.modules['jpype.imports']
-    #     logger.info("integration_fixtures.py: Ancien sys.modules['jpype.imports'] supprimé.")
 
-    # jpype_for_integration = _REAL_JPYPE_MODULE # S'assurer que jpype_for_integration est le vrai module jpype géré par jpype_setup
-    # logger.info(f"integration_fixtures.py: jpype_for_integration assigné à _REAL_JPYPE_MODULE (ID: {id(_REAL_JPYPE_MODULE) if _REAL_JPYPE_MODULE else 'None'})")
+    if hasattr(_REAL_JPYPE_MODULE, 'imports'):
+        sys.modules['jpype.imports'] = _REAL_JPYPE_MODULE.imports
+        logger.info(f"integration_fixtures.py: sys.modules['jpype.imports'] mis à _REAL_JPYPE_MODULE.imports (ID: {id(_REAL_JPYPE_MODULE.imports)}).")
+    elif 'jpype.imports' in sys.modules and sys.modules['jpype.imports'] is not getattr(_REAL_JPYPE_MODULE, 'imports', None):
+        del sys.modules['jpype.imports']
+        logger.info("integration_fixtures.py: Ancien sys.modules['jpype.imports'] supprimé.")
     
     try:
-        # L'import frais de jpype a été retiré. On utilise jpype_for_integration (alias du module).
-        # import jpype as fresh_jpype_instance
-        # logger.info(f"integration_fixtures.py: Utilisation de fresh_jpype_instance (ID: {id(fresh_jpype_instance)}) pour démarrer la JVM.")
-
-        # Bloc de diagnostic (maintenant commenté)
-        # try:
-        #     logger.info(f"integration_fixtures.py: Tentative d'accès à jpype_for_integration. Type: {type(jpype_for_integration)}, ID: {id(jpype_for_integration)}")
-        # except NameError:
-        #     logger.error("integration_fixtures.py: jpype_for_integration n'est PAS DÉFINI juste avant son utilisation !")
-        #     # Tenter d'accéder à la globale du module explicitement pour voir si cela aide au diagnostic
-        #     try:
-        #         import sys
-        #         current_module = sys.modules[__name__]
-        #         if hasattr(current_module, 'jpype_for_integration'):
-        #             logger.info(f"integration_fixtures.py: current_module.jpype_for_integration existe. Type: {type(current_module.jpype_for_integration)}, ID: {id(current_module.jpype_for_integration)}")
-        #         else:
-        #             logger.error("integration_fixtures.py: current_module.jpype_for_integration N'EXISTE PAS.")
-        #     except Exception as e_diag:
-        #         logger.error(f"integration_fixtures.py: Erreur pendant le diagnostic de jpype_for_integration: {e_diag}")
-
-        # Utilisation de _REAL_JPYPE_MODULE
         logger.info(f"integration_fixtures.py: Vérification de la JVM. _REAL_JPYPE_MODULE.isJVMStarted() = {_REAL_JPYPE_MODULE.isJVMStarted()}")
         if not _REAL_JPYPE_MODULE.isJVMStarted():
             logger.info("integration_fixtures.py: JVM non démarrée. Tentative de démarrage.")
             
             jvm_path_to_use = None # Initialisation
-            # Utiliser fresh_jpype_instance pour getDefaultJVMPath si nécessaire
             logger.info("integration_fixtures.py: Tentative de recherche de JAVA_HOME via find_valid_java_home() de core.jvm_setup.")
             java_home_found = find_valid_java_home() # Cette fonction logue déjà beaucoup
 
@@ -193,33 +166,32 @@ def integration_jvm():
 
     finally:
         logger.info("integration_fixtures.py: Nettoyage de la fixture integration_jvm.")
-        # Restaurer les modules originaux - TEMPORAIREMENT DÉSACTIVÉ car les modifications initiales de sys.modules (lignes 40-63) sont désactivées.
-        # if original_sys_jpype is not None:
-        #     sys.modules['jpype'] = original_sys_jpype
-        #     logger.info("integration_fixtures.py: sys.modules['jpype'] restauré.")
-        # elif 'jpype' in sys.modules and sys.modules['jpype'] is _REAL_JPYPE_MODULE :
-        #     # Si on l'a mis et qu'il n'y avait rien, on le retire pour ne pas polluer
-        #     # sauf si c'est le mock global, ce qui ne devrait pas être le cas ici.
-        #     if _REAL_JPYPE_MODULE is not _JPYPE_MODULE_MOCK_OBJ_GLOBAL :
-        #          del sys.modules['jpype']
-        #          logger.info("integration_fixtures.py: sys.modules['jpype'] (notre _REAL_JPYPE_MODULE) supprimé car rien n'était là avant.")
+        # Restaurer les modules originaux
+        if original_sys_jpype is not None:
+            sys.modules['jpype'] = original_sys_jpype
+            logger.info("integration_fixtures.py: sys.modules['jpype'] restauré.")
+        elif 'jpype' in sys.modules and sys.modules['jpype'] is _REAL_JPYPE_MODULE :
+            # Si on l'a mis et qu'il n'y avait rien, on le retire pour ne pas polluer
+            # sauf si c'est le mock global, ce qui ne devrait pas être le cas ici.
+            if _REAL_JPYPE_MODULE is not _JPYPE_MODULE_MOCK_OBJ_GLOBAL :
+                 del sys.modules['jpype']
+                 logger.info("integration_fixtures.py: sys.modules['jpype'] (notre _REAL_JPYPE_MODULE) supprimé car rien n'était là avant.")
 
-        # if original_sys_jpype_core is not None:
-        #     sys.modules['jpype._core'] = original_sys_jpype_core
-        #     logger.info("integration_fixtures.py: sys.modules['jpype._core'] restauré.")
-        # elif 'jpype._core' in sys.modules and hasattr(_REAL_JPYPE_MODULE, '_jpype') and sys.modules['jpype._core'] is _REAL_JPYPE_MODULE._jpype:
-        #     if _REAL_JPYPE_MODULE._jpype is not getattr(_JPYPE_MODULE_MOCK_OBJ_GLOBAL, '_jpype', None): # Ne pas supprimer le mock global par erreur
-        #         del sys.modules['jpype._core']
-        #         logger.info("integration_fixtures.py: sys.modules['jpype._core'] (notre _REAL_JPYPE_MODULE._jpype) supprimé.")
+        if original_sys_jpype_core is not None:
+            sys.modules['jpype._core'] = original_sys_jpype_core
+            logger.info("integration_fixtures.py: sys.modules['jpype._core'] restauré.")
+        elif 'jpype._core' in sys.modules and hasattr(_REAL_JPYPE_MODULE, '_jpype') and sys.modules['jpype._core'] is _REAL_JPYPE_MODULE._jpype:
+            if _REAL_JPYPE_MODULE._jpype is not getattr(_JPYPE_MODULE_MOCK_OBJ_GLOBAL, '_jpype', None): # Ne pas supprimer le mock global par erreur
+                del sys.modules['jpype._core']
+                logger.info("integration_fixtures.py: sys.modules['jpype._core'] (notre _REAL_JPYPE_MODULE._jpype) supprimé.")
         
-        # if original_sys_jpype_imports is not None:
-        #     sys.modules['jpype.imports'] = original_sys_jpype_imports
-        #     logger.info("integration_fixtures.py: sys.modules['jpype.imports'] restauré.")
-        # elif 'jpype.imports' in sys.modules and hasattr(_REAL_JPYPE_MODULE, 'imports') and sys.modules['jpype.imports'] is _REAL_JPYPE_MODULE.imports:
-        #     if _REAL_JPYPE_MODULE.imports is not getattr(_JPYPE_MODULE_MOCK_OBJ_GLOBAL, 'imports', None):
-        #         del sys.modules['jpype.imports']
-        #         logger.info("integration_fixtures.py: sys.modules['jpype.imports'] (notre _REAL_JPYPE_MODULE.imports) supprimé.")
-        logger.info("integration_fixtures.py: Restauration de sys.modules dans finally TEMPORAIREMENT DÉSACTIVÉE.")
+        if original_sys_jpype_imports is not None:
+            sys.modules['jpype.imports'] = original_sys_jpype_imports
+            logger.info("integration_fixtures.py: sys.modules['jpype.imports'] restauré.")
+        elif 'jpype.imports' in sys.modules and hasattr(_REAL_JPYPE_MODULE, 'imports') and sys.modules['jpype.imports'] is _REAL_JPYPE_MODULE.imports:
+            if _REAL_JPYPE_MODULE.imports is not getattr(_JPYPE_MODULE_MOCK_OBJ_GLOBAL, 'imports', None):
+                del sys.modules['jpype.imports']
+                logger.info("integration_fixtures.py: sys.modules['jpype.imports'] (notre _REAL_JPYPE_MODULE.imports) supprimé.")
         logger.info("integration_fixtures.py: Fin de la fixture integration_jvm.")
 
 
@@ -229,15 +201,15 @@ def dung_classes(integration_jvm):
     if integration_jvm is None: pytest.skip("JVM non disponible pour dung_classes.")
     JClass = integration_jvm.JClass
     return {
-        "DungTheory": JClass("net.sf.tweety.arg.dung.DungTheory"),
-        "Argument": JClass("net.sf.tweety.arg.dung.syntax.Argument"),
-        "Attack": JClass("net.sf.tweety.arg.dung.syntax.Attack"),
-        "StableExtension": JClass("net.sf.tweety.arg.dung.semantics.StableExtension"),
-        "PreferredExtension": JClass("net.sf.tweety.arg.dung.semantics.PreferredExtension"),
-        "GroundedExtension": JClass("net.sf.tweety.arg.dung.semantics.GroundedExtension"),
-        "CompleteExtension": JClass("net.sf.tweety.arg.dung.semantics.CompleteExtension"),
-        "AbstractExtensionReasoner": JClass("net.sf.tweety.arg.dung.reasoner.AbstractExtensionReasoner"),
-        "SimpleDungReasoner": JClass("net.sf.tweety.arg.dung.reasoner.SimpleDungReasoner")
+        "DungTheory": JClass("org.tweetyproject.arg.dung.DungTheory"),
+        "Argument": JClass("org.tweetyproject.arg.dung.syntax.Argument"),
+        "Attack": JClass("org.tweetyproject.arg.dung.syntax.Attack"),
+        "StableExtension": JClass("org.tweetyproject.arg.dung.semantics.StableExtension"),
+        "PreferredExtension": JClass("org.tweetyproject.arg.dung.semantics.PreferredExtension"),
+        "GroundedExtension": JClass("org.tweetyproject.arg.dung.semantics.GroundedExtension"),
+        "CompleteExtension": JClass("org.tweetyproject.arg.dung.semantics.CompleteExtension"),
+        "AbstractExtensionReasoner": JClass("org.tweetyproject.arg.dung.reasoner.AbstractExtensionReasoner"),
+        "SimpleDungReasoner": JClass("org.tweetyproject.arg.dung.reasoner.SimpleDungReasoner")
     }
 
 @pytest.fixture(scope="session")
@@ -353,13 +325,13 @@ def tweety_qbf_classes(integration_jvm):
     if integration_jvm is None: pytest.skip("JVM non disponible pour tweety_qbf_classes.")
     JClass = integration_jvm.JClass
     return {
-        "QuantifiedBooleanFormula": JClass("net.sf.tweety.logics.qbf.syntax.QuantifiedBooleanFormula"),
-        "QbfNode": JClass("net.sf.tweety.logics.qbf.syntax.QbfNode"),
-        "ExistsQuantifiedFormula": JClass("net.sf.tweety.logics.qbf.syntax.ExistsQuantifiedFormula"),
-        "ForAllQuantifiedFormula": JClass("net.sf.tweety.logics.qbf.syntax.ForAllQuantifiedFormula"),
-        "QbfReasoner": JClass("net.sf.tweety.logics.qbf.reasoner.QbfReasoner"), # Interface
-        "CAQEReasoner": JClass("net.sf.tweety.logics.qbf.reasoner.CAQEReasoner"),
-        "QbfParser": JClass("net.sf.tweety.logics.qbf.parser.QbfParser")
+        "QuantifiedBooleanFormula": JClass("org.tweetyproject.logics.qbf.syntax.QuantifiedBooleanFormula"),
+        "QbfNode": JClass("org.tweetyproject.logics.qbf.syntax.QbfNode"),
+        "ExistsQuantifiedFormula": JClass("org.tweetyproject.logics.qbf.syntax.ExistsQuantifiedFormula"),
+        "ForAllQuantifiedFormula": JClass("org.tweetyproject.logics.qbf.syntax.ForAllQuantifiedFormula"),
+        "QbfReasoner": JClass("org.tweetyproject.logics.qbf.reasoner.QbfReasoner"), # Interface
+        "CAQEReasoner": JClass("org.tweetyproject.logics.qbf.reasoner.CAQEReasoner"),
+        "QbfParser": JClass("org.tweetyproject.logics.qbf.parser.QbfParser")
     }
 @pytest.fixture(scope="session") # Changé scope à session pour correspondre aux autres fixtures Tweety
 def belief_revision_classes(integration_jvm):
@@ -398,32 +370,32 @@ def belief_revision_classes(integration_jvm):
             loader_to_use = None
 
         pl_classes = {
-            "PlFormula": jpype_instance.JClass("net.sf.tweety.logics.pl.syntax.PlFormula", loader=loader_to_use),
-            "PlBeliefSet": jpype_instance.JClass("net.sf.tweety.logics.pl.syntax.PlBeliefSet", loader=loader_to_use),
-            "PlParser": jpype_instance.JClass("net.sf.tweety.logics.pl.parser.PlParser", loader=loader_to_use),
-            "SimplePlReasoner": jpype_instance.JClass("net.sf.tweety.logics.pl.reasoner.SimplePlReasoner", loader=loader_to_use),
-            "Negation": jpype_instance.JClass("net.sf.tweety.logics.pl.syntax.Negation", loader=loader_to_use),
-            "PlSignature": jpype_instance.JClass("net.sf.tweety.logics.pl.syntax.PlSignature", loader=loader_to_use),
+            "PlFormula": jpype_instance.JClass("org.tweetyproject.logics.pl.syntax.PlFormula", loader=loader_to_use),
+            "PlBeliefSet": jpype_instance.JClass("org.tweetyproject.logics.pl.syntax.PlBeliefSet", loader=loader_to_use),
+            "PlParser": jpype_instance.JClass("org.tweetyproject.logics.pl.parser.PlParser", loader=loader_to_use),
+            "SimplePlReasoner": jpype_instance.JClass("org.tweetyproject.logics.pl.reasoner.SimplePlReasoner", loader=loader_to_use),
+            "Negation": jpype_instance.JClass("org.tweetyproject.logics.pl.syntax.Negation", loader=loader_to_use),
+            "PlSignature": jpype_instance.JClass("org.tweetyproject.logics.pl.syntax.PlSignature", loader=loader_to_use),
         }
         revision_ops = {
-            "KernelContractionOperator": jpype_instance.JClass("net.sf.tweety.beliefdynamics.kernels.KernelContractionOperator", loader=loader_to_use),
-            "RandomIncisionFunction": jpype_instance.JClass("net.sf.tweety.beliefdynamics.kernels.RandomIncisionFunction", loader=loader_to_use),
-            "DefaultMultipleBaseExpansionOperator": jpype_instance.JClass("net.sf.tweety.beliefdynamics.DefaultMultipleBaseExpansionOperator", loader=loader_to_use),
-            "LeviMultipleBaseRevisionOperator": jpype_instance.JClass("net.sf.tweety.beliefdynamics.LeviMultipleBaseRevisionOperator", loader=loader_to_use),
+            "KernelContractionOperator": jpype_instance.JClass("org.tweetyproject.beliefdynamics.kernels.KernelContractionOperator", loader=loader_to_use),
+            "RandomIncisionFunction": jpype_instance.JClass("org.tweetyproject.beliefdynamics.kernels.RandomIncisionFunction", loader=loader_to_use),
+            "DefaultMultipleBaseExpansionOperator": jpype_instance.JClass("org.tweetyproject.beliefdynamics.DefaultMultipleBaseExpansionOperator", loader=loader_to_use),
+            "LeviMultipleBaseRevisionOperator": jpype_instance.JClass("org.tweetyproject.beliefdynamics.LeviMultipleBaseRevisionOperator", loader=loader_to_use),
         }
         crmas_classes = {
-            "CrMasBeliefSet": jpype_instance.JClass("net.sf.tweety.beliefdynamics.mas.CrMasBeliefSet", loader=loader_to_use),
-            "InformationObject": jpype_instance.JClass("net.sf.tweety.beliefdynamics.mas.InformationObject", loader=loader_to_use),
-            "CrMasRevisionWrapper": jpype_instance.JClass("net.sf.tweety.beliefdynamics.mas.CrMasRevisionWrapper", loader=loader_to_use),
-            "CrMasSimpleRevisionOperator": jpype_instance.JClass("net.sf.tweety.beliefdynamics.operators.CrMasSimpleRevisionOperator", loader=loader_to_use),
-            "CrMasArgumentativeRevisionOperator": jpype_instance.JClass("net.sf.tweety.beliefdynamics.operators.CrMasArgumentativeRevisionOperator", loader=loader_to_use),
-            "DummyAgent": jpype_instance.JClass("net.sf.tweety.agents.DummyAgent", loader=loader_to_use),
-            "Order": jpype_instance.JClass("net.sf.tweety.comparator.Order", loader=loader_to_use),
+            "CrMasBeliefSet": jpype_instance.JClass("org.tweetyproject.beliefdynamics.mas.CrMasBeliefSet", loader=loader_to_use),
+            "InformationObject": jpype_instance.JClass("org.tweetyproject.beliefdynamics.mas.InformationObject", loader=loader_to_use),
+            "CrMasRevisionWrapper": jpype_instance.JClass("org.tweetyproject.beliefdynamics.mas.CrMasRevisionWrapper", loader=loader_to_use),
+            "CrMasSimpleRevisionOperator": jpype_instance.JClass("org.tweetyproject.beliefdynamics.operators.CrMasSimpleRevisionOperator", loader=loader_to_use),
+            "CrMasArgumentativeRevisionOperator": jpype_instance.JClass("org.tweetyproject.beliefdynamics.operators.CrMasArgumentativeRevisionOperator", loader=loader_to_use),
+            "DummyAgent": jpype_instance.JClass("org.tweetyproject.agents.DummyAgent", loader=loader_to_use),
+            "Order": jpype_instance.JClass("org.tweetyproject.comparator.Order", loader=loader_to_use),
         }
         inconsistency_measures = {
-            "ContensionInconsistencyMeasure": jpype_instance.JClass("net.sf.tweety.logics.pl.analysis.ContensionInconsistencyMeasure", loader=loader_to_use),
-            "NaiveMusEnumerator": jpype_instance.JClass("net.sf.tweety.logics.commons.analysis.NaiveMusEnumerator", loader=loader_to_use),
-            "SatSolver": jpype_instance.JClass("net.sf.tweety.logics.pl.sat.SatSolver", loader=loader_to_use),
+            "ContensionInconsistencyMeasure": jpype_instance.JClass("org.tweetyproject.logics.pl.analysis.ContensionInconsistencyMeasure", loader=loader_to_use),
+            "NaiveMusEnumerator": jpype_instance.JClass("org.tweetyproject.logics.commons.analysis.NaiveMusEnumerator", loader=loader_to_use),
+            "SatSolver": jpype_instance.JClass("org.tweetyproject.logics.pl.sat.SatSolver", loader=loader_to_use),
         }
         return {**pl_classes, **revision_ops, **crmas_classes, **inconsistency_measures}
     except jpype_instance.JException as e: pytest.fail(f"Echec import classes Belief Revision: {e.stacktrace() if hasattr(e, 'stacktrace') else str(e)}")
@@ -436,16 +408,16 @@ def dialogue_classes(integration_jvm):
     if not jpype_instance or not jpype_instance.isJVMStarted(): pytest.skip("JVM non démarrée ou jpype_instance None (dialogue_classes).")
     try:
         return {
-            "ArgumentationAgent": jpype_instance.JClass("net.sf.tweety.agents.dialogues.ArgumentationAgent"),
-            "GroundedAgent": jpype_instance.JClass("net.sf.tweety.agents.dialogues.GroundedAgent"),
-            "OpponentModel": jpype_instance.JClass("net.sf.tweety.agents.dialogues.OpponentModel"),
-            "Dialogue": jpype_instance.JClass("net.sf.tweety.agents.dialogues.Dialogue"),
-            "DialogueTrace": jpype_instance.JClass("net.sf.tweety.agents.dialogues.DialogueTrace"),
-            "DialogueResult": jpype_instance.JClass("net.sf.tweety.agents.dialogues.DialogueResult"),
-            "PersuasionProtocol": jpype_instance.JClass("net.sf.tweety.agents.dialogues.PersuasionProtocol"),
-            "Position": jpype_instance.JClass("net.sf.tweety.agents.dialogues.Position"),
-            "SimpleBeliefSet": jpype_instance.JClass("net.sf.tweety.logics.commons.syntax.SimpleBeliefSet"), 
-            "DefaultStrategy": jpype_instance.JClass("net.sf.tweety.agents.dialogues.strategies.DefaultStrategy"),
+            "ArgumentationAgent": jpype_instance.JClass("org.tweetyproject.agents.dialogues.ArgumentationAgent"),
+            "GroundedAgent": jpype_instance.JClass("org.tweetyproject.agents.dialogues.GroundedAgent"),
+            "OpponentModel": jpype_instance.JClass("org.tweetyproject.agents.dialogues.OpponentModel"),
+            "Dialogue": jpype_instance.JClass("org.tweetyproject.agents.dialogues.Dialogue"),
+            "DialogueTrace": jpype_instance.JClass("org.tweetyproject.agents.dialogues.DialogueTrace"),
+            "DialogueResult": jpype_instance.JClass("org.tweetyproject.agents.dialogues.DialogueResult"),
+            "PersuasionProtocol": jpype_instance.JClass("org.tweetyproject.agents.dialogues.PersuasionProtocol"),
+            "Position": jpype_instance.JClass("org.tweetyproject.agents.dialogues.Position"),
+            "SimpleBeliefSet": jpype_instance.JClass("org.tweetyproject.logics.commons.syntax.SimpleBeliefSet"),
+            "DefaultStrategy": jpype_instance.JClass("org.tweetyproject.agents.dialogues.strategies.DefaultStrategy"),
         }
     except jpype_instance.JException as e: pytest.fail(f"Echec import classes Dialogue: {e.stacktrace() if hasattr(e, 'stacktrace') else str(e)}")
     except Exception as e_py: pytest.fail(f"Erreur Python (dialogue_classes): {str(e_py)}")
