@@ -163,28 +163,38 @@ cd 2025-Epita-Intelligence-Symbolique
 
 #### Prérequis
 
-- **Python 3.9+** : Nécessaire pour exécuter le code Python
-- **Java JDK 11+** : Requis pour l'intégration avec Tweety via JPype
-- **Pip** : Gestionnaire de paquets Python
+- **Conda (Miniconda ou Anaconda)** : Nécessaire pour la gestion de l'environnement et des dépendances.
+- **Git** : Pour cloner le dépôt.
 
-#### Installation des dépendances Python
+#### Installation de l'environnement Conda
 
-Naviguez vers le dossier principal du projet et installez les dépendances :
+1.  **Assurez-vous que Conda est installé** et configuré dans votre PATH.
+    Vous pouvez télécharger Miniconda (une version légère de Conda) depuis [https://docs.conda.io/en/latest/miniconda.html](https://docs.conda.io/en/latest/miniconda.html).
 
-```bash
-cd argumentation_analysis
-pip install -r requirements.txt
-```
+2.  **Exécutez le script de configuration de l'environnement** à la racine du projet cloné :
+    Ouvrez un terminal PowerShell et exécutez :
+    ```powershell
+    .\setup_project_env.ps1
+    ```
+    Ce script va :
+    * Vérifier la présence de Conda.
+    * Créer (ou mettre à jour) l'environnement Conda nommé `projet-is` à partir du fichier [`environment.yml`](environment.yml:1). Cet environnement inclut Python, Clingo, JPype1 et toutes les autres dépendances nécessaires.
+    * Télécharger et configurer un JDK portable si nécessaire.
+    * Configurer le fichier `.env`.
+    * Vous donner des instructions pour activer l'environnement.
 
-### 4. Configurer les variables d'environnement
+3.  **Activez l'environnement Conda** :
+    Dans votre terminal, exécutez :
+    ```bash
+    conda activate projet-is
+    ```
+    Votre prompt devrait maintenant indiquer `(projet-is)`.
 
-Créez un fichier `.env` dans le dossier `argumentation_analysis` en vous basant sur le fichier `.env.example` :
+### 4. Configurer les variables d'environnement (si nécessaire au-delà du setup)
 
-```bash
-cp .env.example .env
-```
-
-Puis modifiez le fichier `.env` avec vos propres informations (clés API, etc.).
+Le script [`setup_project_env.ps1`](setup_project_env.ps1:1) crée et configure un fichier `.env` à la racine du projet à partir de `.env.template`.
+Vérifiez ce fichier `.env` et ajustez les valeurs si nécessaire (par exemple, les clés API pour `semantic-kernel` si vous les utilisez).
+Le `JAVA_HOME` est normalement configuré automatiquement par le script.
 
 ### 5. Lancer l'application
 
