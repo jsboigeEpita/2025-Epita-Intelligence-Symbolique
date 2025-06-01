@@ -12,21 +12,15 @@ __version__ = '1.0.0'
 from . import paths
 from . import core
 
-# Utilisation d'importations conditionnelles pour éviter les importations circulaires
-def _lazy_import():
-    """Importe les modules de manière paresseuse pour éviter les importations circulaires."""
-    global agents, orchestration, ui, utils, examples, services, scripts
-    
-    import argumentation_analysis.agents as agents
-    import argumentation_analysis.orchestration as orchestration
-    import argumentation_analysis.ui as ui
-    import argumentation_analysis.utils as utils
-    import argumentation_analysis.examples as examples
-    # import argumentation_analysis.services as services
-    import argumentation_analysis.scripts as scripts
-
-# Appeler la fonction d'importation paresseuse
-_lazy_import()
+# Remplacement du lazy import par des imports directs pour débogage des tests
+from . import agents
+from . import orchestration
+# from . import ui # Re-commenté pour éviter le blocage
+from . import utils
+from . import examples
+from . import services
+from . import scripts
+print("INFO [ARG_ANALYSIS_INIT]: Import de 'ui' re-commenté dans argumentation_analysis/__init__.py.")
 
 # Exposer certaines fonctions couramment utilisées
 try:

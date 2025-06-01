@@ -1,6 +1,6 @@
 # Rapport d'analyse complet des agents d'analyse rhétorique
 
-Date: 2025-05-29 17:20:07
+Date: 2025-06-01 08:08:58
 
 ## Résumé exécutif
 
@@ -17,7 +17,9 @@ Ce rapport présente une synthèse complète des résultats des analyses rhétor
 
 ### Corpus analysés
 
-- **Autres corpus**: 1 extraits analysés avec les agents de base, 1 extraits analysés avec les agents avancés
+- **Autres corpus**: 5 extraits analysés avec les agents de base, 1 extraits analysés avec les agents avancés
+- **Discours d'Hitler**: 10 extraits analysés avec les agents de base, 0 extraits analysés avec les agents avancés
+- **Débats Lincoln-Douglas**: 10 extraits analysés avec les agents de base, 0 extraits analysés avec les agents avancés
 
 ### Agents évalués
 
@@ -54,7 +56,7 @@ Les agents ont été évalués sur les critères suivants:
 
 | Agent | Sophismes détectés | Score d'efficacité |
 |-------|-------------------|-------------------|
-| contextual_fallacy_detector | 12 | 12.00 |
+| contextual_fallacy_detector | 7 | 1.40 |
 | argument_coherence_evaluator | 0 | 0.00 |
 | semantic_argument_analyzer | 0 | 0.00 |
 
@@ -72,6 +74,42 @@ Les agents ont été évalués sur les critères suivants:
 - Adapter le choix des agents en fonction du type de contenu spécifique
 - Combiner les agents de base et avancés pour une analyse complète
 - Évaluer la pertinence des agents au cas par cas
+
+### Discours d'Hitler
+
+**Agent le plus efficace**: contextual_fallacy_detector
+
+#### Agents de base
+
+| Agent | Sophismes détectés | Score d'efficacité |
+|-------|-------------------|-------------------|
+| contextual_fallacy_detector | 13 | 1.30 |
+| argument_coherence_evaluator | 0 | 0.00 |
+| semantic_argument_analyzer | 0 | 0.00 |
+
+#### Recommandations spécifiques
+
+- Utiliser l'agent EnhancedComplexFallacyAnalyzer pour détecter les sophismes composites fréquents dans les discours de propagande
+- Combiner avec l'agent EnhancedFallacySeverityEvaluator pour évaluer la gravité des sophismes dans ce contexte historique
+- Développer un agent spécifique pour l'analyse de la rhétorique totalitaire
+
+### Débats Lincoln-Douglas
+
+**Agent le plus efficace**: contextual_fallacy_detector
+
+#### Agents de base
+
+| Agent | Sophismes détectés | Score d'efficacité |
+|-------|-------------------|-------------------|
+| contextual_fallacy_detector | 25 | 2.50 |
+| argument_coherence_evaluator | 0 | 0.00 |
+| semantic_argument_analyzer | 0 | 0.00 |
+
+#### Recommandations spécifiques
+
+- Privilégier l'agent EnhancedRhetoricalResultAnalyzer pour une analyse globale de la qualité argumentative
+- Utiliser l'agent ArgumentCoherenceEvaluator pour évaluer la cohérence des arguments dans ce contexte de débat formel
+- Développer un agent spécifique pour l'analyse des débats politiques historiques
 
 ## Visualisations
 
