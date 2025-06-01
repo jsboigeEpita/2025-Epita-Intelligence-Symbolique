@@ -6,6 +6,26 @@ import pytest # Importé plus haut pour être disponible globalement
 import jpype
 import jpype.imports # Assurer que jpype.imports est disponible
 
+# Charger .env le plus tôt possible, dès l'import de ce conftest.py racine
+# Ceci est fait avant que pytest ne charge les conftest.py des sous-répertoires ou les modules de test.
+_DOTENV_LOADED_SUCCESSFULLY = False
+try:
+    from dotenv import load_dotenv
+    _project_root_for_dotenv_early = os.path.dirname(os.path.abspath(__file__))
+    _dotenv_path_early = os.path.join(_project_root_for_dotenv_early, '.env')
+    print(f"INFO: conftest.py (RACINE) [NIVEAU SUPÉRIEUR]: Tentative de chargement du .env depuis: {_dotenv_path_early}")
+    _loaded_early = load_dotenv(dotenv_path=_dotenv_path_early, override=True)
+    if _loaded_early:
+        _DOTENV_LOADED_SUCCESSFULLY = True
+        print(f"INFO: conftest.py (RACINE) [NIVEAU SUPÉRIEUR]: .env chargé. USE_REAL_JPYPE='{os.getenv('USE_REAL_JPYPE')}'")
+    else:
+        print(f"INFO: conftest.py (RACINE) [NIVEAU SUPÉRIEUR]: .env non trouvé ou vide à {_dotenv_path_early}.")
+except ImportError:
+    print("ERREUR: conftest.py (RACINE) [NIVEAU SUPÉRIEUR]: python-dotenv non installé. Impossible de charger .env.")
+    print("INFO: conftest.py (RACINE) [NIVEAU SUPÉRIEUR]: Veuillez installer via: pip install -r requirements.txt")
+except Exception as e_dotenv_early:
+    print(f"ERREUR: conftest.py (RACINE) [NIVEAU SUPÉRIEUR]: Erreur lors du chargement de .env: {e_dotenv_early}")
+
 # Ajout précoce du chemin pour trouver argumentation_analysis
 current_script_dir_for_path = os.path.dirname(os.path.abspath(__file__))
 project_root_for_path = current_script_dir_for_path
