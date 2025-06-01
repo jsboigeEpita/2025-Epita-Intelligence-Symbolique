@@ -409,6 +409,90 @@
       "is_correct": true,
       "feedback_text": "Bonne détection",
       "timestamp": "2025-06-01T03:44:07.648372"
+    },
+    {
+      "fallacy_id": "fallacy_0",
+      "is_correct": true,
+      "feedback_text": "Bonne détection",
+      "timestamp": "2025-06-01T03:52:56.930729"
+    },
+    {
+      "fallacy_id": "fallacy_0",
+      "is_correct": true,
+      "feedback_text": "Bonne détection",
+      "timestamp": "2025-06-01T03:56:01.951330"
+    },
+    {
+      "fallacy_id": "fallacy_0",
+      "is_correct": true,
+      "feedback_text": "Bonne détection",
+      "timestamp": "2025-06-01T03:59:07.172819"
+    },
+    {
+      "fallacy_id": "fallacy_0",
+      "is_correct": true,
+      "feedback_text": "Bonne détection",
+      "timestamp": "2025-06-01T04:02:24.784687"
+    },
+    {
+      "fallacy_id": "fallacy_0",
+      "is_correct": true,
+      "feedback_text": "Bonne détection",
+      "timestamp": "2025-06-01T04:06:32.394976"
+    },
+    {
+      "fallacy_id": "fallacy_0",
+      "is_correct": true,
+      "feedback_text": "Bonne détection",
+      "timestamp": "2025-06-01T04:35:04.645369"
+    },
+    {
+      "fallacy_id": "fallacy_0",
+      "is_correct": true,
+      "feedback_text": "Bonne détection",
+      "timestamp": "2025-06-01T04:35:54.905692"
+    },
+    {
+      "fallacy_id": "fallacy_0",
+      "is_correct": true,
+      "feedback_text": "Bonne détection",
+      "timestamp": "2025-06-01T04:38:52.720549"
+    },
+    {
+      "fallacy_id": "fallacy_0",
+      "is_correct": true,
+      "feedback_text": "Bonne détection",
+      "timestamp": "2025-06-01T04:56:57.456422"
+    },
+    {
+      "fallacy_id": "fallacy_0",
+      "is_correct": true,
+      "feedback_text": "Bonne détection",
+      "timestamp": "2025-06-01T04:57:25.925424"
+    },
+    {
+      "fallacy_id": "fallacy_0",
+      "is_correct": true,
+      "feedback_text": "Bonne détection",
+      "timestamp": "2025-06-01T04:57:59.170284"
+    },
+    {
+      "fallacy_id": "fallacy_0",
+      "is_correct": true,
+      "feedback_text": "Bonne détection",
+      "timestamp": "2025-06-01T05:24:07.718800"
+    },
+    {
+      "fallacy_id": "fallacy_0",
+      "is_correct": true,
+      "feedback_text": "Bonne détection",
+      "timestamp": "2025-06-01T05:25:43.068588"
+    },
+    {
+      "fallacy_id": "fallacy_0",
+      "is_correct": true,
+      "feedback_text": "Bonne détection",
+      "timestamp": "2025-06-01T05:25:53.936058"
     }
   ],
   "confidence_adjustments": {
