@@ -123,74 +123,74 @@ def _install_numpy_mock_immediately():
         # original_numpy = sys.modules.get('numpy')
 
         # Créer un dictionnaire à partir de tous les attributs de numpy_mock
-            mock_numpy_attrs = {attr: getattr(numpy_mock, attr) for attr in dir(numpy_mock) if not attr.startswith('__')}
-            # S'assurer que __version__ est bien celle du mock
-            mock_numpy_attrs['__version__'] = numpy_mock.__version__ if hasattr(numpy_mock, '__version__') else '1.24.3.mock'
-            
-            mock_numpy_module = type('numpy', (), mock_numpy_attrs)
-            mock_numpy_module.__path__ = [] # Indiquer que c'est un package
-            sys.modules['numpy'] = mock_numpy_module
-            
-            # Exposer explicitement les sous-modules nécessaires qui pourraient ne pas être des attributs directs
-            if hasattr(numpy_mock, 'typing'):
-                sys.modules['numpy.typing'] = numpy_mock.typing
-            if hasattr(numpy_mock, '_core'):
-                sys.modules['numpy._core'] = numpy_mock._core
-            if hasattr(numpy_mock, 'core'):
-                sys.modules['numpy.core'] = numpy_mock.core
-            
-            # Création explicite du mock pour numpy.rec et numpy.rec.recarray
-            _mock_rec_submodule = type('rec', (), {})
-            _mock_rec_submodule.recarray = type('recarray', (), {}) # Un type simple suffit pour isinstance
+        mock_numpy_attrs = {attr: getattr(numpy_mock, attr) for attr in dir(numpy_mock) if not attr.startswith('__')}
+        # S'assurer que __version__ est bien celle du mock
+        mock_numpy_attrs['__version__'] = numpy_mock.__version__ if hasattr(numpy_mock, '__version__') else '1.24.3.mock'
+        
+        mock_numpy_module = type('numpy', (), mock_numpy_attrs)
+        mock_numpy_module.__path__ = [] # Indiquer que c'est un package
+        sys.modules['numpy'] = mock_numpy_module
+        
+        # Exposer explicitement les sous-modules nécessaires qui pourraient ne pas être des attributs directs
+        if hasattr(numpy_mock, 'typing'):
+            sys.modules['numpy.typing'] = numpy_mock.typing
+        if hasattr(numpy_mock, '_core'):
+            sys.modules['numpy._core'] = numpy_mock._core
+        if hasattr(numpy_mock, 'core'):
+            sys.modules['numpy.core'] = numpy_mock.core
+        
+        # Création explicite du mock pour numpy.rec et numpy.rec.recarray
+        _mock_rec_submodule = type('rec', (), {})
+        _mock_rec_submodule.recarray = type('recarray', (), {}) # Un type simple suffit pour isinstance
 
-            # Mettre le sous-module mocké dans sys.modules pour les imports directs `from numpy import rec` ou `import numpy.rec`
-            sys.modules['numpy.rec'] = _mock_rec_submodule
+        # Mettre le sous-module mocké dans sys.modules pour les imports directs `from numpy import rec` ou `import numpy.rec`
+        sys.modules['numpy.rec'] = _mock_rec_submodule
 
-            # Attacher le sous-module mocké comme attribut au module numpy principal mocké (mock_numpy_module)
-            # mock_numpy_module est déjà sys.modules['numpy'] à ce stade.
-            if 'numpy' in sys.modules and sys.modules['numpy'] is mock_numpy_module:
-                mock_numpy_module.rec = _mock_rec_submodule
-            else:
-                # Fallback si mock_numpy_module n'est pas (encore) sys.modules['numpy'] ou a été écrasé.
-                # Cela ne devrait pas arriver si la logique est correcte.
-                print("AVERTISSEMENT: mock_numpy_module n'était pas sys.modules['numpy'] lors de l'attribution de .rec")
-                # Tentative de l'assigner quand même si sys.modules['numpy'] existe et est un mock
-                if 'numpy' in sys.modules and hasattr(sys.modules['numpy'], '__dict__'): # Check si c'est un objet modifiable
-                    setattr(sys.modules['numpy'], 'rec', _mock_rec_submodule)
+        # Attacher le sous-module mocké comme attribut au module numpy principal mocké (mock_numpy_module)
+        # mock_numpy_module est déjà sys.modules['numpy'] à ce stade.
+        if 'numpy' in sys.modules and sys.modules['numpy'] is mock_numpy_module:
+            mock_numpy_module.rec = _mock_rec_submodule
+        else:
+            # Fallback si mock_numpy_module n'est pas (encore) sys.modules['numpy'] ou a été écrasé.
+            # Cela ne devrait pas arriver si la logique est correcte.
+            print("AVERTISSEMENT: mock_numpy_module n'était pas sys.modules['numpy'] lors de l'attribution de .rec")
+            # Tentative de l'assigner quand même si sys.modules['numpy'] existe et est un mock
+            if 'numpy' in sys.modules and hasattr(sys.modules['numpy'], '__dict__'): # Check si c'est un objet modifiable
+                setattr(sys.modules['numpy'], 'rec', _mock_rec_submodule)
 
-            print(f"INFO: Mock numpy.rec configuré. sys.modules['numpy.rec'] (ID: {id(sys.modules.get('numpy.rec'))}), mock_numpy_module.rec (ID: {id(getattr(mock_numpy_module, 'rec', None))})")
+        print(f"INFO: Mock numpy.rec configuré. sys.modules['numpy.rec'] (ID: {id(sys.modules.get('numpy.rec'))}), mock_numpy_module.rec (ID: {id(getattr(mock_numpy_module, 'rec', None))})")
 
-            # Assurer que les multiarray sont là si _core/core les ont
-            if hasattr(numpy_mock, '_core') and hasattr(numpy_mock._core, 'multiarray'):
-                 sys.modules['numpy._core.multiarray'] = numpy_mock._core.multiarray
-            if hasattr(numpy_mock, 'core') and hasattr(numpy_mock.core, 'multiarray'):
-                 sys.modules['numpy.core.multiarray'] = numpy_mock.core
-            if hasattr(numpy_mock, 'core') and hasattr(numpy_mock.core, 'numeric'):
-                 sys.modules['numpy.core.numeric'] = numpy_mock.core.numeric
-            if hasattr(numpy_mock, '_core') and hasattr(numpy_mock._core, 'numeric'):
-                 sys.modules['numpy._core.numeric'] = numpy_mock._core.numeric
-            if hasattr(numpy_mock, 'linalg'):
-                 sys.modules['numpy.linalg'] = numpy_mock.linalg
-            if hasattr(numpy_mock, 'fft'):
-                 sys.modules['numpy.fft'] = numpy_mock.fft
-            if hasattr(numpy_mock, 'lib'):
-                 sys.modules['numpy.lib'] = numpy_mock.lib
-            
-            # S'assurer que le module lui-même est bien dans sys.modules
-            # Cela peut être redondant si type() le fait déjà, mais ne nuit pas.
-            # Les lignes suivantes étaient problématiques car numpy_typing_mock, _core, core n'étaient pas définis ici.
-            # La logique ci-dessus avec hasattr devrait suffire.
-            # sys.modules['numpy'] = sys.modules['numpy']
-            # sys.modules['numpy.typing'] = numpy_typing_mock
-            # sys.modules['numpy._core'] = _core
-            # sys.modules['numpy.core'] = core
-            # sys.modules['numpy._core.multiarray'] = _core.multiarray
-            # sys.modules['numpy.core.multiarray'] = core.multiarray
-            # if 'rec' in sys.modules['numpy'].__dict__:
-            #     sys.modules['numpy.rec'] = sys.modules['numpy'].rec
-            print("INFO: Mock NumPy installé immédiatement dans conftest.py (avec sous-modules).")
-        except ImportError as e:
-            print(f"ERREUR lors de l'installation immédiate du mock NumPy: {e}")
+        # Assurer que les multiarray sont là si _core/core les ont
+        if hasattr(numpy_mock, '_core') and hasattr(numpy_mock._core, 'multiarray'):
+             sys.modules['numpy._core.multiarray'] = numpy_mock._core.multiarray
+        if hasattr(numpy_mock, 'core') and hasattr(numpy_mock.core, 'multiarray'):
+             sys.modules['numpy.core.multiarray'] = numpy_mock.core
+        if hasattr(numpy_mock, 'core') and hasattr(numpy_mock.core, 'numeric'):
+             sys.modules['numpy.core.numeric'] = numpy_mock.core.numeric
+        if hasattr(numpy_mock, '_core') and hasattr(numpy_mock._core, 'numeric'):
+             sys.modules['numpy._core.numeric'] = numpy_mock._core.numeric
+        if hasattr(numpy_mock, 'linalg'):
+             sys.modules['numpy.linalg'] = numpy_mock.linalg
+        if hasattr(numpy_mock, 'fft'):
+             sys.modules['numpy.fft'] = numpy_mock.fft
+        if hasattr(numpy_mock, 'lib'):
+             sys.modules['numpy.lib'] = numpy_mock.lib
+        
+        # S'assurer que le module lui-même est bien dans sys.modules
+        # Cela peut être redondant si type() le fait déjà, mais ne nuit pas.
+        # Les lignes suivantes étaient problématiques car numpy_typing_mock, _core, core n'étaient pas définis ici.
+        # La logique ci-dessus avec hasattr devrait suffire.
+        # sys.modules['numpy'] = sys.modules['numpy']
+        # sys.modules['numpy.typing'] = numpy_typing_mock
+        # sys.modules['numpy._core'] = _core
+        # sys.modules['numpy.core'] = core
+        # sys.modules['numpy._core.multiarray'] = _core.multiarray
+        # sys.modules['numpy.core.multiarray'] = core.multiarray
+        # if 'rec' in sys.modules['numpy'].__dict__:
+        #     sys.modules['numpy.rec'] = sys.modules['numpy'].rec
+        print("INFO: Mock NumPy installé immédiatement dans conftest.py (avec sous-modules).")
+    except ImportError as e:
+        print(f"ERREUR lors de l'installation immédiate du mock NumPy: {e}")
 
 if (sys.version_info.major == 3 and sys.version_info.minor >= 10): # Modifié pour inclure 3.10
     _install_numpy_mock_immediately()
