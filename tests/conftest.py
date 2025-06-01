@@ -131,20 +131,25 @@ def _install_numpy_mock_immediately():
                 sys.modules['numpy.core'] = numpy_mock.core
             
             # Création explicite du mock pour numpy.rec et numpy.rec.recarray
-            mock_rec_module = type('rec', (), {})
-            mock_rec_module.recarray = type('recarray', (), {}) # Crée un type simple pour recarray
-            sys.modules['numpy.rec'] = mock_rec_module
-            # Attacher aussi 'rec' comme attribut au mock numpy principal si numpy_mock l'a, sinon créer un mock
-            if hasattr(numpy_mock, 'rec'):
-                 # Si numpy_mock a un 'rec', on s'assure qu'il a 'recarray'
-                 if not hasattr(numpy_mock.rec, 'recarray'):
-                     setattr(numpy_mock.rec, 'recarray', mock_rec_module.recarray)
-                 # On s'assure que sys.modules['numpy'].rec pointe vers notre mock_rec_module ou celui de numpy_mock
-                 # et que celui-ci est bien dans sys.modules['numpy.rec']
-                 sys.modules['numpy'].rec = numpy_mock.rec
-                 sys.modules['numpy.rec'] = numpy_mock.rec
+            _mock_rec_submodule = type('rec', (), {})
+            _mock_rec_submodule.recarray = type('recarray', (), {}) # Un type simple suffit pour isinstance
+
+            # Mettre le sous-module mocké dans sys.modules pour les imports directs `from numpy import rec` ou `import numpy.rec`
+            sys.modules['numpy.rec'] = _mock_rec_submodule
+
+            # Attacher le sous-module mocké comme attribut au module numpy principal mocké (mock_numpy_module)
+            # mock_numpy_module est déjà sys.modules['numpy'] à ce stade.
+            if 'numpy' in sys.modules and sys.modules['numpy'] is mock_numpy_module:
+                mock_numpy_module.rec = _mock_rec_submodule
             else:
-                 sys.modules['numpy'].rec = mock_rec_module
+                # Fallback si mock_numpy_module n'est pas (encore) sys.modules['numpy'] ou a été écrasé.
+                # Cela ne devrait pas arriver si la logique est correcte.
+                print("AVERTISSEMENT: mock_numpy_module n'était pas sys.modules['numpy'] lors de l'attribution de .rec")
+                # Tentative de l'assigner quand même si sys.modules['numpy'] existe et est un mock
+                if 'numpy' in sys.modules and hasattr(sys.modules['numpy'], '__dict__'): # Check si c'est un objet modifiable
+                    setattr(sys.modules['numpy'], 'rec', _mock_rec_submodule)
+
+            print(f"INFO: Mock numpy.rec configuré. sys.modules['numpy.rec'] (ID: {id(sys.modules.get('numpy.rec'))}), mock_numpy_module.rec (ID: {id(getattr(mock_numpy_module, 'rec', None))})")
 
             # Assurer que les multiarray sont là si _core/core les ont
             if hasattr(numpy_mock, '_core') and hasattr(numpy_mock._core, 'multiarray'):
@@ -302,13 +307,21 @@ def setup_numpy():
         # Création explicite et assignation du mock pour numpy.rec et numpy.rec.recarray
         _mock_rec_submodule_setup = type('rec', (), {})
         _mock_rec_submodule_setup.recarray = type('recarray', (), {}) # Un type simple suffit pour isinstance
-        
-        # Assigner au module numpy mocké (qui est sys.modules['numpy'] à ce point)
-        if 'numpy' in sys.modules:
-             sys.modules['numpy'].rec = _mock_rec_submodule_setup
-        
-        # Mettre dans sys.modules pour les imports directs `from numpy import rec` ou `import numpy.rec`
+
+        # Mettre le sous-module mocké dans sys.modules pour les imports directs `from numpy import rec` ou `import numpy.rec`
         sys.modules['numpy.rec'] = _mock_rec_submodule_setup
+        
+        # Attacher le sous-module mocké comme attribut au module numpy principal mocké (mock_numpy_module_setup_func)
+        # mock_numpy_module_setup_func est déjà sys.modules['numpy'] à ce stade.
+        if 'numpy' in sys.modules and sys.modules['numpy'] is mock_numpy_module_setup_func:
+            mock_numpy_module_setup_func.rec = _mock_rec_submodule_setup
+        else:
+            # Fallback
+            print("AVERTISSEMENT: mock_numpy_module_setup_func n'était pas sys.modules['numpy'] lors de l'attribution de .rec dans setup_numpy")
+            if 'numpy' in sys.modules and hasattr(sys.modules['numpy'], '__dict__'):
+                 setattr(sys.modules['numpy'], 'rec', _mock_rec_submodule_setup)
+        
+        print(f"INFO: Mock numpy.rec configuré dans setup_numpy. sys.modules['numpy.rec'] (ID: {id(sys.modules.get('numpy.rec'))}), mock_numpy_module_setup_func.rec (ID: {id(getattr(mock_numpy_module_setup_func, 'rec', None))})")
         
         if hasattr(numpy_mock, '_core') and hasattr(numpy_mock._core, 'multiarray'):
             sys.modules['numpy._core.multiarray'] = numpy_mock._core.multiarray
