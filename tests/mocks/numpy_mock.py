@@ -20,6 +20,8 @@ logger = logging.getLogger("NumpyMock")
 
 # Version
 __version__ = "1.24.3"
+__spec__ = MagicMock(name='numpy.__spec__') # Ajout pour compatibilité import
+_CopyMode = MagicMock(name='numpy._CopyMode') # Ajout pour compatibilité scipy/sklearn
 
 # Classes de base
 class generic: # Classe de base pour les scalaires NumPy
@@ -59,8 +61,13 @@ class dtype:
             self.itemsize = 4
         if '16' in self.name: # float16, int16, uint16
             self.itemsize = 2
-        if '8' in self.name: # int8, uint8
+        if '8' in self.name and '64' not in self.name and '32' not in self.name and '16' not in self.name: # int8, uint8, mais pas float16/32/64
             self.itemsize = 1
+        
+        self.fields = None # Pour les dtypes structurés, None pour les simples
+        self.alignment = self.itemsize # Souvent égal à itemsize
+        self.byteorder = '=' # Ordre natif
+        self.flags = 0 # Généralement 0 pour les dtypes simples
 
 
     def __str__(self):
@@ -939,8 +946,8 @@ logger.info(f"Types NumPy définis: bool_={bool_}, number={number}, object_={obj
 logger.info(f"Type de bool_: {type(bool_)}, Type de number: {type(number)}, Type de object_: {type(object_)}")
 
 # Types de données temporelles requis par pandas
-datetime64 = "datetime64"
-timedelta64 = "timedelta64"
+datetime64 = MagicMock(name="numpy.datetime64")
+timedelta64 = MagicMock(name="numpy.timedelta64")
 
 # Types de données supplémentaires requis par pandas
 float_ = float64  # Alias pour float64 (maintenant une instance de classe)
@@ -1033,9 +1040,28 @@ def busday_offset(dates, offsets, roll='raise', weekmask='1111100', holidays=Non
     return dates
 
 # Sous-modules internes pour pandas
+
+class _NumPy_Core_Multiarray_Umath_Mock:
+    """Mock pour le module numpy.core._multiarray_umath."""
+    def __init__(self):
+        self.__name__ = 'numpy.core._multiarray_umath'
+        self.__package__ = 'numpy.core'
+        self.__path__ = []
+        # Ajouter ici des mocks pour les fonctions/constantes spécifiques de _multiarray_umath si nécessaire
+        # Par exemple, celles qui pourraient être liées aux dtypes ou à l'API C.
+        # Pour l'instant, un MagicMock générique pour les attributs non définis.
+        # self.some_c_api_function = MagicMock(name='numpy.core._multiarray_umath.some_c_api_function')
+
+    def __getattr__(self, name):
+        logger.info(f"NumpyMock: numpy.core._multiarray_umath.{name} accédé (retourne MagicMock).")
+        return MagicMock(name=f"numpy.core._multiarray_umath.{name}")
+
+_multiarray_umath_mock_instance = _NumPy_Core_Multiarray_Umath_Mock()
+
 class _core:
     """Mock pour numpy._core."""
     numeric = numeric_module_mock_instance # Ajout de l'attribut numeric
+    _multiarray_umath = _multiarray_umath_mock_instance # Ajout du mock
     
     class multiarray:
         """Mock pour numpy._core.multiarray."""
@@ -1048,6 +1074,7 @@ class _core:
 class core:
     """Mock pour numpy.core."""
     numeric = numeric_module_mock_instance # Ajout de l'attribut numeric
+    _multiarray_umath = _multiarray_umath_mock_instance # Ajout du mock
     
     class multiarray:
         """Mock pour numpy.core.multiarray."""

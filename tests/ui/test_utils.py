@@ -464,24 +464,41 @@ def test_load_extract_definitions_no_key(config_file_path, mock_logger): # confi
     assert any(expected_log in called_arg for called_arg in called_warnings)
 
 # Patches pour les dépendances de load_extract_definitions
-@patch('argumentation_analysis.ui.file_operations.decrypt_data', return_value=None)
+@patch('argumentation_analysis.ui.file_operations.decrypt_data', side_effect=InvalidToken)
 def test_load_extract_definitions_decryption_fails(mock_decrypt, config_file_path, test_key, mock_logger):
     config_file_path.write_text("dummy encrypted data")
     with patch('argumentation_analysis.ui.file_operations.ui_config_module.EXTRACT_SOURCES', None), \
          patch('argumentation_analysis.ui.file_operations.ui_config_module.DEFAULT_EXTRACT_SOURCES', [{"default": True}]):
         with pytest.raises(InvalidToken):
             load_extract_definitions(config_file_path, test_key)
-    # L'assertion originale sur mock_logger.warning n'est plus pertinente si InvalidToken est levée avant.
+    # Si InvalidToken est levée, le logger dans load_extract_definitions aura enregistré l'erreur.
+    # On peut vérifier que le mock_logger a été appelé avec un message d'erreur approprié.
+    error_logged = False
+    for call_args in mock_logger.error.call_args_list:
+        if "Erreur déchiffrement/validation token" in call_args[0][0] and str(config_file_path) in call_args[0][0]:
+            error_logged = True
+            break
+    assert error_logged, "L'erreur de déchiffrement attendue n'a pas été logguée par load_extract_definitions."
 
-@patch('argumentation_analysis.ui.file_operations.gzip.decompress', side_effect=gzip.BadGzipFile)
+@patch('argumentation_analysis.ui.file_operations.gzip.decompress', side_effect=gzip.BadGzipFile("Test BadGzipFile"))
 @patch('argumentation_analysis.ui.file_operations.decrypt_data', return_value=b"decrypted but not gzipped")
 def test_load_extract_definitions_decompression_fails(mock_decrypt, mock_decompress, config_file_path, test_key, mock_logger):
     config_file_path.write_text("dummy encrypted data")
+    expected_default_defs = [{"default_decomp_fail": True}] # Valeur unique pour ce test
     with patch('argumentation_analysis.ui.file_operations.ui_config_module.EXTRACT_SOURCES', None), \
-         patch('argumentation_analysis.ui.file_operations.ui_config_module.DEFAULT_EXTRACT_SOURCES', [{"default": True}]):
-        with pytest.raises(InvalidToken): # Le mock lèvera InvalidToken si decrypt échoue (ce qui est le cas ici car le contenu n'est pas chiffré)
-            load_extract_definitions(config_file_path, test_key)
-    # L'assertion originale sur mock_logger.error n'est plus pertinente.
+         patch('argumentation_analysis.ui.file_operations.ui_config_module.DEFAULT_EXTRACT_SOURCES', expected_default_defs):
+        
+        definitions = load_extract_definitions(config_file_path, test_key)
+        assert definitions == expected_default_defs
+    
+    # Vérifier que le logger a été appelé avec un message d'erreur approprié
+    error_logged = False
+    for call_args in mock_logger.error.call_args_list:
+        # Le message d'erreur de gzip.BadGzipFile peut être inclus dans le log
+        if "Erreur chargement/traitement général" in call_args[0][0] and str(config_file_path) in call_args[0][0] and "Test BadGzipFile" in call_args[0][0]:
+            error_logged = True
+            break
+    assert error_logged, "L'erreur de décompression attendue n'a pas été logguée correctement par load_extract_definitions."
 
 @patch('argumentation_analysis.ui.file_operations.decrypt_data')
 def test_load_extract_definitions_invalid_json(mock_decrypt, config_file_path, test_key, mock_logger):
@@ -490,26 +507,44 @@ def test_load_extract_definitions_invalid_json(mock_decrypt, config_file_path, t
     compressed_invalid_json = gzip.compress(invalid_json_bytes)
     mock_decrypt.return_value = compressed_invalid_json # decrypt_data retourne les données compressées invalides
     
+    expected_default_defs = [{"default_invalid_json": True}] # Valeur unique pour ce test
     with patch('argumentation_analysis.ui.file_operations.ui_config_module.EXTRACT_SOURCES', None), \
-         patch('argumentation_analysis.ui.file_operations.ui_config_module.DEFAULT_EXTRACT_SOURCES', [{"default_json_error": True}]):
-        with pytest.raises(InvalidToken): # Idem, échec de déchiffrement avant l'erreur JSON
-            load_extract_definitions(config_file_path, test_key)
-    # L'assertion originale sur mock_logger.error n'est plus pertinente.
+         patch('argumentation_analysis.ui.file_operations.ui_config_module.DEFAULT_EXTRACT_SOURCES', expected_default_defs):
+        
+        definitions = load_extract_definitions(config_file_path, test_key)
+        assert definitions == expected_default_defs
+            
+    # Vérifier que le logger a été appelé avec un message d'erreur approprié
+    error_logged = False
+    for call_args in mock_logger.error.call_args_list:
+        # Le message d'erreur de json.JSONDecodeError peut être inclus
+        if "Erreur chargement/traitement général" in call_args[0][0] and str(config_file_path) in call_args[0][0] and "Expecting value" in call_args[0][0]: # "Expecting value" est typique de JSONDecodeError
+            error_logged = True
+            break
+    assert error_logged, "L'erreur de décodage JSON attendue n'a pas été logguée correctement par load_extract_definitions."
 
 @patch('argumentation_analysis.ui.file_operations.decrypt_data')
 def test_load_extract_definitions_invalid_format(mock_decrypt, config_file_path, test_key, mock_logger):
     config_file_path.write_text("dummy encrypted data")
-    invalid_format_data = {"not_a_list": "data"}
+    invalid_format_data = {"not_a_list": "data"} # Ceci n'est pas une liste, ce qui est attendu
     json_bytes = json.dumps(invalid_format_data).encode('utf-8')
     compressed_data = gzip.compress(json_bytes)
     mock_decrypt.return_value = compressed_data
 
+    expected_default_defs = [{"default_invalid_format": True}] # Valeur unique pour ce test
     with patch('argumentation_analysis.ui.file_operations.ui_config_module.EXTRACT_SOURCES', None), \
-         patch('argumentation_analysis.ui.file_operations.ui_config_module.DEFAULT_EXTRACT_SOURCES', [{"default_format_error": True}]):
-        with pytest.raises(InvalidToken): # Idem, échec de déchiffrement
-            load_extract_definitions(config_file_path, test_key)
-
-    # L'assertion originale sur mock_logger.warning n'est plus pertinente.
+         patch('argumentation_analysis.ui.file_operations.ui_config_module.DEFAULT_EXTRACT_SOURCES', expected_default_defs):
+        
+        definitions = load_extract_definitions(config_file_path, test_key)
+        assert definitions == expected_default_defs
+            
+    # Vérifier que le logger a été appelé avec un message d'avertissement approprié
+    warning_logged = False
+    for call_args in mock_logger.warning.call_args_list:
+        if "Format définitions invalide après chargement" in call_args[0][0]:
+            warning_logged = True
+            break
+    assert warning_logged, "L'avertissement de format invalide attendu n'a pas été loggué par load_extract_definitions."
 
 
 # --- Tests pour le cache (get_cache_filepath, load_from_cache, save_to_cache) ---
@@ -600,27 +635,15 @@ def test_decrypt_data_no_key(mock_logger):
     mock_logger.error.assert_called_with("Erreur déchiffrement: Clé chiffrement manquante.")
 
 def test_decrypt_data_invalid_token(test_key, mock_logger):
-    assert aa_utils.decrypt_data(b"not_really_encrypted", test_key) is None
-    # Le message d'erreur exact de Fernet peut varier ou être interne.
-    # On vérifie que mock_logger.error a été appelé, ce qui indique une gestion d'erreur.
-    # L'erreur spécifique est "Fernet key must be 32 url-safe base64-encoded bytes." si la clé est mauvaise,
-    # ou InvalidToken si les données ne sont pas valides.
-    # Ici, les données sont invalides.
+    with pytest.raises(InvalidToken):
+        aa_utils.decrypt_data(b"not_really_encrypted", test_key)
     
-    # Vérifions qu'un message d'erreur contenant "Erreur déchiffrement" a été loggué.
+    # Vérifier que le logger a été appelé avant que l'exception ne soit levée.
+    # La fonction decrypt_data logue l'erreur PUIS la relance.
     error_found = False
     for call in mock_logger.error.call_args_list:
         args, _ = call
-        if args and "Erreur déchiffrement" in args[0]:
+        if args and args[0].startswith("Erreur déchiffrement (InvalidToken/Signature):"):
             error_found = True
-            # On peut aussi vérifier une partie du message d'exception si c'est stable
-            # Par exemple, si on s'attend à InvalidToken ou un message lié à une clé incorrecte si les données sont vides/corrompues
-            # cryptography.fernet.InvalidToken est l'exception attendue.
-            # Le message loggué est "Erreur déchiffrement: {e}", où e est l'instance de l'exception.
-            # On vérifie que le type de l'exception est bien celui attendu.
-            # L'erreur logguée par aa_utils.decrypt_data est f"Erreur déchiffrement: {e}"
-            # L'objet exception e, lorsqu'il est converti en chaîne dans le logger, peut ne pas inclure "InvalidToken".
-            # On va juste vérifier que le message commence par "Erreur déchiffrement:"
-            assert args[0].startswith("Erreur déchiffrement:")
             break
-    assert error_found, "Le message d'erreur de déchiffrement attendu n'a pas été loggué."
+    assert error_found, "Le message d'erreur de déchiffrement (InvalidToken/Signature) attendu n'a pas été loggué."
