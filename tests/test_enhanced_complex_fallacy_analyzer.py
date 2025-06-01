@@ -39,7 +39,7 @@ from pandas_mock import *
 from argumentation_analysis.agents.tools.analysis.enhanced.complex_fallacy_analyzer import EnhancedComplexFallacyAnalyzer
 
 
-@pytest.mark.xfail(reason="Binary incompatibility with SciPy C extensions and NumPy mock. ValueError: numpy.dtype size changed.", raises=ValueError, strict=True)
+@pytest.mark.use_real_numpy
 class TestEnhancedComplexFallacyAnalyzer(unittest.TestCase):
     """Tests unitaires pour l'analyseur de sophismes complexes amélioré."""
     
