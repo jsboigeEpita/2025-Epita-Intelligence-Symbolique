@@ -30,14 +30,14 @@ from argumentation_analysis.agents.core.extract.extract_agent import ExtractAgen
 from argumentation_analysis.agents.core.pl.pl_definitions import setup_pl_kernel
 from argumentation_analysis.agents.core.informal.informal_definitions import setup_informal_kernel
 from argumentation_analysis.agents.core.pm.pm_definitions import setup_pm_kernel
-from tests.async_test_case import AsyncTestCase
+# from tests.async_test_case import AsyncTestCase # Suppression de l'import
 from models.extract_definition import ExtractDefinitions, SourceDefinition, Extract # Ces imports pourraient poser problème
 from models.extract_result import ExtractResult # Idem
 from argumentation_analysis.services.extract_service import ExtractService # Idem pour 'services'
 from argumentation_analysis.services.fetch_service import FetchService # Idem
 
 
-class TestEndToEndAnalysis(AsyncTestCase):
+class TestEndToEndAnalysis: # Suppression de l'héritage AsyncTestCase
     """Tests d'intégration end-to-end pour le flux complet d'analyse argumentative."""
 
     def setUp(self):
@@ -247,7 +247,7 @@ class TestEndToEndAnalysis(AsyncTestCase):
         self.assertEqual(self.state.errors[0]["agent_name"], "InformalAnalysisAgent")
         self.assertEqual(self.state.errors[0]["message"], "Erreur arguments")
 
-class TestPerformanceIntegration(AsyncTestCase):
+class TestPerformanceIntegration: # Suppression de l'héritage AsyncTestCase
     """Tests d'intégration pour la performance du système."""
 
     def setUp(self):
@@ -300,7 +300,7 @@ class TestPerformanceIntegration(AsyncTestCase):
         self.assertLessEqual(execution_time, 2.0)
 
 
-class TestExtractIntegrationWithBalancedStrategy(AsyncTestCase):
+class TestExtractIntegrationWithBalancedStrategy: # Suppression de l'héritage AsyncTestCase
     """Tests d'intégration pour les composants d'extraction avec la stratégie d'équilibrage."""
 
     def setUp(self):

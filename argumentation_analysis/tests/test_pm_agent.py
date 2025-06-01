@@ -7,10 +7,10 @@ import unittest
 from unittest.mock import MagicMock, patch
 import semantic_kernel as sk
 from argumentation_analysis.agents.core.pm.pm_definitions import setup_pm_kernel
-from tests.async_test_case import AsyncTestCase
+# from tests.async_test_case import AsyncTestCase # Suppression de l'import
 
 
-class TestPMAgent(AsyncTestCase):
+class TestPMAgent: # Suppression de l'héritage AsyncTestCase
     """Tests pour l'agent Project Manager."""
 
     def setUp(self):
@@ -59,7 +59,7 @@ class TestPMAgent(AsyncTestCase):
         # car cette méthode n'existe pas dans la version actuelle de Semantic Kernel
 
 
-class TestPMAgentIntegration(AsyncTestCase):
+class TestPMAgentIntegration: # Suppression de l'héritage AsyncTestCase
     """Tests d'intégration pour l'agent Project Manager."""
 
     @patch('semantic_kernel.Kernel')

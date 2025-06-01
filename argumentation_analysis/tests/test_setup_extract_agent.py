@@ -6,11 +6,11 @@ Tests unitaires pour la fonction setup_extract_agent.
 import unittest
 from unittest.mock import patch, MagicMock
 import asyncio
-from tests.async_test_case import AsyncTestCase
+# from tests.async_test_case import AsyncTestCase # Suppression de l'import
 from argumentation_analysis.agents.core.extract.extract_agent import setup_extract_agent, ExtractAgent
 
 
-class TestSetupExtractAgent(AsyncTestCase):
+class TestSetupExtractAgent: # Suppression de l'héritage AsyncTestCase
     """Tests pour la fonction setup_extract_agent."""
 
     @patch('argumentation_analysis.agents.core.extract.extract_agent.create_llm_service')
