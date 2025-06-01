@@ -59,8 +59,11 @@ def load_extract_definitions(
 
         file_ops_logger.info(f"-> {len(definitions)} définitions chargées depuis fichier.")
         return definitions
+    except (InvalidToken, InvalidSignature) as e: # Intercepter spécifiquement et relancer
+        file_ops_logger.error(f"❌ Erreur déchiffrement/validation token pour '{config_file}': {e}. L'exception sera relancée.", exc_info=True)
+        raise # Relancer l'exception InvalidToken ou InvalidSignature
     except Exception as e:
-        file_ops_logger.error(f"❌ Erreur chargement/traitement '{config_file}': {e}. Utilisation définitions par défaut.", exc_info=True)
+        file_ops_logger.error(f"❌ Erreur chargement/traitement général '{config_file}': {e}. Utilisation définitions par défaut.", exc_info=True)
         return [item.copy() for item in fallback_definitions]
 
 def save_extract_definitions(

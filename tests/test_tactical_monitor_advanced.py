@@ -75,9 +75,10 @@ class TestTacticalMonitorAdvanced(unittest.TestCase):
         self.tactical_state.update_task_status(self.task3["id"], "pending")
         
         # Ajouter des dépendances entre les tâches
+        # Si task-2 dépend de task-1 (task-1 est un prérequis pour task-2)
         self.tactical_state.task_dependencies = {
-            "task-1": ["task-2"],
-            "task-2": ["task-3"]
+            "task-2": ["task-1"], # task-2 dépend de task-1
+            "task-3": ["task-2"]  # task-3 dépend de task-2
         }
         
         # Ajouter des conflits à l'état tactique

@@ -145,7 +145,7 @@ class TestExtractAgentAdapter:
     """Tests unitaires pour l'adaptateur d'agent d'extraction."""
 
     @pytest_asyncio.fixture(autouse=True) # Changement ici
-    async def setup_adapter(self, mocker):
+    async def setup_adapter(self): # mocker retiré des paramètres
         """Initialisation avant chaque test."""
         # Créer les mocks
         self.mock_extract_agent = Mock()

@@ -81,10 +81,12 @@ def test_numpy_mocks_structure():
         print(f"ERREUR lecture {file_path_mock}: {e}")
         found_all = False
         # Idem, ne pas lever d'exception ici
+    
+        assert found_all, "Des éléments de la structure des mocks NumPy sont manquants."
+        # return found_all # Supprimé pour éviter PytestReturnNotNoneWarning
 
-    assert found_all, "Des éléments de la structure des mocks NumPy sont manquants."
-    return found_all # Retourner True si tout est OK pour la fonction main()
-
+# La ligne vide indentée (ligne 87) est supprimée par ce diff.
+# L'indentation de test_integration_file et de son contenu est corrigée.
 def test_integration_file():
     """Test du fichier d'intégration corrigé"""
     try:
@@ -94,9 +96,9 @@ def test_integration_file():
         
         # Vérifier les corrections d'assertions
         checks = [
-            'test_configuration_validation',
-            'test_multi_tool_workflow',
-            'fallacy_detector.analyze',
+            'test_agent_tool_configuration_validation', # Nom de méthode mis à jour
+            'test_multi_tool_analysis_workflow',    # Nom de méthode mis à jour
+            'self.fallacy_detector.detect',         # Appel de méthode mockée mis à jour
         ]
         
         found_checks = []

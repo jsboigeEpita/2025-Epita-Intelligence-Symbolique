@@ -326,7 +326,8 @@ class ProgressMonitor:
         failed_task_ids = [task["id"] for task in self.state.tasks["failed"]]
         
         if failed_task_ids:
-            tasks_to_check = self.state.tasks["pending"]
+            # Vérifier les tâches "pending" ET "in_progress" pour les blocages
+            tasks_to_check = self.state.tasks["pending"] + self.state.tasks["in_progress"]
             for task in tasks_to_check:
                 task_id = task["id"]
                 
@@ -360,18 +361,41 @@ class ProgressMonitor:
             task_id = task["id"]
             progress = self.state.task_progress.get(task_id, 0.0)
             
-            # Si la progression est faible mais la tâche est en cours depuis longtemps
-            # (cette logique serait normalement plus sophistiquée avec des timestamps)
-            if progress < 0.5 and task.get("estimated_duration") == "short":
-                critical_issues.append({
-                    "type": "delayed_task",
-                    "description": f"Tâche en retard: {task.get('description', '')}",
-                    "severity": "high",
+            start_time_str = task.get("start_time")
+            estimated_duration_sec = task.get("estimated_duration")
+
+            if start_time_str and isinstance(estimated_duration_sec, (int, float)) and estimated_duration_sec > 0:
+                try:
+                    start_time_dt = datetime.fromisoformat(start_time_str)
+                    # S'assurer que start_time_dt est conscient du fuseau horaire si datetime.now() l'est, ou inversement.
+                    # Pour simplifier, on suppose qu'ils sont comparables (par exemple, tous deux en UTC implicite ou naïfs).
+                    elapsed_time_sec = (datetime.now() - start_time_dt).total_seconds()
+                    
+                    # Condition de retard: si le temps écoulé dépasse la durée estimée
+                    # ET la progression n'est pas presque terminée (ex: < 90%).
+                    is_overdue = elapsed_time_sec > estimated_duration_sec
+                    
+                    if is_overdue and progress < 0.9:
+                        critical_issues.append({
+                            "type": "delayed_task",
+                            "description": f"Tâche en retard: {task.get('description', '')}. Progrès: {progress:.2f}, Temps écoulé: {elapsed_time_sec:.0f}s, Estimé: {estimated_duration_sec}s",
+                            "severity": "high",
+                            "task_id": task_id,
+                            "objective_id": task.get("objective_id"),
+                            "current_progress": progress
+                        })
+                except ValueError:
+                    self.logger.warning(f"Format de date invalide pour start_time de la tâche {task_id}: {start_time_str}")
+            elif progress < 0.1 and task.get("status") == "in_progress": # Fallback: Stagnation si pas de dates/durées valides
+                 critical_issues.append({
+                    "type": "delayed_task", # Ou "stagnated_task"
+                    "description": f"Tâche potentiellement bloquée ou en retard (faible progression non améliorée): {task.get('description', '')}",
+                    "severity": "medium", # Moins critique car moins d'infos
                     "task_id": task_id,
                     "objective_id": task.get("objective_id"),
                     "current_progress": progress
                 })
-        
+
         # Vérifier le taux d'échec global
         total_tasks = sum(len(tasks) for tasks in self.state.tasks.values())
         failed_tasks = len(self.state.tasks["failed"])
