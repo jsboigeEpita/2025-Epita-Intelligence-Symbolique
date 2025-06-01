@@ -127,15 +127,23 @@ def _install_numpy_mock_immediately():
                 sys.modules['numpy._core'] = numpy_mock._core
             if hasattr(numpy_mock, 'core'):
                 sys.modules['numpy.core'] = numpy_mock.core
+            
+            # Création explicite du mock pour numpy.rec et numpy.rec.recarray
+            mock_rec_module = type('rec', (), {})
+            mock_rec_module.recarray = type('recarray', (), {}) # Crée un type simple pour recarray
+            sys.modules['numpy.rec'] = mock_rec_module
+            # Attacher aussi 'rec' comme attribut au mock numpy principal si numpy_mock l'a, sinon créer un mock
             if hasattr(numpy_mock, 'rec'):
-                sys.modules['numpy.rec'] = numpy_mock.rec
-                if not hasattr(numpy_mock.rec, 'recarray'):
-                    # Créer un mock simple pour recarray si numpy_mock.rec ne le fournit pas
-                    setattr(numpy_mock.rec, 'recarray', type('recarray', (), {}))
-            elif 'numpy.rec' not in sys.modules: # Si numpy_mock n'a pas 'rec', créer un mock basique
-                mock_rec_module = type('rec', (), {})
-                mock_rec_module.recarray = type('recarray', (), {})
-                sys.modules['numpy.rec'] = mock_rec_module
+                 # Si numpy_mock a un 'rec', on s'assure qu'il a 'recarray'
+                 if not hasattr(numpy_mock.rec, 'recarray'):
+                     setattr(numpy_mock.rec, 'recarray', mock_rec_module.recarray)
+                 # On s'assure que sys.modules['numpy'].rec pointe vers notre mock_rec_module ou celui de numpy_mock
+                 # et que celui-ci est bien dans sys.modules['numpy.rec']
+                 sys.modules['numpy'].rec = numpy_mock.rec
+                 sys.modules['numpy.rec'] = numpy_mock.rec
+            else:
+                 sys.modules['numpy'].rec = mock_rec_module
+
             # Assurer que les multiarray sont là si _core/core les ont
             if hasattr(numpy_mock, '_core') and hasattr(numpy_mock._core, 'multiarray'):
                  sys.modules['numpy._core.multiarray'] = numpy_mock._core.multiarray
@@ -282,14 +290,19 @@ def setup_numpy():
             sys.modules['numpy._core'] = numpy_mock._core
         if hasattr(numpy_mock, 'core'):
             sys.modules['numpy.core'] = numpy_mock.core
+
+        # Création explicite du mock pour numpy.rec et numpy.rec.recarray
+        mock_rec_module_setup = type('rec', (), {})
+        mock_rec_module_setup.recarray = type('recarray', (), {})
+        sys.modules['numpy.rec'] = mock_rec_module_setup
         if hasattr(numpy_mock, 'rec'):
-            sys.modules['numpy.rec'] = numpy_mock.rec
-            if not hasattr(numpy_mock.rec, 'recarray'):
-                 setattr(numpy_mock.rec, 'recarray', type('recarray', (), {}))
-        elif 'numpy.rec' not in sys.modules: # Si numpy_mock n'a pas 'rec', créer un mock basique
-            mock_rec_module = type('rec', (), {})
-            mock_rec_module.recarray = type('recarray', (), {})
-            sys.modules['numpy.rec'] = mock_rec_module
+             if not hasattr(numpy_mock.rec, 'recarray'):
+                 setattr(numpy_mock.rec, 'recarray', mock_rec_module_setup.recarray)
+             sys.modules['numpy'].rec = numpy_mock.rec
+             sys.modules['numpy.rec'] = numpy_mock.rec # Assurer la cohérence
+        else:
+             sys.modules['numpy'].rec = mock_rec_module_setup
+        
         if hasattr(numpy_mock, '_core') and hasattr(numpy_mock._core, 'multiarray'):
             sys.modules['numpy._core.multiarray'] = numpy_mock._core.multiarray
         if hasattr(numpy_mock, 'core') and hasattr(numpy_mock.core, 'multiarray'):
