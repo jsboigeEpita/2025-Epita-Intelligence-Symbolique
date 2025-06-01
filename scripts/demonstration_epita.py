@@ -5,9 +5,11 @@ Ce script a pour but de démontrer les fonctionnalités clés du dépôt, inclua
 1. L'exécution des tests unitaires.
 2. L'analyse rhétorique sur un exemple de texte clair, tentant d'utiliser les services réels `InformalAgent` et `create_llm_service`.
    Si `OPENAI_API_KEY` n'est pas configurée ou si `create_llm_service` ne peut être importé, un `MockLLMService` est utilisé.
+   L'analyse des sophismes elle-même utilise un `MockFallacyDetector` pour cette démonstration afin de garantir une exécution rapide et prévisible.
 3. L'analyse rhétorique sur des données chiffrées. Le script tente d'utiliser les services réels `CryptoService`
    et `DefinitionService` pour le déchiffrement. L'analyse rhétorique d'un extrait est ensuite effectuée
    par un `InformalAgent` réel (utilisant le résultat de `create_llm_service` réel si configuré, sinon un mock).
+   L'analyse des sophismes elle-même utilise un `MockFallacyDetector` pour cette démonstration.
    **Correction (Sous-tâche F)**: `MockDefinitionService` retourne maintenant un objet `ExtractDefinitions` (ou son mock) correctement formé.
    **Correction (Sous-tâche I)**: L'initialisation de `RealDefinitionService` est corrigée pour inclure `config_file`.
 4. La génération d'un rapport complet à partir des résultats d'analyse de l'extrait chiffré.
@@ -33,334 +35,78 @@ Exécutez la commande suivante depuis la racine du projet :
 python scripts/demonstration_epita.py
 """
 # Imports nécessaires
+print("INFO [DEMO_SCRIPT_START]: Début des imports Python standards.")
 import subprocess
 import json
 from pathlib import Path
 import os
-import sys # Ajouté pour sys.executable et sys.stdout/stderr.encoding
-import io # Ajouté pour TextIOWrapper
-import time # Ajouté pour mesurer le temps d'exécution
-# import traceback # Décommenter pour un traceback complet si nécessaire dans les excepts
-import semantic_kernel as sk # Ajouté pour l'initialisation de InformalAgent
-print("INFO [DEMO_IMPORT_DEBUG]: Après imports Python standards et semantic_kernel.")
+import sys
+import io
+import time
+import logging # Ajout du logging
+
+# Import pour semantic_kernel, nécessaire globalement
+try:
+    import semantic_kernel as sk
+    print("INFO [DEMO_IMPORT_DEBUG]: semantic_kernel importé.")
+except ImportError:
+    print("ERREUR: semantic_kernel n'a pas pu être importé. Certaines fonctionnalités seront indisponibles.")
+    sk = None # Pour éviter les NameError plus tard
+
+# Configuration du logging pour ce script
+logger = logging.getLogger("demonstration_epita")
+if not logger.handlers:
+    handler = logging.StreamHandler(sys.stdout) # Utiliser sys.stdout configuré
+    formatter = logging.Formatter('%(asctime)s [%(levelname)s] [%(name)s] %(message)s', datefmt='%H:%M:%S')
+    handler.setFormatter(formatter)
+    logger.addHandler(handler)
+    logger.setLevel(logging.INFO)
+
 
 # Reconfigurer sys.stdout et sys.stderr pour utiliser UTF-8
-# Cela est plus robuste que de changer l'encodage de la console elle-même
 try:
-    # Note: os.system("chcp 65001 > nul") sur Windows est omis pour se concentrer sur TextIOWrapper.
     sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
     sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8', errors='replace')
-    print("INFO: sys.stdout et sys.stderr reconfigurés pour utiliser UTF-8 avec errors='replace'.")
+    logger.info("sys.stdout et sys.stderr reconfigurés pour utiliser UTF-8.")
 except Exception as e_reconfig_utf8:
-    # Utiliser le stderr original (__stderr__) si la reconfiguration échoue,
-    # car sys.stderr pourrait être dans un état indéfini.
-    # On ne peut pas utiliser print() directement si sys.stdout est aussi cassé.
-    # On tente d'écrire sur le stderr original, qui est généralement plus sûr.
-    original_stderr = getattr(sys, '__stderr__', sys.stderr) # Accès plus sûr à __stderr__
-    if original_stderr: # Vérifier si original_stderr est accessible
+    original_stderr = getattr(sys, '__stderr__', sys.stderr)
+    if original_stderr:
         try:
             original_stderr.write(f"AVERTISSEMENT: Impossible de reconfigurer stdout/stderr en UTF-8 : {e_reconfig_utf8}\n")
-            original_stderr.flush() # S'assurer que le message est écrit
-        except Exception as e_write_original_stderr:
-            # En dernier recours, si même l'écriture sur __stderr__ échoue, on ne peut plus rien faire de propre.
-            # On pourrait logger dans un fichier, mais pour ce script, on laisse tomber.
+            original_stderr.flush()
+        except Exception:
             pass # Impossible d'afficher l'avertissement
 
-# Ajoute le répertoire parent (racine du projet) au sys.path
-# pour permettre les imports comme argumentation_analysis.services.xxx
+# Détermination de la racine du projet
 # __file__ est le chemin du script actuel (demonstration_epita.py)
-current_script_path = os.path.abspath(__file__)
-# scripts_dir est le répertoire 'scripts'
-scripts_dir = os.path.dirname(current_script_path)
+current_script_path = Path(__file__).resolve()
 # project_root est le répertoire parent de 'scripts'
-project_root = os.path.dirname(scripts_dir)
-if project_root not in sys.path:
-    sys.path.insert(0, project_root)
+project_root = current_script_path.parent.parent
+if str(project_root) not in sys.path:
+    sys.path.insert(0, str(project_root))
+logger.info(f"Racine du projet calculée : {project_root}")
+logger.debug(f"Current sys.path: {sys.path}")
 
-# Amélioration du débogage des imports et de sys.path
-print(f"INFO [DEBUG_PATH]: Calculated project_root: {project_root}")
-print(f"INFO [DEBUG_PATH]: Current sys.path: {sys.path}")
-
-# Vérification des chemins pour les modules problématiques
-print("INFO [DEBUG_IMPORT]: Vérification des chemins pour les modules problématiques...")
-# Assurez-vous que 'project_root' est la variable contenant le chemin racine du projet
-# (par exemple, C:\dev\2025-Epita-Intelligence-Symbolique)
-
-path_to_arg_analysis_init = os.path.join(project_root, "argumentation_analysis", "__init__.py")
-
-path_to_agents = os.path.join(project_root, "argumentation_analysis", "agents")
-path_to_agents_init = os.path.join(path_to_agents, "__init__.py")
-path_to_informal_agent_py_new = os.path.join(project_root, "argumentation_analysis", "agents", "core", "informal", "informal_agent.py")
-
-# Mise à jour du chemin pour llm_service.py
-path_to_core_module = os.path.join(project_root, "argumentation_analysis", "core")
-path_to_llm_service_py_new = os.path.join(path_to_core_module, "llm_service.py")
-path_to_services_init_old = os.path.join(project_root, "argumentation_analysis", "services", "__init__.py") # Ancien chemin pour services init
-
-print(f"INFO [DEBUG_IMPORT]: project_root='{project_root}', existe: {os.path.exists(project_root)}")
-print(f"INFO [DEBUG_IMPORT]: Chemin vers argumentation_analysis/__init__.py: '{path_to_arg_analysis_init}', existe: {os.path.exists(path_to_arg_analysis_init)}")
-
-print(f"INFO [DEBUG_IMPORT]: Chemin vers argumentation_analysis/agents/: '{path_to_agents}', existe: {os.path.exists(path_to_agents)}")
-print(f"INFO [DEBUG_IMPORT]: Chemin vers argumentation_analysis/agents/__init__.py: '{path_to_agents_init}', existe: {os.path.exists(path_to_agents_init)}")
-print(f"INFO [DEBUG_IMPORT]: Nouveau chemin vers argumentation_analysis/agents/core/informal/informal_agent.py: '{path_to_informal_agent_py_new}', existe: {os.path.exists(path_to_informal_agent_py_new)}")
-
-print(f"INFO [DEBUG_IMPORT]: Chemin vers argumentation_analysis/core/: '{path_to_core_module}', existe: {os.path.exists(path_to_core_module)}")
-print(f"INFO [DEBUG_IMPORT]: Nouveau chemin vers argumentation_analysis/core/llm_service.py: '{path_to_llm_service_py_new}', existe: {os.path.exists(path_to_llm_service_py_new)}")
-print(f"INFO [DEBUG_IMPORT]: Ancien chemin vers argumentation_analysis/services/__init__.py: '{path_to_services_init_old}', existe: {os.path.exists(path_to_services_init_old)}")
-
-
-# Import pour charger les variables d'environnement
-from dotenv import load_dotenv
-print("INFO [DEMO_IMPORT_DEBUG]: Après import dotenv.")
-
-# Variable globale pour suivre l'état des services réels pour l'analyse chiffrée
-REAL_CRYPTO_DEFINITION_SERVICES_IMPORTED = False
-REAL_EXTRACT_MODELS_IMPORTED = False
-REAL_ENCRYPTION_KEY_IMPORTED = False # Pour suivre l'import de la clé de chiffrement réelle
-
-# Variables globales pour suivre l'état des services réels pour l'analyse de texte clair
-REAL_INFORMAL_AGENT_IMPORTED = False
-REAL_LLM_SERVICE_FUNCTION_IMPORTED = False # Changé de REAL_LLM_SERVICE_IMPORTED
-InformalAgent = None # Placeholder, sera remplacé par l'import réel
-# LLMService a été remplacé par une fonction create_llm_service
-create_llm_service = None # Placeholder, sera remplacé par l'import réel de la fonction
-
-# Placeholders pour les classes qui seront soit importées soit mockées
-Extract = None
-ExtractDefinitions = None
-SourceDefinition = None
-
-
-# Définition de Mocks globaux qui seront utilisés si les imports réels échouent
-
-class MockFallacyDetector:
-    """Mock minimal pour le détecteur de sophismes."""
-    def detect(self, text: str):
-        print(f"INFO: MockFallacyDetector.detect appelé pour le texte (premiers 100 chars): {text[:100]}...")
-        # Retourne une liste vide pour simuler aucune détection ou un format de base
-        return [
-            {"fallacy_type": "Mock Fallacy", "description": "Ceci est un sophisme mocké.", "confidence": 0.99}
-        ]
-
-class MockCryptoService:
-    def __init__(self, passphrase=None, encryption_key=None): # Ajout de encryption_key pour la cohérence
-        print("INFO: Utilisation de Mock CryptoService (import réel, configuration ou clé de chiffrement échoué).")
-        if passphrase is None and encryption_key is None:
-            print("AVERTISSEMENT: Mock CryptoService initialisé sans passphrase ni clé de chiffrement.")
-    def decrypt_data(self, data):
-        print("INFO: Mock CryptoService - simulation du déchiffrement (retourne les données telles quelles).")
-        return data
-    def encrypt_data(self, data):
-        print("INFO: Mock CryptoService - simulation du chiffrement (retourne les données telles quelles).")
-        return data
-print("INFO [DEMO_IMPORT_DEBUG]: Avant try-except import CryptoService/DefinitionService.")
-
-# Tentative d'importation des classes réelles pour l'analyse chiffrée (CryptoService, DefinitionService).
+# Import du module de bootstrap
 try:
-    from argumentation_analysis.services.crypto_service import CryptoService as RealCryptoService # Alias pour le message d'erreur
-    from argumentation_analysis.services.definition_service import DefinitionService as RealDefinitionService # Alias
-    REAL_CRYPTO_DEFINITION_SERVICES_IMPORTED = True
-    print("INFO: Services réels (CryptoService, DefinitionService) pour l'analyse chiffrée importés avec succès.")
-    # Assigner les versions réelles aux variables globales si l'import réussit
-    CryptoService = RealCryptoService
-    DefinitionService = RealDefinitionService
-except Exception as e_import_cds: # Capture d'exception plus large
-    print(f"AVERTISSEMENT: Erreur détaillée d'importation des services réels (CryptoService, DefinitionService): {type(e_import_cds).__name__}: {e_import_cds}.")
-    # import traceback # Décommenter pour un traceback complet si nécessaire
-    # print(f"TRACEBACK [Crypto/DefinitionService]: {traceback.format_exc()}")
-    print("L'analyse des données chiffrées utilisera des Mocks pour CryptoService et DefinitionService.")
-    # Assigner les mocks aux variables globales si l'import échoue
-    CryptoService = MockCryptoService
-    DefinitionService = None # Sera défini plus bas après MockDefinitionService
-    REAL_CRYPTO_DEFINITION_SERVICES_IMPORTED = False
-print("INFO [DEMO_IMPORT_DEBUG]: Après try-except import CryptoService/DefinitionService.")
+    from project_core.bootstrap import initialize_project_environment, ProjectContext
+    logger.info("Module de bootstrap importé avec succès.")
+except ImportError as e:
+    logger.critical(f"ERREUR CRITIQUE: Impossible d'importer le module de bootstrap 'project_core.bootstrap'. {e}")
+    logger.critical("Assurez-vous que project_core/bootstrap.py existe et que project_root est correctement dans sys.path.")
+    sys.exit(1) # Arrêter si le bootstrap n'est pas là
 
-
-# Tentative d'importation des modèles d'extrait réels (ExtractDefinitions, Extract, SourceDefinition).
+# Imports des modèles de données (nécessaires pour typer et instancier dans la démo)
 try:
-    from argumentation_analysis.models.extract_definition import ExtractDefinitions as RealExtractDefinitions, SourceDefinition as RealSourceDefinition, Extract as RealExtract
-    ExtractDefinitions = RealExtractDefinitions
-    SourceDefinition = RealSourceDefinition
-    Extract = RealExtract
-    REAL_EXTRACT_MODELS_IMPORTED = True
-    print("INFO: Modèles d'extrait réels (ExtractDefinitions, SourceDefinition, Extract) importés avec succès depuis extract_definition.")
-except Exception as e_import_extract_models: # Capture d'exception plus large
-    print(f"AVERTISSEMENT: Erreur détaillée d'importation des modèles d'extrait depuis 'extract_definition': {type(e_import_extract_models).__name__}: {e_import_extract_models}.")
-    # import traceback # Décommenter pour un traceback complet si nécessaire
-    # print(f"TRACEBACK [ExtractModels]: {traceback.format_exc()}")
-    print("Utilisation de Mocks pour ExtractDefinitions, SourceDefinition et Extract.")
-
-    class MockExtractPydanticCompat:
-        """Mock pour Extract, simulant un modèle Pydantic pour la compatibilité."""
-        def __init__(self, **kwargs):
-            self.id = kwargs.get("id", "mock_id")
-            self.source_id = kwargs.get("source_id", "mock_source_id")
-            self.source_type = kwargs.get("source_type", "mock_type")
-            self.text_content = kwargs.get("text_content", "Contenu simulé de l'extrait.")
-            self.title = kwargs.get("title", "Titre simulé de l'extrait.")
-            self.metadata = kwargs.get("metadata", {})
-            # Permettre l'accès par attribut pour d'autres champs potentiels
-            for key, value in kwargs.items():
-                if not hasattr(self, key): # Évite de réécrire les attributs déjà définis
-                    setattr(self, key, value)
-        
-        # Méthode get pour simuler un dictionnaire si nécessaire (bien que getattr soit préféré)
-        def get(self, key, default=None):
-            return getattr(self, key, default)
-
-    class MockSourceDefinitionPydanticCompat:
-        """Mock pour SourceDefinition."""
-        def __init__(self, **kwargs):
-            self.id = kwargs.get("id", "mock_source_def_id")
-            self.description = kwargs.get("description", "Description simulée de la source.")
-            # ... autres champs ...
-
-    class MockExtractDefinitionsPydanticCompat:
-        """Mock pour ExtractDefinitions, simulant un modèle Pydantic."""
-        def __init__(self, extracts=None, version="1.0_mock", sources=None, **kwargs):
-            self.version = version
-            self.sources = sources if sources is not None else {}
-            self.extracts = extracts if extracts is not None else []
-            # Permettre l'accès par attribut pour d'autres champs potentiels
-            for key, value in kwargs.items():
-                if not hasattr(self, key):
-                    setattr(self, key, value)
-            print(f"INFO: MockExtractDefinitionsPydanticCompat initialisé avec {len(self.extracts)} extraits.")
-
-        # Méthode get pour simuler un dictionnaire si nécessaire
-        def get(self, key, default=None):
-             return getattr(self, key, default)
-
-    ExtractDefinitions = MockExtractDefinitionsPydanticCompat
-    SourceDefinition = MockSourceDefinitionPydanticCompat
-    Extract = MockExtractPydanticCompat
-    REAL_EXTRACT_MODELS_IMPORTED = False
-print("INFO [DEMO_IMPORT_DEBUG]: Après try-except import modèles Extract.")
+    from argumentation_analysis.models.extract_definition import ExtractDefinitions, SourceDefinition, Extract
+    logger.info("Modèles d'extrait (ExtractDefinitions, etc.) importés.")
+except ImportError as e:
+    logger.error(f"AVERTISSEMENT: Impossible d'importer les modèles d'extrait: {e}. Certaines parties de la démo pourraient échouer.")
+    ExtractDefinitions, SourceDefinition, Extract = None, None, None
 
 
-class MockDefinitionService:
-    """
-    Mock pour DefinitionService.
-    Sa méthode load_definitions retourne maintenant un objet ExtractDefinitions (réel ou mock)
-    correctement formé, contenant une liste d'objets Extract (réels ou mocks).
-    """
-    def __init__(self, crypto_service, config_file): # config_file ajouté pour correspondre à la signature réelle
-        print(f"INFO: Utilisation de MockDefinitionService pour le fichier de configuration (implicite): {config_file}.")
-        self.crypto_service = crypto_service
-        self.config_file = config_file # Stocker pour référence si nécessaire
-
-    def load_definitions(self):
-        print("INFO: MockDefinitionService - simulation du chargement et déchiffrement de définitions.")
-        print("INFO: MockDefinitionService retourne un objet ExtractDefinitions (réel ou mock) avec des extraits mockés.")
-        
-        mock_extract_1_data = {
-            # "source_id": "mock_source_A_encrypted", # Clé retirée pour corriger TypeError
-            "source_type": "mock_encrypted",
-            "text_content": "Ceci est le premier extrait mocké, simulant des données déchiffrées.",
-            "title": "Extrait Mock 1",
-            "metadata": {"source_details": "Mocked source for demo"}
-        }
-        mock_extract_2_data = {
-            # "source_id": "mock_source_B_encrypted", # Clé retirée pour corriger TypeError
-            "source_type": "mock_encrypted",
-            "text_content": "Deuxième extrait mocké pour la démo chiffrée, avec un contenu différent.",
-            "title": "Extrait Mock 2",
-            "metadata": {"source_details": "Another mocked source"}
-        }
-        
-        extract_instance_1 = Extract(**mock_extract_1_data)
-        extract_instance_2 = Extract(**mock_extract_2_data)
-        
-        list_of_mock_extracts = [extract_instance_1, extract_instance_2]
-        extract_definitions_object = ExtractDefinitions(extracts=list_of_mock_extracts)
-        
-        return extract_definitions_object
-
-# Si DefinitionService n'a pas été importé (REAL_CRYPTO_DEFINITION_SERVICES_IMPORTED est False),
-# ou si l'import de RealDefinitionService a spécifiquement échoué, on assigne MockDefinitionService.
-if not REAL_CRYPTO_DEFINITION_SERVICES_IMPORTED or DefinitionService is None:
-    DefinitionService = MockDefinitionService
-print("INFO [DEMO_IMPORT_DEBUG]: Après assignation MockDefinitionService si besoin.")
-
-
-# Tentative d'importation des classes réelles pour l'analyse de texte clair.
-try:
-    # Correction de l'import pour InformalAgent pour refléter son nouvel emplacement
-    from argumentation_analysis.agents.core.informal.informal_agent import InformalAgent as RealInformalAgent
-    InformalAgent = RealInformalAgent # Assigner à la variable globale
-    REAL_INFORMAL_AGENT_IMPORTED = True
-    print("INFO: RealInformalAgent (InformalAgent) importé avec succès depuis argumentation_analysis.agents.core.informal.informal_agent.")
-except Exception as e_import_ia:
-    InformalAgent = None # Reste None si l'import échoue
-    print(f"AVERTISSEMENT: Erreur détaillée d'importation de RealInformalAgent (depuis argumentation_analysis.agents.core.informal.informal_agent): {type(e_import_ia).__name__}: {e_import_ia}")
-    # import traceback # Décommenter pour un traceback complet si nécessaire
-    # print(f"TRACEBACK [InformalAgent]: {traceback.format_exc()}")
-    REAL_INFORMAL_AGENT_IMPORTED = False
-print("INFO [DEMO_IMPORT_DEBUG]: Après try-except import InformalAgent.")
-
-try:
-    # Mise à jour de l'import pour utiliser create_llm_service depuis argumentation_analysis.core.llm_service
-    from argumentation_analysis.core.llm_service import create_llm_service as real_create_llm_service
-    create_llm_service = real_create_llm_service # Assigner à la variable globale
-    REAL_LLM_SERVICE_FUNCTION_IMPORTED = True
-    print("INFO: Fonction real_create_llm_service (create_llm_service) importée avec succès depuis argumentation_analysis.core.llm_service.")
-except Exception as e_import_llms:
-    create_llm_service = None # Reste None si l'import échoue
-    print(f"AVERTISSEMENT: Erreur détaillée d'importation de real_create_llm_service (depuis argumentation_analysis.core.llm_service): {type(e_import_llms).__name__}: {e_import_llms}")
-    print(f"AVERTISSEMENT: Le module 'argumentation_analysis.core.llm_service.py' n'a pas été trouvé ou une erreur est survenue lors de son import.")
-    print("AVERTISSEMENT: Par conséquent, MockLLMService sera utilisé si un service LLM est requis.")
-    # import traceback # Décommenter pour un traceback complet si nécessaire
-    # print(f"TRACEBACK [create_llm_service]: {traceback.format_exc()}")
-    REAL_LLM_SERVICE_FUNCTION_IMPORTED = False
-print("INFO [DEMO_IMPORT_DEBUG]: Après try-except import create_llm_service.")
-
-
-# Mock pour le service LLM, utilisé si la clé API n'est pas trouvée ou si l'import de create_llm_service échoue.
-# Ce mock simule l'objet retourné par create_llm_service (qui est une instance de OpenAIChatCompletion ou AzureChatCompletion)
-# et doit donc avoir une méthode invoke.
-class MockLLMService: # Ce mock simule l'instance de service LLM, pas la fonction create_llm_service
-    def __init__(self, service_id: str = "mock_llm_service"): # service_id pour correspondre à create_llm_service
-        self.service_id = service_id
-        print(f"INFO: MockLLMService (instance) initialisé avec service_id='{self.service_id}'.")
-
-    # La méthode attendue par semantic kernel est souvent `complete_async` ou similaire,
-    # mais pour un usage direct simple, `invoke` est gardé pour la démo.
-    # Si semantic kernel est utilisé, ce mock devra être adapté pour être un connecteur SK valide.
-    async def complete_async(self, prompt: str, request_settings: sk.connectors.ai.PromptExecutionSettings) -> str: # Signature pour SK
-        print(f"INFO: MockLLMService.complete_async appelé avec le prompt (premiers 100 chars): {prompt[:100]}...")
-        mock_response_data = {
-            "sophismes_identifies": [
-                {"type": "Ad Hominem (Mock - LLM)", "passage": "Votre argument est invalide parce que vous êtes stupide."},
-                {"type": "Homme de paille (Mock - LLM)", "passage": "Vous dites que nous devrions investir plus dans l'éducation, donc vous voulez ruiner le pays."}
-            ],
-            "score_global_sophistication": 0.2
-        }
-        # Pour SK, la réponse doit être une chaîne de caractères simple ou un objet `SKContext`
-        # Ici, nous retournons une chaîne JSON pour la démo, mais cela pourrait nécessiter un ajustement
-        # si InformalAgent s'attend à un format spécifique de SK.
-        return json.dumps(mock_response_data)
-
-    def invoke(self, prompt: str) -> str: # Méthode synchrone pour compatibilité si appelée directement
-        print(f"INFO: MockLLMService.invoke appelé avec le prompt (premiers 100 chars): {prompt[:100]}...")
-        mock_response_data = {
-            "sophismes_identifies": [
-                {"type": "Ad Hominem (Mock - LLM)", "passage": "Votre argument est invalide parce que vous êtes stupide."},
-                {"type": "Homme de paille (Mock - LLM)", "passage": "Vous dites que nous devrions investir plus dans l'éducation, donc vous voulez ruiner le pays."}
-            ],
-            "score_global_sophistication": 0.2
-        }
-        return json.dumps(mock_response_data)
-
-# Fonction mock pour create_llm_service si l'import réel échoue
-def mock_create_llm_service(service_id: str = "mock_llm_service_via_creator") -> MockLLMService:
-    print(f"INFO: Utilisation de mock_create_llm_service (retourne une instance de MockLLMService) pour service_id='{service_id}'.")
-    return MockLLMService(service_id=service_id)
-
-# Assigner la fonction mock si l'import réel a échoué
-if not REAL_LLM_SERVICE_FUNCTION_IMPORTED or create_llm_service is None:
-    create_llm_service = mock_create_llm_service
-
-
+# La vérification et l'installation des dépendances peuvent rester,
+# car elles concernent l'environnement d'exécution de base du script.
 def check_and_install_dependencies():
     """
     Vérifie la présence des packages listés (`flask-cors`, `seaborn`, `semantic-kernel`) et tente de les installer s'ils sont manquants.
@@ -378,11 +124,16 @@ def check_and_install_dependencies():
             try:
                 # Utiliser capture_output=True et text=True pour subprocess.run
                 # S'assurer que l'encodage est géré pour la sortie du subprocess
+                # Ajout d'un timeout de 300 secondes pour l'installation
+                print(f"INFO: Tentative d'installation de '{package_name}' avec un timeout de 300 secondes...")
                 pip_result = subprocess.run([sys.executable, "-m", "pip", "install", package_name], 
-                                            check=True, capture_output=True, text=True, encoding='utf-8', errors='replace')
+                                            check=True, capture_output=True, text=True, encoding='utf-8', errors='replace', timeout=300)
                 print(f"SUCCÈS: Le package '{package_name}' a été installé.")
                 if pip_result.stdout:
                     print(f"Sortie pip (stdout):\n{pip_result.stdout}")
+            except subprocess.TimeoutExpired:
+                print(f"ERREUR: L'installation de '{package_name}' a dépassé le timeout de 300 secondes.")
+                print(f"Veuillez vérifier votre connexion internet et installer '{package_name}' manuellement.")
             except subprocess.CalledProcessError as e:
                 print(f"ERREUR: Échec de l'installation de '{package_name}'. Code de retour : {e.returncode}")
                 # e.stdout et e.stderr sont déjà des chaînes si text=True a été utilisé, ou des bytes sinon.
@@ -409,15 +160,15 @@ def run_unit_tests():
     print("\n--- Exécution des tests unitaires ---")
     print("INFO: Les tests unitaires utilisent typiquement des mocks pour isoler le code testé.")
     start_time_tests = time.time()
-    print(f"INFO: Début de l'exécution des tests unitaires : {start_time_tests}")
+    print(f"INFO: Début de l'exécution des tests unitaires : {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(start_time_tests))}")
     try:
         # MODIFICATION 1: Capturer en bytes (retrait de text=True, encoding, errors)
         # Ajout d'un timeout de 900 secondes (15 minutes)
-        print("INFO: Exécution de pytest avec un timeout de 900 secondes...")
+        print("INFO: Exécution de pytest avec un timeout de 900 secondes (15 minutes)...")
         pytest_process = subprocess.run([sys.executable, "-m", "pytest"], capture_output=True, check=False, timeout=900) # Timeout augmenté
         
         end_time_tests = time.time()
-        print(f"INFO: Fin de l'exécution des tests unitaires : {end_time_tests}")
+        print(f"INFO: Fin de l'exécution des tests unitaires : {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(end_time_tests))}")
         print(f"INFO: Tests unitaires exécutés en {end_time_tests - start_time_tests:.2f} secondes.")
 
         # MODIFICATION 2: Décodage robuste de stdout et stderr
@@ -482,9 +233,9 @@ def run_unit_tests():
 
         # MODIFICATION 5: Utiliser pytest_process.returncode et pytest_stdout_str pour le résumé
         if pytest_process.returncode == 0:
-            print("\nTests unitaires réussis !")
+            print("\nSUCCÈS: Tests unitaires réussis !")
         else:
-            print(f"\nÉchec des tests unitaires ou certains tests ont échoué (code de retour : {pytest_process.returncode}).")
+            print(f"\nAVERTISSEMENT: Échec des tests unitaires ou certains tests ont échoué (code de retour : {pytest_process.returncode}).")
             
             summary_lines = []
             if pytest_stdout_str: 
@@ -511,36 +262,50 @@ def run_unit_tests():
             else: # Si pytest_stdout_str est vide
                 print("Impossible d'extraire un résumé : la sortie standard de pytest était vide.")
     except subprocess.TimeoutExpired:
-        print("ERREUR: L'exécution de pytest a dépassé le timeout de 900 secondes.") # Message mis à jour
-        # pytest_process n'existera pas complètement dans ce cas, ou sa sortie sera vide.
-        # On pourrait vouloir logger cela différemment.
+        print("ERREUR: L'exécution de pytest a dépassé le timeout de 900 secondes (15 minutes).")
+        print("Cela peut indiquer un problème dans les tests (boucle infinie, attente indéfinie), un environnement très lent, ou des tests particulièrement longs.")
+        print("Si ce problème persiste, essayez d'exécuter 'pytest -v' manuellement pour identifier les tests lents ou bloquants.")
         end_time_tests_timeout = time.time()
-        print(f"INFO: Fin de l'exécution des tests unitaires (timeout) : {end_time_tests_timeout}")
+        print(f"INFO: Fin de l'exécution des tests unitaires (timeout) : {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(end_time_tests_timeout))}")
         print(f"INFO: Tests unitaires (tentative) exécutés en {end_time_tests_timeout - start_time_tests:.2f} secondes avant timeout.")
     except FileNotFoundError:
         print("ERREUR: La commande 'pytest' n'a pas été trouvée. Assurez-vous que pytest est installé et dans votre PATH.")
         end_time_tests_error = time.time()
-        print(f"INFO: Fin de l'exécution des tests unitaires (erreur FileNotFoundError) : {end_time_tests_error}")
+        print(f"INFO: Fin de l'exécution des tests unitaires (erreur FileNotFoundError) : {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(end_time_tests_error))}")
         print(f"INFO: Tests unitaires (tentative) exécutés en {end_time_tests_error - start_time_tests:.2f} secondes.")
     except Exception as e:
         print(f"Une erreur inattendue est survenue lors de l'exécution des tests : {e}")
         import traceback
         traceback.print_exc()
         end_time_tests_exception = time.time()
-        print(f"INFO: Fin de l'exécution des tests unitaires (erreur Exception) : {end_time_tests_exception}")
+        print(f"INFO: Fin de l'exécution des tests unitaires (erreur Exception) : {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(end_time_tests_exception))}")
         print(f"INFO: Tests unitaires (tentative) exécutés en {end_time_tests_exception - start_time_tests:.2f} secondes.")
 
 
-def analyze_clear_text_example(example_file_path: str):
-    print(f"\n--- Analyse du fichier texte (avec services réels si possible) : {example_file_path} ---")
-    global InformalAgent, create_llm_service # Utiliser les variables globales
+def analyze_clear_text_example(project_context: ProjectContext, example_file_path_str: str):
+    logger.info(f"\n--- Analyse du fichier texte : {example_file_path_str} ---")
+
+    if not project_context.informal_agent:
+        logger.error("InformalAgent non initialisé dans project_context. Impossible d'analyser le texte clair.")
+        return
+    
+    # Utiliser project_root_path depuis le contexte pour construire le chemin absolu
+    # si example_file_path_str est relatif.
+    # Si example_file_path_str est déjà absolu, Path le gérera.
+    # Le script original utilisait project_root global.
+    # Ici, on s'assure d'utiliser celui du contexte ou le project_root global s'il est défini.
+    current_project_root_path = project_context.project_root_path if project_context.project_root_path else Path(project_root)
+
+    file_path = Path(example_file_path_str)
+    if not file_path.is_absolute():
+        file_path = current_project_root_path / example_file_path_str
+
 
     try:
-        file_path = Path(example_file_path)
         if not file_path.is_file():
-            print(f"Erreur : Le fichier d'exemple '{example_file_path}' n'a pas été trouvé.")
+            logger.error(f"Le fichier d'exemple '{file_path}' n'a pas été trouvé.")
             default_content = "Ceci est un texte d'exemple pour l'analyse de sophismes. L'argument de mon adversaire est ridicule, il doit être idiot. De plus, tout le monde sait que j'ai raison."
-            print(f"Création d'un fichier d'exemple à '{file_path}' avec contenu par défaut pour la démonstration.")
+            logger.info(f"Création d'un fichier d'exemple à '{file_path}' avec contenu par défaut.")
             file_path.parent.mkdir(parents=True, exist_ok=True)
             with open(file_path, "w", encoding="utf-8") as f:
                 f.write(default_content)
@@ -548,376 +313,202 @@ def analyze_clear_text_example(example_file_path: str):
         with open(file_path, "r", encoding="utf-8") as f:
             text_content = f.read()
 
-        print(f"Contenu du fichier (premiers 200 caractères) :\n{text_content[:200]}...\n")
+        logger.info(f"Contenu du fichier (premiers 200 caractères) :\n{text_content[:200]}...\n")
         
-        if not REAL_INFORMAL_AGENT_IMPORTED or InformalAgent is None:
-            print("ERREUR CRITIQUE: Real InformalAgent (depuis son nouvel emplacement) n'a pas été importé correctement ou n'est pas disponible.")
-            print("L'analyse de texte clair avec la version réelle de l'agent ne peut pas continuer.")
-            return
-
-        current_llm_service_instance = None
-        analysis_description = "RealInformalAgent (depuis agents.core.informal)"
-        
-        openai_api_key = os.getenv("OPENAI_API_KEY") # create_llm_service le lira de .env
-
-        start_time_llm_init_clear = time.time()
-        print(f"INFO: Début de l'initialisation du LLMService (texte clair) : {start_time_llm_init_clear}")
-        if REAL_LLM_SERVICE_FUNCTION_IMPORTED and create_llm_service is not mock_create_llm_service and openai_api_key:
-            try:
-                # create_llm_service ne prend pas api_key directement, il le lit depuis .env
-                current_llm_service_instance = create_llm_service(service_id="clear_text_llm")
-                analysis_description += " avec LLM Service réel (via create_llm_service)"
-                print("INFO: Utilisation du service LLM réel (via create_llm_service) pour l'analyse de texte clair.")
-            except Exception as e:
-                print(f"ERREUR: Échec de l'appel à create_llm_service (réel): {e}")
-                print("INFO: Passage à MockLLMService.")
-                current_llm_service_instance = mock_create_llm_service(service_id="clear_text_llm_fallback_after_real_error")() # Appel de la fonction mock
-                analysis_description += " avec MockLLMService (suite à erreur create_llm_service réel)"
+        agent_instance = project_context.informal_agent
+        analysis_description = f"InformalAgent (type: {type(agent_instance).__name__})"
+        if project_context.llm_service:
+            analysis_description += f" avec LLM Service (type: {type(project_context.llm_service).__name__})"
         else:
-            if not openai_api_key:
-                print("AVERTISSEMENT: OPENAI_API_KEY non trouvée dans les variables d'environnement. create_llm_service (réel) pourrait échouer ou utiliser des mocks internes.")
-            elif not (REAL_LLM_SERVICE_FUNCTION_IMPORTED and create_llm_service is not mock_create_llm_service):
-                print("AVERTISSEMENT: La fonction real_create_llm_service (depuis argumentation_analysis.core.llm_service) n'a pas été importée correctement ou n'est pas disponible.")
-            
-            print("INFO: Utilisation de MockLLMService (via mock_create_llm_service) pour l'analyse de texte clair.")
-            current_llm_service_instance = mock_create_llm_service(service_id="clear_text_llm_default_fallback")() # Appel de la fonction mock
-            analysis_description += " avec MockLLMService"
-        end_time_llm_init_clear = time.time()
-        print(f"INFO: Fin de l'initialisation du LLMService (texte clair) : {end_time_llm_init_clear}")
-        print(f"INFO: LLMService (texte clair) initialisé en {end_time_llm_init_clear - start_time_llm_init_clear:.2f} secondes.")
+            analysis_description += " sans LLM Service configuré via bootstrap (l'agent peut utiliser un fallback interne ou échouer)."
 
-        start_time_agent_init_clear = time.time()
-        print(f"INFO: Début de l'initialisation de InformalAgent (texte clair) : {start_time_agent_init_clear}")
+        logger.info(f"Utilisation de {analysis_description} pour l'analyse.")
+            
         try:
-            # Création du kernel sémantique
-            kernel = sk.Kernel()
-            if current_llm_service_instance:
-                 # Le nom du service ("chat-gpt" ou autre) doit correspondre à ce que InformalAgent attend ou configure.
-                 # Pour l'instant, on utilise un nom générique.
-                kernel.add_service(current_llm_service_instance)
-                print(f"INFO: Semantic Kernel initialisé et service LLM '{type(current_llm_service_instance).__name__}' ajouté.")
-            else:
-                print("AVERTISSEMENT: Aucune instance de service LLM n'a été créée. InformalAgent pourrait ne pas fonctionner correctement.")
+            start_time_analyze_clear = time.time()
+            logger.info(f"Début de l'analyse des sophismes (texte clair) : {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(start_time_analyze_clear))}")
             
-            # InformalAgent est déjà la classe RealInformalAgent (ou None si échec import)
-            agent_instance = InformalAgent(
-                agent_id="clear_text_agent", 
-                tools={"fallacy_detector": MockFallacyDetector()}, # Fournir le mock détecteur
-                semantic_kernel=kernel # Passer le kernel configuré
-            )
-            print(f"INFO: Real InformalAgent initialisé ({analysis_description}).")
-        except Exception as e:
-            print(f"ERREUR CRITIQUE: Échec de l'initialisation de Real InformalAgent avec le service LLM sélectionné: {e}")
-            print("L'analyse de texte clair ne peut pas continuer. Vérifiez la compatibilité entre l'agent et le service LLM.")
-            import traceback
-            traceback.print_exc()
-            end_time_agent_init_clear_error = time.time()
-            print(f"INFO: Fin de l'initialisation de InformalAgent (texte clair, erreur) : {end_time_agent_init_clear_error}")
-            print(f"INFO: InformalAgent (texte clair, tentative) initialisé en {end_time_agent_init_clear_error - start_time_agent_init_clear:.2f} secondes.")
-            return
-        end_time_agent_init_clear = time.time()
-        print(f"INFO: Fin de l'initialisation de InformalAgent (texte clair) : {end_time_agent_init_clear}")
-        print(f"INFO: InformalAgent (texte clair) initialisé en {end_time_agent_init_clear - start_time_agent_init_clear:.2f} secondes.")
+            # L'InformalAgent initialisé par le bootstrap devrait avoir son kernel et LLM service déjà configurés.
+            # La méthode analyze_fallacies devrait fonctionner directement.
+            analysis_results = agent_instance.analyze_fallacies(text_content)
             
-        start_time_analyze_clear = time.time()
-        print(f"INFO: Début de l'analyse des sophismes (texte clair) : {start_time_analyze_clear}")
-        analysis_results = agent_instance.analyze_fallacies(text_content)
-        end_time_analyze_clear = time.time()
-        print(f"INFO: Fin de l'analyse des sophismes (texte clair) : {end_time_analyze_clear}")
-        print(f"INFO: Analyse des sophismes (texte clair) effectuée en {end_time_analyze_clear - start_time_analyze_clear:.2f} secondes.")
+            end_time_analyze_clear = time.time()
+            logger.info(f"Fin de l'analyse des sophismes (texte clair) : {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(end_time_analyze_clear))}")
+            logger.info(f"Analyse des sophismes (texte clair) effectuée en {end_time_analyze_clear - start_time_analyze_clear:.2f} secondes.")
 
-        print(f"Résultats de l'analyse des sophismes ({analysis_description}) :")
-        # S'assurer que analysis_results est sérialisable en JSON
-        try:
-            print(json.dumps(analysis_results, indent=4, ensure_ascii=False))
-        except TypeError:
-            print(f"AVERTISSEMENT: Les résultats de l'analyse ne sont pas directement sérialisables en JSON. Affichage brut : {analysis_results}")
-
+            logger.info(f"Résultats de l'analyse des sophismes ({analysis_description}) :")
+            try:
+                # Utiliser logger.info pour la sortie JSON pour la cohérence
+                logger.info(json.dumps(analysis_results, indent=4, ensure_ascii=False))
+            except TypeError:
+                logger.warning(f"Les résultats de l'analyse ne sont pas directement sérialisables en JSON. Affichage brut : {analysis_results}")
+        
+        except Exception as e_analyze:
+            logger.error(f"ERREUR lors de l'appel à agent_instance.analyze_fallacies pour le texte clair : {e_analyze}", exc_info=True)
 
     except Exception as e:
-        print(f"Une erreur est survenue lors de l'analyse du fichier '{example_file_path}' : {e}")
-        import traceback
-        traceback.print_exc()
+        logger.error(f"Une erreur est survenue lors de l'analyse du fichier '{file_path}' : {e}", exc_info=True)
 
 
-def analyze_encrypted_data() -> str | None:
-    print("\n--- Analyse des données chiffrées (avec services réels et analyse rhétorique réelle sur un extrait) ---")
-    global REAL_ENCRYPTION_KEY_IMPORTED, CryptoService, DefinitionService, InformalAgent, create_llm_service, Extract, ExtractDefinitions, project_root
-
-    REAL_ENCRYPTION_KEY = None
-    try:
-        from argumentation_analysis.ui.config import ENCRYPTION_KEY as IMPORTED_REAL_ENCRYPTION_KEY
-        REAL_ENCRYPTION_KEY = IMPORTED_REAL_ENCRYPTION_KEY
-        REAL_ENCRYPTION_KEY_IMPORTED = True
-        print("INFO: Clé de chiffrement réelle (ENCRYPTION_KEY) importée depuis ui.config.")
-    except ImportError:
-        REAL_ENCRYPTION_KEY = None
-        REAL_ENCRYPTION_KEY_IMPORTED = False
-        print("AVERTISSEMENT: Impossible d'importer REAL_ENCRYPTION_KEY depuis argumentation_analysis.ui.config.")
-        print("RealCryptoService ne pourra pas être initialisé avec cette clé. Passage au mock si RealCryptoService est tenté.")
-
-    current_crypto_service = None
-    current_definition_service = None
-    analysis_results_list = []
-
-    env_path = Path(project_root) / "argumentation_analysis" / ".env" # Utilisation de project_root
-    if env_path.exists():
-        load_dotenv(dotenv_path=env_path, override=True) 
-        print(f"INFO: Chargement des variables depuis {env_path}")
-    else:
-        print(f"AVERTISSEMENT: Fichier .env non trouvé à {env_path}.")
-        print("La clé OPENAI_API_KEY est requise pour l'analyse réelle avec create_llm_service.")
-        print("ENCRYPTION_KEY de ui.config est requise pour RealCryptoService.")
-
-    # Initialisation de CryptoService (réel ou mock)
-    start_time_crypto_init = time.time()
-    print(f"INFO: Début de l'initialisation de CryptoService : {start_time_crypto_init}")
-    if CryptoService is not MockCryptoService and REAL_ENCRYPTION_KEY_IMPORTED and REAL_ENCRYPTION_KEY:
-        try:
-            current_crypto_service = CryptoService(encryption_key=REAL_ENCRYPTION_KEY)
-            print("INFO: RealCryptoService initialisé avec ENCRYPTION_KEY depuis ui.config.")
-        except Exception as e:
-            print(f"ERREUR: Impossible d'initialiser CryptoService réel avec ENCRYPTION_KEY : {e}")
-            print("INFO: Utilisation de Mock CryptoService (échec initialisation réel avec ENCRYPTION_KEY).")
-            current_crypto_service = MockCryptoService()
-    elif CryptoService is not MockCryptoService and not (REAL_ENCRYPTION_KEY_IMPORTED and REAL_ENCRYPTION_KEY):
-        print("AVERTISSEMENT: REAL_ENCRYPTION_KEY non disponible ou non importée, impossible d'initialiser RealCryptoService.")
-        print("INFO: Utilisation de Mock CryptoService.")
-        current_crypto_service = MockCryptoService()
-    else: 
-        print("INFO: Utilisation de MockCryptoService (import de RealCryptoService a échoué ou clé non dispo).")
-        current_crypto_service = MockCryptoService()
-    end_time_crypto_init = time.time()
-    print(f"INFO: Fin de l'initialisation de CryptoService : {end_time_crypto_init}")
-    print(f"INFO: CryptoService initialisé en {end_time_crypto_init - start_time_crypto_init:.2f} secondes.")
-
-
-    # Définition du chemin du fichier de configuration pour DefinitionService
-    abs_definitions_file_path = os.path.join(project_root, "argumentation_analysis", "data", "extract_sources.json.gz.enc")
-    print(f"INFO: Chemin absolu pour definitions_file_path (config_file pour DefinitionService): {abs_definitions_file_path}")
-
-    if not os.path.exists(abs_definitions_file_path): # Vérifier l'existence du fichier de config
-        print(f"ERREUR: Le fichier de configuration des définitions '{abs_definitions_file_path}' n'existe pas.")
-        print("Assurez-vous que le fichier est présent pour la démonstration.")
+def analyze_encrypted_data(project_context: ProjectContext) -> str | None:
+    logger.info("\n--- Analyse des données chiffrées ---")
+    
+    if not project_context.crypto_service:
+        logger.error("CryptoService non initialisé dans project_context. Impossible de déchiffrer.")
         return None
-            
-    # Initialisation de DefinitionService (réel ou mock)
-    start_time_def_init = time.time()
-    print(f"INFO: Début de l'initialisation de DefinitionService : {start_time_def_init}")
-    try:
-        if DefinitionService is not MockDefinitionService: 
-            if current_crypto_service: 
-                current_definition_service = DefinitionService(
-                    crypto_service=current_crypto_service,
-                    config_file=abs_definitions_file_path
-                )
-                print(f"INFO: RealDefinitionService initialisé avec config_file: {abs_definitions_file_path}")
-            else:
-                raise ValueError("CryptoService n'est pas initialisé, ne peut pas initialiser RealDefinitionService.")
-        else: 
-             current_definition_service = MockDefinitionService(
-                crypto_service=current_crypto_service, 
-                config_file=abs_definitions_file_path
-            )
-             print(f"INFO: MockDefinitionService initialisé avec config_file: {abs_definitions_file_path}")
-        
-        service_type = "RealDefinitionService" if DefinitionService is not MockDefinitionService else "MockDefinitionService"
-        crypto_type = "RealCryptoService" if not isinstance(current_crypto_service, MockCryptoService) else "MockCryptoService"
-        print(f"INFO: {service_type} initialisé (pour {abs_definitions_file_path}) avec {crypto_type}.")
+    if not project_context.definition_service:
+        logger.error("DefinitionService non initialisé dans project_context. Impossible de charger les définitions.")
+        return None
+    if not project_context.informal_agent:
+        logger.error("InformalAgent non initialisé dans project_context. Impossible d'analyser.")
+        return None
+    if Extract is None or ExtractDefinitions is None: # Vérifier si les modèles ont été importés
+        logger.error("Les modèles Extract/ExtractDefinitions n'ont pas été importés. Impossible de traiter les données.")
+        return None
 
-    except Exception as e_init_ds:
-        print(f"ERREUR: Impossible d'initialiser DefinitionService : {type(e_init_ds).__name__}: {e_init_ds}")
-        print("INFO: Passage au mock DefinitionService explicite.")
-        current_definition_service = MockDefinitionService(
-            crypto_service=current_crypto_service, 
-            config_file=abs_definitions_file_path
-        )
-    end_time_def_init = time.time()
-    print(f"INFO: Fin de l'initialisation de DefinitionService : {end_time_def_init}")
-    print(f"INFO: DefinitionService initialisé en {end_time_def_init - start_time_def_init:.2f} secondes.")
-
+    analysis_results_list = []
+    current_project_root_path = project_context.project_root_path if project_context.project_root_path else Path(project_root)
+    
+    # Le chemin du fichier de configuration est géré par DefinitionService lors de son initialisation dans bootstrap
+    # abs_definitions_file_path = current_project_root_path / "argumentation_analysis" / "data" / "extract_sources.json.gz.enc"
+    # logger.info(f"Utilisation du DefinitionService configuré par bootstrap (qui devrait utiliser {abs_definitions_file_path})")
 
     try:
         start_time_load_defs = time.time()
-        print(f"INFO: Début du chargement des définitions d'extraits : {start_time_load_defs}")
-        print("INFO: Tentative de chargement (et déchiffrement si réel) des définitions d'extraits...")
-        extract_definitions_obj = current_definition_service.load_definitions() 
+        logger.info(f"Début du chargement des définitions d'extraits via DefinitionService du contexte: {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(start_time_load_defs))}")
+        
+        extract_definitions_obj = project_context.definition_service.load_definitions()
+        
         end_time_load_defs = time.time()
-        print(f"INFO: Fin du chargement des définitions d'extraits : {end_time_load_defs}")
-        print(f"INFO: Définitions d'extraits chargées en {end_time_load_defs - start_time_load_defs:.2f} secondes.")
+        logger.info(f"Fin du chargement des définitions d'extraits : {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(end_time_load_defs))}")
+        logger.info(f"Définitions d'extraits chargées en {end_time_load_defs - start_time_load_defs:.2f} secondes.")
         
-        if not extract_definitions_obj or not hasattr(extract_definitions_obj, 'sources') or not isinstance(extract_definitions_obj.sources, list) or not extract_definitions_obj.sources:
-             print("ERREUR: Aucune définition de source n'a été chargée ou l'objet retourné est invalide/ne contient pas d'attribut 'sources' de type liste non vide.")
-             print(f"Type de extract_definitions_obj: {type(extract_definitions_obj)}")
-             if hasattr(extract_definitions_obj, 'sources'):
-                 print(f"Type de extract_definitions_obj.sources: {type(extract_definitions_obj.sources)}")
-             print("Vérifiez l'implémentation de load_definitions() du service utilisé (réel ou mock).")
-             return None
-
-        # Pour la démo, nous prenons la première source et ses extraits.
-        first_source = extract_definitions_obj.sources[0]
-        if not hasattr(first_source, 'extracts') or not isinstance(first_source.extracts, list):
-            print(f"ERREUR: La première source ('{getattr(first_source, 'source_name', 'N/A')}') ne contient pas d'attribut 'extracts' de type liste.")
-            return None
-
-        num_extracts_in_first_source = len(first_source.extracts)
-        print(f"SUCCÈS (ou simulation de chargement): {len(extract_definitions_obj.sources)} source(s) chargée(s).")
-        print(f"La première source contient {num_extracts_in_first_source} extrait(s).")
-
-        if num_extracts_in_first_source == 0:
-            print("INFO: Aucun extrait à analyser dans la première source.")
-            return None
-
-        selected_extract = first_source.extracts[0]
+        # La structure de extract_definitions_obj peut avoir changé.
+        # Le mock original avait .extracts directement. Le réel pourrait avoir .sources puis .extracts.
+        # Le mock dans bootstrap.py pour DefinitionService retourne un objet ExtractDefinitions avec un attribut 'extracts'.
+        # Si le service réel retourne une structure avec 'sources', il faudra adapter.
+        # Pour l'instant, on suppose que extract_definitions_obj.extracts est la liste des extraits.
         
-        # Mise à jour pour utiliser les attributs réels de la classe Extract
-        extract_id = getattr(selected_extract, 'extract_name', 'N/A') # extract_name au lieu de id
-        text_content_extract = getattr(selected_extract, 'text_content', '')
-
-        print(f"\n--- Analyse rhétorique réelle de l'extrait déchiffré (ID: {extract_id}) ---")
-        print(f"Texte de l'extrait sélectionné (premiers 200 chars):\n{text_content_extract[:200]}...")
-
-        if not REAL_INFORMAL_AGENT_IMPORTED or InformalAgent is None:
-            print("ERREUR CRITIQUE: Real InformalAgent (depuis son nouvel emplacement) n'a pas été importé correctement ou n'est pas disponible.")
-            print("L'analyse rhétorique réelle ne peut pas continuer.")
-            return None
-
-        current_llm_service_instance_for_encrypted = None
-        analysis_description_encrypted = "RealInformalAgent (depuis agents.core.informal)"
-        
-        openai_api_key = os.getenv("OPENAI_API_KEY") # create_llm_service le lira de .env
-
-        start_time_llm_init_encrypted = time.time()
-        print(f"INFO: Début de l'initialisation du LLMService (données chiffrées) : {start_time_llm_init_encrypted}")
-        if REAL_LLM_SERVICE_FUNCTION_IMPORTED and create_llm_service is not mock_create_llm_service and openai_api_key:
-            try:
-                current_llm_service_instance_for_encrypted = create_llm_service(service_id="encrypted_data_llm")
-                analysis_description_encrypted += " avec LLM Service réel (via create_llm_service)"
-                print("INFO: Utilisation du service LLM réel (via create_llm_service) pour l'analyse de l'extrait déchiffré.")
-            except Exception as e:
-                print(f"ERREUR: Échec de l'appel à create_llm_service (réel) pour l'extrait déchiffré: {e}")
-                print("INFO: Passage à MockLLMService pour l'extrait déchiffré.")
-                current_llm_service_instance_for_encrypted = mock_create_llm_service(service_id="encrypted_llm_fallback_after_real_error")()
-                analysis_description_encrypted += " avec MockLLMService (suite à erreur create_llm_service réel)"
-        else:
-            if not openai_api_key:
-                print("AVERTISSEMENT: OPENAI_API_KEY non trouvée. Requis pour create_llm_service réel.")
-            elif not (REAL_LLM_SERVICE_FUNCTION_IMPORTED and create_llm_service is not mock_create_llm_service):
-                print("AVERTISSEMENT: La fonction real_create_llm_service (depuis argumentation_analysis.core.llm_service) n'a pas été importée correctement ou n'est pas disponible.")
-            print("INFO: Utilisation de MockLLMService (via mock_create_llm_service) pour l'analyse de l'extrait déchiffré.")
-            current_llm_service_instance_for_encrypted = mock_create_llm_service(service_id="encrypted_llm_default_fallback")()
-            analysis_description_encrypted += " avec MockLLMService"
-        end_time_llm_init_encrypted = time.time()
-        print(f"INFO: Fin de l'initialisation du LLMService (données chiffrées) : {end_time_llm_init_encrypted}")
-        print(f"INFO: LLMService (données chiffrées) initialisé en {end_time_llm_init_encrypted - start_time_llm_init_encrypted:.2f} secondes.")
-
-        start_time_agent_init_encrypted = time.time()
-        print(f"INFO: Début de l'initialisation de InformalAgent (données chiffrées) : {start_time_agent_init_encrypted}")
-        try:
-            kernel_encrypted = sk.Kernel()
-            if current_llm_service_instance_for_encrypted:
-                kernel_encrypted.add_service(current_llm_service_instance_for_encrypted)
-                print(f"INFO: Semantic Kernel initialisé et service LLM '{type(current_llm_service_instance_for_encrypted).__name__}' ajouté pour l'analyse chiffrée.")
+        # Tentative de gestion des deux structures (directement .extracts ou .sources[0].extracts)
+        extracts_to_process = []
+        if hasattr(extract_definitions_obj, 'extracts') and isinstance(extract_definitions_obj.extracts, list):
+            extracts_to_process = extract_definitions_obj.extracts
+            logger.info(f"{len(extracts_to_process)} extraits trouvés directement dans extract_definitions_obj.extracts.")
+        elif hasattr(extract_definitions_obj, 'sources') and isinstance(extract_definitions_obj.sources, list) and extract_definitions_obj.sources:
+            first_source = extract_definitions_obj.sources[0]
+            if hasattr(first_source, 'extracts') and isinstance(first_source.extracts, list):
+                extracts_to_process = first_source.extracts
+                logger.info(f"{len(extracts_to_process)} extraits trouvés dans la première source (extract_definitions_obj.sources[0].extracts).")
             else:
-                print("AVERTISSEMENT: Aucune instance de service LLM n'a été créée pour l'analyse chiffrée.")
-
-            agent_instance_encrypted = InformalAgent(
-                agent_id="encrypted_data_agent",
-                tools={"fallacy_detector": MockFallacyDetector()}, # Fournir le mock détecteur
-                semantic_kernel=kernel_encrypted
-            )
-            print(f"INFO: Real InformalAgent initialisé ({analysis_description_encrypted}) pour l'extrait déchiffré.")
-        except Exception as e:
-            print(f"ERREUR CRITIQUE: Échec de l'initialisation de Real InformalAgent pour l'extrait déchiffré: {e}")
-            import traceback
-            traceback.print_exc()
-            end_time_agent_init_encrypted_error = time.time()
-            print(f"INFO: Fin de l'initialisation de InformalAgent (données chiffrées, erreur) : {end_time_agent_init_encrypted_error}")
-            print(f"INFO: InformalAgent (données chiffrées, tentative) initialisé en {end_time_agent_init_encrypted_error - start_time_agent_init_encrypted:.2f} secondes.")
+                logger.warning("extract_definitions_obj.sources[0] ne contient pas d'attribut 'extracts' de type liste.")
+        else:
+            logger.error("Aucun extrait trouvé dans l'objet extract_definitions. Structure attendue : .extracts ou .sources[0].extracts.")
+            logger.debug(f"Type de extract_definitions_obj: {type(extract_definitions_obj)}")
+            if hasattr(extract_definitions_obj, 'extracts'): logger.debug(f"Type de .extracts: {type(extract_definitions_obj.extracts)}")
+            if hasattr(extract_definitions_obj, 'sources'): logger.debug(f"Type de .sources: {type(extract_definitions_obj.sources)}")
             return None
-        end_time_agent_init_encrypted = time.time()
-        print(f"INFO: Fin de l'initialisation de InformalAgent (données chiffrées) : {end_time_agent_init_encrypted}")
-        print(f"INFO: InformalAgent (données chiffrées) initialisé en {end_time_agent_init_encrypted - start_time_agent_init_encrypted:.2f} secondes.")
-            
-        start_time_analyze_encrypted = time.time()
-        print(f"INFO: Début de l'analyse des sophismes (données chiffrées) : {start_time_analyze_encrypted}")
-        real_analysis_data = agent_instance_encrypted.analyze_fallacies(text_content_extract)
-        end_time_analyze_encrypted = time.time()
-        print(f"INFO: Fin de l'analyse des sophismes (données chiffrées) : {end_time_analyze_encrypted}")
-        print(f"INFO: Analyse des sophismes (données chiffrées) effectuée en {end_time_analyze_encrypted - start_time_analyze_encrypted:.2f} secondes.")
 
-        structured_analysis_result = {
-            "extract_id": extract_id,
-            "analysis_type": f"Rhetorical Analysis ({analysis_description_encrypted})",
-            "analysis_details": real_analysis_data
-        }
-        analysis_results_list.append(structured_analysis_result)
+        if not extracts_to_process:
+            logger.info("Aucun extrait à analyser.")
+            return None
 
-        print("\nRésultat de l'analyse de l'extrait (formaté pour sauvegarde) :")
-        try:
-            print(json.dumps(analysis_results_list, indent=4, ensure_ascii=False)) 
-        except TypeError:
-            print(f"AVERTISSEMENT: Les résultats de l'analyse (chiffrée) ne sont pas directement sérialisables en JSON. Affichage brut : {analysis_results_list}")
-
-
-        results_dir = Path(project_root) / "results" # Utilisation de project_root
-        os.makedirs(results_dir, exist_ok=True) 
+        selected_extract = extracts_to_process[0] # Analyse du premier extrait pour la démo
         
-        analysis_output_path = results_dir / "analysis_encrypted_extract_demo.json"
+        # Les attributs de 'selected_extract' devraient correspondre à la classe Extract
+        # (soit réelle, soit le mock si l'import réel a échoué dans bootstrap)
+        extract_id = getattr(selected_extract, 'id', getattr(selected_extract, 'extract_name', 'N/A_ID'))
+        text_content_extract = getattr(selected_extract, 'text_content', '')
+        extract_title = getattr(selected_extract, 'title', 'N/A_Title')
+
+        logger.info(f"\n--- Analyse rhétorique de l'extrait déchiffré (ID: {extract_id}, Titre: {extract_title}) ---")
+        logger.info(f"Texte de l'extrait sélectionné (premiers 200 chars):\n{text_content_extract[:200]}...")
+
+        agent_instance_encrypted = project_context.informal_agent
+        analysis_description_encrypted = f"InformalAgent (type: {type(agent_instance_encrypted).__name__})"
+        if project_context.llm_service:
+            analysis_description_encrypted += f" avec LLM Service (type: {type(project_context.llm_service).__name__})"
+        else:
+            analysis_description_encrypted += " sans LLM Service configuré (l'agent peut utiliser un fallback ou échouer)."
+        logger.info(f"Utilisation de {analysis_description_encrypted} pour l'analyse de l'extrait.")
+            
+        try:
+            start_time_analyze_encrypted = time.time()
+            logger.info(f"Début de l'analyse des sophismes (extrait déchiffré) : {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(start_time_analyze_encrypted))}")
+            
+            real_analysis_data = agent_instance_encrypted.analyze_fallacies(text_content_extract)
+            
+            end_time_analyze_encrypted = time.time()
+            logger.info(f"Fin de l'analyse des sophismes (extrait déchiffré) : {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(end_time_analyze_encrypted))}")
+            logger.info(f"Analyse des sophismes (extrait déchiffré) effectuée en {end_time_analyze_encrypted - start_time_analyze_encrypted:.2f} secondes.")
+
+            structured_analysis_result = {
+                "extract_id": extract_id,
+                "title": extract_title,
+                "analysis_type": f"Rhetorical Analysis ({analysis_description_encrypted})",
+                "analysis_details": real_analysis_data
+            }
+            analysis_results_list.append(structured_analysis_result)
+
+            logger.info("\nRésultat de l'analyse de l'extrait (formaté pour sauvegarde) :")
+            logger.info(json.dumps(analysis_results_list, indent=4, ensure_ascii=False))
+        
+        except Exception as e_analyze_enc:
+            logger.error(f"ERREUR lors de l'appel à agent_instance_encrypted.analyze_fallacies : {e_analyze_enc}", exc_info=True)
+
+        results_dir = current_project_root_path / "results"
+        results_dir.mkdir(parents=True, exist_ok=True)
+        
+        analysis_output_path = results_dir / "analysis_encrypted_extract_demo_refactored.json"
         with open(analysis_output_path, "w", encoding="utf-8") as f:
-            # S'assurer que ce qui est sauvegardé est sérialisable
             try:
                 json.dump(analysis_results_list, f, indent=4, ensure_ascii=False)
             except TypeError:
-                f.write(str(analysis_results_list)) # Sauvegarde en chaîne si non sérialisable
-                print(f"AVERTISSEMENT: Le résultat de l'analyse chiffrée n'était pas sérialisable en JSON, sauvegardé comme chaîne.")
-        print(f"\nRésultat de l'analyse sauvegardé dans : {analysis_output_path.resolve()}")
+                f.write(str(analysis_results_list))
+                logger.warning(f"Le résultat de l'analyse chiffrée n'était pas sérialisable en JSON, sauvegardé comme chaîne.")
+        logger.info(f"\nRésultat de l'analyse sauvegardé dans : {analysis_output_path.resolve()}")
         
         return str(analysis_output_path.resolve())
 
-    except FileNotFoundError as e: 
-        print(f"ERREUR Fichier non trouvé : {e}")
-    except KeyError as e: 
-        print(f"ERREUR Variable d'environnement manquante : {e}")
-    except json.JSONDecodeError as e: 
-        print(f"ERREUR de décodage JSON (fichier potentiellement corrompu ou mauvaise clé si réel) : {e}")
+    except FileNotFoundError as e:
+        logger.error(f"ERREUR Fichier non trouvé : {e}", exc_info=True)
+    except KeyError as e:
+        logger.error(f"ERREUR Variable d'environnement manquante : {e}", exc_info=True)
+    except json.JSONDecodeError as e:
+        logger.error(f"ERREUR de décodage JSON : {e}", exc_info=True)
     except AttributeError as e:
-        print(f"ERREUR d'attribut : {e}. Cela peut indiquer un problème avec la structure des objets mockés ou réels.")
-        import traceback
-        traceback.print_exc()
+        logger.error(f"ERREUR d'attribut : {e}. Problème avec la structure des objets.", exc_info=True)
     except Exception as e:
-        print(f"Une erreur inattendue est survenue lors de l'analyse des données chiffrées : {e}")
-        import traceback
-        traceback.print_exc()
+        logger.error(f"Une erreur inattendue est survenue lors de l'analyse des données chiffrées : {e}", exc_info=True)
     return None
 
 
-def generate_report_from_analysis(analysis_json_path: str):
-    print(f"\n--- Génération du rapport à partir de : {analysis_json_path} ---")
-    global project_root # S'assurer que project_root est accessible
+def generate_report_from_analysis(project_context: ProjectContext, analysis_json_path_str: str):
+    logger.info(f"\n--- Génération du rapport à partir de : {analysis_json_path_str} ---")
     
-    report_script_path = Path(project_root) / "scripts" / "generate_comprehensive_report.py" # Utilisation de project_root
+    current_project_root_path = project_context.project_root_path if project_context.project_root_path else Path(project_root)
+    report_script_path = current_project_root_path / "scripts" / "generate_comprehensive_report.py"
+    
+    analysis_file_path = Path(analysis_json_path_str) # Doit être un chemin absolu ou relatif au CWD
+
     if not report_script_path.exists():
-        print(f"ERREUR: Le script de génération de rapport '{report_script_path}' n'a pas été trouvé.")
+        logger.error(f"Le script de génération de rapport '{report_script_path}' n'a pas été trouvé.")
         return
 
-    if not Path(analysis_json_path).exists():
-        print(f"ERREUR: Le fichier de résultats d'analyse '{analysis_json_path}' n'a pas été trouvé.")
+    if not analysis_file_path.exists():
+        logger.error(f"Le fichier de résultats d'analyse '{analysis_file_path}' n'a pas été trouvé.")
         return
 
     start_time_report_gen = time.time()
-    print(f"INFO: Début de la génération du rapport : {start_time_report_gen}")
+    logger.info(f"Début de la génération du rapport : {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(start_time_report_gen))}")
     try:
         command = [
-            sys.executable, str(report_script_path.resolve()), 
-            "--advanced-results", str(Path(analysis_json_path).resolve())
+            sys.executable, str(report_script_path.resolve()),
+            "--advanced-results", str(analysis_file_path.resolve())
         ]
-        print(f"Exécution de la commande : {' '.join(command)}")
- 
-        # Utilisation de la même logique de capture et d'impression robuste que pour pytest
-        # Ajout d'un timeout de 300 secondes (5 minutes)
-        print("INFO: Exécution du script de génération de rapport avec un timeout de 300 secondes...")
-        report_process = subprocess.run(command, capture_output=True, check=False, cwd=project_root, timeout=300)
+        logger.info(f"Exécution de la commande : {' '.join(command)}")
+        
+        logger.info("Exécution du script de génération de rapport avec un timeout de 300 secondes...")
+        report_process = subprocess.run(command, capture_output=True, check=False, cwd=str(current_project_root_path), timeout=300)
  
         report_stdout_str = ""
         report_stderr_str = ""
@@ -925,10 +516,10 @@ def generate_report_from_analysis(analysis_json_path: str):
         if report_process.stdout:
             try:
                 report_stdout_str = report_process.stdout.decode('utf-8', errors='replace')
-            except UnicodeDecodeError: # Ne pas afficher de message d'erreur ici, juste essayer latin-1
+            except UnicodeDecodeError:
                 try:
                     report_stdout_str = report_process.stdout.decode('latin-1', errors='replace')
-                except: # Si tout échoue, laisser vide ou mettre un message d'erreur
+                except:
                     report_stdout_str = f"Impossible de décoder stdout du script de rapport. Données brutes (repr): {repr(report_process.stdout)}"
         
         if report_process.stderr:
@@ -940,65 +531,119 @@ def generate_report_from_analysis(analysis_json_path: str):
                 except:
                     report_stderr_str = f"Impossible de décoder stderr du script de rapport. Données brutes (repr): {repr(report_process.stderr)}"
 
-
-        print("\nRésultat de la génération du rapport :")
+        logger.info("\nRésultat de la génération du rapport :")
         if report_stdout_str:
-            print("\n--- Sortie Standard du script de rapport ---")
-            # try:
-            print(report_stdout_str)
-            # except UnicodeEncodeError:
-            #     print("(Encodage forcé pour la sortie standard du rapport en raison d'une UnicodeEncodeError)")
-            #     output_encoding_stdout_report = sys.stdout.encoding if sys.stdout.encoding else 'utf-8'
-            #     print(report_stdout_str.encode(output_encoding_stdout_report, errors='replace').decode(output_encoding_stdout_report, errors='ignore'))
-            # finally:
-            print("--- Fin Sortie Standard du script de rapport ---")
+            logger.info("\n--- Sortie Standard du script de rapport ---")
+            logger.info(report_stdout_str)
+            logger.info("--- Fin Sortie Standard du script de rapport ---")
         
         if report_stderr_str:
-            print("\n--- Sortie d'Erreur du script de rapport ---")
-            # try:
-            print(report_stderr_str)
-            # except UnicodeEncodeError:
-            #     print("(Encodage forcé pour la sortie d'erreur du rapport en raison d'une UnicodeEncodeError)")
-            #     output_encoding_stderr_report = sys.stderr.encoding if sys.stderr.encoding else 'utf-8'
-            #     print(report_stderr_str.encode(output_encoding_stderr_report, errors='replace').decode(output_encoding_stderr_report, errors='ignore'))
-            # finally:
-            print("--- Fin Sortie d'Erreur du script de rapport ---")
+            logger.error("\n--- Sortie d'Erreur du script de rapport ---")
+            logger.error(report_stderr_str)
+            logger.error("--- Fin Sortie d'Erreur du script de rapport ---")
         
         if report_process.returncode == 0:
-            print("\nSUCCÈS: Génération du rapport terminée.")
-            print(f"Les rapports devraient être disponibles dans le dossier '{Path(project_root) / 'results' / 'reports' / 'comprehensive'}'")
+            logger.info("\nSUCCÈS: Génération du rapport terminée.")
+            logger.info(f"Les rapports devraient être disponibles dans le dossier '{current_project_root_path / 'results' / 'reports' / 'comprehensive'}'")
         else:
-            print(f"\nÉCHEC: La génération du rapport a échoué (code de retour : {report_process.returncode}).")
-            print("Vérifiez les logs ci-dessus et les dépendances du script de rapport.")
+            logger.error(f"\nÉCHEC: La génération du rapport a échoué (code de retour : {report_process.returncode}).")
+            logger.error("Vérifiez les logs ci-dessus et les dépendances du script de rapport.")
+
     except subprocess.TimeoutExpired:
-        print("ERREUR: L'exécution du script de génération de rapport a dépassé le timeout de 300 secondes.")
-        end_time_report_gen_timeout = time.time()
-        print(f"INFO: Fin de la génération du rapport (timeout) : {end_time_report_gen_timeout}")
-        print(f"INFO: Génération du rapport (tentative) effectuée en {end_time_report_gen_timeout - start_time_report_gen:.2f} secondes avant timeout.")
+        logger.error("ERREUR: L'exécution du script de génération de rapport a dépassé le timeout de 300 secondes.")
     except FileNotFoundError:
-        print(f"ERREUR: L'interpréteur Python ('{sys.executable}') ou le script de rapport n'a pas été trouvé.")
+        logger.error(f"ERREUR: L'interpréteur Python ('{sys.executable}') ou le script de rapport n'a pas été trouvé.")
     except Exception as e:
-        print(f"Une erreur inattendue est survenue lors de la génération du rapport : {e}")
-        import traceback
-        traceback.print_exc()
+        logger.error(f"Une erreur inattendue est survenue lors de la génération du rapport : {e}", exc_info=True)
+    
     end_time_report_gen = time.time()
-    print(f"INFO: Fin de la génération du rapport : {end_time_report_gen}")
-    print(f"INFO: Génération du rapport effectuée en {end_time_report_gen - start_time_report_gen:.2f} secondes.")
+    logger.info(f"Fin de la génération du rapport : {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(end_time_report_gen))}")
+    logger.info(f"Génération du rapport effectuée en {end_time_report_gen - start_time_report_gen:.2f} secondes.")
 
 
 if __name__ == "__main__":
-    print("=== Début du script de démonstration EPITA ===")
-    print("INFO [MAIN_EXEC]: Atteint le bloc if __name__ == \"__main__\", avant check_and_install_dependencies.") # Ligne de débogage
+    logger.info("=== Début du script de démonstration EPITA (Refactorisé) ===")
+    start_time_script = time.time()
+    logger.info(f"Heure de début du script : {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(start_time_script))}")
+
+    # Initialisation de l'environnement via le bootstrap
+    # Le bootstrap s'occupe du .env, de la JVM, et des services principaux.
+    # project_root est déjà défini globalement dans ce script.
+    logger.info("Initialisation de l'environnement du projet via le module de bootstrap...")
+    # Passer project_root explicitement au bootstrap pour qu'il sache où il est.
+    # Le chemin vers .env sera déduit par le bootstrap à partir de ce root_path_str.
+    project_context = initialize_project_environment(root_path_str=str(project_root))
+
+    if not project_context:
+        logger.critical("Échec de l'initialisation du contexte du projet. Arrêt du script.")
+        sys.exit(1)
+
+    logger.info(f"Contexte du projet initialisé. Racine du projet utilisée: {project_context.project_root_path}")
+    logger.info(f"JVM initialisée par bootstrap: {project_context.jvm_initialized}")
+
+    # 1. Vérification des dépendances (peut rester, car c'est pour l'environnement Python de base)
+    logger.info("Appel de check_and_install_dependencies()...")
     check_and_install_dependencies()
-    run_unit_tests()
-    example_file = os.path.join(project_root, "examples", "exemple_sophisme.txt") # Utilisation de project_root
-    analyze_clear_text_example(example_file)
-    encrypted_analysis_output_file = analyze_encrypted_data()
+    logger.info("Fin de check_and_install_dependencies().")
 
-    if encrypted_analysis_output_file:
-        generate_report_from_analysis(encrypted_analysis_output_file)
+    # 2. Exécution des tests unitaires (peut rester)
+    logger.info("Appel de run_unit_tests()...")
+    run_unit_tests() # Cette fonction utilise le project_root global
+    logger.info("Fin de run_unit_tests().")
+
+    # 3. Analyse de texte clair
+    # Le chemin vers exemple_sophisme.txt est relatif à la racine du projet.
+    example_clear_text_file = "examples/exemple_sophisme.txt" # Relatif à project_root
+    logger.info(f"Appel de analyze_clear_text_example() avec le fichier : {example_clear_text_file}...")
+    analyze_clear_text_example(project_context, example_clear_text_file)
+    logger.info("Fin de analyze_clear_text_example().")
+
+    # 4. Analyse de données chiffrées
+    logger.info("Appel de analyze_encrypted_data()...")
+    encrypted_analysis_output_file_path = analyze_encrypted_data(project_context)
+    logger.info("Fin de analyze_encrypted_data().")
+
+    # 5. Génération de rapport
+    if encrypted_analysis_output_file_path:
+        logger.info(f"Appel de generate_report_from_analysis() avec le fichier : {encrypted_analysis_output_file_path}...")
+        generate_report_from_analysis(project_context, encrypted_analysis_output_file_path)
+        logger.info("Fin de generate_report_from_analysis().")
     else:
-        print("\nINFO: La génération de rapport à partir des données chiffrées a été sautée.")
-        print("Cela peut être dû à une erreur lors de l'étape d'analyse chiffrée ou parce qu'aucun résultat n'a été produit.")
+        logger.warning("\nLa génération de rapport à partir des données chiffrées a été sautée (pas de fichier de résultat).")
 
-    print("\n=== Fin du script de démonstration EPITA ===")
+    # 6. TODO: Interaction avec Tweety (à ajouter pour être exhaustif)
+    # Cette partie nécessitera d'utiliser jpype et les classes Tweety via le project_context.jvm_initialized
+    # et potentiellement des classes chargées dans project_context.tweety_classes.
+    logger.info("\n--- Démonstration de l'interaction avec Tweety (TODO) ---")
+    if project_context.jvm_initialized:
+        logger.info("La JVM est initialisée. Une interaction basique avec Tweety pourrait être ajoutée ici.")
+        try:
+            import jpype
+            # Exemple simple: charger une classe Tweety et l'afficher
+            if jpype.isJVMStarted(): # Double vérification
+                PlParser = jpype.JClass("org.tweetyproject.logics.pl.parser.PlParser")
+                parser_instance = PlParser()
+                logger.info(f"Instance de PlParser créée avec succès via JPype: {parser_instance}")
+                
+                # Parser une formule simple
+                formula_str = "a & b"
+                parsed_formula = parser_instance.parseFormula(jpype.JString(formula_str))
+                logger.info(f"Formule Tweety '{formula_str}' parsée en: {parsed_formula.toString()}")
+                
+                # Afficher les atomes
+                atoms_set = parsed_formula.getAtoms() # java.util.Set
+                py_atoms_list = [str(atom) for atom in atoms_set]
+                logger.info(f"Atomes dans la formule: {py_atoms_list}")
+
+            else:
+                logger.warning("JVM initialisée par bootstrap, mais jpype.isJVMStarted() est False ici. Étrange.")
+        except Exception as e_tweety:
+            logger.error(f"Erreur lors de la démonstration Tweety : {e_tweety}", exc_info=True)
+    else:
+        logger.warning("JVM non initialisée, la démonstration Tweety est sautée.")
+
+
+    end_time_script = time.time()
+    logger.info(f"\nHeure de fin du script : {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(end_time_script))}")
+    logger.info(f"Durée totale d'exécution du script : {end_time_script - start_time_script:.2f} secondes.")
+    logger.info("\n=== Fin du script de démonstration EPITA (Refactorisé) ===")
