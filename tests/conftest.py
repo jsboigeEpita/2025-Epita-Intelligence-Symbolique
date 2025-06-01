@@ -110,10 +110,19 @@ print("INFO: Mocking global de Matplotlib et NetworkX commenté pour débogage."
 
 # --- Mock NumPy Immédiat ---
 def _install_numpy_mock_immediately():
-    if 'numpy' not in sys.modules:
-        try:
-            import numpy_mock
-            # Créer un dictionnaire à partir de tous les attributs de numpy_mock
+    # Toujours installer/réinstaller le mock pour s'assurer qu'il est prioritaire
+    # et correctement configuré, surtout si d'autres tests modifient sys.modules['numpy']
+    print("INFO: _install_numpy_mock_immediately: Tentative d'installation/réinstallation du mock NumPy.")
+    try:
+        import numpy_mock # Assurez-vous que tests/mocks est dans sys.path
+        
+        # Sauvegarder l'ancien sys.modules['numpy'] s'il existe et n'est pas déjà notre mock principal
+        # pour éviter les récursions si cette fonction est appelée plusieurs fois.
+        # Note: Cette logique de sauvegarde/restauration est complexe et peut être source d'erreurs.
+        # Pour l'instant, on écrase simplement.
+        # original_numpy = sys.modules.get('numpy')
+
+        # Créer un dictionnaire à partir de tous les attributs de numpy_mock
             mock_numpy_attrs = {attr: getattr(numpy_mock, attr) for attr in dir(numpy_mock) if not attr.startswith('__')}
             # S'assurer que __version__ est bien celle du mock
             mock_numpy_attrs['__version__'] = numpy_mock.__version__ if hasattr(numpy_mock, '__version__') else '1.24.3.mock'
