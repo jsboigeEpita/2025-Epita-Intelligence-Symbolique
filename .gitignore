@@ -31,6 +31,8 @@ temp_*.py
 *.egg-info/
 argumentation_analysis/data/learning_data.json
 
+build/
+dist/
 # Fichiers de configuration locale
 .env
 .vscode/
