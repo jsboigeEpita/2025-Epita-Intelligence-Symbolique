@@ -6,11 +6,11 @@ Tests unitaires pour la fonction run_analysis_conversation du module analysis_ru
 import unittest
 from unittest.mock import patch, MagicMock, AsyncMock
 import asyncio
-from tests.async_test_case import AsyncTestCase
+# from tests.async_test_case import AsyncTestCase # Suppression de l'import
 from argumentation_analysis.orchestration.analysis_runner import run_analysis_conversation
 
 
-class TestRunAnalysisConversation(AsyncTestCase):
+class TestRunAnalysisConversation: # Suppression de l'héritage AsyncTestCase
     """Tests pour la fonction run_analysis_conversation."""
 
     def setUp(self):

@@ -10,7 +10,7 @@ import tempfile
 from unittest.mock import patch, MagicMock
 from pathlib import Path
 from argumentation_analysis.utils.system_utils import ensure_directory_exists, get_project_root, is_running_in_notebook
-from tests.async_test_case import AsyncTestCase
+# from tests.async_test_case import AsyncTestCase # Suppression de l'import
 
 
 class TestSystemUtils(unittest.TestCase):
@@ -83,7 +83,7 @@ class TestExtractRepairUtils(unittest.TestCase):
         self.assertTrue(True)
 
 
-class TestIntegrationUtils(AsyncTestCase):
+class TestIntegrationUtils: # Suppression de l'héritage AsyncTestCase
     """Tests d'intégration pour les utilitaires."""
     
     async def test_extract_repair_workflow(self):

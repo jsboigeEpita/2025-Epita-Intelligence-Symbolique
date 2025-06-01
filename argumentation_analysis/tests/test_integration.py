@@ -24,14 +24,14 @@ from argumentation_analysis.agents.core.extract.extract_agent import ExtractAgen
 from argumentation_analysis.agents.core.pl.pl_definitions import setup_pl_kernel
 from argumentation_analysis.agents.core.informal.informal_definitions import setup_informal_kernel
 from argumentation_analysis.agents.core.pm.pm_definitions import setup_pm_kernel
-from tests.async_test_case import AsyncTestCase
+# from tests.async_test_case import AsyncTestCase # Suppression de l'import
 from models.extract_definition import ExtractDefinitions, Extract, SourceDefinition # Ces imports pourraient poser problème si 'models' n'est pas accessible
 from models.extract_result import ExtractResult # Idem
 from argumentation_analysis.services.extract_service import ExtractService # Idem pour 'services'
 from argumentation_analysis.services.fetch_service import FetchService # Idem
 
 
-class TestBasicIntegration(AsyncTestCase):
+class TestBasicIntegration: # Suppression de l'héritage AsyncTestCase
     """Tests d'intégration de base pour vérifier l'interaction entre les composants."""
 
     def setUp(self):
@@ -87,7 +87,7 @@ class TestBasicIntegration(AsyncTestCase):
         self.assertTrue(should_terminate)
 
 
-class TestSimulatedAnalysisFlow(AsyncTestCase):
+class TestSimulatedAnalysisFlow: # Suppression de l'héritage AsyncTestCase
     """Tests simulant un flux d'analyse complet avec des mocks."""
 
     def setUp(self):
@@ -145,7 +145,7 @@ class TestSimulatedAnalysisFlow(AsyncTestCase):
         self.assertIsNotNone(self.state.final_conclusion)
 
 
-class TestExtractIntegration(AsyncTestCase):
+class TestExtractIntegration: # Suppression de l'héritage AsyncTestCase
     """Tests d'intégration pour les composants d'extraction."""
 
     def setUp(self):
