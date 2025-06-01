@@ -390,16 +390,53 @@ def setup_pandas():
         print(f"Utilisation de la vraie bibliothèque Pandas (version {getattr(pandas, '__version__', 'inconnue')})")
         return pandas
 
-# @pytest.fixture(scope="session", autouse=True)
-# def setup_numpy_for_tests_fixture():
-#     if 'PYTEST_CURRENT_TEST' in os.environ:
-#         numpy_module = setup_numpy()
-#         if sys.modules.get('numpy') is not numpy_module:
-#             sys.modules['numpy'] = numpy_module
-#         yield
-#     else:
-#         yield
-print("INFO: Fixture setup_numpy_for_tests_fixture commentée pour débogage.")
+@pytest.fixture(scope="function", autouse=True) # Changé scope à function pour plus de granularité
+def setup_numpy_for_tests_fixture(request):
+    # Cette fixture s'assure que notre mock numpy est installé avant chaque test.
+    # Cela aide à contrer les interférences si d'autres tests modifient sys.modules['numpy'].
+    # On appelle _install_numpy_mock_immediately car elle contient la logique la plus récente
+    # et est déjà conditionnée par la version de Python.
+    # La condition Python 3.10+ est dans _install_numpy_mock_immediately.
+    
+    # Ne pas exécuter pour les tests marqués 'real_jpype' car ils pourraient vouloir le vrai numpy.
+    # Cependant, le problème numpy.rec est pour les tests mockés.
+    # Pour l'instant, appliquons-le à tous les tests non 'real_jpype'.
+    # La gestion de numpy (vrai ou mock) est complexe.
+    # L'objectif principal ici est de s'assurer que les tests qui *devraient* utiliser le mock
+    # l'utilisent correctement, en particulier pour numpy.rec.
+
+    # Si le test est marqué 'real_jpype', on ne fait rien ici pour numpy,
+    # laissant la fixture activate_jpype_mock_if_needed gérer le vrai jpype
+    # et potentiellement le vrai numpy si nécessaire (bien que setup_numpy ait sa propre logique).
+    if request.node.get_closest_marker("real_jpype"):
+        print(f"INFO: setup_numpy_for_tests_fixture: Test {request.node.name} marqué real_jpype, skip réinstallation mock numpy.")
+        yield
+        return
+
+    # print(f"INFO: setup_numpy_for_tests_fixture: Exécution pour test {request.node.name}")
+    original_numpy = sys.modules.get('numpy')
+    original_numpy_rec = sys.modules.get('numpy.rec')
+
+    # Forcer la réinstallation de notre mock numpy complet
+    _install_numpy_mock_immediately() # Cette fonction imprime déjà ses propres logs
+
+    yield
+
+    # Tentative de restauration (peut être délicat si l'état a beaucoup changé)
+    # print(f"INFO: setup_numpy_for_tests_fixture: Restauration après test {request.node.name}")
+    if original_numpy:
+        sys.modules['numpy'] = original_numpy
+    elif 'numpy' in sys.modules: # Si on l'a mis et qu'il n'y avait rien
+        # Vérifier si c'est bien notre mock avant de le supprimer
+        # Cette vérification est complexe car l'objet mock est recréé.
+        # Pour l'instant, on le laisse tel quel si original_numpy était None.
+        pass
+        
+    if original_numpy_rec:
+        sys.modules['numpy.rec'] = original_numpy_rec
+    elif 'numpy.rec' in sys.modules: # Si on l'a mis et qu'il n'y avait rien
+        pass
+# print("INFO: Fixture setup_numpy_for_tests_fixture activée avec scope function.")
 
 # @pytest.fixture(scope="session", autouse=True)
 # def setup_pandas_for_tests_fixture():
