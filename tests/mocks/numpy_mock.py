@@ -184,7 +184,215 @@ def argmax(a, axis=None):
 def argmin(a, axis=None):
     """Retourne l'indice du minimum."""
     return 0
+def abs(x, out=None):
+    """Mock pour numpy.abs."""
+    if isinstance(x, ndarray):
+        # Pour un ndarray, on pourrait vouloir retourner un nouveau ndarray
+        # avec les valeurs absolues, mais pour un mock simple, retourner 0.0
+        # ou une nouvelle instance de ndarray est suffisant.
+        return ndarray(shape=x.shape, dtype=x.dtype)
+    return 0.0 if not isinstance(x, (int, float)) else x if x >= 0 else -x
 
+def round(a, decimals=0, out=None):
+    """Mock pour numpy.round."""
+    if isinstance(a, ndarray):
+        return ndarray(shape=a.shape, dtype=a.dtype)
+    # Comportement simplifié pour les scalaires
+    return float(int(a)) if decimals == 0 else a
+
+def percentile(a, q, axis=None, out=None, overwrite_input=False, method="linear", keepdims=False):
+    """Mock pour numpy.percentile."""
+    if isinstance(q, (list, tuple)):
+        return ndarray(shape=(len(q),), dtype=float)
+    return 0.0
+# Fonctions mathématiques supplémentaires pour compatibilité scipy/transformers
+def arccos(x, out=None):
+    """Mock pour numpy.arccos."""
+    if isinstance(x, ndarray):
+        return ndarray(shape=x.shape, dtype=x.dtype)
+    return 0.0 # Valeur de retour simplifiée
+
+def arcsin(x, out=None):
+    """Mock pour numpy.arcsin."""
+    if isinstance(x, ndarray):
+        return ndarray(shape=x.shape, dtype=x.dtype)
+    return 0.0
+
+def arctan(x, out=None):
+    """Mock pour numpy.arctan."""
+    if isinstance(x, ndarray):
+        return ndarray(shape=x.shape, dtype=x.dtype)
+    return 0.0
+def arccosh(x, out=None):
+    """Mock pour numpy.arccosh."""
+    if isinstance(x, ndarray):
+        return ndarray(shape=x.shape, dtype=x.dtype)
+    return 0.0 # Valeur de retour simplifiée
+
+def arcsinh(x, out=None):
+    """Mock pour numpy.arcsinh."""
+    if isinstance(x, ndarray):
+        return ndarray(shape=x.shape, dtype=x.dtype)
+    return 0.0
+
+def arctanh(x, out=None):
+    """Mock pour numpy.arctanh."""
+    if isinstance(x, ndarray):
+        return ndarray(shape=x.shape, dtype=x.dtype)
+    return 0.0
+def arctan2(y, x, out=None):
+    """Mock pour numpy.arctan2."""
+    if isinstance(y, ndarray) or isinstance(x, ndarray):
+        shape = y.shape if isinstance(y, ndarray) else x.shape
+        dtype_res = y.dtype if isinstance(y, ndarray) else x.dtype
+        return ndarray(shape=shape, dtype=dtype_res)
+    return 0.0 # Valeur de retour simplifiée
+
+def sinh(x, out=None):
+    """Mock pour numpy.sinh."""
+    if isinstance(x, ndarray):
+        return ndarray(shape=x.shape, dtype=x.dtype)
+    return 0.0
+
+def cosh(x, out=None):
+    """Mock pour numpy.cosh."""
+    if isinstance(x, ndarray):
+        return ndarray(shape=x.shape, dtype=x.dtype)
+    return 1.0 # cosh(0) = 1
+
+def tanh(x, out=None):
+    """Mock pour numpy.tanh."""
+    if isinstance(x, ndarray):
+        return ndarray(shape=x.shape, dtype=x.dtype)
+    return 0.0
+# Fonctions bitwise
+def left_shift(x1, x2, out=None):
+    """Mock pour numpy.left_shift."""
+    if isinstance(x1, ndarray):
+        return ndarray(shape=x1.shape, dtype=x1.dtype)
+    return 0 # Valeur de retour simplifiée
+
+def right_shift(x1, x2, out=None):
+    """Mock pour numpy.right_shift."""
+    if isinstance(x1, ndarray):
+        return ndarray(shape=x1.shape, dtype=x1.dtype)
+    return 0
+
+def bitwise_and(x1, x2, out=None):
+    """Mock pour numpy.bitwise_and."""
+    if isinstance(x1, ndarray):
+        return ndarray(shape=x1.shape, dtype=x1.dtype)
+    return 0
+
+def bitwise_or(x1, x2, out=None):
+    """Mock pour numpy.bitwise_or."""
+    if isinstance(x1, ndarray):
+        return ndarray(shape=x1.shape, dtype=x1.dtype)
+    return 0
+
+def bitwise_xor(x1, x2, out=None):
+    """Mock pour numpy.bitwise_xor."""
+    if isinstance(x1, ndarray):
+        return ndarray(shape=x1.shape, dtype=x1.dtype)
+    return 0
+
+def invert(x, out=None): # Aussi connu comme bitwise_not
+    """Mock pour numpy.invert (bitwise_not)."""
+    if isinstance(x, ndarray):
+        return ndarray(shape=x.shape, dtype=x.dtype)
+    return 0
+
+bitwise_not = invert # Alias
+
+def sin(x, out=None):
+    """Mock pour numpy.sin."""
+    if isinstance(x, ndarray):
+        return ndarray(shape=x.shape, dtype=x.dtype)
+    return 0.0
+
+def cos(x, out=None):
+    """Mock pour numpy.cos."""
+    if isinstance(x, ndarray):
+        return ndarray(shape=x.shape, dtype=x.dtype)
+    return 0.0
+
+def tan(x, out=None):
+    """Mock pour numpy.tan."""
+    if isinstance(x, ndarray):
+        return ndarray(shape=x.shape, dtype=x.dtype)
+    return 0.0
+
+def sqrt(x, out=None):
+    """Mock pour numpy.sqrt."""
+    if isinstance(x, ndarray):
+        return ndarray(shape=x.shape, dtype=x.dtype)
+    return 0.0 if not isinstance(x, (int, float)) or x < 0 else x**0.5
+
+def exp(x, out=None):
+    """Mock pour numpy.exp."""
+    if isinstance(x, ndarray):
+        return ndarray(shape=x.shape, dtype=x.dtype)
+    return 1.0 # Valeur de retour simplifiée
+
+def log(x, out=None):
+    """Mock pour numpy.log."""
+    if isinstance(x, ndarray):
+        return ndarray(shape=x.shape, dtype=x.dtype)
+    return 0.0 # Valeur de retour simplifiée
+
+def log10(x, out=None):
+    """Mock pour numpy.log10."""
+    if isinstance(x, ndarray):
+        return ndarray(shape=x.shape, dtype=x.dtype)
+    return 0.0
+
+# Et d'autres qui pourraient être nécessaires par scipy.special ou autre part
+pi = 3.141592653589793
+e = 2.718281828459045
+
+# Constantes numériques
+nan = float('nan')
+inf = float('inf')
+NINF = float('-inf')
+PZERO = 0.0
+NZERO = -0.0
+euler_gamma = 0.5772156649015329
+
+# Fonctions de test de type
+def isfinite(x, out=None):
+    if isinstance(x, ndarray):
+        return ndarray(shape=x.shape, dtype=bool)
+    return x not in [float('inf'), float('-inf'), float('nan')]
+
+def isnan(x, out=None):
+    if isinstance(x, ndarray):
+        return ndarray(shape=x.shape, dtype=bool)
+    return x != x # Propriété de NaN
+
+def isinf(x, out=None):
+    if isinstance(x, ndarray):
+        return ndarray(shape=x.shape, dtype=bool)
+    return x == float('inf') or x == float('-inf')
+
+# Plus de fonctions mathématiques
+def floor(x, out=None):
+    if isinstance(x, ndarray):
+        return ndarray(shape=x.shape, dtype=x.dtype)
+    return float(int(x // 1))
+
+def ceil(x, out=None):
+    if isinstance(x, ndarray):
+        return ndarray(shape=x.shape, dtype=x.dtype)
+    return float(int(x // 1 + (1 if x % 1 != 0 else 0)))
+
+# S'assurer que les alias sont bien définis si numpy_mock est importé directement
+# (bien que conftest.py soit la méthode préférée pour mocker)
+abs = abs
+round = round
+max = max
+min = min
+sum = sum
+# etc. pour les autres fonctions déjà définies plus haut si nécessaire.
 # Sous-modules
 class BitGenerator:
     """Mock pour numpy.random.BitGenerator."""
@@ -417,9 +625,15 @@ signedinteger = dtype_base("int64")  # Type entier signé
 unsignedinteger = dtype_base("uint64")  # Type entier non signé
 
 # Types de données complexes
-complex64 = "complex64"
-complex128 = "complex128"
-complex_ = "complex128"
+class complex64(metaclass=dtype_base):
+    __name__ = 'complex64'
+    __module__ = 'numpy'
+
+class complex128(metaclass=dtype_base):
+    __name__ = 'complex128'
+    __module__ = 'numpy'
+
+complex_ = complex128 # Alias
 
 # Types de données entiers supplémentaires
 class int8(metaclass=dtype_base):
@@ -460,7 +674,21 @@ def busday_count(begindates, enddates, weekmask='1111100', holidays=None, busday
 
 def is_busday(dates, weekmask='1111100', holidays=None, busdaycal=None, out=None):
     """Mock pour numpy.is_busday."""
-    return True
+# Sous-module typing pour compatibilité avec scipy/_lib/_array_api.py
+class typing:
+    """Mock pour numpy.typing."""
+    NDArray = "numpy.typing.NDArray"  # Fournir un attribut commun
+    ArrayLike = "numpy.typing.ArrayLike" # Fournir un attribut commun
+
+    def __getattr__(self, name):
+        # Retourner un MagicMock pour tout attribut non défini explicitement
+        # Cela peut aider si d'autres types spécifiques sont demandés.
+        logger.info(f"NumpyMock: numpy.typing.{name} accédé (retourne MagicMock).")
+        return MagicMock(name=f"numpy.typing.{name}")
+
+# Attribuer le mock de typing au module numpy_mock pour qu'il soit importable
+# par conftest.py lors de la construction du mock sys.modules['numpy']
+# Exemple: from numpy_mock import typing as numpy_typing_mock
 
 def busday_offset(dates, offsets, roll='raise', weekmask='1111100', holidays=None, busdaycal=None, out=None):
     """Mock pour numpy.busday_offset."""
