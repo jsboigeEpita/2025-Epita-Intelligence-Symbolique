@@ -79,33 +79,34 @@ if mocks_dir_for_mock not in sys.path:
 # print("INFO: conftest.py: Logger configuré pour pytest hooks jpype.") # Déjà fait plus haut
 
 # --- Mock Matplotlib et NetworkX au plus tôt ---
-try:
-    from matplotlib_mock import pyplot as mock_pyplot_instance
-    from matplotlib_mock import cm as mock_cm_instance
-    from matplotlib_mock import MatplotlibMock as MockMatplotlibModule_class
+# try:
+#     from matplotlib_mock import pyplot as mock_pyplot_instance
+#     from matplotlib_mock import cm as mock_cm_instance
+#     from matplotlib_mock import MatplotlibMock as MockMatplotlibModule_class
     
-    sys.modules['matplotlib.pyplot'] = mock_pyplot_instance
-    sys.modules['matplotlib.cm'] = mock_cm_instance
-    mock_mpl_module = MockMatplotlibModule_class()
-    mock_mpl_module.pyplot = mock_pyplot_instance
-    mock_mpl_module.cm = mock_cm_instance
-    sys.modules['matplotlib'] = mock_mpl_module
-    print("INFO: Matplotlib mocké globalement.")
+#     sys.modules['matplotlib.pyplot'] = mock_pyplot_instance
+#     sys.modules['matplotlib.cm'] = mock_cm_instance
+#     mock_mpl_module = MockMatplotlibModule_class()
+#     mock_mpl_module.pyplot = mock_pyplot_instance
+#     mock_mpl_module.cm = mock_cm_instance
+#     sys.modules['matplotlib'] = mock_mpl_module
+#     print("INFO: Matplotlib mocké globalement.")
 
-    from networkx_mock import NetworkXMock as MockNetworkXModule_class
-    sys.modules['networkx'] = MockNetworkXModule_class()
-    print("INFO: NetworkX mocké globalement.")
+#     from networkx_mock import NetworkXMock as MockNetworkXModule_class
+#     sys.modules['networkx'] = MockNetworkXModule_class()
+#     print("INFO: NetworkX mocké globalement.")
 
-except ImportError as e:
-    print(f"ERREUR CRITIQUE lors du mocking global de matplotlib ou networkx: {e}")
-    if 'matplotlib' not in str(e).lower():
-        sys.modules['matplotlib.pyplot'] = MagicMock()
-        sys.modules['matplotlib.cm'] = MagicMock()
-        sys.modules['matplotlib'] = MagicMock()
-        sys.modules['matplotlib'].pyplot = sys.modules['matplotlib.pyplot']
-        sys.modules['matplotlib'].cm = sys.modules['matplotlib.cm']
-    if 'networkx' not in str(e).lower():
-        sys.modules['networkx'] = MagicMock()
+# except ImportError as e:
+#     print(f"ERREUR CRITIQUE lors du mocking global de matplotlib ou networkx: {e}")
+#     if 'matplotlib' not in str(e).lower():
+#         sys.modules['matplotlib.pyplot'] = MagicMock()
+#         sys.modules['matplotlib.cm'] = MagicMock()
+#         sys.modules['matplotlib'] = MagicMock()
+#         sys.modules['matplotlib'].pyplot = sys.modules['matplotlib.pyplot']
+#         sys.modules['matplotlib'].cm = sys.modules['matplotlib.cm']
+#     if 'networkx' not in str(e).lower():
+#         sys.modules['networkx'] = MagicMock()
+print("INFO: Mocking global de Matplotlib et NetworkX commenté pour débogage.")
 
 # --- Mock NumPy Immédiat ---
 def _install_numpy_mock_immediately():
@@ -161,29 +162,31 @@ def _install_numpy_mock_immediately():
             print(f"ERREUR lors de l'installation immédiate du mock NumPy: {e}")
 
 if (sys.version_info.major == 3 and sys.version_info.minor >= 12):
-    _install_numpy_mock_immediately()
+    # _install_numpy_mock_immediately() # Commenté pour débogage
+    print("INFO: Installation immédiate du mock NumPy commentée pour débogage.")
 
 # --- Mock Pandas Immédiat ---
-def _install_pandas_mock_immediately():
-    if 'pandas' not in sys.modules:
-        try:
-            from pandas_mock import DataFrame, read_csv, read_json
-            sys.modules['pandas'] = type('pandas', (), {
-                'DataFrame': DataFrame, 'read_csv': read_csv, 'read_json': read_json, 'Series': list,
-                'NA': None, 'NaT': None, 'isna': lambda x: x is None, 'notna': lambda x: x is not None,
-                '__version__': '1.5.3',
-            })
-            sys.modules['pandas.core'] = type('pandas.core', (), {})
-            sys.modules['pandas.core.api'] = type('pandas.core.api', (), {})
-            sys.modules['pandas._libs'] = type('pandas._libs', (), {})
-            sys.modules['pandas._libs.pandas_datetime'] = type('pandas._libs.pandas_datetime', (), {})
-            print("INFO: Mock Pandas installé immédiatement dans conftest.py")
-        except ImportError as e:
-            print(f"ERREUR lors de l'installation immédiate du mock Pandas: {e}")
+# def _install_pandas_mock_immediately():
+#     if 'pandas' not in sys.modules:
+#         try:
+#             from pandas_mock import DataFrame, read_csv, read_json
+#             sys.modules['pandas'] = type('pandas', (), {
+#                 'DataFrame': DataFrame, 'read_csv': read_csv, 'read_json': read_json, 'Series': list,
+#                 'NA': None, 'NaT': None, 'isna': lambda x: x is None, 'notna': lambda x: x is not None,
+#                 '__version__': '1.5.3',
+#             })
+#             sys.modules['pandas.core'] = type('pandas.core', (), {})
+#             sys.modules['pandas.core.api'] = type('pandas.core.api', (), {})
+#             sys.modules['pandas._libs'] = type('pandas._libs', (), {})
+#             sys.modules['pandas._libs.pandas_datetime'] = type('pandas._libs.pandas_datetime', (), {})
+#             print("INFO: Mock Pandas installé immédiatement dans conftest.py")
+#         except ImportError as e:
+#             print(f"ERREUR lors de l'installation immédiate du mock Pandas: {e}")
 
 # Installation immédiate si Python 3.12+ ou si pandas n'est pas disponible (de HEAD)
-if (sys.version_info.major == 3 and sys.version_info.minor >= 12):
-    _install_pandas_mock_immediately()
+# if (sys.version_info.major == 3 and sys.version_info.minor >= 12):
+#     _install_pandas_mock_immediately()
+print("INFO: Installation immédiate du mock Pandas commentée pour débogage.")
 
 # --- Mock JPype ---
 try:
@@ -221,14 +224,15 @@ except ImportError as e_jpype:
     print("INFO: Mock JPype de FALLBACK préparé et assigné aux variables globales de mock.")
 
 # --- Mock ExtractDefinitions ---
-try:
-    from extract_definitions_mock import setup_extract_definitions_mock
-    setup_extract_definitions_mock()
-    print("INFO: ExtractDefinitions mocké globalement.")
-except ImportError as e_extract:
-    print(f"ERREUR lors du mocking d'ExtractDefinitions: {e_extract}")
-except Exception as e_extract_setup:
-    print(f"ERREUR lors de la configuration du mock ExtractDefinitions: {e_extract_setup}")
+# try:
+#     from extract_definitions_mock import setup_extract_definitions_mock
+#     setup_extract_definitions_mock()
+#     print("INFO: ExtractDefinitions mocké globalement.")
+# except ImportError as e_extract:
+#     print(f"ERREUR lors du mocking d'ExtractDefinitions: {e_extract}")
+# except Exception as e_extract_setup:
+#     print(f"ERREUR lors de la configuration du mock ExtractDefinitions: {e_extract_setup}")
+print("INFO: Mocking global de ExtractDefinitions commenté pour débogage.")
 
 parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if parent_dir not in sys.path:
@@ -331,25 +335,27 @@ def setup_pandas():
         print(f"Utilisation de la vraie bibliothèque Pandas (version {getattr(pandas, '__version__', 'inconnue')})")
         return pandas
 
-@pytest.fixture(scope="session", autouse=True)
-def setup_numpy_for_tests_fixture(): 
-    if 'PYTEST_CURRENT_TEST' in os.environ:
-        numpy_module = setup_numpy()
-        if sys.modules.get('numpy') is not numpy_module:
-            sys.modules['numpy'] = numpy_module
-        yield
-    else: 
-        yield
+# @pytest.fixture(scope="session", autouse=True)
+# def setup_numpy_for_tests_fixture():
+#     if 'PYTEST_CURRENT_TEST' in os.environ:
+#         numpy_module = setup_numpy()
+#         if sys.modules.get('numpy') is not numpy_module:
+#             sys.modules['numpy'] = numpy_module
+#         yield
+#     else:
+#         yield
+print("INFO: Fixture setup_numpy_for_tests_fixture commentée pour débogage.")
 
-@pytest.fixture(scope="session", autouse=True)
-def setup_pandas_for_tests_fixture(): 
-    if 'PYTEST_CURRENT_TEST' in os.environ:
-        pandas_module = setup_pandas()
-        if sys.modules.get('pandas') is not pandas_module:
-            sys.modules['pandas'] = pandas_module
-        yield
-    else:
-        yield
+# @pytest.fixture(scope="session", autouse=True)
+# def setup_pandas_for_tests_fixture():
+#     if 'PYTEST_CURRENT_TEST' in os.environ:
+#         pandas_module = setup_pandas()
+#         if sys.modules.get('pandas') is not pandas_module:
+#             sys.modules['pandas'] = pandas_module
+#         yield
+#     else:
+#         yield
+print("INFO: Fixture setup_pandas_for_tests_fixture commentée pour débogage.")
 
 # Configuration du logger spécifique pour les fixtures d'intégration JPype
 logger_conftest_integration = logging.getLogger("conftest_integration_jvm_specific")

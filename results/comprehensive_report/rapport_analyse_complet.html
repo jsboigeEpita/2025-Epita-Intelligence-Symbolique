@@ -90,7 +90,7 @@
         </head>
         <body>
             <h1>Rapport d'analyse complet des agents d'analyse rhétorique</h1>
-<p>Date: 2025-05-29 17:20:07</p>
+<p>Date: 2025-06-01 08:08:58</p>
 <h2>Résumé exécutif</h2>
 <p>Ce rapport présente une synthèse complète des résultats des analyses rhétoriques effectuées sur différents corpus de textes. Il compare les performances des différents agents spécialistes d'analyse rhétorique, identifie leurs forces et faiblesses, et propose des recommandations pour leur utilisation optimale et leur amélioration.</p>
 <h3>Points clés</h3>
@@ -103,7 +103,9 @@
 <h2>Méthodologie</h2>
 <h3>Corpus analysés</h3>
 <ul>
-<li><strong>Autres corpus</strong>: 1 extraits analysés avec les agents de base, 1 extraits analysés avec les agents avancés</li>
+<li><strong>Autres corpus</strong>: 5 extraits analysés avec les agents de base, 1 extraits analysés avec les agents avancés</li>
+<li><strong>Discours d'Hitler</strong>: 10 extraits analysés avec les agents de base, 0 extraits analysés avec les agents avancés</li>
+<li><strong>Débats Lincoln-Douglas</strong>: 10 extraits analysés avec les agents de base, 0 extraits analysés avec les agents avancés</li>
 </ul>
 <h3>Agents évalués</h3>
 <h4>Agents de base</h4>
@@ -143,8 +145,8 @@
 <tbody>
 <tr>
 <td>contextual_fallacy_detector</td>
-<td>12</td>
-<td>12.00</td>
+<td>7</td>
+<td>1.40</td>
 </tr>
 <tr>
 <td>argument_coherence_evaluator</td>
@@ -195,6 +197,76 @@
 <li>Adapter le choix des agents en fonction du type de contenu spécifique</li>
 <li>Combiner les agents de base et avancés pour une analyse complète</li>
 <li>Évaluer la pertinence des agents au cas par cas</li>
+</ul>
+<h3>Discours d'Hitler</h3>
+<p><strong>Agent le plus efficace</strong>: contextual_fallacy_detector</p>
+<h4>Agents de base</h4>
+<table>
+<thead>
+<tr>
+<th>Agent</th>
+<th>Sophismes détectés</th>
+<th>Score d'efficacité</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>contextual_fallacy_detector</td>
+<td>13</td>
+<td>1.30</td>
+</tr>
+<tr>
+<td>argument_coherence_evaluator</td>
+<td>0</td>
+<td>0.00</td>
+</tr>
+<tr>
+<td>semantic_argument_analyzer</td>
+<td>0</td>
+<td>0.00</td>
+</tr>
+</tbody>
+</table>
+<h4>Recommandations spécifiques</h4>
+<ul>
+<li>Utiliser l'agent EnhancedComplexFallacyAnalyzer pour détecter les sophismes composites fréquents dans les discours de propagande</li>
+<li>Combiner avec l'agent EnhancedFallacySeverityEvaluator pour évaluer la gravité des sophismes dans ce contexte historique</li>
+<li>Développer un agent spécifique pour l'analyse de la rhétorique totalitaire</li>
+</ul>
+<h3>Débats Lincoln-Douglas</h3>
+<p><strong>Agent le plus efficace</strong>: contextual_fallacy_detector</p>
+<h4>Agents de base</h4>
+<table>
+<thead>
+<tr>
+<th>Agent</th>
+<th>Sophismes détectés</th>
+<th>Score d'efficacité</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>contextual_fallacy_detector</td>
+<td>25</td>
+<td>2.50</td>
+</tr>
+<tr>
+<td>argument_coherence_evaluator</td>
+<td>0</td>
+<td>0.00</td>
+</tr>
+<tr>
+<td>semantic_argument_analyzer</td>
+<td>0</td>
+<td>0.00</td>
+</tr>
+</tbody>
+</table>
+<h4>Recommandations spécifiques</h4>
+<ul>
+<li>Privilégier l'agent EnhancedRhetoricalResultAnalyzer pour une analyse globale de la qualité argumentative</li>
+<li>Utiliser l'agent ArgumentCoherenceEvaluator pour évaluer la cohérence des arguments dans ce contexte de débat formel</li>
+<li>Développer un agent spécifique pour l'analyse des débats politiques historiques</li>
 </ul>
 <h2>Visualisations</h2>
 <h3>Sophismes Par Corpus</h3>
