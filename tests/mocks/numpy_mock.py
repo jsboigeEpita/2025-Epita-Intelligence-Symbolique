@@ -7,7 +7,8 @@ Ce mock permet d'exécuter les tests sans avoir besoin d'installer numpy.
 """
 
 import logging
-from typing import Any, Dict, List, Optional, Union, Callable, Tuple
+from typing import Any, Dict, List, Optional, Union, Callable, Tuple, NewType
+from unittest.mock import MagicMock
 
 # Configuration du logging
 logging.basicConfig(
@@ -21,13 +22,47 @@ logger = logging.getLogger("NumpyMock")
 __version__ = "1.24.3"
 
 # Classes de base
+class generic: # Classe de base pour les scalaires NumPy
+    def __init__(self, value):
+        self.value = value
+    def __repr__(self):
+        return f"numpy.{self.__class__.__name__}({self.value})"
+    # Ajouter d'autres méthodes communes si nécessaire (ex: itemsize, flags, etc.)
+
 class dtype:
     """Mock pour numpy.dtype."""
     
     def __init__(self, type_spec):
-        self.type = type_spec
-        self.name = str(type_spec)
-    
+        # Si type_spec est une chaîne (ex: 'float64'), la stocker.
+        # Si c'est un type Python (ex: float), stocker cela.
+        # Si c'est une instance de nos classes de type (ex: float64), utiliser son nom.
+        if isinstance(type_spec, str):
+            self.name = type_spec
+            self.type = type_spec # Garder une trace du type original si possible
+        elif isinstance(type_spec, type):
+             # Cas où on passe un type Python comme float, int
+            if type_spec is float: self.name = 'float64'
+            elif type_spec is int: self.name = 'int64'
+            elif type_spec is bool: self.name = 'bool_'
+            elif type_spec is complex: self.name = 'complex128'
+            else: self.name = type_spec.__name__
+            self.type = type_spec
+        else: # Supposer que c'est une de nos classes de type mockées
+            self.name = str(getattr(type_spec, '__name__', str(type_spec)))
+            self.type = type_spec
+
+        # Attributs attendus par certaines bibliothèques
+        self.char = self.name[0] if self.name else ''
+        self.num = 0 # Placeholder
+        self.itemsize = 8 # Placeholder, typiquement 8 pour float64/int64
+        if '32' in self.name or 'bool' in self.name or 'byte' in self.name or 'short' in self.name:
+            self.itemsize = 4
+        if '16' in self.name: # float16, int16, uint16
+            self.itemsize = 2
+        if '8' in self.name: # int8, uint8
+            self.itemsize = 1
+
+
     def __str__(self):
         return self.name
     
@@ -112,6 +147,187 @@ def ones(shape, dtype=None):
 def empty(shape, dtype=None):
     """Crée un tableau vide."""
     return ndarray(shape=shape, dtype=dtype)
+# Mock pour numpy.core.numeric
+class _NumPy_Core_Numeric_Mock:
+    """Mock pour le module numpy.core.numeric."""
+    def __init__(self):
+        self.__name__ = 'numpy.core.numeric'
+        self.__package__ = 'numpy.core'
+        self.__path__ = [] # Nécessaire pour être traité comme un module/package
+
+        # Fonctions et attributs attendus dans numpy.core.numeric
+        self.normalize_axis_tuple = MagicMock(name='numpy.core.numeric.normalize_axis_tuple')
+        self.absolute = MagicMock(name='numpy.core.numeric.absolute') # np.absolute est souvent np.core.numeric.absolute
+        self.add = MagicMock(name='numpy.core.numeric.add')
+        self.subtract = MagicMock(name='numpy.core.numeric.subtract')
+        self.multiply = MagicMock(name='numpy.core.numeric.multiply')
+        self.divide = MagicMock(name='numpy.core.numeric.divide') # ou true_divide
+        self.true_divide = MagicMock(name='numpy.core.numeric.true_divide')
+        self.floor_divide = MagicMock(name='numpy.core.numeric.floor_divide')
+        self.power = MagicMock(name='numpy.core.numeric.power')
+        # ... et potentiellement beaucoup d'autres ufuncs et fonctions de base
+
+    def __getattr__(self, name):
+        logger.info(f"NumpyMock: numpy.core.numeric.{name} accédé (retourne MagicMock).")
+        # Retourner un MagicMock pour tout attribut non explicitement défini
+        return MagicMock(name=f"numpy.core.numeric.{name}")
+
+# Instance globale du mock pour numpy.core.numeric
+# Cela permet de l'assigner à numpy.core.numeric et aussi de le mettre dans sys.modules si besoin.
+# Mock pour numpy.linalg
+class _NumPy_Linalg_Mock:
+    """Mock pour le module numpy.linalg."""
+    def __init__(self):
+        self.__name__ = 'numpy.linalg'
+        self.__package__ = 'numpy'
+        self.__path__ = [] # Nécessaire pour être traité comme un module/package
+
+        # Fonctions courantes de numpy.linalg
+        self.norm = MagicMock(name='numpy.linalg.norm')
+        self.svd = MagicMock(name='numpy.linalg.svd')
+        self.solve = MagicMock(name='numpy.linalg.solve')
+        self.inv = MagicMock(name='numpy.linalg.inv')
+        self.det = MagicMock(name='numpy.linalg.det')
+        self.eig = MagicMock(name='numpy.linalg.eig')
+        self.eigh = MagicMock(name='numpy.linalg.eigh')
+        self.qr = MagicMock(name='numpy.linalg.qr')
+        self.cholesky = MagicMock(name='numpy.linalg.cholesky')
+        self.matrix_rank = MagicMock(name='numpy.linalg.matrix_rank')
+        self.pinv = MagicMock(name='numpy.linalg.pinv')
+        self.slogdet = MagicMock(name='numpy.linalg.slogdet')
+        
+        self.__all__ = [
+            'norm', 'svd', 'solve', 'inv', 'det', 'eig', 'eigh', 'qr',
+            'cholesky', 'matrix_rank', 'pinv', 'slogdet', 'lstsq', 'cond',
+            'eigvals', 'eigvalsh', 'tensorinv', 'tensorsolve', 'matrix_power',
+            'LinAlgError'
+        ]
+        # Alias ou variantes
+        self.lstsq = MagicMock(name='numpy.linalg.lstsq')
+        self.cond = MagicMock(name='numpy.linalg.cond')
+        self.eigvals = MagicMock(name='numpy.linalg.eigvals')
+        self.eigvalsh = MagicMock(name='numpy.linalg.eigvalsh')
+        self.tensorinv = MagicMock(name='numpy.linalg.tensorinv')
+        self.tensorsolve = MagicMock(name='numpy.linalg.tensorsolve')
+        self.matrix_power = MagicMock(name='numpy.linalg.matrix_power')
+        # Erreur spécifique
+        self.LinAlgError = type('LinAlgError', (Exception,), {})
+
+
+    def __getattr__(self, name):
+        logger.info(f"NumpyMock: numpy.linalg.{name} accédé (retourne MagicMock).")
+        return MagicMock(name=f"numpy.linalg.{name}")
+# Mock pour numpy.fft
+class _NumPy_FFT_Mock:
+    """Mock pour le module numpy.fft."""
+    def __init__(self):
+        self.__name__ = 'numpy.fft'
+        self.__package__ = 'numpy'
+        self.__path__ = [] # Nécessaire pour être traité comme un module/package
+
+        # Fonctions courantes de numpy.fft
+        self.fft = MagicMock(name='numpy.fft.fft')
+        self.ifft = MagicMock(name='numpy.fft.ifft')
+        self.fft2 = MagicMock(name='numpy.fft.fft2')
+        self.ifft2 = MagicMock(name='numpy.fft.ifft2')
+        self.fftn = MagicMock(name='numpy.fft.fftn')
+        self.ifftn = MagicMock(name='numpy.fft.ifftn')
+        self.rfft = MagicMock(name='numpy.fft.rfft')
+        self.irfft = MagicMock(name='numpy.fft.irfft')
+        self.hfft = MagicMock(name='numpy.fft.hfft')
+        self.ihfft = MagicMock(name='numpy.fft.ihfft')
+        # Alias
+        self.fftshift = MagicMock(name='numpy.fft.fftshift')
+        self.ifftshift = MagicMock(name='numpy.fft.ifftshift')
+        self.fftfreq = MagicMock(name='numpy.fft.fftfreq')
+        self.rfftfreq = MagicMock(name='numpy.fft.rfftfreq')
+        
+        self.__all__ = [
+            'fft', 'ifft', 'fft2', 'ifft2', 'fftn', 'ifftn', 
+            'rfft', 'irfft', 'hfft', 'ihfft',
+            'fftshift', 'ifftshift', 'fftfreq', 'rfftfreq'
+        ]
+
+    def __getattr__(self, name):
+        logger.info(f"NumpyMock: numpy.fft.{name} accédé (retourne MagicMock).")
+        return MagicMock(name=f"numpy.fft.{name}")
+# Mock pour numpy.lib
+class _NumPy_Lib_Mock:
+    """Mock pour le module numpy.lib."""
+    def __init__(self):
+        self.__name__ = 'numpy.lib'
+        self.__package__ = 'numpy'
+        self.__path__ = []
+
+        class NumpyVersion:
+            def __init__(self, version_string):
+                self.version = version_string
+                # Simplification: extraire les composants majeurs/mineurs pour la comparaison
+                try:
+                    self.major, self.minor, self.patch = map(int, version_string.split('.')[:3])
+                except ValueError: # Gérer les cas comme '1.24.3.mock'
+                    self.major, self.minor, self.patch = 0,0,0
+
+
+            def __ge__(self, other_version_string):
+                # Comparaison simplifiée pour 'X.Y.Z'
+                try:
+                    other_major, other_minor, other_patch = map(int, other_version_string.split('.')[:3])
+                    if self.major > other_major: return True
+                    if self.major == other_major and self.minor > other_minor: return True
+                    if self.major == other_major and self.minor == other_minor and self.patch >= other_patch: return True
+                    return False
+                except ValueError:
+                    return False # Ne peut pas comparer si le format est inattendu
+            
+            def __lt__(self, other_version_string):
+                try:
+                    other_major, other_minor, other_patch = map(int, other_version_string.split('.')[:3])
+                    if self.major < other_major: return True
+                    if self.major == other_major and self.minor < other_minor: return True
+                    if self.major == other_major and self.minor == other_minor and self.patch < other_patch: return True
+                    return False
+                except ValueError:
+                    return False
+
+        self.NumpyVersion = NumpyVersion
+        # Autres éléments potentiels de numpy.lib peuvent être ajoutés ici si nécessaire
+        # ex: self.stride_tricks = MagicMock(name='numpy.lib.stride_tricks')
+
+        self.__all__ = ['NumpyVersion'] # Ajouter d'autres si besoin
+
+    def __getattr__(self, name):
+        logger.info(f"NumpyMock: numpy.lib.{name} accédé (retourne MagicMock).")
+        return MagicMock(name=f"numpy.lib.{name}")
+
+# Instance globale du mock pour numpy.lib
+lib_module_mock_instance = _NumPy_Lib_Mock()
+
+# Exposer lib au niveau du module numpy_mock pour qu'il soit copié par conftest
+lib = lib_module_mock_instance
+
+# Instance globale du mock pour numpy.fft
+fft_module_mock_instance = _NumPy_FFT_Mock()
+
+# Exposer fft au niveau du module numpy_mock pour qu'il soit copié par conftest
+fft = fft_module_mock_instance
+
+# Instance globale du mock pour numpy.linalg
+linalg_module_mock_instance = _NumPy_Linalg_Mock()
+
+# Exposer linalg au niveau du module numpy_mock pour qu'il soit copié par conftest
+linalg = linalg_module_mock_instance
+numeric_module_mock_instance = _NumPy_Core_Numeric_Mock()
+# Exceptions pour compatibilité avec scipy et autres bibliothèques
+AxisError = type('AxisError', (ValueError,), {})
+ComplexWarning = type('ComplexWarning', (Warning,), {})
+VisibleDeprecationWarning = type('VisibleDeprecationWarning', (UserWarning,), {})
+DTypePromotionError = type('DTypePromotionError', (TypeError,), {}) # Pour numpy >= 1.25
+# S'assurer que les exceptions sont dans __all__ si on veut qu'elles soient importables avec *
+# Cependant, la copie dynamique des attributs dans conftest.py devrait les rendre disponibles.
+# Pour être explicite, on pourrait les ajouter à une liste __all__ au niveau du module numpy_mock.py
+# __all__ = [ ... noms de fonctions ..., 'AxisError', 'ComplexWarning', 'VisibleDeprecationWarning', 'DTypePromotionError']
+# Mais pour l'instant, la copie d'attributs devrait suffire.
 
 def arange(start, stop=None, step=1, dtype=None):
     """Crée un tableau avec des valeurs espacées régulièrement."""
@@ -276,6 +492,51 @@ def right_shift(x1, x2, out=None):
     """Mock pour numpy.right_shift."""
     if isinstance(x1, ndarray):
         return ndarray(shape=x1.shape, dtype=x1.dtype)
+def rint(x, out=None):
+    """Mock pour numpy.rint. Arrondit à l'entier le plus proche."""
+    if isinstance(x, ndarray):
+        return ndarray(shape=x.shape, dtype=x.dtype)
+    # Comportement simplifié pour les scalaires
+    return np.round(x) # Utilise notre mock np.round
+
+def sign(x, out=None):
+    """Mock pour numpy.sign."""
+    if isinstance(x, ndarray):
+        # Pourrait retourner un ndarray de -1, 0, 1
+        return ndarray(shape=x.shape, dtype=int) 
+    if x > 0: return 1
+    if x < 0: return -1
+    return 0
+
+def expm1(x, out=None):
+    """Mock pour numpy.expm1 (exp(x) - 1)."""
+    if isinstance(x, ndarray):
+        return ndarray(shape=x.shape, dtype=x.dtype)
+    return np.exp(x) - 1 # Utilise notre mock np.exp
+
+def log1p(x, out=None):
+    """Mock pour numpy.log1p (log(1 + x))."""
+    if isinstance(x, ndarray):
+        return ndarray(shape=x.shape, dtype=x.dtype)
+    return np.log(1 + x) # Utilise notre mock np.log
+
+def deg2rad(x, out=None):
+    """Mock pour numpy.deg2rad."""
+    if isinstance(x, ndarray):
+        return ndarray(shape=x.shape, dtype=x.dtype)
+    return x * (np.pi / 180) # Utilise notre mock np.pi
+
+def rad2deg(x, out=None):
+    """Mock pour numpy.rad2deg."""
+    if isinstance(x, ndarray):
+        return ndarray(shape=x.shape, dtype=x.dtype)
+    return x * (180 / np.pi) # Utilise notre mock np.pi
+
+def trunc(x, out=None):
+    """Mock pour numpy.trunc. Retourne la partie entière."""
+    if isinstance(x, ndarray):
+        return ndarray(shape=x.shape, dtype=x.dtype)
+    return float(int(x))
     return 0
 
 def bitwise_and(x1, x2, out=None):
@@ -286,6 +547,26 @@ def bitwise_and(x1, x2, out=None):
 
 def bitwise_or(x1, x2, out=None):
     """Mock pour numpy.bitwise_or."""
+def power(x1, x2, out=None):
+    """Mock pour numpy.power."""
+    if isinstance(x1, ndarray):
+        # Si x2 est un scalaire ou un ndarray compatible
+        if not isinstance(x2, ndarray) or x1.shape == x2.shape or x2.size == 1:
+             return ndarray(shape=x1.shape, dtype=x1.dtype)
+        # Si x1 est un scalaire et x2 un ndarray
+    elif isinstance(x2, ndarray) and not isinstance(x1, ndarray):
+        return ndarray(shape=x2.shape, dtype=x2.dtype)
+    elif not isinstance(x1, ndarray) and not isinstance(x2, ndarray):
+        try:
+            return x1 ** x2 # Comportement scalaire simple
+        except TypeError:
+            return 0 # Fallback pour types non numériques
+    # Cas plus complexes de broadcasting non gérés, retourne un ndarray par défaut si l'un est un ndarray
+    if isinstance(x1, ndarray) or isinstance(x2, ndarray):
+        shape = x1.shape if isinstance(x1, ndarray) else x2.shape # Simplification
+        dtype_res = x1.dtype if isinstance(x1, ndarray) else (x2.dtype if isinstance(x2, ndarray) else float)
+        return ndarray(shape=shape, dtype=dtype_res)
+    return 0 # Fallback général
     if isinstance(x1, ndarray):
         return ndarray(shape=x1.shape, dtype=x1.dtype)
     return 0
@@ -579,30 +860,79 @@ class object_(metaclass=dtype_base):
 class float64(metaclass=dtype_base):
     __name__ = 'float64'
     __module__ = 'numpy'
+float64 = float64 # Rendre l'instance accessible
 
 class float32(metaclass=dtype_base):
     __name__ = 'float32'
     __module__ = 'numpy'
+float32 = float32
 
 class int64(metaclass=dtype_base):
     __name__ = 'int64'
     __module__ = 'numpy'
+int64 = int64
 
 class int32(metaclass=dtype_base):
     __name__ = 'int32'
     __module__ = 'numpy'
+int32 = int32
 
 class uint64(metaclass=dtype_base):
     __name__ = 'uint64'
     __module__ = 'numpy'
+uint64 = uint64
 
 class uint32(metaclass=dtype_base):
     __name__ = 'uint32'
     __module__ = 'numpy'
+uint32 = uint32
+
+class int8(metaclass=dtype_base): pass
+int8 = int8
+
+class int16(metaclass=dtype_base): pass
+int16 = int16
+
+class uint8(metaclass=dtype_base): pass
+uint8 = uint8
+
+class uint16(metaclass=dtype_base): pass
+uint16 = uint16
+
+class byte(metaclass=dtype_base): pass # byte est np.int8
+byte = byte
+
+class ubyte(metaclass=dtype_base): pass # ubyte est np.uint8
+ubyte = ubyte
+
+class short(metaclass=dtype_base): pass # short est np.int16
+short = short
+
+class ushort(metaclass=dtype_base): pass # ushort est np.uint16
+ushort = ushort
+
+class complex64(metaclass=dtype_base): pass
+complex64 = complex64
+
+class complex128(metaclass=dtype_base): pass
+complex128 = complex128
+
+# class longdouble(metaclass=dtype_base): pass # Commenté pour tester avec une chaîne
+longdouble = "longdouble"
 
 # Alias pour compatibilité
 int_ = int64
 uint = uint64
+longlong = int64       # np.longlong (souvent int64)
+ulonglong = uint64      # np.ulonglong (souvent uint64)
+clongdouble = "clongdouble" # np.clongdouble (souvent complex128)
+complex_ = complex128
+intc = int32            # np.intc (C int, souvent int32)
+uintc = uint32           # np.uintc (C unsigned int, souvent uint32)
+intp = int64            # np.intp (taille d'un pointeur, souvent int64)
+
+# Types de données flottants supplémentaires (souvent des chaînes ou des types spécifiques)
+float16 = "float16" # Garder comme chaîne si c'est ainsi qu'il est utilisé, ou définir avec dtype_base
 
 # Ajouter des logs pour diagnostiquer l'utilisation par PyTorch
 logger.info(f"Types NumPy définis: bool_={bool_}, number={number}, object_={object_}")
@@ -613,16 +943,16 @@ datetime64 = "datetime64"
 timedelta64 = "timedelta64"
 
 # Types de données supplémentaires requis par pandas
-float_ = dtype_base("float64")  # Alias pour float64
+float_ = float64  # Alias pour float64 (maintenant une instance de classe)
 str_ = "str"
 unicode_ = "unicode"
 
-# Types numériques supplémentaires
-integer = dtype_base("int64")  # Type entier générique
-floating = dtype_base("float64")  # Type flottant générique
-complexfloating = dtype_base("complex128")  # Type complexe
-signedinteger = dtype_base("int64")  # Type entier signé
-unsignedinteger = dtype_base("uint64")  # Type entier non signé
+# Types numériques supplémentaires (maintenant aliasés aux instances de classe)
+integer = int64  # Type entier générique
+floating = float64  # Type flottant générique
+complexfloating = complex128  # Type complexe
+signedinteger = int64  # Type entier signé
+unsignedinteger = uint64  # Type entier non signé
 
 # Types de données complexes
 class complex64(metaclass=dtype_base):
@@ -656,9 +986,6 @@ class uint16(metaclass=dtype_base):
 intc = int32
 intp = int64
 
-# Types de données flottants supplémentaires
-float16 = "float16"
-
 # Classes utilitaires pour pandas
 class busdaycalendar:
     """Mock pour numpy.busdaycalendar."""
@@ -666,6 +993,10 @@ class busdaycalendar:
     def __init__(self, weekmask='1111100', holidays=None):
         self.weekmask = weekmask
         self.holidays = holidays or []
+
+# Types de données flottants supplémentaires
+# float16 est déjà défini plus haut (ligne 935)
+# busdaycalendar est déjà défini plus haut (fusionné depuis le stash)
 
 # Fonctions utilitaires supplémentaires
 def busday_count(begindates, enddates, weekmask='1111100', holidays=None, busdaycal=None, out=None):
@@ -677,8 +1008,15 @@ def is_busday(dates, weekmask='1111100', holidays=None, busdaycal=None, out=None
 # Sous-module typing pour compatibilité avec scipy/_lib/_array_api.py
 class typing:
     """Mock pour numpy.typing."""
-    NDArray = "numpy.typing.NDArray"  # Fournir un attribut commun
-    ArrayLike = "numpy.typing.ArrayLike" # Fournir un attribut commun
+    # Utiliser Any pour une compatibilité maximale avec les annotations de type
+    # qui utilisent | (union de types) comme dans scipy.
+    NDArray = Any
+    ArrayLike = Any
+    # Si des types plus spécifiques sont nécessaires, ils peuvent être ajoutés ici.
+    # Par exemple, en utilisant NewType:
+    # NDArray = NewType('NDArray', Any)
+    # ArrayLike = NewType('ArrayLike', Any)
+
 
     def __getattr__(self, name):
         # Retourner un MagicMock pour tout attribut non défini explicitement
@@ -697,6 +1035,7 @@ def busday_offset(dates, offsets, roll='raise', weekmask='1111100', holidays=Non
 # Sous-modules internes pour pandas
 class _core:
     """Mock pour numpy._core."""
+    numeric = numeric_module_mock_instance # Ajout de l'attribut numeric
     
     class multiarray:
         """Mock pour numpy._core.multiarray."""
@@ -708,6 +1047,7 @@ class _core:
 
 class core:
     """Mock pour numpy.core."""
+    numeric = numeric_module_mock_instance # Ajout de l'attribut numeric
     
     class multiarray:
         """Mock pour numpy.core.multiarray."""
