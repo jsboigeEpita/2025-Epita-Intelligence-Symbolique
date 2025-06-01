@@ -5,8 +5,12 @@ import os
 import re
 import logging
 
+# Importer la variable pour le décorateur skipif
+from tests.conftest import _REAL_JPYPE_AVAILABLE
+
 logger = logging.getLogger(__name__)
 
+@pytest.mark.skipif(not _REAL_JPYPE_AVAILABLE, reason="Test requires real JPype and JVM.")
 @pytest.mark.real_jpype
 class TestAdvancedReasoning:
     """
