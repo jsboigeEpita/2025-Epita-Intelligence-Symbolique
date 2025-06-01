@@ -125,14 +125,18 @@ def main():
     # 2. Importer les classes Tweety nécessaires
     print("\nÉtape 2: Importation des classes Tweety...")
     try:
+        # Enregistrer le domaine racine pour des imports potentiellement plus simples
+        jpype.imports.registerDomain("org")
+        print("INFO: Domaine 'org' enregistré avec jpype.imports.registerDomain.")
+
         # Importer la classe PlParser pour la logique propositionnelle
-        # Le package Java est net.tweetyproject.logics.pl.parser
-        PlParser = jpype.JClass("net.tweetyproject.logics.pl.parser.PlParser")
+        # Le package Java est org.tweetyproject.logics.pl.parser
+        PlParser = jpype.JClass("org.tweetyproject.logics.pl.parser.PlParser")
         # Importer la classe de base pour les formules propositionnelles
-        # net.tweetyproject.logics.pl.syntax.PropositionalFormula
-        PropositionalFormula = jpype.JClass("net.tweetyproject.logics.pl.syntax.PropositionalFormula")
+        # org.tweetyproject.logics.pl.syntax.PlFormula
+        PlFormula = jpype.JClass("org.tweetyproject.logics.pl.syntax.PlFormula")
         
-        print("INFO: Classes Tweety (PlParser, PropositionalFormula) chargées avec succès via JClass.")
+        print("INFO: Classes Tweety (PlParser, PlFormula) chargées avec succès via JClass.")
     except Exception as e:
         print(f"ERREUR: Échec de l'importation des classes Tweety : {e}")
         print("Vérifiez que les JARs Tweety sont corrects et que le classpath est bien configuré.")
@@ -184,11 +188,11 @@ def main():
         
         # Vérifier si la formule est une instance de PropositionalFormula (côté Java)
         # Note: isinstance() avec des types Java peut être délicat.
-        # Il est plus sûr de vérifier le nom de la classe ou d'utiliser jpype.JInstanceOf
-        if jpype.JInstanceOf(parsed_formula, PropositionalFormula):
-             print("  - Vérification : La formule est bien une instance de PropositionalFormula (côté Java).")
+        # Il est plus sûr de vérifier le nom de la classe ou d'utiliser isinstance() directement
+        if isinstance(parsed_formula, PlFormula):
+             print("  - Vérification : La formule est bien une instance de PlFormula (côté Java).")
         else:
-             print("  - AVERTISSEMENT : La formule n'est PAS une instance de PropositionalFormula (côté Java), type actuel: " + str(type(parsed_formula)))
+             print("  - AVERTISSEMENT : La formule n'est PAS une instance de PlFormula (côté Java), type actuel: " + str(type(parsed_formula)))
 
 
     except Exception as e:
@@ -199,7 +203,7 @@ def main():
     # 6. (Optionnel) Opération basique sur la formule
     print("\nÉtape 6 (Optionnel): Opération basique sur la formule...")
     try:
-        if jpype.JInstanceOf(parsed_formula, PropositionalFormula):
+        if isinstance(parsed_formula, PlFormula):
             # Obtenir les atomes (propositions) de la formule
             # La méthode est getAtoms() et retourne un Set<Proposition>
             atoms_set = parsed_formula.getAtoms() # Ceci est un java.util.Set
@@ -211,10 +215,10 @@ def main():
                 # Itérer sur le Set Java
                 py_atoms = []
                 for atom in atoms_set: # JPype gère l'itération sur les collections Java
-                    py_atoms.append(atom.toString()) # atom est un net.tweetyproject.logics.pl.syntax.Proposition
+                    py_atoms.append(atom.toString()) # atom est un org.tweetyproject.logics.pl.syntax.Proposition
                 print(f"    {py_atoms}")
         else:
-            print("  - L'objet n'est pas une PropositionalFormula, impossible d'obtenir les atomes.")
+            print("  - L'objet n'est pas une PlFormula, impossible d'obtenir les atomes.")
 
     except Exception as e:
         print(f"ERREUR: Échec de l'opération optionnelle sur la formule : {e}")
