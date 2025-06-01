@@ -354,6 +354,26 @@ if ($envContent -match $javaHomeRegex) {
 Set-Content -Path $envFile -Value $envContent -Force
 Write-Host "Fichier .env mis à jour avec : $javaHomeLine"
 
+Write-Host "Mise à jour de USE_REAL_JPYPE dans le fichier .env..."
+$useRealJpypeLine = "USE_REAL_JPYPE=true"
+# $envContent a déjà été lu pour JAVA_HOME, mais relisons-le au cas où pour être sûr
+$envContent = Get-Content $envFile -Raw
+$useRealJpypeRegex = "(?m)^#?\s*USE_REAL_JPYPE=.*"
+
+if ($envContent -match $useRealJpypeRegex) {
+    Write-Host "USE_REAL_JPYPE trouvé, mise à jour de la ligne pour s'assurer qu'il est à 'true' et non commenté."
+    $envContent = $envContent -replace $useRealJpypeRegex, $useRealJpypeLine
+} else {
+    Write-Host "USE_REAL_JPYPE non trouvé, ajout de la ligne."
+    # S'assurer qu'il y a un retour à la ligne si le fichier n'est pas vide et ne termine pas par un newline
+    if ($envContent -and $envContent.Length -gt 0 -and $envContent[-1] -ne "`n" -and $envContent[-1] -ne "`r") {
+        $envContent = $envContent + [System.Environment]::NewLine
+    }
+    $envContent = $envContent + $useRealJpypeLine
+}
+Set-Content -Path $envFile -Value $envContent -Force -Encoding UTF8 # Spécifier l'encodage pour la cohérence
+Write-Host "Fichier .env mis à jour concernant USE_REAL_JPYPE."
+
 # NOUVEAU: Activation de l'environnement virtuel
 Write-Host ""
 Write-Host "--- Activation de l'environnement virtuel ---"
