@@ -88,6 +88,21 @@ if (Test-Path $envFilePath) {
 # $env:PYTHONPATH = "$($PSScriptRoot);$($env:PYTHONPATH)"
 # Write-Host "PYTHONPATH configuré pour inclure la racine du projet."
 
+# Assurer la priorité de l'environnement virtuel Python
+$venvScriptsPath = Join-Path -Path (Join-Path -Path $PSScriptRoot -ChildPath $venvName) -ChildPath "Scripts"
+if (Test-Path $venvScriptsPath -PathType Container) {
+    Write-Host "Confirmation de la priorité de '$venvScriptsPath' dans le PATH."
+    # S'assurer qu'il est au début. Si Activate.ps1 a bien fonctionné, il y est déjà.
+    # Sinon, cela le corrige. Si JAVA_HOME l'a devancé, cela le remet devant.
+    if ($env:PATH -notlike "$venvScriptsPath*") {
+        $env:PATH = "$venvScriptsPath;$($env:PATH)"
+        Write-Host "PATH mis à jour pour prioriser le venv."
+    } else {
+        Write-Host "Le chemin du venv est déjà prioritaire dans le PATH."
+    }
+} else {
+    Write-Warning "Répertoire Scripts du venv ('$venvScriptsPath') introuvable. La priorisation du venv dans le PATH pourrait échouer."
+}
 # --- Message de Confirmation ---
 Write-Host ""
 Write-Host "---------------------------------------------------------------------"
