@@ -52,7 +52,8 @@ def test_numpy_mock_core_modules():
     print(f"✅ numpy._core.multiarray: {numpy._core.multiarray}")
     print(f"✅ numpy.core.multiarray: {numpy.core.multiarray}")
     
-    return True
+    # Si toutes les assertions passent, le test est réussi.
+    # Pytest n'attend pas de valeur de retour.
 
 if __name__ == "__main__":
     try:

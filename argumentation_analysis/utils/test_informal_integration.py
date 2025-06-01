@@ -45,18 +45,12 @@ def test_informal_integration():
         hierarchy = json.loads(hierarchy_json)
         
         # Vérifier que la réponse ne contient pas d'erreur
-        if "error" in hierarchy and hierarchy["error"]:
-            logger.error(f"Erreur lors de l'exploration de la hiérarchie: {hierarchy['error']}")
-            return False
+        assert "error" not in hierarchy or not hierarchy["error"], f"Erreur lors de l'exploration de la hiérarchie: {hierarchy.get('error')}"
         
         # Vérifier que la réponse contient les informations attendues
-        if "current_node" not in hierarchy:
-            logger.error("La réponse ne contient pas de nœud courant")
-            return False
+        assert "current_node" in hierarchy, "La réponse ne contient pas de nœud courant"
         
-        if "children" not in hierarchy:
-            logger.error("La réponse ne contient pas d'enfants")
-            return False
+        assert "children" in hierarchy, "La réponse ne contient pas d'enfants"
         
         # Afficher des informations sur la hiérarchie
         current_node = hierarchy["current_node"]
@@ -69,13 +63,13 @@ def test_informal_integration():
         for i, child in enumerate(children[:5]):
             logger.info(f"  Enfant {i+1}: PK={child.get('pk')}, Nom={child.get('nom_vulgarisé') or child.get('text_fr')}")
         
-        return True
+        # Si toutes les assertions passent, le test est réussi.
     
     except Exception as e:
         logger.error(f"Erreur lors du test d'intégration: {e}")
         import traceback
         logger.error(traceback.format_exc())
-        return False
+        raise
 
 if __name__ == "__main__":
     result = test_informal_integration()

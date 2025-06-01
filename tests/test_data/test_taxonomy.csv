@@ -1,0 +1,4 @@
+PK,Name,Category,Description,Example,Counter_Example
+1,Appel a l'autorite,Fallacy,Invoquer une autorite non pertinente,"Einstein a dit que Dieu ne joue pas aux des, donc la mecanique quantique est fausse.","Selon le consensus scientifique, le rechauffement climatique est reel."
+2,Pente glissante,Fallacy,Suggerer qu'une action menera inevitablement a une chaine d'evenements indesirables,"Si nous legalisons la marijuana, bientot toutes les drogues seront legales.","Si nous augmentons le salaire minimum, certaines entreprises pourraient reduire leurs effectifs."
+3,Ad hominem,Fallacy,Attaquer la personne plutot que ses idees,"Vous etes trop jeune pour comprendre la politique.","Votre argument est base sur des donnees obsoletes."
