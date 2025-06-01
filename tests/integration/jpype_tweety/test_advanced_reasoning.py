@@ -529,24 +529,24 @@ class TestAdvancedReasoning:
         reasoner = DefaultMeReasoner(optimization_finder)
         logger.info(f"DefaultMeReasoner instancié avec optimization_finder: {reasoner}")
         
-        # query_formula = pl_parser.parseFormula(query_str_from_file) # Commenté
-        # logger.info(f"Query formula '{query_str_from_file}' parsée: {query_formula}") # Commenté
+        query_formula = pl_parser.parseFormula(query_str_from_file)
+        logger.info(f"Query formula '{query_str_from_file}' parsée: {query_formula}")
         
-        # # S'assurer que pkb et query_formula sont correctement initialisés
-        # if pkb is None:
-        #     pytest.fail("pkb (PclBeliefSet) est None avant l'appel à reasoner.query()")
-        # if query_formula is None:
-        #     pytest.fail("query_formula (PlFormula) est None avant l'appel à reasoner.query()")
-        # logger.info(f"Appel de reasoner.query avec pkb (type: {type(pkb)}) et query_formula (type: {type(query_formula)})")
+        # S'assurer que pkb et query_formula sont correctement initialisés
+        if pkb is None:
+            pytest.fail("pkb (PclBeliefSet) est None avant l'appel à reasoner.query()")
+        if query_formula is None:
+            pytest.fail("query_formula (PlFormula) est None avant l'appel à reasoner.query()")
+        logger.info(f"Appel de reasoner.query avec pkb (type: {type(pkb)}) et query_formula (type: {type(query_formula)})")
 
-        # probability_result = reasoner.query(pkb, query_formula) # Commenté
+        probability_result = reasoner.query(pkb, query_formula)
 
-        # logger.info(f"Probabilité calculée pour '{query_str_from_file}': {probability_result.getValue()}") # Commenté
-        # assert probability_result is not None, "La probabilité retournée ne doit pas être nulle." # Commenté
-        # # La méthode getValue() de l'objet Probability retourne un double Java, qui est automatiquement
-        # # converti en float Python par JPype.
-        # prob_value = probability_result.getValue() # Commenté
-        # assert 0 <= prob_value <= 1, f"La probabilité doit être entre 0 et 1, obtenue: {prob_value}" # Commenté
+        logger.info(f"Probabilité calculée pour '{query_str_from_file}': {probability_result.getValue()}")
+        assert probability_result is not None, "La probabilité retournée ne doit pas être nulle."
+        # La méthode getValue() de l'objet Probability retourne un double Java, qui est automatiquement
+        # converti en float Python par JPype.
+        prob_value = probability_result.getValue()
+        assert 0 <= prob_value <= 1, f"La probabilité doit être entre 0 et 1, obtenue: {prob_value}"
         
         # # Calcul manuel pour simple_problog.pl:
         # # P(b) = 0.6, P(e) = 0.3
