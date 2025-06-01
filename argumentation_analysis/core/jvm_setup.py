@@ -573,6 +573,13 @@ def initialize_jvm(
         logger.info(f"DEBUG_JVM_SETUP: Path avant startJVM: {os.getenv('PATH')}")
         logger.info(f"DEBUG_JVM_SETUP: CLASSPATH avant startJVM: {os.getenv('CLASSPATH')}")
         logger.info(f"DEBUG_JVM_SETUP: Tentative de démarrage avec jvm_path_to_use_explicit='{jvm_path_to_use_explicit}', classpath='{len(combined_jar_list)} JARs', args='{jvm_args}'")
+        # Configuration de destroy_jvm avant le démarrage de la JVM
+        if hasattr(jpype, 'config'):
+            jpype.config.destroy_jvm = False
+            logger.info(f"DEBUG_JVM_SETUP: jpype.config.destroy_jvm défini sur False.")
+        else:
+            logger.warning("DEBUG_JVM_SETUP: jpype.config non disponible, impossible de définir destroy_jvm.")
+
         logger.info(f"DEBUG_JVM_SETUP: APPEL IMMINENT DE jpype.startJVM()")
         if jvm_path_to_use_explicit:
             jpype.startJVM(jvm_path_to_use_explicit, classpath=combined_jar_list, *jvm_args, convertStrings=False, ignoreUnrecognized=True)
