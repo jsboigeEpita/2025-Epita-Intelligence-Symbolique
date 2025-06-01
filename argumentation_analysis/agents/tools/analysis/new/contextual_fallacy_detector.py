@@ -46,6 +46,7 @@ class ContextualFallacyDetector:
         
         # Définir les sophismes contextuels
         self.contextual_fallacies = self._define_contextual_fallacies()
+        self.detection_history = []
         
         self.logger.info("Détecteur de sophismes contextuels initialisé.")
     
@@ -258,6 +259,14 @@ class ContextualFallacyDetector:
             "argument_results": argument_results,
             "analysis_timestamp": datetime.now().isoformat()
         }
+        
+        self.detection_history.append({
+            "type": "multiple_contextual_fallacy_detection",
+            "timestamp": results["analysis_timestamp"],
+            "input_arguments_count": len(arguments),
+            "input_context": context_description,
+            "detected_fallacies_count": sum(len(arg_res.get("detected_fallacies", [])) for arg_res in argument_results)
+        })
         
         return results
     
