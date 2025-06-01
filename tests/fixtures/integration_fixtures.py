@@ -201,15 +201,15 @@ def dung_classes(integration_jvm):
     if integration_jvm is None: pytest.skip("JVM non disponible pour dung_classes.")
     JClass = integration_jvm.JClass
     return {
-        "DungTheory": JClass("net.sf.tweety.arg.dung.DungTheory"),
-        "Argument": JClass("net.sf.tweety.arg.dung.syntax.Argument"),
-        "Attack": JClass("net.sf.tweety.arg.dung.syntax.Attack"),
-        "StableExtension": JClass("net.sf.tweety.arg.dung.semantics.StableExtension"),
-        "PreferredExtension": JClass("net.sf.tweety.arg.dung.semantics.PreferredExtension"),
-        "GroundedExtension": JClass("net.sf.tweety.arg.dung.semantics.GroundedExtension"),
-        "CompleteExtension": JClass("net.sf.tweety.arg.dung.semantics.CompleteExtension"),
-        "AbstractExtensionReasoner": JClass("net.sf.tweety.arg.dung.reasoner.AbstractExtensionReasoner"),
-        "SimpleDungReasoner": JClass("net.sf.tweety.arg.dung.reasoner.SimpleDungReasoner")
+        "DungTheory": JClass("org.tweetyproject.arg.dung.DungTheory"),
+        "Argument": JClass("org.tweetyproject.arg.dung.syntax.Argument"),
+        "Attack": JClass("org.tweetyproject.arg.dung.syntax.Attack"),
+        "StableExtension": JClass("org.tweetyproject.arg.dung.semantics.StableExtension"),
+        "PreferredExtension": JClass("org.tweetyproject.arg.dung.semantics.PreferredExtension"),
+        "GroundedExtension": JClass("org.tweetyproject.arg.dung.semantics.GroundedExtension"),
+        "CompleteExtension": JClass("org.tweetyproject.arg.dung.semantics.CompleteExtension"),
+        "AbstractExtensionReasoner": JClass("org.tweetyproject.arg.dung.reasoner.AbstractExtensionReasoner"),
+        "SimpleDungReasoner": JClass("org.tweetyproject.arg.dung.reasoner.SimpleDungReasoner")
     }
 
 @pytest.fixture(scope="session")
@@ -325,13 +325,13 @@ def tweety_qbf_classes(integration_jvm):
     if integration_jvm is None: pytest.skip("JVM non disponible pour tweety_qbf_classes.")
     JClass = integration_jvm.JClass
     return {
-        "QuantifiedBooleanFormula": JClass("net.sf.tweety.logics.qbf.syntax.QuantifiedBooleanFormula"),
-        "QbfNode": JClass("net.sf.tweety.logics.qbf.syntax.QbfNode"),
-        "ExistsQuantifiedFormula": JClass("net.sf.tweety.logics.qbf.syntax.ExistsQuantifiedFormula"),
-        "ForAllQuantifiedFormula": JClass("net.sf.tweety.logics.qbf.syntax.ForAllQuantifiedFormula"),
-        "QbfReasoner": JClass("net.sf.tweety.logics.qbf.reasoner.QbfReasoner"), # Interface
-        "CAQEReasoner": JClass("net.sf.tweety.logics.qbf.reasoner.CAQEReasoner"),
-        "QbfParser": JClass("net.sf.tweety.logics.qbf.parser.QbfParser")
+        "QuantifiedBooleanFormula": JClass("org.tweetyproject.logics.qbf.syntax.QuantifiedBooleanFormula"),
+        "QbfNode": JClass("org.tweetyproject.logics.qbf.syntax.QbfNode"),
+        "ExistsQuantifiedFormula": JClass("org.tweetyproject.logics.qbf.syntax.ExistsQuantifiedFormula"),
+        "ForAllQuantifiedFormula": JClass("org.tweetyproject.logics.qbf.syntax.ForAllQuantifiedFormula"),
+        "QbfReasoner": JClass("org.tweetyproject.logics.qbf.reasoner.QbfReasoner"), # Interface
+        "CAQEReasoner": JClass("org.tweetyproject.logics.qbf.reasoner.CAQEReasoner"),
+        "QbfParser": JClass("org.tweetyproject.logics.qbf.parser.QbfParser")
     }
 @pytest.fixture(scope="session") # Changé scope à session pour correspondre aux autres fixtures Tweety
 def belief_revision_classes(integration_jvm):
