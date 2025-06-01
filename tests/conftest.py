@@ -30,6 +30,7 @@ if mocks_dir_for_mock not in sys.path:
 
 from tests.mocks.jpype_setup import (
     _REAL_JPYPE_MODULE,
+    _REAL_JPYPE_AVAILABLE, # Ajouté pour skipif
     _JPYPE_MODULE_MOCK_OBJ_GLOBAL,
     _MOCK_DOT_JPYPE_MODULE_GLOBAL,
     activate_jpype_mock_if_needed,

@@ -5,6 +5,15 @@ from unittest.mock import MagicMock
 import importlib.util
 import logging
 
+# --- Détermination de la disponibilité du vrai JPype via variable d'environnement ---
+# Cette variable est utilisée par les décorateurs skipif dans les fichiers de test.
+_REAL_JPYPE_AVAILABLE = os.environ.get('USE_REAL_JPYPE', 'false').lower() in ('true', '1')
+# Logguer l'état initial pour le débogage
+# Le logger n'est pas encore configuré ici, donc on utilise print, ou on déplace cette logique après la config du logger.
+# Pour l'instant, on va supposer que le logger sera configuré à temps ou que cette info est pour un débogage manuel.
+# print(f"jpype_setup.py: _REAL_JPYPE_AVAILABLE initialisé à: {_REAL_JPYPE_AVAILABLE} (basé sur USE_REAL_JPYPE='{os.environ.get('USE_REAL_JPYPE')}')")
+
+
 # --- Configuration du Logger ---
 logger = logging.getLogger(__name__)
 # Configuration basique si le logger n'est pas déjà configuré par pytest ou autre
