@@ -105,8 +105,17 @@ class TestTheoryOperations:
         kb2.add(formula_s)
         kb2.add(formula_common) # Formule commune
 
-        # La méthode d'instance `intersection(BeliefSet other)` retourne un nouveau BeliefSet.
-        intersection_kb = kb1.intersection(kb2)
+        # La méthode d'instance `intersection(BeliefSet other)` n'existe pas.
+        # Nous allons utiliser kb1_copy.retainAll(kb2) pour effectuer l'intersection.
+        # retainAll modifie l'ensemble sur lequel il est appelé.
+        # Il faut donc cloner kb1 si on ne veut pas le modifier.
+        # PlBeliefSet a un constructeur de copie: PlBeliefSet(Collection<? extends Formula> formulas)
+        # ou simplement PlBeliefSet(PlBeliefSet other)
+        
+        # Tentative avec un constructeur de copie standard s'il existe, sinon on crée un nouveau et on addAll.
+        # La classe PlBeliefSet hérite de java.util.HashSet, qui a un constructeur de copie.
+        intersection_kb = PlBeliefSet(kb1) # Crée une copie de kb1
+        intersection_kb.retainAll(kb2)     # Modifie intersection_kb pour qu'il contienne l'intersection
 
         assert intersection_kb.size() == 1, "La taille de l'intersection devrait être 1"
         
@@ -153,8 +162,11 @@ class TestTheoryOperations:
         kb_b.add(formula_s)
         kb_b.add(formula_t)
 
-        # La méthode d'instance `difference(BeliefSet other)` retourne un nouveau BeliefSet (A - B).
-        difference_kb = kb_a.difference(kb_b)
+        # La méthode d'instance `difference(BeliefSet other)` n'existe pas.
+        # Nous allons utiliser kb_a_copy.removeAll(kb_b) pour effectuer la différence.
+        # removeAll modifie l'ensemble sur lequel il est appelé.
+        difference_kb = PlBeliefSet(kb_a) # Crée une copie de kb_a
+        difference_kb.removeAll(kb_b)     # Modifie difference_kb pour qu'il contienne (A - B)
 
         assert difference_kb.size() == 2, "La taille de la différence (A-B) devrait être 2"
         
@@ -201,16 +213,32 @@ class TestTheoryOperations:
         kb4 = PlBeliefSet()
         kb4.add(parser.parseFormula("r"))
 
-        # La méthode `isSubsumedBy(BeliefBase B, BeliefBase A)` vérifie si A subsume B (A |= B)
-        # Ou `A.subsumes(B)` si une telle méthode existe.
-        # Dans Tweety, un `Reasoner` a une méthode `query(BeliefBase kb, Formula formula)`
-        # Pour vérifier la subsomption KB1 |= KB2, on vérifie si chaque formule de KB2 est une conséquence de KB1.
-        # Tweety `PlBeliefSet` a une méthode `subsumes(PlBeliefSet other)`
+        # Pour vérifier la subsomption KB_A |= KB_B, on vérifie si chaque formule de KB_B est une conséquence de KB_A.
+        # La méthode `subsumes` n'existe pas directement sur PlBeliefSet.
+        # On utilise reasoner.query(KB_A, formula_from_KB_B).
+
+        def check_subsumption(reasoner, kb_subsuming, kb_subsumed):
+            if kb_subsumed.isEmpty(): # Une base vide est subsumée par n'importe quelle base
+                return True
+            iterator = kb_subsumed.iterator()
+            while iterator.hasNext():
+                formula = iterator.next()
+                if not reasoner.query(kb_subsuming, formula):
+                    return False
+            return True
+
+        assert check_subsumption(reasoner, kb1, kb2) == True, "KB1 {p, p=>q} devrait subsumer KB2 {q}"
+        assert check_subsumption(reasoner, kb1, kb3) == True, "KB1 {p, p=>q} devrait subsumer KB3 {p}"
+        assert check_subsumption(reasoner, kb2, kb1) == False, "KB2 {q} ne devrait pas subsumer KB1 {p, p=>q}"
+        assert check_subsumption(reasoner, kb1, kb4) == False, "KB1 {p, p=>q} ne devrait pas subsumer KB4 {r}"
         
-        assert kb1.subsumes(kb2) == True, "KB1 {p, p=>q} devrait subsumer KB2 {q}"
-        assert kb1.subsumes(kb3) == True, "KB1 {p, p=>q} devrait subsumer KB3 {p}"
-        assert kb2.subsumes(kb1) == False, "KB2 {q} ne devrait pas subsumer KB1 {p, p=>q}"
-        assert kb1.subsumes(kb4) == False, "KB1 {p, p=>q} ne devrait pas subsumer KB4 {r}"
+        # Test supplémentaire: une base vide est subsumée par n'importe quoi
+        empty_kb = PlBeliefSet()
+        assert check_subsumption(reasoner, kb1, empty_kb) == True, "KB1 devrait subsumer une base vide"
+        assert check_subsumption(reasoner, empty_kb, kb1) == False, "Une base vide ne devrait pas subsumer KB1 (sauf si KB1 est aussi vide ou tautologique)"
+        
+        # Test avec une base vide des deux côtés
+        assert check_subsumption(reasoner, empty_kb, empty_kb) == True, "Une base vide devrait se subsumer elle-même"
 
     def test_belief_set_equivalence(self, belief_revision_classes, integration_jvm):
         """
@@ -223,8 +251,21 @@ class TestTheoryOperations:
         """
         PlBeliefSet = belief_revision_classes["PlBeliefSet"]
         PlParser = belief_revision_classes["PlParser"]
+        SimplePlReasoner = belief_revision_classes["SimplePlReasoner"]
 
         parser = PlParser()
+        reasoner = SimplePlReasoner()
+
+        # Fonction auxiliaire de test_belief_set_subsumption
+        def check_subsumption(reasoner, kb_subsuming, kb_subsumed):
+            if kb_subsumed.isEmpty():
+                return True
+            iterator = kb_subsumed.iterator()
+            while iterator.hasNext():
+                formula = iterator.next()
+                if not reasoner.query(kb_subsuming, formula):
+                    return False
+            return True
 
         # KB1 = {p & q}
         kb1 = PlBeliefSet()
@@ -243,11 +284,36 @@ class TestTheoryOperations:
         kb4 = PlBeliefSet()
         kb4.add(parser.parseFormula("p"))
 
-        # `PlBeliefSet` a une méthode `isEquivalent(PlBeliefSet other)`
-        assert kb1.isEquivalent(kb2) == True, "{p && q} devrait être équivalent à {q && p}"
-        assert kb1.isEquivalent(kb3) == True, "{p && q} devrait être équivalent à {p, q}"
-        assert kb2.isEquivalent(kb3) == True, "{q && p} devrait être équivalent à {p, q}"
-        assert kb1.isEquivalent(kb4) == False, "{p && q} ne devrait pas être équivalent à {p}"
+        # Deux bases de croyances KB1 et KB2 sont équivalentes si KB1 subsume KB2 ET KB2 subsume KB1.
+        # La méthode isEquivalent n'existe pas directement sur PlBeliefSet.
+        def check_equivalence(reasoner, kb_one, kb_two):
+            return check_subsumption(reasoner, kb_one, kb_two) and \
+                   check_subsumption(reasoner, kb_two, kb_one)
+
+        assert check_equivalence(reasoner, kb1, kb2) == True, "{p && q} devrait être équivalent à {q && p}"
+        assert check_equivalence(reasoner, kb1, kb3) == True, "{p && q} devrait être équivalent à {p, q}"
+        assert check_equivalence(reasoner, kb2, kb3) == True, "{q && p} devrait être équivalent à {p, q}"
+        assert check_equivalence(reasoner, kb1, kb4) == False, "{p && q} ne devrait pas être équivalent à {p}"
+
+        # Test supplémentaire avec des bases vides
+        empty_kb1 = PlBeliefSet()
+        empty_kb2 = PlBeliefSet()
+        assert check_equivalence(reasoner, empty_kb1, empty_kb2) == True, "Deux bases vides devraient être équivalentes"
+        assert check_equivalence(reasoner, kb1, empty_kb1) == False, "Une base non-vide ne devrait pas être équivalente à une base vide (sauf si elle est vide de conséquences)"
+
+        # Cas où kb1 est {a} et kb_empty est {}. kb1 subsume empty_kb. empty_kb ne subsume pas kb1. Donc non équivalent.
+        # Si kb1 était {a, !a}, il serait équivalent à une base vide si on considère la clôture logique (inconsistante).
+        # Mais ici on compare les ensembles de formules et leur conséquence.
+        # Une base {a, !a} (inconsistante) subsume toute formule, donc elle subsumerait une base vide.
+        # Une base vide ne subsume pas {a, !a}. Donc non équivalentes.
+        
+        kb_inconsistent = PlBeliefSet()
+        kb_inconsistent.add(parser.parseFormula("contradiction")) # Une formule auto-contradictoire
+        kb_inconsistent.add(parser.parseFormula("!contradiction"))
+        # Une base inconsistante subsume tout, y compris une base vide.
+        # Une base vide ne subsume pas une base inconsistante (non vide).
+        # Donc, elles ne sont pas équivalentes.
+        assert check_equivalence(reasoner, kb_inconsistent, empty_kb1) == False, "Une base inconsistante non-vide ne devrait pas être équivalente à une base vide"
 
 
     def test_theory_serialization_deserialization(self, belief_revision_classes, integration_jvm, tmp_path):
@@ -262,6 +328,7 @@ class TestTheoryOperations:
         """
         PlBeliefSet = belief_revision_classes["PlBeliefSet"]
         PlParser = belief_revision_classes["PlParser"]
+        SimplePlReasoner = belief_revision_classes["SimplePlReasoner"] # Ajout pour check_equivalence
         # Pour la sérialisation/désérialisation, Tweety utilise souvent des classes IO spécifiques
         # ou des méthodes sur les objets eux-mêmes.
         # `PlBeliefSet.toString()` donne une représentation, mais pas forcément pour la re-création.
@@ -275,6 +342,22 @@ class TestTheoryOperations:
         # Le format standard est souvent une formule par ligne.
 
         parser = PlParser()
+        reasoner = SimplePlReasoner() # Ajout pour check_equivalence
+
+        # Fonctions auxiliaires de test_belief_set_subsumption et test_belief_set_equivalence
+        def check_subsumption(reasoner, kb_subsuming, kb_subsumed):
+            if kb_subsumed.isEmpty():
+                return True
+            iterator = kb_subsumed.iterator()
+            while iterator.hasNext():
+                formula = iterator.next()
+                if not reasoner.query(kb_subsuming, formula):
+                    return False
+            return True
+
+        def check_equivalence(reasoner, kb_one, kb_two):
+            return check_subsumption(reasoner, kb_one, kb_two) and \
+                   check_subsumption(reasoner, kb_two, kb_one)
         
         original_kb = PlBeliefSet()
         original_kb.add(parser.parseFormula("a => b"))
@@ -284,9 +367,12 @@ class TestTheoryOperations:
         # Sérialisation: écrire les formules dans un fichier, une par ligne.
         temp_file = tmp_path / "theory.lp"
         
-        # Utiliser la méthode `writeFile` de `PlBeliefSet` si elle existe et est appropriée.
-        # D'après la documentation de Tweety (ou exploration), `PlBeliefSet` a `writeFile(String filename)`.
-        original_kb.writeFile(str(temp_file))
+        # PlBeliefSet n'a pas de méthode writeFile.
+        # Nous allons écrire manuellement les formules dans le fichier, une par ligne.
+        with open(temp_file, 'w') as f:
+            iterator = original_kb.iterator()
+            while iterator.hasNext():
+                f.write(str(iterator.next()) + "\n")
 
         # Désérialisation
         # `PlParser` a `parseBeliefBaseFromFile(String filename)`
@@ -294,7 +380,7 @@ class TestTheoryOperations:
 
         # Assertion
         assert deserialized_kb is not None, "La désérialisation ne devrait pas retourner None"
-        assert original_kb.isEquivalent(deserialized_kb), \
+        assert check_equivalence(reasoner, original_kb, deserialized_kb), \
             "La base désérialisée devrait être équivalente à l'originale."
         assert original_kb.size() == deserialized_kb.size(), \
             "Les tailles des bases devraient être égales après sérialisation/désérialisation."
