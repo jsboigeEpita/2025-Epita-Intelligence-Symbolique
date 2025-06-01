@@ -1002,23 +1002,23 @@ def belief_revision_classes(integration_jvm):
             "PlSignature": jpype_instance.JClass("org.tweetyproject.logics.pl.syntax.PlSignature", loader=loader_to_use),
         }
         revision_ops = {
-            "KernelContractionOperator": jpype_instance.JClass("org.tweetyproject.beliefdynamics.operators.KernelContractionOperator", loader=loader_to_use),
+            "KernelContractionOperator": jpype_instance.JClass("org.tweetyproject.beliefdynamics.kernels.KernelContractionOperator", loader=loader_to_use),
             "RandomIncisionFunction": jpype_instance.JClass("org.tweetyproject.beliefdynamics.kernels.RandomIncisionFunction", loader=loader_to_use),
-            "DefaultMultipleBaseExpansionOperator": jpype_instance.JClass("org.tweetyproject.beliefdynamics.operators.DefaultMultipleBaseExpansionOperator", loader=loader_to_use),
-            "LeviMultipleBaseRevisionOperator": jpype_instance.JClass("org.tweetyproject.beliefdynamics.operators.LeviMultipleBaseRevisionOperator", loader=loader_to_use),
+            "DefaultMultipleBaseExpansionOperator": jpype_instance.JClass("org.tweetyproject.beliefdynamics.DefaultMultipleBaseExpansionOperator", loader=loader_to_use),
+            "LeviMultipleBaseRevisionOperator": jpype_instance.JClass("org.tweetyproject.beliefdynamics.LeviMultipleBaseRevisionOperator", loader=loader_to_use),
         }
         crmas_classes = {
             "CrMasBeliefSet": jpype_instance.JClass("org.tweetyproject.beliefdynamics.mas.CrMasBeliefSet", loader=loader_to_use),
             "InformationObject": jpype_instance.JClass("org.tweetyproject.beliefdynamics.mas.InformationObject", loader=loader_to_use),
             "CrMasRevisionWrapper": jpype_instance.JClass("org.tweetyproject.beliefdynamics.mas.CrMasRevisionWrapper", loader=loader_to_use),
-            "CrMasSimpleRevisionOperator": jpype_instance.JClass("org.tweetyproject.beliefdynamics.mas.CrMasSimpleRevisionOperator", loader=loader_to_use),
-            "CrMasArgumentativeRevisionOperator": jpype_instance.JClass("org.tweetyproject.beliefdynamics.mas.CrMasArgumentativeRevisionOperator", loader=loader_to_use),
+            "CrMasSimpleRevisionOperator": jpype_instance.JClass("org.tweetyproject.beliefdynamics.operators.CrMasSimpleRevisionOperator", loader=loader_to_use),
+            "CrMasArgumentativeRevisionOperator": jpype_instance.JClass("org.tweetyproject.beliefdynamics.operators.CrMasArgumentativeRevisionOperator", loader=loader_to_use),
             "DummyAgent": jpype_instance.JClass("org.tweetyproject.agents.DummyAgent", loader=loader_to_use),
-            "Order": jpype_instance.JClass("org.tweetyproject.commons.util.Order", loader=loader_to_use),
+            "Order": jpype_instance.JClass("org.tweetyproject.comparator.Order", loader=loader_to_use),
         }
         inconsistency_measures = {
             "ContensionInconsistencyMeasure": jpype_instance.JClass("org.tweetyproject.logics.pl.analysis.ContensionInconsistencyMeasure", loader=loader_to_use),
-            "NaiveMusEnumerator": jpype_instance.JClass("org.tweetyproject.logics.pl.analysis.NaiveMusEnumerator", loader=loader_to_use),
+            "NaiveMusEnumerator": jpype_instance.JClass("org.tweetyproject.logics.commons.analysis.NaiveMusEnumerator", loader=loader_to_use),
             "SatSolver": jpype_instance.JClass("org.tweetyproject.logics.pl.sat.SatSolver", loader=loader_to_use),
         }
         return {**pl_classes, **revision_ops, **crmas_classes, **inconsistency_measures}
