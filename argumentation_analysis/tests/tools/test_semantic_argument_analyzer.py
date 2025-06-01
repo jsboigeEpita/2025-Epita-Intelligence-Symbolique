@@ -55,7 +55,7 @@ class TestSemanticArgumentAnalyzer(unittest.TestCase):
         result = self.analyzer.analyze_argument(argument)
         
         # Vérifier la structure du résultat
-        self.assertIn("semantic_analysis", result)
+        self.assertIn("semantic_components", result) # Clé corrigée
         self.assertIn("key_concepts", result)
         self.assertIn("sentiment_analysis", result)
         self.assertIn("claim_identification", result)
@@ -105,7 +105,7 @@ class TestSemanticArgumentAnalyzer(unittest.TestCase):
         
         # Vérifier la structure du résultat
         self.assertIn("argument_analyses", result)
-        self.assertIn("semantic_relationships", result)
+        self.assertIn("semantic_relations", result) # Clé corrigée
         self.assertIn("thematic_coherence", result)
         self.assertIn("logical_flow", result)
         self.assertIn("overall_semantic_analysis", result)
@@ -311,7 +311,7 @@ class TestSemanticArgumentAnalyzer(unittest.TestCase):
         
         # Vérifier que le résultat est correct
         self.assertIsNotNone(result)
-        self.assertIn("semantic_relationships", result)
+        self.assertIn("semantic_relations", result) # Clé corrigée
         self.assertIn("thematic_coherence", result)
         
         # Vérifier que les mocks ont été appelés
