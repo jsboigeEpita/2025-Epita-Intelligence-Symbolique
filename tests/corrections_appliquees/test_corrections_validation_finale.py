@@ -40,10 +40,11 @@ def test_correction_1_imports_mock():
         from tests.test_tactical_monitor_advanced import unittest, Mock, MagicMock
         print("  [OK] test_tactical_monitor_advanced.py - Imports Mock OK")
         
-        return True
+        # Test passes if no ImportError is raised
+        pass
     except ImportError as e:
         print(f"  [ERREUR] Erreur import Mock: {e}")
-        return False
+        raise
 
 def test_correction_2_task_dependencies():
     """Test Correction 2: Vérifier que task_dependencies est configuré."""
@@ -57,16 +58,12 @@ def test_correction_2_task_dependencies():
         test_instance.setUp()
         
         # Vérifier que task_dependencies existe
-        if hasattr(test_instance.tactical_state, 'task_dependencies'):
-            print("  [OK] task_dependencies configuré dans test_tactical_monitor.py")
-            return True
-        else:
-            print("  [ERREUR] task_dependencies manquant dans test_tactical_monitor.py")
-            return False
+        assert hasattr(test_instance.tactical_state, 'task_dependencies') is True
+        print("  [OK] task_dependencies configuré dans test_tactical_monitor.py")
             
     except Exception as e:
         print(f"  [ERREUR] Erreur test task_dependencies: {e}")
-        return False
+        raise
 
 def test_correction_3_overall_coherence():
     """Test Correction 3: Vérifier le mock de _evaluate_overall_coherence."""
@@ -82,11 +79,11 @@ def test_correction_3_overall_coherence():
         # Tester la méthode test_evaluate_overall_coherence
         test_instance.test_evaluate_overall_coherence()
         print("  [OK] test_evaluate_overall_coherence exécuté sans erreur")
-        return True
+        # Test passes if no exception is raised by the above call
         
     except Exception as e:
         print(f"  [ERREUR] Erreur test overall_coherence: {e}")
-        return False
+        raise
 
 def test_correction_4_validation_agent():
     """Test Correction 4: Vérifier MockValidationAgent."""
@@ -98,11 +95,11 @@ def test_correction_4_validation_agent():
         # Créer une instance
         mock_agent = MockValidationAgent()
         print("  [OK] MockValidationAgent créé avec succès")
-        return True
+        # Test passes if no exception is raised by the above call
         
     except Exception as e:
         print(f"  [ERREUR] Erreur MockValidationAgent: {e}")
-        return False
+        raise
 
 def test_correction_5_extract_plugin():
     """Test Correction 5: Vérifier les attributs Mock ExtractPlugin."""
@@ -118,17 +115,14 @@ def test_correction_5_extract_plugin():
         # Vérifier les attributs du mock_extract_plugin
         required_attrs = ['extract', 'process_text', 'get_supported_formats']
         for attr in required_attrs:
-            if hasattr(test_instance.mock_extract_plugin, attr):
-                print(f"  [OK] mock_extract_plugin.{attr} configuré")
-            else:
-                print(f"  [ERREUR] mock_extract_plugin.{attr} manquant")
-                return False
+            assert hasattr(test_instance.mock_extract_plugin, attr) is True
+            print(f"  [OK] mock_extract_plugin.{attr} configuré")
         
-        return True
+        # Test passes if all asserts pass
         
     except Exception as e:
         print(f"  [ERREUR] Erreur Mock ExtractPlugin: {e}")
-        return False
+        raise
 
 def main():
     """Fonction principale de validation."""

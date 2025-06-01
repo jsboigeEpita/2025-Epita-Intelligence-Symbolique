@@ -11,10 +11,10 @@ def test_conftest_import():
     try:
         import tests.conftest
         print("✓ conftest.py importé avec succès")
-        return True
+        # Test passes if import is successful
     except Exception as e:
         print(f"✗ Erreur conftest: {e}")
-        return False
+        raise
 
 def test_analysis_runner():
     """Test AnalysisRunner avec nouvelles méthodes"""
@@ -32,10 +32,10 @@ def test_analysis_runner():
                 print(f"✗ {method} manquant")
                 all_present = False
         
-        return all_present
+        assert all_present is True
     except Exception as e:
         print(f"✗ Erreur AnalysisRunner: {e}")
-        return False
+        raise
 
 def test_numpy_mock():
     """Test mock numpy"""
@@ -45,10 +45,10 @@ def test_numpy_mock():
         with unittest.mock.patch.dict('sys.modules', {'numpy': unittest.mock.MagicMock()}):
             import numpy as np
             print("✓ numpy mock fonctionne")
-            return True
+            # Test passes if mock import is successful
     except Exception as e:
         print(f"✗ Erreur numpy mock: {e}")
-        return False
+        raise
 
 def main():
     print("=== VALIDATION DES CORRECTIONS ===")
