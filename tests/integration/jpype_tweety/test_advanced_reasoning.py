@@ -131,7 +131,7 @@ class TestAdvancedReasoning:
         # Préparation (setup)
         pass
 
-    @pytest.mark.xfail(reason="Problème persistant avec DefaultMeReasoner: 'Optimization problem to compute the ME-distribution is not feasible'. Nécessite investigation Tweety. De plus, instabilités JVM générales sous pytest.")
+    # @pytest.mark.xfail(reason="Problème persistant avec DefaultMeReasoner: 'Optimization problem to compute the ME-distribution is not feasible'. Nécessite investigation Tweety. De plus, instabilités JVM générales sous pytest.")
     def test_probabilistic_reasoner_query(self, integration_jvm):
         """
         Scénario: Tester l'inférence probabiliste avec un reasoner probabiliste (ProbLog).
@@ -406,6 +406,41 @@ class TestAdvancedReasoning:
             OctaveSqpSolver = jpype_instance.JClass("org.tweetyproject.math.opt.solver.OctaveSqpSolver", loader=loader)
             logger.info(f"Classe OctaveSqpSolver chargée: {OctaveSqpSolver}")
             
+            # Tentative de configuration du chemin d'Octave et vérification de l'installation
+            logger.info("Début de la configuration spécifique pour OctaveSqpSolver.")
+            try:
+                # Remplacer par le chemin réel vers octave-cli.exe ou équivalent si nécessaire
+                # Exemple: octave_cli_path = "C:/Octave/Octave-6.4.0/mingw64/bin/octave-cli.exe"
+                # if os.path.exists(octave_cli_path) and hasattr(OctaveSqpSolver, 'setPathToOctave'):
+                #    OctaveSqpSolver.setPathToOctave(octave_cli_path)
+                #    logger.info(f"Configuration OctaveSqpSolver.setPathToOctave('{octave_cli_path}') effectuée.")
+                # else:
+                #    logger.info("Chemin Octave CLI non configuré ou setPathToOctave non disponible. Utilisation des paramètres par défaut/PATH.")
+                
+                # Alternative via System.setProperty (décommenter et ajuster le chemin si nécessaire)
+                # actual_octave_home = "CHEMIN_VERS_OCTAVE_HOME" # ex: "C:/Program Files/GNU Octave/Octave-6.4.0"
+                # if os.path.isdir(actual_octave_home):
+                #    System.setProperty("octave.home", actual_octave_home)
+                #    logger.info(f"Propriété système 'octave.home' configurée sur: {actual_octave_home}")
+                # else:
+                #    logger.warning(f"Répertoire OCTAVE_HOME '{actual_octave_home}' non trouvé. 'octave.home' non configuré.")
+                logger.info("La configuration explicite du chemin Octave (setPathToOctave/octave.home) est commentée. "
+                            "Tweety tentera de trouver Octave via le PATH système ou d'autres configurations existantes.")
+
+            except Exception as e_set_octave_path:
+                logger.warning(f"Erreur lors de la tentative de configuration du chemin Octave: {e_set_octave_path}. "
+                               "Cela peut arriver si les méthodes/propriétés ne sont pas accessibles comme prévu.")
+
+            # Vérifier si Octave est considéré comme installé par Tweety
+            if hasattr(OctaveSqpSolver, 'isInstalled') and callable(OctaveSqpSolver.isInstalled):
+                is_installed = OctaveSqpSolver.isInstalled()
+                logger.info(f"OctaveSqpSolver.isInstalled() = {is_installed}")
+                if not is_installed:
+                    logger.warning("OctaveSqpSolver.isInstalled() retourne False. Le solveur Octave risque de ne pas fonctionner.")
+            else:
+                logger.info("La méthode OctaveSqpSolver.isInstalled() n'est pas disponible ou appelable.")
+            logger.info("Fin de la configuration spécifique pour OctaveSqpSolver.")
+
             logger.info("Tentative d'instanciation de OctaveSqpSolver...")
             # Cette instanciation peut échouer si Octave n'est pas correctement installé et accessible.
             solver_instance = OctaveSqpSolver()
