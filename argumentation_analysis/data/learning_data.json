@@ -498,55 +498,31 @@
       "fallacy_id": "fallacy_0",
       "is_correct": true,
       "feedback_text": "Bonne détection",
-      "timestamp": "2025-06-01T07:32:56.513581"
+      "timestamp": "2025-06-01T05:29:43.940027"
     },
     {
       "fallacy_id": "fallacy_0",
       "is_correct": true,
       "feedback_text": "Bonne détection",
-      "timestamp": "2025-06-01T07:36:27.701792"
+      "timestamp": "2025-06-01T06:44:06.658023"
     },
     {
       "fallacy_id": "fallacy_0",
       "is_correct": true,
       "feedback_text": "Bonne détection",
-      "timestamp": "2025-06-01T07:39:52.543664"
+      "timestamp": "2025-06-01T06:52:18.130234"
     },
     {
       "fallacy_id": "fallacy_0",
       "is_correct": true,
       "feedback_text": "Bonne détection",
-      "timestamp": "2025-06-01T07:43:09.172306"
+      "timestamp": "2025-06-01T06:52:30.663509"
     },
     {
       "fallacy_id": "fallacy_0",
       "is_correct": true,
       "feedback_text": "Bonne détection",
-      "timestamp": "2025-06-01T07:44:30.655184"
-    },
-    {
-      "fallacy_id": "fallacy_0",
-      "is_correct": true,
-      "feedback_text": "Bonne détection",
-      "timestamp": "2025-06-01T07:48:18.500808"
-    },
-    {
-      "fallacy_id": "fallacy_0",
-      "is_correct": true,
-      "feedback_text": "Bonne détection",
-      "timestamp": "2025-06-01T08:01:13.396901"
-    },
-    {
-      "fallacy_id": "fallacy_0",
-      "is_correct": true,
-      "feedback_text": "Bonne détection",
-      "timestamp": "2025-06-01T08:05:23.092491"
-    },
-    {
-      "fallacy_id": "fallacy_0",
-      "is_correct": true,
-      "feedback_text": "Bonne détection",
-      "timestamp": "2025-06-01T08:08:55.356333"
+      "timestamp": "2025-06-01T06:56:14.074529"
     }
   ],
   "confidence_adjustments": {
