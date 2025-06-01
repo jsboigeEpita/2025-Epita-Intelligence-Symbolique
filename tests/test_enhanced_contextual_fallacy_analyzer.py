@@ -91,9 +91,8 @@ except ImportError:
 from argumentation_analysis.agents.tools.analysis.enhanced.contextual_fallacy_analyzer import EnhancedContextualFallacyAnalyzer
 
 
-@pytest.mark.xfail(reason="Incompatibilité binaire avec scipy.sparse._csparsetools lors de l'utilisation du mock numpy.dtype. "
-                          "Cette erreur se produit car le mock Python pur de numpy.dtype ne correspond pas "
-                          "aux attentes de taille/structure des extensions C de SciPy.")
+@pytest.mark.use_real_numpy
+@pytest.mark.xfail(reason="NumPy 2.x _NoValueType issue with ndarray.max/min, see numpy/numpy#27857 and pandas-dev/pandas#60421")
 class TestEnhancedContextualFallacyAnalyzer(unittest.TestCase):
     """Tests unitaires pour l'analyseur contextuel de sophismes amélioré."""
     

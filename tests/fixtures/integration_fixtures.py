@@ -3,6 +3,9 @@ import sys
 import os
 import logging
 from unittest.mock import MagicMock
+import pathlib # Ajout pour la manipulation des chemins
+import platform # Ajout pour platform.system()
+from argumentation_analysis.core.jvm_setup import find_valid_java_home
 
 # --- Configuration du Logger ---
 logger = logging.getLogger(__name__)
@@ -65,39 +68,78 @@ def integration_jvm():
         if not jpype_for_integration.isJVMStarted():
             logger.info("integration_fixtures.py: JVM non démarrée. Tentative de démarrage.")
             
-            # Logique pour trouver le chemin du JDK portable
-            portable_jdk_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), 'portable_jdk')
-            jvm_path_to_use = None
+            jvm_path_to_use = None # Initialisation
+            logger.info("integration_fixtures.py: Tentative de recherche de JAVA_HOME via find_valid_java_home() de core.jvm_setup.")
+            java_home_found = find_valid_java_home() # Cette fonction logue déjà beaucoup
 
-            if os.path.exists(os.path.join(portable_jdk_path, 'bin', 'server', 'jvm.dll')): # Windows
-                jvm_path_to_use = os.path.join(portable_jdk_path, 'bin', 'server', 'jvm.dll')
-            elif os.path.exists(os.path.join(portable_jdk_path, 'lib', 'server', 'libjvm.so')): # Linux
-                jvm_path_to_use = os.path.join(portable_jdk_path, 'lib', 'server', 'libjvm.so')
-            elif os.path.exists(os.path.join(portable_jdk_path, 'lib', 'server', 'libjvm.dylib')): # macOS
-                jvm_path_to_use = os.path.join(portable_jdk_path, 'lib', 'server', 'libjvm.dylib')
-            
-            if jvm_path_to_use:
-                logger.info(f"integration_fixtures.py: Utilisation du JDK portable trouvé à: {jvm_path_to_use}")
+            if java_home_found:
+                logger.info(f"integration_fixtures.py: find_valid_java_home() a retourné: {java_home_found}")
+                java_home_path = pathlib.Path(java_home_found)
+                system_os = platform.system()
+                potential_jvm_path = None # Initialisation pour cette portée
+                
+                if system_os == "Windows":
+                    potential_jvm_path = java_home_path / "bin" / "server" / "jvm.dll"
+                elif system_os == "Darwin": # macOS
+                    # Chemin standard pour les JDK décompressés
+                    potential_jvm_path = java_home_path / "lib" / "server" / "libjvm.dylib"
+                    # Vérifier la structure .app/Contents/Home si le précédent échoue
+                    if not (potential_jvm_path and potential_jvm_path.is_file()):
+                         _alt_path = java_home_path / "Contents" / "Home" / "lib" / "server" / "libjvm.dylib"
+                         if _alt_path.is_file():
+                             potential_jvm_path = _alt_path
+                    # Vérifier la structure JRE si les précédents échouent
+                    if not (potential_jvm_path and potential_jvm_path.is_file()):
+                        _alt_path_jre = java_home_path / "jre" / "lib" / "server" / "libjvm.dylib"
+                        if _alt_path_jre.is_file():
+                            potential_jvm_path = _alt_path_jre
+                else: # Linux et autres
+                    potential_jvm_path = java_home_path / "lib" / "server" / "libjvm.so"
+                    if not (potential_jvm_path and potential_jvm_path.is_file()): # Structure JRE
+                        _alt_path_jre = java_home_path / "jre" / "lib" / "server" / "libjvm.so"
+                        if _alt_path_jre.is_file():
+                            potential_jvm_path = _alt_path_jre
+
+                if potential_jvm_path and potential_jvm_path.is_file():
+                    jvm_path_to_use = str(potential_jvm_path.resolve())
+                    logger.info(f"integration_fixtures.py: Chemin JVM construit à partir de find_valid_java_home(): {jvm_path_to_use}")
+                else:
+                    logger.warning(f"integration_fixtures.py: JAVA_HOME trouvé par find_valid_java_home() ({java_home_found}), mais impossible de construire un chemin JVM valide (testé: {potential_jvm_path}).")
             else:
-                logger.warning(f"integration_fixtures.py: JDK portable non trouvé à {portable_jdk_path}. Utilisation de jpype.getDefaultJVMPath().")
-                jvm_path_to_use = jpype_for_integration.getDefaultJVMPath()
+                logger.warning("integration_fixtures.py: find_valid_java_home() n'a pas trouvé de JDK valide.")
 
-            logger.info(f"integration_fixtures.py: Chemin JVM à utiliser: {jvm_path_to_use}")
+            # Fallback sur jpype.getDefaultJVMPath() si find_valid_java_home échoue ou ne donne pas de chemin JVM
+            if not jvm_path_to_use:
+                logger.warning("integration_fixtures.py: Tentative de fallback avec jpype.getDefaultJVMPath().")
+                try:
+                    jvm_path_to_use = jpype_for_integration.getDefaultJVMPath()
+                    logger.info(f"integration_fixtures.py: jpype.getDefaultJVMPath() a retourné: {jvm_path_to_use}")
+                except jpype_for_integration.JVMNotFoundException as e:
+                    logger.error(f"integration_fixtures.py: JVMNotFoundException lors de getDefaultJVMPath() (fallback): {e}")
+                    pytest.skip(f"Impossible de trouver la JVM (find_valid_java_home et getDefaultJVMPath ont échoué): {e}. Vérifiez JAVA_HOME ou JDK portable.")
+                    return # Important pour sortir de la fixture après skip
+            
+            if not jvm_path_to_use: # Si toujours None après tous les essais
+                 logger.error("integration_fixtures.py: Échec final de la détermination du chemin JVM après toutes les tentatives.")
+                 pytest.skip("Échec final de la détermination du chemin JVM. Vérifiez la configuration JAVA_HOME ou le JDK portable.")
+                 return # Important pour sortir de la fixture après skip
+
+            logger.info(f"integration_fixtures.py: Chemin JVM final à utiliser: {jvm_path_to_use}")
 
             # Recherche des JARs Tweety dans le sous-répertoire libs/tweety
             project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-            tweety_libs_path = os.path.join(project_root, 'libs', 'tweety')
+            tweety_libs_path = os.path.join(project_root, 'libs') # Corrigé: les JARs sont directement dans libs/
             
             if not os.path.isdir(tweety_libs_path):
                 logger.error(f"integration_fixtures.py: Répertoire des bibliothèques Tweety non trouvé: {tweety_libs_path}")
-                pytest.skip("Répertoire libs/tweety non trouvé.")
+                pytest.skip(f"Répertoire {tweety_libs_path} non trouvé.") # Message de skip mis à jour
                 return None
 
             tweety_jars = [os.path.join(tweety_libs_path, f) for f in os.listdir(tweety_libs_path) if f.endswith('.jar')]
 
             if not tweety_jars:
                 logger.error(f"integration_fixtures.py: Aucun JAR trouvé dans {tweety_libs_path}")
-                pytest.skip("Aucun JAR Tweety trouvé dans libs/tweety.")
+                pytest.skip(f"Aucun JAR Tweety trouvé dans {tweety_libs_path}.") # Message de skip mis à jour
                 return None
             
             classpath_arg = "-Djava.class.path=" + os.pathsep.join(tweety_jars)
