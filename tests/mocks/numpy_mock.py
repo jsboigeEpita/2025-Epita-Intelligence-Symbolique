@@ -1047,6 +1047,7 @@ class _NumPy_Core_Multiarray_Umath_Mock:
         self.__name__ = 'numpy.core._multiarray_umath'
         self.__package__ = 'numpy.core'
         self.__path__ = []
+        self._ARRAY_API = MagicMock(name='numpy.core._multiarray_umath._ARRAY_API')
         # Ajouter ici des mocks pour les fonctions/constantes spécifiques de _multiarray_umath si nécessaire
         # Par exemple, celles qui pourraient être liées aux dtypes ou à l'API C.
         # Pour l'instant, un MagicMock générique pour les attributs non définis.

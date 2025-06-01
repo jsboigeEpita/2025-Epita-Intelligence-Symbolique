@@ -11,6 +11,7 @@ import sys
 import json
 import logging
 from pathlib import Path
+import pytest # Ajout pour le marqueur
 
 # Ajouter le répertoire racine au path pour pouvoir importer les modules
 root_dir = str(Path(__file__).parent.parent.parent)
@@ -23,6 +24,8 @@ logger = logging.getLogger("TestInformalIntegration")
 # Ajouter le chemin pour l'importation
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
+@pytest.mark.use_real_numpy
+@pytest.mark.xfail(reason="NumPy 2.x _NoValueType issue with ndarray.max/min, see numpy/numpy#27857 and pandas-dev/pandas#60421")
 def test_informal_integration():
     """
     Teste l'intégration de l'utilitaire de lazy loading avec l'agent d'analyse informelle.
