@@ -97,6 +97,26 @@ class TestEnhancedContextualFallacyAnalyzer(unittest.TestCase):
         """Initialisation avant chaque test."""
         self.patches = []
         
+        # Importer percentile depuis le mock numpy pour le patch
+        try:
+            from tests.mocks.numpy_mock import percentile as numpy_mock_percentile
+        except ImportError:
+            logger.error("Impossible d'importer percentile depuis tests.mocks.numpy_mock pour le patch.")
+            numpy_mock_percentile = MagicMock()
+
+        # Vérifier si numpy est mocké (par exemple, par conftest.py)
+        # Une façon simple est de vérifier si la version est celle du mock.
+        numpy_module = sys.modules.get('numpy')
+        is_numpy_mocked = hasattr(numpy_module, '__version__') and numpy_module.__version__ == '1.24.3' # Version du mock dans conftest
+
+        if is_numpy_mocked:
+            # Patcher numpy.percentile si numpy est mocké et que percentile n'est pas déjà là ou est incorrect
+            if not hasattr(numpy_module, 'percentile') or getattr(numpy_module, 'percentile') is not numpy_mock_percentile:
+                percentile_patch = patch('numpy.percentile', numpy_mock_percentile)
+                self.patches.append(percentile_patch)
+                percentile_patch.start()
+                logger.info("Patch appliqué pour numpy.percentile dans setUp.")
+
         # Si les vraies bibliothèques ne sont pas là, ET que les mocks de conftest n'ont pas suffi,
         # on pourrait avoir besoin de patcher spécifiquement pour ce module.
         # Cependant, conftest.py devrait rendre cela moins nécessaire.
