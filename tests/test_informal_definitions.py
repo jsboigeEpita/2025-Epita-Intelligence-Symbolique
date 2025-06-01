@@ -133,6 +133,26 @@ class TestInformalDefinitions(unittest.TestCase):
         self.assertIsNotNone(self.plugin.FALLACY_CSV_LOCAL_PATH)
     
     def test_get_taxonomy_dataframe(self):
+        logger.info("--- DEBUG NUMPY MOCK ---")
+        numpy_module = sys.modules.get('numpy')
+        logger.info(f"sys.modules.get('numpy'): {numpy_module}")
+        logger.info(f"numpy.__file__: {getattr(numpy_module, '__file__', 'N/A')}")
+        logger.info(f"numpy.__path__: {getattr(numpy_module, '__path__', 'N/A')}")
+        
+        numpy_rec_module = sys.modules.get('numpy.rec')
+        logger.info(f"sys.modules.get('numpy.rec'): {numpy_rec_module}")
+        logger.info(f"numpy.rec.__file__: {getattr(numpy_rec_module, '__file__', 'N/A')}")
+        
+        has_rec_attr = hasattr(numpy_module, 'rec')
+        logger.info(f"hasattr(numpy_module, 'rec'): {has_rec_attr}")
+        if has_rec_attr:
+            rec_attr = getattr(numpy_module, 'rec')
+            logger.info(f"numpy_module.rec: {rec_attr}")
+            logger.info(f"hasattr(numpy_module.rec, 'recarray'): {hasattr(rec_attr, 'recarray')}")
+            if hasattr(rec_attr, 'recarray'):
+                logger.info(f"numpy_module.rec.recarray: {getattr(rec_attr, 'recarray', 'N/A')}")
+        logger.info("--- FIN DEBUG NUMPY MOCK ---")
+
         df = self.plugin._get_taxonomy_dataframe()
         self.assertIsNotNone(df)
         
