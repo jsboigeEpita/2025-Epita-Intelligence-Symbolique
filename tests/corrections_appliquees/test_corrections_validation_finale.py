@@ -110,7 +110,7 @@ def test_correction_5_extract_plugin():
         
         # Créer une instance de test
         test_instance = TestExtractAgentAdapter()
-        test_instance.setUp()
+        # test_instance.setUp() # Supprimé car TestExtractAgentAdapter utilise des fixtures pytest
         
         # Vérifier les attributs du mock_extract_plugin
         required_attrs = ['extract', 'process_text', 'get_supported_formats']
