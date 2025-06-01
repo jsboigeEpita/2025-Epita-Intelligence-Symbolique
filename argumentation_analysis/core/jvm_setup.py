@@ -442,8 +442,13 @@ def initialize_jvm(
             logger.error("❌ Aucun JAR trouvé pour le classpath ! Démarrage annulé.")
             return False
         
+        # Construire la chaîne de classpath pour l'environnement et le log
+        logger.info(f"   --- Liste détaillée des JARs pour le Classpath ({len(combined_jar_list)} JARs) ---")
+        for i, jar_item in enumerate(combined_jar_list):
+            logger.info(f"     JAR {i+1}: {jar_item}")
+        logger.info(f"   --- Fin de la liste détaillée des JARs ---")
         classpath_str_for_env_and_log = classpath_separator.join(combined_jar_list)
-        logger.info(f"   Classpath construit ({len(combined_jar_list)} JARs). Valeur pour env: {classpath_str_for_env_and_log}")
+        logger.info(f"   Classpath combiné construit ({len(combined_jar_list)} JARs). Valeur pour env (tronquée si trop longue): {classpath_str_for_env_and_log[:500]}{'...' if len(classpath_str_for_env_and_log) > 500 else ''}")
         logger.debug(f"   CLASSPATH pour JVM (avant définition env var): {classpath_str_for_env_and_log}")
 
         try:
