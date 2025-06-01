@@ -135,11 +135,17 @@ class TestAdvancedReasoning:
         jpype_instance = integration_jvm
         # ProblogParser retourne un ProblogProgram, pas une ProbabilisticKnowledgeBase générique.
         # ProbabilisticKnowledgeBase est une interface plus générale.
-        ProblogProgram = jpype_instance.JClass("org.tweetyproject.logics.problog.syntax.ProblogProgram")
-        DefaultProblogReasoner = jpype_instance.JClass("org.tweetyproject.logics.problog.reasoner.DefaultProblogReasoner")
-        ProblogParser = jpype_instance.JClass("org.tweetyproject.logics.problog.parser.ProblogParser")
-        PlFormula = jpype_instance.JClass("org.tweetyproject.logics.pl.syntax.PlFormula")
-        PlParser = jpype_instance.JClass("org.tweetyproject.logics.pl.parser.PlParser") # Pour parser la query
+# Obtenir le ClassLoader
+        JavaThread = jpype_instance.JClass("java.lang.Thread")
+        current_thread = JavaThread.currentThread()
+        loader = current_thread.getContextClassLoader()
+        if loader is None: # Fallback
+            loader = jpype_instance.JClass("java.lang.ClassLoader").getSystemClassLoader()
+        ProblogProgram = jpype_instance.JClass("org.tweetyproject.logics.problog.syntax.ProblogProgram", loader=loader)
+        DefaultProblogReasoner = jpype_instance.JClass("org.tweetyproject.logics.problog.reasoner.DefaultProblogReasoner", loader=loader)
+        ProblogParser = jpype_instance.JClass("org.tweetyproject.logics.problog.parser.ProblogParser", loader=loader)
+        PlFormula = jpype_instance.JClass("org.tweetyproject.logics.pl.syntax.PlFormula", loader=loader)
+        PlParser = jpype_instance.JClass("org.tweetyproject.logics.pl.parser.PlParser", loader=loader) # Pour parser la query
 
         # Préparation (setup)
         problog_parser = ProblogParser()
@@ -153,8 +159,8 @@ class TestAdvancedReasoning:
         # Charger la base de connaissances ProbLog
         # Note: ProblogParser.parseBeliefSet attend un Reader, pas un File.
         # Nous allons lire le contenu du fichier et le passer comme StringReader.
-        FileReader = jpype_instance.JClass("java.io.FileReader")
-        BufferedReader = jpype_instance.JClass("java.io.BufferedReader")
+        FileReader = jpype_instance.JClass("java.io.FileReader", loader=loader)
+        BufferedReader = jpype_instance.JClass("java.io.BufferedReader", loader=loader)
         
         # Lire le contenu du fichier en Python et le passer à un StringReader Java
         # Alternativement, utiliser un FileReader Java directement si le parser le supporte bien
@@ -162,7 +168,7 @@ class TestAdvancedReasoning:
         # qui devrait gérer l'ouverture et la lecture du fichier.
         
         # Correction: ProblogParser.parseBeliefSet prend un File object
-        java_file = jpype_instance.JClass("java.io.File")(file_path)
+        java_file = jpype_instance.JClass("java.io.File", loader=loader)(file_path)
         pkb = problog_parser.parseBeliefSet(java_file)
         assert pkb is not None, "La base de connaissances ProbLog n'a pas pu être chargée."
 
