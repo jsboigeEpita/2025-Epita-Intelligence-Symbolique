@@ -22,7 +22,7 @@ class TestAdvancedReasoning:
         # Tentative de chargement de la classe uniquement pour voir si l'access violation se produit
         print("Attempting to load AspLogicProgram JClass...")
         try:
-            AspLogicProgram = jpype_instance.JClass("org.tweetyproject.logics.asp.syntax.AspLogicProgram")
+            AspLogicProgram = jpype_instance.JClass("org.tweetyproject.lp.asp.syntax.Program")
             print("AspLogicProgram JClass loaded successfully.")
             # Si cela réussit, nous pouvons ajouter d'autres imports un par un.
             # Pour l'instant, on s'arrête ici pour ce test simplifié.
@@ -153,7 +153,7 @@ class TestAdvancedReasoning:
 
         print("Tentative de chargement de org.tweetyproject.logics.pl.syntax.PropositionalSignature...")
         try:
-            PropositionalSignatureClass = jpype_instance.JClass("org.tweetyproject.logics.pl.syntax.PropositionalSignature", loader=loader)
+            PropositionalSignatureClass = jpype_instance.JClass("org.tweetyproject.logics.pl.syntax.PropositionalSignature")
             assert PropositionalSignatureClass is not None, "org.tweetyproject.logics.pl.syntax.PropositionalSignature n'a pas pu être chargée."
             print("org.tweetyproject.logics.pl.syntax.PropositionalSignature chargée avec succès.")
         except Exception as e:
@@ -162,7 +162,7 @@ class TestAdvancedReasoning:
         
         print("Tentative de chargement de org.tweetyproject.logics.problog.syntax.ProblogProgram...")
         try:
-            ProblogProgram_test_load = jpype_instance.JClass("org.tweetyproject.logics.problog.syntax.ProblogProgram", loader=loader)
+            ProblogProgram_test_load = jpype_instance.JClass("org.tweetyproject.logics.problog.syntax.ProblogProgram")
             assert ProblogProgram_test_load is not None, "org.tweetyproject.logics.problog.syntax.ProblogProgram n'a pas pu être chargée."
             print("org.tweetyproject.logics.problog.syntax.ProblogProgram chargée avec succès.") # Ne devrait pas arriver
         except Exception as e:
