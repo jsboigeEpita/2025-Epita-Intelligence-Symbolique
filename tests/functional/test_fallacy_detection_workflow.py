@@ -39,7 +39,7 @@ from argumentation_analysis.agents.tools.analysis.enhanced.contextual_fallacy_an
 from argumentation_analysis.agents.tools.analysis.enhanced.fallacy_severity_evaluator import EnhancedFallacySeverityEvaluator
 
 
-class TestFallacyDetectionWorkflow(AsyncTestCase):
+class TestFallacyDetectionWorkflow: # Suppression de l'héritage AsyncTestCase
     """Tests fonctionnels pour le workflow de détection de sophismes."""
 
     def setUp(self):
