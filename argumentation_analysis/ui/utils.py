@@ -85,8 +85,11 @@ def decrypt_data(encrypted_data: bytes, key: bytes) -> Optional[bytes]:
     try:
         f = Fernet(key)
         return f.decrypt(encrypted_data)
-    except (InvalidToken, InvalidSignature, Exception) as e:
-        utils_logger.error(f"Erreur déchiffrement: {e}")
+    except (InvalidToken, InvalidSignature) as e: # Intercepter spécifiquement et relancer
+        utils_logger.error(f"Erreur déchiffrement (InvalidToken/Signature): {e}")
+        raise # Relancer l'exception capturée (InvalidToken ou InvalidSignature)
+    except Exception as e: # Intercepter les autres exceptions
+        utils_logger.error(f"Erreur déchiffrement (Autre): {e}")
         return None
 
 # Les fonctions load_extract_definitions et save_extract_definitions ont été déplacées
