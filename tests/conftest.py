@@ -924,13 +924,13 @@ def dung_classes(integration_jvm):
             try: TgfParser_class = jpype_instance.JClass("org.tweetyproject.arg.dung.parser.TgfParser")
             except jpype_instance.JException as e_parser: logger_conftest_integration.warning(f"dung_classes: TgfParser non trouvé: {e_parser}")
         classes_to_return = {
-            "DungTheory": jpype_instance.JClass("net.sf.tweety.arg.dung.syntax.DungTheory"),
-            "Argument": jpype_instance.JClass("net.sf.tweety.arg.dung.syntax.Argument"),
-            "Attack": jpype_instance.JClass("net.sf.tweety.arg.dung.syntax.Attack"),
-            "PreferredReasoner": jpype_instance.JClass("net.sf.tweety.arg.dung.reasoner.PreferredReasoner"),
-            "GroundedReasoner": jpype_instance.JClass("net.sf.tweety.arg.dung.reasoner.GroundedReasoner"),
-            "CompleteReasoner": jpype_instance.JClass("net.sf.tweety.arg.dung.reasoner.CompleteReasoner"),
-            "StableReasoner": jpype_instance.JClass("net.sf.tweety.arg.dung.reasoner.StableReasoner"),
+            "DungTheory": jpype_instance.JClass("org.tweetyproject.arg.dung.syntax.DungTheory"),
+            "Argument": jpype_instance.JClass("org.tweetyproject.arg.dung.syntax.Argument"),
+            "Attack": jpype_instance.JClass("org.tweetyproject.arg.dung.syntax.Attack"),
+            "PreferredReasoner": jpype_instance.JClass("org.tweetyproject.arg.dung.reasoner.PreferredReasoner"),
+            "GroundedReasoner": jpype_instance.JClass("org.tweetyproject.arg.dung.reasoner.GroundedReasoner"),
+            "CompleteReasoner": jpype_instance.JClass("org.tweetyproject.arg.dung.reasoner.CompleteReasoner"),
+            "StableReasoner": jpype_instance.JClass("org.tweetyproject.arg.dung.reasoner.StableReasoner"),
         }
         if TgfParser_class: classes_to_return["TgfParser"] = TgfParser_class
         return classes_to_return
