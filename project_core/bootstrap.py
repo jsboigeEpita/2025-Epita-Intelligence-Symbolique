@@ -37,6 +37,7 @@ CryptoService_class = None
 DefinitionService_class = None
 create_llm_service_func = None
 InformalAgent_class = None
+ContextualFallacyDetector_class = None # Ajout pour le détecteur de sophismes
 sk_module = None
 ENCRYPTION_KEY_imported = None
 ExtractDefinitions_class, SourceDefinition_class, Extract_class = None, None, None
@@ -81,6 +82,10 @@ try:
 except ImportError as e:
     logger.error(f"Failed to import extract models (ExtractDefinitions, etc.): {e}")
 
+try:
+    from argumentation_analysis.agents.tools.analysis.new.contextual_fallacy_detector import ContextualFallacyDetector as ContextualFallacyDetector_class
+except ImportError as e:
+    logger.error(f"Failed to import ContextualFallacyDetector: {e}")
 
 class ProjectContext:
     """Classe pour contenir les services initialisés."""
@@ -117,7 +122,7 @@ def initialize_project_environment(env_path_str: str = None, root_path_str: str 
             sys.path.insert(0, str(current_project_root))
             logger.info(f"Added CWD-based project root to sys.path: {current_project_root}")
             # Re-tenter les imports au cas où ils auraient échoué à cause du path
-            global initialize_jvm_func, CryptoService_class, DefinitionService_class, create_llm_service_func, InformalAgent_class, sk_module, ENCRYPTION_KEY_imported, ExtractDefinitions_class, SourceDefinition_class, Extract_class
+            global initialize_jvm_func, CryptoService_class, DefinitionService_class, create_llm_service_func, InformalAgent_class, ContextualFallacyDetector_class, sk_module, ENCRYPTION_KEY_imported, ExtractDefinitions_class, SourceDefinition_class, Extract_class
             if not initialize_jvm_func:
                 try:
                     from argumentation_analysis.core.jvm_setup import initialize_jvm as initialize_jvm_func
@@ -128,6 +133,12 @@ def initialize_project_environment(env_path_str: str = None, root_path_str: str 
                 try:
                     from argumentation_analysis.services.crypto_service import CryptoService as CryptoService_class
                     logger.info("Late import: CryptoService_class")
+                except ImportError:
+                    pass
+            if not ContextualFallacyDetector_class:
+                try:
+                    from argumentation_analysis.agents.tools.analysis.new.contextual_fallacy_detector import ContextualFallacyDetector as ContextualFallacyDetector_class
+                    logger.info("Late import: ContextualFallacyDetector_class")
                 except ImportError:
                     pass
             # ... (faire de même pour les autres imports conditionnels si nécessaire) ...
@@ -238,13 +249,30 @@ def initialize_project_environment(env_path_str: str = None, root_path_str: str 
     else:
         logger.error("create_llm_service_func n'a pas pu être importé.")
 
-    if InformalAgent_class and context.llm_service and sk_module:
+    if ContextualFallacyDetector_class:
+        logger.info("Initialisation de ContextualFallacyDetector...")
+        try:
+            context.fallacy_detector = ContextualFallacyDetector_class()
+            logger.info("ContextualFallacyDetector initialisé.")
+        except Exception as e:
+            logger.error(f"Erreur lors de l'initialisation de ContextualFallacyDetector : {e}", exc_info=True)
+    else:
+        logger.error("ContextualFallacyDetector_class n'a pas pu être importé.")
+
+    if InformalAgent_class and context.llm_service and sk_module and context.fallacy_detector:
         logger.info("Initialisation de InformalAgent...")
         try:
             kernel = sk_module.Kernel()
             kernel.add_service(context.llm_service)
+            
+            informal_agent_tools = {
+                "fallacy_detector": context.fallacy_detector
+                # Ajouter d'autres outils ici si nécessaire pour le bootstrap
+            }
+            
             context.informal_agent = InformalAgent_class(
                 agent_id="bootstrap_informal_agent",
+                tools=informal_agent_tools,
                 semantic_kernel=kernel
             )
             logger.info("InformalAgent initialisé.")
@@ -254,6 +282,8 @@ def initialize_project_environment(env_path_str: str = None, root_path_str: str 
          logger.error("LLMService non initialisé. Impossible d'initialiser InformalAgent.")
     elif not sk_module:
         logger.error("Semantic Kernel (sk_module) non importé.")
+    elif not context.fallacy_detector:
+        logger.error("FallacyDetector non initialisé. Impossible d'initialiser InformalAgent.")
     else:
         logger.error("InformalAgent_class n'a pas pu être importé.")
 
