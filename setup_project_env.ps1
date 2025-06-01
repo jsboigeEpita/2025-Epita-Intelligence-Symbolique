@@ -5,8 +5,8 @@ param (
 )
 
 # --- Configuration ---
-$pythonVersion = "3.10"
-$venvName = "venv_py310"
+$condaEnvName = "projet-is"
+$environmentYmlFile = "environment.yml"
 
 # Configuration JDK
 $jdkDirNameOnly = "portable_jdk"
@@ -25,9 +25,27 @@ $octaveExtractedDirName = "octave-$($octaveVersionMajorMinor)-$($octaveArch)"
 $octaveTempDownloadDir = Join-Path "libs" "_temp_octave_download"
 
 
-$Global:FoundPython310Executable = ""
+$Global:FoundPython310Executable = "" # Conservé pour la gestion du JDK/Octave si Python est nécessaire pour des scripts annexes hors Conda
 
 # --- Fonctions Utilitaires ---
+
+function Test-CondaInstallation {
+    try {
+        $condaInfo = conda --version 2>&1
+        if ($LASTEXITCODE -eq 0 -and $condaInfo -match "conda") {
+            Write-Host "Conda est installé. Version: $condaInfo"
+            return $true
+        } else {
+            Write-Warning "Conda ne semble pas être installé ou n'est pas dans le PATH. (conda --version a échoué ou n'a pas retourné 'conda')"
+            return $false
+        }
+    }
+    catch {
+        Write-Warning "Erreur lors de la vérification de Conda : $($_.Exception.Message)"
+        return $false
+    }
+}
+
 function Test-PythonVersion {
     param (
         [string]$version,
@@ -160,11 +178,20 @@ Write-Host "Nettoyage et déplacement des anciennes installations terminés."
 Write-Host "--- Fin Nettoyage ---"
 Write-Host ""
 
-Write-Host "Vérification de la présence de Python $pythonVersion..."
-if (-not (Test-PythonVersion -version $pythonVersion -explicitPath $Python310Path)) {
-    Write-Error "Python $pythonVersion n'est pas accessible. Veuillez l'installer, l'ajouter au PATH, ou spécifier le chemin via -Python310Path, puis relancez ce script."
+Write-Host "Vérification de la présence de Conda..."
+if (-not (Test-CondaInstallation)) {
+    Write-Error "Conda n'est pas installé ou n'est pas accessible dans le PATH. Veuillez installer Conda (Miniconda ou Anaconda) et vous assurer qu'il est ajouté au PATH, puis relancez ce script."
     exit 1
 }
+
+# La vérification Python spécifique est moins critique si Conda gère Python,
+# mais peut être conservée si des outils hors Conda en dépendent encore (ex: scripts de build spécifiques).
+# Pour l'instant, on la commente car Conda va gérer Python.
+# Write-Host "Vérification de la présence de Python $pythonVersion..."
+# if (-not (Test-PythonVersion -version $pythonVersion -explicitPath $Python310Path)) {
+#     Write-Error "Python $pythonVersion n'est pas accessible. Veuillez l'installer, l'ajouter au PATH, ou spécifier le chemin via -Python310Path, puis relancez ce script."
+#     exit 1
+# }
 
 $fullJdkPath = Join-Path $PSScriptRoot $jdkDir
 Write-Host "Vérification du JDK portable dans '$fullJdkPath'..."
@@ -260,68 +287,99 @@ if (-not (Test-Path $expectedOctaveCliPath)) {
 Write-Host "--- Fin Configuration Octave ---"
 # FIN NOUVELLE SECTION OCTAVE
 
-Write-Host "Nettoyage des anciens répertoires d'environnements virtuels..."
-if (Test-Path -Path ".\venv" -PathType Container) {
-    Write-Host "Suppression de l'ancien répertoire .\venv..."
-    Remove-Item -Recurse -Force ".\venv"
-}
-if (Test-Path -Path ".\.venv" -PathType Container) {
-    Write-Host "Suppression de l'ancien répertoire .\.venv..."
-    Remove-Item -Recurse -Force ".\.venv"
-}
-Write-Host "Nettoyage terminé."
-
-$venvPath = Join-Path $PSScriptRoot $venvName
-Write-Host "Vérification de l'environnement virtuel Python '$venvName'..."
-if (-not (Test-Path $venvPath)) {
-    Write-Host "Création de l'environnement virtuel Python '$venvName' avec Python $pythonVersion en utilisant '$Global:FoundPython310Executable'..."
-    try {
-        if ($Global:FoundPython310Executable -eq "py -$pythonVersion") {
-            py "-$pythonVersion" -m venv $venvPath
-        } elseif ($Global:FoundPython310Executable -and (Test-Path $Global:FoundPython310Executable -PathType Leaf)) {
-            & $Global:FoundPython310Executable -m venv $venvPath
-        } elseif ($Global:FoundPython310Executable) {
-            & $Global:FoundPython310Executable -m venv $venvPath
+Write-Host "Nettoyage des anciens répertoires d'environnements virtuels (venv)..."
+$oldVenvDirs = @("venv", ".venv", "venv_py310") # Ajoutez d'autres noms si nécessaire
+foreach ($dirName in $oldVenvDirs) {
+    $fullOldVenvPath = Join-Path $PSScriptRoot $dirName
+    if (Test-Path -Path $fullOldVenvPath -PathType Container) {
+        $confirmation = Read-Host "L'ancien répertoire d'environnement virtuel '$dirName' a été trouvé. Voulez-vous le supprimer ? (O/N)"
+        if ($confirmation -eq 'O' -or $confirmation -eq 'o') {
+            Write-Host "Suppression de l'ancien répertoire $fullOldVenvPath..."
+            try {
+                Remove-Item -Recurse -Force $fullOldVenvPath -ErrorAction Stop
+                Write-Host "Répertoire $fullOldVenvPath supprimé."
+            } catch {
+                Write-Warning "Impossible de supprimer complètement $fullOldVenvPath. Erreur: $($_.Exception.Message)"
+                Write-Warning "Vous devrez peut-être le supprimer manuellement."
+            }
         } else {
-            Write-Error "Aucun exécutable Python $pythonVersion valide n'a pu être déterminé pour créer l'environnement virtuel."
+            Write-Host "Le répertoire '$fullOldVenvPath' n'a pas été supprimé."
+        }
+    }
+}
+Write-Host "Nettoyage des anciens venv terminé."
+
+Write-Host ""
+Write-Host "--- Configuration de l'environnement Conda '$condaEnvName' ---"
+$envFilePath = Join-Path $PSScriptRoot $environmentYmlFile
+if (-not (Test-Path $envFilePath)) {
+    Write-Error "Le fichier d'environnement '$environmentYmlFile' est introuvable à la racine du projet: $envFilePath"
+    exit 1
+}
+
+# Vérifier si l'environnement Conda existe déjà
+$condaEnvList = conda env list | Select-String -Pattern "\s$condaEnvName\s" -Quiet
+if ($condaEnvList) {
+    Write-Host "L'environnement Conda '$condaEnvName' existe déjà. Mise à jour..."
+    try {
+        conda env update --name $condaEnvName --file $envFilePath --prune
+        if ($LASTEXITCODE -ne 0) {
+            Write-Error "Erreur lors de la mise à jour de l'environnement Conda '$condaEnvName'. Vérifiez les messages ci-dessus."
             exit 1
         }
-        Write-Host "Environnement virtuel '$venvName' créé."
+        Write-Host "Environnement Conda '$condaEnvName' mis à jour avec succès."
     }
     catch {
-        Write-Error "Erreur lors de la création de l'environnement virtuel : $($_.Exception.Message)"
+        Write-Error "Une exception s'est produite lors de la mise à jour de l'environnement Conda '$condaEnvName': $($_.Exception.Message)"
         exit 1
     }
 } else {
-    Write-Host "L'environnement virtuel '$venvName' existe déjà."
-}
-
-Write-Host "Installation/Mise à jour des dépendances Python depuis requirements.txt..."
-$pipPath = Join-Path -Path $venvPath -ChildPath "Scripts\pip.exe"
-$requirementsFile = Join-Path $PSScriptRoot "requirements.txt"
-if (-not (Test-Path $requirementsFile)) {
-    Write-Error "Le fichier requirements.txt est introuvable à la racine du projet."
-    exit 1
-}
-try {
-    Write-Host "Utilisation de $pipPath pour installer les dépendances."
-    & $pipPath install -r $requirementsFile --upgrade
-    Write-Host "Dépendances Python installées/mises à jour."
-}
-catch {
-    Write-Error "Erreur lors de l'installation des dépendances Python : $($_.Exception.Message)"
-    Write-Warning "Tentative d'installation après activation du venv..."
+    Write-Host "L'environnement Conda '$condaEnvName' n'existe pas. Création..."
     try {
-        $activateVenvScriptForPip = Join-Path -Path $venvPath -ChildPath "Scripts\Activate.ps1"
-        . $activateVenvScriptForPip
-        pip install -r $requirementsFile --upgrade
-        if (Get-Command deactivate -ErrorAction SilentlyContinue) { deactivate }
-        Write-Host "Dépendances Python installées/mises à jour (via activation)."
-    } catch {
-         Write-Error "Échec de l'installation des dépendances même après tentative d'activation: $($_.Exception.Message)"
-         exit 1
+        conda env create -f $envFilePath
+        if ($LASTEXITCODE -ne 0) {
+            Write-Error "Erreur lors de la création de l'environnement Conda '$condaEnvName'. Vérifiez les messages ci-dessus."
+            # Tenter de supprimer un environnement potentiellement partiellement créé
+            Write-Warning "Tentative de suppression de l'environnement '$condaEnvName' suite à l'échec de la création..."
+            conda env remove --name $condaEnvName -y
+            exit 1
+        }
+        Write-Host "Environnement Conda '$condaEnvName' créé avec succès."
+    }
+    catch {
+        Write-Error "Une exception s'est produite lors de la création de l'environnement Conda '$condaEnvName': $($_.Exception.Message)"
+        exit 1
     }
 }
+Write-Host "--- Fin Configuration Conda ---"
+Write-Host ""
+
+# La section d'installation des dépendances via pip est maintenant gérée par Conda et environment.yml
+# $pipPath = Join-Path -Path $venvPath -ChildPath "Scripts\pip.exe"
+# $requirementsFile = Join-Path $PSScriptRoot "requirements.txt"
+# if (-not (Test-Path $requirementsFile)) {
+#     Write-Error "Le fichier requirements.txt est introuvable à la racine du projet."
+#     exit 1
+# }
+# try {
+#     Write-Host "Utilisation de $pipPath pour installer les dépendances."
+#     & $pipPath install -r $requirementsFile --upgrade
+#     Write-Host "Dépendances Python installées/mises à jour."
+# }
+# catch {
+#     Write-Error "Erreur lors de l'installation des dépendances Python : $($_.Exception.Message)"
+#     Write-Warning "Tentative d'installation après activation du venv..."
+#     try {
+#         $activateVenvScriptForPip = Join-Path -Path $venvPath -ChildPath "Scripts\Activate.ps1"
+#         . $activateVenvScriptForPip
+#         pip install -r $requirementsFile --upgrade
+#         if (Get-Command deactivate -ErrorAction SilentlyContinue) { deactivate }
+#         Write-Host "Dépendances Python installées/mises à jour (via activation)."
+#     } catch {
+#          Write-Error "Échec de l'installation des dépendances même après tentative d'activation: $($_.Exception.Message)"
+#          exit 1
+#     }
+# }
 
 $envTemplateFile = Join-Path $PSScriptRoot ".env.template"
 $envFile = Join-Path $PSScriptRoot ".env"
@@ -374,35 +432,21 @@ if ($envContent -match $useRealJpypeRegex) {
 Set-Content -Path $envFile -Value $envContent -Force -Encoding UTF8 # Spécifier l'encodage pour la cohérence
 Write-Host "Fichier .env mis à jour concernant USE_REAL_JPYPE."
 
-# NOUVEAU: Activation de l'environnement virtuel
-Write-Host ""
-Write-Host "--- Activation de l'environnement virtuel ---"
-$activateVenvScriptPath = Join-Path $PSScriptRoot (Join-Path $venvName "Scripts\Activate.ps1")
-if (Test-Path $activateVenvScriptPath) {
-    try {
-        Write-Host "Tentative d'activation de l'environnement virtuel '$venvName' via: $activateVenvScriptPath"
-        . $activateVenvScriptPath
-        Write-Host "Environnement virtuel '$venvName' activé pour cette session PowerShell."
-        Write-Host "Le prompt devrait maintenant indiquer ($venvName). Vérifiez le prompt après l'exécution du script."
-    } catch {
-        Write-Warning "Échec de l'activation de l'environnement virtuel '$venvName': $($_.Exception.Message)"
-        Write-Warning "Vous devrez peut-être l'activer manuellement : . $activateVenvScriptPath"
-    }
-} else {
-    Write-Warning "Script d'activation '$activateVenvScriptPath' non trouvé. L'environnement n'a pas pu être activé automatiquement."
-}
-Write-Host "--- Fin Activation ---"
+# La section d'activation de venv est remplacée par des instructions pour Conda.
+# L'activation de Conda ne se fait pas de la même manière programmatiquement dans un script
+# de manière persistante pour la session appelante sans hacks.
+# Il est préférable d'instruire l'utilisateur.
 
 # MODIFIÉ: Instructions Finales
 Write-Host ""
 Write-Host "---------------------------------------------------------------------"
-Write-Host "Installation et configuration de l'environnement terminées!"
-Write-Host "Le script a tenté d'activer l'environnement virtuel '$venvName'."
-Write-Host "Si votre prompt n'indique pas '($venvName)', vous pouvez l'activer"
-Write-Host "manuellement dans votre session PowerShell actuelle en exécutant :"
+Write-Host "Installation et configuration de l'environnement Conda '$condaEnvName' terminées!"
 Write-Host ""
-Write-Host "    . (Join-Path \$PSScriptRoot '$venvName\Scripts\Activate.ps1')"
+Write-Host "IMPORTANT: Pour utiliser l'environnement, vous devez l'activer dans votre terminal."
+Write-Host "Exécutez la commande suivante :"
 Write-Host ""
-Write-Host "Alternativement, le script '.\activate_project_env.ps1' (s'il existe et est configuré)"
-Write-Host "peut aussi être utilisé pour activer l'environnement dans une nouvelle session ou la session courante."
+Write-Host "    conda activate $condaEnvName"
+Write-Host ""
+Write-Host "Une fois activé, votre prompt devrait indiquer '($condaEnvName)'."
+Write-Host "Le script '.\activate_project_env.ps1' a été simplifié et vous rappellera cette commande."
 Write-Host "---------------------------------------------------------------------"
