@@ -28,6 +28,7 @@ temp_*.py
 
 # Fichiers spécifiques au projet
 *.egg-info/
+argumentation_analysis/data/learning_data.json
 
 # Fichiers de configuration locale
 .env

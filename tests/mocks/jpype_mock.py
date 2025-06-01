@@ -56,24 +56,27 @@ __version__ = "1.4.0-mock-refactored"
 # --- _MockInternalJpypeModule ---
 # Cette classe simule le module `_jpype` interne que `jpype.imports` pourrait utiliser.
 # Elle doit rester ici ou être accessible globalement car `sys.modules['jpype._jpype']` est patché.
-class _MockInternalJpypeModule:
+class _MockJpypeCoreModule: # Renommée pour clarifier son rôle
     def isStarted(self):
         # Utilise la variable _jvm_started importée depuis .jpype_components.jvm
-        mock_logger.debug(f"[MOCK jpype._jpype.isStarted()] Appelée. Retourne: {_jvm_started}")
+        mock_logger.debug(f"[MOCK jpype._core.isStarted()] Appelée. Retourne: {_jvm_started}")
         return _jvm_started
+    
+    isJVMStarted = isStarted # Alias pour correspondre à l'API publique si nécessaire
 
     def getVersion(self):
-        return f"Mocked _jpype module (simulated in jpype_mock.py, JVM version: {getJVMVersion()})"
+        return f"Mocked jpype._core module (simulated in jpype_mock.py, JVM version: {getJVMVersion()})"
 
     def isPackage(self, name):
         # Simule la vérification de l'existence d'un package.
-        # Retourne True si notre mock considère la JVM comme démarrée.
-        mock_logger.debug(f"[MOCK jpype._jpype.isPackage('{name}')] Appelée. _jvm_started: {_jvm_started}. Retourne: {_jvm_started}")
+        mock_logger.debug(f"[MOCK jpype._core.isPackage('{name}')] Appelée. _jvm_started: {_jvm_started}. Retourne: {_jvm_started}")
         return _jvm_started
 
-_jpype_internal_module_instance = _MockInternalJpypeModule()
-sys.modules['jpype._jpype'] = _jpype_internal_module_instance
-mock_logger.info("Instance de _MockInternalJpypeModule injectée dans sys.modules['jpype._jpype'].")
+_jpype_core_mock_instance = _MockJpypeCoreModule()
+sys.modules['jpype._jpype'] = _jpype_core_mock_instance # Historique, peut-être encore utilisé par d'anciens imports
+sys.modules['_jpype'] = _jpype_core_mock_instance      # Pour jpype.imports qui fait "from . import _jpype"
+sys.modules['jpype._core'] = _jpype_core_mock_instance # Pour s'assurer que si jpype._core est accédé, c'est notre mock
+mock_logger.info("Instance de _MockJpypeCoreModule injectée dans sys.modules['jpype._jpype'], sys.modules['_jpype'] et sys.modules['jpype._core'].")
 
 
 # --- MockJavaNamespace ---
@@ -184,5 +187,5 @@ mock_logger.info("Les composants sont maintenant dans le package 'jpype_componen
 # ]
 
 # Exposer l'instance du mock interne _jpype pour que conftest.py puisse l'importer
-_jpype = _jpype_internal_module_instance
-_jpype = _jpype_internal_module_instance
+_jpype = _jpype_core_mock_instance # Exposer l'instance mockée
+# La deuxième assignation était redondante
