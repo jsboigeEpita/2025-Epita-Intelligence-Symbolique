@@ -458,8 +458,17 @@ def initialize_jvm(
             jvm_path_final = None
         classpath_separator = os.pathsep
         # Construire la liste des JARs principaux depuis lib_dir_path (qui est LIB_DIR ici)
-        main_jar_list = sorted([str(p.resolve()) for p in LIB_DIR.glob("*.jar")])
+        main_jar_list = sorted([str(p.resolve()) for p in LIB_DIR.glob("*.jar")]) # Original
         logger.info(f"   JARs principaux trouvés dans '{LIB_DIR}': {len(main_jar_list)}")
+
+        # --- DÉBUT DE LA MODIFICATION ---
+        # Exclure le JAR problématique pour une solution temporaire
+        jar_to_exclude = "org.tweetyproject.lp.asp-1.28-with-dependencies.jar"
+        original_main_jar_count = len(main_jar_list)
+        main_jar_list = [jar_path for jar_path in main_jar_list if jar_to_exclude not in pathlib.Path(jar_path).name]
+        if len(main_jar_list) < original_main_jar_count:
+            logger.info(f"   Temporairement exclu '{jar_to_exclude}' du classpath. Nombre de JARs principaux réduit à {len(main_jar_list)}.")
+        # --- FIN DE LA MODIFICATION ---
 
         # Chemin vers les JARs de test
         # PROJECT_ROOT_DIR doit être accessible ici (importé depuis .paths)
@@ -532,9 +541,12 @@ def initialize_jvm(
         jvm_args.extend(jvm_memory_options)
         logger.info(f"   Options de mémoire JVM ajoutées: {jvm_memory_options}")
 
-        # Ajout des options de débogage JPype
-        # jpype_debug_options = ["-Djpype.debug=true", "-Djpype.trace=true"]
+        # Ajout des options de débogage JVM et JPype
+        jvm_debug_options = ["-Xcheck:jni"] # Option de débogage JNI
+        # jpype_debug_options = ["-Djpype.debug=true", "-Djpype.trace=true"] # Options JPype
+        jvm_args.extend(jvm_debug_options)
         # jvm_args.extend(jpype_debug_options)
+        logger.info(f"   Options de débogage JVM ajoutées: {jvm_debug_options}")
         # logger.info(f"   Options de débogage JPype ajoutées: {jpype_debug_options}")
         logger.info(f"   Options de débogage JPype DÉSACTIVÉES pour ce test.")
 
