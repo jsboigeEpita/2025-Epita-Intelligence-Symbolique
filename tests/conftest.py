@@ -118,7 +118,9 @@ def _install_numpy_mock_immediately():
             # S'assurer que __version__ est bien celle du mock
             mock_numpy_attrs['__version__'] = numpy_mock.__version__ if hasattr(numpy_mock, '__version__') else '1.24.3.mock'
             
-            sys.modules['numpy'] = type('numpy', (), mock_numpy_attrs)
+            mock_numpy_module = type('numpy', (), mock_numpy_attrs)
+            mock_numpy_module.__path__ = [] # Indiquer que c'est un package
+            sys.modules['numpy'] = mock_numpy_module
             
             # Exposer explicitement les sous-modules nécessaires qui pourraient ne pas être des attributs directs
             if hasattr(numpy_mock, 'typing'):
@@ -281,7 +283,9 @@ def setup_numpy():
         # S'assurer que __version__ est bien celle du mock
         mock_numpy_attrs['__version__'] = numpy_mock.__version__ if hasattr(numpy_mock, '__version__') else '1.24.3.mock'
 
-        sys.modules['numpy'] = type('numpy', (), mock_numpy_attrs)
+        mock_numpy_module_setup_func = type('numpy', (), mock_numpy_attrs)
+        mock_numpy_module_setup_func.__path__ = [] # Indiquer que c'est un package
+        sys.modules['numpy'] = mock_numpy_module_setup_func
         
         # Exposer explicitement les sous-modules nécessaires
         if hasattr(numpy_mock, 'typing'):
