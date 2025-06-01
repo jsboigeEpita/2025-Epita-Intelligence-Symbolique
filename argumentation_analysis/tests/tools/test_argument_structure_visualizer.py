@@ -105,7 +105,7 @@ class TestArgumentStructureVisualizer(unittest.TestCase):
             self.assertIn("identified_structure", result)
             self.assertIn("visualization_data", result)
             self.assertIn("output_files", result)
-            self.assertIn("visualization_timestamp", result)
+            self.assertIn("timestamp", result) # Corrigé: visualization_timestamp -> timestamp
             
             # Vérifier que l'historique de visualisation a été mis à jour
             self.assertEqual(len(self.visualizer.visualization_history), 1)

@@ -124,6 +124,14 @@ class ArgumentStructureVisualizer:
             "timestamp": datetime.now().isoformat()
         }
         
+        self.visualization_history.append({
+            "type": "argument_structure_visualization",
+            "timestamp": results["timestamp"],
+            "argument_count": len(arguments),
+            "output_format": output_format,
+            "output_files_count": len(results["output_files"])
+        })
+        
         return results
     
     def _analyze_argument_structure(self, arguments: List[str]) -> Dict[str, Any]:
