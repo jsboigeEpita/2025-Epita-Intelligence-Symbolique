@@ -466,9 +466,9 @@ class TestRhetoricalToolsPerformance(unittest.TestCase):
                 # Tester l'évaluateur de cohérence d'arguments
                 for _ in range(self.num_runs):
                     start_time = time.time()
-                    coherence_result = self.argument_coherence_evaluator.evaluate_argument_coherence(dataset, context)
+                    coherence_result = self.argument_coherence_evaluator.evaluate_coherence(dataset, context)
                     execution_time = time.time() - start_time
-                    
+    
                     results["argument_coherence_evaluator"]["execution_times"].append(execution_time)
                     results["argument_coherence_evaluator"]["coherence_scores"].append(
                         coherence_result.get("overall_coherence", 0.5)
