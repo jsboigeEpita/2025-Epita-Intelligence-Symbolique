@@ -5,7 +5,7 @@ import pytest
 # Les classes Java sont importées via la fixture 'qbf_classes' de conftest.py
 # et 'dung_classes' n'est pas nécessaire ici.
 
-def test_qbf_parser_simple_formula(qbf_classes):
+def test_qbf_parser_simple_formula(tweety_qbf_classes):
     """
     Teste le parsing d'une formule QBF simple : exists x forall y (x or not y)
     """
@@ -64,7 +64,7 @@ def test_qbf_parser_simple_formula(qbf_classes):
     except jpype.JException as e: # jpype doit être importé
         pytest.fail(f"Erreur Java lors du parsing de la QBF '{qbf_string}': {e.stacktrace()}")
 
-def test_qbf_programmatic_creation_exists(qbf_classes):
+def test_qbf_programmatic_creation_exists(tweety_qbf_classes):
     """
     Teste la création programmatique d'une QBF simple : exists x (x)
     (Nécessite que la classe Variable soit bien importée et utilisable)
@@ -103,7 +103,7 @@ def test_qbf_programmatic_creation_exists(qbf_classes):
     except jpype.JException as e: # jpype doit être importé
         pytest.fail(f"Erreur Java lors de la création programmatique de la QBF : {e.stacktrace()}")
 
-def test_qbf_programmatic_creation_forall_nested(qbf_classes):
+def test_qbf_programmatic_creation_forall_nested(tweety_qbf_classes):
     """
     Teste la création programmatique d'une QBF imbriquée : forall y exists x (y)
     (Nécessite Variable, Quantifier, QuantifiedBooleanFormula)
@@ -156,7 +156,7 @@ def test_qbf_programmatic_creation_forall_nested(qbf_classes):
     except jpype.JException as e: # jpype doit être importé
         pytest.fail(f"Erreur Java lors de la création de QBF imbriquée : {e.stacktrace()}")
 
-def test_qbf_programmatic_creation_example_from_subject_fiche(qbf_classes):
+def test_qbf_programmatic_creation_example_from_subject_fiche(tweety_qbf_classes):
     """
     Teste la création programmatique de la QBF ∃x ∀y (x ∧ ¬y) de la fiche sujet.
     """
@@ -229,7 +229,7 @@ def test_qbf_programmatic_creation_example_from_subject_fiche(qbf_classes):
 # Ces tests sont donc commentés pour l'instant et pourront être ajoutés
 # une fois que l'environnement de test pour les solveurs est clarifié.
 
-# def test_qbf_satisfiability_simple_true(qbf_classes):
+# def test_qbf_satisfiability_simple_true(tweety_qbf_classes):
 #     """Teste la satisfiabilité d'une QBF simple vraie : exists x (x)"""
 #     QbfParser = qbf_classes["QbfParser"]
 #     QBFSolver = qbf_classes.get("QBFSolver") # Peut être None
@@ -262,7 +262,7 @@ def test_qbf_programmatic_creation_example_from_subject_fiche(qbf_classes):
 #         else:
 #             pytest.fail(f"Erreur Java lors du test de satisfiabilité QBF (true) : {e.stacktrace()}")
 #
-# def test_qbf_satisfiability_simple_false(qbf_classes):
+# def test_qbf_satisfiability_simple_false(tweety_qbf_classes):
 #     """Teste la satisfiabilité d'une QBF simple fausse : forall x (x and not x)"""
 #     QbfParser = qbf_classes["QbfParser"]
 #     QBFSolver = qbf_classes.get("QBFSolver")
@@ -295,7 +295,7 @@ def test_qbf_programmatic_creation_example_from_subject_fiche(qbf_classes):
 # - Explorer d'autres fonctionnalités de l'API QBF de Tweety (conversion en CNF/DNF, etc.)
 #   et ajouter des tests correspondants.
 # - Gérer les cas d'erreur (parsing de formules incorrectes, etc.).
-def test_qbf_prenex_normal_form_transformation(qbf_classes):
+def test_qbf_prenex_normal_form_transformation(tweety_qbf_classes):
     """
     Teste la transformation d'une QBF en forme normale prénexe.
     Exemple: forall x ( (exists y (y)) and (exists z (z)) )
@@ -381,7 +381,7 @@ def test_qbf_prenex_normal_form_transformation(qbf_classes):
 
 
 @pytest.mark.skip(reason="Parsing DIMACS QBF non clairement documenté pour QbfParser sans solveur.")
-def test_qbf_parser_dimacs_format(qbf_classes):
+def test_qbf_parser_dimacs_format(tweety_qbf_classes):
     """
     Teste le parsing d'une QBF au format DIMACS (si supporté directement par QbfParser).
     Ce test est marqué comme skip car la fonctionnalité n'est pas évidente.
@@ -441,7 +441,7 @@ def test_qbf_parser_dimacs_format(qbf_classes):
 
 # Test pour l'extraction de modèles (nécessite un solveur)
 @pytest.mark.skip(reason="Extraction de modèles QBF nécessite un solveur configuré.")
-def test_qbf_model_extraction(qbf_classes):
+def test_qbf_model_extraction(tweety_qbf_classes):
     """
     Teste l'extraction d'un modèle pour une QBF satisfiable.
     Exemple: exists x, y (x and y) -> modèle x=true, y=true
