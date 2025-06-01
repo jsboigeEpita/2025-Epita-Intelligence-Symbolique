@@ -393,40 +393,45 @@ def integration_jvm(request):
         return
 
     # Sauvegarder l'état actuel de sys.modules pour jpype et _jpype
-    original_sys_jpype = sys.modules.get('jpype')
-    original_sys_dot_jpype = sys.modules.get('_jpype')
+    # original_sys_jpype = sys.modules.get('jpype') # Simplification: commenté
+    # original_sys_dot_jpype = sys.modules.get('_jpype') # Simplification: commenté
 
-    # Installer le vrai JPype pour la durée de cette fixture
+    logger.info("integration_jvm: Forçage de sys.modules['jpype'] = _REAL_JPYPE_MODULE")
     sys.modules['jpype'] = _REAL_JPYPE_MODULE
-    if hasattr(_REAL_JPYPE_MODULE, '_jpype'): # Le module C interne
+    if hasattr(_REAL_JPYPE_MODULE, '_jpype'):
         sys.modules['_jpype'] = _REAL_JPYPE_MODULE._jpype
-    elif '_jpype' in sys.modules: # S'il y avait un _jpype (peut-être du mock), l'enlever
+        logger.info("integration_jvm: sys.modules['_jpype'] défini à _REAL_JPYPE_MODULE._jpype")
+    elif '_jpype' in sys.modules:
         del sys.modules['_jpype']
+        logger.info("integration_jvm: Ancien sys.modules['_jpype'] supprimé.")
     
     current_jpype_in_use = sys.modules['jpype'] # Devrait être _REAL_JPYPE_MODULE
     logger.info(f"Fixture 'integration_jvm' (session scope) appelée. Utilisation de JPype ID: {id(current_jpype_in_use)}")
+
+    # S'assurer que jpype.config.destroy_jvm = False est défini sur le vrai module AVANT startJVM
+    if hasattr(current_jpype_in_use, 'config') and current_jpype_in_use.config is not None:
+        current_jpype_in_use.config.destroy_jvm = False
+        logger.info(f"integration_jvm: current_jpype_in_use.config.destroy_jvm défini sur False.")
+    else:
+        logger.warning("integration_jvm: current_jpype_in_use.config non disponible ou None. Impossible de définir destroy_jvm.")
+
 
     try:
         logger.info(f"DEBUG_JVM_SETUP: integration_jvm - Début. current_jpype_in_use (ID: {id(current_jpype_in_use)}).isJVMStarted() = {current_jpype_in_use.isJVMStarted()}")
         logger.info(f"DEBUG_JVM_SETUP: integration_jvm - _integration_jvm_started_session_scope = {_integration_jvm_started_session_scope}")
 
-        if current_jpype_in_use.isJVMStarted() and not _integration_jvm_started_session_scope:
-            logger.error("integration_jvm: ERREUR CRITIQUE - La JVM est déjà démarrée (par un mécanisme externe ou un précédent test non nettoyé) alors que _integration_jvm_started_session_scope est False. Cela indique un problème de gestion de la JVM.")
-            # Envisager un pytest.fail ici si cela ne devrait jamais arriver.
-            # Pour l'instant, on loggue l'erreur et on continue en espérant que la JVM existante est utilisable.
-            # Cependant, cela peut masquer la cause racine du problème.
-            # Si on continue, on devrait peut-être marquer _integration_jvm_started_session_scope = True
-            # pour refléter que la JVM est démarrée, bien que pas par cette instance de la fixture.
-            # Mais cela complique la logique de shutdown.
-            # Pour l'instant, on loggue et on laisse la logique suivante potentiellement re-démarrer ou échouer.
-            # pytest.fail("JVM démarrée prématurément par un mécanisme externe. La fixture 'integration_jvm' doit contrôler son initialisation.", pytrace=False)
-            # return # Ou laisser la logique ci-dessous échouer si elle tente de redémarrer.
-
+        # Simplification: On suppose que si la JVM est démarrée, c'est par nous dans cette session.
+        # La logique complexe de détection de démarrage externe est temporairement simplifiée.
         if _integration_jvm_started_session_scope and current_jpype_in_use.isJVMStarted():
             logger.info("integration_jvm: La JVM a déjà été initialisée par cette fixture dans cette session. Yielding.")
-            yield
+            yield _REAL_JPYPE_MODULE # Renvoyer _REAL_JPYPE_MODULE
             return
         
+        # Si la JVM est démarrée mais que notre flag de session est False, c'est un problème.
+        if current_jpype_in_use.isJVMStarted() and not _integration_jvm_started_session_scope:
+             logger.error("integration_jvm: ERREUR - JVM démarrée mais _integration_jvm_started_session_scope est False. Problème de logique.")
+             # pytest.fail("Incohérence état JVM fixture.") # Pourrait être trop strict pour le moment
+
         logger.info(f"integration_jvm: Vérification des dépendances pour initialize_jvm: initialize_jvm is None: {initialize_jvm is None}, LIBS_DIR is None: {LIBS_DIR is None}, TWEETY_VERSION is None: {TWEETY_VERSION is None}")
         if LIBS_DIR is not None:
             logger.info(f"integration_jvm: LIBS_DIR = {LIBS_DIR} (exists: {os.path.exists(LIBS_DIR)})")
@@ -454,75 +459,30 @@ def integration_jvm(request):
         if not success or not jvm_actually_started_after_call:
             logger.error(f"integration_jvm: ÉCHEC CRITIQUE de l'initialisation de la JVM. success: {success}, jvm_actually_started_after_call: {jvm_actually_started_after_call}.")
             _integration_jvm_started_session_scope = False # Assurer que c'est False
-            # Restauration immédiate en cas d'échec de démarrage avant même le yield
-            logger.info("integration_jvm: Restauration de sys.modules pour jpype/_jpype après échec de démarrage.")
-            if original_sys_jpype is not None: sys.modules['jpype'] = original_sys_jpype
-            elif 'jpype' in sys.modules: del sys.modules['jpype']
-            if original_sys_dot_jpype is not None: sys.modules['_jpype'] = original_sys_dot_jpype
-            elif '_jpype' in sys.modules: del sys.modules['_jpype']
+            # Simplification: Pas de restauration de sys.modules ici pour l'instant si démarrage échoue
             pytest.fail(f"ÉCHEC FIXTURE integration_jvm: Démarrage JVM a échoué (success: {success}, isJVMStarted: {jvm_actually_started_after_call}).", pytrace=False)
         else:
             _integration_jvm_started_session_scope = True # Marquer comme démarrée par cette fixture
             logger.info(f"integration_jvm: JVM initialisée avec succès par cette fixture. Yielding _REAL_JPYPE_MODULE (ID: {id(_REAL_JPYPE_MODULE)}).")
             
-        yield _REAL_JPYPE_MODULE # Le test s'exécute ici, et les fixtures dépendantes reçoivent _REAL_JPYPE_MODULE
+        yield _REAL_JPYPE_MODULE # Le test s'exécute ici
         
     finally:
-        logger.info("integration_jvm: Bloc finally atteint (après yield ou en cas d'exception pendant le test).")
-        # La logique de shutdown est maintenant ici, au lieu d'être dans un finalizer séparé.
-        current_jpype_for_shutdown = sys.modules.get('jpype')
-        jvm_was_shutdown_by_this_fixture = False
-
-        if _integration_jvm_started_session_scope and current_jpype_for_shutdown is _REAL_JPYPE_MODULE and current_jpype_for_shutdown.isJVMStarted():
+        logger.info("integration_jvm: Bloc finally atteint.")
+        # Logique de shutdown simplifiée pour l'instant
+        if _integration_jvm_started_session_scope and _REAL_JPYPE_MODULE and _REAL_JPYPE_MODULE.isJVMStarted():
             try:
-                logger.info("integration_jvm (finally): Vérification/Import de jpype.config avant shutdown...")
-                if hasattr(current_jpype_for_shutdown, 'config'): # Utiliser current_jpype_for_shutdown
-                    logger.info(f"   jpype.config déjà présent (type: {type(current_jpype_for_shutdown.config)}).")
-                else:
-                    try:
-                        import jpype.config # Assumant que jpype est _REAL_JPYPE_MODULE
-                        logger.info("   Import explicite de jpype.config réussi.")
-                    except Exception as e_cfg_imp_finally:
-                         logger.error(f"   Erreur lors de l'import de jpype.config dans finally: {type(e_cfg_imp_finally).__name__}: {e_cfg_imp_finally}")
-
-
-                logger.info("integration_jvm (finally): Tentative d'arrêt de la JVM (vrai JPype)...")
-                logger.info("integration_jvm (finally): APPEL IMMINENT DE current_jpype_for_shutdown.shutdownJVM()")
-                current_jpype_for_shutdown.shutdownJVM()
-                logger.info("integration_jvm (finally): current_jpype_for_shutdown.shutdownJVM() APPELÉ.")
-                logger.info("integration_jvm (finally): JVM arrêtée (vrai JPype).")
-                jvm_was_shutdown_by_this_fixture = True
+                logger.info("integration_jvm (finally): Tentative d'arrêt de la JVM...")
+                _REAL_JPYPE_MODULE.shutdownJVM()
+                logger.info("integration_jvm (finally): JVM arrêtée.")
             except Exception as e_shutdown:
-                logger.error(f"integration_jvm (finally): Erreur arrêt JVM (vrai JPype): {e_shutdown}", exc_info=True)
-            finally: # Nested finally pour s'assurer que _integration_jvm_started_session_scope est réinitialisé
-                logger.info(f"integration_jvm (finally - nested): Réinitialisation de _integration_jvm_started_session_scope (valeur actuelle: {_integration_jvm_started_session_scope}) à False.")
+                logger.error(f"integration_jvm (finally): Erreur lors de l'arrêt de la JVM: {e_shutdown}", exc_info=True)
+            finally:
                 _integration_jvm_started_session_scope = False
         
-        if not jvm_was_shutdown_by_this_fixture:
-            logger.info("integration_jvm (finally): La JVM n'a pas été arrêtée par cette fixture ou une erreur s'est produite. Restauration de sys.modules.")
-        else:
-            logger.info("integration_jvm (finally): La JVM a été arrêtée. sys.modules['jpype'] reste _REAL_JPYPE_MODULE pour les handlers atexit.")
-            # Laisser _REAL_JPYPE_MODULE en place pour atexit, mais s'assurer que _jpype correspond
-            if _REAL_JPYPE_MODULE and hasattr(_REAL_JPYPE_MODULE, '_jpype'):
-                sys.modules['_jpype'] = _REAL_JPYPE_MODULE._jpype
-            elif _REAL_JPYPE_MODULE and '_jpype' in sys.modules and sys.modules['_jpype'] is _MOCK_DOT_JPYPE_MODULE_GLOBAL:
-                logger.info("integration_jvm (finally): _REAL_JPYPE_MODULE laissé, suppression du _MOCK_DOT_JPYPE_MODULE_GLOBAL de sys.modules['_jpype'].")
-                if '_jpype' in sys.modules: del sys.modules['_jpype'] # Vérifier avant de supprimer
-            # Ne pas restaurer original_sys_jpype et original_sys_dot_jpype si shutdown réussi
-            return # Sortir du finally pour éviter la restauration ci-dessous si shutdown ok
-
-        # Restauration si shutdown n'a pas eu lieu ou a échoué
-        logger.info("integration_jvm (finally): Restauration de l'état original de sys.modules pour jpype/_jpype.")
-        if original_sys_jpype is not None:
-            sys.modules['jpype'] = original_sys_jpype
-        elif 'jpype' in sys.modules and sys.modules['jpype'] is _REAL_JPYPE_MODULE : # Si c'est notre vrai module et qu'on doit restaurer
-             del sys.modules['jpype']
-
-        if original_sys_dot_jpype is not None:
-            sys.modules['_jpype'] = original_sys_dot_jpype
-        elif '_jpype' in sys.modules and hasattr(_REAL_JPYPE_MODULE, '_jpype') and sys.modules['_jpype'] is _REAL_JPYPE_MODULE._jpype:
-             del sys.modules['_jpype']
-        logger.info("État original de sys.modules pour jpype/_jpype restauré (cas non-shutdown ou erreur dans finally).")
+        # Simplification: Pas de restauration complexe de sys.modules pour l'instant.
+        # On suppose que la fixture activate_jpype_mock_if_needed gérera la restauration pour le prochain test.
+        logger.info("integration_jvm (finally): Fin du bloc finally. La restauration de sys.modules est laissée à activate_jpype_mock_if_needed pour le prochain test.")
 
 
 # Fixture pour activer le mock JPype pour les tests unitaires
@@ -569,20 +529,52 @@ def activate_jpype_mock_if_needed(request):
 
     if use_real_jpype:
         logger.info(f"Test {request.node.name} demande REAL JPype. Configuration de sys.modules pour utiliser le vrai JPype.")
+        original_sys_jpype = sys.modules.get('jpype')
+        original_sys_dot_jpype = sys.modules.get('_jpype')
+        original_sys_jpype_imports = sys.modules.get('jpype.imports')
+
         if _REAL_JPYPE_MODULE:
             sys.modules['jpype'] = _REAL_JPYPE_MODULE
+            logger.debug(f"REAL JPype (ID: {id(_REAL_JPYPE_MODULE)}) est maintenant sys.modules['jpype'].")
             if hasattr(_REAL_JPYPE_MODULE, '_jpype'):
                 sys.modules['_jpype'] = _REAL_JPYPE_MODULE._jpype
-            elif '_jpype' in sys.modules and sys.modules.get('_jpype') is not getattr(_REAL_JPYPE_MODULE, '_jpype', None) :
+                logger.debug(f"REAL JPype _jpype (ID: {id(_REAL_JPYPE_MODULE._jpype)}) est maintenant sys.modules['_jpype'].")
+            elif '_jpype' in sys.modules: # Si _REAL_JPYPE_MODULE n'a pas _jpype mais qu'il y en a un dans sys.modules
                 del sys.modules['_jpype']
+                logger.debug("Ancien sys.modules['_jpype'] supprimé car _REAL_JPYPE_MODULE n'en a pas.")
+            
             if hasattr(_REAL_JPYPE_MODULE, 'imports'):
                 sys.modules['jpype.imports'] = _REAL_JPYPE_MODULE.imports
-            elif 'jpype.imports' in sys.modules and sys.modules.get('jpype.imports') is not getattr(_REAL_JPYPE_MODULE, 'imports', None):
+                logger.debug(f"REAL JPype imports (ID: {id(_REAL_JPYPE_MODULE.imports)}) est maintenant sys.modules['jpype.imports'].")
+            elif 'jpype.imports' in sys.modules: # Si _REAL_JPYPE_MODULE n'a pas imports mais qu'il y en a un dans sys.modules
                 del sys.modules['jpype.imports']
-            logger.debug(f"REAL JPype (ID: {id(_REAL_JPYPE_MODULE)}) est maintenant sys.modules['jpype'].")
+                logger.debug("Ancien sys.modules['jpype.imports'] supprimé car _REAL_JPYPE_MODULE n'en a pas.")
         else:
             logger.error(f"Test {request.node.name} demande REAL JPype, mais _REAL_JPYPE_MODULE n'est pas disponible. Test échouera probablement.")
-        yield
+        
+        yield # Exécution du test avec le vrai JPype
+
+        # Restauration minimale pour le cas real_jpype :
+        # On restaure ce qui était là avant, au cas où un autre test (non-real_jpype) suivrait
+        # et s'attendrait à un état particulier (par exemple, le mock).
+        # La fixture integration_jvm gère le cycle de vie de la JVM elle-même.
+        logger.debug(f"Nettoyage après test {request.node.name} (utilisation REAL JPype). Restauration de l'état sys.modules précédent.")
+        if original_sys_jpype is not None:
+            sys.modules['jpype'] = original_sys_jpype
+        elif 'jpype' in sys.modules and sys.modules['jpype'] is _REAL_JPYPE_MODULE: # Si on l'a mis et qu'il n'y avait rien
+            del sys.modules['jpype']
+
+        if original_sys_dot_jpype is not None:
+            sys.modules['_jpype'] = original_sys_dot_jpype
+        elif '_jpype' in sys.modules and hasattr(_REAL_JPYPE_MODULE, '_jpype') and sys.modules['_jpype'] is _REAL_JPYPE_MODULE._jpype:
+             del sys.modules['_jpype']
+        
+        if original_sys_jpype_imports is not None:
+            sys.modules['jpype.imports'] = original_sys_jpype_imports
+        elif 'jpype.imports' in sys.modules and hasattr(_REAL_JPYPE_MODULE, 'imports') and sys.modules['jpype.imports'] is _REAL_JPYPE_MODULE.imports:
+            del sys.modules['jpype.imports']
+        logger.info(f"État de sys.modules pour JPype restauré après test REAL {request.node.name}.")
+
     else:
         logger.info(f"Test {request.node.name} utilise MOCK JPype.")
 
