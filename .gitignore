@@ -50,3 +50,6 @@ results/rhetorical_analysis_*.json
 # JDK local et temporaire
 /portable_jdk/
 /_temp/OpenJDK*.zip
+
+# Pytest output files
+pytest_hierarchical_full_v4.txt
