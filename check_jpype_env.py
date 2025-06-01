@@ -59,19 +59,40 @@ else:
 
 # 8. Afficher le classpath construit
 print(f"8. Classpath construit pour Tweety: {os.pathsep.join(tweety_classpath) if tweety_classpath else 'Vide'}")
+# 7. Détection du JDK 17 portable
+print("\n7. Détection du JDK 17 portable...")
+portable_jdk17_dir = os.path.join(script_dir, "portable_jdk", "jdk-17.0.15+6")
+portable_jdk17_jvm_path = os.path.join(portable_jdk17_dir, "bin", "server", "jvm.dll") # Trouvé via list_files
+print(f"   Chemin base du JDK 17 portable: {portable_jdk17_dir}")
+if os.path.exists(portable_jdk17_jvm_path):
+    print(f"   Chemin jvm.dll du JDK 17 portable trouvé: {portable_jdk17_jvm_path}")
+else:
+    print(f"   AVERTISSEMENT: jvm.dll du JDK 17 portable NON trouvé à: {portable_jdk17_jvm_path}")
+    portable_jdk17_jvm_path = None # S'assurer qu'il est None s'il n'est pas trouvé
 
-# Déterminer quel chemin JVM utiliser
+# 8. Détermination du chemin JVM à utiliser
+print("\n8. Détermination du chemin JVM à utiliser...")
 jvm_path_to_use = None
-if java_home:
-    # Tenter de construire le chemin vers jvm.dll à partir de JAVA_HOME
-    # Pour Windows, c'est typiquement JAVA_HOME/bin/server/jvm.dll
-    # Pour Linux/macOS, ce serait JAVA_HOME/lib/server/libjvm.so ou similaire
+preferred_jvm_source = ""
+
+# Priorité 1: JDK 17 Portable
+if portable_jdk17_jvm_path and os.path.exists(portable_jdk17_jvm_path):
+    jvm_path_to_use = portable_jdk17_jvm_path
+    preferred_jvm_source = "JDK 17 Portable"
+    print(f"   INFO: Priorité 1 - Utilisation du JDK 17 Portable: {jvm_path_to_use}")
+else:
+    print(f"   INFO: JDK 17 Portable non utilisé (chemin: {portable_jdk17_jvm_path}).")
+
+# Priorité 2: JAVA_HOME
+if not jvm_path_to_use and java_home:
+    print(f"   INFO: Priorité 2 - Tentative avec JAVA_HOME ({java_home})...")
+    # Tenter de construire le chemin vers jvm.dll/libjvm.so à partir de JAVA_HOME
     jvm_path_candidates = []
     if sys.platform == "win32":
         jvm_path_candidates = [
-            os.path.join(java_home, 'bin', 'server', 'jvm.dll'), # Standard JDK
-            os.path.join(java_home, 'jre', 'bin', 'server', 'jvm.dll'), # JDK plus ancien avec JRE interne
-            os.path.join(java_home, 'bin', 'jvm.dll') # Parfois pour JRE embarqué / GraalVM-like
+            os.path.join(java_home, 'bin', 'server', 'jvm.dll'),
+            os.path.join(java_home, 'jre', 'bin', 'server', 'jvm.dll'),
+            os.path.join(java_home, 'bin', 'jvm.dll')
         ]
     elif sys.platform == "darwin": # macOS
         jvm_path_candidates = [
@@ -88,65 +109,91 @@ if java_home:
     for i, candidate_path in enumerate(jvm_path_candidates):
         if os.path.exists(candidate_path):
             jvm_path_to_use = candidate_path
-            print(f"   INFO: Utilisation du chemin JVM dérivé de JAVA_HOME (essai {i+1}): {jvm_path_to_use}")
+            preferred_jvm_source = f"JAVA_HOME (essai {i+1})" # Mise à jour de la source
+            print(f"   INFO: Chemin JVM trouvé dans JAVA_HOME: {jvm_path_to_use}")
             found_jvm_in_java_home = True
             break
     
     if not found_jvm_in_java_home:
-        print(f"   AVERTISSEMENT: JAVA_HOME est défini ({java_home}), mais aucun des chemins JVM attendus n'a été trouvé:")
-        for candidate_path in jvm_path_candidates:
-            print(f"     - {candidate_path} (non trouvé)")
-        print(f"   Retour à l'utilisation du chemin JVM par défaut de JPype: {default_jvm_path}")
-        jvm_path_to_use = default_jvm_path
-else:
-    print("   INFO: JAVA_HOME n'est pas défini. Utilisation du chemin JVM par défaut de JPype.")
-    jvm_path_to_use = default_jvm_path
+        print(f"   AVERTISSEMENT: Aucun chemin JVM valide trouvé dans JAVA_HOME ({java_home}).")
+        # Afficher les candidats testés si on le souhaite (déjà fait par l'ancienne logique si c'était la source principale)
+        # for candidate_path in jvm_path_candidates:
+        #     print(f"     - {candidate_path} (non trouvé lors de la recherche via JAVA_HOME)")
+elif not jvm_path_to_use: # Si JDK17 portable non utilisé ET JAVA_HOME non défini
+     print(f"   INFO: JAVA_HOME n'est pas défini (et JDK 17 portable non utilisé ou non trouvé).")
 
+# Priorité 3: JPype Default
+if not jvm_path_to_use and default_jvm_path:
+    print(f"   INFO: Priorité 3 - Utilisation du chemin JVM par défaut de JPype: {default_jvm_path}")
+    jvm_path_to_use = default_jvm_path
+    preferred_jvm_source = "JPype Default"
+elif not jvm_path_to_use: # Si default_jvm_path est aussi None (ne devrait pas arriver si JPype est installé et fonctionnel)
+    print("   ERREUR CRITIQUE: Aucun chemin JVM (Portable, JAVA_HOME, ou JPype par défaut) n'est disponible ou valide.")
+    # jvm_path_to_use reste None, ce qui sera géré avant le démarrage de la JVM
+
+# La variable jvm_started_successfully est définie plus loin, juste avant la section de démarrage.
+# On la met ici pour que le bloc remplacé soit cohérent.
 jvm_started_successfully = False
 
 # 9. Tenter de démarrer la JVM
 print("\n9. Tentative de démarrage de la JVM...")
 if not jvm_path_to_use:
-    print("   ERREUR: Impossible de démarrer la JVM car aucun chemin JVM valide n'a pu être déterminé (ni via JAVA_HOME, ni via JPype par défaut).")
+    print("   ERREUR: Impossible de démarrer la JVM car aucun chemin JVM valide n'a pu être déterminé.")
+    # jvm_started_successfully est déjà False (défini à la fin du bloc de détermination du chemin)
 else:
-    try:
-        print(f"   Utilisation du chemin JVM: {jvm_path_to_use}")
-        if tweety_classpath:
+    if not jpype.isJVMStarted():
+        print(f"   INFO: Tentative de démarrage avec la JVM de '{preferred_jvm_source}': {jvm_path_to_use}")
+        if tweety_classpath: # tweety_classpath est une liste de chemins
             print(f"   Utilisation du classpath: {os.pathsep.join(tweety_classpath)}")
-            jpype.startJVM(jvm_path_to_use, "-ea", classpath=tweety_classpath)
         else:
-            print("   Démarrage de la JVM sans classpath spécifique.")
-            jpype.startJVM(jvm_path_to_use, "-ea")
-        print("   JVM démarrée avec succès (ou déjà démarrée).")
-        jvm_started_successfully = jpype.isJVMStarted() # Confirmer
-    except Exception as e:
-        print(f"ERREUR lors du démarrage de la JVM (jpype.startJVM) avec le chemin {jvm_path_to_use}: {e}")
-        print("   Causes possibles :")
-        print("     - JAVA_HOME mal configuré ou pointe vers une installation JRE/JDK invalide.")
-        print("     - Conflit de version de la DLL JVM (si plusieurs JDK/JRE sont installés).")
-        print("     - Problème avec les JARs dans le classpath (si fourni).")
-
+            print("   INFO: Démarrage de la JVM sans classpath Tweety spécifique.")
+        
+        try:
+            # jpype.startJVM attend que classpath soit une liste de strings (ce que tweety_classpath est)
+            jpype.startJVM(jvm_path_to_use, "-ea", classpath=tweety_classpath, convertStrings=False)
+            jvm_started_successfully = True # Mettre à True seulement après succès
+            print("   INFO: JVM démarrée avec succès.")
+        except Exception as e_start_jvm:
+            print(f"   ERREUR lors du démarrage de la JVM avec '{preferred_jvm_source}' ({jvm_path_to_use}): {e_start_jvm}")
+            jvm_started_successfully = False
+            # Ici, on pourrait ajouter une logique pour tenter une autre source de JVM si la première échoue.
+            # Par exemple, si JDK 17 portable échoue, tenter JAVA_HOME, puis le défaut JPype.
+            # Pour l'instant, on s'arrête à la première erreur de démarrage pour la source JVM choisie.
+    else:
+        print("   INFO: La JVM est déjà démarrée.")
+        jvm_started_successfully = True # Supposer qu'elle a bien démarré précédemment et est valide.
 # 10. Si la JVM a démarré, tester l'import Tweety
+print("\n    --- Test d'import Java Standard ---")
+try:
+    jpype.imports.registerDomain("java") # Bonne pratique
+    from java.util import ArrayList
+    print("      Import de java.util.ArrayList réussi.")
+    my_list = ArrayList()
+    my_list.add("TestItem")
+    print(f"      Instanciation et utilisation de java.util.ArrayList réussies: {my_list}")
+except Exception as e_java_std:
+    print(f"ERREUR lors du test d'import Java standard: {e_java_std}")
+print("    --- Fin Test d'import Java Standard ---\n")
 print("\n10. Vérification de l'état de la JVM et test d'import Tweety...")
 if jpype.isJVMStarted():
     print("    La JVM est démarrée.")
     if not tweety_classpath:
         print("    AVERTISSEMENT: Le classpath Tweety est vide. Le test d'import de classe Tweety sera ignoré.")
     else:
-        print("    Tentative d'import d'une classe Tweety (PropositionalSignature)...")
+        print("    Tentative d'import d'une classe Tweety (PlSignature)...")
         try:
 # Enregistrer le domaine de premier niveau peut aider JPype à trouver les classes
             jpype.imports.registerDomain("org")
-            from org.tweetyproject.logics.pl.syntax import PropositionalSignature
-            print("      Import de org.tweetyproject.logics.pl.syntax.PropositionalSignature réussi.")
+            from org.tweetyproject.logics.pl.syntax import PlSignature
+            print("      Import de org.tweetyproject.logics.pl.syntax.PlSignature réussi.")
             try:
-                sig = PropositionalSignature()
-                print(f"      Instanciation de PropositionalSignature réussie: {sig}")
+                sig = PlSignature()
+                print(f"      Instanciation de PlSignature réussie: {sig}")
                 print("      SUCCESS: L'environnement JPype et Tweety semble fonctionner !")
             except Exception as e_inst:
-                print(f"ERREUR lors de l'instanciation de PropositionalSignature: {e_inst}")
+                print(f"ERREUR lors de l'instanciation de PlSignature: {e_inst}")
         except ImportError as e_import_class:
-             print(f"ERREUR: Classe Tweety non trouvée (JClassNotfoundException): {e_import_class}")
+             print(f"ERREUR: Classe Tweety non trouvée (JClassNotfoundException) - tentative avec org.tweetyproject.logics.pl.syntax.PlSignature: {e_import_class}")
              print("      Causes possibles :")
              print("        - Les JARs de Tweety ne sont pas dans le classpath ou sont corrompus.")
              print(f"        - Le classpath utilisé était: {tweety_classpath}")
