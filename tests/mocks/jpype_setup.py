@@ -8,10 +8,8 @@ import logging
 # --- Détermination de la disponibilité du vrai JPype via variable d'environnement ---
 # Cette variable est utilisée par les décorateurs skipif dans les fichiers de test.
 _REAL_JPYPE_AVAILABLE = os.environ.get('USE_REAL_JPYPE', 'false').lower() in ('true', '1')
-# Logguer l'état initial pour le débogage
-print(f"DEBUG [jpype_setup.py]: USE_REAL_JPYPE env var: '{os.environ.get('USE_REAL_JPYPE')}'")
-print(f"DEBUG [jpype_setup.py]: _REAL_JPYPE_AVAILABLE evaluated to: {_REAL_JPYPE_AVAILABLE}")
-
+# Les prints de débogage précédents ont confirmé que _REAL_JPYPE_AVAILABLE est correctement évalué.
+# La cause du skip était une erreur dans la fixture integration_jvm (chemin des libs).
 
 # --- Configuration du Logger ---
 logger = logging.getLogger(__name__)
