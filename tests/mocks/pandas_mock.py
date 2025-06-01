@@ -354,17 +354,20 @@ class PandasMock:
             'submodule_search_locations': None
         })()
 
-# Installer le mock dans sys.modules pour qu'il soit utilisé lors des importations
-_pandas_module_instance = PandasMock()
-sys.modules['pandas'] = _pandas_module_instance
-
-# Installer les mocks pour les sous-modules io
-sys.modules['pandas.io'] = MockPandasIO()
-sys.modules['pandas.io.formats'] = sys.modules['pandas.io'].formats # Réutiliser l'instance
-sys.modules['pandas.io.formats.console'] = sys.modules['pandas.io'].formats.console # Réutiliser l'instance
-
-
-# Assurer que get_option et set_option sont aussi accessibles comme attributs du module mocké
-# pour les imports directs comme `from pandas import get_option`
-setattr(sys.modules['pandas'], 'get_option', get_option)
-setattr(sys.modules['pandas'], 'set_option', set_option)
+# # Installer le mock dans sys.modules pour qu'il soit utilisé lors des importations
+# # Commenté pour éviter l'auto-installation. L'installation doit être gérée par conftest.py
+# _pandas_module_instance = PandasMock()
+# sys.modules['pandas'] = _pandas_module_instance
+# 
+# # Installer les mocks pour les sous-modules io
+# # Commenté également
+# # sys.modules['pandas.io'] = MockPandasIO()
+# # sys.modules['pandas.io.formats'] = sys.modules['pandas.io'].formats # Réutiliser l'instance
+# # sys.modules['pandas.io.formats.console'] = sys.modules['pandas.io'].formats.console # Réutiliser l'instance
+# 
+# 
+# # Assurer que get_option et set_option sont aussi accessibles comme attributs du module mocké
+# # pour les imports directs comme `from pandas import get_option`
+# # Commenté également
+# # setattr(sys.modules['pandas'], 'get_option', get_option)
+# # setattr(sys.modules['pandas'], 'set_option', set_option)

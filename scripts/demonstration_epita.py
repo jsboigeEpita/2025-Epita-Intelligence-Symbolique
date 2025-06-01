@@ -42,6 +42,7 @@ import io # Ajouté pour TextIOWrapper
 import time # Ajouté pour mesurer le temps d'exécution
 # import traceback # Décommenter pour un traceback complet si nécessaire dans les excepts
 import semantic_kernel as sk # Ajouté pour l'initialisation de InformalAgent
+print("INFO [DEMO_IMPORT_DEBUG]: Après imports Python standards et semantic_kernel.")
 
 # Reconfigurer sys.stdout et sys.stderr pour utiliser UTF-8
 # Cela est plus robuste que de changer l'encodage de la console elle-même
@@ -110,6 +111,7 @@ print(f"INFO [DEBUG_IMPORT]: Ancien chemin vers argumentation_analysis/services/
 
 # Import pour charger les variables d'environnement
 from dotenv import load_dotenv
+print("INFO [DEMO_IMPORT_DEBUG]: Après import dotenv.")
 
 # Variable globale pour suivre l'état des services réels pour l'analyse chiffrée
 REAL_CRYPTO_DEFINITION_SERVICES_IMPORTED = False
@@ -151,6 +153,7 @@ class MockCryptoService:
     def encrypt_data(self, data):
         print("INFO: Mock CryptoService - simulation du chiffrement (retourne les données telles quelles).")
         return data
+print("INFO [DEMO_IMPORT_DEBUG]: Avant try-except import CryptoService/DefinitionService.")
 
 # Tentative d'importation des classes réelles pour l'analyse chiffrée (CryptoService, DefinitionService).
 try:
@@ -170,6 +173,7 @@ except Exception as e_import_cds: # Capture d'exception plus large
     CryptoService = MockCryptoService
     DefinitionService = None # Sera défini plus bas après MockDefinitionService
     REAL_CRYPTO_DEFINITION_SERVICES_IMPORTED = False
+print("INFO [DEMO_IMPORT_DEBUG]: Après try-except import CryptoService/DefinitionService.")
 
 
 # Tentative d'importation des modèles d'extrait réels (ExtractDefinitions, Extract, SourceDefinition).
@@ -231,6 +235,7 @@ except Exception as e_import_extract_models: # Capture d'exception plus large
     SourceDefinition = MockSourceDefinitionPydanticCompat
     Extract = MockExtractPydanticCompat
     REAL_EXTRACT_MODELS_IMPORTED = False
+print("INFO [DEMO_IMPORT_DEBUG]: Après try-except import modèles Extract.")
 
 
 class MockDefinitionService:
@@ -275,6 +280,7 @@ class MockDefinitionService:
 # ou si l'import de RealDefinitionService a spécifiquement échoué, on assigne MockDefinitionService.
 if not REAL_CRYPTO_DEFINITION_SERVICES_IMPORTED or DefinitionService is None:
     DefinitionService = MockDefinitionService
+print("INFO [DEMO_IMPORT_DEBUG]: Après assignation MockDefinitionService si besoin.")
 
 
 # Tentative d'importation des classes réelles pour l'analyse de texte clair.
@@ -290,6 +296,7 @@ except Exception as e_import_ia:
     # import traceback # Décommenter pour un traceback complet si nécessaire
     # print(f"TRACEBACK [InformalAgent]: {traceback.format_exc()}")
     REAL_INFORMAL_AGENT_IMPORTED = False
+print("INFO [DEMO_IMPORT_DEBUG]: Après try-except import InformalAgent.")
 
 try:
     # Mise à jour de l'import pour utiliser create_llm_service depuis argumentation_analysis.core.llm_service
@@ -305,6 +312,7 @@ except Exception as e_import_llms:
     # import traceback # Décommenter pour un traceback complet si nécessaire
     # print(f"TRACEBACK [create_llm_service]: {traceback.format_exc()}")
     REAL_LLM_SERVICE_FUNCTION_IMPORTED = False
+print("INFO [DEMO_IMPORT_DEBUG]: Après try-except import create_llm_service.")
 
 
 # Mock pour le service LLM, utilisé si la clé API n'est pas trouvée ou si l'import de create_llm_service échoue.
@@ -980,7 +988,7 @@ def generate_report_from_analysis(analysis_json_path: str):
 
 if __name__ == "__main__":
     print("=== Début du script de démonstration EPITA ===")
-    
+    print("INFO [MAIN_EXEC]: Atteint le bloc if __name__ == \"__main__\", avant check_and_install_dependencies.") # Ligne de débogage
     check_and_install_dependencies()
     run_unit_tests()
     example_file = os.path.join(project_root, "examples", "exemple_sophisme.txt") # Utilisation de project_root
