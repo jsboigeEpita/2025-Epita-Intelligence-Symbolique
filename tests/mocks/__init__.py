@@ -110,22 +110,15 @@ else:
         # Essayer d'importer le vrai jpype d'abord pour voir s'il est installé
         import jpype as real_jpype_module
         jpype_real_path = getattr(real_jpype_module, '__file__', 'N/A')
-        logger.info(f"Vrai JPype trouvé ({jpype_real_path}). Le mock ne sera PAS activé par défaut pour 'jpype' à moins que 'jpype1' ne soit pas trouvé.")
-        # Le comportement original était de mocker 'jpype' seulement si 'jpype1' n'était pas trouvé.
-        # On garde cette logique si on n'est pas dans un cas de forçage du vrai JPype.
-        try:
-            import jpype1 # Tenter d'importer jpype1
-            logger.info("Module 'jpype1' trouvé. Le mock JPype ne sera pas activé pour 'jpype' ou 'jpype1'.")
-        except ImportError:
-            logger.info("Module 'jpype1' non trouvé. Activation du mock JPype pour 'jpype' et 'jpype1'.")
-            from . import jpype_mock
-            sys.modules['jpype1'] = jpype_mock
-            sys.modules['jpype'] = jpype_mock
-            logger.info("Mock JPype activé pour 'jpype' et 'jpype1' car 'jpype1' est manquant.")
+        logger.info(f"Vrai JPype trouvé ({jpype_real_path}). Le mock ne sera PAS activé par défaut par tests/mocks/__init__.py à ce stade.")
+        # La fixture activate_jpype_mock_if_needed dans jpype_setup.py décidera si le mock
+        # est nécessaire pour un test spécifique (si le test n'est pas marqué 'real_jpype'
+        # ou si le vrai JPype n'a pas pu être chargé par jpype_setup.py).
+        # Aucune action de mocking ici si le vrai 'jpype' est disponible.
 
     except ImportError:
         # Le vrai jpype n'est pas installé, donc on peut mocker sans risque.
-        logger.info("Vrai module JPype non trouvé (ImportError). Activation du mock JPype.")
+        logger.info("Vrai module JPype non trouvé (ImportError initial). Activation du mock JPype par tests/mocks/__init__.py.")
         try:
             from . import jpype_mock
             # sys.modules['jpype1'] = jpype_mock # jpype1 n'est pas le nom standard
