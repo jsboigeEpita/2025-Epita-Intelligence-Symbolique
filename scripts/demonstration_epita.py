@@ -5,9 +5,11 @@ Ce script a pour but de démontrer les fonctionnalités clés du dépôt, inclua
 1. L'exécution des tests unitaires.
 2. L'analyse rhétorique sur un exemple de texte clair, tentant d'utiliser les services réels `InformalAgent` et `create_llm_service`.
    Si `OPENAI_API_KEY` n'est pas configurée ou si `create_llm_service` ne peut être importé, un `MockLLMService` est utilisé.
+   L'analyse des sophismes elle-même utilise un `MockFallacyDetector` pour cette démonstration afin de garantir une exécution rapide et prévisible.
 3. L'analyse rhétorique sur des données chiffrées. Le script tente d'utiliser les services réels `CryptoService`
    et `DefinitionService` pour le déchiffrement. L'analyse rhétorique d'un extrait est ensuite effectuée
    par un `InformalAgent` réel (utilisant le résultat de `create_llm_service` réel si configuré, sinon un mock).
+   L'analyse des sophismes elle-même utilise un `MockFallacyDetector` pour cette démonstration.
    **Correction (Sous-tâche F)**: `MockDefinitionService` retourne maintenant un objet `ExtractDefinitions` (ou son mock) correctement formé.
    **Correction (Sous-tâche I)**: L'initialisation de `RealDefinitionService` est corrigée pour inclure `config_file`.
 4. La génération d'un rapport complet à partir des résultats d'analyse de l'extrait chiffré.
@@ -33,6 +35,7 @@ Exécutez la commande suivante depuis la racine du projet :
 python scripts/demonstration_epita.py
 """
 # Imports nécessaires
+print("INFO [DEMO_SCRIPT_START]: Début des imports Python standards.")
 import subprocess
 import json
 from pathlib import Path
@@ -41,6 +44,7 @@ import sys # Ajouté pour sys.executable et sys.stdout/stderr.encoding
 import io # Ajouté pour TextIOWrapper
 import time # Ajouté pour mesurer le temps d'exécution
 # import traceback # Décommenter pour un traceback complet si nécessaire dans les excepts
+print("INFO [DEMO_IMPORT_DEBUG]: Avant import semantic_kernel.")
 import semantic_kernel as sk # Ajouté pour l'initialisation de InformalAgent
 print("INFO [DEMO_IMPORT_DEBUG]: Après imports Python standards et semantic_kernel.")
 
@@ -110,6 +114,7 @@ print(f"INFO [DEBUG_IMPORT]: Ancien chemin vers argumentation_analysis/services/
 
 
 # Import pour charger les variables d'environnement
+print("INFO [DEMO_IMPORT_DEBUG]: Avant import dotenv.")
 from dotenv import load_dotenv
 print("INFO [DEMO_IMPORT_DEBUG]: Après import dotenv.")
 
@@ -156,9 +161,14 @@ class MockCryptoService:
 print("INFO [DEMO_IMPORT_DEBUG]: Avant try-except import CryptoService/DefinitionService.")
 
 # Tentative d'importation des classes réelles pour l'analyse chiffrée (CryptoService, DefinitionService).
+print("INFO [DEMO_IMPORT_DEBUG]: Début du bloc try pour CryptoService et DefinitionService.")
 try:
+    print("INFO [DEMO_IMPORT_DEBUG]: Tentative d'import de argumentation_analysis.services.crypto_service...")
     from argumentation_analysis.services.crypto_service import CryptoService as RealCryptoService # Alias pour le message d'erreur
+    print("INFO [DEMO_IMPORT_DEBUG]: Import de CryptoService réussi.")
+    print("INFO [DEMO_IMPORT_DEBUG]: Tentative d'import de argumentation_analysis.services.definition_service...")
     from argumentation_analysis.services.definition_service import DefinitionService as RealDefinitionService # Alias
+    print("INFO [DEMO_IMPORT_DEBUG]: Import de DefinitionService réussi.")
     REAL_CRYPTO_DEFINITION_SERVICES_IMPORTED = True
     print("INFO: Services réels (CryptoService, DefinitionService) pour l'analyse chiffrée importés avec succès.")
     # Assigner les versions réelles aux variables globales si l'import réussit
@@ -173,12 +183,16 @@ except Exception as e_import_cds: # Capture d'exception plus large
     CryptoService = MockCryptoService
     DefinitionService = None # Sera défini plus bas après MockDefinitionService
     REAL_CRYPTO_DEFINITION_SERVICES_IMPORTED = False
+print("INFO [DEMO_IMPORT_DEBUG]: Fin du bloc try pour CryptoService et DefinitionService.")
 print("INFO [DEMO_IMPORT_DEBUG]: Après try-except import CryptoService/DefinitionService.")
 
 
 # Tentative d'importation des modèles d'extrait réels (ExtractDefinitions, Extract, SourceDefinition).
+print("INFO [DEMO_IMPORT_DEBUG]: Début du bloc try pour les modèles d'extrait.")
 try:
+    print("INFO [DEMO_IMPORT_DEBUG]: Tentative d'import de argumentation_analysis.models.extract_definition...")
     from argumentation_analysis.models.extract_definition import ExtractDefinitions as RealExtractDefinitions, SourceDefinition as RealSourceDefinition, Extract as RealExtract
+    print("INFO [DEMO_IMPORT_DEBUG]: Import des modèles d'extrait réussi.")
     ExtractDefinitions = RealExtractDefinitions
     SourceDefinition = RealSourceDefinition
     Extract = RealExtract
@@ -235,6 +249,7 @@ except Exception as e_import_extract_models: # Capture d'exception plus large
     SourceDefinition = MockSourceDefinitionPydanticCompat
     Extract = MockExtractPydanticCompat
     REAL_EXTRACT_MODELS_IMPORTED = False
+print("INFO [DEMO_IMPORT_DEBUG]: Fin du bloc try pour les modèles d'extrait.")
 print("INFO [DEMO_IMPORT_DEBUG]: Après try-except import modèles Extract.")
 
 
@@ -284,9 +299,12 @@ print("INFO [DEMO_IMPORT_DEBUG]: Après assignation MockDefinitionService si bes
 
 
 # Tentative d'importation des classes réelles pour l'analyse de texte clair.
+print("INFO [DEMO_IMPORT_DEBUG]: Début du bloc try pour InformalAgent.")
 try:
     # Correction de l'import pour InformalAgent pour refléter son nouvel emplacement
+    print("INFO [DEMO_IMPORT_DEBUG]: Tentative d'import de argumentation_analysis.agents.core.informal.informal_agent...")
     from argumentation_analysis.agents.core.informal.informal_agent import InformalAgent as RealInformalAgent
+    print("INFO [DEMO_IMPORT_DEBUG]: Import de InformalAgent réussi.")
     InformalAgent = RealInformalAgent # Assigner à la variable globale
     REAL_INFORMAL_AGENT_IMPORTED = True
     print("INFO: RealInformalAgent (InformalAgent) importé avec succès depuis argumentation_analysis.agents.core.informal.informal_agent.")
@@ -296,11 +314,15 @@ except Exception as e_import_ia:
     # import traceback # Décommenter pour un traceback complet si nécessaire
     # print(f"TRACEBACK [InformalAgent]: {traceback.format_exc()}")
     REAL_INFORMAL_AGENT_IMPORTED = False
+print("INFO [DEMO_IMPORT_DEBUG]: Fin du bloc try pour InformalAgent.")
 print("INFO [DEMO_IMPORT_DEBUG]: Après try-except import InformalAgent.")
 
+print("INFO [DEMO_IMPORT_DEBUG]: Début du bloc try pour create_llm_service.")
 try:
     # Mise à jour de l'import pour utiliser create_llm_service depuis argumentation_analysis.core.llm_service
+    print("INFO [DEMO_IMPORT_DEBUG]: Tentative d'import de argumentation_analysis.core.llm_service...")
     from argumentation_analysis.core.llm_service import create_llm_service as real_create_llm_service
+    print("INFO [DEMO_IMPORT_DEBUG]: Import de create_llm_service réussi.")
     create_llm_service = real_create_llm_service # Assigner à la variable globale
     REAL_LLM_SERVICE_FUNCTION_IMPORTED = True
     print("INFO: Fonction real_create_llm_service (create_llm_service) importée avec succès depuis argumentation_analysis.core.llm_service.")
@@ -312,6 +334,7 @@ except Exception as e_import_llms:
     # import traceback # Décommenter pour un traceback complet si nécessaire
     # print(f"TRACEBACK [create_llm_service]: {traceback.format_exc()}")
     REAL_LLM_SERVICE_FUNCTION_IMPORTED = False
+print("INFO [DEMO_IMPORT_DEBUG]: Fin du bloc try pour create_llm_service.")
 print("INFO [DEMO_IMPORT_DEBUG]: Après try-except import create_llm_service.")
 
 
@@ -378,11 +401,16 @@ def check_and_install_dependencies():
             try:
                 # Utiliser capture_output=True et text=True pour subprocess.run
                 # S'assurer que l'encodage est géré pour la sortie du subprocess
+                # Ajout d'un timeout de 300 secondes pour l'installation
+                print(f"INFO: Tentative d'installation de '{package_name}' avec un timeout de 300 secondes...")
                 pip_result = subprocess.run([sys.executable, "-m", "pip", "install", package_name], 
-                                            check=True, capture_output=True, text=True, encoding='utf-8', errors='replace')
+                                            check=True, capture_output=True, text=True, encoding='utf-8', errors='replace', timeout=300)
                 print(f"SUCCÈS: Le package '{package_name}' a été installé.")
                 if pip_result.stdout:
                     print(f"Sortie pip (stdout):\n{pip_result.stdout}")
+            except subprocess.TimeoutExpired:
+                print(f"ERREUR: L'installation de '{package_name}' a dépassé le timeout de 300 secondes.")
+                print(f"Veuillez vérifier votre connexion internet et installer '{package_name}' manuellement.")
             except subprocess.CalledProcessError as e:
                 print(f"ERREUR: Échec de l'installation de '{package_name}'. Code de retour : {e.returncode}")
                 # e.stdout et e.stderr sont déjà des chaînes si text=True a été utilisé, ou des bytes sinon.
@@ -409,15 +437,15 @@ def run_unit_tests():
     print("\n--- Exécution des tests unitaires ---")
     print("INFO: Les tests unitaires utilisent typiquement des mocks pour isoler le code testé.")
     start_time_tests = time.time()
-    print(f"INFO: Début de l'exécution des tests unitaires : {start_time_tests}")
+    print(f"INFO: Début de l'exécution des tests unitaires : {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(start_time_tests))}")
     try:
         # MODIFICATION 1: Capturer en bytes (retrait de text=True, encoding, errors)
         # Ajout d'un timeout de 900 secondes (15 minutes)
-        print("INFO: Exécution de pytest avec un timeout de 900 secondes...")
+        print("INFO: Exécution de pytest avec un timeout de 900 secondes (15 minutes)...")
         pytest_process = subprocess.run([sys.executable, "-m", "pytest"], capture_output=True, check=False, timeout=900) # Timeout augmenté
         
         end_time_tests = time.time()
-        print(f"INFO: Fin de l'exécution des tests unitaires : {end_time_tests}")
+        print(f"INFO: Fin de l'exécution des tests unitaires : {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(end_time_tests))}")
         print(f"INFO: Tests unitaires exécutés en {end_time_tests - start_time_tests:.2f} secondes.")
 
         # MODIFICATION 2: Décodage robuste de stdout et stderr
@@ -482,9 +510,9 @@ def run_unit_tests():
 
         # MODIFICATION 5: Utiliser pytest_process.returncode et pytest_stdout_str pour le résumé
         if pytest_process.returncode == 0:
-            print("\nTests unitaires réussis !")
+            print("\nSUCCÈS: Tests unitaires réussis !")
         else:
-            print(f"\nÉchec des tests unitaires ou certains tests ont échoué (code de retour : {pytest_process.returncode}).")
+            print(f"\nAVERTISSEMENT: Échec des tests unitaires ou certains tests ont échoué (code de retour : {pytest_process.returncode}).")
             
             summary_lines = []
             if pytest_stdout_str: 
@@ -511,23 +539,23 @@ def run_unit_tests():
             else: # Si pytest_stdout_str est vide
                 print("Impossible d'extraire un résumé : la sortie standard de pytest était vide.")
     except subprocess.TimeoutExpired:
-        print("ERREUR: L'exécution de pytest a dépassé le timeout de 900 secondes.") # Message mis à jour
-        # pytest_process n'existera pas complètement dans ce cas, ou sa sortie sera vide.
-        # On pourrait vouloir logger cela différemment.
+        print("ERREUR: L'exécution de pytest a dépassé le timeout de 900 secondes (15 minutes).")
+        print("Cela peut indiquer un problème dans les tests (boucle infinie, attente indéfinie), un environnement très lent, ou des tests particulièrement longs.")
+        print("Si ce problème persiste, essayez d'exécuter 'pytest -v' manuellement pour identifier les tests lents ou bloquants.")
         end_time_tests_timeout = time.time()
-        print(f"INFO: Fin de l'exécution des tests unitaires (timeout) : {end_time_tests_timeout}")
+        print(f"INFO: Fin de l'exécution des tests unitaires (timeout) : {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(end_time_tests_timeout))}")
         print(f"INFO: Tests unitaires (tentative) exécutés en {end_time_tests_timeout - start_time_tests:.2f} secondes avant timeout.")
     except FileNotFoundError:
         print("ERREUR: La commande 'pytest' n'a pas été trouvée. Assurez-vous que pytest est installé et dans votre PATH.")
         end_time_tests_error = time.time()
-        print(f"INFO: Fin de l'exécution des tests unitaires (erreur FileNotFoundError) : {end_time_tests_error}")
+        print(f"INFO: Fin de l'exécution des tests unitaires (erreur FileNotFoundError) : {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(end_time_tests_error))}")
         print(f"INFO: Tests unitaires (tentative) exécutés en {end_time_tests_error - start_time_tests:.2f} secondes.")
     except Exception as e:
         print(f"Une erreur inattendue est survenue lors de l'exécution des tests : {e}")
         import traceback
         traceback.print_exc()
         end_time_tests_exception = time.time()
-        print(f"INFO: Fin de l'exécution des tests unitaires (erreur Exception) : {end_time_tests_exception}")
+        print(f"INFO: Fin de l'exécution des tests unitaires (erreur Exception) : {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(end_time_tests_exception))}")
         print(f"INFO: Tests unitaires (tentative) exécutés en {end_time_tests_exception - start_time_tests:.2f} secondes.")
 
 
@@ -561,7 +589,7 @@ def analyze_clear_text_example(example_file_path: str):
         openai_api_key = os.getenv("OPENAI_API_KEY") # create_llm_service le lira de .env
 
         start_time_llm_init_clear = time.time()
-        print(f"INFO: Début de l'initialisation du LLMService (texte clair) : {start_time_llm_init_clear}")
+        print(f"INFO: Début de l'initialisation du LLMService (texte clair) : {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(start_time_llm_init_clear))}")
         if REAL_LLM_SERVICE_FUNCTION_IMPORTED and create_llm_service is not mock_create_llm_service and openai_api_key:
             try:
                 # create_llm_service ne prend pas api_key directement, il le lit depuis .env
@@ -583,11 +611,11 @@ def analyze_clear_text_example(example_file_path: str):
             current_llm_service_instance = mock_create_llm_service(service_id="clear_text_llm_default_fallback")() # Appel de la fonction mock
             analysis_description += " avec MockLLMService"
         end_time_llm_init_clear = time.time()
-        print(f"INFO: Fin de l'initialisation du LLMService (texte clair) : {end_time_llm_init_clear}")
+        print(f"INFO: Fin de l'initialisation du LLMService (texte clair) : {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(end_time_llm_init_clear))}")
         print(f"INFO: LLMService (texte clair) initialisé en {end_time_llm_init_clear - start_time_llm_init_clear:.2f} secondes.")
 
         start_time_agent_init_clear = time.time()
-        print(f"INFO: Début de l'initialisation de InformalAgent (texte clair) : {start_time_agent_init_clear}")
+        print(f"INFO: Début de l'initialisation de InformalAgent (texte clair) : {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(start_time_agent_init_clear))}")
         try:
             # Création du kernel sémantique
             kernel = sk.Kernel()
@@ -600,6 +628,8 @@ def analyze_clear_text_example(example_file_path: str):
                 print("AVERTISSEMENT: Aucune instance de service LLM n'a été créée. InformalAgent pourrait ne pas fonctionner correctement.")
             
             # InformalAgent est déjà la classe RealInformalAgent (ou None si échec import)
+            # Pour cette démonstration, l'analyse des sophismes utilise MockFallacyDetector.
+            print("INFO: L'analyse des sophismes pour le texte clair utilisera MockFallacyDetector (pour une exécution rapide et prévisible de la démo).")
             agent_instance = InformalAgent(
                 agent_id="clear_text_agent", 
                 tools={"fallacy_detector": MockFallacyDetector()}, # Fournir le mock détecteur
@@ -612,26 +642,31 @@ def analyze_clear_text_example(example_file_path: str):
             import traceback
             traceback.print_exc()
             end_time_agent_init_clear_error = time.time()
-            print(f"INFO: Fin de l'initialisation de InformalAgent (texte clair, erreur) : {end_time_agent_init_clear_error}")
+            print(f"INFO: Fin de l'initialisation de InformalAgent (texte clair, erreur) : {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(end_time_agent_init_clear_error))}")
             print(f"INFO: InformalAgent (texte clair, tentative) initialisé en {end_time_agent_init_clear_error - start_time_agent_init_clear:.2f} secondes.")
             return
         end_time_agent_init_clear = time.time()
-        print(f"INFO: Fin de l'initialisation de InformalAgent (texte clair) : {end_time_agent_init_clear}")
+        print(f"INFO: Fin de l'initialisation de InformalAgent (texte clair) : {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(end_time_agent_init_clear))}")
         print(f"INFO: InformalAgent (texte clair) initialisé en {end_time_agent_init_clear - start_time_agent_init_clear:.2f} secondes.")
             
-        start_time_analyze_clear = time.time()
-        print(f"INFO: Début de l'analyse des sophismes (texte clair) : {start_time_analyze_clear}")
-        analysis_results = agent_instance.analyze_fallacies(text_content)
-        end_time_analyze_clear = time.time()
-        print(f"INFO: Fin de l'analyse des sophismes (texte clair) : {end_time_analyze_clear}")
-        print(f"INFO: Analyse des sophismes (texte clair) effectuée en {end_time_analyze_clear - start_time_analyze_clear:.2f} secondes.")
-
-        print(f"Résultats de l'analyse des sophismes ({analysis_description}) :")
-        # S'assurer que analysis_results est sérialisable en JSON
         try:
-            print(json.dumps(analysis_results, indent=4, ensure_ascii=False))
-        except TypeError:
-            print(f"AVERTISSEMENT: Les résultats de l'analyse ne sont pas directement sérialisables en JSON. Affichage brut : {analysis_results}")
+            start_time_analyze_clear = time.time()
+            print(f"INFO: Début de l'analyse des sophismes (texte clair) : {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(start_time_analyze_clear))}")
+            analysis_results = agent_instance.analyze_fallacies(text_content)
+            end_time_analyze_clear = time.time()
+            print(f"INFO: Fin de l'analyse des sophismes (texte clair) : {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(end_time_analyze_clear))}")
+            print(f"INFO: Analyse des sophismes (texte clair) effectuée en {end_time_analyze_clear - start_time_analyze_clear:.2f} secondes.")
+
+            print(f"Résultats de l'analyse des sophismes ({analysis_description}) :")
+            # S'assurer que analysis_results est sérialisable en JSON
+            try:
+                print(json.dumps(analysis_results, indent=4, ensure_ascii=False))
+            except TypeError:
+                print(f"AVERTISSEMENT: Les résultats de l'analyse ne sont pas directement sérialisables en JSON. Affichage brut : {analysis_results}")
+        except Exception as e_analyze:
+            print(f"ERREUR lors de l'appel à agent_instance.analyze_fallacies pour le texte clair : {e_analyze}")
+            import traceback
+            traceback.print_exc()
 
 
     except Exception as e:
@@ -646,7 +681,9 @@ def analyze_encrypted_data() -> str | None:
 
     REAL_ENCRYPTION_KEY = None
     try:
+        print("INFO [DEMO_IMPORT_DEBUG]: Tentative d'import de ENCRYPTION_KEY depuis ui.config.")
         from argumentation_analysis.ui.config import ENCRYPTION_KEY as IMPORTED_REAL_ENCRYPTION_KEY
+        print("INFO [DEMO_IMPORT_DEBUG]: Import de ENCRYPTION_KEY réussi.")
         REAL_ENCRYPTION_KEY = IMPORTED_REAL_ENCRYPTION_KEY
         REAL_ENCRYPTION_KEY_IMPORTED = True
         print("INFO: Clé de chiffrement réelle (ENCRYPTION_KEY) importée depuis ui.config.")
@@ -671,7 +708,7 @@ def analyze_encrypted_data() -> str | None:
 
     # Initialisation de CryptoService (réel ou mock)
     start_time_crypto_init = time.time()
-    print(f"INFO: Début de l'initialisation de CryptoService : {start_time_crypto_init}")
+    print(f"INFO: Début de l'initialisation de CryptoService : {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(start_time_crypto_init))}")
     if CryptoService is not MockCryptoService and REAL_ENCRYPTION_KEY_IMPORTED and REAL_ENCRYPTION_KEY:
         try:
             current_crypto_service = CryptoService(encryption_key=REAL_ENCRYPTION_KEY)
@@ -688,7 +725,7 @@ def analyze_encrypted_data() -> str | None:
         print("INFO: Utilisation de MockCryptoService (import de RealCryptoService a échoué ou clé non dispo).")
         current_crypto_service = MockCryptoService()
     end_time_crypto_init = time.time()
-    print(f"INFO: Fin de l'initialisation de CryptoService : {end_time_crypto_init}")
+    print(f"INFO: Fin de l'initialisation de CryptoService : {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(end_time_crypto_init))}")
     print(f"INFO: CryptoService initialisé en {end_time_crypto_init - start_time_crypto_init:.2f} secondes.")
 
 
@@ -703,7 +740,7 @@ def analyze_encrypted_data() -> str | None:
             
     # Initialisation de DefinitionService (réel ou mock)
     start_time_def_init = time.time()
-    print(f"INFO: Début de l'initialisation de DefinitionService : {start_time_def_init}")
+    print(f"INFO: Début de l'initialisation de DefinitionService : {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(start_time_def_init))}")
     try:
         if DefinitionService is not MockDefinitionService: 
             if current_crypto_service: 
@@ -733,17 +770,17 @@ def analyze_encrypted_data() -> str | None:
             config_file=abs_definitions_file_path
         )
     end_time_def_init = time.time()
-    print(f"INFO: Fin de l'initialisation de DefinitionService : {end_time_def_init}")
+    print(f"INFO: Fin de l'initialisation de DefinitionService : {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(end_time_def_init))}")
     print(f"INFO: DefinitionService initialisé en {end_time_def_init - start_time_def_init:.2f} secondes.")
 
 
     try:
         start_time_load_defs = time.time()
-        print(f"INFO: Début du chargement des définitions d'extraits : {start_time_load_defs}")
+        print(f"INFO: Début du chargement des définitions d'extraits : {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(start_time_load_defs))}")
         print("INFO: Tentative de chargement (et déchiffrement si réel) des définitions d'extraits...")
         extract_definitions_obj = current_definition_service.load_definitions() 
         end_time_load_defs = time.time()
-        print(f"INFO: Fin du chargement des définitions d'extraits : {end_time_load_defs}")
+        print(f"INFO: Fin du chargement des définitions d'extraits : {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(end_time_load_defs))}")
         print(f"INFO: Définitions d'extraits chargées en {end_time_load_defs - start_time_load_defs:.2f} secondes.")
         
         if not extract_definitions_obj or not hasattr(extract_definitions_obj, 'sources') or not isinstance(extract_definitions_obj.sources, list) or not extract_definitions_obj.sources:
@@ -788,7 +825,7 @@ def analyze_encrypted_data() -> str | None:
         openai_api_key = os.getenv("OPENAI_API_KEY") # create_llm_service le lira de .env
 
         start_time_llm_init_encrypted = time.time()
-        print(f"INFO: Début de l'initialisation du LLMService (données chiffrées) : {start_time_llm_init_encrypted}")
+        print(f"INFO: Début de l'initialisation du LLMService (données chiffrées) : {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(start_time_llm_init_encrypted))}")
         if REAL_LLM_SERVICE_FUNCTION_IMPORTED and create_llm_service is not mock_create_llm_service and openai_api_key:
             try:
                 current_llm_service_instance_for_encrypted = create_llm_service(service_id="encrypted_data_llm")
@@ -808,11 +845,11 @@ def analyze_encrypted_data() -> str | None:
             current_llm_service_instance_for_encrypted = mock_create_llm_service(service_id="encrypted_llm_default_fallback")()
             analysis_description_encrypted += " avec MockLLMService"
         end_time_llm_init_encrypted = time.time()
-        print(f"INFO: Fin de l'initialisation du LLMService (données chiffrées) : {end_time_llm_init_encrypted}")
+        print(f"INFO: Fin de l'initialisation du LLMService (données chiffrées) : {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(end_time_llm_init_encrypted))}")
         print(f"INFO: LLMService (données chiffrées) initialisé en {end_time_llm_init_encrypted - start_time_llm_init_encrypted:.2f} secondes.")
 
         start_time_agent_init_encrypted = time.time()
-        print(f"INFO: Début de l'initialisation de InformalAgent (données chiffrées) : {start_time_agent_init_encrypted}")
+        print(f"INFO: Début de l'initialisation de InformalAgent (données chiffrées) : {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(start_time_agent_init_encrypted))}")
         try:
             kernel_encrypted = sk.Kernel()
             if current_llm_service_instance_for_encrypted:
@@ -821,6 +858,8 @@ def analyze_encrypted_data() -> str | None:
             else:
                 print("AVERTISSEMENT: Aucune instance de service LLM n'a été créée pour l'analyse chiffrée.")
 
+            # Pour cette démonstration, l'analyse des sophismes utilise MockFallacyDetector.
+            print("INFO: L'analyse des sophismes pour l'extrait chiffré utilisera MockFallacyDetector (pour une exécution rapide et prévisible de la démo).")
             agent_instance_encrypted = InformalAgent(
                 agent_id="encrypted_data_agent",
                 tools={"fallacy_detector": MockFallacyDetector()}, # Fournir le mock détecteur
@@ -832,32 +871,37 @@ def analyze_encrypted_data() -> str | None:
             import traceback
             traceback.print_exc()
             end_time_agent_init_encrypted_error = time.time()
-            print(f"INFO: Fin de l'initialisation de InformalAgent (données chiffrées, erreur) : {end_time_agent_init_encrypted_error}")
+            print(f"INFO: Fin de l'initialisation de InformalAgent (données chiffrées, erreur) : {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(end_time_agent_init_encrypted_error))}")
             print(f"INFO: InformalAgent (données chiffrées, tentative) initialisé en {end_time_agent_init_encrypted_error - start_time_agent_init_encrypted:.2f} secondes.")
             return None
         end_time_agent_init_encrypted = time.time()
-        print(f"INFO: Fin de l'initialisation de InformalAgent (données chiffrées) : {end_time_agent_init_encrypted}")
+        print(f"INFO: Fin de l'initialisation de InformalAgent (données chiffrées) : {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(end_time_agent_init_encrypted))}")
         print(f"INFO: InformalAgent (données chiffrées) initialisé en {end_time_agent_init_encrypted - start_time_agent_init_encrypted:.2f} secondes.")
             
-        start_time_analyze_encrypted = time.time()
-        print(f"INFO: Début de l'analyse des sophismes (données chiffrées) : {start_time_analyze_encrypted}")
-        real_analysis_data = agent_instance_encrypted.analyze_fallacies(text_content_extract)
-        end_time_analyze_encrypted = time.time()
-        print(f"INFO: Fin de l'analyse des sophismes (données chiffrées) : {end_time_analyze_encrypted}")
-        print(f"INFO: Analyse des sophismes (données chiffrées) effectuée en {end_time_analyze_encrypted - start_time_analyze_encrypted:.2f} secondes.")
-
-        structured_analysis_result = {
-            "extract_id": extract_id,
-            "analysis_type": f"Rhetorical Analysis ({analysis_description_encrypted})",
-            "analysis_details": real_analysis_data
-        }
-        analysis_results_list.append(structured_analysis_result)
-
-        print("\nRésultat de l'analyse de l'extrait (formaté pour sauvegarde) :")
         try:
-            print(json.dumps(analysis_results_list, indent=4, ensure_ascii=False)) 
-        except TypeError:
-            print(f"AVERTISSEMENT: Les résultats de l'analyse (chiffrée) ne sont pas directement sérialisables en JSON. Affichage brut : {analysis_results_list}")
+            start_time_analyze_encrypted = time.time()
+            print(f"INFO: Début de l'analyse des sophismes (données chiffrées) : {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(start_time_analyze_encrypted))}")
+            real_analysis_data = agent_instance_encrypted.analyze_fallacies(text_content_extract)
+            end_time_analyze_encrypted = time.time()
+            print(f"INFO: Fin de l'analyse des sophismes (données chiffrées) : {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(end_time_analyze_encrypted))}")
+            print(f"INFO: Analyse des sophismes (données chiffrées) effectuée en {end_time_analyze_encrypted - start_time_analyze_encrypted:.2f} secondes.")
+
+            structured_analysis_result = {
+                "extract_id": extract_id,
+                "analysis_type": f"Rhetorical Analysis ({analysis_description_encrypted})",
+                "analysis_details": real_analysis_data
+            }
+            analysis_results_list.append(structured_analysis_result)
+
+            print("\nRésultat de l'analyse de l'extrait (formaté pour sauvegarde) :")
+            try:
+                print(json.dumps(analysis_results_list, indent=4, ensure_ascii=False)) 
+            except TypeError:
+                print(f"AVERTISSEMENT: Les résultats de l'analyse (chiffrée) ne sont pas directement sérialisables en JSON. Affichage brut : {analysis_results_list}")
+        except Exception as e_analyze_enc:
+            print(f"ERREUR lors de l'appel à agent_instance_encrypted.analyze_fallacies pour l'extrait chiffré : {e_analyze_enc}")
+            import traceback
+            traceback.print_exc()
 
 
         results_dir = Path(project_root) / "results" # Utilisation de project_root
@@ -906,7 +950,7 @@ def generate_report_from_analysis(analysis_json_path: str):
         return
 
     start_time_report_gen = time.time()
-    print(f"INFO: Début de la génération du rapport : {start_time_report_gen}")
+    print(f"INFO: Début de la génération du rapport : {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(start_time_report_gen))}")
     try:
         command = [
             sys.executable, str(report_script_path.resolve()), 
@@ -973,7 +1017,7 @@ def generate_report_from_analysis(analysis_json_path: str):
     except subprocess.TimeoutExpired:
         print("ERREUR: L'exécution du script de génération de rapport a dépassé le timeout de 300 secondes.")
         end_time_report_gen_timeout = time.time()
-        print(f"INFO: Fin de la génération du rapport (timeout) : {end_time_report_gen_timeout}")
+        print(f"INFO: Fin de la génération du rapport (timeout) : {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(end_time_report_gen_timeout))}")
         print(f"INFO: Génération du rapport (tentative) effectuée en {end_time_report_gen_timeout - start_time_report_gen:.2f} secondes avant timeout.")
     except FileNotFoundError:
         print(f"ERREUR: L'interpréteur Python ('{sys.executable}') ou le script de rapport n'a pas été trouvé.")
@@ -982,23 +1026,42 @@ def generate_report_from_analysis(analysis_json_path: str):
         import traceback
         traceback.print_exc()
     end_time_report_gen = time.time()
-    print(f"INFO: Fin de la génération du rapport : {end_time_report_gen}")
+    print(f"INFO: Fin de la génération du rapport : {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(end_time_report_gen))}")
     print(f"INFO: Génération du rapport effectuée en {end_time_report_gen - start_time_report_gen:.2f} secondes.")
 
 
 if __name__ == "__main__":
     print("=== Début du script de démonstration EPITA ===")
-    print("INFO [MAIN_EXEC]: Atteint le bloc if __name__ == \"__main__\", avant check_and_install_dependencies.") # Ligne de débogage
+    start_time_script = time.time()
+    print(f"INFO [MAIN_EXEC]: Heure de début du script : {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(start_time_script))}")
+
+    print("INFO [MAIN_EXEC]: Atteint le bloc if __name__ == \"__main__\".")
+    print("INFO [MAIN_EXEC]: Appel de check_and_install_dependencies()...")
     check_and_install_dependencies()
+    print("INFO [MAIN_EXEC]: Fin de check_and_install_dependencies().")
+
+    print("INFO [MAIN_EXEC]: Appel de run_unit_tests()...")
     run_unit_tests()
+    print("INFO [MAIN_EXEC]: Fin de run_unit_tests().")
+
     example_file = os.path.join(project_root, "examples", "exemple_sophisme.txt") # Utilisation de project_root
+    print(f"INFO [MAIN_EXEC]: Appel de analyze_clear_text_example() avec le fichier : {example_file}...")
     analyze_clear_text_example(example_file)
+    print("INFO [MAIN_EXEC]: Fin de analyze_clear_text_example().")
+
+    print("INFO [MAIN_EXEC]: Appel de analyze_encrypted_data()...")
     encrypted_analysis_output_file = analyze_encrypted_data()
+    print("INFO [MAIN_EXEC]: Fin de analyze_encrypted_data().")
 
     if encrypted_analysis_output_file:
+        print(f"INFO [MAIN_EXEC]: Appel de generate_report_from_analysis() avec le fichier : {encrypted_analysis_output_file}...")
         generate_report_from_analysis(encrypted_analysis_output_file)
+        print("INFO [MAIN_EXEC]: Fin de generate_report_from_analysis().")
     else:
         print("\nINFO: La génération de rapport à partir des données chiffrées a été sautée.")
         print("Cela peut être dû à une erreur lors de l'étape d'analyse chiffrée ou parce qu'aucun résultat n'a été produit.")
 
+    end_time_script = time.time()
+    print(f"\nINFO [MAIN_EXEC]: Heure de fin du script : {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(end_time_script))}")
+    print(f"INFO [MAIN_EXEC]: Durée totale d'exécution du script : {end_time_script - start_time_script:.2f} secondes.")
     print("\n=== Fin du script de démonstration EPITA ===")
