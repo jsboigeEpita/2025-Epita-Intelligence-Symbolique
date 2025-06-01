@@ -1,3 +1,8 @@
+# Ce script vérifie la configuration de l'environnement pour l'utilisation de JPype
+# avec TweetyProject. Il s'assure que Python, Java (JDK), JPype et les JARs de Tweety
+# sont correctement configurés et accessibles.
+# Il sert de première démonstration simple de l'intégration JPype/Tweety.
+
 import sys
 import os
 import glob
@@ -75,7 +80,8 @@ print("\n8. Détermination du chemin JVM à utiliser...")
 jvm_path_to_use = None
 preferred_jvm_source = ""
 
-# Priorité 1: JDK 17 Portable
+# Priorité 1: JDK 17 Portable (fourni avec le projet)
+# C'est la méthode privilégiée pour assurer un environnement cohérent pour tous les utilisateurs.
 if portable_jdk17_jvm_path and os.path.exists(portable_jdk17_jvm_path):
     jvm_path_to_use = portable_jdk17_jvm_path
     preferred_jvm_source = "JDK 17 Portable"
@@ -83,7 +89,8 @@ if portable_jdk17_jvm_path and os.path.exists(portable_jdk17_jvm_path):
 else:
     print(f"   INFO: JDK 17 Portable non utilisé (chemin: {portable_jdk17_jvm_path}).")
 
-# Priorité 2: JAVA_HOME
+# Priorité 2: Variable d'environnement JAVA_HOME
+# Si le JDK portable n'est pas trouvé, on se rabat sur JAVA_HOME configuré par l'utilisateur.
 if not jvm_path_to_use and java_home:
     print(f"   INFO: Priorité 2 - Tentative avec JAVA_HOME ({java_home})...")
     # Tenter de construire le chemin vers jvm.dll/libjvm.so à partir de JAVA_HOME
@@ -122,7 +129,9 @@ if not jvm_path_to_use and java_home:
 elif not jvm_path_to_use: # Si JDK17 portable non utilisé ET JAVA_HOME non défini
      print(f"   INFO: JAVA_HOME n'est pas défini (et JDK 17 portable non utilisé ou non trouvé).")
 
-# Priorité 3: JPype Default
+# Priorité 3: Chemin JVM par défaut détecté par JPype
+# En dernier recours, si ni le JDK portable ni JAVA_HOME ne sont utilisables,
+# on essaie avec le chemin que JPype trouve par défaut sur le système.
 if not jvm_path_to_use and default_jvm_path:
     print(f"   INFO: Priorité 3 - Utilisation du chemin JVM par défaut de JPype: {default_jvm_path}")
     jvm_path_to_use = default_jvm_path
@@ -182,14 +191,22 @@ if jpype.isJVMStarted():
     else:
         print("    Tentative d'import d'une classe Tweety (PlSignature)...")
         try:
-# Enregistrer le domaine de premier niveau peut aider JPype à trouver les classes
+            # Enregistrer le domaine de premier niveau (par exemple, "org" pour "org.tweetyproject")
+            # aide JPype à résoudre les imports de classes Java.
+            # C'est une bonne pratique pour éviter les ambiguïtés et faciliter la découverte des classes.
             jpype.imports.registerDomain("org")
             from org.tweetyproject.logics.pl.syntax import PlSignature
             print("      Import de org.tweetyproject.logics.pl.syntax.PlSignature réussi.")
             try:
+                # Instanciation simple d'un objet PlSignature.
+                # Cela confirme que la classe est non seulement importable mais aussi utilisable.
                 sig = PlSignature()
                 print(f"      Instanciation de PlSignature réussie: {sig}")
-                print("      SUCCESS: L'environnement JPype et Tweety semble fonctionner !")
+                print("\n      #####################################################################")
+                print("      ### SUCCÈS : L'environnement JPype et Tweety est opérationnel ! ###")
+                print("      ### Vous pouvez maintenant utiliser les classes Java de Tweety  ###")
+                print("      ### dans vos scripts Python.                                  ###")
+                print("      #####################################################################")
             except Exception as e_inst:
                 print(f"ERREUR lors de l'instanciation de PlSignature: {e_inst}")
         except ImportError as e_import_class:
