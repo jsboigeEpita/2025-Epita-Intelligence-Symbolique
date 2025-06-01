@@ -27,47 +27,46 @@ def test_agent_creation():
     """Test de création des agents avec les bons paramètres"""
     print("\n=== TEST CRÉATION AGENTS ===")
     
-    results = {}
-    
     # Test InformalAgent
     try:
         from argumentation_analysis.agents.core.informal.informal_agent import InformalAgent
         
         tools = create_mock_tools()
         agent = InformalAgent(agent_id="test_agent", tools=tools)
-        results['InformalAgent'] = 'OK'
+        assert isinstance(agent, InformalAgent)
         print("OK InformalAgent créé avec succès")
         
         # Test d'une méthode simple
         try:
-            result = agent.analyze_text("Test simple")
-            results['InformalAgent_analyze'] = f'OK - Type: {type(result)}'
-            print(f"OK InformalAgent.analyze_text - Type: {type(result)}")
-        except Exception as e:
-            results['InformalAgent_analyze'] = f'ERREUR: {str(e)}'
-            print(f"ERREUR InformalAgent.analyze_text: {str(e)}")
+            analysis_result = agent.analyze_text("Test simple")
+            assert analysis_result is not None # Ou une assertion plus spécifique
+            print(f"OK InformalAgent.analyze_text - Type: {type(analysis_result)}")
+        except Exception as e_analyze:
+            print(f"ERREUR InformalAgent.analyze_text: {str(e_analyze)}")
+            raise  # Re-raise pour que pytest le capture
             
-    except Exception as e:
-        results['InformalAgent'] = f'ERREUR: {str(e)}'
-        print(f"ERREUR InformalAgent: {str(e)}")
+    except Exception as e_informal:
+        print(f"ERREUR InformalAgent: {str(e_informal)}")
+        raise # Re-raise pour que pytest le capture
     
     # Test ExtractAgent
     try:
         from argumentation_analysis.agents.core.extract.extract_agent import ExtractAgent
         
-        extract_agent = ExtractAgent(
+        extract_agent_instance = ExtractAgent(
             extract_agent=Mock(),
             validation_agent=Mock(),
             extract_plugin=Mock()
         )
-        results['ExtractAgent'] = 'OK'
+        assert isinstance(extract_agent_instance, ExtractAgent)
         print("OK ExtractAgent créé avec succès")
         
-    except Exception as e:
-        results['ExtractAgent'] = f'ERREUR: {str(e)}'
-        print(f"ERREUR ExtractAgent: {str(e)}")
+    except Exception as e_extract:
+        print(f"ERREUR ExtractAgent: {str(e_extract)}")
+        raise # Re-raise pour que pytest le capture
     
-    return results
+    # Si toutes les assertions passent et aucune exception n'est levée, le test est réussi.
+    # Pytest n'attend pas de valeur de retour.
 
 def run_unittest_tests():
     """Exécute les tests unittest disponibles"""

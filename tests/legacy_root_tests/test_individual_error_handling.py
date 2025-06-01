@@ -73,13 +73,13 @@ def test_individual_methods():
         print(f"Total: {len(test_methods)}")
         print(f"Taux de réussite: {(successes/len(test_methods)*100):.1f}%")
         
-        return successes, failures
+        assert failures == 0, f"{failures} tests failed in TestInformalErrorHandling"
         
     except Exception as e:
-        print(f"Erreur lors de l'import: {e}")
+        print(f"Erreur lors de l'import ou de l'exécution des tests individuels: {e}")
         import traceback
         traceback.print_exc()
-        return 0, 0
+        raise # Re-raise pour que pytest le capture comme une erreur
 
 if __name__ == "__main__":
     test_individual_methods()

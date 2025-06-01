@@ -28,10 +28,10 @@ def test_analysis_runner_file():
             else:
                 print(f"ERREUR: {method.replace('def ', '').replace('(', '')} manquante")
         
-        return len(found_methods) == len(methods_to_check)
+        assert len(found_methods) == len(methods_to_check)
     except Exception as e:
         print(f"ERREUR lecture analysis_runner: {e}")
-        return False
+        raise
 
 def test_conftest_file():
     """Test direct du fichier conftest.py"""
@@ -56,10 +56,10 @@ def test_conftest_file():
             else:
                 print(f"ERREUR: {check} manquant")
         
-        return len(found_checks) >= 3  # Au moins 3 sur 4
+        assert len(found_checks) >= 3  # Au moins 3 sur 4
     except Exception as e:
         print(f"ERREUR lecture conftest: {e}")
-        return False
+        raise
 
 def test_integration_file():
     """Test du fichier d'intégration corrigé"""
@@ -83,10 +83,10 @@ def test_integration_file():
             else:
                 print(f"ERREUR: {check} manquant")
         
-        return len(found_checks) >= 2
+        assert len(found_checks) >= 2
     except Exception as e:
         print(f"ERREUR lecture integration: {e}")
-        return False
+        raise
 
 def main():
     print("=== TEST DIRECT DES CORRECTIONS ===")
