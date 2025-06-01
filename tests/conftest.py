@@ -109,6 +109,70 @@ if mocks_dir_for_mock not in sys.path:
 print("INFO: Mocking global de Matplotlib et NetworkX commenté pour débogage.")
 
 # --- Mock NumPy Immédiat ---
+
+class MockRecarray:
+    def __init__(self, *args, **kwargs):
+        # Simuler la création d'un tableau, stocker les args/kwargs si nécessaire
+        self.args = args
+        self.kwargs = kwargs
+        # Ajouter des attributs que les tests pourraient vérifier, ex: shape, dtype
+        if args and isinstance(args[0], tuple): # shape
+             self.shape = args[0]
+        else:
+             self.shape = (args[0],) if args and args[0] is not None else (0,)
+
+        # Simuler dtype et names à partir des kwargs
+        # Créer un mock pour dtype qui aura un attribut names
+        self.dtype = MagicMock(name="recarray_dtype_mock")
+        # S'assurer que names est une liste, même si kwargs.get('names') est None
+        names_arg = kwargs.get('names')
+        self.dtype.names = list(names_arg) if names_arg is not None else []
+
+
+    def __getattr__(self, name):
+        # Pour éviter les AttributeError sur des champs non explicitement mockés
+        # et permettre l'accès à des champs comme 'id', 'value' directement sur l'instance
+        if name in self.kwargs.get('names', []):
+            # Simuler l'accès à un champ nommé
+            # Pourrait retourner un mock ou une valeur par défaut
+            # print(f"MockRecarray: Accessing field '{name}'")
+            # Pour l'instant, retourne un MagicMock pour permettre des assertions dessus
+            field_mock = MagicMock(name=f"MockRecarray.field.{name}")
+            # Si vous avez besoin que ce champ soit indexable (ex: arr['id'][0]),
+            # vous pouvez faire field_mock.__getitem__ = lambda key: MagicMock(name=f"MockRecarray.field.{name}.item")
+            return field_mock
+        
+        # Gérer les attributs attendus comme shape et dtype
+        if name in ['shape', 'dtype', 'args', 'kwargs']:
+            return object.__getattribute__(self, name)
+
+        # Pour les autres attributs, retourner un MagicMock pour éviter les erreurs
+        # print(f"MockRecarray: __getattr__ called for unhandled attribute '{name}', returning MagicMock")
+        return MagicMock(name=f"MockRecarray.unhandled.{name}")
+
+    def __getitem__(self, key):
+        # Permettre l'indexation, par exemple arr[0] ou arr['id']
+        # print(f"MockRecarray: __getitem__ called with key '{key}'")
+        if isinstance(key, str) and key in self.kwargs.get('names', []):
+            # Accès par nom de champ
+            field_mock = MagicMock(name=f"MockRecarray.field_getitem.{key}")
+            # Pour permettre arr['id'][0], ce mock doit aussi être indexable
+            field_mock.__getitem__ = lambda idx: MagicMock(name=f"MockRecarray.field_getitem.{key}.item_{idx}")
+            return field_mock
+        elif isinstance(key, int):
+            # Accès par index numérique, simuler une ligne
+            row_mock = MagicMock(name=f"MockRecarray.row_{key}")
+            # Pour permettre arr[0]['id']
+            def get_field_from_row(field_name):
+                if field_name in self.kwargs.get('names', []):
+                    return MagicMock(name=f"MockRecarray.row_{key}.field_{field_name}")
+                raise KeyError(field_name)
+            row_mock.__getitem__ = get_field_from_row
+            return row_mock
+        
+        return MagicMock(name=f"MockRecarray.getitem.{key}")
+
+
 def _install_numpy_mock_immediately():
     # Toujours installer/réinstaller le mock pour s'assurer qu'il est prioritaire
     # et correctement configuré, surtout si d'autres tests modifient sys.modules['numpy']
@@ -142,17 +206,7 @@ def _install_numpy_mock_immediately():
         # Création explicite du mock pour numpy.rec et numpy.rec.recarray
         _mock_rec_submodule = type('rec', (), {})
         # Remplacer par MagicMock pour permettre l'appel avec des arguments
-        _mock_rec_submodule.recarray = MagicMock(name="numpy.rec.recarray_mock")
-        # Simuler un comportement minimal si nécessaire, par exemple, retourner un mock de tableau
-        def mock_recarray_constructor(*args, **kwargs):
-            # Pour l'instant, retourne juste une autre MagicMock simulant un tableau
-            # On pourrait ajouter des attributs comme .shape, .dtype si les tests en ont besoin
-            mock_array_instance = MagicMock(name="recarray_instance")
-            # Exemple: mock_array_instance.shape = args[0] if args else (0,)
-            # mock_array_instance.dtype = MagicMock() # ou un mock de dtype plus spécifique
-            # mock_array_instance.dtype.names = kwargs.get('names')
-            return mock_array_instance
-        _mock_rec_submodule.recarray.side_effect = mock_recarray_constructor
+        _mock_rec_submodule.recarray = MockRecarray # Assigner la classe elle-même
 
         # Mettre le sous-module mocké dans sys.modules pour les imports directs `from numpy import rec` ou `import numpy.rec`
         sys.modules['numpy.rec'] = _mock_rec_submodule
@@ -327,11 +381,7 @@ def setup_numpy():
         # Création explicite et assignation du mock pour numpy.rec et numpy.rec.recarray
         _mock_rec_submodule_setup = type('rec', (), {})
         # Remplacer par MagicMock pour permettre l'appel avec des arguments
-        _mock_rec_submodule_setup.recarray = MagicMock(name="numpy.rec.recarray_mock_setup")
-        def mock_recarray_constructor_setup(*args, **kwargs):
-            mock_array_instance = MagicMock(name="recarray_instance_setup")
-            return mock_array_instance
-        _mock_rec_submodule_setup.recarray.side_effect = mock_recarray_constructor_setup
+        _mock_rec_submodule_setup.recarray = MockRecarray # Assigner la classe elle-même
 
         # Mettre le sous-module mocké dans sys.modules pour les imports directs `from numpy import rec` ou `import numpy.rec`
         sys.modules['numpy.rec'] = _mock_rec_submodule_setup
