@@ -20,6 +20,8 @@ logger = logging.getLogger("NumpyMock")
 
 # Version
 __version__ = "1.24.3"
+__spec__ = MagicMock(name='numpy.__spec__') # Ajout pour compatibilité import
+_CopyMode = MagicMock(name='numpy._CopyMode') # Ajout pour compatibilité scipy/sklearn
 
 # Classes de base
 class generic: # Classe de base pour les scalaires NumPy
