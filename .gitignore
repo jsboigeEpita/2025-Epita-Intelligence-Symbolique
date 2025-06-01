@@ -49,9 +49,10 @@ README_TESTS.md
 argumentation_analysis/tests/tools/reports/test_report_*.txt
 results/rhetorical_analysis_*.json
 
-# JDK local et temporaire
-/portable_jdk/
-/_temp/OpenJDK*.zip
+# Outils portables et répertoires temporaires sous libs/
+libs/portable_jdk/
+libs/portable_octave/
+libs/_temp*/
 
 # Pytest output files
 pytest_hierarchical_full_v4.txt
