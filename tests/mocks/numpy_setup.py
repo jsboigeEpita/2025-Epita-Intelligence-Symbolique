@@ -2,24 +2,48 @@ import sys
 from unittest.mock import MagicMock
 import pytest
 import importlib # Ajouté pour numpy_mock si besoin d'import dynamique
+import logging # Ajout pour la fonction helper
+from types import ModuleType # Ajouté pour créer des objets modules
+
+# Configuration du logger pour ce module si pas déjà fait globalement
+# Ceci est un exemple, adaptez selon la configuration de logging du projet.
+# Si un logger est déjà configuré au niveau racine et propagé, ceci n'est pas nécessaire.
+logger = logging.getLogger(__name__)
+# Pour s'assurer que les messages INFO de la fonction helper sont visibles pendant le test:
+# if not logger.handlers: # Décommentez et ajustez si les logs ne s'affichent pas comme attendu
+#     handler = logging.StreamHandler(sys.stdout)
+#     handler.setFormatter(logging.Formatter('%(levelname)s:%(name)s:%(message)s'))
+#     logger.addHandler(handler)
+#     logger.setLevel(logging.INFO)
+
+
+# DÉBUT : Fonction helper à ajouter
+def deep_delete_from_sys_modules(module_name_prefix, logger_instance):
+    keys_to_delete = [k for k in sys.modules if k == module_name_prefix or k.startswith(module_name_prefix + '.')]
+    if keys_to_delete:
+        logger_instance.info(f"Nettoyage des modules sys pour préfixe '{module_name_prefix}': {keys_to_delete}")
+    for key in keys_to_delete:
+        try:
+            del sys.modules[key]
+        except KeyError:
+            logger_instance.warning(f"Clé '{key}' non trouvée dans sys.modules lors de la tentative de suppression (deep_delete).")
+# FIN : Fonction helper
+
 
 # Tentative d'importation de numpy_mock. S'il est dans le même répertoire (tests/mocks), cela devrait fonctionner.
 try:
-    import numpy_mock
+    import numpy_mock # numpy_mock.py devrait définir .core, ._core, et dans ceux-ci, ._multiarray_umath
 except ImportError:
-    # Fallback si l'import direct échoue, pourrait indiquer un problème de structure ou de PYTHONPATH
-    # pour l'exécution de ce module isolément, bien que pytest devrait le gérer.
     print("ERREUR: numpy_setup.py: Impossible d'importer numpy_mock directement.")
     numpy_mock = MagicMock(name="numpy_mock_fallback_in_numpy_setup")
     numpy_mock.typing = MagicMock()
-    numpy_mock._core = MagicMock()
-    numpy_mock.core = MagicMock()
+    numpy_mock._core = MagicMock() 
+    numpy_mock.core = MagicMock()  
     numpy_mock.linalg = MagicMock()
     numpy_mock.fft = MagicMock()
     numpy_mock.lib = MagicMock()
     numpy_mock.__version__ = '1.24.3.mock_fallback'
-    # Simuler les sous-modules de core si nécessaire pour éviter des AttributeError
-    if hasattr(numpy_mock._core, 'multiarray'):
+    if hasattr(numpy_mock._core, 'multiarray'): # Pourrait être redondant si core est bien mocké
         numpy_mock._core.multiarray = MagicMock()
     if hasattr(numpy_mock.core, 'multiarray'):
         numpy_mock.core.multiarray = MagicMock()
@@ -36,16 +60,16 @@ class MockRecarray:
         shape_arg = kwargs.get('shape')
         if shape_arg is not None:
             self.shape = shape_arg
-        elif args and isinstance(args[0], tuple): # shape as positional arg
+        elif args and isinstance(args[0], tuple): 
              self.shape = args[0]
-        elif args and args[0] is not None: # shape as single integer positional arg
+        elif args and args[0] is not None: 
              self.shape = (args[0],)
         else:
-             self.shape = (0,) # Default or if no shape info
+             self.shape = (0,) 
         self.dtype = MagicMock(name="recarray_dtype_mock")
         names_arg = kwargs.get('names')
         self.dtype.names = list(names_arg) if names_arg is not None else []
-        self._formats = kwargs.get('formats') # Stocker les formats
+        self._formats = kwargs.get('formats') 
 
     @property
     def names(self):
@@ -56,9 +80,9 @@ class MockRecarray:
         return self._formats
 
     def __getattr__(self, name):
-        if name == 'names': # Gérer l'accès à .names via __getattr__ si @property n'est pas suffisant (ne devrait pas être le cas)
+        if name == 'names': 
             return self.dtype.names
-        if name == 'formats': # Gérer l'accès à .formats via __getattr__
+        if name == 'formats': 
             return self._formats
         if name in self.kwargs.get('names', []):
             field_mock = MagicMock(name=f"MockRecarray.field.{name}")
@@ -85,7 +109,6 @@ class MockRecarray:
 def _install_numpy_mock_immediately():
     print("INFO: numpy_setup.py: _install_numpy_mock_immediately: Tentative d'installation/réinstallation du mock NumPy.")
     try:
-        # numpy_mock est importé en haut du fichier
         mock_numpy_attrs = {attr: getattr(numpy_mock, attr) for attr in dir(numpy_mock) if not attr.startswith('__')}
         mock_numpy_attrs['__version__'] = numpy_mock.__version__ if hasattr(numpy_mock, '__version__') else '1.24.3.mock'
         
@@ -95,10 +118,147 @@ def _install_numpy_mock_immediately():
         
         if hasattr(numpy_mock, 'typing'):
             sys.modules['numpy.typing'] = numpy_mock.typing
-        if hasattr(numpy_mock, '_core'):
-            sys.modules['numpy._core'] = numpy_mock._core
-        if hasattr(numpy_mock, 'core'):
-            sys.modules['numpy.core'] = numpy_mock.core
+
+        # Configuration de numpy.core comme un module
+        if hasattr(numpy_mock, 'core'): 
+            numpy_core_obj = type('core', (object,), {}) 
+            numpy_core_obj.__name__ = 'numpy.core'
+            numpy_core_obj.__package__ = 'numpy'
+            numpy_core_obj.__path__ = [] 
+            
+            # Assigner les attributs de la classe numpy_mock.core à l'objet module
+            # (numpy_mock.core est la classe définie dans numpy_mock.py)
+            # (numpy_mock.core._multiarray_umath est _multiarray_umath_mock_instance)
+            if hasattr(numpy_mock.core, '_multiarray_umath'):
+                # Créer un véritable objet ModuleType pour _multiarray_umath
+                umath_module_name_core = 'numpy.core._multiarray_umath'
+                umath_mock_obj_core = ModuleType(umath_module_name_core)
+                
+                # Copier les attributs de l'instance de _NumPy_Core_Multiarray_Umath_Mock
+                # vers le nouvel objet module. numpy_mock.core._multiarray_umath est l'instance.
+                source_mock_instance_core = numpy_mock.core._multiarray_umath
+                for attr_name in dir(source_mock_instance_core):
+                    if not attr_name.startswith('__') or attr_name in ['__name__', '__package__', '__path__']: # Copier certains dunders
+                        setattr(umath_mock_obj_core, attr_name, getattr(source_mock_instance_core, attr_name))
+                
+                # S'assurer que les attributs essentiels de module sont là
+                if not hasattr(umath_mock_obj_core, '__name__'):
+                    umath_mock_obj_core.__name__ = umath_module_name_core
+                if not hasattr(umath_mock_obj_core, '__package__'):
+                    umath_mock_obj_core.__package__ = 'numpy.core'
+                if not hasattr(umath_mock_obj_core, '__path__'):
+                     umath_mock_obj_core.__path__ = [] # Les modules C n'ont pas de __path__ mais pour un mock c'est ok
+                # Supprimer la définition par défaut de _ARRAY_API si non copié
+                # if not hasattr(umath_mock_obj_core, '_ARRAY_API'):
+                #     umath_mock_obj_core._ARRAY_API = None
+
+                numpy_core_obj._multiarray_umath = umath_mock_obj_core
+                sys.modules[umath_module_name_core] = umath_mock_obj_core
+                logger.info(f"NumpyMock: {umath_module_name_core} configuré comme ModuleType et défini dans sys.modules.")
+
+            if hasattr(numpy_mock.core, 'multiarray'): # numpy_mock.core.multiarray est une CLASSE vide
+                multiarray_module_name_core = 'numpy.core.multiarray'
+                multiarray_mock_obj_core = ModuleType(multiarray_module_name_core)
+                multiarray_mock_obj_core.__name__ = multiarray_module_name_core
+                multiarray_mock_obj_core.__package__ = 'numpy.core'
+                multiarray_mock_obj_core.__path__ = []
+                # multiarray_mock_obj_core._ARRAY_API = None # Hypothèse: commenté pour test
+
+                # Potentiellement copier d'autres attributs si _NumPy_Core_Multiarray_Mock était plus fournie
+                # source_multiarray_cls_core = numpy_mock.core.multiarray
+                # try:
+                #     # Si c'est une classe avec des attributs statiques ou un __init__ simple
+                #     # pour une instance temporaire afin de copier les attributs.
+                #     temp_instance = source_multiarray_cls_core()
+                #     for attr_name_ma in dir(temp_instance):
+                #         if not attr_name_ma.startswith('__') or attr_name_ma in ['__name__', '__package__', '__path__']:
+                #             setattr(multiarray_mock_obj_core, attr_name_ma, getattr(temp_instance, attr_name_ma))
+                # except TypeError: # Si la classe ne peut pas être instanciée simplement
+                #     logger.warning(f"NumpyMock: La classe {source_multiarray_cls_core} pour multiarray n'a pas pu être instanciée pour copier les attributs.")
+                #     pass
+
+
+                numpy_core_obj.multiarray = multiarray_mock_obj_core
+                sys.modules[multiarray_module_name_core] = multiarray_mock_obj_core
+                logger.info(f"NumpyMock: {multiarray_module_name_core} configuré comme ModuleType et défini dans sys.modules.")
+
+            if hasattr(numpy_mock.core, 'numeric'):
+                numpy_core_obj.numeric = numpy_mock.core.numeric
+            for attr_name in dir(numpy_mock.core):
+                if not attr_name.startswith('__') and not hasattr(numpy_core_obj, attr_name):
+                    setattr(numpy_core_obj, attr_name, getattr(numpy_mock.core, attr_name))
+            
+            sys.modules['numpy.core'] = numpy_core_obj
+            if hasattr(mock_numpy_module, '__dict__'): 
+                mock_numpy_module.core = numpy_core_obj
+            logger.info(f"NumpyMock: numpy.core configuré comme module. _multiarray_umath présent: {hasattr(numpy_core_obj, '_multiarray_umath')}")
+
+        # Configuration de numpy._core comme un module
+        if hasattr(numpy_mock, '_core'): 
+            numpy_underscore_core_obj = type('_core', (object,), {})
+            numpy_underscore_core_obj.__name__ = 'numpy._core'
+            numpy_underscore_core_obj.__package__ = 'numpy'
+            numpy_underscore_core_obj.__path__ = []
+
+            if hasattr(numpy_mock._core, '_multiarray_umath'):
+                # Créer un véritable objet ModuleType pour _multiarray_umath
+                umath_module_name_underscore_core = 'numpy._core._multiarray_umath'
+                umath_mock_obj_underscore_core = ModuleType(umath_module_name_underscore_core)
+
+                # Copier les attributs de l'instance de _NumPy_Core_Multiarray_Umath_Mock
+                source_mock_instance_underscore_core = numpy_mock._core._multiarray_umath
+                for attr_name in dir(source_mock_instance_underscore_core):
+                    if not attr_name.startswith('__') or attr_name in ['__name__', '__package__', '__path__']:
+                        setattr(umath_mock_obj_underscore_core, attr_name, getattr(source_mock_instance_underscore_core, attr_name))
+                
+                if not hasattr(umath_mock_obj_underscore_core, '__name__'):
+                    umath_mock_obj_underscore_core.__name__ = umath_module_name_underscore_core
+                if not hasattr(umath_mock_obj_underscore_core, '__package__'):
+                     umath_mock_obj_underscore_core.__package__ = 'numpy._core'
+                if not hasattr(umath_mock_obj_underscore_core, '__path__'):
+                     umath_mock_obj_underscore_core.__path__ = []
+                # Supprimer la définition par défaut de _ARRAY_API
+                # if not hasattr(umath_mock_obj_underscore_core, '_ARRAY_API'):
+                #      umath_mock_obj_underscore_core._ARRAY_API = None
+
+                numpy_underscore_core_obj._multiarray_umath = umath_mock_obj_underscore_core
+                sys.modules[umath_module_name_underscore_core] = umath_mock_obj_underscore_core
+                logger.info(f"NumpyMock: {umath_module_name_underscore_core} configuré comme ModuleType et défini dans sys.modules.")
+            
+            if hasattr(numpy_mock._core, 'multiarray'): # numpy_mock._core.multiarray est une CLASSE vide
+                multiarray_module_name_underscore_core = 'numpy._core.multiarray'
+                multiarray_mock_obj_underscore_core = ModuleType(multiarray_module_name_underscore_core)
+                multiarray_mock_obj_underscore_core.__name__ = multiarray_module_name_underscore_core
+                multiarray_mock_obj_underscore_core.__package__ = 'numpy._core'
+                multiarray_mock_obj_underscore_core.__path__ = []
+                # Supprimer la définition par défaut de _ARRAY_API
+                # multiarray_mock_obj_underscore_core._ARRAY_API = None # Déjà commenté, ou à commenter si présent
+
+                # Idem pour copier les attributs si _NumPy_Core_Multiarray_Mock était plus fournie
+                # source_multiarray_cls_underscore_core = numpy_mock._core.multiarray
+                # try:
+                #     temp_instance_uc = source_multiarray_cls_underscore_core()
+                #     for attr_name_ma_uc in dir(temp_instance_uc):
+                #         if not attr_name_ma_uc.startswith('__') or attr_name_ma_uc in ['__name__', '__package__', '__path__']:
+                #             setattr(multiarray_mock_obj_underscore_core, attr_name_ma_uc, getattr(temp_instance_uc, attr_name_ma_uc))
+                # except TypeError:
+                #     logger.warning(f"NumpyMock: La classe {source_multiarray_cls_underscore_core} pour _core.multiarray n'a pas pu être instanciée.")
+                #     pass
+
+                numpy_underscore_core_obj.multiarray = multiarray_mock_obj_underscore_core
+                sys.modules[multiarray_module_name_underscore_core] = multiarray_mock_obj_underscore_core
+                logger.info(f"NumpyMock: {multiarray_module_name_underscore_core} configuré comme ModuleType et défini dans sys.modules.")
+
+            if hasattr(numpy_mock._core, 'numeric'):
+                numpy_underscore_core_obj.numeric = numpy_mock._core.numeric
+            for attr_name in dir(numpy_mock._core):
+                if not attr_name.startswith('__') and not hasattr(numpy_underscore_core_obj, attr_name):
+                    setattr(numpy_underscore_core_obj, attr_name, getattr(numpy_mock._core, attr_name))
+            
+            sys.modules['numpy._core'] = numpy_underscore_core_obj
+            if hasattr(mock_numpy_module, '__dict__'):
+                mock_numpy_module._core = numpy_underscore_core_obj
+            logger.info(f"NumpyMock: numpy._core configuré comme module. _multiarray_umath présent: {hasattr(numpy_underscore_core_obj, '_multiarray_umath')}")
         
         _mock_rec_submodule = type('rec', (), {})
         _mock_rec_submodule.recarray = MockRecarray
@@ -112,15 +272,7 @@ def _install_numpy_mock_immediately():
                  setattr(sys.modules['numpy'], 'rec', _mock_rec_submodule)
         
         print(f"INFO: numpy_setup.py: Mock numpy.rec configuré. sys.modules['numpy.rec'] (ID: {id(sys.modules.get('numpy.rec'))}), mock_numpy_module.rec (ID: {id(getattr(mock_numpy_module, 'rec', None))})")
-
-        if hasattr(numpy_mock, '_core') and hasattr(numpy_mock._core, 'multiarray'):
-             sys.modules['numpy._core.multiarray'] = numpy_mock._core.multiarray
-        if hasattr(numpy_mock, 'core') and hasattr(numpy_mock.core, 'multiarray'):
-             sys.modules['numpy.core.multiarray'] = numpy_mock.core
-        if hasattr(numpy_mock, 'core') and hasattr(numpy_mock.core, 'numeric'):
-             sys.modules['numpy.core.numeric'] = numpy_mock.core.numeric
-        if hasattr(numpy_mock, '_core') and hasattr(numpy_mock._core, 'numeric'):
-             sys.modules['numpy._core.numeric'] = numpy_mock._core.numeric
+        
         if hasattr(numpy_mock, 'linalg'):
              sys.modules['numpy.linalg'] = numpy_mock.linalg
         if hasattr(numpy_mock, 'fft'):
@@ -131,14 +283,14 @@ def _install_numpy_mock_immediately():
         print("INFO: numpy_setup.py: Mock NumPy installé immédiatement (avec sous-modules).")
     except ImportError as e:
         print(f"ERREUR dans numpy_setup.py lors de l'installation immédiate du mock NumPy: {e}")
-    except Exception as e_global: # Attraper d'autres erreurs potentielles
+    except Exception as e_global: 
         print(f"ERREUR GLOBALE dans numpy_setup.py/_install_numpy_mock_immediately: {type(e_global).__name__}: {e_global}")
 
 
-def is_module_available(module_name): # Copié depuis conftest.py, pourrait être dans un utilitaire partagé
+def is_module_available(module_name): 
     if module_name in sys.modules:
         if isinstance(sys.modules[module_name], MagicMock):
-            return True # Si c'est déjà un mock, on considère "disponible" pour la logique de mock
+            return True 
     try:
         spec = importlib.util.find_spec(module_name)
         return spec is not None
@@ -146,56 +298,12 @@ def is_module_available(module_name): # Copié depuis conftest.py, pourrait êtr
         return False
 
 def setup_numpy():
-    # numpy_mock est importé en haut
     if (sys.version_info.major == 3 and sys.version_info.minor >= 12) or not is_module_available('numpy'):
         if not is_module_available('numpy'): print("NumPy non disponible, utilisation du mock (depuis numpy_setup.py).")
         else: print("Python 3.12+ détecté, utilisation du mock NumPy (depuis numpy_setup.py).")
         
-        mock_numpy_attrs = {attr: getattr(numpy_mock, attr) for attr in dir(numpy_mock) if not attr.startswith('__')}
-        mock_numpy_attrs['__version__'] = numpy_mock.__version__ if hasattr(numpy_mock, '__version__') else '1.24.3.mock'
-
-        mock_numpy_module_setup_func = type('numpy', (), mock_numpy_attrs)
-        mock_numpy_module_setup_func.__path__ = []
-        sys.modules['numpy'] = mock_numpy_module_setup_func
-        
-        if hasattr(numpy_mock, 'typing'):
-            sys.modules['numpy.typing'] = numpy_mock.typing
-        if hasattr(numpy_mock, '_core'):
-            sys.modules['numpy._core'] = numpy_mock._core
-        if hasattr(numpy_mock, 'core'):
-            sys.modules['numpy.core'] = numpy_mock.core
-            if 'numpy' in sys.modules and hasattr(sys.modules['numpy'], 'core'):
-                sys.modules['numpy'].core = numpy_mock.core
-
-        _mock_rec_submodule_setup = type('rec', (), {})
-        _mock_rec_submodule_setup.recarray = MockRecarray
-        sys.modules['numpy.rec'] = _mock_rec_submodule_setup
-        
-        if 'numpy' in sys.modules and sys.modules['numpy'] is mock_numpy_module_setup_func:
-            mock_numpy_module_setup_func.rec = _mock_rec_submodule_setup
-        else:
-            print("AVERTISSEMENT: numpy_setup.py: mock_numpy_module_setup_func n'était pas sys.modules['numpy'] lors de l'attribution de .rec dans setup_numpy")
-            if 'numpy' in sys.modules and hasattr(sys.modules['numpy'], '__dict__'):
-                 setattr(sys.modules['numpy'], 'rec', _mock_rec_submodule_setup)
-        
-        print(f"INFO: numpy_setup.py: Mock numpy.rec configuré dans setup_numpy. sys.modules['numpy.rec'] (ID: {id(sys.modules.get('numpy.rec'))}), mock_numpy_module_setup_func.rec (ID: {id(getattr(mock_numpy_module_setup_func, 'rec', None))})")
-        
-        if hasattr(numpy_mock, '_core') and hasattr(numpy_mock._core, 'multiarray'):
-            sys.modules['numpy._core.multiarray'] = numpy_mock._core.multiarray
-        if hasattr(numpy_mock, 'core') and hasattr(numpy_mock.core, 'multiarray'):
-            sys.modules['numpy.core.multiarray'] = numpy_mock.core
-        if hasattr(numpy_mock, 'core') and hasattr(numpy_mock.core, 'numeric'):
-            sys.modules['numpy.core.numeric'] = numpy_mock.core.numeric
-        if hasattr(numpy_mock, '_core') and hasattr(numpy_mock._core, 'numeric'):
-            sys.modules['numpy._core.numeric'] = numpy_mock._core.numeric
-        if hasattr(numpy_mock, 'linalg'):
-            sys.modules['numpy.linalg'] = numpy_mock.linalg
-        if hasattr(numpy_mock, 'fft'):
-            sys.modules['numpy.fft'] = numpy_mock.fft
-        if hasattr(numpy_mock, 'lib'):
-            sys.modules['numpy.lib'] = numpy_mock.lib
-
-        print("INFO: numpy_setup.py: Mock NumPy configuré dynamiquement.")
+        _install_numpy_mock_immediately()
+        print("INFO: numpy_setup.py: Mock NumPy configuré dynamiquement via setup_numpy -> _install_numpy_mock_immediately.")
         return sys.modules['numpy']
     else:
         import numpy
@@ -207,91 +315,121 @@ def setup_numpy_for_tests_fixture(request):
     use_real_numpy_marker = request.node.get_closest_marker("use_real_numpy")
     real_jpype_marker = request.node.get_closest_marker("real_jpype")
 
+    print(f"DEBUG: numpy_setup.py: sys.path au début de la fixture pour {request.node.name}: {sys.path}")
+    _initial_numpy_before_fixture_logic = sys.modules.get('numpy')
+    try:
+        if _initial_numpy_before_fixture_logic:
+            print(f"DEBUG: numpy_setup.py: NumPy DÉJÀ PRÉSENT dans sys.modules pour {request.node.name} AVANT nettoyage: {getattr(_initial_numpy_before_fixture_logic, '__version__', 'inconnue')} (ID: {id(_initial_numpy_before_fixture_logic)}) from {getattr(_initial_numpy_before_fixture_logic, '__file__', 'N/A')}")
+        else:
+            print(f"DEBUG: numpy_setup.py: NumPy NON PRÉSENT dans sys.modules pour {request.node.name} AVANT nettoyage.")
+    except Exception as e_debug_initial:
+        print(f"DEBUG: numpy_setup.py: Erreur lors du log initial de NumPy pour {request.node.name}: {e_debug_initial}")
+
+    numpy_state_before_this_fixture = sys.modules.get('numpy')
+    numpy_rec_state_before_this_fixture = sys.modules.get('numpy.rec')
+    if numpy_state_before_this_fixture:
+        logger.info(f"Fixture pour {request.node.name}: État de sys.modules['numpy'] AVANT nettoyage par cette fixture: version {getattr(numpy_state_before_this_fixture, '__version__', 'N/A')}, ID {id(numpy_state_before_this_fixture)}")
+    else:
+        logger.info(f"Fixture pour {request.node.name}: sys.modules['numpy'] est absent AVANT nettoyage par cette fixture.")
+
+    logger.info(f"Fixture numpy_setup pour {request.node.name}: Nettoyage initial systématique de numpy, scipy, sklearn, pandas.")
+    deep_delete_from_sys_modules("numpy", logger)
+    deep_delete_from_sys_modules("scipy", logger)
+    deep_delete_from_sys_modules("sklearn", logger)
+    deep_delete_from_sys_modules("pandas", logger)
+    
     if use_real_numpy_marker or real_jpype_marker:
         marker_name = "use_real_numpy" if use_real_numpy_marker else "real_jpype"
-        print(f"INFO: numpy_setup.py: setup_numpy_for_tests_fixture: Test {request.node.name} marqué {marker_name}, tentative d'utilisation du vrai NumPy.")
+        logger.info(f"Test {request.node.name} marqué {marker_name}: Configuration pour VRAI NumPy.")
         
-        original_numpy = sys.modules.get('numpy')
-        original_numpy_rec = sys.modules.get('numpy.rec')
-        
-        # Supprimer le mock de sys.modules s'il est présent
-        if 'numpy' in sys.modules and isinstance(sys.modules['numpy'], type) and sys.modules['numpy'].__name__ == 'numpy' and hasattr(sys.modules['numpy'], '__path__') and not sys.modules['numpy'].__path__:
-            print("INFO: numpy_setup.py: Mock NumPy détecté, suppression pour utiliser le vrai NumPy.")
-            del sys.modules['numpy']
-            if 'numpy.rec' in sys.modules: # Supprimer aussi les sous-modules mockés
-                del sys.modules['numpy.rec']
-            # Potentiellement d'autres sous-modules à supprimer: numpy.typing, numpy.core, etc.
-            # Pour l'instant, on se concentre sur numpy et numpy.rec
-
+        imported_numpy_for_test = None
         try:
-            import numpy
-            print(f"INFO: numpy_setup.py: Vrai NumPy (version {getattr(numpy, '__version__', 'inconnue')}) importé avec succès.")
-            # S'assurer que les sous-modules importants sont aussi les vrais
-            if hasattr(numpy, 'rec') and 'numpy.rec' in sys.modules and isinstance(sys.modules['numpy.rec'], type) and sys.modules['numpy.rec'].__name__ == 'rec':
-                 pass # Vrai numpy.rec est déjà là ou sera chargé par le vrai numpy
-            elif hasattr(numpy, 'rec'):
-                 sys.modules['numpy.rec'] = numpy.rec
-
+            imported_numpy_for_test = importlib.import_module('numpy')
+            sys.modules['numpy'] = imported_numpy_for_test 
+            logger.info(f"Vrai NumPy (version {getattr(imported_numpy_for_test, '__version__', 'inconnue')}, ID: {id(imported_numpy_for_test)}) dynamiquement importé et placé dans sys.modules pour {request.node.name}.")
+            
+            if hasattr(imported_numpy_for_test, 'rec'):
+                if not ('numpy.rec' in sys.modules and sys.modules['numpy.rec'] is imported_numpy_for_test.rec):
+                    sys.modules['numpy.rec'] = imported_numpy_for_test.rec
+                    logger.info(f"Vrai numpy.rec (depuis import dynamique) assigné pour {request.node.name}.")
+            
+            yield imported_numpy_for_test
 
         except ImportError:
-            print("ERREUR: numpy_setup.py: Impossible d'importer le vrai NumPy. Le mock restera probablement actif si installé précédemment.")
-            # Si le vrai numpy ne peut être importé, on ne fait rien de plus, le mock pourrait déjà être là.
-        
-        yield # Laisser le test s'exécuter avec le vrai NumPy (ou ce qui a pu être chargé)
+            logger.error(f"Impossible d'importer dynamiquement le vrai NumPy pour {request.node.name} après nettoyage.")
+            pytest.skip("Vrai NumPy non disponible après tentative d'import dynamique.")
+            yield None 
+        finally:
+            logger.info(f"Fin de la section '{marker_name}' pour {request.node.name}. Restauration de l'état PRÉ-FIXTURE (avant nettoyage par CETTE fixture).")
+            if imported_numpy_for_test and 'numpy' in sys.modules and sys.modules['numpy'] is imported_numpy_for_test:
+                logger.info(f"Suppression du NumPy (ID: {id(imported_numpy_for_test)}) spécifiquement importé pour {request.node.name} ({marker_name}).")
+                del sys.modules['numpy']
+                if hasattr(imported_numpy_for_test, 'rec') and 'numpy.rec' in sys.modules and sys.modules['numpy.rec'] is imported_numpy_for_test.rec:
+                    del sys.modules['numpy.rec']
+            
+            if numpy_state_before_this_fixture:
+                sys.modules['numpy'] = numpy_state_before_this_fixture
+                logger.info(f"Restauré sys.modules['numpy'] à l'état pré-fixture (ID: {id(numpy_state_before_this_fixture)}) pour {request.node.name} ({marker_name}).")
+            elif 'numpy' in sys.modules: 
+                logger.warning(f"Après suppression du NumPy de test ({marker_name}), 'numpy' (ID: {id(sys.modules['numpy'])}) est toujours dans sys.modules alors qu'il n'y avait rien à l'origine (avant cette fixture). Suppression.")
+                del sys.modules['numpy']
 
-        # Restauration après le test (si nécessaire, mais pour 'use_real_numpy' on veut le vrai)
-        # Si un mock était là avant et qu'on l'a enlevé, il faut le remettre pour les autres tests.
-        # Cette logique devient complexe. Pour l'instant, on suppose que les tests marqués
-        # 'use_real_numpy' sont exécutés dans un contexte où le vrai numpy est souhaité et disponible.
-        # La restauration du mock initial est gérée par la logique 'else' ci-dessous.
-        # Si original_numpy était le mock, il sera restauré par la branche 'else'.
-        # Si original_numpy était le vrai, il est déjà là.
-        # Si original_numpy était None, et qu'on a chargé le vrai, c'est ok.
-        # Le problème est si un mock était là, qu'on charge le vrai, puis qu'un autre test a besoin du mock.
-        # La fixture étant 'function' scope, la restauration ci-dessous devrait gérer cela.
-
-        # On restaure ce qui était là avant CE test spécifique si ce test utilisait le vrai numpy
-        if original_numpy:
-            sys.modules['numpy'] = original_numpy
-        elif 'numpy' in sys.modules and not use_real_numpy_marker and not real_jpype_marker:
-            # Si on n'avait rien à l'origine et qu'on a chargé le vrai, on le supprime pour que le mock soit réinstallé
-            # pour les tests suivants qui n'ont pas le marqueur.
-            # Mais seulement si ce n'est pas un test qui voulait le vrai numpy.
-            # Cette partie est délicate. La logique principale de mock/démock est mieux gérée
-            # par _install_numpy_mock_immediately et la restauration simple.
-             pass
-
-
-        if original_numpy_rec:
-            sys.modules['numpy.rec'] = original_numpy_rec
-        elif 'numpy.rec' in sys.modules and not use_real_numpy_marker and not real_jpype_marker:
-            pass
+            if numpy_rec_state_before_this_fixture:
+                 sys.modules['numpy.rec'] = numpy_rec_state_before_this_fixture
+                 logger.info(f"Restauré sys.modules['numpy.rec'] à l'état pré-fixture pour {request.node.name} ({marker_name}).")
+            elif 'numpy.rec' in sys.modules:
+                 if not ('numpy' in sys.modules and hasattr(sys.modules['numpy'], 'rec') and sys.modules['numpy'].rec is sys.modules['numpy.rec']):
+                    logger.warning(f"Après suppression du NumPy de test ({marker_name}), 'numpy.rec' est toujours dans sys.modules et n'appartient pas au numpy restauré/absent. Suppression.")
+                    del sys.modules['numpy.rec']
+            logger.info(f"Fin de la restauration pour {request.node.name} (branche {marker_name}).")
         return
 
-    # Logique existante pour les tests qui N'ONT PAS le marqueur 'use_real_numpy' ou 'real_jpype'
-    # C'est ici qu'on s'assure que le mock est bien actif.
-    _original_numpy_before_mock_install = sys.modules.get('numpy')
-    _original_numpy_rec_before_mock_install = sys.modules.get('numpy.rec')
+    else: 
+        logger.info(f"Test {request.node.name} SANS marqueur: Configuration pour MOCK NumPy.")
+        _install_numpy_mock_immediately() 
+        yield 
+        logger.info(f"Fin de la section SANS marqueur pour {request.node.name}. Restauration de l'état PRÉ-FIXTURE.")
+        current_numpy_in_sys = sys.modules.get('numpy')
+        is_our_mock = False
+        if current_numpy_in_sys:
+            if type(current_numpy_in_sys).__name__ == 'numpy' and hasattr(current_numpy_in_sys, '__path__') and not current_numpy_in_sys.__path__:
+                is_our_mock = True
+            elif hasattr(current_numpy_in_sys, '__version__') and "mock" in current_numpy_in_sys.__version__: 
+                is_our_mock = True
 
-    _install_numpy_mock_immediately() # Assure que le mock est en place
+        if is_our_mock:
+            logger.info(f"Suppression du Mock NumPy (ID: {id(current_numpy_in_sys)}) installé par {request.node.name}.")
+            del sys.modules['numpy']
+            if 'numpy.rec' in sys.modules and hasattr(current_numpy_in_sys, 'rec') and sys.modules['numpy.rec'] is getattr(current_numpy_in_sys, 'rec', None):
+                 del sys.modules['numpy.rec']
+            # Nettoyer aussi les sous-modules de core qui auraient pu être mis directement dans sys.modules
+            if 'numpy.core._multiarray_umath' in sys.modules:
+                del sys.modules['numpy.core._multiarray_umath']
+            if 'numpy._core._multiarray_umath' in sys.modules:
+                del sys.modules['numpy._core._multiarray_umath']
+            if 'numpy.core.multiarray' in sys.modules: # Nettoyage supplémentaire
+                del sys.modules['numpy.core.multiarray']
+            if 'numpy._core.multiarray' in sys.modules: # Nettoyage supplémentaire
+                del sys.modules['numpy._core.multiarray']
 
-    yield
+        elif current_numpy_in_sys:
+             logger.warning(f"Tentative de restauration pour {request.node.name} (mock), mais sys.modules['numpy'] (ID: {id(current_numpy_in_sys)}) n'est pas le mock attendu.")
 
-    # Restauration pour les tests qui utilisaient le mock
-    if _original_numpy_before_mock_install:
-        sys.modules['numpy'] = _original_numpy_before_mock_install
-    elif 'numpy' in sys.modules:
-        # Si on a mis notre mock et qu'il n'y avait rien, on le laisse pour l'instant
-        # ou on pourrait le supprimer si on est sûr qu'aucun autre test n'en dépendrait
-        # de manière inattendue. Pour l'instant, on le laisse.
-        pass
-        
-    if _original_numpy_rec_before_mock_install:
-        sys.modules['numpy.rec'] = _original_numpy_rec_before_mock_install
-    elif 'numpy.rec' in sys.modules:
-        pass
+        if numpy_state_before_this_fixture:
+            sys.modules['numpy'] = numpy_state_before_this_fixture
+            logger.info(f"Restauré sys.modules['numpy'] à l'état pré-fixture (ID: {id(numpy_state_before_this_fixture)}) pour {request.node.name} (mock).")
+        elif 'numpy' in sys.modules: 
+            logger.warning(f"Après suppression du Mock NumPy, 'numpy' (ID: {id(sys.modules['numpy'])}) est toujours dans sys.modules alors qu'il n'y avait rien à l'origine (avant cette fixture). Suppression.")
+            del sys.modules['numpy']
 
-# Condition pour l'installation immédiate, si ce fichier est importé directement
-# et que la version de Python correspond. Pytest gérera cela via la fixture autouse.
+        if numpy_rec_state_before_this_fixture:
+            sys.modules['numpy.rec'] = numpy_rec_state_before_this_fixture
+            logger.info(f"Restauré sys.modules['numpy.rec'] à l'état pré-fixture pour {request.node.name} (mock).")
+        elif 'numpy.rec' in sys.modules:
+            if not ('numpy' in sys.modules and hasattr(sys.modules['numpy'], 'rec') and sys.modules['numpy'].rec is sys.modules['numpy.rec']):
+                logger.warning(f"Après suppression du Mock NumPy, 'numpy.rec' est toujours dans sys.modules et n'appartient pas au numpy restauré/absent. Suppression.")
+                del sys.modules['numpy.rec']
+        logger.info(f"Fin de la restauration pour {request.node.name} (branche mock).")
+
 # if (sys.version_info.major == 3 and sys.version_info.minor >= 10):
 # _install_numpy_mock_immediately()
