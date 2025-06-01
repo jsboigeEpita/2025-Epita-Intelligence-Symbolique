@@ -5,12 +5,6 @@ from unittest.mock import MagicMock
 import importlib.util
 import logging
 
-# --- Détermination de la disponibilité du vrai JPype via variable d'environnement ---
-# Cette variable est utilisée par les décorateurs skipif dans les fichiers de test.
-_REAL_JPYPE_AVAILABLE = os.environ.get('USE_REAL_JPYPE', 'false').lower() in ('true', '1')
-# Les prints de débogage précédents ont confirmé que _REAL_JPYPE_AVAILABLE est correctement évalué.
-# La cause du skip était une erreur dans la fixture integration_jvm (chemin des libs).
-
 # --- Configuration du Logger ---
 logger = logging.getLogger(__name__)
 # Configuration basique si le logger n'est pas déjà configuré par pytest ou autre
@@ -21,6 +15,15 @@ if not logger.handlers:
     logger.addHandler(handler)
     logger.setLevel(logging.INFO) # Ou logging.DEBUG pour plus de détails
     logger.propagate = False
+
+# --- Détermination de la disponibilité du vrai JPype via variable d'environnement ---
+# Cette variable est utilisée par les décorateurs skipif dans les fichiers de test.
+logger.info(f"jpype_setup.py: Évaluation de _REAL_JPYPE_AVAILABLE...")
+logger.info(f"jpype_setup.py: Valeur brute de os.environ.get('USE_REAL_JPYPE', 'false'): '{os.environ.get('USE_REAL_JPYPE', 'false')}'")
+_REAL_JPYPE_AVAILABLE = os.environ.get('USE_REAL_JPYPE', 'false').lower() in ('true', '1')
+logger.info(f"jpype_setup.py: _REAL_JPYPE_AVAILABLE évalué à: {_REAL_JPYPE_AVAILABLE}")
+# Les prints de débogage précédents ont confirmé que _REAL_JPYPE_AVAILABLE est correctement évalué.
+# La cause du skip était une erreur dans la fixture integration_jvm (chemin des libs).
 
 
 # --- Sauvegarde du module JPype potentiellement pré-importé ou import frais ---
