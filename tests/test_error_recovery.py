@@ -91,12 +91,12 @@ class ErrorRecoveryManager:
         if "timeout" in message.lower():
             print("Tentative de récupération après timeout...")
             # Simuler une récupération après timeout
-            time.sleep(1)
+            time.sleep(0.001)
             return True
         elif "dns" in message.lower():
             print("Tentative de récupération après erreur DNS...")
             # Simuler une récupération après erreur DNS
-            time.sleep(1)
+            time.sleep(0.001)
             return True
         else:
             print("Erreur réseau non récupérable.")
@@ -109,14 +109,14 @@ class ErrorRecoveryManager:
         if "rate limit" in message.lower():
             print("Tentative de récupération après rate limit...")
             # Simuler une récupération après rate limit
-            time.sleep(1)
+            time.sleep(0.001)
             return True
         elif "api key" in message.lower():
             print("Erreur d'API key non récupérable.")
             return False
         else:
             print("Tentative de récupération après erreur de service générique...")
-            time.sleep(1)
+            time.sleep(0.001)
             return True
     
     def _handle_validation_error(self, error):
@@ -126,12 +126,12 @@ class ErrorRecoveryManager:
         if "missing" in message.lower():
             print("Tentative de récupération après champ manquant...")
             # Simuler une récupération après champ manquant
-            time.sleep(1)
+            time.sleep(0.001)
             return True
         elif "invalid" in message.lower():
             print("Tentative de récupération après valeur invalide...")
             # Simuler une récupération après valeur invalide
-            time.sleep(1)
+            time.sleep(0.001)
             return True
         else:
             print("Erreur de validation non récupérable.")
