@@ -175,7 +175,7 @@ def find_valid_java_home() -> Optional[str]:
 
     # 3. Logique du JDK Portable (Fallback)
     project_root = PROJECT_ROOT_DIR
-    portable_jdk_parent_dir = project_root / PORTABLE_JDK_DIR_NAME
+    portable_jdk_parent_dir = project_root / "libs" / PORTABLE_JDK_DIR_NAME
     portable_jdk_zip_path = project_root / TEMP_DIR_NAME / PORTABLE_JDK_ZIP_NAME
     logger.info(f"Aucun JDK système valide trouvé. Tentative d'utilisation du JDK portable intégré situé dans '{portable_jdk_parent_dir}'...")
     potential_jdk_root_dir = None
@@ -390,10 +390,10 @@ def initialize_jvm(
         # Ajout des options de débogage JVM et JPype (de origin/main)
         jvm_debug_options = ["-Xcheck:jni"] # Option de débogage JNI
         jpype_debug_options = ["-Djpype.debug=True", "-Djpype.jni_debug=True"] # Options JPype
-        jvm_args.extend(jvm_debug_options)
-        jvm_args.extend(jpype_debug_options)
-        logger.info(f"   Options de débogage JVM (-Xcheck:jni) ACTIVÉES: {jvm_debug_options}")
-        logger.info(f"   Options de débogage JPype (debug, jni_debug) ACTIVÉES: {jpype_debug_options}")
+        # jvm_args.extend(jvm_debug_options) # Toujours désactivé pour tester la stabilité
+        # jvm_args.extend(jpype_debug_options) # Également désactivé pour ce test
+        logger.info(f"   Options de débogage JVM (-Xcheck:jni) TEMPORAIREMENT DÉSACTIVÉES.")
+        logger.info(f"   Options de débogage JPype (debug, jni_debug) TEMPORAIREMENT DÉSACTIVÉES.")
         # logger.info(f"   [DEBUG] Toutes les options jvm_args (débogage JNI/JPype) sont DÉSACTIVÉES pour ce test.")
         # Fin de la section fusionnée pour Conflit 2
         # logger.info(f"   [DEBUG] Options de débogage JVM (-Xcheck:jni) temporairement désactivées.") # Commenté pour test
