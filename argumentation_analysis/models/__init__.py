@@ -5,4 +5,4 @@ Ce package contient les classes de modèles de données utilisées dans le proje
 notamment les définitions d'extraits et les résultats d'extraction.
 """
 
-from argumentation_analysis.models.extract_result import ExtractResult
+from .extract_result import ExtractResult
