@@ -97,20 +97,40 @@ except ImportError as e:
 def _install_numpy_mock_immediately():
     if 'numpy' not in sys.modules:
         try:
-            from numpy_mock import array, ndarray, mean, sum, zeros, ones, dot, concatenate, vstack, hstack, argmax, argmin, max, min, random, rec, _core, core
-            sys.modules['numpy'] = type('numpy', (), {
-                'array': array, 'ndarray': ndarray, 'mean': mean, 'sum': sum, 'zeros': zeros, 'ones': ones,
-                'dot': dot, 'concatenate': concatenate, 'vstack': vstack, 'hstack': hstack,
-                'argmax': argmax, 'argmin': argmin, 'max': max, 'min': min, 'random': random, 'rec': rec,
-                '_core': _core, 'core': core, '__version__': '1.24.3',
-            })
+            import numpy_mock
+            # Créer un dictionnaire à partir de tous les attributs de numpy_mock
+            mock_numpy_attrs = {attr: getattr(numpy_mock, attr) for attr in dir(numpy_mock) if not attr.startswith('__')}
+            # S'assurer que __version__ est bien celle du mock
+            mock_numpy_attrs['__version__'] = numpy_mock.__version__ if hasattr(numpy_mock, '__version__') else '1.24.3.mock'
+            
+            sys.modules['numpy'] = type('numpy', (), mock_numpy_attrs)
+            
+            # Exposer explicitement les sous-modules nécessaires qui pourraient ne pas être des attributs directs
+            if hasattr(numpy_mock, 'typing'):
+                sys.modules['numpy.typing'] = numpy_mock.typing
+            if hasattr(numpy_mock, '_core'):
+                sys.modules['numpy._core'] = numpy_mock._core
+            if hasattr(numpy_mock, 'core'):
+                sys.modules['numpy.core'] = numpy_mock.core
+            if hasattr(numpy_mock, 'rec'):
+                 sys.modules['numpy.rec'] = numpy_mock.rec
+            # Assurer que les multiarray sont là si _core/core les ont
+            if hasattr(numpy_mock, '_core') and hasattr(numpy_mock._core, 'multiarray'):
+                 sys.modules['numpy._core.multiarray'] = numpy_mock._core.multiarray
+            if hasattr(numpy_mock, 'core') and hasattr(numpy_mock.core, 'multiarray'):
+                 sys.modules['numpy.core.multiarray'] = numpy_mock.core
+            
+            # S'assurer que le module lui-même est bien dans sys.modules
+            # Cela peut être redondant si type() le fait déjà, mais ne nuit pas.
+            sys.modules['numpy'] = sys.modules['numpy']
+            sys.modules['numpy.typing'] = numpy_typing_mock # Exposer le sous-module typing
             sys.modules['numpy._core'] = _core
             sys.modules['numpy.core'] = core
             sys.modules['numpy._core.multiarray'] = _core.multiarray
             sys.modules['numpy.core.multiarray'] = core.multiarray
             if 'rec' in sys.modules['numpy'].__dict__: # Assurer que rec est bien un attribut
                 sys.modules['numpy.rec'] = sys.modules['numpy'].rec
-            print("INFO: Mock NumPy installé immédiatement dans conftest.py")
+            print("INFO: Mock NumPy installé immédiatement dans conftest.py (avec typing).")
         except ImportError as e:
             print(f"ERREUR lors de l'installation immédiate du mock NumPy: {e}")
 
@@ -223,23 +243,29 @@ def setup_numpy():
     if (sys.version_info.major == 3 and sys.version_info.minor >= 12) or not is_module_available('numpy'):
         if not is_module_available('numpy'): print("NumPy non disponible, utilisation du mock.")
         else: print("Python 3.12+ détecté, utilisation du mock NumPy.")
-        from numpy_mock import array, ndarray, mean, sum, zeros, ones, dot, concatenate, vstack, hstack, argmax, argmin, max, min, random, rec, _core, core, bool_, number, object_, float64, float32, int64, int32, int_, uint, uint64, uint32
-        sys.modules['numpy'] = type('numpy', (), {
-            'array': array, 'ndarray': ndarray, 'mean': mean, 'sum': sum, 'zeros': zeros, 'ones': ones,
-            'dot': dot, 'concatenate': concatenate, 'vstack': vstack, 'hstack': hstack,
-            'argmax': argmax, 'argmin': argmin, 'max': max, 'min': min, 'random': random, 'rec': rec,
-            '_core': _core, 'core': core, '__version__': '1.24.3',
-            'bool_': bool_, 'number': number, 'object_': object_,
-            'float64': float64, 'float32': float32, 'int64': int64, 'int32': int32, 'int_': int_,
-            'uint': uint, 'uint64': uint64, 'uint32': uint32,
-        })
-        sys.modules['numpy._core'] = _core
-        sys.modules['numpy.core'] = core
-        sys.modules['numpy._core.multiarray'] = _core.multiarray
-        sys.modules['numpy.core.multiarray'] = core.multiarray
-        # Enregistrer explicitement numpy.rec
-        if hasattr(sys.modules['numpy'], 'rec'):
-            sys.modules['numpy.rec'] = sys.modules['numpy'].rec
+        import numpy_mock
+        # Créer un dictionnaire à partir de tous les attributs de numpy_mock
+        mock_numpy_attrs = {attr: getattr(numpy_mock, attr) for attr in dir(numpy_mock) if not attr.startswith('__')}
+        # S'assurer que __version__ est bien celle du mock
+        mock_numpy_attrs['__version__'] = numpy_mock.__version__ if hasattr(numpy_mock, '__version__') else '1.24.3.mock'
+
+        sys.modules['numpy'] = type('numpy', (), mock_numpy_attrs)
+        
+        # Exposer explicitement les sous-modules nécessaires
+        if hasattr(numpy_mock, 'typing'):
+            sys.modules['numpy.typing'] = numpy_mock.typing
+        if hasattr(numpy_mock, '_core'):
+            sys.modules['numpy._core'] = numpy_mock._core
+        if hasattr(numpy_mock, 'core'):
+            sys.modules['numpy.core'] = numpy_mock.core
+        if hasattr(numpy_mock, 'rec'):
+            sys.modules['numpy.rec'] = numpy_mock.rec
+        if hasattr(numpy_mock, '_core') and hasattr(numpy_mock._core, 'multiarray'):
+            sys.modules['numpy._core.multiarray'] = numpy_mock._core.multiarray
+        if hasattr(numpy_mock, 'core') and hasattr(numpy_mock.core, 'multiarray'):
+            sys.modules['numpy.core.multiarray'] = numpy_mock.core
+
+        print("INFO: Mock NumPy configuré dynamiquement (avec tous les attributs de numpy_mock).")
         return sys.modules['numpy']
     else:
         import numpy
@@ -318,8 +344,13 @@ def setup_pandas_for_tests_fixture():
 def integration_jvm(request):
     """
     Fixture de session pour démarrer et arrêter la JVM pour les tests d'intégration JPype.
-    Utilise la logique de initialize_jvm de argumentation_analysis.core.jvm_setup.
-    Cette fixture s'assure que le VRAI module jpype est utilisé.
+    - Gère le démarrage unique de la JVM pour toute la session de test si nécessaire.
+    - Utilise la logique de `initialize_jvm` de `argumentation_analysis.core.jvm_setup`.
+    - S'assure que le VRAI module `jpype` est utilisé pendant son exécution.
+    - Tente de s'assurer que `jpype.config` est accessible avant `shutdownJVM` pour éviter
+      les `ModuleNotFoundError` dans les handlers `atexit` de JPype.
+    - Laisse le vrai module `jpype` dans `sys.modules` après un arrêt réussi de la JVM
+      par cette fixture, pour permettre aux handlers `atexit` de JPype de s'exécuter correctement.
     """
     global _integration_jvm_started_session_scope, _REAL_JPYPE_MODULE, _JPYPE_MODULE_MOCK_OBJ_GLOBAL, _MOCK_DOT_JPYPE_MODULE_GLOBAL
 
@@ -381,41 +412,71 @@ def integration_jvm(request):
         yield
         
     finally:
-        # Le finalizer de session s'exécute une seule fois à la fin de tous les tests.
-        # Il est important d'arrêter la JVM si cette fixture l'a démarrée.
-        # La restauration de sys.modules au mock se fera par une autre fixture si nécessaire (ex: activate_jpype_mock_if_needed)
-        # ou on assume que la session de test est terminée.
-        # Pour l'instant, on se concentre sur l'arrêt de la JVM.
-        
-        # La restauration de sys.modules['jpype'] à son état original (mock ou rien)
-        # doit se faire à la fin de la fixture pour que les tests suivants ne soient pas affectés
-        # si cette fixture n'est pas la dernière de la session.
-        # Cependant, avec scope="session", ce finalizer s'exécute tout à la fin.
-        
         logger.info("integration_jvm: Finalisation de la session (arrêt JVM si démarrée par cette fixture).")
-        current_jpype_for_shutdown = sys.modules.get('jpype') # Récupérer le jpype actuel (devrait être le vrai)
-        
+        current_jpype_for_shutdown = sys.modules.get('jpype') 
+
+        jvm_was_shutdown_by_this_fixture = False
         if _integration_jvm_started_session_scope and current_jpype_for_shutdown is _REAL_JPYPE_MODULE and current_jpype_for_shutdown.isJVMStarted():
             try:
+                # S'assurer que jpype.config est accessible avant shutdownJVM pour éviter ModuleNotFoundError dans atexit.
+                if _REAL_JPYPE_MODULE: # Assure que _REAL_JPYPE_MODULE est le module jpype actuel
+                    logger.info("integration_jvm: Vérification/Import de jpype.config avant shutdown...")
+                    try:
+                        # Tenter d'accéder ou d'importer jpype.config pour s'assurer qu'il est chargé
+                        if not hasattr(sys.modules['jpype'], 'config'):
+                             logger.info("   jpype.config non trouvé comme attribut, tentative d'import explicite.")
+                             import jpype.config # Importe le config du module jpype actuellement dans sys.modules
+                             logger.info("   Import explicite de jpype.config réussi.")
+                        elif sys.modules['jpype'].config is None : # Cas où l'attribut existe mais est None
+                             logger.info("   jpype.config est None, tentative d'import explicite.")
+                             import jpype.config
+                             logger.info("   Import explicite de jpype.config (après None) réussi.")
+                        else:
+                             logger.info(f"   jpype.config déjà présent (type: {type(sys.modules['jpype'].config)}).")
+                    except ModuleNotFoundError:
+                        logger.error("   ModuleNotFoundError pour jpype.config lors de la vérification/import avant shutdown.")
+                    except ImportError:
+                        logger.error("   ImportError pour jpype.config lors de la vérification/import avant shutdown.")
+                    except Exception as e_cfg_imp:
+                        logger.error(f"   Erreur lors de la vérification/import de jpype.config: {type(e_cfg_imp).__name__}: {e_cfg_imp}")
+
                 logger.info("integration_jvm: Tentative d'arrêt de la JVM (vrai JPype)...")
                 current_jpype_for_shutdown.shutdownJVM()
                 logger.info("integration_jvm: JVM arrêtée (vrai JPype).")
+                jvm_was_shutdown_by_this_fixture = True
             except Exception as e_shutdown:
                 logger.error(f"integration_jvm: Erreur arrêt JVM (vrai JPype): {e_shutdown}", exc_info=True)
             finally:
-                _integration_jvm_started_session_scope = False # Marquer comme non démarrée pour la prochaine session
+                # Toujours marquer comme non démarrée pour la prochaine session potentielle (bien que session scope)
+                _integration_jvm_started_session_scope = False 
         
-        # Restaurer l'état original de sys.modules pour jpype et _jpype
-        if original_sys_jpype is not None:
-            sys.modules['jpype'] = original_sys_jpype
-        elif 'jpype' in sys.modules: # S'il a été mis par nous et qu'il n'y avait rien avant
-            del sys.modules['jpype']
+        # Si la JVM a été gérée (démarrée et potentiellement arrêtée) par cette fixture,
+        # et que _REAL_JPYPE_MODULE était utilisé, laissons _REAL_JPYPE_MODULE en place dans sys.modules
+        # pour que les handlers atexit du vrai JPype fonctionnent correctement.
+        # Sinon (si la JVM n'a pas été démarrée par nous, ou si _REAL_JPYPE_MODULE n'était pas là,
+        # ou si une erreur a empêché le shutdown normal), restaurer comme avant.
+        if not jvm_was_shutdown_by_this_fixture:
+            logger.info("integration_jvm: La JVM n'a pas été (ou n'a pas pu être) arrêtée par cette fixture, ou _REAL_JPYPE_MODULE n'était pas actif. Restauration de sys.modules à l'état original.")
+            if original_sys_jpype is not None:
+                sys.modules['jpype'] = original_sys_jpype
+            elif 'jpype' in sys.modules: 
+                del sys.modules['jpype']
 
-        if original_sys_dot_jpype is not None:
-            sys.modules['_jpype'] = original_sys_dot_jpype
-        elif '_jpype' in sys.modules: # Idem
-            del sys.modules['_jpype']
-        logger.info("État original de sys.modules pour jpype/_jpype restauré après integration_jvm.")
+            if original_sys_dot_jpype is not None:
+                sys.modules['_jpype'] = original_sys_dot_jpype
+            elif '_jpype' in sys.modules: 
+                del sys.modules['_jpype']
+            logger.info("État original de sys.modules pour jpype/_jpype restauré après integration_jvm (cas non-shutdown ou erreur).")
+        else:
+            logger.info("integration_jvm: La JVM a été arrêtée par cette fixture. sys.modules['jpype'] reste _REAL_JPYPE_MODULE pour les handlers atexit.")
+            # S'assurer que _jpype (le C module) correspond aussi au _REAL_JPYPE_MODULE si celui-ci en a un.
+            if _REAL_JPYPE_MODULE and hasattr(_REAL_JPYPE_MODULE, '_jpype'):
+                sys.modules['_jpype'] = _REAL_JPYPE_MODULE._jpype
+            elif _REAL_JPYPE_MODULE and '_jpype' in sys.modules and sys.modules['_jpype'] is _MOCK_DOT_JPYPE_MODULE_GLOBAL:
+                # Si le mock _jpype est toujours là mais qu'on laisse le vrai jpype, il faut aussi enlever le mock _jpype
+                logger.info("integration_jvm: _REAL_JPYPE_MODULE laissé, suppression du _MOCK_DOT_JPYPE_MODULE_GLOBAL de sys.modules['_jpype'].")
+                del sys.modules['_jpype']
+
 
 # Fixture pour activer le mock JPype pour les tests unitaires
 @pytest.fixture(scope="function", autouse=True)
@@ -423,6 +484,17 @@ def activate_jpype_mock_if_needed(request):
     """
     Active le mock JPype pour les tests, sauf si le marqueur 'real_jpype' est présent
     ou si le test est dans un chemin d'intégration connu.
+    Cette fixture s'assure également que l'état de la JVM mockée (_jvm_started et _jvm_path)
+    est réinitialisé avant chaque test utilisant le mock, pour garantir l'isolation.
+    Comment utiliser:
+    - Par défaut (tests unitaires): Le mock JPype est activé. `jpype.isJVMStarted()` retournera `False`
+      au début de chaque test (grâce à la réinitialisation ici), et les appels à `jpype.startJVM()`
+      utiliseront la version mockée qui mettra `_jvm_started` à `True` pour ce test.
+    - Tests d'intégration nécessitant le vrai JPype:
+        - Marquer le test ou la classe avec `@pytest.mark.real_jpype`.
+        - S'assurer que la fixture `integration_jvm` est demandée par le test (directement ou via
+          une autre fixture qui en dépend, comme `dung_classes`). `integration_jvm` démarrera
+          la vraie JVM une fois par session et la laissera active pour tous les tests marqués.
     """
     global _JPYPE_MODULE_MOCK_OBJ_GLOBAL, _MOCK_DOT_JPYPE_MODULE_GLOBAL, _REAL_JPYPE_MODULE
     
@@ -438,45 +510,60 @@ def activate_jpype_mock_if_needed(request):
     if use_real_jpype:
         logger.info(f"Test {request.node.name} demande REAL JPype. Configuration de sys.modules pour utiliser le vrai JPype.")
         if _REAL_JPYPE_MODULE:
-            # Assurer que le vrai JPype est dans sys.modules
-            # Cette opération est idempotente si déjà correctement configuré.
             sys.modules['jpype'] = _REAL_JPYPE_MODULE
             if hasattr(_REAL_JPYPE_MODULE, '_jpype'):
                 sys.modules['_jpype'] = _REAL_JPYPE_MODULE._jpype
-            elif '_jpype' in sys.modules and sys.modules.get('_jpype') is not getattr(_REAL_JPYPE_MODULE, '_jpype', None) : # Si un _jpype existe mais n'est pas celui du vrai module
+            elif '_jpype' in sys.modules and sys.modules.get('_jpype') is not getattr(_REAL_JPYPE_MODULE, '_jpype', None) :
                 del sys.modules['_jpype']
             logger.debug(f"REAL JPype (ID: {id(_REAL_JPYPE_MODULE)}) est maintenant sys.modules['jpype'].")
         else:
             logger.error(f"Test {request.node.name} demande REAL JPype, mais _REAL_JPYPE_MODULE n'est pas disponible. Test échouera probablement.")
-            # Ne pas yield ici pourrait être une option pour faire échouer le test plus tôt si _REAL_JPYPE_MODULE est None.
-            # Mais la fixture integration_jvm le fera déjà.
-        
-        # On ne fait pas de restauration ici. La fixture integration_jvm (session) gère la JVM.
-        # Le prochain test (s'il n'est pas real_jpype) verra cette fixture s'exécuter à nouveau
-        # et la branche 'else' installera le mock.
         yield
     else:
         logger.info(f"Test {request.node.name} utilise MOCK JPype.")
+        
+        # Réinitialiser l'état _jvm_started et _jvm_path du mock JPype avant chaque test l'utilisant.
+        # Cela se fait en accédant directement au module où ces variables sont définies.
+        # Note: jpype_mock.py importe _jvm_started de tests.mocks.jpype_components.jvm
+        try:
+            jpype_components_jvm_module = sys.modules.get('tests.mocks.jpype_components.jvm')
+            if jpype_components_jvm_module:
+                if hasattr(jpype_components_jvm_module, '_jvm_started'):
+                    jpype_components_jvm_module._jvm_started = False
+                if hasattr(jpype_components_jvm_module, '_jvm_path'):
+                    jpype_components_jvm_module._jvm_path = None
+                # Réinitialiser aussi config.jvm_path dans le mock de config si le module jvm l'utilise
+                # Le module jvm.py a sa propre instance locale de MinimalMockConfig.
+                # Le module config.py a la principale instance `config` de MockConfig.
+                # Il faut s'assurer que le _JPYPE_MODULE_MOCK_OBJ_GLOBAL.config.jvm_path est aussi None.
+                if hasattr(_JPYPE_MODULE_MOCK_OBJ_GLOBAL, 'config') and hasattr(_JPYPE_MODULE_MOCK_OBJ_GLOBAL.config, 'jvm_path'):
+                    _JPYPE_MODULE_MOCK_OBJ_GLOBAL.config.jvm_path = None
+
+                logger.info("État (_jvm_started, _jvm_path, config.jvm_path) du mock JPype réinitialisé pour le test.")
+            else:
+                # Essayer d'importer le module s'il n'est pas encore dans sys.modules, bien que ce soit peu probable ici
+                # car jpype_mock.py l'importe.
+                logger.warning("Impossible de réinitialiser l'état du mock JPype: module 'tests.mocks.jpype_components.jvm' non trouvé dans sys.modules.")
+        except Exception as e_reset_mock:
+            logger.error(f"Erreur lors de la réinitialisation de l'état du mock JPype: {e_reset_mock}")
+
         original_sys_jpype = sys.modules.get('jpype')
         original_sys_dot_jpype = sys.modules.get('_jpype')
 
         sys.modules['jpype'] = _JPYPE_MODULE_MOCK_OBJ_GLOBAL
         sys.modules['_jpype'] = _MOCK_DOT_JPYPE_MODULE_GLOBAL
-        # S'assurer que le mock est bien celui qu'on a préparé
         assert sys.modules['jpype'] is _JPYPE_MODULE_MOCK_OBJ_GLOBAL, "Mock JPype global n'a pas été correctement appliqué!"
 
         yield
 
-        # Restaurer après le test si ce n'était pas déjà le mock global
-        # (ou si on veut isoler les modifications du mock par test, mais le mock est global)
         if original_sys_jpype is not None:
             sys.modules['jpype'] = original_sys_jpype
-        elif 'jpype' in sys.modules: # S'il a été mis par nous et qu'il n'y avait rien avant
+        elif 'jpype' in sys.modules:
              del sys.modules['jpype']
 
         if original_sys_dot_jpype is not None:
             sys.modules['_jpype'] = original_sys_dot_jpype
-        elif '_jpype' in sys.modules: # Idem
+        elif '_jpype' in sys.modules:
             del sys.modules['_jpype']
         logger.info(f"État de JPype restauré après test {request.node.name} (utilisation du mock).")
 
