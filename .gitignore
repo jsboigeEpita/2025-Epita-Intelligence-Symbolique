@@ -16,6 +16,7 @@ venv/
 env/
 ENV/
 /.venv/
+venv_py310/
 
 # Fichiers temporaires
 *.tmp
