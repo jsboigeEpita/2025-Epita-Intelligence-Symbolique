@@ -9,9 +9,8 @@ import logging
 # Cette variable est utilisée par les décorateurs skipif dans les fichiers de test.
 _REAL_JPYPE_AVAILABLE = os.environ.get('USE_REAL_JPYPE', 'false').lower() in ('true', '1')
 # Logguer l'état initial pour le débogage
-# Le logger n'est pas encore configuré ici, donc on utilise print, ou on déplace cette logique après la config du logger.
-# Pour l'instant, on va supposer que le logger sera configuré à temps ou que cette info est pour un débogage manuel.
-# print(f"jpype_setup.py: _REAL_JPYPE_AVAILABLE initialisé à: {_REAL_JPYPE_AVAILABLE} (basé sur USE_REAL_JPYPE='{os.environ.get('USE_REAL_JPYPE')}')")
+print(f"DEBUG [jpype_setup.py]: USE_REAL_JPYPE env var: '{os.environ.get('USE_REAL_JPYPE')}'")
+print(f"DEBUG [jpype_setup.py]: _REAL_JPYPE_AVAILABLE evaluated to: {_REAL_JPYPE_AVAILABLE}")
 
 
 # --- Configuration du Logger ---

@@ -86,18 +86,18 @@ def integration_jvm():
 
             # Recherche des JARs Tweety dans le sous-répertoire libs/tweety
             project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-            tweety_libs_path = os.path.join(project_root, 'libs', 'tweety')
+            tweety_libs_path = os.path.join(project_root, 'libs') # Corrigé: les JARs sont directement dans libs/
             
             if not os.path.isdir(tweety_libs_path):
                 logger.error(f"integration_fixtures.py: Répertoire des bibliothèques Tweety non trouvé: {tweety_libs_path}")
-                pytest.skip("Répertoire libs/tweety non trouvé.")
+                pytest.skip(f"Répertoire {tweety_libs_path} non trouvé.") # Message de skip mis à jour
                 return None
 
             tweety_jars = [os.path.join(tweety_libs_path, f) for f in os.listdir(tweety_libs_path) if f.endswith('.jar')]
 
             if not tweety_jars:
                 logger.error(f"integration_fixtures.py: Aucun JAR trouvé dans {tweety_libs_path}")
-                pytest.skip("Aucun JAR Tweety trouvé dans libs/tweety.")
+                pytest.skip(f"Aucun JAR Tweety trouvé dans {tweety_libs_path}.") # Message de skip mis à jour
                 return None
             
             classpath_arg = "-Djava.class.path=" + os.pathsep.join(tweety_jars)
