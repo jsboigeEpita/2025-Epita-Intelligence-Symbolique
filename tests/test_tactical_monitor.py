@@ -13,7 +13,7 @@ from unittest.mock import MagicMock, patch
 import json
 import logging
 import re
-from datetime import datetime
+from datetime import datetime, timedelta
 
 # Configurer le logging pour les tests
 logging.basicConfig(
@@ -287,7 +287,8 @@ class TestProgressMonitor(unittest.TestCase):
                     "id": "task-delayed",
                     "objective_id": "obj-1",
                     "description": "Tâche en retard",
-                    "estimated_duration": "short"
+                    "estimated_duration": 3600,  # 1 heure
+                    "start_time": (datetime.now() - timedelta(seconds=3601)).isoformat() # En retard de 1 sec
                 }
             ],
             "completed": [],
@@ -316,7 +317,8 @@ class TestProgressMonitor(unittest.TestCase):
         self.tactical_state.log_tactical_action.assert_called_once()
         
         # Vérifier les problèmes détectés
-        self.assertEqual(len(issues), 3)
+        # Attendu: task-blocked (bloquée), task-delayed (bloquée ET en retard), high_failure_rate
+        self.assertEqual(len(issues), 4)
         
         # Vérifier qu'un problème de tâche bloquée a été détecté
         blocked_issue = next((i for i in issues if i["type"] == "blocked_task"), None)
