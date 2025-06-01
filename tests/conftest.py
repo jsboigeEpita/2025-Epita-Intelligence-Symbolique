@@ -125,18 +125,30 @@ def _install_numpy_mock_immediately():
                  sys.modules['numpy._core.multiarray'] = numpy_mock._core.multiarray
             if hasattr(numpy_mock, 'core') and hasattr(numpy_mock.core, 'multiarray'):
                  sys.modules['numpy.core.multiarray'] = numpy_mock.core
+            if hasattr(numpy_mock, 'core') and hasattr(numpy_mock.core, 'numeric'):
+                 sys.modules['numpy.core.numeric'] = numpy_mock.core.numeric
+            if hasattr(numpy_mock, '_core') and hasattr(numpy_mock._core, 'numeric'):
+                 sys.modules['numpy._core.numeric'] = numpy_mock._core.numeric
+            if hasattr(numpy_mock, 'linalg'):
+                 sys.modules['numpy.linalg'] = numpy_mock.linalg
+            if hasattr(numpy_mock, 'fft'):
+                 sys.modules['numpy.fft'] = numpy_mock.fft
+            if hasattr(numpy_mock, 'lib'):
+                 sys.modules['numpy.lib'] = numpy_mock.lib
             
             # S'assurer que le module lui-même est bien dans sys.modules
             # Cela peut être redondant si type() le fait déjà, mais ne nuit pas.
-            sys.modules['numpy'] = sys.modules['numpy']
-            sys.modules['numpy.typing'] = numpy_typing_mock # Exposer le sous-module typing
-            sys.modules['numpy._core'] = _core
-            sys.modules['numpy.core'] = core
-            sys.modules['numpy._core.multiarray'] = _core.multiarray
-            sys.modules['numpy.core.multiarray'] = core.multiarray
-            if 'rec' in sys.modules['numpy'].__dict__: # Assurer que rec est bien un attribut
-                sys.modules['numpy.rec'] = sys.modules['numpy'].rec
-            print("INFO: Mock NumPy installé immédiatement dans conftest.py (avec typing).")
+            # Les lignes suivantes étaient problématiques car numpy_typing_mock, _core, core n'étaient pas définis ici.
+            # La logique ci-dessus avec hasattr devrait suffire.
+            # sys.modules['numpy'] = sys.modules['numpy']
+            # sys.modules['numpy.typing'] = numpy_typing_mock
+            # sys.modules['numpy._core'] = _core
+            # sys.modules['numpy.core'] = core
+            # sys.modules['numpy._core.multiarray'] = _core.multiarray
+            # sys.modules['numpy.core.multiarray'] = core.multiarray
+            # if 'rec' in sys.modules['numpy'].__dict__:
+            #     sys.modules['numpy.rec'] = sys.modules['numpy'].rec
+            print("INFO: Mock NumPy installé immédiatement dans conftest.py (avec sous-modules).")
         except ImportError as e:
             print(f"ERREUR lors de l'installation immédiate du mock NumPy: {e}")
 
@@ -257,8 +269,18 @@ def setup_numpy():
             sys.modules['numpy._core.multiarray'] = numpy_mock._core.multiarray
         if hasattr(numpy_mock, 'core') and hasattr(numpy_mock.core, 'multiarray'):
             sys.modules['numpy.core.multiarray'] = numpy_mock.core
+        if hasattr(numpy_mock, 'core') and hasattr(numpy_mock.core, 'numeric'):
+            sys.modules['numpy.core.numeric'] = numpy_mock.core.numeric
+        if hasattr(numpy_mock, '_core') and hasattr(numpy_mock._core, 'numeric'):
+            sys.modules['numpy._core.numeric'] = numpy_mock._core.numeric
+        if hasattr(numpy_mock, 'linalg'):
+            sys.modules['numpy.linalg'] = numpy_mock.linalg
+        if hasattr(numpy_mock, 'fft'):
+            sys.modules['numpy.fft'] = numpy_mock.fft
+        if hasattr(numpy_mock, 'lib'):
+            sys.modules['numpy.lib'] = numpy_mock.lib
 
-        print("INFO: Mock NumPy configuré dynamiquement (avec tous les attributs de numpy_mock).")
+        print("INFO: Mock NumPy configuré dynamiquement (avec tous les attributs et sous-modules de numpy_mock).")
         return sys.modules['numpy']
     else:
         import numpy
@@ -473,19 +495,34 @@ def integration_jvm(request):
 @pytest.fixture(scope="function", autouse=True)
 def activate_jpype_mock_if_needed(request):
     """
-    Active le mock JPype pour les tests, sauf si le marqueur 'real_jpype' est présent
-    ou si le test est dans un chemin d'intégration connu.
-    Cette fixture s'assure également que l'état de la JVM mockée (_jvm_started et _jvm_path)
-    est réinitialisé avant chaque test utilisant le mock, pour garantir l'isolation.
-    Comment utiliser:
-    - Par défaut (tests unitaires): Le mock JPype est activé. `jpype.isJVMStarted()` retournera `False`
-      au début de chaque test (grâce à la réinitialisation ici), et les appels à `jpype.startJVM()`
-      utiliseront la version mockée qui mettra `_jvm_started` à `True` pour ce test.
-    - Tests d'intégration nécessitant le vrai JPype:
-        - Marquer le test ou la classe avec `@pytest.mark.real_jpype`.
-        - S'assurer que la fixture `integration_jvm` est demandée par le test (directement ou via
-          une autre fixture qui en dépend, comme `dung_classes`). `integration_jvm` démarrera
-          la vraie JVM une fois par session et la laissera active pour tous les tests marqués.
+    Fixture à portée "function" et "autouse=True" pour gérer la sélection entre le mock JPype et le vrai JPype.
+
+    Logique de sélection :
+    1. Si un test est marqué avec `@pytest.mark.real_jpype`, le vrai module JPype (`_REAL_JPYPE_MODULE`)
+       est placé dans `sys.modules['jpype']`.
+    2. Si le chemin du fichier de test contient 'tests/integration/' ou 'tests/minimal_jpype_tweety_tests/',
+       le vrai JPype est également utilisé.
+    3. Dans tous les autres cas (tests unitaires par défaut), le mock JPype (`_JPYPE_MODULE_MOCK_OBJ_GLOBAL`)
+       est activé.
+
+    Gestion de l'état du mock :
+    - Avant chaque test utilisant le mock, l'état interne du mock JPype est réinitialisé :
+        - `tests.mocks.jpype_components.jvm._jvm_started` est mis à `False`.
+        - `tests.mocks.jpype_components.jvm._jvm_path` est mis à `None`.
+        - `_JPYPE_MODULE_MOCK_OBJ_GLOBAL.config.jvm_path` est mis à `None`.
+      Cela garantit que chaque test unitaire commence avec une JVM mockée "propre" et non démarrée.
+      `jpype.isJVMStarted()` (version mockée) retournera donc `False` au début de ces tests.
+      Un appel à `jpype.startJVM()` (version mockée) mettra `_jvm_started` à `True` pour la durée du test.
+
+    Restauration :
+    - Après chaque test, l'état original de `sys.modules['jpype']`, `sys.modules['_jpype']`,
+      et `sys.modules['jpype.imports']` est restauré.
+
+    Interaction avec `integration_jvm` :
+    - Pour les tests nécessitant la vraie JVM (marqués `real_jpype` ou dans les chemins d'intégration),
+      cette fixture s'assure que le vrai `jpype` est dans `sys.modules`. La fixture `integration_jvm`
+      (scope session) est alors responsable du démarrage effectif de la vraie JVM une fois par session
+      et de sa gestion.
     """
     global _JPYPE_MODULE_MOCK_OBJ_GLOBAL, _MOCK_DOT_JPYPE_MODULE_GLOBAL, _REAL_JPYPE_MODULE
     
@@ -635,9 +672,41 @@ def activate_jpype_mock_if_needed(request):
 @pytest.fixture(scope="session")
 def integration_jvm(request, ensure_tweety_libs):
     """
-    Fixture de session pour démarrer et arrêter la JVM pour les tests d'intégration JPype.
-    Utilise la logique de initialize_jvm de argumentation_analysis.core.jvm_setup.
-    Force l'utilisation du vrai jpype pour son scope.
+    Fixture à portée "session" pour gérer le cycle de vie de la VRAIE JVM pour les tests d'intégration.
+
+    Objectifs et fonctionnement :
+    1. Démarrage unique de la JVM : La JVM est démarrée une seule fois pour toute la session de test
+       lorsque cette fixture est activée pour la première fois.
+    2. Utilisation du vrai JPype : Force l'utilisation du module `_REAL_JPYPE_MODULE` (le vrai JPype)
+       pendant toute la durée de son scope. Elle manipule `sys.modules` pour s'assurer que
+       `jpype`, `_jpype` et `jpype.imports` pointent vers les vrais modules, en sauvegardant
+       et restaurant les versions précédentes (potentiellement des mocks).
+    3. Gestion de `initialize_jvm` : Utilise la fonction `initialize_jvm` de
+       `argumentation_analysis.core.jvm_setup` pour démarrer la JVM avec le classpath approprié.
+    4. État de la JVM : Utilise la variable globale `_integration_jvm_started_session_scope` pour
+       suivre si la JVM a été démarrée par *cette* fixture au sein de la session.
+       `jpype.isJVMStarted()` (du vrai JPype) reflète l'état réel.
+    5. Arrêt de la JVM : La JVM est arrêtée à la fin de la session de test via `request.addfinalizer`.
+    6. Gestion de `jpype.config` pour `atexit` : Avant d'appeler `shutdownJVM`, cette fixture tente
+       de s'assurer que `jpype.config` est importé et accessible. Ceci vise à prévenir les
+       `ModuleNotFoundError: No module named 'jpype.config'` qui peuvent survenir si des handlers
+       `atexit` enregistrés par JPype tentent d'accéder à `jpype.config` après que le module
+       principal `jpype` ait été partiellement déchargé ou modifié.
+    7. Restauration de `sys.modules` : Après l'arrêt de la JVM (ou en cas d'échec), les modules
+       `jpype` originaux (qui pouvaient être des mocks) sont restaurés dans `sys.modules`.
+       Cependant, si la JVM est arrêtée avec succès par cette fixture, `sys.modules['jpype']`
+       est laissé comme `_REAL_JPYPE_MODULE` pour permettre aux handlers `atexit` du vrai JPype
+       de s'exécuter correctement.
+
+    Dépendances :
+    - `ensure_tweety_libs`: S'assure que les bibliothèques Tweety sont disponibles.
+    - `_REAL_JPYPE_MODULE`: Doit être le vrai module JPype, initialisé au début de `tests/conftest.py`.
+
+    Utilisation :
+    - Les tests d'intégration qui nécessitent une vraie JVM doivent dépendre de cette fixture
+      (directement ou indirectement, par exemple via `dung_classes`, `qbf_classes`, etc.).
+    - La fixture `activate_jpype_mock_if_needed` s'assurera que `sys.modules['jpype']` est
+      le vrai module JPype avant que `integration_jvm` ne s'exécute pour ces tests.
     """
     global _integration_jvm_started_session_scope, _REAL_JPYPE_MODULE
     
@@ -752,6 +821,44 @@ def integration_jvm(request, ensure_tweety_libs):
         logger_conftest_integration.info("integration_jvm: Finalisation (arrêt JVM si démarrée par elle).")
         if _integration_jvm_started_session_scope and jpype_real and jpype_real.isJVMStarted():
             try:
+                # S'assurer que jpype.config est accessible avant shutdownJVM pour éviter ModuleNotFoundError dans atexit.
+                # Cette logique est inspirée de la première fixture integration_jvm (maintenant inactive).
+                if jpype_real and sys.modules.get('jpype') is jpype_real: # Assure que jpype_real est le module jpype actuel
+                    logger_conftest_integration.info("integration_jvm (fin): Vérification/Import de jpype.config avant shutdown...")
+                    try:
+                        # Tenter d'accéder ou d'importer jpype.config pour s'assurer qu'il est chargé
+                        if not hasattr(jpype_real, 'config'):
+                             logger_conftest_integration.info("   jpype.config non trouvé comme attribut sur jpype_real, tentative d'import explicite via jpype_real.")
+                             # Essayer d'importer via l'objet jpype_real si possible, ou globalement
+                             if hasattr(jpype_real, '__name__') and jpype_real.__name__ == 'jpype':
+                                 import jpype.config # Importe le config du module jpype actuellement dans sys.modules
+                                 logger_conftest_integration.info("   Import explicite de jpype.config (via import global) réussi.")
+                             else: # Fallback si jpype_real n'est pas le 'jpype' global
+                                 # Ceci est moins probable si on a bien restauré sys.modules['jpype'] = jpype_real
+                                 temp_jpype_config = importlib.import_module(f"{jpype_real.__name__}.config")
+                                 setattr(jpype_real, 'config', temp_jpype_config)
+                                 logger_conftest_integration.info(f"   Import explicite de {jpype_real.__name__}.config réussi et attaché.")
+
+                        elif jpype_real.config is None : # Cas où l'attribut existe mais est None
+                             logger_conftest_integration.info("   jpype_real.config est None, tentative d'import explicite.")
+                             if hasattr(jpype_real, '__name__') and jpype_real.__name__ == 'jpype':
+                                 import jpype.config
+                                 logger_conftest_integration.info("   Import explicite de jpype.config (après None, via import global) réussi.")
+                             else:
+                                 temp_jpype_config = importlib.import_module(f"{jpype_real.__name__}.config")
+                                 setattr(jpype_real, 'config', temp_jpype_config)
+                                 logger_conftest_integration.info(f"   Import explicite de {jpype_real.__name__}.config (après None) réussi et attaché.")
+                        else:
+                             logger_conftest_integration.info(f"   jpype_real.config déjà présent (type: {type(jpype_real.config)}).")
+                    except ModuleNotFoundError:
+                        logger_conftest_integration.error("   ModuleNotFoundError pour jpype.config lors de la vérification/import avant shutdown.")
+                    except ImportError:
+                        logger_conftest_integration.error("   ImportError pour jpype.config lors de la vérification/import avant shutdown.")
+                    except Exception as e_cfg_imp:
+                        logger_conftest_integration.error(f"   Erreur lors de la vérification/import de jpype.config: {type(e_cfg_imp).__name__}: {e_cfg_imp}")
+                else:
+                    logger_conftest_integration.warning("integration_jvm (fin): jpype_real n'est pas le module 'jpype' actuel dans sys.modules, ou jpype_real est None. Skip vérification jpype.config.")
+
                 logger_conftest_integration.info("integration_jvm: Tentative d'arrêt de la JVM avec le vrai jpype...")
                 jpype_real.shutdownJVM()
                 logger_conftest_integration.info("integration_jvm: JVM (vrai jpype) arrêtée.")
