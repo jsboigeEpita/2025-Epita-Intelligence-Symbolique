@@ -96,9 +96,14 @@ from argumentation_analysis.agents.tools.analysis.enhanced.contextual_fallacy_an
 class TestEnhancedContextualFallacyAnalyzer(unittest.TestCase):
     """Tests unitaires pour l'analyseur contextuel de sophismes amélioré."""
     
-    def setUp(self):
-        """Initialisation avant chaque test."""
-        self.patches = []
+    analyzer = None
+    patches_class = []
+
+    @classmethod
+    def setUpClass(cls):
+        """Initialisation unique pour la classe de test."""
+        logger.info("Début de setUpClass pour TestEnhancedContextualFallacyAnalyzer.")
+        cls.patches_class = []
         
         # Importer percentile depuis le mock numpy pour le patch
         try:
@@ -107,44 +112,53 @@ class TestEnhancedContextualFallacyAnalyzer(unittest.TestCase):
             logger.error("Impossible d'importer percentile depuis tests.mocks.numpy_mock pour le patch.")
             numpy_mock_percentile = MagicMock()
 
-        # Vérifier si numpy est mocké (par exemple, par conftest.py)
-        # Une façon simple est de vérifier si la version est celle du mock.
         numpy_module = sys.modules.get('numpy')
-        is_numpy_mocked = hasattr(numpy_module, '__version__') and numpy_module.__version__ == '1.24.3' # Version du mock dans conftest
+        is_numpy_mocked = hasattr(numpy_module, '__version__') and numpy_module.__version__ == '1.24.3'
 
         if is_numpy_mocked:
-            # Patcher numpy.percentile si numpy est mocké et que percentile n'est pas déjà là ou est incorrect
             if not hasattr(numpy_module, 'percentile') or getattr(numpy_module, 'percentile') is not numpy_mock_percentile:
                 percentile_patch = patch('numpy.percentile', numpy_mock_percentile)
-                self.patches.append(percentile_patch)
+                cls.patches_class.append(percentile_patch)
                 percentile_patch.start()
-                logger.info("Patch appliqué pour numpy.percentile dans setUp.")
+                logger.info("Patch appliqué pour numpy.percentile dans setUpClass.")
 
-        # Si les vraies bibliothèques ne sont pas là, ET que les mocks de conftest n'ont pas suffi,
-        # on pourrait avoir besoin de patcher spécifiquement pour ce module.
-        # Cependant, conftest.py devrait rendre cela moins nécessaire.
         if not HAS_REAL_LIBS:
             if 'torch' not in sys.modules or not isinstance(sys.modules['torch'], MockTorch):
                  torch_patch = patch('argumentation_analysis.agents.tools.analysis.enhanced.contextual_fallacy_analyzer.torch', MagicMock(spec=MockTorch))
-                 self.patches.append(torch_patch)
+                 cls.patches_class.append(torch_patch)
                  torch_patch.start()
             
             if 'transformers' not in sys.modules or not isinstance(sys.modules['transformers'], MockTransformers):
                  transformers_patch = patch('argumentation_analysis.agents.tools.analysis.enhanced.contextual_fallacy_analyzer.transformers', MagicMock(spec=MockTransformers))
-                 self.patches.append(transformers_patch)
+                 cls.patches_class.append(transformers_patch)
                  transformers_patch.start()
             
-            # Assurer que HAS_TRANSFORMERS est True pour que le code interne s'exécute
             has_transformers_patch = patch('argumentation_analysis.agents.tools.analysis.enhanced.contextual_fallacy_analyzer.HAS_TRANSFORMERS', True)
-            self.patches.append(has_transformers_patch)
+            cls.patches_class.append(has_transformers_patch)
             has_transformers_patch.start()
         
-        self.analyzer = EnhancedContextualFallacyAnalyzer(model_name="distilbert-base-uncased") # Modèle léger
-    
-    def tearDown(self):
-        for patcher in self.patches:
+        cls.analyzer = EnhancedContextualFallacyAnalyzer(model_name="distilbert-base-uncased")
+        logger.info("Fin de setUpClass pour TestEnhancedContextualFallacyAnalyzer.")
+
+    @classmethod
+    def tearDownClass(cls):
+        logger.info("Début de tearDownClass pour TestEnhancedContextualFallacyAnalyzer.")
+        for patcher in cls.patches_class:
             patcher.stop()
-    
+        cls.analyzer = None # Libérer la ressource
+        logger.info("Fin de tearDownClass pour TestEnhancedContextualFallacyAnalyzer.")
+
+    def setUp(self):
+        """Initialisation avant chaque test (si nécessaire pour réinitialiser l'état)."""
+        # Si l'analyseur stocke un état qui doit être propre à chaque test,
+        # il faudrait le réinitialiser ici. Par exemple:
+        if self.analyzer:
+            self.analyzer.feedback_history = []
+            self.analyzer.context_embeddings_cache = {}
+            self.analyzer.last_analysis_fallacies = {}
+            # Réinitialiser d'autres états si nécessaire
+            # self.analyzer.learning_data = {"feedback_history": [], "confidence_adjustments": {}} # Attention si partagé
+
     def test_initialization(self):
         self.assertIsNotNone(self.analyzer)
         self.assertIsNotNone(self.analyzer.logger)
