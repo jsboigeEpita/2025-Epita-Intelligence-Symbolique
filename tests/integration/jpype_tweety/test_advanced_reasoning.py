@@ -5,8 +5,12 @@ import os
 import re
 import logging
 
+# Importer la variable pour le décorateur skipif
+from tests.conftest import _REAL_JPYPE_AVAILABLE
+
 logger = logging.getLogger(__name__)
 
+@pytest.mark.skipif(not _REAL_JPYPE_AVAILABLE, reason="Test requires real JPype and JVM.")
 @pytest.mark.real_jpype
 class TestAdvancedReasoning:
     """
@@ -267,7 +271,6 @@ class TestAdvancedReasoning:
         # jpype_instance et loader sont déjà définis par le bloc de test d'isolement plus haut
         # et sont réutilisés ici.
 
-        # PclBeliefSet = jpype_instance.JClass("org.tweetyproject.logics.pcl.syntax.PclBeliefSet", loader=loader)
         DefaultMeReasoner = jpype_instance.JClass("org.tweetyproject.logics.pcl.reasoner.DefaultMeReasoner", loader=loader)
         PlFormula = jpype_instance.JClass("org.tweetyproject.logics.pl.syntax.PlFormula", loader=loader)
         PlParser = jpype_instance.JClass("org.tweetyproject.logics.pl.parser.PlParser", loader=loader)
@@ -430,57 +433,58 @@ class TestAdvancedReasoning:
             logger.warning("La configuration du solveur général par défaut a échoué. Le test va probablement échouer.")
 
         # Préparation
-        # pl_parser = PlParser()
-        # pkb = PclBeliefSet() # Initialiser une base de connaissances PCL vide
+        PclBeliefSet = jpype_instance.JClass("org.tweetyproject.logics.pcl.syntax.PclBeliefSet", loader=loader)
+        pl_parser = PlParser()
+        pkb = PclBeliefSet() # Initialiser une base de connaissances PCL vide
 
-        # base_path = os.path.dirname(os.path.abspath(__file__))
-        # file_path = os.path.join(base_path, "test_data", "simple_problog.pl")
-        # assert os.path.exists(file_path), f"Le fichier de test {file_path} n'existe pas."
+        base_path = os.path.dirname(os.path.abspath(__file__))
+        file_path = os.path.join(base_path, "test_data", "simple_problog.pl")
+        assert os.path.exists(file_path), f"Le fichier de test {file_path} n'existe pas."
 
-        # query_str_from_file = None
-        # with open(file_path, 'r') as f:
-        #     for line in f:
-        #         line = line.strip()
-        #         if not line or line.startswith('%'): # Ignorer commentaires et lignes vides
-        #             continue
+        query_str_from_file = None
+        with open(file_path, 'r') as f:
+            for line in f:
+                line = line.strip()
+                if not line or line.startswith('%'): # Ignorer commentaires et lignes vides
+                    continue
                 
-        #         if line.startswith('query('):
-        #             match_query = re.match(r"query\((.+)\)\.", line)
-        #             if match_query:
-        #                 query_str_from_file = match_query.group(1)
-        #             continue
+                if line.startswith('query('):
+                    match_query = re.match(r"query\((.+)\)\.", line)
+                    if match_query:
+                        query_str_from_file = match_query.group(1)
+                    continue
 
-        #         # Parser les faits et règles ProbLog
-        #         # Fait: P::Head.  => (Head | Top)[P]
-        #         # Règle: P::Head :- Body. => (Head | Body)[P]
-        #         match_fact = re.match(r"([\d.]+)::([\w\d_]+)\s*\.\s*$", line)
-        #         match_rule = re.match(r"([\d.]+)::([\w\d_]+)\s*:-\s*(.+)\.\s*$", line)
+                # Parser les faits et règles ProbLog
+                # Fait: P::Head.  => (Head | Top)[P]
+                # Règle: P::Head :- Body. => (Head | Body)[P]
+                match_fact = re.match(r"([\d.]+)::([\w\d_]+)\s*\.\s*$", line)
+                match_rule = re.match(r"([\d.]+)::([\w\d_]+)\s*:-\s*(.+)\.\s*$", line)
 
-        #         if match_fact:
-        #             prob_str, head_str = match_fact.groups()
-        #             probability_val = Probability(float(prob_str))
-        #             head_formula = pl_parser.parseFormula(head_str)
-        #             conditional = ProbabilisticConditional(head_formula, Top, probability_val)
-        #             pkb.add(conditional)
-        #             logger.debug(f"Ajout du fait au PKB: ({head_str} | Top)[{prob_str}]")
-        #         elif match_rule:
-        #             prob_str, head_str, body_full_str = match_rule.groups()
-        #             probability_val = Probability(float(prob_str))
-        #             head_formula = pl_parser.parseFormula(head_str)
+                if match_fact:
+                    prob_str, head_str = match_fact.groups()
+                    probability_val = Probability(float(prob_str))
+                    head_formula = pl_parser.parseFormula(head_str)
+                    conditional = ProbabilisticConditional(head_formula, Top, probability_val)
+                    pkb.add(conditional)
+                    logger.debug(f"Ajout du fait au PKB: ({head_str} | Top)[{prob_str}]")
+                elif match_rule:
+                    prob_str, head_str, body_full_str = match_rule.groups()
+                    probability_val = Probability(float(prob_str))
+                    head_formula = pl_parser.parseFormula(head_str)
                     
-        #             # Remplacer \+ par ~ et , par && pour le parser PL
-        #             body_processed_str = body_full_str.replace('\\+', '~').replace(',', ' && ')
-        #             body_formula = pl_parser.parseFormula(body_processed_str)
+                    # Remplacer \+ par ~ et , par && pour le parser PL
+                    body_processed_str = body_full_str.replace('\\+', '~').replace(',', ' && ')
+                    body_formula = pl_parser.parseFormula(body_processed_str)
                     
-        #             conditional = ProbabilisticConditional(head_formula, body_formula, probability_val)
-        #             pkb.add(conditional)
-        #             logger.debug(f"Ajout de la règle au PKB: ({head_str} | {body_processed_str})[{prob_str}]")
-        #         else:
-        #             if line:
-        #                 logger.warning(f"Ligne ProbLog non reconnue et ignorée: '{line}'")
+                    conditional = ProbabilisticConditional(head_formula, body_formula, probability_val)
+                    pkb.add(conditional)
+                    logger.debug(f"Ajout de la règle au PKB: ({head_str} | {body_processed_str})[{prob_str}]")
+                else:
+                    if line:
+                        logger.warning(f"Ligne ProbLog non reconnue et ignorée: '{line}'")
         
-        # assert not pkb.isEmpty(), "PKB ne devrait pas être vide après le parsing du fichier ProbLog."
-        # assert query_str_from_file is not None, "Aucune requête trouvée dans le fichier ProbLog."
+        assert not pkb.isEmpty(), "PKB ne devrait pas être vide après le parsing du fichier ProbLog."
+        assert query_str_from_file is not None, "Aucune requête trouvée dans le fichier ProbLog."
 
         # DefaultMeReasoner attend un OptimizationRootFinder.
         # GradientDescentRootFinder est un OptimizationRootFinder.
@@ -525,24 +529,24 @@ class TestAdvancedReasoning:
         reasoner = DefaultMeReasoner(optimization_finder)
         logger.info(f"DefaultMeReasoner instancié avec optimization_finder: {reasoner}")
         
-        # query_formula = pl_parser.parseFormula(query_str_from_file) # Commenté
-        # logger.info(f"Query formula '{query_str_from_file}' parsée: {query_formula}") # Commenté
+        query_formula = pl_parser.parseFormula(query_str_from_file)
+        logger.info(f"Query formula '{query_str_from_file}' parsée: {query_formula}")
         
-        # # S'assurer que pkb et query_formula sont correctement initialisés
-        # if pkb is None:
-        #     pytest.fail("pkb (PclBeliefSet) est None avant l'appel à reasoner.query()")
-        # if query_formula is None:
-        #     pytest.fail("query_formula (PlFormula) est None avant l'appel à reasoner.query()")
-        # logger.info(f"Appel de reasoner.query avec pkb (type: {type(pkb)}) et query_formula (type: {type(query_formula)})")
+        # S'assurer que pkb et query_formula sont correctement initialisés
+        if pkb is None:
+            pytest.fail("pkb (PclBeliefSet) est None avant l'appel à reasoner.query()")
+        if query_formula is None:
+            pytest.fail("query_formula (PlFormula) est None avant l'appel à reasoner.query()")
+        logger.info(f"Appel de reasoner.query avec pkb (type: {type(pkb)}) et query_formula (type: {type(query_formula)})")
 
-        # probability_result = reasoner.query(pkb, query_formula) # Commenté
+        probability_result = reasoner.query(pkb, query_formula)
 
-        # logger.info(f"Probabilité calculée pour '{query_str_from_file}': {probability_result.getValue()}") # Commenté
-        # assert probability_result is not None, "La probabilité retournée ne doit pas être nulle." # Commenté
-        # # La méthode getValue() de l'objet Probability retourne un double Java, qui est automatiquement
-        # # converti en float Python par JPype.
-        # prob_value = probability_result.getValue() # Commenté
-        # assert 0 <= prob_value <= 1, f"La probabilité doit être entre 0 et 1, obtenue: {prob_value}" # Commenté
+        logger.info(f"Probabilité calculée pour '{query_str_from_file}': {probability_result.getValue()}")
+        assert probability_result is not None, "La probabilité retournée ne doit pas être nulle."
+        # La méthode getValue() de l'objet Probability retourne un double Java, qui est automatiquement
+        # converti en float Python par JPype.
+        prob_value = probability_result.getValue()
+        assert 0 <= prob_value <= 1, f"La probabilité doit être entre 0 et 1, obtenue: {prob_value}"
         
         # # Calcul manuel pour simple_problog.pl:
         # # P(b) = 0.6, P(e) = 0.3
