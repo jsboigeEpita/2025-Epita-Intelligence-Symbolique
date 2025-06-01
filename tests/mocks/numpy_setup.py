@@ -148,9 +148,8 @@ def _install_numpy_mock_immediately():
                     umath_mock_obj_core.__package__ = 'numpy.core'
                 if not hasattr(umath_mock_obj_core, '__path__'):
                      umath_mock_obj_core.__path__ = [] # Les modules C n'ont pas de __path__ mais pour un mock c'est ok
-                # Supprimer la définition par défaut de _ARRAY_API si non copié
-                # if not hasattr(umath_mock_obj_core, '_ARRAY_API'):
-                #     umath_mock_obj_core._ARRAY_API = None
+                # Forcer _ARRAY_API à None pour éviter les conflits
+                umath_mock_obj_core._ARRAY_API = None
 
                 numpy_core_obj._multiarray_umath = umath_mock_obj_core
                 sys.modules[umath_module_name_core] = umath_mock_obj_core
@@ -162,7 +161,7 @@ def _install_numpy_mock_immediately():
                 multiarray_mock_obj_core.__name__ = multiarray_module_name_core
                 multiarray_mock_obj_core.__package__ = 'numpy.core'
                 multiarray_mock_obj_core.__path__ = []
-                # multiarray_mock_obj_core._ARRAY_API = None # Hypothèse: commenté pour test
+                multiarray_mock_obj_core._ARRAY_API = None # Forcer à None
 
                 # Potentiellement copier d'autres attributs si _NumPy_Core_Multiarray_Mock était plus fournie
                 # source_multiarray_cls_core = numpy_mock.core.multiarray
@@ -217,9 +216,8 @@ def _install_numpy_mock_immediately():
                      umath_mock_obj_underscore_core.__package__ = 'numpy._core'
                 if not hasattr(umath_mock_obj_underscore_core, '__path__'):
                      umath_mock_obj_underscore_core.__path__ = []
-                # Supprimer la définition par défaut de _ARRAY_API
-                # if not hasattr(umath_mock_obj_underscore_core, '_ARRAY_API'):
-                #      umath_mock_obj_underscore_core._ARRAY_API = None
+                     # Forcer _ARRAY_API à None pour éviter les conflits
+                     umath_mock_obj_underscore_core._ARRAY_API = None
 
                 numpy_underscore_core_obj._multiarray_umath = umath_mock_obj_underscore_core
                 sys.modules[umath_module_name_underscore_core] = umath_mock_obj_underscore_core
@@ -231,8 +229,8 @@ def _install_numpy_mock_immediately():
                 multiarray_mock_obj_underscore_core.__name__ = multiarray_module_name_underscore_core
                 multiarray_mock_obj_underscore_core.__package__ = 'numpy._core'
                 multiarray_mock_obj_underscore_core.__path__ = []
-                # Supprimer la définition par défaut de _ARRAY_API
-                # multiarray_mock_obj_underscore_core._ARRAY_API = None # Déjà commenté, ou à commenter si présent
+                # Forcer _ARRAY_API à None pour éviter les conflits
+                multiarray_mock_obj_underscore_core._ARRAY_API = None
 
                 # Idem pour copier les attributs si _NumPy_Core_Multiarray_Mock était plus fournie
                 # source_multiarray_cls_underscore_core = numpy_mock._core.multiarray
@@ -312,38 +310,71 @@ def setup_numpy():
 
 @pytest.fixture(scope="function", autouse=True)
 def setup_numpy_for_tests_fixture(request):
+    # Nettoyage FORCÉ au tout début de chaque exécution de la fixture
+    logger.info(f"Fixture numpy_setup pour {request.node.name}: Nettoyage FORCÉ initial systématique de numpy, pandas, scipy, sklearn.")
+    deep_delete_from_sys_modules("numpy", logger)
+    deep_delete_from_sys_modules("pandas", logger)
+    deep_delete_from_sys_modules("scipy", logger)
+    deep_delete_from_sys_modules("sklearn", logger)
+
     use_real_numpy_marker = request.node.get_closest_marker("use_real_numpy")
     real_jpype_marker = request.node.get_closest_marker("real_jpype")
 
     print(f"DEBUG: numpy_setup.py: sys.path au début de la fixture pour {request.node.name}: {sys.path}")
-    _initial_numpy_before_fixture_logic = sys.modules.get('numpy')
-    try:
-        if _initial_numpy_before_fixture_logic:
-            print(f"DEBUG: numpy_setup.py: NumPy DÉJÀ PRÉSENT dans sys.modules pour {request.node.name} AVANT nettoyage: {getattr(_initial_numpy_before_fixture_logic, '__version__', 'inconnue')} (ID: {id(_initial_numpy_before_fixture_logic)}) from {getattr(_initial_numpy_before_fixture_logic, '__file__', 'N/A')}")
-        else:
-            print(f"DEBUG: numpy_setup.py: NumPy NON PRÉSENT dans sys.modules pour {request.node.name} AVANT nettoyage.")
-    except Exception as e_debug_initial:
-        print(f"DEBUG: numpy_setup.py: Erreur lors du log initial de NumPy pour {request.node.name}: {e_debug_initial}")
-
+    
+    # L'état de numpy est capturé APRÈS le nettoyage forcé initial.
+    # Il devrait idéalement être None ici si le nettoyage a bien fonctionné.
     numpy_state_before_this_fixture = sys.modules.get('numpy')
     numpy_rec_state_before_this_fixture = sys.modules.get('numpy.rec')
-    if numpy_state_before_this_fixture:
-        logger.info(f"Fixture pour {request.node.name}: État de sys.modules['numpy'] AVANT nettoyage par cette fixture: version {getattr(numpy_state_before_this_fixture, '__version__', 'N/A')}, ID {id(numpy_state_before_this_fixture)}")
-    else:
-        logger.info(f"Fixture pour {request.node.name}: sys.modules['numpy'] est absent AVANT nettoyage par cette fixture.")
 
-    logger.info(f"Fixture numpy_setup pour {request.node.name}: Nettoyage initial systématique de numpy, scipy, sklearn, pandas.")
-    deep_delete_from_sys_modules("numpy", logger)
-    deep_delete_from_sys_modules("scipy", logger)
-    deep_delete_from_sys_modules("sklearn", logger)
-    deep_delete_from_sys_modules("pandas", logger)
+    _initial_numpy_after_forced_clean = sys.modules.get('numpy')
+    try:
+        if _initial_numpy_after_forced_clean:
+            print(f"DEBUG: numpy_setup.py: NumPy PRÉSENT dans sys.modules pour {request.node.name} APRÈS NETTOYAGE FORCÉ INITIAL: {getattr(_initial_numpy_after_forced_clean, '__version__', 'inconnue')} (ID: {id(_initial_numpy_after_forced_clean)}) from {getattr(_initial_numpy_after_forced_clean, '__file__', 'N/A')}")
+        else:
+            print(f"DEBUG: numpy_setup.py: NumPy NON PRÉSENT dans sys.modules pour {request.node.name} APRÈS NETTOYAGE FORCÉ INITIAL.")
+    except Exception as e_debug_initial:
+        print(f"DEBUG: numpy_setup.py: Erreur lors du log de NumPy APRÈS NETTOYAGE FORCÉ pour {request.node.name}: {e_debug_initial}")
+
+    if numpy_state_before_this_fixture: # Devrait être None si le nettoyage forcé a fonctionné
+        logger.info(f"Fixture pour {request.node.name}: État de sys.modules['numpy'] APRÈS NETTOYAGE FORCÉ (devrait être None): version {getattr(numpy_state_before_this_fixture, '__version__', 'N/A')}, ID {id(numpy_state_before_this_fixture)}")
+    else:
+        logger.info(f"Fixture pour {request.node.name}: sys.modules['numpy'] est absent APRÈS NETTOYAGE FORCÉ (comme attendu).")
     
+    # La logique de nettoyage spécifique à la branche (use_real_numpy vs mock) suit.
+    # Le nettoyage ci-dessous est donc une DEUXIÈME passe de nettoyage pour la branche use_real_numpy.
     if use_real_numpy_marker or real_jpype_marker:
         marker_name = "use_real_numpy" if use_real_numpy_marker else "real_jpype"
         logger.info(f"Test {request.node.name} marqué {marker_name}: Configuration pour VRAI NumPy.")
+
+        # Nettoyage agressif juste avant d'importer le vrai numpy
+        logger.info(f"Nettoyage agressif de numpy et pandas avant import réel pour {request.node.name}")
+        deep_delete_from_sys_modules("numpy", logger)
+        deep_delete_from_sys_modules("pandas", logger) # Assurons-nous que pandas est aussi nettoyé ici
+
+        # Vérification supplémentaire et suppression forcée si nécessaire
+        if 'numpy' in sys.modules:
+            logger.warning(f"NumPy (ID: {id(sys.modules['numpy'])}, Version: {getattr(sys.modules['numpy'], '__version__', 'N/A')}) encore dans sys.modules APRÈS deep_delete pour {request.node.name}. Suppression forcée.")
+            del sys.modules['numpy']
+            # Nettoyer aussi les sous-modules courants qui pourraient persister si la clé principale est supprimée mais pas les enfants
+            keys_to_delete_numpy_children = [k for k in sys.modules if k.startswith('numpy.')]
+            if keys_to_delete_numpy_children:
+                logger.warning(f"Suppression forcée des sous-modules NumPy enfants: {keys_to_delete_numpy_children}")
+                for k_child in keys_to_delete_numpy_children:
+                    del sys.modules[k_child]
+        
+        if 'pandas' in sys.modules:
+            logger.warning(f"Pandas (ID: {id(sys.modules['pandas'])}) encore dans sys.modules APRÈS deep_delete pour {request.node.name}. Suppression forcée.")
+            del sys.modules['pandas']
+            keys_to_delete_pandas_children = [k for k in sys.modules if k.startswith('pandas.')]
+            if keys_to_delete_pandas_children:
+                logger.warning(f"Suppression forcée des sous-modules Pandas enfants: {keys_to_delete_pandas_children}")
+                for k_child in keys_to_delete_pandas_children:
+                    del sys.modules[k_child]
         
         imported_numpy_for_test = None
         try:
+            logger.info(f"Tentative d'importation du vrai NumPy pour {request.node.name}.")
             imported_numpy_for_test = importlib.import_module('numpy')
             sys.modules['numpy'] = imported_numpy_for_test 
             logger.info(f"Vrai NumPy (version {getattr(imported_numpy_for_test, '__version__', 'inconnue')}, ID: {id(imported_numpy_for_test)}) dynamiquement importé et placé dans sys.modules pour {request.node.name}.")
@@ -352,6 +383,18 @@ def setup_numpy_for_tests_fixture(request):
                 if not ('numpy.rec' in sys.modules and sys.modules['numpy.rec'] is imported_numpy_for_test.rec):
                     sys.modules['numpy.rec'] = imported_numpy_for_test.rec
                     logger.info(f"Vrai numpy.rec (depuis import dynamique) assigné pour {request.node.name}.")
+
+            logger.info(f"Forcing re-import of pandas for {request.node.name} after loading real NumPy.")
+            logger.info(f"Nettoyage agressif de pandas et ses sous-modules _libs avant réimportation pour {request.node.name}")
+            deep_delete_from_sys_modules("pandas._libs", logger) # Cibler _libs spécifiquement
+            deep_delete_from_sys_modules("pandas", logger)       # Ensuite, le reste de pandas
+            try:
+                import pandas # Réimporter pandas
+                logger.info(f"Pandas re-imported successfully for {request.node.name} using real NumPy (version {getattr(sys.modules.get('numpy'), '__version__', 'N/A')}, ID: {id(sys.modules.get('numpy'))}). Pandas ID: {id(pandas)}")
+            except ImportError as e_pandas_reimport:
+                logger.error(f"Failed to re-import pandas for {request.node.name} after loading real NumPy: {e_pandas_reimport}")
+                # Optionnel: skipper le test si pandas ne peut être réimporté
+                # pytest.skip(f"Pandas re-import failed: {e_pandas_reimport}")
             
             yield imported_numpy_for_test
 
@@ -411,6 +454,12 @@ def setup_numpy_for_tests_fixture(request):
                 del sys.modules['numpy.core.multiarray']
             if 'numpy._core.multiarray' in sys.modules: # Nettoyage supplémentaire
                 del sys.modules['numpy._core.multiarray']
+            if 'numpy.core' in sys.modules:
+                del sys.modules['numpy.core']
+                logger.info(f"Supprimé sys.modules['numpy.core'] pour {request.node.name} (mock cleanup).")
+            if 'numpy._core' in sys.modules:
+                del sys.modules['numpy._core']
+                logger.info(f"Supprimé sys.modules['numpy._core'] pour {request.node.name} (mock cleanup).")
 
         elif current_numpy_in_sys:
              logger.warning(f"Tentative de restauration pour {request.node.name} (mock), mais sys.modules['numpy'] (ID: {id(current_numpy_in_sys)}) n'est pas le mock attendu.")
