@@ -417,7 +417,7 @@ def analyze_encrypted_data(project_context: ProjectContext) -> str | None:
         # Les attributs de 'selected_extract' devraient correspondre à la classe Extract
         # (soit réelle, soit le mock si l'import réel a échoué dans bootstrap)
         extract_id = getattr(selected_extract, 'id', getattr(selected_extract, 'extract_name', 'N/A_ID'))
-        text_content_extract = getattr(selected_extract, 'text_content', '')
+        text_content_extract = getattr(selected_extract, 'full_text', '') # MODIFIÉ ICI
         extract_title = getattr(selected_extract, 'title', 'N/A_Title')
 
         logger.info(f"\n--- Analyse rhétorique de l'extrait déchiffré (ID: {extract_id}, Titre: {extract_title}) ---")
