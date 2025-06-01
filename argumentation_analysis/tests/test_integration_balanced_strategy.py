@@ -27,10 +27,10 @@ from argumentation_analysis.agents.core.extract.extract_agent import ExtractAgen
 from argumentation_analysis.agents.core.pl.pl_definitions import setup_pl_kernel
 from argumentation_analysis.agents.core.informal.informal_definitions import setup_informal_kernel
 from argumentation_analysis.agents.core.pm.pm_definitions import setup_pm_kernel
-from tests.async_test_case import AsyncTestCase
+# from tests.async_test_case import AsyncTestCase # Suppression de l'import
 
 
-class TestBalancedStrategyIntegration(AsyncTestCase):
+class TestBalancedStrategyIntegration: # Suppression de l'héritage AsyncTestCase
     """Tests d'intégration pour la stratégie d'équilibrage de participation."""
 
     def setUp(self):
@@ -183,7 +183,7 @@ class TestBalancedStrategyIntegration(AsyncTestCase):
         self.assertEqual(balanced_strategy._total_turns, 3)
 
 
-class TestBalancedStrategyEndToEnd(AsyncTestCase):
+class TestBalancedStrategyEndToEnd: # Suppression de l'héritage AsyncTestCase
     """Tests d'intégration end-to-end pour la stratégie d'équilibrage."""
 
     @patch('argumentation_analysis.orchestration.analysis_runner.BalancedParticipationStrategy') # Corrigé le chemin du mock
