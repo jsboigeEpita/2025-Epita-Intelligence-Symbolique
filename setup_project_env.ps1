@@ -110,6 +110,16 @@ if (-not $extractedJdkPath) {
 $finalJdkDirName = (Get-Item $extractedJdkPath).Name
 
 
+Write-Host "Nettoyage des anciens répertoires d'environnements virtuels..."
+if (Test-Path -Path ".\venv" -PathType Container) {
+    Write-Host "Suppression de l'ancien répertoire .\venv..."
+    Remove-Item -Recurse -Force ".\venv"
+}
+if (Test-Path -Path ".\.venv" -PathType Container) {
+    Write-Host "Suppression de l'ancien répertoire .\.venv..."
+    Remove-Item -Recurse -Force ".\.venv"
+}
+Write-Host "Nettoyage terminé."
 # --- Création de l'Environnement Virtuel Python ---
 $venvPath = Join-Path $PSScriptRoot $venvName
 Write-Host "Vérification de l'environnement virtuel Python '$venvName'..."
