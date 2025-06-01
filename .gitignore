@@ -57,3 +57,6 @@ libs/_temp*/
 
 # Pytest output files
 pytest_hierarchical_full_v4.txt
+
+# Scripts de débogage
+scripts/debug_jpype_classpath.py
