@@ -22,7 +22,7 @@ class TestAdvancedReasoning:
         # Tentative de chargement de la classe uniquement pour voir si l'access violation se produit
         print("Attempting to load AspLogicProgram JClass...")
         try:
-            AspLogicProgram = jpype_instance.JClass("org.tweetyproject.logics.asp.syntax.AspLogicProgram")
+            AspLogicProgram = jpype_instance.JClass("org.tweetyproject.lp.asp.syntax.Program")
             print("AspLogicProgram JClass loaded successfully.")
             # Si cela réussit, nous pouvons ajouter d'autres imports un par un.
             # Pour l'instant, on s'arrête ici pour ce test simplifié.
@@ -132,6 +132,115 @@ class TestAdvancedReasoning:
             3. Poser une requête pour la probabilité d'un atome (ex: "alarm").
             4. Assertion: La probabilité calculée devrait être dans une plage attendue.
         """
+# --- DEBUT BLOC DE TEST ISOLEMENT CHARGEMENT CLASSES ---
+        jpype_instance = integration_jvm
+        
+        # Obtenir le ClassLoader
+        JavaThread = jpype_instance.JClass("java.lang.Thread")
+        current_thread = JavaThread.currentThread()
+        loader = current_thread.getContextClassLoader()
+        if loader is None: # Fallback
+            loader = jpype_instance.JClass("java.lang.ClassLoader").getSystemClassLoader()
+
+        print("Tentative de chargement de java.lang.String...")
+        try:
+            StringClass = jpype_instance.JClass("java.lang.String", loader=loader)
+            assert StringClass is not None, "java.lang.String n'a pas pu être chargée."
+            print("java.lang.String chargée avec succès.")
+        except Exception as e:
+            print(f"Erreur lors du chargement de java.lang.String: {e}")
+            pytest.fail(f"Erreur lors du chargement de java.lang.String: {e}")
+
+        print("Tentative de chargement de org.tweetyproject.logics.pl.syntax.PropositionalSignature...")
+        try:
+            PropositionalSignatureClass = jpype_instance.JClass("org.tweetyproject.logics.pl.syntax.PropositionalSignature")
+            assert PropositionalSignatureClass is not None, "org.tweetyproject.logics.pl.syntax.PropositionalSignature n'a pas pu être chargée."
+            print("org.tweetyproject.logics.pl.syntax.PropositionalSignature chargée avec succès.")
+        except Exception as e:
+            print(f"Erreur lors du chargement de org.tweetyproject.logics.pl.syntax.PropositionalSignature: {e}")
+            pytest.fail(f"Erreur lors du chargement de org.tweetyproject.logics.pl.syntax.PropositionalSignature: {e}")
+        
+        print("Tentative de chargement de org.tweetyproject.logics.problog.syntax.ProblogProgram...")
+        try:
+            ProblogProgram_test_load = jpype_instance.JClass("org.tweetyproject.logics.problog.syntax.ProblogProgram")
+            assert ProblogProgram_test_load is not None, "org.tweetyproject.logics.problog.syntax.ProblogProgram n'a pas pu être chargée."
+            print("org.tweetyproject.logics.problog.syntax.ProblogProgram chargée avec succès.") # Ne devrait pas arriver
+        except Exception as e:
+            print(f"Erreur attendue lors du chargement de org.tweetyproject.logics.problog.syntax.ProblogProgram: {e}")
+            # C'est l'échec attendu, donc on continue sans pytest.fail pour ce cas spécifique.
+            pass # On s'attend à une ClassNotFoundException ici.
+        
+        # --- FIN BLOC DE TEST ISOLEMENT CHARGEMENT CLASSES ---
+
+        # --- DEBUT ANCIEN CODE COMMENTE ---
+        # jpype_instance = integration_jvm # Déjà défini au-dessus
+        # # ProblogParser retourne un ProblogProgram, pas une ProbabilisticKnowledgeBase générique.
+        # # ProbabilisticKnowledgeBase est une interface plus générale.
+        # # Obtenir le ClassLoader # Déjà défini au-dessus
+        # # JavaThread = jpype_instance.JClass("java.lang.Thread")
+        # # current_thread = JavaThread.currentThread()
+        # # loader = current_thread.getContextClassLoader()
+        # # if loader is None: # Fallback
+        # #     loader = jpype_instance.JClass("java.lang.ClassLoader").getSystemClassLoader()
+        # ProblogProgram = jpype_instance.JClass("org.tweetyproject.logics.problog.syntax.ProblogProgram", loader=loader)
+        # DefaultProblogReasoner = jpype_instance.JClass("org.tweetyproject.logics.problog.reasoner.DefaultProblogReasoner", loader=loader)
+        # ProblogParser = jpype_instance.JClass("org.tweetyproject.logics.problog.parser.ProblogParser", loader=loader)
+        # PlFormula = jpype_instance.JClass("org.tweetyproject.logics.pl.syntax.PlFormula", loader=loader)
+        # PlParser = jpype_instance.JClass("org.tweetyproject.logics.pl.parser.PlParser", loader=loader) # Pour parser la query
+        #
+        # # Préparation (setup)
+        # problog_parser = ProblogParser()
+        # pl_parser = PlParser() # Parser pour la formule de requête
+        #
+        # base_path = os.path.dirname(os.path.abspath(__file__))
+        # file_path = os.path.join(base_path, "test_data", "simple_problog.pl")
+        #
+        # assert os.path.exists(file_path), f"Le fichier de test {file_path} n'existe pas."
+        #
+        # # Charger la base de connaissances ProbLog
+        # # Note: ProblogParser.parseBeliefSet attend un Reader, pas un File.
+        # # Nous allons lire le contenu du fichier et le passer comme StringReader.
+        # FileReader = jpype_instance.JClass("java.io.FileReader", loader=loader)
+        # BufferedReader = jpype_instance.JClass("java.io.BufferedReader", loader=loader)
+        # 
+        # # Lire le contenu du fichier en Python et le passer à un StringReader Java
+        # # Alternativement, utiliser un FileReader Java directement si le parser le supporte bien
+        # # Pour l'instant, on va parser directement le fichier avec le parser Problog
+        # # qui devrait gérer l'ouverture et la lecture du fichier.
+        # 
+        # # Correction: ProblogParser.parseBeliefSet prend un File object
+        # java_file = jpype_instance.JClass("java.io.File", loader=loader)(file_path)
+        # pkb = problog_parser.parseBeliefSet(java_file)
+        # assert pkb is not None, "La base de connaissances ProbLog n'a pas pu être chargée."
+        #
+        # reasoner = DefaultProblogReasoner() # Le reasoner Problog n'a pas besoin de la KB au constructeur
+        #
+        # # Actions
+        # # La requête est "alarm"
+        # query_formula_str = "alarm"
+        # query_formula = pl_parser.parseFormula(query_formula_str)
+        # 
+        # # La méthode query prend la KB et la formule
+        # probability = reasoner.query(pkb, query_formula)
+        #
+        # # Assertions
+        # # La probabilité exacte peut être complexe à calculer à la main ici,
+        # # mais on s'attend à ce qu'elle soit positive et inférieure ou égale à 1.
+        # # Pour ce modèle spécifique:
+        # # P(alarm) = P(alarm | b, e)P(b)P(e) + P(alarm | b, ~e)P(b)P(~e) + P(alarm | ~b, e)P(~b)P(e) + P(alarm | ~b, ~e)P(~b)P(~e)
+        # # P(b) = 0.6, P(e) = 0.3
+        # # P(~b) = 0.4, P(~e) = 0.7
+        # # P(alarm) = (0.9 * 0.6 * 0.3) + (0.8 * 0.6 * 0.7) + (0.1 * 0.4 * 0.3) + (0 * 0.4 * 0.7)  (en supposant P(alarm | ~b, ~e) = 0 implicitement)
+        # # P(alarm) = 0.162 + 0.336 + 0.012 + 0 = 0.51
+        # # Cependant, Problog peut avoir une sémantique légèrement différente ou des optimisations.
+        # # On va vérifier une plage raisonnable ou une valeur exacte si connue après un premier run.
+        # # Pour l'instant, on s'attend à une valeur positive.
+        # assert probability > 0.0, "La probabilité de 'alarm' devrait être positive."
+        # assert probability <= 1.0, "La probabilité de 'alarm' ne peut excéder 1.0."
+        # # Après exécution, si on obtient une valeur stable, on peut l'affiner.
+        # # Par exemple, si Problog donne 0.51, on peut faire:
+        # assert abs(probability - 0.51) < 0.001, f"La probabilité de 'alarm' attendue autour de 0.51, obtenue: {probability}"
+        # --- FIN ANCIEN CODE COMMENTE ---
         jpype_instance = integration_jvm
         # ProblogParser retourne un ProblogProgram, pas une ProbabilisticKnowledgeBase générique.
         # ProbabilisticKnowledgeBase est une interface plus générale.

@@ -90,24 +90,55 @@ Après avoir activé votre environnement avec `.\activate_project_env.ps1`, vous
     *   **Une exécution réussie** affichera des messages indiquant que `JAVA_HOME` est correctement défini, que le chemin de la JVM a été trouvé, que la JVM a démarré avec succès, et qu'un exemple simple d'utilisation d'une classe Java (comme `java.util.ArrayList` ou `java.lang.String`) fonctionne. Vous devriez voir des messages comme "JVM démarrée avec succès." et des informations sur le `CLASSPATH` Java.
     *   **En cas d'erreur,** le script tentera de fournir des indices sur la nature du problème (par exemple, `JAVA_HOME` non défini, JVM non trouvée, `ClassNotFoundException`). Référez-vous à la section "Dépannage" (Section 6) si nécessaire.
 
-## 5. Exécution du Script de Démonstration Principal `scripts/demonstration_epita.py`
+## 5. Exécution des Scripts de Démonstration
 
-Le script [`scripts/demonstration_epita.py`](scripts/demonstration_epita.py:1) sert de démonstration principale des fonctionnalités du projet, notamment l'interaction avec Tweety pour l'analyse de formules logiques.
+Une fois votre environnement configuré et activé, vous pouvez exécuter les scripts de démonstration pour vérifier l'intégration avec Tweety et comprendre les fonctionnalités de base.
+
+### 5.1. Script de Démonstration Simplifié (Recommandé pour commencer) : `scripts/demo_tweety_interaction_simple.py`
+
+Ce script est la première étape recommandée pour tester votre installation. Il est conçu pour être simple et rapide à exécuter.
+
+**Ce que ce script démontre :**
+*   L'initialisation correcte de la JVM via JPype.
+*   Le parsing d'une formule logique simple (par exemple, `a and b`) en utilisant les classes de Tweety.
+*   L'affichage de la formule parsée.
 
 **Étapes :**
 
 1.  Assurez-vous que votre environnement est activé (voir Section 3).
-2.  Exécutez le script de démonstration :
+2.  Exécutez le script de démonstration simple :
+    ```powershell
+    python scripts/demo_tweety_interaction_simple.py
+    ```
+3.  **Sortie Attendue :**
+    *   Message confirmant le démarrage de la JVM.
+    *   Affichage de la formule logique qui a été parsée (par exemple, `a & b`).
+    *   Message indiquant que le script s'est terminé avec succès.
+    Une sortie sans erreur indique que les composants essentiels (Python, JPype, JVM, accès basique à Tweety) fonctionnent correctement.
+
+### 5.2. Script de Démonstration Complet (Optionnel - Pour aller plus loin) : `scripts/demonstration_epita.py`
+
+Le script [`scripts/demonstration_epita.py`](scripts/demonstration_epita.py:1) est une démonstration plus exhaustive des capacités du projet. Il est plus complexe et illustre des interactions plus avancées avec Tweety.
+
+**Ce que ce script démontre (entre autres) :**
+*   Des opérations logiques plus complexes (satisfiabilité, calcul de modèles).
+*   L'utilisation potentielle de mocks pour simuler certains comportements.
+*   Des exemples d'analyse de sophismes ou d'autres fonctionnalités avancées du projet.
+
+**Étapes :**
+
+1.  Assurez-vous que votre environnement est activé (voir Section 3).
+2.  Exécutez le script de démonstration complet :
     ```powershell
     python scripts/demonstration_epita.py
     ```
 3.  **Sortie Attendue :**
     Le script exécutera une série d'opérations avec Tweety. Vous devriez voir en sortie :
     *   Des messages indiquant le démarrage de la JVM.
-    *   La création et l'affichage de formules logiques.
+    *   La création et l'affichage de formules logiques variées.
     *   Les résultats de l'analyse de ces formules (par exemple, vérification de la satisfiabilité, calcul de modèles).
     *   Des exemples d'utilisation d'agents logiques ou d'autres fonctionnalités spécifiques au projet.
-    Une exécution sans erreurs et affichant les résultats des opérations logiques indique que votre environnement est prêt pour utiliser les fonctionnalités principales du projet.
+    Une exécution sans erreurs et affichant les résultats des opérations logiques indique que votre environnement est prêt pour utiliser les fonctionnalités plus avancées du projet.
 
 ## 6. Dépannage des Problèmes JPype Courants
 
