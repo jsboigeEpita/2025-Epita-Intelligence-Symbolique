@@ -29,9 +29,8 @@ class TestContextualFallacyDetector(unittest.TestCase):
 
     def setUp(self):
         """Initialise l'environnement de test."""
-        # Patcher les dépendances externes pour éviter les erreurs d'importation
-        self.transformers_patcher = patch('argumentation_analysis.agents.tools.analysis.new.contextual_fallacy_detector.HAS_TRANSFORMERS', False)
-        self.transformers_patcher.start()
+        # Le patch pour HAS_TRANSFORMERS a été supprimé car l'attribut n'existe pas
+        # et la logique interne du module gère déjà le cas où les libs NLP sont absentes.
         
         self.detector = ContextualFallacyDetector()
         
@@ -47,7 +46,7 @@ class TestContextualFallacyDetector(unittest.TestCase):
 
     def tearDown(self):
         """Nettoie l'environnement de test."""
-        self.transformers_patcher.stop()
+        # self.transformers_patcher.stop() # Supprimé car le patcher a été enlevé
 
     def test_initialization(self):
         """Teste l'initialisation du détecteur."""
