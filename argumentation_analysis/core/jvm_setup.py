@@ -394,9 +394,22 @@ def initialize_jvm(
             logger.warning("   (JPype n'a pas trouvé de JVM par défaut - dépendra de JAVA_HOME)")
             jvm_path_final = None
         classpath_separator = os.pathsep
-        main_jar_list = sorted([str(p.resolve()) for p in LIB_DIR.glob("*.jar")])
+        
+        # Début de la section fusionnée pour Conflit 1
+        # Construire la liste des JARs principaux depuis lib_dir_path (qui est LIB_DIR ici)
+        main_jar_list = sorted([str(p.resolve()) for p in LIB_DIR.glob("*.jar")]) # Original
         logger.info(f"   JARs principaux trouvés dans '{LIB_DIR}': {len(main_jar_list)}")
 
+        # --- DÉBUT DE LA MODIFICATION (de origin/main) ---
+        # Exclure le JAR problématique pour une solution temporaire
+        jar_to_exclude = "org.tweetyproject.lp.asp-1.28-with-dependencies.jar"
+        original_main_jar_count = len(main_jar_list)
+        main_jar_list = [jar_path for jar_path in main_jar_list if jar_to_exclude not in pathlib.Path(jar_path).name]
+        if len(main_jar_list) < original_main_jar_count:
+            logger.info(f"   Temporairement exclu '{jar_to_exclude}' du classpath. Nombre de JARs principaux réduit à {len(main_jar_list)}.")
+        # --- FIN DE LA MODIFICATION (de origin/main) ---
+        # Fin de la section fusionnée pour Conflit 1
+        
         test_libs_dir_path_obj = PROJECT_ROOT_DIR / "argumentation_analysis" / "tests" / "resources" / "libs"
         test_jar_list = []
         if test_libs_dir_path_obj.is_dir():
@@ -405,14 +418,14 @@ def initialize_jvm(
         else:
             logger.info(f"   Répertoire des JARs de test '{test_libs_dir_path_obj}' non trouvé ou non accessible.")
 
-        # Correction de la logique de construction du classpath
+        # Correction de la logique de construction du classpath (ma logique)
         main_jars_map = {pathlib.Path(p).name: p for p in main_jar_list}
         test_jars_map = {pathlib.Path(p).name: p for p in test_jar_list}
         final_jars_map = {**test_jars_map, **main_jars_map} # Priorité aux JARs principaux
         all_available_jars = sorted(list(final_jars_map.values()))
 
         tweety_full_jar_path = None
-        for jar_path_str in all_available_jars: # Itérer sur all_available_jars qui contient bien les JARs des tests et principaux
+        for jar_path_str in all_available_jars: 
             if "tweety-full" in pathlib.Path(jar_path_str).name:
                 tweety_full_jar_path = jar_path_str
                 break 
@@ -452,7 +465,17 @@ def initialize_jvm(
         jvm_args.extend(jvm_memory_options)
         logger.info(f"   Options de mémoire JVM ajoutées: {jvm_memory_options}")
 
-        logger.info(f"   Options de débogage JPype DÉSACTIVÉES pour ce test.")
+        # Début de la section fusionnée pour Conflit 2
+        # Ajout des options de débogage JVM et JPype (de origin/main)
+        jvm_debug_options = ["-Xcheck:jni"] # Option de débogage JNI
+        # jpype_debug_options = ["-Djpype.debug=true", "-Djpype.trace=true"] # Options JPype
+        jvm_args.extend(jvm_debug_options)
+        # jvm_args.extend(jpype_debug_options)
+        logger.info(f"   Options de débogage JVM ajoutées: {jvm_debug_options}")
+        # logger.info(f"   Options de débogage JPype ajoutées: {jpype_debug_options}")
+        # Fin de la section fusionnée pour Conflit 2
+        
+        logger.info(f"   Options de débogage JPype DÉSACTIVÉES pour ce test.") # Ma ligne, conservée
 
         jvm_path_to_use_explicit: Optional[str] = None
         if java_home_to_set: 

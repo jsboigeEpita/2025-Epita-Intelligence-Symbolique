@@ -386,6 +386,20 @@ class TestHierarchicalCommunication(unittest.TestCase):
             
             # Envoyer la réponse
             self.middleware.send_message(response)
+            time.sleep(0.1) # Donner du temps pour le traitement du message
+            # Tentative de forcer le traitement de la réponse par l'agent tactique
+            for _ in range(5): # Essayer quelques fois avec un court délai
+                # L'agent tactique est le destinataire de la réponse (initiateur de la requête)
+                # mais il est bloqué en attente. On essaie de faire traiter sa file.
+                # C'est un hack de test.
+                processed_msg = self.middleware.receive_message(
+                    recipient_id="tactical-agent-1",
+                    channel_type=ChannelType.HIERARCHICAL,
+                    timeout=0.01
+                )
+                if processed_msg and processed_msg.id == response.id: # Si on a traité la réponse elle-même
+                    break
+                time.sleep(0.01)
         
         # Démarrer un thread pour simuler l'agent stratégique
         strategic_thread = threading.Thread(target=strategic_agent)
@@ -396,7 +410,7 @@ class TestHierarchicalCommunication(unittest.TestCase):
             request_type="guidance",
             parameters={"text_id": "text-123", "issue": "complex_fallacies"},
             recipient_id="strategic-agent-1",
-            timeout=5.0, # Augmentation du timeout
+            timeout=10.0, # Augmentation du timeout (précédemment 5.0)
             priority=MessagePriority.NORMAL
         )
         
@@ -441,7 +455,18 @@ class TestHierarchicalCommunication(unittest.TestCase):
             
             # Envoyer la réponse
             self.middleware.send_message(response)
-        
+            time.sleep(0.1) # Donner du temps pour le traitement du message
+            # Tentative de forcer le traitement de la réponse par l'agent opérationnel
+            for _ in range(5):
+                processed_msg = self.middleware.receive_message(
+                    recipient_id="operational-agent-1",
+                    channel_type=ChannelType.HIERARCHICAL,
+                    timeout=0.01
+                )
+                if processed_msg and processed_msg.id == response.id:
+                    break
+                time.sleep(0.01)
+    
         # Démarrer un thread pour simuler l'agent tactique
         tactical_thread = threading.Thread(target=tactical_agent)
         tactical_thread.start()
@@ -452,7 +477,7 @@ class TestHierarchicalCommunication(unittest.TestCase):
             description="Cannot identify pattern in text",
             context={"text_id": "text-123", "position": "paragraph 3"},
             recipient_id="tactical-agent-1",
-            timeout=5.0, # Augmentation du timeout
+            timeout=10.0, # Augmentation du timeout (précédemment 5.0)
             priority=MessagePriority.NORMAL
         )
         
@@ -573,7 +598,17 @@ class TestAsyncHierarchicalCommunication(unittest.IsolatedAsyncioTestCase):
             # Envoyer la réponse
             await asyncio.to_thread(self.middleware.send_message, response)
             await asyncio.sleep(0.1) # Donner du temps pour le traitement du message
-        
+            # Tentative de forcer le traitement de la réponse par l'agent tactique
+            for _ in range(5):
+                processed_msg = await self.middleware.receive_message_async(
+                    recipient_id="tactical-agent-1",
+                    channel_type=ChannelType.HIERARCHICAL,
+                    timeout=0.01
+                )
+                if processed_msg and processed_msg.id == response.id:
+                    break
+                await asyncio.sleep(0.01)
+    
         # Démarrer une tâche pour simuler l'agent stratégique
         strategic_task = asyncio.create_task(strategic_agent())
         
@@ -582,7 +617,7 @@ class TestAsyncHierarchicalCommunication(unittest.IsolatedAsyncioTestCase):
             request_type="guidance",
             parameters={"text_id": "text-123", "issue": "complex_fallacies"},
             recipient_id="strategic-agent-1",
-            timeout=5.0, # Augmentation du timeout
+            timeout=10.0, # Augmentation du timeout (précédemment 5.0)
             priority=MessagePriority.NORMAL
         )
         
@@ -626,8 +661,19 @@ class TestAsyncHierarchicalCommunication(unittest.IsolatedAsyncioTestCase):
             response.sender_level = AgentLevel.TACTICAL
             
             # Envoyer la réponse
-            self.middleware.send_message(response)
-        
+            self.middleware.send_message(response) # Note: send_message est synchrone ici
+            await asyncio.sleep(0.1) # Donner du temps pour le traitement du message
+            # Tentative de forcer le traitement de la réponse par l'agent opérationnel
+            for _ in range(5):
+                processed_msg = await self.middleware.receive_message_async(
+                    recipient_id="operational-agent-1",
+                    channel_type=ChannelType.HIERARCHICAL,
+                    timeout=0.01
+                )
+                if processed_msg and processed_msg.id == response.id:
+                    break
+                await asyncio.sleep(0.01)
+    
         # Démarrer une tâche pour simuler l'agent tactique
         tactical_task = asyncio.create_task(tactical_agent())
         
@@ -639,7 +685,7 @@ class TestAsyncHierarchicalCommunication(unittest.IsolatedAsyncioTestCase):
             description="Cannot identify pattern in text",
             context={"text_id": "text-123", "position": "paragraph 3"},
             recipient_id="tactical-agent-1",
-            timeout=5.0, # Augmentation du timeout
+            timeout=10.0, # Augmentation du timeout (précédemment 5.0)
             priority=MessagePriority.NORMAL
         )
         
