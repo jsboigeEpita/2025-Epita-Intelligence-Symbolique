@@ -13,3 +13,4 @@ numpy
 scipy
 scikit-learn
 python-dotenv
+clingo
