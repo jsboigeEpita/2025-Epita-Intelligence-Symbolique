@@ -330,7 +330,8 @@ class TacticalAdapter:
             
             if response:
                 self.logger.info(f"Received guidance from {recipient_id} for {request_type} request")
-                return response.content.get("data")
+                # DATA_DIR est la clé correcte utilisée dans les tests et la logique de message
+                return response.content.get(DATA_DIR)
             
             return None
             
@@ -374,7 +375,8 @@ class TacticalAdapter:
             
             if response:
                 self.logger.info(f"Received guidance from {recipient_id} for {request_type} request")
-                return response.content.get("data")
+                # DATA_DIR est la clé correcte
+                return response.content.get(DATA_DIR)
             
             self.logger.warning(f"Request {request_type} to {recipient_id} timed out")
             return None
