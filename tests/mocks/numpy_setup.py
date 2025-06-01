@@ -204,31 +204,90 @@ def setup_numpy():
 
 @pytest.fixture(scope="function", autouse=True)
 def setup_numpy_for_tests_fixture(request):
-    if request.node.get_closest_marker("real_jpype"): # et donc potentiellement real_numpy
-        print(f"INFO: numpy_setup.py: setup_numpy_for_tests_fixture: Test {request.node.name} marqué real_jpype, skip réinstallation mock numpy.")
-        yield
+    use_real_numpy_marker = request.node.get_closest_marker("use_real_numpy")
+    real_jpype_marker = request.node.get_closest_marker("real_jpype")
+
+    if use_real_numpy_marker or real_jpype_marker:
+        marker_name = "use_real_numpy" if use_real_numpy_marker else "real_jpype"
+        print(f"INFO: numpy_setup.py: setup_numpy_for_tests_fixture: Test {request.node.name} marqué {marker_name}, tentative d'utilisation du vrai NumPy.")
+        
+        original_numpy = sys.modules.get('numpy')
+        original_numpy_rec = sys.modules.get('numpy.rec')
+        
+        # Supprimer le mock de sys.modules s'il est présent
+        if 'numpy' in sys.modules and isinstance(sys.modules['numpy'], type) and sys.modules['numpy'].__name__ == 'numpy' and hasattr(sys.modules['numpy'], '__path__') and not sys.modules['numpy'].__path__:
+            print("INFO: numpy_setup.py: Mock NumPy détecté, suppression pour utiliser le vrai NumPy.")
+            del sys.modules['numpy']
+            if 'numpy.rec' in sys.modules: # Supprimer aussi les sous-modules mockés
+                del sys.modules['numpy.rec']
+            # Potentiellement d'autres sous-modules à supprimer: numpy.typing, numpy.core, etc.
+            # Pour l'instant, on se concentre sur numpy et numpy.rec
+
+        try:
+            import numpy
+            print(f"INFO: numpy_setup.py: Vrai NumPy (version {getattr(numpy, '__version__', 'inconnue')}) importé avec succès.")
+            # S'assurer que les sous-modules importants sont aussi les vrais
+            if hasattr(numpy, 'rec') and 'numpy.rec' in sys.modules and isinstance(sys.modules['numpy.rec'], type) and sys.modules['numpy.rec'].__name__ == 'rec':
+                 pass # Vrai numpy.rec est déjà là ou sera chargé par le vrai numpy
+            elif hasattr(numpy, 'rec'):
+                 sys.modules['numpy.rec'] = numpy.rec
+
+
+        except ImportError:
+            print("ERREUR: numpy_setup.py: Impossible d'importer le vrai NumPy. Le mock restera probablement actif si installé précédemment.")
+            # Si le vrai numpy ne peut être importé, on ne fait rien de plus, le mock pourrait déjà être là.
+        
+        yield # Laisser le test s'exécuter avec le vrai NumPy (ou ce qui a pu être chargé)
+
+        # Restauration après le test (si nécessaire, mais pour 'use_real_numpy' on veut le vrai)
+        # Si un mock était là avant et qu'on l'a enlevé, il faut le remettre pour les autres tests.
+        # Cette logique devient complexe. Pour l'instant, on suppose que les tests marqués
+        # 'use_real_numpy' sont exécutés dans un contexte où le vrai numpy est souhaité et disponible.
+        # La restauration du mock initial est gérée par la logique 'else' ci-dessous.
+        # Si original_numpy était le mock, il sera restauré par la branche 'else'.
+        # Si original_numpy était le vrai, il est déjà là.
+        # Si original_numpy était None, et qu'on a chargé le vrai, c'est ok.
+        # Le problème est si un mock était là, qu'on charge le vrai, puis qu'un autre test a besoin du mock.
+        # La fixture étant 'function' scope, la restauration ci-dessous devrait gérer cela.
+
+        # On restaure ce qui était là avant CE test spécifique si ce test utilisait le vrai numpy
+        if original_numpy:
+            sys.modules['numpy'] = original_numpy
+        elif 'numpy' in sys.modules and not use_real_numpy_marker and not real_jpype_marker:
+            # Si on n'avait rien à l'origine et qu'on a chargé le vrai, on le supprime pour que le mock soit réinstallé
+            # pour les tests suivants qui n'ont pas le marqueur.
+            # Mais seulement si ce n'est pas un test qui voulait le vrai numpy.
+            # Cette partie est délicate. La logique principale de mock/démock est mieux gérée
+            # par _install_numpy_mock_immediately et la restauration simple.
+             pass
+
+
+        if original_numpy_rec:
+            sys.modules['numpy.rec'] = original_numpy_rec
+        elif 'numpy.rec' in sys.modules and not use_real_numpy_marker and not real_jpype_marker:
+            pass
         return
 
-    original_numpy = sys.modules.get('numpy')
-    original_numpy_rec = sys.modules.get('numpy.rec')
-    
-    # Toujours appeler _install_numpy_mock_immediately pour s'assurer que notre mock est en place
-    # pour les tests qui ne sont pas 'real_jpype'.
-    _install_numpy_mock_immediately()
+    # Logique existante pour les tests qui N'ONT PAS le marqueur 'use_real_numpy' ou 'real_jpype'
+    # C'est ici qu'on s'assure que le mock est bien actif.
+    _original_numpy_before_mock_install = sys.modules.get('numpy')
+    _original_numpy_rec_before_mock_install = sys.modules.get('numpy.rec')
+
+    _install_numpy_mock_immediately() # Assure que le mock est en place
 
     yield
 
-    # Restauration (best-effort)
-    if original_numpy:
-        sys.modules['numpy'] = original_numpy
+    # Restauration pour les tests qui utilisaient le mock
+    if _original_numpy_before_mock_install:
+        sys.modules['numpy'] = _original_numpy_before_mock_install
     elif 'numpy' in sys.modules:
         # Si on a mis notre mock et qu'il n'y avait rien, on le laisse pour l'instant
         # ou on pourrait le supprimer si on est sûr qu'aucun autre test n'en dépendrait
         # de manière inattendue. Pour l'instant, on le laisse.
         pass
         
-    if original_numpy_rec:
-        sys.modules['numpy.rec'] = original_numpy_rec
+    if _original_numpy_rec_before_mock_install:
+        sys.modules['numpy.rec'] = _original_numpy_rec_before_mock_install
     elif 'numpy.rec' in sys.modules:
         pass
 
