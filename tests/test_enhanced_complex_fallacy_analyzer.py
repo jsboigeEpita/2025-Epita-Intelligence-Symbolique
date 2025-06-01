@@ -11,6 +11,7 @@ import os
 from unittest.mock import MagicMock, patch
 import json
 import logging
+import pytest # Ajout de l'import pytest
 
 # Configurer le logging pour les tests
 logging.basicConfig(
@@ -38,6 +39,7 @@ from pandas_mock import *
 from argumentation_analysis.agents.tools.analysis.enhanced.complex_fallacy_analyzer import EnhancedComplexFallacyAnalyzer
 
 
+@pytest.mark.use_real_numpy
 class TestEnhancedComplexFallacyAnalyzer(unittest.TestCase):
     """Tests unitaires pour l'analyseur de sophismes complexes amélioré."""
     
