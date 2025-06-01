@@ -134,9 +134,9 @@ class TestAdvancedReasoning:
         # Préparation (setup)
         pass
 
-    @pytest.mark.xfail(reason="Problème persistant avec DefaultMeReasoner: 'Optimization problem to compute the ME-distribution is not feasible'. Nécessite investigation Tweety. De plus, instabilités JVM générales sous pytest. Ou JVM non trouvée par JPype.",
-                       raises=jpype.JException, # Attendre une exception Java générique ou une erreur de setup JVM
-                       strict=False) # False car l'erreur peut aussi être JVMNotFoundException pendant le setup
+    @pytest.mark.xfail(reason="Résultat incorrect (0.0 au lieu de 0.51) pour la requête PCL, probablement dû à des instabilités JVM (access violation) lors de l'appel au DefaultMeReasoner avec OctaveSqpSolver. Nécessite investigation.",
+                       raises=jpype.JException, # Gardé car une JException reste possible avec l'instabilité JVM
+                       strict=False) # False car l'erreur sous-jacente (instabilité JVM) peut varier
     def test_probabilistic_reasoner_query(self, integration_jvm):
         """
         Scénario: Tester l'inférence probabiliste avec un reasoner probabiliste (ProbLog).
@@ -592,25 +592,19 @@ class TestAdvancedReasoning:
 
         probability_result = reasoner.query(pkb, query_formula)
 
-        logger.info(f"Probabilité calculée pour '{query_str_from_file}': {probability_result.getValue()}")
+        logger.info(f"Probabilité calculée pour '{query_str_from_file}': {float(probability_result)}")
         assert probability_result is not None, "La probabilité retournée ne doit pas être nulle."
-        # La méthode getValue() de l'objet Probability retourne un double Java, qui est automatiquement
-        # converti en float Python par JPype.
-        prob_value = probability_result.getValue()
-        assert 0 <= prob_value <= 1, f"La probabilité doit être entre 0 et 1, obtenue: {prob_value}"
+        # reasoner.query() retourne un java.lang.Double (ou un type compatible)
+        # que Python peut directement convertir en float.
+        prob_value = float(probability_result)
+        # La probabilité attendue est 0.51 selon le calcul manuel pour simple_problog.pl
+        # Voir le fichier test_data/simple_problog.pl et les commentaires dans ce test pour le détail du calcul.
+        expected_probability = 0.51
+        assert abs(prob_value - expected_probability) < 0.001, \
+            f"La probabilité de '{query_str_from_file}' attendue autour de {expected_probability}, obtenue: {prob_value}"
         
-        # # Calcul manuel pour simple_problog.pl:
-        # # P(b) = 0.6, P(e) = 0.3
-        # # P(a | b,e) = 0.9
-        # # P(a | b,~e) = 0.8
-        # # P(a | ~b,e) = 0.1
-        # # P(a | ~b,~e) = 0 (implicite car non défini)
-        # # P(alarm) = P(a|b,e)P(b)P(e) + P(a|b,~e)P(b)P(~e) + P(a|~b,e)P(~b)P(e) + P(a|~b,~e)P(~b)P(~e)
-        # #          = (0.9 * 0.6 * 0.3) + (0.8 * 0.6 * 0.7) + (0.1 * 0.4 * 0.3) + (0 * 0.4 * 0.7)
-        # #          = 0.162 + 0.336 + 0.012 + 0
-        # #          = 0.51
-        # self.assertAlmostEqual(prob_value, 0.51, places=5, # Commenté
-        #                        msg=f"La probabilité pour '{query_str_from_file}' ({prob_value}) ne correspond pas à la valeur attendue 0.51.")
+        # L'assertion suivante est redondante si celle ci-dessus est précise, mais gardée pour la plage générale.
+        assert 0 <= prob_value <= 1, f"La probabilité doit être entre 0 et 1, obtenue: {prob_value}"
 
     def test_probabilistic_reasoner_update(self, integration_jvm):
         """
