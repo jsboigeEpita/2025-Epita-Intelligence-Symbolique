@@ -251,6 +251,7 @@ def find_valid_java_home() -> Optional[str]:
 
     logger.error(f"❌ Recherche finale: Aucun répertoire Java Home valide (système ou portable) n'a pu être localisé ou validé (Java >= {MIN_JAVA_VERSION}).")
     return None
+# (Suppression du bloc de la version distante, la fonction _build_effective_classpath est conservée depuis HEAD)
 
 def _build_effective_classpath(
     lib_dir_path_str: str = str(LIBS_DIR), # Utiliser str() pour compatibilité avec pathlib.Path()
@@ -336,7 +337,6 @@ def initialize_jvm(
                 logger.warning("   jpype.imports non disponible pour enregistrer les domaines (possible si mock partiel).")
         except Exception: pass
         return True
-        
     java_home_to_set = find_valid_java_home()
     if java_home_to_set and not os.getenv("JAVA_HOME"):
         try:
@@ -358,131 +358,130 @@ def initialize_jvm(
         try:
             jvm_path_final = jpype.getDefaultJVMPath()
             logger.info(f"   (Chemin JVM par défaut détecté par JPype: {jvm_path_final})")
-        except jpype.JVMNotFoundException:
+        except jpype.JVMNotFoundException: 
             logger.warning("   (JPype n'a pas trouvé de JVM par défaut - dépendra de JAVA_HOME)")
             jvm_path_final = None
-        
-        combined_jar_list, classpath_str_for_env_and_log = _build_effective_classpath(lib_dir_path, str(PROJECT_ROOT_DIR))
-        
-        if not combined_jar_list:
-             return False # Erreur déjà loggée par _build_effective_classpath
-
-        try:
-            os.environ['CLASSPATH'] = classpath_str_for_env_and_log
-            logger.info(f"   Variable d'environnement CLASSPATH définie.")
-        except Exception as e_set_classpath_env:
-            logger.error(f"   ❌ Impossible de définir la variable d'environnement CLASSPATH: {e_set_classpath_env}")
+            combined_jar_list, classpath_str_for_env_and_log = _build_effective_classpath(lib_dir_path, str(PROJECT_ROOT_DIR))
             
-        # jvm_args sont déjà initialisés (et peuvent contenir extra_jvm_args)
-        
-        if NATIVE_LIBS_DIR.exists() and any(NATIVE_LIBS_DIR.iterdir()):
-            native_path_arg = f"-Djava.library.path={NATIVE_LIBS_DIR.resolve()}"
-            jvm_args.append(native_path_arg)
-            logger.info(f"   Argument JVM natif ajouté: {native_path_arg}")
-        else:
-            logger.info(f"   (Pas de bibliothèques natives trouvées dans '{NATIVE_LIBS_DIR.resolve()}', -Djava.library.path non ajouté)")
-        # logger.info(f"   [DEBUG] -Djava.library.path temporairement désactivé.") # Commenté pour réactiver
-        
-        # jvm_memory_options = ["-Xms256m", "-Xmx512m"]
-        # jvm_args.extend(jvm_memory_options)
-        # logger.info(f"   Options de mémoire JVM ajoutées: {jvm_memory_options}")
-        logger.info(f"   [DEBUG] Options de mémoire JVM temporairement désactivées.")
-
-        # Début de la section fusionnée pour Conflit 2
-        # Ajout des options de débogage JVM et JPype (de origin/main)
-        # Ces options sont maintenant gérées via le paramètre extra_jvm_args
-        # jvm_debug_options = ["-Xcheck:jni"]
-        # jpype_debug_options = ["-Djpype.debug=True", "-Djpype.jni_debug=True"]
-        # if "-Xcheck:jni" not in jvm_args: # Ne pas ajouter si déjà présent via extra_jvm_args
-        #    logger.info(f"   Option de débogage JVM (-Xcheck:jni) TEMPORAIREMENT DÉSACTIVÉE (ou gérée par extra_jvm_args).")
-        # if not any(arg.startswith("-Djpype.debug") or arg.startswith("-Djpype.jni_debug") for arg in jvm_args):
-        #    logger.info(f"   Options de débogage JPype (debug, jni_debug) TEMPORAIREMENT DÉSACTIVÉES (ou gérées par extra_jvm_args).")
-
-        jvm_path_to_use_explicit: Optional[str] = None
-        # logger.info(f"   [DEBUG] Forçage de jvm_path_to_use_explicit à None pour utiliser la détection JPype par défaut.") # Commenté pour test
-        if java_home_to_set:
-            _java_home_path = pathlib.Path(java_home_to_set)
-            _system = platform.system()
-            _jvm_dll_path: Optional[pathlib.Path] = None
-            if _system == "Windows":
-                _jvm_dll_path = _java_home_path / "bin" / "server" / "jvm.dll"
-            elif _system == "Darwin":
-                _jvm_dll_path = _java_home_path / "lib" / "server" / "libjvm.dylib"
-                if not _jvm_dll_path.is_file() and (_java_home_path / "Contents" / "Home" / "lib" / "server" / "libjvm.dylib").is_file():
-                     _jvm_dll_path = _java_home_path / "Contents" / "Home" / "lib" / "server" / "libjvm.dylib"
-                elif not _jvm_dll_path.is_file():
-                     _jvm_dll_path = _java_home_path / "jre" / "lib" / "server" / "libjvm.dylib"
-            else: # Linux et autres
-                _jvm_dll_path = _java_home_path / "lib" / "server" / "libjvm.so"
-                if not _jvm_dll_path.is_file(): # Tentative avec jre/lib/server
-                    _jvm_dll_path_jre_variant = _java_home_path / "jre" / "lib" / "server" / "libjvm.so"
-                    if _jvm_dll_path_jre_variant.is_file():
-                        _jvm_dll_path = _jvm_dll_path_jre_variant
-                    else: # Tentatives plus génériques pour certaines distributions Linux
-                        lib_server_paths = list((_java_home_path / "lib").glob("**/server/libjvm.so"))
-                        if lib_server_paths:
-                            _jvm_dll_path = lib_server_paths[0]
-                        else:
-                             jre_lib_server_paths = list((_java_home_path / "jre" / "lib").glob("**/server/libjvm.so"))
-                             if jre_lib_server_paths:
-                                  _jvm_dll_path = jre_lib_server_paths[0]
-
-            if _jvm_dll_path and _jvm_dll_path.is_file():
-                jvm_path_to_use_explicit = str(_jvm_dll_path.resolve())
-                logger.info(f"   Chemin JVM explicite déterminé pour startJVM: {jvm_path_to_use_explicit}")
-            else:
-                logger.warning(f"   Impossible de construire un chemin JVM valide depuis JAVA_HOME '{java_home_to_set}' (chemin testé: {_jvm_dll_path}). JPype utilisera sa détection par défaut.")
-        
-        logger.info(f"DEBUG_JVM_SETUP: JAVA_HOME avant startJVM: {os.getenv('JAVA_HOME')}")
-        logger.info(f"DEBUG_JVM_SETUP: Path avant startJVM: {os.getenv('PATH')}")
-        logger.info(f"DEBUG_JVM_SETUP: CLASSPATH avant startJVM: {os.getenv('CLASSPATH')}")
-        logger.info(f"DEBUG_JVM_SETUP: Tentative de démarrage avec jvm_path_to_use_explicit='{jvm_path_to_use_explicit}', classpath='{len(combined_jar_list)} JARs', args='{jvm_args}'")
-        if hasattr(jpype, 'config'):
-            jpype.config.destroy_jvm = False
-            logger.info(f"DEBUG_JVM_SETUP: jpype.config.destroy_jvm défini sur False.")
-            # logger.info(f"DEBUG_JVM_SETUP: jpype.config.destroy_jvm NON défini sur False (utilisation du défaut JPype).")
-        else:
-            logger.warning("DEBUG_JVM_SETUP: jpype.config non disponible, impossible de définir destroy_jvm.")
-
-        logger.info(f"DEBUG_JVM_SETUP: APPEL IMMINENT DE jpype.startJVM()")
-        if jvm_path_to_use_explicit:
-            jpype.startJVM(jvm_path_to_use_explicit, classpath=combined_jar_list, *jvm_args, convertStrings=False, ignoreUnrecognized=True)
-        else:
-            logger.warning("   Aucun chemin JVM explicite fourni à startJVM, utilisation de la détection interne de JPype.")
-            jpype.startJVM(classpath=combined_jar_list, *jvm_args, convertStrings=False, ignoreUnrecognized=True)
-        logger.info(f"DEBUG_JVM_SETUP: jpype.startJVM() APPELÉ. Vérification avec jpype.isJVMStarted(): {jpype.isJVMStarted()}")
-        
-        jvm_fully_initialized = False
-        if jpype.isJVMStarted():
-            classpath_from_jvm = None
+            if not combined_jar_list:
+                 return False # Erreur déjà loggée par _build_effective_classpath
+    
             try:
-                classpath_from_jvm = jpype.getClassPath()
-                logger.info(f"   Classpath rapporté par jpype.getClassPath() juste après startJVM: {classpath_from_jvm}")
-            except Exception as e_cp:
-                logger.warning(f"   Impossible d'obtenir jpype.getClassPath() juste après startJVM: {e_cp}")
-
-            if classpath_from_jvm: # Vérifier si le classpath est non vide
-                if hasattr(jpype, 'imports') and jpype.imports is not None:
-                    try:
-                        jpype.imports.registerDomain("java", alias="java")
-                        jpype.imports.registerDomain("org", alias="org")
-                        jpype.imports.registerDomain("net", alias="net")
-                        jpype.imports.registerDomain("net.sf", alias="sf")
-                        jpype.imports.registerDomain("net.sf.tweety", alias="tweety")
-                        logger.info("✅ JVM démarrée avec succès, classpath chargé ET domaines (java, org, net, sf, tweety) enregistrés.")
-                        jvm_fully_initialized = True
-                    except Exception as e_reg_domain_jvm_setup:
-                        logger.error(f"❌ Erreur lors de l'enregistrement des domaines JPype (classpath semblait OK): {e_reg_domain_jvm_setup}")
-                else:
-                    logger.warning("✅ JVM démarrée et classpath chargé, mais jpype.imports non disponible pour enregistrer les domaines.")
-                    # On considère quand même que c'est mieux que rien si le classpath est là
-                    jvm_fully_initialized = True
-            else:
-                logger.error("❌ JVM démarrée (isJVMStarted()=True) MAIS le classpath est VIDE ou inaccessible. Les classes Java ne seront pas trouvées.")
-        else:
-            logger.error("❌ JVM non démarrée (isJVMStarted()=False).")
+                os.environ['CLASSPATH'] = classpath_str_for_env_and_log
+                logger.info(f"   Variable d'environnement CLASSPATH définie.")
+            except Exception as e_set_classpath_env:
+                logger.error(f"   ❌ Impossible de définir la variable d'environnement CLASSPATH: {e_set_classpath_env}")
+                    
+            # jvm_args sont déjà initialisés (et peuvent contenir extra_jvm_args)
             
-        jvm_ready = jvm_fully_initialized
+            if NATIVE_LIBS_DIR.exists() and any(NATIVE_LIBS_DIR.iterdir()):
+                native_path_arg = f"-Djava.library.path={NATIVE_LIBS_DIR.resolve()}"
+                jvm_args.append(native_path_arg)
+                logger.info(f"   Argument JVM natif ajouté: {native_path_arg}")
+            else:
+                logger.info(f"   (Pas de bibliothèques natives trouvées dans '{NATIVE_LIBS_DIR.resolve()}', -Djava.library.path non ajouté)")
+            # logger.info(f"   [DEBUG] -Djava.library.path temporairement désactivé.") # Commenté pour réactiver
+            
+            # jvm_memory_options = ["-Xms256m", "-Xmx512m"]
+            # jvm_args.extend(jvm_memory_options)
+            # logger.info(f"   Options de mémoire JVM ajoutées: {jvm_memory_options}")
+            logger.info(f"   [DEBUG] Options de mémoire JVM temporairement désactivées.")
+    
+            # Début de la section fusionnée pour Conflit 2
+            # Ajout des options de débogage JVM et JPype (de origin/main)
+            # Ces options sont maintenant gérées via le paramètre extra_jvm_args
+            # jvm_debug_options = ["-Xcheck:jni"]
+            # jpype_debug_options = ["-Djpype.debug=True", "-Djpype.jni_debug=True"]
+            # if "-Xcheck:jni" not in jvm_args: # Ne pas ajouter si déjà présent via extra_jvm_args
+            #    logger.info(f"   Option de débogage JVM (-Xcheck:jni) TEMPORAIREMENT DÉSACTIVÉE (ou gérée par extra_jvm_args).")
+            # if not any(arg.startswith("-Djpype.debug") or arg.startswith("-Djpype.jni_debug") for arg in jvm_args):
+            #    logger.info(f"   Options de débogage JPype (debug, jni_debug) TEMPORAIREMENT DÉSACTIVÉES (ou gérées par extra_jvm_args).")
+    
+            jvm_path_to_use_explicit: Optional[str] = None
+            # logger.info(f"   [DEBUG] Forçage de jvm_path_to_use_explicit à None pour utiliser la détection JPype par défaut.") # Commenté pour test
+            if java_home_to_set:
+                _java_home_path = pathlib.Path(java_home_to_set)
+                _system = platform.system()
+                _jvm_dll_path: Optional[pathlib.Path] = None
+                if _system == "Windows":
+                    _jvm_dll_path = _java_home_path / "bin" / "server" / "jvm.dll"
+                elif _system == "Darwin":
+                    _jvm_dll_path = _java_home_path / "lib" / "server" / "libjvm.dylib"
+                    if not _jvm_dll_path.is_file() and (_java_home_path / "Contents" / "Home" / "lib" / "server" / "libjvm.dylib").is_file():
+                         _jvm_dll_path = _java_home_path / "Contents" / "Home" / "lib" / "server" / "libjvm.dylib"
+                    elif not _jvm_dll_path.is_file():
+                         _jvm_dll_path = _java_home_path / "jre" / "lib" / "server" / "libjvm.dylib"
+                else: # Linux et autres
+                    _jvm_dll_path = _java_home_path / "lib" / "server" / "libjvm.so"
+                    if not _jvm_dll_path.is_file(): # Tentative avec jre/lib/server
+                        _jvm_dll_path_jre_variant = _java_home_path / "jre" / "lib" / "server" / "libjvm.so"
+                        if _jvm_dll_path_jre_variant.is_file():
+                            _jvm_dll_path = _jvm_dll_path_jre_variant
+                        else: # Tentatives plus génériques pour certaines distributions Linux
+                            lib_server_paths = list((_java_home_path / "lib").glob("**/server/libjvm.so"))
+                            if lib_server_paths:
+                                _jvm_dll_path = lib_server_paths[0]
+                            else:
+                                 jre_lib_server_paths = list((_java_home_path / "jre" / "lib").glob("**/server/libjvm.so"))
+                                 if jre_lib_server_paths:
+                                      _jvm_dll_path = jre_lib_server_paths[0]
+    
+                if _jvm_dll_path and _jvm_dll_path.is_file():
+                    jvm_path_to_use_explicit = str(_jvm_dll_path.resolve())
+                    logger.info(f"   Chemin JVM explicite déterminé pour startJVM: {jvm_path_to_use_explicit}")
+                else:
+                    logger.warning(f"   Impossible de construire un chemin JVM valide depuis JAVA_HOME '{java_home_to_set}' (chemin testé: {_jvm_dll_path}). JPype utilisera sa détection par défaut.")
+            
+            logger.info(f"DEBUG_JVM_SETUP: JAVA_HOME avant startJVM: {os.getenv('JAVA_HOME')}")
+            logger.info(f"DEBUG_JVM_SETUP: Path avant startJVM: {os.getenv('PATH')}")
+            logger.info(f"DEBUG_JVM_SETUP: CLASSPATH avant startJVM: {os.getenv('CLASSPATH')}")
+            logger.info(f"DEBUG_JVM_SETUP: Tentative de démarrage avec jvm_path_to_use_explicit='{jvm_path_to_use_explicit}', classpath='{len(combined_jar_list)} JARs', args='{jvm_args}'")
+            if hasattr(jpype, 'config'):
+                jpype.config.destroy_jvm = False
+                logger.info(f"DEBUG_JVM_SETUP: jpype.config.destroy_jvm défini sur False.")
+                # logger.info(f"DEBUG_JVM_SETUP: jpype.config.destroy_jvm NON défini sur False (utilisation du défaut JPype).")
+            else:
+                logger.warning("DEBUG_JVM_SETUP: jpype.config non disponible, impossible de définir destroy_jvm.")
+    
+            logger.info(f"DEBUG_JVM_SETUP: APPEL IMMINENT DE jpype.startJVM()")
+            if jvm_path_to_use_explicit:
+                jpype.startJVM(jvm_path_to_use_explicit, classpath=combined_jar_list, *jvm_args, convertStrings=False, ignoreUnrecognized=True)
+            else:
+                logger.warning("   Aucun chemin JVM explicite fourni à startJVM, utilisation de la détection interne de JPype.")
+                jpype.startJVM(classpath=combined_jar_list, *jvm_args, convertStrings=False, ignoreUnrecognized=True)
+            logger.info(f"DEBUG_JVM_SETUP: jpype.startJVM() APPELÉ. Vérification avec jpype.isJVMStarted(): {jpype.isJVMStarted()}")
+            
+            jvm_fully_initialized = False
+            if jpype.isJVMStarted():
+                classpath_from_jvm = None
+                try:
+                    classpath_from_jvm = jpype.getClassPath()
+                    logger.info(f"   Classpath rapporté par jpype.getClassPath() juste après startJVM: {classpath_from_jvm}")
+                except Exception as e_cp:
+                    logger.warning(f"   Impossible d'obtenir jpype.getClassPath() juste après startJVM: {e_cp}")
+    
+                if classpath_from_jvm: # Vérifier si le classpath est non vide
+                    if hasattr(jpype, 'imports') and jpype.imports is not None:
+                        try:
+                            jpype.imports.registerDomain("java", alias="java")
+                            jpype.imports.registerDomain("org", alias="org")
+                            jpype.imports.registerDomain("net", alias="net")
+                            jpype.imports.registerDomain("net.sf", alias="sf")
+                            jpype.imports.registerDomain("net.sf.tweety", alias="tweety")
+                            logger.info("✅ JVM démarrée avec succès, classpath chargé ET domaines (java, org, net, sf, tweety) enregistrés.")
+                            jvm_fully_initialized = True
+                        except Exception as e_reg_domain_jvm_setup:
+                            logger.error(f"❌ Erreur lors de l'enregistrement des domaines JPype (classpath semblait OK): {e_reg_domain_jvm_setup}")
+                    else:
+                        logger.warning("✅ JVM démarrée et classpath chargé, mais jpype.imports non disponible pour enregistrer les domaines.")
+                        # On considère quand même que c'est mieux que rien si le classpath est là
+                        jvm_fully_initialized = True
+                else:
+                    logger.error("❌ JVM démarrée (isJVMStarted()=True) MAIS le classpath est VIDE ou inaccessible. Les classes Java ne seront pas trouvées.")
+            else:
+                logger.error("❌ JVM non démarrée (isJVMStarted()=False).")
+                
+            jvm_ready = jvm_fully_initialized
     except Exception as e:
         logger.critical(f"\n❌❌❌ Erreur Démarrage JVM: {e} ❌❌❌", exc_info=True)
         logger.critical(f"   Vérifiez chemin JVM, classpath, versions JDK/JARs.")

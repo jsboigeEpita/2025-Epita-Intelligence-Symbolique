@@ -17,8 +17,6 @@ logger = logging.getLogger(__name__)
 from project_core.integration.tweety_clingo_utils import check_clingo_installed_python_way, get_clingo_models_python_way
 
 
-
-
 @pytest.mark.skipif(not _REAL_JPYPE_AVAILABLE, reason="Test requires real JPype and JVM.")
 @pytest.mark.real_jpype
 class TestAdvancedReasoning:
@@ -48,8 +46,8 @@ class TestAdvancedReasoning:
             context_class_loader = jpype_instance.java.lang.ClassLoader.getSystemClassLoader()
         logger.info(f"ASPConsistency: Using ClassLoader: {context_class_loader}")
 
-        AspLogicProgram = jpype_instance.JClass("org.tweetyproject.lp.asp.syntax.Program") 
-        ClingoSolver = jpype_instance.JClass("org.tweetyproject.lp.asp.reasoner.ClingoSolver") 
+        AspLogicProgram = jpype_instance.JClass("org.tweetyproject.lp.asp.syntax.Program")
+        ClingoSolver = jpype_instance.JClass("org.tweetyproject.lp.asp.reasoner.ClingoSolver")
         ASPParserClass = jpype_instance.JClass("org.tweetyproject.lp.asp.parser.ASPParser", loader=context_class_loader)
         PlParser = jpype_instance.JClass("org.tweetyproject.logics.pl.parser.PlParser")
         # StringReader n'est plus nécessaire ici si on parse depuis une string
@@ -61,7 +59,6 @@ class TestAdvancedReasoning:
         # S'assurer que le fichier existe avant de le parser
         assert os.path.exists(file_path), f"Le fichier de test {file_path} n'existe pas."
 
-        # Lire le contenu du fichier en une chaîne Python
         # Lire le contenu du fichier en une chaîne Python
         with open(file_path, 'r') as f:
             file_content_str = f.read()
@@ -252,7 +249,6 @@ class TestAdvancedReasoning:
                 except Exception as e_remove:
                     logger.error(f"ASPEntailment: Erreur lors de la suppression du fichier ASP temporaire {temp_asp_file_path}: {e_remove}")
 
-
     def test_asp_reasoner_query_non_entailment(self, integration_jvm):
         """
         Scénario: Tester la non-inférence avec un reasoner ASP.
@@ -287,7 +283,6 @@ class TestAdvancedReasoning:
 
         assert os.path.exists(file_path), f"Le fichier de test {file_path} n'existe pas."
 
-        # Lire le contenu du fichier en une chaîne Python
         # Lire le contenu du fichier en une chaîne Python
         with open(file_path, 'r') as f:
             file_content_str = f.read()
