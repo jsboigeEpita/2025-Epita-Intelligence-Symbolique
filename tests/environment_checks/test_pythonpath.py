@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 import sys
 import os
+from pathlib import Path
 
 # Ajouter le répertoire du projet au PYTHONPATH
 # current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -10,6 +11,7 @@ import os
 # Ce script est spécifiquement pour tester PYTHONPATH, donc cette modification est peut-être à revoir
 # si le test échoue.
 
+current_dir = Path.cwd()
 print(f"Répertoire courant: {current_dir}")
 print("\nPYTHONPATH:")
 for path in sys.path:
