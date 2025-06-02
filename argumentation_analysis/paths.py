@@ -32,8 +32,8 @@ ROOT_DIR = Path(__file__).resolve().parent # Devrait pointer vers d:/2025-Epita-
 # Pour les éléments à la racine du projet (comme _temp, portable_jdk), PROJECT_ROOT_DIR est nécessaire.
 CONFIG_DIR = ROOT_DIR / CONFIG_DIR_NAME
 DATA_DIR = ROOT_DIR / DATA_DIR_NAME # Données spécifiques au module
-LIBS_DIR = PROJECT_ROOT_DIR / LIBS_DIR_NAME # Les libs sont souvent partagées au niveau projet
-NATIVE_LIBS_DIR = LIBS_DIR / "native"
+LIBS_DIR = PROJECT_ROOT_DIR / LIBS_DIR_NAME / "tweety" # Les libs Tweety sont dans libs/tweety
+NATIVE_LIBS_DIR = LIBS_DIR / "native" # Deviendra libs/tweety/native
 RESULTS_DIR = PROJECT_ROOT_DIR / RESULTS_DIR_NAME # Les résultats sont souvent au niveau projet
 
 # Chemins des fichiers de configuration
@@ -54,8 +54,9 @@ def ensure_directories_exist():
     directories = [
         CONFIG_DIR,
         DATA_DIR,
-        LIBS_DIR,
-        NATIVE_LIBS_DIR,
+        PROJECT_ROOT_DIR / LIBS_DIR_NAME, # Assurer que le répertoire parent 'libs' existe
+        LIBS_DIR, # Sera 'libs/tweety'
+        NATIVE_LIBS_DIR, # Sera 'libs/tweety/native'
         RESULTS_DIR,
         PORTABLE_JDK_PARENT_DIR_FROM_PATHS, # Assurer que portable_jdk existe
         TEMP_DIR_FROM_PATHS # Assurer que _temp existe
