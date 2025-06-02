@@ -19,6 +19,7 @@ _real_numpy_broadcast = None
 _real_numpy_inexact = None
 _real_numpy_flexible = None
 _real_numpy_character = None
+_real_numpy_ufunc = None
 try:
     # Renommer l'import pour éviter les conflits si ce mock est lui-même importé comme 'numpy'
     import numpy as actual_numpy_for_mock
@@ -28,6 +29,7 @@ try:
     _real_numpy_inexact = _actual_numpy_module.inexact
     _real_numpy_flexible = _actual_numpy_module.flexible
     _real_numpy_character = _actual_numpy_module.character
+    _real_numpy_ufunc = _actual_numpy_module.ufunc
 except ImportError:
     pass # Le vrai numpy n'est pas disponible
 # Configuration du logging
@@ -952,6 +954,23 @@ else:
         """Type de base pour les types de données caractères (chaînes, bytes) NumPy."""
         __name__ = 'character'
         __module__ = 'numpy'
+
+if _real_numpy_ufunc:
+    ufunc = _real_numpy_ufunc
+else:
+    class ufunc(MagicMock):
+        """Mock pour numpy.ufunc."""
+        # Les ufuncs ont beaucoup de méthodes et d'attributs spécifiques.
+        # Un MagicMock simple est un point de départ.
+        # Si des erreurs spécifiques se produisent, des attributs/méthodes
+        # devront être ajoutés ici.
+        # Par exemple: nin, nout, nargs, types, identity, __call__, etc.
+        nin = 2 # Placeholder commun
+        nout = 1 # Placeholder commun
+        nargs = 2 # Placeholder commun
+        types = ['FF->F', 'dd->d', 'gg->g'] # Placeholder
+        identity = None # Placeholder
+        pass
 
 # Types de données (classes, pas instances)
 class float64(metaclass=dtype_base):
