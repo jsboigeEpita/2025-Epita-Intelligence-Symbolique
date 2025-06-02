@@ -5,9 +5,10 @@ import pytest
 import asyncio
 from pathlib import Path
 from unittest.mock import patch, MagicMock, AsyncMock # AsyncMock pour les fonctions async
+from typing import Dict # Ajout pour le typage
 
 from project_core.dev_utils.repair_utils import run_extract_repair_pipeline, setup_agents, repair_extract_markers
-from argumentation_analysis.core.models import ExtractDefinitions, SourceDefinition, Extract # Pour typer les mocks
+from argumentation_analysis.models.extract_definition import ExtractDefinitions, SourceDefinition, Extract # Pour typer les mocks
 import semantic_kernel as sk # Pour setup_agents
 from semantic_kernel.agents import ChatCompletionAgent # Pour setup_agents
 from argumentation_analysis.utils.extract_repair.marker_repair_logic import REPAIR_AGENT_INSTRUCTIONS, VALIDATION_AGENT_INSTRUCTIONS # Pour setup_agents
