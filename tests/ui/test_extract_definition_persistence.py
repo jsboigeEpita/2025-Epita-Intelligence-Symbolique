@@ -65,14 +65,12 @@ def test_env(tmp_path, crypto_service_instance, sample_extract_data):
         "sample_data": sample_extract_data # Ajout des données sample à l'env de test
     }
 
-def test_load_definitions_unencrypted(test_env):
-    # Pour ce test, créons un fichier chiffré et compressé correctement
-    # Les données sont déjà préparées dans test_env['encrypted_definitions_file']
-    # et la clé dans test_env['key']
+def test_load_encrypted_definitions_from_fixture(test_env):
+    # Ce test utilise le fichier chiffré (extract_definitions.json.enc)
+    # et la clé préparés par la fixture test_env.
     
-    # Utilisons le fichier chiffré préparé par la fixture test_env
     definitions = load_extract_definitions(
-        config_file=test_env['encrypted_definitions_file'], 
+        config_file=test_env['encrypted_definitions_file'],
         key=test_env['key']
     )
     assert definitions is not None
