@@ -10,9 +10,10 @@ from typing import List, Dict, Any
 
 # Ajuster le PYTHONPATH pour les tests
 import sys
-project_root = Path(__file__).resolve().parent.parent.parent.parent
-if str(project_root) not in sys.path:
-    sys.path.insert(0, str(project_root))
+# project_root = Path(__file__).resolve().parent.parent.parent.parent
+# if str(project_root) not in sys.path:
+#     sys.path.insert(0, str(project_root))
+# Commenté car l'installation du package via `pip install -e .` devrait gérer l'accessibilité.
 
 from argumentation_analysis.utils.data_loader import load_results_from_json
 

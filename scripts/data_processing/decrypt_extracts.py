@@ -31,10 +31,10 @@ logging.basicConfig(
 logger = logging.getLogger("DecryptExtracts")
 
 # Ajout du répertoire parent au chemin pour permettre l'import des modules du projet
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent)) # MODIFIÉ: Ajout de .parent pour pointer vers la racine
 
 # Charger les variables d'environnement depuis .env s'il existe
-dotenv_path = Path(__file__).resolve().parent.parent / '.env'
+dotenv_path = Path(__file__).resolve().parent.parent.parent / '.env' # MODIFIÉ: Ajout de .parent pour pointer vers la racine
 if dotenv_path.exists():
     logger.info(f"Chargement des variables d'environnement depuis {dotenv_path}")
     load_dotenv(dotenv_path)

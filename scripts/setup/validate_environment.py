@@ -8,6 +8,12 @@ Généré automatiquement par diagnostic_environnement.py
 
 import sys
 import importlib
+from pathlib import Path # Ajout pour la clarté
+
+# Ajout du répertoire racine du projet au chemin pour permettre l'import des modules
+project_root = Path(__file__).resolve().parent.parent.parent
+if str(project_root) not in sys.path:
+    sys.path.insert(0, str(project_root))
 
 def validate_environment():
     """Valide rapidement l'environnement."""

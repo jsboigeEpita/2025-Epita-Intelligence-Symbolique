@@ -21,7 +21,7 @@ logging.basicConfig(
 logger = logging.getLogger("TestEnhancedContextualFallacyAnalyzerPytest")
 
 # Importer les mocks pour numpy et pandas (si nécessaire, bien que conftest devrait gérer)
-# from numpy_mock import * # Assurez-vous que c'est géré par conftest.py ou importez explicitement
+# from legacy_numpy_array_mock import * # Assurez-vous que c'est géré par conftest.py ou importez explicitement
 # from pandas_mock import * # Assurez-vous que c'est géré par conftest.py ou importez explicitement
 
 # Import des bibliothèques réelles si disponibles, sinon utiliser des mocks

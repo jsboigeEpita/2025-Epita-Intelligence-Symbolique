@@ -1,3 +1,4 @@
+import logging
 # -*- coding: utf-8 -*-
 """Tests pour le pipeline d'analyse rhétorique avancée."""
 

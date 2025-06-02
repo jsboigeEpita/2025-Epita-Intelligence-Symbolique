@@ -1,1 +1,1 @@
-# Initializer for the tests.argumentation_analysis.analytics module
+"""Init file for analytics test subpackage."""

@@ -116,10 +116,11 @@ logger = logging.getLogger(__name__)
 # Ceci est particulièrement utile si les tests sont exécutés d'une manière où le répertoire racine
 # n'est pas automatiquement inclus dans PYTHONPATH (par exemple, exécution directe de pytest
 # depuis un sous-répertoire ou avec certaines configurations d'IDE).
-parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-if parent_dir not in sys.path:
-    sys.path.insert(0, parent_dir)
-    _conftest_setup_logger.info(f"Ajout du répertoire racine du projet ({parent_dir}) à sys.path.")
+# parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+# if parent_dir not in sys.path:
+#     sys.path.insert(0, parent_dir)
+#     _conftest_setup_logger.info(f"Ajout du répertoire racine du projet ({parent_dir}) à sys.path.")
+# Commenté car l'installation du package via `pip install -e .` devrait gérer l'accessibilité.
 
 # Les fixtures et hooks sont importés depuis leurs modules dédiés.
 # Les commentaires résiduels concernant les déplacements de code et les refactorisations

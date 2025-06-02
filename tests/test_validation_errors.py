@@ -10,9 +10,10 @@ import os
 import json
 
 # Ajouter le répertoire du projet au PYTHONPATH
-current_dir = os.path.dirname(os.path.abspath(__file__))
-parent_dir = os.path.dirname(current_dir)
-sys.path.insert(0, parent_dir)
+# current_dir = os.path.dirname(os.path.abspath(__file__))
+# parent_dir = os.path.dirname(current_dir)
+# sys.path.insert(0, parent_dir)
+# Commenté car l'installation du package via `pip install -e .` devrait gérer l'accessibilité.
 
 # Définir une classe de validation simplifiée pour les tests
 class ExtractValidator:
