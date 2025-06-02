@@ -46,39 +46,38 @@ def test_format_file_basic_indentation(mock_run, temp_python_file):
     
     mock_version_result = MagicMock()
     mock_version_result.stdout = "autopep8 1.x.x"
+    mock_version_result.stderr = ""
     mock_version_result.returncode = 0
     
-    # Simuler que autopep8 modifie le fichier.
-    # Pour ce test, nous ne vérifions pas le contenu exact après autopep8
-    # car cela dépend de la version d'autopep8 et de sa configuration.
-    # Nous vérifions que la fonction retourne True et que subprocess.run a été appelé.
-    # Le fichier réel sera modifié par l'appel simulé.
-    
-    def mock_autopep8_side_effect(*args, **kwargs):
-        command_list = args[0]
-        if '--version' in command_list:
-            return mock_version_result
-        elif '--in-place' in command_list: # Formatage réel
-            # Simuler la modification du fichier
-            file_to_modify = Path(command_list[-1])
-            # Écrire un contenu "formaté" simplifié pour le test
-            formatted_content_simulated = """
+    # Simuler la modification du fichier par autopep8
+    def simulate_autopep8_formatting(file_path_str):
+        # Écrire un contenu "formaté" simplifié pour le test
+        formatted_content_simulated = """
 def foo():
     x = 1
     if x > 0:
         print('positive')
 """
-            with open(file_to_modify, 'w', encoding='utf-8') as f:
-                f.write(formatted_content_simulated)
-            
-            mock_format_result = MagicMock()
-            mock_format_result.stdout = "fixed file" # Simuler une sortie
-            mock_format_result.stderr = ""
-            mock_format_result.returncode = 0
-            return mock_format_result
-        return MagicMock(returncode=1) # Comportement par défaut inattendu
+        with open(file_path_str, 'w', encoding='utf-8') as f:
+            f.write(formatted_content_simulated)
 
-    mock_run.side_effect = mock_autopep8_side_effect
+    mock_format_result = MagicMock()
+    mock_format_result.stdout = "fixed file"
+    mock_format_result.stderr = ""
+    mock_format_result.returncode = 0
+
+    # Configurer side_effect pour gérer l'appel de version et l'appel de formatage
+    def side_effect_handler(*args, **kwargs):
+        command_list = args[0]
+        if '--version' in command_list:
+            return mock_version_result
+        # Supposer que tout autre appel est pour le formatage
+        # et que le dernier argument est le chemin du fichier
+        file_to_format = command_list[-1]
+        simulate_autopep8_formatting(file_to_format)
+        return mock_format_result
+
+    mock_run.side_effect = side_effect_handler
 
     bad_code = """
 def foo():
@@ -121,7 +120,7 @@ def bar():
     return y
 """
     file_path = temp_python_file(good_code)
-    original_content = Path(file_path).read_text(encoding='utf-8') # Lire avant pour comparer
+    original_content = Path(file_path).read_text(encoding='utf-8')
 
     result = format_python_file_with_autopep8(str(file_path))
     assert result is True
