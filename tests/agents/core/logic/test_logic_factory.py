@@ -62,7 +62,7 @@ class TestLogicAgentFactory(unittest.TestCase):
         self.mock_propositional_agent_class.assert_called_once_with(self.kernel)
         
         # Vérifier que l'agent a été configuré
-        self.mock_propositional_agent.setup_kernel.assert_not_called()
+        self.mock_propositional_agent.setup_agent_components.assert_not_called() # MODIFIED
         
         # Vérifier le résultat
         self.assertEqual(agent, self.mock_propositional_agent)
@@ -75,7 +75,7 @@ class TestLogicAgentFactory(unittest.TestCase):
         self.mock_first_order_agent_class.assert_called_once_with(self.kernel)
         
         # Vérifier que l'agent a été configuré
-        self.mock_first_order_agent.setup_kernel.assert_not_called()
+        self.mock_first_order_agent.setup_agent_components.assert_not_called() # MODIFIED
         
         # Vérifier le résultat
         self.assertEqual(agent, self.mock_first_order_agent)
@@ -88,7 +88,7 @@ class TestLogicAgentFactory(unittest.TestCase):
         self.mock_modal_agent_class.assert_called_once_with(self.kernel)
         
         # Vérifier que l'agent a été configuré
-        self.mock_modal_agent.setup_kernel.assert_not_called()
+        self.mock_modal_agent.setup_agent_components.assert_not_called() # MODIFIED
         
         # Vérifier le résultat
         self.assertEqual(agent, self.mock_modal_agent)
@@ -103,7 +103,7 @@ class TestLogicAgentFactory(unittest.TestCase):
         self.mock_propositional_agent_class.assert_called_once_with(self.kernel)
         
         # Vérifier que l'agent a été configuré
-        self.mock_propositional_agent.setup_kernel.assert_called_once_with(llm_service)
+        self.mock_propositional_agent.setup_agent_components.assert_called_once_with(llm_service) # MODIFIED
         
         # Vérifier le résultat
         self.assertEqual(agent, self.mock_propositional_agent)
@@ -137,7 +137,7 @@ class TestLogicAgentFactory(unittest.TestCase):
         """Test de l'enregistrement d'une nouvelle classe d'agent."""
         # Créer une classe d'agent de test (sa définition réelle n'importe pas tant pour le mock)
         class TestLogicAgent(AbstractLogicAgent):
-            def setup_kernel(self, llm_service): pass
+            def setup_agent_components(self, llm_service_id: str): pass # MODIFIED
             def text_to_belief_set(self, text): pass
             def generate_queries(self, text, belief_set): pass
             def execute_query(self, belief_set, query): pass
