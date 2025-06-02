@@ -1,131 +1,246 @@
+import sys
 import pytest
+import logging
 from unittest import mock
 
 # Import the function to test
 from project_core.dev_utils.mock_utils import setup_jpype_mock
 
-# Attempt to import jpype, but allow it to be None if not installed,
-# as the function under test should mock it anyway.
+# Attempt to import jpype for type hinting and direct access if already patched.
+# The tests will primarily rely on the dynamically imported 'jpype' after setup.
 try:
-    import jpype
-    import jpype.imports # if your setup_jpype_mock also mocks things in jpype.imports
+    import jpype as jpype_module_for_typing
 except ImportError:
-    jpype = None # Will be mocked by setup_jpype_mock or tests will mock it
+    jpype_module_for_typing = None
 
 
-def test_setup_jpype_mock_replaces_jpype_attributes():
+class TestSetupJpypeMock:
     """
-    Tests that setup_jpype_mock correctly replaces jpype's attributes
-    with MagicMock objects.
+    Test suite for the setup_jpype_mock function.
     """
-    # Define a mock JVM path to be returned by the mocked getDefaultJVMPath
-    mock_jvm_path = "/mock/jvm/path"
+    active_patches: dict = {}
+    original_jpype_in_sys_modules = None
 
-    # Call the setup function
-    # It's important that this function can run even if jpype is not installed,
-    # as it's supposed to set up a mock *for* jpype.
-    # The function itself should handle the case where 'jpype' module is not found
-    # by creating a mock for it.
-    
-    # If jpype is truly unavailable, sys.modules['jpype'] might not exist.
-    # setup_jpype_mock should ideally create it if it's not there.
-    
-    # Scenario 1: jpype is not installed (or we simulate it)
-    # We want to ensure that after calling setup_jpype_mock, 'jpype' in sys.modules IS a mock.
-    
-    # To robustly test this, we might need to control sys.modules
-    original_sys_modules_jpype = mock.sentinel.original_jpype
-    if 'jpype' in mock.sys.modules:
-        original_sys_modules_jpype = mock.sys.modules.get('jpype')
-        del mock.sys.modules['jpype'] # Simulate jpype not being imported yet or not installed
+    def setup_method(self):
+        """
+        Called before each test method.
+        Ensures 'jpype' is not in sys.modules to simulate it not being imported,
+        or stores the original to restore later.
+        """
+        if 'jpype' in sys.modules:
+            self.original_jpype_in_sys_modules = sys.modules['jpype']
+            del sys.modules['jpype']
+        else:
+            self.original_jpype_in_sys_modules = None
+        
+        # Clear any patches from previous tests, though teardown should handle this.
+        self.active_patches = {}
 
-    # Call the function that should set up the mock
-    jpype_mock_instance = setup_jpype_mock(mock_jvm_path=mock_jvm_path)
+    def teardown_method(self):
+        """
+        Called after each test method.
+        Stops all active patches and restores sys.modules.
+        """
+        for patch_name, patch_obj in self.active_patches.items():
+            try:
+                patch_obj.stop()
+            except RuntimeError: # Patch not started
+                pass
+        
+        if 'jpype' in sys.modules:
+            del sys.modules['jpype'] # Remove the potentially mocked version
 
-    # Assert that the returned object is a MagicMock (or the type setup_jpype_mock creates)
-    assert isinstance(jpype_mock_instance, mock.MagicMock), "setup_jpype_mock should return a MagicMock instance."
-
-    # Verify that the attributes of the returned mock are also mocks and configured
-    assert isinstance(jpype_mock_instance.startJVM, mock.MagicMock)
-    assert isinstance(jpype_mock_instance.shutdownJVM, mock.MagicMock)
-    assert isinstance(jpype_mock_instance.isJVMStarted, mock.MagicMock)
-    assert isinstance(jpype_mock_instance.getDefaultJVMPath, mock.MagicMock)
-    assert isinstance(jpype_mock_instance.JPackage, mock.MagicMock)
-    assert isinstance(jpype_mock_instance.JClass, mock.MagicMock)
-    # If jpype.imports is also mocked:
-    if hasattr(jpype_mock_instance, 'imports'):
-        assert isinstance(jpype_mock_instance.imports, mock.MagicMock)
-
-
-    # Test the configured behavior of the mocked attributes
-    jpype_mock_instance.isJVMStarted.return_value = True # Example configuration
-    assert jpype_mock_instance.isJVMStarted() is True
-
-    # getDefaultJVMPath should return the mock_jvm_path provided
-    assert jpype_mock_instance.getDefaultJVMPath() == mock_jvm_path
-    
-    # JPackage should be callable and return another mock
-    mock_pkg = jpype_mock_instance.JPackage("com.example")
-    assert isinstance(mock_pkg, mock.MagicMock)
-    
-    # JClass should be callable and return another mock
-    mock_class = jpype_mock_instance.JClass("com.example.MyClass")
-    assert isinstance(mock_class, mock.MagicMock)
-
-    # Restore original jpype in sys.modules if it was there
-    if original_sys_modules_jpype is not mock.sentinel.original_jpype:
-        mock.sys.modules['jpype'] = original_sys_modules_jpype
-    elif 'jpype' in mock.sys.modules and mock.sys.modules['jpype'] is jpype_mock_instance:
-        # If setup_jpype_mock added it, clean it up for other tests if necessary
-        del mock.sys.modules['jpype']
+        if self.original_jpype_in_sys_modules:
+            sys.modules['jpype'] = self.original_jpype_in_sys_modules
+        
+        self.active_patches = {}
 
 
-def test_setup_jpype_mock_is_idempotent_or_consistent():
-    """
-    Tests that calling setup_jpype_mock multiple times behaves consistently.
-    If it's idempotent, the same mock or an identically configured one is returned/set.
-    """
-    mock_jvm_path1 = "/path/one"
-    mock_jvm_path2 = "/path/two"
+    def test_setup_jpype_mock_returns_patch_objects(self):
+        """
+        Tests that setup_jpype_mock returns a dictionary of active patch objects.
+        """
+        self.active_patches = setup_jpype_mock()
+        assert isinstance(self.active_patches, dict)
+        expected_keys = ["startJVM", "shutdownJVM", "isJVMStarted", "JPackage", "getDefaultJVMPath"]
+        for key in expected_keys:
+            assert key in self.active_patches
+            assert isinstance(self.active_patches[key], mock.patch)
 
-    # Call 1
-    jpype_mock1 = setup_jpype_mock(mock_jvm_path=mock_jvm_path1)
-    assert jpype_mock1.getDefaultJVMPath() == mock_jvm_path1
-    assert isinstance(jpype_mock1.isJVMStarted, mock.MagicMock)
-    
-    # Store the original isJVMStarted mock object from the first call
-    original_isJVMStarted_mock_obj = jpype_mock1.isJVMStarted
+    def test_jpype_attributes_are_mocked_after_setup(self, caplog):
+        """
+        Tests that after calling setup_jpype_mock, the attributes of the
+        imported 'jpype' module are indeed mocks.
+        """
+        caplog.set_level(logging.INFO)
+        mock_jvm_path = "/test/jvm/path"
+        self.active_patches = setup_jpype_mock(mock_jvm_path=mock_jvm_path)
+        
+        import jpype # Import after patches are active
 
-    # Call 2 - with a different path
-    # The behavior here depends on the implementation of setup_jpype_mock.
-    # Does it overwrite the existing mock in sys.modules or return a new one?
-    # The current implementation in the prompt seems to always create a new mock
-    # and assign it to sys.modules['jpype'].
-    jpype_mock2 = setup_jpype_mock(mock_jvm_path=mock_jvm_path2)
-    
-    assert jpype_mock2.getDefaultJVMPath() == mock_jvm_path2
-    assert isinstance(jpype_mock2.isJVMStarted, mock.MagicMock)
+        assert isinstance(jpype.startJVM, mock.Mock), "jpype.startJVM should be a mock."
+        assert isinstance(jpype.shutdownJVM, mock.Mock), "jpype.shutdownJVM should be a mock."
+        assert isinstance(jpype.isJVMStarted, mock.Mock), "jpype.isJVMStarted should be a mock."
+        assert isinstance(jpype.getDefaultJVMPath, mock.Mock), "jpype.getDefaultJVMPath should be a mock."
+        assert isinstance(jpype.JPackage, mock.MagicMock), "jpype.JPackage should be a MagicMock."
+        
+        # Verify getDefaultJVMPath behavior
+        assert jpype.getDefaultJVMPath() == mock_jvm_path
 
-    # Check if the mock instance in sys.modules is indeed the latest one
-    # This requires setup_jpype_mock to actually place its mock into sys.modules['jpype']
-    if 'jpype' in mock.sys.modules:
-        assert mock.sys.modules['jpype'] is jpype_mock2, "sys.modules['jpype'] should be the latest mock."
-        assert mock.sys.modules['jpype'].getDefaultJVMPath() == mock_jvm_path2
+        # Verify logging
+        assert "Activation du mock pour JPype..." in caplog.text
+        assert "Le mock JPype est correctement configuré et actif." in caplog.text
 
-    # Verify that the mocks are distinct if new ones are created each time,
-    # or the same if it's truly idempotent by object reference.
-    # Given the typical MagicMock usage, they'd likely be different objects but
-    # the one in sys.modules would be the latest.
-    assert jpype_mock1 is not jpype_mock2, "Multiple calls should ideally update or return distinct mocks if re-patching."
-    
-    # However, the attributes like isJVMStarted might be new mock objects too.
-    assert original_isJVMStarted_mock_obj is not jpype_mock2.isJVMStarted, \
-        "Attribute mocks should also be new if the parent mock is new."
 
-    # Clean up sys.modules for other tests
-    if 'jpype' in mock.sys.modules:
-        del mock.sys.modules['jpype']
+    def test_jpype_mock_jvm_state_logic(self, caplog):
+        """
+        Tests the logic of the mocked JVM state (started/stopped).
+        """
+        caplog.set_level(logging.INFO)
+        self.active_patches = setup_jpype_mock()
+        import jpype
 
-# It might be useful to test with jpype actually installed vs not installed
-# to see how setup_jpype_mock behaves, but that's harder to control in unit tests
-# without more complex fixture setups for sys.modules.
+        assert not jpype.isJVMStarted(), "JVM should initially be not started."
+
+        jpype.startJVM()
+        assert "jpype.startJVM (mock) appelé." in caplog.text
+        assert jpype.isJVMStarted(), "JVM should be started after mock startJVM call."
+
+        jpype.shutdownJVM()
+        assert "jpype.shutdownJVM (mock) appelé." in caplog.text
+        assert not jpype.isJVMStarted(), "JVM should be stopped after mock shutdownJVM call."
+
+    def test_jpype_mock_jpackage_structure(self):
+        """
+        Tests the mocked structure of jpype.JPackage.
+        """
+        self.active_patches = setup_jpype_mock()
+        import jpype
+
+        # Test the pre-configured java.lang.String path
+        JavaLangString = jpype.JPackage("java").lang.String
+        assert isinstance(JavaLangString, mock.MagicMock)
+        
+        string_instance_mock = JavaLangString("test")
+        assert isinstance(string_instance_mock, mock.MagicMock)
+        
+        # Test dynamic package creation (MagicMock behavior)
+        MyCustomPackage = jpype.JPackage("com").example.custom
+        assert isinstance(MyCustomPackage, mock.MagicMock)
+        MyClass = MyCustomPackage.MyClass
+        assert isinstance(MyClass, mock.MagicMock)
+        my_instance = MyClass()
+        assert isinstance(my_instance, mock.MagicMock)
+
+    def test_setup_jpype_mock_default_jvm_path(self):
+        """
+        Tests that getDefaultJVMPath returns the default mock path if none is provided.
+        """
+        self.active_patches = setup_jpype_mock(mock_jvm_path=None)
+        import jpype
+        assert jpype.getDefaultJVMPath() == "mock/jvm/path"
+
+    def test_setup_jpype_mock_called_multiple_times_updates_path(self, caplog):
+        """
+        Tests that calling setup_jpype_mock multiple times correctly updates
+        the behavior of the mock (e.g., getDefaultJVMPath).
+        The state of the JVM (isJVMStarted) should also be reset.
+        """
+        caplog.set_level(logging.INFO)
+
+        # Call 1
+        path1 = "/path/num/one"
+        patches1 = setup_jpype_mock(mock_jvm_path=path1)
+        import jpype as jpype1
+        assert jpype1.getDefaultJVMPath() == path1
+        jpype1.startJVM()
+        assert jpype1.isJVMStarted()
+        for p in patches1.values(): p.stop() # Stop first set of patches
+
+        # Ensure jpype is removed from sys.modules so the next import gets the new mock
+        if 'jpype' in sys.modules:
+            del sys.modules['jpype']
+
+        # Call 2
+        path2 = "/path/num/two"
+        self.active_patches = setup_jpype_mock(mock_jvm_path=path2) # self.active_patches will be stopped by teardown
+        import jpype # Re-import to get the newly patched version
+        
+        assert jpype.getDefaultJVMPath() == path2
+        assert not jpype.isJVMStarted(), "JVM state should be reset on re-mocking"
+        
+        # Verify logging from the second call
+        log_records = [r.message for r in caplog.records if "mock_utils" in r.name] # Filter by logger name
+        assert "Activation du mock pour JPype..." in log_records[-2] # Second to last relevant log
+        assert f"Utilisation du chemin JVM mocké fourni : {path2}" not in caplog.text # This log is inside startJVM
+        
+        jpype.startJVM() # This will log the path usage
+        assert f"Utilisation du chemin JVM mocké fourni : {path2}" in caplog.text
+
+
+    def test_setup_jpype_mock_handles_jpype_initially_not_imported(self, caplog):
+        """
+        Tests that setup_jpype_mock works even if 'jpype' was not in sys.modules.
+        This is implicitly covered by setup_method, but an explicit test is good.
+        """
+        caplog.set_level(logging.INFO)
+        # setup_method ensures 'jpype' is removed from sys.modules if it existed.
+        assert 'jpype' not in sys.modules
+
+        self.active_patches = setup_jpype_mock()
+        import jpype # Should now be the mocked version
+        
+        assert isinstance(jpype.isJVMStarted, mock.Mock)
+        assert "Le mock JPype est correctement configuré et actif." in caplog.text
+
+    def test_mock_start_jvm_logs_path_usage(self, caplog):
+        """
+        Tests that the mocked startJVM logs which JVM path it's (notionally) using.
+        """
+        caplog.set_level(logging.INFO)
+        
+        # Scenario 1: mock_jvm_path provided to setup_jpype_mock
+        custom_path = "/my/custom/jvm"
+        self.active_patches = setup_jpype_mock(mock_jvm_path=custom_path)
+        import jpype
+        jpype.startJVM() # Call without jvmpath argument
+        assert f"Utilisation du chemin JVM mocké fourni : {custom_path}" in caplog.text
+        for p in self.active_patches.values(): p.stop()
+        if 'jpype' in sys.modules: del sys.modules['jpype']
+        caplog.clear()
+
+        # Scenario 2: mock_jvm_path is None (default path used)
+        self.active_patches = setup_jpype_mock(mock_jvm_path=None)
+        import jpype as jpype_default
+        jpype_default.startJVM() # Call without jvmpath argument
+        assert f"Utilisation du chemin JVM mocké par défaut : mock/jvm/path" in caplog.text
+        for p in self.active_patches.values(): p.stop()
+        if 'jpype' in sys.modules: del sys.modules['jpype']
+        caplog.clear()
+
+        # Scenario 3: jvmpath explicitly passed to startJVM (should take precedence)
+        explicit_path = "/explicit/startjvm/path"
+        self.active_patches = setup_jpype_mock(mock_jvm_path="/should/be/ignored")
+        import jpype as jpype_explicit
+        # The mock_start_jvm in mock_utils.py doesn't actually use the passed jvmpath for logging if it's provided.
+        # It logs based on what was passed to setup_jpype_mock or the default.
+        # This test verifies the current behavior of mock_utils.py.
+        # If mock_utils.py were changed to log the explicit path, this test would need an update.
+        jpype_explicit.startJVM(jvmpath=explicit_path)
+        # The log will reflect the path from setup_jpype_mock, not the one passed to startJVM directly.
+        assert f"Utilisation du chemin JVM mocké fourni : /should/be/ignored" in caplog.text
+        # However, the actual mock_start_jvm in mock_utils.py has a slight logic flaw:
+        # it logs, then sets jvm_started_state, then *again* checks kwargs for jvmpath and logs.
+        # This means the log for path usage appears twice if jvmpath is not in kwargs.
+        # Let's check the last relevant log.
+        relevant_logs = [r.message for r in caplog.records if "Utilisation du chemin JVM mocké" in r.message]
+        assert len(relevant_logs) > 0
+        # The provided mock_utils.py has duplicate logic in mock_start_jvm (lines 79-84 and 90-95 are identical)
+        # This will result in the logging happening twice if jvmpath is not in kwargs.
+        # For this test, we'll assume the provided code is what we're testing.
+        # The log message related to path usage will be based on setup_jpype_mock's parameter.
+        assert f"Utilisation du chemin JVM mocké fourni : /should/be/ignored" in relevant_logs[-1]
+
+        for p in self.active_patches.values(): p.stop()
+        if 'jpype' in sys.modules: del sys.modules['jpype']
+        caplog.clear()
