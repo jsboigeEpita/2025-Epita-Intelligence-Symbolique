@@ -206,13 +206,24 @@ def generate_performance_visualizations(
 
         # Ne garder que les colonnes qui sont effectivement devenues numériques.
         # Si aucune colonne n'est numérique, df deviendra un DataFrame vide (avec index s'il existait).
-        numeric_cols = df.select_dtypes(include=np.number).columns
-        df = df[numeric_cols]
-
-        # Maintenant, df ne contient que des colonnes numériques (ou est vide).
+        # Au lieu de slicer avec df[numeric_cols], supprimons les colonnes non numériques pour éviter le bug potentiel.
+        numeric_cols_present = df.select_dtypes(include=np.number).columns
+        cols_to_drop = [col for col in df.columns if col not in numeric_cols_present]
+        if cols_to_drop:
+            df = df.drop(columns=cols_to_drop)
+        
+        # Maintenant, df ne contient que des colonnes numériques (ou est vide si toutes ont été droppées ou si df était vide initialement).
         # On peut appliquer fillna(0) sans risque si df n'est pas vide.
         if not df.empty:
-           df = df.fillna(0)
+           # Forcer la conversion en float pour une meilleure gestion des NaN avant fillna,
+           # surtout si une colonne initialement int est devenue float à cause des NaN.
+           # Ou si une colonne est restée 'object' mais contient des nombres.
+           for col_name in df.columns: # S'assurer que chaque colonne est bien numérique
+               if df[col_name].dtype == 'object':
+                   df[col_name] = pd.to_numeric(df[col_name], errors='coerce')
+           # Après to_numeric, les colonnes avec des non-numériques auront des NaN.
+           # Celles qui étaient full-NaN ont été droppées. Celles qui sont devenues full-NaN ici seront gérées par fillna.
+           df = df.astype(float).fillna(0)
         # Si df est devenu vide après la sélection des colonnes numériques, il le reste.
     # else: df était déjà vide ou est devenu vide après dropna.
     # À ce stade, df est soit vide, soit contient uniquement des colonnes numériques avec les NaN remplacés par 0.

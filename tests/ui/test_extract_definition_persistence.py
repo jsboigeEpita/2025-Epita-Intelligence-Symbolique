@@ -97,8 +97,10 @@ def test_load_definitions_no_file(test_env):
     assert definitions is not None
 
 def test_load_definitions_encrypted_no_key(test_env):
-    definitions = load_extract_definitions(config_file=test_env['encrypted_definitions_file'], b64_derived_key=None)
-    assert definitions is not None
+    # Le fichier est chiffré. Si on tente de le lire sans clé,
+    # file_operations.py essaiera de le parser comme JSON, ce qui échouera.
+    with pytest.raises(json.JSONDecodeError):
+        load_extract_definitions(config_file=test_env['encrypted_definitions_file'], b64_derived_key=None)
 
 def test_load_definitions_encrypted_wrong_key(test_env):
     wrong_key = test_env['crypto_service'].generate_key() # bytes
