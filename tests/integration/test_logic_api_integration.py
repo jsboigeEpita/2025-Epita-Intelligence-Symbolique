@@ -6,14 +6,6 @@ Tests d'intégration pour l'API Web avec les agents logiques.
 
 import os
 import sys
-
-# Ajouter le répertoire racine du projet au PYTHONPATH
-# Cela permet aux tests d'importer les modules du projet correctement
-# Assurons-nous que le répertoire racine est bien celui attendu
-# project_root devrait être 'd:/Dev/2025-Epita-Intelligence-Symbolique'
-project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
-if project_root not in sys.path:
-    sys.path.insert(0, project_root)
 import unittest
 import json
 from unittest.mock import MagicMock, patch
