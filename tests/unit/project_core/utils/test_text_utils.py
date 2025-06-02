@@ -1,3 +1,4 @@
+import string
 import pytest
 from project_core.utils.text_utils import normalize_text, tokenize_text
 
