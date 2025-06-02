@@ -2,46 +2,50 @@
 # -*- coding: utf-8 -*-
 
 """
-Script pour vérifier l'encodage des fichiers Python.
+Script pour vérifier l'encodage UTF-8 des fichiers Python du projet
+en utilisant l'utilitaire de project_core.
 """
 
-import os
 import sys
+import os
 
-def check_encoding():
+# Ajuster le PYTHONPATH pour trouver project_core si le script est exécuté directement
+script_dir = os.path.dirname(os.path.abspath(__file__))
+project_root = os.path.abspath(os.path.join(script_dir, '..'))
+if project_root not in sys.path:
+    sys.path.insert(0, project_root)
+
+try:
+    from project_core.dev_utils.encoding_utils import check_project_python_files_encoding, logger
+    import logging
+    logger.setLevel(logging.INFO) # Assurer un output visible pour le script
+except ImportError as e:
+    print(f"Erreur d'importation: {e}", file=sys.stderr)
+    print("Assurez-vous que le PYTHONPATH est correctement configuré ou que le projet est installé.", file=sys.stderr)
+    sys.exit(1)
+
+def main():
     """
-    Vérifie que tous les fichiers Python sont encodés en UTF-8.
+    Fonction principale pour exécuter la vérification de l'encodage.
     """
-    print("Vérification de l'encodage des fichiers Python...")
-    non_utf8_files = []
-    count = 0
+    print(f"Lancement de la vérification de l'encodage des fichiers Python du projet (racine: {project_root})...")
     
-    for root, dirs, files in os.walk('.'):
-        # Ignorer les répertoires venv et .git
-        if 'venv' in dirs:
-            dirs.remove('venv')
-        if '.git' in dirs:
-            dirs.remove('.git')
-            
-        for file in files:
-            if file.endswith('.py'):
-                file_path = os.path.join(root, file)
-                count += 1
-                try:
-                    # Essayer d'ouvrir le fichier en UTF-8
-                    with open(file_path, 'r', encoding='utf-8') as f:
-                        f.read()
-                except UnicodeDecodeError:
-                    non_utf8_files.append(file_path)
+    non_utf8_files = check_project_python_files_encoding(project_root)
     
     if non_utf8_files:
-        print(f"ATTENTION: {len(non_utf8_files)} fichiers ne sont pas encodés en UTF-8:")
-        for file in non_utf8_files:
-            print(f"  - {file}")
-        return False
+        print("\n---------------------------------------------------------------------")
+        print(f"ATTENTION: {len(non_utf8_files)} fichier(s) Python ne sont pas (ou n'ont pas pu être vérifiés comme étant) encodés en UTF-8:")
+        for file_path in non_utf8_files:
+            # Afficher le chemin relatif par rapport à project_root pour la lisibilité
+            relative_path = os.path.relpath(file_path, project_root)
+            print(f"  - {relative_path}")
+        print("---------------------------------------------------------------------")
+        return 1  # Code de sortie d'erreur
     else:
-        print(f"Tous les {count} fichiers Python sont encodés en UTF-8.")
-        return True
+        print("\n---------------------------------------------------------------------")
+        print("Tous les fichiers Python vérifiés sont conformes à l'encodage UTF-8.")
+        print("---------------------------------------------------------------------")
+        return 0  # Code de sortie de succès
 
 if __name__ == "__main__":
-    sys.exit(0 if check_encoding() else 1)
+    sys.exit(main())

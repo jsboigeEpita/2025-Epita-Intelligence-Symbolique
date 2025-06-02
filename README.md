@@ -171,30 +171,52 @@ cd 2025-Epita-Intelligence-Symbolique
 1.  **Assurez-vous que Conda est installé** et configuré dans votre PATH.
     Vous pouvez télécharger Miniconda (une version légère de Conda) depuis [https://docs.conda.io/en/latest/miniconda.html](https://docs.conda.io/en/latest/miniconda.html).
 
-2.  **Exécutez le script de configuration de l'environnement** à la racine du projet cloné :
+2.  **Exécutez le script de configuration de l'environnement** à la racine du projet cloné. Ce script est le point d'entrée principal pour préparer votre environnement de développement.
     Ouvrez un terminal PowerShell et exécutez :
     ```powershell
     .\setup_project_env.ps1
     ```
-    Ce script va :
-    * Vérifier la présence de Conda.
-    * Créer (ou mettre à jour) l'environnement Conda nommé `projet-is` à partir du fichier [`environment.yml`](environment.yml:1). Cet environnement inclut Python, Clingo, JPype1 et toutes les autres dépendances nécessaires.
-    * Télécharger et configurer un JDK portable si nécessaire.
-    * Configurer le fichier `.env`.
-    * Vous donner des instructions pour activer l'environnement.
+    Ce script [`setup_project_env.ps1`](setup_project_env.ps1:0) effectue les actions suivantes :
+    * Vérifie la présence de Conda.
+    * Crée (ou met à jour) l'environnement Conda nommé `projet-is` à partir du fichier [`environment.yml`](environment.yml:1). Cet environnement inclut Python, Clingo, JPype1, Octave (via `pip`) et toutes les autres dépendances nécessaires.
+    * Télécharge et configure un JDK portable (actuellement Temurin 17) dans le dossier [`libs/portable_jdk/`](libs/portable_jdk:0) si non présent ou si `-ForceReinstall` est utilisé.
+    * Télécharge et configure une version portable d'Octave dans le dossier [`libs/portable_octave/`](libs/portable_octave:0) si non présent ou si `-ForceReinstall` est utilisé.
+    * Crée ou met à jour le fichier `.env` à partir de `.env.template`, en configurant notamment `JAVA_HOME` pour pointer vers le JDK portable et `USE_REAL_JPYPE=true`.
+    * Nettoie les anciens répertoires d'environnements virtuels (`venv`, `.venv`, etc.) si détectés (avec confirmation en mode interactif).
+    * À la fin de son exécution, il appelle automatiquement le script [`activate_project_env.ps1`](activate_project_env.ps1:0) pour charger les variables d'environnement du fichier `.env` dans la session PowerShell actuelle et afficher des instructions pour l'activation manuelle de l'environnement Conda ou l'exécution de commandes.
 
-3.  **Activez l'environnement Conda** :
-    Dans votre terminal, exécutez :
-    ```bash
-    conda activate projet-is
-    ```
-    Votre prompt devrait maintenant indiquer `(projet-is)`.
+    **Options du script `setup_project_env.ps1` :**
+    *   `-InteractiveMode` : Active le mode interactif, posant des questions avant certaines actions (ex: suppression d'un environnement Conda existant).
+    *   `-ForceReinstall` : Force la réinstallation du JDK, d'Octave et de l'environnement Conda, même s'ils semblent déjà présents. Utile pour repartir d'une configuration propre.
+    *   `-Python310Path "chemin\vers\python3.10.exe"` : (Optionnel, principalement pour des cas d'usage hérités) Spécifie un chemin vers un exécutable Python 3.10 si nécessaire pour des scripts hors Conda.
 
-### 4. Configurer les variables d'environnement (si nécessaire au-delà du setup)
+3.  **Activation de l'environnement et chargement des variables** :
 
-Le script [`setup_project_env.ps1`](setup_project_env.ps1:1) crée et configure un fichier `.env` à la racine du projet à partir de `.env.template`.
-Vérifiez ce fichier `.env` et ajustez les valeurs si nécessaire (par exemple, les clés API pour `semantic-kernel` si vous les utilisez).
-Le `JAVA_HOME` est normalement configuré automatiquement par le script.
+    Le script [`setup_project_env.ps1`](setup_project_env.ps1:0) appelle [`activate_project_env.ps1`](activate_project_env.ps1:0) à la fin. Ce dernier script est responsable du chargement des variables d'environnement (comme `JAVA_HOME`) depuis le fichier `.env` dans votre session PowerShell actuelle.
+
+    Si vous ouvrez un nouveau terminal après avoir exécuté `setup_project_env.ps1` une première fois, ou si vous souhaitez simplement charger les variables d'environnement et/ou exécuter une commande dans l'environnement Conda sans refaire tout le setup :
+
+    *   **Pour charger les variables d'environnement et activer Conda manuellement** :
+        ```powershell
+        # Exécutez d'abord activate_project_env.ps1 pour charger .env
+        . .\activate_project_env.ps1
+        # Puis activez l'environnement Conda
+        conda activate projet-is
+        ```
+        Votre prompt devrait maintenant indiquer `(projet-is)`.
+
+    *   **Pour exécuter une commande spécifique directement dans l'environnement Conda configuré** (charge `.env` et active l'environnement pour la commande) :
+        ```powershell
+        powershell -File .\activate_project_env.ps1 -CommandToRun "votre_commande --arg1"
+        # Exemple:
+        powershell -File .\activate_project_env.ps1 -CommandToRun "python -m pytest -v"
+        ```
+        Cela est utile pour les tâches ponctuelles ou les scripts d'intégration continue.
+
+### 4. Configurer les variables d'environnement (vérification)
+
+Le script [`setup_project_env.ps1`](setup_project_env.ps1:0) (via [`activate_project_env.ps1`](activate_project_env.ps1:0)) configure le fichier `.env` et charge les variables. Normalement, `JAVA_HOME` est automatiquement pointé vers le JDK portable dans [`libs/portable_jdk/`](libs/portable_jdk:0) et `USE_REAL_JPYPE` est mis à `true`.
+Vous pouvez vérifier le contenu du fichier `.env` pour des configurations spécifiques (par exemple, les clés API pour `semantic-kernel` si vous les utilisez).
 
 ### 5. Lancer l'application
 
