@@ -1033,7 +1033,7 @@ class typing:
 
 # Attribuer le mock de typing au module numpy_mock pour qu'il soit importable
 # par conftest.py lors de la construction du mock sys.modules['numpy']
-# Exemple: from numpy_mock import typing as numpy_typing_mock
+# Exemple: from legacy_numpy_array_mock import typing as numpy_typing_mock
 
 def busday_offset(dates, offsets, roll='raise', weekmask='1111100', holidays=None, busdaycal=None, out=None):
     """Mock pour numpy.busday_offset."""

@@ -32,7 +32,7 @@ def deep_delete_from_sys_modules(module_name_prefix, logger_instance):
 
 # Tentative d'importation de numpy_mock. S'il est dans le même répertoire (tests/mocks), cela devrait fonctionner.
 try:
-    import numpy_mock # numpy_mock.py devrait définir .core, ._core, et dans ceux-ci, ._multiarray_umath
+    import legacy_numpy_array_mock # legacy_numpy_array_mock.py devrait définir .core, ._core, et dans ceux-ci, ._multiarray_umath
 except ImportError:
     print("ERREUR: numpy_setup.py: Impossible d'importer numpy_mock directement.")
     numpy_mock = MagicMock(name="numpy_mock_fallback_in_numpy_setup")

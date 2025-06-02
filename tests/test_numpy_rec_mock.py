@@ -12,8 +12,8 @@ import os
 
 # Forcer l'utilisation du mock numpy
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'mocks'))
-import numpy_mock
-sys.modules['numpy'] = numpy_mock
+import legacy_numpy_array_mock
+sys.modules['numpy'] = legacy_numpy_array_mock
 
 class TestNumpyRecMock(unittest.TestCase):
     """Tests pour vérifier que numpy.rec est correctement mocké."""
