@@ -65,18 +65,12 @@ def test_env(tmp_path, crypto_service_instance, sample_extract_data):
         "sample_data": sample_extract_data
     }
 
-def test_load_definitions_unencrypted(test_env):
-    # Utilisons le fichier chiffré préparé par la fixture test_env
+def test_load_encrypted_definitions_from_fixture(test_env):
+    # Ce test utilise le fichier chiffré (extract_definitions.json.enc)
+    # et la clé préparés par la fixture test_env.
     # load_extract_definitions expects b64_derived_key as str
-    # test_env['key'] is raw bytes. If it's already a b64 encoded string representation of a derived key,
-    # then .decode() is appropriate. Given it's from Fernet.generate_key(), it's a raw Fernet key.
+    # test_env['key'] is raw bytes.
     # The functions in file_operations now use crypto_utils functions that handle raw bytes or b64 str.
-    # So, we should pass the key in a format that crypto_utils functions expect.
-    # If b64_derived_key is meant to be the b64 string of a *derived* key, this test setup is slightly off.
-    # However, since crypto_utils now handles raw bytes keys, we can pass it as is, or its str representation.
-    # Let's assume b64_derived_key in file_operations means "the key material, as a b64 string if it was derived,
-    # or the raw key as string if it's a direct Fernet key".
-    # The crypto_utils functions will handle it.
     definitions = load_extract_definitions(
         config_file=test_env['encrypted_definitions_file'], 
         b64_derived_key=test_env['key'].decode('utf-8') # Pass raw Fernet key as str
