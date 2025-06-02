@@ -7,7 +7,7 @@ setup(
     install_requires=[
         "numpy<2.0",  # Contrainte cruciale pour la compatibilité
         "pandas",
-        "scipy",
+        "scipy==1.15.3",
         "scikit-learn",
         "nltk",
         "spacy",

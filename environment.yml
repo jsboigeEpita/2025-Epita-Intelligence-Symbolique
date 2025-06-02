@@ -8,7 +8,7 @@ dependencies:
   # Core ML/Data Science
   - numpy<2.0 # Contrainte cruciale
   - pandas
-  - scipy
+  - scipy==1.15.3
   - scikit-learn
   - nltk
   - spacy
