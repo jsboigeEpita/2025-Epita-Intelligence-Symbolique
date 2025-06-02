@@ -224,38 +224,54 @@ def pytest_sessionstart(session):
 
     if _REAL_JPYPE_MODULE and _REAL_JPYPE_MODULE is not _JPYPE_MODULE_MOCK_OBJ_GLOBAL:
         logger.info("   pytest_sessionstart: Real JPype module is available.")
-        try:
-            original_sys_jpype_module = sys.modules.get('jpype')
-            if sys.modules.get('jpype') is not _REAL_JPYPE_MODULE:
-                sys.modules['jpype'] = _REAL_JPYPE_MODULE
-                logger.info("   pytest_sessionstart: Temporarily set sys.modules['jpype'] to _REAL_JPYPE_MODULE for config import.")
+        # try:
+            # La logique de configuration de destroy_jvm et l'import de jpype.config
+            # sont maintenant gérés de manière centralisée par initialize_jvm lors du premier démarrage réel.
+            # Commenter cette section pour éviter les conflits ou les configurations prématurées.
+            # original_sys_jpype_module = sys.modules.get('jpype')
+            # if sys.modules.get('jpype') is not _REAL_JPYPE_MODULE:
+            #     sys.modules['jpype'] = _REAL_JPYPE_MODULE
+            #     logger.info("   pytest_sessionstart: Temporarily set sys.modules['jpype'] to _REAL_JPYPE_MODULE for config import.")
 
-            if not hasattr(_REAL_JPYPE_MODULE, 'config') or _REAL_JPYPE_MODULE.config is None:
-                logger.info("   pytest_sessionstart: Attempting to import jpype.config explicitly.")
-                import jpype.config
+            # if not hasattr(_REAL_JPYPE_MODULE, 'config') or _REAL_JPYPE_MODULE.config is None:
+            #     logger.info("   pytest_sessionstart: Attempting to import jpype.config explicitly.")
+            #     import jpype.config # This might be problematic if called before JVM start or with wrong classpath context
             
-            if original_sys_jpype_module is not None and sys.modules.get('jpype') is not original_sys_jpype_module:
-                sys.modules['jpype'] = original_sys_jpype_module
-                logger.info("   pytest_sessionstart: Restored original sys.modules['jpype'].")
-            elif original_sys_jpype_module is None and 'jpype' in sys.modules and sys.modules['jpype'] is _REAL_JPYPE_MODULE:
-                pass
+            # if original_sys_jpype_module is not None and sys.modules.get('jpype') is not original_sys_jpype_module:
+            #     sys.modules['jpype'] = original_sys_jpype_module
+            #     logger.info("   pytest_sessionstart: Restored original sys.modules['jpype'].")
+            # elif original_sys_jpype_module is None and 'jpype' in sys.modules and sys.modules['jpype'] is _REAL_JPYPE_MODULE:
+            #     pass # It was correctly set
+            
+            # Tentative d'assurer que jpype.config est le vrai config, si possible.
+            # initialize_jvm s'occupera de mettre destroy_jvm à False.
+            # Bloc try/except correctement indenté :
+        try:
+            if not hasattr(_REAL_JPYPE_MODULE, 'config') or _REAL_JPYPE_MODULE.config is None:
+                logger.info("   pytest_sessionstart: _REAL_JPYPE_MODULE.config non trouvé, tentative d'import de jpype.config.")
+                _current_sys_jpype = sys.modules.get('jpype')
+                sys.modules['jpype'] = _REAL_JPYPE_MODULE
+                import jpype.config
+                sys.modules['jpype'] = _current_sys_jpype
+                logger.info(f"   pytest_sessionstart: Import de jpype.config tenté. hasattr(config): {hasattr(_REAL_JPYPE_MODULE, 'config')}")
 
             if hasattr(_REAL_JPYPE_MODULE, 'config') and _REAL_JPYPE_MODULE.config is not None:
-                _REAL_JPYPE_MODULE.config.destroy_jvm = False
-                logger.info(f"   pytest_sessionstart: _REAL_JPYPE_MODULE.config.destroy_jvm set to False. Current value: {_REAL_JPYPE_MODULE.config.destroy_jvm}")
                 if 'jpype.config' not in sys.modules or sys.modules.get('jpype.config') is not _REAL_JPYPE_MODULE.config:
                     sys.modules['jpype.config'] = _REAL_JPYPE_MODULE.config
-                    logger.info("   pytest_sessionstart: Ensured _REAL_JPYPE_MODULE.config is in sys.modules['jpype.config'].")
+                    logger.info("   pytest_sessionstart: Assuré que sys.modules['jpype.config'] est _REAL_JPYPE_MODULE.config.")
             else:
-                logger.warning("   pytest_sessionstart: _REAL_JPYPE_MODULE does not have 'config' attribute or it's None after import attempt. Cannot set destroy_jvm.")
-        except ImportError as e_cfg_imp:
-            logger.error(f"   pytest_sessionstart: ImportError when trying to import or use jpype.config: {e_cfg_imp}")
-        except Exception as e:
-            logger.error(f"   pytest_sessionstart: Unexpected error when handling jpype.config: {type(e).__name__}: {e}", exc_info=True)
+                logger.warning("   pytest_sessionstart: _REAL_JPYPE_MODULE.config toujours non disponible après tentative d'import.")
+
+        except ImportError as e_cfg_imp_sess_start:
+            logger.error(f"   pytest_sessionstart: ImportError lors de la tentative d'import de jpype.config: {e_cfg_imp_sess_start}")
+        except Exception as e_sess_start_cfg:
+            logger.error(f"   pytest_sessionstart: Erreur inattendue lors de la manipulation de jpype.config: {e_sess_start_cfg}", exc_info=True)
+
+        logger.info("   pytest_sessionstart: La configuration de jpype.config.destroy_jvm est gérée par initialize_jvm.")
     elif _JPYPE_MODULE_MOCK_OBJ_GLOBAL and _REAL_JPYPE_MODULE is _JPYPE_MODULE_MOCK_OBJ_GLOBAL:
         logger.info("   pytest_sessionstart: JPype module is the MOCK. No changes to destroy_jvm needed for the mock.")
     else:
-        logger.info("   pytest_sessionstart: Real JPype module not definitively available or identified as mock. Cannot set destroy_jvm.")
+        logger.info("   pytest_sessionstart: Real JPype module not definitively available or identified as mock. La configuration de jpype.config est gérée par initialize_jvm.")
 
 def pytest_sessionfinish(session, exitstatus):
     global _REAL_JPYPE_MODULE, _JPYPE_MODULE_MOCK_OBJ_GLOBAL, logger

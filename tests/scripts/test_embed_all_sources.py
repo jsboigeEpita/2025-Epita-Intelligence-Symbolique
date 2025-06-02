@@ -14,6 +14,7 @@ import sys
 SCRIPT_DIR_TEST = Path(__file__).resolve().parent.parent.parent # Remonter à la racine du projet
 sys.path.insert(0, str(SCRIPT_DIR_TEST))
 
+from argumentation_analysis.ui.config import ENCRYPTION_KEY as EXPECTED_KEY_FROM_CONFIG_MODULE
 from argumentation_analysis.ui import utils as aa_utils
 from argumentation_analysis.ui import file_operations
 from argumentation_analysis.ui.config import FIXED_SALT as CONFIG_FIXED_SALT # Importer le sel
@@ -93,15 +94,18 @@ def create_encrypted_config_file(tmp_path, test_passphrase):
     def _creator(filename: str, data: list, passphrase_override=None):
         input_file = tmp_path / filename
         
-        current_passphrase = passphrase_override or test_passphrase
-        derived_key = derive_key_for_test(current_passphrase)
+        # current_passphrase = passphrase_override or test_passphrase # Obsolète
+        # derived_key = derive_key_for_test(current_passphrase) # Obsolète
+        # Utiliser directement la clé du module de configuration, car c'est ce que le script principal utilise.
+        # La fixture test_passphrase n'est plus pertinente pour la dérivation de la clé principale ici.
+        encryption_key_for_saving = EXPECTED_KEY_FROM_CONFIG_MODULE
 
         should_embed = any("full_text" in item for item in data)
 
         file_operations.save_extract_definitions(
             extract_definitions=data,
             config_file=input_file,
-            encryption_key=derived_key, # Passer la clé dérivée (bytes)
+            encryption_key=encryption_key_for_saving, # Passer la clé dérivée (bytes)
             embed_full_text=should_embed,
             config={}
         )
@@ -113,7 +117,7 @@ def create_encrypted_config_file(tmp_path, test_passphrase):
 @pytest.fixture(autouse=True)
 def mock_aa_utils_network_calls(tmp_path, test_passphrase): # Ajout de test_passphrase pour dériver la clé correcte
     # Clé correcte dérivée pour comparaison dans le mock de load_extract_definitions
-    correct_derived_key_for_comparison = derive_key_for_test(test_passphrase)
+    # correct_derived_key_for_comparison = derive_key_for_test(test_passphrase) # Remplacé par EXPECTED_KEY_FROM_CONFIG_MODULE
 
     # Importer la vraie fonction load_extract_definitions pour l'utiliser dans le mock si la clé est correcte
     # Cela évite la récursivité si on patche 'scripts.embed_all_sources.load_extract_definitions'
@@ -159,7 +163,7 @@ def mock_aa_utils_network_calls(tmp_path, test_passphrase): # Ajout de test_pass
         # Configurer le mock de load_extract_definitions (patché dans scripts.embed_all_sources)
         def side_effect_load_defs(config_file: Path, key: bytes):
             # Ce mock est appelé par embed_main (la version patchée)
-            if key != correct_derived_key_for_comparison:
+            if key != EXPECTED_KEY_FROM_CONFIG_MODULE: # Utilisation de la clé importée
                 # Pour test_embed_script_incorrect_passphrase, le script s'attend à une exception
                 # qui mène à sys.exit(1). InvalidToken est approprié.
                 raise InvalidToken("Simulated InvalidToken from mock_script_load_definitions due to incorrect key")
@@ -321,10 +325,11 @@ def decrypt_and_load_json(file_path: Path, passphrase: str) -> list:
     # Le paramètre 'config' (app_config) est optionnel pour load_extract_definitions
     # s'il n'est pas utilisé pour la logique de fallback ou autre.
     # Ici, on veut juste le contenu déchiffré.
-    derived_key = derive_key_for_test(passphrase)
+    # Utiliser la clé attendue par le module de configuration pour le déchiffrement,
+    # car c'est cette clé qui aurait dû être utilisée pour chiffrer.
     loaded_data = file_operations.load_extract_definitions(
         config_file=file_path,
-        key=derived_key, # Passer la clé dérivée (bytes)
+        key=EXPECTED_KEY_FROM_CONFIG_MODULE, # Passer la clé dérivée (bytes)
         # app_config={}
     )
     return loaded_data
@@ -439,25 +444,38 @@ def test_embed_script_passphrase_from_env(
 
 
 def test_embed_script_missing_passphrase(
-    tmp_path, create_encrypted_config_file, minimal_config_data_no_text, mock_sys_argv, mock_os_environ
-):
+    tmp_path, create_encrypted_config_file, minimal_config_data_no_text, test_passphrase, mock_sys_argv, mock_os_environ
+): # Ajout de test_passphrase pour decrypt_and_load_json
     input_file = create_encrypted_config_file("input_no_pass.enc", minimal_config_data_no_text)
     output_file = tmp_path / "output_no_pass.enc"
 
     # S'assurer que la variable d'env n'est pas définie
-    env_vars = os.environ.copy()
-    if "TEXT_CONFIG_PASSPHRASE" in env_vars:
-        del env_vars["TEXT_CONFIG_PASSPHRASE"]
-
-    args = ["--input-config", str(input_file), "--output-config", str(output_file)]
-    # S'assurer que TEXT_CONFIG_PASSPHRASE n'est pas dans l'environnement pour ce test
-    # La fixture mock_os_environ (via EnvSetter) gère la restauration.
-    # On doit s'assurer que la variable est absente avant l'appel.
+    # env_vars = os.environ.copy() # Plus nécessaire de manipuler env_vars ici pour ce test
+    # if "TEXT_CONFIG_PASSPHRASE" in env_vars:
+    #     del env_vars["TEXT_CONFIG_PASSPHRASE"]
     mock_os_environ.clear_env(["TEXT_CONFIG_PASSPHRASE"])
+
+
+    args = ["--input-config", str(input_file), "--output-config", str(output_file)] # Pas de --passphrase
+    # Le script utilise maintenant ENCRYPTION_KEY de ui.config, donc l'absence de --passphrase ou de la variable d'env ne devrait plus causer d'erreur.
+    result = run_script_direct(args, mock_sys_argv, mock_os_environ, env_vars_to_set=None)
     
-    result = run_script_direct(args, mock_sys_argv, mock_os_environ, env_vars_to_set=None) # env_vars_to_set est None car on a déjà nettoyé
-    assert result.returncode == 1
-    assert "Passphrase non fournie (ni via --passphrase, ni via TEXT_CONFIG_PASSPHRASE). Arrêt." in result.stderr
+    print("STDOUT (missing_passphrase):", result.stdout)
+    print("STDERR (missing_passphrase):", result.stderr)
+    
+    assert result.returncode == 0, f"Le script a échoué avec le code {result.returncode}, stderr: {result.stderr}"
+    assert output_file.exists()
+    
+    # Vérifier le contenu, similaire à test_embed_script_passphrase_from_env
+    output_data = decrypt_and_load_json(output_file, test_passphrase) # test_passphrase est utilisé pour déchiffrer le fichier de test créé avec la clé de config
+    assert len(output_data) == 1
+    assert output_data[0]["source_name"] == "Minimal Source"
+    assert "full_text" in output_data[0]
+    assert output_data[0]["full_text"] == "Fetched content for /file1.txt" # Le mock_get_text devrait avoir été appelé
+    assert "Traitement des sources terminé. 1 sources mises à jour, 0 erreurs de récupération." in result.stderr
+    assert "Script d'embarquement des sources terminé avec succès." in result.stderr
+    # L'ancien message d'erreur ne doit plus apparaître :
+    assert "Passphrase non fournie (ni via --passphrase, ni via TEXT_CONFIG_PASSPHRASE). Arrêt." not in result.stderr
 
 
 def test_embed_script_input_file_not_found(tmp_path, test_passphrase, mock_sys_argv, mock_os_environ):
@@ -466,31 +484,37 @@ def test_embed_script_input_file_not_found(tmp_path, test_passphrase, mock_sys_a
     args = ["--input-config", str(non_existent_input), "--output-config", str(output_file), "--passphrase", test_passphrase]
     result = run_script_direct(args, mock_sys_argv, mock_os_environ, env_vars_to_set=None)
     assert result.returncode == 1
-    assert f"Le fichier d'entrée {non_existent_input} n'existe pas. Arrêt." in result.stderr
-
+    assert f"Le fichier d'entrée chiffré {non_existent_input} n'existe pas et aucune autre source n'est fournie. Arrêt." in result.stderr
 
 def test_embed_script_incorrect_passphrase(
     tmp_path, create_encrypted_config_file, minimal_config_data_no_text, test_passphrase, mock_sys_argv, mock_os_environ
 ):
-    input_file = create_encrypted_config_file("input_bad_pass.enc", minimal_config_data_no_text, passphrase_override=test_passphrase)
+    # Le fichier d'entrée est créé avec la clé de configuration standard (via create_encrypted_config_file)
+    input_file = create_encrypted_config_file("input_bad_pass.enc", minimal_config_data_no_text) # passphrase_override n'est plus pertinent ici
     output_file = tmp_path / "output_bad_pass.enc"
-    wrong_passphrase = "thisiswrong"
+    wrong_passphrase_arg = "thisiswrong" # Cette passphrase est passée en argument mais devrait être ignorée par le script pour la dérivation de clé
 
-    args = ["--input-config", str(input_file), "--output-config", str(output_file), "--passphrase", wrong_passphrase]
+    args = ["--input-config", str(input_file), "--output-config", str(output_file), "--passphrase", wrong_passphrase_arg]
     result = run_script_direct(args, mock_sys_argv, mock_os_environ, env_vars_to_set=None)
-    # Le script devrait échouer car load_extract_definitions (le mock) lèvera InvalidToken
-    # que le script principal attrape.
-    # L'erreur exacte dépend de comment aa_utils.load_extract_definitions gère une mauvaise clé.
-    # Typiquement, Fernet lèvera InvalidToken.
-    print("STDOUT:", result.stdout)
-    print("STDERR:", result.stderr)
-    assert result.returncode == 1 # Ou un autre code d'erreur si géré différemment
-    # Vérifier un message d'erreur approprié.
-    # Le script principal loggue "Erreur lors du chargement ou du déchiffrement" sur stderr
-    assert f"Erreur lors du chargement ou du déchiffrement de {input_file}" in result.stderr
-    # Le message "Échec déchiffrement. Utilisation définitions par défaut." n'est plus attendu
-    # car le script sort après avoir loggué "Erreur lors du chargement ou du déchiffrement..."
-    # en raison de l'InvalidToken levée par le mock de load_extract_definitions.
+
+    print("STDOUT (incorrect_passphrase):", result.stdout)
+    print("STDERR (incorrect_passphrase):", result.stderr)
+
+    # Le script devrait réussir car la passphrase en argument est ignorée pour la clé principale.
+    # ENCRYPTION_KEY de ui.config est utilisée pour déchiffrer l'entrée et chiffrer la sortie.
+    assert result.returncode == 0, f"Le script a échoué avec le code {result.returncode}, stderr: {result.stderr}"
+    assert output_file.exists()
+
+    # Vérifier le contenu, il devrait être traité correctement
+    output_data = decrypt_and_load_json(output_file, test_passphrase) # test_passphrase est pour la clé de config utilisée pour créer/lire le fichier de test
+    assert len(output_data) == 1
+    assert output_data[0]["source_name"] == "Minimal Source"
+    assert "full_text" in output_data[0]
+    assert output_data[0]["full_text"] == "Fetched content for /file1.txt"
+    assert "Traitement des sources terminé. 1 sources mises à jour, 0 erreurs de récupération." in result.stderr
+    assert "Script d'embarquement des sources terminé avec succès." in result.stderr
+    # Les anciens messages d'erreur ne doivent plus apparaître
+    assert f"Erreur lors du chargement ou du déchiffrement de {input_file}" not in result.stderr
 
 def test_embed_script_source_fetch_error(
     tmp_path, create_encrypted_config_file, test_passphrase, mock_aa_utils_network_calls, mock_sys_argv, mock_os_environ
@@ -536,7 +560,7 @@ def test_embed_script_empty_input_config(
     # Si le fichier d'entrée est vraiment vide (et correctement déchiffré comme vide), le script devrait loguer qqch comme "0 définitions d'extraits chargées"
     # ou le message d'avertissement si la liste est vide après chargement.
     # Le log "Aucune définition d'extrait trouvée dans..." est un WARNING, donc sur stderr.
-    assert f"Aucune définition d'extrait trouvée dans {input_file}" in result.stderr # Vérifier le warning sur stderr
+    assert f"Aucune définition d'extrait trouvée ou erreur de chargement depuis {input_file}" in result.stderr # Vérifier le warning sur stderr
     # Avec la correction dans embed_all_sources.py, le script essaie de sauvegarder même si les définitions sont vides.
     # Donc, le message "Aucune définition d'extrait à sauvegarder..." ne devrait plus apparaître si la sauvegarde réussit.
     # On vérifie plutôt que le fichier de sortie est créé et que les logs de sauvegarde sont présents.

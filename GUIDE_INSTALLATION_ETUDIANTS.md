@@ -7,9 +7,10 @@ Ce guide vous accompagnera à travers les étapes nécessaires pour configurer v
 Avant de commencer, assurez-vous d'avoir les éléments suivants installés sur votre machine :
 
 *   **Git :** Pour cloner le dépôt du projet. Vous pouvez le télécharger depuis [git-scm.com](https://git-scm.com/).
-*   **PowerShell :** Intégré à Windows. Sur macOS ou Linux, vous utiliserez votre terminal Bash/Zsh standard pour les commandes Git, mais les scripts d'environnement principaux sont conçus pour PowerShell.
+*   **Conda (Miniconda ou Anaconda) :** Pour la gestion de l'environnement. Téléchargez Miniconda depuis [https://docs.conda.io/en/latest/miniconda.html](https://docs.conda.io/en/latest/miniconda.html) et suivez les instructions d'installation pour votre système d'exploitation. Assurez-vous que Conda est ajouté à votre PATH ou que vous savez comment accéder à l'invite de commandes Anaconda / PowerShell initialisé pour Conda.
+*   **PowerShell :** Intégré à Windows. C'est le terminal recommandé pour exécuter les scripts fournis.
 *   Une connexion Internet stable.
-*   Droits d'administrateur sur votre machine (peuvent être requis pour l'installation de Git ou si des stratégies d'exécution PowerShell doivent être modifiées).
+*   Droits d'administrateur sur votre machine (peuvent être requis pour l'installation de Git/Conda ou si des stratégies d'exécution PowerShell doivent être modifiées).
 
 ## 1. Clonage du Projet
 
@@ -24,14 +25,16 @@ Avant de commencer, assurez-vous d'avoir les éléments suivants installés sur 
 
 ## 2. Configuration Initiale de l'Environnement avec `setup_project_env.ps1`
 
-Le script [`setup_project_env.ps1`](setup_project_env.ps1:1) est conçu pour automatiser la configuration complète de votre environnement. Il effectuera les actions suivantes :
-*   Téléchargement et configuration du JDK portable (Java Development Kit 17).
-*   Création d'un environnement virtuel Python 3.10 (`.venv`).
-*   Installation des dépendances Python requises, y compris JPype 1.5.2, à partir du fichier `requirements.txt`.
+Le script [`setup_project_env.ps1`](setup_project_env.ps1:1) est conçu pour automatiser la configuration complète de votre environnement Conda. Il effectuera les actions suivantes :
+*   Vérification de l'installation de Conda.
+*   Création ou mise à jour de l'environnement Conda nommé `projet-is` à partir du fichier [`environment.yml`](environment.yml:1). Cet environnement inclura Python 3.10, Clingo, JPype1, et toutes les autres dépendances listées.
+*   Téléchargement et configuration du JDK portable (Java Development Kit 17), si non géré par Conda.
+*   Configuration du fichier `.env` avec les chemins nécessaires (comme `JAVA_HOME`).
+*   Demande de confirmation pour supprimer les anciens répertoires `venv` s'ils existent.
 
 **Étapes :**
 
-1.  **Ouvrez PowerShell.**
+1.  **Ouvrez PowerShell.** Il est recommandé d'utiliser une session PowerShell où Conda a été initialisé (par exemple, via `conda init powershell` exécuté une fois dans une session précédente, ou en lançant "Anaconda PowerShell Prompt" si disponible).
 2.  **Naviguez jusqu'à la racine de votre projet cloné** (où se trouve le script `setup_project_env.ps1`).
     ```powershell
     cd chemin\vers\votre\projet\2025-Epita-Intelligence-Symbolique
@@ -45,35 +48,35 @@ Le script [`setup_project_env.ps1`](setup_project_env.ps1:1) est conçu pour aut
         Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
         ```
         Puis réessayez d'exécuter le script.
-4.  **Suivez les instructions :** Le script peut vous poser des questions ou afficher des informations pendant son exécution. Laissez-le se terminer complètement.
+4.  **Suivez les instructions :** Le script vous guidera, affichera des informations sur la progression, et pourra vous demander confirmation pour certaines actions (comme la suppression d'anciens `venv`). Laissez-le se terminer complètement.
 
-À la fin de ce script, votre JDK portable sera configuré, l'environnement virtuel Python sera créé et les dépendances seront installées.
+À la fin de ce script, votre environnement Conda `projet-is` sera créé ou mis à jour, le JDK portable sera configuré, et le fichier `.env` sera prêt.
 
-## 3. Activation de l'Environnement de Développement avec `activate_project_env.ps1`
+## 3. Activation de l'Environnement de Développement Conda
 
-Chaque fois que vous souhaitez travailler sur le projet, vous devez activer l'environnement de développement. Le script [`activate_project_env.ps1`](activate_project_env.ps1:1) s'en charge. Il configure les variables d'environnement nécessaires (`JAVA_HOME`, `PATH`, `CLASSPATH` si défini) et active l'environnement virtuel Python.
+Chaque fois que vous souhaitez travailler sur le projet, vous devez activer l'environnement Conda `projet-is`.
 
 **Étapes :**
 
-1.  **Ouvrez une nouvelle session PowerShell.**
-2.  **Naviguez jusqu'à la racine de votre projet.**
+1.  **Ouvrez une nouvelle session PowerShell** (ou votre terminal où Conda est accessible).
+2.  **Naviguez jusqu'à la racine de votre projet si nécessaire.** (L'activation de Conda peut généralement se faire depuis n'importe quel chemin).
+3.  **Activez l'environnement Conda :**
     ```powershell
-    cd chemin\vers\votre\projet\2025-Epita-Intelligence-Symbolique
+    conda activate projet-is
     ```
-3.  **Exécutez le script d'activation :**
+4.  **Vérification :** Une fois la commande exécutée, votre invite de commande devrait être préfixée par `(projet-is)`, indiquant que l'environnement Conda est actif.
+    Vous pouvez vérifier les versions et la configuration avec :
+    ```powershell
+    echo $env:JAVA_HOME  # Devrait afficher le chemin configuré par setup_project_env.ps1
+    python --version     # Devrait afficher Python 3.10.x
+    conda list           # Pour voir les paquets installés dans l'environnement Conda
+    ```
+    Le script [`activate_project_env.ps1`](activate_project_env.ps1:1) a été simplifié et sert maintenant principalement de rappel pour la commande `conda activate projet-is`. Vous pouvez toujours l'exécuter pour voir ce rappel :
     ```powershell
     .\activate_project_env.ps1
     ```
-4.  **Vérification :** Une fois le script exécuté, votre invite de commande PowerShell devrait être préfixée par `(.venv)`, indiquant que l'environnement virtuel Python est actif. De plus, les variables d'environnement comme `JAVA_HOME` seront configurées pour cette session.
-    Vous pouvez vérifier avec :
-    ```powershell
-    echo $env:JAVA_HOME
-    python --version
-    pip list
-    ```
-    Vous devriez voir le chemin du JDK portable, Python 3.10.x, et la liste des paquets installés dans le venv.
 
-**Important :** Vous devez exécuter `.\activate_project_env.ps1` dans chaque nouvelle session PowerShell où vous prévoyez de travailler sur le projet.
+**Important :** Vous devez exécuter `conda activate projet-is` dans chaque nouvelle session de terminal où vous prévoyez de travailler sur le projet.
 
 ## 4. Vérification de l'Installation de JPype avec `check_jpype_env.py`
 
