@@ -25,11 +25,12 @@ class AbstractLogicAgent(ABC):
     
     def __init__(self, kernel: Kernel, agent_name: str):
         """
-        Initialise un agent logique.
-        
-        Args:
-            kernel: Le kernel Semantic Kernel à utiliser pour les fonctions sémantiques
-            agent_name: Le nom de l'agent
+        Initialise un agent logique abstrait.
+
+        :param kernel: Le kernel Semantic Kernel à utiliser pour les fonctions sémantiques.
+        :type kernel: Kernel
+        :param agent_name: Le nom de cet agent.
+        :type agent_name: str
         """
         self._kernel = kernel
         self._agent_name = agent_name
@@ -38,64 +39,88 @@ class AbstractLogicAgent(ABC):
     
     @property
     def name(self) -> str:
-        """Retourne le nom de l'agent."""
+        """Retourne le nom de l'agent.
+
+        :return: Le nom de l'agent.
+        :rtype: str
+        """
         return self._agent_name
     
     @property
     def kernel(self) -> Kernel:
-        """Retourne le kernel associé à l'agent."""
+        """Retourne le kernel Semantic Kernel associé à cet agent.
+
+        :return: L'instance du kernel.
+        :rtype: Kernel
+        """
         return self._kernel
     
     @abstractmethod
     def setup_kernel(self, llm_service) -> None:
         """
-        Configure le kernel avec les plugins et fonctions nécessaires.
-        
-        Args:
-            llm_service: Le service LLM à utiliser
+        Configure le kernel Semantic Kernel avec les plugins natifs et les fonctions
+        sémantiques spécifiques à cet agent logique.
+
+        Cette méthode doit être implémentée par les classes dérivées.
+
+        :param llm_service: L'instance du service LLM à utiliser pour configurer
+                            les fonctions sémantiques.
+        :type llm_service: Any
+        :return: None
+        :rtype: None
         """
         pass
     
     @abstractmethod
     def text_to_belief_set(self, text: str) -> Tuple[Optional[BeliefSet], str]:
         """
-        Convertit un texte en ensemble de croyances.
-        
-        Args:
-            text: Le texte à convertir
-            
-        Returns:
-            Un tuple contenant l'ensemble de croyances créé (ou None en cas d'erreur)
-            et un message de statut
+        Convertit un texte donné en un ensemble de croyances logiques formelles.
+
+        Cette méthode doit être implémentée par les classes dérivées pour gérer
+        la logique de conversion spécifique au type de logique de l'agent.
+
+        :param text: Le texte en langage naturel à convertir.
+        :type text: str
+        :return: Un tuple contenant:
+                 - L'objet `BeliefSet` créé (ou None si la conversion échoue).
+                 - Un message de statut (str) décrivant le résultat de l'opération.
+        :rtype: Tuple[Optional[BeliefSet], str]
         """
         pass
     
     @abstractmethod
     def generate_queries(self, text: str, belief_set: BeliefSet) -> List[str]:
         """
-        Génère des requêtes logiques pertinentes basées sur le texte et l'ensemble de croyances.
-        
-        Args:
-            text: Le texte source
-            belief_set: L'ensemble de croyances
-            
-        Returns:
-            Une liste de requêtes logiques
+        Génère une liste de requêtes logiques pertinentes à partir d'un texte source
+        et d'un ensemble de croyances existant.
+
+        Cette méthode doit être implémentée par les classes dérivées.
+
+        :param text: Le texte source original.
+        :type text: str
+        :param belief_set: L'ensemble de croyances dérivé du texte.
+        :type belief_set: BeliefSet
+        :return: Une liste de chaînes de caractères, chaque chaîne étant une requête logique.
+        :rtype: List[str]
         """
         pass
     
     @abstractmethod
     def execute_query(self, belief_set: BeliefSet, query: str) -> Tuple[Optional[bool], str]:
         """
-        Exécute une requête logique sur un ensemble de croyances.
-        
-        Args:
-            belief_set: L'ensemble de croyances
-            query: La requête à exécuter
-            
-        Returns:
-            Un tuple contenant le résultat de la requête (True, False ou None si indéterminé)
-            et un message formaté
+        Exécute une requête logique donnée sur un ensemble de croyances.
+
+        Cette méthode doit être implémentée par les classes dérivées pour interagir
+        avec le moteur logique spécifique.
+
+        :param belief_set: L'ensemble de croyances sur lequel exécuter la requête.
+        :type belief_set: BeliefSet
+        :param query: La requête logique à exécuter.
+        :type query: str
+        :return: Un tuple contenant:
+                 - Le résultat booléen de la requête (True, False, ou None si indéterminé).
+                 - Une chaîne de caractères formatée représentant le résultat.
+        :rtype: Tuple[Optional[bool], str]
         """
         pass
     
@@ -103,34 +128,45 @@ class AbstractLogicAgent(ABC):
     def interpret_results(self, text: str, belief_set: BeliefSet, 
                          queries: List[str], results: List[str]) -> str:
         """
-        Interprète les résultats des requêtes logiques.
-        
-        Args:
-            text: Le texte source
-            belief_set: L'ensemble de croyances
-            queries: Les requêtes exécutées
-            results: Les résultats des requêtes
-            
-        Returns:
-            Une interprétation textuelle des résultats
+        Interprète les résultats d'une série de requêtes logiques par rapport
+        au texte source original et à l'ensemble de croyances.
+
+        Cette méthode doit être implémentée par les classes dérivées pour fournir
+        une explication en langage naturel des implications des résultats logiques.
+
+        :param text: Le texte source original.
+        :type text: str
+        :param belief_set: L'ensemble de croyances utilisé.
+        :type belief_set: BeliefSet
+        :param queries: La liste des requêtes qui ont été exécutées.
+        :type queries: List[str]
+        :param results: La liste des résultats formatés correspondants aux requêtes.
+        :type results: List[str]
+        :return: Une chaîne de caractères fournissant une interprétation en langage naturel
+                 des résultats.
+        :rtype: str
         """
         pass
     
     def process_task(self, task_id: str, task_description: str, 
                     state_manager: Any) -> Dict[str, Any]:
         """
-        Traite une tâche assignée à l'agent.
-        
+        Traite une tâche assignée à l'agent logique.
+
         Cette méthode implémente le flux de travail général pour traiter une tâche,
-        en déléguant les opérations spécifiques aux méthodes abstraites.
-        
-        Args:
-            task_id: L'identifiant de la tâche
-            task_description: La description de la tâche
-            state_manager: Le gestionnaire d'état pour accéder aux données partagées
-            
-        Returns:
-            Un dictionnaire contenant les résultats du traitement
+        en analysant la `task_description` pour router vers des handlers spécifiques
+        comme `_handle_translation_task` ou `_handle_query_task`.
+
+        :param task_id: L'identifiant unique de la tâche.
+        :type task_id: str
+        :param task_description: La description en langage naturel de la tâche à effectuer.
+        :type task_description: str
+        :param state_manager: L'instance du gestionnaire d'état pour lire et écrire
+                              les données partagées (par exemple, `raw_text`, `belief_sets`).
+        :type state_manager: Any
+        :return: Un dictionnaire contenant le statut ("success" ou "error") et un message
+                 résumant le résultat du traitement de la tâche.
+        :rtype: Dict[str, Any]
         """
         self._logger.info(f"Traitement de la tâche {task_id}: {task_description}")
         
@@ -156,16 +192,22 @@ class AbstractLogicAgent(ABC):
     def _handle_translation_task(self, task_id: str, task_description: str, 
                                state: Dict[str, Any], state_manager: Any) -> Dict[str, Any]:
         """
-        Gère une tâche de traduction de texte en ensemble de croyances.
-        
-        Args:
-            task_id: L'identifiant de la tâche
-            task_description: La description de la tâche
-            state: L'état actuel
-            state_manager: Le gestionnaire d'état
-            
-        Returns:
-            Un dictionnaire contenant les résultats du traitement
+        Gère une tâche spécifique de conversion de texte en un ensemble de croyances logiques.
+
+        Extrait le texte source, le convertit en utilisant `self.text_to_belief_set`,
+        enregistre le nouvel ensemble de croyances via le `state_manager`, et
+        rapporte le résultat.
+
+        :param task_id: L'identifiant de la tâche.
+        :type task_id: str
+        :param task_description: La description de la tâche.
+        :type task_description: str
+        :param state: L'état actuel (snapshot) des données partagées.
+        :type state: Dict[str, Any]
+        :param state_manager: Le gestionnaire d'état.
+        :type state_manager: Any
+        :return: Un dictionnaire de résultat avec statut, message, et ID de l'ensemble de croyances.
+        :rtype: Dict[str, Any]
         """
         # Extraire le texte source depuis l'état ou la description
         raw_text = self._extract_source_text(task_description, state)
@@ -217,16 +259,22 @@ class AbstractLogicAgent(ABC):
     def _handle_query_task(self, task_id: str, task_description: str, 
                          state: Dict[str, Any], state_manager: Any) -> Dict[str, Any]:
         """
-        Gère une tâche d'exécution de requêtes sur un ensemble de croyances.
-        
-        Args:
-            task_id: L'identifiant de la tâche
-            task_description: La description de la tâche
-            state: L'état actuel
-            state_manager: Le gestionnaire d'état
-            
-        Returns:
-            Un dictionnaire contenant les résultats du traitement
+        Gère une tâche d'exécution de requêtes logiques sur un ensemble de croyances existant.
+
+        Extrait l'ID de l'ensemble de croyances, génère des requêtes pertinentes,
+        exécute ces requêtes, interprète les résultats, et enregistre les réponses
+        via le `state_manager`.
+
+        :param task_id: L'identifiant de la tâche.
+        :type task_id: str
+        :param task_description: La description de la tâche.
+        :type task_description: str
+        :param state: L'état actuel (snapshot) des données partagées.
+        :type state: Dict[str, Any]
+        :param state_manager: Le gestionnaire d'état.
+        :type state_manager: Any
+        :return: Un dictionnaire de résultat avec statut, message, requêtes, résultats, et IDs de log.
+        :rtype: Dict[str, Any]
         """
         # Extraire l'ID de l'ensemble de croyances depuis la description
         belief_set_id = self._extract_belief_set_id(task_description)
@@ -313,14 +361,16 @@ class AbstractLogicAgent(ABC):
     
     def _extract_source_text(self, task_description: str, state: Dict[str, Any]) -> str:
         """
-        Extrait le texte source depuis la description de la tâche ou l'état.
-        
-        Args:
-            task_description: La description de la tâche
-            state: L'état actuel
-            
-        Returns:
-            Le texte source
+        Extrait le texte source pertinent pour une tâche, soit à partir de la description
+        de la tâche (si elle contient "texte:"), soit à partir du champ "raw_text"
+        de l'état partagé.
+
+        :param task_description: La description de la tâche.
+        :type task_description: str
+        :param state: L'état actuel (snapshot) des données partagées.
+        :type state: Dict[str, Any]
+        :return: Le texte source extrait, ou une chaîne vide si non trouvé.
+        :rtype: str
         """
         # Implémentation par défaut - à surcharger si nécessaire
         # Essayer d'extraire depuis l'état
@@ -336,13 +386,14 @@ class AbstractLogicAgent(ABC):
     
     def _extract_belief_set_id(self, task_description: str) -> Optional[str]:
         """
-        Extrait l'ID de l'ensemble de croyances depuis la description de la tâche.
-        
-        Args:
-            task_description: La description de la tâche
-            
-        Returns:
-            L'ID de l'ensemble de croyances ou None si non trouvé
+        Extrait un ID d'ensemble de croyances à partir de la description d'une tâche.
+
+        Recherche un motif comme "belief_set_id: [ID]".
+
+        :param task_description: La description de la tâche.
+        :type task_description: str
+        :return: L'ID de l'ensemble de croyances extrait, ou None s'il n'est pas trouvé.
+        :rtype: Optional[str]
         """
         # Implémentation par défaut - à surcharger si nécessaire
         if "belief_set_id:" in task_description.lower():
@@ -357,12 +408,16 @@ class AbstractLogicAgent(ABC):
     @abstractmethod
     def _create_belief_set_from_data(self, belief_set_data: Dict[str, Any]) -> BeliefSet:
         """
-        Crée un objet BeliefSet à partir des données de l'état.
-        
-        Args:
-            belief_set_data: Les données de l'ensemble de croyances
-            
-        Returns:
-            Un objet BeliefSet
+        Crée une instance de `BeliefSet` à partir d'un dictionnaire de données.
+
+        Cette méthode doit être implémentée par les classes dérivées pour instancier
+        le type correct de `BeliefSet` (par exemple, `PropositionalBeliefSet`).
+
+        :param belief_set_data: Un dictionnaire contenant les données nécessaires
+                                pour initialiser un `BeliefSet` (typiquement
+                                "logic_type" et "content").
+        :type belief_set_data: Dict[str, Any]
+        :return: Une instance de `BeliefSet` (ou une sous-classe).
+        :rtype: BeliefSet
         """
         pass

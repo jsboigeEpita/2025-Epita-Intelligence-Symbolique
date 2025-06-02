@@ -1,3 +1,11 @@
+"""
+Prompts pour l'agent d'analyse informelle.
+
+Ce module définit les chaînes de caractères multilignes utilisées comme prompts
+pour guider le modèle de langage (LLM) dans ses tâches d'analyse informelle,
+telles que l'identification d'arguments, l'analyse de sophismes, et la
+justification de l'attribution de sophismes.
+"""
 # agents/core/informal/prompts.py
 import logging
 

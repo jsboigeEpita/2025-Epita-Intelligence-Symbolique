@@ -1,3 +1,12 @@
+"""
+Utilitaires pour l'interface utilisateur (UI) de l'analyse d'argumentation.
+
+Ce module regroupe diverses fonctions d'assistance utilisées par les composants
+de l'interface utilisateur, telles que la reconstruction d'URL, la gestion
+d'un cache de fichiers simple, la récupération de contenu textuel depuis
+différentes sources (direct, Jina, Tika), et la vérification des
+définitions d'extraits.
+"""
 # ui/utils.py
 import requests
 import json
@@ -25,8 +34,18 @@ from project_core.utils.crypto_utils import encrypt_data_with_fernet, decrypt_da
 
 # --- Fonctions Utilitaires (Cache, Crypto, Fetch, Verify) ---
 
-def reconstruct_url(schema: str, host_parts: list, path: str) -> Optional[str]:
-    """Reconstruit une URL à partir de schema, host_parts, et path."""
+def reconstruct_url(schema: str, host_parts: List[str], path: Optional[str]) -> Optional[str]:
+    """Reconstruit une URL complète à partir de ses composants.
+
+    :param schema: Le schéma de l'URL (par exemple, "http", "https").
+    :type schema: str
+    :param host_parts: Une liste des parties composant le nom d'hôte.
+    :type host_parts: List[str]
+    :param path: Le chemin de la ressource sur le serveur. Peut être None ou vide.
+    :type path: Optional[str]
+    :return: L'URL reconstruite, ou None si `schema` ou `host_parts` sont invalides.
+    :rtype: Optional[str]
+    """
     if not schema or not host_parts: return None # Path peut être vide et géré ci-dessous
     host = ".".join(part for part in host_parts if part)
     # Si path est None, on le traite comme une chaîne vide pour la logique suivante
@@ -38,13 +57,27 @@ def reconstruct_url(schema: str, host_parts: list, path: str) -> Optional[str]:
     return f"{schema}://{host}{current_path}"
 
 def get_cache_filepath(url: str) -> Path:
-    """Génère le chemin du fichier cache pour une URL."""
+    """Génère le chemin du fichier cache pour une URL donnée.
+
+    Le nom du fichier est un hachage SHA256 de l'URL, stocké dans `ui_config.CACHE_DIR`.
+
+    :param url: L'URL pour laquelle générer le chemin du fichier cache.
+    :type url: str
+    :return: Le chemin (objet Path) vers le fichier cache.
+    :rtype: Path
+    """
     url_hash = hashlib.sha256(url.encode()).hexdigest()
     # Utilise CACHE_DIR importé depuis config
     return ui_config.CACHE_DIR / f"{url_hash}.txt"
 
 def load_from_cache(url: str) -> Optional[str]:
-    """Charge le contenu textuel depuis le cache si disponible."""
+    """Charge le contenu textuel depuis le cache fichier si disponible pour une URL donnée.
+
+    :param url: L'URL à rechercher dans le cache.
+    :type url: str
+    :return: Le contenu textuel en tant que chaîne si trouvé, sinon None.
+    :rtype: Optional[str]
+    """
     filepath = get_cache_filepath(url)
     if filepath.exists():
         try:
@@ -56,8 +89,18 @@ def load_from_cache(url: str) -> Optional[str]:
     utils_logger.debug(f"Cache miss pour URL: {url}")
     return None
 
-def save_to_cache(url: str, text: str):
-    """Sauvegarde le contenu textuel dans le cache."""
+def save_to_cache(url: str, text: str) -> None:
+    """Sauvegarde le contenu textuel dans le cache fichier pour une URL donnée.
+
+    Ne fait rien si le texte est vide. Crée le répertoire de cache si nécessaire.
+
+    :param url: L'URL associée au contenu.
+    :type url: str
+    :param text: Le contenu textuel à sauvegarder.
+    :type text: str
+    :return: None
+    :rtype: None
+    """
     if not text:
         utils_logger.info("   -> Texte vide, non sauvegardé.")
         return
@@ -76,8 +119,19 @@ def save_to_cache(url: str, text: str):
 
 # Les fonctions load_extract_definitions et save_extract_definitions ont été déplacées
 # vers argumentation_analysis/ui/file_operations.py pour éviter les imports circulaires.
-def fetch_direct_text(source_url: str, timeout: int = 60) -> str:
-    """Récupère contenu texte brut d'URL, utilise cache fichier."""
+def fetch_direct_text(source_url: str, timeout: int = 60) -> Optional[str]:
+    """Récupère le contenu texte brut d'une URL par téléchargement direct.
+
+    Utilise le cache fichier (`load_from_cache`, `save_to_cache`).
+
+    :param source_url: L'URL à partir de laquelle récupérer le texte.
+    :type source_url: str
+    :param timeout: Le délai d'attente en secondes pour la requête HTTP.
+    :type timeout: int
+    :return: Le contenu textuel de la réponse, ou None en cas d'erreur.
+    :rtype: Optional[str]
+    :raises ConnectionError: Si une erreur de requête HTTP survient.
+    """
     # Utilise les fonctions de cache de ce module
     cached_text = load_from_cache(source_url)
     if cached_text is not None: return cached_text
@@ -98,8 +152,21 @@ def fetch_with_jina(
     source_url: str,
     timeout: int = 90,
     jina_reader_prefix_override: Optional[str] = None
-) -> str:
-    """Récupère et extrait via Jina, utilise cache fichier."""
+) -> Optional[str]:
+    """Récupère et extrait le contenu textuel d'une URL via le service Jina Reader.
+
+    Utilise le cache fichier. Le préfixe Jina peut être surchargé.
+
+    :param source_url: L'URL originale à traiter.
+    :type source_url: str
+    :param timeout: Le délai d'attente pour la requête HTTP vers Jina.
+    :type timeout: int
+    :param jina_reader_prefix_override: Préfixe optionnel pour surcharger celui de `ui_config`.
+    :type jina_reader_prefix_override: Optional[str]
+    :return: Le contenu textuel extrait (potentiellement Markdown), ou None en cas d'erreur.
+    :rtype: Optional[str]
+    :raises ConnectionError: Si une erreur de requête HTTP survient avec Jina.
+    """
     # Utilise les fonctions de cache de ce module
     cached_text = load_from_cache(source_url)
     if cached_text is not None: return cached_text
@@ -133,8 +200,36 @@ def fetch_with_tika(
     tika_server_url_override: Optional[str] = None,
     plaintext_extensions_override: Optional[List[str]] = None,
     temp_download_dir_override: Optional[Path] = None
-    ) -> str:
-    """Traite une source via Tika avec gestion cache brut et type texte."""
+    ) -> Optional[str]:
+    """Traite une source (URL ou contenu binaire) via un serveur Apache Tika.
+
+    Gère le cache du texte extrait et optionnellement un cache pour le fichier brut téléchargé.
+    Tente un fetch direct pour les types de fichiers texte simple reconnus.
+
+    :param source_url: URL optionnelle du fichier à traiter.
+    :type source_url: Optional[str]
+    :param file_content: Contenu binaire optionnel du fichier.
+    :type file_content: Optional[bytes]
+    :param file_name: Nom du fichier (utilisé si `file_content` est fourni).
+    :type file_name: str
+    :param raw_file_cache_path: Chemin optionnel pour le cache du fichier brut.
+    :type raw_file_cache_path: Optional[Union[Path, str]]
+    :param timeout_dl: Timeout pour le téléchargement si `source_url` est utilisé.
+    :type timeout_dl: int
+    :param timeout_tika: Timeout pour la requête au serveur Tika.
+    :type timeout_tika: int
+    :param tika_server_url_override: URL optionnelle pour surcharger celle de `ui_config`.
+    :type tika_server_url_override: Optional[str]
+    :param plaintext_extensions_override: Liste optionnelle pour surcharger celles de `ui_config`.
+    :type plaintext_extensions_override: Optional[List[str]]
+    :param temp_download_dir_override: Chemin optionnel pour surcharger celui de `ui_config`.
+    :type temp_download_dir_override: Optional[Path]
+    :return: Le texte extrait par Tika, ou une chaîne vide si Tika ne retourne rien,
+             ou None en cas d'erreur majeure.
+    :rtype: Optional[str]
+    :raises ValueError: Si ni `source_url` ni `file_content` ne sont fournis.
+    :raises ConnectionError: Si une erreur de téléchargement ou de communication Tika survient.
+    """
     _tika_server_url = tika_server_url_override if tika_server_url_override is not None else ui_config.TIKA_SERVER_URL
     _plaintext_extensions = plaintext_extensions_override if plaintext_extensions_override is not None else ui_config.PLAINTEXT_EXTENSIONS
     _temp_download_dir = temp_download_dir_override if temp_download_dir_override is not None else ui_config.TEMP_DOWNLOAD_DIR
@@ -234,17 +329,21 @@ def fetch_with_tika(
 def get_full_text_for_source(source_info: Dict[str, Any], app_config: Optional[Dict[str, Any]] = None) -> Optional[str]:
     """
     Récupère le texte complet pour une source donnée, en utilisant le cache et les configurations appropriées.
-    Centralise la logique de récupération de texte (Jina, Tika, téléchargement direct).
 
-    Args:
-        source_info: Dictionnaire contenant les informations de la source.
-                     Doit contenir "schema", "host_parts", "path", et "source_type".
-        app_config: Dictionnaire optionnel de configuration de l'application.
-                    Peut contenir des surcharges pour JINA_READER_PREFIX, TIKA_SERVER_URL,
-                    PLAINTEXT_EXTENSIONS, TEMP_DOWNLOAD_DIR.
+    Centralise la logique de récupération de texte en utilisant `fetch_direct_text`,
+    `fetch_with_jina`, ou `fetch_with_tika` en fonction de `source_info`.
+    Gère également la lecture de fichiers locaux si `fetch_method` est "file".
 
-    Returns:
-        Le texte complet de la source, ou None en cas d'erreur.
+    :param source_info: Dictionnaire contenant les informations de la source.
+                        Doit contenir des clés comme "schema", "host_parts", "path",
+                        "source_type", et optionnellement "fetch_method" ou "url".
+    :type source_info: Dict[str, Any]
+    :param app_config: Dictionnaire optionnel de configuration de l'application,
+                       utilisé pour surcharger les configurations globales de Jina, Tika, etc.
+    :type app_config: Optional[Dict[str, Any]]
+    :return: Le texte complet de la source (str), ou None en cas d'erreur de récupération
+             ou si l'URL/chemin est invalide.
+    :rtype: Optional[str]
     """
     source_name_for_log = source_info.get('source_name', source_info.get('id', 'Source inconnue')) # Utiliser id si source_name manque
     utils_logger.debug(f"get_full_text_for_source appelée pour: {source_name_for_log}")
@@ -373,8 +472,20 @@ def get_full_text_for_source(source_info: Dict[str, Any], app_config: Optional[D
         utils_logger.error(f"Erreur inattendue lors de la récupération de '{target_url}' ({source_name_for_log}, méthode: {fetch_method}): {e}", exc_info=True)
         return None
 
-def verify_extract_definitions(definitions_list: list) -> str:
-    """Vérifie la présence des marqueurs start/end pour chaque extrait défini."""
+def verify_extract_definitions(definitions_list: List[Dict[str, Any]]) -> str:
+    """Vérifie la présence des marqueurs de début et de fin pour chaque extrait défini.
+
+    Pour chaque source dans `definitions_list`, récupère le texte complet (en utilisant
+    le cache ou les fonctions fetch), puis vérifie si les `start_marker` et `end_marker`
+    de chaque extrait sont présents dans le texte source.
+
+    :param definitions_list: Une liste de dictionnaires, chaque dictionnaire
+                             représentant une définition de source avec ses extraits.
+    :type definitions_list: List[Dict[str, Any]]
+    :return: Une chaîne HTML résumant les résultats de la vérification, indiquant
+             le nombre d'erreurs et listant les problèmes spécifiques.
+    :rtype: str
+    """
     # Utilise les fonctions reconstruct_url, load_from_cache, fetch_* de ce module
     # Et les constantes de ui.config
     utils_logger.info("\n🔬 Lancement de la vérification des marqueurs d'extraits...")

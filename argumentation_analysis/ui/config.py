@@ -1,3 +1,14 @@
+"""
+Configuration pour l'interface utilisateur (UI) du module d'analyse d'argumentation.
+
+Ce module centralise la configuration relative à l'interface utilisateur,
+y compris :
+- La gestion de la clé de chiffrement pour les fichiers de configuration.
+- Les chemins vers les répertoires de cache, de configuration et temporaires.
+- Les URLs et timeouts pour les services externes (Tika, Jina).
+- Les extensions de fichiers considérées comme du texte brut.
+- Le chargement initial des définitions de sources d'extraction.
+"""
 # ui/config.py
 import os
 import logging

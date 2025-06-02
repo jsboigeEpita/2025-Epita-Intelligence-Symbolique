@@ -50,8 +50,8 @@ async def perform_text_analysis(text: str, services: Dict[str, Any], analysis_ty
              ailleurs) ou en cas d'erreurs critiques comme un service LLM manquant.
              Des améliorations futures pourraient impliquer le retour de résultats d'analyse structurés.
              Retourne None si les services essentiels sont manquants ou si une erreur se produit.
-    :rtype: Any
-    :raises ImportError: Si les composants d'analyse essentiels ne peuvent pas être importés.
+   :rtype: Optional[Any] # Peut retourner None ou propager une exception. Si succès, retourne None implicitement.
+   :raises ImportError: Si les composants d'analyse essentiels ne peuvent pas être importés.
     :raises Exception: Pour toute autre erreur survenant pendant le processus d'analyse.
     """
     logging.info(f"Initiating text analysis of type '{analysis_type}' on text of length {len(text)} chars.")

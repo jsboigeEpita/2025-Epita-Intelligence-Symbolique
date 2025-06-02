@@ -52,13 +52,14 @@ crypto_service = CryptoService()
 
 def load_source_text(source_info: Dict[str, Any]) -> Tuple[str, str]:
     """
-    Charge le texte source à partir des informations de la source.
-    
-    Args:
-        source_info: Informations sur la source
-        
-    Returns:
-        Tuple contenant (texte_source, url_ou_message_erreur)
+    Charge le texte source à partir des informations de la source en utilisant `FetchService`.
+
+    :param source_info: Un dictionnaire contenant les informations nécessaires
+                        pour reconstruire l'URL et déterminer la méthode de récupération.
+    :type source_info: Dict[str, Any]
+    :return: Un tuple contenant le texte source (str, ou None si échec) et
+             l'URL traitée ou un message d'erreur (str).
+    :rtype: Tuple[Optional[str], str]
     """
     try:
         # Utiliser le service de récupération pour charger le texte
@@ -75,16 +76,20 @@ def extract_text_with_markers(
     template_start: Optional[str] = None
 ) -> Tuple[Optional[str], str, bool, bool]:
     """
-    Extrait le texte entre les marqueurs de début et de fin.
-    
-    Args:
-        text: Texte source complet
-        start_marker: Marqueur de début
-        end_marker: Marqueur de fin
-        template_start: Template pour le marqueur de début (optionnel)
-        
-    Returns:
-        Tuple contenant (texte_extrait, statut, start_found, end_found)
+    Extrait le texte situé entre des marqueurs de début et de fin spécifiés,
+    en utilisant `ExtractService`.
+
+    :param text: Le texte source complet à partir duquel extraire.
+    :type text: str
+    :param start_marker: La chaîne de caractères marquant le début de l'extrait.
+    :type start_marker: str
+    :param end_marker: La chaîne de caractères marquant la fin de l'extrait.
+    :type end_marker: str
+    :param template_start: Un template optionnel pour le marqueur de début.
+    :type template_start: Optional[str]
+    :return: Un tuple délégué par `ExtractService.extract_text_with_markers`:
+             (texte_extrait, statut, start_found, end_found).
+    :rtype: Tuple[Optional[str], str, bool, bool]
     """
     # Utiliser le service d'extraction pour extraire le texte
     return extract_service.extract_text_with_markers(text, start_marker, end_marker, template_start)
@@ -96,16 +101,20 @@ def find_similar_text(
     max_results: int = 5
 ) -> List[Tuple[str, int, str]]:
     """
-    Trouve des textes similaires au marqueur dans le texte source.
-    
-    Args:
-        text: Texte source complet
-        marker: Marqueur à rechercher
-        context_size: Nombre de caractères de contexte à inclure
-        max_results: Nombre maximum de résultats à retourner
-        
-    Returns:
-        Liste de tuples (contexte, position, texte_trouvé)
+    Trouve des portions de texte similaires à un marqueur donné dans un texte source,
+    en utilisant `ExtractService`.
+
+    :param text: Le texte source complet dans lequel rechercher.
+    :type text: str
+    :param marker: Le marqueur (chaîne de caractères) à rechercher.
+    :type marker: str
+    :param context_size: Le nombre de caractères de contexte à inclure.
+    :type context_size: int
+    :param max_results: Le nombre maximum de résultats similaires à retourner.
+    :type max_results: int
+    :return: Une liste de tuples déléguée par `ExtractService.find_similar_text`:
+             (contexte, position, texte_trouvé).
+    :rtype: List[Tuple[str, int, str]]
     """
     # Utiliser le service d'extraction pour trouver du texte similaire
     return extract_service.find_similar_text(text, marker, context_size, max_results)
@@ -117,16 +126,20 @@ def highlight_text(
     template_start: Optional[str] = None
 ) -> Tuple[str, bool, bool]:
     """
-    Met en évidence les marqueurs dans le texte.
-    
-    Args:
-        text: Texte source complet
-        start_marker: Marqueur de début
-        end_marker: Marqueur de fin
-        template_start: Template pour le marqueur de début (optionnel)
-        
-    Returns:
-        Tuple contenant (html_text, start_found, end_found)
+    Met en évidence les marqueurs de début et de fin dans un texte,
+    en utilisant `ExtractService`.
+
+    :param text: Le texte source complet.
+    :type text: str
+    :param start_marker: Le marqueur de début à mettre en évidence.
+    :type start_marker: str
+    :param end_marker: Le marqueur de fin à mettre en évidence.
+    :type end_marker: str
+    :param template_start: Un template optionnel pour le marqueur de début.
+    :type template_start: Optional[str]
+    :return: Un tuple délégué par `ExtractService.highlight_text`:
+             (html_text, start_found, end_found).
+    :rtype: Tuple[str, bool, bool]
     """
     # Utiliser le service d'extraction pour mettre en évidence le texte
     return extract_service.highlight_text(text, start_marker, end_marker, template_start)
@@ -137,15 +150,17 @@ def search_in_text(
     case_sensitive: bool = False
 ) -> List[re.Match]:
     """
-    Recherche un terme dans le texte et retourne les positions trouvées.
-    
-    Args:
-        text: Texte source complet
-        search_term: Terme à rechercher
-        case_sensitive: Si True, la recherche est sensible à la casse
-        
-    Returns:
-        Liste des correspondances trouvées
+    Recherche toutes les occurrences d'un terme dans un texte,
+    en utilisant `ExtractService`.
+
+    :param text: Le texte source complet dans lequel rechercher.
+    :type text: str
+    :param search_term: Le terme à rechercher.
+    :type search_term: str
+    :param case_sensitive: Si True, la recherche est sensible à la casse.
+    :type case_sensitive: bool
+    :return: Une liste d'objets `re.Match` déléguée par `ExtractService.search_in_text`.
+    :rtype: List[re.Match]
     """
     # Utiliser le service d'extraction pour rechercher dans le texte
     return extract_service.search_in_text(text, search_term, case_sensitive)
@@ -157,16 +172,20 @@ def highlight_search_results(
     context_size: int = 50
 ) -> Tuple[str, int]:
     """
-    Met en évidence les résultats de recherche dans le texte.
-    
-    Args:
-        text: Texte source complet
-        search_term: Terme à rechercher
-        case_sensitive: Si True, la recherche est sensible à la casse
-        context_size: Nombre de caractères de contexte à inclure
-        
-    Returns:
-        Tuple contenant (html_results, count)
+    Met en évidence toutes les occurrences d'un terme de recherche dans un texte,
+    en utilisant `ExtractService`.
+
+    :param text: Le texte source complet.
+    :type text: str
+    :param search_term: Le terme à rechercher et à mettre en évidence.
+    :type search_term: str
+    :param case_sensitive: Si True, la recherche est sensible à la casse.
+    :type case_sensitive: bool
+    :param context_size: Le nombre de caractères de contexte à afficher.
+    :type context_size: int
+    :return: Un tuple délégué par `ExtractService.highlight_search_results`:
+             (html_results, count).
+    :rtype: Tuple[str, int]
     """
     # Utiliser le service d'extraction pour mettre en évidence les résultats de recherche
     return extract_service.highlight_search_results(text, search_term, case_sensitive, context_size)
@@ -177,16 +196,27 @@ def load_extract_definitions_safely(
     fallback_json_file: Optional[Union[str, Path]] = None
 ) -> Tuple[List[Dict[str, Any]], str]:
     """
-    Charge les définitions d'extraits de manière sécurisée.
-    
-    Args:
-        config_file: Chemin vers le fichier de configuration chiffré
-        encryption_key: Clé de chiffrement (peut être None)
-        fallback_json_file: Chemin vers un fichier JSON de secours (peut être None)
-        
-    Returns:
-        Tuple contenant (définitions_extraits, message)
+    Charge les définitions d'extraits de manière sécurisée, en essayant d'abord
+    un fichier chiffré, puis un fichier JSON de secours.
+
+    Utilise `CryptoService` pour le déchiffrement.
+
+    :param config_file: Chemin vers le fichier de configuration principal (potentiellement chiffré).
+    :type config_file: Union[str, Path]
+    :param encryption_key: La clé de chiffrement binaire. Si None, le déchiffrement
+                           du fichier principal n'est pas tenté.
+    :type encryption_key: Optional[str]  # Devrait être Optional[bytes] pour CryptoService
+    :param fallback_json_file: Chemin optionnel vers un fichier JSON non chiffré
+                               de secours.
+    :type fallback_json_file: Optional[Union[str, Path]]
+    :return: Un tuple contenant la liste des définitions d'extraits (List[Dict[str, Any]])
+             et un message de statut (str). Retourne une liste vide et un message d'erreur
+             si tout échoue.
+    :rtype: Tuple[List[Dict[str, Any]], str]
     """
+    # TODO: L'encryption_key devrait être de type bytes pour CryptoService.
+    #       Une conversion ou une adaptation de CryptoService pourrait être nécessaire.
+    #       Pour l'instant, on suppose que CryptoService gère la conversion si besoin.
     try:
         # Essayer d'abord de charger depuis le fichier chiffré
         if encryption_key:
@@ -226,16 +256,26 @@ def save_extract_definitions_safely(
 ) -> Tuple[bool, str]:
     """
     Sauvegarde les définitions d'extraits de manière sécurisée.
-    
-    Args:
-        extract_definitions: Définitions d'extraits à sauvegarder
-        config_file: Chemin vers le fichier de configuration chiffré
-        encryption_key: Clé de chiffrement (peut être None)
-        fallback_json_file: Chemin vers un fichier JSON de secours (peut être None)
-        
-    Returns:
-        Tuple contenant (succès, message)
+
+    Tente de chiffrer et compresser les données si `encryption_key` est fournie,
+    et les sauvegarde dans `config_file`. Sauvegarde également en JSON brut dans
+    `fallback_json_file` si spécifié.
+
+    :param extract_definitions: La liste des définitions d'extraits à sauvegarder.
+    :type extract_definitions: List[Dict[str, Any]]
+    :param config_file: Chemin vers le fichier de configuration principal (pour la version chiffrée).
+    :type config_file: Union[str, Path]
+    :param encryption_key: La clé de chiffrement binaire. Si None, le chiffrement
+                           n'est pas effectué pour `config_file`.
+    :type encryption_key: Optional[str] # Devrait être Optional[bytes]
+    :param fallback_json_file: Chemin optionnel vers un fichier JSON non chiffré
+                               où sauvegarder les données en clair.
+    :type fallback_json_file: Optional[Union[str, Path]]
+    :return: Un tuple contenant un booléen indiquant le succès de l'opération
+             et un message de statut.
+    :rtype: Tuple[bool, str]
     """
+    # TODO: L'encryption_key devrait être de type bytes.
     try:
         # Convertir en JSON
         json_data = json.dumps(extract_definitions, ensure_ascii=False, indent=2)
@@ -283,14 +323,15 @@ def export_definitions_to_json(
     output_path: Union[str, Path]
 ) -> Tuple[bool, str]:
     """
-    Exporte les définitions d'extraits vers un fichier JSON.
-    
-    Args:
-        extract_definitions: Définitions d'extraits à exporter
-        output_path: Chemin vers le fichier de sortie
-        
-    Returns:
-        Tuple contenant (succès, message)
+    Exporte les définitions d'extraits vers un fichier JSON non chiffré.
+
+    :param extract_definitions: La liste des définitions d'extraits à exporter.
+    :type extract_definitions: List[Dict[str, Any]]
+    :param output_path: Le chemin du fichier de sortie JSON.
+    :type output_path: Union[str, Path]
+    :return: Un tuple contenant un booléen indiquant le succès de l'exportation
+             et un message de statut.
+    :rtype: Tuple[bool, str]
     """
     try:
         # Convertir en JSON
@@ -311,13 +352,14 @@ def import_definitions_from_json(
     input_path: Union[str, Path]
 ) -> Tuple[bool, Union[List[Dict[str, Any]], str]]:
     """
-    Importe les définitions d'extraits depuis un fichier JSON.
-    
-    Args:
-        input_path: Chemin vers le fichier d'entrée
-        
-    Returns:
-        Tuple contenant (succès, définitions_ou_message_erreur)
+    Importe les définitions d'extraits depuis un fichier JSON non chiffré.
+
+    :param input_path: Le chemin du fichier d'entrée JSON.
+    :type input_path: Union[str, Path]
+    :return: Un tuple contenant un booléen indiquant le succès de l'importation
+             et soit la liste des définitions d'extraits importées, soit un
+             message d'erreur (str).
+    :rtype: Tuple[bool, Union[List[Dict[str, Any]], str]]
     """
     try:
         # Charger depuis le fichier

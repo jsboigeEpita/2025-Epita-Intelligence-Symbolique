@@ -35,10 +35,11 @@ class ConversationSimulator:
     def __init__(self, agent_names: List[str], default_agent: str = "ProjectManagerAgent"):
         """
         Initialise le simulateur avec une liste de noms d'agents.
-        
-        Args:
-            agent_names: Liste des noms d'agents à simuler
-            default_agent: Nom de l'agent par défaut
+
+        :param agent_names: Liste des noms d'agents à simuler.
+        :type agent_names: List[str]
+        :param default_agent: Nom de l'agent par défaut.
+        :type default_agent: str
         """
         self.agent_names = agent_names
         self.default_agent = default_agent
@@ -49,7 +50,13 @@ class ConversationSimulator:
         logger.info(f"Simulateur initialisé avec {len(agent_names)} agents: {', '.join(agent_names)}")
     
     def _create_mock_agents(self, agent_names: List[str]) -> List[Agent]:
-        """Crée des agents simulés pour les tests."""
+        """Crée des agents simulés (MagicMock) pour les tests.
+
+        :param agent_names: Liste des noms pour les agents simulés.
+        :type agent_names: List[str]
+        :return: Une liste d'objets Agent simulés.
+        :rtype: List[Agent]
+        """
         agents = []
         for name in agent_names:
             agent = MagicMock(spec=Agent)
@@ -63,15 +70,21 @@ class ConversationSimulator:
                            designation_bias: Dict[str, float] = None) -> Dict[str, List[float]]:
         """
         Exécute une simulation de conversation avec la stratégie donnée.
-        
-        Args:
-            strategy: La stratégie de sélection à utiliser
-            num_turns: Nombre de tours à simuler
-            designation_probability: Probabilité qu'un agent soit désigné explicitement
-            designation_bias: Biais de désignation pour chaque agent (probabilités relatives)
-            
-        Returns:
-            Dict[str, List[float]]: Historique des taux de participation pour chaque agent
+
+        :param strategy: La stratégie de sélection d'agent à utiliser.
+        :type strategy: BalancedParticipationStrategy
+        :param num_turns: Nombre de tours de conversation à simuler.
+        :type num_turns: int
+        :param designation_probability: Probabilité qu'un agent soit désigné explicitement
+                                        par le `RhetoricalAnalysisState` à chaque tour.
+        :type designation_probability: float
+        :param designation_bias: Dictionnaire de biais de désignation pour chaque agent.
+                                 Les valeurs sont des probabilités relatives. Si None,
+                                 un biais équitable est utilisé.
+        :type designation_bias: Optional[Dict[str, float]]
+        :return: Un dictionnaire où les clés sont les noms des agents et les valeurs
+                 sont des listes des taux de participation de l'agent à chaque tour.
+        :rtype: Dict[str, List[float]]
         """
         # Initialiser les compteurs et l'historique
         participation_counts = {name: 0 for name in self.agent_names}
@@ -137,11 +150,17 @@ class ConversationSimulator:
                                  title: str = "Évolution des taux de participation"):
         """
         Génère un graphique montrant l'évolution des taux de participation.
-        
-        Args:
-            history: Historique des taux de participation
-            target_participation: Taux de participation cibles
-            title: Titre du graphique
+
+        :param history: Dictionnaire de l'historique des taux de participation,
+                        où les clés sont les noms des agents.
+        :type history: Dict[str, List[float]]
+        :param target_participation: Dictionnaire des taux de participation cibles
+                                     pour chaque agent.
+        :type target_participation: Dict[str, float]
+        :param title: Titre du graphique.
+        :type title: str
+        :return: None
+        :rtype: None
         """
         plt.figure(figsize=(12, 6))
         

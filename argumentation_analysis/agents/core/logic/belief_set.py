@@ -15,19 +15,20 @@ class BeliefSet(ABC):
     def __init__(self, content: str):
         """
         Initialise un ensemble de croyances.
-        
-        Args:
-            content: Le contenu de l'ensemble de croyances
+
+        :param content: Le contenu textuel représentant l'ensemble de croyances
+                        dans la logique spécifique.
+        :type content: str
         """
         self._content = content
     
     @property
     def content(self) -> str:
         """
-        Retourne le contenu de l'ensemble de croyances.
-        
-        Returns:
-            Le contenu de l'ensemble de croyances
+        Retourne le contenu brut de l'ensemble de croyances.
+
+        :return: Le contenu de l'ensemble de croyances.
+        :rtype: str
         """
         return self._content
     
@@ -35,19 +36,21 @@ class BeliefSet(ABC):
     @abstractmethod
     def logic_type(self) -> str:
         """
-        Retourne le type de logique de l'ensemble de croyances.
-        
-        Returns:
-            Le type de logique
+        Retourne le type de logique de cet ensemble de croyances (par exemple, "propositional").
+
+        Cette propriété doit être implémentée par les sous-classes.
+
+        :return: Le type de logique.
+        :rtype: str
         """
         pass
     
     def to_dict(self) -> Dict[str, Any]:
         """
-        Convertit l'ensemble de croyances en dictionnaire.
-        
-        Returns:
-            Un dictionnaire représentant l'ensemble de croyances
+        Convertit l'instance `BeliefSet` en un dictionnaire.
+
+        :return: Un dictionnaire contenant le type de logique et le contenu.
+        :rtype: Dict[str, Any]
         """
         return {
             "logic_type": self.logic_type,
@@ -57,13 +60,15 @@ class BeliefSet(ABC):
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> Optional['BeliefSet']:
         """
-        Crée un ensemble de croyances à partir d'un dictionnaire.
-        
-        Args:
-            data: Le dictionnaire contenant les données de l'ensemble de croyances
-            
-        Returns:
-            Un ensemble de croyances ou None si le type de logique n'est pas supporté
+        Crée une instance d'une sous-classe concrète de `BeliefSet` à partir d'un dictionnaire.
+
+        La sous-classe est déterminée par la valeur de la clé "logic_type" dans `data`.
+
+        :param data: Dictionnaire contenant les clés "logic_type" et "content".
+        :type data: Dict[str, Any]
+        :return: Une instance de `PropositionalBeliefSet`, `FirstOrderBeliefSet`,
+                 ou `ModalBeliefSet`, ou None si `logic_type` n'est pas supporté.
+        :rtype: Optional[BeliefSet]
         """
         logic_type = data.get("logic_type", "").lower()
         content = data.get("content", "")
@@ -86,10 +91,10 @@ class PropositionalBeliefSet(BeliefSet):
     @property
     def logic_type(self) -> str:
         """
-        Retourne le type de logique de l'ensemble de croyances.
-        
-        Returns:
-            "propositional"
+        Retourne le type de logique pour cet ensemble de croyances.
+
+        :return: "propositional"
+        :rtype: str
         """
         return "propositional"
 
@@ -102,10 +107,10 @@ class FirstOrderBeliefSet(BeliefSet):
     @property
     def logic_type(self) -> str:
         """
-        Retourne le type de logique de l'ensemble de croyances.
-        
-        Returns:
-            "first_order"
+        Retourne le type de logique pour cet ensemble de croyances.
+
+        :return: "first_order"
+        :rtype: str
         """
         return "first_order"
 
@@ -118,9 +123,9 @@ class ModalBeliefSet(BeliefSet):
     @property
     def logic_type(self) -> str:
         """
-        Retourne le type de logique de l'ensemble de croyances.
-        
-        Returns:
-            "modal"
+        Retourne le type de logique pour cet ensemble de croyances.
+
+        :return: "modal"
+        :rtype: str
         """
         return "modal"
