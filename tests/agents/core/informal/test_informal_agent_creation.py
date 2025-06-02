@@ -5,219 +5,96 @@
 Tests unitaires pour la création et l'initialisation des agents informels.
 """
 
-import unittest
+import unittest # Rétabli
+import pytest # Ajouté
 from unittest.mock import MagicMock, patch
-# import json # Semble inutilisé
+import logging
 
-# La configuration du logging et les imports conditionnels de numpy/pandas
-# sont maintenant gérés globalement dans tests/conftest.py
-
-# Import des fixtures
-from .fixtures import (
-    mock_fallacy_detector,
-    mock_rhetorical_analyzer,
-    mock_contextual_analyzer,
-    informal_agent_instance,
-    mock_semantic_kernel_instance # patch_semantic_kernel est autouse
+# Configurer le logging pour les tests
+logging.basicConfig(
+    level=logging.DEBUG,
+    format='%(asctime)s [%(levelname)s] [%(name)s] %(message)s',
+    datefmt='%H:%M:%S'
 )
+logger = logging.getLogger("TestInformalAgentCreation")
 
-# Import du module à tester
-from argumentation_analysis.agents.core.informal.informal_agent import InformalAgent
-from argumentation_analysis.agents.core.informal.informal_definitions import InformalAnalysisPlugin
+# Import du module à tester et des dépendances nécessaires
+import semantic_kernel as sk
+from argumentation_analysis.agents.core.informal.informal_agent import InformalAnalysisAgent
+from argumentation_analysis.agents.core.informal.informal_definitions import INFORMAL_AGENT_INSTRUCTIONS, InformalAnalysisPlugin
 
 
-class TestInformalAgentCreation(unittest.TestCase):
-    """Tests unitaires pour la création et l'initialisation des agents informels."""
-    
-    # setUp n'est plus nécessaire si les tests utilisent directement les fixtures pour les instances
-    # def setUp(self):
-    #     """Initialisation avant chaque test."""
-    #     pass
+class TestInformalAgentCreationAndInfo(unittest.TestCase): # Renommé pour refléter le contenu
+    """Tests unitaires pour la création, l'initialisation et l'information des agents informels."""
 
-    def test_initialization(self, informal_agent_instance, mock_fallacy_detector, mock_rhetorical_analyzer, mock_contextual_analyzer):
-        """Teste l'initialisation de l'agent informel."""
-        agent = informal_agent_instance # Utilise la fixture
-        # Vérifier que l'agent a été correctement initialisé
-        self.assertIsNotNone(agent)
-        self.assertEqual(agent.agent_id, "test_agent_fixture") # Id de la fixture
-        self.assertIsNotNone(agent.logger)
+    def setUp(self):
+        """Initialisation avant chaque test."""
+        self.kernel = MagicMock(spec=sk.Kernel)
+        self.kernel.add_plugin = MagicMock()
+        self.kernel.add_function = MagicMock()
+        self.kernel.get_prompt_execution_settings_from_service_id = MagicMock(return_value={"temperature": 0.7})
         
-        # Vérifier que les outils ont été correctement assignés
-        self.assertEqual(agent.tools["fallacy_detector"], mock_fallacy_detector)
-        self.assertEqual(agent.tools["rhetorical_analyzer"], mock_rhetorical_analyzer)
-        self.assertEqual(agent.tools["contextual_analyzer"], mock_contextual_analyzer)
-    
-    def test_initialization_with_minimal_tools(self, mock_fallacy_detector):
-        """Teste l'initialisation de l'agent informel avec un minimum d'outils."""
-        # Créer un agent avec seulement le détecteur de sophismes
-        agent = InformalAgent(
-            agent_id="minimal_agent",
-            tools={
-                "fallacy_detector": mock_fallacy_detector # Utilise la fixture
-            }
-        )
+        # Patch pour InformalAnalysisPlugin pour contrôler son instanciation
+        self.informal_plugin_patcher = patch('argumentation_analysis.agents.core.informal.informal_agent.InformalAnalysisPlugin')
+        self.mock_informal_plugin_class = self.informal_plugin_patcher.start()
+        self.mock_informal_plugin_instance = MagicMock(spec=InformalAnalysisPlugin)
+        self.mock_informal_plugin_class.return_value = self.mock_informal_plugin_instance
+
+        self.agent_name = "TestInformalAgentInstance"
+        self.agent = InformalAnalysisAgent(kernel=self.kernel, agent_name=self.agent_name)
         
-        # Vérifier que l'agent a été correctement initialisé
-        self.assertIsNotNone(agent)
-        self.assertEqual(agent.agent_id, "minimal_agent")
+        self.llm_service_id = "test_llm_service_for_informal"
+        # Appel explicite à setup_agent_components
+        self.agent.setup_agent_components(llm_service_id=self.llm_service_id)
+
+    def tearDown(self):
+        self.informal_plugin_patcher.stop()
+
+    def test_agent_initialization_and_setup_verification(self):
+        """Vérifie l'initialisation correcte et l'appel à setup_agent_components."""
+        self.assertIsNotNone(self.agent)
+        self.assertEqual(self.agent.name, self.agent_name)
+        self.assertEqual(self.agent.sk_kernel, self.kernel)
+        self.assertEqual(self.agent.system_prompt, INFORMAL_AGENT_INSTRUCTIONS)
+        self.assertEqual(self.agent._llm_service_id, self.llm_service_id)
+
+        # Vérifier que InformalAnalysisPlugin a été instancié et ajouté au kernel
+        self.mock_informal_plugin_class.assert_called_once()
+        self.kernel.add_plugin.assert_called_once_with(self.mock_informal_plugin_instance, plugin_name="InformalAnalyzer")
+
+        # Vérifier que les fonctions sémantiques ont été ajoutées
+        # (identify_arguments, analyze_fallacies, justify_fallacy_attribution)
+        self.assertEqual(self.kernel.add_function.call_count, 3)
+        self.kernel.get_prompt_execution_settings_from_service_id.assert_called_with(self.llm_service_id)
         
-        # Vérifier que les outils ont été correctement assignés
-        self.assertEqual(agent.tools["fallacy_detector"], mock_fallacy_detector)
-        self.assertNotIn("rhetorical_analyzer", agent.tools)
-        self.assertNotIn("contextual_analyzer", agent.tools)
-    
-    def test_initialization_with_custom_config(self, mock_fallacy_detector):
-        """Teste l'initialisation de l'agent informel avec une configuration personnalisée."""
-        # Créer une configuration personnalisée
-        config = {
-            "analysis_depth": "deep",
-            "confidence_threshold": 0.6,
-            "max_fallacies": 10,
-            "include_context": True
-        }
-        
-        # Créer un agent avec une configuration personnalisée
-        agent = InformalAgent(
-            agent_id="custom_agent",
-            tools={
-                "fallacy_detector": mock_fallacy_detector # Utilise la fixture
-            },
-            config=config
-        )
-        
-        # Vérifier que l'agent a été correctement initialisé
-        self.assertIsNotNone(agent)
-        self.assertEqual(agent.agent_id, "custom_agent")
-        
-        # Vérifier que la configuration a été correctement assignée
-        self.assertEqual(agent.config["analysis_depth"], "deep")
-        self.assertEqual(agent.config["confidence_threshold"], 0.6)
-        self.assertEqual(agent.config["max_fallacies"], 10)
-        self.assertTrue(agent.config["include_context"])
-    
-    def test_initialization_with_semantic_kernel(self, mock_semantic_kernel_instance, mock_fallacy_detector):
-        """Teste l'initialisation de l'agent informel avec un kernel sémantique."""
-        kernel = mock_semantic_kernel_instance # Utilise la fixture
-        
-        # Créer un plugin d'analyse informelle mock
-        # Note: Si InformalAnalysisPlugin a des dépendances complexes,
-        # une fixture dédiée pourrait être nécessaire. Ici, on suppose qu'un MagicMock suffit.
-        plugin = MagicMock(spec=InformalAnalysisPlugin)
-        
-        # Patcher la fonction setup_informal_kernel
-        with patch('argumentation_analysis.agents.core.informal.informal_agent.setup_informal_kernel') as mock_setup:
-            
-            # Créer un agent avec un kernel sémantique
-            agent = InformalAgent(
-                agent_id="semantic_agent",
-                tools={
-                    "fallacy_detector": mock_fallacy_detector # Utilise la fixture
-                },
-                semantic_kernel=kernel,
-                informal_plugin=plugin
-            )
-            
-            # Vérifier que la fonction setup_informal_kernel a été appelée
-            mock_setup.assert_called_once_with(kernel, plugin)
-            
-            # Vérifier que l'agent a été correctement initialisé
-            self.assertIsNotNone(agent)
-            self.assertEqual(agent.agent_id, "semantic_agent")
-            self.assertEqual(agent.semantic_kernel, kernel)
-            self.assertEqual(agent.informal_plugin, plugin)
-    
-    def test_initialization_with_invalid_tools(self):
-        """Teste l'initialisation de l'agent informel avec des outils invalides."""
-        # Créer un outil invalide
-        invalid_tool = "not a tool"
-        
-        # Vérifier que l'initialisation avec un outil invalide lève une exception
-        with self.assertRaises(TypeError):
-            agent = InformalAgent( # pylint: disable=unused-variable
-                agent_id="invalid_agent",
-                tools={
-                    "invalid_tool": invalid_tool
-                },
-                strict_validation=False
-            )
-    
-    def test_initialization_with_missing_required_tool_flexible(self, mock_rhetorical_analyzer):
-        """Teste l'initialisation de l'agent informel sans l'outil requis en mode flexible."""
-        agent = InformalAgent(
-            agent_id="flexible_agent",
-            tools={
-                "rhetorical_analyzer": mock_rhetorical_analyzer # Utilise la fixture
-            },
-            strict_validation=False
-        )
-        
-        self.assertIsNotNone(agent)
-        self.assertEqual(agent.agent_id, "flexible_agent")
-        self.assertNotIn("fallacy_detector", agent.tools)
-        self.assertIn("rhetorical_analyzer", agent.tools)
-        
-        capabilities = agent.get_agent_capabilities()
-        self.assertFalse(capabilities["fallacy_detection"])
-        self.assertTrue(capabilities["rhetorical_analysis"])
-    
-    def test_initialization_with_empty_tools(self):
-        """Teste l'initialisation de l'agent informel sans outils."""
-        with self.assertRaises(ValueError):
-            agent = InformalAgent( # pylint: disable=unused-variable
-                agent_id="empty_agent",
-                tools={}
-            )
-    
-    def test_initialization_with_missing_required_tool(self, mock_rhetorical_analyzer):
-        """Teste l'initialisation de l'agent informel sans l'outil requis."""
-        with self.assertRaises(ValueError):
-            agent = InformalAgent( # pylint: disable=unused-variable
-                agent_id="missing_tool_agent",
-                tools={
-                    "rhetorical_analyzer": mock_rhetorical_analyzer # Utilise la fixture
-                }
-            )
-    
-    def test_get_available_tools(self, informal_agent_instance):
-        """Teste la méthode get_available_tools."""
-        agent = informal_agent_instance # Utilise la fixture
-        tools = agent.get_available_tools()
-        
-        self.assertIsInstance(tools, list)
-        self.assertEqual(len(tools), 3)
-        self.assertIn("fallacy_detector", tools)
-        self.assertIn("rhetorical_analyzer", tools)
-        self.assertIn("contextual_analyzer", tools)
-    
-    def test_get_agent_capabilities(self, informal_agent_instance):
+        # Vérifier la config par défaut
+        self.assertIn("analysis_depth", self.agent.config)
+        self.assertEqual(self.agent.config["analysis_depth"], "standard")
+
+    def test_get_agent_capabilities(self):
         """Teste la méthode get_agent_capabilities."""
-        agent = informal_agent_instance # Utilise la fixture
-        capabilities = agent.get_agent_capabilities()
+        capabilities = self.agent.get_agent_capabilities()
         
         self.assertIsInstance(capabilities, dict)
-        self.assertIn("fallacy_detection", capabilities)
-        self.assertTrue(capabilities["fallacy_detection"])
-        self.assertIn("rhetorical_analysis", capabilities)
-        self.assertTrue(capabilities["rhetorical_analysis"])
-        self.assertIn("contextual_analysis", capabilities)
-        self.assertTrue(capabilities["contextual_analysis"])
-    
-    def test_get_agent_info(self, informal_agent_instance):
+        self.assertIn("identify_arguments", capabilities)
+        self.assertIn("analyze_fallacies", capabilities)
+        self.assertIn("explore_fallacy_hierarchy", capabilities)
+        self.assertIn("get_fallacy_details", capabilities)
+        self.assertIn("categorize_fallacies", capabilities)
+        self.assertIn("perform_complete_analysis", capabilities)
+
+    def test_get_agent_info(self):
         """Teste la méthode get_agent_info."""
-        agent = informal_agent_instance # Utilise la fixture
-        info = agent.get_agent_info()
+        info = self.agent.get_agent_info()
         
         self.assertIsInstance(info, dict)
-        self.assertIn("agent_id", info)
-        self.assertEqual(info["agent_id"], "test_agent_fixture") # Id de la fixture
-        self.assertIn("agent_type", info)
-        self.assertEqual(info["agent_type"], "informal")
+        self.assertEqual(info["name"], self.agent_name)
+        self.assertEqual(info["class"], "InformalAnalysisAgent")
+        self.assertEqual(info["system_prompt"], INFORMAL_AGENT_INSTRUCTIONS)
+        self.assertEqual(info["llm_service_id"], self.llm_service_id)
+        
         self.assertIn("capabilities", info)
         self.assertIsInstance(info["capabilities"], dict)
-        self.assertIn("tools", info)
-        self.assertIsInstance(info["tools"], list)
-        self.assertEqual(len(info["tools"]), 3)
+        self.assertIn("identify_arguments", info["capabilities"]) # Vérifier une capacité spécifique
 
-
-if __name__ == "__main__":
-    unittest.main()
+# Les lignes commentées if __name__ == "__main__": et unittest.main() sont omises.

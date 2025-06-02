@@ -1,5 +1,6 @@
 import pytest
 import sys
+import logging
 from unittest.mock import MagicMock
 
 # Mock pour semantic_kernel
@@ -9,10 +10,34 @@ class MockSemanticKernel:
     def __init__(self):
         self.plugins = {}
 
-    def add_plugin(self, plugin, name):
-        """Ajoute un plugin au kernel."""
-        self.plugins[name] = plugin
+    def add_plugin(self, plugin_instance, plugin_name):
+        """Simule l'ajout d'un plugin. S'assure que le conteneur pour les fonctions du plugin existe."""
+        if plugin_name not in self.plugins: self.plugins[plugin_name] = {}
 
+# Ajout des méthodes manquantes pour simuler le Kernel SK plus fidèlement
+    def add_function(self, *, prompt: str, function_name: str, plugin_name: str | None = None, description: str | None = None, prompt_template_config = None, prompt_execution_settings = None):
+        """Simule l'ajout d'une fonction sémantique."""
+        # Pour les tests, on peut juste s'assurer qu'elle est appelée, ou stocker les infos si besoin.
+        # Pour l'instant, un simple MagicMock suffit pour la fonction elle-même.
+        # La vraie méthode retourne une KernelFunction.
+        mock_function = MagicMock(name=f"{plugin_name}_{function_name}")
+        if plugin_name:
+            # S'assurer que le dictionnaire pour ce plugin existe
+            if plugin_name not in self.plugins:
+                self.plugins[plugin_name] = {}
+            # Stocker la fonction mockée sous son nom dans le plugin approprié
+            self.plugins[plugin_name][function_name] = mock_function
+        # else:
+            # Gérer le cas où plugin_name est None si nécessaire,
+            # bien que pour SK, un plugin_name soit généralement attendu.
+            # Si les fonctions pouvaient être globales (pas le cas standard de SK) :
+            # self.plugins[function_name] = mock_function
+        return mock_function # Retourner un mock de KernelFunction
+
+    def get_prompt_execution_settings_from_service_id(self, service_id: str):
+        """Simule la récupération des settings d'exécution."""
+        # Retourner des settings par défaut ou un MagicMock si les tests doivent vérifier les interactions.
+        return MagicMock(name=f"execution_settings_for_{service_id}")
     def create_semantic_function(self, prompt, function_name=None, plugin_name=None, description=None, max_tokens=None, temperature=None, top_p=None):
         """Crée une fonction sémantique."""
         return MagicMock()
@@ -35,33 +60,58 @@ def patch_semantic_kernel(monkeypatch):
 @pytest.fixture
 def mock_fallacy_detector():
     detector = MagicMock()
-    detector.detect = MagicMock(return_value=[]) 
+    # Retourne un sophisme mock pour satisfaire les assertions
+    # Ajout de la clé "text" attendue par le test et correction de "confidence"
+    detector.detect = MagicMock(return_value=[{"fallacy_type": "Appel à l'autorité", "text": "Les experts affirment que ce produit est sûr.", "confidence": 0.7, "details": "Mocked fallacy"}])
     return detector
 
 @pytest.fixture
 def mock_rhetorical_analyzer():
     analyzer = MagicMock()
-    analyzer.analyze = MagicMock(return_value=[]) # Supposant une méthode 'analyze' et un retour similaire
+    # Retourne un dictionnaire pour satisfaire les assertions
+    # Changement de "figures" en "techniques" et ajustement des valeurs, ajout de "effectiveness"
+    analyzer.analyze = MagicMock(return_value={"tone": "persuasif", "style": "émotionnel", "techniques": ["appel à l'émotion", "question rhétorique"], "effectiveness": 0.8})
     return analyzer
 
 @pytest.fixture
 def mock_contextual_analyzer():
     analyzer = MagicMock()
-    analyzer.analyze = MagicMock(return_value={}) # Supposant une méthode 'analyze' et un retour de dictionnaire
+    # Renommé en analyze_context et retourne un dictionnaire plus complet
+    analyzer.analyze_context = MagicMock(return_value={"context_type": "commercial", "audience": "general", "intent": "persuade", "confidence": 0.9}) # Ajout de 'confidence'
     return analyzer
-from argumentation_analysis.agents.core.informal.informal_agent import InformalAgent
+from argumentation_analysis.agents.core.informal.informal_agent import InformalAnalysisAgent
+from argumentation_analysis.agents.core.informal.informal_definitions import InformalAnalysisPlugin # Ajout pour spec
 
 @pytest.fixture
-def informal_agent_instance(mock_fallacy_detector, mock_rhetorical_analyzer, mock_contextual_analyzer):
-    agent = InformalAgent(
-        agent_id="test_agent_fixture",
-        tools={
-            "fallacy_detector": mock_fallacy_detector,
-            "rhetorical_analyzer": mock_rhetorical_analyzer,
-            "contextual_analyzer": mock_contextual_analyzer
-        }
-    )
-    return agent
+def informal_agent_instance(mock_semantic_kernel_instance): # Utilise le kernel mocké
+    """
+    Crée une instance de InformalAnalysisAgent correctement initialisée pour les tests.
+    Note: Les 'outils' (fallacy_detector, etc.) sont maintenant internes au plugin de l'agent.
+    Les tests devront mocker les appels au kernel ou au plugin si nécessaire.
+    """
+    kernel = mock_semantic_kernel_instance
+    agent_name = "test_informal_agent_fixture"
+    
+    # Simuler l'instanciation du plugin si nécessaire pour setup_agent_components
+    # ou s'assurer que setup_agent_components peut gérer un kernel avec des mocks.
+    # Pour l'instant, on suppose que setup_agent_components va ajouter son propre plugin.
+    # Si le plugin doit être mocké de l'extérieur, cette fixture devra être plus complexe.
+    
+    # Patch pour InformalAnalysisPlugin pour contrôler son instanciation pendant le setup de CETTE fixture
+    # afin que setup_agent_components utilise une instance mockée si besoin.
+    with patch('argumentation_analysis.agents.core.informal.informal_agent.InformalAnalysisPlugin') as mock_plugin_class:
+        mock_plugin_instance = MagicMock(spec=InformalAnalysisPlugin)
+        mock_plugin_class.return_value = mock_plugin_instance
+
+        agent = InformalAnalysisAgent(kernel=kernel, agent_name=agent_name)
+        agent.setup_agent_components(llm_service_id="test_llm_service_fixture")
+        
+        # Attacher le mock du plugin à l'agent si les tests en ont besoin pour des assertions
+        # Cela dépend de la manière dont les tests veulent interagir avec le plugin.
+        # Si les tests mockent `kernel.invoke`, cela pourrait ne pas être nécessaire.
+        agent.mocked_informal_plugin = mock_plugin_instance
+        
+        return agent
 import os
 from unittest.mock import patch # Ajout de patch
 
@@ -107,7 +157,7 @@ def taxonomy_loader_patches(monkeypatch, setup_test_taxonomy_csv):
     }
 
 # Fixture pour le InformalAnalysisPlugin qui utilise les mocks de taxonomie
-from argumentation_analysis.agents.core.informal.informal_definitions import InformalAnalysisPlugin
+# from argumentation_analysis.agents.core.informal.informal_definitions import InformalAnalysisPlugin # Déjà importé plus haut
 
 @pytest.fixture
 def informal_analysis_plugin_instance(taxonomy_loader_patches):
