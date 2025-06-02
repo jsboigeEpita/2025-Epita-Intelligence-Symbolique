@@ -155,6 +155,7 @@ newaxis = None # Placeholder pour numpy.newaxis
 atleast_1d = lambda x: array(x) # Simule la conversion en tableau 1D
 cov = MagicMock(name='numpy.cov')
 iinfo = MagicMock(return_value=MagicMock(max=2**31 - 1)) # Simule iinfo pour int32
+flatiter = MagicMock(name='numpy.flatiter')
 
 def zeros(shape, dtype=None):
     """Crée un tableau de zéros."""
