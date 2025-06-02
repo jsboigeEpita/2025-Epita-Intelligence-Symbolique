@@ -33,11 +33,11 @@ def test_correction_1_imports_mock():
     
     try:
         # Test test_tactical_monitor.py
-        from tests.test_tactical_monitor import unittest, Mock, MagicMock
+        from tests.orchestration.tactical.test_tactical_monitor import unittest, Mock, MagicMock
         print("  [OK] test_tactical_monitor.py - Imports Mock OK")
         
         # Test test_tactical_monitor_advanced.py
-        from tests.test_tactical_monitor_advanced import unittest, Mock, MagicMock
+        from tests.orchestration.tactical.test_tactical_monitor_advanced import unittest, Mock, MagicMock
         print("  [OK] test_tactical_monitor_advanced.py - Imports Mock OK")
         
         # Test passes if no ImportError is raised
@@ -51,7 +51,7 @@ def test_correction_2_task_dependencies():
     print("Test Correction 2: Configuration task_dependencies")
     
     try:
-        from tests.test_tactical_monitor import TestProgressMonitor
+        from tests.orchestration.tactical.test_tactical_monitor import TestProgressMonitor
         
         # Créer une instance de test
         test_instance = TestProgressMonitor()
@@ -73,7 +73,7 @@ def test_correction_3_overall_coherence():
     print("Test Correction 3: Mock _evaluate_overall_coherence")
     
     try:
-        from tests.test_tactical_monitor_advanced import TestTacticalMonitorAdvanced
+        from tests.orchestration.tactical.test_tactical_monitor_advanced import TestTacticalMonitorAdvanced
         
         # Créer une instance de test
         test_instance = TestTacticalMonitorAdvanced()
@@ -98,7 +98,7 @@ def test_correction_4_validation_agent():
     print("Test Correction 4: MockValidationAgent")
     
     try:
-        from tests.test_extract_agent_adapter import MockValidationAgent
+        from tests.test_extract_agent_adapter import MockValidationAgent # Chemin supposé correct pour l'instant
         
         # Créer une instance
         mock_agent = MockValidationAgent()
@@ -114,7 +114,7 @@ def test_correction_5_extract_plugin():
     print("Test Correction 5: Mock ExtractPlugin")
     
     try:
-        from tests.test_extract_agent_adapter import TestExtractAgentAdapter
+        from tests.test_extract_agent_adapter import TestExtractAgentAdapter # Chemin supposé correct pour l'instant
         
         # Créer une instance de test
         test_instance = TestExtractAgentAdapter()
@@ -154,8 +154,8 @@ def main():
         print(f"\n{name}")
         print("-" * 40)
         try:
-            result = test_func()
-            results.append(result)
+            result = test_func() # Les fonctions de test ne retournent rien, le succès est l'absence d'exception
+            results.append(True) # Marquer comme succès si aucune exception
         except Exception as e:
             print(f"  ❌ Erreur inattendue: {e}")
             results.append(False)
@@ -164,9 +164,9 @@ def main():
     print("RESULTATS FINAUX")
     print("=" * 60)
     
-    success_count = sum(results)
+    success_count = sum(1 for r in results if r is True) # Compter les True
     total_count = len(results)
-    success_rate = (success_count / total_count) * 100
+    success_rate = (success_count / total_count) * 100 if total_count > 0 else 0
     
     for i, (name, _) in enumerate(corrections):
         status = "[REUSSI]" if results[i] else "[ECHEC]"

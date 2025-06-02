@@ -17,6 +17,7 @@ PROJECT_DEPENDENCIES_PARAMETRIZED = [
 
 ALL_PROJECT_DEPENDENCIES = CORE_DEPENDENCIES_INDIVIDUAL + PROJECT_DEPENDENCIES_PARAMETRIZED
 
+@pytest.mark.use_real_numpy
 def test_import_jpype():
     """Tests if jpype can be imported."""
     try:
@@ -27,6 +28,7 @@ def test_import_jpype():
     except Exception as e:
         pytest.fail(f"Erreur inattendue lors de l'importation de JPype: {e}")
 
+@pytest.mark.use_real_numpy
 def test_import_numpy():
     """Tests if numpy can be imported."""
     try:
@@ -37,6 +39,7 @@ def test_import_numpy():
     except Exception as e:
         pytest.fail(f"Erreur inattendue lors de l'importation de NumPy: {e}")
 
+@pytest.mark.use_real_numpy
 def test_import_torch():
     """Tests if torch can be imported."""
     try:
@@ -47,6 +50,7 @@ def test_import_torch():
     except Exception as e:
         pytest.fail(f"Erreur inattendue lors de l'importation de PyTorch: {e}")
 
+@pytest.mark.use_real_numpy
 def test_import_transformers():
     """Tests if transformers can be imported."""
     try:
@@ -57,6 +61,7 @@ def test_import_transformers():
     except Exception as e:
         pytest.fail(f"Erreur inattendue lors de l'importation de Transformers: {e}")
 
+@pytest.mark.use_real_numpy
 def test_import_networkx():
     """Tests if networkx can be imported."""
     try:
@@ -67,6 +72,7 @@ def test_import_networkx():
     except Exception as e:
         pytest.fail(f"Erreur inattendue lors de l'importation de NetworkX: {e}")
 
+@pytest.mark.use_real_numpy
 @pytest.mark.parametrize("dependency", PROJECT_DEPENDENCIES_PARAMETRIZED)
 def test_parametrized_dependency_import(dependency):
     """Vérifie que chaque dépendance majeure paramétrée peut être importée."""

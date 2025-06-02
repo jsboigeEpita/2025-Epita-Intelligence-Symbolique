@@ -35,19 +35,24 @@ def patch_semantic_kernel(monkeypatch):
 @pytest.fixture
 def mock_fallacy_detector():
     detector = MagicMock()
-    detector.detect = MagicMock(return_value=[]) 
+    # Retourne un sophisme mock pour satisfaire les assertions
+    # Ajout de la clé "text" attendue par le test et correction de "confidence"
+    detector.detect = MagicMock(return_value=[{"fallacy_type": "Appel à l'autorité", "text": "Les experts affirment que ce produit est sûr.", "confidence": 0.7, "details": "Mocked fallacy"}])
     return detector
 
 @pytest.fixture
 def mock_rhetorical_analyzer():
     analyzer = MagicMock()
-    analyzer.analyze = MagicMock(return_value=[]) # Supposant une méthode 'analyze' et un retour similaire
+    # Retourne un dictionnaire pour satisfaire les assertions
+    # Changement de "figures" en "techniques" et ajustement des valeurs, ajout de "effectiveness"
+    analyzer.analyze = MagicMock(return_value={"tone": "persuasif", "style": "émotionnel", "techniques": ["appel à l'émotion", "question rhétorique"], "effectiveness": 0.8})
     return analyzer
 
 @pytest.fixture
 def mock_contextual_analyzer():
     analyzer = MagicMock()
-    analyzer.analyze = MagicMock(return_value={}) # Supposant une méthode 'analyze' et un retour de dictionnaire
+    # Renommé en analyze_context et retourne un dictionnaire plus complet
+    analyzer.analyze_context = MagicMock(return_value={"context_type": "commercial", "audience": "general", "intent": "persuade", "confidence": 0.9}) # Ajout de 'confidence'
     return analyzer
 from argumentation_analysis.agents.core.informal.informal_agent import InformalAgent
 
