@@ -6,10 +6,10 @@ Tests unitaires pour l'agent informel.
 """
 
 import unittest # Décommenté
-import pytest 
+import pytest
 from unittest.mock import MagicMock, patch
 import json # Ajouté pour json.dumps
-from semantic_kernel.exceptions import FunctionNotFoundError # Ajouté pour les tests
+from semantic_kernel.exceptions.kernel_exceptions import KernelFunctionNotFoundError # Corrigé l'import
 
 # La configuration du logging est maintenant gérée globalement dans tests/conftest.py
 
@@ -328,7 +328,7 @@ class TestInformalAgent(unittest.TestCase): # Assurer l'héritage
 
         if hasattr(agent, 'mocked_informal_plugin') and agent.mocked_informal_plugin:
             agent.mocked_informal_plugin.analyze_rhetoric_sk_function = MagicMock(
-                side_effect=FunctionNotFoundError("Plugin function for rhetoric not found")
+                side_effect=KernelFunctionNotFoundError("Plugin function for rhetoric not found")
             )
         
         agent.analyze_rhetoric = MagicMock(side_effect=ValueError("Analyseur rhétorique non disponible ou erreur."))
@@ -346,7 +346,7 @@ class TestInformalAgent(unittest.TestCase): # Assurer l'héritage
 
         if hasattr(agent, 'mocked_informal_plugin') and agent.mocked_informal_plugin:
             agent.mocked_informal_plugin.analyze_context_sk_function = MagicMock(
-                side_effect=FunctionNotFoundError("Plugin function for context not found")
+                side_effect=KernelFunctionNotFoundError("Plugin function for context not found")
             )
         
         agent.analyze_context = MagicMock(side_effect=ValueError("Analyseur contextuel non disponible ou erreur."))
@@ -364,7 +364,7 @@ class TestInformalAgent(unittest.TestCase): # Assurer l'héritage
 
         if hasattr(agent, 'mocked_informal_plugin') and agent.mocked_informal_plugin:
             agent.mocked_informal_plugin.identify_arguments_sk_function = MagicMock(
-                side_effect=FunctionNotFoundError("Plugin function for identify_arguments not found")
+                side_effect=KernelFunctionNotFoundError("Plugin function for identify_arguments not found")
             )
         
         agent.identify_arguments = MagicMock(side_effect=ValueError("Identification des arguments non disponible ou erreur kernel."))

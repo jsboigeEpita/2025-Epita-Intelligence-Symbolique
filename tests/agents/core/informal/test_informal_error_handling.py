@@ -6,10 +6,10 @@ Tests unitaires pour la gestion des erreurs des agents informels.
 """
 
 import unittest # Ajouté
-import pytest 
+import pytest
 from unittest.mock import MagicMock, patch
 import json # Ajouté pour les mocks de retour SK
-from semantic_kernel.exceptions import FunctionNotFoundError # Pour simuler des erreurs SK
+from semantic_kernel.exceptions.kernel_exceptions import KernelFunctionNotFoundError # Corrigé l'import
 
 # La configuration du logging et les imports conditionnels de numpy/pandas
 # sont maintenant gérés globalement dans tests/conftest.py
