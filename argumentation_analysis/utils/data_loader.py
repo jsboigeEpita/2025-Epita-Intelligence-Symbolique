@@ -20,14 +20,19 @@ if not logger.handlers:
 
 def load_results_from_json(file_path: Path) -> List[Dict[str, Any]]:
     """
-    Charge les résultats d'analyse depuis un fichier JSON.
-    S'attend à ce que le JSON contienne une liste de dictionnaires.
+    Charge les résultats d'analyse à partir d'un fichier JSON spécifié.
 
-    Args:
-        file_path (Path): Chemin vers le fichier JSON contenant les résultats.
+    Cette fonction s'attend à ce que le fichier JSON contienne une liste de
+    dictionnaires, chaque dictionnaire représentant un ensemble de résultats d'analyse.
+    Elle gère les erreurs de fichier non trouvé, de format JSON incorrect,
+    et d'autres exceptions potentielles lors de la lecture.
 
-    Returns:
-        List[Dict[str, Any]]: Liste des résultats d'analyse, ou une liste vide en cas d'erreur.
+    :param file_path: Le chemin (objet `Path`) vers le fichier JSON contenant les résultats.
+    :type file_path: Path
+    :return: Une liste de dictionnaires représentant les résultats d'analyse.
+             Retourne une liste vide si le fichier n'existe pas, n'est pas un fichier,
+             si le JSON est malformé, ou si une autre erreur de lecture survient.
+    :rtype: List[Dict[str, Any]]
     """
     logger.info(f"Chargement des résultats depuis {file_path}")
     

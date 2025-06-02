@@ -14,12 +14,24 @@ def compare_rhetorical_analyses(
     """
     Compare les résultats d'une analyse rhétorique avancée avec ceux d'une analyse de base.
 
-    Args:
-        advanced_results (Dict[str, Any]): Résultats de l'analyse avancée.
-        base_results (Dict[str, Any]): Résultats de l'analyse de base.
+    Cette fonction extrait et compare spécifiquement le nombre de sophismes détectés
+    et les scores de cohérence entre les deux ensembles de résultats. Elle fournit
+    également une note qualitative sur les améliorations potentielles de l'analyse avancée.
 
-    Returns:
-        Dict[str, Any]: Dictionnaire contenant la comparaison détaillée.
+    :param advanced_results: Un dictionnaire contenant les résultats de l'analyse avancée.
+                             La structure attendue inclut des sous-dictionnaires pour
+                             "analyses" -> "contextual_fallacies" (ou "fallacy_detection")
+                             et "analyses" -> "rhetorical_results" -> "coherence_analysis"
+                             (ou "analyses" -> "coherence_evaluation").
+    :type advanced_results: Dict[str, Any]
+    :param base_results: Un dictionnaire contenant les résultats de l'analyse de base,
+                         avec une structure similaire attendue pour les sophismes et la cohérence.
+    :type base_results: Dict[str, Any]
+    :return: Un dictionnaire contenant la comparaison détaillée, structuré avec les clés
+             "timestamp", "fallacy_detection_comparison", "coherence_analysis_comparison",
+             et "overall_comparison". Retourne un dictionnaire d'erreur si les entrées
+             sont invalides.
+    :rtype: Dict[str, Any]
     """
     if not isinstance(advanced_results, dict) or not isinstance(base_results, dict):
         logger.error("Les résultats avancés et de base doivent être des dictionnaires.")

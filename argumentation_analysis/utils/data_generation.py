@@ -7,17 +7,19 @@ logger = logging.getLogger(__name__)
 
 def generate_sample_text(extract_name: str, source_name: str) -> str:
     """
-    Génère un texte d'exemple pour un extrait.
+    Génère un texte d'exemple pour un extrait donné.
 
-    Cette fonction est utilisée lorsque le contenu réel de l'extrait n'est pas disponible,
-    par exemple pour des tests ou des démonstrations.
+    Cette fonction est utilisée lorsque le contenu réel de l'extrait n'est pas
+    disponible, par exemple pour des tests ou des démonstrations. Le texte généré
+    dépend de mots-clés présents dans `extract_name` ou `source_name`.
 
-    Args:
-        extract_name (str): Nom de l'extrait (peut contenir des mots-clés comme "Lincoln", "Débat").
-        source_name (str): Nom de la source (peut aussi contenir des mots-clés).
-
-    Returns:
-        str: Texte d'exemple généré.
+    :param extract_name: Nom de l'extrait (peut contenir des mots-clés comme
+                         "Lincoln", "Débat", "hitler", "churchill").
+    :type extract_name: str
+    :param source_name: Nom de la source (peut aussi contenir des mots-clés).
+    :type source_name: str
+    :return: Un texte d'exemple généré.
+    :rtype: str
     """
     logger.debug(f"Génération de texte d'exemple pour extract_name='{extract_name}', source_name='{source_name}'")
     

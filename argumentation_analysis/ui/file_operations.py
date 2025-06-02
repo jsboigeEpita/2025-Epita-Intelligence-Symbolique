@@ -1,3 +1,10 @@
+"""
+Opérations sur les fichiers pour l'interface utilisateur (UI) de l'analyse d'argumentation.
+
+Ce module fournit des fonctions pour charger et sauvegarder les définitions d'extraits,
+en gérant le chiffrement, la décompression et la validation de base du format.
+Il interagit avec les modules de configuration et les services de cryptographie.
+"""
 from typing import Optional, Union, List, Dict, Any
 # argumentation_analysis/ui/file_operations.py
 import json
@@ -32,9 +39,29 @@ def load_extract_definitions(
     # lui-même ne l'utilise pas directement pour le chargement/déchiffrement.
     # Cependant, si on voulait que load_extract_definitions peuple les full_text au chargement,
     # il faudrait le passer. Pour l'instant, on le garde optionnel et non utilisé ici.
-    app_config: Optional[Dict[str, Any]] = None 
-) -> list:
-    """Charge, déchiffre et décompresse les définitions depuis le fichier chiffré."""
+    app_config: Optional[Dict[str, Any]] = None
+) -> List[Dict[str, Any]]:
+    """Charge, déchiffre (si clé fournie) et décompresse les définitions d'extraits.
+
+    Tente de charger depuis `config_file`. Si `b64_derived_key` est fournie,
+    tente de déchiffrer et décompresser. Sinon, tente de lire comme JSON simple.
+    Utilise `ui_config_module.DEFAULT_EXTRACT_SOURCES` comme fallback en cas d'erreur.
+
+    :param config_file: Chemin vers le fichier de configuration.
+    :type config_file: Path
+    :param b64_derived_key: La clé de chiffrement dérivée, encodée en base64 URL-safe.
+                            Si None, le fichier est traité comme du JSON non chiffré.
+    :type b64_derived_key: Optional[str]
+    :param app_config: Configuration de l'application (non utilisée directement ici,
+                       mais potentiellement par des fonctions appelées).
+    :type app_config: Optional[Dict[str, Any]]
+    :return: Une liste de dictionnaires représentant les définitions d'extraits.
+             Retourne les définitions par défaut en cas d'échec de chargement/déchiffrement.
+    :rtype: List[Dict[str, Any]]
+    :raises InvalidToken: Si le déchiffrement échoue avec un token invalide (peut être
+                          levée par `decrypt_data_with_fernet` si non attrapée là).
+    :raises json.JSONDecodeError: Si le fichier traité comme JSON simple est malformé.
+    """
     fallback_definitions = ui_config_module.EXTRACT_SOURCES if ui_config_module.EXTRACT_SOURCES else ui_config_module.DEFAULT_EXTRACT_SOURCES
 
     if not config_file.exists():
@@ -96,8 +123,27 @@ def save_extract_definitions(
     embed_full_text: bool = False,
     config: Optional[Dict[str, Any]] = None # 'config' est le app_config passé à get_full_text_for_source
 ) -> bool:
-    """Sauvegarde, compresse et chiffre les définitions dans le fichier.
-    Peut optionnellement embarquer le texte complet des sources.
+    """Sauvegarde les définitions d'extraits, en les compressant et chiffrant si une clé est fournie.
+
+    Peut optionnellement récupérer et embarquer le texte complet des sources avant la sauvegarde.
+
+    :param extract_definitions: La liste des définitions d'extraits à sauvegarder.
+    :type extract_definitions: List[Dict[str, Any]]
+    :param config_file: Chemin vers le fichier de configuration de sortie.
+    :type config_file: Path
+    :param b64_derived_key: La clé de chiffrement dérivée, encodée en base64 URL-safe.
+                            Si None ou vide, la sauvegarde chiffrée est annulée.
+    :type b64_derived_key: Optional[Union[str, bytes]]
+    :param embed_full_text: Si True, tente de récupérer et d'inclure le `full_text`
+                            pour chaque source avant la sauvegarde. Par défaut à False.
+    :type embed_full_text: bool
+    :param config: Configuration de l'application, passée à `get_full_text_for_source`
+                   si `embed_full_text` est True.
+    :type config: Optional[Dict[str, Any]]
+    :return: True si la sauvegarde (potentiellement chiffrée) a réussi, False sinon.
+    :rtype: bool
+    :raises ValueError: Si le chiffrement échoue après la compression des données
+                        (par exemple, `encrypt_data_with_fernet` retourne None).
     """
     if not b64_derived_key: # Vérifie si la clé est None ou une chaîne/bytes vide
         file_ops_logger.error("Clé chiffrement (b64_derived_key) absente ou vide. Sauvegarde annulée.")

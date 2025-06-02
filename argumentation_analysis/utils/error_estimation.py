@@ -21,15 +21,27 @@ def estimate_false_positives_negatives_rates(
     advanced_results: List[Dict[str, Any]]
 ) -> Dict[str, Dict[str, float]]:
     """
-    Estime les taux de faux positifs et faux négatifs en comparant les analyses de base et avancées.
-    Cette fonction suppose que les résultats avancés sont plus proches de la vérité terrain.
+    Estime les taux de faux positifs et faux négatifs en comparant les résultats
+    d'analyses de base et avancées pour des extraits communs.
 
-    Args:
-        base_results (List[Dict[str, Any]]): Liste des résultats d'analyse de base.
-        advanced_results (List[Dict[str, Any]]): Liste des résultats d'analyse avancée.
+    Cette fonction suppose que les résultats de l'analyse avancée sont plus
+    proches de la vérité terrain et les utilise comme référence pour évaluer
+    les résultats de base. Elle calcule également des estimations de faux positifs
+    pour les analyses avancées contextuelles et complexes basées sur des heuristiques
+    (par exemple, faible confiance ou faible sévérité).
 
-    Returns:
-        Dict[str, Dict[str, float]]: Dictionnaire des taux de faux positifs/négatifs estimés par agent/type.
+    :param base_results: Liste des résultats d'analyse de base. Chaque résultat est
+                         un dictionnaire attendu pour contenir 'source_name',
+                         'extract_name', et une structure 'analyses'.
+    :type base_results: List[Dict[str, Any]]
+    :param advanced_results: Liste des résultats d'analyse avancée, avec une structure similaire.
+    :type advanced_results: List[Dict[str, Any]]
+    :return: Un dictionnaire où les clés sont des types d'agents/analyses (par exemple,
+             "base_contextual", "advanced_contextual", "advanced_complex") et les valeurs
+             sont des dictionnaires contenant "false_positive_rate" et "false_negative_rate".
+             Les taux sont à 0.0 si aucun extrait commun n'est trouvé ou si les données
+             sont insuffisantes pour un type d'agent.
+    :rtype: Dict[str, Dict[str, float]]
     """
     # Initialise avec toutes les clés attendues et processed_extracts pour le comptage
     error_rates_accumulator: Dict[str, Dict[str, Any]] = {
@@ -39,6 +51,13 @@ def estimate_false_positives_negatives_rates(
     }
     
     def create_result_dict(results_list: List[Dict[str, Any]]) -> Dict[str, Dict[str, Any]]:
+        """Convertit une liste de résultats en un dictionnaire indexé par "source_name:extract_name".
+
+        :param results_list: Liste de dictionnaires de résultats.
+        :type results_list: List[Dict[str, Any]]
+        :return: Un dictionnaire de résultats indexés.
+        :rtype: Dict[str, Dict[str, Any]]
+        """
         res_dict = {}
         for r in results_list:
             s_name = r.get('source_name', 'UnknownSource')

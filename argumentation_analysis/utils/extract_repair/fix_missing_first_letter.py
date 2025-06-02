@@ -23,15 +23,25 @@ logger = logging.getLogger("FixMissingFirstLetter")
 
 def fix_missing_first_letter(input_file, output_file=None):
     """
-    Corrige les marqueurs de début qui ont leur première lettre manquante.
-    
-    Args:
-        input_file (str): Chemin vers le fichier extract_sources.json
-        output_file (str, optional): Chemin pour sauvegarder le fichier corrigé.
-            Si None, écrase le fichier d'entrée.
-    
-    Returns:
-        tuple: (nombre d'extraits corrigés, liste des corrections)
+    Corrige les marqueurs de début (start_marker) dans les définitions d'extraits
+    qui ont potentiellement leur première lettre manquante, en utilisant le champ
+    `template_start` pour reconstruire le marqueur complet.
+
+    Charge les définitions depuis `input_file`, effectue les corrections,
+    et sauvegarde le résultat dans `output_file` (ou écrase `input_file` si
+    `output_file` n'est pas spécifié).
+
+    :param input_file: Chemin vers le fichier JSON des définitions d'extraits
+                       (par exemple, `extract_sources.json`).
+    :type input_file: str # Peut aussi accepter Path, mais le code interne convertit en str.
+    :param output_file: Chemin optionnel pour sauvegarder le fichier corrigé.
+                        Si None, le fichier d'entrée est écrasé.
+    :type output_file: Optional[str] # Peut aussi accepter Path.
+    :return: Un tuple contenant le nombre d'extraits corrigés (int) et une liste
+             de dictionnaires détaillant chaque correction effectuée. Chaque dictionnaire
+             de correction contient "source_name", "extract_name", "old_marker",
+             "new_marker", et "template".
+    :rtype: Tuple[int, List[Dict[str, str]]]
     """
     # Si output_file n'est pas spécifié, utiliser le même fichier que input_file
     if output_file is None:

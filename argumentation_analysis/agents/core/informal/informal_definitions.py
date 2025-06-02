@@ -68,8 +68,16 @@ class InformalAnalysisPlugin:
     
     def _internal_load_and_prepare_dataframe(self) -> pd.DataFrame:
         """
-        Charge et prépare le DataFrame de taxonomie des sophismes.
-        Utilise l'utilitaire de lazy loading pour obtenir le fichier CSV.
+        Charge et prépare le DataFrame de taxonomie des sophismes à partir d'un fichier CSV.
+
+        Utilise `taxonomy_loader.get_taxonomy_path()` pour obtenir le chemin du fichier
+        et `taxonomy_loader.validate_taxonomy_file()` pour le valider avant chargement.
+        L'index du DataFrame est défini sur la colonne 'PK' et converti en entier.
+
+        :return: Un DataFrame pandas contenant la taxonomie des sophismes.
+        :rtype: pd.DataFrame
+        :raises Exception: Si le fichier de taxonomie n'est pas valide ou si une erreur
+                           survient pendant le chargement ou la préparation.
         """
         self._logger.info("Chargement et préparation du DataFrame de taxonomie...")
         
@@ -108,7 +116,13 @@ class InformalAnalysisPlugin:
     
     def _get_taxonomy_dataframe(self) -> pd.DataFrame:
         """
-        Récupère le DataFrame de taxonomie, en utilisant le cache si disponible.
+        Récupère le DataFrame de taxonomie des sophismes, en utilisant un cache interne.
+
+        Si le DataFrame n'est pas déjà en cache (`self._taxonomy_df_cache`),
+        il est chargé et préparé via `_internal_load_and_prepare_dataframe`.
+
+        :return: Le DataFrame pandas de la taxonomie des sophismes.
+        :rtype: pd.DataFrame
         """
         if self._taxonomy_df_cache is None:
             self._taxonomy_df_cache = self._internal_load_and_prepare_dataframe()
@@ -116,7 +130,20 @@ class InformalAnalysisPlugin:
     
     def _internal_explore_hierarchy(self, current_pk: int, df: pd.DataFrame, max_children: int = 15) -> Dict[str, Any]:
         """
-        Explore la hiérarchie des sophismes à partir d'un nœud donné.
+        Explore la hiérarchie des sophismes à partir d'un nœud parent donné (par sa PK).
+
+        Construit un dictionnaire représentant le nœud courant et ses enfants directs,
+        en se basant sur les colonnes 'FK_Parent', 'parent_pk', ou 'path' du DataFrame.
+
+        :param current_pk: La clé primaire (PK) du nœud parent à partir duquel explorer.
+        :type current_pk: int
+        :param df: Le DataFrame pandas de la taxonomie des sophismes.
+        :type df: pd.DataFrame
+        :param max_children: Le nombre maximum d'enfants directs à retourner.
+        :type max_children: int
+        :return: Un dictionnaire contenant les informations du nœud courant (`current_node`),
+                 une liste de ses enfants (`children`), et un champ `error` si un problème survient.
+        :rtype: Dict[str, Any]
         """
         result = {
             "current_node": None,
@@ -192,15 +219,18 @@ class InformalAnalysisPlugin:
     
     def _internal_get_children_details(self, pk: int, df: pd.DataFrame, max_children: int = 10) -> List[Dict[str, Any]]:
         """
-        Obtient les détails des enfants d'un nœud spécifique.
-        
-        Args:
-            pk: PK du nœud parent
-            df: DataFrame de taxonomie
-            max_children: Nombre maximum d'enfants à retourner
-            
-        Returns:
-            Liste des détails des enfants
+        Obtient les détails (PK, nom, description, exemple) des enfants directs d'un nœud spécifique.
+
+        :param pk: La clé primaire (PK) du nœud parent.
+        :type pk: int
+        :param df: Le DataFrame pandas de la taxonomie des sophismes.
+        :type df: pd.DataFrame
+        :param max_children: Le nombre maximum d'enfants à retourner.
+        :type max_children: int
+        :return: Une liste de dictionnaires, chaque dictionnaire représentant un enfant
+                 avec ses détails. Retourne une liste vide si le DataFrame est None
+                 ou si aucun enfant n'est trouvé.
+        :rtype: List[Dict[str, Any]]
         """
         children = []
         
@@ -241,7 +271,17 @@ class InformalAnalysisPlugin:
     
     def _internal_get_node_details(self, pk: int, df: pd.DataFrame) -> Dict[str, Any]:
         """
-        Obtient les détails d'un nœud spécifique.
+        Obtient les détails complets d'un nœud spécifique de la taxonomie,
+        y compris les informations sur son parent et ses enfants directs.
+
+        :param pk: La clé primaire (PK) du nœud dont les détails sont demandés.
+        :type pk: int
+        :param df: Le DataFrame pandas de la taxonomie des sophismes.
+        :type df: pd.DataFrame
+        :return: Un dictionnaire contenant tous les attributs du nœud, ainsi que
+                 des informations sur son parent et ses enfants. Contient un champ `error`
+                 si le nœud n'est pas trouvé ou si la taxonomie n'est pas disponible.
+        :rtype: Dict[str, Any]
         """
         result = {
             "pk": pk,
@@ -328,14 +368,18 @@ class InformalAnalysisPlugin:
     
     def explore_fallacy_hierarchy(self, current_pk_str: str, max_children: int = 15) -> str:
         """
-        Explore la hiérarchie des sophismes à partir d'un nœud donné.
-        
-        Args:
-            current_pk_str: PK du nœud à explorer (en string)
-            max_children: Nombre maximum d'enfants à retourner
-        
-        Returns:
-            JSON avec le nœud courant et ses enfants
+        Explore la hiérarchie des sophismes à partir d'un nœud donné (par sa PK en chaîne).
+
+        Wrapper autour de `_internal_explore_hierarchy` qui gère la conversion de `current_pk_str`
+        en entier et la sérialisation du résultat en JSON.
+
+        :param current_pk_str: La clé primaire (PK) du nœud à explorer, fournie en tant que chaîne.
+        :type current_pk_str: str
+        :param max_children: Le nombre maximum d'enfants directs à retourner.
+        :type max_children: int
+        :return: Une chaîne JSON représentant le nœud courant et ses enfants,
+                 ou un JSON d'erreur en cas de problème.
+        :rtype: str
         """
         self._logger.info(f"Exploration hiérarchie sophismes depuis PK {current_pk_str}...")
         
@@ -365,13 +409,16 @@ class InformalAnalysisPlugin:
     
     def get_fallacy_details(self, fallacy_pk_str: str) -> str:
         """
-        Obtient les détails d'un sophisme spécifique.
-        
-        Args:
-            fallacy_pk_str: PK du sophisme (en string)
-        
-        Returns:
-            JSON avec les détails du sophisme
+        Obtient les détails d'un sophisme spécifique par sa PK (fournie en chaîne).
+
+        Wrapper autour de `_internal_get_node_details` qui gère la conversion de `fallacy_pk_str`
+        en entier et la sérialisation du résultat en JSON.
+
+        :param fallacy_pk_str: La clé primaire (PK) du sophisme, fournie en tant que chaîne.
+        :type fallacy_pk_str: str
+        :return: Une chaîne JSON contenant les détails du sophisme,
+                 ou un JSON d'erreur en cas de problème.
+        :rtype: str
         """
         self._logger.info(f"Récupération détails sophisme PK {fallacy_pk_str}...")
         
@@ -404,10 +451,23 @@ class InformalAnalysisPlugin:
 logger.info("Classe InformalAnalysisPlugin (V12) définie.")
 
 # --- Fonction setup_informal_kernel (V13 - Simplifiée) ---
-def setup_informal_kernel(kernel: sk.Kernel, llm_service):
+def setup_informal_kernel(kernel: sk.Kernel, llm_service: Any) -> None:
     """
-    Configure le kernel pour l'InformalAnalysisAgent.
-    Ajoute une instance du InformalAnalysisPlugin et la fonction sémantique.
+    Configure le kernel Semantic Kernel pour l'agent d'analyse informelle.
+
+    Ajoute une instance du `InformalAnalysisPlugin` (contenant les fonctions natives
+    pour explorer la taxonomie des sophismes) et enregistre les fonctions sémantiques
+    nécessaires (identification d'arguments, analyse de sophismes, justification).
+
+    :param kernel: L'instance du `semantic_kernel.Kernel` à configurer.
+    :type kernel: sk.Kernel
+    :param llm_service: L'instance du service LLM (par exemple, OpenAIChatCompletion)
+                        qui sera utilisée par les fonctions sémantiques. Doit avoir
+                        un `service_id` accessible.
+    :type llm_service: Any
+    :return: None
+    :rtype: None
+    :raises Exception: Si une erreur survient lors de l'enregistrement des fonctions sémantiques.
     """
     plugin_name = "InformalAnalyzer"
     logger.info(f"Configuration Kernel pour {plugin_name} (V13 - Plugin autonome)...")

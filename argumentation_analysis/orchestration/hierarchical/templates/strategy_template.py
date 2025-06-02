@@ -1,3 +1,12 @@
+"""
+Template pour la création de stratégies d'orchestration dans l'architecture hiérarchique.
+
+Ce module fournit une classe de base `BaseOrchestrationStrategy` que les stratégies
+d'orchestration spécifiques peuvent hériter. Il définit une interface commune pour
+l'initialisation, la planification de l'exécution, l'allocation des ressources,
+la gestion des conflits et l'obtention de l'état de la stratégie.
+"""
+
 # Template de stratégie d'orchestration pour l'architecture hiérarchique
 
 class BaseOrchestrationStrategy:
@@ -11,9 +20,9 @@ class BaseOrchestrationStrategy:
     
     def __init__(self, config: dict):
         """Initialise la stratégie avec sa configuration.
-        
-        Args:
-            config: Dictionnaire contenant la configuration de la stratégie
+
+        :param config: Dictionnaire contenant la configuration de la stratégie.
+        :type config: dict
         """
         self.config = config
         self.name = config.get('name', 'base_strategy')
@@ -21,42 +30,53 @@ class BaseOrchestrationStrategy:
     
     def plan_execution(self, tasks: list) -> list:
         """Planifie l'exécution des tâches selon les règles de priorité.
-        
-        Args:
-            tasks: Liste des tâches à planifier
-            
-        Returns:
-            Liste des tâches ordonnées selon la stratégie
+
+        Cette méthode doit être implémentée par les classes dérivées.
+
+        :param tasks: Liste des tâches à planifier.
+        :type tasks: list
+        :return: Liste des tâches ordonnées selon la stratégie.
+        :rtype: list
+        :raises NotImplementedError: Si la méthode n'est pas implémentée dans la classe dérivée.
         """
         raise NotImplementedError("La méthode plan_execution doit être implémentée")
     
     def allocate_resources(self, planned_tasks: list) -> dict:
         """Alloue les ressources nécessaires pour l'exécution des tâches.
-        
-        Args:
-            planned_tasks: Tâches planifiées
-            
-        Returns:
-            Dictionnaire d'allocation des ressources
+
+        Cette méthode doit être implémentée par les classes dérivées.
+
+        :param planned_tasks: Tâches planifiées.
+        :type planned_tasks: list
+        :return: Dictionnaire d'allocation des ressources.
+        :rtype: dict
+        :raises NotImplementedError: Si la méthode n'est pas implémentée dans la classe dérivée.
         """
         raise NotImplementedError("La méthode allocate_resources doit être implémentée")
     
     def handle_conflicts(self, conflicts: list) -> list:
         """Gère les conflits entre tâches concurrentes.
-        
-        Args:
-            conflicts: Liste des conflits détectés
-            
-        Returns:
-            Liste des résolutions proposées
+
+        Par défaut, retourne une résolution "default_resolution" pour chaque conflit.
+        Les classes dérivées peuvent surcharger cette méthode pour une gestion
+        des conflits plus sophistiquée.
+
+        :param conflicts: Liste des conflits détectés.
+        :type conflicts: list
+        :return: Liste des résolutions proposées.
+        :rtype: list
         """
         return [{"conflict": c, "resolution": "default_resolution"} for c in conflicts]
     
     def get_strategy_status(self) -> dict:
         """Retourne l'état courant de la stratégie.
-        
-        Returns:
-            Dictionnaire contenant l'état de la stratégie
+
+        Par défaut, retourne un dictionnaire de base avec le nom de la stratégie
+        et un statut "active". Les classes dérivées peuvent surcharger cette
+        méthode pour fournir des informations d'état plus détaillées.
+
+        :return: Dictionnaire contenant l'état de la stratégie.
+        :rtype: dict
         """
         return {
             'name': self.name,
