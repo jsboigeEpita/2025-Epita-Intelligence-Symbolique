@@ -4,7 +4,7 @@ from unittest.mock import patch, MagicMock
 
 from argumentation_analysis.pipelines.analysis_pipeline import run_text_analysis_pipeline
 
-MODULE_PATH = "argumentation_analysis.pipelines.analysis_pipeline"
+MODULE_PATH = "src.argumentation_analysis.pipelines.analysis_pipeline"
 
 @pytest.fixture
 def mock_initialize_services():
