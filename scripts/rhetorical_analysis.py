@@ -29,6 +29,16 @@ from datetime import datetime
 from typing import Dict, List, Any, Optional, Tuple, Union
 from tqdm import tqdm
 
+from argumentation_analysis.utils.text_processing import split_text_into_arguments, generate_sample_text
+from project_core.utils.file_utils import load_json_data, save_json_data
+# Importer les mocks centralisés
+from argumentation_analysis.mocks.analysis_tools import (
+    MockContextualFallacyDetector,
+    MockArgumentCoherenceEvaluator,
+    MockSemanticArgumentAnalyzer as CentralizedMockSemanticArgumentAnalyzer # Alias pour éviter conflit
+)
+
+
 # Configuration du logging
 logging.basicConfig(
     level=logging.INFO,
@@ -82,101 +92,8 @@ except Exception as e:
     logger.error(f"Erreur inattendue lors de l'initialisation: {e}")
     sys.exit(1)
 
-def load_extracts(file_path: Path) -> List[Dict[str, Any]]:
-    """
-    Charge les extraits déchiffrés depuis un fichier JSON.
-    
-    Args:
-        file_path (Path): Chemin vers le fichier JSON contenant les extraits déchiffrés
-        
-    Returns:
-        List[Dict[str, Any]]: Liste des extraits déchiffrés
-    """
-    logger.info(f"Chargement des extraits depuis {file_path}")
-    
-    try:
-        with open(file_path, 'r', encoding='utf-8') as f:
-            extract_definitions = json.load(f)
-        
-        logger.info(f"✅ {len(extract_definitions)} sources chargées avec succès")
-        return extract_definitions
-    except Exception as e:
-        logger.error(f"❌ Erreur lors du chargement des extraits: {e}")
-        return []
-
-def split_text_into_arguments(text: str) -> List[str]:
-    """
-    Divise un texte en arguments individuels.
-    
-    Cette fonction utilise des heuristiques simples pour diviser un texte
-    en arguments individuels, en se basant sur la ponctuation et les connecteurs logiques.
-    
-    Args:
-        text (str): Texte à diviser en arguments
-        
-    Returns:
-        List[str]: Liste des arguments extraits
-    """
-    # Liste des délimiteurs d'arguments
-    delimiters = [
-        ". ", "! ", "? ", 
-        ". \n", "! \n", "? \n",
-        ".\n", "!\n", "?\n"
-    ]
-    
-    # Remplacer les délimiteurs par un marqueur spécial
-    for delimiter in delimiters:
-        text = text.replace(delimiter, "|||")
-    
-    # Diviser le texte en utilisant le marqueur
-    raw_arguments = text.split("|||")
-    
-    # Nettoyer les arguments
-    arguments = []
-    for arg in raw_arguments:
-        arg = arg.strip()
-        if arg and len(arg) > 10:  # Ignorer les arguments trop courts
-            arguments.append(arg)
-    
-    return arguments
-
-def generate_sample_text(extract_name: str, source_name: str) -> str:
-    """
-    Génère un texte d'exemple pour un extrait.
-    
-    Cette fonction est utilisée lorsque le contenu réel de l'extrait n'est pas disponible.
-    
-    Args:
-        extract_name (str): Nom de l'extrait
-        source_name (str): Nom de la source
-        
-    Returns:
-        str: Texte d'exemple généré
-    """
-    # Générer un texte d'exemple basé sur le nom de l'extrait
-    if "Lincoln" in extract_name or "Lincoln" in source_name:
-        return """
-        Nous sommes engagés dans une grande guerre civile, mettant à l'épreuve si cette nation, ou toute nation ainsi conçue et ainsi dédiée, peut perdurer.
-        Nous sommes réunis sur un grand champ de bataille de cette guerre. Nous sommes venus dédier une portion de ce champ comme lieu de dernier repos pour ceux qui ont donné leur vie pour que cette nation puisse vivre.
-        Il est tout à fait approprié et juste que nous le fassions. Mais, dans un sens plus large, nous ne pouvons pas dédier, nous ne pouvons pas consacrer, nous ne pouvons pas sanctifier ce sol.
-        Les braves hommes, vivants et morts, qui ont lutté ici, l'ont consacré, bien au-delà de notre pauvre pouvoir d'ajouter ou de retrancher.
-        """
-    elif "Débat" in extract_name or "Discours" in extract_name:
-        return """
-        Mesdames et messieurs, je me présente devant vous aujourd'hui pour discuter d'une question d'importance nationale.
-        Premièrement, nous devons considérer les principes fondamentaux qui guident notre nation.
-        Deuxièmement, nous devons examiner les conséquences pratiques de ces principes dans notre vie quotidienne.
-        Enfin, nous devons réfléchir à la manière dont nous pouvons avancer ensemble, en tant que nation unie, malgré nos différences.
-        Je crois fermement que c'est par le dialogue et la compréhension mutuelle que nous pourrons surmonter nos défis.
-        """
-    else:
-        return """
-        L'argumentation est l'art de convaincre par le raisonnement logique et la présentation d'évidences.
-        Un bon argument repose sur des prémisses solides et des inférences valides.
-        Cependant, il faut être vigilant face aux sophismes qui peuvent miner la qualité d'un raisonnement.
-        La cohérence argumentative est essentielle pour maintenir la crédibilité d'un discours.
-        En conclusion, l'analyse rhétorique nous permet d'évaluer la qualité et l'efficacité des arguments présentés.
-        """
+# Les fonctions load_extracts, split_text_into_arguments, et generate_sample_text
+# ont été déplacées vers des modules utilitaires.
 
 def analyze_extract(
     extract_definition: Dict[str, Any],
@@ -255,62 +172,12 @@ def analyze_extract(
     
     return results
 
-def create_mock_tools():
-    """
-    Crée des outils d'analyse rhétorique simulés lorsque les outils réels ne sont pas disponibles.
-    
-    Returns:
-        Dict[str, Any]: Dictionnaire contenant les outils simulés
-    """
-    logger.warning("Création d'outils d'analyse rhétorique simulés...")
-    
-    # Classe simulée pour le détecteur de sophismes contextuels
-    class MockContextualFallacyDetector:
-        def detect_multiple_contextual_fallacies(self, arguments, context_description):
-            return {
-                "argument_count": len(arguments),
-                "context_description": context_description,
-                "contextual_factors": {"domain": "général", "audience": "généraliste"},
-                "argument_results": [{"detected_fallacies": []} for _ in arguments],
-                "analysis_timestamp": datetime.now().isoformat(),
-                "note": "Analyse simulée - les outils réels ne sont pas disponibles"
-            }
-    
-    # Classe simulée pour l'évaluateur de cohérence argumentative
-    class MockArgumentCoherenceEvaluator:
-        def evaluate_coherence(self, arguments, context=None):
-            return {
-                "overall_coherence": {"score": 0.7, "level": "Bon"},
-                "coherence_evaluations": {},
-                "recommendations": ["Analyse simulée - les outils réels ne sont pas disponibles"],
-                "context": context or "Analyse d'arguments",
-                "timestamp": datetime.now().isoformat()
-            }
-    
-    # Classe simulée pour l'analyseur sémantique d'arguments
-    class MockSemanticArgumentAnalyzer:
-        def analyze_multiple_arguments(self, arguments):
-            return {
-                "argument_count": len(arguments),
-                "argument_analyses": [{"argument_index": i} for i in range(len(arguments))],
-                "semantic_relations": [],
-                "analysis_timestamp": datetime.now().isoformat(),
-                "note": "Analyse simulée - les outils réels ne sont pas disponibles"
-            }
-    
-    # Créer les outils simulés
-    tools = {
-        "fallacy_detector": MockContextualFallacyDetector(),
-        "coherence_evaluator": MockArgumentCoherenceEvaluator(),
-        "semantic_analyzer": MockSemanticArgumentAnalyzer()
-    }
-    
-    logger.warning("✅ Outils d'analyse rhétorique simulés créés")
-    return tools
+# La fonction create_mock_tools est supprimée car nous utilisons les mocks centralisés.
 
 def analyze_extracts(
     extract_definitions: List[Dict[str, Any]],
-    output_file: Path
+    output_file: Path,
+    use_mocks: bool = False  # Nouveau paramètre pour utiliser les mocks
 ) -> None:
     """
     Analyse tous les extraits et sauvegarde les résultats.
@@ -318,23 +185,46 @@ def analyze_extracts(
     Args:
         extract_definitions (List[Dict[str, Any]]): Définitions des extraits
         output_file (Path): Chemin du fichier de sortie
+        use_mocks (bool): Si True, utilise les outils d'analyse simulés.
     """
     logger.info("Initialisation des outils d'analyse rhétorique...")
     
-    # Initialiser les outils d'analyse
-    try:
+    if use_mocks:
+        logger.warning("Utilisation des outils d'analyse rhétorique simulés (centralisés).")
         tools = {
-            "fallacy_detector": ContextualFallacyDetector(),
-            "coherence_evaluator": ArgumentCoherenceEvaluator(),
-            "semantic_analyzer": SemanticArgumentAnalyzer()
+            "fallacy_detector": MockContextualFallacyDetector(),
+            "coherence_evaluator": MockArgumentCoherenceEvaluator(),
+            "semantic_analyzer": CentralizedMockSemanticArgumentAnalyzer()
         }
-        logger.info("✅ Outils d'analyse rhétorique initialisés")
-    except NameError as e:
-        logger.warning(f"Erreur lors de l'initialisation des outils réels: {e}")
-        tools = create_mock_tools()
-    except Exception as e:
-        logger.warning(f"Erreur inattendue lors de l'initialisation des outils: {e}")
-        tools = create_mock_tools()
+        logger.info("✅ Outils d'analyse rhétorique simulés (centralisés) initialisés")
+    else:
+        # Initialiser les outils d'analyse réels
+        try:
+            tools = {
+                "fallacy_detector": ContextualFallacyDetector(),
+                "coherence_evaluator": ArgumentCoherenceEvaluator(),
+                "semantic_analyzer": SemanticArgumentAnalyzer()
+            }
+            logger.info("✅ Outils d'analyse rhétorique réels initialisés")
+        except NameError as e:
+            logger.error(f"Erreur lors de l'initialisation des outils réels (NameError): {e}")
+            logger.error("Les outils réels n'ont pas pu être importés. Vérifiez les dépendances et la configuration.")
+            logger.warning("Passage à l'utilisation des mocks centralisés comme solution de repli.")
+            tools = {
+                "fallacy_detector": MockContextualFallacyDetector(),
+                "coherence_evaluator": MockArgumentCoherenceEvaluator(),
+                "semantic_analyzer": CentralizedMockSemanticArgumentAnalyzer()
+            }
+            logger.info("✅ Outils d'analyse rhétorique simulés (centralisés) initialisés comme solution de repli.")
+        except Exception as e:
+            logger.error(f"Erreur inattendue lors de l'initialisation des outils réels: {e}")
+            logger.warning("Passage à l'utilisation des mocks centralisés comme solution de repli.")
+            tools = {
+                "fallacy_detector": MockContextualFallacyDetector(),
+                "coherence_evaluator": MockArgumentCoherenceEvaluator(),
+                "semantic_analyzer": CentralizedMockSemanticArgumentAnalyzer()
+            }
+            logger.info("✅ Outils d'analyse rhétorique simulés (centralisés) initialisés comme solution de repli.")
     
     # Compter le nombre total d'extraits
     total_extracts = sum(len(source.get("extracts", [])) for source in extract_definitions)
@@ -373,13 +263,10 @@ def analyze_extracts(
     progress_bar.close()
     
     # Sauvegarder les résultats
-    try:
-        with open(output_file, 'w', encoding='utf-8') as f:
-            json.dump(all_results, f, ensure_ascii=False, indent=2)
-        
+    if save_json_data(all_results, output_file):
         logger.info(f"✅ Résultats sauvegardés dans {output_file}")
-    except Exception as e:
-        logger.error(f"❌ Erreur lors de la sauvegarde des résultats: {e}")
+    else:
+        logger.error(f"❌ Erreur lors de la sauvegarde des résultats dans {output_file}")
 
 def parse_arguments():
     """
@@ -406,6 +293,12 @@ def parse_arguments():
         "--verbose", "-v",
         action="store_true",
         help="Affiche des informations de débogage supplémentaires"
+    )
+    
+    parser.add_argument(
+        "--use-mocks",
+        action="store_true",
+        help="Utilise les outils d'analyse rhétorique simulés (mocks) au lieu des outils réels."
     )
     
     return parser.parse_args()
@@ -453,13 +346,13 @@ def main():
     output_path.parent.mkdir(parents=True, exist_ok=True)
     
     # Charger les extraits
-    extract_definitions = load_extracts(input_path)
-    if not extract_definitions:
-        logger.error("Aucun extrait n'a pu être chargé.")
+    extract_definitions = load_json_data(input_path) # Utilisation de la fonction importée
+    if extract_definitions is None: # load_json_data retourne None en cas d'erreur
+        logger.error("Aucun extrait n'a pu être chargé ou le format du fichier est incorrect.")
         sys.exit(1)
     
     # Analyser les extraits
-    analyze_extracts(extract_definitions, output_path)
+    analyze_extracts(extract_definitions, output_path, args.use_mocks) # Passer l'argument use_mocks
     
     logger.info("Analyse rhétorique terminée avec succès.")
 
