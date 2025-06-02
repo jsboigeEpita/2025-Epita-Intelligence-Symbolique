@@ -146,6 +146,12 @@ def array(object, dtype=None, copy=True, order='K', subok=False, ndmin=0):
 asarray = array  # Ajout de asarray comme alias de array
 ma = MagicMock(name='numpy.ma')
 atleast_2d = lambda x: array(x) # Simule la conversion en tableau 2D
+reshape = lambda a, newshape: ndarray(shape=newshape) # Simule reshape
+newaxis = None # Placeholder pour numpy.newaxis
+# zeros est déjà défini
+# dot est déjà défini
+# exp est déjà défini
+# pi est déjà défini
 
 def zeros(shape, dtype=None):
     """Crée un tableau de zéros."""
