@@ -28,18 +28,36 @@ logging.basicConfig(
 logger = logging.getLogger("FullPythonAnalysisWorkflow")
 
 # Ajout du répertoire parent au chemin pour permettre l'import des modules du projet
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+# sys.path.insert(0, str(Path(__file__).resolve().parent.parent)) # Ancienne méthode
+# Ajout du répertoire racine du projet au chemin pour permettre l'import des modules
+project_root = Path(__file__).resolve().parent.parent.parent
+sys.path.insert(0, str(project_root))
 
 try:
-    from cryptography.hazmat.primitives import hashes
-    from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
-    from cryptography.hazmat.backends import default_backend
-    from cryptography.fernet import Fernet, InvalidToken # Fernet et InvalidToken sont utilisés par file_operations
-    import gzip # Utilisé par file_operations implicitement
+    from cryptography.hazmat.primitives import hashes # Gardé car utilisé potentiellement par d'autres imports indirects ou futures utilisations
+    from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC # Gardé pour la même raison
+    from cryptography.hazmat.backends import default_backend # Gardé
+    from cryptography.fernet import Fernet, InvalidToken
+    import gzip
+    
+    from project_core.utils.crypto_utils import derive_encryption_key
+    # MODIFIÉ: generate_markdown_report est maintenant generate_specific_rhetorical_markdown_report
+    from project_core.utils.reporting_utils import generate_json_report, generate_specific_rhetorical_markdown_report
 
     # Importer directement depuis les modules du projet
     from argumentation_analysis.ui.file_operations import load_extract_definitions
     from argumentation_analysis.agents.core.informal.informal_agent import InformalAgent
+    from argumentation_analysis.mocks.fallacy_detection import MockFallacyDetector
+    from argumentation_analysis.mocks.rhetorical_analysis import MockRhetoricalAnalyzer
+    from argumentation_analysis.mocks.argument_mining import MockArgumentMiner
+    from argumentation_analysis.mocks.claim_mining import MockClaimMiner
+    from argumentation_analysis.mocks.evidence_detection import MockEvidenceDetector
+    from argumentation_analysis.mocks.bias_detection import MockBiasDetector
+    from argumentation_analysis.mocks.emotional_tone_analysis import MockEmotionalToneAnalyzer
+    from argumentation_analysis.mocks.engagement_analysis import MockEngagementAnalyzer
+    from argumentation_analysis.mocks.clarity_scoring import MockClarityScorer
+    from argumentation_analysis.mocks.coherence_analysis import MockCoherenceAnalyzer
+    from argumentation_analysis.mocks.fallacy_categorization import MockFallacyCategorizer
     # Pour l'instant, on ne prévoit pas d'utiliser le Kernel sémantique directement ici.
     # from semantic_kernel import Kernel
 except ImportError as e:
@@ -49,24 +67,10 @@ except ImportError as e:
 # Clé de chiffrement par défaut. Pour une utilisation réelle, gérer les secrets de manière sécurisée.
 DEFAULT_PASSPHRASE = os.getenv("TEXT_CONFIG_PASSPHRASE", "epita_ia_symb_2025_temp_key")
 
-# Sel fixe utilisé pour la dérivation de clé, doit correspondre à celui utilisé lors du chiffrement.
-# Ce sel est public et est souvent stocké dans la configuration.
-# (Ex: argumentation_analysis/ui/config.py ou un équivalent)
-FIXED_SALT = b'q\x8b\t\x97\x8b\xe9\xa3\xf2\xe4\x8e\xea\xf5\xe8\xb7\xd6\x8c' # Correspond au sel dans scripts/decrypt_extracts.py
-
-def derive_encryption_key(passphrase: str) -> bytes:
-    """
-    Dérive une clé de chiffrement Fernet à partir d'une phrase secrète.
-    """
-    kdf = PBKDF2HMAC(
-        algorithm=hashes.SHA256(),
-        length=32,
-        salt=FIXED_SALT,
-        iterations=480000, # Doit correspondre à ce qui est utilisé ailleurs (ex: config.py)
-        backend=default_backend()
-    )
-    derived_key_raw = kdf.derive(passphrase.encode('utf-8'))
-    return base64.urlsafe_b64encode(derived_key_raw)
+# FIXED_SALT et la fonction derive_encryption_key sont maintenant dans project_core.utils.crypto_utils
+# Les imports de cryptography.hazmat sont conservés au cas où ils seraient nécessaires
+# pour d'autres parties du script ou des imports indirects, bien que derive_encryption_key
+# ne soit plus défini localement.
 
 # La fonction decrypt_data_local n'est plus nécessaire si on utilise load_extract_definitions
 # qui fait appel à decrypt_data de ui.utils.
@@ -132,88 +136,9 @@ def run_rhetorical_analysis(texts_to_analyze: List[Tuple[str, str]], agent: Info
             })
     return analysis_results
 
-def generate_json_report(analysis_results: List[Dict[str, Any]], output_file: Path) -> None:
-    """
-    Génère un rapport JSON à partir des résultats d'analyse.
-    """
-    logger.info(f"Génération du rapport JSON vers {output_file}...")
-    try:
-        output_file.parent.mkdir(parents=True, exist_ok=True)
-        with open(output_file, 'w', encoding='utf-8') as f:
-            json.dump(analysis_results, f, ensure_ascii=False, indent=2)
-        logger.info(f"Rapport JSON généré avec succès : {output_file}")
-    except Exception as e:
-        logger.error(f"Erreur lors de la génération du rapport JSON : {e}", exc_info=True)
-
-def generate_markdown_report(analysis_results: List[Dict[str, Any]], output_file: Path) -> None:
-    """
-    Génère un rapport Markdown à partir des résultats d'analyse.
-    """
-    logger.info(f"Génération du rapport Markdown vers {output_file}...")
-    report_content = ["# Rapport d'Analyse Rhétorique Python\n"]
-
-    for result_item in analysis_results:
-        source_name = result_item.get("source_name", "Source Inconnue")
-        analysis = result_item.get("analysis", {})
-        error = result_item.get("error")
-
-        report_content.append(f"## Analyse de : {source_name}\n")
-
-        if error:
-            report_content.append(f"**Erreur lors de l'analyse :** `{error}`\n")
-            report_content.append("\n---\n")
-            continue
-        
-        if not analysis:
-            report_content.append("Aucune analyse disponible pour cette source (données d'analyse vides).\n")
-            report_content.append("\n---\n")
-            continue
-
-        original_text = analysis.get("text", "Texte original non disponible.")
-        report_content.append("### Texte Analysé (extrait)\n")
-        report_content.append(f"```\n{original_text[:500]}{'...' if len(original_text) > 500 else ''}\n```\n")
-
-        fallacies = analysis.get("fallacies", [])
-        report_content.append(f"### Sophismes Détectés ({len(fallacies)})\n")
-        if fallacies:
-            for i, fallacy in enumerate(fallacies):
-                fallacy_type = fallacy.get("fallacy_type", "Type inconnu").replace("_", " ").title()
-                description = fallacy.get("description", "Pas de description.")
-                severity = fallacy.get("severity", "Non spécifiée")
-                confidence = fallacy.get("confidence", 0.0)
-                context_text = fallacy.get("context_text", "Pas de contexte.")
-                
-                report_content.append(f"**Sophisme {i+1}: {fallacy_type}**\n")
-                report_content.append(f"- Description : {description}\n")
-                report_content.append(f"- Sévérité : {severity}\n")
-                report_content.append(f"- Confiance : {confidence:.2f}\n")
-                report_content.append(f"- Contexte : `{context_text[:200]}{'...' if len(context_text) > 200 else ''}`\n")
-        else:
-            report_content.append("Aucun sophisme détecté pour ce texte.\n")
-        
-        categories = analysis.get("categories", {})
-        report_content.append(f"\n### Catégorisation des Sophismes\n")
-        if categories:
-            has_content = False
-            for category, types in categories.items():
-                if types:
-                    report_content.append(f"- **{category.replace('_', ' ').title()}**: {', '.join(types)}\n")
-                    has_content = True
-            if not has_content:
-                 report_content.append("Aucune catégorie de sophisme identifiée.\n")
-        else:
-            report_content.append("Aucune catégorie de sophisme disponible.\n")
-
-        report_content.append("\n---\n")
-
-    try:
-        output_file.parent.mkdir(parents=True, exist_ok=True)
-        with open(output_file, 'w', encoding='utf-8') as f:
-            f.write("\n".join(report_content))
-        logger.info(f"Rapport Markdown généré avec succès : {output_file}")
-    except Exception as e:
-        logger.error(f"Erreur lors de la génération du rapport Markdown : {e}", exc_info=True)
-
+# La fonction generate_markdown_report a été déplacée vers project_core.utils.reporting_utils
+# et renommée en generate_specific_rhetorical_markdown_report.
+# L'appel dans main() sera mis à jour.
 
 def main():
     parser = argparse.ArgumentParser(description="Workflow d'analyse Python complet.")
@@ -289,37 +214,6 @@ def main():
 
     # 3. Initialiser l'agent d'analyse
     try:
-        class MockFallacyDetector:
-            def detect(self, text: str) -> list:
-                logger.info(f"MockFallacyDetector.detect appelé pour le texte : '{text[:50]}...'")
-                # Simuler une détection pour tester le flux des rapports
-                if "exemple de sophisme spécifique pour test" in text.lower():
-                    return [{
-                        "fallacy_type": "Specific Mock Fallacy",
-                        "description": "Détection simulée pour un texte spécifique.",
-                        "severity": "Basse",
-                        "confidence": 0.90,
-                        "context_text": text[:150]
-                    }]
-                if "un autre texte pour varier" in text.lower():
-                    return [
-                        {
-                            "fallacy_type": "Generalisation Hative (Mock)",
-                            "description": "Mock de généralisation hâtive.",
-                            "severity": "Moyenne",
-                            "confidence": 0.65,
-                            "context_text": text[:100]
-                        },
-                        {
-                            "fallacy_type": "Ad Populum (Mock)",
-                            "description": "Appel à la popularité simulé.",
-                            "severity": "Faible",
-                            "confidence": 0.55,
-                            "context_text": text[50:150]
-                        }
-                    ]
-                return []
-
         mock_tools = {
             "fallacy_detector": MockFallacyDetector()
         }
@@ -344,7 +238,7 @@ def main():
         generate_json_report(analysis_results, args.output_report_json)
     
     if args.output_report_md: # Utiliser le nouvel argument
-        generate_markdown_report(analysis_results, args.output_report_md)
+        generate_specific_rhetorical_markdown_report(analysis_results, args.output_report_md) # MODIFIÉ: Appel de la fonction renommée
 
     logger.info("Workflow d'analyse Python complet terminé.")
 

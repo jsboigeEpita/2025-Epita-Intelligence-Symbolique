@@ -66,8 +66,11 @@ logging.basicConfig(
 )
 logger = logging.getLogger("ComprehensiveReport")
 
-# Ajout du répertoire parent au chemin pour permettre l'import des modules du projet
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+# Ajout du répertoire racine du projet au chemin pour permettre l'import des modules
+project_root_path_comprehensive = Path(__file__).resolve().parent.parent.parent
+sys.path.insert(0, str(project_root_path_comprehensive))
+
+from project_core.utils.file_utils import load_json_file, load_text_file, load_csv_file
 
 # Vérifier les dépendances requises
 required_packages = ["matplotlib", "numpy", "pandas", "seaborn", "tqdm", "markdown"]
@@ -78,95 +81,8 @@ for package in required_packages:
         __import__(package)
     except ImportError:
         missing_packages.append(package)
-def load_results(file_path: Path) -> List[Dict[str, Any]]:
-    """
-    Charge les résultats d'analyse depuis un fichier JSON.
-    
-    Args:
-        file_path (Path): Chemin vers le fichier JSON contenant les résultats
-        
-    Returns:
-        List[Dict[str, Any]]: Liste des résultats d'analyse
-    """
-    logger.info(f"Chargement des résultats depuis {file_path}")
-    
-    try:
-        with open(file_path, 'r', encoding='utf-8') as f:
-            loaded_data = json.load(f)
-
-        # Vérifier si loaded_data est une chaîne qui doit être parsée à nouveau
-        if isinstance(loaded_data, str):
-            logger.info(f"Le contenu chargé de {file_path} est une chaîne, tentative de re-parse JSON.")
-            try:
-                results = json.loads(loaded_data)
-            except json.JSONDecodeError as e_inner:
-                logger.error(f"❌ Erreur lors du re-parse de la chaîne JSON depuis {file_path}: {e_inner}")
-                logger.error(f"Contenu de la chaîne (premiers 500 caractères): {loaded_data[:500]}")
-                return [] 
-        else:
-            results = loaded_data
-        
-        # Vérification supplémentaire: s'assurer que 'results' est une liste
-        if not isinstance(results, list):
-            logger.warning(f"Les données chargées et parsées depuis {file_path} ne sont pas une liste comme attendu, mais de type {type(results)}.")
-            # Si ce n'est pas une liste, cela pourrait causer des problèmes plus tard.
-            # Pour être plus strict, on pourrait retourner une liste vide ou lever une erreur.
-            # Pour l'instant, on retourne les données telles quelles après l'avertissement,
-            # car la fonction appelante pourrait avoir sa propre gestion d'erreur.
-            # Cependant, pour adhérer à la signature de type List[Dict[str, Any]],
-            # il serait plus sûr de retourner [] si ce n'est pas une liste.
-            # Modifions pour être plus strict :
-            if not isinstance(results, list): # Double vérification au cas où loaded_data était une liste mais json.loads l'a transformé en autre chose (improbable)
-                logger.error(f"Les données finales de {file_path} après traitement ne sont pas une liste. Type: {type(results)}. Contenu (premiers 500 caractères): {str(results)[:500]}")
-                return []
-
-        logger.info(f"✅ {len(results) if isinstance(results, list) else 'Données non-liste'} résultats chargés avec succès depuis {file_path}")
-        return results
-    except Exception as e:
-        logger.error(f"❌ Erreur lors du chargement des résultats depuis {file_path}: {e}")
-        return []
-
-def load_performance_report(file_path: Path) -> str:
-    """
-    Charge le rapport de performance depuis un fichier Markdown.
-    
-    Args:
-        file_path (Path): Chemin vers le fichier Markdown contenant le rapport
-        
-    Returns:
-        str: Contenu du rapport de performance
-    """
-    logger.info(f"Chargement du rapport de performance depuis {file_path}")
-    
-    try:
-        with open(file_path, 'r', encoding='utf-8') as f:
-            report = f.read()
-        
-        logger.info(f"✅ Rapport de performance chargé avec succès")
-        return report
-    except Exception as e:
-        logger.error(f"❌ Erreur lors du chargement du rapport de performance: {e}")
-        return ""
-
-def load_performance_metrics(file_path: Path) -> pd.DataFrame:
-    """
-    Charge les métriques de performance depuis un fichier CSV.
-    
-    Args:
-        file_path (Path): Chemin vers le fichier CSV contenant les métriques
-        
-    Returns:
-        pd.DataFrame: DataFrame contenant les métriques de performance
-    """
-    logger.info(f"Chargement des métriques de performance depuis {file_path}")
-    
-    try:
-        metrics = pd.read_csv(file_path, encoding='utf-8')
-        logger.info(f"✅ Métriques de performance chargées avec succès")
-        return metrics
-    except Exception as e:
-        logger.error(f"❌ Erreur lors du chargement des métriques de performance: {e}")
-        return pd.DataFrame()
+# Les fonctions de chargement de données locales ont été supprimées.
+# Utilisation des fonctions importées de project_core.utils.file_utils.
 
 def group_results_by_corpus(results: List[Dict[str, Any]]) -> Dict[str, List[Dict[str, Any]]]:
     """
@@ -1163,7 +1079,8 @@ def main():
                 performance_report = ""
             else:
                 # Charger le rapport de performance
-                performance_report = load_performance_report(performance_report_path)
+                performance_report_content = load_text_file(performance_report_path)
+                performance_report = performance_report_content if performance_report_content is not None else ""
         
         # Trouver le fichier de métriques de performance le plus récent si non spécifié
         performance_metrics_file = args.performance_metrics
@@ -1187,7 +1104,8 @@ def main():
                 performance_metrics = pd.DataFrame()
             else:
                 # Charger les métriques de performance
-                performance_metrics = load_performance_metrics(performance_metrics_path)
+                df_metrics = load_csv_file(performance_metrics_path)
+                performance_metrics = df_metrics if df_metrics is not None else pd.DataFrame()
         
         # Définir le répertoire de sortie
         output_dir = Path(args.output_dir)
@@ -1201,9 +1119,21 @@ def main():
         html_file = output_dir / "rapport_analyse_complet.html"
         
         # Charger les résultats
-        base_results = load_results(base_results_path)
-        advanced_results = load_results(advanced_results_path)
-        
+        base_results_data = load_json_file(base_results_path)
+        advanced_results_data = load_json_file(advanced_results_path)
+
+        base_results = []
+        if isinstance(base_results_data, list):
+            base_results = base_results_data
+        elif base_results_data is not None:
+            logger.warning(f"Les résultats de base chargés depuis {base_results_path} ne sont pas une liste. Type: {type(base_results_data)}. Traitement comme liste vide.")
+
+        advanced_results = []
+        if isinstance(advanced_results_data, list):
+            advanced_results = advanced_results_data
+        elif advanced_results_data is not None:
+            logger.warning(f"Les résultats avancés chargés depuis {advanced_results_path} ne sont pas une liste. Type: {type(advanced_results_data)}. Traitement comme liste vide.")
+
         if not base_results:
             logger.error("Aucun résultat de base n'a pu être chargé.")
             sys.exit(1)
