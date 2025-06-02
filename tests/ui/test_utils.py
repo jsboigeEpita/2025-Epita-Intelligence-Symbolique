@@ -11,10 +11,7 @@ import logging # Ajout de l'import manquant
 from pathlib import Path
 from unittest.mock import patch, MagicMock, mock_open
 
-# Ajuster le sys.path pour les imports locaux si nécessaire (déjà fait dans le script principal)
-import sys
-SCRIPT_DIR = Path(__file__).resolve().parent.parent.parent # Remonter à la racine du projet
-sys.path.insert(0, str(SCRIPT_DIR))
+# sys.path est géré par la configuration pytest (ex: pytest.ini, conftest.py)
 
 from argumentation_analysis.ui import utils as aa_utils
 # Importer les fonctions déplacées depuis file_operations pour les tests qui les concernent directement
