@@ -132,7 +132,7 @@ def taxonomy_loader_patches(monkeypatch, setup_test_taxonomy_csv):
     }
 
 # Fixture pour le InformalAnalysisPlugin qui utilise les mocks de taxonomie
-from argumentation_analysis.agents.core.informal.informal_definitions import InformalAnalysisPlugin
+# from argumentation_analysis.agents.core.informal.informal_definitions import InformalAnalysisPlugin # Déjà importé plus haut
 
 @pytest.fixture
 def informal_analysis_plugin_instance(taxonomy_loader_patches):
