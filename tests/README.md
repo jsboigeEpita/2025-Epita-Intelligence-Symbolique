@@ -49,6 +49,7 @@ Pour plus de détails sur cette approche, consultez le fichier [README_TESTS_UNI
 - `integration/` : Tests d'intégration entre modules
 - `agents/` : Contient les tests spécifiques aux agents, structurés en sous-répertoires comme `core/informal/`.
 - `environment_checks/`: Contient des tests pour vérifier la configuration de l'environnement et l'importation des dépendances de base.
+-   `ui/`: Tests pour les opérations de fichiers liées à l'interface utilisateur et la persistance de configuration.
 - `ADVANCED_TEST_PATTERNS.md` : Documentation des patterns de test avancés
 - `test_error_recovery.py` : Script exploratoire pour la récupération d'erreurs (à évaluer pour intégration/refactorisation).
 
