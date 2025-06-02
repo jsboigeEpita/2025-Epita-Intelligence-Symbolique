@@ -660,31 +660,34 @@ def test_reconstruct_url(schema, host_parts, path, expected):
 # --- Tests pour encrypt_data et decrypt_data (tests basiques, Fernet est déjà testé) ---
 def test_encrypt_decrypt_data(test_key):
     original_data = b"Secret data"
-    b64_key_str = test_key.decode('utf-8') # Clé Fernet brute est déjà base64
     
-    encrypted = encrypt_data_with_fernet(original_data, b64_key_str)
+    # Utiliser directement les fonctions importées de crypto_utils
+    # et passer test_key (bytes) directement car les fonctions gèrent Union[str, bytes]
+    encrypted = encrypt_data_with_fernet(original_data, test_key)
     assert encrypted is not None
     assert encrypted != original_data
 
-    decrypted = decrypt_data_with_fernet(encrypted, b64_key_str)
+    decrypted = decrypt_data_with_fernet(encrypted, test_key)
     assert decrypted == original_data
 
 def test_encrypt_data_no_key(mock_logger):
-    assert encrypt_data_with_fernet(b"data", None) is None # La clé b64 serait None
-    mock_logger.error.assert_called_with("Erreur chiffrement Fernet: Clé (str b64) manquante.")
+    # Utiliser directement la fonction importée
+    assert encrypt_data_with_fernet(b"data", None) is None
+    # Le message de log a été mis à jour dans crypto_utils pour refléter Union[str, bytes]
+    mock_logger.error.assert_called_with("Erreur chiffrement Fernet: Clé (str b64 ou bytes) manquante.")
 
 def test_decrypt_data_no_key(mock_logger):
-    assert decrypt_data_with_fernet(b"encrypted", None) is None # La clé b64 serait None
-    mock_logger.error.assert_called_with("Erreur déchiffrement Fernet: Clé (str b64) manquante.")
+    # Utiliser directement la fonction importée
+    assert decrypt_data_with_fernet(b"encrypted", None) is None
+    mock_logger.error.assert_called_with("Erreur déchiffrement Fernet: Clé (str b64 ou bytes) manquante.")
 
 def test_decrypt_data_invalid_token(test_key, mock_logger):
-    b64_key_str = test_key.decode('utf-8') # Clé Fernet brute est déjà base64
     # decrypt_data_with_fernet attrape InvalidToken et retourne None.
     # Il logue aussi une erreur.
-    result = decrypt_data_with_fernet(b"not_really_encrypted", b64_key_str)
+    result = decrypt_data_with_fernet(b"not_really_encrypted", test_key)
     assert result is None
     
-    # Vérifier que le logger a été appelé.
+    # Vérifier que le logger a été appelé avec le message d'erreur spécifique.
     error_found = False
     for call_args_tuple in mock_logger.error.call_args_list:
         args = call_args_tuple[0]
