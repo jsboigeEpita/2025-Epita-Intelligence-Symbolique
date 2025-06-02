@@ -1,7 +1,13 @@
+"""
+Ce module fournit des utilitaires pour configurer le logging de l'application.
+
+Il permet d'initialiser le système de logging avec un niveau et un format
+standards, et de contrôler la verbosité des bibliothèques tierces.
+"""
 import logging
 import sys
 
-def setup_logging(log_level_str: str = "INFO"):
+def setup_logging(log_level_str: str = "INFO") -> None:
     """
     Initialise et configure le module logging de Python.
 
@@ -11,51 +17,63 @@ def setup_logging(log_level_str: str = "INFO"):
     Elle permet également de réduire la verbosité de certaines bibliothèques
     tierces courantes.
 
-    Args:
-        log_level_str (str, optional): Le niveau de log souhaité sous forme de chaîne de caractères.
-                                       Par défaut "INFO". Les valeurs possibles sont "DEBUG",
-                                       "INFO", "WARNING", "ERROR", "CRITICAL".
+    :param log_level_str: Le niveau de log souhaité.
+                          Les valeurs possibles sont "DEBUG", "INFO", "WARNING",
+                          "ERROR", "CRITICAL".
+    :type log_level_str: str
+    :default log_level_str: "INFO"
+    :return: None
+    :rtype: None
     """
-    # Convertir la chaîne de caractères du niveau de log en sa valeur numérique correspondante
+    # Convertir la chaîne de caractères du niveau de log en sa valeur numérique.
+    # `getattr` est utilisé pour obtenir l'attribut de `logging` correspondant au nom du niveau.
+    # Par exemple, si log_level_str est "INFO", `getattr(logging, "INFO")` retourne `logging.INFO`.
     numeric_level = getattr(logging, log_level_str.upper(), None)
     if not isinstance(numeric_level, int):
+        # Si le niveau de log fourni n'est pas valide (ex: "INFOS" au lieu de "INFO"),
+        # un avertissement est émis et le niveau INFO est utilisé par défaut.
         logging.warning(f"Niveau de log invalide: {log_level_str}. Utilisation du niveau INFO par défaut.")
         numeric_level = logging.INFO
 
-    # Supprimer les handlers existants pour éviter la duplication si la fonction est appelée plusieurs fois
-    # Ceci est particulièrement utile dans les environnements de notebook ou de tests.
+    # Suppression des handlers existants du logger racine.
+    # Cela évite la duplication des messages de log si `setup_logging` est appelée plusieurs fois,
+    # ce qui peut arriver dans des contextes comme les notebooks Jupyter ou lors de tests répétitifs.
     root_logger = logging.getLogger()
     if root_logger.hasHandlers():
-        for handler in root_logger.handlers[:]:
+        for handler in root_logger.handlers[:]: # Itérer sur une copie de la liste des handlers
             root_logger.removeHandler(handler)
             
+    # Configuration de base du logging.
+    # - `level`: Définit le seuil de criticité pour les messages qui seront traités.
+    # - `format`: Spécifie le format des messages de log.
+    # - `datefmt`: Définit le format de la date/heure dans les messages de log.
+    # - `handlers`: Liste des handlers à ajouter au logger racine. Ici, un StreamHandler
+    #   est utilisé pour envoyer les logs vers la sortie standard (console).
     logging.basicConfig(
         level=numeric_level,
         format='%(asctime)s [%(levelname)s] [%(name)s] %(message)s',
         datefmt='%H:%M:%S',
-        handlers=[logging.StreamHandler(sys.stdout)] # Utilisation explicite de sys.stdout
+        handlers=[logging.StreamHandler(sys.stdout)] # Assure que les logs vont vers stdout
     )
     
-    # Réduire la verbosité de certaines bibliothèques spécifiques
-    # Ces bibliothèques peuvent être très verbeuses au niveau INFO ou DEBUG
+    # Réduction de la verbosité de certaines bibliothèques tierces.
+    # Ces bibliothèques peuvent générer un grand nombre de logs aux niveaux INFO ou DEBUG,
+    # ce qui peut polluer la sortie. Leur niveau est donc fixé à WARNING.
     libraries_to_quiet = ["httpx", "openai", "requests", "urllib3", "semantic_kernel.connectors.ai"]
     for lib_name in libraries_to_quiet:
         logging.getLogger(lib_name).setLevel(logging.WARNING)
     
-    # S'assurer que les loggers spécifiques au projet respectent au moins le niveau INFO,
-    # sauf si le niveau global est plus restrictif (ex: WARNING).
-    # Ou, si le niveau global est plus permissif (ex: DEBUG), ils utiliseront ce niveau.
+    # Configuration des loggers spécifiques au projet.
+    # Par défaut, les loggers enfants héritent du niveau de leur parent (le logger racine ici).
+    # Si `numeric_level` est DEBUG, ces loggers seront aussi à DEBUG.
+    # Si `numeric_level` est INFO, ils seront à INFO, etc.
+    # Aucune action spécifique n'est nécessaire ici si l'on souhaite qu'ils héritent
+    # simplement du niveau configuré via `basicConfig`.
+    # Si un comportement différent était souhaité (par exemple, forcer "Orchestration"
+    # à être toujours en DEBUG), on le configurerait ici.
     project_specific_loggers = ["Orchestration", "semantic_kernel.agents"]
     for logger_name in project_specific_loggers:
-        # Le niveau effectif sera le plus permissif entre le niveau du logger et le niveau racine.
-        # Cependant, nous voulons souvent que nos loggers principaux soient au moins à INFO.
-        # Si numeric_level est DEBUG, ils seront DEBUG. Si numeric_level est WARNING, ils seront WARNING.
-        # Si numeric_level est INFO, ils seront INFO.
-        # La logique de basicConfig a déjà défini le niveau du root logger.
-        # Les loggers enfants hériteront de ce niveau sauf si un niveau spécifique est défini ici.
-        # Pour s'assurer qu'ils ne sont pas moins verbeux que le root logger,
-        # on peut simplement les laisser hériter ou définir leur niveau explicitement si nécessaire.
-        # Dans ce cas, on les laisse hériter du niveau `numeric_level` défini par `basicConfig`.
-        pass # Ils hériteront du niveau `numeric_level`
+        # logging.getLogger(logger_name).setLevel(numeric_level) # Explicite, mais hérité par défaut
+        pass # Les loggers hériteront du niveau `numeric_level` du root logger.
 
     logging.info(f"Logging configuré avec le niveau {log_level_str.upper()}.")

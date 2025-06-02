@@ -1,4 +1,12 @@
 # project_core/pipelines/archival_pipeline.py
+"""
+Ce module définit le pipeline d'archivage des données.
+
+Le pipeline est responsable de la copie des fichiers d'un répertoire source
+vers un répertoire d'archivage, en préservant une partie de la structure
+originale des répertoires. Il gère la configuration du logging, la vérification
+des chemins, et l'archivage effectif des fichiers.
+"""
 import logging
 from pathlib import Path
 from typing import Union # Ajout pour compatibilité avec Python < 3.9 pour PathLike
@@ -24,21 +32,32 @@ def run_archival_pipeline(
     d'archivage de destination et déplace le fichier. Les opérations
     sont loggées.
 
-    Args:
-        source_dir (Union[str, Path]): Le répertoire source contenant les fichiers à archiver.
-        archive_base_dir (Union[str, Path]): Le répertoire de base où les archives
-                                            seront stockées.
-        file_pattern (str): Le motif de glob pour trouver les fichiers à archiver
-                            (ex: "*.txt", "**/*.log").
-        preserve_levels (int): Le nombre de niveaux de répertoires à préserver
-                               depuis le chemin source lors de la création du
-                               chemin d'archivage.
-        log_level_str (str, optional): Le niveau de logging (ex: "INFO", "DEBUG").
-                                       Par défaut à "INFO".
+    :param source_dir: Le répertoire source contenant les fichiers à archiver.
+    :type source_dir: Union[str, Path]
+    :param archive_base_dir: Le répertoire de base où les archives
+                             seront stockées.
+    :type archive_base_dir: Union[str, Path]
+    :param file_pattern: Le motif de glob pour trouver les fichiers à archiver
+                         (ex: "*.txt", "**/*.log").
+    :type file_pattern: str
+    :param preserve_levels: Le nombre de niveaux de répertoires à préserver
+                            depuis le chemin source lors de la création du
+                            chemin d'archivage.
+    :type preserve_levels: int
+    :param log_level_str: Le niveau de logging (ex: "INFO", "DEBUG").
+                          Par défaut à "INFO".
+    :type log_level_str: str, optional
 
-    Returns:
-        None
+    :return: Aucun.
+    :rtype: None
+
+    :raises FileNotFoundError: Si le `source_dir` ou `archive_base_dir` n'est pas trouvé
+                               ou n'est pas un répertoire.
+    :raises ValueError: Si un argument fourni est invalide (par exemple, `preserve_levels` négatif,
+                        bien que non explicitement vérifié ici, mais pourrait l'être dans les fonctions appelées).
+    :raises Exception: Pour toute autre erreur inattendue durant l'exécution du pipeline.
     """
+    # Configuration initiale du logger pour ce pipeline
     logger = setup_logging(log_level_str, "archival_pipeline")
     logger.info("Démarrage du pipeline d'archivage.")
 
@@ -46,22 +65,25 @@ def run_archival_pipeline(
         source_dir_path = Path(source_dir)
         archive_base_dir_path = Path(archive_base_dir)
 
-        # 1. Vérifier que source_dir et archive_base_dir existent et sont des répertoires
+        # Étape 1: Validation des chemins d'entrée
+        # S'assure que les répertoires source et de base pour l'archivage existent.
         check_path_exists(source_dir_path, "répertoire source", is_dir=True)
         check_path_exists(archive_base_dir_path, "répertoire de base d'archivage", is_dir=True)
         logger.info(f"Répertoire source: {source_dir_path}")
         logger.info(f"Répertoire de base d'archivage: {archive_base_dir_path}")
         logger.info(f"Motif de fichier: {file_pattern}, Niveaux à préserver: {preserve_levels}")
 
-        # 2. Itérer sur les fichiers dans source_dir
+        # Étape 2: Traitement des fichiers pour archivage
+        # Itération sur tous les fichiers correspondant au `file_pattern` dans `source_dir` (récursivement).
         archived_files_count = 0
         processed_files_count = 0
-        for source_file in source_dir_path.rglob(file_pattern):
+        for source_file in source_dir_path.rglob(file_pattern): # rglob pour recherche récursive
             processed_files_count += 1
-            if source_file.is_file():
+            if source_file.is_file(): # S'assurer que c'est un fichier et non un répertoire
                 logger.debug(f"Traitement du fichier source: {source_file}")
                 try:
-                    # a. Déterminer le chemin de destination
+                    # Étape 2a: Détermination du chemin de destination pour l'archive.
+                    # Cette étape est cruciale pour maintenir la structure de répertoires souhaitée.
                     archive_path = create_archive_path(
                         source_file_path=source_file,
                         source_base_dir=source_dir_path,
@@ -70,28 +92,39 @@ def run_archival_pipeline(
                     )
                     logger.debug(f"Chemin d'archivage calculé: {archive_path}")
 
-                    # b. Archiver le fichier
-                    # archive_file gère la création des répertoires parents si nécessaire
+                    # Étape 2b: Archivage effectif du fichier.
+                    # La fonction `archive_file` devrait gérer le déplacement ou la copie
+                    # et la création des répertoires parents nécessaires dans la destination.
                     archive_file(source_file, archive_path, create_parent_dirs=True)
                     
-                    # c. Logger l'opération
+                    # Étape 2c: Journalisation de l'opération réussie.
                     logger.info(f"Archivé: '{source_file}' -> '{archive_path}'")
                     archived_files_count += 1
                 except Exception as e:
+                    # Gestion des erreurs spécifiques à l'archivage d'un fichier individuel.
+                    # Le pipeline continue avec les autres fichiers.
                     logger.error(f"Erreur lors de l'archivage du fichier '{source_file}': {e}", exc_info=True)
             else:
                 logger.debug(f"Ignoré (n'est pas un fichier): {source_file}")
         
-        logger.info(f"Pipeline d'archivage terminé. {archived_files_count} fichier(s) archivé(s) sur {processed_files_count} élément(s) traité(s) correspondant au motif.")
+        logger.info(
+            f"Pipeline d'archivage terminé. {archived_files_count} fichier(s) archivé(s) "
+            f"sur {processed_files_count} élément(s) traité(s) correspondant au motif."
+        )
 
     except FileNotFoundError as fnf_error:
+        # Erreur si un chemin de configuration principal (source_dir, archive_base_dir) n'est pas trouvé.
         logger.error(f"Erreur de configuration du pipeline (chemin non trouvé): {fnf_error}", exc_info=True)
     except ValueError as val_error:
+        # Erreur si un argument de configuration est invalide.
         logger.error(f"Erreur de configuration du pipeline (valeur invalide): {val_error}", exc_info=True)
     except Exception as e:
+        # Capture de toute autre exception non gérée explicitement pour éviter un crash silencieux.
         logger.error(f"Une erreur inattendue est survenue dans le pipeline d'archivage: {e}", exc_info=True)
 
 if __name__ == '__main__':
+    # Section de test pour une exécution directe du script.
+    # Ceci est utile pour des vérifications rapides et le débogage.
     # Section pour des tests locaux rapides (optionnel)
     # Assurez-vous que les répertoires de test existent et contiennent des fichiers exemples
     print("Exécution d'un test local du pipeline d'archivage...")

@@ -26,38 +26,51 @@ except ImportError:
 
 
 def initialize_analysis_services(config: Dict[str, Any]) -> Dict[str, Any]:
-    """
-    Initialise les différents composants ou services requis pour l'analyse.
+    """Initialise et configure les services nécessaires à l'analyse argumentative.
 
-    Cette fonction prend un dictionnaire de configuration et initialise les
-    services tels que la JVM, le service LLM, etc.
+    Cette fonction orchestre la mise en place des dépendances clés, telles que
+    la machine virtuelle Java (JVM) pour les bibliothèques associées et le
+    service de modèle de langage à grande échelle (LLM) pour le traitement
+    du langage naturel.
 
-    Args:
-        config: Un dictionnaire de configuration. Actuellement, ce paramètre
-                n'est pas directement utilisé car la configuration est chargée
-                depuis .env ou des chemins codés en dur. Il est inclus pour
-                une future extensibilité.
+    La configuration des services peut être influencée par des variables
+    d'environnement (chargées depuis un fichier .env) et par le dictionnaire
+    de configuration fourni.
 
-    Returns:
-        Un dictionnaire contenant les services initialisés.
-        Par exemple:
-        {
-            "jvm_ready": True,
-            "llm_service": <instance_llm_service>
-        }
+    :param config: Dictionnaire de configuration contenant potentiellement des
+                   chemins spécifiques ou d'autres paramètres pour l'initialisation.
+                   Par exemple, `LIBS_DIR_PATH` peut y être spécifié pour
+                   localiser les bibliothèques Java.
+    :type config: Dict[str, Any]
+    :return: Un dictionnaire contenant l'état des services initialisés.
+             Clés typiques :
+             - "jvm_ready" (bool): True si la JVM est initialisée, False sinon.
+             - "llm_service" (Any | None): Instance du service LLM si créé,
+                                          None en cas d'échec.
+    :rtype: Dict[str, Any]
+    :raises Exception: Peut potentiellement lever des exceptions non capturées
+                       provenant des fonctions d'initialisation sous-jacentes si
+                       elles ne sont pas gérées (bien que la tendance actuelle
+                       soit de logger les erreurs plutôt que de les propager
+                       directement depuis cette fonction).
     """
     services = {}
 
-    # 1. Chargement de l'environnement (.env)
-    # La configuration de dotenv pourrait être rendue optionnelle ou gérée par l'application appelante.
-    # Pour l'instant, on la garde ici pour maintenir le comportement original.
+    # Section 1: Chargement des variables d'environnement
+    # Les variables d'environnement (par exemple, clés API pour le LLM) sont
+    # chargées depuis un fichier .env. Ceci est crucial pour la configuration
+    # sécurisée et flexible des services.
     loaded = load_dotenv(find_dotenv(), override=True)
     logging.info(f"Résultat du chargement de .env: {loaded}")
 
-    # 2. Initialisation de la JVM
-    # LIBS_DIR peut aussi être passé via `config` si nécessaire pour plus de flexibilité.
+    # Section 2: Initialisation de la Machine Virtuelle Java (JVM)
+    # La JVM est nécessaire pour utiliser des bibliothèques Java, comme TweetyProject.
+    # Le chemin vers les bibliothèques (LIBS_DIR) est essentiel ici.
+    # Il peut être fourni via la configuration `config` ou importé.
     libs_dir_path = config.get("LIBS_DIR_PATH", LIBS_DIR)
     if libs_dir_path is None:
+        # Si LIBS_DIR n'est pas disponible, la JVM ne peut pas démarrer,
+        # ce qui impactera les fonctionnalités dépendant de Java.
         logging.error("Le chemin vers LIBS_DIR n'est pas configuré. L'initialisation de la JVM est compromise.")
         services["jvm_ready"] = False
     else:
@@ -67,9 +80,10 @@ def initialize_analysis_services(config: Dict[str, Any]) -> Dict[str, Any]:
         if not jvm_ready_status:
             logging.warning("⚠️ La JVM n'a pas pu être initialisée. Certains agents (ex: PropositionalLogicAgent) pourraient ne pas fonctionner.")
 
-    # 3. Création du Service LLM
-    # La configuration du service LLM (API keys, etc.) est typiquement gérée par `create_llm_service`
-    # qui lit les variables d'environnement (chargées par dotenv ci-dessus).
+    # Section 3: Création du Service de Modèle de Langage (LLM)
+    # Le service LLM est responsable des capacités de traitement du langage.
+    # Sa configuration (clés API, etc.) est généralement gérée par `create_llm_service`
+    # qui s'appuie sur les variables d'environnement chargées précédemment.
     logging.info("Création du service LLM...")
     try:
         llm_service = create_llm_service()
@@ -77,13 +91,18 @@ def initialize_analysis_services(config: Dict[str, Any]) -> Dict[str, Any]:
         if llm_service:
             logging.info(f"✅ Service LLM créé avec succès (ID: {getattr(llm_service, 'service_id', 'N/A')}).")
         else:
-            # create_llm_service pourrait retourner None si la configuration est absente mais sans lever d'exception.
-            logging.warning("⚠️ Le service LLM n'a pas pu être créé (create_llm_service a retourné None). Vérifiez la configuration.")
-            # Il est important que create_llm_service lève une exception si la création est critique et échoue.
+            # Ce cas peut se produire si create_llm_service est conçu pour retourner None
+            # en cas de configuration manquante mais non critique, sans lever d'exception.
+            logging.warning("⚠️ Le service LLM n'a pas pu être créé (create_llm_service a retourné None). Vérifiez la configuration des variables d'environnement (ex: clés API).")
     except Exception as e:
+        # Une exception ici indique un problème sérieux lors de la configuration ou
+        # de l'initialisation du service LLM (par exemple, une clé API invalide ou
+        # un problème de connectivité avec le fournisseur du LLM).
         logging.critical(f"❌ Échec critique lors de la création du service LLM: {e}", exc_info=True)
         services["llm_service"] = None
-        # Selon la criticité, on pourrait vouloir propager l'exception :
+        # Note: La propagation de l'exception est commentée pour permettre au reste de
+        # l'application de potentiellement continuer avec des fonctionnalités réduites.
+        # Décommenter si le service LLM est absolument critique pour toute opération.
         # raise RuntimeError(f"Impossible de créer le service LLM: {e}") from e
     
     return services
