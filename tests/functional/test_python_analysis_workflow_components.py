@@ -13,7 +13,8 @@ import gzip
 import base64
 
 # Ajout du répertoire parent au chemin pour permettre l'import des modules du projet
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
+# sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
+# Commenté car l'installation du package via `pip install -e .` devrait gérer l'accessibilité.
 
 # Fonctions et classes à tester (copiées/adaptées depuis le script de workflow)
 # Idéalement, ces fonctions seraient dans des modules importables.
