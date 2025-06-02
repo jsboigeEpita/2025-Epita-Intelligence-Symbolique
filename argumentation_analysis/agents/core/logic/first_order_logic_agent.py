@@ -104,7 +104,7 @@ Fournissez ensuite une conclusion générale sur ce que ces résultats nous appr
 Votre réponse doit être claire, précise et accessible à quelqu'un qui n'est pas expert en logique formelle.
 """
 
-class FirstOrderLogicAgent(BaseLogicAgent): # Modification de l'héritage
+class FirstOrderLogicAgent(BaseLogicAgent): 
     """
     Agent spécialisé pour la logique du premier ordre.
     
@@ -124,7 +124,6 @@ class FirstOrderLogicAgent(BaseLogicAgent): # Modification de l'héritage
                          agent_name="FirstOrderLogicAgent",
                          logic_type_name="FOL",
                          system_prompt=SYSTEM_PROMPT_FOL)
-        # _tweety_bridge sera initialisé dans setup_agent_components
 
     def get_agent_capabilities(self) -> Dict[str, Any]:
         """Décrit ce que l'agent peut faire."""
@@ -150,20 +149,15 @@ class FirstOrderLogicAgent(BaseLogicAgent): # Modification de l'héritage
         super().setup_agent_components(llm_service_id)
         self.logger.info(f"Configuration des composants pour {self.name}...")
 
-        self._tweety_bridge = TweetyBridge(logic_type="fol") # Initialisation spécifique FOL
+        self._tweety_bridge = TweetyBridge(logic_type="fol") 
 
-        # Vérifier si la JVM est prête
         if not self.tweety_bridge.is_jvm_ready():
             self.logger.error("Tentative de setup FOL Kernel alors que la JVM n'est PAS démarrée.")
-            # Idéalement, lever une exception ou gérer l'état de l'agent
             return
         
-        # Enregistrement des fonctions sémantiques
         default_settings = None
-        if self._llm_service_id: # _llm_service_id est défini dans super().setup_agent_components
+        if self._llm_service_id: 
             try:
-                # Note: get_prompt_execution_settings_from_service_id est une méthode de Kernel
-                # et non de self.sk_kernel.plugins[self._llm_service_id]
                 default_settings = self.sk_kernel.get_prompt_execution_settings_from_service_id(
                     self._llm_service_id
                 )
@@ -189,7 +183,7 @@ class FirstOrderLogicAgent(BaseLogicAgent): # Modification de l'héritage
                 self.logger.info(f"Ajout fonction {self.name}.{func_name} avec prompt de {len(prompt)} caractères")
                 self.sk_kernel.add_function(
                     prompt=prompt,
-                    plugin_name=self.name, # Utilisation de self.name comme plugin_name
+                    plugin_name=self.name, 
                     function_name=func_name,
                     description=description,
                     prompt_execution_settings=default_settings
@@ -207,39 +201,22 @@ class FirstOrderLogicAgent(BaseLogicAgent): # Modification de l'héritage
         
         self.logger.info(f"Composants de {self.name} configurés.")
 
-    def text_to_belief_set(self, text: str, context: Optional[Dict[str, Any]] = None) -> Tuple[Optional[BeliefSet], str]:
+    async def text_to_belief_set(self, text: str, context: Optional[Dict[str, Any]] = None) -> Tuple[Optional[BeliefSet], str]:
         """
         Convertit un texte en ensemble de croyances du premier ordre.
-        
-        Args:
-            text: Le texte à convertir
-            
-        Returns:
-            Un tuple contenant l'ensemble de croyances créé (ou None en cas d'erreur)
-            et un message de statut
         """
         self.logger.info(f"Conversion de texte en ensemble de croyances du premier ordre pour l'agent {self.name}...")
         
         try:
-            # Appeler la fonction sémantique pour convertir le texte
-            # Utilisation de self.name comme plugin_name
-            result = self.sk_kernel.plugins[self.name]["TextToFOLBeliefSet"].invoke(self.sk_kernel, input=text)
-            # La méthode invoke a changé dans les versions récentes de SK, elle prend le kernel en premier argument.
-            # Si invoke prend seulement `input`, alors: result = self.sk_kernel.plugins[self.name]["TextToFOLBeliefSet"](input=text)
-            # Je vais supposer que `invoke` prend `kernel` et `input` pour l'instant.
-            # Si `result.result` n'existe pas, il faut utiliser `str(result)` ou `result.value`.
-            # Pour être sûr, je vais utiliser str(result)
+            result = await self.sk_kernel.plugins[self.name]["TextToFOLBeliefSet"].invoke(self.sk_kernel, input=text)
             belief_set_content = str(result)
             
-            # Vérifier si le contenu est valide
             if not belief_set_content or len(belief_set_content.strip()) == 0:
                 self._logger.error("La conversion a produit un ensemble de croyances vide")
                 return None, "La conversion a produit un ensemble de croyances vide"
             
-            # Créer l'objet BeliefSet
-            belief_set_obj = FirstOrderBeliefSet(belief_set_content) # Renommé pour éviter conflit avec paramètre
+            belief_set_obj = FirstOrderBeliefSet(belief_set_content) 
             
-            # Valider l'ensemble de croyances avec TweetyBridge
             is_valid, validation_msg = self.tweety_bridge.validate_fol_belief_set(belief_set_content)
             if not is_valid:
                 self.logger.error(f"Ensemble de croyances invalide: {validation_msg}")
@@ -253,35 +230,24 @@ class FirstOrderLogicAgent(BaseLogicAgent): # Modification de l'héritage
             self.logger.error(error_msg, exc_info=True)
             return None, error_msg
     
-    def generate_queries(self, text: str, belief_set: BeliefSet, context: Optional[Dict[str, Any]] = None) -> List[str]:
+    async def generate_queries(self, text: str, belief_set: BeliefSet, context: Optional[Dict[str, Any]] = None) -> List[str]:
         """
         Génère des requêtes logiques du premier ordre pertinentes.
-        
-        Args:
-            text: Le texte source
-            belief_set: L'ensemble de croyances
-            
-        Returns:
-            Une liste de requêtes logiques
         """
         self.logger.info(f"Génération de requêtes du premier ordre pour l'agent {self.name}...")
         
         try:
-            # Appeler la fonction sémantique pour générer les requêtes
-            # Utilisation de self.name comme plugin_name
-            result = self.sk_kernel.plugins[self.name]["GenerateFOLQueries"].invoke(
-                self.sk_kernel, # Premier argument kernel
+            result = await self.sk_kernel.plugins[self.name]["GenerateFOLQueries"].invoke(
+                self.sk_kernel,
                 input=text,
-                belief_set=belief_set.content
+                belief_set=belief_set.content # Utiliser .content
             )
-            queries_text = str(result) # Utilisation de str(result)
+            queries_text = str(result)
             
-            # Extraire les requêtes individuelles
             queries = [q.strip() for q in queries_text.split('\n') if q.strip()]
             
-            # Filtrer les requêtes invalides
             valid_queries = []
-            for query_item in queries: # Renommé pour éviter conflit
+            for query_item in queries: 
                 is_valid, _ = self.tweety_bridge.validate_fol_formula(query_item)
                 if is_valid:
                     valid_queries.append(query_item)
@@ -298,81 +264,56 @@ class FirstOrderLogicAgent(BaseLogicAgent): # Modification de l'héritage
     def execute_query(self, belief_set: BeliefSet, query: str) -> Tuple[Optional[bool], str]:
         """
         Exécute une requête logique du premier ordre sur un ensemble de croyances.
-        
-        Args:
-            belief_set: L'ensemble de croyances
-            query: La requête à exécuter
-            
-        Returns:
-            Un tuple contenant le résultat de la requête (True, False ou None si indéterminé)
-            et un message formaté
         """
         self.logger.info(f"Exécution de la requête: {query} pour l'agent {self.name}")
         
         try:
-            # Utilisation directe de tweety_bridge
-            # La méthode execute_fol_query doit exister dans TweetyBridge
-            # et retourner un format similaire à ce qui était attendu.
-            # TweetyBridge.execute_fol_query(belief_set_content: str, query_string: str) -> str
+            bs_str = belief_set.content # Utiliser .content
+            
             result_str = self.tweety_bridge.execute_fol_query(
-                belief_set_content=belief_set.content,
+                belief_set_content=bs_str,
                 query_string=query
             )
             
-            # Analyser le résultat
-            if result_str is None or "ERROR" in result_str.upper(): # Plus générique pour les erreurs
+            if result_str is None or "ERROR" in result_str.upper(): 
                 self.logger.error(f"Erreur lors de l'exécution de la requête: {result_str}")
                 return None, result_str if result_str else "Erreur inconnue de TweetyBridge"
             
-            if "ACCEPTED" in result_str: # TweetyBridge devrait retourner "ACCEPTED" ou "REJECTED"
+            if "ACCEPTED" in result_str: 
                 return True, result_str
             elif "REJECTED" in result_str:
                 return False, result_str
             else:
-                # Cas où le résultat n'est ni ACCEPTED ni REJECTED clairement
                 self.logger.warning(f"Résultat de requête inattendu: {result_str}")
                 return None, result_str
         
         except Exception as e:
             error_msg = f"Erreur lors de l'exécution de la requête: {str(e)}"
             self.logger.error(error_msg, exc_info=True)
-            return None, f"FUNC_ERROR: {error_msg}" # Conserver FUNC_ERROR pour compatibilité si nécessaire
+            return None, f"FUNC_ERROR: {error_msg}" 
 
-    def interpret_results(self, text: str, belief_set: BeliefSet,
+    async def interpret_results(self, text: str, belief_set: BeliefSet,
                          queries: List[str], results: List[Tuple[Optional[bool], str]],
-                         context: Optional[Dict[str, Any]] = None) -> str: # Signature mise à jour
+                         context: Optional[Dict[str, Any]] = None) -> str:
         """
         Interprète les résultats des requêtes logiques du premier ordre.
-        
-        Args:
-            text: Le texte source
-            belief_set: L'ensemble de croyances
-            queries: Les requêtes exécutées
-            results: Les résultats des requêtes
-            
-        Returns:
-            Une interprétation textuelle des résultats
         """
         self.logger.info(f"Interprétation des résultats pour l'agent {self.name}...")
         
         try:
-            # Préparer les entrées pour la fonction sémantique
             queries_str = "\n".join(queries)
-            # results est maintenant List[Tuple[Optional[bool], str]], nous avons besoin de la partie str
             results_text_list = [res_tuple[1] if res_tuple else "Error: No result" for res_tuple in results]
             results_str = "\n".join(results_text_list)
             
-            # Appeler la fonction sémantique pour interpréter les résultats
-            # Utilisation de self.name comme plugin_name
-            result = self.sk_kernel.plugins[self.name]["InterpretFOLResult"].invoke(
-                self.sk_kernel, # Premier argument kernel
+            result = await self.sk_kernel.plugins[self.name]["InterpretFOLResult"].invoke(
+                self.sk_kernel,
                 input=text,
-                belief_set=belief_set.content,
+                belief_set=belief_set.content, # Utiliser .content
                 queries=queries_str,
                 tweety_result=results_str
             )
             
-            interpretation = str(result) # Utilisation de str(result)
+            interpretation = str(result)
             self.logger.info("Interprétation terminée")
             return interpretation
         
@@ -384,12 +325,6 @@ class FirstOrderLogicAgent(BaseLogicAgent): # Modification de l'héritage
     def validate_formula(self, formula: str) -> bool:
         """
         Valide la syntaxe d'une formule FOL en utilisant TweetyBridge.
-        
-        Args:
-            formula: La formule FOL à valider.
-            
-        Returns:
-            True si la formule est valide, False sinon.
         """
         self.logger.debug(f"Validation de la formule FOL: {formula}")
         is_valid, message = self.tweety_bridge.validate_fol_formula(formula)
@@ -400,12 +335,6 @@ class FirstOrderLogicAgent(BaseLogicAgent): # Modification de l'héritage
     def _create_belief_set_from_data(self, belief_set_data: Dict[str, Any]) -> BeliefSet:
         """
         Crée un objet FirstOrderBeliefSet à partir des données de l'état.
-        
-        Args:
-            belief_set_data: Les données de l'ensemble de croyances
-            
-        Returns:
-            Un objet FirstOrderBeliefSet
         """
         content = belief_set_data.get("content", "")
         return FirstOrderBeliefSet(content)

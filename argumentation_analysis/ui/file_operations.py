@@ -1,3 +1,4 @@
+from typing import Optional, Union, List, Dict, Any
 # argumentation_analysis/ui/file_operations.py
 import json
 import gzip
@@ -46,17 +47,17 @@ def load_extract_definitions(
             with open(config_file, 'rb') as f: encrypted_data = f.read()
             decrypted_compressed_data = decrypt_data_with_fernet(encrypted_data, b64_derived_key)
             
-            if not decrypted_compressed_data:
-                file_ops_logger.error(f"❌ Échec déchiffrement pour '{config_file}'. Le token pourrait être invalide ou les données corrompues.")
-                raise InvalidToken # Lever InvalidToken comme attendu par le test
+            if not decrypted_compressed_data: # decrypt_data_with_fernet retourne None en cas d'InvalidToken ou autre erreur de déchiffrement
+                file_ops_logger.warning(f"⚠️ Échec du déchiffrement pour '{config_file}' (decrypt_data_with_fernet a retourné None). Utilisation des définitions par défaut.")
+                return [item.copy() for item in fallback_definitions] # MODIFIÉ: Retourner fallback au lieu de lever
             
             decompressed_data = gzip.decompress(decrypted_compressed_data)
             definitions = json.loads(decompressed_data.decode('utf-8'))
             file_ops_logger.info("✅ Définitions chargées et déchiffrées.")
 
-        except InvalidToken:
-            file_ops_logger.error(f"❌ InvalidToken lors du déchiffrement de '{config_file}'.", exc_info=True)
-            raise
+        except InvalidToken: # Attrapé si decrypt_data_with_fernet lève InvalidToken (par ex. mock avec side_effect)
+            file_ops_logger.error(f"❌ InvalidToken explicitement levée lors du déchiffrement de '{config_file}'. Utilisation définitions par défaut.", exc_info=True)
+            return [item.copy() for item in fallback_definitions] # MODIFIÉ: Retourner fallback
         except Exception as e:
             file_ops_logger.error(f"❌ Erreur chargement/déchiffrement '{config_file}': {e}. Utilisation définitions par défaut.", exc_info=True)
             return [item.copy() for item in fallback_definitions]
@@ -91,15 +92,15 @@ def load_extract_definitions(
 def save_extract_definitions(
     extract_definitions: List[Dict[str, Any]],
     config_file: Path,
-    b64_derived_key: str, # MODIFIÉ: La clé reçue est la chaîne b64 dérivée
+    b64_derived_key: Optional[Union[str, bytes]], # MODIFIÉ: Accepte str, bytes ou None
     embed_full_text: bool = False,
     config: Optional[Dict[str, Any]] = None # 'config' est le app_config passé à get_full_text_for_source
 ) -> bool:
     """Sauvegarde, compresse et chiffre les définitions dans le fichier.
     Peut optionnellement embarquer le texte complet des sources.
     """
-    if not b64_derived_key:
-        file_ops_logger.error("Clé chiffrement (b64) absente. Sauvegarde annulée.")
+    if not b64_derived_key: # Vérifie si la clé est None ou une chaîne/bytes vide
+        file_ops_logger.error("Clé chiffrement (b64_derived_key) absente ou vide. Sauvegarde annulée.")
         return False
     if not isinstance(extract_definitions, list):
         file_ops_logger.error("Erreur sauvegarde: définitions non valides (doit être une liste).")
