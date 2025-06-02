@@ -20,8 +20,15 @@ root_dir = current_dir.parent.parent
 if str(root_dir) not in sys.path:
     sys.path.append(str(root_dir))
 
-def setup_logging(debug: bool = False):
-    """Configure le logging."""
+def setup_logging(debug: bool = False) -> None:
+    """Configure le système de logging de base pour le script.
+
+    :param debug: Si True, configure le niveau de logging à DEBUG.
+                  Sinon, configure à INFO.
+    :type debug: bool
+    :return: None
+    :rtype: None
+    """
     level = logging.DEBUG if debug else logging.INFO
     logging.basicConfig(
         level=level,
@@ -30,7 +37,14 @@ def setup_logging(debug: bool = False):
     )
 
 def check_dependencies():
-    """Vérifie les dépendances requises."""
+    """Vérifie si les dépendances Python requises pour l'API sont installées.
+
+    Tente d'importer 'flask', 'flask_cors', et 'pydantic'.
+    Affiche un message d'erreur et des instructions si des paquets sont manquants.
+
+    :return: True si toutes les dépendances sont présentes, False sinon.
+    :rtype: bool
+    """
     required_packages = ['flask', 'flask_cors', 'pydantic']
     missing = []
     
@@ -49,7 +63,16 @@ def check_dependencies():
     return True
 
 def check_port(port: int):
-    """Vérifie si le port est disponible."""
+    """Vérifie si un port TCP donné est disponible sur localhost.
+
+    Tente de se lier au port spécifié. Si cela réussit, le port est considéré
+    comme disponible.
+
+    :param port: Le numéro de port à vérifier.
+    :type port: int
+    :return: True si le port est disponible, False sinon.
+    :rtype: bool
+    """
     import socket
     
     try:
@@ -60,7 +83,17 @@ def check_port(port: int):
         return False
 
 def print_startup_info(port: int, debug: bool):
-    """Affiche les informations de démarrage."""
+    """Affiche les informations de démarrage de l'API dans la console.
+
+    Inclut l'URL locale, le mode debug, et des liens utiles.
+
+    :param port: Le port sur lequel l'API est configurée pour démarrer.
+    :type port: int
+    :param debug: Booléen indiquant si le mode debug est activé.
+    :type debug: bool
+    :return: None
+    :rtype: None
+    """
     print("\n" + "="*60)
     print("🚀 API Web d'Analyse Argumentative")
     print("="*60)

@@ -14,7 +14,10 @@ import asyncio
 from pathlib import Path
 
 async def main():
-    """Fonction principale pour lancer la réparation des bornes défectueuses."""
+    """Fonction principale pour lancer la réparation des bornes défectueuses.
+
+    :raises ImportError: Si le module `repair_extract_markers` ne peut pas être importé.
+    """
     # Importer le module depuis son nouvel emplacement
     try:
         from argumentation_analysis.utils.extract_repair.repair_extract_markers import main as repair_main

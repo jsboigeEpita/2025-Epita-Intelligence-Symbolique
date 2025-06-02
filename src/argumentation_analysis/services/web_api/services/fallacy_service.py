@@ -50,8 +50,14 @@ class FallacyService:
         self._initialize_analyzers()
         self._load_fallacy_database()
     
-    def _initialize_analyzers(self):
-        """Initialise les analyseurs de sophismes."""
+    def _initialize_analyzers(self) -> None:
+        """Initialise les différents analyseurs de sophismes (contextuel, sévérité, amélioré).
+
+        Met à jour `self.is_initialized` en fonction du succès.
+
+        :return: None
+        :rtype: None
+        """
         try:
             # Analyseur contextuel
             if ContextualFallacyAnalyzer:
@@ -78,8 +84,14 @@ class FallacyService:
             self.logger.error(f"Erreur lors de l'initialisation des analyseurs: {e}")
             self.is_initialized = False
     
-    def _load_fallacy_database(self):
-        """Charge la base de données des sophismes."""
+    def _load_fallacy_database(self) -> None:
+        """Charge une base de données interne de patterns de sophismes.
+
+        Cette base de données est utilisée par la méthode `_detect_with_patterns`.
+
+        :return: None
+        :rtype: None
+        """
         self.fallacy_patterns = {
             # Sophismes logiques formels
             'affirming_consequent': {
@@ -164,18 +176,28 @@ class FallacyService:
         }
     
     def is_healthy(self) -> bool:
-        """Vérifie l'état de santé du service."""
+        """Vérifie si le service de détection de sophismes est opérationnel.
+
+        :return: True si les analyseurs sont initialisés ou si la base de données
+                 de patterns de sophismes est chargée, False sinon.
+        :rtype: bool
+        """
         return self.is_initialized or bool(self.fallacy_patterns)
     
     def detect_fallacies(self, request: FallacyRequest) -> FallacyResponse:
         """
-        Détecte les sophismes dans un texte.
-        
-        Args:
-            request: Requête de détection
-            
-        Returns:
-            Réponse avec les sophismes détectés
+        Détecte les sophismes dans un texte donné en utilisant plusieurs stratégies.
+
+        Combine les résultats des analyseurs configurés (contextuel, amélioré) et
+        d'une détection basée sur des patterns. Filtre et déduplique ensuite les
+        résultats, et calcule des statistiques de distribution.
+
+        :param request: L'objet `FallacyRequest` contenant le texte à analyser
+                        et les options de détection.
+        :type request: FallacyRequest
+        :return: Un objet `FallacyResponse` contenant la liste des sophismes détectés,
+                 des statistiques, et le temps de traitement.
+        :rtype: FallacyResponse
         """
         start_time = time.time()
         
@@ -227,8 +249,16 @@ class FallacyService:
                 detection_options=request.options.dict() if request.options else {}
             )
     
-    def _detect_with_contextual_analyzer(self, text: str, options) -> List[FallacyDetection]:
-        """Détection avec l'analyseur contextuel."""
+    def _detect_with_contextual_analyzer(self, text: str, options: Optional[FallacyOptions]) -> List[FallacyDetection]:
+        """Détecte les sophismes en utilisant `ContextualFallacyAnalyzer`.
+
+        :param text: Le texte à analyser.
+        :type text: str
+        :param options: Les options de détection (non utilisées directement ici mais passées pour cohérence).
+        :type options: Optional[FallacyOptions]
+        :return: Une liste d'objets `FallacyDetection`.
+        :rtype: List[FallacyDetection]
+        """
         fallacies = []
         
         try:
@@ -254,8 +284,16 @@ class FallacyService:
         
         return fallacies
     
-    def _detect_with_enhanced_analyzer(self, text: str, options) -> List[FallacyDetection]:
-        """Détection avec l'analyseur amélioré."""
+    def _detect_with_enhanced_analyzer(self, text: str, options: Optional[FallacyOptions]) -> List[FallacyDetection]:
+        """Détecte les sophismes en utilisant `EnhancedContextualAnalyzer`.
+
+        :param text: Le texte à analyser.
+        :type text: str
+        :param options: Les options de détection (non utilisées directement ici).
+        :type options: Optional[FallacyOptions]
+        :return: Une liste d'objets `FallacyDetection`.
+        :rtype: List[FallacyDetection]
+        """
         fallacies = []
         
         try:
@@ -281,8 +319,16 @@ class FallacyService:
         
         return fallacies
     
-    def _detect_with_patterns(self, text: str, options) -> List[FallacyDetection]:
-        """Détection avec les patterns de sophismes intégrés."""
+    def _detect_with_patterns(self, text: str, options: Optional[FallacyOptions]) -> List[FallacyDetection]:
+        """Détecte les sophismes en utilisant une base de données interne de patterns.
+
+        :param text: Le texte à analyser (converti en minuscules pour la recherche).
+        :type text: str
+        :param options: Les options de détection (non utilisées directement ici).
+        :type options: Optional[FallacyOptions]
+        :return: Une liste d'objets `FallacyDetection`.
+        :rtype: List[FallacyDetection]
+        """
         fallacies = []
         text_lower = text.lower()
         
@@ -313,7 +359,18 @@ class FallacyService:
         return fallacies
     
     def _pattern_matches(self, pattern: str, text: str) -> bool:
-        """Vérifie si un pattern correspond au texte."""
+        """Vérifie si un pattern (simplifié) correspond à un texte (insensible à la casse).
+
+        Tente une recherche regex après avoir remplacé '.*' par '.*?'.
+        En cas d'échec de la regex, effectue une simple recherche de sous-chaîne.
+
+        :param pattern: Le pattern à rechercher (peut contenir '.*').
+        :type pattern: str
+        :param text: Le texte dans lequel rechercher.
+        :type text: str
+        :return: True si le pattern est trouvé, False sinon.
+        :rtype: bool
+        """
         import re
         
         try:
@@ -324,8 +381,18 @@ class FallacyService:
             # Fallback: recherche simple
             return pattern.replace('.*', '') in text
     
-    def _extract_context(self, text: str, position: int, context_size: int = 50) -> str:
-        """Extrait le contexte autour d'une position."""
+    def _extract_context(self, text: str, position: int, context_size: int = 50) -> Optional[str]:
+        """Extrait une portion de texte (contexte) autour d'une position donnée.
+
+        :param text: Le texte source complet.
+        :type text: str
+        :param position: La position centrale autour de laquelle extraire le contexte.
+        :type position: int
+        :param context_size: Le nombre de caractères à inclure avant et après la position.
+        :type context_size: int
+        :return: La chaîne de caractères du contexte, ou None si la position est invalide.
+        :rtype: Optional[str]
+        """
         if position < 0:
             return None
         
@@ -334,8 +401,19 @@ class FallacyService:
         
         return text[start:end].strip()
     
-    def _filter_and_deduplicate(self, fallacies: List[FallacyDetection], options) -> List[FallacyDetection]:
-        """Filtre et déduplique les sophismes détectés."""
+    def _filter_and_deduplicate(self, fallacies: List[FallacyDetection], options: Optional[FallacyOptions]) -> List[FallacyDetection]:
+        """Filtre les sophismes par sévérité et catégories, puis déduplique les résultats.
+
+        La déduplication est basée sur le type de sophisme et la position de début.
+        Limite également le nombre total de sophismes retournés.
+
+        :param fallacies: La liste brute des `FallacyDetection` à traiter.
+        :type fallacies: List[FallacyDetection]
+        :param options: Les `FallacyOptions` contenant les seuils, catégories et limites.
+        :type options: Optional[FallacyOptions]
+        :return: Une liste filtrée, dédupliquée et limitée de `FallacyDetection`.
+        :rtype: List[FallacyDetection]
+        """
         # Filtrage par seuil de sévérité
         threshold = options.severity_threshold if options else 0.5
         filtered = [f for f in fallacies if f.severity >= threshold]
@@ -360,7 +438,15 @@ class FallacyService:
         return deduplicated[:max_fallacies]
     
     def _calculate_severity_distribution(self, fallacies: List[FallacyDetection]) -> Dict[str, int]:
-        """Calcule la distribution par sévérité."""
+        """Calcule la distribution des sophismes détectés par niveau de sévérité.
+
+        Les niveaux sont "low" (<0.4), "medium" (0.4-0.7), "high" (>=0.7).
+
+        :param fallacies: Liste des objets `FallacyDetection`.
+        :type fallacies: List[FallacyDetection]
+        :return: Un dictionnaire avec les comptes pour chaque niveau de sévérité.
+        :rtype: Dict[str, int]
+        """
         distribution = {'low': 0, 'medium': 0, 'high': 0}
         
         for fallacy in fallacies:
@@ -374,7 +460,16 @@ class FallacyService:
         return distribution
     
     def _calculate_category_distribution(self, fallacies: List[FallacyDetection]) -> Dict[str, int]:
-        """Calcule la distribution par catégorie."""
+        """Calcule la distribution des sophismes détectés par catégorie.
+
+        Les catégories sont dérivées de `self.fallacy_patterns`.
+
+        :param fallacies: Liste des objets `FallacyDetection`.
+        :type fallacies: List[FallacyDetection]
+        :return: Un dictionnaire où les clés sont les catégories de sophismes
+                 et les valeurs sont le nombre de sophismes détectés dans cette catégorie.
+        :rtype: Dict[str, int]
+        """
         distribution = {}
         
         for fallacy in fallacies:
@@ -387,8 +482,16 @@ class FallacyService:
         
         return distribution
     
-    def get_fallacy_types(self) -> Dict[str, Any]:
-        """Retourne la liste des types de sophismes supportés."""
+    def get_fallacy_types(self) -> Dict[str, Dict[str, Any]]:
+        """Retourne un dictionnaire des types de sophismes supportés et leurs détails.
+
+        Les détails incluent le nom, la description, la catégorie et la sévérité
+        tels que définis dans `self.fallacy_patterns`.
+
+        :return: Un dictionnaire où les clés sont les identifiants des types de sophismes
+                 et les valeurs sont des dictionnaires de leurs attributs.
+        :rtype: Dict[str, Dict[str, Any]]
+        """
         return {
             fallacy_type: {
                 'name': info['name'],
@@ -400,7 +503,13 @@ class FallacyService:
         }
     
     def get_categories(self) -> List[str]:
-        """Retourne la liste des catégories de sophismes."""
+        """Retourne une liste unique des catégories de sophismes définies.
+
+        Les catégories sont extraites de `self.fallacy_patterns`.
+
+        :return: Une liste de chaînes de caractères, chaque chaîne étant une catégorie.
+        :rtype: List[str]
+        """
         categories = set()
         for info in self.fallacy_patterns.values():
             categories.add(info['category'])

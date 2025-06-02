@@ -48,10 +48,11 @@ CONFIG_FILE_ENC = ui_config.CONFIG_FILE_ENC
 
 def verify_encrypted_file():
     """
-    Vérifie que le fichier chiffré existe et peut être déchiffré correctement.
-    
-    Returns:
-        bool: True si le fichier chiffré peut être déchiffré, False sinon
+    Vérifie que le fichier de configuration chiffré principal existe et peut être
+    déchiffré correctement en utilisant la clé de chiffrement configurée.
+
+    :return: True si le fichier chiffré est valide et déchiffrable, False sinon.
+    :rtype: bool
     """
     logger.info(f"Vérification du fichier chiffré {CONFIG_FILE_ENC}...")
     
@@ -84,10 +85,13 @@ def verify_encrypted_file():
 
 def update_gitignore():
     """
-    Met à jour le fichier .gitignore pour s'assurer que tous les fichiers sensibles sont ignorés.
-    
-    Returns:
-        bool: True si le fichier .gitignore a été mis à jour, False sinon
+    Met à jour le fichier .gitignore à la racine du projet pour s'assurer que
+    les fichiers de configuration sensibles et temporaires spécifiés sont ignorés
+    par Git.
+
+    :return: True si le fichier .gitignore a été trouvé et mis à jour (si nécessaire),
+             False si le fichier .gitignore n'a pas été trouvé.
+    :rtype: bool
     """
     logger.info("Mise à jour du fichier .gitignore...")
     
@@ -133,10 +137,13 @@ def update_gitignore():
 
 def delete_sensitive_files():
     """
-    Supprime les fichiers sensibles.
-    
-    Returns:
-        list: Liste des fichiers supprimés
+    Supprime les fichiers de configuration en clair et les fichiers du cache de texte.
+
+    Les fichiers ciblés incluent `CONFIG_FILE_JSON`, un fichier `extract_sources_updated.json`
+    spécifique, et tous les fichiers `.txt` dans le répertoire de cache de texte.
+
+    :return: Une liste des chemins (str) des fichiers qui ont été effectivement supprimés.
+    :rtype: list[str]
     """
     logger.info("Suppression des fichiers sensibles...")
     
