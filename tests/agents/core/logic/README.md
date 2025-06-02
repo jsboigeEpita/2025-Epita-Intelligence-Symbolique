@@ -16,7 +16,7 @@ Ce répertoire contient les tests unitaires pour les composants logiques fondame
 *   [`test_examples.py`](test_examples.py:1): Contient des tests basés sur des exemples concrets d'utilisation des agents et des systèmes logiques, illustrant des scénarios de raisonnement.
 *   [`test_first_order_logic_agent.py`](test_first_order_logic_agent.py:1): Tests spécifiques à l'agent basé sur la logique du premier ordre, incluant la gestion des quantificateurs et des prédicats.
 *   [`test_logic_factory.py`](test_logic_factory.py:1): Valide la `LogicFactory` responsable de la création des différents types d'agents logiques et de leurs composants.
-*   [`test_propositional_logic_agent.py`](test_propositional_logic_agent.py:1): Tests pour l'agent basé sur la logique propositionnelle.
+*   [`test_propositional_logic_agent.py`](test_propositional_logic_agent.py:1): Tests pour l'agent basé sur la logique propositionnelle, couvrant l'initialisation, l'interaction avec le Kernel sémantique, la conversion texte-croyances, la validation et l'exécution de requêtes via TweetyBridge (mocké).
 *   [`test_modal_logic_agent.py`](test_modal_logic_agent.py:1): Tests pour l'agent basé sur la logique modale, couvrant l'initialisation, l'interaction avec le Kernel sémantique, la conversion texte-croyances, la validation et l'exécution de requêtes via TweetyBridge (mocké).
 *   [`test_abstract_logic_agent.py`](test_abstract_logic_agent.py:1): Tests pour la classe de base abstraite des agents logiques.
 *   [`test_query_executor.py`](test_query_executor.py:1): Tests pour l'exécuteur de requêtes logiques.
