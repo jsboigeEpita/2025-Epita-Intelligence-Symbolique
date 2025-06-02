@@ -1,8 +1,8 @@
 # project_core/utils/crypto_utils.py
 import base64
 import logging
-import os # NOUVEAU: Import nécessaire
-from typing import Optional # NOUVEAU: Import nécessaire
+import os
+from typing import Optional, Union # MODIFIÉ: Ajout de Union
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 from cryptography.hazmat.backends import default_backend
@@ -97,59 +97,61 @@ def load_encryption_key(passphrase_arg: Optional[str] = None, env_var_name: str 
 
 # --- Fonctions de chiffrement/déchiffrement Fernet ---
 
-def encrypt_data_with_fernet(data: bytes, b64_encoded_key_str: str) -> Optional[bytes]:
+def encrypt_data_with_fernet(data: bytes, b64_encoded_key_str: Union[str, bytes]) -> Optional[bytes]:
     """
     Chiffre des données binaires avec une clé Fernet.
-    La clé est la chaîne de caractères encodée en base64url (sortie de derive_encryption_key).
+    La clé est la chaîne de caractères encodée en base64url (sortie de derive_encryption_key) ou des bytes.
 
     Args:
         data: Les données binaires à chiffrer.
-        b64_encoded_key_str: La clé de chiffrement Fernet, encodée en base64url (str).
+        b64_encoded_key_str: La clé de chiffrement Fernet, encodée en base64url (str ou bytes).
 
     Returns:
         Optional[bytes]: Les données chiffrées, ou None en cas d'erreur.
     """
     if not b64_encoded_key_str:
-        logger.error("Erreur chiffrement Fernet: Clé (str b64) manquante.")
+        logger.error("Erreur chiffrement Fernet: Clé (str b64 ou bytes) manquante.")
         return None
     try:
-        # La clé b64_encoded_key_str est une chaîne str.
-        # Fernet attend les bytes bruts de la clé (décodés de base64url).
-        if not isinstance(b64_encoded_key_str, str):
-            logger.error(f"Erreur chiffrement Fernet: b64_encoded_key_str doit être une chaîne, reçu {type(b64_encoded_key_str)}.")
+        # Fernet attend la clé encodée en base64url, mais sous forme de bytes.
+        if isinstance(b64_encoded_key_str, str):
+            key_bytes = b64_encoded_key_str.encode('utf-8')
+        elif isinstance(b64_encoded_key_str, bytes):
+            key_bytes = b64_encoded_key_str
+        else:
+            logger.error(f"Erreur chiffrement Fernet: Type de clé inattendu {type(b64_encoded_key_str)}.")
             return None
-        
-        key_bytes_for_fernet = base64.urlsafe_b64decode(b64_encoded_key_str.encode('utf-8'))
-        f = Fernet(key_bytes_for_fernet)
+        f = Fernet(key_bytes)
         return f.encrypt(data)
     except Exception as e:
         logger.error(f"Erreur chiffrement Fernet: {e}", exc_info=True)
         return None
 
-def decrypt_data_with_fernet(encrypted_data: bytes, b64_encoded_key_str: str) -> Optional[bytes]:
+def decrypt_data_with_fernet(encrypted_data: bytes, b64_encoded_key_str: Union[str, bytes]) -> Optional[bytes]:
     """
     Déchiffre des données binaires avec une clé Fernet.
-    La clé est la chaîne de caractères encodée en base64url (sortie de derive_encryption_key).
+    La clé est la chaîne de caractères encodée en base64url (sortie de derive_encryption_key) ou des bytes.
 
     Args:
         encrypted_data: Les données chiffrées.
-        b64_encoded_key_str: La clé de chiffrement Fernet, encodée en base64url (str).
+        b64_encoded_key_str: La clé de chiffrement Fernet, encodée en base64url (str ou bytes).
 
     Returns:
         Optional[bytes]: Les données déchiffrées, ou None en cas d'erreur ou de token invalide.
     """
     if not b64_encoded_key_str:
-        logger.error("Erreur déchiffrement Fernet: Clé (str b64) manquante.")
+        logger.error("Erreur déchiffrement Fernet: Clé (str b64 ou bytes) manquante.")
         return None
     try:
-        # La clé b64_encoded_key_str est une chaîne str.
-        # Fernet attend les bytes bruts de la clé (décodés de base64url).
-        if not isinstance(b64_encoded_key_str, str):
-            logger.error(f"Erreur déchiffrement Fernet: b64_encoded_key_str doit être une chaîne, reçu {type(b64_encoded_key_str)}.")
+        # Fernet attend la clé encodée en base64url, mais sous forme de bytes.
+        if isinstance(b64_encoded_key_str, str):
+            key_bytes = b64_encoded_key_str.encode('utf-8')
+        elif isinstance(b64_encoded_key_str, bytes):
+            key_bytes = b64_encoded_key_str
+        else:
+            logger.error(f"Erreur déchiffrement Fernet: Type de clé inattendu {type(b64_encoded_key_str)}.")
             return None
-
-        key_bytes_for_fernet = base64.urlsafe_b64decode(b64_encoded_key_str.encode('utf-8'))
-        f = Fernet(key_bytes_for_fernet)
+        f = Fernet(key_bytes)
         return f.decrypt(encrypted_data)
     except (InvalidToken, InvalidSignature) as e:
         logger.error(f"Erreur déchiffrement Fernet (InvalidToken/Signature): {e}")
@@ -197,13 +199,13 @@ if __name__ == '__main__':
         logger.info(f"Clé dérivée (b64) pour tests Fernet: {derived_b64_key}")
         try:
             # La clé Fernet doit être les bytes décodés de la clé b64
-            actual_fernet_key = base64.urlsafe_b64decode(derived_b64_key.encode('utf-8'))
-            logger.info(f"Clé Fernet actuelle (bytes) pour tests: {actual_fernet_key}")
+            # actual_fernet_key = base64.urlsafe_b64decode(derived_b64_key.encode('utf-8')) # Plus nécessaire avec la version corrigée
+            # logger.info(f"Clé Fernet actuelle (bytes) pour tests: {actual_fernet_key}")
 
-            encrypted = encrypt_data_with_fernet(test_data, actual_fernet_key)
+            encrypted = encrypt_data_with_fernet(test_data, derived_b64_key)
             if encrypted:
                 logger.info(f"Données chiffrées: {encrypted}")
-                decrypted = decrypt_data_with_fernet(encrypted, actual_fernet_key)
+                decrypted = decrypt_data_with_fernet(encrypted, derived_b64_key)
                 if decrypted:
                     logger.info(f"Données déchiffrées: {decrypted.decode('utf-8', 'ignore')}")
                     if decrypted == test_data:
@@ -222,15 +224,15 @@ if __name__ == '__main__':
     logger.info("\n--- Test déchiffrement Fernet avec mauvaise clé ---")
     if derived_b64_key:
         try:
-            actual_fernet_key = base64.urlsafe_b64decode(derived_b64_key.encode('utf-8'))
-            encrypted = encrypt_data_with_fernet(test_data, actual_fernet_key) # Chiffrer avec la bonne clé
+            # actual_fernet_key = base64.urlsafe_b64decode(derived_b64_key.encode('utf-8')) # Plus nécessaire
+            encrypted = encrypt_data_with_fernet(test_data, derived_b64_key) # Chiffrer avec la bonne clé
             
             # Créer une mauvaise clé Fernet (différente de l'originale)
             bad_b64_key = derive_encryption_key("mauvaisePhraseSecrete")
             if bad_b64_key and bad_b64_key != derived_b64_key:
-                bad_fernet_key = base64.urlsafe_b64decode(bad_b64_key.encode('utf-8'))
+                # bad_fernet_key = base64.urlsafe_b64decode(bad_b64_key.encode('utf-8')) # Plus nécessaire
                 logger.info("Tentative de déchiffrement avec une mauvaise clé Fernet...")
-                decrypted_with_bad_key = decrypt_data_with_fernet(encrypted, bad_fernet_key)
+                decrypted_with_bad_key = decrypt_data_with_fernet(encrypted, bad_b64_key)
                 if decrypted_with_bad_key is None:
                     logger.info("✅ Échec du déchiffrement avec mauvaise clé, comme attendu (InvalidToken/Signature).")
                 else:

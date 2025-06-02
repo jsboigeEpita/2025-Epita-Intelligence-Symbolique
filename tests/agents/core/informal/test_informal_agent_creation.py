@@ -5,7 +5,8 @@
 Tests unitaires pour la création et l'initialisation des agents informels.
 """
 
-import unittest
+# import unittest # Supprimé
+import pytest # Ajouté
 from unittest.mock import MagicMock, patch
 import logging
 
@@ -96,6 +97,4 @@ class TestInformalAgentCreationAndInfo(unittest.TestCase): # Renommé pour refl�
         self.assertIsInstance(info["capabilities"], dict)
         self.assertIn("identify_arguments", info["capabilities"]) # Vérifier une capacité spécifique
 
-
-if __name__ == "__main__":
-    unittest.main()
+# Les lignes commentées if __name__ == "__main__": et unittest.main() sont omises.

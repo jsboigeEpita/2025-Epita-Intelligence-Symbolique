@@ -90,6 +90,16 @@ class InformalAnalysisPlugin:
             # Préparation du DataFrame
             if 'PK' in df.columns:
                 df.set_index('PK', inplace=True)
+                # S'assurer que l'index est de type entier, surtout pour les tests avec use_real_numpy
+                if not pd.api.types.is_integer_dtype(df.index):
+                    try:
+                        # Tenter de convertir l'index en entier.
+                        # Si l'index contient des valeurs non convertibles (ex: NaN, chaînes non numériques),
+                        # cela pourrait échouer ou changer les valeurs. Pour le CSV de test, cela devrait être sûr.
+                        df.index = pd.to_numeric(df.index, errors='coerce').fillna(0).astype(int)
+                        self._logger.info("Index de la taxonomie converti en type entier après set_index.")
+                    except Exception as e_astype:
+                        self._logger.warning(f"Impossible de convertir l'index de la taxonomie en entier après set_index: {e_astype}")
             
             return df
         except Exception as e:
@@ -406,7 +416,7 @@ def setup_informal_kernel(kernel: sk.Kernel, llm_service):
 
     if plugin_name in kernel.plugins:
         logger.warning(f"Plugin '{plugin_name}' déjà présent. Remplacement.")
-    kernel.add_plugin(informal_plugin_instance, plugin_name=plugin_name)
+    kernel.add_plugin(informal_plugin_instance, plugin_name)
     logger.debug(f"Instance du plugin '{plugin_name}' ajoutée/mise à jour dans le kernel.")
 
     default_settings = None
