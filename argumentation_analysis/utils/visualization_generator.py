@@ -199,24 +199,25 @@ def generate_performance_visualizations(
     # Supprimer les colonnes qui seraient entièrement NaN (si une métrique n'existe pour aucun agent ou n'a pu être convertie)
     df = df.dropna(axis=1, how='all')
     
-    # À ce stade, toutes les colonnes restantes devraient être de type float et contenir des NaN ou des valeurs.
     if not df.empty:
-        # Itérer sur les colonnes pour s'assurer que fillna(0) est appliqué sur des Series numériques
-        for col in df.columns:
-            if not pd.api.types.is_numeric_dtype(df[col]):
-                df[col] = pd.to_numeric(df[col], errors='coerce')
-            
-            # Forcer le type en float64 avant fillna, au cas où la colonne serait de type object avec des NaN
-            try:
-                df[col] = df[col].astype(float)
-            except ValueError:
-                logger.warning(f"Impossible de convertir la colonne '{col}' en float avant fillna. Elle sera remplie avec 0 si possible, sinon les erreurs persisteront.")
-            
-            df[col] = df[col].fillna(0)
-    # else: df reste un DataFrame vide (potentiellement avec juste l'index)
+        # Tenter de convertir toutes les colonnes en numérique.
+        for col in list(df.columns): # Utiliser list() pour itérer sur une copie si on modifie df.columns
+            df[col] = pd.to_numeric(df[col], errors='coerce')
 
+        # Ne garder que les colonnes qui sont effectivement devenues numériques.
+        # Si aucune colonne n'est numérique, df deviendra un DataFrame vide (avec index s'il existait).
+        numeric_cols = df.select_dtypes(include=np.number).columns
+        df = df[numeric_cols]
+
+        # Maintenant, df ne contient que des colonnes numériques (ou est vide).
+        # On peut appliquer fillna(0) sans risque si df n'est pas vide.
+        if not df.empty:
+           df = df.fillna(0)
+        # Si df est devenu vide après la sélection des colonnes numériques, il le reste.
+    # else: df était déjà vide ou est devenu vide après dropna.
+    # À ce stade, df est soit vide, soit contient uniquement des colonnes numériques avec les NaN remplacés par 0.
     if not df.empty:
-        # S'assurer que toutes les colonnes sont bien numériques pour la normalisation.
+        # df ne contient maintenant que des colonnes numériques avec les NaN remplacés par 0.
         df_min = df.min()
         df_max = df.max()
         range_val = df_max - df_min

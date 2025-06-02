@@ -80,7 +80,29 @@ if (-not [string]::IsNullOrEmpty($CommandToRun)) {
     # Utilisation de 'conda run' pour exécuter la commande dans l'environnement spécifié.
     # Les variables d'environnement définies ci-dessus dans la session PowerShell actuelle
     # devraient être héritées par le processus lancé par 'conda run'.
-    $condaRunCommand = "conda run -n $condaEnvName --no-capture-output --live-stream $CommandToRun"
+    
+    $FullCommandToExecute = $CommandToRun
+    if ($args.Count -gt 0) {
+        # Si le script est sourcé (. .\script.ps1 cmd arg1 arg2), $CommandToRun prend 'cmd'
+        # et $args contient (arg1, arg2). Il faut les combiner.
+        $EscapedArgs = $args | ForEach-Object {
+            if ($_ -match "\s" -or $_ -match "'" -or $_ -match '"') {
+                # Échapper les guillemets simples et entourer de guillemets simples
+                # Ceci est une tentative basique, des cas plus complexes d'échappement peuvent exister.
+                "'$($_ -replace "'", "''")'"
+            } elseif ($_.StartsWith("-") -and $_.Contains("=")) {
+                # Pour les arguments comme --param=valeur, s'assurer qu'ils sont bien passés
+                $parts = $_.Split("=", 2)
+                "$($parts[0])=$($parts[1])" # Pas besoin de guillemets si pas d'espaces
+            }
+            else {
+                $_
+            }
+        }
+        $FullCommandToExecute = "$CommandToRun $($EscapedArgs -join ' ')"
+    }
+
+    $condaRunCommand = "conda run -n $condaEnvName --no-capture-output --live-stream $FullCommandToExecute"
     Write-Host "Exécution via: $condaRunCommand"
     
     try {
