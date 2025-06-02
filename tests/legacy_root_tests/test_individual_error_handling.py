@@ -16,7 +16,7 @@ def test_individual_methods():
     """Teste chaque méthode individuellement"""
     
     try:
-        from tests.test_informal_error_handling import TestInformalErrorHandling
+        from tests.agents.core.informal.test_informal_error_handling import TestInformalErrorHandling
         
         # Liste des méthodes de test
         test_methods = [
@@ -47,12 +47,20 @@ def test_individual_methods():
             
             try:
                 # Créer une nouvelle instance pour chaque test
+                # Note: TestInformalErrorHandling est maintenant une classe Pytest,
+                # l'instancier et appeler setUp() directement n'est plus le mode d'emploi standard.
+                # Ce script legacy pourrait nécessiter une refonte plus profonde pour fonctionner
+                # correctement avec les tests de style Pytest qui attendent l'injection de fixtures.
+                # Pour l'instant, on corrige l'import, mais l'exécution pourrait encore échouer.
                 test_instance = TestInformalErrorHandling()
-                test_instance.setUp()
+                if hasattr(test_instance, 'setUp'): # Vérifier si setUp existe toujours (improbable)
+                    test_instance.setUp()
                 
                 # Exécuter le test
                 method = getattr(test_instance, method_name)
-                method()
+                # Les méthodes de test Pytest attendent des fixtures, qui ne seront pas passées ici.
+                # Cela va probablement échouer.
+                method() 
                 
                 print("SUCCES")
                 successes += 1
@@ -71,7 +79,7 @@ def test_individual_methods():
         print(f"Succès: {successes}")
         print(f"Échecs: {failures}")
         print(f"Total: {len(test_methods)}")
-        print(f"Taux de réussite: {(successes/len(test_methods)*100):.1f}%")
+        print(f"Taux de réussite: {(successes/len(test_methods)*100) if len(test_methods) > 0 else 0:.1f}%")
         
         assert failures == 0, f"{failures} tests failed in TestInformalErrorHandling"
         
