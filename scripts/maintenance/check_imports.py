@@ -15,10 +15,10 @@ logging.basicConfig(
 )
 
 # Ajouter le répertoire parent au PYTHONPATH
-parent_dir = Path(__file__).parent.parent
+parent_dir = Path(__file__).resolve().parent.parent.parent # MODIFIÉ: Remonter à la racine du projet
 if str(parent_dir) not in sys.path:
     sys.path.append(str(parent_dir))
-    logging.info(f"Répertoire parent ajouté au PYTHONPATH: {parent_dir}")
+    logging.info(f"Répertoire racine du projet ajouté au PYTHONPATH: {parent_dir}")
 
 # Liste des modules à vérifier
 modules_to_check = [

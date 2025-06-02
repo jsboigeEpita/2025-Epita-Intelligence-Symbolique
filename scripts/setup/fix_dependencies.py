@@ -13,6 +13,11 @@ import argparse
 import logging # Gardé pour le logger du script principal si nécessaire
 from pathlib import Path
 
+# Ajout du répertoire racine du projet au chemin pour permettre l'import des modules
+project_root_path = Path(__file__).resolve().parent.parent.parent
+if str(project_root_path) not in sys.path:
+    sys.path.insert(0, str(project_root_path))
+
 # Importation de la nouvelle fonction de pipeline
 from project_core.pipelines.dependency_management_pipeline import run_dependency_installation_pipeline
 # setup_logging est maintenant appelé à l'intérieur du pipeline, mais on garde un logger local pour ce script.

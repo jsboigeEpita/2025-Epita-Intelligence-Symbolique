@@ -19,7 +19,7 @@ from pathlib import Path
 # Assurer que le répertoire racine du projet est dans sys.path
 # pour permettre les imports relatifs (ex: from argumentation_analysis.ui import utils)
 SCRIPT_DIR = Path(__file__).resolve().parent
-PROJECT_ROOT = SCRIPT_DIR.parent
+PROJECT_ROOT = SCRIPT_DIR.parent.parent # MODIFIÉ: Remonter à la racine du projet
 sys.path.insert(0, str(PROJECT_ROOT))
 
 try:

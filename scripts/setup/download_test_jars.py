@@ -11,9 +11,9 @@ import argparse
 import logging
 
 # Ajouter le répertoire parent au PYTHONPATH (si nécessaire, bien que non utilisé directement ici après refactor)
-# project_root = Path(__file__).resolve().parent.parent.parent
-# if str(project_root) not in sys.path:
-#     sys.path.insert(0, str(project_root))
+project_root = Path(__file__).resolve().parent.parent.parent # MODIFIÉ: Décommenté et activé
+if str(project_root) not in sys.path: # MODIFIÉ: Décommenté et activé
+    sys.path.insert(0, str(project_root)) # MODIFIÉ: Décommenté et activé
 
 try:
     # project_core.utils.network_utils.download_file n'est plus directement utilisé ici.
