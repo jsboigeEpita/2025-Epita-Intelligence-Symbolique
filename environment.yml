@@ -1,24 +1,43 @@
 name: projet-is
 channels:
+  - pytorch # Pour PyTorch
   - conda-forge
   - defaults
 dependencies:
   - python=3.10
-  - clingo
-  - jpype1
-  - flask
-  - matplotlib
-  - networkx==3.4.2
-  - pydantic>=2.0,<2.10
+  # Core ML/Data Science
+  - numpy<2.0 # Contrainte cruciale
   - pandas
-  - numpy<2.0 # Éviter NumPy 2.x pour compatibilité avec numpy.rec via pandas
   - scipy
   - scikit-learn
-  - python-dotenv
+  - nltk
+  - spacy
+  - pytorch # Ou torch, selon la dispo sur les canaux
+  - transformers
+  # Web & API
+  - flask
+  - requests
+  # Utilities
+  - pydantic>=2.0,<2.10
+  - python-dotenv # s'importe comme dotenv
+  - cryptography
+  - tqdm
+  # Plotting & Graphing
+  - matplotlib
+  - seaborn
+  - networkx==3.4.2
+  # Java Bridge
+  - jpype1
+  # Logic & Reasoning
+  - clingo
+  # Testing - conda gère mieux pytest et coverage directement
+  - pytest
+  - pytest-cov # Alternative/complément à coverage, souvent préféré
+  - pytest-mock
+  - pytest-asyncio
+  - coverage # Peut être redondant avec pytest-cov mais ne nuit pas
+  # Pip pour les paquets spécifiques ou non disponibles sur conda-forge facilement
   - pip
   - pip:
-    - Flask-CORS
-    - semantic-kernel==1.29.0
-    - pytest-mock
-    - pytest-asyncio
-    - coverage
+    - Flask-CORS # Spécifique, souvent via pip
+    - semantic-kernel==1.29.0 # Version spécifique
