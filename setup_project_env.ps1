@@ -506,16 +506,30 @@ Write-Host "--------------------------------------------------------------------
 Write-Host "Installation et configuration de l'environnement Conda '$condaEnvName' terminées!"
 Write-Host "---------------------------------------------------------------------"
 Write-Host ""
-Write-Host "Appel du script d'activation (activate_project_env.ps1) pour charger les variables d'environnement"
-Write-Host "et afficher les instructions d'utilisation..."
+Write-Host "Appel du script d'activation (activate_project_env.ps1) pour exécuter 'pip install -e .' dans l'environnement..."
 Write-Host ""
 
-. (Join-Path $PSScriptRoot "activate_project_env.ps1")
+# Exécute pip install -e . dans l'environnement Conda via activate_project_env.ps1
+$pipInstallCommand = "pip install -e ."
+$activateScriptPath = Join-Path $PSScriptRoot "activate_project_env.ps1"
+try {
+    Write-Host "Exécution de: powershell -File $activateScriptPath -CommandToRun '$pipInstallCommand'"
+    # Utiliser powershell -File pour s'assurer que le script est exécuté dans un nouveau scope
+    # et que -CommandToRun est bien passé.
+    powershell -File $activateScriptPath -CommandToRun $pipInstallCommand
+    if ($LASTEXITCODE -ne 0) {
+        Write-Error "L'exécution de '$pipInstallCommand' via activate_project_env.ps1 a échoué avec le code $LASTEXITCODE."
+    } else {
+        Write-Host "'$pipInstallCommand' exécuté avec succès via activate_project_env.ps1."
+    }
+} catch {
+    Write-Error "Une exception s'est produite lors de l'appel à activate_project_env.ps1 pour '$pipInstallCommand': $($_.Exception.Message)"
+}
 
 Write-Host ""
 Write-Host "Fin du script setup_project_env.ps1."
-Write-Host "Si activate_project_env.ps1 n'a pas exécuté de commande spécifique,"
-Write-Host "vous devrez peut-être activer l'environnement manuellement dans votre session actuelle :"
+Write-Host "L'environnement '$condaEnvName' devrait être configuré et le projet installé en mode édition."
+Write-Host "Pour utiliser l'environnement, activez-le dans un nouveau terminal :"
 Write-Host "    conda activate $condaEnvName"
-Write-Host "Ou utiliser activate_project_env.ps1 avec le paramètre -CommandToRun."
+Write-Host "Ou utilisez directement activate_project_env.ps1 avec le paramètre -CommandToRun pour vos commandes."
 Write-Host "---------------------------------------------------------------------"
