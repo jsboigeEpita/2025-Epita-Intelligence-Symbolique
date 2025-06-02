@@ -11,7 +11,6 @@ Ce répertoire contient les tests d'intégration du projet. Ces tests vérifient
 ## Fichiers de Test Notables
 
 *   [`test_agents_tools_integration.py`](test_agents_tools_integration.py:1): Teste l'intégration entre les agents (par exemple, `InformalAgent`) et leurs outils d'analyse (détecteurs de sophismes, analyseurs contextuels, etc.).
-*   [`test_informal_analysis_integration.py`](test_informal_analysis_integration.py:1): (À compléter en fonction du contenu de ce fichier)
 *   [`test_logic_agents_integration.py`](test_logic_agents_integration.py:1): (À compléter en fonction du contenu de ce fichier)
 *   [`test_logic_api_integration.py`](test_logic_api_integration.py:1): (À compléter en fonction du contenu de ce fichier)
 *   [`test_notebooks_execution.py`](test_notebooks_execution.py:1): (À compléter en fonction du contenu de ce fichier)
