@@ -64,7 +64,10 @@ def verify_extract(source_info: Dict[str, Any], extract_info: Dict[str, Any]) ->
             logger.warning(f"Extrait '{extract_name}' valide mais très court ({len(extracted_text)} caractères).")
             result_details["status"] = "warning"
             result_details["message"] = f"Extrait valide mais très court ({len(extracted_text)} caractères)."
-        elif template_start and "{0}" in template_start and start_marker and not start_marker.startswith(template_start.replace("{0}", "")):
+        template_prefix = template_start.replace("{0}", "")
+        if template_start and "{0}" in template_start and start_marker and template_prefix and \
+           len(template_prefix) > 0 and start_marker.startswith(template_prefix[1:]) and \
+           not start_marker.startswith(template_prefix):
             logger.warning(f"Extrait '{extract_name}' valide mais avec un marqueur de début potentiellement corrompu.")
             result_details["status"] = "warning"
             result_details["message"] = "Extrait valide mais avec un marqueur de début potentiellement corrompu (première lettre manquante)."
