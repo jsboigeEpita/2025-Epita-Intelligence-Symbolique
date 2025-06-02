@@ -105,48 +105,48 @@ def load_extract_sources(config_path: Path) -> list:
 # Tentative de chargement des sources depuis le fichier chiffré
 EXTRACT_SOURCES = DEFAULT_EXTRACT_SOURCES
 
-# Si la clé de chiffrement est disponible, essayer de charger depuis le fichier chiffré
-if ENCRYPTION_KEY and CONFIG_FILE_ENC.exists():
-    try:
-        config_logger.info(f"Tentative de chargement depuis le fichier chiffré {CONFIG_FILE_ENC.name}...")
-        # Import local pour éviter l'import circulaire
-        from .file_operations import load_extract_definitions
-        # load_extract_definitions de file_operations n'a pas besoin d'app_config pour le chargement simple
-        loaded_sources = load_extract_definitions(CONFIG_FILE_ENC, ENCRYPTION_KEY)
-        if loaded_sources:
-            EXTRACT_SOURCES = loaded_sources
-            config_logger.info(f"✅ Définitions chargées depuis le fichier chiffré {CONFIG_FILE_ENC.name}.")
-        else:
-            config_logger.warning(f"⚠️ Échec du chargement depuis le fichier chiffré. Utilisation des définitions par défaut.")
-    except Exception as e:
-        config_logger.error(f"❌ Erreur lors du chargement du fichier chiffré: {e}", exc_info=True)
-elif CONFIG_FILE_JSON.exists() and ENCRYPTION_KEY:
-    # Migration: si le fichier JSON existe mais pas le fichier chiffré, créer le fichier chiffré
-    try:
-        from .file_operations import save_extract_definitions # MODIFIÉ
-        config_logger.info(f"Migration: création du fichier chiffré à partir de {CONFIG_FILE_JSON.name}...")
-        json_sources = load_extract_sources(CONFIG_FILE_JSON)
-        # save_extract_definitions de file_operations attend encryption_key et config_file
-        # et le paramètre 'config' (app_config) est optionnel si embed_full_text=False
-        success = save_extract_definitions(
-            extract_definitions=json_sources,
-            config_file=CONFIG_FILE_ENC,
-            encryption_key=ENCRYPTION_KEY,
-            embed_full_text=False # Pour la migration initiale, ne pas essayer de fetch
-        )
-        if success:
-            config_logger.info(f"✅ Fichier chiffré {CONFIG_FILE_ENC.name} créé avec succès à partir de {CONFIG_FILE_JSON.name}.")
-            EXTRACT_SOURCES = json_sources
-            # Suppression du fichier JSON après migration réussie
-            try:
-                CONFIG_FILE_JSON.unlink()
-                config_logger.info(f"✅ Fichier JSON {CONFIG_FILE_JSON.name} supprimé après migration.")
-            except Exception as e_unlink:
-                config_logger.warning(f"⚠️ Impossible de supprimer le fichier JSON après migration: {e_unlink}")
-        else:
-            config_logger.warning(f"⚠️ Échec de la migration vers le fichier chiffré. Utilisation des définitions par défaut.")
-    except Exception as e:
-        config_logger.error(f"❌ Erreur lors de la migration vers le fichier chiffré: {e}", exc_info=True)
+# # Si la clé de chiffrement est disponible, essayer de charger depuis le fichier chiffré
+# if ENCRYPTION_KEY and CONFIG_FILE_ENC.exists():
+#     try:
+#         config_logger.info(f"Tentative de chargement depuis le fichier chiffré {CONFIG_FILE_ENC.name}...")
+#         # Import local pour éviter l'import circulaire
+#         from .file_operations import load_extract_definitions
+#         # load_extract_definitions de file_operations n'a pas besoin d'app_config pour le chargement simple
+#         loaded_sources = load_extract_definitions(CONFIG_FILE_ENC, ENCRYPTION_KEY)
+#         if loaded_sources:
+#             EXTRACT_SOURCES = loaded_sources
+#             config_logger.info(f"✅ Définitions chargées depuis le fichier chiffré {CONFIG_FILE_ENC.name}.")
+#         else:
+#             config_logger.warning(f"⚠️ Échec du chargement depuis le fichier chiffré. Utilisation des définitions par défaut.")
+#     except Exception as e:
+#         config_logger.error(f"❌ Erreur lors du chargement du fichier chiffré: {e}", exc_info=True)
+# elif CONFIG_FILE_JSON.exists() and ENCRYPTION_KEY:
+#     # Migration: si le fichier JSON existe mais pas le fichier chiffré, créer le fichier chiffré
+#     try:
+#         from .file_operations import save_extract_definitions # MODIFIÉ
+#         config_logger.info(f"Migration: création du fichier chiffré à partir de {CONFIG_FILE_JSON.name}...")
+#         json_sources = load_extract_sources(CONFIG_FILE_JSON)
+#         # save_extract_definitions de file_operations attend encryption_key et config_file
+#         # et le paramètre 'config' (app_config) est optionnel si embed_full_text=False
+#         success = save_extract_definitions(
+#             extract_definitions=json_sources,
+#             config_file=CONFIG_FILE_ENC,
+#             encryption_key=ENCRYPTION_KEY,
+#             embed_full_text=False # Pour la migration initiale, ne pas essayer de fetch
+#         )
+#         if success:
+#             config_logger.info(f"✅ Fichier chiffré {CONFIG_FILE_ENC.name} créé avec succès à partir de {CONFIG_FILE_JSON.name}.")
+#             EXTRACT_SOURCES = json_sources
+#             # Suppression du fichier JSON après migration réussie
+#             try:
+#                 CONFIG_FILE_JSON.unlink()
+#                 config_logger.info(f"✅ Fichier JSON {CONFIG_FILE_JSON.name} supprimé après migration.")
+#             except Exception as e_unlink:
+#                 config_logger.warning(f"⚠️ Impossible de supprimer le fichier JSON après migration: {e_unlink}")
+#         else:
+#             config_logger.warning(f"⚠️ Échec de la migration vers le fichier chiffré. Utilisation des définitions par défaut.")
+#     except Exception as e:
+#         config_logger.error(f"❌ Erreur lors de la migration vers le fichier chiffré: {e}", exc_info=True)
 
 # --- État Global (pour ce module UI) ---
 # Note: Utiliser global ici est une simplification liée à la structure UI originale.
