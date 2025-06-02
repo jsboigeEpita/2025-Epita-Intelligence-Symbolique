@@ -69,9 +69,8 @@ def temp_download_dir(tmp_path):
 
 @pytest.fixture
 def test_key():
-    # Retourne une clé encodée en base64url str, comme attendu par les fonctions crypto
-    raw_key = Fernet.generate_key()
-    return base64.urlsafe_b64encode(raw_key).decode('utf-8')
+    # Retourne une clé Fernet valide (bytes, déjà encodés en base64url)
+    return Fernet.generate_key()
 
 @pytest.fixture
 def sample_source_info_direct():
@@ -377,18 +376,18 @@ def test_save_extract_definitions_no_encryption_key(sample_definitions, config_f
     success = save_extract_definitions(sample_definitions, config_file_path, None, embed_full_text=True) # Key est None, donc b64_derived_key sera None
     assert success is False
     # Le logger utilisé par save_extract_definitions est file_ops_logger (alias de utils_logger)
-    mock_logger.error.assert_called_with("Cl\xe9 chiffrement (b64) absente. Sauvegarde annul\xe9e.") # Message mis à jour
+    mock_logger.error.assert_called_with("Clé chiffrement (b64_derived_key) absente ou vide. Sauvegarde annulée.") # Message mis à jour
 
-@patch('project_core.utils.crypto_utils.encrypt_data_with_fernet', return_value=None) # Cible corrigée
+@patch('argumentation_analysis.ui.file_operations.encrypt_data_with_fernet', return_value=None) # Cible corrigée
 def test_save_extract_definitions_encryption_fails(
-    mock_encrypt_data_with_fernet, sample_definitions, config_file_path, test_key, mock_logger, temp_download_dir # mock_encrypt renommé
+    mock_encrypt_data_with_fernet_in_file_ops, sample_definitions, config_file_path, test_key, mock_logger, temp_download_dir # mock_encrypt renommé
 ):
     mock_app_config_for_save = { 'TEMP_DOWNLOAD_DIR': temp_download_dir }
     # Utiliser la fonction importée directement depuis file_operations
     success = save_extract_definitions(
         sample_definitions, config_file_path, test_key, embed_full_text=True, config=mock_app_config_for_save
     )
-    mock_encrypt_data_with_fernet.assert_called_once() # Vérifier que le mock a été appelé
+    mock_encrypt_data_with_fernet_in_file_ops.assert_called_once() # Vérifier que le mock a été appelé
     assert success is False # Car mock_encrypt_data_with_fernet retourne None
     # encrypt_data_with_fernet loggue déjà, mais save_extract_definitions loggue aussi l'erreur globale
     # Le message exact peut varier si encrypt_data_with_fernet retourne None sans exception spécifique attrapée par save_extract_definitions
@@ -495,8 +494,8 @@ def test_load_extract_definitions_no_key(config_file_path, mock_logger): # confi
     assert error_call_found, "Le message d'erreur de décodage JSON attendu n'a pas été loggué."
 
 # Patches pour les dépendances de load_extract_definitions
-@patch('project_core.utils.crypto_utils.decrypt_data_with_fernet', side_effect=InvalidToken) # Cible corrigée
-def test_load_extract_definitions_decryption_fails(mock_decrypt_data_with_fernet, config_file_path, test_key, mock_logger): # mock_decrypt renommé
+@patch('argumentation_analysis.ui.file_operations.decrypt_data_with_fernet', side_effect=InvalidToken) # Cible corrigée
+def test_load_extract_definitions_decryption_fails(mock_decrypt_data_with_fernet_in_file_ops, config_file_path, test_key, mock_logger): # mock_decrypt renommé
     config_file_path.write_text("dummy encrypted data")
     # b64_key_str = test_key.decode('utf-8') # test_key est déjà une str
     with patch('argumentation_analysis.ui.file_operations.ui_config_module.EXTRACT_SOURCES', None), \
@@ -506,18 +505,20 @@ def test_load_extract_definitions_decryption_fails(mock_decrypt_data_with_fernet
         assert definitions == [{"default": True}]
 
     # Vérifier que le logger a été appelé avec un message d'erreur approprié
-    # Le message vient de load_extract_definitions après que decrypt_data_with_fernet retourne None
+    # Le message vient de load_extract_definitions quand InvalidToken est attrapée
     error_logged = False
-    expected_log_part = "Échec déchiffrement (decrypt_data_with_fernet a retourné None)"
-    for call_args in mock_logger.warning.call_args_list: # C'est un warning maintenant dans load_extract_definitions
-        if expected_log_part in call_args[0][0]:
+    # Le message exact loggué par load_extract_definitions pour InvalidToken attrapée
+    expected_log_part = f"❌ InvalidToken explicitement levée lors du déchiffrement de '{config_file_path}'"
+    for call_args_tuple in mock_logger.error.call_args_list: # C'est une erreur maintenant
+        args, kwargs = call_args_tuple
+        if args and isinstance(args[0], str) and expected_log_part in args[0] and kwargs.get('exc_info') is True:
             error_logged = True
             break
-    assert error_logged, f"Le log d'échec de déchiffrement attendu ('{expected_log_part}') n'a pas été trouvé dans les warnings."
+    assert error_logged, f"Le log d'erreur de déchiffrement attendu ('{expected_log_part}') n'a pas été trouvé dans les erreurs. Logs: {mock_logger.error.call_args_list}"
 
 @patch('argumentation_analysis.ui.file_operations.gzip.decompress', side_effect=gzip.BadGzipFile("Test BadGzipFile"))
-@patch('project_core.utils.crypto_utils.decrypt_data_with_fernet', return_value=b"decrypted_gzipped_content") # Cible corrigée, valeur de retour modifiée pour être plus réaliste
-def test_load_extract_definitions_decompression_fails(mock_decrypt_data_with_fernet_func, mock_decompress, config_file_path, test_key, mock_logger): # mock_decrypt_data_with_fernet renommé
+@patch('argumentation_analysis.ui.file_operations.decrypt_data_with_fernet', return_value=b"decrypted_gzipped_content") # Cible corrigée, valeur de retour modifiée pour être plus réaliste
+def test_load_extract_definitions_decompression_fails(mock_decrypt_data_with_fernet_in_file_ops, mock_decompress, config_file_path, test_key, mock_logger): # mock_decrypt_data_with_fernet renommé
     config_file_path.write_text("dummy encrypted data")
     # b64_key_str = test_key.decode('utf-8') # test_key est déjà une str
     expected_default_defs = [{"default_decomp_fail": True}]
@@ -536,13 +537,13 @@ def test_load_extract_definitions_decompression_fails(mock_decrypt_data_with_fer
             break
     assert error_logged, f"L'erreur de décompression attendue n'a pas été logguée correctement. Logs: {mock_logger.error.call_args_list}"
 
-@patch('project_core.utils.crypto_utils.decrypt_data_with_fernet') # Cible corrigée
-def test_load_extract_definitions_invalid_json(mock_decrypt_data_with_fernet, config_file_path, test_key, mock_logger): # mock_decrypt renommé
+@patch('argumentation_analysis.ui.file_operations.decrypt_data_with_fernet') # Cible corrigée
+def test_load_extract_definitions_invalid_json(mock_decrypt_data_with_fernet_in_file_ops, config_file_path, test_key, mock_logger): # mock_decrypt renommé
     config_file_path.write_text("dummy encrypted data")
     # b64_key_str = test_key.decode('utf-8') # test_key est déjà une str
     invalid_json_bytes = b"this is not json"
     compressed_invalid_json = gzip.compress(invalid_json_bytes)
-    mock_decrypt_data_with_fernet.return_value = compressed_invalid_json # decrypt_data retourne les données compressées invalides
+    mock_decrypt_data_with_fernet_in_file_ops.return_value = compressed_invalid_json # decrypt_data retourne les données compressées invalides
     
     expected_default_defs = [{"default_invalid_json": True}]
     with patch('argumentation_analysis.ui.file_operations.ui_config_module.EXTRACT_SOURCES', None), \
@@ -560,14 +561,14 @@ def test_load_extract_definitions_invalid_json(mock_decrypt_data_with_fernet, co
             break
     assert error_logged, f"L'erreur de décodage JSON attendue n'a pas été logguée correctement. Logs: {mock_logger.error.call_args_list}"
 
-@patch('project_core.utils.crypto_utils.decrypt_data_with_fernet') # Cible corrigée
-def test_load_extract_definitions_invalid_format(mock_decrypt_data_with_fernet, config_file_path, test_key, mock_logger): # mock_decrypt renommé
+@patch('argumentation_analysis.ui.file_operations.decrypt_data_with_fernet') # Cible corrigée
+def test_load_extract_definitions_invalid_format(mock_decrypt_data_with_fernet_in_file_ops, config_file_path, test_key, mock_logger): # mock_decrypt renommé
     config_file_path.write_text("dummy encrypted data")
     # b64_key_str = test_key.decode('utf-8') # test_key est déjà une str
     invalid_format_data = {"not_a_list": "data"}
     json_bytes = json.dumps(invalid_format_data).encode('utf-8')
     compressed_data = gzip.compress(json_bytes)
-    mock_decrypt_data_with_fernet.return_value = compressed_data
+    mock_decrypt_data_with_fernet_in_file_ops.return_value = compressed_data
 
     expected_default_defs = [{"default_invalid_format": True}]
     with patch('argumentation_analysis.ui.file_operations.ui_config_module.EXTRACT_SOURCES', None), \
