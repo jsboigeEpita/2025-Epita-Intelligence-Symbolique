@@ -96,12 +96,17 @@ def count_fallacies_in_results(results: List[Dict[str, Any]]) -> Dict[str, Dict[
     
     for result in results:
         extract_name = result.get("extract_name", "Inconnu_" + str(datetime.now().timestamp()))
-        current_extract_counts: Dict[str, int] = {}
+        # Initialiser avec toutes les clés attendues pour assurer une structure cohérente
+        current_extract_counts: Dict[str, int] = {
+            "base_contextual": 0,
+            "advanced_complex": 0,
+            "advanced_contextual": 0
+        }
         
         analyses_data = result.get("analyses", {})
         if not isinstance(analyses_data, dict):
-            logger.debug(f"Aucune donnée d'analyse (ou format incorrect) pour '{extract_name}' lors du comptage des sophismes.")
-            fallacy_counts[extract_name] = current_extract_counts # Vide mais existant
+            logger.debug(f"Aucune donnée d'analyse (ou format incorrect) pour '{extract_name}' lors du comptage des sophismes. Utilisation des valeurs par défaut (0).")
+            fallacy_counts[extract_name] = current_extract_counts # Contient maintenant les clés avec 0
             continue
 
         # Analyse de base - sophismes contextuels
@@ -157,11 +162,11 @@ def extract_confidence_scores_from_results(results: List[Dict[str, Any]]) -> Dic
     for result in results:
         extract_name = result.get("extract_name", "Inconnu_" + str(datetime.now().timestamp()))
         current_extract_scores: Dict[str, float] = {}
-        analyses_data = result.get("analyses", {})
+        analyses_data = result.get("analyses") # Peut être None
 
-        if not isinstance(analyses_data, dict):
-            logger.debug(f"Aucune donnée d'analyse (ou format incorrect) pour '{extract_name}' lors de l'extraction des scores de confiance.")
-            confidence_scores[extract_name] = current_extract_scores
+        if analyses_data is None or not isinstance(analyses_data, dict):
+            logger.debug(f"Clé 'analyses' absente ou format incorrect pour '{extract_name}' lors de l'extraction des scores de confiance. Retour d'un dict vide.")
+            confidence_scores[extract_name] = {}
             continue
 
         # Analyse de base - cohérence argumentative
@@ -224,11 +229,11 @@ def analyze_contextual_richness_from_results(results: List[Dict[str, Any]]) -> D
     for result in results:
         extract_name = result.get("extract_name", "Inconnu_" + str(datetime.now().timestamp()))
         current_extract_scores: Dict[str, float] = {}
-        analyses_data = result.get("analyses", {})
+        analyses_data = result.get("analyses")
 
-        if not isinstance(analyses_data, dict):
-            logger.debug(f"Aucune donnée d'analyse pour '{extract_name}' lors de l'analyse de richesse contextuelle.")
-            richness_scores[extract_name] = current_extract_scores
+        if analyses_data is None or not isinstance(analyses_data, dict):
+            logger.debug(f"Clé 'analyses' absente ou format incorrect pour '{extract_name}' lors de l'analyse de richesse contextuelle. Retour d'un dict vide.")
+            richness_scores[extract_name] = {}
             continue
 
         # Analyse de base - facteurs contextuels
@@ -286,12 +291,12 @@ def evaluate_coherence_relevance_from_results(results: List[Dict[str, Any]]) -> 
     
     for result in results:
         extract_name = result.get("extract_name", "Inconnu_" + str(datetime.now().timestamp()))
-        current_extract_scores: Dict[str, float] = {}
-        analyses_data = result.get("analyses", {})
+        current_extract_scores: Dict[str, float] = {} # Nom original était current_extract_relevance
+        analyses_data = result.get("analyses")
 
-        if not isinstance(analyses_data, dict):
-            logger.debug(f"Aucune donnée d'analyse pour '{extract_name}' lors de l'évaluation de la pertinence de cohérence.")
-            relevance_scores[extract_name] = current_extract_scores
+        if analyses_data is None or not isinstance(analyses_data, dict):
+            logger.debug(f"Clé 'analyses' absente ou format incorrect pour '{extract_name}' lors de l'évaluation de pertinence/cohérence. Retour d'un dict vide.")
+            relevance_scores[extract_name] = {}
             continue
 
         # Analyse de base - cohérence argumentative

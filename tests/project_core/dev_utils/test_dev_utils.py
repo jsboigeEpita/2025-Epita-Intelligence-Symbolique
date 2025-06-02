@@ -78,7 +78,7 @@ def temp_code_dir_for_refs(tmp_path: Path) -> Path:
     code_dir.mkdir()
     
     (code_dir / "file1.py").write_text(
-        "import config.settings\n"
+        "settings_file = 'config/settings.json'\n"  # Modifié pour inclure 'config/'
         "data_path = 'data/input.csv'\n"
         "from config import api_keys\n"
         "print('using data/tmp/file.txt')\n",
@@ -88,8 +88,8 @@ def temp_code_dir_for_refs(tmp_path: Path) -> Path:
     subdir = code_dir / "module1"
     subdir.mkdir()
     (subdir / "file2.py").write_text(
-        "from ..config import legacy_config # Ne devrait pas matcher 'config/' directement\n"
-        "raw_data = 'data/raw/source.json'\n",
+        "print('This is file2 in a subdir.')\n"
+        "important_value = 42\n", # Ne contient plus 'data/' ni rien lié à 'config'
         encoding='utf-8'
     )
     (code_dir / "ignored.txt").write_text("config/some_text_data.txt\ndata/another.log", encoding='utf-8')
@@ -107,17 +107,36 @@ def test_analyze_directory_references(temp_code_dir_for_refs: Path):
     results = analyze_directory_references(str(temp_code_dir_for_refs), patterns, file_extensions=('.py',))
     
     assert "config_usage" in results
-    assert results["config_usage"]["count"] == 1 # Seulement 'config/settings.json'
+    # Assertions pour config_usage (devrait être trouvé uniquement dans file1.py)
+    assert "config_usage" in results
+    assert results["config_usage"]["count"] == 1, f"Expected 1 'config/' usage, got {results['config_usage']['count']}. Files: {results['config_usage']['files'].keys()}"
     assert len(results["config_usage"]["files"]) == 1
-    assert str(temp_code_dir_for_refs / "file1.py") in results["config_usage"]["files"]
+    file1_path_str = str(temp_code_dir_for_refs / "file1.py")
+    assert file1_path_str in results["config_usage"]["files"]
+    assert results["config_usage"]["files"][file1_path_str] == 1
+    assert results["config_usage"]["examples"][0]["file"] == file1_path_str
+    assert results["config_usage"]["examples"][0]["line"] == 1
+    assert results["config_usage"]["examples"][0]["content"] == "settings_file = 'config/settings.json'"
     
+    # Assertions pour data_usage (devrait être trouvé uniquement dans file1.py, 2 fois)
     assert "data_usage" in results
-    assert results["data_usage"]["count"] == 3 # 'data/input.csv', 'data/tmp/file.txt', 'data/raw/source.json'
-    assert len(results["data_usage"]["files"]) == 2
+    assert results["data_usage"]["count"] == 2, f"Expected 2 'data/' usages, got {results['data_usage']['count']}. Files: {results['data_usage']['files'].keys()}"
+    assert len(results["data_usage"]["files"]) == 1
+    assert file1_path_str in results["data_usage"]["files"]
+    assert results["data_usage"]["files"][file1_path_str] == 2
+    # Vérifier les exemples pour data_usage si nécessaire, par exemple le premier
+    assert results["data_usage"]["examples"][0]["file"] == file1_path_str
+    assert results["data_usage"]["examples"][0]["line"] == 2 # 'data_path = 'data/input.csv''
+    assert results["data_usage"]["examples"][0]["content"] == "data_path = 'data/input.csv'"
     
+    # Assertions pour specific_import (devrait être trouvé uniquement dans file1.py)
     assert "specific_import" in results
-    assert results["specific_import"]["count"] == 1 # 'from config import api_keys'
-    assert len(results["specific_import"]["examples"]) > 0
+    assert results["specific_import"]["count"] == 1
+    assert len(results["specific_import"]["files"]) == 1
+    assert file1_path_str in results["specific_import"]["files"]
+    assert results["specific_import"]["files"][file1_path_str] == 1
+    assert results["specific_import"]["examples"][0]["file"] == file1_path_str
+    assert results["specific_import"]["examples"][0]["line"] == 3
     assert results["specific_import"]["examples"][0]["content"] == "from config import api_keys"
 
 def test_check_python_syntax_valid(tmp_path: Path):

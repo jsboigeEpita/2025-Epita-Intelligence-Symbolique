@@ -24,7 +24,7 @@ def sample_base_results_for_metrics() -> List[Dict[str, Any]]:
         {
             "source_name": "S1", "extract_name": "E1", "timestamp": "2023-01-01T10:00:00",
             "analyses": {
-                "contextual_fallacies": {"argument_results": [{"detected_fallacies": [{"type": "F1"}, {"type": "F2"}]}], "contextual_factors": {"cf1":1, "cf2":2}, "analysis_timestamp": "2023-01-01T10:00:10"},
+                "contextual_fallacies": {"argument_results": [{"detected_fallacies": [{"fallacy_type": "F1"}, {"fallacy_type": "F2"}]}], "contextual_factors": {"cf1":1, "cf2":2}, "analysis_timestamp": "2023-01-01T10:00:10"},
                 "argument_coherence": {"overall_coherence": {"score": 0.8}, "recommendations": ["r1"], "coherence_evaluations": {"e1":{}}, "analysis_timestamp": "2023-01-01T10:00:05"},
                 "semantic_analysis": {"analysis_timestamp": "2023-01-01T10:00:03"}
             }
@@ -46,6 +46,7 @@ def sample_advanced_results_for_metrics() -> List[Dict[str, Any]]:
         }
     ]
 
+@pytest.mark.use_real_numpy
 def test_generate_performance_metrics_for_agents_structure(
     sample_base_results_for_metrics: List[Dict[str, Any]],
     sample_advanced_results_for_metrics: List[Dict[str, Any]]
@@ -68,6 +69,7 @@ def test_generate_performance_metrics_for_agents_structure(
     assert "false_positive_rate" in metrics["advanced_contextual"] 
     assert "complexity" in metrics["advanced_complex"]
 
+@pytest.mark.use_real_numpy
 def test_generate_performance_metrics_for_agents_calculations(
     sample_base_results_for_metrics: List[Dict[str, Any]],
     sample_advanced_results_for_metrics: List[Dict[str, Any]]
@@ -115,6 +117,7 @@ def test_generate_performance_metrics_for_agents_calculations(
     assert metrics["advanced_rhetorical"]["recommendation_relevance"] == 2.0
     assert "relevance" not in metrics["advanced_rhetorical"] or metrics["advanced_rhetorical"]["relevance"] == 0.0
 
+@pytest.mark.use_real_numpy
 def test_generate_performance_metrics_empty_inputs():
     """Teste avec des listes de résultats vides."""
     metrics = generate_performance_metrics_for_agents([], [])

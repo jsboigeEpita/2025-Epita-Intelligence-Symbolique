@@ -44,8 +44,9 @@ def generate_performance_metrics_for_agents(
                                      Valeur: valeur de la métrique.
     """
     metrics: Dict[str, Dict[str, Any]] = {
-        "base_contextual": {}, "base_coherence": {}, "base_semantic": {}, 
-        "advanced_contextual": {}, "advanced_complex": {}, "advanced_severity": {}, "advanced_rhetorical": {}
+        "base_contextual": {}, "base_coherence": {}, "base_semantic": {},
+        "advanced_contextual": {}, "advanced_complex": {}, "advanced_severity": {}, "advanced_rhetorical": {},
+        "advanced_coherence": {} # Ajout de l'agent manquant
     }
 
     # 1. Nombre de sophismes détectés (moyenne par extrait)

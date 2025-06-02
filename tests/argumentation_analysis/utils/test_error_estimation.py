@@ -34,6 +34,7 @@ def sample_advanced_results_for_error_rates() -> List[Dict[str, Any]]:
         {"source_name": "SourceC", "extract_name": "Extract_OnlyAdvanced", "analyses": {"contextual_fallacies": {"contextual_fallacies": [{"fallacy_type": "FalseDilemma", "confidence": 0.9}]}}}
     ]
 
+@pytest.mark.use_real_numpy
 def test_estimate_false_positives_negatives_rates_success(
     sample_base_results_for_error_rates: List[Dict[str, Any]],
     sample_advanced_results_for_error_rates: List[Dict[str, Any]]
@@ -55,6 +56,7 @@ def test_estimate_false_positives_negatives_rates_success(
     assert pytest.approx(error_rates["advanced_complex"]["false_positive_rate"], 0.01) == (0.1 + 0.2) / 2
     assert error_rates["advanced_complex"]["false_negative_rate"] == 0.0
 
+@pytest.mark.use_real_numpy
 def test_estimate_false_positives_negatives_rates_no_common_extracts(
     sample_base_results_for_error_rates: List[Dict[str, Any]]
 ):
@@ -71,6 +73,7 @@ def test_estimate_false_positives_negatives_rates_no_common_extracts(
     assert error_rates["advanced_contextual"] == expected_empty_rates
     assert error_rates["advanced_complex"] == expected_empty_rates
 
+@pytest.mark.use_real_numpy
 def test_estimate_false_positives_negatives_rates_empty_inputs(sample_base_results_for_error_rates, sample_advanced_results_for_error_rates):
     error_rates_empty_base = estimate_false_positives_negatives_rates([], sample_advanced_results_for_error_rates)
     error_rates_empty_advanced = estimate_false_positives_negatives_rates(sample_base_results_for_error_rates, [])
@@ -82,6 +85,7 @@ def test_estimate_false_positives_negatives_rates_empty_inputs(sample_base_resul
         assert rates_dict["advanced_contextual"] == expected_empty_rates
         assert rates_dict["advanced_complex"] == expected_empty_rates
 
+@pytest.mark.use_real_numpy
 def test_estimate_false_positives_negatives_rates_missing_fallacy_data():
     base_missing_fallacies = [
         {"source_name": "SourceA", "extract_name": "Extract1", "analyses": {}}

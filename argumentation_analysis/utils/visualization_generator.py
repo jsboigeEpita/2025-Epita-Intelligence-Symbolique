@@ -113,8 +113,9 @@ def generate_performance_visualizations(
         x = np.arange(len(error_agents))
         width = 0.35
         plt.figure(figsize=(12, 7))
-        plt.bar(x - width/2, fp_rates_for_plot, width, label='Taux Faux Positifs', color=sns.color_palette("coolwarm")[0])
-        plt.bar(x + width/2, fn_rates_for_plot, width, label='Taux Faux Négatifs', color=sns.color_palette("coolwarm")[3])
+        palette = sns.color_palette("coolwarm", n_colors=4) # Demander explicitement 4 couleurs
+        plt.bar(x - width/2, fp_rates_for_plot, width, label='Taux Faux Positifs', color=palette[0])
+        plt.bar(x + width/2, fn_rates_for_plot, width, label='Taux Faux Négatifs', color=palette[3])
         plt.title("Taux de faux positifs et faux négatifs estimés par agent")
         plt.xlabel("Agent")
         plt.ylabel("Taux d'erreur estimé")
@@ -158,14 +159,79 @@ def generate_performance_visualizations(
             row[metric_name] = metrics[agent_name].get(metric_name) 
         df_data.append(row)
     
-    df = pd.DataFrame(df_data)
-    df = df.set_index("agent")
-    df = df.dropna(axis=1, how='all') 
-    df = df.fillna(0) 
+    # Initialiser un DataFrame avec l'index des agents
+    if agents:
+        df = pd.DataFrame(index=pd.Index(agents, name="agent"))
+    else:
+        df = pd.DataFrame()
+
+    # Remplir le DataFrame colonne par colonne pour les métriques
+    for metric_name in heatmap_metrics:
+        metric_values = [metrics.get(agent_name, {}).get(metric_name) for agent_name in agents]
+        # Créer la Series avec dtype=float pour convertir None en NaN
+        # et s'assurer que les valeurs numériques sont bien des floats.
+        # Si metric_values ne contient que des None, la Series sera de type float64 avec des NaN.
+        try:
+            s = pd.Series(metric_values, index=df.index, dtype=float)
+            # Si la série n'est pas vide après conversion (c-à-d, elle ne contenait pas QUE des None ou des erreurs de conversion)
+            # ou si elle est vide mais que la colonne n'existe pas encore (pour la créer)
+            if not s.isnull().all() or metric_name not in df.columns:
+                 df[metric_name] = s
+            elif metric_name in df.columns: # La colonne existe mais la nouvelle série est vide/NaN
+                 df[metric_name] = pd.Series(np.nan, index=df.index, dtype=float) # Remplacer par des NaN explicites
+        except Exception as e:
+            logger.warning(f"Impossible de créer/convertir la Series pour la métrique '{metric_name}' avec dtype=float: {e}. Tentative avec pd.to_numeric.")
+            try:
+                # Tentative sans forcer dtype, puis conversion
+                temp_series = pd.Series(metric_values, index=df.index)
+                s_numeric = pd.to_numeric(temp_series, errors='coerce')
+                if not s_numeric.isnull().all() or metric_name not in df.columns:
+                    df[metric_name] = s_numeric
+                elif metric_name in df.columns:
+                    df[metric_name] = pd.Series(np.nan, index=df.index, dtype=float)
+
+            except Exception as e_inner:
+                logger.error(f"Échec final de la création/conversion de la Series pour la métrique '{metric_name}': {e_inner}. Cette métrique sera remplie de NaN.")
+                # Assurer que la colonne existe avec des NaN si elle a été partiellement créée ou référencée
+                df[metric_name] = pd.Series(np.nan, index=df.index, dtype=float)
+
+
+    # Supprimer les colonnes qui seraient entièrement NaN (si une métrique n'existe pour aucun agent ou n'a pu être convertie)
+    df = df.dropna(axis=1, how='all')
+    
+    # À ce stade, toutes les colonnes restantes devraient être de type float et contenir des NaN ou des valeurs.
+    if not df.empty:
+        # Itérer sur les colonnes pour s'assurer que fillna(0) est appliqué sur des Series numériques
+        for col in df.columns:
+            if not pd.api.types.is_numeric_dtype(df[col]):
+                df[col] = pd.to_numeric(df[col], errors='coerce')
+            
+            # Forcer le type en float64 avant fillna, au cas où la colonne serait de type object avec des NaN
+            try:
+                df[col] = df[col].astype(float)
+            except ValueError:
+                logger.warning(f"Impossible de convertir la colonne '{col}' en float avant fillna. Elle sera remplie avec 0 si possible, sinon les erreurs persisteront.")
+            
+            df[col] = df[col].fillna(0)
+    # else: df reste un DataFrame vide (potentiellement avec juste l'index)
 
     if not df.empty:
-        df_normalized = (df - df.min()) / (df.max() - df.min())
-        df_normalized = df_normalized.fillna(0) 
+        # S'assurer que toutes les colonnes sont bien numériques pour la normalisation.
+        df_min = df.min()
+        df_max = df.max()
+        range_val = df_max - df_min
+        
+        range_val_safe = range_val.replace(0, 1)
+
+        df_normalized = (df - df_min) / range_val_safe
+        df_normalized = df_normalized.fillna(0)
+    else:
+        # S'assurer que df_normalized est un DataFrame vide avec les colonnes attendues si df est vide
+        # Cela évite des erreurs si heatmap est appelée avec un DataFrame vide.
+        # Les colonnes de heatmap_metrics qui existent réellement dans les données après dropna.
+        # Cependant, si df est vide, df.columns sera vide.
+        # Il est plus sûr de créer un DataFrame vide sans colonnes spécifiques ici.
+        df_normalized = pd.DataFrame(index=pd.Index(agents, name="agent") if agents else None)
 
         plt.figure(figsize=(14, 10))
         sns.heatmap(df_normalized, annot=df.round(2), cmap="viridis_r", linewidths=.5, fmt=".2f")

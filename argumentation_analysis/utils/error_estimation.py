@@ -31,10 +31,11 @@ def estimate_false_positives_negatives_rates(
     Returns:
         Dict[str, Dict[str, float]]: Dictionnaire des taux de faux positifs/négatifs estimés par agent/type.
     """
-    error_rates: Dict[str, Dict[str, float]] = {
+    # Initialise avec toutes les clés attendues et processed_extracts pour le comptage
+    error_rates_accumulator: Dict[str, Dict[str, Any]] = {
         "base_contextual": {"false_positive_rate": 0.0, "false_negative_rate": 0.0, "processed_extracts": 0},
-        "advanced_contextual": {"false_positive_rate": 0.0, "false_negative_rate": 0.0, "processed_extracts": 0}, # FP basé sur confiance, FN non estimé ici
-        "advanced_complex": {"false_positive_rate": 0.0, "false_negative_rate": 0.0, "processed_extracts": 0} # FP basé sur gravité, FN non estimé ici
+        "advanced_contextual": {"false_positive_rate": 0.0, "false_negative_rate": 0.0, "processed_extracts": 0},
+        "advanced_complex": {"false_positive_rate": 0.0, "false_negative_rate": 0.0, "processed_extracts": 0}
     }
     
     def create_result_dict(results_list: List[Dict[str, Any]]) -> Dict[str, Dict[str, Any]]:
@@ -52,8 +53,11 @@ def estimate_false_positives_negatives_rates(
     
     if not common_extract_keys:
         logger.warning("Aucun extrait commun trouvé entre les résultats de base et avancés. Impossible d'estimer les taux d'erreur comparatifs.")
-        return {k: {"false_positive_rate": 0.0, "false_negative_rate": 0.0} for k in error_rates if k != "base_contextual" and k != "advanced_contextual" and k != "advanced_complex"}
-
+        # Retourner un dictionnaire avec toutes les clés attendues et des taux à 0.0
+        return {
+            agent: {"false_positive_rate": 0.0, "false_negative_rate": 0.0}
+            for agent in error_rates_accumulator.keys()
+        }
 
     fp_sum_base_contextual = 0.0
     fn_sum_base_contextual = 0.0
@@ -84,13 +88,13 @@ def estimate_false_positives_negatives_rates(
                  if isinstance(fall, dict) and fall.get("fallacy_type"):
                     adv_fallacy_types_contextual.append(fall["fallacy_type"])
 
-        if base_fallacy_types or adv_fallacy_types_contextual: 
+        if base_fallacy_types or adv_fallacy_types_contextual:
             fp_base = len([f for f in base_fallacy_types if f not in adv_fallacy_types_contextual])
             fn_base = len([f for f in adv_fallacy_types_contextual if f not in base_fallacy_types])
             
             fp_sum_base_contextual += fp_base / len(base_fallacy_types) if base_fallacy_types else 0
             fn_sum_base_contextual += fn_base / len(adv_fallacy_types_contextual) if adv_fallacy_types_contextual else 0
-            error_rates["base_contextual"]["processed_extracts"] += 1
+            error_rates_accumulator["base_contextual"]["processed_extracts"] += 1
 
         adv_contextual_fp_count = 0
         if isinstance(adv_contextual_data, dict): 
@@ -100,7 +104,7 @@ def estimate_false_positives_negatives_rates(
                     if isinstance(fall_eval, dict) and fall_eval.get("confidence", 1.0) < 0.5: 
                         adv_contextual_fp_count += 1
                 fp_sum_advanced_contextual += adv_contextual_fp_count / len(adv_contextual_fallacies_list)
-                error_rates["advanced_contextual"]["processed_extracts"] += 1
+                error_rates_accumulator["advanced_contextual"]["processed_extracts"] += 1
         
         adv_complex_data = adv_analyses.get("complex_fallacies", {})
         if isinstance(adv_complex_data, dict):
@@ -113,26 +117,24 @@ def estimate_false_positives_negatives_rates(
             elif severity_level_str: current_fp_adv_complex = 0.05 
             
             fp_sum_advanced_complex += current_fp_adv_complex 
-            error_rates["advanced_complex"]["processed_extracts"] += 1
+            error_rates_accumulator["advanced_complex"]["processed_extracts"] += 1
 
-    for agent_type in ["base_contextual", "advanced_contextual", "advanced_complex"]:
-        num_processed = error_rates[agent_type]["processed_extracts"]
+    # Calculer les moyennes et préparer le dictionnaire final
+    final_error_rates: Dict[str, Dict[str, float]] = {}
+    for agent_type in error_rates_accumulator.keys():
+        num_processed = error_rates_accumulator[agent_type]["processed_extracts"]
+        current_rates = {"false_positive_rate": 0.0, "false_negative_rate": 0.0}
         if num_processed > 0:
             if agent_type == "base_contextual":
-                error_rates[agent_type]["false_positive_rate"] = fp_sum_base_contextual / num_processed
-                error_rates[agent_type]["false_negative_rate"] = fn_sum_base_contextual / num_processed
+                current_rates["false_positive_rate"] = fp_sum_base_contextual / num_processed
+                current_rates["false_negative_rate"] = fn_sum_base_contextual / num_processed
             elif agent_type == "advanced_contextual":
-                error_rates[agent_type]["false_positive_rate"] = fp_sum_advanced_contextual / num_processed
+                current_rates["false_positive_rate"] = fp_sum_advanced_contextual / num_processed
+                # FN pour advanced_contextual n'est pas calculé de cette manière comparative
             elif agent_type == "advanced_complex":
-                error_rates[agent_type]["false_positive_rate"] = fp_sum_advanced_complex / num_processed
-        del error_rates[agent_type]["processed_extracts"] 
+                current_rates["false_positive_rate"] = fp_sum_advanced_complex / num_processed
+                # FN pour advanced_complex n'est pas calculé de cette manière comparative
+        final_error_rates[agent_type] = current_rates
 
     logger.info(f"Estimation des taux d'erreur terminée. Extraits communs traités: {len(common_extract_keys)}")
-    # S'assurer que toutes les clés attendues sont présentes même si aucun extrait n'a été traité
-    final_error_rates = {}
-    for agent_key in ["base_contextual", "advanced_contextual", "advanced_complex"]:
-        final_error_rates[agent_key] = {
-            "false_positive_rate": error_rates.get(agent_key, {}).get("false_positive_rate", 0.0),
-            "false_negative_rate": error_rates.get(agent_key, {}).get("false_negative_rate", 0.0)
-        }
     return final_error_rates
