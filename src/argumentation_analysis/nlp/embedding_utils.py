@@ -1,10 +1,19 @@
 """
-Ce module fournit des utilitaires pour générer et sauvegarder des embeddings de texte.
+Utilitaires pour la génération et la sauvegarde d'embeddings de texte.
 
-Il prend en charge la génération d'embeddings via l'API OpenAI et
-les modèles de la bibliothèque Sentence Transformers. Les fonctions permettent
-de traiter des lots de morceaux de texte et de sauvegarder les embeddings résultants
-ainsi que les métadonnées associées dans des fichiers JSON.
+Ce module fournit des fonctions pour :
+    1.  `get_embeddings_for_chunks`: Générer des embeddings pour une liste de
+        morceaux de texte en utilisant soit les modèles d'OpenAI (par exemple,
+        "text-embedding-3-small"), soit des modèles de la bibliothèque
+        Sentence Transformers (par exemple, "all-MiniLM-L6-v2").
+    2.  `save_embeddings_data`: Sauvegarder les données d'embeddings obtenues
+        (incluant potentiellement les textes originaux et d'autres métadonnées)
+        dans un fichier au format JSON.
+
+Il gère les importations conditionnelles pour OpenAI et Sentence Transformers,
+permettant une utilisation flexible même si l'une des bibliothèques n'est pas
+installée (bien que cela lèvera une `ImportError` si le modèle correspondant
+est sollicité).
 """
 import json
 from pathlib import Path

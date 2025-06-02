@@ -2,7 +2,17 @@
 # -*- coding: utf-8 -*-
 
 """
-Module pour l'initialisation des services d'analyse argumentative.
+Initialisation des services pour l'analyse argumentative.
+
+Ce module fournit la fonction `initialize_analysis_services` qui est responsable
+de la configuration et de l'initialisation des services essentiels requis par
+le système d'analyse d'argumentation. Cela inclut typiquement :
+    - Le chargement des variables d'environnement (ex: clés API).
+    - L'initialisation de la Machine Virtuelle Java (JVM) pour l'interaction
+      avec des bibliothèques Java comme TweetyProject.
+    - La création et configuration du service de Modèle de Langage à Grande Échelle (LLM).
+
+La fonction retourne un dictionnaire indiquant le statut des services initialisés.
 """
 
 import logging

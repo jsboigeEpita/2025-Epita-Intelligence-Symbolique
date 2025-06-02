@@ -2,12 +2,23 @@
 # -*- coding: utf-8 -*-
 
 """
-Définitions pour l'agent Informel.
+Définitions et composants pour l'analyse informelle des arguments.
 
-Ce module contient:
-1. La classe InformalAnalysisPlugin pour l'analyse des sophismes
-2. La fonction setup_informal_kernel pour configurer le kernel
-3. Les instructions système pour l'agent Informel
+Ce module fournit :
+- `InformalAnalysisPlugin`: Un plugin Semantic Kernel contenant des fonctions natives
+  pour interagir avec une taxonomie de sophismes (chargée à partir d'un fichier CSV).
+  Ces fonctions permettent d'explorer la hiérarchie des sophismes et d'obtenir
+  des détails sur des sophismes spécifiques.
+- `setup_informal_kernel`: Une fonction utilitaire pour configurer une instance de
+  kernel Semantic Kernel avec le `InformalAnalysisPlugin` et les fonctions
+  sémantiques nécessaires à l'agent d'analyse informelle.
+- `INFORMAL_AGENT_INSTRUCTIONS`: Instructions système détaillées pour guider
+  le comportement d'un agent LLM spécialisé dans l'analyse informelle,
+  décrivant son rôle, les outils disponibles et les processus à suivre pour
+  différentes tâches.
+
+Le module gère également le chargement et la validation de la taxonomie des
+sophismes utilisée par le plugin.
 """
 
 import os
@@ -44,16 +55,28 @@ from argumentation_analysis.paths import DATA_DIR
 # --- Classe InformalAnalysisPlugin (V12) ---
 class InformalAnalysisPlugin:
     """
-    Plugin pour l'analyse des sophismes dans les arguments.
-    
-    Ce plugin fournit des fonctions pour:
-    1. Explorer la hiérarchie des sophismes
-    2. Obtenir les détails d'un sophisme spécifique
+    Plugin Semantic Kernel pour l'analyse informelle des sophismes.
+
+    Ce plugin fournit des fonctions natives pour interagir avec une taxonomie
+    de sophismes, typiquement chargée à partir d'un fichier CSV. Il permet
+    d'explorer la structure hiérarchique de la taxonomie et de récupérer
+    des informations détaillées sur des sophismes spécifiques par leur
+    identifiant (PK).
+
+    Attributes:
+        _logger (logging.Logger): Logger pour ce plugin.
+        FALLACY_CSV_URL (str): URL distante du fichier CSV de la taxonomie (fallback).
+        DATA_DIR (Path): Chemin vers le répertoire de données local.
+        FALLACY_CSV_LOCAL_PATH (Path): Chemin local attendu pour le fichier CSV de la taxonomie.
+        _taxonomy_df_cache (Optional[pd.DataFrame]): Cache pour le DataFrame de la taxonomie.
     """
     
     def __init__(self):
         """
-        Initialise le plugin d'analyse des sophismes.
+        Initialise le plugin `InformalAnalysisPlugin`.
+
+        Configure les chemins pour la taxonomie des sophismes et initialise le cache
+        du DataFrame à None. Le DataFrame sera chargé paresseusement lors du premier accès.
         """
         self._logger = logging.getLogger("InformalAnalysisPlugin")
         self._logger.info("Initialisation du plugin d'analyse des sophismes (V12)...")
@@ -453,21 +476,25 @@ logger.info("Classe InformalAnalysisPlugin (V12) définie.")
 # --- Fonction setup_informal_kernel (V13 - Simplifiée) ---
 def setup_informal_kernel(kernel: sk.Kernel, llm_service: Any) -> None:
     """
-    Configure le kernel Semantic Kernel pour l'agent d'analyse informelle.
+    Configure une instance de `semantic_kernel.Kernel` pour l'analyse informelle.
 
-    Ajoute une instance du `InformalAnalysisPlugin` (contenant les fonctions natives
-    pour explorer la taxonomie des sophismes) et enregistre les fonctions sémantiques
-    nécessaires (identification d'arguments, analyse de sophismes, justification).
+    Cette fonction enregistre `InformalAnalysisPlugin` (contenant des fonctions natives
+    pour la taxonomie des sophismes) et plusieurs fonctions sémantiques (définies
+    dans `.prompts`) dans le kernel fourni. Ces fonctions permettent d'identifier
+    des arguments, d'analyser des sophismes et de justifier leur attribution.
+
+    Le nom du plugin utilisé pour enregistrer à la fois le plugin natif et les
+    fonctions sémantiques est "InformalAnalyzer".
 
     :param kernel: L'instance du `semantic_kernel.Kernel` à configurer.
     :type kernel: sk.Kernel
-    :param llm_service: L'instance du service LLM (par exemple, OpenAIChatCompletion)
-                        qui sera utilisée par les fonctions sémantiques. Doit avoir
-                        un `service_id` accessible.
+    :param llm_service: L'instance du service LLM (par exemple, une classe compatible
+                        avec `OpenAIChatCompletion` de Semantic Kernel) qui sera utilisée
+                        par les fonctions sémantiques. Doit avoir un attribut `service_id`.
     :type llm_service: Any
-    :return: None
-    :rtype: None
-    :raises Exception: Si une erreur survient lors de l'enregistrement des fonctions sémantiques.
+    :raises Exception: Peut propager des exceptions si l'enregistrement des fonctions
+                       sémantiques échoue de manière critique (bien que certaines erreurs
+                       soient actuellement logguées comme des avertissements).
     """
     plugin_name = "InformalAnalyzer"
     logger.info(f"Configuration Kernel pour {plugin_name} (V13 - Plugin autonome)...")
@@ -617,8 +644,26 @@ Racine de la Taxonomie des Sophismes: PK={ROOT_PK}
 
 **Important:** Toujours utiliser le `task_id` fourni par le PM pour `StateManager.add_answer`. Gérer les erreurs potentielles des appels de fonction (vérifier `error` dans JSON retourné par les fonctions natives, ou si une fonction retourne `FUNC_ERROR:`).
 """
+"""
+Template pour les instructions système de l'agent d'analyse informelle (Version 14).
+
+Ce template détaillé guide un agent LLM sur son rôle, les outils disponibles
+(fonctions sémantiques et natives via `InformalAnalyzer`, et fonctions `StateManager`),
+le processus général à suivre pour les tâches assignées par un gestionnaire de projet (PM),
+et des exemples spécifiques de gestion de tâches (identification d'arguments,
+exploration de taxonomie, obtention de détails sur un sophisme, attribution de sophisme,
+analyse complète). Il inclut également des directives pour l'exploration de la
+taxonomie et la rédaction de justifications.
+
+La variable `{ROOT_PK}` est destinée à être formatée avec la PK de la racine
+de la taxonomie des sophismes.
+"""
 
 INFORMAL_AGENT_INSTRUCTIONS = INFORMAL_AGENT_INSTRUCTIONS_V14_TEMPLATE.format(ROOT_PK=0)
+"""
+Instructions système finales pour l'agent d'analyse informelle.
+Formatées à partir de `INFORMAL_AGENT_INSTRUCTIONS_V14_TEMPLATE` avec `ROOT_PK` défini à 0.
+"""
 
 logger.info("Instructions Système INFORMAL_AGENT_INSTRUCTIONS (V14) définies.")
 

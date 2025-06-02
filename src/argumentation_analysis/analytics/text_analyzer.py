@@ -1,11 +1,17 @@
 # -*- coding: utf-8 -*-
 """
-Ce module fournit des fonctionnalités pour effectuer des analyses de texte.
+Analyseur de texte pour le projet d'analyse d'argumentation.
 
-Il s'appuie sur divers services, notamment un service LLM, pour orchestrer
-et exécuter différents types d'analyses textuelles. Le module est conçu
-pour être extensible afin de prendre en charge de nouvelles stratégies d'analyse
-à l'avenir.
+Ce module fournit la fonction principale `perform_text_analysis` qui sert de
+point d'entrée pour effectuer diverses analyses sur un texte donné.
+Il s'appuie sur la fonction `run_analysis_conversation` (du package
+`argumentation_analysis.orchestration.analysis_runner`) pour orchestrer
+l'interaction avec un service LLM et potentiellement d'autres services
+d'analyse.
+
+L'objectif est de fournir une interface unifiée pour lancer des analyses
+textuelles, avec la possibilité d'étendre les types d'analyses supportées
+à l'avenir via le paramètre `analysis_type`.
 """
 import logging
 from typing import Dict, Any

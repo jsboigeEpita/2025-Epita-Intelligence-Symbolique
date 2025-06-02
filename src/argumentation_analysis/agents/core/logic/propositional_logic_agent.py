@@ -1,6 +1,13 @@
 # argumentation_analysis/agents/core/logic/propositional_logic_agent.py
 """
-Agent spécialisé pour la logique propositionnelle.
+Agent spécialisé pour la logique propositionnelle (PL).
+
+Ce module définit `PropositionalLogicAgent`, une classe qui hérite de
+`BaseLogicAgent` et implémente les fonctionnalités spécifiques pour interagir
+avec la logique propositionnelle. Il utilise `TweetyBridge` pour la communication
+avec TweetyProject et s'appuie sur des prompts sémantiques définis dans
+`argumentation_analysis.agents.core.pl.prompts` pour la conversion
+texte-vers-PL, la génération de requêtes et l'interprétation des résultats.
 """
 
 import logging
@@ -27,17 +34,26 @@ logger = logging.getLogger(__name__)
 
 class PropositionalLogicAgent(BaseLogicAgent): 
     """
-    Agent spécialisé pour la logique propositionnelle, héritant de BaseLogicAgent.
-    Utilise TweetyProject via TweetyBridge pour les opérations logiques.
+    Agent spécialisé pour la logique propositionnelle (PL).
+
+    Cet agent étend `BaseLogicAgent` pour fournir des capacités de traitement
+    spécifiques à la logique propositionnelle. Il intègre des fonctions sémantiques
+    pour traduire le langage naturel en ensembles de croyances PL, générer des
+    requêtes PL pertinentes, exécuter ces requêtes via `TweetyBridge`, et
+    interpréter les résultats en langage naturel.
+
+    Attributes:
+        _tweety_bridge (TweetyBridge): Instance de `TweetyBridge` configurée pour la PL.
     """
     
     def __init__(self, kernel: Kernel, agent_name: str = "PropositionalLogicAgent"): 
         """
-        Initialise un agent de logique propositionnelle.
-        
-        Args:
-            kernel: Le kernel Semantic Kernel à utiliser.
-            agent_name: Le nom de l'agent.
+        Initialise une instance de `PropositionalLogicAgent`.
+
+        :param kernel: Le kernel Semantic Kernel à utiliser pour les fonctions sémantiques.
+        :type kernel: Kernel
+        :param agent_name: Le nom de l'agent, par défaut "PropositionalLogicAgent".
+        :type agent_name: str
         """
         super().__init__(kernel,
                          agent_name=agent_name,
@@ -45,7 +61,12 @@ class PropositionalLogicAgent(BaseLogicAgent):
                          system_prompt=PL_AGENT_INSTRUCTIONS)
     
     def get_agent_capabilities(self) -> Dict[str, Any]: 
-        """Retourne les capacités spécifiques de l'agent PL."""
+        """
+        Retourne un dictionnaire décrivant les capacités spécifiques de cet agent PL.
+
+        :return: Un dictionnaire mappant les noms des capacités à leurs descriptions.
+        :rtype: Dict[str, Any]
+        """
         return {
             "text_to_belief_set": "Translates natural language text to a Propositional Logic belief set.",
             "generate_queries": "Generates relevant PL queries based on text and a belief set.",
@@ -56,7 +77,14 @@ class PropositionalLogicAgent(BaseLogicAgent):
 
     def setup_agent_components(self, llm_service_id: str) -> None: 
         """
-        Configure les composants spécifiques de l'agent PL dans le kernel SK.
+        Configure les composants spécifiques de l'agent de logique propositionnelle.
+
+        Initialise `TweetyBridge` pour la logique propositionnelle et enregistre
+        les fonctions sémantiques nécessaires (TextToPLBeliefSet, GeneratePLQueries,
+        InterpretPLResults) dans le kernel Semantic Kernel.
+
+        :param llm_service_id: L'ID du service LLM à utiliser pour les fonctions sémantiques.
+        :type llm_service_id: str
         """
         super().setup_agent_components(llm_service_id)
         self.logger.info(f"Configuration des composants pour {self.name}...")
@@ -110,7 +138,19 @@ class PropositionalLogicAgent(BaseLogicAgent):
 
     async def text_to_belief_set(self, text: str, context: Optional[Dict[str, Any]] = None) -> Tuple[Optional[BeliefSet], str]: 
         """
-        Convertit un texte en ensemble de croyances propositionnelles.
+        Convertit un texte en langage naturel en un ensemble de croyances propositionnelles.
+
+        Utilise la fonction sémantique "TextToPLBeliefSet" pour la conversion,
+        puis valide l'ensemble de croyances généré avec `TweetyBridge`.
+
+        :param text: Le texte en langage naturel à convertir.
+        :type text: str
+        :param context: Un dictionnaire optionnel de contexte (non utilisé actuellement).
+        :type context: Optional[Dict[str, Any]]
+        :return: Un tuple contenant l'objet `PropositionalBeliefSet` si la conversion
+                 et la validation réussissent, et un message de statut.
+                 Retourne (None, message_erreur) en cas d'échec.
+        :rtype: Tuple[Optional[BeliefSet], str]
         """
         self.logger.info(f"Conversion de texte en ensemble de croyances propositionnelles pour le texte : '{text[:100]}...'")
         
@@ -144,7 +184,20 @@ class PropositionalLogicAgent(BaseLogicAgent):
     
     async def generate_queries(self, text: str, belief_set: BeliefSet, context: Optional[Dict[str, Any]] = None) -> List[str]: 
         """
-        Génère des requêtes logiques propositionnelles pertinentes.
+        Génère des requêtes logiques propositionnelles pertinentes à partir d'un texte et d'un ensemble de croyances.
+
+        Utilise la fonction sémantique "GeneratePLQueries". Les requêtes générées
+        sont ensuite validées syntaxiquement.
+
+        :param text: Le texte en langage naturel source.
+        :type text: str
+        :param belief_set: L'ensemble de croyances PL associé.
+        :type belief_set: BeliefSet
+        :param context: Un dictionnaire optionnel de contexte (non utilisé actuellement).
+        :type context: Optional[Dict[str, Any]]
+        :return: Une liste de chaînes de caractères, chacune étant une requête PL valide.
+                 Retourne une liste vide en cas d'erreur.
+        :rtype: List[str]
         """
         self.logger.info(f"Génération de requêtes PL pour le texte : '{text[:100]}...'") 
         
@@ -175,7 +228,19 @@ class PropositionalLogicAgent(BaseLogicAgent):
     
     def execute_query(self, belief_set: BeliefSet, query: str) -> Tuple[Optional[bool], str]: 
         """
-        Exécute une requête logique propositionnelle sur un ensemble de croyances.
+        Exécute une requête logique propositionnelle sur un ensemble de croyances donné.
+
+        Valide d'abord la syntaxe de la requête, puis utilise `TweetyBridge`
+        pour exécuter la requête contre le contenu de `belief_set`.
+
+        :param belief_set: L'ensemble de croyances PL sur lequel exécuter la requête.
+        :type belief_set: BeliefSet
+        :param query: La requête PL à exécuter.
+        :type query: str
+        :return: Un tuple contenant le résultat booléen de la requête (`True` si conséquence,
+                 `False` sinon, `None` si indéterminé ou erreur) et la sortie brute
+                 de `TweetyBridge` (ou un message d'erreur).
+        :rtype: Tuple[Optional[bool], str]
         """
         self.logger.info(f"Exécution de la requête PL: '{query}' sur le BeliefSet.") 
         
@@ -205,7 +270,26 @@ class PropositionalLogicAgent(BaseLogicAgent):
                                 queries: List[str], results: List[Tuple[Optional[bool], str]],
                                 context: Optional[Dict[str, Any]] = None) -> str: 
         """
-        Interprète les résultats des requêtes logiques propositionnelles.
+        Interprète les résultats d'une série de requêtes logiques propositionnelles en langage naturel.
+
+        Utilise la fonction sémantique "InterpretPLResults" pour générer une explication
+        basée sur le texte original, l'ensemble de croyances, les requêtes posées et
+        les résultats obtenus de Tweety.
+
+        :param text: Le texte original en langage naturel.
+        :type text: str
+        :param belief_set: L'ensemble de croyances PL utilisé.
+        :type belief_set: BeliefSet
+        :param queries: La liste des requêtes PL qui ont été exécutées.
+        :type queries: List[str]
+        :param results: La liste des résultats (tuples booléen/None, message_brut)
+                        correspondant à chaque requête.
+        :type results: List[Tuple[Optional[bool], str]]
+        :param context: Un dictionnaire optionnel de contexte (non utilisé actuellement).
+        :type context: Optional[Dict[str, Any]]
+        :return: Une chaîne de caractères contenant l'interprétation en langage naturel
+                 des résultats, ou un message d'erreur.
+        :rtype: str
         """
         self.logger.info("Interprétation des résultats des requêtes PL...") 
         
@@ -237,7 +321,14 @@ class PropositionalLogicAgent(BaseLogicAgent):
 
     def validate_formula(self, formula: str) -> bool: 
         """
-        Valide la syntaxe d'une formule propositionnelle en utilisant TweetyBridge.
+        Valide la syntaxe d'une formule propositionnelle.
+
+        Utilise la méthode `validate_formula` de `TweetyBridge` configurée pour la PL.
+
+        :param formula: La formule PL à valider.
+        :type formula: str
+        :return: `True` si la formule est syntaxiquement valide, `False` sinon.
+        :rtype: bool
         """
         self.logger.debug(f"Validation de la formule PL: '{formula}'")
         try:

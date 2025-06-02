@@ -1,9 +1,29 @@
 """
-Ce module initialise le package `analytics` pour le projet `argumentation_analysis`.
+Package `analytics` pour l'analyse quantitative et statistique des arguments.
 
-Le package `analytics` est destiné à contenir les modules responsables des
-calculs statistiques, de l'analyse de texte et d'autres formes de traitement
-analytique des données d'argumentation.
+Ce package regroupe les modules dédiés à l'analyse quantitative des données
+textuelles et des résultats d'argumentation. Il fournit des outils pour :
+    - Calculer des statistiques descriptives sur les textes et les arguments.
+    - Effectuer des analyses de complexité textuelle.
+    - Potentiellement, intégrer des métriques d'évaluation de la qualité
+      ou de la force des arguments.
+
+Modules clés :
+    - `stats_calculator`: Fonctions pour calculer diverses statistiques.
+    - `text_analyzer`: Outils pour l'analyse de caractéristiques textuelles.
 """
 
 # Initializer for the argumentation_analysis.analytics module
+
+# Exposer les classes ou fonctions importantes si nécessaire
+# from .stats_calculator import StatsCalculator
+# from .text_analyzer import TextAnalyzer
+
+__all__ = [
+    # "StatsCalculator",
+    # "TextAnalyzer",
+]
+
+import logging
+logger = logging.getLogger(__name__)
+logger.info("Package 'argumentation_analysis.analytics' chargé.")

@@ -1,8 +1,26 @@
 """
-Ce module initialise le package `service_setup` pour le projet `argumentation_analysis`.
+Package `service_setup` pour la configuration et l'initialisation des services.
 
-Le package `service_setup` est responsable de la configuration et de
-l'initialisation des services externes ou des composants majeurs utilisés
-par l'application, tels que les modèles de langage (LLM), la JVM pour
-les bibliothèques Java, ou d'autres services tiers.
+Ce package est responsable de la mise en place et de l'initialisation des
+services et composants majeurs requis par l'application d'analyse d'argumentation.
+Cela inclut typiquement :
+    - La configuration et l'instanciation des services de modèles de langage (LLM).
+    - L'initialisation et la gestion de la Machine Virtuelle Java (JVM) pour
+      l'interaction avec des bibliothèques Java comme TweetyProject.
+    - La configuration d'autres services externes ou partagés.
+
+Modules clés :
+    - `analysis_services`: Contient les fonctions pour initialiser les services
+                           nécessaires à l'analyse.
 """
+
+# Exposer les fonctions ou classes importantes si nécessaire
+# from .analysis_services import initialize_all_services
+
+__all__ = [
+    # "initialize_all_services",
+]
+
+import logging
+logger = logging.getLogger(__name__)
+logger.info("Package 'argumentation_analysis.service_setup' chargé.")

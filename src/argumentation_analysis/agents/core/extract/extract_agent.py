@@ -1,8 +1,20 @@
 """
 Agent d'extraction pour l'analyse argumentative.
 
-Ce module implémente un agent d'extraction capable de proposer des extraits pertinents
-dans un texte source en se basant sur la dénomination de l'extrait et le contexte.
+Ce module implémente `ExtractAgent`, un agent spécialisé dans l'extraction
+d'informations pertinentes à partir de textes sources. Il utilise une combinaison
+de fonctions sémantiques (via Semantic Kernel) et de fonctions natives pour
+proposer, valider et gérer des extraits de texte. L'agent est conçu pour
+interagir avec des définitions d'extraits et peut gérer des textes volumineux
+grâce à des stratégies de découpage et de recherche contextuelle.
+
+Fonctionnalités principales :
+- Proposition de marqueurs (début/fin) pour un extrait basé sur son nom.
+- Validation de la pertinence d'un extrait proposé.
+- Réparation d'extraits existants dont les marqueurs sont invalides.
+- Mise à jour et ajout de nouveaux extraits dans une structure de données.
+- Utilisation d'un plugin natif (`ExtractAgentPlugin`) pour des opérations
+  textuelles spécifiques (recherche dichotomique, extraction de blocs).
 """
 
 import os
@@ -33,14 +45,21 @@ from .prompts import (
 
 # Fonction d'importation paresseuse pour éviter les importations circulaires
 def _lazy_imports() -> None:
-    """Importe les modules de manière paresseuse pour éviter les importations circulaires.
+    """
+    Importe les modules de manière paresseuse pour éviter les importations circulaires.
 
     Cette fonction est appelée une fois au chargement du module `extract_agent`.
     Elle peuple les variables globales nécessaires à partir d'autres modules,
-    principalement `ui.config` et `ui.utils`.
+    principalement `argumentation_analysis.ui.config`,
+    `argumentation_analysis.ui.utils`, et `argumentation_analysis.ui.extract_utils`.
+    Cela permet à `ExtractAgent` d'accéder à des configurations et des utilitaires
+    sans créer de dépendances d'importation directes au niveau supérieur du module,
+    ce qui pourrait causer des problèmes si ces modules importent eux-mêmes `ExtractAgent`.
 
-    :return: None
-    :rtype: None
+    Les variables globales peuplées incluent `ENCRYPTION_KEY`, `CONFIG_FILE`,
+    `CONFIG_FILE_JSON`, `load_from_cache`, `reconstruct_url`, `load_source_text`,
+    `extract_text_with_markers`, `find_similar_text`,
+    `load_extract_definitions_safely`, et `save_extract_definitions_safely`.
     """
     global ENCRYPTION_KEY, CONFIG_FILE, CONFIG_FILE_JSON
     global load_from_cache, reconstruct_url
@@ -80,7 +99,22 @@ _lazy_imports()
 
 
 class ExtractAgent(BaseAgent):
-    """Agent d'extraction pour l'analyse argumentative, héritant de BaseAgent."""
+    """
+    Agent spécialisé dans l'extraction d'informations pertinentes de textes sources.
+
+    Hérite de `BaseAgent` et implémente des fonctionnalités pour proposer,
+    valider, réparer et gérer des extraits de texte. Utilise des fonctions
+    sémantiques pour l'interaction avec les LLMs et un plugin natif pour
+    des opérations textuelles spécifiques.
+
+    Attributes:
+        EXTRACT_SEMANTIC_FUNCTION_NAME (str): Nom de la fonction sémantique pour la proposition d'extraits.
+        VALIDATE_SEMANTIC_FUNCTION_NAME (str): Nom de la fonction sémantique pour la validation d'extraits.
+        NATIVE_PLUGIN_NAME (str): Nom du plugin natif contenant les fonctions d'aide à l'extraction.
+        find_similar_text_func (Callable): Fonction pour trouver du texte similaire.
+        extract_text_func (Callable): Fonction pour extraire du texte basé sur des marqueurs.
+        _native_extract_plugin (Optional[ExtractAgentPlugin]): Instance du plugin natif.
+    """
     
     # Noms pour les fonctions sémantiques
     EXTRACT_SEMANTIC_FUNCTION_NAME = "extract_from_name_semantic"
@@ -200,8 +234,8 @@ class ExtractAgent(BaseAgent):
 
         :return: L'instance de `ExtractAgentPlugin`.
         :rtype: ExtractAgentPlugin
-        :raises RuntimeError: Si le plugin natif n'a pas été initialisé
-                              (c'est-à-dire si `setup_agent_components` n'a pas été appelé).
+        :raises RuntimeError: Si le plugin natif n'a pas été initialisé (c'est-à-dire
+                              si `setup_agent_components` n'a pas été appelé).
         """
         if self._native_extract_plugin is None:
             raise RuntimeError("Plugin natif d'extraction non initialisé. Appelez setup_agent_components.")
