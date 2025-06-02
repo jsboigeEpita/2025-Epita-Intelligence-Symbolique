@@ -20,6 +20,6 @@ Ce répertoire contient les tests unitaires pour les composants logiques fondame
 *   [`test_modal_logic_agent.py`](test_modal_logic_agent.py:1): Tests pour l'agent basé sur la logique modale, couvrant l'initialisation, l'interaction avec le Kernel sémantique, la conversion texte-croyances, la validation et l'exécution de requêtes via TweetyBridge (mocké).
 *   [`test_abstract_logic_agent.py`](test_abstract_logic_agent.py:1): Tests pour la classe de base abstraite des agents logiques.
 *   [`test_query_executor.py`](test_query_executor.py:1): Tests pour l'exécuteur de requêtes logiques (`QueryExecutor`), vérifiant son interaction avec `TweetyBridge` (mocké) pour la validation et l'exécution de requêtes propositionnelles, du premier ordre et modales.
-*   [`test_tweety_bridge.py`](test_tweety_bridge.py:1): Tests pour le pont avec la bibliothèque Tweety.
+*   [`test_tweety_bridge.py`](test_tweety_bridge.py:1): Tests unitaires pour `TweetyBridge`. Valide l'initialisation, l'interaction mockée avec `jpype` pour les logiques PL, FOL, ML, incluant la validation de formules et l'exécution de requêtes PL.
 
 Ces tests sont fondamentaux pour garantir la fiabilité du raisonnement des agents au sein du système.
