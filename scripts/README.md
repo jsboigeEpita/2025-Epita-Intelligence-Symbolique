@@ -8,23 +8,19 @@ Ce module contient divers scripts Python et PowerShell pour faciliter le dévelo
 
 Les scripts sont organisés en sous-dossiers thématiques :
 
-- **`cleanup/`** : Scripts pour nettoyer le projet, supprimer les fichiers obsolètes et gérer la configuration du dépôt.
-- **`execution/`** : Scripts principaux pour exécuter des fonctionnalités clés et des workflows complets du système. (Voir [`execution/README.md`](scripts/execution/README.md:1))
-- **`extract_utils/`**: Scripts pour la gestion des extraits de sources (déchiffrement, inspection, chiffrement, embarquement, etc.). (Voir [`extract_utils/README.md`](scripts/extract_utils/README.md:1))
-- **`maintenance/`**: Scripts pour la maintenance, la validation, les tests d'imports et la correction de la structure du projet. (Voir [`maintenance/README.md`](scripts/maintenance/README.md:1))
-- **`reporting/`**: Scripts liés à la génération de rapports (couverture, analyse rhétorique, comparaison d'agents, etc.) et visualisations. (Voir [`reporting/README.md`](scripts/reporting/README.md:1))
-- **`setup/`** : Scripts pour configurer l'environnement de développement, gérer les dépendances (notamment JPype et les outils de compilation). Contient également `download_test_jars.py` et `check_jpype_import.py`.
+- **`archived/`**: Scripts obsolètes mais conservés pour référence. (Voir [`archived/README.md`](scripts/archived/README.md:1))
+- **`cleanup/`** : Scripts pour nettoyer le projet, supprimer les fichiers obsolètes et gérer la configuration du dépôt. (Voir [`cleanup/README.md`](scripts/cleanup/README.md:1))
+- **`data_processing/`**: Scripts pour la préparation, la manipulation, le chiffrement/déchiffrement de données spécifiques, ainsi que l'extraction et la correction de segments de texte (anciennement `extract_utils/`). (Voir [`data_processing/README.md`](scripts/data_processing/README.md:1))
+- **`execution/`** : Scripts principaux pour exécuter des fonctionnalités clés et des workflows complets du système. Contient également les README spécifiques à l'exécution (ex: `README_rhetorical_analysis.md`). (Voir [`execution/README.md`](scripts/execution/README.md:1))
+- **`maintenance/`**: Scripts pour la maintenance du code, la structure du projet, les imports, les chemins et l'intégrité des fichiers. (Voir [`maintenance/README.md`](scripts/maintenance/README.md:1))
+- **`reporting/`**: Scripts liés à la génération de rapports (couverture, analyse rhétorique, comparaison d'agents, etc.) et visualisations. Contient également les README spécifiques aux rapports (ex: `README_compare_rhetorical_agents.md`). (Voir [`reporting/README.md`](scripts/reporting/README.md:1))
+- **`setup/`** : Scripts pour configurer l'environnement de développement, gérer les dépendances (notamment JPype et les outils de compilation). (Voir [`setup/README.md`](scripts/setup/README.md:1))
 - **`testing/`** : Scripts spécifiques pour des scénarios de test, des simulations, ou des validations ponctuelles de composants. (Voir [`testing/README.md`](scripts/testing/README.md:1))
-- **`utils/`** : Petits scripts utilitaires pour des tâches de maintenance ponctuelles sur les fichiers du code source (encodage, indentation, syntaxe).
-- **`validation/`** : Scripts pour valider la structure du projet, les fichiers Markdown, ou d'autres aspects de la qualité.
+- **`utils/`** : Petits scripts utilitaires pour des tâches de maintenance ponctuelles sur les fichiers du code source (encodage, indentation, syntaxe, commits). (Voir [`utils/README.md`](scripts/utils/README.md:1))
+- **`validation/`** : Scripts pour valider la structure du projet, les fichiers Markdown, ou d'autres aspects de la qualité. (Voir [`validation/README.md`](scripts/validation/README.md:1))
 
 Note : Les scripts de démonstration ont été déplacés vers le répertoire `examples/scripts_demonstration/`.
-
-En plus des sous-dossiers, les scripts suivants résident directement à la racine de `scripts/` :
-
-- **`analyze_directory_usage.py`** : Analyse l'utilisation de certains répertoires dans le code (utilise `project_core.dev_utils.code_validation`).
-- **`check_encoding.py`** : Vérifie l'encodage UTF-8 des fichiers Python du projet (utilise `project_core.dev_utils.encoding_utils`).
-- **`script_commits.ps1`**: Script PowerShell pour gérer les commits. **Note : L'usage de ce script doit être documenté plus en détail, ou une alternative en Python pourrait être envisagée pour simplifier les workflows de développement multi-plateforme.**
+Tous les scripts précédemment à la racine de `scripts/` ont été déplacés dans les sous-répertoires thématiques appropriés.
 
 ## Fonctionnalités
 
@@ -60,7 +56,7 @@ python chemin/vers/script.py [options]
 
 Et les scripts PowerShell avec :
 ```powershell
-.\scripts\chemin\vers\script.ps1 [options]
+.\\scripts\\chemin\\vers\\script.ps1 [options]
 ```
 
 ### Exemples d'utilisation
@@ -83,20 +79,20 @@ python scripts/maintenance/update_imports.py --dry-run
 python scripts/setup/download_test_jars.py
 ```
 
-#### Analyse de l'utilisation des répertoires
+#### Analyse de l'utilisation des répertoires (dans `scripts/utils/`)
 
 ```bash
-python scripts/analyze_directory_usage.py --dir argumentation_analysis --output results/usage_report.json
+python scripts/utils/analyze_directory_usage.py --dir argumentation_analysis --output results/usage_report.json
 ```
 
-#### Déchiffrement des extraits (dans `scripts/extract_utils/`)
+#### Déchiffrement des extraits (dans `scripts/data_processing/`)
 ```bash
-python scripts/extract_utils/decrypt_extracts.py --output temp_extracts/decrypted.json
+python scripts/data_processing/decrypt_extracts.py --output temp_extracts/decrypted.json
 ```
 
-#### Embarquement des sources dans les extraits (dans `scripts/extract_utils/`)
+#### Embarquement des sources dans les extraits (dans `scripts/data_processing/`)
 ```bash
-python scripts/extract_utils/embed_all_sources.py \
+python scripts/data_processing/embed_all_sources.py \
   --input-config chemin/vers/votre/extract_sources.json.gz.enc \
   --output-config chemin/vers/votre/extract_sources_embedded.json.gz.enc \
   --passphrase "votre_phrase_secrete"

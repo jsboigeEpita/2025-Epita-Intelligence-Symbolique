@@ -1,6 +1,7 @@
 # Scripts d'exécution
 
 Ce répertoire contient les scripts d'exécution des fonctionnalités principales et des workflows complets du projet d'analyse argumentative.
+Il contient également des README spécifiques à certaines analyses, comme [`README_rhetorical_analysis.md`](scripts/execution/README_rhetorical_analysis.md:1).
 
 ## Scripts disponibles
 
@@ -20,7 +21,23 @@ python scripts/execution/rhetorical_analysis.py --corpus <chemin_corpus> --outpu
 ```
 Consultez `python scripts/execution/rhetorical_analysis.py --help` pour toutes les options.
 
-### 2. `run_full_python_analysis_workflow.py`
+### 2. `advanced_rhetorical_analysis.py`
+
+Script pour des analyses rhétoriques plus poussées, utilisant potentiellement des modèles ou des techniques d'analyse sémantique avancées.
+
+**Fonctionnalités (générales) :**
+- Analyse approfondie des figures de style, des sophismes complexes.
+- Peut intégrer des aspects d'analyse de sentiment ou d'intention.
+- Génération de rapports d'analyse enrichis.
+
+**Utilisation (exemple) :**
+```bash
+python scripts/execution/advanced_rhetorical_analysis.py --input <texte_ou_corpus> --output <rapport_avance.json>
+```
+Consultez `python scripts/execution/advanced_rhetorical_analysis.py --help` pour les options.
+
+
+### 3. `run_full_python_analysis_workflow.py`
 
 Exécute un workflow complet d'analyse Python, potentiellement enchaînant plusieurs étapes de traitement et d'analyse du projet.
 
@@ -34,7 +51,7 @@ python scripts/execution/run_full_python_analysis_workflow.py --config <fichier_
 ```
 Consultez `python scripts/execution/run_full_python_analysis_workflow.py --help` pour les options spécifiques.
 
-### 3. `run_extract_repair.py`
+### 4. `run_extract_repair.py`
 
 Script d'exécution pour la réparation des bornes défectueuses dans les extraits. Ce script est un point d'entrée simplifié pour exécuter le script de réparation des bornes défectueuses dans les extraits. Il utilise les services refactorisés et les modèles centralisés.
 
@@ -62,7 +79,7 @@ python scripts/execution/run_extract_repair.py
 python scripts/execution/run_extract_repair.py --save
 ```
 
-### 4. `run_verify_extracts.py`
+### 5. `run_verify_extracts.py`
 
 Script d'exécution pour la vérification des extraits. Ce script est un point d'entrée simplifié pour exécuter le script de vérification des extraits. Il utilise les services refactorisés et les modèles centralisés.
 
