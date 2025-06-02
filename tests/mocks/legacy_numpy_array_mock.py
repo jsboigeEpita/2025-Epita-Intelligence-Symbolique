@@ -189,6 +189,12 @@ else:
     # Ce cas ne devrait idéalement pas être atteint si scipy est importé.
     class flatiter(MagicMock):
         pass
+class broadcast(MagicMock):
+    """Mock pour numpy.broadcast."""
+    # scipy.linalg._cythonized_array_utils attend que ce soit un type,
+    # pas une instance de MagicMock directement.
+    # Si des instances sont créées, elles hériteront de MagicMock.
+    pass
 
 def zeros(shape, dtype=None):
     """Crée un tableau de zéros."""
