@@ -26,6 +26,7 @@ import asyncio
 from pathlib import Path
 import ipywidgets as widgets
 from IPython.display import display, clear_output, HTML
+import semantic_kernel as sk # Ajout de l'import pour sk.Kernel
 
 # Importer les fonctions utiles depuis notre module ui
 try:
@@ -39,7 +40,7 @@ try:
     )
     from ...core.llm_service import create_llm_service
     # Import de l'agent d'extraction
-    from ...agents.extract import setup_extract_agent
+    from ...agents.core.extract.extract_agent import ExtractAgent # Modifié
     config_import_success = True
 except ImportError as e:
     # Fallback pour les imports absolus
@@ -53,7 +54,7 @@ except ImportError as e:
         )
         from argumentation_analysis.core.llm_service import create_llm_service
         # Import de l'agent d'extraction
-        from argumentation_analysis.agents.core.extract.extract_agent import setup_extract_agent
+        from argumentation_analysis.agents.core.extract.extract_agent import ExtractAgent # Modifié
         config_import_success = True
     except ImportError as e:
         config_import_success = False
@@ -661,9 +662,31 @@ def create_marker_editor_ui():
                     print("❌ Impossible de créer le service LLM.")
                 return
             
-            # Initialiser l'agent d'extraction
-            kernel, extract_agent = await setup_extract_agent(llm_service)
-            if not extract_agent:
+            # Initialiser le kernel et l'agent d'extraction
+            kernel = sk.Kernel()
+            llm_service_id = "extract_editor_llm" # ID spécifique pour ce service
+            # llm_service est déjà l'instance du service LLM (OpenAIChatCompletion ou AzureChatCompletion)
+            # Il faut s'assurer qu'il a un service_id compatible ou le réassigner si nécessaire.
+            # Pour l'instant, on suppose que create_llm_service peut prendre un service_id
+            # ou que l'instance retournée peut être ajoutée directement.
+            # Si create_llm_service ne prend pas de service_id, il faudra l'adapter ou
+            # créer une nouvelle instance avec le bon service_id ici.
+            # Pour simplifier, on va supposer que create_llm_service a déjà assigné un service_id
+            # ou que l'on peut utiliser celui par défaut.
+            # Mieux : on crée le service avec un ID spécifique ici.
+            llm_service_instance = create_llm_service(service_id=llm_service_id)
+            if not llm_service_instance:
+                with status_output:
+                    clear_output(wait=True)
+                    print("❌ Impossible de créer l'instance du service LLM pour l'éditeur.")
+                return
+
+            kernel.add_service(llm_service_instance)
+            
+            extract_agent = ExtractAgent(kernel=kernel)
+            extract_agent.setup_agent_components(llm_service_id=llm_service_id)
+            
+            if not extract_agent: # Ce test n'est plus vraiment pertinent, l'instanciation lèverait une erreur
                 with status_output:
                     clear_output(wait=True)
                     print("❌ Impossible d'initialiser l'agent d'extraction.")

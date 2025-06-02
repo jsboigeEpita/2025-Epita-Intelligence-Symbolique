@@ -19,7 +19,8 @@ from .fixtures import (
     mock_rhetorical_analyzer,
     mock_contextual_analyzer,
     informal_agent_instance,
-    mock_semantic_kernel_instance # patch_semantic_kernel est autouse
+    mock_semantic_kernel_instance, # patch_semantic_kernel est autouse
+MockSemanticKernel # Ajout de l'import direct de la classe mock
 )
 
 # Import du module à tester
@@ -32,7 +33,7 @@ class TestInformalAgent(unittest.TestCase): # Assurer l'héritage
 
     def setUp(self):
         """Initialisation avant chaque test."""
-        self.mock_sk_kernel = mock_semantic_kernel_instance() # Appelle la fixture
+        self.mock_sk_kernel = MockSemanticKernel() # Instancie directement la classe mock
         self.agent_name = "test_agent_from_setup"
 
         # Patch pour InformalAnalysisPlugin pour contrôler son instanciation

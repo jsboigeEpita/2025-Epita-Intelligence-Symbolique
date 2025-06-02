@@ -1,5 +1,6 @@
 import pytest
 import sys
+import logging
 from unittest.mock import MagicMock
 
 # Mock pour semantic_kernel
@@ -9,10 +10,34 @@ class MockSemanticKernel:
     def __init__(self):
         self.plugins = {}
 
-    def add_plugin(self, plugin, name):
-        """Ajoute un plugin au kernel."""
-        self.plugins[name] = plugin
+    def add_plugin(self, plugin_instance, plugin_name):
+        """Simule l'ajout d'un plugin. S'assure que le conteneur pour les fonctions du plugin existe."""
+        if plugin_name not in self.plugins: self.plugins[plugin_name] = {}
 
+# Ajout des méthodes manquantes pour simuler le Kernel SK plus fidèlement
+    def add_function(self, *, prompt: str, function_name: str, plugin_name: str | None = None, description: str | None = None, prompt_template_config = None, prompt_execution_settings = None):
+        """Simule l'ajout d'une fonction sémantique."""
+        # Pour les tests, on peut juste s'assurer qu'elle est appelée, ou stocker les infos si besoin.
+        # Pour l'instant, un simple MagicMock suffit pour la fonction elle-même.
+        # La vraie méthode retourne une KernelFunction.
+        mock_function = MagicMock(name=f"{plugin_name}_{function_name}")
+        if plugin_name:
+            # S'assurer que le dictionnaire pour ce plugin existe
+            if plugin_name not in self.plugins:
+                self.plugins[plugin_name] = {}
+            # Stocker la fonction mockée sous son nom dans le plugin approprié
+            self.plugins[plugin_name][function_name] = mock_function
+        # else:
+            # Gérer le cas où plugin_name est None si nécessaire,
+            # bien que pour SK, un plugin_name soit généralement attendu.
+            # Si les fonctions pouvaient être globales (pas le cas standard de SK) :
+            # self.plugins[function_name] = mock_function
+        return mock_function # Retourner un mock de KernelFunction
+
+    def get_prompt_execution_settings_from_service_id(self, service_id: str):
+        """Simule la récupération des settings d'exécution."""
+        # Retourner des settings par défaut ou un MagicMock si les tests doivent vérifier les interactions.
+        return MagicMock(name=f"execution_settings_for_{service_id}")
     def create_semantic_function(self, prompt, function_name=None, plugin_name=None, description=None, max_tokens=None, temperature=None, top_p=None):
         """Crée une fonction sémantique."""
         return MagicMock()

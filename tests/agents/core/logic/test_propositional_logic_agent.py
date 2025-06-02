@@ -37,7 +37,7 @@ class TestPropositionalLogicAgent(unittest.TestCase):
         self.mock_tweety_bridge_instance.is_jvm_ready.return_value = True
         self.mock_tweety_bridge_instance.validate_belief_set.return_value = (True, "Ensemble de croyances valide")
         self.mock_tweety_bridge_instance.validate_formula.return_value = (True, "Formule valide")
-        self.mock_tweety_bridge_instance.execute_query.return_value = (True, "Tweety Result: Query 'a => b' is ACCEPTED (True).")
+        self.mock_tweety_bridge_instance.execute_pl_query.return_value = (True, "Tweety Result: Query 'a => b' is ACCEPTED (True).")
 
         # Création de l'agent
         self.agent_name = "TestPLAgent"
