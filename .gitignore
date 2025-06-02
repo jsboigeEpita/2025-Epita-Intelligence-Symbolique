@@ -55,6 +55,10 @@ libs/portable_jdk/
 libs/portable_octave/
 libs/_temp*/
 
+# Fichiers de résultats et rapports générés
+results/
+rapport_ia_2024.txt
+discours_attal_20240130.txt
 # Pytest output files
 pytest_hierarchical_full_v4.txt
 

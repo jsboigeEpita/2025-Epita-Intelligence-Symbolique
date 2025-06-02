@@ -414,6 +414,16 @@ def analyze_encrypted_data(project_context: ProjectContext) -> str | None:
 
         selected_extract = extracts_to_process[0] # Analyse du premier extrait pour la démo
         
+        # Log temporaire pour inspecter selected_extract
+        try:
+            logger.debug(f"Selected extract object (before getattr): {selected_extract}") # Log brut de l'objet
+            if hasattr(selected_extract, 'to_dict'):
+                logger.debug(f"Selected extract dict: {selected_extract.to_dict()}")
+            else:
+                logger.debug(f"Selected extract as dict (vars): {vars(selected_extract) if hasattr(selected_extract, '__dict__') else 'N/A'}")
+        except Exception as e_log:
+            logger.error(f"Error logging selected_extract: {e_log}")
+
         # Les attributs de 'selected_extract' devraient correspondre à la classe Extract
         # (soit réelle, soit le mock si l'import réel a échoué dans bootstrap)
         extract_id = getattr(selected_extract, 'id', getattr(selected_extract, 'extract_name', 'N/A_ID'))
