@@ -1,3 +1,4 @@
+from unittest.mock import patch
 # -*- coding: utf-8 -*-
 """
 Tests unitaires pour les utilitaires de reporting de project_core.

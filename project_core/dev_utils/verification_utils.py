@@ -9,7 +9,7 @@ from typing import Optional, List, Dict, Any, Tuple # Ajout de Tuple
 
 # Imports nécessaires pour la logique du pipeline et des fonctions déplacées
 from project_core.service_setup.core_services import initialize_core_services
-from argumentation_analysis.core.models import ExtractDefinitions, SourceDefinition, Extract # Pour typer les objets DefinitionService
+from argumentation_analysis.models.extract_definition import ExtractDefinitions, SourceDefinition, Extract # Pour typer les objets DefinitionService
 # Imports pour les fonctions déplacées depuis marker_verification_logic.py
 from argumentation_analysis.ui.extract_utils import load_source_text, extract_text_with_markers
 # Les services FetchService et ExtractService sont passés en argument aux fonctions de vérification.

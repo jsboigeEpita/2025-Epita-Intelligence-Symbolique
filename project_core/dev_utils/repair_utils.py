@@ -14,7 +14,7 @@ from semantic_kernel.contents import ChatMessageContent, AuthorRole
 from semantic_kernel.agents import ChatCompletionAgent
 from semantic_kernel.functions.kernel_arguments import KernelArguments
 
-from argumentation_analysis.core.models import ExtractDefinitions, SourceDefinition, Extract # Ajustement du chemin
+from argumentation_analysis.models.extract_definition import ExtractDefinitions, SourceDefinition, Extract # Ajustement du chemin
 from argumentation_analysis.core.llm_service import create_llm_service # Conservé pour le pipeline
 from project_core.service_setup.core_services import initialize_core_services # Conservé pour le pipeline
 
