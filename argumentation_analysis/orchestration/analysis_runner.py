@@ -1,4 +1,14 @@
 # orchestration/analysis_runner.py
+import sys
+import os
+# Ajout pour résoudre les problèmes d'import de project_core
+# Obtient le répertoire du script actuel (orchestration)
+current_script_dir = os.path.dirname(os.path.abspath(__file__))
+# Remonte de deux niveaux pour atteindre la racine du projet (depuis argumentation_analysis/orchestration)
+project_root = os.path.abspath(os.path.join(current_script_dir, "..", ".."))
+if project_root not in sys.path:
+    sys.path.insert(0, project_root)
+
 import time
 import traceback
 import asyncio
@@ -6,10 +16,19 @@ import logging
 import json
 import random
 import os
-import jpype # Pour la vérification finale de la JVM
-from typing import List, Optional, Union # Ajout Union
+# Ajout des imports nécessaires pour initialize_jvm
+from argumentation_analysis.core.jvm_setup import initialize_jvm
+from argumentation_analysis.paths import LIBS_DIR # Nécessaire pour initialize_jvm
 
-# Imports Semantic Kernel
+import jpype # Pour la vérification finale de la JVM
+from typing import List, Optional, Union, Any, Dict # Ajout Any, Dict
+
+# Imports pour le hook LLM
+from semantic_kernel.connectors.ai.chat_completion_client_base import ChatCompletionClientBase
+from semantic_kernel.contents.chat_message_content import ChatMessageContent as SKChatMessageContent # Alias pour éviter conflit
+from semantic_kernel.kernel import Kernel as SKernel # Alias pour éviter conflit avec Kernel de SK
+# KernelArguments est déjà importé plus bas
+ # Imports Semantic Kernel
 import semantic_kernel as sk
 from semantic_kernel.contents import ChatMessageContent, AuthorRole
 from semantic_kernel.agents import AgentGroupChat, ChatCompletionAgent, Agent
@@ -66,6 +85,20 @@ async def run_analysis_conversation(
     print("=====================================================")
     run_logger = logging.getLogger(f"Orchestration.Run.{run_id}")
     run_logger.info("--- Début Nouveau Run ---")
+
+    # Diagnostic pour le hook LLM
+    # print(f"DEBUG PRINT: Type de llm_service: {type(llm_service)}") # RETIRÉ PRINT
+    run_logger.info(f"Type de llm_service: {type(llm_service)}")
+    # print(f"DEBUG PRINT: Attributs de llm_service: {dir(llm_service)}") # RETIRÉ PRINT
+    run_logger.info(f"Attributs de llm_service: {dir(llm_service)}")
+    
+    # Ajout du hook LLM
+    if hasattr(llm_service, "add_chat_hook_handler"):
+        raw_logger_hook = RawResponseLogger(run_logger) # Passer le logger au hook
+        llm_service.add_chat_hook_handler(raw_logger_hook)
+        run_logger.info("RawResponseLogger hook ajouté au service LLM.")
+    else:
+        run_logger.warning("Le service LLM ne supporte pas add_chat_hook_handler. Le RawResponseLogger ne sera pas actif.")
 
     # Vérification argument llm_service
     if not llm_service or not hasattr(llm_service, 'service_id'):
@@ -208,10 +241,11 @@ async def run_analysis_conversation(
              run_logger.info(f"----- Début Tour {turn} - Agent/Author: '{author_display_name}', Role: {role_display_name} -----")
 
              content_str = str(message.content) if message.content else ""
-             content_display = content_str[:500] + "..." if len(content_str) > 500 else content_str
+             # Augmentation de la limite pour l'affichage console
+             content_display = content_str[:2000] + "..." if len(content_str) > 2000 else content_str
              print(f"  Content: {content_display}")
              run_logger.debug(f"  Msg Content T{turn} (Full): {content_str}")
-
+ 
              tool_calls = getattr(message, 'tool_calls', []) or []
              if tool_calls:
                  print("   Tool Calls:")
@@ -242,11 +276,11 @@ async def run_analysis_conversation(
             print("\n⚠️ Chat déjà marqué comme terminé.")
         else:
             run_logger.error(f"Erreur AgentChatException: {chat_complete_error}", exc_info=True)
-            print(f"\n❌ Erreur AgentChatException : {chat_complete_error}")
+            print(f"\nERREUR: Erreur AgentChatException : {chat_complete_error}")
             traceback.print_exc()
     except Exception as e:
         run_logger.error(f"Erreur majeure exécution conversation: {e}", exc_info=True)
-        print(f"\n❌ Erreur majeure : {e}")
+        print(f"\nERREUR: Erreur majeure : {e}")
         traceback.print_exc()
     finally:
         # --- Affichage Final ---
@@ -254,6 +288,45 @@ async def run_analysis_conversation(
          total_duration = run_end_time - run_start_time
          run_logger.info(f"Fin analyse. Durée totale: {total_duration:.2f} sec.")
 
+         # --- Affichage Historique Détaillé ---
+         print("\n--- Historique Détaillé de la Conversation ---")
+         final_history_messages = []
+         if local_group_chat and hasattr(local_group_chat, 'history') and hasattr(local_group_chat.history, 'messages'):
+             final_history_messages = local_group_chat.history.messages
+         
+         if final_history_messages:
+             for msg_idx, msg in enumerate(final_history_messages): # Ajout enumerate pour index
+                 author = msg.name or getattr(msg, 'author_name', f"Role:{msg.role.name}")
+                 role_name = msg.role.name
+                 # Utilisation de la limite de 2000 caractères définie plus haut pour la console
+                 content_display = str(msg.content)[:2000] + "..." if len(str(msg.content)) > 2000 else str(msg.content)
+                 print(f"[{msg_idx}] [{author} ({role_name})]: {content_display}") # Index ajouté
+                 tool_calls = getattr(msg, 'tool_calls', []) or []
+                 if tool_calls:
+                     print("   Tool Calls:")
+                     for tc_idx, tc in enumerate(tool_calls): # Ajout enumerate pour index
+                         plugin_name, func_name = 'N/A', 'N/A'
+                         function_name_attr = getattr(getattr(tc, 'function', None), 'name', None)
+                         if function_name_attr and isinstance(function_name_attr, str) and '-' in function_name_attr:
+                             parts = function_name_attr.split('-', 1)
+                             if len(parts) == 2: plugin_name, func_name = parts
+                         args_dict = getattr(getattr(tc, 'function', None), 'arguments', {}) or {}
+                         args_str = json.dumps(args_dict) if args_dict else "{}"
+                         # Utilisation de la limite de 200 caractères pour les arguments dans le log final
+                         args_display = args_str[:200] + "..." if len(args_str) > 200 else args_str
+                         print(f"     [{tc_idx}] - {plugin_name}-{func_name}({args_display})")
+         else:
+             print("(Historique final vide ou inaccessible)")
+         print("----------------------------------------------\n")
+         
+         # Retrait du hook LLM (bonne pratique)
+         if 'raw_logger_hook' in locals() and hasattr(llm_service, "remove_chat_hook_handler"):
+             try:
+                 llm_service.remove_chat_hook_handler(raw_logger_hook)
+                 run_logger.info("RawResponseLogger hook retiré du service LLM.")
+             except Exception as e_rm_hook:
+                 run_logger.warning(f"Erreur lors du retrait du RawResponseLogger hook: {e_rm_hook}")
+ 
          print("\n--- Historique Détaillé ---")
          final_history_messages = []
          if local_group_chat and hasattr(local_group_chat, 'history') and hasattr(local_group_chat.history, 'messages'):
@@ -263,7 +336,8 @@ async def run_analysis_conversation(
              for msg_idx, msg in enumerate(final_history_messages): # Ajouter index pour clarté
                  author = msg.name or getattr(msg, 'author_name', f"Role:{msg.role.name}")
                  role_name = msg.role.name
-                 content_display = str(msg.content)[:500] + "..." if len(str(msg.content)) > 500 else str(msg.content)
+                 # Augmentation de la limite pour l'affichage console de l'historique
+                 content_display = str(msg.content)[:2000] + "..." if len(str(msg.content)) > 2000 else str(msg.content)
                  print(f"[{msg_idx}] [{author} ({role_name})]: {content_display}") # Index ajouté
                  tool_calls = getattr(msg, 'tool_calls', []) or []
                  if tool_calls:
@@ -545,3 +619,44 @@ def generate_report(analysis_results, output_path=None):
 # Log de chargement
 module_logger = logging.getLogger(__name__)
 module_logger.debug("Module orchestration.analysis_runner chargé.")
+
+# La classe RawResponseLogger n'est plus nécessaire ici,
+# le logging des requêtes/réponses brutes est géré par LoggingHttpTransport
+# dans core/llm_service.py
+
+if __name__ == "__main__":
+    import argparse
+    parser = argparse.ArgumentParser(description="Exécute l'analyse d'argumentation sur un texte donné.")
+    parser.add_argument("--text", type=str, required=True, help="Le texte à analyser.")
+    args = parser.parse_args()
+
+    # Configuration du logging de base si ce n'est pas déjà fait ailleurs
+    if not logging.getLogger().handlers:
+        # Changement du niveau de INFO à DEBUG pour des logs plus verbeux
+        logging.basicConfig(level=logging.DEBUG,
+                            format='%(asctime)s [%(levelname)s] [%(name)s] %(message)s',
+                            datefmt='%Y-%m-%d %H:%M:%S')
+ 
+    runner_logger = logging.getLogger("AnalysisRunnerCLI")
+    runner_logger.info(f"Lancement de AnalysisRunner en mode CLI pour le texte : \"{args.text[:100]}...\"")
+    
+    try:
+        # Initialisation explicite de la JVM avant de créer le runner et les agents
+        runner_logger.info("Initialisation explicite de la JVM depuis analysis_runner...")
+        # S'assurer que LIBS_DIR est une chaîne de caractères pour initialize_jvm
+        jvm_ready = initialize_jvm(lib_dir_path=str(LIBS_DIR))
+        if not jvm_ready:
+            runner_logger.error("Échec de l'initialisation de la JVM. L'agent PL et d'autres fonctionnalités Java pourraient ne pas fonctionner.")
+            # Optionnel: décider si l'on doit quitter si la JVM est critique
+            # sys.exit(1)
+        else:
+            runner_logger.info("JVM initialisée avec succès (ou déjà prête).")
+
+        runner = AnalysisRunner()
+        # Le service LLM sera créé par défaut dans run_analysis_async s'il n'est pas fourni
+        asyncio.run(runner.run_analysis_async(text_content=args.text))
+        runner_logger.info("Analyse terminée avec succès.")
+    except Exception as e:
+        runner_logger.error(f"Une erreur est survenue lors de l'exécution de l'analyse : {e}", exc_info=True)
+        print(f"ERREUR CLI: {e}") # Modification du caractère Unicode
+        traceback.print_exc()
