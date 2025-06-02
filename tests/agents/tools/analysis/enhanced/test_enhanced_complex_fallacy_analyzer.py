@@ -26,7 +26,7 @@ logger = logging.getLogger("TestEnhancedComplexFallacyAnalyzerPytest")
 
 # Importer les mocks pour numpy et pandas
 # Le répertoire tests/mocks est ajouté à sys.path par conftest.py
-from numpy_mock import *
+from legacy_numpy_array_mock import *
 from pandas_mock import *
 
 # Import du module à tester
