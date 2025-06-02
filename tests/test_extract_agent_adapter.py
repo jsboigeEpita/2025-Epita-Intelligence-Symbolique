@@ -141,6 +141,7 @@ async def mock_setup_extract_agent():
     return kernel, extract_agent
 
 
+@pytest.mark.skip(reason="Ce fichier de test est obsolète et remplacé par tests/orchestration/hierarchical/operational/adapters/test_extract_agent_adapter.py")
 class TestExtractAgentAdapter:
     """Tests unitaires pour l'adaptateur d'agent d'extraction."""
 
