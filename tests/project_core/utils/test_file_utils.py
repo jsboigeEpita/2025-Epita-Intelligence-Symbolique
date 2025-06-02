@@ -9,6 +9,7 @@ import json
 from pathlib import Path
 import tempfile # Pour créer des fichiers temporaires
 import shutil # Pour supprimer le répertoire temporaire
+from typing import Any
 
 from project_core.utils.file_utils import load_json_data
 

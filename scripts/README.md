@@ -9,41 +9,32 @@ Ce module contient divers scripts Python et PowerShell pour faciliter le dévelo
 Les scripts sont organisés en sous-dossiers thématiques :
 
 - **`cleanup/`** : Scripts pour nettoyer le projet, supprimer les fichiers obsolètes et gérer la configuration du dépôt.
-- **`execution/`** : Scripts principaux pour exécuter des fonctionnalités clés du système, comme la réparation ou la vérification des extraits.
-- **`reports/`** : Scripts liés à la génération ou à la mise à jour de rapports (par exemple, rapports de couverture).
-- **`setup/`** : Scripts pour configurer l'environnement de développement, gérer les dépendances (notamment JPype et les outils de compilation).
-- **`testing/`** : Scripts spécifiques pour des scénarios de test ou des simulations.
+- **`execution/`** : Scripts principaux pour exécuter des fonctionnalités clés et des workflows complets du système. (Voir [`execution/README.md`](scripts/execution/README.md:1))
+- **`extract_utils/`**: Scripts pour la gestion des extraits de sources (déchiffrement, inspection, chiffrement, embarquement, etc.). (Voir [`extract_utils/README.md`](scripts/extract_utils/README.md:1))
+- **`maintenance/`**: Scripts pour la maintenance, la validation, les tests d'imports et la correction de la structure du projet. (Voir [`maintenance/README.md`](scripts/maintenance/README.md:1))
+- **`reporting/`**: Scripts liés à la génération de rapports (couverture, analyse rhétorique, comparaison d'agents, etc.) et visualisations. (Voir [`reporting/README.md`](scripts/reporting/README.md:1))
+- **`setup/`** : Scripts pour configurer l'environnement de développement, gérer les dépendances (notamment JPype et les outils de compilation). Contient également `download_test_jars.py` et `check_jpype_import.py`.
+- **`testing/`** : Scripts spécifiques pour des scénarios de test, des simulations, ou des validations ponctuelles de composants. (Voir [`testing/README.md`](scripts/testing/README.md:1))
 - **`utils/`** : Petits scripts utilitaires pour des tâches de maintenance ponctuelles sur les fichiers du code source (encodage, indentation, syntaxe).
 - **`validation/`** : Scripts pour valider la structure du projet, les fichiers Markdown, ou d'autres aspects de la qualité.
 
-En plus des sous-dossiers, plusieurs scripts importants résident directement à la racine de `scripts/` :
+Note : Les scripts de démonstration ont été déplacés vers le répertoire `examples/scripts_demonstration/`.
 
-- **`analyze_directory_usage.py`** : Analyse l'utilisation de certains répertoires dans le code.
-- **`check_encoding.py`** : Vérifie l'encodage des fichiers.
-- **`check_imports.py`** : S'assure que toutes les importations Python fonctionnent correctement.
-- **`compare_rhetorical_agents.py`** / **`compare_rhetorical_agents_simple.py`** : Scripts pour comparer les performances ou les résultats de différents agents rhétoriques.
-- **`decrypt_extracts.py`** : Utilitaire pour déchiffrer les extraits (à utiliser avec précaution).
-- **`download_test_jars.py`** : Télécharge les JARs minimaux nécessaires pour les tests.
-- **`fix_project_structure.py`** : Script principal de restructuration (à utiliser avec prudence sur la structure actuelle).
-- **`generate_comprehensive_report.py`** : Génère un rapport d'analyse complet.
-- **`generate_coverage_report.py`** : Génère un rapport de couverture de tests.
-- **`generate_rhetorical_analysis_summaries.py`** : Crée des résumés à partir des analyses rhétoriques.
-- **`initialize_coverage_history.py`** : Initialise l'historique pour le suivi de la couverture des tests.
-- **`rhetorical_analysis.py`** / **`rhetorical_analysis_standalone.py`** : Scripts pour lancer des analyses rhétoriques.
-- **`test_imports.py`** / **`test_imports_after_reorg.py`** : Scripts pour tester les importations Python.
-- **`test_rhetorical_analysis.py`** : Script pour tester les fonctionnalités d'analyse rhétorique.
-- **`update_imports.py`** / **`update_paths.py`** : Scripts pour mettre à jour les importations et les chemins.
-- **`verify_content_integrity.py`** / **`verify_files.py`** : Scripts pour vérifier l'intégrité des fichiers ou du contenu.
-- **`visualize_test_coverage.py`** : Génère des visualisations pour la couverture des tests.
+En plus des sous-dossiers, les scripts suivants résident directement à la racine de `scripts/` :
+
+- **`analyze_directory_usage.py`** : Analyse l'utilisation de certains répertoires dans le code (utilise `project_core.dev_utils.code_validation`).
+- **`check_encoding.py`** : Vérifie l'encodage UTF-8 des fichiers Python du projet (utilise `project_core.dev_utils.encoding_utils`).
+- **`script_commits.ps1`**: Script PowerShell pour gérer les commits. **Note : L'usage de ce script doit être documenté plus en détail, ou une alternative en Python pourrait être envisagée pour simplifier les workflows de développement multi-plateforme.**
 
 ## Fonctionnalités
 
-1. **Automatisation des tâches de développement** : Scripts pour automatiser les tâches répétitives du développement.
-2. **Validation et vérification** : Outils pour valider la structure du projet et vérifier l'intégrité des fichiers.
-3. **Génération de rapports** : Scripts pour générer des rapports de couverture, d'analyse et de synthèse.
-4. **Configuration de l'environnement** : Outils pour configurer et valider l'environnement de développement.
-5. **Analyse rhétorique** : Scripts pour exécuter et tester les fonctionnalités d'analyse rhétorique.
-6. **Maintenance du projet** : Utilitaires pour nettoyer, restructurer et maintenir le projet.
+1.  **Automatisation des tâches de développement** : Scripts pour automatiser les tâches répétitives du développement.
+2.  **Validation et vérification** : Outils pour valider la structure du projet et vérifier l'intégrité des fichiers.
+3.  **Génération de rapports** : Scripts pour générer des rapports de couverture, d'analyse et de synthèse.
+4.  **Configuration de l'environnement** : Outils pour configurer et valider l'environnement de développement.
+5.  **Analyse rhétorique** : Scripts pour exécuter et tester les fonctionnalités d'analyse rhétorique.
+6.  **Maintenance du projet** : Utilitaires pour nettoyer, restructurer et maintenir le projet.
+7.  **Gestion des extraits de données** : Scripts pour chiffrer, déchiffrer, et traiter les extraits de sources.
 
 ## Installation/Configuration
 
@@ -63,8 +54,9 @@ Pour chaque sous-dossier et pour de nombreux scripts individuels, un `README.md`
 
 De manière générale, les scripts Python s'exécutent avec :
 ```bash
-python scripts/chemin/vers/script.py [options]
+python chemin/vers/script.py [options]
 ```
+(Note: ajustez le `python` avec `python scripts/` si vous êtes à la racine du projet, ou configurez votre PYTHONPATH)
 
 Et les scripts PowerShell avec :
 ```powershell
@@ -73,95 +65,46 @@ Et les scripts PowerShell avec :
 
 ### Exemples d'utilisation
 
-#### Scripts de restructuration
+#### Scripts de restructuration (dans `scripts/maintenance/`)
 
 ```bash
-# Mode dry-run (analyse sans modification)
-python scripts/fix_project_structure.py --dry-run
-
-# Mode normal (applique les modifications)
-python scripts/fix_project_structure.py
-
-# Options disponibles
-python scripts/fix_project_structure.py --help
+python scripts/maintenance/fix_project_structure.py --dry-run
 ```
 
-#### Mise à jour des importations
+#### Mise à jour des importations (dans `scripts/maintenance/`)
 
 ```bash
-# Mode dry-run (analyse sans modification)
-python scripts/update_imports.py --dry-run
-
-# Mode normal (applique les modifications)
-python scripts/update_imports.py
+python scripts/maintenance/update_imports.py --dry-run
 ```
 
-#### Téléchargement des JARs de test
+#### Téléchargement des JARs de test (dans `scripts/setup/`)
 
 ```bash
-# Télécharge les JARs s'ils n'existent pas déjà
-python scripts/download_test_jars.py
-
-# Force le téléchargement même si les JARs existent déjà
-python scripts/download_test_jars.py --force
+python scripts/setup/download_test_jars.py
 ```
 
 #### Analyse de l'utilisation des répertoires
 
 ```bash
-python scripts/analyze_directory_usage.py
+python scripts/analyze_directory_usage.py --dir argumentation_analysis --output results/usage_report.json
 ```
 
-#### Embarquement des sources dans les extraits
-
+#### Déchiffrement des extraits (dans `scripts/extract_utils/`)
 ```bash
-# Exemple d'utilisation du script d'embarquement
-python scripts/embed_all_sources.py \
+python scripts/extract_utils/decrypt_extracts.py --output temp_extracts/decrypted.json
+```
+
+#### Embarquement des sources dans les extraits (dans `scripts/extract_utils/`)
+```bash
+python scripts/extract_utils/embed_all_sources.py \
   --input-config chemin/vers/votre/extract_sources.json.gz.enc \
   --output-config chemin/vers/votre/extract_sources_embedded.json.gz.enc \
-  --passphrase "votre_phrase_secrete" \
-  --force
+  --passphrase "votre_phrase_secrete"
 ```
 
 ## API/Interface
 
-La plupart des scripts fournissent une interface en ligne de commande avec des options et des arguments. Voici quelques interfaces communes :
-
-### Script `fix_project_structure.py`
-
-```
-usage: fix_project_structure.py [-h] [--dry-run] [--verbose]
-
-Options:
-  -h, --help     affiche ce message d'aide et quitte
-  --dry-run      exécute en mode simulation sans appliquer les modifications
-  --verbose      affiche des informations détaillées pendant l'exécution
-```
-
-### Script `update_imports.py`
-
-```
-usage: update_imports.py [-h] [--dry-run] [--verbose] [--path PATH]
-
-Options:
-  -h, --help     affiche ce message d'aide et quitte
-  --dry-run      exécute en mode simulation sans appliquer les modifications
-  --verbose      affiche des informations détaillées pendant l'exécution
-  --path PATH    chemin spécifique à traiter (par défaut: tout le projet)
-```
-
-### Script `embed_all_sources.py`
-
-```
-usage: embed_all_sources.py [-h] --input-config INPUT_CONFIG --output-config OUTPUT_CONFIG [--passphrase PASSPHRASE] [--force]
-
-Options:
-  -h, --help                 affiche ce message d'aide et quitte
-  --input-config INPUT_CONFIG    chemin vers le fichier de configuration chiffré d'entrée
-  --output-config OUTPUT_CONFIG  chemin vers le fichier de configuration chiffré de sortie
-  --passphrase PASSPHRASE    passphrase pour le déchiffrement/chiffrement
-  --force                    écrase le fichier de sortie s'il existe déjà
-```
+La plupart des scripts fournissent une interface en ligne de commande avec des options et des arguments. Consulter l'aide de chaque script (`--help`) pour plus de détails.
 
 ## Dépendances
 
@@ -172,6 +115,7 @@ Options:
 
 ### Dépendances internes
 - Module `argumentation_analysis` : La plupart des scripts interagissent avec ce module
+- Module `project_core` : Contient des utilitaires partagés.
 - Bibliothèques dans `libs/` : Certains scripts utilisent les bibliothèques externes du projet
 
 ## Tests
@@ -197,11 +141,11 @@ python scripts/script_name.py --test
 
 Pour contribuer aux scripts utilitaires :
 
-1. Assurez-vous que votre script suit les conventions de nommage et de structure du projet
-2. Documentez clairement l'objectif et l'utilisation de votre script
-3. Incluez des options `--help`, `--dry-run` et `--verbose` lorsque c'est pertinent
-4. Ajoutez des tests pour votre script dans le dossier `tests/scripts/`
-5. Mettez à jour ce README ou créez un README spécifique dans le sous-dossier approprié
+1.  Assurez-vous que votre script suit les conventions de nommage et de structure du projet
+2.  Documentez clairement l'objectif et l'utilisation de votre script
+3.  Incluez des options `--help`, `--dry-run` et `--verbose` lorsque c'est pertinent
+4.  Ajoutez des tests pour votre script dans le dossier `tests/scripts/`
+5.  Mettez à jour ce README ou créez un README spécifique dans le sous-dossier approprié
 
 ## Ressources associées
 
@@ -212,4 +156,4 @@ Pour contribuer aux scripts utilitaires :
 
 ---
 
-*Dernière mise à jour : 27/05/2025*
+*Dernière mise à jour : 02/06/2025*

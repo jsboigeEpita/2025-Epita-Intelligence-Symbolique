@@ -1,9 +1,9 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
-
 """
-Script pour s'assurer que toutes les sources dans une configuration d'extraits
-ont leur texte source complet (`full_text`) embarqué.
+Placeholder pour le script embed_all_sources.py.
+Ce script est nécessaire pour que les tests puissent être collectés.
+Son contenu original devra être restauré ou recréé.
 """
 
 import argparse
@@ -81,28 +81,6 @@ except Exception as e_init:
 
 # La ligne "logger = logging.getLogger(__name__)" est supprimée car logger est défini globalement ci-dessus.
 # La configuration de logging de base est également déplacée et gérée ci-dessus.
-
-# La fonction derive_key_from_passphrase est supprimée car ENCRYPTION_KEY de ui.config sera utilisée.
-# FIXED_SALT n'est plus directement utilisé ici non plus.
-
-# def derive_key_from_passphrase(passphrase: str) -> bytes:
-#     """
-#     Dérive une clé Fernet à partir d'une passphrase.
-#     Utilise la même logique que le vrai code.
-#     """
-#     if not passphrase:
-#         raise ValueError("Passphrase vide")
-    
-#     kdf = PBKDF2HMAC(
-#         algorithm=hashes.SHA256(),
-#         length=32,
-#         salt=CONFIG_FIXED_SALT,  # Utilisation du sel importé
-#         iterations=480000,
-#         backend=default_backend()
-#     )
-#     derived_key_raw = kdf.derive(passphrase.encode('utf-8'))
-#     return base64.urlsafe_b64encode(derived_key_raw)
-
 
 def main():
     """
@@ -427,4 +405,5 @@ def main():
     logger.info("Script d'embarquement des sources et d'extraction des segments terminé.")
 
 if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO) # Redondant si basicConfig est appelé au début, mais sans `force=True` ici, il ne fera rien.
     main()
