@@ -5,7 +5,7 @@
 Tests unitaires pour la création et l'initialisation des agents informels.
 """
 
-# import unittest # Supprimé
+import unittest # Rétabli
 import pytest # Ajouté
 from unittest.mock import MagicMock, patch
 import logging
