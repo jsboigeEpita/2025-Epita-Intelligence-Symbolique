@@ -144,6 +144,8 @@ def array(object, dtype=None, copy=True, order='K', subok=False, ndmin=0):
     return ndarray(shape=shape, dtype=dtype)
 
 asarray = array  # Ajout de asarray comme alias de array
+ma = MagicMock(name='numpy.ma')
+atleast_2d = lambda x: array(x) # Simule la conversion en tableau 2D
 
 def zeros(shape, dtype=None):
     """Crée un tableau de zéros."""
