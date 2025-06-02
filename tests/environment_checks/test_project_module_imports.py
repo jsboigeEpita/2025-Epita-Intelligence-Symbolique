@@ -34,6 +34,7 @@ EXTERNAL_DEPENDENCIES_FOR_PROJECT_CONTEXT = [
      "jpype"
 ]
 
+@pytest.mark.use_real_numpy # Ajout du marqueur ici
 @pytest.mark.parametrize("module_name", EXTERNAL_DEPENDENCIES_FOR_PROJECT_CONTEXT)
 def test_import_external_dependency_for_project(module_name):
     """Tests if an external dependency relevant to project modules can be imported."""

@@ -14,18 +14,17 @@ import time
 from typing import Dict, List, Any, Optional, Union
 from datetime import datetime
 
-import semantic_kernel as sk
-from semantic_kernel.contents import ChatMessageContent, AuthorRole
-from semantic_kernel.functions.kernel_arguments import KernelArguments
+import semantic_kernel as sk # Kept for type hints if necessary, but direct use might be reduced
+# from semantic_kernel.contents import ChatMessageContent, AuthorRole # Potentially unused if agent handles chat history
+# from semantic_kernel.functions.kernel_arguments import KernelArguments # Potentially unused
 
 from argumentation_analysis.orchestration.hierarchical.operational.agent_interface import OperationalAgent
 from argumentation_analysis.orchestration.hierarchical.operational.state import OperationalState
 
-# Import de l'agent informel existant
-from argumentation_analysis.agents.core.informal.informal_definitions import InformalAnalysisPlugin, setup_informal_kernel, INFORMAL_AGENT_INSTRUCTIONS
-from argumentation_analysis.core.llm_service import create_llm_service
+# Import de l'agent informel refactoré
+from argumentation_analysis.agents.core.informal.informal_agent import InformalAnalysisAgent
 
-# Import des outils d'analyse rhétorique améliorés
+# Import des outils d'analyse rhétorique améliorés (conservés au cas où, mais l'agent devrait les gérer)
 from argumentation_analysis.agents.tools.analysis.enhanced.complex_fallacy_analyzer import EnhancedComplexFallacyAnalyzer
 from argumentation_analysis.agents.tools.analysis.enhanced.contextual_fallacy_analyzer import EnhancedContextualFallacyAnalyzer
 from argumentation_analysis.agents.tools.analysis.enhanced.fallacy_severity_evaluator import EnhancedFallacySeverityEvaluator
@@ -48,68 +47,50 @@ class InformalAgentAdapter(OperationalAgent):
             operational_state: État opérationnel à utiliser. Si None, un nouvel état est créé.
         """
         super().__init__(name, operational_state)
-        self.kernel = None
-        self.informal_plugin = None
-        self.informal_agent = None
-        self.llm_service = None
+        self.agent: Optional[InformalAnalysisAgent] = None # Agent refactoré
+        self.kernel: Optional[sk.Kernel] = None # Passé à initialize
+        self.llm_service_id: Optional[str] = None # Passé à initialize
         
-        # Outils d'analyse rhétorique améliorés
-        self.complex_fallacy_analyzer = None
-        self.contextual_fallacy_analyzer = None
-        self.fallacy_severity_evaluator = None
+        # Les outils sont maintenant gérés par l'agent via setup_agent_components
+        # self.complex_fallacy_analyzer = None
+        # self.contextual_fallacy_analyzer = None
+        # self.fallacy_severity_evaluator = None
         
         self.initialized = False
         self.logger = logging.getLogger(f"InformalAgentAdapter.{name}")
     
-    async def initialize(self):
+    async def initialize(self, kernel: sk.Kernel, llm_service_id: str): # Prend kernel et llm_service_id
         """
         Initialise l'agent informel.
+
+        Args:
+            kernel: Le kernel Semantic Kernel à utiliser.
+            llm_service_id: L'ID du service LLM à utiliser.
         
         Returns:
             True si l'initialisation a réussi, False sinon
         """
         if self.initialized:
             return True
+
+        self.kernel = kernel
+        self.llm_service_id = llm_service_id
         
         try:
-            self.logger.info("Initialisation de l'agent informel...")
+            self.logger.info("Initialisation de l'agent informel refactoré...")
             
-            # Créer le service LLM
-            self.llm_service = create_llm_service()
-            if not self.llm_service:
-                self.logger.error("Échec de la création du service LLM.")
+            self.agent = InformalAnalysisAgent(kernel=self.kernel, agent_name=f"{self.name}_InformalAgent")
+            await self.agent.setup_agent_components(llm_service_id=self.llm_service_id)
+            
+            if self.agent is None: # Vérifier self.agent
+                self.logger.error("Échec de l'initialisation de l'agent informel.")
                 return False
-            
-            # Créer le kernel
-            self.kernel = sk.Kernel()
-            self.kernel.add_service(self.llm_service)
-            
-            # Créer le plugin informel
-            self.informal_plugin = InformalAnalysisPlugin()
-            
-            # Initialiser les outils d'analyse rhétorique améliorés
-            self.complex_fallacy_analyzer = EnhancedComplexFallacyAnalyzer()
-            self.contextual_fallacy_analyzer = EnhancedContextualFallacyAnalyzer()
-            self.fallacy_severity_evaluator = EnhancedFallacySeverityEvaluator()
-            
-            # Configurer le kernel pour l'agent informel
-            setup_informal_kernel(self.kernel, self.llm_service)
-            
-            # Créer l'agent informel
-            prompt_exec_settings = self.kernel.get_prompt_execution_settings_from_service_id(self.llm_service.service_id)
-            self.informal_agent = sk.ChatCompletionAgent(
-                kernel=self.kernel,
-                service=self.llm_service,
-                name="InformalAgent",
-                instructions=INFORMAL_AGENT_INSTRUCTIONS,
-                arguments=KernelArguments(settings=prompt_exec_settings)
-            )
-            
+
             self.initialized = True
-            self.logger.info("Agent informel initialisé avec succès.")
+            self.logger.info("Agent informel refactoré initialisé avec succès.")
             return True
         except Exception as e:
-            self.logger.error(f"Erreur lors de l'initialisation de l'agent informel: {e}")
+            self.logger.error(f"Erreur lors de l'initialisation de l'agent informel refactoré: {e}")
             return False
     
     def get_capabilities(self) -> List[str]:
@@ -163,7 +144,22 @@ class InformalAgentAdapter(OperationalAgent):
         """
         # Vérifier si l'agent est initialisé
         if not self.initialized:
-            success = await self.initialize()
+            if self.kernel is None or self.llm_service_id is None:
+                self.logger.error("Kernel ou llm_service_id non configuré avant process_task pour l'agent informel.")
+                return {
+                    "id": f"result-{task.get('id')}",
+                    "task_id": task.get("id"),
+                    "tactical_task_id": task.get("tactical_task_id"),
+                    "status": "failed",
+                    "outputs": {},
+                    "metrics": {},
+                    "issues": [{
+                        "type": "configuration_error",
+                        "description": "Kernel ou llm_service_id non configuré pour l'agent informel",
+                        "severity": "high"
+                    }]
+                }
+            success = await self.initialize(self.kernel, self.llm_service_id)
             if not success:
                 return {
                     "id": f"result-{task.get('id')}",
@@ -218,92 +214,108 @@ class InformalAgentAdapter(OperationalAgent):
                         if not extract_content:
                             continue
                         
-                        arguments = await self._identify_arguments(extract_content, technique_params)
-                        
-                        for arg in arguments:
+                        # Appel à la méthode de l'agent refactoré
+                        identified_args_result = await self.agent.identify_arguments(
+                            text=extract_content,
+                            parameters=technique_params
+                        )
+                        # La structure de identified_args_result doit être vérifiée.
+                        # Supposons qu'elle retourne une liste d'arguments structurés.
+                        # Exemple: [{"premises": [...], "conclusion": "...", "confidence": 0.8}]
+                        for arg_data in identified_args_result: # Ajuster selon la sortie réelle de l'agent
                             results.append({
                                 "type": "identified_arguments",
                                 "extract_id": extract.get("id"),
                                 "source": extract.get("source"),
-                                "premises": arg.get("premises", []),
-                                "conclusion": arg.get("conclusion", ""),
-                                "confidence": arg.get("confidence", 0.8)
+                                "premises": arg_data.get("premises", []),
+                                "conclusion": arg_data.get("conclusion", ""),
+                                "confidence": arg_data.get("confidence", 0.8)
                             })
                 
                 elif technique_name == "fallacy_pattern_matching":
-                    # Détecter les sophismes dans le texte
                     for extract in text_extracts:
                         extract_content = extract.get("content", "")
                         if not extract_content:
                             continue
                         
-                        # Utiliser l'analyseur de sophismes amélioré
-                        arguments = self._extract_arguments(extract_content)
-                        context = technique_params.get("context", "général")
-                        
-                        # Détecter les sophismes avec l'outil amélioré
-                        fallacies = []
-                        if self.contextual_fallacy_analyzer:
-                            analysis_results = self.contextual_fallacy_analyzer.analyze_contextual_fallacies(extract_content, context)
-                            for fallacy in analysis_results.get("identified_fallacies", []):
-                                fallacies.append({
-                                    "fallacy_type": fallacy.get("fallacy_type", ""),
-                                    "segment": fallacy.get("segment", ""),
-                                    "explanation": fallacy.get("explanation", ""),
-                                    "confidence": fallacy.get("confidence", 0.7)
-                                })
-                        else:
-                            # Utiliser la méthode originale si l'outil amélioré n'est pas disponible
-                            fallacies = await self._detect_fallacies(extract_content, technique_params)
-                        
-                        for fallacy in fallacies:
+                        # Appel à la méthode de l'agent refactoré
+                        detected_fallacies_result = await self.agent.detect_fallacies(
+                            text=extract_content,
+                            parameters=technique_params
+                        )
+                        # Supposons que detected_fallacies_result retourne une liste de sophismes.
+                        # Exemple: [{"fallacy_type": "...", "segment": "...", "explanation": "...", "confidence": 0.7}]
+                        for fallacy_data in detected_fallacies_result: # Ajuster selon la sortie réelle
                             results.append({
                                 "type": "identified_fallacies",
                                 "extract_id": extract.get("id"),
                                 "source": extract.get("source"),
-                                "fallacy_type": fallacy.get("fallacy_type", ""),
-                                "segment": fallacy.get("segment", ""),
-                                "explanation": fallacy.get("explanation", ""),
-                                "confidence": fallacy.get("confidence", 0.7)
+                                "fallacy_type": fallacy_data.get("fallacy_type", ""),
+                                "segment": fallacy_data.get("segment", ""),
+                                "explanation": fallacy_data.get("explanation", ""),
+                                "confidence": fallacy_data.get("confidence", 0.7)
+                            })
+
+                elif technique_name == "complex_fallacy_analysis": # Nouvelle gestion
+                    for extract in text_extracts:
+                        extract_content = extract.get("content", "")
+                        if not extract_content:
+                            continue
+                        analysis_result = await self.agent.analyze_complex_fallacies(
+                            text=extract_content,
+                            parameters=technique_params
+                        )
+                        for fallacy_data in analysis_result: # Ajuster selon la sortie réelle
+                             results.append({
+                                "type": "complex_fallacies", # ou un type plus spécifique
+                                "extract_id": extract.get("id"),
+                                "source": extract.get("source"),
+                                **fallacy_data # Intégrer les données du sophisme
                             })
                 
                 elif technique_name == "contextual_fallacy_analysis":
-                    # Analyser les sophismes dans le contexte
                     for extract in text_extracts:
                         extract_content = extract.get("content", "")
                         if not extract_content:
                             continue
                         
-                        # Utiliser l'analyseur de sophismes contextuels amélioré
-                        arguments = self._extract_arguments(extract_content)
-                        context = technique_params.get("context", "général")
-                        
-                        # Analyser les sophismes contextuels avec l'outil amélioré
-                        contextual_fallacies = []
-                        if self.complex_fallacy_analyzer:
-                            analysis_results = self.complex_fallacy_analyzer.analyze_inter_argument_coherence(arguments, context)
-                            for fallacy in analysis_results.get("contradictions", []):
-                                contextual_fallacies.append({
-                                    "fallacy_type": fallacy.get("contradiction_type", "Contradiction contextuelle"),
-                                    "context": fallacy.get("description", ""),
-                                    "explanation": fallacy.get("explanation", ""),
-                                    "confidence": fallacy.get("confidence", 0.7)
-                                })
-                        else:
-                            # Utiliser la méthode originale si l'outil amélioré n'est pas disponible
-                            contextual_fallacies = await self._analyze_contextual_fallacies(extract_content, technique_params)
-                        
-                        for fallacy in contextual_fallacies:
+                        # Appel à la méthode de l'agent refactoré
+                        contextual_fallacies_result = await self.agent.analyze_contextual_fallacies(
+                            text=extract_content,
+                            parameters=technique_params
+                        )
+                        # Supposons que contextual_fallacies_result retourne une liste de sophismes contextuels.
+                        # Exemple: [{"fallacy_type": "...", "context": "...", "explanation": "...", "confidence": 0.7}]
+                        for fallacy_data in contextual_fallacies_result: # Ajuster selon la sortie réelle
                             results.append({
                                 "type": "contextual_fallacies",
                                 "extract_id": extract.get("id"),
                                 "source": extract.get("source"),
-                                "fallacy_type": fallacy.get("fallacy_type", ""),
-                                "context": fallacy.get("context", ""),
-                                "explanation": fallacy.get("explanation", ""),
-                                "confidence": fallacy.get("confidence", 0.7)
+                                "fallacy_type": fallacy_data.get("fallacy_type", ""),
+                                "context": fallacy_data.get("context", ""), # ou "segment"
+                                "explanation": fallacy_data.get("explanation", ""),
+                                "confidence": fallacy_data.get("confidence", 0.7)
                             })
-                
+
+                elif technique_name == "fallacy_severity_evaluation": # Nouvelle gestion
+                    # Cette technique pourrait nécessiter des sophismes déjà identifiés en entrée
+                    # ou opérer sur le texte brut. À adapter selon la logique de l'agent.
+                    # Supposons qu'elle opère sur le texte brut pour l'instant.
+                    for extract in text_extracts:
+                        extract_content = extract.get("content", "")
+                        if not extract_content:
+                            continue
+                        severity_results = await self.agent.evaluate_fallacy_severity(
+                            text=extract_content, # ou identified_fallacies
+                            parameters=technique_params
+                        )
+                        for severity_data in severity_results: # Ajuster selon la sortie réelle
+                            results.append({
+                                "type": "fallacy_severity",
+                                "extract_id": extract.get("id"),
+                                "source": extract.get("source"),
+                                **severity_data # Intégrer les données de sévérité
+                            })
                 else:
                     issues.append({
                         "type": "unsupported_technique",
@@ -381,222 +393,10 @@ class InformalAgentAdapter(OperationalAgent):
                 }]
             }
     
-    async def _identify_arguments(self, text: str, parameters: Dict[str, Any]) -> List[Dict[str, Any]]:
-        """
-        Identifie les arguments dans un texte.
-        
-        Args:
-            text: Le texte à analyser
-            parameters: Les paramètres d'identification
-            
-        Returns:
-            Liste des arguments identifiés
-        """
-        # Vérifier si l'agent est initialisé
-        if not self.initialized:
-            await self.initialize()
-        
-        try:
-            # Créer un message de chat pour l'agent
-            chat_message = ChatMessageContent(
-                role=AuthorRole.USER,
-                content=f"Identifie les arguments dans ce texte:\n\n{text}"
-            )
-            
-            # Appeler l'agent informel
-            response_content = ""
-            async for chunk in self.informal_agent.invoke([chat_message]):
-                if hasattr(chunk, 'content') and chunk.content:
-                    response_content = chunk.content
-                    break  # Prendre seulement la première réponse complète
-            
-            # Analyser la réponse pour extraire les arguments
-            arguments = []
-            
-            # Rechercher un bloc JSON dans la réponse
-            json_match = re.search(r'```json\s*([\s\S]*?)\s*```', response_content)
-            if json_match:
-                try:
-                    json_data = json.loads(json_match.group(1))
-                    if isinstance(json_data, list):
-                        arguments = json_data
-                    elif isinstance(json_data, dict) and "arguments" in json_data:
-                        arguments = json_data["arguments"]
-                except json.JSONDecodeError:
-                    pass
-            
-            # Si aucun JSON n'est trouvé, essayer d'extraire les arguments manuellement
-            if not arguments:
-                # Rechercher les arguments dans le texte
-                arg_matches = re.finditer(r'Argument\s+(\d+):\s*\n\s*Prémisses?\s*:\s*(.*?)\n\s*Conclusion\s*:\s*(.*?)(?:\n|$)', 
-                                         response_content, re.DOTALL)
-                
-                for match in arg_matches:
-                    arg_num = match.group(1)
-                    premises_text = match.group(2).strip()
-                    conclusion = match.group(3).strip()
-                    
-                    # Extraire les prémisses individuelles
-                    premises = []
-                    for premise in re.split(r'\n\s*-\s*|\n\s*\d+\.\s*', premises_text):
-                        premise = premise.strip()
-                        if premise:
-                            premises.append(premise)
-                    
-                    arguments.append({
-                        "id": f"arg-{arg_num}",
-                        "premises": premises,
-                        "conclusion": conclusion,
-                        "confidence": 0.8  # Valeur arbitraire pour l'exemple
-                    })
-            
-            return arguments
-        
-        except Exception as e:
-            self.logger.error(f"Erreur lors de l'identification des arguments: {e}")
-            return []
-    
-    async def _detect_fallacies(self, text: str, parameters: Dict[str, Any]) -> List[Dict[str, Any]]:
-        """
-        Détecte les sophismes dans un texte.
-        
-        Args:
-            text: Le texte à analyser
-            parameters: Les paramètres de détection
-            
-        Returns:
-            Liste des sophismes détectés
-        """
-        # Vérifier si l'agent est initialisé
-        if not self.initialized:
-            await self.initialize()
-        
-        try:
-            # Créer un message de chat pour l'agent
-            chat_message = ChatMessageContent(
-                role=AuthorRole.USER,
-                content=f"Analyse ce texte pour détecter les sophismes:\n\n{text}"
-            )
-            
-            # Appeler l'agent informel
-            response_content = ""
-            async for chunk in self.informal_agent.invoke([chat_message]):
-                if hasattr(chunk, 'content') and chunk.content:
-                    response_content = chunk.content
-                    break  # Prendre seulement la première réponse complète
-            
-            # Analyser la réponse pour extraire les sophismes
-            fallacies = []
-            
-            # Rechercher un bloc JSON dans la réponse
-            json_match = re.search(r'```json\s*([\s\S]*?)\s*```', response_content)
-            if json_match:
-                try:
-                    json_data = json.loads(json_match.group(1))
-                    if isinstance(json_data, list):
-                        fallacies = json_data
-                    elif isinstance(json_data, dict) and "fallacies" in json_data:
-                        fallacies = json_data["fallacies"]
-                except json.JSONDecodeError:
-                    pass
-            
-            # Si aucun JSON n'est trouvé, essayer d'extraire les sophismes manuellement
-            if not fallacies:
-                # Rechercher les sophismes dans le texte
-                fallacy_matches = re.finditer(r'Sophisme\s+(\d+):\s*\n\s*Type\s*:\s*(.*?)\n\s*Segment\s*:\s*(.*?)\n\s*Explication\s*:\s*(.*?)(?:\n\s*Sophisme|$)', 
-                                            response_content, re.DOTALL)
-                
-                for match in fallacy_matches:
-                    fallacy_num = match.group(1)
-                    fallacy_type = match.group(2).strip()
-                    segment = match.group(3).strip()
-                    explanation = match.group(4).strip()
-                    
-                    fallacies.append({
-                        "id": f"fallacy-{fallacy_num}",
-                        "fallacy_type": fallacy_type,
-                        "segment": segment,
-                        "explanation": explanation,
-                        "confidence": 0.7  # Valeur arbitraire pour l'exemple
-                    })
-            
-            return fallacies
-        
-        except Exception as e:
-            self.logger.error(f"Erreur lors de la détection des sophismes: {e}")
-            return []
-    
-    async def _analyze_contextual_fallacies(self, text: str, parameters: Dict[str, Any]) -> List[Dict[str, Any]]:
-        """
-        Analyse les sophismes dans le contexte.
-        
-        Args:
-            text: Le texte à analyser
-            parameters: Les paramètres d'analyse
-            
-        Returns:
-            Liste des sophismes contextuels
-        """
-        # Vérifier si l'agent est initialisé
-        if not self.initialized:
-            await self.initialize()
-        
-        try:
-            # Créer un message de chat pour l'agent
-            chat_message = ChatMessageContent(
-                role=AuthorRole.USER,
-                content=f"Analyse ce texte pour détecter les sophismes contextuels:\n\n{text}"
-            )
-            
-            # Appeler l'agent informel
-            response_content = ""
-            async for chunk in self.informal_agent.invoke([chat_message]):
-                if hasattr(chunk, 'content') and chunk.content:
-                    response_content = chunk.content
-                    break  # Prendre seulement la première réponse complète
-            
-            # Analyser la réponse pour extraire les sophismes contextuels
-            contextual_fallacies = []
-            
-            # Rechercher un bloc JSON dans la réponse
-            json_match = re.search(r'```json\s*([\s\S]*?)\s*```', response_content)
-            if json_match:
-                try:
-                    json_data = json.loads(json_match.group(1))
-                    if isinstance(json_data, list):
-                        contextual_fallacies = json_data
-                    elif isinstance(json_data, dict) and "contextual_fallacies" in json_data:
-                        contextual_fallacies = json_data["contextual_fallacies"]
-                except json.JSONDecodeError:
-                    pass
-            
-            # Si aucun JSON n'est trouvé, essayer d'extraire les sophismes contextuels manuellement
-            if not contextual_fallacies:
-                # Rechercher les sophismes contextuels dans le texte
-                fallacy_matches = re.finditer(r'Sophisme contextuel\s+(\d+):\s*\n\s*Type\s*:\s*(.*?)\n\s*Contexte\s*:\s*(.*?)\n\s*Explication\s*:\s*(.*?)(?:\n\s*Sophisme|$)', 
-                                            response_content, re.DOTALL)
-                
-                for match in fallacy_matches:
-                    fallacy_num = match.group(1)
-                    fallacy_type = match.group(2).strip()
-                    context = match.group(3).strip()
-                    explanation = match.group(4).strip()
-                    
-                    contextual_fallacies.append({
-                        "id": f"ctx-fallacy-{fallacy_num}",
-                        "fallacy_type": fallacy_type,
-                        "context": context,
-                        "explanation": explanation,
-                        "confidence": 0.7  # Valeur arbitraire pour l'exemple
-                    })
-            
-            return contextual_fallacies
-        
-        except Exception as e:
-            self.logger.error(f"Erreur lors de l'analyse des sophismes contextuels: {e}")
-            return []
-    
-    def explore_fallacy_hierarchy(self, current_pk: int) -> Dict[str, Any]:
+    # Les méthodes _identify_arguments, _detect_fallacies, _analyze_contextual_fallacies
+    # sont supprimées car leurs fonctionnalités sont maintenant dans self.agent.
+
+    async def explore_fallacy_hierarchy(self, current_pk: int) -> Dict[str, Any]: # Devient async
         """
         Explore la hiérarchie des sophismes.
         
@@ -610,13 +410,14 @@ class InformalAgentAdapter(OperationalAgent):
             self.logger.warning("Agent informel non initialisé. Impossible d'explorer la hiérarchie des sophismes.")
             return {"error": "Agent informel non initialisé"}
         
+        if not self.agent: # Vérifier si self.agent est initialisé
+             self.logger.error("self.agent non initialisé dans explore_fallacy_hierarchy")
+             return {"error": "Agent non initialisé"}
+
         try:
-            # Appeler la fonction du plugin
-            result_json = self.informal_plugin.explore_fallacy_hierarchy(str(current_pk))
-            
-            # Convertir le résultat JSON en dictionnaire
-            result = json.loads(result_json)
-            
+            # Appeler la fonction de l'agent refactoré
+            result = await self.agent.explore_fallacy_hierarchy(current_pk=str(current_pk)) # Appel à l'agent
+            # Pas besoin de json.loads si l'agent retourne déjà un dict
             return result
         except Exception as e:
             self.logger.error(f"Erreur lors de l'exploration de la hiérarchie des sophismes: {e}")
@@ -654,7 +455,7 @@ class InformalAgentAdapter(OperationalAgent):
         
         return paragraphs
     
-    def get_fallacy_details(self, fallacy_pk: int) -> Dict[str, Any]:
+    async def get_fallacy_details(self, fallacy_pk: int) -> Dict[str, Any]: # Devient async
         """
         Obtient les détails d'un sophisme.
         
@@ -667,14 +468,15 @@ class InformalAgentAdapter(OperationalAgent):
         if not self.initialized:
             self.logger.warning("Agent informel non initialisé. Impossible d'obtenir les détails du sophisme.")
             return {"error": "Agent informel non initialisé"}
-        
+
+        if not self.agent: # Vérifier si self.agent est initialisé
+             self.logger.error("self.agent non initialisé dans get_fallacy_details")
+             return {"error": "Agent non initialisé"}
+
         try:
-            # Appeler la fonction du plugin
-            result_json = self.informal_plugin.get_fallacy_details(str(fallacy_pk))
-            
-            # Convertir le résultat JSON en dictionnaire
-            result = json.loads(result_json)
-            
+            # Appeler la fonction de l'agent refactoré
+            result = await self.agent.get_fallacy_details(fallacy_pk=str(fallacy_pk)) # Appel à l'agent
+            # Pas besoin de json.loads si l'agent retourne déjà un dict
             return result
         except Exception as e:
             self.logger.error(f"Erreur lors de l'obtention des détails du sophisme: {e}")

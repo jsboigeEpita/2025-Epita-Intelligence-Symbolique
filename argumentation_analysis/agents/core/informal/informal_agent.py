@@ -16,167 +16,188 @@ import logging
 import json
 from typing import Dict, List, Any, Optional
 import semantic_kernel as sk
+from semantic_kernel.functions.kernel_arguments import KernelArguments
+
+# Import de la classe de base
+from ..abc.agent_bases import BaseAgent
 
 # Import des définitions et des prompts
-from .informal_definitions import InformalAnalysisPlugin, setup_informal_kernel
+from .informal_definitions import InformalAnalysisPlugin, INFORMAL_AGENT_INSTRUCTIONS
+from .prompts import prompt_identify_args_v8, prompt_analyze_fallacies_v1, prompt_justify_fallacy_attribution_v1
+
 
 # Configuration du logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s [%(levelname)s] [%(name)s] %(message)s',
-    datefmt='%H:%M:%S'
-)
+# logging.basicConfig( # Commenté car BaseAgent gère son propre logger
+#     level=logging.INFO,
+#     format='%(asctime)s [%(levelname)s] [%(name)s] %(message)s',
+#     datefmt='%H:%M:%S'
+# )
 
-class InformalAgent:
+class InformalAnalysisAgent(BaseAgent):
     """
-    Agent pour l'analyse informelle des arguments et des sophismes.
-    
-    Cet agent utilise différents outils pour analyser les sophismes dans les arguments.
-    Il peut également utiliser un kernel sémantique pour des analyses plus avancées.
+    Agent pour l'analyse informelle des arguments et des sophismes,
+    héritant de BaseAgent.
     """
     
     def __init__(
         self,
-        agent_id: str,
-        tools: Dict[str, Any],
-        config: Optional[Dict[str, Any]] = None,
-        semantic_kernel: Optional[sk.Kernel] = None,
-        informal_plugin: Optional[InformalAnalysisPlugin] = None,
-        strict_validation: bool = True
+        kernel: sk.Kernel,
+        agent_name: str = "InformalAnalysisAgent",
+        # Les anciens paramètres tools, config, semantic_kernel, informal_plugin, strict_validation
+        # ne sont plus nécessaires ici car gérés par BaseAgent et setup_agent_components.
     ):
         """
-        Initialise l'agent informel.
+        Initialise l'agent d'analyse informelle.
         
         Args:
-            agent_id: Identifiant unique de l'agent
-            tools: Dictionnaire des outils disponibles pour l'agent
-            config: Configuration optionnelle de l'agent
-            semantic_kernel: Kernel sémantique optionnel pour les analyses avancées
-            informal_plugin: Plugin d'analyse informelle optionnel
-            strict_validation: Si True, valide strictement la présence des outils requis
-        
-        Raises:
-            ValueError: Si aucun outil n'est fourni ou si le détecteur de sophismes est manquant (en mode strict)
-            TypeError: Si un outil fourni n'est pas valide
+            kernel: Le kernel sémantique à utiliser.
+            agent_name: Le nom de l'agent.
         """
-        self.agent_id = agent_id
-        self.logger = logging.getLogger(f"InformalAgent:{agent_id}")
-        self.logger.info(f"Initialisation de l'agent informel {agent_id}...")
-        
-        # Vérifier que les outils sont valides
-        if not tools:
-            raise ValueError("Aucun outil fourni pour l'agent informel")
-        
-        # Vérifier que le détecteur de sophismes est présent (seulement en mode strict)
-        if strict_validation and "fallacy_detector" not in tools:
-            raise ValueError("Le détecteur de sophismes est requis pour l'agent informel")
-        
-        # Vérifier que tous les outils sont valides
-        for tool_name, tool in tools.items():
-            if not callable(tool) and not isinstance(tool, object) or isinstance(tool, (int, float, str, bool)):
-                raise TypeError(f"L'outil {tool_name} n'est pas valide")
-        
-        self.tools = tools
-        self.config = config or {
+        super().__init__(kernel, agent_name, system_prompt=INFORMAL_AGENT_INSTRUCTIONS)
+        self.logger.info(f"Initialisation de l'agent informel {self.name}...")
+        # self.config est conservé pour l'instant pour la compatibilité de certaines méthodes
+        # mais devrait idéalement être géré au niveau du plugin ou via des arguments de fonction.
+        self.config = { # Valeurs par défaut, peuvent être surchargées si nécessaire
             "analysis_depth": "standard",
             "confidence_threshold": 0.5,
             "max_fallacies": 5,
             "include_context": False
         }
-        
-        # Kernel sémantique et plugin informel
-        self.semantic_kernel = semantic_kernel
-        self.informal_plugin = informal_plugin
-        
-        # Si un kernel sémantique est fourni, configurer le plugin informel
-        if self.semantic_kernel:
-            setup_informal_kernel(self.semantic_kernel, self.informal_plugin)
-        
-        self.logger.info(f"Agent informel {agent_id} initialisé avec {len(tools)} outils")
-    
-    def get_available_tools(self) -> List[str]:
-        """
-        Retourne la liste des outils disponibles pour l'agent.
-        
-        Returns:
-            Liste des noms des outils disponibles
-        """
-        return list(self.tools.keys())
-    
-    def get_agent_capabilities(self) -> Dict[str, bool]:
+        self.logger.info(f"Agent informel {self.name} initialisé.")
+
+    def get_agent_capabilities(self) -> Dict[str, Any]:
         """
         Retourne les capacités de l'agent en fonction des outils disponibles.
         
         Returns:
             Dictionnaire des capacités de l'agent
         """
-        capabilities = {
-            "fallacy_detection": "fallacy_detector" in self.tools,
-            "rhetorical_analysis": "rhetorical_analyzer" in self.tools,
-            "contextual_analysis": "contextual_analyzer" in self.tools
-        }
-        return capabilities
-    
-    def get_agent_info(self) -> Dict[str, Any]:
-        """
-        Retourne les informations sur l'agent.
-        
-        Returns:
-            Dictionnaire des informations sur l'agent
-        """
+        """Décrit ce que l'agent peut faire."""
         return {
-            "agent_id": self.agent_id,
-            "agent_type": "informal",
-            "capabilities": self.get_agent_capabilities(),
-            "tools": self.get_available_tools()
+            "identify_arguments": "Identifies main arguments in a text using semantic functions.",
+            "analyze_fallacies": "Analyzes text for fallacies using semantic functions and a taxonomy.",
+            "explore_fallacy_hierarchy": "Navigates the fallacy taxonomy using a native plugin.",
+            "get_fallacy_details": "Gets details for a specific fallacy using a native plugin.",
+            "categorize_fallacies": "Categorizes identified fallacies based on their type.",
+            "perform_complete_analysis": "Performs a comprehensive analysis of a text for arguments and fallacies."
         }
-    
-    def analyze_fallacies(self, text: str) -> List[Dict[str, Any]]:
+
+    def setup_agent_components(self, llm_service_id: str) -> None:
         """
-        Analyse les sophismes dans un texte.
+        Configure les composants spécifiques de l'agent dans le kernel SK.
+        """
+        super().setup_agent_components(llm_service_id)
+        self.logger.info(f"Configuration des composants pour {self.name} avec le service LLM: {llm_service_id}...")
+
+        # 1. Initialisation et Enregistrement du Plugin Natif
+        informal_plugin_instance = InformalAnalysisPlugin()
+        # Utiliser self.name comme nom de plugin pour la cohérence, ou un nom spécifique comme "InformalAnalyzer"
+        # Si le system_prompt fait référence à "InformalAnalyzer", il faut utiliser ce nom.
+        # D'après INFORMAL_AGENT_INSTRUCTIONS, le plugin est appelé "InformalAnalyzer"
+        native_plugin_name = "InformalAnalyzer"
+        self.sk_kernel.add_plugin(informal_plugin_instance, plugin_name=native_plugin_name)
+        self.logger.info(f"Plugin natif '{native_plugin_name}' enregistré dans le kernel.")
+
+        # 2. Enregistrement des Fonctions Sémantiques
+        # Le plugin_name pour les fonctions sémantiques est souvent le nom de l'agent ou un domaine.
+        # Ici, nous utilisons aussi native_plugin_name pour que les appels soient cohérents
+        # si le prompt système s'attend à `InformalAnalyzer.semantic_IdentifyArguments`.
+        
+        # Récupérer les settings d'exécution par défaut pour le service LLM spécifié
+        try:
+            execution_settings = self.sk_kernel.get_prompt_execution_settings_from_service_id(llm_service_id)
+        except Exception as e:
+            self.logger.warning(f"Impossible de récupérer les settings LLM pour {llm_service_id}: {e}. Utilisation des settings par défaut.")
+            execution_settings = None
+
+        try:
+            self.sk_kernel.add_function(
+                prompt=prompt_identify_args_v8,
+                plugin_name=native_plugin_name, # Cohérent avec les appels attendus
+                function_name="semantic_IdentifyArguments",
+                description="Identifie les arguments clés dans un texte.",
+                prompt_execution_settings=execution_settings
+            )
+            self.logger.info(f"Fonction sémantique '{native_plugin_name}.semantic_IdentifyArguments' enregistrée.")
+
+            self.sk_kernel.add_function(
+                prompt=prompt_analyze_fallacies_v1,
+                plugin_name=native_plugin_name,
+                function_name="semantic_AnalyzeFallacies",
+                description="Analyse les sophismes dans un argument.",
+                prompt_execution_settings=execution_settings
+            )
+            self.logger.info(f"Fonction sémantique '{native_plugin_name}.semantic_AnalyzeFallacies' enregistrée.")
+
+            self.sk_kernel.add_function(
+                prompt=prompt_justify_fallacy_attribution_v1,
+                plugin_name=native_plugin_name,
+                function_name="semantic_JustifyFallacyAttribution",
+                description="Justifie l'attribution d'un sophisme à un argument.",
+                prompt_execution_settings=execution_settings
+            )
+            self.logger.info(f"Fonction sémantique '{native_plugin_name}.semantic_JustifyFallacyAttribution' enregistrée.")
+            
+        except Exception as e:
+            self.logger.error(f"Erreur lors de l'enregistrement des fonctions sémantiques: {e}", exc_info=True)
+            raise  # Propage l'erreur pour indiquer un échec de configuration
+
+        self.logger.info(f"Composants de {self.name} configurés avec succès.")
+
+    async def analyze_fallacies(self, text: str) -> List[Dict[str, Any]]:
+        """
+        Analyse les sophismes dans un texte en utilisant une fonction sémantique.
         
         Args:
             text: Texte à analyser
         
         Returns:
-            Liste des sophismes détectés
+            Liste des sophismes détectés (format à définir par le prompt)
         """
-        self.logger.info(f"Analyse des sophismes dans un texte de {len(text)} caractères...")
-        
-        # Vérifier si le détecteur de sophismes est disponible
-        if "fallacy_detector" not in self.tools:
-            self.logger.warning("Détecteur de sophismes non disponible, retour d'une liste vide")
-            return []
-        
-        # Utiliser le détecteur de sophismes
-        fallacies = self.tools["fallacy_detector"].detect(text)
-        
-        # Valider le résultat du détecteur
-        if not isinstance(fallacies, list):
-            self.logger.warning(f"Résultat invalide du détecteur de sophismes: {type(fallacies)}")
-            return []
-        
-        # Valider que chaque élément est un dictionnaire
-        valid_fallacies = []
-        for f in fallacies:
-            if isinstance(f, dict):
-                valid_fallacies.append(f)
-            else:
-                self.logger.warning(f"Sophisme invalide ignoré: {type(f)}")
-        
-        # Filtrer les sophismes selon le seuil de confiance
-        confidence_threshold = self.config.get("confidence_threshold", 0.5)
-        fallacies = [f for f in valid_fallacies if f.get("confidence", 0) >= confidence_threshold]
-        
-        # Limiter le nombre de sophismes
-        max_fallacies = self.config.get("max_fallacies", 5)
-        if len(fallacies) > max_fallacies:
-            fallacies = sorted(fallacies, key=lambda f: f.get("confidence", 0), reverse=True)[:max_fallacies]
-        
-        self.logger.info(f"{len(fallacies)} sophismes détectés")
-        return fallacies
-    
-    def analyze_rhetoric(self, text: str) -> Dict[str, Any]:
+        self.logger.info(f"Analyse sémantique des sophismes pour un texte de {len(text)} caractères...")
+        try:
+            arguments = KernelArguments(input=text)
+            result = await self.sk_kernel.invoke(
+                plugin_name="InformalAnalyzer", # Doit correspondre au nom utilisé dans setup_agent_components
+                function_name="semantic_AnalyzeFallacies",
+                arguments=arguments
+            )
+            
+            # Le traitement du résultat dépendra du format de sortie du prompt.
+            # Pour l'instant, on suppose qu'il retourne une chaîne JSON ou un format parsable.
+            # Exemple basique:
+            raw_result = str(result)
+            # Ici, il faudrait parser raw_result pour le transformer en List[Dict[str, Any]]
+            # Pour l'instant, on retourne une structure basique.
+            # Une implémentation réelle nécessiterait un parsing robuste.
+            # Exemple: si le prompt retourne un JSON de liste de sophismes:
+            try:
+                parsed_fallacies = json.loads(raw_result)
+                if isinstance(parsed_fallacies, list):
+                    # Appliquer le filtrage de l'ancienne méthode si pertinent
+                    confidence_threshold = self.config.get("confidence_threshold", 0.5)
+                    filtered_fallacies = [f for f in parsed_fallacies if isinstance(f, dict) and f.get("confidence", 0) >= confidence_threshold]
+                    
+                    max_fallacies = self.config.get("max_fallacies", 5)
+                    if len(filtered_fallacies) > max_fallacies:
+                        filtered_fallacies = sorted(filtered_fallacies, key=lambda f: f.get("confidence", 0), reverse=True)[:max_fallacies]
+                    
+                    self.logger.info(f"{len(filtered_fallacies)} sophismes (sémantiques) détectés et filtrés.")
+                    return filtered_fallacies
+                else:
+                    self.logger.warning(f"Résultat de semantic_AnalyzeFallacies n'est pas une liste JSON: {raw_result}")
+                    return [{"error": "Format de résultat inattendu", "details": raw_result}]
+            except json.JSONDecodeError:
+                self.logger.warning(f"Impossible de parser le résultat JSON de semantic_AnalyzeFallacies: {raw_result}")
+                return [{"error": "Résultat non JSON", "details": raw_result}]
+
+        except Exception as e:
+            self.logger.error(f"Erreur lors de l'appel à semantic_AnalyzeFallacies: {e}", exc_info=True)
+            return [{"error": str(e)}]
+
+    # Les méthodes analyze_rhetoric et analyze_context dépendaient d'outils externes
+    # qui ne sont pas gérés par cette refonte initiale. Elles sont commentées.
+    # async def analyze_rhetoric(self, text: str) -> Dict[str, Any]:
         """
         Analyse la rhétorique d'un texte.
         
@@ -189,64 +210,56 @@ class InformalAgent:
         Raises:
             ValueError: Si l'analyseur rhétorique n'est pas disponible
         """
-        if "rhetorical_analyzer" not in self.tools:
-            raise ValueError("L'analyseur rhétorique n'est pas disponible")
-        
-        self.logger.info(f"Analyse rhétorique d'un texte de {len(text)} caractères...")
-        return self.tools["rhetorical_analyzer"].analyze(text)
-    
-    def analyze_context(self, text: str) -> Dict[str, Any]:
-        """
-        Analyse le contexte d'un texte.
-        
-        Args:
-            text: Texte à analyser
-        
-        Returns:
-            Résultats de l'analyse contextuelle
-        
-        Raises:
-            ValueError: Si l'analyseur contextuel n'est pas disponible
-        """
-        if "contextual_analyzer" not in self.tools:
-            raise ValueError("L'analyseur contextuel n'est pas disponible")
-        
-        self.logger.info(f"Analyse contextuelle d'un texte de {len(text)} caractères...")
-        return self.tools["contextual_analyzer"].analyze_context(text)
-    
-    def identify_arguments(self, text: str) -> List[str]:
+    #     """
+    #     Analyse la rhétorique d'un texte.
+    #     """
+    #     # if "rhetorical_analyzer" not in self.tools: # self.tools n'existe plus
+    #     #     raise ValueError("L'analyseur rhétorique n'est pas disponible")
+    #     self.logger.warning("analyze_rhetoric n'est pas implémenté dans la version BaseAgent.")
+    #     return {"error": "Non implémenté"}
+        # self.logger.info(f"Analyse rhétorique d'un texte de {len(text)} caractères...")
+        # return self.tools["rhetorical_analyzer"].analyze(text)
+
+    # async def analyze_context(self, text: str) -> Dict[str, Any]:
+    #     """
+    #     Analyse le contexte d'un texte.
+    #     """
+    #     # if "contextual_analyzer" not in self.tools: # self.tools n'existe plus
+    #     #     raise ValueError("L'analyseur contextuel n'est pas disponible")
+    #     self.logger.warning("analyze_context n'est pas implémenté dans la version BaseAgent.")
+    #     return {"error": "Non implémenté"}
+        # self.logger.info(f"Analyse contextuelle d'un texte de {len(text)} caractères...")
+        # return self.tools["contextual_analyzer"].analyze_context(text)
+
+    async def identify_arguments(self, text: str) -> List[str]:
         """
         Identifie les arguments dans un texte en utilisant le kernel sémantique.
-        
-        Args:
-            text: Texte à analyser
-        
-        Returns:
-            Liste des arguments identifiés
-        
-        Raises:
-            ValueError: Si le kernel sémantique n'est pas disponible
         """
-        if not self.semantic_kernel:
-            raise ValueError("Le kernel sémantique n'est pas disponible")
-        
-        self.logger.info(f"Identification des arguments dans un texte de {len(text)} caractères...")
-        
+        self.logger.info(f"Identification sémantique des arguments pour un texte de {len(text)} caractères...")
         try:
-            # Utiliser la fonction sémantique pour identifier les arguments
-            result = self.semantic_kernel.invoke("InformalAnalyzer", "semantic_IdentifyArguments", input=text)
+            arguments = KernelArguments(input=text)
+            result = await self.sk_kernel.invoke(
+                plugin_name="InformalAnalyzer", # Doit correspondre au nom utilisé dans setup_agent_components
+                function_name="semantic_IdentifyArguments",
+                arguments=arguments
+            )
             
             # Traiter le résultat
-            arguments = str(result).strip().split("\n")
-            arguments = [arg.strip() for arg in arguments if arg.strip()]
+            raw_arguments = str(result).strip()
+            if not raw_arguments: # Gérer le cas où le LLM ne retourne rien ou que des espaces
+                self.logger.info("Aucun argument identifié par la fonction sémantique (résultat vide).")
+                return []
+
+            identified_args = raw_arguments.split("\n")
+            identified_args = [arg.strip() for arg in identified_args if arg.strip()]
             
-            self.logger.info(f"{len(arguments)} arguments identifiés")
-            return arguments
+            self.logger.info(f"{len(identified_args)} arguments (sémantiques) identifiés.")
+            return identified_args
         except Exception as e:
-            self.logger.error(f"Erreur lors de l'identification des arguments: {e}")
+            self.logger.error(f"Erreur lors de l'appel à semantic_IdentifyArguments: {e}", exc_info=True)
             return []
-    
-    def analyze_argument(self, argument: str) -> Dict[str, Any]:
+
+    async def analyze_argument(self, argument: str) -> Dict[str, Any]:
         """
         Analyse complète d'un argument (sophismes, rhétorique, contexte).
         
@@ -260,26 +273,27 @@ class InformalAgent:
         
         results = {
             "argument": argument,
-            "fallacies": self.analyze_fallacies(argument)
+            "fallacies": await self.analyze_fallacies(argument) # Appel asynchrone
         }
         
-        # Ajouter l'analyse rhétorique si disponible
-        if "rhetorical_analyzer" in self.tools:
-            try:
-                results["rhetoric"] = self.analyze_rhetoric(argument)
-            except Exception as e:
-                self.logger.error(f"Erreur lors de l'analyse rhétorique: {e}")
+        # L'analyse rhétorique et contextuelle sont commentées car elles dépendaient d'outils externes
+        # if "rhetorical_analyzer" in self.tools: # self.tools n'existe plus
+        #     try:
+        #         # results["rhetoric"] = await self.analyze_rhetoric(argument) # Devrait être async
+        #         pass
+        #     except Exception as e:
+        #         self.logger.error(f"Erreur lors de l'analyse rhétorique: {e}")
         
-        # Ajouter l'analyse contextuelle si disponible et demandée
-        if "contextual_analyzer" in self.tools and self.config.get("include_context", False):
-            try:
-                results["context"] = self.analyze_context(argument)
-            except Exception as e:
-                self.logger.error(f"Erreur lors de l'analyse contextuelle: {e}")
+        # if "contextual_analyzer" in self.tools and self.config.get("include_context", False): # self.tools n'existe plus
+        #     try:
+        #         # results["context"] = await self.analyze_context(argument) # Devrait être async
+        #         pass
+        #     except Exception as e:
+        #         self.logger.error(f"Erreur lors de l'analyse contextuelle: {e}")
         
         return results
-    
-    def analyze_text(self, text: str, context: Optional[str] = None) -> Dict[str, Any]:
+
+    async def analyze_text(self, text: str, context: Optional[str] = None) -> Dict[str, Any]:
         """
         Analyse complète d'un texte (identification des arguments et analyse de chaque argument).
         
@@ -304,7 +318,7 @@ class InformalAgent:
         
         try:
             # Analyser les sophismes directement
-            fallacies = self.analyze_fallacies(text)
+            fallacies = await self.analyze_fallacies(text) # Appel asynchrone
             
             # Construire le résultat dans le format attendu par les tests
             results = {
@@ -316,7 +330,7 @@ class InformalAgent:
             if context is not None:
                 results["context"] = context
             
-            self.logger.info(f"Analyse terminée: {len(fallacies)} sophismes détectés")
+            self.logger.info(f"Analyse terminée: {len(fallacies)} sophismes détectés (via analyze_text).")
             return results
             
         except Exception as e:
@@ -328,55 +342,46 @@ class InformalAgent:
                 "error": f"Erreur lors de l'analyse: {str(e)}"
             }
     
-    def explore_fallacy_hierarchy(self, current_pk: int = 0) -> Dict[str, Any]:
+    async def explore_fallacy_hierarchy(self, current_pk: int = 0, max_children: int = 15) -> Dict[str, Any]:
         """
-        Explore la hiérarchie des sophismes à partir d'un nœud donné.
-        
-        Args:
-            current_pk: PK du nœud à explorer
-        
-        Returns:
-            Résultats de l'exploration
-        
-        Raises:
-            ValueError: Si le plugin informel n'est pas disponible
+        Explore la hiérarchie des sophismes en utilisant le plugin natif.
         """
-        if not self.informal_plugin:
-            raise ValueError("Le plugin informel n'est pas disponible")
-        
-        self.logger.info(f"Exploration de la hiérarchie des sophismes depuis PK {current_pk}...")
-        
+        self.logger.info(f"Exploration de la hiérarchie des sophismes (natif) depuis PK {current_pk}...")
         try:
-            result_json = self.informal_plugin.explore_fallacy_hierarchy(str(current_pk))
-            return json.loads(result_json)
+            arguments = KernelArguments(current_pk_str=str(current_pk), max_children=max_children)
+            result = await self.sk_kernel.invoke(
+                plugin_name="InformalAnalyzer", # Doit correspondre au nom utilisé dans setup_agent_components
+                function_name="explore_fallacy_hierarchy", # Nom de la fonction native dans InformalAnalysisPlugin
+                arguments=arguments
+            )
+            # La fonction native retourne déjà un JSON string, qui est parsé par invoke (?) ou doit l'être.
+            # Si invoke retourne un FunctionResult, il faut prendre sa valeur.
+            # Si la fonction native retourne un dict, c'est encore mieux.
+            # D'après la définition du plugin, elle retourne un str JSON.
+            result_str = str(result)
+            return json.loads(result_str)
         except Exception as e:
-            self.logger.error(f"Erreur lors de l'exploration de la hiérarchie: {e}")
+            self.logger.error(f"Erreur lors de l'appel à explore_fallacy_hierarchy (natif): {e}", exc_info=True)
             return {"error": str(e)}
-    
-    def get_fallacy_details(self, fallacy_pk: int) -> Dict[str, Any]:
+
+    async def get_fallacy_details(self, fallacy_pk: int) -> Dict[str, Any]:
         """
-        Obtient les détails d'un sophisme spécifique.
-        
-        Args:
-            fallacy_pk: PK du sophisme
-        
-        Returns:
-            Détails du sophisme
-        
-        Raises:
-            ValueError: Si le plugin informel n'est pas disponible
+        Obtient les détails d'un sophisme spécifique en utilisant le plugin natif.
         """
-        if not self.informal_plugin:
-            raise ValueError("Le plugin informel n'est pas disponible")
-        
-        self.logger.info(f"Récupération des détails du sophisme PK {fallacy_pk}...")
-        
+        self.logger.info(f"Récupération des détails du sophisme (natif) PK {fallacy_pk}...")
         try:
-            result_json = self.informal_plugin.get_fallacy_details(str(fallacy_pk))
-            return json.loads(result_json)
+            arguments = KernelArguments(fallacy_pk_str=str(fallacy_pk))
+            result = await self.sk_kernel.invoke(
+                plugin_name="InformalAnalyzer", # Doit correspondre au nom utilisé dans setup_agent_components
+                function_name="get_fallacy_details", # Nom de la fonction native dans InformalAnalysisPlugin
+                arguments=arguments
+            )
+            result_str = str(result)
+            return json.loads(result_str)
         except Exception as e:
-            self.logger.error(f"Erreur lors de la récupération des détails du sophisme: {e}")
+            self.logger.error(f"Erreur lors de l'appel à get_fallacy_details (natif): {e}", exc_info=True)
             return {"error": str(e)}
+
     def categorize_fallacies(self, fallacies: List[Dict[str, Any]]) -> Dict[str, List[str]]:
         """
         Catégorise les sophismes détectés selon leur type.
@@ -423,69 +428,62 @@ class InformalAgent:
         self.logger.info(f"Sophismes catégorisés: {sum(len(v) for v in categories.values())} types")
         return categories
     
-    def perform_complete_analysis(self, text: str, context: Optional[str] = None) -> Dict[str, Any]:
+    async def perform_complete_analysis(self, text: str, context: Optional[str] = None) -> Dict[str, Any]:
         """
         Effectue une analyse complète d'un texte (sophismes, rhétorique, contexte).
-        
-        Args:
-            text: Texte à analyser
-            context: Contexte optionnel pour l'analyse
-        
-        Returns:
-            Résultats de l'analyse complète
+        Utilise les méthodes asynchrones refactorées.
         """
-        self.logger.info(f"Analyse complète d'un texte de {len(text)} caractères...")
+        self.logger.info(f"Analyse complète (refactorée) d'un texte de {len(text)} caractères...")
         
         results = {
             "text": text,
             "context": context,
             "fallacies": [],
-            "rhetorical_analysis": {},
-            "contextual_analysis": {},
-            "categories": {}
+            # "rhetorical_analysis": {}, # Commenté
+            # "contextual_analysis": {}, # Commenté
+            "categories": {},
+            "analysis_timestamp": self._get_timestamp() # Peut rester synchrone
         }
         
         try:
             # Analyse des sophismes
-            fallacies = self.analyze_fallacies(text)
+            fallacies = await self.analyze_fallacies(text) # Appel asynchrone
             results["fallacies"] = fallacies
             
             # Catégorisation des sophismes
             if fallacies:
+                # categorize_fallacies est synchrone, pas besoin de await
                 results["categories"] = self.categorize_fallacies(fallacies)
             
-            # Analyse rhétorique si disponible
-            if "rhetorical_analyzer" in self.tools:
-                try:
-                    results["rhetorical_analysis"] = self.analyze_rhetoric(text)
-                except Exception as e:
-                    self.logger.error(f"Erreur lors de l'analyse rhétorique: {e}")
-                    results["rhetorical_analysis"] = {"error": str(e)}
+            # Les analyses rhétorique et contextuelle sont commentées
+            # if "rhetorical_analyzer" in self.tools: # self.tools n'existe plus
+            #     try:
+            #         # results["rhetorical_analysis"] = await self.analyze_rhetoric(text)
+            #         pass
+            #     except Exception as e:
+            #         self.logger.error(f"Erreur lors de l'analyse rhétorique: {e}")
+            #         # results["rhetorical_analysis"] = {"error": str(e)}
             
-            # Analyse contextuelle si disponible et contexte fourni
-            if "contextual_analyzer" in self.tools and (context or self.config.get("include_context", False)):
-                try:
-                    if context:
-                        # Passer le contexte à l'analyseur contextuel
-                        results["contextual_analysis"] = self.tools["contextual_analyzer"].analyze_context(text, context)
-                    else:
-                        results["contextual_analysis"] = self.analyze_context(text)
-                except Exception as e:
-                    self.logger.error(f"Erreur lors de l'analyse contextuelle: {e}")
-                    results["contextual_analysis"] = {"error": str(e)}
+            # if "contextual_analyzer" in self.tools and (context or self.config.get("include_context", False)): # self.tools n'existe plus
+            #     try:
+            #         # if context:
+            #         #     results["contextual_analysis"] = await self.tools["contextual_analyzer"].analyze_context(text, context)
+            #         # else:
+            #         #     results["contextual_analysis"] = await self.analyze_context(text)
+            #         pass
+            #     except Exception as e:
+            #         self.logger.error(f"Erreur lors de l'analyse contextuelle: {e}")
+            #         # results["contextual_analysis"] = {"error": str(e)}
             
-            # Ajouter le timestamp d'analyse
-            results["analysis_timestamp"] = self._get_timestamp()
-            
-            self.logger.info("Analyse complète terminée avec succès")
+            self.logger.info("Analyse complète (refactorée) terminée avec succès.")
             return results
             
         except Exception as e:
-            self.logger.error(f"Erreur lors de l'analyse complète: {e}")
+            self.logger.error(f"Erreur lors de l'analyse complète (refactorée): {e}", exc_info=True)
             results["error"] = str(e)
             return results
-    
-    def _extract_arguments(self, text: str) -> List[Dict[str, Any]]:
+
+    async def _extract_arguments(self, text: str) -> List[Dict[str, Any]]:
         """
         Extrait les arguments d'un texte de manière structurée.
         
@@ -500,46 +498,23 @@ class InformalAgent:
         arguments = []
         
         try:
-            # Utiliser le kernel sémantique si disponible
-            if self.semantic_kernel:
-                semantic_args = self.identify_arguments(text)
-                for i, arg_text in enumerate(semantic_args):
-                    arguments.append({
-                        "id": f"arg-{i+1}",
-                        "text": arg_text,
-                        "type": "semantic",
-                        "confidence": 0.8
-                    })
-            else:
-                # Méthode de base : diviser par paragraphes ou phrases
-                paragraphs = [p.strip() for p in text.split('\n\n') if p.strip()]
-                
-                if not paragraphs:
-                    # Diviser par phrases si pas de paragraphes
-                    import re
-                    sentences = [s.strip() for s in re.split(r'[.!?]+', text) if s.strip()]
-                    
-                    # Regrouper les phrases en arguments
-                    for i in range(0, len(sentences), 2):
-                        arg_text = '. '.join(sentences[i:i+2])
-                        if arg_text:
-                            arguments.append({
-                                "id": f"arg-{len(arguments)+1}",
-                                "text": arg_text + '.',
-                                "type": "sentence_group",
-                                "confidence": 0.6
-                            })
-                else:
-                    # Utiliser les paragraphes comme arguments
-                    for i, paragraph in enumerate(paragraphs):
-                        arguments.append({
-                            "id": f"arg-{i+1}",
-                            "text": paragraph,
-                            "type": "paragraph",
-                            "confidence": 0.7
-                        })
+            # Utiliser la méthode identify_arguments refactorée (qui utilise le kernel)
+            # Plus besoin de vérifier self.semantic_kernel ici, car BaseAgent le gère.
+            semantic_args = await self.identify_arguments(text) # Appel asynchrone
+            for i, arg_text in enumerate(semantic_args):
+                arguments.append({
+                    "id": f"arg-{i+1}",
+                    "text": arg_text,
+                    "type": "semantic", # Indique que cela vient de l'analyse sémantique
+                    "confidence": 0.8 # Exemple de confiance, pourrait être ajusté
+                })
             
-            self.logger.info(f"{len(arguments)} arguments extraits")
+            # La logique de fallback (paragraphes/phrases) peut être conservée si identify_arguments retourne une liste vide
+            # ou si une stratégie hybride est souhaitée. Pour l'instant, on se fie à l'appel sémantique.
+            if not arguments:
+                 self.logger.info("Aucun argument extrait par la méthode sémantique, _extract_arguments retourne une liste vide.")
+            else:
+                self.logger.info(f"{len(arguments)} arguments extraits via _extract_arguments (utilisant identify_arguments).")
             return arguments
             
         except Exception as e:
@@ -619,47 +594,43 @@ class InformalAgent:
         from datetime import datetime
         return datetime.now().isoformat()
     
-    def analyze_and_categorize(self, text: str) -> Dict[str, Any]:
+    async def analyze_and_categorize(self, text: str) -> Dict[str, Any]:
         """
         Analyse un texte et catégorise les sophismes trouvés.
-        
-        Args:
-            text: Texte à analyser
-        
-        Returns:
-            Résultats de l'analyse avec catégorisation
+        Utilise les méthodes asynchrones refactorées.
         """
-        self.logger.info(f"Analyse et catégorisation d'un texte de {len(text)} caractères...")
+        self.logger.info(f"Analyse et catégorisation (refactorée) d'un texte de {len(text)} caractères...")
         
         try:
             # Analyser les sophismes
-            fallacies = self.analyze_fallacies(text)
+            fallacies = await self.analyze_fallacies(text) # Appel asynchrone
             
-            # Catégoriser les sophismes
+            # Catégoriser les sophismes (méthode synchrone)
             categories = self.categorize_fallacies(fallacies) if fallacies else {}
             
             result = {
                 "text": text,
                 "fallacies": fallacies,
                 "categories": categories,
-                "analysis_timestamp": self._get_timestamp(),
+                "analysis_timestamp": self._get_timestamp(), # Méthode synchrone
                 "summary": {
                     "total_fallacies": len(fallacies),
                     "categories_count": len([cat for cat, items in categories.items() if items])
                 }
             }
             
-            self.logger.info(f"Analyse terminée: {len(fallacies)} sophismes trouvés")
+            self.logger.info(f"Analyse et catégorisation (refactorée) terminée: {len(fallacies)} sophismes trouvés.")
             return result
             
         except Exception as e:
-            self.logger.error(f"Erreur lors de l'analyse et catégorisation: {e}")
+            self.logger.error(f"Erreur lors de l'analyse et catégorisation (refactorée): {e}", exc_info=True)
             return {
                 "text": text,
                 "fallacies": [],
                 "categories": {},
-                "error": str(e)
+                "error": str(e),
+                "analysis_timestamp": self._get_timestamp()
             }
 
 # Log de chargement
-logging.getLogger(__name__).debug("Module agents.core.informal.informal_agent chargé.")
+# logging.getLogger(__name__).debug("Module agents.core.informal.informal_agent chargé.") # Géré par BaseAgent

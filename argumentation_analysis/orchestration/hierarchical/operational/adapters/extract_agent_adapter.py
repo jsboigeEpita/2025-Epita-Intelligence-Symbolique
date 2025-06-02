@@ -20,7 +20,7 @@ from argumentation_analysis.orchestration.hierarchical.operational.agent_interfa
 from argumentation_analysis.orchestration.hierarchical.operational.state import OperationalState
 from argumentation_analysis.core.communication import MessageMiddleware 
 
-from argumentation_analysis.agents.core.extract.extract_agent import ExtractAgent, setup_extract_agent
+from argumentation_analysis.agents.core.extract.extract_agent import ExtractAgent # Removed setup_extract_agent
 from argumentation_analysis.agents.core.extract.extract_definitions import ExtractResult
 
 
@@ -43,15 +43,20 @@ class ExtractAgentAdapter(OperationalAgent):
             operational_state: État opérationnel à utiliser. Si None, un nouvel état est créé.
             middleware: Le middleware de communication à utiliser.
         """
-        super().__init__(name, operational_state, middleware=middleware) 
-        self.extract_agent = None
-        self.kernel = None
+        super().__init__(name, operational_state, middleware=middleware)
+        self.agent = None # Changed from self.extract_agent
+        self.kernel = None # Will be passed during initialize
+        self.llm_service_id = None # Will be passed during initialize
         self.initialized = False
         self.logger = logging.getLogger(f"ExtractAgentAdapter.{name}")
     
-    async def initialize(self):
+    async def initialize(self, kernel: Any, llm_service_id: str): # Added kernel and llm_service_id
         """
         Initialise l'agent d'extraction.
+
+        Args:
+            kernel: Le kernel Semantic Kernel à utiliser.
+            llm_service_id: L'ID du service LLM à utiliser.
         
         Returns:
             True si l'initialisation a réussi, False sinon
@@ -59,11 +64,17 @@ class ExtractAgentAdapter(OperationalAgent):
         if self.initialized:
             return True
         
+        self.kernel = kernel
+        self.llm_service_id = llm_service_id
+
         try:
             self.logger.info("Initialisation de l'agent d'extraction...")
-            self.kernel, self.extract_agent = await setup_extract_agent()
+            # Instancier l'agent refactoré
+            self.agent = ExtractAgent(kernel=self.kernel, agent_name=f"{self.name}_ExtractAgent")
+            # Configurer les composants de l'agent
+            await self.agent.setup_agent_components(llm_service_id=self.llm_service_id)
             
-            if self.extract_agent is None:
+            if self.agent is None: # Check self.agent
                 self.logger.error("Échec de l'initialisation de l'agent d'extraction.")
                 return False
             
@@ -118,7 +129,28 @@ class ExtractAgentAdapter(OperationalAgent):
         task_original_id = task.get("id", f"unknown_task_{uuid.uuid4().hex[:8]}")
 
         if not self.initialized:
-            success = await self.initialize()
+            # L'initialisation doit maintenant être appelée avec kernel et llm_service_id
+            # Ceci devrait être géré par le OperationalManager avant d'appeler process_task
+            # ou alors, ces informations doivent être disponibles pour l'adaptateur.
+            # Pour l'instant, on suppose qu'elles sont disponibles via self.kernel et self.llm_service_id
+            # qui auraient été définies lors d'un appel explicite à initialize.
+            if self.kernel is None or self.llm_service_id is None:
+                self.logger.error("Kernel ou llm_service_id non configuré avant process_task.")
+                return {
+                    "id": f"result-{task_original_id}",
+                    "task_id": task_original_id,
+                    "tactical_task_id": task.get("tactical_task_id"),
+                    "status": "failed",
+                    "outputs": {},
+                    "metrics": {},
+                    "issues": [{
+                        "type": "configuration_error",
+                        "description": "Kernel ou llm_service_id non configuré pour l'agent d'extraction",
+                        "severity": "high"
+                    }]
+                }
+            
+            success = await self.initialize(self.kernel, self.llm_service_id)
             if not success:
                 return {
                     "id": f"result-{task_original_id}",
@@ -264,8 +296,12 @@ class ExtractAgentAdapter(OperationalAgent):
     
     async def _process_extract(self, extract: Dict[str, Any], parameters: Dict[str, Any]) -> ExtractResult:
         if not self.initialized:
-            await self.initialize() 
-            if not self.initialized: 
+            # Idem que pour process_task, l'initialisation devrait avoir eu lieu.
+            if self.kernel is None or self.llm_service_id is None:
+                self.logger.error("Kernel ou llm_service_id non configuré avant _process_extract.")
+                return ExtractResult(status="error", message="Kernel ou llm_service_id non configuré", explanation="Configuration manquante")
+            await self.initialize(self.kernel, self.llm_service_id)
+            if not self.initialized:
                 return ExtractResult(status="error", message="Agent non initialisé pour _process_extract", explanation="Initialisation échouée")
 
         source_info = {
@@ -275,7 +311,7 @@ class ExtractAgentAdapter(OperationalAgent):
         
         extract_name = extract.get("id", "Extrait sans nom")
         
-        result = await self.extract_agent.extract_from_name(source_info, extract_name)
+        result = await self.agent.extract_from_name(source_info, extract_name) # Changed self.extract_agent to self.agent
         
         return result
     
@@ -303,8 +339,9 @@ class ExtractAgentAdapter(OperationalAgent):
             self.logger.info("Arrêt de l'agent d'extraction...")
             
             # Nettoyer les ressources
-            self.extract_agent = None
+            self.agent = None # Changed from self.extract_agent
             self.kernel = None
+            self.llm_service_id = None # Clear llm_service_id as well
             self.initialized = False
             
             self.logger.info("Agent d'extraction arrêté avec succès.")

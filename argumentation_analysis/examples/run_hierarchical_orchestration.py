@@ -12,9 +12,12 @@ import logging
 import argparse
 from datetime import datetime
 from typing import Dict, List, Any, Optional
+import semantic_kernel as sk # Ajout de l'import pour le Kernel
+from dotenv import load_dotenv # Ajout pour charger .env
 
 # Ajouter le répertoire parent au path pour pouvoir importer les modules
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from argumentation_analysis.core.llm_service import create_llm_service # Pour initialiser le kernel
 
 from argumentation_analysis.orchestration.hierarchical.strategic.state import StrategicState
 from argumentation_analysis.orchestration.hierarchical.tactical.state import TacticalState
@@ -49,13 +52,24 @@ class HierarchicalOrchestrator:
     
     def __init__(self):
         """Initialise l'orchestrateur hiérarchique."""
+        load_dotenv() # Charger les variables d'environnement
         # Configurer le logging
         logging.basicConfig(
             level=logging.INFO,
             format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
         )
         self.logger = logging.getLogger("HierarchicalOrchestrator")
-        
+
+        # Initialiser le Kernel et le service LLM
+        self.kernel = sk.Kernel()
+        self.llm_service = create_llm_service() # Utilise les variables d'env
+        if not self.llm_service:
+            self.logger.error("Échec de la création du service LLM pour HierarchicalOrchestrator.")
+            raise RuntimeError("Impossible d'initialiser le service LLM.")
+        self.kernel.add_service(self.llm_service)
+        self.llm_service_id = self.llm_service.service_id
+        self.logger.info(f"Kernel initialisé avec le service LLM: {self.llm_service_id}")
+
         # Créer les états
         self.strategic_state = StrategicState()
         self.tactical_state = TacticalState()
@@ -94,39 +108,53 @@ class HierarchicalOrchestrator:
         )
         
         # Créer les composants opérationnels
-        self.agent_registry = AgentRegistry()
+        # Passer kernel et llm_service_id à AgentRegistry et OperationalManager
+        self.agent_registry = AgentRegistry(
+            operational_state=self.operational_state,
+            kernel=self.kernel,
+            llm_service_id=self.llm_service_id
+        )
         self.operational_manager = OperationalManager(
             operational_state=self.operational_state,
             tactical_operational_interface=self.tactical_operational_interface,
-            agent_registry=self.agent_registry
+            # agent_registry n'est plus un param de OperationalManager, il le crée lui-même
+            kernel=self.kernel,
+            llm_service_id=self.llm_service_id
         )
         
-        # Initialiser les agents
-        self.initialize_agents()
+        # L'initialisation des agents est maintenant gérée par OperationalAgentRegistry
+        # lors du premier appel à get_agent. initialize_agents et initialize_all_agents
+        # ne sont plus nécessaires ici de la même manière.
+        # self.initialize_agents() # Supprimé
     
-    def initialize_agents(self):
-        """Initialise et enregistre les agents opérationnels."""
-        # Créer les adaptateurs d'agents
-        extract_agent = ExtractAgentAdapter(name="ExtractAgent")
-        informal_agent = InformalAgentAdapter(name="InformalAgent")
-        pl_agent = PLAgentAdapter(name="PLAgent")
+    # def initialize_agents(self): # Supprimé
+    #     """Initialise et enregistre les agents opérationnels."""
+    #     # Créer les adaptateurs d'agents
+    #     extract_agent = ExtractAgentAdapter(name="ExtractAgent")
+    #     informal_agent = InformalAgentAdapter(name="InformalAgent")
+    #     pl_agent = PLAgentAdapter(name="PLAgent")
         
-        # Enregistrer les agents
-        self.agent_registry.register_agent(extract_agent)
-        self.agent_registry.register_agent(informal_agent)
-        self.agent_registry.register_agent(pl_agent)
+    #     # Enregistrer les agents
+    #     # L'enregistrement se fait maintenant via agent_classes dans AgentRegistry
+    #     # self.agent_registry.register_agent(extract_agent)
+    #     # self.agent_registry.register_agent(informal_agent)
+    #     # self.agent_registry.register_agent(pl_agent)
         
-        self.logger.info(f"Agents enregistrés: {len(self.agent_registry.get_all_agents())}")
+    #     # self.logger.info(f"Agents enregistrés: {len(self.agent_registry.get_all_agents())}") # get_all_agents n'existe plus
     
-    async def initialize_all_agents(self):
-        """Initialise tous les agents enregistrés."""
-        self.logger.info("Initialisation de tous les agents...")
+    async def initialize_all_agents(self): # Cette méthode va maintenant appeler get_agent pour chaque type
+        """Initialise tous les types d'agents connus via le registre."""
+        self.logger.info("Pré-initialisation de tous les types d'agents via le registre...")
         
-        for agent in self.agent_registry.get_all_agents():
-            if hasattr(agent, 'initialize') and callable(agent.initialize):
-                await agent.initialize()
+        agent_types = self.agent_registry.get_agent_types()
+        for agent_type in agent_types:
+            agent = await self.agent_registry.get_agent(agent_type)
+            if agent:
+                self.logger.info(f"Agent de type '{agent_type}' initialisé ou récupéré.")
+            else:
+                self.logger.error(f"Échec de l'initialisation de l'agent de type '{agent_type}'.")
         
-        self.logger.info("Tous les agents ont été initialisés.")
+        self.logger.info("Tous les types d'agents ont été sollicités pour initialisation.")
     
     async def analyze_text(self, text: str, analysis_type: str = "complete") -> Dict[str, Any]:
         """
