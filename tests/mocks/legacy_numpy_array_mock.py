@@ -154,6 +154,7 @@ newaxis = None # Placeholder pour numpy.newaxis
 # pi est déjà défini
 atleast_1d = lambda x: array(x) # Simule la conversion en tableau 1D
 cov = MagicMock(name='numpy.cov')
+iinfo = MagicMock(return_value=MagicMock(max=2**31 - 1)) # Simule iinfo pour int32
 
 def zeros(shape, dtype=None):
     """Crée un tableau de zéros."""
