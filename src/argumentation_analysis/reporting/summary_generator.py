@@ -1,3 +1,4 @@
+import json
 # -*- coding: utf-8 -*-
 """
 Module pour la génération de synthèses d'analyses rhétoriques.
