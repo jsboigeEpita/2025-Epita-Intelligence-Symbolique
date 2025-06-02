@@ -55,15 +55,18 @@ def sample_results_for_time_extraction() -> List[Dict[str, Any]]:
         { "timestamp": "2023-01-01T18:00:00", "analyses": {"analysis_X": {"analysis_timestamp": "2023-01-01T18:00:05"}} }
     ]
 
+@pytest.mark.use_real_numpy
 def test_extract_execution_time_success(sample_results_for_time_extraction: List[Dict[str, Any]]):
     results_subset = sample_results_for_time_extraction[:2]
     execution_times = extract_execution_time_from_results(results_subset)
     assert "Extract1" in execution_times and execution_times["Extract1"]["analysis_A"] == 5.0 and execution_times["Extract1"]["analysis_B"] == 15.0
     assert "Extract2" in execution_times and execution_times["Extract2"]["analysis_A"] == 10.0 and execution_times["Extract2"]["analysis_C"] == 30.0
 
+@pytest.mark.use_real_numpy
 def test_extract_execution_time_empty_results():
     assert extract_execution_time_from_results([]) == {}
 
+@pytest.mark.use_real_numpy
 def test_extract_execution_time_missing_or_invalid_data(sample_results_for_time_extraction: List[Dict[str, Any]]):
     problematic_results = sample_results_for_time_extraction[2:]
     execution_times = extract_execution_time_from_results(problematic_results)
@@ -90,12 +93,14 @@ def sample_results_for_fallacy_counting() -> List[Dict[str, Any]]:
         {"extract_name": "Extract_AdvContextual", "analyses": {"contextual_fallacies": {"argument_results": [{"detected_fallacies": [{"type": "Ad Hominem"}]}], "contextual_fallacies_count": 5}, "complex_fallacies": {"individual_fallacies_count": 0}}}
     ]
 
+@pytest.mark.use_real_numpy
 def test_count_fallacies_success(sample_results_for_fallacy_counting: List[Dict[str, Any]]):
     results_subset = [sample_results_for_fallacy_counting[0], sample_results_for_fallacy_counting[6]]
     fallacy_counts = count_fallacies_in_results(results_subset)
     assert fallacy_counts["Extract_Fallacy1"]["base_contextual"] == 3 and fallacy_counts["Extract_Fallacy1"]["advanced_complex"] == 7 and fallacy_counts["Extract_Fallacy1"]["advanced_contextual"] == 0
     assert fallacy_counts["Extract_AdvContextual"]["base_contextual"] == 1 and fallacy_counts["Extract_AdvContextual"]["advanced_complex"] == 0 and fallacy_counts["Extract_AdvContextual"]["advanced_contextual"] == 5
 
+@pytest.mark.use_real_numpy
 def test_count_fallacies_none_and_missing(sample_results_for_fallacy_counting: List[Dict[str, Any]]):
     results_subset = sample_results_for_fallacy_counting[1:5]
     fallacy_counts = count_fallacies_in_results(results_subset)
@@ -104,9 +109,11 @@ def test_count_fallacies_none_and_missing(sample_results_for_fallacy_counting: L
     assert fallacy_counts["Extract_NoAnalyses"] == {"base_contextual": 0, "advanced_complex": 0, "advanced_contextual": 0}
     assert fallacy_counts["Extract_AnalysesNotDict"] == {"base_contextual": 0, "advanced_complex": 0, "advanced_contextual": 0}
 
+@pytest.mark.use_real_numpy
 def test_count_fallacies_empty_results():
     assert count_fallacies_in_results([]) == {}
 
+@pytest.mark.use_real_numpy
 def test_count_fallacies_extract_name_missing(sample_results_for_fallacy_counting: List[Dict[str, Any]]):
     results_subset = [sample_results_for_fallacy_counting[5]]
     fallacy_counts = count_fallacies_in_results(results_subset)
@@ -125,12 +132,14 @@ def sample_results_for_confidence_scores() -> List[Dict[str, Any]]:
         {"analyses": {"argument_coherence": {"overall_coherence": {"score": 0.5}}}}
     ]
 
+@pytest.mark.use_real_numpy
 def test_extract_confidence_scores_success(sample_results_for_confidence_scores: List[Dict[str, Any]]):
     results_subset = [sample_results_for_confidence_scores[0]]
     confidence_scores = extract_confidence_scores_from_results(results_subset)
     scores1 = confidence_scores["Extract_Conf1"]
     assert scores1["base_coherence"] == 0.85 and scores1["advanced_rhetorical"] == 0.75 and scores1["advanced_coherence"] == 0.90 and scores1["advanced_severity"] == 0.60
 
+@pytest.mark.use_real_numpy
 def test_extract_confidence_scores_zeros_and_missing(sample_results_for_confidence_scores: List[Dict[str, Any]]):
     results_subset = sample_results_for_confidence_scores[1:4]
     confidence_scores = extract_confidence_scores_from_results(results_subset)
@@ -138,9 +147,11 @@ def test_extract_confidence_scores_zeros_and_missing(sample_results_for_confiden
     assert confidence_scores["Extract_Conf_MissingStruct"]["base_coherence"] == 0.0
     assert confidence_scores["Extract_Conf_NoAnalyses"] == {}
 
+@pytest.mark.use_real_numpy
 def test_extract_confidence_scores_empty_results():
     assert extract_confidence_scores_from_results([]) == {}
 
+@pytest.mark.use_real_numpy
 def test_extract_confidence_scores_extract_name_missing(sample_results_for_confidence_scores: List[Dict[str, Any]]):
     results_subset = [sample_results_for_confidence_scores[4]]
     confidence_scores = extract_confidence_scores_from_results(results_subset)
@@ -159,12 +170,14 @@ def sample_results_for_richness_analysis() -> List[Dict[str, Any]]:
         {"analyses": {"contextual_fallacies": {"contextual_factors": {"fx": "vx"}}}}
     ]
 
+@pytest.mark.use_real_numpy
 def test_analyze_contextual_richness_success(sample_results_for_richness_analysis: List[Dict[str, Any]]):
     results_subset = [sample_results_for_richness_analysis[0]]
     richness_scores = analyze_contextual_richness_from_results(results_subset)
     scores1 = richness_scores["Extract_Rich1"]
     assert scores1["base_contextual"] == 2.0 and scores1["advanced_contextual"] == 6.0 and scores1["advanced_rhetorical"] == 4.0
 
+@pytest.mark.use_real_numpy
 def test_analyze_contextual_richness_empty_and_missing(sample_results_for_richness_analysis: List[Dict[str, Any]]):
     results_subset = sample_results_for_richness_analysis[1:4]
     richness_scores = analyze_contextual_richness_from_results(results_subset)
@@ -172,9 +185,11 @@ def test_analyze_contextual_richness_empty_and_missing(sample_results_for_richne
     assert richness_scores["Extract_Rich_MissingStruct"]["base_contextual"] == 0.0
     assert richness_scores["Extract_Rich_NoAnalyses"] == {}
 
+@pytest.mark.use_real_numpy
 def test_analyze_contextual_richness_empty_results_list():
     assert analyze_contextual_richness_from_results([]) == {}
 
+@pytest.mark.use_real_numpy
 def test_analyze_contextual_richness_extract_name_missing(sample_results_for_richness_analysis: List[Dict[str, Any]]):
     results_subset = [sample_results_for_richness_analysis[4]]
     richness_scores = analyze_contextual_richness_from_results(results_subset)
@@ -193,12 +208,14 @@ def sample_results_for_coherence_relevance() -> List[Dict[str, Any]]:
         {"analyses": {"argument_coherence": {"recommendations": ["R1"]}}}
     ]
 
+@pytest.mark.use_real_numpy
 def test_evaluate_coherence_relevance_success(sample_results_for_coherence_relevance: List[Dict[str, Any]]):
     results_subset = [sample_results_for_coherence_relevance[0]]
     relevance_scores = evaluate_coherence_relevance_from_results(results_subset)
     scores1 = relevance_scores["Extract_CohRel1"]
     assert scores1["base_coherence"] == 5.0 and scores1["advanced_coherence"] == 4.0 and scores1["advanced_recommendations"] == 3.0
 
+@pytest.mark.use_real_numpy
 def test_evaluate_coherence_relevance_empty_and_missing(sample_results_for_coherence_relevance: List[Dict[str, Any]]):
     results_subset = sample_results_for_coherence_relevance[1:4]
     relevance_scores = evaluate_coherence_relevance_from_results(results_subset)
@@ -206,9 +223,11 @@ def test_evaluate_coherence_relevance_empty_and_missing(sample_results_for_coher
     assert relevance_scores["Extract_CohRel_MissingStruct"]["base_coherence"] == 0.0
     assert relevance_scores["Extract_CohRel_NoAnalyses"] == {}
 
+@pytest.mark.use_real_numpy
 def test_evaluate_coherence_relevance_empty_results_list():
     assert evaluate_coherence_relevance_from_results([]) == {}
 
+@pytest.mark.use_real_numpy
 def test_evaluate_coherence_relevance_extract_name_missing(sample_results_for_coherence_relevance: List[Dict[str, Any]]):
     results_subset = [sample_results_for_coherence_relevance[4]]
     relevance_scores = evaluate_coherence_relevance_from_results(results_subset)
@@ -217,6 +236,7 @@ def test_evaluate_coherence_relevance_extract_name_missing(sample_results_for_co
 
 # Tests pour _calculate_obj_complexity et analyze_result_complexity_from_results
 
+@pytest.mark.use_real_numpy
 def test_calculate_obj_complexity():
     assert _calculate_obj_complexity("simple_string") == 0.0
     assert _calculate_obj_complexity([]) == 0.0
@@ -238,6 +258,7 @@ def sample_results_for_complexity() -> List[Dict[str, Any]]:
         {"extract_name": "Extract_Comp_AnalysesNotDict", "analyses": "not_a_dict_or_list"}
     ]
 
+@pytest.mark.use_real_numpy
 def test_analyze_result_complexity_success(sample_results_for_complexity: List[Dict[str, Any]]):
     results_subset = sample_results_for_complexity[:2]
     complexity_scores = analyze_result_complexity_from_results(results_subset)
@@ -246,6 +267,7 @@ def test_analyze_result_complexity_success(sample_results_for_complexity: List[D
     scores_nested = complexity_scores["Extract_Comp_Nested"]
     assert pytest.approx(scores_nested["nested_list"]) == 2.75 and pytest.approx(scores_nested["nested_dict"]) == 2.75
 
+@pytest.mark.use_real_numpy
 def test_analyze_result_complexity_empty_and_missing(sample_results_for_complexity: List[Dict[str, Any]]):
     results_subset = sample_results_for_complexity[2:]
     complexity_scores = analyze_result_complexity_from_results(results_subset)
@@ -253,5 +275,6 @@ def test_analyze_result_complexity_empty_and_missing(sample_results_for_complexi
     assert complexity_scores["Extract_Comp_NoAnalysesKey"] == {}
     assert complexity_scores["Extract_Comp_AnalysesNotDict"] == {}
 
+@pytest.mark.use_real_numpy
 def test_analyze_result_complexity_empty_results_list():
     assert analyze_result_complexity_from_results([]) == {}

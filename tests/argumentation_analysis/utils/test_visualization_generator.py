@@ -38,7 +38,7 @@ def test_generate_performance_visualizations_libs_not_available(
 
 @mock.patch('argumentation_analysis.utils.visualization_generator.VISUALIZATION_LIBS_AVAILABLE', True)
 @mock.patch('matplotlib.pyplot.savefig')
-@mock.patch('pandas.DataFrame.to_csv')
+@mock.patch('argumentation_analysis.utils.visualization_generator.pd.DataFrame.to_csv')
 @mock.patch('matplotlib.pyplot.close')
 @mock.patch('matplotlib.pyplot.figure')
 @mock.patch('matplotlib.pyplot.bar')
@@ -49,8 +49,9 @@ def test_generate_performance_visualizations_libs_not_available(
 @mock.patch('matplotlib.pyplot.xticks')
 @mock.patch('matplotlib.pyplot.legend')
 @mock.patch('matplotlib.pyplot.tight_layout')
-@mock.patch('seaborn.color_palette', return_value=[(0,0,0)]) 
+@mock.patch('seaborn.color_palette', return_value=[(0.1, 0.2, 0.3), (0.4, 0.5, 0.6), (0.7, 0.8, 0.9), (0.2, 0.4, 0.6)]) # Fournir au moins 4 couleurs
 @mock.patch('seaborn.heatmap')
+@pytest.mark.use_real_numpy
 def test_generate_performance_visualizations_files_created(
     mock_heatmap, mock_color_palette, mock_tight_layout, mock_legend, mock_xticks, mock_ylabel, mock_xlabel, mock_title, mock_text, mock_bar, mock_figure, mock_close, mock_df_to_csv, mock_plt_savefig,
     sample_metrics_for_visualization: Dict[str, Dict[str, Any]],
@@ -91,6 +92,7 @@ def test_generate_performance_visualizations_files_created(
 @mock.patch('pandas.DataFrame.to_csv')
 @mock.patch('matplotlib.pyplot.close')
 @mock.patch('matplotlib.pyplot.figure')
+@pytest.mark.use_real_numpy
 def test_generate_performance_visualizations_empty_metrics(mock_fig, mock_close, mock_to_csv, mock_savefig, tmp_path: Path):
     """Teste avec un dictionnaire de métriques vide."""
     output_dir = tmp_path / "viz_empty_metrics"
