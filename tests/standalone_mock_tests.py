@@ -197,10 +197,10 @@ class TestMockCommunication(unittest.TestCase):
             # Signaler qu'un message est disponible
             message_event.set()
             # Attendre un peu pour que le thread traite le message
-            time.sleep(0.2)
+            time.sleep(0.01)
         
         # Attendre que le thread traite tous les messages
-        time.sleep(1.0)
+        thread.join(1.5) # Attendre la fin du thread avec un timeout
         
         # Vérifier que tous les messages ont été reçus
         self.assertEqual(len(received_messages), 3)

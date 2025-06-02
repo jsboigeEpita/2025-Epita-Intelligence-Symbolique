@@ -25,6 +25,7 @@ venv_py310/
 temp_extracts/
 logs/
 temp/
+_temp/
 temp_*.py
 
 # Fichiers spécifiques au projet
@@ -57,4 +58,5 @@ libs/_temp*/
 # Pytest output files
 pytest_hierarchical_full_v4.txt
 
-_temp/
+# Scripts de débogage
+scripts/debug_jpype_classpath.py

@@ -44,11 +44,17 @@ from argumentation_analysis.agents.tools.analysis.enhanced.complex_fallacy_analy
 class TestEnhancedComplexFallacyAnalyzer(unittest.TestCase):
     """Tests unitaires pour l'analyseur de sophismes complexes amélioré."""
     
-    def setUp(self):
-        """Initialisation avant chaque test."""
-        self.analyzer = EnhancedComplexFallacyAnalyzer()
+    analyzer = None
+    arguments_class = []
+    fallacies_class = []
+
+    @classmethod
+    def setUpClass(cls):
+        """Initialisation unique pour la classe de test."""
+        logger.info("Début de setUpClass pour TestEnhancedComplexFallacyAnalyzer.")
+        cls.analyzer = EnhancedComplexFallacyAnalyzer()
         
-        self.arguments = [
+        cls.arguments_class = [
             {
                 "id": "arg-1",
                 "text": "Tous les experts sont d'accord que le réchauffement climatique est réel, donc c'est vrai.",
@@ -72,7 +78,7 @@ class TestEnhancedComplexFallacyAnalyzer(unittest.TestCase):
             }
         ]
         
-        self.fallacies = [
+        cls.fallacies_class = [
             {
                 "id": "fallacy-1",
                 "type": "Appel à l'autorité",
@@ -95,7 +101,27 @@ class TestEnhancedComplexFallacyAnalyzer(unittest.TestCase):
                 "description": "L'argument attaque la personne plutôt que ses idées."
             }
         ]
-    
+        logger.info("Fin de setUpClass pour TestEnhancedComplexFallacyAnalyzer.")
+
+    @classmethod
+    def tearDownClass(cls):
+        logger.info("Début de tearDownClass pour TestEnhancedComplexFallacyAnalyzer.")
+        cls.analyzer = None
+        cls.arguments_class = []
+        cls.fallacies_class = []
+        logger.info("Fin de tearDownClass pour TestEnhancedComplexFallacyAnalyzer.")
+
+    def setUp(self):
+        """Initialisation avant chaque test (si nécessaire pour réinitialiser l'état)."""
+        # Pour cet analyseur, il ne semble pas y avoir d'état interne modifié par les tests
+        # qui nécessiterait une réinitialisation individuelle.
+        # Si EnhancedComplexFallacyAnalyzer ou ses composants (contextual_analyzer, severity_evaluator)
+        # stockaient un état modifiable, il faudrait le gérer ici.
+        # Par exemple, si contextual_analyzer avait un cache:
+        # if self.analyzer and self.analyzer.contextual_analyzer:
+        #     self.analyzer.contextual_analyzer.context_embeddings_cache = {}
+        pass
+
     def test_initialization(self):
         self.assertIsNotNone(self.analyzer)
         self.assertIsNotNone(self.analyzer.contextual_analyzer)
@@ -104,7 +130,7 @@ class TestEnhancedComplexFallacyAnalyzer(unittest.TestCase):
         self.assertIsNotNone(self.analyzer.advanced_fallacy_combinations)
     
     def test_analyze_complex_fallacies(self):
-        arguments_text = [arg["text"] for arg in self.arguments]
+        arguments_text = [arg["text"] for arg in self.arguments_class]
         result = self.analyzer.detect_composite_fallacies(arguments_text, "général")
         self.assertIsInstance(result, dict)
         self.assertIn("basic_combinations", result)
@@ -116,12 +142,12 @@ class TestEnhancedComplexFallacyAnalyzer(unittest.TestCase):
         self.assertIsInstance(result["fallacy_patterns"], list)
     
     def test_detect_fallacy_combinations(self):
-        fallacies_text = " ".join([fallacy["description"] for fallacy in self.fallacies])
+        fallacies_text = " ".join([fallacy["description"] for fallacy in self.fallacies_class])
         combinations = self.analyzer.identify_combined_fallacies(fallacies_text)
         self.assertIsInstance(combinations, list)
     
     def test_analyze_argument_structure(self):
-        arguments_text = [arg["text"] for arg in self.arguments]
+        arguments_text = [arg["text"] for arg in self.arguments_class]
         result = self.analyzer.analyze_argument_structure(arguments_text, "général")
         self.assertIsInstance(result, dict)
         self.assertIn("identified_structures", result)
@@ -140,13 +166,13 @@ class TestEnhancedComplexFallacyAnalyzer(unittest.TestCase):
         self.assertLessEqual(result["overall_coherence"]["overall_score"], 0.6)
     
     def test_analyze_structure_vulnerabilities(self):
-        arguments_text = [arg["text"] for arg in self.arguments]
+        arguments_text = [arg["text"] for arg in self.arguments_class]
         result = self.analyzer.analyze_argument_structure(arguments_text, "général")
         self.assertIsInstance(result, dict)
         self.assertIn("vulnerability_analysis", result)
     
     def test_evaluate_composite_severity(self):
-        arguments_text = [arg["text"] for arg in self.arguments]
+        arguments_text = [arg["text"] for arg in self.arguments_class]
         result = self.analyzer.detect_composite_fallacies(arguments_text, "général")
         self.assertIsInstance(result, dict)
         self.assertIn("composite_severity", result)
@@ -155,14 +181,14 @@ class TestEnhancedComplexFallacyAnalyzer(unittest.TestCase):
         self.assertLessEqual(result["composite_severity"]["adjusted_severity"], 1.0)
     
     def test_analyze_fallacy_interactions(self):
-        arguments_text = [arg["text"] for arg in self.arguments]
+        arguments_text = [arg["text"] for arg in self.arguments_class]
         result = self.analyzer.detect_composite_fallacies(arguments_text, "général")
         self.assertIsInstance(result, dict)
         self.assertIn("basic_combinations", result)
         self.assertIn("advanced_combinations", result)
     
     def test_analyze_inter_argument_coherence(self):
-        arguments_text = [arg["text"] for arg in self.arguments]
+        arguments_text = [arg["text"] for arg in self.arguments_class]
         result = self.analyzer.analyze_inter_argument_coherence(arguments_text, "général")
         self.assertIsInstance(result, dict)
         self.assertIn("thematic_coherence", result)
@@ -170,7 +196,7 @@ class TestEnhancedComplexFallacyAnalyzer(unittest.TestCase):
         self.assertIn("overall_coherence", result)
     
     def test_identify_fallacy_patterns(self):
-        arguments_text = " ".join([arg["text"] for arg in self.arguments])
+        arguments_text = " ".join([arg["text"] for arg in self.arguments_class])
         patterns = self.analyzer.identify_fallacy_patterns(arguments_text)
         self.assertIsInstance(patterns, list)
 

@@ -28,8 +28,8 @@ if not logger.handlers and not logger.propagate:
 MIN_JAVA_VERSION = 15
 TWEETY_VERSION = "1.28" # Version de Tweety à télécharger
 
-PORTABLE_JDK_DOWNLOAD_URL = "https://github.com/adoptium/temurin17-binaries/releases/download/jdk-17.0.10%2B7/OpenJDK17U-jdk_x64_windows_hotspot_17.0.10_7.zip"
-# Note: Utilisation d'une version légèrement plus ancienne pour tester (17.0.10+7 au lieu de 17.0.15+6)
+PORTABLE_JDK_DOWNLOAD_URL = "https://github.com/adoptium/temurin17-binaries/releases/download/jdk-17.0.15%2B6/OpenJDK17U-jdk_x64_windows_hotspot_17.0.15_6.zip"
+# Note: Changé pour correspondre à la version 17.0.15+6 attendue par .env
 
 # Les fonctions suivantes liées au téléchargement des JARs Tweety (download_tweety_jars,
 # _download_file_with_progress, et la classe TqdmUpTo) sont supprimées de ce fichier.
@@ -38,7 +38,7 @@ PORTABLE_JDK_DOWNLOAD_URL = "https://github.com/adoptium/temurin17-binaries/rele
 # La fixture `ensure_tweety_libs` dans `tests/conftest.py` vérifiera la présence des libs.
 
 PORTABLE_JDK_DIR_NAME = "portable_jdk"
-PORTABLE_JDK_ZIP_NAME = "OpenJDK17U-jdk_x64_windows_hotspot_17.0.10_7.zip"
+PORTABLE_JDK_ZIP_NAME = "OpenJDK17U-jdk_x64_windows_hotspot_17.0.15_6.zip"
 TEMP_DIR_NAME = "_temp"
 
 def _check_java_version_and_path(java_home_candidate: str, exe_suffix: str) -> Optional[str]:
@@ -252,22 +252,67 @@ def find_valid_java_home() -> Optional[str]:
     logger.error(f"❌ Recherche finale: Aucun répertoire Java Home valide (système ou portable) n'a pu être localisé ou validé (Java >= {MIN_JAVA_VERSION}).")
     return None
 
+def _build_effective_classpath(
+    lib_dir_path_str: str = str(LIBS_DIR), # Utiliser str() pour compatibilité avec pathlib.Path()
+    project_root_dir_str: str = str(PROJECT_ROOT_DIR)
+) -> tuple[list[str], str]:
+    """
+    Construit la liste des JARs pour le classpath et la chaîne de classpath.
+    Retourne un tuple (liste_des_jars, chaine_classpath_formatee).
+    """
+    LIB_DIR = pathlib.Path(lib_dir_path_str)
+    PROJECT_ROOT = pathlib.Path(project_root_dir_str)
+    classpath_separator = os.pathsep
+
+    main_jar_list = sorted([str(p.resolve()) for p in LIB_DIR.glob("*.jar")])
+    logger.info(f"   _build_effective_classpath: JARs principaux trouvés dans '{LIB_DIR}': {len(main_jar_list)}")
+    
+    test_libs_dir_path_obj = PROJECT_ROOT / "argumentation_analysis" / "tests" / "resources" / "libs"
+    test_jar_list = []
+    if test_libs_dir_path_obj.is_dir():
+        test_jar_list = sorted([str(p.resolve()) for p in test_libs_dir_path_obj.glob("*.jar")])
+        logger.info(f"   _build_effective_classpath: JARs de test trouvés dans '{test_libs_dir_path_obj}': {len(test_jar_list)}")
+    else:
+        logger.info(f"   _build_effective_classpath: Répertoire des JARs de test '{test_libs_dir_path_obj}' non trouvé ou non accessible.")
+
+    main_jars_map = {pathlib.Path(p).name: p for p in main_jar_list}
+    test_jars_map = {pathlib.Path(p).name: p for p in test_jar_list}
+    final_jars_map = {**test_jars_map, **main_jars_map}
+    all_available_jars = sorted(list(final_jars_map.values()))
+    
+    logger.info("   _build_effective_classpath: Utilisation de tous les JARs disponibles (all_available_jars) pour le classpath.")
+    combined_jar_list = all_available_jars
+
+    logger.info(f"   _build_effective_classpath: Nombre total de JARs pour le classpath final: {len(combined_jar_list)}")
+    if not combined_jar_list:
+        logger.error("❌ _build_effective_classpath: Aucun JAR trouvé pour le classpath !")
+        return [], ""
+    
+    logger.info(f"   _build_effective_classpath: --- Liste détaillée des JARs pour le Classpath ({len(combined_jar_list)} JARs) ---")
+    for i, jar_item in enumerate(combined_jar_list):
+        logger.info(f"     _build_effective_classpath: JAR {i+1}: {jar_item}")
+    logger.info(f"   _build_effective_classpath: --- Fin de la liste détaillée des JARs ---")
+    
+    classpath_str = classpath_separator.join(combined_jar_list)
+    logger.info(f"   _build_effective_classpath: Classpath combiné construit ({len(combined_jar_list)} JARs).")
+    logger.debug(f"   _build_effective_classpath: CLASSPATH pour JVM: {classpath_str}")
+    return combined_jar_list, classpath_str
+
 def initialize_jvm(
-    lib_dir_path: str = LIBS_DIR,
+    lib_dir_path: str = str(LIBS_DIR), 
     native_lib_subdir: str = "native",
-    tweety_version: str = TWEETY_VERSION
-    ) -> bool:
-    import jpype 
+    tweety_version: str = TWEETY_VERSION,
+    extra_jvm_args: Optional[list[str]] = None, 
+    use_exclusive_tweety_full_jar: bool = True 
+) -> bool:
+    import jpype
     try:
-        import jpype.imports 
+        import jpype.imports
     except (ImportError, ModuleNotFoundError):
-        pass 
+        pass
     logger.info("\n--- Préparation et Initialisation de la JVM via JPype ---")
-    libs_ok = True 
-    if not libs_ok:
-        logger.error("❌ Problème avec les fichiers Tweety (Core manquant?). Démarrage JVM annulé.")
-        return False
-    LIB_DIR = pathlib.Path(lib_dir_path)
+    
+    LIB_DIR = pathlib.Path(lib_dir_path) 
     NATIVE_LIBS_DIR = LIB_DIR / native_lib_subdir
     jvm_ready = False
     logger.info(f"DEBUG_JVM_SETUP: Appel de jpype.isJVMStarted() au début de initialize_jvm. Résultat: {jpype.isJVMStarted()}")
@@ -284,19 +329,23 @@ def initialize_jvm(
                 logger.warning("   jpype.imports non disponible pour enregistrer les domaines (possible si mock partiel).")
         except Exception: pass
         return True
+
     java_home_to_set = find_valid_java_home()
     if java_home_to_set and not os.getenv("JAVA_HOME"):
         try:
-            # os.environ['JAVA_HOME'] = java_home_to_set # Temporairement commenté
-            # logger.info(f"✅ JAVA_HOME défini dynamiquement à '{java_home_to_set}' pour cette session.")
             logger.info(f"   [DEBUG] Définition de os.environ['JAVA_HOME'] temporairement DÉSACTIVÉE. jvm_path_to_use_explicit sera utilisé.")
         except Exception as e_setenv:
             logger.error(f"❌ Impossible de définir JAVA_HOME dynamiquement: {e_setenv}")
     elif not java_home_to_set:
          logger.error("❌ JAVA_HOME non trouvé. Démarrage JVM impossible.")
-         return False 
+         return False
+         
     jvm_path_final = None
     jvm_args = [] 
+    if extra_jvm_args: 
+        jvm_args.extend(extra_jvm_args)
+        logger.info(f"   Arguments JVM supplémentaires fournis: {extra_jvm_args}")
+
     try:
         logger.info(f"⏳ Tentative de démarrage JVM...")
         try:
@@ -305,21 +354,12 @@ def initialize_jvm(
         except jpype.JVMNotFoundException: 
             logger.warning("   (JPype n'a pas trouvé de JVM par défaut - dépendra de JAVA_HOME)")
             jvm_path_final = None
+
         classpath_separator = os.pathsep
         
-        # Début de la section fusionnée pour Conflit 1
-        # Construire la liste des JARs principaux depuis lib_dir_path (qui est LIB_DIR ici)
-        main_jar_list = sorted([str(p.resolve()) for p in LIB_DIR.glob("*.jar")]) # Original
+        main_jar_list = sorted([str(p.resolve()) for p in LIB_DIR.glob("*.jar")])
         logger.info(f"   JARs principaux trouvés dans '{LIB_DIR}': {len(main_jar_list)}")
 
-        # --- EXCLUSION TEMPORAIREMENT RETIRÉE ---
-        # jar_to_exclude = "org.tweetyproject.lp.asp-1.28-with-dependencies.jar"
-        # original_main_jar_count = len(main_jar_list)
-        # main_jar_list = [jar_path for jar_path in main_jar_list if jar_to_exclude not in pathlib.Path(jar_path).name]
-        # if len(main_jar_list) < original_main_jar_count:
-        #     logger.info(f"   Exclusion de '{jar_to_exclude}' retirée. Nombre de JARs principaux: {len(main_jar_list)}.")
-        # Fin de la section fusionnée pour Conflit 1
-        
         test_libs_dir_path_obj = PROJECT_ROOT_DIR / "argumentation_analysis" / "tests" / "resources" / "libs"
         test_jar_list = []
         if test_libs_dir_path_obj.is_dir():
@@ -328,34 +368,31 @@ def initialize_jvm(
         else:
             logger.info(f"   Répertoire des JARs de test '{test_libs_dir_path_obj}' non trouvé ou non accessible.")
 
-        # Correction de la logique de construction du classpath (ma logique)
         main_jars_map = {pathlib.Path(p).name: p for p in main_jar_list}
         test_jars_map = {pathlib.Path(p).name: p for p in test_jar_list}
-        final_jars_map = {**test_jars_map, **main_jars_map} # Priorité aux JARs principaux
-        all_available_jars = sorted(list(final_jars_map.values()))
-
-        tweety_full_jar_path = None
-        for jar_path_str in all_available_jars: 
-            if "tweety-full" in pathlib.Path(jar_path_str).name:
-                tweety_full_jar_path = jar_path_str
-                break 
-
-        # if tweety_full_jar_path: # Logique de priorisation de tweety-full commentée pour inclure tous les JARs
-        #     logger.info(f"   Utilisation exclusive du JAR 'tweety-full': {tweety_full_jar_path}")
-        #     combined_jar_list = [tweety_full_jar_path]
-        # else:
-        #     logger.warning("   JAR 'tweety-full' non trouvé. Utilisation de tous les JARs disponibles.")
-        #     combined_jar_list = all_available_jars
         
-        logger.info("   Utilisation de tous les JARs disponibles (all_available_jars) pour le classpath (après exclusion ASP).")
-        combined_jar_list = all_available_jars
-
+        tweety_full_with_deps_jar_name = f"org.tweetyproject.tweety-full-{TWEETY_VERSION}-with-dependencies.jar"
+        tweety_full_with_deps_jar_path = main_jars_map.get(tweety_full_with_deps_jar_name)
+        
+        if use_exclusive_tweety_full_jar and tweety_full_with_deps_jar_path: 
+            logger.info(f"   Utilisation exclusive du JAR '{tweety_full_with_deps_jar_name}': {tweety_full_with_deps_jar_path}")
+            combined_jar_list = [tweety_full_with_deps_jar_path]
+            for test_jar_name, test_jar_p_str in test_jars_map.items():
+                if "tweetyproject" not in test_jar_name and test_jar_name != tweety_full_with_deps_jar_name:
+                    if test_jar_p_str not in combined_jar_list:
+                        combined_jar_list.append(test_jar_p_str)
+                        logger.info(f"   Ajout du JAR de test non-Tweety (et non-full): {test_jar_name}")
+        else:
+            logger.warning(f"   JAR '{tweety_full_with_deps_jar_name}' non trouvé dans '{LIB_DIR}' ou mode non-exclusif. "
+                           "Utilisation de la stratégie de fusion de tous les JARs (priorité à libs/).")
+            final_jars_map = {**test_jars_map, **main_jars_map}
+            combined_jar_list = sorted(list(final_jars_map.values()))
+        
         logger.info(f"   Nombre total de JARs pour le classpath final: {len(combined_jar_list)}")
         if not combined_jar_list:
             logger.error("❌ Aucun JAR trouvé pour le classpath ! Démarrage annulé.")
             return False
         
-        # Construire la chaîne de classpath pour l'environnement et le log
         logger.info(f"   --- Liste détaillée des JARs pour le Classpath ({len(combined_jar_list)} JARs) ---")
         for i, jar_item in enumerate(combined_jar_list):
             logger.info(f"     JAR {i+1}: {jar_item}")
@@ -367,41 +404,42 @@ def initialize_jvm(
         try:
             os.environ['CLASSPATH'] = classpath_str_for_env_and_log
             logger.info(f"   Variable d'environnement CLASSPATH définie.")
-            # logger.info(f"   [DEBUG] Définition de os.environ['CLASSPATH'] temporairement DÉSACTIVÉE. Le classpath sera passé directement à startJVM.")
         except Exception as e_set_classpath_env:
             logger.error(f"   ❌ Impossible de définir la variable d'environnement CLASSPATH: {e_set_classpath_env}")
             
-        jvm_args = [] 
-        
         if NATIVE_LIBS_DIR.exists() and any(NATIVE_LIBS_DIR.iterdir()):
             native_path_arg = f"-Djava.library.path={NATIVE_LIBS_DIR.resolve()}"
-            jvm_args.append(native_path_arg)
-            logger.info(f"   Argument JVM natif ajouté: {native_path_arg}")
+            if native_path_arg not in jvm_args:
+                jvm_args.append(native_path_arg)
+            logger.info(f"   Argument JVM natif ajouté (ou déjà présent): {native_path_arg}")
         else:
             logger.info(f"   (Pas de bibliothèques natives trouvées dans '{NATIVE_LIBS_DIR.resolve()}', -Djava.library.path non ajouté)")
-        # logger.info(f"   [DEBUG] -Djava.library.path temporairement désactivé.") # Commenté pour réactiver
         
-        # jvm_memory_options = ["-Xms256m", "-Xmx512m"]
-        # jvm_args.extend(jvm_memory_options)
-        # logger.info(f"   Options de mémoire JVM ajoutées: {jvm_memory_options}")
-        logger.info(f"   [DEBUG] Options de mémoire JVM temporairement désactivées.")
+        logger.info(f"   [DEBUG] Options de mémoire JVM temporairement désactivées (ou gérées par extra_jvm_args).")
 
-        # Début de la section fusionnée pour Conflit 2
-        # Ajout des options de débogage JVM et JPype (de origin/main)
-        jvm_debug_options = ["-Xcheck:jni"] # Option de débogage JNI
-        jpype_debug_options = ["-Djpype.debug=True", "-Djpype.jni_debug=True"] # Options JPype
-        # jvm_args.extend(jvm_debug_options) # Toujours désactivé pour tester la stabilité
-        # jvm_args.extend(jpype_debug_options) # Également désactivé pour ce test
-        logger.info(f"   Options de débogage JVM (-Xcheck:jni) TEMPORAIREMENT DÉSACTIVÉES.")
-        logger.info(f"   Options de débogage JPype (debug, jni_debug) TEMPORAIREMENT DÉSACTIVÉES.")
-        # logger.info(f"   [DEBUG] Toutes les options jvm_args (débogage JNI/JPype) sont DÉSACTIVÉES pour ce test.")
-        # Fin de la section fusionnée pour Conflit 2
-        # logger.info(f"   [DEBUG] Options de débogage JVM (-Xcheck:jni) temporairement désactivées.") # Commenté pour test
-        
-        # logger.info(f"   Options de débogage JPype DÉSACTIVÉES pour ce test.") # Commenté pour test
+        if "-Xcheck:jni" not in jvm_args:
+            jvm_args.append("-Xcheck:jni")
+        logger.info(f"   Option de débogage JVM '-Xcheck:jni' ACTIVÉE et ajoutée à jvm_args (ou déjà présente).")
+
+        try:
+            if hasattr(jpype, 'config') and jpype.config is not None:
+                if hasattr(jpype.config, 'enable_jni_access'):
+                    jpype.config.enable_jni_access = True
+                    logger.info(f"   Option de débogage JPype 'jpype.config.enable_jni_access' ACTIVÉE.")
+                else:
+                    logger.warning(f"   Option 'jpype.config.enable_jni_access' non trouvée dans jpype.config.")
+                
+                if hasattr(jpype.config, 'enable_tracing'):
+                    jpype.config.enable_tracing = True
+                    logger.info(f"   Option de débogage JPype 'jpype.config.enable_tracing' ACTIVÉE.")
+                else:
+                    logger.warning(f"   Option 'jpype.config.enable_tracing' non trouvée dans jpype.config.")
+            else:
+                logger.warning("   jpype.config non disponible, impossible d'activer les options de débogage JPype via jpype.config.")
+        except Exception as e_jpype_cfg_debug:
+            logger.warning(f"   Erreur lors de la tentative de configuration des options de débogage JPype: {e_jpype_cfg_debug}")
 
         jvm_path_to_use_explicit: Optional[str] = None
-        # logger.info(f"   [DEBUG] Forçage de jvm_path_to_use_explicit à None pour utiliser la détection JPype par défaut.") # Commenté pour test
         if java_home_to_set:
             _java_home_path = pathlib.Path(java_home_to_set)
             _system = platform.system()
@@ -414,13 +452,13 @@ def initialize_jvm(
                      _jvm_dll_path = _java_home_path / "Contents" / "Home" / "lib" / "server" / "libjvm.dylib"
                 elif not _jvm_dll_path.is_file():
                      _jvm_dll_path = _java_home_path / "jre" / "lib" / "server" / "libjvm.dylib"
-            else: # Linux et autres
+            else: 
                 _jvm_dll_path = _java_home_path / "lib" / "server" / "libjvm.so"
-                if not _jvm_dll_path.is_file(): # Tentative avec jre/lib/server
+                if not _jvm_dll_path.is_file(): 
                     _jvm_dll_path_jre_variant = _java_home_path / "jre" / "lib" / "server" / "libjvm.so"
                     if _jvm_dll_path_jre_variant.is_file():
                         _jvm_dll_path = _jvm_dll_path_jre_variant
-                    else: # Tentatives plus génériques pour certaines distributions Linux
+                    else: 
                         lib_server_paths = list((_java_home_path / "lib").glob("**/server/libjvm.so"))
                         if lib_server_paths:
                             _jvm_dll_path = lib_server_paths[0]
@@ -440,9 +478,8 @@ def initialize_jvm(
         logger.info(f"DEBUG_JVM_SETUP: CLASSPATH avant startJVM: {os.getenv('CLASSPATH')}")
         logger.info(f"DEBUG_JVM_SETUP: Tentative de démarrage avec jvm_path_to_use_explicit='{jvm_path_to_use_explicit}', classpath='{len(combined_jar_list)} JARs', args='{jvm_args}'")
         if hasattr(jpype, 'config'):
-            jpype.config.destroy_jvm = False
+            jpype.config.destroy_jvm = False 
             logger.info(f"DEBUG_JVM_SETUP: jpype.config.destroy_jvm défini sur False.")
-            # logger.info(f"DEBUG_JVM_SETUP: jpype.config.destroy_jvm NON défini sur False (utilisation du défaut JPype).")
         else:
             logger.warning("DEBUG_JVM_SETUP: jpype.config non disponible, impossible de définir destroy_jvm.")
 
@@ -458,12 +495,21 @@ def initialize_jvm(
         if jpype.isJVMStarted():
             classpath_from_jvm = None
             try:
-                classpath_from_jvm = jpype.getClassPath()
+                classpath_from_jvm = jpype.getClassPath() 
                 logger.info(f"   Classpath rapporté par jpype.getClassPath() juste après startJVM: {classpath_from_jvm}")
             except Exception as e_cp:
                 logger.warning(f"   Impossible d'obtenir jpype.getClassPath() juste après startJVM: {e_cp}")
 
-            if classpath_from_jvm: # Vérifier si le classpath est non vide
+            classpath_ok = False
+            if classpath_from_jvm is not None:
+                if isinstance(classpath_from_jvm, str):
+                    classpath_ok = bool(classpath_from_jvm.strip())
+                elif isinstance(classpath_from_jvm, list):
+                    classpath_ok = bool(classpath_from_jvm)
+                else: 
+                    classpath_ok = True 
+
+            if classpath_ok: 
                 if hasattr(jpype, 'imports') and jpype.imports is not None:
                     try:
                         jpype.imports.registerDomain("java", alias="java")
@@ -473,17 +519,26 @@ def initialize_jvm(
                         jpype.imports.registerDomain("net.sf.tweety", alias="tweety")
                         logger.info("✅ JVM démarrée avec succès, classpath chargé ET domaines (java, org, net, sf, tweety) enregistrés.")
                         jvm_fully_initialized = True
+                        if hasattr(jpype, 'config') and jpype.config is not None:
+                            jpype.config.destroy_jvm = False 
+                            logger.info(f"   jpype.config.destroy_jvm mis à False. Vérification immédiate: jpype.config.destroy_jvm = {jpype.config.destroy_jvm}")
+                        else:
+                            logger.warning("   Impossible de mettre jpype.config.destroy_jvm à False (jpype.config non disponible).")
                     except Exception as e_reg_domain_jvm_setup:
                         logger.error(f"❌ Erreur lors de l'enregistrement des domaines JPype (classpath semblait OK): {e_reg_domain_jvm_setup}")
                 else:
                     logger.warning("✅ JVM démarrée et classpath chargé, mais jpype.imports non disponible pour enregistrer les domaines.")
-                    # On considère quand même que c'est mieux que rien si le classpath est là
-                    jvm_fully_initialized = True
+                    jvm_fully_initialized = True 
+                    if hasattr(jpype, 'config') and jpype.config is not None:
+                        jpype.config.destroy_jvm = False
+                        logger.info(f"   jpype.config.destroy_jvm mis à False (après avertissement sur jpype.imports). Vérification immédiate: jpype.config.destroy_jvm = {jpype.config.destroy_jvm}")
+                    else:
+                        logger.warning("   Impossible de mettre jpype.config.destroy_jvm à False (jpype.config non disponible, après avertissement sur jpype.imports).")
             else:
                 logger.error("❌ JVM démarrée (isJVMStarted()=True) MAIS le classpath est VIDE ou inaccessible. Les classes Java ne seront pas trouvées.")
         else:
             logger.error("❌ JVM non démarrée (isJVMStarted()=False).")
-            
+                
         jvm_ready = jvm_fully_initialized
     except Exception as e:
         logger.critical(f"\n❌❌❌ Erreur Démarrage JVM: {e} ❌❌❌", exc_info=True)
