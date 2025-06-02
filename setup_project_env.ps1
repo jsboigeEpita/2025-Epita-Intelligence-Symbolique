@@ -2,8 +2,17 @@
 
 param (
     [string]$Python310Path = "", # Chemin optionnel vers python.exe pour la version 3.10
-    [switch]$NonInteractive = $false # Pour supprimer automatiquement les venv et l'environnement conda existant
+    [switch]$NonInteractiveLegacy = $false, # Ancien paramètre, conservé pour compatibilité, mais logique ajustée
+    [switch]$InteractiveMode = $false,    # Nouveau: Pour forcer le mode interactif (poser des questions)
+    [switch]$ForceReinstall = $false      # Nouveau: Pour forcer la réinstallation des outils et de l'environnement Conda
 )
+
+# Déterminer le mode d'interaction basé sur les nouveaux paramètres
+# Si ForceReinstall est activé, on considère que c'est non interactif pour les suppressions.
+# Si InteractiveMode est activé, on pose des questions.
+# Sinon (par défaut), c'est non interactif et conservateur (pas de réinstallation/suppression majeure).
+$effectiveNonInteractiveForDelete = $ForceReinstall -or $NonInteractiveLegacy -or (-not $InteractiveMode)
+$askQuestions = $InteractiveMode -and (-not $ForceReinstall) # On ne pose des questions que si Interactive ET non ForceReinstall
 
 # --- Configuration ---
 $condaEnvName = "projet-is"
@@ -198,8 +207,15 @@ $fullJdkPath = Join-Path $PSScriptRoot $jdkDir
 Write-Host "Vérification du JDK portable dans '$fullJdkPath'..."
 $extractedJdkPath = Get-JdkSubDir -baseDir $fullJdkPath
 
+# Logique de réinstallation du JDK
+if ($ForceReinstall -and $extractedJdkPath) {
+    Write-Host "Mode ForceReinstall : Suppression du JDK existant dans '$fullJdkPath'..."
+    Remove-Item -Path $fullJdkPath -Recurse -Force
+    $extractedJdkPath = $null # Forcer la réinstallation
+}
+
 if (-not $extractedJdkPath) {
-    Write-Host "JDK non trouvé dans '$fullJdkPath'. Téléchargement et extraction..."
+    Write-Host "JDK non trouvé ou réinstallation forcée. Téléchargement et extraction..."
     $tempJdkDownloadDir = Join-Path $PSScriptRoot (Join-Path "libs" "_temp_jdk_download")
     $zipFilePath = Join-Path $tempJdkDownloadDir "jdk.zip"
 
@@ -245,8 +261,15 @@ Write-Host "--- Configuration d'Octave Portable ---"
 $fullOctaveDirPath = Join-Path $PSScriptRoot $octaveDir # ex: C:\projets\Epita\libs\portable_octave
 $expectedOctaveCliPath = Join-Path $fullOctaveDirPath (Join-Path $octaveExtractedDirName "mingw64\bin\octave-cli.exe")
 
+# Logique de réinstallation d'Octave
+if ($ForceReinstall -and (Test-Path $fullOctaveDirPath)) {
+    Write-Host "Mode ForceReinstall : Suppression d'Octave existant dans '$fullOctaveDirPath'..."
+    Remove-Item -Path $fullOctaveDirPath -Recurse -Force
+    # $expectedOctaveCliPath sera re-testé après, donc pas besoin de le nullifier ici
+}
+
 if (-not (Test-Path $expectedOctaveCliPath)) {
-    Write-Host "Octave CLI non trouvé à '$expectedOctaveCliPath'. Tentative de téléchargement et extraction..."
+    Write-Host "Octave CLI non trouvé ou réinstallation forcée. Tentative de téléchargement et extraction..."
     $fullOctaveTempDownloadDirPath = Join-Path $PSScriptRoot $octaveTempDownloadDir # ex: C:\projets\Epita\libs\_temp_octave_download
     $octaveZipFilePath = Join-Path $fullOctaveTempDownloadDirPath $octaveZipName
 
@@ -293,8 +316,8 @@ $oldVenvDirs = @("venv", ".venv", "venv_py310") # Ajoutez d'autres noms si néce
 foreach ($dirName in $oldVenvDirs) {
     $fullOldVenvPath = Join-Path $PSScriptRoot $dirName
     if (Test-Path -Path $fullOldVenvPath -PathType Container) {
-        if ($NonInteractive) {
-            Write-Host "Mode non interactif : Suppression automatique de l'ancien répertoire $fullOldVenvPath..."
+        if ($ForceReinstall -or $NonInteractiveLegacy) { # ForceReinstall ou ancien NonInteractive suppriment sans question
+            Write-Host "Mode ForceReinstall ou NonInteractiveLegacy : Suppression automatique de l'ancien répertoire $fullOldVenvPath..."
             try {
                 Remove-Item -Recurse -Force $fullOldVenvPath -ErrorAction Stop
                 Write-Host "Répertoire $fullOldVenvPath supprimé."
@@ -302,7 +325,7 @@ foreach ($dirName in $oldVenvDirs) {
                 Write-Warning "Impossible de supprimer complètement $fullOldVenvPath. Erreur: $($_.Exception.Message)"
                 Write-Warning "Vous devrez peut-être le supprimer manuellement."
             }
-        } else {
+        } elseif ($InteractiveMode) { # Nouveau mode interactif
             $confirmation = Read-Host "L'ancien répertoire d'environnement virtuel '$dirName' a été trouvé. Voulez-vous le supprimer ? (O/N)"
             if ($confirmation -eq 'O' -or $confirmation -eq 'o') {
                 Write-Host "Suppression de l'ancien répertoire $fullOldVenvPath..."
@@ -316,6 +339,8 @@ foreach ($dirName in $oldVenvDirs) {
             } else {
                 Write-Host "Le répertoire '$fullOldVenvPath' n'a pas été supprimé."
             }
+        } else { # Comportement par défaut (non interactif, pas de suppression)
+             Write-Host "Ancien répertoire d'environnement virtuel '$dirName' trouvé. Non supprimé (mode par défaut non-ForceReinstall et non-Interactive)."
         }
     }
 }
@@ -325,39 +350,54 @@ Write-Host ""
 Write-Host "--- Configuration de l'environnement Conda '$condaEnvName' ---"
 
 # Vérifier si l'environnement Conda existe déjà et demander s'il faut le supprimer pour une installation propre
-$condaEnvExistsForCleanup = conda env list | Select-String -Pattern "\s$condaEnvName\s" -Quiet
-if ($condaEnvExistsForCleanup) {
-    if ($NonInteractive) {
-        Write-Host "Mode non interactif : Suppression automatique de l'environnement Conda '$condaEnvName'..."
+$condaEnvExists = conda env list | Select-String -Pattern "\s$condaEnvName\s" -Quiet
+
+if ($ForceReinstall -and $condaEnvExists) {
+    Write-Host "Mode ForceReinstall : Suppression de l'environnement Conda '$condaEnvName'..."
+    try {
+        conda env remove --name $condaEnvName -y
+        if ($LASTEXITCODE -ne 0) {
+            Write-Warning "La suppression (ForceReinstall) de l'environnement Conda '$condaEnvName' a rencontré un problème."
+        } else {
+            Write-Host "Environnement Conda '$condaEnvName' supprimé (ForceReinstall)."
+        }
+        $condaEnvExists = $false # Marquer comme non existant pour la recréation
+    } catch {
+        Write-Warning "Une exception s'est produite lors de la suppression (ForceReinstall) de l'environnement Conda '$condaEnvName': $($_.Exception.Message)"
+    }
+} elseif ($condaEnvExists -and $askQuestions) { # $askQuestions = $InteractiveMode -and (-not $ForceReinstall)
+    $cleanupConfirmation = Read-Host "L'environnement Conda '$condaEnvName' existe déjà. Voulez-vous le supprimer pour une installation propre ? (O/N)"
+    if ($cleanupConfirmation -eq 'O' -or $cleanupConfirmation -eq 'o') {
+        Write-Host "Suppression de l'environnement Conda '$condaEnvName' (mode interactif)..."
         try {
             conda env remove --name $condaEnvName -y
             if ($LASTEXITCODE -ne 0) {
-                Write-Warning "La suppression de l'environnement Conda '$condaEnvName' a rencontré un problème. Il se peut qu'il ne soit pas complètement supprimé."
+                Write-Warning "La suppression (mode interactif) de l'environnement Conda '$condaEnvName' a rencontré un problème."
             } else {
-                Write-Host "Environnement Conda '$condaEnvName' supprimé."
+                Write-Host "Environnement Conda '$condaEnvName' supprimé (mode interactif)."
             }
+            $condaEnvExists = $false # Marquer comme non existant pour la recréation
         } catch {
-            Write-Warning "Une exception s'est produite lors de la suppression de l'environnement Conda '$condaEnvName': $($_.Exception.Message)"
+            Write-Warning "Une exception s'est produite lors de la suppression (mode interactif) de l'environnement Conda '$condaEnvName': $($_.Exception.Message)"
         }
     } else {
-        $cleanupConfirmation = Read-Host "L'environnement Conda '$condaEnvName' existe déjà. Voulez-vous le supprimer pour une installation propre ? (O/N)"
-        if ($cleanupConfirmation -eq 'O' -or $cleanupConfirmation -eq 'o') {
-            Write-Host "Suppression de l'environnement Conda '$condaEnvName'..."
-            try {
-                conda env remove --name $condaEnvName -y
-                if ($LASTEXITCODE -ne 0) {
-                    Write-Warning "La suppression de l'environnement Conda '$condaEnvName' a rencontré un problème. Il se peut qu'il ne soit pas complètement supprimé."
-                } else {
-                    Write-Host "Environnement Conda '$condaEnvName' supprimé."
-                }
-            } catch {
-                Write-Warning "Une exception s'est produite lors de la suppression de l'environnement Conda '$condaEnvName': $($_.Exception.Message)"
-            }
+        Write-Host "L'environnement Conda '$condaEnvName' ne sera pas supprimé. Le script tentera une mise à jour."
+    }
+} elseif ($NonInteractiveLegacy -and $condaEnvExists) { # Ancien comportement -NonInteractive
+     Write-Host "Mode NonInteractiveLegacy : Suppression de l'environnement Conda '$condaEnvName'..."
+    try {
+        conda env remove --name $condaEnvName -y
+        if ($LASTEXITCODE -ne 0) {
+            Write-Warning "La suppression (NonInteractiveLegacy) de l'environnement Conda '$condaEnvName' a rencontré un problème."
         } else {
-            Write-Host "L'environnement Conda '$condaEnvName' ne sera pas supprimé. Le script tentera une mise à jour."
+            Write-Host "Environnement Conda '$condaEnvName' supprimé (NonInteractiveLegacy)."
         }
+        $condaEnvExists = $false # Marquer comme non existant pour la recréation
+    } catch {
+        Write-Warning "Une exception s'est produite lors de la suppression (NonInteractiveLegacy) de l'environnement Conda '$condaEnvName': $($_.Exception.Message)"
     }
 }
+
 
 $envFilePath = Join-Path $PSScriptRoot $environmentYmlFile
 if (-not (Test-Path $envFilePath)) {
@@ -365,25 +405,14 @@ if (-not (Test-Path $envFilePath)) {
     exit 1
 }
 
-# Forcer la suppression de l'environnement Conda en mode non interactif pour assurer un état propre
-if ($NonInteractive) {
-    Write-Host "Mode non interactif : Tentative de suppression préalable de l'environnement Conda '$condaEnvName' pour assurer un état propre..."
-    try {
-        conda env remove --name $condaEnvName -y
-        if ($LASTEXITCODE -ne 0) {
-            Write-Warning "La suppression préalable de l'environnement Conda '$condaEnvName' a rencontré un problème (Code: $LASTEXITCODE). Cela peut être normal s'il n'existait pas."
-        } else {
-            Write-Host "Environnement Conda '$condaEnvName' supprimé (ou n'existait pas)."
-        }
-    } catch {
-        Write-Warning "Une exception s'est produite lors de la tentative de suppression préalable de l'environnement Conda '$condaEnvName': $($_.Exception.Message)"
-    }
-}
+# La suppression préalable en mode NonInteractiveLegacy est déjà gérée ci-dessus.
+# La suppression en mode ForceReinstall est également gérée.
 
-# Vérifier si l'environnement Conda existe déjà
-$condaEnvList = conda env list | Select-String -Pattern "\s$condaEnvName\s" -Quiet
-if ($condaEnvList) {
-    Write-Host "L'environnement Conda '$condaEnvName' existe déjà. Mise à jour..."
+# Recalculer l'existence après les suppressions potentielles
+$condaEnvExistsAfterCleanup = conda env list | Select-String -Pattern "\s$condaEnvName\s" -Quiet
+
+if ($condaEnvExistsAfterCleanup) {
+    Write-Host "L'environnement Conda '$condaEnvName' existe. Mise à jour..."
     try {
         conda env update --name $condaEnvName --file $envFilePath --prune
         if ($LASTEXITCODE -ne 0) {
