@@ -460,7 +460,8 @@ def test_load_extract_definitions_file_not_found(tmp_path, test_key, mock_logger
         definitions = load_extract_definitions(non_existent_file, test_key.decode('utf-8'))
     assert definitions == [{"default": True}]
     # Le logger utilisé par load_extract_definitions est file_ops_logger (alias de utils_logger)
-    mock_logger.info.assert_called_with(f"Fichier config chiffré '{non_existent_file}' non trouvé. Utilisation définitions par défaut.")
+    # Corrigé : le message de log ne contient plus "chiffré" dans ce cas.
+    mock_logger.info.assert_called_with(f"Fichier config '{non_existent_file}' non trouvé. Utilisation définitions par défaut.")
 
 def test_load_extract_definitions_no_key(config_file_path, mock_logger): # config_file_path peut exister ou non
     with patch('argumentation_analysis.ui.file_operations.ui_config_module.EXTRACT_SOURCES', None), \
@@ -470,31 +471,27 @@ def test_load_extract_definitions_no_key(config_file_path, mock_logger): # confi
             config_file_path.unlink() # S'assurer qu'il n'existe pas pour isoler le test de la clé
 
         # Utiliser la fonction importée directement depuis file_operations
-        definitions = load_extract_definitions(config_file_path, None) # Passe None comme b64_derived_key
-    assert definitions == [{"default": True}]
-    # Le log exact peut dépendre si le fichier existe ou non.
-    # Si le fichier n'existe pas, le log de clé absente peut ne pas être le premier.
-    # On vérifie que le message spécifique est présent parmi les appels.
-    # Si le fichier n'existe pas, le premier log sera sur le fichier non trouvé.
-    # Si le fichier existe mais la clé est None, alors le log sur la clé absente sera émis.
-    # Pour ce test, on s'attend au log de clé absente.
-    # Pour rendre le test plus robuste, on peut s'assurer que le fichier existe *avant* d'appeler avec une clé None.
-    config_file_path.write_text("dummy content for key test") # Créer un fichier factice
+        # Si le fichier n'existe pas, les définitions par défaut sont retournées.
+        definitions_no_file = load_extract_definitions(config_file_path, None)
+    assert definitions_no_file == [{"default": True}]
+    mock_logger.info.assert_any_call(f"Fichier config '{config_file_path}' non trouvé. Utilisation définitions par défaut.")
+
+    # Maintenant, créer un fichier avec du contenu non-JSON et vérifier JSONDecodeError
+    config_file_path.write_text("dummy non-json content for key test")
     
-    # Il faut s'assurer que DEFAULT_EXTRACT_SOURCES est mocké à la valeur attendue pour cette partie du test
-    # Ce patch doit englober l'appel à load_extract_definitions qui l'utilise.
     with patch('argumentation_analysis.ui.file_operations.ui_config_module.EXTRACT_SOURCES', None), \
          patch('argumentation_analysis.ui.file_operations.ui_config_module.DEFAULT_EXTRACT_SOURCES', [{"default_key_test_2": True}]):
-        # Utiliser la fonction importée directement depuis file_operations
-        definitions_with_file = load_extract_definitions(config_file_path, None) # Passe None comme b64_derived_key
+        with pytest.raises(json.JSONDecodeError):
+            load_extract_definitions(config_file_path, None) # Passe None comme b64_derived_key
 
-    assert definitions_with_file == [{"default_key_test_2": True}]
-    
-    # Vérifier que le message d'avertissement spécifique a été loggué
-    expected_log = "Clé chiffrement (b64) absente. Chargement config impossible. Utilisation définitions par défaut."
-
-    called_warnings = [call_args[0][0] for call_args in mock_logger.warning.call_args_list]
-    assert any(expected_log in called_arg for called_arg in called_warnings)
+    # Vérifier que le log d'erreur de décodage JSON a été émis
+    error_call_found = False
+    for call_args_tuple in mock_logger.error.call_args_list:
+        args = call_args_tuple[0]
+        if args and isinstance(args[0], str) and f"❌ Erreur décodage JSON pour '{config_file_path}'" in args[0]:
+            error_call_found = True
+            break
+    assert error_call_found, "Le message d'erreur de décodage JSON attendu n'a pas été loggué."
 
 # Patches pour les dépendances de load_extract_definitions
 @patch('project_core.utils.crypto_utils.decrypt_data_with_fernet', side_effect=InvalidToken)
@@ -503,19 +500,18 @@ def test_load_extract_definitions_decryption_fails(mock_decrypt_fernet, config_f
     b64_key_str = test_key.decode('utf-8')
     with patch('argumentation_analysis.ui.file_operations.ui_config_module.EXTRACT_SOURCES', None), \
          patch('argumentation_analysis.ui.file_operations.ui_config_module.DEFAULT_EXTRACT_SOURCES', [{"default": True}]):
-        # La fonction load_extract_definitions devrait attraper InvalidToken et retourner les définitions par défaut
-        definitions = load_extract_definitions(config_file_path, b64_key_str)
-        assert definitions == [{"default": True}]
+        # La fonction load_extract_definitions devrait maintenant relancer InvalidToken
+        with pytest.raises(InvalidToken):
+            load_extract_definitions(config_file_path, b64_key_str)
 
-    # Vérifier que le logger a été appelé avec un message d'erreur approprié
-    # decrypt_data_with_fernet loggue déjà l'erreur InvalidToken.
-    # load_extract_definitions loggue ensuite un avertissement général.
-    warning_logged = False
-    for call_args in mock_logger.warning.call_args_list:
-        if "Échec déchiffrement (decrypt_data_with_fernet a retourné None)" in call_args[0][0]: # crypto_utils loggue l'erreur, file_ops un warning
-            warning_logged = True
+    # Vérifier que le logger a été appelé avec un message d'erreur approprié avant de lever l'exception
+    error_logged = False
+    for call_args_tuple in mock_logger.error.call_args_list:
+        args = call_args_tuple[0]
+        if args and isinstance(args[0], str) and f"❌ Échec déchiffrement pour '{config_file_path}'" in args[0]:
+            error_logged = True
             break
-    assert warning_logged, "L'avertissement d'échec de déchiffrement attendu n'a pas été loggué par load_extract_definitions."
+    assert error_logged, "Le message d'erreur d'échec de déchiffrement attendu n'a pas été loggué."
 
 @patch('argumentation_analysis.ui.file_operations.gzip.decompress', side_effect=gzip.BadGzipFile("Test BadGzipFile"))
 @patch('argumentation_analysis.ui.file_operations.decrypt_data_with_fernet', return_value=b"decrypted but not gzipped")
@@ -532,10 +528,11 @@ def test_load_extract_definitions_decompression_fails(mock_decrypt_fernet, mock_
     error_logged = False
     for call_args_tuple in mock_logger.error.call_args_list:
         logged_message = call_args_tuple[0][0]
-        if "Erreur chargement/traitement général" in logged_message and str(config_file_path) in logged_message and "Test BadGzipFile" in logged_message:
+        # Message de log ajusté pour correspondre à la logique de file_operations.py
+        if f"❌ Erreur chargement/déchiffrement '{config_file_path}'" in logged_message and "Test BadGzipFile" in logged_message:
             error_logged = True
             break
-    assert error_logged, "L'erreur de décompression attendue n'a pas été logguée correctement par load_extract_definitions."
+    assert error_logged, f"L'erreur de décompression attendue n'a pas été logguée correctement. Logs: {mock_logger.error.call_args_list}"
 
 @patch('argumentation_analysis.ui.file_operations.decrypt_data_with_fernet')
 def test_load_extract_definitions_invalid_json(mock_decrypt_fernet, config_file_path, test_key, mock_logger):
@@ -555,10 +552,11 @@ def test_load_extract_definitions_invalid_json(mock_decrypt_fernet, config_file_
     error_logged = False
     for call_args_tuple in mock_logger.error.call_args_list:
         logged_message = call_args_tuple[0][0]
-        if "Erreur chargement/traitement général" in logged_message and str(config_file_path) in logged_message and "Expecting value" in logged_message: # json.JSONDecodeError
+        # Message de log ajusté
+        if f"❌ Erreur chargement/déchiffrement '{config_file_path}'" in logged_message and "Expecting value" in logged_message: # json.JSONDecodeError
             error_logged = True
             break
-    assert error_logged, "L'erreur de décodage JSON attendue n'a pas été logguée correctement par load_extract_definitions."
+    assert error_logged, f"L'erreur de décodage JSON attendue n'a pas été logguée correctement. Logs: {mock_logger.error.call_args_list}"
 
 @patch('argumentation_analysis.ui.file_operations.decrypt_data_with_fernet')
 def test_load_extract_definitions_invalid_format(mock_decrypt_fernet, config_file_path, test_key, mock_logger):
