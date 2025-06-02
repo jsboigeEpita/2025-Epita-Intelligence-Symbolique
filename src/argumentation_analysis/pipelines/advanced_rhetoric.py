@@ -34,14 +34,29 @@ def run_advanced_rhetoric_pipeline(
 ) -> None:
     """
     Analyse tous les extraits avec les outils avancés et sauvegarde les résultats.
-    Cette fonction est une version modulaire de l'ancienne analyze_extracts_advanced.
 
-    Args:
-        extract_definitions (List[Dict[str, Any]]): Définitions des extraits.
-        base_results (List[Dict[str, Any]]): Résultats de l'analyse de base.
-        output_file (Path): Chemin du fichier de sortie pour les résultats.
-        use_real_tools (bool): Si True et que les outils réels sont disponibles, les utilise.
-                               Sinon, utilise les mocks.
+    Cette fonction est une version modulaire de l'ancienne `analyze_extracts_advanced`.
+    Elle itère sur les définitions d'extraits, effectue une analyse rhétorique
+    avancée pour chacun en utilisant soit des outils réels soit des mocks,
+    puis sauvegarde l'ensemble des résultats dans un fichier JSON.
+
+    :param extract_definitions: Liste des définitions d'extraits à analyser.
+                                Chaque dictionnaire doit contenir les informations
+                                nécessaires pour identifier et traiter un extrait.
+    :type extract_definitions: List[Dict[str, Any]]
+    :param base_results: Liste des résultats de l'analyse de base correspondants
+                         aux extraits. Ces résultats peuvent être utilisés comme
+                         entrée ou contexte pour l'analyse avancée.
+    :type base_results: List[Dict[str, Any]]
+    :param output_file: Chemin du fichier (objet Path) où les résultats complets
+                        de l'analyse avancée seront sauvegardés au format JSON.
+    :type output_file: Path
+    :param use_real_tools: Booléen indiquant s'il faut utiliser les outils d'analyse
+                           réels (si disponibles) ou les versions mockées.
+                           Par défaut à False (utilise les mocks).
+    :type use_real_tools: bool
+    :return: None
+    :rtype: None
     """
     logger.info("Démarrage du pipeline d'analyse rhétorique avancée...")
     

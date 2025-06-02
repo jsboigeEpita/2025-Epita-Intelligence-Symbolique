@@ -216,6 +216,9 @@ def _analyze_agent_effectiveness(
 def _generate_agent_improvement_recommendations() -> Dict[str, List[str]]:
     """
     Génère des recommandations pour l'amélioration des agents existants.
+
+    :return: Un dictionnaire contenant des recommandations d'amélioration par agent.
+    :rtype: Dict[str, List[str]]
     """
     recommendations = {
         "ContextualFallacyDetector": [
@@ -259,6 +262,9 @@ def _generate_agent_improvement_recommendations() -> Dict[str, List[str]]:
 def _generate_new_agent_recommendations() -> List[Dict[str, Any]]:
     """
     Génère des recommandations pour le développement de nouveaux agents spécialistes.
+
+    :return: Une liste de dictionnaires, chacun décrivant un nouvel agent recommandé.
+    :rtype: List[Dict[str, Any]]
     """
     new_agents = [
         {
@@ -343,6 +349,17 @@ def _generate_visualizations(
 ) -> Dict[str, Path]:
     """
     Génère des visualisations pour le rapport.
+
+    :param base_results: Résultats de l'analyse de base.
+    :type base_results: List[Dict[str, Any]]
+    :param advanced_results: Résultats de l'analyse avancée.
+    :type advanced_results: List[Dict[str, Any]]
+    :param effectiveness: Dictionnaire de l'efficacité des agents par corpus.
+    :type effectiveness: Dict[str, Dict[str, Any]]
+    :param output_dir: Répertoire de sortie pour les visualisations.
+    :type output_dir: Path
+    :return: Un dictionnaire mappant les noms des visualisations à leurs chemins.
+    :rtype: Dict[str, Path]
     """
     output_dir.mkdir(parents=True, exist_ok=True)
     visualization_paths = {}
@@ -434,6 +451,29 @@ def _generate_markdown_report(
 ) -> None:
     """
     Génère un rapport complet au format Markdown.
+
+    :param base_results: Résultats de l'analyse de base.
+    :type base_results: List[Dict[str, Any]]
+    :param advanced_results: Résultats de l'analyse avancée.
+    :type advanced_results: List[Dict[str, Any]]
+    :param performance_report: Contenu textuel du rapport de performance.
+    :type performance_report: str
+    :param performance_metrics: DataFrame des métriques de performance.
+    :type performance_metrics: pd.DataFrame
+    :param effectiveness: Dictionnaire de l'efficacité des agents par corpus.
+    :type effectiveness: Dict[str, Dict[str, Any]]
+    :param improvement_recommendations: Recommandations d'amélioration pour les agents.
+    :type improvement_recommendations: Dict[str, List[str]]
+    :param new_agent_recommendations: Recommandations pour de nouveaux agents.
+    :type new_agent_recommendations: List[Dict[str, Any]]
+    :param visualization_paths: Chemins des fichiers de visualisation.
+    :type visualization_paths: Dict[str, Path]
+    :param output_file: Chemin du fichier Markdown de sortie.
+    :type output_file: Path
+    :param combined_average_scores: Scores moyens combinés pour tous les corpus.
+    :type combined_average_scores: Dict[str, Dict[str, float]]
+    :return: None
+    :rtype: None
     """
     output_file.parent.mkdir(parents=True, exist_ok=True)
     report_content = []
@@ -528,6 +568,15 @@ def _generate_markdown_report(
 def _generate_html_report(markdown_file: Path, output_file: Path, visualization_dir: Path) -> None:
     """
     Génère un rapport HTML à partir d'un fichier Markdown.
+
+    :param markdown_file: Chemin du fichier Markdown source.
+    :type markdown_file: Path
+    :param output_file: Chemin du fichier HTML de sortie.
+    :type output_file: Path
+    :param visualization_dir: Répertoire contenant les visualisations (pour référence, non utilisé directement ici).
+    :type visualization_dir: Path
+    :return: None
+    :rtype: None
     """
     logger.info(f"Génération du rapport HTML à partir de {markdown_file} vers {output_file}")
     try:

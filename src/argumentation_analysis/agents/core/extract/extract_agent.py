@@ -32,8 +32,16 @@ from .prompts import (
 )
 
 # Fonction d'importation paresseuse pour éviter les importations circulaires
-def _lazy_imports():
-    """Importe les modules de manière paresseuse pour éviter les importations circulaires."""
+def _lazy_imports() -> None:
+    """Importe les modules de manière paresseuse pour éviter les importations circulaires.
+
+    Cette fonction est appelée une fois au chargement du module `extract_agent`.
+    Elle peuple les variables globales nécessaires à partir d'autres modules,
+    principalement `ui.config` et `ui.utils`.
+
+    :return: None
+    :rtype: None
+    """
     global ENCRYPTION_KEY, CONFIG_FILE, CONFIG_FILE_JSON
     global load_from_cache, reconstruct_url
     global load_source_text, extract_text_with_markers, find_similar_text
@@ -88,12 +96,17 @@ class ExtractAgent(BaseAgent):
     ):
         """
         Initialise l'agent d'extraction.
-        
-        Args:
-            kernel: Le kernel Semantic Kernel à utiliser.
-            agent_name: Nom de l'agent.
-            find_similar_text_func: Fonction pour trouver du texte similaire.
-            extract_text_func: Fonction pour extraire du texte avec des marqueurs.
+
+        :param kernel: Le kernel Semantic Kernel à utiliser par l'agent.
+        :type kernel: sk.Kernel
+        :param agent_name: Nom de cet agent. Par défaut "ExtractAgent".
+        :type agent_name: str
+        :param find_similar_text_func: Fonction optionnelle pour trouver du texte similaire.
+                                       Si None, utilise `find_similar_text` de `ui.utils`.
+        :type find_similar_text_func: Optional[Callable]
+        :param extract_text_func: Fonction optionnelle pour extraire du texte avec des marqueurs.
+                                  Si None, utilise `extract_text_with_markers` de `ui.utils`.
+        :type extract_text_func: Optional[Callable]
         """
         super().__init__(kernel, agent_name, EXTRACT_AGENT_INSTRUCTIONS)
         
@@ -105,7 +118,11 @@ class ExtractAgent(BaseAgent):
         self._native_extract_plugin: Optional[ExtractAgentPlugin] = None
 
     def get_agent_capabilities(self) -> Dict[str, Any]:
-        """Décrit ce que l'agent peut faire."""
+        """Décrit les capacités principales de l'agent d'extraction.
+
+        :return: Un dictionnaire mappant les noms des capacités à leurs descriptions.
+        :rtype: Dict[str, Any]
+        """
         return {
             "extract_from_name": "Extrait un passage pertinent à partir de la dénomination de l'extrait.",
             "repair_extract": "Répare un extrait existant en utilisant sa dénomination.",
@@ -118,7 +135,16 @@ class ExtractAgent(BaseAgent):
         }
 
     def setup_agent_components(self, llm_service_id: str) -> None:
-        """Configure les composants spécifiques de l'agent dans le kernel SK."""
+        """Configure les composants spécifiques de l'agent d'extraction dans le kernel Semantic Kernel.
+
+        Enregistre le plugin natif `ExtractAgentPlugin` et les fonctions sémantiques
+        pour l'extraction et la validation des extraits.
+
+        :param llm_service_id: L'ID du service LLM à utiliser pour les fonctions sémantiques.
+        :type llm_service_id: str
+        :return: None
+        :rtype: None
+        """
         super().setup_agent_components(llm_service_id)
         self.logger.info(f"Configuration des composants pour {self.name} avec le service LLM ID: {llm_service_id}")
 
@@ -170,6 +196,13 @@ class ExtractAgent(BaseAgent):
 
     @property
     def native_extract_plugin(self) -> ExtractAgentPlugin:
+        """Retourne l'instance du plugin natif d'extraction.
+
+        :return: L'instance de `ExtractAgentPlugin`.
+        :rtype: ExtractAgentPlugin
+        :raises RuntimeError: Si le plugin natif n'a pas été initialisé
+                              (c'est-à-dire si `setup_agent_components` n'a pas été appelé).
+        """
         if self._native_extract_plugin is None:
             raise RuntimeError("Plugin natif d'extraction non initialisé. Appelez setup_agent_components.")
         return self._native_extract_plugin
@@ -180,14 +213,21 @@ class ExtractAgent(BaseAgent):
         extract_name: str
     ) -> ExtractResult:
         """
-        Extrait un passage pertinent à partir de la dénomination de l'extrait.
-        
-        Args:
-            source_info: Informations sur la source
-            extract_name: Nom de l'extrait à extraire
-            
-        Returns:
-            Résultat de l'extraction
+        Propose et valide des marqueurs pour un extrait basé sur son nom et le texte source.
+
+        Utilise une fonction sémantique pour proposer des marqueurs (`start_marker`, `end_marker`,
+        `template_start`) et une autre pour valider la pertinence du texte extrait.
+        Gère les textes volumineux en utilisant une approche dichotomique pour le contexte.
+
+        :param source_info: Dictionnaire contenant les informations de la source
+                            (nom, chemin, etc.).
+        :type source_info: Dict[str, Any]
+        :param extract_name: Le nom ou la description de l'extrait à trouver.
+        :type extract_name: str
+        :return: Un objet `ExtractResult` contenant les marqueurs proposés, le texte extrait,
+                 le statut de l'extraction ("valid", "rejected", "error"), un message
+                 et une explication.
+        :rtype: ExtractResult
         """
         source_name = source_info.get("source_name", "Source inconnue")
         
@@ -397,15 +437,23 @@ class ExtractAgent(BaseAgent):
         extract_idx: int
     ) -> ExtractResult:
         """
-        Répare un extrait existant en utilisant sa dénomination.
-        
-        Args:
-            extract_definitions: Liste des définitions d'extraits
-            source_idx: Index de la source
-            extract_idx: Index de l'extrait
-            
-        Returns:
-            Résultat de la réparation
+        Tente de réparer les marqueurs d'un extrait existant si ceux-ci sont invalides.
+
+        Si les marqueurs actuels de l'extrait ne permettent pas une extraction valide,
+        cette méthode appelle `extract_from_name` pour tenter de trouver de meilleurs
+        marqueurs basés sur le nom de l'extrait.
+
+        :param extract_definitions: La liste complète des définitions d'extraits.
+        :type extract_definitions: List[Dict[str, Any]]
+        :param source_idx: L'index de la source contenant l'extrait à réparer.
+        :type source_idx: int
+        :param extract_idx: L'index de l'extrait à réparer au sein de la source.
+        :type extract_idx: int
+        :return: Un objet `ExtractResult` indiquant le résultat de la tentative de réparation.
+                 Si l'extrait original était déjà valide, le statut sera "valid" avec un message.
+                 Si la réparation réussit, le résultat de la nouvelle extraction est retourné.
+                 Si la réparation échoue, le résultat de l'échec de la nouvelle extraction est retourné.
+        :rtype: ExtractResult
         """
         source_info = extract_definitions[source_idx]
         source_name = source_info.get("source_name", f"Source #{source_idx}")
@@ -468,16 +516,22 @@ class ExtractAgent(BaseAgent):
         result: ExtractResult
     ) -> bool:
         """
-        Met à jour les marqueurs d'un extrait avec les résultats d'une extraction.
-        
-        Args:
-            extract_definitions: Liste des définitions d'extraits
-            source_idx: Index de la source
-            extract_idx: Index de l'extrait
-            result: Résultat de l'extraction
-            
-        Returns:
-            True si la mise à jour a réussi, False sinon
+        Met à jour les marqueurs d'un extrait spécifique dans la liste des définitions
+        avec les marqueurs d'un `ExtractResult` validé.
+
+        Enregistre également l'action de mise à jour dans le plugin natif si disponible.
+
+        :param extract_definitions: La liste complète des définitions d'extraits (sera modifiée en place).
+        :type extract_definitions: List[Dict[str, Any]]
+        :param source_idx: L'index de la source de l'extrait.
+        :type source_idx: int
+        :param extract_idx: L'index de l'extrait à mettre à jour.
+        :type extract_idx: int
+        :param result: L'objet `ExtractResult` contenant les nouveaux marqueurs validés.
+        :type result: ExtractResult
+        :return: True si la mise à jour a été effectuée, False si le résultat n'était pas valide
+                 ou si les index étaient invalides.
+        :rtype: bool
         """
         if result.status != "valid":
             self.logger.warning(f"Impossible de mettre à jour les marqueurs avec un résultat non valide: {result.status}")
@@ -532,16 +586,22 @@ class ExtractAgent(BaseAgent):
         result: ExtractResult
     ) -> Tuple[bool, int]:
         """
-        Ajoute un nouvel extrait à une source existante.
-        
-        Args:
-            extract_definitions: Liste des définitions d'extraits
-            source_idx: Index de la source
-            extract_name: Nom du nouvel extrait
-            result: Résultat de l'extraction
-            
-        Returns:
-            Tuple contenant (success, extract_idx)
+        Ajoute un nouvel extrait à une source existante dans la liste des définitions.
+
+        Utilise les marqueurs d'un `ExtractResult` validé pour créer le nouvel extrait.
+        Enregistre également l'action d'ajout dans le plugin natif si disponible.
+
+        :param extract_definitions: La liste complète des définitions d'extraits (sera modifiée en place).
+        :type extract_definitions: List[Dict[str, Any]]
+        :param source_idx: L'index de la source à laquelle ajouter l'extrait.
+        :type source_idx: int
+        :param extract_name: Le nom à donner au nouvel extrait.
+        :type extract_name: str
+        :param result: L'objet `ExtractResult` contenant les marqueurs validés pour le nouvel extrait.
+        :type result: ExtractResult
+        :return: Un tuple contenant un booléen indiquant le succès de l'ajout et l'index
+                 du nouvel extrait (-1 en cas d'échec).
+        :rtype: Tuple[bool, int]
         """
         if result.status != "valid":
             self.logger.warning(f"Impossible d'ajouter un extrait avec un résultat non valide: {result.status}")

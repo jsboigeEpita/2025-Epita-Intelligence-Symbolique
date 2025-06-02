@@ -27,10 +27,12 @@ class CryptoService:
     def __init__(self, encryption_key: Optional[bytes] = None, fixed_salt: Optional[bytes] = None):
         """
         Initialise le service de chiffrement.
-        
-        Args:
-            encryption_key: Clé de chiffrement (si None, le chiffrement est désactivé)
-            fixed_salt: Sel fixe pour la dérivation de clé
+
+        :param encryption_key: Clé de chiffrement binaire. Si None, le chiffrement est désactivé.
+        :type encryption_key: Optional[bytes]
+        :param fixed_salt: Sel fixe optionnel utilisé pour la dérivation de clé.
+                           Un sel par défaut est utilisé si None.
+        :type fixed_salt: Optional[bytes]
         """
         self.encryption_key = encryption_key
         self.fixed_salt = fixed_salt or b'q\x8b\t\x97\x8b\xe9\xa3\xf2\xe4\x8e\xea\xf5\xe8\xb7\xd6\x8c'
@@ -41,14 +43,15 @@ class CryptoService:
     
     def derive_key_from_passphrase(self, passphrase: str, iterations: int = 480000) -> Optional[bytes]:
         """
-        Dérive une clé de chiffrement à partir d'une phrase secrète.
-        
-        Args:
-            passphrase: Phrase secrète
-            iterations: Nombre d'itérations pour la dérivation
-            
-        Returns:
-            Clé dérivée ou None en cas d'erreur
+        Dérive une clé de chiffrement à partir d'une phrase secrète en utilisant PBKDF2HMAC.
+
+        :param passphrase: La phrase secrète à partir de laquelle dériver la clé.
+        :type passphrase: str
+        :param iterations: Le nombre d'itérations pour l'algorithme KDF.
+        :type iterations: int
+        :return: La clé dérivée encodée en base64 URL-safe, ou None si la phrase secrète
+                 est vide ou si une erreur survient pendant la dérivation.
+        :rtype: Optional[bytes]
         """
         if not passphrase:
             self.logger.error("Phrase secrète vide. Impossible de dériver une clé.")
@@ -73,24 +76,28 @@ class CryptoService:
     
     def set_encryption_key(self, key: bytes) -> None:
         """
-        Définit la clé de chiffrement.
-        
-        Args:
-            key: Clé de chiffrement
+        Définit la clé de chiffrement à utiliser par l'instance du service.
+
+        :param key: La nouvelle clé de chiffrement binaire.
+        :type key: bytes
+        :return: None
+        :rtype: None
         """
         self.encryption_key = key
         self.logger.info("Clé de chiffrement mise à jour.")
     
     def encrypt_data(self, data: bytes, key: Optional[bytes] = None) -> Optional[bytes]:
         """
-        Chiffre des données binaires.
-        
-        Args:
-            data: Données à chiffrer
-            key: Clé de chiffrement optionnelle (utilise self.encryption_key si None)
-            
-        Returns:
-            Données chiffrées ou None en cas d'erreur
+        Chiffre des données binaires en utilisant Fernet.
+
+        :param data: Les données binaires (bytes) à chiffrer.
+        :type data: bytes
+        :param key: Clé de chiffrement optionnelle. Si None, la clé de l'instance
+                    (`self.encryption_key`) est utilisée.
+        :type key: Optional[bytes]
+        :return: Les données chiffrées (bytes), ou None si la clé de chiffrement
+                 est manquante ou si une erreur de chiffrement survient.
+        :rtype: Optional[bytes]
         """
         # Utiliser la clé fournie ou celle de l'instance
         encryption_key = key if key is not None else self.encryption_key
@@ -110,14 +117,17 @@ class CryptoService:
     
     def decrypt_data(self, encrypted_data: bytes, key: Optional[bytes] = None) -> Optional[bytes]:
         """
-        Déchiffre des données binaires.
-        
-        Args:
-            encrypted_data: Données chiffrées
-            key: Clé de chiffrement optionnelle (utilise self.encryption_key si None)
-            
-        Returns:
-            Données déchiffrées ou None en cas d'erreur
+        Déchiffre des données binaires précédemment chiffrées avec Fernet.
+
+        :param encrypted_data: Les données chiffrées (bytes) à déchiffrer.
+        :type encrypted_data: bytes
+        :param key: Clé de chiffrement optionnelle. Si None, la clé de l'instance
+                    (`self.encryption_key`) est utilisée.
+        :type key: Optional[bytes]
+        :return: Les données déchiffrées (bytes), ou None si la clé de chiffrement
+                 est manquante ou si une erreur de déchiffrement survient (par exemple,
+                 token invalide).
+        :rtype: Optional[bytes]
         """
         # Utiliser la clé fournie ou celle de l'instance
         encryption_key = key if key is not None else self.encryption_key
@@ -140,13 +150,15 @@ class CryptoService:
     
     def encrypt_and_compress_json(self, data: Union[List, Dict]) -> Optional[bytes]:
         """
-        Chiffre et compresse des données JSON.
-        
-        Args:
-            data: Données JSON à chiffrer
-            
-        Returns:
-            Données chiffrées et compressées ou None en cas d'erreur
+        Convertit des données JSON (liste ou dictionnaire) en une chaîne JSON,
+        la compresse avec gzip, puis la chiffre.
+
+        :param data: Les données JSON (liste ou dictionnaire) à traiter.
+        :type data: Union[List, Dict]
+        :return: Les données chiffrées et compressées (bytes), ou None si une erreur
+                 survient pendant le processus (sérialisation JSON, compression,
+                 ou chiffrement).
+        :rtype: Optional[bytes]
         """
         try:
             # Convertir en JSON
@@ -168,13 +180,14 @@ class CryptoService:
     
     def decrypt_and_decompress_json(self, encrypted_data: bytes) -> Optional[Union[List, Dict]]:
         """
-        Déchiffre et décompresse des données JSON.
-        
-        Args:
-            encrypted_data: Données chiffrées et compressées
-            
-        Returns:
-            Données JSON déchiffrées et décompressées ou None en cas d'erreur
+        Déchiffre des données, les décompresse avec gzip, puis les parse en tant que JSON.
+
+        :param encrypted_data: Les données chiffrées et compressées (bytes) à traiter.
+        :type encrypted_data: bytes
+        :return: Les données JSON déchiffrées et décompressées (liste ou dictionnaire),
+                 ou None si une erreur survient pendant le processus (déchiffrement,
+                 décompression, ou parsing JSON).
+        :rtype: Optional[Union[List, Dict]]
         """
         try:
             # Déchiffrer
@@ -196,19 +209,20 @@ class CryptoService:
     
     def is_encryption_enabled(self) -> bool:
         """
-        Vérifie si le chiffrement est activé.
-        
-        Returns:
-            True si le chiffrement est activé, False sinon
+        Vérifie si une clé de chiffrement est actuellement configurée pour ce service.
+
+        :return: True si `self.encryption_key` n'est pas None, False sinon.
+        :rtype: bool
         """
         return self.encryption_key is not None
     
     def generate_key(self) -> bytes:
         """
-        Génère une nouvelle clé de chiffrement.
-        
-        Returns:
-            Nouvelle clé de chiffrement générée
+        Génère une nouvelle clé de chiffrement Fernet.
+
+        :return: Une nouvelle clé de chiffrement binaire.
+        :rtype: bytes
+        :raises Exception: Si une erreur survient pendant la génération de la clé par Fernet.
         """
         try:
             key = Fernet.generate_key()
@@ -220,14 +234,14 @@ class CryptoService:
     
     def save_key(self, key: bytes, key_file: str) -> bool:
         """
-        Sauvegarde une clé de chiffrement dans un fichier.
-        
-        Args:
-            key: Clé de chiffrement à sauvegarder
-            key_file: Chemin du fichier où sauvegarder la clé
-            
-        Returns:
-            True si la sauvegarde a réussi, False sinon
+        Sauvegarde une clé de chiffrement binaire dans un fichier spécifié.
+
+        :param key: La clé de chiffrement (bytes) à sauvegarder.
+        :type key: bytes
+        :param key_file: Le chemin du fichier (str) où sauvegarder la clé.
+        :type key_file: str
+        :return: True si la sauvegarde a réussi, False sinon.
+        :rtype: bool
         """
         try:
             with open(key_file, 'wb') as f:
@@ -240,13 +254,13 @@ class CryptoService:
     
     def load_key(self, key_file: str) -> Optional[bytes]:
         """
-        Charge une clé de chiffrement depuis un fichier.
-        
-        Args:
-            key_file: Chemin du fichier contenant la clé
-            
-        Returns:
-            Clé de chiffrement ou None en cas d'erreur
+        Charge une clé de chiffrement binaire depuis un fichier spécifié.
+
+        :param key_file: Le chemin du fichier (str) contenant la clé.
+        :type key_file: str
+        :return: La clé de chiffrement (bytes) chargée depuis le fichier,
+                 ou None si une erreur survient lors de la lecture.
+        :rtype: Optional[bytes]
         """
         try:
             with open(key_file, 'rb') as f:
@@ -260,9 +274,11 @@ class CryptoService:
     @staticmethod
     def generate_static_key() -> bytes:
         """
-        Génère une nouvelle clé de chiffrement de manière statique.
-        
-        Returns:
-            Nouvelle clé de chiffrement générée
+        Génère une nouvelle clé de chiffrement Fernet de manière statique.
+
+        Cette méthode peut être appelée sans instance de `CryptoService`.
+
+        :return: Une nouvelle clé de chiffrement binaire.
+        :rtype: bytes
         """
         return Fernet.generate_key()

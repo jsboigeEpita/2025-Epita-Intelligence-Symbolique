@@ -21,13 +21,17 @@ logger = logging.getLogger(__name__)
 def generate_fallacy_detection(argument: str, common_fallacies: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     """
     Génère une détection de sophismes simulée pour un argument.
-    
-    Args:
-        argument (str): Argument à analyser.
-        common_fallacies (List[Dict[str, Any]]): Liste des sophismes courants à utiliser.
-        
-    Returns:
-        List[Dict[str, Any]]: Liste des sophismes détectés.
+
+    :param argument: Argument à analyser.
+    :type argument: str
+    :param common_fallacies: Liste des sophismes courants à utiliser.
+                             Chaque sophisme est un dictionnaire avec "name", "description", "severity".
+    :type common_fallacies: List[Dict[str, Any]]
+    :return: Liste des sophismes détectés pour l'argument. Chaque sophisme détecté
+             est un dictionnaire avec "fallacy_type", "description", "severity",
+             "context_text", et "confidence". Retourne une liste vide si aucun
+             sophisme n'est détecté ou si `common_fallacies` est vide.
+    :rtype: List[Dict[str, Any]]
     """
     if not common_fallacies: # Au cas où la liste serait vide
         return []
@@ -47,9 +51,11 @@ def generate_fallacy_detection(argument: str, common_fallacies: List[Dict[str, A
 def generate_coherence_evaluation() -> Dict[str, Any]:
     """
     Génère une évaluation de cohérence simulée.
-    
-    Returns:
-        Dict[str, Any]: Évaluation de cohérence simulée.
+
+    :return: Un dictionnaire contenant l'évaluation de cohérence simulée,
+             incluant "overall_coherence", "thematic_coherence",
+             "logical_coherence", et "recommendations".
+    :rtype: Dict[str, Any]
     """
     coherence_score = round(random.uniform(0.4, 0.9), 2)
     coherence_level = "Faible"
@@ -83,7 +89,24 @@ def generate_rhetorical_analysis_for_extract(
 ) -> Dict[str, Any]:
     """
     Génère une analyse rhétorique simulée pour un seul extrait.
-    (Anciennement generate_rhetorical_analysis)
+
+    Cette fonction simule divers aspects d'une analyse rhétorique, y compris
+    la détection de sophismes, l'évaluation de la cohérence, et le calcul
+    de métriques de qualité.
+
+    :param extract_definition: Dictionnaire contenant la définition de l'extrait,
+                               notamment "extract_name" et optionnellement "type".
+    :type extract_definition: Dict[str, Any]
+    :param source_name: Nom de la source de l'extrait.
+    :type source_name: str
+    :param agent_config: Configuration de l'agent d'analyse (utilisé pour "name").
+    :type agent_config: Dict[str, Any]
+    :param common_fallacies_for_simulation: Liste des sophismes courants à utiliser
+                                            pour la simulation de détection.
+    :type common_fallacies_for_simulation: List[Dict[str, Any]]
+    :return: Un dictionnaire contenant les résultats de l'analyse rhétorique simulée
+             pour l'extrait.
+    :rtype: Dict[str, Any]
     """
     extract_name = extract_definition["extract_name"]
     extract_type = extract_definition.get("type", "general")
@@ -144,7 +167,18 @@ def generate_rhetorical_analysis_for_extract(
 def generate_markdown_summary_for_analysis(analysis_result: Dict[str, Any], output_dir: Path) -> Path:
     """
     Génère une synthèse au format Markdown pour un résultat d'analyse.
-    (Anciennement generate_markdown_summary)
+
+    Crée un fichier Markdown contenant un résumé formaté des résultats
+    d'une analyse rhétorique spécifique.
+
+    :param analysis_result: Dictionnaire contenant les résultats de l'analyse
+                            pour un extrait.
+    :type analysis_result: Dict[str, Any]
+    :param output_dir: Répertoire (objet Path) où le fichier Markdown de synthèse
+                       sera sauvegardé.
+    :type output_dir: Path
+    :return: Le chemin (objet Path) du fichier Markdown de synthèse généré.
+    :rtype: Path
     """
     extract_name = analysis_result["extract_name"]
     source_name = analysis_result["source_name"]
@@ -219,7 +253,20 @@ def generate_markdown_summary_for_analysis(analysis_result: Dict[str, Any], outp
 def generate_global_summary_report(all_analyses: List[Dict[str, Any]], output_dir: Path, rhetorical_agents_config: List[Dict[str, Any]]) -> Path:
     """
     Génère un rapport de synthèse global comparant les différents agents.
-    (Anciennement generate_global_summary)
+
+    Ce rapport agrège les résultats de multiples analyses effectuées par différents
+    agents sur diverses sources, fournissant une vue comparative.
+
+    :param all_analyses: Liste de tous les résultats d'analyse individuels.
+    :type all_analyses: List[Dict[str, Any]]
+    :param output_dir: Répertoire (objet Path) où le rapport global sera sauvegardé.
+    :type output_dir: Path
+    :param rhetorical_agents_config: Liste des configurations des agents rhétoriques,
+                                     utilisée pour extraire des informations comme
+                                     les forces et faiblesses.
+    :type rhetorical_agents_config: List[Dict[str, Any]]
+    :return: Le chemin (objet Path) du rapport de synthèse global généré.
+    :rtype: Path
     """
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     output_path = output_dir / f"rapport_synthese_global_{timestamp}.md"
@@ -298,6 +345,24 @@ def run_summary_generation_pipeline(
 ) -> None:
     """
     Orchestre la génération des analyses simulées et des rapports de synthèse.
+
+    Ce pipeline principal itère sur les agents et les sources de données simulées,
+    génère des analyses rhétoriques pour chaque extrait, crée des synthèses
+    individuelles en Markdown, et produit un rapport de synthèse global.
+
+    :param simulated_sources_data: Liste des données des sources simulées,
+                                   chaque source contenant des extraits.
+    :type simulated_sources_data: List[Dict[str, Any]]
+    :param rhetorical_agents_data: Liste des configurations des agents rhétoriques.
+    :type rhetorical_agents_data: List[Dict[str, Any]]
+    :param common_fallacies_data: Liste des définitions des sophismes courants
+                                  utilisés pour la simulation.
+    :type common_fallacies_data: List[Dict[str, Any]]
+    :param output_reports_dir: Répertoire (objet Path) de base où tous les rapports
+                               et synthèses seront sauvegardés.
+    :type output_reports_dir: Path
+    :return: None
+    :rtype: None
     """
     logger.info("Démarrage du pipeline de génération de synthèses d'analyses rhétoriques...")
     
