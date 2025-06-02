@@ -10,6 +10,18 @@ import logging
 from typing import Any, Dict, List, Optional, Union, Callable, Tuple, NewType
 from unittest.mock import MagicMock
 
+import sys
+# MagicMock est déjà importé à la ligne 11, donc pas besoin de le réimporter ici.
+
+_actual_numpy_module = None
+_real_numpy_flatiter = None
+try:
+    # Renommer l'import pour éviter les conflits si ce mock est lui-même importé comme 'numpy'
+    import numpy as actual_numpy_for_mock
+    _actual_numpy_module = actual_numpy_for_mock
+    _real_numpy_flatiter = _actual_numpy_module.flatiter
+except ImportError:
+    pass # Le vrai numpy n'est pas disponible
 # Configuration du logging
 logging.basicConfig(
     level=logging.INFO,
@@ -170,8 +182,13 @@ iinfo = MagicMock(return_value=MagicMock(max=2**31 - 1)) # Simule iinfo pour int
 #         else:
 #             raise StopIteration
 
-class flatiter(MagicMock):
-    pass
+if _real_numpy_flatiter:
+    flatiter = _real_numpy_flatiter  # Utilise le vrai flatiter si numpy est disponible
+else:
+    # Fallback si le vrai numpy (et donc le vrai flatiter) n'est pas disponible.
+    # Ce cas ne devrait idéalement pas être atteint si scipy est importé.
+    class flatiter(MagicMock):
+        pass
 
 def zeros(shape, dtype=None):
     """Crée un tableau de zéros."""
