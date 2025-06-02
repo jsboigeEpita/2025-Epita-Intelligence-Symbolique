@@ -5,9 +5,9 @@
 Tests unitaires pour l'agent informel.
 """
 
-import unittest
+# import unittest # Supprimé
+import pytest # Ajouté
 from unittest.mock import MagicMock, patch
-# import json # Semble inutilisé
 
 # La configuration du logging est maintenant gérée globalement dans tests/conftest.py
 
@@ -25,10 +25,8 @@ from argumentation_analysis.agents.core.informal.informal_agent import InformalA
 from argumentation_analysis.agents.core.informal.informal_definitions import InformalAnalysisPlugin # Gardé pour spec
 
 
-class TestInformalAgent(unittest.TestCase):
+class TestInformalAgent: # Suppression de l'héritage unittest.TestCase
     """Tests unitaires pour l'agent informel."""
-    
-    # setUp n'est plus nécessaire si les tests utilisent directement les fixtures
 
     def test_analyze_fallacies(self, informal_agent_instance, mock_fallacy_detector):
         """Teste la méthode analyze_fallacies."""
@@ -38,10 +36,10 @@ class TestInformalAgent(unittest.TestCase):
         
         mock_fallacy_detector.detect.assert_called_once_with(text)
         
-        self.assertEqual(len(fallacies), 1)
-        self.assertEqual(fallacies[0]["fallacy_type"], "Appel à l'autorité")
-        self.assertEqual(fallacies[0]["text"], "Les experts affirment que ce produit est sûr.")
-        self.assertEqual(fallacies[0]["confidence"], 0.7)
+        assert len(fallacies) == 1
+        assert fallacies[0]["fallacy_type"] == "Appel à l'autorité"
+        assert fallacies[0]["text"] == "Les experts affirment que ce produit est sûr."
+        assert fallacies[0]["confidence"] == 0.7
     
     def test_analyze_rhetoric(self, informal_agent_instance, mock_rhetorical_analyzer):
         """Teste la méthode analyze_rhetoric."""
@@ -51,10 +49,10 @@ class TestInformalAgent(unittest.TestCase):
         
         mock_rhetorical_analyzer.analyze.assert_called_once_with(text)
         
-        self.assertEqual(rhetoric["tone"], "persuasif")
-        self.assertEqual(rhetoric["style"], "émotionnel")
-        self.assertEqual(rhetoric["techniques"], ["appel à l'émotion", "question rhétorique"])
-        self.assertEqual(rhetoric["effectiveness"], 0.8)
+        assert rhetoric["tone"] == "persuasif"
+        assert rhetoric["style"] == "émotionnel"
+        assert rhetoric["techniques"] == ["appel à l'émotion", "question rhétorique"]
+        assert rhetoric["effectiveness"] == 0.8
     
     def test_analyze_context(self, informal_agent_instance, mock_contextual_analyzer):
         """Teste la méthode analyze_context."""
@@ -64,8 +62,8 @@ class TestInformalAgent(unittest.TestCase):
         
         mock_contextual_analyzer.analyze_context.assert_called_once_with(text)
         
-        self.assertEqual(context["context_type"], "commercial")
-        self.assertEqual(context["confidence"], 0.9)
+        assert context["context_type"] == "commercial"
+        assert context["confidence"] == 0.9
     
     def test_analyze_argument(self, informal_agent_instance, mock_fallacy_detector, mock_rhetorical_analyzer):
         """Teste la méthode analyze_argument."""
@@ -76,20 +74,18 @@ class TestInformalAgent(unittest.TestCase):
         mock_fallacy_detector.detect.assert_called_once_with(text)
         mock_rhetorical_analyzer.analyze.assert_called_once_with(text)
         
-        self.assertEqual(result["argument"], text)
-        self.assertEqual(len(result["fallacies"]), 1)
-        self.assertEqual(result["fallacies"][0]["fallacy_type"], "Appel à l'autorité")
-        self.assertEqual(result["rhetoric"]["tone"], "persuasif")
+        assert result["argument"] == text
+        assert len(result["fallacies"]) == 1
+        assert result["fallacies"][0]["fallacy_type"] == "Appel à l'autorité"
+        assert result["rhetoric"]["tone"] == "persuasif"
     
     def test_analyze_text_with_semantic_kernel(self, mock_semantic_kernel_instance, mock_fallacy_detector):
         """Teste la méthode analyze_text avec un kernel sémantique."""
         kernel = mock_semantic_kernel_instance
-        kernel.invoke = MagicMock(return_value="Argument 1\nArgument 2") # Mock spécifique pour ce test
+        kernel.invoke = MagicMock(return_value="Argument 1\nArgument 2") 
         
         informal_plugin = MagicMock(spec=InformalAnalysisPlugin)
         
-        # patch_semantic_kernel est autouse, donc pas besoin de patcher sys.modules ici
-        # setup_informal_kernel est appelé dans __init__ si kernel et plugin sont fournis
         with patch('argumentation_analysis.agents.core.informal.informal_agent.setup_informal_kernel') as mock_setup:
             agent = InformalAgent(
                 agent_id="semantic_agent",
@@ -102,11 +98,11 @@ class TestInformalAgent(unittest.TestCase):
         text = "Voici un texte avec plusieurs arguments."
         arguments = agent.identify_arguments(text)
         
-        kernel.invoke.assert_called_once() # Vérifie que la méthode mockée du kernel a été appelée
+        kernel.invoke.assert_called_once() 
         
-        self.assertEqual(len(arguments), 2)
-        self.assertEqual(arguments[0], "Argument 1")
-        self.assertEqual(arguments[1], "Argument 2")
+        assert len(arguments) == 2
+        assert arguments[0] == "Argument 1"
+        assert arguments[1] == "Argument 2"
     
     def test_analyze_text_without_semantic_kernel(self, informal_agent_instance, mock_fallacy_detector):
         """Teste la méthode analyze_text sans kernel sémantique."""
@@ -114,35 +110,35 @@ class TestInformalAgent(unittest.TestCase):
         text = "Voici un texte avec un seul argument."
         result = agent.analyze_text(text)
         
-        self.assertIn("fallacies", result)
-        self.assertIn("analysis_timestamp", result)
-        self.assertIsInstance(result["fallacies"], list)
-        mock_fallacy_detector.detect.assert_called_with(text) # `assert_called_with` car peut être appelé plusieurs fois
+        assert "fallacies" in result
+        assert "analysis_timestamp" in result
+        assert isinstance(result["fallacies"], list)
+        mock_fallacy_detector.detect.assert_called_with(text) 
     
     def test_get_agent_capabilities(self, informal_agent_instance):
         """Teste la méthode get_agent_capabilities."""
         agent = informal_agent_instance
         capabilities = agent.get_agent_capabilities()
         
-        self.assertTrue(capabilities["fallacy_detection"])
-        self.assertTrue(capabilities["rhetorical_analysis"])
-        self.assertTrue(capabilities["contextual_analysis"])
+        assert capabilities["fallacy_detection"] is True
+        assert capabilities["rhetorical_analysis"] is True
+        assert capabilities["contextual_analysis"] is True
     
     def test_get_agent_info(self, informal_agent_instance):
         """Teste la méthode get_agent_info."""
         agent = informal_agent_instance
         info = agent.get_agent_info()
         
-        self.assertEqual(info["agent_id"], "test_agent_fixture") # Id de la fixture
-        self.assertEqual(info["agent_type"], "informal")
-        self.assertTrue(info["capabilities"]["fallacy_detection"])
-        self.assertEqual(len(info["tools"]), 3)
+        assert info["agent_id"] == "test_agent_fixture"
+        assert info["agent_type"] == "informal"
+        assert info["capabilities"]["fallacy_detection"] is True
+        assert len(info["tools"]) == 3
     
     def test_initialization_with_invalid_tools(self, mock_fallacy_detector):
         """Teste l'initialisation de l'agent informel avec des outils invalides."""
         invalid_tool = 123
         
-        with self.assertRaises(TypeError):
+        with pytest.raises(TypeError):
             agent = InformalAgent( # pylint: disable=unused-variable
                 agent_id="invalid_agent",
                 tools={
@@ -153,7 +149,7 @@ class TestInformalAgent(unittest.TestCase):
     
     def test_initialization_without_fallacy_detector(self, mock_rhetorical_analyzer):
         """Teste l'initialisation de l'agent informel sans détecteur de sophismes."""
-        with self.assertRaises(ValueError):
+        with pytest.raises(ValueError):
             agent = InformalAgent( # pylint: disable=unused-variable
                 agent_id="missing_detector_agent",
                 tools={
@@ -170,7 +166,7 @@ class TestInformalAgent(unittest.TestCase):
             }
         )
         
-        with self.assertRaises(ValueError):
+        with pytest.raises(ValueError):
             agent.analyze_rhetoric("Texte à analyser")
     
     def test_analyze_context_without_analyzer(self, mock_fallacy_detector):
@@ -182,15 +178,14 @@ class TestInformalAgent(unittest.TestCase):
             }
         )
         
-        with self.assertRaises(ValueError):
+        with pytest.raises(ValueError):
             agent.analyze_context("Texte à analyser")
     
     def test_identify_arguments_without_kernel(self, informal_agent_instance):
         """Teste la méthode identify_arguments sans kernel sémantique."""
-        agent = informal_agent_instance # Cet agent n'a pas de kernel par défaut via la fixture
-        with self.assertRaises(ValueError): # Devrait lever une erreur car kernel est None
+        agent = informal_agent_instance 
+        with pytest.raises(ValueError): 
             agent.identify_arguments("Texte à analyser")
 
-
-if __name__ == "__main__":
-    unittest.main()
+# if __name__ == "__main__": # Supprimé
+#     unittest.main()
