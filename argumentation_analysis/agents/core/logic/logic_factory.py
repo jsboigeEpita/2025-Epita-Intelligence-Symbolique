@@ -62,7 +62,7 @@ class LogicAgentFactory:
             
             # Configurer le kernel de l'agent si un service LLM est fourni
             if llm_service:
-                agent.setup_kernel(llm_service)
+                agent.setup_agent_components(llm_service) # MODIFIED: Renamed to setup_agent_components
             
             logger.info(f"Agent logique de type '{logic_type}' créé avec succès")
             return agent

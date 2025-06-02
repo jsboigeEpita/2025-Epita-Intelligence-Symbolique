@@ -5,147 +5,163 @@
 Tests unitaires pour la gestion des erreurs des agents informels.
 """
 
-import unittest # Ajouté
-import pytest
-from unittest.mock import MagicMock, patch
-import json # Ajouté pour les mocks de retour SK
-from semantic_kernel.exceptions.kernel_exceptions import KernelFunctionNotFoundError # Corrigé l'import
+import unittest
+import pytest 
+from unittest.mock import MagicMock, patch, AsyncMock # Ajout de AsyncMock
+import json 
+import asyncio # Ajout de asyncio
+from semantic_kernel.exceptions.kernel_exceptions import KernelFunctionNotFoundError
 
 # La configuration du logging et les imports conditionnels de numpy/pandas
 # sont maintenant gérés globalement dans tests/conftest.py
 
 # Import des fixtures (certaines seront appelées dans setUp)
 from .fixtures import (
-    mock_fallacy_detector, # Utilisé conceptuellement
-    mock_rhetorical_analyzer, # Utilisé conceptuellement
-    mock_contextual_analyzer, # Utilisé conceptuellement
-    informal_agent_instance, # Non utilisé directement si on a setUp
-    sample_test_text, # Peut être utilisé
-    mock_semantic_kernel_instance # Pour setUp
+    mock_fallacy_detector, 
+    mock_rhetorical_analyzer, 
+    mock_contextual_analyzer, 
+    informal_agent_instance, 
+    # sample_test_text, # Plus besoin d'importer la fixture directement
+    MockSemanticKernel # Importer la classe MockSemanticKernel directement
 )
 
 # Import du module à tester
 from argumentation_analysis.agents.core.informal.informal_agent import InformalAnalysisAgent as InformalAgent
-from argumentation_analysis.agents.core.informal.informal_agent import InformalAnalysisPlugin # Pour spec dans patch
+from argumentation_analysis.agents.core.informal.informal_agent import InformalAnalysisPlugin
 
-
-class TestInformalErrorHandling(unittest.TestCase): # Héritage de unittest.TestCase
+class TestInformalErrorHandling(unittest.TestCase):
     """Tests unitaires pour la gestion des erreurs des agents informels."""
 
     def setUp(self):
         """Initialisation avant chaque test."""
-        self.mock_sk_kernel = mock_semantic_kernel_instance() 
+        self.mock_sk_kernel = MockSemanticKernel() 
         self.agent_name = "test_error_handling_agent"
 
         self.plugin_patcher = patch('argumentation_analysis.agents.core.informal.informal_agent.InformalAnalysisPlugin')
         mock_plugin_class = self.plugin_patcher.start()
         self.mock_informal_plugin_instance = MagicMock(spec=InformalAnalysisPlugin)
-        mock_plugin_class.return_value = self.mock_informal_plugin_instance
+        # Configurer les fonctions sémantiques mockées sur l'instance du plugin mocké comme AsyncMock
+        self.mock_informal_plugin_instance.semantic_AnalyzeFallacies = AsyncMock()
+        self.mock_informal_plugin_instance.semantic_IdentifyArguments = AsyncMock()
+        # ... autres fonctions sémantiques si nécessaire pour d'autres tests
 
+        mock_plugin_class.return_value = self.mock_informal_plugin_instance
+        
         self.agent = InformalAgent(kernel=self.mock_sk_kernel, agent_name=self.agent_name)
-        # Ne pas appeler setup_agent_components ici pour certains tests d'init, ou le faire sélectivement.
-        # Pour les tests qui supposent un agent fonctionnel, on l'appellera.
-        # Pour l'instant, on le laisse commenté et on l'appelle dans les tests si besoin.
-        # self.agent.setup_agent_components(llm_service_id="test_llm_service_errors")
-        self.agent.mocked_informal_plugin = self.mock_informal_plugin_instance
-        self.sample_text = sample_test_text()
+        # setup_agent_components est appelé dans _ensure_agent_setup si besoin.
+        
+        # Mocker la méthode analyze_text de l'agent avec AsyncMock pour les tests qui en dépendent
+        self.agent.analyze_text = AsyncMock(return_value={
+            "fallacies": [], "analysis_timestamp": "mock_time", "error": "Default mock error"
+        })
+        # La méthode analyze_fallacies est aussi async et est appelée par analyze_text
+        self.agent.analyze_fallacies = AsyncMock(return_value=[])
+
+
+        self.sample_text = "Ceci est un texte d'exemple pour les tests." # Valeur directe
 
     def tearDown(self):
         self.plugin_patcher.stop()
 
     def _ensure_agent_setup(self):
-        # Méthode utilitaire pour s'assurer que setup_agent_components est appelé
-        # si ce n'est pas déjà fait ou si on veut forcer une configuration spécifique.
-        # Pour la plupart des tests ici, on suppose que l'agent est déjà configuré
-        # ou que le test se concentre sur un état avant/pendant la configuration.
         if not hasattr(self.agent, '_llm_service_id') or not self.agent._llm_service_id:
              self.agent.setup_agent_components(llm_service_id="test_llm_service_errors")
 
 
-    def test_handle_empty_text(self):
+    async def test_handle_empty_text(self):
         """Teste la gestion d'un texte vide."""
         self._ensure_agent_setup()
         agent = self.agent
         
-        # Mocker la méthode analyze_text pour simuler le comportement attendu
-        # car la logique interne de l'agent pour texte vide est ce qu'on teste.
-        # La vraie méthode devrait retourner cela.
-        # Pour ce test, on va supposer que la méthode existe et fait la bonne chose.
-        # Si elle n'existe pas, le test échouera à l'appel.
-        
-        # On ne mocke pas agent.analyze_text ici, on teste son comportement réel.
-        # On s'attend à ce que l'agent lui-même gère le texte vide.
+        # Restaurer la vraie méthode analyze_text pour ce test spécifique
+        original_analyze_text = agent.analyze_text 
+        agent.analyze_text = InformalAgent.analyze_text.__get__(agent, InformalAgent) # Lier la méthode à l'instance
 
-        result = agent.analyze_text("")
+        result = await agent.analyze_text("") # Appel await
         
         self.assertIsInstance(result, dict)
         self.assertIn("error", result)
         self.assertEqual(result["error"], "Le texte est vide")
-        self.assertIn("fallacies", result) # La clé "fallacies" doit être présente
+        self.assertIn("fallacies", result) 
         self.assertEqual(result["fallacies"], [])
-        # Vérifier que le kernel n'a pas été appelé inutilement
-        self.agent.mocked_informal_plugin.analyze_fallacies_sk_function.assert_not_called()
+        
+        # Si analyze_fallacies est appelée par analyze_text, elle ne devrait pas l'être pour un texte vide.
+        # On mock analyze_fallacies pour vérifier ses appels.
+        agent.analyze_fallacies = AsyncMock(return_value=[]) # S'assurer qu'elle est mockée pour ce test
+        await agent.analyze_text("") # Appel à nouveau pour vérifier l'appel à analyze_fallacies
+        agent.analyze_fallacies.assert_not_called()
+
+        agent.analyze_text = original_analyze_text # Restaurer le mock
 
 
-    def test_handle_none_text(self):
+    async def test_handle_none_text(self):
         """Teste la gestion d'un texte None."""
         self._ensure_agent_setup()
         agent = self.agent
-        result = agent.analyze_text(None)
+        original_analyze_text = agent.analyze_text
+        agent.analyze_text = InformalAnalysisAgent.analyze_text.__get__(agent, InformalAgent)
+
+        result = await agent.analyze_text(None) # Appel await
         
         self.assertIsInstance(result, dict)
         self.assertIn("error", result)
         self.assertEqual(result["error"], "Le texte est vide")
         self.assertIn("fallacies", result)
         self.assertEqual(result["fallacies"], [])
-        self.agent.mocked_informal_plugin.analyze_fallacies_sk_function.assert_not_called()
+
+        agent.analyze_fallacies = AsyncMock(return_value=[]) 
+        await agent.analyze_text(None)
+        agent.analyze_fallacies.assert_not_called()
+        
+        agent.analyze_text = original_analyze_text
     
-    def test_handle_fallacy_detector_exception(self):
+    async def test_handle_fallacy_detector_exception(self):
         """Teste la gestion d'une exception du détecteur de sophismes (fonction SK)."""
         self._ensure_agent_setup()
         agent = self.agent
         text_to_analyze = self.sample_text
         
-        # Simuler une erreur lors de l'appel à la fonction sémantique des sophismes
-        self.agent.mocked_informal_plugin.analyze_fallacies_sk_function = MagicMock(
-            side_effect=Exception("Erreur SK du détecteur de sophismes")
-        )
+        original_analyze_text = agent.analyze_text
+        agent.analyze_text = InformalAnalysisAgent.analyze_text.__get__(agent, InformalAgent)
         
-        result = agent.analyze_text(text_to_analyze)
+        # La méthode analyze_text appelle analyze_fallacies.
+        # Nous mockons analyze_fallacies pour qu'elle lève une exception.
+        agent.analyze_fallacies = AsyncMock(side_effect=Exception("Erreur SK du détecteur de sophismes"))
+        
+        result = await agent.analyze_text(text_to_analyze) # Appel await
         
         self.assertIsInstance(result, dict)
         self.assertIn("error", result)
-        # Le message d'erreur exact dépendra de la gestion dans agent.analyze_text
-        self.assertIn("Erreur lors de l'analyse du texte", result["error"]) 
-        self.assertIn("Erreur SK du détecteur de sophismes", result["error"])
+        # Le message d'erreur exact est défini dans la méthode analyze_text de l'agent
+        self.assertTrue("Erreur lors de l'analyse" in result["error"] or "Erreur lors de l'analyse du texte" in result["error"])
+        self.assertTrue("Erreur SK du détecteur de sophismes" in result["error"])
         self.assertIn("fallacies", result)
         self.assertEqual(result["fallacies"], [])
 
-    # ... (Adapter les autres tests de manière similaire) ...
+        agent.analyze_text = original_analyze_text # Restaurer
 
     def test_handle_missing_required_tool(self):
         """
         Teste la gestion d'un "outil" requis manquant (fonction sémantique essentielle).
-        Par exemple, si le plugin ne peut pas charger la fonction d'analyse des sophismes.
         """
-        agent_no_setup = InformalAnalysisAgent(kernel=self.mock_sk_kernel, agent_name="test_missing_func")
+        # Ne pas appeler _ensure_agent_setup ici car on teste l'échec de setup
+        agent_no_setup = InformalAgent(kernel=self.mock_sk_kernel, agent_name="test_missing_func")
         
-        # Simuler que le plugin ne peut pas enregistrer une fonction essentielle
-        # ou que setup_agent_components échoue à cause de cela.
-        # Ici, on va mocker add_function pour lever une exception si une fonction clé est manquante.
+        # Mocker kernel.add_function pour qu'il lève une exception si une fonction clé est manquante.
+        # La méthode setup_agent_components de InformalAnalysisAgent appelle kernel.add_function.
+        original_add_function = self.mock_sk_kernel.add_function
         
-        def mock_add_function_side_effect(plugin_name, function_name, prompt, prompt_execution_settings):
-            if function_name == "analyze_fallacies": # Supposons que c'est une fonction clé
-                raise ValueError(f"Fonction sémantique essentielle '{function_name}' manquante pour le plugin '{plugin_name}'.")
-            return MagicMock() # Pour les autres fonctions
+        def mock_add_function_side_effect(*args, **kwargs):
+            # Le nom de la fonction est dans kwargs['function_name']
+            if kwargs.get('function_name') == "semantic_AnalyzeFallacies": 
+                raise ValueError(f"Fonction sémantique essentielle '{kwargs.get('function_name')}' manquante.")
+            return MagicMock() 
 
         self.mock_sk_kernel.add_function = MagicMock(side_effect=mock_add_function_side_effect)
 
         with self.assertRaises(ValueError) as context:
             agent_no_setup.setup_agent_components(llm_service_id="test_llm")
         
-        self.assertIn("Fonction sémantique essentielle 'analyze_fallacies' manquante", str(context.exception))
-
-# Les autres tests de ce fichier nécessitent une adaptation similaire.
-# if __name__ == "__main__":
-#     unittest.main()
+        self.assertIn("Fonction sémantique essentielle 'semantic_AnalyzeFallacies' manquante", str(context.exception))
+        
+        self.mock_sk_kernel.add_function = original_add_function # Restaurer

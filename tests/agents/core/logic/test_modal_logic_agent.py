@@ -43,12 +43,25 @@ class TestModalLogicAgent(unittest.TestCase):
         self.agent_name = self.agent.name # Récupérer le nom de l'agent pour les mocks de plugins
 
         # Mocker les fonctions sémantiques spécifiques au plugin de l'agent
-        self.mock_text_to_modal_function = AsyncMock(return_value=MagicMock(result="[]p => <>q;"))
-        self.mock_generate_queries_function = AsyncMock(return_value=MagicMock(result="p\n[]p\n<>q"))
-        self.mock_interpret_function = AsyncMock(return_value=MagicMock(result="Interprétation des résultats modaux"))
+        # Le .invoke.return_value doit être un mock dont .__str__() retourne la chaîne attendue.
+        
+        mock_text_to_modal_sk_result = MagicMock()
+        mock_text_to_modal_sk_result.__str__.return_value = "[]p => <>q;"
+        self.mock_text_to_modal_function = AsyncMock()
+        self.mock_text_to_modal_function.invoke.return_value = mock_text_to_modal_sk_result
+
+        mock_gen_queries_sk_result = MagicMock()
+        mock_gen_queries_sk_result.__str__.return_value = "p\n[]p\n<>q"
+        self.mock_generate_queries_function = AsyncMock()
+        self.mock_generate_queries_function.invoke.return_value = mock_gen_queries_sk_result
+        
+        mock_interpret_sk_result = MagicMock()
+        mock_interpret_sk_result.__str__.return_value = "Interprétation des résultats modaux"
+        self.mock_interpret_function = AsyncMock()
+        self.mock_interpret_function.invoke.return_value = mock_interpret_sk_result
         
         self.kernel.plugins[self.agent_name] = {
-            "TextToModalBeliefSet": self.mock_text_to_modal_function,
+            "TextToModalBeliefSet": self.mock_text_to_modal_function, # C'est le mock de la fonction elle-même
             "GenerateModalQueries": self.mock_generate_queries_function,
             "InterpretModalResult": self.mock_interpret_function
         }
@@ -79,7 +92,7 @@ class TestModalLogicAgent(unittest.TestCase):
         
         belief_set, message = await self.agent.text_to_belief_set("Texte de test")
         
-        self.mock_text_to_modal_function.assert_called_once_with(self.kernel, input="Texte de test")
+        self.mock_text_to_modal_function.invoke.assert_called_once_with(self.kernel, input="Texte de test")
         self.mock_tweety_bridge_instance.validate_modal_belief_set.assert_called_once_with("[]p => <>q;")
         
         self.assertIsInstance(belief_set, ModalBeliefSet)
@@ -88,24 +101,29 @@ class TestModalLogicAgent(unittest.TestCase):
 
     async def test_text_to_belief_set_empty_result(self):
         """Test de la conversion de texte en ensemble de croyances modal avec résultat vide."""
-        self.mock_text_to_modal_function.return_value = MagicMock(result="")
+        # Configurer le __str__ du résultat de invoke pour retourner une chaîne vide
+        empty_sk_result = MagicMock()
+        empty_sk_result.__str__.return_value = ""
+        self.mock_text_to_modal_function.invoke.return_value = empty_sk_result
         
         belief_set, message = await self.agent.text_to_belief_set("Texte de test")
         
-        self.mock_text_to_modal_function.assert_called_once()
-        self.mock_tweety_bridge_instance.validate_modal_belief_set.assert_not_called()
+        self.mock_text_to_modal_function.invoke.assert_called_once_with(self.kernel, input="Texte de test")
+        self.mock_tweety_bridge_instance.validate_modal_belief_set.assert_not_called() # Ne devrait pas être appelé si belief_set_content est vide
         
         self.assertIsNone(belief_set)
         self.assertEqual(message, "La conversion a produit un ensemble de croyances vide")
 
     async def test_text_to_belief_set_invalid_belief_set(self):
         """Test de la conversion de texte en ensemble de croyances modal avec ensemble invalide."""
-        self.mock_text_to_modal_function.return_value = MagicMock(result="[]p => <>") # Syntaxe invalide
+        invalid_sk_result = MagicMock()
+        invalid_sk_result.__str__.return_value = "[]p => <>" # Syntaxe invalide
+        self.mock_text_to_modal_function.invoke.return_value = invalid_sk_result
         self.mock_tweety_bridge_instance.validate_modal_belief_set.return_value = (False, "Erreur de syntaxe modale")
         
         belief_set, message = await self.agent.text_to_belief_set("Texte de test")
         
-        self.mock_text_to_modal_function.assert_called_once()
+        self.mock_text_to_modal_function.invoke.assert_called_once_with(self.kernel, input="Texte de test")
         self.mock_tweety_bridge_instance.validate_modal_belief_set.assert_called_once_with("[]p => <>")
         
         self.assertIsNone(belief_set)
@@ -119,7 +137,7 @@ class TestModalLogicAgent(unittest.TestCase):
         belief_set_obj = ModalBeliefSet("[]p;")
         queries = await self.agent.generate_queries("Texte de test", belief_set_obj)
         
-        self.mock_generate_queries_function.assert_called_once_with(self.kernel, input="Texte de test", belief_set="[]p;")
+        self.mock_generate_queries_function.invoke.assert_called_once_with(self.kernel, input="Texte de test", belief_set="[]p;")
         self.assertEqual(self.mock_tweety_bridge_instance.validate_modal_formula.call_count, 3)
         self.mock_tweety_bridge_instance.validate_modal_formula.assert_any_call("p")
         
@@ -127,7 +145,9 @@ class TestModalLogicAgent(unittest.TestCase):
 
     async def test_generate_queries_with_invalid_query(self):
         """Test de la génération de requêtes modales avec une requête invalide."""
-        self.mock_generate_queries_function.return_value = MagicMock(result="p\n[]invalid\n<>q")
+        invalid_queries_sk_result = MagicMock()
+        invalid_queries_sk_result.__str__.return_value = "p\n[]invalid\n<>q"
+        self.mock_generate_queries_function.invoke.return_value = invalid_queries_sk_result
 
         def validate_side_effect(formula_str):
             if formula_str == "[]invalid":
@@ -138,7 +158,7 @@ class TestModalLogicAgent(unittest.TestCase):
         belief_set_obj = ModalBeliefSet("[]p;")
         queries = await self.agent.generate_queries("Texte de test", belief_set_obj)
         
-        self.mock_generate_queries_function.assert_called_once()
+        self.mock_generate_queries_function.invoke.assert_called_once_with(self.kernel, input="Texte de test", belief_set="[]p;")
         self.assertEqual(self.mock_tweety_bridge_instance.validate_modal_formula.call_count, 3)
         self.assertEqual(queries, ["p", "<>q"])
 
@@ -197,16 +217,18 @@ class TestModalLogicAgent(unittest.TestCase):
         
         interpretation = await self.agent.interpret_results("Texte de test", belief_set_obj, queries_list, results_tuples)
         
-        self.mock_interpret_function.assert_called_once()
-        args_call = self.mock_interpret_function.call_args[0]
-        kwargs_call = self.mock_interpret_function.call_args[1]
-
-        self.assertEqual(args_call[0], self.kernel)
-        self.assertEqual(kwargs_call['input'], "Texte de test")
-        self.assertEqual(kwargs_call['belief_set'], "[]p => <>q;")
-        self.assertEqual(kwargs_call['queries'], "p\n[]p")
+        self.mock_interpret_function.invoke.assert_called_once()
+        
+        # Vérifier les arguments passés à la méthode invoke du mock
+        args_passed_to_invoke, kwargs_passed_to_invoke = self.mock_interpret_function.invoke.call_args
+        
+        self.assertEqual(args_passed_to_invoke[0], self.kernel) # Vérifie le premier argument positionnel (kernel)
+        
+        self.assertEqual(kwargs_passed_to_invoke['input'], "Texte de test")
+        self.assertEqual(kwargs_passed_to_invoke['belief_set'], "[]p => <>q;")
+        self.assertEqual(kwargs_passed_to_invoke['queries'], "p\n[]p")
         expected_tweety_results = "Tweety Result: Modal Query 'p' is ACCEPTED (True).\nTweety Result: Modal Query '[]p' is REJECTED (False)."
-        self.assertEqual(kwargs_call['tweety_result'], expected_tweety_results)
+        self.assertEqual(kwargs_passed_to_invoke['tweety_result'], expected_tweety_results)
         
         self.assertEqual(interpretation, "Interprétation des résultats modaux")
 

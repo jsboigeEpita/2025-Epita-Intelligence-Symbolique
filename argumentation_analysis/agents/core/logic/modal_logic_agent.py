@@ -205,7 +205,7 @@ class ModalLogicAgent(BaseLogicAgent): # Modification de l'héritage
         
         self.logger.info(f"Composants de {self.name} configurés.")
 
-    def text_to_belief_set(self, text: str, context: Optional[Dict[str, Any]] = None) -> Tuple[Optional[BeliefSet], str]:
+    async def text_to_belief_set(self, text: str, context: Optional[Dict[str, Any]] = None) -> Tuple[Optional[BeliefSet], str]:
         """
         Convertit un texte en ensemble de croyances modales.
         
@@ -220,7 +220,7 @@ class ModalLogicAgent(BaseLogicAgent): # Modification de l'héritage
         
         try:
             # Appeler la fonction sémantique pour convertir le texte
-            result = self.sk_kernel.plugins[self.name]["TextToModalBeliefSet"].invoke(self.sk_kernel, input=text)
+            result = await self.sk_kernel.plugins[self.name]["TextToModalBeliefSet"].invoke(self.sk_kernel, input=text)
             belief_set_content = str(result) # Utilisation de str(result)
             
             # Vérifier si le contenu est valide
@@ -245,7 +245,7 @@ class ModalLogicAgent(BaseLogicAgent): # Modification de l'héritage
             self.logger.error(error_msg, exc_info=True)
             return None, error_msg
     
-    def generate_queries(self, text: str, belief_set: BeliefSet, context: Optional[Dict[str, Any]] = None) -> List[str]:
+    async def generate_queries(self, text: str, belief_set: BeliefSet, context: Optional[Dict[str, Any]] = None) -> List[str]:
         """
         Génère des requêtes logiques modales pertinentes.
         
@@ -260,7 +260,7 @@ class ModalLogicAgent(BaseLogicAgent): # Modification de l'héritage
         
         try:
             # Appeler la fonction sémantique pour générer les requêtes
-            result = self.sk_kernel.plugins[self.name]["GenerateModalQueries"].invoke(
+            result = await self.sk_kernel.plugins[self.name]["GenerateModalQueries"].invoke(
                 self.sk_kernel,
                 input=text,
                 belief_set=belief_set.content
@@ -325,7 +325,7 @@ class ModalLogicAgent(BaseLogicAgent): # Modification de l'héritage
             self.logger.error(error_msg, exc_info=True)
             return None, f"FUNC_ERROR: {error_msg}"
 
-    def interpret_results(self, text: str, belief_set: BeliefSet,
+    async def interpret_results(self, text: str, belief_set: BeliefSet,
                          queries: List[str], results: List[Tuple[Optional[bool], str]],
                          context: Optional[Dict[str, Any]] = None) -> str: # Signature mise à jour
         """
@@ -349,7 +349,7 @@ class ModalLogicAgent(BaseLogicAgent): # Modification de l'héritage
             results_str = "\n".join(results_text_list)
             
             # Appeler la fonction sémantique pour interpréter les résultats
-            result = self.sk_kernel.plugins[self.name]["InterpretModalResult"].invoke(
+            result = await self.sk_kernel.plugins[self.name]["InterpretModalResult"].invoke(
                 self.sk_kernel,
                 input=text,
                 belief_set=belief_set.content,
