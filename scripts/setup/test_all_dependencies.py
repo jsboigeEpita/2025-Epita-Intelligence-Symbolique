@@ -16,6 +16,11 @@ import subprocess
 import platform
 from pathlib import Path
 
+# Ajout du répertoire racine du projet au chemin pour permettre l'import des modules
+project_root_path_setup = Path(__file__).resolve().parent.parent.parent
+if str(project_root_path_setup) not in sys.path:
+    sys.path.insert(0, str(project_root_path_setup))
+
 # Configuration du logging
 logging.basicConfig(
     level=logging.INFO,
