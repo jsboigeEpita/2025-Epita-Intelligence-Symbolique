@@ -18,6 +18,7 @@ _real_numpy_flatiter = None
 _real_numpy_broadcast = None
 _real_numpy_inexact = None
 _real_numpy_flexible = None
+_real_numpy_character = None
 try:
     # Renommer l'import pour éviter les conflits si ce mock est lui-même importé comme 'numpy'
     import numpy as actual_numpy_for_mock
@@ -26,6 +27,7 @@ try:
     _real_numpy_broadcast = _actual_numpy_module.broadcast
     _real_numpy_inexact = _actual_numpy_module.inexact
     _real_numpy_flexible = _actual_numpy_module.flexible
+    _real_numpy_character = _actual_numpy_module.character
 except ImportError:
     pass # Le vrai numpy n'est pas disponible
 # Configuration du logging
@@ -941,6 +943,14 @@ else:
     class flexible(generic, metaclass=dtype_base): # Hérite de generic
         """Type de base pour les types de données flexibles (chaînes, bytes) NumPy."""
         __name__ = 'flexible'
+        __module__ = 'numpy'
+
+if _real_numpy_character:
+    character = _real_numpy_character
+else:
+    class character(flexible, metaclass=dtype_base): # Hérite de flexible
+        """Type de base pour les types de données caractères (chaînes, bytes) NumPy."""
+        __name__ = 'character'
         __module__ = 'numpy'
 
 # Types de données (classes, pas instances)
