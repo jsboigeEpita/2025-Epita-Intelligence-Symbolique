@@ -100,6 +100,7 @@ class CryptoService:
             return None
         
         try:
+            self.logger.debug(f"CryptoService.encrypt_data using key (first 16 bytes): {encryption_key[:16]}")
             f = Fernet(encryption_key)
             encrypted_data = f.encrypt(data)
             return encrypted_data
@@ -126,14 +127,15 @@ class CryptoService:
             return None
         
         try:
+            self.logger.debug(f"CryptoService.decrypt_data using key (first 16 bytes): {encryption_key[:16]}")
             f = Fernet(encryption_key)
             decrypted_data = f.decrypt(encrypted_data)
             return decrypted_data
         except (InvalidToken, InvalidSignature) as e:
-            self.logger.error(f"Erreur de déchiffrement (clé invalide): {e}")
+            self.logger.error(f"Erreur de déchiffrement (clé invalide) with key (first 16 bytes): {encryption_key[:16]}: {e}")
             return None
         except Exception as e:
-            self.logger.error(f"Erreur de déchiffrement: {e}")
+            self.logger.error(f"Erreur de déchiffrement (autre) with key (first 16 bytes): {encryption_key[:16]}: {e}")
             return None
     
     def encrypt_and_compress_json(self, data: Union[List, Dict]) -> Optional[bytes]:
