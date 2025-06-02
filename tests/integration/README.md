@@ -14,7 +14,6 @@ Ce répertoire contient les tests d'intégration du projet. Ces tests vérifient
 *   [`test_logic_agents_integration.py`](test_logic_agents_integration.py:1): Valide l'intégration des `LogicAgentFactory` et des agents logiques (propositionnel, premier ordre, modal) avec un Kernel sémantique mocké et TweetyBridge.
 *   [`test_logic_api_integration.py`](test_logic_api_integration.py:1): Teste l'intégration des endpoints de l'API web pour les fonctionnalités logiques (ex: `/api/logic/*`) et du `LogicService` sous-jacent, en utilisant des mocks pour les agents logiques et le Kernel.
 *   [`test_notebooks_structure.py`](tests/integration/test_notebooks_structure.py:1): Vérifie la structure JSON et la validité du format des notebooks d'exemples situés dans `examples/notebooks/`.
-*   [`test_tactical_operational_integration.py`](test_tactical_operational_integration.py:1): (À compléter en fonction du contenu de ce fichier)
 *   `jpype_tweety/`: Contient des tests d'intégration spécifiques à l'interaction avec TweetyLib via JPype.
 
 ## Exécution des Tests
