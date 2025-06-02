@@ -143,6 +143,8 @@ def array(object, dtype=None, copy=True, order='K', subok=False, ndmin=0):
         shape = (1,)
     return ndarray(shape=shape, dtype=dtype)
 
+asarray = array  # Ajout de asarray comme alias de array
+
 def zeros(shape, dtype=None):
     """Crée un tableau de zéros."""
     return ndarray(shape=shape, dtype=dtype)
