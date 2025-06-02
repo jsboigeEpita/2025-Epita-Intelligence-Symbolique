@@ -201,6 +201,7 @@ class ExtractAgent(BaseAgent):
             execution_settings=self.sk_kernel.get_prompt_execution_settings_from_service_id(llm_service_id)
         )
         self.sk_kernel.add_function(
+            function_name=self.EXTRACT_SEMANTIC_FUNCTION_NAME, # Ajout explicite
             prompt_template_config=extract_prompt_template_config,
             plugin_name=self.name
         )
@@ -223,6 +224,7 @@ class ExtractAgent(BaseAgent):
             execution_settings=self.sk_kernel.get_prompt_execution_settings_from_service_id(llm_service_id)
         )
         self.sk_kernel.add_function(
+            function_name=self.VALIDATE_SEMANTIC_FUNCTION_NAME, # Ajout explicite
             prompt_template_config=validate_prompt_template_config,
             plugin_name=self.name
         )

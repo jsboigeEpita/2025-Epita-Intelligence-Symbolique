@@ -107,4 +107,4 @@ du mécanisme, des citations, un exemple et l'impact du sophisme.
 """
 
 # Log de chargement
-logging.getLogger(__name__).debug("Module agents.core.informal.prompts chargé (V8 - Amélioré).")
+logging.getLogger(__name__).debug("Module agents.core.informal.prompts chargé (V8 - Amélioré, AnalyzeFallacies V1).")
