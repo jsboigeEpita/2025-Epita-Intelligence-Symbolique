@@ -14,17 +14,16 @@ import time
 from typing import Dict, List, Any, Optional, Union
 from datetime import datetime
 
-import semantic_kernel as sk
-from semantic_kernel.contents import ChatMessageContent, AuthorRole
-from semantic_kernel.functions.kernel_arguments import KernelArguments
+import semantic_kernel as sk # Kept for type hints if necessary
+# from semantic_kernel.contents import ChatMessageContent, AuthorRole # Potentially unused
+# from semantic_kernel.functions.kernel_arguments import KernelArguments # Potentially unused
 
 from argumentation_analysis.orchestration.hierarchical.operational.agent_interface import OperationalAgent
 from argumentation_analysis.orchestration.hierarchical.operational.state import OperationalState
 
-# Import de l'agent PL existant
-from argumentation_analysis.agents.core.pl.pl_definitions import PropositionalLogicPlugin, setup_pl_kernel, PL_AGENT_INSTRUCTIONS
-from argumentation_analysis.core.llm_service import create_llm_service
-from argumentation_analysis.core.jvm_setup import initialize_jvm
+# Import de l'agent PL refactoré
+from argumentation_analysis.agents.core.logic.propositional_logic_agent import PropositionalLogicAgent # Modifié
+from argumentation_analysis.core.jvm_setup import initialize_jvm # Kept
 
 from argumentation_analysis.paths import RESULTS_DIR
 
@@ -47,25 +46,31 @@ class PLAgentAdapter(OperationalAgent):
             operational_state: État opérationnel à utiliser. Si None, un nouvel état est créé.
         """
         super().__init__(name, operational_state)
-        self.kernel = None
-        self.pl_plugin = None
-        self.pl_agent = None
-        self.llm_service = None
+        self.agent: Optional[PropositionalLogicAgent] = None # Agent refactoré, type mis à jour
+        self.kernel: Optional[sk.Kernel] = None # Passé à initialize
+        self.llm_service_id: Optional[str] = None # Passé à initialize
         self.initialized = False
         self.logger = logging.getLogger(f"PLAgentAdapter.{name}")
     
-    async def initialize(self):
+    async def initialize(self, kernel: sk.Kernel, llm_service_id: str): # Prend kernel et llm_service_id
         """
         Initialise l'agent de logique propositionnelle.
+
+        Args:
+            kernel: Le kernel Semantic Kernel à utiliser.
+            llm_service_id: L'ID du service LLM à utiliser.
         
         Returns:
             True si l'initialisation a réussi, False sinon
         """
         if self.initialized:
             return True
+
+        self.kernel = kernel
+        self.llm_service_id = llm_service_id
         
         try:
-            self.logger.info("Initialisation de l'agent de logique propositionnelle...")
+            self.logger.info("Initialisation de l'agent de logique propositionnelle refactoré...")
             
             # S'assurer que la JVM est démarrée
             jvm_ready = initialize_jvm()
@@ -73,42 +78,23 @@ class PLAgentAdapter(OperationalAgent):
                 self.logger.error("Échec du démarrage de la JVM.")
                 return False
             
-            # Créer le service LLM
-            self.llm_service = create_llm_service()
-            if not self.llm_service:
-                self.logger.error("Échec de la création du service LLM.")
-                return False
-            
-            # Créer le kernel
-            self.kernel = sk.Kernel()
-            self.kernel.add_service(self.llm_service)
-            
-            # Configurer le kernel pour l'agent PL
-            setup_pl_kernel(self.kernel, self.llm_service)
-            
-            # Récupérer le plugin PL
-            if "PLAnalyzer" in self.kernel.plugins:
-                self.pl_plugin = self.kernel.plugins["PLAnalyzer"]
-                self.logger.info("Plugin PLAnalyzer récupéré avec succès.")
-            else:
-                self.logger.error("Plugin PLAnalyzer non trouvé dans le kernel.")
-                return False
-            
-            # Créer l'agent PL
-            prompt_exec_settings = self.kernel.get_prompt_execution_settings_from_service_id(self.llm_service.service_id)
-            self.pl_agent = sk.ChatCompletionAgent(
+            # Utiliser le nom de classe corrigé et ajouter logic_type_name
+            self.agent = PropositionalLogicAgent(
                 kernel=self.kernel,
-                service=self.llm_service,
-                name="PLAgent",
-                instructions=PL_AGENT_INSTRUCTIONS,
-                arguments=KernelArguments(settings=prompt_exec_settings)
+                agent_name=f"{self.name}_PLAgent",
+                logic_type_name="propositional" # ou le type spécifique attendu par l'agent
             )
+            await self.agent.setup_agent_components(llm_service_id=self.llm_service_id)
+
+            if self.agent is None: # Vérifier self.agent
+                self.logger.error("Échec de l'initialisation de l'agent PL.")
+                return False
             
             self.initialized = True
-            self.logger.info("Agent de logique propositionnelle initialisé avec succès.")
+            self.logger.info("Agent de logique propositionnelle refactoré initialisé avec succès.")
             return True
         except Exception as e:
-            self.logger.error(f"Erreur lors de l'initialisation de l'agent de logique propositionnelle: {e}")
+            self.logger.error(f"Erreur lors de l'initialisation de l'agent de logique propositionnelle refactoré: {e}")
             return False
     
     def get_capabilities(self) -> List[str]:
@@ -158,7 +144,22 @@ class PLAgentAdapter(OperationalAgent):
         """
         # Vérifier si l'agent est initialisé
         if not self.initialized:
-            success = await self.initialize()
+            if self.kernel is None or self.llm_service_id is None:
+                self.logger.error("Kernel ou llm_service_id non configuré avant process_task pour l'agent PL.")
+                return {
+                    "id": f"result-{task.get('id')}",
+                    "task_id": task.get("id"),
+                    "tactical_task_id": task.get("tactical_task_id"),
+                    "status": "failed",
+                    "outputs": {},
+                    "metrics": {},
+                    "issues": [{
+                        "type": "configuration_error",
+                        "description": "Kernel ou llm_service_id non configuré pour l'agent PL",
+                        "severity": "high"
+                    }]
+                }
+            success = await self.initialize(self.kernel, self.llm_service_id)
             if not success:
                 return {
                     "id": f"result-{task.get('id')}",
@@ -213,104 +214,91 @@ class PLAgentAdapter(OperationalAgent):
                         if not extract_content:
                             continue
                         
-                        belief_set = await self._text_to_belief_set(extract_content, technique_params)
-                        
-                        if belief_set:
+                        # Appel à la méthode de l'agent refactoré
+                        formalization_result = await self.agent.formalize_to_pl(
+                            text=extract_content,
+                            parameters=technique_params
+                        )
+                        # Supposons que formalization_result est une chaîne (le belief_set) ou None
+                        if formalization_result:
                             results.append({
-                                "type": "formal_analyses",
+                                "type": "formal_analyses", # ou "pl_formalization"
                                 "extract_id": extract.get("id"),
                                 "source": extract.get("source"),
-                                "belief_set": belief_set,
+                                "belief_set": formalization_result,
                                 "formalism": "propositional_logic",
-                                "confidence": 0.8  # Valeur arbitraire pour l'exemple
+                                "confidence": 0.8
                             })
                         else:
                             issues.append({
                                 "type": "formalization_error",
-                                "description": "Échec de la formalisation en logique propositionnelle",
+                                "description": "Échec de la formalisation en logique propositionnelle par l'agent.",
                                 "severity": "medium",
                                 "extract_id": extract.get("id")
                             })
                 
                 elif technique_name == "validity_checking":
-                    # Vérifier la validité des arguments formalisés
                     for extract in text_extracts:
                         extract_content = extract.get("content", "")
                         if not extract_content:
                             continue
                         
-                        # D'abord, formaliser le texte en belief set
-                        belief_set = await self._text_to_belief_set(extract_content, technique_params)
-                        
-                        if not belief_set:
-                            issues.append({
-                                "type": "formalization_error",
-                                "description": "Échec de la formalisation en logique propositionnelle",
-                                "severity": "medium",
-                                "extract_id": extract.get("id")
-                            })
-                            continue
-                        
-                        # Ensuite, générer et exécuter des requêtes
-                        queries_results = await self._generate_and_execute_queries(extract_content, belief_set, technique_params)
-                        
-                        if queries_results:
+                        # Appel à la méthode de l'agent refactoré
+                        # Cette méthode devrait gérer la formalisation, la génération de requêtes et leur exécution.
+                        validity_analysis_result = await self.agent.check_pl_validity(
+                            text=extract_content,
+                            parameters=technique_params
+                        )
+                        # Supposons que validity_analysis_result est un dict avec belief_set, queries, results, interpretation
+                        if validity_analysis_result and validity_analysis_result.get("belief_set"):
                             results.append({
                                 "type": "validity_analysis",
                                 "extract_id": extract.get("id"),
                                 "source": extract.get("source"),
-                                "belief_set": belief_set,
-                                "queries": queries_results.get("queries", []),
-                                RESULTS_DIR: queries_results.get(RESULTS_DIR, []),
-                                "interpretation": queries_results.get("interpretation", ""),
-                                "confidence": 0.8  # Valeur arbitraire pour l'exemple
+                                "belief_set": validity_analysis_result.get("belief_set"),
+                                "queries": validity_analysis_result.get("queries", []),
+                                "results": validity_analysis_result.get("results", []), # Note: clé "results" au lieu de RESULTS_DIR
+                                "interpretation": validity_analysis_result.get("interpretation", ""),
+                                "confidence": validity_analysis_result.get("confidence", 0.8)
                             })
                         else:
                             issues.append({
                                 "type": "validity_checking_error",
-                                "description": "Échec de la vérification de validité",
+                                "description": "Échec de la vérification de validité par l'agent.",
                                 "severity": "medium",
-                                "extract_id": extract.get("id")
+                                "extract_id": extract.get("id"),
+                                "details": validity_analysis_result.get("error_details") if validity_analysis_result else "No details"
                             })
                 
                 elif technique_name == "consistency_checking":
-                    # Vérifier la cohérence des arguments formalisés
                     for extract in text_extracts:
                         extract_content = extract.get("content", "")
                         if not extract_content:
                             continue
                         
-                        # D'abord, formaliser le texte en belief set
-                        belief_set = await self._text_to_belief_set(extract_content, technique_params)
-                        
-                        if not belief_set:
-                            issues.append({
-                                "type": "formalization_error",
-                                "description": "Échec de la formalisation en logique propositionnelle",
-                                "severity": "medium",
-                                "extract_id": extract.get("id")
-                            })
-                            continue
-                        
-                        # Ensuite, vérifier la cohérence
-                        consistency_result = await self._check_consistency(belief_set, technique_params)
-                        
-                        if consistency_result is not None:
+                        # Appel à la méthode de l'agent refactoré
+                        consistency_analysis_result = await self.agent.check_pl_consistency(
+                            text=extract_content, # ou un belief_set pré-formalisé si disponible
+                            parameters=technique_params
+                        )
+                        # Supposons que consistency_analysis_result est un dict avec belief_set, is_consistent, explanation
+                        if consistency_analysis_result and "is_consistent" in consistency_analysis_result:
                             results.append({
                                 "type": "consistency_analysis",
                                 "extract_id": extract.get("id"),
                                 "source": extract.get("source"),
-                                "belief_set": belief_set,
-                                "is_consistent": consistency_result.get("is_consistent", False),
-                                "explanation": consistency_result.get("explanation", ""),
-                                "confidence": 0.8  # Valeur arbitraire pour l'exemple
+                                "belief_set": consistency_analysis_result.get("belief_set"), # L'agent pourrait retourner le belief_set utilisé
+                                "is_consistent": consistency_analysis_result.get("is_consistent", False),
+                                "explanation": consistency_analysis_result.get("explanation", ""),
+                                "confidence": consistency_analysis_result.get("confidence", 0.8)
                             })
                         else:
                             issues.append({
                                 "type": "consistency_checking_error",
-                                "description": "Échec de la vérification de cohérence",
+                                "description": "Échec de la vérification de cohérence par l'agent.",
                                 "severity": "medium",
-                                "extract_id": extract.get("id")
+                                "extract_id": extract.get("id"),
+                                "details": consistency_analysis_result.get("error_details") if consistency_analysis_result else "No details"
                             })
                 
                 else:
@@ -390,301 +378,7 @@ class PLAgentAdapter(OperationalAgent):
                 }]
             }
     
-    async def _text_to_belief_set(self, text: str, parameters: Dict[str, Any]) -> Optional[str]:
-        """
-        Traduit un texte en belief set de logique propositionnelle.
-        
-        Args:
-            text: Le texte à traduire
-            parameters: Les paramètres de traduction
-            
-        Returns:
-            Le belief set généré ou None en cas d'erreur
-        """
-        # Vérifier si l'agent est initialisé
-        if not self.initialized:
-            await self.initialize()
-        
-        try:
-            # Créer un message de chat pour l'agent
-            chat_message = ChatMessageContent(
-                role=AuthorRole.USER,
-                content=f"Traduis ce texte en Belief Set de logique propositionnelle (syntaxe Tweety):\n\n{text}"
-            )
-            
-            # Appeler l'agent PL
-            response_content = ""
-            async for chunk in self.pl_agent.invoke([chat_message]):
-                if hasattr(chunk, 'content') and chunk.content:
-                    response_content = chunk.content
-                    break  # Prendre seulement la première réponse complète
-            
-            # Extraire le belief set de la réponse
-            belief_set = None
-            
-            # Rechercher un bloc de code dans la réponse
-            code_match = re.search(r'```(?:pl|tweety)?\s*([\s\S]*?)\s*```', response_content)
-            if code_match:
-                belief_set = code_match.group(1).strip()
-            
-            # Si aucun bloc de code n'est trouvé, essayer d'extraire le belief set directement
-            if not belief_set:
-                # Rechercher un pattern comme "Belief Set:" suivi du contenu
-                bs_match = re.search(r'Belief Set:\s*([\s\S]*?)(?:\n\n|\Z)', response_content)
-                if bs_match:
-                    belief_set = bs_match.group(1).strip()
-            
-            # Si toujours pas de belief set, utiliser toute la réponse
-            if not belief_set:
-                belief_set = response_content.strip()
-            
-            # Vérifier que le belief set est valide
-            if belief_set and len(belief_set) > 0:
-                return belief_set
-            else:
-                self.logger.warning("Belief set vide ou invalide généré.")
-                return None
-        
-        except Exception as e:
-            self.logger.error(f"Erreur lors de la traduction en belief set: {e}")
-            return None
-    
-    async def _generate_and_execute_queries(self, text: str, belief_set: str, parameters: Dict[str, Any]) -> Optional[Dict[str, Any]]:
-        """
-        Génère et exécute des requêtes sur un belief set.
-        
-        Args:
-            text: Le texte original
-            belief_set: Le belief set à interroger
-            parameters: Les paramètres d'exécution
-            
-        Returns:
-            Un dictionnaire contenant les requêtes, les résultats et l'interprétation, ou None en cas d'erreur
-        """
-        # Vérifier si l'agent est initialisé
-        if not self.initialized:
-            await self.initialize()
-        
-        try:
-            # Générer les requêtes
-            queries = await self._generate_queries(text, belief_set, parameters)
-            
-            if not queries:
-                self.logger.warning("Aucune requête générée.")
-                return None
-            
-            # Exécuter les requêtes
-            results = []
-            for query in queries:
-                result = self._execute_query(belief_set, query)
-                results.append(result)
-            
-            # Interpréter les résultats
-            interpretation = await self._interpret_results(text, belief_set, queries, results)
-            
-            return {
-                "queries": queries,
-                RESULTS_DIR: results,
-                "interpretation": interpretation
-            }
-        
-        except Exception as e:
-            self.logger.error(f"Erreur lors de la génération et de l'exécution des requêtes: {e}")
-            return None
-    
-    async def _generate_queries(self, text: str, belief_set: str, parameters: Dict[str, Any]) -> List[str]:
-        """
-        Génère des requêtes pour un belief set.
-        
-        Args:
-            text: Le texte original
-            belief_set: Le belief set à interroger
-            parameters: Les paramètres de génération
-            
-        Returns:
-            Liste des requêtes générées
-        """
-        try:
-            # Créer un message de chat pour l'agent
-            chat_message = ChatMessageContent(
-                role=AuthorRole.USER,
-                content=f"Génère des requêtes pertinentes en logique propositionnelle pour ce texte et ce belief set:\n\nTexte:\n{text}\n\nBelief Set:\n{belief_set}"
-            )
-            
-            # Appeler l'agent PL
-            response_content = ""
-            async for chunk in self.pl_agent.invoke([chat_message]):
-                if hasattr(chunk, 'content') and chunk.content:
-                    response_content = chunk.content
-                    break  # Prendre seulement la première réponse complète
-            
-            # Extraire les requêtes de la réponse
-            queries = []
-            
-            # Rechercher un bloc de code dans la réponse
-            code_match = re.search(r'```(?:pl|tweety)?\s*([\s\S]*?)\s*```', response_content)
-            if code_match:
-                # Diviser le bloc de code en lignes et filtrer les lignes vides
-                queries = [q.strip() for q in code_match.group(1).strip().split('\n') if q.strip()]
-            
-            # Si aucun bloc de code n'est trouvé, essayer d'extraire les requêtes directement
-            if not queries:
-                # Rechercher des lignes qui ressemblent à des requêtes
-                query_matches = re.finditer(r'(?:Requête|Query)\s+\d+:\s*(.*?)(?:\n|$)', response_content)
-                queries = [match.group(1).strip() for match in query_matches if match.group(1).strip()]
-            
-            # Si toujours pas de requêtes, essayer d'extraire toutes les lignes qui contiennent des opérateurs PL
-            if not queries:
-                # Rechercher des lignes qui contiennent des opérateurs PL (!, ||, =>, <=>, ^^)
-                query_lines = [line.strip() for line in response_content.split('\n') 
-                              if any(op in line for op in ['!', '||', '=>', '<=>', '^^'])]
-                queries = query_lines
-            
-            return queries
-        
-        except Exception as e:
-            self.logger.error(f"Erreur lors de la génération des requêtes: {e}")
-            return []
-    
-    def _execute_query(self, belief_set: str, query: str) -> Dict[str, Any]:
-        """
-        Exécute une requête sur un belief set.
-        
-        Args:
-            belief_set: Le belief set à interroger
-            query: La requête à exécuter
-            
-        Returns:
-            Le résultat de la requête
-        """
-        try:
-            # Vérifier si le plugin PL est disponible
-            if not self.pl_plugin or not hasattr(self.pl_plugin, "execute_pl_query"):
-                self.logger.error("Plugin PL non disponible ou méthode execute_pl_query non trouvée.")
-                return {
-                    "query": query,
-                    "status": "error",
-                    "message": "Plugin PL non disponible"
-                }
-            
-            # Exécuter la requête
-            result_str = self.pl_plugin.execute_pl_query(belief_set, query)
-            
-            # Analyser le résultat
-            if result_str.startswith("FUNC_ERROR:"):
-                return {
-                    "query": query,
-                    "status": "error",
-                    "message": result_str[11:].strip()  # Enlever "FUNC_ERROR: "
-                }
-            elif "ACCEPTED" in result_str:
-                return {
-                    "query": query,
-                    "status": "accepted",
-                    "message": result_str
-                }
-            elif "REJECTED" in result_str:
-                return {
-                    "query": query,
-                    "status": "rejected",
-                    "message": result_str
-                }
-            elif "Unknown" in result_str:
-                return {
-                    "query": query,
-                    "status": "unknown",
-                    "message": result_str
-                }
-            else:
-                return {
-                    "query": query,
-                    "status": "unknown",
-                    "message": result_str
-                }
-        
-        except Exception as e:
-            self.logger.error(f"Erreur lors de l'exécution de la requête '{query}': {e}")
-            return {
-                "query": query,
-                "status": "error",
-                "message": str(e)
-            }
-    
-    async def _interpret_results(self, text: str, belief_set: str, queries: List[str], results: List[Dict[str, Any]]) -> str:
-        """
-        Interprète les résultats des requêtes.
-        
-        Args:
-            text: Le texte original
-            belief_set: Le belief set utilisé
-            queries: Les requêtes exécutées
-            results: Les résultats des requêtes
-            
-        Returns:
-            L'interprétation des résultats
-        """
-        try:
-            # Formater les requêtes et les résultats pour l'interprétation
-            queries_str = "\n".join(queries)
-            results_str = "\n".join([f"Query: {r['query']} -> {r['status'].upper()}: {r['message']}" for r in results])
-            
-            # Créer un message de chat pour l'agent
-            chat_message = ChatMessageContent(
-                role=AuthorRole.USER,
-                content=f"Interprète les résultats de ces requêtes en logique propositionnelle:\n\nTexte original:\n{text}\n\nBelief Set:\n{belief_set}\n\nRequêtes:\n{queries_str}\n\nRésultats:\n{results_str}"
-            )
-            
-            # Appeler l'agent PL
-            response_content = ""
-            async for chunk in self.pl_agent.invoke([chat_message]):
-                if hasattr(chunk, 'content') and chunk.content:
-                    response_content = chunk.content
-                    break  # Prendre seulement la première réponse complète
-            
-            return response_content.strip()
-        
-        except Exception as e:
-            self.logger.error(f"Erreur lors de l'interprétation des résultats: {e}")
-            return f"Erreur lors de l'interprétation des résultats: {e}"
-    
-    async def _check_consistency(self, belief_set: str, parameters: Dict[str, Any]) -> Optional[Dict[str, Any]]:
-        """
-        Vérifie la cohérence d'un belief set.
-        
-        Args:
-            belief_set: Le belief set à vérifier
-            parameters: Les paramètres de vérification
-            
-        Returns:
-            Un dictionnaire contenant le résultat de la vérification, ou None en cas d'erreur
-        """
-        try:
-            # Créer une requête pour vérifier la cohérence
-            # En logique propositionnelle, un ensemble est incohérent si et seulement si il implique à la fois une proposition et sa négation
-            # Nous pouvons vérifier cela en créant une requête qui vérifie si l'ensemble implique "+" (tautologie)
-            # Si l'ensemble est incohérent, il impliquera "+" (car un ensemble incohérent implique tout)
-            
-            result = self._execute_query(belief_set, "+")
-            
-            if result["status"] == "error":
-                self.logger.warning(f"Erreur lors de la vérification de cohérence: {result['message']}")
-                return None
-            
-            # Interpréter le résultat
-            is_consistent = result["status"] != "accepted"
-            
-            # Générer une explication
-            explanation = ""
-            if is_consistent:
-                explanation = "Le belief set est cohérent car il n'implique pas de contradiction."
-            else:
-                explanation = "Le belief set est incohérent car il implique une contradiction."
-            
-            return {
-                "is_consistent": is_consistent,
-                "explanation": explanation
-            }
-        
-        except Exception as e:
-            self.logger.error(f"Erreur lors de la vérification de cohérence: {e}")
-            return None
+    # Les méthodes _text_to_belief_set, _generate_and_execute_queries, _generate_queries,
+    # _execute_query, _interpret_results, _check_consistency sont supprimées
+    # car leurs fonctionnalités sont maintenant dans self.agent.
+    pass # Placeholder if no other methods are defined after this.

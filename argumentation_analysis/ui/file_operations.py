@@ -5,6 +5,7 @@ import logging
 import base64 # NOUVEAU: Pour décoder la clé b64 en clé Fernet
 from pathlib import Path
 from typing import Optional, List, Dict, Any
+from cryptography.fernet import InvalidToken # NÉCESSAIRE pour lever l'exception
 # cryptography.fernet et exceptions sont maintenant gérés dans project_core.utils.crypto_utils
 # et les fonctions encrypt/decrypt sont importées depuis là.
 # from cryptography.fernet import Fernet, InvalidToken # SUPPRIMÉ
@@ -25,7 +26,7 @@ file_ops_logger = utils_logger # Ou logging.getLogger("App.UI.FileOps")
 
 def load_extract_definitions(
     config_file: Path,
-    b64_derived_key: str, # MODIFIÉ: La clé reçue est la chaîne b64 dérivée
+    b64_derived_key: Optional[str], # MODIFIÉ: La clé reçue est la chaîne b64 dérivée, rendue optionnelle
     # app_config est utilisé par get_full_text_for_source, mais load_extract_definitions
     # lui-même ne l'utilise pas directement pour le chargement/déchiffrement.
     # Cependant, si on voulait que load_extract_definitions peuple les full_text au chargement,
@@ -36,43 +37,56 @@ def load_extract_definitions(
     fallback_definitions = ui_config_module.EXTRACT_SOURCES if ui_config_module.EXTRACT_SOURCES else ui_config_module.DEFAULT_EXTRACT_SOURCES
 
     if not config_file.exists():
-        file_ops_logger.info(f"Fichier config chiffré '{config_file}' non trouvé. Utilisation définitions par défaut.")
-        return [item.copy() for item in fallback_definitions]
-    if not b64_derived_key: # MODIFIÉ: Vérification de la clé b64
-        file_ops_logger.warning("Clé chiffrement (b64) absente. Chargement config impossible. Utilisation définitions par défaut.")
+        file_ops_logger.info(f"Fichier config '{config_file}' non trouvé. Utilisation définitions par défaut.")
         return [item.copy() for item in fallback_definitions]
 
-    file_ops_logger.info(f"Chargement et déchiffrement de '{config_file}'...")
-    try:
-        # actual_fernet_key = base64.urlsafe_b64decode(b64_derived_key.encode('utf-8')) # SUPPRIMÉ: La fonction attend la str b64
-        with open(config_file, 'rb') as f: encrypted_data = f.read()
-        # MODIFIÉ: Utilisation de decrypt_data_with_fernet avec la clé b64_derived_key (str)
-        decrypted_compressed_data = decrypt_data_with_fernet(encrypted_data, b64_derived_key)
-        if not decrypted_compressed_data:
-            # decrypt_data_with_fernet logge déjà l'erreur spécifique (InvalidToken, etc.)
-            file_ops_logger.warning("Échec déchiffrement (decrypt_data_with_fernet a retourné None). Utilisation définitions par défaut.")
+    if b64_derived_key: # Clé fournie, tenter le déchiffrement
+        file_ops_logger.info(f"Chargement et déchiffrement de '{config_file}' avec clé...")
+        try:
+            with open(config_file, 'rb') as f: encrypted_data = f.read()
+            decrypted_compressed_data = decrypt_data_with_fernet(encrypted_data, b64_derived_key)
+            
+            if not decrypted_compressed_data:
+                file_ops_logger.error(f"❌ Échec déchiffrement pour '{config_file}'. Le token pourrait être invalide ou les données corrompues.")
+                raise InvalidToken # Lever InvalidToken comme attendu par le test
+            
+            decompressed_data = gzip.decompress(decrypted_compressed_data)
+            definitions = json.loads(decompressed_data.decode('utf-8'))
+            file_ops_logger.info("✅ Définitions chargées et déchiffrées.")
+
+        except InvalidToken:
+            file_ops_logger.error(f"❌ InvalidToken lors du déchiffrement de '{config_file}'.", exc_info=True)
+            raise
+        except Exception as e:
+            file_ops_logger.error(f"❌ Erreur chargement/déchiffrement '{config_file}': {e}. Utilisation définitions par défaut.", exc_info=True)
             return [item.copy() for item in fallback_definitions]
-        decompressed_data = gzip.decompress(decrypted_compressed_data)
-        definitions = json.loads(decompressed_data.decode('utf-8'))
-        file_ops_logger.info("✅ Définitions chargées et déchiffrées.")
-
-        if not isinstance(definitions, list) or not all(
-            isinstance(item, dict) and
-            "source_name" in item and "source_type" in item and "schema" in item and
-            "host_parts" in item and "path" in item and isinstance(item.get("extracts"), list)
-            for item in definitions
-        ):
-            file_ops_logger.warning("⚠️ Format définitions invalide après chargement. Utilisation définitions par défaut.")
+    
+    else: # Pas de clé, essayer de lire comme JSON simple
+        file_ops_logger.info(f"Aucune clé fournie. Tentative de chargement de '{config_file}' comme JSON simple...")
+        try:
+            with open(config_file, 'r', encoding='utf-8') as f:
+                definitions = json.load(f)
+            file_ops_logger.info(f"✅ Définitions chargées comme JSON simple depuis '{config_file}'.")
+        
+        except json.JSONDecodeError as e_json:
+            file_ops_logger.error(f"❌ Erreur décodage JSON pour '{config_file}': {e_json}. L'exception sera relancée.", exc_info=False)
+            raise
+        except Exception as e:
+            file_ops_logger.error(f"❌ Erreur chargement JSON simple '{config_file}': {e}. Utilisation définitions par défaut.", exc_info=True)
             return [item.copy() for item in fallback_definitions]
 
-        file_ops_logger.info(f"-> {len(definitions)} définitions chargées depuis fichier.")
-        return definitions
-    # except (InvalidToken, InvalidSignature) as e: # SUPPRIMÉ: Ces erreurs sont gérées dans decrypt_data_with_fernet qui retourne None
-    #     file_ops_logger.error(f"❌ Erreur déchiffrement/validation token pour '{config_file}': {e}. L'exception sera relancée.", exc_info=True)
-    #     raise # Relancer l'exception InvalidToken ou InvalidSignature
-    except Exception as e: # Capturer d'autres erreurs potentielles (ex: décodage JSON, décompression)
-        file_ops_logger.error(f"❌ Erreur chargement/traitement général '{config_file}': {e}. Utilisation définitions par défaut.", exc_info=True)
+    # Validation du format (commun aux deux chemins)
+    if not isinstance(definitions, list) or not all(
+        isinstance(item, dict) and
+        "source_name" in item and "source_type" in item and "schema" in item and
+        "host_parts" in item and "path" in item and isinstance(item.get("extracts"), list)
+        for item in definitions
+    ):
+        file_ops_logger.warning(f"⚠️ Format définitions invalide après chargement de '{config_file}'. Utilisation définitions par défaut.")
         return [item.copy() for item in fallback_definitions]
+
+    file_ops_logger.info(f"-> {len(definitions)} définitions chargées depuis '{config_file}'.")
+    return definitions
 
 def save_extract_definitions(
     extract_definitions: List[Dict[str, Any]],

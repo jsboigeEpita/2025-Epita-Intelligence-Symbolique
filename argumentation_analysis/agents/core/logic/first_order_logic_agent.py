@@ -6,16 +6,23 @@ Agent spécialisé pour la logique du premier ordre.
 import logging
 from typing import Dict, List, Optional, Any, Tuple
 
-from semantic_kernel import Kernel
+from semantic_kernel import Kernel # type: ignore
 
-from .abstract_logic_agent import AbstractLogicAgent
+from ..abc.agent_bases import BaseLogicAgent # Modification de l'import
 from .belief_set import BeliefSet, FirstOrderBeliefSet
 from .tweety_bridge import TweetyBridge
 
 # Configuration du logger
-logger = logging.getLogger("Orchestration.FirstOrderLogicAgent")
+logger = logging.getLogger(__name__) # Utilisation de __name__ pour une meilleure pratique
 
-# Prompts pour la logique du premier ordre (à définir ultérieurement)
+# Prompt Système pour l'agent FOL
+SYSTEM_PROMPT_FOL = """Vous êtes un agent spécialisé dans l'analyse et le raisonnement en logique du premier ordre (FOL).
+Vous utilisez la syntaxe de TweetyProject pour représenter les formules FOL.
+Vos tâches principales incluent la traduction de texte en formules FOL, la génération de requêtes FOL pertinentes,
+l'exécution de ces requêtes sur un ensemble de croyances FOL, et l'interprétation des résultats obtenus.
+"""
+
+# Prompts pour la logique du premier ordre
 PROMPT_TEXT_TO_FOL = """
 Vous êtes un expert en logique du premier ordre. Votre tâche est de traduire un texte en un ensemble de croyances (belief set) en logique du premier ordre en utilisant la syntaxe de TweetyProject.
 
@@ -97,11 +104,11 @@ Fournissez ensuite une conclusion générale sur ce que ces résultats nous appr
 Votre réponse doit être claire, précise et accessible à quelqu'un qui n'est pas expert en logique formelle.
 """
 
-class FirstOrderLogicAgent(AbstractLogicAgent):
+class FirstOrderLogicAgent(BaseLogicAgent): # Modification de l'héritage
     """
     Agent spécialisé pour la logique du premier ordre.
     
-    Cette classe implémente les méthodes abstraites de AbstractLogicAgent
+    Cette classe implémente les méthodes abstraites de BaseLogicAgent
     spécifiquement pour la logique du premier ordre, en utilisant TweetyProject
     via l'interface TweetyBridge.
     """
@@ -113,94 +120,94 @@ class FirstOrderLogicAgent(AbstractLogicAgent):
         Args:
             kernel: Le kernel Semantic Kernel à utiliser pour les fonctions sémantiques
         """
-        super().__init__(kernel, "FirstOrderLogicAgent")
-        self._tweety_bridge = TweetyBridge()
-        self._plugin_name = "FOLAnalyzer"
-    
-    def setup_kernel(self, llm_service) -> None:
+        super().__init__(kernel,
+                         agent_name="FirstOrderLogicAgent",
+                         logic_type_name="FOL",
+                         system_prompt=SYSTEM_PROMPT_FOL)
+        # _tweety_bridge sera initialisé dans setup_agent_components
+
+    def get_agent_capabilities(self) -> Dict[str, Any]:
+        """Décrit ce que l'agent peut faire."""
+        return {
+            "name": self.name,
+            "logic_type": self.logic_type,
+            "description": "Agent capable d'analyser du texte en utilisant la logique du premier ordre (FOL). "
+                           "Peut convertir du texte en un ensemble de croyances FOL, générer des requêtes FOL, "
+                           "exécuter ces requêtes, et interpréter les résultats.",
+            "methods": {
+                "text_to_belief_set": "Convertit un texte en un ensemble de croyances FOL.",
+                "generate_queries": "Génère des requêtes FOL pertinentes à partir d'un texte et d'un ensemble de croyances.",
+                "execute_query": "Exécute une requête FOL sur un ensemble de croyances.",
+                "interpret_results": "Interprète les résultats d'une ou plusieurs requêtes FOL.",
+                "validate_formula": "Valide la syntaxe d'une formule FOL."
+            }
+        }
+
+    def setup_agent_components(self, llm_service_id: str) -> None:
         """
-        Configure le kernel avec les plugins et fonctions nécessaires.
-        
-        Args:
-            llm_service: Le service LLM à utiliser
+        Configure les composants spécifiques de l'agent dans le kernel SK.
         """
-        self._logger.info(f"Configuration du kernel pour {self._plugin_name}...")
-        
+        super().setup_agent_components(llm_service_id)
+        self.logger.info(f"Configuration des composants pour {self.name}...")
+
+        self._tweety_bridge = TweetyBridge(logic_type="fol") # Initialisation spécifique FOL
+
         # Vérifier si la JVM est prête
-        if not self._tweety_bridge.is_jvm_ready():
-            self._logger.error("Tentative de setup FOL Kernel alors que la JVM n'est PAS démarrée.")
+        if not self.tweety_bridge.is_jvm_ready():
+            self.logger.error("Tentative de setup FOL Kernel alors que la JVM n'est PAS démarrée.")
+            # Idéalement, lever une exception ou gérer l'état de l'agent
             return
         
-        # Ajouter le plugin TweetyBridge au kernel
-        if self._plugin_name in self.kernel.plugins:
-            self._logger.warning(f"Plugin '{self._plugin_name}' déjà présent. Remplacement.")
-        
-        self.kernel.add_plugin(self._tweety_bridge, plugin_name=self._plugin_name)
-        self._logger.debug(f"Instance du plugin '{self._plugin_name}' ajoutée/mise à jour.")
-        
-        # Configuration des settings LLM
+        # Enregistrement des fonctions sémantiques
         default_settings = None
-        if llm_service:
+        if self._llm_service_id: # _llm_service_id est défini dans super().setup_agent_components
             try:
-                default_settings = self.kernel.get_prompt_execution_settings_from_service_id(
-                    llm_service.service_id
+                # Note: get_prompt_execution_settings_from_service_id est une méthode de Kernel
+                # et non de self.sk_kernel.plugins[self._llm_service_id]
+                default_settings = self.sk_kernel.get_prompt_execution_settings_from_service_id(
+                    self._llm_service_id
                 )
-                self._logger.debug(f"Settings LLM récupérés pour {self._plugin_name}.")
+                self.logger.debug(f"Settings LLM récupérés pour {self.name}.")
             except Exception as e:
-                self._logger.warning(f"Impossible de récupérer settings LLM pour {self._plugin_name}: {e}")
-        
-        # Ajout des fonctions sémantiques au kernel
+                self.logger.warning(f"Impossible de récupérer settings LLM pour {self.name}: {e}")
+
         semantic_functions = [
-            ("semantic_TextToFOLBeliefSet", PROMPT_TEXT_TO_FOL, 
+            ("TextToFOLBeliefSet", PROMPT_TEXT_TO_FOL,
              "Traduit texte en Belief Set FOL (syntaxe Tweety pour logique du premier ordre)."),
-            ("semantic_GenerateFOLQueries", PROMPT_GEN_FOL_QUERIES, 
+            ("GenerateFOLQueries", PROMPT_GEN_FOL_QUERIES,
              "Génère requêtes FOL pertinentes (syntaxe Tweety pour logique du premier ordre)."),
-            ("semantic_InterpretFOLResult", PROMPT_INTERPRET_FOL, 
+            ("InterpretFOLResult", PROMPT_INTERPRET_FOL,
              "Interprète résultat requête FOL Tweety formaté.")
         ]
-        
+
         for func_name, prompt, description in semantic_functions:
             try:
-                # Vérifier si le prompt est valide
                 if not prompt or not isinstance(prompt, str):
-                    self._logger.error(f"ERREUR: Prompt invalide pour {self._plugin_name}.{func_name}")
+                    self.logger.error(f"ERREUR: Prompt invalide pour {self.name}.{func_name}")
                     continue
-                    
-                # Ajouter la fonction avec des logs détaillés
-                self._logger.info(f"Ajout fonction {self._plugin_name}.{func_name} avec prompt de {len(prompt)} caractères")
-                self.kernel.add_function(
+                
+                self.logger.info(f"Ajout fonction {self.name}.{func_name} avec prompt de {len(prompt)} caractères")
+                self.sk_kernel.add_function(
                     prompt=prompt,
-                    plugin_name=self._plugin_name,
+                    plugin_name=self.name, # Utilisation de self.name comme plugin_name
                     function_name=func_name,
                     description=description,
                     prompt_execution_settings=default_settings
                 )
-                self._logger.debug(f"Fonction sémantique {self._plugin_name}.{func_name} ajoutée/mise à jour.")
+                self.logger.debug(f"Fonction sémantique {self.name}.{func_name} ajoutée/mise à jour.")
                 
-                # Vérifier que la fonction a été correctement ajoutée
-                if self._plugin_name in self.kernel.plugins and func_name in self.kernel.plugins[self._plugin_name]:
-                    self._logger.info(f"✅ Fonction {self._plugin_name}.{func_name} correctement enregistrée.")
+                if self.name in self.sk_kernel.plugins and func_name in self.sk_kernel.plugins[self.name]:
+                    self.logger.info(f"✅ Fonction {self.name}.{func_name} correctement enregistrée.")
                 else:
-                    self._logger.error(f"❌ ERREUR CRITIQUE: Fonction {self._plugin_name}.{func_name} non trouvée après ajout!")
+                    self.logger.error(f"❌ ERREUR CRITIQUE: Fonction {self.name}.{func_name} non trouvée après ajout!")
             except ValueError as ve:
-                self._logger.warning(f"Problème ajout/MàJ {self._plugin_name}.{func_name}: {ve}")
-                self._logger.error(f"Détails de l'erreur: {str(ve)}")
+                self.logger.warning(f"Problème ajout/MàJ {self.name}.{func_name}: {ve}")
             except Exception as e:
-                self._logger.error(f"Exception inattendue lors de l'ajout de {self._plugin_name}.{func_name}: {e}", exc_info=True)
+                self.logger.error(f"Exception inattendue lors de l'ajout de {self.name}.{func_name}: {e}", exc_info=True)
         
-        # Vérification de la fonction native
-        native_facade = "execute_fol_query"
-        if self._plugin_name in self.kernel.plugins:
-            if native_facade not in self.kernel.plugins[self._plugin_name]:
-                self._logger.error(f"ERREUR CRITIQUE: Fonction native {self._plugin_name}.{native_facade} non enregistrée!")
-            else:
-                self._logger.debug(f"Fonction native {self._plugin_name}.{native_facade} trouvée.")
-        else:
-            self._logger.error(f"ERREUR CRITIQUE: Plugin {self._plugin_name} non trouvé après ajout!")
-        
-        self._logger.info(f"Kernel {self._plugin_name} configuré.")
-    
-    def text_to_belief_set(self, text: str) -> Tuple[Optional[BeliefSet], str]:
+        self.logger.info(f"Composants de {self.name} configurés.")
+
+    def text_to_belief_set(self, text: str, context: Optional[Dict[str, Any]] = None) -> Tuple[Optional[BeliefSet], str]:
         """
         Convertit un texte en ensemble de croyances du premier ordre.
         
@@ -211,12 +218,18 @@ class FirstOrderLogicAgent(AbstractLogicAgent):
             Un tuple contenant l'ensemble de croyances créé (ou None en cas d'erreur)
             et un message de statut
         """
-        self._logger.info(f"Conversion de texte en ensemble de croyances du premier ordre...")
+        self.logger.info(f"Conversion de texte en ensemble de croyances du premier ordre pour l'agent {self.name}...")
         
         try:
             # Appeler la fonction sémantique pour convertir le texte
-            result = self.kernel.plugins[self._plugin_name]["semantic_TextToFOLBeliefSet"].invoke(text)
-            belief_set_content = result.result
+            # Utilisation de self.name comme plugin_name
+            result = self.sk_kernel.plugins[self.name]["TextToFOLBeliefSet"].invoke(self.sk_kernel, input=text)
+            # La méthode invoke a changé dans les versions récentes de SK, elle prend le kernel en premier argument.
+            # Si invoke prend seulement `input`, alors: result = self.sk_kernel.plugins[self.name]["TextToFOLBeliefSet"](input=text)
+            # Je vais supposer que `invoke` prend `kernel` et `input` pour l'instant.
+            # Si `result.result` n'existe pas, il faut utiliser `str(result)` ou `result.value`.
+            # Pour être sûr, je vais utiliser str(result)
+            belief_set_content = str(result)
             
             # Vérifier si le contenu est valide
             if not belief_set_content or len(belief_set_content.strip()) == 0:
@@ -224,23 +237,23 @@ class FirstOrderLogicAgent(AbstractLogicAgent):
                 return None, "La conversion a produit un ensemble de croyances vide"
             
             # Créer l'objet BeliefSet
-            belief_set = FirstOrderBeliefSet(belief_set_content)
+            belief_set_obj = FirstOrderBeliefSet(belief_set_content) # Renommé pour éviter conflit avec paramètre
             
             # Valider l'ensemble de croyances avec TweetyBridge
-            is_valid, validation_msg = self._tweety_bridge.validate_fol_belief_set(belief_set_content)
+            is_valid, validation_msg = self.tweety_bridge.validate_fol_belief_set(belief_set_content)
             if not is_valid:
-                self._logger.error(f"Ensemble de croyances invalide: {validation_msg}")
+                self.logger.error(f"Ensemble de croyances invalide: {validation_msg}")
                 return None, f"Ensemble de croyances invalide: {validation_msg}"
             
-            self._logger.info("Conversion réussie")
-            return belief_set, "Conversion réussie"
+            self.logger.info("Conversion réussie")
+            return belief_set_obj, "Conversion réussie"
         
         except Exception as e:
             error_msg = f"Erreur lors de la conversion du texte en ensemble de croyances: {str(e)}"
-            self._logger.error(error_msg, exc_info=True)
+            self.logger.error(error_msg, exc_info=True)
             return None, error_msg
     
-    def generate_queries(self, text: str, belief_set: BeliefSet) -> List[str]:
+    def generate_queries(self, text: str, belief_set: BeliefSet, context: Optional[Dict[str, Any]] = None) -> List[str]:
         """
         Génère des requêtes logiques du premier ordre pertinentes.
         
@@ -251,33 +264,35 @@ class FirstOrderLogicAgent(AbstractLogicAgent):
         Returns:
             Une liste de requêtes logiques
         """
-        self._logger.info("Génération de requêtes du premier ordre...")
+        self.logger.info(f"Génération de requêtes du premier ordre pour l'agent {self.name}...")
         
         try:
             # Appeler la fonction sémantique pour générer les requêtes
-            result = self.kernel.plugins[self._plugin_name]["semantic_GenerateFOLQueries"].invoke(
+            # Utilisation de self.name comme plugin_name
+            result = self.sk_kernel.plugins[self.name]["GenerateFOLQueries"].invoke(
+                self.sk_kernel, # Premier argument kernel
                 input=text,
                 belief_set=belief_set.content
             )
-            queries_text = result.result
+            queries_text = str(result) # Utilisation de str(result)
             
             # Extraire les requêtes individuelles
             queries = [q.strip() for q in queries_text.split('\n') if q.strip()]
             
             # Filtrer les requêtes invalides
             valid_queries = []
-            for query in queries:
-                is_valid, _ = self._tweety_bridge.validate_fol_formula(query)
+            for query_item in queries: # Renommé pour éviter conflit
+                is_valid, _ = self.tweety_bridge.validate_fol_formula(query_item)
                 if is_valid:
-                    valid_queries.append(query)
+                    valid_queries.append(query_item)
                 else:
-                    self._logger.warning(f"Requête invalide ignorée: {query}")
+                    self.logger.warning(f"Requête invalide ignorée: {query_item}")
             
-            self._logger.info(f"Génération de {len(valid_queries)} requêtes valides")
+            self.logger.info(f"Génération de {len(valid_queries)} requêtes valides")
             return valid_queries
         
         except Exception as e:
-            self._logger.error(f"Erreur lors de la génération des requêtes: {str(e)}", exc_info=True)
+            self.logger.error(f"Erreur lors de la génération des requêtes: {str(e)}", exc_info=True)
             return []
     
     def execute_query(self, belief_set: BeliefSet, query: str) -> Tuple[Optional[bool], str]:
@@ -292,34 +307,40 @@ class FirstOrderLogicAgent(AbstractLogicAgent):
             Un tuple contenant le résultat de la requête (True, False ou None si indéterminé)
             et un message formaté
         """
-        self._logger.info(f"Exécution de la requête: {query}")
+        self.logger.info(f"Exécution de la requête: {query} pour l'agent {self.name}")
         
         try:
-            # Appeler la fonction native pour exécuter la requête
-            result_str = self.kernel.plugins[self._plugin_name]["execute_fol_query"].invoke(
+            # Utilisation directe de tweety_bridge
+            # La méthode execute_fol_query doit exister dans TweetyBridge
+            # et retourner un format similaire à ce qui était attendu.
+            # TweetyBridge.execute_fol_query(belief_set_content: str, query_string: str) -> str
+            result_str = self.tweety_bridge.execute_fol_query(
                 belief_set_content=belief_set.content,
                 query_string=query
-            ).result
+            )
             
             # Analyser le résultat
-            if "FUNC_ERROR" in result_str:
-                self._logger.error(f"Erreur lors de l'exécution de la requête: {result_str}")
-                return None, result_str
+            if result_str is None or "ERROR" in result_str.upper(): # Plus générique pour les erreurs
+                self.logger.error(f"Erreur lors de l'exécution de la requête: {result_str}")
+                return None, result_str if result_str else "Erreur inconnue de TweetyBridge"
             
-            if "ACCEPTED" in result_str:
+            if "ACCEPTED" in result_str: # TweetyBridge devrait retourner "ACCEPTED" ou "REJECTED"
                 return True, result_str
             elif "REJECTED" in result_str:
                 return False, result_str
             else:
+                # Cas où le résultat n'est ni ACCEPTED ni REJECTED clairement
+                self.logger.warning(f"Résultat de requête inattendu: {result_str}")
                 return None, result_str
         
         except Exception as e:
             error_msg = f"Erreur lors de l'exécution de la requête: {str(e)}"
-            self._logger.error(error_msg, exc_info=True)
-            return None, f"FUNC_ERROR: {error_msg}"
-    
-    def interpret_results(self, text: str, belief_set: BeliefSet, 
-                         queries: List[str], results: List[str]) -> str:
+            self.logger.error(error_msg, exc_info=True)
+            return None, f"FUNC_ERROR: {error_msg}" # Conserver FUNC_ERROR pour compatibilité si nécessaire
+
+    def interpret_results(self, text: str, belief_set: BeliefSet,
+                         queries: List[str], results: List[Tuple[Optional[bool], str]],
+                         context: Optional[Dict[str, Any]] = None) -> str: # Signature mise à jour
         """
         Interprète les résultats des requêtes logiques du premier ordre.
         
@@ -332,30 +353,50 @@ class FirstOrderLogicAgent(AbstractLogicAgent):
         Returns:
             Une interprétation textuelle des résultats
         """
-        self._logger.info("Interprétation des résultats...")
+        self.logger.info(f"Interprétation des résultats pour l'agent {self.name}...")
         
         try:
             # Préparer les entrées pour la fonction sémantique
             queries_str = "\n".join(queries)
-            results_str = "\n".join(results)
+            # results est maintenant List[Tuple[Optional[bool], str]], nous avons besoin de la partie str
+            results_text_list = [res_tuple[1] if res_tuple else "Error: No result" for res_tuple in results]
+            results_str = "\n".join(results_text_list)
             
             # Appeler la fonction sémantique pour interpréter les résultats
-            result = self.kernel.plugins[self._plugin_name]["semantic_InterpretFOLResult"].invoke(
+            # Utilisation de self.name comme plugin_name
+            result = self.sk_kernel.plugins[self.name]["InterpretFOLResult"].invoke(
+                self.sk_kernel, # Premier argument kernel
                 input=text,
                 belief_set=belief_set.content,
                 queries=queries_str,
                 tweety_result=results_str
             )
             
-            interpretation = result.result
-            self._logger.info("Interprétation terminée")
+            interpretation = str(result) # Utilisation de str(result)
+            self.logger.info("Interprétation terminée")
             return interpretation
         
         except Exception as e:
             error_msg = f"Erreur lors de l'interprétation des résultats: {str(e)}"
-            self._logger.error(error_msg, exc_info=True)
+            self.logger.error(error_msg, exc_info=True)
             return f"Erreur d'interprétation: {error_msg}"
-    
+
+    def validate_formula(self, formula: str) -> bool:
+        """
+        Valide la syntaxe d'une formule FOL en utilisant TweetyBridge.
+        
+        Args:
+            formula: La formule FOL à valider.
+            
+        Returns:
+            True si la formule est valide, False sinon.
+        """
+        self.logger.debug(f"Validation de la formule FOL: {formula}")
+        is_valid, message = self.tweety_bridge.validate_fol_formula(formula)
+        if not is_valid:
+            self.logger.warning(f"Formule FOL invalide: {formula}. Message: {message}")
+        return is_valid
+
     def _create_belief_set_from_data(self, belief_set_data: Dict[str, Any]) -> BeliefSet:
         """
         Crée un objet FirstOrderBeliefSet à partir des données de l'état.

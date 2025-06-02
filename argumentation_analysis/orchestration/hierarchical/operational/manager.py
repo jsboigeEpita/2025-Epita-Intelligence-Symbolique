@@ -10,6 +10,7 @@ import asyncio
 from typing import Dict, List, Any, Optional, Union, Callable
 from datetime import datetime
 import uuid
+import semantic_kernel as sk # Ajout de l'import
 
 from argumentation_analysis.orchestration.hierarchical.operational.state import OperationalState
 from argumentation_analysis.orchestration.hierarchical.operational.agent_registry import OperationalAgentRegistry
@@ -32,21 +33,31 @@ class OperationalManager:
     le niveau tactique et les agents opérationnels.
     """
     
-    def __init__(self, operational_state: Optional[OperationalState] = None,
-                tactical_operational_interface: Optional['TacticalOperationalInterface'] = None,
-                middleware: Optional[MessageMiddleware] = None):
+    def __init__(self,
+                 operational_state: Optional[OperationalState] = None,
+                 tactical_operational_interface: Optional['TacticalOperationalInterface'] = None,
+                 middleware: Optional[MessageMiddleware] = None,
+                 kernel: Optional[sk.Kernel] = None,  # Ajout du kernel
+                 llm_service_id: Optional[str] = None): # Ajout de llm_service_id
         """
         Initialise un nouveau gestionnaire opérationnel.
         
         Args:
             operational_state: État opérationnel à utiliser. Si None, un nouvel état est créé.
             tactical_operational_interface: Interface tactique-opérationnelle à utiliser.
-                Si None, une nouvelle interface est créée.
-            middleware: Le middleware de communication à utiliser. Si None, un nouveau middleware est créé.
+            middleware: Le middleware de communication à utiliser.
+            kernel: Le kernel Semantic Kernel à utiliser pour les agents.
+            llm_service_id: L'ID du service LLM à utiliser.
         """
         self.operational_state = operational_state if operational_state else OperationalState()
         self.tactical_operational_interface = tactical_operational_interface
-        self.agent_registry = OperationalAgentRegistry(self.operational_state)
+        self.kernel = kernel # Stocker le kernel
+        self.llm_service_id = llm_service_id # Stocker llm_service_id
+        self.agent_registry = OperationalAgentRegistry(
+            operational_state=self.operational_state,
+            kernel=self.kernel,
+            llm_service_id=self.llm_service_id
+        )
         self.logger = logging.getLogger("OperationalManager")
         self.task_queue = asyncio.Queue()
         self.result_queue = asyncio.Queue()

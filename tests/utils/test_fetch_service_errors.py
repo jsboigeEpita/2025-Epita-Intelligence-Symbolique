@@ -105,7 +105,7 @@ def test_ssl_certificate_error(fetch_service):
     # Si nous voulions un message plus spécifique pour SSLError directement depuis FetchService,
     # il faudrait ajouter un bloc `except requests.exceptions.SSLError as e:` avant `RequestException`.
     # Pour l'instant, nous testons le comportement existant.
-    expected_error_message_fragment = "Erreur SSL lors de la récupération de"
+    expected_error_message_fragment = "Erreur de connexion lors de la récupération de"
     with patch('requests.get') as mock_get:
         ssl_error_instance = requests.exceptions.SSLError("SSL: CERTIFICATE_VERIFY_FAILED")
         mock_get.side_effect = ssl_error_instance
