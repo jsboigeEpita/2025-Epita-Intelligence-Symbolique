@@ -12,7 +12,7 @@ except ImportError as e:
     # Détermine la racine du projet en supposant que ce script est dans 'scripts/'
     # et que 'argumentation_analysis/' est au même niveau que 'scripts/' (c'est-à-dire dans le parent de 'scripts/')
     current_script_dir = os.path.dirname(os.path.abspath(__file__))
-    project_root_assumed = os.path.abspath(os.path.join(current_script_dir, '..'))
+    project_root_assumed = os.path.abspath(os.path.join(current_script_dir, '..', '..')) # MODIFIÉ: Remonter de deux niveaux
     
     if project_root_assumed not in sys.path:
         sys.path.insert(0, project_root_assumed)

@@ -71,7 +71,7 @@ def main():
     
     # Importer le module de test de performance
     try:
-        from argumentiation_analysis.scripts.test_performance_extraits import main as run_tests
+        from argumentation_analysis.scripts.test_performance_extraits import main as run_tests # MODIFIÉ: Correction de la faute de frappe
         import asyncio
         
         # Exécuter les tests de performance
