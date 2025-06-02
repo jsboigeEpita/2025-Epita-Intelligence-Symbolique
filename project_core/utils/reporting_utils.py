@@ -239,3 +239,131 @@ def generate_performance_comparison_markdown_report(
     if not save_text_report(final_report_content, output_file):
         logger.error(f"Échec de la sauvegarde du rapport de comparaison de performance vers {output_file}")
     # save_text_report logue déjà le succès ou l'erreur spécifique.
+def generate_markdown_report_for_corpus(corpus_name: str, corpus_effectiveness_data: Dict[str, Any]) -> List[str]:
+    """
+    Génère une section de rapport au format Markdown pour un corpus donné.
+
+    Cette section inclut les résultats d'analyse détaillés pour ce corpus,
+    y compris l'efficacité des agents et les recommandations spécifiques.
+
+    Args:
+        corpus_name (str): Le nom du corpus.
+        corpus_effectiveness_data (Dict[str, Any]): Un dictionnaire contenant les données
+            d'efficacité des agents pour ce corpus. Doit contenir les clés
+            'best_agent' (str, optionnel), 'base_agents' (Dict, optionnel),
+            'advanced_agents' (Dict, optionnel), et 'recommendations' (List[str], optionnel).
+            Les dictionnaires 'base_agents' et 'advanced_agents' doivent mapper les noms
+            d'agents à des dictionnaires contenant 'fallacy_count' (int) et
+            'effectiveness' (float).
+
+    Returns:
+        List[str]: Une liste de chaînes de caractères, représentant les lignes
+                   de la section du rapport Markdown pour le corpus.
+    """
+    report_section_lines = []
+    report_section_lines.append(f"### {corpus_name}")
+    report_section_lines.append("")
+
+    # Meilleur agent pour ce corpus
+    best_agent = corpus_effectiveness_data.get("best_agent", "")
+    if best_agent:
+        report_section_lines.append(f"**Agent le plus efficace**: {best_agent}")
+        report_section_lines.append("")
+
+    # Résultats des agents de base
+    base_agents_data = corpus_effectiveness_data.get("base_agents", {})
+    if base_agents_data:
+        report_section_lines.append("#### Agents de base")
+        report_section_lines.append("")
+        report_section_lines.append("| Agent | Sophismes détectés | Score d'efficacité |")
+        report_section_lines.append("|-------|-------------------|-------------------|")
+        
+        for agent, metrics in base_agents_data.items():
+            fallacy_count = metrics.get("fallacy_count", 0)
+            effectiveness_score = metrics.get("effectiveness", 0.0)
+            report_section_lines.append(f"| {agent} | {fallacy_count} | {effectiveness_score:.2f} |")
+        
+        report_section_lines.append("")
+
+    # Résultats des agents avancés
+    advanced_agents_data = corpus_effectiveness_data.get("advanced_agents", {})
+    if advanced_agents_data:
+        report_section_lines.append("#### Agents avancés")
+        report_section_lines.append("")
+        report_section_lines.append("| Agent | Sophismes détectés | Score d'efficacité |")
+        report_section_lines.append("|-------|-------------------|-------------------|")
+        
+        for agent, metrics in advanced_agents_data.items():
+            fallacy_count = metrics.get("fallacy_count", 0)
+            effectiveness_score = metrics.get("effectiveness", 0.0)
+            report_section_lines.append(f"| {agent} | {fallacy_count} | {effectiveness_score:.2f} |")
+        
+        report_section_lines.append("")
+
+    # Recommandations spécifiques au corpus
+    recommendations = corpus_effectiveness_data.get("recommendations", [])
+    if recommendations:
+        report_section_lines.append("#### Recommandations spécifiques")
+        report_section_lines.append("")
+        
+        for recommendation in recommendations:
+            report_section_lines.append(f"- {recommendation}")
+        
+        report_section_lines.append("")
+    
+    return report_section_lines
+def generate_overall_summary_markdown(all_average_scores: Dict[str, Dict[str, float]]) -> List[str]:
+    """
+    Crée une section de résumé global au format Markdown.
+
+    Cette fonction agrège et présente les scores moyens obtenus sur tous les corpus
+    (par exemple, moyenne des scores de confiance par corpus, moyenne de la richesse
+    contextuelle par corpus, etc.).
+
+    Args:
+        all_average_scores (Dict[str, Dict[str, float]]): Un dictionnaire où les clés externes
+            sont les noms des corpus. Chaque corpus a un dictionnaire interne où les clés
+            sont les noms des métriques (par exemple, 'confidence_score', 'contextual_richness')
+            et les valeurs sont les scores moyens flottants.
+            Exemple:
+            {
+                "Corpus A": {"confidence_score": 0.85, "contextual_richness": 0.75},
+                "Corpus B": {"confidence_score": 0.90, "contextual_richness": 0.80}
+            }
+
+    Returns:
+        List[str]: Une liste de chaînes de caractères, représentant les lignes
+                   de la section du résumé global au format Markdown.
+    """
+    report_lines = []
+    report_lines.append("## Résumé Global des Scores Moyens par Corpus")
+    report_lines.append("")
+
+    if not all_average_scores:
+        report_lines.append("Aucune donnée de score moyen disponible pour générer le résumé global.")
+        report_lines.append("")
+        return report_lines
+
+    # Collecter tous les noms de métriques uniques pour l'en-tête du tableau
+    metric_names = set()
+    for corpus_scores in all_average_scores.values():
+        metric_names.update(corpus_scores.keys())
+    
+    sorted_metric_names = sorted(list(metric_names))
+
+    # Créer l'en-tête du tableau
+    header = "| Corpus | " + " | ".join([name.replace('_', ' ').title() for name in sorted_metric_names]) + " |"
+    separator = "|--------|-" + "-|-".join(["-" * len(name.replace('_', ' ').title()) for name in sorted_metric_names]) + "-|"
+    report_lines.append(header)
+    report_lines.append(separator)
+
+    # Remplir le tableau avec les données
+    for corpus_name, scores in sorted(all_average_scores.items()):
+        row_values = [corpus_name]
+        for metric_name in sorted_metric_names:
+            score = scores.get(metric_name, 0.0) # Mettre 0.0 si la métrique manque pour un corpus
+            row_values.append(f"{score:.2f}")
+        report_lines.append("| " + " | ".join(row_values) + " |")
+
+    report_lines.append("")
+    return report_lines

@@ -32,6 +32,8 @@ try:
     from argumentation_analysis.ui import config as ui_config
     # Importer ENCRYPTION_KEY directement depuis la configuration UI
     from argumentation_analysis.ui.config import ENCRYPTION_KEY as CONFIG_UI_ENCRYPTION_KEY
+    # Importer la fonction sanitize_filename depuis project_core.utils
+    from project_core.utils.file_utils import sanitize_filename, load_document_content
 except ImportError as e:
     print(f"Erreur d'importation: {e}. Assurez-vous que le script est exécuté depuis la racine du projet "
           "et que l'environnement est correctement configuré.")
@@ -228,14 +230,37 @@ def main():
         else:
             logger.info(f"  Texte complet manquant pour la source {source_id}. Tentative de récupération...")
             try:
-                # get_full_text_for_source utilise déjà ui_config en interne, pas besoin de passer app_config
-                full_text = get_full_text_for_source(source_info)
-                if full_text:
-                    source_info['full_text'] = full_text
-                    logger.info(f"  Texte complet récupéré et mis à jour pour la source {source_id} (longueur: {len(full_text)}).")
+                fetch_method = source_info.get("fetch_method", source_info.get("source_type"))
+                full_text_content = None
+
+                if fetch_method == "file":
+                    file_path_str = source_info.get("path")
+                    if file_path_str:
+                        document_path = Path(file_path_str)
+                        # Si le chemin n'est pas absolu, on le considère relatif à PROJECT_ROOT
+                        # car c'est le contexte d'exécution attendu pour les chemins de fichiers dans la config.
+                        if not document_path.is_absolute():
+                            document_path = PROJECT_ROOT / file_path_str
+                        
+                        # Normaliser le chemin (résout les '..' etc.) et s'assure qu'il est absolu
+                        document_path = document_path.resolve()
+
+                        logger.info(f"  Utilisation de load_document_content pour le fichier : {document_path}")
+                        full_text_content = load_document_content(document_path)
+                    else:
+                        logger.error(f"  Champ 'path' manquant pour la source locale de type 'file': {source_id}.")
+                        # full_text_content reste None
+                else:
+                    # Pour les autres types (web, jina, tika), utiliser l'ancienne méthode
+                    logger.info(f"  Utilisation de get_full_text_for_source pour la source {source_id} (type/méthode: {fetch_method}).")
+                    full_text_content = get_full_text_for_source(source_info)
+
+                if full_text_content:
+                    source_info['full_text'] = full_text_content
+                    logger.info(f"  Texte complet récupéré et mis à jour pour la source {source_id} (longueur: {len(full_text_content)}).")
                     updated_sources_count += 1
                 else:
-                    logger.warning(f"  Impossible de récupérer le texte complet pour la source {source_id}. full_text reste vide.")
+                    logger.warning(f"  Impossible de récupérer le texte complet pour la source {source_id} (méthode: {fetch_method}). full_text reste vide.")
                     sources_with_errors_count += 1
             except Exception as e:
                 logger.error(f"  Erreur lors de la récupération du texte pour la source {source_id}: {e}")
