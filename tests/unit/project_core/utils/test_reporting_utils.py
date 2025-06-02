@@ -1,3 +1,4 @@
+from project_core.utils.reporting_utils import generate_performance_comparison_markdown_report
 from unittest.mock import patch
 # -*- coding: utf-8 -*-
 """
