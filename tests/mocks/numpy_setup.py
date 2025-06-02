@@ -395,7 +395,15 @@ def setup_numpy_for_tests_fixture(request):
                 logger.error(f"Failed to re-import pandas for {request.node.name} after loading real NumPy: {e_pandas_reimport}")
                 # Optionnel: skipper le test si pandas ne peut être réimporté
                 # pytest.skip(f"Pandas re-import failed: {e_pandas_reimport}")
-            
+
+            logger.info(f"Forcing re-import of scipy for {request.node.name} after loading real NumPy.")
+            deep_delete_from_sys_modules("scipy", logger)
+            try:
+                import scipy # Réimporter scipy
+                logger.info(f"Scipy re-imported successfully for {request.node.name} using real NumPy. Scipy ID: {id(scipy)}")
+            except ImportError as e_scipy_reimport:
+                logger.error(f"Failed to re-import scipy for {request.node.name} after loading real NumPy: {e_scipy_reimport}")
+
             yield imported_numpy_for_test
 
         except ImportError:
