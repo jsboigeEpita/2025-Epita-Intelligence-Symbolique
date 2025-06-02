@@ -365,6 +365,21 @@ if (-not (Test-Path $envFilePath)) {
     exit 1
 }
 
+# Forcer la suppression de l'environnement Conda en mode non interactif pour assurer un état propre
+if ($NonInteractive) {
+    Write-Host "Mode non interactif : Tentative de suppression préalable de l'environnement Conda '$condaEnvName' pour assurer un état propre..."
+    try {
+        conda env remove --name $condaEnvName -y
+        if ($LASTEXITCODE -ne 0) {
+            Write-Warning "La suppression préalable de l'environnement Conda '$condaEnvName' a rencontré un problème (Code: $LASTEXITCODE). Cela peut être normal s'il n'existait pas."
+        } else {
+            Write-Host "Environnement Conda '$condaEnvName' supprimé (ou n'existait pas)."
+        }
+    } catch {
+        Write-Warning "Une exception s'est produite lors de la tentative de suppression préalable de l'environnement Conda '$condaEnvName': $($_.Exception.Message)"
+    }
+}
+
 # Vérifier si l'environnement Conda existe déjà
 $condaEnvList = conda env list | Select-String -Pattern "\s$condaEnvName\s" -Quiet
 if ($condaEnvList) {
@@ -489,12 +504,18 @@ Write-Host "Fichier .env mis à jour concernant USE_REAL_JPYPE."
 Write-Host ""
 Write-Host "---------------------------------------------------------------------"
 Write-Host "Installation et configuration de l'environnement Conda '$condaEnvName' terminées!"
+Write-Host "---------------------------------------------------------------------"
 Write-Host ""
-Write-Host "IMPORTANT: Pour utiliser l'environnement, vous devez l'activer dans votre terminal."
-Write-Host "Exécutez la commande suivante :"
+Write-Host "Appel du script d'activation (activate_project_env.ps1) pour charger les variables d'environnement"
+Write-Host "et afficher les instructions d'utilisation..."
 Write-Host ""
+
+. (Join-Path $PSScriptRoot "activate_project_env.ps1")
+
+Write-Host ""
+Write-Host "Fin du script setup_project_env.ps1."
+Write-Host "Si activate_project_env.ps1 n'a pas exécuté de commande spécifique,"
+Write-Host "vous devrez peut-être activer l'environnement manuellement dans votre session actuelle :"
 Write-Host "    conda activate $condaEnvName"
-Write-Host ""
-Write-Host "Une fois activé, votre prompt devrait indiquer '($condaEnvName)'."
-Write-Host "Le script '.\activate_project_env.ps1' a été simplifié et vous rappellera cette commande."
+Write-Host "Ou utiliser activate_project_env.ps1 avec le paramètre -CommandToRun."
 Write-Host "---------------------------------------------------------------------"
