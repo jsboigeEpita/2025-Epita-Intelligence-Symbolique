@@ -10,10 +10,10 @@ def test_conftest_import():
     """Test import conftest.py"""
     try:
         import tests.conftest
-        print("✓ conftest.py importé avec succès")
+        print("[OK] conftest.py importé avec succès")
         # Test passes if import is successful
     except Exception as e:
-        print(f"✗ Erreur conftest: {e}")
+        print(f"[FAIL] Erreur conftest: {e}")
         raise
 
 def test_analysis_runner():
@@ -27,14 +27,14 @@ def test_analysis_runner():
         
         for method in methods:
             if hasattr(runner, method):
-                print(f"✓ {method} disponible")
+                print(f"[OK] {method} disponible")
             else:
-                print(f"✗ {method} manquant")
+                print(f"[FAIL] {method} manquant")
                 all_present = False
         
         assert all_present is True
     except Exception as e:
-        print(f"✗ Erreur AnalysisRunner: {e}")
+        print(f"[FAIL] Erreur AnalysisRunner: {e}")
         raise
 
 def test_numpy_mock():
@@ -44,10 +44,10 @@ def test_numpy_mock():
         import unittest.mock
         with unittest.mock.patch.dict('sys.modules', {'numpy': unittest.mock.MagicMock()}):
             import numpy as np
-            print("✓ numpy mock fonctionne")
+            print("[OK] numpy mock fonctionne")
             # Test passes if mock import is successful
     except Exception as e:
-        print(f"✗ Erreur numpy mock: {e}")
+        print(f"[FAIL] Erreur numpy mock: {e}")
         raise
 
 def main():
@@ -70,16 +70,16 @@ def main():
     total = len(results)
     
     for name, result in results:
-        status = "✓ PASS" if result else "✗ FAIL"
+        status = "[OK] PASS" if result else "[FAIL] FAIL"
         print(f"{status}: {name}")
     
     print(f"\nRésultat: {passed}/{total} tests passés")
     
     if passed == total:
-        print("🎉 Toutes les corrections sont validées!")
+        print("[SUCCESS] Toutes les corrections sont validées!")
         return 0
     else:
-        print("⚠️  Certaines corrections nécessitent attention")
+        print("[WARNING] Certaines corrections nécessitent attention")
         return 1
 
 if __name__ == "__main__":
