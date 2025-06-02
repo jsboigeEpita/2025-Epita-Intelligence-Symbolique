@@ -54,19 +54,39 @@ def mock_contextual_analyzer():
     # Renommé en analyze_context et retourne un dictionnaire plus complet
     analyzer.analyze_context = MagicMock(return_value={"context_type": "commercial", "audience": "general", "intent": "persuade", "confidence": 0.9}) # Ajout de 'confidence'
     return analyzer
-from argumentation_analysis.agents.core.informal.informal_agent import InformalAgent
+from argumentation_analysis.agents.core.informal.informal_agent import InformalAnalysisAgent
+from argumentation_analysis.agents.core.informal.informal_definitions import InformalAnalysisPlugin # Ajout pour spec
 
 @pytest.fixture
-def informal_agent_instance(mock_fallacy_detector, mock_rhetorical_analyzer, mock_contextual_analyzer):
-    agent = InformalAgent(
-        agent_id="test_agent_fixture",
-        tools={
-            "fallacy_detector": mock_fallacy_detector,
-            "rhetorical_analyzer": mock_rhetorical_analyzer,
-            "contextual_analyzer": mock_contextual_analyzer
-        }
-    )
-    return agent
+def informal_agent_instance(mock_semantic_kernel_instance): # Utilise le kernel mocké
+    """
+    Crée une instance de InformalAnalysisAgent correctement initialisée pour les tests.
+    Note: Les 'outils' (fallacy_detector, etc.) sont maintenant internes au plugin de l'agent.
+    Les tests devront mocker les appels au kernel ou au plugin si nécessaire.
+    """
+    kernel = mock_semantic_kernel_instance
+    agent_name = "test_informal_agent_fixture"
+    
+    # Simuler l'instanciation du plugin si nécessaire pour setup_agent_components
+    # ou s'assurer que setup_agent_components peut gérer un kernel avec des mocks.
+    # Pour l'instant, on suppose que setup_agent_components va ajouter son propre plugin.
+    # Si le plugin doit être mocké de l'extérieur, cette fixture devra être plus complexe.
+    
+    # Patch pour InformalAnalysisPlugin pour contrôler son instanciation pendant le setup de CETTE fixture
+    # afin que setup_agent_components utilise une instance mockée si besoin.
+    with patch('argumentation_analysis.agents.core.informal.informal_agent.InformalAnalysisPlugin') as mock_plugin_class:
+        mock_plugin_instance = MagicMock(spec=InformalAnalysisPlugin)
+        mock_plugin_class.return_value = mock_plugin_instance
+
+        agent = InformalAnalysisAgent(kernel=kernel, agent_name=agent_name)
+        agent.setup_agent_components(llm_service_id="test_llm_service_fixture")
+        
+        # Attacher le mock du plugin à l'agent si les tests en ont besoin pour des assertions
+        # Cela dépend de la manière dont les tests veulent interagir avec le plugin.
+        # Si les tests mockent `kernel.invoke`, cela pourrait ne pas être nécessaire.
+        agent.mocked_informal_plugin = mock_plugin_instance
+        
+        return agent
 import os
 from unittest.mock import patch # Ajout de patch
 
