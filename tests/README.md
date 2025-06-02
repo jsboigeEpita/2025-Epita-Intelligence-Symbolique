@@ -40,13 +40,17 @@ Pour plus de détails sur cette approche, consultez le fichier [README_TESTS_UNI
 
 ## Structure du Répertoire
 
-- `test_*.py` : Tests unitaires et d'intégration pour les différents modules. (Note: `tests/test_dependencies.py` est en cours d'évaluation pour refactorisation/remplacement par des tests pytest dédiés et des scripts de `scripts/setup/`.)
+- `test_*.py` : Tests unitaires et d'intégration pour les différents modules.
 - `standalone_mock_tests.py` : Script de test autonome avec des mocks internes pour une logique de communication (potentiellement redondant avec les tests de `core.communication`, à évaluer pour refactorisation/suppression).
 - `mocks/` : Mocks pour les dépendances problématiques (numpy, pandas, jpype)
 - `conftest.py` : Configuration pour pytest
 - `fixtures/` : Fixtures réutilisables pour les tests
 - `functional/` : Tests fonctionnels de bout en bout
 - `integration/` : Tests d'intégration entre modules
+- `agents/` : Contient les tests spécifiques aux agents, structurés en sous-répertoires comme `core/informal/`.
+- `environment_checks/`: Contient des tests pour vérifier la configuration de l'environnement et l'importation des dépendances de base.
+-   `ui/`: Tests pour les opérations de fichiers liées à l'interface utilisateur et la persistance de configuration.
+-   `utils/`: Contient les tests pour les modules utilitaires, comme la gestion des erreurs réseau ([`utils/test_fetch_service_errors.py`](utils/test_fetch_service_errors.py:1)). Voir [tests/utils/README.md](utils/README.md:1) pour plus de détails.
 - `ADVANCED_TEST_PATTERNS.md` : Documentation des patterns de test avancés
 - `test_error_recovery.py` : Script exploratoire pour la récupération d'erreurs (à évaluer pour intégration/refactorisation).
 
@@ -59,7 +63,7 @@ Les modules suivants ont été identifiés comme prioritaires pour l'améliorati
   - `orchestration/hierarchical/operational/adapters/test_extract_agent_adapter.py` : Tests pour l'adaptateur d'agent d'extraction.
   - (D'autres tests d'adaptateurs à lister ici lorsqu'ils seront traités/créés)
 3. **agents.tools.analysis.enhanced** (12.90%)
-4. **agents.core.informal** (16.23%)
+4. **agents.core.informal** (16.23%) - Les tests se trouvent dans [`agents/core/informal/`](agents/core/informal/).
 5. **agents.tools.analysis** (16.46%)
 
 Des tests unitaires avancés ont été implémentés pour ces modules prioritaires afin d'augmenter significativement leur couverture.
@@ -76,7 +80,7 @@ Des tests unitaires avancés ont été implémentés pour ces modules prioritair
 - `agents/tools/analysis/enhanced/test_fallacy_severity_evaluator.py` : Tests pour l'évaluateur de gravité des sophismes amélioré (nouvel emplacement proposé)
 - `agents/tools/analysis/enhanced/test_complex_fallacy_analyzer.py` : Tests pour l'analyseur de sophismes complexes amélioré (nouvel emplacement proposé)
 
-#### agents.core.informal
+#### agents.core.informal (dans [`agents/core/informal/`](agents/core/informal/))
 - `test_informal_agent_creation.py` : Tests pour la création et l'initialisation des agents informels
 - `test_informal_analysis_methods.py` : Tests pour les méthodes d'analyse des agents informels
 - `test_informal_error_handling.py` : Tests pour la gestion des erreurs des agents informels

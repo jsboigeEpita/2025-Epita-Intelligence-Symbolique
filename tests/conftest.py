@@ -20,6 +20,66 @@ import importlib.util
 # collect_ignore = ["../argumentation_analysis/run_tests.py"] # Commenté pour tester l'effet de python_classes
 import logging
 import threading # Ajout de l'import pour l'inspection des threads
+# --- Configuration globale du Logging pour les tests ---
+# Le logger global pour conftest est déjà défini plus bas (ligne 52), 
+# mais nous avons besoin de configurer basicConfig tôt.
+# Nous allons utiliser un logger temporaire ici ou le logger racine.
+_conftest_setup_logger = logging.getLogger("conftest.setup")
+
+if not logging.getLogger().handlers: # Si le root logger n'a pas de handlers, basicConfig n'a probablement pas été appelé efficacement.
+    logging.basicConfig(
+        level=logging.INFO, # Ou un autre niveau pertinent pour les tests globaux
+        format='%(asctime)s [%(levelname)s] [%(name)s] %(message)s',
+        datefmt='%H:%M:%S'
+    )
+    _conftest_setup_logger.info("Configuration globale du logging appliquée.")
+else:
+    _conftest_setup_logger.info("Configuration globale du logging déjà présente ou appliquée par un autre module.")
+# --- Gestion des imports conditionnels NumPy et Pandas ---
+_conftest_setup_logger.info("Début de la gestion des imports conditionnels pour NumPy et Pandas.")
+try:
+    import numpy
+    import pandas
+    _conftest_setup_logger.info("NumPy et Pandas réels importés avec succès.")
+    # Optionnel: Définir un flag si d'autres fixtures ont besoin de savoir si les vraies libs sont là
+    # HAS_REAL_LIBS = True 
+except ImportError:
+    _conftest_setup_logger.warning("Échec de l'import de NumPy et/ou Pandas. Tentative d'utilisation des mocks.")
+    # HAS_REAL_LIBS = False
+    
+    # Mock pour NumPy
+    try:
+        # Tenter d'importer le contenu spécifique du mock si disponible
+        from tests.mocks.numpy_mock import array as numpy_array_mock # Importer un élément spécifique pour vérifier
+        # Si l'import ci-dessus fonctionne, on peut supposer que le module mock est complet
+        # et sera utilisé par les imports suivants dans le code testé.
+        # Cependant, pour forcer l'utilisation du mock complet, on le met dans sys.modules.
+        import tests.mocks.numpy_mock as numpy_mock_content
+        sys.modules['numpy'] = numpy_mock_content
+        _conftest_setup_logger.info("Mock pour NumPy (tests.mocks.numpy_mock) activé via sys.modules.")
+    except ImportError:
+        _conftest_setup_logger.error("Mock spécifique tests.mocks.numpy_mock non trouvé. Utilisation de MagicMock pour NumPy.")
+        sys.modules['numpy'] = MagicMock()
+    except Exception as e_numpy_mock:
+        _conftest_setup_logger.error(f"Erreur inattendue lors du chargement du mock NumPy: {e_numpy_mock}. Utilisation de MagicMock.")
+        sys.modules['numpy'] = MagicMock()
+
+    # Mock pour Pandas
+    try:
+        # Tenter d'importer le contenu spécifique du mock
+        from tests.mocks.pandas_mock import DataFrame as pandas_dataframe_mock # Importer un élément spécifique
+        import tests.mocks.pandas_mock as pandas_mock_content
+        sys.modules['pandas'] = pandas_mock_content
+        _conftest_setup_logger.info("Mock pour Pandas (tests.mocks.pandas_mock) activé via sys.modules.")
+    except ImportError:
+        _conftest_setup_logger.error("Mock spécifique tests.mocks.pandas_mock non trouvé. Utilisation de MagicMock pour Pandas.")
+        sys.modules['pandas'] = MagicMock()
+    except Exception as e_pandas_mock:
+        _conftest_setup_logger.error(f"Erreur inattendue lors du chargement du mock Pandas: {e_pandas_mock}. Utilisation de MagicMock.")
+        sys.modules['pandas'] = MagicMock()
+_conftest_setup_logger.info("Fin de la gestion des imports conditionnels pour NumPy et Pandas.")
+# --- Fin Gestion des imports conditionnels ---
+# --- Fin Configuration globale du Logging ---
 
 # --- Gestion du Path pour les Mocks (déplacé ici AVANT les imports des mocks) ---
 current_dir_for_mock = os.path.dirname(os.path.abspath(__file__))
