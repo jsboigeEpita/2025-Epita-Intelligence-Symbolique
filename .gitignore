@@ -56,3 +56,5 @@ libs/_temp*/
 
 # Pytest output files
 pytest_hierarchical_full_v4.txt
+
+_temp/
