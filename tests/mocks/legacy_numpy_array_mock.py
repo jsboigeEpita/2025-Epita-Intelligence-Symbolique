@@ -16,12 +16,14 @@ import sys
 _actual_numpy_module = None
 _real_numpy_flatiter = None
 _real_numpy_broadcast = None
+_real_numpy_inexact = None
 try:
     # Renommer l'import pour éviter les conflits si ce mock est lui-même importé comme 'numpy'
     import numpy as actual_numpy_for_mock
     _actual_numpy_module = actual_numpy_for_mock
     _real_numpy_flatiter = _actual_numpy_module.flatiter
     _real_numpy_broadcast = _actual_numpy_module.broadcast
+    _real_numpy_inexact = _actual_numpy_module.inexact
 except ImportError:
     pass # Le vrai numpy n'est pas disponible
 # Configuration du logging
@@ -921,6 +923,15 @@ class object_(metaclass=dtype_base):
     
     def __new__(cls, value=None):
         return object() if value is None else value
+
+if _real_numpy_inexact:
+    inexact = _real_numpy_inexact
+else:
+    class inexact(number, metaclass=dtype_base): # Hérite de number
+        """Type de base pour les nombres inexacts (flottants, complexes) NumPy."""
+        __name__ = 'inexact'
+        __module__ = 'numpy'
+        # Pas besoin de __new__ spécifique si number n'en a pas ou si le comportement par défaut est OK
 
 # Types de données (classes, pas instances)
 class float64(metaclass=dtype_base):
