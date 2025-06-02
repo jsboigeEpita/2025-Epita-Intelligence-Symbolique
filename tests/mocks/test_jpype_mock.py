@@ -10,8 +10,10 @@ import sys
 import unittest
 
 # Ajouter le répertoire racine du projet au chemin de recherche
-project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-sys.path.insert(0, project_root)
+# project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+# sys.path.insert(0, project_root)
+# Commenté car l'installation du package via `pip install -e .` devrait gérer l'accessibilité.
+# De plus, ce fichier teste un mock, son path management doit être autonome si besoin.
 
 # Importer le mock JPype1
 from tests.mocks import jpype_mock
