@@ -4,10 +4,12 @@ import json
 import gzip
 import hashlib
 import logging
+import base64 # NOUVEAU: Pour décoder la clé avant de l'utiliser avec Fernet
 from pathlib import Path
 from typing import Optional, List, Dict, Any, Union
-from cryptography.fernet import Fernet, InvalidToken
-from cryptography.exceptions import InvalidSignature
+# cryptography.fernet et exceptions sont maintenant gérés dans project_core.utils.crypto_utils
+# from cryptography.fernet import Fernet, InvalidToken # SUPPRIMÉ
+# from cryptography.exceptions import InvalidSignature # SUPPRIMÉ
 
 # Le reste des imports et du code...
 
@@ -17,6 +19,9 @@ from . import config as ui_config
 utils_logger = logging.getLogger("App.UI.Utils")
 if not utils_logger.handlers and not utils_logger.propagate:
      handler = logging.StreamHandler(); formatter = logging.Formatter('%(asctime)s [%(levelname)s] [%(name)s] %(message)s', datefmt='%H:%M:%S'); handler.setFormatter(formatter); utils_logger.addHandler(handler); utils_logger.setLevel(logging.INFO)
+
+# Import des fonctions de chiffrement déplacées
+from project_core.utils.crypto_utils import encrypt_data_with_fernet, decrypt_data_with_fernet
 
 # --- Fonctions Utilitaires (Cache, Crypto, Fetch, Verify) ---
 
@@ -65,34 +70,9 @@ def save_to_cache(url: str, text: str):
     except Exception as e:
         utils_logger.error(f"   -> Erreur sauvegarde cache {filepath.name}: {e}")
 
-def encrypt_data(data: bytes, key: bytes) -> Optional[bytes]:
-    """Chiffre des données binaires avec une clé Fernet."""
-    if not key:
-        utils_logger.error("Erreur chiffrement: Clé chiffrement manquante.")
-        return None
-    try:
-        utils_logger.debug(f"utils.encrypt_data using key (first 16 bytes): {key[:16]}")
-        f = Fernet(key)
-        return f.encrypt(data)
-    except Exception as e:
-        utils_logger.error(f"Erreur chiffrement: {e}")
-        return None
-
-def decrypt_data(encrypted_data: bytes, key: bytes) -> Optional[bytes]:
-    """Déchiffre des données binaires avec une clé Fernet."""
-    if not key:
-        utils_logger.error("Erreur déchiffrement: Clé chiffrement manquante.")
-        return None
-    try:
-        utils_logger.debug(f"utils.decrypt_data using key (first 16 bytes): {key[:16]}")
-        f = Fernet(key)
-        return f.decrypt(encrypted_data)
-    except (InvalidToken, InvalidSignature) as e: # Intercepter spécifiquement et relancer
-        utils_logger.error(f"Erreur déchiffrement (InvalidToken/Signature) using key (first 16 bytes): {key[:16]}: {e}")
-        raise # Relancer l'exception capturée (InvalidToken ou InvalidSignature)
-    except Exception as e: # Intercepter les autres exceptions
-        utils_logger.error(f"Erreur déchiffrement (Autre) using key (first 16 bytes): {key[:16]}: {e}")
-        return None
+# Les fonctions encrypt_data et decrypt_data ont été déplacées vers project_core.utils.crypto_utils
+# et renommées en encrypt_data_with_fernet et decrypt_data_with_fernet.
+# Les appels dans file_operations.py devront être mis à jour.
 
 # Les fonctions load_extract_definitions et save_extract_definitions ont été déplacées
 # vers argumentation_analysis/ui/file_operations.py pour éviter les imports circulaires.

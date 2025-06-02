@@ -51,10 +51,12 @@ try:
     from argumentation_analysis.ui.file_operations import (
         load_extract_definitions
     )
-    from argumentation_analysis.ui.utils import (
-        decrypt_data
-    )
+    # from argumentation_analysis.ui.utils import ( # SUPPRIMÉ: decrypt_data n'est plus ici et plus utilisé directement
+    #     decrypt_data
+    # )
     from argumentation_analysis.paths import DATA_DIR
+    # MODIFIÉ: Import des deux fonctions déplacées
+    from project_core.utils.crypto_utils import derive_encryption_key, load_encryption_key
     
     # Chemin vers le fichier chiffré
     CONFIG_FILE = Path(DATA_DIR) / "extract_sources.json.gz.enc"
@@ -64,79 +66,15 @@ try:
     logger.info(f"CONFIG_FILE: {CONFIG_FILE}")
 except ImportError as e:
     logger.error(f"Erreur d'importation: {e}")
-    logger.error("Assurez-vous que le package argumentation_analysis est installé ou accessible.")
+    logger.error("Assurez-vous que le package argumentation_analysis et project_core sont installés ou accessibles.") # MODIFIÉ: Message d'erreur
     sys.exit(1)
 except Exception as e:
     logger.error(f"Erreur inattendue lors de l'initialisation: {e}")
     sys.exit(1)
 
-def derive_encryption_key(passphrase: str) -> str:
-    """
-    Dérive une clé de chiffrement à partir d'une phrase secrète.
-    
-    Args:
-        passphrase: La phrase secrète
-        
-    Returns:
-        str: La clé de chiffrement dérivée et encodée en base64
-    """
-    try:
-        from cryptography.hazmat.primitives import hashes
-        from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
-        from cryptography.hazmat.backends import default_backend
-        
-        # Sel fixe utilisé dans config.py
-        FIXED_SALT = b'q\x8b\t\x97\x8b\xe9\xa3\xf2\xe4\x8e\xea\xf5\xe8\xb7\xd6\x8c'
-        
-        kdf = PBKDF2HMAC(
-            algorithm=hashes.SHA256(),
-            length=32,
-            salt=FIXED_SALT,
-            iterations=480000,
-            backend=default_backend()
-        )
-        derived_key_raw = kdf.derive(passphrase.encode('utf-8'))
-        encryption_key = base64.urlsafe_b64encode(derived_key_raw)
-        
-        return encryption_key
-    except Exception as e:
-        logger.error(f"Erreur lors de la dérivation de la clé: {e}")
-        return None
+# Les fonctions derive_encryption_key et load_encryption_key ont été déplacées vers project_core.utils.crypto_utils
 
-def load_encryption_key(passphrase: Optional[str] = None) -> Optional[str]:
-    """
-    Charge la clé de chiffrement depuis les variables d'environnement ou la phrase secrète fournie.
-    
-    Args:
-        passphrase: La phrase secrète (optionnelle)
-        
-    Returns:
-        Optional[str]: La clé de chiffrement ou None si non disponible
-    """
-    global ENCRYPTION_KEY
-    
-    # Si une phrase secrète est fournie, l'utiliser pour dériver la clé
-    if passphrase:
-        logger.info("Utilisation de la phrase secrète fournie pour dériver la clé...")
-        ENCRYPTION_KEY = derive_encryption_key(passphrase)
-        if ENCRYPTION_KEY:
-            logger.info("✅ Clé de chiffrement dérivée avec succès.")
-            return ENCRYPTION_KEY
-    
-    # Sinon, essayer de charger depuis la variable d'environnement
-    env_passphrase = os.getenv("TEXT_CONFIG_PASSPHRASE")
-    if env_passphrase:
-        logger.info("Phrase secrète trouvée dans les variables d'environnement.")
-        ENCRYPTION_KEY = derive_encryption_key(env_passphrase)
-        if ENCRYPTION_KEY:
-            logger.info("✅ Clé de chiffrement dérivée avec succès.")
-            return ENCRYPTION_KEY
-    
-    logger.warning("Aucune clé de chiffrement n'est disponible.")
-    logger.warning("Assurez-vous que la variable d'environnement TEXT_CONFIG_PASSPHRASE est définie ou fournissez une phrase secrète avec l'option --passphrase.")
-    return None
-
-def decrypt_and_load_extracts(encryption_key: Optional[bytes]) -> Tuple[List[Dict[str, Any]], str]:
+def decrypt_and_load_extracts(encryption_key: Optional[str]) -> Tuple[List[Dict[str, Any]], str]: # MODIFIÉ: Annotation de bytes à str
     """
     Déchiffre et charge les extraits du fichier chiffré.
     
@@ -288,7 +226,8 @@ def main():
     logger.info("Démarrage du script de déchiffrement des extraits...")
     
     # 1. Charger la clé de chiffrement
-    encryption_key = load_encryption_key(args.passphrase)
+    # MODIFIÉ: Appel à la fonction importée avec la nouvelle signature
+    encryption_key = load_encryption_key(passphrase_arg=args.passphrase, env_var_name="TEXT_CONFIG_PASSPHRASE")
     if encryption_key is None:
         logger.error("Impossible de continuer sans clé de chiffrement.")
         sys.exit(1)

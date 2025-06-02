@@ -80,7 +80,7 @@ if (-not [string]::IsNullOrEmpty($CommandToRun)) {
     # Utilisation de 'conda run' pour exécuter la commande dans l'environnement spécifié.
     # Les variables d'environnement définies ci-dessus dans la session PowerShell actuelle
     # devraient être héritées par le processus lancé par 'conda run'.
-    $condaRunCommand = "conda run -n $condaEnvName --no-capture-output --live-stream -- $CommandToRun"
+    $condaRunCommand = "conda run -n $condaEnvName --no-capture-output --live-stream $CommandToRun"
     Write-Host "Exécution via: $condaRunCommand"
     
     try {
