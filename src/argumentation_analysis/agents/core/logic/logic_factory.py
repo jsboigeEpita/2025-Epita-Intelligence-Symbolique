@@ -1,3 +1,4 @@
+from typing import List
 # argumentation_analysis/agents/core/logic/logic_factory.py
 """
 Factory pour créer les agents logiques appropriés.

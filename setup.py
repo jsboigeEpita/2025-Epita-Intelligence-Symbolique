@@ -31,6 +31,7 @@ setup(
         "flask",
         "Flask-CORS",
         "tqdm",
+'markdown',
     ],
     python_requires=">=3.8",
     description="Système d'analyse argumentative",

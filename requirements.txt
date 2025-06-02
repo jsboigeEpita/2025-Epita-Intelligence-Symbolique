@@ -17,3 +17,5 @@ semantic-kernel==1.29.0
 spacy
 coverage
 clingo
+
+markdown
