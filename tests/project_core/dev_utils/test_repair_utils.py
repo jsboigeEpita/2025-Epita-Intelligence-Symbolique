@@ -3,6 +3,7 @@
 
 import pytest
 import asyncio
+import logging # Ajout de l'import logging
 from pathlib import Path
 from unittest.mock import patch, MagicMock, AsyncMock # AsyncMock pour les fonctions async
 from typing import Dict # Ajout pour le typage
@@ -30,7 +31,7 @@ def mock_definition_service():
     """Mock pour DefinitionService."""
     service = MagicMock()
     # Simuler le retour de load_definitions
-    sample_source = SourceDefinition(source_name="Test Source Hitler", extracts=[])
+    sample_source = SourceDefinition(source_name="Test Source Hitler", source_type="text", schema="file", host_parts=[], path="", extracts=[])
     sample_defs = ExtractDefinitions(sources=[sample_source])
     service.load_definitions.return_value = (sample_defs, None) # (definitions, error_message)
     service.save_definitions.return_value = (True, None) # (success, error_message)
@@ -137,7 +138,7 @@ async def test_run_extract_repair_pipeline_with_save_and_json_export(
     mock_create_llm.return_value = mock_llm_service
     mock_init_core_services.return_value = mock_core_services
     
-    updated_defs_mock = ExtractDefinitions(sources=[SourceDefinition(source_name="Updated", extracts=[])])
+    updated_defs_mock = ExtractDefinitions(sources=[SourceDefinition(source_name="Updated", source_type="text", schema="file", host_parts=[], path="", extracts=[])])
     mock_repair_markers.return_value = (updated_defs_mock, [])
 
     output_report_path = str(mock_project_root / "report.html")
@@ -176,9 +177,9 @@ async def test_run_extract_repair_pipeline_hitler_only_filter(
     
     # Configurer mock_definition_service pour retourner plusieurs sources
     sources_data = [
-        SourceDefinition(source_name="Discours d'Hitler 1", extracts=[]),
-        SourceDefinition(source_name="Autre Discours", extracts=[]),
-        SourceDefinition(source_name="Texte Hitler sur la fin", extracts=[])
+        SourceDefinition(source_name="Discours d'Hitler 1", source_type="text", schema="file", host_parts=[], path="", extracts=[]),
+        SourceDefinition(source_name="Autre Discours", source_type="text", schema="file", host_parts=[], path="", extracts=[]),
+        SourceDefinition(source_name="Texte Hitler sur la fin", source_type="text", schema="file", host_parts=[], path="", extracts=[])
     ]
     mock_definition_service.load_definitions.return_value = (ExtractDefinitions(sources=sources_data), None)
     
@@ -305,7 +306,7 @@ async def test_setup_agents_creation_fails(mock_llm_service: MagicMock, mock_sk_
 def sample_extracts_for_repair() -> ExtractDefinitions:
     """Fournit des définitions d'extraits pour tester la réparation."""
     return ExtractDefinitions(sources=[
-        SourceDefinition(source_name="SourceA", extracts=[
+        SourceDefinition(source_name="SourceA", source_type="text", schema="file", host_parts=[], path="", extracts=[
             Extract(extract_name="E1_valid", start_marker="Valid start", end_marker="Valid end", template_start="V{0}alid start"),
             Extract(extract_name="E2_needs_repair", start_marker="rong start", end_marker="End E2", template_start="W{0}rong start"),
             Extract(extract_name="E3_no_template", start_marker="No template here", end_marker="End E3", template_start=None),
@@ -376,7 +377,7 @@ async def test_repair_extract_markers_empty_definitions(
     assert updated_defs == empty_defs
     assert results == []
 
-    source_with_no_extracts = ExtractDefinitions(sources=[SourceDefinition(source_name="S_empty", extracts=[])])
+    source_with_no_extracts = ExtractDefinitions(sources=[SourceDefinition(source_name="S_empty", source_type="text", schema="file", host_parts=[], path="", extracts=[])])
     updated_defs_no_ext, results_no_ext = await repair_extract_markers(
         source_with_no_extracts, mock_llm_service, mock_fetch_service, mock_extract_service
     )
