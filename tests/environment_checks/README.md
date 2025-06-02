@@ -4,3 +4,4 @@ Ce répertoire contient des tests conçus pour vérifier la configuration de bas
 
 Tests inclus :
 - [`test_core_dependencies.py`](test_core_dependencies.py:1): Vérifie l'importation des bibliothèques Python essentielles (JPype, NumPy, PyTorch, Transformers, NetworkX).
+- [`test_project_module_imports.py`](test_project_module_imports.py:1): Vérifie l'importation des modules internes clés du projet `argumentation_analysis` ainsi que certaines dépendances externes critiques pour leur fonctionnement.
