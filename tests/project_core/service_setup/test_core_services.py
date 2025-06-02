@@ -101,11 +101,16 @@ def test_initialize_core_services_with_overrides(mock_services_constructors, tem
     custom_config_file = temp_project_root / custom_config_path_str
     (temp_project_root / "custom_config").mkdir(exist_ok=True)
     custom_config_file.touch() # S'assurer que le fichier existe
+    
+    # S'assurer que le fichier JSON de fallback attendu par le mock existe aussi
+    expected_fallback_json_path = temp_project_root / "config" / "default.json"
+    expected_fallback_json_path.parent.mkdir(parents=True, exist_ok=True)
+    expected_fallback_json_path.touch()
 
     # Mock des constantes par défaut car elles sont utilisées si les overrides sont None
     with patch('project_core.service_setup.core_services.DEFAULT_ENCRYPTION_KEY', "default_key"), \
          patch('project_core.service_setup.core_services.DEFAULT_CONFIG_FILE_PATH', "config/default.enc"), \
-         patch('project_core.service_setup.core_services.DEFAULT_CONFIG_FILE_JSON_PATH', "config/default.json"):
+         patch('project_core.service_setup.core_services.DEFAULT_CONFIG_FILE_JSON_PATH', "config/default.json"): # Ce mock pointe vers config/default.json
         
         services = initialize_core_services(
             encryption_key=custom_key,
