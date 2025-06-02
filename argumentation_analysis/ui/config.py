@@ -9,6 +9,8 @@ from cryptography.hazmat.backends import default_backend
 import base64
 import json
 from argumentation_analysis.paths import DATA_DIR
+# Import pour la fonction de chargement JSON mutualisée
+from project_core.utils.file_utils import load_json_file
 
 config_logger = logging.getLogger("App.UI.Config")
 if not config_logger.handlers and not config_logger.propagate:
@@ -84,73 +86,71 @@ DEFAULT_EXTRACT_SOURCES = [
 
 # --- Chargement des Sources d'Extraction ---
 
-def load_extract_sources(config_path: Path) -> list:
-    """Charge les définitions des sources depuis un fichier JSON."""
-    if config_path.exists() and config_path.is_file():
-        try:
-            with open(config_path, 'r', encoding='utf-8') as f:
-                sources = json.load(f)
-            config_logger.info(f"✅ Configuration chargée depuis {config_path.name}")
-            return sources
-        except json.JSONDecodeError as e:
-            config_logger.warning(f"⚠️ Erreur décodage JSON dans {config_path.name}: {e}. Utilisation config par défaut.")
-            return DEFAULT_EXTRACT_SOURCES
-        except Exception as e:
-            config_logger.error(f"❌ Erreur lecture fichier config {config_path.name}: {e}. Utilisation config par défaut.", exc_info=True)
-            return DEFAULT_EXTRACT_SOURCES
-    else:
-        config_logger.warning(f"⚠️ Fichier config {config_path.name} non trouvé. Utilisation config par défaut.")
-        return DEFAULT_EXTRACT_SOURCES
+# La fonction load_extract_sources est maintenant remplacée par l'utilisation directe de
+# project_core.utils.file_utils.load_json_file où c'est nécessaire.
+# La logique de chargement initiale des EXTRACT_SOURCES est adaptée ci-dessous.
 
-# Tentative de chargement des sources depuis le fichier chiffré
-EXTRACT_SOURCES = DEFAULT_EXTRACT_SOURCES
+EXTRACT_SOURCES = DEFAULT_EXTRACT_SOURCES # Initialisation par défaut
 
-# # Si la clé de chiffrement est disponible, essayer de charger depuis le fichier chiffré
-# if ENCRYPTION_KEY and CONFIG_FILE_ENC.exists():
-#     try:
-#         config_logger.info(f"Tentative de chargement depuis le fichier chiffré {CONFIG_FILE_ENC.name}...")
-#         # Import local pour éviter l'import circulaire
-#         from .file_operations import load_extract_definitions
-#         # load_extract_definitions de file_operations n'a pas besoin d'app_config pour le chargement simple
-#         loaded_sources = load_extract_definitions(CONFIG_FILE_ENC, ENCRYPTION_KEY)
-#         if loaded_sources:
-#             EXTRACT_SOURCES = loaded_sources
-#             config_logger.info(f"✅ Définitions chargées depuis le fichier chiffré {CONFIG_FILE_ENC.name}.")
-#         else:
-#             config_logger.warning(f"⚠️ Échec du chargement depuis le fichier chiffré. Utilisation des définitions par défaut.")
-#     except Exception as e:
-#         config_logger.error(f"❌ Erreur lors du chargement du fichier chiffré: {e}", exc_info=True)
-# elif CONFIG_FILE_JSON.exists() and ENCRYPTION_KEY:
-#     # Migration: si le fichier JSON existe mais pas le fichier chiffré, créer le fichier chiffré
-#     try:
-#         from .file_operations import save_extract_definitions # MODIFIÉ
-#         config_logger.info(f"Migration: création du fichier chiffré à partir de {CONFIG_FILE_JSON.name}...")
-#         json_sources = load_extract_sources(CONFIG_FILE_JSON)
-#         # save_extract_definitions de file_operations attend encryption_key et config_file
-#         # et le paramètre 'config' (app_config) est optionnel si embed_full_text=False
-#         success = save_extract_definitions(
-#             extract_definitions=json_sources,
-#             config_file=CONFIG_FILE_ENC,
-#             encryption_key=ENCRYPTION_KEY,
-#             embed_full_text=False # Pour la migration initiale, ne pas essayer de fetch
-#         )
-#         if success:
-#             config_logger.info(f"✅ Fichier chiffré {CONFIG_FILE_ENC.name} créé avec succès à partir de {CONFIG_FILE_JSON.name}.")
-#             EXTRACT_SOURCES = json_sources
-#             # Suppression du fichier JSON après migration réussie
-#             try:
-#                 CONFIG_FILE_JSON.unlink()
-#                 config_logger.info(f"✅ Fichier JSON {CONFIG_FILE_JSON.name} supprimé après migration.")
-#             except Exception as e_unlink:
-#                 config_logger.warning(f"⚠️ Impossible de supprimer le fichier JSON après migration: {e_unlink}")
-#         else:
-#             config_logger.warning(f"⚠️ Échec de la migration vers le fichier chiffré. Utilisation des définitions par défaut.")
-#     except Exception as e:
-#         config_logger.error(f"❌ Erreur lors de la migration vers le fichier chiffré: {e}", exc_info=True)
+# Tentative de chargement des sources depuis le fichier chiffré (logique conservée mais adaptée)
+# ou depuis le fichier JSON non chiffré si le chiffré n'existe pas ou si la clé est absente.
+
+# Note: La logique de migration de JSON vers chiffré est complexe et dépend de file_operations.
+# Pour l'instant, cette section se concentre sur le chargement.
+# La migration pourrait être une étape séparée ou gérée par file_operations.
+
+# Priorité au fichier chiffré si la clé existe
+if ENCRYPTION_KEY and CONFIG_FILE_ENC.exists():
+    try:
+        config_logger.info(f"Tentative de chargement depuis le fichier chiffré {CONFIG_FILE_ENC.name}...")
+        from .file_operations import load_extract_definitions # Import local
+        loaded_sources = load_extract_definitions(CONFIG_FILE_ENC, ENCRYPTION_KEY)
+        if loaded_sources: # load_extract_definitions retourne une liste ou None (ou les défauts en cas d'erreur)
+            EXTRACT_SOURCES = loaded_sources
+            config_logger.info(f"✅ Définitions chargées depuis le fichier chiffré {CONFIG_FILE_ENC.name}.")
+        else:
+            # Si load_extract_definitions retourne None/vide à cause d'une erreur interne gérée,
+            # EXTRACT_SOURCES reste sur DEFAULT_EXTRACT_SOURCES ou ce que load_extract_definitions a retourné.
+            config_logger.warning(f"⚠️ Échec ou retour vide du chargement depuis le fichier chiffré {CONFIG_FILE_ENC.name}. Vérifier logs de file_operations.")
+            # Si load_extract_definitions a déjà loggué et retourné DEFAULT_EXTRACT_SOURCES, ce log est redondant.
+            # Si elle retourne None, alors EXTRACT_SOURCES sera None, ce qui n'est pas souhaité.
+            # Assurons-nous que EXTRACT_SOURCES a une valeur par défaut si loaded_sources est None.
+            if EXTRACT_SOURCES is None: # S'assurer qu'on ne reste pas avec None
+                 EXTRACT_SOURCES = DEFAULT_EXTRACT_SOURCES
+                 config_logger.info("Rétablissement des sources par défaut après échec de chargement chiffré.")
+
+    except Exception as e:
+        config_logger.error(f"❌ Erreur majeure lors du chargement du fichier chiffré {CONFIG_FILE_ENC.name}: {e}", exc_info=True)
+        EXTRACT_SOURCES = DEFAULT_EXTRACT_SOURCES # Rétablir les valeurs par défaut en cas d'erreur majeure
+# Sinon, si le fichier JSON non chiffré existe, l'utiliser
+elif CONFIG_FILE_JSON.exists():
+    config_logger.info(f"Chargement depuis le fichier JSON non chiffré {CONFIG_FILE_JSON.name}...")
+    loaded_json_sources = load_json_file(CONFIG_FILE_JSON) # Utilisation de la fonction mutualisée
+    if isinstance(loaded_json_sources, list):
+        EXTRACT_SOURCES = loaded_json_sources
+        config_logger.info(f"✅ Configuration chargée depuis {CONFIG_FILE_JSON.name} (non chiffré).")
+        # Ici, on pourrait envisager de déclencher la migration vers le chiffré si ENCRYPTION_KEY est dispo
+        if ENCRYPTION_KEY:
+            config_logger.info(f"Migration suggérée: {CONFIG_FILE_JSON.name} existe, {CONFIG_FILE_ENC.name} non (ou échec chargement), et clé disponible.")
+            # La logique de migration active est commentée pour se concentrer sur le chargement.
+            # from .file_operations import save_extract_definitions
+            # save_extract_definitions(EXTRACT_SOURCES, CONFIG_FILE_ENC, ENCRYPTION_KEY, embed_full_text=False)
+            # CONFIG_FILE_JSON.unlink() # etc.
+    elif loaded_json_sources is None: # Erreur de chargement gérée par load_json_file
+        config_logger.warning(f"⚠️ Échec du chargement depuis {CONFIG_FILE_JSON.name} (retour None). Utilisation des définitions par défaut.")
+        EXTRACT_SOURCES = DEFAULT_EXTRACT_SOURCES
+    else: # Cas où ce n'est ni une liste ni None (ex: un dict à la racine non attendu ici)
+        config_logger.warning(f"⚠️ Données depuis {CONFIG_FILE_JSON.name} ne sont pas une liste (type: {type(loaded_json_sources)}). Utilisation des définitions par défaut.")
+        EXTRACT_SOURCES = DEFAULT_EXTRACT_SOURCES
+# Si aucun fichier de configuration n'est trouvé ou chargé avec succès
+else:
+    config_logger.warning(f"⚠️ Aucun fichier de configuration ({CONFIG_FILE_ENC.name} ou {CONFIG_FILE_JSON.name}) trouvé ou chargé. Utilisation des définitions par défaut.")
+    EXTRACT_SOURCES = DEFAULT_EXTRACT_SOURCES
+
 
 # --- État Global (pour ce module UI) ---
 # Note: Utiliser global ici est une simplification liée à la structure UI originale.
 # Une approche plus orientée objet pourrait encapsuler cela.
-current_extract_definitions = [] # Sera peuplé par load_extract_definitions
+current_extract_definitions = [] # Sera peuplé par load_extract_definitions (de file_operations)
 
 config_logger.info(f"Config UI initialisée. {len(EXTRACT_SOURCES)} sources chargées.")
