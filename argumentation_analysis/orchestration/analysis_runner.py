@@ -25,22 +25,16 @@ from argumentation_analysis.core.strategies import SimpleTerminationStrategy, Ba
 # NOTE: create_llm_service n'est plus importé ici, le service est passé en argument
 
 # Fonction d'importation paresseuse pour éviter les importations circulaires
-def _lazy_imports():
-    """Importe les modules de manière paresseuse pour éviter les importations circulaires."""
-    global setup_pm_kernel, PM_INSTRUCTIONS
-    global setup_informal_kernel, INFORMAL_AGENT_INSTRUCTIONS
-    global setup_pl_kernel, PL_AGENT_INSTRUCTIONS
-    global setup_extract_agent, EXTRACT_AGENT_INSTRUCTIONS
-    
-    # Imports des définitions d'agents (setup + instructions)
-    from argumentation_analysis.agents.core.pm.pm_definitions import setup_pm_kernel, PM_INSTRUCTIONS
-    from argumentation_analysis.agents.core.informal.informal_definitions import setup_informal_kernel, INFORMAL_AGENT_INSTRUCTIONS
-    from argumentation_analysis.agents.core.pl.pl_definitions import setup_pl_kernel, PL_AGENT_INSTRUCTIONS
-    from argumentation_analysis.agents.core.extract.extract_agent import setup_extract_agent
-    from argumentation_analysis.agents.core.extract.prompts import EXTRACT_AGENT_INSTRUCTIONS
+# _lazy_imports() n'est plus nécessaire de la même manière, les classes sont importées directement.
 
-# Appeler la fonction d'importation paresseuse
-_lazy_imports()
+# Imports des classes d'agents refactorées
+from argumentation_analysis.agents.core.pm.pm_agent import ProjectManagerAgent
+from argumentation_analysis.agents.core.informal.informal_agent import InformalAnalysisAgent
+from argumentation_analysis.agents.core.logic.propositional_logic_agent import PropositionalLogicAgent
+from argumentation_analysis.agents.core.extract.extract_agent import ExtractAgent
+
+# Les instructions système sont maintenant gérées par les classes d'agents elles-mêmes.
+# PM_INSTRUCTIONS, INFORMAL_AGENT_INSTRUCTIONS, etc., sont utilisées en interne par les agents.
 
 # Logger principal pour cette fonction
 logger = logging.getLogger("Orchestration.Run")
@@ -105,44 +99,60 @@ async def run_analysis_conversation(
         local_kernel.add_plugin(local_state_manager_plugin, plugin_name="StateManager")
         run_logger.info(f"   Plugin 'StateManager' (local) ajouté.")
 
-        # 4. Configurer plugins agents sur Kernel local
-        run_logger.info("4. Configuration plugins agents sur Kernel local...")
-        # Passer l'instance de service LLM aux fonctions setup
-        setup_pm_kernel(local_kernel, llm_service)
-        setup_informal_kernel(local_kernel, llm_service)
-        setup_pl_kernel(local_kernel, llm_service) # Cette fonction vérifie maintenant la JVM en interne
-        # Configuration de l'agent d'extraction
-        extract_kernel, extract_agent_instance = await setup_extract_agent(llm_service)
-        run_logger.info("   Plugins agents configurés.")
-        run_logger.debug(f"   Plugins enregistrés: {list(local_kernel.plugins.keys())}")
+        # 4. Créer et configurer les instances des agents refactorés
+        run_logger.info("4. Création et configuration des instances d'agents refactorés...")
+        llm_service_id_str = llm_service.service_id # Utilisé pour setup_agent_components
 
-        # 5. Créer instances agents locales
-        run_logger.info("5. Création instances agents...")
-        # Utiliser l'instance de service LLM passée en argument pour obtenir les settings
+        # Instanciation et configuration du ProjectManagerAgent
+        pm_agent_refactored = ProjectManagerAgent(kernel=local_kernel, agent_name="ProjectManagerAgent_Refactored")
+        pm_agent_refactored.setup_agent_components(llm_service_id=llm_service_id_str)
+        run_logger.info(f"   Agent {pm_agent_refactored.name} instancié et configuré.")
+
+        # Instanciation et configuration de l'InformalAnalysisAgent
+        informal_agent_refactored = InformalAnalysisAgent(kernel=local_kernel, agent_name="InformalAnalysisAgent_Refactored")
+        informal_agent_refactored.setup_agent_components(llm_service_id=llm_service_id_str)
+        run_logger.info(f"   Agent {informal_agent_refactored.name} instancié et configuré.")
+
+        # Instanciation et configuration du PropositionalLogicAgent
+        pl_agent_refactored = PropositionalLogicAgent(kernel=local_kernel, agent_name="PropositionalLogicAgent_Refactored")
+        pl_agent_refactored.setup_agent_components(llm_service_id=llm_service_id_str)
+        run_logger.info(f"   Agent {pl_agent_refactored.name} instancié et configuré.")
+
+        # Instanciation et configuration de l'ExtractAgent
+        extract_agent_refactored = ExtractAgent(kernel=local_kernel, agent_name="ExtractAgent_Refactored")
+        extract_agent_refactored.setup_agent_components(llm_service_id=llm_service_id_str)
+        run_logger.info(f"   Agent {extract_agent_refactored.name} instancié et configuré.")
+        
+        run_logger.debug(f"   Plugins enregistrés dans local_kernel après setup des agents: {list(local_kernel.plugins.keys())}")
+
+        # 5. Créer instances agents pour AgentGroupChat (enveloppant les agents refactorés)
+        run_logger.info("5. Création des instances ChatCompletionAgent pour AgentGroupChat...")
         prompt_exec_settings = local_kernel.get_prompt_execution_settings_from_service_id(llm_service.service_id)
         prompt_exec_settings.function_choice_behavior = FunctionChoiceBehavior.Auto(auto_invoke_kernel_functions=True, max_auto_invoke_attempts=5)
-        run_logger.info(f"   Settings LLM (auto function call): {prompt_exec_settings.function_choice_behavior}")
+        run_logger.info(f"   Settings LLM pour ChatCompletionAgent (auto function call): {prompt_exec_settings.function_choice_behavior}")
 
-        # Utiliser l'instance de service LLM passée en argument pour créer les agents
         local_pm_agent = ChatCompletionAgent(
             kernel=local_kernel, service=llm_service, name="ProjectManagerAgent",
-            instructions=PM_INSTRUCTIONS, arguments=KernelArguments(settings=prompt_exec_settings)
+            instructions=pm_agent_refactored.system_prompt, # Utilise le system_prompt de l'agent refactoré
+            arguments=KernelArguments(settings=prompt_exec_settings)
         )
         local_informal_agent = ChatCompletionAgent(
             kernel=local_kernel, service=llm_service, name="InformalAnalysisAgent",
-            instructions=INFORMAL_AGENT_INSTRUCTIONS, arguments=KernelArguments(settings=prompt_exec_settings)
+            instructions=informal_agent_refactored.system_prompt, # Utilise le system_prompt de l'agent refactoré
+            arguments=KernelArguments(settings=prompt_exec_settings)
         )
         local_pl_agent = ChatCompletionAgent(
             kernel=local_kernel, service=llm_service, name="PropositionalLogicAgent",
-            instructions=PL_AGENT_INSTRUCTIONS, arguments=KernelArguments(settings=prompt_exec_settings)
+            instructions=pl_agent_refactored.system_prompt, # Utilise le system_prompt de l'agent refactoré
+            arguments=KernelArguments(settings=prompt_exec_settings)
         )
-        # Création de l'agent d'extraction
         local_extract_agent = ChatCompletionAgent(
             kernel=local_kernel, service=llm_service, name="ExtractAgent",
-            instructions=EXTRACT_AGENT_INSTRUCTIONS, arguments=KernelArguments(settings=prompt_exec_settings)
+            instructions=extract_agent_refactored.system_prompt, # Utilise le system_prompt de l'agent refactoré
+            arguments=KernelArguments(settings=prompt_exec_settings)
         )
         agent_list_local = [local_pm_agent, local_informal_agent, local_pl_agent, local_extract_agent]
-        run_logger.info(f"   Instances agents créées: {[agent.name for agent in agent_list_local]}.")
+        run_logger.info(f"   Instances ChatCompletionAgent créées pour AgentGroupChat: {[agent.name for agent in agent_list_local]}.")
 
         # 6. Créer instances stratégies locales
         run_logger.info("6. Création instances stratégies locales...")

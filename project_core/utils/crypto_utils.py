@@ -113,10 +113,14 @@ def encrypt_data_with_fernet(data: bytes, b64_encoded_key_str: str) -> Optional[
         logger.error("Erreur chiffrement Fernet: Clé (str b64) manquante.")
         return None
     try:
-        # b64_encoded_key_str est la clé Fernet déjà encodée en base64url, sous forme de chaîne.
-        # Fernet attend cette clé encodée en base64, mais sous forme de bytes.
-        key_for_fernet = b64_encoded_key_str.encode('utf-8')
-        f = Fernet(key_for_fernet)
+        # La clé b64_encoded_key_str est une chaîne str.
+        # Fernet attend les bytes bruts de la clé (décodés de base64url).
+        if not isinstance(b64_encoded_key_str, str):
+            logger.error(f"Erreur chiffrement Fernet: b64_encoded_key_str doit être une chaîne, reçu {type(b64_encoded_key_str)}.")
+            return None
+        
+        key_bytes_for_fernet = base64.urlsafe_b64decode(b64_encoded_key_str.encode('utf-8'))
+        f = Fernet(key_bytes_for_fernet)
         return f.encrypt(data)
     except Exception as e:
         logger.error(f"Erreur chiffrement Fernet: {e}", exc_info=True)
@@ -138,10 +142,14 @@ def decrypt_data_with_fernet(encrypted_data: bytes, b64_encoded_key_str: str) ->
         logger.error("Erreur déchiffrement Fernet: Clé (str b64) manquante.")
         return None
     try:
-        # b64_encoded_key_str est la clé Fernet déjà encodée en base64url, sous forme de chaîne.
-        # Fernet attend cette clé encodée en base64, mais sous forme de bytes.
-        key_for_fernet = b64_encoded_key_str.encode('utf-8')
-        f = Fernet(key_for_fernet)
+        # La clé b64_encoded_key_str est une chaîne str.
+        # Fernet attend les bytes bruts de la clé (décodés de base64url).
+        if not isinstance(b64_encoded_key_str, str):
+            logger.error(f"Erreur déchiffrement Fernet: b64_encoded_key_str doit être une chaîne, reçu {type(b64_encoded_key_str)}.")
+            return None
+
+        key_bytes_for_fernet = base64.urlsafe_b64decode(b64_encoded_key_str.encode('utf-8'))
+        f = Fernet(key_bytes_for_fernet)
         return f.decrypt(encrypted_data)
     except (InvalidToken, InvalidSignature) as e:
         logger.error(f"Erreur déchiffrement Fernet (InvalidToken/Signature): {e}")
