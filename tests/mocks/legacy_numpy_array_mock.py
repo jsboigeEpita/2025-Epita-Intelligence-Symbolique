@@ -15,11 +15,13 @@ import sys
 
 _actual_numpy_module = None
 _real_numpy_flatiter = None
+_real_numpy_broadcast = None
 try:
     # Renommer l'import pour éviter les conflits si ce mock est lui-même importé comme 'numpy'
     import numpy as actual_numpy_for_mock
     _actual_numpy_module = actual_numpy_for_mock
     _real_numpy_flatiter = _actual_numpy_module.flatiter
+    _real_numpy_broadcast = _actual_numpy_module.broadcast
 except ImportError:
     pass # Le vrai numpy n'est pas disponible
 # Configuration du logging
@@ -189,12 +191,16 @@ else:
     # Ce cas ne devrait idéalement pas être atteint si scipy est importé.
     class flatiter(MagicMock):
         pass
-class broadcast(MagicMock):
-    """Mock pour numpy.broadcast."""
-    # scipy.linalg._cythonized_array_utils attend que ce soit un type,
-    # pas une instance de MagicMock directement.
-    # Si des instances sont créées, elles hériteront de MagicMock.
-    pass
+if _real_numpy_broadcast:
+    broadcast = _real_numpy_broadcast # Utilise le vrai broadcast si numpy est disponible
+else:
+    # Fallback si le vrai numpy (et donc le vrai broadcast) n'est pas disponible.
+    class broadcast(MagicMock):
+        """Mock pour numpy.broadcast."""
+        # scipy.linalg._cythonized_array_utils attend que ce soit un type,
+        # pas une instance de MagicMock directement.
+        # Si des instances sont créées, elles hériteront de MagicMock.
+        pass
 
 def zeros(shape, dtype=None):
     """Crée un tableau de zéros."""
