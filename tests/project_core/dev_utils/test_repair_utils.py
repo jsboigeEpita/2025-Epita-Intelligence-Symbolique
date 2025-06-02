@@ -68,7 +68,7 @@ def mock_core_services(
 @patch("project_core.dev_utils.repair_utils.create_llm_service")
 @patch("project_core.dev_utils.repair_utils.initialize_core_services")
 @patch("project_core.dev_utils.repair_utils.repair_extract_markers", new_callable=AsyncMock) # Mock fonction async
-@patch("argumentation_analysis.utils.extract_repair.marker_repair_logic.generate_report") # Correction de l'emplacement de generate_report
+@patch("project_core.dev_utils.repair_utils.generate_marker_repair_report")
 @pytest.mark.asyncio # Nécessaire pour tester les fonctions async
 async def test_run_extract_repair_pipeline_successful_run_no_save(
     mock_generate_report: MagicMock,
