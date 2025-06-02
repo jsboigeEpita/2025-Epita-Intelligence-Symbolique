@@ -1,3 +1,4 @@
+from unittest.mock import patch
 # -*- coding: utf-8 -*-
 """Tests pour les utilitaires de reporting."""
 

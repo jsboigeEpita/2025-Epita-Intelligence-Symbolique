@@ -1,3 +1,4 @@
+from typing import Dict, Any
 # -*- coding: utf-8 -*-
 """Tests pour l'orchestrateur d'analyse avancée."""
 
