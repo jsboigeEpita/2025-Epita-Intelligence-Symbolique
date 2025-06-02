@@ -22,15 +22,16 @@ if not logger.handlers:
 # Pourrait être externalisé dans une configuration si partagé par d'autres modules.
 FIXED_SALT = b'q\x8b\t\x97\x8b\xe9\xa3\xf2\xe4\x8e\xea\xf5\xe8\xb7\xd6\x8c'
 
-def derive_encryption_key(passphrase: str) -> str:
+def derive_encryption_key(passphrase: str) -> Optional[bytes]:
     """
-    Dérive une clé de chiffrement à partir d'une phrase secrète.
+    Dérive une clé de chiffrement Fernet (encodée en base64url) à partir d'une phrase secrète.
     
     Args:
-        passphrase: La phrase secrète
+        passphrase: La phrase secrète.
         
     Returns:
-        str: La clé de chiffrement dérivée et encodée en base64, ou None en cas d'erreur ou si la passphrase est vide.
+        Optional[bytes]: La clé de chiffrement dérivée et encodée en base64url (bytes),
+                         ou None en cas d'erreur ou si la passphrase est vide.
     """
     if not passphrase:
         logger.warning("Tentative de dérivation de clé avec une phrase secrète vide. Retour de None.")
@@ -38,21 +39,22 @@ def derive_encryption_key(passphrase: str) -> str:
     try:
         kdf = PBKDF2HMAC(
             algorithm=hashes.SHA256(),
-            length=32,
+            length=32, # Produit une clé de 256 bits, adaptée pour Fernet
             salt=FIXED_SALT,
-            iterations=480000, # Assurez-vous que ce nombre d'itérations est cohérent avec l'utilisation originale
+            iterations=480000,
             backend=default_backend()
         )
         derived_key_raw = kdf.derive(passphrase.encode('utf-8'))
-        encryption_key = base64.urlsafe_b64encode(derived_key_raw)
+        # Fernet attend une clé encodée en base64 URL-safe.
+        encryption_key_bytes = base64.urlsafe_b64encode(derived_key_raw)
         
-        logger.debug("Clé de chiffrement dérivée avec succès.")
-        return encryption_key.decode('utf-8') # Retourner une chaîne str
+        logger.debug("Clé de chiffrement dérivée avec succès (bytes).")
+        return encryption_key_bytes
     except Exception as e:
         logger.error(f"Erreur lors de la dérivation de la clé: {e}", exc_info=True)
         return None
 
-def load_encryption_key(passphrase_arg: Optional[str] = None, env_var_name: str = "TEXT_CONFIG_PASSPHRASE") -> Optional[str]:
+def load_encryption_key(passphrase_arg: Optional[str] = None, env_var_name: str = "TEXT_CONFIG_PASSPHRASE") -> Optional[bytes]:
     """
     Charge la clé de chiffrement en essayant d'abord la phrase secrète fournie,
     puis une variable d'environnement.
@@ -62,7 +64,7 @@ def load_encryption_key(passphrase_arg: Optional[str] = None, env_var_name: str 
         env_var_name: Le nom de la variable d'environnement à vérifier pour la phrase secrète.
 
     Returns:
-        Optional[str]: La clé de chiffrement dérivée et encodée en base64, ou None si non disponible ou en cas d'erreur.
+        Optional[bytes]: La clé de chiffrement dérivée et encodée en base64url (bytes), ou None si non disponible ou en cas d'erreur.
     """
     # Essayer avec la phrase secrète fournie en argument
     if passphrase_arg:
@@ -97,51 +99,49 @@ def load_encryption_key(passphrase_arg: Optional[str] = None, env_var_name: str 
 
 # --- Fonctions de chiffrement/déchiffrement Fernet ---
 
-def encrypt_data_with_fernet(data: bytes, b64_encoded_key_str: str) -> Optional[bytes]:
+def encrypt_data_with_fernet(data: bytes, b64_encoded_key_bytes: bytes) -> Optional[bytes]:
     """
     Chiffre des données binaires avec une clé Fernet.
-    La clé est la chaîne de caractères encodée en base64url (sortie de derive_encryption_key).
+    La clé est la sortie directe de derive_encryption_key (bytes encodés en base64url).
 
     Args:
         data: Les données binaires à chiffrer.
-        b64_encoded_key_str: La clé de chiffrement Fernet, encodée en base64url (str).
+        b64_encoded_key_bytes: La clé de chiffrement Fernet, encodée en base64url (bytes).
 
     Returns:
         Optional[bytes]: Les données chiffrées, ou None en cas d'erreur.
     """
-    if not b64_encoded_key_str:
-        logger.error("Erreur chiffrement Fernet: Clé (str b64) manquante.")
+    if not b64_encoded_key_bytes:
+        logger.error("Erreur chiffrement Fernet: Clé (bytes b64) manquante.")
         return None
     try:
-        # b64_encoded_key_str est la clé Fernet déjà encodée en base64url, sous forme de chaîne.
-        # Fernet attend cette clé encodée en base64, mais sous forme de bytes.
-        key_for_fernet = b64_encoded_key_str.encode('utf-8')
-        f = Fernet(key_for_fernet)
+        # b64_encoded_key_bytes est la clé Fernet déjà encodée en base64url, sous forme de bytes.
+        # Fernet attend cette clé directement.
+        f = Fernet(b64_encoded_key_bytes)
         return f.encrypt(data)
     except Exception as e:
         logger.error(f"Erreur chiffrement Fernet: {e}", exc_info=True)
         return None
 
-def decrypt_data_with_fernet(encrypted_data: bytes, b64_encoded_key_str: str) -> Optional[bytes]:
+def decrypt_data_with_fernet(encrypted_data: bytes, b64_encoded_key_bytes: bytes) -> Optional[bytes]:
     """
     Déchiffre des données binaires avec une clé Fernet.
-    La clé est la chaîne de caractères encodée en base64url (sortie de derive_encryption_key).
+    La clé est la sortie directe de derive_encryption_key (bytes encodés en base64url).
 
     Args:
         encrypted_data: Les données chiffrées.
-        b64_encoded_key_str: La clé de chiffrement Fernet, encodée en base64url (str).
+        b64_encoded_key_bytes: La clé de chiffrement Fernet, encodée en base64url (bytes).
 
     Returns:
         Optional[bytes]: Les données déchiffrées, ou None en cas d'erreur ou de token invalide.
     """
-    if not b64_encoded_key_str:
-        logger.error("Erreur déchiffrement Fernet: Clé (str b64) manquante.")
+    if not b64_encoded_key_bytes:
+        logger.error("Erreur déchiffrement Fernet: Clé (bytes b64) manquante.")
         return None
     try:
-        # b64_encoded_key_str est la clé Fernet déjà encodée en base64url, sous forme de chaîne.
-        # Fernet attend cette clé encodée en base64, mais sous forme de bytes.
-        key_for_fernet = b64_encoded_key_str.encode('utf-8')
-        f = Fernet(key_for_fernet)
+        # b64_encoded_key_bytes est la clé Fernet déjà encodée en base64url, sous forme de bytes.
+        # Fernet attend cette clé directement.
+        f = Fernet(b64_encoded_key_bytes)
         return f.decrypt(encrypted_data)
     except (InvalidToken, InvalidSignature) as e:
         logger.error(f"Erreur déchiffrement Fernet (InvalidToken/Signature): {e}")
@@ -150,84 +150,121 @@ def decrypt_data_with_fernet(encrypted_data: bytes, b64_encoded_key_str: str) ->
         logger.error(f"Erreur déchiffrement Fernet (Autre): {e}", exc_info=True)
         return None
 
-if __name__ == '__main__':
-    # Section de test simple pour la dérivation de clé
-    logger.setLevel(logging.DEBUG)
-    test_passphrase = "ma_super_phrase_secrete_de_test"
-    logger.info(f"Test de dérivation de clé pour la phrase secrète: '{test_passphrase}'")
-    
-    key = derive_encryption_key(test_passphrase)
-    if key:
-        logger.info(f"Clé dérivée (encodée en base64): {key}")
-        # Test de re-dérivation pour s'assurer de la consistance
-        key2 = derive_encryption_key(test_passphrase)
-        if key == key2:
-            logger.info("✅ La re-dérivation produit la même clé.")
-        else:
-            logger.error("❌ ERREUR: La re-dérivation ne produit PAS la même clé.")
-    else:
-        logger.error("❌ Échec de la dérivation de la clé.")
+# --- Fonctions de chiffrement/déchiffrement AESGCM ---
 
-    # Test avec une phrase vide (devrait échouer ou retourner None)
-    logger.info("Test de dérivation avec une phrase secrète vide...")
-    empty_key = derive_encryption_key("")
-    if empty_key:
-        logger.warning(f"Clé dérivée pour phrase vide: {empty_key} (ceci peut être inattendu)")
-    else:
-        logger.info("✅ La dérivation avec phrase vide a retourné None, comme attendu.")
+def derive_key_aes(passphrase: str, salt: bytes, key_length: int = 32, iterations: int = 480000) -> bytes:
+    """
+    Dérive une clé de chiffrement pour AESGCM à partir d'une phrase secrète et d'un sel.
+    Utilise PBKDF2HMAC avec SHA256.
 
-    # Tests pour encrypt_data_with_fernet et decrypt_data_with_fernet
-    logger.info("\n--- Tests Fernet ---")
-    test_data = b"Donn\xc3\xa9es secr\xc3\xa8tes \xc3\xa0 chiffrer!"
-    logger.info(f"Données originales: {test_data.decode('utf-8', 'ignore')}")
+    Args:
+        passphrase: La phrase secrète.
+        salt: Le sel à utiliser pour la dérivation.
+        key_length: La longueur souhaitée de la clé en bytes (par défaut 32 pour AES-256).
+        iterations: Le nombre d'itérations pour PBKDF2HMAC.
 
-    # Utiliser une clé dérivée valide pour les tests Fernet
-    fernet_test_passphrase = "uneAutrePhrasePourFernet"
-    derived_b64_key = derive_encryption_key(fernet_test_passphrase)
+    Returns:
+        bytes: La clé dérivée.
+    """
+    if not passphrase:
+        logger.error("Tentative de dérivation de clé AES avec une phrase secrète vide.")
+        raise ValueError("La phrase secrète ne peut pas être vide pour la dérivation de clé AES.")
+    if not salt:
+        logger.error("Tentative de dérivation de clé AES avec un sel vide.")
+        raise ValueError("Le sel ne peut pas être vide pour la dérivation de clé AES.")
 
-    if derived_b64_key:
-        logger.info(f"Clé dérivée (b64) pour tests Fernet: {derived_b64_key}")
-        try:
-            # La clé Fernet doit être les bytes décodés de la clé b64
-            actual_fernet_key = base64.urlsafe_b64decode(derived_b64_key.encode('utf-8'))
-            logger.info(f"Clé Fernet actuelle (bytes) pour tests: {actual_fernet_key}")
+    try:
+        kdf = PBKDF2HMAC(
+            algorithm=hashes.SHA256(),
+            length=key_length,
+            salt=salt,
+            iterations=iterations, # Nombre d'itérations standard, peut être augmenté pour plus de sécurité
+            backend=default_backend()
+        )
+        derived_key = kdf.derive(passphrase.encode('utf-8'))
+        logger.debug(f"Clé AES dérivée avec succès (longueur: {len(derived_key)} bytes).")
+        return derived_key
+    except Exception as e:
+        logger.error(f"Erreur lors de la dérivation de la clé AES: {e}", exc_info=True)
+        raise # Propage l'exception pour que l'appelant puisse la gérer
 
-            encrypted = encrypt_data_with_fernet(test_data, actual_fernet_key)
-            if encrypted:
-                logger.info(f"Données chiffrées: {encrypted}")
-                decrypted = decrypt_data_with_fernet(encrypted, actual_fernet_key)
-                if decrypted:
-                    logger.info(f"Données déchiffrées: {decrypted.decode('utf-8', 'ignore')}")
-                    if decrypted == test_data:
-                        logger.info("✅ Chiffrement et déchiffrement Fernet réussis!")
-                    else:
-                        logger.error("❌ ERREUR: Les données déchiffrées ne correspondent pas aux originales.")
-                else:
-                    logger.error("❌ ERREUR: Échec du déchiffrement Fernet.")
-            else:
-                logger.error("❌ ERREUR: Échec du chiffrement Fernet.")
-        except Exception as e_fernet_test:
-            logger.error(f"❌ ERREUR lors du test Fernet: {e_fernet_test}", exc_info=True)
-    else:
-        logger.error("❌ Impossible de tester Fernet, la dérivation de clé a échoué.")
-    
-    logger.info("\n--- Test déchiffrement Fernet avec mauvaise clé ---")
-    if derived_b64_key:
-        try:
-            actual_fernet_key = base64.urlsafe_b64decode(derived_b64_key.encode('utf-8'))
-            encrypted = encrypt_data_with_fernet(test_data, actual_fernet_key) # Chiffrer avec la bonne clé
-            
-            # Créer une mauvaise clé Fernet (différente de l'originale)
-            bad_b64_key = derive_encryption_key("mauvaisePhraseSecrete")
-            if bad_b64_key and bad_b64_key != derived_b64_key:
-                bad_fernet_key = base64.urlsafe_b64decode(bad_b64_key.encode('utf-8'))
-                logger.info("Tentative de déchiffrement avec une mauvaise clé Fernet...")
-                decrypted_with_bad_key = decrypt_data_with_fernet(encrypted, bad_fernet_key)
-                if decrypted_with_bad_key is None:
-                    logger.info("✅ Échec du déchiffrement avec mauvaise clé, comme attendu (InvalidToken/Signature).")
-                else:
-                    logger.error(f"❌ ERREUR: Le déchiffrement avec une mauvaise clé aurait dû échouer, mais a retourné: {decrypted_with_bad_key}")
-            else:
-                logger.warning("Impossible de générer une mauvaise clé distincte pour le test.")
-        except Exception as e_bad_key_test:
-            logger.error(f"❌ ERREUR lors du test de mauvaise clé Fernet: {e_bad_key_test}", exc_info=True)
+def encrypt_data_aesgcm(data_bytes: bytes, passphrase: str, salt_len: int = 16, nonce_len: int = 12) -> Optional[bytes]:
+    """
+    Chiffre des données binaires en utilisant AESGCM.
+    Un nouveau sel est généré pour chaque chiffrement et est préfixé au résultat.
+    Un nouveau nonce est généré pour chaque chiffrement et est préfixé après le sel.
+
+    Args:
+        data_bytes: Les données binaires à chiffrer.
+        passphrase: La phrase secrète pour dériver la clé.
+        salt_len: Longueur du sel à générer (en bytes).
+        nonce_len: Longueur du nonce à générer (en bytes).
+
+    Returns:
+        Optional[bytes]: Les données chiffrées (sel + nonce + ciphertext), ou None en cas d'erreur.
+    """
+    if not passphrase:
+        logger.error("Erreur chiffrement AESGCM: Phrase secrète manquante.")
+        return None
+    try:
+        salt = os.urandom(salt_len)
+        # Utiliser la fonction derive_key_aes avec le nombre d'itérations par défaut de Fernet pour cohérence si souhaité,
+        # ou un nombre d'itérations spécifique à AESGCM.
+        # Pour l'instant, on utilise les itérations par défaut de derive_key_aes.
+        key = derive_key_aes(passphrase, salt) # derive_key_aes gère les exceptions
+        
+        aesgcm = AESGCM(key)
+        nonce = os.urandom(nonce_len)
+        
+        encrypted_payload = aesgcm.encrypt(nonce, data_bytes, None) # Pas de données additionnelles authentifiées
+        
+        logger.debug(f"Données chiffrées avec AESGCM (sel: {salt_len}B, nonce: {nonce_len}B, payload: {len(encrypted_payload)}B).")
+        return salt + nonce + encrypted_payload
+    except ValueError as ve: # Capturer les ValueErrors de derive_key_aes
+        logger.error(f"Erreur de valeur lors du chiffrement AESGCM: {ve}")
+        return None
+    except Exception as e:
+        logger.error(f"Erreur inattendue lors du chiffrement AESGCM: {e}", exc_info=True)
+        return None
+
+def decrypt_data_aesgcm(encrypted_data_with_prefix: bytes, passphrase: str, salt_len: int = 16, nonce_len: int = 12) -> Optional[bytes]:
+    """
+    Déchiffre des données binaires chiffrées avec AESGCM, où le sel et le nonce sont préfixés.
+
+    Args:
+        encrypted_data_with_prefix: Les données chiffrées (sel + nonce + ciphertext).
+        passphrase: La phrase secrète pour dériver la clé.
+        salt_len: Longueur du sel utilisé (en bytes).
+        nonce_len: Longueur du nonce utilisé (en bytes).
+
+    Returns:
+        Optional[bytes]: Les données déchiffrées, ou None en cas d'erreur (e.g., token invalide, clé incorrecte).
+    """
+    if not passphrase:
+        logger.error("Erreur déchiffrement AESGCM: Phrase secrète manquante.")
+        return None
+    if not encrypted_data_with_prefix or len(encrypted_data_with_prefix) < salt_len + nonce_len:
+        logger.error(f"Erreur déchiffrement AESGCM: Données chiffrées trop courtes (longueur: {len(encrypted_data_with_prefix)}B).")
+        return None
+        
+    try:
+        salt = encrypted_data_with_prefix[:salt_len]
+        nonce = encrypted_data_with_prefix[salt_len : salt_len + nonce_len]
+        encrypted_payload = encrypted_data_with_prefix[salt_len + nonce_len:]
+        
+        key = derive_key_aes(passphrase, salt) # derive_key_aes gère les exceptions
+        
+        aesgcm = AESGCM(key)
+        
+        decrypted_data = aesgcm.decrypt(nonce, encrypted_payload, None)
+        logger.debug("Données déchiffrées avec AESGCM avec succès.")
+        return decrypted_data
+    except (InvalidToken, InvalidSignature) as e: # cryptography.exceptions.InvalidTag est souvent levée ici
+        logger.error(f"Erreur déchiffrement AESGCM (Token/Signature/Tag invalide): {e}. Cela peut indiquer une mauvaise phrase secrète ou des données corrompues.")
+        return None
+    except ValueError as ve: # Capturer les ValueErrors de derive_key_aes
+        logger.error(f"Erreur de valeur lors du déchiffrement AESGCM: {ve}")
+        return None
+    except Exception as e:
+        logger.error(f"Erreur inattendue lors du déchiffrement AESGCM: {e}", exc_info=True)
+        return None

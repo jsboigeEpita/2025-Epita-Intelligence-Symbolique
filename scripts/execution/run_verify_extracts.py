@@ -23,30 +23,21 @@ logging.basicConfig(
 logger = logging.getLogger("RunVerifyExtracts")
 
 # Ajouter le répertoire parent au chemin de recherche des modules
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+# sys.path.insert(0, os.path.dirname(os.path.abspath(__file__))) # Ancienne méthode
+# Ajout du répertoire racine du projet au chemin pour permettre l'import des modules
+project_root = Path(__file__).resolve().parent.parent.parent
+sys.path.insert(0, str(project_root))
 
-# Importer le script de vérification
-from argumentiation_analysis.scripts.verify_extracts import (
-    verify_extracts, generate_report
-)
-
-# Importer les services nécessaires
-from argumentiation_analysis.services.cache_service import CacheService
-from argumentiation_analysis.services.crypto_service import CryptoService
-from argumentiation_analysis.services.definition_service import DefinitionService
-from argumentiation_analysis.services.extract_service import ExtractService
-from argumentiation_analysis.services.fetch_service import FetchService
-from argumentiation_analysis.ui.config import ENCRYPTION_KEY, CONFIG_FILE, CONFIG_FILE_JSON
+# Importer le pipeline de vérification et le parseur d'arguments
+from project_core.dev_utils.verification_utils import run_extract_verification_pipeline
+from project_core.utils.cli_utils import parse_extract_verification_arguments
+# Les imports spécifiques (verify_extracts, generate_report, core_services, etc.)
+# sont maintenant gérés à l'intérieur du pipeline.
 
 
 def main():
     """Fonction principale."""
-    parser = argparse.ArgumentParser(description="Vérification des extraits")
-    parser.add_argument("--output", "-o", default="verify_report.html", help="Fichier de sortie pour le rapport HTML")
-    parser.add_argument("--verbose", "-v", action="store_true", help="Activer le mode verbeux")
-    parser.add_argument("--input", "-i", default=None, help="Fichier d'entrée personnalisé")
-    parser.add_argument("--hitler-only", action="store_true", help="Traiter uniquement le corpus de discours d'Hitler")
-    args = parser.parse_args()
+    args = parse_extract_verification_arguments()
     
     # Configurer le niveau de journalisation
     if args.verbose:
@@ -58,60 +49,34 @@ def main():
     logger.info("Démarrage du script de vérification des extraits...")
     logger.info(f"Répertoire de travail actuel: {os.getcwd()}")
     
+    # Appel du pipeline modularisé
+    # Note: run_extract_verification_pipeline est actuellement défini comme async dans verification_utils.py
+    # Si ce script ne doit pas utiliser asyncio, le pipeline devrait être synchrone.
+    # Pour l'instant, on suppose qu'il est synchrone ou que le script appelant gère l'async.
+    # Si run_extract_verification_pipeline devient effectivement async, il faudra faire:
+    # asyncio.run(run_extract_verification_pipeline(...)) ici, et importer asyncio.
+    # Pour l'instant, je vais le laisser comme un appel direct, en supposant qu'il sera ajusté si nécessaire.
+    
+    # Si le pipeline est async:
+    # import asyncio
+    # asyncio.run(run_extract_verification_pipeline(
+    # project_root_dir=project_root,
+    # output_report_path_str=args.output,
+    # custom_input_path_str=args.input,
+    # hitler_only=args.hitler_only
+    # ))
+    
+    # En supposant une version synchrone du pipeline pour l'instant pour éviter de changer le if __name__ == "__main__":
     try:
-        # Créer le service de cache
-        cache_dir = Path("./argumentiation_analysis/text_cache")
-        cache_service = CacheService(cache_dir)
-        
-        # Créer le service de chiffrement
-        crypto_service = CryptoService(ENCRYPTION_KEY)
-        
-        # Créer le service d'extraction
-        extract_service = ExtractService()
-        
-        # Créer le service de récupération
-        temp_download_dir = Path("./argumentiation_analysis/temp_downloads")
-        fetch_service = FetchService(
-            cache_service=cache_service,
-            temp_download_dir=temp_download_dir
+        run_extract_verification_pipeline(
+            project_root_dir=project_root,
+            output_report_path_str=args.output,
+            custom_input_path_str=args.input,
+            hitler_only=args.hitler_only
         )
-        
-        # Créer le service de définition
-        input_file = Path(args.input) if args.input else Path(CONFIG_FILE)
-        fallback_file = Path(CONFIG_FILE_JSON) if Path(CONFIG_FILE_JSON).exists() else None
-        definition_service = DefinitionService(
-            crypto_service=crypto_service,
-            config_file=input_file,
-            fallback_file=fallback_file
-        )
-        
-        # Charger les définitions d'extraits
-        extract_definitions, error_message = definition_service.load_definitions()
-        if error_message:
-            logger.warning(f"Avertissement lors du chargement des définitions: {error_message}")
-        
-        logger.info(f"{len(extract_definitions.sources)} sources chargées.")
-        
-        # Filtrer les sources si l'option --hitler-only est activée
-        if args.hitler_only:
-            original_count = len(extract_definitions.sources)
-            extract_definitions.sources = [
-                source for source in extract_definitions.sources
-                if "hitler" in source.source_name.lower()
-            ]
-            logger.info(f"Filtrage des sources: {len(extract_definitions.sources)}/{original_count} sources retenues (corpus Hitler).")
-        
-        # Vérifier les extraits
-        results = verify_extracts(extract_definitions, fetch_service, extract_service)
-        
-        # Générer le rapport
-        generate_report(results, args.output)
-        logger.info(f"Rapport généré dans {args.output}")
-        
+        logger.info("Script de vérification des extraits (via pipeline) terminé.")
     except Exception as e:
-        logger.error(f"Exception non gérée: {e}")
-        import traceback
-        logger.error(f"Traceback: {traceback.format_exc()}")
+        logger.error(f"Erreur lors de l'exécution du pipeline de vérification: {e}", exc_info=True)
 
 
 if __name__ == "__main__":

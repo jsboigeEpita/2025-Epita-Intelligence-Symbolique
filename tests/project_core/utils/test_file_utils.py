@@ -1,98 +1,110 @@
-#!/usr/bin/env python
 # -*- coding: utf-8 -*-
-"""
-Tests unitaires pour les utilitaires de gestion de fichiers.
-"""
+"""Tests pour les utilitaires de fichiers."""
 
-import unittest
 import json
+import tempfile
 from pathlib import Path
-import tempfile # Pour créer des fichiers temporaires
-import shutil # Pour supprimer le répertoire temporaire
-from typing import Any
+import pytest # Ajout de l'import pytest
 
-from project_core.utils.file_utils import load_json_data
+from project_core.utils.file_utils import load_json_file, load_extracts, load_base_analysis_results
 
-class TestFileUtils(unittest.TestCase):
-    """Classe de test pour les fonctions de file_utils."""
+# Fixture pour créer un répertoire temporaire pour les tests
+@pytest.fixture
+def temp_dir():
+    with tempfile.TemporaryDirectory() as tmpdir:
+        yield Path(tmpdir)
 
-    def setUp(self):
-        """Crée un répertoire temporaire pour les fichiers de test."""
-        self.test_dir = Path(tempfile.mkdtemp(prefix="test_file_utils_"))
+def test_load_json_file_list_success(temp_dir):
+    """Teste le chargement réussi d'un fichier JSON contenant une liste."""
+    sample_data = [{"id": 1, "name": "item1"}, {"id": 2, "name": "item2"}]
+    file_path = temp_dir / "sample_list.json"
+    with open(file_path, 'w', encoding='utf-8') as f:
+        json.dump(sample_data, f)
 
-    def tearDown(self):
-        """Supprime le répertoire temporaire après les tests."""
-        shutil.rmtree(self.test_dir)
+    loaded_data = load_json_file(file_path)
+    assert loaded_data == sample_data
 
-    def _create_test_json_file(self, filename: str, content: Any):
-        """Helper pour créer un fichier JSON dans le répertoire de test."""
-        file_path = self.test_dir / filename
-        with open(file_path, 'w', encoding='utf-8') as f:
-            json.dump(content, f, indent=2)
-        return file_path
+def test_load_json_file_dict_success(temp_dir):
+    """Teste le chargement réussi d'un fichier JSON contenant un dictionnaire."""
+    sample_data = {"config_key": "value", "number": 123}
+    file_path = temp_dir / "sample_dict.json"
+    with open(file_path, 'w', encoding='utf-8') as f:
+        json.dump(sample_data, f)
 
-    def test_load_json_data_valid_list(self):
-        """Teste le chargement d'une liste JSON valide."""
-        data = [{"id": 1, "name": "Test 1"}, {"id": 2, "name": "Test 2"}]
-        file_path = self._create_test_json_file("valid_list.json", data)
-        loaded_data = load_json_data(file_path)
-        self.assertEqual(loaded_data, data)
+    loaded_data = load_json_file(file_path)
+    assert loaded_data == sample_data
 
-    def test_load_json_data_valid_object(self):
-        """
-        Teste le chargement d'un objet JSON valide.
-        La fonction load_json_data actuelle s'attend à une liste,
-        mais elle retourne les données telles quelles. L'appelant doit vérifier le type.
-        """
-        data = {"id": 1, "name": "Test Object"}
-        file_path = self._create_test_json_file("valid_object.json", data)
-        loaded_data = load_json_data(file_path)
-        self.assertEqual(loaded_data, data) # La fonction retourne l'objet, pas une liste d'objet
+def test_load_json_file_not_found(temp_dir, caplog):
+    """Teste le cas où le fichier JSON n'existe pas."""
+    file_path = temp_dir / "non_existent.json"
+    loaded_data = load_json_file(file_path)
+    assert loaded_data is None
+    assert f"Fichier non trouvé: {file_path}" in caplog.text
 
-    def test_load_json_data_empty_list(self):
-        """Teste le chargement d'une liste JSON vide."""
-        data = []
-        file_path = self._create_test_json_file("empty_list.json", data)
-        loaded_data = load_json_data(file_path)
-        self.assertEqual(loaded_data, data)
+def test_load_json_file_decode_error(temp_dir, caplog):
+    """Teste le cas où le fichier JSON est malformé."""
+    file_path = temp_dir / "malformed.json"
+    with open(file_path, 'w', encoding='utf-8') as f:
+        f.write("this is not json")
 
-    def test_load_json_data_empty_file(self):
-        """Teste le chargement d'un fichier JSON vide (contenu invalide)."""
-        file_path = self.test_dir / "empty_file.json"
-        with open(file_path, 'w', encoding='utf-8') as f:
-            f.write("") # Fichier vide
-        loaded_data = load_json_data(file_path)
-        self.assertIsNone(loaded_data) # Devrait retourner None car JSONDecodeError
+    loaded_data = load_json_file(file_path)
+    assert loaded_data is None
+    assert f"Erreur de décodage JSON dans {file_path}" in caplog.text
 
-    def test_load_json_data_null_content(self):
-        """Teste le chargement d'un fichier JSON contenant 'null'."""
-        file_path = self.test_dir / "null_content.json"
-        with open(file_path, 'w', encoding='utf-8') as f:
-            f.write("null")
-        loaded_data = load_json_data(file_path)
-        # La fonction load_json_data a été modifiée pour retourner [] pour 'null'
-        self.assertEqual(loaded_data, [])
+def test_load_extracts_success(temp_dir):
+    """Teste le chargement réussi avec load_extracts (qui attend une liste)."""
+    sample_extracts = [{"id": "extract1", "content": "Some text"}, {"id": "extract2", "content": "More text"}]
+    file_path = temp_dir / "extracts.json"
+    with open(file_path, 'w', encoding='utf-8') as f:
+        json.dump(sample_extracts, f)
 
+    loaded_extracts = load_extracts(file_path)
+    assert loaded_extracts == sample_extracts
 
-    def test_load_json_data_invalid_json(self):
-        """Teste le chargement d'un fichier avec du JSON invalide."""
-        file_path = self.test_dir / "invalid.json"
-        with open(file_path, 'w', encoding='utf-8') as f:
-            f.write("{'id': 1, 'name': 'Test'") # JSON invalide (manque } et guillemets simples)
-        loaded_data = load_json_data(file_path)
-        self.assertIsNone(loaded_data)
+def test_load_extracts_file_not_found(temp_dir, caplog):
+    """Teste load_extracts quand le fichier n'existe pas."""
+    file_path = temp_dir / "non_existent_extracts.json"
+    loaded_extracts = load_extracts(file_path)
+    assert loaded_extracts == []
+    assert f"Fichier non trouvé: {file_path}" in caplog.text # Vérifie que load_json_file a loggué l'erreur
 
-    def test_load_json_data_file_not_found(self):
-        """Teste le chargement d'un fichier non existant."""
-        file_path = self.test_dir / "non_existent.json"
-        loaded_data = load_json_data(file_path)
-        self.assertIsNone(loaded_data)
+def test_load_extracts_decode_error(temp_dir, caplog):
+    """Teste load_extracts quand le JSON est malformé."""
+    file_path = temp_dir / "malformed_extracts.json"
+    with open(file_path, 'w', encoding='utf-8') as f:
+        f.write("not a valid json list")
+    
+    loaded_extracts = load_extracts(file_path)
+    assert loaded_extracts == []
+    assert f"Erreur de décodage JSON dans {file_path}" in caplog.text
 
-    def test_load_json_data_path_is_directory(self):
-        """Teste le chargement lorsque le chemin est un répertoire."""
-        # Le répertoire test_dir existe déjà
-        loaded_data = load_json_data(self.test_dir)
-        self.assertIsNone(loaded_data)
+def test_load_extracts_returns_list_even_if_dict_loaded(temp_dir, caplog):
+    """Teste que load_extracts retourne une liste vide si le JSON est un dict."""
+    sample_data = {"config_key": "value"}
+    file_path = temp_dir / "dict_for_extracts.json"
+    with open(file_path, 'w', encoding='utf-8') as f:
+        json.dump(sample_data, f)
 
-if __name__ == '__main__':
-    unittest.main()
+    loaded_extracts = load_extracts(file_path)
+    assert loaded_extracts == []
+    assert f"Les données chargées depuis {file_path} ne sont pas une liste comme attendu pour des extraits." in caplog.text
+def test_load_base_analysis_results_success(temp_dir):
+    """Teste le chargement réussi avec load_base_analysis_results (qui attend une liste)."""
+    sample_results = [{"analysis_id": "base1", "score": 0.8}, {"analysis_id": "base2", "score": 0.9}]
+    file_path = temp_dir / "base_results.json"
+    with open(file_path, 'w', encoding='utf-8') as f:
+        json.dump(sample_results, f)
+
+    loaded_results = load_base_analysis_results(file_path)
+    assert loaded_results == sample_results
+
+def test_load_base_analysis_results_returns_list_even_if_dict_loaded(temp_dir, caplog):
+    """Teste que load_base_analysis_results retourne une liste vide si le JSON est un dict."""
+    sample_data = {"summary": "Overall good"}
+    file_path = temp_dir / "dict_for_base_results.json"
+    with open(file_path, 'w', encoding='utf-8') as f:
+        json.dump(sample_data, f)
+
+    loaded_results = load_base_analysis_results(file_path)
+    assert loaded_results == []
+    assert f"Les données chargées depuis {file_path} pour les résultats d'analyse de base ne sont pas une liste." in caplog.text

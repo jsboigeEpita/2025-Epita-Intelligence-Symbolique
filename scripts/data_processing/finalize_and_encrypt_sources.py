@@ -1,34 +1,23 @@
 import json
 import gzip
 import os
-from cryptography.hazmat.primitives.ciphers.aead import AESGCM
-from cryptography.hazmat.primitives import hashes
-from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
-from cryptography.hazmat.backends import default_backend
 import pathlib
+import sys # NOUVEAU: Pour sys.path
+from typing import Optional # NOUVEAU: Pour type hinting
 
-def derive_key(passphrase: str, salt: bytes, key_length: int = 32) -> bytes:
-    kdf = PBKDF2HMAC(
-        algorithm=hashes.SHA256(),
-        length=key_length,
-        salt=salt,
-        iterations=100000, # Nombre d'itérations standard
-        backend=default_backend()
-    )
-    return kdf.derive(passphrase.encode('utf-8'))
+# Ajout du répertoire racine du projet au chemin pour permettre l'import des modules
+project_root = pathlib.Path(__file__).resolve().parent.parent.parent
+sys.path.insert(0, str(project_root))
 
-def encrypt_data(data_bytes: bytes, passphrase: str) -> bytes:
-    salt = os.urandom(16)  # Générer un nouveau sel pour chaque chiffrement
-    key = derive_key(passphrase, salt)
-    aesgcm = AESGCM(key)
-    nonce = os.urandom(12)  # AES-GCM utilise typiquement un nonce de 12 bytes
-    encrypted_data = aesgcm.encrypt(nonce, data_bytes, None) # Pas de données additionnelles authentifiées
-    return salt + nonce + encrypted_data # Préfixer avec sel puis nonce
+from project_core.utils.crypto_utils import encrypt_data_aesgcm, decrypt_data_aesgcm # MODIFIÉ: Import
 
-def finalize_and_encrypt():
+# Les fonctions derive_key et encrypt_data ont été déplacées vers crypto_utils.py
+# et renommées/adaptées (derive_key_aes, encrypt_data_aesgcm).
+
+def finalize_and_encrypt(passphrase_override: Optional[str] = None): # MODIFIÉ: Ajout d'un override pour la passphrase
     input_json_path_str = "_temp/config_final_pre_encryption.json"
     output_encrypted_path_str = "argumentation_analysis/data/extract_sources.json.gz.enc"
-    passphrase = "Propaganda"
+    passphrase = passphrase_override if passphrase_override else "Propaganda" # MODIFIÉ: Utilisation de l'override
 
     input_json_path = pathlib.Path(input_json_path_str)
     output_encrypted_path = pathlib.Path(output_encrypted_path_str)
@@ -54,7 +43,10 @@ def finalize_and_encrypt():
 
     # Chiffrer les données compressées
     try:
-        encrypted_data_with_prefix = encrypt_data(compressed_bytes, passphrase)
+        encrypted_data_with_prefix = encrypt_data_aesgcm(compressed_bytes, passphrase) # MODIFIÉ: Appel de la fonction importée
+        if encrypted_data_with_prefix is None:
+            print(f"ERREUR CRITIQUE: Échec du chiffrement, encrypt_data_aesgcm a retourné None.")
+            return
         print(f"INFO: Données chiffrées avec succès (longueur totale avec sel+nonce: {len(encrypted_data_with_prefix)} bytes).")
     except Exception as e:
         print(f"ERREUR CRITIQUE: Échec du chiffrement: {e}")
@@ -78,4 +70,7 @@ def finalize_and_encrypt():
         return
 
 if __name__ == "__main__":
-    finalize_and_encrypt()
+    # Exemple d'utilisation avec une passphrase spécifique (pourrait être lu depuis un argument CLI ou une variable d'env)
+    # passphrase_for_script = os.getenv("YOUR_SCRIPT_PASSPHRASE") or "Propaganda"
+    # finalize_and_encrypt(passphrase_override=passphrase_for_script)
+    finalize_and_encrypt() # Conserve le comportement original si appelé directement
