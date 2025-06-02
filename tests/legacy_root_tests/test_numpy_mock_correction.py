@@ -46,11 +46,11 @@ def test_numpy_mock_core_modules():
     import numpy._core.multiarray
     import numpy.core.multiarray
     
-    print("✅ Tous les modules NumPy sont correctement exposés !")
-    print(f"✅ numpy._core: {numpy._core}")
-    print(f"✅ numpy.core: {numpy.core}")
-    print(f"✅ numpy._core.multiarray: {numpy._core.multiarray}")
-    print(f"✅ numpy.core.multiarray: {numpy.core.multiarray}")
+    print("[OK] Tous les modules NumPy sont correctement exposés !")
+    print(f"[OK] numpy._core: {numpy._core}")
+    print(f"[OK] numpy.core: {numpy.core}")
+    print(f"[OK] numpy._core.multiarray: {numpy._core.multiarray}")
+    print(f"[OK] numpy.core.multiarray: {numpy.core.multiarray}")
     
     # Si toutes les assertions passent, le test est réussi.
     # Pytest n'attend pas de valeur de retour.
@@ -58,9 +58,9 @@ def test_numpy_mock_core_modules():
 if __name__ == "__main__":
     try:
         test_numpy_mock_core_modules()
-        print("\n🎉 SUCCÈS : La correction du mock NumPy fonctionne parfaitement !")
-        print("🎯 Les modules _core et core sont correctement exposés.")
-        print("🔧 L'erreur 'numpy._core.multiarray failed to import' est résolue.")
+        print("\n[SUCCESS] SUCCÈS : La correction du mock NumPy fonctionne parfaitement !")
+        print("[INFO] Les modules _core et core sont correctement exposés.")
+        print("[INFO] L'erreur 'numpy._core.multiarray failed to import' est résolue.")
     except Exception as e:
-        print(f"\n❌ ÉCHEC : {e}")
+        print(f"\n[FAIL] ÉCHEC : {e}")
         sys.exit(1)

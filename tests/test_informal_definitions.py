@@ -91,8 +91,7 @@ else: # S'il existe, patcher ses fonctions
 from argumentation_analysis.agents.core.informal.informal_definitions import InformalAnalysisPlugin, setup_informal_kernel
 import pytest # Ajout pour le marqueur
 
-@pytest.mark.use_real_numpy
-@pytest.mark.xfail(reason="NumPy 2.x _NoValueType issue with ndarray.max/min, see numpy/numpy#27857 and pandas-dev/pandas#60421")
+@pytest.mark.use_real_numpy # Utilise le vrai NumPy
 class TestInformalDefinitions(unittest.TestCase):
     """Tests unitaires pour les définitions de l'agent informel."""
     

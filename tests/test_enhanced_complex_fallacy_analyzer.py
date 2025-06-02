@@ -39,8 +39,6 @@ from pandas_mock import *
 from argumentation_analysis.agents.tools.analysis.enhanced.complex_fallacy_analyzer import EnhancedComplexFallacyAnalyzer
 
 
-@pytest.mark.use_real_numpy
-@pytest.mark.xfail(reason="NumPy 2.x _NoValueType issue with ndarray.max/min, see numpy/numpy#27857 and pandas-dev/pandas#60421")
 class TestEnhancedComplexFallacyAnalyzer(unittest.TestCase):
     """Tests unitaires pour l'analyseur de sophismes complexes amélioré."""
     
