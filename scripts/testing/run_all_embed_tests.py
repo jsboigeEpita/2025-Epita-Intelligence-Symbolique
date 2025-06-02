@@ -14,7 +14,7 @@ from pathlib import Path
 from unittest.mock import patch, MagicMock
 
 # Ajouter le répertoire racine au path
-PROJECT_ROOT = Path(__file__).resolve().parent
+PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent # MODIFIÉ: Remonter à la racine du projet
 sys.path.insert(0, str(PROJECT_ROOT))
 
 def setup_environment():

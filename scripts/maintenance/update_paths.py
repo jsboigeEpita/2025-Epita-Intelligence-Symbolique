@@ -73,7 +73,7 @@ PATH_PATTERNS = [
 ]
 
 # Motif pour détecter l'importation du module paths
-IMPORT_PATHS_PATTERN = r'from\s+argumentiation_analysis\.paths\s+import\s+([^\n]+)'
+IMPORT_PATHS_PATTERN = r'from\s+argumentation_analysis\.paths\s+import\s+([^\n]+)' # MODIFIÉ
 
 def update_paths_in_file(file_path, dry_run=True):
     """
@@ -118,7 +118,7 @@ def update_paths_in_file(file_path, dry_run=True):
         # Mettre à jour l'importation si nécessaire
         import_added = False
         if paths_to_import and not paths_already_imported:
-            import_statement = f"from argumentiation_analysis.paths import {', '.join(paths_to_import)}\n\n"
+            import_statement = f"from argumentation_analysis.paths import {', '.join(paths_to_import)}\n\n" # MODIFIÉ
             
             # Trouver un bon endroit pour ajouter l'importation
             import_section_end = 0
