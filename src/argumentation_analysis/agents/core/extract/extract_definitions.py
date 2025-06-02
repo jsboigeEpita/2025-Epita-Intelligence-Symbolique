@@ -1,8 +1,13 @@
 """
 Définitions et structures de données pour l'agent d'extraction.
 
-Ce module contient les classes et structures de données utilisées par l'agent d'extraction
-pour gérer les extraits et leurs métadonnées.
+Ce module contient les classes Pydantic (ou similaires) et les structures de données
+utilisées par `ExtractAgent` et ses composants. Il définit :
+    - `ExtractResult`: Pour encapsuler le résultat d'une opération d'extraction.
+    - `ExtractAgentPlugin`: Un plugin contenant des fonctions natives utiles
+      pour le traitement de texte dans le contexte de l'extraction.
+    - `ExtractDefinition`: Pour représenter la définition d'un extrait spécifique
+      à rechercher dans un texte source.
 """
 
 import re
@@ -24,7 +29,24 @@ logger.addHandler(file_handler)
 
 
 class ExtractResult:
-    """Classe représentant le résultat d'une extraction."""
+    """
+    Classe représentant le résultat d'une opération d'extraction.
+
+    Cette classe encapsule toutes les informations pertinentes suite à une tentative
+    d'extraction, y compris le statut, les marqueurs, le texte extrait et
+    toute explication ou message d'erreur.
+
+    Attributes:
+        source_name (str): Nom de la source du texte.
+        extract_name (str): Nom de l'extrait.
+        status (str): Statut de l'extraction (ex: "valid", "rejected", "error").
+        message (str): Message descriptif concernant le résultat.
+        start_marker (str): Marqueur de début utilisé ou proposé.
+        end_marker (str): Marqueur de fin utilisé ou proposé.
+        template_start (str): Template de début utilisé ou proposé.
+        explanation (str): Explication fournie par l'agent pour l'extraction.
+        extracted_text (str): Le texte effectivement extrait.
+    """
     
     def __init__(
         self,
@@ -111,7 +133,18 @@ class ExtractResult:
 
 
 class ExtractAgentPlugin:
-    """Plugin pour les fonctions natives de l'extracteur agentique."""
+    """
+    Plugin contenant des fonctions natives utiles pour l'agent d'extraction.
+
+    Ce plugin regroupe des méthodes de traitement de texte qui ne nécessitent pas
+    d'appel à un LLM mais sont utiles pour préparer les données ou analyser
+    les textes sources dans le cadre du processus d'extraction.
+
+    Attributes:
+        extract_results (List[Dict[str, Any]]): Une liste pour stocker les résultats
+            des opérations d'extraction effectuées, à des fins de journalisation ou de suivi.
+            (Note: L'utilisation de cette liste pourrait être revue pour une meilleure gestion d'état).
+    """
     
     def __init__(self):
         """Initialise le plugin `ExtractAgentPlugin`.
@@ -307,7 +340,21 @@ class ExtractAgentPlugin:
 
 
 class ExtractDefinition:
-    """Classe représentant la définition d'une extraction."""
+    """
+    Classe représentant la définition d'un extrait à rechercher ou à gérer.
+
+    Cette structure de données contient les informations nécessaires pour identifier
+    et localiser un segment de texte spécifique (un "extrait") au sein d'un
+    document source plus large.
+
+    Attributes:
+        source_name (str): Nom de la source du texte.
+        extract_name (str): Nom ou description de l'extrait.
+        start_marker (str): Le marqueur textuel indiquant le début de l'extrait.
+        end_marker (str): Le marqueur textuel indiquant la fin de l'extrait.
+        template_start (str): Un template optionnel qui peut précéder le `start_marker`.
+        description (str): Une description optionnelle de ce que représente l'extrait.
+    """
     
     def __init__(
         self,

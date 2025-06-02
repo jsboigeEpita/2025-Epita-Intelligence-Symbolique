@@ -1,6 +1,13 @@
 # argumentation_analysis/agents/core/logic/tweety_bridge.py
 """
-Interface avec TweetyProject via JPype.
+Interface avec TweetyProject via JPype pour l'exécution de requêtes logiques.
+
+Ce module fournit la classe `TweetyBridge` qui sert d'interface Python
+pour interagir avec les bibliothèques Java de TweetyProject. Elle permet
+de parser des formules et des ensembles de croyances, de valider leur syntaxe,
+et d'exécuter des requêtes pour la logique propositionnelle, la logique du
+premier ordre, et la logique modale. L'interaction avec Java est gérée
+par la bibliothèque JPype.
 """
 
 import logging
@@ -14,15 +21,42 @@ logger = logging.getLogger("Orchestration.TweetyBridge")
 
 class TweetyBridge:
     """
-    Interface avec TweetyProject via JPype.
-    
-    Cette classe fournit une interface unifiée pour interagir avec TweetyProject
-    pour différents types de logiques (propositionnelle, premier ordre, modale).
+    Interface avec TweetyProject via JPype pour différents types de logiques.
+
+    Cette classe encapsule la communication avec TweetyProject, permettant
+    l'analyse syntaxique, la validation et le raisonnement sur des bases de
+    croyances en logique propositionnelle (PL), logique du premier ordre (FOL),
+    et logique modale (ML). Elle gère le démarrage de la JVM et le chargement
+    des classes Java nécessaires de TweetyProject.
+
+    Attributes:
+        _logger (logging.Logger): Logger pour cette classe.
+        _jvm_ok (bool): Indique si la JVM et les composants Tweety sont prêts.
+        _PlParser (jpype.JClass): Classe Java pour le parser de logique propositionnelle.
+        _SatReasoner (jpype.JClass): Classe Java pour le raisonneur SAT (logique prop.).
+        _PlFormula (jpype.JClass): Classe Java pour les formules de logique propositionnelle.
+        _FolParser (jpype.JClass): Classe Java pour le parser de logique du premier ordre.
+        _FolReasoner (jpype.JClass): Interface Java pour les raisonneurs FOL.
+        _SimpleFolReasoner (jpype.JClass): Classe Java pour un raisonneur FOL simple.
+        _FolFormula (jpype.JClass): Classe Java pour les formules de logique du premier ordre.
+        _ModalParser (jpype.JClass): Classe Java pour le parser de logique modale.
+        _AbstractModalReasoner (jpype.JClass): Classe Java abstraite pour les raisonneurs modaux.
+        _SimpleModalReasoner (jpype.JClass): Classe Java pour un raisonneur modal simple.
+        _ModalFormula (jpype.JClass): Classe Java pour les formules de logique modale.
+        _pl_parser_instance (Any): Instance du parser de logique propositionnelle.
+        _pl_reasoner_instance (Any): Instance du raisonneur de logique propositionnelle.
+        _fol_parser_instance (Any): Instance du parser de logique du premier ordre.
+        _fol_reasoner_instance (Any): Instance du raisonneur de logique du premier ordre.
+        _modal_parser_instance (Any): Instance du parser de logique modale.
+        _modal_reasoner_instance (Any): Instance du raisonneur de logique modale.
     """
     
     def __init__(self):
         """
         Initialise l'interface TweetyBridge.
+
+        Tente de démarrer la JVM si elle n'est pas déjà démarrée et charge
+        les classes Java nécessaires de TweetyProject.
         """
         self._logger = logger
         self._jvm_ok = False
@@ -59,16 +93,20 @@ class TweetyBridge:
     
     def is_jvm_ready(self) -> bool:
         """
-        Vérifie si la JVM est prête.
-        
-        Returns:
-            True si la JVM est démarrée, False sinon
+        Vérifie si la JVM et les composants Tweety sont prêts à l'emploi.
+
+        :return: True si la JVM est démarrée et les composants Tweety initialisés, False sinon.
+        :rtype: bool
         """
         return jpype.isJVMStarted() and self._jvm_ok
     
     def _initialize_jvm_components(self) -> None:
         """
-        Initialise les composants JVM pour TweetyProject.
+        Initialise les composants JVM nécessaires pour interagir avec TweetyProject.
+
+        Charge les classes Java pour les parsers et raisonneurs des différentes logiques
+        supportées (PL, FOL, ML). Met à jour l'attribut `_jvm_ok`.
+        Ne fait rien si la JVM n'est pas démarrée.
         """
         # Vérifier si la JVM est démarrée
         if not jpype.isJVMStarted():
@@ -97,7 +135,13 @@ class TweetyBridge:
     
     def _initialize_pl_components(self) -> None:
         """
-        Initialise les composants pour la logique propositionnelle.
+        Initialise les composants Java pour la logique propositionnelle.
+
+        Charge les classes `PlParser`, `SatReasoner`, et `PlFormula` de TweetyProject
+        et crée des instances du parser et du raisonneur.
+
+        :raises Exception: Si une erreur survient lors du chargement des classes ou
+                           de la création des instances.
         """
         try:
             # Charger les classes
@@ -117,7 +161,12 @@ class TweetyBridge:
     
     def _initialize_fol_components(self) -> None:
         """
-        Initialise les composants pour la logique du premier ordre.
+        Initialise les composants Java pour la logique du premier ordre (FOL).
+
+        Charge les classes `FolParser`, `FolReasoner`, `SimpleFolReasoner`, et `FolFormula`
+        de TweetyProject et crée des instances du parser et du raisonneur FOL.
+        En cas d'erreur, un avertissement est loggué et la logique FOL ne sera pas disponible,
+        mais l'initialisation des autres logiques peut continuer.
         """
         try:
             # Charger les classes
@@ -139,7 +188,13 @@ class TweetyBridge:
     
     def _initialize_modal_components(self) -> None:
         """
-        Initialise les composants pour la logique modale.
+        Initialise les composants Java pour la logique modale (ML).
+
+        Charge les classes `MlParser`, `AbstractMlReasoner`, `SimpleMlReasoner`,
+        et `ModalFormula` de TweetyProject et crée des instances du parser et du
+        raisonneur modal. En cas d'erreur, un avertissement est loggué et la logique
+        modale ne sera pas disponible, mais l'initialisation des autres logiques
+        peut continuer.
         """
         try:
             # Charger les classes
@@ -163,13 +218,13 @@ class TweetyBridge:
     
     def validate_formula(self, formula_string: str) -> Tuple[bool, str]:
         """
-        Valide une formule de logique propositionnelle.
-        
-        Args:
-            formula_string: La formule à valider
-            
-        Returns:
-            Un tuple (is_valid, message)
+        Valide la syntaxe d'une formule de logique propositionnelle.
+
+        :param formula_string: La formule à valider.
+        :type formula_string: str
+        :return: Un tuple contenant un booléen indiquant si la formule est valide
+                 et un message descriptif.
+        :rtype: Tuple[bool, str]
         """
         if not self._jvm_ok or not self._pl_parser_instance:
             return False, "JVM ou parser non prêt"
@@ -186,13 +241,16 @@ class TweetyBridge:
     
     def validate_belief_set(self, belief_set_string: str) -> Tuple[bool, str]:
         """
-        Valide un ensemble de croyances de logique propositionnelle.
-        
-        Args:
-            belief_set_string: L'ensemble de croyances à valider
-            
-        Returns:
-            Un tuple (is_valid, message)
+        Valide la syntaxe d'un ensemble de croyances en logique propositionnelle.
+
+        Nettoie les sauts de ligne échappés avant la validation.
+        Vérifie également si l'ensemble de croyances est vide ou ne contient que des commentaires.
+
+        :param belief_set_string: L'ensemble de croyances (chaque formule sur une nouvelle ligne).
+        :type belief_set_string: str
+        :return: Un tuple contenant un booléen indiquant si l'ensemble est valide
+                 et un message descriptif, incluant potentiellement la ligne de l'erreur.
+        :rtype: Tuple[bool, str]
         """
         if not self._jvm_ok or not self._pl_parser_instance:
             return False, "JVM ou parser non prêt"
@@ -232,14 +290,21 @@ class TweetyBridge:
     )
     def execute_pl_query(self, belief_set_content: str, query_string: str) -> str:
         """
-        Exécute une requête en logique propositionnelle.
-        
-        Args:
-            belief_set_content: Le contenu de l'ensemble de croyances
-            query_string: La requête à exécuter
-            
-        Returns:
-            Le résultat formaté de la requête
+        Exécute une requête en logique propositionnelle sur un ensemble de croyances donné.
+
+        La fonction parse l'ensemble de croyances et la formule de requête, puis
+        utilise le raisonneur SAT de TweetyProject pour déterminer si la requête
+        est une conséquence logique de l'ensemble de croyances.
+
+        :param belief_set_content: Le contenu de l'ensemble de croyances,
+                                   avec les formules séparées par des sauts de ligne.
+        :type belief_set_content: str
+        :param query_string: La formule de logique propositionnelle à vérifier.
+        :type query_string: str
+        :return: Une chaîne de caractères formatée indiquant si la requête est
+                 "ACCEPTED (True)", "REJECTED (False)", "Unknown", ou un message
+                 d'erreur préfixé par "FUNC_ERROR:".
+        :rtype: str
         """
         self._logger.info(f"Appel execute_pl_query: Query='{query_string}' sur BS ('{belief_set_content[:60]}...')")
         
@@ -279,13 +344,14 @@ class TweetyBridge:
     
     def _parse_pl_formula(self, formula_string: str) -> Optional[Any]:
         """
-        Parse une formule de logique propositionnelle.
-        
-        Args:
-            formula_string: La formule à parser
-            
-        Returns:
-            L'objet formule parsé ou None en cas d'erreur
+        Parse une chaîne de caractères en un objet formule de logique propositionnelle Tweety.
+
+        :param formula_string: La chaîne représentant la formule.
+        :type formula_string: str
+        :return: Un objet `PlFormula` de TweetyProject si le parsing réussit,
+                 `None` si la JVM ou le parser ne sont pas prêts.
+        :rtype: Optional[Any]
+        :raises RuntimeError: Si une erreur de parsing Java ou Python survient.
         """
         if not self._jvm_ok or not self._pl_parser_instance:
             self._logger.error(f"Parse formula: JVM/Parser non prêt ('{formula_string[:60]}...').")
@@ -306,13 +372,17 @@ class TweetyBridge:
     
     def _parse_pl_belief_set(self, belief_set_string: str) -> Optional[Any]:
         """
-        Parse un ensemble de croyances de logique propositionnelle.
-        
-        Args:
-            belief_set_string: L'ensemble de croyances à parser
-            
-        Returns:
-            L'objet ensemble de croyances parsé ou None en cas d'erreur
+        Parse une chaîne de caractères en un objet ensemble de croyances (BeliefBase) Tweety.
+
+        Nettoie les sauts de ligne échappés avant le parsing.
+
+        :param belief_set_string: La chaîne représentant l'ensemble de croyances
+                                  (formules séparées par des sauts de ligne).
+        :type belief_set_string: str
+        :return: Un objet `BeliefBase` (ou `PlBeliefSet`) de TweetyProject si le parsing réussit,
+                 `None` si la JVM ou le parser ne sont pas prêts.
+        :rtype: Optional[Any]
+        :raises RuntimeError: Si une erreur de parsing Java ou Python survient.
         """
         if not self._jvm_ok or not self._pl_parser_instance:
             self._logger.error(f"Parse BS: JVM/Parser non prêt (BS: '{belief_set_string[:60]}...').")
@@ -354,14 +424,22 @@ class TweetyBridge:
     
     def _execute_pl_query_internal(self, belief_set_obj: Any, formula_obj: Any) -> Optional[bool]:
         """
-        Exécute une requête de logique propositionnelle.
-        
-        Args:
-            belief_set_obj: L'objet ensemble de croyances
-            formula_obj: L'objet formule
-            
-        Returns:
-            Le résultat de la requête (True, False ou None si indéterminé)
+        Exécute une requête de logique propositionnelle en utilisant les objets Tweety parsés.
+
+        Utilise le raisonneur SAT pour vérifier si la `formula_obj` est une conséquence
+        logique de `belief_set_obj`.
+
+        :param belief_set_obj: L'objet `BeliefBase` Tweety parsé.
+        :type belief_set_obj: Any
+        :param formula_obj: L'objet `PlFormula` Tweety parsé.
+        :type formula_obj: Any
+        :return: `True` si la formule est conséquence, `False` sinon, `None` si la JVM
+                 n'est pas prête, si le raisonneur retourne `null` (indéterminé),
+                 ou en cas d'erreur de type.
+        :rtype: Optional[bool]
+        :raises TypeError: Si `formula_obj` n'est pas une instance de `PlFormula`.
+        :raises ValueError: Si `belief_set_obj` est `None`.
+        :raises RuntimeError: Si une erreur d'exécution Java ou Python survient.
         """
         if not self._jvm_ok or not self._pl_reasoner_instance or not self._PlFormula:
             self._logger.error("Execute query: JVM/Reasoner/Formula non prêt.")
@@ -407,13 +485,13 @@ class TweetyBridge:
     
     def validate_fol_formula(self, formula_string: str) -> Tuple[bool, str]:
         """
-        Valide une formule de logique du premier ordre.
-        
-        Args:
-            formula_string: La formule à valider
-            
-        Returns:
-            Un tuple (is_valid, message)
+        Valide la syntaxe d'une formule de logique du premier ordre (FOL).
+
+        :param formula_string: La formule FOL à valider.
+        :type formula_string: str
+        :return: Un tuple contenant un booléen indiquant si la formule est valide
+                 et un message descriptif.
+        :rtype: Tuple[bool, str]
         """
         if not self._jvm_ok or not self._fol_parser_instance:
             return False, "JVM ou parser FOL non prêt"
@@ -430,13 +508,16 @@ class TweetyBridge:
     
     def validate_fol_belief_set(self, belief_set_string: str) -> Tuple[bool, str]:
         """
-        Valide un ensemble de croyances de logique du premier ordre.
-        
-        Args:
-            belief_set_string: L'ensemble de croyances à valider
-            
-        Returns:
-            Un tuple (is_valid, message)
+        Valide la syntaxe d'un ensemble de croyances en logique du premier ordre (FOL).
+
+        Nettoie les sauts de ligne échappés avant la validation.
+        Vérifie également si l'ensemble de croyances est vide ou ne contient que des commentaires.
+
+        :param belief_set_string: L'ensemble de croyances FOL (chaque formule sur une nouvelle ligne).
+        :type belief_set_string: str
+        :return: Un tuple contenant un booléen indiquant si l'ensemble est valide
+                 et un message descriptif, incluant potentiellement la ligne de l'erreur.
+        :rtype: Tuple[bool, str]
         """
         if not self._jvm_ok or not self._fol_parser_instance:
             return False, "JVM ou parser FOL non prêt"
@@ -475,14 +556,17 @@ class TweetyBridge:
     )
     def execute_fol_query(self, belief_set_content: str, query_string: str) -> str:
         """
-        Exécute une requête en logique du premier ordre.
-        
-        Args:
-            belief_set_content: Le contenu de l'ensemble de croyances
-            query_string: La requête à exécuter
-            
-        Returns:
-            Le résultat formaté de la requête
+        Exécute une requête en logique du premier ordre (FOL) sur un ensemble de croyances.
+
+        Parse l'ensemble de croyances et la formule de requête FOL, puis utilise
+        le raisonneur FOL de TweetyProject.
+
+        :param belief_set_content: Le contenu de l'ensemble de croyances FOL.
+        :type belief_set_content: str
+        :param query_string: La formule FOL à vérifier.
+        :type query_string: str
+        :return: Une chaîne de caractères formatée indiquant le résultat ou une erreur.
+        :rtype: str
         """
         self._logger.info(f"Appel execute_fol_query: Query='{query_string}' sur BS ('{belief_set_content[:60]}...')")
         
@@ -522,13 +606,14 @@ class TweetyBridge:
     
     def _parse_fol_formula(self, formula_string: str) -> Optional[Any]:
         """
-        Parse une formule de logique du premier ordre.
-        
-        Args:
-            formula_string: La formule à parser
-            
-        Returns:
-            L'objet formule parsé ou None en cas d'erreur
+        Parse une chaîne de caractères en un objet formule de logique du premier ordre (FOL) Tweety.
+
+        :param formula_string: La chaîne représentant la formule FOL.
+        :type formula_string: str
+        :return: Un objet `FolFormula` de TweetyProject si le parsing réussit,
+                 `None` si la JVM ou le parser FOL ne sont pas prêts.
+        :rtype: Optional[Any]
+        :raises RuntimeError: Si une erreur de parsing Java ou Python survient.
         """
         if not self._jvm_ok or not self._fol_parser_instance:
             self._logger.error(f"Parse FOL formula: JVM/Parser non prêt ('{formula_string[:60]}...').")
@@ -549,13 +634,16 @@ class TweetyBridge:
     
     def _parse_fol_belief_set(self, belief_set_string: str) -> Optional[Any]:
         """
-        Parse un ensemble de croyances de logique du premier ordre.
-        
-        Args:
-            belief_set_string: L'ensemble de croyances à parser
-            
-        Returns:
-            L'objet ensemble de croyances parsé ou None en cas d'erreur
+        Parse une chaîne de caractères en un objet ensemble de croyances FOL (BeliefBase) Tweety.
+
+        Nettoie les sauts de ligne échappés avant le parsing.
+
+        :param belief_set_string: La chaîne représentant l'ensemble de croyances FOL.
+        :type belief_set_string: str
+        :return: Un objet `FolBeliefSet` de TweetyProject si le parsing réussit,
+                 `None` si la JVM ou le parser FOL ne sont pas prêts.
+        :rtype: Optional[Any]
+        :raises RuntimeError: Si une erreur de parsing Java ou Python survient.
         """
         if not self._jvm_ok or not self._fol_parser_instance:
             self._logger.error(f"Parse FOL BS: JVM/Parser non prêt (BS: '{belief_set_string[:60]}...').")
@@ -597,14 +685,21 @@ class TweetyBridge:
     
     def _execute_fol_query_internal(self, belief_set_obj: Any, formula_obj: Any) -> Optional[bool]:
         """
-        Exécute une requête de logique du premier ordre.
-        
-        Args:
-            belief_set_obj: L'objet ensemble de croyances
-            formula_obj: L'objet formule
-            
-        Returns:
-            Le résultat de la requête (True, False ou None si indéterminé)
+        Exécute une requête de logique du premier ordre (FOL) en utilisant les objets Tweety parsés.
+
+        Utilise le raisonneur FOL pour vérifier si la `formula_obj` est une conséquence
+        logique de `belief_set_obj`.
+
+        :param belief_set_obj: L'objet `FolBeliefSet` Tweety parsé.
+        :type belief_set_obj: Any
+        :param formula_obj: L'objet `FolFormula` Tweety parsé.
+        :type formula_obj: Any
+        :return: `True` si la formule est conséquence, `False` sinon, `None` si la JVM
+                 n'est pas prête, si le raisonneur retourne `null`, ou en cas d'erreur.
+        :rtype: Optional[bool]
+        :raises TypeError: Si `formula_obj` n'est pas une instance de `FolFormula`.
+        :raises ValueError: Si `belief_set_obj` est `None`.
+        :raises RuntimeError: Si une erreur d'exécution Java ou Python survient.
         """
         if not self._jvm_ok or not self._fol_reasoner_instance or not self._FolFormula:
             self._logger.error("Execute FOL query: JVM/Reasoner/Formula non prêt.")
@@ -648,13 +743,13 @@ class TweetyBridge:
     
     def validate_modal_formula(self, formula_string: str) -> Tuple[bool, str]:
         """
-        Valide une formule de logique modale.
-        
-        Args:
-            formula_string: La formule à valider
-            
-        Returns:
-            Un tuple (is_valid, message)
+        Valide la syntaxe d'une formule de logique modale (ML).
+
+        :param formula_string: La formule modale à valider.
+        :type formula_string: str
+        :return: Un tuple contenant un booléen indiquant si la formule est valide
+                 et un message descriptif.
+        :rtype: Tuple[bool, str]
         """
         if not self._jvm_ok or not self._modal_parser_instance:
             return False, "JVM ou parser Modal non prêt"
@@ -671,13 +766,16 @@ class TweetyBridge:
     
     def validate_modal_belief_set(self, belief_set_string: str) -> Tuple[bool, str]:
         """
-        Valide un ensemble de croyances de logique modale.
-        
-        Args:
-            belief_set_string: L'ensemble de croyances à valider
-            
-        Returns:
-            Un tuple (is_valid, message)
+        Valide la syntaxe d'un ensemble de croyances en logique modale (ML).
+
+        Nettoie les sauts de ligne échappés avant la validation.
+        Vérifie également si l'ensemble de croyances est vide ou ne contient que des commentaires.
+
+        :param belief_set_string: L'ensemble de croyances modales (chaque formule sur une nouvelle ligne).
+        :type belief_set_string: str
+        :return: Un tuple contenant un booléen indiquant si l'ensemble est valide
+                 et un message descriptif, incluant potentiellement la ligne de l'erreur.
+        :rtype: Tuple[bool, str]
         """
         if not self._jvm_ok or not self._modal_parser_instance:
             return False, "JVM ou parser Modal non prêt"
@@ -716,14 +814,17 @@ class TweetyBridge:
     )
     def execute_modal_query(self, belief_set_content: str, query_string: str) -> str:
         """
-        Exécute une requête en logique modale.
-        
-        Args:
-            belief_set_content: Le contenu de l'ensemble de croyances
-            query_string: La requête à exécuter
-            
-        Returns:
-            Le résultat formaté de la requête
+        Exécute une requête en logique modale (ML) sur un ensemble de croyances.
+
+        Parse l'ensemble de croyances et la formule de requête modale, puis utilise
+        le raisonneur modal de TweetyProject.
+
+        :param belief_set_content: Le contenu de l'ensemble de croyances modales.
+        :type belief_set_content: str
+        :param query_string: La formule modale à vérifier.
+        :type query_string: str
+        :return: Une chaîne de caractères formatée indiquant le résultat ou une erreur.
+        :rtype: str
         """
         self._logger.info(f"Appel execute_modal_query: Query='{query_string}' sur BS ('{belief_set_content[:60]}...')")
         
@@ -763,13 +864,14 @@ class TweetyBridge:
     
     def _parse_modal_formula(self, formula_string: str) -> Optional[Any]:
         """
-        Parse une formule de logique modale.
-        
-        Args:
-            formula_string: La formule à parser
-            
-        Returns:
-            L'objet formule parsé ou None en cas d'erreur
+        Parse une chaîne de caractères en un objet formule de logique modale (ML) Tweety.
+
+        :param formula_string: La chaîne représentant la formule modale.
+        :type formula_string: str
+        :return: Un objet `ModalFormula` de TweetyProject si le parsing réussit,
+                 `None` si la JVM ou le parser modal ne sont pas prêts.
+        :rtype: Optional[Any]
+        :raises RuntimeError: Si une erreur de parsing Java ou Python survient.
         """
         if not self._jvm_ok or not self._modal_parser_instance:
             self._logger.error(f"Parse Modal formula: JVM/Parser non prêt ('{formula_string[:60]}...').")
@@ -790,13 +892,16 @@ class TweetyBridge:
     
     def _parse_modal_belief_set(self, belief_set_string: str) -> Optional[Any]:
         """
-        Parse un ensemble de croyances de logique modale.
-        
-        Args:
-            belief_set_string: L'ensemble de croyances à parser
-            
-        Returns:
-            L'objet ensemble de croyances parsé ou None en cas d'erreur
+        Parse une chaîne de caractères en un objet ensemble de croyances modales (BeliefBase) Tweety.
+
+        Nettoie les sauts de ligne échappés avant le parsing.
+
+        :param belief_set_string: La chaîne représentant l'ensemble de croyances modales.
+        :type belief_set_string: str
+        :return: Un objet `ModalBeliefSet` de TweetyProject si le parsing réussit,
+                 `None` si la JVM ou le parser modal ne sont pas prêts.
+        :rtype: Optional[Any]
+        :raises RuntimeError: Si une erreur de parsing Java ou Python survient.
         """
         if not self._jvm_ok or not self._modal_parser_instance:
             self._logger.error(f"Parse Modal BS: JVM/Parser non prêt (BS: '{belief_set_string[:60]}...').")
@@ -838,14 +943,21 @@ class TweetyBridge:
     
     def _execute_modal_query_internal(self, belief_set_obj: Any, formula_obj: Any) -> Optional[bool]:
         """
-        Exécute une requête de logique modale.
-        
-        Args:
-            belief_set_obj: L'objet ensemble de croyances
-            formula_obj: L'objet formule
-            
-        Returns:
-            Le résultat de la requête (True, False ou None si indéterminé)
+        Exécute une requête de logique modale (ML) en utilisant les objets Tweety parsés.
+
+        Utilise le raisonneur modal pour vérifier si la `formula_obj` est une conséquence
+        logique de `belief_set_obj`.
+
+        :param belief_set_obj: L'objet `ModalBeliefSet` Tweety parsé.
+        :type belief_set_obj: Any
+        :param formula_obj: L'objet `ModalFormula` Tweety parsé.
+        :type formula_obj: Any
+        :return: `True` si la formule est conséquence, `False` sinon, `None` si la JVM
+                 n'est pas prête, si le raisonneur retourne `null`, ou en cas d'erreur.
+        :rtype: Optional[bool]
+        :raises TypeError: Si `formula_obj` n'est pas une instance de `ModalFormula`.
+        :raises ValueError: Si `belief_set_obj` est `None`.
+        :raises RuntimeError: Si une erreur d'exécution Java ou Python survient.
         """
         if not self._jvm_ok or not self._modal_reasoner_instance or not self._ModalFormula:
             self._logger.error("Execute Modal query: JVM/Reasoner/Formula non prêt.")

@@ -2,14 +2,22 @@
 # -*- coding: utf-8 -*-
 
 """
-Agent Informel pour l'analyse des sophismes dans les arguments.
+Agent d'analyse informelle pour l'identification et l'analyse des sophismes.
 
-Cet agent utilise différents outils pour analyser les sophismes dans les arguments:
-1. Un détecteur de sophismes (obligatoire)
-2. Un analyseur rhétorique (optionnel)
-3. Un analyseur contextuel (optionnel)
+Ce module implémente `InformalAnalysisAgent`, un agent spécialisé dans
+l'analyse informelle des arguments, en particulier la détection et la
+catégorisation des sophismes (fallacies). Il s'appuie sur Semantic Kernel
+pour interagir avec des modèles de langage via des prompts spécifiques
+et peut intégrer un plugin natif (`InformalAnalysisPlugin`) pour des
+opérations liées à la taxonomie des sophismes.
 
-Il peut également utiliser un kernel sémantique pour des analyses plus avancées.
+L'agent est conçu pour :
+- Identifier les arguments dans un texte.
+- Analyser un texte ou un argument spécifique pour y détecter des sophismes.
+- Justifier l'attribution de ces sophismes.
+- Explorer une hiérarchie de taxonomie des sophismes.
+- Catégoriser les sophismes détectés.
+- Effectuer une analyse complète combinant ces étapes.
 """
 
 import logging
@@ -35,8 +43,16 @@ from .prompts import prompt_identify_args_v8, prompt_analyze_fallacies_v1, promp
 
 class InformalAnalysisAgent(BaseAgent):
     """
-    Agent pour l'analyse informelle des arguments et des sophismes,
-    héritant de BaseAgent.
+    Agent spécialisé dans l'analyse informelle des arguments et la détection de sophismes.
+
+    Hérite de `BaseAgent` et utilise des fonctions sémantiques ainsi qu'un plugin
+    natif (`InformalAnalysisPlugin`) pour interagir avec une taxonomie de sophismes
+    et analyser des textes.
+
+    Attributes:
+        config (Dict[str, Any]): Configuration spécifique à l'agent, comme
+                                 les seuils de confiance pour la détection.
+                                 (Note: la gestion de la configuration pourrait être améliorée).
     """
     
     def __init__(
@@ -653,7 +669,7 @@ class InformalAnalysisAgent(BaseAgent):
         :return: Une chaîne de caractères représentant le timestamp au format ISO.
         :rtype: str
         """
-        from datetime import datetime
+        from datetime import datetime # Importation locale pour éviter une dépendance globale
         return datetime.now().isoformat()
     
     async def analyze_and_categorize(self, text: str) -> Dict[str, Any]:

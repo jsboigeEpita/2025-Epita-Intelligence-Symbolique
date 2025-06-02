@@ -1,10 +1,16 @@
 """
-Prompts pour l'agent d'analyse informelle.
+Prompts pour l'agent d'analyse informelle des arguments.
 
-Ce module définit les chaînes de caractères multilignes utilisées comme prompts
-pour guider le modèle de langage (LLM) dans ses tâches d'analyse informelle,
-telles que l'identification d'arguments, l'analyse de sophismes, et la
-justification de l'attribution de sophismes.
+Ce module centralise les templates de prompts utilisés par `InformalAnalysisAgent`
+pour interagir avec les modèles de langage (LLM). Ces prompts sont conçus pour
+des tâches spécifiques telles que :
+    - L'identification d'arguments distincts dans un texte.
+    - L'analyse d'un argument pour y détecter des sophismes potentiels.
+    - La justification détaillée de l'attribution d'un type de sophisme spécifique
+      à un argument donné.
+
+Chaque prompt spécifie le format d'entrée attendu (via des variables comme `{{$input}}`)
+et le format de sortie souhaité.
 """
 # agents/core/informal/prompts.py
 import logging
@@ -33,6 +39,13 @@ Retournez UNIQUEMENT la liste des arguments, un par ligne, sans numérotation, p
 +++++
 [Arguments Identifiés (un par ligne)]
 """
+"""
+Prompt pour l'identification d'arguments (Version 8).
+
+Demande au LLM d'analyser un texte (`$input`) et d'extraire les arguments
+ou affirmations distincts, en respectant des critères de clarté, concision,
+et neutralité. La sortie attendue est une liste d'arguments, un par ligne.
+"""
 
 # --- Fonction Sémantique (Prompt) pour Analyse de Sophismes (Nouveau) ---
 prompt_analyze_fallacies_v1 = """
@@ -51,6 +64,13 @@ Concentrez-vous sur les sophismes les plus évidents et significatifs. Soyez pr�
 {{$input}}
 +++++
 [Sophismes Identifiés]
+"""
+"""
+Prompt pour l'analyse des sophismes dans un argument donné (Version 1).
+
+Demande au LLM d'identifier les sophismes dans un argument (`$input`),
+de les nommer, d'expliquer leur application, de citer le texte pertinent,
+et de proposer une reformulation non fallacieuse.
 """
 
 # --- Fonction Sémantique (Prompt) pour Justification d'Attribution (Nouveau) ---
@@ -75,6 +95,15 @@ Votre justification doit:
 {{$fallacy_definition}}
 +++++
 [Justification Détaillée]
+"""
+"""
+Prompt pour la justification de l'attribution d'un sophisme (Version 1).
+
+Demande au LLM de fournir une justification détaillée expliquant pourquoi
+un argument (`$argument`) spécifique contient un type de sophisme donné
+(`$fallacy_type`), en s'appuyant sur la définition du sophisme
+(`$fallacy_definition`). La justification doit inclure une explication
+du mécanisme, des citations, un exemple et l'impact du sophisme.
 """
 
 # Log de chargement

@@ -1,6 +1,14 @@
 # argumentation_analysis/agents/core/logic/modal_logic_agent.py
 """
-Agent spécialisé pour la logique modale.
+Agent spécialisé pour la logique modale (ML).
+
+Ce module définit `ModalLogicAgent`, une classe qui hérite de
+`BaseLogicAgent` et implémente les fonctionnalités spécifiques pour interagir
+avec la logique modale. Il utilise `TweetyBridge` pour la communication
+avec TweetyProject et s'appuie sur des prompts sémantiques définis dans ce
+module pour la conversion texte-vers-ML, la génération de requêtes et
+l'interprétation des résultats, en tenant compte des notions de nécessité
+et de possibilité.
 """
 
 import logging
@@ -21,6 +29,11 @@ Vous utilisez la syntaxe de TweetyProject pour représenter les formules de logi
 Vos tâches principales incluent la traduction de texte en formules ML, la génération de requêtes ML pertinentes,
 l'exécution de ces requêtes sur un ensemble de croyances ML, et l'interprétation des résultats obtenus,
 en tenant compte des notions de nécessité et de possibilité.
+"""
+"""
+Prompt système pour l'agent de logique modale.
+Définit le rôle et les capacités générales de l'agent pour le LLM,
+en mettant l'accent sur les opérateurs modaux de nécessité et possibilité.
 """
 
 # Prompts pour la logique modale
@@ -58,6 +71,10 @@ Traduisez maintenant le texte suivant en un ensemble de croyances en logique mod
 
 Répondez uniquement avec l'ensemble de croyances en logique modale, sans explications supplémentaires.
 """
+"""
+Prompt pour convertir du texte en langage naturel en un ensemble de croyances en logique modale (ML).
+Attend `$input` (le texte source). Explique la syntaxe modale de Tweety ([], <>).
+"""
 
 PROMPT_GEN_MODAL_QUERIES = """
 Vous êtes un expert en logique modale. Votre tâche est de générer des requêtes pertinentes en logique modale pour interroger un ensemble de croyances (belief set) donné.
@@ -79,6 +96,11 @@ Règles importantes:
 6. Utilisez les opérateurs modaux [] (nécessité) et <> (possibilité) de manière appropriée
 
 Répondez uniquement avec les requêtes, sans explications supplémentaires.
+"""
+"""
+Prompt pour générer des requêtes ML pertinentes à partir d'un texte et d'un ensemble de croyances ML.
+Attend `$input` (texte source) et `$belief_set` (l'ensemble de croyances ML).
+Insiste sur l'utilisation appropriée des opérateurs modaux.
 """
 
 PROMPT_INTERPRET_MODAL = """
@@ -106,22 +128,34 @@ Fournissez ensuite une conclusion générale sur ce que ces résultats nous appr
 
 Votre réponse doit être claire, précise et accessible à quelqu'un qui n'est pas expert en logique formelle.
 """
+"""
+Prompt pour interpréter les résultats de requêtes ML en langage naturel.
+Attend `$input` (texte source), `$belief_set` (ensemble de croyances ML),
+`$queries` (les requêtes exécutées), et `$tweety_result` (les résultats bruts de Tweety).
+Demande une explication des implications modales.
+"""
 
 class ModalLogicAgent(BaseLogicAgent): # Modification de l'héritage
     """
-    Agent spécialisé pour la logique modale.
-    
-    Cette classe implémente les méthodes abstraites de BaseLogicAgent
-    spécifiquement pour la logique modale, en utilisant TweetyProject
-    via l'interface TweetyBridge.
+    Agent spécialisé pour la logique modale (ML).
+
+    Cet agent étend `BaseLogicAgent` pour fournir des capacités de traitement
+    spécifiques à la logique modale. Il intègre des fonctions sémantiques
+    pour traduire le langage naturel en ensembles de croyances ML, générer des
+    requêtes ML pertinentes, exécuter ces requêtes via `TweetyBridge`, et
+    interpréter les résultats en langage naturel, en considérant les aspects
+    de nécessité et de possibilité.
+
+    Attributes:
+        _tweety_bridge (TweetyBridge): Instance de `TweetyBridge` configurée pour la ML.
     """
     
     def __init__(self, kernel: Kernel):
         """
-        Initialise un agent de logique modale.
-        
-        Args:
-            kernel: Le kernel Semantic Kernel à utiliser pour les fonctions sémantiques
+        Initialise une instance de `ModalLogicAgent`.
+
+        :param kernel: Le kernel Semantic Kernel à utiliser pour les fonctions sémantiques.
+        :type kernel: Kernel
         """
         super().__init__(kernel,
                          agent_name="ModalLogicAgent",
@@ -130,7 +164,13 @@ class ModalLogicAgent(BaseLogicAgent): # Modification de l'héritage
         # _tweety_bridge sera initialisé dans setup_agent_components
 
     def get_agent_capabilities(self) -> Dict[str, Any]:
-        """Décrit ce que l'agent peut faire."""
+        """
+        Retourne un dictionnaire décrivant les capacités spécifiques de cet agent ML.
+
+        :return: Un dictionnaire détaillant le nom, le type de logique, la description
+                 et les méthodes de l'agent, en soulignant l'aspect modal.
+        :rtype: Dict[str, Any]
+        """
         return {
             "name": self.name,
             "logic_type": self.logic_type,
@@ -148,7 +188,14 @@ class ModalLogicAgent(BaseLogicAgent): # Modification de l'héritage
 
     def setup_agent_components(self, llm_service_id: str) -> None:
         """
-        Configure les composants spécifiques de l'agent dans le kernel SK.
+        Configure les composants spécifiques de l'agent de logique modale.
+
+        Initialise `TweetyBridge` pour la logique modale et enregistre les fonctions
+        sémantiques nécessaires (TextToModalBeliefSet, GenerateModalQueries,
+        InterpretModalResult) dans le kernel Semantic Kernel.
+
+        :param llm_service_id: L'ID du service LLM à utiliser pour les fonctions sémantiques.
+        :type llm_service_id: str
         """
         super().setup_agent_components(llm_service_id)
         self.logger.info(f"Configuration des composants pour {self.name}...")
@@ -207,14 +254,19 @@ class ModalLogicAgent(BaseLogicAgent): # Modification de l'héritage
 
     async def text_to_belief_set(self, text: str, context: Optional[Dict[str, Any]] = None) -> Tuple[Optional[BeliefSet], str]:
         """
-        Convertit un texte en ensemble de croyances modales.
-        
-        Args:
-            text: Le texte à convertir
-            
-        Returns:
-            Un tuple contenant l'ensemble de croyances créé (ou None en cas d'erreur)
-            et un message de statut
+        Convertit un texte en langage naturel en un ensemble de croyances en logique modale (ML).
+
+        Utilise la fonction sémantique "TextToModalBeliefSet" pour la conversion,
+        puis valide l'ensemble de croyances généré avec `TweetyBridge`.
+
+        :param text: Le texte en langage naturel à convertir.
+        :type text: str
+        :param context: Un dictionnaire optionnel de contexte (non utilisé actuellement).
+        :type context: Optional[Dict[str, Any]]
+        :return: Un tuple contenant l'objet `ModalBeliefSet` si la conversion
+                 et la validation réussissent, et un message de statut.
+                 Retourne (None, message_erreur) en cas d'échec.
+        :rtype: Tuple[Optional[BeliefSet], str]
         """
         self.logger.info(f"Conversion de texte en ensemble de croyances modales pour l'agent {self.name}...")
         
@@ -247,14 +299,20 @@ class ModalLogicAgent(BaseLogicAgent): # Modification de l'héritage
     
     async def generate_queries(self, text: str, belief_set: BeliefSet, context: Optional[Dict[str, Any]] = None) -> List[str]:
         """
-        Génère des requêtes logiques modales pertinentes.
-        
-        Args:
-            text: Le texte source
-            belief_set: L'ensemble de croyances
-            
-        Returns:
-            Une liste de requêtes logiques
+        Génère des requêtes logiques modales (ML) pertinentes à partir d'un texte et d'un ensemble de croyances.
+
+        Utilise la fonction sémantique "GenerateModalQueries". Les requêtes générées
+        sont ensuite validées syntaxiquement.
+
+        :param text: Le texte en langage naturel source.
+        :type text: str
+        :param belief_set: L'ensemble de croyances ML associé.
+        :type belief_set: BeliefSet
+        :param context: Un dictionnaire optionnel de contexte (non utilisé actuellement).
+        :type context: Optional[Dict[str, Any]]
+        :return: Une liste de chaînes de caractères, chacune étant une requête ML valide.
+                 Retourne une liste vide en cas d'erreur.
+        :rtype: List[str]
         """
         self.logger.info(f"Génération de requêtes modales pour l'agent {self.name}...")
         
@@ -288,15 +346,20 @@ class ModalLogicAgent(BaseLogicAgent): # Modification de l'héritage
     
     def execute_query(self, belief_set: BeliefSet, query: str) -> Tuple[Optional[bool], str]:
         """
-        Exécute une requête logique modale sur un ensemble de croyances.
-        
-        Args:
-            belief_set: L'ensemble de croyances
-            query: La requête à exécuter
-            
-        Returns:
-            Un tuple contenant le résultat de la requête (True, False ou None si indéterminé)
-            et un message formaté
+        Exécute une requête logique modale (ML) sur un ensemble de croyances donné.
+
+        Utilise `TweetyBridge` pour exécuter la requête contre le contenu de `belief_set`.
+        Interprète la chaîne de résultat de `TweetyBridge` pour déterminer si la requête
+        est acceptée, rejetée ou si une erreur s'est produite.
+
+        :param belief_set: L'ensemble de croyances ML sur lequel exécuter la requête.
+        :type belief_set: BeliefSet
+        :param query: La requête ML à exécuter.
+        :type query: str
+        :return: Un tuple contenant le résultat booléen de la requête (`True` si acceptée,
+                 `False` si rejetée, `None` si indéterminé ou erreur) et la chaîne de
+                 résultat brute de `TweetyBridge` (ou un message d'erreur).
+        :rtype: Tuple[Optional[bool], str]
         """
         self.logger.info(f"Exécution de la requête: {query} pour l'agent {self.name}")
         
@@ -329,16 +392,26 @@ class ModalLogicAgent(BaseLogicAgent): # Modification de l'héritage
                          queries: List[str], results: List[Tuple[Optional[bool], str]],
                          context: Optional[Dict[str, Any]] = None) -> str: # Signature mise à jour
         """
-        Interprète les résultats des requêtes logiques modales.
-        
-        Args:
-            text: Le texte source
-            belief_set: L'ensemble de croyances
-            queries: Les requêtes exécutées
-            results: Les résultats des requêtes
-            
-        Returns:
-            Une interprétation textuelle des résultats
+        Interprète les résultats d'une série de requêtes en logique modale (ML) en langage naturel.
+
+        Utilise la fonction sémantique "InterpretModalResult" pour générer une explication
+        basée sur le texte original, l'ensemble de croyances, les requêtes posées et
+        les résultats obtenus de Tweety, en mettant l'accent sur les aspects modaux.
+
+        :param text: Le texte original en langage naturel.
+        :type text: str
+        :param belief_set: L'ensemble de croyances ML utilisé.
+        :type belief_set: BeliefSet
+        :param queries: La liste des requêtes ML qui ont été exécutées.
+        :type queries: List[str]
+        :param results: La liste des résultats (tuples booléen/None, message_brut)
+                        correspondant à chaque requête.
+        :type results: List[Tuple[Optional[bool], str]]
+        :param context: Un dictionnaire optionnel de contexte (non utilisé actuellement).
+        :type context: Optional[Dict[str, Any]]
+        :return: Une chaîne de caractères contenant l'interprétation en langage naturel
+                 des résultats, ou un message d'erreur.
+        :rtype: str
         """
         self.logger.info(f"Interprétation des résultats pour l'agent {self.name}...")
         
@@ -368,13 +441,14 @@ class ModalLogicAgent(BaseLogicAgent): # Modification de l'héritage
 
     def validate_formula(self, formula: str) -> bool:
         """
-        Valide la syntaxe d'une formule ML en utilisant TweetyBridge.
-        
-        Args:
-            formula: La formule ML à valider.
-            
-        Returns:
-            True si la formule est valide, False sinon.
+        Valide la syntaxe d'une formule de logique modale (ML).
+
+        Utilise la méthode `validate_modal_formula` de `TweetyBridge`.
+
+        :param formula: La formule ML à valider.
+        :type formula: str
+        :return: `True` si la formule est syntaxiquement valide, `False` sinon.
+        :rtype: bool
         """
         self.logger.debug(f"Validation de la formule ML: {formula}")
         is_valid, message = self.tweety_bridge.validate_modal_formula(formula)
@@ -384,13 +458,15 @@ class ModalLogicAgent(BaseLogicAgent): # Modification de l'héritage
 
     def _create_belief_set_from_data(self, belief_set_data: Dict[str, Any]) -> BeliefSet:
         """
-        Crée un objet ModalBeliefSet à partir des données de l'état.
-        
-        Args:
-            belief_set_data: Les données de l'ensemble de croyances
-            
-        Returns:
-            Un objet ModalBeliefSet
+        Crée un objet `ModalBeliefSet` à partir d'un dictionnaire de données.
+
+        Principalement utilisé pour reconstituer un `BeliefSet` à partir d'un état sauvegardé.
+
+        :param belief_set_data: Un dictionnaire contenant au moins la clé "content"
+                                avec la représentation textuelle de l'ensemble de croyances.
+        :type belief_set_data: Dict[str, Any]
+        :return: Une instance de `ModalBeliefSet`.
+        :rtype: BeliefSet
         """
         content = belief_set_data.get("content", "")
         return ModalBeliefSet(content)

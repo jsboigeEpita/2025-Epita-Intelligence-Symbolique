@@ -1,10 +1,12 @@
 # argumentation_analysis/analytics/stats_calculator.py
 """
+Calculateur de statistiques pour l'analyse d'argumentation.
+
 Ce module fournit des fonctions pour calculer des statistiques descriptives
-sur les résultats d'analyse d'argumentation. Il est conçu pour être utilisé
-dans le cadre du projet d'analyse d'argumentation afin de quantifier
-divers aspects des arguments analysés, tels que les scores de confiance moyens,
-la richesse contextuelle, etc., regroupés par corpus ou autres critères.
+à partir des résultats d'analyse d'argumentation. La fonction principale,
+`calculate_average_scores`, permet de calculer les scores moyens de diverses
+métriques (par exemple, confiance, richesse contextuelle) pour des ensembles
+de résultats groupés, typiquement par corpus.
 """
 from typing import Dict, List, Any, Tuple
 
