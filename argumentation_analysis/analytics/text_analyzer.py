@@ -1,6 +1,11 @@
 # -*- coding: utf-8 -*-
 """
-Module for performing text analysis using various services.
+Ce module fournit des fonctionnalités pour effectuer des analyses de texte.
+
+Il s'appuie sur divers services, notamment un service LLM, pour orchestrer
+et exécuter différents types d'analyses textuelles. Le module est conçu
+pour être extensible afin de prendre en charge de nouvelles stratégies d'analyse
+à l'avenir.
 """
 import logging
 from typing import Dict, Any
@@ -18,73 +23,79 @@ except ImportError:
 
 
 async def perform_text_analysis(text: str, services: Dict[str, Any], analysis_type: str = "default") -> Any:
-    """
-    Performs text analysis based on the provided text, services, and analysis type.
+    """Effectue une analyse de texte en fonction du texte, des services et du type d'analyse fournis.
 
-    This function orchestrates the analysis by calling the appropriate
-    underlying analysis functions (currently `run_analysis_conversation`).
-    It expects an initialized LLM service to be present in the `services` dictionary.
+    Cette fonction orchestre l'analyse en appelant les fonctions d'analyse
+    sous-jacentes appropriées (actuellement [`run_analysis_conversation`](argumentation_analysis/orchestration/analysis_runner.py:0)).
+    Elle s'attend à ce qu'un service LLM initialisé soit présent dans le dictionnaire `services`.
 
-    Args:
-        text (str): The input text to analyze.
-        services (Dict[str, Any]): A dictionary of initialized analysis services.
-                                   Must contain 'llm_service'. It may also contain
-                                   'jvm_ready' status, though it's not directly
-                                   used by this function but might be by underlying services.
-        analysis_type (str): The type of analysis to perform. This parameter is
-                             intended for future expansion, allowing routing to
-                             different specialized analysis functions (e.g., "rhetoric",
-                             "fallacies"). Currently, it's primarily for logging and
-                             doesn't change the core analysis logic which defaults to
-                             `run_analysis_conversation`.
-
-    Returns:
-        Any: The results of the analysis. Currently, `run_analysis_conversation`
-             does not explicitly return a value in its original usage context;
-             it logs outcomes. This function mirrors that behavior by returning None
-             upon successful completion (implying results are logged or handled
-             elsewhere) or in case of critical errors like a missing LLM service.
-             Future enhancements might involve returning structured analysis results.
-             Returns None if essential services are missing or an error occurs.
+    :param text: Le texte d'entrée à analyser.
+    :type text: str
+    :param services: Un dictionnaire de services d'analyse initialisés.
+                     Doit contenir 'llm_service'. Il peut également contenir
+                     le statut 'jvm_ready', bien qu'il ne soit pas directement
+                     utilisé par cette fonction mais puisse l'être par les services sous-jacents.
+    :type services: Dict[str, Any]
+    :param analysis_type: Le type d'analyse à effectuer. Ce paramètre est
+                          destiné à une expansion future, permettant le routage vers
+                          différentes fonctions d'analyse spécialisées (par exemple, "rhetoric",
+                          "fallacies"). Actuellement, il est principalement utilisé pour la journalisation et
+                          ne modifie pas la logique d'analyse principale qui utilise par défaut
+                          [`run_analysis_conversation`](argumentation_analysis/orchestration/analysis_runner.py:0).
+    :type analysis_type: str
+    :return: Les résultats de l'analyse. Actuellement, [`run_analysis_conversation`](argumentation_analysis/orchestration/analysis_runner.py:0)
+             ne retourne pas explicitement de valeur dans son contexte d'utilisation original ;
+             elle journalise les résultats. Cette fonction reflète ce comportement en retournant None
+             en cas de succès (impliquant que les résultats sont journalisés ou gérés
+             ailleurs) ou en cas d'erreurs critiques comme un service LLM manquant.
+             Des améliorations futures pourraient impliquer le retour de résultats d'analyse structurés.
+             Retourne None si les services essentiels sont manquants ou si une erreur se produit.
+    :rtype: Any
+    :raises ImportError: Si les composants d'analyse essentiels ne peuvent pas être importés.
+    :raises Exception: Pour toute autre erreur survenant pendant le processus d'analyse.
     """
     logging.info(f"Initiating text analysis of type '{analysis_type}' on text of length {len(text)} chars.")
 
     llm_service = services.get("llm_service")
-    # jvm_ready_status = services.get("jvm_ready", False) # Available if needed
+    # jvm_ready_status = services.get("jvm_ready", False) # Disponible si nécessaire
 
     if not llm_service:
-        logging.critical("❌ LLM service is not available in the provided services. Analysis cannot proceed.")
-        return None # Indicates critical failure
+        logging.critical("❌ Le service LLM n'est pas disponible dans les services fournis. L'analyse ne peut pas continuer.")
+        return None # Indique un échec critique
 
-    # Future logic for routing based on analysis_type can be added here.
-    # Example:
+    # Une logique future pour le routage basé sur analysis_type peut être ajoutée ici.
+    # Exemple :
     # if analysis_type == "rhetoric_specific":
     #     return await analyze_rhetoric_specifically(text, llm_service, services)
     # elif analysis_type == "fallacy_specific":
     #     return await detect_fallacies_specifically(text, llm_service, services)
 
     try:
-        logging.info(f"Launching core analysis (type: {analysis_type}) via run_analysis_conversation...")
-        # `run_analysis_conversation` is awaited. Its original usage in `run_analysis.py`
-        # doesn't involve capturing a return value for further processing within that script.
-        # It handles its own logging of success or failure.
+        logging.info(f"Lancement de l'analyse principale (type: {analysis_type}) via run_analysis_conversation...")
+        # `run_analysis_conversation` est attendue. Son utilisation originale dans `run_analysis.py`
+        # n'implique pas la capture d'une valeur de retour pour un traitement ultérieur dans ce script.
+        # Elle gère sa propre journalisation du succès ou de l'échec.
         await run_analysis_conversation(
             texte_a_analyser=text,
             llm_service=llm_service
-            # If `analysis_type` or other `services` become relevant to `run_analysis_conversation`,
-            # they should be passed here.
+            # Si `analysis_type` ou d'autres `services` deviennent pertinents pour `run_analysis_conversation`,
+            # ils devront être passés ici.
         )
-        logging.info(f"🏁 Core analysis (type: '{analysis_type}') completed successfully (via run_analysis_conversation).")
-        # Mimic original behavior: no explicit result returned by this path, success is logged.
-        return # Or a more specific success indicator if the caller needs it.
+        logging.info(f"🏁 Analyse principale (type: '{analysis_type}') terminée avec succès (via run_analysis_conversation).")
+        # Imite le comportement original : aucun résultat explicite retourné par ce chemin, le succès est journalisé.
+        return # Ou un indicateur de succès plus spécifique si l'appelant en a besoin.
 
     except ImportError as ie:
-        # This would typically be caught at module load if run_analysis_conversation is critical
-        logging.error(f"❌ Failed to import or use analysis components for type '{analysis_type}': {ie}", exc_info=True)
-        return None
+        # Ceci serait typiquement intercepté au chargement du module si run_analysis_conversation est critique.
+        logging.error(f"❌ Échec de l'importation ou de l'utilisation des composants d'analyse pour le type '{analysis_type}': {ie}", exc_info=True)
+        raise # Propage l'ImportError pour indiquer un problème de dépendance.
     except Exception as e:
-        logging.error(f"❌ Error during text analysis (type: {analysis_type}): {e}", exc_info=True)
-        return None
+        logging.error(f"❌ Erreur lors de l'analyse du texte (type: {analysis_type}): {e}", exc_info=True)
+        # Il est important de ne pas masquer l'erreur originale si elle n'est pas gérée spécifiquement.
+        # Retourner None ici pourrait masquer la cause racine d'un problème plus large.
+        # Si une gestion spécifique de l'erreur est nécessaire, elle doit être ajoutée.
+        # Sinon, il est préférable de laisser l'exception se propager ou de la lever à nouveau.
+        raise # Propage l'exception pour une gestion d'erreur plus globale.
 
 # Placeholder for more specific analysis functions if `analysis_type` routing is implemented:
 # async def analyze_rhetoric_specifically(text: str, llm_service: Any, all_services: Dict[str, Any]):

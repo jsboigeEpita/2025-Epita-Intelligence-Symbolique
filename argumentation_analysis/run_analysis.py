@@ -9,7 +9,6 @@ Il offre plusieurs options pour fournir le texte à analyser (fichier, texte dir
 et configure automatiquement l'environnement nécessaire.
 """
 
-import os
 import sys
 import asyncio
 import argparse
