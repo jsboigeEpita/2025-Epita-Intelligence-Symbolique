@@ -10,7 +10,7 @@ import sys
 import os 
 # L'import de numpy_mock doit être adapté en fonction de sa localisation réelle.
 # Si numpy_mock.py est dans le même répertoire (tests/mocks), l'import relatif est correct.
-from .numpy_mock import array, ndarray, mean, sum, zeros, ones, dot, concatenate, vstack, hstack, argmax, argmin, max, min, random, rec, _core, core
+from .legacy_numpy_array_mock import array, ndarray, mean, sum, zeros, ones, dot, concatenate, vstack, hstack, argmax, argmin, max, min, random, rec, _core, core
 
 def test_numpy_mock_core_modules():
     """Test que les modules _core et core sont disponibles dans le mock NumPy."""
