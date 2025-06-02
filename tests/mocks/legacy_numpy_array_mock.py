@@ -152,6 +152,7 @@ newaxis = None # Placeholder pour numpy.newaxis
 # dot est déjà défini
 # exp est déjà défini
 # pi est déjà défini
+atleast_1d = lambda x: array(x) # Simule la conversion en tableau 1D
 
 def zeros(shape, dtype=None):
     """Crée un tableau de zéros."""
