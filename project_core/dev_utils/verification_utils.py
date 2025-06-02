@@ -9,7 +9,7 @@ from typing import Optional, List, Dict, Any, Tuple # Ajout de Tuple
 
 # Imports nécessaires pour la logique du pipeline et des fonctions déplacées
 from project_core.service_setup.core_services import initialize_core_services
-from argumentation_analysis.core.models import ExtractDefinitions, SourceDefinition, Extract # Pour typer les objets DefinitionService
+from argumentation_analysis.models.extract_definition import ExtractDefinitions, SourceDefinition, Extract # Pour typer les objets DefinitionService
 # Imports pour les fonctions déplacées depuis marker_verification_logic.py
 from argumentation_analysis.ui.extract_utils import load_source_text, extract_text_with_markers
 # Les services FetchService et ExtractService sont passés en argument aux fonctions de vérification.
@@ -54,34 +54,59 @@ def verify_extract(source_info: Dict[str, Any], extract_info: Dict[str, Any]) ->
     
     result_details: Dict[str, Any] = {
         "source_name": source_name, "extract_name": extract_name,
-        "start_found": start_found, "end_found": end_found
+        "start_found": start_found, "end_found": end_found,
+        "messages": [] # Initialiser une liste pour les messages
     }
 
     if start_found and end_found:
-        logger.info(f"Extrait '{extract_name}' valide. Les deux marqueurs ont été trouvés.")
+        current_status = "valid" # Statut initial si les marqueurs sont trouvés
+        
         result_details["extracted_length"] = len(extracted_text)
+        
+        # Condition 1: Texte court
         if len(extracted_text) < 10:
             logger.warning(f"Extrait '{extract_name}' valide mais très court ({len(extracted_text)} caractères).")
-            result_details["status"] = "warning"
-            result_details["message"] = f"Extrait valide mais très court ({len(extracted_text)} caractères)."
-        elif template_start and "{0}" in template_start and start_marker and not start_marker.startswith(template_start.replace("{0}", "")):
-            logger.warning(f"Extrait '{extract_name}' valide mais avec un marqueur de début potentiellement corrompu.")
-            result_details["status"] = "warning"
-            result_details["message"] = "Extrait valide mais avec un marqueur de début potentiellement corrompu (première lettre manquante)."
+            current_status = "warning"
+            result_details["messages"].append(f"Extrait valide mais très court ({len(extracted_text)} caractères).")
+            result_details["too_short"] = True # Pour le rapport
+
+        # Condition 2: Problème de template (marqueur de début potentiellement corrompu)
+        template_prefix = template_start.replace("{0}", "")
+        # Vérification que template_prefix est non vide avant d'accéder à template_prefix[1:] ou template_prefix[0]
+        if template_start and "{0}" in template_start and start_marker and template_prefix and \
+           len(template_prefix) > 0 and \
+           start_marker.startswith(template_prefix[1:]) and \
+           not start_marker.startswith(template_prefix) and \
+           len(template_prefix) >=1 and start_marker[0] != template_prefix[0]: # Ajout d'une condition plus stricte
+            
+            warning_message = "Extrait valide mais avec un marqueur de début potentiellement corrompu (première lettre manquante)."
+            logger.warning(f"Extrait '{extract_name}': {warning_message}")
+            current_status = "warning"
+            if warning_message not in result_details["messages"]: # Éviter les doublons
+                result_details["messages"].append(warning_message)
             result_details["template_issue"] = True
-        else:
-            # Vérification des caractères spéciaux (simplifiée)
-            special_chars_to_check = ["\\u", "\\x"] 
-            has_encoding_issues = any(char_seq in extracted_text for char_seq in special_chars_to_check if char_seq)
-            if has_encoding_issues:
-                logger.warning(f"Extrait '{extract_name}' valide mais contient des caractères spéciaux.")
-                result_details["status"] = "warning"
-                result_details["message"] = "Extrait valide mais contient des caractères spéciaux potentiellement mal encodés."
-                result_details["encoding_issues"] = True
-            else:
-                result_details["status"] = "valid"
-                result_details["message"] = "Extrait valide. Les deux marqueurs ont été trouvés."
-    else:
+
+        # Condition 3: Caractères spéciaux / Problèmes d'encodage
+        special_chars_to_check = ["\\u", "\\x"]
+        has_encoding_issues = any(char_seq in extracted_text for char_seq in special_chars_to_check if char_seq)
+        if has_encoding_issues:
+            warning_message = "Extrait valide mais contient des caractères spéciaux potentiellement mal encodés."
+            logger.warning(f"Extrait '{extract_name}': {warning_message}")
+            current_status = "warning"
+            if warning_message not in result_details["messages"]: # Éviter les doublons
+                result_details["messages"].append(warning_message)
+            result_details["encoding_issues"] = True
+
+        result_details["status"] = current_status
+        if not result_details["messages"] and current_status == "valid":
+            result_details["messages"].append("Extrait valide. Les deux marqueurs ont été trouvés.")
+        elif not result_details["messages"] and current_status == "warning": # Fallback si un warning a été mis sans message
+            result_details["messages"].append("Extrait valide avec avertissement(s).")
+            
+        # Concaténer les messages pour le champ "message" principal
+        result_details["message"] = " | ".join(result_details["messages"])
+
+    else: # Cas où start_found ou end_found (ou les deux) sont faux
         result_details["status"] = "invalid"
         if not start_found and not end_found: result_details["message"] = "Extrait invalide. Les deux marqueurs sont introuvables."
         elif not start_found: result_details["message"] = "Extrait invalide. Le marqueur de début est introuvable."

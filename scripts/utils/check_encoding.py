@@ -11,7 +11,7 @@ import os
 
 # Ajuster le PYTHONPATH pour trouver project_core si le script est exécuté directement
 script_dir = os.path.dirname(os.path.abspath(__file__))
-project_root = os.path.abspath(os.path.join(script_dir, '..'))
+project_root = os.path.abspath(os.path.join(script_dir, '..', '..')) # MODIFIÉ: Remonter à la racine du projet
 if project_root not in sys.path:
     sys.path.insert(0, project_root)
 

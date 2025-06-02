@@ -11,7 +11,10 @@ import unittest
 from pathlib import Path
 
 # Ajout du répertoire courant au PYTHONPATH
-sys.path.insert(0, os.getcwd())
+# Remplacé par une méthode plus robuste pour ajouter la racine du projet
+project_root_for_runner = Path(__file__).resolve().parent.parent.parent
+if str(project_root_for_runner) not in sys.path:
+    sys.path.insert(0, str(project_root_for_runner))
 
 def run_tests_in_directory(test_dir):
     """Exécute tous les tests dans un répertoire donné"""

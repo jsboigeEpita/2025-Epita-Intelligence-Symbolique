@@ -34,7 +34,7 @@ def main():
         # 1. Configurer sys.path pour inclure la racine du projet.
         # Ce script est dans scripts/, la racine est un niveau au-dessus.
         current_script_path = Path(__file__).resolve()
-        project_root = current_script_path.parent.parent
+        project_root = current_script_path.parent.parent.parent # Remonter à la racine du projet
         if str(project_root) not in sys.path:
             sys.path.insert(0, str(project_root))
         logger.info(f"Project root (from debug_inspect_extract_sources.py) added to sys.path: {project_root}")

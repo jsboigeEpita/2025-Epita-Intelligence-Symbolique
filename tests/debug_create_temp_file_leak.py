@@ -8,9 +8,10 @@ import platform # Ajout de platform
 
 # Ajoute le répertoire parent (racine du projet) à sys.path
 # pour permettre les imports de argumentation_analysis
-project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
-if project_root not in sys.path:
-    sys.path.insert(0, project_root)
+# project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+# if project_root not in sys.path:
+#     sys.path.insert(0, project_root)
+# Commenté car l'installation du package via `pip install -e .` devrait gérer l'accessibilité.
 
 # Importer la fonction refactorisée et find_valid_java_home
 from argumentation_analysis.core.jvm_setup import find_valid_java_home, _build_effective_classpath

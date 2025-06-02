@@ -1,8 +1,0 @@
-Refactor: Lot 7 - Nettoyage et réorganisation des tests.
-
-Ce commit applique les changements définis dans le plan d'analyse lot7_analysis_plan.md:
-- Suppression des tests et scripts obsolètes dans legacy_root_tests et corrections_appliquees.
-- Réorganisation des tests unitaires dans la structure tests/unit/.
-- Nettoyage et renommage des utilitaires de test dans tests/utils/ et tests/support/.
-- Mise à jour des fichiers README pour refléter la nouvelle structure.
-- Revue et nettoyage mineur de conftest.py et des fixtures.

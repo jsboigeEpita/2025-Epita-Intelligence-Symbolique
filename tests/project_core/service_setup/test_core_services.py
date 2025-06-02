@@ -101,11 +101,16 @@ def test_initialize_core_services_with_overrides(mock_services_constructors, tem
     custom_config_file = temp_project_root / custom_config_path_str
     (temp_project_root / "custom_config").mkdir(exist_ok=True)
     custom_config_file.touch() # S'assurer que le fichier existe
+    
+    # S'assurer que le fichier JSON de fallback attendu par le mock existe aussi
+    expected_fallback_json_path = temp_project_root / "config" / "default.json"
+    expected_fallback_json_path.parent.mkdir(parents=True, exist_ok=True)
+    expected_fallback_json_path.touch()
 
     # Mock des constantes par défaut car elles sont utilisées si les overrides sont None
     with patch('project_core.service_setup.core_services.DEFAULT_ENCRYPTION_KEY', "default_key"), \
          patch('project_core.service_setup.core_services.DEFAULT_CONFIG_FILE_PATH', "config/default.enc"), \
-         patch('project_core.service_setup.core_services.DEFAULT_CONFIG_FILE_JSON_PATH', "config/default.json"):
+         patch('project_core.service_setup.core_services.DEFAULT_CONFIG_FILE_JSON_PATH', "config/default.json"): # Ce mock pointe vers config/default.json
         
         services = initialize_core_services(
             encryption_key=custom_key,
@@ -138,17 +143,17 @@ def test_config_file_paths_resolution(mock_ui_config, mock_services_constructors
     """Teste comment les chemins des fichiers de configuration sont résolus."""
     # Cas 1: Pas d'override, utilise les défauts relatifs à project_root_dir
     initialize_core_services(project_root_dir=temp_project_root)
-    args_def_service, _ = mock_services_constructors["DefinitionService"].call_args
-    assert args_def_service[1]['config_file'] == temp_project_root / "config/default_config.enc"
-    assert args_def_service[1]['fallback_file'] == temp_project_root / "config/default_config.json"
+    kwargs_def_service = mock_services_constructors["DefinitionService"].call_args.kwargs
+    assert kwargs_def_service['config_file'] == temp_project_root / "config/default_config.enc"
+    assert kwargs_def_service['fallback_file'] == temp_project_root / "config/default_config.json"
     mock_services_constructors["DefinitionService"].reset_mock()
 
     # Cas 2: Override avec chemin relatif
     relative_config = Path("specific_config.enc")
     (temp_project_root / relative_config).touch()
     initialize_core_services(project_root_dir=temp_project_root, config_file_path=relative_config)
-    args_def_service, _ = mock_services_constructors["DefinitionService"].call_args
-    assert args_def_service[1]['config_file'] == temp_project_root / relative_config
+    kwargs_def_service = mock_services_constructors["DefinitionService"].call_args.kwargs
+    assert kwargs_def_service['config_file'] == temp_project_root / relative_config
     mock_services_constructors["DefinitionService"].reset_mock()
 
     # Cas 3: Override avec chemin absolu
@@ -157,8 +162,8 @@ def test_config_file_paths_resolution(mock_ui_config, mock_services_constructors
     absolute_config_file = absolute_config_dir / "abs_config.enc"
     absolute_config_file.touch()
     initialize_core_services(project_root_dir=temp_project_root, config_file_path=absolute_config_file)
-    args_def_service, _ = mock_services_constructors["DefinitionService"].call_args
-    assert args_def_service[1]['config_file'] == absolute_config_file
+    kwargs_def_service = mock_services_constructors["DefinitionService"].call_args.kwargs
+    assert kwargs_def_service['config_file'] == absolute_config_file
     mock_services_constructors["DefinitionService"].reset_mock()
 
     # Cas 4: project_root_dir est None, les chemins relatifs sont par rapport à CWD (simulé par tmp_path ici)
@@ -174,7 +179,7 @@ def test_config_file_paths_resolution(mock_ui_config, mock_services_constructors
         # La fonction utilise Path.cwd() si project_root_dir est None.
         # On va mocker Path.cwd() pour ce test spécifique.
         with patch('project_core.service_setup.core_services.Path.cwd', return_value=temp_project_root):
-            initialize_core_services(project_root_dir=None) 
-            args_def_service, _ = mock_services_constructors["DefinitionService"].call_args
-            assert args_def_service[1]['config_file'] == temp_project_root / "config_cwd.enc"
-            assert args_def_service[1]['fallback_file'] == temp_project_root / "config_cwd.json"
+            initialize_core_services(project_root_dir=None)
+            kwargs_def_service = mock_services_constructors["DefinitionService"].call_args.kwargs
+            assert kwargs_def_service['config_file'] == temp_project_root / "config_cwd.enc"
+            assert kwargs_def_service['fallback_file'] == temp_project_root / "config_cwd.json"

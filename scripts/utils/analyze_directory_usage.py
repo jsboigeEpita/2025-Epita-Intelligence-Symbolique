@@ -12,7 +12,7 @@ import logging
 
 # Ajuster le PYTHONPATH pour trouver project_core si le script est exécuté directement
 script_dir = os.path.dirname(os.path.abspath(__file__))
-project_root_dir = os.path.abspath(os.path.join(script_dir, '..'))
+project_root_dir = os.path.abspath(os.path.join(script_dir, '..', '..')) # MODIFIÉ: Remonter à la racine du projet
 if project_root_dir not in sys.path:
     sys.path.insert(0, project_root_dir)
 
@@ -43,10 +43,10 @@ logging.basicConfig(
 def main():
     parser = argparse.ArgumentParser(description="Analyse des références aux répertoires dans le code.")
     parser.add_argument(
-        '--dir', 
-        type=str, 
-        default=os.path.join(project_root_dir, 'argumentation_analysis'), 
-        help="Répertoire racine à analyser (par défaut: argumentation_analysis dans la racine du projet)."
+        '--dir',
+        type=str,
+        default=str(Path(project_root_dir) / 'src' / 'argumentation_analysis'), # MODIFIÉ: Cible src/argumentation_analysis
+        help="Répertoire racine à analyser (par défaut: src/argumentation_analysis dans la racine du projet)."
     )
     parser.add_argument(
         '--output', 
