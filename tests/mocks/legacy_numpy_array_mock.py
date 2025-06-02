@@ -155,20 +155,20 @@ newaxis = None # Placeholder pour numpy.newaxis
 atleast_1d = lambda x: array(x) # Simule la conversion en tableau 1D
 cov = MagicMock(name='numpy.cov')
 iinfo = MagicMock(return_value=MagicMock(max=2**31 - 1)) # Simule iinfo pour int32
-class flatiter: # Défini comme une classe
-    def __init__(self, array):
-        self.array = array
-        self.index = 0
-    def __iter__(self):
-        return self
-    def __next__(self):
-        if self.index < self.array.size: # Supposant que ndarray a un attribut size
-            # Simuler la récupération de l'élément aplati
-            # Ceci est une simplification grossière
-            self.index += 1
-            return 0 # Retourner une valeur factice
-        else:
-            raise StopIteration
+# class flatiter: # Défini comme une classe
+#     def __init__(self, array):
+#         self.array = array
+#         self.index = 0
+#     def __iter__(self):
+#         return self
+#     def __next__(self):
+#         if self.index < self.array.size: # Supposant que ndarray a un attribut size
+#             # Simuler la récupération de l'élément aplati
+#             # Ceci est une simplification grossière
+#             self.index += 1
+#             return 0 # Retourner une valeur factice
+#         else:
+#             raise StopIteration
 
 def zeros(shape, dtype=None):
     """Crée un tableau de zéros."""
