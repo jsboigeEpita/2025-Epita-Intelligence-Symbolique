@@ -170,7 +170,8 @@ iinfo = MagicMock(return_value=MagicMock(max=2**31 - 1)) # Simule iinfo pour int
 #         else:
 #             raise StopIteration
 
-flatiter = MagicMock() # Remplacer l'ancienne classe flatiter par un MagicMock
+class flatiter(MagicMock):
+    pass
 
 def zeros(shape, dtype=None):
     """Crée un tableau de zéros."""
