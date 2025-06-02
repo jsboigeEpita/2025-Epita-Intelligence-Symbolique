@@ -40,7 +40,7 @@ Pour plus de détails sur cette approche, consultez le fichier [README_TESTS_UNI
 
 ## Structure du Répertoire
 
-- `test_*.py` : Tests unitaires et d'intégration pour les différents modules. (Note: `tests/test_dependencies.py` est en cours d'évaluation pour refactorisation/remplacement par des tests pytest dédiés et des scripts de `scripts/setup/`.)
+- `test_*.py` : Tests unitaires et d'intégration pour les différents modules.
 - `standalone_mock_tests.py` : Script de test autonome avec des mocks internes pour une logique de communication (potentiellement redondant avec les tests de `core.communication`, à évaluer pour refactorisation/suppression).
 - `mocks/` : Mocks pour les dépendances problématiques (numpy, pandas, jpype)
 - `conftest.py` : Configuration pour pytest
