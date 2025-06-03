@@ -48,7 +48,7 @@ logging.basicConfig(
 logger = logging.getLogger("RhetoricalAnalysis")
 
 # Ajout du répertoire parent au chemin pour permettre l'import des modules du projet
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent)) # MODIFIÉ: Remonter à la racine
 
 # Vérifier les dépendances requises
 required_packages = ["networkx", "numpy", "tqdm"]

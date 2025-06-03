@@ -58,9 +58,23 @@ def identify_missing_segments(config_file_path_str):
         print("Tous les extraits ont un segment 'full_text_segment' renseigné.")
     else:
         print(f"Nombre total d'extraits avec segment manquant ou vide : {missing_segments_count}")
-    print(f"Nombre total d'extraits analysés : {total_extracts_count}")
-
-if __name__ == "__main__":
-    # ASSUREZ-VOUS QUE CE CHEMIN EST CORRECT
-    config_file_to_analyze = "_temp/config_final_pre_encryption.json"
-    identify_missing_segments(config_file_to_analyze)
+        print(f"Nombre total d'extraits analysés : {total_extracts_count}")
+        # La fonction est maintenant importée et retourne les valeurs.
+        # Le script appelant peut choisir de les utiliser ou non.
+    
+    if __name__ == "__main__":
+        # ASSUREZ-VOUS QUE CE CHEMIN EST CORRECT
+        config_file_to_analyze_str = "_temp/config_final_pre_encryption.json"
+        config_file_path_obj = pathlib.Path(config_file_to_analyze_str)
+        
+        # Appeler la fonction importée
+        # La fonction logge déjà les détails, donc ici on peut juste afficher un résumé si besoin.
+        missing_count, total_count, _ = identify_missing_full_text_segments(config_file_path_obj)
+        
+        print(f"\n--- Résultat final de l'appel à la fonction utilitaire ---")
+        if missing_count == 0 and total_count > 0:
+            print(f"Analyse terminée. Tous les {total_count} extraits ont un segment 'full_text_segment' renseigné.")
+        elif total_count == 0:
+            print("Analyse terminée. Aucun extrait n'a été trouvé ou analysé.")
+        else:
+            print(f"Analyse terminée. {missing_count} extraits sur {total_count} ont un segment manquant ou vide.")

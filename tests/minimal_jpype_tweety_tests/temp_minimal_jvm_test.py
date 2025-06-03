@@ -32,9 +32,10 @@ except ImportError as e:
     # Une meilleure solution est d'exécuter avec `python -m pytest` depuis la racine
     # ou d'avoir le projet installé en mode éditable.
     current_dir = pathlib.Path(__file__).parent.resolve()
-    project_root_from_test = current_dir.parent.parent 
-    sys.path.insert(0, str(project_root_from_test))
-    print(f"Ajout de {project_root_from_test} au sys.path")
+    # project_root_from_test = current_dir.parent.parent
+    # sys.path.insert(0, str(project_root_from_test))
+    # print(f"Ajout de {project_root_from_test} au sys.path")
+    # Commenté car l'installation du package via `pip install -e .` devrait gérer l'accessibilité.
     try:
         from argumentation_analysis.core.jvm_setup import initialize_jvm, find_valid_java_home
         from argumentation_analysis.paths import PROJECT_ROOT_DIR, LIBS_DIR

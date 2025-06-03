@@ -2,7 +2,10 @@ import sys
 import os
 
 # Ajouter le répertoire du projet au PYTHONPATH
-sys.path.insert(0, os.path.abspath('.'))
+from pathlib import Path # Ajout pour la clarté
+project_root = Path(__file__).resolve().parent.parent.parent
+sys.path.insert(0, str(project_root))
+
 
 # Maintenant, essayons d'importer les modules nécessaires
 try:

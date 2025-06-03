@@ -1,12 +1,24 @@
 # -*- coding: utf-8 -*-
-"""Utilitaires pour la manipulation de fichiers."""
+"""
+Utilitaires pour la manipulation de fichiers.
+
+Ce module fournit un ensemble de fonctions pour effectuer des opérations courantes
+sur les fichiers, telles que le chargement et la sauvegarde de données dans
+différents formats (JSON, texte, CSV), la sanitization des noms de fichiers,
+la vérification de l'existence de chemins, la création de chemins d'archive,
+l'archivage de fichiers, et la conversion de Markdown en HTML.
+Il vise à centraliser la logique de manipulation de fichiers pour le projet.
+"""
 
 import json
 from pathlib import Path
-from typing import List, Dict, Any, Optional # Ajout de Optional
+from typing import List, Dict, Any, Optional, Union # Ajout de Union
 import logging
-import re # Ajout de l'import re
+from datetime import datetime # Ajout de datetime
+import re
 import shutil
+import sys
+import markdown
 
 logger = logging.getLogger(__name__)
 
@@ -23,12 +35,12 @@ def sanitize_filename(filename: str, max_len: int = 255) -> str:
     - Gère les extensions de manière plus robuste.
     - Tronque à une longueur maximale tout en essayant de préserver l'extension.
 
-    Args:
-        filename (str): La chaîne de caractères originale du nom de fichier.
-        max_len (int, optional): Longueur maximale du nom de fichier final. Par défaut à 255.
-
-    Returns:
-        str: Le nom de fichier nettoyé.
+    :param filename: La chaîne de caractères originale du nom de fichier.
+    :type filename: str
+    :param max_len: Longueur maximale du nom de fichier final.
+    :type max_len: int, optional
+    :return: Le nom de fichier nettoyé.
+    :rtype: str
     """
     if not filename:
         logger.warning("Tentative de nettoyer un nom de fichier vide. Retour de 'empty_filename'.")
@@ -110,16 +122,20 @@ def sanitize_filename(filename: str, max_len: int = 255) -> str:
     return final_filename
 
 
-def load_json_file(file_path: Path) -> List[Dict[str, Any]] | Dict[str, Any] | None:
+def load_json_file(file_path: Path) -> Optional[Union[List[Dict[str, Any]], Dict[str, Any]]]:
     """
     Charge des données depuis un fichier JSON.
+
     Gère les listes ou dictionnaires à la racine du JSON.
+    Tente également de parser le contenu si le JSON initial est une chaîne (double encodage).
 
-    Args:
-        file_path (Path): Chemin vers le fichier JSON.
-
-    Returns:
-        List[Dict[str, Any]] | Dict[str, Any] | None: Données chargées ou None si erreur.
+    :param file_path: Chemin vers le fichier JSON.
+    :type file_path: Path
+    :return: Données chargées (liste de dictionnaires ou dictionnaire) ou None si une erreur survient
+             (fichier non trouvé, erreur de décodage JSON, type de données inattendu).
+    :rtype: Optional[Union[List[Dict[str, Any]], Dict[str, Any]]]
+    :raises FileNotFoundError: Techniquement gérée en interne et logguée, retourne None.
+    :raises json.JSONDecodeError: Techniquement gérée en interne et logguée, retourne None.
     """
     logger.info(f"Chargement des données JSON depuis {file_path}")
     try:
@@ -147,11 +163,7 @@ def load_json_file(file_path: Path) -> List[Dict[str, Any]] | Dict[str, Any] | N
             # Ce cas ne devrait pas être atteint si json.load ou json.loads fonctionnent correctement
             # et que le JSON est valide (soit une liste, soit un dict à la racine).
             # Si 'data' n'est ni list ni dict ici, c'est inattendu.
-            logger.warning(f"Données chargées depuis {file_path} ne sont ni une liste ni un dictionnaire. Type: {type(data)}. Contenu (premiers 500): {str(data)[:500]}")
-            # Selon la politique de gestion d'erreur, on pourrait retourner None ici.
-            # Pour l'instant, on retourne les données telles quelles, mais cela pourrait violer la signature de type.
-            # Pour être plus strict et correspondre à la signature de type qui attend List ou Dict :
-            logger.error(f"Type de données inattendu ({type(data)}) après chargement de {file_path}. Retour de None.")
+            logger.error(f"Type de données inattendu ({type(data)}) après chargement de {file_path}. Attendu List ou Dict. Retour de None.")
             return None
 
         return data
@@ -171,13 +183,17 @@ def load_json_file(file_path: Path) -> List[Dict[str, Any]] | Dict[str, Any] | N
 def load_extracts(file_path: Path) -> List[Dict[str, Any]]:
     """
     Charge les extraits déchiffrés depuis un fichier JSON.
-    (Wrapper temporaire pour load_json_file pour maintenir la compatibilité)
 
-    Args:
-        file_path (Path): Chemin vers le fichier JSON contenant les extraits déchiffrés
+    Cette fonction est un wrapper autour de `load_json_file` pour maintenir
+    la compatibilité avec le code existant qui attend spécifiquement une liste d'extraits.
+    Elle assure que le résultat est une liste, retournant une liste vide en cas d'erreur
+    ou si les données chargées ne sont pas une liste.
 
-    Returns:
-        List[Dict[str, Any]]: Liste des extraits déchiffrés, ou liste vide si erreur.
+    :param file_path: Chemin vers le fichier JSON contenant les extraits déchiffrés.
+    :type file_path: Path
+    :return: Liste des extraits déchiffrés, ou une liste vide si une erreur de chargement
+             survient ou si le format des données n'est pas une liste.
+    :rtype: List[Dict[str, Any]]
     """
     data = load_json_file(file_path)
     if isinstance(data, list):
@@ -185,51 +201,62 @@ def load_extracts(file_path: Path) -> List[Dict[str, Any]]:
     elif data is None: # Erreur de chargement gérée par load_json_file
         return []
     else:
-        logger.warning(f"Les données chargées depuis {file_path} ne sont pas une liste comme attendu pour des extraits. Type: {type(data)}")
-        # Retourner une liste vide si ce n'est pas le format attendu pour les "extracts"
+        logger.warning(f"Les données chargées depuis {file_path} ne sont pas une liste comme attendu pour des extraits. Type: {type(data)}. Retour d'une liste vide.")
         return []
 def load_base_analysis_results(file_path: Path) -> List[Dict[str, Any]]:
     """
     Charge les résultats de l'analyse rhétorique de base depuis un fichier JSON.
-    (Wrapper temporaire pour load_json_file pour maintenir la compatibilité)
 
-    Args:
-        file_path (Path): Chemin vers le fichier JSON contenant les résultats
+    Cette fonction est un wrapper autour de `load_json_file` pour maintenir
+    la compatibilité avec le code existant qui attend spécifiquement une liste de résultats.
+    Elle assure que le résultat est une liste, retournant une liste vide en cas d'erreur
+    ou si les données chargées ne sont pas une liste.
 
-    Returns:
-        List[Dict[str, Any]]: Liste des résultats, ou liste vide si erreur.
+    :param file_path: Chemin vers le fichier JSON contenant les résultats d'analyse.
+    :type file_path: Path
+    :return: Liste des résultats d'analyse, ou une liste vide si une erreur de chargement
+             survient ou si le format des données n'est pas une liste.
+    :rtype: List[Dict[str, Any]]
     """
     data = load_json_file(file_path)
     if isinstance(data, list):
-        # Le logger.info original mentionnait "résultats d'analyse de base chargés",
-        # load_json_file logue déjà le succès du chargement du fichier.
-        # On pourrait ajouter un log spécifique si le type est correct.
         logger.info(f"Données de type liste chargées pour les résultats d'analyse de base depuis {file_path}")
         return data
     elif data is None: # Erreur de chargement gérée par load_json_file
         return []
     else:
-        logger.warning(f"Les données chargées depuis {file_path} pour les résultats d'analyse de base ne sont pas une liste. Type: {type(data)}")
+        logger.warning(f"Les données chargées depuis {file_path} pour les résultats d'analyse de base ne sont pas une liste. Type: {type(data)}. Retour d'une liste vide.")
         return []
 
-def load_text_file(file_path: Path) -> Optional[str]: # Optional a été ajouté à l'import typing
+def load_text_file(file_path: Path, encoding: str = "utf-8") -> Optional[str]:
     """
     Charge le contenu d'un fichier texte.
 
-    Args:
-        file_path (Path): Chemin vers le fichier texte.
-
-    Returns:
-        Optional[str]: Contenu du fichier, ou None si erreur.
+    :param file_path: Chemin vers le fichier texte.
+    :type file_path: Path
+    :param encoding: Encodage du fichier.
+    :type encoding: str, optional
+    :return: Contenu du fichier sous forme de chaîne de caractères, ou None si une erreur survient
+             (fichier non trouvé, erreur de décodage, erreur d'E/S).
+    :rtype: Optional[str]
+    :raises FileNotFoundError: Gérée en interne, retourne None.
+    :raises UnicodeDecodeError: Gérée en interne, retourne None.
+    :raises IOError: Gérée en interne, retourne None.
     """
-    logger.info(f"Chargement du fichier texte depuis {file_path}")
+    logger.info(f"Chargement du fichier texte {file_path} avec l'encodage {encoding}")
     try:
-        with open(file_path, 'r', encoding='utf-8') as f:
+        with open(file_path, 'r', encoding=encoding) as f:
             content = f.read()
-        logger.info(f"✅ Fichier texte chargé avec succès depuis {file_path}")
+        logger.info(f"✅ Fichier texte {file_path} chargé avec succès")
         return content
     except FileNotFoundError:
         logger.error(f"❌ Fichier non trouvé: {file_path}")
+        return None
+    except UnicodeDecodeError as e:
+        logger.error(f"❌ Erreur de décodage Unicode lors du chargement du fichier {file_path} avec l'encodage {encoding}: {e}", exc_info=True)
+        return None
+    except IOError as e: # Inclut FileNotFoundError mais est plus générique pour les problèmes d'IO
+        logger.error(f"❌ Erreur d'E/S lors du chargement du fichier {file_path}: {e}", exc_info=True)
         return None
     except Exception as e:
         logger.error(f"❌ Erreur inattendue lors du chargement du fichier texte {file_path}: {e}", exc_info=True)
@@ -237,16 +264,21 @@ def load_text_file(file_path: Path) -> Optional[str]: # Optional a été ajouté
 
 def load_csv_file(file_path: Path) -> Optional[Any]: # Remplacement de pd.DataFrame par Any pour éviter l'import de pandas ici
     """
-    Charge des données depuis un fichier CSV en utilisant pandas.
+    Charge des données depuis un fichier CSV en utilisant la bibliothèque pandas.
 
-    Args:
-        file_path (Path): Chemin vers le fichier CSV.
+    Si pandas n'est pas installé, une erreur est logguée et None est retourné.
 
-    Returns:
-        Optional[Any]: DataFrame pandas contenant les données, ou None si erreur.
+    :param file_path: Chemin vers le fichier CSV.
+    :type file_path: Path
+    :return: Un DataFrame pandas contenant les données du fichier CSV.
+             Retourne un DataFrame vide si le fichier CSV est vide.
+             Retourne None si pandas n'est pas installé, si le fichier n'est pas trouvé,
+             ou en cas d'autre erreur de chargement.
+    :rtype: Optional[Any]
+    :raises ImportError: Si pandas n'est pas installé (gérée en interne, retourne None).
+    :raises FileNotFoundError: Gérée en interne, retourne None.
+    :raises pd.errors.EmptyDataError: Gérée en interne, retourne un DataFrame vide.
     """
-    # Vérifier si pandas est disponible, sinon logguer une erreur et retourner None.
-    # Cela évite un ImportError si pandas n'est pas installé et que cette fonction est appelée.
     try:
         import pandas as pd
     except ImportError:
@@ -268,18 +300,59 @@ def load_csv_file(file_path: Path) -> Optional[Any]: # Remplacement de pd.DataFr
     except Exception as e:
         logger.error(f"❌ Erreur inattendue lors du chargement du fichier CSV {file_path}: {e}", exc_info=True)
         return None
+def save_json_file(file_path: Path, data: Any, indent: int = 4) -> bool:
+    """
+    Sauvegarde des données Python dans un fichier JSON.
+
+    Crée les répertoires parents si nécessaire.
+
+    :param file_path: Chemin complet du fichier où sauvegarder les données JSON.
+    :type file_path: Path
+    :param data: Les données Python (par exemple, dict, list) à sérialiser en JSON.
+    :type data: Any
+    :param indent: Niveau d'indentation pour le formatage du JSON.
+    :type indent: int, optional
+    :return: True si la sauvegarde a réussi, False sinon.
+    :rtype: bool
+    :raises IOError: Si une erreur d'E/S se produit (gérée en interne, retourne False).
+    :raises TypeError: Si les données ne sont pas sérialisables en JSON (gérée en interne, retourne False).
+    """
+    logger.info(f"Tentative de sauvegarde des données JSON dans {file_path} avec une indentation de {indent}")
+    try:
+        # S'assurer que le répertoire parent existe
+        file_path.parent.mkdir(parents=True, exist_ok=True)
+        logger.debug(f"Répertoire parent {file_path.parent} pour la sauvegarde JSON vérifié/créé.")
+
+        with open(file_path, 'w', encoding='utf-8') as f:
+            json.dump(data, f, indent=indent, ensure_ascii=False)
+        logger.info(f"✅ Données JSON sauvegardées avec succès dans {file_path}")
+        return True
+    except IOError as e:
+        logger.error(f"❌ Erreur d'E/S lors de la sauvegarde du fichier JSON {file_path}: {e}", exc_info=True)
+        return False
+    except TypeError as e:
+        logger.error(f"❌ Erreur de type lors de la sérialisation JSON pour le fichier {file_path} (données non sérialisables?): {e}", exc_info=True)
+        return False
+    except Exception as e:
+        logger.error(f"❌ Erreur inattendue lors de la sauvegarde du fichier JSON {file_path}: {e}", exc_info=True)
+        return False
 import markdown # Ajout de l'import manquant pour la nouvelle fonction
 
 def save_markdown_to_html(markdown_content: str, output_path: Path) -> bool:
     """
     Convertit une chaîne de contenu Markdown en HTML et sauvegarde le résultat dans un fichier.
 
-    Args:
-        markdown_content (str): La chaîne de contenu Markdown à convertir.
-        output_path (Path): Le chemin du fichier où sauvegarder le contenu HTML.
+    Le document HTML généré inclut un style CSS de base pour une meilleure lisibilité.
+    Les extensions Markdown 'tables' et 'fenced_code' sont activées.
+    Crée les répertoires parents si nécessaire.
 
-    Returns:
-        bool: True si la sauvegarde a réussi, False sinon.
+    :param markdown_content: La chaîne de contenu Markdown à convertir.
+    :type markdown_content: str
+    :param output_path: Le chemin du fichier où sauvegarder le contenu HTML.
+    :type output_path: Path
+    :return: True si la conversion et la sauvegarde ont réussi, False sinon.
+    :rtype: bool
+    :raises Exception: Si une erreur se produit pendant la conversion ou la sauvegarde (gérée en interne, retourne False).
     """
     logger.info(f"Conversion du Markdown en HTML et sauvegarde vers {output_path}")
     try:
@@ -391,6 +464,40 @@ def save_markdown_to_html(markdown_content: str, output_path: Path) -> bool:
     except Exception as e:
         logger.error(f"❌ Erreur lors de la conversion Markdown en HTML ou de la sauvegarde dans {output_path}: {e}", exc_info=True)
         return False
+
+def convert_markdown_file_to_html(markdown_file_path: Path, output_html_path: Path, visualization_dir: Optional[Path] = None) -> bool:
+    """
+    Lit un fichier Markdown, le convertit en HTML et le sauvegarde.
+
+    Utilise la fonction save_markdown_to_html pour la conversion et la sauvegarde.
+    Le paramètre visualization_dir n'est pas directement utilisé dans cette version
+    mais est conservé pour la compatibilité de signature si la logique d'intégration
+    des visualisations devait être ajoutée ici.
+
+    :param markdown_file_path: Chemin vers le fichier Markdown source.
+    :type markdown_file_path: Path
+    :param output_html_path: Chemin vers le fichier HTML de sortie.
+    :type output_html_path: Path
+    :param visualization_dir: Chemin vers un répertoire de visualisations (actuellement non utilisé).
+    :type visualization_dir: Optional[Path], optional
+    :return: True si la conversion et la sauvegarde ont réussi, False sinon.
+    :rtype: bool
+    """
+    logger.info(f"Tentative de conversion du fichier Markdown {markdown_file_path} en HTML vers {output_html_path}.")
+    
+    markdown_content = load_text_file(markdown_file_path)
+    if markdown_content is None:
+        logger.error(f"Impossible de lire le contenu du fichier Markdown: {markdown_file_path}")
+        return False
+    
+    # Le paramètre visualization_dir est présent pour correspondre à la signature du candidat #25.
+    # Si les visualisations doivent être intégrées dans le HTML, la logique devrait être ajoutée ici
+    # ou dans save_markdown_to_html. Pour l'instant, il n'est pas utilisé.
+    if visualization_dir:
+        logger.debug(f"Le répertoire de visualisations {visualization_dir} est fourni mais non utilisé activement dans cette version de la conversion.")
+
+    return save_markdown_to_html(markdown_content, output_html_path)
+
 import sys # Ajout de l'import sys pour sys.exit
 
 def check_path_exists(path: Path, path_type: str = "file") -> bool:
@@ -398,20 +505,16 @@ def check_path_exists(path: Path, path_type: str = "file") -> bool:
     Vérifie si un chemin existe et correspond au type spécifié (fichier ou répertoire).
 
     En cas d'échec de la validation (chemin non trouvé, type incorrect),
-    un message d'erreur critique est loggué et le script est arrêté via sys.exit(1).
+    un message d'erreur critique est loggué et le script est arrêté via `sys.exit(1)`.
 
-    Args:
-        path (Path): L'objet Path à vérifier.
-        path_type (str, optional): Le type de chemin attendu.
-                                   Peut être "file" ou "directory".
-                                   Par défaut "file".
-
-    Returns:
-        bool: True si le chemin existe et correspond au type attendu.
-              Ne retourne jamais False car le script s'arrête en cas d'erreur.
-    
-    Raises:
-        SystemExit: Si la validation échoue.
+    :param path: L'objet Path à vérifier.
+    :type path: Path
+    :param path_type: Le type de chemin attendu. Peut être "file" ou "directory".
+    :type path_type: str, optional
+    :return: True si le chemin existe et correspond au type attendu.
+             Ne retourne jamais False car le script s'arrête en cas d'erreur de validation.
+    :rtype: bool
+    :raises SystemExit: Si la validation échoue (chemin non trouvé ou type incorrect).
     """
     logger.debug(f"Vérification de l'existence et du type pour le chemin : {path} (attendu: {path_type})")
     if not path.exists():
@@ -489,103 +592,66 @@ def create_archive_path(base_archive_dir: Path, source_file_path: Path, preserve
         logger.warning("preserve_levels ne peut pas être négatif. Utilisation de 0 à la place.")
         preserve_levels = 0
 
-    # Les "parts" du chemin source, ex: ('/', 'data', 'raw', 'project_alpha', 'file.txt') ou ('data', 'raw', ...)
-    source_parts = source_file_path.parts
-
-    # Le nom du fichier est toujours le dernier élément
     file_name = source_file_path.name
+    
+    # Obtenir les noms des répertoires parents pertinents
+    # source_file_path.parents est une séquence: (parent, grand-parent, ...)
+    # parents[0] est le parent direct, parents[1] le parent du parent, etc.
+    # On veut les `preserve_levels` derniers noms de répertoires.
+    
+    parent_names_to_preserve = []
+    if preserve_levels > 0 and source_file_path.parents:
+        # Nombre de parents disponibles
+        num_available_parents = len(source_file_path.parents)
+        # Nombre de niveaux à effectivement prendre (ne peut excéder num_available_parents)
+        levels_to_take = min(preserve_levels, num_available_parents)
+        
+        # Prendre les `levels_to_take` premiers parents de la liste `parents`
+        # et inverser pour avoir l'ordre correct (du plus éloigné au plus proche)
+        # puis prendre leurs noms.
+        # Exemple: source = Path("a/b/c/d/file.txt"), preserve_levels = 2
+        # parents = (PosixPath('a/b/c/d'), PosixPath('a/b/c'), PosixPath('a/b'), PosixPath('a'))
+        # levels_to_take = 2
+        # parents_to_consider = [PosixPath('a/b/c/d'), PosixPath('a/b/c')]
+        # parent_names_to_preserve = ['c', 'd'] (après .name et inversion)
+        
+        # On prend les `levels_to_take` parents les plus proches du fichier.
+        # parents[0] est le parent direct, parents[1] celui d'avant, etc.
+        # On veut les noms de parents[levels_to_take-1], ..., parents[0]
+        for i in range(levels_to_take):
+            parent_names_to_preserve.append(source_file_path.parents[i].name)
+        parent_names_to_preserve.reverse() # Mettre dans l'ordre correct de l'arborescence
 
-    # Les parties parentes à considérer pour la préservation
-    # Si source_parts = ('data', 'raw', 'project_alpha', 'file.txt'), parent_parts_to_consider = ('data', 'raw', 'project_alpha')
-    parent_parts_to_consider = source_parts[:-1]
-
-    if preserve_levels == 0:
-        # Si 0 niveau à préserver, on met juste le fichier dans base_archive_dir
-        archive_sub_path = Path(file_name)
-    elif preserve_levels >= len(parent_parts_to_consider):
-        # Si on demande de préserver plus de niveaux qu'il n'y en a (avant le nom du fichier),
-        # on préserve toutes les parties parentes disponibles.
-        # Par exemple, si source = 'project_alpha/file.txt' (len(parent_parts_to_consider) = 1)
-        # et preserve_levels = 2, on garde 'project_alpha/file.txt'
-        if parent_parts_to_consider:
-            archive_sub_path = Path(*parent_parts_to_consider) / file_name
-        else: # Cas où source_file_path est juste un nom de fichier, ex: "file.txt"
-            archive_sub_path = Path(file_name)
+    if parent_names_to_preserve:
+        archive_sub_path = Path(*parent_names_to_preserve) / file_name
     else:
-        # On prend les `preserve_levels` derniers éléments des parties parentes,
-        # puis on ajoute le nom du fichier.
-        # Ex: parent_parts_to_consider = ('data', 'raw', 'project_alpha'), preserve_levels = 2
-        # preserved_parent_parts = ('raw', 'project_alpha') -- NON, c'est l'inverse
-        # On veut les N derniers *répertoires* du chemin source.
-        # Path.parents est une séquence de chemins parents.
-        # parents[0] = data/raw/project_alpha
-        # parents[1] = data/raw
-        # parents[n-1] = data
-        # Si preserve_levels = 2, on veut les 2 derniers niveaux de l'arborescence du fichier source.
-        # Donc, si source_file_path est 'a/b/c/d/file.txt' et preserve_levels = 2,
-        # on veut 'd/file.txt' sous base_archive_dir.
-        # Les 'niveaux' sont les noms des répertoires.
-        # source_file_path.parent.name est 'd'
-        # source_file_path.parent.parent.name est 'c'
-        # On veut les `preserve_levels` derniers composants du chemin *avant* le nom du fichier.
-        
-        # Exemple: source_file_path = Path("data/raw/project_alpha/file.txt")
-        # preserve_levels = 2
-        # On veut garder "project_alpha/file.txt"
-        # Les parties du chemin sont: ('data', 'raw', 'project_alpha', 'file.txt')
-        # On ignore le nom du fichier pour l'instant: ('data', 'raw', 'project_alpha')
-        # On prend les `preserve_levels` derniers éléments: ('project_alpha') si preserve_levels=1, ('raw', 'project_alpha') si preserve_levels=2
-        # Non, c'est le nombre de *niveaux de répertoire* à partir de la fin.
-        # Si source_file_path = data/raw/project_alpha/file.txt et preserve_levels = 2,
-        # les parties à préserver sont project_alpha/file.txt.
-        # C'est équivalent à prendre les `preserve_levels` derniers répertoires parents + le nom du fichier.
-        
-        # Une approche plus simple :
-        # 1. Prendre le nom du fichier : source_file_path.name
-        # 2. Prendre les `preserve_levels` noms de répertoires parents, en partant du plus proche du fichier.
-        
-        preserved_components = []
-        current_parent = source_file_path.parent
-        # On ne peut pas préserver plus de niveaux qu'il n'y a de parents.
-        actual_levels_to_preserve = min(preserve_levels, len(source_file_path.parents))
-
-        for i in range(actual_levels_to_preserve):
-            if current_parent and current_parent.name: # S'assurer qu'on a un nom (pas la racine)
-                preserved_components.insert(0, current_parent.name) # Insérer au début pour garder l'ordre
-                current_parent = current_parent.parent
-            else:
-                break # On a atteint la racine ou un chemin sans nom
-
-        if preserved_components:
-            archive_sub_path = Path(*preserved_components) / file_name
-        else:
-            archive_sub_path = Path(file_name) # Si aucun parent n'a pu être préservé (ex: preserve_levels > 0 mais source est à la racine)
+        archive_sub_path = Path(file_name)
 
     destination_path = base_archive_dir / archive_sub_path
 
-    # S'assurer que le répertoire de destination existe
     destination_path.parent.mkdir(parents=True, exist_ok=True)
     
     logger.info(f"Chemin d'archive généré : {destination_path}")
     return destination_path
 #    return True # Cette ligne semble être une erreur, commentée
-import shutil
 
 def archive_file(source_path: Path, archive_path: Path) -> bool:
     """
-    Archive un fichier en le déplaçant de source_path vers archive_path.
+    Archive un fichier en le déplaçant de `source_path` vers `archive_path`.
 
-    Cette fonction s'assure que le répertoire parent de archive_path existe,
+    Cette fonction s'assure que le répertoire parent de `archive_path` existe,
     le créant si nécessaire. Elle déplace ensuite le fichier source vers
-    le chemin d'archivage. Les erreurs potentielles, comme la non-existence
-    du fichier source ou des problèmes de permissions, sont logguées.
+    le chemin d'archivage.
 
-    Args:
-        source_path (Path): Le chemin complet du fichier source à archiver.
-        archive_path (Path): Le chemin complet de destination pour l'archivage.
-
-    Returns:
-        bool: True si l'archivage a réussi, False sinon.
+    :param source_path: Le chemin complet du fichier source à archiver.
+    :type source_path: Path
+    :param archive_path: Le chemin complet de destination pour l'archivage.
+                         Le répertoire parent sera créé s'il n'existe pas.
+    :type archive_path: Path
+    :return: True si l'archivage (déplacement) a réussi, False sinon.
+    :rtype: bool
+    :raises FileNotFoundError: Si le fichier source n'existe pas (gérée en interne, retourne False).
+    :raises PermissionError: Si les permissions sont insuffisantes (gérée en interne, retourne False).
     """
     logger.info(f"Tentative d'archivage du fichier {source_path} vers {archive_path}")
 
@@ -616,15 +682,14 @@ def load_document_content(file_path: Path) -> Optional[str]:
     """
     Charge le contenu textuel d'un fichier document.
 
-    Gère les fichiers .txt et .md. Pour les autres types de fichiers,
-    un avertissement est loggué et None est retourné.
+    Supporte les fichiers avec les extensions `.txt` et `.md` en utilisant `load_text_file`.
+    Pour les autres types de fichiers, un avertissement est loggué et None est retourné.
 
-    Args:
-        file_path (Path): Chemin vers le fichier document.
-
-    Returns:
-        Optional[str]: Contenu du fichier, ou None si le type de fichier n'est pas
-                       supporté ou en cas d'erreur de lecture.
+    :param file_path: Chemin vers le fichier document.
+    :type file_path: Path
+    :return: Contenu du fichier sous forme de chaîne de caractères, ou None si le type de fichier
+             n'est pas supporté, si le chemin n'est pas un fichier, ou en cas d'erreur de lecture.
+    :rtype: Optional[str]
     """
     logger.info(f"Tentative de chargement du contenu du document depuis {file_path}")
     if not file_path.is_file():
@@ -634,15 +699,93 @@ def load_document_content(file_path: Path) -> Optional[str]:
     file_extension = file_path.suffix.lower()
 
     if file_extension in ['.txt', '.md']:
-        logger.debug(f"Chargement du fichier {file_extension} : {file_path}")
+        logger.debug(f"Chargement du fichier {file_extension} : {file_path} via load_text_file.")
         return load_text_file(file_path)
-    # elif file_extension == '.pdf':
-    #     # La lecture de PDF peut nécessiter des bibliothèques spécifiques (ex: PyPDF2, pdfminer)
-    #     # ou un service externe comme Tika.
-    #     # Pour l'instant, nous ne gérons pas les PDF directement ici pour garder file_utils simple.
-    #     # Cette logique est gérée ailleurs (par ex. via Tika dans argumentation_analysis.ui.utils)
-    #     logger.warning(f"Le chargement direct de fichiers PDF n'est pas implémenté dans cette fonction ({file_path}). Utiliser un processeur de PDF dédié.")
-    #     return None
     else:
-        logger.warning(f"Type de fichier non supporté '{file_extension}' pour le chargement direct de document : {file_path}")
+        logger.warning(f"Type de fichier non supporté '{file_extension}' pour le chargement direct de document : {file_path}. Seuls .txt et .md sont gérés par cette fonction.")
+        return None
+def save_text_file(file_path: Path, content: str, encoding: str = "utf-8") -> bool:
+    """
+    Sauvegarde du contenu textuel dans un fichier.
+
+    Crée les répertoires parents si nécessaire.
+
+    :param file_path: Chemin complet du fichier où sauvegarder le contenu.
+    :type file_path: Path
+    :param content: Contenu textuel à sauvegarder.
+    :type content: str
+    :param encoding: Encodage du fichier.
+    :type encoding: str, optional
+    :return: True si la sauvegarde a réussi, False sinon.
+    :rtype: bool
+    :raises IOError: Si une erreur d'E/S se produit (gérée en interne, retourne False).
+    :raises UnicodeEncodeError: Si une erreur d'encodage se produit (gérée en interne, retourne False).
+    """
+    logger.info(f"Tentative de sauvegarde du contenu dans {file_path} avec l'encodage {encoding}")
+    try:
+        # S'assurer que le répertoire parent existe
+        file_path.parent.mkdir(parents=True, exist_ok=True)
+        logger.debug(f"Répertoire parent {file_path.parent} pour la sauvegarde vérifié/créé.")
+
+        with open(file_path, 'w', encoding=encoding) as f:
+            f.write(content)
+        logger.info(f"✅ Contenu sauvegardé avec succès dans {file_path}")
+        return True
+    except IOError as e:
+        logger.error(f"❌ Erreur d'E/S lors de la sauvegarde du fichier {file_path}: {e}", exc_info=True)
+        return False
+    except UnicodeEncodeError as e:
+        logger.error(f"❌ Erreur d'encodage Unicode lors de la sauvegarde du fichier {file_path} avec l'encodage {encoding}: {e}", exc_info=True)
+        return False
+    except Exception as e:
+        logger.error(f"❌ Erreur inattendue lors de la sauvegarde du fichier {file_path}: {e}", exc_info=True)
+        return False
+
+def save_temp_extracts_json(
+    extract_definitions: List[Dict[str, Any]],
+    base_temp_dir_name: str = "temp_extracts",
+    filename_prefix: str = "extracts_decrypted_"
+) -> Optional[Path]:
+    """
+    Sauvegarde les définitions d'extraits dans un fichier JSON temporaire avec horodatage.
+
+    Crée un sous-répertoire temporaire (par défaut 'temp_extracts') dans le répertoire
+    de travail courant s'il n'existe pas.
+
+    Args:
+        extract_definitions (List[Dict[str, Any]]): La liste des définitions d'extraits.
+        base_temp_dir_name (str): Nom du répertoire de base pour les fichiers temporaires.
+        filename_prefix (str): Préfixe pour le nom du fichier JSON.
+
+    Returns:
+        Optional[Path]: Le chemin complet vers le fichier JSON temporaire sauvegardé,
+                        ou None en cas d'erreur.
+    """
+    if not isinstance(extract_definitions, list):
+        logger.error("Les définitions d'extraits fournies ne sont pas une liste.")
+        return None
+
+    try:
+        # Créer un répertoire temporaire dans le répertoire du projet (ou CWD)
+        # Idéalement, le chemin racine du projet serait passé en argument pour plus de robustesse.
+        # Pour l'instant, on utilise Path.cwd() comme base si un chemin absolu n'est pas donné.
+        current_temp_dir = Path.cwd() / base_temp_dir_name # Path() crée un chemin relatif au CWD
+        current_temp_dir.mkdir(parents=True, exist_ok=True)
+        logger.debug(f"Répertoire temporaire pour les extraits: {current_temp_dir.resolve()}")
+        
+        # Créer un nom de fichier avec horodatage
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S") # Nécessite import datetime
+        temp_file_path = current_temp_dir / f"{filename_prefix}{timestamp}.json"
+        
+        # Utiliser la fonction save_json_file existante pour la sauvegarde
+        if save_json_file(temp_file_path, extract_definitions, indent=2):
+            logger.info(f"✅ Définitions d'extraits sauvegardées avec succès dans {temp_file_path.resolve()}")
+            return temp_file_path
+        else:
+            # save_json_file logue déjà l'erreur spécifique.
+            logger.error(f"Échec de la sauvegarde des extraits temporaires dans {temp_file_path} via save_json_file.")
+            return None
+            
+    except Exception as e:
+        logger.error(f"❌ Erreur inattendue lors de la création ou sauvegarde du fichier d'extraits temporaire: {e}", exc_info=True)
         return None

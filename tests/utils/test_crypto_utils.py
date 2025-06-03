@@ -24,24 +24,24 @@ TEST_PASSPHRASE_EMPTY = ""
 # "unePhraseSecreteDeTestRobuste123!?"
 # La clé générée est: 'A3g1gQzX0JkYqZ8qj9nKlOvCvGc8vHyfV3c7hL6fSgY='
 # MISE À JOUR suite à l'échec du test: la valeur correcte semble être celle retournée par l'exécution.
-EXPECTED_KEY_FOR_VALID_PASSPHRASE = "bdIpkGHyXAa4rFLYZbF6r-QbqlXdstFVk4WJYjPh-sE="
+EXPECTED_KEY_FOR_VALID_PASSPHRASE = b"bdIpkGHyXAa4rFLYZbF6r-QbqlXdstFVk4WJYjPh-sE="
 
 def test_derive_key_valid_passphrase():
     """Teste la dérivation avec une phrase secrète valide."""
     key = derive_encryption_key(TEST_PASSPHRASE_VALID)
     assert key is not None, "La clé ne devrait pas être None pour une phrase secrète valide."
-    assert isinstance(key, str), "La clé dérivée doit être une chaîne de caractères."
+    assert isinstance(key, bytes), "La clé dérivée doit être de type bytes."
     
     # Vérifier si la clé semble être du base64url valide
     try:
-        base64.urlsafe_b64decode(key.encode('utf-8'))
+        base64.urlsafe_b64decode(key) # key est déjà bytes
     except Exception as e:
         pytest.fail(f"La clé dérivée n'est pas un base64url valide: {e}")
         
     # Vérifier la longueur attendue d'une clé AES-256 encodée en base64 (32 bytes -> 44 chars avec padding)
     # La sortie de urlsafe_b64encode pour 32 bytes est typiquement 44 caractères (avec padding '=' si besoin, retiré ici)
     # ou 43 si pas de padding. Fernet attend une clé de 32 bytes après décodage.
-    decoded_key = base64.urlsafe_b64decode(key.encode('utf-8'))
+    decoded_key = base64.urlsafe_b64decode(key) # key est déjà bytes
     assert len(decoded_key) == 32, "La clé décodée devrait avoir une longueur de 32 bytes."
 
 def test_derive_key_deterministic():
@@ -76,7 +76,7 @@ def test_derive_key_known_value():
     # cette valeur attendue DOIT être recalculée.
     key = derive_encryption_key(TEST_PASSPHRASE_VALID)
     assert key == EXPECTED_KEY_FOR_VALID_PASSPHRASE, \
-        f"La clé dérivée ne correspond pas à la valeur attendue. Obtenu: {key}"
+        f"La clé dérivée ne correspond pas à la valeur attendue. Obtenu: {key!r}, Attendu: {EXPECTED_KEY_FOR_VALID_PASSPHRASE!r}"
 
 def test_fixed_salt_unchanged():
     """Vérifie que le FIXED_SALT utilisé dans les tests est le même que dans le module."""
@@ -152,37 +152,39 @@ def test_load_key_arg_none_invalid_env():
 # --- Tests pour encrypt_data_with_fernet et decrypt_data_with_fernet ---
 
 FERNET_TEST_PASSPHRASE = "uneAutrePassphrasePourLesTestsFernet"
-FERNET_KEY_B64_STR = derive_encryption_key(FERNET_TEST_PASSPHRASE) # Clé b64 en string
+# Le nom de la variable est changé pour refléter que derive_encryption_key retourne des bytes
+FERNET_KEY_B64_BYTES = derive_encryption_key(FERNET_TEST_PASSPHRASE)
 
 TEST_DATA_TO_ENCRYPT = b"Donn\xc3\xa9es secr\xc3\xa8tes avec des caract\xc3\xa8res sp\xc3\xa9ciaux: \xc3\xa9\xc3\xa0\xc3\xbc\xc3\xae\xc3\xb4."
 
 def test_fernet_encrypt_decrypt_cycle():
     """Teste un cycle complet de chiffrement et déchiffrement Fernet."""
-    assert FERNET_KEY_B64_STR is not None, "La dérivation de la clé b64 str pour Fernet ne devrait pas échouer."
+    assert FERNET_KEY_B64_BYTES is not None, "La dérivation de la clé b64 bytes pour Fernet ne devrait pas échouer."
     
-    # Vérification que la clé b64 str peut être décodée en 32 bytes
-    decoded_key_for_check = base64.urlsafe_b64decode(FERNET_KEY_B64_STR.encode('utf-8'))
-    assert len(decoded_key_for_check) == 32, "La clé Fernet (b64 str) décodée doit faire 32 bytes."
+    # Vérification que la clé b64 bytes peut être décodée en 32 bytes
+    # FERNET_KEY_B64_BYTES est déjà bytes, donc pas besoin de .encode()
+    decoded_key_for_check = base64.urlsafe_b64decode(FERNET_KEY_B64_BYTES)
+    assert len(decoded_key_for_check) == 32, "La clé Fernet (b64 bytes) décodée doit faire 32 bytes."
 
-    encrypted_data = encrypt_data_with_fernet(TEST_DATA_TO_ENCRYPT, FERNET_KEY_B64_STR)
+    encrypted_data = encrypt_data_with_fernet(TEST_DATA_TO_ENCRYPT, FERNET_KEY_B64_BYTES)
     assert encrypted_data is not None, "Le chiffrement Fernet ne devrait pas retourner None avec une clé valide."
     assert encrypted_data != TEST_DATA_TO_ENCRYPT, "Les données chiffrées doivent être différentes des originales."
 
-    decrypted_data = decrypt_data_with_fernet(encrypted_data, FERNET_KEY_B64_STR)
+    decrypted_data = decrypt_data_with_fernet(encrypted_data, FERNET_KEY_B64_BYTES)
     assert decrypted_data is not None, "Le déchiffrement Fernet ne devrait pas retourner None avec une clé valide."
     assert decrypted_data == TEST_DATA_TO_ENCRYPT, "Les données déchiffrées doivent correspondre aux originales."
 
 def test_fernet_decrypt_with_wrong_key():
     """Teste que le déchiffrement Fernet échoue avec une mauvaise clé."""
-    encrypted_data = encrypt_data_with_fernet(TEST_DATA_TO_ENCRYPT, FERNET_KEY_B64_STR)
+    encrypted_data = encrypt_data_with_fernet(TEST_DATA_TO_ENCRYPT, FERNET_KEY_B64_BYTES)
     assert encrypted_data is not None
 
     wrong_passphrase = "ceciEstUneMauvaisePassphrase"
-    wrong_b64_key_str = derive_encryption_key(wrong_passphrase)
-    assert wrong_b64_key_str is not None
-    assert wrong_b64_key_str != FERNET_KEY_B64_STR
+    wrong_b64_key_bytes = derive_encryption_key(wrong_passphrase)
+    assert wrong_b64_key_bytes is not None
+    assert wrong_b64_key_bytes != FERNET_KEY_B64_BYTES
         
-    decrypted_data = decrypt_data_with_fernet(encrypted_data, wrong_b64_key_str)
+    decrypted_data = decrypt_data_with_fernet(encrypted_data, wrong_b64_key_bytes)
     assert decrypted_data is None, "Le déchiffrement avec une mauvaise clé Fernet devrait retourner None."
 
 def test_fernet_encrypt_no_key():
@@ -193,15 +195,15 @@ def test_fernet_encrypt_no_key():
 def test_fernet_decrypt_no_key():
     """Teste le déchiffrement Fernet avec une clé None."""
     # On a besoin de données chiffrées valides pour ce test
-    encrypted_data = encrypt_data_with_fernet(TEST_DATA_TO_ENCRYPT, FERNET_KEY_B64_STR)
+    encrypted_data = encrypt_data_with_fernet(TEST_DATA_TO_ENCRYPT, FERNET_KEY_B64_BYTES)
     assert encrypted_data is not None
     
-    decrypted_data = decrypt_data_with_fernet(encrypted_data, None) # Passe None comme b64_encoded_key_str
+    decrypted_data = decrypt_data_with_fernet(encrypted_data, None) # Passe None comme b64_encoded_key_bytes
     assert decrypted_data is None, "Le déchiffrement Fernet avec une clé None devrait retourner None."
 
 def test_fernet_decrypt_tampered_data():
     """Teste le déchiffrement Fernet avec des données altérées."""
-    encrypted_data = encrypt_data_with_fernet(TEST_DATA_TO_ENCRYPT, FERNET_KEY_B64_STR)
+    encrypted_data = encrypt_data_with_fernet(TEST_DATA_TO_ENCRYPT, FERNET_KEY_B64_BYTES)
     assert encrypted_data is not None
     
     # Altérer un byte des données chiffrées
@@ -212,7 +214,7 @@ def test_fernet_decrypt_tampered_data():
     
     assert tampered_data != encrypted_data
 
-    decrypted_data = decrypt_data_with_fernet(tampered_data, FERNET_KEY_B64_STR)
+    decrypted_data = decrypt_data_with_fernet(tampered_data, FERNET_KEY_B64_BYTES)
     assert decrypted_data is None, "Le déchiffrement Fernet avec des données altérées devrait retourner None (InvalidToken/Signature)."
 
 

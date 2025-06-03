@@ -29,42 +29,12 @@ COLORS = {
     'Global': '#8c564b'
 }
 
-def parse_coverage_xml(xml_path):
-    """
-    Parse un fichier coverage.xml et extrait les informations de couverture.
-    
-    Args:
-        xml_path (str): Chemin vers le fichier coverage.xml
-        
-    Returns:
-        dict: Dictionnaire contenant les informations de couverture
-    """
-    try:
-        tree = ET.parse(xml_path)
-        root = tree.getroot()
-        
-        # Extraire la couverture globale
-        line_rate = float(root.attrib.get('line-rate', '0')) * 100
-        lines_valid = int(root.attrib.get('lines-valid', '0'))
-        lines_covered = int(root.attrib.get('lines-covered', '0'))
-        
-        # Extraire la couverture par package
-        packages = {}
-        for package in root.findall('.//package'):
-            name = package.attrib.get('name', '')
-            package_line_rate = float(package.attrib.get('line-rate', '0')) * 100
-            packages[name] = package_line_rate
-        
-        return {
-            'global': line_rate,
-            'lines_valid': lines_valid,
-            'lines_covered': lines_covered,
-            'packages': packages,
-            'timestamp': datetime.datetime.now().strftime('%Y-%m-%d')
-        }
-    except Exception as e:
-        print(f"Erreur lors de l'analyse du fichier XML: {e}")
-        return None
+# def parse_coverage_xml(xml_path): # Fonction déplacée
+#     """
+#     Parse un fichier coverage.xml et extrait les informations de couverture.
+#     ... (contenu de la fonction supprimé)
+#     """
+#     pass # La fonction est maintenant importée
 
 def save_coverage_history(coverage_data, history_file):
     """
@@ -95,30 +65,12 @@ def save_coverage_history(coverage_data, history_file):
     except Exception as e:
         print(f"Erreur lors de la sauvegarde du fichier d'historique: {e}")
 
-def map_package_to_module(package_name):
-    """
-    Mappe un nom de package à un nom de module.
-    
-    Args:
-        package_name (str): Nom du package
-        
-    Returns:
-        str: Nom du module correspondant
-    """
-    mapping = {
-        'core.communication': 'Communication',
-        'core': 'Gestion d\'État',
-        'agents.core.extract': 'Agents d\'Extraction',
-        'agents.core.informal': 'Agents d\'Analyse Informelle',
-        'agents.tools.analysis': 'Outils d\'Analyse',
-        '.': 'Global'
-    }
-    
-    for key, value in mapping.items():
-        if key in package_name:
-            return value
-    
-    return 'Autre'
+# def map_package_to_module(package_name): # Fonction déplacée
+#     """
+#     Mappe un nom de package à un nom de module.
+#     ... (contenu de la fonction supprimé)
+#     """
+#     pass # La fonction est maintenant importée
 
 def generate_coverage_trend_chart(history_file, output_dir):
     """
@@ -376,16 +328,21 @@ def main():
     os.makedirs(args.output, exist_ok=True)
     
     # Analyser le fichier coverage.xml
-    coverage_data = parse_coverage_xml(args.xml)
+    coverage_data = parse_coverage_xml(Path(args.xml)) # Utiliser Path pour la fonction importée
     if coverage_data:
         # Sauvegarder les données dans l'historique
-        save_coverage_history(coverage_data, args.history)
+        history_file_path = Path(args.history) # Convertir en Path
+        save_coverage_history(coverage_data, history_file_path) # Utiliser la fonction importée
         
         if not args.update_only:
-            # Générer les graphiques
-            generate_coverage_trend_chart(args.history, args.output)
-            generate_module_comparison_chart(args.history, args.output)
-            generate_coverage_improvement_chart(args.history, args.output)
+            # Générer les graphiques en utilisant les fonctions importées
+            # S'assurer que les arguments sont des Path pour les fonctions utilitaires
+            history_file_path = Path(args.history)
+            output_dir_path = Path(args.output)
+            
+            generate_coverage_trend_chart(history_file_path, output_dir_path, module_colors=COLORS)
+            generate_module_comparison_chart(history_file_path, output_dir_path, module_colors=COLORS)
+            generate_coverage_improvement_chart(history_file_path, output_dir_path, module_colors=COLORS)
     else:
         print(f"Impossible d'analyser le fichier {args.xml}")
 

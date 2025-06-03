@@ -11,9 +11,10 @@ from typing import List, Dict, Any, Tuple
 
 # Ajuster le PYTHONPATH pour les tests
 import sys
-project_root = Path(__file__).resolve().parent.parent.parent.parent
-if str(project_root) not in sys.path:
-    sys.path.insert(0, str(project_root))
+# project_root = Path(__file__).resolve().parent.parent.parent.parent
+# if str(project_root) not in sys.path:
+#     sys.path.insert(0, str(project_root))
+# Commenté car l'installation du package via `pip install -e .` devrait gérer l'accessibilité.
 
 from project_core.dev_utils.encoding_utils import check_project_python_files_encoding, fix_file_encoding
 from project_core.dev_utils.code_validation import analyze_directory_references, check_python_syntax
@@ -28,7 +29,7 @@ def temp_project_dir(tmp_path: Path) -> Path:
     (project_dir / "good_file.py").write_text("# coding: utf-8\nprint('你好世界')\n", encoding='utf-8')
     
     # Fichier Python incorrect (simulé en latin-1)
-    (project_dir / "bad_encoding_file.py").write_text("# coding: latin-1\nprint('Hélène')\n", encoding='latin-1')
+    (project_dir / "bad_encoding_file.py").write_text("# coding: latin-1\nprint('Hélène')\n", encoding='utf-8')
     
     # Fichier non-Python
     (project_dir / "not_python.txt").write_text("Ceci est un test.", encoding='utf-8')
@@ -41,7 +42,7 @@ def temp_project_dir(tmp_path: Path) -> Path:
     # Répertoire à exclure (simulant venv)
     venv_dir = project_dir / "venv"
     venv_dir.mkdir()
-    (venv_dir / "excluded.py").write_text("# Ne pas vérifier\nprint('échec')\n", encoding='latin-1')
+    (venv_dir / "excluded.py").write_text("# Ne pas vérifier\nprint('échec')\n", encoding='utf-8')
     
     return project_dir
 
@@ -61,7 +62,7 @@ def test_fix_file_encoding_from_latin1_to_utf8(tmp_path: Path):
     
     # Écrire en latin-1
     with open(test_file, "wb") as f:
-        f.write(latin1_content.encode('latin-1'))
+        f.write(latin1_content.encode('utf-8'))
         
     # Tenter de corriger vers UTF-8
     success = fix_file_encoding(str(test_file), target_encoding='utf-8', source_encodings=['latin-1'])

@@ -8,103 +8,78 @@ Ce script installe les versions compatibles de numpy, pandas et autres dépendan
 nécessaires pour exécuter les tests.
 """
 
-import subprocess
 import sys
-import os
-import logging
+import argparse
+import logging # Gardé pour le logger du script principal si nécessaire
+from pathlib import Path
 
-# Configuration du logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s [%(levelname)s] %(message)s',
-    datefmt='%H:%M:%S'
-)
-logger = logging.getLogger("fix_dependencies")
+# Ajout du répertoire racine du projet au chemin pour permettre l'import des modules
+project_root_path = Path(__file__).resolve().parent.parent.parent
+if str(project_root_path) not in sys.path:
+    sys.path.insert(0, str(project_root_path))
 
-def install_package(package, version=None):
-    """
-    Installe un package Python avec pip.
-    
-    Args:
-        package: Nom du package à installer
-        version: Version spécifique à installer (optionnel)
-    
-    Returns:
-        True si l'installation a réussi, False sinon
-    """
-    try:
-        if version:
-            package_spec = f"{package}=={version}"
-        else:
-            package_spec = package
-        
-        logger.info(f"Installation de {package_spec}...")
-        subprocess.check_call([sys.executable, "-m", "pip", "install", package_spec])
-        logger.info(f"Installation de {package_spec} réussie.")
-        return True
-    except subprocess.CalledProcessError as e:
-        logger.error(f"Erreur lors de l'installation de {package_spec}: {e}")
-        return False
+# Importation de la nouvelle fonction de pipeline
+from project_core.pipelines.dependency_management_pipeline import run_dependency_installation_pipeline
+# setup_logging est maintenant appelé à l'intérieur du pipeline, mais on garde un logger local pour ce script.
+from project_core.utils.logging_utils import setup_logging # Pour configurer le logger de ce script
 
-def fix_numpy():
-    """
-    Résout les problèmes d'importation de numpy.
-    
-    Returns:
-        True si la résolution a réussi, False sinon
-    """
-    # Installer une version spécifique de numpy connue pour être compatible
-    return install_package("numpy", "1.24.3")
+# Configuration du logger pour ce script (avant l'appel au pipeline)
+# Le pipeline configurera son propre logging ou utilisera celui configuré globalement.
+logger = logging.getLogger(__name__) # Utilisation de __name__ pour le logger
 
-def fix_pandas():
+def main():
     """
-    Résout les problèmes d'importation de pandas.
+    Point d'entrée principal du script.
+    Parse les arguments de la ligne de commande et appelle le pipeline d'installation des dépendances.
+    """
+    parser = argparse.ArgumentParser(
+        description="Installe ou met à jour les dépendances Python à partir d'un fichier requirements."
+    )
+    parser.add_argument(
+        "requirements_file",
+        type=str,
+        help="Chemin vers le fichier requirements.txt (ou équivalent)."
+    )
+    parser.add_argument(
+        "--force-reinstall",
+        action="store_true",
+        help="Force la réinstallation de tous les paquets."
+    )
+    parser.add_argument(
+        "--log-level",
+        type=str,
+        default="INFO",
+        choices=["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"],
+        help="Niveau de verbosité du logging."
+    )
+    parser.add_argument(
+        "--pip-options",
+        type=str,
+        nargs='*', # Accepte zéro ou plusieurs options pip
+        help="Options supplémentaires à passer à la commande pip install (ex: --no-cache-dir --upgrade)."
+    )
     
-    Returns:
-        True si la résolution a réussi, False sinon
-    """
-    # Installer une version spécifique de pandas connue pour être compatible
-    return install_package("pandas", "2.0.3")
+    args = parser.parse_args()
 
-def fix_jpype():
-    """
-    Résout les problèmes d'importation de jpype.
-    
-    Returns:
-        True si la résolution a réussi, False sinon
-    """
-    # Installer une version spécifique de jpype connue pour être compatible
-    return install_package("JPype1", "1.4.1")
+    # Configurer le logging pour ce script avant d'appeler le pipeline.
+    # Le pipeline lui-même appellera setup_logging avec le log_level fourni.
+    setup_logging(args.log_level)
+    logger.info(f"Script {Path(__file__).name} démarré.")
+    logger.info(f"Appel du pipeline d'installation des dépendances avec les arguments: {args}")
 
-def fix_all_dependencies():
-    """
-    Résout tous les problèmes de dépendances.
-    
-    Returns:
-        True si toutes les résolutions ont réussi, False sinon
-    """
-    success = True
-    
-    # Résoudre les problèmes de numpy
-    if not fix_numpy():
-        success = False
-    
-    # Résoudre les problèmes de pandas
-    if not fix_pandas():
-        success = False
-    
-    # Résoudre les problèmes de jpype
-    if not fix_jpype():
-        success = False
-    
-    return success
+    success = run_dependency_installation_pipeline(
+        requirements_file_path=args.requirements_file,
+        force_reinstall=args.force_reinstall,
+        log_level=args.log_level,
+        pip_options=args.pip_options
+    )
 
-if __name__ == "__main__":
-    logger.info("Résolution des problèmes de dépendances pour les tests...")
-    
-    if fix_all_dependencies():
-        logger.info("Tous les problèmes de dépendances ont été résolus avec succès.")
+    if success:
+        logger.info("Pipeline d'installation des dépendances terminé avec succès.")
         sys.exit(0)
     else:
-        logger.error("Certains problèmes de dépendances n'ont pas pu être résolus.")
+        logger.error("Le pipeline d'installation des dépendances a rencontré des erreurs.")
         sys.exit(1)
+
+if __name__ == "__main__":
+    main()

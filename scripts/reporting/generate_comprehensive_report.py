@@ -30,20 +30,12 @@ Ce script:
    - Conclusion
 """
 
-import os
 import sys
 import io
-import json
 import logging
 import argparse
-import time
-import pandas as pd
-import numpy as np
-import matplotlib.pyplot as plt
-import seaborn as sns
 from pathlib import Path
-from datetime import datetime
-from typing import Dict, List, Any, Optional, Tuple, Union # Conservé pour les types si nécessaire
+# from typing import Dict, List, Any, Optional, Tuple, Union # Conservé pour les types si nécessaire, mais probablement géré par le pipeline
 # from tqdm import tqdm # Déplacé vers le pipeline si utilisé
 # import markdown # Déplacé vers le pipeline
 # import shutil # Déplacé vers le pipeline si utilisé
@@ -58,13 +50,9 @@ sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding=_stdout_encoding, erro
 _stderr_encoding = sys.stderr.encoding if sys.stderr.encoding else 'utf-8'
 sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding=_stderr_encoding, errors='replace', line_buffering=True)
 
-# Configuration du logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s [%(levelname)s] %(name)s: %(message)s',
-    datefmt='%H:%M:%S'
-)
-logger = logging.getLogger("ComprehensiveReportScript") # Nom du logger mis à jour
+# Configuration du logging (simplifiée, le pipeline gère sa propre config)
+logging.basicConfig(level=logging.INFO, format='%(asctime)s [%(levelname)s] %(name)s: %(message)s')
+logger = logging.getLogger(__name__) # Utilisation de __name__ pour le logger du script lanceur
 
 # Ajout du répertoire racine du projet au chemin pour permettre l'import des modules
 project_root_path_comprehensive = Path(__file__).resolve().parent.parent.parent
@@ -74,19 +62,11 @@ if str(project_root_path_comprehensive) not in sys.path:
 # Imports des utilitaires et du pipeline
 # from project_core.utils.file_utils import load_json_file, load_text_file, load_csv_file, save_markdown_to_html # Utilisé par le pipeline
 # from project_core.utils.reporting_utils import generate_markdown_report_for_corpus, generate_overall_summary_markdown # Utilisé par le pipeline
-# from argumentation_analysis.utils.data_processing_utils import group_results_by_corpus # Utilisé par le pipeline
+from argumentation_analysis.utils.data_processing_utils import group_results_by_corpus # Utilisé par le pipeline
 # from argumentation_analysis.analytics.stats_calculator import calculate_average_scores # Utilisé par le pipeline
 from argumentation_analysis.pipelines.reporting_pipeline import run_comprehensive_report_pipeline
 
-# Vérifier les dépendances requises (peut être simplifié ou géré par le pipeline/setup)
-required_packages = ["matplotlib", "numpy", "pandas", "seaborn", "tqdm", "markdown"]
-missing_packages = []
-
-for package in required_packages:
-    try:
-        __import__(package)
-    except ImportError:
-        missing_packages.append(package)
+# La vérification des dépendances est retirée, elle doit être gérée par l'environnement ou le pipeline.
 # Les fonctions spécifiques de génération de rapport ont été déplacées vers reporting_pipeline.py
 
 def parse_arguments():
@@ -141,12 +121,10 @@ def main():
     args = parse_arguments()
 
     if args.verbose:
-        # Le logger du pipeline sera configuré par le pipeline lui-même
-        # mais on peut logger un message initial ici si besoin.
-        logger.setLevel(logging.DEBUG)
+        # Le logger du pipeline sera configuré par le pipeline lui-même.
+        # Le logger de ce script est déjà configuré.
         logger.debug("Mode verbeux activé pour le script lanceur.")
-    else:
-        logger.setLevel(logging.INFO)
+    # else: # Le niveau INFO est déjà défini par défaut
 
     try:
         logger.info("Lancement du pipeline de génération de rapport complet...")
@@ -217,9 +195,7 @@ def main():
             logger.error("Le pipeline de génération de rapport a rencontré une erreur.")
             sys.exit(1)
 
-        if missing_packages:
-            logger.warning(f"Les packages suivants sont manquants et pourraient être requis par le pipeline: {', '.join(missing_packages)}")
-            logger.warning(f"Pour les installer: pip install {' '.join(missing_packages)}")
+        # La vérification des missing_packages est retirée.
 
     except Exception as e:
         logger.exception("Une erreur critique est survenue dans le script lanceur.")

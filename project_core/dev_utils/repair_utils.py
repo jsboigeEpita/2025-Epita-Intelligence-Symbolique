@@ -14,7 +14,7 @@ from semantic_kernel.contents import ChatMessageContent, AuthorRole
 from semantic_kernel.agents import ChatCompletionAgent
 from semantic_kernel.functions.kernel_arguments import KernelArguments
 
-from argumentation_analysis.core.models import ExtractDefinitions, SourceDefinition, Extract # Ajustement du chemin
+from argumentation_analysis.models.extract_definition import ExtractDefinitions, SourceDefinition, Extract # Ajustement du chemin
 from argumentation_analysis.core.llm_service import create_llm_service # Conservé pour le pipeline
 from project_core.service_setup.core_services import initialize_core_services # Conservé pour le pipeline
 
@@ -123,10 +123,22 @@ async def repair_extract_markers(
             new_start = start_marker
 
             if template_start and "{0}" in template_start:
-                first_letter = template_start.replace("{0}", "")
-                if start_marker and not start_marker.startswith(first_letter):
+                prefix_to_add = template_start.split("{0}", 1)[0] # Extrait la partie avant {0}
+                if start_marker and not start_marker.startswith(prefix_to_add): # Vérifie si le start_marker commence déjà par le préfixe
+                    # Cas où le start_marker est "rong start" et template_start est "W{0}rong start"
+                    # On veut vérifier si "rong start" commence par "W". Non.
+                    # Mais on veut aussi s'assurer que le template_start complet (sans {0}) n'est pas déjà le start_marker
+                    # Exemple: template_start = "Prefix{0}Suffix", start_marker = "PrefixSuffix" -> ne rien faire
+                    # Exemple: template_start = "P{0}refix", start_marker = "refix" -> new_start = "Prefix"
+                    
+                    # La condition actuelle est: si start_marker ("rong start") ne commence PAS par prefix_to_add ("W")
+                    # C'est correct pour le cas E2.
+                    # Si start_marker était "Wrong start" et template_start "W{0}rong start",
+                    # prefix_to_add serait "W". "Wrong start".startswith("W") est True. Donc on ne rentrerait pas. Correct.
+
+                    # La logique de réparation est d'ajouter le préfixe au start_marker existant.
                     old_start = start_marker
-                    new_start = first_letter + start_marker
+                    new_start = prefix_to_add + start_marker
                     logger.info(f"Correction de l'extrait '{extract_name}': '{old_start}' -> '{new_start}'")
                     
                     # La mise à jour de extract_definitions se fait via l'instance de ExtractRepairPlugin

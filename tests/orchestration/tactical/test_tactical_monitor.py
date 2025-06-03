@@ -24,7 +24,8 @@ logging.basicConfig(
 logger = logging.getLogger("TestProgressMonitor")
 
 # Ajouter le répertoire racine au chemin Python pour pouvoir importer les modules
-sys.path.append(os.path.abspath('..'))
+# sys.path.append(os.path.abspath('..'))
+# Commenté car l'installation du package via `pip install -e .` devrait gérer l'accessibilité.
 
 # Import du module à tester
 from argumentation_analysis.orchestration.hierarchical.tactical.monitor import ProgressMonitor

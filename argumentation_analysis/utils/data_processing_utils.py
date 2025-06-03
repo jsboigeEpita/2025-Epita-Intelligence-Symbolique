@@ -1,42 +1,62 @@
-#!/usr/bin/env python
 # -*- coding: utf-8 -*-
-
 """
-Utilitaires pour le traitement des données d'analyse d'argumentation.
+Utilitaires pour le traitement et la manipulation des données d'analyse d'argumentation.
 """
 
-from typing import Dict, List, Any
+import logging
+from typing import List, Dict, Any, DefaultDict # Ajout de DefaultDict
+from collections import defaultdict
 
-def group_results_by_corpus(results: List[Dict[str, Any]]) -> Dict[str, List[Dict[str, Any]]]:
+logger = logging.getLogger(__name__)
+
+def group_results_by_corpus(results: List[Dict[str, Any]]) -> DefaultDict[str, List[Dict[str, Any]]]:
     """
     Regroupe les résultats d'analyse par corpus.
 
-    Args:
-        results (List[Dict[str, Any]]): Liste des résultats d'analyse.
-            Chaque résultat est un dictionnaire qui doit contenir une clé "source_name"
-            indiquant le nom de la source du texte analysé.
+    Chaque résultat d'analyse dans la liste d'entrée doit idéalement contenir
+    une clé 'corpus_name' ou une clé identifiable comme 'source_name' qui peut
+    être mappée à un nom de corpus. Si aucune clé de ce type n'est trouvée,
+    les résultats peuvent être groupés sous une clé par défaut (par exemple, 'Unknown Corpus').
 
-    Returns:
-        Dict[str, List[Dict[str, Any]]]: Dictionnaire des résultats regroupés par corpus.
-            Les clés sont les noms des corpus (ex: "Discours d'Hitler", "Débats Lincoln-Douglas", "Autres corpus")
-            et les valeurs sont des listes de résultats d'analyse correspondants.
+    :param results: Une liste de dictionnaires, chaque dictionnaire étant un résultat d'analyse.
+                    Chaque résultat devrait avoir une clé comme 'corpus_name' ou 'source_name'.
+    :type results: List[Dict[str, Any]]
+    :return: Un dictionnaire où les clés sont les noms des corpus et les valeurs
+             sont des listes de résultats d'analyse appartenant à ce corpus.
+             Utilise defaultdict pour faciliter l'ajout d'éléments.
+    :rtype: DefaultDict[str, List[Dict[str, Any]]]
     """
-    corpus_results: Dict[str, List[Dict[str, Any]]] = {}
+    logger.info(f"Regroupement de {len(results)} résultats par corpus...")
     
-    for result in results:
-        source_name = result.get("source_name", "Inconnu")
-        
-        # Déterminer le corpus en fonction du nom de la source
-        if "Hitler" in source_name:
-            corpus = "Discours d'Hitler"
-        elif "Lincoln" in source_name or "Douglas" in source_name:
-            corpus = "Débats Lincoln-Douglas"
-        else:
-            corpus = "Autres corpus"
-        
-        if corpus not in corpus_results:
-            corpus_results[corpus] = []
-        
-        corpus_results[corpus].append(result)
+    grouped_results: DefaultDict[str, List[Dict[str, Any]]] = defaultdict(list)
     
-    return corpus_results
+    for result_item in results:
+        corpus_name = result_item.get("corpus_name")
+        
+        if not corpus_name:
+            # Tenter de déduire le corpus à partir d'autres clés si 'corpus_name' est absent
+            # Ceci est une heuristique et pourrait nécessiter une logique de mappage plus complexe.
+            source_name = result_item.get("source_name")
+            if source_name:
+                # Exemple simple de mappage (à adapter/étendre)
+                if "hitler" in source_name.lower():
+                    corpus_name = "Discours d'Hitler"
+                elif "lincoln" in source_name.lower() or "douglas" in source_name.lower():
+                    corpus_name = "Débats Lincoln-Douglas"
+                # Ajouter d'autres mappages si nécessaire
+                else:
+                    corpus_name = source_name # Utiliser source_name comme fallback si pas de mappage
+            else:
+                corpus_name = "Corpus Inconnu"
+                logger.debug(f"Aucun 'corpus_name' ou 'source_name' trouvé pour un résultat. Assignation à '{corpus_name}'. Item: {str(result_item)[:100]}")
+        
+        grouped_results[corpus_name].append(result_item)
+
+    logger.info(f"Résultats regroupés en {len(grouped_results)} corpus.")
+    for corpus, items in grouped_results.items():
+        logger.debug(f"Corpus '{corpus}': {len(items)} résultats.")
+        
+    return grouped_results
+
+# D'autres fonctions de traitement de données pourraient être ajoutées ici,
+# par exemple, filtrage, transformation, agrégation de données d'analyse.

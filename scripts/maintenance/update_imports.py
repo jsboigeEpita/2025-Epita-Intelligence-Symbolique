@@ -23,53 +23,53 @@ logging.basicConfig(
 
 # Définir les motifs de recherche et de remplacement
 IMPORT_PATTERNS = [
-    # from core import X -> from argumentiation_analysis.core import X
-    (r'from\s+core\s+import\s+([^\n]+)', r'from argumentiation_analysis.core import \1'),
+    # from core import X -> from argumentation_analysis.core import X
+    (r'from\s+core\s+import\s+([^\n]+)', r'from argumentation_analysis.core import \1'),
     
-    # import core -> import argumentiation_analysis.core
-    (r'import\s+core(?!\s*\.)', r'import argumentiation_analysis.core'),
+    # import core -> import argumentation_analysis.core
+    (r'import\s+core(?!\s*\.)', r'import argumentation_analysis.core'),
     
-    # from core.X import Y -> from argumentiation_analysis.core.X import Y
-    (r'from\s+core\.([^\s]+)\s+import\s+([^\n]+)', r'from argumentiation_analysis.core.\1 import \2'),
+    # from core.X import Y -> from argumentation_analysis.core.X import Y
+    (r'from\s+core\.([^\s]+)\s+import\s+([^\n]+)', r'from argumentation_analysis.core.\1 import \2'),
     
-    # from agents import X -> from argumentiation_analysis.agents import X
-    (r'from\s+agents\s+import\s+([^\n]+)', r'from argumentiation_analysis.agents import \1'),
+    # from agents import X -> from argumentation_analysis.agents import X
+    (r'from\s+agents\s+import\s+([^\n]+)', r'from argumentation_analysis.agents import \1'),
     
-    # import agents -> import argumentiation_analysis.agents
-    (r'import\s+agents(?!\s*\.)', r'import argumentiation_analysis.agents'),
+    # import agents -> import argumentation_analysis.agents
+    (r'import\s+agents(?!\s*\.)', r'import argumentation_analysis.agents'),
     
-    # from agents.X import Y -> from argumentiation_analysis.agents.X import Y
-    (r'from\s+agents\.([^\s]+)\s+import\s+([^\n]+)', r'from argumentiation_analysis.agents.\1 import \2'),
+    # from agents.X import Y -> from argumentation_analysis.agents.X import Y
+    (r'from\s+agents\.([^\s]+)\s+import\s+([^\n]+)', r'from argumentation_analysis.agents.\1 import \2'),
     
-    # from orchestration import X -> from argumentiation_analysis.orchestration import X
-    (r'from\s+orchestration\s+import\s+([^\n]+)', r'from argumentiation_analysis.orchestration import \1'),
+    # from orchestration import X -> from argumentation_analysis.orchestration import X
+    (r'from\s+orchestration\s+import\s+([^\n]+)', r'from argumentation_analysis.orchestration import \1'),
     
-    # import orchestration -> import argumentiation_analysis.orchestration
-    (r'import\s+orchestration(?!\s*\.)', r'import argumentiation_analysis.orchestration'),
+    # import orchestration -> import argumentation_analysis.orchestration
+    (r'import\s+orchestration(?!\s*\.)', r'import argumentation_analysis.orchestration'),
     
-    # from orchestration.X import Y -> from argumentiation_analysis.orchestration.X import Y
-    (r'from\s+orchestration\.([^\s]+)\s+import\s+([^\n]+)', r'from argumentiation_analysis.orchestration.\1 import \2'),
+    # from orchestration.X import Y -> from argumentation_analysis.orchestration.X import Y
+    (r'from\s+orchestration\.([^\s]+)\s+import\s+([^\n]+)', r'from argumentation_analysis.orchestration.\1 import \2'),
     
-    # from ui import X -> from argumentiation_analysis.ui import X
-    (r'from\s+ui\s+import\s+([^\n]+)', r'from argumentiation_analysis.ui import \1'),
+    # from ui import X -> from argumentation_analysis.ui import X
+    (r'from\s+ui\s+import\s+([^\n]+)', r'from argumentation_analysis.ui import \1'),
     
-    # import ui -> import argumentiation_analysis.ui
-    (r'import\s+ui(?!\s*\.)', r'import argumentiation_analysis.ui'),
+    # import ui -> import argumentation_analysis.ui
+    (r'import\s+ui(?!\s*\.)', r'import argumentation_analysis.ui'),
     
-    # from ui.X import Y -> from argumentiation_analysis.ui.X import Y
-    (r'from\s+ui\.([^\s]+)\s+import\s+([^\n]+)', r'from argumentiation_analysis.ui.\1 import \2'),
+    # from ui.X import Y -> from argumentation_analysis.ui.X import Y
+    (r'from\s+ui\.([^\s]+)\s+import\s+([^\n]+)', r'from argumentation_analysis.ui.\1 import \2'),
     
-    # from utils import X -> from argumentiation_analysis.utils import X
-    (r'from\s+utils\s+import\s+([^\n]+)', r'from argumentiation_analysis.utils import \1'),
+    # from utils import X -> from argumentation_analysis.utils import X
+    (r'from\s+utils\s+import\s+([^\n]+)', r'from argumentation_analysis.utils import \1'),
     
-    # import utils -> import argumentiation_analysis.utils
-    (r'import\s+utils(?!\s*\.)', r'import argumentiation_analysis.utils'),
+    # import utils -> import argumentation_analysis.utils
+    (r'import\s+utils(?!\s*\.)', r'import argumentation_analysis.utils'),
     
-    # from utils.X import Y -> from argumentiation_analysis.utils.X import Y
-    (r'from\s+utils\.([^\s]+)\s+import\s+([^\n]+)', r'from argumentiation_analysis.utils.\1 import \2'),
+    # from utils.X import Y -> from argumentation_analysis.utils.X import Y
+    (r'from\s+utils\.([^\s]+)\s+import\s+([^\n]+)', r'from argumentation_analysis.utils.\1 import \2'),
     
-    # from agents.extract import X -> from argumentiation_analysis.agents.extract import X
-    (r'from\s+agents\.extract\s+import\s+([^\n]+)', r'from argumentiation_analysis.agents.extract import \1'),
+    # from agents.extract import X -> from argumentation_analysis.agents.extract import X
+    (r'from\s+agents\.extract\s+import\s+([^\n]+)', r'from argumentation_analysis.agents.extract import \1'),
 ]
 
 def update_imports_in_file(file_path, dry_run=True):
@@ -171,10 +171,10 @@ def main():
         logging.info("Mode dry-run: aucune modification n'a été effectuée.")
         logging.info("Exécutez à nouveau sans l'option --dry-run pour appliquer les modifications.")
     
-    if stats['modified_files'] > 0:
-        logging.info("\nFichiers modifiés:")
-        for file_path in stats['modified_files_list']:
-            logging.info(f"  {file_path}")
+    if modified_files_count > 0:
+        logging.info("\nFichiers avec modifications potentielles (et nombre de remplacements):")
+        for detail in modified_files_details:
+            logging.info(f"  {detail.get('path')}: {detail.get('replacements')} remplacement(s)")
     
     return 0
 
