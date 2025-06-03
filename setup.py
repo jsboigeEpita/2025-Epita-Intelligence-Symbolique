@@ -20,7 +20,7 @@ setup(
         "seaborn",
         "networkx==3.4.2",
         "python-dotenv",  # Pour l'import de 'dotenv'
-        "semantic-kernel==1.29.0", # Version synchronisée
+        "semantic-kernel==1.29.0", # Version qui contient le module agents/
         "pytest",
         "pytest-cov",
         "pytest-mock",

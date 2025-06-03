@@ -28,8 +28,8 @@ def temp_project_dir(tmp_path: Path) -> Path:
     # Fichier Python correct en UTF-8
     (project_dir / "good_file.py").write_text("# coding: utf-8\nprint('你好世界')\n", encoding='utf-8')
     
-    # Fichier Python incorrect (simulé en latin-1)
-    (project_dir / "bad_encoding_file.py").write_text("# coding: latin-1\nprint('Hélène')\n", encoding='utf-8')
+    # Fichier Python incorrect (réellement encodé en latin-1)
+    (project_dir / "bad_encoding_file.py").write_text("# coding: latin-1\nprint('Hélène')\n", encoding='latin-1')
     
     # Fichier non-Python
     (project_dir / "not_python.txt").write_text("Ceci est un test.", encoding='utf-8')
@@ -62,7 +62,7 @@ def test_fix_file_encoding_from_latin1_to_utf8(tmp_path: Path):
     
     # Écrire en latin-1
     with open(test_file, "wb") as f:
-        f.write(latin1_content.encode('utf-8'))
+        f.write(latin1_content.encode('latin-1'))
         
     # Tenter de corriger vers UTF-8
     success = fix_file_encoding(str(test_file), target_encoding='utf-8', source_encodings=['latin-1'])
