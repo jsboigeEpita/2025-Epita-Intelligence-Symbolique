@@ -7,12 +7,13 @@ A executer avant d'utiliser le projet.
 """
 
 import sys
-from pathlib import Path
+import os # Ajout pour la portabilité
 
 # Ajouter le projet au PYTHONPATH
-project_root = Path(r"c:\dev\2025-Epita-Intelligence-Symbolique")
-if str(project_root) not in sys.path:
-    sys.path.insert(0, str(project_root))
+# Obtenir le répertoire du script actuel (qui est la racine du projet)
+project_root = os.path.dirname(os.path.abspath(__file__))
+if project_root not in sys.path:
+    sys.path.insert(0, project_root)
 
 print("Configuration de l'environnement pour Intelligence Symbolique")
 print(f"Repertoire projet: {project_root}")

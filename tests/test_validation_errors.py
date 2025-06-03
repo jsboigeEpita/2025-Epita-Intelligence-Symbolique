@@ -9,10 +9,12 @@ import sys
 import os
 import json
 
-# Ajouter le répertoire du projet au PYTHONPATH
-current_dir = os.path.dirname(os.path.abspath(__file__))
-parent_dir = os.path.dirname(current_dir)
-sys.path.insert(0, parent_dir)
+# Ajouter le répertoire racine au chemin Python pour pouvoir importer les modules
+project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+if project_root not in sys.path:
+    sys.path.insert(0, project_root)
+# L'installation du package via `pip install -e .` devrait gérer l'accessibilité,
+# mais cette modification assure le fonctionnement même sans installation en mode édition.
 
 # Définir une classe de validation simplifiée pour les tests
 class ExtractValidator:

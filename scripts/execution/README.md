@@ -1,10 +1,57 @@
 # Scripts d'exécution
 
-Ce répertoire contient les scripts d'exécution des fonctionnalités principales du projet d'analyse argumentative.
+Ce répertoire contient les scripts d'exécution des fonctionnalités principales et des workflows complets du projet d'analyse argumentative.
+Il contient également des README spécifiques à certaines analyses, comme [`README_rhetorical_analysis.md`](scripts/execution/README_rhetorical_analysis.md:1).
 
 ## Scripts disponibles
 
-### 1. run_extract_repair.py
+### 1. `rhetorical_analysis.py`
+
+Script principal pour lancer des analyses rhétoriques sur des textes.
+Il permet de configurer différents agents d'analyse et de traiter des corpus de textes.
+
+**Fonctionnalités (générales) :**
+- Chargement de corpus de textes.
+- Configuration et exécution d'agents d'analyse rhétorique (basique et avancée).
+- Génération de résultats d'analyse détaillés.
+
+**Utilisation (exemple) :**
+```bash
+python scripts/execution/rhetorical_analysis.py --corpus <chemin_corpus> --output <fichier_resultats.json>
+```
+Consultez `python scripts/execution/rhetorical_analysis.py --help` pour toutes les options.
+
+### 2. `advanced_rhetorical_analysis.py`
+
+Script pour des analyses rhétoriques plus poussées, utilisant potentiellement des modèles ou des techniques d'analyse sémantique avancées.
+
+**Fonctionnalités (générales) :**
+- Analyse approfondie des figures de style, des sophismes complexes.
+- Peut intégrer des aspects d'analyse de sentiment ou d'intention.
+- Génération de rapports d'analyse enrichis.
+
+**Utilisation (exemple) :**
+```bash
+python scripts/execution/advanced_rhetorical_analysis.py --input <texte_ou_corpus> --output <rapport_avance.json>
+```
+Consultez `python scripts/execution/advanced_rhetorical_analysis.py --help` pour les options.
+
+
+### 3. `run_full_python_analysis_workflow.py`
+
+Exécute un workflow complet d'analyse Python, potentiellement enchaînant plusieurs étapes de traitement et d'analyse du projet.
+
+**Fonctionnalités (générales) :**
+- Orchestration de plusieurs étapes d'analyse.
+- Peut inclure le chargement de données, le prétraitement, l'analyse rhétorique, et la génération de rapports intermédiaires ou finaux.
+
+**Utilisation (exemple) :**
+```bash
+python scripts/execution/run_full_python_analysis_workflow.py --config <fichier_config_workflow>
+```
+Consultez `python scripts/execution/run_full_python_analysis_workflow.py --help` pour les options spécifiques.
+
+### 4. `run_extract_repair.py`
 
 Script d'exécution pour la réparation des bornes défectueuses dans les extraits. Ce script est un point d'entrée simplifié pour exécuter le script de réparation des bornes défectueuses dans les extraits. Il utilise les services refactorisés et les modèles centralisés.
 
@@ -30,12 +77,9 @@ python scripts/execution/run_extract_repair.py
 
 # Exécution avec sauvegarde des modifications
 python scripts/execution/run_extract_repair.py --save
-
-# Exécution en mode verbeux avec un fichier d'entrée personnalisé
-python scripts/execution/run_extract_repair.py --verbose --input chemin/vers/fichier.json
 ```
 
-### 2. run_verify_extracts.py
+### 5. `run_verify_extracts.py`
 
 Script d'exécution pour la vérification des extraits. Ce script est un point d'entrée simplifié pour exécuter le script de vérification des extraits. Il utilise les services refactorisés et les modèles centralisés.
 
@@ -55,18 +99,12 @@ Script d'exécution pour la vérification des extraits. Ce script est un point d
 ```bash
 # Exécution de base
 python scripts/execution/run_verify_extracts.py
-
-# Exécution en mode verbeux
-python scripts/execution/run_verify_extracts.py --verbose
-
-# Exécution avec un fichier d'entrée personnalisé
-python scripts/execution/run_verify_extracts.py --input chemin/vers/fichier.json
 ```
 
 ## Bonnes pratiques
 
-1. **Exécuter les scripts depuis la racine du projet** pour garantir que les chemins relatifs fonctionnent correctement.
-2. **Vérifier les extraits avant de les réparer** en exécutant d'abord `run_verify_extracts.py` pour identifier les problèmes.
-3. **Utiliser l'option `--verbose`** pour obtenir des informations détaillées sur l'exécution du script.
-4. **Utiliser l'option `--dry-run`** (si disponible) pour simuler l'exécution sans effectuer de modifications.
-5. **Examiner les rapports générés** pour comprendre les modifications apportées.
+1.  **Exécuter les scripts depuis la racine du projet** pour garantir que les chemins relatifs fonctionnent correctement.
+2.  **Vérifier les extraits avant de les réparer** en exécutant d'abord `run_verify_extracts.py` pour identifier les problèmes.
+3.  **Utiliser l'option `--verbose`** pour obtenir des informations détaillées sur l'exécution du script.
+4.  **Utiliser l'option `--dry-run`** (si disponible) pour simuler l'exécution sans effectuer de modifications.
+5.  **Examiner les rapports générés** pour comprendre les modifications apportées.

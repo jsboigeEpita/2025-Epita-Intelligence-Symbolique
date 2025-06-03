@@ -140,7 +140,14 @@ class TestRhetoricalToolsPerformance(unittest.TestCase):
                 # Tester l'analyseur original
                 for _ in range(self.num_runs):
                     start_time = time.time()
-                    original_result = self.complex_fallacy_analyzer.detect_composite_fallacies(dataset, context)
+                    # Utiliser identify_combined_fallacies pour chaque argument du dataset
+                    # car detect_composite_fallacies n'existe pas sur la classe de base ComplexFallacyAnalyzer.
+                    # On va agréger les résultats pour simuler un comportement comparable.
+                    temp_original_results = [self.complex_fallacy_analyzer.identify_combined_fallacies(arg) for arg in dataset]
+                    original_result = {
+                        "individual_fallacies_count": sum(len(res) for res in temp_original_results), # Approximation
+                        "composite_fallacies": [item for sublist in temp_original_results for item in sublist] # Agréger
+                    }
                     execution_time = time.time() - start_time
                     
                     results["original"]["execution_times"].append(execution_time)
@@ -163,25 +170,31 @@ class TestRhetoricalToolsPerformance(unittest.TestCase):
         # Calculer les métriques de performance
         performance_metrics = {
             "original": {
-                "avg_execution_time": statistics.mean(results["original"]["execution_times"]),
-                "avg_fallacy_count": statistics.mean(results["original"]["fallacy_counts"]),
-                "avg_composite_fallacy_count": statistics.mean(results["original"]["composite_fallacy_counts"])
+                "avg_execution_time": statistics.mean(results["original"]["execution_times"]) if results["original"]["execution_times"] else 0,
+                "avg_fallacy_count": statistics.mean(results["original"]["fallacy_counts"]) if results["original"]["fallacy_counts"] else 0,
+                "avg_composite_fallacy_count": statistics.mean(results["original"]["composite_fallacy_counts"]) if results["original"]["composite_fallacy_counts"] else 0
             },
             "enhanced": {
-                "avg_execution_time": statistics.mean(results["enhanced"]["execution_times"]),
-                "avg_fallacy_count": statistics.mean(results["enhanced"]["fallacy_counts"]),
-                "avg_composite_fallacy_count": statistics.mean(results["enhanced"]["composite_fallacy_counts"])
+                "avg_execution_time": statistics.mean(results["enhanced"]["execution_times"]) if results["enhanced"]["execution_times"] else 0,
+                "avg_fallacy_count": statistics.mean(results["enhanced"]["fallacy_counts"]) if results["enhanced"]["fallacy_counts"] else 0,
+                "avg_composite_fallacy_count": statistics.mean(results["enhanced"]["composite_fallacy_counts"]) if results["enhanced"]["composite_fallacy_counts"] else 0
             }
         }
         
         # Calculer les améliorations
         improvements = {
-            "execution_time_improvement": 1 - (performance_metrics["enhanced"]["avg_execution_time"] / 
-                                             performance_metrics["original"]["avg_execution_time"]),
-            "fallacy_detection_improvement": (performance_metrics["enhanced"]["avg_fallacy_count"] / 
-                                            performance_metrics["original"]["avg_fallacy_count"]) - 1,
-            "composite_fallacy_detection_improvement": (performance_metrics["enhanced"]["avg_composite_fallacy_count"] / 
-                                                     performance_metrics["original"]["avg_composite_fallacy_count"]) - 1
+            "execution_time_improvement": (
+                1 - (performance_metrics["enhanced"]["avg_execution_time"] / performance_metrics["original"]["avg_execution_time"])
+                if performance_metrics["original"]["avg_execution_time"] > 0 else 0
+            ),
+            "fallacy_detection_improvement": (
+                (performance_metrics["enhanced"]["avg_fallacy_count"] / max(1, performance_metrics["original"]["avg_fallacy_count"])) - 1
+                if performance_metrics["original"]["avg_fallacy_count"] is not None else 0 #  Handle None case
+            ),
+            "composite_fallacy_detection_improvement": (
+                (performance_metrics["enhanced"]["avg_composite_fallacy_count"] / max(1, performance_metrics["original"]["avg_composite_fallacy_count"])) - 1
+                if performance_metrics["original"]["avg_composite_fallacy_count"] is not None else 0 # Handle None case
+            )
         }
         
         # Afficher les résultats
@@ -337,7 +350,17 @@ class TestRhetoricalToolsPerformance(unittest.TestCase):
             # Tester l'évaluateur original
             for _ in range(self.num_runs):
                 start_time = time.time()
-                original_result = self.fallacy_severity_evaluator.evaluate_fallacy_list(test_fallacies, context)
+                # evaluate_fallacy_list n'existe pas sur FallacySeverityEvaluator.
+                # rank_fallacies évalue et trie une liste.
+                # Pour obtenir un overall_severity comparable, on peut prendre la moyenne des sévérités.
+                ranked_fallacies = self.fallacy_severity_evaluator.rank_fallacies(
+                    # rank_fallacies modifie la liste en place, donc on passe une copie
+                    [dict(f, argument=f.get("context_text"), context=context) for f in test_fallacies]
+                )
+                original_result = {
+                    "overall_severity": statistics.mean([f.get("severity", 0.5) for f in ranked_fallacies]) if ranked_fallacies else 0.5,
+                    "fallacy_evaluations": ranked_fallacies
+                }
                 execution_time = time.time() - start_time
                 
                 results["original"]["execution_times"].append(execution_time)
@@ -348,9 +371,11 @@ class TestRhetoricalToolsPerformance(unittest.TestCase):
                 for eval in original_result.get("fallacy_evaluations", []):
                     severity_variations.append(eval.get("final_severity", 0.5))
                 
-                if severity_variations:
+                if len(severity_variations) > 1: # stdev requires at least 2 data points
                     context_sensitivity = statistics.stdev(severity_variations)
                     results["original"]["context_sensitivity_scores"].append(context_sensitivity)
+                else:
+                    results["original"]["context_sensitivity_scores"].append(0.0) # Append 0 if not enough data for stdev
             
             # Tester l'évaluateur amélioré
             for _ in range(self.num_runs):
@@ -362,25 +387,27 @@ class TestRhetoricalToolsPerformance(unittest.TestCase):
                 results["enhanced"]["severity_scores"].append(enhanced_result.get("overall_severity", 0.5))
                 
                 # Calculer la sensibilité au contexte (différence entre les évaluations de différents sophismes)
-                severity_variations = []
-                for eval in enhanced_result.get("fallacy_evaluations", []):
-                    severity_variations.append(eval.get("final_severity", 0.5))
+                severity_variations_enhanced = [] # Doit être initialisé ici
+                for eval_item_enhanced in enhanced_result.get("fallacy_evaluations", []):
+                    severity_variations_enhanced.append(eval_item_enhanced.get("final_severity", 0.5))
                 
-                if severity_variations:
-                    context_sensitivity = statistics.stdev(severity_variations)
-                    results["enhanced"]["context_sensitivity_scores"].append(context_sensitivity)
+                if len(severity_variations_enhanced) > 1: # stdev requires at least 2 data points
+                    context_sensitivity_enhanced = statistics.stdev(severity_variations_enhanced)
+                    results["enhanced"]["context_sensitivity_scores"].append(context_sensitivity_enhanced)
+                else:
+                    results["enhanced"]["context_sensitivity_scores"].append(0.0) # Append 0 if not enough data for stdev
         
         # Calculer les métriques de performance
         performance_metrics = {
             "original": {
-                "avg_execution_time": statistics.mean(results["original"]["execution_times"]),
-                "avg_severity_score": statistics.mean(results["original"]["severity_scores"]),
-                "avg_context_sensitivity": statistics.mean(results["original"]["context_sensitivity_scores"])
+                "avg_execution_time": statistics.mean(results["original"]["execution_times"]) if results["original"]["execution_times"] else 0,
+                "avg_severity_score": statistics.mean(results["original"]["severity_scores"]) if results["original"]["severity_scores"] else 0,
+                "avg_context_sensitivity": statistics.mean(results["original"]["context_sensitivity_scores"]) if results["original"]["context_sensitivity_scores"] else 0
             },
             "enhanced": {
-                "avg_execution_time": statistics.mean(results["enhanced"]["execution_times"]),
-                "avg_severity_score": statistics.mean(results["enhanced"]["severity_scores"]),
-                "avg_context_sensitivity": statistics.mean(results["enhanced"]["context_sensitivity_scores"])
+                "avg_execution_time": statistics.mean(results["enhanced"]["execution_times"]) if results["enhanced"]["execution_times"] else 0,
+                "avg_severity_score": statistics.mean(results["enhanced"]["severity_scores"]) if results["enhanced"]["severity_scores"] else 0,
+                "avg_context_sensitivity": statistics.mean(results["enhanced"]["context_sensitivity_scores"]) if results["enhanced"]["context_sensitivity_scores"] else 0
             }
         }
         
@@ -388,10 +415,14 @@ class TestRhetoricalToolsPerformance(unittest.TestCase):
         improvements = {
             "execution_time_improvement": 1 - (performance_metrics["enhanced"]["avg_execution_time"] / 
                                              performance_metrics["original"]["avg_execution_time"]),
-            "severity_evaluation_improvement": (performance_metrics["enhanced"]["avg_severity_score"] / 
-                                              performance_metrics["original"]["avg_severity_score"]) - 1,
-            "context_sensitivity_improvement": (performance_metrics["enhanced"]["avg_context_sensitivity"] / 
-                                              performance_metrics["original"]["avg_context_sensitivity"]) - 1
+            "severity_evaluation_improvement": (
+                (performance_metrics["enhanced"]["avg_severity_score"] / max(0.0001, performance_metrics["original"]["avg_severity_score"])) - 1
+                if performance_metrics["original"]["avg_severity_score"] is not None else 0
+            ),
+            "context_sensitivity_improvement": (
+                (performance_metrics["enhanced"]["avg_context_sensitivity"] / max(0.0001, performance_metrics["original"]["avg_context_sensitivity"])) - 1
+                if performance_metrics["original"]["avg_context_sensitivity"] is not None and performance_metrics["original"]["avg_context_sensitivity"] > 0 else 0
+            )
         }
         
         # Afficher les résultats
@@ -444,30 +475,46 @@ class TestRhetoricalToolsPerformance(unittest.TestCase):
                     execution_time = time.time() - start_time
                     
                     results["semantic_argument_analyzer"]["execution_times"].append(execution_time)
-                    results["semantic_argument_analyzer"]["thematic_coherence_scores"].append(
-                        semantic_result.get("thematic_coherence", {}).get("coherence_score", 0.5)
-                    )
+                    # La clé "thematic_coherence" n'est pas directement dans semantic_result.
+                    # Il faut chercher dans argument_analyses ou semantic_relations si pertinent,
+                    # ou utiliser une autre métrique. Pour l'instant, on met 0.5 par défaut.
+                    # Une meilleure approche serait de calculer une moyenne de cohérence à partir des relations.
+                    # Pour simplifier, et éviter l'erreur, on met une valeur par défaut.
+                    # Une analyse plus approfondie de ce que "thematic_coherence" représente ici est nécessaire.
+                    # semantic_result contient "semantic_relations"
+                    # On pourrait calculer un score basé sur la force des relations de support.
+                    avg_support_strength = 0.0
+                    support_relations = [r.get("confidence", 0.0) for r in semantic_result.get("semantic_relations", []) if r.get("relation_type") == "support"]
+                    if support_relations:
+                        avg_support_strength = statistics.mean(support_relations)
+                    results["semantic_argument_analyzer"]["thematic_coherence_scores"].append(avg_support_strength)
                 
                 # Tester le détecteur de sophismes contextuels
                 for _ in range(self.num_runs):
                     start_time = time.time()
-                    detector_result = self.contextual_fallacy_detector.detect_contextual_fallacies(dataset, context)
+                    # La méthode est detect_multiple_contextual_fallacies
+                    detector_result = self.contextual_fallacy_detector.detect_multiple_contextual_fallacies(dataset, context)
                     execution_time = time.time() - start_time
                     
                     results["contextual_fallacy_detector"]["execution_times"].append(execution_time)
-                    results["contextual_fallacy_detector"]["fallacy_counts"].append(
-                        len(detector_result.get("detected_fallacies", []))
-                    )
+                    # La structure de retour de detect_multiple_contextual_fallacies est différente
+                    # Elle contient une liste "argument_results", chacun ayant "detected_fallacies"
+                    total_fallacies_in_dataset = 0
+                    if "argument_results" in detector_result:
+                        for arg_res in detector_result["argument_results"]:
+                            total_fallacies_in_dataset += len(arg_res.get("detected_fallacies", []))
+                    results["contextual_fallacy_detector"]["fallacy_counts"].append(total_fallacies_in_dataset)
                 
                 # Tester l'évaluateur de cohérence d'arguments
                 for _ in range(self.num_runs):
                     start_time = time.time()
-                    coherence_result = self.argument_coherence_evaluator.evaluate_argument_coherence(dataset, context)
+                    coherence_result = self.argument_coherence_evaluator.evaluate_coherence(dataset, context)
                     execution_time = time.time() - start_time
-                    
+    
                     results["argument_coherence_evaluator"]["execution_times"].append(execution_time)
+                    # coherence_result a la structure: {'overall_coherence': {'score': ..., 'level': ...}, ...}
                     results["argument_coherence_evaluator"]["coherence_scores"].append(
-                        coherence_result.get("overall_coherence", 0.5)
+                        coherence_result.get("overall_coherence", {}).get("score", 0.5)
                     )
                 
                 # Tester le visualiseur de structure d'arguments
@@ -477,7 +524,7 @@ class TestRhetoricalToolsPerformance(unittest.TestCase):
                     for _ in range(self.num_runs):
                         start_time = time.time()
                         self.argument_structure_visualizer.visualize_argument_structure(
-                            dataset, context, "json", output_dir=str(output_dir)
+                            dataset, context, "json", output_path=str(output_dir)
                         )
                         execution_time = time.time() - start_time
                         
@@ -486,19 +533,19 @@ class TestRhetoricalToolsPerformance(unittest.TestCase):
         # Calculer les métriques de performance
         performance_metrics = {
             "semantic_argument_analyzer": {
-                "avg_execution_time": statistics.mean(results["semantic_argument_analyzer"]["execution_times"]),
-                "avg_thematic_coherence": statistics.mean(results["semantic_argument_analyzer"]["thematic_coherence_scores"])
+                "avg_execution_time": statistics.mean(results["semantic_argument_analyzer"]["execution_times"]) if results["semantic_argument_analyzer"]["execution_times"] else 0,
+                "avg_thematic_coherence": statistics.mean(results["semantic_argument_analyzer"]["thematic_coherence_scores"]) if results["semantic_argument_analyzer"]["thematic_coherence_scores"] else 0
             },
             "contextual_fallacy_detector": {
-                "avg_execution_time": statistics.mean(results["contextual_fallacy_detector"]["execution_times"]),
-                "avg_fallacy_count": statistics.mean(results["contextual_fallacy_detector"]["fallacy_counts"])
+                "avg_execution_time": statistics.mean(results["contextual_fallacy_detector"]["execution_times"]) if results["contextual_fallacy_detector"]["execution_times"] else 0,
+                "avg_fallacy_count": statistics.mean(results["contextual_fallacy_detector"]["fallacy_counts"]) if results["contextual_fallacy_detector"]["fallacy_counts"] else 0
             },
             "argument_coherence_evaluator": {
-                "avg_execution_time": statistics.mean(results["argument_coherence_evaluator"]["execution_times"]),
-                "avg_coherence_score": statistics.mean(results["argument_coherence_evaluator"]["coherence_scores"])
+                "avg_execution_time": statistics.mean(results["argument_coherence_evaluator"]["execution_times"]) if results["argument_coherence_evaluator"]["execution_times"] else 0,
+                "avg_coherence_score": statistics.mean(results["argument_coherence_evaluator"]["coherence_scores"]) if results["argument_coherence_evaluator"]["coherence_scores"] else 0
             },
             "argument_structure_visualizer": {
-                "avg_execution_time": statistics.mean(results["argument_structure_visualizer"]["execution_times"])
+                "avg_execution_time": statistics.mean(results["argument_structure_visualizer"]["execution_times"]) if results["argument_structure_visualizer"]["execution_times"] else 0
             }
         }
         

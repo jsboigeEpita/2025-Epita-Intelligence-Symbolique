@@ -43,16 +43,27 @@ class ExtractService:
         template_start: Optional[str] = None
     ) -> Tuple[Optional[str], str, bool, bool]:
         """
-        Extrait le texte entre les marqueurs de début et de fin.
-        
-        Args:
-            text: Texte source complet
-            start_marker: Marqueur de début
-            end_marker: Marqueur de fin
-            template_start: Template pour le marqueur de début (optionnel)
-            
-        Returns:
-            Tuple contenant (texte_extrait, statut, start_found, end_found)
+        Extrait le texte situé entre des marqueurs de début et de fin spécifiés.
+
+        Tente de trouver `start_marker`. Si un `template_start` est fourni et que
+        `start_marker` n'est pas trouvé directement, essaie de trouver le marqueur
+        formaté avec le template. Cherche ensuite `end_marker` après le début trouvé.
+
+        :param text: Le texte source complet à partir duquel extraire.
+        :type text: str
+        :param start_marker: La chaîne de caractères marquant le début de l'extrait.
+        :type start_marker: str
+        :param end_marker: La chaîne de caractères marquant la fin de l'extrait.
+        :type end_marker: str
+        :param template_start: Un template optionnel pour le marqueur de début,
+                               où "{0}" sera remplacé par `start_marker`.
+        :type template_start: Optional[str]
+        :return: Un tuple contenant:
+                 - Le texte extrait (str, ou None si échec).
+                 - Un message de statut décrivant le résultat de l'extraction (str).
+                 - Un booléen indiquant si le marqueur de début a été trouvé (bool).
+                 - Un booléen indiquant si le marqueur de fin a été trouvé (bool).
+        :rtype: Tuple[Optional[str], str, bool, bool]
         """
         if not text:
             return None, "Texte source vide", False, False
@@ -113,16 +124,27 @@ class ExtractService:
         max_results: int = 5
     ) -> List[Tuple[str, int, str]]:
         """
-        Trouve des textes similaires au marqueur dans le texte source.
-        
-        Args:
-            text: Texte source complet
-            marker: Marqueur à rechercher
-            context_size: Nombre de caractères de contexte à inclure
-            max_results: Nombre maximum de résultats à retourner
-            
-        Returns:
-            Liste de tuples (contexte, position, texte_trouvé)
+        Trouve des portions de texte similaires à un marqueur donné dans un texte source.
+
+        Utilise `re.finditer` pour les marqueurs courts et `difflib.SequenceMatcher`
+        pour les marqueurs plus longs afin de trouver des correspondances.
+
+        :param text: Le texte source complet dans lequel rechercher.
+        :type text: str
+        :param marker: Le marqueur (chaîne de caractères) à rechercher.
+        :type marker: str
+        :param context_size: Le nombre de caractères de contexte à inclure avant et
+                             après chaque correspondance trouvée.
+        :type context_size: int
+        :param max_results: Le nombre maximum de résultats similaires à retourner.
+        :type max_results: int
+        :return: Une liste de tuples. Chaque tuple contient:
+                 - Le contexte entourant le texte trouvé (str).
+                 - La position de début du texte trouvé dans le texte source original (int).
+                 - Le texte trouvé qui est similaire au marqueur (str).
+                 Retourne une liste vide si aucun texte similaire n'est trouvé ou si
+                 `text` ou `marker` sont vides.
+        :rtype: List[Tuple[str, int, str]]
         """
         if not text or not marker:
             return []
@@ -163,16 +185,24 @@ class ExtractService:
         template_start: Optional[str] = None
     ) -> Tuple[str, bool, bool]:
         """
-        Met en évidence les marqueurs dans le texte.
-        
-        Args:
-            text: Texte source complet
-            start_marker: Marqueur de début
-            end_marker: Marqueur de fin
-            template_start: Template pour le marqueur de début (optionnel)
-            
-        Returns:
-            Tuple contenant (html_text, start_found, end_found)
+        Met en évidence les marqueurs de début et de fin dans un texte en les entourant
+        de balises HTML `<span>` avec un style spécifique.
+
+        Gère l'échappement des caractères HTML de base et la conversion des sauts de ligne.
+
+        :param text: Le texte source complet.
+        :type text: str
+        :param start_marker: Le marqueur de début à mettre en évidence.
+        :type start_marker: str
+        :param end_marker: Le marqueur de fin à mettre en évidence.
+        :type end_marker: str
+        :param template_start: Un template optionnel pour le marqueur de début.
+        :type template_start: Optional[str]
+        :return: Un tuple contenant:
+                 - Le texte formaté en HTML avec les marqueurs en évidence (str).
+                 - Un booléen indiquant si le marqueur de début a été trouvé (bool).
+                 - Un booléen indiquant si le marqueur de fin a été trouvé (bool).
+        :rtype: Tuple[str, bool, bool]
         """
         if not text:
             return "<p>Texte vide</p>", False, False
@@ -205,15 +235,20 @@ class ExtractService:
         case_sensitive: bool = False
     ) -> List[re.Match]:
         """
-        Recherche un terme dans le texte et retourne les positions trouvées.
-        
-        Args:
-            text: Texte source complet
-            search_term: Terme à rechercher
-            case_sensitive: Si True, la recherche est sensible à la casse
-            
-        Returns:
-            Liste des correspondances trouvées
+        Recherche toutes les occurrences d'un terme dans un texte.
+
+        Utilise les expressions régulières pour trouver les correspondances.
+
+        :param text: Le texte source complet dans lequel rechercher.
+        :type text: str
+        :param search_term: Le terme à rechercher.
+        :type search_term: str
+        :param case_sensitive: Si True, la recherche est sensible à la casse.
+                               Par défaut à False (insensible à la casse).
+        :type case_sensitive: bool
+        :return: Une liste d'objets `re.Match` représentant toutes les correspondances
+                 trouvées. Retourne une liste vide si `text` ou `search_term` sont vides.
+        :rtype: List[re.Match]
         """
         if not text or not search_term:
             return []
@@ -230,16 +265,24 @@ class ExtractService:
         context_size: int = 50
     ) -> Tuple[str, int]:
         """
-        Met en évidence les résultats de recherche dans le texte.
-        
-        Args:
-            text: Texte source complet
-            search_term: Terme à rechercher
-            case_sensitive: Si True, la recherche est sensible à la casse
-            context_size: Nombre de caractères de contexte à inclure
-            
-        Returns:
-            Tuple contenant (html_results, count)
+        Met en évidence toutes les occurrences d'un terme de recherche dans un texte,
+        en fournissant un contexte HTML pour chaque correspondance.
+
+        :param text: Le texte source complet.
+        :type text: str
+        :param search_term: Le terme à rechercher et à mettre en évidence.
+        :type search_term: str
+        :param case_sensitive: Si True, la recherche est sensible à la casse.
+                               Par défaut à False.
+        :type case_sensitive: bool
+        :param context_size: Le nombre de caractères de contexte à afficher avant
+                             et après chaque correspondance.
+        :type context_size: int
+        :return: Un tuple contenant:
+                 - Une chaîne HTML avec les résultats de recherche mis en évidence
+                   et leur contexte (str).
+                 - Le nombre total de correspondances trouvées (int).
+        :rtype: Tuple[str, int]
         """
         if not text or not search_term:
             return "<p>Texte vide ou terme de recherche manquant</p>", 0
@@ -289,15 +332,24 @@ class ExtractService:
         overlap: int = 50
     ) -> List[Dict[str, Any]]:
         """
-        Extrait des blocs de texte avec chevauchement pour l'analyse.
-        
-        Args:
-            text: Texte source complet
-            block_size: Taille des blocs de texte à extraire
-            overlap: Chevauchement entre les blocs
-            
-        Returns:
-            Liste de dictionnaires contenant les blocs de texte
+        Divise un texte en blocs de taille spécifiée avec un chevauchement défini.
+
+        Utile pour traiter de grands textes par morceaux pour des analyses
+        qui pourraient être limitées par la taille de l'entrée.
+
+        :param text: Le texte source complet à diviser en blocs.
+        :type text: str
+        :param block_size: La taille souhaitée pour chaque bloc de texte.
+        :type block_size: int
+        :param overlap: Le nombre de caractères de chevauchement entre les blocs consécutifs.
+        :type overlap: int
+        :return: Une liste de dictionnaires. Chaque dictionnaire représente un bloc et
+                 contient:
+                 - "block" (str): Le contenu textuel du bloc.
+                 - "start_pos" (int): La position de début du bloc dans le texte original.
+                 - "end_pos" (int): La position de fin du bloc dans le texte original.
+                 Retourne une liste vide si le texte d'entrée est vide.
+        :rtype: List[Dict[str, Any]]
         """
         if not text:
             return []
@@ -326,16 +378,30 @@ class ExtractService:
         overlap: int = 50
     ) -> List[Dict[str, Any]]:
         """
-        Recherche un terme dans le texte en utilisant une approche dichotomique.
-        
-        Args:
-            text: Texte source complet
-            search_term: Terme à rechercher
-            block_size: Taille des blocs de texte à analyser
-            overlap: Chevauchement entre les blocs
-            
-        Returns:
-            Liste de dictionnaires contenant les résultats de recherche
+        Recherche un terme dans un texte en le divisant d'abord en blocs.
+
+        Cette méthode est une simplification et ne réalise pas une recherche
+        dichotomique au sens strict algorithmique, mais plutôt une recherche
+        par blocs. Elle divise le texte en blocs avec chevauchement et recherche
+        le terme dans chaque bloc.
+
+        :param text: Le texte source complet dans lequel rechercher.
+        :type text: str
+        :param search_term: Le terme à rechercher (insensible à la casse).
+        :type search_term: str
+        :param block_size: La taille des blocs dans lesquels diviser le texte.
+        :type block_size: int
+        :param overlap: Le chevauchement entre les blocs consécutifs.
+        :type overlap: int
+        :return: Une liste de dictionnaires. Chaque dictionnaire représente une
+                 correspondance trouvée et contient:
+                 - "match" (str): Le texte exact de la correspondance.
+                 - "position" (int): La position de début de la correspondance dans le texte original.
+                 - "context" (str): Un extrait de contexte entourant la correspondance.
+                 - "block_start" (int): La position de début du bloc où la correspondance a été trouvée.
+                 - "block_end" (int): La position de fin du bloc.
+                 Retourne une liste vide si `text` ou `search_term` sont vides.
+        :rtype: List[Dict[str, Any]]
         """
         if not text or not search_term:
             return []

@@ -20,7 +20,7 @@ from argumentation_analysis.orchestration.hierarchical.operational.agent_interfa
 from argumentation_analysis.orchestration.hierarchical.operational.state import OperationalState
 from argumentation_analysis.core.communication import MessageMiddleware 
 
-from argumentation_analysis.agents.core.extract.extract_agent import ExtractAgent, setup_extract_agent
+from argumentation_analysis.agents.core.extract.extract_agent import ExtractAgent # Removed setup_extract_agent
 from argumentation_analysis.agents.core.extract.extract_definitions import ExtractResult
 
 
@@ -43,15 +43,20 @@ class ExtractAgentAdapter(OperationalAgent):
             operational_state: État opérationnel à utiliser. Si None, un nouvel état est créé.
             middleware: Le middleware de communication à utiliser.
         """
-        super().__init__(name, operational_state, middleware=middleware) 
-        self.extract_agent = None
-        self.kernel = None
+        super().__init__(name, operational_state, middleware=middleware)
+        self.agent = None # Changed from self.extract_agent
+        self.kernel = None # Will be passed during initialize
+        self.llm_service_id = None # Will be passed during initialize
         self.initialized = False
         self.logger = logging.getLogger(f"ExtractAgentAdapter.{name}")
     
-    async def initialize(self):
+    async def initialize(self, kernel: Any, llm_service_id: str): # Added kernel and llm_service_id
         """
         Initialise l'agent d'extraction.
+
+        Args:
+            kernel: Le kernel Semantic Kernel à utiliser.
+            llm_service_id: L'ID du service LLM à utiliser.
         
         Returns:
             True si l'initialisation a réussi, False sinon
@@ -59,11 +64,17 @@ class ExtractAgentAdapter(OperationalAgent):
         if self.initialized:
             return True
         
+        self.kernel = kernel
+        self.llm_service_id = llm_service_id
+
         try:
             self.logger.info("Initialisation de l'agent d'extraction...")
-            self.kernel, self.extract_agent = await setup_extract_agent()
+            # Instancier l'agent refactoré
+            self.agent = ExtractAgent(kernel=self.kernel, agent_name=f"{self.name}_ExtractAgent")
+            # Configurer les composants de l'agent
+            await self.agent.setup_agent_components(llm_service_id=self.llm_service_id)
             
-            if self.extract_agent is None:
+            if self.agent is None: # Check self.agent
                 self.logger.error("Échec de l'initialisation de l'agent d'extraction.")
                 return False
             
@@ -118,7 +129,28 @@ class ExtractAgentAdapter(OperationalAgent):
         task_original_id = task.get("id", f"unknown_task_{uuid.uuid4().hex[:8]}")
 
         if not self.initialized:
-            success = await self.initialize()
+            # L'initialisation doit maintenant être appelée avec kernel et llm_service_id
+            # Ceci devrait être géré par le OperationalManager avant d'appeler process_task
+            # ou alors, ces informations doivent être disponibles pour l'adaptateur.
+            # Pour l'instant, on suppose qu'elles sont disponibles via self.kernel et self.llm_service_id
+            # qui auraient été définies lors d'un appel explicite à initialize.
+            if self.kernel is None or self.llm_service_id is None:
+                self.logger.error("Kernel ou llm_service_id non configuré avant process_task.")
+                return {
+                    "id": f"result-{task_original_id}",
+                    "task_id": task_original_id,
+                    "tactical_task_id": task.get("tactical_task_id"),
+                    "status": "failed",
+                    "outputs": {},
+                    "metrics": {},
+                    "issues": [{
+                        "type": "configuration_error",
+                        "description": "Kernel ou llm_service_id non configuré pour l'agent d'extraction",
+                        "severity": "high"
+                    }]
+                }
+            
+            success = await self.initialize(self.kernel, self.llm_service_id)
             if not success:
                 return {
                     "id": f"result-{task_original_id}",
@@ -264,8 +296,12 @@ class ExtractAgentAdapter(OperationalAgent):
     
     async def _process_extract(self, extract: Dict[str, Any], parameters: Dict[str, Any]) -> ExtractResult:
         if not self.initialized:
-            await self.initialize() 
-            if not self.initialized: 
+            # Idem que pour process_task, l'initialisation devrait avoir eu lieu.
+            if self.kernel is None or self.llm_service_id is None:
+                self.logger.error("Kernel ou llm_service_id non configuré avant _process_extract.")
+                return ExtractResult(status="error", message="Kernel ou llm_service_id non configuré", explanation="Configuration manquante")
+            await self.initialize(self.kernel, self.llm_service_id)
+            if not self.initialized:
                 return ExtractResult(status="error", message="Agent non initialisé pour _process_extract", explanation="Initialisation échouée")
 
         source_info = {
@@ -275,7 +311,7 @@ class ExtractAgentAdapter(OperationalAgent):
         
         extract_name = extract.get("id", "Extrait sans nom")
         
-        result = await self.extract_agent.extract_from_name(source_info, extract_name)
+        result = await self.agent.extract_from_name(source_info, extract_name) # Changed self.extract_agent to self.agent
         
         return result
     
@@ -303,8 +339,9 @@ class ExtractAgentAdapter(OperationalAgent):
             self.logger.info("Arrêt de l'agent d'extraction...")
             
             # Nettoyer les ressources
-            self.extract_agent = None
+            self.agent = None # Changed from self.extract_agent
             self.kernel = None
+            self.llm_service_id = None # Clear llm_service_id as well
             self.initialized = False
             
             self.logger.info("Agent d'extraction arrêté avec succès.")
@@ -312,6 +349,41 @@ class ExtractAgentAdapter(OperationalAgent):
         except Exception as e:
             self.logger.error(f"Erreur lors de l'arrêt de l'agent d'extraction: {e}")
             return False
+
+    def _format_outputs(self, results: List[Dict[str, Any]]) -> Dict[str, List[Dict[str, Any]]]:
+        """
+        Formate la liste des résultats bruts en un dictionnaire d'outputs groupés par type.
+        """
+        outputs: Dict[str, List[Dict[str, Any]]] = {}
+        if not results:
+            # S'assurer que les clés attendues par les tests existent même si results est vide
+            outputs["extracted_segments"] = []
+            outputs["normalized_text"] = []
+            # Ajoutez d'autres types de résultats attendus ici si nécessaire
+            return outputs
+
+        for res_item in results:
+            res_type = res_item.get("type")
+            if res_type:
+                if res_type not in outputs:
+                    outputs[res_type] = []
+                # Crée une copie pour éviter de modifier l'original si besoin, et enlève la clé "type"
+                # item_copy = {k: v for k, v in res_item.items() if k != "type"}
+                # Pour l'instant, on garde l'item tel quel, car les tests pourraient vérifier la clé "type" aussi.
+                outputs[res_type].append(res_item)
+            else:
+                # Gérer les items sans type, peut-être les mettre dans une catégorie "unknown"
+                if "unknown_type_results" not in outputs:
+                    outputs["unknown_type_results"] = []
+                outputs["unknown_type_results"].append(res_item)
+        
+        # S'assurer que les clés attendues par les tests existent même si aucun résultat de ce type n'a été produit
+        if "extracted_segments" not in outputs:
+            outputs["extracted_segments"] = []
+        if "normalized_text" not in outputs:
+            outputs["normalized_text"] = []
+            
+        return outputs
     
     def format_result(self, task: Dict[str, Any], results: List[Dict[str, Any]], metrics: Dict[str, Any], issues: List[Dict[str, Any]], task_id_to_report: Optional[str] = None) -> Dict[str, Any]:
         final_task_id = task_id_to_report if task_id_to_report else task.get("id", f"unknown_task_{uuid.uuid4().hex[:8]}")

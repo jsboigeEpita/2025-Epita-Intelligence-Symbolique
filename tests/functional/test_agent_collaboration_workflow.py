@@ -18,10 +18,12 @@ from semantic_kernel.agents import Agent, AgentGroupChat
 # Ajouter le répertoire racine au chemin Python pour pouvoir importer les modules
 import sys
 import os
-# project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-# if project_root not in sys.path:
-#    sys.path.insert(0, project_root)
-# Commenté car conftest.py et pytest.ini devraient gérer cela.
+project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
+if project_root not in sys.path:
+   sys.path.insert(0, project_root)
+# L'installation du package via `pip install -e .` devrait gérer l'accessibilité,
+# mais cette modification assure le fonctionnement même sans installation en mode édition.
+# conftest.py et pytest.ini devraient également aider, mais ajout explicite pour robustesse.
 
 from argumentation_analysis.core.shared_state import RhetoricalAnalysisState
 from argumentation_analysis.core.state_manager_plugin import StateManagerPlugin
@@ -31,7 +33,7 @@ from argumentation_analysis.agents.core.extract.extract_agent import ExtractAgen
 from argumentation_analysis.agents.core.pl.pl_definitions import setup_pl_kernel
 from argumentation_analysis.agents.core.informal.informal_definitions import setup_informal_kernel
 from argumentation_analysis.agents.core.pm.pm_definitions import setup_pm_kernel
-from tests.async_test_case import AsyncTestCase
+# from tests.async_test_case import AsyncTestCase # Suppression de l'import
 
 # Imports spécifiques pour ce test
 from argumentation_analysis.orchestration.hierarchical.strategic.manager import StrategicManager
@@ -45,7 +47,7 @@ from argumentation_analysis.orchestration.hierarchical.operational.adapters.pl_a
 from argumentation_analysis.core.communication import MessageMiddleware, LocalChannel
 
 
-class TestAgentCollaborationWorkflow(AsyncTestCase):
+class TestAgentCollaborationWorkflow: # Suppression de l'héritage AsyncTestCase
     """Tests fonctionnels pour le workflow de collaboration entre agents."""
 
     def setUp(self):
@@ -108,7 +110,7 @@ class TestAgentCollaborationWorkflow(AsyncTestCase):
         self.operational_manager.agent_registry.register_agent_class("pl", self.mock_pl_adapter)
 
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_full_collaboration_workflow(self):
         """Teste un workflow de collaboration complet entre les niveaux hiérarchiques."""
         

@@ -15,7 +15,7 @@ if project_root not in sys.path:
     sys.path.insert(0, project_root)
 import pytest
 from unittest.mock import Mock, patch, MagicMock
-from argumentation_analysis.services.web_api.models.request_models import (
+from libs.web_api.models.request_models import (
     AnalysisRequest, ValidationRequest, FallacyRequest, FrameworkRequest,
     AnalysisOptions, FallacyOptions, FrameworkOptions, Argument
 )

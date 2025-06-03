@@ -1,0 +1,1 @@
+# This file makes Python treat the directory tests/mocks/jpype_components as a package.

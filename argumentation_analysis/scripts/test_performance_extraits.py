@@ -56,22 +56,35 @@ class StateManagerMock:
     Mock du StateManager pour les tests isolés.
     """
     def __init__(self):
-        self.state = {
+        """Initialise le StateManagerMock avec un état vide et des compteurs."""
+        self.state: Dict[str, Any] = {
             "raw_text": "",
             "identified_arguments": [],
             "identified_fallacies": [],
             "answers": []
         }
-        self.arg_id_counter = 1
-        self.fallacy_id_counter = 1
-        self.answer_id_counter = 1
+        self.arg_id_counter: int = 1
+        self.fallacy_id_counter: int = 1
+        self.answer_id_counter: int = 1
     
-    def get_current_state_snapshot(self, summarize=True):
-        """Retourne un snapshot de l'état actuel."""
+    def get_current_state_snapshot(self, summarize: bool = True) -> str:
+        """Retourne un snapshot JSON de l'état actuel.
+
+        :param summarize: Non utilisé actuellement dans ce mock.
+        :type summarize: bool
+        :return: Une chaîne JSON représentant l'état.
+        :rtype: str
+        """
         return json.dumps(self.state, indent=2)
     
-    def add_identified_argument(self, description):
-        """Ajoute un argument identifié à l'état."""
+    def add_identified_argument(self, description: str) -> str:
+        """Ajoute un argument identifié à l'état.
+
+        :param description: La description de l'argument.
+        :type description: str
+        :return: L'ID de l'argument ajouté.
+        :rtype: str
+        """
         arg_id = f"arg_{self.arg_id_counter}"
         self.arg_id_counter += 1
         self.state["identified_arguments"].append({
@@ -81,8 +94,18 @@ class StateManagerMock:
         })
         return arg_id
     
-    def add_identified_fallacy(self, fallacy_type, justification, target_argument_id):
-        """Ajoute un sophisme identifié à l'état."""
+    def add_identified_fallacy(self, fallacy_type: str, justification: str, target_argument_id: str) -> str:
+        """Ajoute un sophisme identifié à l'état.
+
+        :param fallacy_type: Le type de sophisme.
+        :type fallacy_type: str
+        :param justification: La justification de l'identification du sophisme.
+        :type justification: str
+        :param target_argument_id: L'ID de l'argument auquel ce sophisme est lié.
+        :type target_argument_id: str
+        :return: L'ID du sophisme ajouté.
+        :rtype: str
+        """
         fallacy_id = f"fallacy_{self.fallacy_id_counter}"
         self.fallacy_id_counter += 1
         self.state["identified_fallacies"].append({
@@ -94,8 +117,18 @@ class StateManagerMock:
         })
         return fallacy_id
     
-    def add_answer(self, task_id, answer_text, source_ids=None):
-        """Ajoute une réponse à l'état."""
+    def add_answer(self, task_id: str, answer_text: str, source_ids: Optional[List[str]] = None) -> str:
+        """Ajoute une réponse à l'état.
+
+        :param task_id: L'ID de la tâche associée à la réponse.
+        :type task_id: str
+        :param answer_text: Le texte de la réponse.
+        :type answer_text: str
+        :param source_ids: Liste optionnelle des IDs sources pour la réponse.
+        :type source_ids: Optional[List[str]]
+        :return: L'ID de la réponse ajoutée.
+        :rtype: str
+        """
         answer_id = f"answer_{self.answer_id_counter}"
         self.answer_id_counter += 1
         self.state["answers"].append({
@@ -107,9 +140,17 @@ class StateManagerMock:
         })
         return answer_id
 
-async def setup_informal_agent(llm_service):
+async def setup_informal_agent(llm_service: Any) -> Tuple[Any, StateManagerMock]:
     """
-    Configure et retourne l'agent Informel pour les tests.
+    Configure et retourne l'agent Informel (Kernel Semantic Kernel) pour les tests.
+
+    Initialise un Kernel Semantic Kernel, y ajoute le service LLM fourni,
+    configure les plugins pour l'analyse informelle et ajoute un StateManagerMock.
+
+    :param llm_service: L'instance du service LLM à utiliser.
+    :type llm_service: Any
+    :return: Un tuple contenant le Kernel configuré et l'instance du StateManagerMock.
+    :rtype: Tuple[Any, StateManagerMock]
     """
     from semantic_kernel import Kernel
     from argumentation_analysis.agents.informal.informal_definitions import setup_informal_kernel
@@ -129,9 +170,23 @@ async def setup_informal_agent(llm_service):
     
     return kernel, state_manager
 
-async def test_identify_arguments(kernel, state_manager, texte):
+async def test_identify_arguments(kernel: Any, state_manager: StateManagerMock, texte: str) -> Tuple[List[str], float]:
     """
-    Teste la fonction d'identification des arguments.
+    Teste la fonction d'identification des arguments de l'agent Informel.
+
+    Invoque la fonction 'semantic_IdentifyArguments' du plugin 'InformalAnalyzer'
+    sur le texte fourni, mesure le temps d'exécution et enregistre les arguments
+    identifiés dans le StateManagerMock.
+
+    :param kernel: Le Kernel Semantic Kernel configuré.
+    :type kernel: Any
+    :param state_manager: L'instance du StateManagerMock.
+    :type state_manager: StateManagerMock
+    :param texte: Le texte à analyser pour identifier les arguments.
+    :type texte: str
+    :return: Un tuple contenant la liste des IDs des arguments identifiés et
+             le temps d'exécution en secondes.
+    :rtype: Tuple[List[str], float]
     """
     logger.info("Test d'identification des arguments...")
     
@@ -158,9 +213,20 @@ async def test_identify_arguments(kernel, state_manager, texte):
     logger.info(f"Arguments identifiés: {len(arg_ids)} en {execution_time:.2f} secondes")
     return arg_ids, execution_time
 
-async def test_explore_fallacy_hierarchy(kernel, root_pk="0"):
+async def test_explore_fallacy_hierarchy(kernel: Any, root_pk: str = "0") -> Tuple[Optional[Dict[str, Any]], float]:
     """
-    Teste la fonction d'exploration de la hiérarchie des sophismes.
+    Teste la fonction d'exploration de la hiérarchie des sophismes de l'agent Informel.
+
+    Invoque la fonction 'explore_fallacy_hierarchy' du plugin 'InformalAnalyzer'
+    et mesure le temps d'exécution.
+
+    :param kernel: Le Kernel Semantic Kernel configuré.
+    :type kernel: Any
+    :param root_pk: La clé primaire (PK) du nœud racine de la hiérarchie à explorer.
+    :type root_pk: str
+    :return: Un tuple contenant la hiérarchie des sophismes (dictionnaire) ou None
+             en cas d'erreur de décodage JSON, et le temps d'exécution en secondes.
+    :rtype: Tuple[Optional[Dict[str, Any]], float]
     """
     logger.info(f"Test d'exploration de la hiérarchie des sophismes (PK={root_pk})...")
     
@@ -183,9 +249,20 @@ async def test_explore_fallacy_hierarchy(kernel, root_pk="0"):
         logger.error("Erreur de décodage JSON dans le résultat de explore_fallacy_hierarchy")
         return None, execution_time
 
-async def test_get_fallacy_details(kernel, fallacy_pk):
+async def test_get_fallacy_details(kernel: Any, fallacy_pk: Any) -> Tuple[Optional[Dict[str, Any]], float]:
     """
-    Teste la fonction de récupération des détails d'un sophisme.
+    Teste la fonction de récupération des détails d'un sophisme de l'agent Informel.
+
+    Invoque la fonction 'get_fallacy_details' du plugin 'InformalAnalyzer'
+    et mesure le temps d'exécution.
+
+    :param kernel: Le Kernel Semantic Kernel configuré.
+    :type kernel: Any
+    :param fallacy_pk: La clé primaire (PK) du sophisme dont les détails sont demandés.
+    :type fallacy_pk: Any
+    :return: Un tuple contenant les détails du sophisme (dictionnaire) ou None
+             en cas d'erreur de décodage JSON, et le temps d'exécution en secondes.
+    :rtype: Tuple[Optional[Dict[str, Any]], float]
     """
     logger.info(f"Test de récupération des détails du sophisme (PK={fallacy_pk})...")
     
@@ -208,9 +285,24 @@ async def test_get_fallacy_details(kernel, fallacy_pk):
         logger.error("Erreur de décodage JSON dans le résultat de get_fallacy_details")
         return None, execution_time
 
-async def test_attribute_fallacy(kernel, state_manager, fallacy_pk, arg_id):
+async def test_attribute_fallacy(kernel: Any, state_manager: StateManagerMock, fallacy_pk: Any, arg_id: str) -> Tuple[Optional[str], float]:
     """
-    Teste la fonction d'attribution d'un sophisme à un argument.
+    Teste l'attribution d'un sophisme à un argument via le StateManagerMock.
+
+    Récupère d'abord les détails du sophisme, puis l'ajoute à l'état via
+    `state_manager.add_identified_fallacy`. Mesure le temps d'exécution.
+
+    :param kernel: Le Kernel Semantic Kernel configuré (utilisé pour `test_get_fallacy_details`).
+    :type kernel: Any
+    :param state_manager: L'instance du StateManagerMock.
+    :type state_manager: StateManagerMock
+    :param fallacy_pk: La clé primaire (PK) du sophisme à attribuer.
+    :type fallacy_pk: Any
+    :param arg_id: L'ID de l'argument auquel attribuer le sophisme.
+    :type arg_id: str
+    :return: Un tuple contenant l'ID du sophisme attribué ou None en cas d'erreur,
+             et le temps d'exécution en secondes.
+    :rtype: Tuple[Optional[str], float]
     """
     logger.info(f"Test d'attribution du sophisme PK={fallacy_pk} à l'argument {arg_id}...")
     
@@ -243,9 +335,23 @@ async def test_attribute_fallacy(kernel, state_manager, fallacy_pk, arg_id):
     logger.info(f"Sophisme attribué avec l'ID: {fallacy_id} en {execution_time:.2f} secondes")
     return fallacy_id, execution_time
 
-async def test_analyze_fallacies(kernel, state_manager, arg_id):
+async def test_analyze_fallacies(kernel: Any, state_manager: StateManagerMock, arg_id: str) -> Tuple[List[str], float]:
     """
-    Teste la fonction d'analyse des sophismes dans un argument.
+    Teste la fonction d'analyse des sophismes dans un argument de l'agent Informel.
+
+    Invoque la fonction 'semantic_AnalyzeFallacies' du plugin 'InformalAnalyzer'
+    sur la description de l'argument fourni, mesure le temps d'exécution et
+    enregistre les sophismes identifiés dans le StateManagerMock.
+
+    :param kernel: Le Kernel Semantic Kernel configuré.
+    :type kernel: Any
+    :param state_manager: L'instance du StateManagerMock.
+    :type state_manager: StateManagerMock
+    :param arg_id: L'ID de l'argument à analyser pour les sophismes.
+    :type arg_id: str
+    :return: Un tuple contenant la liste des IDs des sophismes identifiés et
+             le temps d'exécution en secondes.
+    :rtype: Tuple[List[str], float]
     """
     logger.info(f"Test d'analyse des sophismes pour l'argument {arg_id}...")
     
@@ -289,9 +395,19 @@ async def test_analyze_fallacies(kernel, state_manager, arg_id):
     logger.info(f"Sophismes identifiés: {len(fallacy_ids)} en {execution_time:.2f} secondes")
     return fallacy_ids, execution_time
 
-async def load_extrait(path):
+async def load_extrait(path: Path) -> Optional[Dict[str, Any]]:
     """
     Charge un extrait de texte à partir d'un fichier.
+
+    Lit le contenu du fichier et retourne un dictionnaire contenant l'ID de l'extrait
+    (dérivé du nom du fichier), la description (nom du fichier), le chemin et
+    le contenu textuel.
+
+    :param path: Le chemin (objet Path) vers le fichier d'extrait.
+    :type path: Path
+    :return: Un dictionnaire avec les informations de l'extrait, ou None si une
+             erreur survient lors du chargement.
+    :rtype: Optional[Dict[str, Any]]
     """
     try:
         with open(path, 'r', encoding='utf-8') as f:
@@ -311,9 +427,22 @@ async def load_extrait(path):
         logger.error(f"Erreur lors du chargement de l'extrait {path}: {e}")
         return None
 
-async def run_performance_test(extrait):
+async def run_performance_test(extrait: Dict[str, Any]) -> Optional[Dict[str, Any]]:
     """
     Exécute un test complet de performance sur un extrait donné.
+
+    Ce test orchestre la configuration de l'agent, l'identification des arguments,
+    l'exploration de la hiérarchie des sophismes, l'analyse des sophismes pour
+    chaque argument identifié, et la collecte des résultats et des métriques
+    de performance.
+
+    :param extrait: Un dictionnaire contenant les informations de l'extrait à tester,
+                    notamment 'id' et 'texte'.
+    :type extrait: Dict[str, Any]
+    :return: Un dictionnaire contenant les résultats détaillés du test de performance
+             pour cet extrait, ou None si une erreur critique survient (par exemple,
+             échec de la création du service LLM).
+    :rtype: Optional[Dict[str, Any]]
     """
     logger.info(f"=== Test de performance sur l'extrait '{extrait['id']}' ===")
     
@@ -406,9 +535,18 @@ async def run_performance_test(extrait):
     logger.info(f"Résultats sauvegardés dans {results_path}")
     return results
 
-async def generate_performance_report(results):
+async def generate_performance_report(results: List[Dict[str, Any]]) -> Path:
     """
     Génère un rapport de performance basé sur les résultats des tests.
+
+    Crée un rapport en JSON et en Markdown synthétisant les performances
+    observées sur plusieurs extraits.
+
+    :param results: Une liste de dictionnaires, où chaque dictionnaire est le
+                    résultat d'un `run_performance_test` pour un extrait.
+    :type results: List[Dict[str, Any]]
+    :return: Le chemin (objet Path) du rapport de performance généré au format Markdown.
+    :rtype: Path
     """
     logger.info("Génération du rapport de performance...")
     

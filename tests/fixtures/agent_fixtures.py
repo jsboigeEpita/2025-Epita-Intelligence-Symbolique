@@ -14,10 +14,11 @@ import sys
 from unittest.mock import MagicMock, patch
 
 # Ajouter le répertoire racine au chemin Python pour pouvoir importer les modules
-sys.path.append(os.path.abspath('../..'))
+# sys.path.append(os.path.abspath('../..'))
+# Commenté car l'installation du package via `pip install -e .` devrait gérer l'accessibilité.
 
 # Import des modules à tester
-from argumentation_analysis.agents.core.informal.informal_agent import InformalAgent
+from argumentation_analysis.agents.core.informal.informal_agent import InformalAnalysisAgent as InformalAgent
 from argumentation_analysis.agents.core.informal.informal_definitions import FallacyDefinition, FallacyCategory
 from argumentation_analysis.agents.tools.analysis.enhanced.complex_fallacy_analyzer import ComplexFallacyAnalyzer
 from argumentation_analysis.agents.tools.analysis.enhanced.contextual_fallacy_analyzer import ContextualFallacyAnalyzer

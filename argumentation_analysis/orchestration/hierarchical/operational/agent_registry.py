@@ -8,6 +8,7 @@ et sélectionner l'agent approprié pour une tâche donnée.
 import logging
 from typing import Dict, List, Any, Optional, Type, Union
 import asyncio
+import semantic_kernel as sk # Ajout de l'import
 
 from argumentation_analysis.orchestration.hierarchical.operational.agent_interface import OperationalAgent
 from argumentation_analysis.orchestration.hierarchical.operational.state import OperationalState
@@ -25,22 +26,32 @@ class OperationalAgentRegistry:
     de sélectionner l'agent approprié pour une tâche donnée.
     """
     
-    def __init__(self, operational_state: Optional[OperationalState] = None):
+    def __init__(self,
+                 operational_state: Optional[OperationalState] = None,
+                 kernel: Optional[sk.Kernel] = None,
+                 llm_service_id: Optional[str] = None):
         """
         Initialise un nouveau registre d'agents opérationnels.
         
         Args:
             operational_state: État opérationnel à utiliser. Si None, un nouvel état est créé.
+            kernel: Le kernel Semantic Kernel à utiliser pour initialiser les agents.
+            llm_service_id: L'ID du service LLM à utiliser.
         """
         self.operational_state = operational_state if operational_state else OperationalState()
-        self.agents = {}
-        self.agent_classes = {
+        self.kernel = kernel
+        self.llm_service_id = llm_service_id
+        self.agents: Dict[str, OperationalAgent] = {}
+        self.agent_classes: Dict[str, Type[OperationalAgent]] = {
             "extract": ExtractAgentAdapter,
             "informal": InformalAgentAdapter,
             "pl": PLAgentAdapter,
             "rhetorical": RhetoricalToolsAdapter
         }
         self.logger = logging.getLogger("OperationalAgentRegistry")
+
+        if not self.kernel or not self.llm_service_id:
+            self.logger.warning("Kernel ou llm_service_id non fournis à OperationalAgentRegistry. L'initialisation des agents échouera.")
     
     async def get_agent(self, agent_type: str) -> Optional[OperationalAgent]:
         """
@@ -66,8 +77,12 @@ class OperationalAgentRegistry:
             agent_class = self.agent_classes[agent_type]
             agent = agent_class(name=f"{agent_type.capitalize()}Agent", operational_state=self.operational_state)
             
-            # Initialiser l'agent
-            success = await agent.initialize()
+            # Initialiser l'agent avec kernel et llm_service_id
+            if not self.kernel or not self.llm_service_id:
+                self.logger.error(f"Kernel ou llm_service_id manquant pour initialiser l'agent {agent_type}")
+                return None
+            
+            success = await agent.initialize(self.kernel, self.llm_service_id)
             if not success:
                 self.logger.error(f"Échec de l'initialisation de l'agent {agent_type}")
                 return None

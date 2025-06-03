@@ -1,51 +1,28 @@
 # Scripts Utilitaires
 
-Ce répertoire contient des scripts utilitaires pour la maintenance et la correction du code du projet.
+Ce répertoire contient divers scripts utilitaires pour le projet.
 
-## Liste des scripts
+## Gestion de l'Encodage
 
-### check_syntax.py
-Script pour vérifier la syntaxe d'un fichier Python. Il utilise les modules `ast` et `tokenize` pour analyser le code et détecter les erreurs de syntaxe.
+Deux scripts principaux sont fournis pour la gestion de l'encodage des fichiers :
 
-**Usage :** 
-```bash
-python check_syntax.py <file_path>
-```
+- **`check_encoding.py`**:
+  Ce script vérifie l'encodage de tous les fichiers Python (`.py`) au sein du projet pour s'assurer qu'ils sont bien en UTF-8. Il utilise la fonction `check_project_python_files_encoding` du module `project_core.dev_utils.encoding_utils`.
+  C'est un outil de diagnostic utile pour maintenir la cohérence de l'encodage à travers le projet.
 
-### fix_docstrings.py
-Script pour corriger les problèmes d'apostrophes dans les docstrings des fichiers Python. Il remplace les apostrophes problématiques par des versions correctement échappées.
+- **`fix_encoding.py`**:
+  Ce script permet de convertir l'encodage d'un fichier spécifique vers UTF-8 (ou un autre encodage cible). Il tente de détecter l'encodage source (ou accepte une liste d'encodages source potentiels) et réécrit le fichier avec le nouvel encodage. Il utilise la fonction `fix_file_encoding` du module `project_core.dev_utils.encoding_utils`.
+  C'est un outil de correction à utiliser lorsqu'un fichier avec un encodage incorrect est identifié.
 
-**Usage :**
-```bash
-python fix_docstrings.py <file_path>
-```
+**Choix de Conception :**
 
-### fix_encoding.py
-Script pour corriger l'encodage d'un fichier. Il essaie de décoder le fichier avec différents encodages (utf-8, latin-1, cp1252, iso-8859-1) et le réencode en UTF-8.
+La logique métier pour la vérification et la correction de l'encodage a été centralisée dans le module `project_core.dev_utils.encoding_utils.py`. Les scripts présents dans ce répertoire (`scripts/utils/`) servent d'interfaces en ligne de commande (CLI) pour accéder facilement à ces fonctionnalités. Cette séparation permet :
+1.  **Réutilisabilité :** Les fonctions utilitaires dans `project_core` peuvent être appelées par d'autres parties du projet ou d'autres scripts si nécessaire.
+2.  **Clarté :** Les scripts CLI restent simples et se concentrent sur l'interaction avec l'utilisateur et le passage d'arguments, tandis que la logique complexe est encapsulée dans les modules utilitaires.
+3.  **Maintenabilité :** Les modifications de la logique d'encodage se font à un seul endroit (`project_core.dev_utils.encoding_utils.py`), facilitant la maintenance et les mises à jour.
 
-**Usage :**
-```bash
-python fix_encoding.py <file_path>
-```
+Il n'y a donc pas de "fusion" à faire entre `check_encoding.py` et `fix_encoding.py` eux-mêmes, car ils exposent des fonctionnalités distinctes et déjà modularisées. La solution actuelle est considérée comme la meilleure approche.
 
-### fix_indentation.py
-Script pour corriger l'indentation d'un fichier Python. Il analyse la structure du code (classes, méthodes, fonctions) et applique une indentation cohérente.
+## Autres Utilitaires
 
-**Usage :**
-```bash
-python fix_indentation.py <file_path>
-```
-
-## Utilisation générale
-
-Ces scripts peuvent être utilisés individuellement pour corriger des problèmes spécifiques dans les fichiers du projet. Ils sont particulièrement utiles lors de la maintenance du code ou de l'intégration de nouvelles fonctionnalités.
-
-Pour exécuter un script sur un fichier spécifique :
-
-```bash
-python scripts/utils/<script_name>.py <file_path>
-```
-
-## Note
-
-Ces scripts ont été créés pour résoudre des problèmes spécifiques rencontrés lors du développement du projet. Ils peuvent nécessiter des ajustements en fonction de l'évolution des besoins du projet.
+D'autres scripts utilitaires peuvent être présents dans ce répertoire pour diverses tâches de maintenance, d'analyse ou de test.

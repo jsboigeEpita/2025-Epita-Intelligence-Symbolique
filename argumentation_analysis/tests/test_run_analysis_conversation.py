@@ -3,21 +3,23 @@
 Tests unitaires pour la fonction run_analysis_conversation du module analysis_runner.
 """
 
-import unittest
+import pytest # Ajout de pytest
 from unittest.mock import patch, MagicMock, AsyncMock
 import asyncio
-from tests.async_test_case import AsyncTestCase
+# from tests.async_test_case import AsyncTestCase # Suppression de l'import
 from argumentation_analysis.orchestration.analysis_runner import run_analysis_conversation
 
 
-class TestRunAnalysisConversation(AsyncTestCase):
+class TestRunAnalysisConversation:
     """Tests pour la fonction run_analysis_conversation."""
 
-    def setUp(self):
-        """Initialisation avant chaque test."""
-        self.test_text = "Ceci est un texte de test pour l'analyse."
-        self.mock_llm_service = MagicMock()
-        self.mock_llm_service.service_id = "test_service_id"
+    @pytest.fixture
+    def run_analysis_components(self):
+        """Fixture pour initialiser les composants de test."""
+        test_text = "Ceci est un texte de test pour l'analyse."
+        mock_llm_service = MagicMock()
+        mock_llm_service.service_id = "test_service_id"
+        return test_text, mock_llm_service
 
     @patch('argumentation_analysis.orchestration.analysis_runner.RhetoricalAnalysisState')
     @patch('argumentation_analysis.orchestration.analysis_runner.StateManagerPlugin')
@@ -31,7 +33,7 @@ class TestRunAnalysisConversation(AsyncTestCase):
     @patch('argumentation_analysis.orchestration.analysis_runner.AgentGroupChat')
     @patch('argumentation_analysis.orchestration.analysis_runner.ChatCompletionAgent')
     async def test_run_analysis_conversation_success(
-        self, 
+        self,
         mock_chat_completion_agent,
         mock_agent_group_chat,
         mock_balanced_participation_strategy,
@@ -42,9 +44,11 @@ class TestRunAnalysisConversation(AsyncTestCase):
         mock_setup_pm_kernel,
         mock_kernel_class,
         mock_state_manager_plugin,
-        mock_rhetorical_analysis_state
+        mock_rhetorical_analysis_state,
+        run_analysis_components # Ajout de la fixture
     ):
         """Teste l'exécution réussie de la fonction run_analysis_conversation."""
+        test_text, mock_llm_service = run_analysis_components
         # Configurer les mocks
         mock_state = MagicMock()
         mock_rhetorical_analysis_state.return_value = mock_state
@@ -107,38 +111,39 @@ class TestRunAnalysisConversation(AsyncTestCase):
         
         # Appeler la fonction à tester
         await run_analysis_conversation(
-            texte_a_analyser=self.test_text,
-            llm_service=self.mock_llm_service
+            texte_a_analyser=test_text,
+            llm_service=mock_llm_service
         )
         
         # Vérifier que les mocks ont été appelés correctement
-        mock_rhetorical_analysis_state.assert_called_once_with(initial_text=self.test_text)
+        mock_rhetorical_analysis_state.assert_called_once_with(initial_text=test_text)
         mock_state_manager_plugin.assert_called_once_with(mock_state)
         mock_kernel_class.assert_called_once()
-        mock_kernel.add_service.assert_called_once_with(self.mock_llm_service)
+        mock_kernel.add_service.assert_called_once_with(mock_llm_service)
         mock_kernel.add_plugin.assert_called_once()
-        mock_setup_pm_kernel.assert_called_once_with(mock_kernel, self.mock_llm_service)
-        mock_setup_informal_kernel.assert_called_once_with(mock_kernel, self.mock_llm_service)
-        mock_setup_pl_kernel.assert_called_once_with(mock_kernel, self.mock_llm_service)
-        mock_setup_extract_agent.assert_called_once_with(self.mock_llm_service)
-        mock_kernel.get_prompt_execution_settings_from_service_id.assert_called_once_with(self.mock_llm_service.service_id)
-        self.assertEqual(mock_chat_completion_agent.call_count, 4)
+        mock_setup_pm_kernel.assert_called_once_with(mock_kernel, mock_llm_service)
+        mock_setup_informal_kernel.assert_called_once_with(mock_kernel, mock_llm_service)
+        mock_setup_pl_kernel.assert_called_once_with(mock_kernel, mock_llm_service)
+        mock_setup_extract_agent.assert_called_once_with(mock_llm_service)
+        mock_kernel.get_prompt_execution_settings_from_service_id.assert_called_once_with(mock_llm_service.service_id)
+        assert mock_chat_completion_agent.call_count == 4
         mock_simple_termination_strategy.assert_called_once_with(mock_state, max_steps=15)
         mock_balanced_participation_strategy.assert_called_once()
         mock_agent_group_chat.assert_called_once()
         mock_history.add_user_message.assert_called_once()
 
     @patch('argumentation_analysis.orchestration.analysis_runner.RhetoricalAnalysisState')
-    async def test_run_analysis_conversation_invalid_llm_service(self, mock_rhetorical_analysis_state):
+    async def test_run_analysis_conversation_invalid_llm_service(self, mock_rhetorical_analysis_state, run_analysis_components):
         """Teste la gestion des erreurs avec un service LLM invalide."""
+        test_text, _ = run_analysis_components
         # Configurer un service LLM invalide
         invalid_llm_service = MagicMock()
         delattr(invalid_llm_service, 'service_id')
         
         # Appeler la fonction à tester et vérifier qu'elle lève une exception
-        with self.assertRaises(ValueError):
+        with pytest.raises(ValueError):
             await run_analysis_conversation(
-                texte_a_analyser=self.test_text,
+                texte_a_analyser=test_text,
                 llm_service=invalid_llm_service
             )
         
@@ -153,9 +158,11 @@ class TestRunAnalysisConversation(AsyncTestCase):
         self,
         mock_kernel_class,
         mock_state_manager_plugin,
-        mock_rhetorical_analysis_state
+        mock_rhetorical_analysis_state,
+        run_analysis_components # Ajout de la fixture
     ):
         """Teste la gestion des erreurs AgentChatException."""
+        test_text, mock_llm_service = run_analysis_components
         # Configurer les mocks
         mock_state = MagicMock()
         mock_rhetorical_analysis_state.return_value = mock_state
@@ -171,16 +178,16 @@ class TestRunAnalysisConversation(AsyncTestCase):
         
         # Appeler la fonction à tester
         await run_analysis_conversation(
-            texte_a_analyser=self.test_text,
-            llm_service=self.mock_llm_service
+            texte_a_analyser=test_text,
+            llm_service=mock_llm_service
         )
         
         # Vérifier que les mocks ont été appelés correctement
-        mock_rhetorical_analysis_state.assert_called_once_with(initial_text=self.test_text)
+        mock_rhetorical_analysis_state.assert_called_once_with(initial_text=test_text)
         mock_state_manager_plugin.assert_called_once_with(mock_state)
         mock_kernel_class.assert_called_once()
-        mock_kernel.add_service.assert_called_once_with(self.mock_llm_service)
+        mock_kernel.add_service.assert_called_once_with(mock_llm_service)
 
 
-if __name__ == '__main__':
-    unittest.main()
+# if __name__ == '__main__': # Supprimé car pytest gère l'exécution
+#     unittest.main()

@@ -17,6 +17,7 @@ import tempfile
 from unittest.mock import patch, MagicMock
 from pathlib import Path
 from datetime import datetime
+import asyncio # Ajout de l'import asyncio
 
 # Ajouter le répertoire parent au chemin de recherche des modules
 current_dir = Path(__file__).parent
@@ -133,16 +134,20 @@ class TestRhetoricalToolsIntegration(unittest.TestCase):
         self.assertIn("contextual_fallacies", contextual_fallacy_results)
         
         # Utiliser le détecteur de sophismes contextuels pour détecter des sophismes
-        detector_results = self.contextual_fallacy_detector.detect_contextual_fallacies(self.test_arguments, self.test_context)
+        # La méthode detect_contextual_fallacies attend un seul argument (str), pas une liste.
+        # On teste avec le premier argument pour la cohérence avec l'appel précédent à analyze_context.
+        detector_results = self.contextual_fallacy_detector.detect_contextual_fallacies(self.test_arguments[0], self.test_context)
         
         # Vérifier que la détection a produit des résultats
         self.assertIsNotNone(detector_results)
-        self.assertIn("context_analysis", detector_results)
+        self.assertIn("argument", detector_results) # Clé retournée par detect_contextual_fallacies
         self.assertIn("detected_fallacies", detector_results)
         
-        # Comparer les résultats des deux outils
-        self.assertEqual(contextual_fallacy_results["context_analysis"]["context_type"], 
-                         detector_results["context_analysis"]["context_type"])
+        # Comparer les résultats des deux outils (le type de contexte inféré)
+        # contextual_fallacy_results['context_analysis']['context_type']
+        # detector_results['contextual_factors']['domain'] (inféré par _infer_contextual_factors)
+        self.assertEqual(contextual_fallacy_results["context_analysis"]["context_type"],
+                         detector_results.get("contextual_factors", {}).get("domain"))
 
     def test_semantic_argument_analyzer_integration(self):
         """Teste l'intégration de l'analyseur d'arguments sémantiques avec d'autres outils."""
@@ -152,38 +157,45 @@ class TestRhetoricalToolsIntegration(unittest.TestCase):
         # Vérifier que l'analyse a produit des résultats
         self.assertIsNotNone(semantic_results)
         self.assertIn("argument_analyses", semantic_results)
-        self.assertIn("semantic_relationships", semantic_results)
-        self.assertIn("thematic_coherence", semantic_results)
+        self.assertIn("semantic_relations", semantic_results) # Corrigé: semantic_relationships -> semantic_relations
+        # self.assertIn("thematic_coherence", semantic_results) # Clé non présente directement dans semantic_results
         
         # Utiliser l'évaluateur de cohérence pour évaluer la cohérence des arguments
-        coherence_results = self.argument_coherence_evaluator.evaluate_argument_coherence(self.test_arguments, self.test_context)
+        coherence_results = self.argument_coherence_evaluator.evaluate_coherence(self.test_arguments, self.test_context) # Corrigé: evaluate_argument_coherence -> evaluate_coherence
         
         # Vérifier que l'évaluation de cohérence a produit des résultats
         self.assertIsNotNone(coherence_results)
         self.assertIn("overall_coherence", coherence_results)
-        self.assertIn("coherence_level", coherence_results)
-        self.assertIn("thematic_coherence", coherence_results)
+        self.assertIn("level", coherence_results.get("overall_coherence", {})) # Corrigé: coherence_level est dans overall_coherence
+        self.assertIn("thématique", coherence_results.get("coherence_evaluations", {})) # Corrigé: thematic_coherence est dans coherence_evaluations
         
         # Comparer les résultats des deux outils
-        self.assertIsNotNone(semantic_results["thematic_coherence"])
-        self.assertIsNotNone(coherence_results["thematic_coherence"])
+        # La clé "thematic_coherence" n'est pas directement dans semantic_results.
+        # coherence_results contient "coherence_evaluations" qui a une sous-clé "thématique"
+        self.assertIn("thématique", coherence_results.get("coherence_evaluations", {}))
+        self.assertIsNotNone(coherence_results.get("coherence_evaluations", {}).get("thématique"))
 
     def test_rhetorical_result_analyzer_integration(self):
         """Teste l'intégration de l'analyseur de résultats rhétoriques avec d'autres outils."""
         # Créer des résultats d'analyse pour le test
         test_results = {
+            # Ajout de identified_arguments et identified_fallacies pour EnhancedRhetoricalResultVisualizer
+            "identified_arguments": {f"arg_{i}": arg_text for i, arg_text in enumerate(self.test_arguments)},
+            "identified_fallacies": {
+                "fallacy_test_1": {"type": "Appel à l'émotion", "target_argument_id": "arg_4"}
+            },
             "complex_fallacy_analysis": self.complex_fallacy_analyzer.detect_composite_fallacies(self.test_arguments, self.test_context),
             "contextual_fallacy_analysis": {
-                "context_analysis": self.contextual_fallacy_analyzer._analyze_context_deeply(self.test_context),
+                "context_analysis": self.contextual_fallacy_analyzer._analyze_context_deeply(self.test_context), # _analyze_context_deeply est une méthode protégée
                 "contextual_fallacies": [
                     {
                         "fallacy_type": "Appel à l'émotion",
-                        "context_text": self.test_arguments[4],
+                        "context_text": self.test_arguments[4], # Texte de l'argument
                         "confidence": 0.8
                     }
                 ]
             },
-            "argument_coherence_evaluation": self.argument_coherence_evaluator.evaluate_argument_coherence(self.test_arguments, self.test_context)
+            "argument_coherence_evaluation": self.argument_coherence_evaluator.evaluate_coherence(self.test_arguments, self.test_context)
         }
         
         # Analyser les résultats rhétoriques
@@ -207,9 +219,10 @@ class TestRhetoricalToolsIntegration(unittest.TestCase):
             
             # Vérifier que la visualisation a produit des résultats
             self.assertIsNotNone(visualization_results)
-            self.assertIn("visualization_summary", visualization_results)
-            self.assertIn("generated_visualizations", visualization_results)
-            self.assertIn("output_directory", visualization_results)
+            self.assertIn("argument_network", visualization_results) # Clés directes des chemins
+            self.assertIn("fallacy_distribution", visualization_results)
+            self.assertIn("argument_quality", visualization_results)
+            self.assertIn("html_report", visualization_results)
 
     def test_argument_structure_visualizer_integration(self):
         """Teste l'intégration du visualiseur de structure d'arguments avec d'autres outils."""
@@ -217,14 +230,14 @@ class TestRhetoricalToolsIntegration(unittest.TestCase):
         semantic_results = self.semantic_argument_analyzer.analyze_multiple_arguments(self.test_arguments)
         
         # Extraire les relations sémantiques
-        semantic_relationships = semantic_results["semantic_relationships"]
+        semantic_relationships = semantic_results["semantic_relations"] # Corrigé
         
         # Utiliser le visualiseur de structure d'arguments pour visualiser la structure
         with tempfile.TemporaryDirectory() as temp_dir:
             output_dir = Path(temp_dir)
             
             visualization_results = self.argument_structure_visualizer.visualize_argument_structure(
-                self.test_arguments, self.test_context, "json", output_dir=str(output_dir)
+                self.test_arguments, self.test_context, "json", output_path=str(output_dir) # Corrigé: output_dir -> output_path
             )
             
             # Vérifier que la visualisation a produit des résultats
@@ -238,7 +251,7 @@ class TestRhetoricalToolsIntegration(unittest.TestCase):
     def test_rhetorical_tools_adapter_integration(self):
         """Teste l'intégration de l'adaptateur des outils rhétoriques avec le système d'orchestration."""
         # Initialiser l'adaptateur
-        self.rhetorical_tools_adapter.initialize()
+        asyncio.run(self.rhetorical_tools_adapter.initialize())
         
         # Vérifier les capacités de l'adaptateur
         capabilities = self.rhetorical_tools_adapter.get_capabilities()

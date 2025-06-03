@@ -16,6 +16,11 @@ import subprocess
 import platform
 from pathlib import Path
 
+# Ajout du répertoire racine du projet au chemin pour permettre l'import des modules
+project_root_path_setup = Path(__file__).resolve().parent.parent.parent
+if str(project_root_path_setup) not in sys.path:
+    sys.path.insert(0, str(project_root_path_setup))
+
 # Configuration du logging
 logging.basicConfig(
     level=logging.INFO,
@@ -30,7 +35,7 @@ DEPENDENCIES = [
     {"name": "numpy", "min_version": "1.24.0"},
     {"name": "pandas", "min_version": "2.0.0"},
     {"name": "matplotlib", "min_version": "3.5.0"},
-    {"name": "jpype", "min_version": "1.4.0", "import_name": "jpype1"},
+    {"name": "jpype", "min_version": "1.4.0", "import_name": "jpype"},
     {"name": "cryptography", "min_version": "37.0.0"},
     {"name": "cffi", "min_version": "1.15.0"},
     

@@ -70,66 +70,61 @@ Le cycle de vie d'une analyse argumentative suit les étapes suivantes :
 
 #### Prérequis
 
-- **Python 3.10+** : Nécessaire pour exécuter le code Python
-- **Java JDK 11+** : Requis pour l'intégration avec Tweety via JPype
-- **Git** : Pour cloner le dépôt et gérer les versions
+- **Conda (Miniconda ou Anaconda)** : Nécessaire pour la gestion de l'environnement et des dépendances.
+- **Git** : Pour cloner le dépôt et gérer les versions.
+- **PowerShell** (recommandé pour les scripts fournis).
 
 #### Étapes d'Installation
 
-1. **Créez un fork du dépôt principal** :
-   - Connectez-vous à votre compte GitHub
-   - Accédez au dépôt principal : [https://github.com/jsboigeEpita/2025-Epita-Intelligence-Symbolique](https://github.com/jsboigeEpita/2025-Epita-Intelligence-Symbolique)
-   - Cliquez sur le bouton "Fork" en haut à droite de la page
-   - Sélectionnez votre compte comme destination du fork
+1.  **Créez un fork du dépôt principal** :
+    *   Connectez-vous à votre compte GitHub.
+    *   Accédez au dépôt principal : [https://github.com/jsboigeEpita/2025-Epita-Intelligence-Symbolique](https://github.com/jsboigeEpita/2025-Epita-Intelligence-Symbolique)
+    *   Cliquez sur le bouton "Fork" en haut à droite de la page.
+    *   Sélectionnez votre compte comme destination du fork.
 
-2. **Clonez votre fork** :
-   ```bash
-   git clone https://github.com/VOTRE_NOM_UTILISATEUR/2025-Epita-Intelligence-Symbolique.git
-   cd 2025-Epita-Intelligence-Symbolique
-   ```
+2.  **Clonez votre fork** sur votre machine locale :
+    ```bash
+    git clone https://github.com/VOTRE_NOM_UTILISATEUR/2025-Epita-Intelligence-Symbolique.git
+    cd 2025-Epita-Intelligence-Symbolique
+    ```
+    Remplacez `VOTRE_NOM_UTILISATEUR` par votre nom d'utilisateur GitHub.
 
-3. **Créez un environnement virtuel** :
-   ```bash
-   python -m venv venv
-   ```
+3.  **Configurez l'environnement Conda** :
+    *   Assurez-vous que Conda est installé et accessible. Si ce n'est pas le cas, installez Miniconda depuis [https://docs.conda.io/en/latest/miniconda.html](https://docs.conda.io/en/latest/miniconda.html).
+    *   Ouvrez un terminal PowerShell à la racine du projet cloné.
+    *   Exécutez le script de configuration :
+        ```powershell
+        .\setup_project_env.ps1
+        ```
+        Ce script va :
+        *   Vérifier la présence de Conda.
+        *   Créer ou mettre à jour l'environnement Conda `projet-is` à partir du fichier [`environment.yml`](environment.yml:1). Cet environnement inclut Python 3.10, Clingo, JPype1, et toutes les autres dépendances.
+        *   Gérer l'installation d'un JDK portable (pour JPype) si nécessaire.
+        *   Créer et configurer un fichier `.env` à la racine du projet pour les variables d'environnement (comme `JAVA_HOME`, et les emplacements pour les clés API).
+        *   Vous demander de confirmer la suppression d'anciens répertoires `venv` s'ils sont détectés.
+    *   Si vous rencontrez des problèmes d'exécution de script PowerShell, vous pourriez avoir besoin d'exécuter :
+        ```powershell
+        Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
+        ```
+        Puis relancez le script `.\setup_project_env.ps1`.
 
-4. **Activez l'environnement** :
-   - Windows PowerShell : `..\venv\Scripts\activate` (peut nécessiter `Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope Process`)
-   - Windows CMD : `..\venv\Scripts\activate.bat`
-   - Linux/macOS : `source venv/bin/activate`
+4.  **Activez l'environnement Conda** :
+    Après l'exécution réussie de `setup_project_env.ps1`, ouvrez un nouveau terminal (ou dans le même si Conda est bien initialisé) et activez l'environnement :
+    ```bash
+    conda activate projet-is
+    ```
+    Votre invite de commande devrait maintenant être préfixée par `(projet-is)`.
 
-### Installation des Dépendances
+### Configuration des Variables d'Environnement (Post-Setup)
 
-Naviguez vers le dossier principal du projet et installez les dépendances :
+Le script `setup_project_env.ps1` crée un fichier `.env` à la racine du projet. Ce fichier est préconfiguré avec `JAVA_HOME`.
+Vous devrez peut-être modifier ce fichier `.env` pour ajouter :
+-   Vos clés API pour les services LLM (par exemple, `OPENAI_API_KEY` ou les variables pour Azure OpenAI).
+-   La phrase secrète `TEXT_CONFIG_PASSPHRASE` si vous utilisez des configurations d'interface utilisateur chiffrées.
+-   Toute autre variable d'environnement spécifique à votre configuration ou aux services que vous utilisez.
 
-```bash
-cd argumentation_analysis
-pip install -r requirements.txt
-```
-
-Les dépendances principales incluent :
-- `semantic-kernel` : Pour la gestion des agents IA
-- `python-dotenv` : Pour la gestion des variables d'environnement
-- `jpype1` : Pour l'intégration Java-Python (Tweety)
-- `ipywidgets` et `jupyter-ui-poll` : Pour l'interface utilisateur interactive
-- Et d'autres bibliothèques utilitaires
-
-### Configuration des Variables d'Environnement
-
-1. **Créez un fichier `.env`** dans le dossier `argumentation_analysis` en vous basant sur le fichier `.env.example` :
-   ```bash
-   cp .env.example .env
-   ```
-
-2. **Modifiez le fichier `.env`** avec vos propres informations :
-   - Vos clés API LLM (OpenAI ou Azure OpenAI)
-   - Vos identifiants de modèle/déploiement (`OPENAI_CHAT_MODEL_ID`, `OPENAI_ENDPOINT` si Azure)
-   - Une phrase secrète pour chiffrer la configuration UI (`TEXT_CONFIG_PASSPHRASE`)
-
-3. **Configurez `JAVA_HOME`** pour pointer vers votre installation JDK :
-   - Windows : ex: `C:\Program Files\Java\jdk-17` (Adaptez). Ajoutez aux variables d'environnement système/utilisateur.
-   - Linux/macOS : ex: `/usr/lib/jvm/java-17-openjdk-amd64`. Ajoutez `export JAVA_HOME=/chemin/vers/jdk` à votre `~/.bashrc` ou `~/.zshrc`.
-   - **Important** : Redémarrez votre terminal/IDE après avoir défini `JAVA_HOME`.
+Consultez le fichier `.env.template` (s'il existe) ou la documentation des modules spécifiques pour connaître les variables requises.
+Le `JAVA_HOME` est géré par le script de setup et ne devrait normalement pas nécessiter de modification manuelle dans le `.env` après le setup.
 
 ## Structure du Projet
 

@@ -443,6 +443,14 @@ class EnhancedComplexFallacyAnalyzer(BaseAnalyzer):
             coherence_level = "Faible"
         else:
             coherence_level = "Très faible"
+        
+        return {
+            "coherence_score": coherence_score,
+            "coherence_level": coherence_level,
+            "disconnected_arguments": disconnected_arguments,
+            "contradictory_relations": contradictory_relations,
+            "circular_reasoning": circular_reasoning
+        }
             
     def detect_composite_fallacies(self, arguments: List[str], context: str = "général") -> Dict[str, Any]:
         """
@@ -1275,32 +1283,9 @@ class EnhancedComplexFallacyAnalyzer(BaseAnalyzer):
         }
 
 
-# Test de la classe si exécutée directement
-if __name__ == "__main__":
-    analyzer = EnhancedComplexFallacyAnalyzer()
-    
-    # Exemple d'analyse de structure argumentative
-    arguments = [
-        "Les experts affirment que ce produit est sûr.",
-        "Ce produit est utilisé par des millions de personnes.",
-        "Par conséquent, vous devriez faire confiance aux experts et utiliser ce produit.",
-        "Si vous n'utilisez pas ce produit, vous risquez de souffrir de problèmes de santé graves."
-    ]
-    
-    structure_results = analyzer.analyze_argument_structure(arguments, "commercial")
-    print(f"Résultats de l'analyse de structure argumentative: {json.dumps(structure_results, indent=2, ensure_ascii=False)}")
-    
-    # Exemple de détection de sophismes composés
-    composite_results = analyzer.detect_composite_fallacies(arguments, "commercial")
-    print(f"Résultats de la détection de sophismes composés: {json.dumps(composite_results, indent=2, ensure_ascii=False)}")
-    
-    # Exemple d'analyse de cohérence inter-arguments
-    coherence_results = analyzer.analyze_inter_argument_coherence(arguments, "commercial")
-    print(f"Résultats de l'analyse de cohérence inter-arguments: {json.dumps(coherence_results, indent=2, ensure_ascii=False)}")
-    
-# Cette méthode a été déplacée plus haut dans le fichier
-    
-    def _analyze_structure_vulnerabilities(
+    # Cette méthode a été déplacée plus haut dans le fichier
+    # Correction de l'indentation pour que la méthode fasse partie de la classe
+    def _analyze_structure_vulnerabilities( # Cette méthode doit être indentée pour appartenir à la classe
         self,
         argument_structures: List[Dict[str, Any]],
         argument_relations: List[Dict[str, Any]]
@@ -1363,3 +1348,27 @@ if __name__ == "__main__":
             "vulnerability_level": vulnerability_level,
             "specific_vulnerabilities": vulnerabilities
         }
+
+# Test de la classe si exécutée directement
+if __name__ == "__main__":
+    analyzer = EnhancedComplexFallacyAnalyzer()
+    
+    # Exemple d'analyse de structure argumentative
+    arguments = [
+        "Les experts affirment que ce produit est sûr.",
+        "Ce produit est utilisé par des millions de personnes.",
+        "Par conséquent, vous devriez faire confiance aux experts et utiliser ce produit.",
+        "Si vous n'utilisez pas ce produit, vous risquez de souffrir de problèmes de santé graves."
+    ]
+    
+    structure_results = analyzer.analyze_argument_structure(arguments, "commercial")
+    print(f"Résultats de l'analyse de structure argumentative: {json.dumps(structure_results, indent=2, ensure_ascii=False)}")
+    
+    # Exemple de détection de sophismes composés
+    composite_results = analyzer.detect_composite_fallacies(arguments, "commercial")
+    print(f"Résultats de la détection de sophismes composés: {json.dumps(composite_results, indent=2, ensure_ascii=False)}")
+    
+    # Exemple d'analyse de cohérence inter-arguments
+    coherence_results = analyzer.analyze_inter_argument_coherence(arguments, "commercial")
+    print(f"Résultats de l'analyse de cohérence inter-arguments: {json.dumps(coherence_results, indent=2, ensure_ascii=False)}")
+    

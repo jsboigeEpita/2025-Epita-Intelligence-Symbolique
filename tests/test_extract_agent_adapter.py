@@ -5,11 +5,11 @@
 Tests unitaires pour le module orchestration.hierarchical.operational.adapters.extract_agent_adapter.
 """
 
-import unittest
-from unittest.mock import Mock, MagicMock, patch
+import pytest
+import pytest_asyncio # Ajout de l'import
 import sys
 import os
-from unittest.mock import MagicMock, patch, AsyncMock
+from unittest.mock import MagicMock, patch, AsyncMock, Mock # Mock est toujours utilisé pour les instances de mock_extract_agent etc.
 import asyncio
 import logging
 
@@ -22,7 +22,11 @@ logging.basicConfig(
 logger = logging.getLogger("TestExtractAgentAdapter")
 
 # Ajouter le répertoire racine au chemin Python pour pouvoir importer les modules
-sys.path.append(os.path.abspath('..'))
+project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+if project_root not in sys.path:
+    sys.path.insert(0, project_root)
+# L'installation du package via `pip install -e .` devrait gérer l'accessibilité,
+# mais cette modification assure le fonctionnement même sans installation en mode édition.
 
 # Import des modules à tester
 from argumentation_analysis.orchestration.hierarchical.operational.adapters.extract_agent_adapter import ExtractAgentAdapter
@@ -39,7 +43,6 @@ class MockExtractAgent:
         self.state.task_dependencies = {}
         self.state.tasks = {}
         
-        # Configuration des méthodes pour retourner les bons statuts
         self.extract_text = AsyncMock(return_value={
             "status": "success",
             "extracts": [
@@ -73,6 +76,16 @@ class MockExtractAgent:
                 "language": "fr"
             }
         })
+
+        self.extract_from_name = AsyncMock(return_value=MagicMock(
+            status="valid",
+            message="Extraction réussie simulée par extract_from_name",
+            explanation="Mock explanation",
+            start_marker="<MOCK_START>",
+            end_marker="<MOCK_END>",
+            template_start="<MOCK_TEMPLATE_START>",
+            extracted_text="Texte extrait simulé via extract_from_name"
+        ))
         
     def process_extract(self, *args, **kwargs):
         return {"status": "success", "data": []}
@@ -132,16 +145,18 @@ async def mock_setup_extract_agent():
     return kernel, extract_agent
 
 
-class TestExtractAgentAdapter(unittest.TestCase):
+@pytest.mark.skip(reason="Ce fichier de test est obsolète et remplacé par tests/orchestration/hierarchical/operational/adapters/test_extract_agent_adapter.py")
+class TestExtractAgentAdapter:
     """Tests unitaires pour l'adaptateur d'agent d'extraction."""
-    
-    def setUp(self):
+
+    @pytest_asyncio.fixture(autouse=True) # Changement ici
+    async def setup_adapter(self): # mocker retiré des paramètres
         """Initialisation avant chaque test."""
         # Créer les mocks
         self.mock_extract_agent = Mock()
         self.mock_validation_agent = Mock()
         self.mock_extract_plugin = Mock()
-        
+
         # Configuration des mocks pour les tests
         self.mock_extract_agent.process_extract.return_value = {"status": "success"}
         self.mock_validation_agent.validate.return_value = True
@@ -150,209 +165,190 @@ class TestExtractAgentAdapter(unittest.TestCase):
         self.mock_extract_plugin.get_supported_formats.return_value = ["txt", "pdf", "docx"]
         # Créer un état opérationnel mock
         self.operational_state = OperationalState()
-        
-        # Patcher les imports pour utiliser nos mocks
-        self.patches = []
-        
-        # Patcher setup_extract_agent
-        setup_extract_agent_patch = patch('argumentation_analysis.orchestration.hierarchical.operational.adapters.extract_agent_adapter.setup_extract_agent', 
+
+        # Patcher setup_extract_agent avec unittest.mock.patch
+        self.patcher = patch('argumentation_analysis.orchestration.hierarchical.operational.adapters.extract_agent_adapter.setup_extract_agent',
                                          side_effect=mock_setup_extract_agent)
-        self.patches.append(setup_extract_agent_patch)
-        setup_extract_agent_patch.start()
-        
+        self.mock_setup_extract_agent = self.patcher.start()
+
         # Créer l'adaptateur d'agent d'extraction
         self.adapter = ExtractAgentAdapter(name="TestExtractAgent", operational_state=self.operational_state)
-        
-        # Exécuter initialize() de manière synchrone
-        loop = asyncio.get_event_loop()
-        loop.run_until_complete(self.adapter.initialize())
-    
+
+        await self.adapter.initialize()
+
     def tearDown(self):
         """Nettoyage après chaque test."""
-        # Arrêter tous les patchers
-        for patcher in self.patches:
-            patcher.stop()
-    
-    def test_initialization(self):
+        if hasattr(self, 'patcher'): # S'assurer que le patcher a été initialisé
+            self.patcher.stop()
+
+    @pytest.mark.asyncio
+    async def test_initialization(self):
         """Teste l'initialisation de l'adaptateur d'agent d'extraction."""
-        # Vérifier que l'adaptateur a été correctement initialisé
-        self.assertIsNotNone(self.adapter)
-        self.assertEqual(self.adapter.name, "TestExtractAgent")
-        self.assertEqual(self.adapter.operational_state, self.operational_state)
-        self.assertIsNotNone(self.adapter.extract_agent)
-        self.assertIsNotNone(self.adapter.kernel)
-        self.assertTrue(self.adapter.initialized)
-    
-    def test_get_capabilities(self):
+        assert self.adapter is not None
+        assert self.adapter.name == "TestExtractAgent"
+        assert self.adapter.operational_state == self.operational_state
+        assert self.adapter.extract_agent is not None
+        assert self.adapter.kernel is not None
+        assert self.adapter.initialized is True
+
+    @pytest.mark.asyncio
+    async def test_get_capabilities(self):
         """Teste la méthode get_capabilities."""
-        # Appeler la méthode get_capabilities
         capabilities = self.adapter.get_capabilities()
-        
-        # Vérifier que les capacités sont correctes
-        self.assertIsInstance(capabilities, list)
-        self.assertIn("text_extraction", capabilities)
-        self.assertIn("preprocessing", capabilities)
-        self.assertIn("extract_validation", capabilities)
-    
-    def test_can_process_task(self):
+        assert isinstance(capabilities, list)
+        assert "text_extraction" in capabilities
+        assert "preprocessing" in capabilities
+        assert "extract_validation" in capabilities
+
+    @pytest.mark.asyncio
+    async def test_can_process_task(self):
         """Teste la méthode can_process_task."""
-        # Créer une tâche que l'adaptateur peut traiter
-        task = {
+        task_can_process = {
             "id": "task-1",
             "description": "Extraire le texte",
             "required_capabilities": ["text_extraction"]
         }
-        
-        # Appeler la méthode can_process_task
-        can_process = self.adapter.can_process_task(task)
-        
-        # Vérifier que l'adaptateur peut traiter la tâche
-        self.assertTrue(can_process)
-        
-        # Créer une tâche que l'adaptateur ne peut pas traiter
-        task = {
+        assert self.adapter.can_process_task(task_can_process) is True
+
+        task_cannot_process = {
             "id": "task-2",
             "description": "Analyser les sophismes",
             "required_capabilities": ["fallacy_detection"]
         }
-        
-        # Appeler la méthode can_process_task
-        can_process = self.adapter.can_process_task(task)
-        
-        # Vérifier que l'adaptateur ne peut pas traiter la tâche
-        self.assertFalse(can_process)
-    
-    def test_process_task_extract_text(self):
+        assert self.adapter.can_process_task(task_cannot_process) is False
+
+    @pytest.mark.asyncio
+    async def test_process_task_extract_text(self):
         """Teste la méthode process_task pour l'extraction de texte."""
-        # Créer une tâche d'extraction de texte
         task = {
             "id": "task-1",
             "description": "Extraire le texte",
-            "required_capabilities": ["text_extraction"],
-            "parameters": {
-                "text": "Ceci est un texte à extraire",
+            "text_extracts": [{
+                "id": "input-extract-1",
+                "content": "Ceci est un texte à extraire",
                 "source": "test-source"
-            }
+            }],
+            "techniques": [{
+                "name": "relevant_segment_extraction",
+                "parameters": {}
+            }]
         }
-        
-        # Exécuter process_task de manière synchrone
-        loop = asyncio.get_event_loop()
-        result = loop.run_until_complete(self.adapter.process_task(task))
-        
-        # Vérifier que le résultat est correct
-        self.assertEqual(result["status"], "success")
-        self.assertIn("extracts", result)
-        self.assertEqual(len(result["extracts"]), 1)
-        self.assertEqual(result["extracts"][0]["id"], "extract-1")
-        
-        # Vérifier que la méthode extract_text de l'agent d'extraction a été appelée
-        self.adapter.extract_agent.extract_text.assert_called_once()
-    
-    def test_process_task_validate_extracts(self):
+        result = await self.adapter.process_task(task)
+        assert result["status"] == "completed"
+        assert "outputs" in result
+        outputs = result["outputs"]
+        assert "extracted_segments" in outputs
+        assert len(outputs["extracted_segments"]) == 1
+        extracted_segment = outputs["extracted_segments"][0]
+        assert extracted_segment["extract_id"] == "input-extract-1"
+        assert extracted_segment["extracted_text"] == "Texte extrait simulé via extract_from_name"
+        self.adapter.extract_agent.extract_from_name.assert_called_once_with(
+            {"source_name": "test-source", "source_text": "Ceci est un texte à extraire"},
+            "input-extract-1"
+        )
+
+    @pytest.mark.asyncio
+    async def test_process_task_validate_extracts(self):
         """Teste la méthode process_task pour la validation d'extraits."""
-        # Créer une tâche de validation d'extraits
         task = {
             "id": "task-2",
             "description": "Valider les extraits",
-            "required_capabilities": ["extract_validation"],
-            "parameters": {
-                "extracts": [
-                    {
-                        "id": "extract-1",
-                        "text": "Ceci est un extrait à valider",
-                        "source": "test-source"
-                    }
-                ]
-            }
+            "text_extracts": [{
+                "id": "extract-to-validate-1",
+                "content": "Ceci est un extrait à valider",
+                "source": "test-source"
+            }],
+            "techniques": [{
+                "name": "non_existent_validation_technique",
+                "parameters": {}
+            }]
         }
-        
-        # Exécuter process_task de manière synchrone
-        loop = asyncio.get_event_loop()
-        result = loop.run_until_complete(self.adapter.process_task(task))
-        
-        # Vérifier que le résultat est correct
-        self.assertEqual(result["status"], "success")
-        self.assertIn("valid_extracts", result)
-        self.assertEqual(len(result["valid_extracts"]), 1)
-        self.assertEqual(result["valid_extracts"][0]["id"], "extract-1")
-        
-        # Vérifier que la méthode validate_extracts de l'agent d'extraction a été appelée
-        self.adapter.extract_agent.validate_extracts.assert_called_once()
-    
-    def test_process_task_preprocess_text(self):
+        result = await self.adapter.process_task(task)
+        assert result["status"] == "completed_with_issues"
+        assert "issues" in result
+        assert len(result["issues"]) > 0
+        issue = result["issues"][0]
+        assert issue["type"] == "unsupported_technique"
+        assert "non_existent_validation_technique" in issue["description"]
+        self.adapter.extract_agent.validate_extracts.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_process_task_preprocess_text(self):
         """Teste la méthode process_task pour le prétraitement de texte."""
-        # Créer une tâche de prétraitement de texte
         task = {
             "id": "task-3",
             "description": "Prétraiter le texte",
-            "required_capabilities": ["preprocessing"],
-            "parameters": {
-                "text": "Ceci est un texte à prétraiter"
-            }
+            "text_extracts": [{
+                "id": "input-text-preprocess-1",
+                "content": "Ceci est un texte à prétraiter avec des mots comme le et la",
+                "source": "test-source-preprocess"
+            }],
+            "techniques": [{
+                "name": "text_normalization",
+                "parameters": {"remove_stopwords": True}
+            }]
         }
-        
-        # Exécuter process_task de manière synchrone
-        loop = asyncio.get_event_loop()
-        result = loop.run_until_complete(self.adapter.process_task(task))
-        
-        # Vérifier que le résultat est correct
-        self.assertEqual(result["status"], "success")
-        self.assertIn("preprocessed_text", result)
-        self.assertEqual(result["preprocessed_text"], "Ceci est un texte prétraité")
-        
-        # Vérifier que la méthode preprocess_text de l'agent d'extraction a été appelée
-        self.adapter.extract_agent.preprocess_text.assert_called_once()
-    
-    def test_process_task_unknown_capability(self):
+        result = await self.adapter.process_task(task)
+        assert result["status"] == "completed"
+        assert "outputs" in result
+        outputs = result["outputs"]
+        assert "normalized_text" in outputs
+        assert len(outputs["normalized_text"]) == 1
+        normalized_output = outputs["normalized_text"][0]
+        assert normalized_output["extract_id"] == "input-text-preprocess-1"
+        assert normalized_output["normalized_text"] == "Ceci texte à prétraiter avec mots comme"
+        self.adapter.extract_agent.preprocess_text.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_process_task_unknown_capability(self):
         """Teste la méthode process_task pour une capacité inconnue."""
-        # Créer une tâche avec une capacité inconnue
         task = {
             "id": "task-4",
             "description": "Tâche inconnue",
-            "required_capabilities": ["unknown_capability"],
-            "parameters": {}
+            "text_extracts": [{
+                "id": "input-unknown-1",
+                "content": "Texte pour capacité inconnue",
+                "source": "test-source-unknown"
+            }],
+            "techniques": [{
+                "name": "very_unknown_technique",
+                "parameters": {}
+            }]
         }
-        
-        # Exécuter process_task de manière synchrone
-        loop = asyncio.get_event_loop()
-        result = loop.run_until_complete(self.adapter.process_task(task))
-        
-        # Vérifier que le résultat indique une erreur
-        self.assertEqual(result["status"], "error")
-        self.assertIn("message", result)
-        self.assertIn("unknown_capability", result["message"])
-    
-    def test_process_task_missing_parameters(self):
+        result = await self.adapter.process_task(task)
+        assert result["status"] == "completed_with_issues"
+        assert "issues" in result
+        assert len(result["issues"]) > 0
+        issue = result["issues"][0]
+        assert issue["type"] == "unsupported_technique"
+        assert "very_unknown_technique" in issue["description"]
+
+    @pytest.mark.asyncio
+    async def test_process_task_missing_parameters(self):
         """Teste la méthode process_task avec des paramètres manquants."""
-        # Créer une tâche d'extraction de texte sans paramètres
         task = {
             "id": "task-5",
-            "description": "Extraire le texte",
-            "required_capabilities": ["text_extraction"],
-            "parameters": {}  # Paramètres manquants
+            "description": "Extraire le texte avec paramètres manquants pour la technique",
+            "text_extracts": [],
+            "techniques": [{
+                "name": "relevant_segment_extraction"
+            }]
         }
-        
-        # Exécuter process_task de manière synchrone
-        loop = asyncio.get_event_loop()
-        result = loop.run_until_complete(self.adapter.process_task(task))
-        
-        # Vérifier que le résultat indique une erreur
-        self.assertEqual(result["status"], "error")
-        self.assertIn("message", result)
-        self.assertIn("paramètres requis", result["message"].lower())
-    
-    def test_shutdown(self):
+        result = await self.adapter.process_task(task)
+        assert result["status"] == "failed"
+        assert "issues" in result
+        assert len(result["issues"]) > 0
+        issue = result["issues"][0]
+        assert issue["type"] == "execution_error"
+        assert "Aucun extrait de texte fourni dans la tâche." in issue["description"]
+        assert "outputs" in result
+        assert result["outputs"] == {}
+
+    @pytest.mark.asyncio
+    async def test_shutdown(self):
         """Teste la méthode shutdown."""
-        # Exécuter shutdown de manière synchrone
-        loop = asyncio.get_event_loop()
-        result = loop.run_until_complete(self.adapter.shutdown())
-        
-        # Vérifier que le résultat est correct
-        self.assertTrue(result)
-        self.assertFalse(self.adapter.initialized)
-        self.assertIsNone(self.adapter.extract_agent)
-        self.assertIsNone(self.adapter.kernel)
-
-
-if __name__ == "__main__":
-    unittest.main()
+        result = await self.adapter.shutdown()
+        assert result is True
+        assert self.adapter.initialized is False
+        assert self.adapter.extract_agent is None
+        assert self.adapter.kernel is None
