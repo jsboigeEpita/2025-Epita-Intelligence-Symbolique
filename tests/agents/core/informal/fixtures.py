@@ -103,7 +103,7 @@ def informal_agent_instance(mock_semantic_kernel_instance): # Utilise le kernel 
         mock_plugin_instance = MagicMock(spec=InformalAnalysisPlugin)
         mock_plugin_class.return_value = mock_plugin_instance
 
-        agent = InformalAnalysisAgent(kernel=kernel, agent_name=agent_name)
+        agent = InformalAnalysisAgent(kernel=kernel, agent_name=agent_name, taxonomy_file_path="argumentation_analysis/data/mock_taxonomy_small.csv")
         agent.setup_agent_components(llm_service_id="test_llm_service_fixture")
         
         # Attacher le mock du plugin à l'agent si les tests en ont besoin pour des assertions
@@ -163,7 +163,7 @@ def taxonomy_loader_patches(monkeypatch, setup_test_taxonomy_csv):
 def informal_analysis_plugin_instance(taxonomy_loader_patches):
     # S'assurer que les patches sont actifs avant d'instancier
     # taxonomy_loader_patches est déjà une dépendance, donc les patches sont appliqués.
-    plugin = InformalAnalysisPlugin()
+    plugin = InformalAnalysisPlugin(taxonomy_file_path="argumentation_analysis/data/mock_taxonomy_small.csv")
     return plugin
 @pytest.fixture
 def sample_test_text():

@@ -14,7 +14,7 @@ Ce répertoire contient le cœur fonctionnel du projet, organisé en sous-module
 - `services/` : Services partagés (cache, crypto, extraction)
 - `ui/` : Interface utilisateur pour la configuration des analyses
 
-#### 1.1.2. Documentation (`docs/`)
+#### 1.1.2. Documentation (`docs/`) (incluant des guides importants comme le [`docs/guides/guide_developpeur.md`](docs/guides/guide_developpeur.md:0) et le [`docs/guides/guide_utilisation.md`](docs/guides/guide_utilisation.md:0))
 Documentation complète du projet, organisée selon une structure hiérarchique à trois niveaux :
 - `architecture/` : Documentation de l'architecture du système
 - `composants/` : Description des composants du système
@@ -28,7 +28,7 @@ Scripts pour diverses tâches de maintenance, test et analyse :
 - `execution/` : Scripts d'exécution des fonctionnalités principales
 - `validation/` : Scripts de validation du projet
 - `utils/` : Utilitaires pour les scripts
-- Scripts d'analyse rhétorique et de génération de rapports
+- Scripts d'analyse rhétorique et de génération de rapports (par exemple, les scripts dans [`scripts/execution/`](scripts/execution/) pour l'exécution des fonctionnalités ou ceux dans [`scripts/testing/`](scripts/testing/) pour les tests)
 
 #### 1.1.4. Résultats (`results/`)
 Stockage des résultats d'analyses et de tests :
@@ -40,15 +40,15 @@ Stockage des résultats d'analyses et de tests :
 #### 1.1.5. Autres répertoires importants
 - `config/` : Fichiers de configuration du projet
 - `data/` : Données et ressources utilisées par le projet
-- `examples/` : Exemples de textes et données pour les tests
+- `examples/` : Exemples de textes et données pour les tests (voir par exemple [`examples/logic_agents/api_integration_example.py`](examples/logic_agents/api_integration_example.py:0), [`examples/scripts_demonstration/demo_tweety_interaction_simple.py`](examples/scripts_demonstration/demo_tweety_interaction_simple.py:0) ou le tutoriel [`examples/notebooks/api_logic_tutorial.ipynb`](examples/notebooks/api_logic_tutorial.ipynb:0))
 - `libs/` : Bibliothèques externes utilisées par le projet
-- `tests/` : Tests unitaires et d'intégration
+- `tests/` : Tests unitaires et d'intégration (organisés en [`tests/unit/`](tests/unit/) (par exemple, [`tests/unit/project_core/utils/test_file_utils.py`](tests/unit/project_core/utils/test_file_utils.py:0)) et [`tests/integration/`](tests/integration/), et comprenant des tests spécifiques comme [`libs/web_api/test_api.py`](libs/web_api/test_api.py:0))
 - `tutorials/` : Tutoriels pour prendre en main le système
 
 ### 1.2. Organisation des fichiers à la racine
 Les fichiers à la racine du dépôt comprennent :
 - `README.md` : Documentation principale du projet
-- `setup.py` : Script d'installation du package Python
+- `setup.py` : Script d'installation du package Python, et `setup_project_env.ps1` / `.sh` pour la configuration de l'environnement
 - Fichiers de configuration pour les tests (`pytest.ini`, `conftest.py`)
 - Fichiers de test de haut niveau (`test_*.py`)
 - Fichiers de licence et autres métadonnées

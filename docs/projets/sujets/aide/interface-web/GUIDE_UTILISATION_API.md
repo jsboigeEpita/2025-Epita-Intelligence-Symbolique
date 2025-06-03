@@ -144,6 +144,8 @@ Réponse attendue :
   "conclusion": "Socrate est mortel",
   "argument_type": "deductive"
 }
+
+Pour un exemple de test de cet endpoint, consultez la fonction [`test_analyze_endpoint`](libs/web_api/test_api.py:38) dans le script [`libs/web_api/test_api.py`](libs/web_api/test_api.py:0).
 ```
 
 ### 🚫 Détection de Sophismes
@@ -161,6 +163,10 @@ Réponse attendue :
     "max_fallacies": 10,
     "categories": ["informal"]
   }
+
+Pour un exemple de test de cet endpoint, consultez la fonction [`test_fallacies_endpoint`](libs/web_api/test_api.py:109) dans le script [`libs/web_api/test_api.py`](libs/web_api/test_api.py:0).
+
+Pour un exemple de test de cet endpoint, consultez la fonction [`test_validate_endpoint`](libs/web_api/test_api.py:74) dans le script [`libs/web_api/test_api.py`](libs/web_api/test_api.py:0).
 }
 ```
 
@@ -189,6 +195,8 @@ Réponse attendue :
     "semantics": "preferred",
     "include_visualization": true
   }
+
+Pour un exemple de test de cet endpoint, consultez la fonction [`test_framework_endpoint`](libs/web_api/test_api.py:143) dans le script [`libs/web_api/test_api.py`](libs/web_api/test_api.py:0).
 }
 ```
 
@@ -260,6 +268,14 @@ def detect_fallacies(text):
 result = detect_fallacies("Vous ne pouvez pas critiquer ce projet car vous n'êtes pas expert.")
 print(f"Sophismes détectés: {result['fallacy_count']}")
 ```
+
+### Exemple 4 : Script Python d'intégration API (Agents Logiques)
+
+Bien que ciblant une API pour agents logiques avec des endpoints spécifiques (par exemple, `/api/logic/belief-set`), le script [`examples/logic_agents/api_integration_example.py`](examples/logic_agents/api_integration_example.py:0) fournit un exemple complet de classe client Python pour interagir avec une API REST, gérer l'authentification, et structurer les appels. Il peut servir de source d'inspiration pour construire votre propre client.
+
+### Exemple 5 : Tutoriel interactif avec Jupyter Notebook (Agents Logiques)
+
+De même, le notebook [`examples/notebooks/api_logic_tutorial.ipynb`](examples/notebooks/api_logic_tutorial.ipynb:0) illustre comment interagir avec une API pour agents logiques de manière interactive. Il montre la configuration, la création d'un client API, et l'exécution de requêtes pas à pas, ce qui peut être utile pour comprendre le flux général d'interaction avec une API.
 
 ## Intégration avec React
 
@@ -636,6 +652,8 @@ describe('ArgumentationAPI', () => {
 });
 ```
 
+Pour des exemples concrets de tests d'intégration pour l'API d'analyse argumentative, vous pouvez consulter le script [`libs/web_api/test_api.py`](libs/web_api/test_api.py:0). Ce script utilise la bibliothèque `requests` pour envoyer des requêtes aux différents endpoints et vérifier leurs réponses.
+
 ### 6. Monitoring
 
 - Loggez les erreurs importantes
@@ -645,7 +663,11 @@ describe('ArgumentationAPI', () => {
 ## Support et Ressources
 
 - **Documentation complète** : Consultez le README.md de l'API
-- **Exemples de code** : Voir le dossier `exemples-react/`
+- **Exemples de code** :
+  - Pour l'intégration React : Voir le dossier `exemples-react/` (mentionné précédemment dans ce guide).
+  - Pour des tests d'API en Python : [`libs/web_api/test_api.py`](libs/web_api/test_api.py:0).
+  - Pour un exemple de client API Python (pour une API d'agents logiques, mais illustratif) : [`examples/logic_agents/api_integration_example.py`](examples/logic_agents/api_integration_example.py:0).
+  - Pour un tutoriel d'utilisation d'API avec Jupyter Notebook (pour une API d'agents logiques, mais illustratif) : [`examples/notebooks/api_logic_tutorial.ipynb`](examples/notebooks/api_logic_tutorial.ipynb:0).
 - **Troubleshooting** : Consultez `TROUBLESHOOTING.md`
 - **Démarrage rapide** : Suivez `DEMARRAGE_RAPIDE.md`
 

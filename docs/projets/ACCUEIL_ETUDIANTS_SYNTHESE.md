@@ -14,8 +14,10 @@ Le projet "argumentation_analysis" consiste à développer et améliorer un **Sy
 
 **Livrables attendus :**
 1.  Code source de votre implémentation.
+    *   Par exemple, pour comprendre comment interagir avec une API, consultez [cet exemple d'intégration](examples/logic_agents/api_integration_example.py:0) ou pour une démonstration simple, voyez [ce script de démonstration](examples/scripts_demonstration/demo_tweety_interaction_simple.py:0).
 2.  Documentation détaillée.
 3.  Tests unitaires et d'intégration.
+    *   Pour des exemples de tests, référez-vous à [ce test unitaire](tests/unit/project_core/utils/test_file_utils.py:0) ou à [ce test d'intégration](tests/integration/test_logic_agents_integration.py:0). Le répertoire [`tests/integration/jpype_tweety/`](tests/integration/jpype_tweety/) contient également des tests d'intégration spécifiques.
 4.  Rapport final.
 
 Pour tous les détails (objectifs pédagogiques, modalités, évaluation), consultez impérativement :
