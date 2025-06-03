@@ -41,7 +41,11 @@ class TestInformalAgentCreationAndInfo(unittest.TestCase): # Renommé pour refl�
         self.mock_informal_plugin_class.return_value = self.mock_informal_plugin_instance
 
         self.agent_name = "TestInformalAgentInstance"
-        self.agent = InformalAnalysisAgent(kernel=self.kernel, agent_name=self.agent_name)
+        self.agent = InformalAnalysisAgent(
+            kernel=self.kernel,
+            agent_name=self.agent_name,
+            taxonomy_file_path="argumentation_analysis/data/mock_taxonomy_small.csv"
+        )
         
         self.llm_service_id = "test_llm_service_for_informal"
         # Appel explicite à setup_agent_components

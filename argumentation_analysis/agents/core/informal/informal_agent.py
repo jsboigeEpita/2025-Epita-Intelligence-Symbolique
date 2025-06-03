@@ -59,6 +59,7 @@ class InformalAnalysisAgent(BaseAgent):
         self,
         kernel: sk.Kernel,
         agent_name: str = "InformalAnalysisAgent",
+        taxonomy_file_path: Optional[str] = None,
         # Les anciens paramètres tools, config, semantic_kernel, informal_plugin, strict_validation
         # ne sont plus nécessaires ici car gérés par BaseAgent et setup_agent_components.
     ):
@@ -72,6 +73,7 @@ class InformalAnalysisAgent(BaseAgent):
         """
         super().__init__(kernel, agent_name, system_prompt=INFORMAL_AGENT_INSTRUCTIONS)
         self.logger.info(f"Initialisation de l'agent informel {self.name}...")
+        self._taxonomy_file_path = taxonomy_file_path # Stocker le chemin
         # self.config est conservé pour l'instant pour la compatibilité de certaines méthodes
         # mais devrait idéalement être géré au niveau du plugin ou via des arguments de fonction.
         self.config = { # Valeurs par défaut, peuvent être surchargées si nécessaire
@@ -80,7 +82,7 @@ class InformalAnalysisAgent(BaseAgent):
             "max_fallacies": 5,
             "include_context": False
         }
-        self.logger.info(f"Agent informel {self.name} initialisé.")
+        self.logger.info(f"Agent informel {self.name} initialisé avec taxonomy_file_path: {self._taxonomy_file_path}.")
 
     def get_agent_capabilities(self) -> Dict[str, Any]:
         """
@@ -116,7 +118,7 @@ class InformalAnalysisAgent(BaseAgent):
         self.logger.info(f"Configuration des composants pour {self.name} avec le service LLM: {llm_service_id}...")
 
         # 1. Initialisation et Enregistrement du Plugin Natif
-        informal_plugin_instance = InformalAnalysisPlugin()
+        informal_plugin_instance = InformalAnalysisPlugin(taxonomy_file_path=self._taxonomy_file_path)
         # Utiliser self.name comme nom de plugin pour la cohérence, ou un nom spécifique comme "InformalAnalyzer"
         # Si le system_prompt fait référence à "InformalAnalyzer", il faut utiliser ce nom.
         # D'après INFORMAL_AGENT_INSTRUCTIONS, le plugin est appelé "InformalAnalyzer"
