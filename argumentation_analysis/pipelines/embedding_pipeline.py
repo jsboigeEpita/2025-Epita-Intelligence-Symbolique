@@ -275,7 +275,7 @@ def run_embedding_generation_pipeline(
         
         # Étape 3b & 3c: Génération et sauvegarde des embeddings
         # Condition: modèle spécifié ET texte complet disponible (soit préexistant, soit récupéré)
-        if generate_embeddings_model and source_info.get('full_text','').strip():
+        if generate_embeddings_model and (source_info.get('full_text') or '').strip():
             current_full_text_for_embedding = source_info['full_text']
             logger.info(f"  Tentative de génération d'embeddings pour la source {source_id} avec le modèle '{generate_embeddings_model}'...")
             try:
