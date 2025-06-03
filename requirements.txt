@@ -13,7 +13,7 @@ python-dotenv
 scikit-learn
 scipy
 sentence-transformers
-semantic-kernel==1.29.0
+semantic-kernel==1.0.0
 spacy
 coverage
 clingo
