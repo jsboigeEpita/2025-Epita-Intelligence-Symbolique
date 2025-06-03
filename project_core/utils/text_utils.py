@@ -12,7 +12,7 @@ Il contient des fonctions pour :
 import re
 import string
 import unicodedata
-from typing import List, Dict # Ajout de Dict
+from typing import List, Dict, Any # Ajout de Dict et Any
 
 def normalize_text(text: str) -> str:
     """
