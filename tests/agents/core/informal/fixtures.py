@@ -141,29 +141,35 @@ def setup_test_taxonomy_csv(tmp_path):
 
 @pytest.fixture
 def taxonomy_loader_patches(monkeypatch, setup_test_taxonomy_csv):
-    """Patche les fonctions de taxonomy_loader."""
-    # Utilise le chemin du fichier CSV créé par la fixture setup_test_taxonomy_csv
-    test_taxonomy_file_path = setup_test_taxonomy_csv 
-
-    mock_get_path = MagicMock(return_value=str(test_taxonomy_file_path))
-    mock_validate_file = MagicMock(return_value=True)
-
-    monkeypatch.setattr("argumentation_analysis.agents.core.informal.informal_definitions.get_taxonomy_path", mock_get_path)
-    monkeypatch.setattr("argumentation_analysis.agents.core.informal.informal_definitions.validate_taxonomy_file", mock_validate_file)
+    """
+    Fournit le chemin vers un fichier CSV de taxonomie de test.
+    Anciennement, cette fixture patchait des fonctions qui n'existent plus.
+    Maintenant, elle fournit principalement le chemin pour que d'autres fixtures/tests
+    puissent configurer InformalAnalysisPlugin correctement.
+    """
+    test_taxonomy_file_path = str(setup_test_taxonomy_csv)
     
+    # Les fonctions get_taxonomy_path et validate_taxonomy_file n'existent plus
+    # dans informal_definitions.py de la même manière, donc les patchs directs sont supprimés.
+    # Les tests ou fixtures qui dépendent de cela devront s'assurer que
+    # InformalAnalysisPlugin est initialisé avec ce chemin.
+
+    # Retourner le chemin pour référence, et potentiellement des mocks si d'autres
+    # fonctions de chargement/validation devaient être patchées à l'avenir.
     return {
-        "get_taxonomy_path": mock_get_path,
-        "validate_taxonomy_file": mock_validate_file
+        "test_taxonomy_file_path": test_taxonomy_file_path,
+        "mock_get_path": MagicMock(return_value=test_taxonomy_file_path), # Au cas où un test voudrait simuler un ancien get_path
+        "mock_validate_file": MagicMock(return_value=True) # Au cas où un test voudrait simuler une ancienne validation
     }
 
 # Fixture pour le InformalAnalysisPlugin qui utilise les mocks de taxonomie
 # from argumentation_analysis.agents.core.informal.informal_definitions import InformalAnalysisPlugin # Déjà importé plus haut
 
 @pytest.fixture
-def informal_analysis_plugin_instance(taxonomy_loader_patches):
-    # S'assurer que les patches sont actifs avant d'instancier
-    # taxonomy_loader_patches est déjà une dépendance, donc les patches sont appliqués.
-    plugin = InformalAnalysisPlugin(taxonomy_file_path="argumentation_analysis/data/mock_taxonomy_small.csv")
+def informal_analysis_plugin_instance(setup_test_taxonomy_csv): # Dépend directement de setup_test_taxonomy_csv
+    """Crée une instance de InformalAnalysisPlugin utilisant le fichier CSV de taxonomie de test."""
+    test_taxonomy_path = str(setup_test_taxonomy_csv)
+    plugin = InformalAnalysisPlugin(taxonomy_file_path=test_taxonomy_path)
     return plugin
 @pytest.fixture
 def sample_test_text():
