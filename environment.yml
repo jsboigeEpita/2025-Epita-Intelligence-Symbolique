@@ -36,8 +36,8 @@ dependencies:
   - pytest-mock
   - pytest-asyncio
   - coverage # Peut être redondant avec pytest-cov mais ne nuit pas
-  # Pip pour les paquets spécifiques ou non disponibles sur conda-forge facilement
-  - pip
+  - unidecode # Ajouté pour corriger ModuleNotFoundError
+  - markdown # Ajouté pour corriger ModuleNotFoundError
   - pip:
     - Flask-CORS # Spécifique, souvent via pip
     - semantic-kernel==1.29.0 # Version spécifique
