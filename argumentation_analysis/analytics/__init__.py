@@ -1,22 +1,30 @@
 # -*- coding: utf-8 -*-
 """
-Ce module initialise le package argumentation_analysis.analytics.
+Package `analytics` pour l'analyse quantitative et statistique des arguments.
 
-Il regroupe les outils et fonctions pour effectuer des analyses statistiques,
-calculer des métriques d'efficacité, et analyser des textes ou des résultats
-d'argumentation.
+Ce package regroupe les modules dédiés à l'analyse quantitative des données
+textuelles et des résultats d'argumentation. Il fournit des outils pour :
+    - Calculer des statistiques descriptives sur les textes et les arguments.
+    - Effectuer des analyses de complexité textuelle.
+    - Potentiellement, intégrer des métriques d'évaluation de la qualité
+      ou de la force des arguments.
+
+Modules clés :
+    - `stats_calculator`: Fonctions pour calculer diverses statistiques.
+    - `text_analyzer`: Outils pour l'analyse de caractéristiques textuelles.
 """
+
+# Initializer for the argumentation_analysis.analytics module
+
+# Exposer les classes ou fonctions importantes si nécessaire
+# from .stats_calculator import StatsCalculator # Exemple
+# from .text_analyzer import TextAnalyzer       # Exemple
+
+__all__ = [
+    # "StatsCalculator",
+    # "TextAnalyzer",
+]
+
 import logging
 logger = logging.getLogger(__name__)
-logger.debug("Package 'argumentation_analysis.analytics' initialisé.")
-
-# Exposer les analyseurs ou calculateurs clés si nécessaire
-# from .effectiveness_analyzer import analyze_agent_effectiveness
-# from .stats_calculator import calculate_average_scores # Exemple, si déplacé ici
-# from .text_analyzer import TextPropertiesAnalyzer # Exemple
-
-# __all__ = [
-#     "analyze_agent_effectiveness",
-#     "calculate_average_scores",
-#     "TextPropertiesAnalyzer"
-# ]
+logger.info("Package 'argumentation_analysis.analytics' chargé.")
