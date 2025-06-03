@@ -9,7 +9,7 @@ from typing import Optional # NOUVEAU: Pour type hinting
 project_root = pathlib.Path(__file__).resolve().parent.parent.parent
 sys.path.insert(0, str(project_root))
 
-from project_core.utils.crypto_utils import encrypt_data_aesgcm, decrypt_data_aesgcm # MODIFIÉ: Import
+from argumentation_analysis.utils.core_utils.crypto_utils import encrypt_data_aesgcm, decrypt_data_aesgcm # MODIFIÉ: Import
 
 # Les fonctions derive_key et encrypt_data ont été déplacées vers crypto_utils.py
 # et renommées/adaptées (derive_key_aes, encrypt_data_aesgcm).

@@ -23,7 +23,7 @@ if str(project_root) not in sys.path:
     sys.path.append(str(project_root))
 
 # Imports des modules du projet après ajustement du path
-from project_core.utils.logging_utils import setup_logging # Déjà présent, mais s'assurer qu'il est bien trouvé
+from argumentation_analysis.utils.core_utils.logging_utils import setup_logging # Déjà présent, mais s'assurer qu'il est bien trouvé
 from argumentation_analysis.pipelines.analysis_pipeline import run_text_analysis_pipeline
 from argumentation_analysis.paths import LIBS_DIR # Nécessaire pour la configuration des services
 

@@ -24,7 +24,7 @@ if str(project_root) not in sys.path:
     sys.path.insert(0, str(project_root))
 
 from project_core.pipelines.diagnostic_pipeline import run_environment_diagnostic_pipeline
-from project_core.utils.logging_utils import setup_logging # Assurez-vous que cette fonction existe et est correcte
+from argumentation_analysis.utils.core_utils.logging_utils import setup_logging # Assurez-vous que cette fonction existe et est correcte
 
 # Configuration initiale du logger pour ce script lanceur
 # Le pipeline configurera plus finement le logging via setup_logging.

@@ -7,7 +7,7 @@ from pathlib import Path
 import subprocess
 from unittest.mock import patch, MagicMock
 
-from project_core.utils.system_utils import run_shell_command
+from argumentation_analysis.utils.core_utils.system_utils import run_shell_command
 
 @pytest.fixture
 def mock_subprocess_run():

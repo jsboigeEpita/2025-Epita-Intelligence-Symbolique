@@ -3,7 +3,7 @@ import pytest
 import os
 import tempfile
 from pathlib import Path
-from project_core.dev_utils.code_validation import check_python_syntax, check_python_tokens
+from argumentation_analysis.utils.dev_tools.code_validation import check_python_syntax, check_python_tokens
 
 # Helper pour créer des fichiers temporaires
 @pytest.fixture

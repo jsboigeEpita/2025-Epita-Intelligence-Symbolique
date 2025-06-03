@@ -4,7 +4,7 @@ import logging
 from unittest import mock
 
 # Import the function to test
-from project_core.dev_utils.mock_utils import setup_jpype_mock
+from argumentation_analysis.utils.dev_tools.mock_utils import setup_jpype_mock
 
 # Attempt to import jpype for type hinting and direct access if already patched.
 # The tests will primarily rely on the dynamically imported 'jpype' after setup.

@@ -14,7 +14,7 @@ import json
 import datetime
 # import xml.etree.ElementTree as ET # Déplacé vers coverage_utils
 from pathlib import Path
-from project_core.dev_utils.coverage_utils import parse_coverage_xml
+from argumentation_analysis.utils.dev_tools.coverage_utils import parse_coverage_xml
 
 # La fonction parse_coverage_xml a été déplacée vers project_core.dev_utils.coverage_utils
 # et est importée ci-dessus.

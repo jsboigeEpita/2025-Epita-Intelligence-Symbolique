@@ -19,7 +19,7 @@ try:
     # project_core.utils.network_utils.download_file n'est plus directement utilisé ici.
     # Il est utilisé par le pipeline.
     from project_core.pipelines.download_pipeline import run_download_jars_pipeline
-    from project_core.utils.logging_utils import setup_logging # Pour configurer le logging centralisé
+    from argumentation_analysis.utils.core_utils.logging_utils import setup_logging # Pour configurer le logging centralisé
 except ImportError as e:
     # Utilisation du logging standard si setup_logging n'est pas encore disponible
     # ou si l'import du pipeline échoue.

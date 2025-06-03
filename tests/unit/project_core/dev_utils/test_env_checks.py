@@ -6,7 +6,7 @@ from pathlib import Path
 from unittest import mock
 
 # Import the functions to be tested
-from project_core.dev_utils.env_checks import (
+from argumentation_analysis.utils.dev_tools.env_checks import (
     check_java_environment,
     check_jpype_config,
     check_python_dependencies,

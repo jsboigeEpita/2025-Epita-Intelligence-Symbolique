@@ -13,7 +13,7 @@ from pathlib import Path # NOUVEAU: Pour ajuster sys.path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
 
 try:
-    from project_core.dev_utils.format_utils import fix_docstrings_apostrophes
+    from argumentation_analysis.utils.dev_tools.format_utils import fix_docstrings_apostrophes
 except ImportError as e:
     print(f"Erreur d'importation: {e}")
     print("Assurez-vous que project_core.dev_utils.format_utils est accessible.")

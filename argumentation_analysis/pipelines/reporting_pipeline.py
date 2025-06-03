@@ -51,8 +51,8 @@ except NameError: # __file__ n'est pas défini (par exemple, dans un notebook in
         project_root_path_pipeline = Path(".") # Chemin relatif par défaut
 
 
-from project_core.utils.file_utils import load_json_file, load_text_file, load_csv_file, save_markdown_to_html
-from project_core.utils.reporting_utils import generate_markdown_report_for_corpus, generate_overall_summary_markdown
+from argumentation_analysis.utils.core_utils.file_utils import load_json_file, load_text_file, load_csv_file, save_markdown_to_html
+from argumentation_analysis.utils.core_utils.reporting_utils import generate_markdown_report_for_corpus, generate_overall_summary_markdown
 from argumentation_analysis.utils.data_processing_utils import group_results_by_corpus
 from argumentation_analysis.analytics.stats_calculator import calculate_average_scores
 

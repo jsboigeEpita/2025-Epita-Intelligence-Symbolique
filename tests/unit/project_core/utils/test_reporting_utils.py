@@ -1,4 +1,4 @@
-from project_core.utils.reporting_utils import generate_performance_comparison_markdown_report
+from argumentation_analysis.utils.core_utils.reporting_utils import generate_performance_comparison_markdown_report
 from unittest.mock import patch
 # -*- coding: utf-8 -*-
 """
@@ -9,7 +9,7 @@ from pathlib import Path
 import json
 from unittest.mock import patch, mock_open, MagicMock
 
-from project_core.utils.reporting_utils import (
+from argumentation_analysis.utils.core_utils.reporting_utils import (
     save_json_report,
     generate_json_report,
     save_text_report,
