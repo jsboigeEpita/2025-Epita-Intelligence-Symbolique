@@ -40,12 +40,18 @@ class DefinitionService:
     ):
         """
         Initialise le service de définitions.
-        
-        Args:
-            crypto_service: Service de chiffrement
-            config_file: Chemin vers le fichier de configuration principal (chaîne ou Path)
-            fallback_file: Chemin vers le fichier de secours (optionnel, chaîne ou Path)
-            default_definitions: Définitions par défaut (optionnel)
+
+        :param crypto_service: L'instance du service de chiffrement à utiliser.
+        :type crypto_service: CryptoService
+        :param config_file: Chemin vers le fichier de configuration principal
+                            (peut être chiffré ou JSON brut).
+        :type config_file: Union[str, Path]
+        :param fallback_file: Chemin optionnel vers un fichier de configuration JSON
+                              de secours, utilisé si le fichier principal échoue.
+        :type fallback_file: Optional[Union[str, Path]]
+        :param default_definitions: Liste optionnelle de dictionnaires de définitions
+                                    à utiliser si aucun fichier ne peut être chargé.
+        :type default_definitions: Optional[List[Dict[str, Any]]]
         """
         self.crypto_service = crypto_service
         self.config_file = config_file # Peut être une chaîne ou un Path
@@ -59,10 +65,17 @@ class DefinitionService:
     
     def load_definitions(self) -> ExtractDefinitions:
         """
-        Charge les définitions d'extraits avec gestion d'erreurs robuste.
-        
-        Returns:
-            Objet ExtractDefinitions contenant les définitions chargées.
+        Charge les définitions d'extraits à partir du fichier de configuration.
+
+        Tente de charger depuis le fichier principal (`self.config_file`).
+        Si chiffré et `crypto_service` activé, déchiffre et décompresse.
+        Si le fichier principal échoue ou n'existe pas, tente de charger depuis
+        `self.fallback_file` (JSON brut). Si tout échoue, utilise
+        `self.default_definitions`.
+
+        :return: Un objet `ExtractDefinitions` contenant les définitions chargées.
+                 Retourne des définitions vides en cas d'échec persistant.
+        :rtype: ExtractDefinitions
         """
         definitions_list = []
         error_message = None
@@ -146,13 +159,19 @@ class DefinitionService:
     
     def save_definitions(self, definitions: ExtractDefinitions) -> Tuple[bool, Optional[str]]:
         """
-        Sauvegarde les définitions d'extraits avec gestion d'erreurs robuste.
-        
-        Args:
-            definitions: Définitions d'extraits à sauvegarder
-            
-        Returns:
-            Tuple contenant (success, error_message)
+        Sauvegarde les définitions d'extraits dans le fichier de configuration.
+
+        Convertit l'objet `ExtractDefinitions` en liste de dictionnaires.
+        Si le chiffrement est activé via `crypto_service`, chiffre et compresse
+        les données avant de les écrire dans `self.config_file`. Sinon, sauvegarde
+        en JSON brut. En cas d'échec, tente de sauvegarder dans `self.fallback_file`
+        (en JSON brut uniquement).
+
+        :param definitions: L'objet `ExtractDefinitions` à sauvegarder.
+        :type definitions: ExtractDefinitions
+        :return: Un tuple contenant un booléen indiquant le succès de l'opération
+                 et un message d'erreur optionnel en cas d'échec.
+        :rtype: Tuple[bool, Optional[str]]
         """
         success = False
         error_message = None
@@ -216,14 +235,15 @@ class DefinitionService:
     
     def export_definitions_to_json(self, definitions: ExtractDefinitions, output_path: Union[str, Path]) -> Tuple[bool, str]:
         """
-        Exporte les définitions d'extraits vers un fichier JSON.
-        
-        Args:
-            definitions: Définitions d'extraits à exporter
-            output_path: Chemin vers le fichier de sortie (chaîne ou Path)
-            
-        Returns:
-            Tuple contenant (success, message)
+        Exporte les définitions d'extraits vers un fichier JSON non chiffré.
+
+        :param definitions: L'objet `ExtractDefinitions` à exporter.
+        :type definitions: ExtractDefinitions
+        :param output_path: Le chemin du fichier de sortie JSON (chaîne ou Path).
+        :type output_path: Union[str, Path]
+        :return: Un tuple contenant un booléen indiquant le succès de l'exportation
+                 et un message (succès ou erreur).
+        :rtype: Tuple[bool, str]
         """
         output_file_path = Path(output_path)
         try:
@@ -246,13 +266,13 @@ class DefinitionService:
     
     def import_definitions_from_json(self, input_path: Union[str, Path]) -> Tuple[bool, Union[ExtractDefinitions, str]]:
         """
-        Importe les définitions d'extraits depuis un fichier JSON.
-        
-        Args:
-            input_path: Chemin vers le fichier d'entrée (chaîne ou Path)
-            
-        Returns:
-            Tuple contenant (success, definitions_or_error_message)
+        Importe les définitions d'extraits depuis un fichier JSON non chiffré.
+
+        :param input_path: Le chemin du fichier d'entrée JSON (chaîne ou Path).
+        :type input_path: Union[str, Path]
+        :return: Un tuple contenant un booléen indiquant le succès de l'importation
+                 et soit l'objet `ExtractDefinitions` importé, soit un message d'erreur (str).
+        :rtype: Tuple[bool, Union[ExtractDefinitions, str]]
         """
         input_file_path = Path(input_path)
         try:
@@ -282,13 +302,16 @@ class DefinitionService:
     
     def validate_definitions(self, definitions: ExtractDefinitions) -> Tuple[bool, List[str]]:
         """
-        Valide les définitions d'extraits.
-        
-        Args:
-            definitions: Définitions d'extraits à valider
-            
-        Returns:
-            Tuple contenant (is_valid, error_messages)
+        Valide la structure et les champs requis des définitions d'extraits.
+
+        Vérifie la présence des champs obligatoires pour chaque source et chaque extrait
+        au sein des sources (par exemple, `source_name`, `extract_name`, `start_marker`, `end_marker`).
+
+        :param definitions: L'objet `ExtractDefinitions` à valider.
+        :type definitions: ExtractDefinitions
+        :return: Un tuple contenant un booléen indiquant si les définitions sont valides
+                 et une liste des messages d'erreur trouvés.
+        :rtype: Tuple[bool, List[str]]
         """
         errors = []
         

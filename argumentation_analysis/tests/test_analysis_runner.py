@@ -6,11 +6,11 @@ Tests unitaires pour le module analysis_runner.
 import unittest
 from unittest.mock import patch, MagicMock, AsyncMock
 import asyncio
-from tests.async_test_case import AsyncTestCase
+# from tests.async_test_case import AsyncTestCase # Suppression de l'import
 from argumentation_analysis.orchestration.analysis_runner import AnalysisRunner, run_analysis
 
 
-class TestAnalysisRunner(AsyncTestCase):
+class TestAnalysisRunner: # Suppression de l'héritage AsyncTestCase
     """Tests pour la classe AnalysisRunner."""
 
     def setUp(self):

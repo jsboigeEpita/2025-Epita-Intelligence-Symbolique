@@ -1,3 +1,12 @@
+"""
+Interface utilisateur pour la configuration des tâches d'analyse d'argumentation.
+
+Ce module fournit des fonctions pour créer et gérer une interface utilisateur
+basée sur ipywidgets dans un environnement Jupyter. Elle permet à l'utilisateur
+de sélectionner des sources de texte (bibliothèque, URL, fichier, saisie directe),
+de configurer des options d'extraction, et de lancer la préparation du texte
+pour une analyse ultérieure.
+"""
 # ui/app.py
 import ipywidgets as widgets
 from IPython.display import display, clear_output

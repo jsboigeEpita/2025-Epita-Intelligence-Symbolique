@@ -10,6 +10,7 @@ disponible ou si les JARs nécessaires ne sont pas présents.
 import logging
 import pytest # Ajout de l'import pytest
 from argumentation_analysis.tests.jvm_test_case import JVMTestCase
+import sys # Pour vérifier le module importé
 
 # Configuration du logging
 logging.basicConfig(
@@ -21,15 +22,15 @@ logging.basicConfig(
 class TestJVMExample(JVMTestCase):
     """Exemple de test utilisant la classe JVMTestCase."""
     
-    @pytest.mark.skip(reason="Investigation en cours sur un crash JVM (access violation). Logs ajoutés. Fournir la sortie pytest -s pour analyse.")
     def test_jvm_initialized(self):
         """Teste si la JVM est correctement initialisée."""
         # Ce test sera sauté si la JVM n'est pas disponible
         import jpype
-        self.assertTrue(jpype.isJVMStarted(), "La JVM devrait être démarrée")
+        self.assertTrue(jpype.isJVMStarted(), "La JVM devrait être démarrée par JVMTestCase ou conftest.py")
+        logging.info(f"Module jpype utilisé: {getattr(jpype, '__file__', 'N/A')}")
         
         # Vérifier que les domaines sont enregistrés
-        self.assertTrue(hasattr(jpype.imports, "registerDomain"), "La méthode registerDomain devrait être disponible")
+        self.assertTrue(hasattr(jpype.imports, "registerDomain"), "La méthode registerDomain devrait être disponible sur jpype.imports")
         
         # Afficher des informations sur la JVM
         logging.info(f"JVM Version: {jpype.getJVMVersion()}")
@@ -54,14 +55,14 @@ class TestJVMExample(JVMTestCase):
         except Exception as e:
             logging.warning(f"Impossible de récupérer le chemin JVM via jpype.config.jvm_path: {e}")
     
-    @pytest.mark.skip(reason="Investigation en cours sur un crash JVM (access violation) suspecté dans ce test ou après. Logs ajoutés. Fournir la sortie pytest -s pour analyse.")
     def test_tweety_jars_loaded(self):
         """Teste si les JARs Tweety sont correctement chargés."""
         # Ce test sera sauté si la JVM n'est pas disponible
         logging.info("test_tweety_jars_loaded: Début du test")
-        logging.info("test_tweety_jars_loaded: Avant import jpype")
-        import jpype
-        logging.info(f"test_tweety_jars_loaded: Après import jpype. jpype: {jpype}")
+        
+        import jpype # Assurer que jpype est dans la portée locale de la fonction
+        self.assertTrue(jpype.isJVMStarted(), "La JVM devrait être démarrée.")
+        logging.info(f"test_tweety_jars_loaded: Module jpype utilisé: {getattr(jpype, '__file__', 'N/A')}")
         
         # Essayer d'importer une classe de Tweety
         try:

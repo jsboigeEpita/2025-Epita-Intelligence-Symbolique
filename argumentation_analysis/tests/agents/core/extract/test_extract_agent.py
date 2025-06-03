@@ -11,10 +11,11 @@ import asyncio
 import json
 import re
 from unittest.mock import MagicMock, patch, AsyncMock
-from argumentation_analysis.agents.core.extract.extract_agent import ExtractAgent, setup_extract_agent
+from argumentation_analysis.agents.core.extract.extract_agent import ExtractAgent
 from argumentation_analysis.agents.core.extract.extract_definitions import ExtractAgentPlugin, ExtractResult
 from semantic_kernel.connectors.ai.chat_completion_client_base import ChatCompletionClientBase
 from semantic_kernel import Kernel # Importer Kernel pour spec
+from semantic_kernel.functions.function_result import FunctionResult
 
 
 class AsyncTestCase(unittest.TestCase):
@@ -36,22 +37,33 @@ class TestExtractAgent(AsyncTestCase):
 
     def setUp(self):
         super().setUp()
-        self.extract_agent_mock = MagicMock()
-        self.validation_agent_mock = MagicMock()
-        self.extract_plugin_mock = MagicMock(spec=ExtractAgentPlugin)
-        self.find_similar_text_mock = MagicMock()
-        self.extract_text_mock = MagicMock()
-        self.agent = ExtractAgent(
-            extract_agent=self.extract_agent_mock,
-            validation_agent=self.validation_agent_mock,
-            extract_plugin=self.extract_plugin_mock,
-            find_similar_text_func=self.find_similar_text_mock,
-            extract_text_func=self.extract_text_mock
-        )
+        # Mock pour le kernel Semantic Kernel
+        self.mock_sk_kernel = MagicMock(spec=Kernel)
+        
+        # Mocker les méthodes du kernel qui seront appelées par setup_agent_components
+        self.mock_sk_kernel.add_plugin = MagicMock()
+        self.mock_sk_kernel.add_function = MagicMock()
+        self.mock_sk_kernel.get_prompt_execution_settings_from_service_id = MagicMock(return_value=MagicMock(name="prompt_execution_settings"))
+
+        # Initialiser l'agent avec le kernel mocké
+        self.agent = ExtractAgent(kernel=self.mock_sk_kernel)
+        
+        # Appeler setup_agent_components.
+        # ExtractAgentPlugin sera instancié à l'intérieur.
+        # Nous allons mocker cette instanciation pour contrôler le plugin natif.
+        self.mock_native_plugin_instance = MagicMock(spec=ExtractAgentPlugin)
+        with patch('argumentation_analysis.agents.core.extract.extract_agent.ExtractAgentPlugin', return_value=self.mock_native_plugin_instance) as mock_plugin_class:
+            self.agent.setup_agent_components(llm_service_id="test_llm_service_id")
+
+        # Les fonctions utilitaires comme extract_text_with_markers sont importées dans extract_agent.py
+        # et devront être patchées là si nécessaire pour les tests.
+        # self.extract_text_mock = MagicMock() # Sera utilisé pour patcher la fonction globale
+
         self.source_info = {
             "source_name": "Source de test",
             "source_url": "https://example.com",
             "source_text": "Ceci est un texte de test pour l'extraction."
+            # Note: source_text est ici pour info, mais load_source_text sera mocké
         }
         self.extract_name = "Extrait de test"
 
@@ -72,65 +84,158 @@ class TestExtractAgent(AsyncTestCase):
         return AsyncIterator(items)
 
     @patch('argumentation_analysis.agents.core.extract.extract_agent.load_source_text')
-    def test_extract_from_name_success(self, mock_load_source_text):
+    @patch('argumentation_analysis.agents.core.extract.extract_agent.extract_text_with_markers')
+    def test_extract_from_name_success(self, mock_extract_text_with_markers, mock_load_source_text):
         mock_load_source_text.return_value = ("Ceci est un texte de test pour l'extraction.", "https://example.com")
-        mock_response = MagicMock(content='{"start_marker": "Ceci est", "end_marker": "extraction.", "template_start": "", "explanation": "Explication de test"}')
-        async_iter = self._create_async_iterator([mock_response])
-        self.extract_agent_mock.invoke = MagicMock(return_value=async_iter)
-        self.extract_text_mock.return_value = ("Ceci est un texte de test pour l'extraction.", "success", True, True)
-        mock_validation_response = MagicMock(content='{"valid": true, "reason": "Extrait valide"}')
-        async_validation_iter = self._create_async_iterator([mock_validation_response])
-        self.validation_agent_mock.invoke = MagicMock(return_value=async_validation_iter)
+        
+        # Configurer le mock pour sk_kernel.invoke
+        # Il sera appelé deux fois : une pour l'extraction, une pour la validation.
+        async def mock_invoke_side_effect(*args, **kwargs):
+            invoked_plugin_name = kwargs.get('plugin_name')
+            invoked_function_name = kwargs.get('function_name')
+            
+            if invoked_plugin_name == self.agent.name and invoked_function_name == ExtractAgent.EXTRACT_SEMANTIC_FUNCTION_NAME:
+                # Réponse pour l'extraction
+                response_mock = MagicMock()
+                response_mock.__str__ = MagicMock(return_value='{"start_marker": "Ceci est", "end_marker": "extraction.", "template_start": "", "explanation": "Explication de test"}')
+                return response_mock
+            elif invoked_plugin_name == self.agent.name and invoked_function_name == ExtractAgent.VALIDATE_SEMANTIC_FUNCTION_NAME:
+                # Réponse pour la validation
+                response_mock = MagicMock()
+                response_mock.__str__ = MagicMock(return_value='{"valid": true, "reason": "Extrait valide"}')
+                return response_mock
+            raise AssertionError(f"Appel inattendu à sk_kernel.invoke: {kwargs}")
+
+        self.mock_sk_kernel.invoke = AsyncMock(side_effect=mock_invoke_side_effect)
+        
+        # Configurer le mock pour extract_text_with_markers (anciennement self.extract_text_mock)
+        mock_extract_text_with_markers.return_value = ("Ceci est un texte de test pour l'extraction.", "success", True, True)
+        
         result = self._run_async_test(self.agent.extract_from_name(self.source_info, self.extract_name))
+        
         self.assertEqual(result.status, "valid")
         self.assertEqual(result.start_marker, "Ceci est")
         self.assertEqual(result.end_marker, "extraction.")
         self.assertEqual(result.extracted_text, "Ceci est un texte de test pour l'extraction.")
+        
         mock_load_source_text.assert_called_once_with(self.source_info)
-        self.extract_agent_mock.invoke.assert_called_once()
-        self.extract_text_mock.assert_called_once_with(
+        
+        # Vérifier les appels à sk_kernel.invoke
+        self.assertEqual(self.mock_sk_kernel.invoke.call_count, 2)
+        # Vérifier le premier appel (extraction)
+        extract_call_args = self.mock_sk_kernel.invoke.call_args_list[0]
+        self.assertEqual(extract_call_args.kwargs['plugin_name'], self.agent.name)
+        self.assertEqual(extract_call_args.kwargs['function_name'], ExtractAgent.EXTRACT_SEMANTIC_FUNCTION_NAME)
+        # Vérifier le second appel (validation)
+        validate_call_args = self.mock_sk_kernel.invoke.call_args_list[1]
+        self.assertEqual(validate_call_args.kwargs['plugin_name'], self.agent.name)
+        self.assertEqual(validate_call_args.kwargs['function_name'], ExtractAgent.VALIDATE_SEMANTIC_FUNCTION_NAME)
+
+        mock_extract_text_with_markers.assert_called_once_with(
             "Ceci est un texte de test pour l'extraction.", "Ceci est", "extraction.", ""
         )
-        self.validation_agent_mock.invoke.assert_called_once()
 
     @patch('argumentation_analysis.agents.core.extract.extract_agent.load_source_text')
-    def test_extract_from_name_large_text(self, mock_load_source_text):
+    @patch('argumentation_analysis.agents.core.extract.extract_agent.extract_text_with_markers')
+    def test_extract_from_name_large_text(self, mock_extract_text_with_markers, mock_load_source_text):
         large_text = "Ceci est un texte volumineux pour tester l'extraction. " * 500
         mock_load_source_text.return_value = (large_text, "https://example.com")
-        self.extract_plugin_mock.extract_blocks.return_value = [{"block": "Bloc 1", "start_pos": 0, "end_pos": 500}, {"block": "Bloc 2", "start_pos": 450, "end_pos": 950}]
-        self.extract_plugin_mock.search_text_dichotomically.return_value = [{"match": "test", "position": 100, "context": "contexte", "block_start": 0, "block_end": 500}]
-        mock_response = MagicMock(content='{"start_marker": "Ceci est", "end_marker": "extraction.", "template_start": "", "explanation": "Explication de test"}')
-        async_iter = self._create_async_iterator([mock_response])
-        self.extract_agent_mock.invoke = MagicMock(return_value=async_iter)
-        self.extract_text_mock.return_value = ("Extrait de texte", "success", True, True)
-        mock_validation_response = MagicMock(content='{"valid": true, "reason": "Extrait valide"}')
-        async_validation_iter = self._create_async_iterator([mock_validation_response])
-        self.validation_agent_mock.invoke = MagicMock(return_value=async_validation_iter)
+
+        # Mocker les méthodes du plugin natif (maintenant self.mock_native_plugin_instance)
+        self.mock_native_plugin_instance.extract_blocks.return_value = [{"block": "Bloc 1", "start_pos": 0, "end_pos": 500}, {"block": "Bloc 2", "start_pos": 450, "end_pos": 950}]
+        self.mock_native_plugin_instance.search_text_dichotomically.return_value = [{"match": "test", "position": 100, "context": "contexte", "block_start": 0, "block_end": 500}]
+        
+        # Configurer le mock pour sk_kernel.invoke
+        async def mock_invoke_side_effect(*args, **kwargs):
+            invoked_plugin_name = kwargs.get('plugin_name')
+            invoked_function_name = kwargs.get('function_name')
+            if invoked_plugin_name == self.agent.name and invoked_function_name == ExtractAgent.EXTRACT_SEMANTIC_FUNCTION_NAME:
+                response_mock = MagicMock()
+                response_mock.__str__ = MagicMock(return_value='{"start_marker": "Ceci est", "end_marker": "extraction.", "template_start": "", "explanation": "Explication de test"}')
+                return response_mock
+            elif invoked_plugin_name == self.agent.name and invoked_function_name == ExtractAgent.VALIDATE_SEMANTIC_FUNCTION_NAME:
+                response_mock = MagicMock()
+                response_mock.__str__ = MagicMock(return_value='{"valid": true, "reason": "Extrait valide"}')
+                return response_mock
+            raise AssertionError(f"Appel inattendu à sk_kernel.invoke: {kwargs}")
+        self.mock_sk_kernel.invoke = AsyncMock(side_effect=mock_invoke_side_effect)
+        
+        # Configurer le mock pour extract_text_with_markers
+        mock_extract_text_with_markers.return_value = ("Extrait de texte", "success", True, True)
+        
         result = self._run_async_test(self.agent.extract_from_name(self.source_info, self.extract_name))
+        
         self.assertEqual(result.status, "valid")
         mock_load_source_text.assert_called_once_with(self.source_info)
-        self.extract_plugin_mock.extract_blocks.assert_called_once()
-        self.extract_plugin_mock.search_text_dichotomically.assert_called()
-        self.extract_agent_mock.invoke.assert_called_once()
-        self.extract_text_mock.assert_called_once()
-        self.validation_agent_mock.invoke.assert_called_once()
+        
+        # Vérifier les appels aux méthodes du plugin natif
+        self.mock_native_plugin_instance.extract_blocks.assert_called_once()
+        self.mock_native_plugin_instance.search_text_dichotomically.assert_called() # Peut être appelé plusieurs fois
+        
+        # Vérifier les appels à sk_kernel.invoke
+        self.assertEqual(self.mock_sk_kernel.invoke.call_count, 2)
+        
+        mock_extract_text_with_markers.assert_called_once()
 
     @patch('argumentation_analysis.agents.core.extract.extract_agent.load_source_text')
-    def test_extract_from_name_json_error(self, mock_load_source_text):
+    @patch('argumentation_analysis.core.utils.text_utils.extract_text_with_markers') # Correction de l'emplacement du patch
+    def test_extract_from_name_json_error(self, mock_extract_text_with_markers, mock_load_source_text):
         mock_load_source_text.return_value = ("Ceci est un texte de test pour l'extraction.", "https://example.com")
-        mock_response = MagicMock(content='Réponse non-JSON avec "start_marker": "Ceci est", "end_marker": "extraction.", "explanation": "Explication"')
-        async_iter = self._create_async_iterator([mock_response])
-        self.extract_agent_mock.invoke = MagicMock(return_value=async_iter)
-        self.extract_text_mock.return_value = ("Ceci est un texte de test pour l'extraction.", "success", True, True)
-        mock_validation_response = MagicMock(content='{"valid": true, "reason": "Extrait valide"}')
-        async_validation_iter = self._create_async_iterator([mock_validation_response])
-        self.validation_agent_mock.invoke = MagicMock(return_value=async_validation_iter)
-        result = self._run_async_test(self.agent.extract_from_name(self.source_info, self.extract_name))
-        self.assertEqual(result.start_marker, "Ceci est")
-        self.assertEqual(result.end_marker, "extraction.")
-        mock_load_source_text.assert_called_once_with(self.source_info)
-        self.extract_agent_mock.invoke.assert_called_once()
+        
+        # Configurer le mock pour sk_kernel.invoke pour simuler une réponse non-JSON
+        async def mock_invoke_side_effect(*args, **kwargs):
+            invoked_plugin_name = kwargs.get('plugin_name')
+            invoked_function_name = kwargs.get('function_name')
+            kernel_arguments = kwargs.get('arguments', {})
 
+            if invoked_plugin_name == self.agent.plugin_name and invoked_function_name == ExtractAgent.EXTRACT_SEMANTIC_FUNCTION_NAME:
+                # Réponse non-JSON pour l'extraction
+                response_mock = MagicMock(spec=FunctionResult)
+                response_mock.value = 'Réponse non-JSON avec "start_marker": "Ceci est", "end_marker": "extraction.", "explanation": "Explication"'
+                response_mock.__str__ = lambda self_mock: self_mock.value # Assurer que str(response_mock) retourne la string
+                return response_mock
+            elif invoked_plugin_name == self.agent.plugin_name and invoked_function_name == ExtractAgent.VALIDATE_SEMANTIC_FUNCTION_NAME:
+                # Réponse valide pour la validation (peut être appelée ou non selon l'échec)
+                response_mock = MagicMock(spec=FunctionResult)
+                response_mock.value = '{"valid": true, "reason": "Extrait valide"}'
+                response_mock.__str__ = lambda self_mock: self_mock.value
+                return response_mock
+            # Gérer l'appel au plugin natif si nécessaire (ne devrait pas arriver dans ce test si l'erreur JSON est première)
+            elif invoked_plugin_name == ExtractAgentPlugin.PLUGIN_NAME:
+                 # Simuler le comportement du plugin natif si besoin, ou juste retourner un mock
+                native_response_mock = MagicMock()
+                # ... configurer le mock pour le plugin natif ...
+                return native_response_mock
+
+            raise AssertionError(f"Appel inattendu à sk_kernel.invoke: plugin_name='{invoked_plugin_name}', function_name='{invoked_function_name}', args='{kernel_arguments}'")
+
+        self.mock_sk_kernel.invoke = AsyncMock(side_effect=mock_invoke_side_effect)
+        
+        # extract_text_with_markers ne devrait pas être appelé si l'invoke initial échoue à parser le JSON.
+        # On s'attend à ce que l'erreur JSON se produise lors du traitement de la réponse de EXTRACT_SEMANTIC_FUNCTION_NAME.
+        
+        result = self._run_async_test(self.agent.extract_from_name(self.source_info, self.extract_name))
+        
+        self.assertEqual(result.status, "error")
+        self.assertIn("Erreur lors du parsing de la réponse JSON", result.error_message)
+        mock_load_source_text.assert_called_once_with(self.source_info)
+        
+        # Vérifier que la fonction sémantique d'extraction a été appelée
+        # On ne peut plus utiliser assert_any_call facilement avec AsyncMock et side_effect complexe.
+        # On vérifie que invoke a été appelé au moins une fois.
+        self.mock_sk_kernel.invoke.assert_called()
+        
+        # Vérifier que la première tentative d'appel était bien pour l'extraction
+        # Cela peut être fragile si d'autres appels invoke se produisent avant pour une raison quelconque.
+        # S'assurer que le side_effect est assez robuste ou que les tests sont bien isolés.
+        if self.mock_sk_kernel.invoke.call_args_list: # Vérifier s'il y a eu des appels
+            first_call_args = self.mock_sk_kernel.invoke.call_args_list[0]
+            self.assertEqual(first_call_args.kwargs.get('plugin_name'), self.agent.plugin_name)
+            self.assertEqual(first_call_args.kwargs.get('function_name'), ExtractAgent.EXTRACT_SEMANTIC_FUNCTION_NAME)
+        else:
+            self.fail("self.mock_sk_kernel.invoke n'a pas été appelé.")
+
+        mock_extract_text_with_markers.assert_not_called()
     @patch('argumentation_analysis.agents.core.extract.extract_agent.load_source_text')
     def test_extract_from_name_validation_json_error(self, mock_load_source_text):
         mock_load_source_text.return_value = ("Ceci est un texte de test pour l'extraction.", "https://example.com")
@@ -243,73 +348,9 @@ class TestExtractAgent(AsyncTestCase):
         self.assertEqual(len(extract_definitions[0]["extracts"]), 0)
 
 
-class TestSetupExtractAgent(AsyncTestCase):
-    """Tests pour la fonction setup_extract_agent."""
-
-    @patch('argumentation_analysis.agents.core.extract.extract_agent.create_llm_service')
-    @patch('argumentation_analysis.agents.core.extract.extract_agent.sk.Kernel') 
-    @patch('argumentation_analysis.agents.core.extract.extract_agent.ChatCompletionAgent') # Patcher la référence locale
-    def test_setup_extract_agent_success(self, mock_chat_agent, mock_kernel_class, mock_create_llm_service):
-        """Teste la configuration réussie de l'agent d'extraction."""
-        mock_llm_service = MagicMock(spec=ChatCompletionClientBase)
-        mock_llm_service.service_id = "mocked_service_id" 
-        mock_llm_service.ai_model_id = "mocked_ai_model_id"
-        mock_create_llm_service.return_value = mock_llm_service
-        
-        mock_kernel_instance = MagicMock(spec=Kernel) 
-        mock_kernel_class.return_value = mock_kernel_instance 
-        mock_prompt_settings = MagicMock() 
-        mock_kernel_instance.get_prompt_execution_settings_from_service_id.return_value = mock_prompt_settings
-        
-        mock_extract_agent = MagicMock()
-        mock_validation_agent = MagicMock()
-        mock_chat_agent.side_effect = [mock_extract_agent, mock_validation_agent]
-        
-        kernel, agent = self._run_async_test(setup_extract_agent()) # Appel sans llm_service
-        
-        self.assertIs(kernel, mock_kernel_instance) 
-        self.assertIsInstance(agent, ExtractAgent)
-        mock_create_llm_service.assert_called_once()
-        mock_kernel_class.assert_called_once() 
-        mock_kernel_instance.add_service.assert_any_call(mock_llm_service)
-        self.assertEqual(mock_chat_agent.call_count, 2)
-
-    @patch('argumentation_analysis.agents.core.extract.extract_agent.create_llm_service')
-    def test_setup_extract_agent_llm_service_error(self, mock_create_llm_service):
-        """Teste la configuration de l'agent d'extraction avec une erreur de service LLM."""
-        mock_create_llm_service.return_value = None
-        
-        kernel, agent = self._run_async_test(setup_extract_agent())
-        
-        self.assertIsNone(kernel)
-        self.assertIsNone(agent)
-        mock_create_llm_service.assert_called_once()
-
-    @patch('argumentation_analysis.agents.core.extract.extract_agent.sk.Kernel') 
-    @patch('argumentation_analysis.agents.core.extract.extract_agent.ChatCompletionAgent') # Patcher la référence locale
-    def test_setup_extract_agent_with_custom_llm_service(self, mock_chat_agent, mock_kernel_class):
-        """Teste la configuration de l'agent d'extraction avec un service LLM personnalisé."""
-        mock_llm_service = MagicMock(spec=ChatCompletionClientBase)
-        mock_llm_service.service_id = "custom_service" 
-        mock_llm_service.ai_model_id = "custom_ai_model_id"
-        
-        mock_kernel_instance = MagicMock(spec=Kernel) 
-        mock_kernel_class.return_value = mock_kernel_instance 
-        mock_prompt_settings = MagicMock()
-        mock_kernel_instance.get_prompt_execution_settings_from_service_id.return_value = mock_prompt_settings
-            
-        mock_extract_agent = MagicMock()
-        mock_validation_agent = MagicMock()
-        mock_chat_agent.side_effect = [mock_extract_agent, mock_validation_agent]
-            
-        kernel, agent = self._run_async_test(setup_extract_agent(llm_service=mock_llm_service))
-            
-        self.assertIs(kernel, mock_kernel_instance) 
-        self.assertIsInstance(agent, ExtractAgent)
-        mock_kernel_class.assert_called_once() 
-        mock_kernel_instance.add_service.assert_any_call(mock_llm_service)
-        self.assertEqual(mock_chat_agent.call_count, 2)
-
+# La classe TestSetupExtractAgent est supprimée car la fonction setup_extract_agent n'existe plus.
+# Les tests pour l'initialisation de ExtractAgent devront être intégrés différemment si nécessaire,
+# potentiellement en testant directement le constructeur et la méthode setup_agent_components.
 
 if __name__ == "__main__":
     unittest.main()

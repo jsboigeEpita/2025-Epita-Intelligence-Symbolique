@@ -5,284 +5,273 @@ Tests unitaires pour la classe PropositionalLogicAgent.
 """
 
 import unittest
-from unittest.mock import MagicMock, patch, PropertyMock
+import asyncio 
+from unittest.mock import MagicMock, patch, AsyncMock 
 
 from semantic_kernel import Kernel
-from semantic_kernel.functions import KernelFunction
+from semantic_kernel.functions.kernel_arguments import KernelArguments 
 
 from argumentation_analysis.agents.core.logic.propositional_logic_agent import PropositionalLogicAgent
-from argumentation_analysis.agents.core.logic.belief_set import PropositionalBeliefSet
+from argumentation_analysis.agents.core.logic.belief_set import PropositionalBeliefSet, BeliefSet
 from argumentation_analysis.agents.core.logic.tweety_bridge import TweetyBridge
+from argumentation_analysis.agents.core.pl.pl_definitions import PL_AGENT_INSTRUCTIONS
 
 
 class TestPropositionalLogicAgent(unittest.TestCase):
     """Tests pour la classe PropositionalLogicAgent."""
-    
+
     def setUp(self):
         """Initialisation avant chaque test."""
-        # Mock du kernel
         self.kernel = MagicMock(spec=Kernel)
-        self.kernel.plugins = {}
-        
-        # Mock des fonctions du kernel
-        self.text_to_pl_function = MagicMock()
-        self.text_to_pl_function.invoke.return_value = MagicMock(result="a => b")
-        
-        self.generate_queries_function = MagicMock()
-        self.generate_queries_function.invoke.return_value = MagicMock(result="a\nb\na => b")
-        
-        self.interpret_function = MagicMock()
-        self.interpret_function.invoke.return_value = MagicMock(result="Interprétation des résultats")
-        
-        self.execute_query_function = MagicMock()
-        self.execute_query_function.invoke.return_value = MagicMock(result="Tweety Result: Query 'a => b' is ACCEPTED (True).")
-        
-        # Configuration du mock du plugin
-        self.kernel.plugins = {
-            "PLAnalyzer": {
-                "semantic_TextToPLBeliefSet": self.text_to_pl_function,
-                "semantic_GeneratePLQueries": self.generate_queries_function,
-                "semantic_InterpretPLResult": self.interpret_function,
-                "execute_pl_query": self.execute_query_function
-            }
-        }
-        
-        # Mock de TweetyBridge
+        self.kernel.invoke = AsyncMock() 
+        self.kernel.get_prompt_execution_settings_from_service_id = MagicMock(return_value={"temperature": 0.7})
+        self.kernel.add_function = MagicMock() 
+
         self.tweety_bridge_patcher = patch('argumentation_analysis.agents.core.logic.propositional_logic_agent.TweetyBridge')
         self.mock_tweety_bridge_class = self.tweety_bridge_patcher.start()
-        self.mock_tweety_bridge = MagicMock(spec=TweetyBridge)
-        self.mock_tweety_bridge_class.return_value = self.mock_tweety_bridge
-        self.mock_tweety_bridge.is_jvm_ready.return_value = True
-        self.mock_tweety_bridge.validate_belief_set.return_value = (True, "Ensemble de croyances valide")
-        self.mock_tweety_bridge.validate_formula.return_value = (True, "Formule valide")
         
-        # Création de l'agent
-        self.agent = PropositionalLogicAgent(self.kernel)
-    
+        self.mock_tweety_bridge_instance = MagicMock(spec=TweetyBridge)
+        self.mock_tweety_bridge_class.return_value = self.mock_tweety_bridge_instance
+        self.mock_tweety_bridge_instance.is_jvm_ready.return_value = True
+        self.mock_tweety_bridge_instance.validate_belief_set.return_value = (True, "Ensemble de croyances valide")
+        self.mock_tweety_bridge_instance.validate_formula.return_value = (True, "Formule valide")
+        # Configurer le mock pour execute_pl_query car c'est la méthode spécifique de TweetyBridge pour PL
+        self.mock_tweety_bridge_instance.execute_pl_query = MagicMock(return_value=(True, "Tweety Result: Query 'a => b' is ACCEPTED (True)."))
+
+        self.agent_name = "TestPLAgent"
+        self.agent = PropositionalLogicAgent(self.kernel, agent_name=self.agent_name)
+        
+        self.llm_service_id = "test_llm_service"
+        self.agent.setup_agent_components(self.llm_service_id)
+
     def tearDown(self):
         """Nettoyage après chaque test."""
         self.tweety_bridge_patcher.stop()
-    
-    def test_initialization(self):
-        """Test de l'initialisation de l'agent."""
-        self.assertEqual(self.agent.name, "PropositionalLogicAgent")
-        self.assertEqual(self.agent.kernel, self.kernel)
-        self.mock_tweety_bridge_class.assert_called_once()
-    
-    def test_setup_kernel(self):
-        """Test de la configuration du kernel."""
-        llm_service = MagicMock()
-        llm_service.service_id = "test_service"
+
+    def test_initialization_and_setup(self):
+        """Test de l'initialisation et de la configuration de l'agent."""
+        self.assertEqual(self.agent.name, self.agent_name)
+        self.assertEqual(self.agent.sk_kernel, self.kernel)
+        self.assertEqual(self.agent.logic_type, "PL")
+        self.assertEqual(self.agent.system_prompt, PL_AGENT_INSTRUCTIONS)
         
-        # Mock pour get_prompt_execution_settings_from_service_id
-        self.kernel.get_prompt_execution_settings_from_service_id.return_value = {"temperature": 0.7}
+        self.mock_tweety_bridge_class.assert_called_once_with(logic_type="pl")
+        self.mock_tweety_bridge_instance.is_jvm_ready.assert_called_once()
         
-        self.agent.setup_kernel(llm_service)
-        
-        # Vérifier que la JVM est prête
-        self.mock_tweety_bridge.is_jvm_ready.assert_called_once()
-        
-        # Vérifier que le plugin a été ajouté
-        self.kernel.add_plugin.assert_called_once()
-        
-        # Vérifier que les fonctions sémantiques ont été ajoutées
-        self.assertEqual(self.kernel.add_function.call_count, 3)
-    
-    def test_setup_kernel_jvm_not_ready(self):
-        """Test de la configuration du kernel lorsque la JVM n'est pas prête."""
-        self.mock_tweety_bridge.is_jvm_ready.return_value = False
-        
-        self.agent.setup_kernel(None)
-        
-        # Vérifier que la JVM est prête
-        self.mock_tweety_bridge.is_jvm_ready.assert_called_once()
-        
-        # Vérifier que le plugin n'a pas été ajouté
-        self.kernel.add_plugin.assert_not_called()
-        
-        # Vérifier que les fonctions sémantiques n'ont pas été ajoutées
-        self.kernel.add_function.assert_not_called()
-    
-    def test_text_to_belief_set_success(self):
+        self.assertTrue(self.kernel.add_function.call_count >= 3)
+        self.kernel.get_prompt_execution_settings_from_service_id.assert_called_with(self.llm_service_id)
+
+
+    async def test_text_to_belief_set_success(self):
         """Test de la conversion de texte en ensemble de croyances avec succès."""
-        belief_set, message = self.agent.text_to_belief_set("Texte de test")
+        mock_sk_result = MagicMock()
+        mock_sk_result.__str__.return_value = "a => b" 
+        self.kernel.invoke.return_value = mock_sk_result
         
-        # Vérifier que la fonction sémantique a été appelée
-        self.text_to_pl_function.invoke.assert_called_once_with("Texte de test")
+        belief_set, message = await self.agent.text_to_belief_set("Texte de test")
         
-        # Vérifier que l'ensemble de croyances a été validé
-        self.mock_tweety_bridge.validate_belief_set.assert_called_once()
+        self.kernel.invoke.assert_called_once()
+        args, kwargs = self.kernel.invoke.call_args
+        self.assertEqual(kwargs['plugin_name'], self.agent_name)
+        self.assertEqual(kwargs['function_name'], "TextToPLBeliefSet")
+        self.assertIsInstance(kwargs['arguments'], KernelArguments)
+        self.assertEqual(kwargs['arguments']['input'], "Texte de test")
         
-        # Vérifier le résultat
+        self.mock_tweety_bridge_instance.validate_belief_set.assert_called_once_with("a => b", logic_type="PL")
+        
         self.assertIsInstance(belief_set, PropositionalBeliefSet)
         self.assertEqual(belief_set.content, "a => b")
-        self.assertEqual(message, "Conversion réussie")
-    
-    def test_text_to_belief_set_empty_result(self):
+        self.assertEqual(message, "Conversion réussie.")
+
+    async def test_text_to_belief_set_empty_result(self):
         """Test de la conversion de texte en ensemble de croyances avec résultat vide."""
-        self.text_to_pl_function.invoke.return_value = MagicMock(result="")
+        mock_sk_result = MagicMock()
+        mock_sk_result.__str__.return_value = "" 
+        self.kernel.invoke.return_value = mock_sk_result
         
-        belief_set, message = self.agent.text_to_belief_set("Texte de test")
+        belief_set, message = await self.agent.text_to_belief_set("Texte de test")
         
-        # Vérifier que la fonction sémantique a été appelée
-        self.text_to_pl_function.invoke.assert_called_once_with("Texte de test")
+        self.kernel.invoke.assert_called_once()
+        self.mock_tweety_bridge_instance.validate_belief_set.assert_not_called()
         
-        # Vérifier que l'ensemble de croyances n'a pas été validé
-        self.mock_tweety_bridge.validate_belief_set.assert_not_called()
-        
-        # Vérifier le résultat
         self.assertIsNone(belief_set)
-        self.assertEqual(message, "La conversion a produit un ensemble de croyances vide")
-    
-    def test_text_to_belief_set_invalid_belief_set(self):
+        self.assertEqual(message, "La conversion a produit un ensemble de croyances vide.")
+
+    async def test_text_to_belief_set_invalid_belief_set(self):
         """Test de la conversion de texte en ensemble de croyances avec ensemble invalide."""
-        self.mock_tweety_bridge.validate_belief_set.return_value = (False, "Erreur de syntaxe")
+        mock_sk_result = MagicMock()
+        mock_sk_result.__str__.return_value = "invalid_pl_syntax {"
+        self.kernel.invoke.return_value = mock_sk_result
+        self.mock_tweety_bridge_instance.validate_belief_set.return_value = (False, "Erreur de syntaxe")
         
-        belief_set, message = self.agent.text_to_belief_set("Texte de test")
+        belief_set, message = await self.agent.text_to_belief_set("Texte de test")
         
-        # Vérifier que la fonction sémantique a été appelée
-        self.text_to_pl_function.invoke.assert_called_once_with("Texte de test")
+        self.kernel.invoke.assert_called_once()
+        self.mock_tweety_bridge_instance.validate_belief_set.assert_called_once_with("invalid_pl_syntax {", logic_type="PL")
         
-        # Vérifier que l'ensemble de croyances a été validé
-        self.mock_tweety_bridge.validate_belief_set.assert_called_once()
-        
-        # Vérifier le résultat
         self.assertIsNone(belief_set)
         self.assertEqual(message, "Ensemble de croyances invalide: Erreur de syntaxe")
-    
-    def test_generate_queries(self):
+
+    async def test_generate_queries(self):
         """Test de la génération de requêtes."""
-        belief_set = PropositionalBeliefSet("a => b")
+        mock_sk_result = MagicMock()
+        mock_sk_result.__str__.return_value = "a\nb\na => b"
+        self.kernel.invoke.return_value = mock_sk_result
+        self.mock_tweety_bridge_instance.validate_formula.return_value = (True, "Formule valide")
         
-        queries = self.agent.generate_queries("Texte de test", belief_set)
+        belief_set_obj = PropositionalBeliefSet("x => y")
         
-        # Vérifier que la fonction sémantique a été appelée
-        self.generate_queries_function.invoke.assert_called_once_with(
-            input="Texte de test",
-            belief_set="a => b"
-        )
+        queries = await self.agent.generate_queries("Texte de test", belief_set_obj)
         
-        # Vérifier que les requêtes ont été validées
-        self.assertEqual(self.mock_tweety_bridge.validate_formula.call_count, 3)
+        self.kernel.invoke.assert_called_once()
+        args, kwargs = self.kernel.invoke.call_args
+        self.assertEqual(kwargs['plugin_name'], self.agent_name)
+        self.assertEqual(kwargs['function_name'], "GeneratePLQueries")
+        self.assertEqual(kwargs['arguments']['input'], "Texte de test")
+        self.assertEqual(kwargs['arguments']['belief_set'], "x => y")
+
+        self.assertEqual(self.mock_tweety_bridge_instance.validate_formula.call_count, 3)
+        self.mock_tweety_bridge_instance.validate_formula.assert_any_call(formula_str="a", logic_type="PL")
         
-        # Vérifier le résultat
         self.assertEqual(queries, ["a", "b", "a => b"])
-    
-    def test_generate_queries_with_invalid_query(self):
+
+    async def test_generate_queries_with_invalid_query(self):
         """Test de la génération de requêtes avec une requête invalide."""
-        belief_set = PropositionalBeliefSet("a => b")
+        mock_sk_result = MagicMock()
+        mock_sk_result.__str__.return_value = "a\ninvalid_query {\nc"
+        self.kernel.invoke.return_value = mock_sk_result
         
-        # Configurer le mock pour rejeter la deuxième requête
-        self.mock_tweety_bridge.validate_formula.side_effect = [
-            (True, "Formule valide"),
-            (False, "Erreur de syntaxe"),
-            (True, "Formule valide")
-        ]
+        def validate_side_effect(formula_str, logic_type):
+            if formula_str == "invalid_query {":
+                return (False, "Erreur de syntaxe")
+            return (True, "Formule valide")
+        self.mock_tweety_bridge_instance.validate_formula.side_effect = validate_side_effect
         
-        queries = self.agent.generate_queries("Texte de test", belief_set)
+        belief_set_obj = PropositionalBeliefSet("x => y")
+        queries = await self.agent.generate_queries("Texte de test", belief_set_obj)
         
-        # Vérifier que la fonction sémantique a été appelée
-        self.generate_queries_function.invoke.assert_called_once_with(
-            input="Texte de test",
-            belief_set="a => b"
-        )
-        
-        # Vérifier que les requêtes ont été validées
-        self.assertEqual(self.mock_tweety_bridge.validate_formula.call_count, 3)
-        
-        # Vérifier le résultat (la deuxième requête doit être filtrée)
-        self.assertEqual(queries, ["a", "a => b"])
-    
+        self.kernel.invoke.assert_called_once()
+        self.assertEqual(self.mock_tweety_bridge_instance.validate_formula.call_count, 3)
+        self.assertEqual(queries, ["a", "c"])
+
     def test_execute_query_accepted(self):
         """Test de l'exécution d'une requête acceptée."""
-        belief_set = PropositionalBeliefSet("a => b")
+        belief_set_obj = PropositionalBeliefSet("a => b")
+        self.mock_tweety_bridge_instance.execute_pl_query.return_value = (True, "Tweety Result: Query 'a => b' is ACCEPTED (True).")
+        self.mock_tweety_bridge_instance.validate_formula.return_value = (True, "Formule valide")
+
+        result, message = self.agent.execute_query(belief_set_obj, "a => b")
         
-        result, message = self.agent.execute_query(belief_set, "a => b")
-        
-        # Vérifier que la fonction native a été appelée
-        self.execute_query_function.invoke.assert_called_once_with(
-            belief_set_content="a => b",
-            query_string="a => b"
+        self.mock_tweety_bridge_instance.validate_formula.assert_called_once_with(formula_str="a => b", logic_type="PL")
+        self.mock_tweety_bridge_instance.execute_pl_query.assert_called_once_with(
+            belief_set_str="a => b",
+            query_str="a => b" 
         )
         
-        # Vérifier le résultat
         self.assertTrue(result)
         self.assertEqual(message, "Tweety Result: Query 'a => b' is ACCEPTED (True).")
-    
+
     def test_execute_query_rejected(self):
         """Test de l'exécution d'une requête rejetée."""
-        belief_set = PropositionalBeliefSet("a => b")
-        self.execute_query_function.invoke.return_value = MagicMock(
-            result="Tweety Result: Query 'a => b' is REJECTED (False)."
+        belief_set_obj = PropositionalBeliefSet("a => b")
+        self.mock_tweety_bridge_instance.execute_pl_query.return_value = (False, "Tweety Result: Query 'c' is REJECTED (False).")
+        self.mock_tweety_bridge_instance.validate_formula.return_value = (True, "Formule valide")
+
+        result, message = self.agent.execute_query(belief_set_obj, "c")
+        
+        self.mock_tweety_bridge_instance.validate_formula.assert_called_once_with(formula_str="c", logic_type="PL")
+        self.mock_tweety_bridge_instance.execute_pl_query.assert_called_once_with(
+            belief_set_str="a => b",
+            query_str="c"
         )
         
-        result, message = self.agent.execute_query(belief_set, "a => b")
-        
-        # Vérifier que la fonction native a été appelée
-        self.execute_query_function.invoke.assert_called_once_with(
-            belief_set_content="a => b",
-            query_string="a => b"
-        )
-        
-        # Vérifier le résultat
         self.assertFalse(result)
-        self.assertEqual(message, "Tweety Result: Query 'a => b' is REJECTED (False).")
-    
-    def test_execute_query_error(self):
-        """Test de l'exécution d'une requête avec erreur."""
-        belief_set = PropositionalBeliefSet("a => b")
-        self.execute_query_function.invoke.return_value = MagicMock(
-            result="FUNC_ERROR: Erreur de syntaxe"
+        self.assertEqual(message, "Tweety Result: Query 'c' is REJECTED (False).")
+
+    def test_execute_query_error_tweety(self):
+        """Test de l'exécution d'une requête avec erreur de Tweety."""
+        belief_set_obj = PropositionalBeliefSet("a => b")
+        self.mock_tweety_bridge_instance.execute_pl_query.return_value = (None, "FUNC_ERROR: Erreur de syntaxe Tweety")
+        self.mock_tweety_bridge_instance.validate_formula.return_value = (True, "Formule valide")
+
+        result, message = self.agent.execute_query(belief_set_obj, "a")
+        
+        self.mock_tweety_bridge_instance.validate_formula.assert_called_once_with(formula_str="a", logic_type="PL")
+        self.mock_tweety_bridge_instance.execute_pl_query.assert_called_once_with(
+            belief_set_str="a => b",
+            query_str="a"
         )
         
-        result, message = self.agent.execute_query(belief_set, "a => b")
-        
-        # Vérifier que la fonction native a été appelée
-        self.execute_query_function.invoke.assert_called_once_with(
-            belief_set_content="a => b",
-            query_string="a => b"
-        )
-        
-        # Vérifier le résultat
         self.assertIsNone(result)
-        self.assertEqual(message, "FUNC_ERROR: Erreur de syntaxe")
-    
-    def test_interpret_results(self):
+        self.assertEqual(message, "FUNC_ERROR: Erreur de syntaxe Tweety")
+
+    def test_execute_query_invalid_formula(self):
+        """Test de l'exécution d'une requête avec une formule invalide."""
+        belief_set_obj = PropositionalBeliefSet("a => b")
+        self.mock_tweety_bridge_instance.validate_formula.return_value = (False, "Syntax Error in query")
+
+        result, message = self.agent.execute_query(belief_set_obj, "invalid_query {")
+        
+        self.mock_tweety_bridge_instance.validate_formula.assert_called_once_with(formula_str="invalid_query {", logic_type="PL")
+        self.mock_tweety_bridge_instance.execute_pl_query.assert_not_called() 
+        
+        self.assertIsNone(result)
+        self.assertEqual(message, "FUNC_ERROR: Requête invalide: invalid_query {")
+
+
+    async def test_interpret_results(self):
         """Test de l'interprétation des résultats."""
-        belief_set = PropositionalBeliefSet("a => b")
-        queries = ["a", "b", "a => b"]
-        results = [
-            "Tweety Result: Query 'a' is ACCEPTED (True).",
-            "Tweety Result: Query 'b' is REJECTED (False).",
-            "Tweety Result: Query 'a => b' is ACCEPTED (True)."
+        mock_sk_result = MagicMock()
+        mock_sk_result.__str__.return_value = "Interprétation finale des résultats"
+        self.kernel.invoke.return_value = mock_sk_result
+        
+        belief_set_obj = PropositionalBeliefSet("a => b")
+        queries_list = ["a", "b", "a => b"]
+        results_tuples = [
+            (True, "Tweety Result: Query 'a' is ACCEPTED (True)."),
+            (False, "Tweety Result: Query 'b' is REJECTED (False)."),
+            (True, "Tweety Result: Query 'a => b' is ACCEPTED (True).")
         ]
         
-        interpretation = self.agent.interpret_results("Texte de test", belief_set, queries, results)
+        interpretation = await self.agent.interpret_results("Texte de test", belief_set_obj, queries_list, results_tuples)
         
-        # Vérifier que la fonction sémantique a été appelée
-        self.interpret_function.invoke.assert_called_once_with(
-            input="Texte de test",
-            belief_set="a => b",
-            queries="a\nb\na => b",
-            tweety_result="Tweety Result: Query 'a' is ACCEPTED (True).\nTweety Result: Query 'b' is REJECTED (False).\nTweety Result: Query 'a => b' is ACCEPTED (True)."
-        )
+        self.kernel.invoke.assert_called_once()
+        args, kwargs = self.kernel.invoke.call_args
+        self.assertEqual(kwargs['plugin_name'], self.agent_name)
+        self.assertEqual(kwargs['function_name'], "InterpretPLResults")
+        self.assertEqual(kwargs['arguments']['input'], "Texte de test")
+        self.assertEqual(kwargs['arguments']['belief_set'], "a => b")
+        self.assertEqual(kwargs['arguments']['queries'], "a\nb\na => b")
+        expected_tweety_results = "Tweety Result: Query 'a' is ACCEPTED (True).\nTweety Result: Query 'b' is REJECTED (False).\nTweety Result: Query 'a => b' is ACCEPTED (True)."
+        self.assertEqual(kwargs['arguments']['tweety_result'], expected_tweety_results)
         
-        # Vérifier le résultat
-        self.assertEqual(interpretation, "Interprétation des résultats")
-    
-    def test_create_belief_set_from_data(self):
-        """Test de la création d'un ensemble de croyances à partir de données."""
-        belief_set_data = {
-            "logic_type": "propositional",
-            "content": "a => b"
-        }
-        
-        belief_set = self.agent._create_belief_set_from_data(belief_set_data)
-        
-        # Vérifier le résultat
-        self.assertIsInstance(belief_set, PropositionalBeliefSet)
-        self.assertEqual(belief_set.content, "a => b")
-        self.assertEqual(belief_set.logic_type, "propositional")
+        self.assertEqual(interpretation, "Interprétation finale des résultats")
+
+    def test_validate_formula_valid(self):
+        """Test de la validation d'une formule valide."""
+        self.mock_tweety_bridge_instance.validate_formula.return_value = (True, "Formule valide")
+        is_valid = self.agent.validate_formula("a => b")
+        self.assertTrue(is_valid)
+        self.mock_tweety_bridge_instance.validate_formula.assert_called_once_with(formula_str="a => b", logic_type="PL")
+
+    def test_validate_formula_invalid(self):
+        """Test de la validation d'une formule invalide."""
+        self.mock_tweety_bridge_instance.validate_formula.return_value = (False, "Erreur de syntaxe")
+        is_valid = self.agent.validate_formula("a => (b")
+        self.assertFalse(is_valid)
+        self.mock_tweety_bridge_instance.validate_formula.assert_called_once_with(formula_str="a => (b", logic_type="PL")
+
+def async_test(f):
+    def wrapper(*args, **kwargs):
+        asyncio.run(f(*args, **kwargs))
+    return wrapper
+
+TestPropositionalLogicAgent.test_text_to_belief_set_success = async_test(TestPropositionalLogicAgent.test_text_to_belief_set_success)
+TestPropositionalLogicAgent.test_text_to_belief_set_empty_result = async_test(TestPropositionalLogicAgent.test_text_to_belief_set_empty_result)
+TestPropositionalLogicAgent.test_text_to_belief_set_invalid_belief_set = async_test(TestPropositionalLogicAgent.test_text_to_belief_set_invalid_belief_set)
+TestPropositionalLogicAgent.test_generate_queries = async_test(TestPropositionalLogicAgent.test_generate_queries)
+TestPropositionalLogicAgent.test_generate_queries_with_invalid_query = async_test(TestPropositionalLogicAgent.test_generate_queries_with_invalid_query)
+TestPropositionalLogicAgent.test_interpret_results = async_test(TestPropositionalLogicAgent.test_interpret_results)
 
 
 if __name__ == "__main__":

@@ -235,137 +235,138 @@ class TestCommunicationPerformance(unittest.TestCase):
         self.assertGreater(data_throughput, 100, "Le débit sur le canal de données est trop faible")
         self.assertGreater(total_throughput, 300, "Le débit total est trop faible")
     
-    @pytest.mark.asyncio
-    async def test_request_response_performance(self):
-        """Test des performances du protocole de requête-réponse."""
-        # Paramètres du test
-        num_requests = 5  # Réduire encore plus le nombre de requêtes pour faciliter le débogage
-        response_times = []
-        
-        # Fonction pour traiter les requêtes
-        async def process_requests():
-            # Recevoir et répondre aux requêtes
-            requests_processed = 0
-            while requests_processed < num_requests:
-                try:
-                    # Recevoir une requête avec un timeout court
-                    request = self.middleware.receive_message(
-                        recipient_id="responder",
-                        channel_type=ChannelType.HIERARCHICAL,
-                        timeout=0.1  # Timeout très court pour vérifier fréquemment
-                    )
-                    
-                    if request:
-                        requests_processed += 1
-                        print(f"Received request {requests_processed}: {request.id}")
-                        
-                        # Créer une réponse
-                        response = request.create_response(
-                            content={"status": "success", "data": {"value": request.content.get("value", 0) * 2}}
-                        )
-                        response.sender = "responder"
-                        response.sender_level = AgentLevel.TACTICAL
-                        
-                        # Envoyer la réponse
-                        print(f"Sending response to request {request.id}")
-                        self.middleware.send_message(response)
-                        print(f"Response sent for request {request.id}")
-                except Exception as e:
-                    print(f"Error in process_requests: {e}")
-                    await asyncio.sleep(0.01)  # Petite pause en cas d'erreur
-        
-        # Fonction pour recevoir les messages pour le requester
-        async def receive_messages():
-            while True:
-                try:
-                    # Recevoir des messages pour le requester
-                    message = self.middleware.receive_message(
-                        recipient_id="requester",
-                        channel_type=ChannelType.HIERARCHICAL,
-                        timeout=0.1
-                    )
-                    
-                    if message:
-                        print(f"Requester received message: {message.id}, type: {message.type}")
-                        
-                        # Si c'est une réponse, la traiter
-                        if message.type == MessageType.RESPONSE:
-                            request_id = message.metadata.get("reply_to")
-                            if request_id:
-                                print(f"It's a response to request {request_id}")
-                except Exception as e:
-                    print(f"Error in receive_messages: {e}")
-                    await asyncio.sleep(0.01)
-        
-        # Démarrer les tâches asynchrones
-        process_task = asyncio.create_task(process_requests())
-        receive_task = asyncio.create_task(receive_messages())
-        
-        # Attendre un peu pour que les tâches démarrent
-        await asyncio.sleep(0.1)
-        
-        # Envoyer des requêtes et mesurer le temps de réponse
-        for i in range(num_requests):
-            start_time = time.time()
-            
-            # Envoyer une requête avec un timeout plus long
-            try:
-                print(f"Sending request {i}")
-                response = await self.middleware.send_request_async(
-                    sender="requester",
-                    sender_level=AgentLevel.STRATEGIC,
-                    recipient="responder",
-                    request_type="test_request",
-                    content={"value": i},
-                    timeout=5.0,
-                    priority=MessagePriority.NORMAL,
-                    channel=ChannelType.HIERARCHICAL.value
-                )
-                print(f"Received response for request {i}: {response.id}")
-            except Exception as e:
-                print(f"Error sending request {i}: {e}")
-                raise
-            
-            end_time = time.time()
-            
-            # Vérifier que la réponse a été reçue
-            self.assertIsNotNone(response)
-            self.assertEqual(response.content["status"], "success")
-            self.assertEqual(response.content["data"]["value"], i * 2)
-            
-            # Calculer le temps de réponse
-            response_time = end_time - start_time
-            response_times.append(response_time)
-            
-            # Petite pause entre les requêtes
-            await asyncio.sleep(0.1)
-        
-        # Annuler les tâches
-        process_task.cancel()
-        receive_task.cancel()
-        try:
-            await process_task
-        except asyncio.CancelledError:
-            pass
-        try:
-            await receive_task
-        except asyncio.CancelledError:
-            pass
-        
-        # Calculer les statistiques de temps de réponse
-        avg_response_time = statistics.mean(response_times) * 1000  # en millisecondes
-        min_response_time = min(response_times) * 1000
-        max_response_time = max(response_times) * 1000
-        p95_response_time = sorted(response_times)[int(len(response_times) * 0.95)] * 1000
-        
-        print(f"\nTemps de réponse moyen: {avg_response_time:.2f} ms")
-        print(f"Temps de réponse minimal: {min_response_time:.2f} ms")
-        print(f"Temps de réponse maximal: {max_response_time:.2f} ms")
-        print(f"Temps de réponse P95: {p95_response_time:.2f} ms")
-        
-        # Vérifier que les temps de réponse sont acceptables
-        self.assertLess(avg_response_time, 100, "Le temps de réponse moyen est trop élevé")
-        self.assertLess(p95_response_time, 200, "Le temps de réponse P95 est trop élevé")
+    # Déplacé vers TestAsyncCommunicationPerformance
+    # @pytest.mark.anyio
+    # async def test_request_response_performance(self):
+    #     """Test des performances du protocole de requête-réponse."""
+    #     # Paramètres du test
+    #     num_requests = 5  # Réduire encore plus le nombre de requêtes pour faciliter le débogage
+    #     response_times = []
+    #
+    #     # Fonction pour traiter les requêtes
+    #     async def process_requests():
+    #         # Recevoir et répondre aux requêtes
+    #         requests_processed = 0
+    #         while requests_processed < num_requests:
+    #             try:
+    #                 # Recevoir une requête avec un timeout court
+    #                 request = self.middleware.receive_message(
+    #                     recipient_id="responder",
+    #                     channel_type=ChannelType.HIERARCHICAL,
+    #                     timeout=0.1  # Timeout très court pour vérifier fréquemment
+    #                 )
+    #
+    #                 if request:
+    #                     requests_processed += 1
+    #                     print(f"Received request {requests_processed}: {request.id}")
+    #
+    #                     # Créer une réponse
+    #                     response = request.create_response(
+    #                         content={"status": "success", "data": {"value": request.content.get("value", 0) * 2}}
+    #                     )
+    #                     response.sender = "responder"
+    #                     response.sender_level = AgentLevel.TACTICAL
+    #
+    #                     # Envoyer la réponse
+    #                     print(f"Sending response to request {request.id}")
+    #                     self.middleware.send_message(response)
+    #                     print(f"Response sent for request {request.id}")
+    #             except Exception as e:
+    #                 print(f"Error in process_requests: {e}")
+    #                 await asyncio.sleep(0.01)  # Petite pause en cas d'erreur
+    #
+    #     # Fonction pour recevoir les messages pour le requester
+    #     async def receive_messages():
+    #         while True:
+    #             try:
+    #                 # Recevoir des messages pour le requester
+    #                 message = self.middleware.receive_message(
+    #                     recipient_id="requester",
+    #                     channel_type=ChannelType.HIERARCHICAL,
+    #                     timeout=0.1
+    #                 )
+    #
+    #                 if message:
+    #                     print(f"Requester received message: {message.id}, type: {message.type}")
+    #
+    #                     # Si c'est une réponse, la traiter
+    #                     if message.type == MessageType.RESPONSE:
+    #                         request_id = message.metadata.get("reply_to")
+    #                         if request_id:
+    #                             print(f"It's a response to request {request_id}")
+    #             except Exception as e:
+    #                 print(f"Error in receive_messages: {e}")
+    #                 await asyncio.sleep(0.01)
+    #
+    #     # Démarrer les tâches asynchrones
+    #     process_task = asyncio.create_task(process_requests())
+    #     receive_task = asyncio.create_task(receive_messages())
+    #
+    #     # Attendre un peu pour que les tâches démarrent
+    #     await asyncio.sleep(0.1)
+    #
+    #     # Envoyer des requêtes et mesurer le temps de réponse
+    #     for i in range(num_requests):
+    #         start_time = time.time()
+    #
+    #         # Envoyer une requête avec un timeout plus long
+    #         try:
+    #             print(f"Sending request {i}")
+    #             response = await self.middleware.send_request_async(
+    #                 sender="requester",
+    #                 sender_level=AgentLevel.STRATEGIC,
+    #                 recipient="responder",
+    #                 request_type="test_request",
+    #                 content={"value": i},
+    #                 timeout=5.0,
+    #                 priority=MessagePriority.NORMAL,
+    #                 channel=ChannelType.HIERARCHICAL.value
+    #             )
+    #             print(f"Received response for request {i}: {response.id}")
+    #         except Exception as e:
+    #             print(f"Error sending request {i}: {e}")
+    #             raise
+    #
+    #         end_time = time.time()
+    #
+    #         # Vérifier que la réponse a été reçue
+    #         self.assertIsNotNone(response)
+    #         self.assertEqual(response.content["status"], "success")
+    #         self.assertEqual(response.content["data"]["value"], i * 2)
+    #
+    #         # Calculer le temps de réponse
+    #         response_time = end_time - start_time
+    #         response_times.append(response_time)
+    #
+    #         # Petite pause entre les requêtes
+    #         await asyncio.sleep(0.1)
+    #
+    #     # Annuler les tâches
+    #     process_task.cancel()
+    #     receive_task.cancel()
+    #     try:
+    #         await process_task
+    #     except asyncio.CancelledError:
+    #         pass
+    #     try:
+    #         await receive_task
+    #     except asyncio.CancelledError:
+    #         pass
+    #
+    #     # Calculer les statistiques de temps de réponse
+    #     avg_response_time = statistics.mean(response_times) * 1000  # en millisecondes
+    #     min_response_time = min(response_times) * 1000
+    #     max_response_time = max(response_times) * 1000
+    #     p95_response_time = sorted(response_times)[int(len(response_times) * 0.95)] * 1000
+    #
+    #     print(f"\nTemps de réponse moyen: {avg_response_time:.2f} ms")
+    #     print(f"Temps de réponse minimal: {min_response_time:.2f} ms")
+    #     print(f"Temps de réponse maximal: {max_response_time:.2f} ms")
+    #     print(f"Temps de réponse P95: {p95_response_time:.2f} ms")
+    #
+    #     # Vérifier que les temps de réponse sont acceptables
+    #     self.assertLess(avg_response_time, 100, "Le temps de réponse moyen est trop élevé")
+    #     self.assertLess(p95_response_time, 200, "Le temps de réponse P95 est trop élevé")
     
     def test_publish_subscribe_performance(self):
         """Test des performances du protocole de publication-abonnement."""
@@ -573,9 +574,141 @@ class TestAsyncCommunicationPerformance(unittest.IsolatedAsyncioTestCase):
         
         # Initialiser les protocoles
         self.middleware.initialize_protocols()
-    
-    @pytest.mark.asyncio
-    async def test_async_request_response_performance(self):
+
+    @pytest.mark.anyio
+    async def test_request_response_performance(self): # Anciennement dans TestCommunicationPerformance
+        """Test des performances du protocole de requête-réponse."""
+        # Paramètres du test
+        num_requests = 5  # Réduire encore plus le nombre de requêtes pour faciliter le débogage
+        response_times = []
+        
+        # Fonction pour traiter les requêtes
+        async def process_requests():
+            # Recevoir et répondre aux requêtes
+            requests_processed = 0
+            while requests_processed < num_requests:
+                try:
+                    # Recevoir une requête avec un timeout court
+                    request = self.middleware.receive_message(
+                        recipient_id="responder",
+                        channel_type=ChannelType.HIERARCHICAL,
+                        timeout=0.1  # Timeout très court pour vérifier fréquemment
+                    )
+                    
+                    if request:
+                        requests_processed += 1
+                        print(f"Received request {requests_processed}: {request.id}")
+                        
+                        # Créer une réponse
+                        response_content = request.create_response(
+                            content={"status": "success", "data": {"value": request.content.get("value", 0) * 2}}
+                        )
+                        response_content.sender = "responder"
+                        response_content.sender_level = AgentLevel.TACTICAL
+                        
+                        # Envoyer la réponse
+                        print(f"Sending response to request {request.id}")
+                        self.middleware.send_message(response_content)
+                        print(f"Response sent for request {request.id}")
+                except Exception as e:
+                    print(f"Error in process_requests: {e}")
+                    await asyncio.sleep(0.01)  # Petite pause en cas d'erreur
+        
+        # Fonction pour recevoir les messages pour le requester
+        async def receive_messages():
+            while True:
+                try:
+                    # Recevoir des messages pour le requester
+                    message = self.middleware.receive_message(
+                        recipient_id="requester",
+                        channel_type=ChannelType.HIERARCHICAL,
+                        timeout=0.1
+                    )
+                    
+                    if message:
+                        print(f"Requester received message: {message.id}, type: {message.type}")
+                        
+                        # Si c'est une réponse, la traiter
+                        if message.type == MessageType.RESPONSE:
+                            request_id = message.metadata.get("reply_to")
+                            if request_id:
+                                print(f"It's a response to request {request_id}")
+                except Exception as e:
+                    print(f"Error in receive_messages: {e}")
+                    await asyncio.sleep(0.01)
+        
+        # Démarrer les tâches asynchrones
+        process_task = asyncio.create_task(process_requests())
+        receive_task = asyncio.create_task(receive_messages())
+        
+        # Attendre un peu pour que les tâches démarrent
+        await asyncio.sleep(0.1)
+        
+        # Envoyer des requêtes et mesurer le temps de réponse
+        for i in range(num_requests):
+            start_time = time.time()
+            
+            # Envoyer une requête avec un timeout plus long
+            try:
+                print(f"Sending request {i}")
+                response = await self.middleware.send_request_async(
+                    sender="requester",
+                    sender_level=AgentLevel.STRATEGIC,
+                    recipient="responder",
+                    request_type="test_request",
+                    content={"value": i},
+                    timeout=5.0,
+                    priority=MessagePriority.NORMAL,
+                    channel=ChannelType.HIERARCHICAL.value
+                )
+                print(f"Received response for request {i}: {response.id}")
+            except Exception as e:
+                print(f"Error sending request {i}: {e}")
+                raise
+            
+            end_time = time.time()
+            
+            # Vérifier que la réponse a été reçue
+            self.assertIsNotNone(response) # unittest.IsolatedAsyncioTestCase fournit assertIsNotNone
+            self.assertEqual(response.content["status"], "success")
+            self.assertEqual(response.content["data"]["value"], i * 2)
+            
+            # Calculer le temps de réponse
+            response_time = end_time - start_time
+            response_times.append(response_time)
+            
+            # Petite pause entre les requêtes
+            await asyncio.sleep(0.1)
+        
+        # Annuler les tâches
+        process_task.cancel()
+        receive_task.cancel()
+        try:
+            await process_task
+        except asyncio.CancelledError:
+            pass
+        try:
+            await receive_task
+        except asyncio.CancelledError:
+            pass
+        
+        # Calculer les statistiques de temps de réponse
+        avg_response_time = statistics.mean(response_times) * 1000  # en millisecondes
+        min_response_time = min(response_times) * 1000
+        max_response_time = max(response_times) * 1000
+        p95_response_time = sorted(response_times)[int(len(response_times) * 0.95)] * 1000
+        
+        print(f"\nTemps de réponse moyen: {avg_response_time:.2f} ms")
+        print(f"Temps de réponse minimal: {min_response_time:.2f} ms")
+        print(f"Temps de réponse maximal: {max_response_time:.2f} ms")
+        print(f"Temps de réponse P95: {p95_response_time:.2f} ms")
+        
+        # Vérifier que les temps de réponse sont acceptables
+        self.assertLess(avg_response_time, 100, "Le temps de réponse moyen est trop élevé") # Ajusté pour correspondre à l'original
+        self.assertLess(p95_response_time, 200, "Le temps de réponse P95 est trop élevé") # Ajusté pour correspondre à l'original
+
+    @pytest.mark.anyio
+    async def test_async_request_response_performance(self): # Renommé pour éviter conflit, ou garder l'ancien et supprimer celui-ci
         """Test des performances du protocole de requête-réponse asynchrone."""
         # Paramètres du test
         num_requests = 2  # Réduire encore plus le nombre de requêtes pour faciliter le débogage

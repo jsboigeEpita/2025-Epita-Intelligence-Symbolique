@@ -8,6 +8,7 @@ en messages standardisés compréhensibles par le middleware.
 
 import uuid
 import logging
+import time # Ajout de l'import time
 from typing import Dict, Any, Optional, List, Callable, Union
 from datetime import datetime
 
@@ -152,42 +153,82 @@ class StrategicAdapter:
     ) -> Optional[Message]:
         """
         Reçoit un rapport tactique.
+        Boucle jusqu'à ce qu'un message de rapport soit trouvé ou que le timeout expire.
         
         Args:
             timeout: Délai d'attente maximum en secondes (None pour attente indéfinie)
-            filter_criteria: Critères de filtrage des rapports (optionnel)
+            filter_criteria: Critères de filtrage pour le contenu du rapport (optionnel)
             
         Returns:
             Le rapport reçu ou None si timeout
         """
-        # Recevoir un message via le middleware
-        message = self.middleware.receive_message(
-            recipient_id=self.agent_id,
-            channel_type=ChannelType.HIERARCHICAL,
-            timeout=timeout
-        )
+        start_time = time.monotonic()
         
-        if message:
-            # Vérifier si le message est un rapport
-            is_report = (
-                message.type == MessageType.INFORMATION and
-                message.content.get("info_type") == "report"
+        while True:
+            current_timeout = None
+            if timeout is not None:
+                elapsed_time = time.monotonic() - start_time
+                remaining_timeout = timeout - elapsed_time
+                if remaining_timeout <= 0:
+                    self.logger.warning(f"Timeout ({timeout}s) expired while waiting for report for {self.agent_id}.")
+                    return None
+                current_timeout = remaining_timeout
+
+            message = self.middleware.receive_message(
+                recipient_id=self.agent_id,
+                channel_type=ChannelType.HIERARCHICAL,
+                timeout=current_timeout
             )
             
-            if is_report:
-                # Vérifier les critères de filtrage
-                if filter_criteria:
-                    for key, value in filter_criteria.items():
-                        if key in message.content:
-                            if isinstance(value, list):
-                                if message.content[key] not in value:
-                                    return None
-                            elif message.content[key] != value:
-                                return None
+            if message:
+                is_report_type = (
+                    message.type == MessageType.INFORMATION and
+                    message.content.get("info_type") == "report"
+                )
                 
-                self.logger.info(f"Report received from {message.sender}")
-                return message
-        
+                if is_report_type:
+                    if filter_criteria:
+                        match = True
+                        # Le contenu pertinent d'un rapport est sous "data"
+                        actual_content_payload = message.content.get("data", message.content)
+                        if not isinstance(actual_content_payload, dict):
+                             actual_content_payload = message.content
+
+                        for key, expected_value in filter_criteria.items():
+                            if key in actual_content_payload:
+                                actual_value = actual_content_payload[key]
+                            elif key in message.content: # Fallback
+                                actual_value = message.content[key]
+                            else:
+                                match = False
+                                break
+                            
+                            if isinstance(expected_value, list):
+                                if actual_value not in expected_value:
+                                    match = False
+                                    break
+                            elif actual_value != expected_value:
+                                match = False
+                                break
+                        
+                        if not match:
+                            self.logger.debug(f"Message {message.id} (report) received by {self.agent_id} but did not match filter_criteria. Continuing to wait.")
+                            continue
+                    
+                    self.logger.info(f"Report {message.id} (type: {message.content.get('report_type')}) received from {message.sender} by {self.agent_id} and matches criteria.")
+                    return message
+                else:
+                    self.logger.debug(f"Ignored message {message.id} (type: {message.type}, info_type: {message.content.get('info_type')}) by {self.agent_id} while waiting for report.")
+
+            if timeout is None and not message:
+                time.sleep(0.01)
+            elif timeout is not None and not message and current_timeout is not None and current_timeout <= 0:
+                 self.logger.warning(f"Timeout ({timeout}s) confirmed for {self.agent_id} as current_timeout was <=0 before receive_message (waiting for report).")
+                 return None
+            elif timeout is not None and not message :
+                 pass # La boucle while vérifiera le timeout global
+
+        self.logger.error(f"Exited receive_report loop unexpectedly for {self.agent_id}.")
         return None
     
     def request_tactical_info(

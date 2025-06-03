@@ -326,17 +326,31 @@ class ProgressMonitor:
         failed_task_ids = [task["id"] for task in self.state.tasks["failed"]]
         
         if failed_task_ids:
+            self.logger.debug(f"Détection de tâches bloquées. failed_task_ids: {failed_task_ids}")
+            # Vérifier les tâches "pending" ET "in_progress" pour les blocages
             tasks_to_check = self.state.tasks["pending"] + self.state.tasks["in_progress"]
+            self.logger.debug(f"Nombre de tâches à vérifier pour blocage: {len(tasks_to_check)}")
             for task in tasks_to_check:
                 task_id = task["id"]
+                current_task_status = "unknown"
+                for status_key, task_list_for_status in self.state.tasks.items():
+                    if any(t["id"] == task_id for t in task_list_for_status):
+                        current_task_status = status_key
+                        break
+                self.logger.debug(f"Vérification blocage pour task_id: {task_id} (description: '{task.get('description', 'N/A')}', status: {current_task_status})")
                 
                 # Chercher dans toutes les dépendances si cette tâche dépend d'une tâche échouée
                 blocked_by_failed = []
+                current_task_dependencies = self.state.get_task_dependencies(task_id)
+                self.logger.debug(f"Dépendances de {task_id}: {current_task_dependencies}")
+
                 for failed_id in failed_task_ids:
                     # Vérifier si cette tâche dépend de la tâche échouée
-                    if failed_id in self.state.get_task_dependencies(task_id):
+                    if failed_id in current_task_dependencies:
+                        self.logger.debug(f"Tâche {task_id} dépend de la tâche échouée {failed_id}.")
                         blocked_by_failed.append(failed_id)
                 
+                self.logger.debug(f"Pour {task_id}, blocked_by_failed après vérification des dépendances directes: {blocked_by_failed}")
                 # Aussi vérifier l'inverse : si une tâche échouée dépend de cette tâche
                 # (dans ce cas, cette tâche pourrait être bloquée indirectement)
                 for other_task_id, deps in self.state.task_dependencies.items():
@@ -356,22 +370,54 @@ class ProgressMonitor:
                     })
         
         # Vérifier les tâches en retard
+        self.logger.debug("Détection des tâches en retard.")
         for task in self.state.tasks["in_progress"]:
             task_id = task["id"]
             progress = self.state.task_progress.get(task_id, 0.0)
+            self.logger.debug(f"Vérification retard pour task_id: {task_id} (description: '{task.get('description', 'N/A')}', progress: {progress:.2f})")
             
-            # Si la progression est faible mais la tâche est en cours depuis longtemps
-            # (cette logique serait normalement plus sophistiquée avec des timestamps)
-            if progress < 0.5 and task.get("estimated_duration") == "short":
-                critical_issues.append({
-                    "type": "delayed_task",
-                    "description": f"Tâche en retard: {task.get('description', '')}",
-                    "severity": "high",
+            start_time_str = task.get("start_time")
+            estimated_duration_sec = task.get("estimated_duration")
+            self.logger.debug(f"Task {task_id}: start_time_str='{start_time_str}', estimated_duration_sec={estimated_duration_sec}")
+
+            if start_time_str and isinstance(estimated_duration_sec, (int, float)) and estimated_duration_sec > 0:
+                try:
+                    start_time_dt = datetime.fromisoformat(start_time_str)
+                    # S'assurer que start_time_dt est conscient du fuseau horaire si datetime.now() l'est, ou inversement.
+                    # Pour simplifier, on suppose qu'ils sont comparables (par exemple, tous deux en UTC implicite ou naïfs).
+                    elapsed_time_sec = (datetime.now() - start_time_dt).total_seconds()
+                    self.logger.debug(f"Task {task_id}: start_time_dt={start_time_dt}, elapsed_time_sec={elapsed_time_sec:.2f}s")
+                    
+                    # Condition de retard: si le temps écoulé dépasse la durée estimée
+                    # ET la progression n'est pas presque terminée (ex: < 90%).
+                    is_overdue = elapsed_time_sec >= estimated_duration_sec # Correction: >= au lieu de >
+                    self.logger.debug(f"Task {task_id}: is_overdue={is_overdue} (elapsed: {elapsed_time_sec:.2f}s >= estimated: {estimated_duration_sec}s)") # Log mis à jour
+                    
+                    if is_overdue and progress < 0.9:
+                        self.logger.info(f"Tâche {task_id} détectée comme EN RETARD. Progress: {progress}, Elapsed: {elapsed_time_sec:.0f}s, Estimated: {estimated_duration_sec}s")
+                        critical_issues.append({
+                            "type": "delayed_task",
+                            "description": f"Tâche en retard: {task.get('description', '')}. Progrès: {progress:.2f}, Temps écoulé: {elapsed_time_sec:.0f}s, Estimé: {estimated_duration_sec}s",
+                            "severity": "high",
+                            "task_id": task_id,
+                            "objective_id": task.get("objective_id"),
+                            "current_progress": progress
+                        })
+                except ValueError:
+                    self.logger.warning(f"Format de date invalide pour start_time de la tâche {task_id}: {start_time_str}")
+            elif progress < 0.1 and task.get("status") == "in_progress": # Fallback: Stagnation si pas de dates/durées valides
+                 self.logger.info(f"Tâche {task_id} détectée comme POTENTIELLEMENT BLOQUÉE/EN RETARD (fallback). Progress: {progress}")
+                 critical_issues.append({
+                    "type": "delayed_task", # Ou "stagnated_task"
+                    "description": f"Tâche potentiellement bloquée ou en retard (faible progression non améliorée): {task.get('description', '')}",
+                    "severity": "medium", # Moins critique car moins d'infos
                     "task_id": task_id,
                     "objective_id": task.get("objective_id"),
                     "current_progress": progress
                 })
-        
+            else:
+                self.logger.debug(f"Task {task_id} non considérée en retard (pas de start_time/estimated_duration valides ou progression > 0.1).")
+
         # Vérifier le taux d'échec global
         total_tasks = sum(len(tasks) for tasks in self.state.tasks.values())
         failed_tasks = len(self.state.tasks["failed"])

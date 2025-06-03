@@ -8,12 +8,15 @@ __pycache__/
 coverage.xml
 htmlcov/
 coverage.json
+.pytest_cache/
 
 # Environnements virtuels
 venv_test/
 venv/
 env/
 ENV/
+/.venv/
+venv_py310/
 
 # Fichiers temporaires
 *.tmp
@@ -22,10 +25,15 @@ ENV/
 temp_extracts/
 logs/
 temp/
+_temp/
+temp_*.py
 
 # Fichiers spécifiques au projet
 *.egg-info/
+argumentation_analysis/data/learning_data.json
 
+build/
+dist/
 # Fichiers de configuration locale
 .env
 .vscode/
@@ -35,9 +43,30 @@ temp/
 libs/*.jar
 vendor/
 
+# Tweety libraries (downloaded by setup scripts)
+libs/tweety/**/*.jar
+libs/tweety/native/
+
 # Fichiers de documentation spécifiques
 README_TESTS.md
 
 # Fichiers de rapports de tests et d'analyses
 argumentation_analysis/tests/tools/reports/test_report_*.txt
 results/rhetorical_analysis_*.json
+
+# Outils portables et répertoires temporaires sous libs/
+libs/portable_jdk/
+libs/portable_octave/
+libs/_temp*/
+
+# Fichiers de résultats et rapports générés
+results/
+rapport_ia_2024.txt
+discours_attal_20240130.txt
+# Pytest output files
+pytest_hierarchical_full_v4.txt
+
+# Scripts de débogage
+scripts/debug_jpype_classpath.py
+
+argumentation_analysis/text_cache/

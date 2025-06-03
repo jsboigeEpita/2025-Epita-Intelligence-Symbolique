@@ -1,14 +1,22 @@
 # argumentation_analysis/agents/core/logic/propositional_logic_agent.py
 """
-Agent spécialisé pour la logique propositionnelle.
+Agent spécialisé pour la logique propositionnelle (PL).
+
+Ce module définit `PropositionalLogicAgent`, une classe qui hérite de
+`BaseLogicAgent` et implémente les fonctionnalités spécifiques pour interagir
+avec la logique propositionnelle. Il utilise `TweetyBridge` pour la communication
+avec TweetyProject et s'appuie sur des prompts sémantiques définis dans
+`argumentation_analysis.agents.core.pl.prompts` pour la conversion
+texte-vers-PL, la génération de requêtes et l'interprétation des résultats.
 """
 
 import logging
 from typing import Dict, List, Optional, Any, Tuple
 
 from semantic_kernel import Kernel
+from semantic_kernel.functions.kernel_arguments import KernelArguments 
 
-from .abstract_logic_agent import AbstractLogicAgent
+from ..abc.agent_bases import BaseLogicAgent 
 from .belief_set import BeliefSet, PropositionalBeliefSet
 from .tweety_bridge import TweetyBridge
 
@@ -18,278 +26,327 @@ from ..pl.prompts import (
     prompt_gen_pl_queries_v8 as PROMPT_GEN_PL_QUERIES,
     prompt_interpret_pl_v8 as PROMPT_INTERPRET_PL
 )
+# Importer les instructions système
+from ..pl.pl_definitions import PL_AGENT_INSTRUCTIONS 
 
 # Configuration du logger
-logger = logging.getLogger("Orchestration.PropositionalLogicAgent")
+logger = logging.getLogger(__name__) 
 
-class PropositionalLogicAgent(AbstractLogicAgent):
+class PropositionalLogicAgent(BaseLogicAgent): 
     """
-    Agent spécialisé pour la logique propositionnelle.
-    
-    Cette classe implémente les méthodes abstraites de AbstractLogicAgent
-    spécifiquement pour la logique propositionnelle, en utilisant TweetyProject
-    via l'interface TweetyBridge.
+    Agent spécialisé pour la logique propositionnelle (PL).
+
+    Cet agent étend `BaseLogicAgent` pour fournir des capacités de traitement
+    spécifiques à la logique propositionnelle. Il intègre des fonctions sémantiques
+    pour traduire le langage naturel en ensembles de croyances PL, générer des
+    requêtes PL pertinentes, exécuter ces requêtes via `TweetyBridge`, et
+    interpréter les résultats en langage naturel.
+
+    Attributes:
+        _tweety_bridge (TweetyBridge): Instance de `TweetyBridge` configurée pour la PL.
     """
     
-    def __init__(self, kernel: Kernel):
+    def __init__(self, kernel: Kernel, agent_name: str = "PropositionalLogicAgent"): 
         """
-        Initialise un agent de logique propositionnelle.
-        
-        Args:
-            kernel: Le kernel Semantic Kernel à utiliser pour les fonctions sémantiques
+        Initialise une instance de `PropositionalLogicAgent`.
+
+        :param kernel: Le kernel Semantic Kernel à utiliser pour les fonctions sémantiques.
+        :type kernel: Kernel
+        :param agent_name: Le nom de l'agent, par défaut "PropositionalLogicAgent".
+        :type agent_name: str
         """
-        super().__init__(kernel, "PropositionalLogicAgent")
-        self._tweety_bridge = TweetyBridge()
-        self._plugin_name = "PLAnalyzer"
+        super().__init__(kernel,
+                         agent_name=agent_name,
+                         logic_type_name="PL",
+                         system_prompt=PL_AGENT_INSTRUCTIONS)
     
-    def setup_kernel(self, llm_service) -> None:
+    def get_agent_capabilities(self) -> Dict[str, Any]: 
         """
-        Configure le kernel avec les plugins et fonctions nécessaires.
-        
-        Args:
-            llm_service: Le service LLM à utiliser
+        Retourne un dictionnaire décrivant les capacités spécifiques de cet agent PL.
+
+        :return: Un dictionnaire mappant les noms des capacités à leurs descriptions.
+        :rtype: Dict[str, Any]
         """
-        self._logger.info(f"Configuration du kernel pour {self._plugin_name}...")
-        
-        # Vérifier si la JVM est prête
-        if not self._tweety_bridge.is_jvm_ready():
-            self._logger.error("Tentative de setup PL Kernel alors que la JVM n'est PAS démarrée.")
-            return
-        
-        # Ajouter le plugin TweetyBridge au kernel
-        if self._plugin_name in self.kernel.plugins:
-            self._logger.warning(f"Plugin '{self._plugin_name}' déjà présent. Remplacement.")
-        
-        self.kernel.add_plugin(self._tweety_bridge, plugin_name=self._plugin_name)
-        self._logger.debug(f"Instance du plugin '{self._plugin_name}' ajoutée/mise à jour.")
-        
-        # Configuration des settings LLM
-        default_settings = None
-        if llm_service:
-            try:
-                default_settings = self.kernel.get_prompt_execution_settings_from_service_id(
-                    llm_service.service_id
-                )
-                self._logger.debug(f"Settings LLM récupérés pour {self._plugin_name}.")
-            except Exception as e:
-                self._logger.warning(f"Impossible de récupérer settings LLM pour {self._plugin_name}: {e}")
-        
-        # Ajout des fonctions sémantiques au kernel
-        semantic_functions = [
-            ("semantic_TextToPLBeliefSet", PROMPT_TEXT_TO_PL, 
-             "Traduit texte en Belief Set PL (syntaxe Tweety ! || => <=> ^^)."),
-            ("semantic_GeneratePLQueries", PROMPT_GEN_PL_QUERIES, 
-             "Génère requêtes PL pertinentes (syntaxe Tweety ! || => <=> ^^)."),
-            ("semantic_InterpretPLResult", PROMPT_INTERPRET_PL, 
-             "Interprète résultat requête PL Tweety formaté.")
-        ]
-        
-        for func_name, prompt, description in semantic_functions:
-            try:
-                # Vérifier si le prompt est valide
-                if not prompt or not isinstance(prompt, str):
-                    self._logger.error(f"ERREUR: Prompt invalide pour {self._plugin_name}.{func_name}")
-                    continue
-                    
-                # Ajouter la fonction avec des logs détaillés
-                self._logger.info(f"Ajout fonction {self._plugin_name}.{func_name} avec prompt de {len(prompt)} caractères")
-                self.kernel.add_function(
-                    prompt=prompt,
-                    plugin_name=self._plugin_name,
-                    function_name=func_name,
-                    description=description,
-                    prompt_execution_settings=default_settings
-                )
-                self._logger.debug(f"Fonction sémantique {self._plugin_name}.{func_name} ajoutée/mise à jour.")
-                
-                # Vérifier que la fonction a été correctement ajoutée
-                if self._plugin_name in self.kernel.plugins and func_name in self.kernel.plugins[self._plugin_name]:
-                    self._logger.info(f"✅ Fonction {self._plugin_name}.{func_name} correctement enregistrée.")
-                else:
-                    self._logger.error(f"❌ ERREUR CRITIQUE: Fonction {self._plugin_name}.{func_name} non trouvée après ajout!")
-            except ValueError as ve:
-                self._logger.warning(f"Problème ajout/MàJ {self._plugin_name}.{func_name}: {ve}")
-                self._logger.error(f"Détails de l'erreur: {str(ve)}")
-            except Exception as e:
-                self._logger.error(f"Exception inattendue lors de l'ajout de {self._plugin_name}.{func_name}: {e}", exc_info=True)
-        
-        # Vérification de la fonction native
-        native_facade = "execute_pl_query"
-        if self._plugin_name in self.kernel.plugins:
-            if native_facade not in self.kernel.plugins[self._plugin_name]:
-                self._logger.error(f"ERREUR CRITIQUE: Fonction native {self._plugin_name}.{native_facade} non enregistrée!")
-            else:
-                self._logger.debug(f"Fonction native {self._plugin_name}.{native_facade} trouvée.")
-        else:
-            self._logger.error(f"ERREUR CRITIQUE: Plugin {self._plugin_name} non trouvé après ajout!")
-        
-        self._logger.info(f"Kernel {self._plugin_name} configuré.")
-    
-    def text_to_belief_set(self, text: str) -> Tuple[Optional[BeliefSet], str]:
+        return {
+            "text_to_belief_set": "Translates natural language text to a Propositional Logic belief set.",
+            "generate_queries": "Generates relevant PL queries based on text and a belief set.",
+            "execute_query": "Executes a PL query against a belief set using Tweety.",
+            "interpret_results": "Interprets the results of PL queries in natural language.",
+            "validate_formula": "Validates the syntax of a PL formula."
+        }
+
+    def setup_agent_components(self, llm_service_id: str) -> None: 
         """
-        Convertit un texte en ensemble de croyances propositionnelles.
-        
-        Args:
-            text: Le texte à convertir
+        Configure les composants spécifiques de l'agent de logique propositionnelle.
+
+        Initialise `TweetyBridge` pour la logique propositionnelle et enregistre
+        les fonctions sémantiques nécessaires (TextToPLBeliefSet, GeneratePLQueries,
+        InterpretPLResults) dans le kernel Semantic Kernel.
+
+        :param llm_service_id: L'ID du service LLM à utiliser pour les fonctions sémantiques.
+        :type llm_service_id: str
+        """
+        super().setup_agent_components(llm_service_id)
+        self.logger.info(f"Configuration des composants pour {self.name}...")
+
+        self._tweety_bridge = TweetyBridge() # Argument logic_type retiré
+        self.logger.info(f"TweetyBridge initialisé (logique PL implicite par les méthodes appelées). JVM prête: {self._tweety_bridge.is_jvm_ready()}")
+
+        if not self._tweety_bridge.is_jvm_ready(): # Corrigé pour utiliser _tweety_bridge
+            self.logger.error("La JVM n'est pas prête. Les fonctionnalités de TweetyBridge pourraient ne pas fonctionner.")
             
-        Returns:
-            Un tuple contenant l'ensemble de croyances créé (ou None en cas d'erreur)
-            et un message de statut
+        prompt_execution_settings = None
+        if self._llm_service_id:
+            try:
+                prompt_execution_settings = self.sk_kernel.get_prompt_execution_settings_from_service_id(
+                    self._llm_service_id
+                )
+                self.logger.debug(f"Settings LLM récupérés pour {self.name}.")
+            except Exception as e:
+                self.logger.warning(f"Impossible de récupérer les settings LLM pour {self.name}: {e}")
+        
+        semantic_functions_map = {
+            "TextToPLBeliefSet": PROMPT_TEXT_TO_PL,
+            "GeneratePLQueries": PROMPT_GEN_PL_QUERIES,
+            "InterpretPLResults": PROMPT_INTERPRET_PL
+        }
+        
+        descriptions_map = {
+            "TextToPLBeliefSet": "Translates natural language text to a Propositional Logic belief set (Tweety syntax).",
+            "GeneratePLQueries": "Generates relevant Propositional Logic queries based on text and a belief set (Tweety syntax).",
+            "InterpretPLResults": "Interprets the results of Propositional Logic queries in natural language."
+        }
+
+        for func_name, prompt_template in semantic_functions_map.items():
+            try:
+                if not prompt_template or not isinstance(prompt_template, str):
+                    self.logger.error(f"Prompt invalide pour {self.name}.{func_name}. Skipping.")
+                    continue
+                
+                self.sk_kernel.add_function(
+                    prompt=prompt_template,
+                    plugin_name=self.name,
+                    function_name=func_name,
+                    description=descriptions_map.get(func_name, f"{func_name} function"),
+                    prompt_execution_settings=prompt_execution_settings
+                )
+                self.logger.info(f"Fonction sémantique {self.name}.{func_name} ajoutée.")
+            except Exception as e:
+                self.logger.error(f"Erreur lors de l'ajout de la fonction sémantique {self.name}.{func_name}: {e}", exc_info=True)
+        
+        self.logger.info(f"Composants pour {self.name} configurés.")
+
+    async def text_to_belief_set(self, text: str, context: Optional[Dict[str, Any]] = None) -> Tuple[Optional[BeliefSet], str]: 
         """
-        self._logger.info(f"Conversion de texte en ensemble de croyances propositionnelles...")
+        Convertit un texte en langage naturel en un ensemble de croyances propositionnelles.
+
+        Utilise la fonction sémantique "TextToPLBeliefSet" pour la conversion,
+        puis valide l'ensemble de croyances généré avec `TweetyBridge`.
+
+        :param text: Le texte en langage naturel à convertir.
+        :type text: str
+        :param context: Un dictionnaire optionnel de contexte (non utilisé actuellement).
+        :type context: Optional[Dict[str, Any]]
+        :return: Un tuple contenant l'objet `PropositionalBeliefSet` si la conversion
+                 et la validation réussissent, et un message de statut.
+                 Retourne (None, message_erreur) en cas d'échec.
+        :rtype: Tuple[Optional[BeliefSet], str]
+        """
+        self.logger.info(f"Conversion de texte en ensemble de croyances propositionnelles pour le texte : '{text[:100]}...'")
         
         try:
-            # Appeler la fonction sémantique pour convertir le texte
-            result = self.kernel.plugins[self._plugin_name]["semantic_TextToPLBeliefSet"].invoke(text)
-            belief_set_content = result.result
+            arguments = KernelArguments(input=text) 
+            result = await self.sk_kernel.invoke( 
+                plugin_name=self.name, 
+                function_name="TextToPLBeliefSet", 
+                arguments=arguments
+            )
+            belief_set_content = str(result) 
             
-            # Vérifier si le contenu est valide
             if not belief_set_content or len(belief_set_content.strip()) == 0:
-                self._logger.error("La conversion a produit un ensemble de croyances vide")
-                return None, "La conversion a produit un ensemble de croyances vide"
+                self.logger.error("La conversion a produit un ensemble de croyances vide.") 
+                return None, "La conversion a produit un ensemble de croyances vide."
             
-            # Créer l'objet BeliefSet
-            belief_set = PropositionalBeliefSet(belief_set_content)
-            
-            # Valider l'ensemble de croyances avec TweetyBridge
-            is_valid, validation_msg = self._tweety_bridge.validate_belief_set(belief_set_content)
+            is_valid, validation_msg = self._tweety_bridge.validate_belief_set(belief_set_content) # logic_type retiré, corrigé self.tweety_bridge en self._tweety_bridge
             if not is_valid:
-                self._logger.error(f"Ensemble de croyances invalide: {validation_msg}")
+                self.logger.error(f"Ensemble de croyances invalide: {validation_msg}")
                 return None, f"Ensemble de croyances invalide: {validation_msg}"
             
-            self._logger.info("Conversion réussie")
-            return belief_set, "Conversion réussie"
+            belief_set = PropositionalBeliefSet(belief_set_content) 
+            
+            self.logger.info("Conversion en BeliefSet réussie.") 
+            return belief_set, "Conversion réussie."
         
         except Exception as e:
             error_msg = f"Erreur lors de la conversion du texte en ensemble de croyances: {str(e)}"
-            self._logger.error(error_msg, exc_info=True)
+            self.logger.error(error_msg, exc_info=True) 
             return None, error_msg
     
-    def generate_queries(self, text: str, belief_set: BeliefSet) -> List[str]:
+    async def generate_queries(self, text: str, belief_set: BeliefSet, context: Optional[Dict[str, Any]] = None) -> List[str]: 
         """
-        Génère des requêtes logiques propositionnelles pertinentes.
-        
-        Args:
-            text: Le texte source
-            belief_set: L'ensemble de croyances
-            
-        Returns:
-            Une liste de requêtes logiques
+        Génère des requêtes logiques propositionnelles pertinentes à partir d'un texte et d'un ensemble de croyances.
+
+        Utilise la fonction sémantique "GeneratePLQueries". Les requêtes générées
+        sont ensuite validées syntaxiquement.
+
+        :param text: Le texte en langage naturel source.
+        :type text: str
+        :param belief_set: L'ensemble de croyances PL associé.
+        :type belief_set: BeliefSet
+        :param context: Un dictionnaire optionnel de contexte (non utilisé actuellement).
+        :type context: Optional[Dict[str, Any]]
+        :return: Une liste de chaînes de caractères, chacune étant une requête PL valide.
+                 Retourne une liste vide en cas d'erreur.
+        :rtype: List[str]
         """
-        self._logger.info("Génération de requêtes propositionnelles...")
+        self.logger.info(f"Génération de requêtes PL pour le texte : '{text[:100]}...'") 
         
         try:
-            # Appeler la fonction sémantique pour générer les requêtes
-            result = self.kernel.plugins[self._plugin_name]["semantic_GeneratePLQueries"].invoke(
-                input=text,
-                belief_set=belief_set.content
+            arguments = KernelArguments(input=text, belief_set=belief_set.content) 
+            result = await self.sk_kernel.invoke( 
+                plugin_name=self.name, 
+                function_name="GeneratePLQueries", 
+                arguments=arguments
             )
-            queries_text = result.result
+            queries_text = str(result) 
             
-            # Extraire les requêtes individuelles
             queries = [q.strip() for q in queries_text.split('\n') if q.strip()]
             
-            # Filtrer les requêtes invalides
             valid_queries = []
             for query in queries:
-                is_valid, _ = self._tweety_bridge.validate_formula(query)
-                if is_valid:
+                if self.validate_formula(query): # validate_formula appelle self._tweety_bridge.validate_formula qui n'a plus logic_type
                     valid_queries.append(query)
                 else:
-                    self._logger.warning(f"Requête invalide ignorée: {query}")
+                    self.logger.warning(f"Requête invalide générée et ignorée: {query}") 
             
-            self._logger.info(f"Génération de {len(valid_queries)} requêtes valides")
+            self.logger.info(f"Génération de {len(valid_queries)} requêtes PL valides.") 
             return valid_queries
         
         except Exception as e:
-            self._logger.error(f"Erreur lors de la génération des requêtes: {str(e)}", exc_info=True)
+            self.logger.error(f"Erreur lors de la génération des requêtes PL: {str(e)}", exc_info=True) 
             return []
     
-    def execute_query(self, belief_set: BeliefSet, query: str) -> Tuple[Optional[bool], str]:
+    def execute_query(self, belief_set: BeliefSet, query: str) -> Tuple[Optional[bool], str]: 
         """
-        Exécute une requête logique propositionnelle sur un ensemble de croyances.
-        
-        Args:
-            belief_set: L'ensemble de croyances
-            query: La requête à exécuter
-            
-        Returns:
-            Un tuple contenant le résultat de la requête (True, False ou None si indéterminé)
-            et un message formaté
+        Exécute une requête logique propositionnelle sur un ensemble de croyances donné.
+
+        Valide d'abord la syntaxe de la requête, puis utilise `TweetyBridge`
+        pour exécuter la requête contre le contenu de `belief_set`.
+
+        :param belief_set: L'ensemble de croyances PL sur lequel exécuter la requête.
+        :type belief_set: BeliefSet
+        :param query: La requête PL à exécuter.
+        :type query: str
+        :return: Un tuple contenant le résultat booléen de la requête (`True` si conséquence,
+                 `False` sinon, `None` si indéterminé ou erreur) et la sortie brute
+                 de `TweetyBridge` (ou un message d'erreur).
+        :rtype: Tuple[Optional[bool], str]
         """
-        self._logger.info(f"Exécution de la requête: {query}")
+        self.logger.info(f"Exécution de la requête PL: '{query}' sur le BeliefSet.") 
         
         try:
-            # Appeler la fonction native pour exécuter la requête
-            result_str = self.kernel.plugins[self._plugin_name]["execute_pl_query"].invoke(
-                belief_set_content=belief_set.content,
+            bs_str = belief_set.content
+            
+            if not self.validate_formula(query): 
+                msg = f"Requête invalide: {query}"
+                self.logger.error(msg)
+                return None, f"FUNC_ERROR: {msg}"
+
+            raw_output_str = self._tweety_bridge.execute_pl_query(
+                belief_set_content=bs_str,
                 query_string=query
-            ).result
-            
-            # Analyser le résultat
-            if "FUNC_ERROR" in result_str:
-                self._logger.error(f"Erreur lors de l'exécution de la requête: {result_str}")
-                return None, result_str
-            
-            if "ACCEPTED" in result_str:
-                return True, result_str
-            elif "REJECTED" in result_str:
-                return False, result_str
+            )
+
+            parsed_result_bool: Optional[bool] = None
+            if "FUNC_ERROR:" in raw_output_str:
+                self.logger.error(f"Erreur fonctionnelle de TweetyBridge pour la requête '{query}': {raw_output_str}")
+            elif "ACCEPTED (True)" in raw_output_str:
+                parsed_result_bool = True
+            elif "REJECTED (False)" in raw_output_str:
+                parsed_result_bool = False
+            elif "Unknown" in raw_output_str:
+                 self.logger.warning(f"Résultat de la requête '{query}' est 'Unknown'. Output: {raw_output_str}")
             else:
-                return None, result_str
+                self.logger.warning(f"Format de sortie de TweetyBridge non reconnu pour '{query}': {raw_output_str}")
+
+            self.logger.info(f"Résultat de l'exécution pour '{query}': {parsed_result_bool}, Output brut: '{raw_output_str}'")
+            return parsed_result_bool, raw_output_str
         
         except Exception as e:
-            error_msg = f"Erreur lors de l'exécution de la requête: {str(e)}"
-            self._logger.error(error_msg, exc_info=True)
+            error_msg = f"Erreur lors de l'exécution de la requête PL '{query}': {str(e)}"
+            self.logger.error(error_msg, exc_info=True) 
             return None, f"FUNC_ERROR: {error_msg}"
     
-    def interpret_results(self, text: str, belief_set: BeliefSet, 
-                         queries: List[str], results: List[str]) -> str:
+    async def interpret_results(self, text: str, belief_set: BeliefSet,
+                                queries: List[str], results: List[Tuple[Optional[bool], str]],
+                                context: Optional[Dict[str, Any]] = None) -> str: 
         """
-        Interprète les résultats des requêtes logiques propositionnelles.
-        
-        Args:
-            text: Le texte source
-            belief_set: L'ensemble de croyances
-            queries: Les requêtes exécutées
-            results: Les résultats des requêtes
-            
-        Returns:
-            Une interprétation textuelle des résultats
+        Interprète les résultats d'une série de requêtes logiques propositionnelles en langage naturel.
+
+        Utilise la fonction sémantique "InterpretPLResults" pour générer une explication
+        basée sur le texte original, l'ensemble de croyances, les requêtes posées et
+        les résultats obtenus de Tweety.
+
+        :param text: Le texte original en langage naturel.
+        :type text: str
+        :param belief_set: L'ensemble de croyances PL utilisé.
+        :type belief_set: BeliefSet
+        :param queries: La liste des requêtes PL qui ont été exécutées.
+        :type queries: List[str]
+        :param results: La liste des résultats (tuples booléen/None, message_brut)
+                        correspondant à chaque requête.
+        :type results: List[Tuple[Optional[bool], str]]
+        :param context: Un dictionnaire optionnel de contexte (non utilisé actuellement).
+        :type context: Optional[Dict[str, Any]]
+        :return: Une chaîne de caractères contenant l'interprétation en langage naturel
+                 des résultats, ou un message d'erreur.
+        :rtype: str
         """
-        self._logger.info("Interprétation des résultats...")
+        self.logger.info("Interprétation des résultats des requêtes PL...") 
         
         try:
-            # Préparer les entrées pour la fonction sémantique
             queries_str = "\n".join(queries)
-            results_str = "\n".join(results)
-            
-            # Appeler la fonction sémantique pour interpréter les résultats
-            result = self.kernel.plugins[self._plugin_name]["semantic_InterpretPLResult"].invoke(
+            results_messages_str = "\n".join([res_tuple[1] for res_tuple in results]) 
+
+            arguments = KernelArguments( 
                 input=text,
                 belief_set=belief_set.content,
                 queries=queries_str,
-                tweety_result=results_str
+                tweety_result=results_messages_str
             )
             
-            interpretation = result.result
-            self._logger.info("Interprétation terminée")
+            result = await self.sk_kernel.invoke( 
+                plugin_name=self.name, 
+                function_name="InterpretPLResults", 
+                arguments=arguments
+            )
+            interpretation = str(result) 
+            
+            self.logger.info("Interprétation des résultats PL terminée.") 
             return interpretation
         
         except Exception as e:
-            error_msg = f"Erreur lors de l'interprétation des résultats: {str(e)}"
-            self._logger.error(error_msg, exc_info=True)
+            error_msg = f"Erreur lors de l'interprétation des résultats PL: {str(e)}"
+            self.logger.error(error_msg, exc_info=True) 
             return f"Erreur d'interprétation: {error_msg}"
-    
-    def _create_belief_set_from_data(self, belief_set_data: Dict[str, Any]) -> BeliefSet:
+
+    def validate_formula(self, formula: str) -> bool: 
         """
-        Crée un objet PropositionalBeliefSet à partir des données de l'état.
-        
-        Args:
-            belief_set_data: Les données de l'ensemble de croyances
-            
-        Returns:
-            Un objet PropositionalBeliefSet
+        Valide la syntaxe d'une formule propositionnelle.
+
+        Utilise la méthode `validate_formula` de `TweetyBridge` configurée pour la PL.
+
+        :param formula: La formule PL à valider.
+        :type formula: str
+        :return: `True` si la formule est syntaxiquement valide, `False` sinon.
+        :rtype: bool
         """
-        content = belief_set_data.get("content", "")
-        return PropositionalBeliefSet(content)
+        self.logger.debug(f"Validation de la formule PL: '{formula}'")
+        try:
+            is_valid, message = self._tweety_bridge.validate_formula(formula_string=formula) # logic_type retiré, corrigé self.tweety_bridge en self._tweety_bridge, param renommé
+            if not is_valid:
+                self.logger.warning(f"Formule PL invalide: '{formula}'. Message: {message}")
+            return is_valid
+        except Exception as e:
+            self.logger.error(f"Erreur lors de la validation de la formule PL '{formula}': {e}", exc_info=True)
+            return False

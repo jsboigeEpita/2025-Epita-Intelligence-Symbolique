@@ -29,15 +29,21 @@ class QueryExecutor:
     
     def execute_query(self, belief_set: BeliefSet, query: str) -> Tuple[Optional[bool], str]:
         """
-        Exécute une requête sur un ensemble de croyances.
-        
-        Args:
-            belief_set: L'ensemble de croyances
-            query: La requête à exécuter
-            
-        Returns:
-            Un tuple contenant le résultat de la requête (True, False ou None si indéterminé)
-            et un message formaté
+        Exécute une requête logique sur un ensemble de croyances donné.
+
+        Route l'exécution vers la méthode appropriée (`_execute_propositional_query`,
+        `_execute_first_order_query`, ou `_execute_modal_query`) en fonction
+        du `belief_set.logic_type`.
+
+        :param belief_set: L'objet `BeliefSet` sur lequel exécuter la requête.
+        :type belief_set: BeliefSet
+        :param query: La requête logique (chaîne de caractères) à exécuter.
+        :type query: str
+        :return: Un tuple contenant:
+                 - Le résultat booléen de la requête (True, False, ou None si indéterminé
+                   ou si une erreur survient).
+                 - Un message formaté (str) décrivant le résultat ou l'erreur.
+        :rtype: Tuple[Optional[bool], str]
         """
         self._logger.info(f"Exécution de la requête '{query}' sur un ensemble de croyances de type '{belief_set.logic_type}'")
         
@@ -61,14 +67,17 @@ class QueryExecutor:
     
     def execute_queries(self, belief_set: BeliefSet, queries: List[str]) -> List[Tuple[str, Optional[bool], str]]:
         """
-        Exécute une liste de requêtes sur un ensemble de croyances.
-        
-        Args:
-            belief_set: L'ensemble de croyances
-            queries: La liste des requêtes à exécuter
-            
-        Returns:
-            Une liste de tuples (requête, résultat, message formaté)
+        Exécute une liste de requêtes logiques sur un ensemble de croyances.
+
+        Appelle `execute_query` pour chaque requête dans la liste.
+
+        :param belief_set: L'objet `BeliefSet` sur lequel exécuter les requêtes.
+        :type belief_set: BeliefSet
+        :param queries: Une liste de requêtes logiques (chaînes de caractères).
+        :type queries: List[str]
+        :return: Une liste de tuples. Chaque tuple contient la requête originale (str),
+                 son résultat booléen (Optional[bool]), et le message formaté (str).
+        :rtype: List[Tuple[str, Optional[bool], str]]
         """
         self._logger.info(f"Exécution de {len(queries)} requêtes sur un ensemble de croyances de type '{belief_set.logic_type}'")
         
@@ -81,15 +90,16 @@ class QueryExecutor:
     
     def _execute_propositional_query(self, belief_set: BeliefSet, query: str) -> Tuple[Optional[bool], str]:
         """
-        Exécute une requête de logique propositionnelle.
-        
-        Args:
-            belief_set: L'ensemble de croyances
-            query: La requête à exécuter
-            
-        Returns:
-            Un tuple contenant le résultat de la requête (True, False ou None si indéterminé)
-            et un message formaté
+        Exécute une requête de logique propositionnelle via `TweetyBridge`.
+
+        Valide d'abord la formule, puis l'exécute et parse le résultat.
+
+        :param belief_set: L'ensemble de croyances propositionnelles.
+        :type belief_set: BeliefSet
+        :param query: La requête en logique propositionnelle.
+        :type query: str
+        :return: Tuple (résultat booléen, message formaté).
+        :rtype: Tuple[Optional[bool], str]
         """
         try:
             # Valider la requête
@@ -120,15 +130,16 @@ class QueryExecutor:
     
     def _execute_first_order_query(self, belief_set: BeliefSet, query: str) -> Tuple[Optional[bool], str]:
         """
-        Exécute une requête de logique du premier ordre.
-        
-        Args:
-            belief_set: L'ensemble de croyances
-            query: La requête à exécuter
-            
-        Returns:
-            Un tuple contenant le résultat de la requête (True, False ou None si indéterminé)
-            et un message formaté
+        Exécute une requête de logique du premier ordre (FOL) via `TweetyBridge`.
+
+        Valide d'abord la formule FOL, puis l'exécute et parse le résultat.
+
+        :param belief_set: L'ensemble de croyances en logique du premier ordre.
+        :type belief_set: BeliefSet
+        :param query: La requête en logique du premier ordre.
+        :type query: str
+        :return: Tuple (résultat booléen, message formaté).
+        :rtype: Tuple[Optional[bool], str]
         """
         try:
             # Valider la requête
@@ -159,15 +170,16 @@ class QueryExecutor:
     
     def _execute_modal_query(self, belief_set: BeliefSet, query: str) -> Tuple[Optional[bool], str]:
         """
-        Exécute une requête de logique modale.
-        
-        Args:
-            belief_set: L'ensemble de croyances
-            query: La requête à exécuter
-            
-        Returns:
-            Un tuple contenant le résultat de la requête (True, False ou None si indéterminé)
-            et un message formaté
+        Exécute une requête de logique modale via `TweetyBridge`.
+
+        Valide d'abord la formule modale, puis l'exécute et parse le résultat.
+
+        :param belief_set: L'ensemble de croyances en logique modale.
+        :type belief_set: BeliefSet
+        :param query: La requête en logique modale.
+        :type query: str
+        :return: Tuple (résultat booléen, message formaté).
+        :rtype: Tuple[Optional[bool], str]
         """
         try:
             # Valider la requête

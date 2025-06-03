@@ -25,7 +25,7 @@ def main():
     print("=" * 80)
     
     # Ajouter le répertoire du projet au chemin de recherche Python
-    project_root = Path(__file__).parent.absolute()
+    project_root = Path(__file__).resolve().parent.parent.parent # MODIFIÉ: Remonter à la racine du projet
     sys.path.insert(0, str(project_root))
     
     # Liste des modules à tester (basée sur la structure réelle du projet)
@@ -45,7 +45,7 @@ def main():
     total_count = len(modules_to_test)
     
     for module_name in modules_to_test:
-        success, message = test_import(module_name)
+        success, message = test_module_import_by_name(module_name) # Utilisation de la fonction importée
         print(message)
         if success:
             success_count += 1

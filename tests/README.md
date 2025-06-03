@@ -1,204 +1,81 @@
 # Tests du Projet d'Intelligence Symbolique
 
-Ce répertoire contient les tests unitaires, d'intégration et fonctionnels du projet d'Intelligence Symbolique.
+Ce répertoire contient les tests unitaires, d'intégration et fonctionnels du projet d'Intelligence Symbolique. L'objectif principal de ces tests est de garantir la robustesse, la fiabilité et la correction du code à travers différentes couches du système.
 
-## Deux Approches pour les Tests
+## Structure des Tests
 
-Nous proposons deux approches pour exécuter les tests, en fonction de vos besoins et de votre environnement :
+Le répertoire des tests est organisé comme suit pour refléter les meilleures pratiques et faciliter la navigation et la maintenance :
 
-### 1. Approche avec Résolution des Dépendances (Recommandée)
-
-Cette approche consiste à résoudre les problèmes de dépendances (numpy, pandas, jpype) en utilisant des versions spécifiques connues pour être compatibles avec notre environnement de test. Cette approche est recommandée car elle permet de tester le code avec les bibliothèques réelles, ce qui garantit que les tests sont plus représentatifs du comportement en production.
-
-Pour plus de détails sur cette approche, consultez le fichier [README_RESOLUTION_DEPENDANCES.md](README_RESOLUTION_DEPENDANCES.md).
-
-#### Installation des Dépendances
-
-```bash
-# Windows (PowerShell)
-.\scripts\setup\fix_dependencies.ps1
-
-# Linux/macOS
-python scripts/setup/fix_dependencies.py
-```
-
-#### Vérification des Dépendances
-
-```bash
-# Windows (PowerShell)
-.\scripts\setup\test_dependencies.ps1
-
-# Linux/macOS
-python scripts/setup/test_dependencies.py
-```
-
-### 2. Approche avec Mocks
-
-Cette approche consiste à utiliser des mocks pour les dépendances problématiques (numpy, pandas, jpype). Cette approche peut être utile pour les environnements où l'installation des dépendances réelles est difficile ou impossible, ou pour des tests rapides qui ne nécessitent pas toutes les fonctionnalités des bibliothèques réelles.
-
-Pour plus de détails sur cette approche, consultez le fichier [README_TESTS_UNITAIRES.md](README_TESTS_UNITAIRES.md).
-
-## Structure du Répertoire
-
-- `test_*.py` : Tests unitaires et d'intégration pour les différents modules
-- `standalone_mock_tests.py` : Tests utilisant des mocks pour isoler les dépendances problématiques
-- `mocks/` : Mocks pour les dépendances problématiques (numpy, pandas, jpype)
-- `conftest.py` : Configuration pour pytest
-- `fixtures/` : Fixtures réutilisables pour les tests
-- `functional/` : Tests fonctionnels de bout en bout
-- `integration/` : Tests d'intégration entre modules
-- `ADVANCED_TEST_PATTERNS.md` : Documentation des patterns de test avancés
-
-## Modules Prioritaires
-
-Les modules suivants ont été identifiés comme prioritaires pour l'amélioration de la couverture de tests :
-
-1. **orchestration.hierarchical.tactical** (11.78%)
-2. **orchestration.hierarchical.operational.adapters** (12.44%)
-3. **agents.tools.analysis.enhanced** (12.90%)
-4. **agents.core.informal** (16.23%)
-5. **agents.tools.analysis** (16.46%)
-
-Des tests unitaires avancés ont été implémentés pour ces modules prioritaires afin d'augmenter significativement leur couverture.
-
-### Tests Avancés par Module
-
-#### orchestration.hierarchical.tactical
-- `test_tactical_coordinator_advanced.py` : Tests avancés pour le coordinateur tactique
-- `test_tactical_monitor_advanced.py` : Tests avancés pour le moniteur tactique
-- `test_tactical_resolver_advanced.py` : Tests avancés pour le résolveur de conflits tactique
-
-#### agents.tools.analysis.enhanced
-- `test_enhanced_contextual_fallacy_analyzer.py` : Tests pour l'analyseur contextuel de sophismes amélioré
-- `test_enhanced_fallacy_severity_evaluator.py` : Tests pour l'évaluateur de gravité des sophismes amélioré
-- `test_enhanced_complex_fallacy_analyzer.py` : Tests pour l'analyseur de sophismes complexes amélioré
-
-#### agents.core.informal
-- `test_informal_agent_creation.py` : Tests pour la création et l'initialisation des agents informels
-- `test_informal_analysis_methods.py` : Tests pour les méthodes d'analyse des agents informels
-- `test_informal_error_handling.py` : Tests pour la gestion des erreurs des agents informels
-
-#### agents.tools.analysis
-- `test_fallacy_analyzer.py` : Tests pour l'analyseur de sophismes
-- `test_contextual_analyzer.py` : Tests pour l'analyseur contextuel
-- `test_rhetorical_results_analyzer.py` : Tests pour l'analyseur de résultats rhétoriques
+-   **`tests/unit/`**: Contient les tests unitaires. Ces tests vérifient le comportement de petites unités de code isolées (fonctions, méthodes, classes). La structure de ce répertoire miroir celle du code source du projet (par exemple, `project_core`, `argumentation_analysis`, etc.) pour une correspondance claire entre le code et ses tests.
+-   **`tests/integration/`**: Contient les tests d'intégration. Ces tests vérifient que différents modules ou composants du système interagissent correctement entre eux. Cela inclut notamment les tests d'intégration avec des composants externes comme JPype pour TweetyLib.
+-   **`tests/functional/`**: Contient les tests fonctionnels. Ces tests valident des workflows complets ou des fonctionnalités spécifiques du point de vue de l'utilisateur, assurant que le système répond aux exigences fonctionnelles.
+-   **`tests/fixtures/`**: Contient les fixtures Pytest partagées. Les fixtures sont utilisées pour initialiser des données ou des états nécessaires à l'exécution des tests, favorisant la réutilisabilité et la clarté.
+-   **`tests/mocks/`**: Contient les mocks réutilisables. Les mocks simulent le comportement de dépendances externes ou de parties complexes du système, permettant d'isoler le code testé.
+-   **`tests/support/`**: Contient les outils et scripts de support pour les tests. Par exemple, cela peut inclure des scripts pour installer des dépendances spécifiques nécessaires à certains tests (comme un installeur Octave).
+-   **`tests/conftest.py`**: Ce fichier à la racine du répertoire `tests/` est utilisé par Pytest pour les configurations globales, les hooks et les fixtures qui sont disponibles pour tous les tests du projet. Il permet de centraliser la configuration des tests.
 
 ## Exécution des Tests
 
-### Tests Unitaires et d'Intégration
+Avant d'exécuter les tests, il est impératif d'activer l'environnement virtuel du projet. Utilisez le script suivant à la racine du projet :
 
-Pour exécuter tous les tests :
-
-```bash
-pytest
+```powershell
+. .\activate_project_env.ps1
 ```
 
-Pour exécuter un test spécifique :
+Une fois l'environnement activé, vous pouvez utiliser Pytest pour lancer les tests.
 
-```bash
-pytest tests/test_specific_module.py
-```
+### Commandes Pytest de base :
 
-Pour exécuter les tests d'un module prioritaire spécifique :
+-   **Exécuter tous les tests du projet :**
+    ```bash
+    pytest
+    ```
 
-```bash
-# Pour le module orchestration.hierarchical.tactical
-pytest tests/test_tactical_*
+-   **Exécuter tous les tests dans un répertoire spécifique (par exemple, les tests unitaires) :**
+    ```bash
+    pytest tests/unit/
+    ```
 
-# Pour le module agents.tools.analysis.enhanced
-pytest tests/test_enhanced_*
+-   **Exécuter tous les tests dans un fichier spécifique :**
+    ```bash
+    pytest tests/unit/mon_module/test_ma_fonction.py
+    ```
 
-# Pour le module agents.core.informal
-pytest tests/test_informal_*
+-   **Exécuter un test spécifique (une fonction ou une méthode) dans un fichier :**
+    ```bash
+    pytest tests/unit/mon_module/test_ma_fonction.py::test_cas_particulier
+    ```
 
-# Pour le module agents.tools.analysis
-pytest tests/test_fallacy_analyzer.py tests/test_contextual_analyzer.py tests/test_rhetorical_results_analyzer.py
-```
+### Utilisation des Marqueurs Pytest :
+
+Pytest permet d'utiliser des marqueurs (`@pytest.mark.<nom_marqueur>`) pour catégoriser les tests. Vous pouvez ensuite exécuter sélectivement des tests basés sur ces marqueurs.
+
+-   **Exécuter les tests marqués comme `slow` :**
+    ```bash
+    pytest -m slow
+    ```
+
+-   **Exécuter les tests qui ne sont PAS marqués comme `slow` :**
+    ```bash
+    pytest -m "not slow"
+    ```
+    Consultez la documentation de Pytest et le fichier [`tests/conftest.py`](tests/conftest.py:1) pour voir les marqueurs personnalisés disponibles dans ce projet.
 
 ### Tests avec Couverture de Code
 
-Pour exécuter les tests avec génération d'un rapport de couverture :
+Pour exécuter les tests et générer un rapport de couverture de code :
 
 ```bash
-pytest --cov=argumentation_analysis
+pytest --cov=project_core --cov=argumentation_analysis --cov-report=html
 ```
+(Adaptez les modules `--cov` en fonction des répertoires principaux de votre code source.)
+Le rapport HTML sera généré dans un répertoire `htmlcov/`.
 
-Pour générer un rapport HTML détaillé :
+## Bonnes Pratiques de Test
 
-```bash
-pytest --cov=argumentation_analysis --cov-report=html
-```
-
-Pour exécuter les tests avec couverture pour un module spécifique :
-
-```bash
-pytest --cov=argumentation_analysis.orchestration.hierarchical.tactical tests/test_tactical_*
-```
-
-### Interprétation des Résultats des Tests
-
-Lorsque vous exécutez `pytest`, vous obtiendrez un résumé des résultats :
-- **`.` (point)** : Indique un test réussi.
-- **`F` (FAIL)** : Indique un test qui a échoué à cause d'une assertion (`assert`) incorrecte. Le rapport détaillera quelle assertion a échoué.
-- **`E` (ERROR)** : Indique un test qui a provoqué une erreur inattendue (par exemple, une exception non gérée dans le code testé ou dans le test lui-même).
-- **`s` (skip)** : Indique un test qui a été sauté (généralement marqué avec `@pytest.mark.skip` ou une condition de saut).
-- **`x` (xfail)** : Indique un test qui était attendu comme échouant (`@pytest.mark.xfail`) et qui a effectivement échoué.
-- **`X` (XPASS)** : Indique un test qui était attendu comme échouant (`@pytest.mark.xfail`) mais qui a réussi. Cela peut indiquer que le bug attendu a été corrigé.
-
-Le rapport de couverture (généré avec `--cov`) vous montrera quelles parties de votre code ont été exécutées par les tests. Un taux de couverture élevé est souhaitable, mais ne garantit pas l'absence de bugs. Concentrez-vous sur le test des logiques critiques et des cas limites. Le rapport HTML (`--cov-report=html`) est particulièrement utile pour explorer la couverture en détail.
-
-## Conventions de Test
-
-1. **Nommage des fichiers de test** :
-   - Les fichiers de test doivent être nommés `test_*.py`
-   - Le nom doit clairement indiquer le module testé
-   - Les tests avancés doivent inclure `_advanced` dans leur nom
-
-2. **Structure des tests** :
-   - Utiliser des fixtures pytest pour la configuration
-   - Organiser les tests par fonctionnalité
-   - Inclure des tests positifs et négatifs
-   - Utiliser des mocks pour isoler les dépendances
-
-3. **Documentation des tests** :
-   - Chaque test doit avoir une docstring expliquant son objectif
-   - Les cas de test complexes doivent être documentés en détail
-   - Les patterns de test avancés sont documentés dans [ADVANCED_TEST_PATTERNS.md](ADVANCED_TEST_PATTERNS.md)
-
-## Patterns de Test Avancés
-
-Pour améliorer la couverture et la qualité des tests, nous avons développé des patterns de test avancés spécifiques à chaque module prioritaire. Ces patterns sont documentés en détail dans le fichier [ADVANCED_TEST_PATTERNS.md](ADVANCED_TEST_PATTERNS.md).
-
-Les principaux patterns incluent :
-- Pattern de Test Complet
-- Pattern de Test des Cas Limites
-- Pattern de Test des Interactions
-- Patterns spécifiques pour chaque module prioritaire
-
-## Objectifs de Couverture
-
-| Module | Couverture initiale | Couverture actuelle | Objectif |
-|--------|---------------------|---------------------|----------|
-| orchestration.hierarchical.tactical | 11.78% | - | 30% |
-| orchestration.hierarchical.operational.adapters | 12.44% | - | 30% |
-| agents.tools.analysis.enhanced | 12.90% | - | 30% |
-| agents.core.informal | 16.23% | - | 30% |
-| agents.tools.analysis | 16.46% | - | 30% |
-| **Global** | **17.89%** | - | **25%** |
+Pour des directives détaillées sur l'écriture et la maintenance des tests, veuillez consulter le document [Bonnes Pratiques pour les Tests (`BEST_PRACTICES.md`)](BEST_PRACTICES.md:1). Ce document couvre les principes généraux, l'organisation, la gestion des dépendances, l'utilisation des fixtures, et des conseils spécifiques pour les tests d'intégration et fonctionnels.
 
 ## Documentation Associée
 
-### Plan d'Action pour l'Amélioration des Tests
-
-Un plan d'action détaillé pour l'amélioration des tests et de la couverture de code est disponible dans :
-- [Plan d'action pour l'amélioration des tests](../docs/tests/plan_action_tests.md)
-
-### Rapport sur l'État du Dépôt et la Couverture des Tests
-
-Un rapport détaillé sur l'état actuel du dépôt et la couverture des tests est disponible dans :
-- [Rapport sur l'état du dépôt et la couverture des tests](../docs/reports/etat_depot_couverture_tests.md)
-
-### Documentation des Patterns de Test Avancés
-
-Une documentation détaillée des patterns de test avancés utilisés pour améliorer la couverture des tests est disponible dans :
-- [Patterns de Test Avancés](ADVANCED_TEST_PATTERNS.md)
+-   [Plan d'action pour l'amélioration des tests](../docs/tests/plan_action_tests.md)
+-   [Rapport sur l'état du dépôt et la couverture des tests](../docs/reports/etat_depot_couverture_tests.md)

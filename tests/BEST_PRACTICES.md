@@ -62,6 +62,21 @@ tests/
 - **Utilitaires** : `test_*.py`
 - **Mocks** : `*_mock.py`
 
+### Tests Asynchrones
+
+Pour les tests nécessitant des opérations asynchrones, le projet utilise `pytest-asyncio`. Les tests asynchrones doivent être marqués avec `@pytest.mark.anyio`.
+
+Exemple :
+```python
+import pytest
+
+@pytest.mark.anyio
+async def test_ma_fonction_asynchrone():
+    # ... code du test ...
+    result = await ma_fonction_asynchrone()
+    assert result == "valeur attendue"
+```
+L'ancienne classe utilitaire `AsyncTestCase` est obsolète et a été retirée du projet.
 ## Gestion des Dépendances
 
 ### Approche de Résolution des Dépendances

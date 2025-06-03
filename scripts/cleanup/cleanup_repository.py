@@ -55,8 +55,8 @@ def main():
     current_dir = os.getcwd()
     print(f"Répertoire de travail actuel: {current_dir}")
     
-    # Chemin de base du projet (répertoire courant)
-    base_path = Path(current_dir)
+    # Chemin de base du projet (racine du projet)
+    base_path = Path(__file__).resolve().parent.parent.parent
     
     print("\n=== Nettoyage des fichiers du suivi Git ===")
     

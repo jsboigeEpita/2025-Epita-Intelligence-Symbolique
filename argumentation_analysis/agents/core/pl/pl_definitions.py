@@ -314,6 +314,8 @@ Processus OBLIGATOIRE à chaque tour:
 
 
 Important: Utilisez TOUJOURS task_id reçu pour add_answer. La syntaxe Tweety est STRICTE. Gérez les FUNC_ERROR: retournés par les outils. Vérifiez que la JVM est prête avant d'appeler execute_pl_query (normalement géré par le plugin, mais soyez conscient).
+**CRUCIAL : Lorsque vous appelez une fonction (outil), vous DEVEZ fournir TOUS ses arguments requis dans le champ `arguments` de l'appel `tool_calls`. Ne faites PAS d'appels avec des arguments vides ou manquants.**
+**CRUCIAL : Si vous décidez d'appeler la fonction `StateManager.designate_next_agent`, l'argument `agent_name` DOIT être l'un des noms d'agents valides suivants : "ProjectManagerAgent", "InformalAnalysisAgent", "PropositionalLogicAgent", "ExtractAgent". N'utilisez JAMAIS un nom de plugin ou un nom de fonction sémantique comme nom d'agent.**
 """
 PL_AGENT_INSTRUCTIONS = PL_AGENT_INSTRUCTIONS_V10
 logger.info("Instructions Système PL_AGENT_INSTRUCTIONS (V10) définies.")
