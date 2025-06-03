@@ -7,7 +7,7 @@ from unittest.mock import patch, MagicMock, ANY
 from pathlib import Path
 import logging
 
-from argumentation_analysis.core.pipelines.setup_pipeline import run_test_environment_setup_pipeline
+from argumentation_analysis.pipelines.setup_pipeline import run_test_environment_setup_pipeline
 
 # Constantes pour les chemins de test
 TEST_CONFIG_PATH = Path("test_config.json")
@@ -18,13 +18,13 @@ TEST_PROJECT_ROOT = Path("test_project_root_setup")
 @pytest.fixture
 def mock_logger_setup_fixture():
     """Fixture pour mocker le logger utilisé dans le pipeline de setup."""
-    with patch('argumentation_analysis.core.pipelines.setup_pipeline.logger') as mock_log:
+    with patch('argumentation_analysis.pipelines.setup_pipeline.logger') as mock_log:
         yield mock_log
 
-@patch('argumentation_analysis.core.pipelines.setup_pipeline.run_download_jars_pipeline')
-@patch('argumentation_analysis.core.pipelines.setup_pipeline.run_dependency_installation_pipeline')
-@patch('argumentation_analysis.core.pipelines.setup_pipeline.setup_jpype_mock')
-@patch('argumentation_analysis.core.pipelines.setup_pipeline.Path') # Pour mocker Path() et ses instances
+@patch('argumentation_analysis.pipelines.setup_pipeline.run_download_jars_pipeline')
+@patch('argumentation_analysis.pipelines.setup_pipeline.run_dependency_installation_pipeline')
+@patch('argumentation_analysis.pipelines.setup_pipeline.setup_jpype_mock')
+@patch('argumentation_analysis.pipelines.setup_pipeline.Path') # Pour mocker Path() et ses instances
 def test_run_setup_pipeline_all_steps_success_no_optional(
     mock_path_class, # Mocker la classe Path
     mock_setup_jpype,
@@ -75,10 +75,10 @@ def test_run_setup_pipeline_all_steps_success_no_optional(
     
     mock_logger_setup_fixture.info.assert_any_call("Pipeline de configuration de l'environnement de test terminé avec succès.")
 
-@patch('argumentation_analysis.core.pipelines.setup_pipeline.run_download_jars_pipeline')
-@patch('argumentation_analysis.core.pipelines.setup_pipeline.run_dependency_installation_pipeline')
-@patch('argumentation_analysis.core.pipelines.setup_pipeline.setup_jpype_mock')
-@patch('argumentation_analysis.core.pipelines.setup_pipeline.Path')
+@patch('argumentation_analysis.pipelines.setup_pipeline.run_download_jars_pipeline')
+@patch('argumentation_analysis.pipelines.setup_pipeline.run_dependency_installation_pipeline')
+@patch('argumentation_analysis.pipelines.setup_pipeline.setup_jpype_mock')
+@patch('argumentation_analysis.pipelines.setup_pipeline.Path')
 def test_run_setup_pipeline_all_steps_success_all_optional_enabled(
     mock_path_class,
     mock_setup_jpype,
@@ -144,10 +144,10 @@ def test_run_setup_pipeline_all_steps_success_all_optional_enabled(
     
     mock_logger_setup_fixture.info.assert_any_call("Pipeline de configuration de l'environnement de test terminé avec succès.")
 
-@patch('argumentation_analysis.core.pipelines.setup_pipeline.run_download_jars_pipeline')
-@patch('argumentation_analysis.core.pipelines.setup_pipeline.run_dependency_installation_pipeline')
-@patch('argumentation_analysis.core.pipelines.setup_pipeline.setup_jpype_mock')
-@patch('argumentation_analysis.core.pipelines.setup_pipeline.Path')
+@patch('argumentation_analysis.pipelines.setup_pipeline.run_download_jars_pipeline')
+@patch('argumentation_analysis.pipelines.setup_pipeline.run_dependency_installation_pipeline')
+@patch('argumentation_analysis.pipelines.setup_pipeline.setup_jpype_mock')
+@patch('argumentation_analysis.pipelines.setup_pipeline.Path')
 def test_run_setup_pipeline_download_jars_fails(
     mock_path_class,
     mock_setup_jpype,
@@ -191,10 +191,10 @@ def test_run_setup_pipeline_download_jars_fails(
     
     mock_logger_setup_fixture.error.assert_any_call("Le pipeline de configuration de l'environnement de test a rencontré des erreurs.")
 
-@patch('argumentation_analysis.core.pipelines.setup_pipeline.run_download_jars_pipeline')
-@patch('argumentation_analysis.core.pipelines.setup_pipeline.run_dependency_installation_pipeline')
-@patch('argumentation_analysis.core.pipelines.setup_pipeline.setup_jpype_mock')
-@patch('argumentation_analysis.core.pipelines.setup_pipeline.Path')
+@patch('argumentation_analysis.pipelines.setup_pipeline.run_download_jars_pipeline')
+@patch('argumentation_analysis.pipelines.setup_pipeline.run_dependency_installation_pipeline')
+@patch('argumentation_analysis.pipelines.setup_pipeline.setup_jpype_mock')
+@patch('argumentation_analysis.pipelines.setup_pipeline.Path')
 def test_run_setup_pipeline_dependency_install_fails(
     mock_path_class,
     mock_setup_jpype,
@@ -239,10 +239,10 @@ def test_run_setup_pipeline_dependency_install_fails(
     
     mock_logger_setup_fixture.error.assert_any_call("Le pipeline de configuration de l'environnement de test a rencontré des erreurs.")
 
-@patch('argumentation_analysis.core.pipelines.setup_pipeline.run_download_jars_pipeline')
-@patch('argumentation_analysis.core.pipelines.setup_pipeline.run_dependency_installation_pipeline')
-@patch('argumentation_analysis.core.pipelines.setup_pipeline.setup_jpype_mock')
-@patch('argumentation_analysis.core.pipelines.setup_pipeline.Path')
+@patch('argumentation_analysis.pipelines.setup_pipeline.run_download_jars_pipeline')
+@patch('argumentation_analysis.pipelines.setup_pipeline.run_dependency_installation_pipeline')
+@patch('argumentation_analysis.pipelines.setup_pipeline.setup_jpype_mock')
+@patch('argumentation_analysis.pipelines.setup_pipeline.Path')
 def test_run_setup_pipeline_jpype_mock_fails(
     mock_path_class,
     mock_setup_jpype,
@@ -287,10 +287,10 @@ def test_run_setup_pipeline_jpype_mock_fails(
     mock_logger_setup_fixture.error.assert_any_call(f"Erreur lors de la configuration du mock JPype: {error_message}")
     mock_logger_setup_fixture.error.assert_any_call("Le pipeline de configuration de l'environnement de test a rencontré des erreurs.")
 
-@patch('argumentation_analysis.core.pipelines.setup_pipeline.run_download_jars_pipeline')
-@patch('argumentation_analysis.core.pipelines.setup_pipeline.run_dependency_installation_pipeline')
-@patch('argumentation_analysis.core.pipelines.setup_pipeline.setup_jpype_mock')
-@patch('argumentation_analysis.core.pipelines.setup_pipeline.Path')
+@patch('argumentation_analysis.pipelines.setup_pipeline.run_download_jars_pipeline')
+@patch('argumentation_analysis.pipelines.setup_pipeline.run_dependency_installation_pipeline')
+@patch('argumentation_analysis.pipelines.setup_pipeline.setup_jpype_mock')
+@patch('argumentation_analysis.pipelines.setup_pipeline.Path')
 def test_run_setup_pipeline_config_file_not_found(
     mock_path_class,
     mock_setup_jpype,

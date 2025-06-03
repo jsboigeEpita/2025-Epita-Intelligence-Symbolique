@@ -62,9 +62,24 @@ def get_taxonomy_path():
         # Créer le dossier data s'il n'existe pas
         DATA_DIR.mkdir(exist_ok=True)
         
-        # Simuler l'existence du fichier
+        # Créer un fichier mock_taxonomy.csv avec un contenu valide et simplifié
         mock_path = DATA_DIR / "mock_taxonomy.csv"
-        logger.info(f"Chemin simulé vers la taxonomie: {mock_path}")
+        mock_csv_content = (
+            "PK,Name\n"
+            "1,Ad Hominem\n"
+            "2,Straw Man\n"
+            "3,Appeal to Authority\n"
+        )
+        try:
+            with open(mock_path, 'w', encoding='utf-8') as f:
+                f.write(mock_csv_content)
+            logger.info(f"Fichier mock_taxonomy.csv créé avec succès à: {mock_path}")
+        except Exception as e:
+            logger.error(f"Erreur lors de la création du fichier mock_taxonomy.csv: {e}")
+            # Retourner un chemin même en cas d'échec d'écriture pour ne pas bloquer certains tests,
+            # mais la lecture échouera probablement plus tard.
+        
+        logger.info(f"Chemin vers la taxonomie mock: {mock_path}")
         return mock_path
     else:
         # Version réelle (code conservé pour référence)

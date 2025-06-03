@@ -21,30 +21,56 @@ def mock_os_environ_java():
 
 @pytest.fixture
 def mock_path_java():
-    with mock.patch('argumentation_analysis.utils.dev_tools.env_checks.Path') as mock_path_constructor:
-        mock_path_instance = mock.Mock(spec=Path)
-        mock_path_constructor.return_value = mock_path_instance
-        
-        # Default behaviors for Path methods
-        mock_path_instance.is_dir.return_value = False
-        mock_path_instance.exists.return_value = False
-        mock_path_instance.is_file.return_value = False
-        
-        # Allow configuring specific sub-paths like JAVA_HOME/bin/java
-        def configure_java_exe_path(is_dir, java_exe_exists, java_exe_is_file):
-            bin_path_mock = mock.Mock(spec=Path)
-            java_exe_mock = mock.Mock(spec=Path)
-            
-            mock_path_instance.is_dir.return_value = is_dir
-            mock_path_instance.__truediv__.return_value = bin_path_mock # for path / "bin"
-            bin_path_mock.__truediv__.return_value = java_exe_mock    # for bin_path / "java"
-            
-            java_exe_mock.exists.return_value = java_exe_exists
-            java_exe_mock.is_file.return_value = java_exe_is_file
-            return mock_path_instance, java_exe_mock
+    # mock_path_class_replacement sera le mock remplaçant la classe pathlib.Path
+    # dans le module env_checks.pathlib (qui est le module global pathlib).
+    # Il doit avoir _flavour pour éviter les erreurs internes de pathlib.
+    mock_path_class_replacement = mock.MagicMock(spec=Path) # spec=Path pour l'interface de la classe
+    try:
+        mock_path_class_replacement._flavour = Path._flavour # Copier le vrai _flavour de pathlib.Path
+    except AttributeError: # Fallback au cas où Path serait déjà un mock sans _flavour
+        mock_flavour_fallback = mock.Mock()
+        mock_flavour_fallback.parse_parts = mock.Mock(return_value=('', '', []))
+        mock_path_class_replacement._flavour = mock_flavour_fallback
 
-        mock_path_instance.configure_java_exe_path = configure_java_exe_path
-        yield mock_path_instance
+    # mock_path_instance est ce que Path(...) retournera.
+    mock_path_instance = mock.MagicMock(spec=Path) # C'est le mock d'une INSTANCE de Path
+    mock_path_class_replacement.return_value = mock_path_instance
+    
+    # Default behaviors for Path methods on the instance
+    mock_path_instance.is_dir.return_value = False
+    mock_path_instance.exists.return_value = False
+    mock_path_instance.is_file.return_value = False
+    
+    # Allow configuring specific sub-paths like JAVA_HOME/bin/java
+    def configure_java_exe_path_on_instance(is_dir, java_exe_exists, java_exe_is_file):
+        bin_path_mock = mock.MagicMock(spec=Path)
+        java_exe_mock = mock.MagicMock(spec=Path)
+        
+        mock_path_instance.is_dir.return_value = is_dir # Configurer l'instance principale
+        
+        # Configurer __truediv__ sur l'instance principale pour retourner le mock de 'bin'
+        def path_truediv_side_effect(other):
+            if str(other) == "bin":
+                return bin_path_mock
+            return mock.MagicMock(spec=Path, name=f"unexpected_path_division_{other}")
+        mock_path_instance.__truediv__ = mock.Mock(side_effect=path_truediv_side_effect)
+
+        # Configurer __truediv__ sur le mock de 'bin' pour retourner le mock de 'java'/'java.exe'
+        def bin_path_truediv_side_effect(other):
+            # Gérer à la fois "java" (pour les tests Unix-like) et "java.exe" (pour Windows)
+            if str(other) == "java" or str(other) == "java.exe":
+                return java_exe_mock
+            return mock.MagicMock(spec=Path, name=f"unexpected_bin_division_{other}")
+        bin_path_mock.__truediv__ = mock.Mock(side_effect=bin_path_truediv_side_effect)
+        
+        java_exe_mock.exists.return_value = java_exe_exists
+        java_exe_mock.is_file.return_value = java_exe_is_file
+        return mock_path_instance, java_exe_mock
+
+    mock_path_instance.configure_java_exe_path = configure_java_exe_path_on_instance
+
+    with mock.patch('argumentation_analysis.utils.dev_tools.env_checks.pathlib.Path', mock_path_class_replacement):
+        yield mock_path_instance # Le test interagit avec l'instance mockée
 
 @pytest.fixture
 def mock_run_command_java():
@@ -206,16 +232,29 @@ def test_check_jpype_config_shutdown_jvm_fails(mock_jpype_module_fixture, caplog
 # Mocks for check_python_dependencies
 @pytest.fixture
 def mock_file_operations_deps_fixture(): # Renamed
-    mock_path_instance = mock.Mock(spec=Path)
-    mock_path_instance.is_file.return_value = True
+    # Mock pour la classe Path, avec _flavour pour éviter les erreurs internes de pathlib
+    mock_path_class_for_deps = mock.MagicMock(spec=Path)
+    try:
+        mock_path_class_for_deps._flavour = Path._flavour
+    except AttributeError:
+        mock_flavour_fallback_deps = mock.Mock()
+        mock_flavour_fallback_deps.parse_parts = mock.Mock(return_value=('', '', []))
+        mock_path_class_for_deps._flavour = mock_flavour_fallback_deps
+
+    # Instance de mock qui sera retournée par Path(...)
+    mock_path_instance_for_deps = mock.MagicMock(spec=Path)
+    mock_path_instance_for_deps.is_file.return_value = True # Comportement par défaut pour cette fixture
+    mock_path_class_for_deps.return_value = mock_path_instance_for_deps
+    
     mock_open_func = mock.mock_open()
 
-    with mock.patch('argumentation_analysis.utils.dev_tools.env_checks.Path', return_value=mock_path_instance) as mock_path_constructor, \
-         mock.patch('builtins.open', mock_open_func) as mock_open_builtin: # Renamed mock_open to mock_open_builtin
+    # mock_path_constructor_patched sera mock_path_class_for_deps
+    with mock.patch('argumentation_analysis.utils.dev_tools.env_checks.pathlib.Path', mock_path_class_for_deps) as mock_path_constructor_patched, \
+         mock.patch('builtins.open', mock_open_func) as mock_open_builtin:
         yield {
-            "path_constructor": mock_path_constructor,
-            "path_instance": mock_path_instance,
-            "open": mock_open_builtin, # Use the renamed mock
+            "path_constructor": mock_path_constructor_patched, # C'est mock_path_class_for_deps
+            "path_instance": mock_path_instance_for_deps,    # C'est ce que Path() retourne
+            "open": mock_open_builtin,
             "mock_open_func": mock_open_func
         }
 
@@ -272,28 +311,32 @@ def mock_importlib_metadata_deps_fixture(): # Renamed
 # Tests for check_python_dependencies
 def test_check_python_dependencies_file_not_found(mock_file_operations_deps_fixture, caplog):
     mock_file_operations_deps_fixture["path_instance"].is_file.return_value = False
-    req_file_path = Path("dummy_reqs.txt")
+    req_file_path_str = "dummy_reqs.txt" # Utiliser une chaîne
     
-    assert check_python_dependencies(req_file_path) is False
-    assert f"Le fichier de dépendances {str(req_file_path)} n'a pas été trouvé." in caplog.text
+    assert check_python_dependencies(req_file_path_str) is False
+    assert f"Le fichier de dépendances {req_file_path_str} n'a pas été trouvé." in caplog.text
 
 def test_check_python_dependencies_pkg_resources_unavailable(mock_file_operations_deps_fixture, caplog):
-    req_file_path = Path("dummy_reqs.txt")
+    req_file_path_str = "dummy_reqs.txt" # Utiliser une chaîne
+    # Assurer que is_file est True pour ce test, car on teste la dispo de pkg_resources
+    mock_file_operations_deps_fixture["path_instance"].is_file.return_value = True
     mock_file_operations_deps_fixture["mock_open_func"].return_value.read.return_value = "requests==2.25.1"
     
     with mock.patch('argumentation_analysis.utils.dev_tools.env_checks.pkg_resources', None):
-        assert check_python_dependencies(req_file_path) is False
+        assert check_python_dependencies(req_file_path_str) is False
         assert "pkg_resources n'est pas disponible. Impossible de parser le fichier de dépendances." in caplog.text
 
 def test_check_python_dependencies_empty_or_commented_file(mock_file_operations_deps_fixture, mock_pkg_resources_deps_fixture, caplog):
-    req_file_path = Path("empty_reqs.txt")
+    req_file_path_str = "empty_reqs.txt" # Utiliser une chaîne
+    mock_file_operations_deps_fixture["path_instance"].is_file.return_value = True
     mock_file_operations_deps_fixture["mock_open_func"].return_value.read.return_value = "# A comment\n\n   \n"
     
-    assert check_python_dependencies(req_file_path) is True
-    assert f"Le fichier de dépendances {str(req_file_path)} est vide ou ne contient que des commentaires." in caplog.text
+    assert check_python_dependencies(req_file_path_str) is True
+    assert f"Le fichier de dépendances {req_file_path_str} est vide ou ne contient que des commentaires." in caplog.text
 
 def test_check_python_dependencies_all_ok(mock_file_operations_deps_fixture, mock_pkg_resources_deps_fixture, mock_importlib_metadata_deps_fixture, caplog):
-    req_file_path = Path("reqs.txt")
+    req_file_path_str = "reqs.txt" # Utiliser une chaîne
+    mock_file_operations_deps_fixture["path_instance"].is_file.return_value = True
     requirements_content = "requests==2.25.1\nnumpy>=1.20.0\nflask # no version spec"
     mock_file_operations_deps_fixture["mock_open_func"].return_value.read.return_value = requirements_content
     
@@ -304,14 +347,15 @@ def test_check_python_dependencies_all_ok(mock_file_operations_deps_fixture, moc
         raise importlib.metadata.PackageNotFoundError(f"Not found: {package_name}")
     mock_importlib_metadata_deps_fixture.side_effect = version_side_effect
 
-    assert check_python_dependencies(req_file_path) is True
+    assert check_python_dependencies(req_file_path_str) is True
     assert "✅ requests: Version 2.25.1 installée satisfait ==2.25.1" in caplog.text
     assert "✅ numpy: Version 1.21.0 installée satisfait >=1.20.0" in caplog.text
     assert "✅ flask: Version 2.0.0 installée (aucune version spécifique requise)." in caplog.text
     assert "✅ Toutes les dépendances Python du fichier sont satisfaites." in caplog.text
 
 def test_check_python_dependencies_one_missing(mock_file_operations_deps_fixture, mock_pkg_resources_deps_fixture, mock_importlib_metadata_deps_fixture, caplog):
-    req_file_path = Path("reqs_missing.txt")
+    req_file_path_str = "reqs_missing.txt" # Utiliser une chaîne
+    mock_file_operations_deps_fixture["path_instance"].is_file.return_value = True
     requirements_content = "requests==2.25.1\nmissing_pkg==1.0.0"
     mock_file_operations_deps_fixture["mock_open_func"].return_value.read.return_value = requirements_content
 
@@ -321,24 +365,26 @@ def test_check_python_dependencies_one_missing(mock_file_operations_deps_fixture
         raise ValueError(f"Unexpected package in test: {package_name}")
     mock_importlib_metadata_deps_fixture.side_effect = version_side_effect
 
-    assert check_python_dependencies(req_file_path) is False
+    assert check_python_dependencies(req_file_path_str) is False
     assert "✅ requests: Version 2.25.1 installée satisfait ==2.25.1" in caplog.text
     assert "❌ missing_pkg: Non installé (requis: ==1.0.0)" in caplog.text
     assert "⚠️  Certaines dépendances Python du fichier ne sont pas satisfaites ou sont manquantes." in caplog.text
 
 def test_check_python_dependencies_version_mismatch(mock_file_operations_deps_fixture, mock_pkg_resources_deps_fixture, mock_importlib_metadata_deps_fixture, caplog):
-    req_file_path = Path("reqs_mismatch.txt")
+    req_file_path_str = "reqs_mismatch.txt" # Utiliser une chaîne
+    mock_file_operations_deps_fixture["path_instance"].is_file.return_value = True
     requirements_content = "numpy>=1.22.0"
     mock_file_operations_deps_fixture["mock_open_func"].return_value.read.return_value = requirements_content
     
     mock_importlib_metadata_deps_fixture.side_effect = lambda pkg: "1.21.5" if pkg == "numpy" else "unknown"
 
-    assert check_python_dependencies(req_file_path) is False
+    assert check_python_dependencies(req_file_path_str) is False
     assert "❌ numpy: Version 1.21.5 installée ne satisfait PAS >=1.22.0" in caplog.text
     assert "⚠️  Certaines dépendances Python du fichier ne sont pas satisfaites ou sont manquantes." in caplog.text
 
 def test_check_python_dependencies_parsing_error_heuristic_recovery(mock_file_operations_deps_fixture, mock_pkg_resources_deps_fixture, mock_importlib_metadata_deps_fixture, caplog):
-    req_file_path = Path("reqs_parse_error.txt")
+    req_file_path_str = "reqs_parse_error.txt" # Utiliser une chaîne
+    mock_file_operations_deps_fixture["path_instance"].is_file.return_value = True
     requirements_content = "good_pkg==1.0\ncomplex_pkg [extra];python_version<'3.8' --hash=...\nanother_good==3.0"
     mock_file_operations_deps_fixture["mock_open_func"].return_value.read.return_value = requirements_content
     
@@ -360,7 +406,7 @@ def test_check_python_dependencies_parsing_error_heuristic_recovery(mock_file_op
         raise importlib.metadata.PackageNotFoundError
     mock_importlib_metadata_deps_fixture.side_effect = version_side_effect
 
-    assert check_python_dependencies(req_file_path) is True
+    assert check_python_dependencies(req_file_path_str) is True
     assert "Impossible de parser complètement la ligne 'complex_pkg [extra];python_version<'3.8' --hash=...'" in caplog.text
     assert "Tentative avec nom 'complex_pkg'" in caplog.text
     assert "✅ complex_pkg: Version 2.5 installée (aucune version spécifique requise)." in caplog.text
@@ -369,7 +415,8 @@ def test_check_python_dependencies_parsing_error_heuristic_recovery(mock_file_op
     mock_pkg_resources_deps_fixture.Requirement.parse.side_effect = original_parse_method
 
 def test_check_python_dependencies_parsing_error_unrecoverable(mock_file_operations_deps_fixture, mock_pkg_resources_deps_fixture, caplog):
-    req_file_path = Path("reqs_parse_error_hard.txt")
+    req_file_path_str = "reqs_parse_error_hard.txt" # Utiliser une chaîne
+    mock_file_operations_deps_fixture["path_instance"].is_file.return_value = True
     requirements_content = "good_pkg==1.0\n[] --invalid # This should fail parsing hard\nanother_good==3.0"
     mock_file_operations_deps_fixture["mock_open_func"].return_value.read.return_value = requirements_content
 
@@ -380,14 +427,15 @@ def test_check_python_dependencies_parsing_error_unrecoverable(mock_file_operati
         return original_parse_method(req_string)
     mock_pkg_resources_deps_fixture.Requirement.parse.side_effect = custom_parse_side_effect
     
-    assert check_python_dependencies(req_file_path) is False
+    assert check_python_dependencies(req_file_path_str) is False
     assert "Impossible de parser la ligne de dépendance '[] --invalid'" in caplog.text
     assert "⚠️  Certaines dépendances Python du fichier ne sont pas satisfaites ou sont manquantes." in caplog.text
     mock_pkg_resources_deps_fixture.Requirement.parse.side_effect = original_parse_method
 
 
 def test_check_python_dependencies_ignored_lines(mock_file_operations_deps_fixture, mock_pkg_resources_deps_fixture, mock_importlib_metadata_deps_fixture, caplog):
-    req_file_path = Path("reqs_ignored.txt")
+    req_file_path_str = "reqs_ignored.txt" # Utiliser une chaîne
+    mock_file_operations_deps_fixture["path_instance"].is_file.return_value = True
     requirements_content = (
         "-e git+https://github.com/user/repo.git#egg=editable_pkg\n"
         "    -r another_file.txt # Comment after space\n"
@@ -400,7 +448,7 @@ def test_check_python_dependencies_ignored_lines(mock_file_operations_deps_fixtu
         raise importlib.metadata.PackageNotFoundError
     mock_importlib_metadata_deps_fixture.side_effect = version_side_effect
 
-    assert check_python_dependencies(req_file_path) is True
+    assert check_python_dependencies(req_file_path_str) is True
     assert "Ligne ignorée (dépendance éditable/VCS) : -e git+https://github.com/user/repo.git#egg=editable_pkg" in caplog.text
     assert "Ligne ignorée (inclusion d'un autre fichier) : -r another_file.txt" in caplog.text
     assert "✅ requests: Version 2.25.1 installée satisfait ==2.25.1" in caplog.text

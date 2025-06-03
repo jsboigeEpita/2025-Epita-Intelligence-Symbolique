@@ -8,7 +8,7 @@ from pathlib import Path
 import logging
 
 # Assurez-vous que le module testé est importable
-from argumentation_analysis.core.pipelines.download_pipeline import run_download_jars_pipeline
+from argumentation_analysis.pipelines.download_pipeline import run_download_jars_pipeline
 
 DEST_DIR = Path("test_download_dest")
 
@@ -23,11 +23,11 @@ def mock_logger_download_fixture():
     # Utiliser le vrai module logging mais patcher ses fonctions au niveau du module testé
     # ou patcher l'instance de logger si elle est accessible.
     # Ici, on va patcher les fonctions de logging au niveau du module 'download_pipeline'
-    with patch('argumentation_analysis.core.pipelines.download_pipeline.logging') as mock_log_module:
+    with patch('argumentation_analysis.pipelines.download_pipeline.logging') as mock_log_module:
         yield mock_log_module
 
-@patch('argumentation_analysis.core.pipelines.download_pipeline.download_file')
-@patch('argumentation_analysis.core.pipelines.download_pipeline.Path') # Pour mocker Path() et ses instances
+@patch('argumentation_analysis.pipelines.download_pipeline.download_file')
+@patch('argumentation_analysis.pipelines.download_pipeline.Path') # Pour mocker Path() et ses instances
 def test_run_download_pipeline_success_all_jars(
     mock_path_class,
     mock_download_file,
@@ -78,8 +78,8 @@ def test_run_download_pipeline_success_all_jars(
     mock_logger_download_fixture.info.assert_any_call(f"✅ {JAR2_CONFIG['name']} téléchargé avec succès dans {ANY}.")
     mock_logger_download_fixture.info.assert_any_call("✅ Tous les JARs configurés ont été traités avec succès.")
 
-@patch('argumentation_analysis.core.pipelines.download_pipeline.download_file')
-@patch('argumentation_analysis.core.pipelines.download_pipeline.Path')
+@patch('argumentation_analysis.pipelines.download_pipeline.download_file')
+@patch('argumentation_analysis.pipelines.download_pipeline.Path')
 def test_run_download_pipeline_no_jars_to_download(
     mock_path_class,
     mock_download_file,
@@ -97,8 +97,8 @@ def test_run_download_pipeline_no_jars_to_download(
     # mock_path_class.return_value.mkdir.assert_not_called() # Ou assert_called_once si on le crée quand même
     mock_download_file.assert_not_called()
 
-@patch('argumentation_analysis.core.pipelines.download_pipeline.download_file')
-@patch('argumentation_analysis.core.pipelines.download_pipeline.Path')
+@patch('argumentation_analysis.pipelines.download_pipeline.download_file')
+@patch('argumentation_analysis.pipelines.download_pipeline.Path')
 def test_run_download_pipeline_skip_existing_files(
     mock_path_class,
     mock_download_file,
@@ -146,8 +146,8 @@ def test_run_download_pipeline_skip_existing_files(
     mock_logger_download_fixture.info.assert_any_call(f"Le fichier {JAR2_CONFIG['name']} existe déjà dans {mock_dest_dir_path} et force_download est False. Skip.")
     mock_logger_download_fixture.info.assert_any_call("✅ Tous les JARs configurés ont été traités avec succès.")
 
-@patch('argumentation_analysis.core.pipelines.download_pipeline.download_file')
-@patch('argumentation_analysis.core.pipelines.download_pipeline.Path')
+@patch('argumentation_analysis.pipelines.download_pipeline.download_file')
+@patch('argumentation_analysis.pipelines.download_pipeline.Path')
 def test_run_download_pipeline_one_jar_fails_download(
     mock_path_class,
     mock_download_file,
@@ -180,8 +180,8 @@ def test_run_download_pipeline_one_jar_fails_download(
     mock_logger_download_fixture.info.assert_any_call(f"✅ {JAR2_CONFIG['name']} téléchargé avec succès dans {mock_file_path}.")
     mock_logger_download_fixture.error.assert_any_call(f"❌ Échec du traitement d'un ou plusieurs JARs. 1/{len(jars_to_download)} JARs traités avec un certain succès (téléchargés ou skippés).")
 
-@patch('argumentation_analysis.core.pipelines.download_pipeline.download_file')
-@patch('argumentation_analysis.core.pipelines.download_pipeline.Path')
+@patch('argumentation_analysis.pipelines.download_pipeline.download_file')
+@patch('argumentation_analysis.pipelines.download_pipeline.Path')
 def test_run_download_pipeline_one_jar_download_exception(
     mock_path_class,
     mock_download_file,
@@ -215,8 +215,8 @@ def test_run_download_pipeline_one_jar_download_exception(
     mock_logger_download_fixture.info.assert_any_call(f"✅ {JAR2_CONFIG['name']} téléchargé avec succès dans {mock_file_path}.")
     mock_logger_download_fixture.error.assert_any_call(f"❌ Échec du traitement d'un ou plusieurs JARs. 1/{len(jars_to_download)} JARs traités avec un certain succès (téléchargés ou skippés).")
 
-@patch('argumentation_analysis.core.pipelines.download_pipeline.download_file')
-@patch('argumentation_analysis.core.pipelines.download_pipeline.Path')
+@patch('argumentation_analysis.pipelines.download_pipeline.download_file')
+@patch('argumentation_analysis.pipelines.download_pipeline.Path')
 def test_run_download_pipeline_invalid_jar_config(
     mock_path_class,
     mock_download_file,
@@ -255,8 +255,8 @@ def test_run_download_pipeline_invalid_jar_config(
     mock_logger_download_fixture.error.assert_any_call(f"❌ Échec du traitement d'un ou plusieurs JARs. 1/{len(jars_to_download)} JARs traités avec un certain succès (téléchargés ou skippés).")
 
 
-@patch('argumentation_analysis.core.pipelines.download_pipeline.download_file')
-@patch('argumentation_analysis.core.pipelines.download_pipeline.Path')
+@patch('argumentation_analysis.pipelines.download_pipeline.download_file')
+@patch('argumentation_analysis.pipelines.download_pipeline.Path')
 def test_run_download_pipeline_mkdir_fails(
     mock_path_class,
     mock_download_file,
