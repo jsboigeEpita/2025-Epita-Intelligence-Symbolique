@@ -1,92 +1,28 @@
 # Scripts Utilitaires
 
-Ce répertoire contient des scripts utilitaires pour la maintenance, la correction du code, l'analyse et l'inspection du projet.
+Ce répertoire contient divers scripts utilitaires pour le projet.
 
-## Liste des scripts
+## Gestion de l'Encodage
 
-### analyze_directory_usage.py
-Analyse l'utilisation de certains répertoires dans le code (utilise `project_core.dev_utils.code_validation`).
+Deux scripts principaux sont fournis pour la gestion de l'encodage des fichiers :
 
-**Usage :**
-```bash
-python scripts/utils/analyze_directory_usage.py --dir <directory_to_analyze> --output <report_file.json>
-```
+- **`check_encoding.py`**:
+  Ce script vérifie l'encodage de tous les fichiers Python (`.py`) au sein du projet pour s'assurer qu'ils sont bien en UTF-8. Il utilise la fonction `check_project_python_files_encoding` du module `project_core.dev_utils.encoding_utils`.
+  C'est un outil de diagnostic utile pour maintenir la cohérence de l'encodage à travers le projet.
 
-### check_encoding.py
-Vérifie l'encodage UTF-8 des fichiers Python du projet (utilise `project_core.dev_utils.encoding_utils`).
-Le plan suggère une fusion/clarification future avec `fix_encoding.py`.
+- **`fix_encoding.py`**:
+  Ce script permet de convertir l'encodage d'un fichier spécifique vers UTF-8 (ou un autre encodage cible). Il tente de détecter l'encodage source (ou accepte une liste d'encodages source potentiels) et réécrit le fichier avec le nouvel encodage. Il utilise la fonction `fix_file_encoding` du module `project_core.dev_utils.encoding_utils`.
+  C'est un outil de correction à utiliser lorsqu'un fichier avec un encodage incorrect est identifié.
 
-**Usage :**
-```bash
-python scripts/utils/check_encoding.py <file_path_or_directory>
-```
+**Choix de Conception :**
 
-### check_syntax.py
-Script pour vérifier la syntaxe d'un fichier Python. Il utilise les modules `ast` et `tokenize` pour analyser le code et détecter les erreurs de syntaxe.
+La logique métier pour la vérification et la correction de l'encodage a été centralisée dans le module `project_core.dev_utils.encoding_utils.py`. Les scripts présents dans ce répertoire (`scripts/utils/`) servent d'interfaces en ligne de commande (CLI) pour accéder facilement à ces fonctionnalités. Cette séparation permet :
+1.  **Réutilisabilité :** Les fonctions utilitaires dans `project_core` peuvent être appelées par d'autres parties du projet ou d'autres scripts si nécessaire.
+2.  **Clarté :** Les scripts CLI restent simples et se concentrent sur l'interaction avec l'utilisateur et le passage d'arguments, tandis que la logique complexe est encapsulée dans les modules utilitaires.
+3.  **Maintenabilité :** Les modifications de la logique d'encodage se font à un seul endroit (`project_core.dev_utils.encoding_utils.py`), facilitant la maintenance et les mises à jour.
 
-**Usage :**
-```bash
-python scripts/utils/check_syntax.py <file_path>
-```
+Il n'y a donc pas de "fusion" à faire entre `check_encoding.py` et `fix_encoding.py` eux-mêmes, car ils exposent des fonctionnalités distinctes et déjà modularisées. La solution actuelle est considérée comme la meilleure approche.
 
-### fix_docstrings.py
-Script pour corriger les problèmes d'apostrophes dans les docstrings des fichiers Python. Il remplace les apostrophes problématiques par des versions correctement échappées.
+## Autres Utilitaires
 
-**Usage :**
-```bash
-python scripts/utils/fix_docstrings.py <file_path>
-```
-
-### fix_encoding.py
-Script pour corriger l'encodage d'un fichier. Il essaie de décoder le fichier avec différents encodages (utf-8, latin-1, cp1252, iso-8859-1) et le réencode en UTF-8.
-
-**Usage :**
-```bash
-python scripts/utils/fix_encoding.py <file_path>
-```
-
-### fix_indentation.py
-Script pour corriger l'indentation d'un fichier Python. Il analyse la structure du code (classes, méthodes, fonctions) et applique une indentation cohérente.
-
-**Usage :**
-```bash
-python scripts/utils/fix_indentation.py <file_path>
-```
-
-### inspect_specific_sources.py
-Script pour inspecter des sources spécifiques, potentiellement pour vérifier leur contenu ou leur structure.
-
-**Usage :**
-```bash
-python scripts/utils/inspect_specific_sources.py --source <source_identifier_ou_path>
-```
-
-### script_commits.ps1
-Script PowerShell pour aider à la gestion des commits.
-**Note : L'usage de ce script doit être documenté plus en détail, ou une alternative en Python pourrait être envisagée pour simplifier les workflows de développement multi-plateforme.**
-
-**Usage :**
-```powershell
-.\\scripts\\utils\\script_commits.ps1
-```
-
-### test_imports_utils.py / test_imports_utils_impl.py
-Scripts pour tester les utilitaires d'importation.
-
-## Utilisation générale
-
-Ces scripts peuvent être utilisés individuellement pour des tâches spécifiques. Ils sont particulièrement utiles lors de la maintenance du code ou de l'intégration de nouvelles fonctionnalités.
-
-Pour exécuter un script sur un fichier spécifique :
-
-```bash
-python scripts/utils/<script_name>.py <arguments_specifiques>
-```
-ou pour PowerShell :
-```powershell
-.\\scripts\\utils\\<script_name>.ps1 <arguments_specifiques>
-```
-
-## Note
-
-Ces scripts ont été créés pour résoudre des problèmes spécifiques rencontrés lors du développement du projet. Ils peuvent nécessiter des ajustements en fonction de l'évolution des besoins du projet.
+D'autres scripts utilitaires peuvent être présents dans ce répertoire pour diverses tâches de maintenance, d'analyse ou de test.

@@ -245,7 +245,7 @@ def main():
         sys.exit(1)
     
     # 3. Afficher un résumé des sources et extraits
-    summarize_extracts(extract_definitions)
+    summarize_extract_definitions(extract_definitions) # Utilisation de la fonction importée
     
     # 4. Sauvegarder les extraits dans un format temporaire
     try:
@@ -255,9 +255,12 @@ def main():
                 json.dump(extract_definitions, f, ensure_ascii=False, indent=2)
             logger.info(f"✅ Définitions exportées avec succès vers {output_path}")
         else:
-            temp_file = save_temp_extracts(extract_definitions)
-            if temp_file:
-                logger.info(f"Les extraits déchiffrés ont été sauvegardés dans: {temp_file}")
+            # Utiliser la fonction importée. Elle retourne un Path ou None.
+            temp_file_path = save_temp_extracts_json(extract_definitions)
+            if temp_file_path:
+                logger.info(f"Les extraits déchiffrés ont été sauvegardés dans: {temp_file_path.resolve()}")
+            else:
+                logger.error("Échec de la sauvegarde des extraits temporaires.")
     except Exception as e:
         logger.error(f"Erreur lors de la sauvegarde des extraits: {e}")
         sys.exit(1)

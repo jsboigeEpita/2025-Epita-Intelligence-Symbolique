@@ -19,16 +19,21 @@ def verify_files():
     print("Vérification des fichiers réorganisés:")
     all_exist = True
     
-    for file_path in files_to_check:
-        exists = os.path.exists(file_path)
-        print(f"{file_path} : {'✓' if exists else '✗'}")
-        if not exists:
-            all_exist = False
+    # Utiliser la fonction centralisée
+    # Convertir les chaînes en objets Path pour la fonction utilitaire
+    paths_to_check_objects = [Path(fp) for fp in files_to_check]
+    existing_files, missing_files = check_files_existence(paths_to_check_objects)
     
-    if all_exist:
-        print("\nTous les fichiers ont été correctement réorganisés!")
+    for p in paths_to_check_objects: # Itérer sur la liste originale pour garder l'ordre et le formatage
+        if p in existing_files:
+            print(f"{str(p)} : ✓")
+        else:
+            print(f"{str(p)} : ✗ (Non trouvé ou n'est pas un fichier)")
+            
+    if not missing_files:
+        print("\nTous les fichiers ont été correctement réorganisés et existent!")
     else:
-        print("\nCertains fichiers n'ont pas été trouvés aux emplacements attendus.")
+        print(f"\n{len(missing_files)} fichier(s) n'ont pas été trouvé(s) ou ne sont pas des fichiers aux emplacements attendus.")
 
 if __name__ == "__main__":
     verify_files()

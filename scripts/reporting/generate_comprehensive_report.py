@@ -62,7 +62,7 @@ if str(project_root_path_comprehensive) not in sys.path:
 # Imports des utilitaires et du pipeline
 # from project_core.utils.file_utils import load_json_file, load_text_file, load_csv_file, save_markdown_to_html # Utilisé par le pipeline
 # from project_core.utils.reporting_utils import generate_markdown_report_for_corpus, generate_overall_summary_markdown # Utilisé par le pipeline
-# from argumentation_analysis.utils.data_processing_utils import group_results_by_corpus # Utilisé par le pipeline
+from argumentation_analysis.utils.data_processing_utils import group_results_by_corpus # Utilisé par le pipeline
 # from argumentation_analysis.analytics.stats_calculator import calculate_average_scores # Utilisé par le pipeline
 from argumentation_analysis.pipelines.reporting_pipeline import run_comprehensive_report_pipeline
 

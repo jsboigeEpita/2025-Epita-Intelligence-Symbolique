@@ -17,41 +17,42 @@ def get_significant_substrings(marker_text, length=30):
 
     prefix = cleaned_marker[:length]
     suffix = cleaned_marker[-length:]
-    return prefix, suffix
+    return prefix, suffix # La fonction est maintenant importée
 
-def find_segment_with_markers(full_text, start_marker, end_marker):
+# def find_segment_with_markers(full_text, start_marker, end_marker): # Fonction déplacée
     """
     Tente de trouver un segment basé sur les marqueurs de début et de fin.
     Retourne (start_index, end_index_of_end_marker, segment_text) ou (None, None, None).
     """
-    if not all([full_text, start_marker, end_marker]):
-        return None, None, None
+#     if not all([full_text, start_marker, end_marker]):
+#         return None, None, None
 
-    try:
-        start_idx = full_text.find(start_marker)
-        if start_idx == -1:
-            return None, None, None
+#     try:
+#         start_idx = full_text.find(start_marker)
+#         if start_idx == -1:
+#             return None, None, None
 
-        # Recherche end_marker APRES start_marker
-        # end_idx est l'index de début de end_marker
-        end_idx = full_text.find(end_marker, start_idx + len(start_marker))
-        if end_idx == -1:
-            return None, None, None
+#         # Recherche end_marker APRES start_marker
+#         # end_idx est l'index de début de end_marker
+#         end_idx = full_text.find(end_marker, start_idx + len(start_marker))
+#         if end_idx == -1:
+#             return None, None, None
             
-        # L'index de fin pour le slicing doit inclure le end_marker
-        # segment_end_idx = end_idx + len(end_marker)
+#         # L'index de fin pour le slicing doit inclure le end_marker
+#         # segment_end_idx = end_idx + len(end_marker)
         
-        # Assurer que le segment n'est pas vide et que les marqueurs ne se chevauchent pas mal
-        if end_idx <= start_idx : # end_marker doit commencer après le début de start_marker
-             return None, None, None
+#         # Assurer que le segment n'est pas vide et que les marqueurs ne se chevauchent pas mal
+#         if end_idx <= start_idx : # end_marker doit commencer après le début de start_marker
+#              return None, None, None
 
-        # Le segment extrait inclut les marqueurs
-        # Le segment est de start_idx (début de start_marker) à end_idx + len(end_marker) (fin de end_marker)
-        new_segment = full_text[start_idx : end_idx + len(end_marker)]
-        return start_idx, end_idx + len(end_marker), new_segment
-    except Exception as e:
-        print(f"DEBUG: Erreur dans find_segment_with_markers: {e} avec start='{start_marker}', end='{end_marker}'")
-        return None, None, None
+#         # Le segment extrait inclut les marqueurs
+#         # Le segment est de start_idx (début de start_marker) à end_idx + len(end_marker) (fin de end_marker)
+#         new_segment = full_text[start_idx : end_idx + len(end_marker)]
+#         return start_idx, end_idx + len(end_marker), new_segment
+#     except Exception as e:
+#         print(f"DEBUG: Erreur dans find_segment_with_markers: {e} avec start='{start_marker}', end='{end_marker}'")
+#         return None, None, None
+    # La fonction est maintenant importée
 
 def main():
     input_config_path = pathlib.Path("_temp/config_segments_populated.json")
