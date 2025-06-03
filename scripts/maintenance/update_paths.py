@@ -220,10 +220,15 @@ def main():
         logging.info("Mode dry-run: aucune modification n'a été effectuée.")
         logging.info("Exécutez à nouveau sans l'option --dry-run pour appliquer les modifications.")
     
-    if stats['modified_files'] > 0:
-        logging.info("\nFichiers modifiés:")
-        for file_path in stats['modified_files_list']:
-            logging.info(f"  {file_path}")
+    if changed_files_details:
+        logging.info("\nFichiers avec modifications (chemins et/ou imports):")
+        for detail in changed_files_details:
+            log_msg = f"  {detail.get('path')}: {detail.get('path_replacements',0)} remplacement(s) de chemin"
+            if detail.get('import_changed'):
+                log_msg += ", import de chemin modifié/ajouté."
+            else:
+                log_msg += "."
+            logging.info(log_msg)
     
     return 0
 

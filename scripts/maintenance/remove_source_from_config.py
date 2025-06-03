@@ -10,48 +10,40 @@ source_name_to_remove = "article_lemonde_elections_europeennes_2024"
 output_config_path.parent.mkdir(parents=True, exist_ok=True)
 
 # Charger les données depuis le fichier d'entrée
-try:
-    with open(input_config_path, 'r', encoding='utf-8') as f:
-        data = json.load(f)
-except FileNotFoundError:
-    print(f"Erreur : Le fichier d'entrée '{input_config_path}' n'a pas été trouvé.")
-    exit(1)
-except json.JSONDecodeError:
-    print(f"Erreur : Impossible de décoder le JSON du fichier '{input_config_path}'.")
+data = load_json_from_file(input_config_path)
+
+if data is None:
+    # load_json_from_file logue déjà l'erreur
     exit(1)
 
-# S'assurer que les données sont une liste (ou une structure contenant une liste de sources)
-# Ceci est une hypothèse basée sur la tâche. Si la structure est différente,
-# la logique de filtrage devra être adaptée.
-# Pour cet exemple, nous supposons que le fichier JSON racine est une liste de sources.
-if isinstance(data, list):
-    # Filtrer la liste des sources
-    filtered_sources = [
-        source for source in data
-        if not (isinstance(source, dict) and source.get("source_name") == source_name_to_remove)
-    ]
-elif isinstance(data, dict) and "sources" in data and isinstance(data["sources"], list):
-    # Cas où les sources sont sous une clé "sources"
-    filtered_sources_list = [
-        source for source in data["sources"]
-        if not (isinstance(source, dict) and source.get("source_name") == source_name_to_remove)
-    ]
-    data["sources"] = filtered_sources_list
-    filtered_sources = data # Conserver la structure d'origine si c'est un dictionnaire
-else:
+# Filtrer les données en utilisant la fonction utilitaire
+# Déterminer si la liste est à la racine ou sous une clé "sources"
+list_key = None
+if isinstance(data, dict) and "sources" in data and isinstance(data["sources"], list):
+    list_key = "sources"
+elif not isinstance(data, list): # Si ce n'est ni une liste ni un dict avec "sources"
     print(f"Erreur : La structure des données dans '{input_config_path}' n'est pas une liste de sources attendue ou un dictionnaire avec une clé 'sources'.")
-    # Si le fichier ne contient pas la source à supprimer, on peut soit sortir,
-    # soit écrire le contenu original dans le fichier de sortie.
-    # Pour cette tâche, nous allons écrire le contenu original.
-    filtered_sources = data
+    # Sauvegarder les données originales si on ne sait pas comment filtrer
+    if save_json_to_file(data, output_config_path):
+        print(f"Données originales sauvegardées dans '{output_config_path}' car la structure n'a pas pu être filtrée.")
+    else:
+        print(f"Erreur lors de la sauvegarde des données originales dans '{output_config_path}'.")
+    exit(1)
 
+updated_data, items_removed = filter_list_in_json_data(
+    json_data=data,
+    filter_key="source_name",
+    filter_value_to_remove=source_name_to_remove,
+    list_path_key=list_key
+)
 
 # Sauvegarder la liste filtrée dans le fichier de sortie
-try:
-    with open(output_config_path, 'w', encoding='utf-8') as f:
-        json.dump(filtered_sources, f, indent=2, ensure_ascii=False)
-    print(f"La source '{source_name_to_remove}' a été supprimée (si elle existait).")
+if save_json_to_file(updated_data, output_config_path):
+    if items_removed > 0:
+        print(f"{items_removed} instance(s) de la source '{source_name_to_remove}' ont été supprimées.")
+    else:
+        print(f"La source '{source_name_to_remove}' n'a pas été trouvée ou aucune modification n'était nécessaire.")
     print(f"La configuration mise à jour a été sauvegardée dans : '{output_config_path}'")
-except IOError:
-    print(f"Erreur : Impossible d'écrire dans le fichier de sortie '{output_config_path}'.")
+else:
+    # save_json_to_file logue déjà l'erreur
     exit(1)

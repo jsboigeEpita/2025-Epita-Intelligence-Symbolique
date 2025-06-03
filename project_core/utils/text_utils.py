@@ -1,3 +1,7 @@
+from typing import Tuple, Optional # Ajout pour le typage
+import logging # Ajout pour logging
+
+logger = logging.getLogger(__name__) # Ajout logger
 """
 Ce module fournit des fonctions utilitaires pour la manipulation et la normalisation de chaînes de caractères.
 
@@ -8,7 +12,7 @@ Il contient des fonctions pour :
 import re
 import string
 import unicodedata
-from typing import List
+from typing import List, Dict # Ajout de Dict
 
 def normalize_text(text: str) -> str:
     """
@@ -155,3 +159,113 @@ if __name__ == '__main__':
         tokenize_text(None)
     except TypeError as e:
         print(f"\nErreur attendue pour tokenize_text avec entrée non-string: {e}")
+def find_segment_with_markers(
+    full_text: str, 
+    start_marker: str, 
+    end_marker: str
+) -> Tuple[Optional[int], Optional[int], Optional[str]]:
+    """
+    Tente de trouver un segment de texte basé sur des marqueurs de début et de fin.
+
+    La recherche du marqueur de fin commence après la fin du marqueur de début trouvé.
+    Le segment retourné inclut les marqueurs de début et de fin.
+
+    Args:
+        full_text (str): Le texte complet dans lequel chercher.
+        start_marker (str): La chaîne de caractères marquant le début du segment.
+        end_marker (str): La chaîne de caractères marquant la fin du segment.
+
+    Returns:
+        Tuple[Optional[int], Optional[int], Optional[str]]: 
+            Un tuple contenant:
+            - L'index de début du marqueur de début dans full_text (ou None si non trouvé).
+            - L'index de fin du marqueur de fin (c'est-à-dire l'index après le dernier caractère
+              du marqueur de fin) dans full_text (ou None si non trouvé ou si erreur).
+            - Le segment de texte extrait, incluant les marqueurs (ou None si non trouvé).
+            Retourne (None, None, None) si l'un des arguments est invalide,
+            si le marqueur de début n'est pas trouvé, ou si le marqueur de fin
+            n'est pas trouvé après le marqueur de début.
+    """
+    if not all(isinstance(arg, str) for arg in [full_text, start_marker, end_marker]):
+        logger.warning("find_segment_with_markers a reçu des arguments non-chaînes.")
+        return None, None, None
+    if not all([full_text, start_marker, end_marker]): # Vérifier aussi si les chaînes sont vides
+        logger.debug("Un des arguments (full_text, start_marker, end_marker) est vide.")
+        return None, None, None
+
+    try:
+        start_idx = full_text.find(start_marker)
+        if start_idx == -1:
+            logger.debug(f"Marqueur de début '{start_marker[:50]}...' non trouvé.")
+            return None, None, None
+
+        # Recherche end_marker APRES la fin de start_marker
+        search_from_index = start_idx + len(start_marker)
+        end_idx = full_text.find(end_marker, search_from_index)
+        
+        if end_idx == -1:
+            logger.debug(f"Marqueur de fin '{end_marker[:50]}...' non trouvé après l'index {search_from_index}.")
+            return None, None, None
+            
+        # L'index de fin pour le slicing doit inclure le end_marker
+        segment_end_idx = end_idx + len(end_marker)
+        
+        # Le segment extrait inclut les marqueurs
+        extracted_segment = full_text[start_idx : segment_end_idx]
+        
+        logger.debug(f"Segment trouvé: début à {start_idx}, fin (du marqueur de fin) à {segment_end_idx}. Aperçu: '{extracted_segment[:100]}...'")
+        return start_idx, segment_end_idx, extracted_segment
+        
+    except Exception as e:
+        logger.error(f"Erreur dans find_segment_with_markers: {e} avec start='{start_marker[:50]}...', end='{end_marker[:50]}...'", exc_info=True)
+        return None, None, None
+def populate_text_segment(
+    source_full_text: str,
+    extract_definition: Dict[str, Any] # Nécessite Dict from typing
+) -> Optional[str]:
+    """
+    Peuple le 'full_text_segment' pour une définition d'extrait donnée
+    en utilisant son texte source complet et ses marqueurs.
+
+    Utilise la fonction `find_segment_with_markers` pour localiser le segment.
+
+    Args:
+        source_full_text (str): Le texte complet de la source à partir duquel extraire.
+        extract_definition (Dict[str, Any]): Un dictionnaire représentant la définition
+                                             d'un extrait. Doit contenir les clés
+                                             'start_marker' et 'end_marker'.
+                                             Le champ 'extract_name' est optionnel pour le logging.
+
+    Returns:
+        Optional[str]: Le segment de texte extrait (incluant les marqueurs) si trouvé,
+                       sinon None.
+                       La fonction logue les erreurs ou les marqueurs non trouvés.
+    """
+    if not source_full_text:
+        logger.debug("Texte source complet manquant, impossible de peupler le segment.")
+        return None
+        
+    if not isinstance(extract_definition, dict):
+        logger.warning("La définition de l'extrait n'est pas un dictionnaire.")
+        return None
+
+    extract_name = extract_definition.get("extract_name", "Extrait Inconnu")
+    start_marker = extract_definition.get("start_marker")
+    end_marker = extract_definition.get("end_marker")
+
+    if not start_marker or not end_marker:
+        missing_info = []
+        if not start_marker: missing_info.append("marqueur de début")
+        if not end_marker: missing_info.append("marqueur de fin")
+        logger.warning(f"{', '.join(missing_info).capitalize()} manquants pour l'extrait '{extract_name}'. Segment non peuplé.")
+        return None
+
+    _, _, segment = find_segment_with_markers(source_full_text, start_marker, end_marker)
+
+    if segment:
+        logger.debug(f"Segment peuplé pour l'extrait '{extract_name}' (longueur: {len(segment)}).")
+        return segment
+    else:
+        # find_segment_with_markers logue déjà les détails si les marqueurs ne sont pas trouvés.
+        logger.warning(f"Impossible de trouver/peupler le segment pour l'extrait '{extract_name}' avec les marqueurs fournis.")
+        return None

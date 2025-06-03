@@ -92,37 +92,40 @@ Cependant, cette approche ne remplace pas complètement les tests réels, qui re
 """
 
 def update_rapport():
-    """Met à jour le rapport final des tests."""
-    if not RAPPORT_PATH.exists():
-        print(f"Erreur: Le rapport final n'existe pas à l'emplacement {RAPPORT_PATH}")
+    """Met à jour le rapport final des tests en utilisant l'utilitaire centralisé."""
+    
+    section_header_to_update = "## Partie 3 : Tests mockés et couverture de code (21/05/2025)"
+    # RAPPORT_UPDATE contient déjà l'en-tête. Pour une utilisation propre avec
+    # update_markdown_section, new_content ne devrait pas inclure l'en-tête.
+    
+    header_in_update = "## Partie 3 : Tests mockés et couverture de code (21/05/2025)\n" # Doit correspondre
+    
+    # Extraire le contenu réel à insérer (sans l'en-tête)
+    content_for_section = RAPPORT_UPDATE.split(header_in_update, 1)[-1] if header_in_update in RAPPORT_UPDATE else RAPPORT_UPDATE
+    if content_for_section == RAPPORT_UPDATE and RAPPORT_UPDATE.strip().startswith(section_header_to_update.strip()):
+        # Cas où split n'a rien fait car RAPPORT_UPDATE ne contenait pas exactement header_in_update (ex: pas de \n final)
+        # mais commence bien par l'en-tête.
+        temp_header_check = section_header_to_update.strip()
+        if RAPPORT_UPDATE.strip().startswith(temp_header_check):
+             content_for_section = RAPPORT_UPDATE.strip()[len(temp_header_check):].strip()
+
+
+    if update_markdown_section(
+        file_path=RAPPORT_PATH,
+        section_header=section_header_to_update, # L'en-tête que l'on cherche/veut créer
+        new_content=content_for_section,         # Le contenu à mettre sous cet en-tête
+        ensure_header_level=2,                   # C'est un '##'
+        add_if_not_found=True,                   # Ajouter si la section n'existe pas
+        replace_entire_section=True              # Remplacer toute la section si trouvée
+    ):
+        print(f"Rapport final mis à jour avec succès: {RAPPORT_PATH}")
+        return True
+    else:
+        # update_markdown_section logue déjà les erreurs spécifiques si le fichier n'est pas trouvé
+        # ou si la section n'est pas trouvée et add_if_not_found est False.
+        # Si elle retourne False ici, c'est soit une erreur d'écriture, soit aucune modif n'a été faite.
+        print(f"Échec de la mise à jour du rapport final ou aucune modification nécessaire: {RAPPORT_PATH}")
         return False
-    
-    # Lire le contenu actuel du rapport
-    content = RAPPORT_PATH.read_text(encoding='utf-8')
-    
-    # Supprimer l'ancienne section si elle existe
-    if "## Partie 3 : Tests mockés et couverture de code" in content:
-        print("Suppression de l'ancienne section et ajout de la nouvelle...")
-        # Trouver le début de la section
-        start_index = content.find("## Partie 3 : Tests mockés et couverture de code")
-        if start_index != -1:
-            # Trouver la fin de la section (soit le début de la section suivante, soit la fin du fichier)
-            next_section_index = content.find("##", start_index + 10)
-            if next_section_index != -1:
-                # Supprimer la section
-                content = content[:start_index] + content[next_section_index:]
-            else:
-                # Si c'est la dernière section, supprimer jusqu'à la fin
-                content = content[:start_index]
-    
-    # Ajouter la mise à jour au rapport
-    new_content = content + RAPPORT_UPDATE
-    
-    # Écrire le nouveau contenu dans le rapport
-    RAPPORT_PATH.write_text(new_content, encoding='utf-8')
-    
-    print(f"Rapport final mis à jour avec succès: {RAPPORT_PATH}")
-    return True
 
 if __name__ == "__main__":
     update_rapport()
