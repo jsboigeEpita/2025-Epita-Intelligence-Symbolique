@@ -42,13 +42,13 @@ def test_run_archival_pipeline_success_no_files(
     mock_create_archive_path,
     mock_check_path_exists,
     mock_setup_logging,
-    mock_logger_fixture # Utilisation de la fixture pour le logger
+    mock_logger # Utilisation de la fixture pour le logger
 ):
     """
     Teste le pipeline d'archivage dans un scénario de succès où aucun fichier ne correspond au pattern.
     """
     # Configuration des mocks
-    mock_setup_logging.return_value = mock_logger_fixture
+    mock_setup_logging.return_value = mock_logger
     
     # Simuler Path() pour source_dir et archive_base_dir
     mock_source_dir_path = MagicMock(spec=Path)
@@ -79,7 +79,7 @@ def test_run_archival_pipeline_success_no_files(
 
     # Vérifications
     mock_setup_logging.assert_called_once_with("INFO", "archival_pipeline")
-    mock_logger_fixture.info.assert_any_call("Démarrage du pipeline d'archivage.")
+    mock_logger.info.assert_any_call("Démarrage du pipeline d'archivage.")
     
     # check_path_exists doit être appelé pour source_dir et archive_base_dir
     expected_check_calls = [
@@ -88,9 +88,9 @@ def test_run_archival_pipeline_success_no_files(
     ]
     mock_check_path_exists.assert_has_calls(expected_check_calls, any_order=False) # L'ordre est important ici
 
-    mock_logger_fixture.info.assert_any_call(f"Répertoire source: {mock_source_dir_path}")
-    mock_logger_fixture.info.assert_any_call(f"Répertoire de base d'archivage: {mock_archive_base_dir_path}")
-    mock_logger_fixture.info.assert_any_call("Motif de fichier: *.txt, Niveaux à préserver: 1")
+    mock_logger.info.assert_any_call(f"Répertoire source: {mock_source_dir_path}")
+    mock_logger.info.assert_any_call(f"Répertoire de base d'archivage: {mock_archive_base_dir_path}")
+    mock_logger.info.assert_any_call("Motif de fichier: *.txt, Niveaux à préserver: 1")
 
     mock_source_dir_path.rglob.assert_called_once_with("*.txt")
     
@@ -98,7 +98,7 @@ def test_run_archival_pipeline_success_no_files(
     mock_create_archive_path.assert_not_called()
     mock_archive_file.assert_not_called()
 
-    mock_logger_fixture.info.assert_any_call(
+    mock_logger.info.assert_any_call(
         "Pipeline d'archivage terminé. 0 fichier(s) archivé(s) sur 0 élément(s) traité(s) correspondant au motif."
     )
 
@@ -113,14 +113,14 @@ def test_run_archival_pipeline_success_one_file(
     mock_create_archive_path,
     mock_check_path_exists,
     mock_setup_logging,
-    mock_logger_fixture, # Utilisation de la fixture pour le logger
+    mock_logger, # Utilisation de la fixture pour le logger
     mock_path_obj # Utilisation de la fixture pour un objet Path mocké
 ):
     """
     Teste le pipeline d'archivage dans un scénario de succès où un fichier est archivé.
     """
     # Configuration des mocks
-    mock_setup_logging.return_value = mock_logger_fixture
+    mock_setup_logging.return_value = mock_logger
     
     mock_source_file = mock_path_obj # Utilise la fixture
     mock_source_file.name = "file1.txt"
@@ -170,7 +170,7 @@ def test_run_archival_pipeline_success_one_file(
     mock_source_dir_path.rglob.assert_called_once_with("*.txt")
     mock_source_file.is_file.assert_called_once() # Vérifie qu'on a testé si c'est un fichier
 
-    mock_logger_fixture.debug.assert_any_call(f"Traitement du fichier source: {mock_source_file}")
+    mock_logger.debug.assert_any_call(f"Traitement du fichier source: {mock_source_file}")
 
     mock_create_archive_path.assert_called_once_with(
         source_file_path=mock_source_file,
@@ -178,12 +178,12 @@ def test_run_archival_pipeline_success_one_file(
         archive_base_dir=mock_archive_base_dir_path,
         preserve_levels=1
     )
-    mock_logger_fixture.debug.assert_any_call(f"Chemin d'archivage calculé: {mock_target_archive_path}")
+    mock_logger.debug.assert_any_call(f"Chemin d'archivage calculé: {mock_target_archive_path}")
 
     mock_archive_file.assert_called_once_with(mock_source_file, mock_target_archive_path, create_parent_dirs=True)
-    mock_logger_fixture.info.assert_any_call(f"Archivé: '{mock_source_file}' -> '{mock_target_archive_path}'")
+    mock_logger.info.assert_any_call(f"Archivé: '{mock_source_file}' -> '{mock_target_archive_path}'")
 
-    mock_logger_fixture.info.assert_any_call(
+    mock_logger.info.assert_any_call(
         "Pipeline d'archivage terminé. 1 fichier(s) archivé(s) sur 1 élément(s) traité(s) correspondant au motif."
     )
 
@@ -194,12 +194,12 @@ def test_run_archival_pipeline_fail_source_dir_not_found(
     mock_path_class,
     mock_check_path_exists,
     mock_setup_logging,
-    mock_logger_fixture
+    mock_logger
 ):
     """
     Teste l'échec du pipeline si le répertoire source n'est pas trouvé.
     """
-    mock_setup_logging.return_value = mock_logger_fixture
+    mock_setup_logging.return_value = mock_logger
     
     mock_source_dir_path = MagicMock(spec=Path)
     mock_archive_base_dir_path = MagicMock(spec=Path)
@@ -229,7 +229,7 @@ def test_run_archival_pipeline_fail_source_dir_not_found(
 
     mock_check_path_exists.assert_any_call(mock_source_dir_path, "répertoire source", is_dir=True)
     # S'assurer que le pipeline logge l'erreur et s'arrête (ou gère l'erreur comme prévu)
-    mock_logger_fixture.error.assert_any_call(
+    mock_logger.error.assert_any_call(
         f"Erreur de configuration du pipeline (chemin non trouvé): {error_message}", exc_info=True
     )
     # Les étapes suivantes ne devraient pas être appelées
@@ -243,12 +243,12 @@ def test_run_archival_pipeline_fail_archive_dir_not_found(
     mock_path_class,
     mock_check_path_exists,
     mock_setup_logging,
-    mock_logger_fixture
+    mock_logger
 ):
     """
     Teste l'échec du pipeline si le répertoire d'archive de base n'est pas trouvé.
     """
-    mock_setup_logging.return_value = mock_logger_fixture
+    mock_setup_logging.return_value = mock_logger
 
     mock_source_dir_path = MagicMock(spec=Path)
     mock_archive_base_dir_path = MagicMock(spec=Path)
@@ -279,7 +279,7 @@ def test_run_archival_pipeline_fail_archive_dir_not_found(
     mock_check_path_exists.assert_any_call(mock_source_dir_path, "répertoire source", is_dir=True)
     mock_check_path_exists.assert_any_call(mock_archive_base_dir_path, "répertoire de base d'archivage", is_dir=True)
     
-    mock_logger_fixture.error.assert_any_call(
+    mock_logger.error.assert_any_call(
         f"Erreur de configuration du pipeline (chemin non trouvé): {error_message}", exc_info=True
     )
     assert mock_source_dir_path.rglob.call_count == 0
@@ -295,14 +295,14 @@ def test_run_archival_pipeline_error_in_create_archive_path(
     mock_create_archive_path,
     mock_check_path_exists,
     mock_setup_logging,
-    mock_logger_fixture,
+    mock_logger,
     mock_path_obj
 ):
     """
     Teste la gestion d'erreur si create_archive_path lève une exception.
     Le pipeline doit logger l'erreur et continuer avec les autres fichiers.
     """
-    mock_setup_logging.return_value = mock_logger_fixture
+    mock_setup_logging.return_value = mock_logger
     mock_source_file1 = mock_path_obj
     mock_source_file1.name = "file1.txt"
     mock_source_file1.__str__.return_value = f"{TEST_SOURCE_DIR}/{mock_source_file1.name}"
@@ -324,16 +324,14 @@ def test_run_archival_pipeline_error_in_create_archive_path(
     mock_path_class.return_value = MagicMock(spec=Path)
 
     error_message = "Erreur de création de chemin"
-    mock_create_archive_path.side_effect = [
-        Exception(error_message), # Échoue pour file1.txt
-        MagicMock(spec=Path)      # Réussit pour file2.txt (retourne un mock Path)
-    ]
-    
     # Pour le deuxième appel réussi à create_archive_path
     mock_target_path_file2 = MagicMock(spec=Path)
     mock_target_path_file2.__str__.return_value = f"{TEST_ARCHIVE_BASE_DIR}/file2_archived.txt"
-    # Faire en sorte que le deuxième appel à create_archive_path retourne ce mock spécifique
-    mock_create_archive_path.side_effect = lambda **kwargs: Exception(error_message) if kwargs['source_file_path'] == mock_source_file1 else mock_target_path_file2
+    # Faire en sorte que create_archive_path échoue pour le premier fichier et réussisse pour le second
+    mock_create_archive_path.side_effect = [
+        Exception(error_message),  # Le premier appel lèvera une exception
+        mock_target_path_file2     # Le deuxième appel retournera le chemin mocké
+    ]
 
 
     run_archival_pipeline(
@@ -343,14 +341,14 @@ def test_run_archival_pipeline_error_in_create_archive_path(
         preserve_levels=1
     )
 
-    mock_logger_fixture.error.assert_any_call(
+    mock_logger.error.assert_any_call(
         f"Erreur lors de l'archivage du fichier '{mock_source_file1}': {error_message}", exc_info=True
     )
     # archive_file ne doit pas être appelé pour le fichier en erreur
     # mais doit être appelé pour le fichier qui réussit
     mock_archive_file.assert_called_once_with(mock_source_file2, mock_target_path_file2, create_parent_dirs=True)
-    mock_logger_fixture.info.assert_any_call(f"Archivé: '{mock_source_file2}' -> '{mock_target_path_file2}'")
-    mock_logger_fixture.info.assert_any_call(
+    mock_logger.info.assert_any_call(f"Archivé: '{mock_source_file2}' -> '{mock_target_path_file2}'")
+    mock_logger.info.assert_any_call(
         "Pipeline d'archivage terminé. 1 fichier(s) archivé(s) sur 2 élément(s) traité(s) correspondant au motif."
     )
 
@@ -366,14 +364,14 @@ def test_run_archival_pipeline_error_in_archive_file(
     mock_create_archive_path,
     mock_check_path_exists,
     mock_setup_logging,
-    mock_logger_fixture,
+    mock_logger,
     mock_path_obj
 ):
     """
     Teste la gestion d'erreur si archive_file lève une exception.
     Le pipeline doit logger l'erreur et continuer.
     """
-    mock_setup_logging.return_value = mock_logger_fixture
+    mock_setup_logging.return_value = mock_logger
     mock_source_file1 = mock_path_obj
     mock_source_file1.name = "file1.txt"
     mock_source_file1.__str__.return_value = f"{TEST_SOURCE_DIR}/{mock_source_file1.name}"
@@ -403,7 +401,10 @@ def test_run_archival_pipeline_error_in_archive_file(
 
     error_message = "Erreur d'archivage IO"
     # archive_file échoue pour file1, réussit pour file2
-    mock_archive_file.side_effect = lambda source, dest, **kwargs: Exception(error_message) if source == mock_source_file1 else None
+    mock_archive_file.side_effect = [
+        Exception(error_message), # Le premier appel lèvera une exception
+        None                      # Le deuxième appel ne fera rien (comportement de succès)
+    ]
 
 
     run_archival_pipeline(
@@ -413,7 +414,7 @@ def test_run_archival_pipeline_error_in_archive_file(
         preserve_levels=1
     )
 
-    mock_logger_fixture.error.assert_any_call(
+    mock_logger.error.assert_any_call(
         f"Erreur lors de l'archivage du fichier '{mock_source_file1}': {error_message}", exc_info=True
     )
     # Vérifier que create_archive_path a été appelé pour les deux
@@ -423,8 +424,8 @@ def test_run_archival_pipeline_error_in_archive_file(
     mock_archive_file.assert_any_call(mock_source_file1, mock_target_path_file1, create_parent_dirs=True)
     mock_archive_file.assert_any_call(mock_source_file2, mock_target_path_file2, create_parent_dirs=True)
 
-    mock_logger_fixture.info.assert_any_call(f"Archivé: '{mock_source_file2}' -> '{mock_target_path_file2}'")
-    mock_logger_fixture.info.assert_any_call(
+    mock_logger.info.assert_any_call(f"Archivé: '{mock_source_file2}' -> '{mock_target_path_file2}'")
+    mock_logger.info.assert_any_call(
         "Pipeline d'archivage terminé. 1 fichier(s) archivé(s) sur 2 élément(s) traité(s) correspondant au motif."
     )
 
@@ -439,13 +440,13 @@ def test_run_archival_pipeline_item_is_not_file(
     mock_create_archive_path,
     mock_check_path_exists,
     mock_setup_logging,
-    mock_logger_fixture # Utilisation de la fixture logger
+    mock_logger # Utilisation de la fixture logger
 ):
     """
     Teste le comportement lorsque rglob retourne un élément qui n'est pas un fichier.
     Cet élément doit être ignoré et le pipeline doit continuer.
     """
-    mock_setup_logging.return_value = mock_logger_fixture
+    mock_setup_logging.return_value = mock_logger
 
     mock_item_dir = MagicMock(spec=Path)
     mock_item_dir.is_file.return_value = False # Simule un répertoire
@@ -487,10 +488,10 @@ def test_run_archival_pipeline_item_is_not_file(
     mock_source_file.is_file.assert_called_once()
 
     # Vérifier que le répertoire est loggué comme ignoré
-    mock_logger_fixture.debug.assert_any_call(f"Ignoré (n'est pas un fichier): {mock_item_dir}")
+    mock_logger.debug.assert_any_call(f"Ignoré (n'est pas un fichier): {mock_item_dir}")
     
     # Vérifier que le fichier est traité et archivé
-    mock_logger_fixture.debug.assert_any_call(f"Traitement du fichier source: {mock_source_file}")
+    mock_logger.debug.assert_any_call(f"Traitement du fichier source: {mock_source_file}")
     mock_create_archive_path.assert_called_once_with(
         source_file_path=mock_source_file,
         source_base_dir=mock_source_dir_path,
@@ -498,10 +499,10 @@ def test_run_archival_pipeline_item_is_not_file(
         preserve_levels=1
     )
     mock_archive_file.assert_called_once_with(mock_source_file, mock_target_archive_path_for_file, create_parent_dirs=True)
-    mock_logger_fixture.info.assert_any_call(f"Archivé: '{mock_source_file}' -> '{mock_target_archive_path_for_file}'")
+    mock_logger.info.assert_any_call(f"Archivé: '{mock_source_file}' -> '{mock_target_archive_path_for_file}'")
 
     # Vérifier le message final du logger
-    mock_logger_fixture.info.assert_any_call(
+    mock_logger.info.assert_any_call(
         "Pipeline d'archivage terminé. 1 fichier(s) archivé(s) sur 2 élément(s) traité(s) correspondant au motif."
     )
 
