@@ -1,9 +1,9 @@
 from setuptools import setup, find_packages
 
 setup(
-    name="argumentation_analysis",
+    name="argumentation_analysis_project",
     version="0.1.0",
-    packages=find_packages(exclude=["tests", "scripts", "docs", "notebooks", "venv", ".venv", "dist", "build", "*.egg-info"]),
+    packages=find_packages(exclude=["tests", "tests.*", "scripts", "scripts.*", "docs", "docs.*", "notebooks", "notebooks.*", "venv", ".venv", "dist", "build", "*.egg-info", "_archives", "_archives.*", "examples", "examples.*", "config", "config.*", "services", "services.*", "tutorials", "tutorials.*", "libs", "libs.*", "results", "results.*", "src", "src.*"]),
     # package_dir={'': 'src'},
     install_requires=[
         "numpy<2.0",  # Contrainte cruciale pour la compatibilité
@@ -31,7 +31,8 @@ setup(
         "flask",
         "Flask-CORS",
         "tqdm",
-'markdown',
+        'markdown',
+        "unidecode",
     ],
     python_requires=">=3.8",
     description="Système d'analyse argumentative",
