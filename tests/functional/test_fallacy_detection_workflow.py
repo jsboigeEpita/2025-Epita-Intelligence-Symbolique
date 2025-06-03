@@ -18,10 +18,12 @@ from semantic_kernel.agents import Agent, AgentGroupChat # Importations inutilis
 # Ajouter le répertoire racine au chemin Python pour pouvoir importer les modules
 import sys
 import os
-# project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-# if project_root not in sys.path:
-#    sys.path.insert(0, project_root)
-# Commenté car conftest.py et pytest.ini devraient gérer cela.
+project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
+if project_root not in sys.path:
+   sys.path.insert(0, project_root)
+# L'installation du package via `pip install -e .` devrait gérer l'accessibilité,
+# mais cette modification assure le fonctionnement même sans installation en mode édition.
+# conftest.py et pytest.ini devraient également aider, mais ajout explicite pour robustesse.
 
 from argumentation_analysis.core.shared_state import RhetoricalAnalysisState # Importation inutilisée ?
 from argumentation_analysis.core.state_manager_plugin import StateManagerPlugin # Importation inutilisée ?

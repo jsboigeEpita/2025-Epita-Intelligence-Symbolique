@@ -9,9 +9,9 @@ from typing import List, Dict, Any
 
 # Ajuster le PYTHONPATH pour les tests
 import sys
-# project_root_path = Path(__file__).resolve().parent.parent.parent.parent
-# if str(project_root_path) not in sys.path:
-#     sys.path.insert(0, str(project_root_path))
+project_root_path = Path(__file__).resolve().parent.parent.parent.parent
+if str(project_root_path) not in sys.path:
+    sys.path.insert(0, str(project_root_path))
 # Commenté car l'installation du package via `pip install -e .` devrait gérer l'accessibilité.
 
 from argumentation_analysis.utils.metrics_aggregation import generate_performance_metrics_for_agents
