@@ -1,5 +1,12 @@
 # -*- coding: utf-8 -*-
-"""Utilitaires pour la génération de rapports."""
+"""
+Utilitaires pour la génération de rapports.
+
+Ce module fournit des fonctions pour créer, formater et sauvegarder
+divers types de rapports, y compris JSON et Markdown. Il est conçu
+pour faciliter la présentation des résultats d'analyse et des
+comparaisons de performance.
+"""
 
 import json
 from pathlib import Path
@@ -246,20 +253,32 @@ def generate_markdown_report_for_corpus(corpus_name: str, corpus_effectiveness_d
     Cette section inclut les résultats d'analyse détaillés pour ce corpus,
     y compris l'efficacité des agents et les recommandations spécifiques.
 
-    Args:
-        corpus_name (str): Le nom du corpus.
-        corpus_effectiveness_data (Dict[str, Any]): Un dictionnaire contenant les données
-            d'efficacité des agents pour ce corpus. Doit contenir les clés
-            'best_agent' (str, optionnel), 'base_agents' (Dict, optionnel),
-            'advanced_agents' (Dict, optionnel), et 'recommendations' (List[str], optionnel).
-            Les dictionnaires 'base_agents' et 'advanced_agents' doivent mapper les noms
-            d'agents à des dictionnaires contenant 'fallacy_count' (int) et
-            'effectiveness' (float).
-
-    Returns:
-        List[str]: Une liste de chaînes de caractères, représentant les lignes
-                   de la section du rapport Markdown pour le corpus.
+    :param corpus_name: Le nom du corpus.
+    :type corpus_name: str
+    :param corpus_effectiveness_data: Un dictionnaire contenant les données
+        d'efficacité des agents pour ce corpus. Doit contenir les clés
+        'best_agent' (str, optionnel), 'base_agents' (Dict, optionnel),
+        'advanced_agents' (Dict, optionnel), et 'recommendations' (List[str], optionnel).
+        Les dictionnaires 'base_agents' et 'advanced_agents' doivent mapper les noms
+        d'agents à des dictionnaires contenant 'fallacy_count' (int) et
+        'effectiveness' (float).
+    :type corpus_effectiveness_data: Dict[str, Any]
+    :return: Une liste de chaînes de caractères, représentant les lignes
+             de la section du rapport Markdown pour le corpus.
+    :rtype: List[str]
+    :raises TypeError: Si `corpus_name` n'est pas une chaîne de caractères.
+    :raises ValueError: Si `corpus_effectiveness_data` n'est pas structuré comme attendu.
     """
+    if not isinstance(corpus_name, str):
+        raise TypeError("Le paramètre 'corpus_name' doit être une chaîne de caractères.")
+    if not isinstance(corpus_effectiveness_data, dict):
+        # Une vérification plus approfondie de la structure pourrait être ajoutée ici
+        # par exemple avec un schéma Pydantic ou des assertions sur les clés attendues.
+        logger.warning("La structure de 'corpus_effectiveness_data' pourrait ne pas être conforme.")
+        # Pour l'instant, on ne lève pas d'erreur stricte pour garder la flexibilité,
+        # mais on logue un avertissement. Une ValueError pourrait être levée si
+        # des clés cruciales manquent et que la fonction ne peut pas opérer.
+
     report_section_lines = []
     report_section_lines.append(f"### {corpus_name}")
     report_section_lines.append("")
@@ -320,21 +339,25 @@ def generate_overall_summary_markdown(all_average_scores: Dict[str, Dict[str, fl
     (par exemple, moyenne des scores de confiance par corpus, moyenne de la richesse
     contextuelle par corpus, etc.).
 
-    Args:
-        all_average_scores (Dict[str, Dict[str, float]]): Un dictionnaire où les clés externes
-            sont les noms des corpus. Chaque corpus a un dictionnaire interne où les clés
-            sont les noms des métriques (par exemple, 'confidence_score', 'contextual_richness')
-            et les valeurs sont les scores moyens flottants.
-            Exemple:
-            {
-                "Corpus A": {"confidence_score": 0.85, "contextual_richness": 0.75},
-                "Corpus B": {"confidence_score": 0.90, "contextual_richness": 0.80}
-            }
-
-    Returns:
-        List[str]: Une liste de chaînes de caractères, représentant les lignes
-                   de la section du résumé global au format Markdown.
+    :param all_average_scores: Un dictionnaire où les clés externes
+        sont les noms des corpus. Chaque corpus a un dictionnaire interne où les clés
+        sont les noms des métriques (par exemple, 'confidence_score', 'contextual_richness')
+        et les valeurs sont les scores moyens flottants.
+        Exemple:
+        ``{
+            "Corpus A": {"confidence_score": 0.85, "contextual_richness": 0.75},
+            "Corpus B": {"confidence_score": 0.90, "contextual_richness": 0.80}
+        }``
+    :type all_average_scores: Dict[str, Dict[str, float]]
+    :return: Une liste de chaînes de caractères, représentant les lignes
+             de la section du résumé global au format Markdown.
+    :rtype: List[str]
+    :raises TypeError: Si `all_average_scores` n'est pas un dictionnaire.
     """
+    if not isinstance(all_average_scores, dict):
+        raise TypeError("Le paramètre 'all_average_scores' doit être un dictionnaire.")
+    # Des vérifications plus poussées sur la structure interne pourraient être ajoutées.
+
     report_lines = []
     report_lines.append("## Résumé Global des Scores Moyens par Corpus")
     report_lines.append("")

@@ -73,7 +73,7 @@ PATH_PATTERNS = [
 ]
 
 # Motif pour détecter l'importation du module paths
-IMPORT_PATHS_PATTERN = r'from\s+argumentiation_analysis\.paths\s+import\s+([^\n]+)'
+IMPORT_PATHS_PATTERN = r'from\s+argumentation_analysis\.paths\s+import\s+([^\n]+)' # MODIFIÉ
 
 def update_paths_in_file(file_path, dry_run=True):
     """
@@ -118,7 +118,7 @@ def update_paths_in_file(file_path, dry_run=True):
         # Mettre à jour l'importation si nécessaire
         import_added = False
         if paths_to_import and not paths_already_imported:
-            import_statement = f"from argumentiation_analysis.paths import {', '.join(paths_to_import)}\n\n"
+            import_statement = f"from argumentation_analysis.paths import {', '.join(paths_to_import)}\n\n" # MODIFIÉ
             
             # Trouver un bon endroit pour ajouter l'importation
             import_section_end = 0
@@ -220,10 +220,15 @@ def main():
         logging.info("Mode dry-run: aucune modification n'a été effectuée.")
         logging.info("Exécutez à nouveau sans l'option --dry-run pour appliquer les modifications.")
     
-    if stats['modified_files'] > 0:
-        logging.info("\nFichiers modifiés:")
-        for file_path in stats['modified_files_list']:
-            logging.info(f"  {file_path}")
+    if changed_files_details:
+        logging.info("\nFichiers avec modifications (chemins et/ou imports):")
+        for detail in changed_files_details:
+            log_msg = f"  {detail.get('path')}: {detail.get('path_replacements',0)} remplacement(s) de chemin"
+            if detail.get('import_changed'):
+                log_msg += ", import de chemin modifié/ajouté."
+            else:
+                log_msg += "."
+            logging.info(log_msg)
     
     return 0
 

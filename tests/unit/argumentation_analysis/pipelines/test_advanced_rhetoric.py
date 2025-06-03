@@ -1,3 +1,4 @@
+import logging
 # -*- coding: utf-8 -*-
 """Tests pour le pipeline d'analyse rhétorique avancée."""
 
@@ -42,8 +43,8 @@ def temp_output_file(tmp_path: Path) -> Path:
     """Crée un chemin de fichier de sortie temporaire."""
     return tmp_path / "advanced_results.json"
 
-@patch("argumentation_analysis.pipelines.advanced_rhetoric.analyze_extract_advanced")
-@patch("argumentation_analysis.pipelines.advanced_rhetoric.create_mock_advanced_rhetorical_tools")
+@patch("src.argumentation_analysis.pipelines.advanced_rhetoric.analyze_extract_advanced")
+@patch("src.argumentation_analysis.pipelines.advanced_rhetoric.create_mock_advanced_rhetorical_tools")
 @patch("builtins.open") # Pour mocker l'écriture du fichier
 @patch("json.dump")
 @patch("tqdm.tqdm") # Pour mocker la barre de progression
@@ -99,8 +100,8 @@ def test_run_advanced_rhetoric_pipeline_success(
     ]
 
 
-@patch("argumentation_analysis.pipelines.advanced_rhetoric.analyze_extract_advanced")
-@patch("argumentation_analysis.pipelines.advanced_rhetoric.create_mock_advanced_rhetorical_tools")
+@patch("src.argumentation_analysis.pipelines.advanced_rhetoric.analyze_extract_advanced")
+@patch("src.argumentation_analysis.pipelines.advanced_rhetoric.create_mock_advanced_rhetorical_tools")
 @patch("builtins.open")
 @patch("json.dump")
 @patch("tqdm.tqdm")
@@ -127,8 +128,8 @@ def test_run_advanced_rhetoric_pipeline_no_base_results(
              assert args[2] is None # base_result doit être None
 
 
-@patch("argumentation_analysis.pipelines.advanced_rhetoric.analyze_extract_advanced", side_effect=Exception("Erreur d'analyse d'extrait!"))
-@patch("argumentation_analysis.pipelines.advanced_rhetoric.create_mock_advanced_rhetorical_tools")
+@patch("src.argumentation_analysis.pipelines.advanced_rhetoric.analyze_extract_advanced", side_effect=Exception("Erreur d'analyse d'extrait!"))
+@patch("src.argumentation_analysis.pipelines.advanced_rhetoric.create_mock_advanced_rhetorical_tools")
 @patch("builtins.open")
 @patch("json.dump")
 @patch("tqdm.tqdm")
@@ -159,7 +160,7 @@ def test_run_advanced_rhetoric_pipeline_extract_analysis_error(
         assert "Erreur de pipeline: Erreur d'analyse d'extrait!" in res["error"]
 
 
-@patch("argumentation_analysis.pipelines.advanced_rhetoric.create_mock_advanced_rhetorical_tools")
+@patch("src.argumentation_analysis.pipelines.advanced_rhetoric.create_mock_advanced_rhetorical_tools")
 @patch("builtins.open", side_effect=IOError("Erreur de sauvegarde!")) # Simule une erreur d'écriture
 @patch("json.dump")
 @patch("tqdm.tqdm")
@@ -174,7 +175,7 @@ def test_run_advanced_rhetoric_pipeline_save_error(
 ):
     """Teste la gestion d'erreur si la sauvegarde des résultats échoue."""
     # On a besoin de mocker analyze_extract_advanced pour qu'il ne lève pas d'erreur
-    with patch("argumentation_analysis.pipelines.advanced_rhetoric.analyze_extract_advanced", return_value={"ok": True}):
+    with patch("src.argumentation_analysis.pipelines.advanced_rhetoric.analyze_extract_advanced", return_value={"ok": True}):
         with caplog.at_level(logging.ERROR):
             run_advanced_rhetoric_pipeline(sample_extract_definitions, [], temp_output_file)
 

@@ -43,6 +43,10 @@ dist/
 libs/*.jar
 vendor/
 
+# Tweety libraries (downloaded by setup scripts)
+libs/tweety/**/*.jar
+libs/tweety/native/
+
 # Fichiers de documentation spécifiques
 README_TESTS.md
 

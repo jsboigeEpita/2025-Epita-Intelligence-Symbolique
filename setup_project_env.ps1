@@ -160,6 +160,18 @@ if (-not (Test-Path $libsDir)) {
     New-Item -ItemType Directory -Path $libsDir -Force | Out-Null
 }
 
+# Création du répertoire pour les JARs Tweety
+$tweetyLibsDir = Join-Path $libsDir "tweety"
+if (-not (Test-Path $tweetyLibsDir)) {
+    Write-Host "Création du répertoire pour les JARs Tweety: $tweetyLibsDir..."
+    New-Item -ItemType Directory -Path $tweetyLibsDir -Force | Out-Null
+}
+if (-not (Test-Path (Join-Path $tweetyLibsDir "native"))) {
+    Write-Host "Création du répertoire pour les libs natives de Tweety: $(Join-Path $tweetyLibsDir "native")..."
+    New-Item -ItemType Directory -Path (Join-Path $tweetyLibsDir "native") -Force | Out-Null
+}
+
+
 function Move-Or-Clear-Old-Dir {
     param (
         [string]$oldDirNameAtRoot,
@@ -349,6 +361,43 @@ foreach ($dirName in $oldVenvDirs) {
     }
 }
 Write-Host "Nettoyage des anciens venv terminé."
+
+Write-Host ""
+Write-Host "--- Nettoyage de l'ancien répertoire des JARs Tweety (argumentation_analysis/libs) ---"
+$oldTweetyDir = Join-Path $PSScriptRoot "argumentation_analysis\libs"
+if (Test-Path -Path $oldTweetyDir -PathType Container) {
+    Write-Host "Ancien répertoire des JARs Tweety trouvé: $oldTweetyDir."
+    if ($ForceReinstall -or $effectiveNonInteractiveForDelete) {
+        Write-Host "Suppression automatique de '$oldTweetyDir' (mode ForceReinstall ou NonInteractive)..."
+        try {
+            Remove-Item -Path $oldTweetyDir -Recurse -Force -ErrorAction Stop
+            Write-Host "Répertoire '$oldTweetyDir' supprimé."
+        } catch {
+            Write-Warning "Impossible de supprimer complètement '$oldTweetyDir'. Erreur: $($_.Exception.Message)"
+            Write-Warning "Vous devrez peut-être le supprimer manuellement."
+        }
+    } elseif ($askQuestions) { # $askQuestions = $InteractiveMode -and (-not $ForceReinstall)
+        $confirmation = Read-Host "L'ancien répertoire des JARs Tweety '$oldTweetyDir' a été trouvé. Voulez-vous le supprimer ? (O/N)"
+        if ($confirmation -eq 'O' -or $confirmation -eq 'o') {
+            Write-Host "Suppression de '$oldTweetyDir'..."
+            try {
+                Remove-Item -Path $oldTweetyDir -Recurse -Force -ErrorAction Stop
+                Write-Host "Répertoire '$oldTweetyDir' supprimé."
+            } catch {
+                Write-Warning "Impossible de supprimer complètement '$oldTweetyDir'. Erreur: $($_.Exception.Message)"
+                Write-Warning "Vous devrez peut-être le supprimer manuellement."
+            }
+        } else {
+            Write-Host "Le répertoire '$oldTweetyDir' n'a pas été supprimé."
+        }
+    } else {
+        Write-Host "Ancien répertoire des JARs Tweety '$oldTweetyDir' trouvé. Non supprimé (mode par défaut non-ForceReinstall et non-Interactive)."
+    }
+} else {
+    Write-Host "Ancien répertoire des JARs Tweety '$oldTweetyDir' non trouvé. Aucun nettoyage nécessaire."
+}
+Write-Host "--- Fin Nettoyage ancien répertoire JARs Tweety ---"
+Write-Host ""
 
 Write-Host ""
 Write-Host "--- Configuration de l'environnement Conda '$condaEnvName' ---"

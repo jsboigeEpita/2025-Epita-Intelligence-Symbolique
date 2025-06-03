@@ -33,8 +33,10 @@ def run_tests():
             all_passed = False
             continue
             
-        success, message = test_module_import(module_path)
-        print(f"{module_path} : {'✓' if success else '✗'} - {message}")
+        # Utiliser la fonction importée, qui attend un objet Path
+        success, message = test_module_import_by_path(Path(module_path))
+        # L'utilitaire formate déjà bien le message, mais on peut garder le préfixe du chemin pour ce script.
+        print(f"{module_path} : {message}")
         if not success:
             all_passed = False
     

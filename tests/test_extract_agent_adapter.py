@@ -22,7 +22,8 @@ logging.basicConfig(
 logger = logging.getLogger("TestExtractAgentAdapter")
 
 # Ajouter le répertoire racine au chemin Python pour pouvoir importer les modules
-sys.path.append(os.path.abspath('..'))
+# sys.path.append(os.path.abspath('..'))
+# Commenté car l'installation du package via `pip install -e .` devrait gérer l'accessibilité.
 
 # Import des modules à tester
 from argumentation_analysis.orchestration.hierarchical.operational.adapters.extract_agent_adapter import ExtractAgentAdapter

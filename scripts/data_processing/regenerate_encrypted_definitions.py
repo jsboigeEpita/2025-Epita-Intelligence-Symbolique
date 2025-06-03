@@ -10,11 +10,10 @@ from pathlib import Path
 
 # Ajoute le répertoire parent (racine du projet) au sys.path
 # pour permettre les imports comme argumentation_analysis.services.xxx
-current_script_path = os.path.abspath(__file__)
-scripts_dir = os.path.dirname(current_script_path)
-project_root = os.path.dirname(scripts_dir)
-if project_root not in sys.path:
-    sys.path.insert(0, project_root)
+current_script_path = Path(__file__).resolve()
+project_root = current_script_path.parent.parent.parent # MODIFIÉ: Remonter à la racine du projet
+if str(project_root) not in sys.path:
+    sys.path.insert(0, str(project_root))
 
 # Imports des modules du projet
 try:

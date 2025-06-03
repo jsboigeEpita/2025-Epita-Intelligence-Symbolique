@@ -12,7 +12,7 @@ import logging
 
 # Ajuster le PYTHONPATH pour trouver project_core si le script est exécuté directement
 script_dir = os.path.dirname(os.path.abspath(__file__))
-project_root_dir = os.path.abspath(os.path.join(script_dir, '..'))
+project_root_dir = os.path.abspath(os.path.join(script_dir, '..', '..')) # MODIFIÉ: Remonter à la racine du projet
 if project_root_dir not in sys.path:
     sys.path.insert(0, project_root_dir)
 
@@ -43,10 +43,10 @@ logging.basicConfig(
 def main():
     parser = argparse.ArgumentParser(description="Analyse des références aux répertoires dans le code.")
     parser.add_argument(
-        '--dir', 
-        type=str, 
-        default=os.path.join(project_root_dir, 'argumentation_analysis'), 
-        help="Répertoire racine à analyser (par défaut: argumentation_analysis dans la racine du projet)."
+        '--dir',
+        type=str,
+        default=str(Path(project_root_dir) / 'src' / 'argumentation_analysis'), # MODIFIÉ: Cible src/argumentation_analysis
+        help="Répertoire racine à analyser (par défaut: src/argumentation_analysis dans la racine du projet)."
     )
     parser.add_argument(
         '--output', 
@@ -68,24 +68,25 @@ def main():
         os.makedirs(output_dir)
         logger.info(f"Répertoire de sortie créé : {output_dir}")
 
-    # Convertir la chaîne de motifs en dictionnaire de regex compilées
-    # Chaque clé est le nom du motif (ex: "config_dir_usage") et la valeur est le regex compilé
-    patterns_to_search = {}
-    if args.patterns:
-        pattern_names = args.patterns.split(':')
-        for p_name in pattern_names:
-            if p_name: # S'assurer que le nom n'est pas vide
-                # Le nom du motif dans le dictionnaire sera "nom_du_motif_refs"
-                # Le regex cherchera "nom_du_motif/"
-                patterns_to_search[f"{p_name.replace('/', '')}_refs"] = re.compile(re.escape(p_name))
-    
-    if not patterns_to_search:
-        logger.warning("Aucun motif valide fourni pour l'analyse. Utilisation des motifs par défaut: 'config/' et 'data/'.")
-        patterns_to_search = {
-            "config_refs": re.compile(re.escape("config/")),
-            "data_refs": re.compile(re.escape("data/"))
-        }
+    # Utiliser la fonction centralisée pour convertir la chaîne de motifs
+    default_patterns_for_script = {
+        "config_refs": "config/", # La fonction s'occupera de re.escape et re.compile
+        "data_refs": "data/"
+    }
+    patterns_to_search = parse_colon_separated_string_to_regex_dict(
+        patterns_string=args.patterns,
+        default_patterns=default_patterns_for_script,
+        key_suffix="_refs", # Conserver le suffixe original du script
+        escape_pattern=True # Comportement original du script
+    )
 
+    if not patterns_to_search:
+        # Cela ne devrait pas arriver si default_patterns est fourni et correct,
+        # mais par sécurité, on logue si le dictionnaire est vide.
+        logger.error("Aucun motif à rechercher, même après application des valeurs par défaut. Vérifier la logique de parsing_utils ou les motifs par défaut.")
+        # On pourrait choisir de s'arrêter ici ou de continuer avec un dictionnaire vide.
+        # Pour l'instant, on continue, la boucle d'analyse ne fera rien.
+    
     logger.info(f"Analyse des références aux motifs {list(patterns_to_search.keys())} dans {args.dir}...")
     
     # Utiliser la fonction de project_core
