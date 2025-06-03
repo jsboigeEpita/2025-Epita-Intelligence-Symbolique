@@ -1,52 +1,45 @@
 # -*- coding: utf-8 -*-
-"""Utilitaires pour la génération de données d'exemple ou de test."""
+"""
+Utilitaires pour la génération de données d'exemple ou de test
+pour l'analyse d'argumentation.
+"""
 
 import logging
+from typing import Dict, Any # Ajouté pour type hinting si besoin futur
 
 logger = logging.getLogger(__name__)
 
 def generate_sample_text(extract_name: str, source_name: str) -> str:
     """
-    Génère un texte d'exemple pour un extrait donné.
+    Génère un texte d'exemple simple pour un extrait donné.
 
-    Cette fonction est utilisée lorsque le contenu réel de l'extrait n'est pas
-    disponible, par exemple pour des tests ou des démonstrations. Le texte généré
-    dépend de mots-clés présents dans `extract_name` ou `source_name`.
+    Le texte généré est destiné à être utilisé pour des tests ou des démonstrations
+    et contient des phrases de base pour simuler un contenu analysable.
 
-    :param extract_name: Nom de l'extrait (peut contenir des mots-clés comme
-                         "Lincoln", "Débat", "hitler", "churchill").
+    :param extract_name: Le nom de l'extrait pour lequel générer le texte.
     :type extract_name: str
-    :param source_name: Nom de la source (peut aussi contenir des mots-clés).
+    :param source_name: Le nom de la source de l'extrait.
     :type source_name: str
-    :return: Un texte d'exemple généré.
+    :return: Une chaîne de caractères représentant le texte d'exemple.
     :rtype: str
     """
-    logger.debug(f"Génération de texte d'exemple pour extract_name='{extract_name}', source_name='{source_name}'")
-    
-    # Logique de génération de texte d'exemple
-    # (Identique à la fonction originale, avec une petite adaptation pour couvrir plus de cas)
-    if "Lincoln" in extract_name or "Lincoln" in source_name:
-        return """
-        Nous sommes engagés dans une grande guerre civile, mettant à l'épreuve si cette nation, ou toute nation ainsi conçue et ainsi dédiée, peut perdurer.
-        Nous sommes réunis sur un grand champ de bataille de cette guerre. Nous sommes venus dédier une portion de ce champ comme lieu de dernier repos pour ceux qui ont donné leur vie pour que cette nation puisse vivre.
-        Il est tout à fait approprié et juste que nous le fassions. Mais, dans un sens plus large, nous ne pouvons pas dédier, nous ne pouvons pas consacrer, nous ne pouvons pas sanctifier ce sol.
-        Les braves hommes, vivants et morts, qui ont lutté ici, l'ont consacré, bien au-delà de notre pauvre pouvoir d'ajouter ou de retrancher.
-        """
-    elif "Débat" in extract_name or "Discours" in extract_name or \
-         "Hitler" in source_name or "hitler" in extract_name.lower() or \
-         "Churchill" in source_name or "churchill" in extract_name.lower(): # Étendre pour couvrir plus de cas des scripts
-        return """
-        Mesdames et messieurs, je me présente devant vous aujourd'hui pour discuter d'une question d'importance nationale.
-        Premièrement, nous devons considérer les principes fondamentaux qui guident notre nation.
-        Deuxièmement, nous devons examiner les conséquences pratiques de ces principes dans notre vie quotidienne.
-        Enfin, nous devons réfléchir à la manière dont nous pouvons avancer ensemble, en tant que nation unie, malgré nos différences.
-        Je crois fermement que c'est par le dialogue et la compréhension mutuelle que nous pourrons surmonter nos défis.
-        """
-    else:
-        return """
-        L'argumentation est l'art de convaincre par le raisonnement logique et la présentation d'évidences.
-        Un bon argument repose sur des prémisses solides et des inférences valides.
-        Cependant, il faut être vigilant face aux sophismes qui peuvent miner la qualité d'un raisonnement.
-        La cohérence argumentative est essentielle pour maintenir la crédibilité d'un discours.
-        En conclusion, l'analyse rhétorique nous permet d'évaluer la qualité et l'efficacité des arguments présentés.
-        """
+    if not extract_name:
+        extract_name = "Inconnu"
+        logger.debug("Nom d'extrait non fourni, utilisation de 'Inconnu'.")
+    if not source_name:
+        source_name = "Inconnue"
+        logger.debug("Nom de source non fourni, utilisation de 'Inconnue'.")
+
+    sample_text = (
+        f"Ceci est un texte d'exemple généré pour l'extrait intitulé '{extract_name}' "
+        f"provenant de la source '{source_name}'.\n\n"
+        "Ce texte a pour objectif de simuler un contenu qui pourrait être sujet à une analyse rhétorique. "
+        "Il contient plusieurs phrases et est structuré en paragraphes pour permettre une évaluation basique des outils d'analyse.\n"
+        "Par exemple, on pourrait y chercher des sophismes, évaluer la cohérence, ou identifier les figures de style. "
+        "La complexité de ce texte est volontairement limitée pour faciliter les tests initiaux."
+    )
+    logger.info(f"Texte d'exemple généré pour extract='{extract_name}', source='{source_name}'.")
+    return sample_text
+
+# Potentiellement d'autres fonctions de génération de données ici à l'avenir.
+# Par exemple, générer des structures de résultats d'analyse simulées, etc.

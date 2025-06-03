@@ -91,8 +91,14 @@ def main():
     
     logging.info("=== Test des importations de modules ===")
     for module_name in modules_to_test:
-        if test_import(module_name):
+        # Utiliser la nouvelle fonction pour les modules simples
+        mod_success, mod_message = test_module_import_by_name(module_name)
+        if mod_success:
+            logging.info(mod_message) # L'utilitaire formate déjà le message
             success_count += 1
+        else:
+            logging.error(mod_message)
+            # failure_count est déjà géré dans la fonction main de ce script
     
     logging.info("\n=== Test des importations d'attributs ===")
     for module_name, attr_name in attributes_to_test:

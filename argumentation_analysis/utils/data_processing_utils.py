@@ -1,64 +1,62 @@
-#!/usr/bin/env python
 # -*- coding: utf-8 -*-
-
 """
-Ce module fournit des fonctions utilitaires pour le traitement et la manipulation
-des données issues de l'analyse d'argumentation. Il comprend des fonctions pour
-regrouper, filtrer et transformer les résultats d'analyse afin de faciliter
-leur exploitation et leur présentation.
+Utilitaires pour le traitement et la manipulation des données d'analyse d'argumentation.
 """
 
-from typing import Dict, List, Any
+import logging
+from typing import List, Dict, Any, DefaultDict # Ajout de DefaultDict
+from collections import defaultdict
 
-def group_results_by_corpus(results: List[Dict[str, Any]]) -> Dict[str, List[Dict[str, Any]]]:
+logger = logging.getLogger(__name__)
+
+def group_results_by_corpus(results: List[Dict[str, Any]]) -> DefaultDict[str, List[Dict[str, Any]]]:
     """
-    Regroupe une liste de résultats d'analyse en fonction du corpus d'origine.
+    Regroupe les résultats d'analyse par corpus.
 
-    La fonction identifie le corpus de chaque résultat en se basant sur la clé
-    `source_name` présente dans chaque dictionnaire de résultat. Des corpus prédéfinis
-    sont utilisés ("Discours d'Hitler", "Débats Lincoln-Douglas"), et tout autre
-    résultat est classé dans "Autres corpus".
+    Chaque résultat d'analyse dans la liste d'entrée doit idéalement contenir
+    une clé 'corpus_name' ou une clé identifiable comme 'source_name' qui peut
+    être mappée à un nom de corpus. Si aucune clé de ce type n'est trouvée,
+    les résultats peuvent être groupés sous une clé par défaut (par exemple, 'Unknown Corpus').
 
-    :param results: Une liste de dictionnaires, où chaque dictionnaire représente
-                    un résultat d'analyse et doit contenir une clé "source_name".
+    :param results: Une liste de dictionnaires, chaque dictionnaire étant un résultat d'analyse.
+                    Chaque résultat devrait avoir une clé comme 'corpus_name' ou 'source_name'.
     :type results: List[Dict[str, Any]]
     :return: Un dictionnaire où les clés sont les noms des corpus et les valeurs
              sont des listes de résultats d'analyse appartenant à ce corpus.
-    :rtype: Dict[str, List[Dict[str, Any]]]
-    :raises TypeError: Si `results` n'est pas une liste.
-    :raises KeyError: Si un dictionnaire dans `results` ne contient pas la clé "source_name"
-                      (bien que géré avec `.get()` pour éviter une levée directe ici,
-                       une utilisation stricte pourrait le nécessiter).
+             Utilise defaultdict pour faciliter l'ajout d'éléments.
+    :rtype: DefaultDict[str, List[Dict[str, Any]]]
     """
-    corpus_results: Dict[str, List[Dict[str, Any]]] = {}
+    logger.info(f"Regroupement de {len(results)} résultats par corpus...")
     
-    # Vérification initiale du type de l'argument d'entrée.
-    if not isinstance(results, list):
-        raise TypeError("L'argument 'results' doit être une liste.")
-
-    for result in results:
-        # Assurer que chaque 'result' est un dictionnaire, sinon ignorer ou lever une exception.
-        if not isinstance(result, dict):
-            # Optionnel: logger un avertissement ou lever une exception plus spécifique.
-            # print(f"Avertissement: élément non-dictionnaire ignoré: {result}")
-            continue
-
-        source_name = result.get("source_name", "Inconnu")
-        
-        # Logique de classification des corpus basée sur des mots-clés dans 'source_name'.
-        # Cette section pourrait être étendue ou configurée via des paramètres externes
-        # pour plus de flexibilité si le nombre de corpus ou les critères de classification augmentent.
-        if "Hitler" in source_name:
-            corpus = "Discours d'Hitler"
-        elif "Lincoln" in source_name or "Douglas" in source_name:
-            corpus = "Débats Lincoln-Douglas"
-        else:
-            corpus = "Autres corpus"  # Catégorie par défaut pour les sources non classifiées.
-        
-        # Initialisation de la liste pour un nouveau corpus si non existant.
-        if corpus not in corpus_results:
-            corpus_results[corpus] = []
-        
-        corpus_results[corpus].append(result)
+    grouped_results: DefaultDict[str, List[Dict[str, Any]]] = defaultdict(list)
     
-    return corpus_results
+    for result_item in results:
+        corpus_name = result_item.get("corpus_name")
+        
+        if not corpus_name:
+            # Tenter de déduire le corpus à partir d'autres clés si 'corpus_name' est absent
+            # Ceci est une heuristique et pourrait nécessiter une logique de mappage plus complexe.
+            source_name = result_item.get("source_name")
+            if source_name:
+                # Exemple simple de mappage (à adapter/étendre)
+                if "hitler" in source_name.lower():
+                    corpus_name = "Discours d'Hitler"
+                elif "lincoln" in source_name.lower() or "douglas" in source_name.lower():
+                    corpus_name = "Débats Lincoln-Douglas"
+                # Ajouter d'autres mappages si nécessaire
+                else:
+                    corpus_name = source_name # Utiliser source_name comme fallback si pas de mappage
+            else:
+                corpus_name = "Corpus Inconnu"
+                logger.debug(f"Aucun 'corpus_name' ou 'source_name' trouvé pour un résultat. Assignation à '{corpus_name}'. Item: {str(result_item)[:100]}")
+        
+        grouped_results[corpus_name].append(result_item)
+
+    logger.info(f"Résultats regroupés en {len(grouped_results)} corpus.")
+    for corpus, items in grouped_results.items():
+        logger.debug(f"Corpus '{corpus}': {len(items)} résultats.")
+        
+    return grouped_results
+
+# D'autres fonctions de traitement de données pourraient être ajoutées ici,
+# par exemple, filtrage, transformation, agrégation de données d'analyse.

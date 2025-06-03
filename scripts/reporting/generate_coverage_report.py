@@ -12,45 +12,12 @@ import os
 import sys
 import json
 import datetime
-import xml.etree.ElementTree as ET
+# import xml.etree.ElementTree as ET # Déplacé vers coverage_utils
 from pathlib import Path
+from project_core.dev_utils.coverage_utils import parse_coverage_xml
 
-def parse_coverage_xml(xml_path):
-    """
-    Parse un fichier coverage.xml et extrait les informations de couverture.
-    
-    Args:
-        xml_path (str): Chemin vers le fichier coverage.xml
-        
-    Returns:
-        dict: Dictionnaire contenant les informations de couverture
-    """
-    try:
-        tree = ET.parse(xml_path)
-        root = tree.getroot()
-        
-        # Extraire la couverture globale
-        line_rate = float(root.attrib.get('line-rate', '0')) * 100
-        lines_valid = int(root.attrib.get('lines-valid', '0'))
-        lines_covered = int(root.attrib.get('lines-covered', '0'))
-        
-        # Extraire la couverture par package
-        packages = {}
-        for package in root.findall('.//package'):
-            name = package.attrib.get('name', '')
-            package_line_rate = float(package.attrib.get('line-rate', '0')) * 100
-            packages[name] = package_line_rate
-        
-        return {
-            'global': line_rate,
-            'lines_valid': lines_valid,
-            'lines_covered': lines_covered,
-            'packages': packages,
-            'timestamp': datetime.datetime.now().strftime('%Y-%m-%d')
-        }
-    except Exception as e:
-        print(f"Erreur lors de l'analyse du fichier XML: {e}")
-        return None
+# La fonction parse_coverage_xml a été déplacée vers project_core.dev_utils.coverage_utils
+# et est importée ci-dessus.
 
 def map_package_to_module(package_name):
     """
@@ -75,7 +42,7 @@ def map_package_to_module(package_name):
         if key in package_name:
             return value
     
-    return 'Autre'
+    return 'Autre' # La fonction est maintenant importée
 
 def generate_text_report(history_file, output_file):
     """
@@ -223,7 +190,14 @@ def main():
     output_file = 'results/rapport_evolution_couverture.md'
     
     # Générer le rapport
-    generate_text_report(history_file, output_file)
+    # generate_text_report(history_file, output_file) # Appel modifié ci-dessous
+    
+    # Convertir les chemins en objets Path pour la nouvelle fonction
+    history_file_path = Path(history_file)
+    output_file_path = Path(output_file)
+    
+    # Appeler la fonction importée
+    generate_coverage_evolution_text_report(history_file_path, output_file_path)
 
 if __name__ == "__main__":
     main()

@@ -60,13 +60,15 @@ def verify_content():
     all_valid = True
     
     for file_path, check_func in files_to_check:
-        if not os.path.exists(file_path):
-            print(f"{file_path} : ✗ (Fichier non trouvé)")
-            all_valid = False
-            continue
+        # La vérification d'existence est maintenant dans les fonctions utilitaires
+        # if not os.path.exists(file_path):
+        #     print(f"{file_path} : ✗ (Fichier non trouvé)")
+        #     all_valid = False
+        #     continue
             
-        success, message = check_func(file_path)
-        print(f"{file_path} : {'✓' if success else '✗'} - {message}")
+        success, message = check_func(Path(file_path)) # Passer un objet Path
+        # Le message de l'utilitaire inclut déjà le chemin du fichier.
+        print(f"{'✓' if success else '✗'} - {message}")
         if not success:
             all_valid = False
     

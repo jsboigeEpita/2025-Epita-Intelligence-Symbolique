@@ -45,7 +45,7 @@ def main():
     total_count = len(modules_to_test)
     
     for module_name in modules_to_test:
-        success, message = test_import(module_name)
+        success, message = test_module_import_by_name(module_name) # Utilisation de la fonction importée
         print(message)
         if success:
             success_count += 1

@@ -1,52 +1,74 @@
-#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
-Utilitaires pour le traitement des données et la génération de rapports d'analyse rhétorique.
-Ce module sert maintenant de point d'entrée principal pour les fonctionnalités de reporting,
-qui sont implémentées dans des sous-modules spécialisés.
+Utilitaires pour la génération de rapports et de résumés spécifiques
+à l'analyse d'argumentation.
 """
 
 import logging
-
-# Importations depuis les nouveaux sous-modules
-from .data_loader import load_results_from_json
-from .metrics_extraction import (
-    extract_execution_time_from_results,
-    count_fallacies_in_results,
-    extract_confidence_scores_from_results,
-    analyze_contextual_richness_from_results,
-    evaluate_coherence_relevance_from_results,
-    _calculate_obj_complexity, # Noter que _calculate_obj_complexity est interne
-    analyze_result_complexity_from_results
-)
-from .error_estimation import estimate_false_positives_negatives_rates
-from .metrics_aggregation import generate_performance_metrics_for_agents
-from .visualization_generator import generate_performance_visualizations, VISUALIZATION_LIBS_AVAILABLE
-from .report_generator import generate_markdown_performance_report
+from typing import List, Dict, Any, Optional # Ajout d'Optional
 
 logger = logging.getLogger(__name__)
-if not logger.handlers:
-    handler = logging.StreamHandler()
-    formatter = logging.Formatter('%(asctime)s [%(levelname)s] [%(name)s] %(message)s', datefmt='%H:%M:%S')
-    handler.setFormatter(formatter)
-    logger.addHandler(handler)
-    logger.setLevel(logging.INFO)
 
-# Réexportation explicite pour rendre les fonctions accessibles via ce module
-__all__ = [
-    "load_results_from_json",
-    "extract_execution_time_from_results",
-    "count_fallacies_in_results",
-    "extract_confidence_scores_from_results",
-    "estimate_false_positives_negatives_rates",
-    "analyze_contextual_richness_from_results",
-    "evaluate_coherence_relevance_from_results",
-    "analyze_result_complexity_from_results",
-    # "_calculate_obj_complexity", # Ne pas réexporter les fonctions "privées" sauf si nécessaire
-    "generate_performance_metrics_for_agents",
-    "generate_performance_visualizations",
-    "generate_markdown_performance_report",
-    "VISUALIZATION_LIBS_AVAILABLE" # Exporter aussi cette constante
-]
+def summarize_extract_definitions(extract_definitions: List[Dict[str, Any]], max_marker_len: int = 50) -> None:
+    """
+    Affiche via le logger un résumé des sources et extraits disponibles
+    à partir des définitions d'extraits.
 
-logger.info("Module reporting_utils initialisé, fonctions importées depuis les sous-modules.")
+    Args:
+        extract_definitions (List[Dict[str, Any]]): Une liste de dictionnaires,
+            où chaque dictionnaire représente une source et contient des informations
+            sur la source et une liste de ses extraits.
+        max_marker_len (int): Longueur maximale pour l'affichage des marqueurs.
+    """
+    if not extract_definitions:
+        logger.warning("Aucune définition d'extrait fournie pour le résumé.")
+        return
+    
+    logger.info(f"--- Résumé des Définitions d'Extraits ---")
+    logger.info(f"Nombre total de sources: {len(extract_definitions)}")
+    
+    total_extracts_count = 0
+    for i, source_def in enumerate(extract_definitions, 1):
+        if not isinstance(source_def, dict):
+            logger.warning(f"Source {i} n'est pas un dictionnaire, ignorée.")
+            continue
+
+        source_name = source_def.get("source_name", "Source Inconnue")
+        source_type = source_def.get("source_type", "Type Inconnu")
+        source_url = source_def.get("source_url", source_def.get("path", "URL/Path Inconnu")) # Utiliser path comme fallback
+        extracts_list = source_def.get("extracts", [])
+        
+        logger.info(f"\nSource {i}: {source_name}")
+        logger.info(f"  Type: {source_type}")
+        logger.info(f"  URL/Path: {source_url}")
+        
+        if not isinstance(extracts_list, list):
+            logger.warning(f"  Les extraits pour la source '{source_name}' ne sont pas une liste, ignorés.")
+            extracts_list = [] # Traiter comme vide pour éviter erreur plus loin
+
+        logger.info(f"  Nombre d'extraits: {len(extracts_list)}")
+        
+        for j, extract_def in enumerate(extracts_list, 1):
+            if not isinstance(extract_def, dict):
+                logger.warning(f"    Extrait {j} pour la source '{source_name}' n'est pas un dictionnaire, ignoré.")
+                continue
+
+            extract_name = extract_def.get("extract_name", "Extrait Inconnu")
+            start_marker = extract_def.get("start_marker", "")
+            end_marker = extract_def.get("end_marker", "")
+            
+            # Tronquer les marqueurs s'ils sont trop longs pour l'affichage
+            display_start_marker = start_marker[:max_marker_len] + "..." if len(start_marker) > max_marker_len else start_marker
+            display_end_marker = end_marker[:max_marker_len] + "..." if len(end_marker) > max_marker_len else end_marker
+            
+            logger.info(f"    Extrait {j}: {extract_name}")
+            logger.info(f"      Début: '{display_start_marker}'")
+            logger.info(f"      Fin:   '{display_end_marker}'")
+        
+        total_extracts_count += len(extracts_list)
+    
+    logger.info(f"\nNombre total d'extraits sur toutes les sources: {total_extracts_count}")
+    logger.info(f"--- Fin du Résumé des Définitions d'Extraits ---")
+
+# D'autres fonctions de reporting spécifiques à l'analyse d'argumentation pourraient être ajoutées ici.
+# Par exemple, formater des résultats d'analyse spécifiques, etc.
