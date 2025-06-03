@@ -12,14 +12,21 @@ Il vise à centraliser la logique de manipulation de fichiers pour le projet.
 
 import json
 from pathlib import Path
-from typing import List, Dict, Any, Optional, Union # Ajout de Union
+from typing import List, Dict, Any, Optional, Union, Tuple # Ajout de Tuple
 import logging
 import re
 import shutil
 import sys
-import markdown
+import markdown # type: ignore
+from unidecode import unidecode
+
 
 logger = logging.getLogger(__name__)
+
+# Constantes pour les types de chemins
+PATH_TYPE_FILE = "file"
+PATH_TYPE_DIRECTORY = "directory"
+PATH_TYPE_ANY = "any"
 
 
 def sanitize_filename(filename: str, max_len: int = 255) -> str:
@@ -27,6 +34,7 @@ def sanitize_filename(filename: str, max_len: int = 255) -> str:
     Nettoie une chaîne de caractères pour la transformer en un nom de fichier valide et sûr.
 
     Transformations appliquées :
+    - Translitère les caractères Unicode en ASCII (ex: é -> e).
     - Remplace les espaces et multiples underscores/tirets par un seul underscore.
     - Supprime les caractères non alphanumériques non sûrs (sauf underscores, tirets et points).
     - Convertit le nom de fichier en minuscules.
@@ -47,39 +55,94 @@ def sanitize_filename(filename: str, max_len: int = 255) -> str:
 
     original_filename_for_log = filename # Garder une copie pour le log
 
-    # Séparer le nom de base et l'extension (s'il y en a une)
-    name_part, dot, extension_part = filename.rpartition('.')
+    # Translitérer en ASCII
+    filename = unidecode(filename)
+
+    # Séparer le nom de base et l'extension
+    if filename.startswith('.'):
+        # Cas des fichiers cachés (ex: .bashrc, .gitignore.old)
+        parts = filename.split('.', 2) # Split au plus en 2 pour gérer les noms comme ".file.ext"
+        if len(parts) == 1: # Juste "." ou ".." etc.
+            name_part = parts[0]
+            current_extension = ""
+        elif len(parts) == 2: # Cas comme ".bashrc" ou ".config" (pas d'extension après le nom caché)
+            if parts[0] == '': # Commence par un point
+                name_part = "." + parts[1]
+                current_extension = ""
+            else: # Cas comme "file.ext" traité normalement
+                name_part, dot, current_extension = filename.rpartition('.')
+                if not dot:
+                    name_part = filename
+                    current_extension = ""
+        else: # len(parts) == 3, cas comme ".config.txt" ou ".tar.gz"
+            if parts[0] == '':
+                name_part = "." + parts[1]
+                current_extension = parts[2]
+            else: # Cas comme "archive.tar.gz"
+                name_part, dot, current_extension = filename.rpartition('.')
+                if not dot: # Devrait pas arriver ici si split en 3, mais par sécurité
+                    name_part = filename
+                    current_extension = ""
+    else:
+        name_part, dot, current_extension = filename.rpartition('.')
+        if not dot: # Pas d'extension
+            name_part = filename
+            current_extension = ""
     
-    # Si pas de point, ou si le point est au début (fichier caché type .bashrc),
-    # alors tout est considéré comme le nom.
-    if not dot or (dot and not name_part and extension_part): # ex: "file", ".bashrc"
-        name_to_sanitize = filename
-        current_extension = ""
-    else: # ex: "archive.tar.gz" -> name_part="archive.tar", extension_part="gz"
-        name_to_sanitize = name_part
-        current_extension = extension_part
+    name_to_sanitize = name_part
 
     # 1. Remplacer les espaces et séquences de séparateurs par un seul underscore dans le nom
-    sanitized_name = re.sub(r'[\s_.-]+', '_', name_to_sanitize)
+    #    Ne pas remplacer le "." initial des fichiers cachés par un "_"
+    if name_to_sanitize.startswith('.'):
+        sanitized_name = "." + re.sub(r'[\s_.-]+', '_', name_to_sanitize[1:])
+    else:
+        sanitized_name = re.sub(r'[\s_.-]+', '_', name_to_sanitize)
+
 
     # 2. Supprimer les caractères non autorisés du nom (tout ce qui n'est pas alphanumérique ou underscore)
-    sanitized_name = re.sub(r'[^\w_]', '', sanitized_name)
+    #    Sauf si c'est le point initial d'un fichier caché
+    if sanitized_name.startswith('.'):
+        sanitized_name = "." + re.sub(r'[^\w_]', '', sanitized_name[1:])
+    else:
+        sanitized_name = re.sub(r'[^\w_]', '', sanitized_name)
+
 
     # 3. Convertir le nom en minuscules
-    sanitized_name = sanitized_name.lower()
+    #    Si le nom original commençait par un point, s'assurer que le nom sanitizé le conserve.
+    if name_to_sanitize.startswith('.') and not sanitized_name.startswith('.'):
+        if sanitized_name: # Eviter ".." si le nom devient vide après sanitization (ex: ".!")
+             sanitized_name = "." + sanitized_name.lower()
+        # Si sanitized_name est vide ici (ex: ".!"), il sera traité plus bas
+        # et deviendra "default_filename" ou "default_filename.ext"
+    else:
+        sanitized_name = sanitized_name.lower()
 
-    # 4. Supprimer les underscores en début ou fin du nom
-    sanitized_name = re.sub(r'^_+|_+$', '', sanitized_name)
+
+    # 4. Supprimer les underscores en début ou fin du nom (sauf si c'est le seul caractère ou partie d'un nom caché)
+    if sanitized_name.startswith('.'):
+        if len(sanitized_name) > 1: # Ne pas toucher à "." seul
+            sanitized_name = "." + re.sub(r'^_+|_+$', '', sanitized_name[1:])
+    elif sanitized_name: # Ne pas toucher à une chaîne vide
+        sanitized_name = re.sub(r'^_+|_+$', '', sanitized_name)
+
 
     # Traiter l'extension si elle existe
     if current_extension:
-        # Supprimer les caractères non autorisés de l'extension (tout ce qui n'est pas alphanumérique)
         sanitized_extension = re.sub(r'[^\w]', '', current_extension).lower()
-        if not sanitized_extension: # Si l'extension devient vide
-            # On rattache ce qui restait de l'extension (avant sanitization) au nom
-            sanitized_name = f"{sanitized_name}_{re.sub(r'[^a-zA-Z0-9_]', '', current_extension.lower())}"
-            sanitized_name = re.sub(r'_+', '_', sanitized_name).strip('_') # Nettoyer encore
-            current_extension = "" # Plus d'extension valide
+        if not sanitized_extension:
+            # Si l'extension devient vide, on la considère comme partie du nom
+            # et on la nettoie comme le nom.
+            # Cela évite "file._!" -> "file_" au lieu de "file_".
+            # On rattache la version nettoyée de l'extension originale au nom.
+            additional_name_part = re.sub(r'[\s_.-]+', '_', unidecode(current_extension))
+            additional_name_part = re.sub(r'[^\w_]', '', additional_name_part).lower()
+            additional_name_part = re.sub(r'^_+|_+$', '', additional_name_part)
+            if sanitized_name and additional_name_part:
+                sanitized_name = f"{sanitized_name}_{additional_name_part}"
+            elif additional_name_part: # Si sanitized_name était vide (ex: ".! .txt")
+                 sanitized_name = additional_name_part
+            # Si sanitized_name est vide et additional_name_part aussi, sera géré par default_filename
+            current_extension = "" 
         else:
             current_extension = sanitized_extension
             
@@ -90,26 +153,46 @@ def sanitize_filename(filename: str, max_len: int = 255) -> str:
         final_filename = sanitized_name
 
     # Assurer que le nom n'est pas vide après nettoyage (avant la troncature)
-    if not sanitized_name: # Si le nom (sans extension) est devenu vide
-        final_filename = f"default_filename{'.' + current_extension if current_extension else ''}"
-        logger.warning(f"Le nom de base du fichier '{original_filename_for_log}' est devenu vide après nettoyage. Utilisation de '{final_filename}'.")
+    # Si le nom final (sans extension, ou le nom total si pas d'extension) est vide ou juste "."
+    # (ex: "...", ".!.", "  .  ")
+    # alors utiliser "default_filename"
+    # Sauf si c'était un fichier caché valide comme ".bashrc" qui devient ".bashrc"
+    
+    # Test si la partie nom (avant extension) est vide ou juste un point
+    # (après toutes les sanitizations précédentes)
+    is_name_part_empty_or_dot = not sanitized_name or (sanitized_name == "." and not current_extension)
+
+    if is_name_part_empty_or_dot:
+        # Si l'original était juste des points/espaces (ex: " . ", "...")
+        # ou si après unidecode et suppression de non-alphanum, il ne reste rien (ex: "!@#$")
+        # ou si c'était un fichier caché invalide qui est devenu vide (ex: ".!")
+        if not (filename.startswith('.') and re.match(r'^\.[\w_]+$', final_filename)): # Ne pas remplacer les noms cachés valides
+            final_filename = f"default_filename{'.' + current_extension if current_extension else ''}"
+            logger.warning(f"Le nom de base du fichier '{original_filename_for_log}' est devenu vide ou invalide après nettoyage. Utilisation de '{final_filename}'.")
 
 
     # 5. Tronquer à une longueur maximale en préservant l'extension
     if len(final_filename) > max_len:
         if current_extension:
-            # Laisse de la place pour le point et l'extension
             len_ext_plus_dot = len(current_extension) + 1
-            # Si l'extension elle-même (avec le point) est plus longue que max_len,
-            # ou si le nom doit être tronqué à 0 ou moins, on tronque brutalement.
-            if len_ext_plus_dot >= max_len :
-                 # Tenter de garder au moins une partie de l'extension si possible
-                final_filename = final_filename[:max_len-1] + final_filename[-1] if max_len > 0 else ""
+            if len_ext_plus_dot >= max_len : # Extension trop longue pour max_len
+                # Tronquer brutalement en essayant de garder le dernier caractère de l'extension
+                # et un point si possible.
+                if max_len > 1:
+                    final_filename = final_filename[:max_len-1] + final_filename[-1]
+                elif max_len == 1:
+                     final_filename = final_filename[0] # Prend le premier caractère
+                else: # max_len == 0
+                    final_filename = ""
+            else: # Assez de place pour l'extension et au moins un caractère du nom
+                name_part_len = max_len - len_ext_plus_dot
+                
+                # Extraire la partie nom de final_filename (qui peut avoir été modifiée en "default_filename")
+                current_name_part_for_trunc = final_filename.rpartition('.')[0] if '.' in final_filename else final_filename
 
-            else:
-                name_part_truncated = final_filename[:max_len - len_ext_plus_dot]
+                name_part_truncated = current_name_part_for_trunc[:name_part_len]
                 final_filename = f"{name_part_truncated}.{current_extension}"
-        else:
+        else: # Pas d'extension, tronquer simplement
             final_filename = final_filename[:max_len]
     
     # Ultime vérification pour un nom de fichier complètement vide
@@ -335,7 +418,6 @@ def save_json_file(file_path: Path, data: Any, indent: int = 4) -> bool:
     except Exception as e:
         logger.error(f"❌ Erreur inattendue lors de la sauvegarde du fichier JSON {file_path}: {e}", exc_info=True)
         return False
-import markdown # Ajout de l'import manquant pour la nouvelle fonction
 
 def save_markdown_to_html(markdown_content: str, output_path: Path) -> bool:
     """
@@ -362,13 +444,13 @@ def save_markdown_to_html(markdown_content: str, output_path: Path) -> bool:
         
         # Ajouter un style CSS de base pour une meilleure lisibilité
         html_document = f"""
-        &lt;!DOCTYPE html&gt;
-        &lt;html lang="fr"&gt;
-        &lt;head&gt;
-            &lt;meta charset="UTF-8"&gt;
-            &lt;meta name="viewport" content="width=device-width, initial-scale=1.0"&gt;
-            &lt;title&gt;{output_path.stem}&lt;/title&gt;
-            &lt;style&gt;
+        <!DOCTYPE html>
+        <html lang="fr">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>{output_path.stem}</title>
+            <style>
                 body {{
                     font-family: Arial, sans-serif;
                     line-height: 1.6;
@@ -449,12 +531,12 @@ def save_markdown_to_html(markdown_content: str, output_path: Path) -> bool:
                     max-width: 100%;
                     height: auto;
                 }}
-            &lt;/style&gt;
-        &lt;/head&gt;
-        &lt;body&gt;
+            </style>
+        </head>
+        <body>
             {html_content}
-        &lt;/body&gt;
-        &lt;/html&gt;
+        </body>
+        </html>
         """
         with open(output_path, 'w', encoding='utf-8', errors="replace") as f:
             f.write(html_document)
@@ -463,7 +545,6 @@ def save_markdown_to_html(markdown_content: str, output_path: Path) -> bool:
     except Exception as e:
         logger.error(f"❌ Erreur lors de la conversion Markdown en HTML ou de la sauvegarde dans {output_path}: {e}", exc_info=True)
         return False
-import sys # Ajout de l'import sys pour sys.exit
 
 def check_path_exists(path: Path, path_type: str = "file") -> bool:
     """
@@ -499,7 +580,8 @@ def check_path_exists(path: Path, path_type: str = "file") -> bool:
     else:
         logger.critical(f"❌ ERREUR CRITIQUE: Type de chemin non supporté '{path_type}'. Utilisez 'file' ou 'directory'.")
         sys.exit(1)
-    
+    return True # Ajout du return True manquant
+
 def create_archive_path(base_archive_dir: Path, source_file_path: Path, preserve_levels: int = 2) -> Path:
     """
     Génère un chemin de destination complet pour archiver un fichier source.
@@ -525,16 +607,16 @@ def create_archive_path(base_archive_dir: Path, source_file_path: Path, preserve
         Path: Le chemin de destination complet pour le fichier archivé.
 
     Example:
-        &gt;&gt;&gt; base = Path("archives")
-        &gt;&gt;&gt; source = Path("data/raw/project_alpha/file.txt")
-        &gt;&gt;&gt; create_archive_path(base, source, 2)
+        >>> base = Path("archives")
+        >>> source = Path("data/raw/project_alpha/file.txt")
+        >>> create_archive_path(base, source, 2)
         Path('archives/project_alpha/file.txt') # Si 'data/raw' sont les niveaux supérieurs
-        &gt;&gt;&gt; create_archive_path(base, source, 1)
+        >>> create_archive_path(base, source, 1)
         Path('archives/file.txt') # Si 'project_alpha' est le seul niveau préservé
-        &gt;&gt;&gt; create_archive_path(base, source, 0)
+        >>> create_archive_path(base, source, 0)
         Path('archives/file.txt')
-        &gt;&gt;&gt; source_short = Path("file.txt")
-        &gt;&gt;&gt; create_archive_path(base, source_short, 2)
+        >>> source_short = Path("file.txt")
+        >>> create_archive_path(base, source_short, 2)
         Path('archives/file.txt')
     """
     logger.debug(
@@ -542,50 +624,36 @@ def create_archive_path(base_archive_dir: Path, source_file_path: Path, preserve
         f"en préservant {preserve_levels} niveaux."
     )
 
-    # Extrait les `preserve_levels` derniers composants du chemin parent du fichier source
-    # et le nom du fichier lui-même.
-    # source_file_path.parts donne un tuple des composants du chemin.
-    # ex: ('data', 'raw', 'project_alpha', 'file.txt')
-    # Si preserve_levels = 2, on veut garder 'project_alpha', 'file.txt'.
-    # Les parents sont source_file_path.parents.
-    # parents[0] est 'data/raw/project_alpha'
-    # parents[1] est 'data/raw'
-    # parents[preserve_levels-1] nous donnerait le parent à partir duquel commencer,
-    # mais c'est plus simple de travailler avec les 'parts' du chemin.
-
     if preserve_levels < 0:
         logger.warning("preserve_levels ne peut pas être négatif. Utilisation de 0 à la place.")
         preserve_levels = 0
 
     file_name = source_file_path.name
     
-    # Obtenir les noms des répertoires parents pertinents
-    # source_file_path.parents est une séquence: (parent, grand-parent, ...)
-    # parents[0] est le parent direct, parents[1] le parent du parent, etc.
-    # On veut les `preserve_levels` derniers noms de répertoires.
-    
     parent_names_to_preserve = []
     if preserve_levels > 0 and source_file_path.parents:
-        # Nombre de parents disponibles
         num_available_parents = len(source_file_path.parents)
-        # Nombre de niveaux à effectivement prendre (ne peut excéder num_available_parents)
-        levels_to_take = min(preserve_levels, num_available_parents)
+        # On ne compte pas le "drive" ou "." comme un parent à préserver pour le compte
+        # Si source_file_path.parent est '.', num_available_parents sera 1 (Path('.'))
+        # Si source_file_path est 'file.txt', parents est (Path('.'),)
+        # Si source_file_path est 'd:/file.txt', parents est (Path('d:/'),)
         
-        # Prendre les `levels_to_take` premiers parents de la liste `parents`
-        # et inverser pour avoir l'ordre correct (du plus éloigné au plus proche)
-        # puis prendre leurs noms.
-        # Exemple: source = Path("a/b/c/d/file.txt"), preserve_levels = 2
-        # parents = (PosixPath('a/b/c/d'), PosixPath('a/b/c'), PosixPath('a/b'), PosixPath('a'))
-        # levels_to_take = 2
-        # parents_to_consider = [PosixPath('a/b/c/d'), PosixPath('a/b/c')]
-        # parent_names_to_preserve = ['c', 'd'] (après .name et inversion)
+        # On veut les `preserve_levels` derniers segments de répertoire avant le nom du fichier.
+        # `source_file_path.parts` inclut le nom du fichier.
+        # `source_file_path.parent.parts` sont les répertoires.
         
-        # On prend les `levels_to_take` parents les plus proches du fichier.
-        # parents[0] est le parent direct, parents[1] celui d'avant, etc.
-        # On veut les noms de parents[levels_to_take-1], ..., parents[0]
-        for i in range(levels_to_take):
-            parent_names_to_preserve.append(source_file_path.parents[i].name)
-        parent_names_to_preserve.reverse() # Mettre dans l'ordre correct de l'arborescence
+        path_segments = source_file_path.parent.parts
+        
+        # Si le chemin est absolu, le premier segment est le drive (ex: 'D:\\' ou '/')
+        # On ne veut pas le compter dans les "niveaux" à préserver de cette manière.
+        # Cependant, la logique de min(preserve_levels, len(path_segments)) gère cela.
+        
+        levels_to_take = min(preserve_levels, len(path_segments))
+        
+        if levels_to_take > 0:
+            # Prendre les `levels_to_take` derniers segments du chemin parent
+            parent_names_to_preserve = list(path_segments[-levels_to_take:])
+
 
     if parent_names_to_preserve:
         archive_sub_path = Path(*parent_names_to_preserve) / file_name
@@ -598,7 +666,6 @@ def create_archive_path(base_archive_dir: Path, source_file_path: Path, preserve
     
     logger.info(f"Chemin d'archive généré : {destination_path}")
     return destination_path
-#    return True # Cette ligne semble être une erreur, commentée
 
 def archive_file(source_path: Path, archive_path: Path) -> bool:
     """
@@ -657,7 +724,7 @@ def load_document_content(file_path: Path) -> Optional[str]:
     :rtype: Optional[str]
     """
     logger.info(f"Tentative de chargement du contenu du document depuis {file_path}")
-    if not file_path.is_file():
+    if not file_path.is_file(): # Vérifier si c'est un fichier avant de lire l'extension
         logger.error(f"❌ Le chemin spécifié n'est pas un fichier : {file_path}")
         return None
 
