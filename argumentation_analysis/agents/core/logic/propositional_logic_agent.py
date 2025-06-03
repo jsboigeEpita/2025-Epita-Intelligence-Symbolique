@@ -252,13 +252,25 @@ class PropositionalLogicAgent(BaseLogicAgent):
                 self.logger.error(msg)
                 return None, f"FUNC_ERROR: {msg}"
 
-            is_entailed, raw_output = self._tweety_bridge.execute_pl_query( # Corrigé self.tweety_bridge en self._tweety_bridge
-                belief_set_content=bs_str, # Le paramètre s'appelle belief_set_content dans TweetyBridge
-                query_string=query # Le paramètre s'appelle query_string dans TweetyBridge
+            raw_output_str = self._tweety_bridge.execute_pl_query(
+                belief_set_content=bs_str,
+                query_string=query
             )
-            
-            self.logger.info(f"Résultat de l'exécution pour '{query}': {is_entailed}, Output: '{raw_output}'")
-            return is_entailed, raw_output
+
+            parsed_result_bool: Optional[bool] = None
+            if "FUNC_ERROR:" in raw_output_str:
+                self.logger.error(f"Erreur fonctionnelle de TweetyBridge pour la requête '{query}': {raw_output_str}")
+            elif "ACCEPTED (True)" in raw_output_str:
+                parsed_result_bool = True
+            elif "REJECTED (False)" in raw_output_str:
+                parsed_result_bool = False
+            elif "Unknown" in raw_output_str:
+                 self.logger.warning(f"Résultat de la requête '{query}' est 'Unknown'. Output: {raw_output_str}")
+            else:
+                self.logger.warning(f"Format de sortie de TweetyBridge non reconnu pour '{query}': {raw_output_str}")
+
+            self.logger.info(f"Résultat de l'exécution pour '{query}': {parsed_result_bool}, Output brut: '{raw_output_str}'")
+            return parsed_result_bool, raw_output_str
         
         except Exception as e:
             error_msg = f"Erreur lors de l'exécution de la requête PL '{query}': {str(e)}"

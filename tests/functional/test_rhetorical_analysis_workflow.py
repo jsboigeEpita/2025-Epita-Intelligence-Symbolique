@@ -37,7 +37,7 @@ if project_root not in sys.path:
 from argumentation_analysis.orchestration.hierarchical.tactical.coordinator import TacticalCoordinator as TaskCoordinator 
 from argumentation_analysis.orchestration.hierarchical.tactical.state import TacticalState
 from argumentation_analysis.orchestration.hierarchical.operational.adapters.extract_agent_adapter import ExtractAgentAdapter
-from argumentation_analysis.agents.core.informal.informal_agent import InformalAgent
+from argumentation_analysis.agents.core.informal.informal_agent import InformalAnalysisAgent as InformalAgent
 from argumentation_analysis.agents.tools.analysis.enhanced.complex_fallacy_analyzer import EnhancedComplexFallacyAnalyzer as ComplexFallacyAnalyzer
 from argumentation_analysis.core.communication import MessageMiddleware # Corrigé
 from argumentation_analysis.orchestration.analysis_runner import AnalysisRunner as RhetoricalAnalysisRunner # Corrigé et alias
