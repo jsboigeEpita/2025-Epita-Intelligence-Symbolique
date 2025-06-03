@@ -211,7 +211,7 @@ class TweetyBridge:
             self._ModalParser = jpype.JClass("org.tweetyproject.logics.ml.parser.MlParser") # Nom corrigé
             self._AbstractModalReasoner = jpype.JClass("org.tweetyproject.logics.ml.reasoner.AbstractMlReasoner") # Pour type hinting
             self._SimpleModalReasoner = jpype.JClass("org.tweetyproject.logics.ml.reasoner.SimpleMlReasoner") # Classe concrète
-            self._ModalFormula = jpype.JClass("org.tweetyproject.logics.ml.syntax.ModalFormula")
+            self._ModalFormula = jpype.JClass("org.tweetyproject.logics.ml.syntax.MlFormula")
             
             # Créer les instances
             self._modal_parser_instance = self._ModalParser()

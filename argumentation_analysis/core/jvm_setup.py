@@ -15,7 +15,7 @@ try:
     # S'assurer que PROJECT_ROOT_DIR est bien défini comme dans paths.py
     # Cela suppose que ce fichier est dans argumentation_analysis/core/
     PROJECT_ROOT_DIR = Path(__file__).resolve().parent.parent.parent
-    _JDK_SUBDIR = "portable_jdk/jdk-11" # Ajuster si la version/nom du JDK change
+    _JDK_SUBDIR = "libs/portable_jdk/jdk-17.0.11+9" # Ajuster si la version/nom du JDK change
     
     # Vérifier si le répertoire JDK existe
     _potential_jdk_path = PROJECT_ROOT_DIR / _JDK_SUBDIR
@@ -78,7 +78,10 @@ def initialize_jvm(lib_dir_path: str, jdk_path: Optional[Path] = PORTABLE_JDK_PA
             logger.error(f"❌ Le répertoire des JARs '{jar_directory}' n'existe pas ou n'est pas un répertoire.")
             return False
 
+        # Stratégie: Inclure tous les JARs du répertoire.
+        logger.info(f"Construction du classpath avec tous les JARs trouvés dans '{jar_directory}'.")
         jars = [str(jar_file) for jar_file in jar_directory.glob("*.jar")]
+        
         if not jars:
             logger.error(f"❌ Aucun JAR trouvé pour le classpath dans '{jar_directory}' ! Démarrage annulé.")
             return False
@@ -114,8 +117,8 @@ def initialize_jvm(lib_dir_path: str, jdk_path: Optional[Path] = PORTABLE_JDK_PA
         
         # Test simple pour vérifier que les classes Tweety sont accessibles
         try:
-            _ = jpype.JClass("org.tweetyproject.logics.pl.syntax.PropositionalSignature")
-            logger.info("✅ Test de chargement de classe Tweety (PropositionalSignature) réussi.")
+            _ = jpype.JClass("org.tweetyproject.logics.pl.syntax.PlSignature")
+            logger.info("✅ Test de chargement de classe Tweety (PlSignature) réussi.")
         except Exception as e_test:
             logger.error(f"❌ Test de chargement de classe Tweety échoué après démarrage JVM: {e_test}", exc_info=True)
             # Ne pas retourner False ici, la JVM est démarrée, mais il y a un problème avec les JARs/classpath.
