@@ -20,7 +20,7 @@ if str(root_dir) not in sys.path:
 
 # Imports du moteur d'analyse
 try:
-    from argumentation_analysis.agents.core.informal.informal_agent import InformalAgent
+    from argumentation_analysis.agents.core.informal.informal_agent import InformalAnalysisAgent as InformalAgent
     from argumentation_analysis.agents.tools.analysis.complex_fallacy_analyzer import ComplexFallacyAnalyzer
     from argumentation_analysis.agents.tools.analysis.contextual_fallacy_analyzer import ContextualFallacyAnalyzer
     from argumentation_analysis.agents.tools.analysis.fallacy_severity_evaluator import FallacySeverityEvaluator

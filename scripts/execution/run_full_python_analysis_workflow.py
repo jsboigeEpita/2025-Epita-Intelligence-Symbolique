@@ -46,7 +46,7 @@ try:
 
     # Importer directement depuis les modules du projet
     from argumentation_analysis.ui.file_operations import load_extract_definitions
-    from argumentation_analysis.agents.core.informal.informal_agent import InformalAgent
+    from argumentation_analysis.agents.core.informal.informal_agent import InformalAnalysisAgent as InformalAgent
     from argumentation_analysis.mocks.fallacy_detection import MockFallacyDetector
     from argumentation_analysis.mocks.rhetorical_analysis import MockRhetoricalAnalyzer
     from argumentation_analysis.mocks.argument_mining import MockArgumentMiner

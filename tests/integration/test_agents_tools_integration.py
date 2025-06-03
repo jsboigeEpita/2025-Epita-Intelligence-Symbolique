@@ -32,7 +32,7 @@ if project_root not in sys.path:
 # conftest.py et pytest.ini devraient également aider, mais ajout explicite pour robustesse.
 
 # Import des modules à tester
-from argumentation_analysis.agents.core.informal.informal_agent import InformalAgent
+from argumentation_analysis.agents.core.informal.informal_agent import InformalAnalysisAgent as InformalAgent
 from argumentation_analysis.agents.tools.analysis.enhanced.complex_fallacy_analyzer import EnhancedComplexFallacyAnalyzer as ComplexFallacyAnalyzer # Alias
 from argumentation_analysis.agents.tools.analysis.enhanced.contextual_fallacy_analyzer import EnhancedContextualFallacyAnalyzer as ContextualFallacyAnalyzer # Alias
 from argumentation_analysis.agents.tools.analysis.enhanced.fallacy_severity_evaluator import EnhancedFallacySeverityEvaluator as FallacySeverityEvaluator # Alias
