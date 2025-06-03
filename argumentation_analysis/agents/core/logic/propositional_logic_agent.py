@@ -89,10 +89,12 @@ class PropositionalLogicAgent(BaseLogicAgent):
         super().setup_agent_components(llm_service_id)
         self.logger.info(f"Configuration des composants pour {self.name}...")
 
-        self._tweety_bridge = TweetyBridge() # Argument logic_type retiré
-        self.logger.info(f"TweetyBridge initialisé (logique PL implicite par les méthodes appelées). JVM prête: {self._tweety_bridge.is_jvm_ready()}")
-
-        if not self._tweety_bridge.is_jvm_ready(): # Corrigé pour utiliser _tweety_bridge
+        # Initialisation de TweetyBridge pour la logique propositionnelle.
+        # Ceci était manquant et causait l'AttributeError.
+        # La classe BaseLogicAgent s'attend à ce que la sous-classe initialise _tweety_bridge.
+        self._tweety_bridge = TweetyBridge()
+        self.logger.info(f"TweetyBridge initialisé pour {self.name}. JVM prête: {self._tweety_bridge.is_jvm_ready()}")
+        if not self._tweety_bridge.is_jvm_ready():
             self.logger.error("La JVM n'est pas prête. Les fonctionnalités de TweetyBridge pourraient ne pas fonctionner.")
             
         prompt_execution_settings = None
@@ -167,7 +169,7 @@ class PropositionalLogicAgent(BaseLogicAgent):
                 self.logger.error("La conversion a produit un ensemble de croyances vide.") 
                 return None, "La conversion a produit un ensemble de croyances vide."
             
-            is_valid, validation_msg = self._tweety_bridge.validate_belief_set(belief_set_content) # logic_type retiré, corrigé self.tweety_bridge en self._tweety_bridge
+            is_valid, validation_msg = self._tweety_bridge.validate_belief_set(belief_set_str=belief_set_content) # paramètre nommé pour correspondre à TweetyBridge
             if not is_valid:
                 self.logger.error(f"Ensemble de croyances invalide: {validation_msg}")
                 return None, f"Ensemble de croyances invalide: {validation_msg}"
@@ -214,7 +216,8 @@ class PropositionalLogicAgent(BaseLogicAgent):
             
             valid_queries = []
             for query in queries:
-                if self.validate_formula(query): # validate_formula appelle self._tweety_bridge.validate_formula qui n'a plus logic_type
+                # self.validate_formula utilise self._tweety_bridge.validate_formula
+                if self.validate_formula(query):
                     valid_queries.append(query)
                 else:
                     self.logger.warning(f"Requête invalide générée et ignorée: {query}") 
@@ -252,9 +255,9 @@ class PropositionalLogicAgent(BaseLogicAgent):
                 self.logger.error(msg)
                 return None, f"FUNC_ERROR: {msg}"
 
-            is_entailed, raw_output = self._tweety_bridge.execute_pl_query( # Corrigé self.tweety_bridge en self._tweety_bridge
-                belief_set_content=bs_str, # Le paramètre s'appelle belief_set_content dans TweetyBridge
-                query_string=query # Le paramètre s'appelle query_string dans TweetyBridge
+            is_entailed, raw_output = self._tweety_bridge.execute_pl_query(
+                belief_set_content=bs_str,
+                query_string=query
             )
             
             self.logger.info(f"Résultat de l'exécution pour '{query}': {is_entailed}, Output: '{raw_output}'")
@@ -331,7 +334,7 @@ class PropositionalLogicAgent(BaseLogicAgent):
         """
         self.logger.debug(f"Validation de la formule PL: '{formula}'")
         try:
-            is_valid, message = self._tweety_bridge.validate_formula(formula_string=formula) # logic_type retiré, corrigé self.tweety_bridge en self._tweety_bridge, param renommé
+            is_valid, message = self._tweety_bridge.validate_formula(formula_string=formula)
             if not is_valid:
                 self.logger.warning(f"Formule PL invalide: '{formula}'. Message: {message}")
             return is_valid
