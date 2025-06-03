@@ -21,7 +21,7 @@ class MockFallacyDetector:
         self.language = language
         logger.info(f"MockFallacyDetector initialisé avec model='{model_name}', language='{language}'.")
 
-    def detect_fallacies(self, text: str, context: Dict[str, Any] = None) -> List[Dict[str, Any]]:
+    def detect(self, text: str, context: Dict[str, Any] = None) -> List[Dict[str, Any]]:
         """
         Simule la détection de sophismes dans le texte.
         Combine des logiques de HEAD et MERGE_HEAD.
@@ -34,10 +34,10 @@ class MockFallacyDetector:
         :rtype: List[Dict[str, Any]]
         """
         if not isinstance(text, str):
-            logger.warning("MockFallacyDetector.detect_fallacies a reçu une entrée non textuelle.")
+            logger.warning("MockFallacyDetector.detect a reçu une entrée non textuelle.")
             return []
             
-        logger.info(f"MockFallacyDetector.detect_fallacies appelée pour le texte : '{text[:70]}...'")
+        logger.info(f"MockFallacyDetector.detect appelée pour le texte : '{text[:70]}...'")
         
         detected_fallacies: List[Dict[str, Any]] = []
         text_lower = text.lower()
@@ -45,9 +45,9 @@ class MockFallacyDetector:
         # Logique de détection inspirée de MERGE_HEAD, adaptée au format de HEAD
         if "exemple de sophisme spécifique pour test" in text_lower:
             detected_fallacies.append({
-                "fallacy_type": "Specific Mock Fallacy (Simulé)",
+                "fallacy_type": "Specific Mock Fallacy",
                 "description": "Détection simulée pour un texte spécifique.",
-                "severity": "Basse (Mock)", # Format HEAD
+                "severity": "Basse", # Format HEAD
                 "confidence": 0.90,
                 "context_text": text[:150]
             })
@@ -55,18 +55,18 @@ class MockFallacyDetector:
         if "un autre texte pour varier" in text_lower:
             detected_fallacies.extend([
                 {
-                    "fallacy_type": "Generalisation Hative (Simulé)",
+                    "fallacy_type": "Generalisation Hative (Mock)",
                     "description": "Mock de généralisation hâtive.",
-                    "severity": "Moyenne (Mock)", # Format HEAD
+                    "severity": "Moyenne", # Format HEAD
                     "confidence": 0.65,
                     "context_text": text[:100]
                 },
                 {
-                    "fallacy_type": "Ad Populum (Simulé)",
+                    "fallacy_type": "Ad Populum (Mock)",
                     "description": "Appel à la popularité simulé.",
-                    "severity": "Faible (Mock)", # Ajusté, MERGE_HEAD avait "Faible"
+                    "severity": "Faible", # Ajusté, MERGE_HEAD avait "Faible"
                     "confidence": 0.55,
-                    "context_text": text[50:150] if len(text) > 150 else (text[50:] if len(text) > 50 else text) # Protection slicing
+                    "context_text": text[50:150] if len(text) > 150 else (text[50:] if len(text) > 50 else "") # Protection slicing
                 }
             ])
         
@@ -75,29 +75,29 @@ class MockFallacyDetector:
             detected_fallacies.append({
                 "fallacy_type": "Argument Invalide (Simulé)",
                 "description": "Le raisonnement présenté semble contenir une faille logique simulée.",
-                "severity": "Haute (Mock)",
+                "severity": "Haute",
                 "confidence": 0.80,
                 "context_text": text[:100] 
             })
         
         # Logique de HEAD pour "personnellement" et "attaque"
-        if "personnellement" in text_lower() and "attaque" in text_lower():
+        if "personnellement" in text_lower and "attaque" in text_lower:
             start_index = text_lower.find("personnellement")
             end_index = text_lower.find("attaque") + len("attaque")
             context_slice = text[max(0, start_index-20) : min(len(text), end_index+20)]
             detected_fallacies.append({
                 "fallacy_type": "Ad Hominem (Simulé)",
                 "description": "Une attaque personnelle simulée semble être présente.",
-                "severity": "Moyenne (Mock)",
+                "severity": "Moyenne",
                 "confidence": 0.65,
                 "context_text": context_slice
             })
             
-        if not detected_fallacies and ("sophisme générique" in text_lower or text): # Assurer un retour si texte non vide
+        if not detected_fallacies and "sophisme générique" in text_lower:
              detected_fallacies.append({
-                "fallacy_type": "Sophisme Générique (Simulé)", # Nom de HEAD
+                "fallacy_type": "Generic Mock Fallacy", # Nom de HEAD
                 "description": "Un sophisme générique simulé pour illustrer.", # Description de HEAD
-                "severity": "Basse (Mock)", # Format HEAD
+                "severity": "Indéterminée", # Format HEAD, ajusté pour le test
                 "confidence": 0.50, # Confiance de MERGE_HEAD pour générique
                 "context_text": text[:150] if text else "Texte non disponible."
             })
