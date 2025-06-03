@@ -14,7 +14,7 @@ Modules et classes clés :
 """
 
 try:
-    from .informal_agent import InformalAgent
+    from .informal_agent import InformalAnalysisAgent as InformalAgent
     from .informal_definitions import (
         FallacyDefinition,
         RhetoricalStrategy,

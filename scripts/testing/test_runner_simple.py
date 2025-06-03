@@ -138,7 +138,7 @@ def test_core_functionality():
     
     # Test 1: Import de l'agent informel
     try:
-        from argumentation_analysis.agents.core.informal.informal_agent import InformalAgent
+        from argumentation_analysis.agents.core.informal.informal_agent import InformalAnalysisAgent as InformalAgent
         tests.append(('Import InformalAgent', 'OK'))
         print("OK Import InformalAgent")
         
