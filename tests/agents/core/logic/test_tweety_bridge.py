@@ -22,8 +22,19 @@ class TestTweetyBridge(unittest.TestCase):
         self.jpype_patcher = patch('argumentation_analysis.agents.core.logic.tweety_bridge.jpype')
         self.mock_jpype = self.jpype_patcher.start()
         self.mock_jpype.JException = MockedJException # Assigner la classe mockée
+
+        # Patcher jpype dans jvm_setup également pour contrôler son comportement depuis les tests de TweetyBridge
+        self.jvm_setup_jpype_patcher = patch('argumentation_analysis.core.jvm_setup.jpype')
+        self.mock_jvm_setup_jpype = self.jvm_setup_jpype_patcher.start()
+
+        # Assurer la cohérence des mocks jpype entre les deux modules patchés
+        self.mock_jvm_setup_jpype.isJVMStarted = self.mock_jpype.isJVMStarted
+        self.mock_jvm_setup_jpype.JException = self.mock_jpype.JException
+        self.mock_jvm_setup_jpype.JClass = self.mock_jpype.JClass
+        self.mock_jvm_setup_jpype.startJVM = self.mock_jpype.startJVM
+        self.mock_jvm_setup_jpype.shutdownJVM = self.mock_jpype.shutdownJVM # Au cas où
         
-        # Configurer le mock de jpype
+        # Configurer le mock de jpype (sera propagé à mock_jvm_setup_jpype)
         self.mock_jpype.isJVMStarted.return_value = True
         
         # Mocks pour les classes Java
@@ -57,7 +68,7 @@ class TestTweetyBridge(unittest.TestCase):
             "org.tweetyproject.logics.ml.reasoner.AbstractMlReasoner": self.mock_abstract_ml_reasoner,
             "org.tweetyproject.logics.ml.reasoner.SimpleMlReasoner": self.mock_simple_ml_reasoner,
             "org.tweetyproject.logics.ml.reasoner.ModalReasoner": self.mock_modal_reasoner,
-            "org.tweetyproject.logics.ml.syntax.ModalFormula": self.mock_modal_formula
+            "org.tweetyproject.logics.ml.syntax.MlFormula": self.mock_modal_formula
         }
         
         def jclass_side_effect_strict(class_name):
@@ -124,6 +135,7 @@ class TestTweetyBridge(unittest.TestCase):
     def tearDown(self):
         """Nettoyage après chaque test."""
         self.jpype_patcher.stop()
+        self.jvm_setup_jpype_patcher.stop()
     
     def test_initialization_jvm_ready(self):
         """Test de l'initialisation lorsque la JVM est prête."""
@@ -145,7 +157,7 @@ class TestTweetyBridge(unittest.TestCase):
         print(f"DEBUG: JClass call_args_list before ModalReasoner assert: {self.mock_jpype.JClass.call_args_list}")
         self.mock_jpype.JClass.assert_any_call("org.tweetyproject.logics.ml.reasoner.AbstractMlReasoner") # Corrigé selon les logs
         self.mock_jpype.JClass.assert_any_call("org.tweetyproject.logics.ml.reasoner.SimpleMlReasoner")   # Corrigé selon les logs
-        self.mock_jpype.JClass.assert_any_call("org.tweetyproject.logics.ml.syntax.ModalFormula")
+        self.mock_jpype.JClass.assert_any_call("org.tweetyproject.logics.ml.syntax.MlFormula")
         
         # Vérifier que les instances ont été créées
         self.mock_pl_parser.assert_called_once()
@@ -163,10 +175,18 @@ class TestTweetyBridge(unittest.TestCase):
         """Test de l'initialisation lorsque la JVM n'est pas prête."""
         # Configurer le mock de jpype
         self.mock_jpype.isJVMStarted.return_value = False
-        self.mock_jpype.JClass.reset_mock() # Réinitialiser les appels pour ce test spécifique
+        self.mock_jpype.JClass.reset_mock() # Réinitialiser les appels JClass pour ce test spécifique
+        self.mock_jpype.startJVM.reset_mock() # Réinitialiser les appels startJVM aussi
+        
+        # Simuler un échec du démarrage de la JVM
+        self.mock_jpype.startJVM.side_effect = Exception("Mocked JVM start failure")
         
         # Créer l'instance de TweetyBridge
         tweety_bridge = TweetyBridge()
+        
+        # Restaurer le comportement par défaut de startJVM pour ne pas affecter d'autres tests
+        # Bien que setUp soit appelé pour chaque test, c'est plus propre.
+        self.mock_jpype.startJVM.side_effect = None
         
         # Vérifier que la JVM n'est pas prête
         self.assertFalse(tweety_bridge.is_jvm_ready())
