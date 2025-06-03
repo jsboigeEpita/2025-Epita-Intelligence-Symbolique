@@ -83,7 +83,7 @@ class TestInformalDefinitions: # Suppression de l'héritage unittest.TestCase
         kernel = mock_semantic_kernel_instance
         llm_service = MagicMock()
         
-        setup_informal_kernel(kernel, llm_service)
+        setup_informal_kernel(kernel, llm_service, taxonomy_file_path="argumentation_analysis/data/mock_taxonomy_small.csv")
         assert "InformalAnalyzer" in kernel.plugins
 
 # if __name__ == "__main__": # Supprimé

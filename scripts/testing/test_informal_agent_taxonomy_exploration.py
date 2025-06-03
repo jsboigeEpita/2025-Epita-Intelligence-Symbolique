@@ -76,7 +76,7 @@ async def main():
          logger.error(f"Service LLM '{llm_service.service_id if llm_service else 'None'}' non disponible dans le kernel. Impossible de continuer la configuration de l'agent.")
          return
 
-    setup_informal_kernel(kernel, llm_service) 
+    setup_informal_kernel(kernel, llm_service, taxonomy_file_path="argumentation_analysis/data/mock_taxonomy_cards.csv")
     logger.info("Kernel configuré avec InformalAnalysisPlugin.")
 
     try:
@@ -158,7 +158,7 @@ async def main():
     
     logger.info("Test: explore_fallacy_hierarchy(current_pk_str='0')") 
     if "explore_fallacy_hierarchy" in analyzer_plugin:
-        result_explore_root = await kernel.invoke(analyzer_plugin["explore_fallacy_hierarchy"], current_pk_str="0")
+        result_explore_root = await kernel.invoke(analyzer_plugin["explore_fallacy_hierarchy"], current_pk_str="0", max_children=15)
         logger.info(f"Résultat explore_fallacy_hierarchy('0'): {result_explore_root}")
     else:
         logger.error("Fonction 'explore_fallacy_hierarchy' non trouvée dans analyzer_plugin.")
