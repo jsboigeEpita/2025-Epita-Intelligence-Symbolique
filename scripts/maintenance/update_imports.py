@@ -171,10 +171,10 @@ def main():
         logging.info("Mode dry-run: aucune modification n'a été effectuée.")
         logging.info("Exécutez à nouveau sans l'option --dry-run pour appliquer les modifications.")
     
-    if stats['modified_files'] > 0:
-        logging.info("\nFichiers modifiés:")
-        for file_path in stats['modified_files_list']:
-            logging.info(f"  {file_path}")
+    if modified_files_count > 0:
+        logging.info("\nFichiers avec modifications potentielles (et nombre de remplacements):")
+        for detail in modified_files_details:
+            logging.info(f"  {detail.get('path')}: {detail.get('replacements')} remplacement(s)")
     
     return 0
 

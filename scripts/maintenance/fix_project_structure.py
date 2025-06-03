@@ -109,27 +109,35 @@ def main():
     
     # Installer le package en mode développement
     logging.info("\n=== Installation du package en mode développement ===")
-    try:
-        subprocess.run([sys.executable, "-m", "pip", "install", "-e", "."], check=True)
-        logging.info("✅ Package installé en mode développement.")
-    except Exception as e:
-        logging.error(f"❌ Erreur lors de l'installation du package: {e}")
+    # try: # Remplacé par run_shell_command
+        # subprocess.run([sys.executable, "-m", "pip", "install", "-e", "."], check=True)
+    return_code, _, _ = run_shell_command(
+        [sys.executable, "-m", "pip", "install", "-e", "."],
+        description="Installation du package en mode développement"
+    )
+    if return_code != 0:
+        logging.error(f"❌ Erreur lors de l'installation du package (code: {return_code}).")
+        # Pas de logging.info("✅ Package installé...") car run_shell_command le fait déjà si succès.
+    # except Exception as e: # run_shell_command gère ses propres exceptions
+    #     logging.error(f"❌ Erreur lors de l'installation du package: {e}")
     
     # Mettre à jour les importations
     if not args.skip_imports:
         update_imports_cmd = [sys.executable, str(script_dir / "update_imports.py")]
-        if not args.dry_run:
-            run_command(update_imports_cmd, "Mise à jour des importations")
-        else:
-            run_command(update_imports_cmd + ["--dry-run"], "Analyse des importations (dry-run)")
+        desc_imports = "Mise à jour des importations"
+        if args.dry_run:
+            update_imports_cmd.append("--dry-run")
+            desc_imports = "Analyse des importations (dry-run)"
+        run_shell_command(update_imports_cmd, description=desc_imports)
     
     # Mettre à jour les références aux chemins
     if not args.skip_paths:
         update_paths_cmd = [sys.executable, str(script_dir / "update_paths.py")]
-        if not args.dry_run:
-            run_command(update_paths_cmd, "Mise à jour des références aux chemins")
-        else:
-            run_command(update_paths_cmd + ["--dry-run"], "Analyse des références aux chemins (dry-run)")
+        desc_paths = "Mise à jour des références aux chemins"
+        if args.dry_run:
+            update_paths_cmd.append("--dry-run")
+            desc_paths = "Analyse des références aux chemins (dry-run)"
+        run_shell_command(update_paths_cmd, description=desc_paths)
     
     # Télécharger les JARs de test
     if not args.skip_jars:
@@ -138,12 +146,12 @@ def main():
             logging.info("\n=== Téléchargement des JARs de test (simulation) ===")
             logging.info("En mode dry-run, les JARs ne sont pas téléchargés.")
         else:
-            run_command(download_jars_cmd, "Téléchargement des JARs de test")
+            run_shell_command(download_jars_cmd, description="Téléchargement des JARs de test")
     
     # Vérifier les importations
     if not args.skip_tests:
         test_imports_cmd = [sys.executable, str(script_dir / "utils/test_imports_utils.py")]
-        run_command(test_imports_cmd, "Vérification des importations")
+        run_shell_command(test_imports_cmd, description="Vérification des importations")
     
     logging.info("\n=== Résumé ===")
     if args.dry_run:

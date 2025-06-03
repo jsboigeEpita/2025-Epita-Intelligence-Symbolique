@@ -53,55 +53,13 @@ for source in new_data:
 
     if source_full_text:
         print(f"INFO: -> Full_text de la source disponible (longueur: {len(source_full_text)}). Tentative de génération des segments d'extraits.")
-        for extract in source.get("extracts", []):
-            extract_name = extract.get("extract_name", "Nom d'extrait inconnu")
-            start_marker = extract.get("start_marker")
-            end_marker = extract.get("end_marker")
-
-            if start_marker and end_marker:
-                try:
-                    start_index = source_full_text.find(start_marker)
-                    # Chercher end_marker après le début de start_marker
-                    end_index = source_full_text.find(end_marker, start_index + len(start_marker))
-
-                    if start_index != -1 and end_index != -1:
-                        # S'assurer que end_index est bien après start_index
-                        if end_index > start_index:
-                            segment = source_full_text[start_index : end_index + len(end_marker)]
-                            extract["full_text_segment"] = segment
-                            print(f"INFO: ---> Segment pour extrait '{extract_name}' généré (longueur: {len(segment)}).")
-                        else:
-                            # Cas où end_marker est trouvé avant la fin de start_marker (ou chevauchement)
-                            # Tenter de trouver end_marker APRES la fin de start_marker
-                            search_after_start_marker_end = start_index + len(start_marker)
-                            end_index_strict = source_full_text.find(end_marker, search_after_start_marker_end)
-                            if end_index_strict != -1:
-                                segment = source_full_text[start_index : end_index_strict + len(end_marker)]
-                                extract["full_text_segment"] = segment
-                                print(f"INFO: ---> Segment pour extrait '{extract_name}' généré (longueur: {len(segment)}) (recherche stricte).")
-                            else:
-                                print(f" ATTENTION: Marqueur de fin '{end_marker}' pour extrait '{extract_name}' (source {source_id}) non trouvé après le marqueur de début '{start_marker}'.")
-                    else:
-                        missing_markers_msg = []
-                        if start_index == -1:
-                            missing_markers_msg.append(f"marqueur de début '{start_marker}'")
-                        if end_index == -1 : #and start_index != -1 (implicite si on arrive ici et start_index != -1)
-                             missing_markers_msg.append(f"marqueur de fin '{end_marker}' après '{start_marker}'")
-                        elif end_index == -1 and start_index == -1: # si les deux sont manquants, le message précédent est suffisant
-                            pass
-
-
-                        print(f" ATTENTION: Marqueurs pour extrait '{extract_name}' (source {source_id}) non trouvés: {', '.join(missing_markers_msg)} dans le full_text.")
-
-                except Exception as e:
-                    print(f" ERREUR: Génération du segment pour extrait '{extract_name}' (source {source_id}) échouée: {e}")
-            else:
-                missing_info = []
-                if not start_marker:
-                    missing_info.append("marqueur de début")
-                if not end_marker:
-                    missing_info.append("marqueur de fin")
-                print(f" ATTENTION: {', '.join(missing_info).capitalize()} manquants pour extrait '{extract_name}' (source {source_id}).")
+        for extract_def in source.get("extracts", []): # Renommé extract en extract_def pour clarté
+            segment = populate_text_segment(source_full_text, extract_def)
+            if segment:
+                extract_def["full_text_segment"] = segment
+                # Le logging est déjà fait dans populate_text_segment
+            # else:
+                # Le logging de l'échec est aussi dans populate_text_segment
     else:
         print(f" INFO: Full_text non disponible pour source {source_id}. Segments non générés.")
 
