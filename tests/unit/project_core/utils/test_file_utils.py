@@ -119,11 +119,11 @@ def test_sanitize_filename_max_len():
 
 def test_sanitize_filename_only_dots_and_symbols():
     """Teste sanitize_filename avec des chaînes composées uniquement de points ou de symboles."""
-    assert sanitize_filename("...", "default_filename")
-    assert sanitize_filename("..", "default_filename")
-    assert sanitize_filename(".", "default_filename")
-    assert sanitize_filename("._-.", "default_filename") # Devient vide, puis default_filename
-    assert sanitize_filename("!@#$", "default_filename")
+    assert sanitize_filename("...") == "default_filename"
+    assert sanitize_filename("..") == "default_filename"
+    assert sanitize_filename(".") == "default_filename"
+    assert sanitize_filename("._-.") == "default_filename" # Devient vide, puis default_filename
+    assert sanitize_filename("!@#$") == "default_filename"
 
 def test_sanitize_filename_complex_extensions():
     """Teste la gestion des extensions complexes."""

@@ -9,8 +9,10 @@ import io
 from pathlib import Path
 
 # Configuration du projet
-PROJECT_ROOT = Path(__file__).parent.absolute()
-sys.path.insert(0, str(PROJECT_ROOT))
+# Ajout du répertoire parent du répertoire scripts/ (racine du projet) à sys.path
+PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
 
 def fix_unittest_stringio_issue():
     """Correction 1: Problème unittest.StringIO -> io.StringIO"""

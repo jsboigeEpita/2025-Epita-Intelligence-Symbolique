@@ -1,0 +1,15 @@
+fallacy_type,description,keywords,context_types,severity
+Appel à l'autorité,Utiliser l'opinion d'une autorité comme preuve d'une affirmation,"expert,autorité,scientifique,docteur,professeur,spécialiste","scientifique,politique,académique",2
+Appel à la popularité,Affirmer qu'une proposition est vraie parce que beaucoup de personnes y croient,"majorité,tout le monde,millions,populaire,beaucoup,nombreux","commercial,politique,général",2
+Appel à l'émotion,Manipuler les émotions du public au lieu d'utiliser des arguments valides,"émotion,sentiment,peur,joie,tristesse,colère","politique,commercial,général",3
+Ad hominem,Attaquer la personne plutôt que son argument,"personne,caractère,personnalité,attaque,insulte,discréditer","politique,juridique,général",3
+Homme de paille,Déformer l'argument de l'adversaire pour le réfuter plus facilement,"déformer,prétendre,affirmer,dire que,selon vous","politique,académique,juridique",3
+Faux dilemme,Présenter seulement deux options alors qu'il en existe d'autres,"soit,ou,alternative,choix,option,dilemme","politique,commercial,juridique",2
+Pente glissante,Affirmer qu'un petit pas mènera inévitablement à une chaîne d'événements indésirables,"mènera à,conduira à,finira par,aboutira à,résultera en","politique,juridique,général",2
+Appel à l'ignorance,Affirmer qu'une proposition est vraie parce qu'elle n'a pas été prouvée fausse,"pas prouvé,pas démontré,pas établi,aucune preuve","scientifique,académique,juridique",2
+Généralisation hâtive,Tirer une conclusion générale à partir d'un échantillon trop petit,"toujours,jamais,tous,aucun,chaque,systématiquement","scientifique,juridique,général",2
+Post hoc ergo propter hoc,Affirmer qu'un événement est la cause d'un autre simplement parce qu'il l'a précédé,"après,suite à,depuis,consécutif à,suivant","scientifique,général,politique",2
+Appel à la tradition,Justifier quelque chose parce que c'est comme ça qu'on a toujours fait,"tradition,toujours fait,habitude,coutume,usage","politique,général,commercial",1
+Appel à la nouveauté,Affirmer que quelque chose est meilleur parce que c'est nouveau,"nouveau,récent,moderne,innovant,dernier,révolutionnaire","commercial,général,technologique",1
+Argument circulaire,Utiliser la conclusion comme prémisse,"parce que,car,puisque,donc,par conséquent","académique,scientifique,général",2
+Appel à la peur,Utiliser la peur pour convaincre,"danger,risque,menace,peur,crainte,inquiétude","politique,commercial,général",3

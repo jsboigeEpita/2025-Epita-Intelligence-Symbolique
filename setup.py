@@ -3,8 +3,8 @@ from setuptools import setup, find_packages
 setup(
     name="argumentation_analysis",
     version="0.1.0",
-    packages=find_packages(where='src'),
-    package_dir={'': 'src'},
+    packages=find_packages(exclude=["tests", "scripts", "docs", "notebooks", "venv", ".venv", "dist", "build", "*.egg-info"]),
+    # package_dir={'': 'src'},
     install_requires=[
         "numpy<2.0",  # Contrainte cruciale pour la compatibilité
         "pandas",

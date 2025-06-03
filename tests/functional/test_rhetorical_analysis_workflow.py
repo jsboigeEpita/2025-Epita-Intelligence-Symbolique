@@ -26,7 +26,12 @@ logging.basicConfig(
 logger = logging.getLogger("TestRhetoricalAnalysisWorkflow")
 
 # Ajouter le répertoire racine au chemin Python pour pouvoir importer les modules
-# sys.path.append(os.path.abspath('../..')) # Géré par conftest.py / pytest.ini
+project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
+if project_root not in sys.path:
+    sys.path.insert(0, project_root)
+# L'installation du package via `pip install -e .` devrait gérer l'accessibilité,
+# mais cette modification assure le fonctionnement même sans installation en mode édition.
+# conftest.py et pytest.ini devraient également aider, mais ajout explicite pour robustesse.
 
 # Import des modules à tester
 from argumentation_analysis.orchestration.hierarchical.tactical.coordinator import TacticalCoordinator as TaskCoordinator 
