@@ -111,6 +111,8 @@ llm_service = kernel.add_service("gpt-4", "openai")
 agent = LogicAgentFactory.create_agent("propositional", kernel, llm_service)
 ```
 
+Pour un exemple complet d'initialisation et d'utilisation programmatique d'un agent logique, consultez les scripts disponibles dans le répertoire [`examples/logic_agents/`](../../examples/logic_agents/). Le script [`demo_tweety_interaction_simple.py`](../../examples/scripts_demonstration/demo_tweety_interaction_simple.py:0) peut également offrir un contexte d'utilisation, bien qu'il soit plus orienté vers une démonstration d'interaction globale.
+
 ### Conversion de texte en ensemble de croyances
 
 Pour convertir un texte en ensemble de croyances:
@@ -161,6 +163,8 @@ interpretation = agent.interpret_results(text, belief_set, queries, results)
 print(f"Interprétation: {interpretation}")
 ```
 
+Des exemples illustrant l'ensemble de ce flux de travail (de la conversion du texte à l'interprétation des résultats) sont disponibles dans le répertoire [`examples/logic_agents/`](../../examples/logic_agents/).
+
 ## Intégration avec d'autres composants
 
 Les agents logiques peuvent être intégrés avec d'autres composants du système d'analyse argumentative:
@@ -198,6 +202,9 @@ Les agents logiques sont exposés via l'API Web, permettant leur utilisation à 
 - Endpoint `/api/logic/query`: Exécute une requête sur un ensemble de croyances
 - Endpoint `/api/logic/generate-queries`: Génère des requêtes pertinentes
 - Endpoint `/api/logic/interpret`: Interprète les résultats des requêtes
+
+Pour un exemple concret d'intégration et d'utilisation de ces endpoints API, référez-vous au script [`api_integration_example.py`](../../examples/logic_agents/api_integration_example.py).
+De plus, des tests d'intégration pour les agents logiques, y compris leur interaction via l'API, sont disponibles dans [`tests/integration/test_logic_agents_integration.py`](../../tests/integration/test_logic_agents_integration.py).
 
 ## Bonnes pratiques
 
@@ -256,3 +263,15 @@ logging.basicConfig(level=logging.DEBUG)
 - [Guide d'intégration avec l'API Web](integration_api_web.md)
 - [Documentation de TweetyProject](http://tweetyproject.org/doc/)
 - [Tutoriel interactif sur les agents logiques](../../examples/notebooks/logic_agents_tutorial.ipynb)
+- **Exemples de scripts pour agents logiques**:
+    - Le répertoire [`examples/logic_agents/`](../../examples/logic_agents/) contient divers scripts illustrant l'utilisation des agents logiques.
+    - Le script [`api_integration_example.py`](../../examples/logic_agents/api_integration_example.py) montre comment interagir avec les agents logiques via l'API.
+    - Certains scripts dans [`examples/scripts_demonstration/`](../../examples/scripts_demonstration/) peuvent également offrir des contextes d'utilisation pertinents (ex: [`demo_tweety_interaction_simple.py`](../../examples/scripts_demonstration/demo_tweety_interaction_simple.py)).
+- **Notebooks Jupyter supplémentaires**:
+    - En complément du tutoriel `logic_agents_tutorial.ipynb` déjà listé, le notebook [`api_logic_tutorial.ipynb`](../../examples/notebooks/api_logic_tutorial.ipynb) peut offrir des exemples d'utilisation de l'API des agents logiques (vérifiez sa disponibilité et pertinence exacte pour votre besoin).
+- **Tests d'intégration**:
+    - Pour comprendre comment les agents logiques sont testés et pour voir des exemples d'utilisation dans des scénarios d'intégration, consultez :
+        - Le fichier de test principal : [`tests/integration/test_logic_agents_integration.py`](../../tests/integration/test_logic_agents_integration.py).
+        - Le répertoire [`tests/integration/jpype_tweety/`](../../tests/integration/jpype_tweety/) pour des tests spécifiques à l'intégration avec TweetyProject via JPype, qui est un composant clé.
+- **Données d'exemple**:
+    - Les données utilisées par les exemples ou les tests des agents logiques peuvent se trouver dans le répertoire [`examples/test_data/`](../../examples/test_data/). Il est recommandé d'explorer ce répertoire pour trouver des fichiers de données spécifiques si vous travaillez sur des exemples ou reproduisez des tests.

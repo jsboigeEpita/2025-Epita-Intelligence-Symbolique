@@ -199,8 +199,8 @@ Chaque projet étudiant sera listé ci-dessous avec les informations suivantes :
 
 *   **Communication :** Maintenez une communication régulière avec les encadrants et les autres groupes, surtout en cas d'interdépendances.
 *   **Versionnement :** Utilisez Git rigoureusement. Créez des branches claires pour vos fonctionnalités.
-*   **Documentation :** Documentez votre code et vos choix d'architecture.
-*   **Tests :** Écrivez des tests pour valider vos développements.
+*   **Documentation :** Documentez votre code et vos choix d'architecture. Vous trouverez des exemples de code bien structuré et commenté dans les répertoires [`examples/logic_agents/`](examples/logic_agents/), [`examples/scripts_demonstration/`](examples/scripts_demonstration/) et les notebooks Jupyter dans [`examples/notebooks/`](examples/notebooks/).
+*   **Tests :** Écrivez des tests pour valider vos développements. Par exemple, pour comprendre comment structurer des tests unitaires, consultez [`tests/unit/project_core/utils/test_file_utils.py`](tests/unit/project_core/utils/test_file_utils.py:0). Pour des tests d'intégration, référez-vous à [`tests/integration/test_logic_agents_integration.py`](tests/integration/test_logic_agents_integration.py:0) ou aux exemples dans [`tests/integration/jpype_tweety/`](tests/integration/jpype_tweety/). Les scripts dans [`examples/scripts_demonstration/`](examples/scripts_demonstration/) (comme [`demo_tweety_interaction_simple.py`](examples/scripts_demonstration/demo_tweety_interaction_simple.py:0)) peuvent également illustrer des scénarios d'utilisation à tester. Les données d'exemple pour vos tests peuvent être trouvées dans [`examples/test_data/`](examples/test_data/).
 *   **Pull Requests :** Pour l'intégration dans le dépôt principal, soumettez des Pull Requests claires et concises, en expliquant les changements apportés. Référez-vous aux [guides de contribution](../../CONTRIBUTING.md) du projet.
 *   **Respect des Conventions :** Suivez les conventions de nommage et de style de code du projet.
 

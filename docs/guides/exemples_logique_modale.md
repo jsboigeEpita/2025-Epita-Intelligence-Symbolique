@@ -109,6 +109,8 @@ Résultat: True - Tweety Result: Modal Query '<>(somme_angles_triangle_180)' is 
 **Interprétation:**
 ```
 L'argument est valide. Puisque la somme des angles d'un triangle est nécessairement égale à 180 degrés ([](somme_angles_triangle_180)), elle est vraie (somme_angles_triangle_180). Et puisqu'elle est vraie, elle est possiblement vraie (<>(somme_angles_triangle_180)).
+
+Pour voir cet exemple en action, consultez la fonction `process_necessity_possibility_example` dans [le script d'exemples de logique modale](../../examples/logic_agents/modal_logic_example.py:91).
 ```
 
 ### Exemple 2: Raisonnement épistémique
@@ -156,6 +158,8 @@ Résultat: True - Tweety Result: Modal Query 'K(alice, obtention_diplome)' is AC
 **Interprétation:**
 ```
 L'argument est valide. Puisqu'Alice sait que si elle réussit son examen, elle obtiendra son diplôme, et qu'elle sait qu'elle a réussi son examen, elle sait logiquement qu'elle obtiendra son diplôme. Cela illustre la propriété de clôture sous implication de la connaissance.
+
+Pour un exemple de code illustrant ce type de raisonnement, référez-vous à la fonction `process_epistemic_example` dans [le script d'exemples de logique modale](../../examples/logic_agents/modal_logic_example.py:143).
 ```
 
 ### Exemple 3: Raisonnement déontique
@@ -203,6 +207,8 @@ Résultat: False - Tweety Result: Modal Query '!circuler_librement => !respecter
 **Interprétation:**
 ```
 L'argument n'est pas valide. Le fait qu'il soit permis de circuler librement si on respecte la loi n'implique pas que si on ne circule pas librement, alors on ne respecte pas la loi. La permission de faire quelque chose n'implique pas l'obligation de le faire. C'est une erreur de raisonnement connue sous le nom de "négation de l'antécédent".
+
+Le code correspondant à cet exemple se trouve dans la fonction `process_deontic_example` du [script d'exemples de logique modale](../../examples/logic_agents/modal_logic_example.py:174).
 ```
 
 ## Exemples intermédiaires
@@ -351,6 +357,8 @@ Résultat: True - Tweety Result: Modal Query '<>([](P(sauver_vie)))' is ACCEPTED
 **Interprétation:**
 ```
 L'argument est valide. Puisqu'il est possible que sauver une vie soit obligatoire (<>(O(sauver_vie))), et que si une action est obligatoire, alors il est nécessaire qu'elle soit permise (O(a) => [](P(a))), il s'ensuit qu'il est possible qu'il soit nécessaire que sauver une vie soit permis (<>([](P(sauver_vie)))).
+
+Vous pouvez retrouver une implémentation de cet exemple complexe dans la fonction `process_complex_example` du [script d'exemples de logique modale](../../examples/logic_agents/modal_logic_example.py:210).
 ```
 
 ### Exemple 7: Paradoxes modaux
@@ -528,6 +536,8 @@ L'analyse montre qu'il n'est pas permis de divulguer publiquement une informatio
 - [Guide d'utilisation des agents logiques](utilisation_agents_logiques.md)
 - [Exemples de logique propositionnelle](exemples_logique_propositionnelle.md)
 - [Exemples de logique du premier ordre](exemples_logique_premier_ordre.md)
+- [Script complet avec divers exemples de logique modale](../../examples/logic_agents/modal_logic_example.py)
+- [Tutoriel API Logique (Section Logique Modale)](../../examples/notebooks/api_logic_tutorial.ipynb#4.3-Logique-modale)
 - [Tutoriel interactif sur les agents logiques](../../examples/notebooks/logic_agents_tutorial.ipynb)
 - [Documentation de TweetyProject sur la logique modale](http://tweetyproject.org/doc/modal-logic.html)
 - [Stanford Encyclopedia of Philosophy: Modal Logic](https://plato.stanford.edu/entries/logic-modal/)
