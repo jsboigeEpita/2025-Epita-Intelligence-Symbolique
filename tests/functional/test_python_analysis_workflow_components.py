@@ -39,7 +39,7 @@ try:
         load_and_decrypt_corpus
         # InformalAgent sera testé en important depuis son module
     )
-    from argumentation_analysis.agents.core.informal.informal_agent import InformalAgent
+    from argumentation_analysis.agents.core.informal.informal_agent import InformalAnalysisAgent as InformalAgent
 
 except ImportError as e:
     print(f"Erreur d'importation dans les tests: {e}")
@@ -80,7 +80,7 @@ except ImportError as e:
         except Exception:
             return None
     
-    from argumentation_analysis.agents.core.informal.informal_agent import InformalAgent
+    from argumentation_analysis.agents.core.informal.informal_agent import InformalAnalysisAgent as InformalAgent
 
 
 @pytest.fixture

@@ -14,6 +14,8 @@ import logging
 from typing import Tuple, Optional, Any, Dict
 
 import jpype
+from argumentation_analysis.core.jvm_setup import initialize_jvm
+from argumentation_analysis.paths import LIBS_DIR
 from semantic_kernel.functions import kernel_function
 
 # Configuration du logger
@@ -85,11 +87,19 @@ class TweetyBridge:
         self._modal_reasoner_instance = None
         
         # Tenter l'initialisation des composants JVM
-        if jpype.isJVMStarted():
-            self._initialize_jvm_components()
+        if not jpype.isJVMStarted():
+            self._logger.info("JVM non démarrée. Tentative d'initialisation depuis TweetyBridge...")
+            # Utiliser le chemin par défaut pour LIBS_DIR tel que défini dans jvm_setup
+            jvm_initialized_by_bridge = initialize_jvm(lib_dir_path=str(LIBS_DIR))
+            if jvm_initialized_by_bridge and jpype.isJVMStarted():
+                self._logger.info("JVM initialisée avec succès par TweetyBridge.")
+                self._initialize_jvm_components()
+            else:
+                self._logger.error("Échec de l'initialisation de la JVM par TweetyBridge. Les composants Tweety ne seront pas chargés.")
+                self._jvm_ok = False
         else:
-            self._logger.warning("JVM non démarrée à l'initialisation de TweetyBridge. Composants non chargés.")
-            self._jvm_ok = False # S'assurer que _jvm_ok est False
+            self._logger.info("JVM déjà démarrée. Initialisation des composants Tweety...")
+            self._initialize_jvm_components()
     
     def is_jvm_ready(self) -> bool:
         """
@@ -201,7 +211,7 @@ class TweetyBridge:
             self._ModalParser = jpype.JClass("org.tweetyproject.logics.ml.parser.MlParser") # Nom corrigé
             self._AbstractModalReasoner = jpype.JClass("org.tweetyproject.logics.ml.reasoner.AbstractMlReasoner") # Pour type hinting
             self._SimpleModalReasoner = jpype.JClass("org.tweetyproject.logics.ml.reasoner.SimpleMlReasoner") # Classe concrète
-            self._ModalFormula = jpype.JClass("org.tweetyproject.logics.ml.syntax.ModalFormula")
+            self._ModalFormula = jpype.JClass("org.tweetyproject.logics.ml.syntax.MlFormula")
             
             # Créer les instances
             self._modal_parser_instance = self._ModalParser()

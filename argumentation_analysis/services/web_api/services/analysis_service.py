@@ -13,7 +13,7 @@ from pathlib import Path
 from typing import Dict, List, Any, Optional
 
 # Imports du moteur d'analyse
-# from argumentation_analysis.agents.core.informal.informal_agent import InformalAgent # Commenté pour débogage ImportError
+from argumentation_analysis.agents.core.informal.informal_agent import InformalAnalysisAgent as InformalAgent
 from argumentation_analysis.agents.tools.analysis.complex_fallacy_analyzer import ComplexFallacyAnalyzer
 from argumentation_analysis.agents.tools.analysis.contextual_fallacy_analyzer import ContextualFallacyAnalyzer
 from argumentation_analysis.agents.tools.analysis.fallacy_severity_evaluator import FallacySeverityEvaluator
