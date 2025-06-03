@@ -21,8 +21,8 @@ from pathlib import Path
 from datetime import datetime, timedelta
 
 # Configuration
-PROJECT_ROOT = Path(__file__).parent
-ARGUMENTIATION_ANALYSIS_DIR = PROJECT_ROOT / "argumentiation_analysis"
+PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent # Racine du projet
+ARGUMENTIATION_ANALYSIS_DIR = PROJECT_ROOT / "argumentation_analysis" # Chemin corrigé
 DATA_DIR = ARGUMENTIATION_ANALYSIS_DIR / "data"
 LOG_RETENTION_DAYS = 30  # Nombre de jours à conserver les logs
 

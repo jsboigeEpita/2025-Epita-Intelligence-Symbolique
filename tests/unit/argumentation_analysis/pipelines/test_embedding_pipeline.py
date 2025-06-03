@@ -4,7 +4,7 @@ from unittest.mock import patch, MagicMock
 
 from argumentation_analysis.pipelines.embedding_pipeline import run_embedding_generation_pipeline
 
-MODULE_PATH = "src.argumentation_analysis.pipelines.embedding_pipeline"
+MODULE_PATH = "argumentation_analysis.pipelines.embedding_pipeline"
 
 @pytest.fixture
 def mock_load_docs():

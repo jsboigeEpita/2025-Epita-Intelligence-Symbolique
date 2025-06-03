@@ -71,9 +71,9 @@ def main():
     parser.add_argument('--skip-tests', action='store_true', help="Ne pas exécuter les tests")
     args = parser.parse_args()
     
-    # Déterminer le répertoire du script
-    script_dir = Path(__file__).parent
-    project_dir = script_dir.parent
+    # Déterminer le répertoire du script et la racine du projet
+    script_dir = Path(__file__).resolve().parent
+    project_dir = script_dir.parent.parent # Racine du projet
     
     # Créer les répertoires nécessaires
     logging.info("\n=== Création des répertoires nécessaires ===")

@@ -297,9 +297,9 @@ def setup_test_environment():
         dict: Informations sur l'environnement de test.
     """
     # Ajouter le répertoire parent au PYTHONPATH
-    # parent_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-    # if parent_dir not in sys.path:
-    #     sys.path.insert(0, parent_dir)
+    parent_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    if parent_dir not in sys.path:
+        sys.path.insert(0, parent_dir)
     # Commenté car l'installation du package via `pip install -e .` devrait gérer l'accessibilité.
     
     # Créer les répertoires nécessaires

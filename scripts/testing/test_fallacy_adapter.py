@@ -9,13 +9,15 @@ logger = logging.getLogger("TestFallacyAdapter")
 # S'assurer que la racine du projet est dans sys.path pour que bootstrap fonctionne correctement
 try:
     current_script_path = Path(__file__).resolve()
-    project_root_for_test = current_script_path.parent.parent # scripts -> project_root
+    # Correction: Remonter de trois niveaux pour atteindre la racine du projet
+    # scripts/testing/test_fallacy_adapter.py -> scripts/testing -> scripts -> project_root
+    project_root_for_test = current_script_path.parent.parent.parent
     if str(project_root_for_test) not in sys.path:
         sys.path.insert(0, str(project_root_for_test))
         logger.info(f"Ajout de {project_root_for_test} à sys.path pour le test.")
 except NameError:
     logger.error("__file__ non défini. Assurez-vous que le script est exécuté en tant que fichier.")
-    project_root_for_test = Path.cwd() # Fallback, pourrait ne pas être correct
+    project_root_for_test = Path.cwd().parent # Tentative de fallback améliorée, mais __file__ est préférable
 
 try:
     from project_core.bootstrap import initialize_project_environment, ProjectContext

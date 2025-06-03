@@ -1,86 +1,119 @@
 # -*- coding: utf-8 -*-
-"""
-Ce module fournit des mocks pour les outils d'analyse rhétorique avancée.
-"""
+"""Outils d'analyse rhétorique avancés simulés."""
 
+from typing import Dict, Any, List
+from datetime import datetime
 import logging
-from typing import List, Dict, Any, Tuple
 
 logger = logging.getLogger(__name__)
 
-# Mock des classes d'outils réels pour simuler leur comportement
+# Classe simulée pour l'analyseur de sophismes complexes
 class MockEnhancedComplexFallacyAnalyzer:
-    def analyze(self, text: str, context: Dict[str, Any]) -> List[Dict[str, Any]]:
-        logger.debug(f"MockEnhancedComplexFallacyAnalyzer.analyze appelée pour le texte (début): {text[:50]}...")
-        # Simuler la détection de quelques sophismes complexes
-        return [
-            {"type": "Mock Complex Fallacy A", "details": "Détails du mock sophisme complexe A", "severity": 0.7, "confidence": 0.85},
-            {"type": "Mock Complex Fallacy B", "details": "Détails du mock sophisme complexe B", "severity": 0.5, "confidence": 0.70},
-        ]
-
-class MockEnhancedContextualFallacyAnalyzer:
-    def analyze(self, text: str, context: Dict[str, Any]) -> List[Dict[str, Any]]:
-        logger.debug(f"MockEnhancedContextualFallacyAnalyzer.analyze appelée pour le texte (début): {text[:50]}...")
-        # Simuler la détection de sophismes contextuels
-        return [
-            {"type": "Mock Contextual Fallacy C", "details": "Détails du mock sophisme contextuel C", "severity": 0.6, "confidence": 0.90},
-        ]
-
-class MockEnhancedFallacySeverityEvaluator:
-    def evaluate(self, fallacies: List[Dict[str, Any]], context: Dict[str, Any]) -> List[Dict[str, Any]]:
-        logger.debug(f"MockEnhancedFallacySeverityEvaluator.evaluate appelée pour {len(fallacies)} sophismes.")
-        # Simuler l'évaluation de la sévérité
-        evaluated_fallacies = []
-        for fallacy in fallacies:
-            updated_fallacy = fallacy.copy()
-            updated_fallacy["evaluated_severity"] = updated_fallacy.get("severity", 0.5) * 1.1 # Augmenter un peu la sévérité
-            updated_fallacy["severity_evaluation_confidence"] = 0.75
-            evaluated_fallacies.append(updated_fallacy)
-        return evaluated_fallacies
-
-class MockEnhancedRhetoricalResultAnalyzer:
-    def analyze(self, analysis_data: Dict[str, Any]) -> Dict[str, Any]:
-        logger.debug("MockEnhancedRhetoricalResultAnalyzer.analyze appelée.")
-        # Simuler une analyse globale des résultats
-        summary = "Ceci est un résumé simulé de l'analyse rhétorique avancée. "
-        num_fallacies = len(analysis_data.get("fallacies_evaluated", []))
-        summary += f"{num_fallacies} sophismes évalués ont été trouvés. "
-        summary += "L'analyse contextuelle a révélé des aspects intéressants."
-        
+    def detect_composite_fallacies(self, arguments: List[str], context: Any) -> Dict[str, Any]:
+        logger.debug(f"MockEnhancedComplexFallacyAnalyzer.detect_composite_fallacies appelée avec {len(arguments) if arguments else 0} arguments.")
         return {
-            "overall_assessment": "Globalement positif avec quelques points d'amélioration (mock).",
-            "summary": summary,
-            "confidence_score": 0.88,
-            "key_findings": [
-                "Mock découverte clé 1: La structure argumentative est solide.",
-                "Mock découverte clé 2: Certains sophismes contextuels nécessitent une attention particulière."
-            ]
+            "individual_fallacies_count": len(arguments) if arguments else 0,
+            "basic_combinations": [],
+            "advanced_combinations": [],
+            "fallacy_patterns": [],
+            "composite_severity": {
+                "composite_severity": 0.5,
+                "severity_level": "Modéré"
+            },
+            "context": context,
+            "analysis_timestamp": datetime.now().isoformat(),
+            "note": "Analyse simulée - les outils réels ne sont pas disponibles"
         }
 
-def create_mock_advanced_rhetorical_tools() -> Tuple[Any, Any, Any, Any]:
-    """
-    Crée et retourne des instances des outils d'analyse rhétorique avancés simulés.
+# Classe simulée pour l'analyseur contextuel de sophismes
+class MockEnhancedContextualFallacyAnalyzer:
+    def analyze_context(self, text: str, context: Any) -> Dict[str, Any]:
+        logger.debug(f"MockEnhancedContextualFallacyAnalyzer.analyze_context appelée pour le texte: '{str(text)[:50]}...'")
+        return {
+            "context_analysis": {
+                "context_type": "général",
+                "context_subtypes": [],
+                "audience_characteristics": ["généraliste"],
+                "formality_level": "moyen",
+                "confidence": 0.7
+            },
+            "potential_fallacies_count": 3,
+            "contextual_fallacies_count": 2,
+            "contextual_fallacies": [],
+            "fallacy_relations": [],
+            "analysis_timestamp": datetime.now().isoformat(),
+            "note": "Analyse simulée - les outils réels ne sont pas disponibles"
+        }
 
-    Ces outils sont des versions mockées des analyseurs réels et sont utilisés
-    pour les tests ou lorsque les dépendances réelles ne sont pas disponibles.
+# Classe simulée pour l'évaluateur de gravité des sophismes
+class MockEnhancedFallacySeverityEvaluator:
+    def evaluate_fallacy_severity(self, arguments: List[str], context: Any) -> Dict[str, Any]:
+        logger.debug(f"MockEnhancedFallacySeverityEvaluator.evaluate_fallacy_severity appelée avec {len(arguments) if arguments else 0} arguments.")
+        return {
+            "overall_severity": 0.5,
+            "severity_level": "Modéré",
+            "fallacy_evaluations": [],
+            "context_analysis": {
+                "context_type": "général",
+                "audience_type": "généraliste",
+                "domain_type": "général"
+            },
+            "analysis_timestamp": datetime.now().isoformat(),
+            "note": "Analyse simulée - les outils réels ne sont pas disponibles"
+        }
 
-    :return: Un tuple contenant les instances des outils simulés:
-             (complex_fallacy_analyzer, contextual_fallacy_analyzer,
-              fallacy_severity_evaluator, rhetorical_result_analyzer)
-    :rtype: Tuple[Any, Any, Any, Any]
+# Classe simulée pour l'analyseur de résultats rhétoriques
+class MockEnhancedRhetoricalResultAnalyzer:
+    def analyze_rhetorical_results(self, results: Dict[str, Any], context: Any) -> Dict[str, Any]:
+        logger.debug("MockEnhancedRhetoricalResultAnalyzer.analyze_rhetorical_results appelée.")
+        return {
+            "overall_analysis": {
+                "rhetorical_quality": 0.6,
+                "rhetorical_quality_level": "Bon",
+                "main_strengths": ["Cohérence thématique"],
+                "main_weaknesses": ["Présence de sophismes"],
+                "context_relevance": "Modérée"
+            },
+            "fallacy_analysis": {
+                "total_fallacies": 2,
+                "most_common_fallacies": ["Appel à l'autorité"],
+                "most_severe_fallacies": ["Appel à la peur"],
+                "overall_severity": 0.5,
+                "severity_level": "Modéré"
+            },
+            "coherence_analysis": {
+                "overall_coherence": 0.7,
+                "coherence_level": "Élevé",
+                "thematic_coherence": 0.8,
+                "logical_coherence": 0.6
+            },
+            "persuasion_analysis": {
+                "persuasion_score": 0.6,
+                "persuasion_level": "Modéré"
+            },
+            "recommendations": {
+                "general_recommendations": ["Améliorer la qualité des arguments"],
+                "fallacy_recommendations": ["Éviter les appels à l'autorité"],
+                "coherence_recommendations": ["Renforcer les liens logiques"],
+                "persuasion_recommendations": ["Équilibrer les appels émotionnels et logiques"]
+            },
+            "analysis_timestamp": datetime.now().isoformat(),
+            "note": "Analyse simulée - les outils réels ne sont pas disponibles"
+        }
+
+def create_mock_advanced_rhetorical_tools() -> Dict[str, Any]:
     """
-    logger.info("Création des instances des outils d'analyse rhétorique avancés simulés (mocks).")
+    Crée et retourne un dictionnaire d'outils d'analyse rhétorique avancés simulés.
     
-    complex_fallacy_analyzer = MockEnhancedComplexFallacyAnalyzer()
-    contextual_fallacy_analyzer = MockEnhancedContextualFallacyAnalyzer()
-    fallacy_severity_evaluator = MockEnhancedFallacySeverityEvaluator()
-    rhetorical_result_analyzer = MockEnhancedRhetoricalResultAnalyzer()
-    
-    logger.debug("Mocks pour EnhancedComplexFallacyAnalyzer, EnhancedContextualFallacyAnalyzer, EnhancedFallacySeverityEvaluator, EnhancedRhetoricalResultAnalyzer créés.")
-    
-    return (
-        complex_fallacy_analyzer,
-        contextual_fallacy_analyzer,
-        fallacy_severity_evaluator,
-        rhetorical_result_analyzer,
-    )
+    Returns:
+        Dict[str, Any]: Dictionnaire contenant les instances des outils simulés.
+    """
+    logger.warning("Création d'outils d'analyse rhétorique avancés simulés...")
+    tools = {
+        "complex_fallacy_analyzer": MockEnhancedComplexFallacyAnalyzer(),
+        "contextual_fallacy_analyzer": MockEnhancedContextualFallacyAnalyzer(),
+        "fallacy_severity_evaluator": MockEnhancedFallacySeverityEvaluator(),
+        "rhetorical_result_analyzer": MockEnhancedRhetoricalResultAnalyzer()
+    }
+    logger.warning("✅ Outils d'analyse rhétorique avancés simulés créés et retournés.")
+    return tools

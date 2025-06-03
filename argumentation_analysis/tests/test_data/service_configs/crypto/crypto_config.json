@@ -1,0 +1,63 @@
+{
+  "encryption_enabled": true,
+  "encryption_settings": {
+    "algorithm": "Fernet",
+    "key_derivation": {
+      "method": "PBKDF2HMAC",
+      "hash_algorithm": "SHA256",
+      "iterations": 480000,
+      "salt_size": 16,
+      "key_length": 32
+    },
+    "key_management": {
+      "key_source": "environment_variable",
+      "key_env_var": "ENCRYPTION_KEY",
+      "fallback_key_file": "./.keys/encryption_key.key",
+      "auto_generate_if_missing": false,
+      "key_rotation": {
+        "enabled": false,
+        "rotation_interval_days": 90,
+        "keep_old_keys": 3
+      }
+    }
+  },
+  "compression": {
+    "enabled": true,
+    "algorithm": "gzip",
+    "compression_level": 6,
+    "min_size_for_compression": 1024
+  },
+  "security_settings": {
+    "max_password_attempts": 5,
+    "lockout_period_minutes": 30,
+    "password_requirements": {
+      "min_length": 12,
+      "require_uppercase": true,
+      "require_lowercase": true,
+      "require_digits": true,
+      "require_special_chars": true
+    }
+  },
+  "fixed_salt": "q8b0978be9a3f2e48eeaf5e8b7d68c",
+  "logging": {
+    "enabled": true,
+    "log_level": "INFO",
+    "log_encryption_operations": true,
+    "log_decryption_operations": true,
+    "log_key_derivation": false,
+    "mask_sensitive_data": true
+  },
+  "error_handling": {
+    "retry_failed_operations": true,
+    "max_retries": 3,
+    "retry_delay_seconds": 1,
+    "fallback_to_unencrypted": false
+  },
+  "test_vectors": [
+    {
+      "plaintext": "Test message for encryption",
+      "key": "dGVzdF9rZXlfZm9yX2VuY3J5cHRpb25fdmVjdG9ycw==",
+      "expected_ciphertext_prefix": "gAAAAA"
+    }
+  ]
+}

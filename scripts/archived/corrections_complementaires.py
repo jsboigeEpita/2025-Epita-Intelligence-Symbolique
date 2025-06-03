@@ -9,8 +9,10 @@ import re
 from pathlib import Path
 
 # Configuration du projet
-PROJECT_ROOT = Path(__file__).parent.absolute()
-sys.path.insert(0, str(PROJECT_ROOT))
+# Ajout du répertoire parent du répertoire scripts/ (racine du projet) à sys.path
+PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
 
 def fix_tactical_monitor_with_re():
     """Correction du test_tactical_monitor.py avec import re"""
@@ -92,8 +94,15 @@ import io
 from pathlib import Path
 
 # Configuration du projet
-PROJECT_ROOT = Path(__file__).parent.absolute()
-sys.path.insert(0, str(PROJECT_ROOT))
+# Ajout du répertoire parent du répertoire scripts/ (racine du projet) à sys.path
+# Note: Ce code est généré dynamiquement, la correction ici est pour le template.
+# Le PROJECT_ROOT ici sera relatif au fichier test_validation_finale.py qui sera à la racine.
+_SCRIPT_PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent # Racine du projet actuel
+_TARGET_FILE_PROJECT_ROOT = Path(__file__).resolve().parent # Sera la racine pour le fichier généré
+# Donc, pour que le fichier généré trouve argumentation_analysis, il faut ajouter son propre parent (la racine)
+# ce qui est équivalent à ajouter '.' au sys.path si le script est exécuté depuis la racine.
+# Ou, plus robustement, ajouter le parent du fichier généré.
+sys.path.insert(0, str(_TARGET_FILE_PROJECT_ROOT)) # Devrait être la racine du projet
 
 def run_specific_tests():
     """Exécuter des tests spécifiques pour validation"""
