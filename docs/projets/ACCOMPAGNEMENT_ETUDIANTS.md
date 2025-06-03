@@ -6,12 +6,12 @@ Ce document a pour but de centraliser les informations utiles, les conseils, les
 
 ## 1. Points d'Attention Généraux
 
-*   **Configuration de l'environnement** : Assurez-vous d'avoir correctement configuré votre environnement Python, Java (JDK 11+), et JPype. Le notebook [`docs/resources/notebooks/Tweety.ipynb`](docs/resources/notebooks/Tweety.ipynb) (Partie 1) détaille les étapes.
+*   **Configuration de l'environnement** : Assurez-vous d'avoir correctement configuré votre environnement Python, Java (JDK 11+), et JPype. Le notebook [`docs/resources/notebooks/Tweety.ipynb`](docs/resources/notebooks/Tweety.ipynb) (Partie 1) détaille les étapes. Pour vérifier certains aspects de votre configuration ou voir des exemples de scripts d'initialisation, les scripts dans [`scripts/testing/`](scripts/testing/) et [`scripts/execution/`](scripts/execution/) peuvent s'avérer utiles.
 *   **Utilisation de TweetyProject** : De nombreux sujets s'appuient sur TweetyProject. Familiarisez-vous avec :
     *   Le notebook principal : [`docs/resources/notebooks/Tweety.ipynb`](docs/resources/notebooks/Tweety.ipynb)
     *   Les exemples de code par projet : [`docs/projets/exemples_tweety_par_projet.md`](docs/projets/exemples_tweety_par_projet.md)
 *   **Gestion de projet** : Pour les travaux en groupe, référez-vous aux conseils donnés dans le [message d'annonce](./message_annonce_etudiants.md#conseils-selon-la-taille-du-groupe). Utilisez GitHub (forks, branches, issues) efficacement.
-*   **Livrables** : N'oubliez pas les livrables attendus (code, documentation, tests, rapport final) décrits dans le [message d'annonce](./message_annonce_etudiants.md#livrables-attendus).
+*   **Livrables** : N'oubliez pas les livrables attendus (code, documentation, tests, rapport final) décrits dans le [message d'annonce](./message_annonce_etudiants.md#livrables-attendus). Vous trouverez des exemples concrets de tests unitaires dans [`tests/unit/`](tests/unit/) (par exemple, [`tests/unit/project_core/utils/test_file_utils.py`](tests/unit/project_core/utils/test_file_utils.py:0)) et de tests d'intégration dans [`tests/integration/`](tests/integration/) (par exemple, [`tests/integration/test_logic_agents_integration.py`](tests/integration/test_logic_agents_integration.py:0)) qui peuvent vous servir de modèle et d'inspiration.
 
 ## 2. Problèmes Connus et Pistes de Résolution
 
@@ -47,6 +47,13 @@ Ce document a pour but de centraliser les informations utiles, les conseils, les
 *   **Communiquez** : N'hésitez pas à poser des questions à l'équipe pédagogique et à échanger avec les autres étudiants (via le forum de discussion mentionné).
 *   **Documentez au fur et à mesure** : Une bonne documentation facilite la collaboration et la compréhension de votre travail.
 *   **Testez régulièrement** : Écrivez des tests unitaires et d'intégration pour assurer la robustesse de votre code.
+    *   Vous trouverez l'ensemble des tests unitaires dans le répertoire [`tests/unit/`](tests/unit/) et les tests d'intégration dans [`tests/integration/`](tests/integration/).
+    *   Par exemple, pour comprendre comment tester des utilitaires de fichiers, consultez le test unitaire [`tests/unit/project_core/utils/test_file_utils.py`](tests/unit/project_core/utils/test_file_utils.py:0).
+    *   Pour des exemples de tests d'intégration, notamment pour les agents logiques, explorez [`tests/integration/test_logic_agents_integration.py`](tests/integration/test_logic_agents_integration.py:0). Le répertoire [`tests/integration/jpype_tweety/`](tests/integration/jpype_tweety/) contient également des tests pertinents pour l'interaction avec Tweety via JPype.
+    *   Des scripts d'exécution et de test plus généraux, pouvant servir d'exemples ou d'outils, sont disponibles dans [`scripts/execution/`](scripts/execution/) et [`scripts/testing/`](scripts/testing/).
+    *   Les notebooks Jupyter dans [`examples/notebooks/`](examples/notebooks/) (comme [`api_logic_tutorial.ipynb`](examples/notebooks/api_logic_tutorial.ipynb:0)) peuvent aussi illustrer l'utilisation et le test de certaines fonctionnalités.
+    *   De même, les scripts Python dans [`examples/logic_agents/`](examples/logic_agents/) (ex: [`api_integration_example.py`](examples/logic_agents/api_integration_example.py:0)) et [`examples/scripts_demonstration/`](examples/scripts_demonstration/) (ex: [`demo_tweety_interaction_simple.py`](examples/scripts_demonstration/demo_tweety_interaction_simple.py:0)) offrent des cas d'usage concrets.
+    *   N'oubliez pas les données d'exemple dans [`examples/test_data/`](examples/test_data/) qui sont souvent utilisées par ces tests et exemples.
 *   **Versionnez votre code** : Utilisez Git et GitHub de manière rigoureuse (commits fréquents, messages clairs, branches pour les fonctionnalités).
 
 ## 4. Liens Utiles (Rappel)

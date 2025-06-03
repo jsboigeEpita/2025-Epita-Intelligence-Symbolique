@@ -49,7 +49,12 @@ Notre système utilise la syntaxe de TweetyProject pour la logique du premier or
 | Équivalence | `<=>` | SI ET SEULEMENT SI | `Carre(x) <=> Rectangle(x) && CotesEgaux(x)` |
 | Égalité | `=` | Identité | `pere(pere(x)) = grand_pere(x)` |
 
+Pour voir ces concepts en action et des exemples d'utilisation de l'agent de logique du premier ordre avec la syntaxe décrite, consultez le script suivant :
+- Code source : [`examples/logic_agents/first_order_logic_example.py`](../../examples/logic_agents/first_order_logic_example.py)
+
 ## Exemples de base
+
+Les exemples qui suivent (Syllogisme, Quantificateurs mixtes, Relations) sont illustrés par des implémentations concrètes dans le script [`first_order_logic_example.py`](../../examples/logic_agents/first_order_logic_example.py). Vous y trouverez notamment les fonctions `process_syllogism_example`, `process_quantifiers_example`, et `process_relations_example` qui correspondent aux Exemples 1, 2 et 3 ci-dessous.
 
 ### Exemple 1: Syllogisme catégorique
 
@@ -303,6 +308,8 @@ L'argument est valide. Alice est la mère de Bob, donc elle est son parent. Bob 
 
 ## Exemples avancés
 
+L'Exemple 6 ("Analyse d'un argument complexe") présenté ci-dessous est également implémenté dans la fonction `process_complex_example` du script [`first_order_logic_example.py`](../../examples/logic_agents/first_order_logic_example.py).
+
 ### Exemple 6: Analyse d'un argument complexe
 
 Analysons un argument plus complexe avec plusieurs prémisses et des relations imbriquées.
@@ -535,3 +542,5 @@ L'argument est valide. Puisque l'accusé est une personne qui a commis un crime 
 - [Exemples de logique modale](exemples_logique_modale.md)
 - [Tutoriel interactif sur les agents logiques](../../examples/notebooks/logic_agents_tutorial.ipynb)
 - [Documentation de TweetyProject sur la logique du premier ordre](http://tweetyproject.org/doc/first-order-logic.html)
+- Script d'exemples complets pour l'agent de Logique du Premier Ordre : [`examples/logic_agents/first_order_logic_example.py`](../../examples/logic_agents/first_order_logic_example.py)
+- Tutoriel interactif via API (incluant une section LPO) : [`examples/notebooks/api_logic_tutorial.ipynb`](../../examples/notebooks/api_logic_tutorial.ipynb) (voir section 4.2)

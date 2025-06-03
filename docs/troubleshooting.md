@@ -24,6 +24,18 @@ Ce document fournit des solutions aux problèmes courants rencontrés lors de l'
   - [Graphiques non générés](#graphiques-non-générés)
   - [Problèmes d'affichage](#problèmes-daffichage)
 
+## Ressources de Diagnostic Générales
+
+Avant de plonger dans des problèmes spécifiques, plusieurs scripts et ensembles de tests peuvent vous aider à diagnostiquer et résoudre les problèmes courants :
+
+*   **Configuration de l'environnement :** Assurez-vous que votre environnement est correctement configuré en exécutant le script [`setup_project_env.ps1`](../../setup_project_env.ps1) (pour Windows) ou `setup_project_env.sh` (pour Linux/macOS).
+*   **Tests Généraux :** Le répertoire [`scripts/testing/`](../../scripts/testing/) contient divers scripts pour tester différentes fonctionnalités du projet.
+*   **Tests Unitaires :** Pour isoler des problèmes au niveau des modules, exécutez les tests situés dans [`tests/unit/`](../../tests/unit/).
+*   **Tests d'Intégration :** Si vous suspectez des problèmes d'interaction entre différents composants, les tests dans [`tests/integration/`](../../tests/integration/) peuvent être utiles.
+*   **Test de l'API :** Pour les problèmes spécifiques à l'API web, le script [`libs/web_api/test_api.py`](../../libs/web_api/test_api.py) permet de vérifier son bon fonctionnement.
+
+Consultez également la [FAQ générale de développement](projets/sujets/aide/FAQ_DEVELOPPEMENT.md) pour des réponses aux questions fréquentes.
+
 ## Problèmes d'Installation
 
 ### Erreurs de dépendances
@@ -217,6 +229,7 @@ Ce document fournit des solutions aux problèmes courants rencontrés lors de l'
    ```bash
    python scripts/test_imports.py
    ```
+5. Exécutez les tests unitaires pour vérifier l'intégrité des modules concernés : consultez le répertoire [`tests/unit/`](../../tests/unit/).
 
 #### Symptôme : "ImportError: cannot import name X" 
 
@@ -236,6 +249,8 @@ Ce document fournit des solutions aux problèmes courants rencontrés lors de l'
 3. Restructurez les imports problématiques selon les recommandations dans `docs/conventions_importation.md`
 
 ## Problèmes d'API
+
+Pour tout problème lié à l'API, il est fortement recommandé d'exécuter le script de test dédié [`libs/web_api/test_api.py`](../../libs/web_api/test_api.py) qui peut aider à identifier la source du problème (connexion, routes, réponses attendues, etc.).
 
 ### Erreurs de connexion
 
@@ -368,6 +383,8 @@ Ce document fournit des solutions aux problèmes courants rencontrés lors de l'
    ```bash
    python scripts/utils/report_analysis_issue.py --file votre_fichier.txt --expected "Description des résultats attendus"
    ```
+
+5. Exécutez les tests d'intégration pour vérifier les interactions entre les différents composants du système d'analyse : consultez le répertoire [`tests/integration/`](../../tests/integration/).
 
 ### Analyses incomplètes
 
@@ -578,6 +595,10 @@ Cette erreur se produit lorsque le système manque de mémoire pour traiter de g
 
 ---
 
-Si vous rencontrez un problème qui n'est pas couvert dans ce guide, veuillez consulter la [FAQ](faq.md) ou ouvrir une issue sur le dépôt GitHub du projet avec une description détaillée du problème, les étapes pour le reproduire, et les logs pertinents.
+Si vous rencontrez un problème qui n'est pas couvert dans ce guide, veuillez consulter les ressources suivantes :
+*   La [FAQ générale de développement](projets/sujets/aide/FAQ_DEVELOPPEMENT.md).
+*   Pour les problèmes spécifiques à l'interface web, consultez le [guide de dépannage de l'interface web](projets/sujets/aide/interface-web/TROUBLESHOOTING.md).
+
+Si le problème persiste, ouvrez une issue sur le dépôt GitHub du projet avec une description détaillée du problème, les étapes pour le reproduire, et les logs pertinents.
 
 *Dernière mise à jour : 27/05/2025*

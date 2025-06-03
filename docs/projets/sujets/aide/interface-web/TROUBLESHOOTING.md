@@ -402,6 +402,8 @@ time curl -X POST http://localhost:5000/api/analyze \
 
 ## Outils de diagnostic
 
+Avant d'utiliser les outils de diagnostic spécifiques, assurez-vous que votre environnement de projet est correctement configuré. Exécutez le script [`setup_project_env.ps1`](../../../../../setup_project_env.ps1:0) pour initialiser ou vérifier votre environnement Conda, les dépendances Python, et d'autres configurations cruciales.
+
 ### 🔍 Script de diagnostic automatique
 
 Créez `diagnostic.py` dans `services/web_api/` :
@@ -510,6 +512,16 @@ python diagnostic.py
 
 # Diagnostic avec logs détaillés
 python diagnostic.py 2>&1 | tee diagnostic.log
+
+### 🧪 Script de test complet de l'API
+
+Pour un ensemble de tests plus exhaustifs couvrant plusieurs endpoints de l'API (health check, analyse, validation, etc.) avec des charges utiles prédéfinies, utilisez le script [`libs/web_api/test_api.py`](../../../../../libs/web_api/test_api.py:0).
+
+```bash
+# Lancer tous les tests de l'API
+python ../../../../../libs/web_api/test_api.py
+```
+Ce script vous donnera un bon aperçu du fonctionnement général de l'API.
 ```
 
 ### 🔍 Tests manuels rapides
