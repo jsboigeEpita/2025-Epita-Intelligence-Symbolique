@@ -14,6 +14,7 @@ import json
 from pathlib import Path
 from typing import List, Dict, Any, Optional, Union # Ajout de Union
 import logging
+from datetime import datetime # Ajout de datetime
 import re
 import shutil
 import sys
@@ -463,6 +464,40 @@ def save_markdown_to_html(markdown_content: str, output_path: Path) -> bool:
     except Exception as e:
         logger.error(f"❌ Erreur lors de la conversion Markdown en HTML ou de la sauvegarde dans {output_path}: {e}", exc_info=True)
         return False
+
+def convert_markdown_file_to_html(markdown_file_path: Path, output_html_path: Path, visualization_dir: Optional[Path] = None) -> bool:
+    """
+    Lit un fichier Markdown, le convertit en HTML et le sauvegarde.
+
+    Utilise la fonction save_markdown_to_html pour la conversion et la sauvegarde.
+    Le paramètre visualization_dir n'est pas directement utilisé dans cette version
+    mais est conservé pour la compatibilité de signature si la logique d'intégration
+    des visualisations devait être ajoutée ici.
+
+    :param markdown_file_path: Chemin vers le fichier Markdown source.
+    :type markdown_file_path: Path
+    :param output_html_path: Chemin vers le fichier HTML de sortie.
+    :type output_html_path: Path
+    :param visualization_dir: Chemin vers un répertoire de visualisations (actuellement non utilisé).
+    :type visualization_dir: Optional[Path], optional
+    :return: True si la conversion et la sauvegarde ont réussi, False sinon.
+    :rtype: bool
+    """
+    logger.info(f"Tentative de conversion du fichier Markdown {markdown_file_path} en HTML vers {output_html_path}.")
+    
+    markdown_content = load_text_file(markdown_file_path)
+    if markdown_content is None:
+        logger.error(f"Impossible de lire le contenu du fichier Markdown: {markdown_file_path}")
+        return False
+    
+    # Le paramètre visualization_dir est présent pour correspondre à la signature du candidat #25.
+    # Si les visualisations doivent être intégrées dans le HTML, la logique devrait être ajoutée ici
+    # ou dans save_markdown_to_html. Pour l'instant, il n'est pas utilisé.
+    if visualization_dir:
+        logger.debug(f"Le répertoire de visualisations {visualization_dir} est fourni mais non utilisé activement dans cette version de la conversion.")
+
+    return save_markdown_to_html(markdown_content, output_html_path)
+
 import sys # Ajout de l'import sys pour sys.exit
 
 def check_path_exists(path: Path, path_type: str = "file") -> bool:
@@ -705,3 +740,52 @@ def save_text_file(file_path: Path, content: str, encoding: str = "utf-8") -> bo
     except Exception as e:
         logger.error(f"❌ Erreur inattendue lors de la sauvegarde du fichier {file_path}: {e}", exc_info=True)
         return False
+
+def save_temp_extracts_json(
+    extract_definitions: List[Dict[str, Any]],
+    base_temp_dir_name: str = "temp_extracts",
+    filename_prefix: str = "extracts_decrypted_"
+) -> Optional[Path]:
+    """
+    Sauvegarde les définitions d'extraits dans un fichier JSON temporaire avec horodatage.
+
+    Crée un sous-répertoire temporaire (par défaut 'temp_extracts') dans le répertoire
+    de travail courant s'il n'existe pas.
+
+    Args:
+        extract_definitions (List[Dict[str, Any]]): La liste des définitions d'extraits.
+        base_temp_dir_name (str): Nom du répertoire de base pour les fichiers temporaires.
+        filename_prefix (str): Préfixe pour le nom du fichier JSON.
+
+    Returns:
+        Optional[Path]: Le chemin complet vers le fichier JSON temporaire sauvegardé,
+                        ou None en cas d'erreur.
+    """
+    if not isinstance(extract_definitions, list):
+        logger.error("Les définitions d'extraits fournies ne sont pas une liste.")
+        return None
+
+    try:
+        # Créer un répertoire temporaire dans le répertoire du projet (ou CWD)
+        # Idéalement, le chemin racine du projet serait passé en argument pour plus de robustesse.
+        # Pour l'instant, on utilise Path.cwd() comme base si un chemin absolu n'est pas donné.
+        current_temp_dir = Path.cwd() / base_temp_dir_name # Path() crée un chemin relatif au CWD
+        current_temp_dir.mkdir(parents=True, exist_ok=True)
+        logger.debug(f"Répertoire temporaire pour les extraits: {current_temp_dir.resolve()}")
+        
+        # Créer un nom de fichier avec horodatage
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S") # Nécessite import datetime
+        temp_file_path = current_temp_dir / f"{filename_prefix}{timestamp}.json"
+        
+        # Utiliser la fonction save_json_file existante pour la sauvegarde
+        if save_json_file(temp_file_path, extract_definitions, indent=2):
+            logger.info(f"✅ Définitions d'extraits sauvegardées avec succès dans {temp_file_path.resolve()}")
+            return temp_file_path
+        else:
+            # save_json_file logue déjà l'erreur spécifique.
+            logger.error(f"Échec de la sauvegarde des extraits temporaires dans {temp_file_path} via save_json_file.")
+            return None
+            
+    except Exception as e:
+        logger.error(f"❌ Erreur inattendue lors de la création ou sauvegarde du fichier d'extraits temporaire: {e}", exc_info=True)
+        return None

@@ -143,6 +143,14 @@ Ce répertoire contient également d'autres scripts utiles pour la configuration
 - `test_jpype_mock.py`: Teste le fonctionnement du mock JPype.
 - `validate_environment.py`: Valide la configuration de l'environnement.
 
+## Choix Technologiques (Python vs PowerShell)
+
+Les scripts de ce répertoire utilisent une combinaison de Python (.py) et de PowerShell (.ps1) :
+
+- **PowerShell** est privilégié pour les scripts qui interagissent fortement avec l'environnement Windows, tels que la configuration de variables d'environnement, l'appel d'outils de compilation spécifiques à Windows (comme VCVars pour Visual Studio), ou l'orchestration de commandes système pour l'installation de certains composants (ex: `install_build_tools.ps1`, `run_with_vcvars.ps1`). Sa syntaxe est souvent plus concise pour ces tâches.
+- **Python** est utilisé pour les scripts nécessitant une logique plus complexe, la manipulation de fichiers de configuration, des diagnostics d'environnement plus poussés, ou l'interaction avec d'autres modules Python du projet (ex: `diagnostic_environnement.py`, `fix_pythonpath_simple.py`). Il offre également une meilleure portabilité théorique, bien que l'environnement cible principal soit Windows.
+
+Le choix est fait au cas par cas pour utiliser l'outil le plus adapté à la tâche spécifique du script de configuration ou de diagnostic.
 Consultez les scripts individuels pour plus de détails sur leur utilisation.
 
 ## Ressources supplémentaires
