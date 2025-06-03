@@ -22,6 +22,8 @@
 
 ## Introduction
 
+Pour une implémentation complète des exemples présentés dans ce guide, vous pouvez consulter le script Python suivant : [`examples/logic_agents/propositional_logic_example.py`](../../examples/logic_agents/propositional_logic_example.py:0). Ce script montre comment initialiser l'agent, convertir du texte, exécuter des requêtes et interpréter les résultats pour divers scénarios de logique propositionnelle.
+
 La logique propositionnelle est le type de logique le plus fondamental, permettant de représenter et d'analyser des propositions simples et leurs relations. Ce document présente des exemples concrets d'utilisation de la logique propositionnelle avec notre système d'agents logiques.
 
 La logique propositionnelle est particulièrement adaptée pour:
@@ -47,6 +49,9 @@ Les variables propositionnelles sont généralement représentées par des lettr
 ## Exemples de base
 
 ### Exemple 1: Modus Ponens
+
+*Le code complet pour cet exemple est disponible dans [`examples/logic_agents/propositional_logic_example.py`](../../examples/logic_agents/propositional_logic_example.py:91).* 
+
 
 Le Modus Ponens est une règle d'inférence fondamentale: si on a "si P alors Q" et "P", on peut conclure "Q".
 
@@ -103,6 +108,9 @@ L'argument est valide selon le Modus Ponens. Puisque nous savons que "si le ciel
 
 ### Exemple 2: Modus Tollens
 
+*Le code complet pour cet exemple est disponible dans [`examples/logic_agents/propositional_logic_example.py`](../../examples/logic_agents/propositional_logic_example.py:132).* 
+
+
 Le Modus Tollens est une autre règle d'inférence: si on a "si P alors Q" et "non Q", on peut conclure "non P".
 
 **Texte original:**
@@ -149,6 +157,8 @@ L'argument est valide selon le Modus Tollens. Puisque nous savons que "si un ani
 ```
 
 ### Exemple 3: Syllogisme hypothétique
+
+*Le code complet pour un exemple similaire est disponible dans [`examples/logic_agents/propositional_logic_example.py`](../../examples/logic_agents/propositional_logic_example.py:0) (recherchez des exemples de raisonnement chaîné).*
 
 Le syllogisme hypothétique combine des implications: si on a "si P alors Q" et "si Q alors R", on peut conclure "si P alors R".
 
@@ -198,6 +208,8 @@ L'argument est valide selon le syllogisme hypothétique. Puisque nous savons que
 ## Exemples intermédiaires
 
 ### Exemple 4: Raisonnement par cas
+
+*Des exemples illustrant des concepts similaires peuvent être trouvés dans [`examples/logic_agents/propositional_logic_example.py`](../../examples/logic_agents/propositional_logic_example.py:0).*
 
 Le raisonnement par cas consiste à examiner toutes les possibilités et à montrer que la même conclusion s'ensuit dans chaque cas.
 
@@ -249,6 +261,9 @@ L'argument est valide selon le raisonnement par cas. Puisque nous savons qu'"il 
 
 ### Exemple 5: Réduction à l'absurde
 
+*Le code complet pour un exemple de détection de contradiction, qui utilise un raisonnement similaire, est disponible dans [`examples/logic_agents/propositional_logic_example.py`](../../examples/logic_agents/propositional_logic_example.py:212).* 
+
+
 La réduction à l'absurde consiste à montrer qu'une hypothèse mène à une contradiction, prouvant ainsi que l'hypothèse est fausse.
 
 **Texte original:**
@@ -298,6 +313,9 @@ L'argument est valide selon la réduction à l'absurde. Si nous supposons que "t
 ## Exemples avancés
 
 ### Exemple 6: Analyse d'un argument complexe
+
+*Le code complet pour cet exemple est disponible dans [`examples/logic_agents/propositional_logic_example.py`](../../examples/logic_agents/propositional_logic_example.py:168).* 
+
 
 Analysons un argument plus complexe avec plusieurs prémisses et des relations logiques imbriquées.
 
@@ -360,6 +378,9 @@ Cela crée une contradiction. Par conséquent, notre supposition que le projet e
 ```
 
 ### Exemple 7: Détection de contradictions
+
+*Le code complet pour cet exemple est disponible dans [`examples/logic_agents/propositional_logic_example.py`](../../examples/logic_agents/propositional_logic_example.py:212).* 
+
 
 Utilisons la logique propositionnelle pour détecter des contradictions dans un ensemble d'affirmations.
 
@@ -566,3 +587,6 @@ L'ensemble de croyances est contradictoire. D'une part, nous pouvons conclure qu
 - [Exemples de logique modale](exemples_logique_modale.md)
 - [Tutoriel interactif sur les agents logiques](../../examples/notebooks/logic_agents_tutorial.ipynb)
 - [Documentation de TweetyProject sur la logique propositionnelle](http://tweetyproject.org/doc/propositional-logic.html)
+- [Script d'exemples complets de logique propositionnelle](../../examples/logic_agents/propositional_logic_example.py)
+- [Tests d'intégration pour les opérations logiques (JPype/Tweety)](../../tests/integration/jpype_tweety/test_logic_operations.py)
+- [Tutoriel interactif sur l'API logique (Notebook)](../../examples/notebooks/api_logic_tutorial.ipynb) (Note: se concentre sur une API Web, mais peut illustrer des concepts)
