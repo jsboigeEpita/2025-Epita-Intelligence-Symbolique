@@ -4,12 +4,10 @@ import json
 import gzip
 import hashlib
 import logging
-import base64 # NOUVEAU: Pour décoder la clé avant de l'utiliser avec Fernet
 from pathlib import Path
 from typing import Optional, List, Dict, Any, Union
-# cryptography.fernet et exceptions sont maintenant gérés dans project_core.utils.crypto_utils
-# from cryptography.fernet import Fernet, InvalidToken # SUPPRIMÉ
-# from cryptography.exceptions import InvalidSignature # SUPPRIMÉ
+from cryptography.fernet import Fernet, InvalidToken
+from cryptography.exceptions import InvalidSignature
 
 # Le reste des imports et du code...
 
@@ -19,9 +17,6 @@ from . import config as ui_config
 utils_logger = logging.getLogger("App.UI.Utils")
 if not utils_logger.handlers and not utils_logger.propagate:
      handler = logging.StreamHandler(); formatter = logging.Formatter('%(asctime)s [%(levelname)s] [%(name)s] %(message)s', datefmt='%H:%M:%S'); handler.setFormatter(formatter); utils_logger.addHandler(handler); utils_logger.setLevel(logging.INFO)
-
-# Import des fonctions de chiffrement déplacées
-from project_core.utils.crypto_utils import encrypt_data_with_fernet, decrypt_data_with_fernet
 
 # --- Fonctions Utilitaires (Cache, Crypto, Fetch, Verify) ---
 
@@ -70,9 +65,32 @@ def save_to_cache(url: str, text: str):
     except Exception as e:
         utils_logger.error(f"   -> Erreur sauvegarde cache {filepath.name}: {e}")
 
-# Les fonctions encrypt_data et decrypt_data ont été déplacées vers project_core.utils.crypto_utils
-# et renommées en encrypt_data_with_fernet et decrypt_data_with_fernet.
-# Les appels dans file_operations.py devront être mis à jour.
+def encrypt_data(data: bytes, key: bytes) -> Optional[bytes]:
+    """Chiffre des données binaires avec une clé Fernet."""
+    if not key:
+        utils_logger.error("Erreur chiffrement: Clé chiffrement manquante.")
+        return None
+    try:
+        f = Fernet(key)
+        return f.encrypt(data)
+    except Exception as e:
+        utils_logger.error(f"Erreur chiffrement: {e}")
+        return None
+
+def decrypt_data(encrypted_data: bytes, key: bytes) -> Optional[bytes]:
+    """Déchiffre des données binaires avec une clé Fernet."""
+    if not key:
+        utils_logger.error("Erreur déchiffrement: Clé chiffrement manquante.")
+        return None
+    try:
+        f = Fernet(key)
+        return f.decrypt(encrypted_data)
+    except (InvalidToken, InvalidSignature) as e: # Intercepter spécifiquement et relancer
+        utils_logger.error(f"Erreur déchiffrement (InvalidToken/Signature): {e}")
+        raise # Relancer l'exception capturée (InvalidToken ou InvalidSignature)
+    except Exception as e: # Intercepter les autres exceptions
+        utils_logger.error(f"Erreur déchiffrement (Autre): {e}")
+        return None
 
 # Les fonctions load_extract_definitions et save_extract_definitions ont été déplacées
 # vers argumentation_analysis/ui/file_operations.py pour éviter les imports circulaires.
@@ -146,6 +164,28 @@ def fetch_with_tika(
     content_to_send = None
     # temp_download_dir = ui_config.TEMP_DOWNLOAD_DIR # Utiliser le chemin depuis config
     # Remplacé par _temp_download_dir
+    
+    # --- LOGS DÉTAILLÉS ---
+    processing_target_log = ""
+    if source_url:
+        processing_target_log = f"URL: {source_url}"
+        # Si l'URL est un chemin de fichier local (commence par file://), extraire le chemin
+        if source_url.startswith("file://"):
+            local_file_path = Path(source_url[7:])
+            processing_target_log += f" (Chemin local interprété: {local_file_path})"
+            # Si raw_file_cache_path est fourni, il est prioritaire pour le cache brut
+            # Sinon, on utilise le chemin local directement si c'est un fichier PDF
+            # (ou un autre type binaire que Tika devrait traiter)
+            # Note: la logique de cache brut existante avec _temp_download_dir est conservée pour les URL HTTP(S)
+            if local_file_path.suffix.lower() == ".pdf": # Exemple pour PDF
+                 utils_logger.info(f"  [Tika Log] Traitement du fichier PDF local: {local_file_path}")
+
+    elif file_content:
+        processing_target_log = f"Fichier fourni: {file_name} (taille: {len(file_content)} bytes)"
+        if file_name.lower().endswith(".pdf"): # Exemple pour PDF
+            utils_logger.info(f"  [Tika Log] Traitement du contenu PDF fourni pour: {file_name}")
+    utils_logger.info(f"  [Tika Log] Début fetch_with_tika pour: {processing_target_log}")
+    # --- FIN LOGS DÉTAILLÉS ---
 
     if source_url:
         original_filename = Path(source_url).name
@@ -156,31 +196,48 @@ def fetch_with_tika(
         url_hash = hashlib.sha256(source_url.encode()).hexdigest()
         file_extension = Path(original_filename).suffix if Path(original_filename).suffix else ".download"
         effective_raw_cache_path = Path(raw_file_cache_path) if raw_file_cache_path else _temp_download_dir / f"{url_hash}{file_extension}"
+        
+        # Si c'est une URL file:// et que le fichier existe, on le lit directement
+        # au lieu de passer par le cache de téléchargement brut (qui est plus pour HTTP)
+        if source_url.startswith("file://"):
+            local_path_from_url = Path(source_url[7:])
+            if local_path_from_url.exists() and local_path_from_url.is_file():
+                utils_logger.info(f"   -> Lecture directe du fichier local (via file:// URL): {local_path_from_url}")
+                try:
+                    content_to_send = local_path_from_url.read_bytes()
+                except Exception as e_read_local_file:
+                    utils_logger.error(f"   -> Erreur lecture fichier local {local_path_from_url}: {e_read_local_file}. Tentative de téléchargement si c'est aussi une URL HTTP(S)...")
+                    # Si la lecture échoue, on laisse la logique de téléchargement HTTP(S) ci-dessous prendre le relais si applicable
+                    # ou si c'était *uniquement* un file://, alors content_to_send restera None.
+            else:
+                utils_logger.warning(f"   -> Fichier local spécifié via file:// URL non trouvé ou n'est pas un fichier: {local_path_from_url}")
 
-        if effective_raw_cache_path.exists() and effective_raw_cache_path.stat().st_size > 0:
-             try:
-                utils_logger.info(f"   -> Lecture fichier brut depuis cache local : {effective_raw_cache_path.name}")
-                content_to_send = effective_raw_cache_path.read_bytes()
-             except Exception as e_read_raw:
-                utils_logger.warning(f"   -> Erreur lecture cache brut {effective_raw_cache_path.name}: {e_read_raw}. Re-téléchargement...")
-                content_to_send = None
 
-        if content_to_send is None:
-             utils_logger.info(f"-> Téléchargement (pour Tika) depuis : {source_url}...")
-             try:
-                 response_dl = requests.get(source_url, stream=True, timeout=timeout_dl)
-                 response_dl.raise_for_status()
-                 content_to_send = response_dl.content
-                 utils_logger.info(f"   -> Doc téléchargé ({len(content_to_send)} bytes).")
+        if content_to_send is None and not source_url.startswith("file://"): # Ne pas re-télécharger si c'était un file:// qui a échoué
+            if effective_raw_cache_path.exists() and effective_raw_cache_path.stat().st_size > 0:
                  try:
-                     effective_raw_cache_path.parent.mkdir(parents=True, exist_ok=True)
-                     effective_raw_cache_path.write_bytes(content_to_send)
-                     utils_logger.info(f"   -> Doc brut sauvegardé: {effective_raw_cache_path.resolve()}")
-                 except Exception as e_save:
-                     utils_logger.error(f"   -> Erreur sauvegarde brut: {e_save}")
-             except requests.exceptions.RequestException as e:
-                 utils_logger.error(f"Erreur téléchargement {source_url}: {e}")
-                 raise ConnectionError(f"Erreur téléchargement {source_url}: {e}") from e
+                    utils_logger.info(f"   -> Lecture fichier brut depuis cache local : {effective_raw_cache_path.name}")
+                    content_to_send = effective_raw_cache_path.read_bytes()
+                 except Exception as e_read_raw:
+                    utils_logger.warning(f"   -> Erreur lecture cache brut {effective_raw_cache_path.name}: {e_read_raw}. Re-téléchargement...")
+                    content_to_send = None # Assurer que content_to_send est None pour forcer le re-téléchargement
+
+            if content_to_send is None: # Si toujours None après tentative de cache brut
+                 utils_logger.info(f"-> Téléchargement (pour Tika) depuis : {source_url}...")
+                 try:
+                     response_dl = requests.get(source_url, stream=True, timeout=timeout_dl)
+                     response_dl.raise_for_status()
+                     content_to_send = response_dl.content
+                     utils_logger.info(f"   -> Doc téléchargé ({len(content_to_send)} bytes).")
+                     try:
+                         effective_raw_cache_path.parent.mkdir(parents=True, exist_ok=True)
+                         effective_raw_cache_path.write_bytes(content_to_send)
+                         utils_logger.info(f"   -> Doc brut sauvegardé: {effective_raw_cache_path.resolve()}")
+                     except Exception as e_save:
+                         utils_logger.error(f"   -> Erreur sauvegarde brut: {e_save}")
+                 except requests.exceptions.RequestException as e:
+                     utils_logger.error(f"Erreur téléchargement {source_url}: {e}")
+                     raise ConnectionError(f"Erreur téléchargement {source_url}: {e}") from e
 
     elif file_content:
         utils_logger.info(f"-> Utilisation contenu fichier '{file_name}' ({len(file_content)} bytes)...")
@@ -201,22 +258,37 @@ def fetch_with_tika(
         save_to_cache(cache_key, "") # Sauvegarder une chaîne vide pour éviter re-fetch inutile
         return ""
 
-    utils_logger.info(f"-> Envoi contenu à Tika ({_tika_server_url})... (Timeout={timeout_tika}s)")
+    utils_logger.info(f"  [Tika Log] Envoi du contenu à Tika. URL Tika: {_tika_server_url}, Taille contenu: {len(content_to_send)} bytes, Timeout Tika: {timeout_tika}s")
     headers = { 'Accept': 'text/plain', 'Content-Type': 'application/octet-stream', 'X-Tika-OCRLanguage': 'fra+eng' }
+    texte_brut_tika = "" # Initialiser
     try:
         response_tika = requests.put(_tika_server_url, data=content_to_send, headers=headers, timeout=timeout_tika)
-        response_tika.raise_for_status()
-        texte_brut = response_tika.text
-        if not texte_brut: utils_logger.warning(f"   -> Warning: Tika status {response_tika.status_code} sans texte.")
-        else: utils_logger.info(f"   -> Texte Tika extrait (longueur {len(texte_brut)}).")
-        save_to_cache(cache_key, texte_brut) # Appel fonction de ce module
-        return texte_brut
+        utils_logger.info(f"  [Tika Log] Réponse de Tika reçue. Statut: {response_tika.status_code}")
+        response_tika.raise_for_status() # Lèvera une exception pour les codes d'erreur HTTP
+        texte_brut_tika = response_tika.text
+        if not texte_brut_tika:
+            utils_logger.warning(f"  [Tika Log] Tika a retourné un statut {response_tika.status_code} mais le texte est vide.")
+        else:
+            utils_logger.info(f"  [Tika Log] Texte extrait par Tika. Longueur: {len(texte_brut_tika)}.")
+            utils_logger.debug(f"  [Tika Log] Extrait Tika (premiers 200 chars): {texte_brut_tika[:200]}")
+        save_to_cache(cache_key, texte_brut_tika)
+        return texte_brut_tika
     except requests.exceptions.Timeout:
-        utils_logger.error(f"   -> ❌ Timeout Tika ({timeout_tika}s).")
-        raise ConnectionError(f"Timeout Tika")
-    except requests.exceptions.RequestException as e:
-        utils_logger.error(f"Erreur Tika: {e}")
-        raise ConnectionError(f"Erreur Tika: {e}") from e
+        utils_logger.error(f"  [Tika Log] ❌ Timeout Tika ({timeout_tika}s) pour {processing_target_log}.")
+        raise ConnectionError(f"Timeout Tika pour {processing_target_log}")
+    except requests.exceptions.HTTPError as e_http:
+        utils_logger.error(f"  [Tika Log] ❌ Erreur HTTP de Tika: {e_http}. Réponse: {e_http.response.text[:500] if e_http.response else 'Pas de réponse textuelle'}")
+        # Sauvegarder une chaîne vide pour éviter les re-tentatives sur des erreurs persistantes de Tika
+        save_to_cache(cache_key, "")
+        raise ConnectionError(f"Erreur HTTP Tika: {e_http}") from e_http
+    except requests.exceptions.RequestException as e_req:
+        utils_logger.error(f"  [Tika Log] ❌ Erreur de requête Tika: {e_req}")
+        save_to_cache(cache_key, "")
+        raise ConnectionError(f"Erreur de requête Tika: {e_req}") from e_req
+    except Exception as e_generic:
+        utils_logger.error(f"  [Tika Log] ❌ Erreur inattendue pendant le traitement Tika: {e_generic}", exc_info=True)
+        save_to_cache(cache_key, "") # Sauvegarder une chaîne vide en cas d'erreur inconnue
+        raise ConnectionError(f"Erreur inattendue Tika: {e_generic}") from e_generic
 
 
         if not texte_brut: utils_logger.warning(f"   -> Warning: Tika status {response_tika.status_code} sans texte.")
@@ -246,66 +318,62 @@ def get_full_text_for_source(source_info: Dict[str, Any], app_config: Optional[D
     Returns:
         Le texte complet de la source, ou None en cas d'erreur.
     """
-    source_name_for_log = source_info.get('source_name', source_info.get('id', 'Source inconnue')) # Utiliser id si source_name manque
+    source_name_for_log = source_info.get('source_name', 'Source inconnue')
     utils_logger.debug(f"get_full_text_for_source appelée pour: {source_name_for_log}")
 
-    fetch_method = source_info.get("fetch_method", source_info.get("source_type"))
- 
-    if fetch_method == "file":
-        file_path_str = source_info.get("path")
-        if not file_path_str:
-            utils_logger.error(f"Champ 'path' manquant pour la source locale: {source_name_for_log}")
-            return None
-        
-        # On suppose que file_path_str est relatif au CWD (qui devrait être la racine du projet
-        # lorsque embed_all_sources.py est exécuté) ou un chemin absolu.
-        absolute_file_path = Path(file_path_str).resolve() # .resolve() pour obtenir le chemin absolu et normalisé
+    source_type = source_info.get("source_type") # Déplacé ici pour être défini avant utilisation
+    source_path_str = source_info.get("path")
+    reconstructed_url = None # Initialiser
 
-        utils_logger.info(f"Tentative de lecture du fichier local: {absolute_file_path}")
-        if absolute_file_path.exists() and absolute_file_path.is_file():
-            try:
-                text_content = absolute_file_path.read_text(encoding='utf-8')
-                utils_logger.info(f"Contenu du fichier local '{absolute_file_path.name}' lu avec succès (longueur: {len(text_content)}).")
-                return text_content
-            except Exception as e:
-                utils_logger.error(f"Erreur lors de la lecture du fichier local '{absolute_file_path}': {e}")
-                return None
-        else:
-            utils_logger.error(f"Fichier local non trouvé ou n'est pas un fichier: {absolute_file_path}")
-            return None
-
-    # Tenter d'obtenir l'URL directement du champ "url", sinon la reconstruire
-    target_url = source_info.get("url")
-    if not target_url:
-        utils_logger.debug(f"Champ 'url' non trouvé pour {source_name_for_log}, tentative de reconstruction avec schema/host/path.")
-        target_url = reconstruct_url(
-            source_info.get("schema"), source_info.get("host_parts", []), source_info.get("path")
-        )
+    # NOUVELLE LOGIQUE: Si un champ 'url' est explicitement fourni, l'utiliser en priorité.
+    # Ceci est particulièrement pertinent pour fetch_method: 'url' ou lorsque l'URL complète est déjà connue.
+    explicit_url = source_info.get("url")
+    if explicit_url:
+        utils_logger.debug(f"Champ 'url' explicite trouvé et utilisé pour '{source_name_for_log}': {explicit_url}")
+        reconstructed_url = explicit_url
     
-    if not target_url:
-        # Si target_url est toujours None ou vide après les deux tentatives
-        utils_logger.error(f"URL non disponible ou invalide pour source: {source_name_for_log} (fetch_method: {fetch_method}) après vérification 'url' et reconstruction.")
+    if reconstructed_url is None: # Si l'URL explicite n'a pas été fournie ou n'a pas été utilisée
+        utils_logger.debug(f"Aucune URL explicite fournie ou utilisée pour '{source_name_for_log}'. Passage à la logique de reconstruction.")
+        # Logique spécifique pour les sources Tika locales
+        # Si c'est une source 'tika', qu'elle a un 'path', et qu'elle n'a pas de 'schema'/'host_parts' (typique d'un fichier local)
+        if source_type == "tika" and source_path_str and not source_info.get("schema") and not source_info.get("host_parts"):
+            utils_logger.debug(f"Source Tika avec path local détectée: {source_path_str} pour '{source_name_for_log}'")
+            local_file_path = Path(source_path_str)
+            if not local_file_path.is_absolute():
+                # Utiliser ui_config.PROJECT_ROOT (qui est _project_root de config.py)
+                if hasattr(ui_config, 'PROJECT_ROOT') and isinstance(ui_config.PROJECT_ROOT, Path):
+                    utils_logger.debug(f"DEBUG: ui_config.PROJECT_ROOT utilisé dans get_full_text_for_source: {ui_config.PROJECT_ROOT}")
+                    local_file_path = (ui_config.PROJECT_ROOT / local_file_path).resolve()
+                    utils_logger.debug(f"Chemin local résolu en: {local_file_path} pour '{source_name_for_log}'")
+                else:
+                    utils_logger.warning(f"ui_config.PROJECT_ROOT non disponible ou mal configuré. Tentative de résolution de '{source_path_str}' par rapport au CWD pour '{source_name_for_log}'.")
+                    local_file_path = (Path.cwd() / local_file_path).resolve() # Fallback, peut être moins fiable
+            
+            if local_file_path.exists() and local_file_path.is_file():
+                reconstructed_url = local_file_path.as_uri() # ex: file:///D:/path/to/file.pdf
+                utils_logger.info(f"Source Tika locale: Utilisation de l'URI de fichier '{reconstructed_url}' pour '{source_name_for_log}'.")
+            else:
+                utils_logger.error(f"Fichier local pour source Tika '{source_name_for_log}' non trouvé ou n'est pas un fichier: {local_file_path} (path original: '{source_path_str}')")
+                # Laisser reconstructed_url à None pour la suite
+
+        # Logique de reconstruction d'URL standard si toujours None
+        if reconstructed_url is None:
+            utils_logger.debug(f"Tentative de reconstruction d'URL standard pour '{source_name_for_log}' (schema: {source_info.get('schema')}, host_parts: {source_info.get('host_parts', [])}, path: {source_info.get('path')})")
+            reconstructed_url = reconstruct_url(
+                source_info.get("schema"), source_info.get("host_parts", []), source_info.get("path")
+            )
+
+    if not reconstructed_url:
+        utils_logger.error(f"URL invalide ou impossible à construire pour source: {source_name_for_log}")
         return None
-    
-    utils_logger.debug(f"URL cible déterminée pour {source_name_for_log}: {target_url}")
 
-    # Essayer de charger depuis le cache fichier d'abord en utilisant target_url comme clé
-    cached_text = load_from_cache(target_url)
+    # Essayer de charger depuis le cache fichier d'abord
+    cached_text = load_from_cache(reconstructed_url)
     if cached_text is not None:
-        utils_logger.info(f"Texte chargé depuis cache fichier pour URL '{target_url}' ({source_name_for_log})")
-        if source_name_for_log == "Source_1": # Ajout du logging spécifique pour Source_1
-            utils_logger.info(f"--- LOGGING SPÉCIFIQUE POUR Source_1 (depuis cache) ---")
-            utils_logger.info(f"Full text length: {len(cached_text)}")
-            utils_logger.info(f"Premiers 500 chars:\n{cached_text[:500]}")
-            utils_logger.info(f"Derniers 500 chars:\n{cached_text[-500:]}")
-            utils_logger.info(f"--- FIN LOGGING SPÉCIFIQUE POUR Source_1 ---")
+        utils_logger.info(f"Texte chargé depuis cache fichier pour URL '{reconstructed_url}' ({source_name_for_log})")
         return cached_text
 
-    # Utiliser fetch_method si disponible, sinon fallback sur source_type
-    # fetch_method a déjà été récupéré au début
-    # source_type reste utile pour des logiques de fallback ou si fetch_method n'est pas exhaustif
-    source_type_original = source_info.get("source_type")
-    
+    # source_type est maintenant défini plus haut
     texte_brut_source: Optional[str] = None
 
     # Récupérer les configurations, en privilégiant app_config si fourni
@@ -324,53 +392,44 @@ def get_full_text_for_source(source_info: Dict[str, Any], app_config: Optional[D
             temp_download_dir_val = Path(temp_download_dir_str_or_path)
 
 
-    utils_logger.info(f"Cache texte absent pour '{target_url}' ({source_name_for_log}). Récupération (méthode: {fetch_method}, type original: {source_type_original})...")
+    utils_logger.info(f"Cache texte absent pour '{reconstructed_url}' ({source_name_for_log}). Récupération (type: {source_type})...")
     try:
-        if fetch_method == "jina":
+        if source_type == "jina":
             texte_brut_source = fetch_with_jina(
-                target_url,
+                reconstructed_url,
                 jina_reader_prefix_override=jina_prefix_val
             )
-        elif fetch_method == "tika":
+        elif source_type == "direct_download":
+            # fetch_direct_text n'a pas de config spécifique à surcharger via app_config pour l'instant
+            texte_brut_source = fetch_direct_text(reconstructed_url)
+        elif source_type == "tika":
+            # fetch_with_tika gère déjà la logique plaintext vs binaire en interne
+            # On passe les configs potentiellement surchargées
             texte_brut_source = fetch_with_tika(
-                source_url=target_url,
+                source_url=reconstructed_url,
                 tika_server_url_override=tika_server_url_val,
                 plaintext_extensions_override=plaintext_extensions_val,
                 temp_download_dir_override=temp_download_dir_val
+                # raw_file_cache_path n'est pas géré par app_config ici, fetch_with_tika le déduit si besoin
             )
-        elif fetch_method == "direct_download":
-            texte_brut_source = fetch_direct_text(target_url)
-        # Fallbacks basés sur source_type_original si fetch_method n'est pas l'un des ci-dessus ou est manquant
-        elif source_type_original == "web": # Ancien type "web" pourrait être traité comme jina ou direct
-             utils_logger.info(f"Fallback pour source_type 'web' vers fetch_with_jina pour {target_url}")
-             texte_brut_source = fetch_with_jina(target_url, jina_reader_prefix_override=jina_prefix_val)
-        elif source_type_original == "pdf": # Ancien type "pdf" devrait être traité par tika
-             utils_logger.info(f"Fallback pour source_type 'pdf' vers fetch_with_tika pour {target_url}")
-             texte_brut_source = fetch_with_tika(source_url=target_url, tika_server_url_override=tika_server_url_val, plaintext_extensions_override=plaintext_extensions_val, temp_download_dir_override=temp_download_dir_val)
         else:
-            utils_logger.warning(f"Méthode de fetch/type de source inconnu ou non géré: '{fetch_method}' / '{source_type_original}' pour '{target_url}' ({source_name_for_log}). Impossible de récupérer le texte.")
+            utils_logger.warning(f"Type de source inconnu '{source_type}' pour '{reconstructed_url}' ({source_name_for_log}). Impossible de récupérer le texte.")
             return None
 
         if texte_brut_source is not None:
-            utils_logger.info(f"Texte récupéré pour '{target_url}' ({source_name_for_log}), sauvegarde dans le cache...")
-            save_to_cache(target_url, texte_brut_source)
+            utils_logger.info(f"Texte récupéré pour '{reconstructed_url}' ({source_name_for_log}), sauvegarde dans le cache...")
+            save_to_cache(reconstructed_url, texte_brut_source)
         else:
-            utils_logger.warning(f"Aucun texte brut retourné par la fonction fetch pour '{target_url}' ({source_name_for_log}).")
+            utils_logger.warning(f"Aucun texte brut retourné par la fonction fetch pour '{reconstructed_url}' ({source_name_for_log}).")
 
-        if source_name_for_log == "Source_1" and texte_brut_source is not None: # Ajout du logging spécifique pour Source_1
-            utils_logger.info(f"--- LOGGING SPÉCIFIQUE POUR Source_1 (après fetch) ---")
-            utils_logger.info(f"Full text length: {len(texte_brut_source)}")
-            utils_logger.info(f"Premiers 500 chars:\n{texte_brut_source[:500]}")
-            utils_logger.info(f"Derniers 500 chars:\n{texte_brut_source[-500:]}")
-            utils_logger.info(f"--- FIN LOGGING SPÉCIFIQUE POUR Source_1 ---")
-        
+
         return texte_brut_source
 
     except ConnectionError as e: # Erreurs spécifiques levées par les fetch_*
-        utils_logger.error(f"Erreur de connexion lors de la récupération de '{target_url}' ({source_name_for_log}, méthode: {fetch_method}): {e}")
+        utils_logger.error(f"Erreur de connexion lors de la récupération de '{reconstructed_url}' ({source_name_for_log}, type: {source_type}): {e}")
         return None
     except Exception as e:
-        utils_logger.error(f"Erreur inattendue lors de la récupération de '{target_url}' ({source_name_for_log}, méthode: {fetch_method}): {e}", exc_info=True)
+        utils_logger.error(f"Erreur inattendue lors de la récupération de '{reconstructed_url}' ({source_name_for_log}, type: {source_type}): {e}", exc_info=True)
         return None
 
 def verify_extract_definitions(definitions_list: list) -> str:
@@ -438,91 +497,6 @@ def verify_extract_definitions(definitions_list: list) -> str:
                     extract_name = extract_info.get("extract_name", f"Extrait #{extract_idx+1}")
                     start_marker = extract_info.get("start_marker")
                     end_marker = extract_info.get("end_marker")
-
-                    # --- DÉBUT LOGS DÉTAILLÉS (SIMULATION EXTRACT_SEGMENT) ---
-                    # Uniquement pour l'extrait ciblé pour ne pas polluer les logs inutilement
-                    # Note: Cette condition est spécifique à la tâche de diagnostic actuelle.
-                    # Pour un logging général, il faudrait l'enlever ou la rendre configurable.
-                    is_target_extract = source_name == "Source_1" and extract_name == "1. DAcbat Complet (Ottawa, 1858)"
-
-                    if is_target_extract:
-                        utils_logger.info(f"[LOGGING DIAGNOSTIC POUR {source_name} -> {extract_name}]")
-                        utils_logger.info(f"  extract_name: {extract_name}")
-                        utils_logger.info(f"  start_marker (reçu): '{start_marker}'")
-                        utils_logger.info(f"  end_marker (reçu): '{end_marker}'")
-
-                    current_start_index = -1 # Renommé pour éviter conflit avec une variable potentielle 'start_index'
-                    current_end_index = -1   # Renommé pour éviter conflit
-
-                    if texte_brut_source and start_marker:
-                        actual_start_marker_log = start_marker
-                        
-                        if is_target_extract:
-                            utils_logger.info(f"  AVANT RECHERCHE start_marker:")
-                            utils_logger.info(f"    actual_start_marker: '{actual_start_marker_log}'")
-                            # Tentative de trouver la position attendue pour un meilleur contexte
-                            # Utiliser une sous-chaîne plus petite pour l'aperçu si le texte est immense
-                            approx_start_pos = texte_brut_source.find(actual_start_marker_log)
-                            if approx_start_pos != -1:
-                                context_window = 200 # Augmenté pour plus de contexte
-                                start_slice = max(0, approx_start_pos - context_window)
-                                end_slice = approx_start_pos + len(actual_start_marker_log) + context_window
-                                context_text_start = texte_brut_source[start_slice:end_slice]
-                                utils_logger.info(f"    contexte source_text (autour de pos {approx_start_pos}, fenetre +/-{context_window}):\n'''{context_text_start}'''")
-                            else:
-                                utils_logger.info(f"    start_marker non trouvé (estimation), contexte source_text (début):\n'''{texte_brut_source[:500]}'''")
-                        
-                        try:
-                            found_pos = texte_brut_source.index(actual_start_marker_log)
-                            current_start_index = found_pos # Position de début du marqueur
-                            if is_target_extract:
-                                utils_logger.info(f"  start_index TROUVÉ: {current_start_index}")
-                        except ValueError:
-                            if is_target_extract:
-                                utils_logger.info(f"  start_index NON TROUVÉ pour '{actual_start_marker_log}'")
-                            current_start_index = -1
-                    
-                    if texte_brut_source and end_marker and current_start_index != -1:
-                        actual_end_marker_log = end_marker
-                        # Zone de recherche pour end_marker commence après le start_marker complet
-                        search_area_start_for_end_marker = current_start_index + len(start_marker)
-
-                        if is_target_extract:
-                            utils_logger.info(f"  AVANT RECHERCHE end_marker (recherche à partir de position {search_area_start_for_end_marker}):")
-                            utils_logger.info(f"    actual_end_marker: '{actual_end_marker_log}'")
-                            
-                            approx_end_pos_in_search_area = texte_brut_source[search_area_start_for_end_marker:].find(actual_end_marker_log)
-                            if approx_end_pos_in_search_area != -1:
-                                approx_end_pos_global = search_area_start_for_end_marker + approx_end_pos_in_search_area
-                                context_window = 200 # Augmenté
-                                start_slice = max(0, approx_end_pos_global - context_window)
-                                end_slice = approx_end_pos_global + len(actual_end_marker_log) + context_window
-                                context_text_end = texte_brut_source[start_slice:end_slice]
-                                utils_logger.info(f"    contexte source_text (autour de pos globale {approx_end_pos_global}, fenetre +/-{context_window}):\n'''{context_text_end}'''")
-                            else:
-                                utils_logger.info(f"    end_marker non trouvé (estimation) dans la zone, contexte source_text (zone de recherche concernée):\n'''{texte_brut_source[search_area_start_for_end_marker : search_area_start_for_end_marker + 500]}'''")
-
-                        try:
-                            # .find() est utilisé ici car la logique originale est `end_marker in texte_brut_source[...]`
-                            found_pos_end = texte_brut_source.find(actual_end_marker_log, search_area_start_for_end_marker)
-                            if found_pos_end != -1:
-                                # Conventionnellement, end_index est la position *après* le marqueur de fin.
-                                current_end_index = found_pos_end + len(actual_end_marker_log)
-                                if is_target_extract:
-                                    utils_logger.info(f"  end_index TROUVÉ (marqueur trouvé à {found_pos_end}, fin du segment à {current_end_index})")
-                            else:
-                                if is_target_extract:
-                                    utils_logger.info(f"  end_index NON TROUVÉ pour '{actual_end_marker_log}' après start_marker.")
-                                current_end_index = -1
-                        except Exception as e_find_end: # Bien que .find() ne lève pas ValueError, sécurité
-                            if is_target_extract:
-                                utils_logger.error(f"  Erreur inattendue recherche end_marker: {e_find_end}")
-                            current_end_index = -1
-                    
-                    if is_target_extract: # Log final des index trouvés pour l'extrait cible
-                        utils_logger.info(f"  Valeurs finales pour {extract_name}: current_start_index = {current_start_index}, current_end_index = {current_end_index}")
-                    # --- FIN LOGS DÉTAILLÉS ---
-
                     total_checks += 1
                     source_checks += 1
                     marker_errors = []

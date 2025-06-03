@@ -168,8 +168,12 @@ function Move-Or-Clear-Old-Dir {
     $oldPathAtRoot = Join-Path $PSScriptRoot $oldDirNameAtRoot
     if (Test-Path $oldPathAtRoot) {
         if (Test-Path $newDirInLibsFullPath) {
-            Write-Host "Le nouveau répertoire '$newDirInLibsFullPath' existe déjà. Suppression de l'ancien '$oldPathAtRoot'."
-            Remove-Item -Path $oldPathAtRoot -Recurse -Force
+            if ($ForceReinstall) {
+                Write-Host "Mode ForceReinstall: Le nouveau répertoire '$newDirInLibsFullPath' existe déjà. Suppression de l'ancien '$oldPathAtRoot'."
+                Remove-Item -Path $oldPathAtRoot -Recurse -Force
+            } else {
+                Write-Host "Le nouveau répertoire '$newDirInLibsFullPath' et l'ancien '$oldPathAtRoot' existent. Pas de suppression sans -ForceReinstall."
+            }
         } else {
             Write-Host "Déplacement de '$oldPathAtRoot' vers '$newDirInLibsFullPath'..."
             Move-Item -Path $oldPathAtRoot -Destination $newDirInLibsFullPath -Force
@@ -349,8 +353,33 @@ Write-Host "Nettoyage des anciens venv terminé."
 Write-Host ""
 Write-Host "--- Configuration de l'environnement Conda '$condaEnvName' ---"
 
-# Vérifier si l'environnement Conda existe déjà et demander s'il faut le supprimer pour une installation propre
-$condaEnvExists = conda env list | Select-String -Pattern "\s$condaEnvName\s" -Quiet
+function Get-CondaEnvExists {
+    param ([string]$envName)
+    try {
+        # Utiliser conda env list et chercher le nom de l'environnement.
+        # L'option -Quiet de Select-String retourne $true si trouvé, $false sinon.
+        # L'expression régulière \b$envName\b assure une correspondance exacte du nom.
+        $found = conda env list | Select-String -Pattern "\b$envName\b" -Quiet
+        if ($LASTEXITCODE -ne 0) {
+            Write-Warning "La commande 'conda env list' a échoué ou Select-String a rencontré un problème. Code de sortie: $LASTEXITCODE"
+            # Afficher la sortie d'erreur de conda env list si disponible
+            $errorOutput = conda env list 2>&1 | Where-Object {$_ -is [System.Management.Automation.ErrorRecord]}
+            if ($errorOutput) {
+                Write-Warning "Erreur de conda env list: $errorOutput"
+            }
+            return $false # Prudence : considérer comme non existant si la commande échoue
+        }
+        return $found
+    }
+    catch {
+        Write-Warning "Exception lors de la vérification de l'existence de l'environnement Conda '$envName' via 'conda env list': $($_.Exception.Message)"
+        return $false
+    }
+}
+
+# Vérifier si l'environnement Conda existe déjà
+$condaEnvExists = Get-CondaEnvExists -envName $condaEnvName
+Write-Host "Vérification de l'existence de l'environnement Conda '$condaEnvName': $condaEnvExists"
 
 if ($ForceReinstall -and $condaEnvExists) {
     Write-Host "Mode ForceReinstall : Suppression de l'environnement Conda '$condaEnvName'..."
@@ -409,7 +438,16 @@ if (-not (Test-Path $envFilePath)) {
 # La suppression en mode ForceReinstall est également gérée.
 
 # Recalculer l'existence après les suppressions potentielles
-$condaEnvExistsAfterCleanup = conda env list | Select-String -Pattern "\s$condaEnvName\s" -Quiet
+# $condaEnvExists a déjà été mis à $false si une suppression a eu lieu dans les blocs conditionnels précédents.
+# S'il n'y a pas eu de suppression, on revérifie au cas où.
+if ($condaEnvExists) { # Si $condaEnvExists est toujours true (pas de suppression)
+    $condaEnvExistsAfterCleanup = Get-CondaEnvExists -envName $condaEnvName
+    Write-Host "Nouvelle vérification de l'existence de l'environnement Conda '$condaEnvName' (après étapes de suppression optionnelles): $condaEnvExistsAfterCleanup"
+} else { # Si $condaEnvExists a été mis à false par un bloc de suppression
+    $condaEnvExistsAfterCleanup = $false
+    Write-Host "L'environnement Conda '$condaEnvName' a été marqué pour suppression/n'existait pas. Existence après nettoyage (supposée): $condaEnvExistsAfterCleanup"
+}
+
 
 if ($condaEnvExistsAfterCleanup) {
     Write-Host "L'environnement Conda '$condaEnvName' existe. Mise à jour..."
