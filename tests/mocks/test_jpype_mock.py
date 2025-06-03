@@ -9,11 +9,13 @@ import os
 import sys
 import unittest
 
-# Ajouter le répertoire racine du projet au chemin de recherche
-# project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-# sys.path.insert(0, project_root)
-# Commenté car l'installation du package via `pip install -e .` devrait gérer l'accessibilité.
-# De plus, ce fichier teste un mock, son path management doit être autonome si besoin.
+# Ajouter le répertoire racine au chemin Python pour pouvoir importer les modules
+project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
+if project_root not in sys.path:
+    sys.path.insert(0, project_root)
+# L'installation du package via `pip install -e .` devrait gérer l'accessibilité,
+# mais cette modification assure le fonctionnement même sans installation en mode édition.
+# Ce fichier teste un mock, son path management doit être autonome si besoin.
 
 # Importer le mock JPype1
 from tests.mocks import jpype_mock

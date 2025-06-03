@@ -4,7 +4,7 @@ from unittest.mock import patch, MagicMock, call
 
 from argumentation_analysis.pipelines.reporting_pipeline import run_comprehensive_report_pipeline
 
-MODULE_PATH = "src.argumentation_analysis.pipelines.reporting_pipeline"
+MODULE_PATH = "argumentation_analysis.pipelines.reporting_pipeline"
 
 @pytest.fixture
 def mock_load_results():
