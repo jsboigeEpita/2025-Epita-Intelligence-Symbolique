@@ -12,7 +12,8 @@ et les dépendances Python.
 import os
 import logging
 import subprocess
-import pathlib # Modifié: import du module entier
+from pathlib import Path as _PathInternal # Modifié: import spécifique pour patching ciblé
+import pathlib # Gardé pour les annotations de type si nécessaire, ou peut être enlevé si _PathInternal suffit.
 import typing # Ajouté pour l'annotation de type
 import importlib.metadata # Ajouté pour la vérification des versions
 try:
@@ -34,7 +35,7 @@ if not logger.handlers:
     logger.addHandler(handler)
     logger.setLevel(logging.INFO)
 
-def _run_command(cmd: List[str], cwd: Optional[pathlib.Path] = None) -> Tuple[int, str, str]:
+def _run_command(cmd: List[str], cwd: Optional[_PathInternal] = None) -> Tuple[int, str, str]:
     """
     Exécute une commande et retourne le code de retour, stdout, et stderr.
     Fonction utilitaire interne.
@@ -83,7 +84,7 @@ def check_java_environment() -> bool:
     java_home = os.environ.get("JAVA_HOME")
     if java_home:
         logger.info(f"    JAVA_HOME est défini : {java_home}")
-        java_home_path = pathlib.Path(java_home)
+        java_home_path = _PathInternal(java_home)
         if java_home_path.is_dir():
             # Vérifier si java.exe (ou java pour non-Windows) existe dans JAVA_HOME/bin
             java_exe_in_home = java_home_path / "bin" / ("java.exe" if os.name == 'nt' else "java")
@@ -241,7 +242,7 @@ def check_jpype_config() -> bool:
         logger.error("❌ Des problèmes ont été détectés avec la configuration de JPype ou la gestion de la JVM.")
 
     return jpype_ok
-def check_python_dependencies(requirements_file_path: typing.Union[str, pathlib.Path]) -> bool: # Annotation de type modifiée
+def check_python_dependencies(requirements_file_path: typing.Union[str, _PathInternal]) -> bool: # Annotation de type modifiée
     """
     Vérifie si les dépendances Python spécifiées dans un fichier de requirements
     sont présentes et satisfont aux contraintes de version.
@@ -260,13 +261,13 @@ def check_python_dependencies(requirements_file_path: typing.Union[str, pathlib.
                        des packages (gérées en interne, mènent à un retour de False).
     """
     # S'assurer que requirements_file_path est un objet pathlib.Path
-    logger.debug(f"Type de 'pathlib.Path' avant isinstance: {type(pathlib.Path)}")
-    if not isinstance(requirements_file_path, pathlib.Path): # Modifié pour utiliser pathlib.Path
-        logger.debug(f"requirements_file_path n'est pas un pathlib.Path, c'est un {type(requirements_file_path)}. Conversion...")
-        requirements_file_path = pathlib.Path(requirements_file_path) # Modifié pour utiliser pathlib.Path
+    logger.debug(f"Type de '_PathInternal' avant isinstance: {type(_PathInternal)}")
+    if not isinstance(requirements_file_path, _PathInternal): # Modifié pour utiliser _PathInternal
+        logger.debug(f"requirements_file_path n'est pas un _PathInternal, c'est un {type(requirements_file_path)}. Conversion...")
+        requirements_file_path = _PathInternal(requirements_file_path) # Modifié pour utiliser _PathInternal
         
     logger.info(f"🐍 Vérification des dépendances Python depuis {requirements_file_path}...")
-    all_ok = True
+    overall_all_ok = True # Renommé pour éviter confusion avec all_ok de la boucle de parsing
     
     if not requirements_file_path.is_file():
         logger.error(f"    Le fichier de dépendances {requirements_file_path} n'a pas été trouvé.")
@@ -281,7 +282,6 @@ def check_python_dependencies(requirements_file_path: typing.Union[str, pathlib.
         with open(requirements_file_path, 'r', encoding='utf-8') as f:
             requirements_content = f.read()
         
-        # Filtrer les lignes vides et les commentaires avant de parser
         valid_lines = [
             line for line in requirements_content.splitlines()
             if line.strip() and not line.strip().startswith('#')
@@ -289,48 +289,55 @@ def check_python_dependencies(requirements_file_path: typing.Union[str, pathlib.
         
         if not valid_lines:
             logger.info(f"    Le fichier de dépendances {requirements_file_path} est vide ou ne contient que des commentaires.")
-            return True # Un fichier vide est considéré comme "satisfait"
+            return True 
 
-        # pkg_resources.parse_requirements ne gère pas bien les options comme --hash
-        # Nous allons parser manuellement pour extraire nom et specifiers
-        # Ceci est une simplification; une librairie dédiée comme 'packaging' ou 'requirements-parser' serait plus robuste.
-        
         parsed_requirements = []
+        # parsing_completely_failed_for_a_line = False # Ce drapeau n'est plus nécessaire avec la nouvelle logique
+
         for line in valid_lines:
-            # Tentative de parser avec pkg_resources, mais être prêt à gérer les erreurs pour les lignes complexes
+            current_processing_line = line.strip()
+            line_successfully_parsed_or_recovered = False
             try:
-                # pkg_resources.Requirement.parse peut gérer des lignes plus simples
-                # ex: "package", "package==1.0", "package>=1.0,<2.0"
-                # Il ne gère pas les options comme -r, -e, ou les URLs directes de la même manière que parse_requirements
-                # Pour une analyse plus robuste, il faudrait une logique de parsing plus détaillée.
-                # Ici, on se concentre sur les dépendances nommées avec spécificateurs.
-                if line.startswith('-e') or line.startswith('git+') or '.git@' in line:
-                    logger.info(f"    Ligne ignorée (dépendance éditable/VCS) : {line}")
-                    continue
-                if line.startswith('-r'):
-                    logger.info(f"    Ligne ignorée (inclusion d'un autre fichier) : {line}")
-                    continue
+                if current_processing_line.startswith('-e') or current_processing_line.startswith('git+') or '.git@' in current_processing_line:
+                    logger.info(f"    Ligne ignorée (dépendance éditable/VCS) : {current_processing_line}")
+                    continue 
+                if current_processing_line.startswith('-r'):
+                    logger.info(f"    Ligne ignorée (inclusion d'un autre fichier) : {current_processing_line}")
+                    continue 
                 
-                # Supprimer les hashes et autres options non supportées par Requirement.parse
-                line_parts = line.split('#')[0].split(';')[0].strip() # Enlever commentaires et marqueurs d'environnement
-                
-                # Tenter de parser la ligne nettoyée
+                line_parts = current_processing_line.split('#')[0].split(';')[0].strip()
                 parsed_req = pkg_resources.Requirement.parse(line_parts)
                 parsed_requirements.append(parsed_req)
-            except ValueError as ve: # Erreur de parsing de pkg_resources
-                 # Essayer d'extraire le nom du package au cas où.
-                 # Ceci est une heuristique et peut ne pas être précis.
-                potential_name = line.split("==")[0].split(">=")[0].split("<=")[0].split("!=")[0].split("~=")[0].strip()
-                if potential_name and not any(c in potential_name for c in "[](),"): # Simple vérification
-                    logger.warning(f"    Impossible de parser complètement la ligne '{line}' avec pkg_resources: {ve}. Tentative avec nom '{potential_name}'.")
-                    # Créer un requirement sans specifier si le parsing échoue mais qu'on a un nom
-                    parsed_requirements.append(pkg_resources.Requirement.parse(potential_name))
+                line_successfully_parsed_or_recovered = True
+            except ValueError as ve_initial_parse:
+                potential_name = current_processing_line.split("==")[0].split(">=")[0].split("<=")[0].split("!=")[0].split("~=")[0].split(";")[0].split("[")[0].split(" ")[0].strip()
+                if potential_name and not any(c in potential_name for c in "[](),"):
+                    logger.warning(f"    Impossible de parser complètement la ligne '{current_processing_line}' avec pkg_resources: {ve_initial_parse}. Tentative avec nom '{potential_name}'.")
+                    try: 
+                        parsed_requirements.append(pkg_resources.Requirement.parse(potential_name))
+                        line_successfully_parsed_or_recovered = True 
+                        # La vérification de version ci-dessous déterminera si overall_all_ok doit être False
+                    except ValueError as ve_heuristic_parse:
+                        cleaned_line_for_log = current_processing_line.split('#')[0].strip()
+                        logger.error(f"    Impossible de parser la ligne de dépendance '{cleaned_line_for_log}' même après heuristique: {ve_heuristic_parse}")
+                        overall_all_ok = False # Échec définitif pour cette ligne
                 else:
-                    logger.error(f"    Impossible de parser la ligne de dépendance '{line}': {ve}")
-                    all_ok = False # Marquer comme échec si une ligne ne peut être parsée
+                    cleaned_line_for_log = current_processing_line.split('#')[0].strip()
+                    logger.error(f"    Impossible de parser la ligne de dépendance '{cleaned_line_for_log}': {ve_initial_parse}")
+                    overall_all_ok = False # Échec définitif pour cette ligne
+            
+            # Si après toutes les tentatives, la ligne n'est pas gérée et n'a pas été skippée (continue),
+            # cela signifie un échec de parsing non récupéré pour cette ligne.
+            # Cependant, la logique ci-dessus met déjà overall_all_ok à False dans ces cas.
+            # if not line_successfully_parsed_or_recovered and not (current_processing_line.startswith('-e') or ...):
+            #     overall_all_ok = False
 
-        if not all_ok: # Si une ligne n'a pas pu être parsée, on arrête là pour cette partie.
-            return False
+
+        # Si un parsing a complètement échoué au point de ne pas pouvoir ajouter à parsed_requirements
+        # et a mis overall_all_ok à False, on peut vouloir s'arrêter plus tôt.
+        # Cependant, la boucle continue pour logger toutes les erreurs de parsing.
+        # Si overall_all_ok est déjà False à cause d'un parsing, on peut retourner False ici.
+        # Mais il est préférable de vérifier toutes les versions des packages qui ONT PU être parsés.
 
         for req in parsed_requirements:
             req_name = req.project_name 
@@ -338,31 +345,31 @@ def check_python_dependencies(requirements_file_path: typing.Union[str, pathlib.
                 installed_version_str = importlib.metadata.version(req_name)
                 installed_version = pkg_resources.parse_version(installed_version_str)
                 
-                # Si req.specifier est vide (ex: juste "package_name"), on considère que la présence suffit.
-                if not req.specs: # Pas de spécificateur de version
+                if not req.specs: 
                     logger.info(f"    ✅ {req_name}: Version {installed_version_str} installée (aucune version spécifique requise).")
-                elif req.specifier.contains(installed_version_str, prereleases=True): # Autoriser les pré-releases
+                elif req.specifier.contains(installed_version_str, prereleases=True): 
                     logger.info(f"    ✅ {req_name}: Version {installed_version_str} installée satisfait {req.specifier}")
                 else:
                     logger.warning(f"    ❌ {req_name}: Version {installed_version_str} installée ne satisfait PAS {req.specifier}")
-                    all_ok = False
+                    overall_all_ok = False
             except importlib.metadata.PackageNotFoundError:
                 logger.warning(f"    ❌ {req_name}: Non installé (requis: {req.specifier if req.specs else 'any version'})")
-                all_ok = False
-            except Exception as e:
+                overall_all_ok = False
+            except Exception as e: 
                 logger.error(f"    ❓ Erreur lors de la vérification de {req_name}: {e}")
-                all_ok = False
+                overall_all_ok = False
                 
-    except Exception as e:
-        logger.error(f"    Erreur lors de la lecture ou du parsing du fichier {requirements_file_path}: {e}")
-        return False
+    except Exception as e: 
+        logger.error(f"    Erreur majeure lors de la lecture ou du traitement du fichier {requirements_file_path}: {e}")
+        return False 
 
-    if all_ok:
+    if overall_all_ok:
         logger.info("✅ Toutes les dépendances Python du fichier sont satisfaites.")
     else:
         logger.warning("⚠️  Certaines dépendances Python du fichier ne sont pas satisfaites ou sont manquantes.")
         
-    return all_ok
+    return overall_all_ok
+
 if __name__ == '__main__':
     # Pour des tests rapides
     logging.basicConfig(level=logging.INFO)

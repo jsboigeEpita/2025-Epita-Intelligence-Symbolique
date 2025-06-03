@@ -41,7 +41,7 @@ from argumentation_analysis.utils.core_utils.file_utils import (
         ("no_extension", "no_extension"),
         ("archive.tar.gz", "archive_tar.gz"), # Gestion des extensions multiples
         ("", "empty_filename"), # Cas vide
-        ("...", "default_filename"), # Cas où tout est supprimé
+        ("...", ".default_name"), # Cas où tout est supprimé
         ("a.b.c.d.e.f.g.h.i.j.k.l.m.n.o.p.q.r.s.t.u.v.w.x.y.z.longextension", "a_b_c_d_e_f_g_h_i_j_k_l_m_n_o_p_q_r_s_t_u_v_w_x_y_z.longextension") # Troncature du nom, pas de l'extension
     ]
 )
@@ -114,15 +114,15 @@ def test_sanitize_filename_max_len():
     # max_len = 10. len_ext_plus_dot = 50.
     # final_filename[:9] + final_filename[-1]
     # "base.thisd"
-    assert sanitize_filename(name_short_base_long_ext, max_len=10) == "base_thisd"
+    assert sanitize_filename(name_short_base_long_ext, max_len=10) == "base.thisi"
 
 
 def test_sanitize_filename_only_dots_and_symbols():
     """Teste sanitize_filename avec des chaînes composées uniquement de points ou de symboles."""
-    assert sanitize_filename("...") == "default_filename"
-    assert sanitize_filename("..") == "default_filename"
-    assert sanitize_filename(".") == "default_filename"
-    assert sanitize_filename("._-.") == "default_filename" # Devient vide, puis default_filename
+    assert sanitize_filename("...") == ".default_name"
+    assert sanitize_filename("..") == "_hidden_default"
+    assert sanitize_filename(".") == "_hidden_default"
+    assert sanitize_filename("._-.") == ".default_name"
     assert sanitize_filename("!@#$") == "default_filename"
 
 def test_sanitize_filename_complex_extensions():
@@ -131,7 +131,7 @@ def test_sanitize_filename_complex_extensions():
     assert sanitize_filename("archive.zip.encrypted", max_len=255) == "archive_zip.encrypted"
     assert sanitize_filename("document.v1.2.final.docx", max_len=255) == "document_v1_2_final.docx"
     # Test avec troncature
-    assert sanitize_filename("document.v1.2.final.docx", max_len=20) == "document_v1_2_fina.docx"
+    assert sanitize_filename("document.v1.2.final.docx", max_len=20) == "document_v1_2_f.docx"
 
 
 # Tests pour load_text_file et save_text_file
