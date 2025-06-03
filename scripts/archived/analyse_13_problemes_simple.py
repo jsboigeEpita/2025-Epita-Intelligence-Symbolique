@@ -11,8 +11,10 @@ import json
 from datetime import datetime
 
 # Configuration du projet
-PROJECT_ROOT = Path(__file__).parent.absolute()
-sys.path.insert(0, str(PROJECT_ROOT))
+# Ajout du répertoire parent du répertoire scripts/ (racine du projet) à sys.path
+PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
 
 def analyze_test_results_report():
     """Analyse le rapport final des résultats de tests"""
