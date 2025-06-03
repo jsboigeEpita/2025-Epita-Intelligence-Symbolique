@@ -1,0 +1,51 @@
+[
+  {
+    "source_name": "Discours politique invalide",
+    "source_type": "url",
+    "schema": "https",
+    "host_parts": ["example", "com"],
+    "path": "/discours-invalide",
+    "extracts": [
+      {
+        "extract_name": "Introduction invalide",
+        "start_marker": "Mesdames et Messieurs,",
+        "end_marker": "Je vous remercie de votre attention.",
+        "template_start": null
+      },
+      {
+        "extract_name": 42,
+        "start_marker": "En matière d'économie, nous proposons",
+        "end_marker": "Voilà notre vision économique."
+      }
+    ]
+  },
+  {
+    "source_name": "Article scientifique invalide",
+    "source_type": "url",
+    "schema": "https",
+    "host_parts": ["science", "journal", "org"],
+    "extracts": [
+      {
+        "extract_name": "Résumé invalide",
+        "start_marker": "Abstract:",
+        "end_marker": "Keywords:"
+      }
+    ]
+  },
+  {
+    "source_name": "Discours avec structure invalide",
+    "source_type": "url",
+    "schema": "https",
+    "host_parts": ["speeches", "archive", "org"],
+    "path": "/historical/invalid",
+    "extracts": {
+      "extract_name": "Ceci n'est pas un tableau d'extraits",
+      "start_marker": "commence mon discours",
+      "end_marker": "Passons maintenant"
+    }
+  },
+  {
+    "source_name": "Source avec champs manquants",
+    "extracts": []
+  }
+]

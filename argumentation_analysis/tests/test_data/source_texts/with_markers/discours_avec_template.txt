@@ -1,0 +1,21 @@
+# Discours avec template - Exemple pour les tests
+
+ALLOCUTION DU PRÉSIDENT - 15 JANVIER 2025
+
+Icommence mon discours en vous remerciant tous d'être présents aujourd'hui pour cette occasion importante. C'est un honneur de m'adresser à vous en ce jour mémorable qui marque une étape significative dans notre histoire commune.
+
+Nous sommes réunis pour célébrer les avancées remarquables que nous avons accomplies ensemble au cours de l'année écoulée, mais aussi pour réfléchir aux défis qui nous attendent et aux moyens de les surmonter collectivement.
+
+Passons maintenant aux sujets qui nous préoccupent tous.
+
+J'aborderai trois points essentiels dans mon intervention d'aujourd'hui.
+
+Premièrement, la situation économique de notre pays. Les indicateurs récents montrent une reprise progressive après la période difficile que nous avons traversée. Le taux de croissance a atteint 2,5% au dernier trimestre, et le chômage est en baisse constante depuis six mois. Ces résultats encourageants sont le fruit des efforts conjoints de tous les acteurs économiques, que je tiens à saluer ici.
+
+Deuxièmement, les enjeux environnementaux qui représentent sans doute le plus grand défi de notre génération. Le plan national pour la transition écologique que nous avons lancé l'année dernière commence à porter ses fruits. Les émissions de CO2 ont diminué de 8% et les investissements dans les énergies renouvelables ont augmenté de 15%. Mais nous devons aller plus loin et plus vite.
+
+Troisièmement, la cohésion sociale, sans laquelle aucun progrès durable n'est possible. Les inégalités persistent dans notre société et constituent un frein à notre développement collectif. C'est pourquoi nous lançons aujourd'hui un grand plan national pour l'égalité des chances, doté d'un budget de 5 milliards d'euros sur trois ans.
+
+En conclusion, je voudrais souligner que ces défis ne pourront être relevés que si nous travaillons ensemble, dans un esprit de dialogue et de respect mutuel. Les divisions et les antagonismes ne mènent nulle part. C'est dans l'unité et la solidarité que nous trouverons les solutions aux problèmes complexes qui se posent à nous.
+
+Je vous remercie pour votre attention et je suis maintenant prêt à répondre à vos questions.

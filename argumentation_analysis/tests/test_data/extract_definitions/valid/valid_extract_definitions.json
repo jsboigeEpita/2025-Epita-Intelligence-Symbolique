@@ -1,0 +1,77 @@
+[
+  {
+    "source_name": "Discours politique",
+    "source_type": "url",
+    "schema": "https",
+    "host_parts": ["example", "com"],
+    "path": "/discours-politique",
+    "extracts": [
+      {
+        "extract_name": "Introduction",
+        "start_marker": "Mesdames et Messieurs,",
+        "end_marker": "Je vous remercie de votre attention.",
+        "template_start": ""
+      },
+      {
+        "extract_name": "Proposition économique",
+        "start_marker": "En matière d'économie, nous proposons",
+        "end_marker": "Voilà notre vision économique.",
+        "template_start": ""
+      },
+      {
+        "extract_name": "Conclusion",
+        "start_marker": "Pour conclure,",
+        "end_marker": "Merci à tous.",
+        "template_start": ""
+      }
+    ]
+  },
+  {
+    "source_name": "Article scientifique",
+    "source_type": "url",
+    "schema": "https",
+    "host_parts": ["science", "journal", "org"],
+    "path": "/article/12345",
+    "extracts": [
+      {
+        "extract_name": "Résumé",
+        "start_marker": "Abstract:",
+        "end_marker": "Keywords:",
+        "template_start": ""
+      },
+      {
+        "extract_name": "Méthodologie",
+        "start_marker": "Methodology",
+        "end_marker": "Results",
+        "template_start": ""
+      },
+      {
+        "extract_name": "Conclusion",
+        "start_marker": "Conclusion",
+        "end_marker": "References",
+        "template_start": ""
+      }
+    ]
+  },
+  {
+    "source_name": "Discours avec template",
+    "source_type": "url",
+    "schema": "https",
+    "host_parts": ["speeches", "archive", "org"],
+    "path": "/historical/speech1",
+    "extracts": [
+      {
+        "extract_name": "Introduction avec template",
+        "start_marker": "commence mon discours",
+        "end_marker": "Passons maintenant",
+        "template_start": "I{0}"
+      },
+      {
+        "extract_name": "Partie principale",
+        "start_marker": "aborderai trois points",
+        "end_marker": "En conclusion",
+        "template_start": "J'{0}"
+      }
+    ]
+  }
+]
