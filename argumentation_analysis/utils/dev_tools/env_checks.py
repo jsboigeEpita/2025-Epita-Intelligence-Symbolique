@@ -12,7 +12,8 @@ et les dépendances Python.
 import os
 import logging
 import subprocess
-from pathlib import Path
+import pathlib # Modifié: import du module entier
+import typing # Ajouté pour l'annotation de type
 import importlib.metadata # Ajouté pour la vérification des versions
 try:
     import pkg_resources # Pour parser les requirements
@@ -33,7 +34,7 @@ if not logger.handlers:
     logger.addHandler(handler)
     logger.setLevel(logging.INFO)
 
-def _run_command(cmd: List[str], cwd: Optional[Path] = None) -> Tuple[int, str, str]:
+def _run_command(cmd: List[str], cwd: Optional[pathlib.Path] = None) -> Tuple[int, str, str]:
     """
     Exécute une commande et retourne le code de retour, stdout, et stderr.
     Fonction utilitaire interne.
@@ -82,7 +83,7 @@ def check_java_environment() -> bool:
     java_home = os.environ.get("JAVA_HOME")
     if java_home:
         logger.info(f"    JAVA_HOME est défini : {java_home}")
-        java_home_path = Path(java_home)
+        java_home_path = pathlib.Path(java_home)
         if java_home_path.is_dir():
             # Vérifier si java.exe (ou java pour non-Windows) existe dans JAVA_HOME/bin
             java_exe_in_home = java_home_path / "bin" / ("java.exe" if os.name == 'nt' else "java")
@@ -91,9 +92,11 @@ def check_java_environment() -> bool:
                 java_home_valid = True
             else:
                 logger.warning(f"    JAVA_HOME ({java_home}) ne semble pas contenir une installation Java valide (exécutable non trouvé à {java_exe_in_home}).")
-                java_ok = False
+                java_home_valid = False # Correction: S'assurer que java_home_valid est False ici
+                java_ok = False # java_ok peut aussi être False si JAVA_HOME est la seule source de Java
         else:
             logger.warning(f"    JAVA_HOME ({java_home}) n'est pas un répertoire valide.")
+            java_home_valid = False # Correction: S'assurer que java_home_valid est False ici
             java_ok = False
     else:
         logger.warning("    JAVA_HOME n'est pas défini. Cette variable est souvent nécessaire pour les outils basés sur Java.")
@@ -238,7 +241,7 @@ def check_jpype_config() -> bool:
         logger.error("❌ Des problèmes ont été détectés avec la configuration de JPype ou la gestion de la JVM.")
 
     return jpype_ok
-def check_python_dependencies(requirements_file_path: Path) -> bool:
+def check_python_dependencies(requirements_file_path: typing.Union[str, pathlib.Path]) -> bool: # Annotation de type modifiée
     """
     Vérifie si les dépendances Python spécifiées dans un fichier de requirements
     sont présentes et satisfont aux contraintes de version.
@@ -248,7 +251,7 @@ def check_python_dependencies(requirements_file_path: Path) -> bool:
     du fichier de requirements.
 
     :param requirements_file_path: Chemin vers le fichier de dépendances (ex: requirements.txt).
-    :type requirements_file_path: pathlib.Path
+    :type requirements_file_path: typing.Union[str, pathlib.Path]
     :return: True si toutes les dépendances sont satisfaites, False sinon.
     :rtype: bool
     :raises FileNotFoundError: Si le fichier de requirements spécifié n'est pas trouvé (géré en interne, retourne False).
@@ -256,6 +259,12 @@ def check_python_dependencies(requirements_file_path: Path) -> bool:
                        du fichier de requirements, ou lors de la vérification des versions
                        des packages (gérées en interne, mènent à un retour de False).
     """
+    # S'assurer que requirements_file_path est un objet pathlib.Path
+    logger.debug(f"Type de 'pathlib.Path' avant isinstance: {type(pathlib.Path)}")
+    if not isinstance(requirements_file_path, pathlib.Path): # Modifié pour utiliser pathlib.Path
+        logger.debug(f"requirements_file_path n'est pas un pathlib.Path, c'est un {type(requirements_file_path)}. Conversion...")
+        requirements_file_path = pathlib.Path(requirements_file_path) # Modifié pour utiliser pathlib.Path
+        
     logger.info(f"🐍 Vérification des dépendances Python depuis {requirements_file_path}...")
     all_ok = True
     

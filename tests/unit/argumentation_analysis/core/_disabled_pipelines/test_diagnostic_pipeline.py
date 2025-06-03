@@ -7,7 +7,7 @@ from unittest.mock import patch, MagicMock, ANY
 import logging
 from pathlib import Path
 
-from argumentation_analysis.core.pipelines.diagnostic_pipeline import run_environment_diagnostic_pipeline, EnvironmentDiagnostic
+from argumentation_analysis.pipelines.diagnostic_pipeline import run_environment_diagnostic_pipeline, EnvironmentDiagnostic
 
 TEST_REQ_FILE_DIAG = "dummy_requirements_diag.txt"
 
@@ -38,9 +38,9 @@ def mock_env_diagnostic_instance(mock_logger_diag_fixture):
     instance.run_full_diagnostic.return_value = instance.results 
     return instance
 
-@patch('argumentation_analysis.core.pipelines.diagnostic_pipeline.setup_logging')
-@patch('argumentation_analysis.core.pipelines.diagnostic_pipeline.EnvironmentDiagnostic')
-@patch('argumentation_analysis.core.pipelines.diagnostic_pipeline.Path')
+@patch('argumentation_analysis.pipelines.diagnostic_pipeline.setup_logging')
+@patch('argumentation_analysis.pipelines.diagnostic_pipeline.EnvironmentDiagnostic')
+@patch('argumentation_analysis.pipelines.diagnostic_pipeline.Path')
 def test_run_diagnostic_pipeline_success(
     mock_path_class,
     mock_env_diagnostic_class,
@@ -54,7 +54,7 @@ def test_run_diagnostic_pipeline_success(
     """
     # Remplacer le logger global du module par notre mock
     # Ceci est nécessaire car le logger est initialisé au niveau du module
-    with patch('argumentation_analysis.core.pipelines.diagnostic_pipeline.logger', mock_logger_diag_fixture):
+    with patch('argumentation_analysis.pipelines.diagnostic_pipeline.logger', mock_logger_diag_fixture):
         mock_setup_logging.return_value = None # setup_logging est appelé, mais on ne vérifie pas son effet ici
         
         mock_req_path_obj = MagicMock(spec=Path)
@@ -87,9 +87,9 @@ def test_run_diagnostic_pipeline_success(
         
         mock_logger_diag_fixture.info.assert_any_call("Pipeline de diagnostic terminé avec succès.")
 
-@patch('argumentation_analysis.core.pipelines.diagnostic_pipeline.setup_logging')
-@patch('argumentation_analysis.core.pipelines.diagnostic_pipeline.EnvironmentDiagnostic')
-@patch('argumentation_analysis.core.pipelines.diagnostic_pipeline.Path')
+@patch('argumentation_analysis.pipelines.diagnostic_pipeline.setup_logging')
+@patch('argumentation_analysis.pipelines.diagnostic_pipeline.EnvironmentDiagnostic')
+@patch('argumentation_analysis.pipelines.diagnostic_pipeline.Path')
 def test_run_diagnostic_pipeline_critical_failure(
     mock_path_class,
     mock_env_diagnostic_class,
@@ -101,7 +101,7 @@ def test_run_diagnostic_pipeline_critical_failure(
     Teste le scénario d'échec du pipeline de diagnostic.
     Une vérification critique (ex: package non installé) est supposée échouer.
     """
-    with patch('argumentation_analysis.core.pipelines.diagnostic_pipeline.logger', mock_logger_diag_fixture):
+    with patch('argumentation_analysis.pipelines.diagnostic_pipeline.logger', mock_logger_diag_fixture):
         mock_setup_logging.return_value = None
         
         mock_req_path_obj = MagicMock(spec=Path)

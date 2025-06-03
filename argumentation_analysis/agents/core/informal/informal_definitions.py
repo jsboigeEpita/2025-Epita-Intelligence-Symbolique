@@ -4,6 +4,7 @@
 """
 Définitions et composants pour l'analyse informelle des arguments.
 
+import numpy as np
 Ce module fournit :
 - `InformalAnalysisPlugin`: Un plugin Semantic Kernel contenant des fonctions natives
   pour interagir avec une taxonomie de sophismes (chargée à partir d'un fichier CSV).
@@ -120,17 +121,65 @@ class InformalAnalysisPlugin:
             
             # Préparation du DataFrame
             if 'PK' in df.columns:
-                df.set_index('PK', inplace=True)
-                # S'assurer que l'index est de type entier, surtout pour les tests avec use_real_numpy
-                if not pd.api.types.is_integer_dtype(df.index):
+                self._logger.info("Colonne 'PK' trouvée. Tentative de la définir comme index.")
+                # Assurer que la colonne PK est numérique avant de la définir comme index
+                try:
+                    if not pd.api.types.is_string_dtype(df['PK']) and pd.api.types.is_object_dtype(df['PK']):
+                        df['PK'] = df['PK'].astype(str)
+                        self._logger.debug("Colonne 'PK' convertie en str pour la normalisation.")
+                    
+                    df['PK'] = pd.to_numeric(df['PK'], errors='coerce')
+                    df['PK'] = df['PK'].fillna(0) # Remplir NaN avant conversion en int
+                    # Tenter la conversion en int64, si échec, logguer et potentiellement laisser en float pour set_index
                     try:
-                        # Tenter de convertir l'index en entier.
-                        # Si l'index contient des valeurs non convertibles (ex: NaN, chaînes non numériques),
-                        # cela pourrait échouer ou changer les valeurs. Pour le CSV de test, cela devrait être sûr.
-                        df.index = pd.to_numeric(df.index, errors='coerce').fillna(0).astype(int)
-                        self._logger.info("Index de la taxonomie converti en type entier après set_index.")
-                    except Exception as e_astype:
-                        self._logger.warning(f"Impossible de convertir l'index de la taxonomie en entier après set_index: {e_astype}")
+                        df['PK'] = df['PK'].astype("int64")
+                        self._logger.info(f"Colonne 'PK' convertie en type {df['PK'].dtype}. Valeurs: {df['PK'].to_list()}")
+                    except Exception as e_astype_int:
+                        self._logger.warning(f"Échec de la conversion de 'PK' en int64 ({e_astype_int}), conservée en {df['PK'].dtype}. Valeurs: {df['PK'].to_list()}")
+
+                except Exception as e_convert:
+                    self._logger.error(f"Erreur majeure lors de la préparation de la colonne 'PK': {e_convert}")
+                    self._logger.error(f"Erreur majeure lors de la préparation de la colonne 'PK': {e_convert}")
+                    self._logger.info(f"État de la colonne 'PK' avant l'échec: {df['PK'].to_dict() if 'PK' in df else 'Non présente'}")
+
+                self._logger.debug(f"Valeurs de la colonne 'PK' avant set_index: {df['PK'].to_list()}, dtype: {df['PK'].dtype}")
+                
+                # Inspection de toutes les colonnes avant set_index
+                self._logger.debug("Inspection du DataFrame avant set_index:")
+                for col in df.columns:
+                    self._logger.debug(f"  Colonne '{col}', dtype: {df[col].dtype}")
+                    try:
+                        # Tenter de détecter des valeurs inhabituelles comme _NoValueType
+                        # Ceci est une heuristique car _NoValueType n'est pas directement comparable facilement
+                        problematic_values = df[col][df[col].apply(lambda x: hasattr(x, '__class__') and x.__class__.__name__ == '_NoValueType')]
+                        if not problematic_values.empty:
+                            self._logger.warning(f"    Colonne '{col}' contient des valeurs potentiellement problématiques (_NoValueType): {problematic_values.to_dict()}")
+                    except Exception as e_inspect:
+                        self._logger.debug(f"    Impossible d'inspecter finement la colonne '{col}': {e_inspect}")
+                
+                try:
+                    df.set_index('PK', inplace=True)
+                    self._logger.info(f"Colonne 'PK' définie comme index. Type de l'index: {df.index.dtype}, Valeurs de l'index: {df.index.to_list()}")
+                    
+                    # Assurer que l'index est de type entier après set_index
+                    if not pd.api.types.is_integer_dtype(df.index):
+                        self._logger.warning(f"L'index PK n'est pas de type entier après set_index (actuel: {df.index.dtype}). Tentative de reconversion explicite.")
+                        try:
+                            df.index = df.index.astype("int64")
+                            self._logger.info(f"Index PK reconverti en type {df.index.dtype}. Valeurs: {df.index.to_list()}")
+                        except Exception as e_reconvert_index:
+                            self._logger.error(f"Erreur lors de la reconversion de l'index PK en int64: {e_reconvert_index}")
+                    else:
+                        self._logger.info(f"L'index PK est déjà de type entier ({df.index.dtype}).")
+
+                except Exception as e_set_index:
+                    self._logger.error(f"Erreur lors de la définition de 'PK' comme index: {e_set_index}")
+                    if 'PK' in df.columns:
+                         self._logger.info(f"État de la colonne 'PK' avant l'échec de set_index: {df['PK'].to_dict()}, dtype: {df['PK'].dtype}")
+                    else:
+                         self._logger.info("Colonne 'PK' non présente dans df.columns avant l'échec de set_index.")
+            else:
+                self._logger.warning("Colonne 'PK' non trouvée dans le fichier de taxonomie. L'index ne sera pas défini.")
             
             return df
         except Exception as e:

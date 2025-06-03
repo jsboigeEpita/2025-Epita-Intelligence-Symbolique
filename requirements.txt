@@ -1,8 +1,8 @@
 flask
-jpype1
+jpype1==1.5.0
 Flask-CORS
 matplotlib
-networkx==3.4.2
+networkx==3.2.1
 nltk
 openai
 pandas
@@ -11,9 +11,9 @@ pytest-asyncio
 pytest-mock
 python-dotenv
 scikit-learn
-scipy
+scipy==1.13.1
 sentence-transformers
-semantic-kernel==1.29.0
+semantic-kernel==0.9.9b1
 spacy
 coverage
 clingo

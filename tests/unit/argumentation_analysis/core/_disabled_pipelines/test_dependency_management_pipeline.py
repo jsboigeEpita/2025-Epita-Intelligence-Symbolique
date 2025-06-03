@@ -7,7 +7,7 @@ from unittest.mock import patch, MagicMock, mock_open, call
 from pathlib import Path
 import sys
 
-from argumentation_analysis.core.pipelines.dependency_management_pipeline import run_dependency_installation_pipeline
+from argumentation_analysis.pipelines.dependency_management_pipeline import run_dependency_installation_pipeline
 
 TEST_REQ_FILE = "test_requirements.txt"
 
@@ -17,9 +17,9 @@ def mock_logger_fixture(): # Renommé pour éviter conflit avec le logger du mod
     logger = MagicMock()
     return logger
 
-@patch('argumentation_analysis.core.pipelines.dependency_management_pipeline.setup_logging')
-@patch('argumentation_analysis.core.pipelines.dependency_management_pipeline.run_shell_command')
-@patch('argumentation_analysis.core.pipelines.dependency_management_pipeline.Path')
+@patch('argumentation_analysis.pipelines.dependency_management_pipeline.setup_logging')
+@patch('argumentation_analysis.pipelines.dependency_management_pipeline.run_shell_command')
+@patch('argumentation_analysis.pipelines.dependency_management_pipeline.Path')
 @patch('builtins.open', new_callable=mock_open)
 def test_run_dependency_installation_success_no_deps(
     mock_file_open,
@@ -56,9 +56,9 @@ def test_run_dependency_installation_success_no_deps(
     mock_logger_fixture.info.assert_any_call("Toutes les dépendances listées dans le fichier requirements ont été traitées avec succès.")
 
 
-@patch('argumentation_analysis.core.pipelines.dependency_management_pipeline.setup_logging')
-@patch('argumentation_analysis.core.pipelines.dependency_management_pipeline.run_shell_command')
-@patch('argumentation_analysis.core.pipelines.dependency_management_pipeline.Path')
+@patch('argumentation_analysis.pipelines.dependency_management_pipeline.setup_logging')
+@patch('argumentation_analysis.pipelines.dependency_management_pipeline.run_shell_command')
+@patch('argumentation_analysis.pipelines.dependency_management_pipeline.Path')
 @patch('builtins.open', new_callable=mock_open)
 def test_run_dependency_installation_req_file_not_found(
     mock_file_open,
@@ -83,9 +83,9 @@ def test_run_dependency_installation_req_file_not_found(
     mock_file_open.assert_not_called()
     mock_run_shell_command.assert_not_called()
 
-@patch('argumentation_analysis.core.pipelines.dependency_management_pipeline.setup_logging')
-@patch('argumentation_analysis.core.pipelines.dependency_management_pipeline.run_shell_command')
-@patch('argumentation_analysis.core.pipelines.dependency_management_pipeline.Path')
+@patch('argumentation_analysis.pipelines.dependency_management_pipeline.setup_logging')
+@patch('argumentation_analysis.pipelines.dependency_management_pipeline.run_shell_command')
+@patch('argumentation_analysis.pipelines.dependency_management_pipeline.Path')
 @patch('builtins.open', new_callable=mock_open)
 def test_run_dependency_installation_read_file_error(
     mock_file_open,
@@ -114,11 +114,11 @@ def test_run_dependency_installation_read_file_error(
     )
     mock_run_shell_command.assert_not_called()
 
-@patch('argumentation_analysis.core.pipelines.dependency_management_pipeline.setup_logging')
-@patch('argumentation_analysis.core.pipelines.dependency_management_pipeline.run_shell_command')
-@patch('argumentation_analysis.core.pipelines.dependency_management_pipeline.Path')
+@patch('argumentation_analysis.pipelines.dependency_management_pipeline.setup_logging')
+@patch('argumentation_analysis.pipelines.dependency_management_pipeline.run_shell_command')
+@patch('argumentation_analysis.pipelines.dependency_management_pipeline.Path')
 @patch('builtins.open', new_callable=mock_open)
-@patch('argumentation_analysis.core.pipelines.dependency_management_pipeline.sys') # Pour mocker sys.executable
+@patch('argumentation_analysis.pipelines.dependency_management_pipeline.sys') # Pour mocker sys.executable
 def test_run_dependency_installation_success_one_dep(
     mock_sys,
     mock_file_open,
@@ -189,11 +189,11 @@ def test_run_dependency_installation_success_one_dep(
     mock_logger_fixture.debug.assert_any_call(f"Sortie pip (stdout) pour {dep_name}:\nSuccess output")
     mock_logger_fixture.info.assert_any_call("Toutes les dépendances listées dans le fichier requirements ont été traitées avec succès.")
 
-@patch('argumentation_analysis.core.pipelines.dependency_management_pipeline.setup_logging')
-@patch('argumentation_analysis.core.pipelines.dependency_management_pipeline.run_shell_command')
-@patch('argumentation_analysis.core.pipelines.dependency_management_pipeline.Path')
+@patch('argumentation_analysis.pipelines.dependency_management_pipeline.setup_logging')
+@patch('argumentation_analysis.pipelines.dependency_management_pipeline.run_shell_command')
+@patch('argumentation_analysis.pipelines.dependency_management_pipeline.Path')
 @patch('builtins.open', new_callable=mock_open)
-@patch('argumentation_analysis.core.pipelines.dependency_management_pipeline.sys')
+@patch('argumentation_analysis.pipelines.dependency_management_pipeline.sys')
 def test_run_dependency_installation_partial_failure(
     mock_sys,
     mock_file_open,
