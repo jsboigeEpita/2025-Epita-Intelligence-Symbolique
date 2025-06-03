@@ -226,7 +226,8 @@ class InformalAnalysisPlugin:
             "pk": int(current_row.name), # PK est l'index
             "path": current_path,
             "depth": int(current_row['depth']) if pd.notna(current_row.get('depth')) else 0,
-            "nom_vulgarise": current_row.get('nom_vulgarisé', ''), # nom_vulgarisé
+            "Name": current_row.get('Name', ''), # Utiliser la colonne 'Name' du CSV
+            "nom_vulgarise": current_row.get('nom_vulgarisé', ''), # nom_vulgarisé (peut être redondant ou un alias)
             "famille": current_row.get('Famille', ''),             # Famille
             "description_courte": current_row.get('text_fr', '')   # text_fr comme description courte
         }
@@ -395,6 +396,7 @@ class InformalAnalysisPlugin:
             return result
         # Extraire les informations du nœud
         row = node_df.iloc[0]
+        # Suppression des logs de débogage
         for col in row.index: # Utiliser row.index qui contient les noms des colonnes
             if pd.notna(row[col]):
                 # Gérer la conversion pour numpy types si nécessaire pour la sérialisation JSON

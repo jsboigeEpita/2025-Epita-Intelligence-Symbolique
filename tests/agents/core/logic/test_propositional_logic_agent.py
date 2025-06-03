@@ -56,9 +56,8 @@ class TestPropositionalLogicAgent(unittest.TestCase):
         self.assertEqual(self.agent.logic_type, "PL")
         self.assertEqual(self.agent.system_prompt, PL_AGENT_INSTRUCTIONS)
         
-        self.mock_tweety_bridge_class.assert_called_once_with()
-        # is_jvm_ready is called twice: once in the log info, once in the conditional check
-        self.assertEqual(self.mock_tweety_bridge_instance.is_jvm_ready.call_count, 2)
+        self.mock_tweety_bridge_class.assert_called_once_with() # TweetyBridge __init__ ne prend plus logic_type
+        self.assertEqual(self.mock_tweety_bridge_instance.is_jvm_ready.call_count, 2) # Appelé deux fois dans setup_agent_components
         
         self.assertTrue(self.kernel.add_function.call_count >= 3)
         self.kernel.get_prompt_execution_settings_from_service_id.assert_called_with(self.llm_service_id)
@@ -79,7 +78,7 @@ class TestPropositionalLogicAgent(unittest.TestCase):
         self.assertIsInstance(kwargs['arguments'], KernelArguments)
         self.assertEqual(kwargs['arguments']['input'], "Texte de test")
         
-        self.mock_tweety_bridge_instance.validate_belief_set.assert_called_once_with("a => b")
+        self.mock_tweety_bridge_instance.validate_belief_set.assert_called_once_with("a => b") # logic_type retiré
         
         self.assertIsInstance(belief_set, PropositionalBeliefSet)
         self.assertEqual(belief_set.content, "a => b")
@@ -109,7 +108,7 @@ class TestPropositionalLogicAgent(unittest.TestCase):
         belief_set, message = await self.agent.text_to_belief_set("Texte de test")
         
         self.kernel.invoke.assert_called_once()
-        self.mock_tweety_bridge_instance.validate_belief_set.assert_called_once_with("invalid_pl_syntax {")
+        self.mock_tweety_bridge_instance.validate_belief_set.assert_called_once_with("invalid_pl_syntax {") # logic_type retiré
         
         self.assertIsNone(belief_set)
         self.assertEqual(message, "Ensemble de croyances invalide: Erreur de syntaxe")
@@ -133,7 +132,9 @@ class TestPropositionalLogicAgent(unittest.TestCase):
         self.assertEqual(kwargs['arguments']['belief_set'], "x => y")
 
         self.assertEqual(self.mock_tweety_bridge_instance.validate_formula.call_count, 3)
-        self.mock_tweety_bridge_instance.validate_formula.assert_any_call(formula_string="a")
+        self.mock_tweety_bridge_instance.validate_formula.assert_any_call(formula_string="a") # formula_str -> formula_string, logic_type retiré
+        self.mock_tweety_bridge_instance.validate_formula.assert_any_call(formula_string="b")
+        self.mock_tweety_bridge_instance.validate_formula.assert_any_call(formula_string="a => b")
         
         self.assertEqual(queries, ["a", "b", "a => b"])
 
@@ -143,7 +144,7 @@ class TestPropositionalLogicAgent(unittest.TestCase):
         mock_sk_result.__str__.return_value = "a\ninvalid_query {\nc"
         self.kernel.invoke.return_value = mock_sk_result
         
-        def validate_side_effect(formula_string): # Changed signature
+        def validate_side_effect(formula_string): # formula_str -> formula_string, logic_type retiré de la signature
             if formula_string == "invalid_query {":
                 return (False, "Erreur de syntaxe")
             return (True, "Formule valide")
@@ -159,15 +160,16 @@ class TestPropositionalLogicAgent(unittest.TestCase):
     def test_execute_query_accepted(self):
         """Test de l'exécution d'une requête acceptée."""
         belief_set_obj = PropositionalBeliefSet("a => b")
-        self.mock_tweety_bridge_instance.execute_pl_query.return_value = "Tweety Result: Query 'a => b' is ACCEPTED (True)." # Retourne une chaîne
+        # Assurer que le mock retourne la chaîne attendue par l'agent pour ce test
+        self.mock_tweety_bridge_instance.execute_pl_query.return_value = "Tweety Result: Query 'a => b' is ACCEPTED (True)."
         self.mock_tweety_bridge_instance.validate_formula.return_value = (True, "Formule valide")
 
         result, message = self.agent.execute_query(belief_set_obj, "a => b")
         
-        self.mock_tweety_bridge_instance.validate_formula.assert_called_once_with(formula_string="a => b")
+        self.mock_tweety_bridge_instance.validate_formula.assert_called_once_with(formula_string="a => b") # formula_str -> formula_string, logic_type retiré
         self.mock_tweety_bridge_instance.execute_pl_query.assert_called_once_with(
-            belief_set_content="a => b", # Corrected parameter name
-            query_string="a => b"  # Corrected parameter name
+            belief_set_content="a => b", # belief_set_str -> belief_set_content
+            query_string="a => b"      # query_str -> query_string
         )
         
         self.assertTrue(result)
@@ -176,15 +178,16 @@ class TestPropositionalLogicAgent(unittest.TestCase):
     def test_execute_query_rejected(self):
         """Test de l'exécution d'une requête rejetée."""
         belief_set_obj = PropositionalBeliefSet("a => b")
-        self.mock_tweety_bridge_instance.execute_pl_query.return_value = "Tweety Result: Query 'c' is REJECTED (False)." # Retourne une chaîne
+        # Assurer que le mock retourne la chaîne attendue par l'agent pour ce test
+        self.mock_tweety_bridge_instance.execute_pl_query.return_value = "Tweety Result: Query 'c' is REJECTED (False)."
         self.mock_tweety_bridge_instance.validate_formula.return_value = (True, "Formule valide")
 
         result, message = self.agent.execute_query(belief_set_obj, "c")
         
-        self.mock_tweety_bridge_instance.validate_formula.assert_called_once_with(formula_string="c")
+        self.mock_tweety_bridge_instance.validate_formula.assert_called_once_with(formula_string="c") # formula_str -> formula_string, logic_type retiré
         self.mock_tweety_bridge_instance.execute_pl_query.assert_called_once_with(
-            belief_set_content="a => b", # Corrected parameter name
-            query_string="c"  # Corrected parameter name
+            belief_set_content="a => b", # belief_set_str -> belief_set_content
+            query_string="c"          # query_str -> query_string
         )
         
         self.assertFalse(result)
@@ -193,15 +196,16 @@ class TestPropositionalLogicAgent(unittest.TestCase):
     def test_execute_query_error_tweety(self):
         """Test de l'exécution d'une requête avec erreur de Tweety."""
         belief_set_obj = PropositionalBeliefSet("a => b")
-        self.mock_tweety_bridge_instance.execute_pl_query.return_value = "FUNC_ERROR: Erreur de syntaxe Tweety" # Retourne une chaîne
+        # Assurer que le mock retourne la chaîne attendue par l'agent pour ce test
+        self.mock_tweety_bridge_instance.execute_pl_query.return_value = "FUNC_ERROR: Erreur de syntaxe Tweety"
         self.mock_tweety_bridge_instance.validate_formula.return_value = (True, "Formule valide")
 
         result, message = self.agent.execute_query(belief_set_obj, "a")
         
-        self.mock_tweety_bridge_instance.validate_formula.assert_called_once_with(formula_string="a")
+        self.mock_tweety_bridge_instance.validate_formula.assert_called_once_with(formula_string="a") # formula_str -> formula_string, logic_type retiré
         self.mock_tweety_bridge_instance.execute_pl_query.assert_called_once_with(
-            belief_set_content="a => b", # Corrected parameter name
-            query_string="a"  # Corrected parameter name
+            belief_set_content="a => b", # belief_set_str -> belief_set_content
+            query_string="a"          # query_str -> query_string
         )
         
         self.assertIsNone(result)
@@ -214,7 +218,7 @@ class TestPropositionalLogicAgent(unittest.TestCase):
 
         result, message = self.agent.execute_query(belief_set_obj, "invalid_query {")
         
-        self.mock_tweety_bridge_instance.validate_formula.assert_called_once_with(formula_string="invalid_query {")
+        self.mock_tweety_bridge_instance.validate_formula.assert_called_once_with(formula_string="invalid_query {") # formula_str -> formula_string, logic_type retiré
         self.mock_tweety_bridge_instance.execute_pl_query.assert_not_called()
         
         self.assertIsNone(result)
@@ -254,14 +258,14 @@ class TestPropositionalLogicAgent(unittest.TestCase):
         self.mock_tweety_bridge_instance.validate_formula.return_value = (True, "Formule valide")
         is_valid = self.agent.validate_formula("a => b")
         self.assertTrue(is_valid)
-        self.mock_tweety_bridge_instance.validate_formula.assert_called_once_with(formula_string="a => b")
+        self.mock_tweety_bridge_instance.validate_formula.assert_called_once_with(formula_string="a => b") # formula_str -> formula_string, logic_type retiré
 
     def test_validate_formula_invalid(self):
         """Test de la validation d'une formule invalide."""
         self.mock_tweety_bridge_instance.validate_formula.return_value = (False, "Erreur de syntaxe")
         is_valid = self.agent.validate_formula("a => (b")
         self.assertFalse(is_valid)
-        self.mock_tweety_bridge_instance.validate_formula.assert_called_once_with(formula_string="a => (b")
+        self.mock_tweety_bridge_instance.validate_formula.assert_called_once_with(formula_string="a => (b") # formula_str -> formula_string, logic_type retiré
 
 def async_test(f):
     def wrapper(*args, **kwargs):

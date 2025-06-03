@@ -70,21 +70,17 @@ def verify_extract(source_info: Dict[str, Any], extract_info: Dict[str, Any]) ->
             result_details["messages"].append(f"Extrait valide mais très court ({len(extracted_text)} caractères).")
             result_details["too_short"] = True # Pour le rapport
 
-        # Condition 2: Problème de template (marqueur de début potentiellement corrompu)
+        # Condition 2: Problème de template (marqueur de début ne correspond pas au template attendu)
         template_prefix = template_start.replace("{0}", "")
-        # Vérification que template_prefix est non vide avant d'accéder à template_prefix[1:] ou template_prefix[0]
-        if template_start and "{0}" in template_start and start_marker and template_prefix and \
-           len(template_prefix) > 0 and \
-           start_marker.startswith(template_prefix[1:]) and \
-           not start_marker.startswith(template_prefix) and \
-           len(template_prefix) >=1 and start_marker[0] != template_prefix[0]: # Ajout d'une condition plus stricte
-            
-            warning_message = "Extrait valide mais avec un marqueur de début potentiellement corrompu (première lettre manquante)."
+        if template_prefix and start_marker and not start_marker.startswith(template_prefix):
+            warning_message = f"Avertissement: Le marqueur de début '{start_marker}' ne commence pas par le template attendu '{template_prefix}'."
             logger.warning(f"Extrait '{extract_name}': {warning_message}")
             current_status = "warning"
-            if warning_message not in result_details["messages"]: # Éviter les doublons
+            if warning_message not in result_details["messages"]:
                 result_details["messages"].append(warning_message)
             result_details["template_issue"] = True
+        # La logique précédente pour la première lettre manquante était trop spécifique.
+        # Cette condition plus générale devrait couvrir le cas du test.
 
         # Condition 3: Caractères spéciaux / Problèmes d'encodage
         special_chars_to_check = ["\\u", "\\x"]

@@ -29,9 +29,9 @@ class TestVerificationUtils(unittest.TestCase):
         
         source_info = {"source_name": "Test Source", "url": "http://example.com/source"}
         extract_info = {
-            "extract_name": "Test Extract", 
-            "start_marker": "START", 
-            "end_marker": "END", 
+            "extract_name": "Test Extract",
+            "start_marker": "Template START",
+            "end_marker": "END",
             "template_start": "Template {0}"
         }
         
@@ -44,7 +44,7 @@ class TestVerificationUtils(unittest.TestCase):
         self.assertEqual(result["extracted_length"], len("Texte extrait"))
         mock_load_source_text.assert_called_once_with(source_info)
         mock_extract_text_with_markers.assert_called_once_with(
-            "Texte source complet", "START", "END", "Template {0}"
+            "Texte source complet", "Template START", "END", "Template {0}"
         )
 
     @patch('project_core.dev_utils.verification_utils.extract_text_with_markers')
@@ -108,7 +108,7 @@ class TestVerificationUtils(unittest.TestCase):
         
         result = verify_extract(source_info, extract_info)
         self.assertEqual(result["status"], "warning")
-        self.assertIn("marqueur de début potentiellement corrompu", result["message"])
+        self.assertIn("ne commence pas par le template attendu", result["message"])
         self.assertTrue(result.get("template_issue"))
 
     @patch('project_core.dev_utils.verification_utils.verify_extract')
