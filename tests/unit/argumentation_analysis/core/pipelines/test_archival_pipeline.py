@@ -6,7 +6,7 @@ import pytest
 from unittest.mock import patch, MagicMock, call
 from pathlib import Path
 
-from project_core.pipelines.archival_pipeline import run_archival_pipeline
+from argumentation_analysis.core.pipelines.archival_pipeline import run_archival_pipeline
 
 # Constantes pour les chemins de test
 TEST_SOURCE_DIR = "test_source"
@@ -31,11 +31,11 @@ def mock_path_obj():
     path_mock.__str__.return_value = str(path_mock.name)
     return path_mock
 
-@patch('project_core.pipelines.archival_pipeline.setup_logging')
-@patch('project_core.pipelines.archival_pipeline.check_path_exists')
-@patch('project_core.pipelines.archival_pipeline.create_archive_path')
-@patch('project_core.pipelines.archival_pipeline.archive_file')
-@patch('project_core.pipelines.archival_pipeline.Path')
+@patch('argumentation_analysis.core.pipelines.archival_pipeline.setup_logging')
+@patch('argumentation_analysis.core.pipelines.archival_pipeline.check_path_exists')
+@patch('argumentation_analysis.core.pipelines.archival_pipeline.create_archive_path')
+@patch('argumentation_analysis.core.pipelines.archival_pipeline.archive_file')
+@patch('argumentation_analysis.core.pipelines.archival_pipeline.Path')
 def test_run_archival_pipeline_success_no_files(
     mock_path_class,
     mock_archive_file,
@@ -102,11 +102,11 @@ def test_run_archival_pipeline_success_no_files(
         "Pipeline d'archivage terminé. 0 fichier(s) archivé(s) sur 0 élément(s) traité(s) correspondant au motif."
     )
 
-@patch('project_core.pipelines.archival_pipeline.setup_logging')
-@patch('project_core.pipelines.archival_pipeline.check_path_exists')
-@patch('project_core.pipelines.archival_pipeline.create_archive_path')
-@patch('project_core.pipelines.archival_pipeline.archive_file')
-@patch('project_core.pipelines.archival_pipeline.Path')
+@patch('argumentation_analysis.core.pipelines.archival_pipeline.setup_logging')
+@patch('argumentation_analysis.core.pipelines.archival_pipeline.check_path_exists')
+@patch('argumentation_analysis.core.pipelines.archival_pipeline.create_archive_path')
+@patch('argumentation_analysis.core.pipelines.archival_pipeline.archive_file')
+@patch('argumentation_analysis.core.pipelines.archival_pipeline.Path')
 def test_run_archival_pipeline_success_one_file(
     mock_path_class,
     mock_archive_file,
@@ -187,9 +187,9 @@ def test_run_archival_pipeline_success_one_file(
         "Pipeline d'archivage terminé. 1 fichier(s) archivé(s) sur 1 élément(s) traité(s) correspondant au motif."
     )
 
-@patch('project_core.pipelines.archival_pipeline.setup_logging')
-@patch('project_core.pipelines.archival_pipeline.check_path_exists')
-@patch('project_core.pipelines.archival_pipeline.Path')
+@patch('argumentation_analysis.core.pipelines.archival_pipeline.setup_logging')
+@patch('argumentation_analysis.core.pipelines.archival_pipeline.check_path_exists')
+@patch('argumentation_analysis.core.pipelines.archival_pipeline.Path')
 def test_run_archival_pipeline_fail_source_dir_not_found(
     mock_path_class,
     mock_check_path_exists,
@@ -236,9 +236,9 @@ def test_run_archival_pipeline_fail_source_dir_not_found(
     assert mock_source_dir_path.rglob.call_count == 0
 
 
-@patch('project_core.pipelines.archival_pipeline.setup_logging')
-@patch('project_core.pipelines.archival_pipeline.check_path_exists')
-@patch('project_core.pipelines.archival_pipeline.Path')
+@patch('argumentation_analysis.core.pipelines.archival_pipeline.setup_logging')
+@patch('argumentation_analysis.core.pipelines.archival_pipeline.check_path_exists')
+@patch('argumentation_analysis.core.pipelines.archival_pipeline.Path')
 def test_run_archival_pipeline_fail_archive_dir_not_found(
     mock_path_class,
     mock_check_path_exists,
@@ -284,11 +284,11 @@ def test_run_archival_pipeline_fail_archive_dir_not_found(
     )
     assert mock_source_dir_path.rglob.call_count == 0
 
-@patch('project_core.pipelines.archival_pipeline.setup_logging')
-@patch('project_core.pipelines.archival_pipeline.check_path_exists')
-@patch('project_core.pipelines.archival_pipeline.create_archive_path')
-@patch('project_core.pipelines.archival_pipeline.archive_file')
-@patch('project_core.pipelines.archival_pipeline.Path')
+@patch('argumentation_analysis.core.pipelines.archival_pipeline.setup_logging')
+@patch('argumentation_analysis.core.pipelines.archival_pipeline.check_path_exists')
+@patch('argumentation_analysis.core.pipelines.archival_pipeline.create_archive_path')
+@patch('argumentation_analysis.core.pipelines.archival_pipeline.archive_file')
+@patch('argumentation_analysis.core.pipelines.archival_pipeline.Path')
 def test_run_archival_pipeline_error_in_create_archive_path(
     mock_path_class,
     mock_archive_file,
@@ -355,11 +355,11 @@ def test_run_archival_pipeline_error_in_create_archive_path(
     )
 
 
-@patch('project_core.pipelines.archival_pipeline.setup_logging')
-@patch('project_core.pipelines.archival_pipeline.check_path_exists')
-@patch('project_core.pipelines.archival_pipeline.create_archive_path')
-@patch('project_core.pipelines.archival_pipeline.archive_file')
-@patch('project_core.pipelines.archival_pipeline.Path')
+@patch('argumentation_analysis.core.pipelines.archival_pipeline.setup_logging')
+@patch('argumentation_analysis.core.pipelines.archival_pipeline.check_path_exists')
+@patch('argumentation_analysis.core.pipelines.archival_pipeline.create_archive_path')
+@patch('argumentation_analysis.core.pipelines.archival_pipeline.archive_file')
+@patch('argumentation_analysis.core.pipelines.archival_pipeline.Path')
 def test_run_archival_pipeline_error_in_archive_file(
     mock_path_class,
     mock_archive_file,
@@ -428,11 +428,11 @@ def test_run_archival_pipeline_error_in_archive_file(
         "Pipeline d'archivage terminé. 1 fichier(s) archivé(s) sur 2 élément(s) traité(s) correspondant au motif."
     )
 
-@patch('project_core.pipelines.archival_pipeline.setup_logging')
-@patch('project_core.pipelines.archival_pipeline.check_path_exists')
-@patch('project_core.pipelines.archival_pipeline.create_archive_path')
-@patch('project_core.pipelines.archival_pipeline.archive_file')
-@patch('project_core.pipelines.archival_pipeline.Path')
+@patch('argumentation_analysis.core.pipelines.archival_pipeline.setup_logging')
+@patch('argumentation_analysis.core.pipelines.archival_pipeline.check_path_exists')
+@patch('argumentation_analysis.core.pipelines.archival_pipeline.create_archive_path')
+@patch('argumentation_analysis.core.pipelines.archival_pipeline.archive_file')
+@patch('argumentation_analysis.core.pipelines.archival_pipeline.Path')
 def test_run_archival_pipeline_item_is_not_file(
     mock_path_class,
     mock_archive_file,
