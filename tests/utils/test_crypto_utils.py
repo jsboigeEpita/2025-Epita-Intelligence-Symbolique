@@ -4,7 +4,7 @@ import base64
 import os
 from unittest import mock
 # MODIFIÉ: Ajout de encrypt_data_with_fernet et decrypt_data_with_fernet
-from project_core.utils.crypto_utils import (
+from argumentation_analysis.utils.core_utils.crypto_utils import (
     derive_encryption_key, load_encryption_key, FIXED_SALT,
     encrypt_data_with_fernet, decrypt_data_with_fernet
 )

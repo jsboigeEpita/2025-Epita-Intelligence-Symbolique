@@ -8,7 +8,7 @@ import json
 import shutil # Ajouté pour archive_file
 
 # Fonctions à tester
-from project_core.utils.file_utils import (
+from argumentation_analysis.utils.core_utils.file_utils import (
     sanitize_filename,
     load_text_file,
     save_text_file,
@@ -487,7 +487,7 @@ def test_load_extracts_success_returns_list(tmp_path, sample_json_list_data, moc
     assert isinstance(result, list)
     assert result == sample_json_list_data
     # Vérifier que load_json_file a été appelé avec le bon chemin
-    from project_core.utils.file_utils import load_json_file as l_j_f # alias pour l'assertion
+    from argumentation_analysis.utils.core_utils.file_utils import load_json_file as l_j_f # alias pour l'assertion
     l_j_f.assert_called_once_with(file_path)
 
 
@@ -518,7 +518,7 @@ def test_load_base_analysis_results_success_returns_list(tmp_path, sample_json_l
     result = load_base_analysis_results(file_path)
     assert isinstance(result, list)
     assert result == sample_json_list_data
-    from project_core.utils.file_utils import load_json_file as l_j_f
+    from argumentation_analysis.utils.core_utils.file_utils import load_json_file as l_j_f
     l_j_f.assert_called_once_with(file_path)
 
 def test_load_base_analysis_results_returns_empty_list_on_load_json_file_none(tmp_path, mocker, caplog):

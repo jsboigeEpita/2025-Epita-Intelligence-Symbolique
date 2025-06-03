@@ -21,7 +21,7 @@ import base64
 import json
 from argumentation_analysis.paths import DATA_DIR
 # Import pour la fonction de chargement JSON mutualisée
-from project_core.utils.file_utils import load_json_file
+from argumentation_analysis.utils.core_utils.file_utils import load_json_file
 
 config_logger = logging.getLogger("App.UI.Config")
 if not config_logger.handlers and not config_logger.propagate:

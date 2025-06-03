@@ -3,7 +3,7 @@ import pytest
 import os
 import tempfile
 from pathlib import Path
-from project_core.dev_utils.format_utils import fix_docstrings_apostrophes, logger as format_utils_logger # Importer le logger
+from argumentation_analysis.utils.dev_tools.format_utils import fix_docstrings_apostrophes, logger as format_utils_logger # Importer le logger
 import logging # Importer logging
 
 @pytest.fixture

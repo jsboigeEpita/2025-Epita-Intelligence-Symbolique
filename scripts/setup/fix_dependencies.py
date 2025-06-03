@@ -21,7 +21,7 @@ if str(project_root_path) not in sys.path:
 # Importation de la nouvelle fonction de pipeline
 from project_core.pipelines.dependency_management_pipeline import run_dependency_installation_pipeline
 # setup_logging est maintenant appelé à l'intérieur du pipeline, mais on garde un logger local pour ce script.
-from project_core.utils.logging_utils import setup_logging # Pour configurer le logger de ce script
+from argumentation_analysis.utils.core_utils.logging_utils import setup_logging # Pour configurer le logger de ce script
 
 # Configuration du logger pour ce script (avant l'appel au pipeline)
 # Le pipeline configurera son propre logging ou utilisera celui configuré globalement.

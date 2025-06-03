@@ -24,12 +24,12 @@ import logging
 import argparse
 import time
 from pathlib import Path
-from project_core.utils.cli_utils import parse_advanced_analysis_arguments
+from argumentation_analysis.utils.core_utils.cli_utils import parse_advanced_analysis_arguments
 from datetime import datetime
 from typing import Dict, List, Any, Optional, Tuple, Union
 from tqdm import tqdm
 
-from project_core.utils.file_utils import load_extracts, load_base_analysis_results
+from argumentation_analysis.utils.core_utils.file_utils import load_extracts, load_base_analysis_results
 from argumentation_analysis.utils.text_processing import split_text_into_arguments
 from argumentation_analysis.utils.data_generation import generate_sample_text
 from argumentation_analysis.utils.analysis_comparison import compare_rhetorical_analyses

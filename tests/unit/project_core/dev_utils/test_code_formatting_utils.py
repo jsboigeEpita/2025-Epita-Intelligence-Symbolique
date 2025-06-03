@@ -7,7 +7,7 @@ import subprocess
 import logging
 from unittest.mock import patch, MagicMock
 
-from project_core.dev_utils.code_formatting_utils import format_python_file_with_autopep8, logger as formatting_utils_logger
+from argumentation_analysis.utils.dev_tools.code_formatting_utils import format_python_file_with_autopep8, logger as formatting_utils_logger
 
 @pytest.fixture
 def temp_python_file(request):

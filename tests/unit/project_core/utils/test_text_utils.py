@@ -1,6 +1,6 @@
 import string
 import pytest
-from project_core.utils.text_utils import normalize_text, tokenize_text
+from argumentation_analysis.utils.core_utils.text_utils import normalize_text, tokenize_text
 
 # Tests for normalize_text
 def test_normalize_text_lowercase():

@@ -4,7 +4,7 @@ import os
 import tempfile
 from pathlib import Path
 import logging
-from project_core.dev_utils.encoding_utils import fix_file_encoding, logger as encoding_utils_logger
+from argumentation_analysis.utils.dev_tools.encoding_utils import fix_file_encoding, logger as encoding_utils_logger
 
 # Fixture pour créer des fichiers temporaires avec différents encodages
 @pytest.fixture

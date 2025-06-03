@@ -28,10 +28,10 @@ import seaborn as sns
 project_root_path = Path(__file__).resolve().parent.parent.parent
 sys.path.insert(0, str(project_root_path))
 
-from project_core.utils.file_utils import load_json_file
+from argumentation_analysis.utils.core_utils.file_utils import load_json_file
 from argumentation_analysis.utils.metrics_calculator import count_fallacies, extract_confidence_scores, analyze_contextual_richness
-from project_core.utils.visualization_utils import generate_performance_visualizations
-from project_core.utils.reporting_utils import generate_performance_comparison_markdown_report
+from argumentation_analysis.utils.core_utils.visualization_utils import generate_performance_visualizations
+from argumentation_analysis.utils.core_utils.reporting_utils import generate_performance_comparison_markdown_report
 
 # Configuration du logging
 logging.basicConfig(

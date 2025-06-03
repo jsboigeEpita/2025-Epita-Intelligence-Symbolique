@@ -7,7 +7,7 @@ from pathlib import Path
 from unittest.mock import patch, MagicMock, mock_open
 import requests # Pour les exceptions
 
-from project_core.utils.network_utils import download_file
+from argumentation_analysis.utils.core_utils.network_utils import download_file
 
 @pytest.fixture
 def mock_requests_get():

@@ -5,7 +5,7 @@ import pytest
 import argparse
 from unittest.mock import patch
 
-from project_core.utils.cli_utils import (
+from argumentation_analysis.utils.core_utils.cli_utils import (
     parse_advanced_analysis_arguments,
     parse_summary_generation_arguments,
     parse_extract_verification_arguments,

@@ -16,7 +16,7 @@ project_root_path_setup = Path(__file__).resolve().parent.parent.parent
 if str(project_root_path_setup) not in sys.path:
     sys.path.insert(0, str(project_root_path_setup))
 
-from project_core.dev_utils.code_formatting_utils import format_python_file_with_autopep8, logger as formatting_logger
+from argumentation_analysis.utils.dev_tools.code_formatting_utils import format_python_file_with_autopep8, logger as formatting_logger
 
 # Configurer le logger pour ce script
 script_logger = logging.getLogger(__name__)
