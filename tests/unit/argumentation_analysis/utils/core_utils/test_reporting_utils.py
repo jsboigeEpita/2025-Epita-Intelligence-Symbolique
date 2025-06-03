@@ -85,7 +85,7 @@ def test_save_json_report_os_error(tmp_path, sample_dict_data, mocker, caplog):
 def test_generate_json_report_calls_save_json_report(tmp_path, sample_analysis_results, mocker):
     """Teste que generate_json_report appelle save_json_report."""
     output_file = tmp_path / "generated_report.json"
-    mock_save_json = mocker.patch("project_core.utils.reporting_utils.save_json_report", return_value=True)
+    mock_save_json = mocker.patch("argumentation_analysis.utils.core_utils.reporting_utils.save_json_report", return_value=True)
     
     generate_json_report(sample_analysis_results, output_file)
     
@@ -94,7 +94,7 @@ def test_generate_json_report_calls_save_json_report(tmp_path, sample_analysis_r
 def test_generate_json_report_logs_error_on_save_failure(tmp_path, sample_analysis_results, mocker, caplog):
     """Teste que generate_json_report logue une erreur si save_json_report échoue."""
     output_file = tmp_path / "gen_report_fail.json"
-    mocker.patch("project_core.utils.reporting_utils.save_json_report", return_value=False)
+    mocker.patch("argumentation_analysis.utils.core_utils.reporting_utils.save_json_report", return_value=False)
     
     generate_json_report(sample_analysis_results, output_file)
     
@@ -122,7 +122,7 @@ def test_save_text_report_os_error(tmp_path, mocker, caplog):
 def test_generate_specific_rhetorical_markdown_report_success(tmp_path, sample_analysis_results, mocker):
     """Teste la génération réussie d'un rapport Markdown rhétorique."""
     output_file = tmp_path / "rhetorical_report.md"
-    mock_save_text = mocker.patch("project_core.utils.reporting_utils.save_text_report", return_value=True)
+    mock_save_text = mocker.patch("argumentation_analysis.utils.core_utils.reporting_utils.save_text_report", return_value=True)
     
     generate_specific_rhetorical_markdown_report(sample_analysis_results, output_file)
     
@@ -143,7 +143,7 @@ def test_generate_specific_rhetorical_markdown_report_success(tmp_path, sample_a
 def test_generate_specific_rhetorical_markdown_report_empty_analysis(tmp_path, mocker):
     """Teste la génération avec des résultats d'analyse vides ou sans analyse."""
     output_file = tmp_path / "empty_rhetoric.md"
-    mock_save_text = mocker.patch("project_core.utils.reporting_utils.save_text_report", return_value=True)
+    mock_save_text = mocker.patch("argumentation_analysis.utils.core_utils.reporting_utils.save_text_report", return_value=True)
     empty_results = [
         {"source_name": "Vide", "analysis": {}},
         {"source_name": "Sans Analyse", "analysis": None} # Simuler un cas où analysis pourrait être None
@@ -160,7 +160,7 @@ def test_generate_specific_rhetorical_markdown_report_empty_analysis(tmp_path, m
 def test_generate_specific_rhetorical_markdown_report_save_fails(tmp_path, sample_analysis_results, mocker, caplog):
     """Teste le log d'erreur si la sauvegarde du rapport rhétorique échoue."""
     output_file = tmp_path / "rhetoric_save_fail.md"
-    mocker.patch("project_core.utils.reporting_utils.save_text_report", return_value=False)
+    mocker.patch("argumentation_analysis.utils.core_utils.reporting_utils.save_text_report", return_value=False)
     generate_specific_rhetorical_markdown_report(sample_analysis_results, output_file)
     assert f"Échec de la sauvegarde du rapport Markdown rhétorique spécifique vers {output_file}" in caplog.text
 
@@ -254,7 +254,7 @@ def test_generate_overall_summary_markdown_type_error():
 def test_generate_performance_comparison_markdown_report_runs(tmp_path, mocker):
     """Teste que la fonction de comparaison de performance s'exécute et appelle save_text_report."""
     output_file = tmp_path / "perf_compare_report.md"
-    mock_save_text = mocker.patch("project_core.utils.reporting_utils.save_text_report", return_value=True)
+    mock_save_text = mocker.patch("argumentation_analysis.utils.core_utils.reporting_utils.save_text_report", return_value=True)
     
     base_metrics = {
         'fallacy_counts': {'base_contextual': 10},

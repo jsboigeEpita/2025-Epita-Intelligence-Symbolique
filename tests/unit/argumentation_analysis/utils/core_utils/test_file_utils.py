@@ -271,7 +271,7 @@ def test_save_markdown_to_html_success(tmp_path, mocker):
     
     # Mocker markdown.markdown pour ne pas dépendre de la lib externe pour ce test unitaire
     # et pour contrôler la sortie.
-    mock_markdown_converter = mocker.patch("project_core.utils.file_utils.markdown.markdown")
+    mock_markdown_converter = mocker.patch("argumentation_analysis.utils.core_utils.file_utils.markdown.markdown")
     expected_html_core = "<h1>Titre</h1>\n<p>Ceci est un paragraphe avec du <strong>gras</strong> et de l'<em>italique</em>.</p>"
     mock_markdown_converter.return_value = expected_html_core
 
@@ -291,7 +291,7 @@ def test_save_markdown_to_html_conversion_error(tmp_path, mocker, caplog):
     markdown_content = "Test"
     html_output_path = tmp_path / "error.html"
     
-    mocker.patch("project_core.utils.file_utils.markdown.markdown", side_effect=Exception("Simulated Markdown Error"))
+    mocker.patch("argumentation_analysis.utils.core_utils.file_utils.markdown.markdown", side_effect=Exception("Simulated Markdown Error"))
     
     assert save_markdown_to_html(markdown_content, html_output_path) is False
     assert not html_output_path.exists()
@@ -481,7 +481,7 @@ def test_load_extracts_success_returns_list(tmp_path, sample_json_list_data, moc
     """Teste que load_extracts retourne une liste si load_json_file retourne une liste."""
     file_path = tmp_path / "extracts.json"
     # Mocker load_json_file pour qu'il retourne la liste d'échantillon
-    mocker.patch("project_core.utils.file_utils.load_json_file", return_value=sample_json_list_data)
+    mocker.patch("argumentation_analysis.utils.core_utils.file_utils.load_json_file", return_value=sample_json_list_data)
     
     result = load_extracts(file_path)
     assert isinstance(result, list)
@@ -494,7 +494,7 @@ def test_load_extracts_success_returns_list(tmp_path, sample_json_list_data, moc
 def test_load_extracts_returns_empty_list_on_load_json_file_none(tmp_path, mocker, caplog):
     """Teste que load_extracts retourne une liste vide si load_json_file retourne None."""
     file_path = tmp_path / "extracts_none.json"
-    mocker.patch("project_core.utils.file_utils.load_json_file", return_value=None)
+    mocker.patch("argumentation_analysis.utils.core_utils.file_utils.load_json_file", return_value=None)
     
     result = load_extracts(file_path)
     assert result == []
@@ -503,7 +503,7 @@ def test_load_extracts_returns_empty_list_on_load_json_file_none(tmp_path, mocke
 def test_load_extracts_returns_empty_list_on_load_json_file_not_list(tmp_path, sample_json_dict_data, mocker, caplog):
     """Teste que load_extracts retourne une liste vide si load_json_file retourne un dict."""
     file_path = tmp_path / "extracts_dict.json"
-    mocker.patch("project_core.utils.file_utils.load_json_file", return_value=sample_json_dict_data)
+    mocker.patch("argumentation_analysis.utils.core_utils.file_utils.load_json_file", return_value=sample_json_dict_data)
     
     result = load_extracts(file_path)
     assert result == []
@@ -513,7 +513,7 @@ def test_load_extracts_returns_empty_list_on_load_json_file_not_list(tmp_path, s
 def test_load_base_analysis_results_success_returns_list(tmp_path, sample_json_list_data, mocker):
     """Teste que load_base_analysis_results retourne une liste si load_json_file retourne une liste."""
     file_path = tmp_path / "analysis.json"
-    mocker.patch("project_core.utils.file_utils.load_json_file", return_value=sample_json_list_data)
+    mocker.patch("argumentation_analysis.utils.core_utils.file_utils.load_json_file", return_value=sample_json_list_data)
     
     result = load_base_analysis_results(file_path)
     assert isinstance(result, list)
@@ -524,7 +524,7 @@ def test_load_base_analysis_results_success_returns_list(tmp_path, sample_json_l
 def test_load_base_analysis_results_returns_empty_list_on_load_json_file_none(tmp_path, mocker, caplog):
     """Teste que load_base_analysis_results retourne une liste vide si load_json_file retourne None."""
     file_path = tmp_path / "analysis_none.json"
-    mocker.patch("project_core.utils.file_utils.load_json_file", return_value=None)
+    mocker.patch("argumentation_analysis.utils.core_utils.file_utils.load_json_file", return_value=None)
     
     result = load_base_analysis_results(file_path)
     assert result == []
@@ -532,7 +532,7 @@ def test_load_base_analysis_results_returns_empty_list_on_load_json_file_none(tm
 def test_load_base_analysis_results_returns_empty_list_on_load_json_file_not_list(tmp_path, sample_json_dict_data, mocker, caplog):
     """Teste que load_base_analysis_results retourne une liste vide si load_json_file retourne un dict."""
     file_path = tmp_path / "analysis_dict.json"
-    mocker.patch("project_core.utils.file_utils.load_json_file", return_value=sample_json_dict_data)
+    mocker.patch("argumentation_analysis.utils.core_utils.file_utils.load_json_file", return_value=sample_json_dict_data)
     
     result = load_base_analysis_results(file_path)
     assert result == []

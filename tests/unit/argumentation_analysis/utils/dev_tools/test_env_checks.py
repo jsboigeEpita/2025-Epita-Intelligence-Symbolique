@@ -21,7 +21,7 @@ def mock_os_environ_java():
 
 @pytest.fixture
 def mock_path_java():
-    with mock.patch('project_core.dev_utils.env_checks.Path') as mock_path_constructor:
+    with mock.patch('argumentation_analysis.utils.dev_tools.env_checks.Path') as mock_path_constructor:
         mock_path_instance = mock.Mock(spec=Path)
         mock_path_constructor.return_value = mock_path_instance
         
@@ -49,7 +49,7 @@ def mock_path_java():
 @pytest.fixture
 def mock_run_command_java():
     # This mocks the _run_command function within the env_checks module
-    with mock.patch('project_core.dev_utils.env_checks._run_command') as mock_run:
+    with mock.patch('argumentation_analysis.utils.dev_tools.env_checks._run_command') as mock_run:
         yield mock_run
 
 # Tests for check_java_environment
@@ -210,7 +210,7 @@ def mock_file_operations_deps_fixture(): # Renamed
     mock_path_instance.is_file.return_value = True
     mock_open_func = mock.mock_open()
 
-    with mock.patch('project_core.dev_utils.env_checks.Path', return_value=mock_path_instance) as mock_path_constructor, \
+    with mock.patch('argumentation_analysis.utils.dev_tools.env_checks.Path', return_value=mock_path_instance) as mock_path_constructor, \
          mock.patch('builtins.open', mock_open_func) as mock_open_builtin: # Renamed mock_open to mock_open_builtin
         yield {
             "path_constructor": mock_path_constructor,
@@ -258,7 +258,7 @@ def mock_pkg_resources_deps_fixture(): # Renamed
     from packaging.version import parse as packaging_parse_version
     pkg_resources_mock.parse_version = packaging_parse_version
 
-    with mock.patch('project_core.dev_utils.env_checks.pkg_resources', pkg_resources_mock) as patched_pkg_res:
+    with mock.patch('argumentation_analysis.utils.dev_tools.env_checks.pkg_resources', pkg_resources_mock) as patched_pkg_res:
         patched_pkg_res._original_parse_method = mock_requirement_parse_impl
         yield patched_pkg_res
 
@@ -281,7 +281,7 @@ def test_check_python_dependencies_pkg_resources_unavailable(mock_file_operation
     req_file_path = Path("dummy_reqs.txt")
     mock_file_operations_deps_fixture["mock_open_func"].return_value.read.return_value = "requests==2.25.1"
     
-    with mock.patch('project_core.dev_utils.env_checks.pkg_resources', None):
+    with mock.patch('argumentation_analysis.utils.dev_tools.env_checks.pkg_resources', None):
         assert check_python_dependencies(req_file_path) is False
         assert "pkg_resources n'est pas disponible. Impossible de parser le fichier de dépendances." in caplog.text
 
