@@ -1,1 +1,0 @@
-# Initializer for the project_core.service_setup module

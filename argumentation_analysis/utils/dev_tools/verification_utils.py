@@ -8,11 +8,23 @@ from pathlib import Path
 from typing import Optional, List, Dict, Any, Tuple # Ajout de Tuple
 
 # Imports nécessaires pour la logique du pipeline et des fonctions déplacées
-from project_core.service_setup.core_services import initialize_core_services
+# from project_core.service_setup.core_services import initialize_core_services # Remplacé par initialisation manuelle
 from argumentation_analysis.models.extract_definition import ExtractDefinitions, SourceDefinition, Extract # Pour typer les objets DefinitionService
 # Imports pour les fonctions déplacées depuis marker_verification_logic.py
 from argumentation_analysis.ui.extract_utils import load_source_text, extract_text_with_markers
-# Les services FetchService et ExtractService sont passés en argument aux fonctions de vérification.
+
+# Imports pour l'initialisation manuelle des services
+from argumentation_analysis.services.cache_service import CacheService
+from argumentation_analysis.services.crypto_service import CryptoService
+from argumentation_analysis.services.definition_service import DefinitionService
+from argumentation_analysis.services.extract_service import ExtractService
+from argumentation_analysis.services.fetch_service import FetchService
+from argumentation_analysis.ui.config import (
+    ENCRYPTION_KEY as DEFAULT_ENCRYPTION_KEY,
+    CONFIG_FILE as DEFAULT_CONFIG_FILE_PATH,
+    CONFIG_FILE_JSON as DEFAULT_CONFIG_FILE_JSON_PATH
+)
+
 
 logger = logging.getLogger(__name__)
 
@@ -261,14 +273,43 @@ def run_extract_verification_pipeline(
     try:
         config_file_to_use = Path(custom_input_path_str) if custom_input_path_str else None
         
-        core_services = initialize_core_services(
-            project_root_dir=project_root_dir,
-            config_file_path=config_file_to_use
-        )
+        # Remplacement de initialize_core_services
+        logger.info("Initialisation manuelle des services pour verification_utils...")
+        base_path = project_root_dir if project_root_dir else Path.cwd()
+
+        current_encryption_key = DEFAULT_ENCRYPTION_KEY # TODO: Permettre la surcharge via config si nécessaire
         
-        extract_service = core_services["extract_service"]
-        fetch_service = core_services["fetch_service"]
-        definition_service = core_services["definition_service"]
+        current_config_file = config_file_to_use if config_file_to_use else base_path / DEFAULT_CONFIG_FILE_PATH
+        if not current_config_file.is_absolute():
+            current_config_file = base_path / current_config_file
+        
+        current_fallback_file = base_path / DEFAULT_CONFIG_FILE_JSON_PATH # TODO: Permettre la surcharge
+        if not current_fallback_file.is_absolute():
+            current_fallback_file = base_path / current_fallback_file
+        if not current_fallback_file.exists():
+            logger.warning(f"Fichier de fallback JSON {current_fallback_file.resolve()} non trouvé.")
+            current_fallback_file = None
+
+        crypto_service = CryptoService(current_encryption_key)
+        
+        cache_dir = base_path / "argumentation_analysis" / "text_cache"
+        cache_dir.mkdir(parents=True, exist_ok=True)
+        cache_service = CacheService(cache_dir=cache_dir)
+        
+        extract_service = ExtractService()
+        
+        temp_download_dir = base_path / "argumentation_analysis" / "temp_downloads"
+        temp_download_dir.mkdir(parents=True, exist_ok=True)
+        fetch_service = FetchService(cache_service=cache_service, temp_download_dir=temp_download_dir)
+        
+        definition_service = DefinitionService(
+            crypto_service=crypto_service,
+            config_file=current_config_file,
+            fallback_file=current_fallback_file
+        )
+        logger.info("Services initialisés manuellement pour verification_utils.")
+
+        # extract_service, fetch_service, definition_service sont maintenant disponibles localement
         
         extract_definitions_obj, error_message = definition_service.load_definitions() # C'est un objet ExtractDefinitions
         if error_message:

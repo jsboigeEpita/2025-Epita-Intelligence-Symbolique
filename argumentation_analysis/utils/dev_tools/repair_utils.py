@@ -16,7 +16,19 @@ from semantic_kernel.functions.kernel_arguments import KernelArguments
 
 from argumentation_analysis.models.extract_definition import ExtractDefinitions, SourceDefinition, Extract # Ajustement du chemin
 from argumentation_analysis.core.llm_service import create_llm_service # Conservé pour le pipeline
-from project_core.service_setup.core_services import initialize_core_services # Conservé pour le pipeline
+# from project_core.service_setup.core_services import initialize_core_services # Remplacé par initialisation manuelle
+
+# Imports pour l'initialisation manuelle des services
+from argumentation_analysis.services.cache_service import CacheService
+from argumentation_analysis.services.crypto_service import CryptoService
+from argumentation_analysis.services.definition_service import DefinitionService
+from argumentation_analysis.services.extract_service import ExtractService
+from argumentation_analysis.services.fetch_service import FetchService
+from argumentation_analysis.ui.config import (
+    ENCRYPTION_KEY as DEFAULT_ENCRYPTION_KEY,
+    CONFIG_FILE as DEFAULT_CONFIG_FILE_PATH,
+    CONFIG_FILE_JSON as DEFAULT_CONFIG_FILE_JSON_PATH
+)
 
 # Services passés en argument à repair_extract_markers, pas besoin d'importer FetchService/ExtractService ici
 # from argumentation_analysis.services.fetch_service import FetchService
@@ -201,14 +213,43 @@ async def run_extract_repair_pipeline(
 
         config_file_to_use = Path(custom_input_path_str) if custom_input_path_str else None
         
-        core_services = initialize_core_services(
-            project_root_dir=project_root_dir,
-            config_file_path=config_file_to_use
-        )
+        # Remplacement de initialize_core_services
+        logger.info("Initialisation manuelle des services pour repair_utils...")
+        base_path = project_root_dir if project_root_dir else Path.cwd()
+
+        current_encryption_key = DEFAULT_ENCRYPTION_KEY # TODO: Permettre la surcharge via config si nécessaire
         
-        extract_service = core_services["extract_service"]
-        fetch_service = core_services["fetch_service"]
-        definition_service = core_services["definition_service"]
+        current_config_file = config_file_to_use if config_file_to_use else base_path / DEFAULT_CONFIG_FILE_PATH
+        if not current_config_file.is_absolute():
+            current_config_file = base_path / current_config_file
+        
+        current_fallback_file = base_path / DEFAULT_CONFIG_FILE_JSON_PATH # TODO: Permettre la surcharge
+        if not current_fallback_file.is_absolute():
+            current_fallback_file = base_path / current_fallback_file
+        if not current_fallback_file.exists():
+            logger.warning(f"Fichier de fallback JSON {current_fallback_file.resolve()} non trouvé.")
+            current_fallback_file = None
+
+        crypto_service = CryptoService(current_encryption_key)
+        
+        cache_dir = base_path / "argumentation_analysis" / "text_cache"
+        cache_dir.mkdir(parents=True, exist_ok=True)
+        cache_service = CacheService(cache_dir=cache_dir)
+        
+        extract_service = ExtractService() # Utilisé plus bas
+        
+        temp_download_dir = base_path / "argumentation_analysis" / "temp_downloads"
+        temp_download_dir.mkdir(parents=True, exist_ok=True)
+        fetch_service = FetchService(cache_service=cache_service, temp_download_dir=temp_download_dir) # Utilisé plus bas
+        
+        definition_service = DefinitionService( # Utilisé plus bas
+            crypto_service=crypto_service,
+            config_file=current_config_file,
+            fallback_file=current_fallback_file
+        )
+        logger.info("Services initialisés manuellement pour repair_utils.")
+        
+        # extract_service, fetch_service, definition_service sont maintenant disponibles localement
         
         extract_definitions, error_message = definition_service.load_definitions()
         if error_message:

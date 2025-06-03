@@ -11,10 +11,10 @@ logger = logging.getLogger(__name__)
 
 # Ce mapping pourrait être externalisé ou rendu plus configurable si nécessaire.
 DEFAULT_PACKAGE_TO_MODULE_MAPPING: Dict[str, str] = {
-    'project_core.utils': 'Project Core Utilities',
-    'project_core.dev_utils': 'Project Core Dev Utilities',
-    'project_core.service_setup': 'Project Core Service Setup',
-    'project_core.pipelines': 'Project Core Pipelines',
+    # 'project_core.utils': 'Project Core Utilities', # Supprimé
+    # 'project_core.dev_utils': 'Project Core Dev Utilities', # Supprimé
+    # 'project_core.service_setup': 'Project Core Service Setup', # Supprimé
+    # 'project_core.pipelines': 'Project Core Pipelines', # Supprimé
     'argumentation_analysis.utils': 'Argumentation Analysis Utilities',
     'argumentation_analysis.analytics': 'Argumentation Analysis Analytics',
     'argumentation_analysis.mocks': 'Argumentation Analysis Mocks',
