@@ -16,6 +16,13 @@ node --version
 npm --version
 ```
 
+Pour une configuration plus automatisée de votre environnement de développement, notamment pour les dépendances Python et Java, vous pouvez utiliser le script [`setup_project_env.ps1`](../../../../../setup_project_env.ps1:0). Exécutez-le depuis la racine du projet :
+```bash
+# Depuis la racine du projet (d:/Dev/2025-Epita-Intelligence-Symbolique)
+./setup_project_env.ps1
+```
+Ce script vous aidera à configurer Conda, le JDK portable et d'autres aspects essentiels.
+
 #### ☐ 2. Navigation vers le projet
 ```bash
 # Aller dans le répertoire du projet
@@ -58,6 +65,13 @@ curl -X POST http://localhost:5000/api/analyze \
   -H "Content-Type: application/json" \
   -d '{"text": "Test argument"}'
 ```
+
+Vous pouvez également tester l'API de manière plus complète en exécutant le script de test dédié depuis la racine du projet :
+```bash
+# Assurez-vous que l'API est démarrée
+python libs/web_api/test_api.py
+```
+Ce script effectue une série de tests sur les différents points d'accès de l'API. Consultez le fichier [`libs/web_api/test_api.py`](../../../../../libs/web_api/test_api.py) pour plus de détails.
 
 **✅ Résultat attendu :** L'API répond avec un JSON contenant `"success": true`
 
@@ -294,6 +308,8 @@ npm start
    ```
 
 **✅ Résultat attendu :** L'interface affiche les résultats d'analyse avec les sophismes détectés.
+
+Pour des tests plus automatisés et approfondis de l'API elle-même, vous pouvez réutiliser le script [`libs/web_api/test_api.py`](../../../../../libs/web_api/test_api.py) mentionné précédemment. Cela peut être utile pour vérifier que l'API fonctionne correctement avant de tester l'intégration complète avec l'interface React.
 
 ## 🎯 Objectifs de validation
 

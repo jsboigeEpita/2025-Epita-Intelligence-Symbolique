@@ -697,6 +697,16 @@ class AlertMessage(Message):
             type=MessageType.ALERT,
             sender=sender,
             sender_level=sender_level,
+### Tests pour les canaux
+
+Il est crucial de tester vos implémentations de canaux. Vous pouvez vous inspirer des tests unitaires existants pour vérifier :
+- L'envoi et la réception corrects des messages.
+- La gestion des files d'attente.
+- Le fonctionnement des abonnements et des filtres.
+- La gestion des erreurs.
+
+Par exemple, consultez les tests unitaires pour les composants principaux dans [`tests/unit/project_core/`](tests/unit/project_core/) pour des idées sur la structure des tests.
+
 ## Comment créer de nouveaux adaptateurs
 
 ### Structure d'un adaptateur
@@ -1149,6 +1159,15 @@ subscription_id = visualization_adapter.subscribe_to_data_updates(
 )
 ```
 
+### Tests pour les adaptateurs
+
+Les adaptateurs doivent être testés pour s'assurer qu'ils traduisent correctement les appels et les messages.
+- Testez chaque méthode spécifique de l'adaptateur.
+- Vérifiez la création correcte des messages sortants.
+- Assurez-vous que les messages entrants sont correctement interprétés.
+
+Vous trouverez des exemples de tests d'adaptateurs dans le répertoire [`tests/unit/argumentation_analysis/`](tests/unit/argumentation_analysis/) ou en examinant les tests des modules principaux.
+
 ## Bonnes pratiques de développement
 
 ### Gestion des erreurs
@@ -1294,6 +1313,8 @@ class TestStrategicAdapter(unittest.TestCase):
         self.assertEqual(message.priority, MessagePriority.HIGH)
 ```
 
+Pour un exemple concret de test unitaire, vous pouvez examiner [`tests/unit/project_core/utils/test_file_utils.py`](tests/unit/project_core/utils/test_file_utils.py:0) qui teste les utilitaires de fichiers.
+
 #### 2. Tests d'intégration
 
 Écrivez des tests d'intégration pour valider les interactions entre les composants :
@@ -1360,6 +1381,8 @@ class TestCommunicationIntegration(unittest.TestCase):
         # Attendre que le thread se termine
         tactical_thread.join()
 ```
+
+Un exemple de test d'intégration pertinent est [`tests/integration/test_logic_agents_integration.py`](tests/integration/test_logic_agents_integration.py:0), qui vérifie l'interaction entre différents agents logiques.
 
 #### 3. Tests de performance
 

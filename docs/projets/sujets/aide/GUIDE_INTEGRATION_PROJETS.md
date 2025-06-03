@@ -47,6 +47,16 @@ Le système est composé de plusieurs couches :
    - Intégration avec des LLMs comme Claude et GPT
    - Gestion des sessions et du contexte
 
+### Exemples d'intégration et Tests
+
+Pour mieux comprendre comment ces composants interagissent, vous pouvez consulter les ressources suivantes :
+
+*   **Scripts d'intégration d'API :** Un exemple concret d'appel à l'API pour utiliser les fonctionnalités du moteur d'analyse se trouve dans [`examples/logic_agents/api_integration_example.py`](examples/logic_agents/api_integration_example.py:0).
+*   **Tests d'intégration :** Les tests d'intégration pour les agents logiques, qui illustrent leurs interactions avec le reste du système, sont disponibles dans [`tests/integration/test_logic_agents_integration.py`](tests/integration/test_logic_agents_integration.py:0). Pour l'intégration spécifique avec TweetyProject via JPype, référez-vous au répertoire [`tests/integration/jpype_tweety/`](tests/integration/jpype_tweety/).
+*   **Scripts de démonstration :** Des scripts montrant l'utilisation combinée de plusieurs modules sont disponibles dans le répertoire [`examples/scripts_demonstration/`](examples/scripts_demonstration/).
+*   **Notebooks illustratifs :** Un tutoriel sous forme de notebook, illustrant un flux d'intégration typique avec l'API et les agents logiques, est disponible ici : [`examples/notebooks/api_logic_tutorial.ipynb`](examples/notebooks/api_logic_tutorial.ipynb:0).
+*   **Test de l'API Web :** Un script de test dédié pour l'API web, montrant comment interroger ses différents endpoints, se trouve dans [`libs/web_api/test_api.py`](libs/web_api/test_api.py:0).
+
 ## Guide pour le projet Interface Web
 
 > **Étudiants :** erwin.rodrigues, robin.de-bastos
@@ -251,6 +261,7 @@ Développer une interface web moderne et intuitive qui permet aux utilisateurs d
 - **Exemples de code** : Consultez `docs/projets/sujets/aide/interface-web/exemples-react/` pour des composants prêts à l'emploi
 - **Guide de démarrage rapide** : `docs/projets/sujets/aide/interface-web/DEMARRAGE_RAPIDE.md`
 - **Documentation de l'API** : Accessible via `http://localhost:5000/api/endpoints` une fois l'API démarrée
+*   **Exemples d'intégration API pour le frontend :** Bien que le guide se concentre sur React, les principes d'appel à l'API sont similaires pour d'autres frameworks. Pour un exemple Python d'appel à l'API, voir [`examples/logic_agents/api_integration_example.py`](examples/logic_agents/api_integration_example.py:0). Les tests d'intégration comme [`tests/integration/test_logic_agents_integration.py`](tests/integration/test_logic_agents_integration.py:0) peuvent aussi vous donner des idées sur les flux de données.
 
 ### Fonctionnalités à implémenter
 
@@ -624,6 +635,8 @@ Développer un serveur MCP (Model Context Protocol) qui expose les fonctionnalit
 - **Documentation MCP** : [Model Context Protocol](https://github.com/anthropics/anthropic-cookbook/tree/main/model_context_protocol)
 - **Exemples d'intégration** : `docs/projets/sujets/2.5.3_Developpement_Serveur_MCP_Analyse_Argumentative.md`
 - **Documentation TweetyProject** : [TweetyProject](https://tweetyproject.org/doc/)
+*   **Exemples d'utilisation des agents logiques :** Pour comprendre comment interagir avec le moteur d'analyse que votre serveur MCP exposera, consultez le guide [`docs/guides/utilisation_agents_logiques.md`](docs/guides/utilisation_agents_logiques.md:0).
+*   **Tests d'intégration du moteur :** Les fichiers dans [`tests/integration/`](tests/integration/) (par exemple, [`tests/integration/test_logic_agents_integration.py`](tests/integration/test_logic_agents_integration.py:0)) montrent comment les composants du moteur sont testés ensemble.
 
 ### Fonctionnalités à implémenter
 
@@ -686,6 +699,14 @@ L'API web expose les fonctionnalités suivantes :
    - `FallacyRequest` / `FallacyResponse`
    - `FrameworkRequest` / `FrameworkResponse`
 
+### Guides et Exemples Complémentaires
+
+*   **Guide du développeur :** Pour une vue d'ensemble plus large des pratiques de développement et de l'architecture, consultez le [`docs/guides/guide_developpeur.md`](docs/guides/guide_developpeur.md:0).
+*   **Utilisation des agents logiques :** Un guide détaillé sur l'utilisation directe des agents logiques est disponible : [`docs/guides/utilisation_agents_logiques.md`](docs/guides/utilisation_agents_logiques.md:0).
+*   **Exemple d'intégration API :** Un script Python illustrant l'appel à l'API se trouve dans [`examples/logic_agents/api_integration_example.py`](examples/logic_agents/api_integration_example.py:0).
+*   **Notebook tutoriel :** Pour un exemple interactif d'utilisation de l'API et des agents, voir [`examples/notebooks/api_logic_tutorial.ipynb`](examples/notebooks/api_logic_tutorial.ipynb:0).
+*   **Script de test de l'API :** Pour voir comment tester les différents endpoints de l'API, référez-vous à [`libs/web_api/test_api.py`](libs/web_api/test_api.py:0).
+
 ## Processus de développement
 
 ### Workflow recommandé
@@ -704,6 +725,7 @@ L'API web expose les fonctionnalités suivantes :
    - Tester chaque composant individuellement
    - Effectuer des tests d'intégration
    - Valider les fonctionnalités avec des cas d'utilisation réels
+    *   Consultez les tests d'intégration existants dans [`tests/integration/`](tests/integration/) pour des exemples, notamment [`tests/integration/test_logic_agents_integration.py`](tests/integration/test_logic_agents_integration.py:0) et le répertoire [`tests/integration/jpype_tweety/`](tests/integration/jpype_tweety/).
 
 4. **Documentation**
    - Documenter le code
