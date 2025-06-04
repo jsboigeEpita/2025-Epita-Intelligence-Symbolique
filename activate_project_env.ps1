@@ -23,6 +23,16 @@ if (Test-Path $envFilePath) {
             if ($parts.Length -eq 2) {
                 $key = $parts[0].Trim()
                 $value = $parts[1].Trim()
+
+                # Retirer les guillemets englobants s'ils existent (simples ou doubles)
+                if (($value.StartsWith('"') -and $value.EndsWith('"')) -or ($value.StartsWith("'") -and $value.EndsWith("'"))) {
+                    if ($value.Length -ge 2) { # S'assurer qu'il y a au moins deux caractères (les guillemets)
+                        $value = $value.Substring(1, $value.Length - 2)
+                    } else {
+                        # Cas étrange : une chaîne comme "'" ou """", laisser vide ou tel quel ? Pour l'instant, on la vide.
+                        $value = ""
+                    }
+                }
                 
                 # Résolution spécifique pour JAVA_HOME si c'est un chemin relatif
                 if ($key -eq "JAVA_HOME") {

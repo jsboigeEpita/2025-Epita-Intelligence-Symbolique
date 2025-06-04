@@ -42,7 +42,7 @@ def main():
 
     try:
         # Importer la fonction depuis son nouvel emplacement
-        from project_core.dev_utils.mock_utils import setup_jpype_mock
+        from argumentation_analysis.utils.dev_tools.mock_utils import setup_jpype_mock
         logger.info("Fonction setup_jpype_mock importée avec succès.")
         
         # Appeler la fonction pour activer le mock

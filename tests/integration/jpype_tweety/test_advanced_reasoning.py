@@ -14,7 +14,7 @@ import logging
 from tests.conftest import _REAL_JPYPE_AVAILABLE
 
 logger = logging.getLogger(__name__)
-from project_core.integration.tweety_clingo_utils import check_clingo_installed_python_way, get_clingo_models_python_way
+from argumentation_analysis.core.integration.tweety_clingo_utils import check_clingo_installed_python_way, get_clingo_models_python_way
 
 
 @pytest.mark.skipif(not _REAL_JPYPE_AVAILABLE, reason="Test requires real JPype and JVM.")

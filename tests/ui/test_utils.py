@@ -19,7 +19,7 @@ from argumentation_analysis.ui.file_operations import load_extract_definitions, 
 from argumentation_analysis.ui import config as ui_config_module # Pour mocker les constantes
 from cryptography.fernet import Fernet, InvalidToken # Ajout InvalidToken
 # Importer les fonctions de crypto directement pour les tests qui les utilisent
-from project_core.utils.crypto_utils import encrypt_data_with_fernet, decrypt_data_with_fernet
+from argumentation_analysis.utils.core_utils.crypto_utils import encrypt_data_with_fernet, decrypt_data_with_fernet
 import base64 # Ajouté pour la fixture test_key
 
 

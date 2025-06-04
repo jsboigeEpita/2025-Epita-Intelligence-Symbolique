@@ -16,8 +16,8 @@ if str(project_root) not in sys.path:
     sys.path.insert(0, str(project_root))
 # Commenté car l'installation du package via `pip install -e .` devrait gérer l'accessibilité.
 
-from project_core.dev_utils.encoding_utils import check_project_python_files_encoding, fix_file_encoding
-from project_core.dev_utils.code_validation import analyze_directory_references, check_python_syntax
+from argumentation_analysis.utils.dev_tools.encoding_utils import check_project_python_files_encoding, fix_file_encoding
+from argumentation_analysis.utils.dev_tools.code_validation import analyze_directory_references, check_python_syntax
 
 @pytest.fixture
 def temp_project_dir(tmp_path: Path) -> Path:
@@ -28,7 +28,7 @@ def temp_project_dir(tmp_path: Path) -> Path:
     # Fichier Python correct en UTF-8
     (project_dir / "good_file.py").write_text("# coding: utf-8\nprint('你好世界')\n", encoding='utf-8')
     
-    # Fichier Python incorrect (réellement encodé en latin-1)
+    # Fichier Python incorrect (simulé en latin-1)
     (project_dir / "bad_encoding_file.py").write_text("# coding: latin-1\nprint('Hélène')\n", encoding='latin-1')
     
     # Fichier non-Python

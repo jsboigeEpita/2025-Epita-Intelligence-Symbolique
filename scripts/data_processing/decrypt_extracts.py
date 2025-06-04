@@ -56,7 +56,7 @@ try:
     # )
     from argumentation_analysis.paths import DATA_DIR
     # MODIFIÉ: Import des deux fonctions déplacées
-    from project_core.utils.crypto_utils import derive_encryption_key, load_encryption_key
+    from argumentation_analysis.utils.core_utils.crypto_utils import derive_encryption_key, load_encryption_key
     
     # Chemin vers le fichier chiffré
     CONFIG_FILE = Path(DATA_DIR) / "extract_sources.json.gz.enc"
