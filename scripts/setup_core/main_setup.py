@@ -1,4 +1,17 @@
 # main_setup.py
+import os
+import sys
+
+# Déterminer la racine du projet et l'ajouter à sys.path pour prioriser les modules locaux
+# Le script est dans scripts/setup_core, donc remonter de deux niveaux
+_current_script_path_for_sys_path = os.path.abspath(__file__)
+_setup_core_dir_for_sys_path = os.path.dirname(_current_script_path_for_sys_path)
+_scripts_dir_for_sys_path = os.path.dirname(_setup_core_dir_for_sys_path)
+_project_root_for_sys_path = os.path.dirname(_scripts_dir_for_sys_path)
+if _project_root_for_sys_path not in sys.path:
+    sys.path.insert(0, _project_root_for_sys_path)
+print(f"[DEBUG_ROO] sys.path[0] is now: {sys.path[0]}") # Log pour vérifier
+
 import argparse
 import sys
 import os
@@ -6,6 +19,7 @@ import os
 # Placeholder pour les futurs modules
 import scripts.setup_core.manage_conda_env as manage_conda_env
 import scripts.setup_core.manage_portable_tools as manage_portable_tools
+print(f"[DEBUG_ROO] Loaded manage_portable_tools from: {manage_portable_tools.__file__}")
 import scripts.setup_core.manage_project_files as manage_project_files
 import scripts.setup_core.run_pip_commands as run_pip_commands
 
@@ -116,6 +130,6 @@ if __name__ == "__main__":
     # Ceci est utile pour les tests locaux du script, mais les wrappers shell devront gérer le PYTHONPATH correctement.
     current_dir = os.path.dirname(os.path.abspath(__file__))
     project_root = os.path.dirname(os.path.dirname(current_dir)) 
-    # sys.path.insert(0, project_root) # Décommenter si des imports de modules du projet sont nécessaires plus tard
+    sys.path.insert(0, project_root) # S'assurer que les modules locaux sont prioritaires
 
     main()

@@ -9,7 +9,7 @@ import re
 
 JDK_CONFIG = {
     "name": "JDK",
-    "url_windows": "https://download.oracle.com/java/17/latest/jdk-17_windows-x64_bin.zip",
+    "url_windows": "https://github.com/adoptium/temurin17-binaries/releases/download/jdk-17.0.11%2B9/OpenJDK17U-jdk_x64_windows_hotspot_17.0.11_9.zip",
     # "url_linux": "https://download.oracle.com/java/17/latest/jdk-17_linux-x64_bin.tar.gz", # Exemple
     # "url_macos": "https://download.oracle.com/java/17/latest/jdk-17_macos-x64_bin.tar.gz", # Exemple
     "dir_name_pattern": r"jdk-17.*",  # Regex pour correspondre à des versions comme jdk-17.0.1, jdk-17.0.11
@@ -28,8 +28,15 @@ TOOLS_TO_MANAGE = [JDK_CONFIG, OCTAVE_CONFIG] # Peut être utilisé si on boucle
 
 def _download_file(url, dest_folder, file_name):
     """Télécharge un fichier depuis une URL vers un dossier de destination."""
+    print(f"[DEBUG_ROO] _download_file called with: url={url}, dest_folder={dest_folder}, file_name={file_name}")
     os.makedirs(dest_folder, exist_ok=True)
     file_path = os.path.join(dest_folder, file_name)
+
+    # Vérifier si l'archive existe déjà
+    if os.path.exists(file_path):
+        print(f"[INFO] Archive {file_name} already exists in {dest_folder}. Using local copy.")
+        # Une vérification de l'intégrité du fichier (ex: checksum) pourrait être ajoutée ici à l'avenir.
+        return file_path
     
     print(f"Downloading {file_name} from {url}...")
     try:
@@ -64,8 +71,9 @@ def _extract_zip(zip_path, extract_to_folder):
         with zipfile.ZipFile(zip_path, 'r') as zip_ref:
             zip_ref.extractall(extract_to_folder)
         print("Extraction complete.")
-        os.remove(zip_path) # Nettoyer l'archive
-        print(f"Removed archive {zip_path}.")
+        print(f"[DEBUG_ROO] Reached end of _extract_zip. zip_path is: {zip_path}. os.remove is commented.")
+        # os.remove(zip_path) # Conserver l'archive pour réutilisation potentielle
+        # print(f"Archive {zip_path} kept for potential reuse.") # L'archive est conservée.
         return True
     except zipfile.BadZipFile:
         print(f"[ERROR] Failed to extract {os.path.basename(zip_path)}. File might be corrupted or not a ZIP file.")
@@ -87,6 +95,7 @@ def _find_tool_dir(base_dir, pattern):
 def setup_single_tool(tool_config, tools_base_dir, temp_download_dir, force_reinstall=False, interactive=False):
     """Gère le téléchargement, l'extraction et la configuration d'un seul outil portable."""
     print(f"--- Managing {tool_config['name']} ---")
+    print(f"[DEBUG_ROO] Initial tool_config for {tool_config['name']}: {tool_config}")
     
     tool_name = tool_config['name']
     # Déterminer l'URL en fonction de l'OS (simplifié pour Windows pour l'instant)
@@ -148,6 +157,9 @@ def setup_single_tool(tool_config, tools_base_dir, temp_download_dir, force_rein
     # Si l'outil n'existe pas ou a été supprimé
     if not expected_tool_path:
         print(f"[INFO] {tool_name} not found or marked for reinstallation. Proceeding with download and setup.")
+        print(f"[DEBUG_ROO] URL to be used for download: {url}")
+        print(f"[DEBUG_ROO] Archive name: {archive_name}")
+        print(f"[DEBUG_ROO] Temp download dir: {temp_download_dir}")
         downloaded_archive_path = _download_file(url, temp_download_dir, archive_name)
         if not downloaded_archive_path:
             print(f"[ERROR] Failed to download {tool_name}. Aborting setup for this tool.")
