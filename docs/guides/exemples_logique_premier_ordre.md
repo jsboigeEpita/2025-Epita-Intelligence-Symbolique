@@ -88,8 +88,8 @@ print(belief_set.content)
 
 **Résultat (ensemble de croyances):**
 ```
-forall x: (Homme(x) => Mortel(x))
-Homme(socrate)
+forall x: (Homme(x) => Mortel(x));
+Homme(socrate);
 ```
 
 **Requête et exécution:**
@@ -135,8 +135,8 @@ print(belief_set.content)
 
 **Résultat (ensemble de croyances):**
 ```
-forall x: (Etudiant(x) => exists y: (Cours(y) && Suit(x,y)))
-forall z: (Cours(z) => !Facile(z))
+forall x: (Etudiant(x) => exists y: (Cours(y) && Suit(x,y)));
+forall z: (Cours(z) => !Facile(z));
 ```
 
 **Requête et exécution:**
@@ -182,9 +182,9 @@ print(belief_set.content)
 
 **Résultat (ensemble de croyances):**
 ```
-forall x: forall y: (Parent(x,y) => Aime(x,y))
-Mere(marie,jean)
-forall x: forall y: (Mere(x,y) => Parent(x,y))
+forall x: forall y: (Parent(x,y) => Aime(x,y));
+Mere(marie,jean);
+forall x: forall y: (Mere(x,y) => Parent(x,y));
 ```
 
 **Requête et exécution:**
@@ -236,10 +236,10 @@ print(belief_set.content)
 
 **Résultat (ensemble de croyances):**
 ```
-directeur = pierre
-president = pierre
-forall x: (Employe(x) => Respecte(x,directeur))
-Employe(jean)
+directeur = pierre;
+president = pierre;
+forall x: (Employe(x) => Respecte(x,directeur));
+Employe(jean);
 ```
 
 **Requête et exécution:**
@@ -338,10 +338,10 @@ print(belief_set.content)
 
 **Résultat (ensemble de croyances):**
 ```
-forall x: (Mammifere(x) => Vertebre(x))
-forall x: (Chat(x) => Mammifere(x))
-forall x: (Vertebre(x) => ACœur(x))
-Chat(felix)
+forall x: (Mammifere(x) => Vertebre(x));
+forall x: (Chat(x) => Mammifere(x));
+forall x: (Vertebre(x) => ACœur(x));
+Chat(felix);
 ```
 
 **Requête et exécution:**
@@ -389,10 +389,10 @@ print(belief_set.content)
 
 **Résultat (ensemble de croyances):**
 ```
-forall x: (Premier(x) <=> EntierNaturel(x) && Superieur(x,1) && forall y: (Divise(y,x) => (y = 1 || y = x)))
-EntierNaturel(2)
-Superieur(2,1)
-forall y: (Divise(y,2) => (y = 1 || y = 2))
+forall x: (Premier(x) <=> EntierNaturel(x) && Superieur(x,1) && forall y: (Divise(y,x) => (y = 1 || y = x)));
+EntierNaturel(2);
+Superieur(2,1);
+forall y: (Divise(y,2) => (y = 1 || y = 2));
 ```
 
 **Requête et exécution:**
@@ -440,9 +440,9 @@ print(belief_set.content)
 
 **Résultat (ensemble de croyances):**
 ```
-forall x: (Eucaryote(x) => PossedeNoyau(x))
-forall x: (PossedeNoyau(x) => ContientADN(x))
-forall x: (Bacterienne(x) => !PossedeNoyau(x))
+forall x: (Eucaryote(x) => PossedeNoyau(x));
+forall x: (PossedeNoyau(x) => ContientADN(x));
+forall x: (Bacterienne(x) => !PossedeNoyau(x));
 ```
 
 **Requête et exécution:**
@@ -488,10 +488,10 @@ print(belief_set.content)
 
 **Résultat (ensemble de croyances):**
 ```
-forall x: (Personne(x) && CommetCrimePremeditation(x) => CoupableMeurtrePremierDegre(x))
-forall x: (Personne(x) && CoupableMeurtrePremierDegre(x) => EncourtPerpetuite(x))
-Personne(accuse)
-CommetCrimePremeditation(accuse)
+forall x: (Personne(x) && CommetCrimePremeditation(x) => CoupableMeurtrePremierDegre(x));
+forall x: (Personne(x) && CoupableMeurtrePremierDegre(x) => EncourtPerpetuite(x));
+Personne(accuse);
+CommetCrimePremeditation(accuse);
 ```
 
 **Requête et exécution:**
