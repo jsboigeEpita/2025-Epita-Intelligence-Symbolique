@@ -50,12 +50,21 @@ def normalize_text(text: str) -> str:
     )
 
     # Gestion spécifique des apostrophes avant la suppression générale de la ponctuation.
-    # L'objectif est de conserver les apostrophes internes aux mots (ex: "l'important")
-    # tout en supprimant celles qui sont en début/fin de mot ou multiples.
-    text = re.sub(r"'{2,}", " ", text)  # Remplace les apostrophes doubles ou plus par un espace.
-    # Remplace les apostrophes en début ou fin de mot, ou celles isolées par des espaces.
-    # (?<!\w) : assertion négative arrière, s'assure qu'il n'y a pas de caractère de mot avant.
-    # (?!\w) : assertion négative avant, s'assure qu'il n'y a pas de caractère de mot après.
+    # Objectif:
+    # - l'''exemple''' -> l'exemple
+    # - ''fin'' -> fin (après normalisation des espaces)
+    # - l''autre -> l autre (pour tokenisation correcte en "l", "autre")
+    # - 'debut' -> debut (après normalisation des espaces)
+    # - l'important -> l'important (conservé car interne)
+
+    text = text.replace("'''", "'")  # l'''exemple''' -> l'exemple
+    text = text.replace("''", " ")   # ''fin'' ->  fin ,  l''autre -> l autre
+                                     # Note: " fin " avec espaces sera nettoyé par la normalisation des espaces plus tard.
+                                     # "l autre" est intentionnel pour la tokenisation.
+
+    # Supprimer les apostrophes restantes en début/fin de mot ou celles isolées par des espaces.
+    # Ex: 'debut' ->  debut , ' mot ' ->   mot
+    # Ne devrait pas affecter "l'exemple" ou "l'important" car l'apostrophe y est interne.
     text = re.sub(r"(?<!\w)'|'(?!\w)", " ", text)
 
     # Suppression de tous les autres signes de ponctuation définis dans string.punctuation.
@@ -101,7 +110,10 @@ def tokenize_text(text: str) -> List[str]:
 
     # La normalisation est une étape préalable à la tokenisation.
     normalized_text = normalize_text(text)
-    if not normalized_text: # Gérer le cas d'une chaîne vide après normalisation
+    # Pour s'assurer que la tokenisation sépare les mots aux apostrophes,
+    # comme attendu par certains tests et le docstring.
+    normalized_text = normalized_text.replace("'", " ")
+    if not normalized_text.strip(): # Gérer chaîne vide ou que des espaces après remplacement
         return []
     tokens = normalized_text.split()
     return tokens

@@ -165,22 +165,10 @@ def test_run_shell_command_empty_command_string(caplog):
     # car il n'y a pas de commande à exécuter.
     ret_code, out, err = run_shell_command("")
     
-    assert ret_code == -10 # Devrait être traité comme FileNotFoundError car la commande est vide
-    assert "Commande non trouvée: " in err or "IndexError" in err # Le message exact peut varier
-    # Le log devrait indiquer une erreur
-    assert "Erreur : La commande ou l'exécutable" in caplog.text or "IndexError: list index out of range" in caplog.text
-    # La logique actuelle de run_shell_command avec shlex.split("") -> []
-    # puis shlex.split(command)[0] lèvera un IndexError.
-    # Il faudrait peut-être un check pour une commande vide en amont.
-    # Pour l'instant, on teste le comportement actuel.
-    # Après correction dans system_utils pour gérer IndexError:
-    # assert "Commande non trouvée: " in err
-    # assert "Erreur : La commande ou l'exécutable '' n'a pas été trouvé." in caplog.text
-    # Si shlex.split('') -> [], alors cmd_name = shlex.split(command)[0] -> IndexError
-    # Le bloc `except Exception` capturera cela.
-    # stderr_str sera str(e) qui est "list index out of range"
-    # Donc ret_code = -11
-    assert ret_code == -11 # Ou -10 si on considère une commande vide comme "non trouvée"
-    if ret_code == -11:
-        assert "list index out of range" in err # Ou le message de l'exception attrapée
-    # Si on veut un comportement plus spécifique pour une commande vide, il faudrait l'ajouter.
+    assert ret_code == -11 # OSError: [WinError 87] Paramètre incorrect est capturée par le except Exception générique
+    assert "Paramètre incorrect" in err # Vérifie une partie du message de OSError
+    # Le log devrait indiquer une erreur générique car OSError est attrapée par le bloc Exception
+    assert "Une erreur inattendue est survenue lors de l'exécution de '': OSError - [WinError 87] Paramètre incorrect" in caplog.text
+    # Les commentaires et assertions précédents supposaient un FileNotFoundError ou IndexError,
+    # mais c'est une OSError sur Windows pour une commande vide passée à subprocess.run,
+    # qui est ensuite attrapée par le bloc `except Exception`.

@@ -30,7 +30,11 @@ except Exception as e:
 
 def get_jvm_options(jdk_path: Optional[Path] = PORTABLE_JDK_PATH) -> List[str]:
     """Prépare les options pour le démarrage de la JVM, incluant le chemin du JDK si disponible."""
-    options = []
+    options = [
+        "-Xms128m",  # Mémoire initiale minimale
+        "-Xmx512m"   # Mémoire maximale
+    ]
+    logger.info(f"Options JVM de base définies : {options}")
     if jdk_path and jdk_path.is_dir():
         jvm_dll_path = None
         # Tenter de trouver le chemin correct vers jvm.dll ou libjvm.so
@@ -92,6 +96,8 @@ def initialize_jvm(lib_dir_path: str, jdk_path: Optional[Path] = PORTABLE_JDK_PA
 
         jvm_options = get_jvm_options(jdk_path)
         
+        # La logique de recherche de jvm_dll_to_use (lignes 99-112) est conservée pour information
+        # mais jvm_dll_to_use n'est plus utilisé directement ci-dessous pour startJVM.
         jvm_dll_to_use = None
         if jdk_path:
             # Tenter de trouver le chemin correct vers jvm.dll ou libjvm.so
@@ -106,14 +112,24 @@ def initialize_jvm(lib_dir_path: str, jdk_path: Optional[Path] = PORTABLE_JDK_PA
             elif (jdk_path / "jre" / "lib" / "amd64" / "server" / "libjvm.so").exists(): # Structure plus ancienne
                 jvm_dll_to_use = str(jdk_path / "jre" / "lib" / "amd64" / "server" / "libjvm.so")
 
-        if jvm_dll_to_use:
-            logger.info(f"Tentative de démarrage de la JVM avec: {jvm_dll_to_use}")
-            jpype.startJVM(jvm_dll_to_use, classpath=[classpath], *jvm_options, convertStrings=False)
+            if jvm_dll_to_use: # Log informatif si un JDK portable est détecté
+                 logger.info(f"Un JDK portable a été détecté à {jdk_path} (jvm.dll estimé: {jvm_dll_to_use}), mais nous allons prioriser la configuration système.")
+            else:
+                 logger.info(f"Aucun jvm.dll/libjvm.so trouvé dans le JDK portable spécifié: {jdk_path}. Nous allons utiliser la configuration système.")
         else:
-            logger.info("Tentative de démarrage de la JVM avec le JDK par défaut du système.")
+            logger.info("Aucun JDK portable spécifié. Nous allons utiliser la configuration système.")
+
+        # Simplified: Attempt to start JVM using system configuration.
+        # This replaces the logic that tried portable JDK first or as fallback.
+        logger.info(f"Attempting JVM start with system config. Classpath: {classpath}, Options: {jvm_options}")
+        try:
             jpype.startJVM(classpath=[classpath], *jvm_options, convertStrings=False)
+            logger.info("JVM started successfully with system configuration.")
+        except Exception as e_system_start:
+            logger.error(f"Failed to start JVM with system configuration: {e_system_start}", exc_info=True)
+            raise # Re-raise the exception to see the full error for diagnosis
             
-        logger.info("✅ JVM démarrée avec succès.")
+        logger.info("✅ JVM démarrée avec succès (ou tentatives faites).")
         
         # Test simple pour vérifier que les classes Tweety sont accessibles
         try:

@@ -26,7 +26,7 @@ from pathlib import Path
 from typing import List, Dict, Any, Tuple, Optional, Union, Callable
 
 import semantic_kernel as sk
-from semantic_kernel.contents import ChatMessageContent, AuthorRole # Potentiellement plus nécessaire directement
+from semantic_kernel.contents import ChatMessageContent # Potentiellement plus nécessaire directement
 from semantic_kernel.functions.kernel_arguments import KernelArguments
 from semantic_kernel.prompt_template.prompt_template_config import PromptTemplateConfig
 

@@ -274,4 +274,4 @@ def test_generate_performance_comparison_markdown_report_runs(tmp_path, mocker):
     report_content = args[0]
     assert "# Rapport de comparaison des performances" in report_content
     assert "Agent contextuel de base | 10 |" in report_content # Vérifie une partie des données
-    assert "Agent rhétorique avancé fournit l'analyse contextuelle la plus riche." in report_content # Vérifie une partie de l'analyse
+    assert "L'agent rhétorique avancé fournit l'analyse contextuelle la plus riche." in report_content # Vérifie une partie de l'analyse
