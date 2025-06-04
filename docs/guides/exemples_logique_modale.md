@@ -34,10 +34,10 @@ La logique modale est particulièrement adaptée pour:
 
 Notre système utilise la syntaxe de TweetyProject pour la logique modale:
 
-| Opérateur | Symbole | Description | Exemple |
-|-----------|---------|-------------|---------|
-| Nécessité | `[]` | Il est nécessaire que | `[](p)` (il est nécessaire que p) |
-| Possibilité | `<>` | Il est possible que | `<>(p)` (il est possible que p) |
+| Opérateur | Symbole(s) | Description | Exemple |
+|-----------|------------|-------------|---------|
+| Nécessité | `[]`, `Box` | Il est nécessaire que | `[](p)` ou `Box(p)` |
+| Possibilité | `<>`, `Diamond` | Il est possible que | `<>(p)` ou `Diamond(p)` |
 | Négation | `!` | NON logique | `!(p)` (non p) |
 | Conjonction | `&&` | ET logique | `p && q` (p et q) |
 | Disjonction | `\|\|` | OU logique | `p \|\| q` (p ou q) |
@@ -258,6 +258,8 @@ Résultat: True - Tweety Result: Modal Query 'F(routes_mouillees)' is ACCEPTED (
 **Interprétation:**
 ```
 L'argument est valide. Puisqu'il pleuvra demain (F(pluie)) et que s'il pleut, les routes seront mouillées (pluie => routes_mouillees), il s'ensuit que les routes seront mouillées demain (F(routes_mouillees)).
+
+Bien qu'il n'y ait pas de fonction dédiée pour cet exemple spécifique dans [`modal_logic_example.py`](../../examples/logic_agents/modal_logic_example.py:0), les principes de conversion de texte et d'exécution de requêtes modales sont illustrés par les autres fonctions du script.
 ```
 
 ### Exemple 5: Croyances et connaissances
@@ -308,6 +310,8 @@ Résultat: True - Tweety Result: Modal Query '!K(jean, terre_plate)' is ACCEPTED
 **Interprétation:**
 ```
 L'argument est valide. Si Jean savait que la Terre est plate, alors la Terre serait plate (par la propriété de véracité de la connaissance). Or, la Terre n'est pas plate. Donc, Jean ne sait pas que la Terre est plate, même s'il le croit.
+
+Bien qu'il n'y ait pas de fonction dédiée pour cet exemple spécifique dans [`modal_logic_example.py`](../../examples/logic_agents/modal_logic_example.py:0), les principes de conversion de texte et d'exécution de requêtes modales sont illustrés par les autres fonctions du script.
 ```
 
 ## Exemples avancés
@@ -413,6 +417,8 @@ L'ensemble de croyances est incohérent. Le paradoxe vient de la combinaison des
 3. Il existe des vérités contingentes qui ne sont pas connues
 
 Cette combinaison mène à une contradiction dans certains systèmes modaux, illustrant les subtilités et les défis de la logique modale.
+
+Bien qu'il n'y ait pas de fonction dédiée pour cet exemple spécifique dans [`modal_logic_example.py`](../../examples/logic_agents/modal_logic_example.py:0), les principes de conversion de texte et d'exécution de requêtes modales, y compris la vérification de la cohérence (bien que la requête ici soit formulée pour tester une conséquence spécifique qui se révèle fausse, indiquant l'incohérence), sont illustrés par les autres fonctions du script.
 ```
 
 ## Cas d'utilisation réels
