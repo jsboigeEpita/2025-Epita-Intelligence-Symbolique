@@ -18,6 +18,8 @@ Les autres sections peuvent nécessiter une vérification manuelle.
 - [Guide de Démarrage Rapide](#guide-de-démarrage-rapide)
 - [Modalités du projet](#modalités-du-projet)
 - [Utilisation des LLMs et IA Symbolique](#utilisation-des-llms-et-ia-symbolique)
+- [Documentation d'Architecture](#documentation-darchitecture)
+- [API Web et Interfaces Modernes](#api-web-et-interfaces-modernes)
 - [Sujets de Projets](#sujets-de-projets)
 - [Guide de Contribution](#guide-de-contribution)
 - [Ressources et Documentation](#ressources-et-documentation)
@@ -316,6 +318,10 @@ Le projet montre comment ces deux approches peuvent être intégrées efficaceme
 - Les résultats sont réintégrés dans un format compréhensible
 
 Cette approche hybride représente une direction prometteuse pour développer des systèmes d'IA plus robustes et explicables.
+
+## Documentation d'Architecture
+
+Une description détaillée de l'architecture du projet, incluant l'architecture globale, les systèmes de communication, l'analyse de l'état actuel et les propositions d'évolution, est disponible dans le répertoire [docs/architecture/](./docs/architecture/). Le document principal de cette section est le [README d'Architecture](./docs/architecture/README.md).
 
 ## API Web et Interfaces Modernes
 

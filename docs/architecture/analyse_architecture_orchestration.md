@@ -17,13 +17,13 @@ L'objectif de la refonte est d'implémenter une architecture hiérarchique à tr
 ### Méthodologie d'analyse utilisée
 
 Pour cette analyse, nous avons examiné en détail les fichiers clés de l'architecture d'orchestration actuelle:
-- `argumentiation_analysis/orchestration/README.md`
-- `argumentiation_analysis/orchestration/analysis_runner.py`
-- `argumentiation_analysis/core/README.md`
-- `argumentiation_analysis/core/shared_state.py`
-- `argumentiation_analysis/core/state_manager_plugin.py`
-- `argumentiation_analysis/core/strategies.py`
-- `argumentiation_analysis/README.md`
+- [`argumentation_analysis/orchestration/README.md`](../../argumentation_analysis/orchestration/README.md)
+- [`argumentation_analysis/orchestration/analysis_runner.py`](../../argumentation_analysis/orchestration/analysis_runner.py)
+- [`argumentation_analysis/core/README.md`](../../argumentation_analysis/core/README.md)
+- [`argumentation_analysis/core/shared_state.py`](../../argumentation_analysis/core/shared_state.py)
+- [`argumentation_analysis/core/state_manager_plugin.py`](../../argumentation_analysis/core/state_manager_plugin.py)
+- [`argumentation_analysis/core/strategies.py`](../../argumentation_analysis/core/strategies.py)
+- [`argumentation_analysis/README.md`](../../argumentation_analysis/README.md)
 
 Cette analyse se concentre sur la structure actuelle, les composants principaux, les mécanismes d'interaction entre agents, et les limitations identifiées qui justifient une refonte vers une architecture hiérarchique.
 
@@ -65,9 +65,9 @@ Le système utilise Semantic Kernel comme framework d'orchestration principal. C
 
 #### Flux d'exécution principal
 
-Le flux d'exécution principal, défini dans `analysis_runner.py`, suit ces étapes:
-1. Création d'une instance d'état locale (`RhetoricalAnalysisState`)
-2. Création d'une instance de plugin de gestion d'état (`StateManagerPlugin`)
+Le flux d'exécution principal, défini dans [`analysis_runner.py`](../../argumentation_analysis/orchestration/analysis_runner.py#L66), suit ces étapes:
+1. Création d'une instance d'état locale ([`RhetoricalAnalysisState`](../../argumentation_analysis/core/shared_state.py#L12))
+2. Création d'une instance de plugin de gestion d'état ([`StateManagerPlugin`](../../argumentation_analysis/core/state_manager_plugin.py#L16))
 3. Configuration d'un kernel Semantic Kernel local avec le service LLM
 4. Configuration des plugins des agents sur le kernel
 5. Création des instances d'agents (`ChatCompletionAgent`)
@@ -79,7 +79,7 @@ Le flux d'exécution principal, défini dans `analysis_runner.py`, suit ces éta
 
 ### 2.2 Composants principaux
 
-#### État partagé (`RhetoricalAnalysisState`)
+#### État partagé ([`RhetoricalAnalysisState`](../../argumentation_analysis/core/shared_state.py#L12))
 
 L'état partagé est le composant central qui stocke toutes les données de l'analyse:
 - `raw_text`: Le texte brut à analyser
@@ -96,30 +96,30 @@ L'état partagé est le composant central qui stocke toutes les données de l'an
 
 La classe fournit des méthodes pour ajouter, modifier et récupérer ces éléments, ainsi que pour sérialiser l'état en JSON.
 
-#### Plugin de gestion d'état (`StateManagerPlugin`)
+#### Plugin de gestion d'état ([`StateManagerPlugin`](../../argumentation_analysis/core/state_manager_plugin.py#L16))
 
 Le `StateManagerPlugin` est un plugin Semantic Kernel qui encapsule l'état partagé et expose des fonctions kernel aux agents:
-- `get_current_state_snapshot`: Récupère un aperçu de l'état actuel
-- `add_analysis_task`: Ajoute une tâche d'analyse
-- `add_identified_argument`: Ajoute un argument identifié
-- `add_identified_fallacy`: Ajoute un sophisme identifié
-- `add_belief_set`: Ajoute un ensemble de croyances formel
-- `log_query_result`: Enregistre une requête formelle et son résultat
-- `add_answer`: Ajoute une réponse à une tâche
-- `set_final_conclusion`: Enregistre la conclusion finale
-- `designate_next_agent`: Désigne l'agent qui doit parler au prochain tour
+- `get_current_state_snapshot`
+- `add_analysis_task`
+- `add_identified_argument`
+- `add_identified_fallacy`
+- `add_belief_set`
+- `log_query_result`
+- `add_answer`
+- `set_final_conclusion`
+- `designate_next_agent`
 
 Ce plugin assure que les modifications de l'état sont contrôlées et traçables.
 
 #### Stratégies d'orchestration
 
-Deux stratégies principales sont utilisées pour l'orchestration:
+Deux stratégies principales sont utilisées pour l'orchestration, définies dans [`strategies.py`](../../argumentation_analysis/core/strategies.py):
 
-1. **SimpleTerminationStrategy**: Détermine quand la conversation doit se terminer
+1. **[`SimpleTerminationStrategy`](../../argumentation_analysis/core/strategies.py#L27)**: Détermine quand la conversation doit se terminer
    - Arrête la conversation si une conclusion finale est présente dans l'état
    - Arrête la conversation si un nombre maximum de tours est atteint
 
-2. **BalancedParticipationStrategy**: Sélectionne le prochain agent à parler
+2. **[`BalancedParticipationStrategy`](../../argumentation_analysis/core/strategies.py#L191)**: Sélectionne le prochain agent à parler
    - Priorise la désignation explicite via `_next_agent_designated` dans l'état
    - Équilibre la participation des agents en fonction de cibles de participation
    - Utilise un système de budget de déséquilibre pour favoriser les agents sous-représentés
@@ -127,16 +127,15 @@ Deux stratégies principales sont utilisées pour l'orchestration:
 
 #### Agents spécialisés et leurs rôles
 
-Le système utilise quatre agents spécialisés:
-
-1. **ProjectManagerAgent**: Coordonne l'analyse, définit les tâches et synthétise les résultats
-2. **InformalAnalysisAgent**: Identifie les arguments et sophismes informels
-3. **PropositionalLogicAgent**: Effectue des analyses formelles en logique propositionnelle
-4. **ExtractAgent**: Extrait et analyse des portions spécifiques du texte
+Le système utilise quatre agents spécialisés, dont les implémentations de base se trouvent dans [`argumentation_analysis/agents/core/`](../../argumentation_analysis/agents/core/):
+1. **[`ProjectManagerAgent`](../../argumentation_analysis/agents/core/pm/pm_agent.py)**: Coordonne l'analyse, définit les tâches et synthétise les résultats
+2. **[`InformalAnalysisAgent`](../../argumentation_analysis/agents/core/informal/informal_agent.py)**: Identifie les arguments et sophismes informels
+3. **[`PropositionalLogicAgent`](../../argumentation_analysis/agents/core/logic/propositional_logic_agent.py)**: Effectue des analyses formelles en logique propositionnelle
+4. **[`ExtractAgent`](../../argumentation_analysis/agents/core/extract/extract_agent.py)**: Extrait et analyse des portions spécifiques du texte
 
 Chaque agent a ses propres instructions et plugins spécifiques qui sont configurés sur le kernel local.
 
-#### Runner d'analyse (`analysis_runner.py`)
+#### Runner d'analyse ([`analysis_runner.py`](../../argumentation_analysis/orchestration/analysis_runner.py#L66))
 
 Le runner d'analyse est le point d'entrée principal pour l'exécution de l'analyse. Il:
 - Crée et configure tous les composants nécessaires
@@ -150,18 +149,18 @@ Le runner d'analyse est le point d'entrée principal pour l'exécution de l'anal
 #### Désignation explicite du prochain agent
 
 Le mécanisme principal d'interaction entre agents est la désignation explicite du prochain agent à parler:
-- Un agent peut appeler la fonction `designate_next_agent` pour indiquer quel agent devrait parler ensuite
-- Cette désignation est stockée dans l'état partagé (`_next_agent_designated`)
-- La stratégie de sélection (`BalancedParticipationStrategy`) consulte cette désignation pour déterminer le prochain agent
+- Un agent peut appeler la fonction `designate_next_agent` du [`StateManagerPlugin`](../../argumentation_analysis/core/state_manager_plugin.py#L16) pour indiquer quel agent devrait parler ensuite
+- Cette désignation est stockée dans l'état partagé (`_next_agent_designated` dans [`RhetoricalAnalysisState`](../../argumentation_analysis/core/shared_state.py#L12))
+- La stratégie de sélection ([`BalancedParticipationStrategy`](../../argumentation_analysis/core/strategies.py#L191)) consulte cette désignation pour déterminer le prochain agent
 - Si aucune désignation n'est présente, la stratégie utilise ses propres règles pour sélectionner un agent
 
 Ce mécanisme permet une forme de coordination directe entre les agents.
 
 #### Partage d'état et modification collaborative
 
-Les agents interagissent indirectement via l'état partagé:
-- Chaque agent peut lire l'état complet via `get_current_state_snapshot`
-- Les agents peuvent ajouter des tâches, arguments, sophismes, etc. à l'état
+Les agents interagissent indirectement via l'état partagé ([`RhetoricalAnalysisState`](../../argumentation_analysis/core/shared_state.py#L12)):
+- Chaque agent peut lire l'état complet via `get_current_state_snapshot` du [`StateManagerPlugin`](../../argumentation_analysis/core/state_manager_plugin.py#L16)
+- Les agents peuvent ajouter des tâches, arguments, sophismes, etc. à l'état via les fonctions du [`StateManagerPlugin`](../../argumentation_analysis/core/state_manager_plugin.py#L16)
 - Les modifications de l'état sont visibles par tous les agents
 - Les agents peuvent construire sur le travail des autres en consultant l'état
 
@@ -169,7 +168,7 @@ Cette approche permet une collaboration asynchrone où les agents peuvent voir e
 
 #### Équilibrage de participation
 
-La stratégie `BalancedParticipationStrategy` assure que tous les agents participent de manière équilibrée à la conversation:
+La stratégie [`BalancedParticipationStrategy`](../../argumentation_analysis/core/strategies.py#L191) assure que tous les agents participent de manière équilibrée à la conversation:
 - Elle maintient des compteurs de participation pour chaque agent
 - Elle calcule des scores de priorité basés sur l'écart par rapport aux cibles de participation
 - Elle favorise les agents qui n'ont pas parlé récemment
@@ -234,7 +233,7 @@ Les mécanismes de délégation sont limités:
 
 #### Gestion d'état non hiérarchique
 
-L'état partagé est monolithique et accessible à tous les agents:
+L'état partagé ([`RhetoricalAnalysisState`](../../argumentation_analysis/core/shared_state.py#L12)) est monolithique et accessible à tous les agents:
 - Pas de partitionnement de l'état par niveau de responsabilité
 - Pas d'isolation des préoccupations
 - Pas de contrôle d'accès basé sur les rôles
