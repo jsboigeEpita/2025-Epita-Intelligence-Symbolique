@@ -30,24 +30,24 @@ def mock_logger():
     # Crée un mock partagé
     shared_mock_log = MagicMock()
     
-    # Patcher utils_logger pour qu'il soit ce mock partagé
-    patcher_utils_logger = patch('argumentation_analysis.ui.utils.utils_logger', shared_mock_log)
-    # Patcher file_ops_logger pour qu'il soit aussi ce mock partagé
-    patcher_file_ops_logger = patch('argumentation_analysis.ui.file_operations.file_ops_logger', shared_mock_log)
-    # Patcher crypto_utils_logger pour qu'il soit aussi ce mock partagé (ou crypto_logger, c'est pareil)
-    patcher_crypto_logger = patch('project_core.utils.crypto_utils.logger', shared_mock_log)
+    # Liste des patchers à appliquer
+    patchers = [
+        patch('argumentation_analysis.ui.utils.utils_logger', shared_mock_log),
+        patch('argumentation_analysis.ui.file_operations.file_ops_logger', shared_mock_log),
+        patch('argumentation_analysis.utils.core_utils.crypto_utils.logger', shared_mock_log), # anciennement crypto_logger
+        patch('argumentation_analysis.ui.fetch_utils.fetch_logger', shared_mock_log), # Nouveau
+        patch('argumentation_analysis.ui.cache_utils.cache_logger', shared_mock_log)  # Nouveau
+    ]
     
-    # Démarrer les patchers
-    patcher_utils_logger.start()
-    patcher_file_ops_logger.start()
-    patcher_crypto_logger.start()
+    # Démarrer tous les patchers
+    for p in patchers:
+        p.start()
     
     yield shared_mock_log # Le mock partagé est utilisé pour les assertions
     
-    # Arrêter les patchers
-    patcher_utils_logger.stop()
-    patcher_file_ops_logger.stop()
-    patcher_crypto_logger.stop()
+    # Arrêter tous les patchers
+    for p in patchers:
+        p.stop()
 
 @pytest.fixture
 def temp_cache_dir(tmp_path):
@@ -131,9 +131,9 @@ def app_config_override():
 
 # --- Tests pour get_full_text_for_source ---
 
-@patch('argumentation_analysis.ui.utils.fetch_direct_text')
-@patch('argumentation_analysis.ui.utils.load_from_cache')
-@patch('argumentation_analysis.ui.utils.save_to_cache')
+@patch('argumentation_analysis.ui.fetch_utils.fetch_direct_text')
+@patch('argumentation_analysis.ui.fetch_utils.load_from_cache') # Corrigé: doit cibler fetch_utils où get_full_text_for_source l'appelle
+@patch('argumentation_analysis.ui.fetch_utils.save_to_cache')   # Corrigé: doit cibler fetch_utils
 def test_get_full_text_direct_download_no_cache(
     mock_save_cache, mock_load_cache, mock_fetch_direct,
     sample_source_info_direct, mock_logger, temp_cache_dir
@@ -154,7 +154,7 @@ def test_get_full_text_direct_download_no_cache(
     mock_save_cache.assert_called_once_with(url, "Direct content")
     mock_logger.info.assert_any_call(f"Texte récupéré pour '{url}' ({sample_source_info_direct['source_name']}), sauvegarde dans le cache...")
 
-@patch('argumentation_analysis.ui.utils.load_from_cache')
+@patch('argumentation_analysis.ui.fetch_utils.load_from_cache')
 def test_get_full_text_from_cache(
     mock_load_cache, sample_source_info_direct, mock_logger, temp_cache_dir
 ):
@@ -172,9 +172,9 @@ def test_get_full_text_from_cache(
     mock_logger.info.assert_any_call(f"Texte chargé depuis cache fichier pour URL '{url}' ({sample_source_info_direct['source_name']})")
 
 
-@patch('argumentation_analysis.ui.utils.fetch_with_jina')
-@patch('argumentation_analysis.ui.utils.load_from_cache', return_value=None)
-@patch('argumentation_analysis.ui.utils.save_to_cache')
+@patch('argumentation_analysis.ui.fetch_utils.fetch_with_jina')
+@patch('argumentation_analysis.ui.fetch_utils.load_from_cache', return_value=None)
+@patch('argumentation_analysis.ui.fetch_utils.save_to_cache')
 def test_get_full_text_jina(
     mock_save_cache, mock_load_cache, mock_fetch_jina,
     sample_source_info_jina, mock_logger, temp_cache_dir, app_config_override, temp_download_dir
@@ -196,9 +196,9 @@ def test_get_full_text_jina(
     )
     mock_save_cache.assert_called_once_with(url, "Jina content")
 
-@patch('argumentation_analysis.ui.utils.fetch_with_tika')
-@patch('argumentation_analysis.ui.utils.load_from_cache', return_value=None)
-@patch('argumentation_analysis.ui.utils.save_to_cache')
+@patch('argumentation_analysis.ui.fetch_utils.fetch_with_tika')
+@patch('argumentation_analysis.ui.fetch_utils.load_from_cache', return_value=None)
+@patch('argumentation_analysis.ui.fetch_utils.save_to_cache')
 def test_get_full_text_tika_pdf(
     mock_save_cache, mock_load_cache, mock_fetch_tika,
     sample_source_info_tika_pdf, mock_logger, temp_cache_dir, app_config_override, temp_download_dir
@@ -222,9 +222,9 @@ def test_get_full_text_tika_pdf(
     )
     mock_save_cache.assert_called_once_with(url, "Tika PDF content")
 
-@patch('argumentation_analysis.ui.utils.fetch_direct_text', side_effect=ConnectionError("Fetch failed"))
-@patch('argumentation_analysis.ui.utils.load_from_cache', return_value=None)
-@patch('argumentation_analysis.ui.utils.save_to_cache') # Ne devrait pas être appelé
+@patch('argumentation_analysis.ui.fetch_utils.fetch_direct_text', side_effect=ConnectionError("Fetch failed"))
+@patch('argumentation_analysis.ui.fetch_utils.load_from_cache', return_value=None)
+@patch('argumentation_analysis.ui.fetch_utils.save_to_cache') # Ne devrait pas être appelé, mais le patch doit être correct
 def test_get_full_text_fetch_error(
     mock_save_cache, mock_load_cache, mock_fetch_direct,
     sample_source_info_direct, mock_logger, temp_cache_dir
@@ -258,7 +258,7 @@ def test_get_full_text_unknown_source_type(sample_source_info_direct, mock_logge
     source_info_unknown = sample_source_info_direct.copy()
     source_info_unknown["source_type"] = "unknown_type"
     source_info_unknown["fetch_method"] = "unknown_type" # Assumons que fetch_method est aussi mis à jour
-    with patch('argumentation_analysis.ui.utils.load_from_cache', return_value=None):
+    with patch('argumentation_analysis.ui.fetch_utils.load_from_cache', return_value=None):
         result = aa_utils.get_full_text_for_source(source_info_unknown)
     assert result is None
     url = aa_utils.reconstruct_url(
@@ -266,8 +266,8 @@ def test_get_full_text_unknown_source_type(sample_source_info_direct, mock_logge
         source_info_unknown["host_parts"],
         source_info_unknown["path"]
     )
-    # Le message de log réel est "Méthode de fetch/type de source inconnu ou non géré: '{fetch_method}' / '{source_type}' pour '{url}' ({source_name}). Impossible de récupérer le texte."
-    expected_log_message = f"Méthode de fetch/type de source inconnu ou non géré: '{source_info_unknown.get('fetch_method', source_info_unknown['source_type'])}' / '{source_info_unknown['source_type']}' pour '{url}' ({source_info_unknown['source_name']}). Impossible de récupérer le texte."
+    # Le message de log réel est "Méthode de fetch/type de source inconnu ou non géré: '{fetch_method}' pour '{url}' ({source_name}). Impossible de récupérer le texte."
+    expected_log_message = f"Méthode de fetch/type de source inconnu ou non géré: '{source_info_unknown['fetch_method']}' pour '{url}' ({source_info_unknown['source_name']}). Impossible de récupérer le texte."
     mock_logger.warning.assert_any_call(expected_log_message)
 
 
