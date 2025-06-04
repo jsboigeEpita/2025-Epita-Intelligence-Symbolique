@@ -61,6 +61,7 @@ class TweetyBridge:
         les classes Java nécessaires de TweetyProject.
         """
         self._logger = logger
+        self._logger.info("TWEETY_BRIDGE: __init__ - Début")
         self._jvm_ok = False
         
         # Classes Java pour la logique propositionnelle
@@ -75,7 +76,7 @@ class TweetyBridge:
         
         # Classes Java pour la logique modale
         self._ModalParser = None
-        self._ModalReasoner = None
+        self._ModalReasoner = None # Renommé depuis _AbstractModalReasoner pour cohérence
         self._ModalFormula = None
         
         # Instances des parsers et raisonneurs
@@ -87,19 +88,26 @@ class TweetyBridge:
         self._modal_reasoner_instance = None
         
         # Tenter l'initialisation des composants JVM
+        self._logger.info("TWEETY_BRIDGE: __init__ - Avant vérification/initialisation JVM.")
         if not jpype.isJVMStarted():
-            self._logger.info("JVM non démarrée. Tentative d'initialisation depuis TweetyBridge...")
+            self._logger.info("TWEETY_BRIDGE: __init__ - JVM non démarrée. Tentative d'initialisation...")
             # Utiliser le chemin par défaut pour LIBS_DIR tel que défini dans jvm_setup
-            jvm_initialized_by_bridge = initialize_jvm(lib_dir_path=str(LIBS_DIR))
+            jvm_initialized_by_bridge = initialize_jvm(lib_dir_path=str(LIBS_DIR)) # Appel à initialize_jvm
+            self._logger.info(f"TWEETY_BRIDGE: __init__ - initialize_jvm appelée, résultat: {jvm_initialized_by_bridge}, isJVMStarted: {jpype.isJVMStarted()}")
             if jvm_initialized_by_bridge and jpype.isJVMStarted():
-                self._logger.info("JVM initialisée avec succès par TweetyBridge.")
+                self._logger.info("TWEETY_BRIDGE: __init__ - JVM initialisée avec succès par TweetyBridge.")
+                self._logger.info("TWEETY_BRIDGE: __init__ - Appel de _initialize_jvm_components après initialisation JVM.")
                 self._initialize_jvm_components()
+                self._logger.info("TWEETY_BRIDGE: __init__ - Retour de _initialize_jvm_components.")
             else:
-                self._logger.error("Échec de l'initialisation de la JVM par TweetyBridge. Les composants Tweety ne seront pas chargés.")
+                self._logger.error("TWEETY_BRIDGE: __init__ - Échec de l'initialisation de la JVM par TweetyBridge. Les composants Tweety ne seront pas chargés.")
                 self._jvm_ok = False
         else:
-            self._logger.info("JVM déjà démarrée. Initialisation des composants Tweety...")
+            self._logger.info("TWEETY_BRIDGE: __init__ - JVM déjà démarrée. Initialisation des composants Tweety...")
+            self._logger.info("TWEETY_BRIDGE: __init__ - Appel de _initialize_jvm_components (JVM déjà démarrée).")
             self._initialize_jvm_components()
+            self._logger.info("TWEETY_BRIDGE: __init__ - Retour de _initialize_jvm_components (JVM déjà démarrée).")
+        self._logger.info(f"TWEETY_BRIDGE: __init__ - Fin. _jvm_ok: {self._jvm_ok}")
     
     def is_jvm_ready(self) -> bool:
         """
@@ -118,30 +126,39 @@ class TweetyBridge:
         supportées (PL, FOL, ML). Met à jour l'attribut `_jvm_ok`.
         Ne fait rien si la JVM n'est pas démarrée.
         """
+        self._logger.info("TWEETY_BRIDGE: _initialize_jvm_components - Début.")
         # Vérifier si la JVM est démarrée
         if not jpype.isJVMStarted():
-            self._logger.critical("Tentative d'initialisation alors que la JVM n'est PAS démarrée!")
+            self._logger.critical("TWEETY_BRIDGE: _initialize_jvm_components - Tentative d'initialisation alors que la JVM n'est PAS démarrée!")
             self._jvm_ok = False
+            self._logger.info("TWEETY_BRIDGE: _initialize_jvm_components - Fin (JVM non démarrée).")
             return
         
-        self._logger.info("JVM démarrée. Tentative de chargement des classes Tweety...")
+        self._logger.info("TWEETY_BRIDGE: _initialize_jvm_components - JVM démarrée. Tentative de chargement des classes Tweety...")
         
         try:
             # Initialiser les composants pour la logique propositionnelle
+            self._logger.info("TWEETY_BRIDGE: _initialize_jvm_components - Appel de _initialize_pl_components.")
             self._initialize_pl_components()
+            self._logger.info("TWEETY_BRIDGE: _initialize_jvm_components - Retour de _initialize_pl_components.")
             
             # Initialiser les composants pour la logique du premier ordre
+            self._logger.info("TWEETY_BRIDGE: _initialize_jvm_components - Appel de _initialize_fol_components.")
             self._initialize_fol_components()
+            self._logger.info("TWEETY_BRIDGE: _initialize_jvm_components - Retour de _initialize_fol_components.")
             
             # Initialiser les composants pour la logique modale
+            self._logger.info("TWEETY_BRIDGE: _initialize_jvm_components - Appel de _initialize_modal_components.")
             self._initialize_modal_components()
+            self._logger.info("TWEETY_BRIDGE: _initialize_jvm_components - Retour de _initialize_modal_components.")
             
             # Si tout réussit
             self._jvm_ok = True
-            self._logger.info("✅ Classes et instances Java Tweety chargées avec succès.")
+            self._logger.info("TWEETY_BRIDGE: _initialize_jvm_components - ✅ Classes et instances Java Tweety chargées avec succès.")
         except Exception as e:
-            self._logger.critical(f"❌ Erreur chargement classes/instances Tweety: {e}", exc_info=True)
+            self._logger.critical(f"TWEETY_BRIDGE: _initialize_jvm_components - ❌ Erreur chargement classes/instances Tweety: {e}", exc_info=True)
             self._jvm_ok = False
+        self._logger.info(f"TWEETY_BRIDGE: _initialize_jvm_components - Fin. _jvm_ok: {self._jvm_ok}")
     
     def _initialize_pl_components(self) -> None:
         """
@@ -153,21 +170,29 @@ class TweetyBridge:
         :raises Exception: Si une erreur survient lors du chargement des classes ou
                            de la création des instances.
         """
+        self._logger.info("TWEETY_BRIDGE: _initialize_pl_components - Début.")
         try:
             # Charger les classes
+            self._logger.info("TWEETY_BRIDGE: _initialize_pl_components - Chargement PlParser.")
             self._PlParser = jpype.JClass("org.tweetyproject.logics.pl.parser.PlParser")
+            self._logger.info("TWEETY_BRIDGE: _initialize_pl_components - Chargement SatReasoner.")
             self._SatReasoner = jpype.JClass("org.tweetyproject.logics.pl.reasoner.SatReasoner")
+            self._logger.info("TWEETY_BRIDGE: _initialize_pl_components - Chargement PlFormula.")
             self._PlFormula = jpype.JClass("org.tweetyproject.logics.pl.syntax.PlFormula")
             
             # Créer les instances
+            self._logger.info("TWEETY_BRIDGE: _initialize_pl_components - Instanciation PlParser.")
             self._pl_parser_instance = self._PlParser()
+            self._logger.info("TWEETY_BRIDGE: _initialize_pl_components - Instanciation SatReasoner.")
             self._pl_reasoner_instance = self._SatReasoner()
             
-            self._logger.info("✅ Composants pour la logique propositionnelle initialisés.")
+            self._logger.info("TWEETY_BRIDGE: _initialize_pl_components - ✅ Composants PL initialisés.")
         
         except Exception as e:
-            self._logger.error(f"❌ Erreur initialisation composants logique propositionnelle: {e}", exc_info=True)
+            self._logger.error(f"TWEETY_BRIDGE: _initialize_pl_components - ❌ Erreur: {e}", exc_info=True)
             raise
+        finally:
+            self._logger.info("TWEETY_BRIDGE: _initialize_pl_components - Fin.")
     
     def _initialize_fol_components(self) -> None:
         """
@@ -178,23 +203,32 @@ class TweetyBridge:
         En cas d'erreur, un avertissement est loggué et la logique FOL ne sera pas disponible,
         mais l'initialisation des autres logiques peut continuer.
         """
+        self._logger.info("TWEETY_BRIDGE: _initialize_fol_components - Début.")
         try:
             # Charger les classes
+            self._logger.info("TWEETY_BRIDGE: _initialize_fol_components - Chargement FolParser.")
             self._FolParser = jpype.JClass("org.tweetyproject.logics.fol.parser.FolParser")
+            self._logger.info("TWEETY_BRIDGE: _initialize_fol_components - Chargement FolReasoner.")
             self._FolReasoner = jpype.JClass("org.tweetyproject.logics.fol.reasoner.FolReasoner") # Pour type hinting
+            self._logger.info("TWEETY_BRIDGE: _initialize_fol_components - Chargement SimpleFolReasoner.")
             self._SimpleFolReasoner = jpype.JClass("org.tweetyproject.logics.fol.reasoner.SimpleFolReasoner") # Classe concrète
+            self._logger.info("TWEETY_BRIDGE: _initialize_fol_components - Chargement FolFormula.")
             self._FolFormula = jpype.JClass("org.tweetyproject.logics.fol.syntax.FolFormula")
             
             # Créer les instances
+            self._logger.info("TWEETY_BRIDGE: _initialize_fol_components - Instanciation FolParser.")
             self._fol_parser_instance = self._FolParser()
+            self._logger.info("TWEETY_BRIDGE: _initialize_fol_components - Instanciation SimpleFolReasoner.")
             self._fol_reasoner_instance = self._SimpleFolReasoner() # Utiliser la classe concrète
             
-            self._logger.info("✅ Composants pour la logique du premier ordre initialisés.")
+            self._logger.info("TWEETY_BRIDGE: _initialize_fol_components - ✅ Composants FOL initialisés.")
         
         except Exception as e:
-            self._logger.error(f"❌ Erreur initialisation composants logique du premier ordre: {e}", exc_info=True)
+            self._logger.error(f"TWEETY_BRIDGE: _initialize_fol_components - ❌ Erreur: {e}", exc_info=True)
             # Ne pas lever d'exception pour permettre l'initialisation partielle
-            self._logger.warning("La logique du premier ordre ne sera pas disponible.")
+            self._logger.warning("TWEETY_BRIDGE: _initialize_fol_components - La logique du premier ordre ne sera pas disponible.")
+        finally:
+            self._logger.info("TWEETY_BRIDGE: _initialize_fol_components - Fin.")
     
     def _initialize_modal_components(self) -> None:
         """
@@ -206,23 +240,32 @@ class TweetyBridge:
         modale ne sera pas disponible, mais l'initialisation des autres logiques
         peut continuer.
         """
+        self._logger.info("TWEETY_BRIDGE: _initialize_modal_components - Début.")
         try:
             # Charger les classes
+            self._logger.info("TWEETY_BRIDGE: _initialize_modal_components - Chargement ModalParser.")
             self._ModalParser = jpype.JClass("org.tweetyproject.logics.ml.parser.MlParser") # Nom corrigé
+            self._logger.info("TWEETY_BRIDGE: _initialize_modal_components - Chargement AbstractModalReasoner.")
             self._AbstractModalReasoner = jpype.JClass("org.tweetyproject.logics.ml.reasoner.AbstractMlReasoner") # Pour type hinting
+            self._logger.info("TWEETY_BRIDGE: _initialize_modal_components - Chargement SimpleModalReasoner.")
             self._SimpleModalReasoner = jpype.JClass("org.tweetyproject.logics.ml.reasoner.SimpleMlReasoner") # Classe concrète
+            self._logger.info("TWEETY_BRIDGE: _initialize_modal_components - Chargement ModalFormula.")
             self._ModalFormula = jpype.JClass("org.tweetyproject.logics.ml.syntax.MlFormula")
             
             # Créer les instances
+            self._logger.info("TWEETY_BRIDGE: _initialize_modal_components - Instanciation ModalParser.")
             self._modal_parser_instance = self._ModalParser()
+            self._logger.info("TWEETY_BRIDGE: _initialize_modal_components - Instanciation SimpleModalReasoner.")
             self._modal_reasoner_instance = self._SimpleModalReasoner() # Utiliser la classe concrète
             
-            self._logger.info("✅ Composants pour la logique modale initialisés.")
+            self._logger.info("TWEETY_BRIDGE: _initialize_modal_components - ✅ Composants Modaux initialisés.")
         
         except Exception as e:
-            self._logger.error(f"❌ Erreur initialisation composants logique modale: {e}", exc_info=True)
+            self._logger.error(f"TWEETY_BRIDGE: _initialize_modal_components - ❌ Erreur: {e}", exc_info=True)
             # Ne pas lever d'exception pour permettre l'initialisation partielle
-            self._logger.warning("La logique modale ne sera pas disponible.")
+            self._logger.warning("TWEETY_BRIDGE: _initialize_modal_components - La logique modale ne sera pas disponible.")
+        finally:
+            self._logger.info("TWEETY_BRIDGE: _initialize_modal_components - Fin.")
     
     # --- Méthodes pour la logique propositionnelle ---
     
@@ -489,9 +532,7 @@ class TweetyBridge:
             self._logger.error(f"Erreur Python exécution requête '{str(formula_obj)}': {e}", exc_info=True)
             raise RuntimeError(f"Erreur Python Exécution Requête: {e}") from e
             
-            self._logger.info("✅ Composants pour la logique modale initialisés.")
-        
-# --- Méthodes pour la logique du premier ordre ---
+    # --- Méthodes pour la logique du premier ordre ---
     
     def validate_fol_formula(self, formula_string: str) -> Tuple[bool, str]:
         """
@@ -1006,7 +1047,4 @@ class TweetyBridge:
         except Exception as e:
             self._logger.error(f"Erreur Python exécution requête modale '{str(formula_obj)}': {e}", exc_info=True)
             raise RuntimeError(f"Erreur Python Exécution Requête Modal: {e}") from e
-        except Exception as e:
-            self._logger.error(f"❌ Erreur initialisation composants logique modale: {e}", exc_info=True)
-            # Ne pas lever d'exception pour permettre l'initialisation partielle
-            self._logger.warning("La logique modale ne sera pas disponible.")
+# Fin des méthodes de la classe TweetyBridge
