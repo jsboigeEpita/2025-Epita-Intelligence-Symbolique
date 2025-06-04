@@ -1,8 +1,31 @@
 param (
     [string]$CommandToRun = "" # Commande à exécuter après activation
 )
+ 
+# Récupérer le nom de l'environnement Conda dynamiquement
+$envNameScriptPath = Join-Path $scriptRoot "scripts/get_env_name.py"
+$condaEnvNameFromScript = ""
+try {
+    # Tenter d'exécuter avec 'python' qui devrait être dans le PATH (souvent le base de conda)
+    # ou l'environnement actif si le script est sourcé après une activation partielle.
+    $condaEnvNameFromScript = (python $envNameScriptPath 2>&1).Trim() # Rediriger stderr vers stdout pour capturer les erreurs aussi
+    if ($LASTEXITCODE -ne 0 -or $condaEnvNameFromScript -match "^ERROR_GETTING_ENV_NAME" -or $condaEnvNameFromScript -match "^CRITICAL_ERROR") {
+        Write-Warning "Erreur lors de la récupération du nom de l'environnement Conda depuis '$envNameScriptPath': $condaEnvNameFromScript"
+        Write-Warning "Utilisation du nom par défaut 'projet-is'."
+        $condaEnvNameFromScript = "projet-is" # Fallback
+    } elseif ($condaEnvNameFromScript -match "\s") {
+        # Si le nom contient des espaces ou des retours à la ligne inattendus (ex: messages d'erreur non capturés)
+        Write-Warning "Le nom de l'environnement récupéré ('$condaEnvNameFromScript') semble invalide. Utilisation du nom par défaut 'projet-is'."
+        $condaEnvNameFromScript = "projet-is" # Fallback
+    }
+} catch {
+    Write-Warning "Exception lors de l'exécution de '$envNameScriptPath': $($_.Exception.Message)"
+    Write-Warning "Utilisation du nom par défaut 'projet-is'."
+    $condaEnvNameFromScript = "projet-is" # Fallback
+}
+$condaEnvName = $condaEnvNameFromScript
+Write-Host "[INFO] Nom de l'environnement Conda à utiliser: $condaEnvName"
 
-$condaEnvName = "projet-is"
 $envFile = ".env"
 # Assurer que PSScriptRoot est défini, même si le script est appelé d'une manière où $PSScriptRoot n'est pas automatiquement peuplé.
 if ($PSScriptRoot) {
