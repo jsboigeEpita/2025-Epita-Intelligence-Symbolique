@@ -14,7 +14,9 @@ from .prompts import prompt_define_tasks_v11, prompt_write_conclusion_v7
 
 class ProjectManagerAgent(BaseAgent):
     """
-    Agent responsable de la coordination des tâches d'analyse et de la synthèse des résultats.
+    Agent spécialisé dans la planification stratégique de l'analyse d'argumentation.
+    Il définit les tâches séquentielles et génère la conclusion finale,
+    en fournissant des instructions à un orchestrateur externe pour l'exécution.
     """
 
     def __init__(self, kernel: Kernel, agent_name: str = "ProjectManagerAgent", system_prompt: Optional[str] = PM_INSTRUCTIONS):
@@ -92,8 +94,18 @@ class ProjectManagerAgent(BaseAgent):
 
     async def define_tasks_and_delegate(self, analysis_state_snapshot: str, raw_text: str) -> str:
         """
-        Définit la prochaine tâche d'analyse et la délègue à un agent spécialiste.
-        Utilise la fonction sémantique DefineTasksAndDelegate.
+        Définit la prochaine tâche d'analyse et suggère sa délégation à un agent spécialiste.
+
+        Cette méthode invoque la fonction sémantique `DefineTasksAndDelegate`.
+        Le résultat est une chaîne (souvent JSON) que l'orchestrateur doit interpréter
+        pour effectivement créer la tâche et la déléguer.
+
+        Args:
+            analysis_state_snapshot: Un instantané de l'état actuel de l'analyse.
+            raw_text: Le texte brut original soumis à l'analyse.
+
+        Returns:
+            Une chaîne de caractères contenant la définition de la tâche et l'agent suggéré.
         """
         self.logger.info("Appel de define_tasks_and_delegate...")
         args = KernelArguments(analysis_state_snapshot=analysis_state_snapshot, raw_text=raw_text)
@@ -114,8 +126,19 @@ class ProjectManagerAgent(BaseAgent):
 
     async def write_conclusion(self, analysis_state_snapshot: str, raw_text: str) -> str:
         """
-        Rédige la conclusion finale de l'analyse.
-        Utilise la fonction sémantique WriteAndSetConclusion.
+        Rédige la conclusion finale de l'analyse basée sur l'état actuel.
+
+        Cette méthode invoque la fonction sémantique `WriteAndSetConclusion`.
+        Le résultat est une chaîne (la conclusion) que l'orchestrateur doit interpréter
+        pour enregistrer formellement la conclusion.
+
+        Args:
+            analysis_state_snapshot: Un instantané de l'état actuel de l'analyse (devrait
+                                     refléter l'achèvement des tâches précédentes).
+            raw_text: Le texte brut original.
+
+        Returns:
+            Une chaîne de caractères contenant la conclusion finale proposée.
         """
         self.logger.info("Appel de write_conclusion...")
         args = KernelArguments(analysis_state_snapshot=analysis_state_snapshot, raw_text=raw_text)
