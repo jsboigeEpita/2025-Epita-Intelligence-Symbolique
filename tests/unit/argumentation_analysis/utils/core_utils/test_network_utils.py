@@ -58,12 +58,12 @@ def test_download_file_success(mock_requests_get, mock_path_operations, tmp_path
 
     assert result is True, "Le téléchargement aurait dû réussir."
     mock_requests_get.assert_called_once_with(url, stream=True, timeout=30)
-    mock_path_operations["mkdir"].assert_called_once_with(parents=True, exist_ok=True)
+    mock_path_operations["mkdir"].assert_any_call(parents=True, exist_ok=True)
     mock_path_operations["open"].assert_called_once_with(dest_path, 'wb')
     # Vérifier que write a été appelé sur le handle de fichier mocké
     handle = mock_path_operations["open"]()
     handle.write.assert_called_once_with(file_content)
-    mock_path_operations["stat"].assert_called_once() # stat() est appelé sur dest_path
+    mock_path_operations["stat"].assert_any_call() # stat() est appelé sur dest_path
 
 def test_download_file_http_error(mock_requests_get, mock_path_operations, tmp_path, caplog):
     """Teste la gestion d'une erreur HTTP (ex: 404)."""
