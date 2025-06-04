@@ -28,46 +28,17 @@ PATH_TYPE_ANY = "any" # Bien que non utilisé par check_path_exists actuel, gard
 def sanitize_filename(filename: str, max_len: int = 255) -> str:
     """
     Nettoie une chaîne de caractères pour la transformer en un nom de fichier valide et sûr.
-    (Version provenant de file_utils.py original)
     """
     if not filename:
         path_ops_logger.warning("Tentative de nettoyer un nom de fichier vide. Retour de 'empty_filename'.")
         return "empty_filename"
 
-    original_filename_for_log = filename 
+    original_filename_for_log = filename
 
-    name_part, dot, extension_part = filename.rpartition('.')
-    
-    if not dot or (dot and not name_part and extension_part):
-        name_to_sanitize = filename
-        current_extension = ""
-    else: 
-        name_to_sanitize = name_part
-        current_extension = extension_part
-
-    # Translitérer en ASCII (appliqué après la séparation pour ne pas affecter le point de l'extension)
-    # Note: unidecode est appliqué sur les parties séparément si nécessaire.
-    # Pour la simplicité de cette version, appliquons-le au nom seulement.
-    # Une version plus robuste appliquerait unidecode avant rpartition.
-    # Cependant, la version originale de file_utils.py l'appliquait globalement au début.
-    # Pour rester fidèle à la version lue (ligne 60 de file_utils.py original, avant ma refactorisation de sanitize_filename),
-    # unidecode devrait être appliqué au `filename` complet au début.
-    # Je vais suivre la logique de la version de file_utils.py que j'ai lue (celle de MERGE_HEAD après checkout --theirs)
-    # qui n'avait pas unidecode dans sanitize_filename.
-    # MAIS, l'import unidecode EST présent dans le file_utils.py que j'ai lu.
-    # Et la version de sanitize_filename dans ui/utils.py (HEAD) l'utilisait.
-    # Je vais ajouter unidecode ici pour la robustesse, comme c'était probablement l'intention.
-    
-    # Ré-évalution: la version de sanitize_filename dans le file_utils.py que j'ai lu (après checkout --theirs)
-    # est plus simple et n'utilise PAS unidecode. Je vais m'en tenir à CETTE version pour l'instant.
-    # L'import unidecode dans le file_utils.py global était peut-être pour une autre fonction ou un reste.
-    # Si unidecode est nécessaire, il faudra le réintégrer soigneusement.
-    # Pour l'instant, je copie la version de file_utils.py (lignes 26-122) qui n'utilise pas unidecode.
-    # **CORRECTION**: En revoyant le fichier complet de file_utils.py (celui de 791 lignes),
-    # `sanitize_filename` (lignes 26-122) N'UTILISE PAS `unidecode`.
-    # L'import `unidecode` à la ligne 22 du fichier global est donc soit inutilisé par cette fonction,
-    # soit pour une autre partie (mais je ne la vois pas).
-    # Je vais donc implémenter `sanitize_filename` SANS `unidecode` pour correspondre au code que je refactorise.
+    # Gestion spécifique pour "." et ".." qui doivent retourner une valeur fixe.
+    if filename == "." or filename == "..":
+        path_ops_logger.warning(f"Nom de fichier caché invalide '{original_filename_for_log}'. Utilisation de '_hidden_default'.")
+        return "_hidden_default"
 
     # Translitérer d'abord le nom complet pour une meilleure gestion des accents dans les extensions
     filename_ascii = unidecode(filename)
@@ -75,74 +46,90 @@ def sanitize_filename(filename: str, max_len: int = 255) -> str:
     # Séparer le nom de base et l'extension APRÈS la translittération
     is_hidden_file_original = filename.startswith('.') # Basé sur le nom original pour la logique des fichiers cachés
     
-    if is_hidden_file_original and not any(c.isalnum() for c in filename[1:]): # Cas comme ".", "..", "._-."
-        name_to_sanitize = filename_ascii # Sera traité pour devenir default_filename
-        current_extension = ""
-    elif filename_ascii.startswith('.'):
-        parts = filename_ascii[1:].rpartition('.')
-        if parts[1] == '.': # Un point a été trouvé, séparant nom et extension
-            name_to_sanitize = "." + parts[0] if parts[0] else "."
-            current_extension = parts[2]
-        else: # Pas de point trouvé après le premier caractère, donc tout est nom
-            name_to_sanitize = "." + parts[2] # parts[2] contient le reste de la chaîne après le premier '.'
+    # Logique de séparation du nom et de l'extension
+    if is_hidden_file_original:
+        # Pour les fichiers cachés, on partitionne ce qui suit le premier '.'
+        base_for_partition = filename_ascii[1:]
+        name_part_temp, dot_temp, ext_part_temp = base_for_partition.rpartition('.')
+        if dot_temp: # Une extension a été trouvée après le premier point
+            name_to_sanitize = "." + name_part_temp # Reconstituer le nom caché avec le point initial
+            current_extension = ext_part_temp
+        else: # Pas d'extension trouvée après le premier point
+            name_to_sanitize = "." + base_for_partition # Tout est considéré comme nom (avec le point initial)
             current_extension = ""
-    else:
-        parts = filename_ascii.rpartition('.')
-        if parts[1] == '.':
-            name_to_sanitize = parts[0]
-            current_extension = parts[2]
-        else: # Pas d'extension
-            name_to_sanitize = parts[2] # filename_ascii en entier
+    else: # Fichier non caché
+        name_part_temp, dot_temp, ext_part_temp = filename_ascii.rpartition('.')
+        if dot_temp:
+            name_to_sanitize = name_part_temp
+            current_extension = ext_part_temp
+        else:
+            name_to_sanitize = filename_ascii # Pas d'extension, tout est nom
             current_extension = ""
 
-    # Nettoyage du nom de base
-    # Remplacer espaces et certains caractères spéciaux (y compris le point maintenant) par des underscores
-    sanitized_name = re.sub(r'[\s_.-]+', '_', name_to_sanitize)
-    # Supprimer les caractères non alphanumériques restants (sauf underscore)
-    sanitized_name = re.sub(r'[^\w_]', '', sanitized_name)
-    # Convertir en minuscules
-    sanitized_name = sanitized_name.lower()
-    # Supprimer les underscores en début/fin
-    sanitized_name = re.sub(r'^_+|_+$', '', sanitized_name)
+    # Nettoyage du nom de base (name_to_sanitize peut déjà inclure un "." au début s'il est caché)
+    base_name_part_to_clean = name_to_sanitize[1:] if name_to_sanitize.startswith('.') and is_hidden_file_original else name_to_sanitize
     
-    # Si le nom original était un fichier caché (commençant par '.') et que le nom nettoyé ne l'est plus (et n'est pas vide),
-    # on préserve le caractère caché, sauf si le nom est devenu "default_filename"
-    if is_hidden_file_original and not sanitized_name.startswith('.') and sanitized_name and sanitized_name != "default_filename":
-        sanitized_name = "." + sanitized_name
+    cleaned_base_name_part = re.sub(r'[\s_.-]+', '_', base_name_part_to_clean)
+    cleaned_base_name_part = re.sub(r'[^\w_]', '', cleaned_base_name_part) # Garde les underscores
+    cleaned_base_name_part = cleaned_base_name_part.lower()
+    cleaned_base_name_part = re.sub(r'^_+|_+$', '', cleaned_base_name_part) # Supprime underscores en début/fin
+
+    # Reconstituer sanitized_name avec le point initial si c'était un fichier caché
+    if is_hidden_file_original:
+        sanitized_name = "." + cleaned_base_name_part
+    else:
+        sanitized_name = cleaned_base_name_part
         
+    # Gestion des noms vides après nettoyage
+    if is_hidden_file_original and not cleaned_base_name_part: # Ex: "...", "._-.", ". "
+        sanitized_name = ".default_name" 
+        path_ops_logger.warning(f"Le nom de base du fichier caché '{original_filename_for_log}' est devenu vide après nettoyage. Utilisation de '{sanitized_name}'.")
+    elif not is_hidden_file_original and not cleaned_base_name_part: # Ex: "!@#$", "   "
+        sanitized_name = "default_filename"
+        path_ops_logger.warning(f"Le nom de base du fichier '{original_filename_for_log}' est devenu vide après nettoyage. Utilisation de '{sanitized_name}'.")
+    # Si le nom original était juste des points (ex: "...") et n'était pas caché initialement,
+    # mais que filename_ascii est devenu vide ou que des symboles, il sera traité par la ligne ci-dessus.
+    # Le cas spécifique de `all(c == '.' for c in filename.strip())` est géré par la logique ci-dessus
+    # car `cleaned_base_name_part` deviendra vide.
+
     # Nettoyage de l'extension (si elle existe)
     if current_extension:
-        sanitized_extension = re.sub(r'[^\w]', '', current_extension).lower()
-        current_extension = sanitized_extension if sanitized_extension else ""
+        sanitized_cleaned_extension = re.sub(r'[^\w]', '', current_extension).lower()
+        current_extension = sanitized_cleaned_extension if sanitized_cleaned_extension else ""
 
-    # Gestion des noms vides ou invalides
-    if all(c == '.' for c in filename.strip()) and filename.strip(): # Si original était que des points
-        final_filename = "default_filename"
-        path_ops_logger.warning(f"Le nom de fichier original '{original_filename_for_log}' ne contenait que des points. Utilisation de '{final_filename}'.")
-    elif not sanitized_name or (is_hidden_file_original and sanitized_name == "."): # Si le nom de base est vide ou "." pour un fichier caché
-        final_filename = f"default_filename{'.' + current_extension if current_extension else ''}"
-        path_ops_logger.warning(f"Le nom de base du fichier '{original_filename_for_log}' est devenu vide ou invalide après nettoyage. Utilisation de '{final_filename}'.")
+    # Recomposition finale
+    if current_extension:
+        final_filename = f"{sanitized_name}.{current_extension}"
     else:
-        if current_extension:
-            final_filename = f"{sanitized_name}.{current_extension}"
-        else:
-            final_filename = sanitized_name
+        final_filename = sanitized_name
             
     # Troncature à max_len
     if len(final_filename) > max_len:
-        if current_extension:
+        if current_extension: # Si une extension est présente
             len_ext_plus_dot = len(current_extension) + 1
-            if len_ext_plus_dot >= max_len :
-                final_filename = final_filename[:max_len-1] + final_filename[-1] if max_len > 0 else ""
+            if len_ext_plus_dot >= max_len : 
+                # Si l'extension + point est trop long, on tronque brutalement le nom complet
+                final_filename = final_filename[:max_len] 
+                path_ops_logger.debug(f"Extension trop longue pour max_len={max_len}. Troncature brutale de '{original_filename_for_log}' en '{final_filename}'.")
             else:
-                name_part_truncated = final_filename[:max_len - len_ext_plus_dot]
-                final_filename = f"{name_part_truncated}.{current_extension}"
-        else:
+                # Assez de place pour l'extension, tronquer la partie nom (sanitized_name)
+                name_part_to_truncate = sanitized_name
+                allowed_len_for_name = max_len - len_ext_plus_dot
+                truncated_name_part = name_part_to_truncate[:allowed_len_for_name]
+                final_filename = f"{truncated_name_part}.{current_extension}"
+        else: # Pas d'extension, juste tronquer
             final_filename = final_filename[:max_len]
     
+    # Ultime fallback si, pour une raison quelconque, final_filename est vide
+    # Cela peut arriver si max_len est 0, ou si le nom après troncature est vide.
     if not final_filename:
-        path_ops_logger.error(f"La sanitization du nom de fichier '{original_filename_for_log}' a résulté en une chaîne vide. Retour de 'error_empty_filename'.")
-        return "error_empty_filename"
+        # Si c'était un fichier caché à l'origine et que tout est devenu vide
+        if is_hidden_file_original:
+            path_ops_logger.error(f"La sanitization du nom de fichier caché '{original_filename_for_log}' a résulté en une chaîne vide. Retour de '.error_empty_filename'.")
+            return ".error_empty_filename"
+        else:
+            path_ops_logger.error(f"La sanitization du nom de fichier '{original_filename_for_log}' a résulté en une chaîne vide. Retour de 'error_empty_filename'.")
+            return "error_empty_filename"
 
     path_ops_logger.debug(f"Nom de fichier original: '{original_filename_for_log}', nettoyé: '{final_filename}'")
     return final_filename
@@ -191,12 +178,18 @@ def create_archive_path(base_archive_dir: Path, source_file_path: Path, preserve
     
     parent_names_to_preserve = []
     if preserve_levels > 0 and source_file_path.parents:
-        num_available_parents = len(source_file_path.parents)
+        # source_file_path.parents n'inclut pas le fichier lui-même, ni '.'
+        # Si source_file_path est "a/b/c.txt", parents est (Path('a/b'), Path('a'), Path('.'))
+        # Si source_file_path est "c.txt", parents est (Path('.'),)
+        # On veut les noms des répertoires parents, en excluant le '.' final s'il est le seul parent.
+        
+        actual_parents = [p for p in source_file_path.parents if p.name] # Exclut Path('.') qui a un nom vide
+        num_available_parents = len(actual_parents)
         levels_to_take = min(preserve_levels, num_available_parents)
         
         for i in range(levels_to_take):
-            parent_names_to_preserve.append(source_file_path.parents[i].name)
-        parent_names_to_preserve.reverse()
+            parent_names_to_preserve.append(actual_parents[i].name)
+        parent_names_to_preserve.reverse() # Les parents sont listés du plus proche au plus éloigné
 
     if parent_names_to_preserve:
         archive_sub_path = Path(*parent_names_to_preserve) / file_name
