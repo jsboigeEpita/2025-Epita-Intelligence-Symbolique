@@ -22,7 +22,8 @@ import scripts.setup_core.manage_portable_tools as manage_portable_tools
 print(f"[DEBUG_ROO] Loaded manage_portable_tools from: {manage_portable_tools.__file__}")
 import scripts.setup_core.manage_project_files as manage_project_files
 import scripts.setup_core.run_pip_commands as run_pip_commands
-
+import scripts.setup_core.env_utils as env_utils # Ajout de l'importation
+ 
 def main():
     # Déterminer la racine du projet pour la passer aux modules de configuration
     # Le script est dans scripts/setup_core, donc remonter de deux niveaux
@@ -82,7 +83,14 @@ def main():
 
     if not args.skip_env:
         print("[INFO] Managing Conda environment...")
-        conda_env_name = "epita_symbolic_ai" # Peut être rendu configurable
+        try:
+            conda_env_name = env_utils.get_conda_env_name_from_yaml()
+            print(f"[INFO] Nom de l'environnement Conda récupéré depuis environment.yml: {conda_env_name}")
+        except Exception as e:
+            print(f"[ERROR] Impossible de récupérer le nom de l'environnement Conda depuis environment.yml: {e}")
+            print("[INFO] Utilisation du nom par défaut 'epita_symbolic_ai' pour l'environnement Conda.")
+            conda_env_name = "epita_symbolic_ai" # Fallback au cas où la lecture échoue
+        
         conda_env_file = os.path.join(project_root, "environment.yml")
         
         env_setup_success = manage_conda_env.setup_environment(
