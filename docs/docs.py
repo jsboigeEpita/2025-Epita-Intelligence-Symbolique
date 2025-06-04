@@ -5,15 +5,6 @@ Moteur de Recherche Documentation - Version Web Moderne
 
 Interface web avancée pour explorer et rechercher dans la documentation
 du projet d'IA symbolique avec serveur intégré sur localhost:8081.
-
-Fonctionnalités :
-- 🔍 Recherche intelligente avec filtres avancés
-- 📊 Visualisations interactives 
-- 🎨 Interface moderne et responsive
-- 📁 Navigation par arborescence
-- 💾 Export des résultats
-- 🌙 Mode sombre/clair
-- 📱 Compatible mobile
 """
 
 import os
@@ -33,7 +24,7 @@ try:
     FLASK_AVAILABLE = True
 except ImportError:
     FLASK_AVAILABLE = False
-    print("⚠️ Flask non disponible. Installez avec: pip install flask")
+    print("Flask non disponible. Installez avec: pip install flask")
 
 
 class AdvancedDocumentationSearcher:
@@ -187,7 +178,7 @@ class AdvancedDocumentationSearcher:
                         processed_files += 1
                         
                         if processed_files % 50 == 0:
-                            print(f"   📄 Traité: {processed_files} fichiers...")
+                            print(f"   Traité: {processed_files} fichiers...")
                             
                     except Exception as e:
                         print(f"   ⚠️ Erreur {filepath}: {e}")
@@ -199,7 +190,7 @@ class AdvancedDocumentationSearcher:
         # Construire l'arbre des fichiers
         self._build_file_tree()
         
-        print(f"✅ Scan terminé: {processed_files} fichiers traités, {skipped_files} ignorés")
+        print(f" Scan terminé: {processed_files} fichiers traités, {skipped_files} ignorés")
     
     def _build_file_tree(self):
         """Construit l'arborescence des fichiers"""
@@ -480,9 +471,9 @@ class DocumentationWebServer:
         
     def load_project(self, project_path: str = "."):
         """Charge et indexe un projet"""
-        print(f"🚀 Chargement du projet depuis : {project_path}")
+        print(f" Chargement du projet depuis : {project_path}")
         self.searcher.load_documents_from_directory(project_path)
-        print(f"✅ Projet indexé : {self.searcher.stats['total_files']} fichiers")
+        print(f" Projet indexé : {self.searcher.stats['total_files']} fichiers")
         
     def index(self):
         """Page principale de l'interface"""
@@ -1252,9 +1243,9 @@ class DocumentationWebServer:
     
     def run(self, host: str = '127.0.0.1', debug: bool = False):
         """Lance le serveur web"""
-        print(f"🚀 Démarrage du serveur sur http://{host}:{self.port}")
-        print(f"🌐 Interface accessible à l'adresse : http://{host}:{self.port}")
-        print("💡 Utilisez Ctrl+C pour arrêter le serveur")
+        print(f" Démarrage du serveur sur http://{host}:{self.port}")
+        print(f" Interface accessible à l'adresse : http://{host}:{self.port}")
+        print(" Utilisez Ctrl+C pour arrêter le serveur")
         
         # Ouvrir automatiquement le navigateur
         if not debug:
@@ -1263,7 +1254,7 @@ class DocumentationWebServer:
         try:
             self.app.run(host=host, port=self.port, debug=debug)
         except KeyboardInterrupt:
-            print("\n👋 Serveur arrêté")
+            print("\n Serveur arrêté")
 
 
 def main():
@@ -1279,11 +1270,11 @@ def main():
     args = parser.parse_args()
     
     if not FLASK_AVAILABLE:
-        print("❌ Flask requis pour le serveur web")
-        print("📦 Installation : pip install flask")
+        print(" Flask requis pour le serveur web")
+        print(" Installation : pip install flask")
         return
     
-    print("🔍 Documentation Search Engine - Version Web Moderne")
+    print(" Documentation Search Engine - Version Web Moderne")
     print("=" * 60)
     
     # Créer et configurer le serveur
