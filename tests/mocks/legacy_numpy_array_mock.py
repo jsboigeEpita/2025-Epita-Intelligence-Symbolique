@@ -20,18 +20,20 @@ _real_numpy_inexact = None
 _real_numpy_flexible = None
 _real_numpy_character = None
 _real_numpy_ufunc = None
-try:
-    # Renommer l'import pour éviter les conflits si ce mock est lui-même importé comme 'numpy'
-    import numpy as actual_numpy_for_mock
-    _actual_numpy_module = actual_numpy_for_mock
-    _real_numpy_flatiter = _actual_numpy_module.flatiter
-    _real_numpy_broadcast = _actual_numpy_module.broadcast
-    _real_numpy_inexact = _actual_numpy_module.inexact
-    _real_numpy_flexible = _actual_numpy_module.flexible
-    _real_numpy_character = _actual_numpy_module.character
-    _real_numpy_ufunc = _actual_numpy_module.ufunc
-except ImportError:
-    pass # Le vrai numpy n'est pas disponible
+# Commenting out the problematic import of the real numpy
+# try:
+#     # Renommer l'import pour éviter les conflits si ce mock est lui-même importé comme 'numpy'
+#     import numpy as actual_numpy_for_mock
+#     _actual_numpy_module = actual_numpy_for_mock
+#     _real_numpy_flatiter = _actual_numpy_module.flatiter
+#     _real_numpy_broadcast = _actual_numpy_module.broadcast
+#     _real_numpy_inexact = _actual_numpy_module.inexact
+#     _real_numpy_flexible = _actual_numpy_module.flexible
+#     _real_numpy_character = _actual_numpy_module.character
+#     _real_numpy_ufunc = _actual_numpy_module.ufunc
+# except ImportError:
+#     pass # Le vrai numpy n'est pas disponible
+
 # Configuration du logging
 logging.basicConfig(
     level=logging.INFO,
@@ -40,8 +42,26 @@ logging.basicConfig(
 )
 logger = logging.getLogger("NumpyMock")
 
+# Adding typecodes definition
+typecodes = {
+    'Character': 'c',
+    'Integer': 'bhilqp',
+    'UnsignedInteger': 'BHILQP',
+    'Float': 'efdg',
+    'Complex': 'FDG',
+    'AllInteger': 'bBhHiIlLqQpP',
+    'AllFloat': 'efdgFDG',
+    'Datetime': 'M',
+    'Timedelta': 'm',
+    'Object': 'O',
+    'String': 'S',
+    'Unicode': 'U',
+    'Void': 'V',
+    'All': '?bhilqpBHILQPefdgFDGSUVOMm'
+}
+
 # Version
-__version__ = "1.24.3"
+__version__ = "1.24.3.mock" # Ensure mock is in version
 __spec__ = MagicMock(name='numpy.__spec__') # Ajout pour compatibilité import
 _CopyMode = MagicMock(name='numpy._CopyMode') # Ajout pour compatibilité scipy/sklearn
 
@@ -571,7 +591,7 @@ def rint(x, out=None):
     if isinstance(x, ndarray):
         return ndarray(shape=x.shape, dtype=x.dtype)
     # Comportement simplifié pour les scalaires
-    return np.round(x) # Utilise notre mock np.round
+    return round(x) # Utilise notre mock round
 
 def sign(x, out=None):
     """Mock pour numpy.sign."""
@@ -586,25 +606,25 @@ def expm1(x, out=None):
     """Mock pour numpy.expm1 (exp(x) - 1)."""
     if isinstance(x, ndarray):
         return ndarray(shape=x.shape, dtype=x.dtype)
-    return np.exp(x) - 1 # Utilise notre mock np.exp
+    return exp(x) - 1 # Utilise notre mock exp
 
 def log1p(x, out=None):
     """Mock pour numpy.log1p (log(1 + x))."""
     if isinstance(x, ndarray):
         return ndarray(shape=x.shape, dtype=x.dtype)
-    return np.log(1 + x) # Utilise notre mock np.log
+    return log(1 + x) # Utilise notre mock log
 
 def deg2rad(x, out=None):
     """Mock pour numpy.deg2rad."""
     if isinstance(x, ndarray):
         return ndarray(shape=x.shape, dtype=x.dtype)
-    return x * (np.pi / 180) # Utilise notre mock np.pi
+    return x * (pi / 180) # Utilise notre mock pi
 
 def rad2deg(x, out=None):
     """Mock pour numpy.rad2deg."""
     if isinstance(x, ndarray):
         return ndarray(shape=x.shape, dtype=x.dtype)
-    return x * (180 / np.pi) # Utilise notre mock np.pi
+    return x * (180 / pi) # Utilise notre mock pi
 
 def trunc(x, out=None):
     """Mock pour numpy.trunc. Retourne la partie entière."""
@@ -1086,25 +1106,6 @@ class int8(metaclass=dtype_base):
     __name__ = 'int8'
     __module__ = 'numpy'
 
-class int16(metaclass=dtype_base):
-    __name__ = 'int16'
-    __module__ = 'numpy'
-
-class uint8(metaclass=dtype_base):
-    __name__ = 'uint8'
-    __module__ = 'numpy'
-
-class uint16(metaclass=dtype_base):
-    __name__ = 'uint16'
-    __module__ = 'numpy'
-
-# Alias pour compatibilité avec scipy (intc, intp)
-intc = int32
-intp = int64
-
-# Classes utilitaires pour pandas
-class busdaycalendar:
-    """Mock pour numpy.busdaycalendar."""
     
     def __init__(self, weekmask='1111100', holidays=None):
         self.weekmask = weekmask
