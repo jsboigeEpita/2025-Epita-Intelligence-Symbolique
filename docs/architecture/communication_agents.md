@@ -1,341 +1,201 @@
-# Analyse du système de communication actuel entre agents
+# Système de Communication entre Agents
 
 ## 1. Introduction
 
-Ce document présente une analyse approfondie du système de communication actuel entre les agents dans l'architecture hiérarchique à trois niveaux du projet d'analyse rhétorique. L'objectif est d'identifier les mécanismes existants, les flux d'information, les limitations et les opportunités d'amélioration pour un système multi-canal.
+Ce document présente une analyse et une description du système de communication entre les agents dans le projet d'analyse rhétorique. L'architecture initiale, basée sur un état partagé et des interfaces hiérarchiques, a évolué pour intégrer une approche multi-canal gérée par un middleware de messagerie. L'objectif est de détailler les mécanismes existants, les flux d'information, les protocoles et formats utilisés, ainsi que les composants clés qui assurent l'interopérabilité des agents.
 
-## 2. Architecture de communication actuelle
+## 2. Architecture de Communication Globale
 
-### 2.1 Vue d'ensemble
+L'architecture de communication repose sur deux piliers principaux :
 
-L'architecture actuelle est structurée selon un modèle hiérarchique à trois niveaux :
+1.  **Une structure hiérarchique à trois niveaux** (Stratégique, Tactique, Opérationnel) qui définit les flux de contrôle et de traduction des objectifs en tâches exécutables.
+2.  **Un `MessageMiddleware`** ([`../../argumentation_analysis/core/communication/middleware.py`](../../argumentation_analysis/core/communication/middleware.py:19)) qui gère la communication multi-canal entre les agents, indépendamment de leur niveau hiérarchique.
 
-1. **Niveau stratégique** : Responsable de la planification globale et de la définition des objectifs
-2. **Niveau tactique** : Responsable de la coordination des tâches et de la gestion des ressources
-3. **Niveau opérationnel** : Responsable de l'exécution des tâches spécifiques d'analyse
+![Architecture hiérarchique à trois niveaux (concept général)](../images/architecture_communication_agents.png)
+*(Note: Cette image illustre le concept hiérarchique. La communication réelle est maintenant facilitée et étendue par le middleware.)*
 
-La communication entre ces niveaux est assurée par deux interfaces principales :
-- **Interface stratégique-tactique** : Traduit les objectifs stratégiques en directives tactiques
-- **Interface tactique-opérationnelle** : Traduit les tâches tactiques en tâches opérationnelles
+### 2.1 Niveaux Hiérarchiques
 
-![Architecture hiérarchique à trois niveaux](../docs/images/architecture_communication_agents.png)
+La structure hiérarchique demeure un concept fondamental pour l'orchestration :
 
-### 2.2 Composants clés du système de communication
+*   **Niveau stratégique** : Responsable de la planification globale et de la définition des objectifs.
+*   **Niveau tactique** : Responsable de la coordination des tâches et de la gestion des ressources.
+*   **Niveau opérationnel** : Responsable de l'exécution des tâches spécifiques d'analyse.
 
-#### 2.2.1 État partagé (`RhetoricalAnalysisState`)
+La communication entre ces niveaux est assurée par des interfaces dédiées qui utilisent le `MessageMiddleware` :
 
-Le composant `RhetoricalAnalysisState` constitue le fondement du système de communication actuel. Il fournit :
+*   **`StrategicTacticalInterface` ([`../../argumentation_analysis/orchestration/hierarchical/interfaces/strategic_tactical.py`](../../argumentation_analysis/orchestration/hierarchical/interfaces/strategic_tactical.py:22))** : Traduit les objectifs stratégiques en directives tactiques et remonte les informations agrégées.
+*   **`TacticalOperationalInterface` ([`../../argumentation_analysis/orchestration/hierarchical/interfaces/tactical_operational.py`](../../argumentation_analysis/orchestration/hierarchical/interfaces/tactical_operational.py:22))** : Traduit les tâches tactiques en tâches opérationnelles et remonte les résultats d'analyse.
+*   **`OperationalAgent` ([`../../argumentation_analysis/orchestration/hierarchical/operational/agent_interface.py`](../../argumentation_analysis/orchestration/hierarchical/operational/agent_interface.py:22))** : Interface de base pour tous les agents exécutant les tâches.
 
-- Un espace de stockage centralisé pour les données partagées
-- Des méthodes pour ajouter et récupérer des informations
-- Un mécanisme de désignation du prochain agent à intervenir
+### 2.2 Middleware de Messagerie (`MessageMiddleware`)
 
-Ce composant permet aux agents de partager :
-- Le texte brut à analyser
-- Les tâches d'analyse
-- Les arguments identifiés
-- Les sophismes détectés
-- Les ensembles de croyances formels
-- Les journaux de requêtes
-- Les réponses aux tâches
-- Les extraits de texte
-- Les erreurs rencontrées
+Le `MessageMiddleware` ([`../../argumentation_analysis/core/communication/middleware.py`](../../argumentation_analysis/core/communication/middleware.py:19)) est le cœur du système de communication actuel. Il fournit :
 
-#### 2.2.2 Gestionnaire d'état (`StateManagerPlugin`)
+*   **Gestion de Canaux Multiples** : Il enregistre et gère différents types de canaux de communication (définis dans [`ChannelType`](../../argumentation_analysis/core/communication/channel_interface.py:19)).
+    *   `HierarchicalChannel` ([`../../argumentation_analysis/core/communication/hierarchical_channel.py`](../../argumentation_analysis/core/communication/hierarchical_channel.py:20)): Pour les communications structurées entre les niveaux hiérarchiques.
+    *   `DataChannel` ([`../../argumentation_analysis/core/communication/data_channel.py`](../../argumentation_analysis/core/communication/data_channel.py:253)): Pour le transfert efficace de données volumineuses, avec un `DataStore` ([`../../argumentation_analysis/core/communication/data_channel.py:26`](../../argumentation_analysis/core/communication/data_channel.py:26)) interne pour la compression et le versionnement en mémoire.
+    *   `CollaborationChannel` ([`../../argumentation_analysis/core/communication/collaboration_channel.py`](../../argumentation_analysis/core/communication/collaboration_channel.py:140)): Pour la communication horizontale entre agents, supportant des `CollaborationGroup` ([`../../argumentation_analysis/core/communication/collaboration_channel.py:20`](../../argumentation_analysis/core/communication/collaboration_channel.py:20)).
+    *   D'autres canaux comme `FeedbackChannel` et `SystemChannel` peuvent être définis et utilisés.
+    *   Une implémentation `LocalChannel` ([`../../argumentation_analysis/core/communication/channel_interface.py:96`](../../argumentation_analysis/core/communication/channel_interface.py:96)) existe également, principalement pour les tests.
+*   **Routage de Messages** : Il détermine le canal approprié pour un message donné en fonction de son type et de son contenu.
+*   **Envoi et Réception Unifiés** : Il offre des méthodes `send_message` et `receive_message` pour les agents.
+*   **Protocoles de Communication** : Il intègre des protocoles comme `RequestResponseProtocol` ([`../../argumentation_analysis/core/communication/request_response.py`](../../argumentation_analysis/core/communication/request_response.py)) et `PublishSubscribeProtocol` ([`../../argumentation_analysis/core/communication/pub_sub.py`](../../argumentation_analysis/core/communication/pub_sub.py)) pour des patterns d'interaction spécifiques.
+*   **Adaptateurs d'Agents** : Les agents interagissent avec le middleware via des adaptateurs spécifiques à leur niveau (ex: `StrategicAdapter`, `TacticalAdapter`, `OperationalAdapter` trouvés dans [`../../argumentation_analysis/core/communication/adapters.py`](../../argumentation_analysis/core/communication/adapters.py)).
 
-Le `StateManagerPlugin` sert d'interface entre les agents et l'état partagé. Il :
+Ce middleware ne repose pas sur des brokers de messages externes comme RabbitMQ ou ZeroMQ ; la communication via les canaux est gérée en mémoire.
 
-- Expose des fonctions pour manipuler l'état partagé
-- Valide les entrées avant de les ajouter à l'état
-- Journalise les opérations effectuées sur l'état
+### 2.3 Format des Messages
 
-#### 2.2.3 Interface stratégique-tactique (`StrategicTacticalInterface`)
+Les messages échangés sont des instances de la classe `Message` ([`../../argumentation_analysis/core/communication/message.py`](../../argumentation_analysis/core/communication/message.py)). Un message typique contient :
 
-Cette interface assure la communication entre les niveaux stratégique et tactique. Elle :
+*   `id`: Identifiant unique du message.
+*   `type`: Type de message (ex: `COMMAND`, `INFORMATION`, `REQUEST`, `RESPONSE`, `EVENT` - voir [`MessageType`](../../argumentation_analysis/core/communication/message.py)).
+*   `sender`: Identifiant de l'agent émetteur.
+*   `sender_level`: Niveau hiérarchique de l'émetteur (voir [`AgentLevel`](../../argumentation_analysis/core/communication/message.py)).
+*   `recipient`: Identifiant de l'agent destinataire (peut être un agent spécifique ou un groupe).
+*   `content`: Contenu du message (un dictionnaire Python).
+*   `priority`: Priorité du message (voir [`MessagePriority`](../../argumentation_analysis/core/communication/message.py)).
+*   `timestamp`: Horodatage de la création du message.
+*   `metadata`: Informations additionnelles (ex: `reply_to` pour les réponses, `group_id`).
+*   `channel`: Le type de canal sur lequel le message transite.
 
-- Traduit les objectifs stratégiques en directives tactiques
-- Enrichit les objectifs avec des informations contextuelles
-- Remonte les rapports de progression du niveau tactique au niveau stratégique
-- Identifie les problèmes stratégiques à partir des problèmes tactiques
-- Détermine les ajustements stratégiques nécessaires
+Le format de message n'est pas basé sur JSON-RPC. La sérialisation pour le stockage (par exemple dans `DataChannel`) utilise JSON.
 
-#### 2.2.4 Interface tactique-opérationnelle (`TacticalOperationalInterface`)
+### 2.4 État Partagé (`RhetoricalAnalysisState`)
 
-Cette interface assure la communication entre les niveaux tactique et opérationnel. Elle :
+Le `RhetoricalAnalysisState` ([`../../argumentation_analysis/core/shared_state.py`](../../argumentation_analysis/core/shared_state.py:12)) reste un composant important, notamment pour :
 
-- Traduit les tâches tactiques en tâches opérationnelles
-- Détermine les techniques à appliquer en fonction des capacités requises
-- Remonte les résultats d'analyse du niveau opérationnel au niveau tactique
-- Traduit les problèmes opérationnels en problèmes tactiques
+*   Stocker les données fondamentales de l'analyse (texte brut, tâches, arguments, sophismes, etc.).
+*   Fournir un point central pour certaines informations partagées globalement.
+*   Permettre une forme de communication indirecte ou de persistance de l'état de l'analyse.
 
-#### 2.2.5 Interface des agents opérationnels (`OperationalAgent`)
+Il est accessible et manipulé via le `StateManagerPlugin` ([`../../argumentation_analysis/core/state_manager_plugin.py`](../../argumentation_analysis/core/state_manager_plugin.py:16)), qui expose ses fonctionnalités aux agents (souvent via Semantic Kernel).
 
-Cette interface définit comment les agents opérationnels interagissent avec le système. Elle :
-
-- Définit les méthodes que tous les agents opérationnels doivent implémenter
-- Fournit des méthodes pour enregistrer des tâches, des résultats et des problèmes
-- Permet de mettre à jour le statut des tâches et les métriques opérationnelles
-
-## 3. Flux d'information entre les niveaux
-
-### 3.1 Flux descendant (stratégique → tactique → opérationnel)
-
-#### 3.1.1 Du niveau stratégique au niveau tactique
-
-1. Le niveau stratégique définit des objectifs globaux
-2. L'interface stratégique-tactique traduit ces objectifs en directives tactiques
-3. Les objectifs sont enrichis avec des informations contextuelles :
-   - Phase du plan global
-   - Objectifs liés
-   - Niveau de priorité
-   - Critères de succès
-4. Des paramètres de contrôle sont ajoutés :
-   - Niveau de détail
-   - Équilibre précision/couverture
-   - Préférences méthodologiques
-   - Limites de ressources
-
-#### 3.1.2 Du niveau tactique au niveau opérationnel
-
-1. Le niveau tactique définit des tâches spécifiques
-2. L'interface tactique-opérationnelle traduit ces tâches en tâches opérationnelles
-3. Les tâches sont enrichies avec des informations d'exécution :
-   - Techniques à appliquer
-   - Extraits de texte pertinents
-   - Paramètres d'exécution
-   - Outputs attendus
-   - Contraintes d'exécution
-4. Des informations de contexte local sont ajoutées :
-   - Position dans le workflow
-   - Tâches liées
-   - Dépendances
-   - Contraintes spécifiques
-
-### 3.2 Flux ascendant (opérationnel → tactique → stratégique)
-
-#### 3.2.1 Du niveau opérationnel au niveau tactique
-
-1. Les agents opérationnels exécutent les tâches et produisent des résultats
-2. Les résultats sont formatés selon les attentes du niveau tactique
-3. L'interface tactique-opérationnelle traduit ces résultats en informations tactiques
-4. Les métriques d'exécution sont remontées :
-   - Temps de traitement
-   - Score de confiance
-   - Couverture
-   - Utilisation des ressources
-5. Les problèmes rencontrés sont traduits en problèmes tactiques
-
-#### 3.2.2 Du niveau tactique au niveau stratégique
-
-1. Le niveau tactique agrège les résultats des tâches
-2. L'interface stratégique-tactique traduit ces résultats en informations stratégiques
-3. Des métriques stratégiques sont dérivées :
-   - Progression globale
-   - Indicateurs de qualité
-   - Utilisation des ressources
-4. Les problèmes tactiques sont traduits en problèmes stratégiques
-5. Des ajustements stratégiques sont proposés
-
-## 4. Mécanismes de passage de messages existants
-
-### 4.1 Passage de messages via l'état partagé
-
-Le mécanisme principal de communication est basé sur l'état partagé :
-
-1. Les agents écrivent des informations dans l'état partagé
-2. Les autres agents lisent ces informations pour prendre des décisions
-3. Le mécanisme de désignation du prochain agent permet de contrôler le flux de communication
+La désignation du prochain agent (`designate_next_agent`, `consume_next_agent_designation`) est un mécanisme de contrôle de flux spécifique à l'état partagé.
 
 ```python
-# Exemple de désignation du prochain agent
+# Exemple de désignation du prochain agent via l'état partagé
+# state est une instance de RhetoricalAnalysisState
 state.designate_next_agent("agent_name")
 
 # Exemple de consommation de la désignation
 next_agent = state.consume_next_agent_designation()
 ```
 
-### 4.2 Passage de messages via les interfaces
+### 2.5 Journalisation
 
-Les interfaces entre les niveaux servent également de mécanismes de passage de messages :
-
-1. Les objectifs stratégiques sont traduits en directives tactiques
-2. Les tâches tactiques sont traduites en tâches opérationnelles
-3. Les résultats opérationnels sont traduits en informations tactiques
-4. Les rapports tactiques sont traduits en informations stratégiques
+Chaque niveau et composant intègre des mécanismes de journalisation (`logging`) pour tracer les actions, les erreurs et les flux de communication. Par exemple, `OperationalAgent` ([`../../argumentation_analysis/orchestration/hierarchical/operational/agent_interface.py`](../../argumentation_analysis/orchestration/hierarchical/operational/agent_interface.py:22)) inclut une méthode `log_action`.
 
 ```python
-# Exemple de traduction d'objectifs stratégiques en directives tactiques
-tactical_directives = strategic_tactical_interface.translate_objectives(objectives)
-
-# Exemple de traduction de tâche tactique en tâche opérationnelle
-operational_task = tactical_operational_interface.translate_task(task)
+# Exemple de journalisation d'une action dans un agent opérationnel
+# self.operational_state est une instance de OperationalState
+# self.operational_state.log_action("execute_technique", {"technique": "premise_conclusion_extraction", "task_id": "task-1"})
+# Note: l'exemple du document original semble pointer vers operational_state directement,
+# mais c'est généralement l'agent qui utilise son état pour logger.
 ```
 
-### 4.3 Journalisation des actions
+## 3. Flux d'Information
 
-Chaque niveau dispose d'un mécanisme de journalisation des actions :
+Les flux d'information suivent à la fois la structure hiérarchique et les capacités du `MessageMiddleware`.
 
-1. Les actions sont enregistrées avec un horodatage et des détails
-2. Ces journaux peuvent être consultés pour comprendre le déroulement de l'analyse
-3. Les erreurs sont également journalisées pour faciliter le débogage
+### 3.1 Flux Descendant (Stratégique → Tactique → Opérationnel)
 
-```python
-# Exemple de journalisation d'une action
-operational_state.log_action("execute_technique", {"technique": "premise_conclusion_extraction", "task_id": "task-1"})
-```
+*   **Stratégique à Tactique** :
+    1.  Le niveau stratégique définit des objectifs globaux.
+    2.  La `StrategicTacticalInterface` traduit ces objectifs en directives tactiques, enrichies de contexte.
+    3.  Ces directives sont envoyées via le `MessageMiddleware`, typiquement sur le `HierarchicalChannel`, à destination du coordinateur tactique.
+        *Exemple de code (conceptuel, l'implémentation réelle utilise le middleware) :*
+        ```python
+        # tactical_directives = strategic_tactical_interface.translate_objectives(objectives)
+        # self.strategic_adapter.send_directive(..., recipient_id="tactical_coordinator", ...)
+        ```
+        (Voir [`StrategicTacticalInterface.translate_objectives`](../../argumentation_analysis/orchestration/hierarchical/interfaces/strategic_tactical.py) pour l'implémentation avec adaptateur)
 
-## 5. Limitations et contraintes du système actuel
+*   **Tactique à Opérationnel** :
+    1.  Le niveau tactique définit des tâches spécifiques.
+    2.  La `TacticalOperationalInterface` traduit ces tâches en tâches opérationnelles, enrichies d'informations d'exécution.
+    3.  Ces tâches sont envoyées via le `MessageMiddleware` à destination des agents opérationnels appropriés (soit directement, soit publiées sur un topic du `CollaborationChannel` basé sur les capacités requises).
+        *Exemple de code (conceptuel) :*
+        ```python
+        # operational_task = tactical_operational_interface.translate_task(task)
+        # self.tactical_adapter.assign_task(..., recipient_id=recipient_id, ...) 
+        # ou self.middleware.publish(topic_id=f"operational_tasks.{capability}", ...)
+        ```
+        (Voir [`TacticalOperationalInterface.translate_task`](../../argumentation_analysis/orchestration/hierarchical/interfaces/tactical_operational.py) pour l'implémentation avec adaptateur/publication)
 
-### 5.1 Communication unidirectionnelle
+### 3.2 Flux Ascendant (Opérationnel → Tactique → Stratégique)
 
-Le système actuel privilégie une communication descendante (stratégique → tactique → opérationnel) avec un retour d'information limité dans le sens ascendant. Cette approche :
+*   **Opérationnel à Tactique** :
+    1.  Les agents opérationnels exécutent les tâches et produisent des résultats, métriques et problèmes.
+    2.  Ces informations sont envoyées via le `MessageMiddleware` (par l'`OperationalAdapter`) à la `TacticalOperationalInterface`.
+    3.  L'interface traduit ces informations pour le niveau tactique.
+        (Voir [`OperationalAgent._process_task_async`](../../argumentation_analysis/orchestration/hierarchical/operational/agent_interface.py) et [`TacticalOperationalInterface.process_operational_result`](../../argumentation_analysis/orchestration/hierarchical/interfaces/tactical_operational.py))
 
-- Limite la capacité des niveaux inférieurs à influencer les décisions des niveaux supérieurs
-- Réduit l'adaptabilité du système face à des situations imprévues
-- Crée un goulot d'étranglement dans la remontée d'information
+*   **Tactique à Stratégique** :
+    1.  Le niveau tactique agrège les résultats.
+    2.  La `StrategicTacticalInterface` traduit ces informations pour le niveau stratégique.
+    3.  Les rapports sont envoyés via le `MessageMiddleware` (par le `TacticalAdapter`) au niveau stratégique.
+        (Voir [`StrategicTacticalInterface.process_tactical_report`](../../argumentation_analysis/orchestration/hierarchical/interfaces/strategic_tactical.py))
 
-### 5.2 Absence de communication horizontale
+### 3.3 Communication Horizontale et Autres Patterns
 
-Le système ne prévoit pas de mécanisme explicite pour la communication horizontale entre agents de même niveau :
+Grâce au `MessageMiddleware` :
 
-- Les agents opérationnels ne peuvent pas collaborer directement
-- Les agents tactiques ne peuvent pas coordonner leurs actions sans passer par le niveau stratégique
-- Les connaissances ne sont pas partagées efficacement entre agents de même niveau
+*   **Communication Horizontale** : Les agents de même niveau peuvent communiquer directement ou via des `CollaborationGroup` sur le `CollaborationChannel`.
+*   **Publish-Subscribe** : Des informations peuvent être publiées sur des topics (ex: tâches opérationnelles par capacité, résultats intermédiaires) et les agents intéressés peuvent s'y abonner.
+*   **Request-Response** : Des interactions synchrones sont possibles.
+*   **Partage de Données** : Le `DataChannel` permet de partager des données volumineuses efficacement.
 
-### 5.3 Couplage fort entre les niveaux
+## 4. Gestion des Ontologies et Sémantique
 
-Les interfaces entre les niveaux créent un couplage fort :
+Actuellement, il n'y a pas de preuve d'une utilisation directe et active d'ontologies formelles (comme `argumentum_fallacies.owl` trouvé dans `_archives`) au sein du flux de communication principal géré par le `MessageMiddleware` ou dans la structuration des messages échangés par les agents principaux codés en Python. La mention "Ontologies partagées" dans les versions antérieures de ce document ou dans les objectifs généraux du projet reste une aspiration ou concerne des modules/outils spécifiques non couverts par l'analyse du code de communication principal. La sémantique des messages est principalement définie par la structure de la classe `Message` et les conventions établies dans le contenu des messages.
 
-- Les niveaux sont fortement dépendants les uns des autres
-- Un changement dans un niveau peut nécessiter des modifications dans les autres niveaux
-- L'évolution indépendante des différents niveaux est difficile
+## 5. Limitations et Évolutions
 
-### 5.4 Manque de flexibilité dans les formats de communication
+L'introduction du `MessageMiddleware` a permis de pallier certaines limitations de l'approche purement basée sur l'état partagé :
 
-Le système actuel impose un format unique pour la communication :
+*   **Communication Unidirectionnelle / Horizontale** : Le middleware facilite la communication bidirectionnelle et horizontale via des canaux dédiés (ex: `CollaborationChannel`) et des patterns comme publish-subscribe.
+*   **Couplage Fort** : Le middleware introduit une couche d'abstraction, réduisant le couplage direct, bien que les interfaces hiérarchiques maintiennent une forme de couplage logique.
+*   **Flexibilité des Formats** : La structure `Message.content` (dictionnaire Python) offre une certaine flexibilité. Le `DataChannel` permet de gérer des données plus volumineuses ou structurées.
+*   **Mécanismes de Négociation** : Bien qu'un `ChannelType.NEGOTIATION` soit défini, l'implémentation de protocoles de négociation avancés (comme Contract Net) n'est pas évidente dans le code actuel du middleware et reste une évolution possible.
+*   **Gestion des Erreurs** : Le middleware et les canaux incluent une journalisation des erreurs. Des mécanismes de récupération plus avancés ou de propagation structurée des erreurs entre niveaux sont des points d'amélioration continue.
 
-- Les données doivent être structurées selon un schéma prédéfini
-- Il est difficile d'ajouter de nouveaux types de données ou de messages
-- L'expressivité des messages est limitée
+Le système actuel, avec le `MessageMiddleware`, correspond déjà en partie aux "opportunités d'amélioration" et "recommandations" décrites dans les sections 6 et 7 du document original. Ce qui suit met à jour ces sections pour refléter l'état actuel et les perspectives.
 
-### 5.5 Absence de mécanismes de négociation
+## 6. Capacités Actuelles du Système Multi-Canal
 
-Le système ne prévoit pas de mécanismes pour la négociation entre agents :
+L'architecture actuelle avec le `MessageMiddleware` fournit :
 
-- Les conflits sont résolus de manière hiérarchique
-- Les agents ne peuvent pas proposer des alternatives
-- La prise de décision collaborative est limitée
+*   **Communications directes et horizontales** : Via le `CollaborationChannel` et les messages directs.
+*   **Communications asynchrones** : La nature du middleware et des files d'attente des canaux le permet.
+*   **Canaux spécialisés** : `HierarchicalChannel`, `DataChannel`, `CollaborationChannel` sont implémentés. `FeedbackChannel`, `NegotiationChannel`, `SystemChannel` sont des types définis pouvant être davantage exploités.
+*   **Mécanismes de communication enrichis** :
+    *   **Publish-Subscribe** : Implémenté via `PublishSubscribeProtocol`.
+    *   **Request-Response** : Implémenté via `RequestResponseProtocol`.
+    *   **Event-Driven** : Possible via la publication d'événements et l'abonnement.
+    *   **Blackboard / Data Sharing** : Le `DataChannel` et son `DataStore` agissent comme une forme de blackboard pour les données partagées.
+*   **Formats de communication flexibles** : La structure `Message` est flexible.
 
-### 5.6 Gestion limitée des erreurs et des exceptions
+## 7. Perspectives d'Évolution
 
-Le système actuel offre une gestion limitée des erreurs :
+Bien que le `MessageMiddleware` offre une base solide, des améliorations et extensions sont toujours possibles :
 
-- Les erreurs sont journalisées mais pas toujours traitées
-- Il n'existe pas de mécanisme de récupération automatique
-- La propagation des erreurs entre les niveaux n'est pas clairement définie
-
-## 6. Opportunités d'amélioration pour un système multi-canal
-
-### 6.1 Architecture de communication multi-canal
-
-Une architecture multi-canal permettrait :
-
-- Des communications directes entre agents de différents niveaux
-- Des communications horizontales entre agents de même niveau
-- Des communications asynchrones pour des tâches non bloquantes
-- Des communications synchrones pour des tâches critiques
-
-![Architecture multi-canal proposée](../docs/images/architecture_multi_canal_proposee.png)
-
-### 6.2 Canaux de communication spécialisés
-
-Différents canaux pourraient être créés pour différents types de communication :
-
-1. **Canal de contrôle** : Pour les directives et les commandes
-2. **Canal de données** : Pour le partage de données volumineuses
-3. **Canal de coordination** : Pour la synchronisation des actions
-4. **Canal de négociation** : Pour la résolution collaborative des conflits
-5. **Canal de feedback** : Pour la remontée d'information et les suggestions
-
-### 6.3 Mécanismes de communication enrichis
-
-De nouveaux mécanismes pourraient être introduits :
-
-1. **Publish-Subscribe** : Pour diffuser des informations à plusieurs agents intéressés
-2. **Request-Response** : Pour des interactions synchrones entre agents
-3. **Event-Driven** : Pour réagir à des événements spécifiques
-4. **Blackboard** : Pour partager des connaissances de manière structurée
-5. **Contract Net** : Pour la négociation et l'allocation de tâches
-
-### 6.4 Formats de communication flexibles
-
-Des formats plus flexibles pourraient être adoptés :
-
-1. **Messages structurés** : Pour des communications formelles
-2. **Messages semi-structurés** : Pour des communications plus expressives
-3. **Ontologies partagées** : Pour une compréhension commune des concepts
-4. **Langages de communication d'agents** : Pour des interactions complexes
-
-### 6.5 Mécanismes de coordination avancés
-
-Des mécanismes de coordination plus sophistiqués pourraient être implémentés :
-
-1. **Coordination par plans partagés** : Pour aligner les actions des agents
-2. **Coordination par normes et conventions** : Pour établir des règles de comportement
-3. **Coordination par rôles et responsabilités** : Pour clarifier les attentes
-4. **Coordination par marchés** : Pour une allocation efficace des ressources
-
-## 7. Recommandations pour le nouveau système multi-canal
-
-### 7.1 Architecture proposée
-
-Nous recommandons une architecture de communication multi-canal basée sur un middleware de messagerie :
-
-1. **Couche de middleware** : Fournit les services de base pour la communication
-2. **Gestionnaire de canaux** : Gère les différents canaux de communication
-3. **Adaptateurs d'agents** : Permettent aux agents existants de s'intégrer au nouveau système
-4. **Moniteur de communication** : Surveille et analyse les communications
-
-### 7.2 Canaux de communication recommandés
-
-Nous recommandons l'implémentation des canaux suivants :
-
-1. **Canal hiérarchique** : Pour maintenir la communication hiérarchique existante
-2. **Canal de collaboration** : Pour la communication horizontale entre agents
-3. **Canal de données** : Pour le partage efficace de données volumineuses
-4. **Canal de négociation** : Pour la résolution collaborative des conflits
-5. **Canal de feedback** : Pour la remontée d'information et les suggestions
-
-### 7.3 Protocoles de communication
-
-Nous recommandons l'adoption des protocoles suivants :
-
-1. **Protocole de coordination** : Pour synchroniser les actions des agents
-2. **Protocole de négociation** : Pour résoudre les conflits et allouer les ressources
-3. **Protocole de partage de connaissances** : Pour diffuser les informations pertinentes
-4. **Protocole d'apprentissage collectif** : Pour améliorer les performances du système
-
-### 7.4 Mécanismes de gestion des erreurs
-
-Nous recommandons l'implémentation des mécanismes suivants :
-
-1. **Détection et notification des erreurs** : Pour identifier rapidement les problèmes
-2. **Récupération automatique** : Pour maintenir le système opérationnel
-3. **Dégradation gracieuse** : Pour maintenir un service minimal en cas de problème
-4. **Apprentissage à partir des erreurs** : Pour améliorer la robustesse du système
-
-### 7.5 Feuille de route d'implémentation
-
-Nous proposons la feuille de route suivante :
-
-1. **Phase 1** : Implémentation du middleware de messagerie et des adaptateurs d'agents
-2. **Phase 2** : Implémentation des canaux hiérarchique et de collaboration
-3. **Phase 3** : Implémentation des canaux de données et de feedback
-4. **Phase 4** : Implémentation du canal de négociation et des protocoles avancés
-5. **Phase 5** : Optimisation et évaluation du système
+*   **Protocoles de Communication Avancés** :
+    *   Développer et intégrer des protocoles plus formels pour la négociation (ex: Contract Net), la coordination avancée (plans partagés) et l'apprentissage collectif.
+*   **Gestion des Erreurs Améliorée** :
+    *   Standardiser la propagation des erreurs à travers les niveaux.
+    *   Implémenter des stratégies de récupération automatique plus robustes.
+    *   Permettre une dégradation gracieuse des services en cas de défaillance partielle.
+*   **Intégration d'Ontologies** :
+    *   Explorer l'intégration formelle d'ontologies pour enrichir la sémantique des messages et assurer une meilleure interopérabilité, si le besoin se confirme pour les agents principaux.
+*   **Sécurité des Communications** :
+    *   Si le système doit interagir avec des composants externes ou être déployé dans des environnements moins contrôlés, des mécanismes d'authentification, d'autorisation et de chiffrement devront être ajoutés.
+*   **Monitoring et Analyse des Communications** :
+    *   Étendre les capacités de monitoring du `MessageMiddleware` pour fournir des tableaux de bord et des analyses plus détaillées sur les flux de communication, les performances et les goulots d'étranglement.
+*   **Scalabilité** :
+    *   Si le nombre d'agents ou le volume de messages augmente considérablement, l'implémentation actuelle en mémoire du middleware et des canaux pourrait nécessiter une refonte pour utiliser des solutions de messagerie distribuées (comme RabbitMQ, Kafka, ou ZeroMQ, bien qu'ils ne soient pas utilisés actuellement).
 
 ## 8. Conclusion
 
-Le système de communication actuel entre agents dans l'architecture hiérarchique à trois niveaux présente des limitations significatives qui peuvent être adressées par l'adoption d'une architecture multi-canal. Cette nouvelle architecture permettrait une communication plus riche et plus flexible, facilitant la collaboration entre agents et améliorant les performances globales du système d'analyse rhétorique.
-
-Les recommandations proposées dans ce document visent à guider le développement d'un système de communication plus robuste, plus expressif et plus adaptatif, tout en maintenant la compatibilité avec l'architecture existante.
+Le système de communication entre agents a évolué d'un modèle purement basé sur l'état partagé vers une architecture multi-canal plus flexible et robuste, orchestrée par un `MessageMiddleware` central. Cette architecture supporte la communication hiérarchique nécessaire à la structure du projet, tout en offrant des capacités étendues pour la communication horizontale, le partage de données et divers patterns d'interaction. Les formats de message sont définis par la classe `Message` et la communication ne s'appuie pas sur des brokers externes comme RabbitMQ/ZeroMQ, ni sur des standards comme FIPA-ACL ou JSON-RPC dans son implémentation principale actuelle. L'utilisation d'ontologies formelles dans le flux de communication principal n'est pas non plus avérée. Des améliorations continues sont possibles, notamment concernant les protocoles de communication avancés et la gestion des erreurs.
