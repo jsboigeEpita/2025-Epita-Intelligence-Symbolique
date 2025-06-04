@@ -1,3 +1,7 @@
+Ce diagramme Mermaid illustre l'architecture de communication multi-canal du système.
+Il montre comment le Middleware de Messagerie, via son Gestionnaire de Canaux, interagit avec divers canaux spécialisés pour faciliter la communication entre les agents des niveaux Stratégique, Tactique et Opérationnel. Les adaptateurs représentent l'interface de chaque niveau avec le système de communication.
+
+```mermaid
 graph TD
     subgraph "Middleware de Messagerie"
         MM[Middleware de Messagerie]
@@ -11,6 +15,7 @@ graph TD
         CD[Canal de Données]
         CN[Canal de Négociation]
         CF[Canal de Feedback]
+        CS[Canal Système]
     end
 
     subgraph "Niveau Stratégique"
@@ -48,6 +53,7 @@ graph TD
     GC <--> CD
     GC <--> CN
     GC <--> CF
+    GC <--> CS
 
     %% Connexions entre composants stratégiques
     SS <--> SM
@@ -82,24 +88,10 @@ graph TD
     OA2 <--> OAdapter
     OA3 <--> OAdapter
 
-    %% Connexions entre adaptateurs et canaux
-    SAdapter <--> CH
-    SAdapter <--> CC
-    SAdapter <--> CD
-    SAdapter <--> CN
-    SAdapter <--> CF
-
-    TAdapter <--> CH
-    TAdapter <--> CC
-    TAdapter <--> CD
-    TAdapter <--> CN
-    TAdapter <--> CF
-
-    OAdapter <--> CH
-    OAdapter <--> CC
-    OAdapter <--> CD
-    OAdapter <--> CN
-    OAdapter <--> CF
+    %% Connexions entre adaptateurs et Gestionnaire de Canaux
+    SAdapter <--> GC
+    TAdapter <--> GC
+    OAdapter <--> GC
 
     %% Styles
     classDef middleware fill:#f9e5d5,stroke:#333,stroke-width:1px;
@@ -110,8 +102,9 @@ graph TD
     classDef adapter fill:#e5f9d5,stroke:#333,stroke-width:1px;
 
     class MM,GC,MC middleware;
-    class CH,CC,CD,CN,CF channel;
+    class CH,CC,CD,CN,CF,CS channel;
     class SS,SM,SP,SA strategic;
     class TS,TC,TM,TR tactical;
     class OS,OA1,OA2,OA3 operational;
     class SAdapter,TAdapter,OAdapter adapter;
+```

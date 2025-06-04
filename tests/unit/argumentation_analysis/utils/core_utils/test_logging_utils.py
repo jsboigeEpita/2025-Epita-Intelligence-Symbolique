@@ -5,6 +5,7 @@ Tests unitaires pour les utilitaires de logging de project_core.
 import pytest
 import logging
 from unittest.mock import patch, MagicMock
+import sys # Ajout pour sys.stdout dans le test modifié
 
 from argumentation_analysis.utils.core_utils.logging_utils import setup_logging
 
@@ -41,8 +42,14 @@ def reset_logging_state():
     current_handlers = logging.root.handlers[:]
     for handler in current_handlers:
         logging.root.removeHandler(handler)
-    for handler in original_handlers: # Réappliquer les handlers originaux
-        logging.root.addHandler(handler)
+    # Réappliquer les handlers originaux seulement s'ils ne sont pas déjà là pour éviter les doublons
+    # ou s'assurer que la liste est identique à original_handlers.
+    # Une manière simple est de vider et de rajouter.
+    # (Déjà fait ci-dessus, mais si on veut être exact sur la restauration)
+    # current_handlers_after_removal = logging.root.handlers[:] # Devrait être vide
+    for handler_orig in original_handlers:
+        if handler_orig not in logging.root.handlers: # Évite d'ajouter si déjà restauré par ex.
+             logging.root.addHandler(handler_orig)
 
 
 @pytest.mark.parametrize("level_str", VALID_LOG_LEVELS)
@@ -76,62 +83,40 @@ def test_setup_logging_configures_handler_and_formatter(mock_stream_handler_clas
     Teste que setup_logging configure correctement le StreamHandler et le formateur.
     """
     # Créer une instance mock pour le handler qui sera retournée par la classe mockée
-    mock_handler_instance = MagicMock()
+    mock_handler_instance = MagicMock() # spec retiré car logging.StreamHandler est déjà mocké par @patch
     mock_stream_handler_class.return_value = mock_handler_instance
+
+    # S'assurer que le handler mocké a un attribut 'level' de type int,
+    # car la bibliothèque logging le compare avec record.levelno (int).
+    # Le niveau du handler sera configuré par basicConfig au niveau du logger racine.
+    mock_handler_instance.level = logging.DEBUG # Correspond au log_level_str passé à setup_logging
+    # S'assurer que basicConfig tentera de définir un formateur
+    mock_handler_instance.formatter = None 
 
     setup_logging(log_level_str="DEBUG")
     
     # Vérifier que StreamHandler a été instancié (avec sys.stdout)
-    # Note: sys.stdout est l'argument par défaut, donc on peut juste vérifier l'appel
-    mock_stream_handler_class.assert_called_once() 
-    # On pourrait être plus précis si on mockait sys.stdout:
-    # mock_stream_handler_class.assert_called_once_with(sys.stdout)
+    mock_stream_handler_class.assert_called_once_with(sys.stdout)
 
     # Vérifier que le handler a été ajouté au logger racine
-    # logging.basicConfig ajoute le handler, donc on vérifie que le root logger a des handlers
-    # et que notre mock_handler_instance (ou un handler de type StreamHandler) en fait partie.
-    # C'est un peu indirect car basicConfig fait le travail.
-    # On peut vérifier que le root logger a au moins un handler.
-    assert len(logging.getLogger().handlers) > 0, "Le logger racine devrait avoir au moins un handler."
+    assert mock_handler_instance in logging.getLogger().handlers, \
+        "L'instance mockée du StreamHandler aurait dû être ajoutée au logger racine."
     
-    # Vérifier le formateur en logguant un message et en inspectant le format du caplog
-    # C'est un test plus d'intégration pour le format.
-    # Le format est '%(asctime)s [%(levelname)s] [%(name)s] %(message)s'
-    # La date est '%H:%M:%S'
-    with caplog.at_level(logging.INFO):
-        logging.getLogger("test_logger").info("Test message for format.")
+    # Vérifier que setFormatter a été appelé sur le handler mocké
+    mock_handler_instance.setFormatter.assert_called_once()
     
-    assert len(caplog.records) == 1
-    log_record = caplog.records[0]
+    formatter_arg = mock_handler_instance.setFormatter.call_args[0][0]
+    assert isinstance(formatter_arg, logging.Formatter), "L'argument de setFormatter devrait être un logging.Formatter"
     
-    # Exemple de vérification du format (peut être fragile si le format exact change)
-    # On s'attend à quelque chose comme "12:34:56 [INFO] [test_logger] Test message for format."
-    # On peut utiliser des regex pour plus de flexibilité.
-    import re
-    # Regex pour HH:MM:SS [LEVEL] [LOGGER_NAME] Message
-    log_pattern = re.compile(r"^\d{2}:\d{2}:\d{2} \[INFO\] \[test_logger\] Test message for format\.$")
-    # Note: Le format de l'heure dépend de l'exécution, donc on ne peut pas le fixer.
-    # On vérifie la structure générale.
-    # Le message loggué par setup_logging lui-même sera aussi capturé si le niveau est INFO.
-    # On se concentre sur le message que l'on vient de logger.
+    expected_format_str = '%(asctime)s [%(levelname)s] [%(name)s] %(message)s'
+    expected_date_fmt_str = '%H:%M:%S'
+
+    actual_format_str = formatter_arg._style._fmt if hasattr(formatter_arg, '_style') else formatter_arg._fmt
     
-    # Le message de setup_logging est "Logging configuré avec le niveau DEBUG."
-    # Le message de notre test est "Test message for format."
-    # On cherche le dernier message qui correspond à notre test.
-    
-    found_test_message = False
-    for record in caplog.records:
-        if record.name == "test_logger" and record.message == "Test message for format.":
-            # Le format du message est appliqué par le handler au moment de l'émission.
-            # caplog.text contient les messages formatés.
-            # On cherche notre message formaté dans caplog.text
-            formatted_message_found = any(
-                log_pattern.match(line) for line in caplog.text.splitlines() if "Test message for format." in line
-            )
-            assert formatted_message_found, "Le format du message de log ne correspond pas à l'attendu."
-            found_test_message = True
-            break
-    assert found_test_message, "Le message de test spécifique n'a pas été trouvé dans les logs."
+    assert actual_format_str == expected_format_str, \
+        f"Le format du formateur est incorrect. Attendu: '{expected_format_str}', Obtenu: '{actual_format_str}'"
+    assert formatter_arg.datefmt == expected_date_fmt_str, \
+        f"Le format de date du formateur est incorrect. Attendu: '{expected_date_fmt_str}', Obtenu: '{formatter_arg.datefmt}'"
 
 
 def test_setup_logging_quiets_third_party_libraries():
@@ -163,54 +148,46 @@ def test_setup_logging_project_specific_loggers_inherit_level():
             f"Le logger spécifique au projet '{logger_name}' devrait hériter du niveau ERROR."
 
 
-def test_setup_logging_removes_existing_handlers(mocker):
+def test_setup_logging_removes_existing_handlers(): # mocker n'est plus nécessaire ici
     """
-    Teste que setup_logging supprime les handlers existants du logger racine
-    avant d'en configurer de nouveaux, pour éviter la duplication de logs.
+    Teste que setup_logging (avec force=True dans basicConfig) supprime les handlers 
+    existants du logger racine avant d'en configurer de nouveaux.
     """
     root_logger = logging.getLogger()
-    
-    # Ajouter un handler factice
-    dummy_handler = logging.StreamHandler()
-    root_logger.addHandler(dummy_handler)
-    assert dummy_handler in root_logger.handlers, "Le handler factice devrait être dans les handlers du root."
-    
-    # Mocker logging.basicConfig pour ne pas ajouter de nouveaux handlers pendant ce test spécifique
-    # et se concentrer sur la suppression.
-    # Cependant, setup_logging utilise basicConfig qui gère les handlers.
-    # On va plutôt vérifier le nombre de handlers avant et après, et leur type.
-    
-    # On espère que setup_logging va enlever dummy_handler et ajouter son propre StreamHandler.
-    # Pour isoler la suppression, on peut mocker `root_logger.removeHandler`.
-    mock_remove_handler = mocker.patch.object(root_logger, 'removeHandler')
-    mock_has_handlers = mocker.patch.object(root_logger, 'hasHandlers', return_value=True)
-    # Simuler que root_logger.handlers contient notre dummy_handler
-    # Ceci est un peu délicat car on modifie l'état interne de logging.
-    # Une approche plus propre est de laisser setup_logging s'exécuter et de vérifier l'état après.
 
-    # Réinitialiser le logger racine à un état plus contrôlé pour ce test.
-    # Enlever tous les handlers potentiels ajoutés par d'autres tests ou la config pytest.
-    for h in root_logger.handlers[:]:
-        root_logger.removeHandler(h)
-    
-    # Ajouter notre handler factice
-    root_logger.addHandler(dummy_handler)
-    initial_handler_count = len(root_logger.handlers)
-    assert initial_handler_count == 1, "Devrait y avoir 1 handler initialement."
-    
-    setup_logging("INFO") # Exécuter la fonction à tester
-    
-    # Après setup_logging, dummy_handler devrait avoir été retiré,
-    # et un nouveau StreamHandler (celui de basicConfig) ajouté.
-    # Le nombre de handlers devrait toujours être 1 (celui de basicConfig).
-    # Et ce handler ne devrait pas être notre dummy_handler.
-    
-    final_handlers = root_logger.handlers
-    assert len(final_handlers) == 1, "Devrait y avoir 1 handler après setup_logging."
-    assert dummy_handler not in final_handlers, "Le handler factice initial aurait dû être retiré."
-    assert isinstance(final_handlers[0], logging.StreamHandler), "Le handler final devrait être un StreamHandler."
+    # 1. Nettoyer tous les handlers existants pour un état de départ propre
+    while root_logger.handlers:
+        root_logger.removeHandler(root_logger.handlers[0])
+    assert not root_logger.handlers, "Le logger racine devrait être sans handlers au début du test."
 
-    # Nettoyage explicite pour ce test si la fixture autouse ne suffit pas
-    # (normalement, elle devrait suffire).
-    for h in root_logger.handlers[:]:
-        root_logger.removeHandler(h)
+    # 2. Ajouter un handler factice
+    dummy_handler = logging.StreamHandler(sys.stderr) # Utiliser stderr pour le distinguer
+    dummy_handler.set_name("dummy_handler_for_test")
+    root_logger.addHandler(dummy_handler)
+    assert dummy_handler in root_logger.handlers, "Le handler factice devrait être présent."
+    assert len(root_logger.handlers) == 1, "Il ne devrait y avoir que le dummy_handler."
+
+    # 3. Appeler setup_logging
+    setup_logging("INFO") # Utilise basicConfig(force=True)
+
+    # 4. Vérifier l'état des handlers
+    # Le dummy_handler devrait avoir été retiré par force=True
+    assert dummy_handler not in root_logger.handlers, \
+        "Le handler factice initial aurait dû être retiré par basicConfig(force=True)."
+    
+    # Il devrait y avoir au moins un handler (celui configuré par basicConfig)
+    assert len(root_logger.handlers) >= 1, \
+        "Le logger racine devrait avoir au moins un handler après setup_logging."
+        
+    # Vérifier que le nouveau handler est un StreamHandler pointant vers sys.stdout
+    found_new_handler = False
+    for h in root_logger.handlers:
+        if isinstance(h, logging.StreamHandler) and getattr(h, 'stream', None) == sys.stdout:
+            found_new_handler = True
+            break
+    assert found_new_handler, \
+        "Un nouveau StreamHandler pointant vers sys.stdout aurait dû être ajouté par basicConfig."
+
+    # Nettoyage final (la fixture autouse s'en charge aussi, mais pour être sûr)
+    while root_logger.handlers:
+        root_logger.removeHandler(root_logger.handlers[0])

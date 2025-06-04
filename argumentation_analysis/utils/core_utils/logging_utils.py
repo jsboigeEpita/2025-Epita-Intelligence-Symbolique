@@ -35,13 +35,12 @@ def setup_logging(log_level_str: str = "INFO") -> None:
         logging.warning(f"Niveau de log invalide: {log_level_str}. Utilisation du niveau INFO par défaut.")
         numeric_level = logging.INFO
 
-    # Suppression des handlers existants du logger racine.
-    # Cela évite la duplication des messages de log si `setup_logging` est appelée plusieurs fois,
-    # ce qui peut arriver dans des contextes comme les notebooks Jupyter ou lors de tests répétitifs.
-    root_logger = logging.getLogger()
-    if root_logger.hasHandlers():
-        for handler in root_logger.handlers[:]: # Itérer sur une copie de la liste des handlers
-            root_logger.removeHandler(handler)
+    # La suppression manuelle des handlers existants n'est plus nécessaire
+    # si `force=True` est utilisé dans `basicConfig`.
+    # root_logger = logging.getLogger()
+    # if root_logger.hasHandlers():
+    #     for handler in root_logger.handlers[:]: # Itérer sur une copie de la liste des handlers
+    #         root_logger.removeHandler(handler)
             
     # Configuration de base du logging.
     # - `level`: Définit le seuil de criticité pour les messages qui seront traités.
@@ -49,11 +48,14 @@ def setup_logging(log_level_str: str = "INFO") -> None:
     # - `datefmt`: Définit le format de la date/heure dans les messages de log.
     # - `handlers`: Liste des handlers à ajouter au logger racine. Ici, un StreamHandler
     #   est utilisé pour envoyer les logs vers la sortie standard (console).
+    # - `force=True` (depuis Python 3.8): Supprime et ferme tous les handlers existants
+    #   attachés au logger racine avant d'effectuer la configuration.
     logging.basicConfig(
         level=numeric_level,
         format='%(asctime)s [%(levelname)s] [%(name)s] %(message)s',
         datefmt='%H:%M:%S',
-        handlers=[logging.StreamHandler(sys.stdout)] # Assure que les logs vont vers stdout
+        handlers=[logging.StreamHandler(sys.stdout)], # Assure que les logs vont vers stdout
+        force=True # Assure que les handlers existants sont retirés et la config appliquée.
     )
     
     # Réduction de la verbosité de certaines bibliothèques tierces.
