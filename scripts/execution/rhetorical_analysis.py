@@ -30,7 +30,7 @@ from typing import Dict, List, Any, Optional, Tuple, Union
 from tqdm import tqdm
 
 from argumentation_analysis.utils.text_processing import split_text_into_arguments, generate_sample_text
-from project_core.utils.file_utils import load_json_data, save_json_data
+from argumentation_analysis.utils.core_utils.file_utils import load_json_data, save_json_data
 # Importer les mocks centralisés
 from argumentation_analysis.mocks.analysis_tools import (
     MockContextualFallacyDetector,

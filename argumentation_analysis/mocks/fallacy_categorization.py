@@ -73,11 +73,19 @@ class MockFallacyCategorizer:
             category = self.type_to_category_map.get(fallacy_type_str)
             
             if category:
+                # Récupérer le type de sophisme avec la casse d'origine de la configuration
+                original_case_type = fallacy["fallacy_type"] # Valeur par défaut
+                for type_in_config in self.fallacy_categories.get(category, []):
+                    if type_in_config.lower() == fallacy_type_str:
+                        original_case_type = type_in_config
+                        break
+                
                 # Éviter les doublons de type dans une même catégorie pour ce résultat
-                if fallacy["fallacy_type"] not in categorized_results[category]:
-                    categorized_results[category].append(fallacy["fallacy_type"])
+                if original_case_type not in categorized_results[category]:
+                    categorized_results[category].append(original_case_type)
             else:
                 logger.debug(f"Type de sophisme '{fallacy['fallacy_type']}' non trouvé dans les catégories mappées, classé comme 'Autres'.")
+                # Pour "Autres Sophismes", on conserve la casse d'entrée car il n'y a pas de casse canonique.
                 if fallacy["fallacy_type"] not in categorized_results["Autres Sophismes (Mock)"]:
                      categorized_results["Autres Sophismes (Mock)"].append(fallacy["fallacy_type"])
         

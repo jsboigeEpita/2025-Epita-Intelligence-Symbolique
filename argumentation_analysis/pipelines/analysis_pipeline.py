@@ -21,7 +21,7 @@ from pathlib import Path
 from typing import Optional, Dict, Any
 
 # Imports des modules du projet
-from project_core.utils.logging_utils import setup_logging
+from argumentation_analysis.utils.core_utils.logging_utils import setup_logging
 from argumentation_analysis.service_setup.analysis_services import initialize_analysis_services
 from argumentation_analysis.analytics.text_analyzer import perform_text_analysis
 # Les imports pour LIBS_DIR et l'UI seront conditionnels ou gérés différemment
@@ -203,7 +203,7 @@ async def run_text_analysis_pipeline(
             # Étape 5 (Optionnel): Sauvegarde des résultats (logique commentée pour l'instant)
             # if output_path:
             #     try:
-            #         from project_core.utils.file_utils import save_json_file
+            #         from argumentation_analysis.utils.core_utils.file_utils import save_json_file
             #         save_json_file(analysis_results, output_path)
             #         logging.info(f"Résultats de l'analyse sauvegardés dans {output_path}")
             #     except Exception as e:

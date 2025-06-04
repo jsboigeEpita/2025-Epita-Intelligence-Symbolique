@@ -26,7 +26,7 @@ from . import config as ui_config_module
 # On importe les fonctions de utils qui ne dépendent pas de config de manière cyclique.
 # encrypt_data et decrypt_data sont maintenant importées depuis project_core
 from .utils import get_full_text_for_source, utils_logger # utils_logger est déjà configuré dans utils.py
-from project_core.utils.crypto_utils import encrypt_data_with_fernet, decrypt_data_with_fernet # NOUVEAU
+from argumentation_analysis.utils.core_utils.crypto_utils import encrypt_data_with_fernet, decrypt_data_with_fernet # NOUVEAU
 
 # Logger spécifique pour les opérations sur fichiers si besoin, ou utiliser utils_logger
 file_ops_logger = utils_logger # Ou logging.getLogger("App.UI.FileOps")

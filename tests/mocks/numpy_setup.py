@@ -377,13 +377,23 @@ def setup_numpy_for_tests_fixture(request):
         try:
             logger.info(f"Tentative d'importation du vrai NumPy pour {request.node.name}.")
             imported_numpy_for_test = importlib.import_module('numpy')
-            sys.modules['numpy'] = imported_numpy_for_test 
+            sys.modules['numpy'] = imported_numpy_for_test
             logger.info(f"Vrai NumPy (version {getattr(imported_numpy_for_test, '__version__', 'inconnue')}, ID: {id(imported_numpy_for_test)}) dynamiquement importé et placé dans sys.modules pour {request.node.name}.")
             
-            if hasattr(imported_numpy_for_test, 'rec'):
-                if not ('numpy.rec' in sys.modules and sys.modules['numpy.rec'] is imported_numpy_for_test.rec):
-                    sys.modules['numpy.rec'] = imported_numpy_for_test.rec
-                    logger.info(f"Vrai numpy.rec (depuis import dynamique) assigné pour {request.node.name}.")
+            try:
+                # Tentative d'import explicite pour s'assurer que numpy.rec est bien un module chargé
+                import numpy.rec as actual_rec_module
+                sys.modules['numpy.rec'] = actual_rec_module
+                logger.info(f"Vrai numpy.rec importé explicitement et assigné à sys.modules['numpy.rec'] pour {request.node.name}. Type: {type(actual_rec_module)}")
+            except ImportError as e_rec:
+                logger.error(f"Échec de l'import explicite de numpy.rec pour {request.node.name}: {e_rec}")
+                # Logique de fallback si l'import direct échoue (moins probable si numpy lui-même est ok)
+                if hasattr(imported_numpy_for_test, 'rec'):
+                    if not ('numpy.rec' in sys.modules and sys.modules['numpy.rec'] is imported_numpy_for_test.rec):
+                        sys.modules['numpy.rec'] = imported_numpy_for_test.rec
+                        logger.info(f"Vrai numpy.rec (attribut de numpy importé) assigné en fallback pour {request.node.name}.")
+                else:
+                    logger.warning(f"L'attribut 'rec' n'existe pas sur le module numpy importé pour {request.node.name} et l'import explicite a échoué.")
 
             logger.info(f"Forcing re-import of pandas for {request.node.name} after loading real NumPy.")
             logger.info(f"Nettoyage agressif de pandas et ses sous-modules _libs avant réimportation pour {request.node.name}")

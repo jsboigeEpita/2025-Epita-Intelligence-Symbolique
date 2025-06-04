@@ -4,6 +4,7 @@
 """
 Définitions et composants pour l'analyse informelle des arguments.
 
+import numpy as np
 Ce module fournit :
 - `InformalAnalysisPlugin`: Un plugin Semantic Kernel contenant des fonctions natives
   pour interagir avec une taxonomie de sophismes (chargée à partir d'un fichier CSV).
@@ -136,30 +137,65 @@ class InformalAnalysisPlugin:
             
             # Préparation du DataFrame
             if 'PK' in df.columns:
-                # S'assurer que la colonne PK ne contient pas de NaN avant de la définir comme index
-                if df['PK'].isnull().any():
-                    self._logger.warning(f"La colonne 'PK' contient des valeurs NaN. Les lignes avec PK NaN seront supprimées avant de définir l'index.")
-                    df.dropna(subset=['PK'], inplace=True)
-
+                self._logger.info("Colonne 'PK' trouvée. Tentative de la définir comme index.")
+                # Assurer que la colonne PK est numérique avant de la définir comme index
                 try:
-                    # Convertir PK en numérique, puis en int. Les erreurs deviennent NaT/NaN, qui sont ensuite gérées.
+                    if not pd.api.types.is_string_dtype(df['PK']) and pd.api.types.is_object_dtype(df['PK']):
+                        df['PK'] = df['PK'].astype(str)
+                        self._logger.debug("Colonne 'PK' convertie en str pour la normalisation.")
+                    
                     df['PK'] = pd.to_numeric(df['PK'], errors='coerce')
-                    df.dropna(subset=['PK'], inplace=True) # Supprimer les lignes où PK est devenu NaN après conversion
-                    df['PK'] = df['PK'].astype(int)
-                    df.set_index('PK', inplace=True)
-                    self._logger.info("Index 'PK' défini et converti en entier.")
-                except Exception as e_pk:
-                    self._logger.warning(f"Impossible de convertir la colonne 'PK' en index entier ({e_pk}). Utilisation de l'index par défaut si set_index échoue ou si la conversion échoue.")
-                    # Si set_index échoue ou si la conversion en int échoue après la conversion numérique,
-                    # Pandas utilisera un RangeIndex par défaut si 'PK' n'est pas défini comme index.
-                    # Si 'PK' existe mais ne peut pas être l'index, les fonctions devront y accéder comme une colonne normale.
-                    if 'PK' in df.columns and df.index.name != 'PK':
-                         self._logger.info("La colonne 'PK' existe mais n'a pas pu être définie comme index entier. Elle restera une colonne.")
-                    elif df.index.name != 'PK':
-                         self._logger.info("Utilisation de l'index par défaut (RangeIndex).")
+                    df['PK'] = df['PK'].fillna(0) # Remplir NaN avant conversion en int
+                    # Tenter la conversion en int64, si échec, logguer et potentiellement laisser en float pour set_index
+                    try:
+                        df['PK'] = df['PK'].astype("int64")
+                        self._logger.info(f"Colonne 'PK' convertie en type {df['PK'].dtype}. Valeurs: {df['PK'].to_list()}")
+                    except Exception as e_astype_int:
+                        self._logger.warning(f"Échec de la conversion de 'PK' en int64 ({e_astype_int}), conservée en {df['PK'].dtype}. Valeurs: {df['PK'].to_list()}")
 
+                except Exception as e_convert:
+                    self._logger.error(f"Erreur majeure lors de la préparation de la colonne 'PK': {e_convert}")
+                    self._logger.error(f"Erreur majeure lors de la préparation de la colonne 'PK': {e_convert}")
+                    self._logger.info(f"État de la colonne 'PK' avant l'échec: {df['PK'].to_dict() if 'PK' in df else 'Non présente'}")
+
+                self._logger.debug(f"Valeurs de la colonne 'PK' avant set_index: {df['PK'].to_list()}, dtype: {df['PK'].dtype}")
+                
+                # Inspection de toutes les colonnes avant set_index
+                self._logger.debug("Inspection du DataFrame avant set_index:")
+                for col in df.columns:
+                    self._logger.debug(f"  Colonne '{col}', dtype: {df[col].dtype}")
+                    try:
+                        # Tenter de détecter des valeurs inhabituelles comme _NoValueType
+                        # Ceci est une heuristique car _NoValueType n'est pas directement comparable facilement
+                        problematic_values = df[col][df[col].apply(lambda x: hasattr(x, '__class__') and x.__class__.__name__ == '_NoValueType')]
+                        if not problematic_values.empty:
+                            self._logger.warning(f"    Colonne '{col}' contient des valeurs potentiellement problématiques (_NoValueType): {problematic_values.to_dict()}")
+                    except Exception as e_inspect:
+                        self._logger.debug(f"    Impossible d'inspecter finement la colonne '{col}': {e_inspect}")
+                
+                try:
+                    df.set_index('PK', inplace=True)
+                    self._logger.info(f"Colonne 'PK' définie comme index. Type de l'index: {df.index.dtype}, Valeurs de l'index: {df.index.to_list()}")
+                    
+                    # Assurer que l'index est de type entier après set_index
+                    if not pd.api.types.is_integer_dtype(df.index):
+                        self._logger.warning(f"L'index PK n'est pas de type entier après set_index (actuel: {df.index.dtype}). Tentative de reconversion explicite.")
+                        try:
+                            df.index = df.index.astype("int64")
+                            self._logger.info(f"Index PK reconverti en type {df.index.dtype}. Valeurs: {df.index.to_list()}")
+                        except Exception as e_reconvert_index:
+                            self._logger.error(f"Erreur lors de la reconversion de l'index PK en int64: {e_reconvert_index}")
+                    else:
+                        self._logger.info(f"L'index PK est déjà de type entier ({df.index.dtype}).")
+
+                except Exception as e_set_index:
+                    self._logger.error(f"Erreur lors de la définition de 'PK' comme index: {e_set_index}")
+                    if 'PK' in df.columns:
+                         self._logger.info(f"État de la colonne 'PK' avant l'échec de set_index: {df['PK'].to_dict()}, dtype: {df['PK'].dtype}")
+                    else:
+                         self._logger.info("Colonne 'PK' non présente dans df.columns avant l'échec de set_index.")
             else:
-                self._logger.warning("Colonne 'PK' non trouvée dans la taxonomie. Utilisation de l'index par défaut (RangeIndex).")
+                self._logger.warning("Colonne 'PK' non trouvée dans le fichier de taxonomie. L'index ne sera pas défini.")
             
             return df
         except Exception as e:

@@ -6,21 +6,27 @@ setup(
     packages=find_packages(exclude=["tests", "tests.*", "scripts", "scripts.*", "docs", "docs.*", "notebooks", "notebooks.*", "venv", ".venv", "dist", "build", "*.egg-info", "_archives", "_archives.*", "examples", "examples.*", "config", "config.*", "services", "services.*", "tutorials", "tutorials.*", "libs", "libs.*", "results", "results.*", "src", "src.*"]),
     # package_dir={'': 'src'},
     install_requires=[
-        "numpy<2.0",  # Contrainte cruciale pour la compatibilité
+        "numpy>=2.0.0,<2.3",  # Ajusté pour thinc et scipy
         "pandas",
-        "scipy==1.15.3",
+        "scipy==1.13.1",
         "scikit-learn",
         "nltk",
-        "spacy",
+        # "spacy==3.8.7", # Temporairement retiré
+        # "thinc==8.2.3",
+        # "blis==0.7.11",
+        # "srsly==2.5.1",
+        # "preshed==3.0.10",
+        # "murmurhash==1.0.13",
+        # "cymem==2.0.11",
         "torch",
         "transformers",
         "pydantic>=2.0,<2.10",
         "requests",
         "matplotlib",
         "seaborn",
-        "networkx==3.4.2",
+        "networkx==3.2.1",
         "python-dotenv",  # Pour l'import de 'dotenv'
-        "semantic-kernel==1.29.0", # Version qui contient le module agents/
+        "semantic-kernel~=0.9.7b1", # Tentative de mise à jour mineure pour AuthorRole
         "pytest",
         "pytest-cov",
         "pytest-mock",

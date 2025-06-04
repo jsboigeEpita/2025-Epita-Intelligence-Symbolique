@@ -40,9 +40,9 @@ try:
     from cryptography.fernet import Fernet, InvalidToken
     import gzip
     
-    from project_core.utils.crypto_utils import derive_encryption_key
+    from argumentation_analysis.utils.core_utils.crypto_utils import derive_encryption_key
     # MODIFIÉ: generate_markdown_report est maintenant generate_specific_rhetorical_markdown_report
-    from project_core.utils.reporting_utils import generate_json_report, generate_specific_rhetorical_markdown_report
+    from argumentation_analysis.utils.core_utils.reporting_utils import generate_json_report, generate_specific_rhetorical_markdown_report
 
     # Importer directement depuis les modules du projet
     from argumentation_analysis.ui.file_operations import load_extract_definitions
