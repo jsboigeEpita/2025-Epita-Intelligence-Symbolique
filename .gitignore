@@ -71,3 +71,42 @@ pytest_hierarchical_full_v4.txt
 scripts/debug_jpype_classpath.py
 
 argumentation_analysis/text_cache/
+
+# Ajouté par le script de nettoyage
+# Fichiers temporaires Python
+*.so
+.Python
+.venv/
+# Fichiers de configuration sensibles
+*.env
+**/.env
+# Fichiers de logs
+# Cache et téléchargements
+text_cache/
+/.tools/
+temp_downloads/
+# Données
+data/
+!data/.gitkeep
+!data/extract_sources.json.gz.enc
+# Configuration UI non chiffrée
+data/extract_sources.json
+# Rapports de tests et couverture
+.coverage*
+# Dossiers de backups
+**/backups/
+!**/backups/__init__.py
+# Fichiers JAR
+*.jar
+# Fichiers temporaires Jupyter Notebook
+.ipynb_checkpoints/
+# Fichiers de configuration IDE / Editeur
+*.sublime-project
+*.sublime-workspace
+*.swp
+*.swo
+*~
+#*#
+# Fichiers spécifiques OS
+.DS_Store
+Thumbs.db
