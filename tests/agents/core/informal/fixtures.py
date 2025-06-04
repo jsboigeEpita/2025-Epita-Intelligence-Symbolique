@@ -2,6 +2,7 @@ import pytest
 import sys
 import logging
 from unittest.mock import MagicMock
+from typing import Optional # Ajout de l'import
 
 # Mock pour semantic_kernel
 class MockSemanticKernel:
@@ -15,7 +16,7 @@ class MockSemanticKernel:
         if plugin_name not in self.plugins: self.plugins[plugin_name] = {}
 
 # Ajout des méthodes manquantes pour simuler le Kernel SK plus fidèlement
-    def add_function(self, *, prompt: str, function_name: str, plugin_name: str | None = None, description: str | None = None, prompt_template_config = None, prompt_execution_settings = None):
+    def add_function(self, *, prompt: str, function_name: str, plugin_name: Optional[str] = None, description: Optional[str] = None, prompt_template_config = None, prompt_execution_settings = None):
         """Simule l'ajout d'une fonction sémantique."""
         # Pour les tests, on peut juste s'assurer qu'elle est appelée, ou stocker les infos si besoin.
         # Pour l'instant, un simple MagicMock suffit pour la fonction elle-même.

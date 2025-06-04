@@ -10,8 +10,8 @@ from typing import Optional, List, Dict, Any, Tuple # Ajout des types nécessair
 
 # Imports pour les fonctions déplacées
 import semantic_kernel as sk
-from semantic_kernel.contents import ChatMessageContent, AuthorRole
-from semantic_kernel.agents import ChatCompletionAgent
+from semantic_kernel.contents import ChatMessageContent
+# from semantic_kernel.agents import ChatCompletionAgent # Commenté pour l'instant
 from semantic_kernel.functions.kernel_arguments import KernelArguments
 
 from argumentation_analysis.models.extract_definition import ExtractDefinitions, SourceDefinition, Extract # Ajustement du chemin
@@ -34,7 +34,7 @@ logger = logging.getLogger(__name__)
 
 # --- Fonctions déplacées depuis argumentation_analysis/scripts/repair_extract_markers.py ---
 
-async def setup_agents(llm_service, kernel_instance: sk.Kernel) -> Tuple[ChatCompletionAgent, ChatCompletionAgent]:
+async def setup_agents(llm_service, kernel_instance: sk.Kernel) -> Tuple[Any, Any]: # Modification des annotations de type
     """
     Configure les agents de réparation et de validation.
     
@@ -57,34 +57,34 @@ async def setup_agents(llm_service, kernel_instance: sk.Kernel) -> Tuple[ChatCom
         logger.info("Utilisation de paramètres d'exécution de prompt vides")
         prompt_exec_settings = {} # type: ignore
     
-    try:
-        repair_agent = ChatCompletionAgent(
-            kernel=kernel_instance,
-            service=llm_service,
-            name="RepairAgent",
-            instructions=REPAIR_AGENT_INSTRUCTIONS,
-            arguments=KernelArguments(settings=prompt_exec_settings)
-        )
-        logger.info("Agent de réparation créé")
-    except Exception as e:
-        logger.error(f"Erreur lors de la création de l'agent de réparation: {e}")
-        raise
+    # try:
+    #     repair_agent = ChatCompletionAgent(
+    #         kernel=kernel_instance,
+    #         service=llm_service,
+    #         name="RepairAgent",
+    #         instructions=REPAIR_AGENT_INSTRUCTIONS,
+    #         arguments=KernelArguments(settings=prompt_exec_settings)
+    #     )
+    #     logger.info("Agent de réparation créé")
+    # except Exception as e:
+    #     logger.error(f"Erreur lors de la création de l'agent de réparation: {e}")
+    #     raise
     
-    try:
-        validation_agent = ChatCompletionAgent(
-            kernel=kernel_instance,
-            service=llm_service,
-            name="ValidationAgent",
-            instructions=VALIDATION_AGENT_INSTRUCTIONS,
-            arguments=KernelArguments(settings=prompt_exec_settings)
-        )
-        logger.info("Agent de validation créé")
-    except Exception as e:
-        logger.error(f"Erreur lors de la création de l'agent de validation: {e}")
-        raise
+    # try:
+    #     validation_agent = ChatCompletionAgent(
+    #         kernel=kernel_instance,
+    #         service=llm_service,
+    #         name="ValidationAgent",
+    #         instructions=VALIDATION_AGENT_INSTRUCTIONS,
+    #         arguments=KernelArguments(settings=prompt_exec_settings)
+    #     )
+    #     logger.info("Agent de validation créé")
+    # except Exception as e:
+    #     logger.error(f"Erreur lors de la création de l'agent de validation: {e}")
+    #     raise
     
-    logger.info("Agents configurés.")
-    return repair_agent, validation_agent
+    logger.info("Agents configurés (création désactivée temporairement).")
+    return None, None # Retourner None car la création est désactivée
 
 
 async def repair_extract_markers(

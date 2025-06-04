@@ -112,11 +112,23 @@ def check_java_environment() -> bool:
         else:
             logger.warning("    Commande 'java -version' exécutée, mais n'a retourné aucune information de version.")
             java_ok = False # Si pas d'info de version, c'est un problème
-    else:
+    else: # returncode != 0
         logger.error(f"    Échec de l'exécution de 'java -version'. Code de retour : {returncode}")
-        logger.error(f"    Stderr: {stderr.strip()}")
-        logger.error(f"    Stdout: {stdout.strip()}")
-        logger.warning("    Java n'est pas trouvé dans le PATH ou n'est pas exécutable.")
+        if stderr: # Log stderr s'il y a quelque chose
+            logger.error(f"    Stderr: {stderr.strip()}")
+        #else: # Optionnel: log si stderr est vide mais il y a une erreur
+            #logger.info("    Stderr était vide pour l'échec de 'java -version'.")
+        if stdout: # Log stdout s'il y a quelque chose
+            logger.error(f"    Stdout: {stdout.strip()}")
+        #else: # Optionnel: log si stdout est vide
+            #logger.info("    Stdout était vide pour l'échec de 'java -version'.")
+
+        if returncode == -1 and "FileNotFoundError" in stderr: # Cas spécifique de _run_command
+            logger.warning("    Java n'est pas trouvé dans le PATH (FileNotFoundError).")
+        elif returncode != 0 : # Autres erreurs d'exécution où java a été trouvé mais a échoué
+             logger.warning("    La commande 'java -version' a échoué (voir logs ci-dessus), bien que Java semble être dans le PATH.")
+        # Si returncode est 0, on ne devrait pas être dans ce bloc 'else'
+
         java_ok = False
 
     if not java_home_valid and java_ok : # Si JAVA_HOME n'est pas bon mais java -version fonctionne
@@ -311,8 +323,12 @@ def check_python_dependencies(requirements_file_path: Path) -> bool:
             except ValueError as ve: # Erreur de parsing de pkg_resources
                  # Essayer d'extraire le nom du package au cas où.
                  # Ceci est une heuristique et peut ne pas être précis.
-                potential_name = line.split("==")[0].split(">=")[0].split("<=")[0].split("!=")[0].split("~=")[0].strip()
-                if potential_name and not any(c in potential_name for c in "[](),"): # Simple vérification
+                # D'abord, nettoyer les commentaires et marqueurs d'environnement comme pour line_parts
+                clean_line_for_heuristic = line.split('#')[0].split(';')[0].strip()
+                # Ensuite, essayer d'isoler le nom du package avant un crochet ou un opérateur de version
+                potential_name = clean_line_for_heuristic.split('[')[0].split("==")[0].split(">=")[0].split("<=")[0].split("!=")[0].split("~=")[0].strip()
+                
+                if potential_name and not any(c in potential_name for c in "[](),"): # Simple vérification que le nom est "propre"
                     logger.warning(f"    Impossible de parser complètement la ligne '{line}' avec pkg_resources: {ve}. Tentative avec nom '{potential_name}'.")
                     # Créer un requirement sans specifier si le parsing échoue mais qu'on a un nom
                     parsed_requirements.append(pkg_resources.Requirement.parse(potential_name))

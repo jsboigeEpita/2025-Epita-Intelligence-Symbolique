@@ -2,7 +2,7 @@ flask
 jpype1
 Flask-CORS
 matplotlib
-networkx==3.4.2
+networkx
 nltk
 openai
 pandas
@@ -13,9 +13,11 @@ python-dotenv
 scikit-learn
 scipy
 sentence-transformers
-semantic-kernel==1.0.0
-spacy
+semantic-kernel==0.9.6b1
+#spacy
 coverage
 clingo
-
+unidecode
 markdown
+
+unidecode

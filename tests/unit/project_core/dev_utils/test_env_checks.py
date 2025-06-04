@@ -61,7 +61,7 @@ def test_check_java_environment_all_ok(mock_os_environ_java, mock_path_java, moc
     assert check_java_environment() is True
     assert "JAVA_HOME est défini : /opt/java" in caplog.text
     assert "JAVA_HOME pointe vers un répertoire Java valide" in caplog.text
-    assert "Commande 'java -version' exécutée avec succès. Version détectée : java version \"11.0.1\"" in caplog.text
+    assert "Commande 'java -version' exécutée avec succès. Version détectée : java version \"11.0.1\" 2021-04-20" in caplog.text
     assert "L'environnement Java est jugé correctement configuré" in caplog.text
 
 def test_check_java_environment_no_java_home_version_ok(mock_os_environ_java, mock_path_java, mock_run_command_java, caplog):
@@ -90,7 +90,17 @@ def test_check_java_environment_java_home_no_java_exe(mock_os_environ_java, mock
     mock_run_command_java.return_value = (0, "", "openjdk version \"1.8.0_292\"")
 
     assert check_java_environment() is False
-    assert "JAVA_HOME (/opt/java_no_exe) ne semble pas contenir une installation Java valide" in caplog.text
+    # Le mock_path_java.configure_java_exe_path construit le chemin java_exe_mock à partir de mock_path_instance / "bin" / "java"
+    # mock_path_instance est configuré avec JAVA_HOME = "/opt/java_no_exe"
+    # Donc java_exe_in_home dans la fonction testée sera /opt/java_no_exe/bin/java (ou java.exe)
+    # Le message exact dépendra de os.name, mais le test mock Path, donc on peut être précis.
+    # La fixture mock_path_java ne simule pas os.name pour le nom de l'exécutable,
+    # mais la fonction check_java_environment le fait.
+    # Pour être robuste, on peut vérifier une partie du message ou rendre le mock plus intelligent.
+    # Ici, on va supposer que le nom "java" est utilisé par le mock de Path.
+    # Le mock configure_java_exe_path utilise `java_exe_mock` qui est le résultat de `bin_path_mock.__truediv__("java")`
+    # Donc le chemin loggué sera effectivement ".../java"
+    assert "JAVA_HOME (/opt/java_no_exe) ne semble pas contenir une installation Java valide (exécutable non trouvé à /opt/java_no_exe/bin/java)." in caplog.text
     assert "L'environnement Java n'est pas considéré comme correctement configuré." in caplog.text
 
 def test_check_java_environment_java_version_fails_filenotfound(mock_os_environ_java, mock_path_java, mock_run_command_java, caplog):
@@ -99,8 +109,9 @@ def test_check_java_environment_java_version_fails_filenotfound(mock_os_environ_
     mock_run_command_java.return_value = (-1, "", "FileNotFoundError: java") # Simulating _run_command's FileNotFoundError case
 
     assert check_java_environment() is False
-    assert "Échec de l'exécution de 'java -version'." in caplog.text # This comes from _run_command via logger
-    assert "Java n'est pas trouvé dans le PATH ou n'est pas exécutable." in caplog.text # This is from check_java_environment
+    assert "Commande non trouvée: java" in caplog.text # Logged by _run_command
+    assert "Échec de l'exécution de 'java -version'. Code de retour : -1" in caplog.text # Logged by check_java_environment
+    assert "Java n'est pas trouvé dans le PATH (FileNotFoundError)." in caplog.text # Specific log for FileNotFoundError
     assert "L'environnement Java n'est pas considéré comme correctement configuré." in caplog.text
 
 def test_check_java_environment_java_version_fails_returncode(mock_os_environ_java, mock_path_java, mock_run_command_java, caplog):
@@ -111,6 +122,8 @@ def test_check_java_environment_java_version_fails_returncode(mock_os_environ_ja
     assert check_java_environment() is False
     assert "Échec de l'exécution de 'java -version'. Code de retour : 1" in caplog.text
     assert "Stderr: stderr error" in caplog.text
+    # Le message suivant est loggué par la logique affinée dans check_java_environment
+    assert "La commande 'java -version' a échoué (voir logs ci-dessus), bien que Java semble être dans le PATH." in caplog.text
     assert "L'environnement Java n'est pas considéré comme correctement configuré." in caplog.text
 
 def test_check_java_environment_java_version_ok_no_output(mock_os_environ_java, mock_path_java, mock_run_command_java, caplog):
@@ -283,14 +296,14 @@ def test_check_python_dependencies_pkg_resources_unavailable(mock_file_operation
     
     with mock.patch('project_core.dev_utils.env_checks.pkg_resources', None):
         assert check_python_dependencies(req_file_path) is False
-        assert "pkg_resources n'est pas disponible. Impossible de parser le fichier de dépendances." in caplog.text
+        assert "    pkg_resources n'est pas disponible. Impossible de parser le fichier de dépendances." in caplog.text
 
 def test_check_python_dependencies_empty_or_commented_file(mock_file_operations_deps_fixture, mock_pkg_resources_deps_fixture, caplog):
     req_file_path = Path("empty_reqs.txt")
     mock_file_operations_deps_fixture["mock_open_func"].return_value.read.return_value = "# A comment\n\n   \n"
     
     assert check_python_dependencies(req_file_path) is True
-    assert f"Le fichier de dépendances {str(req_file_path)} est vide ou ne contient que des commentaires." in caplog.text
+    assert f"    Le fichier de dépendances {str(req_file_path)} est vide ou ne contient que des commentaires." in caplog.text
 
 def test_check_python_dependencies_all_ok(mock_file_operations_deps_fixture, mock_pkg_resources_deps_fixture, mock_importlib_metadata_deps_fixture, caplog):
     req_file_path = Path("reqs.txt")
@@ -305,9 +318,9 @@ def test_check_python_dependencies_all_ok(mock_file_operations_deps_fixture, moc
     mock_importlib_metadata_deps_fixture.side_effect = version_side_effect
 
     assert check_python_dependencies(req_file_path) is True
-    assert "✅ requests: Version 2.25.1 installée satisfait ==2.25.1" in caplog.text
-    assert "✅ numpy: Version 1.21.0 installée satisfait >=1.20.0" in caplog.text
-    assert "✅ flask: Version 2.0.0 installée (aucune version spécifique requise)." in caplog.text
+    assert "    ✅ requests: Version 2.25.1 installée satisfait ==2.25.1" in caplog.text
+    assert "    ✅ numpy: Version 1.21.0 installée satisfait >=1.20.0" in caplog.text
+    assert "    ✅ flask: Version 2.0.0 installée (aucune version spécifique requise)." in caplog.text
     assert "✅ Toutes les dépendances Python du fichier sont satisfaites." in caplog.text
 
 def test_check_python_dependencies_one_missing(mock_file_operations_deps_fixture, mock_pkg_resources_deps_fixture, mock_importlib_metadata_deps_fixture, caplog):
@@ -322,8 +335,8 @@ def test_check_python_dependencies_one_missing(mock_file_operations_deps_fixture
     mock_importlib_metadata_deps_fixture.side_effect = version_side_effect
 
     assert check_python_dependencies(req_file_path) is False
-    assert "✅ requests: Version 2.25.1 installée satisfait ==2.25.1" in caplog.text
-    assert "❌ missing_pkg: Non installé (requis: ==1.0.0)" in caplog.text
+    assert "    ✅ requests: Version 2.25.1 installée satisfait ==2.25.1" in caplog.text
+    assert "    ❌ missing_pkg: Non installé (requis: ==1.0.0)" in caplog.text # Le mock de Requirement.parse génère "==1.0.0" pour req.specifier
     assert "⚠️  Certaines dépendances Python du fichier ne sont pas satisfaites ou sont manquantes." in caplog.text
 
 def test_check_python_dependencies_version_mismatch(mock_file_operations_deps_fixture, mock_pkg_resources_deps_fixture, mock_importlib_metadata_deps_fixture, caplog):
@@ -334,7 +347,7 @@ def test_check_python_dependencies_version_mismatch(mock_file_operations_deps_fi
     mock_importlib_metadata_deps_fixture.side_effect = lambda pkg: "1.21.5" if pkg == "numpy" else "unknown"
 
     assert check_python_dependencies(req_file_path) is False
-    assert "❌ numpy: Version 1.21.5 installée ne satisfait PAS >=1.22.0" in caplog.text
+    assert "    ❌ numpy: Version 1.21.5 installée ne satisfait PAS >=1.22.0" in caplog.text
     assert "⚠️  Certaines dépendances Python du fichier ne sont pas satisfaites ou sont manquantes." in caplog.text
 
 def test_check_python_dependencies_parsing_error_heuristic_recovery(mock_file_operations_deps_fixture, mock_pkg_resources_deps_fixture, mock_importlib_metadata_deps_fixture, caplog):
@@ -361,9 +374,9 @@ def test_check_python_dependencies_parsing_error_heuristic_recovery(mock_file_op
     mock_importlib_metadata_deps_fixture.side_effect = version_side_effect
 
     assert check_python_dependencies(req_file_path) is True
-    assert "Impossible de parser complètement la ligne 'complex_pkg [extra];python_version<'3.8' --hash=...'" in caplog.text
-    assert "Tentative avec nom 'complex_pkg'" in caplog.text
-    assert "✅ complex_pkg: Version 2.5 installée (aucune version spécifique requise)." in caplog.text
+    assert "    Impossible de parser complètement la ligne 'complex_pkg [extra];python_version<'3.8' --hash=...'" in caplog.text
+    assert "    Tentative avec nom 'complex_pkg'" in caplog.text
+    assert "    ✅ complex_pkg: Version 2.5 installée (aucune version spécifique requise)." in caplog.text
     assert "✅ Toutes les dépendances Python du fichier sont satisfaites." in caplog.text
     
     mock_pkg_resources_deps_fixture.Requirement.parse.side_effect = original_parse_method
@@ -381,7 +394,7 @@ def test_check_python_dependencies_parsing_error_unrecoverable(mock_file_operati
     mock_pkg_resources_deps_fixture.Requirement.parse.side_effect = custom_parse_side_effect
     
     assert check_python_dependencies(req_file_path) is False
-    assert "Impossible de parser la ligne de dépendance '[] --invalid'" in caplog.text
+    assert "    Impossible de parser la ligne de dépendance '[] --invalid'" in caplog.text
     assert "⚠️  Certaines dépendances Python du fichier ne sont pas satisfaites ou sont manquantes." in caplog.text
     mock_pkg_resources_deps_fixture.Requirement.parse.side_effect = original_parse_method
 
@@ -401,9 +414,9 @@ def test_check_python_dependencies_ignored_lines(mock_file_operations_deps_fixtu
     mock_importlib_metadata_deps_fixture.side_effect = version_side_effect
 
     assert check_python_dependencies(req_file_path) is True
-    assert "Ligne ignorée (dépendance éditable/VCS) : -e git+https://github.com/user/repo.git#egg=editable_pkg" in caplog.text
-    assert "Ligne ignorée (inclusion d'un autre fichier) : -r another_file.txt" in caplog.text
-    assert "✅ requests: Version 2.25.1 installée satisfait ==2.25.1" in caplog.text
+    assert "    Ligne ignorée (dépendance éditable/VCS) : -e git+https://github.com/user/repo.git#egg=editable_pkg" in caplog.text
+    assert "    Ligne ignorée (inclusion d'un autre fichier) :     -r another_file.txt" in caplog.text # Note: leading spaces from content
+    assert "    ✅ requests: Version 2.25.1 installée satisfait ==2.25.1" in caplog.text
     assert "✅ Toutes les dépendances Python du fichier sont satisfaites." in caplog.text
 
 # Need to import builtins for mocking __import__
