@@ -6,7 +6,7 @@ channels:
 dependencies:
   - python=3.10
   # Core ML/Data Science
-  - numpy<2.0 # Contrainte cruciale
+  - numpy>=2.0.0,<2.3 # Permettre numpy 2.x compatible avec le projet et SK 1.x
   - pandas
   - scipy==1.15.3
   - scikit-learn

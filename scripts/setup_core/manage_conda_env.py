@@ -5,7 +5,10 @@ import re
 import sys
 import shutil
 
-CONDA_ENV_NAME = "epita_symbolic_ai"
+# Lire le nom de l'environnement Conda depuis une variable d'environnement, sinon utiliser une valeur par défaut
+CONDA_ENV_NAME_DEFAULT = "epita_symbolic_ai"
+CONDA_ENV_NAME = os.getenv("CONDA_ENV_NAME", CONDA_ENV_NAME_DEFAULT)
+print(f"[INFO] Using Conda environment name: {CONDA_ENV_NAME} (Default was: {CONDA_ENV_NAME_DEFAULT}, Env Var was: {os.getenv('CONDA_ENV_NAME')})") # Log amélioré
 CONDA_ENV_FILE_NAME = "environment.yml"
 
 def _find_conda_executable():
