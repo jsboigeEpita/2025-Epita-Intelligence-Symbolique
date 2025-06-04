@@ -1,6 +1,17 @@
 # argumentation_analysis/agents/core/logic/abstract_logic_agent.py
 """
-Classe abstraite de base pour tous les agents logiques.
+Module définissant la classe `AbstractLogicAgent`.
+
+Cette classe représente une tentative d'abstraction pour les agents logiques,
+incluant une interface pour la gestion de tâches (`process_task`, `_handle_translation_task`,
+`_handle_query_task`).
+
+Note: Les agents logiques concrets actuellement implémentés dans ce répertoire
+(`PropositionalLogicAgent`, `FirstOrderLogicAgent`, `ModalLogicAgent`)
+n'héritent pas directement de `AbstractLogicAgent`, mais de `BaseLogicAgent`
+située dans `argumentation_analysis.agents.core.abc.agent_bases`.
+`AbstractLogicAgent` pourrait donc représenter une conception antérieure ou une
+abstraction alternative pour un autre type d'orchestration d'agents.
 """
 
 import logging

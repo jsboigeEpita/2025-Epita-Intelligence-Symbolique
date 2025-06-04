@@ -38,6 +38,7 @@ dist/
 .env
 .vscode/
 .idea/
+/.vs/
 
 # Bibliothèques externes
 libs/*.jar
