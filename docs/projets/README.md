@@ -1,3 +1,4 @@
+<!-- TODO: Vérifier manuellement que toutes les ancres dans les liens de ce document pointent vers des sections existantes dans les fichiers cibles. -->
 # Projets d'Intelligence Symbolique
 
 Ce dossier contient l'ensemble des sujets de projets proposés aux étudiants dans le cadre du cours d'intelligence symbolique, ainsi que les ressources associées pour leur réalisation. Ces projets permettent d'appliquer concrètement les méthodes et outils d'intelligence symbolique, avec un focus particulier sur l'argumentation et son intégration par l'IA générative agentique orchestrée.
@@ -44,8 +45,10 @@ Organisation des fichiers et sous-dossiers du dossier projets :
 - **`message_annonce_etudiants.md`** : Message d'annonce des projets aux étudiants.
 - **`sujets_projets_detailles.md`** : Présentation détaillée des sujets de projets.
 - **`sujets/`** : Dossier contenant les descriptions détaillées de chaque sujet de projet.
+  - **`README.md`** <!-- TODO: Confirmer si un README.md général pour `sujets/` doit être listé ici. Il est présent dans la structure fournie. -->
   - **`aide/`** : Ressources pratiques spécialisées pour faciliter la réalisation des projets.
-    - **`interface-web/`** : Exemples et guides pour le développement d'interfaces web.
+    - **`README.md`** <!-- TODO: Le fichier `docs/projets/sujets/aide/README.md` est présent dans la structure mais n'était pas explicitement listé ici. Ajouté pour cohérence. -->
+    - **`interface-web/`** : Exemples et guides pour le développement d'interfaces web (voir [./sujets/aide/interface-web/README.md](./sujets/aide/interface-web/README.md)).
     - **`DEMARRAGE_RAPIDE.md`** : Guide de démarrage rapide pour les projets.
     - **`FAQ_DEVELOPPEMENT.md`** : Réponses aux questions fréquentes sur le développement.
     - **`GUIDE_INTEGRATION_PROJETS.md`** : Guide pour l'intégration des projets.
@@ -69,7 +72,7 @@ Les projets sont organisés en trois catégories thématiques principales :
    - Automatisation et intégration MCP
 
 3. **[Expérience utilisateur et applications](./experience_utilisateur.md)** - Projets orientés vers les interfaces, visualisations et cas d'usage concrets, incluant :
-   - Interfaces utilisateurs (s'appuyant souvent sur l'[API Web](../composants/api_web.md))
+   - Interfaces utilisateurs (s'appuyant souvent sur l'[API Web](../composants/api_web.md) <!-- TODO: Confirmer l'existence et le nom exact du fichier cible 'api_web.md' pour ce lien. -->)
    - Visualisations
    - Applications spécifiques
    - Lutte contre la désinformation
@@ -98,7 +101,8 @@ Les projets sont documentés à travers plusieurs fichiers complémentaires :
    - [sujets/aide/DEMARRAGE_RAPIDE.md](./sujets/aide/DEMARRAGE_RAPIDE.md) - Guide de démarrage rapide
    - [sujets/aide/FAQ_DEVELOPPEMENT.md](./sujets/aide/FAQ_DEVELOPPEMENT.md) - FAQ pour le développement
    - [sujets/aide/GUIDE_INTEGRATION_PROJETS.md](./sujets/aide/GUIDE_INTEGRATION_PROJETS.md) - Guide d'intégration
-   - [sujets/aide/interface-web/](./sujets/aide/interface-web/) - Ressources pour les interfaces web
+   - [sujets/aide/PRESENTATION_KICKOFF.md](./sujets/aide/PRESENTATION_KICKOFF.md) <!-- TODO: Le fichier `PRESENTATION_KICKOFF.md` est dans la structure mais n'était pas listé ici. Ajouté pour cohérence. -->
+   - [sujets/aide/interface-web/README.md](./sujets/aide/interface-web/README.md) <!-- TODO: Ce lien pointait vers un dossier. Vérifier s'il doit pointer vers un fichier spécifique (ex: README.md) à l'intérieur de ce dossier. Le lien a été modifié pour pointer vers README.md en supposant son existence. --> - Ressources pour les interfaces web
 
 Les fichiers sont interconnectés par des liens relatifs pour faciliter la navigation entre les différents aspects des projets.
 
@@ -272,9 +276,10 @@ Pour faciliter la réalisation des projets, plusieurs ressources sont mises à d
     *   [Guide de démarrage rapide](./sujets/aide/DEMARRAGE_RAPIDE.md) - Instructions pour commencer rapidement.
     *   [FAQ Développement](./sujets/aide/FAQ_DEVELOPPEMENT.md) - Réponses aux questions fréquentes.
     *   [Guide d'intégration des projets](./sujets/aide/GUIDE_INTEGRATION_PROJETS.md) - Comment intégrer votre projet.
+    *   [Présentation Kickoff des Projets](./sujets/aide/PRESENTATION_KICKOFF.md) <!-- TODO: Le fichier `PRESENTATION_KICKOFF.md` est dans la structure mais n'était pas listé ici. Ajouté pour cohérence. -->
 
 4.  **Exemples de Code**:
-    *   [Exemples d'interfaces web (React)](./sujets/aide/interface-web/exemples-react/) - Composants React réutilisables.
+    *   [Exemples d'interfaces web (React)](./sujets/aide/interface-web/exemples-react/) <!-- TODO: Ce lien pointe vers un dossier. Vérifier s'il doit pointer vers un fichier spécifique (ex: README.md) à l'intérieur de ce dossier 'exemples-react'. --> - Composants React réutilisables.
     *   Code prêt à l'emploi pour démarrer rapidement (disponible dans les dépôts spécifiques ou les sections d'aide).
     *   Solutions aux problèmes courants (voir FAQ et guides).
 
