@@ -4,31 +4,46 @@ Cette section documente les différents **concepts et modules logiques** qui con
 
 ## Documents Disponibles
 
-### [`Agent Management`](./agent_management.md)
+### [`Agent Management`](./agent_management.md) <!-- TODO: Vérifier l'existence et le chemin de ce fichier. S'il n'existe pas ou est ailleurs, mettre à jour ou supprimer cette entrée. -->
 Décrit les mécanismes de création, configuration, enregistrement, cycle de vie et gestion des dépendances des agents au sein du système.
 
-### [`Agents Spécialistes`](./agents_specialistes.md)
+### [`Agents Spécialistes`](./agents_specialistes.md) <!-- TODO: Vérifier l'existence et le chemin de ce fichier. S'il n'existe pas ou est ailleurs, mettre à jour ou supprimer cette entrée. -->
 Description détaillée des agents spécialistes qui composent le système, incluant leurs rôles, responsabilités et interactions. Sous-documents :
-*   [`Pont Tweety (Tweety Bridge)`](./tweety_bridge.md) : Décrit le composant `TweetyBridge` qui sert d'interface avec les bibliothèques Java de TweetyProject pour le raisonnement formel.
-*   [`Sous-système d'Évaluation (Evaluation Subsystem)`](./evaluation_subsystem.md) : Décrit l'ensemble des fonctionnalités et outils distribués responsables de l'évaluation de la qualité, de la cohérence et de la pertinence au sein du projet.
+*   [`Pont Tweety (Tweety Bridge)`](./tweety_bridge.md) <!-- TODO: Vérifier l'existence et le chemin de ce fichier. S'il n'existe pas ou est ailleurs, mettre à jour ou supprimer cette entrée. --> : Décrit le composant `TweetyBridge` qui sert d'interface avec les bibliothèques Java de TweetyProject pour le raisonnement formel.
+*   [`Sous-système d'Évaluation (Evaluation Subsystem)`](./evaluation_subsystem.md) <!-- TODO: Vérifier l'existence et le chemin de ce fichier. S'il n'existe pas ou est ailleurs, mettre à jour ou supprimer cette entrée. --> : Décrit l'ensemble des fonctionnalités et outils distribués responsables de l'évaluation de la qualité, de la cohérence et de la pertinence au sein du projet.
 
-### [`API Web Applicative`](./api_web.md)
+### [`API Web Applicative`](./api_web.md) <!-- TODO: Vérifier l'existence et le chemin de ce fichier. S'il n'existe pas ou est ailleurs, mettre à jour ou supprimer cette entrée. -->
 Décrit l'API RESTful basée sur Flask qui expose les fonctionnalités du projet, y compris ses points de terminaison et formats de données.
 
-### [`Argument Parser`](./argument_parser.md)
+### [`Argument Parser`](./argument_parser.md) <!-- TODO: Vérifier l'existence et le chemin de ce fichier. S'il n'existe pas ou est ailleurs, mettre à jour ou supprimer cette entrée. -->
 Détaille le processus d'identification, d'extraction, de structuration et de validation des arguments (extraits) à partir des textes sources, principalement via l'`ExtractAgent`.
 
-### [`Knowledge Base Interface`](./knowledge_base_interface.md)
+### [`Knowledge Base Interface`](./knowledge_base_interface.md) <!-- TODO: Vérifier l'existence et le chemin de ce fichier. S'il n'existe pas ou est ailleurs, mettre à jour ou supprimer cette entrée. -->
 Décrit le concept et l'implémentation d'une interface permettant aux agents d'accéder à des informations structurées ou non structurées (bases de données, ontologies, etc.) pour enrichir leur analyse.
 
-### [`Reasoning Engine`](./reasoning_engine.md)
+### [`Reasoning Engine`](./reasoning_engine.md) <!-- TODO: Vérifier l'existence et le chemin de ce fichier. S'il n'existe pas ou est ailleurs, mettre à jour ou supprimer cette entrée. -->
 Présente l'ensemble des composants et capacités dédiés à l'évaluation de la structure logique, la validité, la cohérence des arguments, et à l'exécution d'inférences logiques.
 
-### [`Structure du Projet`](./structure_projet.md)
+### [`Structure du Projet`](../structure_projet.md)
 Documentation complète de la structure du projet, incluant l'organisation des dossiers et des fichiers.
 
-### [`Synthèse de la Collaboration entre Agents`](./synthese_collaboration.md)
+### [`Synthèse de la Collaboration entre Agents`](./synthese_collaboration.md) <!-- TODO: Vérifier l'existence et le chemin de ce fichier. S'il n'existe pas ou est ailleurs, mettre à jour ou supprimer cette entrée. -->
 Analyse de la collaboration entre les différents agents du système et des mécanismes qui la rendent possible.
+
+### [`Agent Analyse`](./agent_analyse.md) <!-- TODO: Rédiger une brève description pour ce document. -->
+<!-- Description à venir. -->
+
+### [`Agent Communication`](./agent_communication.md) <!-- TODO: Rédiger une brève description pour ce document. -->
+<!-- Description à venir. -->
+
+### [`Agent Coordination`](./agent_coordination.md) <!-- TODO: Rédiger une brève description pour ce document. -->
+<!-- Description à venir. -->
+
+### [`Agent Gestion Connaissances`](./agent_gestion_connaissances.md) <!-- TODO: Rédiger une brève description pour ce document. -->
+<!-- Description à venir. -->
+
+### [`Agent Orchestration`](./agent_orchestration.md) <!-- TODO: Rédiger une brève description pour ce document. -->
+<!-- Description à venir. -->
 
 ## Composants Principaux
 
@@ -70,4 +85,4 @@ Les composants du système interagissent selon des patterns bien définis :
 
 ## Extensibilité
 
-Le système est conçu pour être extensible, permettant l'ajout de nouveaux agents et composants. Pour plus d'informations sur l'extension du système, consultez le [Guide du Développeur](../guides/guide_developpeur.md).
+Le système est conçu pour être extensible, permettant l'ajout de nouveaux agents et composants. Pour plus d'informations sur l'extension du système, consultez le [Guide du Développeur](../guides/demarrage_rapide_developpement.md). <!-- TODO: Confirmer que 'demarrage_rapide_developpement.md' est le guide approprié ici. -->

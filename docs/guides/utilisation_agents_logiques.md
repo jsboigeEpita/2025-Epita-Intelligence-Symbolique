@@ -47,8 +47,9 @@ Chaque ensemble de croyances possède:
 Le système prend en charge trois types de logiques:
 
 1. **Logique propositionnelle**: Utilise des variables propositionnelles et des connecteurs logiques (ET, OU, NON, IMPLIQUE, etc.) pour représenter des propositions simples.
-   - Syntaxe: Utilise les opérateurs `!` (négation), `||` (disjonction), `&&` (conjonction), `=>` (implication), `<=>` (équivalence), `^^` (XOR).
-   - Exemple: `(p && q) => r`
+   - Syntaxe: Utilise les opérateurs `!` (négation), `||` (disjonction), `=>` (implication), `<=>` (équivalence), `^^` (XOR). Note: L'opérateur `&&` (conjonction) n'est pas utilisé par les prompts actuels, privilégiez les autres opérateurs pour construire vos formules.
+   - Exemple: `(p => q)`
+   - Pour la conjonction, vous pouvez utiliser la négation et la disjonction (Lois de De Morgan), par exemple `!( !p || !q )` est équivalent à `p && q`.
 
 2. **Logique du premier ordre**: Étend la logique propositionnelle avec des quantificateurs (∀, ∃) et des prédicats.
    - Syntaxe: Utilise `forall` et `exists` pour les quantificateurs, et des prédicats comme `P(x)`.
@@ -71,21 +72,21 @@ Les requêtes logiques permettent d'interroger un ensemble de croyances pour vé
 
 Le système d'agents logiques est composé des éléments suivants:
 
-1. **AbstractLogicAgent**: Classe abstraite définissant l'interface commune à tous les agents logiques.
-2. **Agents spécifiques**: Implémentations concrètes pour chaque type de logique:
-   - `PropositionalLogicAgent`: Pour la logique propositionnelle
-   - `FirstOrderLogicAgent`: Pour la logique du premier ordre
-   - `ModalLogicAgent`: Pour la logique modale
-3. **LogicFactory**: Factory pour créer les agents appropriés selon le type de logique.
-4. **BeliefSet**: Représentation des ensembles de croyances.
-5. **TweetyBridge**: Interface avec la bibliothèque TweetyProject pour le raisonnement logique.
-6. **QueryExecutor**: Exécuteur de requêtes logiques.
+1. **`BaseLogicAgent`**: Classe abstraite ([`argumentation_analysis/agents/core/abc/agent_bases.py`](../../argumentation_analysis/agents/core/abc/agent_bases.py:159)) définissant l'interface commune à tous les agents logiques concrets. (`AbstractLogicAgent` existe mais semble être une conception antérieure).
+2. **Agents spécifiques**: Implémentations concrètes héritant de `BaseLogicAgent`:
+   - [`PropositionalLogicAgent`](../../argumentation_analysis/agents/core/logic/propositional_logic_agent.py:35): Pour la logique propositionnelle
+   - [`FirstOrderLogicAgent`](../../argumentation_analysis/agents/core/logic/first_order_logic_agent.py:131): Pour la logique du premier ordre
+   - [`ModalLogicAgent`](../../argumentation_analysis/agents/core/logic/modal_logic_agent.py:138): Pour la logique modale
+3. **`LogicAgentFactory`**: Factory ([`argumentation_analysis/agents/core/logic/logic_factory.py`](../../argumentation_analysis/agents/core/logic/logic_factory.py:20)) pour créer les agents appropriés selon le type de logique.
+4. **`BeliefSet`**: Représentation des ensembles de croyances ([`argumentation_analysis/agents/core/logic/belief_set.py`](../../argumentation_analysis/agents/core/logic/belief_set.py)).
+5. **`TweetyBridge`**: Interface avec la bibliothèque TweetyProject pour le raisonnement logique ([`argumentation_analysis/agents/core/logic/tweety_bridge.py`](../../argumentation_analysis/agents/core/logic/tweety_bridge.py:24)).
+6. **`QueryExecutor`**: Exécuteur de requêtes logiques ([`argumentation_analysis/agents/core/logic/query_executor.py`](../../argumentation_analysis/agents/core/logic/query_executor.py:15)). Note: Ce composant offre une interface alternative pour exécuter des requêtes et n'est pas directement utilisé dans les exemples principaux de ce guide qui se concentrent sur les méthodes des agents eux-mêmes.
 
 ### Flux de travail
 
 Le flux de travail typique pour l'utilisation des agents logiques est le suivant:
 
-1. **Création de l'agent**: Utilisation de `LogicFactory` pour créer l'agent approprié.
+1. **Création de l'agent**: Utilisation de `LogicAgentFactory` pour créer l'agent approprié.
 2. **Conversion du texte**: Transformation d'un texte en ensemble de croyances.
 3. **Génération de requêtes**: Création de requêtes pertinentes basées sur le texte et l'ensemble de croyances.
 4. **Exécution des requêtes**: Évaluation des requêtes sur l'ensemble de croyances.
@@ -104,11 +105,18 @@ from argumentation_analysis.agents.core.logic.logic_factory import LogicAgentFac
 # Créer un kernel Semantic Kernel
 kernel = Kernel()
 
-# Initialiser un service LLM (exemple avec OpenAI)
-llm_service = kernel.add_service("gpt-4", "openai")
+# Initialiser un service LLM (exemple avec OpenAI).
+# Remplacez par votre configuration de service LLM réelle.
+# Par exemple, pour OpenAI:
+# from semantic_kernel.connectors.ai.open_ai import OpenAIChatCompletion
+# llm_service_id = "gpt-4"
+# kernel.add_service(OpenAIChatCompletion(service_id=llm_service_id, api_key="YOUR_API_KEY", org_id="YOUR_ORG_ID"))
+# Pour cet exemple, nous supposerons que `llm_service_id` est une chaîne identifiant un service déjà configuré.
+llm_service_id = "default" # Assurez-vous que ce service est configuré dans votre kernel
 
 # Créer un agent logique propositionnelle
-agent = LogicAgentFactory.create_agent("propositional", kernel, llm_service)
+# La factory appellera agent.setup_agent_components(llm_service_id)
+agent = LogicAgentFactory.create_agent("propositional", kernel, llm_service_id)
 ```
 
 Pour un exemple complet d'initialisation et d'utilisation programmatique d'un agent logique, consultez les scripts disponibles dans le répertoire [`examples/logic_agents/`](../../examples/logic_agents/). Le script [`demo_tweety_interaction_simple.py`](../../examples/scripts_demonstration/demo_tweety_interaction_simple.py:0) peut également offrir un contexte d'utilisation, bien qu'il soit plus orienté vers une démonstration d'interaction globale.
@@ -159,7 +167,18 @@ else:
 Pour interpréter les résultats de plusieurs requêtes:
 
 ```python
-interpretation = agent.interpret_results(text, belief_set, queries, results)
+# 'results' doit être une liste de tuples, où chaque tuple contient:
+# (résultat booléen ou None, message brut de TweetyBridge)
+# Exemple de structure pour 'results' basée sur la sortie de execute_query:
+# results_from_execution = []
+# for query in queries:
+#     res_bool, res_msg = agent.execute_query(belief_set, query)
+#     results_from_execution.append((res_bool, res_msg))
+
+# Assurez-vous que 'results' a le format List[Tuple[Optional[bool], str]]
+# Par exemple: results_for_interpretation = [(True, "Query 'il va pleuvoir' is ACCEPTED (True)."), ...]
+
+interpretation = agent.interpret_results(text, belief_set, queries, results_for_interpretation)
 print(f"Interprétation: {interpretation}")
 ```
 
@@ -185,8 +204,9 @@ def analyze_argument(text):
     results = []
     
     for query in queries:
-        result, result_msg = logic_agent.execute_query(belief_set, query)
-        results.append(result_msg)
+        result_bool, result_msg_str = logic_agent.execute_query(belief_set, query)
+        # La méthode interpret_results attend une liste de tuples (Optional[bool], str)
+        results.append((result_bool, result_msg_str))
     
     # Interpréter les résultats
     interpretation = logic_agent.interpret_results(text, belief_set, queries, results)
@@ -201,7 +221,7 @@ Les agents logiques sont exposés via l'API Web, permettant leur utilisation à 
 - Endpoint `/api/logic/belief-set`: Convertit un texte en ensemble de croyances
 - Endpoint `/api/logic/query`: Exécute une requête sur un ensemble de croyances
 - Endpoint `/api/logic/generate-queries`: Génère des requêtes pertinentes
-- Endpoint `/api/logic/interpret`: Interprète les résultats des requêtes
+- Endpoint `/api/logic/interpret`: Interprète les résultats des requêtes (Note: Cet endpoint n'est actuellement pas implémenté dans [`libs/web_api/routes/logic_routes.py`](../../libs/web_api/routes/logic_routes.py)).
 
 Pour un exemple concret d'intégration et d'utilisation de ces endpoints API, référez-vous au script [`api_integration_example.py`](../../examples/logic_agents/api_integration_example.py).
 De plus, des tests d'intégration pour les agents logiques, y compris leur interaction via l'API, sont disponibles dans [`tests/integration/test_logic_agents_integration.py`](../../tests/integration/test_logic_agents_integration.py).

@@ -68,7 +68,7 @@ setup(
     packages=find_packages(exclude=["tests", "tests.*", "scripts", "scripts.*", "docs", "docs.*", "notebooks", "notebooks.*", "venv", ".venv", "dist", "build", "*.egg-info", "_archives", "_archives.*", "examples", "examples.*", "config", "config.*", "services", "services.*", "tutorials", "tutorials.*", "libs", "libs.*", "results", "results.*", "src", "src.*"]),
     # package_dir={'': 'src'},
     install_requires=dynamic_install_requires,
-    python_requires=">=3.8", # Gardé de l'original, environment.yml spécifie python=3.10
+    python_requires=">=3.8",
     description="Système d'analyse argumentative",
     author="EPITA",
     author_email="contact@epita.fr",
