@@ -5,6 +5,7 @@ channels:
   - defaults
 dependencies:
   - python=3.10
+  - pip # Ajouté pour suivre la recommandation de Conda
   # Core ML/Data Science
   - numpy<2.0 # Contrainte cruciale
   - pandas
@@ -22,6 +23,7 @@ dependencies:
   - python-dotenv # s'importe comme dotenv
   - cryptography
   - tqdm
+  - pyyaml # Pour parser environment.yml dans setup.py
   # Plotting & Graphing
   - matplotlib
   - seaborn
