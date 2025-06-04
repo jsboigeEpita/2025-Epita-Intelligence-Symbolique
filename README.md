@@ -10,6 +10,7 @@ Les autres sections peuvent nécessiter une vérification manuelle.
 ![Version](https://img.shields.io/badge/version-1.0.0-blue)
 ![Documentation](https://img.shields.io/badge/docs-up%20to%20date-brightgreen)
 ![License](https://img.shields.io/badge/license-MIT-blue)
+<!-- Note: Les badges ci-dessus sont fournis à titre indicatif. Pour l'état le plus récent du build, des tests, etc., veuillez consulter les outils et processus spécifiques du projet (par exemple, les actions GitHub, les rapports de tests). -->
 
 ## Table des Matières
 - [Introduction](#introduction)
@@ -34,6 +35,7 @@ Cette année, contrairement au cours précédent de programmation par contrainte
 
 Le projet est organisé en plusieurs modules principaux :
 
+<!-- TODO: Vérifier l'actualité de la description et des sous-dossiers de argumentation_analysis/. -->
 - **[`argumentation_analysis/`](./argumentation_analysis/README.md)** : Dossier principal contenant l'infrastructure d'analyse argumentative multi-agents.
   - **[`agents/`](./argumentation_analysis/agents/README.md)** : Agents spécialisés pour l'analyse.
     - **`core/`** : Implémentations des agents spécialistes (PM, Informal, PL, Extract).
@@ -89,6 +91,7 @@ Le projet est organisé en plusieurs modules principaux :
   - **[`visualizations/`](./results/visualizations/)** : Graphiques et visualisations des résultats.
   - D'autres sous-dossiers peuvent contenir des rapports de tests spécifiques et des logs.
 
+<!-- TODO: Vérifier l'actualité de la description de services/, notamment la mention de l'API REST Flask. -->
 - **[`services/`](./services/README.md)** : Services web et API pour l'intégration externe.
   - **[`web_api/`](./services/web_api/)** : API REST Flask pour l'analyse argumentative, permettant l'intégration avec des interfaces web modernes.
 
@@ -96,6 +99,7 @@ Le projet est organisé en plusieurs modules principaux :
 
 Chaque module dispose de son propre README détaillé expliquant son fonctionnement et son utilisation.
 
+<!-- TODO: Vérifier que cette section est une vue d'ensemble cohérente avec docs/architecture/README.md. -->
 ## Architecture Technique
 
 Cette section présente l'architecture technique du projet d'analyse argumentative multi-agents, expliquant comment les différents composants interagissent pour former un système cohérent.
@@ -157,8 +161,8 @@ Pour commencer à travailler sur le projet, vous devez d'abord créer un fork du
 Une fois le fork créé, clonez-le sur votre machine locale :
 
 ```bash
-git clone https://github.com/VOTRE_NOM_UTILISATEUR/2025-Epita-Intelligence-Symbolique.git
-cd 2025-Epita-Intelligence-Symbolique
+**git clone https://github.com/VOTRE_NOM_UTILISATEUR/2025-Epita-Intelligence-Symbolique.git**
+**cd 2025-Epita-Intelligence-Symbolique**
 ```
 
 ### 3. Configurer l'environnement de développement
@@ -175,8 +179,9 @@ cd 2025-Epita-Intelligence-Symbolique
 
 2.  **Exécutez le script de configuration de l'environnement** à la racine du projet cloné. Ce script est le point d'entrée principal pour préparer votre environnement de développement.
     Ouvrez un terminal PowerShell et exécutez :
+    <!-- TODO: Vérifier l'exactitude du nom du script setup_project_env.ps1, de ses options, des chemins de dépendances (JDK, Octave), et du fichier environment.yml. -->
     ```powershell
-    .\setup_project_env.ps1
+    **.\setup_project_env.ps1**
     ```
     Ce script [`setup_project_env.ps1`](setup_project_env.ps1:0) effectue les actions suivantes :
     * Vérifie la présence de Conda.
@@ -201,17 +206,17 @@ cd 2025-Epita-Intelligence-Symbolique
     *   **Pour charger les variables d'environnement et activer Conda manuellement** :
         ```powershell
         # Exécutez d'abord activate_project_env.ps1 pour charger .env
-        . .\activate_project_env.ps1
+        **. .\activate_project_env.ps1**
         # Puis activez l'environnement Conda
-        conda activate projet-is
+        **conda activate projet-is**
         ```
         Votre prompt devrait maintenant indiquer `(projet-is)`.
 
     *   **Pour exécuter une commande spécifique directement dans l'environnement Conda configuré** (charge `.env` et active l'environnement pour la commande) :
         ```powershell
-        powershell -File .\activate_project_env.ps1 -CommandToRun "votre_commande --arg1"
+        **powershell -File .\activate_project_env.ps1 -CommandToRun "votre_commande --arg1"**
         # Exemple:
-        powershell -File .\activate_project_env.ps1 -CommandToRun "python -m pytest -v"
+        **powershell -File .\activate_project_env.ps1 -CommandToRun "python -m pytest -v"**
         ```
         Cela est utile pour les tâches ponctuelles ou les scripts d'intégration continue.
 
@@ -220,6 +225,7 @@ cd 2025-Epita-Intelligence-Symbolique
 Le script [`setup_project_env.ps1`](setup_project_env.ps1:0) (via [`activate_project_env.ps1`](activate_project_env.ps1:0)) configure le fichier `.env` et charge les variables. Normalement, `JAVA_HOME` est automatiquement pointé vers le JDK portable dans [`libs/portable_jdk/`](libs/portable_jdk:0) et `USE_REAL_JPYPE` est mis à `true`.
 Vous pouvez vérifier le contenu du fichier `.env` pour des configurations spécifiques (par exemple, les clés API pour `semantic-kernel` si vous les utilisez).
 
+<!-- TODO: Confirmer que ces commandes sont les points d'entrée recommandés et fonctionnels. -->
 ### 5. Lancer l'application
 
 Plusieurs points d'entrée sont disponibles selon vos besoins et cas d'utilisation :
@@ -227,19 +233,19 @@ Plusieurs points d'entrée sont disponibles selon vos besoins et cas d'utilisati
 #### Notebook d'orchestration principal
 
 ```bash
-jupyter notebook main_orchestrator.ipynb
+**jupyter notebook main_orchestrator.ipynb**
 ```
 
 #### Interface utilisateur web
 
 ```bash
-python -m ui.app
+**python -m ui.app**
 ```
 
 #### Analyse via script Python
 
 ```bash
-python run_analysis.py --input votre_texte.txt --output resultats.json
+**python run_analysis.py --input votre_texte.txt --output resultats.json**
 ```
 
 #### Scripts utilitaires
@@ -249,6 +255,7 @@ Le projet inclut plusieurs scripts utilitaires pour faciliter le développement 
 - **Scripts de nettoyage** : Voir [documentation des scripts de nettoyage](./scripts/cleanup/README.md)
 - **Scripts d'exécution** : Voir [documentation des scripts d'exécution](./scripts/execution/README.md)
 
+<!-- TODO: Vérifier l'actualité des informations (groupes, livrables, évaluation). -->
 ## Modalités du projet
 
 ### Organisation en groupes
@@ -289,6 +296,7 @@ L'évaluation portera sur 4 critères :
 3. **Technique** : Réalisations, performances, tests et qualité du code
 4. **Gestion de projet/collaboration** : Gestion intelligente de GitHub et du travail collaboratif durant la durée du projet
 
+<!-- TODO: Vérifier que cette section reflète l'approche actuelle du projet. -->
 ## Utilisation des LLMs et IA Symbolique
 
 Ce projet combine l'utilisation des Grands Modèles de Langage (LLMs) avec des techniques d'IA symbolique pour l'analyse argumentative. Cette approche hybride permet de tirer parti des forces de chaque paradigme :
@@ -327,6 +335,7 @@ Une description détaillée de l'architecture du projet, incluant l'architecture
 
 Le projet inclut une **API REST complète** dans [`services/web_api/`](./services/web_api/) qui expose toutes les fonctionnalités d'analyse argumentative via des endpoints HTTP. Cette API permet aux étudiants de créer facilement des interfaces web modernes (React, Vue, Angular) sans avoir à gérer directement la complexité du moteur d'analyse.
 
+<!-- TODO: Vérifier l'exactitude de la liste des endpoints et des commandes de démarrage de l'API. Envisager de lier vers une doc auto-générée si disponible. -->
 ### Fonctionnalités de l'API
 
 - **Analyse complète de textes** : Endpoint `/api/analyze` pour l'analyse argumentative complète
@@ -339,13 +348,13 @@ Le projet inclut une **API REST complète** dans [`services/web_api/`](./service
 
 ```bash
 # Naviguer vers l'API
-cd services/web_api
+**cd services/web_api**
 
 # Installer les dépendances
-pip install -r requirements.txt
+**pip install -r requirements.txt**
 
 # Démarrer l'API
-python app.py
+**python app.py**
 ```
 
 L'API sera accessible sur `http://localhost:5000` avec une documentation complète des endpoints.
@@ -386,6 +395,7 @@ Lors du choix de votre sujet, tenez compte de :
 - Le temps disponible pour réaliser le projet
 - Les interdépendances avec d'autres projets
 
+<!-- TODO: Vérifier l'exactitude des titres des documents liés et le fonctionnement des ancres. -->
 Pour faciliter votre choix, plusieurs vues transversales sont disponibles :
 - [Projets par niveau de difficulté](./docs/projets/README.md#filtrage-par-niveau-de-difficulté) - Pour choisir selon vos compétences
 - [Projets par technologie](./docs/projets/README.md#filtrage-par-technologie) - Pour choisir selon vos intérêts techniques
@@ -400,7 +410,7 @@ Pour contribuer au projet, suivez ces étapes :
 
 1. **Créez une branche** dans votre fork pour votre fonctionnalité ou correction :
    ```bash
-   git checkout -b feature/nom-de-votre-fonctionnalite
+   **git checkout -b feature/nom-de-votre-fonctionnalite**
    ```
 
 2. **Développez votre fonctionnalité** en suivant les bonnes pratiques de code :
@@ -410,13 +420,13 @@ Pour contribuer au projet, suivez ces étapes :
 
 3. **Committez vos changements** avec des messages descriptifs :
    ```bash
-   git add .
-   git commit -m "Description claire de vos modifications"
+   **git add .**
+   **git commit -m "Description claire de vos modifications"**
    ```
 
 4. **Poussez votre branche** vers votre fork :
    ```bash
-   git push origin feature/nom-de-votre-fonctionnalite
+   **git push origin feature/nom-de-votre-fonctionnalite**
    ```
 
 5. **Créez une Pull Request (PR)** depuis votre branche vers le dépôt principal :
@@ -433,9 +443,10 @@ Pour contribuer au projet, suivez ces étapes :
 
 - **Maintenez votre fork à jour** avec le dépôt principal :
   ```bash
-  git remote add upstream https://github.com/jsboigeEpita/2025-Epita-Intelligence-Symbolique.git
-  git fetch upstream
-  git merge upstream/main
+  **git remote add upstream https://github.com/jsboigeEpita/2025-Epita-Intelligence-Symbolique.git**
+  **git fetch upstream**
+  <!-- TODO: Vérifier le nom de la branche principale (main ou master) et adapter la commande si nécessaire. -->
+  **git merge upstream/main**
   ```
 
 - **Créez des branches spécifiques** pour chaque fonctionnalité ou correction
@@ -464,10 +475,12 @@ Documentation supplémentaire :
 - [Changelog](./CHANGELOG.md) : Journal des modifications apportées au projet
 - [Documentation supplémentaire](./docs/README.md) : Documentation additionnelle sur divers aspects du projet
 - [Architecture Globale](./docs/architecture/architecture_globale.md) : Description de l'architecture complète du système
+<!-- TODO: S'assurer que tests/README.md est le point d'entrée pertinent pour la doc des tests. -->
 - [Documentation des Tests](./tests/README.md) : Stratégie de test, exécution et interprétation des tests
 - [Extraits chiffrés](./docs/reports/extraits_chiffres.md) : Documentation détaillée sur le système d'extraits chiffrés
 - [Exemples](./examples/README.md) : Exemples de textes et données pour les tests
 
+<!-- TODO: Vérifier l'existence et la pertinence des liens vers CHANGELOG.md et examples/README.md. -->
 ### Ressources externes utiles
 
 - [Documentation Python](https://docs.python.org/fr/3/)
