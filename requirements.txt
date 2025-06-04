@@ -11,9 +11,10 @@ pytest-asyncio
 pytest-mock
 python-dotenv
 scikit-learn
-scipy==1.13.1
+scipy==1.15.3
 sentence-transformers
-semantic-kernel==0.9.9b1
+semantic-kernel==1.29.0
+numpy>=2.0.0,<2.3 # Assurer la compatibilité
 spacy
 coverage
 clingo

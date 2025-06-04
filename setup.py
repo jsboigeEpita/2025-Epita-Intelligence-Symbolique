@@ -8,7 +8,7 @@ setup(
     install_requires=[
         "numpy>=2.0.0,<2.3",  # Ajusté pour thinc et scipy
         "pandas",
-        "scipy==1.13.1",
+        "scipy==1.15.3",
         "scikit-learn",
         "nltk",
         # "spacy==3.8.7", # Temporairement retiré
@@ -26,7 +26,7 @@ setup(
         "seaborn",
         "networkx==3.2.1",
         "python-dotenv",  # Pour l'import de 'dotenv'
-        "semantic-kernel~=0.9.7b1", # Tentative de mise à jour mineure pour AuthorRole
+        "semantic-kernel==1.29.0",
         "pytest",
         "pytest-cov",
         "pytest-mock",
