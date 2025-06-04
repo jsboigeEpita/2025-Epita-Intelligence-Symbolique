@@ -1,16 +1,33 @@
 # Composants du Système d'Analyse Argumentative
 
-Cette section documente les différents composants qui constituent le système d'analyse argumentative, leur fonctionnement et leurs interactions.
+Cette section documente les différents **concepts et modules logiques** qui constituent le système d'analyse argumentative, leur fonctionnement et leurs interactions. La documentation détaillée de chaque aspect se trouve dans les fichiers Markdown dédiés listés sous "Documents Disponibles" ou dans les sections ultérieures de ce document.
 
 ## Documents Disponibles
 
-### [Agents Spécialistes](./agents_specialistes.md)
-Description détaillée des agents spécialistes qui composent le système, incluant leurs rôles, responsabilités et interactions.
+### [`Agent Management`](./agent_management.md)
+Décrit les mécanismes de création, configuration, enregistrement, cycle de vie et gestion des dépendances des agents au sein du système.
 
-### [Structure du Projet](./structure_projet.md)
+### [`Agents Spécialistes`](./agents_specialistes.md)
+Description détaillée des agents spécialistes qui composent le système, incluant leurs rôles, responsabilités et interactions. Sous-documents :
+*   [`Pont Tweety (Tweety Bridge)`](./tweety_bridge.md) : Décrit le composant `TweetyBridge` qui sert d'interface avec les bibliothèques Java de TweetyProject pour le raisonnement formel.
+*   [`Sous-système d'Évaluation (Evaluation Subsystem)`](./evaluation_subsystem.md) : Décrit l'ensemble des fonctionnalités et outils distribués responsables de l'évaluation de la qualité, de la cohérence et de la pertinence au sein du projet.
+
+### [`API Web Applicative`](./api_web.md)
+Décrit l'API RESTful basée sur Flask qui expose les fonctionnalités du projet, y compris ses points de terminaison et formats de données.
+
+### [`Argument Parser`](./argument_parser.md)
+Détaille le processus d'identification, d'extraction, de structuration et de validation des arguments (extraits) à partir des textes sources, principalement via l'`ExtractAgent`.
+
+### [`Knowledge Base Interface`](./knowledge_base_interface.md)
+Décrit le concept et l'implémentation d'une interface permettant aux agents d'accéder à des informations structurées ou non structurées (bases de données, ontologies, etc.) pour enrichir leur analyse.
+
+### [`Reasoning Engine`](./reasoning_engine.md)
+Présente l'ensemble des composants et capacités dédiés à l'évaluation de la structure logique, la validité, la cohérence des arguments, et à l'exécution d'inférences logiques.
+
+### [`Structure du Projet`](./structure_projet.md)
 Documentation complète de la structure du projet, incluant l'organisation des dossiers et des fichiers.
 
-### [Synthèse de la Collaboration entre Agents](./synthese_collaboration.md)
+### [`Synthèse de la Collaboration entre Agents`](./synthese_collaboration.md)
 Analyse de la collaboration entre les différents agents du système et des mécanismes qui la rendent possible.
 
 ## Composants Principaux
