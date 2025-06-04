@@ -8,12 +8,36 @@ from typing import Optional, List
 
 # Configuration du logger pour ce module
 logger = logging.getLogger("Orchestration.JPype")
+# Détermination du répertoire racine du projet
+PROJECT_ROOT_DIR = Path(__file__).resolve().parent.parent.parent
+
+# Définition des chemins possibles pour LIBS_DIR
+LIBS_DIR_PRIMARY = PROJECT_ROOT_DIR / "libs" / "tweety"
+LIBS_DIR_FALLBACK = PROJECT_ROOT_DIR / "libs"
+
+# Détermination de LIBS_DIR à utiliser globalement
+LIBS_DIR: Optional[Path] = None
+if LIBS_DIR_PRIMARY.is_dir() and list(LIBS_DIR_PRIMARY.glob("*.jar")):
+    LIBS_DIR = LIBS_DIR_PRIMARY
+    logger.info(f"LIBS_DIR (global) défini sur (primaire): {LIBS_DIR}")
+elif LIBS_DIR_FALLBACK.is_dir() and list(LIBS_DIR_FALLBACK.glob("*.jar")):
+    LIBS_DIR = LIBS_DIR_FALLBACK
+    logger.info(f"LIBS_DIR (global) défini sur (fallback): {LIBS_DIR}")
+else:
+    logger.warning(
+        f"Aucun JAR trouvé ni dans {LIBS_DIR_PRIMARY} ni dans {LIBS_DIR_FALLBACK}. "
+        f"LIBS_DIR (global) n'est pas défini. Cela peut causer des problèmes si la JVM est initialisée sans chemin explicite."
+    )
+    # Optionnel: définir sur fallback même si vide pour éviter None si une valeur est toujours attendue
+    # LIBS_DIR = LIBS_DIR_FALLBACK
+    # logger.warning(f"LIBS_DIR (global) défini sur (fallback) {LIBS_DIR} malgré l'absence de JARs.")
+TWEETY_VERSION = "1.28"
 
 PORTABLE_JDK_PATH: Optional[Path] = None
 try:
-    PROJECT_ROOT_DIR = Path(__file__).resolve().parent.parent.parent
+    # PROJECT_ROOT_DIR = Path(__file__).resolve().parent.parent.parent # Défini globalement à la ligne 12
     _JDK_SUBDIR = "libs/portable_jdk/jdk-17.0.11+9" 
-    _potential_jdk_path = PROJECT_ROOT_DIR / _JDK_SUBDIR
+    _potential_jdk_path = PROJECT_ROOT_DIR / _JDK_SUBDIR # Utilise le PROJECT_ROOT_DIR global
     if _potential_jdk_path.is_dir():
         PORTABLE_JDK_PATH = _potential_jdk_path
         logger.info(f"✅ JDK portable détecté : {PORTABLE_JDK_PATH}")
@@ -49,9 +73,10 @@ def get_jvm_options(jdk_path: Optional[Path] = PORTABLE_JDK_PATH) -> List[str]:
         logger.info("Aucun JDK portable spécifié ou trouvé. Utilisation du JDK par défaut du système.")
     return options
 
-def initialize_jvm(lib_dir_path: str, jdk_path: Optional[Path] = PORTABLE_JDK_PATH) -> bool:
+def initialize_jvm(lib_dir_path: Optional[str] = None, jdk_path: Optional[Path] = PORTABLE_JDK_PATH) -> bool:
     """
     Initialise la JVM avec les JARs de TweetyProject.
+    Si lib_dir_path n'est pas fourni, utilise la variable globale LIBS_DIR.
     """
     logger.info(f"JVM_SETUP: initialize_jvm appelée. isJVMStarted au début: {jpype.isJVMStarted()}")
     if jpype.isJVMStarted():
@@ -59,7 +84,16 @@ def initialize_jvm(lib_dir_path: str, jdk_path: Optional[Path] = PORTABLE_JDK_PA
         return True
 
     try:
-        jar_directory = Path(lib_dir_path)
+        effective_lib_dir_path = lib_dir_path
+        if effective_lib_dir_path is None:
+            if LIBS_DIR is not None: # LIBS_DIR est maintenant global
+                effective_lib_dir_path = str(LIBS_DIR)
+                logger.info(f"Utilisation de LIBS_DIR global: {effective_lib_dir_path}")
+            else:
+                logger.error("❌ `lib_dir_path` non fourni et `LIBS_DIR` global non défini. Impossible de localiser les JARs.")
+                return False
+        
+        jar_directory = Path(effective_lib_dir_path)
         if not jar_directory.is_dir():
             logger.error(f"❌ Le répertoire des JARs '{jar_directory}' n'existe pas ou n'est pas un répertoire.")
             return False
@@ -141,31 +175,13 @@ def shutdown_jvm_if_needed():
 if __name__ == "__main__":
     logging.basicConfig(level=logging.DEBUG)
     
-    PROJECT_ROOT_DIR_MAIN = Path(__file__).resolve().parent.parent.parent 
-    # Tenter de localiser le répertoire libs contenant les JARs Tweety
-    # Scénario 1: libs/tweety (structure originellement visée pour les JARs spécifiques à Tweety)
-    LIBS_DIR_MAIN_PRIMARY = PROJECT_ROOT_DIR_MAIN / "libs" / "tweety"
-    # Scénario 2: libs (structure où les JARs sont directement sous libs)
-    LIBS_DIR_MAIN_FALLBACK = PROJECT_ROOT_DIR_MAIN / "libs"
+    # La logique de actual_libs_dir_to_use est maintenant gérée par LIBS_DIR global
+    # et la fonction initialize_jvm peut utiliser cette variable globale si aucun argument n'est passé.
 
-    actual_libs_dir_to_use = None
+    logger.info(f"Test: LIBS_DIR global est: {LIBS_DIR}")
 
-    if LIBS_DIR_MAIN_PRIMARY.is_dir() and list(LIBS_DIR_MAIN_PRIMARY.glob("*.jar")):
-        actual_libs_dir_to_use = LIBS_DIR_MAIN_PRIMARY
-        logger.info(f"Test: Utilisation de LIBS_DIR (primaire): {actual_libs_dir_to_use}")
-    elif LIBS_DIR_MAIN_FALLBACK.is_dir() and list(LIBS_DIR_MAIN_FALLBACK.glob("*.jar")):
-        actual_libs_dir_to_use = LIBS_DIR_MAIN_FALLBACK
-        logger.info(f"Test: Utilisation de LIBS_DIR (fallback): {actual_libs_dir_to_use}")
-    else:
-        logger.warning(f"Aucun JAR trouvé ni dans {LIBS_DIR_MAIN_PRIMARY} ni dans {LIBS_DIR_MAIN_FALLBACK}. Le test peut échouer.")
-        # Pour permettre au test de continuer même si les JARs ne sont pas là (pour tester la logique de détection)
-        # On peut choisir un des chemins par défaut, même s'il est vide.
-        actual_libs_dir_to_use = LIBS_DIR_MAIN_FALLBACK 
-        logger.warning(f"Test: Poursuite avec LIBS_DIR (fallback) {actual_libs_dir_to_use} malgré l'absence de JARs.")
-
-
-    if actual_libs_dir_to_use:
-        success = initialize_jvm(str(actual_libs_dir_to_use))
+    if LIBS_DIR: # Vérifie si LIBS_DIR a été défini globalement
+        success = initialize_jvm() # Appelle sans argument pour utiliser LIBS_DIR global
         if success:
             logger.info("Test initialize_jvm: SUCCÈS")
             try:
@@ -183,4 +199,4 @@ if __name__ == "__main__":
         else:
             logger.error("Test initialize_jvm: ÉCHEC")
     else:
-        logger.error("Test initialize_jvm: ÉCHEC - Aucun répertoire de bibliothèques valide n'a pu être déterminé.")
+        logger.error("Test initialize_jvm: ÉCHEC - LIBS_DIR global n'a pas été défini ou aucun JAR trouvé.")
