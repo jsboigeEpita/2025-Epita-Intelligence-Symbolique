@@ -3,6 +3,7 @@ import os
 import pytest
 from unittest.mock import MagicMock
 import importlib.util
+from argumentation_analysis.core.jvm_setup import shutdown_jvm_if_needed
 import logging
 
 # --- Configuration du Logger ---
@@ -88,14 +89,31 @@ except ImportError as e_jpype:
 def activate_jpype_mock_if_needed(request):
     global _JPYPE_MODULE_MOCK_OBJ_GLOBAL, _MOCK_DOT_JPYPE_MODULE_GLOBAL, _REAL_JPYPE_MODULE
 
-    use_real_jpype = False
+    # Déterminer si le vrai JPype doit être utilisé
+    env_use_real_jpype = os.environ.get('USE_REAL_JPYPE', 'false').lower() in ('true', '1')
+    
+    use_real_jpype_marker = False
     if request.node.get_closest_marker("real_jpype"):
-        use_real_jpype = True
+        use_real_jpype_marker = True
+        
+    use_real_jpype_path = False
     path_str = str(request.node.fspath).replace(os.sep, '/')
     if 'tests/integration/' in path_str or 'tests/minimal_jpype_tweety_tests/' in path_str:
-        use_real_jpype = True
+        use_real_jpype_path = True
+        
+    final_use_real_jpype = False
+    if env_use_real_jpype:
+        final_use_real_jpype = True
+        logger.info(f"Test {request.node.name}: REAL JPype forcé par la variable d'environnement USE_REAL_JPYPE.")
+    elif use_real_jpype_marker:
+        final_use_real_jpype = True
+        logger.info(f"Test {request.node.name}: REAL JPype demandé par le marqueur 'real_jpype'.")
+    elif use_real_jpype_path:
+        final_use_real_jpype = True
+        logger.info(f"Test {request.node.name}: REAL JPype activé par chemin ({path_str}).")
+    # else: final_use_real_jpype reste False
 
-    if use_real_jpype:
+    if final_use_real_jpype:
         logger.info(f"Test {request.node.name} demande REAL JPype. Configuration de sys.modules pour utiliser le vrai JPype.")
         if _REAL_JPYPE_MODULE:
             sys.modules['jpype'] = _REAL_JPYPE_MODULE
@@ -277,39 +295,84 @@ def pytest_sessionfinish(session, exitstatus):
     global _REAL_JPYPE_MODULE, _JPYPE_MODULE_MOCK_OBJ_GLOBAL, logger
     logger.info(f"jpype_setup.py: pytest_sessionfinish hook triggered. Exit status: {exitstatus}")
 
-    if _REAL_JPYPE_MODULE and _REAL_JPYPE_MODULE is not _JPYPE_MODULE_MOCK_OBJ_GLOBAL:
-        logger.info("   pytest_sessionfinish: Real JPype module is available.")
+    # Déterminer si le vrai JPype a été utilisé pour la session ou le dernier test
+    # Cela est une heuristique. Idéalement, on saurait si la JVM a été démarrée par notre code.
+    real_jpype_was_potentially_used = False
+    if _REAL_JPYPE_MODULE and sys.modules.get('jpype') is _REAL_JPYPE_MODULE:
+        logger.info("   pytest_sessionfinish: sys.modules['jpype'] IS _REAL_JPYPE_MODULE. Le vrai JPype a potentiellement été utilisé.")
+        real_jpype_was_potentially_used = True
+    elif _REAL_JPYPE_MODULE and _REAL_JPYPE_MODULE is not _JPYPE_MODULE_MOCK_OBJ_GLOBAL:
+        logger.info("   pytest_sessionfinish: _REAL_JPYPE_MODULE est disponible et n'est pas le mock global. Le vrai JPype a potentiellement été utilisé.")
+        real_jpype_was_potentially_used = True
+    else:
+        logger.info("   pytest_sessionfinish: sys.modules['jpype'] n'est pas _REAL_JPYPE_MODULE ou _REAL_JPYPE_MODULE est le mock. Le mock JPype a probablement été utilisé.")
+
+    if real_jpype_was_potentially_used:
+        logger.info("   pytest_sessionfinish: Tentative d'arrêt de la JVM via shutdown_jvm_if_needed() car le vrai JPype a potentiellement été utilisé.")
         try:
-            jvm_started = hasattr(_REAL_JPYPE_MODULE, 'isJVMStarted') and _REAL_JPYPE_MODULE.isJVMStarted()
-            destroy_jvm_is_false = False
-            if hasattr(_REAL_JPYPE_MODULE, 'config') and _REAL_JPYPE_MODULE.config is not None and hasattr(_REAL_JPYPE_MODULE.config, 'destroy_jvm'):
-                destroy_jvm_is_false = not _REAL_JPYPE_MODULE.config.destroy_jvm
+            # S'assurer que le vrai jpype est dans sys.modules pour que shutdown_jvm_if_needed fonctionne correctement
+            original_jpype_in_sys = sys.modules.get('jpype')
+            if original_jpype_in_sys is not _REAL_JPYPE_MODULE and _REAL_JPYPE_MODULE is not None:
+                logger.info(f"   pytest_sessionfinish: Temporairement, sys.modules['jpype'] = _REAL_JPYPE_MODULE (ID: {id(_REAL_JPYPE_MODULE)}) pour shutdown.")
+                sys.modules['jpype'] = _REAL_JPYPE_MODULE
             
-            logger.info(f"   pytest_sessionfinish: JVM started: {jvm_started}, destroy_jvm is False: {destroy_jvm_is_false}")
+            shutdown_jvm_if_needed() # Appel de notre fonction centralisée
+            
+            # Restaurer l'état précédent de sys.modules['jpype'] si modifié
+            if original_jpype_in_sys is not None and sys.modules.get('jpype') is not original_jpype_in_sys:
+                logger.info(f"   pytest_sessionfinish: Restauration de sys.modules['jpype'] à son état original (ID: {id(original_jpype_in_sys)}).")
+                sys.modules['jpype'] = original_jpype_in_sys
+            elif original_jpype_in_sys is None and 'jpype' in sys.modules: # Si on l'a ajouté et qu'il n'y était pas
+                del sys.modules['jpype']
+                logger.info("   pytest_sessionfinish: sys.modules['jpype'] supprimé car il n'était pas là initialement.")
 
-            if jvm_started and destroy_jvm_is_false:
-                logger.info("   pytest_sessionfinish: JVM is active and not set to be destroyed. Ensuring jpype modules are correctly in sys.modules for atexit.")
-                current_sys_jpype = sys.modules.get('jpype')
-                if current_sys_jpype is not _REAL_JPYPE_MODULE:
-                    logger.warning(f"   pytest_sessionfinish: sys.modules['jpype'] (ID: {id(current_sys_jpype)}) is not _REAL_JPYPE_MODULE (ID: {id(_REAL_JPYPE_MODULE)}). Restoring _REAL_JPYPE_MODULE.")
+        except Exception as e_shutdown:
+            logger.error(f"   pytest_sessionfinish: Erreur lors de l'appel à shutdown_jvm_if_needed(): {e_shutdown}", exc_info=True)
+        
+        # La logique ci-dessous pour restaurer sys.modules['jpype'] et sys.modules['jpype.config']
+        # est importante si la JVM n'est PAS arrêtée par JPype via atexit (destroy_jvm=False).
+        # Si shutdown_jvm_if_needed() a bien arrêté la JVM, cette partie est moins critique mais ne fait pas de mal.
+        logger.info("   pytest_sessionfinish: Vérification de l'état de la JVM après tentative d'arrêt.")
+        try:
+            jvm_still_started_after_shutdown_attempt = False
+            if _REAL_JPYPE_MODULE and hasattr(_REAL_JPYPE_MODULE, 'isJVMStarted'):
+                 # Assurer que _REAL_JPYPE_MODULE est utilisé pour la vérification
+                _current_jpype_for_check = sys.modules.get('jpype')
+                if _current_jpype_for_check is not _REAL_JPYPE_MODULE and _REAL_JPYPE_MODULE is not None:
                     sys.modules['jpype'] = _REAL_JPYPE_MODULE
-                else:
-                    logger.info("   pytest_sessionfinish: sys.modules['jpype'] is already _REAL_JPYPE_MODULE.")
+                jvm_still_started_after_shutdown_attempt = _REAL_JPYPE_MODULE.isJVMStarted()
+                if _current_jpype_for_check is not None and _current_jpype_for_check is not _REAL_JPYPE_MODULE: # restaurer
+                    sys.modules['jpype'] = _current_jpype_for_check
+                elif _current_jpype_for_check is None and 'jpype' in sys.modules and sys.modules['jpype'] is _REAL_JPYPE_MODULE:
+                    del sys.modules['jpype']
 
-                if hasattr(_REAL_JPYPE_MODULE, 'config') and _REAL_JPYPE_MODULE.config is not None:
+
+            logger.info(f"   pytest_sessionfinish: JVM encore démarrée après tentative d'arrêt: {jvm_still_started_after_shutdown_attempt}")
+
+            destroy_jvm_is_false = False # Valeur par défaut si config non accessible
+            if _REAL_JPYPE_MODULE and hasattr(_REAL_JPYPE_MODULE, 'config') and _REAL_JPYPE_MODULE.config is not None and hasattr(_REAL_JPYPE_MODULE.config, 'destroy_jvm'):
+                destroy_jvm_is_false = not _REAL_JPYPE_MODULE.config.destroy_jvm
+            logger.info(f"   pytest_sessionfinish: destroy_jvm est False (selon config): {destroy_jvm_is_false}")
+
+            if jvm_still_started_after_shutdown_attempt and destroy_jvm_is_false:
+                logger.info("   pytest_sessionfinish: JVM est toujours active et destroy_jvm est False. Assurer la présence des modules jpype pour atexit.")
+                current_sys_jpype = sys.modules.get('jpype')
+                if current_sys_jpype is not _REAL_JPYPE_MODULE and _REAL_JPYPE_MODULE is not None:
+                    logger.warning(f"   pytest_sessionfinish: sys.modules['jpype'] (ID: {id(current_sys_jpype)}) n'est pas _REAL_JPYPE_MODULE (ID: {id(_REAL_JPYPE_MODULE)}). Restauration de _REAL_JPYPE_MODULE.")
+                    sys.modules['jpype'] = _REAL_JPYPE_MODULE
+                
+                if _REAL_JPYPE_MODULE and hasattr(_REAL_JPYPE_MODULE, 'config') and _REAL_JPYPE_MODULE.config is not None:
                     current_sys_jpype_config = sys.modules.get('jpype.config')
                     if current_sys_jpype_config is not _REAL_JPYPE_MODULE.config:
-                        logger.warning(f"   pytest_sessionfinish: sys.modules['jpype.config'] (ID: {id(current_sys_jpype_config)}) is not _REAL_JPYPE_MODULE.config (ID: {id(_REAL_JPYPE_MODULE.config)}). Restoring.")
+                        logger.warning(f"   pytest_sessionfinish: sys.modules['jpype.config'] (ID: {id(current_sys_jpype_config)}) n'est pas _REAL_JPYPE_MODULE.config (ID: {id(_REAL_JPYPE_MODULE.config)}). Restauration.")
                         sys.modules['jpype.config'] = _REAL_JPYPE_MODULE.config
-                    else:
-                        logger.info("   pytest_sessionfinish: sys.modules['jpype.config'] is already _REAL_JPYPE_MODULE.config.")
                 else:
-                    logger.warning("   pytest_sessionfinish: _REAL_JPYPE_MODULE.config not available, cannot ensure sys.modules['jpype.config'].")
+                    logger.warning("   pytest_sessionfinish: _REAL_JPYPE_MODULE.config non disponible, ne peut pas assurer sys.modules['jpype.config'].")
             else:
-                logger.info("   pytest_sessionfinish: JVM not started or destroy_jvm is True. No special sys.modules handling for atexit needed from here.")
+                logger.info("   pytest_sessionfinish: JVM non démarrée ou destroy_jvm est True. Pas de gestion spéciale de sys.modules pour atexit depuis ici.")
         except AttributeError as ae:
-             logger.error(f"   pytest_sessionfinish: AttributeError encountered: {ae}. This might happen if JPype was not fully initialized or is mocked.", exc_info=True)
+             logger.error(f"   pytest_sessionfinish: AttributeError (vérification post-arrêt): {ae}.", exc_info=True)
         except Exception as e:
-            logger.error(f"   pytest_sessionfinish: Unexpected error: {type(e).__name__}: {e}", exc_info=True)
+            logger.error(f"   pytest_sessionfinish: Erreur inattendue (vérification post-arrêt): {type(e).__name__}: {e}", exc_info=True)
     else:
-        logger.info("   pytest_sessionfinish: Real JPype module not available or is mock. No action.")
+        logger.info("   pytest_sessionfinish: Le mock JPype a probablement été utilisé. Aucun arrêt de JVM nécessaire depuis ici.")
