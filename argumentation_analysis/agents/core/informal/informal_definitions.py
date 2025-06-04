@@ -46,7 +46,7 @@ from semantic_kernel.functions.kernel_parameter_metadata import KernelParameterM
 # from taxonomy_loader import get_taxonomy_path, validate_taxonomy_file # Commenté car remplacé
 
 # Importer load_csv_file depuis project_core
-from project_core.utils.file_loaders import load_csv_file
+from argumentation_analysis.utils.core_utils.file_loaders import load_csv_file
 from argumentation_analysis.paths import DATA_DIR # Assurer que DATA_DIR est importé si nécessaire ailleurs
 
 # Configuration du logging
