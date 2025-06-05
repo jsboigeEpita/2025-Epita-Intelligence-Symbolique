@@ -1,0 +1,38 @@
+﻿============================= test session starts =============================
+platform win32 -- Python 3.9.12, pytest-8.4.0, pluggy-1.6.0
+rootdir: D:\2025-Epita-Intelligence-Symbolique-4
+configfile: pytest.ini
+plugins: anyio-4.9.0, asyncio-1.0.0, cov-6.1.1, mock-3.14.1
+asyncio: mode=auto, asyncio_default_fixture_loop_scope=function, asyncio_default_test_loop_scope=function
+collected 13 items
+
+tests\agents\core\logic\test_propositional_logic_agent.py .............  [100%]2025-06-05 06:38:56,284 - tests.mocks.jpype_setup - INFO - jpype_setup.py: pytest_sessionfinish hook triggered. Exit status: 0
+2025-06-05 06:38:56,284 - tests.mocks.jpype_setup - INFO -    pytest_sessionfinish: sys.modules['jpype'] IS _REAL_JPYPE_MODULE. Le vrai JPype a potentiellement été utilisé.
+2025-06-05 06:38:56,284 - tests.mocks.jpype_setup - INFO -    pytest_sessionfinish: Tentative d'arrêt de la JVM via shutdown_jvm_if_needed() car le vrai JPype a potentiellement été utilisé.
+2025-06-05 06:38:56,284 - tests.mocks.jpype_setup - INFO -    pytest_sessionfinish: Vérification de l'état de la JVM après tentative d'arrêt.
+2025-06-05 06:38:56,284 - tests.mocks.jpype_setup - INFO -    pytest_sessionfinish: JVM encore démarrée après tentative d'arrêt: False
+2025-06-05 06:38:56,284 - tests.mocks.jpype_setup - INFO -    pytest_sessionfinish: destroy_jvm est False (selon config): False
+2025-06-05 06:38:56,284 - tests.mocks.jpype_setup - INFO -    pytest_sessionfinish: JVM non démarrée ou destroy_jvm est True. Pas de gestion spéciale de sys.modules pour atexit depuis ici.
+python : 06:38:56 [INFO] [Orchestration.JPype] JVM_SETUP: Appel de shutdown_jvm_if_needed.
+Au caractère Ligne:1 : 214
++ ... tputFile)"; python -m pytest tests/agents/core/logic/test_proposition ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (06:38:56 [INFO]..._jvm_if_needed.:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+06:38:56 [INFO] [Orchestration.JPype] JVM_SETUP: JVM n'était pas démarrée. Aucun arrêt nécessaire. isJVMStarted: False
+06:38:56 [DEBUG] [tests.mocks.jpype_components.jvm] isJVMStarted() appelée. Retourne: False
+
+
+============================== warnings summary ===============================
+C:\Users\MYIA\AppData\Roaming\Python\Python39\site-packages\pydantic\_internal\_config.py:291
+  C:\Users\MYIA\AppData\Roaming\Python\Python39\site-packages\pydantic\_internal\_config.py:291: PydanticDeprecatedSince20: Support for class-based `config` is deprecated, use ConfigDict instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.9/migration/
+    warnings.warn(DEPRECATION_MESSAGE, DeprecationWarning)
+
+C:\Users\MYIA\AppData\Roaming\Python\Python39\site-packages\pydantic\_internal\_config.py:341
+  C:\Users\MYIA\AppData\Roaming\Python\Python39\site-packages\pydantic\_internal\_config.py:341: UserWarning: Valid config keys have changed in V2:
+  * 'allow_population_by_field_name' has been renamed to 'populate_by_name'
+    warnings.warn(message, UserWarning)
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+======================= 13 passed, 2 warnings in 2.38s ========================
