@@ -5,13 +5,12 @@
 Service de détection de sophismes.
 """
 
-import os
 import time
 import logging
 from pathlib import Path
 from typing import Dict, List, Any, Optional
 
-# Imports du moteur d'analyse (style HEAD)
+# Imports du moteur d'analyse
 try:
     from argumentation_analysis.agents.tools.analysis.contextual_fallacy_analyzer import ContextualFallacyAnalyzer
     from argumentation_analysis.agents.tools.analysis.fallacy_severity_evaluator import FallacySeverityEvaluator
@@ -22,7 +21,7 @@ except ImportError as e:
     FallacySeverityEvaluator = None
     EnhancedContextualAnalyzer = None
 
-# Imports des modèles (style HEAD, avec FallacyOptions)
+# Imports des modèles (style relatif)
 from ..models.request_models import FallacyRequest, FallacyOptions
 from ..models.response_models import FallacyResponse, FallacyDetection
 
@@ -48,6 +47,7 @@ class FallacyService:
         """Initialise les différents analyseurs de sophismes (contextuel, sévérité, amélioré).
 
         Met à jour `self.is_initialized` en fonction du succès.
+        TODO: EnhancedContextualFallacyAnalyzer is currently disabled in some branches. Re-evaluate for consistent integration.
 
         :return: None
         :rtype: None
@@ -65,7 +65,7 @@ class FallacyService:
             else:
                 self.severity_evaluator = None
             
-            # Analyseur contextuel amélioré (selon HEAD)
+            # Analyseur contextuel amélioré
             if EnhancedContextualAnalyzer: 
                 self.enhanced_analyzer = EnhancedContextualAnalyzer()
             else:
@@ -80,7 +80,6 @@ class FallacyService:
     
     def _load_fallacy_database(self) -> None:
         """Charge la base de données des sophismes."""
-        # Utilisation des patterns de la branche 0813790 (plus complets)
         self.fallacy_patterns = {
             # Sophismes logiques formels
             'affirming_consequent': {
@@ -333,7 +332,7 @@ class FallacyService:
         
         try:
             if self.contextual_analyzer:
-                results = self.contextual_analyzer.analyze_fallacies(text)
+                results = self.contextual_analyzer.analyze_fallacies(text) # Logique de HEAD
                 
                 if results:
                     for result in results:
@@ -404,10 +403,8 @@ class FallacyService:
         
         try:
             for fallacy_type, fallacy_info in self.fallacy_patterns.items():
-                # Vérification des patterns
                 for pattern in fallacy_info['patterns']:
                     if self._pattern_matches(pattern, text_lower):
-                        # Calcul de la position approximative
                         position = text_lower.find(pattern.split('.*')[0] if '.*' in pattern else pattern)
                         
                         fallacy = FallacyDetection(
@@ -415,13 +412,13 @@ class FallacyService:
                             name=fallacy_info['name'],
                             description=fallacy_info['description'],
                             severity=fallacy_info['severity'],
-                            confidence=0.6,  # Confiance modérée pour les patterns
+                            confidence=0.6,
                             location={'start': position, 'end': position + len(pattern)} if position >= 0 else None,
                             context=self._extract_context(text, position) if position >= 0 else None,
                             explanation=f"Pattern détecté: {pattern}"
                         )
                         fallacies.append(fallacy)
-                        break  # Un seul match par type de sophisme
+                        break 
         
         except Exception as e:
             self.logger.error(f"Erreur détection patterns: {e}")
@@ -444,11 +441,9 @@ class FallacyService:
         import re
         
         try:
-            # Conversion du pattern simple en regex
             regex_pattern = pattern.replace('.*', r'.*?')
             return bool(re.search(regex_pattern, text, re.IGNORECASE))
         except Exception:
-            # Fallback: recherche simple
             return pattern.replace('.*', '') in text
     
     def _extract_context(self, text: str, position: int, context_size: int = 50) -> Optional[str]:
@@ -484,16 +479,12 @@ class FallacyService:
         :return: Une liste filtrée, dédupliquée et limitée de `FallacyDetection`.
         :rtype: List[FallacyDetection]
         """
-        # Filtrage par seuil de sévérité
         threshold = options.severity_threshold if options and options.severity_threshold is not None else 0.5
         filtered = [f for f in fallacies if f.severity >= threshold]
         
-        # Filtrage par catégories si spécifié
         if options and options.categories:
-            # category_map = {info['name']: key for key, info in self.fallacy_patterns.items()} # Non utilisé
             filtered = [f for f in filtered if f.type in options.categories or f.name in options.categories]
         
-        # Déduplication basée sur le type et la position
         seen = set()
         deduplicated = []
         
@@ -503,7 +494,6 @@ class FallacyService:
                 seen.add(key)
                 deduplicated.append(fallacy)
         
-        # Limitation du nombre de résultats
         max_fallacies = options.max_fallacies if options and options.max_fallacies is not None else 10
         return deduplicated[:max_fallacies]
     
@@ -543,7 +533,6 @@ class FallacyService:
         distribution = {}
         
         for fallacy in fallacies:
-            # Déterminer la catégorie
             category = 'unknown'
             if fallacy.type in self.fallacy_patterns:
                 category = self.fallacy_patterns[fallacy.type]['category']

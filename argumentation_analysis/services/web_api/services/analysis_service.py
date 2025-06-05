@@ -5,21 +5,27 @@
 Service d'analyse complète utilisant le moteur d'analyse argumentative.
 """
 
-import os
-import sys
 import time
 import logging
-from pathlib import Path
 from typing import Dict, List, Any, Optional
 
-# Imports du moteur d'analyse
-from argumentation_analysis.agents.core.informal.informal_agent import InformalAnalysisAgent as InformalAgent
-from argumentation_analysis.agents.tools.analysis.complex_fallacy_analyzer import ComplexFallacyAnalyzer
-from argumentation_analysis.agents.tools.analysis.contextual_fallacy_analyzer import ContextualFallacyAnalyzer
-from argumentation_analysis.agents.tools.analysis.fallacy_severity_evaluator import FallacySeverityEvaluator
-from argumentation_analysis.orchestration.hierarchical.operational.manager import OperationalManager
+# Imports du moteur d'analyse (style b282af4 avec gestion d'erreur)
+try:
+    from argumentation_analysis.agents.core.informal.informal_agent import InformalAnalysisAgent as InformalAgent
+    from argumentation_analysis.agents.tools.analysis.complex_fallacy_analyzer import ComplexFallacyAnalyzer
+    from argumentation_analysis.agents.tools.analysis.contextual_fallacy_analyzer import ContextualFallacyAnalyzer
+    from argumentation_analysis.agents.tools.analysis.fallacy_severity_evaluator import FallacySeverityEvaluator
+    from argumentation_analysis.orchestration.hierarchical.operational.manager import OperationalManager
+except ImportError as e:
+    logging.warning(f"Impossible d'importer les modules d'analyse: {e}")
+    # Mode dégradé pour les tests
+    InformalAgent = None
+    ComplexFallacyAnalyzer = None
+    ContextualFallacyAnalyzer = None
+    FallacySeverityEvaluator = None
+    OperationalManager = None
 
-# Imports des modèles
+# Imports des modèles (style HEAD)
 from argumentation_analysis.services.web_api.models.request_models import AnalysisRequest
 from argumentation_analysis.services.web_api.models.response_models import (
     AnalysisResponse, FallacyDetection, ArgumentStructure
@@ -47,7 +53,7 @@ class AnalysisService:
         """Initialise les composants d'analyse internes du service.
 
         Tente d'instancier `ComplexFallacyAnalyzer`, `ContextualFallacyAnalyzer`,
-        `FallacySeverityEvaluator`, et un `MockedInformalAgent`.
+        `FallacySeverityEvaluator`, et `InformalAgent`.
         Met à jour `self.is_initialized` en fonction du succès.
 
         :return: None
@@ -79,21 +85,12 @@ class AnalysisService:
             if self.severity_evaluator:
                 self.tools['fallacy_severity_evaluator'] = self.severity_evaluator
             
-            # Initialisation de l'agent informel (mocké temporairement)
-            # Solution temporaire pour éviter l'ImportError et permettre la collecte des autres tests
-            class MockedInformalAgent:
-                def __init__(self, *args, **kwargs):
-                    self.logger = logging.getLogger("MockedInformalAgent")
-                    self.logger.info("MockedInformalAgent initialisé.")
-                def analyze_text(self, text, context=None): # Signature mise à jour pour correspondre à l'agent réel
-                    self.logger.info(f"MockedInformalAgent.analyze_text appelé avec le texte: {text[:50]}...")
-                    return {"fallacies": [{"type": "mock_fallacy", "name": "Mock Fallacy", "description": "Généré par un agent mocké.", "severity": 0.1, "confidence": 0.9, "location": "mock_location"}]}
-
-            # if InformalAgent and self.tools: # Condition originale commentée
-            if self.tools: # Utiliser MockedInformalAgent si les outils sont là (même si vide)
-                self.informal_agent = MockedInformalAgent(
+            # Initialisation de l'agent informel (version b282af4)
+            if InformalAgent and self.tools:
+                self.informal_agent = InformalAgent(
                     agent_id="web_api_informal_agent",
-                    tools=self.tools # Conserver la logique originale pour self.tools
+                    tools=self.tools,
+                    strict_validation=False # Ajouté par b282af4
                 )
             else:
                 self.informal_agent = None
@@ -199,7 +196,7 @@ class AnalysisService:
         try:
             # Utilisation de l'agent informel si disponible
             if self.informal_agent:
-                result = self.informal_agent.analyze_text(text)
+                result = self.informal_agent.analyze_text(text) # La signature de analyze_text peut varier
                 if result and 'fallacies' in result:
                     for fallacy_data in result['fallacies']:
                         fallacy = FallacyDetection(
@@ -214,7 +211,7 @@ class AnalysisService:
                         )
                         fallacies.append(fallacy)
             
-            # Analyse contextuelle si disponible
+            # Analyse contextuelle si disponible et si l'agent informel n'a pas été utilisé ou n'a rien retourné
             elif self.contextual_analyzer:
                 result = self.contextual_analyzer.analyze_fallacies(text)
                 if result:
@@ -230,7 +227,7 @@ class AnalysisService:
                         fallacies.append(fallacy)
             
             # Filtrage par seuil de sévérité
-            if options and hasattr(options, 'severity_threshold'):
+            if options and hasattr(options, 'severity_threshold') and options.severity_threshold is not None:
                 fallacies = [f for f in fallacies if f.severity >= options.severity_threshold]
             
         except Exception as e:
@@ -254,10 +251,8 @@ class AnalysisService:
         :rtype: Optional[ArgumentStructure]
         """
         try:
-            # Analyse basique de structure
-            # TODO: Intégrer avec les outils d'analyse de structure existants
+            # TODO: Future enhancement - Integrate with more advanced structural analysis tools (e.g., discourse parsers) for more accurate conclusion/premise identification.
             
-            # Détection simple de prémisses et conclusion
             sentences = [s.strip() for s in text.split('.') if s.strip()]
             
             if len(sentences) < 2:
@@ -265,22 +260,20 @@ class AnalysisService:
                     premises=[],
                     conclusion=text,
                     argument_type="simple",
-                    strength=0.3,
-                    coherence=0.3
+                    strength=0.3, # Faible force si pas de structure claire
+                    coherence=0.3 # Faible cohérence
                 )
             
-            # Heuristique simple: dernière phrase = conclusion
             conclusion = sentences[-1]
             premises = sentences[:-1]
             
-            # Calcul de la force et cohérence (simplifié)
-            strength = min(0.8, len(premises) * 0.2 + 0.4)
-            coherence = 0.7 if len(premises) > 1 else 0.5
+            strength = min(0.8, len(premises) * 0.2 + 0.4) # Force basée sur le nombre de prémisses
+            coherence = 0.7 if len(premises) > 1 else 0.5 # Cohérence basique
             
             return ArgumentStructure(
                 premises=premises,
                 conclusion=conclusion,
-                argument_type="deductive" if len(premises) > 1 else "simple",
+                argument_type="deductive" if len(premises) > 1 else "simple", # Type basé sur le nombre de prémisses
                 strength=strength,
                 coherence=coherence
             )
@@ -303,20 +296,17 @@ class AnalysisService:
         :rtype: float
         """
         try:
-            # Score basé sur le nombre et la sévérité des sophismes
             fallacy_penalty = sum(f.severity for f in fallacies) * 0.1
             fallacy_score = max(0.0, 1.0 - fallacy_penalty)
             
-            # Score basé sur la structure
             structure_score = structure.strength if structure else 0.3
             
-            # Score global (moyenne pondérée)
             overall = (fallacy_score * 0.6 + structure_score * 0.4)
             return min(1.0, max(0.0, overall))
             
         except Exception as e:
             self.logger.error(f"Erreur lors du calcul de qualité: {e}")
-            return 0.5
+            return 0.5 # Valeur neutre en cas d'erreur
     
     def _calculate_coherence_score(self, structure: Optional[ArgumentStructure]) -> float:
         """Calcule le score de cohérence basé sur la structure argumentative.
@@ -330,7 +320,7 @@ class AnalysisService:
         try:
             if structure:
                 return structure.coherence
-            return 0.3
+            return 0.3 # Cohérence faible par défaut
         except Exception as e:
             self.logger.error(f"Erreur lors du calcul de cohérence: {e}")
             return 0.3
@@ -351,9 +341,9 @@ class AnalysisService:
             success=False,
             text_analyzed=request.text,
             fallacies=[],
-            argument_structure=ArgumentStructure(
+            argument_structure=ArgumentStructure( # Fournir une structure par défaut
                 premises=[],
-                conclusion=request.text,
+                conclusion=request.text, # Au moins retourner le texte comme conclusion
                 argument_type="unknown",
                 strength=0.0,
                 coherence=0.0
