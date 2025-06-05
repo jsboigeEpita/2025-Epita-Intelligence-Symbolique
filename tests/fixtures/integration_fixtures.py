@@ -75,14 +75,36 @@ def integration_jvm():
                 pytest.skip("LIBS_DIR ou TWEETY_VERSION manquant pour initialize_jvm.")
                 return None
 
+            # Définir explicitement le chemin vers libs/tweety pour cette fixture
+            # pour s'assurer que le bon répertoire est utilisé, conformément à la demande de correction.
+            current_file_path = pathlib.Path(__file__).resolve()
+            project_root_for_fixture = current_file_path.parent.parent.parent
+            explicit_libs_tweety_path = project_root_for_fixture / "libs" / "tweety"
+            
+            if not explicit_libs_tweety_path.is_dir():
+                logger.error(f"Le chemin explicite vers les JARs Tweety '{explicit_libs_tweety_path}' n'est pas un répertoire. Skip.")
+                pytest.skip(f"Chemin libs/tweety explicite non trouvé: {explicit_libs_tweety_path}")
+                return None
+
+            logger.info(f"Utilisation du chemin explicite pour les JARs Tweety: {explicit_libs_tweety_path}")
+
+            # Définir le chemin vers le JAR spécifique
+            specific_jar_file_name = "org.tweetyproject.tweety-full-1.28-with-dependencies.jar"
+            specific_jar_full_path = explicit_libs_tweety_path / specific_jar_file_name
+
+            if not specific_jar_full_path.is_file():
+                logger.error(f"Le JAR spécifique '{specific_jar_full_path}' n'a pas été trouvé. Skip.")
+                pytest.skip(f"JAR spécifique non trouvé: {specific_jar_full_path}")
+                return None
+            
+            logger.info(f"Tentative d'initialisation de la JVM avec le JAR spécifique: {specific_jar_full_path}")
+
             success = initialize_jvm(
-                lib_dir_path=str(LIBS_DIR)
-                # tweety_version=TWEETY_VERSION, # Argument non attendu
-                # use_exclusive_tweety_full_jar=False, # Argument non attendu
-                # extra_jvm_args=None # Argument non attendu
+                # lib_dir_path=str(explicit_libs_tweety_path), # Commenté car nous utilisons specific_jar_path
+                specific_jar_path=str(specific_jar_full_path)
             )
             if success:
-                logger.info("initialize_jvm a réussi.")
+                logger.info("initialize_jvm a réussi avec le JAR spécifique.")
                 _initialize_jvm_called_successfully_session = True
             else:
                 logger.error("initialize_jvm a échoué.")
@@ -95,6 +117,14 @@ def integration_jvm():
             logger.error("ERREUR CRITIQUE - JVM non démarrée même après l'appel à initialize_jvm.")
             pytest.skip("JVM non démarrée après initialize_jvm.")
             return None
+
+        # Log du classpath effectif
+        if jpype_for_integration.isJVMStarted():
+            system_class = jpype_for_integration.JClass("java.lang.System")
+            class_path = system_class.getProperty("java.class.path")
+            logger.info(f"Java ClassPath effectif: {class_path}")
+        else:
+            logger.warning("JVM non démarrée, impossible de récupérer le classpath.")
             
         yield jpype_for_integration
 
@@ -113,7 +143,7 @@ def integration_jvm():
 def dung_classes(integration_jvm):
     if integration_jvm is None: pytest.skip("JVM non disponible pour dung_classes.")
     JClass = integration_jvm.JClass
-loader_to_use = None
+    loader_to_use = None
     try:
         JavaThread = integration_jvm.JClass("java.lang.Thread")
         current_thread = JavaThread.currentThread()
@@ -125,15 +155,15 @@ loader_to_use = None
         logger.warning(f"integration_fixtures.py: dung_classes - Erreur lors de l'obtention du ClassLoader: {str(e_loader)}. JClass utilisera le loader par défaut.")
         loader_to_use = None
     return {
-        "DungTheory": JClass("org.tweetyproject.arg.dung.syntax.DungTheory"),
-        "Argument": JClass("org.tweetyproject.arg.dung.syntax.Argument"),
-        "Attack": JClass("org.tweetyproject.arg.dung.syntax.Attack"),
-        "StableExtension": JClass("org.tweetyproject.arg.dung.semantics.StableExtension"),
-        "PreferredExtension": JClass("org.tweetyproject.arg.dung.semantics.PreferredExtension"),
-        "GroundedExtension": JClass("org.tweetyproject.arg.dung.semantics.GroundedExtension"),
-        "CompleteExtension": JClass("org.tweetyproject.arg.dung.semantics.CompleteExtension"),
-        "AbstractExtensionReasoner": JClass("org.tweetyproject.arg.dung.reasoner.AbstractExtensionReasoner"),
-        "SimpleDungReasoner": JClass("org.tweetyproject.arg.dung.reasoner.SimpleDungReasoner")
+        "DungTheory": JClass("org.tweetyproject.arg.dung.syntax.DungTheory", loader=loader_to_use),
+        "Argument": JClass("org.tweetyproject.arg.dung.syntax.Argument", loader=loader_to_use),
+        "Attack": JClass("org.tweetyproject.arg.dung.syntax.Attack", loader=loader_to_use),
+        "StableExtension": JClass("org.tweetyproject.arg.dung.semantics.StableExtension", loader=loader_to_use),
+        "PreferredExtension": JClass("org.tweetyproject.arg.dung.semantics.PreferredExtension", loader=loader_to_use),
+        "GroundedExtension": JClass("org.tweetyproject.arg.dung.semantics.GroundedExtension", loader=loader_to_use),
+        "CompleteExtension": JClass("org.tweetyproject.arg.dung.semantics.CompleteExtension", loader=loader_to_use),
+        "AbstractExtensionReasoner": JClass("org.tweetyproject.arg.dung.reasoner.AbstractExtensionReasoner", loader=loader_to_use),
+        "SimpleDungReasoner": JClass("org.tweetyproject.arg.dung.reasoner.SimpleDungReasoner", loader=loader_to_use)
     }
 
 @pytest.fixture(scope="session")
@@ -161,57 +191,68 @@ def cl_syntax_parser(integration_jvm):
 def tweety_logics_classes(integration_jvm):
     if integration_jvm is None: pytest.skip("JVM non disponible pour tweety_logics_classes.")
     JClass = integration_jvm.JClass
+    loader_to_use = None
+    try:
+        JavaThread = integration_jvm.JClass("java.lang.Thread")
+        current_thread = JavaThread.currentThread()
+        loader_to_use = current_thread.getContextClassLoader()
+        if loader_to_use is None:
+             loader_to_use = integration_jvm.JClass("java.lang.ClassLoader").getSystemClassLoader()
+        logger.info(f"integration_fixtures.py: tweety_logics_classes - Utilisation du ClassLoader: {loader_to_use}")
+    except Exception as e_loader:
+        logger.warning(f"integration_fixtures.py: tweety_logics_classes - Erreur lors de l'obtention du ClassLoader: {str(e_loader)}. JClass utilisera le loader par défaut.")
+        loader_to_use = None
     return {
         # Propositional Logic
-        "PlBeliefSet": JClass("org.tweetyproject.logics.pl.syntax.PlBeliefSet"),
-        "PropositionalSignature": JClass("org.tweetyproject.logics.pl.syntax.PropositionalSignature"),
-        "Proposition": JClass("org.tweetyproject.logics.pl.syntax.Proposition"),
-        "PlReasoner": JClass("org.tweetyproject.logics.pl.reasoner.PlReasoner"), # Interface
-        "SatReasoner": JClass("org.tweetyproject.logics.pl.reasoner.SatReasoner"),
-        "PlParser": JClass("org.tweetyproject.logics.pl.parser.PlParser"),
+        "PlBeliefSet": JClass("org.tweetyproject.logics.pl.syntax.PlBeliefSet", loader=loader_to_use),
+        "PropositionalSignature": JClass("org.tweetyproject.logics.pl.syntax.PropositionalSignature", loader=loader_to_use),
+        "Proposition": JClass("org.tweetyproject.logics.pl.syntax.Proposition", loader=loader_to_use),
+        "PlReasoner": JClass("org.tweetyproject.logics.pl.reasoner.PlReasoner", loader=loader_to_use), # Interface
+        "SatReasoner": JClass("org.tweetyproject.logics.pl.reasoner.SatReasoner", loader=loader_to_use),
+        "PlParser": JClass("org.tweetyproject.logics.pl.parser.PlParser", loader=loader_to_use),
         # First-Order Logic
-        "FolBeliefSet": JClass("org.tweetyproject.logics.fol.syntax.FolBeliefSet"),
-        "FolSignature": JClass("org.tweetyproject.logics.fol.syntax.FolSignature"),
-        "FolParser": JClass("org.tweetyproject.logics.fol.parser.FolParser"),
-        "Prover9Reasoner": JClass("org.tweetyproject.logics.fol.reasoner.Prover9Reasoner"),
+        "FolBeliefSet": JClass("org.tweetyproject.logics.fol.syntax.FolBeliefSet", loader=loader_to_use),
+        "FolSignature": JClass("org.tweetyproject.logics.fol.syntax.FolSignature", loader=loader_to_use),
+        "FolParser": JClass("org.tweetyproject.logics.fol.parser.FolParser", loader=loader_to_use),
+        "Prover9Reasoner": JClass("org.tweetyproject.logics.fol.reasoner.Prover9Reasoner", loader=loader_to_use),
         # Conditional Logic
-        "ClBeliefSet": JClass("org.tweetyproject.logics.cl.syntax.ClBeliefSet"),
-        "Conditional": JClass("org.tweetyproject.logics.cl.syntax.Conditional"),
-        "ClParser": JClass("org.tweetyproject.logics.cl.parser.ClParser"),
-        "ZReasoner": JClass("org.tweetyproject.logics.cl.reasoner.ZReasoner"),
+        "ClBeliefSet": JClass("org.tweetyproject.logics.cl.syntax.ClBeliefSet", loader=loader_to_use),
+        "Conditional": JClass("org.tweetyproject.logics.cl.syntax.Conditional", loader=loader_to_use),
+        "ClParser": JClass("org.tweetyproject.logics.cl.parser.ClParser", loader=loader_to_use),
+        "ZReasoner": JClass("org.tweetyproject.logics.cl.reasoner.ZReasoner", loader=loader_to_use),
         # Description Logic
-        "DlBeliefSet": JClass("org.tweetyproject.logics.dl.syntax.DlBeliefSet"),
-        "DescriptionLogicSignature": JClass("org.tweetyproject.logics.dl.syntax.DescriptionLogicSignature"),
-        "DlParser": JClass("org.tweetyproject.logics.dl.parser.DlParser"),
-        "PelletReasoner": JClass("org.tweetyproject.logics.dl.reasoner.PelletReasoner"),
+        "DlBeliefSet": JClass("org.tweetyproject.logics.dl.syntax.DlBeliefSet", loader=loader_to_use),
+        "DescriptionLogicSignature": JClass("org.tweetyproject.logics.dl.syntax.DescriptionLogicSignature", loader=loader_to_use),
+        "DlParser": JClass("org.tweetyproject.logics.dl.parser.DlParser", loader=loader_to_use),
+        "PelletReasoner": JClass("org.tweetyproject.logics.dl.reasoner.PelletReasoner", loader=loader_to_use),
         # ASP
-        "AspBeliefSet": JClass("org.tweetyproject.logics.asp.syntax.AspBeliefSet"),
-        "DLVReasoner": JClass("org.tweetyproject.logics.asp.reasoner.DLVReasoner"),
-        "ClingoReasoner": JClass("org.tweetyproject.logics.asp.reasoner.ClingoReasoner"),
+        "AspBeliefSet": JClass("org.tweetyproject.logics.asp.syntax.AspBeliefSet", loader=loader_to_use),
+        "DLVReasoner": JClass("org.tweetyproject.logics.asp.reasoner.DLVReasoner", loader=loader_to_use),
+        "ClingoReasoner": JClass("org.tweetyproject.logics.asp.reasoner.ClingoReasoner", loader=loader_to_use),
         # General
-        "BeliefSet": JClass("org.tweetyproject.commons.BeliefSet"),
-        "Formula": JClass("org.tweetyproject.logics.commons.syntax.Formula"),
-        "Signature": JClass("org.tweetyproject.logics.commons.syntax.Signature"),
-        "Reasoner": JClass("org.tweetyproject.logics.commons.reasoner.Reasoner"), # Interface
-        "QueryResult": JClass("org.tweetyproject.logics.commons.reasoner.QueryResult"),
+        "BeliefSet": JClass("org.tweetyproject.commons.BeliefSet", loader=loader_to_use),
+        "Formula": JClass("org.tweetyproject.logics.commons.syntax.Formula", loader=loader_to_use),
+        "Signature": JClass("org.tweetyproject.logics.commons.syntax.Signature", loader=loader_to_use),
+        "Reasoner": JClass("org.tweetyproject.logics.commons.reasoner.Reasoner", loader=loader_to_use), # Interface
+        "QueryResult": JClass("org.tweetyproject.logics.commons.reasoner.QueryResult", loader=loader_to_use),
         # Argumentation
-        "ProbabilisticArgumentationFramework": JClass("org.tweetyproject.arg.prob.ProbabilisticArgumentationFramework"),
-        "ProbabilisticFact": JClass("org.tweetyproject.arg.prob.ProbabilisticFact"),
-        "ProbabilisticReasoner": JClass("org.tweetyproject.arg.prob.reasoner.ProbabilisticReasoner"),
-        "EpistemicProbabilityReasoner": JClass("org.tweetyproject.arg.prob.reasoner.EpistemicProbabilityReasoner"),
-        "DungTheory": JClass("org.tweetyproject.arg.dung.DungTheory"), # Répété de dung_classes pour complétude
-        "Argument": JClass("org.tweetyproject.arg.dung.syntax.Argument"),
-        "Attack": JClass("org.tweetyproject.arg.dung.syntax.Attack"),
-        "SimpleDungReasoner": JClass("org.tweetyproject.arg.dung.reasoner.SimpleDungReasoner"),
+        "ProbabilisticArgumentationFramework": JClass("org.tweetyproject.arg.prob.ProbabilisticArgumentationFramework", loader=loader_to_use),
+        "ProbabilisticFact": JClass("org.tweetyproject.arg.prob.ProbabilisticFact", loader=loader_to_use),
+        "ProbabilisticReasoner": JClass("org.tweetyproject.arg.prob.reasoner.ProbabilisticReasoner", loader=loader_to_use),
+        "EpistemicProbabilityReasoner": JClass("org.tweetyproject.arg.prob.reasoner.EpistemicProbabilityReasoner", loader=loader_to_use),
+        "DungTheory": JClass("org.tweetyproject.arg.dung.DungTheory", loader=loader_to_use), # Répété de dung_classes pour complétude
+        "Argument": JClass("org.tweetyproject.arg.dung.syntax.Argument", loader=loader_to_use),
+        "Attack": JClass("org.tweetyproject.arg.dung.syntax.Attack", loader=loader_to_use),
+        "SimpleDungReasoner": JClass("org.tweetyproject.arg.dung.reasoner.SimpleDungReasoner", loader=loader_to_use),
         # Belief Revision
-        "RevisionOperator": JClass("org.tweetyproject.beliefdynamics.RevisionOperator"), # Interface
-        "DalalRevision": JClass("org.tweetyproject.beliefdynamics.revops.DalalRevision"),
+        "RevisionOperator": JClass("org.tweetyproject.beliefdynamics.RevisionOperator", loader=loader_to_use), # Interface
+        "DalalRevision": JClass("org.tweetyproject.beliefdynamics.revops.DalalRevision", loader=loader_to_use),
         # Other useful classes
-        "ArrayList": JClass("java.util.ArrayList"),
-        "HashSet": JClass("java.util.HashSet"),
-        "File": JClass("java.io.File"),
-        "System": JClass("java.lang.System"),
-        "TweetyConfiguration": JClass("org.tweetyproject.commons.TweetyConfiguration"),
+        "ArrayList": JClass("java.util.ArrayList", loader=loader_to_use),
+        "HashSet": JClass("java.util.HashSet", loader=loader_to_use),
+        "File": JClass("java.io.File", loader=loader_to_use),
+        "System": JClass("java.lang.System", loader=loader_to_use),
+        "TweetyConfiguration": JClass("org.tweetyproject.commons.TweetyConfiguration", loader=loader_to_use),
     }
 
 @pytest.fixture(scope="session")
@@ -248,14 +289,25 @@ def tweety_io_exception(integration_jvm):
 def tweety_qbf_classes(integration_jvm):
     if integration_jvm is None: pytest.skip("JVM non disponible pour tweety_qbf_classes.")
     JClass = integration_jvm.JClass
+    loader_to_use = None
+    try:
+        JavaThread = integration_jvm.JClass("java.lang.Thread") # integration_jvm est le paramètre ici
+        current_thread = JavaThread.currentThread()
+        loader_to_use = current_thread.getContextClassLoader()
+        if loader_to_use is None:
+             loader_to_use = integration_jvm.JClass("java.lang.ClassLoader").getSystemClassLoader()
+        logger.info(f"integration_fixtures.py: tweety_qbf_classes - Utilisation du ClassLoader: {loader_to_use}")
+    except Exception as e_loader:
+        logger.warning(f"integration_fixtures.py: tweety_qbf_classes - Erreur lors de l'obtention du ClassLoader: {str(e_loader)}. JClass utilisera le loader par défaut.")
+        loader_to_use = None
     return {
-        "QuantifiedBooleanFormula": JClass("org.tweetyproject.logics.qbf.syntax.QuantifiedBooleanFormula"),
-        "QbfNode": JClass("org.tweetyproject.logics.qbf.syntax.QbfNode"),
-        "ExistsQuantifiedFormula": JClass("org.tweetyproject.logics.qbf.syntax.ExistsQuantifiedFormula"),
-        "ForAllQuantifiedFormula": JClass("org.tweetyproject.logics.qbf.syntax.ForAllQuantifiedFormula"),
-        "QbfReasoner": JClass("org.tweetyproject.logics.qbf.reasoner.QbfReasoner"), # Interface
-        "CAQEReasoner": JClass("org.tweetyproject.logics.qbf.reasoner.CAQEReasoner"),
-        "QbfParser": JClass("org.tweetyproject.logics.qbf.parser.QbfParser")
+        "QuantifiedBooleanFormula": JClass("org.tweetyproject.logics.qbf.syntax.QuantifiedBooleanFormula", loader=loader_to_use),
+        "QbfNode": JClass("org.tweetyproject.logics.qbf.syntax.QbfNode", loader=loader_to_use),
+        "ExistsQuantifiedFormula": JClass("org.tweetyproject.logics.qbf.syntax.ExistsQuantifiedFormula", loader=loader_to_use),
+        "ForAllQuantifiedFormula": JClass("org.tweetyproject.logics.qbf.syntax.ForAllQuantifiedFormula", loader=loader_to_use),
+        "QbfReasoner": JClass("org.tweetyproject.logics.qbf.reasoner.QbfReasoner", loader=loader_to_use), # Interface
+        "CAQEReasoner": JClass("org.tweetyproject.logics.qbf.reasoner.CAQEReasoner", loader=loader_to_use),
+        "QbfParser": JClass("org.tweetyproject.logics.qbf.parser.QbfParser", loader=loader_to_use)
     }
 @pytest.fixture(scope="session") # Changé scope à session pour correspondre aux autres fixtures Tweety
 def belief_revision_classes(integration_jvm):
@@ -328,17 +380,28 @@ def dialogue_classes(integration_jvm):
     jpype_instance = integration_jvm
     if not jpype_instance or not jpype_instance.isJVMStarted(): pytest.skip("JVM non démarrée ou jpype_instance None (dialogue_classes).")
     try:
+        loader_to_use = None
+        try:
+            JavaThread = jpype_instance.JClass("java.lang.Thread") # jpype_instance est déjà défini dans cette fixture
+            current_thread = JavaThread.currentThread()
+            loader_to_use = current_thread.getContextClassLoader()
+            if loader_to_use is None:
+                 loader_to_use = jpype_instance.JClass("java.lang.ClassLoader").getSystemClassLoader()
+            logger.info(f"integration_fixtures.py: dialogue_classes - Utilisation du ClassLoader: {loader_to_use}")
+        except Exception as e_loader:
+            logger.warning(f"integration_fixtures.py: dialogue_classes - Erreur lors de l'obtention du ClassLoader: {str(e_loader)}. JClass utilisera le loader par défaut.")
+            loader_to_use = None
         return {
-            "ArgumentationAgent": jpype_instance.JClass("org.tweetyproject.agents.dialogues.ArgumentationAgent"),
-            "GroundedAgent": jpype_instance.JClass("org.tweetyproject.agents.dialogues.GroundedAgent"),
-            "OpponentModel": jpype_instance.JClass("org.tweetyproject.agents.dialogues.OpponentModel"),
-            "Dialogue": jpype_instance.JClass("org.tweetyproject.agents.dialogues.Dialogue"),
-            "DialogueTrace": jpype_instance.JClass("org.tweetyproject.agents.dialogues.DialogueTrace"),
-            "DialogueResult": jpype_instance.JClass("org.tweetyproject.agents.dialogues.DialogueResult"),
-            "PersuasionProtocol": jpype_instance.JClass("org.tweetyproject.agents.dialogues.PersuasionProtocol"),
-            "Position": jpype_instance.JClass("org.tweetyproject.agents.dialogues.Position"),
-            "SimpleBeliefSet": jpype_instance.JClass("org.tweetyproject.logics.commons.syntax.SimpleBeliefSet"),
-            "DefaultStrategy": jpype_instance.JClass("org.tweetyproject.agents.dialogues.strategies.DefaultStrategy"),
+            "ArgumentationAgent": jpype_instance.JClass("org.tweetyproject.agents.dialogues.ArgumentationAgent", loader=loader_to_use),
+            "GroundedAgent": jpype_instance.JClass("org.tweetyproject.agents.dialogues.GroundedAgent", loader=loader_to_use),
+            "OpponentModel": jpype_instance.JClass("org.tweetyproject.agents.dialogues.OpponentModel", loader=loader_to_use),
+            "Dialogue": jpype_instance.JClass("org.tweetyproject.agents.dialogues.Dialogue", loader=loader_to_use),
+            "DialogueTrace": jpype_instance.JClass("org.tweetyproject.agents.dialogues.DialogueTrace", loader=loader_to_use),
+            "DialogueResult": jpype_instance.JClass("org.tweetyproject.agents.dialogues.DialogueResult", loader=loader_to_use),
+            "PersuasionProtocol": jpype_instance.JClass("org.tweetyproject.agents.dialogues.PersuasionProtocol", loader=loader_to_use),
+            "Position": jpype_instance.JClass("org.tweetyproject.agents.dialogues.Position", loader=loader_to_use),
+            "SimpleBeliefSet": jpype_instance.JClass("org.tweetyproject.logics.commons.syntax.SimpleBeliefSet", loader=loader_to_use),
+            "DefaultStrategy": jpype_instance.JClass("org.tweetyproject.agents.dialogues.strategies.DefaultStrategy", loader=loader_to_use),
         }
     except jpype_instance.JException as e: pytest.fail(f"Echec import classes Dialogue: {e.stacktrace() if hasattr(e, 'stacktrace') else str(e)}")
     except Exception as e_py: pytest.fail(f"Erreur Python (dialogue_classes): {str(e_py)}")
