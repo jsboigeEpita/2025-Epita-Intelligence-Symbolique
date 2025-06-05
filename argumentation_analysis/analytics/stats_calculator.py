@@ -73,6 +73,9 @@ def calculate_average_scores(grouped_results: Dict[str, List[Dict[str, Any]]]) -
 
         # Itération sur chaque élément de résultat (par exemple, analyse d'un document) dans le corpus
         for result_item in results_list:
+            if not isinstance(result_item, dict):
+                continue  # Ignorer les éléments qui ne sont pas des dictionnaires
+            
             for key, value in result_item.items():
                 # On ne calcule la moyenne que pour les valeurs numériques (int ou float)
                 if isinstance(value, (int, float)):

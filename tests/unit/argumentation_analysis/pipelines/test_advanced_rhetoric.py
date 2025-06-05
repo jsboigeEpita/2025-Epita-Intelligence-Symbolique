@@ -47,7 +47,7 @@ def temp_output_file(tmp_path: Path) -> Path:
 @patch("argumentation_analysis.pipelines.advanced_rhetoric.create_mock_advanced_rhetorical_tools")
 @patch("builtins.open") # Pour mocker l'écriture du fichier
 @patch("json.dump")
-@patch("tqdm.tqdm") # Pour mocker la barre de progression
+@patch("argumentation_analysis.pipelines.advanced_rhetoric.tqdm") # Pour mocker la barre de progression
 def test_run_advanced_rhetoric_pipeline_success(
     mock_tqdm: MagicMock,
     mock_json_dump: MagicMock,
