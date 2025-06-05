@@ -18,7 +18,7 @@ if project_root not in sys.path:
 # Forcer l'utilisation du mock numpy
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'mocks')) # Doit être après l'ajout de project_root pour prioriser le mock local
 import legacy_numpy_array_mock
-sys.modules['numpy'] = legacy_numpy_array_mock
+# sys.modules['numpy'] = legacy_numpy_array_mock # TEMPORAIREMENT COMMENTÉ POUR DIAGNOSTIC
 
 class TestNumpyRecMock(unittest.TestCase):
     """Tests pour vérifier que numpy.rec est correctement mocké."""
