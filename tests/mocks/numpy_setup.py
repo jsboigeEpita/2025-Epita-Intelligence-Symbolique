@@ -289,13 +289,13 @@ def setup_numpy_for_tests_fixture(request):
                 
                 # Forcer la réimportation des bibliothèques dépendantes pour qu'elles utilisent le vrai NumPy
                 for lib in ['pandas', 'scipy', 'sklearn', 'pyarrow']:
-                    if lib in initial_modules_state: # Ne réimporter que si c'était déjà là
-                        logger.info(f"Forcing re-import of {lib} for {request.node.name} after loading real NumPy.")
+                    if lib in initial_modules_state and lib in sys.modules:
+                        logger.info(f"Forcing reload of {lib} for {request.node.name} after loading real NumPy.")
                         try:
-                            importlib.import_module(lib)
-                            logger.info(f"{lib} réimporté avec succès.")
-                        except ImportError as e:
-                            logger.error(f"Échec de la réimportation de {lib}: {e}")
+                            importlib.reload(sys.modules[lib])
+                            logger.info(f"{lib} reloaded successfully.")
+                        except Exception as e:
+                            logger.error(f"Failed to reload {lib}: {e}")
                 
                 yield  # Le test s'exécute ici avec le vrai NumPy
             except ImportError:

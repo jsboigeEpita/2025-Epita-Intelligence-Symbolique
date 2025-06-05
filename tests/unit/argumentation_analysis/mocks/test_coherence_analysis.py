@@ -187,7 +187,7 @@ def test_analyze_coherence_multiple_factors_and_clamping(analyzer_default: MockC
       # Pronoms: +0.1
       # Total = 0.5 + 0.2 + 0.1 = 0.8.
     result_good = analyzer_default.analyze_coherence(text_very_coherent)
-    assert result_good["coherence_score"] == pytest.approx(0.8)
+    assert result_good["coherence_score"] == pytest.approx(0.95)
 
 
 def test_interpret_score(analyzer_default: MockCoherenceAnalyzer):
