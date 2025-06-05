@@ -51,7 +51,9 @@ def get_jvm_options(jdk_path: Optional[Path] = PORTABLE_JDK_PATH) -> List[str]:
     """Prépare les options pour le démarrage de la JVM, incluant le chemin du JDK si disponible."""
     options = [
         "-Xms128m",
-        "-Xmx512m"
+        "-Xmx512m",
+        "-Dfile.encoding=UTF-8",    # Ajouté
+        "-Djava.awt.headless=true"  # Ajouté
     ]
     logger.info(f"Options JVM de base définies : {options}")
     if jdk_path and jdk_path.is_dir():
@@ -73,12 +75,22 @@ def get_jvm_options(jdk_path: Optional[Path] = PORTABLE_JDK_PATH) -> List[str]:
         logger.info("Aucun JDK portable spécifié ou trouvé. Utilisation du JDK par défaut du système.")
     return options
 
+
+        
+        
+    
+        
 def initialize_jvm(lib_dir_path: Optional[str] = None, jdk_path: Optional[Path] = PORTABLE_JDK_PATH) -> bool:
     """
     Initialise la JVM avec les JARs de TweetyProject.
     Si lib_dir_path n'est pas fourni, utilise la variable globale LIBS_DIR.
     """
     logger.info(f"JVM_SETUP: initialize_jvm appelée. isJVMStarted au début: {jpype.isJVMStarted()}")
+    try:
+        # import jpype.version # Commenté car jpype est déjà importé globalement
+        logger.info(f"JVM_SETUP: Version de JPype: {jpype.__version__}")
+    except (ImportError, AttributeError):
+        logger.warning("JVM_SETUP: Impossible d'obtenir la version de JPype via jpype.__version__.")
     if jpype.isJVMStarted():
         logger.info("JVM_SETUP: JVM déjà démarrée (vérifié au début de initialize_jvm).")
         return True
@@ -182,23 +194,59 @@ def initialize_jvm(lib_dir_path: Optional[str] = None, jdk_path: Optional[Path] 
         logger.critical(f"❌ Échec critique du démarrage de la JVM (dans le try/except global de initialize_jvm): {e}", exc_info=True)
         return False
 
+def _safe_log(logger_instance, level, message, exc_info_val=False):
+    """Effectue un log de manière sécurisée, avec un fallback sur print si les handlers sont fermés."""
+    try:
+        if logger_instance.hasHandlers(): # Vérifie si des handlers sont configurés
+            if level == logging.INFO:
+                logger_instance.info(message)
+            elif level == logging.ERROR:
+                logger_instance.error(message, exc_info=exc_info_val)
+            elif level == logging.DEBUG:
+                logger_instance.debug(message)
+            elif level == logging.WARNING:
+                logger_instance.warning(message)
+            elif level == logging.CRITICAL:
+                logger_instance.critical(message)
+            # Ajoutez d'autres niveaux si nécessaire
+        else: # Pas de handlers, utiliser print
+            print(f"FALLBACK LOG (No handlers) ({logging.getLevelName(level)}): {message}")
+            if exc_info_val:
+                import traceback
+                traceback.print_exc()
+    except ValueError as e:
+        if "I/O operation on closed file" in str(e):
+            # Log a échoué car le fichier/stream est fermé, utiliser print comme fallback
+            print(f"FALLBACK LOG (ValueError) ({logging.getLevelName(level)}): {message}")
+            if exc_info_val:
+                import traceback
+                traceback.print_exc()
+        else:
+            raise # Renvoyer d'autres ValueErrors
+    except Exception as e_other: # Attraper d'autres erreurs potentielles de logging
+        print(f"FALLBACK LOG (Other Exception) ({logging.getLevelName(level)}): {message} - Error: {e_other}")
+        if exc_info_val:
+            import traceback
+            traceback.print_exc()
+        raise # Renvoyer l'erreur si elle n'est pas liée à un fichier fermé
+
 def shutdown_jvm_if_needed():
     """Arrête la JVM si elle est démarrée, avec des logs."""
-    logger.info("JVM_SETUP: Appel de shutdown_jvm_if_needed.")
+    _safe_log(logger, logging.INFO, "JVM_SETUP: Appel de shutdown_jvm_if_needed.")
     try:
         if jpype.isJVMStarted():
-            logger.info(f"JVM_SETUP: JVM est démarrée. Appel de jpype.shutdownJVM(). isJVMStarted avant: {jpype.isJVMStarted()}")
+            _safe_log(logger, logging.INFO, f"JVM_SETUP: JVM est démarrée. Appel de jpype.shutdownJVM(). isJVMStarted avant: {jpype.isJVMStarted()}")
             jpype.shutdownJVM()
-            logger.info(f"JVM_SETUP: jpype.shutdownJVM() exécuté. isJVMStarted après: {jpype.isJVMStarted()}")
+            _safe_log(logger, logging.INFO, f"JVM_SETUP: jpype.shutdownJVM() exécuté. isJVMStarted après: {jpype.isJVMStarted()}")
         else:
-            logger.info(f"JVM_SETUP: JVM n'était pas démarrée. Aucun arrêt nécessaire. isJVMStarted: {jpype.isJVMStarted()}")
+            _safe_log(logger, logging.INFO, f"JVM_SETUP: JVM n'était pas démarrée. Aucun arrêt nécessaire. isJVMStarted: {jpype.isJVMStarted()}")
     except Exception as e_shutdown:
-        logger.error(f"JVM_SETUP: Erreur lors de jpype.shutdownJVM() ou de la vérification isJVMStarted: {e_shutdown}", exc_info=True)
+        _safe_log(logger, logging.ERROR, f"JVM_SETUP: Erreur lors de jpype.shutdownJVM() ou de la vérification isJVMStarted: {e_shutdown}", exc_info_val=True)
         # Tenter de vérifier l'état même en cas d'erreur, si jpype est encore accessible
         try:
-            logger.error(f"JVM_SETUP: État isJVMStarted après erreur de shutdown: {jpype.isJVMStarted()}")
+            _safe_log(logger, logging.ERROR, f"JVM_SETUP: État isJVMStarted après erreur de shutdown: {jpype.isJVMStarted()}")
         except Exception:
-            logger.error("JVM_SETUP: Impossible de vérifier isJVMStarted après erreur de shutdown.")
+            _safe_log(logger, logging.ERROR, "JVM_SETUP: Impossible de vérifier isJVMStarted après erreur de shutdown.")
 
 
 if __name__ == "__main__":

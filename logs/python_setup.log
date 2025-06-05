@@ -1,0 +1,1217 @@
+2025-06-05 03:06:43,794 - __main__ - DEBUG - Logging initialisé. Les logs DEBUG iront dans D:\2025-Epita-Intelligence-Symbolique-4\logs\python_setup.log. Les logs INFO (et plus) iront aussi sur la console.
+2025-06-05 03:06:43,794 - __main__ - DEBUG - sys.path[0] is now: D:\2025-Epita-Intelligence-Symbolique-4
+2025-06-05 03:06:43,794 - __main__ - DEBUG - Loaded manage_portable_tools from: D:\2025-Epita-Intelligence-Symbolique-4\scripts\setup_core\manage_portable_tools.py
+2025-06-05 03:07:53,047 - __main__ - DEBUG - Logging initialisé. Les logs DEBUG iront dans D:\2025-Epita-Intelligence-Symbolique-4\logs\python_setup.log. Les logs INFO (et plus) iront aussi sur la console.
+2025-06-05 03:07:53,048 - __main__ - DEBUG - sys.path[0] is now: D:\2025-Epita-Intelligence-Symbolique-4
+2025-06-05 03:07:53,050 - __main__ - DEBUG - Loaded manage_portable_tools from: D:\2025-Epita-Intelligence-Symbolique-4\scripts\setup_core\manage_portable_tools.py
+2025-06-05 03:07:53,051 - __main__ - INFO - Starting project setup with the following options:
+2025-06-05 03:07:53,051 - __main__ - INFO -   Force reinstall tools: False
+2025-06-05 03:07:53,051 - __main__ - INFO -   Force reinstall env: True
+2025-06-05 03:07:53,051 - __main__ - INFO -   Interactive mode: False
+2025-06-05 03:07:53,051 - __main__ - INFO -   Skip tools: False
+2025-06-05 03:07:53,051 - __main__ - INFO -   Skip Conda env: False
+2025-06-05 03:07:53,051 - __main__ - INFO -   Skip cleanup: False
+2025-06-05 03:07:53,051 - __main__ - INFO -   Skip pip install: False
+2025-06-05 03:07:53,051 - __main__ - INFO -   Run pytest debug: False
+2025-06-05 03:07:53,051 - __main__ - INFO - ------------------------------
+2025-06-05 03:07:53,051 - __main__ - INFO - Managing portable tools (JDK, Octave)...
+2025-06-05 03:07:53,052 - __main__ - INFO - Portable tools will be installed/checked in: D:\2025-Epita-Intelligence-Symbolique-4\.tools
+2025-06-05 03:07:53,052 - __main__ - DEBUG - setup_tools called with: tools_dir_base_path=D:\2025-Epita-Intelligence-Symbolique-4\.tools, force_reinstall=False, interactive=False, skip_jdk=False, skip_octave=False
+2025-06-05 03:07:53,052 - __main__ - INFO - --- Managing JDK ---
+2025-06-05 03:07:53,052 - __main__ - DEBUG - Initial tool_config for JDK: {'name': 'JDK', 'url_windows': 'https://github.com/adoptium/temurin17-binaries/releases/download/jdk-17.0.11%2B9/OpenJDK17U-jdk_x64_windows_hotspot_17.0.11_9.zip', 'dir_name_pattern': 'jdk-17.*', 'home_env_var': 'JAVA_HOME'}
+2025-06-05 03:07:53,062 - __main__ - DEBUG - _find_tool_dir: Found matching dir 'D:\2025-Epita-Intelligence-Symbolique-4\.tools\jdk-17.0.11+9' for pattern 'jdk-17.*' in 'D:\2025-Epita-Intelligence-Symbolique-4\.tools'.
+2025-06-05 03:07:53,062 - __main__ - INFO - JDK found at: D:\2025-Epita-Intelligence-Symbolique-4\.tools\jdk-17.0.11+9
+2025-06-05 03:07:53,062 - __main__ - INFO - Using existing JDK installation.
+2025-06-05 03:07:53,062 - __main__ - INFO - --- Managing Octave ---
+2025-06-05 03:07:53,062 - __main__ - DEBUG - Initial tool_config for Octave: {'name': 'Octave', 'url_windows': 'https://mirrors.ocf.berkeley.edu/gnu/octave/windows/octave-8.4.0-w64.zip', 'dir_name_pattern': 'octave-8.4.0-w64.*', 'home_env_var': 'OCTAVE_HOME'}
+2025-06-05 03:07:53,062 - __main__ - DEBUG - _find_tool_dir: Found matching dir 'D:\2025-Epita-Intelligence-Symbolique-4\.tools\octave-8.4.0-w64' for pattern 'octave-8.4.0-w64.*' in 'D:\2025-Epita-Intelligence-Symbolique-4\.tools'.
+2025-06-05 03:07:53,062 - __main__ - INFO - Octave found at: D:\2025-Epita-Intelligence-Symbolique-4\.tools\octave-8.4.0-w64
+2025-06-05 03:07:53,062 - __main__ - INFO - Using existing Octave installation.
+2025-06-05 03:07:53,062 - __main__ - INFO - Temporary download directory D:\2025-Epita-Intelligence-Symbolique-4\.tools\_temp_downloads can be cleaned up manually for now.
+2025-06-05 03:07:53,062 - __main__ - INFO - Paths for configured tools:
+2025-06-05 03:07:53,062 - __main__ - INFO -   JAVA_HOME: D:\2025-Epita-Intelligence-Symbolique-4\.tools\jdk-17.0.11+9
+2025-06-05 03:07:53,062 - __main__ - INFO -   OCTAVE_HOME: D:\2025-Epita-Intelligence-Symbolique-4\.tools\octave-8.4.0-w64
+2025-06-05 03:07:53,062 - __main__ - INFO - Managing Conda environment...
+2025-06-05 03:07:53,062 - __main__ - DEBUG - Attempting to read Conda env name from: D:\2025-Epita-Intelligence-Symbolique-4\environment.yml
+2025-06-05 03:07:53,064 - __main__ - DEBUG - Successfully read env name 'projet-is' from D:\2025-Epita-Intelligence-Symbolique-4\environment.yml
+2025-06-05 03:07:53,065 - __main__ - INFO - Nom de l'environnement Conda récupéré depuis environment.yml: projet-is
+2025-06-05 03:07:53,065 - __main__ - INFO - --- Managing Conda Environment: projet-is ---
+2025-06-05 03:07:53,065 - __main__ - INFO - Project root: D:\2025-Epita-Intelligence-Symbolique-4
+2025-06-05 03:07:53,065 - __main__ - INFO - Environment file: D:\2025-Epita-Intelligence-Symbolique-4\environment.yml
+2025-06-05 03:07:53,065 - __main__ - INFO - Using Conda environment name: projet-is (Hardcoded for repair task in manage_conda_env.py)
+2025-06-05 03:07:53,065 - __main__ - DEBUG - Running Conda command: C:\Tools\miniconda3\Library\bin\conda.BAT --version
+2025-06-05 03:07:53,349 - __main__ - DEBUG - Conda stdout:
+conda 4.12.0
+
+2025-06-05 03:07:53,350 - __main__ - DEBUG - Running Conda command: C:\Tools\miniconda3\Library\bin\conda.BAT --version
+2025-06-05 03:07:53,648 - __main__ - DEBUG - Conda stdout:
+conda 4.12.0
+
+2025-06-05 03:07:53,648 - __main__ - DEBUG - Running Conda command: C:\Tools\miniconda3\Library\bin\conda.BAT env list
+2025-06-05 03:07:54,387 - __main__ - DEBUG - Conda stdout:
+# conda environments:
+#
+epita_symbolic_ai        C:\Users\MYIA\.conda\envs\epita_symbolic_ai
+epita_symbolic_ai_sherlock     C:\Users\MYIA\.conda\envs\epita_symbolic_ai_sherlock
+projet-is                C:\Users\MYIA\.conda\envs\projet-is
+                         C:\Users\MYIA\miniconda3
+                         C:\Users\MYIA\miniconda3\envs\projet-is
+base                     C:\tools\miniconda3
+                         D:\text-generation-webui\installer_files\env
+                         d:\text-generation-webui\installer_files\env
+
+
+2025-06-05 03:07:54,387 - __main__ - DEBUG - Conda env list stdout for 'projet-is' check:
+# conda environments:
+#
+epita_symbolic_ai        C:\Users\MYIA\.conda\envs\epita_symbolic_ai
+epita_symbolic_ai_sherlock     C:\Users\MYIA\.conda\envs\epita_symbolic_ai_sherlock
+projet-is                C:\Users\MYIA\.conda\envs\projet-is
+                         C:\Users\MYIA\miniconda3
+                         C:\Users\MYIA\miniconda3\envs\projet-is
+base                     C:\tools\miniconda3
+                         D:\text-generation-webui\installer_files\env
+                         d:\text-generation-webui\installer_files\env
+
+
+2025-06-05 03:07:54,387 - __main__ - DEBUG - Environment 'projet-is' exists: True
+2025-06-05 03:07:54,387 - __main__ - INFO - Force reinstall of Conda environment 'projet-is' requested.
+2025-06-05 03:07:54,387 - __main__ - INFO - Attempting robust removal of Conda environment 'projet-is'.
+2025-06-05 03:07:54,387 - __main__ - DEBUG - Running Conda command: C:\Tools\miniconda3\Library\bin\conda.BAT info --json
+2025-06-05 03:07:54,902 - __main__ - DEBUG - Conda stdout:
+{
+  "active_prefix": "C:\\Tools\\miniconda3",
+  "active_prefix_name": "base",
+  "av_data_dir": "C:\\tools\\miniconda3\\etc\\conda",
+  "av_metadata_url_base": null,
+  "channels": [
+    "https://repo.anaconda.com/pkgs/main/win-64",
+    "https://repo.anaconda.com/pkgs/main/noarch",
+    "https://repo.anaconda.com/pkgs/r/win-64",
+    "https://repo.anaconda.com/pkgs/r/noarch",
+    "https://repo.anaconda.com/pkgs/msys2/win-64",
+    "https://repo.anaconda.com/pkgs/msys2/noarch"
+  ],
+  "conda_build_version": "not installed",
+  "conda_env_version": "4.12.0",
+  "conda_location": "C:\\tools\\miniconda3\\lib\\site-packages\\conda",
+  "conda_prefix": "C:\\tools\\miniconda3",
+  "conda_private": false,
+  "conda_shlvl": 1,
+  "conda_version": "4.12.0",
+  "config_files": [],
+  "default_prefix": "C:\\Tools\\miniconda3",
+  "env_vars": {
+    "CIO_TEST": "<not set>",
+    "COMMONPROPERTYBAGPATH": "C:\\Users\\MYIA\\AppData\\Local\\Temp\\csdevkit\\c0fbf602.json",
+    "COMMONPROPERTYBAGWITHCONFIGPATH": "C:\\Users\\MYIA\\AppData\\Local\\Temp\\csdevkit\\6f9a9d67cacb1749085045376.json",
+    "CONDA_DEFAULT_ENV": "base",
+    "CONDA_EXE": "C:\\tools\\miniconda3\\condabin\\..\\Scripts\\conda.exe",
+    "CONDA_EXES": "\"C:\\tools\\miniconda3\\condabin\\..\\Scripts\\conda.exe\"  ",
+    "CONDA_PREFIX": "C:\\Tools\\miniconda3",
+    "CONDA_PROMPT_MODIFIER": "(base) ",
+    "CONDA_PYTHON_EXE": "C:\\Tools\\miniconda3\\python.exe",
+    "CONDA_ROOT": "C:\\tools\\miniconda3",
+    "CONDA_SHLVL": "1",
+    "CURL_CA_BUNDLE": "<not set>",
+    "HOMEPATH": "\\Users\\MYIA",
+    "PATH": "C:\\tools\\miniconda3;C:\\tools\\miniconda3\\Library\\mingw-w64\\bin;C:\\tools\\miniconda3\\Library\\usr\\bin;C:\\tools\\miniconda3\\Library\\bin;C:\\tools\\miniconda3\\Scripts;C:\\tools\\miniconda3\\bin;C:\\Tools\\miniconda3;C:\\Tools\\miniconda3\\Library\\mingw-w64\\bin;C:\\Tools\\miniconda3\\Library\\usr\\bin;C:\\Tools\\miniconda3\\Library\\bin;C:\\Tools\\miniconda3\\Scripts;C:\\Tools\\miniconda3\\bin;C:\\Tools\\miniconda3\\condabin;C:\\Users\\MYIA\\.elan\\bin;C:\\Python312\\Scripts;C:\\Python312;C:\\WINDOWS\\system32;C:\\WINDOWS;C:\\WINDOWS\\System32\\Wbem;C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0;C:\\WINDOWS\\System32\\OpenSSH;C:\\Program Files\\dotnet;C:\\Program Files (x86)\\NVIDIA Corporation\\PhysX\\Common;C:\\Program Files\\Microsoft VS Code\\bin;C:\\ProgramData\\chocolatey\\bin;C:\\Program Files\\NVIDIA Corporation\\NVIDIA app\\NvDLISR;C:\\Program Files\\Git\\cmd;C:\\Program Files\\nodejs;C:\\Program Files\\Docker\\Docker\\resources\\bin;C:\\Program Files (x86)\\Windows Kits\\10\\Windows Performance Toolkit;C:\\Users\\MYIA\\AppData\\Local\\Programs\\Python\\Python310\\Scripts;C:\\Users\\MYIA\\AppData\\Local\\Programs\\Python\\Python310;C:\\Users\\MYIA\\miniconda3;C:\\Users\\MYIA\\miniconda3\\Library\\mingw-w64\\bin;C:\\Users\\MYIA\\miniconda3\\Library\\usr\\bin;C:\\Users\\MYIA\\miniconda3\\Library\\bin;C:\\Users\\MYIA\\miniconda3\\Scripts;C:\\Users\\MYIA\\AppData\\Local\\Microsoft\\WindowsApps;C:\\Users\\MYIA\\AppData\\Roaming\\npm;C:\\Users\\MYIA\\.dotnet\\tools;C:\\Users\\MYIA\\AppData\\Local\\Programs\\Fiddler;C:\\Users\\MYIA\\.dotnet\\tools",
+    "PSMODULEPATH": "C:\\Users\\MYIA\\OneDrive\\Documents\\WindowsPowerShell\\Modules;C:\\Program Files\\WindowsPowerShell\\Modules;C:\\WINDOWS\\system32\\WindowsPowerShell\\v1.0\\Modules",
+    "REQUESTS_CA_BUNDLE": "<not set>",
+    "SSL_CERT_FILE": "<not set>",
+    "VSCODE_CODE_CACHE_PATH": "C:\\Users\\MYIA\\AppData\\Roaming\\Code\\CachedData\\258e40fedc6cb8edf399a463ce3a9d32e7e1f6f3"
+  },
+  "envs": [
+    "C:\\Users\\MYIA\\.conda\\envs\\epita_symbolic_ai",
+    "C:\\Users\\MYIA\\.conda\\envs\\epita_symbolic_ai_sherlock",
+    "C:\\Users\\MYIA\\.conda\\envs\\projet-is",
+    "C:\\Users\\MYIA\\miniconda3",
+    "C:\\Users\\MYIA\\miniconda3\\envs\\projet-is",
+    "C:\\tools\\miniconda3",
+    "D:\\text-generation-webui\\installer_files\\env",
+    "d:\\text-generation-webui\\installer_files\\env"
+  ],
+  "envs_dirs": [
+    "C:\\Users\\MYIA\\.conda\\envs",
+    "C:\\tools\\miniconda3\\envs",
+    "C:\\Users\\MYIA\\AppData\\Local\\conda\\conda\\envs"
+  ],
+  "is_windows_admin": false,
+  "netrc_file": null,
+  "offline": false,
+  "pkgs_dirs": [
+    "C:\\tools\\miniconda3\\pkgs",
+    "C:\\Users\\MYIA\\.conda\\pkgs",
+    "C:\\Users\\MYIA\\AppData\\Local\\conda\\conda\\pkgs"
+  ],
+  "platform": "win-64",
+  "python_version": "3.9.12.final.0",
+  "rc_path": "C:\\Users\\MYIA\\.condarc",
+  "requests_version": "2.32.3",
+  "root_prefix": "C:\\tools\\miniconda3",
+  "root_writable": false,
+  "site_dirs": [
+    "C:\\Users\\MYIA\\AppData\\Roaming\\Python\\etc",
+    "C:\\Users\\MYIA\\AppData\\Roaming\\Python\\Python312",
+    "C:\\Users\\MYIA\\AppData\\Roaming\\Python\\Python39",
+    "C:\\Users\\MYIA\\AppData\\Roaming\\Python\\share"
+  ],
+  "sys.executable": "C:\\tools\\miniconda3\\python.exe",
+  "sys.prefix": "C:\\tools\\miniconda3",
+  "sys.version": "3.9.12 (main, Apr  4 2022, 05:22:27) [MSC v.1916 64 bit (AMD64)]",
+  "sys_rc_path": "C:\\tools\\miniconda3\\.condarc",
+  "user_agent": "conda/4.12.0 requests/2.32.3 CPython/3.9.12 Windows/10 Windows/10.0.26100",
+  "user_rc_path": "C:\\Users\\MYIA\\.condarc",
+  "virtual_pkgs": [
+    [
+      "__cuda",
+      "12.9",
+      "0"
+    ],
+    [
+      "__win",
+      "0",
+      "0"
+    ],
+    [
+      "__archspec",
+      "1",
+      "x86_64"
+    ]
+  ]
+}
+
+2025-06-05 03:07:54,902 - __main__ - DEBUG - Found environment directory candidate: C:\Users\MYIA\.conda\envs\projet-is
+2025-06-05 03:07:54,902 - __main__ - INFO - Attempting direct removal of existing environment directory: C:\Users\MYIA\.conda\envs\projet-is
+2025-06-05 03:08:01,486 - __main__ - INFO - Environment directory C:\Users\MYIA\.conda\envs\projet-is successfully deleted.
+2025-06-05 03:08:01,486 - __main__ - INFO - Executing 'conda clean --all --yes' to clean Conda caches.
+2025-06-05 03:08:01,486 - __main__ - DEBUG - Running Conda command: C:\Tools\miniconda3\Library\bin\conda.BAT clean --all --yes
+2025-06-05 03:08:03,720 - __main__ - DEBUG - Conda stdout:
+Cache location: C:\Users\MYIA\.conda\pkgs
+Will remove the following tarballs:
+
+C:\Users\MYIA\.conda\pkgs
+-------------------------
+blas-1.0-mkl.conda                             6 KB
+cpython-3.10.18-py310hd8ed1ab_0.conda         49 KB
+fonts-conda-ecosystem-1-0.tar.bz2              4 KB
+fonts-conda-forge-1-0.tar.bz2                  4 KB
+libfreetype-2.13.3-h57928b3_1.conda            8 KB
+libgoogle-cloud-2.36.0-hf249c01_1.conda       14 KB
+libgoogle-cloud-storage-2.36.0-he5eb982_1.conda      14 KB
+matplotlib-3.10.3-py310h5588dad_0.conda       17 KB
+networkx-3.4.2-pyh267e887_2.conda            1.2 MB
+pthread-stubs-0.4-h0e40799_1002.conda          9 KB
+pyarrow-20.0.0-py310h5588dad_0.conda          26 KB
+python-gil-3.10.18-hd8ed1ab_0.conda           49 KB
+python_abi-3.10-7_cp310.conda                  7 KB
+pytorch-mutex-1.0-cpu.tar.bz2                  3 KB
+seaborn-0.13.2-hd8ed1ab_3.conda                7 KB
+smart-open-7.1.0-hd8ed1ab_0.conda              7 KB
+sympy-1.14.0-pyh04b8f61_5.conda              4.4 MB
+typer-slim-standard-0.16.0-hf964461_0.conda       5 KB
+vc-14.3-h2b53caa_26.conda                     17 KB
+vs2015_runtime-14.42.34438-h7142326_26.conda      17 KB
+werkzeug-3.1.3-pyhd8ed1ab_1.conda            238 KB
+xz-5.8.1-h208afaa_1.conda                     24 KB
+_openmp_mutex-4.5-2_gnu.conda                 48 KB
+_python_abi3_support-1.0-hd8ed1ab_2.conda       8 KB
+
+---------------------------------------------------
+Total:                                       6.2 MB
+
+Removed blas-1.0-mkl.conda
+Removed cpython-3.10.18-py310hd8ed1ab_0.conda
+Removed fonts-conda-ecosystem-1-0.tar.bz2
+Removed fonts-conda-forge-1-0.tar.bz2
+Removed libfreetype-2.13.3-h57928b3_1.conda
+Removed libgoogle-cloud-2.36.0-hf249c01_1.conda
+Removed libgoogle-cloud-storage-2.36.0-he5eb982_1.conda
+Removed matplotlib-3.10.3-py310h5588dad_0.conda
+Removed networkx-3.4.2-pyh267e887_2.conda
+Removed pthread-stubs-0.4-h0e40799_1002.conda
+Removed pyarrow-20.0.0-py310h5588dad_0.conda
+Removed python-gil-3.10.18-hd8ed1ab_0.conda
+Removed python_abi-3.10-7_cp310.conda
+Removed pytorch-mutex-1.0-cpu.tar.bz2
+Removed seaborn-0.13.2-hd8ed1ab_3.conda
+Removed smart-open-7.1.0-hd8ed1ab_0.conda
+Removed sympy-1.14.0-pyh04b8f61_5.conda
+Removed typer-slim-standard-0.16.0-hf964461_0.conda
+Removed vc-14.3-h2b53caa_26.conda
+Removed vs2015_runtime-14.42.34438-h7142326_26.conda
+Removed werkzeug-3.1.3-pyhd8ed1ab_1.conda
+Removed xz-5.8.1-h208afaa_1.conda
+Removed _openmp_mutex-4.5-2_gnu.conda
+Removed _python_abi3_support-1.0-hd8ed1ab_2.conda
+WARNING: C:\Users\MYIA\AppData\Local\conda\conda\pkgs does not exist
+Cache location: C:\tools\miniconda3\pkgs
+Cache location: C:\Users\MYIA\.conda\pkgs
+Will remove the following packages:
+C:\tools\miniconda3\pkgs
+------------------------
+
+vc-14.2-h21ff451_1                            23 KB
+
+C:\Users\MYIA\.conda\pkgs
+-------------------------
+
+blas-1.0-mkl                                  16 KB
+cpython-3.10.18-py310hd8ed1ab_0              217 KB
+fonts-conda-ecosystem-1-0                      9 KB
+fonts-conda-forge-1-0                         11 KB
+libfreetype-2.13.3-h57928b3_1                 22 KB
+libgoogle-cloud-2.36.0-hf249c01_1             79 KB
+libgoogle-cloud-storage-2.36.0-he5eb982_1      78 KB
+matplotlib-3.10.3-py310h5588dad_0             64 KB
+networkx-3.4.2-pyh267e887_2                  6.3 MB
+pthread-stubs-0.4-h0e40799_1002               25 KB
+pyarrow-20.0.0-py310h5588dad_0               145 KB
+python-gil-3.10.18-hd8ed1ab_0                217 KB
+python_abi-3.10-7_cp310                       16 KB
+pytorch-mutex-1.0-cpu                          7 KB
+seaborn-0.13.2-hd8ed1ab_3                     15 KB
+smart-open-7.1.0-hd8ed1ab_0                   18 KB
+sympy-1.14.0-pyh04b8f61_5                   26.1 MB
+typer-slim-standard-0.16.0-hf964461_0         14 KB
+vc-14.3-h2b53caa_26                           56 KB
+vs2015_runtime-14.42.34438-h7142326_26        56 KB
+werkzeug-3.1.3-pyhd8ed1ab_1                  1.1 MB
+xz-5.8.1-h208afaa_1                           90 KB
+_openmp_mutex-4.5-2_gnu                      174 KB
+_python_abi3_support-1.0-hd8ed1ab_2           19 KB
+
+---------------------------------------------------
+Total:                                      34.9 MB
+
+removing vc-14.2-h21ff451_1
+removing blas-1.0-mkl
+removing cpython-3.10.18-py310hd8ed1ab_0
+removing fonts-conda-ecosystem-1-0
+removing fonts-conda-forge-1-0
+removing libfreetype-2.13.3-h57928b3_1
+removing libgoogle-cloud-2.36.0-hf249c01_1
+removing libgoogle-cloud-storage-2.36.0-he5eb982_1
+removing matplotlib-3.10.3-py310h5588dad_0
+removing networkx-3.4.2-pyh267e887_2
+removing pthread-stubs-0.4-h0e40799_1002
+removing pyarrow-20.0.0-py310h5588dad_0
+removing python-gil-3.10.18-hd8ed1ab_0
+removing python_abi-3.10-7_cp310
+removing pytorch-mutex-1.0-cpu
+removing seaborn-0.13.2-hd8ed1ab_3
+removing smart-open-7.1.0-hd8ed1ab_0
+removing sympy-1.14.0-pyh04b8f61_5
+removing typer-slim-standard-0.16.0-hf964461_0
+removing vc-14.3-h2b53caa_26
+removing vs2015_runtime-14.42.34438-h7142326_26
+removing werkzeug-3.1.3-pyhd8ed1ab_1
+removing xz-5.8.1-h208afaa_1
+removing _openmp_mutex-4.5-2_gnu
+removing _python_abi3_support-1.0-hd8ed1ab_2
+
+2025-06-05 03:08:03,720 - __main__ - DEBUG - Conda stderr:
+WARNING conda.gateways.disk.delete:unlink_or_rename_to_trash(143): Could not remove or rename C:\tools\miniconda3\pkgs\vc-14.2-h21ff451_1\info\recipe\parent\activate.bat.  Please remove this file manually (you may need to reboot to free file handles)
+WARNING conda.gateways.disk.delete:unlink_or_rename_to_trash(143): Could not remove or rename C:\tools\miniconda3\pkgs\vc-14.2-h21ff451_1\info\recipe\parent\conda_build_config.yaml.  Please remove this file manually (you may need to reboot to free file handles)
+WARNING conda.gateways.disk.delete:unlink_or_rename_to_trash(143): Could not remove or rename C:\tools\miniconda3\pkgs\vc-14.2-h21ff451_1\info\recipe\parent\install_activate.bat.  Please remove this file manually (you may need to reboot to free file handles)
+WARNING conda.gateways.disk.delete:unlink_or_rename_to_trash(143): Could not remove or rename C:\tools\miniconda3\pkgs\vc-14.2-h21ff451_1\info\recipe\parent\install_runtime.bat.  Please remove this file manually (you may need to reboot to free file handles)
+WARNING conda.gateways.disk.delete:unlink_or_rename_to_trash(143): Could not remove or rename C:\tools\miniconda3\pkgs\vc-14.2-h21ff451_1\info\recipe\parent\meta.yaml.  Please remove this file manually (you may need to reboot to free file handles)
+WARNING conda.gateways.disk.delete:unlink_or_rename_to_trash(143): Could not remove or rename C:\tools\miniconda3\pkgs\vc-14.2-h21ff451_1\info\recipe\conda_build_config.yaml.  Please remove this file manually (you may need to reboot to free file handles)
+WARNING conda.gateways.disk.delete:unlink_or_rename_to_trash(143): Could not remove or rename C:\tools\miniconda3\pkgs\vc-14.2-h21ff451_1\info\recipe\meta.yaml.  Please remove this file manually (you may need to reboot to free file handles)
+WARNING conda.gateways.disk.delete:unlink_or_rename_to_trash(143): Could not remove or rename C:\tools\miniconda3\pkgs\vc-14.2-h21ff451_1\info\about.json.  Please remove this file manually (you may need to reboot to free file handles)
+WARNING conda.gateways.disk.delete:unlink_or_rename_to_trash(143): Could not remove or rename C:\tools\miniconda3\pkgs\vc-14.2-h21ff451_1\info\files.  Please remove this file manually (you may need to reboot to free file handles)
+WARNING conda.gateways.disk.delete:unlink_or_rename_to_trash(143): Could not remove or rename C:\tools\miniconda3\pkgs\vc-14.2-h21ff451_1\info\git.  Please remove this file manually (you may need to reboot to free file handles)
+WARNING conda.gateways.disk.delete:unlink_or_rename_to_trash(143): Could not remove or rename C:\tools\miniconda3\pkgs\vc-14.2-h21ff451_1\info\hash_input.json.  Please remove this file manually (you may need to reboot to free file handles)
+WARNING conda.gateways.disk.delete:unlink_or_rename_to_trash(143): Could not remove or rename C:\tools\miniconda3\pkgs\vc-14.2-h21ff451_1\info\index.json.  Please remove this file manually (you may need to reboot to free file handles)
+WARNING conda.gateways.disk.delete:unlink_or_rename_to_trash(143): Could not remove or rename C:\tools\miniconda3\pkgs\vc-14.2-h21ff451_1\info\paths.json.  Please remove this file manually (you may need to reboot to free file handles)
+WARNING conda.gateways.disk.delete:unlink_or_rename_to_trash(143): Could not remove or rename C:\tools\miniconda3\pkgs\vc-14.2-h21ff451_1\info\repodata_record.json.  Please remove this file manually (you may need to reboot to free file handles)
+
+2025-06-05 03:08:03,720 - __main__ - INFO - Conda cache cleaning finished (or attempt made).
+2025-06-05 03:08:03,720 - __main__ - INFO - Attempting 'conda env remove --name projet-is' to clean Conda metadata.
+2025-06-05 03:08:03,720 - __main__ - DEBUG - Running Conda command: C:\Tools\miniconda3\Library\bin\conda.BAT env remove --name projet-is --yes
+2025-06-05 03:08:04,566 - __main__ - INFO - 'conda env remove' command for 'projet-is' executed.
+2025-06-05 03:08:04,567 - __main__ - DEBUG - Running Conda command: C:\Tools\miniconda3\Library\bin\conda.BAT --version
+2025-06-05 03:08:04,915 - __main__ - DEBUG - Conda stdout:
+conda 4.12.0
+
+2025-06-05 03:08:04,915 - __main__ - DEBUG - Running Conda command: C:\Tools\miniconda3\Library\bin\conda.BAT env list
+2025-06-05 03:08:05,710 - __main__ - DEBUG - Conda stdout:
+# conda environments:
+#
+epita_symbolic_ai        C:\Users\MYIA\.conda\envs\epita_symbolic_ai
+epita_symbolic_ai_sherlock     C:\Users\MYIA\.conda\envs\epita_symbolic_ai_sherlock
+                         C:\Users\MYIA\miniconda3
+                         C:\Users\MYIA\miniconda3\envs\projet-is
+base                     C:\tools\miniconda3
+                         D:\text-generation-webui\installer_files\env
+                         d:\text-generation-webui\installer_files\env
+
+
+2025-06-05 03:08:05,710 - __main__ - DEBUG - Conda env list stdout for 'projet-is' check:
+# conda environments:
+#
+epita_symbolic_ai        C:\Users\MYIA\.conda\envs\epita_symbolic_ai
+epita_symbolic_ai_sherlock     C:\Users\MYIA\.conda\envs\epita_symbolic_ai_sherlock
+                         C:\Users\MYIA\miniconda3
+                         C:\Users\MYIA\miniconda3\envs\projet-is
+base                     C:\tools\miniconda3
+                         D:\text-generation-webui\installer_files\env
+                         d:\text-generation-webui\installer_files\env
+
+
+2025-06-05 03:08:05,710 - __main__ - DEBUG - Environment 'projet-is' exists: False
+2025-06-05 03:08:05,710 - __main__ - INFO - Confirmation: Environment 'projet-is' no longer exists after cleanup steps (according to conda env list).
+2025-06-05 03:08:05,711 - __main__ - DEBUG - Running Conda command: C:\Tools\miniconda3\Library\bin\conda.BAT --version
+2025-06-05 03:08:06,047 - __main__ - DEBUG - Conda stdout:
+conda 4.12.0
+
+2025-06-05 03:08:06,047 - __main__ - DEBUG - Running Conda command: C:\Tools\miniconda3\Library\bin\conda.BAT env list
+2025-06-05 03:08:06,799 - __main__ - DEBUG - Conda stdout:
+# conda environments:
+#
+epita_symbolic_ai        C:\Users\MYIA\.conda\envs\epita_symbolic_ai
+epita_symbolic_ai_sherlock     C:\Users\MYIA\.conda\envs\epita_symbolic_ai_sherlock
+                         C:\Users\MYIA\miniconda3
+                         C:\Users\MYIA\miniconda3\envs\projet-is
+base                     C:\tools\miniconda3
+                         D:\text-generation-webui\installer_files\env
+                         d:\text-generation-webui\installer_files\env
+
+
+2025-06-05 03:08:06,799 - __main__ - DEBUG - Conda env list stdout for 'projet-is' check:
+# conda environments:
+#
+epita_symbolic_ai        C:\Users\MYIA\.conda\envs\epita_symbolic_ai
+epita_symbolic_ai_sherlock     C:\Users\MYIA\.conda\envs\epita_symbolic_ai_sherlock
+                         C:\Users\MYIA\miniconda3
+                         C:\Users\MYIA\miniconda3\envs\projet-is
+base                     C:\tools\miniconda3
+                         D:\text-generation-webui\installer_files\env
+                         d:\text-generation-webui\installer_files\env
+
+
+2025-06-05 03:08:06,799 - __main__ - DEBUG - Environment 'projet-is' exists: False
+2025-06-05 03:08:06,799 - __main__ - INFO - Creating Conda environment 'projet-is' from file 'D:\2025-Epita-Intelligence-Symbolique-4\environment.yml'. This may take a while...
+2025-06-05 03:08:06,799 - __main__ - DEBUG - Running Conda command: C:\Tools\miniconda3\Library\bin\conda.BAT env create -f D:\2025-Epita-Intelligence-Symbolique-4\environment.yml -n projet-is
+2025-06-05 03:14:56,200 - __main__ - DEBUG - Conda stdout:
+Collecting package metadata (repodata.json): ...working... done
+Solving environment: ...working... done
+
+Downloading and Extracting Packages
+
+python-gil-3.10.18   | 49 KB     |            |   0% 
+python-gil-3.10.18   | 49 KB     | ########## | 100% 
+python-gil-3.10.18   | 49 KB     | ########## | 100% 
+
+blas-1.0             | 6 KB      |            |   0% 
+blas-1.0             | 6 KB      | ########## | 100% 
+
+fonts-conda-forge-1  | 4 KB      |            |   0% 
+fonts-conda-forge-1  | 4 KB      | ########## | 100% 
+
+cpython-3.10.18      | 49 KB     |            |   0% 
+cpython-3.10.18      | 49 KB     | ########## | 100% 
+
+sympy-1.14.0         | 4.4 MB    |            |   0% 
+sympy-1.14.0         | 4.4 MB    | ########## | 100% 
+sympy-1.14.0         | 4.4 MB    | ########## | 100% 
+
+fonts-conda-ecosyste | 4 KB      |            |   0% 
+fonts-conda-ecosyste | 4 KB      | ########## | 100% 
+
+pthread-stubs-0.4    | 9 KB      |            |   0% 
+pthread-stubs-0.4    | 9 KB      | ########## | 100% 
+
+_openmp_mutex-4.5    | 48 KB     |            |   0% 
+_openmp_mutex-4.5    | 48 KB     | ########## | 100% 
+
+_python_abi3_support | 8 KB      |            |   0% 
+_python_abi3_support | 8 KB      | ########## | 100% 
+
+smart-open-7.1.0     | 7 KB      |            |   0% 
+smart-open-7.1.0     | 7 KB      | ########## | 100% 
+
+libgoogle-cloud-2.36 | 14 KB     |            |   0% 
+libgoogle-cloud-2.36 | 14 KB     | ########## | 100% 
+
+matplotlib-3.10.3    | 17 KB     |            |   0% 
+matplotlib-3.10.3    | 17 KB     | ########## | 100% 
+
+python_abi-3.10      | 7 KB      |            |   0% 
+python_abi-3.10      | 7 KB      | ########## | 100% 
+
+vs2015_runtime-14.42 | 17 KB     |            |   0% 
+vs2015_runtime-14.42 | 17 KB     | ########## | 100% 
+
+libgoogle-cloud-stor | 14 KB     |            |   0% 
+libgoogle-cloud-stor | 14 KB     | ########## | 100% 
+
+werkzeug-3.1.3       | 238 KB    |            |   0% 
+werkzeug-3.1.3       | 238 KB    | ########## | 100% 
+
+vc-14.3              | 17 KB     |            |   0% 
+vc-14.3              | 17 KB     | ########## | 100% 
+
+typer-slim-standard- | 5 KB      |            |   0% 
+typer-slim-standard- | 5 KB      | ########## | 100% 
+
+pytorch-mutex-1.0    | 3 KB      |            |   0% 
+pytorch-mutex-1.0    | 3 KB      | ########## | 100% 
+
+xz-5.8.1             | 24 KB     |            |   0% 
+xz-5.8.1             | 24 KB     | ########## | 100% 
+
+libfreetype-2.13.3   | 8 KB      |            |   0% 
+libfreetype-2.13.3   | 8 KB      | ########## | 100% 
+
+pyarrow-20.0.0       | 26 KB     |            |   0% 
+pyarrow-20.0.0       | 26 KB     | ########## | 100% 
+
+seaborn-0.13.2       | 7 KB      |            |   0% 
+seaborn-0.13.2       | 7 KB      | ########## | 100% 
+
+networkx-3.4.2       | 1.2 MB    |            |   0% 
+networkx-3.4.2       | 1.2 MB    | ########## | 100% 
+networkx-3.4.2       | 1.2 MB    | ########## | 100% 
+Preparing transaction: ...working... done
+Verifying transaction: ...working... done
+Executing transaction: ...working... done
+Installing pip dependencies: ...working... Ran pip subprocess with arguments:
+['C:\\Users\\MYIA\\.conda\\envs\\projet-is\\python.exe', '-m', 'pip', 'install', '-U', '-r', 'D:\\2025-Epita-Intelligence-Symbolique-4\\condaenv._hl87u65.requirements.txt']
+Pip subprocess output:
+Collecting Flask-CORS (from -r D:\2025-Epita-Intelligence-Symbolique-4\condaenv._hl87u65.requirements.txt (line 1))
+
+  Using cached flask_cors-6.0.0-py3-none-any.whl.metadata (961 bytes)
+
+Collecting semantic-kernel==1.29.0 (from -r D:\2025-Epita-Intelligence-Symbolique-4\condaenv._hl87u65.requirements.txt (line 2))
+
+  Using cached semantic_kernel-1.29.0-py3-none-any.whl.metadata (12 kB)
+
+Requirement already satisfied: aiohttp~=3.8 in c:\users\myia\.conda\envs\projet-is\lib\site-packages (from semantic-kernel==1.29.0->-r D:\2025-Epita-Intelligence-Symbolique-4\condaenv._hl87u65.requirements.txt (line 2)) (3.12.8)
+
+Collecting cloudevents~=1.0 (from semantic-kernel==1.29.0->-r D:\2025-Epita-Intelligence-Symbolique-4\condaenv._hl87u65.requirements.txt (line 2))
+
+  Using cached cloudevents-1.12.0-py3-none-any.whl.metadata (7.2 kB)
+
+Requirement already satisfied: pydantic!=2.10.0,!=2.10.1,!=2.10.2,!=2.10.3,<2.12,>=2.0 in c:\users\myia\.conda\envs\projet-is\lib\site-packages (from semantic-kernel==1.29.0->-r D:\2025-Epita-Intelligence-Symbolique-4\condaenv._hl87u65.requirements.txt (line 2)) (2.9.2)
+
+Collecting pydantic-settings~=2.0 (from semantic-kernel==1.29.0->-r D:\2025-Epita-Intelligence-Symbolique-4\condaenv._hl87u65.requirements.txt (line 2))
+
+  Using cached pydantic_settings-2.9.1-py3-none-any.whl.metadata (3.8 kB)
+
+Collecting defusedxml~=0.7 (from semantic-kernel==1.29.0->-r D:\2025-Epita-Intelligence-Symbolique-4\condaenv._hl87u65.requirements.txt (line 2))
+
+  Using cached defusedxml-0.7.1-py2.py3-none-any.whl.metadata (32 kB)
+
+Collecting azure-identity>=1.13 (from semantic-kernel==1.29.0->-r D:\2025-Epita-Intelligence-Symbolique-4\condaenv._hl87u65.requirements.txt (line 2))
+
+  Using cached azure_identity-1.23.0-py3-none-any.whl.metadata (81 kB)
+
+Requirement already satisfied: numpy>=1.25.0 in c:\users\myia\.conda\envs\projet-is\lib\site-packages (from semantic-kernel==1.29.0->-r D:\2025-Epita-Intelligence-Symbolique-4\condaenv._hl87u65.requirements.txt (line 2)) (2.2.6)
+
+Collecting openai>=1.67 (from semantic-kernel==1.29.0->-r D:\2025-Epita-Intelligence-Symbolique-4\condaenv._hl87u65.requirements.txt (line 2))
+
+  Using cached openai-1.84.0-py3-none-any.whl.metadata (25 kB)
+
+Collecting openapi_core<0.20,>=0.18 (from semantic-kernel==1.29.0->-r D:\2025-Epita-Intelligence-Symbolique-4\condaenv._hl87u65.requirements.txt (line 2))
+
+  Using cached openapi_core-0.19.5-py3-none-any.whl.metadata (6.6 kB)
+
+Collecting websockets<16,>=13 (from semantic-kernel==1.29.0->-r D:\2025-Epita-Intelligence-Symbolique-4\condaenv._hl87u65.requirements.txt (line 2))
+
+  Using cached websockets-15.0.1-cp310-cp310-win_amd64.whl.metadata (7.0 kB)
+
+Collecting aiortc>=1.9.0 (from semantic-kernel==1.29.0->-r D:\2025-Epita-Intelligence-Symbolique-4\condaenv._hl87u65.requirements.txt (line 2))
+
+  Using cached aiortc-1.13.0-py3-none-any.whl.metadata (4.9 kB)
+
+Collecting opentelemetry-api~=1.24 (from semantic-kernel==1.29.0->-r D:\2025-Epita-Intelligence-Symbolique-4\condaenv._hl87u65.requirements.txt (line 2))
+
+  Using cached opentelemetry_api-1.34.0-py3-none-any.whl.metadata (1.5 kB)
+
+Collecting opentelemetry-sdk~=1.24 (from semantic-kernel==1.29.0->-r D:\2025-Epita-Intelligence-Symbolique-4\condaenv._hl87u65.requirements.txt (line 2))
+
+  Using cached opentelemetry_sdk-1.34.0-py3-none-any.whl.metadata (1.6 kB)
+
+Collecting prance<25.4.9,>=23.6.21 (from semantic-kernel==1.29.0->-r D:\2025-Epita-Intelligence-Symbolique-4\condaenv._hl87u65.requirements.txt (line 2))
+
+  Using cached prance-25.4.8.0-py3-none-any.whl.metadata (13 kB)
+
+Collecting pybars4~=0.9 (from semantic-kernel==1.29.0->-r D:\2025-Epita-Intelligence-Symbolique-4\condaenv._hl87u65.requirements.txt (line 2))
+
+  Using cached pybars4-0.9.13-py3-none-any.whl
+
+Requirement already satisfied: jinja2~=3.1 in c:\users\myia\.conda\envs\projet-is\lib\site-packages (from semantic-kernel==1.29.0->-r D:\2025-Epita-Intelligence-Symbolique-4\condaenv._hl87u65.requirements.txt (line 2)) (3.1.6)
+
+Collecting nest-asyncio~=1.6 (from semantic-kernel==1.29.0->-r D:\2025-Epita-Intelligence-Symbolique-4\condaenv._hl87u65.requirements.txt (line 2))
+
+  Using cached nest_asyncio-1.6.0-py3-none-any.whl.metadata (2.8 kB)
+
+Requirement already satisfied: scipy>=1.15.1 in c:\users\myia\.conda\envs\projet-is\lib\site-packages (from semantic-kernel==1.29.0->-r D:\2025-Epita-Intelligence-Symbolique-4\condaenv._hl87u65.requirements.txt (line 2)) (1.15.3)
+
+Requirement already satisfied: aiohappyeyeballs>=2.5.0 in c:\users\myia\.conda\envs\projet-is\lib\site-packages (from aiohttp~=3.8->semantic-kernel==1.29.0->-r D:\2025-Epita-Intelligence-Symbolique-4\condaenv._hl87u65.requirements.txt (line 2)) (2.6.1)
+
+Requirement already satisfied: aiosignal>=1.1.2 in c:\users\myia\.conda\envs\projet-is\lib\site-packages (from aiohttp~=3.8->semantic-kernel==1.29.0->-r D:\2025-Epita-Intelligence-Symbolique-4\condaenv._hl87u65.requirements.txt (line 2)) (1.3.2)
+
+Requirement already satisfied: async-timeout<6.0,>=4.0 in c:\users\myia\.conda\envs\projet-is\lib\site-packages (from aiohttp~=3.8->semantic-kernel==1.29.0->-r D:\2025-Epita-Intelligence-Symbolique-4\condaenv._hl87u65.requirements.txt (line 2)) (5.0.1)
+
+Requirement already satisfied: attrs>=17.3.0 in c:\users\myia\.conda\envs\projet-is\lib\site-packages (from aiohttp~=3.8->semantic-kernel==1.29.0->-r D:\2025-Epita-Intelligence-Symbolique-4\condaenv._hl87u65.requirements.txt (line 2)) (25.3.0)
+
+Requirement already satisfied: frozenlist>=1.1.1 in c:\users\myia\.conda\envs\projet-is\lib\site-packages (from aiohttp~=3.8->semantic-kernel==1.29.0->-r D:\2025-Epita-Intelligence-Symbolique-4\condaenv._hl87u65.requirements.txt (line 2)) (1.6.0)
+
+Requirement already satisfied: multidict<7.0,>=4.5 in c:\users\myia\.conda\envs\projet-is\lib\site-packages (from aiohttp~=3.8->semantic-kernel==1.29.0->-r D:\2025-Epita-Intelligence-Symbolique-4\condaenv._hl87u65.requirements.txt (line 2)) (6.4.4)
+
+Requirement already satisfied: propcache>=0.2.0 in c:\users\myia\.conda\envs\projet-is\lib\site-packages (from aiohttp~=3.8->semantic-kernel==1.29.0->-r D:\2025-Epita-Intelligence-Symbolique-4\condaenv._hl87u65.requirements.txt (line 2)) (0.3.1)
+
+Requirement already satisfied: yarl<2.0,>=1.17.0 in c:\users\myia\.conda\envs\projet-is\lib\site-packages (from aiohttp~=3.8->semantic-kernel==1.29.0->-r D:\2025-Epita-Intelligence-Symbolique-4\condaenv._hl87u65.requirements.txt (line 2)) (1.20.0)
+
+Collecting deprecation<3.0,>=2.0 (from cloudevents~=1.0->semantic-kernel==1.29.0->-r D:\2025-Epita-Intelligence-Symbolique-4\condaenv._hl87u65.requirements.txt (line 2))
+
+  Using cached deprecation-2.1.0-py2.py3-none-any.whl.metadata (4.6 kB)
+
+Requirement already satisfied: packaging in c:\users\myia\.conda\envs\projet-is\lib\site-packages (from deprecation<3.0,>=2.0->cloudevents~=1.0->semantic-kernel==1.29.0->-r D:\2025-Epita-Intelligence-Symbolique-4\condaenv._hl87u65.requirements.txt (line 2)) (25.0)
+
+Requirement already satisfied: MarkupSafe>=2.0 in c:\users\myia\.conda\envs\projet-is\lib\site-packages (from jinja2~=3.1->semantic-kernel==1.29.0->-r D:\2025-Epita-Intelligence-Symbolique-4\condaenv._hl87u65.requirements.txt (line 2)) (3.0.2)
+
+Requirement already satisfied: typing-extensions>=4.1.0 in c:\users\myia\.conda\envs\projet-is\lib\site-packages (from multidict<7.0,>=4.5->aiohttp~=3.8->semantic-kernel==1.29.0->-r D:\2025-Epita-Intelligence-Symbolique-4\condaenv._hl87u65.requirements.txt (line 2)) (4.14.0)
+
+Collecting isodate (from openapi_core<0.20,>=0.18->semantic-kernel==1.29.0->-r D:\2025-Epita-Intelligence-Symbolique-4\condaenv._hl87u65.requirements.txt (line 2))
+
+  Using cached isodate-0.7.2-py3-none-any.whl.metadata (11 kB)
+
+Collecting jsonschema<5.0.0,>=4.18.0 (from openapi_core<0.20,>=0.18->semantic-kernel==1.29.0->-r D:\2025-Epita-Intelligence-Symbolique-4\condaenv._hl87u65.requirements.txt (line 2))
+
+  Using cached jsonschema-4.24.0-py3-none-any.whl.metadata (7.8 kB)
+
+Collecting jsonschema-path<0.4.0,>=0.3.1 (from openapi_core<0.20,>=0.18->semantic-kernel==1.29.0->-r D:\2025-Epita-Intelligence-Symbolique-4\condaenv._hl87u65.requirements.txt (line 2))
+
+  Using cached jsonschema_path-0.3.4-py3-none-any.whl.metadata (4.3 kB)
+
+Collecting more-itertools (from openapi_core<0.20,>=0.18->semantic-kernel==1.29.0->-r D:\2025-Epita-Intelligence-Symbolique-4\condaenv._hl87u65.requirements.txt (line 2))
+
+  Using cached more_itertools-10.7.0-py3-none-any.whl.metadata (37 kB)
+
+Collecting openapi-schema-validator<0.7.0,>=0.6.0 (from openapi_core<0.20,>=0.18->semantic-kernel==1.29.0->-r D:\2025-Epita-Intelligence-Symbolique-4\condaenv._hl87u65.requirements.txt (line 2))
+
+  Using cached openapi_schema_validator-0.6.3-py3-none-any.whl.metadata (5.4 kB)
+
+Collecting openapi-spec-validator<0.8.0,>=0.7.1 (from openapi_core<0.20,>=0.18->semantic-kernel==1.29.0->-r D:\2025-Epita-Intelligence-Symbolique-4\condaenv._hl87u65.requirements.txt (line 2))
+
+  Using cached openapi_spec_validator-0.7.1-py3-none-any.whl.metadata (5.7 kB)
+
+Collecting parse (from openapi_core<0.20,>=0.18->semantic-kernel==1.29.0->-r D:\2025-Epita-Intelligence-Symbolique-4\condaenv._hl87u65.requirements.txt (line 2))
+
+  Using cached parse-1.20.2-py2.py3-none-any.whl.metadata (22 kB)
+
+Collecting werkzeug<3.1.2 (from openapi_core<0.20,>=0.18->semantic-kernel==1.29.0->-r D:\2025-Epita-Intelligence-Symbolique-4\condaenv._hl87u65.requirements.txt (line 2))
+
+  Using cached werkzeug-3.1.1-py3-none-any.whl.metadata (3.7 kB)
+
+Collecting jsonschema-specifications>=2023.03.6 (from jsonschema<5.0.0,>=4.18.0->openapi_core<0.20,>=0.18->semantic-kernel==1.29.0->-r D:\2025-Epita-Intelligence-Symbolique-4\condaenv._hl87u65.requirements.txt (line 2))
+
+  Using cached jsonschema_specifications-2025.4.1-py3-none-any.whl.metadata (2.9 kB)
+
+Collecting referencing>=0.28.4 (from jsonschema<5.0.0,>=4.18.0->openapi_core<0.20,>=0.18->semantic-kernel==1.29.0->-r D:\2025-Epita-Intelligence-Symbolique-4\condaenv._hl87u65.requirements.txt (line 2))
+
+  Using cached referencing-0.36.2-py3-none-any.whl.metadata (2.8 kB)
+
+Collecting rpds-py>=0.7.1 (from jsonschema<5.0.0,>=4.18.0->openapi_core<0.20,>=0.18->semantic-kernel==1.29.0->-r D:\2025-Epita-Intelligence-Symbolique-4\condaenv._hl87u65.requirements.txt (line 2))
+
+  Using cached rpds_py-0.25.1-cp310-cp310-win_amd64.whl.metadata (4.2 kB)
+
+Requirement already satisfied: PyYAML>=5.1 in c:\users\myia\.conda\envs\projet-is\lib\site-packages (from jsonschema-path<0.4.0,>=0.3.1->openapi_core<0.20,>=0.18->semantic-kernel==1.29.0->-r D:\2025-Epita-Intelligence-Symbolique-4\condaenv._hl87u65.requirements.txt (line 2)) (6.0.2)
+
+Collecting pathable<0.5.0,>=0.4.1 (from jsonschema-path<0.4.0,>=0.3.1->openapi_core<0.20,>=0.18->semantic-kernel==1.29.0->-r D:\2025-Epita-Intelligence-Symbolique-4\condaenv._hl87u65.requirements.txt (line 2))
+
+  Using cached pathable-0.4.4-py3-none-any.whl.metadata (1.8 kB)
+
+Requirement already satisfied: requests<3.0.0,>=2.31.0 in c:\users\myia\.conda\envs\projet-is\lib\site-packages (from jsonschema-path<0.4.0,>=0.3.1->openapi_core<0.20,>=0.18->semantic-kernel==1.29.0->-r D:\2025-Epita-Intelligence-Symbolique-4\condaenv._hl87u65.requirements.txt (line 2)) (2.32.3)
+
+Collecting rfc3339-validator (from openapi-schema-validator<0.7.0,>=0.6.0->openapi_core<0.20,>=0.18->semantic-kernel==1.29.0->-r D:\2025-Epita-Intelligence-Symbolique-4\condaenv._hl87u65.requirements.txt (line 2))
+
+  Using cached rfc3339_validator-0.1.4-py2.py3-none-any.whl.metadata (1.5 kB)
+
+Collecting lazy-object-proxy<2.0.0,>=1.7.1 (from openapi-spec-validator<0.8.0,>=0.7.1->openapi_core<0.20,>=0.18->semantic-kernel==1.29.0->-r D:\2025-Epita-Intelligence-Symbolique-4\condaenv._hl87u65.requirements.txt (line 2))
+
+  Using cached lazy_object_proxy-1.11.0-cp310-cp310-win_amd64.whl.metadata (8.7 kB)
+
+Requirement already satisfied: importlib-metadata<8.8.0,>=6.0 in c:\users\myia\.conda\envs\projet-is\lib\site-packages (from opentelemetry-api~=1.24->semantic-kernel==1.29.0->-r D:\2025-Epita-Intelligence-Symbolique-4\condaenv._hl87u65.requirements.txt (line 2)) (8.7.0)
+
+Requirement already satisfied: zipp>=3.20 in c:\users\myia\.conda\envs\projet-is\lib\site-packages (from importlib-metadata<8.8.0,>=6.0->opentelemetry-api~=1.24->semantic-kernel==1.29.0->-r D:\2025-Epita-Intelligence-Symbolique-4\condaenv._hl87u65.requirements.txt (line 2)) (3.22.0)
+
+Collecting opentelemetry-semantic-conventions==0.55b0 (from opentelemetry-sdk~=1.24->semantic-kernel==1.29.0->-r D:\2025-Epita-Intelligence-Symbolique-4\condaenv._hl87u65.requirements.txt (line 2))
+
+  Using cached opentelemetry_semantic_conventions-0.55b0-py3-none-any.whl.metadata (2.5 kB)
+
+Collecting chardet>=5.2 (from prance<25.4.9,>=23.6.21->semantic-kernel==1.29.0->-r D:\2025-Epita-Intelligence-Symbolique-4\condaenv._hl87u65.requirements.txt (line 2))
+
+  Using cached chardet-5.2.0-py3-none-any.whl.metadata (3.4 kB)
+
+Collecting ruamel.yaml>=0.18.10 (from prance<25.4.9,>=23.6.21->semantic-kernel==1.29.0->-r D:\2025-Epita-Intelligence-Symbolique-4\condaenv._hl87u65.requirements.txt (line 2))
+
+  Using cached ruamel.yaml-0.18.12-py3-none-any.whl.metadata (24 kB)
+
+Collecting PyMeta3>=0.5.1 (from pybars4~=0.9->semantic-kernel==1.29.0->-r D:\2025-Epita-Intelligence-Symbolique-4\condaenv._hl87u65.requirements.txt (line 2))
+
+  Using cached pymeta3-0.5.1-py3-none-any.whl
+
+Requirement already satisfied: annotated-types>=0.6.0 in c:\users\myia\.conda\envs\projet-is\lib\site-packages (from pydantic!=2.10.0,!=2.10.1,!=2.10.2,!=2.10.3,<2.12,>=2.0->semantic-kernel==1.29.0->-r D:\2025-Epita-Intelligence-Symbolique-4\condaenv._hl87u65.requirements.txt (line 2)) (0.7.0)
+
+Requirement already satisfied: pydantic-core==2.23.4 in c:\users\myia\.conda\envs\projet-is\lib\site-packages (from pydantic!=2.10.0,!=2.10.1,!=2.10.2,!=2.10.3,<2.12,>=2.0->semantic-kernel==1.29.0->-r D:\2025-Epita-Intelligence-Symbolique-4\condaenv._hl87u65.requirements.txt (line 2)) (2.23.4)
+
+Requirement already satisfied: python-dotenv>=0.21.0 in c:\users\myia\.conda\envs\projet-is\lib\site-packages (from pydantic-settings~=2.0->semantic-kernel==1.29.0->-r D:\2025-Epita-Intelligence-Symbolique-4\condaenv._hl87u65.requirements.txt (line 2)) (1.1.0)
+
+Collecting typing-inspection>=0.4.0 (from pydantic-settings~=2.0->semantic-kernel==1.29.0->-r D:\2025-Epita-Intelligence-Symbolique-4\condaenv._hl87u65.requirements.txt (line 2))
+
+  Using cached typing_inspection-0.4.1-py3-none-any.whl.metadata (2.6 kB)
+
+Requirement already satisfied: charset_normalizer<4,>=2 in c:\users\myia\.conda\envs\projet-is\lib\site-packages (from requests<3.0.0,>=2.31.0->jsonschema-path<0.4.0,>=0.3.1->openapi_core<0.20,>=0.18->semantic-kernel==1.29.0->-r D:\2025-Epita-Intelligence-Symbolique-4\condaenv._hl87u65.requirements.txt (line 2)) (3.4.2)
+
+Requirement already satisfied: idna<4,>=2.5 in c:\users\myia\.conda\envs\projet-is\lib\site-packages (from requests<3.0.0,>=2.31.0->jsonschema-path<0.4.0,>=0.3.1->openapi_core<0.20,>=0.18->semantic-kernel==1.29.0->-r D:\2025-Epita-Intelligence-Symbolique-4\condaenv._hl87u65.requirements.txt (line 2)) (3.10)
+
+Requirement already satisfied: urllib3<3,>=1.21.1 in c:\users\myia\.conda\envs\projet-is\lib\site-packages (from requests<3.0.0,>=2.31.0->jsonschema-path<0.4.0,>=0.3.1->openapi_core<0.20,>=0.18->semantic-kernel==1.29.0->-r D:\2025-Epita-Intelligence-Symbolique-4\condaenv._hl87u65.requirements.txt (line 2)) (2.4.0)
+
+Requirement already satisfied: certifi>=2017.4.17 in c:\users\myia\.conda\envs\projet-is\lib\site-packages (from requests<3.0.0,>=2.31.0->jsonschema-path<0.4.0,>=0.3.1->openapi_core<0.20,>=0.18->semantic-kernel==1.29.0->-r D:\2025-Epita-Intelligence-Symbolique-4\condaenv._hl87u65.requirements.txt (line 2)) (2025.4.26)
+
+Requirement already satisfied: flask>=0.9 in c:\users\myia\.conda\envs\projet-is\lib\site-packages (from Flask-CORS->-r D:\2025-Epita-Intelligence-Symbolique-4\condaenv._hl87u65.requirements.txt (line 1)) (3.1.1)
+
+Collecting aioice<1.0.0,>=0.10.1 (from aiortc>=1.9.0->semantic-kernel==1.29.0->-r D:\2025-Epita-Intelligence-Symbolique-4\condaenv._hl87u65.requirements.txt (line 2))
+
+  Using cached aioice-0.10.1-py3-none-any.whl.metadata (4.1 kB)
+
+Collecting av<15.0.0,>=14.0.0 (from aiortc>=1.9.0->semantic-kernel==1.29.0->-r D:\2025-Epita-Intelligence-Symbolique-4\condaenv._hl87u65.requirements.txt (line 2))
+
+  Using cached av-14.4.0-cp310-cp310-win_amd64.whl.metadata (4.7 kB)
+
+Requirement already satisfied: cffi>=1.0.0 in c:\users\myia\.conda\envs\projet-is\lib\site-packages (from aiortc>=1.9.0->semantic-kernel==1.29.0->-r D:\2025-Epita-Intelligence-Symbolique-4\condaenv._hl87u65.requirements.txt (line 2)) (1.17.1)
+
+Requirement already satisfied: cryptography>=44.0.0 in c:\users\myia\.conda\envs\projet-is\lib\site-packages (from aiortc>=1.9.0->semantic-kernel==1.29.0->-r D:\2025-Epita-Intelligence-Symbolique-4\condaenv._hl87u65.requirements.txt (line 2)) (45.0.3)
+
+Collecting google-crc32c>=1.1 (from aiortc>=1.9.0->semantic-kernel==1.29.0->-r D:\2025-Epita-Intelligence-Symbolique-4\condaenv._hl87u65.requirements.txt (line 2))
+
+  Using cached google_crc32c-1.7.1-cp310-cp310-win_amd64.whl.metadata (2.4 kB)
+
+Collecting pyee>=13.0.0 (from aiortc>=1.9.0->semantic-kernel==1.29.0->-r D:\2025-Epita-Intelligence-Symbolique-4\condaenv._hl87u65.requirements.txt (line 2))
+
+  Using cached pyee-13.0.0-py3-none-any.whl.metadata (2.9 kB)
+
+Collecting pylibsrtp>=0.10.0 (from aiortc>=1.9.0->semantic-kernel==1.29.0->-r D:\2025-Epita-Intelligence-Symbolique-4\condaenv._hl87u65.requirements.txt (line 2))
+
+  Using cached pylibsrtp-0.12.0-cp39-abi3-win_amd64.whl.metadata (4.2 kB)
+
+Collecting pyopenssl>=25.0.0 (from aiortc>=1.9.0->semantic-kernel==1.29.0->-r D:\2025-Epita-Intelligence-Symbolique-4\condaenv._hl87u65.requirements.txt (line 2))
+
+  Using cached pyopenssl-25.1.0-py3-none-any.whl.metadata (17 kB)
+
+Collecting dnspython>=2.0.0 (from aioice<1.0.0,>=0.10.1->aiortc>=1.9.0->semantic-kernel==1.29.0->-r D:\2025-Epita-Intelligence-Symbolique-4\condaenv._hl87u65.requirements.txt (line 2))
+
+  Using cached dnspython-2.7.0-py3-none-any.whl.metadata (5.8 kB)
+
+Collecting ifaddr>=0.2.0 (from aioice<1.0.0,>=0.10.1->aiortc>=1.9.0->semantic-kernel==1.29.0->-r D:\2025-Epita-Intelligence-Symbolique-4\condaenv._hl87u65.requirements.txt (line 2))
+
+  Using cached ifaddr-0.2.0-py3-none-any.whl.metadata (4.9 kB)
+
+Collecting azure-core>=1.31.0 (from azure-identity>=1.13->semantic-kernel==1.29.0->-r D:\2025-Epita-Intelligence-Symbolique-4\condaenv._hl87u65.requirements.txt (line 2))
+
+  Using cached azure_core-1.34.0-py3-none-any.whl.metadata (42 kB)
+
+Collecting msal>=1.30.0 (from azure-identity>=1.13->semantic-kernel==1.29.0->-r D:\2025-Epita-Intelligence-Symbolique-4\condaenv._hl87u65.requirements.txt (line 2))
+
+  Using cached msal-1.32.3-py3-none-any.whl.metadata (11 kB)
+
+Collecting msal-extensions>=1.2.0 (from azure-identity>=1.13->semantic-kernel==1.29.0->-r D:\2025-Epita-Intelligence-Symbolique-4\condaenv._hl87u65.requirements.txt (line 2))
+
+  Using cached msal_extensions-1.3.1-py3-none-any.whl.metadata (7.8 kB)
+
+Requirement already satisfied: six>=1.11.0 in c:\users\myia\.conda\envs\projet-is\lib\site-packages (from azure-core>=1.31.0->azure-identity>=1.13->semantic-kernel==1.29.0->-r D:\2025-Epita-Intelligence-Symbolique-4\condaenv._hl87u65.requirements.txt (line 2)) (1.17.0)
+
+Requirement already satisfied: pycparser in c:\users\myia\.conda\envs\projet-is\lib\site-packages (from cffi>=1.0.0->aiortc>=1.9.0->semantic-kernel==1.29.0->-r D:\2025-Epita-Intelligence-Symbolique-4\condaenv._hl87u65.requirements.txt (line 2)) (2.22)
+
+Requirement already satisfied: blinker>=1.9.0 in c:\users\myia\.conda\envs\projet-is\lib\site-packages (from flask>=0.9->Flask-CORS->-r D:\2025-Epita-Intelligence-Symbolique-4\condaenv._hl87u65.requirements.txt (line 1)) (1.9.0)
+
+Requirement already satisfied: click>=8.1.3 in c:\users\myia\.conda\envs\projet-is\lib\site-packages (from flask>=0.9->Flask-CORS->-r D:\2025-Epita-Intelligence-Symbolique-4\condaenv._hl87u65.requirements.txt (line 1)) (8.2.1)
+
+Requirement already satisfied: itsdangerous>=2.2.0 in c:\users\myia\.conda\envs\projet-is\lib\site-packages (from flask>=0.9->Flask-CORS->-r D:\2025-Epita-Intelligence-Symbolique-4\condaenv._hl87u65.requirements.txt (line 1)) (2.2.0)
+
+Requirement already satisfied: colorama in c:\users\myia\.conda\envs\projet-is\lib\site-packages (from click>=8.1.3->flask>=0.9->Flask-CORS->-r D:\2025-Epita-Intelligence-Symbolique-4\condaenv._hl87u65.requirements.txt (line 1)) (0.4.6)
+
+Collecting PyJWT<3,>=1.0.0 (from PyJWT[crypto]<3,>=1.0.0->msal>=1.30.0->azure-identity>=1.13->semantic-kernel==1.29.0->-r D:\2025-Epita-Intelligence-Symbolique-4\condaenv._hl87u65.requirements.txt (line 2))
+
+  Using cached PyJWT-2.10.1-py3-none-any.whl.metadata (4.0 kB)
+
+Collecting anyio<5,>=3.5.0 (from openai>=1.67->semantic-kernel==1.29.0->-r D:\2025-Epita-Intelligence-Symbolique-4\condaenv._hl87u65.requirements.txt (line 2))
+
+  Using cached anyio-4.9.0-py3-none-any.whl.metadata (4.7 kB)
+
+Collecting distro<2,>=1.7.0 (from openai>=1.67->semantic-kernel==1.29.0->-r D:\2025-Epita-Intelligence-Symbolique-4\condaenv._hl87u65.requirements.txt (line 2))
+
+  Using cached distro-1.9.0-py3-none-any.whl.metadata (6.8 kB)
+
+Collecting httpx<1,>=0.23.0 (from openai>=1.67->semantic-kernel==1.29.0->-r D:\2025-Epita-Intelligence-Symbolique-4\condaenv._hl87u65.requirements.txt (line 2))
+
+  Using cached httpx-0.28.1-py3-none-any.whl.metadata (7.1 kB)
+
+Collecting jiter<1,>=0.4.0 (from openai>=1.67->semantic-kernel==1.29.0->-r D:\2025-Epita-Intelligence-Symbolique-4\condaenv._hl87u65.requirements.txt (line 2))
+
+  Using cached jiter-0.10.0-cp310-cp310-win_amd64.whl.metadata (5.3 kB)
+
+Collecting sniffio (from openai>=1.67->semantic-kernel==1.29.0->-r D:\2025-Epita-Intelligence-Symbolique-4\condaenv._hl87u65.requirements.txt (line 2))
+
+  Using cached sniffio-1.3.1-py3-none-any.whl.metadata (3.9 kB)
+
+Requirement already satisfied: tqdm>4 in c:\users\myia\.conda\envs\projet-is\lib\site-packages (from openai>=1.67->semantic-kernel==1.29.0->-r D:\2025-Epita-Intelligence-Symbolique-4\condaenv._hl87u65.requirements.txt (line 2)) (4.67.1)
+
+Requirement already satisfied: exceptiongroup>=1.0.2 in c:\users\myia\.conda\envs\projet-is\lib\site-packages (from anyio<5,>=3.5.0->openai>=1.67->semantic-kernel==1.29.0->-r D:\2025-Epita-Intelligence-Symbolique-4\condaenv._hl87u65.requirements.txt (line 2)) (1.3.0)
+
+Collecting httpcore==1.* (from httpx<1,>=0.23.0->openai>=1.67->semantic-kernel==1.29.0->-r D:\2025-Epita-Intelligence-Symbolique-4\condaenv._hl87u65.requirements.txt (line 2))
+
+  Using cached httpcore-1.0.9-py3-none-any.whl.metadata (21 kB)
+
+Collecting h11>=0.16 (from httpcore==1.*->httpx<1,>=0.23.0->openai>=1.67->semantic-kernel==1.29.0->-r D:\2025-Epita-Intelligence-Symbolique-4\condaenv._hl87u65.requirements.txt (line 2))
+
+  Using cached h11-0.16.0-py3-none-any.whl.metadata (8.3 kB)
+
+Collecting ruamel.yaml.clib>=0.2.7 (from ruamel.yaml>=0.18.10->prance<25.4.9,>=23.6.21->semantic-kernel==1.29.0->-r D:\2025-Epita-Intelligence-Symbolique-4\condaenv._hl87u65.requirements.txt (line 2))
+
+  Using cached ruamel.yaml.clib-0.2.12-cp310-cp310-win_amd64.whl.metadata (2.8 kB)
+
+Using cached semantic_kernel-1.29.0-py3-none-any.whl (818 kB)
+
+Using cached cloudevents-1.12.0-py3-none-any.whl (55 kB)
+
+Using cached defusedxml-0.7.1-py2.py3-none-any.whl (25 kB)
+
+Using cached deprecation-2.1.0-py2.py3-none-any.whl (11 kB)
+
+Using cached nest_asyncio-1.6.0-py3-none-any.whl (5.2 kB)
+
+Using cached openapi_core-0.19.5-py3-none-any.whl (106 kB)
+
+Using cached jsonschema-4.24.0-py3-none-any.whl (88 kB)
+
+Using cached jsonschema_path-0.3.4-py3-none-any.whl (14 kB)
+
+Using cached openapi_schema_validator-0.6.3-py3-none-any.whl (8.8 kB)
+
+Using cached openapi_spec_validator-0.7.1-py3-none-any.whl (38 kB)
+
+Using cached lazy_object_proxy-1.11.0-cp310-cp310-win_amd64.whl (28 kB)
+
+Using cached opentelemetry_api-1.34.0-py3-none-any.whl (65 kB)
+
+Using cached opentelemetry_sdk-1.34.0-py3-none-any.whl (118 kB)
+
+Using cached opentelemetry_semantic_conventions-0.55b0-py3-none-any.whl (196 kB)
+
+Using cached pathable-0.4.4-py3-none-any.whl (9.6 kB)
+
+Using cached prance-25.4.8.0-py3-none-any.whl (36 kB)
+
+Using cached pydantic_settings-2.9.1-py3-none-any.whl (44 kB)
+
+Using cached referencing-0.36.2-py3-none-any.whl (26 kB)
+
+Using cached websockets-15.0.1-cp310-cp310-win_amd64.whl (176 kB)
+
+Using cached werkzeug-3.1.1-py3-none-any.whl (224 kB)
+
+Using cached flask_cors-6.0.0-py3-none-any.whl (11 kB)
+
+Using cached aiortc-1.13.0-py3-none-any.whl (92 kB)
+
+Using cached aioice-0.10.1-py3-none-any.whl (24 kB)
+
+Using cached av-14.4.0-cp310-cp310-win_amd64.whl (27.9 MB)
+
+Using cached azure_identity-1.23.0-py3-none-any.whl (186 kB)
+
+Using cached azure_core-1.34.0-py3-none-any.whl (207 kB)
+
+Using cached chardet-5.2.0-py3-none-any.whl (199 kB)
+
+Using cached dnspython-2.7.0-py3-none-any.whl (313 kB)
+
+Using cached google_crc32c-1.7.1-cp310-cp310-win_amd64.whl (33 kB)
+
+Using cached ifaddr-0.2.0-py3-none-any.whl (12 kB)
+
+Using cached jsonschema_specifications-2025.4.1-py3-none-any.whl (18 kB)
+
+Using cached msal-1.32.3-py3-none-any.whl (115 kB)
+
+Using cached PyJWT-2.10.1-py3-none-any.whl (22 kB)
+
+Using cached msal_extensions-1.3.1-py3-none-any.whl (20 kB)
+
+Using cached openai-1.84.0-py3-none-any.whl (725 kB)
+
+Using cached anyio-4.9.0-py3-none-any.whl (100 kB)
+
+Using cached distro-1.9.0-py3-none-any.whl (20 kB)
+
+Using cached httpx-0.28.1-py3-none-any.whl (73 kB)
+
+Using cached httpcore-1.0.9-py3-none-any.whl (78 kB)
+
+Using cached jiter-0.10.0-cp310-cp310-win_amd64.whl (207 kB)
+
+Using cached h11-0.16.0-py3-none-any.whl (37 kB)
+
+Using cached pyee-13.0.0-py3-none-any.whl (15 kB)
+
+Using cached pylibsrtp-0.12.0-cp39-abi3-win_amd64.whl (1.5 MB)
+
+Using cached pyopenssl-25.1.0-py3-none-any.whl (56 kB)
+
+Using cached rpds_py-0.25.1-cp310-cp310-win_amd64.whl (231 kB)
+
+Using cached ruamel.yaml-0.18.12-py3-none-any.whl (118 kB)
+
+Using cached ruamel.yaml.clib-0.2.12-cp310-cp310-win_amd64.whl (118 kB)
+
+Using cached sniffio-1.3.1-py3-none-any.whl (10 kB)
+
+Using cached typing_inspection-0.4.1-py3-none-any.whl (14 kB)
+
+Using cached isodate-0.7.2-py3-none-any.whl (22 kB)
+
+Using cached more_itertools-10.7.0-py3-none-any.whl (65 kB)
+
+Using cached parse-1.20.2-py2.py3-none-any.whl (20 kB)
+
+Using cached rfc3339_validator-0.1.4-py2.py3-none-any.whl (3.5 kB)
+
+Installing collected packages: PyMeta3, parse, ifaddr, werkzeug, websockets, typing-inspection, sniffio, ruamel.yaml.clib, rpds-py, rfc3339-validator, PyJWT, pyee, pybars4, pathable, nest-asyncio, more-itertools, lazy-object-proxy, jiter, isodate, h11, google-crc32c, dnspython, distro, deprecation, defusedxml, chardet, av, ruamel.yaml, referencing, pylibsrtp, opentelemetry-api, httpcore, cloudevents, azure-core, anyio, aioice, pyopenssl, pydantic-settings, prance, opentelemetry-semantic-conventions, jsonschema-specifications, jsonschema-path, httpx, Flask-CORS, opentelemetry-sdk, openai, msal, jsonschema, aiortc, openapi-schema-validator, msal-extensions, openapi-spec-validator, azure-identity, openapi_core, semantic-kernel
+
+  Attempting uninstall: werkzeug
+
+    Found existing installation: Werkzeug 3.1.3
+
+    Uninstalling Werkzeug-3.1.3:
+
+      Successfully uninstalled Werkzeug-3.1.3
+
+
+
+Successfully installed Flask-CORS-6.0.0 PyJWT-2.10.1 PyMeta3-0.5.1 aioice-0.10.1 aiortc-1.13.0 anyio-4.9.0 av-14.4.0 azure-core-1.34.0 azure-identity-1.23.0 chardet-5.2.0 cloudevents-1.12.0 defusedxml-0.7.1 deprecation-2.1.0 distro-1.9.0 dnspython-2.7.0 google-crc32c-1.7.1 h11-0.16.0 httpcore-1.0.9 httpx-0.28.1 ifaddr-0.2.0 isodate-0.7.2 jiter-0.10.0 jsonschema-4.24.0 jsonschema-path-0.3.4 jsonschema-specifications-2025.4.1 lazy-object-proxy-1.11.0 more-itertools-10.7.0 msal-1.32.3 msal-extensions-1.3.1 nest-asyncio-1.6.0 openai-1.84.0 openapi-schema-validator-0.6.3 openapi-spec-validator-0.7.1 openapi_core-0.19.5 opentelemetry-api-1.34.0 opentelemetry-sdk-1.34.0 opentelemetry-semantic-conventions-0.55b0 parse-1.20.2 pathable-0.4.4 prance-25.4.8.0 pybars4-0.9.13 pydantic-settings-2.9.1 pyee-13.0.0 pylibsrtp-0.12.0 pyopenssl-25.1.0 referencing-0.36.2 rfc3339-validator-0.1.4 rpds-py-0.25.1 ruamel.yaml-0.18.12 ruamel.yaml.clib-0.2.12 semantic-kernel-1.29.0 sniffio-1.3.1 typing-inspection-0.4.1 websockets-15.0.1 werkzeug-3.1.1
+
+
+done
+#
+# To activate this environment, use
+#
+#     $ conda activate projet-is
+#
+# To deactivate an active environment, use
+#
+#     $ conda deactivate
+
+
+2025-06-05 03:14:56,201 - __main__ - DEBUG - Conda stderr:
+
+
+==> WARNING: A newer version of conda exists. <==
+  current version: 4.12.0
+  latest version: 25.5.0
+
+Please update conda by running
+
+    $ conda update -n base -c defaults conda
+
+
+
+2025-06-05 03:14:56,201 - __main__ - INFO - Conda environment 'projet-is' created successfully.
+2025-06-05 03:14:56,201 - __main__ - INFO - Conda environment 'projet-is' is ready.
+2025-06-05 03:14:56,201 - __main__ - INFO - Managing project files (.env, cleanup)...
+2025-06-05 03:14:56,201 - __main__ - INFO - Début de la configuration de la structure du projet...
+2025-06-05 03:14:56,201 - __main__ - INFO - Début du nettoyage des anciennes installations...
+2025-06-05 03:14:56,201 - __main__ - INFO - Éléments identifiés pour le nettoyage :
+2025-06-05 03:14:56,201 - __main__ - INFO -   - D:\2025-Epita-Intelligence-Symbolique-4\.tools (dir)
+2025-06-05 03:15:01,901 - __main__ - INFO - Répertoire supprimé : D:\2025-Epita-Intelligence-Symbolique-4\.tools
+2025-06-05 03:15:01,901 - __main__ - INFO - Nettoyage des anciennes installations terminé.
+2025-06-05 03:15:01,901 - __main__ - INFO - Configuration du fichier .env...
+2025-06-05 03:15:01,913 - __main__ - DEBUG - PYTHONPATH défini à : D:\2025-Epita-Intelligence-Symbolique-4;D:\2025-Epita-Intelligence-Symbolique-4\src
+2025-06-05 03:15:01,913 - __main__ - DEBUG - JAVA_HOME défini à : D:\2025-Epita-Intelligence-Symbolique-4\.tools\jdk-17.0.11+9
+2025-06-05 03:15:01,913 - __main__ - DEBUG - OCTAVE_HOME défini à : D:\2025-Epita-Intelligence-Symbolique-4\.tools\octave-8.4.0-w64
+2025-06-05 03:15:01,913 - __main__ - DEBUG - TEXT_CONFIG_PASSPHRASE trouvé dans .env.
+2025-06-05 03:15:01,913 - __main__ - DEBUG - TIKA_SERVER_ENDPOINT trouvé dans .env : "https://tika.open-webui.myia.io/"
+2025-06-05 03:15:01,919 - __main__ - INFO - Fichier .env mis à jour : D:\2025-Epita-Intelligence-Symbolique-4\.env
+2025-06-05 03:15:01,919 - __main__ - INFO - Configuration de la structure du projet terminée.
+2025-06-05 03:15:01,919 - __main__ - INFO - Running pip commands to install project dependencies...
+2025-06-05 03:15:01,919 - __main__ - INFO - Début de l'installation des dépendances du projet dans 'D:\2025-Epita-Intelligence-Symbolique-4' pour l'environnement 'projet-is'.
+2025-06-05 03:15:01,919 - __main__ - INFO - Tentative d'installation des dépendances avec 'pip install -e .'
+2025-06-05 03:15:01,919 - __main__ - INFO - Exécution de la commande dans l'environnement Conda 'projet-is': conda run -n projet-is pip install -e .
+2025-06-05 03:15:24,636 - __main__ - INFO - Commande exécutée avec succès.
+2025-06-05 03:15:24,637 - __main__ - DEBUG - Sortie standard:
+Obtaining file:///D:/2025-Epita-Intelligence-Symbolique-4
+
+  Installing build dependencies: started
+
+  Installing build dependencies: finished with status 'done'
+
+  Checking if build backend supports build_editable: started
+
+  Checking if build backend supports build_editable: finished with status 'done'
+
+  Getting requirements to build editable: started
+
+  Getting requirements to build editable: finished with status 'done'
+
+  Preparing editable metadata (pyproject.toml): started
+
+  Preparing editable metadata (pyproject.toml): finished with status 'done'
+
+Requirement already satisfied: numpy<2.3,>=2.0.0 in c:\users\myia\.conda\envs\projet-is\lib\site-packages (from argumentation_analysis_project==0.1.0) (2.2.6)
+
+Requirement already satisfied: pandas in c:\users\myia\.conda\envs\projet-is\lib\site-packages (from argumentation_analysis_project==0.1.0) (2.2.3)
+
+Requirement already satisfied: scipy==1.15.3 in c:\users\myia\.conda\envs\projet-is\lib\site-packages (from argumentation_analysis_project==0.1.0) (1.15.3)
+
+Requirement already satisfied: scikit-learn in c:\users\myia\.conda\envs\projet-is\lib\site-packages (from argumentation_analysis_project==0.1.0) (1.6.1)
+
+Requirement already satisfied: nltk in c:\users\myia\.conda\envs\projet-is\lib\site-packages (from argumentation_analysis_project==0.1.0) (3.9.1)
+
+Requirement already satisfied: spacy in c:\users\myia\.conda\envs\projet-is\lib\site-packages (from argumentation_analysis_project==0.1.0) (3.8.6)
+
+Requirement already satisfied: torch in c:\users\myia\.conda\envs\projet-is\lib\site-packages (from argumentation_analysis_project==0.1.0) (2.5.1)
+
+Requirement already satisfied: transformers in c:\users\myia\.conda\envs\projet-is\lib\site-packages (from argumentation_analysis_project==0.1.0) (4.52.4)
+
+Requirement already satisfied: flask in c:\users\myia\.conda\envs\projet-is\lib\site-packages (from argumentation_analysis_project==0.1.0) (3.1.1)
+
+Requirement already satisfied: requests in c:\users\myia\.conda\envs\projet-is\lib\site-packages (from argumentation_analysis_project==0.1.0) (2.32.3)
+
+Requirement already satisfied: pydantic<2.10,>=2.0 in c:\users\myia\.conda\envs\projet-is\lib\site-packages (from argumentation_analysis_project==0.1.0) (2.9.2)
+
+Requirement already satisfied: python-dotenv in c:\users\myia\.conda\envs\projet-is\lib\site-packages (from argumentation_analysis_project==0.1.0) (1.1.0)
+
+Requirement already satisfied: cryptography in c:\users\myia\.conda\envs\projet-is\lib\site-packages (from argumentation_analysis_project==0.1.0) (45.0.3)
+
+Requirement already satisfied: tqdm in c:\users\myia\.conda\envs\projet-is\lib\site-packages (from argumentation_analysis_project==0.1.0) (4.67.1)
+
+Requirement already satisfied: pyyaml in c:\users\myia\.conda\envs\projet-is\lib\site-packages (from argumentation_analysis_project==0.1.0) (6.0.2)
+
+Requirement already satisfied: matplotlib in c:\users\myia\.conda\envs\projet-is\lib\site-packages (from argumentation_analysis_project==0.1.0) (3.10.3)
+
+Requirement already satisfied: seaborn in c:\users\myia\.conda\envs\projet-is\lib\site-packages (from argumentation_analysis_project==0.1.0) (0.13.2)
+
+Requirement already satisfied: statsmodels in c:\users\myia\.conda\envs\projet-is\lib\site-packages (from argumentation_analysis_project==0.1.0) (0.14.4)
+
+Requirement already satisfied: networkx==3.4.2 in c:\users\myia\.conda\envs\projet-is\lib\site-packages (from argumentation_analysis_project==0.1.0) (3.4.2)
+
+Requirement already satisfied: jpype1 in c:\users\myia\.conda\envs\projet-is\lib\site-packages (from argumentation_analysis_project==0.1.0) (1.5.2)
+
+Requirement already satisfied: clingo in c:\users\myia\.conda\envs\projet-is\lib\site-packages (from argumentation_analysis_project==0.1.0) (5.8.0)
+
+Requirement already satisfied: pytest in c:\users\myia\.conda\envs\projet-is\lib\site-packages (from argumentation_analysis_project==0.1.0) (8.4.0)
+
+Requirement already satisfied: pytest-cov in c:\users\myia\.conda\envs\projet-is\lib\site-packages (from argumentation_analysis_project==0.1.0) (6.1.1)
+
+Requirement already satisfied: pytest-mock in c:\users\myia\.conda\envs\projet-is\lib\site-packages (from argumentation_analysis_project==0.1.0) (3.14.1)
+
+Requirement already satisfied: pytest-asyncio in c:\users\myia\.conda\envs\projet-is\lib\site-packages (from argumentation_analysis_project==0.1.0) (1.0.0)
+
+Requirement already satisfied: coverage in c:\users\myia\.conda\envs\projet-is\lib\site-packages (from argumentation_analysis_project==0.1.0) (7.8.2)
+
+Requirement already satisfied: unidecode in c:\users\myia\.conda\envs\projet-is\lib\site-packages (from argumentation_analysis_project==0.1.0) (1.3.8)
+
+Requirement already satisfied: markdown in c:\users\myia\.conda\envs\projet-is\lib\site-packages (from argumentation_analysis_project==0.1.0) (3.8)
+
+Requirement already satisfied: annotated-types>=0.6.0 in c:\users\myia\.conda\envs\projet-is\lib\site-packages (from pydantic<2.10,>=2.0->argumentation_analysis_project==0.1.0) (0.7.0)
+
+Requirement already satisfied: pydantic-core==2.23.4 in c:\users\myia\.conda\envs\projet-is\lib\site-packages (from pydantic<2.10,>=2.0->argumentation_analysis_project==0.1.0) (2.23.4)
+
+Requirement already satisfied: typing-extensions>=4.6.1 in c:\users\myia\.conda\envs\projet-is\lib\site-packages (from pydantic<2.10,>=2.0->argumentation_analysis_project==0.1.0) (4.14.0)
+
+Requirement already satisfied: cffi>=1.14 in c:\users\myia\.conda\envs\projet-is\lib\site-packages (from cryptography->argumentation_analysis_project==0.1.0) (1.17.1)
+
+Requirement already satisfied: pycparser in c:\users\myia\.conda\envs\projet-is\lib\site-packages (from cffi>=1.14->cryptography->argumentation_analysis_project==0.1.0) (2.22)
+
+Requirement already satisfied: blinker>=1.9.0 in c:\users\myia\.conda\envs\projet-is\lib\site-packages (from flask->argumentation_analysis_project==0.1.0) (1.9.0)
+
+Requirement already satisfied: click>=8.1.3 in c:\users\myia\.conda\envs\projet-is\lib\site-packages (from flask->argumentation_analysis_project==0.1.0) (8.2.1)
+
+Requirement already satisfied: itsdangerous>=2.2.0 in c:\users\myia\.conda\envs\projet-is\lib\site-packages (from flask->argumentation_analysis_project==0.1.0) (2.2.0)
+
+Requirement already satisfied: jinja2>=3.1.2 in c:\users\myia\.conda\envs\projet-is\lib\site-packages (from flask->argumentation_analysis_project==0.1.0) (3.1.6)
+
+Requirement already satisfied: markupsafe>=2.1.1 in c:\users\myia\.conda\envs\projet-is\lib\site-packages (from flask->argumentation_analysis_project==0.1.0) (3.0.2)
+
+Requirement already satisfied: werkzeug>=3.1.0 in c:\users\myia\.conda\envs\projet-is\lib\site-packages (from flask->argumentation_analysis_project==0.1.0) (3.1.1)
+
+Requirement already satisfied: colorama in c:\users\myia\.conda\envs\projet-is\lib\site-packages (from click>=8.1.3->flask->argumentation_analysis_project==0.1.0) (0.4.6)
+
+Requirement already satisfied: packaging in c:\users\myia\.conda\envs\projet-is\lib\site-packages (from jpype1->argumentation_analysis_project==0.1.0) (25.0)
+
+Requirement already satisfied: contourpy>=1.0.1 in c:\users\myia\.conda\envs\projet-is\lib\site-packages (from matplotlib->argumentation_analysis_project==0.1.0) (1.3.2)
+
+Requirement already satisfied: cycler>=0.10 in c:\users\myia\.conda\envs\projet-is\lib\site-packages (from matplotlib->argumentation_analysis_project==0.1.0) (0.12.1)
+
+Requirement already satisfied: fonttools>=4.22.0 in c:\users\myia\.conda\envs\projet-is\lib\site-packages (from matplotlib->argumentation_analysis_project==0.1.0) (4.58.1)
+
+Requirement already satisfied: kiwisolver>=1.3.1 in c:\users\myia\.conda\envs\projet-is\lib\site-packages (from matplotlib->argumentation_analysis_project==0.1.0) (1.4.7)
+
+Requirement already satisfied: pillow>=8 in c:\users\myia\.conda\envs\projet-is\lib\site-packages (from matplotlib->argumentation_analysis_project==0.1.0) (11.2.1)
+
+Requirement already satisfied: pyparsing>=2.3.1 in c:\users\myia\.conda\envs\projet-is\lib\site-packages (from matplotlib->argumentation_analysis_project==0.1.0) (3.2.3)
+
+Requirement already satisfied: python-dateutil>=2.7 in c:\users\myia\.conda\envs\projet-is\lib\site-packages (from matplotlib->argumentation_analysis_project==0.1.0) (2.9.0.post0)
+
+Requirement already satisfied: six>=1.5 in c:\users\myia\.conda\envs\projet-is\lib\site-packages (from python-dateutil>=2.7->matplotlib->argumentation_analysis_project==0.1.0) (1.17.0)
+
+Requirement already satisfied: joblib in c:\users\myia\.conda\envs\projet-is\lib\site-packages (from nltk->argumentation_analysis_project==0.1.0) (1.5.1)
+
+Requirement already satisfied: regex>=2021.8.3 in c:\users\myia\.conda\envs\projet-is\lib\site-packages (from nltk->argumentation_analysis_project==0.1.0) (2024.11.6)
+
+Requirement already satisfied: pytz>=2020.1 in c:\users\myia\.conda\envs\projet-is\lib\site-packages (from pandas->argumentation_analysis_project==0.1.0) (2025.2)
+
+Requirement already satisfied: tzdata>=2022.7 in c:\users\myia\.conda\envs\projet-is\lib\site-packages (from pandas->argumentation_analysis_project==0.1.0) (2025.2)
+
+Requirement already satisfied: exceptiongroup>=1 in c:\users\myia\.conda\envs\projet-is\lib\site-packages (from pytest->argumentation_analysis_project==0.1.0) (1.3.0)
+
+Requirement already satisfied: iniconfig>=1 in c:\users\myia\.conda\envs\projet-is\lib\site-packages (from pytest->argumentation_analysis_project==0.1.0) (2.0.0)
+
+Requirement already satisfied: pluggy<2,>=1.5 in c:\users\myia\.conda\envs\projet-is\lib\site-packages (from pytest->argumentation_analysis_project==0.1.0) (1.6.0)
+
+Requirement already satisfied: pygments>=2.7.2 in c:\users\myia\.conda\envs\projet-is\lib\site-packages (from pytest->argumentation_analysis_project==0.1.0) (2.19.1)
+
+Requirement already satisfied: tomli>=1 in c:\users\myia\.conda\envs\projet-is\lib\site-packages (from pytest->argumentation_analysis_project==0.1.0) (2.2.1)
+
+Requirement already satisfied: charset_normalizer<4,>=2 in c:\users\myia\.conda\envs\projet-is\lib\site-packages (from requests->argumentation_analysis_project==0.1.0) (3.4.2)
+
+Requirement already satisfied: idna<4,>=2.5 in c:\users\myia\.conda\envs\projet-is\lib\site-packages (from requests->argumentation_analysis_project==0.1.0) (3.10)
+
+Requirement already satisfied: urllib3<3,>=1.21.1 in c:\users\myia\.conda\envs\projet-is\lib\site-packages (from requests->argumentation_analysis_project==0.1.0) (2.4.0)
+
+Requirement already satisfied: certifi>=2017.4.17 in c:\users\myia\.conda\envs\projet-is\lib\site-packages (from requests->argumentation_analysis_project==0.1.0) (2025.4.26)
+
+Requirement already satisfied: threadpoolctl>=3.1.0 in c:\users\myia\.conda\envs\projet-is\lib\site-packages (from scikit-learn->argumentation_analysis_project==0.1.0) (3.6.0)
+
+Requirement already satisfied: spacy-legacy<3.1.0,>=3.0.11 in c:\users\myia\.conda\envs\projet-is\lib\site-packages (from spacy->argumentation_analysis_project==0.1.0) (3.0.12)
+
+Requirement already satisfied: spacy-loggers<2.0.0,>=1.0.0 in c:\users\myia\.conda\envs\projet-is\lib\site-packages (from spacy->argumentation_analysis_project==0.1.0) (1.0.5)
+
+Requirement already satisfied: murmurhash<1.1.0,>=0.28.0 in c:\users\myia\.conda\envs\projet-is\lib\site-packages (from spacy->argumentation_analysis_project==0.1.0) (1.0.10)
+
+Requirement already satisfied: cymem<2.1.0,>=2.0.2 in c:\users\myia\.conda\envs\projet-is\lib\site-packages (from spacy->argumentation_analysis_project==0.1.0) (2.0.11)
+
+Requirement already satisfied: preshed<3.1.0,>=3.0.2 in c:\users\myia\.conda\envs\projet-is\lib\site-packages (from spacy->argumentation_analysis_project==0.1.0) (3.0.9)
+
+Collecting thinc<8.4.0,>=8.3.4 (from spacy->argumentation_analysis_project==0.1.0)
+
+  Using cached thinc-8.3.6-cp310-cp310-win_amd64.whl.metadata (15 kB)
+
+Requirement already satisfied: wasabi<1.2.0,>=0.9.1 in c:\users\myia\.conda\envs\projet-is\lib\site-packages (from spacy->argumentation_analysis_project==0.1.0) (1.1.3)
+
+Requirement already satisfied: srsly<3.0.0,>=2.4.3 in c:\users\myia\.conda\envs\projet-is\lib\site-packages (from spacy->argumentation_analysis_project==0.1.0) (2.5.1)
+
+Requirement already satisfied: catalogue<2.1.0,>=2.0.6 in c:\users\myia\.conda\envs\projet-is\lib\site-packages (from spacy->argumentation_analysis_project==0.1.0) (2.0.10)
+
+Requirement already satisfied: weasel<0.5.0,>=0.1.0 in c:\users\myia\.conda\envs\projet-is\lib\site-packages (from spacy->argumentation_analysis_project==0.1.0) (0.4.1)
+
+Requirement already satisfied: typer<1.0.0,>=0.3.0 in c:\users\myia\.conda\envs\projet-is\lib\site-packages (from spacy->argumentation_analysis_project==0.1.0) (0.16.0)
+
+Requirement already satisfied: setuptools in c:\users\myia\.conda\envs\projet-is\lib\site-packages (from spacy->argumentation_analysis_project==0.1.0) (80.9.0)
+
+Requirement already satisfied: langcodes<4.0.0,>=3.2.0 in c:\users\myia\.conda\envs\projet-is\lib\site-packages (from spacy->argumentation_analysis_project==0.1.0) (3.4.1)
+
+Requirement already satisfied: language-data>=1.2 in c:\users\myia\.conda\envs\projet-is\lib\site-packages (from langcodes<4.0.0,>=3.2.0->spacy->argumentation_analysis_project==0.1.0) (1.3.0)
+
+Requirement already satisfied: cloudpickle>=2.2.0 in c:\users\myia\.conda\envs\projet-is\lib\site-packages (from srsly<3.0.0,>=2.4.3->spacy->argumentation_analysis_project==0.1.0) (3.1.1)
+
+Requirement already satisfied: ujson>=1.35 in c:\users\myia\.conda\envs\projet-is\lib\site-packages (from srsly<3.0.0,>=2.4.3->spacy->argumentation_analysis_project==0.1.0) (5.10.0)
+
+Collecting blis<1.4.0,>=1.3.0 (from thinc<8.4.0,>=8.3.4->spacy->argumentation_analysis_project==0.1.0)
+
+  Using cached blis-1.3.0-cp310-cp310-win_amd64.whl.metadata (7.6 kB)
+
+Requirement already satisfied: confection<1.0.0,>=0.0.1 in c:\users\myia\.conda\envs\projet-is\lib\site-packages (from thinc<8.4.0,>=8.3.4->spacy->argumentation_analysis_project==0.1.0) (0.1.5)
+
+Requirement already satisfied: shellingham>=1.3.0 in c:\users\myia\.conda\envs\projet-is\lib\site-packages (from typer<1.0.0,>=0.3.0->spacy->argumentation_analysis_project==0.1.0) (1.5.4)
+
+Requirement already satisfied: rich>=10.11.0 in c:\users\myia\.conda\envs\projet-is\lib\site-packages (from typer<1.0.0,>=0.3.0->spacy->argumentation_analysis_project==0.1.0) (14.0.0)
+
+Requirement already satisfied: cloudpathlib<1.0.0,>=0.7.0 in c:\users\myia\.conda\envs\projet-is\lib\site-packages (from weasel<0.5.0,>=0.1.0->spacy->argumentation_analysis_project==0.1.0) (0.21.1)
+
+Requirement already satisfied: smart-open<8.0.0,>=5.2.1 in c:\users\myia\.conda\envs\projet-is\lib\site-packages (from weasel<0.5.0,>=0.1.0->spacy->argumentation_analysis_project==0.1.0) (7.1.0)
+
+Requirement already satisfied: wrapt in c:\users\myia\.conda\envs\projet-is\lib\site-packages (from smart-open<8.0.0,>=5.2.1->weasel<0.5.0,>=0.1.0->spacy->argumentation_analysis_project==0.1.0) (1.17.2)
+
+Requirement already satisfied: marisa-trie>=1.1.0 in c:\users\myia\.conda\envs\projet-is\lib\site-packages (from language-data>=1.2->langcodes<4.0.0,>=3.2.0->spacy->argumentation_analysis_project==0.1.0) (1.2.1)
+
+Requirement already satisfied: markdown-it-py>=2.2.0 in c:\users\myia\.conda\envs\projet-is\lib\site-packages (from rich>=10.11.0->typer<1.0.0,>=0.3.0->spacy->argumentation_analysis_project==0.1.0) (3.0.0)
+
+Requirement already satisfied: mdurl~=0.1 in c:\users\myia\.conda\envs\projet-is\lib\site-packages (from markdown-it-py>=2.2.0->rich>=10.11.0->typer<1.0.0,>=0.3.0->spacy->argumentation_analysis_project==0.1.0) (0.1.2)
+
+Requirement already satisfied: patsy>=0.5.6 in c:\users\myia\.conda\envs\projet-is\lib\site-packages (from statsmodels->argumentation_analysis_project==0.1.0) (1.0.1)
+
+Requirement already satisfied: filelock in c:\users\myia\.conda\envs\projet-is\lib\site-packages (from torch->argumentation_analysis_project==0.1.0) (3.18.0)
+
+Requirement already satisfied: fsspec in c:\users\myia\.conda\envs\projet-is\lib\site-packages (from torch->argumentation_analysis_project==0.1.0) (2025.3.0)
+
+Collecting sympy==1.13.1 (from torch->argumentation_analysis_project==0.1.0)
+
+  Using cached sympy-1.13.1-py3-none-any.whl.metadata (12 kB)
+
+Requirement already satisfied: mpmath<1.4,>=1.1.0 in c:\users\myia\.conda\envs\projet-is\lib\site-packages (from sympy==1.13.1->torch->argumentation_analysis_project==0.1.0) (1.3.0)
+
+Requirement already satisfied: huggingface-hub<1.0,>=0.30.0 in c:\users\myia\.conda\envs\projet-is\lib\site-packages (from transformers->argumentation_analysis_project==0.1.0) (0.32.4)
+
+Requirement already satisfied: tokenizers<0.22,>=0.21 in c:\users\myia\.conda\envs\projet-is\lib\site-packages (from transformers->argumentation_analysis_project==0.1.0) (0.21.1)
+
+Requirement already satisfied: safetensors>=0.4.3 in c:\users\myia\.conda\envs\projet-is\lib\site-packages (from transformers->argumentation_analysis_project==0.1.0) (0.5.3)
+
+Using cached thinc-8.3.6-cp310-cp310-win_amd64.whl (1.8 MB)
+
+Using cached blis-1.3.0-cp310-cp310-win_amd64.whl (6.2 MB)
+
+Using cached sympy-1.13.1-py3-none-any.whl (6.2 MB)
+
+Building wheels for collected packages: argumentation_analysis_project
+
+  Building editable for argumentation_analysis_project (pyproject.toml): started
+
+  Building editable for argumentation_analysis_project (pyproject.toml): finished with status 'done'
+
+  Created wheel for argumentation_analysis_project: filename=argumentation_analysis_project-0.1.0-0.editable-py3-none-any.whl size=14048 sha256=8a699a6febad2b673d7262dd33957465844a72d73f37571151724f797b62a4cd
+
+  Stored in directory: C:\Users\MYIA\AppData\Local\Temp\pip-ephem-wheel-cache-_80bch06\wheels\26\4d\84\fd476aa100ec86c92163b99b6d0b5f0f744809d3823be0be36
+
+Successfully built argumentation_analysis_project
+
+Installing collected packages: sympy, blis, thinc, argumentation_analysis_project
+
+  Attempting uninstall: sympy
+
+    Found existing installation: sympy 1.14.0
+
+    Uninstalling sympy-1.14.0:
+
+      Successfully uninstalled sympy-1.14.0
+
+  Attempting uninstall: blis
+
+    Found existing installation: blis 1.0.1
+
+    Uninstalling blis-1.0.1:
+
+      Successfully uninstalled blis-1.0.1
+
+  Attempting uninstall: thinc
+
+    Found existing installation: thinc 8.3.2
+
+    Uninstalling thinc-8.3.2:
+
+      Successfully uninstalled thinc-8.3.2
+
+
+
+Successfully installed argumentation_analysis_project-0.1.0 blis-1.3.0 sympy-1.13.1 thinc-8.3.6
+
+
+
+2025-06-05 03:15:24,637 - __main__ - INFO - Dépendances installées avec succès via 'pip install -e .'.
+2025-06-05 03:15:24,637 - __main__ - INFO - Project dependencies installed successfully via pip.
+2025-06-05 03:15:24,637 - __main__ - INFO - ------------------------------
+2025-06-05 03:15:24,637 - __main__ - INFO - Setup orchestration complete.
