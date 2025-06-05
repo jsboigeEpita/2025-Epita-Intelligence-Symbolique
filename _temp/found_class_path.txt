@@ -1,4 +1,0 @@
-﻿org/tweetyproject/logics/ml/syntax/MlBeliefSet.class
-org/tweetyproject/logics/ml/syntax/MlFormula.class
-org/tweetyproject/logics/ml/syntax/Possibility.class
-org/tweetyproject/logics/ml/syntax/Necessity.class
