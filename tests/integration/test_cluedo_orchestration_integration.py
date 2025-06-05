@@ -2,10 +2,6 @@ import asyncio
 import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 
-# Supposons que cluedo_orchestrator.main peut être importé et appelé.
-# Si ce n'est pas le cas, il faudra ajuster la structure ou utiliser subprocess (moins idéal).
-# Pour l'instant, nous allons patcher les dépendances au niveau du module.
-
 # Chemin vers le module à tester pour le patching
 ORCHESTRATOR_MODULE_PATH = "argumentation_analysis.orchestration.cluedo_orchestrator"
 
@@ -189,4 +185,4 @@ async def test_cluedo_orchestration_flow():
 
 # Pour exécuter ce test:
 # Assurez-vous que pytest et pytest-asyncio sont installés.
-# Exécutez `pytest tests/orchestration/test_cluedo_orchestrator.py` depuis la racine du projet.
+# Exécutez `pytest tests/integration/test_cluedo_orchestration_integration.py` depuis la racine du projet.

@@ -76,10 +76,10 @@ def integration_jvm():
                 return None
 
             success = initialize_jvm(
-                lib_dir_path=str(LIBS_DIR),
-                tweety_version=TWEETY_VERSION,
-                use_exclusive_tweety_full_jar=False, 
-                extra_jvm_args=None 
+                lib_dir_path=str(LIBS_DIR)
+                # tweety_version=TWEETY_VERSION, # Argument non attendu
+                # use_exclusive_tweety_full_jar=False, # Argument non attendu
+                # extra_jvm_args=None # Argument non attendu
             )
             if success:
                 logger.info("initialize_jvm a réussi.")
