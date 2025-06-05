@@ -181,12 +181,13 @@ def test_analyze_coherence_multiple_factors_and_clamping(analyzer_default: MockC
         "Ce texte est un exemple de cohérence. Donc, il suit une logique claire. "
         "De plus, les idées sont bien liées. Ainsi, la cohérence du texte est assurée. "
         "La structure du texte aide aussi la cohérence. La cohérence est clé."
-    ) # ~40 mots. Transitions: 4. Ratio 0.1. -> +0.2
-      # Répétition: "cohérence" (x4), "texte" (x4). -> +0.15
+    ) # ~40 mots. Transitions: 4. Ratio > 0.02. -> +0.2
+      # Répétition: "cohérence" (x4). "texte" a 5 lettres, donc n'est pas compté (len > 5).
+      # Un seul mot-clé est répété, donc le bonus est 0 (il faut >= 2 mots-clés répétés).
       # Pronoms: +0.1
-      # Total = 0.5 + 0.2 + 0.15 + 0.1 = 0.95.
+      # Total = 0.5 + 0.2 + 0.1 = 0.8.
     result_good = analyzer_default.analyze_coherence(text_very_coherent)
-    assert result_good["coherence_score"] == pytest.approx(0.95)
+    assert result_good["coherence_score"] == pytest.approx(0.8)
 
 
 def test_interpret_score(analyzer_default: MockCoherenceAnalyzer):

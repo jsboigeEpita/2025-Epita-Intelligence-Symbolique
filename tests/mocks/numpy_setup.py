@@ -252,196 +252,72 @@ def setup_numpy():
         print(f"Utilisation de la vraie bibliothèque NumPy (version {getattr(numpy, '__version__', 'inconnue')}) (depuis numpy_setup.py).")
         return numpy
 
-@pytest.fixture(scope="function") # autouse=True SUPPRIMÉ
+@pytest.fixture(scope="function")
 def setup_numpy_for_tests_fixture(request):
-    # Nettoyage FORCÉ au tout début de chaque exécution de la fixture
-    logger.info(f"Fixture numpy_setup pour {request.node.name}: Nettoyage FORCÉ initial systématique de numpy, pandas, scipy, sklearn.")
-    deep_delete_from_sys_modules("numpy", logger)
-    deep_delete_from_sys_modules("pandas", logger)
-    deep_delete_from_sys_modules("scipy", logger)
-    deep_delete_from_sys_modules("sklearn", logger)
+    """
+    Fixture pour gérer dynamiquement l'utilisation du vrai NumPy ou de son mock.
+    Assure un nettoyage complet de sys.modules avant et après chaque test pour éviter la pollution d'état.
+    """
+    # --- 1. Sauvegarde de l'état initial ---
+    initial_modules_state = {
+        name: sys.modules.get(name) for name in ['numpy', 'pandas', 'scipy', 'sklearn', 'pyarrow']
+        if sys.modules.get(name) is not None
+    }
+    logger.info(f"Fixture pour {request.node.name}: État initial sauvegardé pour {list(initial_modules_state.keys())}.")
 
-    # MODIFICATION ICI: Vérifier le nouveau marqueur pour utiliser le mock
-    use_mock_numpy_marker = request.node.get_closest_marker("use_mock_numpy")
-    # Garder la logique pour real_jpype car elle peut être indépendante
-    real_jpype_marker = request.node.get_closest_marker("real_jpype")
+    # --- 2. Nettoyage systématique avant le test ---
+    logger.info(f"Fixture pour {request.node.name}: Nettoyage systématique AVANT le test.")
+    for lib in ['numpy', 'pandas', 'scipy', 'sklearn', 'pyarrow']:
+        deep_delete_from_sys_modules(lib, logger)
 
-    print(f"DEBUG: numpy_setup.py: sys.path au début de la fixture pour {request.node.name}: {sys.path}")
-    
-    # L'état de numpy est capturé APRÈS le nettoyage forcé initial.
-    # Il devrait idéalement être None ici si le nettoyage a bien fonctionné.
-    numpy_state_before_this_fixture = sys.modules.get('numpy')
-    numpy_rec_state_before_this_fixture = sys.modules.get('numpy.rec')
-
-    _initial_numpy_after_forced_clean = sys.modules.get('numpy')
     try:
-        if _initial_numpy_after_forced_clean:
-            print(f"DEBUG: numpy_setup.py: NumPy PRÉSENT dans sys.modules pour {request.node.name} APRÈS NETTOYAGE FORCÉ INITIAL: {getattr(_initial_numpy_after_forced_clean, '__version__', 'inconnue')} (ID: {id(_initial_numpy_after_forced_clean)}) from {getattr(_initial_numpy_after_forced_clean, '__file__', 'N/A')}")
+        # --- 3. Décision et configuration (Mock vs. Réel) ---
+        use_mock_numpy_marker = request.node.get_closest_marker("use_mock_numpy")
+
+        if use_mock_numpy_marker:
+            # --- Branche MOCK ---
+            logger.info(f"Test {request.node.name} marqué 'use_mock_numpy': Installation du MOCK NumPy.")
+            _install_numpy_mock_immediately()
+            yield  # Le test s'exécute ici avec le mock
         else:
-            print(f"DEBUG: numpy_setup.py: NumPy NON PRÉSENT dans sys.modules pour {request.node.name} APRÈS NETTOYAGE FORCÉ INITIAL.")
-    except Exception as e_debug_initial:
-        print(f"DEBUG: numpy_setup.py: Erreur lors du log de NumPy APRÈS NETTOYAGE FORCÉ pour {request.node.name}: {e_debug_initial}")
+            # --- Branche RÉELLE (par défaut) ---
+            logger.info(f"Test {request.node.name} (DEFAULT/real_numpy): Configuration pour le VRAI NumPy.")
+            try:
+                # Importation du vrai NumPy
+                importlib.import_module('numpy')
+                logger.info(f"Vrai NumPy importé avec succès pour {request.node.name}.")
+                
+                # Forcer la réimportation des bibliothèques dépendantes pour qu'elles utilisent le vrai NumPy
+                for lib in ['pandas', 'scipy', 'sklearn', 'pyarrow']:
+                    if lib in initial_modules_state: # Ne réimporter que si c'était déjà là
+                        logger.info(f"Forcing re-import of {lib} for {request.node.name} after loading real NumPy.")
+                        try:
+                            importlib.import_module(lib)
+                            logger.info(f"{lib} réimporté avec succès.")
+                        except ImportError as e:
+                            logger.error(f"Échec de la réimportation de {lib}: {e}")
+                
+                yield  # Le test s'exécute ici avec le vrai NumPy
+            except ImportError:
+                logger.error(f"Impossible d'importer le vrai NumPy pour {request.node.name}.")
+                pytest.skip("Vrai NumPy non disponible.")
+                yield
 
-    if numpy_state_before_this_fixture: # Devrait être None si le nettoyage forcé a fonctionné
-        logger.info(f"Fixture pour {request.node.name}: État de sys.modules['numpy'] APRÈS NETTOYAGE FORCÉ (devrait être None): version {getattr(numpy_state_before_this_fixture, '__version__', 'N/A')}, ID {id(numpy_state_before_this_fixture)}")
-    else:
-        logger.info(f"Fixture pour {request.node.name}: sys.modules['numpy'] est absent APRÈS NETTOYAGE FORCÉ (comme attendu).")
-    
-    # MODIFICATION DE LA CONDITION PRINCIPALE
-    if use_mock_numpy_marker: # Si le test demande explicitement le MOCK
-        logger.info(f"Test {request.node.name} marqué 'use_mock_numpy': Configuration pour MOCK NumPy.")
-        _install_numpy_mock_immediately()
-        yield
-        logger.info(f"Fin de la section 'use_mock_numpy' pour {request.node.name}. Restauration de l'état PRÉ-FIXTURE.")
-        # ... (logique de nettoyage du mock, identique à l'ancienne branche 'else') ...
-        current_numpy_in_sys = sys.modules.get('numpy')
-        is_our_mock = False
-        if current_numpy_in_sys:
-            if type(current_numpy_in_sys).__name__ == 'numpy' and hasattr(current_numpy_in_sys, '__path__') and not current_numpy_in_sys.__path__:
-                is_our_mock = True
-            elif hasattr(current_numpy_in_sys, '__version__') and "mock" in current_numpy_in_sys.__version__:
-                is_our_mock = True
-
-        if is_our_mock:
-            logger.info(f"Suppression du Mock NumPy (ID: {id(current_numpy_in_sys)}) installé par {request.node.name} (use_mock_numpy).")
-            del sys.modules['numpy']
-            if 'numpy.rec' in sys.modules and hasattr(current_numpy_in_sys, 'rec') and sys.modules['numpy.rec'] is getattr(current_numpy_in_sys, 'rec', None):
-                 del sys.modules['numpy.rec']
-            # Nettoyer aussi les sous-modules de core qui auraient pu être mis directement dans sys.modules
-            if 'numpy.core._multiarray_umath' in sys.modules:
-                del sys.modules['numpy.core._multiarray_umath']
-            if 'numpy._core._multiarray_umath' in sys.modules:
-                del sys.modules['numpy._core._multiarray_umath']
-            if 'numpy.core.multiarray' in sys.modules:
-                del sys.modules['numpy.core.multiarray']
-            if 'numpy._core.multiarray' in sys.modules:
-                del sys.modules['numpy._core.multiarray']
-            if 'numpy.core' in sys.modules:
-                del sys.modules['numpy.core']
-                logger.info(f"Supprimé sys.modules['numpy.core'] pour {request.node.name} (use_mock_numpy cleanup).")
-            if 'numpy._core' in sys.modules:
-                del sys.modules['numpy._core']
-                logger.info(f"Supprimé sys.modules['numpy._core'] pour {request.node.name} (use_mock_numpy cleanup).")
-
-        elif current_numpy_in_sys:
-             logger.warning(f"Tentative de restauration pour {request.node.name} (use_mock_numpy), mais sys.modules['numpy'] (ID: {id(current_numpy_in_sys)}) n'est pas le mock attendu.")
-
-        if numpy_state_before_this_fixture:
-            sys.modules['numpy'] = numpy_state_before_this_fixture
-            logger.info(f"Restauré sys.modules['numpy'] à l'état pré-fixture (ID: {id(numpy_state_before_this_fixture)}) pour {request.node.name} (use_mock_numpy).")
-        elif 'numpy' in sys.modules:
-            logger.warning(f"Après suppression du Mock NumPy (use_mock_numpy), 'numpy' (ID: {id(sys.modules['numpy'])}) est toujours dans sys.modules alors qu'il n'y avait rien à l'origine. Suppression.")
-            del sys.modules['numpy']
-
-        if numpy_rec_state_before_this_fixture:
-            sys.modules['numpy.rec'] = numpy_rec_state_before_this_fixture
-            logger.info(f"Restauré sys.modules['numpy.rec'] à l'état pré-fixture pour {request.node.name} (use_mock_numpy).")
-        elif 'numpy.rec' in sys.modules:
-            if not ('numpy' in sys.modules and hasattr(sys.modules['numpy'], 'rec') and sys.modules['numpy'].rec is sys.modules['numpy.rec']):
-                logger.warning(f"Après suppression du Mock NumPy (use_mock_numpy), 'numpy.rec' est toujours dans sys.modules et n'appartient pas au numpy restauré/absent. Suppression.")
-                del sys.modules['numpy.rec']
-        logger.info(f"Fin de la restauration pour {request.node.name} (branche use_mock_numpy).")
-
-    else: # PAR DÉFAUT, ou si real_jpype est demandé (ce qui implique souvent real numpy)
-        marker_name = "DEFAULT (real_numpy)" if not real_jpype_marker else "real_jpype (implies real_numpy)"
-        logger.info(f"Test {request.node.name} ({marker_name}): Configuration pour VRAI NumPy.")
-
-        # ... (logique pour installer le VRAI NumPy, identique à l'ancienne branche 'if use_real_numpy_marker') ...
-        logger.info(f"Nettoyage agressif de numpy et pandas avant import réel pour {request.node.name}")
-        deep_delete_from_sys_modules("numpy", logger)
-        deep_delete_from_sys_modules("pandas", logger) # Assurons-nous que pandas est aussi nettoyé ici
-
-        # Vérification supplémentaire et suppression forcée si nécessaire
-        if 'numpy' in sys.modules:
-            logger.warning(f"NumPy (ID: {id(sys.modules['numpy'])}, Version: {getattr(sys.modules['numpy'], '__version__', 'N/A')}) encore dans sys.modules APRÈS deep_delete pour {request.node.name}. Suppression forcée.")
-            del sys.modules['numpy']
-            # Nettoyer aussi les sous-modules courants qui pourraient persister si la clé principale est supprimée mais pas les enfants
-            keys_to_delete_numpy_children = [k for k in sys.modules if k.startswith('numpy.')]
-            if keys_to_delete_numpy_children:
-                logger.warning(f"Suppression forcée des sous-modules NumPy enfants: {keys_to_delete_numpy_children}")
-                for k_child in keys_to_delete_numpy_children:
-                    del sys.modules[k_child]
+    finally:
+        # --- 4. Nettoyage et restauration systématiques après le test ---
+        logger.info(f"Fixture pour {request.node.name}: Nettoyage et restauration FINALE.")
         
-        if 'pandas' in sys.modules:
-            logger.warning(f"Pandas (ID: {id(sys.modules['pandas'])}) encore dans sys.modules APRÈS deep_delete pour {request.node.name}. Suppression forcée.")
-            del sys.modules['pandas']
-            keys_to_delete_pandas_children = [k for k in sys.modules if k.startswith('pandas.')]
-            if keys_to_delete_pandas_children:
-                logger.warning(f"Suppression forcée des sous-modules Pandas enfants: {keys_to_delete_pandas_children}")
-                for k_child in keys_to_delete_pandas_children:
-                    del sys.modules[k_child]
+        # D'abord, nettoyer tout ce qui a pu être ajouté pendant le test
+        for lib in ['numpy', 'pandas', 'scipy', 'sklearn', 'pyarrow']:
+            deep_delete_from_sys_modules(lib, logger)
         
-        imported_numpy_for_test = None
-        try:
-            logger.info(f"Tentative d'importation du vrai NumPy pour {request.node.name}.")
-            imported_numpy_for_test = importlib.import_module('numpy')
-            sys.modules['numpy'] = imported_numpy_for_test
-            logger.info(f"Vrai NumPy (version {getattr(imported_numpy_for_test, '__version__', 'inconnue')}, ID: {id(imported_numpy_for_test)}) dynamiquement importé et placé dans sys.modules pour {request.node.name}.")
-            
-            try:
-                # Tentative d'import explicite pour s'assurer que numpy.rec est bien un module chargé
-                import numpy.rec as actual_rec_module
-                sys.modules['numpy.rec'] = actual_rec_module
-                logger.info(f"Vrai numpy.rec importé explicitement et assigné à sys.modules['numpy.rec'] pour {request.node.name}. Type: {type(actual_rec_module)}")
-            except ImportError as e_rec:
-                logger.error(f"Échec de l'import explicite de numpy.rec pour {request.node.name}: {e_rec}")
-                # Logique de fallback si l'import direct échoue (moins probable si numpy lui-même est ok)
-                if hasattr(imported_numpy_for_test, 'rec'):
-                    if not ('numpy.rec' in sys.modules and sys.modules['numpy.rec'] is imported_numpy_for_test.rec):
-                        sys.modules['numpy.rec'] = imported_numpy_for_test.rec
-                        logger.info(f"Vrai numpy.rec (attribut de numpy importé) assigné en fallback pour {request.node.name}.")
-                else:
-                    logger.warning(f"L'attribut 'rec' n'existe pas sur le module numpy importé pour {request.node.name} et l'import explicite a échoué.")
-
-            logger.info(f"Forcing re-import of pandas for {request.node.name} after loading real NumPy.")
-            logger.info(f"Nettoyage agressif de pandas et ses sous-modules _libs avant réimportation pour {request.node.name}")
-            deep_delete_from_sys_modules("pandas._libs", logger) # Cibler _libs spécifiquement
-            deep_delete_from_sys_modules("pandas", logger)       # Ensuite, le reste de pandas
-            try:
-                import pandas # Réimporter pandas
-                logger.info(f"Pandas re-imported successfully for {request.node.name} using real NumPy (version {getattr(sys.modules.get('numpy'), '__version__', 'N/A')}, ID: {id(sys.modules.get('numpy'))}). Pandas ID: {id(pandas)}")
-            except ImportError as e_pandas_reimport:
-                logger.error(f"Failed to re-import pandas for {request.node.name} after loading real NumPy: {e_pandas_reimport}")
-                # Optionnel: skipper le test si pandas ne peut être réimporté
-                # pytest.skip(f"Pandas re-import failed: {e_pandas_reimport}")
-
-            logger.info(f"Forcing re-import of scipy for {request.node.name} after loading real NumPy.")
-            deep_delete_from_sys_modules("scipy", logger)
-            try:
-                import scipy # Réimporter scipy
-                logger.info(f"Scipy re-imported successfully for {request.node.name} using real NumPy. Scipy ID: {id(scipy)}")
-            except ImportError as e_scipy_reimport:
-                logger.error(f"Failed to re-import scipy for {request.node.name} after loading real NumPy: {e_scipy_reimport}")
-
-            yield imported_numpy_for_test
-
-        except ImportError:
-            logger.error(f"Impossible d'importer dynamiquement le vrai NumPy pour {request.node.name} après nettoyage.")
-            pytest.skip("Vrai NumPy non disponible après tentative d'import dynamique.")
-            yield None 
-        finally:
-            logger.info(f"Fin de la section '{marker_name}' pour {request.node.name}. Restauration de l'état PRÉ-FIXTURE (avant nettoyage par CETTE fixture).")
-            if imported_numpy_for_test and 'numpy' in sys.modules and sys.modules['numpy'] is imported_numpy_for_test:
-                logger.info(f"Suppression du NumPy (ID: {id(imported_numpy_for_test)}) spécifiquement importé pour {request.node.name} ({marker_name}).")
-                del sys.modules['numpy']
-                if hasattr(imported_numpy_for_test, 'rec') and 'numpy.rec' in sys.modules and sys.modules['numpy.rec'] is imported_numpy_for_test.rec:
-                    del sys.modules['numpy.rec']
-            
-            if numpy_state_before_this_fixture:
-                sys.modules['numpy'] = numpy_state_before_this_fixture
-                logger.info(f"Restauré sys.modules['numpy'] à l'état pré-fixture (ID: {id(numpy_state_before_this_fixture)}) pour {request.node.name} ({marker_name}).")
-            elif 'numpy' in sys.modules: 
-                logger.warning(f"Après suppression du NumPy de test ({marker_name}), 'numpy' (ID: {id(sys.modules['numpy'])}) est toujours dans sys.modules alors qu'il n'y avait rien à l'origine (avant cette fixture). Suppression.")
-                del sys.modules['numpy']
-
-            if numpy_rec_state_before_this_fixture:
-                 sys.modules['numpy.rec'] = numpy_rec_state_before_this_fixture
-                 logger.info(f"Restauré sys.modules['numpy.rec'] à l'état pré-fixture pour {request.node.name} ({marker_name}).")
-            elif 'numpy.rec' in sys.modules:
-                 if not ('numpy' in sys.modules and hasattr(sys.modules['numpy'], 'rec') and sys.modules['numpy'].rec is sys.modules['numpy.rec']):
-                    logger.warning(f"Après suppression du NumPy de test ({marker_name}), 'numpy.rec' est toujours dans sys.modules et n'appartient pas au numpy restauré/absent. Suppression.")
-                    del sys.modules['numpy.rec']
-            logger.info(f"Fin de la restauration pour {request.node.name} (branche {marker_name}).")
-        return
-# if (sys.version_info.major == 3 and sys.version_info.minor >= 10):
-# _install_numpy_mock_immediately()
+        # Ensuite, restaurer l'état initial des modules
+        restored_count = 0
+        for name, module in initial_modules_state.items():
+            if module is not None:
+                sys.modules[name] = module
+                restored_count += 1
+        if restored_count > 0:
+            logger.info(f"{restored_count} modules restaurés à leur état initial ({list(initial_modules_state.keys())}).")
+        
+        logger.info(f"Fin de la fixture pour {request.node.name}.")

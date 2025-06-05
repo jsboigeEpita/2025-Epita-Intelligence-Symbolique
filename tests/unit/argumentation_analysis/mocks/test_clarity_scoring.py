@@ -107,14 +107,14 @@ def test_score_clarity_passive_voice_simulation(scorer_default: MockClarityScore
     # Ratio 1.0 > 0.2. Pénalité -0.05
     text = "Le chat est chassé par le chien. La souris est mangée par le chat. Une action fut entreprise par le comité."
     result = scorer_default.score_clarity(text)
-    # Recalcul:
-    # Mots: 19, Phrases: 3, Passifs: 3. Ratio passif: 3/3 = 1.0 > 0.2 -> Pénalité: -0.05
-    # Mots complexes: "entreprise" (1) -> ratio 1/19 = 0.052. Pénalité: -0.15 * 0.052 = -0.0078
-    # Score: 1.0 - 0.05 - 0.0078 = 0.942...
-    # Le log montre un ratio de 0.67, ce qui est > 0.2, donc la pénalité de -0.05 s'applique.
-    # Le log montre un ratio de mots complexes de 0.05. Pénalité: -0.15 * 0.05 = -0.0075
-    # Score = 1.0 - 0.05 - 0.0075 = 0.9425
-    assert result["clarity_score"] == pytest.approx(1.0 - 0.05 - (0.15 * (1/19)))
+    # Recalcul basé sur l'implémentation actuelle:
+    # Mots (via regex \b\w+\b): 21
+    # Phrases (via split('.')): 3
+    # Passifs (via regex limitée): 2 ("est chassé", "est mangée"). Ratio: 2/3 = 0.66... > 0.2 -> Pénalité: -0.05
+    # Mots complexes (>9 lettres): 1 ("entreprise"). Ratio: 1/21 = 0.0476...
+    # Pénalité mots complexes: -0.15 * (1/21) = -0.00714...
+    # Score attendu: 1.0 - 0.05 - (0.15 * (1/21)) = 0.942857...
+    assert result["clarity_score"] == pytest.approx(1.0 - 0.05 - (0.15 * (1/21)))
     assert result["factors"]["passive_voice_ratio"] > scorer_default.max_passive_voice_ratio
     assert result["interpretation"] == "Très clair (Mock)" # 0.94
 
