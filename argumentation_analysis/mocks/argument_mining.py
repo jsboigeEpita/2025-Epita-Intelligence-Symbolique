@@ -38,56 +38,27 @@ class MockArgumentMiner:
         
         arguments: List[Dict[str, Any]] = []
         
-        # Simuler la recherche de "prémisse :" et "conclusion :"
-        premise_matches = list(re.finditer(r"prémisse\s*:", text, re.IGNORECASE))
-        conclusion_matches = list(re.finditer(r"conclusion\s*:", text, re.IGNORECASE))
-
-        # Scénario 1: Prémisse explicite suivie d'une conclusion explicite
-        # Combine and sort all matches to process them in order
-        all_matches = sorted(premise_matches + conclusion_matches, key=lambda m: m.start())
-
-        i = 0
-        while i < len(all_matches):
-            p_match = all_matches[i]
-            if "prémisse" not in p_match.group(0).lower():
-                i += 1
-                continue
-
-            # Find the next conclusion
-            c_match = None
-            if i + 1 < len(all_matches) and "conclusion" in all_matches[i+1].group(0).lower():
-                c_match = all_matches[i+1]
+        # Scénario 1: Recherche de paires Prémisse/Conclusion
+        pattern = re.compile(r"prémisse\s*:(.*?)(?:conclusion\s*:(.*?))?(?=prémisse\s*:|$)", re.IGNORECASE | re.DOTALL)
+        for match in pattern.finditer(text):
+            premise_content = match.group(1).strip()
+            conclusion_content = match.group(2)
             
-            if c_match:
-                premise_text_start = p_match.end()
-                premise_text_end = c_match.start()
-                premise_content = text[premise_text_start:premise_text_end].strip()
-
-                conclusion_text_start = c_match.end()
-
-                # Find the end of the conclusion (next premise or end of text)
-                conclusion_text_end = len(text)
-                if i + 2 < len(all_matches):
-                    conclusion_text_end = all_matches[i+2].start()
-                
-                final_conclusion_content = text[conclusion_text_start:conclusion_text_end].strip()
-
-                # Delimit by sentence end
-                sentence_end_match = re.search(r'[.!?]', final_conclusion_content)
-                if sentence_end_match:
-                    final_conclusion_content = final_conclusion_content[:sentence_end_match.end()]
-
-                if len(premise_content) >= self.min_length and len(final_conclusion_content) >= self.min_length:
-                    arguments.append({
-                        "type": "Argument Explicite (Mock)",
-                        "premise": premise_content,
-                        "conclusion": final_conclusion_content,
-                        "confidence": 0.85,
-                        "details": "Prémisse et conclusion explicitement marquées."
-                    })
-                i += 2 # Move past the premise and conclusion
+            if conclusion_content is not None:
+                conclusion_content = conclusion_content.strip()
+                if '.' in conclusion_content:
+                    conclusion_content = conclusion_content.split('.')[0] + '.'
             else:
-                i += 1 # Move to the next match
+                conclusion_content = ""
+
+            if len(premise_content) >= self.min_length:
+                arguments.append({
+                    "type": "Argument Explicite (Mock)",
+                    "premise": premise_content,
+                    "conclusion": conclusion_content,
+                    "confidence": 0.85 if conclusion_content else 0.60,
+                    "details": "Prémisse et conclusion explicitement marquées." if conclusion_content else "Prémisse détectée sans conclusion explicite."
+                })
 
         # Scénario 2: Texte contenant "donc" ou "par conséquent" comme indicateur de conclusion
         conclusion_indicators = ["donc", "par conséquent", "ainsi"]
