@@ -11,12 +11,14 @@ pytest-asyncio
 pytest-mock
 python-dotenv
 scikit-learn
-scipy==1.15.3
+scipy==1.13.1
 sentence-transformers
-semantic-kernel==1.29.0
+semantic-kernel==0.9.6b1
 numpy>=2.0.0,<2.3 # Assurer la compatibilité
-spacy
+# spacy
 coverage
 clingo
 unidecode
 markdown
+
+playwright
