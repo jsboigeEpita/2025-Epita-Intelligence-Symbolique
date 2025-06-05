@@ -309,7 +309,7 @@ def setup_numpy():
         print(f"Utilisation de la vraie bibliothèque NumPy (version {getattr(numpy, '__version__', 'inconnue')}) (depuis numpy_setup.py).")
         return numpy
 
-@pytest.fixture(scope="function", autouse=True)
+@pytest.fixture(scope="function") # autouse=True SUPPRIMÉ
 def setup_numpy_for_tests_fixture(request):
     # Nettoyage FORCÉ au tout début de chaque exécution de la fixture
     logger.info(f"Fixture numpy_setup pour {request.node.name}: Nettoyage FORCÉ initial systématique de numpy, pandas, scipy, sklearn.")
