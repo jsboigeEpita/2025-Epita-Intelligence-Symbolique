@@ -15,16 +15,15 @@ class MockClarityScorer:
     def __init__(self, config: Dict[str, Any] = None):
         self.config = config if config else {}
         # Pénalités pour manque de clarté
-        self.clarity_penalties: Dict[str, float] = self.config.get(
-            "clarity_penalties",
-            {
-                "long_sentences_avg": -0.1, # Si longueur moyenne des phrases > 25 mots
-                "complex_words_ratio": -0.15, # Si ratio de mots complexes (ex: >3 syllabes) > 0.1
-                "passive_voice_ratio": -0.05, # Si ratio de phrases à la voix passive > 0.2
-                "jargon_count": -0.2,         # Par occurrence de mot de jargon détecté
-                "ambiguity_keywords": -0.1    # Par occurrence de mot ambigu
-            }
-        )
+        default_penalties = {
+            "long_sentences_avg": -0.1,
+            "complex_words_ratio": -0.15,
+            "passive_voice_ratio": -0.05,
+            "jargon_count": -0.2,
+            "ambiguity_keywords": -0.1
+        }
+        custom_penalties = self.config.get("clarity_penalties", {})
+        self.clarity_penalties = {**default_penalties, **custom_penalties}
         self.jargon_list = self.config.get("jargon_list", ["synergie", "paradigm shift", "holistique", "disruptif"])
         self.ambiguity_keywords = self.config.get("ambiguity_keywords", ["peut-être", "possiblement", "certains", "quelques"])
         self.max_avg_sentence_length = self.config.get("max_avg_sentence_length", 25)
@@ -52,7 +51,14 @@ class MockClarityScorer:
         logger.info("MockClarityScorer évalue le texte : %s...", text[:100])
         
         clarity_score: float = 1.0 # Score de base parfait
-        factors: Dict[str, Any] = {penalty: 0 for penalty in self.clarity_penalties}
+        default_penalties = {
+            "long_sentences_avg": 0,
+            "complex_words_ratio": 0,
+            "passive_voice_ratio": 0,
+            "jargon_count": 0,
+            "ambiguity_keywords": 0
+        }
+        factors: Dict[str, Any] = default_penalties.copy()
         text_lower = text.lower()
 
         words = re.findall(r'\b\w+\b', text_lower)
@@ -72,9 +78,8 @@ class MockClarityScorer:
         # Mots complexes (simplifié: mots > 9 lettres comme proxy pour >3 syllabes)
         complex_words = [w for w in words if len(w) > 9]
         complex_word_ratio = len(complex_words) / num_words
-        if complex_word_ratio > self.max_complex_word_ratio:
-            clarity_score += self.clarity_penalties["complex_words_ratio"]
-            factors["complex_words_ratio"] = round(complex_word_ratio, 2)
+        clarity_score += self.clarity_penalties["complex_words_ratio"] * complex_word_ratio
+        factors["complex_words_ratio"] = round(complex_word_ratio, 2)
         
         # Voix passive (très simplifié: recherche de "est/sont/été suivi par participe passé")
         # Ceci est un placeholder, une vraie détection est complexe.
@@ -110,11 +115,11 @@ class MockClarityScorer:
         }
 
     def _interpret_score(self, score: float) -> str:
-        if score >= 0.8:
+        if score >= 0.9:
             return "Très clair (Mock)"
-        elif score >= 0.6:
+        elif score >= 0.7:
             return "Clair (Mock)"
-        elif score >= 0.4:
+        elif score >= 0.5:
             return "Peu clair (Mock)"
         else:
             return "Pas clair du tout (Mock)"

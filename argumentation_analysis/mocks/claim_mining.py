@@ -69,24 +69,8 @@ class MockClaimMiner:
                         "source_indices": (match.start(), claim_text_end)
                     })
 
-        # Scénario 2: Identifier les phrases assertives (simplifié: phrases se terminant par un point)
-        # et qui sont suffisamment longues. Éviter les doublons avec le scénario 1.
-        if not claims: # Seulement si aucun mot-clé n'a fonctionné pour éviter trop de bruit
-            sentences = [s.strip() for s in text.split('.') if s.strip()]
-            for sentence in sentences:
-                if len(sentence) >= self.min_claim_length:
-                    # Vérifier si cette phrase n'est pas déjà couverte par une revendication par mot-clé
-                    already_covered = False
-                    # (Cette logique de non-doublon est omise car on est dans le `if not claims`)
-
-                    claims.append({
-                        "type": "Revendication Assertive (Mock)",
-                        "claim_text": sentence,
-                        "confidence": 0.60,
-                        "source_indices": (text.find(sentence), text.find(sentence) + len(sentence))
-                    })
-        
-        # Scénario 3: Si toujours rien, et que le texte est assez long, prendre le texte entier.
+        # Scénario 2: Si aucun mot-clé n'est trouvé, considérer le texte entier comme une "Revendication Globale"
+        # si sa longueur est suffisante.
         if not claims and len(text) >= self.min_claim_length:
             claims.append({
                 "type": "Revendication Globale (Mock)",
