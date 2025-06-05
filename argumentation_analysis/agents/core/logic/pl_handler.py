@@ -1,11 +1,13 @@
 import jpype
 from jpype.types import JString
 import logging
-from argumentation_analysis.utils.core_utils.logging_utils import setup_logging
+# La configuration du logging (appel à setup_logging()) est supposée être faite globalement,
+# par exemple au point d'entrée de l'application ou dans conftest.py pour les tests.
+# from argumentation_analysis.utils.core_utils.logging_utils import setup_logging # Retiré
 # Import TweetyInitializer to access its static methods for parser/reasoner
 from .tweety_initializer import TweetyInitializer
 
-logger = setup_logging(__name__)
+logger = logging.getLogger(__name__) # Obtient le logger pour ce module
 
 class PLHandler:
     """
