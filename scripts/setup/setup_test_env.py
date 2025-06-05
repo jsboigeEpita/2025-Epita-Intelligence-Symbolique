@@ -40,7 +40,7 @@ try:
     project_root_path = current_script_path.parent.parent.parent 
     if str(project_root_path) not in sys.path:
         sys.path.insert(0, str(project_root_path))
-    from project_core.pipelines.setup_pipeline import run_test_environment_setup_pipeline
+    from argumentation_analysis.pipelines.setup_pipeline import run_test_environment_setup_pipeline
 except ImportError as e:
     print(f"Erreur d'import: {e}. Assurez-vous que le PYTHONPATH est correctement configuré ou que le script est exécuté depuis la racine du projet.")
     sys.exit(1)
