@@ -41,11 +41,17 @@ class MockClaimMiner:
         logger.info("MockClaimMiner analyse le texte : %s...", text[:100])
         
         claims: List[Dict[str, Any]] = []
+        keyword_match_found = False
 
         # Scénario 1: Utiliser des mots-clés pour identifier des revendications
         for keyword in self.claim_keywords:
-            # Utiliser \b pour s'assurer que le mot-clé est un mot entier (ou début de phrase)
-            matches = list(re.finditer(rf"\b{re.escape(keyword)}\b", text, re.IGNORECASE))
+            search_pattern = re.escape(keyword)
+            if keyword.isalnum():
+                search_pattern = rf"\b{search_pattern}\b"
+            
+            matches = list(re.finditer(search_pattern, text, re.IGNORECASE))
+            if matches:
+                keyword_match_found = True
             for match in matches:
                 # Extraire la phrase ou la portion de texte suivant le mot-clé
                 claim_text_start = match.end()
@@ -56,7 +62,7 @@ class MockClaimMiner:
                     claim_text_end = period_match + 1
                 else:
                     # Sinon, prendre une portion de texte (ex: 100 caractères)
-                    claim_text_end = min(len(text), claim_text_start + 100) 
+                    claim_text_end = min(len(text), claim_text_start + 100)
                 
                 claim_content = text[claim_text_start:claim_text_end].strip()
                 
@@ -69,9 +75,9 @@ class MockClaimMiner:
                         "source_indices": (match.start(), claim_text_end)
                     })
 
-        # Scénario 2: Si aucun mot-clé n'est trouvé, considérer le texte entier comme une "Revendication Globale"
-        # si sa longueur est suffisante.
-        if not claims and len(text) >= self.min_claim_length:
+        # Scénario 2: Si aucune revendication n'a été ajoutée ET aucun mot-clé n'a été trouvé,
+        # considérer le texte entier comme une "Revendication Globale".
+        if not claims and not keyword_match_found and len(text) >= self.min_claim_length:
             claims.append({
                 "type": "Revendication Globale (Mock)",
                 "claim_text": text,
