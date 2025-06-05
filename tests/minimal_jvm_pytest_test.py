@@ -37,12 +37,12 @@ def local_start_the_jvm_directly():
     classpath_entries = [] # Vide pour le test minimal
     
     jvm_options = [
-        '-Xms128m', 
+        '-Xms128m',
         '-Xmx512m',
         '-Dfile.encoding=UTF-8',
-        '-Djava.awt.headless=true'
-        # '-verbose:jni', # Option de débogage JNI si nécessaire
-        # '-Xcheck:jni'   # Option de débogage JNI plus stricte
+        '-Djava.awt.headless=true',
+        '-verbose:jni',
+        '-Xcheck:jni'
     ]
 
     logger.debug(f"  LOCAL_CALL jvmpath: {jvmpath}")
