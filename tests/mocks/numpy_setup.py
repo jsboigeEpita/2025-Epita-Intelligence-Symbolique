@@ -107,183 +107,185 @@ class MockRecarray:
         return MagicMock(name=f"MockRecarray.getitem.{key}")
 
 def _install_numpy_mock_immediately():
-    print("INFO: numpy_setup.py: _install_numpy_mock_immediately: Tentative d'installation/réinstallation du mock NumPy.")
-    try:
-        # Utiliser legacy_numpy_array_mock directement ici
-        mock_numpy_attrs = {attr: getattr(legacy_numpy_array_mock, attr) for attr in dir(legacy_numpy_array_mock) if not attr.startswith('__')}
-        mock_numpy_attrs['__version__'] = legacy_numpy_array_mock.__version__ if hasattr(legacy_numpy_array_mock, '__version__') else '1.24.3.mock'
+    print("INFO: numpy_setup.py: _install_numpy_mock_immediately: CORPS DE LA FONCTION COMMENTÉ POUR TEST.")
+    # print("INFO: numpy_setup.py: _install_numpy_mock_immediately: Tentative d'installation/réinstallation du mock NumPy.")
+    # try:
+    #     # Utiliser legacy_numpy_array_mock directement ici
+    #     mock_numpy_attrs = {attr: getattr(legacy_numpy_array_mock, attr) for attr in dir(legacy_numpy_array_mock) if not attr.startswith('__')}
+    #     mock_numpy_attrs['__version__'] = legacy_numpy_array_mock.__version__ if hasattr(legacy_numpy_array_mock, '__version__') else '1.24.3.mock'
         
-        mock_numpy_module = type('numpy', (), mock_numpy_attrs)
-        mock_numpy_module.__path__ = []
-        sys.modules['numpy'] = mock_numpy_module
+    #     mock_numpy_module = type('numpy', (), mock_numpy_attrs)
+    #     mock_numpy_module.__path__ = []
+    #     sys.modules['numpy'] = mock_numpy_module
         
-        if hasattr(legacy_numpy_array_mock, 'typing'):
-            sys.modules['numpy.typing'] = legacy_numpy_array_mock.typing
+    #     if hasattr(legacy_numpy_array_mock, 'typing'):
+    #         sys.modules['numpy.typing'] = legacy_numpy_array_mock.typing
 
-        # Configuration de numpy.core comme un module
-        if hasattr(legacy_numpy_array_mock, 'core'):
-            numpy_core_obj = type('core', (object,), {})
-            numpy_core_obj.__name__ = 'numpy.core'
-            numpy_core_obj.__package__ = 'numpy'
-            numpy_core_obj.__path__ = [] 
+    #     # Configuration de numpy.core comme un module
+    #     if hasattr(legacy_numpy_array_mock, 'core'):
+    #         numpy_core_obj = type('core', (object,), {})
+    #         numpy_core_obj.__name__ = 'numpy.core'
+    #         numpy_core_obj.__package__ = 'numpy'
+    #         numpy_core_obj.__path__ = []
             
-            # Assigner les attributs de la classe numpy_mock.core à l'objet module
-            # (legacy_numpy_array_mock.core est la classe définie dans legacy_numpy_array_mock.py)
-            # (legacy_numpy_array_mock.core._multiarray_umath est _multiarray_umath_mock_instance)
-            if hasattr(legacy_numpy_array_mock.core, '_multiarray_umath'):
-                # Créer un véritable objet ModuleType pour _multiarray_umath
-                umath_module_name_core = 'numpy.core._multiarray_umath'
-                umath_mock_obj_core = ModuleType(umath_module_name_core)
+    #         # Assigner les attributs de la classe numpy_mock.core à l'objet module
+    #         # (legacy_numpy_array_mock.core est la classe définie dans legacy_numpy_array_mock.py)
+    #         # (legacy_numpy_array_mock.core._multiarray_umath est _multiarray_umath_mock_instance)
+    #         if hasattr(legacy_numpy_array_mock.core, '_multiarray_umath'):
+    #             # Créer un véritable objet ModuleType pour _multiarray_umath
+    #             umath_module_name_core = 'numpy.core._multiarray_umath'
+    #             umath_mock_obj_core = ModuleType(umath_module_name_core)
                 
-                # Copier les attributs de l'instance de _NumPy_Core_Multiarray_Umath_Mock
-                # vers le nouvel objet module. legacy_numpy_array_mock.core._multiarray_umath est l'instance.
-                source_mock_instance_core = legacy_numpy_array_mock.core._multiarray_umath
-                for attr_name in dir(source_mock_instance_core):
-                    if not attr_name.startswith('__') or attr_name in ['__name__', '__package__', '__path__']: # Copier certains dunders
-                        setattr(umath_mock_obj_core, attr_name, getattr(source_mock_instance_core, attr_name))
+    #             # Copier les attributs de l'instance de _NumPy_Core_Multiarray_Umath_Mock
+    #             # vers le nouvel objet module. legacy_numpy_array_mock.core._multiarray_umath est l'instance.
+    #             source_mock_instance_core = legacy_numpy_array_mock.core._multiarray_umath
+    #             for attr_name in dir(source_mock_instance_core):
+    #                 if not attr_name.startswith('__') or attr_name in ['__name__', '__package__', '__path__']: # Copier certains dunders
+    #                     setattr(umath_mock_obj_core, attr_name, getattr(source_mock_instance_core, attr_name))
                 
-                # S'assurer que les attributs essentiels de module sont là
-                if not hasattr(umath_mock_obj_core, '__name__'):
-                    umath_mock_obj_core.__name__ = umath_module_name_core
-                if not hasattr(umath_mock_obj_core, '__package__'):
-                    umath_mock_obj_core.__package__ = 'numpy.core'
-                if not hasattr(umath_mock_obj_core, '__path__'):
-                     umath_mock_obj_core.__path__ = [] # Les modules C n'ont pas de __path__ mais pour un mock c'est ok
-                # Forcer _ARRAY_API à None pour éviter les conflits
-                umath_mock_obj_core._ARRAY_API = None
+    #             # S'assurer que les attributs essentiels de module sont là
+    #             if not hasattr(umath_mock_obj_core, '__name__'):
+    #                 umath_mock_obj_core.__name__ = umath_module_name_core
+    #             if not hasattr(umath_mock_obj_core, '__package__'):
+    #                 umath_mock_obj_core.__package__ = 'numpy.core'
+    #             if not hasattr(umath_mock_obj_core, '__path__'):
+    #                  umath_mock_obj_core.__path__ = [] # Les modules C n'ont pas de __path__ mais pour un mock c'est ok
+    #             # Forcer _ARRAY_API à None pour éviter les conflits
+    #             umath_mock_obj_core._ARRAY_API = None
 
-                numpy_core_obj._multiarray_umath = umath_mock_obj_core
-                sys.modules[umath_module_name_core] = umath_mock_obj_core
-                logger.info(f"NumpyMock: {umath_module_name_core} configuré comme ModuleType et défini dans sys.modules.")
+    #             numpy_core_obj._multiarray_umath = umath_mock_obj_core
+    #             sys.modules[umath_module_name_core] = umath_mock_obj_core
+    #             logger.info(f"NumpyMock: {umath_module_name_core} configuré comme ModuleType et défini dans sys.modules.")
 
-            if hasattr(legacy_numpy_array_mock.core, 'multiarray'): # legacy_numpy_array_mock.core.multiarray est une CLASSE vide
-                multiarray_module_name_core = 'numpy.core.multiarray'
-                multiarray_mock_obj_core = ModuleType(multiarray_module_name_core)
-                multiarray_mock_obj_core.__name__ = multiarray_module_name_core
-                multiarray_mock_obj_core.__package__ = 'numpy.core'
-                multiarray_mock_obj_core.__path__ = []
-                multiarray_mock_obj_core._ARRAY_API = None # Forcer à None
+    #         if hasattr(legacy_numpy_array_mock.core, 'multiarray'): # legacy_numpy_array_mock.core.multiarray est une CLASSE vide
+    #             multiarray_module_name_core = 'numpy.core.multiarray'
+    #             multiarray_mock_obj_core = ModuleType(multiarray_module_name_core)
+    #             multiarray_mock_obj_core.__name__ = multiarray_module_name_core
+    #             multiarray_mock_obj_core.__package__ = 'numpy.core'
+    #             multiarray_mock_obj_core.__path__ = []
+    #             multiarray_mock_obj_core._ARRAY_API = None # Forcer à None
 
-                # Potentiellement copier d'autres attributs si _NumPy_Core_Multiarray_Mock était plus fournie
-                # source_multiarray_cls_core = legacy_numpy_array_mock.core.multiarray
-                # try:
-                #     # Si c'est une classe avec des attributs statiques ou un __init__ simple
-                #     # pour une instance temporaire afin de copier les attributs.
-                #     temp_instance = source_multiarray_cls_core()
-                #     for attr_name_ma in dir(temp_instance):
-                #         if not attr_name_ma.startswith('__') or attr_name_ma in ['__name__', '__package__', '__path__']:
-                #             setattr(multiarray_mock_obj_core, attr_name_ma, getattr(temp_instance, attr_name_ma))
-                # except TypeError: # Si la classe ne peut pas être instanciée simplement
-                #     logger.warning(f"NumpyMock: La classe {source_multiarray_cls_core} pour multiarray n'a pas pu être instanciée pour copier les attributs.")
-                #     pass
+    #             # Potentiellement copier d'autres attributs si _NumPy_Core_Multiarray_Mock était plus fournie
+    #             # source_multiarray_cls_core = legacy_numpy_array_mock.core.multiarray
+    #             # try:
+    #             #     # Si c'est une classe avec des attributs statiques ou un __init__ simple
+    #             #     # pour une instance temporaire afin de copier les attributs.
+    #             #     temp_instance = source_multiarray_cls_core()
+    #             #     for attr_name_ma in dir(temp_instance):
+    #             #         if not attr_name_ma.startswith('__') or attr_name_ma in ['__name__', '__package__', '__path__']:
+    #             #             setattr(multiarray_mock_obj_core, attr_name_ma, getattr(temp_instance, attr_name_ma))
+    #             # except TypeError: # Si la classe ne peut pas être instanciée simplement
+    #             #     logger.warning(f"NumpyMock: La classe {source_multiarray_cls_core} pour multiarray n'a pas pu être instanciée pour copier les attributs.")
+    #             #     pass
 
 
-                numpy_core_obj.multiarray = multiarray_mock_obj_core
-                sys.modules[multiarray_module_name_core] = multiarray_mock_obj_core
-                logger.info(f"NumpyMock: {multiarray_module_name_core} configuré comme ModuleType et défini dans sys.modules.")
+    #             numpy_core_obj.multiarray = multiarray_mock_obj_core
+    #             sys.modules[multiarray_module_name_core] = multiarray_mock_obj_core
+    #             logger.info(f"NumpyMock: {multiarray_module_name_core} configuré comme ModuleType et défini dans sys.modules.")
 
-            if hasattr(legacy_numpy_array_mock.core, 'numeric'):
-                numpy_core_obj.numeric = legacy_numpy_array_mock.core.numeric
-            for attr_name in dir(legacy_numpy_array_mock.core):
-                if not attr_name.startswith('__') and not hasattr(numpy_core_obj, attr_name):
-                    setattr(numpy_core_obj, attr_name, getattr(legacy_numpy_array_mock.core, attr_name))
+    #         if hasattr(legacy_numpy_array_mock.core, 'numeric'):
+    #             numpy_core_obj.numeric = legacy_numpy_array_mock.core.numeric
+    #         for attr_name in dir(legacy_numpy_array_mock.core):
+    #             if not attr_name.startswith('__') and not hasattr(numpy_core_obj, attr_name):
+    #                 setattr(numpy_core_obj, attr_name, getattr(legacy_numpy_array_mock.core, attr_name))
             
-            sys.modules['numpy.core'] = numpy_core_obj
-            if hasattr(mock_numpy_module, '__dict__'):
-                mock_numpy_module.core = numpy_core_obj
-            logger.info(f"NumpyMock: numpy.core configuré comme module. _multiarray_umath présent: {hasattr(numpy_core_obj, '_multiarray_umath')}")
+    #         sys.modules['numpy.core'] = numpy_core_obj
+    #         if hasattr(mock_numpy_module, '__dict__'):
+    #             mock_numpy_module.core = numpy_core_obj
+    #         logger.info(f"NumpyMock: numpy.core configuré comme module. _multiarray_umath présent: {hasattr(numpy_core_obj, '_multiarray_umath')}")
 
-        # Configuration de numpy._core comme un module
-        if hasattr(legacy_numpy_array_mock, '_core'):
-            numpy_underscore_core_obj = type('_core', (object,), {})
-            numpy_underscore_core_obj.__name__ = 'numpy._core'
-            numpy_underscore_core_obj.__package__ = 'numpy'
-            numpy_underscore_core_obj.__path__ = []
+    #     # Configuration de numpy._core comme un module
+    #     if hasattr(legacy_numpy_array_mock, '_core'):
+    #         numpy_underscore_core_obj = type('_core', (object,), {})
+    #         numpy_underscore_core_obj.__name__ = 'numpy._core'
+    #         numpy_underscore_core_obj.__package__ = 'numpy'
+    #         numpy_underscore_core_obj.__path__ = []
 
-            if hasattr(legacy_numpy_array_mock._core, '_multiarray_umath'):
-                # Créer un véritable objet ModuleType pour _multiarray_umath
-                umath_module_name_underscore_core = 'numpy._core._multiarray_umath'
-                umath_mock_obj_underscore_core = ModuleType(umath_module_name_underscore_core)
+    #         if hasattr(legacy_numpy_array_mock._core, '_multiarray_umath'):
+    #             # Créer un véritable objet ModuleType pour _multiarray_umath
+    #             umath_module_name_underscore_core = 'numpy._core._multiarray_umath'
+    #             umath_mock_obj_underscore_core = ModuleType(umath_module_name_underscore_core)
 
-                # Copier les attributs de l'instance de _NumPy_Core_Multiarray_Umath_Mock
-                source_mock_instance_underscore_core = legacy_numpy_array_mock._core._multiarray_umath
-                for attr_name in dir(source_mock_instance_underscore_core):
-                    if not attr_name.startswith('__') or attr_name in ['__name__', '__package__', '__path__']:
-                        setattr(umath_mock_obj_underscore_core, attr_name, getattr(source_mock_instance_underscore_core, attr_name))
+    #             # Copier les attributs de l'instance de _NumPy_Core_Multiarray_Umath_Mock
+    #             source_mock_instance_underscore_core = legacy_numpy_array_mock._core._multiarray_umath
+    #             for attr_name in dir(source_mock_instance_underscore_core):
+    #                 if not attr_name.startswith('__') or attr_name in ['__name__', '__package__', '__path__']:
+    #                     setattr(umath_mock_obj_underscore_core, attr_name, getattr(source_mock_instance_underscore_core, attr_name))
                 
-                if not hasattr(umath_mock_obj_underscore_core, '__name__'):
-                    umath_mock_obj_underscore_core.__name__ = umath_module_name_underscore_core
-                if not hasattr(umath_mock_obj_underscore_core, '__package__'):
-                     umath_mock_obj_underscore_core.__package__ = 'numpy._core'
-                if not hasattr(umath_mock_obj_underscore_core, '__path__'):
-                     umath_mock_obj_underscore_core.__path__ = []
-                     # Forcer _ARRAY_API à None pour éviter les conflits
-                     umath_mock_obj_underscore_core._ARRAY_API = None
+    #             if not hasattr(umath_mock_obj_underscore_core, '__name__'):
+    #                 umath_mock_obj_underscore_core.__name__ = umath_module_name_underscore_core
+    #             if not hasattr(umath_mock_obj_underscore_core, '__package__'):
+    #                  umath_mock_obj_underscore_core.__package__ = 'numpy._core'
+    #             if not hasattr(umath_mock_obj_underscore_core, '__path__'):
+    #                  umath_mock_obj_underscore_core.__path__ = []
+    #                  # Forcer _ARRAY_API à None pour éviter les conflits
+    #                  umath_mock_obj_underscore_core._ARRAY_API = None
 
-                numpy_underscore_core_obj._multiarray_umath = umath_mock_obj_underscore_core
-                sys.modules[umath_module_name_underscore_core] = umath_mock_obj_underscore_core
-                logger.info(f"NumpyMock: {umath_module_name_underscore_core} configuré comme ModuleType et défini dans sys.modules.")
+    #             numpy_underscore_core_obj._multiarray_umath = umath_mock_obj_underscore_core
+    #             sys.modules[umath_module_name_underscore_core] = umath_mock_obj_underscore_core
+    #             logger.info(f"NumpyMock: {umath_module_name_underscore_core} configuré comme ModuleType et défini dans sys.modules.")
             
-            if hasattr(legacy_numpy_array_mock._core, 'multiarray'): # legacy_numpy_array_mock._core.multiarray est une CLASSE vide
-                multiarray_module_name_underscore_core = 'numpy._core.multiarray'
-                multiarray_mock_obj_underscore_core = ModuleType(multiarray_module_name_underscore_core)
-                multiarray_mock_obj_underscore_core.__name__ = multiarray_module_name_underscore_core
-                multiarray_mock_obj_underscore_core.__package__ = 'numpy._core'
-                multiarray_mock_obj_underscore_core.__path__ = []
-                # Forcer _ARRAY_API à None pour éviter les conflits
-                multiarray_mock_obj_underscore_core._ARRAY_API = None
+    #         if hasattr(legacy_numpy_array_mock._core, 'multiarray'): # legacy_numpy_array_mock._core.multiarray est une CLASSE vide
+    #             multiarray_module_name_underscore_core = 'numpy._core.multiarray'
+    #             multiarray_mock_obj_underscore_core = ModuleType(multiarray_module_name_underscore_core)
+    #             multiarray_mock_obj_underscore_core.__name__ = multiarray_module_name_underscore_core
+    #             multiarray_mock_obj_underscore_core.__package__ = 'numpy._core'
+    #             multiarray_mock_obj_underscore_core.__path__ = []
+    #             # Forcer _ARRAY_API à None pour éviter les conflits
+    #             multiarray_mock_obj_underscore_core._ARRAY_API = None
 
-                # Idem pour copier les attributs si _NumPy_Core_Multiarray_Mock était plus fournie
-                # source_multiarray_cls_underscore_core = legacy_numpy_array_mock._core.multiarray
-                # try:
-                #     temp_instance_uc = source_multiarray_cls_underscore_core()
-                #     for attr_name_ma_uc in dir(temp_instance_uc):
-                #         if not attr_name_ma_uc.startswith('__') or attr_name_ma_uc in ['__name__', '__package__', '__path__']:
-                #             setattr(multiarray_mock_obj_underscore_core, attr_name_ma_uc, getattr(temp_instance_uc, attr_name_ma_uc))
-                # except TypeError:
-                #     logger.warning(f"NumpyMock: La classe {source_multiarray_cls_underscore_core} pour _core.multiarray n'a pas pu être instanciée.")
-                #     pass
+    #             # Idem pour copier les attributs si _NumPy_Core_Multiarray_Mock était plus fournie
+    #             # source_multiarray_cls_underscore_core = legacy_numpy_array_mock._core.multiarray
+    #             # try:
+    #             #     temp_instance_uc = source_multiarray_cls_underscore_core()
+    #             #     for attr_name_ma_uc in dir(temp_instance_uc):
+    #             #         if not attr_name_ma_uc.startswith('__') or attr_name_ma_uc in ['__name__', '__package__', '__path__']:
+    #             #             setattr(multiarray_mock_obj_underscore_core, attr_name_ma_uc, getattr(temp_instance_uc, attr_name_ma_uc))
+    #             # except TypeError:
+    #             #     logger.warning(f"NumpyMock: La classe {source_multiarray_cls_underscore_core} pour _core.multiarray n'a pas pu être instanciée.")
+    #             #     pass
 
-                numpy_underscore_core_obj.multiarray = multiarray_mock_obj_underscore_core
-                sys.modules[multiarray_module_name_underscore_core] = multiarray_mock_obj_underscore_core
-                logger.info(f"NumpyMock: {multiarray_module_name_underscore_core} configuré comme ModuleType et défini dans sys.modules.")
+    #             numpy_underscore_core_obj.multiarray = multiarray_mock_obj_underscore_core
+    #             sys.modules[multiarray_module_name_underscore_core] = multiarray_mock_obj_underscore_core
+    #             logger.info(f"NumpyMock: {multiarray_module_name_underscore_core} configuré comme ModuleType et défini dans sys.modules.")
 
-            if hasattr(legacy_numpy_array_mock._core, 'numeric'):
-                numpy_underscore_core_obj.numeric = legacy_numpy_array_mock._core.numeric
-            for attr_name in dir(legacy_numpy_array_mock._core):
-                if not attr_name.startswith('__') and not hasattr(numpy_underscore_core_obj, attr_name):
-                    setattr(numpy_underscore_core_obj, attr_name, getattr(legacy_numpy_array_mock._core, attr_name))
+    #         if hasattr(legacy_numpy_array_mock._core, 'numeric'):
+    #             numpy_underscore_core_obj.numeric = legacy_numpy_array_mock._core.numeric
+    #         for attr_name in dir(legacy_numpy_array_mock._core):
+    #             if not attr_name.startswith('__') and not hasattr(numpy_underscore_core_obj, attr_name):
+    #                 setattr(numpy_underscore_core_obj, attr_name, getattr(legacy_numpy_array_mock._core, attr_name))
             
-            sys.modules['numpy._core'] = numpy_underscore_core_obj
-            if hasattr(mock_numpy_module, '__dict__'):
-                mock_numpy_module._core = numpy_underscore_core_obj
-            logger.info(f"NumpyMock: numpy._core configuré comme module. _multiarray_umath présent: {hasattr(numpy_underscore_core_obj, '_multiarray_umath')}")
+    #         sys.modules['numpy._core'] = numpy_underscore_core_obj
+    #         if hasattr(mock_numpy_module, '__dict__'):
+    #             mock_numpy_module._core = numpy_underscore_core_obj
+    #         logger.info(f"NumpyMock: numpy._core configuré comme module. _multiarray_umath présent: {hasattr(numpy_underscore_core_obj, '_multiarray_umath')}")
         
-        _mock_rec_submodule = type('rec', (), {})
-        _mock_rec_submodule.recarray = MockRecarray
-        sys.modules['numpy.rec'] = _mock_rec_submodule
+    #     _mock_rec_submodule = type('rec', (), {})
+    #     _mock_rec_submodule.recarray = MockRecarray
+    #     sys.modules['numpy.rec'] = _mock_rec_submodule
 
-        if 'numpy' in sys.modules and sys.modules['numpy'] is mock_numpy_module:
-            mock_numpy_module.rec = _mock_rec_submodule
-        else:
-            print("AVERTISSEMENT: numpy_setup.py: mock_numpy_module n'était pas sys.modules['numpy'] lors de l'attribution de .rec")
-            if 'numpy' in sys.modules and hasattr(sys.modules['numpy'], '__dict__'):
-                 setattr(sys.modules['numpy'], 'rec', _mock_rec_submodule)
+    #     if 'numpy' in sys.modules and sys.modules['numpy'] is mock_numpy_module:
+    #         mock_numpy_module.rec = _mock_rec_submodule
+    #     else:
+    #         print("AVERTISSEMENT: numpy_setup.py: mock_numpy_module n'était pas sys.modules['numpy'] lors de l'attribution de .rec")
+    #         if 'numpy' in sys.modules and hasattr(sys.modules['numpy'], '__dict__'):
+    #              setattr(sys.modules['numpy'], 'rec', _mock_rec_submodule)
         
-        print(f"INFO: numpy_setup.py: Mock numpy.rec configuré. sys.modules['numpy.rec'] (ID: {id(sys.modules.get('numpy.rec'))}), mock_numpy_module.rec (ID: {id(getattr(mock_numpy_module, 'rec', None))})")
+    #     print(f"INFO: numpy_setup.py: Mock numpy.rec configuré. sys.modules['numpy.rec'] (ID: {id(sys.modules.get('numpy.rec'))}), mock_numpy_module.rec (ID: {id(getattr(mock_numpy_module, 'rec', None))})")
         
-        if hasattr(legacy_numpy_array_mock, 'linalg'):
-             sys.modules['numpy.linalg'] = legacy_numpy_array_mock.linalg
-        if hasattr(legacy_numpy_array_mock, 'fft'):
-             sys.modules['numpy.fft'] = legacy_numpy_array_mock.fft
-        if hasattr(legacy_numpy_array_mock, 'lib'):
-             sys.modules['numpy.lib'] = legacy_numpy_array_mock.lib
+    #     if hasattr(legacy_numpy_array_mock, 'linalg'):
+    #          sys.modules['numpy.linalg'] = legacy_numpy_array_mock.linalg
+    #     if hasattr(legacy_numpy_array_mock, 'fft'):
+    #          sys.modules['numpy.fft'] = legacy_numpy_array_mock.fft
+    #     if hasattr(legacy_numpy_array_mock, 'lib'):
+    #          sys.modules['numpy.lib'] = legacy_numpy_array_mock.lib
         
-        print("INFO: numpy_setup.py: Mock NumPy installé immédiatement (avec sous-modules).")
-    except ImportError as e:
-        print(f"ERREUR dans numpy_setup.py lors de l'installation immédiate du mock NumPy: {e}")
-    except Exception as e_global:
-        print(f"ERREUR GLOBALE dans numpy_setup.py/_install_numpy_mock_immediately: {type(e_global).__name__}: {e_global}")
+    #     print("INFO: numpy_setup.py: Mock NumPy installé immédiatement (avec sous-modules).")
+    # except ImportError as e:
+    #     print(f"ERREUR dans numpy_setup.py lors de l'installation immédiate du mock NumPy: {e}")
+    # except Exception as e_global:
+    #     print(f"ERREUR GLOBALE dans numpy_setup.py/_install_numpy_mock_immediately: {type(e_global).__name__}: {e_global}")
+    pass # Laisser la fonction vide pour le test
 
 
 def is_module_available(module_name): 
