@@ -245,6 +245,7 @@ def generate_performance_visualizations(
         # Il est plus sûr de créer un DataFrame vide sans colonnes spécifiques ici.
         df_normalized = pd.DataFrame(index=pd.Index(agents, name="agent") if agents else None)
 
+    if not df_normalized.empty:
         plt.figure(figsize=(14, 10))
         sns.heatmap(df_normalized, annot=df.round(2), cmap="viridis_r", linewidths=.5, fmt=".2f")
         plt.title("Matrice de comparaison normalisée des performances des agents")
