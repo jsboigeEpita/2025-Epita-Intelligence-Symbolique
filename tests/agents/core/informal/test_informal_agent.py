@@ -29,10 +29,10 @@ from argumentation_analysis.agents.core.informal.informal_agent import InformalA
 from argumentation_analysis.agents.core.informal.informal_agent import InformalAnalysisPlugin
 
 
-class TestInformalAgent(unittest.TestCase):
+class TestInformalAgent:
     """Tests unitaires pour l'agent informel."""
 
-    def setUp(self):
+    def setup_method(self, method):
         """Initialisation avant chaque test."""
         self.mock_sk_kernel = MockSemanticKernel()
         self.agent_name = "test_agent_from_setup"
@@ -44,21 +44,12 @@ class TestInformalAgent(unittest.TestCase):
 
         self.agent = InformalAgent(kernel=self.mock_sk_kernel, agent_name=self.agent_name)
         self.agent.setup_agent_components(llm_service_id="test_llm_service_setup")
-        
-        # Rendre les méthodes de l'agent mockables avec AsyncMock si elles sont async
-        # Cela est crucial si les méthodes originales sont async
-        self.agent.analyze_fallacies = AsyncMock(return_value=[])
-        self.agent.analyze_rhetoric = AsyncMock(return_value={})
-        self.agent.analyze_context = AsyncMock(return_value={})
-        self.agent.analyze_argument = AsyncMock(return_value={})
-        self.agent.identify_arguments = AsyncMock(return_value=[])
-        self.agent.analyze_text = AsyncMock(return_value={"fallacies": [], "analysis_timestamp": "mock_time"})
 
-
-    def tearDown(self):
+    def teardown_method(self, method):
         self.plugin_patcher.stop()
 
-    async def test_analyze_fallacies(self):
+    @pytest.mark.asyncio
+    async def test_analyze_fallacies(self, mocker):
         """Teste la méthode analyze_fallacies."""
         text = "Les experts affirment que ce produit est sûr."
         
@@ -66,161 +57,118 @@ class TestInformalAgent(unittest.TestCase):
             {"fallacy_type": "Appel à l'autorité", "text": "Les experts affirment que ce produit est sûr.", "confidence": 0.7}
         ]
         
-        self.agent.analyze_fallacies.return_value = expected_fallacy_list
+        mocker.patch.object(self.mock_sk_kernel, 'invoke', return_value=json.dumps(expected_fallacy_list))
 
         fallacies = await self.agent.analyze_fallacies(text)
         
-        self.assertEqual(len(fallacies), 1)
-        self.assertEqual(fallacies[0]["fallacy_type"], "Appel à l'autorité")
-        self.assertEqual(fallacies[0]["text"], "Les experts affirment que ce produit est sûr.")
-        self.assertEqual(fallacies[0]["confidence"], 0.7)
+        assert len(fallacies) == 1
+        assert fallacies[0]["fallacy_type"] == "Appel à l'autorité"
+        assert fallacies[0]["text"] == "Les experts affirment que ce produit est sûr."
+        assert fallacies[0]["confidence"] == 0.7
     
+    @pytest.mark.asyncio
     async def test_analyze_rhetoric(self):
         """Teste la méthode analyze_rhetoric."""
-        agent = self.agent # Utiliser self.agent directement
-        text = "N'est-il pas évident que ce produit va changer votre vie?"
-
-        expected_rhetoric_dict = {
-            "tone": "persuasif",
-            "style": "émotionnel",
-            "techniques": ["appel à l'émotion", "question rhétorique"],
-            "effectiveness": 0.8
-        }
-        
-        agent.analyze_rhetoric.return_value = expected_rhetoric_dict
-        
-        rhetoric = await agent.analyze_rhetoric(text)
-
-        self.assertEqual(rhetoric["tone"], "persuasif")
-        self.assertEqual(rhetoric["style"], "émotionnel")
-        self.assertEqual(rhetoric["techniques"], ["appel à l'émotion", "question rhétorique"])
-        self.assertEqual(rhetoric["effectiveness"], 0.8)
+        # Cette méthode est commentée dans l'agent, donc ce test n'est plus pertinent.
+        pass
     
+    @pytest.mark.asyncio
     async def test_analyze_context(self):
         """Teste la méthode analyze_context."""
-        agent = self.agent
-        text = "Achetez notre produit maintenant et bénéficiez d'une réduction de 20%!"
-
-        expected_context_dict = {
-            "context_type": "commercial",
-            "confidence": 0.9
-        }
-        
-        agent.analyze_context.return_value = expected_context_dict
-        
-        context = await agent.analyze_context(text)
-        
-        self.assertEqual(context["context_type"], "commercial")
-        self.assertEqual(context["confidence"], 0.9)
+        # Cette méthode est commentée dans l'agent, donc ce test n'est plus pertinent.
+        pass
     
-    async def test_analyze_argument(self):
+    @pytest.mark.asyncio
+    async def test_analyze_argument(self, mocker):
         """Teste la méthode analyze_argument."""
-        agent = self.agent
         text = "Les experts affirment que ce produit est sûr. N'est-il pas évident que vous devriez l'acheter?"
 
-        expected_result_dict = {
-            "argument": text,
-            "fallacies": [{"fallacy_type": "Appel à l'autorité", "text": "Les experts affirment que ce produit est sûr.", "confidence": 0.7}],
-            "rhetoric": {"tone": "persuasif", "style": "émotionnel", "techniques": ["question rhétorique"], "effectiveness": 0.8},
-        }
+        expected_fallacies = [{"fallacy_type": "Appel à l'autorité", "text": "Les experts affirment que ce produit est sûr.", "confidence": 0.7}]
         
-        agent.analyze_argument.return_value = expected_result_dict
+        mocker.patch.object(self.mock_sk_kernel, 'invoke', return_value=json.dumps(expected_fallacies))
         
-        result = await agent.analyze_argument(text)
+        result = await self.agent.analyze_argument(text)
 
-        self.assertEqual(result["argument"], text)
-        self.assertEqual(len(result["fallacies"]), 1)
-        self.assertEqual(result["fallacies"][0]["fallacy_type"], "Appel à l'autorité")
-        self.assertEqual(result["rhetoric"]["tone"], "persuasif")
+        assert result["argument"] == text
+        assert len(result["fallacies"]) == 1
+        assert result["fallacies"][0]["fallacy_type"] == "Appel à l'autorité"
     
-    async def test_analyze_text_with_semantic_kernel(self):
+    @pytest.mark.asyncio
+    async def test_analyze_text_with_semantic_kernel(self, mocker):
         """Teste la méthode identify_arguments avec un kernel sémantique."""
-        agent = self.agent
-        kernel_to_use = self.mock_sk_kernel 
-
-        # Mock direct de la méthode de l'agent qui utilise le kernel
-        expected_arguments = ["Argument 1", "Argument 2"]
-        agent.identify_arguments.return_value = expected_arguments
+        expected_arguments = "Argument 1\nArgument 2"
+        mocker.patch.object(self.mock_sk_kernel, 'invoke', return_value=expected_arguments)
         
         text = "Voici un texte avec plusieurs arguments."
         
-        arguments = await agent.identify_arguments(text)
+        arguments = await self.agent.identify_arguments(text)
         
-        # Vérifier que la méthode mockée de l'agent a été appelée
-        agent.identify_arguments.assert_called_once_with(text)
-        
-        self.assertEqual(len(arguments), 2)
-        self.assertEqual(arguments[0], "Argument 1")
-        self.assertEqual(arguments[1], "Argument 2")
+        assert len(arguments) == 2
+        assert arguments[0] == "Argument 1"
+        assert arguments[1] == "Argument 2"
 
-    async def test_analyze_text_without_semantic_kernel(self):
+    @pytest.mark.asyncio
+    async def test_analyze_text_without_semantic_kernel(self, mocker):
         """
         Teste la méthode analyze_text.
         """
-        agent = self.agent
         text = "Voici un texte avec un seul argument."
 
-        expected_result = {
-            "fallacies": [], 
-            "analysis_timestamp": "mocked_time" 
-        }
+        expected_fallacies = []
+        mocker.patch.object(self.mock_sk_kernel, 'invoke', return_value=json.dumps(expected_fallacies))
         
-        agent.analyze_text.return_value = expected_result
-        
-        result = await agent.analyze_text(text)
+        result = await self.agent.analyze_text(text)
 
-        self.assertIn("fallacies", result)
-        self.assertIn("analysis_timestamp", result)
-        self.assertIsInstance(result["fallacies"], list)
-        self.assertEqual(result["fallacies"], expected_result["fallacies"])
-        
-        agent.analyze_text.assert_called_once_with(text)
+        assert "fallacies" in result
+        assert "analysis_timestamp" in result
+        assert isinstance(result["fallacies"], list)
+        assert result["fallacies"] == expected_fallacies
     
     def test_get_agent_capabilities(self):
         """Teste la méthode get_agent_capabilities."""
-        agent = self.agent 
+        agent = self.agent
         
         # La méthode get_agent_capabilities est synchrone
         capabilities = agent.get_agent_capabilities()
 
         # Vérifications basées sur la définition actuelle dans InformalAnalysisAgent
-        self.assertIn("identify_arguments", capabilities)
-        self.assertIn("analyze_fallacies", capabilities)
-        self.assertIn("explore_fallacy_hierarchy", capabilities)
-        self.assertIn("get_fallacy_details", capabilities)
-        self.assertIn("categorize_fallacies", capabilities)
-        self.assertIn("perform_complete_analysis", capabilities)
+        assert "identify_arguments" in capabilities
+        assert "analyze_fallacies" in capabilities
+        assert "explore_fallacy_hierarchy" in capabilities
+        assert "get_fallacy_details" in capabilities
+        assert "categorize_fallacies" in capabilities
+        assert "perform_complete_analysis" in capabilities
     
     def test_get_agent_info(self):
         """Teste la méthode get_agent_info."""
-        agent = self.agent 
+        agent = self.agent
 
         # La méthode get_agent_info est synchrone
         info = agent.get_agent_info()
 
-        self.assertEqual(info["name"], self.agent_name) # Corrigé pour correspondre à BaseAgent
-        self.assertEqual(info["class"], "InformalAnalysisAgent") # Corrigé
+        assert info["name"] == self.agent_name # Corrigé pour correspondre à BaseAgent
+        assert info["class"] == "InformalAnalysisAgent" # Corrigé
         
         # Vérifier la présence des clés attendues par BaseAgent
-        self.assertIn("system_prompt", info) 
-        self.assertIn("llm_service_id", info)
-        self.assertIn("capabilities", info)
+        assert "system_prompt" in info
+        assert "llm_service_id" in info
+        assert "capabilities" in info
         
         # Vérifier une capacité spécifique pour s'assurer que get_agent_capabilities a été appelée
-        self.assertIn("identify_arguments", info["capabilities"])
+        assert "identify_arguments" in info["capabilities"]
     
     def test_initialization_with_invalid_tools(self):
         """
         Teste que l'initialisation de InformalAgent lève une TypeError si un argument
         'tools' (qui n'est plus supporté) est passé.
         """
-        mock_sk_kernel = self.mock_sk_kernel 
+        mock_sk_kernel = self.mock_sk_kernel
         
-        with self.assertRaises(TypeError):
-            agent = InformalAgent( 
+        with pytest.raises(TypeError):
+            agent = InformalAgent(
                 kernel=mock_sk_kernel,
                 agent_name="invalid_tools_agent",
-                tools={"fallacy_detector": MagicMock(), "invalid_tool": 123} 
+                tools={"fallacy_detector": MagicMock(), "invalid_tool": 123}
             )
     
     def test_initialization_without_fallacy_detector(self):
@@ -230,52 +178,43 @@ class TestInformalAgent(unittest.TestCase):
         """
         mock_sk_kernel = self.mock_sk_kernel
 
-        with self.assertRaises(TypeError):
-            agent = InformalAgent( 
+        with pytest.raises(TypeError):
+            agent = InformalAgent(
                 kernel=mock_sk_kernel,
                 agent_name="missing_detector_agent",
-                tools={"rhetorical_analyzer": MagicMock()} 
+                tools={"rhetorical_analyzer": MagicMock()}
             )
     
+    @pytest.mark.asyncio
     async def test_analyze_rhetoric_without_analyzer(self):
         """
         Teste que agent.analyze_rhetoric gère correctement l'absence de la fonction
         sémantique correspondante (par exemple, en levant ValueError).
         """
-        agent = self.agent
-        
-        # Simuler l'échec de la fonction sémantique via le mock de la méthode de l'agent
-        agent.analyze_rhetoric.side_effect = ValueError("Analyseur rhétorique non disponible ou erreur.")
-
-        with self.assertRaises(ValueError) as context:
-            await agent.analyze_rhetoric("Texte à analyser")
-        self.assertIn("Analyseur rhétorique non disponible", str(context.exception))
+        # Cette méthode est commentée dans l'agent, donc ce test n'est plus pertinent.
+        pass
     
+    @pytest.mark.asyncio
     async def test_analyze_context_without_analyzer(self):
         """
         Teste que agent.analyze_context gère correctement l'absence de la fonction
         sémantique correspondante.
         """
-        agent = self.agent
-        
-        agent.analyze_context.side_effect = ValueError("Analyseur contextuel non disponible ou erreur.")
-
-        with self.assertRaises(ValueError) as context:
-            await agent.analyze_context("Texte à analyser")
-        self.assertIn("Analyseur contextuel non disponible", str(context.exception))
+        # Cette méthode est commentée dans l'agent, donc ce test n'est plus pertinent.
+        pass
     
-    async def test_identify_arguments_without_kernel(self):
+    @pytest.mark.asyncio
+    async def test_identify_arguments_without_kernel(self, mocker):
         """
         Teste que agent.identify_arguments gère correctement l'absence de la fonction
         sémantique correspondante ou un problème avec le kernel.
         """
-        agent = self.agent
-        
-        agent.identify_arguments.side_effect = ValueError("Identification des arguments non disponible ou erreur kernel.")
+        mocker.patch.object(self.mock_sk_kernel, 'invoke', side_effect=KernelFunctionNotFoundError("Test error"))
 
-        with self.assertRaises(ValueError) as context:
-            await agent.identify_arguments("Texte à analyser")
-        self.assertIn("Identification des arguments non disponible", str(context.exception))
+        # La méthode doit attraper l'exception et retourner None
+        result = await self.agent.identify_arguments("Texte à analyser")
+        
+        assert result is None
 
 # Pour exécuter les tests async avec unittest, on peut utiliser asyncio.run
 # ou un runner de test compatible async comme pytest-asyncio (déjà utilisé via pytest)

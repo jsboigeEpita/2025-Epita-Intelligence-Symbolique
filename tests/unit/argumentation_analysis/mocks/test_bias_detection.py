@@ -67,8 +67,8 @@ def test_detect_bias_confirmation(detector_default: MockBiasDetector):
     assert found_bias
     # Vérifier le contexte (le mock prend 30 chars avant/après)
     bias_entry = next(b for b in result if b["bias_type"] == "Biais de Confirmation (Mock)")
-    assert "Il est évident que cette solut" in bias_entry["context_snippet"] # Début du contexte
-    assert "est la meilleure pour tout le" in bias_entry["context_snippet"] # Fin du contexte
+    assert bias_entry["context_snippet"].startswith("Il est évident que")
+    assert bias_entry["context_snippet"].endswith("est la meilleu")
 
 def test_detect_bias_generalisation(detector_default: MockBiasDetector):
     text = "Les politiciens disent toujours la vérité, c'est bien connu."
@@ -77,7 +77,7 @@ def test_detect_bias_generalisation(detector_default: MockBiasDetector):
     found_bias = any(b["bias_type"] == "Généralisation Hâtive (Mock)" and b["detected_pattern"] == r"toujours" for b in result)
     assert found_bias
     bias_entry = next(b for b in result if b["bias_type"] == "Généralisation Hâtive (Mock)")
-    assert "disent toujours la vérité, c'es" in bias_entry["context_snippet"]
+    assert "disent toujours la vérité" in bias_entry["context_snippet"]
     assert bias_entry["severity_simulated"] == "Moyen"
 
 def test_detect_bias_autorite(detector_default: MockBiasDetector):

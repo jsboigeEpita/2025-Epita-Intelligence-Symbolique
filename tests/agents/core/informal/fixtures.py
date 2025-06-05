@@ -15,6 +15,10 @@ class MockSemanticKernel:
         """Simule l'ajout d'un plugin. S'assure que le conteneur pour les fonctions du plugin existe."""
         if plugin_name not in self.plugins: self.plugins[plugin_name] = {}
 
+    async def invoke(self, *args, **kwargs):
+        """Simule l'invocation du kernel."""
+        return MagicMock()
+
 # Ajout des méthodes manquantes pour simuler le Kernel SK plus fidèlement
     def add_function(self, *, prompt: str, function_name: str, plugin_name: Optional[str] = None, description: Optional[str] = None, prompt_template_config = None, prompt_execution_settings = None):
         """Simule l'ajout d'une fonction sémantique."""

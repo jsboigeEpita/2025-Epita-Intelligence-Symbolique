@@ -160,3 +160,5 @@ data/extract_sources.json # Configuration UI non chiffrée
 
 # Fichiers JAR (déjà couvert par libs/*.jar mais peut rester pour clarté)
 # *.jar
+
+*.txt

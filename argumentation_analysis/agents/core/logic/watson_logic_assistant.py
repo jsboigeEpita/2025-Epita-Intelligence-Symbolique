@@ -1,8 +1,11 @@
 # argumentation_analysis/agents/core/logic/watson_logic_assistant.py
 import logging
-from typing import Optional
+from typing import Optional, List, AsyncGenerator
 
-from semantic_kernel import Kernel # type: ignore
+from semantic_kernel import Kernel
+from semantic_kernel.agents import Agent
+from semantic_kernel.contents import ChatMessageContent
+from semantic_kernel.contents.chat_history import ChatHistory
 
 from .propositional_logic_agent import PropositionalLogicAgent
 # from ..pl.pl_definitions import PL_AGENT_INSTRUCTIONS # Remplacé par le prompt spécifique
@@ -49,6 +52,47 @@ class WatsonLogicAssistant(PropositionalLogicAgent):
         # self.logger = logging.getLogger(agent_name)
         self.logger.info(f"WatsonLogicAssistant '{agent_name}' initialisé.")
 
+    async def invoke(
+        self,
+        messages: List[ChatMessageContent],
+        **kwargs,
+    ) -> List[ChatMessageContent]:
+        """Invoke the agent with a list of messages."""
+        chat_history = ChatHistory(messages=messages)
+        chat_history.add_system_message(self.instructions)
+        
+        # Pass runtime to the kernel invocation
+        runtime = kwargs.pop("runtime", None)
+        if not runtime:
+            raise ValueError("Runtime not provided in kwargs for agent invocation.")
+
+        result = await self.kernel.invoke(
+            prompt=str(chat_history),
+            runtime=runtime,
+            **kwargs,
+        )
+        # Assuming result is ChatMessageContent or similar
+        response_message = result if isinstance(result, ChatMessageContent) else ChatMessageContent(role="assistant", content=str(result))
+        return [response_message]
+
+    async def invoke_stream(
+        self,
+        messages: List[ChatMessageContent],
+        **kwargs,
+    ) -> AsyncGenerator[List[ChatMessageContent], None]:
+        """Invoke the agent with a stream of messages."""
+        # Basic (non-streaming) implementation for now
+        response = await self.invoke(messages, **kwargs)
+        yield response
+
+    async def get_response(
+        self,
+        messages: List[ChatMessageContent],
+        **kwargs,
+    ) -> List[ChatMessageContent]:
+        """Get a response from the agent."""
+        return await self.invoke(messages, **kwargs)
+
     async def get_agent_belief_set_content(self, belief_set_id: str) -> Optional[str]:
         """
         Récupère le contenu d'un ensemble de croyances spécifique via le EnqueteStateManagerPlugin.
@@ -82,41 +126,6 @@ class WatsonLogicAssistant(PropositionalLogicAgent):
             self.logger.error(f"Erreur lors de la récupération du contenu de l'ensemble de croyances {belief_set_id}: {e}")
             return None
 
-async def add_new_deduction_result(self, query_id: str, formal_result: str, natural_language_interpretation: str, belief_set_id: str) -> Optional[dict]:
-        """
-        Ajoute un nouveau résultat de déduction à l'état de l'enquête.
-
-        Args:
-            query_id: L'identifiant de la requête de déduction.
-            formal_result: Le résultat formel de la déduction.
-            natural_language_interpretation: L'interprétation en langage naturel du résultat.
-            belief_set_id: L'identifiant de l'ensemble de croyances utilisé pour la déduction.
-
-        Returns:
-            Le dictionnaire du résultat de déduction ajouté ou None en cas d'erreur.
-        """
-        self.logger.info(f"Ajout d'un nouveau résultat de déduction pour la requête ID: {query_id}")
-        try:
-            content = {
-                "reponse_formelle": formal_result,
-                "interpretation_ln": natural_language_interpretation,
-                "belief_set_id_utilise": belief_set_id,
-                "status_deduction": "success"  # Ou un autre statut pertinent
-            }
-            result = await self.kernel.invoke(
-                plugin_name="EnqueteStatePlugin",
-                function_name="add_result",  # Correspond à add_deduction_result dans l'état
-                query_id=query_id, # type: ignore
-                agent_source="WatsonLogicAssistant", # type: ignore
-                content=content # type: ignore
-            )
-            # Supposant que 'result' est le dictionnaire du résultat ou a un attribut 'value'
-            if hasattr(result, 'value'):
-                return result.value # type: ignore
-            return result # type: ignore
-        except Exception as e:
-            self.logger.error(f"Erreur lors de l'ajout du résultat de déduction pour la requête {query_id}: {e}")
-            return None
 # Pourrait être étendu avec des capacités spécifiques à Watson plus tard
 # def get_agent_capabilities(self) -> Dict[str, Any]:
 #     base_caps = super().get_agent_capabilities()

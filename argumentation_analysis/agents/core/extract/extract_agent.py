@@ -23,7 +23,7 @@ import json
 import logging
 import asyncio
 from pathlib import Path
-from typing import List, Dict, Any, Tuple, Optional, Union, Callable
+from typing import List, Dict, Any, Tuple, Optional, Union, Callable, ClassVar
 
 import semantic_kernel as sk
 from semantic_kernel.contents import ChatMessageContent # Potentiellement plus nécessaire directement
@@ -118,9 +118,9 @@ class ExtractAgent(BaseAgent):
     """
     
     # Noms pour les fonctions sémantiques
-    EXTRACT_SEMANTIC_FUNCTION_NAME = "extract_from_name_semantic"
-    VALIDATE_SEMANTIC_FUNCTION_NAME = "validate_extract_semantic"
-    NATIVE_PLUGIN_NAME = "ExtractNativePlugin"
+    EXTRACT_SEMANTIC_FUNCTION_NAME: ClassVar[str] = "extract_from_name_semantic"
+    VALIDATE_SEMANTIC_FUNCTION_NAME: ClassVar[str] = "validate_extract_semantic"
+    NATIVE_PLUGIN_NAME: ClassVar[str] = "ExtractNativePlugin"
 
     def __init__(
         self,

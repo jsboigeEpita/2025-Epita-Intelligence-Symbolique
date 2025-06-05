@@ -22,9 +22,10 @@ L'agent est conçu pour :
 
 import logging
 import json
-from typing import Dict, List, Any, Optional
+from typing import Dict, List, Any, Optional, AsyncGenerator
 import semantic_kernel as sk
 from semantic_kernel.functions.kernel_arguments import KernelArguments
+from semantic_kernel.contents.chat_message_content import ChatMessageContent
 
 # Import de la classe de base
 from ..abc.agent_bases import BaseAgent
@@ -54,6 +55,12 @@ class InformalAnalysisAgent(BaseAgent):
                                  les seuils de confiance pour la détection.
                                  (Note: la gestion de la configuration pourrait être améliorée).
     """
+    config: Dict[str, Any] = {
+        "analysis_depth": "standard",
+        "confidence_threshold": 0.5,
+        "max_fallacies": 5,
+        "include_context": False
+    }
     
     def __init__(
         self,
@@ -76,12 +83,6 @@ class InformalAnalysisAgent(BaseAgent):
         self._taxonomy_file_path = taxonomy_file_path # Stocker le chemin
         # self.config est conservé pour l'instant pour la compatibilité de certaines méthodes
         # mais devrait idéalement être géré au niveau du plugin ou via des arguments de fonction.
-        self.config = { # Valeurs par défaut, peuvent être surchargées si nécessaire
-            "analysis_depth": "standard",
-            "confidence_threshold": 0.5,
-            "max_fallacies": 5,
-            "include_context": False
-        }
         self.logger.info(f"Agent informel {self.name} initialisé avec taxonomy_file_path: {self._taxonomy_file_path}.")
 
     def get_agent_capabilities(self) -> Dict[str, Any]:
@@ -203,21 +204,27 @@ class InformalAnalysisAgent(BaseAgent):
             # Une implémentation réelle nécessiterait un parsing robuste.
             # Exemple: si le prompt retourne un JSON de liste de sophismes:
             try:
-                parsed_fallacies = json.loads(raw_result)
-                if isinstance(parsed_fallacies, list):
-                    # Appliquer le filtrage de l'ancienne méthode si pertinent
-                    confidence_threshold = self.config.get("confidence_threshold", 0.5)
-                    filtered_fallacies = [f for f in parsed_fallacies if isinstance(f, dict) and f.get("confidence", 0) >= confidence_threshold]
-                    
-                    max_fallacies = self.config.get("max_fallacies", 5)
-                    if len(filtered_fallacies) > max_fallacies:
-                        filtered_fallacies = sorted(filtered_fallacies, key=lambda f: f.get("confidence", 0), reverse=True)[:max_fallacies]
-                    
-                    self.logger.info(f"{len(filtered_fallacies)} sophismes (sémantiques) détectés et filtrés.")
-                    return filtered_fallacies
+                parsed_result = json.loads(raw_result)
+                
+                # Gérer le cas où le LLM retourne un objet {"sophismes": [...]}
+                if isinstance(parsed_result, dict) and "sophismes" in parsed_result:
+                    parsed_fallacies = parsed_result["sophismes"]
+                elif isinstance(parsed_result, list):
+                    parsed_fallacies = parsed_result
                 else:
-                    self.logger.warning(f"Résultat de semantic_AnalyzeFallacies n'est pas une liste JSON: {raw_result}")
+                    self.logger.warning(f"Résultat de semantic_AnalyzeFallacies n'est ni une liste, ni un objet avec la clé 'sophismes': {raw_result}")
                     return [{"error": "Format de résultat inattendu", "details": raw_result}]
+
+                # Appliquer le filtrage
+                confidence_threshold = self.config.get("confidence_threshold", 0.5)
+                filtered_fallacies = [f for f in parsed_fallacies if isinstance(f, dict) and f.get("confidence", 0) >= confidence_threshold]
+                
+                max_fallacies = self.config.get("max_fallacies", 5)
+                if len(filtered_fallacies) > max_fallacies:
+                    filtered_fallacies = sorted(filtered_fallacies, key=lambda f: f.get("confidence", 0), reverse=True)[:max_fallacies]
+                
+                self.logger.info(f"{len(filtered_fallacies)} sophismes (sémantiques) détectés et filtrés.")
+                return filtered_fallacies
             except json.JSONDecodeError:
                 self.logger.warning(f"Impossible de parser le résultat JSON de semantic_AnalyzeFallacies: {raw_result}")
                 return [{"error": "Résultat non JSON", "details": raw_result}]
@@ -262,7 +269,7 @@ class InformalAnalysisAgent(BaseAgent):
         # self.logger.info(f"Analyse contextuelle d'un texte de {len(text)} caractères...")
         # return self.tools["contextual_analyzer"].analyze_context(text)
 
-    async def identify_arguments(self, text: str) -> List[str]:
+    async def identify_arguments(self, text: str) -> Optional[List[str]]:
         """
         Identifie les arguments principaux dans un texte en utilisant la fonction
         sémantique `semantic_IdentifyArguments`.
@@ -270,8 +277,8 @@ class InformalAnalysisAgent(BaseAgent):
         :param text: Le texte à analyser.
         :type text: str
         :return: Une liste de chaînes de caractères, chaque chaîne représentant un argument identifié.
-                 Retourne une liste vide en cas d'erreur ou si aucun argument n'est identifié.
-        :rtype: List[str]
+                 Retourne None en cas d'erreur.
+        :rtype: Optional[List[str]]
         """
         self.logger.info(f"Identification sémantique des arguments pour un texte de {len(text)} caractères...")
         try:
@@ -295,7 +302,7 @@ class InformalAnalysisAgent(BaseAgent):
             return identified_args
         except Exception as e:
             self.logger.error(f"Erreur lors de l'appel à semantic_IdentifyArguments: {e}", exc_info=True)
-            return []
+            return None
 
     async def analyze_argument(self, argument: str) -> Dict[str, Any]:
         """
@@ -579,13 +586,14 @@ class InformalAnalysisAgent(BaseAgent):
             # Utiliser la méthode identify_arguments refactorée (qui utilise le kernel)
             # Plus besoin de vérifier self.semantic_kernel ici, car BaseAgent le gère.
             semantic_args = await self.identify_arguments(text) # Appel asynchrone
-            for i, arg_text in enumerate(semantic_args):
-                arguments.append({
-                    "id": f"arg-{i+1}",
-                    "text": arg_text,
-                    "type": "semantic", # Indique que cela vient de l'analyse sémantique
-                    "confidence": 0.8 # Exemple de confiance, pourrait être ajusté
-                })
+            if semantic_args is not None:
+                for i, arg_text in enumerate(semantic_args):
+                    arguments.append({
+                        "id": f"arg-{i+1}",
+                        "text": arg_text,
+                        "type": "semantic", # Indique que cela vient de l'analyse sémantique
+                        "confidence": 0.8 # Exemple de confiance, pourrait être ajusté
+                    })
             
             # La logique de fallback (paragraphes/phrases) peut être conservée si identify_arguments retourne une liste vide
             # ou si une stratégie hybride est souhaitée. Pour l'instant, on se fie à l'appel sémantique.
@@ -716,6 +724,54 @@ class InformalAnalysisAgent(BaseAgent):
                 "error": str(e),
                 "analysis_timestamp": self._get_timestamp()
             }
+
+    async def invoke(
+        self,
+        messages: List[ChatMessageContent],
+        **kwargs: Dict[str, Any],
+    ) -> List[ChatMessageContent]:
+        """
+        Méthode principale pour interagir avec l'agent.
+        Prend le dernier message, effectue une analyse complète et retourne le résultat.
+        """
+        if not messages:
+            return []
+        
+        last_message = messages[-1]
+        text_to_analyze = last_message.content
+        
+        self.logger.info(f"Invocation de l'agent {self.name} avec le message : '{text_to_analyze[:100]}...'")
+        
+        analysis_result = await self.perform_complete_analysis(text_to_analyze)
+        
+        # Formatter le résultat en ChatMessageContent
+        response_content = json.dumps(analysis_result, indent=2, ensure_ascii=False)
+        
+        return [ChatMessageContent(role="assistant", content=response_content, name=self.name)]
+
+    async def invoke_stream(
+        self,
+        messages: List[ChatMessageContent],
+        **kwargs: Dict[str, Any],
+    ) -> AsyncGenerator[List[ChatMessageContent], None]:
+        """
+        Méthode de streaming pour interagir avec l'agent.
+        Retourne le résultat complet en un seul chunk.
+        """
+        self.logger.info(f"Invocation en streaming de l'agent {self.name}.")
+        response = await self.invoke(messages, **kwargs)
+        yield response
+
+    async def get_response(
+        self,
+        messages: List[ChatMessageContent],
+        **kwargs: Dict[str, Any],
+    ) -> List[ChatMessageContent]:
+        """
+        Alias pour invoke, pour la compatibilité.
+        """
+        self.logger.info(f"Appel de get_response pour l'agent {self.name}.")
+        return await self.invoke(messages, **kwargs)
 
 # Log de chargement
 # logging.getLogger(__name__).debug("Module agents.core.informal.informal_agent chargé.") # Géré par BaseAgent

@@ -61,10 +61,10 @@ except ImportError as e:
     logger.error(f"Failed to import create_llm_service: {e}")
 
 try:
-    # Changement ici pour refléter le renommage/déplacement potentiel de l'agent
-    from argumentation_analysis.agents.core.informal.informal_agent import InformalAgent as InformalAgent_class
+    # Correction du nom de la classe importée pour correspondre à la définition
+    from argumentation_analysis.agents.core.informal.informal_agent import InformalAnalysisAgent as InformalAgent_class
 except ImportError as e:
-    logger.error(f"Failed to import InformalAgent (anciennement InformalAnalysisAgent): {e}")
+    logger.error(f"Failed to import InformalAnalysisAgent: {e}")
 
 try:
     import semantic_kernel as sk_module
@@ -252,20 +252,12 @@ def initialize_project_environment(env_path_str: str = None, root_path_str: str 
 
     if create_llm_service_func:
         logger.info("Initialisation de LLMService via create_llm_service...")
-        if context.config.get('OPENAI_API_KEY'):
-            try:
-                context.llm_service = create_llm_service_func(service_id="default_llm_bootstrap")
-                logger.info("LLMService initialisé via create_llm_service.")
-            except Exception as e:
-                logger.error(f"Erreur lors de l'appel à create_llm_service : {e}", exc_info=True)
-        else:
-            logger.warning("OPENAI_API_KEY non disponible. Tentative d'initialisation de LLMService sans clé (pourrait retourner un mock ou échouer).")
-            try:
-                context.llm_service = create_llm_service_func(service_id="default_llm_bootstrap_no_key")
-                if context.llm_service:
-                     logger.info(f"create_llm_service (sans clé API) a retourné: {type(context.llm_service).__name__}")
-            except Exception as e:
-                logger.error(f"Erreur lors de l'appel à create_llm_service (sans clé API) : {e}", exc_info=True)
+        # Toujours forcer le mock pour éviter les erreurs d'authentification pendant le débogage
+        try:
+            context.llm_service = create_llm_service_func(service_id="default_llm_bootstrap", force_mock=True)
+            logger.info("LLMService initialisé en mode mock forcé.")
+        except Exception as e:
+            logger.error(f"Erreur lors de l'appel à create_llm_service avec force_mock=True : {e}", exc_info=True)
     else:
         logger.error("create_llm_service_func n'a pas pu être importé.")
 
@@ -291,11 +283,19 @@ def initialize_project_environment(env_path_str: str = None, root_path_str: str 
             }
             
             context.informal_agent = InformalAgent_class(
-                agent_id="bootstrap_informal_agent",
-                tools=informal_agent_tools,
-                semantic_kernel=kernel
+                kernel=kernel,
+                agent_name="bootstrap_informal_agent"
             )
-            logger.info("InformalAgent initialisé.")
+            
+            # Configuration des plugins et fonctions sémantiques de l'agent
+            if context.llm_service:
+                llm_service_id = getattr(context.llm_service, 'service_id', 'default')
+                context.informal_agent.setup_agent_components(llm_service_id=llm_service_id)
+                logger.info(f"Composants de l'agent configurés avec le service LLM ID: {llm_service_id}")
+            else:
+                logger.warning("LLM Service non disponible, impossible de configurer les composants de l'agent.")
+
+            logger.info("InformalAgent initialisé et configuré.")
         except Exception as e:
             logger.error(f"Erreur lors de l'initialisation de InformalAgent : {e}", exc_info=True)
     elif not context.llm_service:

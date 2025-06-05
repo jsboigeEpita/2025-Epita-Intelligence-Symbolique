@@ -1,8 +1,11 @@
 # argumentation_analysis/agents/core/pm/sherlock_enquete_agent.py
 import logging
-from typing import Optional
+from typing import Optional, List, AsyncGenerator
 
-from semantic_kernel import Kernel # type: ignore
+from semantic_kernel import Kernel
+from semantic_kernel.agents import Agent
+from semantic_kernel.contents import ChatMessageContent
+from semantic_kernel.contents.chat_history import ChatHistory
 
 from .pm_agent import ProjectManagerAgent
 # from .pm_definitions import PM_INSTRUCTIONS # Remplacé par le prompt spécifique
@@ -46,6 +49,47 @@ class SherlockEnqueteAgent(ProjectManagerAgent):
         self.kernel = kernel  # Stocker la référence au kernel
         # self.logger = logging.getLogger(agent_name) # Assurer un logger spécifique - Géré par BaseAgent._logger
         self._logger.info(f"SherlockEnqueteAgent '{agent_name}' initialisé.")
+
+    async def invoke(
+        self,
+        messages: List[ChatMessageContent],
+        **kwargs,
+    ) -> List[ChatMessageContent]:
+        """Invoke the agent with a list of messages."""
+        chat_history = ChatHistory(messages=messages)
+        chat_history.add_system_message(self.instructions)
+        
+        # Pass runtime to the kernel invocation
+        runtime = kwargs.pop("runtime", None)
+        if not runtime:
+            raise ValueError("Runtime not provided in kwargs for agent invocation.")
+
+        result = await self.kernel.invoke(
+            prompt=str(chat_history),
+            runtime=runtime,
+            **kwargs,
+        )
+        # Assuming result is ChatMessageContent or similar
+        response_message = result if isinstance(result, ChatMessageContent) else ChatMessageContent(role="assistant", content=str(result))
+        return [response_message]
+
+    async def invoke_stream(
+        self,
+        messages: List[ChatMessageContent],
+        **kwargs,
+    ) -> AsyncGenerator[List[ChatMessageContent], None]:
+        """Invoke the agent with a stream of messages."""
+        # Basic (non-streaming) implementation for now
+        response = await self.invoke(messages, **kwargs)
+        yield response
+
+    async def get_response(
+        self,
+        messages: List[ChatMessageContent],
+        **kwargs,
+    ) -> List[ChatMessageContent]:
+        """Get a response from the agent."""
+        return await self.invoke(messages, **kwargs)
 
     async def get_current_case_description(self) -> str:
         """
@@ -98,32 +142,6 @@ class SherlockEnqueteAgent(ProjectManagerAgent):
             self._logger.error(f"Erreur lors de l'ajout de l'hypothèse: {e}")
             return None
 
-async def add_new_hypothesis(self, hypothesis_text: str, confidence_score: float) -> Optional[dict]:
-        """
-        Ajoute une nouvelle hypothèse à l'état de l'enquête.
-
-        Args:
-            hypothesis_text: Le texte de l'hypothèse.
-            confidence_score: Le score de confiance de l'hypothèse.
-
-        Returns:
-            Le dictionnaire de l'hypothèse ajoutée ou None en cas d'erreur.
-        """
-        self._logger.info(f"Ajout d'une nouvelle hypothèse: '{hypothesis_text}' avec confiance {confidence_score}")
-        try:
-            result = await self.kernel.invoke(
-                plugin_name="EnqueteStatePlugin",
-                function_name="add_hypothesis",
-                text=hypothesis_text, # type: ignore
-                confidence_score=confidence_score # type: ignore
-            )
-            # Supposant que 'result' est le dictionnaire de l'hypothèse ou a un attribut 'value'
-            if hasattr(result, 'value'):
-                return result.value # type: ignore
-            return result # type: ignore
-        except Exception as e:
-            self._logger.error(f"Erreur lors de l'ajout de l'hypothèse: {e}")
-            return None
 # Pourrait être étendu avec des capacités spécifiques à Sherlock plus tard
 # def get_agent_capabilities(self) -> Dict[str, Any]:
 #     base_caps = super().get_agent_capabilities()
