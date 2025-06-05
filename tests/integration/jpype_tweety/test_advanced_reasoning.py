@@ -1,6 +1,6 @@
 import pytest
 import pathlib # Ajout pour la manipulation des chemins
-from tests.utils.portable_tools import ensure_portable_octave
+from tests.support.portable_octave_installer import ensure_portable_octave
 from argumentation_analysis.paths import PROJECT_ROOT_DIR # Pour la racine du projet
 import jpype
 import os
