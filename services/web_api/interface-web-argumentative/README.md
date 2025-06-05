@@ -25,6 +25,20 @@ Pour lancer l'interface en mode développement local, suivez ces étapes :
     (ou `yarn start`)
 
     L'application devrait s'ouvrir automatiquement dans votre navigateur par défaut, généralement à l'adresse `http://localhost:3000`.
+### Commandes One-Liner (depuis la racine du projet)
+
+Si vous souhaitez lancer les serveurs backend et frontend rapidement depuis des terminaux positionnés à la racine du projet (`C:\dev\2025-Epita-Intelligence-Symbolique`), vous pouvez utiliser les commandes PowerShell suivantes :
+
+*   **Pour démarrer le serveur Backend :**
+    ```powershell
+    powershell -Command ".\activate_project_env.ps1 -CommandToRun 'python .\argumentation_analysis\services\web_api\start_api.py --port 5003'"
+    ```
+
+*   **Pour démarrer le serveur Frontend :**
+    ```powershell
+    powershell -Command ".\activate_project_env.ps1 -CommandToRun 'cd services/web_api/interface-web-argumentative && npm start'"
+    ```
+    *(Note : Cette commande utilise `activate_project_env.ps1` pour la cohérence avec la demande, bien que l'environnement Conda ne soit pas strictement nécessaire pour `npm start`. La commande `cd` est exécutée dans le contexte de `conda run`.)*
 
 ## Parcours de test de l'interface
 
