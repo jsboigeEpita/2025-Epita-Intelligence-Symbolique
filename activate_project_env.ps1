@@ -1,38 +1,13 @@
 param (
     [string]$CommandToRun = "" # Commande à exécuter après activation
 )
- 
+
 # Assurer que PSScriptRoot est défini, même si le script est appelé d'une manière où $PSScriptRoot n'est pas automatiquement peuplé.
 if ($PSScriptRoot) {
     $scriptRoot = $PSScriptRoot
 } else {
     $scriptRoot = Split-Path -Parent $MyInvocation.MyCommand.Definition
 }
- 
-# Récupérer le nom de l'environnement Conda dynamiquement
-$envNameScriptPath = Join-Path $scriptRoot "scripts/get_env_name.py"
-$condaEnvNameFromScript = ""
-try {
-    # Tenter d'exécuter avec 'python' qui devrait être dans le PATH (souvent le base de conda)
-    # ou l'environnement actif si le script est sourcé après une activation partielle.
-    # Convertir la sortie en chaîne avant d'appeler Trim() pour éviter les erreurs si la commande retourne un ErrorRecord
-    $condaEnvNameFromScript = ("$(python $envNameScriptPath 2>&1)" | Out-String).Trim()
-    if ($LASTEXITCODE -ne 0 -or $condaEnvNameFromScript -match "^ERROR_GETTING_ENV_NAME" -or $condaEnvNameFromScript -match "^CRITICAL_ERROR") {
-        Write-Warning "Erreur lors de la récupération du nom de l'environnement Conda depuis '$envNameScriptPath': $condaEnvNameFromScript"
-        Write-Warning "Utilisation du nom par défaut 'projet-is'."
-        $condaEnvNameFromScript = "projet-is" # Fallback
-    } elseif ($condaEnvNameFromScript -match "\s") {
-        # Si le nom contient des espaces ou des retours à la ligne inattendus (ex: messages d'erreur non capturés)
-        Write-Warning "Le nom de l'environnement récupéré ('$condaEnvNameFromScript') semble invalide. Utilisation du nom par défaut 'projet-is'."
-        $condaEnvNameFromScript = "projet-is" # Fallback
-    }
-} catch {
-    Write-Warning "Exception lors de l'exécution de '$envNameScriptPath': $($_.Exception.Message)"
-    Write-Warning "Utilisation du nom par défaut 'projet-is'."
-    $condaEnvNameFromScript = "projet-is" # Fallback
-}
-$condaEnvName = $condaEnvNameFromScript
-Write-Host "[INFO] Nom de l'environnement Conda à utiliser: $condaEnvName"
 
 $envFile = ".env"
 
@@ -102,6 +77,45 @@ if (Test-Path $envFilePath) {
     Write-Warning "Fichier '$envFile' ('$envFilePath') introuvable. Certaines variables d'environnement (comme JAVA_HOME) pourraient ne pas être configurées."
 }
 
+# --- Récupération du nom de l'environnement Conda ---
+$envNameScriptPath = Join-Path $scriptRoot "scripts/get_env_name.py"
+$condaEnvName = "" # Initialisation
+$fallbackCondaEnvName = "projet-is" # Nom de secours final
+
+try {
+    # Tenter d'exécuter avec 'python' qui devrait être dans le PATH
+    $condaEnvNameFromScript = ("$(python $envNameScriptPath 2>&1)" | Out-String).Trim()
+    
+    if ($LASTEXITCODE -ne 0 -or $condaEnvNameFromScript -match "^ERROR_GETTING_ENV_NAME" -or $condaEnvNameFromScript -match "^CRITICAL_ERROR" -or [string]::IsNullOrWhiteSpace($condaEnvNameFromScript) -or $condaEnvNameFromScript -match "\s") {
+        Write-Warning "Erreur ou nom invalide lors de la récupération du nom de l'environnement Conda depuis '$envNameScriptPath': '$condaEnvNameFromScript'"
+        # Tentative de fallback sur $env:CONDA_ENV_NAME
+        if (-not [string]::IsNullOrWhiteSpace($env:CONDA_ENV_NAME)) {
+            $condaEnvName = $env:CONDA_ENV_NAME
+            Write-Host "[INFO] Utilisation du nom de l'environnement Conda depuis la variable d'environnement `$env:CONDA_ENV_NAME: '$condaEnvName'"
+        } else {
+            Write-Warning "La variable d'environnement `$env:CONDA_ENV_NAME n'est pas définie ou est vide."
+            Write-Warning "Utilisation du nom par défaut '$fallbackCondaEnvName'."
+            $condaEnvName = $fallbackCondaEnvName
+        }
+    } else {
+        $condaEnvName = $condaEnvNameFromScript
+        Write-Host "[INFO] Nom de l'environnement Conda récupéré depuis le script: '$condaEnvName'"
+    }
+} catch {
+    Write-Warning "Exception lors de l'exécution de '$envNameScriptPath': $($_.Exception.Message)"
+    # Tentative de fallback sur $env:CONDA_ENV_NAME en cas d'exception
+    if (-not [string]::IsNullOrWhiteSpace($env:CONDA_ENV_NAME)) {
+        $condaEnvName = $env:CONDA_ENV_NAME
+        Write-Host "[INFO] Utilisation du nom de l'environnement Conda depuis la variable d'environnement `$env:CONDA_ENV_NAME (suite à une exception): '$condaEnvName'"
+    } else {
+        Write-Warning "La variable d'environnement `$env:CONDA_ENV_NAME n'est pas définie ou est vide (suite à une exception)."
+        Write-Warning "Utilisation du nom par défaut '$fallbackCondaEnvName'."
+        $condaEnvName = $fallbackCondaEnvName
+    }
+}
+
+Write-Host "[INFO] Nom de l'environnement Conda final à utiliser: $condaEnvName"
+
 # --- Exécution de la commande dans l'environnement Conda ---
 if (-not [string]::IsNullOrEmpty($CommandToRun)) {
     Write-Host ""
@@ -112,23 +126,14 @@ if (-not [string]::IsNullOrEmpty($CommandToRun)) {
     Write-Host "  PATH (début)= $($env:PATH.Substring(0, [System.Math]::Min($env:PATH.Length, 200)))..."
     Write-Host "---------------------------------------------------------------------"
     
-    # Utilisation de 'conda run' pour exécuter la commande dans l'environnement spécifié.
-    # Les variables d'environnement définies ci-dessus dans la session PowerShell actuelle
-    # devraient être héritées par le processus lancé par 'conda run'.
-    
     $FullCommandToExecute = $CommandToRun
     if ($args.Count -gt 0) {
-        # Si le script est sourcé (. .\script.ps1 cmd arg1 arg2), $CommandToRun prend 'cmd'
-        # et $args contient (arg1, arg2). Il faut les combiner.
         $EscapedArgs = $args | ForEach-Object {
             if ($_ -match "\s" -or $_ -match "'" -or $_ -match '"') {
-                # Échapper les guillemets simples et entourer de guillemets simples
-                # Ceci est une tentative basique, des cas plus complexes d'échappement peuvent exister.
                 "'$($_ -replace "'", "''")'"
             } elseif ($_.StartsWith("-") -and $_.Contains("=")) {
-                # Pour les arguments comme --param=valeur, s'assurer qu'ils sont bien passés
                 $parts = $_.Split("=", 2)
-                "$($parts[0])=$($parts[1])" # Pas besoin de guillemets si pas d'espaces
+                "$($parts[0])=$($parts[1])"
             }
             else {
                 $_
@@ -151,13 +156,8 @@ if (-not [string]::IsNullOrEmpty($CommandToRun)) {
 
     Write-Host "---------------------------------------------------------------------"
     Write-Host "Commande '$CommandToRun' terminée avec le code de sortie: $exitCode"
-    exit $exitCode # Quitte le script avec le code de sortie de la commande exécutée
+    exit $exitCode 
 } else {
-    # Si aucune commande n'est fournie, ce script est probablement sourcé ou appelé pour charger l'environnement
-    # dans un contexte où l'utilisateur exécutera des commandes ensuite.
-    # L'activation réelle de Conda pour la session appelante via `conda activate` directement dans le script
-    # ne fonctionne de manière fiable que si le script est "sourcé" (ex: . .\activate_project_env.ps1).
-    # Si appelé normalement (.\activate_project_env.ps1), l'activation est locale au script.
     Write-Host ""
     Write-Host "---------------------------------------------------------------------"
     Write-Host "Variables d'environnement du projet chargées (si .env trouvé)."
