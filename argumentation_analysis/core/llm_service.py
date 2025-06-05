@@ -129,14 +129,13 @@ def create_llm_service(service_id: str = "global_llm_service", force_mock: bool 
 
             # Création du client AsyncOpenAI avec le client httpx personnalisé
             # Création du client AsyncOpenAI avec le client httpx personnalisé
-            client_args = {
-                "api_key": api_key,
-                "http_client": custom_httpx_client
-            }
-            if org_id and "your_openai_org_id_here" not in org_id:
-                client_args["organization"] = org_id
+            org_to_use = org_id if (org_id and "your_openai_org_id_here" not in org_id) else None
             
-            openai_custom_async_client = AsyncOpenAI(**client_args)
+            openai_custom_async_client = AsyncOpenAI(
+                api_key=api_key,
+                organization=org_to_use,
+                http_client=custom_httpx_client
+            )
             
             llm_instance = OpenAIChatCompletion(
                 service_id=service_id,
