@@ -1215,3 +1215,323 @@ Successfully installed argumentation_analysis_project-0.1.0 blis-1.3.0 sympy-1.1
 2025-06-05 03:15:24,637 - __main__ - INFO - Project dependencies installed successfully via pip.
 2025-06-05 03:15:24,637 - __main__ - INFO - ------------------------------
 2025-06-05 03:15:24,637 - __main__ - INFO - Setup orchestration complete.
+2025-06-05 08:53:07,951 - __main__ - DEBUG - Logging initialisé. Les logs DEBUG iront dans d:\2025-Epita-Intelligence-Symbolique-4\logs\python_setup.log. Les logs INFO (et plus) iront aussi sur la console.
+2025-06-05 08:53:07,952 - __main__ - DEBUG - sys.path[0] is now: d:\2025-Epita-Intelligence-Symbolique-4
+2025-06-05 08:53:07,952 - __main__ - DEBUG - Loaded manage_portable_tools from: d:\2025-Epita-Intelligence-Symbolique-4\scripts\setup_core\manage_portable_tools.py
+2025-06-05 08:53:07,952 - __main__ - INFO - Starting project setup with the following options:
+2025-06-05 08:53:07,953 - __main__ - INFO -   Force reinstall tools: False
+2025-06-05 08:53:07,953 - __main__ - INFO -   Force reinstall env: False
+2025-06-05 08:53:07,953 - __main__ - INFO -   Interactive mode: False
+2025-06-05 08:53:07,953 - __main__ - INFO -   Skip tools: False
+2025-06-05 08:53:07,953 - __main__ - INFO -   Skip Conda env: False
+2025-06-05 08:53:07,953 - __main__ - INFO -   Skip cleanup: False
+2025-06-05 08:53:07,953 - __main__ - INFO -   Skip pip install: False
+2025-06-05 08:53:07,953 - __main__ - INFO -   Run pytest debug: False
+2025-06-05 08:53:07,953 - __main__ - INFO - ------------------------------
+2025-06-05 08:53:07,953 - __main__ - INFO - Managing portable tools (JDK, Octave)...
+2025-06-05 08:53:07,953 - __main__ - INFO - JDK will be installed/checked in: d:\2025-Epita-Intelligence-Symbolique-4\libs\portable_jdk
+2025-06-05 08:53:07,953 - __main__ - INFO - --- Managing JDK ---
+2025-06-05 08:53:07,953 - __main__ - DEBUG - Initial tool_config for JDK: {'name': 'JDK', 'url_windows': 'https://github.com/adoptium/temurin17-binaries/releases/download/jdk-17.0.11%2B9/OpenJDK17U-jdk_x64_windows_hotspot_17.0.11_9.zip', 'dir_name_pattern': 'jdk-17.*', 'home_env_var': 'JAVA_HOME'}
+2025-06-05 08:53:08,054 - __main__ - DEBUG - _find_tool_dir: Found matching dir 'd:\2025-Epita-Intelligence-Symbolique-4\libs\portable_jdk\jdk-17.0.11+9' for pattern 'jdk-17.*' in 'd:\2025-Epita-Intelligence-Symbolique-4\libs\portable_jdk'.
+2025-06-05 08:53:08,054 - __main__ - INFO - JDK found at: d:\2025-Epita-Intelligence-Symbolique-4\libs\portable_jdk\jdk-17.0.11+9
+2025-06-05 08:53:08,054 - __main__ - INFO - Using existing JDK installation.
+2025-06-05 08:53:08,054 - __main__ - INFO -   JAVA_HOME: d:\2025-Epita-Intelligence-Symbolique-4\libs\portable_jdk\jdk-17.0.11+9
+2025-06-05 08:53:08,054 - __main__ - INFO - Octave will be installed/checked in: d:\2025-Epita-Intelligence-Symbolique-4\.tools
+2025-06-05 08:53:08,055 - __main__ - INFO - --- Managing Octave ---
+2025-06-05 08:53:08,055 - __main__ - DEBUG - Initial tool_config for Octave: {'name': 'Octave', 'url_windows': 'https://mirrors.ocf.berkeley.edu/gnu/octave/windows/octave-8.4.0-w64.zip', 'dir_name_pattern': 'octave-8.4.0-w64.*', 'home_env_var': 'OCTAVE_HOME'}
+2025-06-05 08:53:08,055 - __main__ - DEBUG - _find_tool_dir: No matching dir for pattern 'octave-8.4.0-w64.*' in 'd:\2025-Epita-Intelligence-Symbolique-4\.tools'.
+2025-06-05 08:53:08,055 - __main__ - INFO - Octave not found or marked for reinstallation. Proceeding with download and setup.
+2025-06-05 08:53:08,055 - __main__ - DEBUG - URL to be used for download: https://mirrors.ocf.berkeley.edu/gnu/octave/windows/octave-8.4.0-w64.zip
+2025-06-05 08:53:08,055 - __main__ - DEBUG - Archive name: octave-8.4.0-w64.zip
+2025-06-05 08:53:08,055 - __main__ - DEBUG - Temp download dir: d:\2025-Epita-Intelligence-Symbolique-4\.tools\_temp_downloads_octave
+2025-06-05 08:53:08,055 - __main__ - DEBUG - _download_file called with: url=https://mirrors.ocf.berkeley.edu/gnu/octave/windows/octave-8.4.0-w64.zip, dest_folder=d:\2025-Epita-Intelligence-Symbolique-4\.tools\_temp_downloads_octave, file_name=octave-8.4.0-w64.zip, force_download=True
+2025-06-05 08:53:08,055 - __main__ - INFO - Downloading octave-8.4.0-w64.zip from https://mirrors.ocf.berkeley.edu/gnu/octave/windows/octave-8.4.0-w64.zip...
+2025-06-05 08:53:09,270 - __main__ - INFO - Total file size: 700609947 bytes (668.15 MB)
+2025-06-05 08:53:14,347 - __main__ - INFO - Downloaded 86556672 bytes / 700609947 bytes (12.35%) - Speed: 16647.80 KB/s - ETA: 00:00:36...
+2025-06-05 08:53:19,432 - __main__ - INFO - Downloaded 186908672 bytes / 700609947 bytes (26.68%) - Speed: 17963.64 KB/s - ETA: 00:00:27...
+2025-06-05 08:53:24,434 - __main__ - INFO - Downloaded 300072960 bytes / 700609947 bytes (42.83%) - Speed: 19324.44 KB/s - ETA: 00:00:20...
+2025-06-05 08:53:29,512 - __main__ - INFO - Downloaded 407552000 bytes / 700609947 bytes (58.17%) - Speed: 19661.77 KB/s - ETA: 00:00:14...
+2025-06-05 08:53:34,522 - __main__ - INFO - Downloaded 509624320 bytes / 700609947 bytes (72.74%) - Speed: 19708.32 KB/s - ETA: 00:00:09...
+2025-06-05 08:53:39,528 - __main__ - INFO - Downloaded 613679104 bytes / 700609947 bytes (87.59%) - Speed: 19805.96 KB/s - ETA: 00:00:04...
+2025-06-05 08:53:43,817 - __main__ - INFO - Downloaded 700609947 bytes / 700609947 bytes (100.00%) - Avg Speed: 19804.64 KB/s.
+2025-06-05 08:53:43,817 - __main__ - INFO - Download complete for octave-8.4.0-w64.zip.
+2025-06-05 08:53:43,818 - __main__ - DEBUG - Attempting to extract 'd:\2025-Epita-Intelligence-Symbolique-4\.tools\_temp_downloads_octave\octave-8.4.0-w64.zip' to 'd:\2025-Epita-Intelligence-Symbolique-4\.tools'.
+2025-06-05 08:53:43,818 - __main__ - INFO - Starting extraction of octave-8.4.0-w64.zip to d:\2025-Epita-Intelligence-Symbolique-4\.tools...
+2025-06-05 08:53:44,041 - __main__ - INFO - Opened ZIP file: octave-8.4.0-w64.zip. Contains 55120 members.
+2025-06-05 08:53:44,041 - __main__ - DEBUG - Starting member-by-member extraction of octave-8.4.0-w64.zip to d:\2025-Epita-Intelligence-Symbolique-4\.tools...
+2025-06-05 08:53:44,935 - __main__ - INFO - Extracted 2756/55120 members for octave-8.4.0-w64.zip (5.00%)...
+2025-06-05 08:53:45,931 - __main__ - INFO - Extracted 5512/55120 members for octave-8.4.0-w64.zip (10.00%)...
+2025-06-05 08:53:46,760 - __main__ - INFO - Extracted 8268/55120 members for octave-8.4.0-w64.zip (15.00%)...
+2025-06-05 08:53:51,185 - __main__ - INFO - Extracted 11024/55120 members for octave-8.4.0-w64.zip (20.00%)...
+2025-06-05 08:53:53,172 - __main__ - INFO - Extracted 13780/55120 members for octave-8.4.0-w64.zip (25.00%)...
+2025-06-05 08:53:53,988 - __main__ - INFO - Extracted 16536/55120 members for octave-8.4.0-w64.zip (30.00%)...
+2025-06-05 08:53:54,712 - __main__ - INFO - Extracted 19292/55120 members for octave-8.4.0-w64.zip (35.00%)...
+2025-06-05 08:53:55,512 - __main__ - INFO - Extracted 22048/55120 members for octave-8.4.0-w64.zip (40.00%)...
+2025-06-05 08:53:56,432 - __main__ - INFO - Extracted 24804/55120 members for octave-8.4.0-w64.zip (45.00%)...
+2025-06-05 08:53:57,304 - __main__ - INFO - Extracted 27560/55120 members for octave-8.4.0-w64.zip (50.00%)...
+2025-06-05 08:53:58,217 - __main__ - INFO - Extracted 30316/55120 members for octave-8.4.0-w64.zip (55.00%)...
+2025-06-05 08:53:59,088 - __main__ - INFO - Extracted 33072/55120 members for octave-8.4.0-w64.zip (60.00%)...
+2025-06-05 08:54:00,959 - __main__ - INFO - Extracted 35828/55120 members for octave-8.4.0-w64.zip (65.00%)...
+2025-06-05 08:54:01,900 - __main__ - INFO - Extracted 38584/55120 members for octave-8.4.0-w64.zip (70.00%)...
+2025-06-05 08:54:02,846 - __main__ - INFO - Extracted 41340/55120 members for octave-8.4.0-w64.zip (75.00%)...
+2025-06-05 08:54:03,831 - __main__ - INFO - Extracted 44096/55120 members for octave-8.4.0-w64.zip (80.00%)...
+2025-06-05 08:54:04,605 - __main__ - INFO - Extracted 46852/55120 members for octave-8.4.0-w64.zip (85.00%)...
+2025-06-05 08:54:05,622 - __main__ - INFO - Extracted 49608/55120 members for octave-8.4.0-w64.zip (90.00%)...
+2025-06-05 08:54:06,423 - __main__ - INFO - Extracted 52364/55120 members for octave-8.4.0-w64.zip (95.00%)...
+2025-06-05 08:54:07,219 - __main__ - INFO - Extracted 55120/55120 members for octave-8.4.0-w64.zip (100.00%)...
+2025-06-05 08:54:07,219 - __main__ - INFO - Member-by-member extraction of octave-8.4.0-w64.zip complete. Extracted 55120 members.
+2025-06-05 08:54:07,219 - __main__ - DEBUG - Destination folder 'd:\2025-Epita-Intelligence-Symbolique-4\.tools' exists and is not empty after extraction. Contains 2 top-level items.
+2025-06-05 08:54:07,219 - __main__ - DEBUG - Reached end of _extract_zip. zip_path is: d:\2025-Epita-Intelligence-Symbolique-4\.tools\_temp_downloads_octave\octave-8.4.0-w64.zip.
+2025-06-05 08:54:07,228 - __main__ - DEBUG - _find_tool_dir: Found matching dir 'd:\2025-Epita-Intelligence-Symbolique-4\.tools\octave-8.4.0-w64' for pattern 'octave-8.4.0-w64.*' in 'd:\2025-Epita-Intelligence-Symbolique-4\.tools'.
+2025-06-05 08:54:07,228 - __main__ - INFO - Octave successfully set up at: d:\2025-Epita-Intelligence-Symbolique-4\.tools\octave-8.4.0-w64
+2025-06-05 08:54:07,228 - __main__ - INFO -   OCTAVE_HOME: d:\2025-Epita-Intelligence-Symbolique-4\.tools\octave-8.4.0-w64
+2025-06-05 08:54:07,228 - __main__ - INFO - Managing Conda environment...
+2025-06-05 08:54:07,228 - __main__ - DEBUG - Attempting to read Conda env name from: D:\2025-Epita-Intelligence-Symbolique-4\environment.yml
+2025-06-05 08:54:07,244 - __main__ - DEBUG - Successfully read env name 'projet-is' from D:\2025-Epita-Intelligence-Symbolique-4\environment.yml
+2025-06-05 08:54:07,244 - __main__ - INFO - Nom de l'environnement Conda récupéré depuis environment.yml: projet-is
+2025-06-05 08:54:07,244 - __main__ - INFO - --- Managing Conda Environment: projet-is ---
+2025-06-05 08:54:07,244 - __main__ - INFO - Project root: d:\2025-Epita-Intelligence-Symbolique-4
+2025-06-05 08:54:07,244 - __main__ - INFO - Environment file: d:\2025-Epita-Intelligence-Symbolique-4\environment.yml
+2025-06-05 08:54:07,244 - __main__ - INFO - Using Conda environment name: projet-is (Hardcoded for repair task in manage_conda_env.py)
+2025-06-05 08:54:07,247 - __main__ - DEBUG - Running Conda command: C:\Users\MYIA\miniconda3\Library\bin\conda.BAT --version
+2025-06-05 08:54:08,529 - __main__ - DEBUG - Conda stdout:
+conda 25.1.1
+
+2025-06-05 08:54:08,533 - __main__ - DEBUG - Running Conda command: C:\Users\MYIA\miniconda3\Library\bin\conda.BAT --version
+2025-06-05 08:54:09,140 - __main__ - DEBUG - Conda stdout:
+conda 25.1.1
+
+2025-06-05 08:54:09,140 - __main__ - DEBUG - Running Conda command: C:\Users\MYIA\miniconda3\Library\bin\conda.BAT env list
+2025-06-05 08:54:10,165 - __main__ - DEBUG - Conda stdout:
+
+# conda environments:
+#
+epita_symbolic_ai      C:\Users\MYIA\.conda\envs\epita_symbolic_ai
+epita_symbolic_ai_sherlock   C:\Users\MYIA\.conda\envs\epita_symbolic_ai_sherlock
+base                   C:\Users\MYIA\miniconda3
+projet-is              C:\Users\MYIA\miniconda3\envs\projet-is
+                       C:\tools\miniconda3
+                       D:\text-generation-webui\installer_files\env
+                       d:\text-generation-webui\installer_files\env
+
+
+2025-06-05 08:54:10,165 - __main__ - DEBUG - Conda stderr:
+C:\Users\MYIA\miniconda3\Lib\site-packages\conda\base\context.py:202: FutureWarning: Adding 'defaults' to channel list implicitly is deprecated and will be removed in 25.3. 
+
+To remove this warning, please choose a default channel explicitly with conda's regular configuration system, e.g. by adding 'defaults' to the list of channels:
+
+  conda config --add channels defaults
+
+For more information see https://docs.conda.io/projects/conda/en/stable/user-guide/configuration/use-condarc.html
+
+  deprecated.topic(
+
+2025-06-05 08:54:10,165 - __main__ - DEBUG - Conda env list stdout for 'projet-is' check:
+
+# conda environments:
+#
+epita_symbolic_ai      C:\Users\MYIA\.conda\envs\epita_symbolic_ai
+epita_symbolic_ai_sherlock   C:\Users\MYIA\.conda\envs\epita_symbolic_ai_sherlock
+base                   C:\Users\MYIA\miniconda3
+projet-is              C:\Users\MYIA\miniconda3\envs\projet-is
+                       C:\tools\miniconda3
+                       D:\text-generation-webui\installer_files\env
+                       d:\text-generation-webui\installer_files\env
+
+
+2025-06-05 08:54:10,165 - __main__ - DEBUG - Environment 'projet-is' exists: True
+2025-06-05 08:54:10,165 - __main__ - INFO - Conda environment 'projet-is' already exists. Attempting to update.
+2025-06-05 08:54:10,165 - __main__ - INFO - Updating Conda environment 'projet-is' from file 'd:\2025-Epita-Intelligence-Symbolique-4\environment.yml'. This may take a while...
+2025-06-05 08:54:10,165 - __main__ - DEBUG - Running Conda command: C:\Users\MYIA\miniconda3\Library\bin\conda.BAT env update -n projet-is --file d:\2025-Epita-Intelligence-Symbolique-4\environment.yml --prune
+2025-06-05 08:54:50,829 - __main__ - ERROR - Conda command 'C:\Users\MYIA\miniconda3\Library\bin\conda.BAT env update -n projet-is --file d:\2025-Epita-Intelligence-Symbolique-4\environment.yml --prune' failed with exit code 3221226505.
+2025-06-05 08:54:50,829 - __main__ - ERROR - Conda STDOUT (on error):
+Channels:
+ - pytorch
+ - conda-forge
+ - defaults
+Platform: win-64
+Collecting package metadata (repodata.json): ...working... done
+Solving environment: ...working... 
+2025-06-05 08:54:50,829 - __main__ - ERROR - Conda STDERR (on error):
+C:\Users\MYIA\miniconda3\Lib\site-packages\conda\base\context.py:202: FutureWarning: Adding 'defaults' to channel list implicitly is deprecated and will be removed in 25.3. 
+
+To remove this warning, please choose a default channel explicitly with conda's regular configuration system, e.g. by adding 'defaults' to the list of channels:
+
+  conda config --add channels defaults
+
+For more information see https://docs.conda.io/projects/conda/en/stable/user-guide/configuration/use-condarc.html
+
+  deprecated.topic(
+Out of memory allocating 1358954496 bytes!
+
+2025-06-05 08:54:50,830 - __main__ - ERROR - Failed to update Conda environment 'projet-is'. Error: Command '['C:\\Users\\MYIA\\miniconda3\\Library\\bin\\conda.BAT', 'env', 'update', '-n', 'projet-is', '--file', 'd:\\2025-Epita-Intelligence-Symbolique-4\\environment.yml', '--prune']' returned non-zero exit status 3221226505.
+Traceback (most recent call last):
+  File "d:\2025-Epita-Intelligence-Symbolique-4\scripts\setup_core\manage_conda_env.py", line 174, in update_conda_env
+    _run_conda_command(["env", "update", "-n", env_name, "--file", env_file_path, "--prune"], logger_instance=logger, capture_output=True, check=True)
+  File "d:\2025-Epita-Intelligence-Symbolique-4\scripts\setup_core\manage_conda_env.py", line 94, in _run_conda_command
+    process = subprocess.run(command, capture_output=capture_output, text=True, check=check, encoding='utf-8', **kwargs)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Python312\Lib\subprocess.py", line 573, in run
+    raise CalledProcessError(retcode, process.args,
+subprocess.CalledProcessError: Command '['C:\\Users\\MYIA\\miniconda3\\Library\\bin\\conda.BAT', 'env', 'update', '-n', 'projet-is', '--file', 'd:\\2025-Epita-Intelligence-Symbolique-4\\environment.yml', '--prune']' returned non-zero exit status 3221226505.
+2025-06-05 08:54:50,883 - __main__ - ERROR - Failed to set up Conda environment 'projet-is'.
+2025-06-05 08:54:50,883 - __main__ - INFO - Managing project files (.env, cleanup)...
+2025-06-05 08:54:50,883 - __main__ - INFO - Début de la configuration de la structure du projet...
+2025-06-05 08:54:50,883 - __main__ - INFO - Début du nettoyage des anciennes installations...
+2025-06-05 08:54:50,884 - __main__ - INFO - Éléments identifiés pour le nettoyage :
+2025-06-05 08:54:50,884 - __main__ - INFO -   - d:\2025-Epita-Intelligence-Symbolique-4\.tools (dir)
+2025-06-05 08:54:59,365 - __main__ - INFO - Répertoire supprimé : d:\2025-Epita-Intelligence-Symbolique-4\.tools
+2025-06-05 08:54:59,365 - __main__ - INFO - Nettoyage des anciennes installations terminé.
+2025-06-05 08:54:59,365 - __main__ - INFO - Configuration du fichier .env...
+2025-06-05 08:54:59,366 - __main__ - DEBUG - PYTHONPATH défini à : d:\2025-Epita-Intelligence-Symbolique-4
+2025-06-05 08:54:59,366 - __main__ - DEBUG - JAVA_HOME défini à : d:\2025-Epita-Intelligence-Symbolique-4\libs\portable_jdk\jdk-17.0.11+9
+2025-06-05 08:54:59,366 - __main__ - DEBUG - OCTAVE_HOME défini à : d:\2025-Epita-Intelligence-Symbolique-4\.tools\octave-8.4.0-w64
+2025-06-05 08:54:59,366 - __main__ - DEBUG - TEXT_CONFIG_PASSPHRASE trouvé dans .env.
+2025-06-05 08:54:59,366 - __main__ - DEBUG - TIKA_SERVER_ENDPOINT trouvé dans .env : "https://tika.open-webui.myia.io/"
+2025-06-05 08:54:59,387 - __main__ - INFO - Fichier .env mis à jour : d:\2025-Epita-Intelligence-Symbolique-4\.env
+2025-06-05 08:54:59,387 - __main__ - INFO - Configuration de la structure du projet terminée.
+2025-06-05 08:54:59,387 - __main__ - INFO - Running pip commands to install project dependencies...
+2025-06-05 08:54:59,387 - __main__ - INFO - Début de l'installation des dépendances du projet dans 'd:\2025-Epita-Intelligence-Symbolique-4' pour l'environnement 'projet-is'.
+2025-06-05 08:54:59,387 - __main__ - INFO - Tentative d'installation des dépendances avec 'pip install -e .'
+2025-06-05 08:54:59,387 - __main__ - INFO - Exécution de la commande dans l'environnement Conda 'projet-is': conda run -n projet-is pip install -e .
+2025-06-05 08:55:26,723 - __main__ - INFO - Commande exécutée avec succès.
+2025-06-05 08:55:26,724 - __main__ - DEBUG - Sortie standard:
+Obtaining file:///D:/2025-Epita-Intelligence-Symbolique-4
+  Installing build dependencies: started
+  Installing build dependencies: finished with status 'done'
+  Checking if build backend supports build_editable: started
+  Checking if build backend supports build_editable: finished with status 'done'
+  Getting requirements to build editable: started
+  Getting requirements to build editable: finished with status 'done'
+  Preparing editable metadata (pyproject.toml): started
+  Preparing editable metadata (pyproject.toml): finished with status 'done'
+Requirement already satisfied: numpy<2.3,>=2.0.0 in c:\users\myia\miniconda3\envs\projet-is\lib\site-packages (from argumentation_analysis_project==0.1.0) (2.2.6)
+Requirement already satisfied: pandas in c:\users\myia\miniconda3\envs\projet-is\lib\site-packages (from argumentation_analysis_project==0.1.0) (2.2.3)
+Requirement already satisfied: scipy==1.15.3 in c:\users\myia\miniconda3\envs\projet-is\lib\site-packages (from argumentation_analysis_project==0.1.0) (1.15.3)
+Requirement already satisfied: scikit-learn in c:\users\myia\miniconda3\envs\projet-is\lib\site-packages (from argumentation_analysis_project==0.1.0) (1.6.1)
+Requirement already satisfied: nltk in c:\users\myia\miniconda3\envs\projet-is\lib\site-packages (from argumentation_analysis_project==0.1.0) (3.9.1)
+Requirement already satisfied: spacy in c:\users\myia\miniconda3\envs\projet-is\lib\site-packages (from argumentation_analysis_project==0.1.0) (3.8.6)
+Requirement already satisfied: torch in c:\users\myia\miniconda3\envs\projet-is\lib\site-packages (from argumentation_analysis_project==0.1.0) (2.5.1)
+Requirement already satisfied: transformers in c:\users\myia\miniconda3\envs\projet-is\lib\site-packages (from argumentation_analysis_project==0.1.0) (4.52.4)
+Requirement already satisfied: flask in c:\users\myia\miniconda3\envs\projet-is\lib\site-packages (from argumentation_analysis_project==0.1.0) (3.1.1)
+Requirement already satisfied: requests in c:\users\myia\miniconda3\envs\projet-is\lib\site-packages (from argumentation_analysis_project==0.1.0) (2.32.3)
+Requirement already satisfied: pydantic<2.10,>=2.0 in c:\users\myia\miniconda3\envs\projet-is\lib\site-packages (from argumentation_analysis_project==0.1.0) (2.9.2)
+Requirement already satisfied: python-dotenv in c:\users\myia\miniconda3\envs\projet-is\lib\site-packages (from argumentation_analysis_project==0.1.0) (1.1.0)
+Requirement already satisfied: cryptography in c:\users\myia\miniconda3\envs\projet-is\lib\site-packages (from argumentation_analysis_project==0.1.0) (45.0.3)
+Requirement already satisfied: tqdm in c:\users\myia\miniconda3\envs\projet-is\lib\site-packages (from argumentation_analysis_project==0.1.0) (4.67.1)
+Requirement already satisfied: pyyaml in c:\users\myia\miniconda3\envs\projet-is\lib\site-packages (from argumentation_analysis_project==0.1.0) (6.0.2)
+Requirement already satisfied: matplotlib in c:\users\myia\miniconda3\envs\projet-is\lib\site-packages (from argumentation_analysis_project==0.1.0) (3.10.3)
+Requirement already satisfied: seaborn in c:\users\myia\miniconda3\envs\projet-is\lib\site-packages (from argumentation_analysis_project==0.1.0) (0.13.2)
+Requirement already satisfied: statsmodels in c:\users\myia\miniconda3\envs\projet-is\lib\site-packages (from argumentation_analysis_project==0.1.0) (0.14.4)
+Requirement already satisfied: networkx==3.4.2 in c:\users\myia\miniconda3\envs\projet-is\lib\site-packages (from argumentation_analysis_project==0.1.0) (3.4.2)
+Requirement already satisfied: jpype1 in c:\users\myia\miniconda3\envs\projet-is\lib\site-packages (from argumentation_analysis_project==0.1.0) (1.5.2)
+Requirement already satisfied: clingo in c:\users\myia\miniconda3\envs\projet-is\lib\site-packages (from argumentation_analysis_project==0.1.0) (5.8.0)
+Requirement already satisfied: pytest in c:\users\myia\miniconda3\envs\projet-is\lib\site-packages (from argumentation_analysis_project==0.1.0) (8.4.0)
+Requirement already satisfied: pytest-cov in c:\users\myia\miniconda3\envs\projet-is\lib\site-packages (from argumentation_analysis_project==0.1.0) (6.1.1)
+Requirement already satisfied: pytest-mock in c:\users\myia\miniconda3\envs\projet-is\lib\site-packages (from argumentation_analysis_project==0.1.0) (3.14.1)
+Requirement already satisfied: pytest-asyncio in c:\users\myia\miniconda3\envs\projet-is\lib\site-packages (from argumentation_analysis_project==0.1.0) (1.0.0)
+Requirement already satisfied: coverage in c:\users\myia\miniconda3\envs\projet-is\lib\site-packages (from argumentation_analysis_project==0.1.0) (7.8.2)
+Requirement already satisfied: unidecode in c:\users\myia\miniconda3\envs\projet-is\lib\site-packages (from argumentation_analysis_project==0.1.0) (1.3.8)
+Requirement already satisfied: markdown in c:\users\myia\miniconda3\envs\projet-is\lib\site-packages (from argumentation_analysis_project==0.1.0) (3.8)
+Requirement already satisfied: annotated-types>=0.6.0 in c:\users\myia\miniconda3\envs\projet-is\lib\site-packages (from pydantic<2.10,>=2.0->argumentation_analysis_project==0.1.0) (0.7.0)
+Requirement already satisfied: pydantic-core==2.23.4 in c:\users\myia\miniconda3\envs\projet-is\lib\site-packages (from pydantic<2.10,>=2.0->argumentation_analysis_project==0.1.0) (2.23.4)
+Requirement already satisfied: typing-extensions>=4.6.1 in c:\users\myia\miniconda3\envs\projet-is\lib\site-packages (from pydantic<2.10,>=2.0->argumentation_analysis_project==0.1.0) (4.14.0)
+Requirement already satisfied: cffi>=1.14 in c:\users\myia\miniconda3\envs\projet-is\lib\site-packages (from cryptography->argumentation_analysis_project==0.1.0) (1.17.1)
+Requirement already satisfied: pycparser in c:\users\myia\miniconda3\envs\projet-is\lib\site-packages (from cffi>=1.14->cryptography->argumentation_analysis_project==0.1.0) (2.22)
+Requirement already satisfied: blinker>=1.9.0 in c:\users\myia\miniconda3\envs\projet-is\lib\site-packages (from flask->argumentation_analysis_project==0.1.0) (1.9.0)
+Requirement already satisfied: click>=8.1.3 in c:\users\myia\miniconda3\envs\projet-is\lib\site-packages (from flask->argumentation_analysis_project==0.1.0) (8.2.1)
+Requirement already satisfied: itsdangerous>=2.2.0 in c:\users\myia\miniconda3\envs\projet-is\lib\site-packages (from flask->argumentation_analysis_project==0.1.0) (2.2.0)
+Requirement already satisfied: jinja2>=3.1.2 in c:\users\myia\miniconda3\envs\projet-is\lib\site-packages (from flask->argumentation_analysis_project==0.1.0) (3.1.6)
+Requirement already satisfied: markupsafe>=2.1.1 in c:\users\myia\miniconda3\envs\projet-is\lib\site-packages (from flask->argumentation_analysis_project==0.1.0) (3.0.2)
+Requirement already satisfied: werkzeug>=3.1.0 in c:\users\myia\miniconda3\envs\projet-is\lib\site-packages (from flask->argumentation_analysis_project==0.1.0) (3.1.1)
+Requirement already satisfied: colorama in c:\users\myia\miniconda3\envs\projet-is\lib\site-packages (from click>=8.1.3->flask->argumentation_analysis_project==0.1.0) (0.4.6)
+Requirement already satisfied: packaging in c:\users\myia\miniconda3\envs\projet-is\lib\site-packages (from jpype1->argumentation_analysis_project==0.1.0) (25.0)
+Requirement already satisfied: contourpy>=1.0.1 in c:\users\myia\miniconda3\envs\projet-is\lib\site-packages (from matplotlib->argumentation_analysis_project==0.1.0) (1.3.2)
+Requirement already satisfied: cycler>=0.10 in c:\users\myia\miniconda3\envs\projet-is\lib\site-packages (from matplotlib->argumentation_analysis_project==0.1.0) (0.12.1)
+Requirement already satisfied: fonttools>=4.22.0 in c:\users\myia\miniconda3\envs\projet-is\lib\site-packages (from matplotlib->argumentation_analysis_project==0.1.0) (4.58.1)
+Requirement already satisfied: kiwisolver>=1.3.1 in c:\users\myia\miniconda3\envs\projet-is\lib\site-packages (from matplotlib->argumentation_analysis_project==0.1.0) (1.4.7)
+Requirement already satisfied: pillow>=8 in c:\users\myia\miniconda3\envs\projet-is\lib\site-packages (from matplotlib->argumentation_analysis_project==0.1.0) (10.4.0)
+Requirement already satisfied: pyparsing>=2.3.1 in c:\users\myia\miniconda3\envs\projet-is\lib\site-packages (from matplotlib->argumentation_analysis_project==0.1.0) (3.2.3)
+Requirement already satisfied: python-dateutil>=2.7 in c:\users\myia\miniconda3\envs\projet-is\lib\site-packages (from matplotlib->argumentation_analysis_project==0.1.0) (2.9.0.post0)
+Requirement already satisfied: six>=1.5 in c:\users\myia\miniconda3\envs\projet-is\lib\site-packages (from python-dateutil>=2.7->matplotlib->argumentation_analysis_project==0.1.0) (1.17.0)
+Requirement already satisfied: joblib in c:\users\myia\miniconda3\envs\projet-is\lib\site-packages (from nltk->argumentation_analysis_project==0.1.0) (1.5.1)
+Requirement already satisfied: regex>=2021.8.3 in c:\users\myia\miniconda3\envs\projet-is\lib\site-packages (from nltk->argumentation_analysis_project==0.1.0) (2024.11.6)
+Requirement already satisfied: pytz>=2020.1 in c:\users\myia\miniconda3\envs\projet-is\lib\site-packages (from pandas->argumentation_analysis_project==0.1.0) (2025.2)
+Requirement already satisfied: tzdata>=2022.7 in c:\users\myia\miniconda3\envs\projet-is\lib\site-packages (from pandas->argumentation_analysis_project==0.1.0) (2025.2)
+Requirement already satisfied: exceptiongroup>=1 in c:\users\myia\miniconda3\envs\projet-is\lib\site-packages (from pytest->argumentation_analysis_project==0.1.0) (1.3.0)
+Requirement already satisfied: iniconfig>=1 in c:\users\myia\miniconda3\envs\projet-is\lib\site-packages (from pytest->argumentation_analysis_project==0.1.0) (2.0.0)
+Requirement already satisfied: pluggy<2,>=1.5 in c:\users\myia\miniconda3\envs\projet-is\lib\site-packages (from pytest->argumentation_analysis_project==0.1.0) (1.6.0)
+Requirement already satisfied: pygments>=2.7.2 in c:\users\myia\miniconda3\envs\projet-is\lib\site-packages (from pytest->argumentation_analysis_project==0.1.0) (2.19.1)
+Requirement already satisfied: tomli>=1 in c:\users\myia\miniconda3\envs\projet-is\lib\site-packages (from pytest->argumentation_analysis_project==0.1.0) (2.2.1)
+Requirement already satisfied: charset_normalizer<4,>=2 in c:\users\myia\miniconda3\envs\projet-is\lib\site-packages (from requests->argumentation_analysis_project==0.1.0) (3.4.2)
+Requirement already satisfied: idna<4,>=2.5 in c:\users\myia\miniconda3\envs\projet-is\lib\site-packages (from requests->argumentation_analysis_project==0.1.0) (3.10)
+Requirement already satisfied: urllib3<3,>=1.21.1 in c:\users\myia\miniconda3\envs\projet-is\lib\site-packages (from requests->argumentation_analysis_project==0.1.0) (2.4.0)
+Requirement already satisfied: certifi>=2017.4.17 in c:\users\myia\miniconda3\envs\projet-is\lib\site-packages (from requests->argumentation_analysis_project==0.1.0) (2025.4.26)
+Requirement already satisfied: threadpoolctl>=3.1.0 in c:\users\myia\miniconda3\envs\projet-is\lib\site-packages (from scikit-learn->argumentation_analysis_project==0.1.0) (3.6.0)
+Requirement already satisfied: spacy-legacy<3.1.0,>=3.0.11 in c:\users\myia\miniconda3\envs\projet-is\lib\site-packages (from spacy->argumentation_analysis_project==0.1.0) (3.0.12)
+Requirement already satisfied: spacy-loggers<2.0.0,>=1.0.0 in c:\users\myia\miniconda3\envs\projet-is\lib\site-packages (from spacy->argumentation_analysis_project==0.1.0) (1.0.5)
+Requirement already satisfied: murmurhash<1.1.0,>=0.28.0 in c:\users\myia\miniconda3\envs\projet-is\lib\site-packages (from spacy->argumentation_analysis_project==0.1.0) (1.0.10)
+Requirement already satisfied: cymem<2.1.0,>=2.0.2 in c:\users\myia\miniconda3\envs\projet-is\lib\site-packages (from spacy->argumentation_analysis_project==0.1.0) (2.0.11)
+Requirement already satisfied: preshed<3.1.0,>=3.0.2 in c:\users\myia\miniconda3\envs\projet-is\lib\site-packages (from spacy->argumentation_analysis_project==0.1.0) (3.0.9)
+Collecting thinc<8.4.0,>=8.3.4 (from spacy->argumentation_analysis_project==0.1.0)
+  Using cached thinc-8.3.6-cp310-cp310-win_amd64.whl.metadata (15 kB)
+Requirement already satisfied: wasabi<1.2.0,>=0.9.1 in c:\users\myia\miniconda3\envs\projet-is\lib\site-packages (from spacy->argumentation_analysis_project==0.1.0) (1.1.3)
+Requirement already satisfied: srsly<3.0.0,>=2.4.3 in c:\users\myia\miniconda3\envs\projet-is\lib\site-packages (from spacy->argumentation_analysis_project==0.1.0) (2.5.1)
+Requirement already satisfied: catalogue<2.1.0,>=2.0.6 in c:\users\myia\miniconda3\envs\projet-is\lib\site-packages (from spacy->argumentation_analysis_project==0.1.0) (2.0.10)
+Requirement already satisfied: weasel<0.5.0,>=0.1.0 in c:\users\myia\miniconda3\envs\projet-is\lib\site-packages (from spacy->argumentation_analysis_project==0.1.0) (0.4.1)
+Requirement already satisfied: typer<1.0.0,>=0.3.0 in c:\users\myia\miniconda3\envs\projet-is\lib\site-packages (from spacy->argumentation_analysis_project==0.1.0) (0.16.0)
+Requirement already satisfied: setuptools in c:\users\myia\miniconda3\envs\projet-is\lib\site-packages (from spacy->argumentation_analysis_project==0.1.0) (80.9.0)
+Requirement already satisfied: langcodes<4.0.0,>=3.2.0 in c:\users\myia\miniconda3\envs\projet-is\lib\site-packages (from spacy->argumentation_analysis_project==0.1.0) (3.4.1)
+Requirement already satisfied: language-data>=1.2 in c:\users\myia\miniconda3\envs\projet-is\lib\site-packages (from langcodes<4.0.0,>=3.2.0->spacy->argumentation_analysis_project==0.1.0) (1.3.0)
+Requirement already satisfied: cloudpickle>=2.2.0 in c:\users\myia\miniconda3\envs\projet-is\lib\site-packages (from srsly<3.0.0,>=2.4.3->spacy->argumentation_analysis_project==0.1.0) (3.1.1)
+Requirement already satisfied: ujson>=1.35 in c:\users\myia\miniconda3\envs\projet-is\lib\site-packages (from srsly<3.0.0,>=2.4.3->spacy->argumentation_analysis_project==0.1.0) (5.10.0)
+Collecting blis<1.4.0,>=1.3.0 (from thinc<8.4.0,>=8.3.4->spacy->argumentation_analysis_project==0.1.0)
+  Using cached blis-1.3.0-cp310-cp310-win_amd64.whl.metadata (7.6 kB)
+Requirement already satisfied: confection<1.0.0,>=0.0.1 in c:\users\myia\miniconda3\envs\projet-is\lib\site-packages (from thinc<8.4.0,>=8.3.4->spacy->argumentation_analysis_project==0.1.0) (0.1.5)
+Requirement already satisfied: shellingham>=1.3.0 in c:\users\myia\miniconda3\envs\projet-is\lib\site-packages (from typer<1.0.0,>=0.3.0->spacy->argumentation_analysis_project==0.1.0) (1.5.4)
+Requirement already satisfied: rich>=10.11.0 in c:\users\myia\miniconda3\envs\projet-is\lib\site-packages (from typer<1.0.0,>=0.3.0->spacy->argumentation_analysis_project==0.1.0) (14.0.0)
+Requirement already satisfied: cloudpathlib<1.0.0,>=0.7.0 in c:\users\myia\miniconda3\envs\projet-is\lib\site-packages (from weasel<0.5.0,>=0.1.0->spacy->argumentation_analysis_project==0.1.0) (0.21.1)
+Requirement already satisfied: smart-open<8.0.0,>=5.2.1 in c:\users\myia\miniconda3\envs\projet-is\lib\site-packages (from weasel<0.5.0,>=0.1.0->spacy->argumentation_analysis_project==0.1.0) (7.1.0)
+Requirement already satisfied: wrapt in c:\users\myia\miniconda3\envs\projet-is\lib\site-packages (from smart-open<8.0.0,>=5.2.1->weasel<0.5.0,>=0.1.0->spacy->argumentation_analysis_project==0.1.0) (1.17.2)
+Requirement already satisfied: marisa-trie>=1.1.0 in c:\users\myia\miniconda3\envs\projet-is\lib\site-packages (from language-data>=1.2->langcodes<4.0.0,>=3.2.0->spacy->argumentation_analysis_project==0.1.0) (1.2.1)
+Requirement already satisfied: markdown-it-py>=2.2.0 in c:\users\myia\miniconda3\envs\projet-is\lib\site-packages (from rich>=10.11.0->typer<1.0.0,>=0.3.0->spacy->argumentation_analysis_project==0.1.0) (3.0.0)
+Requirement already satisfied: mdurl~=0.1 in c:\users\myia\miniconda3\envs\projet-is\lib\site-packages (from markdown-it-py>=2.2.0->rich>=10.11.0->typer<1.0.0,>=0.3.0->spacy->argumentation_analysis_project==0.1.0) (0.1.2)
+Requirement already satisfied: patsy>=0.5.6 in c:\users\myia\miniconda3\envs\projet-is\lib\site-packages (from statsmodels->argumentation_analysis_project==0.1.0) (1.0.1)
+Requirement already satisfied: filelock in c:\users\myia\miniconda3\envs\projet-is\lib\site-packages (from torch->argumentation_analysis_project==0.1.0) (3.18.0)
+Requirement already satisfied: fsspec in c:\users\myia\miniconda3\envs\projet-is\lib\site-packages (from torch->argumentation_analysis_project==0.1.0) (2025.3.0)
+Collecting sympy==1.13.1 (from torch->argumentation_analysis_project==0.1.0)
+  Using cached sympy-1.13.1-py3-none-any.whl.metadata (12 kB)
+Requirement already satisfied: mpmath<1.4,>=1.1.0 in c:\users\myia\miniconda3\envs\projet-is\lib\site-packages (from sympy==1.13.1->torch->argumentation_analysis_project==0.1.0) (1.3.0)
+Requirement already satisfied: huggingface-hub<1.0,>=0.30.0 in c:\users\myia\miniconda3\envs\projet-is\lib\site-packages (from transformers->argumentation_analysis_project==0.1.0) (0.32.4)
+Requirement already satisfied: tokenizers<0.22,>=0.21 in c:\users\myia\miniconda3\envs\projet-is\lib\site-packages (from transformers->argumentation_analysis_project==0.1.0) (0.21.1)
+Requirement already satisfied: safetensors>=0.4.3 in c:\users\myia\miniconda3\envs\projet-is\lib\site-packages (from transformers->argumentation_analysis_project==0.1.0) (0.5.3)
+Using cached thinc-8.3.6-cp310-cp310-win_amd64.whl (1.8 MB)
+Using cached blis-1.3.0-cp310-cp310-win_amd64.whl (6.2 MB)
+Using cached sympy-1.13.1-py3-none-any.whl (6.2 MB)
+Building wheels for collected packages: argumentation_analysis_project
+  Building editable for argumentation_analysis_project (pyproject.toml): started
+  Building editable for argumentation_analysis_project (pyproject.toml): finished with status 'done'
+  Created wheel for argumentation_analysis_project: filename=argumentation_analysis_project-0.1.0-0.editable-py3-none-any.whl size=14553 sha256=1c2b28ebe648f4fc62d4265bca2f6b31b8fe8a00a6976dba4f165f010c4d26e0
+  Stored in directory: C:\Users\MYIA\AppData\Local\Temp\pip-ephem-wheel-cache-abdslr1v\wheels\26\4d\84\fd476aa100ec86c92163b99b6d0b5f0f744809d3823be0be36
+Successfully built argumentation_analysis_project
+Installing collected packages: sympy, blis, thinc, argumentation_analysis_project
+  Attempting uninstall: sympy
+    Found existing installation: sympy 1.14.0
+    Uninstalling sympy-1.14.0:
+      Successfully uninstalled sympy-1.14.0
+  Attempting uninstall: blis
+    Found existing installation: blis 1.0.1
+    Uninstalling blis-1.0.1:
+      Successfully uninstalled blis-1.0.1
+  Attempting uninstall: thinc
+    Found existing installation: thinc 8.3.2
+    Uninstalling thinc-8.3.2:
+      Successfully uninstalled thinc-8.3.2
+
+Successfully installed argumentation_analysis_project-0.1.0 blis-1.3.0 sympy-1.13.1 thinc-8.3.6
+
+
+2025-06-05 08:55:26,724 - __main__ - INFO - Dépendances installées avec succès via 'pip install -e .'.
+2025-06-05 08:55:26,724 - __main__ - INFO - Project dependencies installed successfully via pip.
+2025-06-05 08:55:26,724 - __main__ - INFO - ------------------------------
+2025-06-05 08:55:26,724 - __main__ - INFO - Setup orchestration complete.
