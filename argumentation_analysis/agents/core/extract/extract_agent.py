@@ -69,13 +69,14 @@ def _lazy_imports() -> None:
 
     try:
         # Import relatif depuis le package agents/core
-        from ....ui.config import ENCRYPTION_KEY, CONFIG_FILE, CONFIG_FILE_JSON
-        from ....ui.utils import load_from_cache, reconstruct_url
-        from ....ui.extract_utils import (
+        # Corrigé de '....' à '...' car ui est un sous-répertoire de argumentation_analysis
+        from ...ui.config import ENCRYPTION_KEY, CONFIG_FILE, CONFIG_FILE_JSON
+        from ...ui.utils import load_from_cache, reconstruct_url
+        from ...ui.extract_utils import (
             load_source_text, extract_text_with_markers, find_similar_text,
             load_extract_definitions_safely, save_extract_definitions_safely
         )
-        # from ....core.llm_service import create_llm_service # Déplacé
+        # from ...core.llm_service import create_llm_service # Déplacé
     except ImportError:
         # Fallback pour les imports absolus
         from argumentation_analysis.ui.config import ENCRYPTION_KEY, CONFIG_FILE, CONFIG_FILE_JSON

@@ -65,8 +65,8 @@ import types
 # print("INFO [ARG_ANALYSIS_TESTS_CONFTEST]: Mocking de modules factices et imports associés commentés.")
 #
 # Utiliser des imports directs pour les fixtures de ce fichier
-from argumentation_analysis.models.extract_definition import Extract, SourceDefinition, ExtractDefinitions
-from argumentation_analysis.models.extract_result import ExtractResult
+from argumentation_analysis.services.web_api.models.request_models import Extract, SourceDefinition, ExtractDefinitions
+from argumentation_analysis.agents.core.extract.extract_definitions import ExtractResult
 from argumentation_analysis.services.cache_service import CacheService
 from argumentation_analysis.services.crypto_service import CryptoService
 from argumentation_analysis.services.definition_service import DefinitionService
