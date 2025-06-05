@@ -65,10 +65,10 @@ def mock_core_services(
 
 # --- Tests pour run_extract_repair_pipeline ---
 
-@patch("project_core.dev_utils.repair_utils.create_llm_service")
-@patch("project_core.dev_utils.repair_utils.initialize_core_services")
-@patch("project_core.dev_utils.repair_utils.repair_extract_markers", new_callable=AsyncMock) # Mock fonction async
-@patch("project_core.dev_utils.repair_utils.generate_marker_repair_report")
+@patch("argumentation_analysis.utils.dev_tools.repair_utils.create_llm_service")
+@patch("argumentation_analysis.utils.dev_tools.repair_utils.initialize_core_services")
+@patch("argumentation_analysis.utils.dev_tools.repair_utils.repair_extract_markers", new_callable=AsyncMock) # Mock fonction async
+@patch("argumentation_analysis.utils.dev_tools.repair_utils.generate_marker_repair_report")
 @pytest.mark.asyncio # Nécessaire pour tester les fonctions async
 async def test_run_extract_repair_pipeline_successful_run_no_save(
     mock_generate_report: MagicMock,
@@ -119,9 +119,9 @@ async def test_run_extract_repair_pipeline_successful_run_no_save(
     mock_definition_service.export_definitions_to_json.assert_not_called()
 
 
-@patch("project_core.dev_utils.repair_utils.create_llm_service")
-@patch("project_core.dev_utils.repair_utils.initialize_core_services")
-@patch("project_core.dev_utils.repair_utils.repair_extract_markers", new_callable=AsyncMock)
+@patch("argumentation_analysis.utils.dev_tools.repair_utils.create_llm_service")
+@patch("argumentation_analysis.utils.dev_tools.repair_utils.initialize_core_services")
+@patch("argumentation_analysis.utils.dev_tools.repair_utils.repair_extract_markers", new_callable=AsyncMock)
 @patch("argumentation_analysis.utils.extract_repair.marker_repair_logic.generate_report") # Correction de l'emplacement de generate_report
 @pytest.mark.asyncio
 async def test_run_extract_repair_pipeline_with_save_and_json_export(
@@ -159,9 +159,9 @@ async def test_run_extract_repair_pipeline_with_save_and_json_export(
     )
 
 
-@patch("project_core.dev_utils.repair_utils.create_llm_service")
-@patch("project_core.dev_utils.repair_utils.initialize_core_services")
-@patch("project_core.dev_utils.repair_utils.repair_extract_markers", new_callable=AsyncMock)
+@patch("argumentation_analysis.utils.dev_tools.repair_utils.create_llm_service")
+@patch("argumentation_analysis.utils.dev_tools.repair_utils.initialize_core_services")
+@patch("argumentation_analysis.utils.dev_tools.repair_utils.repair_extract_markers", new_callable=AsyncMock)
 @pytest.mark.asyncio
 async def test_run_extract_repair_pipeline_hitler_only_filter(
     mock_repair_markers: AsyncMock,
@@ -211,7 +211,7 @@ async def test_run_extract_repair_pipeline_hitler_only_filter(
     assert called_with_definitions.sources[1].source_name == "Texte Hitler sur la fin"
 
 
-@patch("project_core.dev_utils.repair_utils.create_llm_service", return_value=None) # Simule échec création LLM
+@patch("argumentation_analysis.utils.dev_tools.repair_utils.create_llm_service", return_value=None) # Simule échec création LLM
 @pytest.mark.asyncio
 async def test_run_extract_repair_pipeline_llm_service_creation_fails(
     mock_create_llm: MagicMock, # Le patch est déjà appliqué
@@ -228,8 +228,8 @@ async def test_run_extract_repair_pipeline_llm_service_creation_fails(
     assert "Impossible de créer le service LLM dans le pipeline." in caplog.text
 
 
-@patch("project_core.dev_utils.repair_utils.create_llm_service")
-@patch("project_core.dev_utils.repair_utils.initialize_core_services")
+@patch("argumentation_analysis.utils.dev_tools.repair_utils.create_llm_service")
+@patch("argumentation_analysis.utils.dev_tools.repair_utils.initialize_core_services")
 @pytest.mark.asyncio
 async def test_run_extract_repair_pipeline_load_definitions_fails(
     mock_init_core_services: MagicMock,
