@@ -1,112 +1,162 @@
-# Python bytecode
+# Fichiers byte-compilés / optimisés / DLL
 __pycache__/
 *.py[cod]
 *$py.class
 
-# Test coverage
-.coverage
-coverage.xml
-htmlcov/
-coverage.json
-.pytest_cache/
+# Extensions C
+*.so
 
-# Environnements virtuels
-venv_test/
+# Distribution / packaging
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+pip-wheel-metadata/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# PyInstaller
+# Ces fichiers sont généralement écrits par un script python à partir d'un modèle
+# avant que PyInstaller ne construise l'exe, afin d'y injecter des informations de date/version.
+*.manifest
+*.spec
+
+# Logs d'installation
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Rapports de test unitaires / couverture
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+coverage.json
+*.cover
+.hypothesis/
+.pytest_cache/
+htmlcov_demonstration/
+
+# Traductions
+*.mo
+*.pot
+
+# Django
+local_settings.py
+db.sqlite3
+db.sqlite3-journal
+
+# Flask
+instance/
+.webassets-cache
+
+# Scrapy
+.scrapy
+
+# Documentation Sphinx
+docs/_build/
+
+# Jupyter Notebook
+.ipynb_checkpoints/
+
+# IPython
+profile_default/
+ipython_config.py
+
+# Environnements
+.env
+.venv/
 venv/
+venv_test/
+venv_py310/
 env/
 ENV/
-/.venv/
-venv_py310/
+env.bak/
+venv.bak/
+config/.env
+**/.env # Plus générique que *.env
 
-# Fichiers temporaires
-*.tmp
-*.log
-*.bak
-temp_extracts/
-logs/
-temp/
-_temp/
-temp_*.py
-
-# Fichiers spécifiques au projet
-*.egg-info/
-argumentation_analysis/data/learning_data.json
-
-build/
-dist/
-# Fichiers de configuration locale
-.env
+# IDEs et éditeurs
 .vscode/
 .idea/
 /.vs/
-
-# Bibliothèques externes
-libs/*.jar
-vendor/
-
-# Tweety libraries (downloaded by setup scripts)
-libs/tweety/**/*.jar
-libs/tweety/native/
-
-# Fichiers de documentation spécifiques
-README_TESTS.md
-
-# Fichiers de rapports de tests et d'analyses
-argumentation_analysis/tests/tools/reports/test_report_*.txt
-results/rhetorical_analysis_*.json
-
-# Outils portables et répertoires temporaires sous libs/
-libs/portable_jdk/
-libs/portable_octave/
-libs/_temp*/
-
-# Fichiers de résultats et rapports générés
-results/
-rapport_ia_2024.txt
-discours_attal_20240130.txt
-# Pytest output files
-pytest_hierarchical_full_v4.txt
-
-# Scripts de débogage
-scripts/debug_jpype_classpath.py
-
-argumentation_analysis/text_cache/
-
-# Ajouté par le script de nettoyage
-# Fichiers temporaires Python
-*.so
-.Python
-.venv/
-# Fichiers de configuration sensibles
-*.env
-**/.env
-# Fichiers de logs
-# Cache et téléchargements
-text_cache/
-/.tools/
-temp_downloads/
-# Données
-data/
-!data/.gitkeep
-!data/extract_sources.json.gz.enc
-# Configuration UI non chiffrée
-data/extract_sources.json
-# Rapports de tests et couverture
-.coverage*
-# Dossiers de backups
-**/backups/
-!**/backups/__init__.py
-# Fichiers JAR
-*.jar
-# Fichiers temporaires Jupyter Notebook
-.ipynb_checkpoints/
-# Fichiers de configuration IDE / Editeur
+*.project
+*.pydevproject
 *.sublime-project
 *.sublime-workspace
 *.swp
 *.swo
 *~
 #*#
-# Fichiers spécifiques OS
 .DS_Store
 Thumbs.db
+
+# Java / Maven / Gradle
+libs/*.jar
+libs/tweety/**/*.jar # Plus spécifique pour tweety
+libs/tweety/native/
+target/
+.gradle/
+*.class
+hs_err_pid*.log
+
+# Fichiers temporaires et sorties
+*.tmp
+*.log # Ajouté depuis HEAD
+*.bak # Ajouté depuis HEAD
+temp/
+_temp/ # Ajouté depuis HEAD
+temp_*.py # Ajouté depuis HEAD
+temp_extracts/
+pr1_diff.txt
+{output_file_path}
+logs/ # Ajouté depuis HEAD
+
+# Logs spécifiques au projet
+extract_agent.log
+repair_extract_markers.log
+
+# Archives (si non voulues dans le repo)
+_archives/
+
+# Fichiers spécifiques au projet (regroupés depuis HEAD)
+argumentation_analysis/data/learning_data.json
+README_TESTS.md
+argumentation_analysis/tests/tools/reports/test_report_*.txt
+results/rhetorical_analysis_*.json
+libs/portable_jdk/
+libs/portable_octave/
+libs/_temp*/
+results/
+rapport_ia_2024.txt
+discours_attal_20240130.txt
+pytest_hierarchical_full_v4.txt
+scripts/debug_jpype_classpath.py
+argumentation_analysis/text_cache/ # Aussi text_cache/ plus bas, celui-ci est plus spécifique
+text_cache/ # Cache générique
+/.tools/
+temp_downloads/
+data/
+!data/.gitkeep
+!data/extract_sources.json.gz.enc
+data/extract_sources.json # Configuration UI non chiffrée
+**/backups/
+!**/backups/__init__.py
+
+# Fichiers JAR (déjà couvert par libs/*.jar mais peut rester pour clarté)
+# *.jar

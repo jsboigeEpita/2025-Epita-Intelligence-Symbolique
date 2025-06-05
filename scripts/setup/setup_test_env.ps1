@@ -13,7 +13,7 @@ function Write-Step {
 
 # Vérifier le répertoire courant
 $scriptDir = Get-Location
-$projectDir = (Get-Item $scriptDir).Parent.Parent.FullName
+$projectDir = if ($env:PROJECT_DIR_OVERRIDE_TEST_SETUP) { $env:PROJECT_DIR_OVERRIDE_TEST_SETUP } else { (Get-Item $scriptDir).Parent.Parent.FullName }
 Write-Step "Configuration de l'environnement de test dans $projectDir"
 
 # Vérifier si un environnement virtuel existe déjà
