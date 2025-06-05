@@ -43,70 +43,80 @@ class MockArgumentMiner:
         conclusion_matches = list(re.finditer(r"conclusion\s*:", text, re.IGNORECASE))
 
         # Scénario 1: Prémisse explicite suivie d'une conclusion explicite
-        used_conclusion_indices = set()
-        for i, p_match in enumerate(premise_matches):
-            # Trouver la meilleure conclusion (la plus proche après la prémisse)
-            best_c_match = None
-            for j, c_match in enumerate(conclusion_matches):
-                if j not in used_conclusion_indices and c_match.start() > p_match.end():
-                    if best_c_match is None or c_match.start() < best_c_match.start():
-                        best_c_match = c_match
+        # Combine and sort all matches to process them in order
+        all_matches = sorted(premise_matches + conclusion_matches, key=lambda m: m.start())
+
+        i = 0
+        while i < len(all_matches):
+            p_match = all_matches[i]
+            if "prémisse" not in p_match.group(0).lower():
+                i += 1
+                continue
+
+            # Find the next conclusion
+            c_match = None
+            if i + 1 < len(all_matches) and "conclusion" in all_matches[i+1].group(0).lower():
+                c_match = all_matches[i+1]
             
-            if best_c_match:
-                c_match_index = conclusion_matches.index(best_c_match)
-                used_conclusion_indices.add(c_match_index)
-
+            if c_match:
                 premise_text_start = p_match.end()
-                premise_text_end = best_c_match.start()
+                premise_text_end = c_match.start()
                 premise_content = text[premise_text_start:premise_text_end].strip()
-                
-                conclusion_text_start = best_c_match.end()
-                
-                # Déterminer la fin de la conclusion
-                next_premise_start = float('inf')
-                if i + 1 < len(premise_matches):
-                    next_premise_start = premise_matches[i+1].start()
-                
-                conclusion_text_end = min(len(text), next_premise_start)
-                
-                period_after_conclusion = text.find('.', conclusion_text_start, conclusion_text_end)
-                if period_after_conclusion != -1:
-                    conclusion_text_end = period_after_conclusion + 1
-                
-                conclusion_content = text[conclusion_text_start:conclusion_text_end].strip()
 
-                if len(premise_content) >= self.min_length and len(conclusion_content) >= self.min_length:
+                conclusion_text_start = c_match.end()
+
+                # Find the end of the conclusion (next premise or end of text)
+                conclusion_text_end = len(text)
+                if i + 2 < len(all_matches):
+                    conclusion_text_end = all_matches[i+2].start()
+                
+                final_conclusion_content = text[conclusion_text_start:conclusion_text_end].strip()
+
+                # Delimit by sentence end
+                sentence_end_match = re.search(r'[.!?]', final_conclusion_content)
+                if sentence_end_match:
+                    final_conclusion_content = final_conclusion_content[:sentence_end_match.end()]
+
+                if len(premise_content) >= self.min_length and len(final_conclusion_content) >= self.min_length:
                     arguments.append({
                         "type": "Argument Explicite (Mock)",
                         "premise": premise_content,
-                        "conclusion": conclusion_content,
+                        "conclusion": final_conclusion_content,
                         "confidence": 0.85,
                         "details": "Prémisse et conclusion explicitement marquées."
                     })
+                i += 2 # Move past the premise and conclusion
+            else:
+                i += 1 # Move to the next match
 
         # Scénario 2: Texte contenant "donc" ou "par conséquent" comme indicateur de conclusion
-        # et ce qui précède comme prémisse.
         conclusion_indicators = ["donc", "par conséquent", "ainsi"]
         for indicator in conclusion_indicators:
             indicator_match = list(re.finditer(rf"\b{indicator}\b", text, re.IGNORECASE))
             for match in indicator_match:
                 premise_part = text[:match.start()].strip()
                 conclusion_part = text[match.end():].strip()
-                
+
                 # Simplification: prendre la dernière phrase pour la prémisse et la première pour la conclusion
-                premise_sentences = [s.strip() for s in premise_part.split('.') if s.strip()]
-                conclusion_sentences = [s.strip() for s in conclusion_part.split('.') if s.strip()]
+                premise_sentences = [s.strip() for s in re.split(r'[.!?]', premise_part) if s.strip()]
+                conclusion_sentences = [s.strip() for s in re.split(r'[.!?]', conclusion_part) if s.strip()]
 
                 if premise_sentences and conclusion_sentences:
-                    final_premise = premise_sentences[-1]
-                    final_conclusion = conclusion_sentences[0]
+                    final_premise = premise_sentences[-1].rstrip(' ,')
+                    final_conclusion = conclusion_sentences[0].lstrip(' ,')
                     if len(final_premise) >= self.min_length and len(final_conclusion) >= self.min_length:
                         # Éviter les doublons si déjà trouvé par la méthode explicite
                         is_duplicate = False
                         for arg in arguments:
-                            if arg["premise"] == final_premise and arg["conclusion"] == final_conclusion:
-                                is_duplicate = True
-                                break
+                            if arg.get("type") == "Argument Explicite (Mock)":
+                                norm_arg_premise = arg.get("premise", "").strip(" .!?").lower()
+                                norm_arg_conclusion = arg.get("conclusion", "").strip(" .!?").lower()
+                                norm_final_premise = final_premise.strip(" .!?").lower()
+                                norm_final_conclusion = final_conclusion.strip(" .!?").lower()
+                                
+                                if norm_arg_premise == norm_final_premise and norm_arg_conclusion == norm_final_conclusion:
+                                    is_duplicate = True
+                                    break
                         if not is_duplicate:
                             arguments.append({
                                 "type": f"Argument Implicite (Mock - {indicator})",
