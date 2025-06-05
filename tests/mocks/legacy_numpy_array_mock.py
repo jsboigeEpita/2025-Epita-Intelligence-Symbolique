@@ -916,15 +916,21 @@ class _NumPy_Rec_Mock:
             _formats_arg = formats
 
             if input_array is not None:
-                # Si input_array est fourni, essayer d'en déduire la forme et le dtype
-                # C'est une simplification grossière.
-                if hasattr(input_array, 'shape'):
+                # Si input_array est un tuple et que shape n'est pas explicitement fourni,
+                # il est probable que input_array SOIT la shape.
+                if isinstance(input_array, tuple) and all(isinstance(dim, int) for dim in input_array) and _shape_arg is None:
+                    _shape_arg = input_array
+                # Sinon, si input_array est un autre array-like, essayer d'en déduire la forme.
+                elif hasattr(input_array, 'shape'):
                     _shape_arg = input_array.shape
-                if hasattr(input_array, 'dtype'):
+                
+                if hasattr(input_array, 'dtype') and _dtype_arg is None: # Ne pas écraser un dtype explicite
                     _dtype_arg = input_array.dtype
             
-            if _shape_arg is None: # Fallback si shape n'est pas déductible ou fourni
-                _shape_arg = (0,) if _names_arg is None else (len(_names_arg),)
+            if _shape_arg is None: # Fallback si shape n'est toujours pas déductible ou fourni
+                # Si names est fourni, on peut supposer une shape 1D basée sur le nombre de noms
+                # Ceci est une heuristique et pourrait ne pas couvrir tous les cas d'usage de recarray.
+                _shape_arg = (0,) if _names_arg is None else (len(_names_arg) if isinstance(_names_arg, (list, tuple)) else 0,)
 
 
             # Gestion du dtype pour les recarrays (très simplifié)
