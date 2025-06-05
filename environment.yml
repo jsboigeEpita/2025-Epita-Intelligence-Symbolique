@@ -44,3 +44,4 @@ dependencies:
   - pip:
     - Flask-CORS # Spécifique, souvent via pip
     - semantic-kernel==1.29.0 # Version spécifique
+    - markdown
