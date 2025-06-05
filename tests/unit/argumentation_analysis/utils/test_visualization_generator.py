@@ -89,20 +89,18 @@ def test_generate_performance_visualizations_files_created(
         assert str(output_dir / png_name) in generated_files
     assert str(output_dir / expected_csv) in generated_files
 
-@mock.patch('argumentation_analysis.utils.visualization_generator.VISUALIZATION_LIBS_AVAILABLE', True)
-@mock.patch('matplotlib.pyplot.savefig') # Pour éviter les erreurs si les mocks précédents ne suffisent pas
-@mock.patch('pandas.DataFrame.to_csv')
-@mock.patch('matplotlib.pyplot.close')
-@mock.patch('matplotlib.pyplot.figure')
-def test_generate_performance_visualizations_empty_metrics(mock_fig, mock_close, mock_to_csv, mock_savefig, tmp_path: Path):
+def test_generate_performance_visualizations_empty_metrics(mocker, setup_numpy_for_tests_fixture, tmp_path: Path):
     """Teste avec un dictionnaire de métriques vide."""
+    mocker.patch('argumentation_analysis.utils.visualization_generator.VISUALIZATION_LIBS_AVAILABLE', True)
+    mock_savefig = mocker.patch('matplotlib.pyplot.savefig')
+    mock_to_csv = mocker.patch('pandas.DataFrame.to_csv')
+    mocker.patch('matplotlib.pyplot.close')
+    mocker.patch('matplotlib.pyplot.figure')
+
     output_dir = tmp_path / "viz_empty_metrics"
-    # Assurer que VISUALIZATION_LIBS_AVAILABLE est True pour ce test spécifique
-    # car le mock global pourrait être False.
-    # with mock.patch('argumentation_analysis.utils.visualization_generator.VISUALIZATION_LIBS_AVAILABLE', True):
     generated_files = generate_performance_visualizations({}, output_dir)
     
-    assert generated_files == [] 
+    assert generated_files == []
     assert output_dir.exists() # Le répertoire est créé même si aucun fichier n'est généré.
     mock_savefig.assert_not_called() # Aucun graphique ne devrait être sauvegardé
     mock_to_csv.assert_not_called() # Aucun CSV ne devrait être sauvegardé

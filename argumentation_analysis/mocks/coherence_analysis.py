@@ -81,8 +81,10 @@ class MockCoherenceAnalyzer:
                 word_counts[word] = word_counts.get(word, 0) + 1
         
         repeated_keywords_count = sum(1 for count in word_counts.values() if count >= 2)
-        if repeated_keywords_count >= 2:
-            coherence_score += self.coherence_factors["repeated_keywords_bonus"] * (repeated_keywords_count - 1) # Bonus pour chaque paire de répétitions
+        if repeated_keywords_count > 0:
+            # Appliquer un bonus fixe si au moins un mot est répété.
+            # La logique originale était peut-être trop complexe pour le mock.
+            coherence_score += self.coherence_factors["repeated_keywords_bonus"]
             factors["repeated_keywords_bonus"] = repeated_keywords_count
 
         # Contradictions (simplifié)
