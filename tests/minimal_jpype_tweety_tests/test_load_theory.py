@@ -3,28 +3,47 @@ import jpype.imports
 from jpype.types import JString
 import os
 
-# Définir le chemin vers les JARs de Tweety (à adapter si nécessaire)
-# Cela suppose que les JARs sont dans un sous-répertoire 'libs' du répertoire parent du projet
-# ou que le CLASSPATH est déjà configuré.
-# Pour cet exemple, nous allons supposer que le CLASSPATH est configuré
-# ou que les JARs sont accessibles via les options JVM.
+# Définition des chemins en dehors de la fonction de test
+PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+LIBS_DIR = os.path.join(PROJECT_ROOT, "libs")
+NATIVE_LIBS_DIR = os.path.join(LIBS_DIR, "native")
+
+# Inclure tous les JARs du répertoire libs, sauf celui sans "with-dependencies" s'il existe
+all_jars_in_libs = [os.path.join(LIBS_DIR, f) for f in os.listdir(LIBS_DIR) if f.endswith(".jar")]
+TWEETY_JARS = [jar for jar in all_jars_in_libs if "tweety-full-1.28.jar" != os.path.basename(jar) or "with-dependencies" in os.path.basename(jar)]
+jar_simple = os.path.join(LIBS_DIR, "org.tweetyproject.tweety-full-1.28.jar")
+jar_with_deps = os.path.join(LIBS_DIR, "org.tweetyproject.tweety-full-1.28-with-dependencies.jar")
+
+if jar_simple in TWEETY_JARS and jar_with_deps in TWEETY_JARS:
+    TWEETY_JARS.remove(jar_simple)
+    print(f"Removed {jar_simple} to avoid conflict with {jar_with_deps}")
+
+print(f"Dynamically included JARS for test_load_theory: {TWEETY_JARS}")
+
+# Vérifier l'existence de ces JARs spécifiques
+for jar_path_check in TWEETY_JARS:
+    if not os.path.exists(jar_path_check):
+        raise FileNotFoundError(f"JAR file {jar_path_check} not found. Please run download_test_jars.py or ensure correct paths.")
+
+def start_jvm_if_not_started(): # Conservé pour référence ou exécution hors pytest
+    if not jpype.isJVMStarted():
+        print("JVM non démarrée. Tentative de démarrage avec le classpath complet...")
+        classpath = os.pathsep.join(TWEETY_JARS)
+        jpype.startJVM(classpath=[classpath], convertStrings=False)
+        print(f"JVM démarrée avec classpath: {classpath}")
+    else:
+        print("JVM déjà démarrée.")
+
 def test_load_theory():
     try:
         print("Démarrage du test de chargement de théorie...")
 
-        # Démarrer la JVM si ce n'est pas déjà fait
-        # L'initialisation de la JVM est maintenant gérée globalement par conftest.py
-        if not jpype.isJVMStarted():
-            # Cette condition ne devrait plus être vraie si conftest.py fonctionne correctement.
-            print("ERREUR CRITIQUE: La JVM n'a pas été démarrée par conftest.py comme attendu dans test_load_theory.")
-            # Lever une exception pour que le test échoue clairement si la JVM n'est pas prête.
-            raise RuntimeError("JVM non démarrée par conftest.py, test_load_theory ne peut pas continuer.")
-        # Importer les classes Java nécessaires de Tweety
-        # Assurez-vous que les noms de package sont corrects pour votre version de Tweety
-        from org.tweetyproject.logics.pl.syntax import PlBeliefSet
-        from org.tweetyproject.logics.pl.parser import PlParser
+        start_jvm_if_not_started() # Assure que la JVM est démarrée avec le classpath
 
-        print("JVM démarrée et classes Tweety importées.")
+        PlBeliefSet = jpype.JClass("net.sf.tweety.logics.pl.syntax.PlBeliefSet")
+        PlParser = jpype.JClass("net.sf.tweety.logics.pl.parser.PlParser")
+
+        print("JVM démarrée et classes Tweety chargées via JClass (espérons-le).")
 
         # Chemin vers le fichier de théorie
         theory_file_path = os.path.join(os.path.dirname(__file__), "sample_theory.lp")

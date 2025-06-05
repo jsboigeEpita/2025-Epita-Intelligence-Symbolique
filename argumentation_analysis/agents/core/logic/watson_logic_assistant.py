@@ -47,7 +47,7 @@ class WatsonLogicAssistant(PropositionalLogicAgent):
         self.logger = logging.getLogger(agent_name) # Assurer un logger spécifique
         self.logger.info(f"WatsonLogicAssistant '{agent_name}' initialisé.")
 
-    async def get_agent_belief_set_content(self, belief_set_id: str) -> str | None:
+    async def get_agent_belief_set_content(self, belief_set_id: str) -> Optional[str]:
         """
         Récupère le contenu d'un ensemble de croyances spécifique via le EnqueteStateManagerPlugin.
 
@@ -80,7 +80,7 @@ class WatsonLogicAssistant(PropositionalLogicAgent):
             self.logger.error(f"Erreur lors de la récupération du contenu de l'ensemble de croyances {belief_set_id}: {e}")
             return None
 
-async def add_new_deduction_result(self, query_id: str, formal_result: str, natural_language_interpretation: str, belief_set_id: str) -> dict | None:
+async def add_new_deduction_result(self, query_id: str, formal_result: str, natural_language_interpretation: str, belief_set_id: str) -> Optional[dict]:
         """
         Ajoute un nouveau résultat de déduction à l'état de l'enquête.
 
