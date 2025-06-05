@@ -28,13 +28,14 @@ class FOLHandler:
             raise TypeError("Input formula must be a string.")
         logger.debug(f"Attempting to parse FOL formula: {formula_str}")
         try:
+            # Revenir à la version simple. La gestion de la signature doit être revue.
+            # parseFormula(String, Signature) n'existe pas pour FolParser.
             if signature_declarations_str:
-                # Currently, the basic _fol_parser.parseFormula doesn't directly use the signature string.
-                # Signature is typically associated with a FolBeliefSet or a reasoner context.
-                logger.debug(f"Signature declarations provided but not directly used by this basic parse_fol_formula: {signature_declarations_str}")
+                logger.warning(f"FOLHandler.parse_fol_formula received signature_declarations_str='{signature_declarations_str}' but the current FolParser setup does not use it directly for single formula parsing. The formula will be parsed by the default parser without this ad-hoc signature.")
+            
             java_formula_str = JString(formula_str)
-            fol_formula = self._fol_parser.parseFormula(java_formula_str)
-            logger.info(f"Successfully parsed FOL formula: {formula_str} -> {fol_formula}")
+            fol_formula = self._fol_parser.parseFormula(java_formula_str) # Appel simple
+            logger.info(f"Successfully parsed FOL formula (default parser): {formula_str} -> {fol_formula}")
             return fol_formula
         except jpype.JException as e:
             logger.error(f"JPype JException parsing FOL formula '{formula_str}': {e.getMessage()}", exc_info=True)
