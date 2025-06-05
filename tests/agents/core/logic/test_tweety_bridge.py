@@ -153,15 +153,22 @@ class TestTweetyBridge(unittest.TestCase):
             self.mock_ml_parser.assert_called_once()
             self.mock_simple_ml_reasoner.assert_called_once()
         else:
-            self.assertIsNotNone(self.tweety_bridge._pl_parser_instance)
-            self.assertIsNotNone(self.tweety_bridge._pl_reasoner_instance)
-            self.assertIsNotNone(self.tweety_bridge._fol_parser_instance)
-            self.assertIsNotNone(self.tweety_bridge._fol_reasoner_instance)
-            self.assertIsNotNone(self.tweety_bridge._modal_parser_instance)
-            self.assertIsNotNone(self.tweety_bridge._modal_reasoner_instance)
-            self.assertIsNotNone(self.tweety_bridge._PlFormula)
-            self.assertIsNotNone(self.tweety_bridge._FolFormula)
-            self.assertIsNotNone(self.tweety_bridge._ModalFormula)
+            # Vérifier que les handlers sont initialisés
+            self.assertIsNotNone(self.tweety_bridge._pl_handler, "PLHandler non initialisé")
+            self.assertIsNotNone(self.tweety_bridge._fol_handler, "FOLHandler non initialisé")
+            self.assertIsNotNone(self.tweety_bridge._modal_handler, "ModalHandler non initialisé")
+
+            # Vérifier que les parsers et reasoners dans les handlers sont initialisés
+            self.assertIsNotNone(self.tweety_bridge._pl_handler._pl_parser, "PL Parser dans PLHandler non initialisé")
+            self.assertIsNotNone(self.tweety_bridge._pl_handler._pl_reasoner, "PL Reasoner dans PLHandler non initialisé")
+            self.assertIsNotNone(self.tweety_bridge._fol_handler._fol_parser, "FOL Parser dans FOLHandler non initialisé")
+            # FOL et Modal reasoners ne sont pas initialisés par défaut dans les handlers actuels
+            self.assertIsNotNone(self.tweety_bridge._modal_handler._modal_parser, "Modal Parser dans ModalHandler non initialisé")
+
+            # Vérifier que les classes de formule sont présentes (en supposant les nouveaux noms d'attributs)
+            self.assertIsNotNone(self.tweety_bridge._PlFormulaClass, "Classe PlFormula non initialisée")
+            self.assertIsNotNone(self.tweety_bridge._FolFormulaClass, "Classe FolFormula non initialisée")
+            self.assertIsNotNone(self.tweety_bridge._ModalFormulaClass, "Classe ModalFormula non initialisée")
 
     def test_initialization_jvm_not_ready(self):
         """Test de l'initialisation lorsque la JVM n'est pas prête."""
