@@ -43,38 +43,46 @@ class MockArgumentMiner:
         conclusion_matches = list(re.finditer(r"conclusion\s*:", text, re.IGNORECASE))
 
         # Scénario 1: Prémisse explicite suivie d'une conclusion explicite
-        for p_match in premise_matches:
-            for c_match in conclusion_matches:
-                if c_match.start() > p_match.end():
-                    premise_text_start = p_match.end()
-                    premise_text_end = c_match.start()
-                    premise_content = text[premise_text_start:premise_text_end].strip()
-                    
-                    conclusion_text_start = c_match.end()
-                    # Trouver la fin de la phrase de la conclusion
-                    next_premise_start = float('inf')
-                    if premise_matches.index(p_match) + 1 < len(premise_matches):
-                         next_premise_start = premise_matches[premise_matches.index(p_match) + 1].start()
-                    
-                    conclusion_text_end = min(len(text), next_premise_start)
-                    # Chercher un point pour délimiter la conclusion si possible
-                    period_after_conclusion = text.find('.', conclusion_text_start, conclusion_text_end)
-                    if period_after_conclusion != -1:
-                        conclusion_text_end = period_after_conclusion + 1
-                    
-                    conclusion_content = text[conclusion_text_start:conclusion_text_end].strip()
+        used_conclusion_indices = set()
+        for i, p_match in enumerate(premise_matches):
+            # Trouver la meilleure conclusion (la plus proche après la prémisse)
+            best_c_match = None
+            for j, c_match in enumerate(conclusion_matches):
+                if j not in used_conclusion_indices and c_match.start() > p_match.end():
+                    if best_c_match is None or c_match.start() < best_c_match.start():
+                        best_c_match = c_match
+            
+            if best_c_match:
+                c_match_index = conclusion_matches.index(best_c_match)
+                used_conclusion_indices.add(c_match_index)
 
-                    if len(premise_content) >= self.min_length and len(conclusion_content) >= self.min_length:
-                        arguments.append({
-                            "type": "Argument Explicite (Mock)",
-                            "premise": premise_content,
-                            "conclusion": conclusion_content,
-                            "confidence": 0.85,
-                            "details": "Prémisse et conclusion explicitement marquées."
-                        })
-                        # Pour éviter de réutiliser les mêmes, on pourrait marquer les portions utilisées.
-                        # Ce mock simple ne le fait pas.
-                        break # On associe la première conclusion après la prémisse
+                premise_text_start = p_match.end()
+                premise_text_end = best_c_match.start()
+                premise_content = text[premise_text_start:premise_text_end].strip()
+                
+                conclusion_text_start = best_c_match.end()
+                
+                # Déterminer la fin de la conclusion
+                next_premise_start = float('inf')
+                if i + 1 < len(premise_matches):
+                    next_premise_start = premise_matches[i+1].start()
+                
+                conclusion_text_end = min(len(text), next_premise_start)
+                
+                period_after_conclusion = text.find('.', conclusion_text_start, conclusion_text_end)
+                if period_after_conclusion != -1:
+                    conclusion_text_end = period_after_conclusion + 1
+                
+                conclusion_content = text[conclusion_text_start:conclusion_text_end].strip()
+
+                if len(premise_content) >= self.min_length and len(conclusion_content) >= self.min_length:
+                    arguments.append({
+                        "type": "Argument Explicite (Mock)",
+                        "premise": premise_content,
+                        "conclusion": conclusion_content,
+                        "confidence": 0.85,
+                        "details": "Prémisse et conclusion explicitement marquées."
+                    })
 
         # Scénario 2: Texte contenant "donc" ou "par conséquent" comme indicateur de conclusion
         # et ce qui précède comme prémisse.

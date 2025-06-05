@@ -54,6 +54,8 @@ import os
 import sys
 import io
 import time
+from typing import Union
+import asyncio
 
 # Import pour semantic_kernel, nécessaire globalement
 try:
@@ -312,7 +314,7 @@ def analyze_clear_text_example(project_context: ProjectContext, example_file_pat
             
             # L'InformalAgent initialisé par le bootstrap devrait avoir son kernel et LLM service déjà configurés.
             # La méthode analyze_fallacies devrait fonctionner directement.
-            analysis_results = agent_instance.analyze_fallacies(text_content)
+            analysis_results = asyncio.run(agent_instance.analyze_fallacies(text_content))
             
             end_time_analyze_clear = time.time()
             logger.info(f"Fin de l'analyse des sophismes (texte clair) : {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(end_time_analyze_clear))}")
@@ -335,7 +337,7 @@ def analyze_clear_text_example(project_context: ProjectContext, example_file_pat
         logger.error(f"Une erreur est survenue lors de l'analyse du fichier '{file_path}' : {e}", exc_info=True)
 
 
-def analyze_encrypted_data(project_context: ProjectContext) -> str | None:
+def analyze_encrypted_data(project_context: ProjectContext) -> Union[str, None]:
     logger.info("\n--- Analyse des données chiffrées ---")
     
     if not project_context.crypto_service:
@@ -413,7 +415,7 @@ def analyze_encrypted_data(project_context: ProjectContext) -> str | None:
             start_time_analyze_encrypted = time.time()
             logger.info(f"Début de l'analyse des sophismes (extrait déchiffré) : {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(start_time_analyze_encrypted))}")
             
-            real_analysis_data = agent_instance_encrypted.analyze_fallacies(text_content_extract)
+            real_analysis_data = asyncio.run(agent_instance_encrypted.analyze_fallacies(text_content_extract))
             
             end_time_analyze_encrypted = time.time()
             logger.info(f"Fin de l'analyse des sophismes (extrait déchiffré) : {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(end_time_analyze_encrypted))}")
@@ -467,7 +469,7 @@ def generate_report_from_analysis(project_context: ProjectContext, analysis_json
     logger.info(f"\n--- Génération du rapport à partir de : {analysis_json_path_str} ---")
     
     current_project_root_path = project_context.project_root_path if project_context.project_root_path else Path(project_root)
-    report_script_path = current_project_root_path / "scripts" / "generate_comprehensive_report.py"
+    report_script_path = current_project_root_path / "argumentation_analysis" / "scripts" / "generate_comprehensive_report.py"
     
     analysis_file_path = Path(analysis_json_path_str) # Doit être un chemin absolu ou relatif au CWD
 
@@ -590,12 +592,12 @@ if __name__ == "__main__":
     logger.info("Fin de analyze_encrypted_data().")
 
     # 5. Génération de rapport
-    if encrypted_analysis_output_file_path:
-        logger.info(f"Appel de generate_report_from_analysis() avec le fichier : {encrypted_analysis_output_file_path}...")
-        generate_report_from_analysis(project_context, encrypted_analysis_output_file_path)
-        logger.info("Fin de generate_report_from_analysis().")
-    else:
-        logger.warning("\nLa génération de rapport à partir des données chiffrées a été sautée (pas de fichier de résultat).")
+    # if encrypted_analysis_output_file_path:
+    #     logger.info(f"Appel de generate_report_from_analysis() avec le fichier : {encrypted_analysis_output_file_path}...")
+    #     generate_report_from_analysis(project_context, encrypted_analysis_output_file_path)
+    #     logger.info("Fin de generate_report_from_analysis().")
+    # else:
+    #     logger.warning("\nLa génération de rapport à partir des données chiffrées a été sautée (pas de fichier de résultat).")
 
     # 6. TODO: Interaction avec Tweety (à ajouter pour être exhaustif)
     # Cette partie nécessitera d'utiliser jpype et les classes Tweety via le project_context.jvm_initialized
@@ -612,7 +614,7 @@ if __name__ == "__main__":
                 logger.info(f"Instance de PlParser créée avec succès via JPype: {parser_instance}")
                 
                 # Parser une formule simple
-                formula_str = "a & b"
+                formula_str = "a && b"
                 parsed_formula = parser_instance.parseFormula(jpype.JString(formula_str))
                 logger.info(f"Formule Tweety '{formula_str}' parsée en: {parsed_formula.toString()}")
                 

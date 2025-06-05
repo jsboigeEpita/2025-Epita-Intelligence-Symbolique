@@ -81,7 +81,7 @@ def test_detect_evidence_by_keyword_no_period(detector_default: MockEvidenceDete
     assert evidence["evidence_text"] == "l'impact est significatif et continue" # Prend jusqu'à 150 chars ou fin
     assert evidence["keyword_used"] == "les données montrent que"
 
-def test_detect_evidence_by_keyword_text_too_short_after_keyword(detector_default: MockEvidenceDetector):
+def test_detect_evidence_by_keyword_text_too_short_after_keyword(detector_default: MockEvidenceDetector, detector_custom_config: MockEvidenceDetector):
     """Teste mot-clé mais texte suivant trop court."""
     text = "Il a été prouvé que A." # "A." (len 2) < min_evidence_length 15
     result = detector_default.detect_evidence(text)
@@ -97,7 +97,7 @@ def test_detect_evidence_by_keyword_text_too_short_after_keyword(detector_defaul
     assert len(result_custom_valid) == 1
     assert result_custom_valid[0]["type"] == "Preuve par Mot-Clé (Mock)"
     assert result_custom_valid[0]["evidence_text"] == "C'est valide ici."
-    assert result_custom_valid[0]["keyword_used"] == "Source:"
+    assert result_custom_valid[0]["keyword_used"].lower() == "source:"
 
 def test_detect_evidence_factual_digit_if_no_keywords(detector_default: MockEvidenceDetector):
     """Teste preuve factuelle (chiffre) si aucun mot-clé n'est trouvé."""

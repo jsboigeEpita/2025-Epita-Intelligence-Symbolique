@@ -46,7 +46,12 @@ class MockEvidenceDetector:
 
         # Scénario 1: Utiliser des mots-clés pour identifier des preuves
         for keyword in self.evidence_keywords:
-            matches = list(re.finditer(rf"\b{re.escape(keyword)}\b", text, re.IGNORECASE))
+            # Logique de recherche de pattern plus flexible
+            search_pattern = re.escape(keyword)
+            if keyword.isalnum(): # Si le mot-clé est un mot simple, utiliser les frontières de mot
+                search_pattern = rf"\b{search_pattern}\b"
+            
+            matches = list(re.finditer(search_pattern, text, re.IGNORECASE))
             for match in matches:
                 evidence_text_start = match.end()
                 
@@ -60,6 +65,8 @@ class MockEvidenceDetector:
                     evidence_text_end = min(len(text), evidence_text_start + 150) # Portion plus longue pour les preuves
                 
                 evidence_content = text[evidence_text_start:evidence_text_end].strip()
+                # Enlever la ponctuation non désirée au début
+                evidence_content = re.sub(r"^[ ,:]+", "", evidence_content)
                 
                 if len(evidence_content) >= self.min_evidence_length:
                     evidences.append({
