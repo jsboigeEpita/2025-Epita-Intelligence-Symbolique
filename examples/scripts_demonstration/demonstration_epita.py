@@ -36,6 +36,7 @@ python scripts/demonstration_epita.py
 """
 # Configuration du logging pour ce script
 import logging # Ajout du logging
+import sys # Ajout de l'import manquant
 logger = logging.getLogger("demonstration_epita")
 if not logger.handlers:
     handler = logging.StreamHandler(sys.stdout) # Utiliser sys.stdout configuré
@@ -81,7 +82,7 @@ except Exception as e_reconfig_utf8:
 # __file__ est le chemin du script actuel (demonstration_epita.py)
 current_script_path = Path(__file__).resolve()
 # project_root est le répertoire parent de 'scripts'
-project_root = current_script_path.parent.parent
+project_root = current_script_path.parent.parent.parent
 if str(project_root) not in sys.path:
     sys.path.insert(0, str(project_root))
 logger.info(f"Racine du projet calculée : {project_root}")
@@ -89,7 +90,7 @@ logger.debug(f"Current sys.path: {sys.path}")
 
 # Import du module de bootstrap
 try:
-    from project_core.bootstrap import initialize_project_environment, ProjectContext
+    from argumentation_analysis.core.bootstrap import initialize_project_environment, ProjectContext
     logger.info("Module de bootstrap importé avec succès.")
 except ImportError as e:
     logger.critical(f"ERREUR CRITIQUE: Impossible d'importer le module de bootstrap 'project_core.bootstrap'. {e}")

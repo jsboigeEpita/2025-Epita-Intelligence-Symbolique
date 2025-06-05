@@ -80,10 +80,11 @@ def get_jvm_options(jdk_path: Optional[Path] = PORTABLE_JDK_PATH) -> List[str]:
         
     
         
-def initialize_jvm(lib_dir_path: Optional[str] = None, jdk_path: Optional[Path] = PORTABLE_JDK_PATH) -> bool:
+def initialize_jvm(lib_dir_path: Optional[str] = None, jdk_path: Optional[Path] = PORTABLE_JDK_PATH, specific_jar_path: Optional[str] = None) -> bool:
     """
     Initialise la JVM avec les JARs de TweetyProject.
-    Si lib_dir_path n'est pas fourni, utilise la variable globale LIBS_DIR.
+    Si specific_jar_path est fourni, utilise uniquement ce JAR.
+    Sinon, si lib_dir_path n'est pas fourni, utilise la variable globale LIBS_DIR pour scanner les JARs.
     """
     logger.info(f"JVM_SETUP: initialize_jvm appelée. isJVMStarted au début: {jpype.isJVMStarted()}")
     try:
@@ -96,29 +97,40 @@ def initialize_jvm(lib_dir_path: Optional[str] = None, jdk_path: Optional[Path] 
         return True
 
     try:
-        effective_lib_dir_path = lib_dir_path
-        if effective_lib_dir_path is None:
-            if LIBS_DIR is not None: # LIBS_DIR est maintenant global
-                effective_lib_dir_path = str(LIBS_DIR)
-                logger.info(f"Utilisation de LIBS_DIR global: {effective_lib_dir_path}")
+        jars: List[str] = []
+        if specific_jar_path:
+            specific_jar_file = Path(specific_jar_path)
+            if specific_jar_file.is_file():
+                jars = [str(specific_jar_file)]
+                logger.info(f"Utilisation du JAR spécifique pour le classpath: {specific_jar_path}")
             else:
-                logger.error("❌ `lib_dir_path` non fourni et `LIBS_DIR` global non défini. Impossible de localiser les JARs.")
+                logger.error(f"❌ Le fichier JAR spécifique '{specific_jar_path}' n'a pas été trouvé ou n'est pas un fichier.")
                 return False
-        
-        jar_directory = Path(effective_lib_dir_path)
-        if not jar_directory.is_dir():
-            logger.error(f"❌ Le répertoire des JARs '{jar_directory}' n'existe pas ou n'est pas un répertoire.")
-            return False
+        else:
+            effective_lib_dir_path = lib_dir_path
+            if effective_lib_dir_path is None:
+                if LIBS_DIR is not None: # LIBS_DIR est maintenant global
+                    effective_lib_dir_path = str(LIBS_DIR)
+                    logger.info(f"Utilisation de LIBS_DIR global: {effective_lib_dir_path}")
+                else:
+                    logger.error("❌ `lib_dir_path` non fourni, `specific_jar_path` non fourni, et `LIBS_DIR` global non défini. Impossible de localiser les JARs.")
+                    return False
+            
+            jar_directory = Path(effective_lib_dir_path)
+            if not jar_directory.is_dir():
+                logger.error(f"❌ Le répertoire des JARs '{jar_directory}' n'existe pas ou n'est pas un répertoire (et specific_jar_path non fourni).")
+                return False
 
-        logger.info(f"Construction du classpath avec tous les JARs trouvés dans '{jar_directory}'.")
-        jars = [str(jar_file) for jar_file in jar_directory.glob("*.jar")]
-        
+            logger.info(f"Construction du classpath avec tous les JARs trouvés dans '{jar_directory}'.")
+            jars = [str(jar_file) for jar_file in jar_directory.glob("*.jar")]
+            logger.info(f"Classpath construit avec {len(jars)} JAR(s) depuis '{jar_directory}'.")
+
         if not jars:
-            logger.error(f"❌ Aucun JAR trouvé pour le classpath dans '{jar_directory}' ! Démarrage annulé.")
+            logger.error(f"❌ Aucun JAR à inclure dans le classpath ! Démarrage annulé. (specific_jar_path: {specific_jar_path}, lib_dir_path: {lib_dir_path})")
             return False
         
         # classpath_str = os.pathsep.join(jars) # Pour le log seulement
-        logger.info(f"Classpath construit avec {len(jars)} JAR(s) depuis '{jar_directory}'.")
+        # logger.info(f"Classpath construit avec {len(jars)} JAR(s).") # Déjà loggué au-dessus
         # logger.debug(f"Classpath (premiers 200 chars): {classpath_str[:200]}...")
 
         jvm_options = get_jvm_options(jdk_path)
