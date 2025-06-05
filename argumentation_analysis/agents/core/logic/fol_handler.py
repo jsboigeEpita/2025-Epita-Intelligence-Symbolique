@@ -12,20 +12,25 @@ class FOLHandler:
     Relies on TweetyInitializer for JVM and FOL component setup.
     """
 
-    def __init__(self):
-        self._fol_parser = TweetyInitializer.get_fol_parser()
+    def __init__(self, initializer_instance: TweetyInitializer):
+        self._initializer_instance = initializer_instance
+        self._fol_parser = self._initializer_instance.get_fol_parser()
         # self._fol_reasoner = TweetyInitializer.get_fol_reasoner() # If a general one is set up
 
         if self._fol_parser is None:
             logger.error("FOL Parser not initialized. Ensure TweetyBridge calls TweetyInitializer first.")
             raise RuntimeError("FOLHandler initialized before TweetyInitializer completed FOL setup.")
 
-    def parse_fol_formula(self, formula_str: str):
+    def parse_fol_formula(self, formula_str: str, signature_declarations_str: str = None):
         """Parses an FOL formula string into a TweetyProject FolFormula object."""
         if not isinstance(formula_str, str):
             raise TypeError("Input formula must be a string.")
         logger.debug(f"Attempting to parse FOL formula: {formula_str}")
         try:
+            if signature_declarations_str:
+                # Currently, the basic _fol_parser.parseFormula doesn't directly use the signature string.
+                # Signature is typically associated with a FolBeliefSet or a reasoner context.
+                logger.debug(f"Signature declarations provided but not directly used by this basic parse_fol_formula: {signature_declarations_str}")
             java_formula_str = JString(formula_str)
             fol_formula = self._fol_parser.parseFormula(java_formula_str)
             logger.info(f"Successfully parsed FOL formula: {formula_str} -> {fol_formula}")

@@ -55,8 +55,8 @@ def get_project_root():
     # Obtenir le répertoire du script courant
     current_dir = Path(os.path.dirname(os.path.abspath(__file__)))
     
-    # Remonter d'un niveau pour obtenir la racine du projet
-    project_root = current_dir.parent
+    # Remonter de deux niveaux pour obtenir la racine du projet (depuis utils -> argumentation_analysis -> project_root)
+    project_root = current_dir.parent.parent
     
     return project_root
 
