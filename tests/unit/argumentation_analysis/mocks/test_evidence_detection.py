@@ -81,7 +81,7 @@ def test_detect_evidence_by_keyword_no_period(detector_default: MockEvidenceDete
     assert evidence["evidence_text"] == "l'impact est significatif et continue" # Prend jusqu'à 150 chars ou fin
     assert evidence["keyword_used"] == "les données montrent que"
 
-def test_detect_evidence_by_keyword_text_too_short_after_keyword(detector_default: MockEvidenceDetector):
+def test_detect_evidence_by_keyword_text_too_short_after_keyword(detector_default: MockEvidenceDetector, detector_custom_config: MockEvidenceDetector):
     """Teste mot-clé mais texte suivant trop court."""
     text = "Il a été prouvé que A." # "A." (len 2) < min_evidence_length 15
     result = detector_default.detect_evidence(text)

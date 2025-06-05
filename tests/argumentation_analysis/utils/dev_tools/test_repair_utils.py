@@ -259,7 +259,7 @@ async def test_run_extract_repair_pipeline_hitler_only_filter(
 
     mock_repair_extract_markers.assert_called_once()
     # Vérifier que les définitions passées à repair_extract_markers sont filtrées
-    called_with_definitions = mock_repair_markers.call_args[0][0]
+    called_with_definitions = mock_repair_extract_markers.call_args[0][0]
     assert isinstance(called_with_definitions, ExtractDefinitions)
     assert len(called_with_definitions.sources) == 2 # Seules les sources "Hitler"
     assert called_with_definitions.sources[0].source_name == "Discours d'Hitler 1"
