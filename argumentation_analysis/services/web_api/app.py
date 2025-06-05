@@ -130,7 +130,7 @@ def health_check():
 
 
 @app.route('/api/analyze', methods=['POST'])
-def analyze_text():
+async def analyze_text():
     """
     Analyse complète d'un texte argumentatif.
     
@@ -174,7 +174,7 @@ def analyze_text():
             ).dict()), 400
         
         # Analyse du texte
-        result = analysis_service.analyze_text(analysis_request)
+        result = await analysis_service.analyze_text(analysis_request)
         
         return jsonify(result.dict())
         

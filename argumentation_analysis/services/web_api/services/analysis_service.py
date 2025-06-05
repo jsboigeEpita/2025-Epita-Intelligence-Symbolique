@@ -158,7 +158,7 @@ class AnalysisService:
             any([self.complex_analyzer, self.contextual_analyzer, self.severity_evaluator])
         )
     
-    def analyze_text(self, request: AnalysisRequest) -> AnalysisResponse:
+    async def analyze_text(self, request: AnalysisRequest) -> AnalysisResponse:
         """
         Effectue une analyse complète d'un texte argumentatif.
 
@@ -181,7 +181,7 @@ class AnalysisService:
                 return self._create_fallback_response(request, start_time)
             
             # Analyse des sophismes
-            fallacies = self._detect_fallacies(request.text, request.options)
+            fallacies = await self._detect_fallacies(request.text, request.options)
             
             # Analyse de la structure argumentative
             structure = self._analyze_structure(request.text, request.options)
@@ -220,7 +220,7 @@ class AnalysisService:
                 analysis_options=request.options.dict() if request.options else {}
             )
     
-    def _detect_fallacies(self, text: str, options: Optional[Any]) -> List[FallacyDetection]:
+    async def _detect_fallacies(self, text: str, options: Optional[Any]) -> List[FallacyDetection]:
         """Détecte les sophismes dans le texte en utilisant les analyseurs disponibles.
 
         Utilise `self.informal_agent` si disponible, sinon `self.contextual_analyzer`.
@@ -239,7 +239,7 @@ class AnalysisService:
         try:
             # Utilisation de l'agent informel si disponible
             if self.informal_agent:
-                result = self.informal_agent.analyze_text(text) # La signature de analyze_text peut varier
+                result = await self.informal_agent.analyze_text(text) # La signature de analyze_text peut varier
                 if result and 'fallacies' in result:
                     for fallacy_data in result['fallacies']:
                         fallacy = FallacyDetection(

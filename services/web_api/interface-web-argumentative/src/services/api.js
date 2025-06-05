@@ -1,4 +1,4 @@
-const API_BASE_URL = 'http://localhost:5000';
+const API_BASE_URL = 'http://localhost:5003';
 
 // Configuration par défaut pour les requêtes
 const defaultHeaders = {
