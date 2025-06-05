@@ -11,6 +11,8 @@ import json
 from argumentation_analysis.paths import DATA_DIR
 # Import pour la fonction de chargement JSON mutualisée (chemin corrigé)
 from argumentation_analysis.utils.core_utils.file_utils import load_json_file
+from pydantic import BaseModel, Field
+from typing import List, Dict, Any, Optional
 
 config_logger = logging.getLogger("App.UI.Config")
 if not config_logger.handlers and not config_logger.propagate:
@@ -90,6 +92,34 @@ except Exception as e:
 
 
 # --- Définitions Sources par Défaut ---
+
+class ExtractItem(BaseModel):
+    extract_name: str
+    start_marker: str
+    end_marker: str
+    template_start: Optional[str] = None
+    description: Optional[str] = None
+    extracted_text: Optional[str] = None # Champ pour stocker le texte extrait
+
+class SourceDefinition(BaseModel):
+    source_name: str
+    source_type: str # 'url', 'file', 'jina', 'text'
+    schema_val: Optional[str] = Field(None, alias="schema") # 'http', 'https', 'file'
+    host_parts: Optional[List[str]] = None # Pour URL/Jina
+    path: Optional[str] = None # Pour URL/Jina/File
+    full_text: Optional[str] = None # Texte brut si type 'text' ou cache
+    extracts: List[ExtractItem] = Field(default_factory=list)
+    # Champs optionnels pour la gestion UI
+    is_expanded: Optional[bool] = True
+    is_editing: Optional[bool] = False
+    # Champs pour le cache et la récupération
+    last_fetched: Optional[str] = None # Timestamp ISO
+    fetch_error: Optional[str] = None
+    # Champs pour Jina
+    jina_url: Optional[str] = None # URL complète pour Jina (r.jina.ai/...)
+
+    class Config:
+        allow_population_by_field_name = True
 DEFAULT_EXTRACT_SOURCES = [
     {"source_name": "Exemple Vide (Config manquante)", "source_type": "jina",
      "schema": "https:", "host_parts": ["example", "com"], "path": "/",

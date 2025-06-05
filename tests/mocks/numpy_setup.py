@@ -32,9 +32,9 @@ def deep_delete_from_sys_modules(module_name_prefix, logger_instance):
 
 # Tentative d'importation de numpy_mock. S'il est dans le même répertoire (tests/mocks), cela devrait fonctionner.
 try:
-    import legacy_numpy_array_mock # legacy_numpy_array_mock.py devrait définir .core, ._core, et dans ceux-ci, ._multiarray_umath
+    from tests.mocks import legacy_numpy_array_mock # MODIFIÉ: Import absolu
 except ImportError:
-    print("ERREUR: numpy_setup.py: Impossible d'importer numpy_mock directement.")
+    print("ERREUR: numpy_setup.py: Impossible d'importer legacy_numpy_array_mock via 'from tests.mocks'.")
     numpy_mock = MagicMock(name="numpy_mock_fallback_in_numpy_setup")
     numpy_mock.typing = MagicMock()
     numpy_mock._core = MagicMock() 
@@ -110,12 +110,30 @@ def _install_numpy_mock_immediately():
     logger.info("numpy_setup.py: _install_numpy_mock_immediately: Installation du mock NumPy.")
     try:
         # S'assurer que legacy_numpy_array_mock est importé
-        if 'legacy_numpy_array_mock' not in globals():
-            import legacy_numpy_array_mock as legacy_numpy_array_mock_module
-            # Rendre accessible globalement dans ce module si ce n'est pas déjà le cas
-            globals()['legacy_numpy_array_mock'] = legacy_numpy_array_mock_module
+        if 'legacy_numpy_array_mock' not in globals() or globals()['legacy_numpy_array_mock'] is None: # Vérifier aussi si None à cause du try/except global
+            try:
+                from tests.mocks import legacy_numpy_array_mock as legacy_numpy_array_mock_module # MODIFIÉ: Import absolu
+                # Rendre accessible globalement dans ce module si ce n'est pas déjà le cas
+                globals()['legacy_numpy_array_mock'] = legacy_numpy_array_mock_module
+                logger.info("legacy_numpy_array_mock importé avec succès dans _install_numpy_mock_immediately.")
+            except ImportError as e_direct_import:
+                logger.error(f"Échec de l'import de tests.mocks.legacy_numpy_array_mock dans _install_numpy_mock_immediately: {e_direct_import}")
+                # Fallback sur le MagicMock si l'import échoue ici aussi, pour éviter des erreurs en aval
+                legacy_numpy_array_mock_module = MagicMock(name="legacy_numpy_array_mock_fallback_in_install_func")
+                legacy_numpy_array_mock_module.__path__ = [] # Nécessaire pour être traité comme un package
+                legacy_numpy_array_mock_module.rec = MagicMock(name="rec_fallback")
+                legacy_numpy_array_mock_module.rec.recarray = MagicMock(name="recarray_fallback")
+                legacy_numpy_array_mock_module.typing = MagicMock(name="typing_fallback")
+                legacy_numpy_array_mock_module.core = MagicMock(name="core_fallback")
+                legacy_numpy_array_mock_module._core = MagicMock(name="_core_fallback")
+                legacy_numpy_array_mock_module.linalg = MagicMock(name="linalg_fallback")
+                legacy_numpy_array_mock_module.fft = MagicMock(name="fft_fallback")
+                legacy_numpy_array_mock_module.lib = MagicMock(name="lib_fallback")
+                legacy_numpy_array_mock_module.random = MagicMock(name="random_fallback")
+                globals()['legacy_numpy_array_mock'] = legacy_numpy_array_mock_module # S'assurer qu'il est dans globals
         else:
-            legacy_numpy_array_mock_module = legacy_numpy_array_mock
+            legacy_numpy_array_mock_module = globals()['legacy_numpy_array_mock']
+            logger.info("legacy_numpy_array_mock déjà présent dans globals() pour _install_numpy_mock_immediately.")
 
         # 1. Créer le module principal mock 'numpy'
         # On utilise directement le module legacy_numpy_array_mock comme base pour sys.modules['numpy']

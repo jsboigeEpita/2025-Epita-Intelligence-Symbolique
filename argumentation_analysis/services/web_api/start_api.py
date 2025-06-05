@@ -13,6 +13,13 @@ import sys
 import argparse
 import logging
 from pathlib import Path
+import io
+
+# Force UTF-8 encoding for stdout and stderr
+if sys.stdout.encoding != 'utf-8':
+    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
+if sys.stderr.encoding != 'utf-8':
+    sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8')
 
 # Ajouter le répertoire racine au chemin Python
 current_dir = Path(__file__).parent
@@ -187,7 +194,7 @@ Exemples d'utilisation:
     
     try:
         # Import et démarrage de l'application
-        from services.web_api.app import app
+        from argumentation_analysis.services.web_api.app import app
         
         logger.info(f"Démarrage de l'API sur {args.host}:{args.port}")
         

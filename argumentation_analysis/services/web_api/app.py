@@ -14,6 +14,7 @@ import logging
 from pathlib import Path
 from flask import Flask, request, jsonify, redirect, url_for
 from flask_cors import CORS
+from werkzeug.exceptions import HTTPException # Ajout pour la gestion des erreurs HTTP
 from typing import Dict, Any, Optional
 
 # Ajouter le répertoire racine au chemin Python
@@ -144,7 +145,17 @@ def analyze_text():
     }
     """
     try:
-        data = request.get_json()
+        try:
+            data = request.get_json()
+        except HTTPException as he:
+            # Intercepter les erreurs HTTP spécifiques de Werkzeug (ex: 400, 415)
+            logger.warning(f"Erreur HTTP lors de la récupération du JSON: {str(he)}")
+            return jsonify(ErrorResponse(
+                error=he.name, # ex: Bad Request, Unsupported Media Type
+                message=he.description,
+                status_code=he.code
+            ).dict()), he.code
+
         if not data:
             return jsonify(ErrorResponse(
                 error="Données manquantes",
@@ -155,7 +166,7 @@ def analyze_text():
         # Validation de la requête
         try:
             analysis_request = AnalysisRequest(**data)
-        except Exception as e:
+        except Exception as e: # Pour les erreurs de validation Pydantic
             return jsonify(ErrorResponse(
                 error="Données invalides",
                 message=f"Erreur de validation: {str(e)}",
@@ -167,11 +178,11 @@ def analyze_text():
         
         return jsonify(result.dict())
         
-    except Exception as e:
-        logger.error(f"Erreur lors de l'analyse: {str(e)}")
+    except Exception as e: # Pour les autres erreurs inattendues
+        logger.error(f"Erreur lors de l'analyse: {str(e)}", exc_info=True)
         return jsonify(ErrorResponse(
             error="Erreur d'analyse",
-            message=str(e),
+            message="Une erreur interne est survenue lors du traitement de votre requête.", # Message plus générique pour l'utilisateur
             status_code=500
         ).dict()), 500
 

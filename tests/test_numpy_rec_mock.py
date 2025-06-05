@@ -55,7 +55,7 @@ def test_numpy_rec_recarray_instantiation():
     # Test avec formats et names
     arr2 = numpy.rec.recarray(5, formats=['i4', 'f8'], names=['x', 'y'])
     assert arr2 is not None
-    assert arr2.names == ['x', 'y']
+    assert arr2.names == ('x', 'y') # MODIFIÉ: Comparer à un tuple
     assert arr2.formats == ['i4', 'f8']
     
     # Test avec shape et dtype
@@ -70,7 +70,7 @@ def test_numpy_rec_recarray_properties():
     arr = numpy.rec.recarray(3, formats=['i4', 'f8'], names=['id', 'value'])
     
     # Test des propriétés
-    assert arr.names == ['id', 'value']
+    assert arr.names == ('id', 'value') # MODIFIÉ: Comparer à un tuple
     assert arr.formats == ['i4', 'f8']
     
     # Test d'accès aux champs (doit retourner un ndarray)

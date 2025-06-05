@@ -25,10 +25,10 @@ from argumentation_analysis.agents.core.pl.pl_definitions import setup_pl_kernel
 from argumentation_analysis.agents.core.informal.informal_definitions import setup_informal_kernel
 from argumentation_analysis.agents.core.pm.pm_definitions import setup_pm_kernel
 # from tests.async_test_case import AsyncTestCase # Suppression de l'import
-from models.extract_definition import ExtractDefinitions, Extract, SourceDefinition # Ces imports pourraient poser problème si 'models' n'est pas accessible
-from models.extract_result import ExtractResult # Idem
-from argumentation_analysis.services.extract_service import ExtractService # Idem pour 'services'
-from argumentation_analysis.services.fetch_service import FetchService # Idem
+from argumentation_analysis.services.web_api.models.request_models import ExtractDefinitions, Extract, SourceDefinition
+from argumentation_analysis.agents.core.extract.extract_definitions import ExtractResult
+from argumentation_analysis.services.extract_service import ExtractService
+from argumentation_analysis.services.fetch_service import FetchService
 
 
 class TestBasicIntegration: # Suppression de l'héritage AsyncTestCase

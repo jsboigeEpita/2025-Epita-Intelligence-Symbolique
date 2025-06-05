@@ -19,14 +19,14 @@ class TestTweetyBridge(unittest.TestCase):
     
     def setUp(self):
         """Initialisation avant chaque test."""
-        self.use_real_jpype = os.environ.get('USE_REAL_JPYPE') == 'true'
+        # self.use_real_jpype = os.environ.get('USE_REAL_JPYPE') == 'true' # Remplacé par vérification directe
         
         self.jpype_patcher = None
         self.jvm_setup_jpype_patcher = None
         self.mock_jpype = None
         self.mock_jvm_setup_jpype = None
 
-        if not self.use_real_jpype:
+        if not os.environ.get('USE_REAL_JPYPE', 'false').lower() in ('true', '1'):
             # Patcher jpype
             self.jpype_patcher = patch('argumentation_analysis.agents.core.logic.tweety_bridge.jpype')
             self.mock_jpype = self.jpype_patcher.start()
@@ -115,7 +115,7 @@ class TestTweetyBridge(unittest.TestCase):
             self.tweety_bridge._FolFormula = self.mock_fol_formula
             self.tweety_bridge._ModalFormula = self.mock_modal_formula
             
-        else: # self.use_real_jpype is True
+        else: # os.environ.get('USE_REAL_JPYPE', 'false').lower() in ('true', '1')
             self.tweety_bridge = TweetyBridge()
 
     def tearDown(self):
@@ -131,7 +131,7 @@ class TestTweetyBridge(unittest.TestCase):
         """Test de l'initialisation lorsque la JVM est prête."""
         self.assertTrue(self.tweety_bridge.is_jvm_ready())
 
-        if not self.use_real_jpype:
+        if not os.environ.get('USE_REAL_JPYPE', 'false').lower() in ('true', '1'):
             self.mock_jpype.JClass.assert_any_call("org.tweetyproject.logics.pl.parser.PlParser")
             self.mock_jpype.JClass.assert_any_call("org.tweetyproject.logics.pl.reasoner.SatReasoner")
             self.mock_jpype.JClass.assert_any_call("org.tweetyproject.logics.pl.syntax.PlFormula")
@@ -165,9 +165,9 @@ class TestTweetyBridge(unittest.TestCase):
 
     def test_initialization_jvm_not_ready(self):
         """Test de l'initialisation lorsque la JVM n'est pas prête."""
-        if not self.use_real_jpype:
+        if not os.environ.get('USE_REAL_JPYPE', 'false').lower() in ('true', '1'):
             self.mock_jpype.isJVMStarted.return_value = False
-            self.mock_jpype.JClass.reset_mock() 
+            self.mock_jpype.JClass.reset_mock()
             self.mock_jpype.startJVM.reset_mock()
             self.mock_jpype.startJVM.side_effect = Exception("Mocked JVM start failure")
             
@@ -182,7 +182,7 @@ class TestTweetyBridge(unittest.TestCase):
 
     def test_validate_formula_valid(self):
         """Test de la validation d'une formule propositionnelle valide."""
-        if not self.use_real_jpype:
+        if not os.environ.get('USE_REAL_JPYPE', 'false').lower() in ('true', '1'):
             self.mock_pl_parser_instance.parseFormula.return_value = MagicMock()
             is_valid, message = self.tweety_bridge.validate_formula("a => b")
             self.mock_pl_parser_instance.parseFormula.assert_called_once_with("a => b")
@@ -195,7 +195,7 @@ class TestTweetyBridge(unittest.TestCase):
     
     def test_validate_formula_invalid(self):
         """Test de la validation d'une formule propositionnelle invalide."""
-        if not self.use_real_jpype:
+        if not os.environ.get('USE_REAL_JPYPE', 'false').lower() in ('true', '1'):
             # Configurer le mock du parser pour lever une exception
             java_exception_instance = self.mock_jpype.JException("Erreur de syntaxe")
             # Configurer getMessage sur l'instance si nécessaire, bien que le constructeur du mock le fasse déjà.
@@ -227,7 +227,7 @@ class TestTweetyBridge(unittest.TestCase):
 
     def test_validate_belief_set_valid(self):
         """Test de la validation d'un ensemble de croyances propositionnelles valide."""
-        if not self.use_real_jpype:
+        if not os.environ.get('USE_REAL_JPYPE', 'false').lower() in ('true', '1'):
             # Configurer le mock du parser
             mock_belief_set = MagicMock()
             mock_belief_set.__str__.return_value = "a => b"
@@ -250,7 +250,7 @@ class TestTweetyBridge(unittest.TestCase):
 
     def test_validate_belief_set_empty(self):
         """Test de la validation d'un ensemble de croyances propositionnelles vide."""
-        if not self.use_real_jpype:
+        if not os.environ.get('USE_REAL_JPYPE', 'false').lower() in ('true', '1'):
             # Configurer le mock du parser
             mock_belief_set = MagicMock()
             mock_belief_set.__str__.return_value = "" # Simule une base vide après parsing
@@ -277,7 +277,7 @@ class TestTweetyBridge(unittest.TestCase):
 
     def test_validate_belief_set_invalid(self):
         """Test de la validation d'un ensemble de croyances propositionnelles invalide."""
-        if not self.use_real_jpype:
+        if not os.environ.get('USE_REAL_JPYPE', 'false').lower() in ('true', '1'):
             # Configurer le mock du parser pour lever une exception
             java_exception_instance = self.mock_jpype.JException("Erreur de syntaxe à la ligne 2")
             self.mock_pl_parser_instance.parseBeliefBase.side_effect = java_exception_instance
@@ -300,7 +300,7 @@ class TestTweetyBridge(unittest.TestCase):
 
     def test_execute_pl_query_accepted(self):
         """Test de l'exécution d'une requête propositionnelle acceptée."""
-        if not self.use_real_jpype:
+        if not os.environ.get('USE_REAL_JPYPE', 'false').lower() in ('true', '1'):
             # Configurer les mocks
             mock_belief_set = MagicMock()
             mock_formula = MagicMock()
@@ -327,7 +327,7 @@ class TestTweetyBridge(unittest.TestCase):
 
     def test_execute_pl_query_rejected(self):
         """Test de l'exécution d'une requête propositionnelle rejetée."""
-        if not self.use_real_jpype:
+        if not os.environ.get('USE_REAL_JPYPE', 'false').lower() in ('true', '1'):
             # Configurer les mocks
             mock_belief_set = MagicMock()
             mock_formula = MagicMock()
@@ -351,7 +351,7 @@ class TestTweetyBridge(unittest.TestCase):
 
     def test_execute_pl_query_error(self):
         """Test de l'exécution d'une requête propositionnelle avec erreur."""
-        if not self.use_real_jpype:
+        if not os.environ.get('USE_REAL_JPYPE', 'false').lower() in ('true', '1'):
             # Configurer le mock du parser pour lever une exception
             java_exception = self.mock_jpype.JException("Erreur de syntaxe")
             self.mock_pl_parser_instance.parseBeliefBase.side_effect = java_exception
@@ -372,7 +372,7 @@ class TestTweetyBridge(unittest.TestCase):
 
     def test_validate_fol_formula(self):
         """Test de la validation d'une formule du premier ordre."""
-        if not self.use_real_jpype:
+        if not os.environ.get('USE_REAL_JPYPE', 'false').lower() in ('true', '1'):
             # Configurer le mock du parser
             self.mock_fol_parser_instance.parseFormula.return_value = MagicMock()
             
@@ -396,10 +396,9 @@ class TestTweetyBridge(unittest.TestCase):
             self.assertFalse(is_valid_invalid, f"FOL Formula 'forall X: p(X) &' should be invalid. Message: {message_invalid}")
             self.assertTrue(message_invalid)
             self.assertTrue("syntax" in message_invalid.lower() or "error" in message_invalid.lower(), f"Message d'erreur '{message_invalid}' devrait contenir 'syntax' or 'error'.")
-
     def test_validate_modal_formula(self):
         """Test de la validation d'une formule modale."""
-        if not self.use_real_jpype:
+        if not os.environ.get('USE_REAL_JPYPE', 'false').lower() in ('true', '1'):
             # Configurer le mock du parser
             self.mock_ml_parser_instance.parseFormula.return_value = MagicMock(name="parsed_modal_formula_mock")
             
@@ -428,7 +427,6 @@ class TestTweetyBridge(unittest.TestCase):
             self.assertFalse(is_valid_invalid, f"Modal formula '[] (prop1) => <>' should be invalid. Message: {message_invalid}")
             self.assertTrue(message_invalid)
             self.assertTrue("syntax" in message_invalid.lower() or "error" in message_invalid.lower(), f"Message d'erreur '{message_invalid}' devrait contenir 'syntax' or 'error'.")
-
 
 if __name__ == "__main__":
     unittest.main()
