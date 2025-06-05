@@ -8,6 +8,7 @@ Service d'analyse complète utilisant le moteur d'analyse argumentative.
 import time
 import logging
 from typing import Dict, List, Any, Optional
+import semantic_kernel as sk
 
 # Imports du moteur d'analyse (style b282af4 avec gestion d'erreur)
 try:
@@ -16,8 +17,10 @@ try:
     from argumentation_analysis.agents.tools.analysis.contextual_fallacy_analyzer import ContextualFallacyAnalyzer
     from argumentation_analysis.agents.tools.analysis.fallacy_severity_evaluator import FallacySeverityEvaluator
     from argumentation_analysis.orchestration.hierarchical.operational.manager import OperationalManager
+    from argumentation_analysis.core.llm_service import create_llm_service # Ajouté
+    from argumentation_analysis.utils.taxonomy_loader import get_taxonomy_path # Ajouté
 except ImportError as e:
-    logging.warning(f"Impossible d'importer les modules d'analyse: {e}")
+    logging.warning(f"Impossible d'importer les modules d'analyse ou llm_service/taxonomy_loader: {e}")
     # Mode dégradé pour les tests
     InformalAgent = None
     ComplexFallacyAnalyzer = None
@@ -86,17 +89,57 @@ class AnalysisService:
                 self.tools['fallacy_severity_evaluator'] = self.severity_evaluator
             
             # Initialisation de l'agent informel (version b282af4)
-            if InformalAgent and self.tools:
-                self.informal_agent = InformalAgent(
-                    agent_id="web_api_informal_agent",
-                    tools=self.tools,
-                    strict_validation=False # Ajouté par b282af4
-                )
+            if InformalAgent:
+                # Création du kernel et ajout du service LLM
+                kernel = sk.Kernel()
+                llm_service = None
+                if create_llm_service:
+                    try:
+                        llm_service = create_llm_service(service_id="default_analysis_llm")
+                        kernel.add_service(llm_service)
+                        self.logger.info("Service LLM créé et ajouté au kernel pour AnalysisService.")
+                    except Exception as llm_e:
+                        self.logger.error(f"Erreur lors de la création ou de l'ajout du service LLM: {llm_e}")
+                else:
+                    self.logger.error("create_llm_service non disponible.")
+
+                taxonomy_path = None
+                if get_taxonomy_path:
+                    try:
+                        taxonomy_path = get_taxonomy_path()
+                        self.logger.info(f"Chemin de la taxonomie obtenu: {taxonomy_path}")
+                    except Exception as tax_e:
+                        self.logger.error(f"Erreur lors de l'obtention du chemin de la taxonomie: {tax_e}")
+                else:
+                    self.logger.error("get_taxonomy_path non disponible.")
+                
+                if kernel and llm_service: # S'assurer que le kernel et le service LLM sont prêts
+                    self.informal_agent = InformalAgent(
+                        kernel=kernel,
+                        agent_name="web_api_informal_agent", # Utilisation de agent_name
+                        taxonomy_file_path=str(taxonomy_path) if taxonomy_path else None # Passer le chemin de la taxonomie
+                    )
+                    # Configurer les composants de l'agent (plugins, fonctions sémantiques)
+                    # L'ID du service LLM est nécessaire ici. create_llm_service devrait le retourner ou le rendre accessible.
+                    # Supposons que l'ID est "default_analysis_llm" comme utilisé ci-dessus.
+                    try:
+                        self.informal_agent.setup_agent_components(llm_service_id="default_analysis_llm")
+                        self.logger.info("Composants de InformalAgent configurés.")
+                    except Exception as setup_e:
+                        self.logger.error(f"Erreur lors de la configuration des composants de InformalAgent: {setup_e}")
+                        self.informal_agent = None # Invalider l'agent si la configuration échoue
+                else:
+                    self.logger.error("Kernel ou LLM Service non initialisé, impossible de créer InformalAgent.")
+                    self.informal_agent = None
             else:
                 self.informal_agent = None
+                self.logger.warning("Classe InformalAgent non disponible.")
             
-            self.is_initialized = True
-            self.logger.info("Service d'analyse initialisé avec succès")
+            self.is_initialized = True # Peut-être conditionner cela au succès de l'init de l'agent
+            if self.informal_agent:
+                self.logger.info("Service d'analyse initialisé avec succès (avec InformalAgent).")
+            else:
+                self.logger.warning("Service d'analyse initialisé, mais InformalAgent n'a pas pu être créé/configuré.")
             
         except Exception as e:
             self.logger.error(f"Erreur lors de l'initialisation: {e}")

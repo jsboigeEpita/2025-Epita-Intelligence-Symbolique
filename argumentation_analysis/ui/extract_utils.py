@@ -23,11 +23,11 @@ try:
     from ..services.crypto_service import CryptoService
 except ImportError:
     # Fallback pour les imports absolus
-    from services.extract_service import ExtractService
-    from services.fetch_service import FetchService
-    from models.extract_definition import ExtractDefinitions
+    from argumentation_analysis.services.extract_service import ExtractService
+    from argumentation_analysis.services.fetch_service import FetchService
+    from argumentation_analysis.models.extract_definition import ExtractDefinitions
     from argumentation_analysis.ui.config import ENCRYPTION_KEY, CONFIG_FILE, CONFIG_FILE_JSON, CACHE_DIR
-    from services.crypto_service import CryptoService
+    from argumentation_analysis.services.crypto_service import CryptoService
 
 # Configuration du logging
 logger = logging.getLogger("UI.ExtractUtils")

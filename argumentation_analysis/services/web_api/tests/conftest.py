@@ -41,24 +41,29 @@ def mock_analysis_service():
         
         # Configuration du mock pour analyze_text
         from argumentation_analysis.services.web_api.models.response_models import AnalysisResponse, ArgumentStructure
-        mock_response = AnalysisResponse(
-            success=True,
-            text_analyzed="Texte de test",
-            fallacies=[],
-            argument_structure=ArgumentStructure(
-                premises=["Prémisse 1"],
-                conclusion="Conclusion",
-                argument_type="deductive",
-                strength=0.8,
-                coherence=0.7
-            ),
-            overall_quality=0.8,
-            coherence_score=0.7,
-            fallacy_count=0,
-            processing_time=0.1,
-            analysis_options={}
-        )
-        mock.analyze_text.return_value = mock_response
+        from argumentation_analysis.services.web_api.models.request_models import AnalysisRequest
+
+        def dynamic_analyze_text(analysis_request: AnalysisRequest):
+            # analysis_request est l'objet Pydantic passé au service
+            return AnalysisResponse(
+                success=True,
+                text_analyzed=analysis_request.text, # Utilise le texte de la requête
+                fallacies=[],
+                argument_structure=ArgumentStructure(
+                    premises=["Prémisse 1"], # Garder des valeurs fixes pour les autres champs pour la simplicité du mock
+                    conclusion="Conclusion",
+                    argument_type="deductive",
+                    strength=0.8,
+                    coherence=0.7
+                ),
+                overall_quality=0.8,
+                coherence_score=0.7,
+                fallacy_count=0,
+                processing_time=0.1,
+                analysis_options=analysis_request.options.dict() if analysis_request.options else {}
+            )
+        
+        mock.analyze_text.side_effect = dynamic_analyze_text
         yield mock
 
 

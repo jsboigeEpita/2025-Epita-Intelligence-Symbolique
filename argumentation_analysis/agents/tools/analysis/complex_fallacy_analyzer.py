@@ -17,10 +17,10 @@ from typing import Dict, List, Any, Optional, Tuple
 from pathlib import Path
 
 # Ajouter le répertoire parent au chemin de recherche des modules
-current_dir = Path(__file__).parent
-parent_dir = current_dir.parent.parent.parent
-if str(parent_dir) not in sys.path:
-    sys.path.append(str(parent_dir))
+# current_dir = Path(__file__).parent # Commenté car start_api.py devrait gérer sys.path
+# parent_dir = current_dir.parent.parent.parent
+# if str(parent_dir) not in sys.path:
+#     sys.path.append(str(parent_dir))
 
 # Importer les autres analyseurs
 from argumentation_analysis.agents.tools.analysis.contextual_fallacy_analyzer import ContextualFallacyAnalyzer
