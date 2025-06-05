@@ -12,7 +12,7 @@ pytest-asyncio
 pytest-mock
 python-dotenv
 scikit-learn
-scipy==1.15.3
+scipy==1.13.1
 sentence-transformers
 semantic-kernel==1.29.0
 numpy<2.0
@@ -21,3 +21,5 @@ coverage
 clingo
 unidecode
 markdown
+
+playwright
