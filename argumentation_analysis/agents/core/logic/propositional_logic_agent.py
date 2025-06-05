@@ -46,7 +46,7 @@ class PropositionalLogicAgent(BaseLogicAgent):
         _tweety_bridge (TweetyBridge): Instance de `TweetyBridge` configurée pour la PL.
     """
     
-    def __init__(self, kernel: Kernel, agent_name: str = "PropositionalLogicAgent"): 
+    def __init__(self, kernel: Kernel, agent_name: str = "PropositionalLogicAgent", system_prompt: Optional[str] = None):
         """
         Initialise une instance de `PropositionalLogicAgent`.
 
@@ -54,13 +54,23 @@ class PropositionalLogicAgent(BaseLogicAgent):
         :type kernel: Kernel
         :param agent_name: Le nom de l'agent, par défaut "PropositionalLogicAgent".
         :type agent_name: str
+        :param system_prompt: Le prompt système optionnel. S'il n'est pas fourni,
+                              PL_AGENT_INSTRUCTIONS sera utilisé.
+        :type system_prompt: Optional[str]
         """
+        actual_system_prompt = system_prompt if system_prompt is not None else PL_AGENT_INSTRUCTIONS
         super().__init__(kernel,
                          agent_name=agent_name,
                          logic_type_name="PL",
-                         system_prompt=PL_AGENT_INSTRUCTIONS)
-    
-    def get_agent_capabilities(self) -> Dict[str, Any]: 
+                         system_prompt=actual_system_prompt)
+        
+        # Initialiser TweetyBridge ici pour qu'il soit toujours disponible après l'instanciation
+        self._tweety_bridge = TweetyBridge()
+        self.logger.info(f"TweetyBridge initialisé directement dans PropositionalLogicAgent.__init__ pour {self.name}. JVM prête: {self._tweety_bridge.is_jvm_ready()}")
+        if not self._tweety_bridge.is_jvm_ready():
+            self.logger.error("La JVM n'est pas prête. Les fonctionnalités de TweetyBridge pourraient ne pas fonctionner.")
+
+    def get_agent_capabilities(self) -> Dict[str, Any]:
         """
         Retourne un dictionnaire décrivant les capacités spécifiques de cet agent PL.
 
@@ -87,16 +97,18 @@ class PropositionalLogicAgent(BaseLogicAgent):
         :type llm_service_id: str
         """
         super().setup_agent_components(llm_service_id)
-        self.logger.info(f"Configuration des composants pour {self.name}...")
+        self.logger.info(f"Configuration des composants sémantiques pour {self.name}...")
+        # _tweety_bridge est maintenant initialisé dans __init__
 
-        # Initialisation de TweetyBridge pour la logique propositionnelle.
-        # Ceci était manquant et causait l'AttributeError.
-        # La classe BaseLogicAgent s'attend à ce que la sous-classe initialise _tweety_bridge.
-        self._tweety_bridge = TweetyBridge()
-        self.logger.info(f"TweetyBridge initialisé pour {self.name}. JVM prête: {self._tweety_bridge.is_jvm_ready()}")
-        if not self._tweety_bridge.is_jvm_ready():
-            self.logger.error("La JVM n'est pas prête. Les fonctionnalités de TweetyBridge pourraient ne pas fonctionner.")
-            
+        # Vérification supplémentaire de la JVM ici si nécessaire, bien que déjà faite dans __init__
+        if not hasattr(self, '_tweety_bridge') or not self._tweety_bridge:
+            self.logger.error(f"TweetyBridge non initialisé avant setup_agent_components pour {self.name}. Tentative d'initialisation tardive.")
+            self._tweety_bridge = TweetyBridge() # Fallback, ne devrait pas arriver si __init__ est correct
+            if not self._tweety_bridge.is_jvm_ready():
+                 self.logger.error("La JVM n'est toujours pas prête après initialisation tardive.")
+        elif not self._tweety_bridge.is_jvm_ready():
+             self.logger.warning(f"La JVM pour TweetyBridge de {self.name} n'est pas prête au moment de setup_agent_components (déjà loggué par __init__).")
+
         prompt_execution_settings = None
         if self._llm_service_id:
             try:

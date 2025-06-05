@@ -72,9 +72,7 @@ async def test_cluedo_orchestration_flow():
          patch(f"{ORCHESTRATOR_MODULE_PATH}.EnqueteStateManagerPlugin", MagicMock()) as mock_plugin_constructor, \
          patch(f"{ORCHESTRATOR_MODULE_PATH}.SherlockEnqueteAgent", return_value=mock_sherlock_instance) as mock_sherlock_constructor, \
          patch(f"{ORCHESTRATOR_MODULE_PATH}.WatsonLogicAssistant", return_value=mock_watson_instance) as mock_watson_constructor, \
-         patch(f"{ORCHESTRATOR_MODULE_PATH}.AgentGroupChat", return_value=mock_group_chat_instance) as mock_group_chat_constructor, \
-         patch(f"{ORCHESTRATOR_MODULE_PATH}.BalancedParticipationStrategy", MagicMock()) as mock_balanced_strat_constructor, \
-         patch(f"{ORCHESTRATOR_MODULE_PATH}.SimpleTerminationStrategy", MagicMock()) as mock_simple_term_strat_constructor, \
+         patch(f"{ORCHESTRATOR_MODULE_PATH}.GroupChatOrchestration", return_value=mock_group_chat_instance) as mock_group_chat_constructor, \
          patch("builtins.print") as mock_print: # Mocker print pour éviter les sorties console pendant le test
 
         # Importer et exécuter la fonction main du script d'orchestration
@@ -125,8 +123,12 @@ async def test_cluedo_orchestration_flow():
         # assert mock_watson_instance in args[0]['agents']
 
         # 3. Vérifier que la méthode invoke de AgentGroupChat a été appelée
-        initial_message_expected = "L'enquête sur le meurtre au Manoir Tudor commence maintenant. Qui a des premières pistes ?"
-        mock_group_chat_instance.invoke.assert_called_once_with(initial_prompt=initial_message_expected)
+        expected_input_message = [{
+            "role": "user",
+            "name": "System",
+            "content": "Nouvelle enquête Cluedo : A test case.. Sherlock, commencez."
+        }]
+        mock_group_chat_instance.invoke.assert_called_once_with(input=expected_input_message)
 
         # 4. Vérifier que l'historique (simulé) contient des messages des deux agents
         # L'historique est retourné par mock_group_chat_instance.invoke
@@ -134,43 +136,32 @@ async def test_cluedo_orchestration_flow():
         # On peut vérifier les appels à print.
         
         # Construire les chaînes attendues pour les appels à print
-        expected_print_calls = [
-            "--- Historique de la Conversation ---",
-            f"User: {simulated_history[0]['content']}", # Ou le nom du rôle si 'name' n'est pas là
-            f"Sherlock: {simulated_history[1]['content']}",
-            f"Watson: {simulated_history[2]['content']}",
-            f"Sherlock: {simulated_history[3]['content']}",
-            "--- Fin de la Conversation ---"
-        ]
-        
         # Récupérer les appels réels à print
-        # mock_print.call_args_list contient une liste de `call` objects.
-        # Chaque `call` object est comme une tuple (args, kwargs).
-        # Ici, print est appelé avec un seul argument.
         actual_print_calls = [args[0] for args, kwargs in mock_print.call_args_list if args]
 
-        # Vérifier que les messages de l'historique simulé ont été "affichés"
-        # Cette vérification est un peu fragile car elle dépend du formatage exact dans print.
-        # Une meilleure approche serait de vérifier directement la variable `history` si elle était
-        # retournée par `main()` ou accessible d'une autre manière.
-        # Pour l'instant, on se base sur les `print` mockés.
+        # Vérifier les messages clés qui devraient être imprimés
+        # Note: simulated_history est ce que mock_group_chat_instance.invoke retourne.
+        # Le script cluedo_orchestrator.py itère ensuite sur ce résultat pour imprimer.
 
-        assert expected_print_calls[0] in actual_print_calls
-        # Pour les messages, il faut être flexible avec le nom de l'expéditeur
-        # car le script utilise message.get("name", message.get("role", "Inconnu"))
+        # 1. Vérifier que le titre de l'historique est imprimé
+        assert "Historique de la conversation Cluedo :" in actual_print_calls
         
-        # Simplification: on vérifie juste que les contenus des messages sont présents dans les prints
-        assert any(simulated_history[1]['content'] in call for call in actual_print_calls) # Sherlock's message
-        assert any(simulated_history[2]['content'] in call for call in actual_print_calls) # Watson's message
-        assert any(simulated_history[3]['content'] in call for call in actual_print_calls) # Sherlock's second message
-        assert expected_print_calls[-1] in actual_print_calls
+        # 2. Vérifier que le contenu de chaque message simulé est imprimé.
+        #    Le format exact du print dans le script est "  {sender_name}: {content}"
+        #    simulated_history[0] est le message utilisateur initial, qui n'est pas ré-imprimé de cette façon.
+        #    Les messages des assistants (simulated_history[1] à simulated_history[3]) devraient l'être.
+
+        # Vérification du contenu des messages des assistants
+        assert any(f"Sherlock: {simulated_history[1]['content']}" in call for call in actual_print_calls)
+        assert any(f"Watson: {simulated_history[2]['content']}" in call for call in actual_print_calls)
+        assert any(f"Sherlock: {simulated_history[3]['content']}" in call for call in actual_print_calls)
+
+        # 3. Vérifier que le message de fin de conversation est imprimé
+        assert "--- Fin de la Conversation ---" in actual_print_calls
 
 
-        # 5. Vérifier que les stratégies ont été configurées (appel de add_hook)
-        # mock_group_chat_instance.add_hook.assert_any_call(mock_balanced_strat_constructor.return_value)
-        # mock_group_chat_instance.add_hook.assert_any_call(mock_simple_term_strat_constructor.return_value)
-        # Le nombre d'appels à add_hook devrait être 2
-        assert mock_group_chat_instance.add_hook.call_count == 2
+        # L'ancienne vérification pour add_hook n'est plus pertinente avec GroupChatOrchestration
+        # car les stratégies sont gérées par le manager.
 
 
         # Note: Les mocks pour les méthodes `invoke` des agents (sherlock_invoke_side_effect, watson_invoke_side_effect)
