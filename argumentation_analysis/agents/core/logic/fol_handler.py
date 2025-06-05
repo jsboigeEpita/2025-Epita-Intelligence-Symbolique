@@ -1,10 +1,12 @@
 import jpype
 from jpype.types import JString
 import logging
+# La configuration du logging (appel à setup_logging()) est supposée être faite globalement.
 from argumentation_analysis.utils.core_utils.logging_utils import setup_logging
 from .tweety_initializer import TweetyInitializer # To access FOL parser
 
-logger = setup_logging(__name__)
+setup_logging()
+logger = logging.getLogger(__name__) # Obtient le logger pour ce module
 
 class FOLHandler:
     """
@@ -12,23 +14,29 @@ class FOLHandler:
     Relies on TweetyInitializer for JVM and FOL component setup.
     """
 
-    def __init__(self):
-        self._fol_parser = TweetyInitializer.get_fol_parser()
+    def __init__(self, initializer_instance: TweetyInitializer):
+        self._initializer_instance = initializer_instance
+        self._fol_parser = self._initializer_instance.get_fol_parser()
         # self._fol_reasoner = TweetyInitializer.get_fol_reasoner() # If a general one is set up
 
         if self._fol_parser is None:
             logger.error("FOL Parser not initialized. Ensure TweetyBridge calls TweetyInitializer first.")
             raise RuntimeError("FOLHandler initialized before TweetyInitializer completed FOL setup.")
 
-    def parse_fol_formula(self, formula_str: str):
+    def parse_fol_formula(self, formula_str: str, signature_declarations_str: str = None):
         """Parses an FOL formula string into a TweetyProject FolFormula object."""
         if not isinstance(formula_str, str):
             raise TypeError("Input formula must be a string.")
         logger.debug(f"Attempting to parse FOL formula: {formula_str}")
         try:
+            # Revenir à la version simple. La gestion de la signature doit être revue.
+            # parseFormula(String, Signature) n'existe pas pour FolParser.
+            if signature_declarations_str:
+                logger.warning(f"FOLHandler.parse_fol_formula received signature_declarations_str='{signature_declarations_str}' but the current FolParser setup does not use it directly for single formula parsing. The formula will be parsed by the default parser without this ad-hoc signature.")
+            
             java_formula_str = JString(formula_str)
-            fol_formula = self._fol_parser.parseFormula(java_formula_str)
-            logger.info(f"Successfully parsed FOL formula: {formula_str} -> {fol_formula}")
+            fol_formula = self._fol_parser.parseFormula(java_formula_str) # Appel simple
+            logger.info(f"Successfully parsed FOL formula (default parser): {formula_str} -> {fol_formula}")
             return fol_formula
         except jpype.JException as e:
             logger.error(f"JPype JException parsing FOL formula '{formula_str}': {e.getMessage()}", exc_info=True)

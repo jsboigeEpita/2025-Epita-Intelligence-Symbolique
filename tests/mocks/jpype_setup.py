@@ -54,9 +54,9 @@ else:
 
 # --- Mock JPype ---
 try:
-    import jpype_mock # Importer le module directement
+    from tests.mocks import jpype_mock # Importer le module via son chemin de package
     # Importer le vrai module mock d'imports depuis le sous-package jpype_components
-    from jpype_components.imports import imports_module as actual_mock_jpype_imports_module
+    from tests.mocks.jpype_components.imports import imports_module as actual_mock_jpype_imports_module
 
     jpype_module_mock_obj = MagicMock(name="jpype_module_mock")
     jpype_module_mock_obj.__path__ = []

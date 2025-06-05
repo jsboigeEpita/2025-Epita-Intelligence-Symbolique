@@ -71,6 +71,33 @@ class SherlockEnqueteAgent(ProjectManagerAgent):
             # Retourner une chaîne vide ou lever une exception spécifique pourrait être mieux
             return "Erreur: Impossible de récupérer la description de l'affaire."
 
+    async def add_new_hypothesis(self, hypothesis_text: str, confidence_score: float) -> Optional[dict]:
+        """
+        Ajoute une nouvelle hypothèse à l'état de l'enquête.
+
+        Args:
+            hypothesis_text: Le texte de l'hypothèse.
+            confidence_score: Le score de confiance de l'hypothèse.
+
+        Returns:
+            Le dictionnaire de l'hypothèse ajoutée ou None en cas d'erreur.
+        """
+        self._logger.info(f"Ajout d'une nouvelle hypothèse: '{hypothesis_text}' avec confiance {confidence_score}")
+        try:
+            result = await self.kernel.invoke(
+                plugin_name="EnqueteStatePlugin",
+                function_name="add_hypothesis",
+                text=hypothesis_text, # type: ignore
+                confidence_score=confidence_score # type: ignore
+            )
+            # Supposant que 'result' est le dictionnaire de l'hypothèse ou a un attribut 'value'
+            if hasattr(result, 'value'):
+                return result.value # type: ignore
+            return result # type: ignore
+        except Exception as e:
+            self._logger.error(f"Erreur lors de l'ajout de l'hypothèse: {e}")
+            return None
+
 async def add_new_hypothesis(self, hypothesis_text: str, confidence_score: float) -> Optional[dict]:
         """
         Ajoute une nouvelle hypothèse à l'état de l'enquête.
