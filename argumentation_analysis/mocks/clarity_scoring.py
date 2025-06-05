@@ -83,6 +83,8 @@ class MockClarityScorer:
         
         # Voix passive (très simplifié: recherche de "est/sont/été suivi par participe passé")
         # Ceci est un placeholder, une vraie détection est complexe.
+        # Voix passive (très simplifié: recherche de "est/sont/été suivi par participe passé")
+        # Ceci est un placeholder, une vraie détection est complexe.
         passive_indicators = len(re.findall(r"\b(est|sont|été|fut|furent)\s+\w+é(e?s?)\b", text_lower))
         passive_voice_ratio = passive_indicators / num_sentences
         if passive_voice_ratio > self.max_passive_voice_ratio:
