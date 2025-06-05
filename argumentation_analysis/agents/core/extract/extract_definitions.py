@@ -1,3 +1,4 @@
+# argumentation_analysis/agents/core/extract/extract_definitions.py
 """
 Définitions et structures de données pour l'agent d'extraction.
 
@@ -12,9 +13,17 @@ utilisées par `ExtractAgent` et ses composants. Il définit :
 
 import re
 import logging
+from pathlib import Path # De la version stashed
 from typing import List, Dict, Any, Tuple, Optional, Union
 
-# Configuration du logging
+# Importer PROJECT_ROOT depuis la configuration centrale (de la version stashed)
+try:
+    from argumentation_analysis.ui.config import PROJECT_ROOT
+except ImportError:
+    # Fallback si le script est exécuté dans un contexte où l'import direct n'est pas possible
+    PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent.parent.parent
+
+# Configuration du logging (de la version stashed)
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s [%(levelname)s] [%(name)s] %(message)s',
@@ -22,13 +31,17 @@ logging.basicConfig(
 )
 logger = logging.getLogger("ExtractAgent.Definitions")
 
-# Création d'un handler pour écrire les logs dans un fichier
-file_handler = logging.FileHandler("extract_agent.log")
+# Création d'un handler pour écrire les logs dans un fichier (de la version stashed)
+log_dir = PROJECT_ROOT / "_temp" / "logs"
+log_dir.mkdir(parents=True, exist_ok=True)
+log_file_path = log_dir / "extract_agent.log"
+
+file_handler = logging.FileHandler(log_file_path, mode='a', encoding='utf-8')
 file_handler.setFormatter(logging.Formatter('%(asctime)s [%(levelname)s] [%(name)s] %(message)s', datefmt='%H:%M:%S'))
 logger.addHandler(file_handler)
 
 
-class ExtractResult:
+class ExtractResult: # De la version HEAD (Updated upstream)
     """
     Classe représentant le résultat d'une opération d'extraction.
 
@@ -132,7 +145,7 @@ class ExtractResult:
         )
 
 
-class ExtractAgentPlugin:
+class ExtractAgentPlugin: # De la version HEAD (Updated upstream)
     """
     Plugin contenant des fonctions natives utiles pour l'agent d'extraction.
 
@@ -339,7 +352,7 @@ class ExtractAgentPlugin:
         return self.extract_results
 
 
-class ExtractDefinition:
+class ExtractDefinition: # De la version HEAD (Updated upstream)
     """
     Classe représentant la définition d'un extrait à rechercher ou à gérer.
 

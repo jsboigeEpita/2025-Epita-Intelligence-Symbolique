@@ -11,7 +11,7 @@ par la bibliothèque JPype.
 """
 
 import logging
-from typing import Tuple, Optional, Any, Dict
+from typing import Tuple, Optional, Any, Dict, List
 
 import jpype
 from argumentation_analysis.core.jvm_setup import initialize_jvm
@@ -180,13 +180,26 @@ class TweetyBridge:
             self._logger.info("TWEETY_BRIDGE: _initialize_pl_components - Chargement PlFormula.")
             self._PlFormula = jpype.JClass("org.tweetyproject.logics.pl.syntax.PlFormula")
             
+            # Charger les classes SatSolver et Sat4jSolver pour configuration explicite
+            self._logger.info("TWEETY_BRIDGE: _initialize_pl_components - Chargement SatSolver et Sat4jSolver pour configuration.")
+            _SatSolver_class = jpype.JClass("org.tweetyproject.logics.pl.sat.SatSolver")
+            _Sat4jSolver_class = jpype.JClass("org.tweetyproject.logics.pl.sat.Sat4jSolver")
+            
             # Créer les instances
             self._logger.info("TWEETY_BRIDGE: _initialize_pl_components - Instanciation PlParser.")
             self._pl_parser_instance = self._PlParser()
-            self._logger.info("TWEETY_BRIDGE: _initialize_pl_components - Instanciation SatReasoner.")
-            self._pl_reasoner_instance = self._SatReasoner()
             
-            self._logger.info("TWEETY_BRIDGE: _initialize_pl_components - ✅ Composants PL initialisés.")
+            # Configurer explicitement Sat4jSolver comme solveur par défaut AVANT d'instancier SatReasoner.
+            # Cela garantit que SatReasoner est initialisé avec le solveur par défaut correctement défini.
+            self._logger.info("TWEETY_BRIDGE: _initialize_pl_components - Configuration explicite de Sat4jSolver comme solveur SAT par défaut (AVANT instanciation SatReasoner).")
+            _SatSolver_class.setDefaultSolver(_Sat4jSolver_class())
+            self._logger.info("TWEETY_BRIDGE: _initialize_pl_components - Sat4jSolver configuré comme défaut.")
+
+            self._logger.info("TWEETY_BRIDGE: _initialize_pl_components - Instanciation SatReasoner (APRÈS configuration solveur défaut).")
+            self._pl_reasoner_instance = self._SatReasoner() # SatReasoner utilise le solveur par défaut
+            self._logger.info(f"TWEETY_BRIDGE: _initialize_pl_components - Solveur SAT par défaut ACTIF: {_SatSolver_class.getDefaultSolver().getClass().getName()}")
+            
+            self._logger.info("TWEETY_BRIDGE: _initialize_pl_components - ✅ Composants PL initialisés et Sat4jSolver configuré.")
         
         except Exception as e:
             self._logger.error(f"TWEETY_BRIDGE: _initialize_pl_components - ❌ Erreur: {e}", exc_info=True)
@@ -266,7 +279,38 @@ class TweetyBridge:
             self._logger.warning("TWEETY_BRIDGE: _initialize_modal_components - La logique modale ne sera pas disponible.")
         finally:
             self._logger.info("TWEETY_BRIDGE: _initialize_modal_components - Fin.")
-    
+
+    def _remove_comments_and_empty_lines(self, text: str) -> List[str]:
+        """
+        Supprime les lignes de commentaire (commençant par '%' pour Tweety) et les lignes vides.
+        Sépare les formules sur la même ligne si elles sont délimitées par ';'.
+        Les espaces en début/fin de ligne sont également supprimés pour chaque formule.
+        Retourne une liste de chaînes de formules propres.
+        """
+        if text is None:
+            return []
+        
+        text_with_actual_newlines = text.replace("\\n", "\n")
+        raw_lines = text_with_actual_newlines.splitlines()
+        final_formulas: List[str] = []
+        
+        for line_content in raw_lines:
+            # 1. Enlever les commentaires de la ligne entière (Tweety utilise '%' pour les commentaires)
+            line_no_comments = line_content.split('%')[0].strip()
+            if not line_no_comments: # Si la ligne est vide ou ne contient qu'un commentaire
+                continue
+
+            # 2. Séparer les formules sur la ligne par des points-virgules.
+            potential_formulas_on_line = line_no_comments.split(';')
+            
+            for pf_str in potential_formulas_on_line:
+                formula_candidate = pf_str.strip()
+                if formula_candidate: # S'assurer que la formule n'est pas vide après strip
+                    final_formulas.append(formula_candidate)
+                    
+        self._logger.debug(f"_remove_comments_and_empty_lines: a retourné {len(final_formulas)} formules: {final_formulas}")
+        return final_formulas
+
     # --- Méthodes pour la logique propositionnelle ---
     
     def validate_formula(self, formula_string: str) -> Tuple[bool, str]:
@@ -307,35 +351,46 @@ class TweetyBridge:
         """
         if not self._jvm_ok or not self._pl_parser_instance:
             return False, "JVM ou parser non prêt"
-        
+
+        self._logger.debug(f"validate_belief_set (PL): Input: '{belief_set_string[:100]}...'")
+        cleaned_formulas_list = self._remove_comments_and_empty_lines(belief_set_string)
+
+        if not cleaned_formulas_list:
+            self._logger.info("validate_belief_set (PL): La liste de formules nettoyées est vide.")
+            return False, "Ensemble de croyances vide ou ne contenant que des commentaires"
+
         try:
-            belief_set_string_cleaned = belief_set_string.replace("\\\\n", "\\n")
-            parsed_bs = self._pl_parser_instance.parseBeliefBase(belief_set_string_cleaned)
+            # Tenter de parser pour valider la syntaxe de chaque formule.
+            # _parse_pl_belief_set lèvera une RuntimeError si une formule est invalide.
+            # Il retournera un PlBeliefSet (potentiellement vide si cleaned_formulas_list était vide,
+            # mais ce cas est géré au-dessus).
+            parsed_bs = self._parse_pl_belief_set(cleaned_formulas_list)
             
-            # Vérifier si l'ensemble de croyances est vide
-            bs_str_repr = str(parsed_bs).strip()
-            if not bs_str_repr or all(line.strip().startswith("#") for line in bs_str_repr.splitlines() if line.strip()):
-                return False, "Ensemble de croyances vide ou ne contenant que des commentaires"
-            
+            if parsed_bs is None:
+                 # Ce cas pourrait arriver si _jvm_ok devient False pendant l'appel à _parse_pl_belief_set,
+                 # ou une autre condition inattendue dans _parse_pl_belief_set qui retourne None.
+                 self._logger.error("validate_belief_set (PL): _parse_pl_belief_set a retourné None pour une liste non vide de formules.")
+                 return False, "Erreur interne lors du parsing du Belief Set"
+
+            # Si _parse_pl_belief_set a réussi (n'a pas levé d'exception et a retourné un objet PlBeliefSet),
+            # et que cleaned_formulas_list n'était pas vide (vérifié au début),
+            # alors l'ensemble est considéré syntaxiquement valide.
+            # La taille de parsed_bs sera > 0 car cleaned_formulas_list n'était pas vide et le parsing a réussi.
+            self._logger.info(f"validate_belief_set (PL): Ensemble de croyances valide, {parsed_bs.size()} formules parsées.")
             return True, "Ensemble de croyances valide"
-        
+
+        except RuntimeError as e_runtime:
+            # Erreur de parsing d'une formule individuelle attrapée depuis _parse_pl_belief_set (via _parse_pl_formula)
+            self._logger.warning(f"validate_belief_set (PL): Erreur de syntaxe détectée lors du parsing d'une formule: {str(e_runtime)}")
+            # Le message de e_runtime est déjà formaté par _parse_pl_formula ou _parse_pl_belief_set
+            return False, f"Erreur de syntaxe: {str(e_runtime)}"
         except jpype.JException as e_java:
-            error_msg = f"Erreur de syntaxe: {e_java.getMessage()}"
-            
-            # Ajouter contexte sur la ligne potentielle causant l'erreur si possible
-            # Utiliser getMessage() qui est la méthode standard et mockée
-            java_error_message = e_java.getMessage()
-            if java_error_message and 'line ' in java_error_message:
-                try:
-                    line_info = java_error_message.split('line ')[1].split(',')[0]
-                    error_msg += f" (Probablement près de la ligne {line_info})"
-                except Exception:
-                    pass # Ignorer si l'extraction de la ligne échoue
-            
-            return False, error_msg
-        
-        except Exception as e:
-            return False, f"Erreur: {str(e)}"
+            # Autres erreurs Java potentielles non attrapées par RuntimeError (ex: de .add() dans _parse_pl_belief_set si cela arrivait)
+            self._logger.error(f"validate_belief_set (PL): Erreur Java inattendue lors de la validation: {e_java.getMessage()}", exc_info=True)
+            return False, f"Erreur de syntaxe Java: {e_java.getMessage()}"
+        except Exception as e_generic: # Autres exceptions Python
+            self._logger.error(f"validate_belief_set (PL): Erreur générique inattendue lors de la validation: {str(e_generic)}", exc_info=True)
+            return False, f"Erreur inattendue: {str(e_generic)}"
     
     @kernel_function(
         description="Exécute une requête en Logique Propositionnelle (syntaxe Tweety: !,||,=>,<=>,^^) sur un Belief Set fourni.",
@@ -359,15 +414,24 @@ class TweetyBridge:
                  d'erreur préfixé par "FUNC_ERROR:".
         :rtype: str
         """
-        self._logger.info(f"Appel execute_pl_query: Query='{query_string}' sur BS ('{belief_set_content[:60]}...')")
+        self._logger.info(f"Appel execute_pl_query: Query='{query_string}' sur BS (brut): ('{belief_set_content[:60]}...')")
         
         if not self._jvm_ok:
             self._logger.error("execute_pl_query: JVM non prête.")
             return "FUNC_ERROR: JVM non prête ou composants Tweety non chargés."
         
         try:
+            # Nettoyer et préparer la liste des formules de la base de croyances
+            cleaned_formulas_list = self._remove_comments_and_empty_lines(belief_set_content)
+            self._logger.debug(f"execute_pl_query: Liste de formules nettoyées (pour _parse_pl_belief_set): {cleaned_formulas_list}")
+            
+            # Note: Si cleaned_formulas_list est vide, _parse_pl_belief_set retournera un PlBeliefSet vide.
+            # Ce comportement est conservé pour l'instant.
+            if not cleaned_formulas_list:
+                self._logger.warning("execute_pl_query: La liste de formules nettoyées est vide, un PlBeliefSet vide sera utilisé pour la requête.")
+
             # Parser l'ensemble de croyances
-            belief_set_obj = self._parse_pl_belief_set(belief_set_content)
+            belief_set_obj = self._parse_pl_belief_set(cleaned_formulas_list)
             if belief_set_obj is None:
                 return "FUNC_ERROR: Échec parsing Belief Set. Vérifiez syntaxe."
             
@@ -423,57 +487,56 @@ class TweetyBridge:
             self._logger.error(f"Erreur Python parsing formule '{formula_string}': {e}", exc_info=True)
             raise RuntimeError(f"Erreur Python Parsing Formule: {e}") from e
     
-    def _parse_pl_belief_set(self, belief_set_string: str) -> Optional[Any]:
+    def _parse_pl_belief_set(self, formula_list: List[str]) -> Optional[Any]:
         """
-        Parse une chaîne de caractères en un objet ensemble de croyances (BeliefBase) Tweety.
+        Construit un objet PlBeliefSet Tweety à partir d'une liste de chaînes de formules.
 
-        Nettoie les sauts de ligne échappés avant le parsing.
+        Chaque formule de la liste est parsée individuellement.
 
-        :param belief_set_string: La chaîne représentant l'ensemble de croyances
-                                  (formules séparées par des sauts de ligne).
-        :type belief_set_string: str
-        :return: Un objet `BeliefBase` (ou `PlBeliefSet`) de TweetyProject si le parsing réussit,
-                 `None` si la JVM ou le parser ne sont pas prêts.
+        :param formula_list: Liste des chaînes de formules à parser et ajouter.
+        :type formula_list: List[str]
+        :return: Un objet `PlBeliefSet` de TweetyProject.
+                 Retourne un `PlBeliefSet` vide si la liste est vide.
+                 Retourne `None` si la JVM ou le parser ne sont pas prêts.
         :rtype: Optional[Any]
-        :raises RuntimeError: Si une erreur de parsing Java ou Python survient.
+        :raises RuntimeError: Si une erreur de parsing Java ou Python survient pour une formule individuelle.
         """
         if not self._jvm_ok or not self._pl_parser_instance:
-            self._logger.error(f"Parse BS: JVM/Parser non prêt (BS: '{belief_set_string[:60]}...').")
+            self._logger.error(f"Parse PL BS from list: JVM/Parser non prêt. Liste: {formula_list[:5]}...")
             return None
+
+        _PlBeliefSet_class = jpype.JClass("org.tweetyproject.logics.pl.syntax.PlBeliefSet")
+        java_belief_set = _PlBeliefSet_class()
+
+        if not formula_list:
+            self._logger.info("_parse_pl_belief_set: Reçu une liste de formules vide. Retourne un PlBeliefSet vide.")
+            return java_belief_set
+
+        self._logger.info(f"_parse_pl_belief_set: Construction manuelle du PlBeliefSet à partir de {len(formula_list)} formules.")
+        for idx, formula_str in enumerate(formula_list):
+            if not formula_str.strip(): # Ignorer les chaînes vides si présentes après nettoyage
+                self._logger.debug(f"  Formule {idx} ignorée (vide).")
+                continue
+            try:
+                # _parse_pl_formula gère déjà le logging d'erreur et lève RuntimeError
+                formula_obj = self._parse_pl_formula(formula_str)
+                if formula_obj:
+                    java_belief_set.add(formula_obj)
+                    self._logger.debug(f"  Formule {idx} ('{formula_str}') ajoutée. Nouvelle taille BS: {java_belief_set.size()}")
+                else:
+                    # Ce cas ne devrait pas arriver si _parse_pl_formula lève une exception en cas d'échec
+                    self._logger.error(f"  _parse_pl_formula a retourné None pour '{formula_str}' sans lever d'exception. C'est inattendu.")
+                    # Lever une exception pour signaler l'échec global du parsing du BS
+                    raise RuntimeError(f"Échec inattendu du parsing de la formule individuelle '{formula_str}' (retour None)")
+            except RuntimeError as e_formula_parse: # Attraper l'erreur de _parse_pl_formula
+                self._logger.error(f"Erreur lors du parsing/ajout de la formule '{formula_str}' (index {idx}) au PlBeliefSet: {e_formula_parse}")
+                raise RuntimeError(f"Erreur lors de la construction du Belief Set: {e_formula_parse}") from e_formula_parse
+            except Exception as e_generic: # Attraper d'autres erreurs potentielles (ex: jpype.JException de .add)
+                 self._logger.error(f"Erreur générique lors de l'ajout de la formule '{formula_str}' au PlBeliefSet: {e_generic}", exc_info=True)
+                 raise RuntimeError(f"Erreur générique lors de la construction du Belief Set avec '{formula_str}': {e_generic}") from e_generic
         
-        try:
-            belief_set_string_cleaned = belief_set_string.replace("\\\\n", "\\n")
-            self._logger.debug(f"Parsing belief set (nettoyé): '{belief_set_string_cleaned[:100]}...'. Longueur: {len(belief_set_string_cleaned)}")
-            parsed_bs = self._pl_parser_instance.parseBeliefBase(belief_set_string_cleaned)
-            
-            # Vérifier si l'ensemble de croyances est vide
-            bs_str_repr = str(parsed_bs).strip()
-            if not bs_str_repr or all(line.strip().startswith("#") for line in bs_str_repr.splitlines() if line.strip()):
-                self._logger.warning(f" -> BS parsé semble vide ou ne contient que des commentaires: '{bs_str_repr[:100]}...'")
-            else:
-                self._logger.debug(f" -> BS parsé (type: {type(parsed_bs)}, size: {parsed_bs.size()}, repr: '{bs_str_repr[:100]}...')")
-            
-            return parsed_bs
-        
-        except jpype.JException as e_java:
-            error_msg = f"Erreur Java parsing BS (extrait: '{belief_set_string[:60]}...'): {e_java.getClass().getName()}: {e_java.getMessage()}"
-            self._logger.error(error_msg)
-            
-            # Ajouter contexte sur la ligne potentielle causant l'erreur si possible
-            java_error_message = e_java.getMessage()
-            if java_error_message and 'line ' in java_error_message:
-                try:
-                    line_info = java_error_message.split('line ')[1].split(',')[0]
-                    error_context = f" (Probablement près de la ligne {line_info} du belief set)"
-                    error_msg += error_context
-                except Exception:
-                    pass # Ignorer si l'extraction de la ligne échoue
-            
-            raise RuntimeError(f"Erreur Parsing Belief Set: {e_java.getMessage()}") from e_java
-        
-        except Exception as e:
-            self._logger.error(f"Erreur Python parsing BS: {e}", exc_info=True)
-            raise RuntimeError(f"Erreur Python Parsing Belief Set: {e}") from e
+        self._logger.info(f" -> BS PL construit manuellement (type: {java_belief_set.getClass().getName()}, size: {java_belief_set.size()}, repr: '{str(java_belief_set)[:100]}...')")
+        return java_belief_set
     
     def _execute_pl_query_internal(self, belief_set_obj: Any, formula_obj: Any) -> Optional[bool]:
         """
@@ -510,9 +573,25 @@ class TweetyBridge:
             formula_str = str(formula_obj)
             self._logger.debug(f"Exécution requête '{formula_str}' avec raisonneur '{self._pl_reasoner_instance.getClass().getName()}'...")
             
+            # Log ajouté pour inspecter les objets avant la requête
+            self._logger.info(f"Querying PL with belief_set_obj: {str(belief_set_obj)} (Java class: {belief_set_obj.getClass().getName()}), formula_obj: {str(formula_obj)} (Java class: {formula_obj.getClass().getName()})") # DEBUG -> INFO
+            
+            # Inspecter le contenu détaillé du PlBeliefSet
+            if belief_set_obj is not None:
+                self._logger.info(f"TWEETY_BRIDGE: _execute_pl_query_internal - Contenu détaillé du PlBeliefSet (size {belief_set_obj.size()}):")
+                try:
+                    iterator = belief_set_obj.iterator()
+                    idx = 0
+                    while iterator.hasNext():
+                        formula_in_set = iterator.next()
+                        self._logger.info(f"  Formula {idx}: '{str(formula_in_set)}' (Class: {formula_in_set.getClass().getName()})")
+                        idx += 1
+                except Exception as e_iter:
+                    self._logger.error(f"TWEETY_BRIDGE: _execute_pl_query_internal - Erreur lors de l'itération sur PlBeliefSet: {e_iter}")
+
             # Exécuter la requête
             result_java_boolean = self._pl_reasoner_instance.query(belief_set_obj, formula_obj)
-            self._logger.debug(f" -> Résultat brut Java pour '{formula_str}': {result_java_boolean}")
+            self._logger.info(f" -> Résultat brut Java pour '{formula_str}': {result_java_boolean}") # DEBUG -> INFO
             
             # Conversion et retour
             if result_java_boolean is None:
@@ -574,27 +653,46 @@ class TweetyBridge:
             return False, "JVM ou parser FOL non prêt"
         
         try:
-            belief_set_string_cleaned = belief_set_string.replace("\\\\n", "\\n")
-            parsed_bs = self._fol_parser_instance.parseBeliefBase(belief_set_string_cleaned)
-            
-            # Vérifier si l'ensemble de croyances est vide
-            bs_str_repr = str(parsed_bs).strip()
-            if not bs_str_repr or all(line.strip().startswith("#") for line in bs_str_repr.splitlines() if line.strip()):
+            # Nettoyer la chaîne d'entrée en utilisant la méthode dédiée
+            # Pour FOL, parseBeliefBase attend une chaîne unique, donc joindre la liste.
+            cleaned_formulas_list = self._remove_comments_and_empty_lines(belief_set_string)
+            belief_set_string_cleaned_for_fol = "\n".join(cleaned_formulas_list)
+
+            self._logger.debug(f"validate_fol_belief_set: Original input string: '{belief_set_string[:60]}...'")
+            self._logger.debug(f"validate_fol_belief_set: Cleaned string for FOL parsing: '{belief_set_string_cleaned_for_fol[:100]}...' (length: {len(belief_set_string_cleaned_for_fol)})")
+
+            if not belief_set_string_cleaned_for_fol.strip(): # Vérifier si la chaîne jointe est vide après nettoyage
+                 self._logger.info("validate_fol_belief_set: La chaîne de formules nettoyée et jointe est vide.")
+                 return False, "Ensemble de croyances FOL vide ou ne contenant que des commentaires"
+
+            # Essayer de parser avec Tweety
+            parsed_bs = self._fol_parser_instance.parseBeliefBase(belief_set_string_cleaned_for_fol)
+            current_size = parsed_bs.size() # Store size in local variable
+            self._logger.debug(f"validate_fol_belief_set: Parsed belief set (Java object reference): {parsed_bs}")
+            self._logger.debug(f"validate_fol_belief_set: String representation of parsed_bs: '{str(parsed_bs)[:100]}'")
+            self._logger.debug(f"validate_fol_belief_set: Value of current_size (from parsed_bs.size()): {current_size} (type: {type(current_size)})")
+
+            # Si parseBeliefBase réussit mais que la liste originale nettoyée était vide,
+            # cela a déjà été géré. Si la liste n'était pas vide mais que current_size est 0,
+            # cela signifie que le parsing a réussi mais n'a produit aucune formule (cas étrange mais possible).
+            if current_size == 0 and cleaned_formulas_list: # Vérifier cleaned_formulas_list pour être sûr
+                self._logger.warning(f"validate_fol_belief_set: parsed_bs.size() est 0 bien que cleaned_formulas_list ne soit pas vide. Considéré comme vide.")
                 return False, "Ensemble de croyances FOL vide ou ne contenant que des commentaires"
             
+            # Si current_size > 0, c'est valide.
+            self._logger.debug(f"validate_fol_belief_set: Ensemble de croyances FOL valide, {current_size} formules.")
             return True, "Ensemble de croyances FOL valide"
         
         except jpype.JException as e_java:
             error_msg = f"Erreur de syntaxe FOL: {e_java.getMessage()}"
             
-            # Ajouter contexte sur la ligne potentielle causant l'erreur si possible
             java_error_message = e_java.getMessage()
             if java_error_message and 'line ' in java_error_message:
                 try:
                     line_info = java_error_message.split('line ')[1].split(',')[0]
                     error_msg += f" (Probablement près de la ligne {line_info})"
                 except Exception:
-                    pass # Ignorer si l'extraction de la ligne échoue
+                    pass 
             
             return False, error_msg
         
@@ -619,16 +717,24 @@ class TweetyBridge:
         :return: Une chaîne de caractères formatée indiquant le résultat ou une erreur.
         :rtype: str
         """
-        self._logger.info(f"Appel execute_fol_query: Query='{query_string}' sur BS ('{belief_set_content[:60]}...')")
+        self._logger.info(f"Appel execute_fol_query: Query='{query_string}' sur BS (brut): ('{belief_set_content[:60]}...')")
         
         if not self._jvm_ok or not self._fol_parser_instance or not self._fol_reasoner_instance:
             self._logger.error("execute_fol_query: JVM ou composants FOL non prêts.")
             return "FUNC_ERROR: JVM non prête ou composants FOL non chargés."
         
         try:
+            # Nettoyer et préparer la chaîne de la base de croyances FOL
+            cleaned_formulas_list = self._remove_comments_and_empty_lines(belief_set_content)
+            belief_set_string_cleaned_for_fol = "\n".join(cleaned_formulas_list)
+            self._logger.debug(f"execute_fol_query: Contenu BS FOL nettoyé (pour _parse_fol_belief_set): '{belief_set_string_cleaned_for_fol[:100]}...'")
+
+            if not belief_set_string_cleaned_for_fol.strip():
+                 self._logger.warning("execute_fol_query: La chaîne de formules nettoyée et jointe est vide, un FolBeliefSet vide sera utilisé.")
+            
             # Parser l'ensemble de croyances
-            belief_set_obj = self._parse_fol_belief_set(belief_set_content)
-            if belief_set_obj is None:
+            belief_set_obj = self._parse_fol_belief_set(belief_set_string_cleaned_for_fol)
+            if belief_set_obj is None: # Peut arriver si JVM/parser non prêt, ou erreur interne dans _parse_fol_belief_set
                 return "FUNC_ERROR: Échec parsing Belief Set FOL. Vérifiez syntaxe."
             
             # Parser la formule
@@ -683,42 +789,40 @@ class TweetyBridge:
             self._logger.error(f"Erreur Python parsing formule FOL '{formula_string}': {e}", exc_info=True)
             raise RuntimeError(f"Erreur Python Parsing Formule FOL: {e}") from e
     
-    def _parse_fol_belief_set(self, belief_set_string: str) -> Optional[Any]:
+    def _parse_fol_belief_set(self, belief_set_string_cleaned: str) -> Optional[Any]:
         """
-        Parse une chaîne de caractères en un objet ensemble de croyances FOL (BeliefBase) Tweety.
+        Parse une chaîne de caractères (préalablement nettoyée) en un objet ensemble de croyances FOL (BeliefBase) Tweety.
 
-        Nettoie les sauts de ligne échappés avant le parsing.
-
-        :param belief_set_string: La chaîne représentant l'ensemble de croyances FOL.
-        :type belief_set_string: str
+        :param belief_set_string_cleaned: La chaîne représentant l'ensemble de croyances FOL,
+                                          déjà traitée par _remove_comments_and_empty_lines et jointe.
+        :type belief_set_string_cleaned: str
         :return: Un objet `FolBeliefSet` de TweetyProject si le parsing réussit,
                  `None` si la JVM ou le parser FOL ne sont pas prêts.
         :rtype: Optional[Any]
         :raises RuntimeError: Si une erreur de parsing Java ou Python survient.
         """
         if not self._jvm_ok or not self._fol_parser_instance:
-            self._logger.error(f"Parse FOL BS: JVM/Parser non prêt (BS: '{belief_set_string[:60]}...').")
+            self._logger.error(f"Parse FOL BS: JVM/Parser non prêt (BS nettoyé: '{belief_set_string_cleaned[:60]}...').")
             return None
         
         try:
-            belief_set_string_cleaned = belief_set_string.replace("\\\\n", "\\n")
-            self._logger.debug(f"Parsing FOL belief set (nettoyé): '{belief_set_string_cleaned[:100]}...'. Longueur: {len(belief_set_string_cleaned)}")
+            self._logger.debug(f"Parsing FOL belief set (reçu, déjà nettoyé et joint): '{belief_set_string_cleaned[:100]}...'. Longueur: {len(belief_set_string_cleaned)}")
+            
+            if not belief_set_string_cleaned.strip(): # Si la chaîne est vide après nettoyage et jointure
+                self._logger.info("_parse_fol_belief_set: Chaîne vide fournie, retourne un FolBeliefSet vide.")
+                _FolBeliefSet_class = jpype.JClass("org.tweetyproject.logics.fol.syntax.FolBeliefSet")
+                return _FolBeliefSet_class()
+
             parsed_bs = self._fol_parser_instance.parseBeliefBase(belief_set_string_cleaned)
             
-            # Vérifier si l'ensemble de croyances est vide
-            bs_str_repr = str(parsed_bs).strip()
-            if not bs_str_repr or all(line.strip().startswith("#") for line in bs_str_repr.splitlines() if line.strip()):
-                self._logger.warning(f" -> BS FOL parsé semble vide ou ne contient que des commentaires: '{bs_str_repr[:100]}...'")
-            else:
-                self._logger.debug(f" -> BS FOL parsé (type: {type(parsed_bs)}, size: {parsed_bs.size()}, repr: '{bs_str_repr[:100]}...')")
+            self._logger.debug(f" -> BS FOL parsé (type: {type(parsed_bs)}, size: {parsed_bs.size()}, repr: '{str(parsed_bs)[:100]}...')")
             
             return parsed_bs
         
         except jpype.JException as e_java:
-            error_msg = f"Erreur Java parsing BS FOL (extrait: '{belief_set_string[:60]}...'): {e_java.getClass().getName()}: {e_java.getMessage()}"
+            error_msg = f"Erreur Java parsing BS FOL (extrait nettoyé: '{belief_set_string_cleaned[:60]}...'): {e_java.getClass().getName()}: {e_java.getMessage()}"
             self._logger.error(error_msg)
             
-            # Ajouter contexte sur la ligne potentielle causant l'erreur si possible
             java_error_message = e_java.getMessage()
             if java_error_message and 'line ' in java_error_message:
                 try:
@@ -726,7 +830,7 @@ class TweetyBridge:
                     error_context = f" (Probablement près de la ligne {line_info} du belief set)"
                     error_msg += error_context
                 except Exception:
-                    pass # Ignorer si l'extraction de la ligne échoue
+                    pass 
             
             raise RuntimeError(f"Erreur Parsing Belief Set FOL: {e_java.getMessage()}") from e_java
         
@@ -757,22 +861,18 @@ class TweetyBridge:
             return None
         
         try:
-            # Vérifier si formula_obj est bien une instance de FolFormula
             if not jpype.JObject(formula_obj, self._FolFormula):
                 raise TypeError(f"Objet requête n'est pas un FolFormula (type: {type(formula_obj)})")
             
-            # Vérifier si belief_set_obj est valide
             if belief_set_obj is None:
                 raise ValueError("Objet Belief Set FOL est None.")
             
             formula_str = str(formula_obj)
             self._logger.debug(f"Exécution requête FOL '{formula_str}' avec raisonneur '{self._fol_reasoner_instance.getClass().getName()}'...")
             
-            # Exécuter la requête
             result_java_boolean = self._fol_reasoner_instance.query(belief_set_obj, formula_obj)
             self._logger.debug(f" -> Résultat brut Java pour FOL '{formula_str}': {result_java_boolean}")
             
-            # Conversion et retour
             if result_java_boolean is None:
                 self._logger.warning(f"Requête FOL Tweety pour '{formula_str}' a retourné null (indéterminé?).")
                 return None
@@ -832,27 +932,42 @@ class TweetyBridge:
             return False, "JVM ou parser Modal non prêt"
         
         try:
-            belief_set_string_cleaned = belief_set_string.replace("\\\\n", "\\n")
-            parsed_bs = self._modal_parser_instance.parseBeliefBase(belief_set_string_cleaned)
+            # Nettoyer la chaîne d'entrée en utilisant la méthode dédiée
+            # Pour Modal, parseBeliefBase attend une chaîne unique, donc joindre la liste.
+            cleaned_formulas_list = self._remove_comments_and_empty_lines(belief_set_string)
+            belief_set_string_cleaned_for_modal = "\n".join(cleaned_formulas_list)
+
+            self._logger.debug(f"validate_modal_belief_set: Original input string: '{belief_set_string[:60]}...'")
+            self._logger.debug(f"validate_modal_belief_set: Cleaned string for Modal parsing: '{belief_set_string_cleaned_for_modal[:100]}...' (length: {len(belief_set_string_cleaned_for_modal)})")
+
+            if not belief_set_string_cleaned_for_modal.strip():
+                 self._logger.info("validate_modal_belief_set: La chaîne de formules nettoyée et jointe est vide.")
+                 return False, "Ensemble de croyances modal vide ou ne contenant que des commentaires"
             
-            # Vérifier si l'ensemble de croyances est vide
-            bs_str_repr = str(parsed_bs).strip()
-            if not bs_str_repr or all(line.strip().startswith("#") for line in bs_str_repr.splitlines() if line.strip()):
+            # Essayer de parser avec Tweety
+            parsed_bs = self._modal_parser_instance.parseBeliefBase(belief_set_string_cleaned_for_modal)
+            current_size = parsed_bs.size() 
+            self._logger.debug(f"validate_modal_belief_set: Parsed belief set (Java object reference): {parsed_bs}")
+            self._logger.debug(f"validate_modal_belief_set: String representation of parsed_bs: '{str(parsed_bs)[:100]}'")
+            self._logger.debug(f"validate_modal_belief_set: Value of current_size (from parsed_bs.size()): {current_size} (type: {type(current_size)})")
+
+            if current_size == 0 and cleaned_formulas_list:
+                self._logger.warning(f"validate_modal_belief_set: parsed_bs.size() est 0 bien que cleaned_formulas_list ne soit pas vide. Considéré comme vide.")
                 return False, "Ensemble de croyances modal vide ou ne contenant que des commentaires"
             
+            self._logger.debug(f"validate_modal_belief_set: Ensemble de croyances modal valide, {current_size} formules.")
             return True, "Ensemble de croyances modal valide"
         
         except jpype.JException as e_java:
             error_msg = f"Erreur de syntaxe modale: {e_java.getMessage()}"
             
-            # Ajouter contexte sur la ligne potentielle causant l'erreur si possible
             java_error_message = e_java.getMessage()
             if java_error_message and 'line ' in java_error_message:
                 try:
                     line_info = java_error_message.split('line ')[1].split(',')[0]
                     error_msg += f" (Probablement près de la ligne {line_info})"
                 except Exception:
-                    pass # Ignorer si l'extraction de la ligne échoue
+                    pass 
             
             return False, error_msg
         
@@ -877,15 +992,23 @@ class TweetyBridge:
         :return: Une chaîne de caractères formatée indiquant le résultat ou une erreur.
         :rtype: str
         """
-        self._logger.info(f"Appel execute_modal_query: Query='{query_string}' sur BS ('{belief_set_content[:60]}...')")
+        self._logger.info(f"Appel execute_modal_query: Query='{query_string}' sur BS (brut): ('{belief_set_content[:60]}...')")
         
         if not self._jvm_ok or not self._modal_parser_instance or not self._modal_reasoner_instance:
             self._logger.error("execute_modal_query: JVM ou composants Modal non prêts.")
             return "FUNC_ERROR: JVM non prête ou composants Modal non chargés."
         
         try:
+            # Nettoyer et préparer la chaîne de la base de croyances modale
+            cleaned_formulas_list = self._remove_comments_and_empty_lines(belief_set_content)
+            belief_set_string_cleaned_for_modal = "\n".join(cleaned_formulas_list)
+            self._logger.debug(f"execute_modal_query: Contenu BS Modal nettoyé (pour _parse_modal_belief_set): '{belief_set_string_cleaned_for_modal[:100]}...'")
+
+            if not belief_set_string_cleaned_for_modal.strip():
+                self._logger.warning("execute_modal_query: La chaîne de formules nettoyée et jointe est vide, un ModalBeliefSet vide sera utilisé.")
+
             # Parser l'ensemble de croyances
-            belief_set_obj = self._parse_modal_belief_set(belief_set_content)
+            belief_set_obj = self._parse_modal_belief_set(belief_set_string_cleaned_for_modal)
             if belief_set_obj is None:
                 return "FUNC_ERROR: Échec parsing Belief Set Modal. Vérifiez syntaxe."
             
@@ -941,42 +1064,40 @@ class TweetyBridge:
             self._logger.error(f"Erreur Python parsing formule modale '{formula_string}': {e}", exc_info=True)
             raise RuntimeError(f"Erreur Python Parsing Formule modale: {e}") from e
     
-    def _parse_modal_belief_set(self, belief_set_string: str) -> Optional[Any]:
+    def _parse_modal_belief_set(self, belief_set_string_cleaned: str) -> Optional[Any]:
         """
-        Parse une chaîne de caractères en un objet ensemble de croyances modales (BeliefBase) Tweety.
+        Parse une chaîne de caractères (préalablement nettoyée) en un objet ensemble de croyances modales (BeliefBase) Tweety.
 
-        Nettoie les sauts de ligne échappés avant le parsing.
-
-        :param belief_set_string: La chaîne représentant l'ensemble de croyances modales.
-        :type belief_set_string: str
+        :param belief_set_string_cleaned: La chaîne représentant l'ensemble de croyances modales,
+                                          déjà traitée par _remove_comments_and_empty_lines et jointe.
+        :type belief_set_string_cleaned: str
         :return: Un objet `ModalBeliefSet` de TweetyProject si le parsing réussit,
                  `None` si la JVM ou le parser modal ne sont pas prêts.
         :rtype: Optional[Any]
         :raises RuntimeError: Si une erreur de parsing Java ou Python survient.
         """
         if not self._jvm_ok or not self._modal_parser_instance:
-            self._logger.error(f"Parse Modal BS: JVM/Parser non prêt (BS: '{belief_set_string[:60]}...').")
+            self._logger.error(f"Parse Modal BS: JVM/Parser non prêt (BS nettoyé: '{belief_set_string_cleaned[:60]}...').")
             return None
         
         try:
-            belief_set_string_cleaned = belief_set_string.replace("\\\\n", "\\n")
-            self._logger.debug(f"Parsing Modal belief set (nettoyé): '{belief_set_string_cleaned[:100]}...'. Longueur: {len(belief_set_string_cleaned)}")
+            self._logger.debug(f"Parsing Modal belief set (reçu, déjà nettoyé et joint): '{belief_set_string_cleaned[:100]}...'. Longueur: {len(belief_set_string_cleaned)}")
+            
+            if not belief_set_string_cleaned.strip():
+                self._logger.info("_parse_modal_belief_set: Chaîne vide fournie, retourne un ModalBeliefSet vide.")
+                _ModalBeliefSet_class = jpype.JClass("org.tweetyproject.logics.ml.syntax.ModalBeliefSet")
+                return _ModalBeliefSet_class()
+                
             parsed_bs = self._modal_parser_instance.parseBeliefBase(belief_set_string_cleaned)
             
-            # Vérifier si l'ensemble de croyances est vide
-            bs_str_repr = str(parsed_bs).strip()
-            if not bs_str_repr or all(line.strip().startswith("#") for line in bs_str_repr.splitlines() if line.strip()):
-                self._logger.warning(f" -> BS Modal parsé semble vide ou ne contient que des commentaires: '{bs_str_repr[:100]}...'")
-            else:
-                self._logger.debug(f" -> BS Modal parsé (type: {type(parsed_bs)}, size: {parsed_bs.size()}, repr: '{bs_str_repr[:100]}...')")
+            self._logger.debug(f" -> BS Modal parsé (type: {type(parsed_bs)}, size: {parsed_bs.size()}, repr: '{str(parsed_bs)[:100]}...')")
             
             return parsed_bs
         
         except jpype.JException as e_java:
-            error_msg = f"Erreur Java parsing BS Modal (extrait: '{belief_set_string[:60]}...'): {e_java.getClass().getName()}: {e_java.getMessage()}"
+            error_msg = f"Erreur Java parsing BS Modal (extrait nettoyé: '{belief_set_string_cleaned[:60]}...'): {e_java.getClass().getName()}: {e_java.getMessage()}"
             self._logger.error(error_msg)
             
-            # Ajouter contexte sur la ligne potentielle causant l'erreur si possible
             java_error_message = e_java.getMessage()
             if java_error_message and 'line ' in java_error_message:
                 try:
@@ -984,7 +1105,7 @@ class TweetyBridge:
                     error_context = f" (Probablement près de la ligne {line_info} du belief set)"
                     error_msg += error_context
                 except Exception:
-                    pass # Ignorer si l'extraction de la ligne échoue
+                    pass 
             
             raise RuntimeError(f"Erreur Parsing Belief Set Modal: {e_java.getMessage()}") from e_java
         
@@ -1015,22 +1136,18 @@ class TweetyBridge:
             return None
         
         try:
-            # Vérifier si formula_obj est bien une instance de ModalFormula
             if not jpype.JObject(formula_obj, self._ModalFormula):
                 raise TypeError(f"Objet requête n'est pas un ModalFormula (type: {type(formula_obj)})")
             
-            # Vérifier si belief_set_obj est valide
             if belief_set_obj is None:
                 raise ValueError("Objet Belief Set Modal est None.")
             
             formula_str = str(formula_obj)
             self._logger.debug(f"Exécution requête modale '{formula_str}' avec raisonneur '{self._modal_reasoner_instance.getClass().getName()}'...")
             
-            # Exécuter la requête
             result_java_boolean = self._modal_reasoner_instance.query(belief_set_obj, formula_obj)
             self._logger.debug(f" -> Résultat brut Java pour Modal '{formula_str}': {result_java_boolean}")
             
-            # Conversion et retour
             if result_java_boolean is None:
                 self._logger.warning(f"Requête Modal Tweety pour '{formula_str}' a retourné null (indéterminé?).")
                 return None

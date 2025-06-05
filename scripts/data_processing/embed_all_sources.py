@@ -11,31 +11,35 @@ import argparse
 import logging
 import sys
 from pathlib import Path
-# import base64 # Supprimé car la dérivation de clé est retirée de ce script
-# from cryptography.hazmat.primitives import hashes # Supprimé
-# from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC # Supprimé
-# from cryptography.hazmat.backends import default_backend # Supprimé
 
 # Assurer que le répertoire racine du projet est dans sys.path
-# pour permettre les imports relatifs (ex: from argumentation_analysis.ui import utils)
 SCRIPT_DIR = Path(__file__).resolve().parent
-PROJECT_ROOT = SCRIPT_DIR.parent.parent # MODIFIÉ: Remonter à la racine du projet
+PROJECT_ROOT = SCRIPT_DIR.parent.parent 
 sys.path.insert(0, str(PROJECT_ROOT))
 
 try:
     # Import de la nouvelle fonction de pipeline
     from argumentation_analysis.pipelines.embedding_pipeline import run_embedding_generation_pipeline
-    # Le logger est configuré dans le pipeline, plus besoin de le configurer ici.
-    # Les autres imports spécifiques à la logique (file_operations, utils, nlp_utils)
-    # sont maintenant gérés dans embedding_pipeline.py
 except ImportError as e:
     print(f"Erreur d'importation: {e}. Assurez-vous que le script est exécuté depuis la racine du projet "
           "et que l'environnement est correctement configuré.")
     sys.exit(1)
 
-# Le logger global du script, s'il est encore utilisé, peut être défini ici,
-# mais la configuration principale du logging est faite dans le pipeline.
-# logger = logging.getLogger(__name__) # Supprimé car non utilisé, script_logger est utilisé dans main
+# Configuration du logging (prise de la version Stash)
+log_dir = PROJECT_ROOT / "_temp" / "logs"
+log_dir.mkdir(parents=True, exist_ok=True)
+log_file_path = log_dir / "embed_all_sources.log"
+
+# Le logger est configuré plus bas dans main() en utilisant args.log_level
+# Cette configuration initiale est un fallback ou sera écrasée.
+logging.basicConfig(level=logging.INFO,
+                    format='%(asctime)s - %(levelname)s - [%(name)s] %(message)s',
+                    datefmt='%H:%M:%S',
+                    handlers=[
+                        logging.FileHandler(log_file_path, mode='a', encoding='utf-8'),
+                        logging.StreamHandler(sys.stdout)
+                    ])
+logger = logging.getLogger(__name__)
 
 
 def main():
@@ -95,16 +99,25 @@ def main():
         type=str,
         default="INFO",
         choices=["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"],
-        help="Niveau de verbosité du logging pour le pipeline."
+        help="Niveau de verbosité du logging pour le pipeline et ce script."
     )
 
     args = parser.parse_args()
 
-    # Le logging initial du script lui-même peut être simple.
-    # La configuration détaillée est faite par setup_logging dans le pipeline.
-    script_logger = logging.getLogger(__name__) # Utiliser un logger spécifique au script si besoin
-    logging.basicConfig(level=args.log_level.upper()) # Configuration de base pour ce script avant appel pipeline
-    script_logger.info(f"Lancement du script '{Path(__file__).name}'. Délégation au pipeline d'embedding...")
+    # Reconfigurer le logging de base avec le niveau choisi pour ce script
+    # et pour le logger de ce module spécifique.
+    logging.basicConfig(level=args.log_level.upper(), 
+                        format='%(asctime)s - %(levelname)s - [%(name)s] %(message)s',
+                        datefmt='%H:%M:%S',
+                        handlers=[
+                            logging.FileHandler(log_file_path, mode='a', encoding='utf-8'),
+                            logging.StreamHandler(sys.stdout)
+                        ],
+                        force=True) # force=True pour réécrire la config si basicConfig a déjà été appelé
+    logger.setLevel(args.log_level.upper()) # Assurer que le logger de ce module respecte aussi le niveau
+
+    logger.info(f"Lancement du script '{Path(__file__).name}'. Délégation au pipeline d'embedding...")
+    logger.debug(f"Arguments reçus: {args}")
 
     try:
         run_embedding_generation_pipeline(
@@ -114,16 +127,14 @@ def main():
             output_config_path=args.output_config,
             generate_embeddings_model=args.generate_embeddings,
             force_overwrite=args.force,
-            log_level=args.log_level,
-            passphrase=args.passphrase # Passé au pipeline
+            log_level=args.log_level, 
+            passphrase=args.passphrase
         )
-        script_logger.info(f"Pipeline d'embedding terminé. Le script '{Path(__file__).name}' a fini son exécution.")
+        logger.info(f"Pipeline d'embedding terminé. Le script '{Path(__file__).name}' a fini son exécution.")
     except SystemExit:
-        # Si le pipeline sort avec sys.exit(), on ne veut pas forcément le considérer comme une erreur ici,
-        # car le pipeline aura déjà loggué l'erreur.
-        script_logger.warning(f"Le pipeline s'est terminé prématurément (SystemExit). Vérifiez les logs du pipeline.")
+        logger.warning(f"Le pipeline s'est terminé prématurément (SystemExit). Vérifiez les logs du pipeline.")
     except Exception as e:
-        script_logger.error(f"Une erreur s'est produite lors de l'exécution du pipeline d'embedding: {e}", exc_info=True)
+        logger.error(f"Une erreur s'est produite lors de l'exécution du pipeline d'embedding: {e}", exc_info=True)
         sys.exit(1)
 
 
