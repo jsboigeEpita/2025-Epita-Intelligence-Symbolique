@@ -27,6 +27,7 @@ dependencies:
   # Plotting & Graphing
   - matplotlib
   - seaborn
+  - statsmodels
   - networkx==3.4.2
   # Java Bridge
   - jpype1

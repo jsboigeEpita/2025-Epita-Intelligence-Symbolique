@@ -42,7 +42,7 @@ class WatsonLogicAssistant(PropositionalLogicAgent):
             #                         La classe parente PropositionalLogicAgent gère
             #                         sa propre instance de TweetyBridge par défaut.
         """
-        super().__init__(kernel, agent_name=agent_name, system_prompt=system_prompt)
+        super().__init__(kernel, agent_name=agent_name)
         self.kernel = kernel  # Stocker la référence au kernel
         self.logger = logging.getLogger(agent_name) # Assurer un logger spécifique
         self.logger.info(f"WatsonLogicAssistant '{agent_name}' initialisé.")

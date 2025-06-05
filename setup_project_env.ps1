@@ -7,7 +7,8 @@ param (
     [switch]$SkipTools,            # Pour sauter l'installation/vérification des outils portables
     [switch]$SkipEnv,              # Pour sauter la création/mise à jour de l'environnement Conda
     [switch]$SkipCleanup,          # Pour sauter les étapes de nettoyage
-    [switch]$SkipPipInstall        # Pour sauter l'étape `pip install -e .`
+    [switch]$SkipPipInstall,       # Pour sauter l'étape `pip install -e .`
+    [switch]$RunPytestDebug        # Pour exécuter pytest avec des informations de débogage après l'installation
 )
 
 $ErrorActionPreference = "Stop"
@@ -35,6 +36,7 @@ try {
     if ($SkipEnv)             { $pythonArgs += "--skip-env" }
     if ($SkipCleanup)         { $pythonArgs += "--skip-cleanup" }
     if ($SkipPipInstall)      { $pythonArgs += "--skip-pip-install" }
+    if ($RunPytestDebug)      { $pythonArgs += "--run-pytest-debug" }
 
     Write-Host "Lancement du script d'installation Python : $pythonScriptPath"
     if ($pythonArgs.Count -gt 0) {
