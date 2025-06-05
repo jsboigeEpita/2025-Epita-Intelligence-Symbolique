@@ -64,6 +64,26 @@ class TestAnalyzeEndpoint:
         
         # Vérifier que le service a été appelé
         mock_analysis_service.analyze_text.assert_called_once()
+
+    def test_analyze_integration_simple_success(self, client, sample_analysis_request_simple_text):
+        """Test d'intégration simple pour /api/analyze avec texte simple."""
+        response = client.post('/api/analyze',
+                              data=json.dumps(sample_analysis_request_simple_text),
+                              content_type='application/json')
+        
+        assert response.status_code == 200
+        data = response.get_json()
+        
+        assert data['success'] is True
+        assert data['text_analyzed'] == sample_analysis_request_simple_text["text"]
+        assert 'fallacies' in data
+        assert 'argument_structure' in data
+        assert 'overall_quality' in data
+        assert 'coherence_score' in data
+        assert 'processing_time' in data
+        # Pas de vérification de mock_analysis_service.analyze_text.assert_called_once()
+        # car c'est un test d'intégration qui peut appeler le vrai service
+        # ou un service partiellement mocké selon la configuration du client de test.
     
     def test_analyze_missing_body(self, client):
         """Test d'analyse sans body JSON."""
