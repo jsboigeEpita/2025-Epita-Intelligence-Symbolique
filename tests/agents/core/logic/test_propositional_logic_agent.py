@@ -195,9 +195,8 @@ class TestPropositionalLogicAgent:
             query_string="a"
         )
         
-        assert result is False
-        if not os.environ.get('USE_REAL_JPYPE', 'false').lower() in ('true', '1'):
-            assert "FUNC_ERROR" in message
+        assert result is None
+        assert "FUNC_ERROR" in message
 
     def test_execute_query_invalid_formula(self):
         """Test de l'exécution d'une requête avec une formule invalide."""

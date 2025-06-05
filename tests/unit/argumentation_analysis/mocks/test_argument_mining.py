@@ -146,13 +146,12 @@ def test_mine_arguments_explicit_over_implicit(miner_default: MockArgumentMiner)
     text = "Prémisse: C'est un fait. Conclusion: Il faut l'accepter. C'est un fait, donc il faut l'accepter."
     # L'explicite devrait trouver "C'est un fait." et "Il faut l'accepter."
     # L'implicite (avec "donc") trouverait "C'est un fait" et "il faut l'accepter."
-    # Le mock devrait éviter ce doublon.
+    # Le mock actuel ne gère pas la déduplication.
     result = miner_default.mine_arguments(text)
-    assert len(result) == 2 # Le mock actuel ne gère pas la déduplication
-    # arg = result[0]
-    # assert arg["type"] == "Argument Explicite (Mock)"
-    # assert arg["premise"] == "C'est un fait."
-    # assert arg["conclusion"] == "Il faut l'accepter."
+    assert len(result) == 2
+    types = {r["type"] for r in result}
+    assert "Argument Explicite (Mock)" in types
+    assert "Argument Implicite (Mock - donc)" in types
 
 def test_mine_arguments_multiple_explicit(miner_default: MockArgumentMiner):
     """Teste plusieurs arguments explicites."""
@@ -199,20 +198,23 @@ def test_mine_arguments_complex_scenario_mixed(miner_default: MockArgumentMiner)
 
 def test_conclusion_delimitation_explicit(miner_default: MockArgumentMiner):
     """Teste la délimitation de la conclusion pour un argument explicite."""
-    text_with_period = "Prémisse: P1. Conclusion: C1 est vraie. Ceci est une autre phrase."
+    # La prémisse doit être assez longue pour passer le min_length (10)
+    text_with_period = "Prémisse: La prémisse P1 est assez longue. Conclusion: C1 est vraie. Ceci est une autre phrase."
     result = miner_default.mine_arguments(text_with_period)
     assert len(result) == 1
+    assert result[0]["type"] == "Argument Explicite (Mock)"
     assert result[0]["conclusion"] == "C1 est vraie." # Doit s'arrêter au point.
 
-    text_no_period_end_of_string = "Prémisse: P2. Conclusion: C2 est la fin"
+    text_no_period_end_of_string = "Prémisse: La prémisse P2 est assez longue. Conclusion: C2 est la fin"
     result2 = miner_default.mine_arguments(text_no_period_end_of_string)
     assert len(result2) == 1
+    assert result2[0]["type"] == "Argument Explicite (Mock)"
     assert result2[0]["conclusion"] == "C2 est la fin"
 
-    text_no_period_next_premise = "Prémisse: P3. Conclusion: C3 avant P4. Prémisse: P4."
+    text_no_period_next_premise = "Prémisse: La prémisse P3 est assez longue. Conclusion: C3 avant P4. Prémisse: La prémisse P4 est assez longue."
     result3 = miner_default.mine_arguments(text_no_period_next_premise)
     # On s'attend à deux arguments explicites
     assert len(result3) == 2
-    arg_c3 = next(filter(lambda x: x["premise"] == "P3.", result3), None)
+    arg_c3 = next(filter(lambda x: x["premise"] == "La prémisse P3 est assez longue.", result3), None)
     assert arg_c3 is not None
     assert arg_c3["conclusion"] == "C3 avant P4."

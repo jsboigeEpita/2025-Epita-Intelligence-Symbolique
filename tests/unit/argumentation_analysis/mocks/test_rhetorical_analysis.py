@@ -86,14 +86,12 @@ def test_analyze_ironic_tone(analyzer: MockRhetoricalAnalyzer):
     text = "Oh, quelle merveilleuse journée pluvieuse, c'est une tonalité ironique."
     result = analyzer.analyze(text)
     
-    # La tonalité ironique peut ajouter une figure de style par défaut si aucune autre n'est trouvée.
-    assert len(result["figures_de_style"]) >= 1 
-    if result["figures_de_style"][0]["type"] == "Style Direct (Mock)":
-         assert result["figures_de_style"][0]["type"] == "Style Direct (Mock)"
+    # La tonalité ironique est détectée, mais ne crée pas de figure de style par elle-même.
+    assert len(result["figures_de_style"]) == 0
 
     assert result["tonalite_globale"] == "Ironique (Mock)"
-    # score_engagement = 0.1 (default) - 0.2 (ironie) = -0.1, clamped to 0.0
-    assert result["score_engagement_simule"] == 0.0 
+    # score_engagement = 0.0 (base) - 0.2 (ironie) = -0.2, clamped to 0.0
+    assert result["score_engagement_simule"] == 0.0
 
 def test_analyze_combination_metaphor_and_question(analyzer: MockRhetoricalAnalyzer):
     """Teste la combinaison de métaphore et question rhétorique."""
@@ -123,7 +121,7 @@ def test_analyze_combination_all_keywords(analyzer: MockRhetoricalAnalyzer):
     # La tonalité ironique est la dernière vérifiée et devrait s'appliquer
     assert result["tonalite_globale"] == "Ironique (Mock)"
     # Métaphore: +0.3, Question: +0.4, Ironie: -0.2. Total = 0.5
-    assert result["score_engagement_simule"] == 0.5
+    assert result["score_engagement_simule"] == pytest.approx(0.5)
 
 def test_score_engagement_clamping(analyzer: MockRhetoricalAnalyzer):
     """Teste que le score d'engagement est bien clampé entre 0 et 1."""

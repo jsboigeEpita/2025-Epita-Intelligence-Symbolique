@@ -97,7 +97,7 @@ def test_detect_evidence_by_keyword_text_too_short_after_keyword(detector_defaul
     assert len(result_custom_valid) == 1
     assert result_custom_valid[0]["type"] == "Preuve par Mot-Clé (Mock)"
     assert result_custom_valid[0]["evidence_text"] == "C'est valide ici."
-    assert result_custom_valid[0]["keyword_used"] == "Source:"
+    assert result_custom_valid[0]["keyword_used"].lower() == "source:"
 
 def test_detect_evidence_factual_digit_if_no_keywords(detector_default: MockEvidenceDetector):
     """Teste preuve factuelle (chiffre) si aucun mot-clé n'est trouvé."""

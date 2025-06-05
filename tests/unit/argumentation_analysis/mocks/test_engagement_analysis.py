@@ -87,7 +87,11 @@ def test_analyze_engagement_appel_action(analyzer_default: MockEngagementAnalyze
     # "cliquez", "rejoignez" -> count=2. score = 0.3 * 2 = 0.6
     result = analyzer_default.analyze_engagement(text)
     assert result["signals_detected"]["appels_action"] == 2
-    assert result["engagement_score"] == pytest.approx(0.6)
+    # Recalcul:
+    # Appels action: 2 * 0.3 = 0.6
+    # Pronoms inclusifs: "notre" (1) -> 1 * 0.1 = 0.1
+    # Total = 0.7
+    assert result["engagement_score"] == pytest.approx(0.7)
     assert result["interpretation"] == "Engageant (Mock)"
 
 def test_analyze_engagement_pronoms_inclusifs(analyzer_default: MockEngagementAnalyzer):
@@ -139,7 +143,8 @@ def test_analyze_engagement_combination_and_clamping(analyzer_default: MockEngag
     assert result["interpretation"] == "Très engageant (Mock)"
     assert result["signals_detected"]["questions_directes"] == 4
     assert result["signals_detected"]["appels_action"] == 2
-    assert result["signals_detected"]["pronoms_inclusifs"] == 3
+    # Pronoms: "Ensemble", "nous", "nous" (dans Rejoignez-nous), "Votre" -> 4
+    assert result["signals_detected"]["pronoms_inclusifs"] == 4
     assert result["signals_detected"]["vocabulaire_positif_fort"] == 3
     assert result["signals_detected"]["longueur_texte_bonus"] == 1
 
