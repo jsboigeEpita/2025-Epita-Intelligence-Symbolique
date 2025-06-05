@@ -42,8 +42,9 @@ class BaseAgent(ABC):
     _logger: logging.Logger
     _llm_service_id: Optional[str]
     _system_prompt: Optional[str]
+    description: str # Ajout de l'attribut description
 
-    def __init__(self, kernel: 'Kernel', agent_name: str, system_prompt: Optional[str] = None):
+    def __init__(self, kernel: 'Kernel', agent_name: str, system_prompt: Optional[str] = None, description: Optional[str] = None):
         """
         Initialise une instance de BaseAgent.
 
@@ -53,10 +54,13 @@ class BaseAgent(ABC):
         :type agent_name: str
         :param system_prompt: Le prompt système optionnel pour l'agent.
         :type system_prompt: Optional[str]
+        :param description: La description optionnelle de l'agent.
+        :type description: Optional[str]
         """
         self._kernel = kernel
         self._agent_name = agent_name
         self._system_prompt = system_prompt
+        self.description = description if description else (system_prompt if system_prompt else f"Agent {agent_name}")
         self._logger = logging.getLogger(f"agent.{self.__class__.__name__}.{agent_name}")
         self._llm_service_id = None # Initialisé dans setup_agent_components
 
