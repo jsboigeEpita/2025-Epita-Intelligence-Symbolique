@@ -14,9 +14,15 @@ et de possibilité.
 import logging
 from typing import Dict, List, Optional, Any, Tuple
 
-from semantic_kernel import Kernel # type: ignore
+from semantic_kernel import Kernel
+from semantic_kernel.connectors.ai.chat_completion_client_base import ChatCompletionClientBase
+from semantic_kernel.contents import ChatMessageContent
+from semantic_kernel.contents.chat_history import ChatHistory
+from pydantic import Field
+from typing import AsyncGenerator
 
-from ..abc.agent_bases import BaseLogicAgent # Modification de l'import
+
+from ..abc.agent_bases import BaseLogicAgent
 from .belief_set import BeliefSet, ModalBeliefSet
 from .tweety_bridge import TweetyBridge
 
@@ -150,7 +156,10 @@ class ModalLogicAgent(BaseLogicAgent): # Modification de l'héritage
         _tweety_bridge (TweetyBridge): Instance de `TweetyBridge` configurée pour la ML.
     """
     
-    def __init__(self, kernel: Kernel):
+    service: Optional[ChatCompletionClientBase] = Field(default=None, exclude=True)
+    settings: Optional[Any] = Field(default=None, exclude=True)
+
+    def __init__(self, kernel: Kernel, service_id: Optional[str] = None):
         """
         Initialise une instance de `ModalLogicAgent`.
 
@@ -161,7 +170,7 @@ class ModalLogicAgent(BaseLogicAgent): # Modification de l'héritage
                          agent_name="ModalLogicAgent",
                          logic_type_name="ML",
                          system_prompt=SYSTEM_PROMPT_ML)
-        # _tweety_bridge sera initialisé dans setup_agent_components
+        self._llm_service_id = service_id
 
     def get_agent_capabilities(self) -> Dict[str, Any]:
         """
@@ -470,3 +479,41 @@ class ModalLogicAgent(BaseLogicAgent): # Modification de l'héritage
         """
         content = belief_set_data.get("content", "")
         return ModalBeliefSet(content)
+
+    async def get_response(
+        self,
+        chat_history: ChatHistory,
+        settings: Optional[Any] = None,
+    ) -> AsyncGenerator[list[ChatMessageContent], None]:
+        """
+        Méthode abstraite de `Agent` pour obtenir une réponse.
+        Non implémentée car cet agent utilise des méthodes spécifiques.
+        """
+        logger.warning("La méthode 'get_response' n'est pas implémentée pour ModalLogicAgent et ne devrait pas être appelée directement.")
+        yield []
+        return
+
+    async def invoke(
+        self,
+        chat_history: ChatHistory,
+        settings: Optional[Any] = None,
+    ) -> list[ChatMessageContent]:
+        """
+        Méthode abstraite de `Agent` pour invoquer l'agent.
+        Non implémentée car cet agent utilise des méthodes spécifiques.
+        """
+        logger.warning("La méthode 'invoke' n'est pas implémentée pour ModalLogicAgent et ne devrait pas être appelée directement.")
+        return []
+
+    async def invoke_stream(
+        self,
+        chat_history: ChatHistory,
+        settings: Optional[Any] = None,
+    ) -> AsyncGenerator[list[ChatMessageContent], None]:
+        """
+        Méthode abstraite de `Agent` pour invoquer l'agent en streaming.
+        Non implémentée car cet agent utilise des méthodes spécifiques.
+        """
+        logger.warning("La méthode 'invoke_stream' n'est pas implémentée pour ModalLogicAgent et ne devrait pas être appelée directement.")
+        yield []
+        return
