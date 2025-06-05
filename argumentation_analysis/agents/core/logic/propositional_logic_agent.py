@@ -14,9 +14,14 @@ import logging
 from typing import Dict, List, Optional, Any, Tuple
 
 from semantic_kernel import Kernel
-from semantic_kernel.functions.kernel_arguments import KernelArguments 
+from semantic_kernel.functions.kernel_arguments import KernelArguments
+from semantic_kernel.connectors.ai.chat_completion_client_base import ChatCompletionClientBase
+from semantic_kernel.contents import ChatMessageContent
+from semantic_kernel.contents.chat_history import ChatHistory
+from pydantic import Field
+from typing import AsyncGenerator
 
-from ..abc.agent_bases import BaseLogicAgent 
+from ..abc.agent_bases import BaseLogicAgent
 from .belief_set import BeliefSet, PropositionalBeliefSet
 from .tweety_bridge import TweetyBridge
 
@@ -46,7 +51,10 @@ class PropositionalLogicAgent(BaseLogicAgent):
         _tweety_bridge (TweetyBridge): Instance de `TweetyBridge` configurée pour la PL.
     """
     
-    def __init__(self, kernel: Kernel, agent_name: str = "PropositionalLogicAgent", system_prompt: Optional[str] = None):
+    service: Optional[ChatCompletionClientBase] = Field(default=None, exclude=True)
+    settings: Optional[Any] = Field(default=None, exclude=True)
+
+    def __init__(self, kernel: Kernel, agent_name: str = "PropositionalLogicAgent", system_prompt: Optional[str] = None, service_id: Optional[str] = None):
         """
         Initialise une instance de `PropositionalLogicAgent`.
 
@@ -63,6 +71,7 @@ class PropositionalLogicAgent(BaseLogicAgent):
                          agent_name=agent_name,
                          logic_type_name="PL",
                          system_prompt=actual_system_prompt)
+        self._llm_service_id = service_id
         
         # Initialiser TweetyBridge ici pour qu'il soit toujours disponible après l'instanciation
         self._tweety_bridge = TweetyBridge()
@@ -366,3 +375,41 @@ class PropositionalLogicAgent(BaseLogicAgent):
         except Exception as e:
             self.logger.error(f"Erreur lors de la validation de la formule PL '{formula}': {e}", exc_info=True)
             return False
+
+    async def get_response(
+        self,
+        chat_history: ChatHistory,
+        settings: Optional[Any] = None,
+    ) -> AsyncGenerator[list[ChatMessageContent], None]:
+        """
+        Méthode abstraite de `Agent` pour obtenir une réponse.
+        Non implémentée car cet agent utilise des méthodes spécifiques.
+        """
+        logger.warning("La méthode 'get_response' n'est pas implémentée pour PropositionalLogicAgent et ne devrait pas être appelée directement.")
+        yield []
+        return
+
+    async def invoke(
+        self,
+        chat_history: ChatHistory,
+        settings: Optional[Any] = None,
+    ) -> list[ChatMessageContent]:
+        """
+        Méthode abstraite de `Agent` pour invoquer l'agent.
+        Non implémentée car cet agent utilise des méthodes spécifiques.
+        """
+        logger.warning("La méthode 'invoke' n'est pas implémentée pour PropositionalLogicAgent et ne devrait pas être appelée directement.")
+        return []
+
+    async def invoke_stream(
+        self,
+        chat_history: ChatHistory,
+        settings: Optional[Any] = None,
+    ) -> AsyncGenerator[list[ChatMessageContent], None]:
+        """
+        Méthode abstraite de `Agent` pour invoquer l'agent en streaming.
+        Non implémentée car cet agent utilise des méthodes spécifiques.
+        """
+        logger.warning("La méthode 'invoke_stream' n'est pas implémentée pour PropositionalLogicAgent et ne devrait pas être appelée directement.")
+        yield []
+        return
