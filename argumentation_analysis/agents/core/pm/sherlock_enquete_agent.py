@@ -71,7 +71,7 @@ class SherlockEnqueteAgent(ProjectManagerAgent):
             # Retourner une chaîne vide ou lever une exception spécifique pourrait être mieux
             return "Erreur: Impossible de récupérer la description de l'affaire."
 
-async def add_new_hypothesis(self, hypothesis_text: str, confidence_score: float) -> dict | None:
+async def add_new_hypothesis(self, hypothesis_text: str, confidence_score: float) -> Optional[dict]:
         """
         Ajoute une nouvelle hypothèse à l'état de l'enquête.
 
