@@ -113,6 +113,17 @@ def integration_jvm():
 def dung_classes(integration_jvm):
     if integration_jvm is None: pytest.skip("JVM non disponible pour dung_classes.")
     JClass = integration_jvm.JClass
+loader_to_use = None
+    try:
+        JavaThread = integration_jvm.JClass("java.lang.Thread")
+        current_thread = JavaThread.currentThread()
+        loader_to_use = current_thread.getContextClassLoader()
+        if loader_to_use is None: 
+             loader_to_use = integration_jvm.JClass("java.lang.ClassLoader").getSystemClassLoader()
+        logger.info(f"integration_fixtures.py: dung_classes - Utilisation du ClassLoader: {loader_to_use}")
+    except Exception as e_loader:
+        logger.warning(f"integration_fixtures.py: dung_classes - Erreur lors de l'obtention du ClassLoader: {str(e_loader)}. JClass utilisera le loader par défaut.")
+        loader_to_use = None
     return {
         "DungTheory": JClass("org.tweetyproject.arg.dung.syntax.DungTheory"),
         "Argument": JClass("org.tweetyproject.arg.dung.syntax.Argument"),
@@ -138,12 +149,12 @@ def fol_syntax_parser(integration_jvm):
 @pytest.fixture(scope="session")
 def pl_syntax_parser(integration_jvm):
     if integration_jvm is None: pytest.skip("JVM non disponible pour pl_syntax_parser.")
-    return integration_jvm.JClass("net.sf.tweety.logics.pl.parser.PlParser")
+    return integration_jvm.JClass("org.tweetyproject.logics.pl.parser.PlParser")
 
 @pytest.fixture(scope="session")
 def cl_syntax_parser(integration_jvm):
     if integration_jvm is None: pytest.skip("JVM non disponible pour cl_syntax_parser.")
-    return integration_jvm.JClass("net.sf.tweety.logics.cl.parser.ClParser")
+    return integration_jvm.JClass("org.tweetyproject.logics.cl.parser.ClParser")
 
 
 @pytest.fixture(scope="session")
@@ -152,81 +163,81 @@ def tweety_logics_classes(integration_jvm):
     JClass = integration_jvm.JClass
     return {
         # Propositional Logic
-        "PlBeliefSet": JClass("net.sf.tweety.logics.pl.syntax.PlBeliefSet"),
-        "PropositionalSignature": JClass("net.sf.tweety.logics.pl.syntax.PropositionalSignature"),
-        "Proposition": JClass("net.sf.tweety.logics.pl.syntax.Proposition"),
-        "PlReasoner": JClass("net.sf.tweety.logics.pl.reasoner.PlReasoner"), # Interface
-        "SatReasoner": JClass("net.sf.tweety.logics.pl.reasoner.SatReasoner"),
-        "PlParser": JClass("net.sf.tweety.logics.pl.parser.PlParser"),
+        "PlBeliefSet": JClass("org.tweetyproject.logics.pl.syntax.PlBeliefSet"),
+        "PropositionalSignature": JClass("org.tweetyproject.logics.pl.syntax.PropositionalSignature"),
+        "Proposition": JClass("org.tweetyproject.logics.pl.syntax.Proposition"),
+        "PlReasoner": JClass("org.tweetyproject.logics.pl.reasoner.PlReasoner"), # Interface
+        "SatReasoner": JClass("org.tweetyproject.logics.pl.reasoner.SatReasoner"),
+        "PlParser": JClass("org.tweetyproject.logics.pl.parser.PlParser"),
         # First-Order Logic
-        "FolBeliefSet": JClass("net.sf.tweety.logics.fol.syntax.FolBeliefSet"),
-        "FolSignature": JClass("net.sf.tweety.logics.fol.syntax.FolSignature"),
-        "FolParser": JClass("net.sf.tweety.logics.fol.parser.FolParser"),
-        "Prover9Reasoner": JClass("net.sf.tweety.logics.fol.reasoner.Prover9Reasoner"),
+        "FolBeliefSet": JClass("org.tweetyproject.logics.fol.syntax.FolBeliefSet"),
+        "FolSignature": JClass("org.tweetyproject.logics.fol.syntax.FolSignature"),
+        "FolParser": JClass("org.tweetyproject.logics.fol.parser.FolParser"),
+        "Prover9Reasoner": JClass("org.tweetyproject.logics.fol.reasoner.Prover9Reasoner"),
         # Conditional Logic
-        "ClBeliefSet": JClass("net.sf.tweety.logics.cl.syntax.ClBeliefSet"),
-        "Conditional": JClass("net.sf.tweety.logics.cl.syntax.Conditional"),
-        "ClParser": JClass("net.sf.tweety.logics.cl.parser.ClParser"),
-        "ZReasoner": JClass("net.sf.tweety.logics.cl.reasoner.ZReasoner"),
+        "ClBeliefSet": JClass("org.tweetyproject.logics.cl.syntax.ClBeliefSet"),
+        "Conditional": JClass("org.tweetyproject.logics.cl.syntax.Conditional"),
+        "ClParser": JClass("org.tweetyproject.logics.cl.parser.ClParser"),
+        "ZReasoner": JClass("org.tweetyproject.logics.cl.reasoner.ZReasoner"),
         # Description Logic
-        "DlBeliefSet": JClass("net.sf.tweety.logics.dl.syntax.DlBeliefSet"),
-        "DescriptionLogicSignature": JClass("net.sf.tweety.logics.dl.syntax.DescriptionLogicSignature"),
-        "DlParser": JClass("net.sf.tweety.logics.dl.parser.DlParser"),
-        "PelletReasoner": JClass("net.sf.tweety.logics.dl.reasoner.PelletReasoner"),
+        "DlBeliefSet": JClass("org.tweetyproject.logics.dl.syntax.DlBeliefSet"),
+        "DescriptionLogicSignature": JClass("org.tweetyproject.logics.dl.syntax.DescriptionLogicSignature"),
+        "DlParser": JClass("org.tweetyproject.logics.dl.parser.DlParser"),
+        "PelletReasoner": JClass("org.tweetyproject.logics.dl.reasoner.PelletReasoner"),
         # ASP
-        "AspBeliefSet": JClass("net.sf.tweety.logics.asp.syntax.AspBeliefSet"),
-        "DLVReasoner": JClass("net.sf.tweety.logics.asp.reasoner.DLVReasoner"),
-        "ClingoReasoner": JClass("net.sf.tweety.logics.asp.reasoner.ClingoReasoner"),
+        "AspBeliefSet": JClass("org.tweetyproject.logics.asp.syntax.AspBeliefSet"),
+        "DLVReasoner": JClass("org.tweetyproject.logics.asp.reasoner.DLVReasoner"),
+        "ClingoReasoner": JClass("org.tweetyproject.logics.asp.reasoner.ClingoReasoner"),
         # General
-        "BeliefSet": JClass("net.sf.tweety.commons.BeliefSet"),
-        "Formula": JClass("net.sf.tweety.logics.commons.syntax.Formula"),
-        "Signature": JClass("net.sf.tweety.logics.commons.syntax.Signature"),
-        "Reasoner": JClass("net.sf.tweety.logics.commons.reasoner.Reasoner"), # Interface
-        "QueryResult": JClass("net.sf.tweety.logics.commons.reasoner.QueryResult"),
+        "BeliefSet": JClass("org.tweetyproject.commons.BeliefSet"),
+        "Formula": JClass("org.tweetyproject.logics.commons.syntax.Formula"),
+        "Signature": JClass("org.tweetyproject.logics.commons.syntax.Signature"),
+        "Reasoner": JClass("org.tweetyproject.logics.commons.reasoner.Reasoner"), # Interface
+        "QueryResult": JClass("org.tweetyproject.logics.commons.reasoner.QueryResult"),
         # Argumentation
-        "ProbabilisticArgumentationFramework": JClass("net.sf.tweety.arg.prob.ProbabilisticArgumentationFramework"),
-        "ProbabilisticFact": JClass("net.sf.tweety.arg.prob.ProbabilisticFact"),
-        "ProbabilisticReasoner": JClass("net.sf.tweety.arg.prob.reasoner.ProbabilisticReasoner"),
-        "EpistemicProbabilityReasoner": JClass("net.sf.tweety.arg.prob.reasoner.EpistemicProbabilityReasoner"),
-        "DungTheory": JClass("net.sf.tweety.arg.dung.DungTheory"), # Répété de dung_classes pour complétude
-        "Argument": JClass("net.sf.tweety.arg.dung.syntax.Argument"),
-        "Attack": JClass("net.sf.tweety.arg.dung.syntax.Attack"),
-        "SimpleDungReasoner": JClass("net.sf.tweety.arg.dung.reasoner.SimpleDungReasoner"),
+        "ProbabilisticArgumentationFramework": JClass("org.tweetyproject.arg.prob.ProbabilisticArgumentationFramework"),
+        "ProbabilisticFact": JClass("org.tweetyproject.arg.prob.ProbabilisticFact"),
+        "ProbabilisticReasoner": JClass("org.tweetyproject.arg.prob.reasoner.ProbabilisticReasoner"),
+        "EpistemicProbabilityReasoner": JClass("org.tweetyproject.arg.prob.reasoner.EpistemicProbabilityReasoner"),
+        "DungTheory": JClass("org.tweetyproject.arg.dung.DungTheory"), # Répété de dung_classes pour complétude
+        "Argument": JClass("org.tweetyproject.arg.dung.syntax.Argument"),
+        "Attack": JClass("org.tweetyproject.arg.dung.syntax.Attack"),
+        "SimpleDungReasoner": JClass("org.tweetyproject.arg.dung.reasoner.SimpleDungReasoner"),
         # Belief Revision
-        "RevisionOperator": JClass("net.sf.tweety.beliefdynamics.RevisionOperator"), # Interface
-        "DalalRevision": JClass("net.sf.tweety.beliefdynamics.revops.DalalRevision"),
+        "RevisionOperator": JClass("org.tweetyproject.beliefdynamics.RevisionOperator"), # Interface
+        "DalalRevision": JClass("org.tweetyproject.beliefdynamics.revops.DalalRevision"),
         # Other useful classes
         "ArrayList": JClass("java.util.ArrayList"),
         "HashSet": JClass("java.util.HashSet"),
         "File": JClass("java.io.File"),
         "System": JClass("java.lang.System"),
-        "TweetyConfiguration": JClass("net.sf.tweety.commons.TweetyConfiguration"),
+        "TweetyConfiguration": JClass("org.tweetyproject.commons.TweetyConfiguration"),
     }
 
 @pytest.fixture(scope="session")
 def tweety_string_utils(integration_jvm):
     if integration_jvm is None: pytest.skip("JVM non disponible pour tweety_string_utils.")
-    return integration_jvm.JClass("net.sf.tweety.commons.util.string.StringUtils")
+    return integration_jvm.JClass("org.tweetyproject.commons.util.string.StringUtils")
 
 @pytest.fixture(scope="session")
 def tweety_math_utils(integration_jvm):
     if integration_jvm is None: pytest.skip("JVM non disponible pour tweety_math_utils.")
-    return integration_jvm.JClass("net.sf.tweety.math.util.MathUtils")
+    return integration_jvm.JClass("org.tweetyproject.math.util.MathUtils")
 
 @pytest.fixture(scope="session")
 def tweety_probability(integration_jvm):
     if integration_jvm is None: pytest.skip("JVM non disponible pour tweety_probability.")
-    return integration_jvm.JClass("net.sf.tweety.math.probability.Probability")
+    return integration_jvm.JClass("org.tweetyproject.math.probability.Probability")
 
 @pytest.fixture(scope="session")
 def tweety_conditional_probability(integration_jvm):
     if integration_jvm is None: pytest.skip("JVM non disponible pour tweety_conditional_probability.")
-    return integration_jvm.JClass("net.sf.tweety.math.probability.ConditionalProbability")
+    return integration_jvm.JClass("org.tweetyproject.math.probability.ConditionalProbability")
 
 @pytest.fixture(scope="session")
 def tweety_parser_exception(integration_jvm):
     if integration_jvm is None: pytest.skip("JVM non disponible pour tweety_parser_exception.")
-    return integration_jvm.JClass("net.sf.tweety.parsers.ParserException")
+    return integration_jvm.JClass("org.tweetyproject.parsers.ParserException")
 
 @pytest.fixture(scope="session")
 def tweety_io_exception(integration_jvm):
