@@ -9,17 +9,23 @@ Ce test vérifie que le problème "ModuleNotFoundError: No module named 'numpy.r
 import unittest
 import sys
 import os
+import pytest # Ajout de pytest pour les marqueurs
 
-# Ajouter la racine du projet à sys.path
-project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
-if project_root not in sys.path:
-    sys.path.insert(0, project_root)
+# # Ajouter la racine du projet à sys.path # Géré par pytest.ini (pythonpath = .) ou PYTHONPATH env var
+# project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+# if project_root not in sys.path:
+#     sys.path.insert(0, project_root)
 
-# Forcer l'utilisation du mock numpy
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'mocks')) # Doit être après l'ajout de project_root pour prioriser le mock local
-import legacy_numpy_array_mock
-# sys.modules['numpy'] = legacy_numpy_array_mock # TEMPORAIREMENT COMMENTÉ POUR DIAGNOSTIC
+# # Forcer l'utilisation du mock numpy # Sera géré par la fixture
+# sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'mocks'))
+# import legacy_numpy_array_mock
+# # sys.modules['numpy'] = legacy_numpy_array_mock # Géré par la fixture
 
+# Importer la fixture nécessaire si elle n'est pas autouse (ce qui est notre cas maintenant)
+# from tests.mocks.numpy_setup import setup_numpy_for_tests_fixture # Pas besoin d'importer si on utilise usefixtures
+
+@pytest.mark.usefixtures("setup_numpy_for_tests_fixture")
+@pytest.mark.use_mock_numpy # Indiquer à la fixture d'utiliser le mock
 class TestNumpyRecMock(unittest.TestCase):
     """Tests pour vérifier que numpy.rec est correctement mocké."""
     
