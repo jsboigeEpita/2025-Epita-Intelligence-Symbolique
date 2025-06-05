@@ -34,17 +34,64 @@ Ce projet contient une application web pour l'analyse d'argumentation, composée
     ```
     Pour une configuration permanente, ajoutez ceci à votre profil PowerShell ou configurez-le via les variables d'environnement système.
 
-    **Alternative : Utilisation du script d'environnement**
+    **Alternative : Utilisation des scripts d'environnement PowerShell**
 
-    Vous pouvez également utiliser le script fourni à la racine du projet pour activer l'environnement Conda et configurer PYTHONPATH pour la session PowerShell actuelle :
+    Pour simplifier la configuration de l'environnement et l'exécution de commandes, le projet fournit des scripts PowerShell.
+
+    **1. Le script de travail principal : `scripts\env\activate_project_env.ps1`**
+
+    Ce script est le cœur de l'automatisation de l'environnement. Voici ce qu'il fait :
+    *   Il charge les variables d'environnement depuis le fichier `.env` situé à la racine du projet (par exemple, `OPENAI_API_KEY`, `JAVA_HOME`, `CONDA_ENV_NAME`).
+    *   Il configure la variable d'environnement `JAVA_HOME` pour la session PowerShell actuelle si elle est définie dans `.env`.
+    *   Il ajoute le répertoire `bin` de `JAVA_HOME` au `PATH` système pour la session PowerShell actuelle.
+    *   **Comportement avec `-CommandToRun`** :
+        *   Si vous lui passez le paramètre `-CommandToRun "<votre_commande>"` (où `<votre_commande>` n'est pas une chaîne vide) :
+            *   Il exécute `<votre_commande>` en utilisant `conda run -n <nom_env_conda> --no-capture-output --live-stream <votre_commande>`. Le `<nom_env_conda>` est typiquement `projet-is` ou celui défini par `CONDA_ENV_NAME` dans votre `.env`.
+            *   Cela signifie que votre commande s'exécute dans l'environnement Conda isolé, qui gère ses propres dépendances et `PYTHONPATH`. C'est la méthode recommandée pour lancer des applications Python du projet.
+        *   Si `-CommandToRun` n'est pas fourni, ou si la commande est une chaîne vide :
+            *   Le script N'EXÉCUTE PAS `conda run`.
+            *   Il N'ACTIVE PAS l'environnement Conda dans votre session PowerShell actuelle (il ne fait pas `conda activate projet-is`).
+            *   Il NE CONFIGURE PAS `PYTHONPATH` pour votre session PowerShell actuelle. Dans ce cas, si vous voulez lancer des scripts Python manuellement ensuite, vous devrez gérer l'activation de Conda et `PYTHONPATH` vous-même (voir la configuration manuelle ci-dessus).
+
+    **2. Les scripts raccourcis à la racine du projet**
+
+    Pour faciliter l'appel du script principal, deux raccourcis (wrappers) sont disponibles à la racine du projet :
+
+    *   **`.\activate_project_env.ps1`**
+        *   **Usage recommandé pour lancer des commandes (comme le serveur backend) :**
+            ```powershell
+            .\activate_project_env.ps1 -CommandToRun "python .\argumentation_analysis\services\web_api\start_api.py --port 5003"
+            ```
+            Cela passe l'option `-CommandToRun` au script `scripts\env\activate_project_env.ps1`, qui exécutera la commande via `conda run`.
+        *   **Usage pour préparer partiellement l'environnement (sans lancer de commande via Conda) :**
+            Si vous l'appelez sans `-CommandToRun` :
+            ```powershell
+            .\activate_project_env.ps1
+            ```
+            Il appelle `scripts\env\activate_project_env.ps1` sans `-CommandToRun`. Cela chargera les variables de `.env` et configurera `JAVA_HOME`/`PATH` dans votre session PowerShell actuelle. Cela n'active pas Conda ni ne configure `PYTHONPATH` pour le shell.
+
+    *   **`.\setup_project_env.ps1`**
+        *   Ce script appelle toujours `scripts\env\activate_project_env.ps1` en lui passant le paramètre `-CommandToRun`.
+        *   Si vous l'appelez avec `-CommandToRun "<votre_commande>"` :
+            ```powershell
+            .\setup_project_env.ps1 -CommandToRun "python .\argumentation_analysis\services\web_api\start_api.py --port 5003"
+            ```
+            L'effet est identique à l'utilisation de `.\activate_project_env.ps1 -CommandToRun "<votre_commande>"`.
+        *   Si vous l'appelez sans `-CommandToRun` :
+            ```powershell
+            .\setup_project_env.ps1
+            ```
+            Il passe `-CommandToRun ""` (une chaîne vide) à `scripts\env\activate_project_env.ps1`. L'effet est donc similaire à `.\activate_project_env.ps1` sans argument : chargement de `.env`, configuration de `JAVA_HOME`/`PATH`, mais pas d'exécution via `conda run` ni d'activation Conda/`PYTHONPATH` pour le shell.
+            Le nom "setup" peut être un peu trompeur dans ce cas précis ; il est plus pertinent si vous l'utilisez avec `-CommandToRun` pour exécuter une tâche de configuration ou de lancement.
+
+    **En résumé pour démarrer le backend :**
+    La méthode recommandée utilisant les scripts est :
     ```powershell
-    .\setup_project_env.ps1
+    .\activate_project_env.ps1 -CommandToRun "python .\argumentation_analysis\services\web_api\start_api.py --port 5003"
     ```
-    Pour exécuter une commande spécifique directement après l'activation (par exemple, démarrer le serveur) :
-    ```powershell
-    .\setup_project_env.ps1 -CommandToRun "python .\argumentation_analysis\services\web_api\start_api.py --port 5003"
-    ```
-    Il existe également un script `setup_project_env.sh` pour les environnements bash/zsh.
+    Cela garantit que le serveur s'exécute dans l'environnement Conda correctement configuré.
+
+    Un script `setup_project_env.sh` est disponible pour les environnements bash/zsh, fonctionnant sur un principe similaire pour exécuter une commande dans un environnement préparé.
 
 ### Frontend
 1.  **Installer les dépendances Node.js** :
@@ -83,39 +130,3 @@ npm start
 ```
 L'application React devrait s'ouvrir automatiquement dans votre navigateur à l'adresse `http://localhost:3000` (ou un autre port si 3000 est occupé). L'interface client communiquera avec le backend sur le port 5003.
 
-## Parcours de test de l'interface
-
-Cette section décrit un parcours de test simple pour vérifier les fonctionnalités de base de l'application.
-
-### 1. Accès à l'application
-1.  Assurez-vous que le backend et le frontend sont démarrés (voir la section "Démarrage de l'application").
-2.  Ouvrez votre navigateur et accédez à l'URL du frontend (généralement `http://localhost:3000`).
-
-    *   **Résultat attendu :** La page d'accueil de l'application d'analyse d'argumentation s'affiche sans erreur. L'interface est prête à recevoir une entrée.
-
-### 2. Soumettre un texte pour analyse (Exemple de fonctionnalité)
-1.  Localisez la zone de saisie de texte sur l'interface.
-2.  Entrez un texte argumentatif simple. Par exemple :
-    `"Les énergies renouvelables sont cruciales pour l'avenir. Elles réduisent notre dépendance aux fossiles et combattent le changement climatique."`
-3.  Cliquez sur le bouton "Analyser" ou "Soumettre".
-
-    *   **Résultat attendu :**
-        *   L'interface envoie le texte au backend.
-        *   Après un court instant, les résultats de l'analyse s'affichent.
-        *   Cela pourrait inclure :
-            *   L'identification des prémisses et de la conclusion.
-            *   Une visualisation des arguments.
-            *   Un score de cohérence ou de force argumentative (selon les fonctionnalités implémentées).
-        *   Aucun message d'erreur ne doit apparaître.
-
-### 3. Interaction avec les résultats (Exemple de fonctionnalité)
-1.  Si l'analyse affiche des éléments cliquables ou des options de filtrage :
-    *   Essayez de cliquer sur un argument identifié.
-    *   Si des filtres sont disponibles, essayez de les appliquer.
-
-    *   **Résultat attendu :**
-        *   L'interface réagit de manière appropriée aux interactions.
-        *   Cliquer sur un argument pourrait afficher plus de détails ou le mettre en évidence.
-        *   Les filtres modifient la présentation des résultats comme attendu.
-
-*(N.B. : Ce parcours est un exemple. Veuillez l'adapter et le compléter avec les fonctionnalités spécifiques de votre application et les résultats précis que vous attendez pour votre démo.)*
