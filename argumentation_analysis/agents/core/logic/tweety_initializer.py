@@ -185,7 +185,7 @@ class TweetyInitializer:
             _ = jpype.JClass("org.tweetyproject.logics.ml.syntax.MlFormula") # Attempting to use MlFormula for ModalLogic types
             _ = jpype.JClass("org.tweetyproject.logics.ml.syntax.MlBeliefSet")
             # jpype.imports.org.tweetyproject.logics.ml.reasoner # Old way
-            # _ = jpype.JClass("org.tweetyproject.logics.ml.reasoner.KrHyperModalReasoner") # Commenté car classe non trouvée et potentiellement non critique pour ce test
+            _ = jpype.JClass("org.tweetyproject.logics.ml.reasoner.SimpleMlReasoner") # KrHyperModalReasoner non trouvé dans le JAR
             # jpype.imports.org.tweetyproject.logics.ml.parser.MlParser # Old way
             _ = jpype.JClass("org.tweetyproject.logics.ml.parser.MlParser")
             

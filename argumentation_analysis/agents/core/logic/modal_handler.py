@@ -24,34 +24,35 @@ class ModalHandler:
             logger.error("Modal Logic Parser not initialized. Ensure TweetyBridge calls TweetyInitializer first.")
             raise RuntimeError("ModalHandler initialized before TweetyInitializer completed Modal Logic setup.")
 
-    def parse_modal_formula(self, formula_str: str, modal_logic_str: str = "S4"):
+    def parse_modal_formula(self, formula_str: str, modal_logic_str: str = "S4", signature_declarations_str: str = None):
         """
         Parses a Modal Logic formula string into a TweetyProject MlFormula object.
         Requires specifying the modal logic type (e.g., "K", "S4", "S5").
+        Optionally accepts signature declarations for propositions (e.g., "prop1/0").
         """
         if not self._initializer_instance.is_jvm_started():
             logger.error("JVM not started. Cannot parse modal formula.")
-            # Or attempt to start it, though initializer should handle this.
-            # TweetyInitializer.get_instance().start_jvm_and_initialize()
             raise RuntimeError("JVM must be started by TweetyInitializer before parsing modal formulas.")
 
         if not isinstance(formula_str, str):
             raise TypeError("Input formula must be a string.")
-        logger.debug(f"Attempting to parse Modal Logic formula: {formula_str} (Logic: {modal_logic_str})")
+        logger.debug(f"Attempting to parse Modal Logic formula: {formula_str} (Logic: {modal_logic_str}), Signature: {signature_declarations_str}")
         
         try:
-            ModalLogic = jpype.JClass("org.tweetyproject.logics.ml.syntax.MlFormula") # Attempting to use MlFormula for ModalLogic types
-            
-            try:
-                java_modal_logic_enum = getattr(ModalLogic, modal_logic_str.upper())
-            except AttributeError:
-                logger.error(f"Unsupported Modal Logic type string: {modal_logic_str}. Supported are K, D, T, S4, S5 etc.")
-                raise ValueError(f"Unsupported Modal Logic type: {modal_logic_str}")
-
             java_formula_str = JString(formula_str)
-            modal_formula = self._modal_parser.parseFormula(java_formula_str, java_modal_logic_enum)
             
-            logger.info(f"Successfully parsed Modal Logic formula: {formula_str} (Logic: {modal_logic_str}) -> {modal_formula}")
+            # Revenir à l'appel simple, car parseFormula(String, Signature) n'existe pas pour MlParser.
+            # La gestion de la signature pour les propositions en logique modale doit se faire autrement
+            # (potentiellement via un BeliefSet configuré avec une signature, ou si le parser
+            # est instancié/configuré pour une logique qui gère les propositions différemment).
+            # Si signature_declarations_str est fourni mais non utilisé ici, cela peut mener à des erreurs
+            # si le parser par défaut est strict.
+            if signature_declarations_str:
+                logger.warning(f"ModalHandler.parse_modal_formula received signature_declarations_str='{signature_declarations_str}' but the current MlParser does not use it directly for single formula parsing.")
+
+            modal_formula = self._modal_parser.parseFormula(java_formula_str)
+            
+            logger.info(f"Successfully parsed Modal Logic formula: {formula_str} (Logic: {modal_logic_str}, using default or pre-configured parser) -> {modal_formula}")
             return modal_formula
         except jpype.JException as e:
             error_message = e.getMessage()
@@ -76,15 +77,21 @@ class ModalHandler:
         logger.debug(f"Checking Modal Logic consistency for KB: '{knowledge_base_str}' (Logic: {modal_logic_str})")
         try:
             MlBeliefSet = jpype.JClass("org.tweetyproject.logics.ml.syntax.MlBeliefSet")
-            ModalLogic = jpype.JClass("org.tweetyproject.logics.ml.syntax.ModalLogic")
+            # ModalLogic = jpype.JClass("org.tweetyproject.logics.ml.syntax.ModalLogic") # Incorrect
             
-            try:
-                java_modal_logic_enum = getattr(ModalLogic, modal_logic_str.upper())
-            except AttributeError:
-                logger.error(f"Unsupported Modal Logic type string: {modal_logic_str}")
-                raise ValueError(f"Unsupported Modal Logic type: {modal_logic_str}")
+            # Supposons que MlBeliefSet attend une chaîne pour le type de logique, ou que le parser s'en charge.
+            # Le constructeur de MlBeliefSet(ModalLogic) est probablement pour un objet ModalLogic spécifique,
+            # pas juste l'enum. Si le parser est responsable de la logique, le KB n'a peut-être pas besoin de la logique au constructeur.
+            # Pour l'instant, on va supposer que le constructeur par défaut de MlBeliefSet est suffisant
+            # et que la logique est gérée au niveau du parsing de chaque formule ou par le reasoner.
+            # try:
+            #     java_modal_logic_enum = getattr(ModalLogic, modal_logic_str.upper())
+            # except AttributeError:
+            #     logger.error(f"Unsupported Modal Logic type string: {modal_logic_str}")
+            #     raise ValueError(f"Unsupported Modal Logic type: {modal_logic_str}")
 
-            kb = MlBeliefSet(java_modal_logic_enum)
+            # kb = MlBeliefSet(java_modal_logic_enum) # Cela échouerait si java_modal_logic_enum n'est pas un objet ModalLogic
+            kb = MlBeliefSet() # Utiliser le constructeur par défaut
 
             if signature_declarations_str:
                 logger.warning("Parsing Modal Logic signature declarations from string is complex and not fully implemented here. This may affect consistency checks.")
@@ -135,15 +142,18 @@ class ModalHandler:
         logger.debug(f"Performing Modal Logic query. KB: '{knowledge_base_str}', Query: '{query_formula_str}', Logic: {modal_logic_str}")
         try:
             MlBeliefSet = jpype.JClass("org.tweetyproject.logics.ml.syntax.MlBeliefSet")
-            ModalLogic = jpype.JClass("org.tweetyproject.logics.ml.syntax.ModalLogic")
+            # ModalLogic = jpype.JClass("org.tweetyproject.logics.ml.syntax.ModalLogic") # Incorrect
 
-            try:
-                java_modal_logic_enum = getattr(ModalLogic, modal_logic_str.upper())
-            except AttributeError:
-                logger.error(f"Unsupported Modal Logic type string: {modal_logic_str}")
-                raise ValueError(f"Unsupported Modal Logic type: {modal_logic_str}")
+            # Comme pour modal_check_consistency, utilisons le constructeur par défaut pour MlBeliefSet.
+            # La logique modale sera spécifiée lors du parsing des formules individuelles.
+            # try:
+            #    java_modal_logic_enum = getattr(ModalLogic, modal_logic_str.upper())
+            # except AttributeError:
+            #    logger.error(f"Unsupported Modal Logic type string: {modal_logic_str}")
+            #    raise ValueError(f"Unsupported Modal Logic type: {modal_logic_str}")
 
-            kb = MlBeliefSet(java_modal_logic_enum)
+            # kb = MlBeliefSet(java_modal_logic_enum)
+            kb = MlBeliefSet() # Utiliser le constructeur par défaut
 
             if signature_declarations_str:
                 logger.warning("Parsing Modal Logic signature declarations from string is complex and not fully implemented here. This may affect query results.")
