@@ -14,6 +14,7 @@ from semantic_kernel.agents import (
     RoundRobinGroupChatManager,
     BooleanResult  # Utile pour should_terminate dans un manager customisé
 )
+from semantic_kernel.contents.chat_message_content import ChatMessageContent
 from semantic_kernel.agents.runtime import InProcessRuntime
 from typing import List, Dict, Optional, Any # Ajout pour typage
 from pydantic import Field
@@ -53,13 +54,13 @@ class CluedoGroupChatManager(RoundRobinGroupChatManager):
         self._total_messages_count = 0
         self._conversation_history: List[Dict[str, str]] = [] # Pour stocker l'historique
 
-    async def select_next_agent(self, history: List[Dict[str, Any]]) -> Agent:
+    async def select_next_agent(self, history: List[ChatMessageContent]) -> Agent:
         """Sélectionne le prochain agent en mode round-robin, en respectant max_turns_per_agent."""
         # Implémentation de RoundRobinGroupChatManager gère déjà le round-robin de base.
         # On va surcharger pour ajouter la logique de max_turns_per_agent.
         
         # Trouver l'agent qui vient de parler
-        last_speaker_name = history[-1]["name"] if history else None
+        last_speaker_name = history[-1].author_name if history else None
 
         # Trouver l'index du dernier agent ayant parlé pour le round-robin
         current_agent_index = -1
@@ -92,12 +93,12 @@ class CluedoGroupChatManager(RoundRobinGroupChatManager):
         
         return selected_agent
 
-    async def should_terminate(self, history: List[Dict[str, Any]]) -> BooleanResult:
+    async def should_terminate(self, history: List[ChatMessageContent]) -> BooleanResult:
         """Détermine si la conversation doit se terminer."""
         self._total_messages_count = len(history)
         
         if history:
-            last_message_content = str(history[-1].get("content", "")).strip()
+            last_message_content = str(history[-1].content).strip()
             if any(keyword.lower() in last_message_content.lower() for keyword in self.termination_keywords):
                 return BooleanResult(value=True, rationale="Termination keyword detected.")
 
@@ -106,7 +107,7 @@ class CluedoGroupChatManager(RoundRobinGroupChatManager):
 
         # Mettre à jour le compteur de tours pour l'agent qui vient de parler
         if history:
-            last_speaker_name = history[-1]["name"]
+            last_speaker_name = history[-1].author_name
             if last_speaker_name in self._agent_turn_count:
                  # On ne met à jour que si c'est un nouveau message de cet agent
                  # (pour éviter de compter plusieurs fois si l'historique est passé plusieurs fois)
