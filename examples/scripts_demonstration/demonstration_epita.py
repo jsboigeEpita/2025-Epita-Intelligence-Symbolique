@@ -353,10 +353,6 @@ def analyze_encrypted_data(project_context: ProjectContext) -> str | None:
     analysis_results_list = []
     current_project_root_path = project_context.project_root_path if project_context.project_root_path else Path(project_root)
     
-    # Le chemin du fichier de configuration est géré par DefinitionService lors de son initialisation dans bootstrap
-    # abs_definitions_file_path = current_project_root_path / "argumentation_analysis" / "data" / "extract_sources.json.gz.enc"
-    # logger.info(f"Utilisation du DefinitionService configuré par bootstrap (qui devrait utiliser {abs_definitions_file_path})")
-
     try:
         start_time_load_defs = time.time()
         logger.info(f"Début du chargement des définitions d'extraits via DefinitionService du contexte: {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(start_time_load_defs))}")
@@ -366,12 +362,7 @@ def analyze_encrypted_data(project_context: ProjectContext) -> str | None:
         end_time_load_defs = time.time()
         logger.info(f"Fin du chargement des définitions d'extraits : {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(end_time_load_defs))}")
         logger.info(f"Définitions d'extraits chargées en {end_time_load_defs - start_time_load_defs:.2f} secondes.")
-        
-        # La structure de extract_definitions_obj peut avoir changé.
-        # Le mock original avait .extracts directement. Le réel pourrait avoir .sources puis .extracts.
-        # Le mock dans bootstrap.py pour DefinitionService retourne un objet ExtractDefinitions avec un attribut 'extracts'.
-        # Si le service réel retourne une structure avec 'sources', il faudra adapter.
-        # Pour l'instant, on suppose que extract_definitions_obj.extracts est la liste des extraits.
+        logger.info("Recherche des extraits à traiter dans l'objet de définitions...")
         
         # Tentative de gestion des deux structures (directement .extracts ou .sources[0].extracts)
         extracts_to_process = []
@@ -397,17 +388,8 @@ def analyze_encrypted_data(project_context: ProjectContext) -> str | None:
             return None
 
         selected_extract = extracts_to_process[0] # Analyse du premier extrait pour la démo
+        logger.info(f"Sélection du premier extrait (ID: {getattr(selected_extract, 'id', 'N/A')}) pour l'analyse détaillée.")
         
-        # Log temporaire pour inspecter selected_extract
-        try:
-            logger.debug(f"Selected extract object (before getattr): {selected_extract}") # Log brut de l'objet
-            if hasattr(selected_extract, 'to_dict'):
-                logger.debug(f"Selected extract dict: {selected_extract.to_dict()}")
-            else:
-                logger.debug(f"Selected extract as dict (vars): {vars(selected_extract) if hasattr(selected_extract, '__dict__') else 'N/A'}")
-        except Exception as e_log:
-            logger.error(f"Error logging selected_extract: {e_log}")
-
         # Les attributs de 'selected_extract' devraient correspondre à la classe Extract
         # (soit réelle, soit le mock si l'import réel a échoué dans bootstrap)
         extract_id = getattr(selected_extract, 'id', getattr(selected_extract, 'extract_name', 'N/A_ID'))
@@ -503,7 +485,8 @@ def generate_report_from_analysis(project_context: ProjectContext, analysis_json
             sys.executable, str(report_script_path.resolve()),
             "--advanced-results", str(analysis_file_path.resolve())
         ]
-        logger.info(f"Exécution de la commande : {' '.join(command)}")
+        logger.info(f"Exécution de la commande pour générer le rapport : {' '.join(command)}")
+        logger.info("Ce script tentera de produire des rapports en plusieurs formats (ex: HTML, Markdown) basés sur les résultats d'analyse.")
         
         logger.info("Exécution du script de génération de rapport avec un timeout de 300 secondes...")
         report_process = subprocess.run(command, capture_output=True, check=False, cwd=str(current_project_root_path), timeout=300)
