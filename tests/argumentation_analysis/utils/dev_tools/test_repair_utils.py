@@ -104,10 +104,9 @@ async def test_run_extract_repair_pipeline_successful_run_no_save(
     mock_fetch_instance = MagicMock()
     MockFetchService.return_value = mock_fetch_instance
 
-    # Utiliser la configuration de la fixture mock_definition_service_fixture pour l'instance mockée
-    # mock_definition_service_fixture est déjà configurée avec load_definitions, save_definitions etc.
+    # Utiliser la configuration de la fixture mock_definition_service pour l'instance mockée
+    # mock_definition_service est déjà configurée avec load_definitions, save_definitions etc.
     MockDefinitionService.return_value = mock_definition_service
-    
     # Assurer que load_definitions retourne un tuple
     sample_source = SourceDefinition(source_name="Test Source", source_type="text", schema="file", host_parts=[], path="", extracts=[])
     sample_defs = ExtractDefinitions(sources=[sample_source])

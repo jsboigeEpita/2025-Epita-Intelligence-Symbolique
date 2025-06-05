@@ -1,3 +1,4 @@
+import os
 # -*- coding: utf-8 -*-
 # tests/agents/core/logic/test_propositional_logic_agent.py
 """
@@ -99,7 +100,7 @@ class TestPropositionalLogicAgent(unittest.TestCase):
         belief_set, message = await self.agent.text_to_belief_set("Texte de test")
         
         self.kernel.invoke.assert_called_once()
-        if not self.use_real_jpype:
+        if not os.environ.get('USE_REAL_JPYPE', 'false').lower() in ('true', '1'):
             self.mock_tweety_bridge_instance.validate_belief_set.assert_not_called()
         # Si real_jpype, la vraie méthode ne serait pas appelée non plus car le résultat SK est vide.
         
@@ -111,7 +112,7 @@ class TestPropositionalLogicAgent(unittest.TestCase):
         mock_sk_result = MagicMock()
         mock_sk_result.__str__.return_value = "invalid_pl_syntax {"
         self.kernel.invoke.return_value = mock_sk_result
-        if not self.use_real_jpype:
+        if not os.environ.get('USE_REAL_JPYPE', 'false').lower() in ('true', '1'):
             self.mock_tweety_bridge_instance.validate_belief_set.return_value = (False, "Erreur de syntaxe")
         # Si real_jpype, la vraie méthode est appelée. Le message d'erreur proviendra de la vraie bridge.
         
@@ -120,7 +121,7 @@ class TestPropositionalLogicAgent(unittest.TestCase):
         self.kernel.invoke.assert_called_once()
         self.mock_tweety_bridge_instance.validate_belief_set.assert_called_once_with(belief_set_str="invalid_pl_syntax {")
         
-        if not self.use_real_jpype:
+        if not os.environ.get('USE_REAL_JPYPE', 'false').lower() in ('true', '1'):
             self.assertIsNone(belief_set)
             self.assertEqual(message, "Ensemble de croyances invalide: Erreur de syntaxe")
         else:
@@ -136,7 +137,7 @@ class TestPropositionalLogicAgent(unittest.TestCase):
         mock_sk_result = MagicMock()
         mock_sk_result.__str__.return_value = "a\nb\na => b"
         self.kernel.invoke.return_value = mock_sk_result
-        if not self.use_real_jpype:
+        if not os.environ.get('USE_REAL_JPYPE', 'false').lower() in ('true', '1'):
             self.mock_tweety_bridge_instance.validate_formula.return_value = (True, "Formule valide")
         
         belief_set_obj = PropositionalBeliefSet("x => y")
@@ -178,7 +179,7 @@ class TestPropositionalLogicAgent(unittest.TestCase):
     def test_execute_query_accepted(self):
         """Test de l'exécution d'une requête acceptée."""
         belief_set_obj = PropositionalBeliefSet("a => b")
-        if not self.use_real_jpype:
+        if not os.environ.get('USE_REAL_JPYPE', 'false').lower() in ('true', '1'):
             # Assurer que le mock retourne la chaîne attendue par l'agent pour ce test
             self.mock_tweety_bridge_instance.execute_pl_query.return_value = "Tweety Result: Query 'a => b' is ACCEPTED (True)."
             self.mock_tweety_bridge_instance.validate_formula.return_value = (True, "Formule valide")
@@ -198,7 +199,7 @@ class TestPropositionalLogicAgent(unittest.TestCase):
     def test_execute_query_rejected(self):
         """Test de l'exécution d'une requête rejetée."""
         belief_set_obj = PropositionalBeliefSet("a => b")
-        if not self.use_real_jpype:
+        if not os.environ.get('USE_REAL_JPYPE', 'false').lower() in ('true', '1'):
             # Assurer que le mock retourne la chaîne attendue par l'agent pour ce test
             self.mock_tweety_bridge_instance.execute_pl_query.return_value = "Tweety Result: Query 'c' is REJECTED (False)."
             self.mock_tweety_bridge_instance.validate_formula.return_value = (True, "Formule valide")
@@ -216,7 +217,7 @@ class TestPropositionalLogicAgent(unittest.TestCase):
     def test_execute_query_error_tweety(self):
         """Test de l'exécution d'une requête avec erreur de Tweety."""
         belief_set_obj = PropositionalBeliefSet("a => b")
-        if not self.use_real_jpype:
+        if not os.environ.get('USE_REAL_JPYPE', 'false').lower() in ('true', '1'):
             # Assurer que le mock retourne la chaîne attendue par l'agent pour ce test
             self.mock_tweety_bridge_instance.execute_pl_query.return_value = "FUNC_ERROR: Erreur de syntaxe Tweety"
             self.mock_tweety_bridge_instance.validate_formula.return_value = (True, "Formule valide")
@@ -236,7 +237,7 @@ class TestPropositionalLogicAgent(unittest.TestCase):
     def test_execute_query_invalid_formula(self):
         """Test de l'exécution d'une requête avec une formule invalide."""
         belief_set_obj = PropositionalBeliefSet("a => b")
-        if not self.use_real_jpype:
+        if not os.environ.get('USE_REAL_JPYPE', 'false').lower() in ('true', '1'):
             self.mock_tweety_bridge_instance.validate_formula.return_value = (False, "Syntax Error in query")
 
         result, message = self.agent.execute_query(belief_set_obj, "invalid_query {")
@@ -286,7 +287,7 @@ class TestPropositionalLogicAgent(unittest.TestCase):
 
     def test_validate_formula_invalid(self):
         """Test de la validation d'une formule invalide."""
-        if not self.use_real_jpype:
+        if not os.environ.get('USE_REAL_JPYPE', 'false').lower() in ('true', '1'):
             self.mock_tweety_bridge_instance.validate_formula.return_value = (False, "Erreur de syntaxe")
             is_valid, _ = self.agent.tweety_bridge.validate_formula("a => (b") # Appel mocké
             self.mock_tweety_bridge_instance.validate_formula.assert_called_once_with(formula_string="a => (b")
