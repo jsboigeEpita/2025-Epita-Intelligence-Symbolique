@@ -23,9 +23,13 @@ def test_import_project_module(module_name):
         logging.info(f"Module {module_name} importé avec succès.")
         print(f"Module {module_name} importé avec succès.") 
     except ImportError as e:
-        pytest.fail(f"Erreur lors de l'importation du module {module_name}: {e}")
+        # Re-lever l'exception pour voir le traceback complet
+        print(f"DEBUG: ImportError pour {module_name}: {e}") # Ajout d'un print pour visibilité
+        raise
     except Exception as e:
-        pytest.fail(f"Erreur inattendue lors de l'importation de {module_name}: {e}")
+        # Re-lever aussi pour les autres exceptions inattendues
+        print(f"DEBUG: Exception pour {module_name}: {e}") # Ajout d'un print pour visibilité
+        raise
 
 EXTERNAL_DEPENDENCIES_FOR_PROJECT_CONTEXT = [
      "semantic_kernel",
