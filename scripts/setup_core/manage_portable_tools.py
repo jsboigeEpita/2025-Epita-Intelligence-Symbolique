@@ -43,6 +43,8 @@ def _download_file(url, dest_folder, file_name):
         with requests.get(url, stream=True, timeout=300) as r: # Timeout de 5 minutes
             r.raise_for_status()
             total_size = int(r.headers.get('content-length', 0))
+            if total_size == 0:
+                print("\n[WARNING] Content-Length header not found or is zero. Download progress percentage will not be shown, but byte count will.")
             downloaded_size = 0
             with open(file_path, 'wb') as f:
                 for chunk in r.iter_content(chunk_size=8192):
@@ -51,7 +53,9 @@ def _download_file(url, dest_folder, file_name):
                     if total_size > 0:
                         progress = (downloaded_size / total_size) * 100
                         sys.stdout.write(f"\rDownloaded {downloaded_size}/{total_size} bytes ({progress:.2f}%)")
-                        sys.stdout.flush()
+                    else:
+                        sys.stdout.write(f"\rDownloaded {downloaded_size} bytes (total size unknown)...")
+                    sys.stdout.flush()
         sys.stdout.write("\nDownload complete.\n")
         return file_path
     except requests.exceptions.RequestException as e:
@@ -61,25 +65,88 @@ def _download_file(url, dest_folder, file_name):
         return None
 
 def _extract_zip(zip_path, extract_to_folder):
-    """Extrait une archive ZIP et la supprime ensuite."""
+    """Extrait une archive ZIP."""
+    print(f"[DIAG_EXTRACT] Attempting to extract '{zip_path}' to '{extract_to_folder}'.")
     if not zip_path or not os.path.exists(zip_path):
-        print(f"[ERROR] ZIP file not found: {zip_path}")
+        print(f"[ERROR_EXTRACT] ZIP file not found or path is invalid: {zip_path}")
         return False
     
-    print(f"Extracting {os.path.basename(zip_path)} to {extract_to_folder}...")
+    archive_name = os.path.basename(zip_path)
+    print(f"[DIAG_EXTRACT] Starting extraction of {archive_name} to {extract_to_folder}...")
+    
+    # S'assurer que le répertoire de destination existe, sinon le créer.
+    # ZipFile.extractall le fait, mais une vérification/création explicite peut aider au débogage.
+    if not os.path.exists(extract_to_folder):
+        print(f"[DIAG_EXTRACT] Destination folder '{extract_to_folder}' does not exist. Creating it.")
+        try:
+            os.makedirs(extract_to_folder, exist_ok=True)
+        except Exception as e_mkdir:
+            print(f"[ERROR_EXTRACT] Could not create destination folder '{extract_to_folder}': {e_mkdir}")
+            return False
+            
+    extracted_files_count = 0
     try:
         with zipfile.ZipFile(zip_path, 'r') as zip_ref:
-            zip_ref.extractall(extract_to_folder)
-        print("Extraction complete.")
-        print(f"[DEBUG_ROO] Reached end of _extract_zip. zip_path is: {zip_path}. os.remove is commented.")
-        # os.remove(zip_path) # Conserver l'archive pour réutilisation potentielle
-        # print(f"Archive {zip_path} kept for potential reuse.") # L'archive est conservée.
+            members = zip_ref.infolist()
+            num_members = len(members)
+            print(f"[DIAG_EXTRACT] Opened ZIP file: {archive_name}. Contains {num_members} members.")
+            
+            # Lister quelques membres pour vérification (peut être verbeux pour de grosses archives)
+            # if num_members > 0:
+            #     member_list_preview = [m.filename for m in members[:5]]
+            #     print(f"[DIAG_EXTRACT] First few members: {member_list_preview}")
+
+            print(f"[DIAG_EXTRACT] Starting member-by-member extraction of {archive_name} to {extract_to_folder}...")
+            
+            extracted_count = 0
+            # Loguer la progression toutes les N étapes, ou au moins une fois au début et à la fin.
+            # Pour les très grosses archives, on ne veut pas loguer chaque fichier.
+            # Loguer environ toutes les 5% ou tous les 1000 fichiers, selon ce qui est le plus fréquent,
+            # mais au moins une fois tous les 5000 fichiers pour ne pas spammer.
+            if num_members > 0:
+                log_interval = max(1, num_members // 20) # Log environ 20 fois (5%)
+                if num_members > 5000: # Pour les très grosses archives, limiter la fréquence
+                    log_interval = max(log_interval, 1000)
+                if num_members < 100: # Pour les petites archives, loguer plus souvent
+                    log_interval = max(1, num_members // 10)
+
+
+                for i, member in enumerate(members):
+                    zip_ref.extract(member, extract_to_folder)
+                    extracted_count += 1
+                    if (i + 1) % log_interval == 0 or (i + 1) == num_members:
+                        print(f"[DIAG_EXTRACT] Extracted {extracted_count}/{num_members} members for {archive_name} ({(extracted_count/num_members*100):.2f}%)...")
+            
+            print(f"[DIAG_EXTRACT] Member-by-member extraction of {archive_name} complete. Extracted {extracted_count} members.")
+            # extracted_files_count est maintenant extracted_count
+            extracted_files_count = extracted_count
+        
+        # Vérification post-extraction
+        if os.path.isdir(extract_to_folder):
+            extracted_content = os.listdir(extract_to_folder)
+            if extracted_content:
+                print(f"[DIAG_EXTRACT] Destination folder '{extract_to_folder}' exists and is not empty after extraction. Contains {len(extracted_content)} top-level items.")
+                # print(f"[DIAG_EXTRACT] Top-level items: {extracted_content[:10]}") # Aperçu du contenu
+            else:
+                print(f"[WARNING_EXTRACT] Destination folder '{extract_to_folder}' exists but is EMPTY after extraction of {archive_name}.")
+        else:
+            print(f"[ERROR_EXTRACT] Destination folder '{extract_to_folder}' DOES NOT EXIST after extraction attempt of {archive_name}.")
+            return False # Clairement un échec si le dossier de destination n'est pas là
+
+        # La conservation de l'archive est gérée par la logique d'appel (ne pas supprimer ici)
+        print(f"[DEBUG_ROO] Reached end of _extract_zip. zip_path is: {zip_path}.")
         return True
-    except zipfile.BadZipFile:
-        print(f"[ERROR] Failed to extract {os.path.basename(zip_path)}. File might be corrupted or not a ZIP file.")
+    except zipfile.BadZipFile as e_badzip:
+        print(f"[ERROR_EXTRACT] Failed to extract {archive_name}. File might be corrupted or not a valid ZIP file. Error: {e_badzip}")
+        return False
+    except PermissionError as e_perm:
+        print(f"[ERROR_EXTRACT] Permission error during extraction of {archive_name} to {extract_to_folder}. Error: {e_perm}")
         return False
     except Exception as e:
-        print(f"[ERROR] An error occurred during extraction: {e}")
+        print(f"[ERROR_EXTRACT] An unexpected error occurred during extraction of {archive_name}. Error: {e}")
+        exc_type, exc_obj, exc_tb = sys.exc_info()
+        fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+        print(f"[ERROR_EXTRACT] Exception type: {exc_type}, File: {fname}, Line: {exc_tb.tb_lineno}")
         return False
 
 def _find_tool_dir(base_dir, pattern):
@@ -166,7 +233,17 @@ def setup_single_tool(tool_config, tools_base_dir, temp_download_dir, force_rein
             return None
 
         if not _extract_zip(downloaded_archive_path, tools_base_dir):
-            print(f"[ERROR] Failed to extract {tool_name}. Aborting setup for this tool.")
+            print(f"[ERROR_SETUP] Failed to extract {tool_name} (archive: {downloaded_archive_path}). Aborting setup for this tool.")
+            # Tentative de lister le contenu de tools_base_dir pour voir ce qui a pu être extrait partiellement
+            if os.path.isdir(tools_base_dir):
+                print(f"[DIAG_SETUP] Contents of target base directory '{tools_base_dir}' after failed extraction:")
+                try:
+                    for item in os.listdir(tools_base_dir):
+                        print(f"[DIAG_SETUP]  - {item}")
+                except Exception as e_ls:
+                    print(f"[DIAG_SETUP]    Could not list contents: {e_ls}")
+            else:
+                print(f"[DIAG_SETUP] Target base directory '{tools_base_dir}' does not exist or is not a directory.")
             return None
         
         # Après extraction, trouver le répertoire exact
