@@ -66,27 +66,55 @@ def mock_core_services(
 # --- Tests pour run_extract_repair_pipeline ---
 
 @patch("argumentation_analysis.utils.dev_tools.repair_utils.create_llm_service")
-@patch("argumentation_analysis.utils.dev_tools.repair_utils.initialize_core_services")
-@patch("argumentation_analysis.utils.dev_tools.repair_utils.repair_extract_markers", new_callable=AsyncMock) # Mock fonction async
+@patch("argumentation_analysis.utils.dev_tools.repair_utils.DefinitionService")
+@patch("argumentation_analysis.utils.dev_tools.repair_utils.CryptoService")
+@patch("argumentation_analysis.utils.dev_tools.repair_utils.CacheService")
+@patch("argumentation_analysis.utils.dev_tools.repair_utils.ExtractService")
+@patch("argumentation_analysis.utils.dev_tools.repair_utils.FetchService")
+@patch("argumentation_analysis.utils.dev_tools.repair_utils.repair_extract_markers", new_callable=AsyncMock)
 @patch("argumentation_analysis.utils.dev_tools.repair_utils.generate_marker_repair_report")
-@pytest.mark.asyncio # Nécessaire pour tester les fonctions async
+@pytest.mark.asyncio
 async def test_run_extract_repair_pipeline_successful_run_no_save(
-    mock_generate_report: MagicMock,
-    mock_repair_markers: AsyncMock, # Doit être AsyncMock
-    mock_init_core_services: MagicMock,
-    mock_create_llm: MagicMock,
+    mock_generate_marker_repair_report: MagicMock,
+    mock_repair_extract_markers: AsyncMock,
+    MockFetchService: MagicMock,
+    MockExtractService: MagicMock,
+    MockCacheService: MagicMock,
+    MockCryptoService: MagicMock,
+    MockDefinitionService: MagicMock,
+    mock_create_llm_service: MagicMock,
     mock_project_root: Path,
-    mock_llm_service: MagicMock,
-    mock_core_services: Dict[str, MagicMock],
-    mock_definition_service: MagicMock # Pour vérifier les appels
+    mock_llm_service: MagicMock, # Fixture pour configurer le retour de create_llm_service
+    # mock_core_services: Dict[str, MagicMock], # Moins utile maintenant
+    mock_definition_service_fixture: MagicMock # Fixture pour configurer le comportement de l'instance mockée de DefinitionService
 ):
     """Teste une exécution réussie du pipeline sans sauvegarde."""
-    mock_create_llm.return_value = mock_llm_service
-    mock_init_core_services.return_value = mock_core_services
+    mock_create_llm_service.return_value = mock_llm_service
+
+    # Configurer les instances mockées retournées par les classes patchées
+    mock_crypto_instance = MagicMock()
+    MockCryptoService.return_value = mock_crypto_instance
+
+    mock_cache_instance = MagicMock()
+    MockCacheService.return_value = mock_cache_instance
+
+    mock_extract_instance = MagicMock()
+    MockExtractService.return_value = mock_extract_instance
+
+    mock_fetch_instance = MagicMock()
+    MockFetchService.return_value = mock_fetch_instance
+
+    # Utiliser la configuration de la fixture mock_definition_service_fixture pour l'instance mockée
+    # mock_definition_service_fixture est déjà configurée avec load_definitions, save_definitions etc.
+    MockDefinitionService.return_value = mock_definition_service_fixture
     
-    # Simuler le retour de repair_extract_markers
-    # updated_definitions, results
-    mock_repair_markers.return_value = (ExtractDefinitions(sources=[]), [{"some_result": "data"}])
+    # Assurer que load_definitions retourne un tuple
+    sample_source = SourceDefinition(source_name="Test Source", source_type="text", schema="file", host_parts=[], path="", extracts=[])
+    sample_defs = ExtractDefinitions(sources=[sample_source])
+    mock_definition_service_fixture.load_definitions.return_value = (sample_defs, None)
+
+
+    mock_repair_extract_markers.return_value = (sample_defs, [{"some_result": "data"}])
 
     output_report_path = str(mock_project_root / "repair_report.html")
 
@@ -99,47 +127,68 @@ async def test_run_extract_repair_pipeline_successful_run_no_save(
         output_json_path_str=None
     )
 
-    mock_create_llm.assert_called_once()
-    mock_init_core_services.assert_called_once_with(
-        project_root_dir=mock_project_root,
-        config_file_path=None
-    )
-    mock_definition_service.load_definitions.assert_called_once()
-    mock_repair_markers.assert_called_once()
+    mock_create_llm_service.assert_called_once()
+    
+    # Vérifier que les constructeurs des services ont été appelés (une fois chacun)
+    MockDefinitionService.assert_called_once()
+    MockCryptoService.assert_called_once()
+    MockCacheService.assert_called_once()
+    MockExtractService.assert_called_once()
+    MockFetchService.assert_called_once()
+
+    # Vérifier les appels sur les instances mockées
+    mock_definition_service_fixture.load_definitions.assert_called_once()
+    mock_repair_extract_markers.assert_called_once()
     # Vérifier les arguments de repair_extract_markers (le premier est extract_definitions)
-    assert isinstance(mock_repair_markers.call_args[0][0], ExtractDefinitions)
-    assert mock_repair_markers.call_args[0][1] == mock_llm_service # llm_service
-    # Les autres services sont passés aussi
+    assert isinstance(mock_repair_extract_markers.call_args[0][0], ExtractDefinitions)
+    assert mock_repair_extract_markers.call_args[0][1] == mock_llm_service # llm_service
+    assert mock_repair_extract_markers.call_args[0][2] == mock_fetch_instance # fetch_service instance
+    assert mock_repair_extract_markers.call_args[0][3] == mock_extract_instance # extract_service instance
 
-    mock_generate_report.assert_called_once()
-    assert mock_generate_report.call_args[0][0] == [{"some_result": "data"}] # results
-    assert mock_generate_report.call_args[0][1] == output_report_path # output_file_str
+    mock_generate_marker_repair_report.assert_called_once()
+    assert mock_generate_marker_repair_report.call_args[0][0] == [{"some_result": "data"}] # results
+    assert mock_generate_marker_repair_report.call_args[0][1] == output_report_path # output_file_str
 
-    mock_definition_service.save_definitions.assert_not_called()
-    mock_definition_service.export_definitions_to_json.assert_not_called()
+    mock_definition_service_fixture.save_definitions.assert_not_called()
+    mock_definition_service_fixture.export_definitions_to_json.assert_not_called()
 
 
 @patch("argumentation_analysis.utils.dev_tools.repair_utils.create_llm_service")
-@patch("argumentation_analysis.utils.dev_tools.repair_utils.initialize_core_services")
+@patch("argumentation_analysis.utils.dev_tools.repair_utils.DefinitionService")
+@patch("argumentation_analysis.utils.dev_tools.repair_utils.CryptoService")
+@patch("argumentation_analysis.utils.dev_tools.repair_utils.CacheService")
+@patch("argumentation_analysis.utils.dev_tools.repair_utils.ExtractService")
+@patch("argumentation_analysis.utils.dev_tools.repair_utils.FetchService")
 @patch("argumentation_analysis.utils.dev_tools.repair_utils.repair_extract_markers", new_callable=AsyncMock)
-@patch("argumentation_analysis.utils.extract_repair.marker_repair_logic.generate_report") # Correction de l'emplacement de generate_report
+@patch("argumentation_analysis.utils.extract_repair.marker_repair_logic.generate_report") # Cible l'emplacement original
 @pytest.mark.asyncio
 async def test_run_extract_repair_pipeline_with_save_and_json_export(
-    mock_generate_report: MagicMock,
-    mock_repair_markers: AsyncMock,
-    mock_init_core_services: MagicMock,
-    mock_create_llm: MagicMock,
+    mock_generate_marker_repair_report: MagicMock, # Renommé pour correspondre au nom importé
+    mock_repair_extract_markers: AsyncMock,  # Renommé pour correspondre au nom importé
+    MockFetchService: MagicMock,
+    MockExtractService: MagicMock,
+    MockCacheService: MagicMock,
+    MockCryptoService: MagicMock,
+    MockDefinitionService: MagicMock,
+    mock_create_llm_service: MagicMock, # Renommé pour correspondre au nom importé
     mock_project_root: Path,
-    mock_llm_service: MagicMock,
-    mock_core_services: Dict[str, MagicMock],
-    mock_definition_service: MagicMock
+    mock_llm_service: MagicMock, # Fixture
+    mock_definition_service_fixture: MagicMock # Fixture
 ):
     """Teste le pipeline avec sauvegarde et export JSON."""
-    mock_create_llm.return_value = mock_llm_service
-    mock_init_core_services.return_value = mock_core_services
-    
+    mock_create_llm_service.return_value = mock_llm_service
+
+    # Configurer les instances mockées
+    MockCryptoService.return_value = MagicMock()
+    MockCacheService.return_value = MagicMock()
+    MockExtractService.return_value = MagicMock()
+    MockFetchService.return_value = MagicMock()
+    MockDefinitionService.return_value = mock_definition_service_fixture # Utiliser la fixture configurée
+
     updated_defs_mock = ExtractDefinitions(sources=[SourceDefinition(source_name="Updated", source_type="text", schema="file", host_parts=[], path="", extracts=[])])
-    mock_repair_markers.return_value = (updated_defs_mock, [])
+    # Assurer que load_definitions retourne un tuple correct
+    mock_definition_service_fixture.load_definitions.return_value = (updated_defs_mock, None)
+    mock_repair_extract_markers.return_value = (updated_defs_mock, [])
 
     output_report_path = str(mock_project_root / "report.html")
     output_json_path = str(mock_project_root / "updated.json")
@@ -153,45 +202,52 @@ async def test_run_extract_repair_pipeline_with_save_and_json_export(
         output_json_path_str=output_json_path
     )
 
-    mock_definition_service.save_definitions.assert_called_once_with(updated_defs_mock)
-    mock_definition_service.export_definitions_to_json.assert_called_once_with(
+    mock_definition_service_fixture.save_definitions.assert_called_once_with(updated_defs_mock)
+    mock_definition_service_fixture.export_definitions_to_json.assert_called_once_with(
         updated_defs_mock, Path(output_json_path)
     )
+    mock_generate_marker_repair_report.assert_called_once() # Vérifier qu'il est appelé
 
 
 @patch("argumentation_analysis.utils.dev_tools.repair_utils.create_llm_service")
-@patch("argumentation_analysis.utils.dev_tools.repair_utils.initialize_core_services")
+@patch("argumentation_analysis.utils.dev_tools.repair_utils.DefinitionService")
+@patch("argumentation_analysis.utils.dev_tools.repair_utils.CryptoService") # Ajouter les autres patchs de service
+@patch("argumentation_analysis.utils.dev_tools.repair_utils.CacheService")
+@patch("argumentation_analysis.utils.dev_tools.repair_utils.ExtractService")
+@patch("argumentation_analysis.utils.dev_tools.repair_utils.FetchService")
 @patch("argumentation_analysis.utils.dev_tools.repair_utils.repair_extract_markers", new_callable=AsyncMock)
 @pytest.mark.asyncio
 async def test_run_extract_repair_pipeline_hitler_only_filter(
-    mock_repair_markers: AsyncMock,
-    mock_init_core_services: MagicMock,
-    mock_create_llm: MagicMock,
+    mock_repair_extract_markers: AsyncMock, # Renommé
+    MockFetchService: MagicMock,
+    MockExtractService: MagicMock,
+    MockCacheService: MagicMock,
+    MockCryptoService: MagicMock,
+    MockDefinitionService: MagicMock,
+    mock_create_llm_service: MagicMock, # Renommé
     mock_project_root: Path,
-    mock_llm_service: MagicMock,
-    # mock_core_services: Dict[str, MagicMock], # Pas besoin de tout le dict ici
-    mock_definition_service: MagicMock # On va modifier son retour
+    mock_llm_service: MagicMock, # Fixture
+    mock_definition_service_fixture: MagicMock # Fixture
 ):
     """Teste le filtrage --hitler-only."""
-    mock_create_llm.return_value = mock_llm_service
+    mock_create_llm_service.return_value = mock_llm_service
     
-    # Configurer mock_definition_service pour retourner plusieurs sources
+    # Configurer les instances mockées
+    MockCryptoService.return_value = MagicMock()
+    MockCacheService.return_value = MagicMock()
+    MockExtractService.return_value = MagicMock()
+    MockFetchService.return_value = MagicMock()
+    MockDefinitionService.return_value = mock_definition_service_fixture
+
+    # Configurer mock_definition_service_fixture pour retourner plusieurs sources
     sources_data = [
         SourceDefinition(source_name="Discours d'Hitler 1", source_type="text", schema="file", host_parts=[], path="", extracts=[]),
         SourceDefinition(source_name="Autre Discours", source_type="text", schema="file", host_parts=[], path="", extracts=[]),
         SourceDefinition(source_name="Texte Hitler sur la fin", source_type="text", schema="file", host_parts=[], path="", extracts=[])
     ]
-    mock_definition_service.load_definitions.return_value = (ExtractDefinitions(sources=sources_data), None)
+    mock_definition_service_fixture.load_definitions.return_value = (ExtractDefinitions(sources=sources_data), None)
     
-    # Configurer mock_init_core_services pour retourner le mock_definition_service modifié
-    mock_core_services_custom = {
-        "definition_service": mock_definition_service,
-        "extract_service": MagicMock(), "fetch_service": MagicMock(),
-        "cache_service": MagicMock(), "crypto_service": MagicMock()
-    }
-    mock_init_core_services.return_value = mock_core_services_custom
-    
-    mock_repair_markers.return_value = (ExtractDefinitions(sources=[]), []) # Peu importe le retour ici
+    mock_repair_extract_markers.return_value = (ExtractDefinitions(sources=[]), []) # Peu importe le retour ici
 
     await run_extract_repair_pipeline(
         project_root_dir=mock_project_root,
@@ -202,7 +258,7 @@ async def test_run_extract_repair_pipeline_hitler_only_filter(
         output_json_path_str=None
     )
 
-    mock_repair_markers.assert_called_once()
+    mock_repair_extract_markers.assert_called_once()
     # Vérifier que les définitions passées à repair_extract_markers sont filtrées
     called_with_definitions = mock_repair_markers.call_args[0][0]
     assert isinstance(called_with_definitions, ExtractDefinitions)
@@ -229,24 +285,38 @@ async def test_run_extract_repair_pipeline_llm_service_creation_fails(
 
 
 @patch("argumentation_analysis.utils.dev_tools.repair_utils.create_llm_service")
-@patch("argumentation_analysis.utils.dev_tools.repair_utils.initialize_core_services")
+@patch("argumentation_analysis.utils.dev_tools.repair_utils.DefinitionService")
+@patch("argumentation_analysis.utils.dev_tools.repair_utils.CryptoService")
+@patch("argumentation_analysis.utils.dev_tools.repair_utils.CacheService")
+@patch("argumentation_analysis.utils.dev_tools.repair_utils.ExtractService")
+@patch("argumentation_analysis.utils.dev_tools.repair_utils.FetchService")
 @pytest.mark.asyncio
 async def test_run_extract_repair_pipeline_load_definitions_fails(
-    mock_init_core_services: MagicMock,
-    mock_create_llm: MagicMock,
+    MockFetchService: MagicMock, # Ajout des mocks de classe
+    MockExtractService: MagicMock,
+    MockCacheService: MagicMock,
+    MockCryptoService: MagicMock,
+    MockDefinitionService: MagicMock,
+    mock_create_llm_service: MagicMock, # Renommé
     mock_project_root: Path,
-    mock_llm_service: MagicMock,
-    mock_definition_service: MagicMock, # Pour contrôler son retour
+    mock_llm_service: MagicMock, # Fixture
+    # mock_definition_service_fixture: MagicMock, # Renommé pour clarté, sera utilisé pour configurer MockDefinitionService.return_value
     caplog
 ):
     """Teste l'échec du chargement des définitions."""
-    mock_create_llm.return_value = mock_llm_service
-    mock_definition_service.load_definitions.return_value = (None, "Erreur de chargement test") # Simule échec
+    mock_create_llm_service.return_value = mock_llm_service
+
+    # Configurer les instances mockées, en particulier DefinitionService
+    mock_def_instance = MagicMock()
+    mock_def_instance.load_definitions.return_value = (None, "Erreur de chargement test") # Simule échec
+    MockDefinitionService.return_value = mock_def_instance
     
-    mock_core_services_custom = { "definition_service": mock_definition_service, 
-                                  "extract_service": MagicMock(), "fetch_service": MagicMock(),
-                                  "cache_service": MagicMock(), "crypto_service": MagicMock()}
-    mock_init_core_services.return_value = mock_core_services_custom
+    # Les autres services peuvent retourner des mocks simples car ils ne devraient pas être atteints
+    # ou leur interaction n'est pas l'objet de ce test si le pipeline s'arrête tôt.
+    MockCryptoService.return_value = MagicMock()
+    MockCacheService.return_value = MagicMock()
+    MockExtractService.return_value = MagicMock()
+    MockFetchService.return_value = MagicMock()
     
     with caplog.at_level(logging.ERROR): # ou WARNING selon le log dans le pipeline
         await run_extract_repair_pipeline(
@@ -255,6 +325,7 @@ async def test_run_extract_repair_pipeline_load_definitions_fails(
             save_changes=False, hitler_only=False, custom_input_path_str=None, output_json_path_str=None
         )
     assert "Aucune définition d'extrait chargée ou sources vides. Arrêt du pipeline." in caplog.text
+    mock_def_instance.load_definitions.assert_called_once() # Vérifier que load_definitions a été appelé
 # --- Tests for setup_agents ---
 
 @pytest.fixture
