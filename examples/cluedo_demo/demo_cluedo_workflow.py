@@ -3,6 +3,8 @@
 import json # Ajouté pour parser le JSON dans le texte des hypothèses
 import asyncio
 from unittest.mock import AsyncMock, MagicMock # Pour mocker les appels LLM
+import os # Ajouté pour les variables d'environnement
+from dotenv import load_dotenv # Ajouté pour charger .env
 
 # Adapter les imports selon la structure réelle du projet
 from argumentation_analysis.core.enquete_states import EnqueteCluedoState
@@ -512,5 +514,163 @@ if etat_enquete_defini and sherlock and watson and plugin_etat and mock_kernel.p
 else:
     print("\nComposants manquants pour le flux fonctionnel simplifié.")
 
+# --- Niveau 4: Tests avec Appels Réels au LLM (Optionnel) ---
+print("\n--- Niveau 4: Tests avec Appels Réels au LLM (Optionnel) ---")
+
+# Charger les variables d'environnement depuis .env
+load_dotenv()
+
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+OPENAI_CHAT_MODEL_ID = os.getenv("OPENAI_CHAT_MODEL_ID", "gpt-4o-mini") # Default au cas où
+# OPENAI_ORG_ID = os.getenv("OPENAI_ORG_ID") # Moins souvent nécessaire pour les appels directs
+
+if OPENAI_API_KEY:
+    print("Clé API OpenAI trouvée, tentative d'initialisation du Kernel réel.")
+    try:
+        # 1. Création du Kernel réel
+        real_kernel = Kernel()
+
+        # 2. Ajout du service OpenAIChatCompletion
+        real_kernel.add_service(
+            OpenAIChatCompletion(
+                api_key=OPENAI_API_KEY,
+                # org_id=OPENAI_ORG_ID, # Décommenter si nécessaire
+                ai_model_id=OPENAI_CHAT_MODEL_ID
+            )
+        )
+        print(f"Kernel réel initialisé avec le service OpenAI pour le modèle {OPENAI_CHAT_MODEL_ID}.")
+
+        # 3. Ré-instanciation des composants avec le Kernel réel
+        print("\nRé-instanciation des composants Cluedo avec le Kernel réel...")
+
+        # 3.1 État de l'enquête (peut être réutilisé ou recréé)
+        # Pour la démo, recréons-le pour s'assurer qu'il est propre.
+        solution_reelle_dict = {"suspect": "Mademoiselle Rose", "arme": "Corde", "lieu": "Salon"}
+        etat_enquete_reel = EnqueteCluedoState(
+            nom_enquete_cluedo=NOM_ENQUETE_DEMO + " (Réel)",
+            elements_jeu_cluedo=ELEMENTS_JEU_CLUEDO,
+            description_cas=DESCRIPTION_CAS_DEMO,
+            initial_context={"source": "Démo Cluedo Réel"},
+            solution_secrete_cluedo=solution_reelle_dict,
+            auto_generate_solution=False
+        )
+        print(f"État d'enquête réel créé. Solution: {etat_enquete_reel.solution_secrete_cluedo}")
+
+        # 3.2 Plugin de gestion d'état
+        plugin_etat_reel = EnqueteStateManagerPlugin(etat_enquete_reel)
+        real_kernel.add_plugin(plugin_etat_reel, plugin_name="EnqueteManagerReel")
+        print("Plugin EnqueteStateManagerPlugin (réel) ajouté au Kernel réel.")
+
+        # 3.3 Agents
+        sherlock_reel = SherlockEnqueteAgent(
+            kernel=real_kernel,
+            agent_name="Sherlock Holmes (Réel)",
+            system_prompt="Vous êtes Sherlock Holmes. Résolvez ce Cluedo en utilisant les informations fournies par le plugin EnqueteManagerReel. Soyez concis."
+        )
+        watson_reel = WatsonLogicAssistant(
+            kernel=real_kernel,
+            agent_name="Dr. Watson (Réel)",
+            system_prompt="Vous êtes Dr. Watson. Aidez Sherlock en analysant logiquement les informations du plugin EnqueteManagerReel. Soyez concis."
+        )
+        print(f"Agents réels instanciés: {sherlock_reel.name}, {watson_reel.name}")
+
+        # 3.4 GroupChat Orchestration (optionnel pour un test simple d'appel LLM)
+        # Pour un test simple, on peut invoquer un agent directement.
+        # Si on veut tester le chat:
+        # cluedo_chat_manager_reel = CluedoGroupChatManager(
+        #     members=[sherlock_reel, watson_reel],
+        #     enquete_state_plugin=plugin_etat_reel,
+        #     kernel=real_kernel
+        # )
+        # group_chat_reel = GroupChatOrchestration(
+        #     members=[sherlock_reel, watson_reel],
+        #     manager=cluedo_chat_manager_reel
+        # )
+        # print("GroupChat réel configuré.")
+
+        # 4. Simulation d'une interaction simple avec appel LLM réel
+        print("\nSimulation d'une interaction simple avec appel LLM réel...")
+
+        async def demo_real_llm_call():
+            try:
+                print(f"\nSherlock (réel) va tenter de faire une première analyse basée sur la description du cas...")
+                # L'agent Sherlock (ProjectManagerAgent) a une méthode `invoke` qui prend un `input`
+                # Le prompt système est déjà configuré. On peut lui donner une tâche initiale.
+                
+                # Pour un appel direct au LLM via le kernel (plus simple pour tester la connexion)
+                # response = await real_kernel.invoke_prompt(
+                #     "Qui pourrait être le coupable dans une affaire de meurtre dans un manoir? Sois bref."
+                # )
+                # print(f"Réponse directe du LLM (via kernel.invoke_prompt): {response}")
+
+                # Pour invoquer l'agent Sherlock
+                # L'agent Sherlock est un ProjectManagerAgent, il s'attend à un input pour son `invoke`.
+                # Son prompt système le guide déjà. On peut lui demander de commencer.
+                initial_task_for_sherlock = "Commence l'enquête sur le meurtre au manoir. Quelle est ta première piste ou question basée sur la description du cas fournie par le plugin EnqueteManagerReel (fonction get_info_etat_actuel)?"
+                
+                # Assurons-nous que le plugin a bien la fonction attendue par le prompt de Sherlock
+                # Le prompt de Sherlock mentionne "get_info_etat_actuel".
+                # Le plugin EnqueteStateManagerPlugin a bien cette fonction.
+
+                # Pour que Sherlock utilise le plugin, il doit être configuré pour,
+                # ou son prompt doit l'inciter à utiliser les fonctions du plugin via kernel.invoke.
+                # Le ProjectManagerAgent peut utiliser des plugins si son `plugin_name` est défini
+                # ou si son prompt l'y incite.
+                # Ici, on va supposer que son prompt suffit pour qu'il tente d'utiliser le plugin.
+
+                # On peut aussi directement demander à Sherlock de faire une hypothèse.
+                # Le prompt de SherlockEnqueteAgent est "Vous êtes Sherlock Holmes, un détective de renommée mondiale. Votre mission est de résoudre ce Cluedo."
+                # Il n'est pas explicitement configuré pour utiliser un plugin spécifique par défaut.
+                # On va simplifier en lui demandant de générer une hypothèse.
+                
+                # Pour que l'agent utilise le plugin, il faut que son kernel (real_kernel) ait le plugin. C'est le cas.
+                # Le prompt de l'agent doit l'inciter à utiliser les fonctions du plugin.
+                # Le prompt de SherlockEnqueteAgent est générique.
+                # Modifions le prompt de Sherlock pour qu'il utilise le plugin.
+                
+                # sherlock_reel.system_prompt = "Vous êtes Sherlock Holmes. Utilisez le plugin 'EnqueteManagerReel' et sa fonction 'get_info_etat_actuel' pour obtenir le contexte, puis proposez une première hypothèse (suspect, arme, lieu) sous forme de JSON dans votre réponse."
+                # print(f"Nouveau prompt pour Sherlock (réel): {sherlock_reel.system_prompt}")
+
+                # L'agent Sherlock (ProjectManagerAgent) est un agent de type "chat".
+                # Son `invoke` prend un `input` qui est généralement le dernier message de l'utilisateur ou du chat.
+                # Il maintient un historique interne.
+                
+                # Pour un premier appel, l'input peut être une instruction.
+                # Le prompt système de Sherlock est: "Vous êtes Sherlock Holmes. Résolvez ce Cluedo en utilisant les informations fournies par le plugin EnqueteManagerReel. Soyez concis."
+                # Il devrait donc essayer d'utiliser le plugin.
+
+                print("Demande à Sherlock (réel) de fournir une première hypothèse...")
+                # Le ProjectManagerAgent s'attend à un `input` pour sa méthode `invoke`.
+                # Ce `input` est généralement un message utilisateur ou une instruction.
+                response_sherlock_reel = await sherlock_reel.invoke(input="Quelle est votre première hypothèse Cluedo (suspect, arme, lieu) basée sur la description du cas ? Répondez uniquement avec un JSON contenant 'suspect', 'arme', 'lieu'.")
+                
+                # La réponse de l'agent SK est un ChatMessageContent ou une liste de ChatMessageContent
+                if isinstance(response_sherlock_reel, list): # Si l'agent retourne plusieurs messages
+                    final_content = response_sherlock_reel[-1].content if response_sherlock_reel else "Pas de réponse"
+                else: # Si l'agent retourne un seul message
+                    final_content = response_sherlock_reel.content if response_sherlock_reel else "Pas de réponse"
+
+                print(f"Réponse de Sherlock (réel): {final_content}")
+
+                # Tentative de validation si c'est un JSON
+                try:
+                    hypothese_json = json.loads(final_content)
+                    print(f"Hypothèse JSON parsée de Sherlock (réel): {hypothese_json}")
+                    # On pourrait l'ajouter à l'état réel ici si on voulait continuer le flux.
+                    # await real_kernel.invoke(plugin_name="EnqueteManagerReel", function_name="add_hypothesis", text=f"Hypothèse de Sherlock (réel): {final_content}", confidence_score=0.9)
+                except json.JSONDecodeError:
+                    print("La réponse de Sherlock (réel) n'était pas un JSON valide.")
+
+            except Exception as e_real:
+                print(f"Erreur lors de la simulation de l'appel LLM réel: {type(e_real).__name__} - {e_real}")
+
+        asyncio.run(demo_real_llm_call())
+
+    except Exception as e_kernel_real:
+        print(f"Erreur majeure lors de l'initialisation du Kernel réel ou de ses composants: {e_kernel_real}")
+else:
+    print("Clé API OpenAI (OPENAI_API_KEY) non trouvée dans .env. Skip des tests avec appels réels.")
+
+print("\n--- Fin de la Démonstration du Workflow Cluedo ---")
 
 print("\n--- Fin de la Démonstration du Workflow Cluedo ---")
