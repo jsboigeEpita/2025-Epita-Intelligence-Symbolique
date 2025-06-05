@@ -1,5 +1,5 @@
 import pytest # type: ignore
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock, patch, AsyncMock
 
 from semantic_kernel import Kernel # type: ignore
 
@@ -29,7 +29,7 @@ def test_sherlock_enquete_agent_instanciation(mock_kernel: MagicMock, mocker: Ma
     assert isinstance(agent, SherlockEnqueteAgent)
     assert agent.name == TEST_AGENT_NAME
     # Vérifier que le logger a été configuré avec le nom de l'agent
-    assert agent.logger.name == TEST_AGENT_NAME
+    assert agent.logger.name == f"agent.{agent.__class__.__name__}.{TEST_AGENT_NAME}"
 
 
     # Vérifier que le constructeur de ProjectManagerAgent a été appelé avec les bons arguments
@@ -90,7 +90,7 @@ async def test_get_current_case_description(mock_kernel: MagicMock) -> None:
     expected_description_value_attr = "Description de l'affaire (via value)"
     mock_invoke_result_value_attr = MagicMock()
     mock_invoke_result_value_attr.value = expected_description_value_attr
-    mock_kernel.invoke = MagicMock(return_value=mock_invoke_result_value_attr) # Simule une coroutine
+    mock_kernel.invoke = AsyncMock(return_value=mock_invoke_result_value_attr) # Simule une coroutine
 
     description = await agent.get_current_case_description()
     
@@ -105,7 +105,7 @@ async def test_get_current_case_description(mock_kernel: MagicMock) -> None:
 
     # Cas 2: invoke retourne directement la valeur
     expected_description_direct = "Description de l'affaire (direct)"
-    mock_kernel.invoke = MagicMock(return_value=expected_description_direct) # Simule une coroutine
+    mock_kernel.invoke = AsyncMock(return_value=expected_description_direct) # Simule une coroutine
 
     description_direct = await agent.get_current_case_description()
 
@@ -119,7 +119,7 @@ async def test_get_current_case_description(mock_kernel: MagicMock) -> None:
     mock_kernel.invoke.reset_mock()
 
     # Cas 3: Gestion d'erreur si invoke échoue
-    mock_kernel.invoke = MagicMock(side_effect=Exception("Test error")) # Simule une coroutine qui lève une exception
+    mock_kernel.invoke = AsyncMock(side_effect=Exception("Test error")) # Simule une coroutine qui lève une exception
     
     # Patch logger pour vérifier les messages d'erreur
     with patch.object(agent.logger, 'error') as mock_logger_error:
@@ -145,7 +145,7 @@ async def test_add_new_hypothesis(mock_kernel: MagicMock) -> None:
     # Cas 1: invoke retourne un objet avec un attribut 'value'
     mock_invoke_result_value_attr = MagicMock()
     mock_invoke_result_value_attr.value = expected_invoke_result
-    mock_kernel.invoke = MagicMock(return_value=mock_invoke_result_value_attr)
+    mock_kernel.invoke = AsyncMock(return_value=mock_invoke_result_value_attr)
 
     result = await agent.add_new_hypothesis(hypothesis_text, confidence_score)
 
@@ -161,7 +161,7 @@ async def test_add_new_hypothesis(mock_kernel: MagicMock) -> None:
     mock_kernel.invoke.reset_mock()
 
     # Cas 2: invoke retourne directement la valeur
-    mock_kernel.invoke = MagicMock(return_value=expected_invoke_result)
+    mock_kernel.invoke = AsyncMock(return_value=expected_invoke_result)
 
     result_direct = await agent.add_new_hypothesis(hypothesis_text, confidence_score)
 
@@ -177,7 +177,7 @@ async def test_add_new_hypothesis(mock_kernel: MagicMock) -> None:
     mock_kernel.invoke.reset_mock()
 
     # Cas 3: Gestion d'erreur si invoke échoue
-    mock_kernel.invoke = MagicMock(side_effect=Exception("Test error adding hypothesis"))
+    mock_kernel.invoke = AsyncMock(side_effect=Exception("Test error adding hypothesis"))
     
     with patch.object(agent.logger, 'error') as mock_logger_error:
         error_result = await agent.add_new_hypothesis(hypothesis_text, confidence_score)

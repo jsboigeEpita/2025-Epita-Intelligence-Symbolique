@@ -1,11 +1,14 @@
 import jpype
 from jpype.types import JString
 import logging
+# La configuration du logging (appel à setup_logging()) est supposée être faite globalement,
+# par exemple au point d'entrée de l'application ou dans conftest.py pour les tests.
 from argumentation_analysis.utils.core_utils.logging_utils import setup_logging
 # Import TweetyInitializer to access its static methods for parser/reasoner
 from .tweety_initializer import TweetyInitializer
 
-logger = setup_logging(__name__)
+setup_logging() # Appel de la configuration globale du logging
+logger = logging.getLogger(__name__) # Obtient le logger pour ce module
 
 class PLHandler:
     """
@@ -13,12 +16,10 @@ class PLHandler:
     Relies on TweetyInitializer for JVM and PL component setup.
     """
 
-    def __init__(self):
-        # Ensure JVM is started and components are initialized by TweetyBridge via TweetyInitializer
-        # This handler assumes that the main TweetyBridge instance has already
-        # instantiated TweetyInitializer, which starts the JVM and initializes components.
-        self._pl_parser = TweetyInitializer.get_pl_parser()
-        self._pl_reasoner = TweetyInitializer.get_pl_reasoner()
+    def __init__(self, initializer_instance: TweetyInitializer):
+        self._initializer_instance = initializer_instance
+        self._pl_parser = self._initializer_instance.get_pl_parser()
+        self._pl_reasoner = self._initializer_instance.get_pl_reasoner()
 
         if self._pl_parser is None or self._pl_reasoner is None:
             logger.error("PL components not initialized. Ensure TweetyBridge calls TweetyInitializer first.")
