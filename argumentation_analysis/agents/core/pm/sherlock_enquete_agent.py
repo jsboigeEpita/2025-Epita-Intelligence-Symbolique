@@ -44,8 +44,8 @@ class SherlockEnqueteAgent(ProjectManagerAgent):
         """
         super().__init__(kernel, agent_name=agent_name, system_prompt=system_prompt)
         self.kernel = kernel  # Stocker la référence au kernel
-        self.logger = logging.getLogger(agent_name) # Assurer un logger spécifique
-        self.logger.info(f"SherlockEnqueteAgent '{agent_name}' initialisé.")
+        # self.logger = logging.getLogger(agent_name) # Assurer un logger spécifique - Géré par BaseAgent._logger
+        self._logger.info(f"SherlockEnqueteAgent '{agent_name}' initialisé.")
 
     async def get_current_case_description(self) -> str:
         """
@@ -54,7 +54,7 @@ class SherlockEnqueteAgent(ProjectManagerAgent):
         Returns:
             La description de l'affaire.
         """
-        self.logger.info("Récupération de la description de l'affaire en cours.")
+        self._logger.info("Récupération de la description de l'affaire en cours.")
         try:
             result = await self.kernel.invoke(
                 plugin_name="EnqueteStatePlugin",
@@ -67,7 +67,7 @@ class SherlockEnqueteAgent(ProjectManagerAgent):
                 return str(result.value)
             return str(result)
         except Exception as e:
-            self.logger.error(f"Erreur lors de la récupération de la description de l'affaire: {e}")
+            self._logger.error(f"Erreur lors de la récupération de la description de l'affaire: {e}")
             # Retourner une chaîne vide ou lever une exception spécifique pourrait être mieux
             return "Erreur: Impossible de récupérer la description de l'affaire."
 
@@ -82,7 +82,7 @@ async def add_new_hypothesis(self, hypothesis_text: str, confidence_score: float
         Returns:
             Le dictionnaire de l'hypothèse ajoutée ou None en cas d'erreur.
         """
-        self.logger.info(f"Ajout d'une nouvelle hypothèse: '{hypothesis_text}' avec confiance {confidence_score}")
+        self._logger.info(f"Ajout d'une nouvelle hypothèse: '{hypothesis_text}' avec confiance {confidence_score}")
         try:
             result = await self.kernel.invoke(
                 plugin_name="EnqueteStatePlugin",
@@ -95,7 +95,7 @@ async def add_new_hypothesis(self, hypothesis_text: str, confidence_score: float
                 return result.value # type: ignore
             return result # type: ignore
         except Exception as e:
-            self.logger.error(f"Erreur lors de l'ajout de l'hypothèse: {e}")
+            self._logger.error(f"Erreur lors de l'ajout de l'hypothèse: {e}")
             return None
 # Pourrait être étendu avec des capacités spécifiques à Sherlock plus tard
 # def get_agent_capabilities(self) -> Dict[str, Any]:

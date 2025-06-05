@@ -2,17 +2,28 @@ import os
 import shutil
 import re
 import logging
+import sys # Ajout pour le logger par défaut
 
-# Configure logging
-logger = logging.getLogger(__name__)
+# Logger par défaut pour ce module
+module_logger_files = logging.getLogger(__name__)
+if not module_logger_files.hasHandlers():
+    _console_handler_files = logging.StreamHandler(sys.stdout)
+    _console_handler_files.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s (module default files)'))
+    module_logger_files.addHandler(_console_handler_files)
+    module_logger_files.setLevel(logging.INFO)
+
+def _get_logger_files(logger_instance=None):
+    """Retourne le logger fourni ou le logger par défaut du module."""
+    return logger_instance if logger_instance else module_logger_files
 
 DEFAULT_DIRECTORIES_TO_CLEAN = ["venv", ".venv", ".tools"]
 DEFAULT_FILES_TO_CLEAN = [] # Ajouter des fichiers si nécessaire, ex: anciens logs, etc.
 
-def cleanup_old_installations(project_root, interactive=False):
+def cleanup_old_installations(project_root, logger_instance=None, interactive=False):
     """
     Nettoie les anciens répertoires et fichiers d'installation.
     """
+    logger = _get_logger_files(logger_instance)
     logger.info("Début du nettoyage des anciennes installations...")
     items_to_remove = []
 
@@ -40,10 +51,15 @@ def cleanup_old_installations(project_root, interactive=False):
         logger.info(f"  - {item['path']} ({item['type']})")
 
     if interactive:
-        confirm = input("Confirmez-vous la suppression de ces éléments ? (oui/[non]) : ")
-        if confirm.lower() != 'oui':
-            logger.info("Nettoyage annulé par l'utilisateur.")
+        try:
+            confirm = input("Confirmez-vous la suppression de ces éléments ? (oui/[non]) : ")
+            if confirm.lower() != 'oui':
+                logger.info("Nettoyage annulé par l'utilisateur.")
+                return
+        except EOFError:
+            logger.warning("input() called in non-interactive context during cleanup. Assuming 'non' for safety.")
             return
+
 
     for item in items_to_remove:
         try:
@@ -54,13 +70,14 @@ def cleanup_old_installations(project_root, interactive=False):
                 os.remove(item["path"])
                 logger.info(f"Fichier supprimé : {item['path']}")
         except OSError as e:
-            logger.error(f"Erreur lors de la suppression de {item['path']}: {e}")
+            logger.error(f"Erreur lors de la suppression de {item['path']}: {e}", exc_info=True)
     logger.info("Nettoyage des anciennes installations terminé.")
 
-def setup_env_file(project_root, tool_paths=None):
+def setup_env_file(project_root, logger_instance=None, tool_paths=None):
     """
     Crée ou met à jour le fichier .env du projet.
     """
+    logger = _get_logger_files(logger_instance)
     logger.info("Configuration du fichier .env...")
     env_file_path = os.path.join(project_root, ".env")
     template_env_path = os.path.join(project_root, ".env.template")
@@ -75,7 +92,7 @@ def setup_env_file(project_root, tool_paths=None):
             shutil.copy(template_env_path, env_file_path)
             logger.info(f"Fichier .env créé à partir de .env.template: {env_file_path}")
         except OSError as e:
-            logger.error(f"Impossible de copier .env.template vers .env: {e}")
+            logger.error(f"Impossible de copier .env.template vers .env: {e}", exc_info=True)
             return
 
     env_vars = {}
@@ -87,23 +104,18 @@ def setup_env_file(project_root, tool_paths=None):
                     key, value = line.split('=', 1)
                     env_vars[key.strip()] = value.strip()
     except IOError as e:
-        logger.error(f"Impossible de lire le fichier .env: {e}")
+        logger.error(f"Impossible de lire le fichier .env: {e}", exc_info=True)
         return
 
     # Variables à gérer par le script
     pythonpath_parts = set()
     if "PYTHONPATH" in env_vars:
-        # Conserver les chemins existants s'ils sont valides et ne sont pas ceux gérés par ce script
-        # Cela permet à l'utilisateur d'ajouter ses propres chemins
-        # Pour l'instant, on écrase avec les chemins du projet pour simplifier
-        pass # On va reconstruire PYTHONPATH
+        pass
 
     pythonpath_parts.add(project_root)
-    src_path = os.path.join(project_root, "src") # Ajuster si la structure des sources est différente
+    src_path = os.path.join(project_root, "src")
     if os.path.isdir(src_path):
          pythonpath_parts.add(src_path)
-    # Ajouter d'autres chemins pertinents au PYTHONPATH si nécessaire
-    # Par exemple, des sous-répertoires de src ou un répertoire libs/
 
     env_vars["PYTHONPATH"] = os.pathsep.join(sorted(list(pythonpath_parts)))
     logger.debug(f"PYTHONPATH défini à : {env_vars['PYTHONPATH']}")
@@ -111,14 +123,12 @@ def setup_env_file(project_root, tool_paths=None):
     if "JAVA_HOME" in tool_paths and tool_paths["JAVA_HOME"]:
         env_vars["JAVA_HOME"] = tool_paths["JAVA_HOME"]
         logger.debug(f"JAVA_HOME défini à : {env_vars['JAVA_HOME']}")
-    elif "JAVA_HOME" not in env_vars: # Si pas dans tool_paths et pas déjà dans .env
+    elif "JAVA_HOME" not in env_vars:
         logger.debug("JAVA_HOME non fourni par tool_paths et non présent dans .env.")
-        # On pourrait mettre un placeholder ou laisser vide si .env.template le gère
 
-    # Gérer OCTAVE_HOME ou OCTAVE_EXECUTABLE
-    if "OCTAVE_HOME" in tool_paths and tool_paths["OCTAVE_HOME"]: # Priorité à OCTAVE_HOME
+    if "OCTAVE_HOME" in tool_paths and tool_paths["OCTAVE_HOME"]:
         env_vars["OCTAVE_HOME"] = tool_paths["OCTAVE_HOME"]
-        if "OCTAVE_EXECUTABLE" in env_vars: # Supprimer OCTAVE_EXECUTABLE si OCTAVE_HOME est défini
+        if "OCTAVE_EXECUTABLE" in env_vars:
             del env_vars["OCTAVE_EXECUTABLE"]
         logger.debug(f"OCTAVE_HOME défini à : {env_vars['OCTAVE_HOME']}")
     elif "OCTAVE_EXECUTABLE" in tool_paths and tool_paths["OCTAVE_EXECUTABLE"]:
@@ -127,10 +137,7 @@ def setup_env_file(project_root, tool_paths=None):
     elif "OCTAVE_HOME" not in env_vars and "OCTAVE_EXECUTABLE" not in env_vars:
         logger.debug("Ni OCTAVE_HOME ni OCTAVE_EXECUTABLE fournis par tool_paths ou présents dans .env.")
 
-    # Gestion de TEXT_CONFIG_PASSPHRASE
     if "TEXT_CONFIG_PASSPHRASE" not in env_vars and not os.getenv("TEXT_CONFIG_PASSPHRASE"):
-        # Pour l'instant, on ajoute un placeholder si absent.
-        # Idéalement, il faudrait demander à l'utilisateur ou générer une valeur.
         env_vars["TEXT_CONFIG_PASSPHRASE"] = "YOUR_SECRET_PASSPHRASE_HERE_PLEASE_CHANGE_ME"
         logger.warning("TEXT_CONFIG_PASSPHRASE non trouvé. Un placeholder a été ajouté dans .env. Veuillez le remplacer.")
     elif "TEXT_CONFIG_PASSPHRASE" in env_vars:
@@ -139,7 +146,6 @@ def setup_env_file(project_root, tool_paths=None):
         logger.debug("TEXT_CONFIG_PASSPHRASE trouvé dans les variables d'environnement système.")
 
 
-    # Gestion de TIKA_SERVER_ENDPOINT
     if "TIKA_SERVER_ENDPOINT" not in env_vars:
         env_vars["TIKA_SERVER_ENDPOINT"] = "http://localhost:9998"
         logger.debug(f"TIKA_SERVER_ENDPOINT défini par défaut à : {env_vars['TIKA_SERVER_ENDPOINT']}")
@@ -147,15 +153,9 @@ def setup_env_file(project_root, tool_paths=None):
         logger.debug(f"TIKA_SERVER_ENDPOINT trouvé dans .env : {env_vars['TIKA_SERVER_ENDPOINT']}")
 
 
-    # Réécrire le fichier .env avec les variables mises à jour/ajoutées
-    # On essaie de préserver l'ordre et les commentaires du template autant que possible
-    # Pour cela, on lit le template (ou le .env existant s'il est déjà formaté)
-    # et on remplace/ajoute les valeurs.
-
     output_lines = []
     written_keys = set()
 
-    # Lire le template pour préserver la structure et les commentaires
     source_for_structure = template_env_path if os.path.exists(template_env_path) else env_file_path
 
     try:
@@ -163,7 +163,7 @@ def setup_env_file(project_root, tool_paths=None):
             for line in f_template:
                 stripped_line = line.strip()
                 if not stripped_line or stripped_line.startswith('#'):
-                    output_lines.append(line.rstrip('\r\n')) # Conserver commentaires et lignes vides
+                    output_lines.append(line.rstrip('\r\n'))
                     continue
                 
                 if '=' in stripped_line:
@@ -173,20 +173,15 @@ def setup_env_file(project_root, tool_paths=None):
                         output_lines.append(f"{key}={env_vars[key]}")
                         written_keys.add(key)
                     else:
-                        # La clé du template n'est plus pertinente (ex: supprimée par la logique)
-                        # ou n'était pas dans env_vars initialement (ce qui ne devrait pas arriver ici)
-                        # On peut choisir de la commenter ou de la supprimer. Pour l'instant, on la garde commentée.
-                        # output_lines.append(f"# {stripped_line} # Clé du template non gérée ou supprimée")
-                        output_lines.append(stripped_line) # Garder la ligne originale du template si non gérée
-                else: # Ligne sans '=' mais non vide et non commentaire, la garder
+                        output_lines.append(stripped_line)
+                else:
                     output_lines.append(stripped_line)
 
 
-        # Ajouter les nouvelles variables qui n'étaient pas dans le template
         for key, value in env_vars.items():
             if key not in written_keys:
                 output_lines.append(f"{key}={value}")
-                written_keys.add(key) # S'assurer qu'on ne l'ajoute pas deux fois
+                written_keys.add(key)
 
         with open(env_file_path, 'w', encoding='utf-8') as f:
             for line_to_write in output_lines:
@@ -194,26 +189,32 @@ def setup_env_file(project_root, tool_paths=None):
         logger.info(f"Fichier .env mis à jour : {env_file_path}")
 
     except IOError as e:
-        logger.error(f"Erreur lors de l'écriture du fichier .env: {e}")
+        logger.error(f"Erreur lors de l'écriture du fichier .env: {e}", exc_info=True)
 
 
-def setup_project_structure(project_root, tool_paths=None, interactive=False, perform_cleanup=True):
+def setup_project_structure(project_root, logger_instance=None, tool_paths=None, interactive=False, perform_cleanup=True):
     """
     Fonction principale pour gérer la structure du projet, y compris le nettoyage et le fichier .env.
     """
+    logger = _get_logger_files(logger_instance)
     logger.info("Début de la configuration de la structure du projet...")
     if perform_cleanup:
-        cleanup_old_installations(project_root, interactive=interactive)
+        cleanup_old_installations(project_root, logger_instance=logger, interactive=interactive)
     else:
         logger.info("Nettoyage des anciennes installations ignoré.")
 
-    setup_env_file(project_root, tool_paths=tool_paths)
+    setup_env_file(project_root, logger_instance=logger, tool_paths=tool_paths)
     logger.info("Configuration de la structure du projet terminée.")
 
 if __name__ == '__main__':
-    # Exemple d'utilisation (à des fins de test)
-    # Pour un test réel, il faudrait un faux project_root avec un .env.template
-    print("Ce script est destiné à être importé et utilisé par main_setup.py.")
+    # Configuration du logger pour les tests locaux directs
+    logging.basicConfig(level=logging.DEBUG,
+                        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s (main test files)',
+                        handlers=[logging.StreamHandler(sys.stdout)])
+    logger_main_files = logging.getLogger(__name__)
+
+    logger_main_files.info("Ce script est destiné à être importé et utilisé par main_setup.py.")
+    
     # mock_project_root = os.path.join(os.path.dirname(__file__), "..", "..", "tests", "fake_project_root")
     # os.makedirs(mock_project_root, exist_ok=True)
     # with open(os.path.join(mock_project_root, ".env.template"), "w") as f_template:
@@ -221,12 +222,10 @@ if __name__ == '__main__':
     #     f_template.write("# Commentaire\n")
     #     f_template.write("TIKA_SERVER_ENDPOINT=http://localhost:9999\n")
 
-
-    # print(f"Utilisation d'un faux project_root : {mock_project_root}")
-    # logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
+    # logger_main_files.info(f"Utilisation d'un faux project_root : {mock_project_root}")
     # mock_tool_paths = {
     #     "JAVA_HOME": "/path/to/fake_jdk",
     #     "OCTAVE_HOME": "/path/to/fake_octave"
     # }
-    # setup_project_structure(mock_project_root, tool_paths=mock_tool_paths, interactive=False, perform_cleanup=True)
-    # print(f"Vérifiez le contenu de {os.path.join(mock_project_root, '.env')}")
+    # setup_project_structure(mock_project_root, logger_instance=logger_main_files, tool_paths=mock_tool_paths, interactive=False, perform_cleanup=True)
+    # logger_main_files.info(f"Vérifiez le contenu de {os.path.join(mock_project_root, '.env')}")

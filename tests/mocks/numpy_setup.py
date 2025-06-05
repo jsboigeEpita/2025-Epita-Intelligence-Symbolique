@@ -318,7 +318,9 @@ def setup_numpy_for_tests_fixture(request):
     deep_delete_from_sys_modules("scipy", logger)
     deep_delete_from_sys_modules("sklearn", logger)
 
-    use_real_numpy_marker = request.node.get_closest_marker("use_real_numpy")
+    # MODIFICATION ICI: Vérifier le nouveau marqueur pour utiliser le mock
+    use_mock_numpy_marker = request.node.get_closest_marker("use_mock_numpy")
+    # Garder la logique pour real_jpype car elle peut être indépendante
     real_jpype_marker = request.node.get_closest_marker("real_jpype")
 
     print(f"DEBUG: numpy_setup.py: sys.path au début de la fixture pour {request.node.name}: {sys.path}")
@@ -342,13 +344,66 @@ def setup_numpy_for_tests_fixture(request):
     else:
         logger.info(f"Fixture pour {request.node.name}: sys.modules['numpy'] est absent APRÈS NETTOYAGE FORCÉ (comme attendu).")
     
-    # La logique de nettoyage spécifique à la branche (use_real_numpy vs mock) suit.
-    # Le nettoyage ci-dessous est donc une DEUXIÈME passe de nettoyage pour la branche use_real_numpy.
-    if use_real_numpy_marker or real_jpype_marker:
-        marker_name = "use_real_numpy" if use_real_numpy_marker else "real_jpype"
-        logger.info(f"Test {request.node.name} marqué {marker_name}: Configuration pour VRAI NumPy.")
+    # MODIFICATION DE LA CONDITION PRINCIPALE
+    if use_mock_numpy_marker: # Si le test demande explicitement le MOCK
+        logger.info(f"Test {request.node.name} marqué 'use_mock_numpy': Configuration pour MOCK NumPy.")
+        _install_numpy_mock_immediately()
+        yield
+        logger.info(f"Fin de la section 'use_mock_numpy' pour {request.node.name}. Restauration de l'état PRÉ-FIXTURE.")
+        # ... (logique de nettoyage du mock, identique à l'ancienne branche 'else') ...
+        current_numpy_in_sys = sys.modules.get('numpy')
+        is_our_mock = False
+        if current_numpy_in_sys:
+            if type(current_numpy_in_sys).__name__ == 'numpy' and hasattr(current_numpy_in_sys, '__path__') and not current_numpy_in_sys.__path__:
+                is_our_mock = True
+            elif hasattr(current_numpy_in_sys, '__version__') and "mock" in current_numpy_in_sys.__version__:
+                is_our_mock = True
 
-        # Nettoyage agressif juste avant d'importer le vrai numpy
+        if is_our_mock:
+            logger.info(f"Suppression du Mock NumPy (ID: {id(current_numpy_in_sys)}) installé par {request.node.name} (use_mock_numpy).")
+            del sys.modules['numpy']
+            if 'numpy.rec' in sys.modules and hasattr(current_numpy_in_sys, 'rec') and sys.modules['numpy.rec'] is getattr(current_numpy_in_sys, 'rec', None):
+                 del sys.modules['numpy.rec']
+            # Nettoyer aussi les sous-modules de core qui auraient pu être mis directement dans sys.modules
+            if 'numpy.core._multiarray_umath' in sys.modules:
+                del sys.modules['numpy.core._multiarray_umath']
+            if 'numpy._core._multiarray_umath' in sys.modules:
+                del sys.modules['numpy._core._multiarray_umath']
+            if 'numpy.core.multiarray' in sys.modules:
+                del sys.modules['numpy.core.multiarray']
+            if 'numpy._core.multiarray' in sys.modules:
+                del sys.modules['numpy._core.multiarray']
+            if 'numpy.core' in sys.modules:
+                del sys.modules['numpy.core']
+                logger.info(f"Supprimé sys.modules['numpy.core'] pour {request.node.name} (use_mock_numpy cleanup).")
+            if 'numpy._core' in sys.modules:
+                del sys.modules['numpy._core']
+                logger.info(f"Supprimé sys.modules['numpy._core'] pour {request.node.name} (use_mock_numpy cleanup).")
+
+        elif current_numpy_in_sys:
+             logger.warning(f"Tentative de restauration pour {request.node.name} (use_mock_numpy), mais sys.modules['numpy'] (ID: {id(current_numpy_in_sys)}) n'est pas le mock attendu.")
+
+        if numpy_state_before_this_fixture:
+            sys.modules['numpy'] = numpy_state_before_this_fixture
+            logger.info(f"Restauré sys.modules['numpy'] à l'état pré-fixture (ID: {id(numpy_state_before_this_fixture)}) pour {request.node.name} (use_mock_numpy).")
+        elif 'numpy' in sys.modules:
+            logger.warning(f"Après suppression du Mock NumPy (use_mock_numpy), 'numpy' (ID: {id(sys.modules['numpy'])}) est toujours dans sys.modules alors qu'il n'y avait rien à l'origine. Suppression.")
+            del sys.modules['numpy']
+
+        if numpy_rec_state_before_this_fixture:
+            sys.modules['numpy.rec'] = numpy_rec_state_before_this_fixture
+            logger.info(f"Restauré sys.modules['numpy.rec'] à l'état pré-fixture pour {request.node.name} (use_mock_numpy).")
+        elif 'numpy.rec' in sys.modules:
+            if not ('numpy' in sys.modules and hasattr(sys.modules['numpy'], 'rec') and sys.modules['numpy'].rec is sys.modules['numpy.rec']):
+                logger.warning(f"Après suppression du Mock NumPy (use_mock_numpy), 'numpy.rec' est toujours dans sys.modules et n'appartient pas au numpy restauré/absent. Suppression.")
+                del sys.modules['numpy.rec']
+        logger.info(f"Fin de la restauration pour {request.node.name} (branche use_mock_numpy).")
+
+    else: # PAR DÉFAUT, ou si real_jpype est demandé (ce qui implique souvent real numpy)
+        marker_name = "DEFAULT (real_numpy)" if not real_jpype_marker else "real_jpype (implies real_numpy)"
+        logger.info(f"Test {request.node.name} ({marker_name}): Configuration pour VRAI NumPy.")
+
+        # ... (logique pour installer le VRAI NumPy, identique à l'ancienne branche 'if use_real_numpy_marker') ...
         logger.info(f"Nettoyage agressif de numpy et pandas avant import réel pour {request.node.name}")
         deep_delete_from_sys_modules("numpy", logger)
         deep_delete_from_sys_modules("pandas", logger) # Assurons-nous que pandas est aussi nettoyé ici
@@ -445,13 +500,6 @@ def setup_numpy_for_tests_fixture(request):
                     del sys.modules['numpy.rec']
             logger.info(f"Fin de la restauration pour {request.node.name} (branche {marker_name}).")
         return
-
-    else: 
-        logger.info(f"Test {request.node.name} SANS marqueur: Configuration pour MOCK NumPy.")
-        _install_numpy_mock_immediately() 
-        yield 
-        logger.info(f"Fin de la section SANS marqueur pour {request.node.name}. Restauration de l'état PRÉ-FIXTURE.")
-        current_numpy_in_sys = sys.modules.get('numpy')
         is_our_mock = False
         if current_numpy_in_sys:
             if type(current_numpy_in_sys).__name__ == 'numpy' and hasattr(current_numpy_in_sys, '__path__') and not current_numpy_in_sys.__path__:
