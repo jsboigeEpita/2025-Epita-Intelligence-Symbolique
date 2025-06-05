@@ -5,10 +5,10 @@ import re
 import sys
 import shutil
 
-# Lire le nom de l'environnement Conda depuis une variable d'environnement, sinon utiliser une valeur par défaut
-CONDA_ENV_NAME_DEFAULT = "epita_symbolic_ai"
-CONDA_ENV_NAME = os.getenv("CONDA_ENV_NAME", CONDA_ENV_NAME_DEFAULT)
-print(f"[INFO] Using Conda environment name: {CONDA_ENV_NAME} (Default was: {CONDA_ENV_NAME_DEFAULT}, Env Var was: {os.getenv('CONDA_ENV_NAME')})") # Log amélioré
+# Forcer le nom de l'environnement Conda pour cette tâche spécifique
+CONDA_ENV_NAME_DEFAULT = "projet-is" # Conserver pour référence si besoin
+CONDA_ENV_NAME = "projet-is"
+print(f"[INFO] Using Conda environment name: {CONDA_ENV_NAME} (Hardcoded for repair task)")
 CONDA_ENV_FILE_NAME = "environment.yml"
 
 def _find_conda_executable():
@@ -219,47 +219,21 @@ if __name__ == '__main__':
         print("Conda is not installed or not found. Aborting tests.")
         sys.exit(1)
 
-    # Assurez-vous d'avoir un fichier environment.yml à la racine pour tester
-    # Exemple de test (crée/met à jour l'environnement)
-    # Pour tester, décommentez les lignes suivantes et assurez-vous qu'un fichier
-    # 'environment.yml' existe à la racine du projet.
-    # Contenu minimal pour environment.yml pour tester:
-    # name: epita_symbolic_ai
-    # channels:
-    #   - defaults
-    # dependencies:
-    #   - python=3.10
-    #   - pip
-    
-    # print(f"\n--- Test Scenario: Check if environment '{CONDA_ENV_NAME}' exists ---")
-    # if conda_env_exists(CONDA_ENV_NAME):
-    #     print(f"Environment '{CONDA_ENV_NAME}' exists.")
-    # else:
-    #     print(f"Environment '{CONDA_ENV_NAME}' does not exist.")
+    # Section modifiée pour l'exécution automatique de la réparation
+    if os.path.exists(test_env_file):
+        print(f"\n--- Auto Execution for Repair Task: Force reinstall environment '{CONDA_ENV_NAME}' ---")
+        # Forcer la réinstallation, non interactif
+        success_reinstall = setup_environment(CONDA_ENV_NAME, test_env_file, project_root_dir, force_reinstall=True, interactive=False)
+        print(f"Force reinstall successful: {success_reinstall}")
+        if not success_reinstall:
+            print(f"[ERROR] Exiting due to failed reinstallation of environment '{CONDA_ENV_NAME}'.")
+            sys.exit(1) # Quitter avec un code d'erreur si la réinstallation échoue
+        else:
+            print(f"[SUCCESS] Environment '{CONDA_ENV_NAME}' reinstalled successfully through main execution block.")
+            
+    else:
+        print(f"\n[ERROR] Cannot run repair: '{CONDA_ENV_FILE_NAME}' not found at project root '{project_root_dir}'.")
+        sys.exit(1) # Quitter avec un code d'erreur
 
-    # if os.path.exists(test_env_file):
-    #     print(f"\n--- Test Scenario: Setup environment (create/update) '{CONDA_ENV_NAME}' ---")
-    #     # Mettre force_reinstall=True pour tester la suppression et recréation
-    #     success = setup_environment(CONDA_ENV_NAME, test_env_file, project_root_dir, force_reinstall=False, interactive=True)
-    #     print(f"Setup successful: {success}")
-
-    #     if success:
-    #         print(f"\n--- Test Scenario: Attempt to update again ---")
-    #         success_update = setup_environment(CONDA_ENV_NAME, test_env_file, project_root_dir, force_reinstall=False, interactive=False)
-    #         print(f"Second update successful: {success_update}")
-
-    #     print(f"\n--- Test Scenario: Force reinstall environment '{CONDA_ENV_NAME}' ---")
-    #     success_reinstall = setup_environment(CONDA_ENV_NAME, test_env_file, project_root_dir, force_reinstall=True, interactive=True) # Mettre interactive à False pour les tests automatisés
-    #     print(f"Force reinstall successful: {success_reinstall}")
-
-    #     # print(f"\n--- Test Scenario: Remove environment '{CONDA_ENV_NAME}' ---")
-    #     # if remove_conda_env(CONDA_ENV_NAME, interactive=True): # Mettre interactive à False pour les tests automatisés
-    #     #     print(f"Environment '{CONDA_ENV_NAME}' removed for cleanup.")
-    #     # else:
-    #     #     print(f"Failed to remove environment '{CONDA_ENV_NAME}' during cleanup.")
-    # else:
-    #     print(f"\n[WARNING] Cannot run full setup tests: '{CONDA_ENV_FILE_NAME}' not found at project root '{project_root_dir}'.")
-    #     print("Please create it with basic content (e.g., python version) to test environment creation.")
-
-    print("\nRun this script directly to test its functionality (uncomment test calls and ensure environment.yml exists).")
-    print("Make sure Conda is installed and accessible.")
+    # print("\nOriginal test messages commented out for automated repair.")
+    # print("Make sure Conda is installed and accessible.")

@@ -16,6 +16,7 @@ import argparse
 import sys
 import os
 
+import subprocess
 # Placeholder pour les futurs modules
 import scripts.setup_core.manage_conda_env as manage_conda_env
 import scripts.setup_core.manage_portable_tools as manage_portable_tools
@@ -42,6 +43,7 @@ def main():
     parser.add_argument("--skip-env", action="store_true", help="Skip Conda environment setup.")
     parser.add_argument("--skip-cleanup", action="store_true", help="Skip cleanup of old installations.")
     parser.add_argument("--skip-pip-install", action="store_true", help="Skip pip install dependencies.")
+    parser.add_argument("--run-pytest-debug", action="store_true", help="Run pytest with debug info after setup.")
     # Ajoutez d'autres arguments si pertinent après analyse de setup_project_env.ps1
  
     args = parser.parse_args()
@@ -54,6 +56,7 @@ def main():
     print(f"  Skip Conda env: {args.skip_env}")
     print(f"  Skip cleanup: {args.skip_cleanup}")
     print(f"  Skip pip install: {args.skip_pip_install}")
+    print(f"  Run pytest debug: {args.run_pytest_debug}")
     print("-" * 30)
  
     tool_paths = None # Initialiser tool_paths
@@ -130,14 +133,117 @@ def main():
     else:
         print("[INFO] Skipping Conda environment setup (and pip commands, project files setup).")
 
+    if args.run_pytest_debug:
+        if args.skip_env: # Cette vérification est pertinente ici, car on pourrait vouloir skipper l'env mais quand même tenter le debug
+            print("[WARNING] --run-pytest-debug was specified, and --skip-env was also specified. Pytest will run in the currently active environment, if any, or the base environment.")
+        
+        print("[INFO] Attempting to run pytest with debug information...")
+        try:
+            # Récupérer conda_env_name si l'environnement n'a pas été skippé, sinon il n'est pas pertinent
+            # ou on pourrait tenter de le deviner si nécessaire pour un `conda run`
+            conda_env_name_for_debug = "epita_symbolic_ai" # Valeur par défaut ou à déterminer
+            if not args.skip_env and 'conda_env_name' in locals() and conda_env_name:
+                conda_env_name_for_debug = conda_env_name
+            elif 'conda_env_name' in locals() and conda_env_name: # Cas où skip_env mais conda_env_name a été défini plus tôt
+                 conda_env_name_for_debug = conda_env_name
+            else: # Fallback si conda_env_name n'a jamais été défini (par ex. si --skip-env et lecture yaml échoue)
+                try:
+                    conda_env_name_for_debug = env_utils.get_conda_env_name_from_yaml()
+                except Exception:
+                    pass # Garder la valeur par défaut "epita_symbolic_ai"
+
+            print(f"[INFO] Target Conda environment for debug (if applicable for activation): {conda_env_name_for_debug}")
+            
+            # Commande PowerShell à exécuter à l'intérieur de l'environnement Conda
+            final_ps_command_block = f"""
+            Write-Host '--- Debug Info Start (inside conda run) ---'
+            Write-Host "CONDA_DEFAULT_ENV: $env:CONDA_DEFAULT_ENV"
+            Write-Host "CONDA_PREFIX: $env:CONDA_PREFIX"
+            Write-Host "PYTHONPATH: $env:PYTHONPATH"
+            Write-Host "PATH (first 200 chars): $($env:PATH.Substring(0, [System.Math]::Min($env:PATH.Length, 200))) ..."
+            conda env list
+            Write-Host '--- Debug Info End (inside conda run) ---'
+            pytest
+            """
+            
+            # Contenu du script PowerShell temporaire
+            temp_ps_script_content = f"""
+            Write-Host "--- Attempting to activate {conda_env_name_for_debug} within temp script ---"
+            try {{
+                conda activate {conda_env_name_for_debug}
+                Write-Host "CONDA_PREFIX after explicit activate: $env:CONDA_PREFIX"
+                if ($env:CONDA_PREFIX) {{
+                    $EnvScriptsPath = Join-Path $env:CONDA_PREFIX 'Scripts'
+                    $env:PATH = $EnvScriptsPath + ';' + $env:PATH
+                    Write-Host "PATH updated with $EnvScriptsPath"
+                }}
+            }}
+            catch {{
+                Write-Warning "Failed to explicitly activate {conda_env_name_for_debug} or update PATH in temp script. Error: $($_.Exception.Message)"
+            }}
+
+            Write-Host '--- Debug Info Start (inside conda run via temp script) ---'
+            Write-Host "CONDA_DEFAULT_ENV: $env:CONDA_DEFAULT_ENV"
+            Write-Host "CONDA_PREFIX: $env:CONDA_PREFIX"
+            Write-Host "PYTHONPATH: $env:PYTHONPATH"
+            Write-Host "PATH (first 200 chars): $($env:PATH.Substring(0, [System.Math]::Min($env:PATH.Length, 200))) ..."
+            conda env list
+            Write-Host '--- Debug Info End (inside conda run via temp script) ---'
+            pytest
+            """
+            
+            # Utiliser project_root qui est défini au début de la fonction main()
+            temp_script_path = os.path.join(project_root, "temp_debug_pytest.ps1")
+            
+            try:
+                with open(temp_script_path, "w", encoding="utf-8") as f:
+                    f.write(temp_ps_script_content)
+                
+                conda_run_args = [
+                    "conda", "run", "-n", conda_env_name_for_debug,
+                    # "--no-capture-output", # On va capturer pour l'analyse
+                    "powershell", "-ExecutionPolicy", "Bypass", "-File", temp_script_path
+                ]
+                
+                print(f"[INFO] Executing conda run with temp script: {' '.join(conda_run_args)}")
+                completed_process = subprocess.run(conda_run_args, shell=False, check=False, capture_output=True, text=True)
+
+                if completed_process.stdout:
+                    print(f"[INFO] Conda run STDOUT (temp script):\n{completed_process.stdout}")
+                if completed_process.stderr:
+                    print(f"[INFO] Conda run STDERR (temp script):\n{completed_process.stderr}")
+
+                if completed_process.returncode != 0:
+                     print(f"[ERROR] Pytest debug command (via conda run temp script) failed with return code {completed_process.returncode}.")
+                # else: # Le succès sera déterminé par la présence de l'erreur pytest ou non dans la sortie.
+                #    print("[SUCCESS] Pytest debug command (via conda run temp script) executed successfully.")
+            
+            finally:
+                # Supprimer le script temporaire
+                if os.path.exists(temp_script_path):
+                    try:
+                        os.remove(temp_script_path)
+                        print(f"[INFO] Temporary script {temp_script_path} removed.")
+                    except Exception as e_remove:
+                        print(f"[WARNING] Failed to remove temporary script {temp_script_path}: {e_remove}")
+    
+        except FileNotFoundError:
+            print("[ERROR] powershell command not found. Please ensure PowerShell is installed and in your PATH.")
+        except subprocess.CalledProcessError as e:
+            print(f"[ERROR] Pytest debug command failed: {e}")
+            print(f"[ERROR] PowerShell STDOUT:\n{e.stdout}")
+            print(f"[ERROR] PowerShell STDERR:\n{e.stderr}")
+        except Exception as e:
+            print(f"[ERROR] An unexpected error occurred while running pytest with debug info: {e}")
+
     print("-" * 30)
     print("Setup orchestration placeholder complete.")
 
 if __name__ == "__main__":
-    # Ajout du répertoire parent de 'scripts' au PYTHONPATH pour permettre les imports relatifs si exécuté directement
-    # Ceci est utile pour les tests locaux du script, mais les wrappers shell devront gérer le PYTHONPATH correctement.
-    current_dir = os.path.dirname(os.path.abspath(__file__))
-    project_root = os.path.dirname(os.path.dirname(current_dir)) 
-    sys.path.insert(0, project_root) # S'assurer que les modules locaux sont prioritaires
-
-    main()
+        # Ajout du répertoire parent de 'scripts' au PYTHONPATH pour permettre les imports relatifs si exécuté directement
+        # Ceci est utile pour les tests locaux du script, mais les wrappers shell devront gérer le PYTHONPATH correctement.
+        current_dir = os.path.dirname(os.path.abspath(__file__)) # type: ignore
+        project_root = os.path.dirname(os.path.dirname(current_dir)) # type: ignore
+        sys.path.insert(0, project_root) # S'assurer que les modules locaux sont prioritaires
+    
+        main()
