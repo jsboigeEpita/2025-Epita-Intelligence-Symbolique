@@ -42,6 +42,56 @@ def get_conda_env_name_from_yaml(env_file_path: Path = None) -> str:
         # Attraper d'autres exceptions potentielles (ex: problèmes de permission)
         raise RuntimeError(f"Une erreur inattendue est survenue lors de la lecture de '{env_file_path}': {e}")
 
+import stat # Ajout pour handle_remove_readonly_retry
+import time # Ajout pour handle_remove_readonly_retry
+
+def handle_remove_readonly_retry(func, path, exc_info):
+    """
+    Error handler for shutil.rmtree.
+
+    If the error is due to an access error (read only file)
+    it attempts to add write permission and then retries the removal.
+    If the error is for another reason it re-raises the error.
+    
+    Usage: shutil.rmtree(path, onerror=handle_remove_readonly_retry)
+    """
+    # exc_info est un tuple (type, value, traceback)
+    excvalue = exc_info[1]
+    # Tenter de gérer les erreurs de permission spécifiquement pour les opérations de suppression
+    if func in (os.rmdir, os.remove, os.unlink) and isinstance(excvalue, PermissionError):
+        print(f"[DEBUG_ROO_HANDLE_REMOVE] PermissionError for {path} with {func.__name__}. Attempting to change permissions and retry.")
+        try:
+            # Tenter de rendre le fichier/répertoire accessible en écriture
+            # S_IWRITE est obsolète, utiliser S_IWUSR pour l'utilisateur
+            current_permissions = os.stat(path).st_mode
+            new_permissions = current_permissions | stat.S_IWUSR | stat.S_IRUSR # Assurer lecture et écriture pour l'utilisateur
+            
+            # Pour les répertoires, il faut aussi s'assurer qu'ils sont exécutables pour y accéder
+            if stat.S_ISDIR(current_permissions):
+                new_permissions |= stat.S_IXUSR
+
+            os.chmod(path, new_permissions)
+            print(f"[DEBUG_ROO_HANDLE_REMOVE] Changed permissions for {path} to {oct(new_permissions)}.")
+            
+            # Réessayer l'opération
+            func(path)
+            print(f"[DEBUG_ROO_HANDLE_REMOVE] Successfully executed {func.__name__} on {path} after chmod.")
+        except Exception as e_chmod_retry:
+            print(f"[WARNING_ROO_HANDLE_REMOVE] Failed to execute {func.__name__} on {path} even after chmod: {e_chmod_retry}")
+            # Optionnel: ajouter un petit délai et une nouvelle tentative
+            time.sleep(0.2) # Augmenté légèrement le délai
+            try:
+                func(path)
+                print(f"[DEBUG_ROO_HANDLE_REMOVE] Successfully executed {func.__name__} on {path} after chmod and delay.")
+            except Exception as e_retry_final:
+                 print(f"[ERROR_ROO_HANDLE_REMOVE] Still failed to execute {func.__name__} on {path} after chmod and delay: {e_retry_final}. Raising original error.")
+                 raise excvalue # Relancer l'erreur originale si la correction échoue
+    else:
+        # Si ce n'est pas une PermissionError ou si la fonction n'est pas celle attendue, relancer.
+        # Ceci est important pour ne pas masquer d'autres types d'erreurs.
+        print(f"[DEBUG_ROO_HANDLE_REMOVE] Error not handled by custom logic for {path} with {func.__name__} (Error: {excvalue}). Raising original error.")
+        raise excvalue
+
 if __name__ == '__main__':
     # Pour des tests rapides lors de l'exécution directe du script
     try:
