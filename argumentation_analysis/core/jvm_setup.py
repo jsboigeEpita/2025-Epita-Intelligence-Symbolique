@@ -51,7 +51,9 @@ def get_jvm_options(jdk_path: Optional[Path] = PORTABLE_JDK_PATH) -> List[str]:
     """Prépare les options pour le démarrage de la JVM, incluant le chemin du JDK si disponible."""
     options = [
         "-Xms128m",
-        "-Xmx512m"
+        "-Xmx512m",
+        "-Dfile.encoding=UTF-8",    # Ajouté
+        "-Djava.awt.headless=true"  # Ajouté
     ]
     logger.info(f"Options JVM de base définies : {options}")
     if jdk_path and jdk_path.is_dir():
@@ -73,12 +75,22 @@ def get_jvm_options(jdk_path: Optional[Path] = PORTABLE_JDK_PATH) -> List[str]:
         logger.info("Aucun JDK portable spécifié ou trouvé. Utilisation du JDK par défaut du système.")
     return options
 
+
+        
+        
+    
+        
 def initialize_jvm(lib_dir_path: Optional[str] = None, jdk_path: Optional[Path] = PORTABLE_JDK_PATH) -> bool:
     """
     Initialise la JVM avec les JARs de TweetyProject.
     Si lib_dir_path n'est pas fourni, utilise la variable globale LIBS_DIR.
     """
     logger.info(f"JVM_SETUP: initialize_jvm appelée. isJVMStarted au début: {jpype.isJVMStarted()}")
+    try:
+        # import jpype.version # Commenté car jpype est déjà importé globalement
+        logger.info(f"JVM_SETUP: Version de JPype: {jpype.__version__}")
+    except (ImportError, AttributeError):
+        logger.warning("JVM_SETUP: Impossible d'obtenir la version de JPype via jpype.__version__.")
     if jpype.isJVMStarted():
         logger.info("JVM_SETUP: JVM déjà démarrée (vérifié au début de initialize_jvm).")
         return True
@@ -132,6 +144,9 @@ def initialize_jvm(lib_dir_path: Optional[str] = None, jdk_path: Optional[Path] 
         logger.info(f"JVM_SETUP: Avant startJVM. isJVMStarted: {jpype.isJVMStarted()}. Nombre de JARs: {len(jars)}. Options: {jvm_options}")
         try:
             # JPype attend une liste de chemins pour le classpath.
+            # Les informations sur jvm_dll_to_use (si un JDK portable est détecté) sont logguées avant ce bloc.
+            # Nous allons toujours nous fier à JAVA_HOME / config système pour le démarrage effectif.
+            logger.warning("JVM_SETUP: Tentative de démarrage de la JVM sans jvmpath explicite (dépend de JAVA_HOME / config système).")
             jpype.startJVM(classpath=jars, *jvm_options, convertStrings=False)
             logger.info(f"JVM_SETUP: JVM démarrée avec succès par startJVM. isJVMStarted: {jpype.isJVMStarted()}.")
         except Exception as e_system_start:
