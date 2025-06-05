@@ -50,9 +50,19 @@ def local_start_the_jvm_directly():
     logger.debug(f"  LOCAL_CALL jvm_options: {jvm_options}")
     logger.debug(f"  LOCAL_CALL convertStrings: False")
 
+    original_path = os.environ.get("PATH", "")
+    jdk_bin_path = str(Path(PORTABLE_JDK_PATH) / "bin")
+    
+    logger.debug(f"  LOCAL_CALL Original PATH: {original_path[:200]}...") # Log tronqué pour la lisibilité
+    
+    # Mettre le répertoire bin du JDK portable en tête du PATH
+    modified_path = jdk_bin_path + os.pathsep + original_path
+    os.environ["PATH"] = modified_path
+    logger.debug(f"  LOCAL_CALL Modified PATH: {os.environ['PATH'][:200]}...") # Log tronqué
+
     try:
         jpype.startJVM(
-            jvmpath=jvmpath,
+            jvmpath=jvmpath, # jvmpath pointe déjà vers .../bin/server/jvm.dll
             classpath=classpath_entries,
             *jvm_options,
             convertStrings=False
@@ -65,6 +75,10 @@ def local_start_the_jvm_directly():
         # Windows fatal exception: access violation est souvent non capturable ici
         # mais on loggue au cas où ce serait une autre exception.
         return False
+    finally:
+        # Restaurer le PATH original
+        os.environ["PATH"] = original_path
+        logger.debug(f"  LOCAL_CALL Restored PATH: {os.environ['PATH'][:200]}...") # Log tronqué
 
 def test_minimal_jvm_startup_in_pytest():
     """
