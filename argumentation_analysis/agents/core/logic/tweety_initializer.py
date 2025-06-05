@@ -165,7 +165,7 @@ class TweetyInitializer:
         try:
             # Propositional Logic
             # jpype.imports.org.tweetyproject.logics.pl.syntax # Old way
-            _ = jpype.JClass("org.tweetyproject.logics.pl.syntax.PropositionalSignature")
+            _ = jpype.JClass("org.tweetyproject.logics.pl.syntax.PlSignature")
             _ = jpype.JClass("org.tweetyproject.logics.pl.syntax.Proposition")
             _ = jpype.JClass("org.tweetyproject.logics.pl.syntax.PlBeliefSet")
             # jpype.imports.org.tweetyproject.logics.pl.reasoner # Old way
@@ -178,11 +178,11 @@ class TweetyInitializer:
             _ = jpype.JClass("org.tweetyproject.logics.fol.syntax.FolSignature")
             _ = jpype.JClass("org.tweetyproject.logics.fol.syntax.FolBeliefSet")
             # jpype.imports.org.tweetyproject.logics.fol.reasoner # Old way
-            _ = jpype.JClass("org.tweetyproject.logics.fol.reasoner.DefaultProver")
+            _ = jpype.JClass("org.tweetyproject.logics.fol.reasoner.SimpleFolReasoner")
             
             # Modal Logic
             # jpype.imports.org.tweetyproject.logics.ml.syntax # Old way
-            _ = jpype.JClass("org.tweetyproject.logics.ml.syntax.ModalLogic")
+            _ = jpype.JClass("org.tweetyproject.logics.ml.syntax.MlFormula") # Attempting to use MlFormula for ModalLogic types
             _ = jpype.JClass("org.tweetyproject.logics.ml.syntax.MlBeliefSet")
             # jpype.imports.org.tweetyproject.logics.ml.reasoner # Old way
             _ = jpype.JClass("org.tweetyproject.logics.ml.reasoner.KrHyperModalReasoner")
