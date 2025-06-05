@@ -5,18 +5,10 @@
 Service de détection de sophismes.
 """
 
-import os
-import sys
 import time
 import logging
 from pathlib import Path
 from typing import Dict, List, Any, Optional
-
-# Ajouter le répertoire racine au chemin Python
-current_dir = Path(__file__).parent
-root_dir = current_dir.parent.parent.parent
-if str(root_dir) not in sys.path:
-    sys.path.append(str(root_dir))
 
 # Imports du moteur d'analyse
 try:
@@ -29,6 +21,7 @@ except ImportError as e:
     FallacySeverityEvaluator = None
     EnhancedContextualAnalyzer = None
 
+# Imports des modèles (style relatif)
 from ..models.request_models import FallacyRequest, FallacyOptions
 from ..models.response_models import FallacyResponse, FallacyDetection
 
@@ -54,6 +47,7 @@ class FallacyService:
         """Initialise les différents analyseurs de sophismes (contextuel, sévérité, amélioré).
 
         Met à jour `self.is_initialized` en fonction du succès.
+        TODO: EnhancedContextualFallacyAnalyzer is currently disabled in some branches. Re-evaluate for consistent integration.
 
         :return: None
         :rtype: None
@@ -72,7 +66,7 @@ class FallacyService:
                 self.severity_evaluator = None
             
             # Analyseur contextuel amélioré
-            if EnhancedContextualAnalyzer:
+            if EnhancedContextualAnalyzer: 
                 self.enhanced_analyzer = EnhancedContextualAnalyzer()
             else:
                 self.enhanced_analyzer = None
@@ -85,27 +79,21 @@ class FallacyService:
             self.is_initialized = False
     
     def _load_fallacy_database(self) -> None:
-        """Charge une base de données interne de patterns de sophismes.
-
-        Cette base de données est utilisée par la méthode `_detect_with_patterns`.
-
-        :return: None
-        :rtype: None
-        """
+        """Charge la base de données des sophismes."""
         self.fallacy_patterns = {
             # Sophismes logiques formels
             'affirming_consequent': {
                 'name': 'Affirmation du conséquent',
                 'description': 'Erreur logique qui consiste à affirmer le conséquent dans un raisonnement conditionnel',
                 'category': 'formal',
-                'patterns': ['si.*alors', 'donc.*vrai'],
+                'patterns': ['si.*alors.*donc.*vrai', 'si.*alors.*donc.*correct'], 
                 'severity': 0.8
             },
             'denying_antecedent': {
                 'name': 'Négation de l\'antécédent',
                 'description': 'Erreur logique qui consiste à nier l\'antécédent dans un raisonnement conditionnel',
                 'category': 'formal',
-                'patterns': ['si.*pas', 'donc.*pas'],
+                'patterns': ['si.*pas.*alors.*pas', 'si.*pas.*donc.*pas'], 
                 'severity': 0.8
             },
             
@@ -114,63 +102,144 @@ class FallacyService:
                 'name': 'Attaque personnelle (Ad Hominem)',
                 'description': 'Attaquer la personne plutôt que son argument',
                 'category': 'informal',
-                'patterns': ['vous êtes', 'tu es', 'il/elle est.*donc'],
+                'patterns': [ 
+                    'parce que.*auteur.*condamné',
+                    'parce que.*personne.*condamné',
+                    'parce que.*il.*condamné',
+                    'parce que.*elle.*condamné',
+                    'parce que.*son.*condamné',
+                    'parce que.*sa.*condamné',
+                    'donc.*faux.*parce que.*personne',
+                    'donc.*incorrect.*parce que.*personne',
+                    'donc.*invalide.*parce que.*personne'
+                ],
                 'severity': 0.7
             },
             'straw_man': {
                 'name': 'Homme de paille',
                 'description': 'Déformer l\'argument de l\'adversaire pour le réfuter plus facilement',
                 'category': 'informal',
-                'patterns': ['vous dites que', 'selon vous', 'votre position'],
+                'patterns': [ 
+                    'vous dites que.*mais',
+                    'selon vous.*ce qui est',
+                    'votre position.*implique',
+                    'vous prétendez que',
+                    'vous suggérez que',
+                    'vous insinuez que'
+                ],
                 'severity': 0.8
             },
             'false_dilemma': {
                 'name': 'Faux dilemme',
                 'description': 'Présenter seulement deux options alors qu\'il en existe d\'autres',
                 'category': 'informal',
-                'patterns': ['soit.*soit', 'ou.*ou', 'seulement deux'],
+                'patterns': [ 
+                    'soit.*soit',
+                    'ou.*ou',
+                    'seulement deux',
+                    'uniquement deux',
+                    'vous devez choisir entre',
+                    'il n\'y a que deux',
+                    'il n\'y a que deux options'
+                ],
                 'severity': 0.6
             },
             'slippery_slope': {
                 'name': 'Pente glissante',
                 'description': 'Affirmer qu\'une action mènera inévitablement à des conséquences extrêmes',
                 'category': 'informal',
-                'patterns': ['si.*alors.*et puis', 'mènera à', 'conséquences'],
+                'patterns': [ 
+                    'si.*alors.*et puis',
+                    'si.*alors.*ensuite',
+                    'mènera à',
+                    'conduira à',
+                    'finira par',
+                    'inévitablement',
+                    'cela va',
+                    'cela va finir par',
+                    'cela va conduire à'
+                ],
                 'severity': 0.6
             },
             'appeal_to_authority': {
                 'name': 'Appel à l\'autorité',
                 'description': 'Invoquer une autorité non pertinente ou fallacieuse',
                 'category': 'informal',
-                'patterns': ['expert dit', 'selon.*célèbre', 'autorité'],
+                'patterns': [ 
+                    'expert dit',
+                    'selon.*célèbre',
+                    'selon.*médecin',
+                    'selon.*professeur',
+                    'selon.*docteur',
+                    'selon.*spécialiste',
+                    'parce que.*mécanicien',
+                    'parce que.*expert',
+                    'parce que.*professionnel'
+                ],
                 'severity': 0.5
             },
             'appeal_to_emotion': {
                 'name': 'Appel à l\'émotion',
                 'description': 'Utiliser les émotions plutôt que la logique pour convaincre',
                 'category': 'informal',
-                'patterns': ['pensez aux enfants', 'tragique', 'terrible'],
+                'patterns': [ 
+                    'pensez aux enfants',
+                    'pensez aux familles',
+                    'imaginez la souffrance',
+                    'imaginez la douleur',
+                    'tragique',
+                    'terrible',
+                    'horrible',
+                    'catastrophique',
+                    'désastreux'
+                ],
                 'severity': 0.6
             },
             'bandwagon': {
                 'name': 'Appel à la popularité',
                 'description': 'Affirmer qu\'une idée est vraie parce qu\'elle est populaire',
                 'category': 'informal',
-                'patterns': ['tout le monde', 'la plupart', 'populaire'],
+                'patterns': [ 
+                    'tout le monde',
+                    'la plupart',
+                    'populaire',
+                    'majorité',
+                    'consensus',
+                    'commun',
+                    'généralement accepté',
+                    'largement reconnu'
+                ],
                 'severity': 0.5
             },
             'circular_reasoning': {
                 'name': 'Raisonnement circulaire',
                 'description': 'Utiliser la conclusion comme prémisse',
                 'category': 'informal',
-                'patterns': ['parce que.*c\'est', 'car.*donc'],
+                'patterns': [ 
+                    'parce que.*c\'est',
+                    'car.*donc',
+                    'puisque.*c\'est',
+                    'car.*c\'est',
+                    'parce que.*cela',
+                    'car.*cela',
+                    'puisque.*cela'
+                ],
                 'severity': 0.8
             },
             'hasty_generalization': {
                 'name': 'Généralisation hâtive',
                 'description': 'Tirer une conclusion générale à partir d\'exemples insuffisants',
                 'category': 'informal',
-                'patterns': ['tous.*sont', 'toujours', 'jamais'],
+                'patterns': [ 
+                    'tous.*sont',
+                    'toujours',
+                    'jamais',
+                    'aucun',
+                    'personne',
+                    'tout le monde',
+                    'toujours le cas',
+                    'jamais le cas'
+                ],
                 'severity': 0.6
             }
         }
@@ -263,7 +332,7 @@ class FallacyService:
         
         try:
             if self.contextual_analyzer:
-                results = self.contextual_analyzer.analyze_fallacies(text)
+                results = self.contextual_analyzer.analyze_fallacies(text) # Logique de HEAD
                 
                 if results:
                     for result in results:
@@ -334,10 +403,8 @@ class FallacyService:
         
         try:
             for fallacy_type, fallacy_info in self.fallacy_patterns.items():
-                # Vérification des patterns
                 for pattern in fallacy_info['patterns']:
                     if self._pattern_matches(pattern, text_lower):
-                        # Calcul de la position approximative
                         position = text_lower.find(pattern.split('.*')[0] if '.*' in pattern else pattern)
                         
                         fallacy = FallacyDetection(
@@ -345,13 +412,13 @@ class FallacyService:
                             name=fallacy_info['name'],
                             description=fallacy_info['description'],
                             severity=fallacy_info['severity'],
-                            confidence=0.6,  # Confiance modérée pour les patterns
+                            confidence=0.6,
                             location={'start': position, 'end': position + len(pattern)} if position >= 0 else None,
                             context=self._extract_context(text, position) if position >= 0 else None,
                             explanation=f"Pattern détecté: {pattern}"
                         )
                         fallacies.append(fallacy)
-                        break  # Un seul match par type de sophisme
+                        break 
         
         except Exception as e:
             self.logger.error(f"Erreur détection patterns: {e}")
@@ -374,11 +441,9 @@ class FallacyService:
         import re
         
         try:
-            # Conversion du pattern simple en regex
             regex_pattern = pattern.replace('.*', r'.*?')
             return bool(re.search(regex_pattern, text, re.IGNORECASE))
         except Exception:
-            # Fallback: recherche simple
             return pattern.replace('.*', '') in text
     
     def _extract_context(self, text: str, position: int, context_size: int = 50) -> Optional[str]:
@@ -414,16 +479,12 @@ class FallacyService:
         :return: Une liste filtrée, dédupliquée et limitée de `FallacyDetection`.
         :rtype: List[FallacyDetection]
         """
-        # Filtrage par seuil de sévérité
-        threshold = options.severity_threshold if options else 0.5
+        threshold = options.severity_threshold if options and options.severity_threshold is not None else 0.5
         filtered = [f for f in fallacies if f.severity >= threshold]
         
-        # Filtrage par catégories si spécifié
         if options and options.categories:
-            category_map = {info['name']: key for key, info in self.fallacy_patterns.items()}
             filtered = [f for f in filtered if f.type in options.categories or f.name in options.categories]
         
-        # Déduplication basée sur le type et la position
         seen = set()
         deduplicated = []
         
@@ -433,8 +494,7 @@ class FallacyService:
                 seen.add(key)
                 deduplicated.append(fallacy)
         
-        # Limitation du nombre de résultats
-        max_fallacies = options.max_fallacies if options else 10
+        max_fallacies = options.max_fallacies if options and options.max_fallacies is not None else 10
         return deduplicated[:max_fallacies]
     
     def _calculate_severity_distribution(self, fallacies: List[FallacyDetection]) -> Dict[str, int]:
@@ -473,7 +533,6 @@ class FallacyService:
         distribution = {}
         
         for fallacy in fallacies:
-            # Déterminer la catégorie
             category = 'unknown'
             if fallacy.type in self.fallacy_patterns:
                 category = self.fallacy_patterns[fallacy.type]['category']
