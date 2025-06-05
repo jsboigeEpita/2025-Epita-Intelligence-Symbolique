@@ -16,13 +16,14 @@ import os
 from pathlib import Path
 
 # Ajouter le répertoire parent au chemin de recherche des modules
-current_dir = Path(__file__).parent
-parent_dir = current_dir.parent
-if str(parent_dir) not in sys.path:
-    sys.path.insert(0, str(parent_dir))
+# current_dir = Path(__file__).parent # Commenté car start_api.py devrait gérer sys.path
+# parent_dir = current_dir.parent
+# if str(parent_dir) not in sys.path:
+#     sys.path.insert(0, str(parent_dir))
 
-from models.extract_result import ExtractResult
-from models.extract_definition import Extract, SourceDefinition, ExtractDefinitions
+# Correction des imports pour pointer vers le bon emplacement des modèles
+from argumentation_analysis.agents.core.extract.extract_definitions import ExtractResult
+from argumentation_analysis.services.web_api.models.request_models import Extract, SourceDefinition, ExtractDefinitions # Supposant que ce sont des modèles de requête
 
 # Configuration du logging
 logger = logging.getLogger("Services.ExtractService")

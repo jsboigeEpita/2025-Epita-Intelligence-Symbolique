@@ -123,38 +123,64 @@ def initialize_jvm(lib_dir_path: Optional[str] = None, jdk_path: Optional[Path] 
 
         jvm_options = get_jvm_options(jdk_path)
         
-        jvm_dll_to_use = None # Ce n'est plus utilisé pour forcer jvmpath, mais gardé pour info
-        if jdk_path:
-            if (jdk_path / "bin" / "server" / "jvm.dll").exists():
-                jvm_dll_to_use = str(jdk_path / "bin" / "server" / "jvm.dll")
-            elif (jdk_path / "jre" / "bin" / "server" / "jvm.dll").exists(): 
-                 jvm_dll_to_use = str(jdk_path / "jre" / "bin" / "server" / "jvm.dll")
-            elif (jdk_path / "lib" / "server" / "libjvm.so").exists():
-                jvm_dll_to_use = str(jdk_path / "lib" / "server" / "libjvm.so")
-            elif (jdk_path / "jre" / "lib" / "amd64" / "server" / "libjvm.so").exists(): 
-                jvm_dll_to_use = str(jdk_path / "jre" / "lib" / "amd64" / "server" / "libjvm.so")
-
-            if jvm_dll_to_use:
-                 logger.info(f"Un JDK portable a été détecté à {jdk_path} (jvm.dll estimé: {jvm_dll_to_use}), mais nous allons prioriser la configuration système/JAVA_HOME.")
-            else:
-                 logger.info(f"Aucun jvm.dll/libjvm.so trouvé dans le JDK portable spécifié: {jdk_path}. Nous allons utiliser la configuration système/JAVA_HOME.")
-        else:
-            logger.info("Aucun JDK portable spécifié. Nous allons utiliser la configuration système/JAVA_HOME.")
-
         logger.info(f"JVM_SETUP: Avant startJVM. isJVMStarted: {jpype.isJVMStarted()}. Nombre de JARs: {len(jars)}. Options: {jvm_options}")
+        
+        jvm_started_successfully = False
         try:
-            # JPype attend une liste de chemins pour le classpath.
-            # Les informations sur jvm_dll_to_use (si un JDK portable est détecté) sont logguées avant ce bloc.
-            # Nous allons toujours nous fier à JAVA_HOME / config système pour le démarrage effectif.
-            logger.warning("JVM_SETUP: Tentative de démarrage de la JVM sans jvmpath explicite (dépend de JAVA_HOME / config système).")
+            # Tentative 1: Laisser JPype trouver la JVM (via JAVA_HOME ou recherche système)
+            logger.info("JVM_SETUP: Tentative 1 - Démarrage JVM avec détection automatique.")
             jpype.startJVM(classpath=jars, *jvm_options, convertStrings=False)
-            logger.info(f"JVM_SETUP: JVM démarrée avec succès par startJVM. isJVMStarted: {jpype.isJVMStarted()}.")
-        except Exception as e_system_start:
-            logger.error(f"JVM_SETUP: ÉCHEC CRITIQUE de jpype.startJVM : {e_system_start}", exc_info=True)
-            logger.error(f"JVM_SETUP: État isJVMStarted après échec de startJVM: {jpype.isJVMStarted()}")
-            raise 
+            logger.info(f"JVM_SETUP: Tentative 1 - JVM démarrée avec succès. isJVMStarted: {jpype.isJVMStarted()}.")
+            jvm_started_successfully = True
+        except jpype.JVMNotFoundException as e_not_found:
+            logger.warning(f"JVM_SETUP: Tentative 1 - Échec (JVMNotFoundException): {e_not_found}.")
             
-        logger.info("✅ JVM démarrée avec succès (ou tentatives faites).")
+            portable_jvm_lib_path_str = None
+            if jdk_path: # jdk_path est PORTABLE_JDK_PATH par défaut
+                # Ordre de recherche commun pour les bibliothèques JVM
+                # Windows
+                if (jdk_path / "bin" / "server" / "jvm.dll").exists():
+                    portable_jvm_lib_path_str = str(jdk_path / "bin" / "server" / "jvm.dll")
+                elif (jdk_path / "jre" / "bin" / "server" / "jvm.dll").exists():
+                    portable_jvm_lib_path_str = str(jdk_path / "jre" / "bin" / "server" / "jvm.dll")
+                # Linux
+                elif (jdk_path / "lib" / "server" / "libjvm.so").exists():
+                     portable_jvm_lib_path_str = str(jdk_path / "lib" / "server" / "libjvm.so")
+                elif (jdk_path / "jre" / "lib" / "amd64" / "server" / "libjvm.so").exists():
+                     portable_jvm_lib_path_str = str(jdk_path / "jre" / "lib" / "amd64" / "server" / "libjvm.so")
+                # MacOS (chemins typiques, peuvent varier)
+                elif (jdk_path / "lib" / "jli" / "libjli.dylib").exists(): # Souvent un symlink ou chargeur
+                     portable_jvm_lib_path_str = str(jdk_path / "lib" / "jli" / "libjli.dylib")
+                elif (jdk_path / "lib" / "server" / "libjvm.dylib").exists():
+                     portable_jvm_lib_path_str = str(jdk_path / "lib" / "server" / "libjvm.dylib")
+
+            if portable_jvm_lib_path_str:
+                logger.info(f"JVM_SETUP: Tentative 2 - Utilisation du JDK portable avec la bibliothèque JVM explicite: {portable_jvm_lib_path_str}")
+                try:
+                    # Le premier argument de startJVM peut être le chemin de la JVM
+                    jpype.startJVM(portable_jvm_lib_path_str, classpath=jars, *jvm_options, convertStrings=False)
+                    logger.info(f"JVM_SETUP: Tentative 2 - JVM démarrée avec succès en utilisant le JDK portable. isJVMStarted: {jpype.isJVMStarted()}.")
+                    jvm_started_successfully = True
+                except Exception as e_portable_start:
+                    logger.error(f"JVM_SETUP: Tentative 2 - ÉCHEC CRITIQUE avec JDK portable ({portable_jvm_lib_path_str}): {e_portable_start}", exc_info=True)
+                    # Ne pas lever ici pour permettre au flux principal de gérer l'échec global, mais s'assurer que jvm_started_successfully reste False
+            else:
+                logger.error("JVM_SETUP: JDK portable non trouvé ou bibliothèque JVM (jvm.dll/libjvm.so/libjli.dylib) manquante dans le JDK portable. Impossible de tenter le démarrage avec le JDK portable.")
+                # Si le JDK portable était la solution de repli et qu'il échoue, on relance l'exception originale.
+                raise e_not_found
+        except Exception as e_other_start_error:
+            # Attrape d'autres erreurs potentielles de la Tentative 1
+            logger.error(f"JVM_SETUP: ÉCHEC CRITIQUE lors de la Tentative 1 (autre erreur que JVMNotFound): {e_other_start_error}", exc_info=True)
+            raise # Relancer pour que le bloc try/except global de initialize_jvm le capture
+
+        if not jvm_started_successfully:
+            # Si on arrive ici, c'est que toutes les tentatives ont échoué et une exception aurait dû être levée.
+            # Ce bloc est une sécurité supplémentaire.
+            final_error_msg = "Échec du démarrage de la JVM après toutes les tentatives."
+            logger.error(f"JVM_SETUP: {final_error_msg}")
+            raise RuntimeError(final_error_msg)
+            
+        # logger.info("✅ JVM démarrée avec succès (ou tentatives faites).") # Commenté car redondant avec les logs des tentatives
         
         try:
             _ = jpype.JClass("org.tweetyproject.logics.pl.syntax.PlSignature")
