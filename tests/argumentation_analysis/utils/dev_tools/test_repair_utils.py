@@ -86,7 +86,7 @@ async def test_run_extract_repair_pipeline_successful_run_no_save(
     mock_project_root: Path,
     mock_llm_service: MagicMock, # Fixture pour configurer le retour de create_llm_service
     # mock_core_services: Dict[str, MagicMock], # Moins utile maintenant
-    mock_definition_service_fixture: MagicMock # Fixture pour configurer le comportement de l'instance mockée de DefinitionService
+    mock_definition_service: MagicMock # Fixture pour configurer le comportement de l'instance mockée de DefinitionService
 ):
     """Teste une exécution réussie du pipeline sans sauvegarde."""
     mock_create_llm_service.return_value = mock_llm_service
@@ -106,12 +106,12 @@ async def test_run_extract_repair_pipeline_successful_run_no_save(
 
     # Utiliser la configuration de la fixture mock_definition_service_fixture pour l'instance mockée
     # mock_definition_service_fixture est déjà configurée avec load_definitions, save_definitions etc.
-    MockDefinitionService.return_value = mock_definition_service_fixture
+    MockDefinitionService.return_value = mock_definition_service
     
     # Assurer que load_definitions retourne un tuple
     sample_source = SourceDefinition(source_name="Test Source", source_type="text", schema="file", host_parts=[], path="", extracts=[])
     sample_defs = ExtractDefinitions(sources=[sample_source])
-    mock_definition_service_fixture.load_definitions.return_value = (sample_defs, None)
+    mock_definition_service.load_definitions.return_value = (sample_defs, None)
 
 
     mock_repair_extract_markers.return_value = (sample_defs, [{"some_result": "data"}])
@@ -137,7 +137,7 @@ async def test_run_extract_repair_pipeline_successful_run_no_save(
     MockFetchService.assert_called_once()
 
     # Vérifier les appels sur les instances mockées
-    mock_definition_service_fixture.load_definitions.assert_called_once()
+    mock_definition_service.load_definitions.assert_called_once()
     mock_repair_extract_markers.assert_called_once()
     # Vérifier les arguments de repair_extract_markers (le premier est extract_definitions)
     assert isinstance(mock_repair_extract_markers.call_args[0][0], ExtractDefinitions)
@@ -149,8 +149,8 @@ async def test_run_extract_repair_pipeline_successful_run_no_save(
     assert mock_generate_marker_repair_report.call_args[0][0] == [{"some_result": "data"}] # results
     assert mock_generate_marker_repair_report.call_args[0][1] == output_report_path # output_file_str
 
-    mock_definition_service_fixture.save_definitions.assert_not_called()
-    mock_definition_service_fixture.export_definitions_to_json.assert_not_called()
+    mock_definition_service.save_definitions.assert_not_called()
+    mock_definition_service.export_definitions_to_json.assert_not_called()
 
 
 @patch("argumentation_analysis.utils.dev_tools.repair_utils.create_llm_service")
@@ -173,7 +173,7 @@ async def test_run_extract_repair_pipeline_with_save_and_json_export(
     mock_create_llm_service: MagicMock, # Renommé pour correspondre au nom importé
     mock_project_root: Path,
     mock_llm_service: MagicMock, # Fixture
-    mock_definition_service_fixture: MagicMock # Fixture
+    mock_definition_service: MagicMock # Fixture
 ):
     """Teste le pipeline avec sauvegarde et export JSON."""
     mock_create_llm_service.return_value = mock_llm_service
@@ -183,11 +183,11 @@ async def test_run_extract_repair_pipeline_with_save_and_json_export(
     MockCacheService.return_value = MagicMock()
     MockExtractService.return_value = MagicMock()
     MockFetchService.return_value = MagicMock()
-    MockDefinitionService.return_value = mock_definition_service_fixture # Utiliser la fixture configurée
+    MockDefinitionService.return_value = mock_definition_service # Utiliser la fixture configurée
 
     updated_defs_mock = ExtractDefinitions(sources=[SourceDefinition(source_name="Updated", source_type="text", schema="file", host_parts=[], path="", extracts=[])])
     # Assurer que load_definitions retourne un tuple correct
-    mock_definition_service_fixture.load_definitions.return_value = (updated_defs_mock, None)
+    mock_definition_service.load_definitions.return_value = (updated_defs_mock, None)
     mock_repair_extract_markers.return_value = (updated_defs_mock, [])
 
     output_report_path = str(mock_project_root / "report.html")
@@ -202,8 +202,8 @@ async def test_run_extract_repair_pipeline_with_save_and_json_export(
         output_json_path_str=output_json_path
     )
 
-    mock_definition_service_fixture.save_definitions.assert_called_once_with(updated_defs_mock)
-    mock_definition_service_fixture.export_definitions_to_json.assert_called_once_with(
+    mock_definition_service.save_definitions.assert_called_once_with(updated_defs_mock)
+    mock_definition_service.export_definitions_to_json.assert_called_once_with(
         updated_defs_mock, Path(output_json_path)
     )
     mock_generate_marker_repair_report.assert_called_once() # Vérifier qu'il est appelé
@@ -227,7 +227,7 @@ async def test_run_extract_repair_pipeline_hitler_only_filter(
     mock_create_llm_service: MagicMock, # Renommé
     mock_project_root: Path,
     mock_llm_service: MagicMock, # Fixture
-    mock_definition_service_fixture: MagicMock # Fixture
+    mock_definition_service: MagicMock # Fixture
 ):
     """Teste le filtrage --hitler-only."""
     mock_create_llm_service.return_value = mock_llm_service
@@ -237,7 +237,7 @@ async def test_run_extract_repair_pipeline_hitler_only_filter(
     MockCacheService.return_value = MagicMock()
     MockExtractService.return_value = MagicMock()
     MockFetchService.return_value = MagicMock()
-    MockDefinitionService.return_value = mock_definition_service_fixture
+    MockDefinitionService.return_value = mock_definition_service
 
     # Configurer mock_definition_service_fixture pour retourner plusieurs sources
     sources_data = [
@@ -245,7 +245,7 @@ async def test_run_extract_repair_pipeline_hitler_only_filter(
         SourceDefinition(source_name="Autre Discours", source_type="text", schema="file", host_parts=[], path="", extracts=[]),
         SourceDefinition(source_name="Texte Hitler sur la fin", source_type="text", schema="file", host_parts=[], path="", extracts=[])
     ]
-    mock_definition_service_fixture.load_definitions.return_value = (ExtractDefinitions(sources=sources_data), None)
+    mock_definition_service.load_definitions.return_value = (ExtractDefinitions(sources=sources_data), None)
     
     mock_repair_extract_markers.return_value = (ExtractDefinitions(sources=[]), []) # Peu importe le retour ici
 
