@@ -4,7 +4,8 @@ import logging
 from argumentation_analysis.utils.core_utils.logging_utils import setup_logging
 from .tweety_initializer import TweetyInitializer # To access Modal parser
 
-logger = setup_logging(__name__)
+setup_logging()
+logger = logging.getLogger(__name__)
 
 class ModalHandler:
     """
@@ -38,7 +39,7 @@ class ModalHandler:
         logger.debug(f"Attempting to parse Modal Logic formula: {formula_str} (Logic: {modal_logic_str})")
         
         try:
-            ModalLogic = jpype.JClass("org.tweetyproject.logics.ml.syntax.ModalLogic")
+            ModalLogic = jpype.JClass("org.tweetyproject.logics.ml.syntax.MlFormula") # Attempting to use MlFormula for ModalLogic types
             
             try:
                 java_modal_logic_enum = getattr(ModalLogic, modal_logic_str.upper())

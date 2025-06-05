@@ -5,7 +5,8 @@ from argumentation_analysis.utils.core_utils.logging_utils import setup_logging
 # Import TweetyInitializer to access its static methods for parser/reasoner
 from .tweety_initializer import TweetyInitializer
 
-logger = setup_logging(__name__)
+setup_logging()
+logger = logging.getLogger(__name__)
 
 class PLHandler:
     """
