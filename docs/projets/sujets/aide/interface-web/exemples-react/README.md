@@ -4,21 +4,30 @@ Ce dossier contient une collection complète d'exemples d'utilisation de l'API d
 
 ## 🚀 Démarrage rapide
 
-1. **Démarrez l'API :**
-   ```bash
-   cd services/web_api
-   python start_api.py
-   ```
+1.  **Activez l'environnement du projet :**
+    Avant de démarrer l'API, assurez-vous que votre environnement de projet est correctement activé. Par exemple, si vous utilisez le script fourni à la racine du projet :
+    ```bash
+    # Depuis la racine du projet
+    ./activate_project_env.ps1
+    ```
 
-2. **Intégrez les composants dans votre projet React :**
-   ```jsx
-   import Demo from './exemples-react/Demo';
-   import './exemples-react/Demo.css';
+2.  **Démarrez l'API :**
+    Une fois l'environnement activé, naviguez vers le répertoire de l'API et lancez-la :
+    ```bash
+    cd services/web_api
+    python start_api.py
+    ```
+    L'API devrait maintenant être accessible (par défaut sur `http://localhost:5000`).
 
-   function App() {
-     return <Demo />;
-   }
-   ```
+3.  **Intégrez les composants dans votre projet React :**
+    ```jsx
+    import Demo from './exemples-react/Demo'; // Assurez-vous que le chemin est correct
+    import './exemples-react/Demo.css';
+
+    function App() {
+      return <Demo />;
+    }
+    ```
 
 ## 📦 Composants disponibles
 
@@ -112,9 +121,9 @@ import FrameworkBuilder from './FrameworkBuilder';
 **Hook React personnalisé** pour interagir avec l'API d'argumentation.
 
 **Fonctionnalités :**
-- Gestion complète de tous les endpoints
+- Gestion complète de tous les endpoints (voir la [documentation de l'API Web](../../../../composants/api_web.md) pour le détail des endpoints)
 - États de chargement et gestion d'erreurs
-- Cache des résultats
+- Cache des résultats (si configuré et applicable)
 - Configuration flexible
 
 **Utilisation :**
@@ -182,29 +191,29 @@ exemples-react/
 
 ### Prérequis
 - Node.js 16+ et npm/yarn
-- API d'argumentation démarrée sur `http://localhost:5000`
+- API d'argumentation démarrée (par défaut sur `http://localhost:5000` après activation de l'environnement)
 
 ### Installation
 ```bash
 # Installation des dépendances React
 npm install react react-dom
 
-# Optionnel : dépendances pour les graphiques
+# Optionnel : dépendances pour les graphiques (si utilisées par certains exemples)
 npm install recharts d3
 ```
 
 ### Configuration
-1. **URL de l'API :** Modifiez `BASE_URL` dans `hooks/useArgumentationAPI.js`
-2. **CORS :** Assurez-vous que l'API autorise les requêtes depuis votre domaine
-3. **Styles :** Importez les fichiers CSS nécessaires
+1.  **URL de l'API :** L'URL de base de l'API est configurée dans `hooks/useArgumentationAPI.js`. Modifiez la variable `baseURL` dans `API_CONFIG` si votre API n'est pas sur `http://localhost:5000`.
+2.  **CORS :** Assurez-vous que l'API autorise les requêtes depuis le domaine et le port de votre application React (ex: `http://localhost:3000`).
+3.  **Styles :** Importez les fichiers CSS nécessaires pour les composants que vous utilisez (ex: `Demo.css`, `ArgumentAnalyzer.css`, etc.).
 
 ## 🎨 Exemples d'utilisation
 
 ### Interface complète
 ```jsx
 import React from 'react';
-import Demo from './exemples-react/Demo';
-import './exemples-react/Demo.css';
+import Demo from './exemples-react/Demo'; // Ajustez le chemin si nécessaire
+import './exemples-react/Demo.css';   // Ajustez le chemin si nécessaire
 
 function App() {
   return (
@@ -218,7 +227,7 @@ function App() {
 ### Composants individuels
 ```jsx
 import React, { useState } from 'react';
-import ArgumentAnalyzer from './exemples-react/ArgumentAnalyzer';
+import ArgumentAnalyzer from './exemples-react/ArgumentAnalyzer'; // Ajustez les chemins
 import FallacyDetector from './exemples-react/FallacyDetector';
 
 function MyApp() {
@@ -240,9 +249,9 @@ function MyApp() {
 
 ### Utilisation du hook
 ```jsx
-import { useArgumentationAPI } from './exemples-react/hooks/useArgumentationAPI';
-import { formatScore, formatProcessingTime } from './exemples-react/utils/formatters';
-import { validateArgumentText } from './exemples-react/utils/validators';
+import { useArgumentationAPI } from './exemples-react/hooks/useArgumentationAPI'; // Ajustez le chemin
+import { formatScore, formatProcessingTime } from './exemples-react/utils/formatters'; // Ajustez le chemin
+import { validateArgumentText } from './exemples-react/utils/validators'; // Ajustez le chemin
 
 function CustomAnalyzer() {
   const { analyzeText, loading, error } = useArgumentationAPI();
@@ -306,13 +315,20 @@ Tous les composants utilisent des variables CSS pour faciliter la personnalisati
 ```
 
 ### Configuration de l'API
+
+La configuration de l'API se fait principalement dans le hook [`useArgumentationAPI.js`](#useargumentationapijs-hook). Il est crucial de s'assurer que l'URL de base (`baseURL`) pointe vers votre instance de l'API d'argumentation.
+
+Pour une compréhension détaillée des endpoints disponibles et des options de configuration avancées, référez-vous à :
+- **Documentation de l'API Web :** [`../../../../composants/api_web.md`](../../../../composants/api_web.md)
+- **Guide d'Intégration de l'API Web :** [`../../../../guides/integration_api_web.md`](../../../../guides/integration_api_web.md)
+
 ```javascript
 // Dans useArgumentationAPI.js
 const API_CONFIG = {
-  baseURL: 'http://localhost:5000',
-  timeout: 30000,
-  retries: 3,
-  cache: true
+  baseURL: 'http://localhost:5000', // Assurez-vous que cette URL correspond à votre instance de l'API
+  timeout: 30000, // Délai d'attente en millisecondes pour les requêtes
+  retries: 3,       // Nombre de tentatives en cas d'échec réseau (pour les requêtes GET idempotentes)
+  cache: true      // Activation du cache pour les requêtes GET (si implémenté dans le hook)
 };
 ```
 
@@ -320,44 +336,55 @@ const API_CONFIG = {
 
 ### Problèmes courants
 
-1. **Erreur CORS :**
-   ```bash
-   # Vérifiez que l'API autorise votre domaine
-   curl -H "Origin: http://localhost:3000" http://localhost:5000/health
-   ```
+1.  **Erreur CORS :**
+    Vérifiez que l'API autorise les requêtes depuis l'origine de votre application React (ex: `http://localhost:3000`). Vous pouvez tester avec `curl` :
+    ```bash
+    # Remplacez http://localhost:3000 par l'origine de votre application React
+    curl -I -H "Origin: http://localhost:3000" http://localhost:5000/health
+    ```
+    Recherchez l'en-tête `Access-Control-Allow-Origin` dans la réponse.
 
-2. **API non accessible :**
-   ```bash
-   # Testez la connectivité
-   curl http://localhost:5000/health
-   ```
+2.  **API non accessible :**
+    Assurez-vous que l'API est démarrée et écoute sur l'URL et le port attendus.
+    ```bash
+    curl http://localhost:5000/health
+    ```
+    Cela devrait retourner une réponse de l'API (par exemple, un statut de santé).
 
-3. **Erreurs de validation :**
-   - Utilisez les fonctions de `validators.js`
-   - Vérifiez les formats de données dans la documentation API
+3.  **Erreurs de validation des données :**
+    - Utilisez les fonctions de validation fournies dans [`utils/validators.js`](#validatorsjs) avant d'envoyer des données à l'API.
+    - Consultez la [documentation de l'API Web](../../../../composants/api_web.md) pour les formats de données attendus par chaque endpoint.
 
 ### Logs de débogage
+Pour activer des logs plus détaillés dans la console lors des interactions avec l'API (si le hook `useArgumentationAPI.js` le supporte) :
 ```javascript
-// Activez les logs détaillés
+// Dans la console de votre navigateur
 localStorage.setItem('DEBUG_API', 'true');
+// Rafraîchissez la page
 ```
 
-## 📚 Documentation complète
+## 📚 Documentation Complète et Références Utiles
 
-- **[Guide d'utilisation](../GUIDE_UTILISATION_API.md)** - Documentation complète de l'API
-- **[Démarrage rapide](../DEMARRAGE_RAPIDE.md)** - Guide de démarrage étape par étape  
-- **[Dépannage](../TROUBLESHOOTING.md)** - Solutions aux problèmes courants
+Pour une compréhension approfondie de l'API Web et du système global, veuillez consulter :
+
+- **Documentation de l'API Web (Composant) :** [`../../../../composants/api_web.md`](../../../../composants/api_web.md) - Description détaillée du composant API Web, son architecture et ses endpoints.
+- **Guide d'Intégration de l'API Web :** [`../../../../guides/integration_api_web.md`](../../../../guides/integration_api_web.md) - Instructions pas à pas pour intégrer l'API Web dans vos applications.
+- **Guide du Développeur :** [`../../../../guides/guide_developpeur.md`](../../../../guides/guide_developpeur.md) - Informations générales pour les développeurs contribuant au projet.
+- **Portail des Guides :** [`../../../../guides/README.md`](../../../../guides/README.md) - Point d'entrée vers tous les guides techniques et d'utilisation.
+- **Architecture Globale :** [`../../../../architecture/architecture_globale.md`](../../../../architecture/architecture_globale.md) - Vue d'ensemble de l'architecture du système (pour contexte).
+
+Les anciens liens spécifiques à ce dossier d'exemples ont été remplacés ou complétés par les références ci-dessus, qui sont plus actuelles et centralisées au sein de la documentation globale du projet.
 
 ## 🤝 Contribution
 
 Pour contribuer à ces exemples :
 
-1. Fork le projet
-2. Créez une branche : `git checkout -b feature/nouvelle-fonctionnalite`
-3. Committez : `git commit -m 'Ajout nouvelle fonctionnalité'`
-4. Push : `git push origin feature/nouvelle-fonctionnalite`
-5. Ouvrez une Pull Request
+1.  Fork le projet principal contenant ces exemples.
+2.  Créez une branche pour votre fonctionnalité : `git checkout -b feature/nouvelle-fonctionnalite-react`
+3.  Faites vos modifications et committez : `git commit -m 'Ajout nouvelle fonctionnalité aux exemples React'`
+4.  Poussez votre branche : `git push origin feature/nouvelle-fonctionnalite-react`
+5.  Ouvrez une Pull Request sur le dépôt principal.
 
 ## 📄 Licence
 
-Ces exemples sont fournis sous licence MIT. Voir le fichier LICENSE pour plus de détails.
+Ces exemples sont fournis sous licence MIT. Voir le fichier `LICENSE` à la racine du projet principal pour plus de détails.
