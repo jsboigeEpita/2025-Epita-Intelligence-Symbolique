@@ -42,9 +42,11 @@ class WatsonLogicAssistant(PropositionalLogicAgent):
             #                         La classe parente PropositionalLogicAgent gère
             #                         sa propre instance de TweetyBridge par défaut.
         """
-        super().__init__(kernel, agent_name=agent_name)
+        super().__init__(kernel, agent_name=agent_name, system_prompt=system_prompt) # Passer le system_prompt spécifique
         self.kernel = kernel  # Stocker la référence au kernel
-        self.logger = logging.getLogger(agent_name) # Assurer un logger spécifique
+        # self.logger est déjà initialisé par BaseAgent et est une propriété en lecture seule.
+        # La ligne suivante causait l'AttributeError:
+        # self.logger = logging.getLogger(agent_name)
         self.logger.info(f"WatsonLogicAssistant '{agent_name}' initialisé.")
 
     async def get_agent_belief_set_content(self, belief_set_id: str) -> Optional[str]:
