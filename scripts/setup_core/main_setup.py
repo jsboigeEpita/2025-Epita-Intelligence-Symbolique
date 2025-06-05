@@ -99,29 +99,49 @@ def main():
     logger.info(f"  Run pytest debug: {args.run_pytest_debug}")
     logger.info("-" * 30)
  
-    tool_paths = None # Initialiser tool_paths
+    tool_paths = {} # Initialiser tool_paths
     if not args.skip_tools:
         logger.info("Managing portable tools (JDK, Octave)...")
-        # Définir le répertoire des outils
-        tools_target_dir = tools_dir_default # Peut être rendu configurable via args plus tard
-        logger.info(f"Portable tools will be installed/checked in: {tools_target_dir}")
         
-        tool_paths = manage_portable_tools.setup_tools(
-            tools_dir_base_path=tools_target_dir,
+        # Configurer JDK
+        jdk_base_dir = os.path.join(project_root, "libs", "portable_jdk")
+        logger.info(f"JDK will be installed/checked in: {jdk_base_dir}")
+        os.makedirs(jdk_base_dir, exist_ok=True) # S'assurer que le répertoire de base existe
+        temp_download_dir_jdk = os.path.join(jdk_base_dir, "_temp_downloads_jdk") # Temp dir spécifique
+
+        jdk_home_path = manage_portable_tools.setup_single_tool(
+            manage_portable_tools.JDK_CONFIG,
+            tools_base_dir=jdk_base_dir,
+            temp_download_dir=temp_download_dir_jdk,
             force_reinstall=args.force_reinstall_tools,
             interactive=args.interactive,
-            logger_instance=logger # Passer l'instance du logger
-            # Les options skip_jdk, skip_octave pourraient être ajoutées ici si besoin
-            # skip_jdk=args.skip_jdk, # Nécessiterait d'ajouter --skip-jdk à argparse
-            # skip_octave=args.skip_octave # Nécessiterait d'ajouter --skip-octave à argparse
+            logger_instance=logger
         )
-        if tool_paths:
-            logger.info("Paths for configured tools:")
-            for env_var, path in tool_paths.items():
-                logger.info(f"  {env_var}: {path}")
-        else:
-            logger.info("No portable tools were configured or paths returned.")
-            tool_paths = {} # S'assurer que c'est un dictionnaire pour l'appel suivant
+        if jdk_home_path:
+            tool_paths[manage_portable_tools.JDK_CONFIG["home_env_var"]] = jdk_home_path
+            logger.info(f"  {manage_portable_tools.JDK_CONFIG['home_env_var']}: {jdk_home_path}")
+        
+        # Configurer Octave (utilise le chemin par défaut .tools)
+        octave_base_dir = tools_dir_default # os.path.join(project_root, ".tools")
+        logger.info(f"Octave will be installed/checked in: {octave_base_dir}")
+        os.makedirs(octave_base_dir, exist_ok=True)
+        temp_download_dir_octave = os.path.join(octave_base_dir, "_temp_downloads_octave")
+
+        octave_home_path = manage_portable_tools.setup_single_tool(
+            manage_portable_tools.OCTAVE_CONFIG,
+            tools_base_dir=octave_base_dir,
+            temp_download_dir=temp_download_dir_octave,
+            force_reinstall=args.force_reinstall_tools,
+            interactive=args.interactive,
+            logger_instance=logger
+        )
+        if octave_home_path:
+            tool_paths[manage_portable_tools.OCTAVE_CONFIG["home_env_var"]] = octave_home_path
+            logger.info(f"  {manage_portable_tools.OCTAVE_CONFIG['home_env_var']}: {octave_home_path}")
+
+        if not tool_paths:
+            logger.info("No portable tools were successfully configured or paths returned.")
+            # tool_paths est déjà {}
     else:
         logger.info("Skipping portable tools installation.")
 
