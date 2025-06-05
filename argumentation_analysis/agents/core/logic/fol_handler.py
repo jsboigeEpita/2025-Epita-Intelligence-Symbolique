@@ -4,7 +4,8 @@ import logging
 from argumentation_analysis.utils.core_utils.logging_utils import setup_logging
 from .tweety_initializer import TweetyInitializer # To access FOL parser
 
-logger = setup_logging(__name__)
+setup_logging()
+logger = logging.getLogger(__name__)
 
 class FOLHandler:
     """
