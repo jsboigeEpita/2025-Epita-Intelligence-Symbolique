@@ -6,6 +6,7 @@ import requests
 import zipfile
 import shutil
 import re
+import time # Ajout pour le timestamp et l'intervalle de log
 
 JDK_CONFIG = {
     "name": "JDK",
@@ -17,7 +18,7 @@ JDK_CONFIG = {
 }
 OCTAVE_CONFIG = {
     "name": "Octave",
-    "url_windows": "https://ftp.gnu.org/gnu/octave/windows/octave-8.4.0-w64.zip",
+    "url_windows": "https://mirrors.ocf.berkeley.edu/gnu/octave/windows/octave-8.4.0-w64.zip", # URL de miroir modifiée
     # "url_linux": "...", # Souvent installé via gestionnaire de paquets
     # "url_macos": "...", # Souvent installé via gestionnaire de paquets ou dmg
     "dir_name_pattern": r"octave-8.4.0-w64.*", # Regex pour correspondre au répertoire extrait
@@ -26,43 +27,101 @@ OCTAVE_CONFIG = {
 
 TOOLS_TO_MANAGE = [JDK_CONFIG, OCTAVE_CONFIG] # Peut être utilisé si on boucle sur les outils plus tard
 
-def _download_file(url, dest_folder, file_name):
-    """Télécharge un fichier depuis une URL vers un dossier de destination."""
-    print(f"[DEBUG_ROO] _download_file called with: url={url}, dest_folder={dest_folder}, file_name={file_name}")
+def _download_file(url, dest_folder, file_name, log_interval_seconds=5, force_download=False):
+    """
+    Télécharge un fichier depuis une URL vers un dossier de destination avec journalisation améliorée.
+    Retourne le chemin du fichier et un booléen indiquant si le téléchargement a eu lieu (True) ou si un fichier existant a été utilisé (False).
+    """
+    print(f"[DEBUG_ROO] _download_file called with: url={url}, dest_folder={dest_folder}, file_name={file_name}, force_download={force_download}")
     os.makedirs(dest_folder, exist_ok=True)
     file_path = os.path.join(dest_folder, file_name)
 
-    # Vérifier si l'archive existe déjà
-    if os.path.exists(file_path):
-        print(f"[INFO] Archive {file_name} already exists in {dest_folder}. Using local copy.")
-        # Une vérification de l'intégrité du fichier (ex: checksum) pourrait être ajoutée ici à l'avenir.
-        return file_path
-    
-    print(f"Downloading {file_name} from {url}...")
+    if not force_download and os.path.exists(file_path):
+        print(f"[{time.strftime('%Y-%m-%d %H:%M:%S')}] [INFO] Archive {file_name} already exists in {dest_folder}. Using local copy.")
+        # Optionnel: Vérifier la taille par rapport à la taille distante si possible
+        try:
+            response_head = requests.head(url, timeout=10)
+            remote_size = int(response_head.headers.get('content-length', 0))
+            local_size = os.path.getsize(file_path)
+            if remote_size > 0 and local_size != remote_size:
+                print(f"[{time.strftime('%Y-%m-%d %H:%M:%S')}] [WARNING] Local file {file_name} size ({local_size} bytes) differs from remote size ({remote_size} bytes). Consider re-downloading.")
+        except requests.exceptions.RequestException:
+            print(f"[{time.strftime('%Y-%m-%d %H:%M:%S')}] [WARNING] Could not verify remote size for {file_name}. Proceeding with local copy.")
+        return file_path, False # False car fichier existant utilisé
+
+    if force_download and os.path.exists(file_path):
+        print(f"[{time.strftime('%Y-%m-%d %H:%M:%S')}] [INFO] Force download: deleting existing file {file_path}")
+        try:
+            os.remove(file_path)
+        except OSError as e:
+            print(f"[{time.strftime('%Y-%m-%d %H:%M:%S')}] [ERROR] Could not delete existing file {file_path} for forced download: {e}")
+            return None, False # Indiquer l'échec
+
+    print(f"[{time.strftime('%Y-%m-%d %H:%M:%S')}] Downloading {file_name} from {url}...")
     try:
-        with requests.get(url, stream=True, timeout=300) as r: # Timeout de 5 minutes
+        with requests.get(url, stream=True, timeout=600) as r: # Timeout de 10 minutes
             r.raise_for_status()
             total_size = int(r.headers.get('content-length', 0))
-            if total_size == 0:
-                print("\n[WARNING] Content-Length header not found or is zero. Download progress percentage will not be shown, but byte count will.")
+            
+            if total_size > 0:
+                print(f"[{time.strftime('%Y-%m-%d %H:%M:%S')}] [INFO] Total file size: {total_size} bytes ({total_size / (1024*1024):.2f} MB)")
+            else:
+                print(f"[{time.strftime('%Y-%m-%d %H:%M:%S')}] [WARNING] Content-Length header not found or is zero. Download progress percentage will not be shown, but byte count will.")
+            
             downloaded_size = 0
+            last_log_time = time.time()
+            start_time = last_log_time
+
             with open(file_path, 'wb') as f:
                 for chunk in r.iter_content(chunk_size=8192):
-                    f.write(chunk)
-                    downloaded_size += len(chunk)
-                    if total_size > 0:
-                        progress = (downloaded_size / total_size) * 100
-                        sys.stdout.write(f"\rDownloaded {downloaded_size}/{total_size} bytes ({progress:.2f}%)")
-                    else:
-                        sys.stdout.write(f"\rDownloaded {downloaded_size} bytes (total size unknown)...")
-                    sys.stdout.flush()
-        sys.stdout.write("\nDownload complete.\n")
-        return file_path
-    except requests.exceptions.RequestException as e:
-        print(f"\n[ERROR] Failed to download {file_name}: {e}")
+                    if chunk:
+                        f.write(chunk)
+                        downloaded_size += len(chunk)
+                        current_time = time.time()
+                        
+                        if current_time - last_log_time >= log_interval_seconds:
+                            elapsed_time_total = current_time - start_time
+                            speed_bps = downloaded_size / elapsed_time_total if elapsed_time_total > 0 else 0
+                            speed_kbps = speed_bps / 1024
+                            
+                            progress_str = f"\r[{time.strftime('%Y-%m-%d %H:%M:%S')}] Downloaded {downloaded_size} bytes"
+                            if total_size > 0:
+                                progress_percentage = (downloaded_size / total_size) * 100
+                                progress_str += f" / {total_size} bytes ({progress_percentage:.2f}%)"
+                                if speed_bps > 0:
+                                    remaining_bytes = total_size - downloaded_size
+                                    eta_seconds = remaining_bytes / speed_bps if speed_bps > 0 else float('inf')
+                                    eta_str = time.strftime("%H:%M:%S", time.gmtime(eta_seconds)) if eta_seconds != float('inf') else "N/A"
+                                    progress_str += f" - Speed: {speed_kbps:.2f} KB/s - ETA: {eta_str}"
+                            else:
+                                progress_str += f" (total size unknown) - Speed: {speed_kbps:.2f} KB/s"
+                            
+                            sys.stdout.write(progress_str + "...")
+                            sys.stdout.flush()
+                            last_log_time = current_time
+
+            elapsed_time_total = time.time() - start_time
+            speed_bps = downloaded_size / elapsed_time_total if elapsed_time_total > 0 else 0
+            speed_kbps = speed_bps / 1024
+            final_progress_str = f"\r[{time.strftime('%Y-%m-%d %H:%M:%S')}] Downloaded {downloaded_size} bytes"
+            if total_size > 0:
+                final_progress_str += f" / {total_size} bytes (100.00%)"
+            final_progress_str += f" - Avg Speed: {speed_kbps:.2f} KB/s."
+            sys.stdout.write(final_progress_str + " " * 20 + "\n")
+            sys.stdout.flush()
+
+        print(f"[{time.strftime('%Y-%m-%d %H:%M:%S')}] Download complete for {file_name}.")
+        return file_path, True # True car le téléchargement a eu lieu
+    except requests.exceptions.Timeout:
+        print(f"\n[{time.strftime('%Y-%m-%d %H:%M:%S')}] [ERROR] Timeout occurred while downloading {file_name} from {url}.")
         if os.path.exists(file_path):
             os.remove(file_path)
-        return None
+        return None, False # False car échec
+    except requests.exceptions.RequestException as e:
+        print(f"\n[{time.strftime('%Y-%m-%d %H:%M:%S')}] [ERROR] Failed to download {file_name}: {e}")
+        if os.path.exists(file_path):
+            os.remove(file_path)
+        return None, False # False car échec
 
 def _extract_zip(zip_path, extract_to_folder):
     """Extrait une archive ZIP."""
@@ -227,14 +286,36 @@ def setup_single_tool(tool_config, tools_base_dir, temp_download_dir, force_rein
         print(f"[DEBUG_ROO] URL to be used for download: {url}")
         print(f"[DEBUG_ROO] Archive name: {archive_name}")
         print(f"[DEBUG_ROO] Temp download dir: {temp_download_dir}")
-        downloaded_archive_path = _download_file(url, temp_download_dir, archive_name)
+        downloaded_archive_path, downloaded_this_run = _download_file(url, temp_download_dir, archive_name)
+        
         if not downloaded_archive_path:
             print(f"[ERROR] Failed to download {tool_name}. Aborting setup for this tool.")
             return None
 
-        if not _extract_zip(downloaded_archive_path, tools_base_dir):
-            print(f"[ERROR_SETUP] Failed to extract {tool_name} (archive: {downloaded_archive_path}). Aborting setup for this tool.")
-            # Tentative de lister le contenu de tools_base_dir pour voir ce qui a pu être extrait partiellement
+        extraction_successful = _extract_zip(downloaded_archive_path, tools_base_dir)
+
+        if not extraction_successful and not downloaded_this_run:
+            # L'extraction a échoué et nous avons utilisé une archive locale.
+            print(f"[WARNING] Extraction failed for locally found archive: {downloaded_archive_path}. Deleting it and retrying download.")
+            try:
+                os.remove(downloaded_archive_path)
+                print(f"[INFO] Deleted potentially corrupted local archive: {downloaded_archive_path}")
+            except OSError as e:
+                print(f"[ERROR] Failed to delete corrupted local archive {downloaded_archive_path}: {e}")
+                return None # Ne pas continuer si la suppression échoue.
+
+            # Retenter le téléchargement en forçant
+            print(f"[INFO] Retrying download for {tool_name}...")
+            downloaded_archive_path, downloaded_this_run = _download_file(url, temp_download_dir, archive_name, force_download=True)
+            if not downloaded_archive_path:
+                print(f"[ERROR] Failed to re-download {tool_name} after deleting local copy. Aborting setup.")
+                return None
+            
+            print(f"[INFO] Retrying extraction for {tool_name} from newly downloaded archive...")
+            extraction_successful = _extract_zip(downloaded_archive_path, tools_base_dir)
+
+        if not extraction_successful:
+            print(f"[ERROR_SETUP] Failed to extract {tool_name} (archive: {downloaded_archive_path}) even after potential retry. Aborting setup.")
             if os.path.isdir(tools_base_dir):
                 print(f"[DIAG_SETUP] Contents of target base directory '{tools_base_dir}' after failed extraction:")
                 try:
@@ -246,7 +327,7 @@ def setup_single_tool(tool_config, tools_base_dir, temp_download_dir, force_rein
                 print(f"[DIAG_SETUP] Target base directory '{tools_base_dir}' does not exist or is not a directory.")
             return None
         
-        # Après extraction, trouver le répertoire exact
+        # Après extraction réussie (potentiellement après nouvelle tentative)
         expected_tool_path = _find_tool_dir(tools_base_dir, tool_config["dir_name_pattern"])
         if not expected_tool_path:
             print(f"[ERROR] Could not find {tool_name} directory in {tools_base_dir} after extraction using pattern {tool_config['dir_name_pattern']}.")

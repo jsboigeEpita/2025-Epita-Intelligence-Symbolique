@@ -69,7 +69,7 @@ def install_project_dependencies(project_root: str, conda_env_name: str):
     logging.info(f"Début de l'installation des dépendances du projet dans '{project_root}' pour l'environnement '{conda_env_name}'.")
 
     # Commande 1: pip install -e .
-    pip_command_root = ['python', '-m', 'pip', 'install', '-e', '.']
+    pip_command_root = ['pip', 'install', '-e', '.'] # Changement ici
     logging.info("Tentative d'installation des dépendances avec 'pip install -e .'")
     if _run_command_in_conda_env(conda_env_name, pip_command_root, project_root):
         logging.info("Dépendances installées avec succès via 'pip install -e .'.")
@@ -87,7 +87,7 @@ def install_project_dependencies(project_root: str, conda_env_name: str):
         logging.info("Tentative d'installation des dépendances avec 'pip install -e ./src'")
         
         # Commande 2: pip install -e ./src (exécutée depuis project_root, pip s'occupe du ./src)
-        pip_command_src = ['python', '-m', 'pip', 'install', '-e', './src']
+        pip_command_src = ['pip', 'install', '-e', './src'] # Changement ici
         if _run_command_in_conda_env(conda_env_name, pip_command_src, project_root):
             logging.info("Dépendances installées avec succès via 'pip install -e ./src'.")
             return True
