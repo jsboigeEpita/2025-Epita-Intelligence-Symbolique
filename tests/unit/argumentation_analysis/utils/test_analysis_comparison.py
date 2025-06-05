@@ -143,15 +143,15 @@ def test_compare_rhetorical_analyses_invalid_inputs():
     """Teste avec des entrées qui ne sont pas des dictionnaires."""
     comparison_list_adv = compare_rhetorical_analyses([], {"test": 1})
     assert "error" in comparison_list_adv
-    assert comparison_list_adv["error"] == "Entrées invalides pour la comparaison."
+    assert comparison_list_adv["error"] == "Résultats avancés invalides pour 'N/A'."
 
     comparison_list_base = compare_rhetorical_analyses({"test": 1}, [])
     assert "error" in comparison_list_base
-    assert comparison_list_base["error"] == "Entrées invalides pour la comparaison."
+    assert comparison_list_base["error"] == "Résultats de base invalides pour 'N/A'."
 
     comparison_none = compare_rhetorical_analyses(None, None)
     assert "error" in comparison_none
-    assert comparison_none["error"] == "Entrées invalides pour la comparaison."
+    assert comparison_none["error"] == "Résultats avancés invalides pour 'N/A'."
 
 def test_alternative_fallacy_structure_advanced(sample_base_results_full):
     """Teste une structure alternative pour les sophismes dans les résultats avancés."""

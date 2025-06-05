@@ -120,7 +120,7 @@ def compare_rhetorical_analyses(
 
     comparison["fallacy_detection_comparison"] = {
         "advanced_fallacy_count": adv_fallacy_count,
-        "base_fallacy_count": base_fallacy_count if base_results else None,
+        "base_fallacy_count": base_fallacy_count if base_results is not None else None,
         "difference": adv_fallacy_count - base_fallacy_count if base_results else None,
         "advanced_fallacy_types": sorted(list(adv_fallacy_types)),
         "base_fallacy_types": sorted(list(base_fallacy_types)) if base_results else None,
@@ -132,7 +132,8 @@ def compare_rhetorical_analyses(
 
     # --- Comparer l'analyse de cohérence ---
     adv_coherence = adv_analyses.get("rhetorical_results", {}).get("coherence_analysis", adv_analyses.get("coherence_evaluation", {}))
-    adv_coherence_score_data = adv_coherence.get("overall_coherence", {}) if isinstance(adv_coherence, dict) else {}
+    overall_coherence_value = adv_coherence.get("overall_coherence") if isinstance(adv_coherence, dict) else None
+    adv_coherence_score_data = overall_coherence_value if isinstance(overall_coherence_value, dict) else {}
     adv_coherence_score = adv_coherence_score_data.get("score", adv_coherence.get("score", 0.0)) # Fallback
     adv_coherence_score = adv_coherence_score if isinstance(adv_coherence_score, (int, float)) else 0.0
     adv_coherence_level = adv_coherence_score_data.get("level", adv_coherence.get("level", "N/A"))
@@ -141,7 +142,7 @@ def compare_rhetorical_analyses(
     base_coherence_level = None
     coherence_diff = None
 
-    if base_results:
+    if base_results is not None:
         base_coherence = base_analyses.get("argument_coherence", base_analyses.get("coherence_evaluation", {}))
         base_coherence_score_data = base_coherence.get("overall_coherence", {}) if isinstance(base_coherence, dict) else {}
         base_coherence_score = base_coherence_score_data.get("score", base_coherence.get("score", 0.0))
@@ -164,7 +165,7 @@ def compare_rhetorical_analyses(
     
     comparison["overall_comparison"] = {
         "advanced_analysis_depth": adv_overall_analysis.get("analysis_depth", "Élevée"),
-        "base_analysis_depth": base_analyses.get("analysis_depth", "Modérée") if base_results else None,
+        "base_analysis_depth": base_analyses.get("analysis_depth", "Modérée") if base_results is not None else None,
         "advanced_quality_score": adv_quality,
         "key_improvements_with_advanced": [
             "Détection potentielle de sophismes plus complexes ou contextuels.",

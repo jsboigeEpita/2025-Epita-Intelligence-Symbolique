@@ -184,7 +184,7 @@ def test_check_java_environment_java_version_fails_filenotfound(mock_os_environ_
 
     assert check_java_environment() is False
     # assert "Échec de l'exécution de 'java -version'." in caplog.text # This comes from _run_command via logger
-    assert "Java n'est pas trouvé dans le PATH ou n'est pas exécutable." in caplog.text # This is from check_java_environment
+    assert "Java n'est pas trouvé dans le PATH (FileNotFoundError)." in caplog.text # This is from check_java_environment
     assert "L'environnement Java n'est pas considéré comme correctement configuré." in caplog.text
 
 def test_check_java_environment_java_version_fails_returncode(mock_os_environ_java, mock_path_java, mock_run_command_java, caplog):
