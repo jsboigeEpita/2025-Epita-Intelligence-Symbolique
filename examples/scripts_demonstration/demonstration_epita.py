@@ -34,6 +34,16 @@ Comment exécuter le script :
 Exécutez la commande suivante depuis la racine du projet :
 python scripts/demonstration_epita.py
 """
+# Configuration du logging pour ce script
+import logging # Ajout du logging
+logger = logging.getLogger("demonstration_epita")
+if not logger.handlers:
+    handler = logging.StreamHandler(sys.stdout) # Utiliser sys.stdout configuré
+    formatter = logging.Formatter('%(asctime)s [%(levelname)s] [%(name)s] %(message)s', datefmt='%H:%M:%S')
+    handler.setFormatter(formatter)
+    logger.addHandler(handler)
+    logger.setLevel(logging.INFO)
+
 # Imports nécessaires
 logger.info("Début des imports Python standards.") # Remplacé print par logger.info
 import subprocess
@@ -43,7 +53,6 @@ import os
 import sys
 import io
 import time
-import logging # Ajout du logging
 
 # Import pour semantic_kernel, nécessaire globalement
 try:
@@ -52,15 +61,6 @@ try:
 except ImportError:
     logger.error("semantic_kernel n'a pas pu être importé. Certaines fonctionnalités seront indisponibles.") # Remplacé print par logger.error
     sk = None # Pour éviter les NameError plus tard
-
-# Configuration du logging pour ce script
-logger = logging.getLogger("demonstration_epita")
-if not logger.handlers:
-    handler = logging.StreamHandler(sys.stdout) # Utiliser sys.stdout configuré
-    formatter = logging.Formatter('%(asctime)s [%(levelname)s] [%(name)s] %(message)s', datefmt='%H:%M:%S')
-    handler.setFormatter(formatter)
-    logger.addHandler(handler)
-    logger.setLevel(logging.INFO)
 
 
 # Reconfigurer sys.stdout et sys.stderr pour utiliser UTF-8
