@@ -1,39 +1,72 @@
-import os # jpype et jpype.imports seront importés dans la fonction
+import os
+import jpype # Déplacé ici pour être accessible globalement dans le module si nécessaire
+import jpype.imports # Idem
+from jpype.types import JString # Idem
 
 # from jpype.types import JString # Sera importé si nécessaire dans la fonction
 
-def test_list_models(integration_jvm): # Ajout de la fixture integration_jvm
-    import jpype # Importation locale
-    import jpype.imports
-    from jpype.types import JString
+# Définition des chemins en dehors de la fonction de test pour une meilleure lisibilité
+PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+LIBS_DIR = os.path.join(PROJECT_ROOT, "libs")
+NATIVE_LIBS_DIR = os.path.join(LIBS_DIR, "native")
 
+# Inclure tous les JARs du répertoire libs, sauf celui sans "with-dependencies" s'il existe
+all_jars_in_libs = [os.path.join(LIBS_DIR, f) for f in os.listdir(LIBS_DIR) if f.endswith(".jar")]
+TWEETY_JARS = [jar for jar in all_jars_in_libs if "tweety-full-1.28.jar" != os.path.basename(jar) or "with-dependencies" in os.path.basename(jar)]
+jar_simple = os.path.join(LIBS_DIR, "org.tweetyproject.tweety-full-1.28.jar")
+jar_with_deps = os.path.join(LIBS_DIR, "org.tweetyproject.tweety-full-1.28-with-dependencies.jar")
+
+if jar_simple in TWEETY_JARS and jar_with_deps in TWEETY_JARS:
+    TWEETY_JARS.remove(jar_simple)
+    print(f"Removed {jar_simple} to avoid conflict with {jar_with_deps}")
+
+print(f"Dynamically included JARS for test_list_models: {TWEETY_JARS}")
+
+# Vérifier l'existence de ces JARs spécifiques
+for jar_path_check in TWEETY_JARS:
+    if not os.path.exists(jar_path_check):
+        raise FileNotFoundError(f"JAR file {jar_path_check} not found. Please run download_test_jars.py or ensure correct paths.")
+
+# Cette fonction de démarrage JVM est maintenant potentiellement redondante si conftest.py gère tout.
+# Elle est conservée ici pour référence ou si les tests sont exécutés en dehors de pytest.
+def start_jvm_if_not_started():
+    if not jpype.isJVMStarted():
+        print("JVM non démarrée. Tentative de démarrage avec le classpath complet...")
+        classpath = os.pathsep.join(TWEETY_JARS)
+        jpype.startJVM(
+            # jpype.getDefaultJVMPath(), # Utilise le JVM par défaut trouvé par JPype
+            # "-ea", # Enable assertions
+            # "-Xmx2048m", # Augmenter la mémoire si nécessaire
+            classpath=[classpath],
+            convertStrings=False # Recommandé pour éviter les conversions automatiques potentiellement problématiques
+        )
+        print(f"JVM démarrée avec classpath: {classpath}")
+    else:
+        print("JVM déjà démarrée.")
+
+
+def test_list_models(integration_jvm): # Ajout de la fixture integration_jvm
     try:
         print("Démarrage du test de listage des modèles...")
 
-        # L'initialisation de la JVM est maintenant gérée globalement par conftest.py
-        if not jpype.isJVMStarted():
-            # Cette condition ne devrait plus être vraie si conftest.py fonctionne correctement.
-            # Lever une erreur ou un skip si la JVM n'est pas démarrée comme attendu.
-            print("ERREUR CRITIQUE: La JVM n'a pas été démarrée par conftest.py comme attendu.")
-            # On pourrait utiliser pytest.skip ou lever une exception pour arrêter le test.
-            # Pour l'instant, on logue et on laisse le test échouer plus loin si les imports Java échouent.
-            # raise RuntimeError("JVM non démarrée par conftest.py") # Optionnel: être plus strict
-        from org.tweetyproject.logics.pl.syntax import PlBeliefSet
-        from org.tweetyproject.logics.pl.parser import PlParser
-        # from org.tweetyproject.logics.pl.reasoner import SimplePlReasoner, SatReasoner
-        from org.tweetyproject.logics.pl.sat import SatSolver, Sat4jSolver, SimpleModelEnumerator
-        from org.tweetyproject.logics.pl.syntax import Proposition, Implication, Negation # Ajout Implication, Negation
-        from org.tweetyproject.logics.pl.semantics import PossibleWorld # PossibleWorld est un alias pour PlInterpretation
-        JArrayList = jpype.JClass("java.util.ArrayList")
-        # from org.tweetyproject.commons import InterpretationSet # Pas nécessaire d'importer directement si on itère sur le résultat de getModels
-        
-        print("JVM démarrée et classes Tweety importées.")
+        start_jvm_if_not_started() # Assure que la JVM est démarrée avec le classpath
+
+        PlBeliefSet = jpype.JClass("org.tweetyproject.logics.pl.syntax.PlBeliefSet")
+        PlParser = jpype.JClass("org.tweetyproject.logics.pl.parser.PlParser")
+        Proposition = jpype.JClass("org.tweetyproject.logics.pl.syntax.Proposition")
+        Implication = jpype.JClass("org.tweetyproject.logics.pl.syntax.Implication")
+        Negation = jpype.JClass("org.tweetyproject.logics.pl.syntax.Negation")
+        PossibleWorld = jpype.JClass("org.tweetyproject.logics.pl.semantics.PossibleWorld")
+        SatSolver = jpype.JClass("org.tweetyproject.logics.pl.sat.SatSolver")
+        Sat4jSolver = jpype.JClass("org.tweetyproject.logics.pl.sat.Sat4jSolver")
+        SimpleModelEnumerator = jpype.JClass("org.tweetyproject.logics.pl.sat.SimpleModelEnumerator")
+        JArrayList = jpype.JClass("java.util.ArrayList") # Conservé au cas où
+
+        print("JVM démarrée et classes Tweety chargées via JClass (espérons-le).")
         
         # Configuration du solveur SAT par défaut
-        SatSolver_JClass = jpype.JClass("org.tweetyproject.logics.pl.sat.SatSolver")
-        Sat4jSolver_JClass = jpype.JClass("org.tweetyproject.logics.pl.sat.Sat4jSolver")
-        if not SatSolver_JClass.hasDefaultSolver(): # Correction: isDefaultSolverSet -> hasDefaultSolver
-            SatSolver_JClass.setDefaultSolver(Sat4jSolver_JClass())
+        if not SatSolver.hasDefaultSolver():
+            SatSolver.setDefaultSolver(Sat4jSolver())
             print("INFO: Sat4jSolver configuré comme solveur par défaut pour PL.")
         else:
             print("INFO: Un solveur SAT par défaut est déjà configuré.")
@@ -41,10 +74,10 @@ def test_list_models(integration_jvm): # Ajout de la fixture integration_jvm
         # Construction manuelle de la PlBeliefSet pour isoler du parsing
         print("Construction manuelle de la PlBeliefSet...")
         belief_set = PlBeliefSet()
-        p_a = Proposition("a")
-        p_b = Proposition("b")
-        p_c = Proposition("c")
-        p_d = Proposition("d")
+        p_a = Proposition(JString("a")) # Utiliser JString pour les noms de propositions
+        p_b = Proposition(JString("b"))
+        p_c = Proposition(JString("c"))
+        p_d = Proposition(JString("d"))
 
         # b.
         belief_set.add(p_b)
@@ -142,12 +175,12 @@ def test_list_models(integration_jvm): # Ajout de la fixture integration_jvm
             # signature = belief_set.getMinimalSignature() # Ne semble pas retourner les atomes simples.
             
             # Définir manuellement les propositions atomiques d'intérêt pour l'affichage
-            Proposition_JClass = jpype.JClass("org.tweetyproject.logics.pl.syntax.Proposition")
+            # Proposition_JClass est déjà défini plus haut
             propositions_for_interpretation = [
-                Proposition_JClass("a"),
-                Proposition_JClass("b"),
-                Proposition_JClass("c"),
-                Proposition_JClass("d")
+                Proposition(JString("a")), # Utiliser JString
+                Proposition(JString("b")),
+                Proposition(JString("c")),
+                Proposition(JString("d"))
             ]
             print(f"Propositions utilisées pour l'interprétation des modèles: {[p.getName() for p in propositions_for_interpretation]}")
         
