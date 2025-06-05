@@ -68,28 +68,29 @@ class MockEngagementAnalyzer:
             if keyword in text_lower:
                 signals_detected["appels_action"] += text_lower.count(keyword)
         if signals_detected["appels_action"] > 0:
-            engagement_score += self.engagement_signals["appels_action"]
+            engagement_score += self.engagement_signals["appels_action"] * signals_detected["appels_action"]
 
         # Pronoms inclusifs
         for pronoun in self.inclusive_pronouns:
-            if rf"\b{pronoun}\b" in text_lower: # Recherche de mot entier
-                 signals_detected["pronoms_inclusifs"] += len(re.findall(rf"\b{pronoun}\b", text_lower))
+            matches = re.findall(rf"\b{pronoun}\b", text_lower, re.IGNORECASE)
+            if matches:
+                 signals_detected["pronoms_inclusifs"] += len(matches)
         if signals_detected["pronoms_inclusifs"] > 0:
-            engagement_score += self.engagement_signals["pronoms_inclusifs"] * min(signals_detected["pronoms_inclusifs"], 5) # Plafonner
+            engagement_score += self.engagement_signals["pronoms_inclusifs"] * min(signals_detected["pronoms_inclusifs"], 5)
 
         # Vocabulaire positif fort
         for keyword in self.positive_keywords:
             if keyword in text_lower:
                 signals_detected["vocabulaire_positif_fort"] += text_lower.count(keyword)
         if signals_detected["vocabulaire_positif_fort"] > 0:
-            engagement_score += self.engagement_signals["vocabulaire_positif_fort"]
+            engagement_score += self.engagement_signals["vocabulaire_positif_fort"] * signals_detected["vocabulaire_positif_fort"]
 
         # Vocabulaire négatif fort
         for keyword in self.negative_keywords:
             if keyword in text_lower:
                 signals_detected["vocabulaire_negatif_fort"] += text_lower.count(keyword)
         if signals_detected["vocabulaire_negatif_fort"] > 0:
-            engagement_score += self.engagement_signals["vocabulaire_negatif_fort"] # C'est un score négatif
+            engagement_score += self.engagement_signals["vocabulaire_negatif_fort"] * signals_detected["vocabulaire_negatif_fort"]
 
         # Bonus longueur texte
         if len(text) > 200: # Arbitraire

@@ -204,21 +204,27 @@ class InformalAnalysisAgent(BaseAgent):
             # Une implémentation réelle nécessiterait un parsing robuste.
             # Exemple: si le prompt retourne un JSON de liste de sophismes:
             try:
-                parsed_fallacies = json.loads(raw_result)
-                if isinstance(parsed_fallacies, list):
-                    # Appliquer le filtrage de l'ancienne méthode si pertinent
-                    confidence_threshold = self.config.get("confidence_threshold", 0.5)
-                    filtered_fallacies = [f for f in parsed_fallacies if isinstance(f, dict) and f.get("confidence", 0) >= confidence_threshold]
-                    
-                    max_fallacies = self.config.get("max_fallacies", 5)
-                    if len(filtered_fallacies) > max_fallacies:
-                        filtered_fallacies = sorted(filtered_fallacies, key=lambda f: f.get("confidence", 0), reverse=True)[:max_fallacies]
-                    
-                    self.logger.info(f"{len(filtered_fallacies)} sophismes (sémantiques) détectés et filtrés.")
-                    return filtered_fallacies
+                parsed_result = json.loads(raw_result)
+                
+                # Gérer le cas où le LLM retourne un objet {"sophismes": [...]}
+                if isinstance(parsed_result, dict) and "sophismes" in parsed_result:
+                    parsed_fallacies = parsed_result["sophismes"]
+                elif isinstance(parsed_result, list):
+                    parsed_fallacies = parsed_result
                 else:
-                    self.logger.warning(f"Résultat de semantic_AnalyzeFallacies n'est pas une liste JSON: {raw_result}")
+                    self.logger.warning(f"Résultat de semantic_AnalyzeFallacies n'est ni une liste, ni un objet avec la clé 'sophismes': {raw_result}")
                     return [{"error": "Format de résultat inattendu", "details": raw_result}]
+
+                # Appliquer le filtrage
+                confidence_threshold = self.config.get("confidence_threshold", 0.5)
+                filtered_fallacies = [f for f in parsed_fallacies if isinstance(f, dict) and f.get("confidence", 0) >= confidence_threshold]
+                
+                max_fallacies = self.config.get("max_fallacies", 5)
+                if len(filtered_fallacies) > max_fallacies:
+                    filtered_fallacies = sorted(filtered_fallacies, key=lambda f: f.get("confidence", 0), reverse=True)[:max_fallacies]
+                
+                self.logger.info(f"{len(filtered_fallacies)} sophismes (sémantiques) détectés et filtrés.")
+                return filtered_fallacies
             except json.JSONDecodeError:
                 self.logger.warning(f"Impossible de parser le résultat JSON de semantic_AnalyzeFallacies: {raw_result}")
                 return [{"error": "Résultat non JSON", "details": raw_result}]

@@ -94,7 +94,6 @@ def test_generate_performance_visualizations_files_created(
 @mock.patch('pandas.DataFrame.to_csv')
 @mock.patch('matplotlib.pyplot.close')
 @mock.patch('matplotlib.pyplot.figure')
-@pytest.mark.use_real_numpy
 def test_generate_performance_visualizations_empty_metrics(mock_fig, mock_close, mock_to_csv, mock_savefig, tmp_path: Path):
     """Teste avec un dictionnaire de métriques vide."""
     output_dir = tmp_path / "viz_empty_metrics"

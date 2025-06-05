@@ -18,7 +18,7 @@ class MockEmotionalToneAnalyzer:
         self.emotion_keywords: Dict[str, List[str]] = self.config.get(
             "emotion_keywords",
             {
-                "Joie (Mock)": ["heureux", "joyeux", "content", "ravi", "enthousiaste"],
+                "Joie (Mock)": ["heureux", "joyeux", "joyeuse", "content", "ravi", "enthousiaste"],
                 "Tristesse (Mock)": ["triste", "malheureux", "déprimé", "peiné", "abattu"],
                 "Colère (Mock)": ["colère", "furieux", "irrité", "enragé", "mécontent"],
                 "Peur (Mock)": ["peur", "effrayé", "craintif", "anxieux", "inquiet"],
@@ -26,7 +26,11 @@ class MockEmotionalToneAnalyzer:
                 "Dégoût (Mock)": ["dégoût", "répugnance", "aversion"]
             }
         )
-        self.intensity_threshold = self.config.get("intensity_threshold", 0.6) # Seuil pour considérer une émotion comme dominante
+        self.intensity_threshold = self.config.get("intensity_threshold", 0.6)
+        self.strong_keywords = self.config.get(
+            "strong_keywords",
+            ["furieux", "ravi", "effrayé", "déprimé", "enthousiaste", "enragé", "stupéfait"]
+        )
         logger.info(
             "MockEmotionalToneAnalyzer initialisé avec config: %s (keywords: %d, threshold: %.2f)",
             self.config, len(self.emotion_keywords), self.intensity_threshold
@@ -55,26 +59,25 @@ class MockEmotionalToneAnalyzer:
 
         for emotion, keywords in self.emotion_keywords.items():
             keyword_found_count = 0
+            has_strong_keyword = False
             for keyword in keywords:
-                # Utiliser \b pour s'assurer que le mot-clé est un mot entier
                 matches = list(re.finditer(rf"\b{re.escape(keyword)}\b", text_lower))
                 if matches:
                     keyword_found_count += len(matches)
+                    if keyword in self.strong_keywords:
+                        has_strong_keyword = True
                     for match in matches:
-                         detected_emotion_details.append({
-                             "emotion": emotion,
-                             "keyword": keyword,
-                             "indices": (match.start(), match.end())
-                         })
+                        detected_emotion_details.append({
+                            "emotion": emotion,
+                            "keyword": keyword,
+                            "indices": (match.start(), match.end())
+                        })
             
-            # Simuler un score basé sur le nombre d'occurrences de mots-clés
-            # Normalisation très basique: max 1.0 si au moins 3 mots-clés ou un mot-clé très fort
             if keyword_found_count > 0:
-                emotions_scores[emotion] = min(1.0, 0.3 * keyword_found_count + 0.1) # Score de base + par occurrence
-                # Certains mots-clés pourraient avoir plus de poids
-                if any(kw in text_lower for kw in ["furieux", "ravi", "effrayé", "déprimé"]):
-                     emotions_scores[emotion] = min(1.0, emotions_scores[emotion] + 0.2)
-
+                score = min(1.0, 0.3 * keyword_found_count + 0.1)
+                if has_strong_keyword:
+                    score = min(1.0, score + 0.2)
+                emotions_scores[emotion] = score
 
         dominant_emotion = "Neutre (Mock)"
         max_score = 0.0

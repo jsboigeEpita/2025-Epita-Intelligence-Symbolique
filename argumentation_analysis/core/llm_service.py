@@ -15,7 +15,7 @@ if not logger.handlers and not logger.propagate:
 logger.info("<<<<< MODULE llm_service.py LOADED >>>>>")
 
 
-def create_llm_service(service_id: str = "global_llm_service") -> Union[OpenAIChatCompletion, AzureChatCompletion]:
+def create_llm_service(service_id: str = "global_llm_service", force_mock: bool = False) -> Union[OpenAIChatCompletion, AzureChatCompletion]:
     """
     Charge la configuration depuis .env et crée une instance du service LLM
     (OpenAI ou Azure OpenAI).
@@ -56,6 +56,45 @@ def create_llm_service(service_id: str = "global_llm_service") -> Union[OpenAICh
 
     llm_instance = None
     try:
+        if force_mock:
+            logger.info("Forçage de l'utilisation du service LLM factice (Mock).")
+            # Vous devez avoir une classe MockLLMService définie quelque part
+            # Pour l'exemple, je vais la définir ici, mais elle devrait être dans un module de mocks.
+            class MockLLMService(OpenAIChatCompletion):
+                def __init__(self, service_id: str):
+                    # Initialisation minimale pour satisfaire les besoins de base
+                    super().__init__(ai_model_id="mock_model", service_id=service_id, api_key="mock_key")
+                
+                async def _inner_get_chat_message_contents(self, *args, **kwargs):
+                    # Simuler une réponse simple
+                    from semantic_kernel.contents.chat_message_content import ChatMessageContent
+                    from openai.types.chat import ChatCompletion, ChatCompletionMessage
+                    from openai.types.chat.chat_completion import Choice
+                    from semantic_kernel.contents.utils.author_role import AuthorRole
+                    
+                    mock_choice = Choice(
+                        finish_reason='stop',
+                        index=0,
+                        message=ChatCompletionMessage(role='assistant', content='{"sophismes": []}')
+                    )
+                    
+                    mock_completion = ChatCompletion(
+                        id='chatcmpl-mock',
+                        choices=[mock_choice],
+                        created=1677652288,
+                        model=self.ai_model_id,
+                        object='chat.completion',
+                    )
+                    
+                    return [ChatMessageContent(
+                        inner_content=mock_completion,
+                        ai_model_id=self.ai_model_id,
+                        role=AuthorRole.ASSISTANT,
+                        content=mock_choice.message.content
+                    )]
+
+            return MockLLMService(service_id=service_id)
+
         if use_azure_openai:
             logger.info("Configuration Service: AzureChatCompletion...")
             if not all([api_key, model_id, endpoint]):
