@@ -309,7 +309,7 @@ def setup_numpy():
         print(f"Utilisation de la vraie bibliothèque NumPy (version {getattr(numpy, '__version__', 'inconnue')}) (depuis numpy_setup.py).")
         return numpy
 
-@pytest.fixture(scope="function", autouse=True)
+@pytest.fixture(scope="function") # autouse=True SUPPRIMÉ
 def setup_numpy_for_tests_fixture(request):
     # Nettoyage FORCÉ au tout début de chaque exécution de la fixture
     logger.info(f"Fixture numpy_setup pour {request.node.name}: Nettoyage FORCÉ initial systématique de numpy, pandas, scipy, sklearn.")
@@ -500,52 +500,5 @@ def setup_numpy_for_tests_fixture(request):
                     del sys.modules['numpy.rec']
             logger.info(f"Fin de la restauration pour {request.node.name} (branche {marker_name}).")
         return
-        is_our_mock = False
-        if current_numpy_in_sys:
-            if type(current_numpy_in_sys).__name__ == 'numpy' and hasattr(current_numpy_in_sys, '__path__') and not current_numpy_in_sys.__path__:
-                is_our_mock = True
-            elif hasattr(current_numpy_in_sys, '__version__') and "mock" in current_numpy_in_sys.__version__: 
-                is_our_mock = True
-
-        if is_our_mock:
-            logger.info(f"Suppression du Mock NumPy (ID: {id(current_numpy_in_sys)}) installé par {request.node.name}.")
-            del sys.modules['numpy']
-            if 'numpy.rec' in sys.modules and hasattr(current_numpy_in_sys, 'rec') and sys.modules['numpy.rec'] is getattr(current_numpy_in_sys, 'rec', None):
-                 del sys.modules['numpy.rec']
-            # Nettoyer aussi les sous-modules de core qui auraient pu être mis directement dans sys.modules
-            if 'numpy.core._multiarray_umath' in sys.modules:
-                del sys.modules['numpy.core._multiarray_umath']
-            if 'numpy._core._multiarray_umath' in sys.modules:
-                del sys.modules['numpy._core._multiarray_umath']
-            if 'numpy.core.multiarray' in sys.modules: # Nettoyage supplémentaire
-                del sys.modules['numpy.core.multiarray']
-            if 'numpy._core.multiarray' in sys.modules: # Nettoyage supplémentaire
-                del sys.modules['numpy._core.multiarray']
-            if 'numpy.core' in sys.modules:
-                del sys.modules['numpy.core']
-                logger.info(f"Supprimé sys.modules['numpy.core'] pour {request.node.name} (mock cleanup).")
-            if 'numpy._core' in sys.modules:
-                del sys.modules['numpy._core']
-                logger.info(f"Supprimé sys.modules['numpy._core'] pour {request.node.name} (mock cleanup).")
-
-        elif current_numpy_in_sys:
-             logger.warning(f"Tentative de restauration pour {request.node.name} (mock), mais sys.modules['numpy'] (ID: {id(current_numpy_in_sys)}) n'est pas le mock attendu.")
-
-        if numpy_state_before_this_fixture:
-            sys.modules['numpy'] = numpy_state_before_this_fixture
-            logger.info(f"Restauré sys.modules['numpy'] à l'état pré-fixture (ID: {id(numpy_state_before_this_fixture)}) pour {request.node.name} (mock).")
-        elif 'numpy' in sys.modules: 
-            logger.warning(f"Après suppression du Mock NumPy, 'numpy' (ID: {id(sys.modules['numpy'])}) est toujours dans sys.modules alors qu'il n'y avait rien à l'origine (avant cette fixture). Suppression.")
-            del sys.modules['numpy']
-
-        if numpy_rec_state_before_this_fixture:
-            sys.modules['numpy.rec'] = numpy_rec_state_before_this_fixture
-            logger.info(f"Restauré sys.modules['numpy.rec'] à l'état pré-fixture pour {request.node.name} (mock).")
-        elif 'numpy.rec' in sys.modules:
-            if not ('numpy' in sys.modules and hasattr(sys.modules['numpy'], 'rec') and sys.modules['numpy'].rec is sys.modules['numpy.rec']):
-                logger.warning(f"Après suppression du Mock NumPy, 'numpy.rec' est toujours dans sys.modules et n'appartient pas au numpy restauré/absent. Suppression.")
-                del sys.modules['numpy.rec']
-        logger.info(f"Fin de la restauration pour {request.node.name} (branche mock).")
-
 # if (sys.version_info.major == 3 and sys.version_info.minor >= 10):
 # _install_numpy_mock_immediately()
