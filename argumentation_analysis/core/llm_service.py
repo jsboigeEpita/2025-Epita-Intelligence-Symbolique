@@ -12,6 +12,7 @@ import json # Ajout de l'import manquant
 logger = logging.getLogger("Orchestration.LLM")
 if not logger.handlers and not logger.propagate:
     handler = logging.StreamHandler(); formatter = logging.Formatter('%(asctime)s [%(levelname)s] [%(name)s] %(message)s', datefmt='%H:%M:%S'); handler.setFormatter(formatter); logger.addHandler(handler); logger.setLevel(logging.INFO)
+logger.info("<<<<< MODULE llm_service.py LOADED >>>>>")
 
 
 def create_llm_service(service_id: str = "global_llm_service") -> Union[OpenAIChatCompletion, AzureChatCompletion]:
@@ -29,10 +30,25 @@ def create_llm_service(service_id: str = "global_llm_service") -> Union[OpenAICh
         ValueError: Si la configuration .env est incomplète ou invalide.
         RuntimeError: Si la création de l'instance échoue pour une autre raison.
     """
+    logger.critical("<<<<< get_llm_service FUNCTION CALLED >>>>>")
     logger.info(f"--- Configuration du Service LLM ({service_id}) ---")
-    load_dotenv(override=True) # Recharger au cas où
+    cwd = os.getcwd()
+    logger.info(f"Current working directory for dotenv: {cwd}")
+    dotenv_path = os.path.join(cwd, '.env')
+    logger.info(f"Attempting to load .env from explicit path: {dotenv_path}")
+    success = load_dotenv(dotenv_path=dotenv_path, override=True, verbose=True) # Ajout de verbose=True
+    logger.info(f"load_dotenv success with explicit path '{dotenv_path}': {success}")
 
     api_key = os.getenv("OPENAI_API_KEY")
+    logger.info(f"Value of api_key directly from os.getenv: '{api_key}'")
+    # AJOUT POUR DEBUGGING
+    if api_key and len(api_key) > 10: # Vérifier que la clé existe et est assez longue
+        logger.info(f"OpenAI API Key (first 5, last 5): {api_key[:5]}...{api_key[-5:]}")
+    elif api_key:
+        logger.info(f"OpenAI API Key loaded (short key): {api_key}")
+    else:
+        logger.warning("OpenAI API Key is None or empty after os.getenv.")
+    # FIN AJOUT
     model_id = os.getenv("OPENAI_CHAT_MODEL_ID")
     endpoint = os.getenv("OPENAI_ENDPOINT")
     org_id = os.getenv("OPENAI_ORG_ID")
