@@ -36,9 +36,9 @@ Si vous souhaitez lancer les serveurs backend et frontend rapidement depuis des 
 
 *   **Pour démarrer le serveur Frontend :**
     ```powershell
-    powershell -Command ".\activate_project_env.ps1 -CommandToRun 'cd services/web_api/interface-web-argumentative && npm start'"
+    powershell -Command ".\activate_project_env.ps1 -CommandToRun 'scripts\run_frontend.cmd 3001'"
     ```
-    *(Note : Cette commande utilise `activate_project_env.ps1` pour la cohérence avec la demande, bien que l'environnement Conda ne soit pas strictement nécessaire pour `npm start`. La commande `cd` est exécutée dans le contexte de `conda run`.)*
+    *(Note : Cette commande utilise `activate_project_env.ps1` qui exécute le script `scripts\run_frontend.cmd` (en lui passant optionnellement un port, ici 3001) via `conda run`. Le script `run_frontend.cmd` se charge de naviguer dans le bon répertoire et de lancer `npm start`, en utilisant le port spécifié ou un port par défaut si aucun n'est fourni à `run_frontend.cmd`.)*
 
 ## Parcours de test de l'interface
 
