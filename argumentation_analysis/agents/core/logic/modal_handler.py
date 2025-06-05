@@ -1,11 +1,12 @@
 import jpype
 from jpype.types import JString
 import logging
+# La configuration du logging (appel à setup_logging()) est supposée être faite globalement.
 from argumentation_analysis.utils.core_utils.logging_utils import setup_logging
 from .tweety_initializer import TweetyInitializer # To access Modal parser
 
 setup_logging()
-logger = logging.getLogger(__name__)
+logger = logging.getLogger(__name__) # Obtient le logger pour ce module
 
 class ModalHandler:
     """
