@@ -22,8 +22,7 @@ from pathlib import Path
 #     sys.path.insert(0, str(parent_dir))
 
 # Correction des imports pour pointer vers le bon emplacement des modèles
-from argumentation_analysis.agents.core.extract.extract_definitions import ExtractResult
-from argumentation_analysis.services.web_api.models.request_models import Extract, SourceDefinition, ExtractDefinitions # Supposant que ce sont des modèles de requête
+from argumentation_analysis.models.extract_definition import ExtractResult, Extract, SourceDefinition, ExtractDefinitions
 
 # Configuration du logging
 logger = logging.getLogger("Services.ExtractService")

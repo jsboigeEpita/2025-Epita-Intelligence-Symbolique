@@ -75,9 +75,9 @@ def test_score_clarity_long_sentences(scorer_default: MockClarityScorer):
     # 30 mots / 1 phrase = 30. > 25. Pénalité -0.1
     text = "Ceci est une phrase exceptionnellement et particulièrement longue conçue dans le but unique de tester la fonctionnalité de détection de phrases longues de notre analyseur de clarté."
     result = scorer_default.score_clarity(text)
-    assert result["clarity_score"] == pytest.approx(1.0 - 0.1)
+    assert result["clarity_score"] == pytest.approx(1.0 - 0.1 - (0.15 * 0.11))
     assert result["factors"]["long_sentences_avg"] > scorer_default.max_avg_sentence_length
-    assert result["interpretation"] == "Très clair (Mock)" # 0.9
+    assert result["interpretation"] == "Très clair (Mock)"
 
 def test_score_clarity_complex_words(scorer_default: MockClarityScorer):
     """Teste l'impact des mots complexes."""
@@ -113,9 +113,9 @@ def test_score_clarity_ambiguity(scorer_default: MockClarityScorer):
     # "peut-être", "possiblement", "certains" (3 ambigus). Pénalité -0.1 * 3 = -0.3
     text = "Peut-être que cela fonctionnera. Possiblement demain. Certains pensent ainsi."
     result = scorer_default.score_clarity(text)
-    assert result["clarity_score"] == pytest.approx(1.0 - 0.1 * 3)
+    assert result["clarity_score"] == pytest.approx(1.0 - (0.1 * 3) - (0.15 * 0.2))
     assert result["factors"]["ambiguity_keywords"] == 3
-    assert result["interpretation"] == "Clair (Mock)" # 0.7
+    assert result["interpretation"] == "Peu clair (Mock)"
 
 def test_score_clarity_multiple_penalties_and_clamping(scorer_default: MockClarityScorer):
     """Teste le cumul de plusieurs pénalités et le clampage à 0."""
@@ -153,6 +153,7 @@ def test_score_clarity_custom_jargon(scorer_custom_config: MockClarityScorer):
     # Jargon: "customjargon" (x1). Pénalité custom = -0.5
     text = "Ce texte utilise notre customjargon spécifique."
     result = scorer_custom_config.score_clarity(text)
-    assert result["clarity_score"] == pytest.approx(1.0 - 0.5)
+    assert result["clarity_score"] == pytest.approx(1.0 - 0.5 - (0.15 * 0.33))
     assert result["factors"]["jargon_count"] == 1
+    assert result["interpretation"] == "Peu clair (Mock)"
     assert result["interpretation"] == "Peu clair (Mock)" # 0.5

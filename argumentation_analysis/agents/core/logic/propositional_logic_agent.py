@@ -271,12 +271,13 @@ class PropositionalLogicAgent(BaseLogicAgent):
         try:
             bs_str = belief_set.content
             
-            if not self.validate_formula(query): 
-                msg = f"Requête invalide: {query}"
+            is_valid, validation_message = self._tweety_bridge.validate_formula(formula_string=query)
+            if not is_valid:
+                msg = f"Requête invalide: {query}. Raison: {validation_message}"
                 self.logger.error(msg)
-                return None, f"FUNC_ERROR: {msg}"
+                return False, f"FUNC_ERROR: {msg}"
 
-            is_entailed, raw_output_str = self._tweety_bridge.execute_pl_query( # Utilisez raw_output_str ici
+            is_entailed, raw_output_str = self._tweety_bridge.execute_pl_query(
                 belief_set_content=bs_str,
                 query_string=query
             )
