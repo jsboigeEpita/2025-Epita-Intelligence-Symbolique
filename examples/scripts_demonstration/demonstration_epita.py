@@ -35,7 +35,7 @@ Exécutez la commande suivante depuis la racine du projet :
 python scripts/demonstration_epita.py
 """
 # Imports nécessaires
-print("INFO [DEMO_SCRIPT_START]: Début des imports Python standards.")
+logger.info("Début des imports Python standards.") # Remplacé print par logger.info
 import subprocess
 import json
 from pathlib import Path
@@ -48,9 +48,9 @@ import logging # Ajout du logging
 # Import pour semantic_kernel, nécessaire globalement
 try:
     import semantic_kernel as sk
-    print("INFO [DEMO_IMPORT_DEBUG]: semantic_kernel importé.")
+    logger.info("semantic_kernel importé.") # Remplacé print par logger.info
 except ImportError:
-    print("ERREUR: semantic_kernel n'a pas pu être importé. Certaines fonctionnalités seront indisponibles.")
+    logger.error("semantic_kernel n'a pas pu être importé. Certaines fonctionnalités seront indisponibles.") # Remplacé print par logger.error
     sk = None # Pour éviter les NameError plus tard
 
 # Configuration du logging pour ce script
@@ -157,19 +157,19 @@ def check_and_install_dependencies():
 
 
 def run_unit_tests():
-    print("\n--- Exécution des tests unitaires ---")
-    print("INFO: Les tests unitaires utilisent typiquement des mocks pour isoler le code testé.")
+    logger.info("\n--- Exécution des tests unitaires ---")
+    logger.info("Les tests unitaires utilisent typiquement des mocks pour isoler le code testé et garantir une exécution rapide.")
     start_time_tests = time.time()
-    print(f"INFO: Début de l'exécution des tests unitaires : {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(start_time_tests))}")
+    logger.info(f"Début de l'exécution des tests unitaires : {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(start_time_tests))}")
     try:
         # MODIFICATION 1: Capturer en bytes (retrait de text=True, encoding, errors)
         # Ajout d'un timeout de 900 secondes (15 minutes)
-        print("INFO: Exécution de pytest avec un timeout de 900 secondes (15 minutes)...")
+        logger.info("Exécution de pytest avec un timeout de 900 secondes (15 minutes)...")
         pytest_process = subprocess.run([sys.executable, "-m", "pytest"], capture_output=True, check=False, timeout=900) # Timeout augmenté
         
         end_time_tests = time.time()
-        print(f"INFO: Fin de l'exécution des tests unitaires : {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(end_time_tests))}")
-        print(f"INFO: Tests unitaires exécutés en {end_time_tests - start_time_tests:.2f} secondes.")
+        logger.info(f"Fin de l'exécution des tests unitaires : {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(end_time_tests))}")
+        logger.info(f"Tests unitaires exécutés en {end_time_tests - start_time_tests:.2f} secondes.")
 
         # MODIFICATION 2: Décodage robuste de stdout et stderr
         pytest_stdout_str = ""
@@ -179,107 +179,87 @@ def run_unit_tests():
             try:
                 pytest_stdout_str = pytest_process.stdout.decode('utf-8', errors='replace')
             except UnicodeDecodeError as e_decode_utf8:
-                print(f"AVERTISSEMENT: Échec du décodage UTF-8 pour stdout: {e_decode_utf8}. Tentative avec latin-1.")
+                logger.warning(f"Échec du décodage UTF-8 pour stdout des tests: {e_decode_utf8}. Tentative avec latin-1.")
                 try:
                     pytest_stdout_str = pytest_process.stdout.decode('latin-1', errors='replace')
                 except UnicodeDecodeError as e_decode_latin1:
-                    print(f"ERREUR: Échec du décodage latin-1 pour stdout après échec UTF-8: {e_decode_latin1}.")
-                    # Représentation des bytes si tout échoue
-                    pytest_stdout_str = f"Impossible de décoder stdout. Données brutes (repr): {repr(pytest_process.stdout)}"
+                    logger.error(f"Échec du décodage latin-1 pour stdout des tests après échec UTF-8: {e_decode_latin1}.")
+                    pytest_stdout_str = f"Impossible de décoder stdout des tests. Données brutes (repr): {repr(pytest_process.stdout)}"
             except Exception as e_decode_other_stdout:
-                print(f"ERREUR: Erreur inattendue lors du décodage de stdout: {e_decode_other_stdout}")
-                pytest_stdout_str = f"Erreur inattendue lors du décodage de stdout. Données brutes (repr): {repr(pytest_process.stdout)}"
-
+                logger.error(f"Erreur inattendue lors du décodage de stdout des tests: {e_decode_other_stdout}")
+                pytest_stdout_str = f"Erreur inattendue lors du décodage de stdout des tests. Données brutes (repr): {repr(pytest_process.stdout)}"
 
         if pytest_process.stderr:
             try:
                 pytest_stderr_str = pytest_process.stderr.decode('utf-8', errors='replace')
             except UnicodeDecodeError as e_decode_utf8_err:
-                print(f"AVERTISSEMENT: Échec du décodage UTF-8 pour stderr: {e_decode_utf8_err}. Tentative avec latin-1.")
+                logger.warning(f"Échec du décodage UTF-8 pour stderr des tests: {e_decode_utf8_err}. Tentative avec latin-1.")
                 try:
                     pytest_stderr_str = pytest_process.stderr.decode('latin-1', errors='replace')
                 except UnicodeDecodeError as e_decode_latin1_err:
-                    print(f"ERREUR: Échec du décodage latin-1 pour stderr après échec UTF-8: {e_decode_latin1_err}.")
-                    pytest_stderr_str = f"Impossible de décoder stderr. Données brutes (repr): {repr(pytest_process.stderr)}"
+                    logger.error(f"Échec du décodage latin-1 pour stderr des tests après échec UTF-8: {e_decode_latin1_err}.")
+                    pytest_stderr_str = f"Impossible de décoder stderr des tests. Données brutes (repr): {repr(pytest_process.stderr)}"
             except Exception as e_decode_other_stderr:
-                 print(f"ERREUR: Erreur inattendue lors du décodage de stderr: {e_decode_other_stderr}")
-                 pytest_stderr_str = f"Erreur inattendue lors du décodage de stderr. Données brutes (repr): {repr(pytest_process.stderr)}"
+                 logger.error(f"Erreur inattendue lors du décodage de stderr des tests: {e_decode_other_stderr}")
+                 pytest_stderr_str = f"Erreur inattendue lors du décodage de stderr des tests. Données brutes (repr): {repr(pytest_process.stderr)}"
 
-        print("\nRésultat de l'exécution de pytest:")
+        logger.info("\nRésultat de l'exécution de pytest:")
 
-        # MODIFICATION 3: Impression de stdout (try-except commenté)
         if pytest_stdout_str:
-            print("\n--- Sortie Standard Pytest ---")
-            # try:
-            print(pytest_stdout_str)
-            # except UnicodeEncodeError:
-            #     print("(Encodage forcé pour la sortie standard en raison d'une UnicodeEncodeError)")
-            #     output_encoding_stdout = sys.stdout.encoding if sys.stdout.encoding else 'utf-8'
-            #     print(pytest_stdout_str.encode(output_encoding_stdout, errors='replace').decode(output_encoding_stdout, errors='ignore'))
-            # finally:
-            print("--- Fin Sortie Standard Pytest ---")
+            logger.info("\n--- Sortie Standard Pytest ---")
+            for line in pytest_stdout_str.splitlines(): # Imprimer ligne par ligne pour le logger
+                logger.info(line)
+            logger.info("--- Fin Sortie Standard Pytest ---")
         
-        # MODIFICATION 4: Impression de stderr (try-except commenté)
         if pytest_stderr_str:
-            print("\n--- Sortie d'Erreur Pytest ---")
-            # try:
-            print(pytest_stderr_str)
-            # except UnicodeEncodeError:
-            #     print("(Encodage forcé pour la sortie d'erreur en raison d'une UnicodeEncodeError)")
-            #     output_encoding_stderr = sys.stderr.encoding if sys.stderr.encoding else 'utf-8'
-            #     print(pytest_stderr_str.encode(output_encoding_stderr, errors='replace').decode(output_encoding_stderr, errors='ignore'))
-            # finally:
-            print("--- Fin Sortie d'Erreur Pytest ---")
+            logger.error("\n--- Sortie d'Erreur Pytest ---") # Utiliser logger.error pour stderr
+            for line in pytest_stderr_str.splitlines(): # Imprimer ligne par ligne
+                logger.error(line)
+            logger.error("--- Fin Sortie d'Erreur Pytest ---")
 
-        # MODIFICATION 5: Utiliser pytest_process.returncode et pytest_stdout_str pour le résumé
         if pytest_process.returncode == 0:
-            print("\nSUCCÈS: Tests unitaires réussis !")
+            logger.info("\nSUCCÈS: Tests unitaires réussis !")
         else:
-            print(f"\nAVERTISSEMENT: Échec des tests unitaires ou certains tests ont échoué (code de retour : {pytest_process.returncode}).")
+            logger.warning(f"\nAVERTISSEMENT: Échec des tests unitaires ou certains tests ont échoué (code de retour : {pytest_process.returncode}).")
             
             summary_lines = []
-            if pytest_stdout_str: 
+            if pytest_stdout_str:
                 try:
                     keywords = ["collected", "passed", "failed", "error", "skipped", "xfailed", "xpassed", "short test summary info", "===="]
                     summary_lines = [line for line in pytest_stdout_str.splitlines() if any(keyword in line.lower() for keyword in keywords)]
-                except Exception as e_split: 
-                    print(f"AVERTISSEMENT: Erreur lors du découpage de la sortie standard pour le résumé: {e_split}")
-                    summary_lines = ["Erreur lors de l'extraction du résumé."] # Fournir un message d'erreur dans le résumé
+                except Exception as e_split:
+                    logger.warning(f"Erreur lors du découpage de la sortie standard pour le résumé des tests: {e_split}")
+                    summary_lines = ["Erreur lors de l'extraction du résumé des tests."]
 
             if summary_lines:
                 summary_to_print = "\n".join(summary_lines)
-                print("\n--- Résumé des tests (extrait de la sortie) ---")
-                # try:
-                print(summary_to_print)
-                # except UnicodeEncodeError:
-                #     print("(Encodage forcé pour le résumé en raison d'une UnicodeEncodeError)")
-                #     output_encoding_summary = sys.stdout.encoding if sys.stdout.encoding else 'utf-8'
-                #     print(summary_to_print.encode(output_encoding_summary, errors='replace').decode(output_encoding_summary, errors='ignore'))
-                # finally:
-                print("--- Fin Résumé des tests ---")
-            elif pytest_stdout_str : # Si stdout n'est pas vide mais aucun résumé pertinent
-                 print("Aucun résumé pertinent trouvé dans la sortie de pytest.")
-            else: # Si pytest_stdout_str est vide
-                print("Impossible d'extraire un résumé : la sortie standard de pytest était vide.")
+                logger.info("\n--- Résumé des tests (extrait de la sortie) ---")
+                for line in summary_to_print.splitlines(): # Imprimer ligne par ligne
+                    logger.info(line)
+                logger.info("--- Fin Résumé des tests ---")
+            elif pytest_stdout_str :
+                 logger.info("Aucun résumé pertinent trouvé dans la sortie de pytest.")
+            else:
+                logger.warning("Impossible d'extraire un résumé des tests : la sortie standard de pytest était vide.")
     except subprocess.TimeoutExpired:
-        print("ERREUR: L'exécution de pytest a dépassé le timeout de 900 secondes (15 minutes).")
-        print("Cela peut indiquer un problème dans les tests (boucle infinie, attente indéfinie), un environnement très lent, ou des tests particulièrement longs.")
-        print("Si ce problème persiste, essayez d'exécuter 'pytest -v' manuellement pour identifier les tests lents ou bloquants.")
+        logger.error("L'exécution de pytest a dépassé le timeout de 900 secondes (15 minutes).")
+        logger.error("Cela peut indiquer un problème dans les tests (boucle infinie, attente indéfinie), un environnement très lent, ou des tests particulièrement longs.")
+        logger.error("Si ce problème persiste, essayez d'exécuter 'pytest -v' manuellement pour identifier les tests lents ou bloquants.")
         end_time_tests_timeout = time.time()
-        print(f"INFO: Fin de l'exécution des tests unitaires (timeout) : {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(end_time_tests_timeout))}")
-        print(f"INFO: Tests unitaires (tentative) exécutés en {end_time_tests_timeout - start_time_tests:.2f} secondes avant timeout.")
+        logger.info(f"Fin de l'exécution des tests unitaires (timeout) : {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(end_time_tests_timeout))}")
+        logger.info(f"Tests unitaires (tentative) exécutés en {end_time_tests_timeout - start_time_tests:.2f} secondes avant timeout.")
     except FileNotFoundError:
-        print("ERREUR: La commande 'pytest' n'a pas été trouvée. Assurez-vous que pytest est installé et dans votre PATH.")
+        logger.error("La commande 'pytest' n'a pas été trouvée. Assurez-vous que pytest est installé et dans votre PATH.")
         end_time_tests_error = time.time()
-        print(f"INFO: Fin de l'exécution des tests unitaires (erreur FileNotFoundError) : {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(end_time_tests_error))}")
-        print(f"INFO: Tests unitaires (tentative) exécutés en {end_time_tests_error - start_time_tests:.2f} secondes.")
+        logger.info(f"Fin de l'exécution des tests unitaires (erreur FileNotFoundError) : {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(end_time_tests_error))}")
+        logger.info(f"Tests unitaires (tentative) exécutés en {end_time_tests_error - start_time_tests:.2f} secondes.")
     except Exception as e:
-        print(f"Une erreur inattendue est survenue lors de l'exécution des tests : {e}")
-        import traceback
-        traceback.print_exc()
+        logger.error(f"Une erreur inattendue est survenue lors de l'exécution des tests : {e}", exc_info=True) # Ajout de exc_info=True
+        # import traceback # Déjà géré par exc_info=True pour le logger
+        # traceback.print_exc()
         end_time_tests_exception = time.time()
-        print(f"INFO: Fin de l'exécution des tests unitaires (erreur Exception) : {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(end_time_tests_exception))}")
-        print(f"INFO: Tests unitaires (tentative) exécutés en {end_time_tests_exception - start_time_tests:.2f} secondes.")
+        logger.info(f"Fin de l'exécution des tests unitaires (erreur Exception) : {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(end_time_tests_exception))}")
+        logger.info(f"Tests unitaires (tentative) exécutés en {end_time_tests_exception - start_time_tests:.2f} secondes.")
 
 
 def analyze_clear_text_example(project_context: ProjectContext, example_file_path_str: str):
@@ -313,7 +293,8 @@ def analyze_clear_text_example(project_context: ProjectContext, example_file_pat
         with open(file_path, "r", encoding="utf-8") as f:
             text_content = f.read()
 
-        logger.info(f"Contenu du fichier (premiers 200 caractères) :\n{text_content[:200]}...\n")
+        logger.info(f"Contenu du fichier '{example_file_path_str}' (premiers 200 caractères) :\n{text_content[:200]}...\n")
+        logger.info("L'objectif est d'analyser ce texte pour identifier d'éventuels sophismes.")
         
         agent_instance = project_context.informal_agent
         analysis_description = f"InformalAgent (type: {type(agent_instance).__name__})"
@@ -336,15 +317,18 @@ def analyze_clear_text_example(project_context: ProjectContext, example_file_pat
             logger.info(f"Fin de l'analyse des sophismes (texte clair) : {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(end_time_analyze_clear))}")
             logger.info(f"Analyse des sophismes (texte clair) effectuée en {end_time_analyze_clear - start_time_analyze_clear:.2f} secondes.")
 
-            logger.info(f"Résultats de l'analyse des sophismes ({analysis_description}) :")
+            logger.info(f"Résultats de l'analyse des sophismes pour '{example_file_path_str}' ({analysis_description}) :")
+            logger.info("L'utilisateur devrait observer une structure JSON listant les sophismes détectés (ou une indication d'absence de sophismes).")
             try:
                 # Utiliser logger.info pour la sortie JSON pour la cohérence
-                logger.info(json.dumps(analysis_results, indent=4, ensure_ascii=False))
+                analysis_results_json = json.dumps(analysis_results, indent=4, ensure_ascii=False)
+                for line in analysis_results_json.splitlines(): # Imprimer ligne par ligne pour le logger
+                    logger.info(line)
             except TypeError:
-                logger.warning(f"Les résultats de l'analyse ne sont pas directement sérialisables en JSON. Affichage brut : {analysis_results}")
+                logger.warning(f"Les résultats de l'analyse du texte clair ne sont pas directement sérialisables en JSON. Affichage brut : {analysis_results}")
         
         except Exception as e_analyze:
-            logger.error(f"ERREUR lors de l'appel à agent_instance.analyze_fallacies pour le texte clair : {e_analyze}", exc_info=True)
+            logger.error(f"ERREUR lors de l'appel à agent_instance.analyze_fallacies pour le texte clair ('{example_file_path_str}') : {e_analyze}", exc_info=True)
 
     except Exception as e:
         logger.error(f"Une erreur est survenue lors de l'analyse du fichier '{file_path}' : {e}", exc_info=True)
@@ -369,10 +353,6 @@ def analyze_encrypted_data(project_context: ProjectContext) -> str | None:
     analysis_results_list = []
     current_project_root_path = project_context.project_root_path if project_context.project_root_path else Path(project_root)
     
-    # Le chemin du fichier de configuration est géré par DefinitionService lors de son initialisation dans bootstrap
-    # abs_definitions_file_path = current_project_root_path / "argumentation_analysis" / "data" / "extract_sources.json.gz.enc"
-    # logger.info(f"Utilisation du DefinitionService configuré par bootstrap (qui devrait utiliser {abs_definitions_file_path})")
-
     try:
         start_time_load_defs = time.time()
         logger.info(f"Début du chargement des définitions d'extraits via DefinitionService du contexte: {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(start_time_load_defs))}")
@@ -382,12 +362,7 @@ def analyze_encrypted_data(project_context: ProjectContext) -> str | None:
         end_time_load_defs = time.time()
         logger.info(f"Fin du chargement des définitions d'extraits : {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(end_time_load_defs))}")
         logger.info(f"Définitions d'extraits chargées en {end_time_load_defs - start_time_load_defs:.2f} secondes.")
-        
-        # La structure de extract_definitions_obj peut avoir changé.
-        # Le mock original avait .extracts directement. Le réel pourrait avoir .sources puis .extracts.
-        # Le mock dans bootstrap.py pour DefinitionService retourne un objet ExtractDefinitions avec un attribut 'extracts'.
-        # Si le service réel retourne une structure avec 'sources', il faudra adapter.
-        # Pour l'instant, on suppose que extract_definitions_obj.extracts est la liste des extraits.
+        logger.info("Recherche des extraits à traiter dans l'objet de définitions...")
         
         # Tentative de gestion des deux structures (directement .extracts ou .sources[0].extracts)
         extracts_to_process = []
@@ -413,17 +388,8 @@ def analyze_encrypted_data(project_context: ProjectContext) -> str | None:
             return None
 
         selected_extract = extracts_to_process[0] # Analyse du premier extrait pour la démo
+        logger.info(f"Sélection du premier extrait (ID: {getattr(selected_extract, 'id', 'N/A')}) pour l'analyse détaillée.")
         
-        # Log temporaire pour inspecter selected_extract
-        try:
-            logger.debug(f"Selected extract object (before getattr): {selected_extract}") # Log brut de l'objet
-            if hasattr(selected_extract, 'to_dict'):
-                logger.debug(f"Selected extract dict: {selected_extract.to_dict()}")
-            else:
-                logger.debug(f"Selected extract as dict (vars): {vars(selected_extract) if hasattr(selected_extract, '__dict__') else 'N/A'}")
-        except Exception as e_log:
-            logger.error(f"Error logging selected_extract: {e_log}")
-
         # Les attributs de 'selected_extract' devraient correspondre à la classe Extract
         # (soit réelle, soit le mock si l'import réel a échoué dans bootstrap)
         extract_id = getattr(selected_extract, 'id', getattr(selected_extract, 'extract_name', 'N/A_ID'))
@@ -431,7 +397,8 @@ def analyze_encrypted_data(project_context: ProjectContext) -> str | None:
         extract_title = getattr(selected_extract, 'title', 'N/A_Title')
 
         logger.info(f"\n--- Analyse rhétorique de l'extrait déchiffré (ID: {extract_id}, Titre: {extract_title}) ---")
-        logger.info(f"Texte de l'extrait sélectionné (premiers 200 chars):\n{text_content_extract[:200]}...")
+        logger.info(f"Texte de l'extrait déchiffré sélectionné (ID: {extract_id}, Titre: {extract_title}, premiers 200 chars):\n{text_content_extract[:200]}...")
+        logger.info("L'objectif est d'analyser cet extrait déchiffré pour identifier d'éventuels sophismes.")
 
         agent_instance_encrypted = project_context.informal_agent
         analysis_description_encrypted = f"InformalAgent (type: {type(agent_instance_encrypted).__name__})"
@@ -459,11 +426,14 @@ def analyze_encrypted_data(project_context: ProjectContext) -> str | None:
             }
             analysis_results_list.append(structured_analysis_result)
 
-            logger.info("\nRésultat de l'analyse de l'extrait (formaté pour sauvegarde) :")
-            logger.info(json.dumps(analysis_results_list, indent=4, ensure_ascii=False))
+            logger.info(f"\nRésultat de l'analyse de l'extrait déchiffré (ID: {extract_id}, Titre: {extract_title}) (formaté pour sauvegarde) :")
+            logger.info("L'utilisateur devrait observer une structure JSON similaire à celle de l'analyse de texte clair.")
+            analysis_results_list_json = json.dumps(analysis_results_list, indent=4, ensure_ascii=False)
+            for line in analysis_results_list_json.splitlines(): # Imprimer ligne par ligne
+                logger.info(line)
         
         except Exception as e_analyze_enc:
-            logger.error(f"ERREUR lors de l'appel à agent_instance_encrypted.analyze_fallacies : {e_analyze_enc}", exc_info=True)
+            logger.error(f"ERREUR lors de l'appel à agent_instance_encrypted.analyze_fallacies pour l'extrait (ID: {extract_id}) : {e_analyze_enc}", exc_info=True)
 
         results_dir = current_project_root_path / "results"
         results_dir.mkdir(parents=True, exist_ok=True)
@@ -515,7 +485,8 @@ def generate_report_from_analysis(project_context: ProjectContext, analysis_json
             sys.executable, str(report_script_path.resolve()),
             "--advanced-results", str(analysis_file_path.resolve())
         ]
-        logger.info(f"Exécution de la commande : {' '.join(command)}")
+        logger.info(f"Exécution de la commande pour générer le rapport : {' '.join(command)}")
+        logger.info("Ce script tentera de produire des rapports en plusieurs formats (ex: HTML, Markdown) basés sur les résultats d'analyse.")
         
         logger.info("Exécution du script de génération de rapport avec un timeout de 300 secondes...")
         report_process = subprocess.run(command, capture_output=True, check=False, cwd=str(current_project_root_path), timeout=300)
@@ -543,18 +514,22 @@ def generate_report_from_analysis(project_context: ProjectContext, analysis_json
 
         logger.info("\nRésultat de la génération du rapport :")
         if report_stdout_str:
-            logger.info("\n--- Sortie Standard du script de rapport ---")
-            logger.info(report_stdout_str)
-            logger.info("--- Fin Sortie Standard du script de rapport ---")
+            logger.info("\n--- Sortie Standard du script de génération de rapport ---")
+            for line in report_stdout_str.splitlines(): # Imprimer ligne par ligne
+                logger.info(line)
+            logger.info("--- Fin Sortie Standard du script de génération de rapport ---")
         
         if report_stderr_str:
-            logger.error("\n--- Sortie d'Erreur du script de rapport ---")
-            logger.error(report_stderr_str)
-            logger.error("--- Fin Sortie d'Erreur du script de rapport ---")
+            logger.error("\n--- Sortie d'Erreur du script de génération de rapport ---")
+            for line in report_stderr_str.splitlines(): # Imprimer ligne par ligne
+                logger.error(line)
+            logger.error("--- Fin Sortie d'Erreur du script de génération de rapport ---")
         
         if report_process.returncode == 0:
             logger.info("\nSUCCÈS: Génération du rapport terminée.")
-            logger.info(f"Les rapports devraient être disponibles dans le dossier '{current_project_root_path / 'results' / 'reports' / 'comprehensive'}'")
+            report_dir = current_project_root_path / 'results' / 'reports' / 'comprehensive'
+            logger.info(f"Les rapports (HTML, Markdown, etc.) devraient être disponibles dans le dossier : {report_dir.resolve()}")
+            logger.info("L'utilisateur devrait vérifier ce dossier pour les fichiers de rapport générés.")
         else:
             logger.error(f"\nÉCHEC: La génération du rapport a échoué (code de retour : {report_process.returncode}).")
             logger.error("Vérifiez les logs ci-dessus et les dépendances du script de rapport.")
