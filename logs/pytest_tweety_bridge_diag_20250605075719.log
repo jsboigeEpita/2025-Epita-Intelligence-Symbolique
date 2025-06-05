@@ -1,0 +1,1468 @@
+﻿============================= test session starts =============================
+platform win32 -- Python 3.9.12, pytest-8.4.0, pluggy-1.6.0 -- C:\Tools\miniconda3\python.exe
+cachedir: .pytest_cache
+rootdir: D:\2025-Epita-Intelligence-Symbolique-4
+configfile: pytest.ini
+plugins: anyio-4.9.0, asyncio-1.0.0, cov-6.1.1, mock-3.14.1
+asyncio: mode=auto, asyncio_default_fixture_loop_scope=function, asyncio_default_test_loop_scope=function
+collecting ... collected 12 items
+
+tests/agents/core/logic/test_tweety_bridge.py::TestTweetyBridge::test_execute_pl_query_accepted FAILED [  8%]
+tests/agents/core/logic/test_tweety_bridge.py::TestTweetyBridge::test_execute_pl_query_error FAILED [ 16%]
+tests/agents/core/logic/test_tweety_bridge.py::TestTweetyBridge::test_execute_pl_query_rejected FAILED [ 25%]
+tests/agents/core/logic/test_tweety_bridge.py::TestTweetyBridge::test_initialization_jvm_not_ready FAILED [ 33%]
+tests/agents/core/logic/test_tweety_bridge.py::TestTweetyBridge::test_initialization_jvm_ready FAILED [ 41%]
+tests/agents/core/logic/test_tweety_bridge.py::TestTweetyBridge::test_validate_belief_set_empty FAILED [ 50%]
+tests/agents/core/logic/test_tweety_bridge.py::TestTweetyBridge::test_validate_belief_set_invalid FAILED [ 58%]
+tests/agents/core/logic/test_tweety_bridge.py::TestTweetyBridge::test_validate_belief_set_valid FAILED [ 66%]
+tests/agents/core/logic/test_tweety_bridge.py::TestTweetyBridge::test_validate_fol_formula FAILED [ 75%]
+tests/agents/core/logic/test_tweety_bridge.py::TestTweetyBridge::test_validate_formula_invalid FAILED [ 83%]
+tests/agents/core/logic/test_tweety_bridge.py::TestTweetyBridge::test_validate_formula_valid FAILED [ 91%]
+tests/agents/core/logic/test_tweety_bridge.py::TestTweetyBridge::test_validate_modal_formula FAILED [100%]
+
+================================== FAILURES ===================================
+_______________ TestTweetyBridge.test_execute_pl_query_accepted _______________
+
+self = <MagicMock name='PlParser_instance_mock.parseBeliefBase' id='2933797727104'>
+
+    def assert_called_once(self):
+        """assert that the mock was called only once.
+        """
+        if not self.call_count == 1:
+            msg = ("Expected '%s' to have been called once. Called %s times.%s"
+                   % (self._mock_name or 'mock',
+                      self.call_count,
+                      self._calls_repr()))
+>           raise AssertionError(msg)
+E           AssertionError: Expected 'parseBeliefBase' to have been called once. Called 0 times.
+
+C:\Tools\miniconda3\lib\unittest\mock.py:886: AssertionError
+
+During handling of the above exception, another exception occurred:
+
+self = <test_tweety_bridge.TestTweetyBridge testMethod=test_execute_pl_query_accepted>
+
+    def test_execute_pl_query_accepted(self):
+        """Test de l'ex�cution d'une requ�te propositionnelle accept�e."""
+        if not os.environ.get('USE_REAL_JPYPE', 'false').lower() in ('true', '1'):
+            # Configurer les mocks
+            mock_belief_set = MagicMock()
+            mock_formula = MagicMock()
+            self.mock_pl_parser_instance.parseBeliefBase.return_value = mock_belief_set
+            self.mock_pl_parser_instance.parseFormula.return_value = mock_formula
+            self.mock_sat_reasoner_instance.query.return_value = True
+            self.mock_jpype.JObject.return_value = True # Pour la conversion du r�sultat bool�en Java
+    
+            # Ex�cuter une requ�te
+            result = self.tweety_bridge.execute_pl_query("a => b", "a")
+    
+            # V�rifier que le parser a �t� appel�
+>           self.mock_pl_parser_instance.parseBeliefBase.assert_called_once()
+E           AssertionError: Expected 'parseBeliefBase' to have been called once. Called 0 times.
+
+tests\agents\core\logic\test_tweety_bridge.py:316: AssertionError
+---------------------------- Captured stdout setup ----------------------------
+2025-06-05 07:57:31,063 - tests.mocks.jpype_setup - INFO - Test test_execute_pl_query_accepted utilise MOCK JPype.
+2025-06-05 07:57:31,063 - tests.mocks.jpype_setup - INFO - �tat (_jvm_started, _jvm_path, config.jvm_path) du mock JPype r�initialis� pour le test.
+---------------------------- Captured stdout call -----------------------------
+07:57:31 [INFO] [Orchestration.TweetyBridge] TWEETY_BRIDGE: __init__ - D�but (Refactored)
+07:57:31 [INFO] [argumentation_analysis.agents.core.logic.tweety_initializer] Contenu de tweety_lib_path (D:\2025-Epita-Intelligence-Symbolique-4\libs\tweety):
+07:57:31 [INFO] [argumentation_analysis.agents.core.logic.tweety_initializer]   - .gitkeep
+07:57:31 [INFO] [argumentation_analysis.agents.core.logic.tweety_initializer]   - native
+07:57:31 [INFO] [argumentation_analysis.agents.core.logic.tweety_initializer]   - org.tweetyproject.action-1.28-with-dependencies.jar
+07:57:31 [INFO] [argumentation_analysis.agents.core.logic.tweety_initializer]   - org.tweetyproject.agents-1.28-with-dependencies.jar
+07:57:31 [INFO] [argumentation_analysis.agents.core.logic.tweety_initializer]   - org.tweetyproject.agents.dialogues-1.28-with-dependencies.jar
+07:57:31 [INFO] [argumentation_analysis.agents.core.logic.tweety_initializer]   - org.tweetyproject.arg.aba-1.28-with-dependencies.jar
+07:57:31 [INFO] [argumentation_analysis.agents.core.logic.tweety_initializer]   - org.tweetyproject.arg.adf-1.28-with-dependencies.jar
+07:57:31 [INFO] [argumentation_analysis.agents.core.logic.tweety_initializer]   - org.tweetyproject.arg.aspic-1.28-with-dependencies.jar
+07:57:31 [INFO] [argumentation_analysis.agents.core.logic.tweety_initializer]   - org.tweetyproject.arg.bipolar-1.28-with-dependencies.jar
+07:57:31 [INFO] [argumentation_analysis.agents.core.logic.tweety_initializer]   - org.tweetyproject.arg.caf-1.28-with-dependencies.jar
+07:57:31 [INFO] [argumentation_analysis.agents.core.logic.tweety_initializer]   - org.tweetyproject.arg.deductive-1.28-with-dependencies.jar
+07:57:31 [INFO] [argumentation_analysis.agents.core.logic.tweety_initializer]   - org.tweetyproject.arg.delp-1.28-with-dependencies.jar
+07:57:31 [INFO] [argumentation_analysis.agents.core.logic.tweety_initializer]   - org.tweetyproject.arg.dung-1.28-with-dependencies.jar
+07:57:31 [INFO] [argumentation_analysis.agents.core.logic.tweety_initializer]   - org.tweetyproject.arg.extended-1.28-with-dependencies.jar
+07:57:31 [INFO] [argumentation_analysis.agents.core.logic.tweety_initializer]   - org.tweetyproject.arg.prob-1.28-with-dependencies.jar
+07:57:31 [INFO] [argumentation_analysis.agents.core.logic.tweety_initializer]   - org.tweetyproject.arg.rankings-1.28-with-dependencies.jar
+07:57:31 [INFO] [argumentation_analysis.agents.core.logic.tweety_initializer]   - org.tweetyproject.arg.setaf-1.28-with-dependencies.jar
+07:57:31 [INFO] [argumentation_analysis.agents.core.logic.tweety_initializer]   - org.tweetyproject.arg.social-1.28-with-dependencies.jar
+07:57:31 [INFO] [argumentation_analysis.agents.core.logic.tweety_initializer]   - org.tweetyproject.arg.weighted-1.28-with-dependencies.jar
+07:57:31 [INFO] [argumentation_analysis.agents.core.logic.tweety_initializer]   - org.tweetyproject.beliefdynamics-1.28-with-dependencies.jar
+07:57:31 [INFO] [argumentation_analysis.agents.core.logic.tweety_initializer]   - org.tweetyproject.commons-1.28-with-dependencies.jar
+07:57:31 [INFO] [argumentation_analysis.agents.core.logic.tweety_initializer]   - org.tweetyproject.logics.bpm-1.28-with-dependencies.jar
+07:57:31 [INFO] [argumentation_analysis.agents.core.logic.tweety_initializer]   - org.tweetyproject.logics.cl-1.28-with-dependencies.jar
+07:57:31 [INFO] [argumentation_analysis.agents.core.logic.tweety_initializer]   - org.tweetyproject.logics.commons-1.28-with-dependencies.jar
+07:57:31 [INFO] [argumentation_analysis.agents.core.logic.tweety_initializer]   - org.tweetyproject.logics.dl-1.28-with-dependencies.jar
+07:57:31 [INFO] [argumentation_analysis.agents.core.logic.tweety_initializer]   - org.tweetyproject.logics.fol-1.28-with-dependencies.jar
+07:57:31 [INFO] [argumentation_analysis.agents.core.logic.tweety_initializer]   - org.tweetyproject.logics.ml-1.28-with-dependencies.jar
+07:57:31 [INFO] [argumentation_analysis.agents.core.logic.tweety_initializer]   - org.tweetyproject.logics.mln-1.28-with-dependencies.jar
+07:57:31 [INFO] [argumentation_analysis.agents.core.logic.tweety_initializer]   - org.tweetyproject.logics.pcl-1.28-with-dependencies.jar
+07:57:31 [INFO] [argumentation_analysis.agents.core.logic.tweety_initializer]   - org.tweetyproject.logics.pl-1.28-with-dependencies.jar
+07:57:31 [INFO] [argumentation_analysis.agents.core.logic.tweety_initializer]   - org.tweetyproject.logics.qbf-1.28-with-dependencies.jar
+07:57:31 [INFO] [argumentation_analysis.agents.core.logic.tweety_initializer]   - org.tweetyproject.logics.rcl-1.28-with-dependencies.jar
+07:57:31 [INFO] [argumentation_analysis.agents.core.logic.tweety_initializer]   - org.tweetyproject.logics.rpcl-1.28-with-dependencies.jar
+07:57:31 [INFO] [argumentation_analysis.agents.core.logic.tweety_initializer]   - org.tweetyproject.lp.asp-1.28-with-dependencies.jar
+07:57:31 [INFO] [argumentation_analysis.agents.core.logic.tweety_initializer]   - org.tweetyproject.math-1.28-with-dependencies.jar
+07:57:31 [INFO] [argumentation_analysis.agents.core.logic.tweety_initializer]   - org.tweetyproject.tweety-full-1.28-with-dependencies.jar
+07:57:31 [INFO] [argumentation_analysis.agents.core.logic.tweety_initializer]   - org.tweetyproject.tweety-full-1.28.jar
+07:57:31 [INFO] [argumentation_analysis.agents.core.logic.tweety_initializer]   - tweety-full-1.28-jar-with-dependencies.jar
+07:57:31 [INFO] [argumentation_analysis.agents.core.logic.tweety_initializer] Contenu de tweety_actual_lib_dir (D:\2025-Epita-Intelligence-Symbolique-4\libs\tweety\lib):
+07:57:31 [INFO] [argumentation_analysis.agents.core.logic.tweety_initializer]     Le r�pertoire D:\2025-Epita-Intelligence-Symbolique-4\libs\tweety\lib n'existe pas ou n'est pas un r�pertoire.
+07:57:31 [INFO] [argumentation_analysis.agents.core.logic.tweety_initializer] Inspection du contenu de D:\2025-Epita-Intelligence-Symbolique-4\libs\tweety\org.tweetyproject.tweety-full-1.28-with-dependencies.jar:
+07:57:31 [INFO] [argumentation_analysis.agents.core.logic.tweety_initializer] Utilisation de l'ex�cutable jar: D:\2025-Epita-Intelligence-Symbolique-4\.tools\jdk-17.0.11+9\bin\jar
+07:57:31 [ERROR] [argumentation_analysis.agents.core.logic.tweety_initializer] La commande 'jar' n'a pas �t� trouv�e. Assurez-vous que le JDK est install� et que 'jar' est dans le PATH ou que JAVA_HOME est correctement d�fini.
+07:57:31 [INFO] [argumentation_analysis.agents.core.logic.tweety_initializer] Calculated Classpath: ['D:\\2025-Epita-Intelligence-Symbolique-4\\libs\\tweety\\org.tweetyproject.tweety-full-1.28-with-dependencies.jar']
+07:57:31 [DEBUG] [tests.mocks.jpype_components.jvm] isJVMStarted() appel�e. Retourne: False
+07:57:31 [INFO] [argumentation_analysis.agents.core.logic.tweety_initializer] Starting JVM...
+07:57:31 [INFO] [tests.mocks.jpype_components.jvm] startJVM appel�e. _jvm_started mis � True. Classpath: None
+07:57:31 [INFO] [tests.mocks.jpype_components.jvm] JVM d�marr�e avec le chemin: D:\2025-Epita-Intelligence-Symbolique-4\.tools\jdk-17.0.11+9\bin\server\jvm.dll
+07:57:31 [INFO] [argumentation_analysis.agents.core.logic.tweety_initializer] JVM started successfully.
+07:57:31 [INFO] [tests.mocks.jpype_mock] [MOCK JPYPE JClass] Appel�e avec name='java.lang.System', args=(), kwargs={}
+07:57:31 [DEBUG] [tests.mocks.jpype_mock] JClass('java.lang.System') demand�.
+07:57:31 [DEBUG] [tests.mocks.jpype_mock] JClass('java.lang.System'): Pas une �num�ration Tweety connue. Cr�ation d'une instance de MockJClassCore.
+07:57:31 [DEBUG] [tests.mocks.jpype_components.jclass_core] MockJClassCore pour 'java.lang.System' initialis�e (jclass_provider: True).
+07:57:31 [DEBUG] [tests.mocks.jpype_components.jclass_core] M�thode statique 'getProperty' configur�e pour java.lang.System.
+07:57:31 [DEBUG] [tests.mocks.jpype_components.jclass_core] MockJClassCore('java.lang.System').__getattr__('getProperty')
+07:57:31 [INFO] [tests.mocks.jpype_components.jclass_core] [MOCK] java.lang.System.getProperty('java.class.path') CALLED
+07:57:31 [INFO] [argumentation_analysis.agents.core.logic.tweety_initializer] Actual Java Classpath from System.getProperty: mocked/path1.jar;mocked/another/path2.jar
+07:57:31 [INFO] [argumentation_analysis.agents.core.logic.tweety_initializer] DIAGNOSTIC: Attempting to load java.util.ArrayList...
+07:57:31 [INFO] [tests.mocks.jpype_mock] [MOCK JPYPE JClass] Appel�e avec name='java.util.ArrayList', args=(), kwargs={}
+07:57:31 [DEBUG] [tests.mocks.jpype_mock] JClass('java.util.ArrayList') demand�.
+07:57:31 [DEBUG] [tests.mocks.jpype_mock] JClass('java.util.ArrayList'): Pas une �num�ration Tweety connue. Cr�ation d'une instance de MockJClassCore.
+07:57:31 [DEBUG] [tests.mocks.jpype_components.jclass_core] MockJClassCore pour 'java.util.ArrayList' initialis�e (jclass_provider: True).
+07:57:31 [INFO] [argumentation_analysis.agents.core.logic.tweety_initializer] DIAGNOSTIC: Successfully loaded java.util.ArrayList.
+07:57:31 [INFO] [argumentation_analysis.agents.core.logic.tweety_initializer] Attempting to import TweetyProject Java classes...
+07:57:31 [INFO] [tests.mocks.jpype_mock] [MOCK JPYPE JClass] Appel�e avec name='org.tweetyproject.logics.pl.syntax.PropositionalSignature', args=(), kwargs={}
+07:57:31 [DEBUG] [tests.mocks.jpype_mock] JClass('org.tweetyproject.logics.pl.syntax.PropositionalSignature') demand�.
+07:57:31 [DEBUG] [tests.mocks.jpype_mock] JClass('org.tweetyproject.logics.pl.syntax.PropositionalSignature'): Pas une �num�ration Tweety connue. Cr�ation d'une instance de MockJClassCore.
+07:57:31 [DEBUG] [tests.mocks.jpype_components.jclass_core] MockJClassCore pour 'org.tweetyproject.logics.pl.syntax.PropositionalSignature' initialis�e (jclass_provider: True).
+07:57:31 [INFO] [tests.mocks.jpype_mock] [MOCK JPYPE JClass] Appel�e avec name='org.tweetyproject.logics.pl.syntax.Proposition', args=(), kwargs={}
+07:57:31 [DEBUG] [tests.mocks.jpype_mock] JClass('org.tweetyproject.logics.pl.syntax.Proposition') demand�.
+07:57:31 [DEBUG] [tests.mocks.jpype_mock] JClass('org.tweetyproject.logics.pl.syntax.Proposition'): Pas une �num�ration Tweety connue. Cr�ation d'une instance de MockJClassCore.
+07:57:31 [DEBUG] [tests.mocks.jpype_components.jclass_core] MockJClassCore pour 'org.tweetyproject.logics.pl.syntax.Proposition' initialis�e (jclass_provider: True).
+07:57:31 [INFO] [tests.mocks.jpype_mock] [MOCK JPYPE JClass] Appel�e avec name='org.tweetyproject.logics.pl.syntax.PlBeliefSet', args=(), kwargs={}
+07:57:31 [DEBUG] [tests.mocks.jpype_mock] JClass('org.tweetyproject.logics.pl.syntax.PlBeliefSet') demand�.
+07:57:31 [DEBUG] [tests.mocks.jpype_mock] JClass('org.tweetyproject.logics.pl.syntax.PlBeliefSet'): Pas une �num�ration Tweety connue. Cr�ation d'une instance de MockJClassCore.
+07:57:31 [DEBUG] [tests.mocks.jpype_components.jclass_core] MockJClassCore pour 'org.tweetyproject.logics.pl.syntax.PlBeliefSet' initialis�e (jclass_provider: True).
+07:57:31 [INFO] [tests.mocks.jpype_mock] [MOCK JPYPE JClass] Appel�e avec name='org.tweetyproject.logics.pl.reasoner.SatReasoner', args=(), kwargs={}
+07:57:31 [DEBUG] [tests.mocks.jpype_mock] JClass('org.tweetyproject.logics.pl.reasoner.SatReasoner') demand�.
+07:57:31 [DEBUG] [tests.mocks.jpype_mock] JClass('org.tweetyproject.logics.pl.reasoner.SatReasoner'): Pas une �num�ration Tweety connue. Cr�ation d'une instance de MockJClassCore.
+07:57:31 [DEBUG] [tests.mocks.jpype_components.jclass_core] MockJClassCore pour 'org.tweetyproject.logics.pl.reasoner.SatReasoner' initialis�e (jclass_provider: True).
+07:57:31 [INFO] [tests.mocks.jpype_mock] [MOCK JPYPE JClass] Appel�e avec name='org.tweetyproject.logics.pl.sat.Sat4jSolver', args=(), kwargs={}
+07:57:31 [DEBUG] [tests.mocks.jpype_mock] JClass('org.tweetyproject.logics.pl.sat.Sat4jSolver') demand�.
+07:57:31 [DEBUG] [tests.mocks.jpype_mock] JClass('org.tweetyproject.logics.pl.sat.Sat4jSolver'): Pas une �num�ration Tweety connue. Cr�ation d'une instance de MockJClassCore.
+07:57:31 [DEBUG] [tests.mocks.jpype_components.jclass_core] MockJClassCore pour 'org.tweetyproject.logics.pl.sat.Sat4jSolver' initialis�e (jclass_provider: True).
+07:57:31 [INFO] [tests.mocks.jpype_mock] [MOCK JPYPE JClass] Appel�e avec name='org.tweetyproject.logics.fol.syntax.FolSignature', args=(), kwargs={}
+07:57:31 [DEBUG] [tests.mocks.jpype_mock] JClass('org.tweetyproject.logics.fol.syntax.FolSignature') demand�.
+07:57:31 [DEBUG] [tests.mocks.jpype_mock] JClass('org.tweetyproject.logics.fol.syntax.FolSignature'): Pas une �num�ration Tweety connue. Cr�ation d'une instance de MockJClassCore.
+07:57:31 [DEBUG] [tests.mocks.jpype_components.jclass_core] MockJClassCore pour 'org.tweetyproject.logics.fol.syntax.FolSignature' initialis�e (jclass_provider: True).
+07:57:31 [INFO] [tests.mocks.jpype_mock] [MOCK JPYPE JClass] Appel�e avec name='org.tweetyproject.logics.fol.syntax.FolBeliefSet', args=(), kwargs={}
+07:57:31 [DEBUG] [tests.mocks.jpype_mock] JClass('org.tweetyproject.logics.fol.syntax.FolBeliefSet') demand�.
+07:57:31 [DEBUG] [tests.mocks.jpype_mock] JClass('org.tweetyproject.logics.fol.syntax.FolBeliefSet'): Pas une �num�ration Tweety connue. Cr�ation d'une instance de MockJClassCore.
+07:57:31 [DEBUG] [tests.mocks.jpype_components.jclass_core] MockJClassCore pour 'org.tweetyproject.logics.fol.syntax.FolBeliefSet' initialis�e (jclass_provider: True).
+07:57:31 [INFO] [tests.mocks.jpype_mock] [MOCK JPYPE JClass] Appel�e avec name='org.tweetyproject.logics.fol.reasoner.DefaultProver', args=(), kwargs={}
+07:57:31 [DEBUG] [tests.mocks.jpype_mock] JClass('org.tweetyproject.logics.fol.reasoner.DefaultProver') demand�.
+07:57:31 [DEBUG] [tests.mocks.jpype_mock] JClass('org.tweetyproject.logics.fol.reasoner.DefaultProver'): Pas une �num�ration Tweety connue. Cr�ation d'une instance de MockJClassCore.
+07:57:31 [DEBUG] [tests.mocks.jpype_components.jclass_core] MockJClassCore pour 'org.tweetyproject.logics.fol.reasoner.DefaultProver' initialis�e (jclass_provider: True).
+07:57:31 [INFO] [tests.mocks.jpype_mock] [MOCK JPYPE JClass] Appel�e avec name='org.tweetyproject.logics.ml.syntax.ModalLogic', args=(), kwargs={}
+07:57:31 [DEBUG] [tests.mocks.jpype_mock] JClass('org.tweetyproject.logics.ml.syntax.ModalLogic') demand�.
+07:57:31 [DEBUG] [tests.mocks.jpype_mock] JClass('org.tweetyproject.logics.ml.syntax.ModalLogic'): Pas une �num�ration Tweety connue. Cr�ation d'une instance de MockJClassCore.
+07:57:31 [DEBUG] [tests.mocks.jpype_components.jclass_core] MockJClassCore pour 'org.tweetyproject.logics.ml.syntax.ModalLogic' initialis�e (jclass_provider: True).
+07:57:31 [INFO] [tests.mocks.jpype_mock] [MOCK JPYPE JClass] Appel�e avec name='org.tweetyproject.logics.ml.syntax.MlBeliefSet', args=(), kwargs={}
+07:57:31 [DEBUG] [tests.mocks.jpype_mock] JClass('org.tweetyproject.logics.ml.syntax.MlBeliefSet') demand�.
+07:57:31 [DEBUG] [tests.mocks.jpype_mock] JClass('org.tweetyproject.logics.ml.syntax.MlBeliefSet'): Pas une �num�ration Tweety connue. Cr�ation d'une instance de MockJClassCore.
+07:57:31 [DEBUG] [tests.mocks.jpype_components.jclass_core] MockJClassCore pour 'org.tweetyproject.logics.ml.syntax.MlBeliefSet' initialis�e (jclass_provider: True).
+07:57:31 [INFO] [tests.mocks.jpype_mock] [MOCK JPYPE JClass] Appel�e avec name='org.tweetyproject.logics.ml.reasoner.KrHyperModalReasoner', args=(), kwargs={}
+07:57:31 [DEBUG] [tests.mocks.jpype_mock] JClass('org.tweetyproject.logics.ml.reasoner.KrHyperModalReasoner') demand�.
+07:57:31 [DEBUG] [tests.mocks.jpype_mock] JClass('org.tweetyproject.logics.ml.reasoner.KrHyperModalReasoner'): Pas une �num�ration Tweety connue. Cr�ation d'une instance de MockJClassCore.
+07:57:31 [DEBUG] [tests.mocks.jpype_components.jclass_core] MockJClassCore pour 'org.tweetyproject.logics.ml.reasoner.KrHyperModalReasoner' initialis�e (jclass_provider: True).
+07:57:31 [INFO] [tests.mocks.jpype_mock] [MOCK JPYPE JClass] Appel�e avec name='org.tweetyproject.logics.ml.parser.MlParser', args=(), kwargs={}
+07:57:31 [DEBUG] [tests.mocks.jpype_mock] JClass('org.tweetyproject.logics.ml.parser.MlParser') demand�.
+07:57:31 [DEBUG] [tests.mocks.jpype_mock] JClass('org.tweetyproject.logics.ml.parser.MlParser'): Pas une �num�ration Tweety connue. Cr�ation d'une instance de MockJClassCore.
+07:57:31 [DEBUG] [tests.mocks.jpype_components.jclass_core] MockJClassCore pour 'org.tweetyproject.logics.ml.parser.MlParser' initialis�e (jclass_provider: True).
+07:57:31 [INFO] [tests.mocks.jpype_mock] [MOCK JPYPE JClass] Appel�e avec name='org.tweetyproject.commons.ParserException', args=(), kwargs={}
+07:57:31 [DEBUG] [tests.mocks.jpype_mock] JClass('org.tweetyproject.commons.ParserException') demand�.
+07:57:31 [DEBUG] [tests.mocks.jpype_mock] JClass('org.tweetyproject.commons.ParserException'): Pas une �num�ration Tweety connue. Cr�ation d'une instance de MockJClassCore.
+07:57:31 [DEBUG] [tests.mocks.jpype_components.jclass_core] MockJClassCore pour 'org.tweetyproject.commons.ParserException' initialis�e (jclass_provider: True).
+07:57:31 [INFO] [tests.mocks.jpype_mock] [MOCK JPYPE JClass] Appel�e avec name='org.tweetyproject.logics.commons.syntax.Sort', args=(), kwargs={}
+07:57:31 [DEBUG] [tests.mocks.jpype_mock] JClass('org.tweetyproject.logics.commons.syntax.Sort') demand�.
+07:57:31 [DEBUG] [tests.mocks.jpype_mock] JClass('org.tweetyproject.logics.commons.syntax.Sort'): Pas une �num�ration Tweety connue. Cr�ation d'une instance de MockJClassCore.
+07:57:31 [DEBUG] [tests.mocks.jpype_components.jclass_core] MockJClassCore pour 'org.tweetyproject.logics.commons.syntax.Sort' initialis�e (jclass_provider: True).
+07:57:31 [INFO] [argumentation_analysis.agents.core.logic.tweety_initializer] Successfully imported TweetyProject Java classes.
+07:57:31 [INFO] [Orchestration.TweetyBridge] TWEETY_BRIDGE: __init__ - JVM d�j� pr�te ou initialis�e par TweetyInitializer.
+07:57:31 [INFO] [tests.mocks.jpype_mock] [MOCK JPYPE JClass] Appel�e avec name='org.tweetyproject.logics.pl.reasoner.SatReasoner', args=(), kwargs={}
+07:57:31 [INFO] [tests.mocks.jpype_components.tweety_reasoners] Module jpype_components.tweety_reasoners initialis�.
+07:57:31 [INFO] [tests.mocks.jpype_components.tweety_agents] tweety_agents.py mock component loading.
+07:57:31 [INFO] [tests.mocks.jpype_components.tweety_agents] Tweety agent class configurators registered: ['org.tweetyproject.agents.ArgumentationAgent', 'org.tweetyproject.agents.OpponentModel', 'org.tweetyproject.agents.PersuasionProtocol']
+07:57:31 [DEBUG] [tests.mocks.jpype_components.jclass_core] MockJClassCore('org.tweetyproject.logics.pl.reasoner.SatReasoner').__call__ avec args: (), kwargs: {}
+07:57:31 [INFO] [tests.mocks.jpype_components.jclass_core] Instance mock�e de 'org.tweetyproject.logics.pl.reasoner.SatReasoner' cr��e et retourn�e.
+07:57:31 [INFO] [tests.mocks.jpype_mock] [MOCK JPYPE JClass] Appel�e avec name='org.tweetyproject.logics.pl.parser.PlParser', args=(), kwargs={}
+07:57:31 [DEBUG] [tests.mocks.jpype_mock] JClass('org.tweetyproject.logics.pl.parser.PlParser') demand�.
+07:57:31 [DEBUG] [tests.mocks.jpype_mock] JClass('org.tweetyproject.logics.pl.parser.PlParser'): Pas une �num�ration Tweety connue. Cr�ation d'une instance de MockJClassCore.
+07:57:31 [DEBUG] [tests.mocks.jpype_components.jclass_core] MockJClassCore pour 'org.tweetyproject.logics.pl.parser.PlParser' initialis�e (jclass_provider: True).
+07:57:31 [DEBUG] [tests.mocks.jpype_components.jclass_core] MockJClassCore('org.tweetyproject.logics.pl.parser.PlParser').__call__ avec args: (), kwargs: {}
+07:57:31 [INFO] [tests.mocks.jpype_components.jclass_core] Instance mock�e de 'org.tweetyproject.logics.pl.parser.PlParser' cr��e et retourn�e.
+07:57:31 [INFO] [argumentation_analysis.agents.core.logic.tweety_initializer] PL components initialized.
+07:57:31 [INFO] [tests.mocks.jpype_mock] [MOCK JPYPE JClass] Appel�e avec name='org.tweetyproject.logics.fol.parser.FolParser', args=(), kwargs={}
+07:57:31 [DEBUG] [tests.mocks.jpype_mock] JClass('org.tweetyproject.logics.fol.parser.FolParser') demand�.
+07:57:31 [DEBUG] [tests.mocks.jpype_mock] JClass('org.tweetyproject.logics.fol.parser.FolParser'): Pas une �num�ration Tweety connue. Cr�ation d'une instance de MockJClassCore.
+07:57:31 [DEBUG] [tests.mocks.jpype_components.jclass_core] MockJClassCore pour 'org.tweetyproject.logics.fol.parser.FolParser' initialis�e (jclass_provider: True).
+07:57:31 [DEBUG] [tests.mocks.jpype_components.jclass_core] MockJClassCore('org.tweetyproject.logics.fol.parser.FolParser').__call__ avec args: (), kwargs: {}
+07:57:31 [INFO] [tests.mocks.jpype_components.jclass_core] Instance mock�e de 'org.tweetyproject.logics.fol.parser.FolParser' cr��e et retourn�e.
+07:57:31 [INFO] [argumentation_analysis.agents.core.logic.tweety_initializer] FOL parser initialized.
+07:57:31 [INFO] [tests.mocks.jpype_mock] [MOCK JPYPE JClass] Appel�e avec name='org.tweetyproject.logics.ml.parser.MlParser', args=(), kwargs={}
+07:57:31 [DEBUG] [tests.mocks.jpype_components.jclass_core] MockJClassCore('org.tweetyproject.logics.ml.parser.MlParser').__call__ avec args: (), kwargs: {}
+07:57:31 [INFO] [tests.mocks.jpype_components.jclass_core] Instance mock�e de 'org.tweetyproject.logics.ml.parser.MlParser' cr��e et retourn�e.
+07:57:31 [INFO] [argumentation_analysis.agents.core.logic.tweety_initializer] Modal Logic parser initialized.
+07:57:31 [INFO] [Orchestration.TweetyBridge] TWEETY_BRIDGE: __init__ - Handlers PL, FOL, Modal initialis�s avec succ�s.
+07:57:31 [INFO] [Orchestration.TweetyBridge] TWEETY_BRIDGE: __init__ - Fin (Refactored). _jvm_ok: True
+07:57:31 [INFO] [Orchestration.TweetyBridge] TweetyBridge.execute_pl_query: Query='a' sur BS: ('a => b...')
+07:57:31 [INFO] [tests.mocks.jpype_mock] [MOCK JPYPE JClass] Appel�e avec name='org.tweetyproject.logics.pl.syntax.PlBeliefSet', args=(), kwargs={}
+07:57:31 [DEBUG] [tests.mocks.jpype_components.jclass_core] MockJClassCore('org.tweetyproject.logics.pl.syntax.PlBeliefSet').__call__ avec args: (), kwargs: {}
+07:57:31 [INFO] [tests.mocks.jpype_components.jclass_core] Instance mock�e de 'org.tweetyproject.logics.pl.syntax.PlBeliefSet' cr��e et retourn�e.
+07:57:31 [DEBUG] [tests.mocks.jpype_components.jclass_core] MockJClassCore pour 'java.lang.String' initialis�e (jclass_provider: False).
+07:57:31 [INFO] [argumentation_analysis.agents.core.logic.pl_handler] Successfully parsed PL formula: a => b -> <MagicMock name='MockInstanceOf_org.tweetyproject.logics.pl.parser.PlParser.parseFormula()' id='2933797973392'>
+07:57:31 [DEBUG] [tests.mocks.jpype_components.jclass_core] MockJClassCore pour 'java.lang.String' initialis�e (jclass_provider: False).
+07:57:31 [INFO] [argumentation_analysis.agents.core.logic.pl_handler] Successfully parsed PL formula: a -> <MagicMock name='MockInstanceOf_org.tweetyproject.logics.pl.parser.PlParser.parseFormula()' id='2933797973392'>
+07:57:31 [INFO] [argumentation_analysis.agents.core.logic.pl_handler] PL Query: KB entails 'a'? <MagicMock name='MockInstanceOf_org.tweetyproject.logics.pl.reasoner.SatReasoner.query()' id='2933798131648'>
+07:57:31 [INFO] [Orchestration.TweetyBridge] R�sultat format� requ�te PL 'a' via PLHandler: ACCEPTED (True)
+------------------------------ Captured log call ------------------------------
+INFO     Orchestration.TweetyBridge:tweety_bridge.py:57 TWEETY_BRIDGE: __init__ - D�but (Refactored)
+INFO     argumentation_analysis.agents.core.logic.tweety_initializer:tweety_initializer.py:61 Contenu de tweety_lib_path (D:\2025-Epita-Intelligence-Symbolique-4\libs\tweety):
+INFO     argumentation_analysis.agents.core.logic.tweety_initializer:tweety_initializer.py:64   - .gitkeep
+INFO     argumentation_analysis.agents.core.logic.tweety_initializer:tweety_initializer.py:64   - native
+INFO     argumentation_analysis.agents.core.logic.tweety_initializer:tweety_initializer.py:64   - org.tweetyproject.action-1.28-with-dependencies.jar
+INFO     argumentation_analysis.agents.core.logic.tweety_initializer:tweety_initializer.py:64   - org.tweetyproject.agents-1.28-with-dependencies.jar
+INFO     argumentation_analysis.agents.core.logic.tweety_initializer:tweety_initializer.py:64   - org.tweetyproject.agents.dialogues-1.28-with-dependencies.jar
+INFO     argumentation_analysis.agents.core.logic.tweety_initializer:tweety_initializer.py:64   - org.tweetyproject.arg.aba-1.28-with-dependencies.jar
+INFO     argumentation_analysis.agents.core.logic.tweety_initializer:tweety_initializer.py:64   - org.tweetyproject.arg.adf-1.28-with-dependencies.jar
+INFO     argumentation_analysis.agents.core.logic.tweety_initializer:tweety_initializer.py:64   - org.tweetyproject.arg.aspic-1.28-with-dependencies.jar
+INFO     argumentation_analysis.agents.core.logic.tweety_initializer:tweety_initializer.py:64   - org.tweetyproject.arg.bipolar-1.28-with-dependencies.jar
+INFO     argumentation_analysis.agents.core.logic.tweety_initializer:tweety_initializer.py:64   - org.tweetyproject.arg.caf-1.28-with-dependencies.jar
+INFO     argumentation_analysis.agents.core.logic.tweety_initializer:tweety_initializer.py:64   - org.tweetyproject.arg.deductive-1.28-with-dependencies.jar
+INFO     argumentation_analysis.agents.core.logic.tweety_initializer:tweety_initializer.py:64   - org.tweetyproject.arg.delp-1.28-with-dependencies.jar
+INFO     argumentation_analysis.agents.core.logic.tweety_initializer:tweety_initializer.py:64   - org.tweetyproject.arg.dung-1.28-with-dependencies.jar
+INFO     argumentation_analysis.agents.core.logic.tweety_initializer:tweety_initializer.py:64   - org.tweetyproject.arg.extended-1.28-with-dependencies.jar
+INFO     argumentation_analysis.agents.core.logic.tweety_initializer:tweety_initializer.py:64   - org.tweetyproject.arg.prob-1.28-with-dependencies.jar
+INFO     argumentation_analysis.agents.core.logic.tweety_initializer:tweety_initializer.py:64   - org.tweetyproject.arg.rankings-1.28-with-dependencies.jar
+INFO     argumentation_analysis.agents.core.logic.tweety_initializer:tweety_initializer.py:64   - org.tweetyproject.arg.setaf-1.28-with-dependencies.jar
+INFO     argumentation_analysis.agents.core.logic.tweety_initializer:tweety_initializer.py:64   - org.tweetyproject.arg.social-1.28-with-dependencies.jar
+INFO     argumentation_analysis.agents.core.logic.tweety_initializer:tweety_initializer.py:64   - org.tweetyproject.arg.weighted-1.28-with-dependencies.jar
+INFO     argumentation_analysis.agents.core.logic.tweety_initializer:tweety_initializer.py:64   - org.tweetyproject.beliefdynamics-1.28-with-dependencies.jar
+INFO     argumentation_analysis.agents.core.logic.tweety_initializer:tweety_initializer.py:64   - org.tweetyproject.commons-1.28-with-dependencies.jar
+INFO     argumentation_analysis.agents.core.logic.tweety_initializer:tweety_initializer.py:64   - org.tweetyproject.logics.bpm-1.28-with-dependencies.jar
+INFO     argumentation_analysis.agents.core.logic.tweety_initializer:tweety_initializer.py:64   - org.tweetyproject.logics.cl-1.28-with-dependencies.jar
+INFO     argumentation_analysis.agents.core.logic.tweety_initializer:tweety_initializer.py:64   - org.tweetyproject.logics.commons-1.28-with-dependencies.jar
+INFO     argumentation_analysis.agents.core.logic.tweety_initializer:tweety_initializer.py:64   - org.tweetyproject.logics.dl-1.28-with-dependencies.jar
+INFO     argumentation_analysis.agents.core.logic.tweety_initializer:tweety_initializer.py:64   - org.tweetyproject.logics.fol-1.28-with-dependencies.jar
+INFO     argumentation_analysis.agents.core.logic.tweety_initializer:tweety_initializer.py:64   - org.tweetyproject.logics.ml-1.28-with-dependencies.jar
+INFO     argumentation_analysis.agents.core.logic.tweety_initializer:tweety_initializer.py:64   - org.tweetyproject.logics.mln-1.28-with-dependencies.jar
+INFO     argumentation_analysis.agents.core.logic.tweety_initializer:tweety_initializer.py:64   - org.tweetyproject.logics.pcl-1.28-with-dependencies.jar
+INFO     argumentation_analysis.agents.core.logic.tweety_initializer:tweety_initializer.py:64   - org.tweetyproject.logics.pl-1.28-with-dependencies.jar
+INFO     argumentation_analysis.agents.core.logic.tweety_initializer:tweety_initializer.py:64   - org.tweetyproject.logics.qbf-1.28-with-dependencies.jar
+INFO     argumentation_analysis.agents.core.logic.tweety_initializer:tweety_initializer.py:64   - org.tweetyproject.logics.rcl-1.28-with-dependencies.jar
+INFO     argumentation_analysis.agents.core.logic.tweety_initializer:tweety_initializer.py:64   - org.tweetyproject.logics.rpcl-1.28-with-dependencies.jar
+INFO     argumentation_analysis.agents.core.logic.tweety_initializer:tweety_initializer.py:64   - org.tweetyproject.lp.asp-1.28-with-dependencies.jar
+INFO     argumentation_analysis.agents.core.logic.tweety_initializer:tweety_initializer.py:64   - org.tweetyproject.math-1.28-with-dependencies.jar
+INFO     argumentation_analysis.agents.core.logic.tweety_initializer:tweety_initializer.py:64   - org.tweetyproject.tweety-full-1.28-with-dependencies.jar
+INFO     argumentation_analysis.agents.core.logic.tweety_initializer:tweety_initializer.py:64   - org.tweetyproject.tweety-full-1.28.jar
+INFO     argumentation_analysis.agents.core.logic.tweety_initializer:tweety_initializer.py:64   - tweety-full-1.28-jar-with-dependencies.jar
+INFO     argumentation_analysis.agents.core.logic.tweety_initializer:tweety_initializer.py:69 Contenu de tweety_actual_lib_dir (D:\2025-Epita-Intelligence-Symbolique-4\libs\tweety\lib):
+INFO     argumentation_analysis.agents.core.logic.tweety_initializer:tweety_initializer.py:75     Le r�pertoire D:\2025-Epita-Intelligence-Symbolique-4\libs\tweety\lib n'existe pas ou n'est pas un r�pertoire.
+INFO     argumentation_analysis.agents.core.logic.tweety_initializer:tweety_initializer.py:80 Inspection du contenu de D:\2025-Epita-Intelligence-Symbolique-4\libs\tweety\org.tweetyproject.tweety-full-1.28-with-dependencies.jar:
+INFO     argumentation_analysis.agents.core.logic.tweety_initializer:tweety_initializer.py:92 Utilisation de l'ex�cutable jar: D:\2025-Epita-Intelligence-Symbolique-4\.tools\jdk-17.0.11+9\bin\jar
+ERROR    argumentation_analysis.agents.core.logic.tweety_initializer:tweety_initializer.py:103 La commande 'jar' n'a pas �t� trouv�e. Assurez-vous que le JDK est install� et que 'jar' est dans le PATH ou que JAVA_HOME est correctement d�fini.
+INFO     argumentation_analysis.agents.core.logic.tweety_initializer:tweety_initializer.py:117 Calculated Classpath: ['D:\\2025-Epita-Intelligence-Symbolique-4\\libs\\tweety\\org.tweetyproject.tweety-full-1.28-with-dependencies.jar']
+DEBUG    tests.mocks.jpype_components.jvm:jvm.py:28 isJVMStarted() appel�e. Retourne: False
+INFO     argumentation_analysis.agents.core.logic.tweety_initializer:tweety_initializer.py:120 Starting JVM...
+INFO     tests.mocks.jpype_components.jvm:jvm.py:38 startJVM appel�e. _jvm_started mis � True. Classpath: None
+INFO     tests.mocks.jpype_components.jvm:jvm.py:39 JVM d�marr�e avec le chemin: D:\2025-Epita-Intelligence-Symbolique-4\.tools\jdk-17.0.11+9\bin\server\jvm.dll
+INFO     argumentation_analysis.agents.core.logic.tweety_initializer:tweety_initializer.py:128 JVM started successfully.
+INFO     tests.mocks.jpype_mock:jpype_mock.py:114 [MOCK JPYPE JClass] Appel�e avec name='java.lang.System', args=(), kwargs={}
+DEBUG    tests.mocks.jpype_mock:jpype_mock.py:119 JClass('java.lang.System') demand�.
+DEBUG    tests.mocks.jpype_mock:jpype_mock.py:137 JClass('java.lang.System'): Pas une �num�ration Tweety connue. Cr�ation d'une instance de MockJClassCore.
+DEBUG    tests.mocks.jpype_components.jclass_core:jclass_core.py:34 MockJClassCore pour 'java.lang.System' initialis�e (jclass_provider: True).
+DEBUG    tests.mocks.jpype_components.jclass_core:jclass_core.py:74 M�thode statique 'getProperty' configur�e pour java.lang.System.
+DEBUG    tests.mocks.jpype_components.jclass_core:jclass_core.py:77 MockJClassCore('java.lang.System').__getattr__('getProperty')
+INFO     tests.mocks.jpype_components.jclass_core:jclass_core.py:63 [MOCK] java.lang.System.getProperty('java.class.path') CALLED
+INFO     argumentation_analysis.agents.core.logic.tweety_initializer:tweety_initializer.py:136 Actual Java Classpath from System.getProperty: mocked/path1.jar;mocked/another/path2.jar
+INFO     argumentation_analysis.agents.core.logic.tweety_initializer:tweety_initializer.py:156 DIAGNOSTIC: Attempting to load java.util.ArrayList...
+INFO     tests.mocks.jpype_mock:jpype_mock.py:114 [MOCK JPYPE JClass] Appel�e avec name='java.util.ArrayList', args=(), kwargs={}
+DEBUG    tests.mocks.jpype_mock:jpype_mock.py:119 JClass('java.util.ArrayList') demand�.
+DEBUG    tests.mocks.jpype_mock:jpype_mock.py:137 JClass('java.util.ArrayList'): Pas une �num�ration Tweety connue. Cr�ation d'une instance de MockJClassCore.
+DEBUG    tests.mocks.jpype_components.jclass_core:jclass_core.py:34 MockJClassCore pour 'java.util.ArrayList' initialis�e (jclass_provider: True).
+INFO     argumentation_analysis.agents.core.logic.tweety_initializer:tweety_initializer.py:158 DIAGNOSTIC: Successfully loaded java.util.ArrayList.
+INFO     argumentation_analysis.agents.core.logic.tweety_initializer:tweety_initializer.py:164 Attempting to import TweetyProject Java classes...
+INFO     tests.mocks.jpype_mock:jpype_mock.py:114 [MOCK JPYPE JClass] Appel�e avec name='org.tweetyproject.logics.pl.syntax.PropositionalSignature', args=(), kwargs={}
+DEBUG    tests.mocks.jpype_mock:jpype_mock.py:119 JClass('org.tweetyproject.logics.pl.syntax.PropositionalSignature') demand�.
+DEBUG    tests.mocks.jpype_mock:jpype_mock.py:137 JClass('org.tweetyproject.logics.pl.syntax.PropositionalSignature'): Pas une �num�ration Tweety connue. Cr�ation d'une instance de MockJClassCore.
+DEBUG    tests.mocks.jpype_components.jclass_core:jclass_core.py:34 MockJClassCore pour 'org.tweetyproject.logics.pl.syntax.PropositionalSignature' initialis�e (jclass_provider: True).
+INFO     tests.mocks.jpype_mock:jpype_mock.py:114 [MOCK JPYPE JClass] Appel�e avec name='org.tweetyproject.logics.pl.syntax.Proposition', args=(), kwargs={}
+DEBUG    tests.mocks.jpype_mock:jpype_mock.py:119 JClass('org.tweetyproject.logics.pl.syntax.Proposition') demand�.
+DEBUG    tests.mocks.jpype_mock:jpype_mock.py:137 JClass('org.tweetyproject.logics.pl.syntax.Proposition'): Pas une �num�ration Tweety connue. Cr�ation d'une instance de MockJClassCore.
+DEBUG    tests.mocks.jpype_components.jclass_core:jclass_core.py:34 MockJClassCore pour 'org.tweetyproject.logics.pl.syntax.Proposition' initialis�e (jclass_provider: True).
+INFO     tests.mocks.jpype_mock:jpype_mock.py:114 [MOCK JPYPE JClass] Appel�e avec name='org.tweetyproject.logics.pl.syntax.PlBeliefSet', args=(), kwargs={}
+DEBUG    tests.mocks.jpype_mock:jpype_mock.py:119 JClass('org.tweetyproject.logics.pl.syntax.PlBeliefSet') demand�.
+DEBUG    tests.mocks.jpype_mock:jpype_mock.py:137 JClass('org.tweetyproject.logics.pl.syntax.PlBeliefSet'): Pas une �num�ration Tweety connue. Cr�ation d'une instance de MockJClassCore.
+DEBUG    tests.mocks.jpype_components.jclass_core:jclass_core.py:34 MockJClassCore pour 'org.tweetyproject.logics.pl.syntax.PlBeliefSet' initialis�e (jclass_provider: True).
+INFO     tests.mocks.jpype_mock:jpype_mock.py:114 [MOCK JPYPE JClass] Appel�e avec name='org.tweetyproject.logics.pl.reasoner.SatReasoner', args=(), kwargs={}
+DEBUG    tests.mocks.jpype_mock:jpype_mock.py:119 JClass('org.tweetyproject.logics.pl.reasoner.SatReasoner') demand�.
+DEBUG    tests.mocks.jpype_mock:jpype_mock.py:137 JClass('org.tweetyproject.logics.pl.reasoner.SatReasoner'): Pas une �num�ration Tweety connue. Cr�ation d'une instance de MockJClassCore.
+DEBUG    tests.mocks.jpype_components.jclass_core:jclass_core.py:34 MockJClassCore pour 'org.tweetyproject.logics.pl.reasoner.SatReasoner' initialis�e (jclass_provider: True).
+INFO     tests.mocks.jpype_mock:jpype_mock.py:114 [MOCK JPYPE JClass] Appel�e avec name='org.tweetyproject.logics.pl.sat.Sat4jSolver', args=(), kwargs={}
+DEBUG    tests.mocks.jpype_mock:jpype_mock.py:119 JClass('org.tweetyproject.logics.pl.sat.Sat4jSolver') demand�.
+DEBUG    tests.mocks.jpype_mock:jpype_mock.py:137 JClass('org.tweetyproject.logics.pl.sat.Sat4jSolver'): Pas une �num�ration Tweety connue. Cr�ation d'une instance de MockJClassCore.
+DEBUG    tests.mocks.jpype_components.jclass_core:jclass_core.py:34 MockJClassCore pour 'org.tweetyproject.logics.pl.sat.Sat4jSolver' initialis�e (jclass_provider: True).
+INFO     tests.mocks.jpype_mock:jpype_mock.py:114 [MOCK JPYPE JClass] Appel�e avec name='org.tweetyproject.logics.fol.syntax.FolSignature', args=(), kwargs={}
+DEBUG    tests.mocks.jpype_mock:jpype_mock.py:119 JClass('org.tweetyproject.logics.fol.syntax.FolSignature') demand�.
+DEBUG    tests.mocks.jpype_mock:jpype_mock.py:137 JClass('org.tweetyproject.logics.fol.syntax.FolSignature'): Pas une �num�ration Tweety connue. Cr�ation d'une instance de MockJClassCore.
+DEBUG    tests.mocks.jpype_components.jclass_core:jclass_core.py:34 MockJClassCore pour 'org.tweetyproject.logics.fol.syntax.FolSignature' initialis�e (jclass_provider: True).
+INFO     tests.mocks.jpype_mock:jpype_mock.py:114 [MOCK JPYPE JClass] Appel�e avec name='org.tweetyproject.logics.fol.syntax.FolBeliefSet', args=(), kwargs={}
+DEBUG    tests.mocks.jpype_mock:jpype_mock.py:119 JClass('org.tweetyproject.logics.fol.syntax.FolBeliefSet') demand�.
+DEBUG    tests.mocks.jpype_mock:jpype_mock.py:137 JClass('org.tweetyproject.logics.fol.syntax.FolBeliefSet'): Pas une �num�ration Tweety connue. Cr�ation d'une instance de MockJClassCore.
+DEBUG    tests.mocks.jpype_components.jclass_core:jclass_core.py:34 MockJClassCore pour 'org.tweetyproject.logics.fol.syntax.FolBeliefSet' initialis�e (jclass_provider: True).
+INFO     tests.mocks.jpype_mock:jpype_mock.py:114 [MOCK JPYPE JClass] Appel�e avec name='org.tweetyproject.logics.fol.reasoner.DefaultProver', args=(), kwargs={}
+DEBUG    tests.mocks.jpype_mock:jpype_mock.py:119 JClass('org.tweetyproject.logics.fol.reasoner.DefaultProver') demand�.
+DEBUG    tests.mocks.jpype_mock:jpype_mock.py:137 JClass('org.tweetyproject.logics.fol.reasoner.DefaultProver'): Pas une �num�ration Tweety connue. Cr�ation d'une instance de MockJClassCore.
+DEBUG    tests.mocks.jpype_components.jclass_core:jclass_core.py:34 MockJClassCore pour 'org.tweetyproject.logics.fol.reasoner.DefaultProver' initialis�e (jclass_provider: True).
+INFO     tests.mocks.jpype_mock:jpype_mock.py:114 [MOCK JPYPE JClass] Appel�e avec name='org.tweetyproject.logics.ml.syntax.ModalLogic', args=(), kwargs={}
+DEBUG    tests.mocks.jpype_mock:jpype_mock.py:119 JClass('org.tweetyproject.logics.ml.syntax.ModalLogic') demand�.
+DEBUG    tests.mocks.jpype_mock:jpype_mock.py:137 JClass('org.tweetyproject.logics.ml.syntax.ModalLogic'): Pas une �num�ration Tweety connue. Cr�ation d'une instance de MockJClassCore.
+DEBUG    tests.mocks.jpype_components.jclass_core:jclass_core.py:34 MockJClassCore pour 'org.tweetyproject.logics.ml.syntax.ModalLogic' initialis�e (jclass_provider: True).
+INFO     tests.mocks.jpype_mock:jpype_mock.py:114 [MOCK JPYPE JClass] Appel�e avec name='org.tweetyproject.logics.ml.syntax.MlBeliefSet', args=(), kwargs={}
+DEBUG    tests.mocks.jpype_mock:jpype_mock.py:119 JClass('org.tweetyproject.logics.ml.syntax.MlBeliefSet') demand�.
+DEBUG    tests.mocks.jpype_mock:jpype_mock.py:137 JClass('org.tweetyproject.logics.ml.syntax.MlBeliefSet'): Pas une �num�ration Tweety connue. Cr�ation d'une instance de MockJClassCore.
+DEBUG    tests.mocks.jpype_components.jclass_core:jclass_core.py:34 MockJClassCore pour 'org.tweetyproject.logics.ml.syntax.MlBeliefSet' initialis�e (jclass_provider: True).
+INFO     tests.mocks.jpype_mock:jpype_mock.py:114 [MOCK JPYPE JClass] Appel�e avec name='org.tweetyproject.logics.ml.reasoner.KrHyperModalReasoner', args=(), kwargs={}
+DEBUG    tests.mocks.jpype_mock:jpype_mock.py:119 JClass('org.tweetyproject.logics.ml.reasoner.KrHyperModalReasoner') demand�.
+DEBUG    tests.mocks.jpype_mock:jpype_mock.py:137 JClass('org.tweetyproject.logics.ml.reasoner.KrHyperModalReasoner'): Pas une �num�ration Tweety connue. Cr�ation d'une instance de MockJClassCore.
+DEBUG    tests.mocks.jpype_components.jclass_core:jclass_core.py:34 MockJClassCore pour 'org.tweetyproject.logics.ml.reasoner.KrHyperModalReasoner' initialis�e (jclass_provider: True).
+INFO     tests.mocks.jpype_mock:jpype_mock.py:114 [MOCK JPYPE JClass] Appel�e avec name='org.tweetyproject.logics.ml.parser.MlParser', args=(), kwargs={}
+DEBUG    tests.mocks.jpype_mock:jpype_mock.py:119 JClass('org.tweetyproject.logics.ml.parser.MlParser') demand�.
+DEBUG    tests.mocks.jpype_mock:jpype_mock.py:137 JClass('org.tweetyproject.logics.ml.parser.MlParser'): Pas une �num�ration Tweety connue. Cr�ation d'une instance de MockJClassCore.
+DEBUG    tests.mocks.jpype_components.jclass_core:jclass_core.py:34 MockJClassCore pour 'org.tweetyproject.logics.ml.parser.MlParser' initialis�e (jclass_provider: True).
+INFO     tests.mocks.jpype_mock:jpype_mock.py:114 [MOCK JPYPE JClass] Appel�e avec name='org.tweetyproject.commons.ParserException', args=(), kwargs={}
+DEBUG    tests.mocks.jpype_mock:jpype_mock.py:119 JClass('org.tweetyproject.commons.ParserException') demand�.
+DEBUG    tests.mocks.jpype_mock:jpype_mock.py:137 JClass('org.tweetyproject.commons.ParserException'): Pas une �num�ration Tweety connue. Cr�ation d'une instance de MockJClassCore.
+DEBUG    tests.mocks.jpype_components.jclass_core:jclass_core.py:34 MockJClassCore pour 'org.tweetyproject.commons.ParserException' initialis�e (jclass_provider: True).
+INFO     tests.mocks.jpype_mock:jpype_mock.py:114 [MOCK JPYPE JClass] Appel�e avec name='org.tweetyproject.logics.commons.syntax.Sort', args=(), kwargs={}
+DEBUG    tests.mocks.jpype_mock:jpype_mock.py:119 JClass('org.tweetyproject.logics.commons.syntax.Sort') demand�.
+DEBUG    tests.mocks.jpype_mock:jpype_mock.py:137 JClass('org.tweetyproject.logics.commons.syntax.Sort'): Pas une �num�ration Tweety connue. Cr�ation d'une instance de MockJClassCore.
+DEBUG    tests.mocks.jpype_components.jclass_core:jclass_core.py:34 MockJClassCore pour 'org.tweetyproject.logics.commons.syntax.Sort' initialis�e (jclass_provider: True).
+INFO     argumentation_analysis.agents.core.logic.tweety_initializer:tweety_initializer.py:195 Successfully imported TweetyProject Java classes.
+INFO     Orchestration.TweetyBridge:tweety_bridge.py:74 TWEETY_BRIDGE: __init__ - JVM d�j� pr�te ou initialis�e par TweetyInitializer.
+INFO     tests.mocks.jpype_mock:jpype_mock.py:114 [MOCK JPYPE JClass] Appel�e avec name='org.tweetyproject.logics.pl.reasoner.SatReasoner', args=(), kwargs={}
+INFO     tests.mocks.jpype_components.tweety_reasoners:tweety_reasoners.py:89 Module jpype_components.tweety_reasoners initialis�.
+INFO     tests.mocks.jpype_components.tweety_agents:tweety_agents.py:23 tweety_agents.py mock component loading.
+INFO     tests.mocks.jpype_components.tweety_agents:tweety_agents.py:86 Tweety agent class configurators registered: ['org.tweetyproject.agents.ArgumentationAgent', 'org.tweetyproject.agents.OpponentModel', 'org.tweetyproject.agents.PersuasionProtocol']
+DEBUG    tests.mocks.jpype_components.jclass_core:jclass_core.py:87 MockJClassCore('org.tweetyproject.logics.pl.reasoner.SatReasoner').__call__ avec args: (), kwargs: {}
+INFO     tests.mocks.jpype_components.jclass_core:jclass_core.py:169 Instance mock�e de 'org.tweetyproject.logics.pl.reasoner.SatReasoner' cr��e et retourn�e.
+INFO     tests.mocks.jpype_mock:jpype_mock.py:114 [MOCK JPYPE JClass] Appel�e avec name='org.tweetyproject.logics.pl.parser.PlParser', args=(), kwargs={}
+DEBUG    tests.mocks.jpype_mock:jpype_mock.py:119 JClass('org.tweetyproject.logics.pl.parser.PlParser') demand�.
+DEBUG    tests.mocks.jpype_mock:jpype_mock.py:137 JClass('org.tweetyproject.logics.pl.parser.PlParser'): Pas une �num�ration Tweety connue. Cr�ation d'une instance de MockJClassCore.
+DEBUG    tests.mocks.jpype_components.jclass_core:jclass_core.py:34 MockJClassCore pour 'org.tweetyproject.logics.pl.parser.PlParser' initialis�e (jclass_provider: True).
+DEBUG    tests.mocks.jpype_components.jclass_core:jclass_core.py:87 MockJClassCore('org.tweetyproject.logics.pl.parser.PlParser').__call__ avec args: (), kwargs: {}
+INFO     tests.mocks.jpype_components.jclass_core:jclass_core.py:169 Instance mock�e de 'org.tweetyproject.logics.pl.parser.PlParser' cr��e et retourn�e.
+INFO     argumentation_analysis.agents.core.logic.tweety_initializer:tweety_initializer.py:209 PL components initialized.
+INFO     tests.mocks.jpype_mock:jpype_mock.py:114 [MOCK JPYPE JClass] Appel�e avec name='org.tweetyproject.logics.fol.parser.FolParser', args=(), kwargs={}
+DEBUG    tests.mocks.jpype_mock:jpype_mock.py:119 JClass('org.tweetyproject.logics.fol.parser.FolParser') demand�.
+DEBUG    tests.mocks.jpype_mock:jpype_mock.py:137 JClass('org.tweetyproject.logics.fol.parser.FolParser'): Pas une �num�ration Tweety connue. Cr�ation d'une instance de MockJClassCore.
+DEBUG    tests.mocks.jpype_components.jclass_core:jclass_core.py:34 MockJClassCore pour 'org.tweetyproject.logics.fol.parser.FolParser' initialis�e (jclass_provider: True).
+DEBUG    tests.mocks.jpype_components.jclass_core:jclass_core.py:87 MockJClassCore('org.tweetyproject.logics.fol.parser.FolParser').__call__ avec args: (), kwargs: {}
+INFO     tests.mocks.jpype_components.jclass_core:jclass_core.py:169 Instance mock�e de 'org.tweetyproject.logics.fol.parser.FolParser' cr��e et retourn�e.
+INFO     argumentation_analysis.agents.core.logic.tweety_initializer:tweety_initializer.py:225 FOL parser initialized.
+INFO     tests.mocks.jpype_mock:jpype_mock.py:114 [MOCK JPYPE JClass] Appel�e avec name='org.tweetyproject.logics.ml.parser.MlParser', args=(), kwargs={}
+DEBUG    tests.mocks.jpype_components.jclass_core:jclass_core.py:87 MockJClassCore('org.tweetyproject.logics.ml.parser.MlParser').__call__ avec args: (), kwargs: {}
+INFO     tests.mocks.jpype_components.jclass_core:jclass_core.py:169 Instance mock�e de 'org.tweetyproject.logics.ml.parser.MlParser' cr��e et retourn�e.
+INFO     argumentation_analysis.agents.core.logic.tweety_initializer:tweety_initializer.py:248 Modal Logic parser initialized.
+INFO     Orchestration.TweetyBridge:tweety_bridge.py:88 TWEETY_BRIDGE: __init__ - Handlers PL, FOL, Modal initialis�s avec succ�s.
+INFO     Orchestration.TweetyBridge:tweety_bridge.py:95 TWEETY_BRIDGE: __init__ - Fin (Refactored). _jvm_ok: True
+INFO     Orchestration.TweetyBridge:tweety_bridge.py:228 TweetyBridge.execute_pl_query: Query='a' sur BS: ('a => b...')
+INFO     tests.mocks.jpype_mock:jpype_mock.py:114 [MOCK JPYPE JClass] Appel�e avec name='org.tweetyproject.logics.pl.syntax.PlBeliefSet', args=(), kwargs={}
+DEBUG    tests.mocks.jpype_components.jclass_core:jclass_core.py:87 MockJClassCore('org.tweetyproject.logics.pl.syntax.PlBeliefSet').__call__ avec args: (), kwargs: {}
+INFO     tests.mocks.jpype_components.jclass_core:jclass_core.py:169 Instance mock�e de 'org.tweetyproject.logics.pl.syntax.PlBeliefSet' cr��e et retourn�e.
+DEBUG    tests.mocks.jpype_components.jclass_core:jclass_core.py:34 MockJClassCore pour 'java.lang.String' initialis�e (jclass_provider: False).
+INFO     argumentation_analysis.agents.core.logic.pl_handler:pl_handler.py:37 Successfully parsed PL formula: a => b -> <MagicMock name='MockInstanceOf_org.tweetyproject.logics.pl.parser.PlParser.parseFormula()' id='2933797973392'>
+DEBUG    tests.mocks.jpype_components.jclass_core:jclass_core.py:34 MockJClassCore pour 'java.lang.String' initialis�e (jclass_provider: False).
+INFO     argumentation_analysis.agents.core.logic.pl_handler:pl_handler.py:37 Successfully parsed PL formula: a -> <MagicMock name='MockInstanceOf_org.tweetyproject.logics.pl.parser.PlParser.parseFormula()' id='2933797973392'>
+INFO     argumentation_analysis.agents.core.logic.pl_handler:pl_handler.py:114 PL Query: KB entails 'a'? <MagicMock name='MockInstanceOf_org.tweetyproject.logics.pl.reasoner.SatReasoner.query()' id='2933798131648'>
+INFO     Orchestration.TweetyBridge:tweety_bridge.py:246 R�sultat format� requ�te PL 'a' via PLHandler: ACCEPTED (True)
+-------------------------- Captured stdout teardown ---------------------------
+2025-06-05 07:57:31,389 - tests.mocks.jpype_setup - INFO - �tat de JPype restaur� apr�s test test_execute_pl_query_accepted (utilisation du mock).
+________________ TestTweetyBridge.test_execute_pl_query_error _________________
+
+self = <MagicMock name='PlParser_instance_mock.parseBeliefBase' id='2933816167728'>
+
+    def assert_called_once(self):
+        """assert that the mock was called only once.
+        """
+        if not self.call_count == 1:
+            msg = ("Expected '%s' to have been called once. Called %s times.%s"
+                   % (self._mock_name or 'mock',
+                      self.call_count,
+                      self._calls_repr()))
+>           raise AssertionError(msg)
+E           AssertionError: Expected 'parseBeliefBase' to have been called once. Called 0 times.
+
+C:\Tools\miniconda3\lib\unittest\mock.py:886: AssertionError
+
+During handling of the above exception, another exception occurred:
+
+self = <test_tweety_bridge.TestTweetyBridge testMethod=test_execute_pl_query_error>
+
+    def test_execute_pl_query_error(self):
+        """Test de l'ex�cution d'une requ�te propositionnelle avec erreur."""
+        if not os.environ.get('USE_REAL_JPYPE', 'false').lower() in ('true', '1'):
+            # Configurer le mock du parser pour lever une exception
+            java_exception = self.mock_jpype.JException("Erreur de syntaxe")
+            self.mock_pl_parser_instance.parseBeliefBase.side_effect = java_exception
+    
+            # Ex�cuter une requ�te
+            result = self.tweety_bridge.execute_pl_query("a ==> b", "a")
+    
+            # V�rifier que le parser a �t� appel�
+>           self.mock_pl_parser_instance.parseBeliefBase.assert_called_once()
+E           AssertionError: Expected 'parseBeliefBase' to have been called once. Called 0 times.
+
+tests\agents\core\logic\test_tweety_bridge.py:363: AssertionError
+---------------------------- Captured stdout setup ----------------------------
+2025-06-05 07:57:31,389 - tests.mocks.jpype_setup - INFO - Test test_execute_pl_query_error utilise MOCK JPype.
+2025-06-05 07:57:31,390 - tests.mocks.jpype_setup - INFO - �tat (_jvm_started, _jvm_path, config.jvm_path) du mock JPype r�initialis� pour le test.
+---------------------------- Captured stdout call -----------------------------
+07:57:31 [INFO] [Orchestration.TweetyBridge] TWEETY_BRIDGE: __init__ - D�but (Refactored)
+07:57:31 [INFO] [Orchestration.TweetyBridge] TWEETY_BRIDGE: __init__ - JVM d�j� pr�te ou initialis�e par TweetyInitializer.
+07:57:31 [INFO] [tests.mocks.jpype_mock] [MOCK JPYPE JClass] Appel�e avec name='org.tweetyproject.logics.pl.reasoner.SatReasoner', args=(), kwargs={}
+07:57:31 [DEBUG] [tests.mocks.jpype_components.jclass_core] MockJClassCore('org.tweetyproject.logics.pl.reasoner.SatReasoner').__call__ avec args: (), kwargs: {}
+07:57:31 [INFO] [tests.mocks.jpype_components.jclass_core] Instance mock�e de 'org.tweetyproject.logics.pl.reasoner.SatReasoner' cr��e et retourn�e.
+07:57:31 [INFO] [tests.mocks.jpype_mock] [MOCK JPYPE JClass] Appel�e avec name='org.tweetyproject.logics.pl.parser.PlParser', args=(), kwargs={}
+07:57:31 [DEBUG] [tests.mocks.jpype_components.jclass_core] MockJClassCore('org.tweetyproject.logics.pl.parser.PlParser').__call__ avec args: (), kwargs: {}
+07:57:31 [INFO] [tests.mocks.jpype_components.jclass_core] Instance mock�e de 'org.tweetyproject.logics.pl.parser.PlParser' cr��e et retourn�e.
+07:57:31 [INFO] [argumentation_analysis.agents.core.logic.tweety_initializer] PL components initialized.
+07:57:31 [INFO] [tests.mocks.jpype_mock] [MOCK JPYPE JClass] Appel�e avec name='org.tweetyproject.logics.fol.parser.FolParser', args=(), kwargs={}
+07:57:31 [DEBUG] [tests.mocks.jpype_components.jclass_core] MockJClassCore('org.tweetyproject.logics.fol.parser.FolParser').__call__ avec args: (), kwargs: {}
+07:57:31 [INFO] [tests.mocks.jpype_components.jclass_core] Instance mock�e de 'org.tweetyproject.logics.fol.parser.FolParser' cr��e et retourn�e.
+07:57:31 [INFO] [argumentation_analysis.agents.core.logic.tweety_initializer] FOL parser initialized.
+07:57:31 [INFO] [tests.mocks.jpype_mock] [MOCK JPYPE JClass] Appel�e avec name='org.tweetyproject.logics.ml.parser.MlParser', args=(), kwargs={}
+07:57:31 [DEBUG] [tests.mocks.jpype_components.jclass_core] MockJClassCore('org.tweetyproject.logics.ml.parser.MlParser').__call__ avec args: (), kwargs: {}
+07:57:31 [INFO] [tests.mocks.jpype_components.jclass_core] Instance mock�e de 'org.tweetyproject.logics.ml.parser.MlParser' cr��e et retourn�e.
+07:57:31 [INFO] [argumentation_analysis.agents.core.logic.tweety_initializer] Modal Logic parser initialized.
+07:57:31 [INFO] [Orchestration.TweetyBridge] TWEETY_BRIDGE: __init__ - Handlers PL, FOL, Modal initialis�s avec succ�s.
+07:57:31 [INFO] [Orchestration.TweetyBridge] TWEETY_BRIDGE: __init__ - Fin (Refactored). _jvm_ok: True
+07:57:31 [DEBUG] [tests.mocks.jpype_components.exceptions] JException initialis�e avec message: Erreur de syntaxe
+07:57:31 [INFO] [Orchestration.TweetyBridge] TweetyBridge.execute_pl_query: Query='a' sur BS: ('a ==> b...')
+07:57:31 [INFO] [tests.mocks.jpype_mock] [MOCK JPYPE JClass] Appel�e avec name='org.tweetyproject.logics.pl.syntax.PlBeliefSet', args=(), kwargs={}
+07:57:31 [DEBUG] [tests.mocks.jpype_components.jclass_core] MockJClassCore('org.tweetyproject.logics.pl.syntax.PlBeliefSet').__call__ avec args: (), kwargs: {}
+07:57:31 [INFO] [tests.mocks.jpype_components.jclass_core] Instance mock�e de 'org.tweetyproject.logics.pl.syntax.PlBeliefSet' cr��e et retourn�e.
+07:57:31 [DEBUG] [tests.mocks.jpype_components.jclass_core] MockJClassCore pour 'java.lang.String' initialis�e (jclass_provider: False).
+07:57:31 [INFO] [argumentation_analysis.agents.core.logic.pl_handler] Successfully parsed PL formula: a ==> b -> <MagicMock name='MockInstanceOf_org.tweetyproject.logics.pl.parser.PlParser.parseFormula()' id='2933816386272'>
+07:57:31 [DEBUG] [tests.mocks.jpype_components.jclass_core] MockJClassCore pour 'java.lang.String' initialis�e (jclass_provider: False).
+07:57:31 [INFO] [argumentation_analysis.agents.core.logic.pl_handler] Successfully parsed PL formula: a -> <MagicMock name='MockInstanceOf_org.tweetyproject.logics.pl.parser.PlParser.parseFormula()' id='2933816386272'>
+07:57:31 [INFO] [argumentation_analysis.agents.core.logic.pl_handler] PL Query: KB entails 'a'? <MagicMock name='MockInstanceOf_org.tweetyproject.logics.pl.reasoner.SatReasoner.query()' id='2933817773264'>
+07:57:31 [INFO] [Orchestration.TweetyBridge] R�sultat format� requ�te PL 'a' via PLHandler: ACCEPTED (True)
+------------------------------ Captured log call ------------------------------
+INFO     Orchestration.TweetyBridge:tweety_bridge.py:57 TWEETY_BRIDGE: __init__ - D�but (Refactored)
+INFO     Orchestration.TweetyBridge:tweety_bridge.py:74 TWEETY_BRIDGE: __init__ - JVM d�j� pr�te ou initialis�e par TweetyInitializer.
+INFO     tests.mocks.jpype_mock:jpype_mock.py:114 [MOCK JPYPE JClass] Appel�e avec name='org.tweetyproject.logics.pl.reasoner.SatReasoner', args=(), kwargs={}
+DEBUG    tests.mocks.jpype_components.jclass_core:jclass_core.py:87 MockJClassCore('org.tweetyproject.logics.pl.reasoner.SatReasoner').__call__ avec args: (), kwargs: {}
+INFO     tests.mocks.jpype_components.jclass_core:jclass_core.py:169 Instance mock�e de 'org.tweetyproject.logics.pl.reasoner.SatReasoner' cr��e et retourn�e.
+INFO     tests.mocks.jpype_mock:jpype_mock.py:114 [MOCK JPYPE JClass] Appel�e avec name='org.tweetyproject.logics.pl.parser.PlParser', args=(), kwargs={}
+DEBUG    tests.mocks.jpype_components.jclass_core:jclass_core.py:87 MockJClassCore('org.tweetyproject.logics.pl.parser.PlParser').__call__ avec args: (), kwargs: {}
+INFO     tests.mocks.jpype_components.jclass_core:jclass_core.py:169 Instance mock�e de 'org.tweetyproject.logics.pl.parser.PlParser' cr��e et retourn�e.
+INFO     argumentation_analysis.agents.core.logic.tweety_initializer:tweety_initializer.py:209 PL components initialized.
+INFO     tests.mocks.jpype_mock:jpype_mock.py:114 [MOCK JPYPE JClass] Appel�e avec name='org.tweetyproject.logics.fol.parser.FolParser', args=(), kwargs={}
+DEBUG    tests.mocks.jpype_components.jclass_core:jclass_core.py:87 MockJClassCore('org.tweetyproject.logics.fol.parser.FolParser').__call__ avec args: (), kwargs: {}
+INFO     tests.mocks.jpype_components.jclass_core:jclass_core.py:169 Instance mock�e de 'org.tweetyproject.logics.fol.parser.FolParser' cr��e et retourn�e.
+INFO     argumentation_analysis.agents.core.logic.tweety_initializer:tweety_initializer.py:225 FOL parser initialized.
+INFO     tests.mocks.jpype_mock:jpype_mock.py:114 [MOCK JPYPE JClass] Appel�e avec name='org.tweetyproject.logics.ml.parser.MlParser', args=(), kwargs={}
+DEBUG    tests.mocks.jpype_components.jclass_core:jclass_core.py:87 MockJClassCore('org.tweetyproject.logics.ml.parser.MlParser').__call__ avec args: (), kwargs: {}
+INFO     tests.mocks.jpype_components.jclass_core:jclass_core.py:169 Instance mock�e de 'org.tweetyproject.logics.ml.parser.MlParser' cr��e et retourn�e.
+INFO     argumentation_analysis.agents.core.logic.tweety_initializer:tweety_initializer.py:248 Modal Logic parser initialized.
+INFO     Orchestration.TweetyBridge:tweety_bridge.py:88 TWEETY_BRIDGE: __init__ - Handlers PL, FOL, Modal initialis�s avec succ�s.
+INFO     Orchestration.TweetyBridge:tweety_bridge.py:95 TWEETY_BRIDGE: __init__ - Fin (Refactored). _jvm_ok: True
+DEBUG    tests.mocks.jpype_components.exceptions:exceptions.py:18 JException initialis�e avec message: Erreur de syntaxe
+INFO     Orchestration.TweetyBridge:tweety_bridge.py:228 TweetyBridge.execute_pl_query: Query='a' sur BS: ('a ==> b...')
+INFO     tests.mocks.jpype_mock:jpype_mock.py:114 [MOCK JPYPE JClass] Appel�e avec name='org.tweetyproject.logics.pl.syntax.PlBeliefSet', args=(), kwargs={}
+DEBUG    tests.mocks.jpype_components.jclass_core:jclass_core.py:87 MockJClassCore('org.tweetyproject.logics.pl.syntax.PlBeliefSet').__call__ avec args: (), kwargs: {}
+INFO     tests.mocks.jpype_components.jclass_core:jclass_core.py:169 Instance mock�e de 'org.tweetyproject.logics.pl.syntax.PlBeliefSet' cr��e et retourn�e.
+DEBUG    tests.mocks.jpype_components.jclass_core:jclass_core.py:34 MockJClassCore pour 'java.lang.String' initialis�e (jclass_provider: False).
+INFO     argumentation_analysis.agents.core.logic.pl_handler:pl_handler.py:37 Successfully parsed PL formula: a ==> b -> <MagicMock name='MockInstanceOf_org.tweetyproject.logics.pl.parser.PlParser.parseFormula()' id='2933816386272'>
+DEBUG    tests.mocks.jpype_components.jclass_core:jclass_core.py:34 MockJClassCore pour 'java.lang.String' initialis�e (jclass_provider: False).
+INFO     argumentation_analysis.agents.core.logic.pl_handler:pl_handler.py:37 Successfully parsed PL formula: a -> <MagicMock name='MockInstanceOf_org.tweetyproject.logics.pl.parser.PlParser.parseFormula()' id='2933816386272'>
+INFO     argumentation_analysis.agents.core.logic.pl_handler:pl_handler.py:114 PL Query: KB entails 'a'? <MagicMock name='MockInstanceOf_org.tweetyproject.logics.pl.reasoner.SatReasoner.query()' id='2933817773264'>
+INFO     Orchestration.TweetyBridge:tweety_bridge.py:246 R�sultat format� requ�te PL 'a' via PLHandler: ACCEPTED (True)
+-------------------------- Captured stdout teardown ---------------------------
+2025-06-05 07:57:31,430 - tests.mocks.jpype_setup - INFO - �tat de JPype restaur� apr�s test test_execute_pl_query_error (utilisation du mock).
+_______________ TestTweetyBridge.test_execute_pl_query_rejected _______________
+
+self = <MagicMock name='PlParser_instance_mock.parseBeliefBase' id='2933818529632'>
+
+    def assert_called_once(self):
+        """assert that the mock was called only once.
+        """
+        if not self.call_count == 1:
+            msg = ("Expected '%s' to have been called once. Called %s times.%s"
+                   % (self._mock_name or 'mock',
+                      self.call_count,
+                      self._calls_repr()))
+>           raise AssertionError(msg)
+E           AssertionError: Expected 'parseBeliefBase' to have been called once. Called 0 times.
+
+C:\Tools\miniconda3\lib\unittest\mock.py:886: AssertionError
+
+During handling of the above exception, another exception occurred:
+
+self = <test_tweety_bridge.TestTweetyBridge testMethod=test_execute_pl_query_rejected>
+
+    def test_execute_pl_query_rejected(self):
+        """Test de l'ex�cution d'une requ�te propositionnelle rejet�e."""
+        if not os.environ.get('USE_REAL_JPYPE', 'false').lower() in ('true', '1'):
+            # Configurer les mocks
+            mock_belief_set = MagicMock()
+            mock_formula = MagicMock()
+            self.mock_pl_parser_instance.parseBeliefBase.return_value = mock_belief_set
+            self.mock_pl_parser_instance.parseFormula.return_value = mock_formula
+            self.mock_sat_reasoner_instance.query.return_value = False
+            self.mock_jpype.JObject.return_value = True
+    
+            # Ex�cuter une requ�te
+            result = self.tweety_bridge.execute_pl_query("a => b", "c")
+    
+            # V�rifier que le parser a �t� appel�
+>           self.mock_pl_parser_instance.parseBeliefBase.assert_called_once()
+E           AssertionError: Expected 'parseBeliefBase' to have been called once. Called 0 times.
+
+tests\agents\core\logic\test_tweety_bridge.py:343: AssertionError
+---------------------------- Captured stdout setup ----------------------------
+2025-06-05 07:57:31,431 - tests.mocks.jpype_setup - INFO - Test test_execute_pl_query_rejected utilise MOCK JPype.
+2025-06-05 07:57:31,431 - tests.mocks.jpype_setup - INFO - �tat (_jvm_started, _jvm_path, config.jvm_path) du mock JPype r�initialis� pour le test.
+---------------------------- Captured stdout call -----------------------------
+07:57:31 [INFO] [Orchestration.TweetyBridge] TWEETY_BRIDGE: __init__ - D�but (Refactored)
+07:57:31 [INFO] [Orchestration.TweetyBridge] TWEETY_BRIDGE: __init__ - JVM d�j� pr�te ou initialis�e par TweetyInitializer.
+07:57:31 [INFO] [tests.mocks.jpype_mock] [MOCK JPYPE JClass] Appel�e avec name='org.tweetyproject.logics.pl.reasoner.SatReasoner', args=(), kwargs={}
+07:57:31 [DEBUG] [tests.mocks.jpype_components.jclass_core] MockJClassCore('org.tweetyproject.logics.pl.reasoner.SatReasoner').__call__ avec args: (), kwargs: {}
+07:57:31 [INFO] [tests.mocks.jpype_components.jclass_core] Instance mock�e de 'org.tweetyproject.logics.pl.reasoner.SatReasoner' cr��e et retourn�e.
+07:57:31 [INFO] [tests.mocks.jpype_mock] [MOCK JPYPE JClass] Appel�e avec name='org.tweetyproject.logics.pl.parser.PlParser', args=(), kwargs={}
+07:57:31 [DEBUG] [tests.mocks.jpype_components.jclass_core] MockJClassCore('org.tweetyproject.logics.pl.parser.PlParser').__call__ avec args: (), kwargs: {}
+07:57:31 [INFO] [tests.mocks.jpype_components.jclass_core] Instance mock�e de 'org.tweetyproject.logics.pl.parser.PlParser' cr��e et retourn�e.
+07:57:31 [INFO] [argumentation_analysis.agents.core.logic.tweety_initializer] PL components initialized.
+07:57:31 [INFO] [tests.mocks.jpype_mock] [MOCK JPYPE JClass] Appel�e avec name='org.tweetyproject.logics.fol.parser.FolParser', args=(), kwargs={}
+07:57:31 [DEBUG] [tests.mocks.jpype_components.jclass_core] MockJClassCore('org.tweetyproject.logics.fol.parser.FolParser').__call__ avec args: (), kwargs: {}
+07:57:31 [INFO] [tests.mocks.jpype_components.jclass_core] Instance mock�e de 'org.tweetyproject.logics.fol.parser.FolParser' cr��e et retourn�e.
+07:57:31 [INFO] [argumentation_analysis.agents.core.logic.tweety_initializer] FOL parser initialized.
+07:57:31 [INFO] [tests.mocks.jpype_mock] [MOCK JPYPE JClass] Appel�e avec name='org.tweetyproject.logics.ml.parser.MlParser', args=(), kwargs={}
+07:57:31 [DEBUG] [tests.mocks.jpype_components.jclass_core] MockJClassCore('org.tweetyproject.logics.ml.parser.MlParser').__call__ avec args: (), kwargs: {}
+07:57:31 [INFO] [tests.mocks.jpype_components.jclass_core] Instance mock�e de 'org.tweetyproject.logics.ml.parser.MlParser' cr��e et retourn�e.
+07:57:31 [INFO] [argumentation_analysis.agents.core.logic.tweety_initializer] Modal Logic parser initialized.
+07:57:31 [INFO] [Orchestration.TweetyBridge] TWEETY_BRIDGE: __init__ - Handlers PL, FOL, Modal initialis�s avec succ�s.
+07:57:31 [INFO] [Orchestration.TweetyBridge] TWEETY_BRIDGE: __init__ - Fin (Refactored). _jvm_ok: True
+07:57:31 [INFO] [Orchestration.TweetyBridge] TweetyBridge.execute_pl_query: Query='c' sur BS: ('a => b...')
+07:57:31 [INFO] [tests.mocks.jpype_mock] [MOCK JPYPE JClass] Appel�e avec name='org.tweetyproject.logics.pl.syntax.PlBeliefSet', args=(), kwargs={}
+07:57:31 [DEBUG] [tests.mocks.jpype_components.jclass_core] MockJClassCore('org.tweetyproject.logics.pl.syntax.PlBeliefSet').__call__ avec args: (), kwargs: {}
+07:57:31 [INFO] [tests.mocks.jpype_components.jclass_core] Instance mock�e de 'org.tweetyproject.logics.pl.syntax.PlBeliefSet' cr��e et retourn�e.
+07:57:31 [DEBUG] [tests.mocks.jpype_components.jclass_core] MockJClassCore pour 'java.lang.String' initialis�e (jclass_provider: False).
+07:57:31 [INFO] [argumentation_analysis.agents.core.logic.pl_handler] Successfully parsed PL formula: a => b -> <MagicMock name='MockInstanceOf_org.tweetyproject.logics.pl.parser.PlParser.parseFormula()' id='2933818600032'>
+07:57:31 [DEBUG] [tests.mocks.jpype_components.jclass_core] MockJClassCore pour 'java.lang.String' initialis�e (jclass_provider: False).
+07:57:31 [INFO] [argumentation_analysis.agents.core.logic.pl_handler] Successfully parsed PL formula: c -> <MagicMock name='MockInstanceOf_org.tweetyproject.logics.pl.parser.PlParser.parseFormula()' id='2933818600032'>
+07:57:31 [INFO] [argumentation_analysis.agents.core.logic.pl_handler] PL Query: KB entails 'c'? <MagicMock name='MockInstanceOf_org.tweetyproject.logics.pl.reasoner.SatReasoner.query()' id='2933818070160'>
+07:57:31 [INFO] [Orchestration.TweetyBridge] R�sultat format� requ�te PL 'c' via PLHandler: ACCEPTED (True)
+------------------------------ Captured log call ------------------------------
+INFO     Orchestration.TweetyBridge:tweety_bridge.py:57 TWEETY_BRIDGE: __init__ - D�but (Refactored)
+INFO     Orchestration.TweetyBridge:tweety_bridge.py:74 TWEETY_BRIDGE: __init__ - JVM d�j� pr�te ou initialis�e par TweetyInitializer.
+INFO     tests.mocks.jpype_mock:jpype_mock.py:114 [MOCK JPYPE JClass] Appel�e avec name='org.tweetyproject.logics.pl.reasoner.SatReasoner', args=(), kwargs={}
+DEBUG    tests.mocks.jpype_components.jclass_core:jclass_core.py:87 MockJClassCore('org.tweetyproject.logics.pl.reasoner.SatReasoner').__call__ avec args: (), kwargs: {}
+INFO     tests.mocks.jpype_components.jclass_core:jclass_core.py:169 Instance mock�e de 'org.tweetyproject.logics.pl.reasoner.SatReasoner' cr��e et retourn�e.
+INFO     tests.mocks.jpype_mock:jpype_mock.py:114 [MOCK JPYPE JClass] Appel�e avec name='org.tweetyproject.logics.pl.parser.PlParser', args=(), kwargs={}
+DEBUG    tests.mocks.jpype_components.jclass_core:jclass_core.py:87 MockJClassCore('org.tweetyproject.logics.pl.parser.PlParser').__call__ avec args: (), kwargs: {}
+INFO     tests.mocks.jpype_components.jclass_core:jclass_core.py:169 Instance mock�e de 'org.tweetyproject.logics.pl.parser.PlParser' cr��e et retourn�e.
+INFO     argumentation_analysis.agents.core.logic.tweety_initializer:tweety_initializer.py:209 PL components initialized.
+INFO     tests.mocks.jpype_mock:jpype_mock.py:114 [MOCK JPYPE JClass] Appel�e avec name='org.tweetyproject.logics.fol.parser.FolParser', args=(), kwargs={}
+DEBUG    tests.mocks.jpype_components.jclass_core:jclass_core.py:87 MockJClassCore('org.tweetyproject.logics.fol.parser.FolParser').__call__ avec args: (), kwargs: {}
+INFO     tests.mocks.jpype_components.jclass_core:jclass_core.py:169 Instance mock�e de 'org.tweetyproject.logics.fol.parser.FolParser' cr��e et retourn�e.
+INFO     argumentation_analysis.agents.core.logic.tweety_initializer:tweety_initializer.py:225 FOL parser initialized.
+INFO     tests.mocks.jpype_mock:jpype_mock.py:114 [MOCK JPYPE JClass] Appel�e avec name='org.tweetyproject.logics.ml.parser.MlParser', args=(), kwargs={}
+DEBUG    tests.mocks.jpype_components.jclass_core:jclass_core.py:87 MockJClassCore('org.tweetyproject.logics.ml.parser.MlParser').__call__ avec args: (), kwargs: {}
+INFO     tests.mocks.jpype_components.jclass_core:jclass_core.py:169 Instance mock�e de 'org.tweetyproject.logics.ml.parser.MlParser' cr��e et retourn�e.
+INFO     argumentation_analysis.agents.core.logic.tweety_initializer:tweety_initializer.py:248 Modal Logic parser initialized.
+INFO     Orchestration.TweetyBridge:tweety_bridge.py:88 TWEETY_BRIDGE: __init__ - Handlers PL, FOL, Modal initialis�s avec succ�s.
+INFO     Orchestration.TweetyBridge:tweety_bridge.py:95 TWEETY_BRIDGE: __init__ - Fin (Refactored). _jvm_ok: True
+INFO     Orchestration.TweetyBridge:tweety_bridge.py:228 TweetyBridge.execute_pl_query: Query='c' sur BS: ('a => b...')
+INFO     tests.mocks.jpype_mock:jpype_mock.py:114 [MOCK JPYPE JClass] Appel�e avec name='org.tweetyproject.logics.pl.syntax.PlBeliefSet', args=(), kwargs={}
+DEBUG    tests.mocks.jpype_components.jclass_core:jclass_core.py:87 MockJClassCore('org.tweetyproject.logics.pl.syntax.PlBeliefSet').__call__ avec args: (), kwargs: {}
+INFO     tests.mocks.jpype_components.jclass_core:jclass_core.py:169 Instance mock�e de 'org.tweetyproject.logics.pl.syntax.PlBeliefSet' cr��e et retourn�e.
+DEBUG    tests.mocks.jpype_components.jclass_core:jclass_core.py:34 MockJClassCore pour 'java.lang.String' initialis�e (jclass_provider: False).
+INFO     argumentation_analysis.agents.core.logic.pl_handler:pl_handler.py:37 Successfully parsed PL formula: a => b -> <MagicMock name='MockInstanceOf_org.tweetyproject.logics.pl.parser.PlParser.parseFormula()' id='2933818600032'>
+DEBUG    tests.mocks.jpype_components.jclass_core:jclass_core.py:34 MockJClassCore pour 'java.lang.String' initialis�e (jclass_provider: False).
+INFO     argumentation_analysis.agents.core.logic.pl_handler:pl_handler.py:37 Successfully parsed PL formula: c -> <MagicMock name='MockInstanceOf_org.tweetyproject.logics.pl.parser.PlParser.parseFormula()' id='2933818600032'>
+INFO     argumentation_analysis.agents.core.logic.pl_handler:pl_handler.py:114 PL Query: KB entails 'c'? <MagicMock name='MockInstanceOf_org.tweetyproject.logics.pl.reasoner.SatReasoner.query()' id='2933818070160'>
+INFO     Orchestration.TweetyBridge:tweety_bridge.py:246 R�sultat format� requ�te PL 'c' via PLHandler: ACCEPTED (True)
+-------------------------- Captured stdout teardown ---------------------------
+2025-06-05 07:57:31,471 - tests.mocks.jpype_setup - INFO - �tat de JPype restaur� apr�s test test_execute_pl_query_rejected (utilisation du mock).
+_____________ TestTweetyBridge.test_initialization_jvm_not_ready ______________
+
+self = <test_tweety_bridge.TestTweetyBridge testMethod=test_initialization_jvm_not_ready>
+
+    def test_initialization_jvm_not_ready(self):
+        """Test de l'initialisation lorsque la JVM n'est pas pr�te."""
+        if not os.environ.get('USE_REAL_JPYPE', 'false').lower() in ('true', '1'):
+            self.mock_jpype.isJVMStarted.return_value = False
+            self.mock_jpype.JClass.reset_mock()
+            self.mock_jpype.startJVM.reset_mock()
+            self.mock_jpype.startJVM.side_effect = Exception("Mocked JVM start failure")
+    
+            tweety_bridge_test_instance = TweetyBridge()
+    
+            self.mock_jpype.startJVM.side_effect = None
+    
+>           self.assertFalse(tweety_bridge_test_instance.is_jvm_ready())
+E           AssertionError: True is not false
+
+tests\agents\core\logic\test_tweety_bridge.py:178: AssertionError
+---------------------------- Captured stdout setup ----------------------------
+2025-06-05 07:57:31,472 - tests.mocks.jpype_setup - INFO - Test test_initialization_jvm_not_ready utilise MOCK JPype.
+2025-06-05 07:57:31,472 - tests.mocks.jpype_setup - INFO - �tat (_jvm_started, _jvm_path, config.jvm_path) du mock JPype r�initialis� pour le test.
+---------------------------- Captured stdout call -----------------------------
+07:57:31 [INFO] [Orchestration.TweetyBridge] TWEETY_BRIDGE: __init__ - D�but (Refactored)
+07:57:31 [INFO] [Orchestration.TweetyBridge] TWEETY_BRIDGE: __init__ - JVM d�j� pr�te ou initialis�e par TweetyInitializer.
+07:57:31 [INFO] [tests.mocks.jpype_mock] [MOCK JPYPE JClass] Appel�e avec name='org.tweetyproject.logics.pl.reasoner.SatReasoner', args=(), kwargs={}
+07:57:31 [DEBUG] [tests.mocks.jpype_components.jclass_core] MockJClassCore('org.tweetyproject.logics.pl.reasoner.SatReasoner').__call__ avec args: (), kwargs: {}
+07:57:31 [INFO] [tests.mocks.jpype_components.jclass_core] Instance mock�e de 'org.tweetyproject.logics.pl.reasoner.SatReasoner' cr��e et retourn�e.
+07:57:31 [INFO] [tests.mocks.jpype_mock] [MOCK JPYPE JClass] Appel�e avec name='org.tweetyproject.logics.pl.parser.PlParser', args=(), kwargs={}
+07:57:31 [DEBUG] [tests.mocks.jpype_components.jclass_core] MockJClassCore('org.tweetyproject.logics.pl.parser.PlParser').__call__ avec args: (), kwargs: {}
+07:57:31 [INFO] [tests.mocks.jpype_components.jclass_core] Instance mock�e de 'org.tweetyproject.logics.pl.parser.PlParser' cr��e et retourn�e.
+07:57:31 [INFO] [argumentation_analysis.agents.core.logic.tweety_initializer] PL components initialized.
+07:57:31 [INFO] [tests.mocks.jpype_mock] [MOCK JPYPE JClass] Appel�e avec name='org.tweetyproject.logics.fol.parser.FolParser', args=(), kwargs={}
+07:57:31 [DEBUG] [tests.mocks.jpype_components.jclass_core] MockJClassCore('org.tweetyproject.logics.fol.parser.FolParser').__call__ avec args: (), kwargs: {}
+07:57:31 [INFO] [tests.mocks.jpype_components.jclass_core] Instance mock�e de 'org.tweetyproject.logics.fol.parser.FolParser' cr��e et retourn�e.
+07:57:31 [INFO] [argumentation_analysis.agents.core.logic.tweety_initializer] FOL parser initialized.
+07:57:31 [INFO] [tests.mocks.jpype_mock] [MOCK JPYPE JClass] Appel�e avec name='org.tweetyproject.logics.ml.parser.MlParser', args=(), kwargs={}
+07:57:31 [DEBUG] [tests.mocks.jpype_components.jclass_core] MockJClassCore('org.tweetyproject.logics.ml.parser.MlParser').__call__ avec args: (), kwargs: {}
+07:57:31 [INFO] [tests.mocks.jpype_components.jclass_core] Instance mock�e de 'org.tweetyproject.logics.ml.parser.MlParser' cr��e et retourn�e.
+07:57:31 [INFO] [argumentation_analysis.agents.core.logic.tweety_initializer] Modal Logic parser initialized.
+07:57:31 [INFO] [Orchestration.TweetyBridge] TWEETY_BRIDGE: __init__ - Handlers PL, FOL, Modal initialis�s avec succ�s.
+07:57:31 [INFO] [Orchestration.TweetyBridge] TWEETY_BRIDGE: __init__ - Fin (Refactored). _jvm_ok: True
+07:57:31 [INFO] [Orchestration.TweetyBridge] TWEETY_BRIDGE: __init__ - D�but (Refactored)
+07:57:31 [INFO] [Orchestration.TweetyBridge] TWEETY_BRIDGE: __init__ - JVM d�j� pr�te ou initialis�e par TweetyInitializer.
+07:57:31 [INFO] [tests.mocks.jpype_mock] [MOCK JPYPE JClass] Appel�e avec name='org.tweetyproject.logics.pl.reasoner.SatReasoner', args=(), kwargs={}
+07:57:31 [DEBUG] [tests.mocks.jpype_components.jclass_core] MockJClassCore('org.tweetyproject.logics.pl.reasoner.SatReasoner').__call__ avec args: (), kwargs: {}
+07:57:31 [INFO] [tests.mocks.jpype_components.jclass_core] Instance mock�e de 'org.tweetyproject.logics.pl.reasoner.SatReasoner' cr��e et retourn�e.
+07:57:31 [INFO] [tests.mocks.jpype_mock] [MOCK JPYPE JClass] Appel�e avec name='org.tweetyproject.logics.pl.parser.PlParser', args=(), kwargs={}
+07:57:31 [DEBUG] [tests.mocks.jpype_components.jclass_core] MockJClassCore('org.tweetyproject.logics.pl.parser.PlParser').__call__ avec args: (), kwargs: {}
+07:57:31 [INFO] [tests.mocks.jpype_components.jclass_core] Instance mock�e de 'org.tweetyproject.logics.pl.parser.PlParser' cr��e et retourn�e.
+07:57:31 [INFO] [argumentation_analysis.agents.core.logic.tweety_initializer] PL components initialized.
+07:57:31 [INFO] [tests.mocks.jpype_mock] [MOCK JPYPE JClass] Appel�e avec name='org.tweetyproject.logics.fol.parser.FolParser', args=(), kwargs={}
+07:57:31 [DEBUG] [tests.mocks.jpype_components.jclass_core] MockJClassCore('org.tweetyproject.logics.fol.parser.FolParser').__call__ avec args: (), kwargs: {}
+07:57:31 [INFO] [tests.mocks.jpype_components.jclass_core] Instance mock�e de 'org.tweetyproject.logics.fol.parser.FolParser' cr��e et retourn�e.
+07:57:31 [INFO] [argumentation_analysis.agents.core.logic.tweety_initializer] FOL parser initialized.
+07:57:31 [INFO] [tests.mocks.jpype_mock] [MOCK JPYPE JClass] Appel�e avec name='org.tweetyproject.logics.ml.parser.MlParser', args=(), kwargs={}
+07:57:31 [DEBUG] [tests.mocks.jpype_components.jclass_core] MockJClassCore('org.tweetyproject.logics.ml.parser.MlParser').__call__ avec args: (), kwargs: {}
+07:57:31 [INFO] [tests.mocks.jpype_components.jclass_core] Instance mock�e de 'org.tweetyproject.logics.ml.parser.MlParser' cr��e et retourn�e.
+07:57:31 [INFO] [argumentation_analysis.agents.core.logic.tweety_initializer] Modal Logic parser initialized.
+07:57:31 [INFO] [Orchestration.TweetyBridge] TWEETY_BRIDGE: __init__ - Handlers PL, FOL, Modal initialis�s avec succ�s.
+07:57:31 [INFO] [Orchestration.TweetyBridge] TWEETY_BRIDGE: __init__ - Fin (Refactored). _jvm_ok: True
+------------------------------ Captured log call ------------------------------
+INFO     Orchestration.TweetyBridge:tweety_bridge.py:57 TWEETY_BRIDGE: __init__ - D�but (Refactored)
+INFO     Orchestration.TweetyBridge:tweety_bridge.py:74 TWEETY_BRIDGE: __init__ - JVM d�j� pr�te ou initialis�e par TweetyInitializer.
+INFO     tests.mocks.jpype_mock:jpype_mock.py:114 [MOCK JPYPE JClass] Appel�e avec name='org.tweetyproject.logics.pl.reasoner.SatReasoner', args=(), kwargs={}
+DEBUG    tests.mocks.jpype_components.jclass_core:jclass_core.py:87 MockJClassCore('org.tweetyproject.logics.pl.reasoner.SatReasoner').__call__ avec args: (), kwargs: {}
+INFO     tests.mocks.jpype_components.jclass_core:jclass_core.py:169 Instance mock�e de 'org.tweetyproject.logics.pl.reasoner.SatReasoner' cr��e et retourn�e.
+INFO     tests.mocks.jpype_mock:jpype_mock.py:114 [MOCK JPYPE JClass] Appel�e avec name='org.tweetyproject.logics.pl.parser.PlParser', args=(), kwargs={}
+DEBUG    tests.mocks.jpype_components.jclass_core:jclass_core.py:87 MockJClassCore('org.tweetyproject.logics.pl.parser.PlParser').__call__ avec args: (), kwargs: {}
+INFO     tests.mocks.jpype_components.jclass_core:jclass_core.py:169 Instance mock�e de 'org.tweetyproject.logics.pl.parser.PlParser' cr��e et retourn�e.
+INFO     argumentation_analysis.agents.core.logic.tweety_initializer:tweety_initializer.py:209 PL components initialized.
+INFO     tests.mocks.jpype_mock:jpype_mock.py:114 [MOCK JPYPE JClass] Appel�e avec name='org.tweetyproject.logics.fol.parser.FolParser', args=(), kwargs={}
+DEBUG    tests.mocks.jpype_components.jclass_core:jclass_core.py:87 MockJClassCore('org.tweetyproject.logics.fol.parser.FolParser').__call__ avec args: (), kwargs: {}
+INFO     tests.mocks.jpype_components.jclass_core:jclass_core.py:169 Instance mock�e de 'org.tweetyproject.logics.fol.parser.FolParser' cr��e et retourn�e.
+INFO     argumentation_analysis.agents.core.logic.tweety_initializer:tweety_initializer.py:225 FOL parser initialized.
+INFO     tests.mocks.jpype_mock:jpype_mock.py:114 [MOCK JPYPE JClass] Appel�e avec name='org.tweetyproject.logics.ml.parser.MlParser', args=(), kwargs={}
+DEBUG    tests.mocks.jpype_components.jclass_core:jclass_core.py:87 MockJClassCore('org.tweetyproject.logics.ml.parser.MlParser').__call__ avec args: (), kwargs: {}
+INFO     tests.mocks.jpype_components.jclass_core:jclass_core.py:169 Instance mock�e de 'org.tweetyproject.logics.ml.parser.MlParser' cr��e et retourn�e.
+INFO     argumentation_analysis.agents.core.logic.tweety_initializer:tweety_initializer.py:248 Modal Logic parser initialized.
+INFO     Orchestration.TweetyBridge:tweety_bridge.py:88 TWEETY_BRIDGE: __init__ - Handlers PL, FOL, Modal initialis�s avec succ�s.
+INFO     Orchestration.TweetyBridge:tweety_bridge.py:95 TWEETY_BRIDGE: __init__ - Fin (Refactored). _jvm_ok: True
+INFO     Orchestration.TweetyBridge:tweety_bridge.py:57 TWEETY_BRIDGE: __init__ - D�but (Refactored)
+INFO     Orchestration.TweetyBridge:tweety_bridge.py:74 TWEETY_BRIDGE: __init__ - JVM d�j� pr�te ou initialis�e par TweetyInitializer.
+INFO     tests.mocks.jpype_mock:jpype_mock.py:114 [MOCK JPYPE JClass] Appel�e avec name='org.tweetyproject.logics.pl.reasoner.SatReasoner', args=(), kwargs={}
+DEBUG    tests.mocks.jpype_components.jclass_core:jclass_core.py:87 MockJClassCore('org.tweetyproject.logics.pl.reasoner.SatReasoner').__call__ avec args: (), kwargs: {}
+INFO     tests.mocks.jpype_components.jclass_core:jclass_core.py:169 Instance mock�e de 'org.tweetyproject.logics.pl.reasoner.SatReasoner' cr��e et retourn�e.
+INFO     tests.mocks.jpype_mock:jpype_mock.py:114 [MOCK JPYPE JClass] Appel�e avec name='org.tweetyproject.logics.pl.parser.PlParser', args=(), kwargs={}
+DEBUG    tests.mocks.jpype_components.jclass_core:jclass_core.py:87 MockJClassCore('org.tweetyproject.logics.pl.parser.PlParser').__call__ avec args: (), kwargs: {}
+INFO     tests.mocks.jpype_components.jclass_core:jclass_core.py:169 Instance mock�e de 'org.tweetyproject.logics.pl.parser.PlParser' cr��e et retourn�e.
+INFO     argumentation_analysis.agents.core.logic.tweety_initializer:tweety_initializer.py:209 PL components initialized.
+INFO     tests.mocks.jpype_mock:jpype_mock.py:114 [MOCK JPYPE JClass] Appel�e avec name='org.tweetyproject.logics.fol.parser.FolParser', args=(), kwargs={}
+DEBUG    tests.mocks.jpype_components.jclass_core:jclass_core.py:87 MockJClassCore('org.tweetyproject.logics.fol.parser.FolParser').__call__ avec args: (), kwargs: {}
+INFO     tests.mocks.jpype_components.jclass_core:jclass_core.py:169 Instance mock�e de 'org.tweetyproject.logics.fol.parser.FolParser' cr��e et retourn�e.
+INFO     argumentation_analysis.agents.core.logic.tweety_initializer:tweety_initializer.py:225 FOL parser initialized.
+INFO     tests.mocks.jpype_mock:jpype_mock.py:114 [MOCK JPYPE JClass] Appel�e avec name='org.tweetyproject.logics.ml.parser.MlParser', args=(), kwargs={}
+DEBUG    tests.mocks.jpype_components.jclass_core:jclass_core.py:87 MockJClassCore('org.tweetyproject.logics.ml.parser.MlParser').__call__ avec args: (), kwargs: {}
+INFO     tests.mocks.jpype_components.jclass_core:jclass_core.py:169 Instance mock�e de 'org.tweetyproject.logics.ml.parser.MlParser' cr��e et retourn�e.
+INFO     argumentation_analysis.agents.core.logic.tweety_initializer:tweety_initializer.py:248 Modal Logic parser initialized.
+INFO     Orchestration.TweetyBridge:tweety_bridge.py:88 TWEETY_BRIDGE: __init__ - Handlers PL, FOL, Modal initialis�s avec succ�s.
+INFO     Orchestration.TweetyBridge:tweety_bridge.py:95 TWEETY_BRIDGE: __init__ - Fin (Refactored). _jvm_ok: True
+-------------------------- Captured stdout teardown ---------------------------
+2025-06-05 07:57:31,533 - tests.mocks.jpype_setup - INFO - �tat de JPype restaur� apr�s test test_initialization_jvm_not_ready (utilisation du mock).
+_______________ TestTweetyBridge.test_initialization_jvm_ready ________________
+
+self = <MagicMock name='jpype.JClass' id='2933797477584'>
+args = ('org.tweetyproject.logics.pl.parser.PlParser',), kwargs = {}
+expected = call('org.tweetyproject.logics.pl.parser.PlParser'), cause = None
+actual = []
+expected_string = "JClass('org.tweetyproject.logics.pl.parser.PlParser')"
+
+    def assert_any_call(self, /, *args, **kwargs):
+        """assert the mock has been called with the specified arguments.
+    
+        The assert passes if the mock has *ever* been called, unlike
+        `assert_called_with` and `assert_called_once_with` that only pass if
+        the call is the most recent one."""
+        expected = self._call_matcher(_Call((args, kwargs), two=True))
+        cause = expected if isinstance(expected, Exception) else None
+        actual = [self._call_matcher(c) for c in self.call_args_list]
+        if cause or expected not in _AnyComparer(actual):
+            expected_string = self._format_mock_call_signature(args, kwargs)
+>           raise AssertionError(
+                '%s call not found' % expected_string
+            ) from cause
+E           AssertionError: JClass('org.tweetyproject.logics.pl.parser.PlParser') call not found
+
+C:\Tools\miniconda3\lib\unittest\mock.py:978: AssertionError
+
+During handling of the above exception, another exception occurred:
+
+self = <test_tweety_bridge.TestTweetyBridge testMethod=test_initialization_jvm_ready>
+
+    def test_initialization_jvm_ready(self):
+        """Test de l'initialisation lorsque la JVM est pr�te."""
+        self.assertTrue(self.tweety_bridge.is_jvm_ready())
+    
+        if not os.environ.get('USE_REAL_JPYPE', 'false').lower() in ('true', '1'):
+>           self.mock_jpype.JClass.assert_any_call("org.tweetyproject.logics.pl.parser.PlParser")
+E           AssertionError: JClass('org.tweetyproject.logics.pl.parser.PlParser') call not found
+
+tests\agents\core\logic\test_tweety_bridge.py:135: AssertionError
+---------------------------- Captured stdout setup ----------------------------
+2025-06-05 07:57:31,534 - tests.mocks.jpype_setup - INFO - Test test_initialization_jvm_ready utilise MOCK JPype.
+2025-06-05 07:57:31,534 - tests.mocks.jpype_setup - INFO - �tat (_jvm_started, _jvm_path, config.jvm_path) du mock JPype r�initialis� pour le test.
+---------------------------- Captured stdout call -----------------------------
+07:57:31 [INFO] [Orchestration.TweetyBridge] TWEETY_BRIDGE: __init__ - D�but (Refactored)
+07:57:31 [INFO] [Orchestration.TweetyBridge] TWEETY_BRIDGE: __init__ - JVM d�j� pr�te ou initialis�e par TweetyInitializer.
+07:57:31 [INFO] [tests.mocks.jpype_mock] [MOCK JPYPE JClass] Appel�e avec name='org.tweetyproject.logics.pl.reasoner.SatReasoner', args=(), kwargs={}
+07:57:31 [DEBUG] [tests.mocks.jpype_components.jclass_core] MockJClassCore('org.tweetyproject.logics.pl.reasoner.SatReasoner').__call__ avec args: (), kwargs: {}
+07:57:31 [INFO] [tests.mocks.jpype_components.jclass_core] Instance mock�e de 'org.tweetyproject.logics.pl.reasoner.SatReasoner' cr��e et retourn�e.
+07:57:31 [INFO] [tests.mocks.jpype_mock] [MOCK JPYPE JClass] Appel�e avec name='org.tweetyproject.logics.pl.parser.PlParser', args=(), kwargs={}
+07:57:31 [DEBUG] [tests.mocks.jpype_components.jclass_core] MockJClassCore('org.tweetyproject.logics.pl.parser.PlParser').__call__ avec args: (), kwargs: {}
+07:57:31 [INFO] [tests.mocks.jpype_components.jclass_core] Instance mock�e de 'org.tweetyproject.logics.pl.parser.PlParser' cr��e et retourn�e.
+07:57:31 [INFO] [argumentation_analysis.agents.core.logic.tweety_initializer] PL components initialized.
+07:57:31 [INFO] [tests.mocks.jpype_mock] [MOCK JPYPE JClass] Appel�e avec name='org.tweetyproject.logics.fol.parser.FolParser', args=(), kwargs={}
+07:57:31 [DEBUG] [tests.mocks.jpype_components.jclass_core] MockJClassCore('org.tweetyproject.logics.fol.parser.FolParser').__call__ avec args: (), kwargs: {}
+07:57:31 [INFO] [tests.mocks.jpype_components.jclass_core] Instance mock�e de 'org.tweetyproject.logics.fol.parser.FolParser' cr��e et retourn�e.
+07:57:31 [INFO] [argumentation_analysis.agents.core.logic.tweety_initializer] FOL parser initialized.
+07:57:31 [INFO] [tests.mocks.jpype_mock] [MOCK JPYPE JClass] Appel�e avec name='org.tweetyproject.logics.ml.parser.MlParser', args=(), kwargs={}
+07:57:31 [DEBUG] [tests.mocks.jpype_components.jclass_core] MockJClassCore('org.tweetyproject.logics.ml.parser.MlParser').__call__ avec args: (), kwargs: {}
+07:57:31 [INFO] [tests.mocks.jpype_components.jclass_core] Instance mock�e de 'org.tweetyproject.logics.ml.parser.MlParser' cr��e et retourn�e.
+07:57:31 [INFO] [argumentation_analysis.agents.core.logic.tweety_initializer] Modal Logic parser initialized.
+07:57:31 [INFO] [Orchestration.TweetyBridge] TWEETY_BRIDGE: __init__ - Handlers PL, FOL, Modal initialis�s avec succ�s.
+07:57:31 [INFO] [Orchestration.TweetyBridge] TWEETY_BRIDGE: __init__ - Fin (Refactored). _jvm_ok: True
+------------------------------ Captured log call ------------------------------
+INFO     Orchestration.TweetyBridge:tweety_bridge.py:57 TWEETY_BRIDGE: __init__ - D�but (Refactored)
+INFO     Orchestration.TweetyBridge:tweety_bridge.py:74 TWEETY_BRIDGE: __init__ - JVM d�j� pr�te ou initialis�e par TweetyInitializer.
+INFO     tests.mocks.jpype_mock:jpype_mock.py:114 [MOCK JPYPE JClass] Appel�e avec name='org.tweetyproject.logics.pl.reasoner.SatReasoner', args=(), kwargs={}
+DEBUG    tests.mocks.jpype_components.jclass_core:jclass_core.py:87 MockJClassCore('org.tweetyproject.logics.pl.reasoner.SatReasoner').__call__ avec args: (), kwargs: {}
+INFO     tests.mocks.jpype_components.jclass_core:jclass_core.py:169 Instance mock�e de 'org.tweetyproject.logics.pl.reasoner.SatReasoner' cr��e et retourn�e.
+INFO     tests.mocks.jpype_mock:jpype_mock.py:114 [MOCK JPYPE JClass] Appel�e avec name='org.tweetyproject.logics.pl.parser.PlParser', args=(), kwargs={}
+DEBUG    tests.mocks.jpype_components.jclass_core:jclass_core.py:87 MockJClassCore('org.tweetyproject.logics.pl.parser.PlParser').__call__ avec args: (), kwargs: {}
+INFO     tests.mocks.jpype_components.jclass_core:jclass_core.py:169 Instance mock�e de 'org.tweetyproject.logics.pl.parser.PlParser' cr��e et retourn�e.
+INFO     argumentation_analysis.agents.core.logic.tweety_initializer:tweety_initializer.py:209 PL components initialized.
+INFO     tests.mocks.jpype_mock:jpype_mock.py:114 [MOCK JPYPE JClass] Appel�e avec name='org.tweetyproject.logics.fol.parser.FolParser', args=(), kwargs={}
+DEBUG    tests.mocks.jpype_components.jclass_core:jclass_core.py:87 MockJClassCore('org.tweetyproject.logics.fol.parser.FolParser').__call__ avec args: (), kwargs: {}
+INFO     tests.mocks.jpype_components.jclass_core:jclass_core.py:169 Instance mock�e de 'org.tweetyproject.logics.fol.parser.FolParser' cr��e et retourn�e.
+INFO     argumentation_analysis.agents.core.logic.tweety_initializer:tweety_initializer.py:225 FOL parser initialized.
+INFO     tests.mocks.jpype_mock:jpype_mock.py:114 [MOCK JPYPE JClass] Appel�e avec name='org.tweetyproject.logics.ml.parser.MlParser', args=(), kwargs={}
+DEBUG    tests.mocks.jpype_components.jclass_core:jclass_core.py:87 MockJClassCore('org.tweetyproject.logics.ml.parser.MlParser').__call__ avec args: (), kwargs: {}
+INFO     tests.mocks.jpype_components.jclass_core:jclass_core.py:169 Instance mock�e de 'org.tweetyproject.logics.ml.parser.MlParser' cr��e et retourn�e.
+INFO     argumentation_analysis.agents.core.logic.tweety_initializer:tweety_initializer.py:248 Modal Logic parser initialized.
+INFO     Orchestration.TweetyBridge:tweety_bridge.py:88 TWEETY_BRIDGE: __init__ - Handlers PL, FOL, Modal initialis�s avec succ�s.
+INFO     Orchestration.TweetyBridge:tweety_bridge.py:95 TWEETY_BRIDGE: __init__ - Fin (Refactored). _jvm_ok: True
+-------------------------- Captured stdout teardown ---------------------------
+2025-06-05 07:57:31,570 - tests.mocks.jpype_setup - INFO - �tat de JPype restaur� apr�s test test_initialization_jvm_ready (utilisation du mock).
+_______________ TestTweetyBridge.test_validate_belief_set_empty _______________
+
+self = <MagicMock name='PlParser_instance_mock.parseBeliefBase' id='2933816208688'>
+
+    def assert_called_once(self):
+        """assert that the mock was called only once.
+        """
+        if not self.call_count == 1:
+            msg = ("Expected '%s' to have been called once. Called %s times.%s"
+                   % (self._mock_name or 'mock',
+                      self.call_count,
+                      self._calls_repr()))
+>           raise AssertionError(msg)
+E           AssertionError: Expected 'parseBeliefBase' to have been called once. Called 0 times.
+
+C:\Tools\miniconda3\lib\unittest\mock.py:886: AssertionError
+
+During handling of the above exception, another exception occurred:
+
+self = <test_tweety_bridge.TestTweetyBridge testMethod=test_validate_belief_set_empty>
+
+    def test_validate_belief_set_empty(self):
+        """Test de la validation d'un ensemble de croyances propositionnelles vide."""
+        if not os.environ.get('USE_REAL_JPYPE', 'false').lower() in ('true', '1'):
+            # Configurer le mock du parser
+            mock_belief_set = MagicMock()
+            mock_belief_set.__str__.return_value = "" # Simule une base vide apr�s parsing
+            self.mock_pl_parser_instance.parseBeliefBase.return_value = mock_belief_set
+    
+            # Valider un ensemble de croyances
+            is_valid, message = self.tweety_bridge.validate_belief_set("") # Test avec cha�ne vide
+    
+            # V�rifier que le parser a �t� appel�
+>           self.mock_pl_parser_instance.parseBeliefBase.assert_called_once() # Devrait �tre appel� m�me pour cha�ne vide
+E           AssertionError: Expected 'parseBeliefBase' to have been called once. Called 0 times.
+
+tests\agents\core\logic\test_tweety_bridge.py:263: AssertionError
+---------------------------- Captured stdout setup ----------------------------
+2025-06-05 07:57:31,570 - tests.mocks.jpype_setup - INFO - Test test_validate_belief_set_empty utilise MOCK JPype.
+2025-06-05 07:57:31,570 - tests.mocks.jpype_setup - INFO - �tat (_jvm_started, _jvm_path, config.jvm_path) du mock JPype r�initialis� pour le test.
+---------------------------- Captured stdout call -----------------------------
+07:57:31 [INFO] [Orchestration.TweetyBridge] TWEETY_BRIDGE: __init__ - D�but (Refactored)
+07:57:31 [INFO] [Orchestration.TweetyBridge] TWEETY_BRIDGE: __init__ - JVM d�j� pr�te ou initialis�e par TweetyInitializer.
+07:57:31 [INFO] [tests.mocks.jpype_mock] [MOCK JPYPE JClass] Appel�e avec name='org.tweetyproject.logics.pl.reasoner.SatReasoner', args=(), kwargs={}
+07:57:31 [DEBUG] [tests.mocks.jpype_components.jclass_core] MockJClassCore('org.tweetyproject.logics.pl.reasoner.SatReasoner').__call__ avec args: (), kwargs: {}
+07:57:31 [INFO] [tests.mocks.jpype_components.jclass_core] Instance mock�e de 'org.tweetyproject.logics.pl.reasoner.SatReasoner' cr��e et retourn�e.
+07:57:31 [INFO] [tests.mocks.jpype_mock] [MOCK JPYPE JClass] Appel�e avec name='org.tweetyproject.logics.pl.parser.PlParser', args=(), kwargs={}
+07:57:31 [DEBUG] [tests.mocks.jpype_components.jclass_core] MockJClassCore('org.tweetyproject.logics.pl.parser.PlParser').__call__ avec args: (), kwargs: {}
+07:57:31 [INFO] [tests.mocks.jpype_components.jclass_core] Instance mock�e de 'org.tweetyproject.logics.pl.parser.PlParser' cr��e et retourn�e.
+07:57:31 [INFO] [argumentation_analysis.agents.core.logic.tweety_initializer] PL components initialized.
+07:57:31 [INFO] [tests.mocks.jpype_mock] [MOCK JPYPE JClass] Appel�e avec name='org.tweetyproject.logics.fol.parser.FolParser', args=(), kwargs={}
+07:57:31 [DEBUG] [tests.mocks.jpype_components.jclass_core] MockJClassCore('org.tweetyproject.logics.fol.parser.FolParser').__call__ avec args: (), kwargs: {}
+07:57:31 [INFO] [tests.mocks.jpype_components.jclass_core] Instance mock�e de 'org.tweetyproject.logics.fol.parser.FolParser' cr��e et retourn�e.
+07:57:31 [INFO] [argumentation_analysis.agents.core.logic.tweety_initializer] FOL parser initialized.
+07:57:31 [INFO] [tests.mocks.jpype_mock] [MOCK JPYPE JClass] Appel�e avec name='org.tweetyproject.logics.ml.parser.MlParser', args=(), kwargs={}
+07:57:31 [DEBUG] [tests.mocks.jpype_components.jclass_core] MockJClassCore('org.tweetyproject.logics.ml.parser.MlParser').__call__ avec args: (), kwargs: {}
+07:57:31 [INFO] [tests.mocks.jpype_components.jclass_core] Instance mock�e de 'org.tweetyproject.logics.ml.parser.MlParser' cr��e et retourn�e.
+07:57:31 [INFO] [argumentation_analysis.agents.core.logic.tweety_initializer] Modal Logic parser initialized.
+07:57:31 [INFO] [Orchestration.TweetyBridge] TWEETY_BRIDGE: __init__ - Handlers PL, FOL, Modal initialis�s avec succ�s.
+07:57:31 [INFO] [Orchestration.TweetyBridge] TWEETY_BRIDGE: __init__ - Fin (Refactored). _jvm_ok: True
+------------------------------ Captured log call ------------------------------
+INFO     Orchestration.TweetyBridge:tweety_bridge.py:57 TWEETY_BRIDGE: __init__ - D�but (Refactored)
+INFO     Orchestration.TweetyBridge:tweety_bridge.py:74 TWEETY_BRIDGE: __init__ - JVM d�j� pr�te ou initialis�e par TweetyInitializer.
+INFO     tests.mocks.jpype_mock:jpype_mock.py:114 [MOCK JPYPE JClass] Appel�e avec name='org.tweetyproject.logics.pl.reasoner.SatReasoner', args=(), kwargs={}
+DEBUG    tests.mocks.jpype_components.jclass_core:jclass_core.py:87 MockJClassCore('org.tweetyproject.logics.pl.reasoner.SatReasoner').__call__ avec args: (), kwargs: {}
+INFO     tests.mocks.jpype_components.jclass_core:jclass_core.py:169 Instance mock�e de 'org.tweetyproject.logics.pl.reasoner.SatReasoner' cr��e et retourn�e.
+INFO     tests.mocks.jpype_mock:jpype_mock.py:114 [MOCK JPYPE JClass] Appel�e avec name='org.tweetyproject.logics.pl.parser.PlParser', args=(), kwargs={}
+DEBUG    tests.mocks.jpype_components.jclass_core:jclass_core.py:87 MockJClassCore('org.tweetyproject.logics.pl.parser.PlParser').__call__ avec args: (), kwargs: {}
+INFO     tests.mocks.jpype_components.jclass_core:jclass_core.py:169 Instance mock�e de 'org.tweetyproject.logics.pl.parser.PlParser' cr��e et retourn�e.
+INFO     argumentation_analysis.agents.core.logic.tweety_initializer:tweety_initializer.py:209 PL components initialized.
+INFO     tests.mocks.jpype_mock:jpype_mock.py:114 [MOCK JPYPE JClass] Appel�e avec name='org.tweetyproject.logics.fol.parser.FolParser', args=(), kwargs={}
+DEBUG    tests.mocks.jpype_components.jclass_core:jclass_core.py:87 MockJClassCore('org.tweetyproject.logics.fol.parser.FolParser').__call__ avec args: (), kwargs: {}
+INFO     tests.mocks.jpype_components.jclass_core:jclass_core.py:169 Instance mock�e de 'org.tweetyproject.logics.fol.parser.FolParser' cr��e et retourn�e.
+INFO     argumentation_analysis.agents.core.logic.tweety_initializer:tweety_initializer.py:225 FOL parser initialized.
+INFO     tests.mocks.jpype_mock:jpype_mock.py:114 [MOCK JPYPE JClass] Appel�e avec name='org.tweetyproject.logics.ml.parser.MlParser', args=(), kwargs={}
+DEBUG    tests.mocks.jpype_components.jclass_core:jclass_core.py:87 MockJClassCore('org.tweetyproject.logics.ml.parser.MlParser').__call__ avec args: (), kwargs: {}
+INFO     tests.mocks.jpype_components.jclass_core:jclass_core.py:169 Instance mock�e de 'org.tweetyproject.logics.ml.parser.MlParser' cr��e et retourn�e.
+INFO     argumentation_analysis.agents.core.logic.tweety_initializer:tweety_initializer.py:248 Modal Logic parser initialized.
+INFO     Orchestration.TweetyBridge:tweety_bridge.py:88 TWEETY_BRIDGE: __init__ - Handlers PL, FOL, Modal initialis�s avec succ�s.
+INFO     Orchestration.TweetyBridge:tweety_bridge.py:95 TWEETY_BRIDGE: __init__ - Fin (Refactored). _jvm_ok: True
+-------------------------- Captured stdout teardown ---------------------------
+2025-06-05 07:57:31,601 - tests.mocks.jpype_setup - INFO - �tat de JPype restaur� apr�s test test_validate_belief_set_empty (utilisation du mock).
+______________ TestTweetyBridge.test_validate_belief_set_invalid ______________
+
+self = <MagicMock name='PlParser_instance_mock.parseBeliefBase' id='2933796854896'>
+
+    def assert_called_once(self):
+        """assert that the mock was called only once.
+        """
+        if not self.call_count == 1:
+            msg = ("Expected '%s' to have been called once. Called %s times.%s"
+                   % (self._mock_name or 'mock',
+                      self.call_count,
+                      self._calls_repr()))
+>           raise AssertionError(msg)
+E           AssertionError: Expected 'parseBeliefBase' to have been called once. Called 0 times.
+
+C:\Tools\miniconda3\lib\unittest\mock.py:886: AssertionError
+
+During handling of the above exception, another exception occurred:
+
+self = <test_tweety_bridge.TestTweetyBridge testMethod=test_validate_belief_set_invalid>
+
+    def test_validate_belief_set_invalid(self):
+        """Test de la validation d'un ensemble de croyances propositionnelles invalide."""
+        if not os.environ.get('USE_REAL_JPYPE', 'false').lower() in ('true', '1'):
+            # Configurer le mock du parser pour lever une exception
+            java_exception_instance = self.mock_jpype.JException("Erreur de syntaxe � la ligne 2")
+            self.mock_pl_parser_instance.parseBeliefBase.side_effect = java_exception_instance
+    
+            # Valider un ensemble de croyances
+            is_valid, message = self.tweety_bridge.validate_belief_set("a ==> b")
+    
+            # V�rifier que le parser a �t� appel�
+>           self.mock_pl_parser_instance.parseBeliefBase.assert_called_once()
+E           AssertionError: Expected 'parseBeliefBase' to have been called once. Called 0 times.
+
+tests\agents\core\logic\test_tweety_bridge.py:289: AssertionError
+---------------------------- Captured stdout setup ----------------------------
+2025-06-05 07:57:31,602 - tests.mocks.jpype_setup - INFO - Test test_validate_belief_set_invalid utilise MOCK JPype.
+2025-06-05 07:57:31,602 - tests.mocks.jpype_setup - INFO - �tat (_jvm_started, _jvm_path, config.jvm_path) du mock JPype r�initialis� pour le test.
+---------------------------- Captured stdout call -----------------------------
+07:57:31 [INFO] [Orchestration.TweetyBridge] TWEETY_BRIDGE: __init__ - D�but (Refactored)
+07:57:31 [INFO] [Orchestration.TweetyBridge] TWEETY_BRIDGE: __init__ - JVM d�j� pr�te ou initialis�e par TweetyInitializer.
+07:57:31 [INFO] [tests.mocks.jpype_mock] [MOCK JPYPE JClass] Appel�e avec name='org.tweetyproject.logics.pl.reasoner.SatReasoner', args=(), kwargs={}
+07:57:31 [DEBUG] [tests.mocks.jpype_components.jclass_core] MockJClassCore('org.tweetyproject.logics.pl.reasoner.SatReasoner').__call__ avec args: (), kwargs: {}
+07:57:31 [INFO] [tests.mocks.jpype_components.jclass_core] Instance mock�e de 'org.tweetyproject.logics.pl.reasoner.SatReasoner' cr��e et retourn�e.
+07:57:31 [INFO] [tests.mocks.jpype_mock] [MOCK JPYPE JClass] Appel�e avec name='org.tweetyproject.logics.pl.parser.PlParser', args=(), kwargs={}
+07:57:31 [DEBUG] [tests.mocks.jpype_components.jclass_core] MockJClassCore('org.tweetyproject.logics.pl.parser.PlParser').__call__ avec args: (), kwargs: {}
+07:57:31 [INFO] [tests.mocks.jpype_components.jclass_core] Instance mock�e de 'org.tweetyproject.logics.pl.parser.PlParser' cr��e et retourn�e.
+07:57:31 [INFO] [argumentation_analysis.agents.core.logic.tweety_initializer] PL components initialized.
+07:57:31 [INFO] [tests.mocks.jpype_mock] [MOCK JPYPE JClass] Appel�e avec name='org.tweetyproject.logics.fol.parser.FolParser', args=(), kwargs={}
+07:57:31 [DEBUG] [tests.mocks.jpype_components.jclass_core] MockJClassCore('org.tweetyproject.logics.fol.parser.FolParser').__call__ avec args: (), kwargs: {}
+07:57:31 [INFO] [tests.mocks.jpype_components.jclass_core] Instance mock�e de 'org.tweetyproject.logics.fol.parser.FolParser' cr��e et retourn�e.
+07:57:31 [INFO] [argumentation_analysis.agents.core.logic.tweety_initializer] FOL parser initialized.
+07:57:31 [INFO] [tests.mocks.jpype_mock] [MOCK JPYPE JClass] Appel�e avec name='org.tweetyproject.logics.ml.parser.MlParser', args=(), kwargs={}
+07:57:31 [DEBUG] [tests.mocks.jpype_components.jclass_core] MockJClassCore('org.tweetyproject.logics.ml.parser.MlParser').__call__ avec args: (), kwargs: {}
+07:57:31 [INFO] [tests.mocks.jpype_components.jclass_core] Instance mock�e de 'org.tweetyproject.logics.ml.parser.MlParser' cr��e et retourn�e.
+07:57:31 [INFO] [argumentation_analysis.agents.core.logic.tweety_initializer] Modal Logic parser initialized.
+07:57:31 [INFO] [Orchestration.TweetyBridge] TWEETY_BRIDGE: __init__ - Handlers PL, FOL, Modal initialis�s avec succ�s.
+07:57:31 [INFO] [Orchestration.TweetyBridge] TWEETY_BRIDGE: __init__ - Fin (Refactored). _jvm_ok: True
+07:57:31 [DEBUG] [tests.mocks.jpype_components.exceptions] JException initialis�e avec message: Erreur de syntaxe � la ligne 2
+07:57:31 [DEBUG] [tests.mocks.jpype_components.jclass_core] MockJClassCore pour 'java.lang.String' initialis�e (jclass_provider: False).
+07:57:31 [INFO] [argumentation_analysis.agents.core.logic.pl_handler] Successfully parsed PL formula: a ==> b -> <MagicMock name='MockInstanceOf_org.tweetyproject.logics.pl.parser.PlParser.parseFormula()' id='2933817161760'>
+07:57:31 [INFO] [Orchestration.TweetyBridge] Ensemble de croyances PL valid� avec succ�s par PLHandler (parsing individuel).
+------------------------------ Captured log call ------------------------------
+INFO     Orchestration.TweetyBridge:tweety_bridge.py:57 TWEETY_BRIDGE: __init__ - D�but (Refactored)
+INFO     Orchestration.TweetyBridge:tweety_bridge.py:74 TWEETY_BRIDGE: __init__ - JVM d�j� pr�te ou initialis�e par TweetyInitializer.
+INFO     tests.mocks.jpype_mock:jpype_mock.py:114 [MOCK JPYPE JClass] Appel�e avec name='org.tweetyproject.logics.pl.reasoner.SatReasoner', args=(), kwargs={}
+DEBUG    tests.mocks.jpype_components.jclass_core:jclass_core.py:87 MockJClassCore('org.tweetyproject.logics.pl.reasoner.SatReasoner').__call__ avec args: (), kwargs: {}
+INFO     tests.mocks.jpype_components.jclass_core:jclass_core.py:169 Instance mock�e de 'org.tweetyproject.logics.pl.reasoner.SatReasoner' cr��e et retourn�e.
+INFO     tests.mocks.jpype_mock:jpype_mock.py:114 [MOCK JPYPE JClass] Appel�e avec name='org.tweetyproject.logics.pl.parser.PlParser', args=(), kwargs={}
+DEBUG    tests.mocks.jpype_components.jclass_core:jclass_core.py:87 MockJClassCore('org.tweetyproject.logics.pl.parser.PlParser').__call__ avec args: (), kwargs: {}
+INFO     tests.mocks.jpype_components.jclass_core:jclass_core.py:169 Instance mock�e de 'org.tweetyproject.logics.pl.parser.PlParser' cr��e et retourn�e.
+INFO     argumentation_analysis.agents.core.logic.tweety_initializer:tweety_initializer.py:209 PL components initialized.
+INFO     tests.mocks.jpype_mock:jpype_mock.py:114 [MOCK JPYPE JClass] Appel�e avec name='org.tweetyproject.logics.fol.parser.FolParser', args=(), kwargs={}
+DEBUG    tests.mocks.jpype_components.jclass_core:jclass_core.py:87 MockJClassCore('org.tweetyproject.logics.fol.parser.FolParser').__call__ avec args: (), kwargs: {}
+INFO     tests.mocks.jpype_components.jclass_core:jclass_core.py:169 Instance mock�e de 'org.tweetyproject.logics.fol.parser.FolParser' cr��e et retourn�e.
+INFO     argumentation_analysis.agents.core.logic.tweety_initializer:tweety_initializer.py:225 FOL parser initialized.
+INFO     tests.mocks.jpype_mock:jpype_mock.py:114 [MOCK JPYPE JClass] Appel�e avec name='org.tweetyproject.logics.ml.parser.MlParser', args=(), kwargs={}
+DEBUG    tests.mocks.jpype_components.jclass_core:jclass_core.py:87 MockJClassCore('org.tweetyproject.logics.ml.parser.MlParser').__call__ avec args: (), kwargs: {}
+INFO     tests.mocks.jpype_components.jclass_core:jclass_core.py:169 Instance mock�e de 'org.tweetyproject.logics.ml.parser.MlParser' cr��e et retourn�e.
+INFO     argumentation_analysis.agents.core.logic.tweety_initializer:tweety_initializer.py:248 Modal Logic parser initialized.
+INFO     Orchestration.TweetyBridge:tweety_bridge.py:88 TWEETY_BRIDGE: __init__ - Handlers PL, FOL, Modal initialis�s avec succ�s.
+INFO     Orchestration.TweetyBridge:tweety_bridge.py:95 TWEETY_BRIDGE: __init__ - Fin (Refactored). _jvm_ok: True
+DEBUG    tests.mocks.jpype_components.exceptions:exceptions.py:18 JException initialis�e avec message: Erreur de syntaxe � la ligne 2
+DEBUG    tests.mocks.jpype_components.jclass_core:jclass_core.py:34 MockJClassCore pour 'java.lang.String' initialis�e (jclass_provider: False).
+INFO     argumentation_analysis.agents.core.logic.pl_handler:pl_handler.py:37 Successfully parsed PL formula: a ==> b -> <MagicMock name='MockInstanceOf_org.tweetyproject.logics.pl.parser.PlParser.parseFormula()' id='2933817161760'>
+INFO     Orchestration.TweetyBridge:tweety_bridge.py:209 Ensemble de croyances PL valid� avec succ�s par PLHandler (parsing individuel).
+-------------------------- Captured stdout teardown ---------------------------
+2025-06-05 07:57:31,670 - tests.mocks.jpype_setup - INFO - �tat de JPype restaur� apr�s test test_validate_belief_set_invalid (utilisation du mock).
+_______________ TestTweetyBridge.test_validate_belief_set_valid _______________
+
+self = <MagicMock name='PlParser_instance_mock.parseBeliefBase' id='2933797330224'>
+
+    def assert_called_once(self):
+        """assert that the mock was called only once.
+        """
+        if not self.call_count == 1:
+            msg = ("Expected '%s' to have been called once. Called %s times.%s"
+                   % (self._mock_name or 'mock',
+                      self.call_count,
+                      self._calls_repr()))
+>           raise AssertionError(msg)
+E           AssertionError: Expected 'parseBeliefBase' to have been called once. Called 0 times.
+
+C:\Tools\miniconda3\lib\unittest\mock.py:886: AssertionError
+
+During handling of the above exception, another exception occurred:
+
+self = <test_tweety_bridge.TestTweetyBridge testMethod=test_validate_belief_set_valid>
+
+    def test_validate_belief_set_valid(self):
+        """Test de la validation d'un ensemble de croyances propositionnelles valide."""
+        if not os.environ.get('USE_REAL_JPYPE', 'false').lower() in ('true', '1'):
+            # Configurer le mock du parser
+            mock_belief_set = MagicMock()
+            mock_belief_set.__str__.return_value = "a => b"
+            self.mock_pl_parser_instance.parseBeliefBase.return_value = mock_belief_set
+    
+            # Valider un ensemble de croyances
+            is_valid, message = self.tweety_bridge.validate_belief_set("a => b")
+    
+            # V�rifier que le parser a �t� appel�
+>           self.mock_pl_parser_instance.parseBeliefBase.assert_called_once()
+E           AssertionError: Expected 'parseBeliefBase' to have been called once. Called 0 times.
+
+tests\agents\core\logic\test_tweety_bridge.py:240: AssertionError
+---------------------------- Captured stdout setup ----------------------------
+2025-06-05 07:57:31,671 - tests.mocks.jpype_setup - INFO - Test test_validate_belief_set_valid utilise MOCK JPype.
+2025-06-05 07:57:31,671 - tests.mocks.jpype_setup - INFO - �tat (_jvm_started, _jvm_path, config.jvm_path) du mock JPype r�initialis� pour le test.
+---------------------------- Captured stdout call -----------------------------
+07:57:31 [INFO] [Orchestration.TweetyBridge] TWEETY_BRIDGE: __init__ - D�but (Refactored)
+07:57:31 [INFO] [Orchestration.TweetyBridge] TWEETY_BRIDGE: __init__ - JVM d�j� pr�te ou initialis�e par TweetyInitializer.
+07:57:31 [INFO] [tests.mocks.jpype_mock] [MOCK JPYPE JClass] Appel�e avec name='org.tweetyproject.logics.pl.reasoner.SatReasoner', args=(), kwargs={}
+07:57:31 [DEBUG] [tests.mocks.jpype_components.jclass_core] MockJClassCore('org.tweetyproject.logics.pl.reasoner.SatReasoner').__call__ avec args: (), kwargs: {}
+07:57:31 [INFO] [tests.mocks.jpype_components.jclass_core] Instance mock�e de 'org.tweetyproject.logics.pl.reasoner.SatReasoner' cr��e et retourn�e.
+07:57:31 [INFO] [tests.mocks.jpype_mock] [MOCK JPYPE JClass] Appel�e avec name='org.tweetyproject.logics.pl.parser.PlParser', args=(), kwargs={}
+07:57:31 [DEBUG] [tests.mocks.jpype_components.jclass_core] MockJClassCore('org.tweetyproject.logics.pl.parser.PlParser').__call__ avec args: (), kwargs: {}
+07:57:31 [INFO] [tests.mocks.jpype_components.jclass_core] Instance mock�e de 'org.tweetyproject.logics.pl.parser.PlParser' cr��e et retourn�e.
+07:57:31 [INFO] [argumentation_analysis.agents.core.logic.tweety_initializer] PL components initialized.
+07:57:31 [INFO] [tests.mocks.jpype_mock] [MOCK JPYPE JClass] Appel�e avec name='org.tweetyproject.logics.fol.parser.FolParser', args=(), kwargs={}
+07:57:31 [DEBUG] [tests.mocks.jpype_components.jclass_core] MockJClassCore('org.tweetyproject.logics.fol.parser.FolParser').__call__ avec args: (), kwargs: {}
+07:57:31 [INFO] [tests.mocks.jpype_components.jclass_core] Instance mock�e de 'org.tweetyproject.logics.fol.parser.FolParser' cr��e et retourn�e.
+07:57:31 [INFO] [argumentation_analysis.agents.core.logic.tweety_initializer] FOL parser initialized.
+07:57:31 [INFO] [tests.mocks.jpype_mock] [MOCK JPYPE JClass] Appel�e avec name='org.tweetyproject.logics.ml.parser.MlParser', args=(), kwargs={}
+07:57:31 [DEBUG] [tests.mocks.jpype_components.jclass_core] MockJClassCore('org.tweetyproject.logics.ml.parser.MlParser').__call__ avec args: (), kwargs: {}
+07:57:31 [INFO] [tests.mocks.jpype_components.jclass_core] Instance mock�e de 'org.tweetyproject.logics.ml.parser.MlParser' cr��e et retourn�e.
+07:57:31 [INFO] [argumentation_analysis.agents.core.logic.tweety_initializer] Modal Logic parser initialized.
+07:57:31 [INFO] [Orchestration.TweetyBridge] TWEETY_BRIDGE: __init__ - Handlers PL, FOL, Modal initialis�s avec succ�s.
+07:57:31 [INFO] [Orchestration.TweetyBridge] TWEETY_BRIDGE: __init__ - Fin (Refactored). _jvm_ok: True
+07:57:31 [DEBUG] [tests.mocks.jpype_components.jclass_core] MockJClassCore pour 'java.lang.String' initialis�e (jclass_provider: False).
+07:57:31 [INFO] [argumentation_analysis.agents.core.logic.pl_handler] Successfully parsed PL formula: a => b -> <MagicMock name='MockInstanceOf_org.tweetyproject.logics.pl.parser.PlParser.parseFormula()' id='2933797340928'>
+07:57:31 [INFO] [Orchestration.TweetyBridge] Ensemble de croyances PL valid� avec succ�s par PLHandler (parsing individuel).
+------------------------------ Captured log call ------------------------------
+INFO     Orchestration.TweetyBridge:tweety_bridge.py:57 TWEETY_BRIDGE: __init__ - D�but (Refactored)
+INFO     Orchestration.TweetyBridge:tweety_bridge.py:74 TWEETY_BRIDGE: __init__ - JVM d�j� pr�te ou initialis�e par TweetyInitializer.
+INFO     tests.mocks.jpype_mock:jpype_mock.py:114 [MOCK JPYPE JClass] Appel�e avec name='org.tweetyproject.logics.pl.reasoner.SatReasoner', args=(), kwargs={}
+DEBUG    tests.mocks.jpype_components.jclass_core:jclass_core.py:87 MockJClassCore('org.tweetyproject.logics.pl.reasoner.SatReasoner').__call__ avec args: (), kwargs: {}
+INFO     tests.mocks.jpype_components.jclass_core:jclass_core.py:169 Instance mock�e de 'org.tweetyproject.logics.pl.reasoner.SatReasoner' cr��e et retourn�e.
+INFO     tests.mocks.jpype_mock:jpype_mock.py:114 [MOCK JPYPE JClass] Appel�e avec name='org.tweetyproject.logics.pl.parser.PlParser', args=(), kwargs={}
+DEBUG    tests.mocks.jpype_components.jclass_core:jclass_core.py:87 MockJClassCore('org.tweetyproject.logics.pl.parser.PlParser').__call__ avec args: (), kwargs: {}
+INFO     tests.mocks.jpype_components.jclass_core:jclass_core.py:169 Instance mock�e de 'org.tweetyproject.logics.pl.parser.PlParser' cr��e et retourn�e.
+INFO     argumentation_analysis.agents.core.logic.tweety_initializer:tweety_initializer.py:209 PL components initialized.
+INFO     tests.mocks.jpype_mock:jpype_mock.py:114 [MOCK JPYPE JClass] Appel�e avec name='org.tweetyproject.logics.fol.parser.FolParser', args=(), kwargs={}
+DEBUG    tests.mocks.jpype_components.jclass_core:jclass_core.py:87 MockJClassCore('org.tweetyproject.logics.fol.parser.FolParser').__call__ avec args: (), kwargs: {}
+INFO     tests.mocks.jpype_components.jclass_core:jclass_core.py:169 Instance mock�e de 'org.tweetyproject.logics.fol.parser.FolParser' cr��e et retourn�e.
+INFO     argumentation_analysis.agents.core.logic.tweety_initializer:tweety_initializer.py:225 FOL parser initialized.
+INFO     tests.mocks.jpype_mock:jpype_mock.py:114 [MOCK JPYPE JClass] Appel�e avec name='org.tweetyproject.logics.ml.parser.MlParser', args=(), kwargs={}
+DEBUG    tests.mocks.jpype_components.jclass_core:jclass_core.py:87 MockJClassCore('org.tweetyproject.logics.ml.parser.MlParser').__call__ avec args: (), kwargs: {}
+INFO     tests.mocks.jpype_components.jclass_core:jclass_core.py:169 Instance mock�e de 'org.tweetyproject.logics.ml.parser.MlParser' cr��e et retourn�e.
+INFO     argumentation_analysis.agents.core.logic.tweety_initializer:tweety_initializer.py:248 Modal Logic parser initialized.
+INFO     Orchestration.TweetyBridge:tweety_bridge.py:88 TWEETY_BRIDGE: __init__ - Handlers PL, FOL, Modal initialis�s avec succ�s.
+INFO     Orchestration.TweetyBridge:tweety_bridge.py:95 TWEETY_BRIDGE: __init__ - Fin (Refactored). _jvm_ok: True
+DEBUG    tests.mocks.jpype_components.jclass_core:jclass_core.py:34 MockJClassCore pour 'java.lang.String' initialis�e (jclass_provider: False).
+INFO     argumentation_analysis.agents.core.logic.pl_handler:pl_handler.py:37 Successfully parsed PL formula: a => b -> <MagicMock name='MockInstanceOf_org.tweetyproject.logics.pl.parser.PlParser.parseFormula()' id='2933797340928'>
+INFO     Orchestration.TweetyBridge:tweety_bridge.py:209 Ensemble de croyances PL valid� avec succ�s par PLHandler (parsing individuel).
+-------------------------- Captured stdout teardown ---------------------------
+2025-06-05 07:57:31,703 - tests.mocks.jpype_setup - INFO - �tat de JPype restaur� apr�s test test_validate_belief_set_valid (utilisation du mock).
+_________________ TestTweetyBridge.test_validate_fol_formula __________________
+
+self = <MagicMock name='FolParser_instance_mock.parseFormula' id='2933816055024'>
+args = ('forall X: (P(X) => Q(X))',), kwargs = {}
+msg = "Expected 'parseFormula' to be called once. Called 0 times."
+
+    def assert_called_once_with(self, /, *args, **kwargs):
+        """assert that the mock was called exactly once and that that call was
+        with the specified arguments."""
+        if not self.call_count == 1:
+            msg = ("Expected '%s' to be called once. Called %s times.%s"
+                   % (self._mock_name or 'mock',
+                      self.call_count,
+                      self._calls_repr()))
+>           raise AssertionError(msg)
+E           AssertionError: Expected 'parseFormula' to be called once. Called 0 times.
+
+C:\Tools\miniconda3\lib\unittest\mock.py:918: AssertionError
+
+During handling of the above exception, another exception occurred:
+
+self = <test_tweety_bridge.TestTweetyBridge testMethod=test_validate_fol_formula>
+
+    def test_validate_fol_formula(self):
+        """Test de la validation d'une formule du premier ordre."""
+        if not os.environ.get('USE_REAL_JPYPE', 'false').lower() in ('true', '1'):
+            # Configurer le mock du parser
+            self.mock_fol_parser_instance.parseFormula.return_value = MagicMock()
+    
+            # Valider une formule
+            is_valid, message = self.tweety_bridge.validate_fol_formula("forall X: (P(X) => Q(X))")
+    
+            # V�rifier que le parser a �t� appel�
+>           self.mock_fol_parser_instance.parseFormula.assert_called_once_with("forall X: (P(X) => Q(X))")
+E           AssertionError: Expected 'parseFormula' to be called once. Called 0 times.
+
+tests\agents\core\logic\test_tweety_bridge.py:383: AssertionError
+---------------------------- Captured stdout setup ----------------------------
+2025-06-05 07:57:31,704 - tests.mocks.jpype_setup - INFO - Test test_validate_fol_formula utilise MOCK JPype.
+2025-06-05 07:57:31,704 - tests.mocks.jpype_setup - INFO - �tat (_jvm_started, _jvm_path, config.jvm_path) du mock JPype r�initialis� pour le test.
+---------------------------- Captured stdout call -----------------------------
+07:57:31 [INFO] [Orchestration.TweetyBridge] TWEETY_BRIDGE: __init__ - D�but (Refactored)
+07:57:31 [INFO] [Orchestration.TweetyBridge] TWEETY_BRIDGE: __init__ - JVM d�j� pr�te ou initialis�e par TweetyInitializer.
+07:57:31 [INFO] [tests.mocks.jpype_mock] [MOCK JPYPE JClass] Appel�e avec name='org.tweetyproject.logics.pl.reasoner.SatReasoner', args=(), kwargs={}
+07:57:31 [DEBUG] [tests.mocks.jpype_components.jclass_core] MockJClassCore('org.tweetyproject.logics.pl.reasoner.SatReasoner').__call__ avec args: (), kwargs: {}
+07:57:31 [INFO] [tests.mocks.jpype_components.jclass_core] Instance mock�e de 'org.tweetyproject.logics.pl.reasoner.SatReasoner' cr��e et retourn�e.
+07:57:31 [INFO] [tests.mocks.jpype_mock] [MOCK JPYPE JClass] Appel�e avec name='org.tweetyproject.logics.pl.parser.PlParser', args=(), kwargs={}
+07:57:31 [DEBUG] [tests.mocks.jpype_components.jclass_core] MockJClassCore('org.tweetyproject.logics.pl.parser.PlParser').__call__ avec args: (), kwargs: {}
+07:57:31 [INFO] [tests.mocks.jpype_components.jclass_core] Instance mock�e de 'org.tweetyproject.logics.pl.parser.PlParser' cr��e et retourn�e.
+07:57:31 [INFO] [argumentation_analysis.agents.core.logic.tweety_initializer] PL components initialized.
+07:57:31 [INFO] [tests.mocks.jpype_mock] [MOCK JPYPE JClass] Appel�e avec name='org.tweetyproject.logics.fol.parser.FolParser', args=(), kwargs={}
+07:57:31 [DEBUG] [tests.mocks.jpype_components.jclass_core] MockJClassCore('org.tweetyproject.logics.fol.parser.FolParser').__call__ avec args: (), kwargs: {}
+07:57:31 [INFO] [tests.mocks.jpype_components.jclass_core] Instance mock�e de 'org.tweetyproject.logics.fol.parser.FolParser' cr��e et retourn�e.
+07:57:31 [INFO] [argumentation_analysis.agents.core.logic.tweety_initializer] FOL parser initialized.
+07:57:31 [INFO] [tests.mocks.jpype_mock] [MOCK JPYPE JClass] Appel�e avec name='org.tweetyproject.logics.ml.parser.MlParser', args=(), kwargs={}
+07:57:31 [DEBUG] [tests.mocks.jpype_components.jclass_core] MockJClassCore('org.tweetyproject.logics.ml.parser.MlParser').__call__ avec args: (), kwargs: {}
+07:57:31 [INFO] [tests.mocks.jpype_components.jclass_core] Instance mock�e de 'org.tweetyproject.logics.ml.parser.MlParser' cr��e et retourn�e.
+07:57:31 [INFO] [argumentation_analysis.agents.core.logic.tweety_initializer] Modal Logic parser initialized.
+07:57:31 [INFO] [Orchestration.TweetyBridge] TWEETY_BRIDGE: __init__ - Handlers PL, FOL, Modal initialis�s avec succ�s.
+07:57:31 [INFO] [Orchestration.TweetyBridge] TWEETY_BRIDGE: __init__ - Fin (Refactored). _jvm_ok: True
+07:57:31 [DEBUG] [tests.mocks.jpype_components.jclass_core] MockJClassCore pour 'java.lang.String' initialis�e (jclass_provider: False).
+07:57:31 [INFO] [argumentation_analysis.agents.core.logic.fol_handler] Successfully parsed FOL formula: forall X: (P(X) => Q(X)) -> <MagicMock name='MockInstanceOf_org.tweetyproject.logics.fol.parser.FolParser.parseFormula()' id='2933816008656'>
+07:57:31 [INFO] [Orchestration.TweetyBridge] Formule FOL 'forall X: (P(X) => Q(X))' valid�e avec succ�s par FOLHandler.
+------------------------------ Captured log call ------------------------------
+INFO     Orchestration.TweetyBridge:tweety_bridge.py:57 TWEETY_BRIDGE: __init__ - D�but (Refactored)
+INFO     Orchestration.TweetyBridge:tweety_bridge.py:74 TWEETY_BRIDGE: __init__ - JVM d�j� pr�te ou initialis�e par TweetyInitializer.
+INFO     tests.mocks.jpype_mock:jpype_mock.py:114 [MOCK JPYPE JClass] Appel�e avec name='org.tweetyproject.logics.pl.reasoner.SatReasoner', args=(), kwargs={}
+DEBUG    tests.mocks.jpype_components.jclass_core:jclass_core.py:87 MockJClassCore('org.tweetyproject.logics.pl.reasoner.SatReasoner').__call__ avec args: (), kwargs: {}
+INFO     tests.mocks.jpype_components.jclass_core:jclass_core.py:169 Instance mock�e de 'org.tweetyproject.logics.pl.reasoner.SatReasoner' cr��e et retourn�e.
+INFO     tests.mocks.jpype_mock:jpype_mock.py:114 [MOCK JPYPE JClass] Appel�e avec name='org.tweetyproject.logics.pl.parser.PlParser', args=(), kwargs={}
+DEBUG    tests.mocks.jpype_components.jclass_core:jclass_core.py:87 MockJClassCore('org.tweetyproject.logics.pl.parser.PlParser').__call__ avec args: (), kwargs: {}
+INFO     tests.mocks.jpype_components.jclass_core:jclass_core.py:169 Instance mock�e de 'org.tweetyproject.logics.pl.parser.PlParser' cr��e et retourn�e.
+INFO     argumentation_analysis.agents.core.logic.tweety_initializer:tweety_initializer.py:209 PL components initialized.
+INFO     tests.mocks.jpype_mock:jpype_mock.py:114 [MOCK JPYPE JClass] Appel�e avec name='org.tweetyproject.logics.fol.parser.FolParser', args=(), kwargs={}
+DEBUG    tests.mocks.jpype_components.jclass_core:jclass_core.py:87 MockJClassCore('org.tweetyproject.logics.fol.parser.FolParser').__call__ avec args: (), kwargs: {}
+INFO     tests.mocks.jpype_components.jclass_core:jclass_core.py:169 Instance mock�e de 'org.tweetyproject.logics.fol.parser.FolParser' cr��e et retourn�e.
+INFO     argumentation_analysis.agents.core.logic.tweety_initializer:tweety_initializer.py:225 FOL parser initialized.
+INFO     tests.mocks.jpype_mock:jpype_mock.py:114 [MOCK JPYPE JClass] Appel�e avec name='org.tweetyproject.logics.ml.parser.MlParser', args=(), kwargs={}
+DEBUG    tests.mocks.jpype_components.jclass_core:jclass_core.py:87 MockJClassCore('org.tweetyproject.logics.ml.parser.MlParser').__call__ avec args: (), kwargs: {}
+INFO     tests.mocks.jpype_components.jclass_core:jclass_core.py:169 Instance mock�e de 'org.tweetyproject.logics.ml.parser.MlParser' cr��e et retourn�e.
+INFO     argumentation_analysis.agents.core.logic.tweety_initializer:tweety_initializer.py:248 Modal Logic parser initialized.
+INFO     Orchestration.TweetyBridge:tweety_bridge.py:88 TWEETY_BRIDGE: __init__ - Handlers PL, FOL, Modal initialis�s avec succ�s.
+INFO     Orchestration.TweetyBridge:tweety_bridge.py:95 TWEETY_BRIDGE: __init__ - Fin (Refactored). _jvm_ok: True
+DEBUG    tests.mocks.jpype_components.jclass_core:jclass_core.py:34 MockJClassCore pour 'java.lang.String' initialis�e (jclass_provider: False).
+INFO     argumentation_analysis.agents.core.logic.fol_handler:fol_handler.py:37 Successfully parsed FOL formula: forall X: (P(X) => Q(X)) -> <MagicMock name='MockInstanceOf_org.tweetyproject.logics.fol.parser.FolParser.parseFormula()' id='2933816008656'>
+INFO     Orchestration.TweetyBridge:tweety_bridge.py:277 Formule FOL 'forall X: (P(X) => Q(X))' valid�e avec succ�s par FOLHandler.
+-------------------------- Captured stdout teardown ---------------------------
+2025-06-05 07:57:31,775 - tests.mocks.jpype_setup - INFO - �tat de JPype restaur� apr�s test test_validate_fol_formula (utilisation du mock).
+_______________ TestTweetyBridge.test_validate_formula_invalid ________________
+
+self = <MagicMock name='PlParser_instance_mock.parseFormula' id='2933797245136'>
+args = ('a ==> b',), kwargs = {}
+msg = "Expected 'parseFormula' to be called once. Called 0 times."
+
+    def assert_called_once_with(self, /, *args, **kwargs):
+        """assert that the mock was called exactly once and that that call was
+        with the specified arguments."""
+        if not self.call_count == 1:
+            msg = ("Expected '%s' to be called once. Called %s times.%s"
+                   % (self._mock_name or 'mock',
+                      self.call_count,
+                      self._calls_repr()))
+>           raise AssertionError(msg)
+E           AssertionError: Expected 'parseFormula' to be called once. Called 0 times.
+
+C:\Tools\miniconda3\lib\unittest\mock.py:918: AssertionError
+
+During handling of the above exception, another exception occurred:
+
+self = <test_tweety_bridge.TestTweetyBridge testMethod=test_validate_formula_invalid>
+
+    def test_validate_formula_invalid(self):
+        """Test de la validation d'une formule propositionnelle invalide."""
+        if not os.environ.get('USE_REAL_JPYPE', 'false').lower() in ('true', '1'):
+            # Configurer le mock du parser pour lever une exception
+            java_exception_instance = self.mock_jpype.JException("Erreur de syntaxe")
+            # Configurer getMessage sur l'instance si n�cessaire, bien que le constructeur du mock le fasse d�j�.
+            # java_exception_instance.getMessage = MagicMock(return_value="Erreur de syntaxe")
+            self.mock_pl_parser_instance.parseFormula.side_effect = java_exception_instance
+    
+            # Valider une formule
+            is_valid, message = self.tweety_bridge.validate_formula("a ==> b")
+    
+            # V�rifier que le parser a �t� appel�
+>           self.mock_pl_parser_instance.parseFormula.assert_called_once_with("a ==> b")
+E           AssertionError: Expected 'parseFormula' to be called once. Called 0 times.
+
+tests\agents\core\logic\test_tweety_bridge.py:209: AssertionError
+---------------------------- Captured stdout setup ----------------------------
+2025-06-05 07:57:31,776 - tests.mocks.jpype_setup - INFO - Test test_validate_formula_invalid utilise MOCK JPype.
+2025-06-05 07:57:31,776 - tests.mocks.jpype_setup - INFO - �tat (_jvm_started, _jvm_path, config.jvm_path) du mock JPype r�initialis� pour le test.
+---------------------------- Captured stdout call -----------------------------
+07:57:31 [INFO] [Orchestration.TweetyBridge] TWEETY_BRIDGE: __init__ - D�but (Refactored)
+07:57:31 [INFO] [Orchestration.TweetyBridge] TWEETY_BRIDGE: __init__ - JVM d�j� pr�te ou initialis�e par TweetyInitializer.
+07:57:31 [INFO] [tests.mocks.jpype_mock] [MOCK JPYPE JClass] Appel�e avec name='org.tweetyproject.logics.pl.reasoner.SatReasoner', args=(), kwargs={}
+07:57:31 [DEBUG] [tests.mocks.jpype_components.jclass_core] MockJClassCore('org.tweetyproject.logics.pl.reasoner.SatReasoner').__call__ avec args: (), kwargs: {}
+07:57:31 [INFO] [tests.mocks.jpype_components.jclass_core] Instance mock�e de 'org.tweetyproject.logics.pl.reasoner.SatReasoner' cr��e et retourn�e.
+07:57:31 [INFO] [tests.mocks.jpype_mock] [MOCK JPYPE JClass] Appel�e avec name='org.tweetyproject.logics.pl.parser.PlParser', args=(), kwargs={}
+07:57:31 [DEBUG] [tests.mocks.jpype_components.jclass_core] MockJClassCore('org.tweetyproject.logics.pl.parser.PlParser').__call__ avec args: (), kwargs: {}
+07:57:31 [INFO] [tests.mocks.jpype_components.jclass_core] Instance mock�e de 'org.tweetyproject.logics.pl.parser.PlParser' cr��e et retourn�e.
+07:57:31 [INFO] [argumentation_analysis.agents.core.logic.tweety_initializer] PL components initialized.
+07:57:31 [INFO] [tests.mocks.jpype_mock] [MOCK JPYPE JClass] Appel�e avec name='org.tweetyproject.logics.fol.parser.FolParser', args=(), kwargs={}
+07:57:31 [DEBUG] [tests.mocks.jpype_components.jclass_core] MockJClassCore('org.tweetyproject.logics.fol.parser.FolParser').__call__ avec args: (), kwargs: {}
+07:57:31 [INFO] [tests.mocks.jpype_components.jclass_core] Instance mock�e de 'org.tweetyproject.logics.fol.parser.FolParser' cr��e et retourn�e.
+07:57:31 [INFO] [argumentation_analysis.agents.core.logic.tweety_initializer] FOL parser initialized.
+07:57:31 [INFO] [tests.mocks.jpype_mock] [MOCK JPYPE JClass] Appel�e avec name='org.tweetyproject.logics.ml.parser.MlParser', args=(), kwargs={}
+07:57:31 [DEBUG] [tests.mocks.jpype_components.jclass_core] MockJClassCore('org.tweetyproject.logics.ml.parser.MlParser').__call__ avec args: (), kwargs: {}
+07:57:31 [INFO] [tests.mocks.jpype_components.jclass_core] Instance mock�e de 'org.tweetyproject.logics.ml.parser.MlParser' cr��e et retourn�e.
+07:57:31 [INFO] [argumentation_analysis.agents.core.logic.tweety_initializer] Modal Logic parser initialized.
+07:57:31 [INFO] [Orchestration.TweetyBridge] TWEETY_BRIDGE: __init__ - Handlers PL, FOL, Modal initialis�s avec succ�s.
+07:57:31 [INFO] [Orchestration.TweetyBridge] TWEETY_BRIDGE: __init__ - Fin (Refactored). _jvm_ok: True
+07:57:31 [DEBUG] [tests.mocks.jpype_components.exceptions] JException initialis�e avec message: Erreur de syntaxe
+07:57:31 [DEBUG] [tests.mocks.jpype_components.jclass_core] MockJClassCore pour 'java.lang.String' initialis�e (jclass_provider: False).
+07:57:31 [INFO] [argumentation_analysis.agents.core.logic.pl_handler] Successfully parsed PL formula: a ==> b -> <MagicMock name='MockInstanceOf_org.tweetyproject.logics.pl.parser.PlParser.parseFormula()' id='2933797338080'>
+07:57:31 [INFO] [Orchestration.TweetyBridge] Formule PL 'a ==> b' valid�e avec succ�s par PLHandler.
+------------------------------ Captured log call ------------------------------
+INFO     Orchestration.TweetyBridge:tweety_bridge.py:57 TWEETY_BRIDGE: __init__ - D�but (Refactored)
+INFO     Orchestration.TweetyBridge:tweety_bridge.py:74 TWEETY_BRIDGE: __init__ - JVM d�j� pr�te ou initialis�e par TweetyInitializer.
+INFO     tests.mocks.jpype_mock:jpype_mock.py:114 [MOCK JPYPE JClass] Appel�e avec name='org.tweetyproject.logics.pl.reasoner.SatReasoner', args=(), kwargs={}
+DEBUG    tests.mocks.jpype_components.jclass_core:jclass_core.py:87 MockJClassCore('org.tweetyproject.logics.pl.reasoner.SatReasoner').__call__ avec args: (), kwargs: {}
+INFO     tests.mocks.jpype_components.jclass_core:jclass_core.py:169 Instance mock�e de 'org.tweetyproject.logics.pl.reasoner.SatReasoner' cr��e et retourn�e.
+INFO     tests.mocks.jpype_mock:jpype_mock.py:114 [MOCK JPYPE JClass] Appel�e avec name='org.tweetyproject.logics.pl.parser.PlParser', args=(), kwargs={}
+DEBUG    tests.mocks.jpype_components.jclass_core:jclass_core.py:87 MockJClassCore('org.tweetyproject.logics.pl.parser.PlParser').__call__ avec args: (), kwargs: {}
+INFO     tests.mocks.jpype_components.jclass_core:jclass_core.py:169 Instance mock�e de 'org.tweetyproject.logics.pl.parser.PlParser' cr��e et retourn�e.
+INFO     argumentation_analysis.agents.core.logic.tweety_initializer:tweety_initializer.py:209 PL components initialized.
+INFO     tests.mocks.jpype_mock:jpype_mock.py:114 [MOCK JPYPE JClass] Appel�e avec name='org.tweetyproject.logics.fol.parser.FolParser', args=(), kwargs={}
+DEBUG    tests.mocks.jpype_components.jclass_core:jclass_core.py:87 MockJClassCore('org.tweetyproject.logics.fol.parser.FolParser').__call__ avec args: (), kwargs: {}
+INFO     tests.mocks.jpype_components.jclass_core:jclass_core.py:169 Instance mock�e de 'org.tweetyproject.logics.fol.parser.FolParser' cr��e et retourn�e.
+INFO     argumentation_analysis.agents.core.logic.tweety_initializer:tweety_initializer.py:225 FOL parser initialized.
+INFO     tests.mocks.jpype_mock:jpype_mock.py:114 [MOCK JPYPE JClass] Appel�e avec name='org.tweetyproject.logics.ml.parser.MlParser', args=(), kwargs={}
+DEBUG    tests.mocks.jpype_components.jclass_core:jclass_core.py:87 MockJClassCore('org.tweetyproject.logics.ml.parser.MlParser').__call__ avec args: (), kwargs: {}
+INFO     tests.mocks.jpype_components.jclass_core:jclass_core.py:169 Instance mock�e de 'org.tweetyproject.logics.ml.parser.MlParser' cr��e et retourn�e.
+INFO     argumentation_analysis.agents.core.logic.tweety_initializer:tweety_initializer.py:248 Modal Logic parser initialized.
+INFO     Orchestration.TweetyBridge:tweety_bridge.py:88 TWEETY_BRIDGE: __init__ - Handlers PL, FOL, Modal initialis�s avec succ�s.
+INFO     Orchestration.TweetyBridge:tweety_bridge.py:95 TWEETY_BRIDGE: __init__ - Fin (Refactored). _jvm_ok: True
+DEBUG    tests.mocks.jpype_components.exceptions:exceptions.py:18 JException initialis�e avec message: Erreur de syntaxe
+DEBUG    tests.mocks.jpype_components.jclass_core:jclass_core.py:34 MockJClassCore pour 'java.lang.String' initialis�e (jclass_provider: False).
+INFO     argumentation_analysis.agents.core.logic.pl_handler:pl_handler.py:37 Successfully parsed PL formula: a ==> b -> <MagicMock name='MockInstanceOf_org.tweetyproject.logics.pl.parser.PlParser.parseFormula()' id='2933797338080'>
+INFO     Orchestration.TweetyBridge:tweety_bridge.py:167 Formule PL 'a ==> b' valid�e avec succ�s par PLHandler.
+-------------------------- Captured stdout teardown ---------------------------
+2025-06-05 07:57:31,806 - tests.mocks.jpype_setup - INFO - �tat de JPype restaur� apr�s test test_validate_formula_invalid (utilisation du mock).
+________________ TestTweetyBridge.test_validate_formula_valid _________________
+
+self = <MagicMock name='PlParser_instance_mock.parseFormula' id='2933797759392'>
+args = ('a => b',), kwargs = {}
+msg = "Expected 'parseFormula' to be called once. Called 0 times."
+
+    def assert_called_once_with(self, /, *args, **kwargs):
+        """assert that the mock was called exactly once and that that call was
+        with the specified arguments."""
+        if not self.call_count == 1:
+            msg = ("Expected '%s' to be called once. Called %s times.%s"
+                   % (self._mock_name or 'mock',
+                      self.call_count,
+                      self._calls_repr()))
+>           raise AssertionError(msg)
+E           AssertionError: Expected 'parseFormula' to be called once. Called 0 times.
+
+C:\Tools\miniconda3\lib\unittest\mock.py:918: AssertionError
+
+During handling of the above exception, another exception occurred:
+
+self = <test_tweety_bridge.TestTweetyBridge testMethod=test_validate_formula_valid>
+
+    def test_validate_formula_valid(self):
+        """Test de la validation d'une formule propositionnelle valide."""
+        if not os.environ.get('USE_REAL_JPYPE', 'false').lower() in ('true', '1'):
+            self.mock_pl_parser_instance.parseFormula.return_value = MagicMock()
+            is_valid, message = self.tweety_bridge.validate_formula("a => b")
+>           self.mock_pl_parser_instance.parseFormula.assert_called_once_with("a => b")
+E           AssertionError: Expected 'parseFormula' to be called once. Called 0 times.
+
+tests\agents\core\logic\test_tweety_bridge.py:188: AssertionError
+---------------------------- Captured stdout setup ----------------------------
+2025-06-05 07:57:31,807 - tests.mocks.jpype_setup - INFO - Test test_validate_formula_valid utilise MOCK JPype.
+2025-06-05 07:57:31,807 - tests.mocks.jpype_setup - INFO - �tat (_jvm_started, _jvm_path, config.jvm_path) du mock JPype r�initialis� pour le test.
+---------------------------- Captured stdout call -----------------------------
+07:57:31 [INFO] [Orchestration.TweetyBridge] TWEETY_BRIDGE: __init__ - D�but (Refactored)
+07:57:31 [INFO] [Orchestration.TweetyBridge] TWEETY_BRIDGE: __init__ - JVM d�j� pr�te ou initialis�e par TweetyInitializer.
+07:57:31 [INFO] [tests.mocks.jpype_mock] [MOCK JPYPE JClass] Appel�e avec name='org.tweetyproject.logics.pl.reasoner.SatReasoner', args=(), kwargs={}
+07:57:31 [DEBUG] [tests.mocks.jpype_components.jclass_core] MockJClassCore('org.tweetyproject.logics.pl.reasoner.SatReasoner').__call__ avec args: (), kwargs: {}
+07:57:31 [INFO] [tests.mocks.jpype_components.jclass_core] Instance mock�e de 'org.tweetyproject.logics.pl.reasoner.SatReasoner' cr��e et retourn�e.
+07:57:31 [INFO] [tests.mocks.jpype_mock] [MOCK JPYPE JClass] Appel�e avec name='org.tweetyproject.logics.pl.parser.PlParser', args=(), kwargs={}
+07:57:31 [DEBUG] [tests.mocks.jpype_components.jclass_core] MockJClassCore('org.tweetyproject.logics.pl.parser.PlParser').__call__ avec args: (), kwargs: {}
+07:57:31 [INFO] [tests.mocks.jpype_components.jclass_core] Instance mock�e de 'org.tweetyproject.logics.pl.parser.PlParser' cr��e et retourn�e.
+07:57:31 [INFO] [argumentation_analysis.agents.core.logic.tweety_initializer] PL components initialized.
+07:57:31 [INFO] [tests.mocks.jpype_mock] [MOCK JPYPE JClass] Appel�e avec name='org.tweetyproject.logics.fol.parser.FolParser', args=(), kwargs={}
+07:57:31 [DEBUG] [tests.mocks.jpype_components.jclass_core] MockJClassCore('org.tweetyproject.logics.fol.parser.FolParser').__call__ avec args: (), kwargs: {}
+07:57:31 [INFO] [tests.mocks.jpype_components.jclass_core] Instance mock�e de 'org.tweetyproject.logics.fol.parser.FolParser' cr��e et retourn�e.
+07:57:31 [INFO] [argumentation_analysis.agents.core.logic.tweety_initializer] FOL parser initialized.
+07:57:31 [INFO] [tests.mocks.jpype_mock] [MOCK JPYPE JClass] Appel�e avec name='org.tweetyproject.logics.ml.parser.MlParser', args=(), kwargs={}
+07:57:31 [DEBUG] [tests.mocks.jpype_components.jclass_core] MockJClassCore('org.tweetyproject.logics.ml.parser.MlParser').__call__ avec args: (), kwargs: {}
+07:57:31 [INFO] [tests.mocks.jpype_components.jclass_core] Instance mock�e de 'org.tweetyproject.logics.ml.parser.MlParser' cr��e et retourn�e.
+07:57:31 [INFO] [argumentation_analysis.agents.core.logic.tweety_initializer] Modal Logic parser initialized.
+07:57:31 [INFO] [Orchestration.TweetyBridge] TWEETY_BRIDGE: __init__ - Handlers PL, FOL, Modal initialis�s avec succ�s.
+07:57:31 [INFO] [Orchestration.TweetyBridge] TWEETY_BRIDGE: __init__ - Fin (Refactored). _jvm_ok: True
+07:57:31 [DEBUG] [tests.mocks.jpype_components.jclass_core] MockJClassCore pour 'java.lang.String' initialis�e (jclass_provider: False).
+07:57:31 [INFO] [argumentation_analysis.agents.core.logic.pl_handler] Successfully parsed PL formula: a => b -> <MagicMock name='MockInstanceOf_org.tweetyproject.logics.pl.parser.PlParser.parseFormula()' id='2933821531328'>
+07:57:31 [INFO] [Orchestration.TweetyBridge] Formule PL 'a => b' valid�e avec succ�s par PLHandler.
+------------------------------ Captured log call ------------------------------
+INFO     Orchestration.TweetyBridge:tweety_bridge.py:57 TWEETY_BRIDGE: __init__ - D�but (Refactored)
+INFO     Orchestration.TweetyBridge:tweety_bridge.py:74 TWEETY_BRIDGE: __init__ - JVM d�j� pr�te ou initialis�e par TweetyInitializer.
+INFO     tests.mocks.jpype_mock:jpype_mock.py:114 [MOCK JPYPE JClass] Appel�e avec name='org.tweetyproject.logics.pl.reasoner.SatReasoner', args=(), kwargs={}
+DEBUG    tests.mocks.jpype_components.jclass_core:jclass_core.py:87 MockJClassCore('org.tweetyproject.logics.pl.reasoner.SatReasoner').__call__ avec args: (), kwargs: {}
+INFO     tests.mocks.jpype_components.jclass_core:jclass_core.py:169 Instance mock�e de 'org.tweetyproject.logics.pl.reasoner.SatReasoner' cr��e et retourn�e.
+INFO     tests.mocks.jpype_mock:jpype_mock.py:114 [MOCK JPYPE JClass] Appel�e avec name='org.tweetyproject.logics.pl.parser.PlParser', args=(), kwargs={}
+DEBUG    tests.mocks.jpype_components.jclass_core:jclass_core.py:87 MockJClassCore('org.tweetyproject.logics.pl.parser.PlParser').__call__ avec args: (), kwargs: {}
+INFO     tests.mocks.jpype_components.jclass_core:jclass_core.py:169 Instance mock�e de 'org.tweetyproject.logics.pl.parser.PlParser' cr��e et retourn�e.
+INFO     argumentation_analysis.agents.core.logic.tweety_initializer:tweety_initializer.py:209 PL components initialized.
+INFO     tests.mocks.jpype_mock:jpype_mock.py:114 [MOCK JPYPE JClass] Appel�e avec name='org.tweetyproject.logics.fol.parser.FolParser', args=(), kwargs={}
+DEBUG    tests.mocks.jpype_components.jclass_core:jclass_core.py:87 MockJClassCore('org.tweetyproject.logics.fol.parser.FolParser').__call__ avec args: (), kwargs: {}
+INFO     tests.mocks.jpype_components.jclass_core:jclass_core.py:169 Instance mock�e de 'org.tweetyproject.logics.fol.parser.FolParser' cr��e et retourn�e.
+INFO     argumentation_analysis.agents.core.logic.tweety_initializer:tweety_initializer.py:225 FOL parser initialized.
+INFO     tests.mocks.jpype_mock:jpype_mock.py:114 [MOCK JPYPE JClass] Appel�e avec name='org.tweetyproject.logics.ml.parser.MlParser', args=(), kwargs={}
+DEBUG    tests.mocks.jpype_components.jclass_core:jclass_core.py:87 MockJClassCore('org.tweetyproject.logics.ml.parser.MlParser').__call__ avec args: (), kwargs: {}
+INFO     tests.mocks.jpype_components.jclass_core:jclass_core.py:169 Instance mock�e de 'org.tweetyproject.logics.ml.parser.MlParser' cr��e et retourn�e.
+INFO     argumentation_analysis.agents.core.logic.tweety_initializer:tweety_initializer.py:248 Modal Logic parser initialized.
+INFO     Orchestration.TweetyBridge:tweety_bridge.py:88 TWEETY_BRIDGE: __init__ - Handlers PL, FOL, Modal initialis�s avec succ�s.
+INFO     Orchestration.TweetyBridge:tweety_bridge.py:95 TWEETY_BRIDGE: __init__ - Fin (Refactored). _jvm_ok: True
+DEBUG    tests.mocks.jpype_components.jclass_core:jclass_core.py:34 MockJClassCore pour 'java.lang.String' initialis�e (jclass_provider: False).
+INFO     argumentation_analysis.agents.core.logic.pl_handler:pl_handler.py:37 Successfully parsed PL formula: a => b -> <MagicMock name='MockInstanceOf_org.tweetyproject.logics.pl.parser.PlParser.parseFormula()' id='2933821531328'>
+INFO     Orchestration.TweetyBridge:tweety_bridge.py:167 Formule PL 'a => b' valid�e avec succ�s par PLHandler.
+-------------------------- Captured stdout teardown ---------------------------
+2025-06-05 07:57:31,837 - tests.mocks.jpype_setup - INFO - �tat de JPype restaur� apr�s test test_validate_formula_valid (utilisation du mock).
+________________ TestTweetyBridge.test_validate_modal_formula _________________
+
+self = <MagicMock name='MlParser_instance_mock.parseFormula' id='2933818262240'>
+args = ('[]p => <>q',), kwargs = {}
+msg = "Expected 'parseFormula' to be called once. Called 0 times."
+
+    def assert_called_once_with(self, /, *args, **kwargs):
+        """assert that the mock was called exactly once and that that call was
+        with the specified arguments."""
+        if not self.call_count == 1:
+            msg = ("Expected '%s' to be called once. Called %s times.%s"
+                   % (self._mock_name or 'mock',
+                      self.call_count,
+                      self._calls_repr()))
+>           raise AssertionError(msg)
+E           AssertionError: Expected 'parseFormula' to be called once. Called 0 times.
+
+C:\Tools\miniconda3\lib\unittest\mock.py:918: AssertionError
+
+During handling of the above exception, another exception occurred:
+
+self = <test_tweety_bridge.TestTweetyBridge testMethod=test_validate_modal_formula>
+
+    def test_validate_modal_formula(self):
+        """Test de la validation d'une formule modale."""
+        if not os.environ.get('USE_REAL_JPYPE', 'false').lower() in ('true', '1'):
+            # Configurer le mock du parser
+            self.mock_ml_parser_instance.parseFormula.return_value = MagicMock(name="parsed_modal_formula_mock")
+    
+            # Valider une formule
+            is_valid, message = self.tweety_bridge.validate_modal_formula("[]p => <>q")
+    
+            # V�rifier que le parser a �t� appel�
+            # Ces prints sont utiles pour d�boguer les mocks
+            print(f"DEBUG (mock): ID of self.tweety_bridge._modal_parser_instance: {id(self.tweety_bridge._modal_parser_instance)}")
+            print(f"DEBUG (mock): ID of self.mock_ml_parser_instance: {id(self.mock_ml_parser_instance)}")
+            self.assertIs(self.tweety_bridge._modal_parser_instance, self.mock_ml_parser_instance, "Instance de _modal_parser_instance n'est pas self.mock_ml_parser_instance")
+    
+>           self.tweety_bridge._modal_parser_instance.parseFormula.assert_called_once_with("[]p => <>q")
+E           AssertionError: Expected 'parseFormula' to be called once. Called 0 times.
+
+tests\agents\core\logic\test_tweety_bridge.py:414: AssertionError
+---------------------------- Captured stdout setup ----------------------------
+2025-06-05 07:57:31,838 - tests.mocks.jpype_setup - INFO - Test test_validate_modal_formula utilise MOCK JPype.
+2025-06-05 07:57:31,838 - tests.mocks.jpype_setup - INFO - �tat (_jvm_started, _jvm_path, config.jvm_path) du mock JPype r�initialis� pour le test.
+---------------------------- Captured stdout call -----------------------------
+07:57:31 [INFO] [Orchestration.TweetyBridge] TWEETY_BRIDGE: __init__ - D�but (Refactored)
+07:57:31 [INFO] [Orchestration.TweetyBridge] TWEETY_BRIDGE: __init__ - JVM d�j� pr�te ou initialis�e par TweetyInitializer.
+07:57:31 [INFO] [tests.mocks.jpype_mock] [MOCK JPYPE JClass] Appel�e avec name='org.tweetyproject.logics.pl.reasoner.SatReasoner', args=(), kwargs={}
+07:57:31 [DEBUG] [tests.mocks.jpype_components.jclass_core] MockJClassCore('org.tweetyproject.logics.pl.reasoner.SatReasoner').__call__ avec args: (), kwargs: {}
+07:57:31 [INFO] [tests.mocks.jpype_components.jclass_core] Instance mock�e de 'org.tweetyproject.logics.pl.reasoner.SatReasoner' cr��e et retourn�e.
+07:57:31 [INFO] [tests.mocks.jpype_mock] [MOCK JPYPE JClass] Appel�e avec name='org.tweetyproject.logics.pl.parser.PlParser', args=(), kwargs={}
+07:57:31 [DEBUG] [tests.mocks.jpype_components.jclass_core] MockJClassCore('org.tweetyproject.logics.pl.parser.PlParser').__call__ avec args: (), kwargs: {}
+07:57:31 [INFO] [tests.mocks.jpype_components.jclass_core] Instance mock�e de 'org.tweetyproject.logics.pl.parser.PlParser' cr��e et retourn�e.
+07:57:31 [INFO] [argumentation_analysis.agents.core.logic.tweety_initializer] PL components initialized.
+07:57:31 [INFO] [tests.mocks.jpype_mock] [MOCK JPYPE JClass] Appel�e avec name='org.tweetyproject.logics.fol.parser.FolParser', args=(), kwargs={}
+07:57:31 [DEBUG] [tests.mocks.jpype_components.jclass_core] MockJClassCore('org.tweetyproject.logics.fol.parser.FolParser').__call__ avec args: (), kwargs: {}
+07:57:31 [INFO] [tests.mocks.jpype_components.jclass_core] Instance mock�e de 'org.tweetyproject.logics.fol.parser.FolParser' cr��e et retourn�e.
+07:57:31 [INFO] [argumentation_analysis.agents.core.logic.tweety_initializer] FOL parser initialized.
+07:57:31 [INFO] [tests.mocks.jpype_mock] [MOCK JPYPE JClass] Appel�e avec name='org.tweetyproject.logics.ml.parser.MlParser', args=(), kwargs={}
+07:57:31 [DEBUG] [tests.mocks.jpype_components.jclass_core] MockJClassCore('org.tweetyproject.logics.ml.parser.MlParser').__call__ avec args: (), kwargs: {}
+07:57:31 [INFO] [tests.mocks.jpype_components.jclass_core] Instance mock�e de 'org.tweetyproject.logics.ml.parser.MlParser' cr��e et retourn�e.
+07:57:31 [INFO] [argumentation_analysis.agents.core.logic.tweety_initializer] Modal Logic parser initialized.
+07:57:31 [INFO] [Orchestration.TweetyBridge] TWEETY_BRIDGE: __init__ - Handlers PL, FOL, Modal initialis�s avec succ�s.
+07:57:31 [INFO] [Orchestration.TweetyBridge] TWEETY_BRIDGE: __init__ - Fin (Refactored). _jvm_ok: True
+07:57:31 [INFO] [tests.mocks.jpype_mock] [MOCK JPYPE JClass] Appel�e avec name='org.tweetyproject.logics.ml.syntax.ModalLogic', args=(), kwargs={}
+07:57:31 [DEBUG] [tests.mocks.jpype_components.jclass_core] MockJClassCore('org.tweetyproject.logics.ml.syntax.ModalLogic').__getattr__('S4')
+07:57:31 [ERROR] [argumentation_analysis.agents.core.logic.modal_handler] Unsupported Modal Logic type string: S4. Supported are K, D, T, S4, S5 etc.
+07:57:31 [ERROR] [argumentation_analysis.agents.core.logic.modal_handler] Unexpected error parsing Modal Logic formula '[]p => <>q' for logic 'S4': Unsupported Modal Logic type: S4
+Traceback (most recent call last):
+  File "D:\2025-Epita-Intelligence-Symbolique-4\argumentation_analysis\agents\core\logic\modal_handler.py", line 45, in parse_modal_formula
+    java_modal_logic_enum = getattr(ModalLogic, modal_logic_str.upper())
+  File "D:\2025-Epita-Intelligence-Symbolique-4\tests\mocks\jpype_components\jclass_core.py", line 80, in __getattr__
+    raise AttributeError(f"MockJClassCore '{self.class_name}' has no static attribute '{attr_name}' or it's not defined in _static_attributes.")
+AttributeError: MockJClassCore 'org.tweetyproject.logics.ml.syntax.ModalLogic' has no static attribute 'S4' or it's not defined in _static_attributes.
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\2025-Epita-Intelligence-Symbolique-4\argumentation_analysis\agents\core\logic\modal_handler.py", line 48, in parse_modal_formula
+    raise ValueError(f"Unsupported Modal Logic type: {modal_logic_str}")
+ValueError: Unsupported Modal Logic type: S4
+07:57:31 [WARNING] [Orchestration.TweetyBridge] Erreur de syntaxe Modale pour '[]p => <>q' (Logic: S4) d�tect�e par ModalHandler: Unsupported Modal Logic type: S4
+DEBUG (mock): ID of self.tweety_bridge._modal_parser_instance: 2933817679008
+DEBUG (mock): ID of self.mock_ml_parser_instance: 2933817679008
+------------------------------ Captured log call ------------------------------
+2025-06-05 07:57:31,912 - tests.mocks.jpype_setup - INFO - jpype_setup.py: pytest_sessionfinish hook triggered. Exit status: 1
+2025-06-05 07:57:31,912 - tests.mocks.jpype_setup - INFO -    pytest_sessionfinish: sys.modules['jpype'] IS _REAL_JPYPE_MODULE. Le vrai JPype a potentiellement été utilisé.
+2025-06-05 07:57:31,912 - tests.mocks.jpype_setup - INFO -    pytest_sessionfinish: Tentative d'arrêt de la JVM via shutdown_jvm_if_needed() car le vrai JPype a potentiellement été utilisé.
+07:57:31 [INFO] [Orchestration.JPype] JVM_SETUP: Appel de shutdown_jvm_if_needed.
+07:57:31 [INFO] [Orchestration.JPype] JVM_SETUP: JVM n'était pas démarrée. Aucun arrêt nécessaire. isJVMStarted: False
+2025-06-05 07:57:31,912 - tests.mocks.jpype_setup - INFO -    pytest_sessionfinish: Vérification de l'état de la JVM après tentative d'arrêt.
+07:57:31 [DEBUG] [tests.mocks.jpype_components.jvm] isJVMStarted() appelée. Retourne: False
+2025-06-05 07:57:31,912 - tests.mocks.jpype_setup - INFO -    pytest_sessionfinish: JVM encore démarrée après tentative d'arrêt: False
+2025-06-05 07:57:31,912 - tests.mocks.jpype_setup - INFO -    pytest_sessionfinish: destroy_jvm est False (selon config): False
+2025-06-05 07:57:31,912 - tests.mocks.jpype_setup - INFO -    pytest_sessionfinish: JVM non démarrée ou destroy_jvm est True. Pas de gestion spéciale de sys.modules pour atexit depuis ici.
+INFO     Orchestration.TweetyBridge:tweety_bridge.py:57 TWEETY_BRIDGE: __init__ - D�but (Refactored)
+INFO     Orchestration.TweetyBridge:tweety_bridge.py:74 TWEETY_BRIDGE: __init__ - JVM d�j� pr�te ou initialis�e par TweetyInitializer.
+INFO     tests.mocks.jpype_mock:jpype_mock.py:114 [MOCK JPYPE JClass] Appel�e avec name='org.tweetyproject.logics.pl.reasoner.SatReasoner', args=(), kwargs={}
+DEBUG    tests.mocks.jpype_components.jclass_core:jclass_core.py:87 MockJClassCore('org.tweetyproject.logics.pl.reasoner.SatReasoner').__call__ avec args: (), kwargs: {}
+INFO     tests.mocks.jpype_components.jclass_core:jclass_core.py:169 Instance mock�e de 'org.tweetyproject.logics.pl.reasoner.SatReasoner' cr��e et retourn�e.
+INFO     tests.mocks.jpype_mock:jpype_mock.py:114 [MOCK JPYPE JClass] Appel�e avec name='org.tweetyproject.logics.pl.parser.PlParser', args=(), kwargs={}
+DEBUG    tests.mocks.jpype_components.jclass_core:jclass_core.py:87 MockJClassCore('org.tweetyproject.logics.pl.parser.PlParser').__call__ avec args: (), kwargs: {}
+INFO     tests.mocks.jpype_components.jclass_core:jclass_core.py:169 Instance mock�e de 'org.tweetyproject.logics.pl.parser.PlParser' cr��e et retourn�e.
+INFO     argumentation_analysis.agents.core.logic.tweety_initializer:tweety_initializer.py:209 PL components initialized.
+INFO     tests.mocks.jpype_mock:jpype_mock.py:114 [MOCK JPYPE JClass] Appel�e avec name='org.tweetyproject.logics.fol.parser.FolParser', args=(), kwargs={}
+DEBUG    tests.mocks.jpype_components.jclass_core:jclass_core.py:87 MockJClassCore('org.tweetyproject.logics.fol.parser.FolParser').__call__ avec args: (), kwargs: {}
+INFO     tests.mocks.jpype_components.jclass_core:jclass_core.py:169 Instance mock�e de 'org.tweetyproject.logics.fol.parser.FolParser' cr��e et retourn�e.
+INFO     argumentation_analysis.agents.core.logic.tweety_initializer:tweety_initializer.py:225 FOL parser initialized.
+INFO     tests.mocks.jpype_mock:jpype_mock.py:114 [MOCK JPYPE JClass] Appel�e avec name='org.tweetyproject.logics.ml.parser.MlParser', args=(), kwargs={}
+DEBUG    tests.mocks.jpype_components.jclass_core:jclass_core.py:87 MockJClassCore('org.tweetyproject.logics.ml.parser.MlParser').__call__ avec args: (), kwargs: {}
+INFO     tests.mocks.jpype_components.jclass_core:jclass_core.py:169 Instance mock�e de 'org.tweetyproject.logics.ml.parser.MlParser' cr��e et retourn�e.
+INFO     argumentation_analysis.agents.core.logic.tweety_initializer:tweety_initializer.py:248 Modal Logic parser initialized.
+INFO     Orchestration.TweetyBridge:tweety_bridge.py:88 TWEETY_BRIDGE: __init__ - Handlers PL, FOL, Modal initialis�s avec succ�s.
+INFO     Orchestration.TweetyBridge:tweety_bridge.py:95 TWEETY_BRIDGE: __init__ - Fin (Refactored). _jvm_ok: True
+INFO     tests.mocks.jpype_mock:jpype_mock.py:114 [MOCK JPYPE JClass] Appel�e avec name='org.tweetyproject.logics.ml.syntax.ModalLogic', args=(), kwargs={}
+DEBUG    tests.mocks.jpype_components.jclass_core:jclass_core.py:77 MockJClassCore('org.tweetyproject.logics.ml.syntax.ModalLogic').__getattr__('S4')
+ERROR    argumentation_analysis.agents.core.logic.modal_handler:modal_handler.py:47 Unsupported Modal Logic type string: S4. Supported are K, D, T, S4, S5 etc.
+ERROR    argumentation_analysis.agents.core.logic.modal_handler:modal_handler.py:62 Unexpected error parsing Modal Logic formula '[]p => <>q' for logic 'S4': Unsupported Modal Logic type: S4
+Traceback (most recent call last):
+  File "D:\2025-Epita-Intelligence-Symbolique-4\argumentation_analysis\agents\core\logic\modal_handler.py", line 45, in parse_modal_formula
+    java_modal_logic_enum = getattr(ModalLogic, modal_logic_str.upper())
+  File "D:\2025-Epita-Intelligence-Symbolique-4\tests\mocks\jpype_components\jclass_core.py", line 80, in __getattr__
+    raise AttributeError(f"MockJClassCore '{self.class_name}' has no static attribute '{attr_name}' or it's not defined in _static_attributes.")
+AttributeError: MockJClassCore 'org.tweetyproject.logics.ml.syntax.ModalLogic' has no static attribute 'S4' or it's not defined in _static_attributes.
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\2025-Epita-Intelligence-Symbolique-4\argumentation_analysis\agents\core\logic\modal_handler.py", line 48, in parse_modal_formula
+    raise ValueError(f"Unsupported Modal Logic type: {modal_logic_str}")
+ValueError: Unsupported Modal Logic type: S4
+WARNING  Orchestration.TweetyBridge:tweety_bridge.py:376 Erreur de syntaxe Modale pour '[]p => <>q' (Logic: S4) d�tect�e par ModalHandler: Unsupported Modal Logic type: S4
+-------------------------- Captured stdout teardown ---------------------------
+2025-06-05 07:57:31,909 - tests.mocks.jpype_setup - INFO - �tat de JPype restaur� apr�s test test_validate_modal_formula (utilisation du mock).
+============================== warnings summary ===============================
+C:\Users\MYIA\AppData\Roaming\Python\Python39\site-packages\pydantic\_internal\_config.py:284
+  C:\Users\MYIA\AppData\Roaming\Python\Python39\site-packages\pydantic\_internal\_config.py:284: PydanticDeprecatedSince20: Support for class-based `config` is deprecated, use ConfigDict instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.7/migration/
+    warnings.warn(DEPRECATION_MESSAGE, DeprecationWarning)
+
+C:\Users\MYIA\AppData\Roaming\Python\Python39\site-packages\pydantic\_internal\_config.py:334
+  C:\Users\MYIA\AppData\Roaming\Python\Python39\site-packages\pydantic\_internal\_config.py:334: UserWarning: Valid config keys have changed in V2:
+  * 'allow_population_by_field_name' has been renamed to 'populate_by_name'
+    warnings.warn(message, UserWarning)
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ===========================
+FAILED tests/agents/core/logic/test_tweety_bridge.py::TestTweetyBridge::test_execute_pl_query_accepted - AssertionError: Expected 'parseBeliefBase' to have been called once. Called 0 times.
+FAILED tests/agents/core/logic/test_tweety_bridge.py::TestTweetyBridge::test_execute_pl_query_error - AssertionError: Expected 'parseBeliefBase' to have been called once. Called 0 times.
+FAILED tests/agents/core/logic/test_tweety_bridge.py::TestTweetyBridge::test_execute_pl_query_rejected - AssertionError: Expected 'parseBeliefBase' to have been called once. Called 0 times.
+FAILED tests/agents/core/logic/test_tweety_bridge.py::TestTweetyBridge::test_initialization_jvm_not_ready - AssertionError: True is not false
+FAILED tests/agents/core/logic/test_tweety_bridge.py::TestTweetyBridge::test_initialization_jvm_ready - AssertionError: JClass('org.tweetyproject.logics.pl.parser.PlParser') call not found
+FAILED tests/agents/core/logic/test_tweety_bridge.py::TestTweetyBridge::test_validate_belief_set_empty - AssertionError: Expected 'parseBeliefBase' to have been called once. Called 0 times.
+FAILED tests/agents/core/logic/test_tweety_bridge.py::TestTweetyBridge::test_validate_belief_set_invalid - AssertionError: Expected 'parseBeliefBase' to have been called once. Called 0 times.
+FAILED tests/agents/core/logic/test_tweety_bridge.py::TestTweetyBridge::test_validate_belief_set_valid - AssertionError: Expected 'parseBeliefBase' to have been called once. Called 0 times.
+FAILED tests/agents/core/logic/test_tweety_bridge.py::TestTweetyBridge::test_validate_fol_formula - AssertionError: Expected 'parseFormula' to be called once. Called 0 times.
+FAILED tests/agents/core/logic/test_tweety_bridge.py::TestTweetyBridge::test_validate_formula_invalid - AssertionError: Expected 'parseFormula' to be called once. Called 0 times.
+FAILED tests/agents/core/logic/test_tweety_bridge.py::TestTweetyBridge::test_validate_formula_valid - AssertionError: Expected 'parseFormula' to be called once. Called 0 times.
+FAILED tests/agents/core/logic/test_tweety_bridge.py::TestTweetyBridge::test_validate_modal_formula - AssertionError: Expected 'parseFormula' to be called once. Called 0 times.
+======================= 12 failed, 2 warnings in 3.55s ========================

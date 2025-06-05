@@ -1,0 +1,21 @@
+﻿============================= test session starts =============================
+platform win32 -- Python 3.9.12, pytest-8.4.0, pluggy-1.6.0
+rootdir: D:\2025-Epita-Intelligence-Symbolique-4
+configfile: pytest.ini
+plugins: anyio-4.9.0, asyncio-1.0.0, cov-6.1.1, mock-3.14.1
+asyncio: mode=auto, asyncio_default_fixture_loop_scope=function, asyncio_default_test_loop_scope=function
+collected 939 items
+
+tests\agents\core\informal\test_informal_agent.py .............          [  1%]
+tests\agents\core\informal\test_informal_agent_creation.py ...           [  1%]
+tests\agents\core\informal\test_informal_analysis_methods.py ....        [  2%]
+tests\agents\core\informal\test_informal_definitions.py .sss.            [  2%]
+tests\agents\core\informal\test_informal_error_handling.py ....          [  3%]
+tests\agents\core\logic\test_abstract_logic_agent.py ........            [  3%]
+tests\agents\core\logic\test_belief_set.py ..........                    [  5%]
+tests\agents\core\logic\test_examples.py .....                           [  5%]
+tests\agents\core\logic\test_first_order_logic_agent.py ............     [  6%]
+tests\agents\core\logic\test_logic_factory.py ........                   [  7%]
+tests\agents\core\logic\test_modal_logic_agent.py ............           [  8%]
+tests\agents\core\logic\test_propositional_logic_agent.py FF.F.......F.  [ 10%]
+tests\agents\core\logic\test_query_executor.py .........                 [ 11%]
