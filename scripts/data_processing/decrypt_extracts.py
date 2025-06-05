@@ -48,15 +48,9 @@ DATA_DIR = None
 
 try:
     # Import des modules nécessaires
-    from argumentation_analysis.ui.file_operations import (
-        load_extract_definitions
-    )
-    # from argumentation_analysis.ui.utils import ( # SUPPRIMÉ: decrypt_data n'est plus ici et plus utilisé directement
-    #     decrypt_data
-    # )
     from argumentation_analysis.paths import DATA_DIR
     # MODIFIÉ: Import des deux fonctions déplacées
-    from argumentation_analysis.utils.core_utils.crypto_utils import derive_encryption_key, load_encryption_key
+    from argumentation_analysis.utils.core_utils.crypto_utils import load_encryption_key, decrypt_data_aesgcm
     
     # Chemin vers le fichier chiffré
     CONFIG_FILE = Path(DATA_DIR) / "extract_sources.json.gz.enc"
@@ -95,14 +89,23 @@ def decrypt_and_load_extracts(encryption_key: Optional[str]) -> Tuple[List[Dict[
         return [], f"Fichier {CONFIG_FILE} introuvable"
     
     try:
-        # Utiliser la fonction de utils.py pour charger les définitions
-        extract_definitions = load_extract_definitions(CONFIG_FILE, encryption_key)
-        
+        with open(CONFIG_FILE, 'rb') as f:
+            encrypted_data = f.read()
+
+        decrypted_gzipped_data = decrypt_data_aesgcm(encrypted_data, encryption_key)
+
+        if not decrypted_gzipped_data:
+            return [], "Échec du déchiffrement des données."
+
+        import gzip
+        json_data = gzip.decompress(decrypted_gzipped_data)
+        extract_definitions = json.loads(json_data.decode('utf-8'))
+
         if extract_definitions:
-            message = f"Définitions chargées depuis {CONFIG_FILE}"
+            message = f"Définitions chargées et déchiffrées depuis {CONFIG_FILE}"
             return extract_definitions, message
         else:
-            return [], "Échec du chargement des définitions"
+            return [], "Échec du chargement des définitions après déchiffrement."
     except Exception as e:
         logger.error(f"Erreur lors du chargement des définitions: {e}")
         return [], f"Erreur: {str(e)}"
@@ -227,7 +230,7 @@ def main():
     
     # 1. Charger la clé de chiffrement
     # MODIFIÉ: Appel à la fonction importée avec la nouvelle signature
-    encryption_key = load_encryption_key(passphrase_arg=args.passphrase, env_var_name="TEXT_CONFIG_PASSPHRASE")
+    encryption_key = args.passphrase or os.getenv("TEXT_CONFIG_PASSPHRASE")
     if encryption_key is None:
         logger.error("Impossible de continuer sans clé de chiffrement.")
         sys.exit(1)
@@ -245,7 +248,7 @@ def main():
         sys.exit(1)
     
     # 3. Afficher un résumé des sources et extraits
-    summarize_extract_definitions(extract_definitions) # Utilisation de la fonction importée
+    summarize_extracts(extract_definitions) # Utilisation de la fonction importée
     
     # 4. Sauvegarder les extraits dans un format temporaire
     try:
