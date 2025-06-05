@@ -60,6 +60,9 @@ class TestTweetyBridge(unittest.TestCase):
             self.mock_simple_ml_reasoner = MagicMock(name="SimpleMlReasoner_class_mock")
             self.mock_modal_formula = MagicMock(name="ModalFormula_class_mock")
             self.mock_simple_fol_reasoner = MagicMock(name="SimpleFolReasoner_class_mock")
+            self.mock_sat_solver = MagicMock(name="SatSolver_class_mock")
+            self.mock_sat4j_solver = MagicMock(name="Sat4jSolver_class_mock")
+            self.mock_pl_belief_set = MagicMock(name="PlBeliefSet_class_mock") # Ajout
             
             self.jclass_map = {
                 "org.tweetyproject.logics.pl.parser.PlParser": self.mock_pl_parser,
@@ -72,7 +75,10 @@ class TestTweetyBridge(unittest.TestCase):
                 "org.tweetyproject.logics.ml.parser.MlParser": self.mock_ml_parser,
                 "org.tweetyproject.logics.ml.reasoner.AbstractMlReasoner": self.mock_abstract_ml_reasoner,
                 "org.tweetyproject.logics.ml.reasoner.SimpleMlReasoner": self.mock_simple_ml_reasoner,
-                "org.tweetyproject.logics.ml.syntax.MlFormula": self.mock_modal_formula
+                "org.tweetyproject.logics.ml.syntax.MlFormula": self.mock_modal_formula,
+                "org.tweetyproject.logics.pl.sat.SatSolver": self.mock_sat_solver,
+                "org.tweetyproject.logics.pl.sat.Sat4jSolver": self.mock_sat4j_solver,
+                "org.tweetyproject.logics.pl.syntax.PlBeliefSet": self.mock_pl_belief_set # Ajout
             }
             
             def jclass_side_effect_strict(class_name):
