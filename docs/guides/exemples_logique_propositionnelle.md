@@ -154,11 +154,12 @@ Résultat: True - Tweety Result: Query '!mammifere' is ACCEPTED (True).
 **Interprétation:**
 ```
 L'argument est valide selon le Modus Tollens. Puisque nous savons que "si un animal est un mammifère, alors il a des poils" et que "ce reptile n'a pas de poils", nous pouvons logiquement conclure que "ce reptile n'est pas un mammifère".
+Le script [`examples/logic_agents/propositional_logic_example.py`](../../examples/logic_agents/propositional_logic_example.py:163) exécute également une requête pour "mammifere", qui retourne `False`, renforçant la conclusion.
 ```
 
 ### Exemple 3: Syllogisme hypothétique
 
-*Le code complet pour un exemple similaire est disponible dans [`examples/logic_agents/propositional_logic_example.py`](../../examples/logic_agents/propositional_logic_example.py:0) (recherchez des exemples de raisonnement chaîné).*
+*Bien qu'un exemple explicitement nommé "syllogisme hypothétique" ne soit pas présent dans [`examples/logic_agents/propositional_logic_example.py`](../../examples/logic_agents/propositional_logic_example.py:0), le principe du raisonnement chaîné est illustré dans des exemples plus complexes, comme l'analyse d'argument complexe (voir Exemple 6).*
 
 Le syllogisme hypothétique combine des implications: si on a "si P alors Q" et "si Q alors R", on peut conclure "si P alors R".
 
@@ -209,7 +210,7 @@ L'argument est valide selon le syllogisme hypothétique. Puisque nous savons que
 
 ### Exemple 4: Raisonnement par cas
 
-*Des exemples illustrant des concepts similaires peuvent être trouvés dans [`examples/logic_agents/propositional_logic_example.py`](../../examples/logic_agents/propositional_logic_example.py:0).*
+*Le script [`examples/logic_agents/propositional_logic_example.py`](../../examples/logic_agents/propositional_logic_example.py:0) ne contient pas d'exemple explicitement nommé "raisonnement par cas". Cependant, la logique sous-jacente peut être construite en utilisant les fonctionnalités de l'agent.*
 
 Le raisonnement par cas consiste à examiner toutes les possibilités et à montrer que la même conclusion s'ensuit dans chaque cas.
 
@@ -412,21 +413,7 @@ alice_etudie_regulierement
 
 **Requête et exécution:**
 ```python
-# Requête: L'ensemble de croyances est-il cohérent?
-# Pour vérifier la cohérence, nous pouvons tester si une contradiction (p && !p) est dérivable
-query = "alice_reussite && !alice_reussite"
-result, result_msg = agent.execute_query(belief_set, query)
-
-print(f"Résultat: {result} - {result_msg}")
-```
-
-**Résultat de la requête:**
-```
-Résultat: False - Tweety Result: Query 'alice_reussite && !alice_reussite' is REJECTED (False).
-```
-
-**Vérification supplémentaire:**
-```python
+# Pour vérifier la cohérence, nous testons si des propositions contradictoires sont dérivables.
 # Vérifions si alice_reussite est dérivable
 query1 = "alice_reussite"
 result1, result_msg1 = agent.execute_query(belief_set, query1)
@@ -435,22 +422,23 @@ result1, result_msg1 = agent.execute_query(belief_set, query1)
 query2 = "!alice_reussite"
 result2, result_msg2 = agent.execute_query(belief_set, query2)
 
-print(f"alice_reussite: {result1}")
-print(f"!alice_reussite: {result2}")
+print(f"alice_reussite: {result1} - {result_msg1}")
+print(f"!alice_reussite: {result2} - {result_msg2}")
 ```
 
-**Résultats:**
+**Résultats des requêtes:**
 ```
-alice_reussite: True
-!alice_reussite: True
+alice_reussite: True - Tweety Result: Query 'alice_reussite' is ACCEPTED (True).
+!alice_reussite: True - Tweety Result: Query '!alice_reussite' is ACCEPTED (True).
 ```
 
 **Interprétation:**
 ```
-L'ensemble de croyances est incohérent (contradictoire). D'une part, nous pouvons dériver qu'Alice a réussi son examen (car elle étudie régulièrement et tous les étudiants qui étudient régulièrement réussissent). D'autre part, nous avons l'affirmation directe qu'Alice n'a pas réussi son examen. Ces deux conclusions sont contradictoires, ce qui indique qu'au moins une des prémisses doit être fausse.
+L'ensemble de croyances est incohérent (contradictoire). D'une part, nous pouvons dériver qu'Alice a réussi son examen (car elle étudie régulièrement et tous les étudiants qui étudient régulièrement réussissent). D'autre part, nous avons l'affirmation directe qu'Alice n'a pas réussi son examen. Ces deux conclusions (`alice_reussite` est VRAI et `!alice_reussite` est VRAI) sont contradictoires, ce qui indique qu'au moins une des prémisses doit être fausse. Le script [`examples/logic_agents/propositional_logic_example.py`](../../examples/logic_agents/propositional_logic_example.py:250) confirme cela en montrant que la requête `alice_reussite && !alice_reussite` est ACCEPTED (True) pour cet ensemble de croyances.
 ```
 
 ## Cas d'utilisation réels
+# (Cette section a été intégrée dans la précédente pour plus de clarté)
 
 ### Analyse de discours politique
 
