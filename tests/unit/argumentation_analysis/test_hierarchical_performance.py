@@ -18,7 +18,7 @@ from datetime import datetime
 from typing import Dict, List, Any, Optional
 import statistics
 
-from tests.support.argumentation_analysis.async_test_case import AsyncTestCase
+# from tests.support.argumentation_analysis.async_test_case import AsyncTestCase
 
 # Importer les composants de la nouvelle architecture
 from argumentation_analysis.orchestration.hierarchical.strategic.state import StrategicState
@@ -51,7 +51,7 @@ class HierarchicalOrchestrator:
 RESULTS_DIR = "results" # Définir RESULTS_DIR si ce n'est pas déjà fait globalement
 
 @pytest.mark.skip(reason="Ce test dépend de argumentation_analysis.examples.run_hierarchical_orchestration qui n'existe pas. De plus, l'AttributeError initial persiste et nécessite une investigation plus approfondie sur la manière dont pytest charge le package argumentation_analysis.")
-class TestPerformanceComparison(AsyncTestCase):
+class TestPerformanceComparison(unittest.TestCase):
     """Tests de performance comparant l'ancienne et la nouvelle architecture."""
     
     async def asyncSetUp(self):

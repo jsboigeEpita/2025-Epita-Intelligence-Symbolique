@@ -7,7 +7,6 @@ d'analyse argumentative de bout en bout, y compris l'interaction entre
 les différents agents et la gestion des erreurs.
 """
 
-import unittest
 import asyncio
 import pytest
 import json
@@ -16,54 +15,42 @@ from unittest.mock import MagicMock, AsyncMock, patch, call
 import semantic_kernel as sk
 from semantic_kernel.contents import ChatMessageContent, AuthorRole
 from semantic_kernel.agents import Agent, AgentGroupChat
-from semantic_kernel.exceptions import AgentChatException
-
-# Utiliser la fonction setup_import_paths pour résoudre les problèmes d'imports relatifs
-# from tests import setup_import_paths # Commenté pour investigation
-# setup_import_paths() # Commenté pour investigation
 
 from argumentation_analysis.core.shared_state import RhetoricalAnalysisState
 from argumentation_analysis.core.state_manager_plugin import StateManagerPlugin
-from argumentation_analysis.core.strategies import BalancedParticipationStrategy, SimpleTerminationStrategy
+from argumentation_analysis.core.strategies import BalancedParticipationStrategy
 from argumentation_analysis.orchestration.analysis_runner import run_analysis_conversation
-from argumentation_analysis.agents.core.extract.extract_agent import ExtractAgent
-from argumentation_analysis.agents.core.pl.pl_definitions import setup_pl_kernel
-from argumentation_analysis.agents.core.informal.informal_definitions import setup_informal_kernel
-from argumentation_analysis.agents.core.pm.pm_definitions import setup_pm_kernel
-# from tests.async_test_case import AsyncTestCase # Suppression de l'import
-from argumentation_analysis.services.web_api.models.request_models import ExtractDefinitions, SourceDefinition, Extract
-from argumentation_analysis.agents.core.extract.extract_definitions import ExtractResult
+from argumentation_analysis.models.extract_definition import ExtractDefinitions, SourceDefinition, Extract
 from argumentation_analysis.services.extract_service import ExtractService
 from argumentation_analysis.services.fetch_service import FetchService
 
 
-class TestEndToEndAnalysis: # Suppression de l'héritage AsyncTestCase
+@pytest.fixture
+def analysis_fixture():
+    """Fixture pour initialiser les composants de base pour les tests d'analyse."""
+    test_text = """
+    La Terre est plate car l'horizon semble plat quand on regarde au loin.
+    De plus, si la Terre était ronde, les gens à l'autre bout tomberaient.
+    Certains scientifiques affirment que la Terre est ronde, mais ils sont payés par la NASA.
+    """
+    state = RhetoricalAnalysisState(test_text)
+    llm_service = MagicMock()
+    llm_service.service_id = "test_service"
+    kernel = sk.Kernel()
+    state_manager = StateManagerPlugin(state)
+    kernel.add_plugin(state_manager, "StateManager")
+    return state, llm_service, kernel, test_text
+
+
+class TestEndToEndAnalysis:
     """Tests d'intégration end-to-end pour le flux complet d'analyse argumentative."""
 
-    def setUp(self):
-        """Initialisation avant chaque test."""
-        self.test_text = """
-        La Terre est plate car l'horizon semble plat quand on regarde au loin.
-        De plus, si la Terre était ronde, les gens à l'autre bout tomberaient.
-        Certains scientifiques affirment que la Terre est ronde, mais ils sont payés par la NASA.
-        """
-        
-        self.state = RhetoricalAnalysisState(self.test_text)
-        
-        self.llm_service = MagicMock()
-        self.llm_service.service_id = "test_service"
-        
-        self.kernel = sk.Kernel()
-        
-        self.state_manager = StateManagerPlugin(self.state)
-        self.kernel.add_plugin(self.state_manager, "StateManager")
-
-    @patch('argumentation_analysis.orchestration.analysis_runner.AgentGroupChat') 
-    @patch('argumentation_analysis.orchestration.analysis_runner.ChatCompletionAgent') 
-    @patch('argumentation_analysis.orchestration.analysis_runner.setup_extract_agent') 
-    @patch('argumentation_analysis.orchestration.analysis_runner.setup_pl_kernel') 
-    @patch('argumentation_analysis.orchestration.analysis_runner.setup_informal_kernel') 
-    @patch('argumentation_analysis.orchestration.analysis_runner.setup_pm_kernel') 
+    @patch('argumentation_analysis.orchestration.analysis_runner.AgentGroupChat')
+    @patch('argumentation_analysis.orchestration.analysis_runner.ChatCompletionAgent')
+    @patch('argumentation_analysis.orchestration.analysis_runner.setup_extract_agent')
+    @patch('argumentation_analysis.orchestration.analysis_runner.setup_pl_kernel')
+    @patch('argumentation_analysis.orchestration.analysis_runner.setup_informal_kernel')
+    @patch('argumentation_analysis.orchestration.analysis_runner.setup_pm_kernel')
     async def test_complete_analysis_flow(
         self,
         mock_setup_pm_kernel,
@@ -71,27 +58,18 @@ class TestEndToEndAnalysis: # Suppression de l'héritage AsyncTestCase
         mock_setup_pl_kernel,
         mock_setup_extract_agent,
         mock_chat_completion_agent,
-        mock_agent_group_chat
+        mock_agent_group_chat,
+        analysis_fixture
     ):
         """Teste le flux complet d'analyse argumentative de bout en bout."""
-        mock_pm_agent = MagicMock(spec=Agent)
-        mock_pm_agent.name = "ProjectManagerAgent"
+        state, llm_service, _, test_text = analysis_fixture
         
-        mock_informal_agent = MagicMock(spec=Agent)
-        mock_informal_agent.name = "InformalAnalysisAgent"
+        mock_pm_agent = MagicMock(spec=Agent); mock_pm_agent.name = "ProjectManagerAgent"
+        mock_informal_agent = MagicMock(spec=Agent); mock_informal_agent.name = "InformalAnalysisAgent"
+        mock_pl_agent = MagicMock(spec=Agent); mock_pl_agent.name = "PropositionalLogicAgent"
+        mock_extract_agent = MagicMock(spec=Agent); mock_extract_agent.name = "ExtractAgent"
         
-        mock_pl_agent = MagicMock(spec=Agent)
-        mock_pl_agent.name = "PropositionalLogicAgent"
-        
-        mock_extract_agent = MagicMock(spec=Agent)
-        mock_extract_agent.name = "ExtractAgent"
-        
-        mock_chat_completion_agent.side_effect = [
-            mock_pm_agent,
-            mock_informal_agent,
-            mock_pl_agent,
-            mock_extract_agent
-        ]
+        mock_chat_completion_agent.side_effect = [mock_pm_agent, mock_informal_agent, mock_pl_agent, mock_extract_agent]
         
         mock_extract_kernel = MagicMock(spec=sk.Kernel)
         mock_setup_extract_agent.return_value = (mock_extract_kernel, mock_extract_agent)
@@ -100,77 +78,69 @@ class TestEndToEndAnalysis: # Suppression de l'héritage AsyncTestCase
         mock_agent_group_chat.return_value = mock_group_chat_instance
         
         async def mock_invoke():
-            message1 = MagicMock(spec=ChatMessageContent)
-            message1.name = "ProjectManagerAgent"; message1.role = AuthorRole.ASSISTANT
+            message1 = MagicMock(spec=ChatMessageContent); message1.name = "ProjectManagerAgent"; message1.role = AuthorRole.ASSISTANT
             message1.content = "Je vais définir les tâches d'analyse."
-            self.state.add_task("Identifier les arguments dans le texte")
-            self.state.add_task("Analyser les sophismes dans les arguments")
-            self.state.designate_next_agent("InformalAnalysisAgent")
+            state.add_task("Identifier les arguments dans le texte")
+            state.add_task("Analyser les sophismes dans les arguments")
+            state.designate_next_agent("InformalAnalysisAgent")
             yield message1
             
-            message2 = MagicMock(spec=ChatMessageContent)
-            message2.name = "InformalAnalysisAgent"; message2.role = AuthorRole.ASSISTANT
+            message2 = MagicMock(spec=ChatMessageContent); message2.name = "InformalAnalysisAgent"; message2.role = AuthorRole.ASSISTANT
             message2.content = "J'ai identifié les arguments suivants."
-            arg1_id = self.state.add_argument("La Terre est plate car l'horizon semble plat")
-            arg2_id = self.state.add_argument("Si la Terre était ronde, les gens tomberaient")
-            arg3_id = self.state.add_argument("Les scientifiques sont payés par la NASA")
-            task1_id = next(iter(self.state.analysis_tasks))
-            self.state.add_answer(task1_id, "InformalAnalysisAgent", "J'ai identifié 3 arguments.", [arg1_id, arg2_id, arg3_id])
-            self.state.designate_next_agent("InformalAnalysisAgent")
+            arg1_id = state.add_argument("La Terre est plate car l'horizon semble plat")
+            arg2_id = state.add_argument("Si la Terre était ronde, les gens tomberaient")
+            arg3_id = state.add_argument("Les scientifiques sont payés par la NASA")
+            task1_id = next(iter(state.analysis_tasks))
+            state.add_answer(task1_id, "InformalAnalysisAgent", "J'ai identifié 3 arguments.", [arg1_id, arg2_id, arg3_id])
+            state.designate_next_agent("InformalAnalysisAgent")
             yield message2
             
-            message3 = MagicMock(spec=ChatMessageContent)
-            message3.name = "InformalAnalysisAgent"; message3.role = AuthorRole.ASSISTANT
+            message3 = MagicMock(spec=ChatMessageContent); message3.name = "InformalAnalysisAgent"; message3.role = AuthorRole.ASSISTANT
             message3.content = "J'ai identifié les sophismes suivants."
-            fallacy1_id = self.state.add_fallacy("Faux raisonnement", "Confusion", arg1_id)
-            fallacy2_id = self.state.add_fallacy("Fausse analogie", "Gravité", arg2_id)
-            fallacy3_id = self.state.add_fallacy("Ad hominem", "Crédibilité", arg3_id)
-            task_ids = list(self.state.analysis_tasks.keys())
+            fallacy1_id = state.add_fallacy("Faux raisonnement", "Confusion", arg1_id)
+            fallacy2_id = state.add_fallacy("Fausse analogie", "Gravité", arg2_id)
+            fallacy3_id = state.add_fallacy("Ad hominem", "Crédibilité", arg3_id)
+            task_ids = list(state.analysis_tasks.keys())
             if len(task_ids) > 1:
                 task2_id = task_ids[1]
-                self.state.add_answer(task2_id, "InformalAnalysisAgent", "J'ai identifié 3 sophismes.", [fallacy1_id, fallacy2_id, fallacy3_id])
-            self.state.designate_next_agent("PropositionalLogicAgent")
+                state.add_answer(task2_id, "InformalAnalysisAgent", "J'ai identifié 3 sophismes.", [fallacy1_id, fallacy2_id, fallacy3_id])
+            state.designate_next_agent("PropositionalLogicAgent")
             yield message3
             
-            message4 = MagicMock(spec=ChatMessageContent)
-            message4.name = "PropositionalLogicAgent"; message4.role = AuthorRole.ASSISTANT
+            message4 = MagicMock(spec=ChatMessageContent); message4.name = "PropositionalLogicAgent"; message4.role = AuthorRole.ASSISTANT
             message4.content = "Je vais formaliser l'argument principal."
-            bs_id = self.state.add_belief_set("Propositional", "p => q\np\n")
-            log_id = self.state.log_query(bs_id, "p => q", "ACCEPTED (True)")
-            self.state.designate_next_agent("ExtractAgent")
+            bs_id = state.add_belief_set("Propositional", "p => q\np\n")
+            state.log_query(bs_id, "p => q", "ACCEPTED (True)")
+            state.designate_next_agent("ExtractAgent")
             yield message4
             
-            message5 = MagicMock(spec=ChatMessageContent)
-            message5.name = "ExtractAgent"; message5.role = AuthorRole.ASSISTANT
+            message5 = MagicMock(spec=ChatMessageContent); message5.name = "ExtractAgent"; message5.role = AuthorRole.ASSISTANT
             message5.content = "J'ai analysé l'extrait du texte."
-            extract_id = self.state.add_extract("Extrait du texte", "La Terre est plate")
-            self.state.designate_next_agent("ProjectManagerAgent")
+            state.add_extract("Extrait du texte", "La Terre est plate")
+            state.designate_next_agent("ProjectManagerAgent")
             yield message5
             
-            message6 = MagicMock(spec=ChatMessageContent)
-            message6.name = "ProjectManagerAgent"; message6.role = AuthorRole.ASSISTANT
+            message6 = MagicMock(spec=ChatMessageContent); message6.name = "ProjectManagerAgent"; message6.role = AuthorRole.ASSISTANT
             message6.content = "Voici la conclusion de l'analyse."
-            self.state.set_conclusion("Le texte contient plusieurs sophismes.")
+            state.set_conclusion("Le texte contient plusieurs sophismes.")
             yield message6
         
         mock_group_chat_instance.invoke = mock_invoke
-        mock_group_chat_instance.history = MagicMock()
-        mock_group_chat_instance.history.add_user_message = MagicMock()
-        mock_group_chat_instance.history.messages = []
+        mock_group_chat_instance.history = MagicMock(); mock_group_chat_instance.history.add_user_message = MagicMock(); mock_group_chat_instance.history.messages = []
         
-        await run_analysis_conversation(self.test_text, self.llm_service)
+        await run_analysis_conversation(test_text, llm_service)
         
-        self.assertEqual(len(self.state.analysis_tasks), 2)
-        self.assertEqual(len(self.state.identified_arguments), 3)
-        self.assertEqual(len(self.state.identified_fallacies), 3)
-        self.assertEqual(len(self.state.belief_sets), 1)
-        self.assertEqual(len(self.state.query_log), 1)
-        self.assertEqual(len(self.state.answers), 2)
-        self.assertEqual(len(self.state.extracts), 1)
-        self.assertIsNotNone(self.state.final_conclusion)
+        assert len(state.analysis_tasks) == 2
+        assert len(state.identified_arguments) == 3
+        assert len(state.identified_fallacies) == 3
+        assert len(state.belief_sets) == 1
+        assert len(state.query_log) == 1
+        assert len(state.answers) == 2
+        assert len(state.extracts) == 1
+        assert state.final_conclusion is not None
         
         mock_agent_group_chat.assert_called_once()
-        self.assertEqual(mock_chat_completion_agent.call_count, 4)
+        assert mock_chat_completion_agent.call_count == 4
 
     @patch('argumentation_analysis.orchestration.analysis_runner.AgentGroupChat')
     @patch('argumentation_analysis.orchestration.analysis_runner.ChatCompletionAgent')
@@ -185,8 +155,10 @@ class TestEndToEndAnalysis: # Suppression de l'héritage AsyncTestCase
         mock_setup_pl_kernel,
         mock_setup_extract_agent,
         mock_chat_completion_agent,
-        mock_agent_group_chat
+        mock_agent_group_chat,
+        analysis_fixture
     ):
+        state, llm_service, _, test_text = analysis_fixture
         mock_pm_agent = MagicMock(spec=Agent); mock_pm_agent.name = "ProjectManagerAgent"
         mock_informal_agent = MagicMock(spec=Agent); mock_informal_agent.name = "InformalAnalysisAgent"
         mock_pl_agent = MagicMock(spec=Agent); mock_pl_agent.name = "PropositionalLogicAgent"
@@ -201,58 +173,60 @@ class TestEndToEndAnalysis: # Suppression de l'héritage AsyncTestCase
         async def mock_invoke():
             message1 = MagicMock(spec=ChatMessageContent); message1.name = "ProjectManagerAgent"; message1.role = AuthorRole.ASSISTANT
             message1.content = "Définition des tâches."
-            self.state.add_task("Identifier les arguments")
-            self.state.designate_next_agent("InformalAnalysisAgent")
+            state.add_task("Identifier les arguments")
+            state.designate_next_agent("InformalAnalysisAgent")
             yield message1
             
             message2 = MagicMock(spec=ChatMessageContent); message2.name = "InformalAnalysisAgent"; message2.role = AuthorRole.ASSISTANT
             message2.content = "Erreur d'identification."
-            self.state.log_error("InformalAnalysisAgent", "Erreur arguments")
-            self.state.designate_next_agent("ProjectManagerAgent")
+            state.log_error("InformalAnalysisAgent", "Erreur arguments")
+            state.designate_next_agent("ProjectManagerAgent")
             yield message2
             
             message3 = MagicMock(spec=ChatMessageContent); message3.name = "ProjectManagerAgent"; message3.role = AuthorRole.ASSISTANT
             message3.content = "Gestion erreur."
-            self.state.add_task("Analyser sophismes directement")
-            self.state.designate_next_agent("InformalAnalysisAgent")
+            state.add_task("Analyser sophismes directement")
+            state.designate_next_agent("InformalAnalysisAgent")
             yield message3
             
             message4 = MagicMock(spec=ChatMessageContent); message4.name = "InformalAnalysisAgent"; message4.role = AuthorRole.ASSISTANT
             message4.content = "Analyse sophismes."
-            arg1_id = self.state.add_argument("Argument récupéré")
-            fallacy1_id = self.state.add_fallacy("Sophisme récupéré", "Desc", arg1_id)
-            task_ids = list(self.state.analysis_tasks.keys())
+            arg1_id = state.add_argument("Argument récupéré")
+            fallacy1_id = state.add_fallacy("Sophisme récupéré", "Desc", arg1_id)
+            task_ids = list(state.analysis_tasks.keys())
             if len(task_ids) > 1:
                 task2_id = task_ids[1]
-                self.state.add_answer(task2_id, "InformalAnalysisAgent", "1 sophisme.", [fallacy1_id])
-            self.state.designate_next_agent("ProjectManagerAgent")
+                state.add_answer(task2_id, "InformalAnalysisAgent", "1 sophisme.", [fallacy1_id])
+            state.designate_next_agent("ProjectManagerAgent")
             yield message4
             
             message5 = MagicMock(spec=ChatMessageContent); message5.name = "ProjectManagerAgent"; message5.role = AuthorRole.ASSISTANT
             message5.content = "Conclusion après récupération."
-            self.state.set_conclusion("Analyse avec récupération.")
+            state.set_conclusion("Analyse avec récupération.")
             yield message5
         
         mock_group_chat_instance.invoke = mock_invoke
         mock_group_chat_instance.history = MagicMock(); mock_group_chat_instance.history.add_user_message = MagicMock(); mock_group_chat_instance.history.messages = []
         
-        await run_analysis_conversation(self.test_text, self.llm_service)
+        await run_analysis_conversation(test_text, llm_service)
         
-        self.assertEqual(len(self.state.analysis_tasks), 2)
-        self.assertEqual(len(self.state.identified_arguments), 1)
-        self.assertEqual(len(self.state.identified_fallacies), 1)
-        self.assertEqual(len(self.state.errors), 1)
-        self.assertEqual(len(self.state.answers), 1)
-        self.assertIsNotNone(self.state.final_conclusion)
-        self.assertEqual(self.state.errors[0]["agent_name"], "InformalAnalysisAgent")
-        self.assertEqual(self.state.errors[0]["message"], "Erreur arguments")
+        assert len(state.analysis_tasks) == 2
+        assert len(state.identified_arguments) == 1
+        assert len(state.identified_fallacies) == 1
+        assert len(state.errors) == 1
+        assert len(state.answers) == 1
+        assert state.final_conclusion is not None
+        assert state.errors[0]["agent_name"] == "InformalAnalysisAgent"
+        assert state.errors[0]["message"] == "Erreur arguments"
 
-class TestPerformanceIntegration: # Suppression de l'héritage AsyncTestCase
+class TestPerformanceIntegration:
     """Tests d'intégration pour la performance du système."""
 
-    def setUp(self):
-        self.test_text = "Texte pour test de performance."
-        self.llm_service = MagicMock(); self.llm_service.service_id = "test_service"
+    @pytest.fixture
+    def performance_fixture(self):
+        test_text = "Texte pour test de performance."
+        llm_service = MagicMock(); llm_service.service_id = "test_service"
+        return test_text, llm_service
 
     @patch('argumentation_analysis.orchestration.analysis_runner.AgentGroupChat')
     @patch('argumentation_analysis.orchestration.analysis_runner.ChatCompletionAgent')
@@ -262,14 +236,16 @@ class TestPerformanceIntegration: # Suppression de l'héritage AsyncTestCase
     @patch('argumentation_analysis.orchestration.analysis_runner.setup_pm_kernel')
     async def test_performance_metrics(
         self, mock_setup_pm_kernel, mock_setup_informal_kernel, mock_setup_pl_kernel,
-        mock_setup_extract_agent, mock_chat_completion_agent, mock_agent_group_chat
+        mock_setup_extract_agent, mock_chat_completion_agent, mock_agent_group_chat,
+        performance_fixture
     ):
+        test_text, llm_service = performance_fixture
         mock_pm_agent = MagicMock(spec=Agent); mock_pm_agent.name = "ProjectManagerAgent"
         mock_informal_agent = MagicMock(spec=Agent); mock_informal_agent.name = "InformalAnalysisAgent"
         mock_pl_agent = MagicMock(spec=Agent); mock_pl_agent.name = "PropositionalLogicAgent"
         mock_extract_agent = MagicMock(spec=Agent); mock_extract_agent.name = "ExtractAgent"
         
-        mock_chat_completion_agent.side_effect = [mock_pm_agent, mock_informal_agent, mock_pl_agent, mock_extract_agent, mock_pm_agent] 
+        mock_chat_completion_agent.side_effect = [mock_pm_agent, mock_informal_agent, mock_pl_agent, mock_extract_agent, mock_pm_agent]
         mock_extract_kernel = MagicMock(spec=sk.Kernel)
         mock_setup_extract_agent.return_value = (mock_extract_kernel, mock_extract_agent)
         mock_group_chat_instance = MagicMock(spec=AgentGroupChat)
@@ -280,7 +256,7 @@ class TestPerformanceIntegration: # Suppression de l'héritage AsyncTestCase
                 msg = MagicMock(spec=ChatMessageContent)
                 msg.name = agent_name; msg.role = AuthorRole.ASSISTANT; msg.content = content
                 await asyncio.sleep(delay)
-                yield msg
+                return msg  # Changed to return instead of yield
             
             yield await sleep_and_yield("ProjectManagerAgent", "Tâches définies.", 0.1)
             yield await sleep_and_yield("InformalAnalysisAgent", "Arguments analysés.", 0.3)
@@ -288,84 +264,84 @@ class TestPerformanceIntegration: # Suppression de l'héritage AsyncTestCase
             yield await sleep_and_yield("ExtractAgent", "Extraits analysés.", 0.2)
             yield await sleep_and_yield("ProjectManagerAgent", "Conclusion.", 0.1)
 
-        mock_group_chat_instance.invoke = mock_invoke() 
+        mock_group_chat_instance.invoke = mock_invoke()
 
         mock_group_chat_instance.history = MagicMock(); mock_group_chat_instance.history.add_user_message = MagicMock(); mock_group_chat_instance.history.messages = []
         
         start_time = time.time()
-        await run_analysis_conversation(self.test_text, self.llm_service)
+        await run_analysis_conversation(test_text, llm_service)
         execution_time = time.time() - start_time
         
-        self.assertGreaterEqual(execution_time, 1.2) 
-        self.assertLessEqual(execution_time, 2.0)
+        assert execution_time >= 1.2
+        assert execution_time <= 2.0
 
 
-class TestExtractIntegrationWithBalancedStrategy: # Suppression de l'héritage AsyncTestCase
+@pytest.fixture
+def balanced_strategy_fixture(monkeypatch):
+    """Fixture pour les tests de la stratégie d'équilibrage."""
+    test_text = "Texte source avec DEBUT_EXTRAIT et FIN_EXTRAIT."
+    state = RhetoricalAnalysisState(test_text)
+    
+    mock_fetch_service = MagicMock(spec=FetchService)
+    mock_fetch_service.fetch_text.return_value = "Texte source avec DEBUT_EXTRAIT contenu FIN_EXTRAIT.", "https://example.com/test"
+    mock_fetch_service.reconstruct_url.return_value = "https://example.com/test"
+    
+    mock_extract_service = MagicMock(spec=ExtractService)
+    mock_extract_service.extract_text_with_markers.return_value = "contenu", "Extraction réussie", True, True
+    
+    integration_sample_definitions = ExtractDefinitions(sources=[
+        SourceDefinition(source_name="SourceInt", source_type="url", schema="https", host_parts=["example", "com"], path="/test",
+                         extracts=[Extract(extract_name="ExtraitInt1", start_marker="DEBUT_EXTRAIT", end_marker="FIN_EXTRAIT")])
+    ])
+    
+    monkeypatch.setattr("argumentation_analysis.services.fetch_service.FetchService", lambda: mock_fetch_service)
+    monkeypatch.setattr("argumentation_analysis.services.extract_service.ExtractService", lambda: mock_extract_service)
+    
+    return state, mock_fetch_service, mock_extract_service, integration_sample_definitions
+
+
+class TestExtractIntegrationWithBalancedStrategy:
     """Tests d'intégration pour les composants d'extraction avec la stratégie d'équilibrage."""
 
-    def setUp(self):
-        self.test_text = "Texte source avec DEBUT_EXTRAIT et FIN_EXTRAIT."
-        self.state = RhetoricalAnalysisState(self.test_text)
-        self.llm_service = MagicMock(); self.llm_service.service_id = "test_service"
-
-    @pytest.fixture(autouse=True)
-    def setup_mocks_for_extract_test(self, monkeypatch): 
-        self.mock_fetch_service = MagicMock(spec=FetchService)
-        def mock_fetch_text_impl(source_info, force_refresh=False):
-            return "Texte source avec DEBUT_EXTRAIT contenu FIN_EXTRAIT.", "https://example.com/test"
-        self.mock_fetch_service.fetch_text = MagicMock(side_effect=mock_fetch_text_impl)
-        self.mock_fetch_service.reconstruct_url = MagicMock(return_value="https://example.com/test")
+    async def test_extract_integration_with_balanced_strategy(self, balanced_strategy_fixture):
+        state, mock_fetch_service, mock_extract_service, integration_sample_definitions = balanced_strategy_fixture
         
-        self.mock_extract_service = MagicMock(spec=ExtractService)
-        def mock_extract_text_impl(text, start_marker, end_marker, template_start=None):
-            return "contenu", "Extraction réussie", True, True
-        self.mock_extract_service.extract_text_with_markers = MagicMock(side_effect=mock_extract_text_impl)
-        
-        self.integration_sample_definitions = ExtractDefinitions(sources=[
-            SourceDefinition(source_name="SourceInt", source_type="url", schema="https", host_parts=["example", "com"], path="/test",
-                             extracts=[Extract(extract_name="ExtraitInt1", start_marker="DEBUT_EXTRAIT", end_marker="FIN_EXTRAIT")])
-        ])
-        
-        monkeypatch.setattr("argumentation_analysis.services.fetch_service.FetchService", lambda: self.mock_fetch_service)
-        monkeypatch.setattr("argumentation_analysis.services.extract_service.ExtractService", lambda: self.mock_extract_service)
-
-
-    async def test_extract_integration_with_balanced_strategy(self):
-        source = self.integration_sample_definitions.sources[0]
-        extract_def = source.extracts[0] 
+        source = integration_sample_definitions.sources[0]
+        extract_def = source.extracts[0]
         
         pm_agent = MagicMock(spec=Agent); pm_agent.name = "ProjectManagerAgent"
         pl_agent = MagicMock(spec=Agent); pl_agent.name = "PropositionalLogicAgent"
         informal_agent = MagicMock(spec=Agent); informal_agent.name = "InformalAnalysisAgent"
-        extract_agent_mock = MagicMock(spec=Agent); extract_agent_mock.name = "ExtractAgent" 
+        extract_agent_mock = MagicMock(spec=Agent); extract_agent_mock.name = "ExtractAgent"
         
         agents = [pm_agent, pl_agent, informal_agent, extract_agent_mock]
         
-        balanced_strategy = BalancedParticipationStrategy(agents=agents, state=self.state, default_agent_name="ProjectManagerAgent")
+        balanced_strategy = BalancedParticipationStrategy(agents=agents, state=state, default_agent_name="ProjectManagerAgent")
         
-        source_text, url = self.mock_fetch_service.fetch_text(source.to_dict())
-        self.assertIsNotNone(source_text)
-        self.assertEqual(url, "https://example.com/test")
+        source_text, url = mock_fetch_service.fetch_text(source.to_dict())
+        assert source_text is not None
+        assert url == "https://example.com/test"
         
-        extracted_text, status, start_found, end_found = self.mock_extract_service.extract_text_with_markers(
+        extracted_text, status, start_found, end_found = mock_extract_service.extract_text_with_markers(
             source_text, extract_def.start_marker, extract_def.end_marker
         )
-        self.assertTrue(start_found); self.assertTrue(end_found)
-        self.assertIn("Extraction réussie", status)
+        assert start_found
+        assert end_found
+        assert "Extraction réussie" in status
         
-        extract_id = self.state.add_extract(extract_def.extract_name, extracted_text)
+        extract_id = state.add_extract(extract_def.extract_name, extracted_text)
         
         history = []
-        self.state.designate_next_agent("ExtractAgent")
+        state.designate_next_agent("ExtractAgent")
         selected_agent = await balanced_strategy.next(agents, history)
-        self.assertEqual(selected_agent, extract_agent_mock)
+        assert selected_agent == extract_agent_mock
         
-        self.assertEqual(balanced_strategy._participation_counts["ExtractAgent"], 1)
-        self.assertEqual(balanced_strategy._total_turns, 1)
-        self.assertEqual(len(self.state.extracts), 1)
-        self.assertEqual(self.state.extracts[0]["id"], extract_id)
-        self.assertEqual(self.state.extracts[0]["name"], extract_def.extract_name)
-        self.assertEqual(self.state.extracts[0]["content"], extracted_text)
+        assert balanced_strategy._participation_counts["ExtractAgent"] == 1
+        assert balanced_strategy._total_turns == 1
+        assert len(state.extracts) == 1
+        assert state.extracts[0]["id"] == extract_id
+        assert state.extracts[0]["name"] == extract_def.extract_name
+        assert state.extracts[0]["content"] == extracted_text
 
 
 if __name__ == '__main__':

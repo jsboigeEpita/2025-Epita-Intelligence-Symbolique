@@ -9,8 +9,9 @@ disponible ou si les JARs nécessaires ne sont pas présents.
 
 import logging
 import pytest # Ajout de l'import pytest
-from tests.support.argumentation_analysis.jvm_test_case import JVMTestCase
+# from tests.support.argumentation_analysis.jvm_test_case import JVMTestCase
 import sys # Pour vérifier le module importé
+import unittest
 
 # Configuration du logging
 logging.basicConfig(
@@ -19,7 +20,7 @@ logging.basicConfig(
     datefmt='%H:%M:%S'
 )
 
-class TestJVMExample(JVMTestCase):
+class TestJVMExample(unittest.TestCase):
     """Exemple de test utilisant la classe JVMTestCase."""
     
     def test_jvm_initialized(self):
