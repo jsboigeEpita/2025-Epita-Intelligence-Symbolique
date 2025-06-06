@@ -1,6 +1,9 @@
 import re
 from playwright.sync_api import Page, expect
 
+import pytest
+
+@pytest.mark.playwright
 def test_successful_simple_argument_analysis(page: Page):
     """
     Scenario 1.1: Successful analysis of a simple argument (Happy Path)
@@ -44,6 +47,7 @@ def test_successful_simple_argument_analysis(page: Page):
     # Wait for the results to be displayed and check for content
     expect(results_container).to_be_visible()
     expect(results_container).to_contain_text("Structure argumentative")
+@pytest.mark.playwright
 def test_empty_argument_submission_displays_error(page: Page):
     """
     Scenario 1.2: Empty submission (Error Path)
@@ -70,6 +74,7 @@ def test_empty_argument_submission_displays_error(page: Page):
     expect(submit_button).to_be_enabled()
     argument_input.fill("")
     expect(submit_button).to_be_disabled()
+@pytest.mark.playwright
 def test_reset_button_clears_input_and_results(page: Page):
     """
     Scenario 1.3: Reset functionality

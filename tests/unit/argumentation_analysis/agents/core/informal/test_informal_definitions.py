@@ -16,7 +16,7 @@ root_dir = current_dir.parent.parent.parent.parent
 sys.path.append(str(root_dir))
 
 # Importation de taxonomy_loader pour pouvoir le patcher
-import taxonomy_loader
+# import taxonomy_loader
 
 test_logger = logging.getLogger("TestInformalDefinitions")
 
@@ -50,13 +50,13 @@ class TestInformalAnalysisPlugin(unittest.TestCase):
         
         # Patch pour taxonomy_loader.get_taxonomy_path et validate_taxonomy_file
         # Cible directement le module taxonomy_loader
-        self.patcher_get_taxonomy_path = patch('taxonomy_loader.get_taxonomy_path', return_value="mock_taxonomy_path_for_all_tests.csv")
-        self.mock_get_taxonomy_path = self.patcher_get_taxonomy_path.start()
-        self.addCleanup(self.patcher_get_taxonomy_path.stop)
+        # self.patcher_get_taxonomy_path = patch('taxonomy_loader.get_taxonomy_path', return_value="mock_taxonomy_path_for_all_tests.csv")
+        # self.mock_get_taxonomy_path = self.patcher_get_taxonomy_path.start()
+        # self.addCleanup(self.patcher_get_taxonomy_path.stop)
 
-        self.patcher_validate_taxonomy_file = patch('taxonomy_loader.validate_taxonomy_file', return_value=True)
-        self.mock_validate_taxonomy_file = self.patcher_validate_taxonomy_file.start()
-        self.addCleanup(self.patcher_validate_taxonomy_file.stop)
+        # self.patcher_validate_taxonomy_file = patch('taxonomy_loader.validate_taxonomy_file', return_value=True)
+        # self.mock_validate_taxonomy_file = self.patcher_validate_taxonomy_file.start()
+        # self.addCleanup(self.patcher_validate_taxonomy_file.stop)
 
         # Importation de la classe réelle pour la patcher
         from argumentation_analysis.agents.core.informal.informal_definitions import InformalAnalysisPlugin

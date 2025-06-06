@@ -1,6 +1,8 @@
 import re
+import pytest
 from playwright.sync_api import Page, expect
 
+@pytest.mark.playwright
 def test_successful_graph_visualization(page: Page):
     """
     Scenario 4.1: Successful visualization of a logic graph (Happy Path)
@@ -27,6 +29,7 @@ def test_successful_graph_visualization(page: Page):
     expect(graph_svg).to_be_visible(timeout=10000)
     expect(graph_svg).to_have_attribute("data-testid", "logic-graph-svg")
 
+@pytest.mark.playwright
 def test_logic_graph_api_error(page: Page):
     """
     Scenario 4.2: API error during graph generation
@@ -58,6 +61,7 @@ def test_logic_graph_api_error(page: Page):
     graph_svg = graph_container.locator("svg")
     expect(graph_svg).not_to_be_visible()
 
+@pytest.mark.playwright
 def test_logic_graph_reset_button(page: Page):
     """
     Scenario 4.3: Reset button clears input and graph

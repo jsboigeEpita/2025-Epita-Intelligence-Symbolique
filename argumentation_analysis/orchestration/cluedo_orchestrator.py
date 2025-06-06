@@ -97,9 +97,11 @@ async def run_cluedo_game(
     # Ajout d'un appel final à Sherlock pour la conclusion
     conclusion_prompt = "Sherlock, veuillez résumer vos conclusions."
     # Invoquer directement Sherlock pour la conclusion
-    final_responses = await sherlock.invoke(conclusion_prompt)
+    final_responses = []
+    async for response in sherlock.invoke(conclusion_prompt):
+        final_responses.append(response)
     
-    # La méthode invoke d'un agent retourne une liste de ChatMessageContent
+    # La méthode invoke d'un agent retourne un générateur asynchrone de ChatMessageContent
     if final_responses:
         history.extend(final_responses)
 

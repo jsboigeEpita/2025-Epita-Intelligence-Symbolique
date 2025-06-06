@@ -1,5 +1,7 @@
+import pytest
 from playwright.sync_api import Page, expect
 
+@pytest.mark.playwright
 def test_successful_simple_reconstruction(page: Page):
     """
     Scenario 3.1: Successful reconstruction of a simple argument (Happy Path)
@@ -34,6 +36,7 @@ def test_successful_simple_reconstruction(page: Page):
     expect(results_container).to_contain_text("Conclusion")
 
 
+@pytest.mark.playwright
 def test_reconstruction_api_error(page: Page):
     """
     Scenario 3.2: API error during reconstruction
@@ -70,6 +73,7 @@ def test_reconstruction_api_error(page: Page):
     expect(results_container).not_to_be_visible()
 
 
+@pytest.mark.playwright
 def test_reconstruction_reset_button(page: Page):
     """
     Scenario 3.3: Reset button clears the input and results

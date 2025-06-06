@@ -99,6 +99,11 @@ class SourceDefinition:
             return self.extracts[index]
         return None
 
+    def get_url(self) -> str:
+        """Construit et retourne l'URL complète de la source."""
+        host = ".".join(self.host_parts)
+        return f"{self.schema}://{host}{self.path}"
+
 @dataclass
 class ExtractResult:
     """Classe représentant le résultat d'une extraction."""

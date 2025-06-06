@@ -27,13 +27,13 @@ from argumentation_analysis.orchestration.hierarchical.operational.adapters.extr
 from argumentation_analysis.orchestration.hierarchical.operational.adapters.informal_agent_adapter import InformalAgentAdapter
 from argumentation_analysis.orchestration.hierarchical.operational.adapters.pl_agent_adapter import PLAgentAdapter
 
-from tests.support.argumentation_analysis.async_test_case import AsyncTestCase
+# from tests.support.argumentation_analysis.async_test_case import AsyncTestCase
 
 from argumentation_analysis.paths import RESULTS_DIR
 
 
 
-class TestHierarchicalIntegration(AsyncTestCase):
+class TestHierarchicalIntegration(unittest.TestCase):
     """Tests d'intégration pour l'architecture hiérarchique à trois niveaux."""
     
     async def asyncSetUp(self):
@@ -387,7 +387,7 @@ class TestHierarchicalIntegration(AsyncTestCase):
         self.assertEqual(strategic_report["progress_by_objective"]["obj-3"], 1.0)
 
 
-class TestHierarchicalPerformance(AsyncTestCase):
+class TestHierarchicalPerformance(unittest.TestCase):
     """Tests de performance pour l'architecture hiérarchique à trois niveaux."""
     
     async def test_performance_comparison(self):

@@ -1,6 +1,8 @@
 import re
+import pytest
 from playwright.sync_api import Page, expect
 
+@pytest.mark.playwright
 def test_successful_simple_fallacy_detection(page: Page):
     """
     Scenario 2.1: Successful detection of a simple fallacy (Happy Path)
@@ -33,6 +35,7 @@ def test_successful_simple_fallacy_detection(page: Page):
     # Wait for the results and check for the fallacy name
     expect(results_container).to_be_visible()
     expect(results_container).to_contain_text("Affirmation du conséquent")
+@pytest.mark.playwright
 def test_submission_with_empty_input_disables_button(page: Page):
     """
     Scenario 2.2: Submission with empty input
@@ -53,6 +56,7 @@ def test_submission_with_empty_input_disables_button(page: Page):
     argument_input.fill("test")
     argument_input.fill("")
     expect(submit_button).to_be_disabled()
+@pytest.mark.playwright
 def test_reset_button_clears_input_and_results(page: Page):
     """
     Scenario 2.3: Reset button functionality
