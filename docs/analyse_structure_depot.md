@@ -42,7 +42,7 @@ Stockage des résultats d'analyses et de tests :
 - `data/` : Données et ressources utilisées par le projet
 - `examples/` : Exemples de textes et données pour les tests (voir par exemple [`examples/logic_agents/api_integration_example.py`](examples/logic_agents/api_integration_example.py:0), [`examples/scripts_demonstration/demo_tweety_interaction_simple.py`](examples/scripts_demonstration/demo_tweety_interaction_simple.py:0) ou le tutoriel [`examples/notebooks/api_logic_tutorial.ipynb`](examples/notebooks/api_logic_tutorial.ipynb:0))
 - `libs/` : Bibliothèques externes utilisées par le projet
-- `tests/` : Tests unitaires et d'intégration (organisés en [`tests/unit/`](tests/unit/) (par exemple, [`tests/unit/project_core/utils/test_file_utils.py`](tests/unit/project_core/utils/test_file_utils.py:0)) et [`tests/integration/`](tests/integration/), et comprenant des tests spécifiques comme [`libs/web_api/test_api.py`](libs/web_api/test_api.py:0))
+- `tests/` : Tests unitaires et d'intégration (organisés en [`tests/unit/`](tests/unit/) (par exemple, [`../tests/unit/argumentation_analysis/utils/core_utils/test_file_utils.py`](../tests/unit/argumentation_analysis/utils/core_utils/test_file_utils.py:0)) et [`tests/integration/`](tests/integration/), et comprenant des tests spécifiques comme [`libs/web_api/test_api.py`](libs/web_api/test_api.py:0))
 - `tutorials/` : Tutoriels pour prendre en main le système
 
 ### 1.2. Organisation des fichiers à la racine

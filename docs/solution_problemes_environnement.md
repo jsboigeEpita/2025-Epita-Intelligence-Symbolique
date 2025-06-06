@@ -90,7 +90,7 @@ Pour résoudre ces problèmes, nous avons:
 
 4. **Testé notre solution sur un sous-ensemble de tests**:
    ```powershell
-   powershell -c "python -m unittest argumentation_analysis/tests/test_async_communication_fixed.py"
+   powershell -c "python -m unittest tests/unit/argumentation_analysis/test_async_communication_fixed.py"
    powershell -c "python -m unittest discover -s argumentation_analysis/tests/communication -p 'test_*.py' -v"
    ```
 
