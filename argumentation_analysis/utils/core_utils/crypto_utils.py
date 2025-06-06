@@ -71,7 +71,7 @@ def load_encryption_key(passphrase_arg: Optional[str] = None, env_var_name: str 
         logger.info("Utilisation de la phrase secrète fournie en argument pour dériver la clé...")
         encryption_key = derive_encryption_key(passphrase_arg)
         if encryption_key:
-            logger.info("✅ Clé de chiffrement dérivée avec succès à partir de l'argument.")
+            logger.info("(OK) Clé de chiffrement dérivée avec succès à partir de l'argument.")
             return encryption_key
         else:
             # L'erreur est déjà loggée par derive_encryption_key
@@ -84,7 +84,7 @@ def load_encryption_key(passphrase_arg: Optional[str] = None, env_var_name: str 
         logger.info(f"Phrase secrète trouvée dans la variable d'environnement '{env_var_name}'.")
         encryption_key = derive_encryption_key(env_passphrase)
         if encryption_key:
-            logger.info("✅ Clé de chiffrement dérivée avec succès à partir de la variable d'environnement.")
+            logger.info("(OK) Clé de chiffrement dérivée avec succès à partir de la variable d'environnement.")
             return encryption_key
         else:
             # L'erreur est déjà loggée par derive_encryption_key
@@ -300,17 +300,17 @@ def _test_fernet_encryption_decryption():
                 if decrypted:
                     logger.info(f"Données déchiffrées: {decrypted.decode('utf-8', 'ignore')}")
                     if decrypted == test_data:
-                        logger.info("✅ Chiffrement et déchiffrement Fernet réussis!")
+                        logger.info("(OK) Chiffrement et déchiffrement Fernet réussis!")
                     else:
-                        logger.error("❌ ERREUR: Les données déchiffrées ne correspondent pas aux originales.")
+                        logger.error("(ERROR) Les données déchiffrées ne correspondent pas aux originales.")
                 else:
-                    logger.error("❌ ERREUR: Échec du déchiffrement Fernet.")
+                    logger.error("(ERROR) Échec du déchiffrement Fernet.")
             else:
-                logger.error("❌ ERREUR: Échec du chiffrement Fernet.")
+                logger.error("(ERROR) Échec du chiffrement Fernet.")
         except Exception as e_fernet_test:
-            logger.error(f"❌ ERREUR lors du test Fernet: {e_fernet_test}", exc_info=True)
+            logger.error(f"(ERROR) lors du test Fernet: {e_fernet_test}", exc_info=True)
     else:
-        logger.error("❌ Impossible de tester Fernet, la dérivation de clé a échoué.")
+        logger.error("(ERROR) Impossible de tester Fernet, la dérivation de clé a échoué.")
     
     logger.info("\n--- Test déchiffrement Fernet avec mauvaise clé ---")
     if derived_b64_key:
@@ -322,13 +322,13 @@ def _test_fernet_encryption_decryption():
                 logger.info("Tentative de déchiffrement avec une mauvaise clé Fernet...")
                 decrypted_with_bad_key = decrypt_data_with_fernet(encrypted, bad_b64_key)
                 if decrypted_with_bad_key is None:
-                    logger.info("✅ Échec du déchiffrement avec mauvaise clé, comme attendu (InvalidToken/Signature).")
+                    logger.info("(OK) Échec du déchiffrement avec mauvaise clé, comme attendu (InvalidToken/Signature).")
                 else:
-                    logger.error(f"❌ ERREUR: Le déchiffrement avec une mauvaise clé aurait dû échouer, mais a retourné: {decrypted_with_bad_key}")
+                    logger.error(f"(ERROR) Le déchiffrement avec une mauvaise clé aurait dû échouer, mais a retourné: {decrypted_with_bad_key}")
             else:
                 logger.warning("Impossible de générer une mauvaise clé distincte pour le test.")
         except Exception as e_bad_key_test:
-            logger.error(f"❌ ERREUR lors du test de mauvaise clé Fernet: {e_bad_key_test}", exc_info=True)
+            logger.error(f"(ERROR) lors du test de mauvaise clé Fernet: {e_bad_key_test}", exc_info=True)
 
 if __name__ == '__main__':
     if not logging.getLogger().handlers:
