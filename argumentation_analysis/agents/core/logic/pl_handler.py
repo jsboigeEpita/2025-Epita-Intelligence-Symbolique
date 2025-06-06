@@ -78,7 +78,25 @@ class PLHandler:
                     parsed_formula = self.parse_pl_formula(cleaned_f_str)
                     kb.add(parsed_formula)
             
-            is_consistent = self._pl_reasoner.isConsistent(kb)
+            logger.info(f"DEBUG: Méthodes disponibles pour _pl_reasoner: {dir(self._pl_reasoner)}")
+            
+            # Contournement pour le bug JPype avec isConsistent.
+            # Une KB est cohérente si elle n'entraîne pas de contradiction (false).
+            # On vérifie donc si la KB entraîne la formule "false".
+            try:
+                Contradiction = jpype.JClass("org.tweetyproject.logics.pl.syntax.Contradiction")
+                parsed_false = Contradiction()
+                
+                # self._pl_reasoner.query(kb, formula) retourne true si kb |= formula
+                entails_contradiction = self._pl_reasoner.query(kb, parsed_false)
+                is_consistent = not entails_contradiction
+                logger.info(f"Vérification de cohérence via query(kb, false). Entraîne contradiction: {entails_contradiction}. Cohérent: {is_consistent}")
+
+            except Exception as query_exc:
+                logger.error(f"Erreur durant le contournement de isConsistent avec query(false): {query_exc}", exc_info=True)
+                # Fallback ou lever une exception ? Pour l'instant, on lève.
+                raise RuntimeError("Échec de la vérification de cohérence alternative.") from query_exc
+
             logger.info(f"PL Knowledge base consistency for '{knowledge_base_str}': {is_consistent}")
             return bool(is_consistent)
         except ValueError as e: # Catch parsing errors from parse_pl_formula

@@ -13,11 +13,8 @@ import logging
 from semantic_kernel.agents import Agent
 from semantic_kernel import Kernel # Exemple d'importation
 
-class BeliefSet: pass # Placeholder
-
-# Supposons que TweetyBridge est importable
-# from ..logic.tweety_bridge import TweetyBridge # Exemple d'importation
-class TweetyBridge: pass # Placeholder
+from argumentation_analysis.agents.core.logic.belief_set import BeliefSet
+from argumentation_analysis.agents.core.logic.tweety_bridge import TweetyBridge
 
 
 class BaseAgent(Agent, ABC):
@@ -329,6 +326,38 @@ class BaseLogicAgent(BaseAgent, ABC):
         """
         pass
 
+    def is_consistent(self, belief_set: 'BeliefSet') -> Tuple[bool, str]:
+        """
+        Vérifie si un ensemble de croyances est cohérent.
+
+        Utilise le TweetyBridge pour appeler la méthode de vérification de
+        cohérence appropriée pour la logique de l'agent.
+
+        :param belief_set: L'ensemble de croyances à vérifier.
+        :type belief_set: BeliefSet
+        :return: Un tuple contenant un booléen (True si cohérent, False sinon)
+                 et un message de détails du solveur.
+        :rtype: Tuple[bool, str]
+        """
+        self.logger.info(f"Vérification de la cohérence pour le BeliefSet via {self.name} (type: {self.logic_type})")
+        try:
+            logic_type_lower = self.logic_type.lower()
+            if logic_type_lower in ["pl", "propositional"]:
+                return self.tweety_bridge.is_pl_kb_consistent(belief_set.content)
+            elif logic_type_lower in ["fol", "first_order"]:
+                # Note: La signature pourrait être nécessaire pour FOL, mais est optionnelle.
+                # Pour cette méthode de base, nous ne la passons pas.
+                return self.tweety_bridge.is_fol_kb_consistent(belief_set.content)
+            elif logic_type_lower in ["ml", "modal"]:
+                 # Note: La logique modale spécifique (ex: S4) est en dur dans le bridge pour l'instant.
+                return self.tweety_bridge.is_modal_kb_consistent(belief_set.content)
+            else:
+                raise NotImplementedError(f"La vérification de cohérence n'est pas implémentée pour le type de logique: {self.logic_type}")
+        except Exception as e:
+            error_msg = f"Erreur lors de la vérification de la cohérence pour la logique '{self.logic_type}': {e}"
+            self.logger.error(error_msg, exc_info=True)
+            return False, error_msg
+ 
     # La méthode setup_agent_components de BaseAgent doit être implémentée
     # par les sous-classes concrètes (PLAgent, FOLAgent) pour enregistrer
     # leurs fonctions sémantiques spécifiques et initialiser/configurer TweetyBridge.

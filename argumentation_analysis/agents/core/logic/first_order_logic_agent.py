@@ -11,6 +11,8 @@ l'interprétation des résultats.
 """
 
 import logging
+import re
+import json
 from typing import Dict, List, Optional, Any, Tuple, AsyncGenerator
 
 from semantic_kernel import Kernel
@@ -40,37 +42,51 @@ Définit le rôle et les capacités générales de l'agent pour le LLM.
 
 # Prompts pour la logique du premier ordre
 PROMPT_TEXT_TO_FOL = """
-Vous êtes un expert en logique du premier ordre. Votre tâche est de traduire un texte en un ensemble de croyances (belief set) en logique du premier ordre en utilisant la syntaxe de TweetyProject.
+Vous êtes un expert en logique du premier ordre (FOL) et votre tâche est de traduire un texte en une base de connaissances structurée pour la bibliothèque TweetyProject.
 
-Syntaxe de la logique du premier ordre pour TweetyProject:
-- Prédicats: commencent par une lettre majuscule (ex: P(x), Human(john))
-- Variables: commencent par une lettre minuscule (ex: x, y, person)
-- Constantes: commencent par une lettre minuscule (ex: john, paris)
-- Connecteurs logiques: !, ||, &&, =>, <=>
-- Quantificateurs: forall x: (formule), exists x: (formule)
+**Format de Sortie (JSON Strict):**
+Votre sortie DOIT être un objet JSON unique contenant trois clés : `sorts`, `predicates`, et `formulas`.
 
-Règles importantes:
-1. Chaque formule doit se terminer par un point-virgule (;)
-2. Les formules sont séparées par des sauts de ligne
-3. Utilisez des noms significatifs pour les prédicats, variables et constantes
-4. Évitez les espaces dans les noms des prédicats, variables et constantes
-5. Les commentaires commencent par // et s'étendent jusqu'à la fin de la ligne
+1.  **`sorts`**: Un dictionnaire où chaque clé est le nom d'un type (un "sort", ex: "person", "concept") et la valeur est une liste de constantes appartenant à ce type (ex: ["socrates", "plato"]). Les noms de sorts et de constantes doivent être en minuscules et en `snake_case` (par exemple, `climate_change`).
+2.  **`predicates`**: Une liste d'objets, où chaque objet représente un prédicat et a deux clés :
+    *   `name`: Le nom du prédicat (commençant par une majuscule, ex: "IsMan").
+    *   `args`: Une liste des noms de sorts pour les arguments du prédicat (ex: ["person"]). Si le prédicat n'a pas d'arguments (arité 0), la liste doit être vide.
+3.  **`formulas`**: Une liste de chaînes de caractères, où chaque chaîne est une formule FOL bien formée. N'ajoutez PAS de point-virgule à la fin des formules.
 
-Exemple:
+**Règles de Syntaxe et de Modélisation:**
+*   **Cohérence Stricte**: L'arité (nombre d'arguments) et les types de sorts des prédicats utilisés dans les `formulas` DOIVENT correspondre EXACTEMENT à leur déclaration dans la section `predicates`. Par exemple, si vous déclarez `{"name": "HasEvidence", "args": ["concept", "concept"]}`, alors la formule doit être `HasEvidence(unConcept, unePreuve);`, et non `HasEvidence(unConcept);`.
+*   **Constantes et Sorts**: Toutes les constantes utilisées dans les formules DOIVENT être déclarées dans la section `sorts`.
+*   **Prédicats**: Tous les prédicats utilisés dans les formules DOIVENT être déclarés dans la section `predicates`.
+*   **Variables**: Les variables doivent commencer par une LETTRE MAJUSCULE (ex: `X`, `Y`) et être liées par un quantificateur (`forall X: (...)` ou `exists Y: (...)`). Les constantes sont toujours en minuscules.
+*   **Connecteurs**: Utilisez `!`, `&&`, `||`, `=>`, `<=>`.
+
+**Exemple de Traduction Avancé:**
+Texte: "Paris est une ville. Jean aime Paris. Les villes sont des lieux."
+
+**Sortie JSON attendue:**
+```json
+{
+  "sorts": {
+    "person": ["jean"],
+    "city": ["paris"],
+    "place": ["paris"]
+  },
+  "predicates": [
+    { "name": "IsCity", "args": ["city"] },
+    { "name": "Loves", "args": ["person", "place"] },
+    { "name": "IsAPlace", "args": ["place"] }
+  ],
+  "formulas": [
+    "IsCity(paris)",
+    "Loves(jean, paris)",
+    "forall X: (IsCity(X) => IsAPlace(X))"
+  ]
+}
 ```
-// Définitions de base
-Human(john);
-Human(mary);
-forall x: (Human(x) => Mortal(x));
-Loves(john, mary);
-exists x: (Human(x) && Loves(x, john));
-```
 
-Traduisez maintenant le texte suivant en un ensemble de croyances en logique du premier ordre:
+Traduisez maintenant le texte suivant en un objet JSON respectant scrupuleusement le format et les règles ci-dessus.
 
 {{$input}}
-
-Répondez uniquement avec l'ensemble de croyances en logique du premier ordre, sans explications supplémentaires.
 """
 """
 Prompt pour convertir du texte en langage naturel en un ensemble de croyances FOL.
@@ -207,7 +223,7 @@ class FirstOrderLogicAgent(BaseLogicAgent):
         super().setup_agent_components(llm_service_id)
         self.logger.info(f"Configuration des composants pour {self.name}...")
 
-        self._tweety_bridge = TweetyBridge(logic_type="fol") 
+        self._tweety_bridge = TweetyBridge()
 
         if not self.tweety_bridge.is_jvm_ready():
             self.logger.error("Tentative de setup FOL Kernel alors que la JVM n'est PAS démarrée.")
@@ -249,9 +265,9 @@ class FirstOrderLogicAgent(BaseLogicAgent):
                 self.logger.debug(f"Fonction sémantique {self.name}.{func_name} ajoutée/mise à jour.")
                 
                 if self.name in self.sk_kernel.plugins and func_name in self.sk_kernel.plugins[self.name]:
-                    self.logger.info(f"✅ Fonction {self.name}.{func_name} correctement enregistrée.")
+                    self.logger.info(f"(OK) Fonction {self.name}.{func_name} correctement enregistrée.")
                 else:
-                    self.logger.error(f"❌ ERREUR CRITIQUE: Fonction {self.name}.{func_name} non trouvée après ajout!")
+                    self.logger.error(f"(CRITICAL ERROR) Fonction {self.name}.{func_name} non trouvée après ajout!")
             except ValueError as ve:
                 self.logger.warning(f"Problème ajout/MàJ {self.name}.{func_name}: {ve}")
             except Exception as e:
@@ -259,40 +275,167 @@ class FirstOrderLogicAgent(BaseLogicAgent):
         
         self.logger.info(f"Composants de {self.name} configurés.")
 
+    def _construct_kb_from_json(self, kb_json: Dict[str, Any]) -> str:
+        """
+        Construit une base de connaissances FOL textuelle à partir d'un JSON structuré,
+        en respectant la syntaxe BNF de TweetyProject.
+        """
+        kb_parts = []
+
+        # 1. SORTSDEC
+        sorts = kb_json.get("sorts", {})
+        if sorts:
+            for sort_name, constants in sorts.items():
+                if constants:
+                    kb_parts.append(f"{sort_name} = {{ {', '.join(constants)} }}")
+
+        # 2. DECLAR (PREDDEC)
+        predicates = kb_json.get("predicates", [])
+        if predicates:
+            for pred in predicates:
+                pred_name = pred.get("name")
+                args = pred.get("args", [])
+                if pred_name:
+                    args_str = f"({', '.join(args)})" if args else ""
+                    kb_parts.append(f"type({pred_name}{args_str})")
+
+        # 3. FORMULAS
+        formulas = kb_json.get("formulas", [])
+        if formulas:
+            # Assurer que les formules sont bien séparées des déclarations
+            if kb_parts:
+                kb_parts.append("\n")
+            # Nettoyer les formules en enlevant le point-virgule final si présent
+            cleaned_formulas = [f.strip().removesuffix(';') for f in formulas]
+            kb_parts.extend(cleaned_formulas)
+
+        return "\n".join(kb_parts)
+
+    def _normalize_identifier(self, text: str) -> str:
+        """Normalise un identifiant en snake_case sans accents."""
+        import unidecode
+        text = unidecode.unidecode(text) # Translitère les accents (é -> e)
+        text = re.sub(r'\s+', '_', text) # Remplace les espaces par des underscores
+        text = re.sub(r'[^a-zA-Z0-9_]', '', text) # Supprime les caractères non alphanumériques
+        return text.lower()
+
+    def _validate_kb_json(self, kb_json: Dict[str, Any]) -> Tuple[bool, str]:
+        """Valide la cohérence interne du JSON généré par le LLM."""
+        if not all(k in kb_json for k in ["sorts", "predicates", "formulas"]):
+            return False, "Le JSON doit contenir les clés 'sorts', 'predicates', et 'formulas'."
+
+        declared_constants = set()
+        for constants_list in kb_json.get("sorts", {}).values():
+            if isinstance(constants_list, list):
+                declared_constants.update(constants_list)
+        
+        declared_predicates = {p["name"]: len(p.get("args", [])) for p in kb_json.get("predicates", []) if "name" in p}
+
+        for formula in kb_json.get("formulas", []):
+            quantified_vars = set(re.findall(r'(?:forall|exists)\s+([A-Z][a-zA-Z0-9_]*)\s*:', formula))
+            used_predicates = re.findall(r'([A-Z][a-zA-Z0-9]*)\((.*?)\)', formula)
+            for pred_name, args_str in used_predicates:
+                if pred_name not in declared_predicates:
+                    return False, f"Le prédicat '{pred_name}' utilisé dans la formule '{formula}' n'est pas déclaré."
+                
+                args_list = [arg.strip() for arg in args_str.split(',')] if args_str.strip() else []
+                used_arity = len(args_list)
+                if declared_predicates[pred_name] != used_arity:
+                    return False, f"Incohérence d'arité pour '{pred_name}'. Déclaré: {declared_predicates[pred_name]}, utilisé: {used_arity} dans '{formula}'."
+
+                for arg in args_list:
+                    if not arg: continue
+                    # Si l'argument commence par une minuscule, c'est une constante
+                    if arg[0].islower():
+                        if arg not in declared_constants:
+                            return False, f"La constante '{arg}' utilisée dans la formule '{formula}' n'est pas déclarée dans les 'sorts'."
+                    # Si l'argument commence par une majuscule, c'est une variable
+                    elif arg[0].isupper():
+                        if arg not in quantified_vars:
+                            return False, f"La variable '{arg}' utilisée dans la formule '{formula}' n'est pas liée par un quantificateur (forall/exists)."
+
+        return True, "Validation du JSON réussie."
+
     async def text_to_belief_set(self, text: str, context: Optional[Dict[str, Any]] = None) -> Tuple[Optional[BeliefSet], str]:
         """
         Convertit un texte en langage naturel en un ensemble de croyances FOL.
-
-        Utilise la fonction sémantique "TextToFOLBeliefSet" pour la conversion,
-        puis valide l'ensemble de croyances généré avec `TweetyBridge`.
-
-        :param text: Le texte en langage naturel à convertir.
-        :type text: str
-        :param context: Un dictionnaire optionnel de contexte (non utilisé actuellement).
-        :type context: Optional[Dict[str, Any]]
-        :return: Un tuple contenant l'objet `FirstOrderBeliefSet` si la conversion
-                 et la validation réussissent, et un message de statut.
-                 Retourne (None, message_erreur) en cas d'échec.
-        :rtype: Tuple[Optional[BeliefSet], str]
+        Approche basée sur la BNF avec validation Python:
+        1. Le LLM génère un JSON structuré.
+        2. Le JSON est validé en Python pour sa cohérence interne.
+        3. Une base de connaissances est construite en respectant la syntaxe Tweety.
+        4. Le belief set complet est validé par Tweety.
         """
-        self.logger.info(f"Conversion de texte en ensemble de croyances du premier ordre pour l'agent {self.name}...")
+        self.logger.info(f"Conversion de texte en ensemble de croyances FOL (approche BNF + validation) pour {self.name}...")
         
         try:
+            # 1. Obtenir le JSON du LLM
             result = await self.sk_kernel.plugins[self.name]["TextToFOLBeliefSet"].invoke(self.sk_kernel, input=text)
-            belief_set_content = str(result)
+            json_content_str = str(result).strip()
             
-            if not belief_set_content or len(belief_set_content.strip()) == 0:
-                self._logger.error("La conversion a produit un ensemble de croyances vide")
-                return None, "La conversion a produit un ensemble de croyances vide"
+            if json_content_str.startswith("```json"):
+                json_content_str = json_content_str[7:]
+            if json_content_str.startswith("```"):
+                json_content_str = json_content_str[3:]
+            if json_content_str.endswith("```"):
+                json_content_str = json_content_str[:-3]
+            json_content_str = json_content_str.strip()
+
+            try:
+                kb_json = json.loads(json_content_str)
+            except json.JSONDecodeError as json_err:
+                return None, f"La sortie du LLM n'est pas un JSON valide: {json_err}"
+
+            # 2. Normaliser et valider la cohérence du JSON
+            # 2. Créer une version entièrement normalisée du JSON
+            normalized_kb_json = {"predicates": kb_json.get("predicates", [])}
+
+            # Normaliser les sorts et créer une table de mappage
+            constant_map = {}
+            normalized_sorts = {}
+            for sort_name, constants in kb_json.get("sorts", {}).items():
+                norm_constants = []
+                for const in constants:
+                    norm_const = self._normalize_identifier(const)
+                    norm_constants.append(norm_const)
+                    constant_map[const] = norm_const
+                normalized_sorts[sort_name] = norm_constants
+            normalized_kb_json["sorts"] = normalized_sorts
+
+            # Normaliser les formules en utilisant la table de mappage
+            normalized_formulas = []
+            for formula in kb_json.get("formulas", []):
+                # Remplacer les constantes dans la formule. On trie par longueur pour éviter les remplacements partiels (ex: 'a' dans 'ab')
+                sorted_constants = sorted(constant_map.keys(), key=len, reverse=True)
+                norm_formula = formula
+                for const in sorted_constants:
+                    # Utiliser \b pour s'assurer qu'on remplace des mots entiers
+                    norm_formula = re.sub(r'\b' + re.escape(const) + r'\b', constant_map[const], norm_formula)
+                normalized_formulas.append(norm_formula)
+            normalized_kb_json["formulas"] = normalized_formulas
             
-            belief_set_obj = FirstOrderBeliefSet(belief_set_content) 
-            
-            is_valid, validation_msg = self.tweety_bridge.validate_fol_belief_set(belief_set_content)
+            # Valider le JSON entièrement normalisé
+            is_json_valid, json_validation_msg = self._validate_kb_json(normalized_kb_json)
+            if not is_json_valid:
+                self.logger.error(f"Validation du JSON échouée: {json_validation_msg}")
+                self.logger.error(f"JSON (après normalisation complète):\n{json.dumps(normalized_kb_json, indent=2)}")
+                return None, f"Validation du JSON échouée: {json_validation_msg}"
+            self.logger.info("Validation de la cohérence du JSON réussie.")
+
+            # 3. Construire la base de connaissances à partir du JSON normalisé
+            full_belief_set_content = self._construct_kb_from_json(normalized_kb_json)
+            if not full_belief_set_content:
+                return None, "La conversion a produit une base de connaissances vide."
+            self.logger.debug(f"Ensemble de croyances complet généré:\n{full_belief_set_content}")
+
+            # 4. Valider le belief set complet avec Tweety
+            is_valid, validation_msg = self.tweety_bridge.validate_fol_belief_set(full_belief_set_content)
             if not is_valid:
-                self.logger.error(f"Ensemble de croyances invalide: {validation_msg}")
+                self.logger.error(f"Ensemble de croyances invalide selon Tweety: {validation_msg}")
+                self.logger.error(f"Contenu invalidé:\n{full_belief_set_content}")
                 return None, f"Ensemble de croyances invalide: {validation_msg}"
             
-            self.logger.info("Conversion réussie")
+            belief_set_obj = FirstOrderBeliefSet(full_belief_set_content)
+            self.logger.info("Conversion réussie avec l'approche BNF et validation Python.")
             return belief_set_obj, "Conversion réussie"
         
         except Exception as e:

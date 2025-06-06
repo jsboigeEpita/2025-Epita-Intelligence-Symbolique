@@ -23,20 +23,22 @@ class FOLHandler:
             logger.error("FOL Parser not initialized. Ensure TweetyBridge calls TweetyInitializer first.")
             raise RuntimeError("FOLHandler initialized before TweetyInitializer completed FOL setup.")
 
-    def parse_fol_formula(self, formula_str: str, signature_declarations_str: str = None):
-        """Parses an FOL formula string into a TweetyProject FolFormula object."""
+    def parse_fol_formula(self, formula_str: str, custom_parser=None):
+        """
+        Parses a single FOL formula string.
+        If a custom_parser (with a specific signature) is provided, it uses it.
+        Otherwise, it uses the default FOL parser.
+        """
         if not isinstance(formula_str, str):
             raise TypeError("Input formula must be a string.")
+        
+        parser_to_use = custom_parser if custom_parser else self._fol_parser
+        
         logger.debug(f"Attempting to parse FOL formula: {formula_str}")
         try:
-            # Revenir à la version simple. La gestion de la signature doit être revue.
-            # parseFormula(String, Signature) n'existe pas pour FolParser.
-            if signature_declarations_str:
-                logger.warning(f"FOLHandler.parse_fol_formula received signature_declarations_str='{signature_declarations_str}' but the current FolParser setup does not use it directly for single formula parsing. The formula will be parsed by the default parser without this ad-hoc signature.")
-            
             java_formula_str = JString(formula_str)
-            fol_formula = self._fol_parser.parseFormula(java_formula_str) # Appel simple
-            logger.info(f"Successfully parsed FOL formula (default parser): {formula_str} -> {fol_formula}")
+            fol_formula = parser_to_use.parseFormula(java_formula_str)
+            logger.info(f"Successfully parsed FOL formula: {formula_str} -> {fol_formula}")
             return fol_formula
         except jpype.JException as e:
             logger.error(f"JPype JException parsing FOL formula '{formula_str}': {e.getMessage()}", exc_info=True)
@@ -44,6 +46,45 @@ class FOLHandler:
         except Exception as e:
             logger.error(f"Unexpected error parsing FOL formula '{formula_str}': {e}", exc_info=True)
             raise
+
+    def parse_fol_belief_set(self, belief_set_str: str):
+        """
+        Parses a complete FOL belief set string, which must include a 'signature:' line.
+        The parser will read the signature and formulas from the same string.
+        Returns a tuple of (FolBeliefSet, FolSignature, FolParser).
+        """
+        logger.debug(f"Attempting to parse FOL belief set: {belief_set_str[:100]}...")
+        try:
+            # Create a new parser instance for this specific operation.
+            FolParser = jpype.JClass("org.tweetyproject.logics.fol.parser.FolParser")
+            parser = FolParser()
+
+            # The parseBeliefBase method is designed to handle the entire string,
+            # including the "signature:" line. No need to split manually.
+            java_belief_set_str = JString(belief_set_str)
+            belief_set_obj = parser.parseBeliefBase(java_belief_set_str)
+            
+            # After parsing, we can retrieve the signature from the parsed object.
+            signature_obj = belief_set_obj.getSignature()
+
+            # For consistency, we can create and return a new parser that is
+            # explicitly configured with the signature from the parsed belief set.
+            # This is useful if the caller wants to parse individual formulas later.
+            new_configured_parser = FolParser()
+            new_configured_parser.setSignature(signature_obj)
+
+            logger.info("Successfully parsed FOL belief set with its signature.")
+            return belief_set_obj, signature_obj, new_configured_parser
+
+        except jpype.JException as e:
+            # Make the error message more informative
+            msg = f"JPype JException parsing FOL belief set: {e.getMessage()}. Belief Set was:\n{belief_set_str}"
+            logger.error(msg, exc_info=True)
+            raise ValueError(msg) from e
+        except Exception as e:
+            msg = f"Unexpected error parsing FOL belief set: {e}. Belief Set was:\n{belief_set_str}"
+            logger.error(msg, exc_info=True)
+            raise RuntimeError(msg) from e
 
     def fol_add_sort(self, sort_name: str):
         """Adds a sort to the FOL environment. Not directly available in Tweety parsers, managed by knowledge base."""
