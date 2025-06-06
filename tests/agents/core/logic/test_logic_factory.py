@@ -59,7 +59,7 @@ class TestLogicAgentFactory(unittest.TestCase):
         agent = LogicAgentFactory.create_agent("propositional", self.kernel)
         
         # Vérifier que la classe d'agent a été appelée
-        self.mock_propositional_agent_class.assert_called_once_with(self.kernel)
+        self.mock_propositional_agent_class.assert_called_once_with(kernel=self.kernel, agent_name='PropositionalAgent')
         
         # Vérifier que l'agent a été configuré
         self.mock_propositional_agent.setup_agent_components.assert_not_called() # MODIFIED
@@ -72,7 +72,7 @@ class TestLogicAgentFactory(unittest.TestCase):
         agent = LogicAgentFactory.create_agent("first_order", self.kernel)
         
         # Vérifier que la classe d'agent a été appelée
-        self.mock_first_order_agent_class.assert_called_once_with(self.kernel)
+        self.mock_first_order_agent_class.assert_called_once_with(kernel=self.kernel, agent_name='First_orderAgent')
         
         # Vérifier que l'agent a été configuré
         self.mock_first_order_agent.setup_agent_components.assert_not_called() # MODIFIED
@@ -85,7 +85,7 @@ class TestLogicAgentFactory(unittest.TestCase):
         agent = LogicAgentFactory.create_agent("modal", self.kernel)
         
         # Vérifier que la classe d'agent a été appelée
-        self.mock_modal_agent_class.assert_called_once_with(self.kernel)
+        self.mock_modal_agent_class.assert_called_once_with(kernel=self.kernel, agent_name='ModalAgent')
         
         # Vérifier que l'agent a été configuré
         self.mock_modal_agent.setup_agent_components.assert_not_called() # MODIFIED
@@ -100,7 +100,7 @@ class TestLogicAgentFactory(unittest.TestCase):
         agent = LogicAgentFactory.create_agent("propositional", self.kernel, llm_service)
         
         # Vérifier que la classe d'agent a été appelée
-        self.mock_propositional_agent_class.assert_called_once_with(self.kernel)
+        self.mock_propositional_agent_class.assert_called_once_with(kernel=self.kernel, agent_name='PropositionalAgent')
         
         # Vérifier que l'agent a été configuré
         self.mock_propositional_agent.setup_agent_components.assert_called_once_with(llm_service) # MODIFIED
@@ -128,7 +128,7 @@ class TestLogicAgentFactory(unittest.TestCase):
         agent = LogicAgentFactory.create_agent("propositional", self.kernel)
         
         # Vérifier que la classe d'agent a été appelée
-        self.mock_propositional_agent_class.assert_called_once_with(self.kernel)
+        self.mock_propositional_agent_class.assert_called_once_with(kernel=self.kernel, agent_name='PropositionalAgent')
         
         # Vérifier le résultat
         self.assertIsNone(agent)
@@ -164,7 +164,12 @@ class TestLogicAgentFactory(unittest.TestCase):
         agent = LogicAgentFactory.create_agent(test_logic_type, self.kernel)
         
         # Vérifier que notre mock constructeur (qui simule la classe) a été appelé
-        mock_test_agent_constructor.assert_called_once_with(self.kernel)
+        # L'agent_name généré dynamiquement sera quelque chose comme Test_agent_type_123456Agent
+        mock_test_agent_constructor.assert_called_once()
+        args, kwargs = mock_test_agent_constructor.call_args
+        self.assertEqual(kwargs.get('kernel'), self.kernel)
+        self.assertTrue(kwargs.get('agent_name', '').startswith('Test_agent_type_'))
+        self.assertTrue(kwargs.get('agent_name', '').endswith('Agent'))
         
         # Vérifier le résultat
         self.assertEqual(agent, mock_test_agent_instance)

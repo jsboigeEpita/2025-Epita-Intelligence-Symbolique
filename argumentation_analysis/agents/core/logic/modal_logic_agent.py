@@ -41,131 +41,35 @@ Les opérateurs modaux que vous utilisez sont :
 """
 
 # Prompts pour la logique modale
-PROMPT_TEXT_TO_MODAL_BELIEF_SET = """
-Vous êtes un expert en logique modale. Votre tâche est de convertir un texte en langage naturel en un ensemble de croyances modales.
+PROMPT_TEXT_TO_MODAL_BELIEF_SET = """Expert Modal : Convertissez le texte en ensemble de croyances modales JSON.
 
-**Format de Sortie (JSON Strict):**
-Votre sortie DOIT être un objet JSON unique contenant deux clés : `propositions` et `modal_formulas`.
+Format : {"propositions": ["prop1", "prop2"], "modal_formulas": ["[]prop1", "<>prop2"]}
 
-1. **`propositions`**: Une liste des propositions de base extraites du texte. Les propositions doivent être en minuscules et en `snake_case` (ex: ["il_pleut", "jean_travaille"]).
+Opérateurs : [] (nécessité), <> (possibilité). Connecteurs : !, &&, ||, =>, <=>
+Propositions en snake_case. Utilisez UNIQUEMENT les propositions déclarées.
 
-2. **`modal_formulas`**: Une liste de formules modales utilisant les opérateurs `[]` (nécessité) et `<>` (possibilité). Utilisez les propositions définies précédemment.
-
-**Opérateurs modaux:**
-- `[]p` signifie "il est nécessaire que p"
-- `<>p` signifie "il est possible que p"
-- Vous pouvez utiliser les connecteurs logiques: `!`, `&&`, `||`, `=>`, `<=>`
-
-**Exemple:**
-Texte: "Il pleut nécessairement. Il est possible que Jean travaille. S'il pleut, alors il est nécessaire que les routes soient mouillées."
-
-**Sortie JSON attendue:**
-```json
-{
-  "propositions": ["il_pleut", "jean_travaille", "routes_mouillees"],
-  "modal_formulas": [
-    "[]il_pleut",
-    "<>jean_travaille",
-    "il_pleut => []routes_mouillees"
-  ]
-}
-```
-
-**Règles importantes:**
-- N'utilisez QUE les propositions que vous avez déclarées dans la liste `propositions`
-- Les formules modales doivent être syntaxiquement correctes
-- Gardez les noms de propositions courts et descriptifs
-
-Analysez le texte suivant et générez l'ensemble de croyances modal:
-
-{{$input}}
+Texte : {{$input}}
 """
 
-PROMPT_GEN_MODAL_QUERIES_IDEAS = """
-Vous êtes un expert en logique modale. Votre tâche est de générer des "idées" de requêtes pertinentes pour interroger un ensemble de croyances modales.
+PROMPT_GEN_MODAL_QUERIES_IDEAS = """Expert Modal : Générez des requêtes modales pertinentes en JSON.
 
-**Contexte Fourni:**
-1. **Texte Original**: Le texte qui motive l'analyse.
-2. **Ensemble de Croyances Modales**: Une description structurée de la logique extraite du texte, contenant les `propositions` et les `modal_formulas`.
+Format : {"query_ideas": [{"formula": "[]prop1"}, {"formula": "<>prop2"}]}
 
-**Votre Tâche:**
-Générez un objet JSON contenant UNIQUEMENT la clé `query_ideas`.
-La valeur de `query_ideas` doit être une liste d'objets JSON, où chaque objet représente une idée de requête et contient une clé :
-1. `formula`: Une formule modale à tester (ex: "[]il_pleut", "<>jean_travaille").
+Règles : Utilisez UNIQUEMENT les propositions du belief set. Opérateurs : [], <>
 
-**Règles Strictes:**
-- **Utilisation Exclusive**: N'utilisez QUE les `propositions` qui existent dans l'ensemble de croyances fourni. N'en inventez pas.
-- **Pertinence**: Les idées de requêtes doivent être pertinentes par rapport au texte original et chercher à vérifier des conclusions modales intéressantes.
-- **Opérateurs modaux**: Utilisez `[]` pour la nécessité et `<>` pour la possibilité.
-- **Format de Sortie**: Votre sortie DOIT être un objet JSON valide, sans aucun texte ou explication supplémentaire.
-
-**Exemple:**
-Texte Original: "Il pleut nécessairement. Il est possible que Jean travaille."
-Ensemble de Croyances:
-```json
-{
-  "propositions": ["il_pleut", "jean_travaille"],
-  "modal_formulas": [
-    "[]il_pleut",
-    "<>jean_travaille"
-  ]
-}
-```
-
-**Sortie JSON attendue:**
-```json
-{
-  "query_ideas": [
-    {
-      "formula": "[]il_pleut"
-    },
-    {
-      "formula": "<>jean_travaille"
-    },
-    {
-      "formula": "![]!jean_travaille"
-    }
-  ]
-}
-```
-
-Maintenant, analysez le contexte suivant et générez les idées de requêtes.
-
-**Texte Original:**
-{{$input}}
-
-**Ensemble de Croyances:**
-{{$belief_set}}
+Texte : {{$input}}
+Belief Set : {{$belief_set}}
 """
 
-PROMPT_INTERPRET_MODAL = """
-Vous êtes un expert en logique modale. Votre tâche est d'interpréter les résultats de requêtes en logique modale et d'expliquer leur signification dans le contexte du texte source.
+PROMPT_INTERPRET_MODAL = """Expert Modal : Interprétez les résultats de requêtes modales en langage accessible.
 
-Voici le texte source:
-{{$input}}
+Texte : {{$input}}
+Belief Set : {{$belief_set}}
+Requêtes : {{$queries}}
+Résultats : {{$tweety_result}}
 
-Voici l'ensemble de croyances en logique modale:
-{{$belief_set}}
-
-Voici les requêtes qui ont été exécutées:
-{{$queries}}
-
-Voici les résultats de ces requêtes:
-{{$tweety_result}}
-
-Interprétez ces résultats et expliquez leur signification dans le contexte du texte source. Pour chaque requête:
-1. Expliquez ce que la requête cherchait à vérifier (en termes de nécessité ou possibilité)
-2. Indiquez si la requête a été acceptée (ACCEPTED) ou rejetée (REJECTED)
-3. Expliquez ce que cela signifie dans le contexte du texte source
-4. Si pertinent, mentionnez les implications modales de ce résultat
-
-**Rappel des opérateurs modaux:**
-- `[]p` signifie "il est nécessaire que p"
-- `<>p` signifie "il est possible que p"
-
-Fournissez ensuite une conclusion générale sur ce que ces résultats nous apprennent sur les modalités présentes dans le texte source.
-
-Votre réponse doit être claire, précise et accessible à quelqu'un qui n'est pas expert en logique modale.
+Pour chaque requête : objectif modal ([] nécessité, <> possibilité), statut (ACCEPTED/REJECTED), signification, implications.
+Conclusion générale concise.
 """
 
 class ModalLogicAgent(BaseLogicAgent): 
@@ -295,25 +199,50 @@ class ModalLogicAgent(BaseLogicAgent):
         """
         Construit une base de connaissances modale textuelle à partir d'un JSON structuré,
         en respectant la syntaxe de TweetyProject pour la logique modale.
+        Pré-déclare toutes les constantes nécessaires pour éviter les erreurs TweetyProject.
         """
         kb_parts = []
 
-        # 1. Déclaration des propositions
+        # 1. Extraction de toutes les constantes utilisées dans les formules
         propositions = kb_json.get("propositions", [])
+        modal_formulas = kb_json.get("modal_formulas", [])
+        
+        # Collecter toutes les constantes uniques utilisées
+        all_constants = set(propositions)
+        
+        # Extraire les constantes supplémentaires des formules modales
+        for formula in modal_formulas:
+            # Extraire les identifiants en minuscules (constantes)
+            constants_in_formula = re.findall(r'\b[a-z_][a-z0-9_]*\b', formula)
+            all_constants.update(constants_in_formula)
+        
+        # 2. Déclaration explicite des constantes pour TweetyProject
+        if all_constants:
+            self.logger.debug(f"Déclaration des constantes modales: {sorted(all_constants)}")
+            # Déclarer chaque constante comme une constante modale
+            for const in sorted(all_constants):
+                kb_parts.append(f"constant {const}")
+            
+            # Ajouter une ligne vide pour séparer les déclarations des propositions
+            if kb_parts:
+                kb_parts.append("")
+
+        # 3. Déclaration des propositions
         if propositions:
-            # En logique modale, les propositions peuvent être déclarées comme des variables propositionnelles
-            prop_declarations = [f"prop({prop})" for prop in propositions]
+            # En logique modale, les propositions sont déclarées comme des variables propositionnelles
+            prop_declarations = [f"prop({prop})" for prop in sorted(propositions)]
             kb_parts.extend(prop_declarations)
 
-        # 2. Formules modales
-        modal_formulas = kb_json.get("modal_formulas", [])
+        # 4. Formules modales
         if modal_formulas:
             # Assurer que les formules sont bien séparées des déclarations
             if kb_parts:
                 kb_parts.append("")
             kb_parts.extend(modal_formulas)
 
-        return "\n".join(kb_parts)
+        result = "\n".join(kb_parts)
+        self.logger.debug(f"Base de connaissances modale construite:\n{result}")
+        return result
 
     def _validate_modal_kb_json(self, kb_json: Dict[str, Any]) -> Tuple[bool, str]:
         """Valide la cohérence interne du JSON généré par le LLM pour la logique modale."""
@@ -333,13 +262,73 @@ class ModalLogicAgent(BaseLogicAgent):
         return True, "Validation du JSON modale réussie."
 
     def _extract_json_block(self, text: str) -> str:
-        """Extrait le premier bloc JSON valide de la réponse du LLM."""
+        """Extrait le premier bloc JSON valide de la réponse du LLM avec gestion des troncatures."""
         start_index = text.find('{')
+        if start_index == -1:
+            self.logger.warning("Aucun début de JSON trouvé.")
+            return text
+        
+        # Tentative d'extraction du JSON complet
         end_index = text.rfind('}')
         if start_index != -1 and end_index != -1 and end_index > start_index:
-            return text[start_index:end_index + 1]
-        self.logger.warning("Impossible d'isoler un bloc JSON. Tentative de parsing de la chaîne complète.")
-        return text
+            potential_json = text[start_index:end_index + 1]
+            
+            # Test si le JSON est valide
+            try:
+                json.loads(potential_json)
+                return potential_json
+            except json.JSONDecodeError:
+                self.logger.warning("JSON potentiellement tronqué détecté. Tentative de réparation...")
+                
+        # Tentative de réparation pour JSON tronqué
+        partial_json = text[start_index:]
+        
+        # Compter les accolades ouvertes non fermées
+        open_braces = 0
+        valid_end = len(partial_json)
+        
+        for i, char in enumerate(partial_json):
+            if char == '{':
+                open_braces += 1
+            elif char == '}':
+                open_braces -= 1
+                if open_braces == 0:
+                    valid_end = i + 1
+                    break
+        
+        # Si on a des accolades non fermées, essayer de fermer proprement
+        if open_braces > 0:
+            self.logger.warning(f"JSON tronqué détecté ({open_braces} accolades non fermées). Tentative de complétion...")
+            
+            # Technique améliorée : détecter si nous sommes dans un tableau
+            if '"modal_formulas":[' in partial_json and not partial_json.rstrip().endswith(']'):
+                # Nous sommes probablement dans un tableau modal_formulas non fermé
+                if partial_json.rstrip().endswith('"'):
+                    # Ligne tronquée dans une chaîne
+                    repaired_json = partial_json[:partial_json.rfind('"')] + '"]}'
+                else:
+                    # Fermer le tableau et l'objet
+                    repaired_json = partial_json + '"]}'
+            else:
+                # Approche standard
+                repaired_json = partial_json[:valid_end] + '}' * open_braces
+            
+            try:
+                json.loads(repaired_json)
+                self.logger.info("Réparation JSON réussie.")
+                return repaired_json
+            except json.JSONDecodeError:
+                self.logger.error("Échec de la réparation JSON.")
+                # Dernière tentative : fermeture simple
+                try:
+                    simple_repair = partial_json[:valid_end] + '}' * open_braces
+                    json.loads(simple_repair)
+                    return simple_repair
+                except:
+                    pass
+        
+        self.logger.warning("Retour du JSON partiel original.")
+        return partial_json[:valid_end] if valid_end < len(partial_json) else partial_json
 
     async def text_to_belief_set(self, text: str, context: Optional[Dict[str, Any]] = None) -> Tuple[Optional[BeliefSet], str]:
         """

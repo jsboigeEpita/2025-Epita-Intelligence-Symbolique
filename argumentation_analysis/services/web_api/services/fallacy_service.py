@@ -86,23 +86,45 @@ class FallacyService:
                 'name': 'Affirmation du conséquent',
                 'description': 'Erreur logique qui consiste à affirmer le conséquent dans un raisonnement conditionnel',
                 'category': 'formal',
-                'patterns': ['si.*alors.*donc.*vrai', 'si.*alors.*donc.*correct'], 
+                'patterns': ['si.*alors.*donc.*vrai', 'si.*alors.*donc.*correct'],
                 'severity': 0.8
             },
             'denying_antecedent': {
                 'name': 'Négation de l\'antécédent',
                 'description': 'Erreur logique qui consiste à nier l\'antécédent dans un raisonnement conditionnel',
                 'category': 'formal',
-                'patterns': ['si.*pas.*alors.*pas', 'si.*pas.*donc.*pas'], 
+                'patterns': ['si.*pas.*alors.*pas', 'si.*pas.*donc.*pas'],
                 'severity': 0.8
             },
             
-            # Sophismes informels
+            # NOUVEAU : Raisonnement circulaire
+            'circular_reasoning': {
+                'name': 'Raisonnement circulaire (Pétition de principe)',
+                'description': 'Utiliser la conclusion comme prémisse de son propre argument',
+                'category': 'formal',
+                'patterns': [
+                    # Patterns corrigés pour "Dieu existe parce que la Bible le dit, et la Bible est vraie parce qu'elle est la parole de Dieu"
+                    # Patterns avec gestion des contractions françaises (parce qu' + voyelle)
+                    r'parce qu[e\'].*et.*parce qu[e\']',  # Structure basique avec contractions
+                    r'existe.*parce qu[e\'].*dit.*et.*vraie.*parce qu[e\']',  # Pattern spécifique
+                    r'(.+)\s*parce qu[e\']\s*(.+)\s*dit.*et.*\2.*vraie.*parce qu[e\']',  # Avec référence
+                    r'(.+)\s*parce qu[e\']\s*(.+).*et.*\2.*parce qu[e\']',  # A parce qu'X et X parce qu'Y
+                    # Patterns génériques pour raisonnement circulaire avec contractions
+                    r'(.+)\s*parce qu[e\']\s*(.+).*parce qu[e\'].*\1',  # A parce qu'B... parce qu'A
+                    r'vrai.*parce qu[e\'].*vrai',  # X est vrai parce qu'... est vrai
+                    r'existe.*parce qu[e\'].*existe',  # X existe parce qu'... existe
+                    r'dit.*et.*parce qu[e\'].*dit',  # ...dit et...parce qu'...dit
+                ],
+                'severity': 0.9
+            },
+            
+            # Sophismes informels - AD HOMINEM AMÉLIORÉ
             'ad_hominem': {
                 'name': 'Attaque personnelle (Ad Hominem)',
                 'description': 'Attaquer la personne plutôt que son argument',
                 'category': 'informal',
-                'patterns': [ 
+                'patterns': [
+                    # Patterns existants
                     'parce que.*auteur.*condamné',
                     'parce que.*personne.*condamné',
                     'parce que.*il.*condamné',
@@ -111,9 +133,27 @@ class FallacyService:
                     'parce que.*sa.*condamné',
                     'donc.*faux.*parce que.*personne',
                     'donc.*incorrect.*parce que.*personne',
-                    'donc.*invalide.*parce que.*personne'
+                    'donc.*invalide.*parce que.*personne',
+                    
+                    # NOUVEAUX patterns pour "Tu ne peux pas être d'accord avec cette politique économique, tu n'es qu'un étudiant sans expérience"
+                    'tu ne peux pas.+tu n\'es qu\'un',
+                    'tu ne peux pas.+tu es (juste|seulement)',
+                    'vous ne pouvez pas.+vous n\'êtes qu\'un',
+                    'vous ne pouvez pas.+vous êtes (juste|seulement)',
+                    'ne peut pas.+n\'es qu\'un',
+                    'ne peut pas.+es (juste|seulement)',
+                    # Patterns pour disqualification basée sur le statut
+                    'qu\'un (étudiant|élève|apprenti).+sans expérience',
+                    '(juste|seulement) un.+sans expérience',
+                    'tu n\'es qu\'un.+sans',
+                    'vous n\'êtes qu\'un.+sans',
+                    # Patterns génériques d'attaque de statut/crédibilité
+                    'ne peut pas.*d\'accord.+n\'es qu\'un',
+                    'opinion.*ne compte pas.+tu es',
+                    'avis.*invalide.+statut',
+                    '(incompétent|ignorant|naïf).+donc.*faux'
                 ],
-                'severity': 0.7
+                'severity': 0.8  # Augmentation de 0.7 à 0.8
             },
             'straw_man': {
                 'name': 'Homme de paille',
@@ -401,10 +441,22 @@ class FallacyService:
         fallacies = []
         text_lower = text.lower()
         
+        print(f"[DEBUG] Détection patterns - Texte: '{text}'")
+        print(f"[DEBUG] Texte normalisé: '{text_lower}'")
+        print(f"[DEBUG] Nombre de patterns dans fallacy_patterns: {len(self.fallacy_patterns)}")
+        print(f"[DEBUG] Nombre de patterns dans fallacies: {len(self.fallacies)}")
+        
         try:
-            for fallacy_type, fallacy_info in self.fallacy_patterns.items():
-                for pattern in fallacy_info['patterns']:
+            # CORRECTION: Utiliser self.fallacies au lieu de self.fallacy_patterns
+            patterns_source = self.fallacies if hasattr(self, 'fallacies') and self.fallacies else self.fallacy_patterns
+            print(f"[DEBUG] Source utilisée: {'self.fallacies' if patterns_source is self.fallacies else 'self.fallacy_patterns'}")
+            
+            for fallacy_type, fallacy_info in patterns_source.items():
+                print(f"[DEBUG] Test sophisme: {fallacy_type}")
+                for i, pattern in enumerate(fallacy_info['patterns']):
+                    print(f"[DEBUG] Test pattern {i+1}: '{pattern}'")
                     if self._pattern_matches(pattern, text_lower):
+                        print(f"[DEBUG] MATCH trouvé pour {fallacy_type} avec pattern: {pattern}")
                         position = text_lower.find(pattern.split('.*')[0] if '.*' in pattern else pattern)
                         
                         fallacy = FallacyDetection(
@@ -418,20 +470,25 @@ class FallacyService:
                             explanation=f"Pattern détecté: {pattern}"
                         )
                         fallacies.append(fallacy)
-                        break 
+                        print(f"[DEBUG] Sophisme ajouté: {fallacy_type}")
+                        break
+                    else:
+                        print(f"[DEBUG] Pas de match pour pattern {i+1}")
         
         except Exception as e:
+            print(f"[DEBUG] Erreur détection patterns: {e}")
             self.logger.error(f"Erreur détection patterns: {e}")
         
+        print(f"[DEBUG] Total sophismes détectés: {len(fallacies)}")
         return fallacies
     
     def _pattern_matches(self, pattern: str, text: str) -> bool:
-        """Vérifie si un pattern (simplifié) correspond à un texte (insensible à la casse).
+        """Vérifie si un pattern regex correspond à un texte (insensible à la casse).
 
-        Tente une recherche regex après avoir remplacé '.*' par '.*?'.
+        Traite les patterns comme des expressions régulières complètes.
         En cas d'échec de la regex, effectue une simple recherche de sous-chaîne.
 
-        :param pattern: Le pattern à rechercher (peut contenir '.*').
+        :param pattern: Le pattern regex à rechercher.
         :type pattern: str
         :param text: Le texte dans lequel rechercher.
         :type text: str
@@ -440,11 +497,24 @@ class FallacyService:
         """
         import re
         
+        print(f"[DEBUG] Pattern à tester: '{pattern}'")
+        print(f"[DEBUG] Texte à analyser: '{text}'")
+        
         try:
-            regex_pattern = pattern.replace('.*', r'.*?')
-            return bool(re.search(regex_pattern, text, re.IGNORECASE))
-        except Exception:
-            return pattern.replace('.*', '') in text
+            # Traiter le pattern comme une regex complète
+            match = re.search(pattern, text, re.IGNORECASE | re.DOTALL)
+            result = bool(match)
+            print(f"[DEBUG] Résultat regex: {result}")
+            if match:
+                print(f"[DEBUG] Match trouvé: '{match.group(0)}'")
+            return result
+        except Exception as e:
+            print(f"[DEBUG] Erreur regex: {e}, fallback vers recherche sous-chaîne")
+            # Fallback: recherche de sous-chaîne simple (sans regex)
+            cleaned_pattern = re.sub(r'[\\()\[\]{}.*+?^$|]', '', pattern)
+            result = cleaned_pattern.lower() in text.lower()
+            print(f"[DEBUG] Résultat fallback: {result}")
+            return result
     
     def _extract_context(self, text: str, position: int, context_size: int = 50) -> Optional[str]:
         """Extrait une portion de texte (contexte) autour d'une position donnée.
