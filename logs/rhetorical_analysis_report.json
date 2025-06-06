@@ -1,7 +1,7 @@
 {
     "metadata": {
-        "source_file": "C:\\Users\\MYIA\\AppData\\Local\\Temp\\tmpzh1lx2qi.txt",
-        "timestamp": "2025-06-06T16:27:25.336829",
+        "source_file": "C:\\Users\\MYIA\\AppData\\Local\\Temp\\tmpzoex5guu.txt",
+        "timestamp": "2025-06-06T16:48:11.743484",
         "demo_version": "1.2.0"
     },
     "informal_analysis": {
@@ -60,10 +60,10 @@
         "status": "Success",
         "belief_set_summary": {
             "is_consistent": false,
-            "details": "Error during FOL consistency check: No matching overloads found for constructor org.tweetyproject.logics.fol.syntax.FolBeliefSet(org.tweetyproject.logics.fol.syntax.FolSignature), options are:\n\tpublic org.tweetyproject.logics.fol.syntax.FolBeliefSet(java.util.Collection)\n\tpublic org.tweetyproject.logics.fol.syntax.FolBeliefSet()\n"
+            "details": "Erreur inattendue lors de la vérification de la cohérence: 'FirstOrderBeliefSet' object is not subscriptable"
         },
         "belief_set": [
-            "concept = { rechauffement_climatique, mythe, hiver_froid, preuve, mesures_drastiques, catastrophe_planetaire, danger, conclusions, faits, sophismes }\nscientist = { scientifiques }\ntype(IsComplex(concept))\ntype(IsMyth(concept))\ntype(CitesAsEvidence(concept, concept))\ntype(NeedsImmediateAction(concept))\ntype(IsMotivated(scientist))\ntype(QuestionsConclusions(scientist, concept))\ntype(AnalyzesWithRigour(concept))\ntype(DeconstructsSophisms(concept))\n\n\nIsComplex(rechauffement_climatique)\nIsMyth(mythe)\nCitesAsEvidence(mythe, hiver_froid)\nNeedsImmediateAction(mesures_drastiques)\nIsMotivated(scientifiques)\nQuestionsConclusions(scientifiques, conclusions)\nforall X: (QuestionsConclusions(scientifiques, X) => AnalyzesWithRigour(faits) && DeconstructsSophisms(sophismes))"
+            "concept = { rechauffement_climatique, mythe, sujet, hivers_froids, preuve, mesures_drastiques, catastrophe_planetaire, danger, conclusions, arguments, faits, sophismes }\nscientist = { scientifiques }\ntype(IsComplex(concept))\ntype(IsMyth(concept))\ntype(CitesAsProof(concept, concept))\ntype(NeedsUrgentAction(concept))\ntype(IsFinanciallyMotivated(scientist))\ntype(CallsForAnalysis(concept, concept))\ntype(DeconstructsFallacies(concept))\n\n\nIsComplex(rechauffement_climatique)\nIsMyth(mythe)\nCitesAsProof(mythe, hivers_froids)\nNeedsUrgentAction(mesures_drastiques)\nIsFinanciallyMotivated(scientifiques)\nforall X: (IsComplex(X) => CallsForAnalysis(X, faits))\nforall Y: (CitesAsProof(mythe, Y) => IsFinanciallyMotivated(scientifiques))\nDeconstructsFallacies(sophismes)"
         ],
         "queries": []
     }
