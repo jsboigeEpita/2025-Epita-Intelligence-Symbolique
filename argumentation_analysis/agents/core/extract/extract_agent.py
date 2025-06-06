@@ -122,6 +122,10 @@ class ExtractAgent(BaseAgent):
     VALIDATE_SEMANTIC_FUNCTION_NAME: ClassVar[str] = "validate_extract_semantic"
     NATIVE_PLUGIN_NAME: ClassVar[str] = "ExtractNativePlugin"
 
+    find_similar_text_func: Optional[Callable] = None
+    extract_text_func: Optional[Callable] = None
+    _native_extract_plugin: Optional[ExtractAgentPlugin] = None
+
     def __init__(
         self,
         kernel: sk.Kernel,
@@ -148,9 +152,6 @@ class ExtractAgent(BaseAgent):
         # Fonctions helper spécifiques à cet agent
         self.find_similar_text_func = find_similar_text_func or find_similar_text
         self.extract_text_func = extract_text_func or extract_text_with_markers
-        
-        # Le plugin natif sera initialisé dans setup_agent_components
-        self._native_extract_plugin: Optional[ExtractAgentPlugin] = None
 
     def get_agent_capabilities(self) -> Dict[str, Any]:
         """Décrit les capacités principales de l'agent d'extraction.

@@ -162,3 +162,5 @@ data/extract_sources.json # Configuration UI non chiffrée
 # *.jar
 
 *.txt
+
+_temp/

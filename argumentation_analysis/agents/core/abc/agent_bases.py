@@ -150,9 +150,21 @@ class BaseAgent(Agent, ABC):
             "llm_service_id": self._llm_service_id,
             "capabilities": self.get_agent_capabilities()
         }
+    
+    async def get_response(self, *args, **kwargs):
+        """Méthode abstraite de Agent."""
+        raise NotImplementedError("get_response n'est pas implémenté dans BaseAgent.")
 
-    # Optionnel, à considérer pour une interface d'appel atomique standardisée
-    # def invoke_atomic(self, method_name: str, **kwargs) -> Any:
+    async def invoke(self, *args, **kwargs):
+        """Méthode abstraite de Agent."""
+        raise NotImplementedError("invoke n'est pas implémenté dans BaseAgent.")
+
+    async def invoke_stream(self, *args, **kwargs):
+        """Méode abstraite de Agent."""
+        raise NotImplementedError("invoke_stream n'est pas implémenté dans BaseAgent.")
+ 
+     # Optionnel, à considérer pour une interface d'appel atomique standardisée
+     # def invoke_atomic(self, method_name: str, **kwargs) -> Any:
     #     if hasattr(self, method_name) and callable(getattr(self, method_name)):
     #         method_to_call = getattr(self, method_name)
     #         # Potentiellement vérifier si la méthode est "publique" ou listée dans capabilities
