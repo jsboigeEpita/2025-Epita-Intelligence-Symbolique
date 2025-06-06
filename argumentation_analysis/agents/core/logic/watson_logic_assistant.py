@@ -1,5 +1,6 @@
 # argumentation_analysis/agents/core/logic/watson_logic_assistant.py
 import logging
+import re
 from typing import Optional, List, AsyncGenerator, ClassVar
 
 from semantic_kernel import Kernel
@@ -10,70 +11,118 @@ from .tweety_bridge import TweetyBridge
 
 # from .propositional_logic_agent import PropositionalLogicAgent # No longer inheriting
 
-WATSON_LOGIC_ASSISTANT_SYSTEM_PROMPT = """Vous êtes le Dr. John Watson, un logicien rigoureux et l'assistant de confiance de Sherlock Holmes.
-Votre rôle est de maintenir une base de connaissances formelle (BeliefSet) et d'effectuer des déductions logiques précises.
+WATSON_LOGIC_ASSISTANT_SYSTEM_PROMPT = """Vous êtes le Dr. John Watson, un logicien expert et l'assistant dévoué de Sherlock Holmes. Sherlock est le **leader** de l'enquête. Votre rôle est de le soutenir avec une rigueur logique absolue.
 
-**Votre méthode de raisonnement :**
-1.  **Analyser la demande de Sherlock** : Comprenez l'objectif de sa question.
-2.  **Construire la base de connaissances** : Utilisez les faits fournis par Sherlock pour construire le paramètre `belief_set_content`. Chaque fait doit être une proposition distincte.
-3.  **Formuler la requête** : Traduisez la question de Sherlock en une formule logique propositionnelle **syntaxiquement valide** pour le paramètre `query`.
-4.  **Exécuter et interpréter** : Utilisez `execute_query`. Ne vous contentez pas de donner le résultat brut. Expliquez ses implications pour l'enquête. Par exemple, si une hypothèse est rejetée, énoncez clairement ce que cela signifie.
-5.  **Guider et corriger** : Si une requête de Sherlock est ambiguë ou syntaxiquement incorrecte, ne vous contentez pas d'échouer. Expliquez le problème et proposez une reformulation correcte.
+**Votre protocole de travail :**
+1.  **ATTENDRE LES ORDRES** : Attendez une instruction claire de Sherlock.
+2.  **EXÉCUTER LA REQUÊTE** : Lorsqu'il vous demande une analyse logique, utilisez vos outils (`validate_formula`, `execute_query`) pour y répondre avec précision.
+3.  **RAPPORTER LES FAITS** : Présentez les résultats de votre analyse de manière concise et factuelle. Expliquez les implications logiques de vos découvertes.
+4.  **SUGGÉRER (si nécessaire)** : Si Sherlock semble bloqué ou si une incohérence logique évidente apparaît, vous pouvez proposer une suggestion de requête pour clarifier la situation. Commencez votre suggestion par "**Suggestion logique :**".
 
-**Instructions pour la syntaxe logique (TweetyProject):**
-- Les propositions atomiques sont des chaînes de caractères sans espaces (ex: `Pluie`, `LeColonelEstCoupable`).
-- **ET (AND)**: `&&`
-- **OU (OR)**: `||`
-- **NON (NOT)**: `!`
-- **IMPLIQUE (IMPLIES)**: `=>`
-- **ÉQUIVALENT (EQUIVALENT)**: `<=>`
-- **Exemple de formule valide**: `(LeColonelEstCoupable && LeLieuEstLeSalon) => !LeProfesseurEstCoupable`
+**RÈGLES STRICTES :**
+- **NE PRENEZ JAMAIS L'INITIATIVE** de l'enquête. Vous assistez, vous ne dirigez pas.
+- **NE POSEZ PAS DE QUESTIONS OUVERTES** comme "Que faisons-nous maintenant ?".
+- Votre réponse doit être une analyse logique ou une suggestion ciblée.
 
-**Outils disponibles :**
-- Valider une formule logique : `WatsonTools.validate_formula(formula: str)`
-- Exécuter une requête sur une base de connaissances : `WatsonTools.execute_query(belief_set_content: str, query: str)`
+**Format des Formules Logiques (BNF Strict) :**
+Vous devez adhérer strictement à la grammaire suivante pour toutes les formules logiques. Toute déviation entraînera un échec.
 
-Votre but est d'être un partenaire de raisonnement actif, pas seulement un calculateur. Aidez Sherlock à structurer sa pensée logiquement.
+- `FORMULA ::= PROPOSITION | "(" FORMULA ")" | FORMULA "&&" FORMULA | FORMULA "||" FORMULA | FORMULA "=>" FORMULA | FORMULA "<=>" FORMULA | "!" FORMULA`
+- `PROPOSITION` : Une séquence de caractères **SANS espaces, parenthèses ou caractères spéciaux**. Utilisez le format `CamelCase` ou `snake_case`.
 
-**Règle Impérative : Soyez proactif. Si Sherlock est incertain, proposez une requête logique pertinente pour tester une hypothèse clé. Ne vous contentez pas d'attendre des instructions.**
-"""
+- **Exemples de PROPOSITIONS VALIDES :**
+  - `ColonelMoutardeEstCoupable`
+  - `ArmeEstLeRevolver`
+  - `LieuEstLeSalon`
+
+- **Exemples de propositions NON VALIDES (NE PAS UTILISER) :**
+  - `Coupable(Colonel Moutarde)` (contient des parenthèses et des espaces)
+  - `Arme(Revolver)` (contient des parenthèses)
+  - `"Colonel Moutarde est coupable"` (contient des espaces et des guillemets)
+
+- **Exemple de FORMULE VALIDE :**
+  - `(ColonelMoutardeEstCoupable && LieuEstLeSalon) => !ArmeEstLeRevolver`
+
+**Outils disponibles (via WatsonTools) :**
+- `validate_formula(formula: str)`
+- `execute_query(belief_set_content: str, query: str)`
+
+Votre mission est de fournir à Sherlock les déductions logiques dont il a besoin pour résoudre l'affaire. Votre rigueur est la clé de son succès."""
 
 class WatsonTools:
     """
     Plugin contenant les outils logiques pour l'agent Watson.
     Ces méthodes interagissent avec TweetyBridge.
     """
-    def __init__(self):
+    def __init__(self, constants: Optional[List[str]] = None):
         self._logger = logging.getLogger(self.__class__.__name__)
         self._tweety_bridge = TweetyBridge()
+        self._constants = constants or []
         if not self._tweety_bridge.is_jvm_ready():
             self._logger.error("La JVM n'est pas prête. Les fonctionnalités de TweetyBridge pourraient ne pas fonctionner.")
+
+    def _normalize_formula(self, formula: str) -> str:
+        """Normalise une formule pour la rendre compatible avec le parser PL de Tweety."""
+        # Remplace les opérateurs logiques textuels ou non standards
+        normalized = formula.replace("&&", "&").replace("||", "|").replace("!", "not ")
+
+        # Remplace `Predicat(Argument)` par `Predicat_Argument`
+        normalized = re.sub(r'(\w+)\(([\w\s]+)\)', lambda m: m.group(1) + "_" + m.group(2).replace(" ", ""), normalized)
+        
+        # Supprime les espaces et les caractères non valides pour les propositions
+        # Garde les lettres, chiffres, underscores, et les opérateurs logiques &, |, not, (, )
+        # Note: les espaces dans "not " sont importants
+        parts = normalized.split()
+        sanitized_parts = []
+        for part in parts:
+            if part.lower() == "not":
+                sanitized_parts.append("not")
+            else:
+                # Supprime tout ce qui n'est pas un caractère de mot, ou un opérateur valide
+                sanitized_part = re.sub(r'[^\w&|()~]', '', part)
+                sanitized_parts.append(sanitized_part)
+        
+        normalized = " ".join(sanitized_parts)
+        # Fusionne "not" avec le mot suivant
+        normalized = normalized.replace("not ", "not")
+
+        # Supprime les espaces autour des opérateurs pour être sûr
+        normalized = re.sub(r'\s*([&|()~])\s*', r'\1', normalized)
+
+        self._logger.debug(f"Formule normalisée: de '{formula}' à '{normalized}'")
+        return normalized
 
     @kernel_function(name="validate_formula", description="Valide la syntaxe d'une formule logique propositionnelle.")
     def validate_formula(self, formula: str) -> bool:
         self._logger.debug(f"Validation de la formule PL: '{formula}'")
+        normalized_formula = self._normalize_formula(formula)
         try:
-            is_valid, message = self._tweety_bridge.validate_formula(formula_string=formula)
+            # Utilise les constantes stockées lors de l'initialisation
+            is_valid, message = self._tweety_bridge.validate_formula(formula_string=normalized_formula, constants=self._constants)
             if not is_valid:
-                self._logger.warning(f"Formule PL invalide: '{formula}'. Message: {message}")
+                self._logger.warning(f"Formule PL invalide: '{normalized_formula}'. Message: {message}")
             return is_valid
         except Exception as e:
-            self._logger.error(f"Erreur lors de la validation de la formule PL '{formula}': {e}", exc_info=True)
+            self._logger.error(f"Erreur lors de la validation de la formule PL '{normalized_formula}': {e}", exc_info=True)
             return False
 
     @kernel_function(name="execute_query", description="Exécute une requête logique sur une base de connaissances.")
     def execute_query(self, belief_set_content: str, query: str) -> str:
         self._logger.info(f"Exécution de la requête PL: '{query}' sur le BeliefSet.")
+        normalized_query = self._normalize_formula(query)
+        normalized_belief_set = self._normalize_formula(belief_set_content)
         try:
-            is_valid, validation_message = self._tweety_bridge.validate_formula(formula_string=query)
+            # Utilise les constantes stockées lors de l'initialisation
+            is_valid, validation_message = self._tweety_bridge.validate_formula(formula_string=normalized_query, constants=self._constants)
             if not is_valid:
-                msg = f"Requête invalide: {query}. Raison: {validation_message}"
+                msg = f"Requête invalide: {normalized_query}. Raison: {validation_message}"
                 self._logger.error(msg)
                 return f"ERREUR: {msg}"
 
             is_entailed, raw_output_str = self._tweety_bridge.perform_pl_query(
-                belief_set_content=belief_set_content,
-                query_string=query
+                belief_set_content=normalized_belief_set,
+                query_string=normalized_query,
+                constants=self._constants
             )
             
             if is_entailed is None:
@@ -82,7 +131,7 @@ class WatsonTools:
 
             return f"Résultat de l'inférence: {is_entailed}. {raw_output_str}"
         except Exception as e:
-            error_msg = f"Erreur lors de l'exécution de la requête PL '{query}': {str(e)}"
+            error_msg = f"Erreur lors de l'exécution de la requête PL '{normalized_query}': {str(e)}"
             self._logger.error(error_msg, exc_info=True)
             return f"ERREUR: {error_msg}"
 
@@ -94,15 +143,16 @@ class WatsonLogicAssistant(ChatCompletionAgent):
     pour interagir avec la logique propositionnelle via TweetyBridge.
     """
 
-    def __init__(self, kernel: Kernel, agent_name: str = "Watson", **kwargs):
+    def __init__(self, kernel: Kernel, agent_name: str = "Watson", constants: Optional[List[str]] = None, **kwargs):
         """
         Initialise une instance de WatsonLogicAssistant.
 
         Args:
             kernel: Le kernel Semantic Kernel à utiliser.
             agent_name: Le nom de l'agent.
+            constants: Une liste optionnelle de constantes logiques à utiliser.
         """
-        watson_tools = WatsonTools()
+        watson_tools = WatsonTools(constants=constants)
         
         plugins = kwargs.pop("plugins", [])
         plugins.append(watson_tools)

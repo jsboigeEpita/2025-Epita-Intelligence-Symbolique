@@ -67,17 +67,13 @@ class PropositionalLogicAgent(BaseLogicAgent):
         :type system_prompt: Optional[str]
         """
         actual_system_prompt = system_prompt if system_prompt is not None else PL_AGENT_INSTRUCTIONS
+        logger.info(f"DEBUG: Initializing PropositionalLogicAgent with name: {agent_name}")
         super().__init__(kernel,
                          agent_name=agent_name,
                          logic_type_name="PL",
                          system_prompt=actual_system_prompt)
         self._llm_service_id = service_id
-        
-        # Initialiser TweetyBridge ici pour qu'il soit toujours disponible après l'instanciation
-        self._tweety_bridge = TweetyBridge()
-        self.logger.info(f"TweetyBridge initialisé directement dans PropositionalLogicAgent.__init__ pour {self.name}. JVM prête: {self._tweety_bridge.is_jvm_ready()}")
-        if not self._tweety_bridge.is_jvm_ready():
-            self.logger.error("La JVM n'est pas prête. Les fonctionnalités de TweetyBridge pourraient ne pas fonctionner.")
+        self._tweety_bridge = None  # Initialiser à None
 
     def get_agent_capabilities(self) -> Dict[str, Any]:
         """
@@ -107,16 +103,13 @@ class PropositionalLogicAgent(BaseLogicAgent):
         """
         super().setup_agent_components(llm_service_id)
         self.logger.info(f"Configuration des composants sémantiques pour {self.name}...")
-        # _tweety_bridge est maintenant initialisé dans __init__
-
-        # Vérification supplémentaire de la JVM ici si nécessaire, bien que déjà faite dans __init__
-        if not hasattr(self, '_tweety_bridge') or not self._tweety_bridge:
-            self.logger.error(f"TweetyBridge non initialisé avant setup_agent_components pour {self.name}. Tentative d'initialisation tardive.")
-            self._tweety_bridge = TweetyBridge() # Fallback, ne devrait pas arriver si __init__ est correct
+        
+        # Initialiser TweetyBridge ici
+        if not self._tweety_bridge:
+            self._tweety_bridge = TweetyBridge()
+            self.logger.info(f"TweetyBridge initialisé dans setup_agent_components pour {self.name}. JVM prête: {self._tweety_bridge.is_jvm_ready()}")
             if not self._tweety_bridge.is_jvm_ready():
-                 self.logger.error("La JVM n'est toujours pas prête après initialisation tardive.")
-        elif not self._tweety_bridge.is_jvm_ready():
-             self.logger.warning(f"La JVM pour TweetyBridge de {self.name} n'est pas prête au moment de setup_agent_components (déjà loggué par __init__).")
+                self.logger.error("La JVM n'est pas prête. Les fonctionnalités de TweetyBridge pourraient ne pas fonctionner.")
 
         prompt_execution_settings = None
         if self._llm_service_id:
@@ -190,7 +183,7 @@ class PropositionalLogicAgent(BaseLogicAgent):
                 self.logger.error("La conversion a produit un ensemble de croyances vide.") 
                 return None, "La conversion a produit un ensemble de croyances vide."
             
-            is_valid, validation_msg = self._tweety_bridge.validate_belief_set(belief_set_str=belief_set_content) # paramètre nommé pour correspondre à TweetyBridge
+            is_valid, validation_msg = self._tweety_bridge.validate_belief_set(belief_set_string=belief_set_content)
             if not is_valid:
                 self.logger.error(f"Ensemble de croyances invalide: {validation_msg}")
                 return None, f"Ensemble de croyances invalide: {validation_msg}"
@@ -379,13 +372,22 @@ class PropositionalLogicAgent(BaseLogicAgent):
 
     def is_consistent(self, belief_set: BeliefSet) -> Tuple[bool, str]:
         """
-        Vérifie si un ensemble de croyances PL est cohérent.
+        Vérifie si un ensemble de croyances propositionnel est cohérent.
 
         :param belief_set: L'ensemble de croyances à vérifier.
         :return: Un tuple (bool, str) indiquant la cohérence et un message.
         """
         self.logger.info(f"Vérification de la cohérence pour l'agent {self.name}")
-        return self._tweety_bridge.is_pl_kb_consistent(belief_set.content)
+        try:
+            # La cohérence est vérifiée par le bridge qui appelle le handler approprié.
+            is_consistent, message = self.tweety_bridge.is_pl_kb_consistent(belief_set.content)
+            if not is_consistent:
+                self.logger.warning(f"Ensemble de croyances PL jugé incohérent par Tweety: {message}")
+            return is_consistent, message
+        except Exception as e:
+            error_msg = f"Erreur inattendue lors de la vérification de la cohérence PL: {e}"
+            self.logger.error(error_msg, exc_info=True)
+            return False, error_msg
 
     async def get_response(
         self,

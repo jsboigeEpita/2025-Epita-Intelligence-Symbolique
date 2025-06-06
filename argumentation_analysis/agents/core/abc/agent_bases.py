@@ -34,7 +34,7 @@ class BaseAgent(Agent):
         _system_prompt (Optional[str]): Le prompt système global pour l'agent.
     """
     _kernel: 'Kernel'  # Utilisation de guillemets pour forward reference si Kernel n'est pas encore importé
-    # _agent_name: str # Déjà dans Agent
+    _agent_name: str
     _logger: logging.Logger
     _llm_service_id: Optional[str]
     # _system_prompt: Optional[str] # Déjà dans Agent as instructions
@@ -70,7 +70,7 @@ class BaseAgent(Agent):
         :return: Le nom de l'agent.
         :rtype: str
         """
-        return self.name
+        return self._agent_name
 
     @property
     def sk_kernel(self) -> 'Kernel':

@@ -10,34 +10,30 @@ from semantic_kernel.functions import kernel_function
 # from .pm_agent import ProjectManagerAgent # No longer inheriting
 # from .pm_definitions import PM_INSTRUCTIONS # Remplacé par le prompt spécifique
 
-SHERLOCK_ENQUETE_AGENT_SYSTEM_PROMPT = """Vous êtes Sherlock Holmes, un détective consultant de renommée mondiale. Votre mission est de résoudre l'enquête en cours décrite dans l'état partagé.
+SHERLOCK_ENQUETE_AGENT_SYSTEM_PROMPT = """Vous êtes Sherlock Holmes, le détective consultant. Votre objectif est de résoudre une affaire de meurtre dans le Manoir Tudor en utilisant la logique et la déduction.
 
-**Votre méthode d'enquête :**
-1.  **Analyser l'état** : Utilisez `get_case_description`, `get_identified_elements`, et `get_hypotheses` pour comprendre la situation.
-2.  **Synthétiser** : Résumez les informations connues et l'état actuel de l'enquête pour vous-même.
-3.  **Décider de la prochaine action** : Sur la base de votre synthèse, choisissez UNE action concrète et décisive. N'hésitez pas.
-4.  **Agir** : Exécutez l'action choisie en utilisant un outil.
-5.  **Conclure** : Lorsque les preuves sont suffisantes, utilisez `propose_final_solution`.
+**STRATÉGIE D'ENQUÊTE (CLUEDO) :**
 
-**Règle Impérative : Ne demandez jamais "Que dois-je faire maintenant ?" ou des questions similaires. Analysez l'état et agissez. Proposez toujours une action concrète.**
+Votre méthode principale est la **suggestion et réfutation**. Vous devez itérer pour éliminer les possibilités.
 
-**Interaction avec les outils :**
-Utilisez l'agent WatsonLogicAssistant pour effectuer des déductions logiques.
-Pour interagir avec l'état de l'enquête (géré par StateManagerPlugin), utilisez les fonctions disponibles dans le plugin 'SherlockTools':
-- Lire la description du cas : `SherlockTools.get_case_description()`
-- Consulter les éléments identifiés : `SherlockTools.get_identified_elements()`
-- Consulter les hypothèses actuelles : `SherlockTools.get_hypotheses()`
-- Ajouter une nouvelle hypothèse : `SherlockTools.add_hypothesis(text: str, confidence_score: float)`
-- Mettre à jour une hypothèse : `SherlockTools.update_hypothesis(hypothesis_id: str, new_text: str, new_confidence: float)`
-- Demander une déduction à Watson : `SherlockTools.query_watson(logical_query: str, belief_set_id: str)` (Watson mettra à jour l'état avec sa réponse)
-- Consulter le log des requêtes à Watson : `SherlockTools.get_query_log()`
-- Marquer une tâche comme terminée : `SherlockTools.complete_task(task_id: str)`
-- Ajouter une nouvelle tâche : `SherlockTools.add_task(description: str, assignee: str)`
-- Consulter les tâches : `SherlockTools.get_tasks()`
-- Proposer une solution finale : `SherlockTools.propose_final_solution(solution_details: dict)`
+1.  **FAIRE UNE SUGGESTION** : À chaque tour, utilisez l'outil `faire_suggestion(suspect: str, arme: str, lieu: str)`. C'est votre action par défaut. Choisissez une combinaison que vous n'avez pas encore testée.
+2.  **ANALYSER L'INDICE** : L'orchestrateur (simulant les autres joueurs) vous donnera un indice en retour, vous informant si l'un des éléments de votre suggestion est connu. Par exemple : "Indice : Watson possède la carte 'Poignard'".
+3.  **METTRE À JOUR VOS DÉDUCTIONS** : Utilisez cet indice pour éliminer une carte. Si vous recevez un indice, cela signifie qu'au moins une des cartes de votre suggestion n'est PAS dans l'enveloppe secrète.
+4.  **ITÉRER** : Répétez le processus avec une nouvelle suggestion pour recueillir plus d'indices et affiner vos hypothèses.
+5.  **ACCUSATION FINALE** : Lorsque vous êtes certain de la solution (vous avez éliminé toutes les autres possibilités), et seulement à ce moment-là, utilisez l'outil `propose_final_solution(solution: dict)`. Commencez votre message par "**Conclusion finale :**".
 
-Votre objectif est de parvenir à une conclusion logique et bien étayée.
-Dans le contexte d'une enquête Cluedo, vous devez identifier le coupable, l'arme et le lieu du crime."""
+**RÈGLES STRICTES :**
+- **COMMENCEZ TOUJOURS PAR UNE SUGGESTION.** N'attendez pas d'avoir toutes les informations.
+- **UTILISEZ LES INDICES.** Chaque indice est une pièce du puzzle. Mentionnez comment l'indice reçu influence votre prochaine suggestion.
+- **NE FAITES QU'UNE ACTION À LA FOIS.** Votre action principale est `faire_suggestion`.
+
+**Outils disponibles :**
+- `faire_suggestion(suspect: str, arme: str, lieu: str)`: Votre outil principal pour tester une hypothèse et obtenir un indice.
+- `propose_final_solution(solution: dict)`: À n'utiliser que pour l'accusation finale. Le dictionnaire doit contenir 'suspect', 'arme', et 'lieu'.
+- `get_case_description()`: Pour obtenir un rappel des éléments du jeu (suspects, armes, lieux).
+
+Prenez les choses en main, détective. Le jeu a commencé.
+"""
 
 
 class SherlockTools:
@@ -78,6 +74,43 @@ class SherlockTools:
         except Exception as e:
             self._logger.error(f"Erreur lors de l'ajout de l'hypothèse: {e}")
             return f"Erreur lors de l'ajout de l'hypothèse: {e}"
+
+    @kernel_function(name="propose_final_solution", description="Propose une solution finale à l'enquête.")
+    async def propose_final_solution(self, solution: Any) -> str:
+        import json
+        self._logger.info(f"Tentative de proposition de la solution finale: {solution} (type: {type(solution)})")
+        
+        parsed_solution = None
+        if isinstance(solution, str):
+            try:
+                parsed_solution = json.loads(solution)
+                self._logger.info(f"La solution était une chaîne, parsée en dictionnaire: {parsed_solution}")
+            except json.JSONDecodeError:
+                error_msg = f"Erreur: la solution fournie est une chaîne de caractères mal formatée: {solution}"
+                self._logger.error(error_msg)
+                return error_msg
+        elif isinstance(solution, dict):
+            parsed_solution = solution
+        else:
+            error_msg = f"Erreur: type de solution non supporté ({type(solution)}). Un dictionnaire ou une chaîne JSON est attendu."
+            self._logger.error(error_msg)
+            return error_msg
+
+        if not parsed_solution:
+            return "Erreur: La solution n'a pas pu être interprétée."
+
+        try:
+            await self._kernel.invoke(
+                plugin_name="EnqueteStatePlugin",
+                function_name="propose_final_solution",
+                solution=parsed_solution
+            )
+            success_msg = f"Solution finale proposée avec succès: {parsed_solution}"
+            self._logger.info(success_msg)
+            return success_msg
+        except Exception as e:
+            self._logger.error(f"Erreur lors de l'invocation de la fonction du kernel 'propose_final_solution': {e}", exc_info=True)
+            return f"Erreur lors de la proposition de la solution finale: {e}"
 
 
 class SherlockEnqueteAgent(ChatCompletionAgent):
