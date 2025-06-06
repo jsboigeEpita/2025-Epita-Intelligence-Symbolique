@@ -43,5 +43,7 @@ dependencies:
   - markdown # Ajouté pour corriger ModuleNotFoundError
   - pip:
     - Flask-CORS # Spécifique, souvent via pip
-    - semantic-kernel==1.29.0 # Version spécifique
+    - semantic-kernel==1.32.2 # Version spécifique
     - markdown
+    - playwright
+    - pytest-playwright
