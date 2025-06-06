@@ -70,3 +70,9 @@ pytest_hierarchical_full_v4.txt
 scripts/debug_jpype_classpath.py
 
 argumentation_analysis/text_cache/
+
+# Documentation généré par le dossier documentation_system/
+generated_docs/
+knowledge_map.html
+knowledge_summary.json
+project_analysis.json
