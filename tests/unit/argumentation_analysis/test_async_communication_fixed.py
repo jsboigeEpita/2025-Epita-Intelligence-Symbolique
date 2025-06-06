@@ -15,6 +15,7 @@ import time
 import uuid
 import logging
 from unittest.mock import MagicMock, patch
+import pytest
 
 from argumentation_analysis.core.communication.message import (
     Message, MessageType, MessagePriority, AgentLevel
@@ -38,10 +39,11 @@ logging.basicConfig(level=logging.INFO,
 logger = logging.getLogger("AsyncTests")
 
 
-class TestAsyncCommunicationFixed(unittest.IsolatedAsyncioTestCase):
+class TestAsyncCommunicationFixed(unittest.TestCase):
     """Tests d'intégration pour la communication asynchrone avec des corrections."""
     
-    async def asyncSetUp(self):
+    @pytest.fixture(autouse=True)
+    async def setup(self):
         """Initialisation asynchrone avant chaque test."""
         logger.info("Setting up test environment")
         
@@ -69,8 +71,14 @@ class TestAsyncCommunicationFixed(unittest.IsolatedAsyncioTestCase):
         self.tactical_adapter2 = TacticalAdapter("tactical-agent-2", self.middleware)
         
         logger.info("Test environment setup complete")
+        
+        # Yield pour que le test s'exécute
+        yield
+        
+        # Code de teardown
+        await self._teardown()
     
-    async def asyncTearDown(self):
+    async def _teardown(self):
         """Nettoyage après chaque test."""
         logger.info("Tearing down test environment")
         
@@ -82,6 +90,7 @@ class TestAsyncCommunicationFixed(unittest.IsolatedAsyncioTestCase):
         
         logger.info("Test environment teardown complete")
     
+    @pytest.mark.asyncio
     async def test_async_request_response(self):
         """Test de la communication asynchrone par requête-réponse."""
         logger.info("Starting test_async_request_response")
@@ -196,6 +205,7 @@ class TestAsyncCommunicationFixed(unittest.IsolatedAsyncioTestCase):
         
         logger.info("test_async_request_response completed successfully")
     
+    @pytest.mark.asyncio
     async def test_async_parallel_requests(self):
         """Test de l'envoi parallèle de requêtes asynchrones."""
         logger.info("Starting test_async_parallel_requests")
@@ -324,7 +334,3 @@ class TestAsyncCommunicationFixed(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(response["index"], i)
         
         logger.info("test_async_parallel_requests completed successfully")
-
-
-if __name__ == "__main__":
-    unittest.main()
