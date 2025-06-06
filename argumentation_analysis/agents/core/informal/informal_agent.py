@@ -124,7 +124,7 @@ class InformalAnalysisAgent(BaseAgent):
         # Si le system_prompt fait référence à "InformalAnalyzer", il faut utiliser ce nom.
         # D'après INFORMAL_AGENT_INSTRUCTIONS, le plugin est appelé "InformalAnalyzer"
         native_plugin_name = "InformalAnalyzer"
-        self.sk_kernel.add_plugin(informal_plugin_instance, plugin_name=native_plugin_name)
+        self.kernel.add_plugin(informal_plugin_instance, plugin_name=native_plugin_name)
         self.logger.info(f"Plugin natif '{native_plugin_name}' enregistré dans le kernel.")
 
         # 2. Enregistrement des Fonctions Sémantiques
@@ -134,13 +134,13 @@ class InformalAnalysisAgent(BaseAgent):
         
         # Récupérer les settings d'exécution par défaut pour le service LLM spécifié
         try:
-            execution_settings = self.sk_kernel.get_prompt_execution_settings_from_service_id(llm_service_id)
+            execution_settings = self.kernel.get_prompt_execution_settings_from_service_id(llm_service_id)
         except Exception as e:
             self.logger.warning(f"Impossible de récupérer les settings LLM pour {llm_service_id}: {e}. Utilisation des settings par défaut.")
             execution_settings = None
 
         try:
-            self.sk_kernel.add_function(
+            self.kernel.add_function(
                 prompt=prompt_identify_args_v8,
                 plugin_name=native_plugin_name, # Cohérent avec les appels attendus
                 function_name="semantic_IdentifyArguments",
@@ -149,7 +149,7 @@ class InformalAnalysisAgent(BaseAgent):
             )
             self.logger.info(f"Fonction sémantique '{native_plugin_name}.semantic_IdentifyArguments' enregistrée.")
 
-            self.sk_kernel.add_function(
+            self.kernel.add_function(
                 prompt=prompt_analyze_fallacies_v2,
                 plugin_name=native_plugin_name,
                 function_name="semantic_AnalyzeFallacies",
@@ -158,7 +158,7 @@ class InformalAnalysisAgent(BaseAgent):
             )
             self.logger.info(f"Fonction sémantique '{native_plugin_name}.semantic_AnalyzeFallacies' enregistrée.")
 
-            self.sk_kernel.add_function(
+            self.kernel.add_function(
                 prompt=prompt_justify_fallacy_attribution_v1,
                 plugin_name=native_plugin_name,
                 function_name="semantic_JustifyFallacyAttribution",
@@ -189,7 +189,7 @@ class InformalAnalysisAgent(BaseAgent):
         self.logger.info(f"Analyse sémantique des sophismes pour un texte de {len(text)} caractères...")
         try:
             arguments = KernelArguments(input=text)
-            result = await self.sk_kernel.invoke(
+            result = await self.kernel.invoke(
                 plugin_name="InformalAnalyzer", # Doit correspondre au nom utilisé dans setup_agent_components
                 function_name="semantic_AnalyzeFallacies",
                 arguments=arguments
@@ -283,7 +283,7 @@ class InformalAnalysisAgent(BaseAgent):
         self.logger.info(f"Identification sémantique des arguments pour un texte de {len(text)} caractères...")
         try:
             arguments = KernelArguments(input=text)
-            result = await self.sk_kernel.invoke(
+            result = await self.kernel.invoke(
                 plugin_name="InformalAnalyzer", # Doit correspondre au nom utilisé dans setup_agent_components
                 function_name="semantic_IdentifyArguments",
                 arguments=arguments
@@ -412,7 +412,7 @@ class InformalAnalysisAgent(BaseAgent):
         self.logger.info(f"Exploration de la hiérarchie des sophismes (natif) depuis PK {current_pk}...")
         try:
             arguments = KernelArguments(current_pk_str=str(current_pk), max_children=max_children)
-            result = await self.sk_kernel.invoke(
+            result = await self.kernel.invoke(
                 plugin_name="InformalAnalyzer", # Doit correspondre au nom utilisé dans setup_agent_components
                 function_name="explore_fallacy_hierarchy", # Nom de la fonction native dans InformalAnalysisPlugin
                 arguments=arguments
@@ -441,7 +441,7 @@ class InformalAnalysisAgent(BaseAgent):
         self.logger.info(f"Récupération des détails du sophisme (natif) PK {fallacy_pk}...")
         try:
             arguments = KernelArguments(fallacy_pk_str=str(fallacy_pk))
-            result = await self.sk_kernel.invoke(
+            result = await self.kernel.invoke(
                 plugin_name="InformalAnalyzer", # Doit correspondre au nom utilisé dans setup_agent_components
                 function_name="get_fallacy_details", # Nom de la fonction native dans InformalAnalysisPlugin
                 arguments=arguments

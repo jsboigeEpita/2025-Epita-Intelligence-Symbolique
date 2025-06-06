@@ -3,12 +3,15 @@ import sys
 import logging
 from unittest.mock import MagicMock
 from typing import Optional # Ajout de l'import
+from semantic_kernel import Kernel
+
 
 # Mock pour semantic_kernel
-class MockSemanticKernel:
+class MockSemanticKernel(Kernel):
     """Mock pour semantic_kernel."""
 
     def __init__(self):
+        super().__init__()
         self.plugins = {}
 
     def add_plugin(self, plugin_instance, plugin_name):
