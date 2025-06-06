@@ -1,7 +1,7 @@
 {
     "metadata": {
-        "source_file": "C:\\Users\\MYIA\\AppData\\Local\\Temp\\tmp6cbklfkj.txt",
-        "timestamp": "2025-06-06T17:18:15.021560",
+        "source_file": "C:\\Users\\MYIA\\AppData\\Local\\Temp\\tmpb9ixsq66.txt",
+        "timestamp": "2025-06-06T18:19:48.914068",
         "demo_version": "1.2.0"
     },
     "informal_analysis": {
@@ -57,8 +57,26 @@
     },
     "formal_analysis": {
         "logic_type_used": "first_order",
-        "status": "Failed",
-        "reason": "Belief set conversion failed.",
-        "details": "Validation ou erreur de syntaxe FOL: Le prédicat 'Necessity' utilisé dans la formule 'supportsNecessity(catastrophe_planetaire)' n'est pas déclaré."
+        "status": "Success",
+        "belief_set_summary": {
+            "status": "Succès",
+            "is_consistent": true,
+            "details": "Ensemble de croyances FOL valide",
+            "formulas_validated": 5,
+            "formulas_total": 5
+        },
+        "query_generation_summary": {
+            "status": "Succès",
+            "queries_validated": 1,
+            "queries_total": 1
+        },
+        "belief_set_content": "subject = { rechauffement_climatique, mythe, hiver_froid, mesures_drastiques, catastrophe_planetaire, scientifiques, danger, conclusions, arguments, faits, sophismes }\nconcept = { complexite, urgence, motivation_financiere, rigueur }\ntype(IsComplexSubject(subject))\ntype(IsMyth(subject))\ntype(CitesAsProof(subject, subject))\ntype(NeedsDrasticMeasures(subject))\ntype(AvoidsPlanetaryCatastrophe(subject))\ntype(AlertsOnDanger(subject))\ntype(FinanciallyMotivated(subject))\ntype(AnalyzesFacts(subject))\ntype(DeconstructsSophisms(subject))\n\n\nIsComplexSubject(rechauffement_climatique)\nNeedsDrasticMeasures(mesures_drastiques)\nAvoidsPlanetaryCatastrophe(catastrophe_planetaire)\nAnalyzesFacts(faits)\nDeconstructsSophisms(sophismes)",
+        "queries": [
+            {
+                "query": "IsComplexSubject(rechauffement_climatique)",
+                "result": "Entailed",
+                "raw_output": "Tweety Result: FOL Query 'IsComplexSubject(rechauffement_climatique)' is ACCEPTED (True)."
+            }
+        ]
     }
 }

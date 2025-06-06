@@ -488,7 +488,8 @@ class FirstOrderLogicAgent(BaseLogicAgent):
             
             corrected_predicates = []
             predicates_to_correct = defs_json.get("predicates", [])
-            
+            self.logger.debug(f"Prédicats avant correction: {json.dumps(predicates_to_correct, indent=2)}")
+
             for predicate in predicates_to_correct:
                 corrected_args = []
                 # Itérer sur les arguments de chaque prédicat.
@@ -514,6 +515,7 @@ class FirstOrderLogicAgent(BaseLogicAgent):
             
             # Mettre à jour le JSON des définitions avec la liste des prédicats corrigée.
             defs_json["predicates"] = corrected_predicates
+            self.logger.debug(f"Prédicats après correction: {json.dumps(corrected_predicates, indent=2)}")
             self.logger.info("Correction des prédicats terminée.")
 
         except Exception as e:
@@ -524,8 +526,10 @@ class FirstOrderLogicAgent(BaseLogicAgent):
         # --- Étape 2: Génération des Formules ---
         self.logger.info("Étape 2: Génération des formules...")
         try:
+            definitions_for_prompt = json.dumps(defs_json, indent=2)
+            self.logger.debug(f"Prompt complet pour TextToFOLFormulas (avec définitions corrigées):\nInput: {text}\nDefinitions:\n{definitions_for_prompt}")
             formulas_result = await self.sk_kernel.plugins[self.name]["TextToFOLFormulas"].invoke(
-                self.sk_kernel, input=text, definitions=json.dumps(defs_json, indent=2)
+                self.sk_kernel, input=text, definitions=definitions_for_prompt
             )
             formulas_json_str = self._extract_json_block(str(formulas_result))
             formulas_json = json.loads(formulas_json_str)
@@ -566,7 +570,7 @@ class FirstOrderLogicAgent(BaseLogicAgent):
                 is_formula_valid = True
                 for term in terms:
                     if term not in valid_constants:
-                        self.logger.warning(f"Terme invalide '{term}' trouvé dans la formule '{formula}'. La formule sera rejetée.")
+                        self.logger.info(f"Formule rejetée: Terme invalide '{term}' trouvé dans '{formula}'.")
                         is_formula_valid = False
                         break
                 
@@ -734,6 +738,7 @@ class FirstOrderLogicAgent(BaseLogicAgent):
                 return []
 
             self.logger.info(f"{len(query_ideas)} idées de requêtes reçues du LLM.")
+            self.logger.debug(f"Idées de requêtes brutes reçues: {json.dumps(query_ideas, indent=2)}")
 
             # Étape 3: Assemblage et validation des requêtes
             valid_queries = []
@@ -743,30 +748,30 @@ class FirstOrderLogicAgent(BaseLogicAgent):
 
                 # Validation 1: Le nom du prédicat est-il une chaîne de caractères ?
                 if not isinstance(predicate_name, str):
-                    self.logger.warning(f"Idée de requête ignorée: 'predicate_name' n'est pas une chaîne -> {predicate_name}")
+                    self.logger.info(f"Idée de requête rejetée: 'predicate_name' invalide (pas une chaîne) -> {predicate_name}")
                     continue
 
                 # Validation 2: Le prédicat existe-t-il dans la KB ?
                 if predicate_name not in kb_details["predicates"]:
-                    self.logger.warning(f"Idée de requête ignorée: Le prédicat '{predicate_name}' n'existe pas dans la KB.")
+                    self.logger.info(f"Idée de requête rejetée: Prédicat inconnu '{predicate_name}'.")
                     continue
 
                 # Validation 3: Les constantes sont-elles une liste ?
                 if not isinstance(constants, list):
-                    self.logger.warning(f"Idée de requête ignorée pour '{predicate_name}': 'constants' n'est pas une liste -> {constants}")
+                    self.logger.info(f"Idée de requête rejetée pour '{predicate_name}': 'constants' n'est pas une liste -> {constants}")
                     continue
 
                 # Validation 4: Toutes les constantes existent-elles dans la KB ?
-                if not all(c in kb_details["constants"] for c in constants):
-                    invalid_consts = [c for c in constants if c not in kb_details["constants"]]
-                    self.logger.warning(f"Idée de requête ignorée pour '{predicate_name}': Constantes non valides: {invalid_consts}")
+                invalid_consts = [c for c in constants if c not in kb_details["constants"]]
+                if invalid_consts:
+                    self.logger.info(f"Idée de requête rejetée pour '{predicate_name}': Constantes inconnues: {invalid_consts}")
                     continue
 
                 # Validation 5: L'arité du prédicat correspond-elle au nombre de constantes ?
                 expected_arity = kb_details["predicates"][predicate_name]
                 actual_arity = len(constants)
                 if expected_arity != actual_arity:
-                    self.logger.warning(f"Idée de requête ignorée pour '{predicate_name}': Incohérence d'arité. Attendu: {expected_arity}, Reçu: {actual_arity}")
+                    self.logger.info(f"Idée de requête rejetée pour '{predicate_name}': Arity incorrecte. Attendu: {expected_arity}, Reçu: {actual_arity}")
                     continue
                 
                 # Si toutes les validations passent, on assemble la requête
@@ -776,12 +781,12 @@ class FirstOrderLogicAgent(BaseLogicAgent):
                 validation_result = self.tweety_bridge.validate_fol_query_with_context(belief_set.content, query_string)
                 is_valid, validation_msg = validation_result if isinstance(validation_result, tuple) else (validation_result, "")
                 if is_valid:
-                    self.logger.info(f"Requête valide assemblée: {query_string}")
+                    self.logger.info(f"Idée validée et requête assemblée: {query_string}")
                     valid_queries.append(query_string)
                 else:
-                    self.logger.warning(f"Requête assemblée '{query_string}' a échoué à la validation contextuelle de Tweety: {validation_msg}")
+                    self.logger.info(f"Idée rejetée: La requête assemblée '{query_string}' a échoué la validation de Tweety: {validation_msg}")
 
-            self.logger.info(f"Génération terminée. {len(valid_queries)} requêtes valides assemblées.")
+            self.logger.info(f"Génération terminée. {len(valid_queries)}/{len(query_ideas)} requêtes valides assemblées.")
             return valid_queries
 
         except json.JSONDecodeError as e:
