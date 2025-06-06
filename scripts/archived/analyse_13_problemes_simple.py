@@ -85,7 +85,7 @@ def analyze_specific_test_files():
     print("\n=== ANALYSE DES FICHIERS DE TESTS SPÉCIFIQUES ===")
     
     problematic_files = [
-        "tests/test_extract_agent_adapter.py",
+        "tests/unit/orchestration/hierarchical/operational/adapters/test_extract_agent_adapter.py",
         "tests/test_load_extract_definitions.py", 
         "tests/test_tactical_monitor.py",
         "tests/test_tactical_monitor_advanced.py"
@@ -165,7 +165,7 @@ def categorize_13_problems():
         'MOCK_CONFIGURATION': {
             'count': 7,
             'description': 'Problèmes de configuration des mocks',
-            'files': ['test_extract_agent_adapter.py'],
+            'files': ['tests/unit/orchestration/hierarchical/operational/adapters/test_extract_agent_adapter.py'],
             'details': [
                 'Mock ExtractAgent - Paramètres manquants dans __init__',
                 'Mock ValidationAgent - Configuration incomplète',
@@ -209,7 +209,7 @@ def generate_correction_recommendations():
         'PRIORITÉ_HAUTE': [
             {
                 'problème': 'Import Mock manquant',
-                'fichier': 'test_extract_agent_adapter.py',
+                'fichier': 'tests/unit/orchestration/hierarchical/operational/adapters/test_extract_agent_adapter.py',
                 'correction': 'Ajouter: from unittest.mock import Mock, MagicMock',
                 'impact': 'Résout 1 erreur critique'
             },
@@ -229,7 +229,7 @@ def generate_correction_recommendations():
         'PRIORITÉ_MOYENNE': [
             {
                 'problème': 'Configuration Mock ExtractAgent incomplète',
-                'fichier': 'test_extract_agent_adapter.py',
+                'fichier': 'tests/unit/orchestration/hierarchical/operational/adapters/test_extract_agent_adapter.py',
                 'correction': 'Configurer tous les paramètres __init__ requis',
                 'impact': 'Résout 3-4 échecs de tests'
             },

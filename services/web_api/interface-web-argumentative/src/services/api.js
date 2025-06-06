@@ -1,4 +1,4 @@
-const API_BASE_URL = 'http://localhost:5003';
+const API_BASE_URL = 'http://localhost:5000';
 
 // Configuration par défaut pour les requêtes
 const defaultHeaders = {
@@ -160,6 +160,23 @@ export const interpretLogicResults = async (results, context = '') => {
   return handleResponse(response);
 };
 
+// Analyse et visualisation de graphe logique
+export const analyzeLogicGraph = async (data) => {
+  const { text, options } = data;
+  const requestBody = {
+    text,
+    options: options || { layout: 'hierarchical' }
+  };
+
+  const response = await fetchWithTimeout(`${API_BASE_URL}/api/logic_graph`, {
+    method: 'POST',
+    headers: defaultHeaders,
+    body: JSON.stringify(requestBody)
+  });
+
+  return handleResponse(response);
+};
+
 // Vérification de l'état de l'API
 export const checkAPIHealth = async () => {
   const response = await fetchWithTimeout(`${API_BASE_URL}/api/health`, {
@@ -245,6 +262,7 @@ export default {
   executeLogicQuery,
   generateLogicQueries,
   interpretLogicResults,
+  analyzeLogicGraph,
   checkAPIHealth,
   getAPIEndpoints,
   testConnection,
