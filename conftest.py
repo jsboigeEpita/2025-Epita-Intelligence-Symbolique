@@ -1,3 +1,4 @@
+pytest_plugins = ["pytest_playwright"]
 print("INFO: conftest.py (RACINE): Fichier en cours de lecture par pytest.")
 
 import sys

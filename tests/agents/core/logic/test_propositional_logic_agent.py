@@ -32,6 +32,7 @@ class TestPropositionalLogicAgent:
         self.mock_tweety_bridge_instance.validate_belief_set.return_value = (True, "Ensemble de croyances valide")
         self.mock_tweety_bridge_instance.validate_formula.return_value = (True, "Formule valide")
         self.mock_tweety_bridge_instance.execute_pl_query = MagicMock(return_value=(True, "Tweety Result: Query 'a => b' is ACCEPTED (True)."))
+        self.mock_tweety_bridge_instance.is_pl_kb_consistent.return_value = (True, "Belief set is consistent")
 
         self.agent_name = "TestPLAgent"
         self.llm_service_id = "test_llm_service"
