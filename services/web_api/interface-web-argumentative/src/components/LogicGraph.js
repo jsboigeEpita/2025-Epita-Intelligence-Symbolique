@@ -13,7 +13,12 @@ function LogicGraph() {
     setGraphData(null);
     try {
       const data = await analyzeLogicGraph({ text });
-      setGraphData(data.graph);
+      // L'API retourne un LogicBeliefSetResponse avec success et belief_set
+      if (data.success && data.belief_set) {
+        setGraphData(data.belief_set);
+      } else {
+        setError('Échec de la conversion en ensemble de croyances');
+      }
     } catch (err) {
       setError(err.message || 'An error occurred while analyzing the graph.');
     } finally {
@@ -64,9 +69,23 @@ function LogicGraph() {
         {graphData && (
           // In a real application, this would render a proper graph (e.g., using D3, vis.js, or a library)
           // For testing, we'll just render a simple SVG element to prove it's present.
-          <svg data-testid="logic-graph-svg" width="100" height="100">
-            <circle cx="50" cy="50" r="40" stroke="green" strokeWidth="4" fill="yellow" />
-          </svg>
+          <div>
+            <h3>Ensemble de croyances généré:</h3>
+            <p><strong>Type:</strong> {graphData.logic_type}</p>
+            <p><strong>Contenu:</strong> {graphData.content}</p>
+            <svg data-testid="logic-graph-svg" width="200" height="100">
+              <circle cx="50" cy="50" r="40" stroke="green" strokeWidth="4" fill="yellow" />
+              <text x="120" y="30" fontFamily="Arial" fontSize="12" fill="black">
+                Logic Graph
+              </text>
+              <text x="120" y="50" fontFamily="Arial" fontSize="10" fill="black">
+                {graphData.logic_type}
+              </text>
+              <text x="120" y="70" fontFamily="Arial" fontSize="8" fill="black">
+                {graphData.content.substring(0, 20)}...
+              </text>
+            </svg>
+          </div>
         )}
       </div>
     </div>

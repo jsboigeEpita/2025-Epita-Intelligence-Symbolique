@@ -24,13 +24,35 @@ Start-Job -ScriptBlock {
     conda run -n projet-is --no-capture-output --live-stream npm start --prefix services/web_api/interface-web-argumentative
 } -Name "Frontend"
 
-# Attendre que les serveurs démarrent
-Write-Host "Attente de 30 secondes pour le démarrage des serveurs..."
-Start-Sleep -Seconds 30
+# Boucle de vérification pour les serveurs
+$max_attempts = 30
+$sleep_interval = 2 # secondes
 
-# Vérifier si les ports sont ouverts
-$backend_ok = (Test-NetConnection -ComputerName localhost -Port 5003 -WarningAction SilentlyContinue).TcpTestSucceeded
-$frontend_ok = (Test-NetConnection -ComputerName localhost -Port 3000 -WarningAction SilentlyContinue).TcpTestSucceeded
+$backend_ok = $false
+$frontend_ok = $false
+
+Write-Host "Attente du démarrage des serveurs (max $(($max_attempts * $sleep_interval)) secondes)..."
+
+foreach ($attempt in 1..$max_attempts) {
+    Write-Host "Tentative $attempt sur $max_attempts..."
+    
+    # Tester les ports
+    if (-not $backend_ok) {
+        $backend_ok = (Test-NetConnection -ComputerName localhost -Port 5003 -WarningAction SilentlyContinue).TcpTestSucceeded
+        if ($backend_ok) { Write-Host "  -> Backend sur le port 5003 est prêt." }
+    }
+    if (-not $frontend_ok) {
+        $frontend_ok = (Test-NetConnection -ComputerName localhost -Port 3000 -WarningAction SilentlyContinue).TcpTestSucceeded
+        if ($frontend_ok) { Write-Host "  -> Frontend sur le port 3000 est prêt." }
+    }
+
+    if ($backend_ok -and $frontend_ok) {
+        break
+    }
+    
+    Start-Sleep -Seconds $sleep_interval
+}
+
 
 if (-not $backend_ok) {
     Write-Error "Le serveur backend n'a pas démarré sur le port 5003."
@@ -43,6 +65,8 @@ if (-not $backend_ok) {
 
 if (-not $frontend_ok) {
     Write-Error "Le serveur frontend n'a pas démarré sur le port 3000."
+    Write-Host "Affichage des logs du job Frontend :"
+    Receive-Job -Name Frontend
     Get-Job | Stop-Job
     Get-Job | Remove-Job
     exit 1

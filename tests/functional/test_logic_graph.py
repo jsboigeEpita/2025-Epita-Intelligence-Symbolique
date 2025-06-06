@@ -47,7 +47,7 @@ def test_logic_graph_api_error(page: Page):
 
     # Intercepter l'appel API pour simuler une erreur 500
     page.route(
-        re.compile(r"/api/logic_graph"),
+        re.compile(r"/api/logic/belief-set"),
         lambda route: route.fulfill(status=500, json={"message": "Internal Server Error"})
     )
     
@@ -86,7 +86,7 @@ def test_logic_graph_reset_button(page: Page):
     graph_container = page.locator('[data-testid="logic-graph-container"]')
 
     # Générer un graphe (happy path)
-    text_input.fill("A -> B")
+    text_input.fill("A -> B; B -> C")
     submit_button.click()
     
     graph_svg = graph_container.locator("svg")

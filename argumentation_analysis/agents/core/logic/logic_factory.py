@@ -80,6 +80,8 @@ class LogicAgentFactory:
         
         except Exception as e:
             logger.error(f"Erreur lors de la création de l'agent logique de type '{logic_type}': {str(e)}", exc_info=True)
+            import traceback
+            logger.error(traceback.format_exc())
             return None
     
     @classmethod

@@ -424,7 +424,7 @@ def list_endpoints():
 
 
 @app.route('/api/logic/belief-set', methods=['POST'])
-def create_belief_set():
+async def create_belief_set():
     """
     Convertit un texte en ensemble de croyances logiques.
     
@@ -458,7 +458,7 @@ def create_belief_set():
             ).dict()), 400
         
         # Conversion du texte en ensemble de croyances
-        result = logic_service.text_to_belief_set(belief_set_request)
+        result = await logic_service.text_to_belief_set(belief_set_request)
         
         return jsonify(result.dict())
         
@@ -472,7 +472,7 @@ def create_belief_set():
 
 
 @app.route('/api/logic/query', methods=['POST'])
-def execute_logic_query():
+async def execute_logic_query():
     """
     Exécute une requête logique sur un ensemble de croyances.
     
@@ -506,7 +506,7 @@ def execute_logic_query():
             ).dict()), 400
         
         # Exécution de la requête
-        result = logic_service.execute_query(query_request)
+        result = await logic_service.execute_query(query_request)
         
         return jsonify(result.dict())
         
@@ -520,7 +520,7 @@ def execute_logic_query():
 
 
 @app.route('/api/logic/generate-queries', methods=['POST'])
-def generate_logic_queries():
+async def generate_logic_queries():
     """
     Génère des requêtes logiques pertinentes.
     
@@ -554,7 +554,7 @@ def generate_logic_queries():
             ).dict()), 400
         
         # Génération des requêtes
-        result = logic_service.generate_queries(generate_request)
+        result = await logic_service.generate_queries(generate_request)
         
         return jsonify(result.dict())
         
@@ -568,7 +568,7 @@ def generate_logic_queries():
 
 
 @app.route('/api/logic/interpret', methods=['POST'])
-def interpret_logic_results():
+async def interpret_logic_results():
     """
     Interprète les résultats de requêtes logiques.
     
@@ -632,7 +632,7 @@ def interpret_logic_results():
             ).dict()), 400
         
         # Interprétation des résultats
-        result = logic_service.interpret_results(
+        result = await logic_service.interpret_results(
             belief_set_id=belief_set_id,
             logic_type=logic_type,
             text=text,
