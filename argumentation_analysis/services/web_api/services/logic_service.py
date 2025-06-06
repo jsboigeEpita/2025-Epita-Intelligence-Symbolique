@@ -121,7 +121,9 @@ class LogicService:
         
         except Exception as e:
             self.logger.error(f"Erreur lors de la conversion: {str(e)}", exc_info=True)
-            raise ValueError(f"Erreur lors de la conversion: {str(e)}")
+            import traceback
+            tb_str = traceback.format_exc()
+            raise ValueError(f"Erreur lors de la conversion: {str(e)}\nTRACEBACK:\n{tb_str}")
         
         finally:
             processing_time = time.time() - start_time

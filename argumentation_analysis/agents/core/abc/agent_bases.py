@@ -13,14 +13,11 @@ import logging
 from semantic_kernel.agents import Agent
 from semantic_kernel import Kernel # Exemple d'importation
 
-class BeliefSet: pass # Placeholder
-
-# Supposons que TweetyBridge est importable
-# from ..logic.tweety_bridge import TweetyBridge # Exemple d'importation
-class TweetyBridge: pass # Placeholder
+from argumentation_analysis.agents.core.logic.belief_set import BeliefSet
+# from argumentation_analysis.agents.core.logic.tweety_bridge import TweetyBridge
 
 
-class BaseAgent(Agent, ABC):
+class BaseAgent(ABC):
     """
     Classe de base abstraite pour tous les agents du système.
 
@@ -55,11 +52,9 @@ class BaseAgent(Agent, ABC):
         :param description: La description optionnelle de l'agent.
         :type description: Optional[str]
         """
-        super().__init__(
-            name=agent_name,
-            description=description if description else (system_prompt if system_prompt else f"Agent {agent_name}"),
-            instructions=system_prompt if system_prompt else ""
-        )
+        self.name = agent_name
+        self.description = description if description else (system_prompt if system_prompt else f"Agent {agent_name}")
+        self.instructions = system_prompt if system_prompt else ""
         self._kernel = kernel
         self._logger = logging.getLogger(f"agent.{self.__class__.__name__}.{agent_name}")
         self._llm_service_id = None # Initialisé dans setup_agent_components
@@ -73,7 +68,7 @@ class BaseAgent(Agent, ABC):
         :return: Le nom de l'agent.
         :rtype: str
         """
-        return self._agent_name
+        return self.name
 
     @property
     def sk_kernel(self) -> 'Kernel':
@@ -329,6 +324,22 @@ class BaseLogicAgent(BaseAgent, ABC):
         """
         pass
 
+    @abstractmethod
+    def is_consistent(self, belief_set: 'BeliefSet') -> Tuple[bool, str]:
+        """
+        Vérifie si un ensemble de croyances est cohérent.
+
+        Utilise le TweetyBridge pour appeler la méthode de vérification de
+        cohérence appropriée pour la logique de l'agent.
+
+        :param belief_set: L'ensemble de croyances à vérifier.
+        :type belief_set: BeliefSet
+        :return: Un tuple contenant un booléen (True si cohérent, False sinon)
+                 et un message de détails du solveur.
+        :rtype: Tuple[bool, str]
+        """
+        pass
+ 
     # La méthode setup_agent_components de BaseAgent doit être implémentée
     # par les sous-classes concrètes (PLAgent, FOLAgent) pour enregistrer
     # leurs fonctions sémantiques spécifiques et initialiser/configurer TweetyBridge.
