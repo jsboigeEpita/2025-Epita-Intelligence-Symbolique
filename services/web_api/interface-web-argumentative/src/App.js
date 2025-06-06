@@ -1,8 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import './App.css';
 import ArgumentAnalyzer from './components/ArgumentAnalyzer';
+import ArgumentReconstructor from './components/ArgumentReconstructor';
 import FallacyDetector from './components/FallacyDetector';
 import FrameworkBuilder from './components/FrameworkBuilder';
+import LogicGraph from './components/LogicGraph';
 import ValidationForm from './components/ValidationForm';
 import { checkAPIHealth } from './services/api';
 
@@ -20,6 +22,8 @@ function App() {
   const tabs = [
     { id: 'analyzer', label: '🔍 Analyseur', component: ArgumentAnalyzer },
     { id: 'fallacies', label: '⚠️ Sophismes', component: FallacyDetector },
+    { id: 'reconstructor', label: '🔄 Reconstructeur', component: ArgumentReconstructor },
+    { id: 'logic-graph', label: '📊 Graphe Logique', component: LogicGraph },
     { id: 'validation', label: '✅ Validation', component: ValidationForm },
     { id: 'framework', label: '🏗️ Framework', component: FrameworkBuilder }
   ];
@@ -57,6 +61,11 @@ function App() {
               className={`tab-button ${activeTab === tab.id ? 'active' : ''}`}
               onClick={() => setActiveTab(tab.id)}
               disabled={apiStatus !== 'connected'}
+              data-testid={
+                tab.id === 'fallacies' ? 'fallacy-detector-tab' :
+                tab.id === 'reconstructor' ? 'reconstructor-tab' :
+                tab.id === 'logic-graph' ? 'logic-graph-tab' : undefined
+              }
             >
               {tab.label}
             </button>
