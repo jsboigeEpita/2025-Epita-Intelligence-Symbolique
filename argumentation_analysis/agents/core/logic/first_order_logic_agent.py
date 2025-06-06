@@ -17,7 +17,6 @@ import jpype
 from typing import Dict, List, Optional, Any, Tuple, AsyncGenerator
 
 from semantic_kernel import Kernel
-from semantic_kernel.agents import Agent
 from semantic_kernel.connectors.ai.chat_completion_client_base import ChatCompletionClientBase
 from semantic_kernel.contents import ChatMessageContent
 from semantic_kernel.contents.chat_history import ChatHistory
@@ -260,16 +259,17 @@ class FirstOrderLogicAgent(BaseLogicAgent):
     service: Optional[ChatCompletionClientBase] = Field(default=None, exclude=True)
     settings: Optional[Any] = Field(default=None, exclude=True) # Remplace PromptExecutionSettings
 
-    def __init__(self, kernel: Kernel, service_id: Optional[str] = None):
+    def __init__(self, kernel: Kernel, agent_name: str = "FirstOrderLogicAgent", service_id: Optional[str] = None):
         """
         Initialise une instance de `FirstOrderLogicAgent`.
 
         :param kernel: Le kernel Semantic Kernel à utiliser pour les fonctions sémantiques.
+        :param agent_name: Le nom de l'agent (par défaut "FirstOrderLogicAgent").
         :param service_id: L'ID du service LLM à utiliser.
         """
         super().__init__(
             kernel=kernel,
-            agent_name="FirstOrderLogicAgent",
+            agent_name=agent_name,
             logic_type_name="FOL",
             system_prompt=SYSTEM_PROMPT_FOL
         )

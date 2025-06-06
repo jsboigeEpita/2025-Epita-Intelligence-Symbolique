@@ -9,7 +9,7 @@ from typing import Dict, Optional, Any, Type
 
 from semantic_kernel import Kernel
 
-from .abstract_logic_agent import AbstractLogicAgent
+from ..abc.agent_bases import BaseLogicAgent
 from .propositional_logic_agent import PropositionalLogicAgent
 from .first_order_logic_agent import FirstOrderLogicAgent
 from .modal_logic_agent import ModalLogicAgent
@@ -26,14 +26,14 @@ class LogicAgentFactory:
     """
     
     # Mapping des types de logique vers les classes d'agents
-    _agent_classes: Dict[str, Type[AbstractLogicAgent]] = {
+    _agent_classes: Dict[str, Type[BaseLogicAgent]] = {
         "propositional": PropositionalLogicAgent,
         "first_order": FirstOrderLogicAgent,
         "modal": ModalLogicAgent
     }
     
     @classmethod
-    def create_agent(cls, logic_type: str, kernel: Kernel, llm_service: Optional[Any] = None) -> Optional[AbstractLogicAgent]:
+    def create_agent(cls, logic_type: str, kernel: Kernel, llm_service: Optional[Any] = None) -> Optional[BaseLogicAgent]:
         """
         Crée une instance d'un agent logique basé sur le type de logique spécifié.
 
@@ -49,9 +49,9 @@ class LogicAgentFactory:
         :param llm_service: Le service LLM optionnel à utiliser pour configurer
                             les composants de l'agent.
         :type llm_service: Optional[Any]
-        :return: Une instance de la sous-classe `AbstractLogicAgent` correspondante,
+        :return: Une instance de la sous-classe `BaseLogicAgent` correspondante,
                  ou None si le `logic_type` n'est pas supporté ou si une erreur survient.
-        :rtype: Optional[AbstractLogicAgent]
+        :rtype: Optional[BaseLogicAgent]
         """
         logger.info(f"Création d'un agent logique de type '{logic_type}'")
         logger.info(f"DEBUG: Logic type received: {logic_type}")
@@ -83,7 +83,7 @@ class LogicAgentFactory:
             return None
     
     @classmethod
-    def register_agent_class(cls, logic_type: str, agent_class: Type[AbstractLogicAgent]) -> None:
+    def register_agent_class(cls, logic_type: str, agent_class: Type[BaseLogicAgent]) -> None:
         """
         Enregistre une nouvelle classe d'agent pour un type de logique spécifique.
 
@@ -91,8 +91,8 @@ class LogicAgentFactory:
 
         :param logic_type: Le nom du type de logique (sera normalisé en minuscules et sans espaces).
         :type logic_type: str
-        :param agent_class: La classe de l'agent (doit hériter de `AbstractLogicAgent`).
-        :type agent_class: Type[AbstractLogicAgent]
+        :param agent_class: La classe de l'agent (doit hériter de `BaseLogicAgent`).
+        :type agent_class: Type[BaseLogicAgent]
         :return: None
         :rtype: None
         """
