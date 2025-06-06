@@ -149,3 +149,20 @@ Utilisez le script `run_frontend.cmd` pour démarrer le serveur React. Vous pouv
 
 L'application React s'ouvrira dans votre navigateur et communiquera avec le backend sur le port que vous avez défini dans le fichier `.env` du frontend.
 
+## Documentation
+
+Ce projet dispose d'une documentation complète organisée dans le répertoire `docs/`. Nous vous recommandons de consulter :
+
+- **[Documentation complète](docs/README.md)** - Point d'entrée principal de la documentation
+- **[Architecture du système](docs/architecture/README.md)** - Architecture hiérarchique et patterns d'orchestration
+- **[Guides d'utilisation](docs/guides/README.md)** - Tutoriels et guides pratiques
+
+### Guides d'Orchestration Agentique
+
+Le projet inclut des guides avancés sur l'orchestration d'agents intelligents :
+
+- **[Analyse des Orchestrations Sherlock/Watson](docs/architecture/analyse_orchestrations_sherlock_watson.md)** - Analyse complète des flux d'orchestration dans les conversations agentiques entre Sherlock Holmes et Dr. Watson, incluant leurs interactions, outils utilisés, et l'usage des solvers Tweety
+- **[Guide des Patterns d'Orchestration](docs/guides/GUIDE_PATTERNS_ORCHESTRATION_MODES.md)** - Guide complet des patterns d'orchestration utilisés dans le projet, incluant 5 types d'orchestration distincts avec leurs templates de communication et bonnes pratiques
+
+Ces guides sont basés sur l'analyse de sessions de développement réelles et offrent des patterns reproductibles pour l'orchestration d'agents intelligents dans des projets complexes.
+
