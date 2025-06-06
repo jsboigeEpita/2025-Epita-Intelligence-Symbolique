@@ -459,49 +459,91 @@ class FirstOrderLogicAgent(BaseLogicAgent):
         self.logger.error(f"Échec de la conversion après {max_retries} tentatives. Dernière erreur: {last_error}")
         return None, f"Échec de la conversion après {max_retries} tentatives. Dernière erreur: {last_error}"
     
+    def _validate_query(self, query: str) -> Tuple[bool, Optional[str]]:
+        """Valide une seule requête FOL et retourne le message d'erreur si invalide."""
+        is_valid, message = self.tweety_bridge.validate_fol_formula(query)
+        return is_valid, message if not is_valid else None
+
     async def generate_queries(self, text: str, belief_set: BeliefSet, context: Optional[Dict[str, Any]] = None) -> List[str]:
         """
-        Génère des requêtes logiques du premier ordre (FOL) pertinentes à partir d'un texte et d'un ensemble de croyances.
+        Génère des requêtes FOL pertinentes avec une boucle d'auto-correction.
 
-        Utilise la fonction sémantique "GenerateFOLQueries". Les requêtes générées
-        sont ensuite validées syntaxiquement.
+        Tente de générer et valider des requêtes. Si toutes les requêtes d'une
+        tentative sont invalides, il utilise les erreurs pour demander au LLM de
+        les corriger, jusqu'à un maximum de 3 tentatives.
 
         :param text: Le texte en langage naturel source.
-        :type text: str
         :param belief_set: L'ensemble de croyances FOL associé.
-        :type belief_set: BeliefSet
-        :param context: Un dictionnaire optionnel de contexte (non utilisé actuellement).
-        :type context: Optional[Dict[str, Any]]
-        :return: Une liste de chaînes de caractères, chacune étant une requête FOL valide.
-                 Retourne une liste vide en cas d'erreur.
-        :rtype: List[str]
+        :param context: Un dictionnaire optionnel de contexte.
+        :return: Une liste de requêtes FOL valides, ou une liste vide si aucune
+                 requête valide n'a pu être générée.
         """
-        self.logger.info(f"Génération de requêtes du premier ordre pour l'agent {self.name}...")
+        self.logger.info(f"Génération de requêtes FOL pour l'agent {self.name}...")
         
-        try:
-            result = await self.sk_kernel.plugins[self.name]["GenerateFOLQueries"].invoke(
-                self.sk_kernel,
-                input=text,
-                belief_set=belief_set.content # Utiliser .content
-            )
-            queries_text = str(result)
-            
-            queries = [q.strip() for q in queries_text.split('\n') if q.strip()]
-            
-            valid_queries = []
-            for query_item in queries: 
-                is_valid, _ = self.tweety_bridge.validate_fol_formula(query_item)
-                if is_valid:
-                    valid_queries.append(query_item)
-                else:
-                    self.logger.warning(f"Requête invalide ignorée: {query_item}")
-            
-            self.logger.info(f"Génération de {len(valid_queries)} requêtes valides")
-            return valid_queries
+        max_retries = 3
+        last_errors = []
         
-        except Exception as e:
-            self.logger.error(f"Erreur lors de la génération des requêtes: {str(e)}", exc_info=True)
-            return []
+        # Initialiser les arguments pour le premier appel
+        args = {
+            "input": text,
+            "belief_set": belief_set.content
+        }
+
+        for attempt in range(max_retries):
+            self.logger.info(f"Tentative de génération de requêtes {attempt + 1}/{max_retries}...")
+            
+            try:
+                result = await self.sk_kernel.plugins[self.name]["GenerateFOLQueries"].invoke(self.sk_kernel, **args)
+                queries_text = str(result)
+                
+                potential_queries = [q.strip() for q in queries_text.split('\n') if q.strip()]
+                
+                if not potential_queries:
+                    self.logger.warning("Le LLM n'a généré aucune requête. Nouvelle tentative.")
+                    args["input"] = f"La tentative précédente n'a produit aucune requête. Veuillez générer des requêtes valides basées sur le texte original:\n{text}"
+                    continue
+
+                valid_queries = []
+                invalid_queries_with_errors = []
+
+                for query in potential_queries:
+                    is_valid, error_message = self._validate_query(query)
+                    if is_valid:
+                        valid_queries.append(query)
+                    else:
+                        invalid_queries_with_errors.append(f"- Requête: `{query}`\n  Erreur: {error_message}")
+                
+                if valid_queries:
+                    self.logger.info(f"Génération de {len(valid_queries)} requêtes valides réussie.")
+                    return valid_queries
+                
+                # Si on arrive ici, toutes les requêtes étaient invalides
+                self.logger.warning(f"Toutes les {len(potential_queries)} requêtes générées sont invalides à la tentative {attempt + 1}.")
+                
+                last_errors = invalid_queries_with_errors
+                errors_str = "\n".join(last_errors)
+                
+                # Préparer le prompt pour la prochaine tentative de correction
+                correction_prompt = (
+                    f"Les requêtes précédemment générées étaient toutes syntaxiquement incorrectes. "
+                    f"Veuillez les corriger en respectant la syntaxe de la logique du premier ordre et les prédicats/sorts définis.\n\n"
+                    f"Texte original:\n{text}\n\n"
+                    f"Ensemble de croyances:\n{belief_set.content}\n\n"
+                    f"Requêtes invalides et erreurs:\n{errors_str}\n\n"
+                    f"Veuillez fournir une nouvelle liste de requêtes corrigées et valides."
+                )
+                args["input"] = correction_prompt
+
+            except Exception as e:
+                self.logger.error(f"Erreur inattendue lors de la génération des requêtes à la tentative {attempt + 1}: {e}", exc_info=True)
+                # En cas d'erreur majeure, on arrête la boucle
+                return []
+
+        self.logger.error(f"Échec de la génération de requêtes valides après {max_retries} tentatives.")
+        if last_errors:
+            self.logger.error(f"Dernières erreurs de validation:\n" + "\n".join(last_errors))
+            
+        return []
     
     def execute_query(self, belief_set: BeliefSet, query: str) -> Tuple[Optional[bool], str]:
         """
