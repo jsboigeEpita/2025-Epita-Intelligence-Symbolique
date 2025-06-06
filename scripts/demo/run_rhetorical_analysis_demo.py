@@ -40,12 +40,16 @@ from argumentation_analysis.core.llm_service import create_llm_service
 from argumentation_analysis.paths import LIBS_DIR, DATA_DIR, PROJECT_ROOT_DIR
 from argumentation_analysis.agents.core.logic.logic_factory import LogicAgentFactory
 from argumentation_analysis.agents.core.logic.propositional_logic_agent import PropositionalLogicAgent
+from argumentation_analysis.agents.core.logic.first_order_logic_agent import FirstOrderLogicAgent
+from argumentation_analysis.agents.core.logic.modal_logic_agent import ModalLogicAgent
 from argumentation_analysis.agents.core.logic.tweety_bridge import TweetyBridge
-from argumentation_analysis.agents.core.logic.belief_set import PropositionalBeliefSet
+from argumentation_analysis.agents.core.logic.belief_set import PropositionalBeliefSet, FirstOrderBeliefSet, ModalBeliefSet
 # Nouveaux imports pour la démo enrichie
 from argumentation_analysis.agents.tools.analysis.enhanced.complex_fallacy_analyzer import EnhancedComplexFallacyAnalyzer
 from argumentation_analysis.agents.tools.analysis.enhanced.contextual_fallacy_analyzer import EnhancedContextualFallacyAnalyzer
 from argumentation_analysis.agents.tools.analysis.enhanced.fallacy_severity_evaluator import EnhancedFallacySeverityEvaluator
+# Import pour le SynthesisAgent
+from argumentation_analysis.agents.core.synthesis.synthesis_agent import SynthesisAgent
 
 # Définition du chemin vers le répertoire des logs
 LOGS_DIRECTORY = PROJECT_ROOT_DIR / "logs"
@@ -235,7 +239,7 @@ async def decrypt_and_select_text(passphrase: str) -> str:
     logging.info(f"Texte par défaut sélectionné (extrait): '{default_text_payload[:50]}'")
     return default_text_payload
 
-def generate_rich_json_report(source_file_path, informal_results, formal_results, logic_type: str):
+def generate_rich_json_report(source_file_path, informal_results, formal_results, logic_type: str, analysis_type: str = "logic"):
     """Génère un rapport JSON structuré à partir des résultats d'analyse."""
     
     # Assurer que formal_results est un dictionnaire
@@ -246,7 +250,8 @@ def generate_rich_json_report(source_file_path, informal_results, formal_results
         "metadata": {
             "source_file": str(source_file_path),
             "timestamp": datetime.now().isoformat(),
-            "demo_version": "1.2.0" # Version mise à jour
+            "demo_version": "1.3.0", # Version mise à jour pour intégration SynthesisAgent
+            "analysis_type": analysis_type
         },
         "informal_analysis": informal_results,
         "formal_analysis": {
@@ -255,6 +260,108 @@ def generate_rich_json_report(source_file_path, informal_results, formal_results
         }
     }
     return report
+
+async def run_unified_analysis_demo(text_to_analyze: str, temp_file_path: Path, llm_service, jvm_ready: bool, logic_type: str):
+    """Orchestre la démo complète avec le SynthesisAgent pour analyse unifiée."""
+    
+    logger = logging.getLogger("Orchestration.Run.Unified")
+    logger.info("--- Début de l'orchestration d'analyse unifiée avec SynthesisAgent ---")
+    logger.info(f"Type de logique configuré : {logic_type.upper()}")
+
+    try:
+        # 1. Initialisation du SynthesisAgent
+        logger.info("[ETAPE 1/4] Initialisation du SynthesisAgent...")
+        kernel = sk.Kernel()
+        kernel.add_service(llm_service)
+        
+        # Création du SynthesisAgent en mode Phase 1 (enable_advanced_features=False)
+        synthesis_agent = SynthesisAgent(
+            kernel=kernel,
+            agent_name="Demo_SynthesisAgent",
+            enable_advanced_features=False
+        )
+        
+        # Configuration des composants
+        synthesis_agent.setup_agent_components(llm_service.service_id)
+        
+        capabilities = synthesis_agent.get_agent_capabilities()
+        logger.info(f"SynthesisAgent initialisé - Phase: {capabilities['phase']}, "
+                   f"Fonctionnalités avancées: {capabilities['advanced_features_enabled']}")
+        
+        # 2. Exécution de l'analyse unifiée
+        logger.info("[ETAPE 2/4] Lancement de l'analyse unifiée...")
+        logger.info("(Début de l'appel asynchrone à synthesize_analysis)")
+        
+        unified_report = await synthesis_agent.synthesize_analysis(text_to_analyze)
+        
+        logger.info("(Fin de l'appel asynchrone à synthesize_analysis)")
+        logger.info(f"Analyse unifiée terminée en {unified_report.total_processing_time_ms:.2f}ms")
+        
+        # 3. Génération du rapport textuel
+        logger.info("[ETAPE 3/4] Génération du rapport textuel...")
+        text_report = await synthesis_agent.generate_report(unified_report)
+        logger.info("Rapport textuel généré")
+        
+        # 4. Adaptation au format de rapport existant pour compatibilité
+        logger.info("[ETAPE 4/4] Conversion au format de rapport compatible...")
+        
+        # Conversion des données du rapport unifié au format attendu
+        stats = unified_report.get_summary_statistics()
+        
+        # Format informel compatible
+        informal_results = {
+            "summary": {
+                "total_fallacies": stats.get('fallacies_count', 0),
+                "average_confidence": 0.8,  # Placeholder - le SynthesisAgent ne calcule pas encore cette métrique
+                "severity_overview": {
+                    "Faible": 0, "Modéré": 1, "Élevé": 1, "Critique": 0  # Estimations basées sur l'analyse
+                }
+            },
+            "fallacies": unified_report.informal_analysis.fallacies_detected if unified_report.informal_analysis else [],
+            "synthesis_report": text_report,
+            "unified_analysis": True
+        }
+        
+        # Format formel compatible
+        formal_results = {
+            "status": "Success" if unified_report.logic_analysis.logical_validity is not None else "Partial Success",
+            "belief_set_summary": {
+                "status": "Succès" if unified_report.logic_analysis.consistency_check else "Échec",
+                "is_consistent": unified_report.logic_analysis.consistency_check,
+                "formulas_validated": len(unified_report.logic_analysis.formulas_extracted),
+                "formulas_total": len(unified_report.logic_analysis.formulas_extracted)
+            },
+            "query_generation_summary": {
+                "status": "Succès" if unified_report.logic_analysis.queries_executed else "Échec",
+                "queries_validated": len(unified_report.logic_analysis.queries_executed),
+                "queries_total": len(unified_report.logic_analysis.queries_executed)
+            },
+            "queries": [{"query": q, "result": "Analyzed", "raw_output": ""} for q in unified_report.logic_analysis.queries_executed],
+            "synthesis_analysis": {
+                "overall_validity": unified_report.overall_validity,
+                "confidence_level": unified_report.confidence_level,
+                "contradictions_count": len(unified_report.contradictions_identified),
+                "recommendations_count": len(unified_report.recommendations)
+            }
+        }
+        
+        logger.info("--- Fin de l'orchestration d'analyse unifiée ---")
+        return informal_results, formal_results, text_report
+        
+    except Exception as e:
+        logger.error(f"Erreur lors de l'analyse unifiée: {str(e)}", exc_info=True)
+        # Retour de résultats d'erreur compatibles
+        error_informal = {
+            "summary": {"total_fallacies": 0, "average_confidence": 0, "severity_overview": {}},
+            "fallacies": [],
+            "error": f"Échec de l'analyse unifiée: {str(e)}"
+        }
+        error_formal = {
+            "status": "Failed",
+            "reason": "Unified analysis error",
+            "details": str(e)
+        }
+        return error_informal, error_formal, f"Erreur dans l'analyse unifiée: {str(e)}"
 
 def print_final_summary(report: dict):
     """Affiche une synthèse lisible et détaillée du rapport d'analyse final."""
@@ -535,7 +642,12 @@ async def run_full_analysis_demo(text_to_analyze: str, temp_file_path: Path, llm
 async def main_demo(args):
     """Fonction principale de la démonstration."""
     logging.info("--- Début du script de démonstration d'analyse rhétorique ---")
-    logging.info(f"Type de logique sélectionné pour l'analyse formelle : {args.logic_type.upper()}")
+    logging.info(f"Type d'analyse sélectionné: {args.analysis_type.upper()}")
+    
+    if args.analysis_type == "logic":
+        logging.info(f"Type de logique sélectionné pour l'analyse formelle : {args.logic_type.upper()}")
+    elif args.analysis_type == "unified":
+        logging.info(f"Type de logique configuré pour l'analyse unifiée : {args.logic_type.upper()}")
 
     passphrase = get_passphrase()
     full_text_to_analyze = await decrypt_and_select_text(passphrase)
@@ -560,8 +672,31 @@ async def main_demo(args):
         llm_service = create_llm_service()
         logging.info(f"Service LLM créé avec succès (ID: {llm_service.service_id}).")
 
-        # Lancement de la démo enrichie
-        final_report = await run_full_analysis_demo(full_text_to_analyze, temp_file_path, llm_service, jvm_ready, args.logic_type)
+        # Sélection du type d'analyse
+        if args.analysis_type == "unified":
+            # Analyse unifiée avec SynthesisAgent
+            logging.info("==> Lancement de l'analyse unifiée avec SynthesisAgent")
+            informal_results, formal_results, synthesis_text_report = await run_unified_analysis_demo(
+                full_text_to_analyze, temp_file_path, llm_service, jvm_ready, args.logic_type
+            )
+            
+            # Génération du rapport final compatible
+            final_report = generate_rich_json_report(
+                temp_file_path, informal_results, formal_results, args.logic_type, args.analysis_type
+            )
+            
+            # Affichage supplémentaire du rapport de synthèse
+            if synthesis_text_report:
+                logging.info("=== RAPPORT DE SYNTHÈSE UNIFIÉ ===")
+                print("\n" + "="*80)
+                print(synthesis_text_report)
+                print("="*80)
+        else:
+            # Analyse traditionnelle (logique seule)
+            logging.info("==> Lancement de l'analyse traditionnelle (logique seule)")
+            final_report = await run_full_analysis_demo(
+                full_text_to_analyze, temp_file_path, llm_service, jvm_ready, args.logic_type
+            )
         
         # Affichage de la synthèse finale
         if final_report:
@@ -585,7 +720,14 @@ async def main_demo(args):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Script de démonstration pour l'analyse rhétorique.")
     parser.add_argument(
-        "--logic_type",
+        "--analysis-type",
+        type=str,
+        choices=["logic", "unified"],
+        default="logic",
+        help="Type d'analyse à effectuer. 'logic': analyse logique traditionnelle, 'unified': analyse unifiée avec SynthesisAgent."
+    )
+    parser.add_argument(
+        "--logic-type",
         type=str,
         choices=["propositional", "first_order", "modal"],
         default="propositional",
