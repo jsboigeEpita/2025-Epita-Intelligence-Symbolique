@@ -277,6 +277,41 @@ class EnqueteStateManagerPlugin:
             self._logger.error(f"Erreur dans propose_final_solution: {e}", exc_info=True)
             return json.dumps({"error": str(e)})
 
+    @kernel_function(description="Permet à un agent de faire une suggestion (suspect, arme, lieu) pour obtenir un indice en retour.", name="faire_suggestion")
+    def faire_suggestion(self, suspect: str, arme: str, lieu: str) -> str:
+        self._logger.info(f"Appel faire_suggestion: suspect='{suspect}', arme='{arme}', lieu='{lieu}'")
+        if not isinstance(self._state, EnqueteCluedoState):
+            return json.dumps({"error": "La méthode faire_suggestion n'est disponible que pour EnqueteCluedoState."})
+        
+        try:
+            suggestion = {"suspect": suspect, "arme": arme, "lieu": lieu}
+            self._state.suggestions_historique.append(suggestion)
+            self._logger.info(f"Suggestion enregistrée: {suggestion}")
+
+            # Logique de réfutation
+            cartes_connues_watson = []
+            for categorie in ["suspects_exclus", "armes_exclues", "lieux_exclus"]:
+                for phrase in self._state.belief_set_initial_watson.get(categorie, []):
+                    nom_carte = phrase.split(" n'est pas")[0]
+                    cartes_connues_watson.append(nom_carte)
+
+            indice_trouve = None
+            for element_suggere in suggestion.values():
+                if element_suggere in cartes_connues_watson:
+                    indice_trouve = f"Indice : L'un des éléments de votre suggestion est connu. Watson possède la carte '{element_suggere}'."
+                    break
+            
+            if indice_trouve:
+                response = {"indice": indice_trouve}
+            else:
+                response = {"indice": "Aucun des éléments de votre suggestion n'est connu par Watson. Continuez."}
+            
+            return json.dumps(response)
+
+        except Exception as e:
+            self._logger.error(f"Erreur dans faire_suggestion: {e}", exc_info=True)
+            return json.dumps({"error": str(e)})
+
 # Log de chargement du module
 module_logger = logging.getLogger(__name__)
 module_logger.debug("Module argumentation_analysis.orchestration.plugins.enquete_state_manager_plugin chargé.")
