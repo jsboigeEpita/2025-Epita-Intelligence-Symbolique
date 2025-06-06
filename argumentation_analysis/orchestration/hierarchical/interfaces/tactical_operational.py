@@ -739,9 +739,10 @@ class TacticalOperationalInterface:
         
         # Traduire en résultat tactique
         tactical_result = {
+            "task_id": task_id,
             "tactical_task_id": tactical_task_id,
             "completion_status": result.get("status", "completed"),
-            "results": self._translate_outputs(outputs),
+            RESULTS_DIR: self._translate_outputs(outputs),
             "execution_metrics": self._translate_metrics(metrics),
             "issues": self._translate_issues(issues)
         }
