@@ -1,26 +1,67 @@
-2025-06-06 16:54:40 [INFO] [Orchestration.Run.Demo] --- Début de l'orchestration de l'analyse rhétorique complète ---
-2025-06-06 16:54:40 [INFO] [Orchestration.Run.Demo] [ETAPE 1/3] Lancement de l'analyse informelle...
-2025-06-06 16:54:48 [INFO] [Orchestration.Run.Demo]  -> 1a. Identification des sophismes contextuels...
-2025-06-06 16:54:48 [INFO] [Orchestration.Run.Demo]     2 sophismes contextuels identifiés (simulé).
-2025-06-06 16:54:48 [INFO] [Orchestration.Run.Demo]  -> 1b. Analyse des sophismes complexes et composés...
-2025-06-06 16:54:48 [INFO] [Orchestration.Run.Demo]     Analyse complexe terminée (simulé).
-2025-06-06 16:54:48 [INFO] [Orchestration.Run.Demo]  -> 1c. Évaluation de la gravité des sophismes...
-2025-06-06 16:54:48 [INFO] [Orchestration.Run.Demo]     Évaluation de la gravité terminée.
-2025-06-06 16:54:48 [INFO] [Orchestration.Run.Demo] [ETAPE 1/3] Analyse informelle terminée.
-2025-06-06 16:54:48 [INFO] [Orchestration.Run.Demo] [ETAPE 2/3] Lancement de l'analyse formelle...
-2025-06-06 16:54:48 [INFO] [Orchestration.Run.Demo]  -> Initialisation de l'agent logique de type 'FIRST_ORDER'...
-2025-06-06 16:54:48 [INFO] [Orchestration.Run.Demo] Kernel Semantic Kernel créé et service LLM ajouté.
-2025-06-06 16:54:48 [INFO] [Orchestration.Run.Demo]  -> 2a. Conversion du texte en ensemble de croyances...
-2025-06-06 16:54:48 [INFO] [Orchestration.Run.Demo]     (Début de l'appel asynchrone à text_to_belief_set)
-2025-06-06 16:55:14 [INFO] [Orchestration.Run.Demo]     (Fin de l'appel asynchrone à text_to_belief_set)
-2025-06-06 16:55:14 [ERROR] [Orchestration.Run.Demo] Échec de la conversion en ensemble de croyances : Échec de la conversion après 3 tentatives. Dernière erreur: Validation ou erreur de syntaxe FOL: La constante 'faits' utilisée dans la formule 'Analyzes(faits, rigueur)' n'est pas déclarée dans les 'sorts'.
-2025-06-06 16:55:14 [INFO] [Orchestration.Run.Demo] [ETAPE 2/3] Analyse formelle terminée.
-2025-06-06 16:55:14 [INFO] [Orchestration.Run.Demo] [ETAPE 3/3] Génération du rapport JSON enrichi...
-2025-06-06 16:55:14 [INFO] [Orchestration.Run.Demo]     Rapport JSON enrichi sauvegardé avec succès dans : D:\2025-Epita-Intelligence-Symbolique-4\logs\rhetorical_analysis_report.json
-2025-06-06 16:55:14 [INFO] [Orchestration.Run.Demo] # --- DEMO: Comparaison Agents Logiques (PL Legacy vs PL Hiérarchique) ---
-2025-06-06 16:55:14 [INFO] [Orchestration.Run.Demo]  -> Comparaison: Exécution avec l'approche 'Legacy' (TweetyBridge direct)...
-2025-06-06 16:55:14 [INFO] [Orchestration.Run.Demo]     Cohérence (Legacy): True - Détails: Consistency check returned: True
-2025-06-06 16:55:14 [INFO] [Orchestration.Run.Demo]  -> Comparaison: Exécution avec l'agent hiérarchique PL...
-2025-06-06 16:55:14 [INFO] [Orchestration.Run.Demo]     Cohérence (Hiérarchique): True - Détails: Consistency check returned: True
-2025-06-06 16:55:14 [INFO] [Orchestration.Run.Demo] # --- FIN DEMO Comparaison ---
-2025-06-06 16:55:14 [INFO] [Orchestration.Run.Demo] --- Fin de l'orchestration de l'analyse ---
+2025-06-06 16:58:46 [INFO] [Orchestration.Run.Demo] --- Début de l'orchestration de l'analyse rhétorique complète ---
+2025-06-06 16:58:46 [INFO] [Orchestration.Run.Demo] [ETAPE 1/3] Lancement de l'analyse informelle...
+2025-06-06 16:58:54 [INFO] [Orchestration.Run.Demo]  -> 1a. Identification des sophismes contextuels...
+2025-06-06 16:58:54 [INFO] [Orchestration.Run.Demo]     2 sophismes contextuels identifiés (simulé).
+2025-06-06 16:58:54 [INFO] [Orchestration.Run.Demo]  -> 1b. Analyse des sophismes complexes et composés...
+2025-06-06 16:58:54 [INFO] [Orchestration.Run.Demo]     Analyse complexe terminée (simulé).
+2025-06-06 16:58:54 [INFO] [Orchestration.Run.Demo]  -> 1c. Évaluation de la gravité des sophismes...
+2025-06-06 16:58:54 [INFO] [Orchestration.Run.Demo]     Évaluation de la gravité terminée.
+2025-06-06 16:58:54 [INFO] [Orchestration.Run.Demo] [ETAPE 1/3] Analyse informelle terminée.
+2025-06-06 16:58:54 [INFO] [Orchestration.Run.Demo] [ETAPE 2/3] Lancement de l'analyse formelle...
+2025-06-06 16:58:54 [INFO] [Orchestration.Run.Demo]  -> Initialisation de l'agent logique de type 'FIRST_ORDER'...
+2025-06-06 16:58:54 [INFO] [Orchestration.Run.Demo] Kernel Semantic Kernel créé et service LLM ajouté.
+2025-06-06 16:58:55 [INFO] [Orchestration.Run.Demo]  -> 2a. Conversion du texte en ensemble de croyances...
+2025-06-06 16:58:55 [INFO] [Orchestration.Run.Demo]     (Début de l'appel asynchrone à text_to_belief_set)
+2025-06-06 16:59:01 [INFO] [Orchestration.Run.Demo]     (Fin de l'appel asynchrone à text_to_belief_set)
+2025-06-06 16:59:01 [ERROR] [Orchestration.Run.Demo] Échec de la conversion en ensemble de croyances : Validation ou erreur de syntaxe FOL: Ensemble de croyances invalide selon Tweety: Erreur de syntaxe FOL: JPype JException parsing FOL belief set: org.tweetyproject.commons.ParserException: Sort 'scientifique' has not been declared before.. Belief Set was:
+topic = { rechauffement_climatique, mythe, hiver_froid, catastrophe_planetaire, scientifique, danger, fait, sophisme }
+measure = { mesure_drastrique }
+argument = { argument }
+type(IsComplex(topic))
+type(Affirms(argument, topic))
+type(Cites(argument, topic))
+type(Supports(argument, measure))
+type(IsNecessary(measure))
+type(Alerts(scientifique, danger))
+type(IsFinanciallyMotivated(scientifique))
+type(Doubts(argument))
+type(Analyzes(argument, fact))
+type(Deconstructs(sophisme))
+
+
+IsComplex(rechauffement_climatique)
+exists Y: (Affirms(Y, mythe) && Cites(Y, hiver_froid))
+exists Z: (Supports(Z, mesure_drastrique) && IsNecessary(mesure_drastrique))
+exists X: (Alerts(X, danger) && IsFinanciallyMotivated(X) => Doubts(X))
+forall A: (Analyzes(A, fait) && Deconstructs(sophisme))
+Contenu:
+topic = { rechauffement_climatique, mythe, hiver_froid, catastrophe_planetaire, scientifique, danger, fait, sophisme }
+measure = { mesure_drastrique }
+argument = { argument }
+type(IsComplex(topic))
+type(Affirms(argument, topic))
+type(Cites(argument, topic))
+type(Supports(argument, measure))
+type(IsNecessary(measure))
+type(Alerts(scientifique, danger))
+type(IsFinanciallyMotivated(scientifique))
+type(Doubts(argument))
+type(Analyzes(argument, fact))
+type(Deconstructs(sophisme))
+
+
+IsComplex(rechauffement_climatique)
+exists Y: (Affirms(Y, mythe) && Cites(Y, hiver_froid))
+exists Z: (Supports(Z, mesure_drastrique) && IsNecessary(mesure_drastrique))
+exists X: (Alerts(X, danger) && IsFinanciallyMotivated(X) => Doubts(X))
+forall A: (Analyzes(A, fait) && Deconstructs(sophisme))
+2025-06-06 16:59:01 [INFO] [Orchestration.Run.Demo] [ETAPE 2/3] Analyse formelle terminée.
+2025-06-06 16:59:01 [INFO] [Orchestration.Run.Demo] [ETAPE 3/3] Génération du rapport JSON enrichi...
+2025-06-06 16:59:01 [INFO] [Orchestration.Run.Demo]     Rapport JSON enrichi sauvegardé avec succès dans : D:\2025-Epita-Intelligence-Symbolique-4\logs\rhetorical_analysis_report.json
+2025-06-06 16:59:01 [INFO] [Orchestration.Run.Demo] # --- DEMO: Comparaison Agents Logiques (PL Legacy vs PL Hiérarchique) ---
+2025-06-06 16:59:01 [INFO] [Orchestration.Run.Demo]  -> Comparaison: Exécution avec l'approche 'Legacy' (TweetyBridge direct)...
+2025-06-06 16:59:01 [INFO] [Orchestration.Run.Demo]     Cohérence (Legacy): True - Détails: Consistency check returned: True
+2025-06-06 16:59:01 [INFO] [Orchestration.Run.Demo]  -> Comparaison: Exécution avec l'agent hiérarchique PL...
+2025-06-06 16:59:01 [INFO] [Orchestration.Run.Demo]     Cohérence (Hiérarchique): True - Détails: Consistency check returned: True
+2025-06-06 16:59:01 [INFO] [Orchestration.Run.Demo] # --- FIN DEMO Comparaison ---
+2025-06-06 16:59:01 [INFO] [Orchestration.Run.Demo] --- Fin de l'orchestration de l'analyse ---

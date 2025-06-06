@@ -1,7 +1,7 @@
 {
     "metadata": {
-        "source_file": "C:\\Users\\MYIA\\AppData\\Local\\Temp\\tmpg471xwca.txt",
-        "timestamp": "2025-06-06T16:55:14.666794",
+        "source_file": "C:\\Users\\MYIA\\AppData\\Local\\Temp\\tmp24dd4x3m.txt",
+        "timestamp": "2025-06-06T16:59:01.482756",
         "demo_version": "1.2.0"
     },
     "informal_analysis": {
@@ -59,6 +59,6 @@
         "logic_type_used": "first_order",
         "status": "Failed",
         "reason": "Belief set conversion failed.",
-        "details": "Échec de la conversion après 3 tentatives. Dernière erreur: Validation ou erreur de syntaxe FOL: La constante 'faits' utilisée dans la formule 'Analyzes(faits, rigueur)' n'est pas déclarée dans les 'sorts'."
+        "details": "Validation ou erreur de syntaxe FOL: Ensemble de croyances invalide selon Tweety: Erreur de syntaxe FOL: JPype JException parsing FOL belief set: org.tweetyproject.commons.ParserException: Sort 'scientifique' has not been declared before.. Belief Set was:\ntopic = { rechauffement_climatique, mythe, hiver_froid, catastrophe_planetaire, scientifique, danger, fait, sophisme }\nmeasure = { mesure_drastrique }\nargument = { argument }\ntype(IsComplex(topic))\ntype(Affirms(argument, topic))\ntype(Cites(argument, topic))\ntype(Supports(argument, measure))\ntype(IsNecessary(measure))\ntype(Alerts(scientifique, danger))\ntype(IsFinanciallyMotivated(scientifique))\ntype(Doubts(argument))\ntype(Analyzes(argument, fact))\ntype(Deconstructs(sophisme))\n\n\nIsComplex(rechauffement_climatique)\nexists Y: (Affirms(Y, mythe) && Cites(Y, hiver_froid))\nexists Z: (Supports(Z, mesure_drastrique) && IsNecessary(mesure_drastrique))\nexists X: (Alerts(X, danger) && IsFinanciallyMotivated(X) => Doubts(X))\nforall A: (Analyzes(A, fait) && Deconstructs(sophisme))\nContenu:\ntopic = { rechauffement_climatique, mythe, hiver_froid, catastrophe_planetaire, scientifique, danger, fait, sophisme }\nmeasure = { mesure_drastrique }\nargument = { argument }\ntype(IsComplex(topic))\ntype(Affirms(argument, topic))\ntype(Cites(argument, topic))\ntype(Supports(argument, measure))\ntype(IsNecessary(measure))\ntype(Alerts(scientifique, danger))\ntype(IsFinanciallyMotivated(scientifique))\ntype(Doubts(argument))\ntype(Analyzes(argument, fact))\ntype(Deconstructs(sophisme))\n\n\nIsComplex(rechauffement_climatique)\nexists Y: (Affirms(Y, mythe) && Cites(Y, hiver_froid))\nexists Z: (Supports(Z, mesure_drastrique) && IsNecessary(mesure_drastrique))\nexists X: (Alerts(X, danger) && IsFinanciallyMotivated(X) => Doubts(X))\nforall A: (Analyzes(A, fait) && Deconstructs(sophisme))"
     }
 }

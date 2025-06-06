@@ -42,26 +42,18 @@ Définit le rôle et les capacités générales de l'agent pour le LLM.
 """
 
 # Prompts pour la logique du premier ordre
-PROMPT_TEXT_TO_FOL = """
-Vous êtes un expert en logique du premier ordre (FOL) et votre tâche est de traduire un texte en une base de connaissances structurée pour la bibliothèque TweetyProject.
+PROMPT_TEXT_TO_FOL_DEFS = """
+Vous êtes un expert en logique du premier ordre (FOL). Votre première tâche est d'identifier les concepts de base (sorts) et les relations (prédicats) dans un texte donné.
 
 **Format de Sortie (JSON Strict):**
-Votre sortie DOIT être un objet JSON unique contenant trois clés : `sorts`, `predicates`, et `formulas`.
+Votre sortie DOIT être un objet JSON unique contenant deux clés : `sorts` et `predicates`.
 
-1.  **`sorts`**: Un dictionnaire où chaque clé est le nom d'un type (un "sort", ex: "person", "concept") et la valeur est une liste de constantes appartenant à ce type (ex: ["socrates", "plato"]). Les noms de sorts et de constantes doivent être en minuscules et en `snake_case` (par exemple, `climate_change`).
+1.  **`sorts`**: Un dictionnaire où chaque clé est le nom d'un type (un "sort", ex: "person", "concept") et la valeur est une liste de constantes appartenant à ce type (ex: ["socrates", "plato"]). Les noms de sorts et de constantes doivent être en minuscules et en `snake_case`.
 2.  **`predicates`**: Une liste d'objets, où chaque objet représente un prédicat et a deux clés :
     *   `name`: Le nom du prédicat (commençant par une majuscule, ex: "IsMan").
     *   `args`: Une liste des noms de sorts pour les arguments du prédicat (ex: ["person"]). Si le prédicat n'a pas d'arguments (arité 0), la liste doit être vide.
-3.  **`formulas`**: Une liste de chaînes de caractères, où chaque chaîne est une formule FOL bien formée. N'ajoutez PAS de point-virgule à la fin des formules.
 
-**Règles de Syntaxe et de Modélisation:**
-*   **Cohérence Stricte**: L'arité (nombre d'arguments) et les types de sorts des prédicats utilisés dans les `formulas` DOIVENT correspondre EXACTEMENT à leur déclaration dans la section `predicates`. Par exemple, si vous déclarez `{"name": "HasEvidence", "args": ["concept", "concept"]}`, alors la formule doit être `HasEvidence(unConcept, unePreuve);`, et non `HasEvidence(unConcept);`.
-*   **Constantes et Sorts**: Toutes les constantes utilisées dans les formules DOIVENT être déclarées dans la section `sorts`.
-*   **Prédicats**: Tous les prédicats utilisés dans les formules DOIVENT être déclarés dans la section `predicates`.
-*   **Variables**: Les variables doivent commencer par une LETTRE MAJUSCULE (ex: `X`, `Y`) et être liées par un quantificateur (`forall X: (...)` ou `exists Y: (...)`). Les constantes sont toujours en minuscules.
-*   **Connecteurs**: Utilisez `!`, `&&`, `||`, `=>`, `<=>`.
-
-**Exemple de Traduction Avancé:**
+**Exemple:**
 Texte: "Paris est une ville. Jean aime Paris. Les villes sont des lieux."
 
 **Sortie JSON attendue:**
@@ -76,7 +68,57 @@ Texte: "Paris est une ville. Jean aime Paris. Les villes sont des lieux."
     { "name": "IsCity", "args": ["city"] },
     { "name": "Loves", "args": ["person", "place"] },
     { "name": "IsAPlace", "args": ["place"] }
-  ],
+  ]
+}
+```
+
+Analysez le texte suivant et extrayez uniquement les `sorts` et `predicates`.
+
+{{$input}}
+"""
+"""
+Prompt pour extraire les sorts et prédicats d'un texte.
+Attend `$input` (le texte source).
+"""
+
+PROMPT_TEXT_TO_FOL_FORMULAS = """
+Vous êtes un expert en logique du premier ordre (FOL). Votre deuxième tâche est de traduire un texte en formules logiques, en utilisant un ensemble prédéfini de sorts et de prédicats.
+
+**Contexte Fourni:**
+1.  **Texte Original**: Le texte à traduire.
+2.  **Définitions Autorisées**: Un objet JSON contenant les `sorts` (types et constantes) et `predicates` (relations et leurs arguments) que vous DEVEZ utiliser.
+
+**Votre Tâche:**
+Générez un objet JSON contenant UNIQUEMENT la clé `formulas`.
+
+**Règles Strictes:**
+*   **Utilisation Exclusive**: N'utilisez QUE les `sorts`, `constantes` et `predicates` fournis dans les définitions. N'en inventez pas de nouveaux.
+*   **Cohérence Stricte**: L'arité (nombre d'arguments) et les types de sorts des prédicats utilisés dans les `formulas` DOIVENT correspondre EXACTEMENT à leur déclaration.
+*   **Variables**: Les variables doivent commencer par une LETTRE MAJUSCULE (ex: `X`, `Y`) et être liées par un quantificateur (`forall X: (...)` ou `exists Y: (...)`).
+*   **Connecteurs**: Utilisez `!`, `&&`, `||`, `=>`, `<=>`.
+*   **Format**: Les formules sont une liste de chaînes de caractères. N'ajoutez PAS de point-virgule à la fin.
+
+**Exemple:**
+Texte Original: "Paris est une ville. Jean aime Paris. Les villes sont des lieux."
+Définitions Autorisées:
+```json
+{
+  "sorts": {
+    "person": ["jean"],
+    "city": ["paris"],
+    "place": ["paris"]
+  },
+  "predicates": [
+    { "name": "IsCity", "args": ["city"] },
+    { "name": "Loves", "args": ["person", "place"] },
+    { "name": "IsAPlace", "args": ["place"] }
+  ]
+}
+```
+
+**Sortie JSON attendue:**
+```json
+{
   "formulas": [
     "IsCity(paris)",
     "Loves(jean, paris)",
@@ -85,13 +127,17 @@ Texte: "Paris est une ville. Jean aime Paris. Les villes sont des lieux."
 }
 ```
 
-Traduisez maintenant le texte suivant en un objet JSON respectant scrupuleusement le format et les règles ci-dessus.
+Maintenant, traduisez le texte suivant en utilisant les définitions fournies.
 
+**Texte Original:**
 {{$input}}
+
+**Définitions Autorisées:**
+{{$definitions}}
 """
 """
-Prompt pour convertir du texte en langage naturel en un ensemble de croyances FOL.
-Attend `$input` (le texte source).
+Prompt pour générer des formules FOL à partir d'un texte et de définitions.
+Attend `$input` (texte source) et `$definitions` (JSON des sorts et prédicats).
 """
 
 PROMPT_GEN_FOL_QUERIES = """
@@ -241,8 +287,10 @@ class FirstOrderLogicAgent(BaseLogicAgent):
                 self.logger.warning(f"Impossible de récupérer settings LLM pour {self.name}: {e}")
 
         semantic_functions = [
-            ("TextToFOLBeliefSet", PROMPT_TEXT_TO_FOL,
-             "Traduit texte en Belief Set FOL (syntaxe Tweety pour logique du premier ordre)."),
+            ("TextToFOLDefs", PROMPT_TEXT_TO_FOL_DEFS,
+             "Extrait les sorts et prédicats FOL d'un texte."),
+            ("TextToFOLFormulas", PROMPT_TEXT_TO_FOL_FORMULAS,
+             "Génère les formules FOL à partir d'un texte et de définitions."),
             ("GenerateFOLQueries", PROMPT_GEN_FOL_QUERIES,
              "Génère requêtes FOL pertinentes (syntaxe Tweety pour logique du premier ordre)."),
             ("InterpretFOLResult", PROMPT_INTERPRET_FOL,
@@ -359,105 +407,132 @@ class FirstOrderLogicAgent(BaseLogicAgent):
 
     async def text_to_belief_set(self, text: str, context: Optional[Dict[str, Any]] = None) -> Tuple[Optional[BeliefSet], str]:
         """
-        Convertit un texte en langage naturel en un ensemble de croyances FOL.
-        Approche basée sur la BNF avec validation Python et boucle de correction:
-        1. Le LLM génère un JSON structuré.
-        2. Une boucle de correction (max 3 tentatives) tente de valider et de corriger le JSON.
-        3. Une base de connaissances est construite en respectant la syntaxe Tweety.
-        4. Le belief set complet est validé par Tweety.
+        Convertit un texte en langage naturel en un ensemble de croyances FOL en deux étapes.
+        1. Génère les sorts et prédicats.
+        2. Génère les formules en se basant sur les définitions de l'étape 1.
+        3. Assemble et valide le tout avec une boucle de correction.
         """
-        self.logger.info(f"Conversion de texte en ensemble de croyances FOL pour {self.name}...")
+        self.logger.info(f"Conversion de texte en ensemble de croyances FOL pour {self.name} (approche en 2 étapes)...")
         
         max_retries = 3
         last_error = ""
-        current_input = text
+        
+        # Variables pour stocker les parties de la base de connaissances
+        defs_json = None
+        formulas_json = None
+        
+        # --- Étape 1: Génération des Définitions (Sorts et Prédicats) ---
+        self.logger.info("Étape 1: Génération des sorts et prédicats...")
+        try:
+            defs_result = await self.sk_kernel.plugins[self.name]["TextToFOLDefs"].invoke(self.sk_kernel, input=text)
+            defs_json_str = self._extract_json_block(str(defs_result))
+            defs_json = json.loads(defs_json_str)
+            self.logger.info("Sorts et prédicats générés avec succès.")
+        except (json.JSONDecodeError, Exception) as e:
+            error_msg = f"Échec de la génération des définitions (sorts/prédicats): {e}"
+            self.logger.error(error_msg)
+            return None, error_msg
 
+        # --- Étape 2: Génération des Formules ---
+        self.logger.info("Étape 2: Génération des formules...")
+        try:
+            formulas_result = await self.sk_kernel.plugins[self.name]["TextToFOLFormulas"].invoke(
+                self.sk_kernel, input=text, definitions=json.dumps(defs_json, indent=2)
+            )
+            formulas_json_str = self._extract_json_block(str(formulas_result))
+            formulas_json = json.loads(formulas_json_str)
+            self.logger.info("Formules générées avec succès.")
+        except (json.JSONDecodeError, Exception) as e:
+            error_msg = f"Échec de la génération des formules: {e}"
+            self.logger.error(error_msg)
+            return None, error_msg
+
+        # --- Étape 3: Assemblage, Validation et Correction ---
+        self.logger.info("Étape 3: Assemblage, validation et correction...")
+        kb_json = {
+            "sorts": defs_json.get("sorts", {}),
+            "predicates": defs_json.get("predicates", []),
+            "formulas": formulas_json.get("formulas", [])
+        }
+        
+        current_kb_json = kb_json
+        
         for attempt in range(max_retries):
-            self.logger.info(f"Tentative {attempt + 1}/{max_retries}...")
+            self.logger.info(f"Tentative de validation et correction {attempt + 1}/{max_retries}...")
             
             try:
-                # 1. Obtenir le JSON du LLM
-                result = await self.sk_kernel.plugins[self.name]["TextToFOLBeliefSet"].invoke(self.sk_kernel, input=current_input)
-                json_content_str = str(result).strip()
+                # 1. Normaliser et valider la cohérence du JSON assemblé
+                normalized_kb_json = self._normalize_and_validate_json(current_kb_json)
                 
-                # Extrait le premier bloc JSON valide de la réponse du LLM.
-                # Trouve le premier '{' et le dernier '}' pour isoler l'objet JSON,
-                # ignorant ainsi tout texte explicatif avant ou après.
-                start_index = json_content_str.find('{')
-                end_index = json_content_str.rfind('}')
-
-                if start_index != -1 and end_index != -1 and end_index > start_index:
-                    json_content_str = json_content_str[start_index:end_index + 1]
-                else:
-                    self.logger.warning("Impossible d'isoler un bloc JSON avec find/rfind. Tentative de parsing de la chaîne complète.")
-                
-                try:
-                    kb_json = json.loads(json_content_str)
-                except json.JSONDecodeError as json_err:
-                    last_error = f"La sortie du LLM n'est pas un JSON valide: {json_err}"
-                    self.logger.warning(f"{last_error} à la tentative {attempt + 1}")
-                    current_input = f"Le JSON précédent était invalide. Erreur: {json_err}. Le JSON était: {json_content_str}. Veuillez corriger et renvoyer un JSON valide. Texte original: {text}"
-                    continue
-
-                # 2. Normaliser et valider la cohérence du JSON
-                normalized_kb_json = {"predicates": kb_json.get("predicates", [])}
-                constant_map = {}
-                normalized_sorts = {}
-                for sort_name, constants in kb_json.get("sorts", {}).items():
-                    norm_constants = []
-                    for const in constants:
-                        norm_const = self._normalize_identifier(const)
-                        norm_constants.append(norm_const)
-                        constant_map[const] = norm_const
-                    normalized_sorts[sort_name] = norm_constants
-                normalized_kb_json["sorts"] = normalized_sorts
-
-                normalized_formulas = []
-                for formula in kb_json.get("formulas", []):
-                    sorted_constants = sorted(constant_map.keys(), key=len, reverse=True)
-                    norm_formula = formula
-                    for const in sorted_constants:
-                        norm_formula = re.sub(r'\b' + re.escape(const) + r'\b', constant_map[const], norm_formula)
-                    normalized_formulas.append(norm_formula)
-                normalized_kb_json["formulas"] = normalized_formulas
-                
-                is_json_valid, json_validation_msg = self._validate_kb_json(normalized_kb_json)
-                if not is_json_valid:
-                    raise ValueError(json_validation_msg)
-
-                self.logger.info("Validation de la cohérence du JSON réussie.")
-
-                # 3. Construire la base de connaissances
+                # 2. Construire la base de connaissances
                 full_belief_set_content = self._construct_kb_from_json(normalized_kb_json)
                 if not full_belief_set_content:
-                    last_error = "La conversion a produit une base de connaissances vide."
-                    self.logger.warning(last_error)
-                    continue
+                    raise ValueError("La conversion a produit une base de connaissances vide.")
 
-                # 4. Valider le belief set complet avec Tweety
+                # 3. Valider le belief set complet avec Tweety
                 is_valid, validation_msg = self.tweety_bridge.validate_fol_belief_set(full_belief_set_content)
                 if not is_valid:
-                    last_error = f"Ensemble de croyances invalide selon Tweety: {validation_msg}"
-                    self.logger.error(f"{last_error}\nContenu invalidé:\n{full_belief_set_content}")
-                    # On ne tente pas de corriger une erreur Tweety pour l'instant
-                    return None, last_error
+                    raise ValueError(f"Ensemble de croyances invalide selon Tweety: {validation_msg}\nContenu:\n{full_belief_set_content}")
 
                 belief_set_obj = FirstOrderBeliefSet(full_belief_set_content)
-                self.logger.info("Conversion réussie.")
+                self.logger.info("Conversion et validation réussies.")
                 return belief_set_obj, "Conversion réussie"
 
             except (ValueError, jpype.JException) as e:
                 last_error = f"Validation ou erreur de syntaxe FOL: {e}"
                 self.logger.warning(f"{last_error} à la tentative {attempt + 1}")
-                current_input = f"La tentative précédente a échoué avec l'erreur: '{e}'. La sortie JSON était: {json_content_str}. Veuillez corriger le JSON ou la syntaxe FOL en respectant les règles et le texte original: {text}"
-                continue
+                
+                # Pour l'instant, on ne tente pas de boucle de correction automatique complexe.
+                # On retourne l'erreur pour analyse.
+                # Dans une future itération, on pourrait appeler un prompt de correction ici.
+                return None, last_error
+
             except Exception as e:
-                error_msg = f"Erreur inattendue lors de la conversion: {str(e)}"
+                error_msg = f"Erreur inattendue lors de la validation: {str(e)}"
                 self.logger.error(error_msg, exc_info=True)
                 return None, error_msg
 
         self.logger.error(f"Échec de la conversion après {max_retries} tentatives. Dernière erreur: {last_error}")
         return None, f"Échec de la conversion après {max_retries} tentatives. Dernière erreur: {last_error}"
+
+    def _extract_json_block(self, text: str) -> str:
+        """Extrait le premier bloc JSON valide de la réponse du LLM."""
+        start_index = text.find('{')
+        end_index = text.rfind('}')
+        if start_index != -1 and end_index != -1 and end_index > start_index:
+            return text[start_index:end_index + 1]
+        self.logger.warning("Impossible d'isoler un bloc JSON. Tentative de parsing de la chaîne complète.")
+        return text
+
+    def _normalize_and_validate_json(self, kb_json: Dict[str, Any]) -> Dict[str, Any]:
+        """Normalise les identifiants et valide la cohérence interne du JSON."""
+        normalized_kb_json = {"predicates": kb_json.get("predicates", [])}
+        constant_map = {}
+        normalized_sorts = {}
+        for sort_name, constants in kb_json.get("sorts", {}).items():
+            norm_constants = []
+            for const in constants:
+                norm_const = self._normalize_identifier(const)
+                norm_constants.append(norm_const)
+                constant_map[const] = norm_const
+            normalized_sorts[sort_name] = norm_constants
+        normalized_kb_json["sorts"] = normalized_sorts
+
+        normalized_formulas = []
+        for formula in kb_json.get("formulas", []):
+            sorted_constants = sorted(constant_map.keys(), key=len, reverse=True)
+            norm_formula = formula
+            for const in sorted_constants:
+                norm_formula = re.sub(r'\b' + re.escape(const) + r'\b', constant_map[const], norm_formula)
+            normalized_formulas.append(norm_formula)
+        normalized_kb_json["formulas"] = normalized_formulas
+        
+        is_json_valid, json_validation_msg = self._validate_kb_json(normalized_kb_json)
+        if not is_json_valid:
+            raise ValueError(json_validation_msg)
+        
+        self.logger.info("Validation de la cohérence du JSON réussie.")
+        return normalized_kb_json
     
     def _validate_query(self, query: str) -> Tuple[bool, Optional[str]]:
         """Valide une seule requête FOL et retourne le message d'erreur si invalide."""
