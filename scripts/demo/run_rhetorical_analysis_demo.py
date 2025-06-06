@@ -256,6 +256,67 @@ def generate_rich_json_report(source_file_path, informal_results, formal_results
     }
     return report
 
+def print_final_summary(report: dict):
+    """Affiche une synthèse lisible du rapport d'analyse final."""
+    
+    print("\n" + "="*80)
+    print(" " * 25 + "SYNTHÈSE DE L'ANALYSE RHÉTORIQUE")
+    print("="*80)
+
+    # Métadonnées
+    metadata = report.get("metadata", {})
+    print(f"\n--- [ Contexte de l'analyse ] ---")
+    print(f"  - Fichier source analysé : {metadata.get('source_file', 'N/A')}")
+    print(f"  - Horodatage de l'analyse : {datetime.fromisoformat(metadata.get('timestamp', '')) if metadata.get('timestamp') else 'N/A'}")
+
+    # Analyse Informelle
+    informal = report.get("informal_analysis", {})
+    informal_summary = informal.get("summary", {})
+    print("\n--- [ 1. Analyse Informelle des Sophismes ] ---")
+    if not informal_summary:
+        print("  - Aucune donnée d'analyse informelle disponible.")
+    else:
+        total_fallacies = informal_summary.get('total_fallacies', 0)
+        avg_confidence = informal_summary.get('average_confidence', 0) * 100
+        severity_overview = informal_summary.get('severity_overview', {})
+        
+        print(f"  - Nombre total de sophismes détectés : {total_fallacies}")
+        print(f"  - Confiance moyenne de détection : {avg_confidence:.2f}%")
+        print(f"  - Répartition par sévérité :")
+        for level, count in severity_overview.items():
+            if count > 0:
+                print(f"    - {level}: {count} sophisme(s)")
+
+    # Analyse Formelle
+    formal = report.get("formal_analysis", {})
+    logic_type_used = formal.get('logic_type_used', 'N/A').replace('_', ' ').title()
+    status = formal.get('status', 'Unknown')
+    
+    print(f"\n--- [ 2. Analyse Formelle (Logique: {logic_type_used}) ] ---")
+    print(f"  - Statut de l'analyse : {status}")
+
+    if status == "Failed":
+        reason = formal.get('reason', 'Raison inconnue.')
+        details = formal.get('details', 'Pas de détails supplémentaires.')
+        print(f"  - Raison de l'échec : {reason}")
+        print(f"  - Détails : {details}")
+    elif status == "Success":
+        kb_summary = formal.get('belief_set_summary', {})
+        is_consistent = kb_summary.get('is_consistent', 'Inconnue')
+        queries = formal.get('queries', [])
+        
+        print(f"  - Cohérence de la base de connaissances : {is_consistent}")
+        if queries:
+            print(f"  - Nombre de requêtes logiques exécutées : {len(queries)}")
+            entailed_count = sum(1 for q in queries if q.get('result') == 'Entailed')
+            print(f"    - {entailed_count} étaient prouvables (Entailed).")
+            print(f"    - {len(queries) - entailed_count} n'étaient pas prouvables (Not Entailed).")
+        else:
+            print("  - Aucune requête logique n'a été exécutée.")
+            
+    print("\n" + "="*80)
+    print("Rapport complet disponible dans les fichiers de log.\n")
+
 async def run_full_analysis_demo(text_to_analyze: str, temp_file_path: Path, llm_service, jvm_ready: bool, logic_type: str):
     """Orchestre la démo complète avec analyses informelle et formelle."""
     
@@ -333,7 +394,9 @@ async def run_full_analysis_demo(text_to_analyze: str, temp_file_path: Path, llm
             formal_results = {"status": "Failed", "reason": f"Agent creation failed for logic type '{logic_type}'."}
         else:
             logger.info(" -> 2a. Conversion du texte en ensemble de croyances...")
+            logger.info("    (Début de l'appel asynchrone à text_to_belief_set)")
             belief_set, status = await logic_agent.text_to_belief_set(text_to_analyze)
+            logger.info("    (Fin de l'appel asynchrone à text_to_belief_set)")
             
             if not belief_set:
                 logger.error(f"Échec de la conversion en ensemble de croyances : {status}")
@@ -347,7 +410,9 @@ async def run_full_analysis_demo(text_to_analyze: str, temp_file_path: Path, llm
                 logger.info(f"    La base de connaissances est cohérente : {is_consistent}")
 
                 logger.info(" -> 2c. Génération de requêtes logiques...")
+                logger.info("    (Début de l'appel asynchrone à generate_queries)")
                 queries = await logic_agent.generate_queries(text_to_analyze, belief_set)
+                logger.info("    (Fin de l'appel asynchrone à generate_queries)")
                 logger.info(f"    {len(queries)} requêtes générées.")
 
                 query_results = []
@@ -413,6 +478,7 @@ async def run_full_analysis_demo(text_to_analyze: str, temp_file_path: Path, llm
     logger.info("# --- FIN DEMO Comparaison ---")
 
     logger.info("--- Fin de l'orchestration de l'analyse ---")
+    return final_report
 
 async def main_demo(args):
     """Fonction principale de la démonstration."""
@@ -443,7 +509,11 @@ async def main_demo(args):
         logging.info(f"Service LLM créé avec succès (ID: {llm_service.service_id}).")
 
         # Lancement de la démo enrichie
-        await run_full_analysis_demo(full_text_to_analyze, temp_file_path, llm_service, jvm_ready, args.logic_type)
+        final_report = await run_full_analysis_demo(full_text_to_analyze, temp_file_path, llm_service, jvm_ready, args.logic_type)
+        
+        # Affichage de la synthèse finale
+        if final_report:
+            print_final_summary(final_report)
 
     except Exception as e:
         logging.critical(f"Une erreur majeure est survenue pendant la démo : {e}", exc_info=True)

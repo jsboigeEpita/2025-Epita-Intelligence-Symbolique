@@ -556,11 +556,11 @@ class TaskCoordinator:
             self.logger.warning(f"Résultat reçu sans identifiant de tâche tactique: {result}")
             return {"status": "error", "message": "Identifiant de tâche tactique manquant"}
         
-        # Mettre à jour le statut de la tâche
-        self.state.update_task_status(
-            tactical_task_id,
-            "completed" if result.get("status") == "completed" else "failed"
-        )
+        # Mettre à jour le statut et la progression de la tâche
+        if result.get("completion_status") == "completed" or result.get("status") == "completed":
+            self.state.update_task_progress(tactical_task_id, 1.0)
+        else:
+            self.state.update_task_status(tactical_task_id, "failed")
         
         # Enregistrer le résultat
         self.state.add_intermediate_result(tactical_task_id, result)
