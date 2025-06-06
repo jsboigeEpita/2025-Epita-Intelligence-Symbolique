@@ -42,6 +42,7 @@ class PLHandler:
         replacements = {
             "&&": "&",
             "||": "|",
+            "|": "|",
             "->": "=>",
             "<=>": "<=>",
             "Not ": "!",
@@ -52,28 +53,62 @@ class PLHandler:
 
         # Remove spaces inside predicates like `Coupable(Colonel Moutarde)`
         import re
-        formula_str = re.sub(r'\(\s*([^)]+?)\s*\)', lambda m: '(' + m.group(1).replace(' ', '') + ')', formula_str)
+        
+        # This function will be applied to each match of the regex.
+        # It replaces spaces with underscores inside the matched group.
+        def replace_spaces_with_underscores(match):
+            return match.group(0).replace(' ', '_')
 
-        # Ensure single space around binary operators for clarity, then remove them for the parser
-        formula_str = formula_str.replace("&", " & ")
-        formula_str = formula_str.replace("|", " | ")
-        formula_str = formula_str.replace("=>", " => ")
-        formula_str = formula_str.replace("<=>", " <=> ")
+        # A more robust approach: split by operators, process, then rejoin.
+        # This avoids complex regex lookarounds.
+        operators_pattern = r'(\s*=>\s*|\s*<=>\s*|\s*\||\s*&\s*|\s*!\s*|\(|\))'
+        parts = re.split(operators_pattern, formula_str)
         
-        # Handle negation
-        formula_str = formula_str.replace("! ", "!")
+        processed_parts = []
+        for part in parts:
+            if part is None:
+                continue
+            # Check if the part is an operator (with potential whitespace)
+            if re.fullmatch(operators_pattern, part):
+                # Keep operator as is, but without surrounding spaces that will be added later
+                processed_parts.append(part.strip())
+            else:
+                # This is a proposition name, replace spaces with underscores
+                processed_parts.append(part.strip().replace(' ', '_'))
         
-        # Collapse multiple spaces
-        formula_str = " ".join(formula_str.split())
+        # Rejoin the formula, ensuring single spaces around binary operators
+        final_formula = ""
+        for i, part in enumerate(processed_parts):
+            if not part:
+                continue
+            
+            is_binary_op = part in ['=>', '<=>', '|', '&']
+            is_unary_op = part == '!'
+            is_open_paren = part == '('
+            is_close_paren = part == ')'
+            
+            # Add space before binary operators and after close parenthesis if needed
+            if final_formula and (is_binary_op or is_open_paren or not is_unary_op and not final_formula.endswith('(') and not final_formula.endswith('!')):
+                 if not final_formula.endswith(' '):
+                    final_formula += " "
+
+            final_formula += part
+            
+            # Add space after binary operators and open parenthesis
+            if is_binary_op or is_open_paren:
+                final_formula += " "
+
+        formula_str = " ".join(final_formula.split()) # Clean up extra spaces
 
         logger.debug(f"Normalized formula to: '{formula_str}'")
         return formula_str
 
     def parse_pl_formula(self, formula_str: str, constants: Optional[List[str]] = None):
         """Parses a PL formula string into a TweetyProject PlFormula object."""
-        if not isinstance(formula_str, str):
-            raise TypeError("Input formula must be a string.")
-        
+        if not isinstance(formula_str, str) or not formula_str.strip() or formula_str.strip() == '```':
+            logger.debug(f"Skipping parsing of invalid or empty formula: '{formula_str}'")
+            return None # Retourne None pour indiquer que la formule doit être ignorée
+
         normalized_formula = self._normalize_formula(formula_str)
         logger.debug(f"Attempting to parse normalized PL formula: {normalized_formula}")
 
@@ -114,7 +149,7 @@ class PLHandler:
             # Let's refine this: parse individual formulas and add to a PlBeliefSet
             formulas = []
             # Handle potential empty strings or formulas correctly
-            formula_strings = [f.strip() for f in knowledge_base_str.split(';') if f.strip()]
+            formula_strings = [f.strip() for f in knowledge_base_str.split('\n') if f.strip() and f.strip() != '```']
             
             if not formula_strings:
                 logger.info("Empty knowledge base is considered consistent.")
@@ -128,7 +163,8 @@ class PLHandler:
                 cleaned_f_str = f_str.rstrip('%').strip()
                 if cleaned_f_str:
                     parsed_formula = self.parse_pl_formula(cleaned_f_str, constants)
-                    kb.add(parsed_formula)
+                    if parsed_formula:
+                        kb.add(parsed_formula)
             
             logger.info(f"DEBUG: Méthodes disponibles pour _pl_reasoner: {dir(self._pl_reasoner)}")
             
@@ -172,14 +208,24 @@ class PLHandler:
             PlBeliefSet = jpype.JClass("org.tweetyproject.logics.pl.syntax.PlBeliefSet")
             kb = PlBeliefSet()
 
-            formula_strings = [f.strip() for f in knowledge_base_str.split(';') if f.strip()]
+            formula_strings = [f.strip() for f in knowledge_base_str.split('\n') if f.strip() and f.strip() != '```']
             for f_str in formula_strings:
                 cleaned_f_str = f_str.rstrip('%').strip()
                 if cleaned_f_str:
                     parsed_formula = self.parse_pl_formula(cleaned_f_str, constants)
-                    kb.add(parsed_formula)
+                    if parsed_formula:
+                        kb.add(parsed_formula)
             
-            query_formula = self.parse_pl_formula(query_formula_str.rstrip('%').strip(), constants)
+            # Nettoyer également la chaîne de la requête
+            cleaned_query_str = query_formula_str.rstrip('%').strip()
+            if not cleaned_query_str or cleaned_query_str == '```':
+                logger.warning(f"Query string is invalid or empty after cleaning: '{query_formula_str}'")
+                return False # Ou une autre gestion d'erreur appropriée
+
+            query_formula = self.parse_pl_formula(cleaned_query_str, constants)
+            if not query_formula:
+                logger.warning(f"Skipping empty or invalid query after parsing: '{cleaned_query_str}'")
+                return False
             
             entails = self._pl_reasoner.query(kb, query_formula)
             logger.info(f"PL Query: KB entails '{query_formula_str}'? {entails}")

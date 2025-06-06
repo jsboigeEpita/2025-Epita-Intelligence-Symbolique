@@ -183,7 +183,7 @@ class PropositionalLogicAgent(BaseLogicAgent):
                 self.logger.error("La conversion a produit un ensemble de croyances vide.") 
                 return None, "La conversion a produit un ensemble de croyances vide."
             
-            is_valid, validation_msg = self._tweety_bridge.validate_belief_set(belief_set_str=belief_set_content) # paramètre nommé pour correspondre à TweetyBridge
+            is_valid, validation_msg = self._tweety_bridge.validate_belief_set(belief_set_string=belief_set_content)
             if not is_valid:
                 self.logger.error(f"Ensemble de croyances invalide: {validation_msg}")
                 return None, f"Ensemble de croyances invalide: {validation_msg}"

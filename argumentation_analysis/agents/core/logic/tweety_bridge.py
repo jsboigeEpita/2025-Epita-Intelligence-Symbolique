@@ -135,7 +135,7 @@ class TweetyBridge:
         for line_content in raw_lines:
             # 1. Enlever les commentaires de la ligne entière (Tweety utilise '%' ou '//')
             line_no_comments = line_content.split('%')[0].split('//')[0].strip()
-            if not line_no_comments: # Si la ligne est vide ou ne contient qu'un commentaire
+            if not line_no_comments or line_no_comments == '```': # Si la ligne est vide ou ne contient qu'un commentaire ou une balise markdown
                 continue
 
             # 2. Séparer les formules sur la ligne par des points-virgules.
