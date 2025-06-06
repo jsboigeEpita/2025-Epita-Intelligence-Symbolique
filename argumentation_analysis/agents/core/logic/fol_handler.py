@@ -250,4 +250,32 @@ class FOLHandler:
             logger.error(f"Unexpected error during FOL query: {e}", exc_info=True)
             raise
 
+def validate_fol_query_with_context(self, belief_set_str: str, query_str: str) -> tuple[bool, str]:
+        """
+        Valide une requête FOL en utilisant le contexte (signature) d'une base de connaissances.
+
+        :param belief_set_str: La chaîne de caractères de la base de connaissances complète.
+        :param query_str: La chaîne de caractères de la requête à valider.
+        :return: Un tuple (bool, str) indiquant si la validation a réussi et un message.
+        """
+        logger.debug(f"Validation de la requête '{query_str}' avec le contexte de la base de connaissances.")
+        try:
+            # 1. Parser la base de connaissances pour obtenir un parser configuré avec la bonne signature.
+            _, _, configured_parser = self.parse_fol_belief_set(belief_set_str)
+            
+            # 2. Utiliser ce parser pour valider la requête.
+            self.parse_fol_formula(query_str, custom_parser=configured_parser)
+            
+            logger.info(f"La requête '{query_str}' a été validée avec succès dans le contexte de la base de connaissances.")
+            return True, "Requête valide dans le contexte."
+            
+        except ValueError as e:
+            # Les erreurs de parsing (y compris les constantes non déclarées) lèveront une ValueError.
+            error_message = f"Validation de la requête '{query_str}' échouée : {e}"
+            logger.warning(error_message)
+            return False, str(e)
+        except Exception as e:
+            error_message = f"Erreur inattendue lors de la validation contextuelle de la requête '{query_str}': {e}"
+            logger.error(error_message, exc_info=True)
+            return False, error_message
     # Add other FOL-specific methods as needed

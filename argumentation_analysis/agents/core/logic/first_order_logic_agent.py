@@ -662,10 +662,6 @@ class FirstOrderLogicAgent(BaseLogicAgent):
         self.logger.info("Validation de la cohérence du JSON réussie.")
         return normalized_kb_json
     
-    def _validate_query(self, query: str) -> Tuple[bool, Optional[str]]:
-        """Valide une seule requête FOL et retourne le message d'erreur si invalide."""
-        is_valid, message = self.tweety_bridge.validate_fol_formula(query)
-        return is_valid, message if not is_valid else None
 
     def _parse_belief_set_content(self, belief_set_content: str) -> Dict[str, Any]:
         """
@@ -776,13 +772,13 @@ class FirstOrderLogicAgent(BaseLogicAgent):
                 # Si toutes les validations passent, on assemble la requête
                 query_string = f"{predicate_name}({', '.join(constants)})"
                 
-                # Une dernière validation avec Tweety pour être sûr
-                is_valid, _ = self._validate_query(query_string)
+                # Validation contextuelle avec Tweety
+                is_valid, validation_msg = self.tweety_bridge.validate_fol_query_with_context(belief_set.content, query_string)
                 if is_valid:
                     self.logger.info(f"Requête valide assemblée: {query_string}")
                     valid_queries.append(query_string)
                 else:
-                    self.logger.warning(f"Requête assemblée '{query_string}' a échoué à la validation finale de Tweety.")
+                    self.logger.warning(f"Requête assemblée '{query_string}' a échoué à la validation contextuelle de Tweety: {validation_msg}")
 
             self.logger.info(f"Génération terminée. {len(valid_queries)} requêtes valides assemblées.")
             return valid_queries

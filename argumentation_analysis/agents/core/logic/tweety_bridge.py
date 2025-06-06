@@ -375,6 +375,21 @@ class TweetyBridge:
     # Les méthodes _parse_fol_formula, _parse_fol_belief_set, _execute_fol_query_internal
     # sont maintenant encapsulées dans FOLHandler et peuvent être supprimées ici.
     
+    def validate_fol_query_with_context(self, belief_set_str: str, query_str: str) -> Tuple[bool, str]:
+        """
+        Valide une requête FOL en utilisant le contexte (signature) d'une base de connaissances.
+        Délègue la validation au FOLHandler.
+        """
+        if not self.is_jvm_ready() or not hasattr(self, '_fol_handler'):
+            return False, "TweetyBridge ou FOLHandler non prêt."
+
+        self._logger.debug(f"TweetyBridge.validate_fol_query_with_context appelée pour query: '{query_str}'")
+        try:
+            return self._fol_handler.validate_fol_query_with_context(belief_set_str, query_str)
+        except (ValueError, RuntimeError) as e:
+            self._logger.error(f"Erreur lors de la validation contextuelle de la requête FOL '{query_str}': {e}", exc_info=True)
+            return False, str(e)
+
     # --- Méthodes pour la logique modale ---
 
     def validate_modal_formula(self, formula_string: str, modal_logic_str: str = "S4", signature_declarations_str: Optional[str] = None) -> Tuple[bool, str]:

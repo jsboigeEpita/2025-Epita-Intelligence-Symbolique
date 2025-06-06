@@ -1,7 +1,7 @@
 {
     "metadata": {
-        "source_file": "C:\\Users\\MYIA\\AppData\\Local\\Temp\\tmpuhh5ar15.txt",
-        "timestamp": "2025-06-06T17:09:47.084899",
+        "source_file": "C:\\Users\\MYIA\\AppData\\Local\\Temp\\tmp4uayvbqb.txt",
+        "timestamp": "2025-06-06T17:13:06.785209",
         "demo_version": "1.2.0"
     },
     "informal_analysis": {
@@ -63,7 +63,7 @@
             "details": "Ensemble de croyances FOL valide"
         },
         "belief_set": [
-            "subject = { rechauffement_climatique, mythe, hiver_froid, catastrophe_planetaire, scientifiques, arguments, faits, sophismes }\nmeasure = { mesures_drastiques }\nconclusion = { conclusions }\ntype(IsComplexSubject(subject))\ntype(AffirmsMyth(subject))\ntype(NeedsMeasures(subject, measure))\ntype(IsMotivatedScientist(subject))\ntype(QuestionsConclusions(subject, conclusion))\ntype(AnalyzesFacts(subject))\ntype(DeconstructsSophisms(subject))\n\n\nIsComplexSubject(rechauffement_climatique)\nNeedsMeasures(rechauffement_climatique, mesures_drastiques)\nAnalyzesFacts(faits)\nDeconstructsSophisms(sophismes)"
+            "subject = { rechauffement_climatique, mythe, mesures_drastiques, catastrophe_planetaire, scientifiques, arguments, faits, sophismes }\nconcept = { complexite, danger, rigueur }\ntype(IsMythe(subject))\ntype(RequiresDrasticMeasures(subject))\ntype(IsFinanciallyMotivated(subject))\ntype(AlertsAboutDanger(subject))\ntype(AnalyzesFacts(subject))\ntype(DeconstructsSophisms(subject))\n\n\nIsMythe(mythe)\nRequiresDrasticMeasures(mesures_drastiques)\nAnalyzesFacts(faits)\nDeconstructsSophisms(sophismes)"
         ],
         "queries": []
     }
