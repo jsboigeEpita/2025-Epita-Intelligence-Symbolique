@@ -144,8 +144,12 @@ async def analyze_text():
     }
     """
     try:
+        # 🚨🚨🚨 LOGS ULTRA-VISIBLES ENDPOINT DEBUG V2 🚨🚨🚨
+        print("🔥🔥🔥 VERSION MODIFIÉE - ENDPOINT /api/analyze APPELÉ V2 🔥🔥🔥")
+        logger.critical("🚨🚨🚨 ENDPOINT /api/analyze APPELÉ V2")
         try:
             data = request.get_json()
+            logger.critical(f"🚨 JSON reçu: {data}")
         except HTTPException as he:
             # Intercepter les erreurs HTTP spécifiques de Werkzeug (ex: 400, 415)
             logger.warning(f"Erreur HTTP lors de la récupération du JSON: {str(he)}")
