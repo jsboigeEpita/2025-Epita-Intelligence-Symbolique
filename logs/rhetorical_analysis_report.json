@@ -1,0 +1,70 @@
+{
+    "metadata": {
+        "source_file": "C:\\Users\\MYIA\\AppData\\Local\\Temp\\tmpzh1lx2qi.txt",
+        "timestamp": "2025-06-06T16:27:25.336829",
+        "demo_version": "1.2.0"
+    },
+    "informal_analysis": {
+        "summary": {
+            "total_fallacies": 2,
+            "average_confidence": 0.7749999999999999,
+            "severity_overview": {
+                "Faible": 0,
+                "Modéré": 2,
+                "Élevé": 0,
+                "Critique": 0
+            }
+        },
+        "fallacies": [
+            {
+                "fallacy_type": "Sophisme inconnu",
+                "context_text": "",
+                "base_severity": 0.5,
+                "context_modifier": 0.0,
+                "audience_modifier": 0.0,
+                "domain_modifier": 0.0,
+                "final_severity": 0.5,
+                "severity_level": "Modéré",
+                "original_confidence": 0.85
+            },
+            {
+                "fallacy_type": "Sophisme inconnu",
+                "context_text": "",
+                "base_severity": 0.5,
+                "context_modifier": 0.0,
+                "audience_modifier": 0.0,
+                "domain_modifier": 0.0,
+                "final_severity": 0.5,
+                "severity_level": "Modéré",
+                "original_confidence": 0.7
+            }
+        ],
+        "composite_analysis": {
+            "individual_fallacies_count": 2,
+            "basic_combinations": [
+                {
+                    "combination_name": "Défiance généralisée",
+                    "fallacies": [
+                        "Ad Hominem",
+                        "Straw Man"
+                    ],
+                    "severity": 0.75
+                }
+            ],
+            "advanced_combinations": [],
+            "composite_severity": "High"
+        }
+    },
+    "formal_analysis": {
+        "logic_type_used": "first_order",
+        "status": "Success",
+        "belief_set_summary": {
+            "is_consistent": false,
+            "details": "Error during FOL consistency check: No matching overloads found for constructor org.tweetyproject.logics.fol.syntax.FolBeliefSet(org.tweetyproject.logics.fol.syntax.FolSignature), options are:\n\tpublic org.tweetyproject.logics.fol.syntax.FolBeliefSet(java.util.Collection)\n\tpublic org.tweetyproject.logics.fol.syntax.FolBeliefSet()\n"
+        },
+        "belief_set": [
+            "concept = { rechauffement_climatique, mythe, hiver_froid, preuve, mesures_drastiques, catastrophe_planetaire, danger, conclusions, faits, sophismes }\nscientist = { scientifiques }\ntype(IsComplex(concept))\ntype(IsMyth(concept))\ntype(CitesAsEvidence(concept, concept))\ntype(NeedsImmediateAction(concept))\ntype(IsMotivated(scientist))\ntype(QuestionsConclusions(scientist, concept))\ntype(AnalyzesWithRigour(concept))\ntype(DeconstructsSophisms(concept))\n\n\nIsComplex(rechauffement_climatique)\nIsMyth(mythe)\nCitesAsEvidence(mythe, hiver_froid)\nNeedsImmediateAction(mesures_drastiques)\nIsMotivated(scientifiques)\nQuestionsConclusions(scientifiques, conclusions)\nforall X: (QuestionsConclusions(scientifiques, X) => AnalyzesWithRigour(faits) && DeconstructsSophisms(sophismes))"
+        ],
+        "queries": []
+    }
+}

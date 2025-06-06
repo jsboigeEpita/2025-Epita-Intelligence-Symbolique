@@ -34,6 +34,14 @@ if str(root_dir) not in sys.path:
     # qui est spécifique à pr-student-1 et potentiellement source de confusion.
     pass # On ne modifie plus sys.path ici, on se fie aux imports de HEAD.
 
+# Configuration du logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s [%(levelname)s] [%(name)s] %(message)s',
+    datefmt='%H:%M:%S'
+)
+logger = logging.getLogger("WebAPI")
+
 # Import des services (style HEAD, mais avec les try-except de pr-student-1 pour la robustesse)
 try:
     # Utilisation des imports absolus depuis la racine du module `argumentation_analysis` (style HEAD)
@@ -67,15 +75,6 @@ except ImportError as e_abs:
         AnalysisResponse, ValidationResponse, FallacyResponse, FrameworkResponse, ErrorResponse,
         LogicBeliefSetResponse, LogicQueryResponse, LogicGenerateQueriesResponse, LogicInterpretationResponse, LogicQueryResult # Ajout de LogicQueryResult
     )
-
-
-# Configuration du logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s [%(levelname)s] [%(name)s] %(message)s',
-    datefmt='%H:%M:%S'
-)
-logger = logging.getLogger("WebAPI")
 
 # Création de l'application Flask
 app = Flask(__name__)

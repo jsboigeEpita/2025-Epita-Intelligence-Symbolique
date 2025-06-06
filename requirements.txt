@@ -13,9 +13,9 @@ pytest-mock
 pytest-playwright
 python-dotenv
 scikit-learn
-scipy>=1.15.1
+# scipy>=1.15.1
 sentence-transformers
-semantic-kernel
+semantic-kernel==1.32.2
 numpy
 spacy
 coverage
