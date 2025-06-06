@@ -12,7 +12,6 @@ from unittest.mock import MagicMock, patch, mock_open
 from pathlib import Path
 import semantic_kernel as sk
 from argumentation_analysis.agents.core.informal.informal_definitions import InformalAnalysisPlugin, setup_informal_kernel
-from tests.async_test_case import AsyncTestCase
 
 
 class TestInformalAnalysisPlugin(unittest.TestCase):
@@ -200,7 +199,7 @@ class TestInformalAnalysisPlugin(unittest.TestCase):
         self.assertIn('error', result_no_df)
 
 
-class TestSetupInformalKernel(AsyncTestCase):
+class TestSetupInformalKernel(unittest.TestCase):
     """Tests pour la fonction setup_informal_kernel."""
 
     def setUp(self):

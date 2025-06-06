@@ -1,6 +1,8 @@
 import re
+import pytest
 from playwright.sync_api import Page, expect
 
+@pytest.mark.playwright
 def test_homepage_has_correct_title_and_header(page: Page):
     """
     Ce test vérifie que la page d'accueil de l'application web se charge correctement,

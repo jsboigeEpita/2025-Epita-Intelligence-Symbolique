@@ -33,18 +33,17 @@ from argumentation_analysis.agents.core.extract.extract_agent import ExtractAgen
 from argumentation_analysis.agents.core.pl.pl_definitions import setup_pl_kernel # Importation inutilisée ?
 from argumentation_analysis.agents.core.informal.informal_definitions import setup_informal_kernel # Importation inutilisée ?
 from argumentation_analysis.agents.core.pm.pm_definitions import setup_pm_kernel # Importation inutilisée ?
-from tests.async_test_case import AsyncTestCase
-
 # Imports spécifiques pour ce test
 from argumentation_analysis.agents.tools.analysis.enhanced.complex_fallacy_analyzer import EnhancedComplexFallacyAnalyzer as ComplexFallacyAnalyzer # Alias pour compatibilité
 from argumentation_analysis.agents.tools.analysis.enhanced.contextual_fallacy_analyzer import EnhancedContextualFallacyAnalyzer
 from argumentation_analysis.agents.tools.analysis.enhanced.fallacy_severity_evaluator import EnhancedFallacySeverityEvaluator
 
 
-class TestFallacyDetectionWorkflow: # Suppression de l'héritage AsyncTestCase
+class TestFallacyDetectionWorkflow:
     """Tests fonctionnels pour le workflow de détection de sophismes."""
 
-    def setUp(self):
+    @pytest.fixture(autouse=True)
+    def setup(self):
         """Initialisation avant chaque test."""
         self.complex_analyzer = ComplexFallacyAnalyzer()
         self.contextual_analyzer = EnhancedContextualFallacyAnalyzer()
@@ -65,11 +64,11 @@ class TestFallacyDetectionWorkflow: # Suppression de l'héritage AsyncTestCase
         # 1. Analyse contextuelle pour identifier les sophismes potentiels
         # Utiliser directement identify_contextual_fallacies qui appelle analyze_context en interne
         contextual_fallacies = self.contextual_analyzer.identify_contextual_fallacies(
-            self.sample_text_with_fallacies, 
+            self.sample_text_with_fallacies,
             self.sample_context
         )
         
-        self.assertIsNotNone(contextual_fallacies)
+        assert contextual_fallacies is not None
         # S'attendre à ce que des sophismes soient détectés (même si ce sont des mocks pour l'instant)
         # Le nombre exact dépendra de l'implémentation réelle et des mocks
         
@@ -80,15 +79,15 @@ class TestFallacyDetectionWorkflow: # Suppression de l'héritage AsyncTestCase
 
         # 2. Analyse complexe pour identifier les sophismes composés et les structures
         complex_analysis_results = self.complex_analyzer.detect_composite_fallacies(
-            arguments_for_complex_analysis, 
+            arguments_for_complex_analysis,
             self.sample_context
         )
         
-        self.assertIsNotNone(complex_analysis_results)
-        self.assertIn("individual_fallacies_count", complex_analysis_results)
-        self.assertIn("basic_combinations", complex_analysis_results)
-        self.assertIn("advanced_combinations", complex_analysis_results)
-        self.assertIn("composite_severity", complex_analysis_results)
+        assert complex_analysis_results is not None
+        assert "individual_fallacies_count" in complex_analysis_results
+        assert "basic_combinations" in complex_analysis_results
+        assert "advanced_combinations" in complex_analysis_results
+        assert "composite_severity" in complex_analysis_results
         
         # Récupérer tous les sophismes identifiés (individuels et composés)
         all_identified_fallacies = []
@@ -111,24 +110,24 @@ class TestFallacyDetectionWorkflow: # Suppression de l'héritage AsyncTestCase
                 all_identified_fallacies.append({
                     "fallacy_type": combo.get("combination_name", "Combinaison avancée"),
                     "description": combo.get("description"),
-                    "confidence": combo.get("severity", 0.7) 
+                    "confidence": combo.get("severity", 0.7)
                 })
         
         # 3. Évaluation de la gravité des sophismes identifiés
         if all_identified_fallacies:
             severity_results = self.severity_evaluator.evaluate_fallacies_severity(
-                all_identified_fallacies, 
+                all_identified_fallacies,
                 self.sample_context
             )
             
-            self.assertIsNotNone(severity_results)
-            self.assertIsInstance(severity_results, list)
+            assert severity_results is not None
+            assert isinstance(severity_results, list)
             if severity_results: # S'assurer que la liste n'est pas vide
-                self.assertIn("fallacy_type", severity_results[0])
-                self.assertIn("original_confidence", severity_results[0])
-                self.assertIn("contextual_adjustment", severity_results[0])
-                self.assertIn("final_severity_score", severity_results[0])
-                self.assertIn("severity_level", severity_results[0])
+                assert "fallacy_type" in severity_results[0]
+                assert "original_confidence" in severity_results[0]
+                assert "contextual_adjustment" in severity_results[0]
+                assert "final_severity_score" in severity_results[0]
+                assert "severity_level" in severity_results[0]
         else:
             # Si aucun sophisme n'a été identifié par les étapes précédentes,
             # severity_results sera probablement vide ou non appelé.

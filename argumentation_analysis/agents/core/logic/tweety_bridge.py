@@ -220,24 +220,19 @@ class TweetyBridge:
         description="Exécute une requête en Logique Propositionnelle (syntaxe Tweety: !,||,=>,<=>,^^) sur un Belief Set fourni.",
         name="execute_pl_query"
     )
-    def execute_pl_query(self, belief_set_content: str, query_string: str) -> str:
+    def perform_pl_query(self, belief_set_content: str, query_string: str) -> Tuple[Optional[bool], str]:
         """
-        Exécute une requête en logique propositionnelle sur un ensemble de croyances donné.
-        Délègue l'exécution au PLHandler.
+        Exécute une requête PL et retourne le résultat booléen brut et une chaîne de sortie.
         """
-        self._logger.info(f"TweetyBridge.execute_pl_query: Query='{query_string}' sur BS: ('{belief_set_content[:60]}...')")
-        
+        self._logger.info(f"TweetyBridge.perform_pl_query: Query='{query_string}' sur BS: ('{belief_set_content[:60]}...')")
         if not self.is_jvm_ready() or not hasattr(self, '_pl_handler'):
-            self._logger.error("TweetyBridge.execute_pl_query: TweetyBridge ou PLHandler non prêt.")
-            return "FUNC_ERROR: TweetyBridge ou PLHandler non prêt."
-        
+            self._logger.error("TweetyBridge.perform_pl_query: TweetyBridge ou PLHandler non prêt.")
+            return None, "Erreur: TweetyBridge ou PLHandler non prêt."
+
         try:
-            # PLHandler.pl_query gère le parsing du BS et de la requête, et l'exécution.
-            # Il devrait retourner True, False, ou lever une exception.
             result_bool = self._pl_handler.pl_query(belief_set_content, query_string)
             
-            # Formater le résultat comme attendu par l'ancienne interface
-            if result_bool is None: # Cas où le handler pourrait retourner None (même si non prévu actuellement)
+            if result_bool is None:
                 result_str = f"Tweety Result: Unknown for query '{query_string}'."
                 self._logger.warning(f"Requête PL '{query_string}' -> indéterminé (None) via PLHandler.")
             else:
@@ -245,16 +240,24 @@ class TweetyBridge:
                 result_str = f"Tweety Result: Query '{query_string}' is {result_label}."
                 self._logger.info(f"Résultat formaté requête PL '{query_string}' via PLHandler: {result_label}")
             
-            return result_str
-        
-        except ValueError as e_val: # Erreurs de parsing ou autres erreurs logiques du handler
+            return result_bool, result_str
+
+        except ValueError as e_val:
             error_msg = f"Erreur lors de l'exécution de la requête PL via PLHandler: {str(e_val)}"
             self._logger.error(error_msg, exc_info=True)
-            return f"FUNC_ERROR: {error_msg}"
-        except Exception as e_generic: # Autres erreurs inattendues
+            return None, f"ERREUR: {error_msg}"
+        except Exception as e_generic:
             error_msg = f"Erreur inattendue lors de l'exécution de la requête PL: {str(e_generic)}"
             self._logger.error(error_msg, exc_info=True)
-            return f"FUNC_ERROR: {error_msg}"
+            return None, f"ERREUR: {error_msg}"
+
+    def execute_pl_query(self, belief_set_content: str, query_string: str) -> str:
+        """
+        Exécute une requête en logique propositionnelle sur un ensemble de croyances donné.
+        Délègue l'exécution au PLHandler et retourne une chaîne formatée.
+        """
+        _, result_str = self.perform_pl_query(belief_set_content, query_string)
+        return result_str
 
     # Les méthodes _parse_pl_formula, _parse_pl_belief_set, _execute_pl_query_internal
     # sont maintenant encapsulées dans PLHandler et peuvent être supprimées ici.

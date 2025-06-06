@@ -6,7 +6,6 @@ Tests unitaires pour le module EnhancedComplexFallacyAnalyzer.
 import unittest
 from unittest.mock import patch, MagicMock
 import json
-from tests.async_test_case import AsyncTestCase
 from argumentation_analysis.agents.tools.analysis.enhanced.complex_fallacy_analyzer import EnhancedComplexFallacyAnalyzer
 
 
