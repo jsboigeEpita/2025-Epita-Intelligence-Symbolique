@@ -151,7 +151,7 @@ class TweetyBridge:
 
     # --- Méthodes pour la logique propositionnelle ---
     
-    def validate_formula(self, formula_string: str) -> Tuple[bool, str]:
+    def validate_formula(self, formula_string: str, constants: Optional[List[str]] = None) -> Tuple[bool, str]:
         """
         Valide la syntaxe d'une formule de logique propositionnelle.
         Délègue la validation au PLHandler.
@@ -163,7 +163,7 @@ class TweetyBridge:
         try:
             # PLHandler.parse_pl_formula lève une ValueError en cas d'échec de parsing.
             # Si elle ne lève pas d'exception, la formule est syntaxiquement valide.
-            self._pl_handler.parse_pl_formula(formula_string)
+            self._pl_handler.parse_pl_formula(formula_string, constants)
             self._logger.info(f"Formule PL '{formula_string}' validée avec succès par PLHandler.")
             return True, "Formule valide"
         except ValueError as e_val:
@@ -173,7 +173,7 @@ class TweetyBridge:
             self._logger.error(f"Erreur inattendue lors de la validation PL de '{formula_string}': {e_generic}", exc_info=True)
             return False, f"Erreur inattendue: {str(e_generic)}"
 
-    def validate_belief_set(self, belief_set_string: str) -> Tuple[bool, str]:
+    def validate_belief_set(self, belief_set_string: str, constants: Optional[List[str]] = None) -> Tuple[bool, str]:
         """
         Valide la syntaxe d'un ensemble de croyances en logique propositionnelle.
         Délègue la validation au PLHandler.
@@ -204,7 +204,7 @@ class TweetyBridge:
                 return False, "Ensemble de croyances vide ou ne contenant que des commentaires"
 
             for formula_str in cleaned_formulas:
-                self._pl_handler.parse_pl_formula(formula_str) # Lèvera ValueError si invalide
+                self._pl_handler.parse_pl_formula(formula_str, constants) # Lèvera ValueError si invalide
 
             self._logger.info(f"Ensemble de croyances PL validé avec succès par PLHandler (parsing individuel).")
             return True, "Ensemble de croyances valide"
@@ -220,7 +220,7 @@ class TweetyBridge:
         description="Exécute une requête en Logique Propositionnelle (syntaxe Tweety: !,||,=>,<=>,^^) sur un Belief Set fourni.",
         name="execute_pl_query"
     )
-    def perform_pl_query(self, belief_set_content: str, query_string: str) -> Tuple[Optional[bool], str]:
+    def perform_pl_query(self, belief_set_content: str, query_string: str, constants: Optional[List[str]] = None) -> Tuple[Optional[bool], str]:
         """
         Exécute une requête PL et retourne le résultat booléen brut et une chaîne de sortie.
         """
@@ -230,7 +230,7 @@ class TweetyBridge:
             return None, "Erreur: TweetyBridge ou PLHandler non prêt."
 
         try:
-            result_bool = self._pl_handler.pl_query(belief_set_content, query_string)
+            result_bool = self._pl_handler.pl_query(belief_set_content, query_string, constants)
             
             if result_bool is None:
                 result_str = f"Tweety Result: Unknown for query '{query_string}'."
@@ -251,13 +251,14 @@ class TweetyBridge:
             self._logger.error(error_msg, exc_info=True)
             return None, f"ERREUR: {error_msg}"
 
-    def execute_pl_query(self, belief_set_content: str, query_string: str) -> str:
+    def execute_pl_query(self, belief_set_content: str, query_string: str, constants: Optional[List[str]] = None) -> Tuple[Optional[bool], str]:
         """
         Exécute une requête en logique propositionnelle sur un ensemble de croyances donné.
-        Délègue l'exécution au PLHandler et retourne une chaîne formatée.
+        Délègue l'exécution au PLHandler et retourne un tuple (résultat_bool, chaîne_formatée).
         """
-        _, result_str = self.perform_pl_query(belief_set_content, query_string)
-        return result_str
+        self._logger.info(f"TweetyBridge.execute_pl_query: Query='{query_string}' sur BS: ('{belief_set_content[:60]}...')")
+        # La méthode perform_pl_query est maintenant la méthode publique principale
+        return self.perform_pl_query(belief_set_content, query_string, constants)
 
     def is_pl_kb_consistent(self, belief_set_content: str) -> Tuple[bool, str]:
         """Vérifie la cohérence d'une base de connaissances propositionnelle."""

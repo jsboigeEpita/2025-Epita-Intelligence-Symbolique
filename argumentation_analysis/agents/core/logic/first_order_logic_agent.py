@@ -906,23 +906,22 @@ class FirstOrderLogicAgent(BaseLogicAgent):
             self.logger.warning(f"Formule FOL invalide: {formula}. Message: {message}")
         return is_valid
 
-    def is_consistent(self, belief_set: BeliefSet) -> tuple[bool, str]:
+    def is_consistent(self, belief_set: BeliefSet) -> Tuple[bool, str]:
         """
         Vérifie si un ensemble de croyances FOL est cohérent.
 
-        :param belief_set: L'objet BeliefSet à vérifier.
-        :return: Un tuple (bool, str) indiquant si l'ensemble est cohérent et un message.
+        :param belief_set: L'ensemble de croyances à vérifier.
+        :return: Un tuple (bool, str) indiquant la cohérence et un message.
         """
-        self.logger.debug(f"Vérification de la cohérence de l'ensemble de croyances FOL.")
+        self.logger.info(f"Vérification de la cohérence pour l'agent {self.name}")
         try:
-            # Accéder à l'attribut 'content' de l'objet BeliefSet
-            belief_set_content = belief_set.content
-            is_valid, message = self.tweety_bridge.validate_fol_belief_set(belief_set_content)
-            if not is_valid:
-                self.logger.warning(f"Ensemble de croyances FOL incohérent: {message}")
-            return is_valid, message
+            # La signature est extraite du belief_set.content par le handler
+            is_consistent, message = self.tweety_bridge.is_fol_kb_consistent(belief_set.content)
+            if not is_consistent:
+                self.logger.warning(f"Ensemble de croyances FOL jugé incohérent par Tweety: {message}")
+            return is_consistent, message
         except Exception as e:
-            error_msg = f"Erreur inattendue lors de la vérification de la cohérence: {e}"
+            error_msg = f"Erreur inattendue lors de la vérification de la cohérence FOL: {e}"
             self.logger.error(error_msg, exc_info=True)
             return False, error_msg
 

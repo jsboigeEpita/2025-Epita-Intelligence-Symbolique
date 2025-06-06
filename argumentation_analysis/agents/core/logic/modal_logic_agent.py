@@ -465,6 +465,16 @@ class ModalLogicAgent(BaseLogicAgent): # Modification de l'héritage
             self.logger.warning(f"Formule ML invalide: {formula}. Message: {message}")
         return is_valid
 
+    def is_consistent(self, belief_set: BeliefSet) -> Tuple[bool, str]:
+        """
+        Vérifie si un ensemble de croyances ML est cohérent.
+
+        :param belief_set: L'ensemble de croyances à vérifier.
+        :return: Un tuple (bool, str) indiquant la cohérence et un message.
+        """
+        self.logger.info(f"Vérification de la cohérence pour l'agent {self.name}")
+        return self.tweety_bridge.is_modal_kb_consistent(belief_set.content)
+
     def _create_belief_set_from_data(self, belief_set_data: Dict[str, Any]) -> BeliefSet:
         """
         Crée un objet `ModalBeliefSet` à partir d'un dictionnaire de données.

@@ -377,22 +377,22 @@ class PropositionalLogicAgent(BaseLogicAgent):
             self.logger.error(f"Erreur lors de la validation de la formule PL '{formula}': {e}", exc_info=True)
             return False
 
-    def is_consistent(self, belief_set: BeliefSet) -> tuple[bool, str]:
+    def is_consistent(self, belief_set: BeliefSet) -> Tuple[bool, str]:
         """
         Vérifie si un ensemble de croyances propositionnel est cohérent.
 
-        :param belief_set: L'objet BeliefSet à vérifier.
-        :return: Un tuple (bool, str) indiquant si l'ensemble est cohérent et un message.
+        :param belief_set: L'ensemble de croyances à vérifier.
+        :return: Un tuple (bool, str) indiquant la cohérence et un message.
         """
-        self.logger.debug(f"Vérification de la cohérence de l'ensemble de croyances PL.")
+        self.logger.info(f"Vérification de la cohérence pour l'agent {self.name}")
         try:
-            belief_set_content = belief_set.content
-            is_valid, message = self._tweety_bridge.is_pl_kb_consistent(belief_set_content)
-            if not is_valid:
-                self.logger.warning(f"Ensemble de croyances PL incohérent: {message}")
-            return is_valid, message
+            # La cohérence est vérifiée par le bridge qui appelle le handler approprié.
+            is_consistent, message = self.tweety_bridge.is_pl_kb_consistent(belief_set.content)
+            if not is_consistent:
+                self.logger.warning(f"Ensemble de croyances PL jugé incohérent par Tweety: {message}")
+            return is_consistent, message
         except Exception as e:
-            error_msg = f"Erreur inattendue lors de la vérification de la cohérence: {e}"
+            error_msg = f"Erreur inattendue lors de la vérification de la cohérence PL: {e}"
             self.logger.error(error_msg, exc_info=True)
             return False, error_msg
 
