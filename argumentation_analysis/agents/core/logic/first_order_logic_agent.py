@@ -773,7 +773,8 @@ class FirstOrderLogicAgent(BaseLogicAgent):
                 query_string = f"{predicate_name}({', '.join(constants)})"
                 
                 # Validation contextuelle avec Tweety
-                is_valid, validation_msg = self.tweety_bridge.validate_fol_query_with_context(belief_set.content, query_string)
+                validation_result = self.tweety_bridge.validate_fol_query_with_context(belief_set.content, query_string)
+                is_valid, validation_msg = validation_result if isinstance(validation_result, tuple) else (validation_result, "")
                 if is_valid:
                     self.logger.info(f"Requête valide assemblée: {query_string}")
                     valid_queries.append(query_string)
