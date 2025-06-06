@@ -13,6 +13,7 @@ l'interprétation des résultats.
 import logging
 import re
 import json
+import jpype
 from typing import Dict, List, Optional, Any, Tuple, AsyncGenerator
 
 from semantic_kernel import Kernel
@@ -359,89 +360,104 @@ class FirstOrderLogicAgent(BaseLogicAgent):
     async def text_to_belief_set(self, text: str, context: Optional[Dict[str, Any]] = None) -> Tuple[Optional[BeliefSet], str]:
         """
         Convertit un texte en langage naturel en un ensemble de croyances FOL.
-        Approche basée sur la BNF avec validation Python:
+        Approche basée sur la BNF avec validation Python et boucle de correction:
         1. Le LLM génère un JSON structuré.
-        2. Le JSON est validé en Python pour sa cohérence interne.
+        2. Une boucle de correction (max 3 tentatives) tente de valider et de corriger le JSON.
         3. Une base de connaissances est construite en respectant la syntaxe Tweety.
         4. Le belief set complet est validé par Tweety.
         """
-        self.logger.info(f"Conversion de texte en ensemble de croyances FOL (approche BNF + validation) pour {self.name}...")
+        self.logger.info(f"Conversion de texte en ensemble de croyances FOL pour {self.name}...")
         
-        try:
-            # 1. Obtenir le JSON du LLM
-            result = await self.sk_kernel.plugins[self.name]["TextToFOLBeliefSet"].invoke(self.sk_kernel, input=text)
-            json_content_str = str(result).strip()
-            
-            if json_content_str.startswith("```json"):
-                json_content_str = json_content_str[7:]
-            if json_content_str.startswith("```"):
-                json_content_str = json_content_str[3:]
-            if json_content_str.endswith("```"):
-                json_content_str = json_content_str[:-3]
-            json_content_str = json_content_str.strip()
+        max_retries = 3
+        last_error = ""
+        current_input = text
 
+        for attempt in range(max_retries):
+            self.logger.info(f"Tentative {attempt + 1}/{max_retries}...")
+            
             try:
-                kb_json = json.loads(json_content_str)
-            except json.JSONDecodeError as json_err:
-                return None, f"La sortie du LLM n'est pas un JSON valide: {json_err}"
+                # 1. Obtenir le JSON du LLM
+                result = await self.sk_kernel.plugins[self.name]["TextToFOLBeliefSet"].invoke(self.sk_kernel, input=current_input)
+                json_content_str = str(result).strip()
+                
+                # Extrait le premier bloc JSON valide de la réponse du LLM.
+                # Trouve le premier '{' et le dernier '}' pour isoler l'objet JSON,
+                # ignorant ainsi tout texte explicatif avant ou après.
+                start_index = json_content_str.find('{')
+                end_index = json_content_str.rfind('}')
 
-            # 2. Normaliser et valider la cohérence du JSON
-            # 2. Créer une version entièrement normalisée du JSON
-            normalized_kb_json = {"predicates": kb_json.get("predicates", [])}
+                if start_index != -1 and end_index != -1 and end_index > start_index:
+                    json_content_str = json_content_str[start_index:end_index + 1]
+                else:
+                    self.logger.warning("Impossible d'isoler un bloc JSON avec find/rfind. Tentative de parsing de la chaîne complète.")
+                
+                try:
+                    kb_json = json.loads(json_content_str)
+                except json.JSONDecodeError as json_err:
+                    last_error = f"La sortie du LLM n'est pas un JSON valide: {json_err}"
+                    self.logger.warning(f"{last_error} à la tentative {attempt + 1}")
+                    current_input = f"Le JSON précédent était invalide. Erreur: {json_err}. Le JSON était: {json_content_str}. Veuillez corriger et renvoyer un JSON valide. Texte original: {text}"
+                    continue
 
-            # Normaliser les sorts et créer une table de mappage
-            constant_map = {}
-            normalized_sorts = {}
-            for sort_name, constants in kb_json.get("sorts", {}).items():
-                norm_constants = []
-                for const in constants:
-                    norm_const = self._normalize_identifier(const)
-                    norm_constants.append(norm_const)
-                    constant_map[const] = norm_const
-                normalized_sorts[sort_name] = norm_constants
-            normalized_kb_json["sorts"] = normalized_sorts
+                # 2. Normaliser et valider la cohérence du JSON
+                normalized_kb_json = {"predicates": kb_json.get("predicates", [])}
+                constant_map = {}
+                normalized_sorts = {}
+                for sort_name, constants in kb_json.get("sorts", {}).items():
+                    norm_constants = []
+                    for const in constants:
+                        norm_const = self._normalize_identifier(const)
+                        norm_constants.append(norm_const)
+                        constant_map[const] = norm_const
+                    normalized_sorts[sort_name] = norm_constants
+                normalized_kb_json["sorts"] = normalized_sorts
 
-            # Normaliser les formules en utilisant la table de mappage
-            normalized_formulas = []
-            for formula in kb_json.get("formulas", []):
-                # Remplacer les constantes dans la formule. On trie par longueur pour éviter les remplacements partiels (ex: 'a' dans 'ab')
-                sorted_constants = sorted(constant_map.keys(), key=len, reverse=True)
-                norm_formula = formula
-                for const in sorted_constants:
-                    # Utiliser \b pour s'assurer qu'on remplace des mots entiers
-                    norm_formula = re.sub(r'\b' + re.escape(const) + r'\b', constant_map[const], norm_formula)
-                normalized_formulas.append(norm_formula)
-            normalized_kb_json["formulas"] = normalized_formulas
-            
-            # Valider le JSON entièrement normalisé
-            is_json_valid, json_validation_msg = self._validate_kb_json(normalized_kb_json)
-            if not is_json_valid:
-                self.logger.error(f"Validation du JSON échouée: {json_validation_msg}")
-                self.logger.error(f"JSON (après normalisation complète):\n{json.dumps(normalized_kb_json, indent=2)}")
-                return None, f"Validation du JSON échouée: {json_validation_msg}"
-            self.logger.info("Validation de la cohérence du JSON réussie.")
+                normalized_formulas = []
+                for formula in kb_json.get("formulas", []):
+                    sorted_constants = sorted(constant_map.keys(), key=len, reverse=True)
+                    norm_formula = formula
+                    for const in sorted_constants:
+                        norm_formula = re.sub(r'\b' + re.escape(const) + r'\b', constant_map[const], norm_formula)
+                    normalized_formulas.append(norm_formula)
+                normalized_kb_json["formulas"] = normalized_formulas
+                
+                is_json_valid, json_validation_msg = self._validate_kb_json(normalized_kb_json)
+                if not is_json_valid:
+                    raise ValueError(json_validation_msg)
 
-            # 3. Construire la base de connaissances à partir du JSON normalisé
-            full_belief_set_content = self._construct_kb_from_json(normalized_kb_json)
-            if not full_belief_set_content:
-                return None, "La conversion a produit une base de connaissances vide."
-            self.logger.debug(f"Ensemble de croyances complet généré:\n{full_belief_set_content}")
+                self.logger.info("Validation de la cohérence du JSON réussie.")
 
-            # 4. Valider le belief set complet avec Tweety
-            is_valid, validation_msg = self.tweety_bridge.validate_fol_belief_set(full_belief_set_content)
-            if not is_valid:
-                self.logger.error(f"Ensemble de croyances invalide selon Tweety: {validation_msg}")
-                self.logger.error(f"Contenu invalidé:\n{full_belief_set_content}")
-                return None, f"Ensemble de croyances invalide: {validation_msg}"
-            
-            belief_set_obj = FirstOrderBeliefSet(full_belief_set_content)
-            self.logger.info("Conversion réussie avec l'approche BNF et validation Python.")
-            return belief_set_obj, "Conversion réussie"
-        
-        except Exception as e:
-            error_msg = f"Erreur lors de la conversion du texte en ensemble de croyances: {str(e)}"
-            self.logger.error(error_msg, exc_info=True)
-            return None, error_msg
+                # 3. Construire la base de connaissances
+                full_belief_set_content = self._construct_kb_from_json(normalized_kb_json)
+                if not full_belief_set_content:
+                    last_error = "La conversion a produit une base de connaissances vide."
+                    self.logger.warning(last_error)
+                    continue
+
+                # 4. Valider le belief set complet avec Tweety
+                is_valid, validation_msg = self.tweety_bridge.validate_fol_belief_set(full_belief_set_content)
+                if not is_valid:
+                    last_error = f"Ensemble de croyances invalide selon Tweety: {validation_msg}"
+                    self.logger.error(f"{last_error}\nContenu invalidé:\n{full_belief_set_content}")
+                    # On ne tente pas de corriger une erreur Tweety pour l'instant
+                    return None, last_error
+
+                belief_set_obj = FirstOrderBeliefSet(full_belief_set_content)
+                self.logger.info("Conversion réussie.")
+                return belief_set_obj, "Conversion réussie"
+
+            except (ValueError, jpype.JException) as e:
+                last_error = f"Validation ou erreur de syntaxe FOL: {e}"
+                self.logger.warning(f"{last_error} à la tentative {attempt + 1}")
+                current_input = f"La tentative précédente a échoué avec l'erreur: '{e}'. La sortie JSON était: {json_content_str}. Veuillez corriger le JSON ou la syntaxe FOL en respectant les règles et le texte original: {text}"
+                continue
+            except Exception as e:
+                error_msg = f"Erreur inattendue lors de la conversion: {str(e)}"
+                self.logger.error(error_msg, exc_info=True)
+                return None, error_msg
+
+        self.logger.error(f"Échec de la conversion après {max_retries} tentatives. Dernière erreur: {last_error}")
+        return None, f"Échec de la conversion après {max_retries} tentatives. Dernière erreur: {last_error}"
     
     async def generate_queries(self, text: str, belief_set: BeliefSet, context: Optional[Dict[str, Any]] = None) -> List[str]:
         """
@@ -596,6 +612,26 @@ class FirstOrderLogicAgent(BaseLogicAgent):
         if not is_valid:
             self.logger.warning(f"Formule FOL invalide: {formula}. Message: {message}")
         return is_valid
+
+    def is_consistent(self, belief_set: BeliefSet) -> tuple[bool, str]:
+        """
+        Vérifie si un ensemble de croyances FOL est cohérent.
+
+        :param belief_set: L'objet BeliefSet à vérifier.
+        :return: Un tuple (bool, str) indiquant si l'ensemble est cohérent et un message.
+        """
+        self.logger.debug(f"Vérification de la cohérence de l'ensemble de croyances FOL.")
+        try:
+            # Accéder à l'attribut 'content' de l'objet BeliefSet
+            belief_set_content = belief_set.content
+            is_valid, message = self.tweety_bridge.validate_fol_belief_set(belief_set_content)
+            if not is_valid:
+                self.logger.warning(f"Ensemble de croyances FOL incohérent: {message}")
+            return is_valid, message
+        except Exception as e:
+            error_msg = f"Erreur inattendue lors de la vérification de la cohérence: {e}"
+            self.logger.error(error_msg, exc_info=True)
+            return False, error_msg
 
     def _create_belief_set_from_data(self, belief_set_data: Dict[str, Any]) -> BeliefSet:
         """

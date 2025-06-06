@@ -52,7 +52,7 @@ class BaseAgent(ABC):
         :param description: La description optionnelle de l'agent.
         :type description: Optional[str]
         """
-        self.name = agent_name
+        self._agent_name = agent_name
         self.description = description if description else (system_prompt if system_prompt else f"Agent {agent_name}")
         self.instructions = system_prompt if system_prompt else ""
         self._kernel = kernel
@@ -68,7 +68,7 @@ class BaseAgent(ABC):
         :return: Le nom de l'agent.
         :rtype: str
         """
-        return self.name
+        return self._agent_name
 
     @property
     def sk_kernel(self) -> 'Kernel':
