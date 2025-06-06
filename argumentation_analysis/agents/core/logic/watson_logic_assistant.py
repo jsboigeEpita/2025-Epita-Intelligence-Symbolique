@@ -1,9 +1,12 @@
 # argumentation_analysis/agents/core/logic/watson_logic_assistant.py
 import logging
-from typing import Optional, List, AsyncGenerator
+from typing import Optional, List, AsyncGenerator, ClassVar
 
 from semantic_kernel import Kernel
 from semantic_kernel.agents import Agent
+from semantic_kernel.agents.channels.agent_channel import AgentChannel
+from argumentation_analysis.agents.core.pm.sherlock_enquete_agent import CluedoChannel
+from semantic_kernel.contents import StreamingChatMessageContent, ChatMessageContent
 from semantic_kernel.contents import ChatMessageContent
 from semantic_kernel.contents.chat_history import ChatHistory
 
@@ -26,6 +29,7 @@ Lorsqu'une requête logique vous est soumise par Sherlock (via une tâche ou une
 4. Marquez la tâche correspondante comme complétée."""
 
 class WatsonLogicAssistant(PropositionalLogicAgent):
+    channel_type: ClassVar[type[AgentChannel]] = CluedoChannel
     """
     Assistant logique spécialisé, inspiré par Dr. Watson.
     Il aide à analyser la cohérence des arguments, à vérifier les déductions

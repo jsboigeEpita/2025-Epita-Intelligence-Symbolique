@@ -1,10 +1,11 @@
 # argumentation_analysis/agents/core/pm/sherlock_enquete_agent.py
 import logging
-from typing import Optional, List, AsyncGenerator
+from typing import Optional, List, AsyncGenerator, ClassVar, Any
 
 from semantic_kernel import Kernel
 from semantic_kernel.agents import Agent
-from semantic_kernel.contents import ChatMessageContent
+from semantic_kernel.agents.channels.agent_channel import AgentChannel
+from semantic_kernel.contents import ChatMessageContent, StreamingChatMessageContent
 from semantic_kernel.contents.chat_history import ChatHistory
 
 from .pm_agent import ProjectManagerAgent
@@ -29,7 +30,21 @@ Pour interagir avec l'état de l'enquête (géré par StateManagerPlugin), utili
 Votre objectif est de parvenir à une conclusion logique et bien étayée.
 Dans le contexte d'une enquête Cluedo, vous devez identifier le coupable, l'arme et le lieu du crime."""
 
+class CluedoChannel(AgentChannel):
+    """Un canal de communication pour le jeu Cluedo."""
+    async def get_history(self, **kwargs: Any) -> AsyncGenerator[List[ChatMessageContent], Any]:
+        yield []
+    async def invoke(self, agent: "Agent", **kwargs: Any) -> AsyncGenerator[List[ChatMessageContent], Any]:
+        yield True, ChatMessageContent(role="user", content="test")
+    async def invoke_stream(self, agent: "Agent", **kwargs: Any) -> AsyncGenerator[List[StreamingChatMessageContent], Any]:
+        yield []
+    async def receive(self, messages: List[ChatMessageContent], **kwargs: Any) -> None:
+        pass
+    async def reset(self, **kwargs: Any) -> None:
+        pass
+
 class SherlockEnqueteAgent(ProjectManagerAgent):
+    channel_type: ClassVar[type[AgentChannel]] = CluedoChannel
     """
     Agent spécialisé dans la gestion d'enquêtes complexes, inspiré par Sherlock Holmes.
     Il planifie les étapes d'investigation, identifie les pistes à suivre et
@@ -56,6 +71,7 @@ class SherlockEnqueteAgent(ProjectManagerAgent):
         **kwargs,
     ) -> List[ChatMessageContent]:
         """Invoke the agent with a list of messages."""
+        self._logger.info(f"--- SherlockEnqueteAgent INVOKED with {len(messages)} messages ---")
         chat_history = ChatHistory(messages=messages)
         chat_history.add_system_message(self.instructions)
         
