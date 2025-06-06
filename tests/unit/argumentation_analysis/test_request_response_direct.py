@@ -10,6 +10,7 @@ import time
 import unittest
 import uuid
 from datetime import datetime
+import pytest
 
 from argumentation_analysis.core.communication.message import (
     Message, MessageType, MessagePriority, AgentLevel
@@ -27,10 +28,11 @@ logging.basicConfig(level=logging.DEBUG,
                    datefmt='%H:%M:%S')
 logger = logging.getLogger("DirectTest")
 
-class TestRequestResponseDirect(unittest.IsolatedAsyncioTestCase):
+class TestRequestResponseDirect(unittest.TestCase):
     """Test direct du protocole de requête-réponse."""
     
-    async def asyncSetUp(self):
+    @pytest.fixture(autouse=True)
+    async def setup(self):
         """Initialisation asynchrone avant chaque test."""
         logger.info("Setting up test environment")
         
@@ -50,8 +52,14 @@ class TestRequestResponseDirect(unittest.IsolatedAsyncioTestCase):
         self.middleware.initialize_protocols()
         
         logger.info("Test environment setup complete")
+        
+        # Yield pour que le test s'exécute
+        yield
+        
+        # Code de teardown
+        await self._teardown()
     
-    async def asyncTearDown(self):
+    async def _teardown(self):
         """Nettoyage après chaque test."""
         logger.info("Tearing down test environment")
         
@@ -63,6 +71,7 @@ class TestRequestResponseDirect(unittest.IsolatedAsyncioTestCase):
         
         logger.info("Test environment teardown complete")
     
+    @pytest.mark.asyncio
     async def test_direct_request_response(self):
         """Test direct du protocole de requête-réponse."""
         logger.info("Starting test_direct_request_response")
