@@ -165,10 +165,11 @@ export const analyzeLogicGraph = async (data) => {
   const { text, options } = data;
   const requestBody = {
     text,
+    logic_type: 'propositional', // Ajout du type de logique manquant
     options: options || { layout: 'hierarchical' }
   };
 
-  const response = await fetchWithTimeout(`${API_BASE_URL}/api/logic_graph`, {
+  const response = await fetchWithTimeout(`${API_BASE_URL}/api/logic/belief-set`, {
     method: 'POST',
     headers: defaultHeaders,
     body: JSON.stringify(requestBody)
