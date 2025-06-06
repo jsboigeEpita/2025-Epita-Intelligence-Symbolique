@@ -45,9 +45,9 @@ async def main():
     
     logger = setup_logging()
     
-    print("🧩 Lancement de la démonstration de l'ÉNIGME D'EINSTEIN COMPLEXE...")
-    print("⚠️  Cette énigme FORCE l'utilisation de TweetyProject par Watson!")
-    print("📋 Minimum requis: 10 clauses logiques + 5 requêtes pour validation\n")
+    print("[ENIGME] Lancement de la démonstration de l'ÉNIGME D'EINSTEIN COMPLEXE...")
+    print("[ATTENTION] Cette énigme FORCE l'utilisation de TweetyProject par Watson!")
+    print("[REQUIS] Minimum requis: 10 clauses logiques + 5 requêtes pour validation\n")
     
     try:
         # Configuration du kernel Semantic Kernel
