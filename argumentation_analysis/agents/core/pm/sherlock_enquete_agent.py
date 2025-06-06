@@ -10,31 +10,30 @@ from semantic_kernel.functions import kernel_function
 # from .pm_agent import ProjectManagerAgent # No longer inheriting
 # from .pm_definitions import PM_INSTRUCTIONS # Remplacé par le prompt spécifique
 
-SHERLOCK_ENQUETE_AGENT_SYSTEM_PROMPT = """Vous êtes Sherlock Holmes, le détective consultant. Vous êtes le **leader** de cette enquête. Votre parole fait autorité.
+SHERLOCK_ENQUETE_AGENT_SYSTEM_PROMPT = """Vous êtes Sherlock Holmes, le détective consultant. Votre objectif est de résoudre une affaire de meurtre dans le Manoir Tudor en utilisant la logique et la déduction.
 
-**VOTRE CYCLE DE TRAVAIL IMPÉRATIF :**
-À chaque tour, vous **DEVEZ** suivre ce cycle :
-1.  **ANALYSE** : Obtenez l'état complet de l'enquête (`get_case_description`, `get_hypotheses`, etc.).
-2.  **SYNTHÈSE** : Formulez une brève synthèse interne de l'état actuel.
-3.  **DÉCISION** : Prenez **UNE** décision claire et unique sur la prochaine action. Ne demandez **JAMAIS** l'avis de Watson sur ce qu'il faut faire.
-4.  **ACTION** : Exécutez l'action via un outil.
-5.  **CONCLUSION** : Si vous avez une hypothèse avec une confiance de 0.8 ou plus, ou si l'enquête semble bloquée, déclarez votre conclusion. Commencez votre message par "**Conclusion finale :**" et utilisez l'outil `propose_final_solution`. C'est à vous, et à vous seul, de décider quand l'enquête est terminée.
+**STRATÉGIE D'ENQUÊTE (CLUEDO) :**
+
+Votre méthode principale est la **suggestion et réfutation**. Vous devez itérer pour éliminer les possibilités.
+
+1.  **FAIRE UNE SUGGESTION** : À chaque tour, utilisez l'outil `faire_suggestion(suspect: str, arme: str, lieu: str)`. C'est votre action par défaut. Choisissez une combinaison que vous n'avez pas encore testée.
+2.  **ANALYSER L'INDICE** : L'orchestrateur (simulant les autres joueurs) vous donnera un indice en retour, vous informant si l'un des éléments de votre suggestion est connu. Par exemple : "Indice : Watson possède la carte 'Poignard'".
+3.  **METTRE À JOUR VOS DÉDUCTIONS** : Utilisez cet indice pour éliminer une carte. Si vous recevez un indice, cela signifie qu'au moins une des cartes de votre suggestion n'est PAS dans l'enveloppe secrète.
+4.  **ITÉRER** : Répétez le processus avec une nouvelle suggestion pour recueillir plus d'indices et affiner vos hypothèses.
+5.  **ACCUSATION FINALE** : Lorsque vous êtes certain de la solution (vous avez éliminé toutes les autres possibilités), et seulement à ce moment-là, utilisez l'outil `propose_final_solution(solution: dict)`. Commencez votre message par "**Conclusion finale :**".
 
 **RÈGLES STRICTES :**
-- **NE JAMAIS DEMANDER "Que faire ensuite ?"** ou des questions similaires. Vous êtes le décideur.
-- **DIRIGEZ WATSON** : Donnez des ordres clairs à Watson. Attendez ses analyses logiques, puis prenez votre décision.
-- **PRENEZ DES RISQUES** : Mieux vaut une conclusion audacieuse basée sur des preuves solides qu'une enquête qui n'en finit pas.
+- **COMMENCEZ TOUJOURS PAR UNE SUGGESTION.** N'attendez pas d'avoir toutes les informations.
+- **UTILISEZ LES INDICES.** Chaque indice est une pièce du puzzle. Mentionnez comment l'indice reçu influence votre prochaine suggestion.
+- **NE FAITES QU'UNE ACTION À LA FOIS.** Votre action principale est `faire_suggestion`.
 
-**Outils disponibles (via SherlockTools) :**
-- `get_case_description()`
-- `get_identified_elements()`
-- `get_hypotheses()`
-- `add_hypothesis(text: str, confidence_score: float)`
-- `update_hypothesis(hypothesis_id: str, new_text: str, new_confidence: float)`
-- `query_watson(logical_query: str, belief_set_id: str)`
-- `propose_final_solution(solution: dict)`: Propose la solution finale. Le dictionnaire doit avoir les clés 'suspect', 'arme', et 'lieu'.
+**Outils disponibles :**
+- `faire_suggestion(suspect: str, arme: str, lieu: str)`: Votre outil principal pour tester une hypothèse et obtenir un indice.
+- `propose_final_solution(solution: dict)`: À n'utiliser que pour l'accusation finale. Le dictionnaire doit contenir 'suspect', 'arme', et 'lieu'.
+- `get_case_description()`: Pour obtenir un rappel des éléments du jeu (suspects, armes, lieux).
 
-Votre objectif est de résoudre l'enquête Cluedo en identifiant le coupable, l'arme et le lieu. Prenez les choses en main."""
+Prenez les choses en main, détective. Le jeu a commencé.
+"""
 
 
 class SherlockTools:
@@ -77,17 +76,40 @@ class SherlockTools:
             return f"Erreur lors de l'ajout de l'hypothèse: {e}"
 
     @kernel_function(name="propose_final_solution", description="Propose une solution finale à l'enquête.")
-    async def propose_final_solution(self, solution: dict) -> str:
-        self._logger.info(f"Proposition de la solution finale: {solution}")
+    async def propose_final_solution(self, solution: Any) -> str:
+        import json
+        self._logger.info(f"Tentative de proposition de la solution finale: {solution} (type: {type(solution)})")
+        
+        parsed_solution = None
+        if isinstance(solution, str):
+            try:
+                parsed_solution = json.loads(solution)
+                self._logger.info(f"La solution était une chaîne, parsée en dictionnaire: {parsed_solution}")
+            except json.JSONDecodeError:
+                error_msg = f"Erreur: la solution fournie est une chaîne de caractères mal formatée: {solution}"
+                self._logger.error(error_msg)
+                return error_msg
+        elif isinstance(solution, dict):
+            parsed_solution = solution
+        else:
+            error_msg = f"Erreur: type de solution non supporté ({type(solution)}). Un dictionnaire ou une chaîne JSON est attendu."
+            self._logger.error(error_msg)
+            return error_msg
+
+        if not parsed_solution:
+            return "Erreur: La solution n'a pas pu être interprétée."
+
         try:
             await self._kernel.invoke(
                 plugin_name="EnqueteStatePlugin",
                 function_name="propose_final_solution",
-                solution=solution
+                solution=parsed_solution
             )
-            return f"Solution finale proposée avec succès: {solution}"
+            success_msg = f"Solution finale proposée avec succès: {parsed_solution}"
+            self._logger.info(success_msg)
+            return success_msg
         except Exception as e:
-            self._logger.error(f"Erreur lors de la proposition de la solution finale: {e}")
+            self._logger.error(f"Erreur lors de l'invocation de la fonction du kernel 'propose_final_solution': {e}", exc_info=True)
             return f"Erreur lors de la proposition de la solution finale: {e}"
 
 
