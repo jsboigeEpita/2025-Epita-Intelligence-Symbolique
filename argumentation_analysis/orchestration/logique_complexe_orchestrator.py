@@ -129,38 +129,35 @@ Commencez l'exploration!"""
         await self._group_chat.add_chat_message(ChatMessageContent(role="user", content=message_initial))
         
         # Boucle de résolution avec surveillance de progression
-        while self._tour_actuel < self._max_tours:
-            self._tour_actuel += 1
-            
-            self._logger.info(f"\n--- TOUR {self._tour_actuel}/{self._max_tours} ---")
-            
-            try:
-                # Invocation du groupe de chat
-                response = await self._group_chat.invoke()
+        self._logger.info("Début de la boucle de jeu gérée par AgentGroupChat.invoke...")
+        
+        try:
+            async for message in self._group_chat.invoke():
+                self._tour_actuel += 1
                 
-                if response and len(response) > 0:
-                    dernier_message = response[-1]
-                    agent_nom = getattr(dernier_message, 'name', 'Agent inconnu')
-                    contenu = str(dernier_message.content)
+                self._logger.info(f"\n--- TOUR {self._tour_actuel}/{self._max_tours} ---")
+                
+                agent_nom = getattr(message, 'name', 'Agent inconnu')
+                contenu = str(message.content)
+                
+                self._logger.info(f"Message de {agent_nom}: {contenu[:200]}...")
+                
+                # Vérification de progression logique
+                progression = self._state.verifier_progression_logique()
+                self._logger.info(f"Progression logique: {progression}")
+                
+                # Vérification de solution proposée
+                if "solution finale" in contenu.lower() or "énigme résolue" in contenu.lower():
+                    self._logger.info("[DETECTION] Tentative de solution finale détectée.")
                     
-                    self._logger.info(f"Message de {agent_nom}: {contenu[:200]}...")
-                    
-                    # Vérification de progression logique
-                    progression = self._state.verifier_progression_logique()
-                    self._logger.info(f"Progression logique: {progression}")
-                    
-                    # Vérification de solution proposée
-                    if "solution finale" in contenu.lower() or "énigme résolue" in contenu.lower():
-                        self._logger.info("🎯 Tentative de solution finale détectée.")
+                    if progression["force_logique_formelle"]:
+                        self._logger.info("[SUCCES] Solution avec logique formelle suffisante.")
+                        break
+                    else:
+                        self._logger.warning(f"[REJET] Solution rejetée - logique formelle insuffisante: {progression}")
                         
-                        if progression["force_logique_formelle"]:
-                            self._logger.info("✅ Solution avec logique formelle suffisante.")
-                            break
-                        else:
-                            self._logger.warning(f"❌ Solution rejetée - logique formelle insuffisante: {progression}")
-                            
-                            # Message de rappel forcé
-                            message_rappel = f"""⚠️ SOLUTION REJETÉE - LOGIQUE FORMELLE INSUFFISANTE
+                        # Message de rappel forcé
+                        message_rappel = f"""[REJET] SOLUTION REJETÉE - LOGIQUE FORMELLE INSUFFISANTE
 
 Progression actuelle:
 - Clauses formulées: {progression['clauses_formulees']}/10 (minimum requis)
@@ -170,14 +167,14 @@ Watson: Vous DEVEZ utiliser davantage TweetyProject avant de proposer une soluti
 Formulez plus de clauses logiques et exécutez plus de requêtes de déduction.
 
 Sherlock: Insistez pour que Watson utilise ses outils de logique formelle."""
-                            
-                            await self._group_chat.add_chat_message(
-                                ChatMessageContent(role="assistant", content=message_rappel)
-                            )
-                    
-                    # Encouragements périodiques pour utilisation TweetyProject
-                    if self._tour_actuel % 5 == 0 and not progression["force_logique_formelle"]:
-                        message_encouragement = f"""📊 POINT PROGRESSION (Tour {self._tour_actuel})
+                        
+                        await self._group_chat.add_chat_message(
+                            ChatMessageContent(role="assistant", content=message_rappel)
+                        )
+                
+                # Encouragements périodiques pour utilisation TweetyProject
+                if self._tour_actuel % 5 == 0 and not progression["force_logique_formelle"]:
+                    message_encouragement = f"""[PROGRESSION] POINT PROGRESSION (Tour {self._tour_actuel})
 
 État logique actuel:
 - Clauses TweetyProject: {progression['clauses_formulees']}/10
@@ -185,17 +182,18 @@ Sherlock: Insistez pour que Watson utilise ses outils de logique formelle."""
 
 Cette énigme est IMPOSSIBLE à résoudre sans formalisation complète.
 Watson: Continuez à utiliser vos outils TweetyProject massivement!"""
-                        
-                        await self._group_chat.add_chat_message(
-                            ChatMessageContent(role="assistant", content=message_encouragement)
-                        )
-                
-                else:
-                    self._logger.warning(f"Aucune réponse reçue au tour {self._tour_actuel}")
                     
-            except Exception as e:
-                self._logger.error(f"Erreur au tour {self._tour_actuel}: {e}", exc_info=True)
-                break
+                    await self._group_chat.add_chat_message(
+                        ChatMessageContent(role="assistant", content=message_encouragement)
+                    )
+                
+                # Arrêt si limite de tours atteinte
+                if self._tour_actuel >= self._max_tours:
+                    self._logger.warning(f"[LIMITE] Limite de {self._max_tours} tours atteinte.")
+                    break
+                    
+        except Exception as e:
+            self._logger.error(f"Erreur dans la boucle de jeu: {e}", exc_info=True)
         
         # Résultats finaux
         progression_finale = self._state.verifier_progression_logique()
