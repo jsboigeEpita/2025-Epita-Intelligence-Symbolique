@@ -507,5 +507,6 @@ async def run_test_with_timeout():
 
 
 if __name__ == "__main__":
-    # Exécuter le test
-    asyncio.run(run_test_with_timeout())
+    # Exécuter le test avec pytest-asyncio
+    import pytest
+    pytest.main([__file__, "-v"])

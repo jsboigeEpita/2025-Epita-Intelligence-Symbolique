@@ -492,6 +492,23 @@ class TweetyBridge:
             self._logger.error(f"Erreur lors de la vérification de cohérence modale: {e}", exc_info=True)
             return False, f"Error during Modal consistency check: {e}"
 
+    def validate_modal_query_with_context(self, belief_set_str: str, query_str: str, modal_logic_str: str = "S4") -> Tuple[bool, str]:
+        """
+        Valide une requête modale en utilisant le contexte d'une base de connaissances.
+        Délègue la validation au ModalHandler.
+        """
+        if not self.is_jvm_ready() or not hasattr(self, '_modal_handler'):
+            return False, "TweetyBridge ou ModalHandler non prêt."
+
+        self._logger.debug(f"TweetyBridge.validate_modal_query_with_context appelée pour query: '{query_str}', Logic: {modal_logic_str}")
+        try:
+            # Valider la requête en essayant de la parser avec le même contexte que le belief set
+            self._modal_handler.parse_modal_formula(query_str, modal_logic_str)
+            return True, "Requête modale valide dans le contexte"
+        except (ValueError, RuntimeError) as e:
+            self._logger.error(f"Erreur lors de la validation contextuelle de la requête modale '{query_str}': {e}", exc_info=True)
+            return False, str(e)
+
     # Les méthodes _parse_modal_formula, _parse_modal_belief_set, _execute_modal_query_internal
     # sont maintenant encapsulées dans ModalHandler et peuvent être supprimées ici.
 

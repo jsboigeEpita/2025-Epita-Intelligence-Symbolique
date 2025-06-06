@@ -13,6 +13,9 @@ Proposition détaillée de l'architecture hiérarchique à trois niveaux (strat�
 ### [Système de Communication entre Agents](./communication_agents.md)
 Analyse et description du système de communication inter-agents, incluant l'évolution vers une approche multi-canal gérée par un middleware de messagerie.
 
+### [Analyse des Orchestrations Agentiques Sherlock/Watson](./analyse_orchestrations_sherlock_watson.md)
+Analyse complète des flux d'orchestration dans les conversations agentiques entre Sherlock Holmes et Dr. Watson, en se concentrant sur leurs interactions, outils utilisés, et notamment l'usage des solvers Tweety par Watson. Couvre les patterns d'interaction pour les workflows Cluedo (logique informelle) et Einstein (logique formelle obligatoire).
+
 ### [Conception du Système de Communication Multi-Canal](../conception_systeme_communication_multi_canal.md) <!-- Lien corrigé de ./conception_multi_canal.md -->
 Présentation de la conception détaillée du système de communication multi-canal, incluant le rôle du middleware et les différents types de canaux.
 
