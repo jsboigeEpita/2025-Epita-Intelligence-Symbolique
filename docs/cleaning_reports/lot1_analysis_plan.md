@@ -32,7 +32,7 @@ L'objectif est d'améliorer l'organisation, la documentation, et la réutilisabi
 
 ### 3. `tests/test_crypto_errors.py`
 
-*   **Analyse :** Script de test manuel pour un `CryptoService` local. Redondant car un `CryptoService` plus complet existe dans `argumentation_analysis/services/crypto_service.py` et possède déjà des tests `pytest` (`argumentation_analysis/tests/test_crypto_service.py`) qui couvrent les cas d'erreur.
+*   **Analyse :** Script de test manuel pour un `CryptoService` local. Redondant car un `CryptoService` plus complet existe dans `argumentation_analysis/services/crypto_service.py` et possède déjà des tests `pytest` (`../tests/unit/argumentation_analysis/test_crypto_service.py`) qui couvrent les cas d'erreur.
 *   **Actions Documentaires (Mode Architecte) :** Aucune modification de README effectuée pour ce fichier spécifiquement, car le fichier de test principal est ailleurs.
 *   **Actions de Code Proposées (Mode Code) :**
     *   Supprimer le fichier `tests/test_crypto_errors.py`.

@@ -52,8 +52,8 @@ Plusieurs fichiers sont modifiés mais non commitées:
 
 Fichiers non suivis:
 - **argumentation_analysis/tests/run_fixed_tests.py**
-- **argumentation_analysis/tests/test_async_communication_timeout_fix.py**
-- **argumentation_analysis/tests/test_mock_communication.py**
+- **../tests/unit/argumentation_analysis/test_async_communication_timeout_fix.py**
+- **../tests/unit/argumentation_analysis/test_mock_communication.py**
 - **argumentation_analysis/tests/update_rapport_suivi.py**
 
 ## 2. Structure du Projet après Rangement
@@ -138,11 +138,11 @@ Lors de l'exécution des tests spécifiques, nous avons rencontré plusieurs pro
    - Échec avec erreur d'importation: `PyO3 modules compiled for CPython 3.8 or older may only be initialized once per interpreter process`
    - Ce test vérifie la fonction `load_extract_definitions` avec une clé invalide
 
-2. **argumentation_analysis/tests/test_async_communication_timeout_fix.py**:
+2. **../tests/unit/argumentation_analysis/test_async_communication_timeout_fix.py**:
    - Échec avec la même erreur d'importation PyO3
    - Ce test implémente des correctifs pour résoudre le problème de blocage des tests asynchrones
 
-3. **argumentation_analysis/tests/test_mock_communication.py**:
+3. **../tests/unit/argumentation_analysis/test_mock_communication.py**:
    - Échec avec la même erreur d'importation PyO3
    - Ce test implémente une version simplifiée des tests de communication avec des mocks
 
@@ -296,3 +296,4 @@ L'analyse de l'état du dépôt et de la couverture des tests révèle plusieurs
 La couverture globale actuelle de 17.89% est très faible, mais montre une amélioration de +5.00% par rapport à la couverture initiale. Pour atteindre les objectifs recommandés, il est essentiel de résoudre les problèmes d'importation, d'ajouter des tests pour les modules critiques avec 0% de couverture, et de mettre en place un processus continu d'amélioration de la couverture.
 
 En suivant les recommandations proposées, il devrait être possible d'atteindre une couverture globale de 75% dans les six prochains mois, ce qui représenterait une amélioration significative par rapport à l'état actuel.
+

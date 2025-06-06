@@ -1,18 +1,37 @@
-# Tests du Projet d'Intelligence Symbolique
+# Tests du Projet d'Analyse d'Argumentation
 
-Ce répertoire contient les tests unitaires, d'intégration et fonctionnels du projet d'Intelligence Symbolique. L'objectif principal de ces tests est de garantir la robustesse, la fiabilité et la correction du code à travers différentes couches du système.
+Ce répertoire contient l'ensemble des tests (unitaires, d'intégration, fonctionnels) pour le projet d'analyse d'argumentation. L'objectif de cette suite de tests est de garantir la robustesse, la fiabilité et la correction du code à travers les différentes couches du système, depuis les interactions de bas niveau avec la JVM jusqu'aux workflows d'analyse complets.
+
+## Philosophie de Test
+
+Notre approche de test est basée sur la pyramide des tests. Nous privilégions une large base de **tests unitaires** rapides et isolés, complétée par des **tests d'intégration** ciblés pour vérifier les interactions entre les composants, et enfin quelques **tests fonctionnels** de bout en bout pour valider les scénarios utilisateurs clés.
 
 ## Structure des Tests
 
-Le répertoire des tests est organisé comme suit pour refléter les meilleures pratiques et faciliter la navigation et la maintenance :
+Le répertoire `tests` est organisé pour refléter les différentes natures de tests et faciliter la navigation :
 
--   **`tests/unit/`**: Contient les tests unitaires. Ces tests vérifient le comportement de petites unités de code isolées (fonctions, méthodes, classes). La structure de ce répertoire miroir celle du code source du projet (par exemple, `project_core`, `argumentation_analysis`, etc.) pour une correspondance claire entre le code et ses tests.
--   **`tests/integration/`**: Contient les tests d'intégration. Ces tests vérifient que différents modules ou composants du système interagissent correctement entre eux. Cela inclut notamment les tests d'intégration avec des composants externes comme JPype pour TweetyLib.
--   **`tests/functional/`**: Contient les tests fonctionnels. Ces tests valident des workflows complets ou des fonctionnalités spécifiques du point de vue de l'utilisateur, assurant que le système répond aux exigences fonctionnelles.
--   **`tests/fixtures/`**: Contient les fixtures Pytest partagées. Les fixtures sont utilisées pour initialiser des données ou des états nécessaires à l'exécution des tests, favorisant la réutilisabilité et la clarté.
--   **`tests/mocks/`**: Contient les mocks réutilisables. Les mocks simulent le comportement de dépendances externes ou de parties complexes du système, permettant d'isoler le code testé.
--   **`tests/support/`**: Contient les outils et scripts de support pour les tests. Par exemple, cela peut inclure des scripts pour installer des dépendances spécifiques nécessaires à certains tests (comme un installeur Octave).
--   **`tests/conftest.py`**: Ce fichier à la racine du répertoire `tests/` est utilisé par Pytest pour les configurations globales, les hooks et les fixtures qui sont disponibles pour tous les tests du projet. Il permet de centraliser la configuration des tests.
+-   **[`agents/`](agents/README.md)**: Contient les tests pour les agents, qui sont les acteurs principaux du système. Les tests sont subdivisés par type d'agent (logique, informel, etc.).
+
+-   **[`environment_checks/`](environment_checks/README.md)**: Une suite de tests de diagnostic pour valider la configuration de l'environnement local (dépendances, `PYTHONPATH`).
+
+-   **[`fixtures/`](fixtures/README.md)**: Contient les fixtures Pytest partagées, utilisées pour initialiser des données ou des états nécessaires à l'exécution des tests.
+
+-   **[`functional/`](functional/README.md)**: Contient les tests fonctionnels qui valident des workflows complets du point de vue de l'utilisateur.
+
+-   **[`integration/`](integration/README.md)**: Contient les tests d'intégration qui vérifient que différents modules interagissent correctement.
+    -   **[`integration/jpype_tweety/`](integration/jpype_tweety/README.md)**: Tests spécifiques à l'intégration avec la bibliothèque Java Tweety via JPype.
+
+-   **[`minimal_jpype_tweety_tests/`](minimal_jpype_tweety_tests/README.md)**: Tests de très bas niveau pour la communication directe Python-Java, utiles pour le débogage de la couche JPype.
+
+-   **[`mocks/`](mocks/README.md)**: Contient des mocks réutilisables qui simulent le comportement de dépendances externes (ex: `numpy`, `pandas`, `jpype`) pour isoler le code testé.
+
+-   **[`support/`](support/README.md)**: Contient des outils et scripts de support pour les tests, comme un installeur de dépendances portables (ex: GNU Octave).
+
+-   **[`unit/`](unit/README.md)**: Contient les tests unitaires qui vérifient de petites unités de code isolées. La structure de ce répertoire miroir celle du code source du projet.
+
+-   **[`ui/`](ui/README.md)**: Contient les tests pour la logique sous-jacente de l'interface utilisateur.
+
+-   **[`conftest.py`](conftest.py)**: Fichier de configuration global pour Pytest, contenant les hooks et les fixtures disponibles pour tous les tests.
 
 ## Exécution des Tests
 
@@ -36,11 +55,6 @@ Une fois l'environnement activé, vous pouvez utiliser Pytest pour lancer les te
     pytest tests/unit/
     ```
 
--   **Exécuter tous les tests dans un fichier spécifique :**
-    ```bash
-    pytest tests/unit/mon_module/test_ma_fonction.py
-    ```
-
 -   **Exécuter un test spécifique (une fonction ou une méthode) dans un fichier :**
     ```bash
     pytest tests/unit/mon_module/test_ma_fonction.py::test_cas_particulier
@@ -48,7 +62,7 @@ Une fois l'environnement activé, vous pouvez utiliser Pytest pour lancer les te
 
 ### Utilisation des Marqueurs Pytest :
 
-Pytest permet d'utiliser des marqueurs (`@pytest.mark.<nom_marqueur>`) pour catégoriser les tests. Vous pouvez ensuite exécuter sélectivement des tests basés sur ces marqueurs.
+Des marqueurs (`@pytest.mark.<nom_marqueur>`) sont utilisés pour catégoriser les tests.
 
 -   **Exécuter les tests marqués comme `slow` :**
     ```bash
@@ -59,23 +73,19 @@ Pytest permet d'utiliser des marqueurs (`@pytest.mark.<nom_marqueur>`) pour cat�
     ```bash
     pytest -m "not slow"
     ```
-    Consultez la documentation de Pytest et le fichier [`tests/conftest.py`](tests/conftest.py:1) pour voir les marqueurs personnalisés disponibles dans ce projet.
+    Consultez le fichier [`tests/conftest.py`](conftest.py) pour voir les marqueurs personnalisés disponibles.
 
 ### Tests avec Couverture de Code
 
 Pour exécuter les tests et générer un rapport de couverture de code :
 
 ```bash
-pytest --cov=project_core --cov=argumentation_analysis --cov-report=html
+pytest --cov=argumentation_analysis --cov-report=html
 ```
-(Adaptez les modules `--cov` en fonction des répertoires principaux de votre code source.)
 Le rapport HTML sera généré dans un répertoire `htmlcov/`.
 
-## Bonnes Pratiques de Test
+## Bonnes Pratiques et Documentation
 
-Pour des directives détaillées sur l'écriture et la maintenance des tests, veuillez consulter le document [Bonnes Pratiques pour les Tests (`BEST_PRACTICES.md`)](BEST_PRACTICES.md:1). Ce document couvre les principes généraux, l'organisation, la gestion des dépendances, l'utilisation des fixtures, et des conseils spécifiques pour les tests d'intégration et fonctionnels.
-
-## Documentation Associée
-
--   [Plan d'action pour l'amélioration des tests](../docs/tests/plan_action_tests.md)
--   [Rapport sur l'état du dépôt et la couverture des tests](../docs/reports/etat_depot_couverture_tests.md)
+-   **Bonnes Pratiques**: Pour des directives détaillées sur l'écriture et la maintenance des tests, veuillez consulter le document [`BEST_PRACTICES.md`](BEST_PRACTICES.md).
+-   **Plan d'action**: [Plan d'action pour l'amélioration des tests](../docs/tests/plan_action_tests.md)
+-   **Rapport de couverture**: [Rapport sur l'état du dépôt et la couverture des tests](../docs/reports/etat_depot_couverture_tests.md)
