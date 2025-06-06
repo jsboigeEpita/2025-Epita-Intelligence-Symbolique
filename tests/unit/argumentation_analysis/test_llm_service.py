@@ -9,6 +9,7 @@ import os
 import semantic_kernel as sk
 from semantic_kernel.connectors.ai.open_ai import OpenAIChatCompletion
 from argumentation_analysis.core.llm_service import create_llm_service
+from openai import AsyncOpenAI
 
 
 class TestLLMService(unittest.TestCase):
@@ -46,12 +47,22 @@ class TestLLMService(unittest.TestCase):
         
         # Vérifier que le service a été créé correctement
         self.assertIsNotNone(service)
-        mock_openai_class.assert_called_once_with(
-            service_id="global_llm_service",
-            ai_model_id="gpt-4o-mini",
-            api_key=self.api_key,
-            org_id=None
-        )
+        
+        # Vérifier que le mock a été appelé une fois
+        mock_openai_class.assert_called_once()
+        
+        # Vérifier que les arguments essentiels sont présents
+        args, kwargs = mock_openai_class.call_args
+        self.assertEqual(kwargs["service_id"], "global_llm_service")
+        self.assertEqual(kwargs["ai_model_id"], "gpt-4o-mini")
+        
+        # Vérifier que async_client est fourni (nouvelle interface)
+        self.assertIn("async_client", kwargs)
+        self.assertIsNotNone(kwargs["async_client"])
+        
+        # Vérifier que api_key et org_id ne sont PAS fournis (ils sont dans async_client)
+        self.assertNotIn("api_key", kwargs)
+        self.assertNotIn("org_id", kwargs)
 
     @patch('argumentation_analysis.core.llm_service.OpenAIChatCompletion')
     def test_create_llm_service_custom_model(self, mock_openai_class):
@@ -66,14 +77,21 @@ class TestLLMService(unittest.TestCase):
         # Vérifier que le service a été créé correctement
         self.assertIsNotNone(service)
         
-        # Vérifier que le mock a été appelé une fois (sans vérifier les arguments exacts)
+        # Vérifier que le mock a été appelé une fois
         mock_openai_class.assert_called_once()
         
         # Vérifier que les arguments essentiels sont présents
         args, kwargs = mock_openai_class.call_args
         self.assertEqual(kwargs["service_id"], "global_llm_service")
-        self.assertEqual(kwargs["api_key"], self.api_key)
         self.assertIsNotNone(kwargs["ai_model_id"])
+        
+        # Vérifier que async_client est fourni (nouvelle interface)
+        self.assertIn("async_client", kwargs)
+        self.assertIsNotNone(kwargs["async_client"])
+        
+        # Vérifier que api_key et org_id ne sont PAS fournis (ils sont dans async_client)
+        self.assertNotIn("api_key", kwargs)
+        self.assertNotIn("org_id", kwargs)
 
     @patch('argumentation_analysis.core.llm_service.OpenAIChatCompletion')
     def test_create_llm_service_missing_api_key(self, mock_openai_class):

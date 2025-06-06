@@ -20,3 +20,27 @@ try:
 except ImportError as e:
     import logging
     logging.warning(f"Le sous-module 'extract' de 'agents.core' n'a pas pu être importé: {e}")
+
+try:
+    from . import informal
+except ImportError as e:
+    import logging
+    logging.warning(f"Le sous-module 'informal' de 'agents.core' n'a pas pu être importé: {e}")
+
+try:
+    from . import logic
+except ImportError as e:
+    import logging
+    logging.warning(f"Le sous-module 'logic' de 'agents.core' n'a pas pu être importé: {e}")
+
+try:
+    from . import pl
+except ImportError as e:
+    import logging
+    logging.warning(f"Le sous-module 'pl' de 'agents.core' n'a pas pu être importé: {e}")
+
+try:
+    from . import pm
+except ImportError as e:
+    import logging
+    logging.warning(f"Le sous-module 'pm' de 'agents.core' n'a pas pu être importé: {e}")
