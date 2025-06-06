@@ -40,11 +40,11 @@ try:
     _potential_jdk_path = PROJECT_ROOT_DIR / _JDK_SUBDIR # Utilise le PROJECT_ROOT_DIR global
     if _potential_jdk_path.is_dir():
         PORTABLE_JDK_PATH = _potential_jdk_path
-        logger.info(f"✅ JDK portable détecté : {PORTABLE_JDK_PATH}")
+        logger.info(f"(OK) JDK portable détecté : {PORTABLE_JDK_PATH}")
     else:
-        logger.warning(f"⚠️ JDK portable non trouvé à l'emplacement attendu : {_potential_jdk_path}")
+        logger.warning(f"(ATTENTION) JDK portable non trouvé à l'emplacement attendu : {_potential_jdk_path}")
 except Exception as e:
-    logger.error(f"❌ Erreur lors de la détection du JDK portable : {e}", exc_info=True)
+    logger.error(f"(ERREUR) Erreur lors de la détection du JDK portable : {e}", exc_info=True)
 
 
 def get_jvm_options(jdk_path: Optional[Path] = PORTABLE_JDK_PATH) -> List[str]:
@@ -104,7 +104,7 @@ def initialize_jvm(lib_dir_path: Optional[str] = None, jdk_path: Optional[Path] 
                 jars = [str(specific_jar_file)]
                 logger.info(f"Utilisation du JAR spécifique pour le classpath: {specific_jar_path}")
             else:
-                logger.error(f"❌ Le fichier JAR spécifique '{specific_jar_path}' n'a pas été trouvé ou n'est pas un fichier.")
+                logger.error(f"(ERREUR) Le fichier JAR spécifique '{specific_jar_path}' n'a pas été trouvé ou n'est pas un fichier.")
                 return False
         else:
             effective_lib_dir_path = lib_dir_path
@@ -113,12 +113,12 @@ def initialize_jvm(lib_dir_path: Optional[str] = None, jdk_path: Optional[Path] 
                     effective_lib_dir_path = str(LIBS_DIR)
                     logger.info(f"Utilisation de LIBS_DIR global: {effective_lib_dir_path}")
                 else:
-                    logger.error("❌ `lib_dir_path` non fourni, `specific_jar_path` non fourni, et `LIBS_DIR` global non défini. Impossible de localiser les JARs.")
+                    logger.error("(ERREUR) `lib_dir_path` non fourni, `specific_jar_path` non fourni, et `LIBS_DIR` global non défini. Impossible de localiser les JARs.")
                     return False
             
             jar_directory = Path(effective_lib_dir_path)
             if not jar_directory.is_dir():
-                logger.error(f"❌ Le répertoire des JARs '{jar_directory}' n'existe pas ou n'est pas un répertoire (et specific_jar_path non fourni).")
+                logger.error(f"(ERREUR) Le répertoire des JARs '{jar_directory}' n'existe pas ou n'est pas un répertoire (et specific_jar_path non fourni).")
                 return False
 
             logger.info(f"Construction du classpath avec tous les JARs trouvés dans '{jar_directory}'.")
@@ -126,7 +126,7 @@ def initialize_jvm(lib_dir_path: Optional[str] = None, jdk_path: Optional[Path] 
             logger.info(f"Classpath construit avec {len(jars)} JAR(s) depuis '{jar_directory}'.")
 
         if not jars:
-            logger.error(f"❌ Aucun JAR à inclure dans le classpath ! Démarrage annulé. (specific_jar_path: {specific_jar_path}, lib_dir_path: {lib_dir_path})")
+            logger.error(f"(ERREUR) Aucun JAR à inclure dans le classpath ! Démarrage annulé. (specific_jar_path: {specific_jar_path}, lib_dir_path: {lib_dir_path})")
             return False
         
         # classpath_str = os.pathsep.join(jars) # Pour le log seulement
@@ -196,14 +196,14 @@ def initialize_jvm(lib_dir_path: Optional[str] = None, jdk_path: Optional[Path] 
         
         try:
             _ = jpype.JClass("org.tweetyproject.logics.pl.syntax.PlSignature")
-            logger.info("✅ Test de chargement de classe Tweety (PlSignature) réussi.")
+            logger.info("(OK) Test de chargement de classe Tweety (PlSignature) réussi.")
         except Exception as e_test:
-            logger.error(f"❌ Test de chargement de classe Tweety échoué après démarrage JVM: {e_test}", exc_info=True)
+            logger.error(f"(ERREUR) Test de chargement de classe Tweety échoué après démarrage JVM: {e_test}", exc_info=True)
 
         return True
 
     except Exception as e:
-        logger.critical(f"❌ Échec critique du démarrage de la JVM (dans le try/except global de initialize_jvm): {e}", exc_info=True)
+        logger.critical(f"(ERREUR CRITIQUE) Échec critique du démarrage de la JVM (dans le try/except global de initialize_jvm): {e}", exc_info=True)
         return False
 
 def _safe_log(logger_instance, level, message, exc_info_val=False):

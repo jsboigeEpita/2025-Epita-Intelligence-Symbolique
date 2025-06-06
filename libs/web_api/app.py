@@ -112,7 +112,7 @@ def health_check():
 
 
 @app.route('/api/analyze', methods=['POST'])
-def analyze_text():
+async def analyze_text():
     """
     Analyse complète d'un texte argumentatif.
     
@@ -146,7 +146,7 @@ def analyze_text():
             ).dict()), 400
         
         # Analyse du texte
-        result = analysis_service.analyze_text(analysis_request)
+        result = await analysis_service.analyze_text(analysis_request)
         
         return jsonify(result.dict())
         
@@ -303,6 +303,43 @@ def build_framework():
             status_code=500
         ).dict()), 500
     
+@app.route('/api/logic_graph', methods=['POST'])
+async def logic_graph():
+    """
+    Analyse un texte et retourne une représentation de graphe logique.
+    """
+    try:
+        data = request.get_json()
+        if not data or 'text' not in data:
+            return jsonify(ErrorResponse(
+                error="Données manquantes",
+                message="Le champ 'text' est requis dans le body JSON",
+                status_code=400
+            ).dict()), 400
+
+        # Pour l'instant, nous utilisons une logique de mock simple.
+        # Le service `logic_service` devrait être étendu pour gérer cela.
+        # On simule une réussite si le texte n'est pas vide.
+        if data['text']:
+            # Simule une réponse de graphe SVG simple
+            mock_graph_data = {
+                "graph": "<svg width=\"100\" height=\"100\"><circle cx=\"50\" cy=\"50\" r=\"40\" stroke=\"green\" stroke-width=\"4\" fill=\"yellow\" /></svg>"
+            }
+            return jsonify(mock_graph_data)
+        else:
+            return jsonify(ErrorResponse(
+                error="Texte vide",
+                message="L'analyse d'un texte vide n'est pas supportée.",
+                status_code=400
+            ).dict()), 400
+
+    except Exception as e:
+        logger.error(f"Erreur lors de la génération du graphe logique: {str(e)}")
+        return jsonify(ErrorResponse(
+            error="Erreur de génération de graphe",
+            message=str(e),
+            status_code=500
+        ).dict()), 500
     
 @app.route('/api/endpoints', methods=['GET'])
 def list_endpoints():

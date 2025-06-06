@@ -11,6 +11,8 @@ import time
 import logging
 from pathlib import Path
 from typing import Dict, List, Any, Optional
+import semantic_kernel as sk
+from semantic_kernel.connectors.ai.open_ai import OpenAIChatCompletion
 
 # Ajouter le répertoire racine au chemin Python
 current_dir = Path(__file__).parent
@@ -87,11 +89,27 @@ class AnalysisService:
                 self.tools['fallacy_severity_evaluator'] = self.severity_evaluator
             
             # Initialisation de l'agent informel
-            if InformalAgent and self.tools:
-                self.informal_agent = InformalAgent(
-                    agent_id="web_api_informal_agent",
-                    tools=self.tools
-                )
+            if InformalAgent:
+                # Création d'un kernel SK de base pour l'agent
+                kernel = sk.Kernel()
+                
+                # Ajout d'un service LLM (suppose que les variables d'environnement OPENAI_API_KEY et OPENAI_ORG_ID sont définies)
+                # Vous devrez peut-être adapter le modèle et le service_id
+                try:
+                    service_id = "default"
+                    kernel.add_service(
+                        OpenAIChatCompletion(
+                            service_id=service_id,
+                            env_file_path=os.path.join(root_dir, '.env') # Assurez-vous que le .env est au bon endroit
+                        )
+                    )
+                    self.informal_agent = InformalAgent(kernel=kernel)
+                    # La configuration des composants (plugins) se fait via setup_agent_components
+                    self.informal_agent.setup_agent_components(llm_service_id=service_id)
+
+                except Exception as e:
+                    self.logger.error(f"Impossible de configurer le service LLM pour le kernel: {e}")
+                    self.informal_agent = None
             else:
                 self.informal_agent = None
             
@@ -109,7 +127,7 @@ class AnalysisService:
             any([self.complex_analyzer, self.contextual_analyzer, self.severity_evaluator])
         )
     
-    def analyze_text(self, request: AnalysisRequest) -> AnalysisResponse:
+    async def analyze_text(self, request: AnalysisRequest) -> AnalysisResponse:
         """
         Analyse complète d'un texte argumentatif.
         
@@ -127,7 +145,7 @@ class AnalysisService:
                 return self._create_fallback_response(request, start_time)
             
             # Analyse des sophismes
-            fallacies = self._detect_fallacies(request.text, request.options)
+            fallacies = await self._detect_fallacies(request.text, request.options)
             
             # Analyse de la structure argumentative
             structure = self._analyze_structure(request.text, request.options)
@@ -166,14 +184,14 @@ class AnalysisService:
                 analysis_options=request.options.dict() if request.options else {}
             )
     
-    def _detect_fallacies(self, text: str, options) -> List[FallacyDetection]:
+    async def _detect_fallacies(self, text: str, options) -> List[FallacyDetection]:
         """Détecte les sophismes dans le texte."""
         fallacies = []
         
         try:
             # Utilisation de l'agent informel si disponible
             if self.informal_agent:
-                result = self.informal_agent.analyze_text(text)
+                result = await self.informal_agent.analyze_text(text)
                 if result and 'fallacies' in result:
                     for fallacy_data in result['fallacies']:
                         fallacy = FallacyDetection(
