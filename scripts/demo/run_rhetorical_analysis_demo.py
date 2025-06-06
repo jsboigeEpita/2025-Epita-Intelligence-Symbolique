@@ -37,6 +37,7 @@ from argumentation_analysis.utils.core_utils.crypto_utils import load_encryption
 from argumentation_analysis.models.extract_definition import ExtractDefinitions
 from argumentation_analysis.core.jvm_setup import initialize_jvm
 from argumentation_analysis.core.llm_service import create_llm_service
+from argumentation_analysis.core.source_manager import create_source_manager
 from argumentation_analysis.paths import LIBS_DIR, DATA_DIR, PROJECT_ROOT_DIR
 from argumentation_analysis.agents.core.logic.logic_factory import LogicAgentFactory
 from argumentation_analysis.agents.core.logic.propositional_logic_agent import PropositionalLogicAgent
@@ -116,128 +117,49 @@ def get_passphrase() -> str:
         sys.exit(1)
     return passphrase
 
-async def decrypt_and_select_text(passphrase: str) -> str:
-    # Texte par défaut si le chargement/sélection échoue
-    default_text_payload = (
-        "Le réchauffement climatique est un sujet complexe. Certains affirment qu'il s'agit d'un mythe, "
-        "citant par exemple des hivers froids comme preuve. D'autres soutiennent que des mesures "
-        "drastiques sont nécessaires immédiatement pour éviter une catastrophe planétaire. Il est "
-        "également courant d'entendre que les scientifiques qui alertent sur ce danger sont "
-        "financièrement motivés, ce qui mettrait en doute leurs conclusions. Face à ces arguments, "
-        "il est crucial d'analyser les faits avec rigueur et de déconstruire les sophismes."
-    )
-
+def load_text_with_source_manager(source_type: str, passphrase: str = None) -> tuple[str, str]:
     """
-    Déchiffre le fichier extract_sources.json.gz.enc et sélectionne un texte pour la démo.
-    Retourne un texte par défaut si la sélection échoue.
-    """
-    if not passphrase:
-        logging.error("Aucune passphrase fournie pour decrypt_and_select_text.")
-        # Utilisation du texte par défaut
-        logging.warning("Utilisation d'un texte de démonstration par défaut car aucune passphrase n'a été fournie.")
-        logging.info(f"Texte par défaut sélectionné (extrait): '{default_text_payload[:50]}'")
-        return default_text_payload
-
-    encryption_key = load_encryption_key(passphrase_arg=passphrase)
-    if not encryption_key:
-        logging.error("Impossible de dériver la clé de chiffrement.")
-        # Utilisation du texte par défaut
-        logging.warning("Utilisation d'un texte de démonstration par défaut car la clé de chiffrement n'a pu être dérivée.")
-        logging.info(f"Texte par défaut sélectionné (extrait): '{default_text_payload[:50]}'")
-        return default_text_payload
-
-    encrypted_file_path = DATA_DIR / "extract_sources.json.gz.enc"
-    if not encrypted_file_path.exists():
-        logging.error(f"Fichier chiffré non trouvé : {encrypted_file_path}")
-        # Utilisation du texte par défaut
-        logging.warning(f"Utilisation d'un texte de démonstration par défaut car le fichier chiffré {encrypted_file_path} est introuvable.")
-        logging.info(f"Texte par défaut sélectionné (extrait): '{default_text_payload[:50]}'")
-        return default_text_payload
-
-    try:
-        with open(encrypted_file_path, "rb") as f:
-            encrypted_data = f.read()
-        
-        decrypted_gzipped_data = decrypt_data_with_fernet(encrypted_data, encryption_key)
-        if not decrypted_gzipped_data:
-            logging.error("Échec du déchiffrement des données.")
-            # Utilisation du texte par défaut
-            logging.warning("Utilisation d'un texte de démonstration par défaut suite à un échec de déchiffrement.")
-            logging.info(f"Texte par défaut sélectionné (extrait): '{default_text_payload[:50]}'")
-            return default_text_payload
-
-        json_data_bytes = gzip.decompress(decrypted_gzipped_data)
-        sources_list_dict = json.loads(json_data_bytes.decode('utf-8'))
-        
-        extract_definitions = ExtractDefinitions.from_dict_list(sources_list_dict)
-        
-        # Logs de débogage (conservés et corrigés)
-        if not extract_definitions: 
-            logging.error("ExtractDefinitions.from_dict_list a résulté en un objet None.")
-        elif not extract_definitions.sources:
-            logging.info("extract_definitions ne contient aucune source.")
-        else: # extract_definitions et extract_definitions.sources existent
-            logging.info(f"Nombre de sources dans extract_definitions: {len(extract_definitions.sources)}")
-            first_source = extract_definitions.sources[0]
-            logging.info(f"Détails de la première source (Nom): '{first_source.source_name}', Type: '{first_source.source_type}'")
-            logging.info(f"  Nombre d'extraits pour la première source: {len(first_source.extracts) if first_source.extracts else 0}")
-            if first_source.extracts:
-                first_extract = first_source.extracts[0]
-                logging.info(f"  Détails du premier extrait (Nom): '{first_extract.extract_name}'")
-                full_text_present = bool(first_extract.full_text and first_extract.full_text.strip())
-                logging.info(f"    Présence de full_text pour le premier extrait: {full_text_present}")
-                if full_text_present:
-                    logging.info(f"    Début de full_text (premiers 200 caractères): '{first_extract.full_text[:200]}' (tronqué)")
-                else:
-                    logging.info(f"    full_text est vide ou non défini pour le premier extrait.")
-            else:
-                logging.info("  La première source n'a pas d'extraits.")
-        
-        if extract_definitions and extract_definitions.sources:
-            # Chercher un extrait avec full_text rempli
-            selected_extract_data = None
-            for source_idx, source in enumerate(extract_definitions.sources):
-                logging.debug(f"Vérification Source {source_idx}: '{source.source_name}'")
-                if not source.extracts:
-                    logging.debug(f"  Aucun extrait dans la source '{source.source_name}'.")
-                    continue
-                for extract_idx, extract_item in enumerate(source.extracts):
-                    logging.debug(f"  Vérification Extrait {extract_idx}: '{extract_item.extract_name}' - Présence full_text: {bool(extract_item.full_text)}")
-                    if extract_item.full_text and extract_item.full_text.strip(): # Ajout de strip() pour être sûr
-                        selected_extract_data = {
-                            "source": source,
-                            "extract": extract_item
-                        }
-                        logging.info(f"Extrait avec full_text trouvé et sélectionné: '{extract_item.extract_name}' de la source '{source.source_name}'.")
-                        break 
-                if selected_extract_data:
-                    break 
-            
-            if selected_extract_data:
-                selected_source = selected_extract_data["source"]
-                selected_extract = selected_extract_data["extract"]
-                logging.info(f"Texte sélectionné pour la démo :")
-                logging.info(f"  Source : '{selected_source.source_name}' (Type: {selected_source.source_type})")
-                logging.info(f"  Extrait: '{selected_extract.extract_name}'")
-                logging.info(f"  Début du texte (extrait): '{selected_extract.full_text[:50]}'") 
-                return selected_extract.full_text
-            else:
-                logging.error("Aucun extrait avec 'full_text' pré-rempli n'a été trouvé dans les sources disponibles après la boucle de recherche.")
-        # Si extract_definitions est vide ou sans sources, ou si aucun full_text n'est trouvé, on tombe ici vers le fallback.
-
-    except FileNotFoundError:
-        logging.error(f"Fichier source chiffré non trouvé : {encrypted_file_path}")
-    except gzip.BadGzipFile:
-        logging.error("Erreur de décompression Gzip. Les données déchiffrées ne sont peut-être pas au format Gzip.")
-    except json.JSONDecodeError:
-        logging.error("Erreur de décodage JSON. Les données décompressées ne sont peut-être pas du JSON valide.")
-    except Exception as e:
-        logging.error(f"Erreur majeure lors du déchiffrement ou de la sélection du texte : {e}", exc_info=True)
+    Charge un texte pour analyse en utilisant le SourceManager.
     
-    # Fallback au texte par défaut
-    logging.warning("Utilisation d'un texte de démonstration par défaut car le chargement/sélection depuis les sources a échoué.")
-    logging.info(f"Texte par défaut sélectionné (extrait): '{default_text_payload[:50]}'")
-    return default_text_payload
+    Args:
+        source_type: Type de source ("simple" ou "complex")
+        passphrase: Phrase secrète pour le déchiffrement (optionnel pour sources simples)
+        
+    Returns:
+        Tuple[str, str]: Le texte sélectionné et sa description
+    """
+    logging.info(f"=== CHARGEMENT DE SOURCES (TYPE: {source_type.upper()}) ===")
+    
+    with create_source_manager(
+        source_type=source_type,
+        passphrase=passphrase,
+        anonymize_logs=(source_type == "complex"),
+        auto_cleanup=True
+    ) as source_manager:
+        
+        # Charger les sources
+        extract_definitions, status_message = source_manager.load_sources()
+        logging.info(f"Résultat du chargement: {status_message}")
+        
+        if not extract_definitions:
+            logging.error("Impossible de charger les sources. Utilisation du fallback.")
+            return (
+                "Analyse de fallback : les arguments contiennent souvent des sophismes "
+                "qu'il convient d'identifier et d'analyser avec rigueur scientifique.",
+                "Texte de fallback (échec du chargement)"
+            )
+        
+        # Sélectionner un texte pour l'analyse
+        selected_text, description = source_manager.select_text_for_analysis(extract_definitions)
+        logging.info(f"Texte sélectionné: {description}")
+        
+        # Log sécurisé du début du texte
+        if source_type == "complex":
+            logging.info(f"Début du texte (politiquement sensible): [CONTENU ANONYMISÉ - {len(selected_text)} caractères]")
+        else:
+            logging.info(f"Début du texte (extrait): '{selected_text[:100]}...'")
+        
+        return selected_text, description
 
 def generate_rich_json_report(source_file_path, informal_results, formal_results, logic_type: str, analysis_type: str = "logic"):
     """Génère un rapport JSON structuré à partir des résultats d'analyse."""
@@ -643,17 +565,25 @@ async def main_demo(args):
     """Fonction principale de la démonstration."""
     logging.info("--- Début du script de démonstration d'analyse rhétorique ---")
     logging.info(f"Type d'analyse sélectionné: {args.analysis_type.upper()}")
+    logging.info(f"Type de source sélectionné: {args.source_type.upper()}")
     
     if args.analysis_type == "logic":
         logging.info(f"Type de logique sélectionné pour l'analyse formelle : {args.logic_type.upper()}")
     elif args.analysis_type == "unified":
         logging.info(f"Type de logique configuré pour l'analyse unifiée : {args.logic_type.upper()}")
 
-    passphrase = get_passphrase()
-    full_text_to_analyze = await decrypt_and_select_text(passphrase)
+    # Gestion de la passphrase selon le type de source
+    passphrase = None
+    if args.source_type == "complex":
+        passphrase = get_passphrase()
+    
+    # Utilisation du nouveau système de gestion de sources
+    full_text_to_analyze, text_description = load_text_with_source_manager(args.source_type, passphrase)
     if not full_text_to_analyze:
         logging.error("Impossible d'obtenir le texte pour l'analyse. Arrêt de la démo.")
         sys.exit(1)
+    
+    logging.info(f"Texte chargé pour analyse: {text_description}")
 
     temp_file_path = None
     try:
@@ -732,6 +662,13 @@ if __name__ == "__main__":
         choices=["propositional", "first_order", "modal"],
         default="propositional",
         help="Le type de logique à utiliser pour l'analyse formelle."
+    )
+    parser.add_argument(
+        "--source-type",
+        type=str,
+        choices=["simple", "complex"],
+        default="simple",
+        help="Type de source de données. 'simple': données mockées pour tests, 'complex': corpus chiffré de discours politiques."
     )
     args = parser.parse_args()
 

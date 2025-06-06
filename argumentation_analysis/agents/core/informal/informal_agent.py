@@ -215,9 +215,15 @@ class InformalAnalysisAgent(BaseAgent):
                     self.logger.warning(f"Résultat de semantic_AnalyzeFallacies n'est ni une liste, ni un objet avec la clé 'sophismes': {raw_result}")
                     return [{"error": "Format de résultat inattendu", "details": raw_result}]
 
-                # Appliquer le filtrage
+                # Appliquer le filtrage - ne filtrer que si le champ confidence existe
                 confidence_threshold = self.config.get("confidence_threshold", 0.5)
-                filtered_fallacies = [f for f in parsed_fallacies if isinstance(f, dict) and f.get("confidence", 0) >= confidence_threshold]
+                filtered_fallacies = []
+                for f in parsed_fallacies:
+                    if isinstance(f, dict):
+                        # Si pas de champ confidence, considérer comme valide (confiance par défaut = 1.0)
+                        confidence = f.get("confidence", 1.0)
+                        if confidence >= confidence_threshold:
+                            filtered_fallacies.append(f)
                 
                 max_fallacies = self.config.get("max_fallacies", 5)
                 if len(filtered_fallacies) > max_fallacies:

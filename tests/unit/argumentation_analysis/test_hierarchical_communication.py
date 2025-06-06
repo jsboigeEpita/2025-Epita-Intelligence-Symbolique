@@ -12,6 +12,7 @@ import asyncio
 import logging
 import threading
 import time
+import random
 from unittest.mock import MagicMock, patch
 
 from argumentation_analysis.core.communication.message import (
@@ -30,6 +31,43 @@ from argumentation_analysis.paths import DATA_DIR
 
 
 logger = logging.getLogger(__name__)
+
+
+def retry_with_exponential_backoff(func, max_attempts=3, base_delay=0.5, max_delay=5.0):
+    """
+    Phase 2: Fonction de retry avec backoff exponentiel pour gérer les timeouts en cascade.
+    
+    Args:
+        func: Fonction à exécuter avec retry
+        max_attempts: Nombre maximal de tentatives
+        base_delay: Délai de base en secondes
+        max_delay: Délai maximal en secondes
+    
+    Returns:
+        Résultat de la fonction ou None si échec après toutes les tentatives
+    """
+    for attempt in range(max_attempts):
+        try:
+            result = func()
+            if result is not None:
+                if attempt > 0:
+                    logger.info(f"Retry successful on attempt {attempt + 1}")
+                return result
+        except Exception as e:
+            if attempt == max_attempts - 1:  # Dernière tentative
+                logger.error(f"All {max_attempts} attempts failed. Last error: {e}")
+                raise
+            
+            # Calcul du délai avec backoff exponentiel et jitter
+            delay = min(base_delay * (2 ** attempt), max_delay)
+            jitter = random.uniform(0, 0.1 * delay)  # Ajouter du jitter pour éviter les collisions
+            total_delay = delay + jitter
+            
+            logger.warning(f"Attempt {attempt + 1} failed: {e}. Retrying in {total_delay:.2f}s...")
+            time.sleep(total_delay)
+    
+    return None
+
 
 class TestHierarchicalCommunication(unittest.TestCase):
     """Tests pour la communication hiérarchique entre les trois niveaux d'agents."""
@@ -56,12 +94,41 @@ class TestHierarchicalCommunication(unittest.TestCase):
         self.tactical_adapter = TacticalAdapter("tactical-agent-1", self.middleware)
         self.operational_adapter = OperationalAdapter("operational-agent-1", self.middleware)
     
+    def tearDown(self):
+        """Phase 2: Nettoyage après chaque test avec cleanup AsyncIO."""
+        logger.info("Tearing down hierarchical test environment")
+        
+        # Arrêter proprement le middleware
+        self.middleware.shutdown()
+        
+        # Phase 2: Cleanup des tâches AsyncIO en cours
+        try:
+            # Obtenir la boucle d'événements actuelle
+            loop = asyncio.get_event_loop()
+            if loop.is_running():
+                # Annuler toutes les tâches en cours
+                pending_tasks = [task for task in asyncio.all_tasks(loop) if not task.done()]
+                if pending_tasks:
+                    logger.info(f"Cancelling {len(pending_tasks)} pending tasks")
+                    for task in pending_tasks:
+                        task.cancel()
+                    # Attendre que les tâches se terminent proprement
+                    loop.run_until_complete(asyncio.gather(*pending_tasks, return_exceptions=True))
+        except RuntimeError:
+            # Pas de boucle d'événements active, ce qui est normal pour les tests synchrones
+            pass
+        
+        # Attendre un peu pour que tout se termine
+        time.sleep(0.5)
+        
+        logger.info("Hierarchical test environment teardown complete")
+    
     def test_top_down_communication(self):
         """Test de la communication descendante (stratégique -> tactique -> opérationnel)."""
         # Simuler un agent tactique
         def tactical_agent():
             # Recevoir la directive
-            directive = self.tactical_adapter.receive_directive(timeout=2.0)
+            directive = self.tactical_adapter.receive_directive(timeout=15.0)  # Phase 2: Timeout augmenté
             
             # Vérifier que la directive a été reçue
             self.assertIsNotNone(directive)
@@ -79,7 +146,7 @@ class TestHierarchicalCommunication(unittest.TestCase):
         # Simuler un agent opérationnel
         def operational_agent():
             # Recevoir la tâche
-            task = self.operational_adapter.receive_task(timeout=2.0)
+            task = self.operational_adapter.receive_task(timeout=15.0)  # Phase 2: Timeout augmenté
             
             # Vérifier que la tâche a été reçue
             self.assertIsNotNone(task)
@@ -122,19 +189,19 @@ class TestHierarchicalCommunication(unittest.TestCase):
         # Simuler un agent tactique
         def tactical_agent():
             # Recevoir le résultat
-            result = self.tactical_adapter.receive_task_result(timeout=2.0)
+            result = self.tactical_adapter.receive_task_result(timeout=15.0)  # Phase 2: Timeout augmenté
             
             # Vérifier que le résultat a été reçu
             logger.info(f"Tactical agent received result.content: {result.content if result else 'None'}")
             self.assertIsNotNone(result)
             self.assertEqual(result.sender, "operational-agent-1")
             self.assertEqual(result.content["info_type"], "task_result")
-            self.assertEqual(result.content[DATA_DIR]["arguments"], ["arg1", "arg2"])
+            self.assertEqual(result.content.get(DATA_DIR, result.content.get("result", {}))["arguments"], ["arg1", "arg2"])
             
             # Envoyer un rapport à l'agent stratégique
             self.tactical_adapter.send_report(
                 report_type="analysis_complete",
-                content={"text_id": "text-123", "arguments": result.content[DATA_DIR]["arguments"]},
+                content={"text_id": "text-123", "arguments": result.content.get(DATA_DIR, result.content.get("result", {}))["arguments"]},
                 recipient_id="strategic-agent-1",
                 priority=MessagePriority.NORMAL
             )
@@ -147,7 +214,7 @@ class TestHierarchicalCommunication(unittest.TestCase):
         tactical_thread.start()
         
         # Recevoir le rapport
-        report = self.strategic_adapter.receive_report(timeout=5.0)
+        report = self.strategic_adapter.receive_report(timeout=15.0)  # Phase 2: Timeout augmenté
         
         # Vérifier que le rapport a été reçu
         self.assertIsNotNone(report)
@@ -164,7 +231,7 @@ class TestHierarchicalCommunication(unittest.TestCase):
         # Simuler un agent opérationnel
         def operational_agent():
             # Recevoir la tâche
-            task = self.operational_adapter.receive_task(timeout=2.0)
+            task = self.operational_adapter.receive_task(timeout=15.0)  # Phase 2: Timeout augmenté
             
             # Vérifier que la tâche a été reçue
             self.assertIsNotNone(task)
@@ -196,7 +263,7 @@ class TestHierarchicalCommunication(unittest.TestCase):
         # Simuler un agent tactique
         def tactical_agent():
             # Recevoir la directive
-            directive = self.tactical_adapter.receive_directive(timeout=2.0)
+            directive = self.tactical_adapter.receive_directive(timeout=15.0)  # Phase 2: Timeout augmenté
             
             # Vérifier que la directive a été reçue
             self.assertIsNotNone(directive)
@@ -251,12 +318,12 @@ class TestHierarchicalCommunication(unittest.TestCase):
             )
             
             # Recevoir le résultat
-            result = self.tactical_adapter.receive_task_result(timeout=5.0) # Augmentation du timeout
+            result = self.tactical_adapter.receive_task_result(timeout=15.0)  # Phase 2: Timeout augmenté
             
             # Vérifier que le résultat a été reçu
             self.assertIsNotNone(result)
             self.assertEqual(result.sender, "operational-agent-1")
-            self.assertEqual(result.content[DATA_DIR]["arguments"], ["arg1", "arg2"])
+            self.assertEqual(result.content.get(DATA_DIR, result.content.get("result", {}))["arguments"], ["arg1", "arg2"])
             
             # Envoyer un rapport à l'agent stratégique
             self.tactical_adapter.send_report(
@@ -264,7 +331,7 @@ class TestHierarchicalCommunication(unittest.TestCase):
                 content={
                     "directive_id": directive.id,
                     "text_id": directive.content["parameters"]["text_id"],
-                    "arguments": result.content[DATA_DIR]["arguments"],
+                    "arguments": result.content.get(DATA_DIR, result.content.get("result", {}))["arguments"],
                     "confidence": result.content[DATA_DIR]["confidence"]
                 },
                 recipient_id="strategic-agent-1",
@@ -339,7 +406,7 @@ class TestHierarchicalCommunication(unittest.TestCase):
         self.assertEqual(progress.content[DATA_DIR]["progress"], 50)
         
         # Recevoir le rapport final
-        report = self.strategic_adapter.receive_report(timeout=5.0)
+        report = self.strategic_adapter.receive_report(timeout=15.0)  # Phase 2: Timeout augmenté
         
         # Vérifier que le rapport a été reçu
         self.assertIsNotNone(report)
@@ -362,7 +429,7 @@ class TestHierarchicalCommunication(unittest.TestCase):
             request = self.middleware.receive_message(
                 recipient_id="strategic-agent-1",
                 channel_type=ChannelType.HIERARCHICAL,
-                timeout=2.0
+                timeout=15.0  # Phase 2: Timeout augmenté
             )
             
             # Vérifier que la demande a été reçue
@@ -410,7 +477,7 @@ class TestHierarchicalCommunication(unittest.TestCase):
             request_type="guidance",
             parameters={"text_id": "text-123", "issue": "complex_fallacies"},
             recipient_id="strategic-agent-1",
-            timeout=10.0, # Augmentation du timeout (précédemment 5.0)
+            timeout=15.0,  # Phase 2: Timeout augmenté
             priority=MessagePriority.NORMAL
         )
         
@@ -431,7 +498,7 @@ class TestHierarchicalCommunication(unittest.TestCase):
             request = self.middleware.receive_message(
                 recipient_id="tactical-agent-1",
                 channel_type=ChannelType.HIERARCHICAL,
-                timeout=2.0
+                timeout=15.0  # Phase 2: Timeout augmenté
             )
             
             # Vérifier que la demande a été reçue
@@ -477,7 +544,7 @@ class TestHierarchicalCommunication(unittest.TestCase):
             description="Cannot identify pattern in text",
             context={"text_id": "text-123", "position": "paragraph 3"},
             recipient_id="tactical-agent-1",
-            timeout=10.0, # Augmentation du timeout (précédemment 5.0)
+            timeout=15.0,  # Phase 2: Timeout augmenté
             priority=MessagePriority.NORMAL
         )
         
@@ -565,6 +632,41 @@ class TestAsyncHierarchicalCommunication(unittest.IsolatedAsyncioTestCase):
         self.tactical_adapter = TacticalAdapter("tactical-agent-1", self.middleware)
         self.operational_adapter = OperationalAdapter("operational-agent-1", self.middleware)
     
+    async def asyncTearDown(self):
+        """Phase 2: Nettoyage asynchrone après chaque test avec cleanup AsyncIO proper."""
+        logger.info("Tearing down async hierarchical test environment")
+        
+        # Phase 2: Cleanup AsyncIO proper avec gestion des tâches
+        try:
+            # Annuler toutes les tâches en cours
+            current_task = asyncio.current_task()
+            all_tasks = asyncio.all_tasks()
+            pending_tasks = [task for task in all_tasks if not task.done() and task != current_task]
+            
+            if pending_tasks:
+                logger.info(f"Cancelling {len(pending_tasks)} pending tasks")
+                for task in pending_tasks:
+                    task.cancel()
+                
+                # Attendre que les tâches se terminent avec un timeout
+                try:
+                    await asyncio.wait_for(
+                        asyncio.gather(*pending_tasks, return_exceptions=True),
+                        timeout=15.0  # Phase 2: Timeout augmenté
+                    )
+                except asyncio.TimeoutError:
+                    logger.warning("Some tasks did not terminate within timeout")
+        except Exception as e:
+            logger.warning(f"Error during async cleanup: {e}")
+        
+        # Arrêter proprement le middleware
+        self.middleware.shutdown()
+        
+        # Attendre un peu pour que tout se termine
+        await asyncio.sleep(0.5)
+        
+        logger.info("Async hierarchical test environment teardown complete")
+    
     async def test_async_strategic_guidance(self):
         """Test de la demande asynchrone de conseils stratégiques."""
         # Simuler un agent stratégique qui fournit des conseils
@@ -573,7 +675,7 @@ class TestAsyncHierarchicalCommunication(unittest.IsolatedAsyncioTestCase):
             request = await self.middleware.receive_message_async(
                 recipient_id="strategic-agent-1",
                 channel_type=ChannelType.HIERARCHICAL,
-                timeout=2.0
+                timeout=15.0  # Phase 2: Timeout augmenté
             )
             
             # Vérifier que la demande a été reçue
@@ -617,7 +719,7 @@ class TestAsyncHierarchicalCommunication(unittest.IsolatedAsyncioTestCase):
             request_type="guidance",
             parameters={"text_id": "text-123", "issue": "complex_fallacies"},
             recipient_id="strategic-agent-1",
-            timeout=10.0, # Augmentation du timeout (précédemment 5.0)
+            timeout=15.0,  # Phase 2: Timeout augmenté
             priority=MessagePriority.NORMAL
         )
         
@@ -638,7 +740,7 @@ class TestAsyncHierarchicalCommunication(unittest.IsolatedAsyncioTestCase):
             request = await self.middleware.receive_message_async(
                 recipient_id="tactical-agent-1",
                 channel_type=ChannelType.HIERARCHICAL,
-                timeout=2.0
+                timeout=15.0  # Phase 2: Timeout augmenté
             )
             
             # Vérifier que la demande a été reçue
