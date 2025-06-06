@@ -8,7 +8,6 @@ from unittest.mock import patch, MagicMock
 import json
 import os
 from pathlib import Path
-from tests.async_test_case import AsyncTestCase
 from argumentation_analysis.agents.tools.analysis.enhanced.contextual_fallacy_analyzer import EnhancedContextualFallacyAnalyzer
 
 

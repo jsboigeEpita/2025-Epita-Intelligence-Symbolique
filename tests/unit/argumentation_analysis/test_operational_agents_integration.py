@@ -15,16 +15,18 @@ import json
 import os
 import sys
 from pathlib import Path
+import semantic_kernel as sk
 
 # Ajouter le répertoire parent au chemin de recherche des modules
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
-from tests.support.argumentation_analysis.async_test_case import AsyncTestCase
+# from tests.support.argumentation_analysis.async_test_case import AsyncTestCase
 from argumentation_analysis.orchestration.hierarchical.operational.state import OperationalState
 from argumentation_analysis.orchestration.hierarchical.operational.agent_registry import OperationalAgentRegistry
 from argumentation_analysis.orchestration.hierarchical.operational.manager import OperationalManager
 from argumentation_analysis.orchestration.hierarchical.interfaces.tactical_operational import TacticalOperationalInterface
 from argumentation_analysis.orchestration.hierarchical.tactical.state import TacticalState
+from argumentation_analysis.core.communication import MessageMiddleware, Channel, ChannelType
 
 from argumentation_analysis.paths import RESULTS_DIR
 
@@ -43,7 +45,24 @@ class TestOperationalAgentsIntegration:
         tactical_state = TacticalState()
         operational_state = OperationalState()
         interface = TacticalOperationalInterface(tactical_state, operational_state)
-        manager = OperationalManager(operational_state, interface)
+        
+        # Créer et configurer le middleware
+        middleware = MessageMiddleware()
+        mock_channel = MagicMock(spec=Channel)
+        mock_channel.type = ChannelType.HIERARCHICAL
+        middleware.register_channel(mock_channel)
+        
+        # Créer un kernel et un llm_service_id mockés
+        mock_kernel = MagicMock(spec=sk.Kernel)
+        mock_llm_service_id = "mock_service"
+
+        manager = OperationalManager(
+            operational_state=operational_state,
+            tactical_operational_interface=interface,
+            middleware=middleware,
+            kernel=mock_kernel,
+            llm_service_id=mock_llm_service_id
+        )
         await manager.start()
         
         sample_text = """

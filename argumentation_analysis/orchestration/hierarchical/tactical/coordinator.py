@@ -187,7 +187,7 @@ class TaskCoordinator:
                                  for obj in objectives}
         }
     
-    def _assign_task_to_operational_agent(self, task: Dict[str, Any]) -> None:
+    async def assign_task_to_operational(self, task: Dict[str, Any]) -> None:
         """
         Assigne une tâche à un agent opérationnel approprié.
         
@@ -265,6 +265,23 @@ class TaskCoordinator:
         
         return None
     
+    async def decompose_strategic_goal(self, objective: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Décompose un objectif stratégique en un plan tactique (liste de tâches).
+        
+        Args:
+            objective: L'objectif stratégique à décomposer.
+            
+        Returns:
+            Un dictionnaire représentant le plan tactique.
+        """
+        tasks = self._decompose_objective_to_tasks(objective)
+        self._establish_task_dependencies(tasks)
+        for task in tasks:
+            self.state.add_task(task)
+        
+        return {"tasks": tasks}
+
     def _decompose_objective_to_tasks(self, objective: Dict[str, Any]) -> List[Dict[str, Any]]:
         """
         Décompose un objectif en tâches concrètes.
