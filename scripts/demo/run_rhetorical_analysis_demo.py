@@ -134,7 +134,7 @@ async def decrypt_and_select_text(passphrase: str) -> str:
         logging.info(f"Texte par défaut sélectionné (extrait): '{default_text_payload[:50]}'")
         return default_text_payload
 
-    encrypted_file_path = PROJECT_ROOT_DIR / "tests" / "extract_sources_with_full_text.enc"
+    encrypted_file_path = DATA_DIR / "extract_sources.json.gz.enc"
     if not encrypted_file_path.exists():
         logging.error(f"Fichier chiffré non trouvé : {encrypted_file_path}")
         # Utilisation du texte par défaut
