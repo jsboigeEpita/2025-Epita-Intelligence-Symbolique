@@ -183,7 +183,7 @@ class PropositionalLogicAgent(BaseLogicAgent):
                 self.logger.error("La conversion a produit un ensemble de croyances vide.") 
                 return None, "La conversion a produit un ensemble de croyances vide."
             
-            is_valid, validation_msg = self._tweety_bridge.validate_belief_set(belief_set_str=belief_set_content) # paramètre nommé pour correspondre à TweetyBridge
+            is_valid, validation_msg = self._tweety_bridge.validate_belief_set(belief_set_string=belief_set_content)
             if not is_valid:
                 self.logger.error(f"Ensemble de croyances invalide: {validation_msg}")
                 return None, f"Ensemble de croyances invalide: {validation_msg}"
@@ -372,13 +372,22 @@ class PropositionalLogicAgent(BaseLogicAgent):
 
     def is_consistent(self, belief_set: BeliefSet) -> Tuple[bool, str]:
         """
-        Vérifie si un ensemble de croyances PL est cohérent.
+        Vérifie si un ensemble de croyances propositionnel est cohérent.
 
         :param belief_set: L'ensemble de croyances à vérifier.
         :return: Un tuple (bool, str) indiquant la cohérence et un message.
         """
         self.logger.info(f"Vérification de la cohérence pour l'agent {self.name}")
-        return self._tweety_bridge.is_pl_kb_consistent(belief_set.content)
+        try:
+            # La cohérence est vérifiée par le bridge qui appelle le handler approprié.
+            is_consistent, message = self.tweety_bridge.is_pl_kb_consistent(belief_set.content)
+            if not is_consistent:
+                self.logger.warning(f"Ensemble de croyances PL jugé incohérent par Tweety: {message}")
+            return is_consistent, message
+        except Exception as e:
+            error_msg = f"Erreur inattendue lors de la vérification de la cohérence PL: {e}"
+            self.logger.error(error_msg, exc_info=True)
+            return False, error_msg
 
     async def get_response(
         self,
