@@ -151,6 +151,7 @@ const FallacyDetector = () => {
           <textarea
             ref={textareaRef}
             id="fallacy-text"
+            data-testid="fallacy-text-input"
             className="form-textarea"
             value={text}
             onChange={(e) => setText(e.target.value)}
@@ -228,6 +229,7 @@ const FallacyDetector = () => {
         <div className="form-actions">
           <button
             type="submit"
+            data-testid="fallacy-submit-button"
             className="btn btn-primary btn-lg"
             disabled={loading || !text.trim()}
           >
@@ -244,6 +246,7 @@ const FallacyDetector = () => {
           </button>
           <button
             type="button"
+            data-testid="fallacy-reset-button"
             className="btn btn-secondary"
             onClick={clearAll}
             disabled={loading}
@@ -266,7 +269,7 @@ const FallacyDetector = () => {
 
       {/* Résultats */}
       {result && (
-        <div className="detection-results">
+        <div className="detection-results" data-testid="fallacy-results-container">
           <div className="results-header">
             <h3>🎯 Résultats de la détection</h3>
             <div className="results-stats">

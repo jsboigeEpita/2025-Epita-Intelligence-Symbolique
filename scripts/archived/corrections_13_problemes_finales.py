@@ -31,7 +31,7 @@ def fix_extract_agent_adapter_status():
     """Correction 2-6: Problèmes test_extract_agent_adapter.py"""
     print("=== CORRECTIONS 2-6: test_extract_agent_adapter.py ===")
     
-    test_file = PROJECT_ROOT / "tests" / "test_extract_agent_adapter.py"
+    test_file = PROJECT_ROOT / "tests" / "unit" / "orchestration" / "hierarchical" / "operational" / "adapters" / "test_extract_agent_adapter.py"
     if test_file.exists():
         content = test_file.read_text(encoding='utf-8')
         

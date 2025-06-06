@@ -1,8 +1,8 @@
 Flask[async]~=3.1.1
-jpype1==1.5.0
+jpype1
 Flask-CORS
 matplotlib
-networkx==3.4.2
+networkx
 nltk
 openai
 pandas
@@ -14,8 +14,8 @@ python-dotenv
 scikit-learn
 scipy>=1.15.1
 sentence-transformers
-semantic-kernel==1.29.0
-numpy<2.0
+semantic-kernel
+numpy
 spacy
 coverage
 clingo
