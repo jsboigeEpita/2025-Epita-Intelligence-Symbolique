@@ -40,196 +40,59 @@ Prompt système pour l'agent de logique du premier ordre.
 Définit le rôle et les capacités générales de l'agent pour le LLM.
 """
 
-# Prompts pour la logique du premier ordre
-PROMPT_TEXT_TO_FOL_DEFS = """
-Vous êtes un expert en logique du premier ordre (FOL). Votre première tâche est d'identifier les concepts de base (sorts) et les relations (prédicats) dans un texte donné.
+# Prompts pour la logique du premier ordre (optimisés)
+PROMPT_TEXT_TO_FOL_DEFS = """Expert FOL : Extrayez sorts et prédicats du texte en format JSON strict.
 
-**Format de Sortie (JSON Strict):**
-Votre sortie DOIT être un objet JSON unique contenant deux clés : `sorts` et `predicates`.
+Format : {"sorts": {"type": ["const1", "const2"]}, "predicates": [{"name": "PredName", "args": ["type1"]}]}
 
-1.  **`sorts`**: Un dictionnaire où chaque clé est le nom d'un type (un "sort", ex: "person", "concept") et la valeur est une liste de constantes appartenant à ce type (ex: ["socrates", "plato"]). Les noms de sorts et de constantes doivent être en minuscules et en `snake_case`.
-2.  **`predicates`**: Une liste d'objets, où chaque objet représente un prédicat et a deux clés :
-    *   `name`: Le nom du prédicat (commençant par une majuscule, ex: "IsMan").
-    *   `args`: Une liste des noms de sorts pour les arguments du prédicat (ex: ["person"]). Si le prédicat n'a pas d'arguments (arité 0), la liste doit être vide.
+Règles : sorts/constantes en snake_case, prédicats commencent par majuscule.
 
-**Exemple:**
-Texte: "Paris est une ville. Jean aime Paris. Les villes sont des lieux."
+Exemple : "Jean aime Paris" → {"sorts": {"person": ["jean"], "place": ["paris"]}, "predicates": [{"name": "Loves", "args": ["person", "place"]}]}
 
-**Sortie JSON attendue:**
-```json
-{
-  "sorts": {
-    "person": ["jean"],
-    "city": ["paris"],
-    "place": ["paris"]
-  },
-  "predicates": [
-    { "name": "IsCity", "args": ["city"] },
-    { "name": "Loves", "args": ["person", "place"] },
-    { "name": "IsAPlace", "args": ["place"] }
-  ]
-}
-```
-
-Analysez le texte suivant et extrayez uniquement les `sorts` et `predicates`.
-
-{{$input}}
+Texte : {{$input}}
 """
 """
 Prompt pour extraire les sorts et prédicats d'un texte.
 Attend `$input` (le texte source).
 """
 
-PROMPT_TEXT_TO_FOL_FORMULAS = """
-Vous êtes un expert en logique du premier ordre (FOL). Votre deuxième tâche est de traduire un texte en formules logiques, en utilisant un ensemble prédéfini de sorts et de prédicats.
+PROMPT_TEXT_TO_FOL_FORMULAS = """Expert FOL : Traduisez le texte en formules FOL en JSON strict.
 
-**Contexte Fourni:**
-1.  **Texte Original**: Le texte à traduire.
-2.  **Définitions Autorisées**: Un objet JSON contenant les `sorts` (types et constantes) et `predicates` (relations et leurs arguments) que vous DEVEZ utiliser.
+Format : {"formulas": ["Pred(const)", "forall X: (Pred1(X) => Pred2(X))"]}
 
-**Votre Tâche:**
-Générez un objet JSON contenant UNIQUEMENT la clé `formulas`.
+Règles : Utilisez UNIQUEMENT les sorts/prédicats fournis. Variables majuscules (X,Y). Connecteurs : !, &&, ||, =>, <=>
 
-**Règles Strictes:**
-*   **Utilisation Exclusive**: N'utilisez QUE les `sorts`, `constantes` et `predicates` fournis dans les définitions. N'en inventez pas de nouveaux.
-*   **Cohérence Stricte**: L'arité (nombre d'arguments) et les types de sorts des prédicats utilisés dans les `formulas` DOIVENT correspondre EXACTEMENT à leur déclaration.
-*   **Variables**: Les variables doivent commencer par une LETTRE MAJUSCULE (ex: `X`, `Y`) et être liées par un quantificateur (`forall X: (...)` ou `exists Y: (...)`).
-*   **Connecteurs**: Utilisez `!`, `&&`, `||`, `=>`, `<=>`.
-*   **Format**: Les formules sont une liste de chaînes de caractères. N'ajoutez PAS de point-virgule à la fin.
-
-**Exemple:**
-Texte Original: "Paris est une ville. Jean aime Paris. Les villes sont des lieux."
-Définitions Autorisées:
-```json
-{
-  "sorts": {
-    "person": ["jean"],
-    "city": ["paris"],
-    "place": ["paris"]
-  },
-  "predicates": [
-    { "name": "IsCity", "args": ["city"] },
-    { "name": "Loves", "args": ["person", "place"] },
-    { "name": "IsAPlace", "args": ["place"] }
-  ]
-}
-```
-
-**Sortie JSON attendue:**
-```json
-{
-  "formulas": [
-    "IsCity(paris)",
-    "Loves(jean, paris)",
-    "forall X: (IsCity(X) => IsAPlace(X))"
-  ]
-}
-```
-
-Maintenant, traduisez le texte suivant en utilisant les définitions fournies.
-
-**Texte Original:**
-{{$input}}
-
-**Définitions Autorisées:**
-{{$definitions}}
+Texte : {{$input}}
+Définitions : {{$definitions}}
 """
 """
 Prompt pour générer des formules FOL à partir d'un texte et de définitions.
 Attend `$input` (texte source) et `$definitions` (JSON des sorts et prédicats).
 """
 
-PROMPT_GEN_FOL_QUERIES_IDEAS = """
-Vous êtes un expert en logique du premier ordre. Votre tâche est de générer des "idées" de requêtes pertinentes pour interroger un ensemble de croyances (belief set) donné.
+PROMPT_GEN_FOL_QUERIES_IDEAS = """Expert FOL : Générez des requêtes pertinentes en JSON strict.
 
-**Contexte Fourni:**
-1.  **Texte Original**: Le texte qui motive l'analyse.
-2.  **Ensemble de Croyances (Knowledge Base)**: Une description structurée de la logique extraite du texte, contenant les `sorts` (types et leurs constantes) et les `predicates` (relations et leur arité).
+Format : {"query_ideas": [{"predicate_name": "PredName", "constants": ["const1"]}]}
 
-**Votre Tâche:**
-Générez un objet JSON contenant UNIQUEMENT la clé `query_ideas`.
-La valeur de `query_ideas` doit être une liste d'objets JSON, où chaque objet représente une idée de requête et contient deux clés :
-1.  `predicate_name`: Le nom d'un prédicat à interroger (ex: "IsMan").
-2.  `constants`: Une liste des constantes à utiliser comme arguments pour ce prédicat (ex: ["socrates"]).
+Règles : Utilisez UNIQUEMENT les prédicats/constantes du belief set. Priorité aux requêtes vérifiables.
 
-**Règles Strictes:**
-*   **Utilisation Exclusive**: N'utilisez QUE les `predicates` et `constants` qui existent dans l'ensemble de croyances fourni. N'en inventez pas.
-*   **Pertinence**: Les idées de requêtes doivent être pertinentes par rapport au texte original et chercher à vérifier des conclusions ou des faits intéressants.
-*   **Format de Sortie**: Votre sortie DOIT être un objet JSON valide, sans aucun texte ou explication supplémentaire.
-
-**Exemple:**
-Texte Original: "Socrate est un homme. Tous les hommes sont mortels."
-Ensemble de Croyances:
-```json
-{
-  "sorts": {
-    "person": ["socrates"],
-    "concept": ["mortal"]
-  },
-  "predicates": [
-    { "name": "IsMan", "args": ["person"] },
-    { "name": "IsMortal", "args": ["person"] }
-  ],
-  "formulas": [
-    "IsMan(socrates)",
-    "forall X: (IsMan(X) => IsMortal(X))"
-  ]
-}
-```
-
-**Sortie JSON attendue:**
-```json
-{
-  "query_ideas": [
-    {
-      "predicate_name": "IsMortal",
-      "constants": ["socrates"]
-    },
-    {
-      "predicate_name": "IsMan",
-      "constants": ["socrates"]
-    }
-  ]
-}
-```
-
-Maintenant, analysez le contexte suivant et générez les idées de requêtes.
-
-**Texte Original:**
-{{$input}}
-
-**Ensemble de Croyances:**
-{{$belief_set}}
+Texte : {{$input}}
+Belief Set : {{$belief_set}}
 """
 """
 Prompt pour générer des idées de requêtes FOL au format JSON.
 Attend `$input` (texte source) et `$belief_set` (l'ensemble de croyances FOL).
 """
 
-PROMPT_INTERPRET_FOL = """
-Vous êtes un expert en logique du premier ordre. Votre tâche est d'interpréter les résultats de requêtes en logique du premier ordre et d'expliquer leur signification dans le contexte du texte source.
+PROMPT_INTERPRET_FOL = """Expert FOL : Interprétez les résultats de requêtes FOL en langage accessible.
 
-Voici le texte source:
-{{$input}}
+Texte : {{$input}}
+Belief Set : {{$belief_set}}
+Requêtes : {{$queries}}
+Résultats : {{$tweety_result}}
 
-Voici l'ensemble de croyances en logique du premier ordre:
-{{$belief_set}}
-
-Voici les requêtes qui ont été exécutées:
-{{$queries}}
-
-Voici les résultats de ces requêtes:
-{{$tweety_result}}
-
-Interprétez ces résultats et expliquez leur signification dans le contexte du texte source. Pour chaque requête:
-1. Expliquez ce que la requête cherchait à vérifier
-2. Indiquez si la requête a été acceptée (ACCEPTED) ou rejetée (REJECTED)
-3. Expliquez ce que cela signifie dans le contexte du texte source
-4. Si pertinent, mentionnez les implications logiques de ce résultat
-
-Fournissez ensuite une conclusion générale sur ce que ces résultats nous apprennent sur le texte source.
-
-Votre réponse doit être claire, précise et accessible à quelqu'un qui n'est pas expert en logique formelle.
+Pour chaque requête : objectif, statut (ACCEPTED/REJECTED), signification, implications.
+Conclusion générale concise.
 """
 """
 Prompt pour interpréter les résultats de requêtes FOL en langage naturel.
@@ -628,13 +491,54 @@ class FirstOrderLogicAgent(BaseLogicAgent):
         return None, f"Échec de la conversion après {max_retries} tentatives. Dernière erreur: {last_error}"
 
     def _extract_json_block(self, text: str) -> str:
-        """Extrait le premier bloc JSON valide de la réponse du LLM."""
+        """Extrait le premier bloc JSON valide de la réponse du LLM avec gestion des troncatures."""
         start_index = text.find('{')
+        if start_index == -1:
+            self.logger.warning("Aucun début de JSON trouvé.")
+            return text
+        
+        # Tentative d'extraction du JSON complet
         end_index = text.rfind('}')
         if start_index != -1 and end_index != -1 and end_index > start_index:
-            return text[start_index:end_index + 1]
-        self.logger.warning("Impossible d'isoler un bloc JSON. Tentative de parsing de la chaîne complète.")
-        return text
+            potential_json = text[start_index:end_index + 1]
+            
+            # Test si le JSON est valide
+            try:
+                json.loads(potential_json)
+                return potential_json
+            except json.JSONDecodeError:
+                self.logger.warning("JSON potentiellement tronqué détecté. Tentative de réparation...")
+                
+        # Tentative de réparation pour JSON tronqué
+        partial_json = text[start_index:]
+        
+        # Compter les accolades ouvertes non fermées
+        open_braces = 0
+        valid_end = len(partial_json)
+        
+        for i, char in enumerate(partial_json):
+            if char == '{':
+                open_braces += 1
+            elif char == '}':
+                open_braces -= 1
+                if open_braces == 0:
+                    valid_end = i + 1
+                    break
+        
+        # Si on a des accolades non fermées, essayer de fermer proprement
+        if open_braces > 0:
+            self.logger.warning(f"JSON tronqué détecté ({open_braces} accolades non fermées). Tentative de complétion...")
+            repaired_json = partial_json[:valid_end] + '}' * open_braces
+            
+            try:
+                json.loads(repaired_json)
+                self.logger.info("Réparation JSON réussie.")
+                return repaired_json
+            except json.JSONDecodeError:
+                self.logger.error("Échec de la réparation JSON.")
+        
+        self.logger.warning("Retour du JSON partiel original.")
+        return partial_json[:valid_end] if valid_end < len(partial_json) else partial_json
 
     def _normalize_and_validate_json(self, kb_json: Dict[str, Any]) -> Dict[str, Any]:
         """Normalise les identifiants et valide la cohérence interne du JSON."""
