@@ -1,0 +1,13 @@
+{
+  "agents": [
+    {"name": "S1", "personality": "strategic", "preferences": ["A", "B", "C"], "options": ["A", "B", "C"]},
+    {"name": "S2", "personality": "strategic", "preferences": ["A", "C", "B"], "options": ["A", "B", "C"]},
+    {"name": "S3", "personality": "strategic", "preferences": ["B", "A", "C"], "options": ["A", "B", "C"]},
+    {"name": "S4", "personality": "strategic", "preferences": ["B", "C", "A"], "options": ["A", "B", "C"]},
+    {"name": "S5", "personality": "strategic", "preferences": ["C", "A", "B"], "options": ["A", "B", "C"]},
+    {"name": "F1", "personality": "flexible", "preferences": ["C", "B", "A"], "options": ["A", "B", "C"]},
+    {"name": "R1", "personality": "random", "preferences": ["B", "C", "A"], "options": ["A", "B", "C"]}
+  ],
+  "options": ["A", "B", "C"],
+  "context": {"description": "7 agents, majority are strategic, 3 options. Tests tactical voting."}
+} 

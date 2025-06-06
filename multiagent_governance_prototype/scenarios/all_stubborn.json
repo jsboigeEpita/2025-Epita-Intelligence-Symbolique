@@ -1,0 +1,12 @@
+{
+  "agents": [
+    {"name": "S1", "personality": "stubborn", "preferences": ["A", "B", "C"], "options": ["A", "B", "C"]},
+    {"name": "S2", "personality": "stubborn", "preferences": ["B", "C", "A"], "options": ["A", "B", "C"]},
+    {"name": "S3", "personality": "stubborn", "preferences": ["C", "A", "B"], "options": ["A", "B", "C"]},
+    {"name": "S4", "personality": "stubborn", "preferences": ["A", "C", "B"], "options": ["A", "B", "C"]},
+    {"name": "S5", "personality": "stubborn", "preferences": ["B", "A", "C"], "options": ["A", "B", "C"]},
+    {"name": "S6", "personality": "stubborn", "preferences": ["C", "B", "A"], "options": ["A", "B", "C"]}
+  ],
+  "options": ["A", "B", "C"],
+  "context": {"description": "All stubborn agents, unique top preferences. Deadlock likely."}
+} 

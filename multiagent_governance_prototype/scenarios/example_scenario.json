@@ -1,0 +1,11 @@
+{
+  "agents": [
+    {"name": "Alice", "personality": "stubborn", "preferences": ["A", "B", "C"], "options": ["A", "B", "C"]},
+    {"name": "Bob", "personality": "flexible", "preferences": ["B", "C", "A"], "options": ["A", "B", "C"]},
+    {"name": "Carol", "personality": "strategic", "preferences": ["C", "A", "B"], "options": ["A", "B", "C"]},
+    {"name": "Dave", "personality": "random", "preferences": ["B", "A", "C"], "options": ["A", "B", "C"]},
+    {"name": "Eve", "personality": "flexible", "preferences": ["A", "C", "B"], "options": ["A", "B", "C"]}
+  ],
+  "options": ["A", "B", "C"],
+  "context": {"description": "Resource allocation among three projects."}
+} 

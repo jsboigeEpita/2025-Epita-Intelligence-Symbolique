@@ -1,0 +1,11 @@
+{
+  "agents": [
+    {"name": "A1", "personality": "flexible", "preferences": ["X", "Y", "Z"], "options": ["X", "Y", "Z"]},
+    {"name": "A2", "personality": "flexible", "preferences": ["X", "Y", "Z"], "options": ["X", "Y", "Z"]},
+    {"name": "A3", "personality": "flexible", "preferences": ["X", "Y", "Z"], "options": ["X", "Y", "Z"]},
+    {"name": "A4", "personality": "flexible", "preferences": ["X", "Y", "Z"], "options": ["X", "Y", "Z"]},
+    {"name": "D1", "personality": "stubborn", "preferences": ["Z", "Y", "X"], "options": ["X", "Y", "Z"]}
+  ],
+  "options": ["X", "Y", "Z"],
+  "context": {"description": "5 agents, 4 agree, 1 stubborn dissenter. Tests consensus robustness."}
+} 

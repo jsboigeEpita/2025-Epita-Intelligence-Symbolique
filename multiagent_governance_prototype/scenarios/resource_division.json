@@ -1,0 +1,18 @@
+{
+  "agents": [
+    {"name": "R1", "personality": "flexible", "preferences": ["A", "B", "C"], "options": ["A", "B", "C"]},
+    {"name": "R2", "personality": "flexible", "preferences": ["A", "B", "C"], "options": ["A", "B", "C"]},
+    {"name": "R3", "personality": "flexible", "preferences": ["A", "B", "C"], "options": ["A", "B", "C"]},
+    {"name": "R4", "personality": "stubborn", "preferences": ["B", "A", "C"], "options": ["A", "B", "C"]},
+    {"name": "R5", "personality": "stubborn", "preferences": ["B", "A", "C"], "options": ["A", "B", "C"]},
+    {"name": "R6", "personality": "stubborn", "preferences": ["B", "A", "C"], "options": ["A", "B", "C"]},
+    {"name": "R7", "personality": "strategic", "preferences": ["C", "A", "B"], "options": ["A", "B", "C"]},
+    {"name": "R8", "personality": "strategic", "preferences": ["C", "A", "B"], "options": ["A", "B", "C"]},
+    {"name": "R9", "personality": "strategic", "preferences": ["C", "A", "B"], "options": ["A", "B", "C"]},
+    {"name": "R10", "personality": "random", "preferences": ["A", "C", "B"], "options": ["A", "B", "C"]},
+    {"name": "R11", "personality": "random", "preferences": ["B", "C", "A"], "options": ["A", "B", "C"]},
+    {"name": "R12", "personality": "random", "preferences": ["C", "B", "A"], "options": ["A", "B", "C"]}
+  ],
+  "options": ["A", "B", "C"],
+  "context": {"description": "12 agents, 3 options, preferences based on resource needs. Fairness test."}
+} 
