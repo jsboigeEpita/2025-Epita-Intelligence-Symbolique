@@ -67,17 +67,13 @@ class PropositionalLogicAgent(BaseLogicAgent):
         :type system_prompt: Optional[str]
         """
         actual_system_prompt = system_prompt if system_prompt is not None else PL_AGENT_INSTRUCTIONS
+        logger.info(f"DEBUG: Initializing PropositionalLogicAgent with name: {agent_name}")
         super().__init__(kernel,
                          agent_name=agent_name,
                          logic_type_name="PL",
                          system_prompt=actual_system_prompt)
         self._llm_service_id = service_id
-        
-        # Initialiser TweetyBridge ici pour qu'il soit toujours disponible après l'instanciation
-        self._tweety_bridge = TweetyBridge()
-        self.logger.info(f"TweetyBridge initialisé directement dans PropositionalLogicAgent.__init__ pour {self.name}. JVM prête: {self._tweety_bridge.is_jvm_ready()}")
-        if not self._tweety_bridge.is_jvm_ready():
-            self.logger.error("La JVM n'est pas prête. Les fonctionnalités de TweetyBridge pourraient ne pas fonctionner.")
+        self._tweety_bridge = None  # Initialiser à None
 
     def get_agent_capabilities(self) -> Dict[str, Any]:
         """
@@ -107,16 +103,13 @@ class PropositionalLogicAgent(BaseLogicAgent):
         """
         super().setup_agent_components(llm_service_id)
         self.logger.info(f"Configuration des composants sémantiques pour {self.name}...")
-        # _tweety_bridge est maintenant initialisé dans __init__
-
-        # Vérification supplémentaire de la JVM ici si nécessaire, bien que déjà faite dans __init__
-        if not hasattr(self, '_tweety_bridge') or not self._tweety_bridge:
-            self.logger.error(f"TweetyBridge non initialisé avant setup_agent_components pour {self.name}. Tentative d'initialisation tardive.")
-            self._tweety_bridge = TweetyBridge() # Fallback, ne devrait pas arriver si __init__ est correct
+        
+        # Initialiser TweetyBridge ici
+        if not self._tweety_bridge:
+            self._tweety_bridge = TweetyBridge()
+            self.logger.info(f"TweetyBridge initialisé dans setup_agent_components pour {self.name}. JVM prête: {self._tweety_bridge.is_jvm_ready()}")
             if not self._tweety_bridge.is_jvm_ready():
-                 self.logger.error("La JVM n'est toujours pas prête après initialisation tardive.")
-        elif not self._tweety_bridge.is_jvm_ready():
-             self.logger.warning(f"La JVM pour TweetyBridge de {self.name} n'est pas prête au moment de setup_agent_components (déjà loggué par __init__).")
+                self.logger.error("La JVM n'est pas prête. Les fonctionnalités de TweetyBridge pourraient ne pas fonctionner.")
 
         prompt_execution_settings = None
         if self._llm_service_id:

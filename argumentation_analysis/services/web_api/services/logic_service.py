@@ -23,6 +23,7 @@ from argumentation_analysis.agents.core.logic.logic_factory import LogicAgentFac
 from argumentation_analysis.agents.core.logic.abstract_logic_agent import AbstractLogicAgent
 from argumentation_analysis.agents.core.logic.belief_set import BeliefSet
 from argumentation_analysis.agents.core.logic.query_executor import QueryExecutor
+from argumentation_analysis.core.llm_service import create_llm_service
 
 from ..models.request_models import (
     LogicBeliefSetRequest, LogicQueryRequest, LogicGenerateQueriesRequest, LogicOptions
@@ -41,8 +42,14 @@ class LogicService:
         self.logger = logging.getLogger("WebAPI.LogicService")
         self.logger.info("Initialisation du service LogicService")
         
-        # Initialisation du kernel
+        # Initialisation du kernel et du service LLM
         self.kernel = Kernel()
+        try:
+            llm_service = create_llm_service(service_id="default_logic_llm")
+            self.kernel.add_service(llm_service)
+            self.logger.info("Service LLM 'default_logic_llm' créé et ajouté au kernel pour LogicService.")
+        except Exception as e:
+            self.logger.error(f"Erreur lors de la création du service LLM pour LogicService: {e}")
         
         # Initialisation de l'exécuteur de requêtes
         self.query_executor = QueryExecutor()
@@ -85,6 +92,9 @@ class LogicService:
             agent = LogicAgentFactory.create_agent(request.logic_type, self.kernel)
             if not agent:
                 raise ValueError(f"Impossible de créer un agent pour le type de logique '{request.logic_type}'")
+            
+            # Configurer l'agent
+            agent.setup_agent_components(llm_service_id="default_logic_llm")
             
             # Convertir le texte en ensemble de croyances
             belief_set, message = agent.text_to_belief_set(request.text)
