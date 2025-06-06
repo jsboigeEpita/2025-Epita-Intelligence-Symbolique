@@ -1,7 +1,7 @@
 {
     "metadata": {
-        "source_file": "C:\\Users\\MYIA\\AppData\\Local\\Temp\\tmp4uayvbqb.txt",
-        "timestamp": "2025-06-06T17:13:06.785209",
+        "source_file": "C:\\Users\\MYIA\\AppData\\Local\\Temp\\tmp6cbklfkj.txt",
+        "timestamp": "2025-06-06T17:18:15.021560",
         "demo_version": "1.2.0"
     },
     "informal_analysis": {
@@ -57,14 +57,8 @@
     },
     "formal_analysis": {
         "logic_type_used": "first_order",
-        "status": "Success",
-        "belief_set_summary": {
-            "is_consistent": true,
-            "details": "Ensemble de croyances FOL valide"
-        },
-        "belief_set": [
-            "subject = { rechauffement_climatique, mythe, mesures_drastiques, catastrophe_planetaire, scientifiques, arguments, faits, sophismes }\nconcept = { complexite, danger, rigueur }\ntype(IsMythe(subject))\ntype(RequiresDrasticMeasures(subject))\ntype(IsFinanciallyMotivated(subject))\ntype(AlertsAboutDanger(subject))\ntype(AnalyzesFacts(subject))\ntype(DeconstructsSophisms(subject))\n\n\nIsMythe(mythe)\nRequiresDrasticMeasures(mesures_drastiques)\nAnalyzesFacts(faits)\nDeconstructsSophisms(sophismes)"
-        ],
-        "queries": []
+        "status": "Failed",
+        "reason": "Belief set conversion failed.",
+        "details": "Validation ou erreur de syntaxe FOL: Le prédicat 'Necessity' utilisé dans la formule 'supportsNecessity(catastrophe_planetaire)' n'est pas déclaré."
     }
 }
