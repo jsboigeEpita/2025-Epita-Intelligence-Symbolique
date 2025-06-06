@@ -7,7 +7,7 @@ Bienvenue dans la documentation du projet Intelligence Symbolique. Cette section
 La documentation est organisée en plusieurs sections thématiques :
 
 ### [Architecture](./architecture/README.md)
-Documentation de l'architecture du système d'analyse argumentative, incluant l'architecture hiérarchique à trois niveaux et les systèmes de communication entre agents.
+Documentation de l'architecture du système d'analyse argumentative, incluant l'architecture hiérarchique à trois niveaux, les systèmes de communication entre agents, et l'analyse des orchestrations agentiques Sherlock/Watson.
 
 ### [Audit](./audit/README.md)
 Documentation relative aux audits du projet et de la documentation.
@@ -16,7 +16,7 @@ Documentation relative aux audits du projet et de la documentation.
 Description détaillée des différents composants qui constituent le système d'analyse argumentative, leur fonctionnement et leurs interactions.
 
 ### [Guides](./guides/README.md)
-Guides d'utilisation et tutoriels pour vous aider à comprendre et à utiliser efficacement le système d'analyse argumentative.
+Guides d'utilisation et tutoriels pour vous aider à comprendre et à utiliser efficacement le système d'analyse argumentative, incluant les patterns d'orchestration des modes.
 
 <!-- TODO: Le fichier docs/images/README.md est actuellement vide. Évaluer s'il doit être peuplé (par ex. avec une liste/catégorisation des images) ou si le lien dans cette section devrait pointer directement vers le dossier ./images/ ou si l'entrée "Images" devrait être supprimée si ce dossier n'est pas destiné à être navigué via un README. -->
 ### [Images](./images/README.md)
@@ -52,6 +52,9 @@ Description détaillée de l'architecture hiérarchique à trois niveaux qui str
 ### [Système de Communication entre Agents](./architecture/communication_agents.md)
 Analyse du système de communication permettant aux agents de collaborer efficacement.
 
+### [Analyse des Orchestrations Agentiques Sherlock/Watson](./architecture/analyse_orchestrations_sherlock_watson.md)
+Analyse complète des flux d'orchestration dans les conversations agentiques entre Sherlock Holmes et Dr. Watson, incluant leurs interactions, outils utilisés, et l'usage des solvers Tweety.
+
 ### [Conception du Système de Communication Multi-Canal](./conception_systeme_communication_multi_canal.md)
 Présentation de la conception du système de communication multi-canal pour les agents.
 
@@ -72,6 +75,9 @@ Procédures et critères pour valider l'intégration du système.
 
 ### [Liste de Vérification pour le Déploiement](./liste_verification_deploiement.md)
 Liste exhaustive des points à vérifier avant le déploiement du système.
+
+### [Guide des Patterns d'Orchestration](./guides/GUIDE_PATTERNS_ORCHESTRATION_MODES.md)
+Guide complet des patterns d'orchestration utilisés dans le projet, incluant 5 types d'orchestration distincts avec leurs templates de communication et bonnes pratiques.
 
 ## Pour Commencer
 
