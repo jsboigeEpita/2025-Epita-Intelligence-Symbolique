@@ -9,6 +9,9 @@ def test_successful_graph_visualization(page: Page):
     """
     page.goto("http://localhost:3000/")
     
+    # Attendre que l'API soit connectée
+    expect(page.locator('.api-status.connected')).to_be_visible(timeout=15000)
+
     # Assurez-vous que l'onglet "Logic Graph" est cliquable et cliquez dessus
     logic_graph_tab = page.locator('[data-testid="logic-graph-tab"]')
     expect(logic_graph_tab).to_be_enabled()
@@ -36,6 +39,9 @@ def test_logic_graph_api_error(page: Page):
     """
     page.goto("http://localhost:3000/")
     
+    # Attendre que l'API soit connectée
+    expect(page.locator('.api-status.connected')).to_be_visible(timeout=15000)
+
     logic_graph_tab = page.locator('[data-testid="logic-graph-tab"]')
     logic_graph_tab.click()
 
@@ -68,6 +74,9 @@ def test_logic_graph_reset_button(page: Page):
     """
     page.goto("http://localhost:3000/")
     
+    # Attendre que l'API soit connectée
+    expect(page.locator('.api-status.connected')).to_be_visible(timeout=15000)
+
     logic_graph_tab = page.locator('[data-testid="logic-graph-tab"]')
     logic_graph_tab.click()
 
