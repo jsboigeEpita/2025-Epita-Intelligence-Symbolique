@@ -112,21 +112,40 @@ Ce projet contient une application web pour l'analyse d'argumentation, composée
 
 ## Démarrage de l'application
 
-Vous devez démarrer le backend PUIS le frontend dans des terminaux séparés.
+Le lancement du backend et du frontend est géré par des scripts pour plus de simplicité et de cohérence.
 
-### 1. Démarrer le Backend (Serveur Flask)
-Assurez-vous que votre environnement Conda (`projet-is`) est activé et que `PYTHONPATH` est correctement configuré (voir section Configuration).
+### 1. Configurer la communication Frontend -> Backend
 
-Depuis la **racine du projet** (`C:\dev\2025-Epita-Intelligence-Symbolique`), exécutez :
-```bash
-python .\argumentation_analysis\services\web_api\start_api.py --port 5003
+Avant de lancer, assurez-vous que le frontend sait comment contacter le backend.
+
+1.  **Créez un fichier** nommé `.env` dans le répertoire du frontend, ici : `services/web_api/interface-web-argumentative/.env`
+2.  **Ajoutez la ligne suivante** dans ce fichier. Le port doit correspondre à celui sur lequel vous allez lancer le backend (par exemple, 5005).
+
+    ```
+    REACT_APP_API_BASE_URL=http://localhost:5005
+    ```
+
+### 2. Lancer les serveurs
+
+Ouvrez deux terminaux PowerShell à la racine du projet.
+
+**Terminal 1 : Lancer le Backend**
+
+Utilisez le script `run_backend.cmd` pour démarrer le serveur Flask. Vous pouvez spécifier un port.
+
+```powershell
+# Lance le backend sur le port 5005
+.\activate_project_env.ps1 -CommandToRun "scripts\run_backend.cmd 5005"
 ```
-Le serveur backend devrait démarrer sur `http://localhost:5003`.
 
-### 2. Démarrer le Frontend (Client React)
-Depuis le répertoire **client** (`C:\dev\2025-Epita-Intelligence-Symbolique\services\web_api\interface-web-argumentative\`), exécutez :
-```bash
-npm start
+**Terminal 2 : Lancer le Frontend**
+
+Utilisez le script `run_frontend.cmd` pour démarrer le serveur React. Vous pouvez également spécifier un port.
+
+```powershell
+# Lance le frontend sur le port 3001
+.\activate_project_env.ps1 -CommandToRun "scripts\run_frontend.cmd 3001"
 ```
-L'application React devrait s'ouvrir automatiquement dans votre navigateur à l'adresse `http://localhost:3000` (ou un autre port si 3000 est occupé). L'interface client communiquera avec le backend sur le port 5003.
+
+L'application React s'ouvrira dans votre navigateur et communiquera avec le backend sur le port que vous avez défini dans le fichier `.env` du frontend.
 

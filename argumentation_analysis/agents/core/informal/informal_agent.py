@@ -32,7 +32,7 @@ from ..abc.agent_bases import BaseAgent
 
 # Import des définitions et des prompts
 from .informal_definitions import InformalAnalysisPlugin, INFORMAL_AGENT_INSTRUCTIONS
-from .prompts import prompt_identify_args_v8, prompt_analyze_fallacies_v1, prompt_justify_fallacy_attribution_v1
+from .prompts import prompt_identify_args_v8, prompt_analyze_fallacies_v2, prompt_justify_fallacy_attribution_v1
 
 
 # Configuration du logging
@@ -150,7 +150,7 @@ class InformalAnalysisAgent(BaseAgent):
             self.logger.info(f"Fonction sémantique '{native_plugin_name}.semantic_IdentifyArguments' enregistrée.")
 
             self.sk_kernel.add_function(
-                prompt=prompt_analyze_fallacies_v1,
+                prompt=prompt_analyze_fallacies_v2,
                 plugin_name=native_plugin_name,
                 function_name="semantic_AnalyzeFallacies",
                 description="Analyse les sophismes dans un argument.",
