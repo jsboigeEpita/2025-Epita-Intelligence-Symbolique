@@ -152,7 +152,7 @@ Il est crucial de pouvoir vérifier l'intégrité et le bon fonctionnement du co
 
 *   **Scripts de test dédiés :** Le répertoire [`scripts/testing/`](../../scripts/testing/) contient des scripts pour lancer des suites de tests spécifiques ou des simulations.
 *   **Tests Unitaires :** Les tests unitaires, qui vérifient des composants isolés du code, sont situés dans [`tests/unit/`](../../tests/unit/). Un exemple typique est [`tests/unit/project_core/utils/test_file_utils.py`](../../tests/unit/project_core/utils/test_file_utils.py:0), qui teste les utilitaires de gestion de fichiers.
-*   **Tests d'Intégration :** Les tests d'intégration, qui vérifient l'interaction entre plusieurs composants, se trouvent dans [`tests/integration/`](../../tests/integration/). Vous pouvez consulter [`tests/integration/test_logic_agents_integration.py`](../../tests/integration/test_logic_agents_integration.py:0) pour un exemple d'intégration d'agents logiques, ou le répertoire [`tests/integration/jpype_tweety/`](../../tests/integration/jpype_tweety/) pour les tests spécifiques à l'intégration JPype/Tweety.
+*   **Tests d'Intégration :** Les tests d'intégration, qui vérifient l'interaction entre plusieurs composants, se trouvent dans [`tests/integration/`](../../tests/integration/). Vous pouvez consulter [`tests/integration/test_logic_agents_integration.py`](../tests/integration/test_logic_agents_integration.py:0) pour un exemple d'intégration d'agents logiques, ou le répertoire [`tests/integration/jpype_tweety/`](../../tests/integration/jpype_tweety/) pour les tests spécifiques à l'intégration JPype/Tweety.
 
 ## Conclusion
 
@@ -161,3 +161,6 @@ Ce guide vous a présenté comment utiliser le service d'analyse argumentative v
 N'hésitez pas à consulter la documentation complète de l'API ([`docs/composants/api_web.md`](../composants/api_web.md:1)) et les README spécifiques à chaque module pour plus de détails.
 
 Bonne exploration !
+
+
+

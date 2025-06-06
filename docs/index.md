@@ -51,9 +51,9 @@ Le projet Intelligence Symbolique est une infrastructure d'analyse argumentative
 ### Documentation des tests
 - [Plan d'Action Tests](./tests/plan_action_tests.md) - Plan pour les tests
 - [README des Tests](../tests/README.md) - Documentation principale des tests
-- [Tests Unitaires](../tests/README_TESTS_UNITAIRES.md) - Guide pour les tests unitaires
-- [Tests d'Intégration](../tests/README_INTEGRATION_TESTS.md) - Guide pour les tests d'intégration
-- [Tests Fonctionnels](../tests/README_FUNCTIONAL_TESTS.md) - Guide pour les tests fonctionnels
+- [Tests Unitaires](tests/README_TESTS_UNITAIRES.md) - Guide pour les tests unitaires
+- [Tests d'Intégration](tests/README_INTEGRATION_TESTS.md) - Guide pour les tests d'intégration
+- [Tests Fonctionnels](tests/README_FUNCTIONAL_TESTS.md) - Guide pour les tests fonctionnels
 
 ### Rapports et analyses
 - [Rapport d'Analyse de Documentation](./rapport_analyse_documentation.md) - Analyse de la structure documentaire
@@ -164,3 +164,5 @@ Le projet Intelligence Symbolique est une infrastructure d'analyse argumentative
 ---
 
 *Dernière mise à jour : 27/05/2025*
+
+

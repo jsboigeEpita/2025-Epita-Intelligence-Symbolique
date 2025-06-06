@@ -11,7 +11,7 @@ Ce document résume les analyses, actions, propositions d'extraction et suggesti
 ## Résumé par Fichier Traité
 
 1.  **`tests/agents/tools/test_rhetorical_tools_integration.py`**
-    *   **Localisation réelle :** [`tests/integration/test_agents_tools_integration.py`](../../tests/integration/test_agents_tools_integration.py)
+    *   **Localisation réelle :** [`tests/integration/test_agents_tools_integration.py`](../tests/integration/test_agents_tools_integration.py)
     *   **Analyse :** Le fichier teste l'intégration entre `InformalAgent` et ses outils d'analyse mockés. L'emplacement dans `tests/integration/` est approprié.
     *   **Actions Effectuées :**
         *   Création du fichier [`tests/integration/README.md`](../../tests/integration/README.md) pour documenter le répertoire des tests d'intégration.
@@ -42,7 +42,7 @@ Ce document résume les analyses, actions, propositions d'extraction et suggesti
     *   **Actions Effectuées :** Aucune.
     *   **Propositions :** Aucune, l'absence est notée.
 
-6.  **[`tests/functional/test_agent_collaboration_workflow.py`](../../tests/functional/test_agent_collaboration_workflow.py)**
+6.  **[`tests/functional/test_agent_collaboration_workflow.py`](../tests/functional/test_agent_collaboration_workflow.py)**
     *   **Analyse :** Teste la collaboration entre agents (PM, PL, Informal, Extract) via une architecture hiérarchique. Utilise `@pytest.mark.anyio`. Le `setUp` est volumineux.
     *   **Actions Effectuées :**
         *   Création du fichier [`tests/functional/README.md`](../../tests/functional/README.md) pour documenter le répertoire des tests fonctionnels.
@@ -51,7 +51,7 @@ Ce document résume les analyses, actions, propositions d'extraction et suggesti
     *   **Suggestions de Documentation Croisée :**
         *   Ajouter une référence à ce test dans la documentation de l'orchestration hiérarchique (par exemple, `argumentation_analysis/orchestration/hierarchical/README.md`).
 
-7.  **[`tests/functional/test_fallacy_detection_workflow.py`](../../tests/functional/test_fallacy_detection_workflow.py)**
+7.  **[`tests/functional/test_fallacy_detection_workflow.py`](../tests/functional/test_fallacy_detection_workflow.py)**
     *   **Analyse :** Teste l'enchaînement des analyseurs de sophismes (Contextuel, Complexe, Sévérité). Contient des imports inutilisés.
     *   **Actions Effectuées :**
         *   Mise à jour de [`tests/agents/tools/analysis/enhanced/README.md`](../../tests/agents/tools/analysis/enhanced/README.md) pour lier à ce test fonctionnel.
@@ -61,7 +61,7 @@ Ce document résume les analyses, actions, propositions d'extraction et suggesti
     *   **Suggestions de Documentation Croisée :**
         *   La documentation des analyseurs dans `argumentation_analysis/agents/tools/analysis/enhanced/` devrait référencer ce test.
 
-8.  **[`tests/functional/test_python_analysis_workflow_components.py`](../../tests/functional/test_python_analysis_workflow_components.py)**
+8.  **[`tests/functional/test_python_analysis_workflow_components.py`](../tests/functional/test_python_analysis_workflow_components.py)**
     *   **Analyse :** Teste des composants du workflow d'analyse Python, y compris le chiffrement, le chargement de corpus, `InformalAgent` (basique), et l'exécution du script `run_full_python_analysis_workflow.py`. Contient du code dupliqué pour les fonctions de chiffrement.
     *   **Actions Effectuées :**
         *   Mise à jour de [`tests/functional/README.md`](../../tests/functional/README.md) pour décrire ce test.
@@ -71,7 +71,7 @@ Ce document résume les analyses, actions, propositions d'extraction et suggesti
         *   La documentation du nouveau module d'utilitaires de chiffrement (si créé) devrait mentionner ces tests.
         *   La documentation du script `run_full_python_analysis_workflow.py` pourrait lier à ces tests.
 
-9.  **[`tests/functional/test_rhetorical_analysis_workflow.py`](../../tests/functional/test_rhetorical_analysis_workflow.py)**
+9.  **[`tests/functional/test_rhetorical_analysis_workflow.py`](../tests/functional/test_rhetorical_analysis_workflow.py)**
     *   **Analyse :** Teste le workflow d'analyse rhétorique via `AnalysisRunner`, avec des agents mockés. Utilise `unittest.TestCase` mais pourrait être migré vers un style pytest pur.
     *   **Actions Effectuées :**
         *   Mise à jour de [`tests/functional/README.md`](../../tests/functional/README.md) pour décrire ce test.
@@ -95,3 +95,7 @@ Ce document résume les analyses, actions, propositions d'extraction et suggesti
 ## Confirmation
 
 Tous les changements relatifs à la documentation (création/mise à jour de READMEs) ont été poussés sur `origin/main`. Les propositions de refactorisation de code et de suppression d'imports sont notées pour être traitées par un mode d'édition de code.
+
+
+
+

@@ -576,5 +576,5 @@ L'ensemble de croyances est contradictoire. D'une part, nous pouvons conclure qu
 - [Tutoriel interactif sur les agents logiques](../../examples/notebooks/logic_agents_tutorial.ipynb)
 - [Documentation de TweetyProject sur la logique propositionnelle](http://tweetyproject.org/doc/propositional-logic.html)
 - [Script d'exemples complets de logique propositionnelle](../../examples/logic_agents/propositional_logic_example.py)
-- [Tests d'intégration pour les opérations logiques (JPype/Tweety)](../../tests/integration/jpype_tweety/test_logic_operations.py)
+- [Tests d'intégration pour les opérations logiques (JPype/Tweety)](../tests/integration/jpype_tweety/test_logic_operations.py)
 - [Tutoriel interactif sur l'API logique (Notebook)](../../examples/notebooks/api_logic_tutorial.ipynb) (Note: se concentre sur une API Web, mais peut illustrer des concepts)

@@ -1,21 +1,41 @@
-# Tests d'Orchestration Tactique
+# Tests de l'Orchestration Tactique
 
-Ce répertoire regroupe les tests unitaires et d'intégration pour les composants d'orchestration tactique, incluant les coordinateurs et les moniteurs tactiques. Ces tests visent à assurer la robustesse et la fiabilité de la logique de coordination des agents et de la surveillance de l'état du système à un niveau tactique.
+## Objectif
 
-## Objectifs des Tests :
+Ce répertoire contient les tests pour les composants de la couche tactique de l'architecture d'orchestration. La couche tactique est le "cerveau" de l'orchestration, responsable de la planification, de la coordination et de la supervision de l'exécution des tâches.
 
-*   Valider le comportement nominal des coordinateurs tactiques dans la gestion des plans et des tâches des agents.
-*   Tester les fonctionnalités avancées des coordinateurs, telles que la résolution de conflits, la replanification et l'adaptation dynamique.
-*   Assurer une couverture de code adéquate pour les modules des coordinateurs.
-*   Vérifier le fonctionnement des moniteurs tactiques dans la détection d'événements pertinents et la mise à jour de l'état tactique.
-*   Tester les capacités avancées des moniteurs, y compris l'agrégation d'informations et le déclenchement d'alertes ou d'actions.
+L'objectif de ces tests est de valider que les composants tactiques peuvent non seulement créer des plans d'action à partir d'objectifs stratégiques, mais aussi surveiller leur exécution, détecter les problèmes et suggérer des solutions, assurant ainsi une exécution robuste et résiliente.
 
-## Fichiers Inclus :
+## Composants Testés
 
-*   [`test_tactical_coordinator_advanced.py`](test_tactical_coordinator_advanced.py:1): Tests pour les fonctionnalités avancées du coordinateur tactique.
-*   [`test_tactical_coordinator_coverage.py`](test_tactical_coordinator_coverage.py:1): Tests visant à maximiser la couverture de code du coordinateur tactique.
-*   [`test_tactical_coordinator.py`](test_tactical_coordinator.py:1): Tests de base pour le coordinateur tactique.
-*   [`test_tactical_monitor_advanced.py`](test_tactical_monitor_advanced.py:1): Tests pour les fonctionnalités avancées du moniteur tactique.
-*   [`test_tactical_monitor.py`](test_tactical_monitor.py:1): Tests de base pour le moniteur tactique.
+Les tests dans ce module se concentrent sur deux composants principaux :
 
-Ces tests sont essentiels pour garantir que la couche d'orchestration tactique fonctionne comme prévu et peut gérer de manière fiable les interactions complexes entre les agents et l'environnement.
+-   **`TaskCoordinator`**: Le coordinateur de tâches est responsable de :
+    -   Recevoir des objectifs de la couche stratégique.
+    -   Décomposer ces objectifs en tâches plus petites et gérables.
+    -   Établir les dépendances entre les tâches.
+    -   Assigner les tâches aux agents opérationnels appropriés.
+    -   Gérer les résultats des tâches et rapporter l'état d'avancement.
+
+-   **`ProgressMonitor`**: Le moniteur de progression est responsable de :
+    -   Suivre la progression de chaque tâche.
+    -   Détecter les anomalies telles que les retards, la stagnation ou les blocages dus à des dépendances échouées.
+    -   Identifier les problèmes systémiques comme un taux d'échec élevé.
+    -   Suggérer des actions correctives pour résoudre les problèmes détectés (par exemple, réassigner une tâche, allouer plus de ressources).
+
+## Scénarios d'Orchestration
+
+Les tests couvrent un large éventail de scénarios de gestion de projet et de résolution de problèmes :
+
+-   **Planification de bout en bout**: De la réception d'un objectif à l'assignation des tâches décomposées.
+-   **Détection d'Anomalies**: Simulation de divers problèmes (tâches en retard, bloquées, en régression) pour vérifier que le moniteur les détecte correctement.
+-   **Suggestion d'Actions Correctives**: Vérification que le moniteur propose des solutions pertinentes et logiques pour les problèmes identifiés.
+-   **Gestion des Ajustements Stratégiques**: Teste la capacité du coordinateur à modifier un plan en cours d'exécution en réponse à de nouvelles directives de la couche stratégique.
+-   **Génération de Rapports**: Valide la capacité des composants à générer des rapports de statut complets, incluant la progression, les problèmes et les métriques.
+
+## Dépendances Clés
+
+-   **`unittest` et `pytest`**: Utilisés comme frameworks de test.
+-   **`unittest.mock`**: Essentiel pour mocker les dépendances et isoler la logique tactique. Les principaux mocks incluent :
+    -   **`TacticalState`**: Pour simuler l'état partagé de la couche tactique et vérifier que les composants le lisent et le mettent à jour correctement.
+    -   **`MessageMiddleware` et `TacticalAdapter`**: Pour simuler le système de communication et vérifier que les composants interagissent correctement avec les autres couches.

@@ -78,4 +78,4 @@ Pour mettre à jour les bibliothèques Tweety vers une nouvelle version :
 
 - [Documentation Tweety](https://tweetyproject.org/doc/)
 - [Service JVM](../argumentation_analysis/services/README.md)
-- [Tests d'Intégration JVM](../argumentation_analysis/tests/test_jvm_example.py)
+- [Tests d'Intégration JVM](tests/unit/argumentation_analysis/test_jvm_example.py)
