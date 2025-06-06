@@ -10,7 +10,7 @@ from unittest.mock import MagicMock, AsyncMock
 from semantic_kernel import Kernel
 from semantic_kernel.functions.kernel_arguments import KernelArguments
 
-from argumentation_analysis.agents.core.logic.modal_logic_agent import ModalLogicAgent, SYSTEM_PROMPT_ML
+from argumentation_analysis.agents.core.logic.modal_logic_agent import ModalLogicAgent, SYSTEM_PROMPT_MODAL
 from argumentation_analysis.agents.core.logic.belief_set import ModalBeliefSet, BeliefSet
 from argumentation_analysis.agents.core.logic.tweety_bridge import TweetyBridge
 
@@ -69,8 +69,8 @@ class TestModalLogicAgent:
         """Test de l'initialisation et de la configuration de l'agent."""
         assert self.agent.name == "ModalLogicAgent"
         assert self.agent.sk_kernel == self.kernel
-        assert self.agent.logic_type == "ML"
-        assert self.agent.instructions == SYSTEM_PROMPT_ML
+        assert self.agent.logic_type == "Modal"
+        assert self.agent.instructions == SYSTEM_PROMPT_MODAL
         
         self.mock_tweety_bridge_instance.is_jvm_ready.assert_called_once()
         
