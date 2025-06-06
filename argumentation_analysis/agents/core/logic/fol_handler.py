@@ -221,19 +221,21 @@ class FOLHandler:
         """
         logger.debug(f"Validating query '{query_str}' with context from belief set.")
         try:
-            # Use the class's default parser, which will be configured by parsing the belief set.
-            # First, parse the belief base. This loads the signature into the parser.
-            self._fol_parser.parseBeliefBase(JString(belief_set_str))
+            # This method creates a dedicated, configured parser for the validation task,
+            # avoiding state conflicts with the shared self._fol_parser.
+            # It parses the belief set and returns a parser ready for use.
+            _, _, parser_with_signature = self.parse_fol_belief_set(belief_set_str)
 
-            # Now, using the same parser instance (which now knows the signature), parse the query.
-            self._fol_parser.parseFormula(JString(query_str))
+            # Use the newly created parser, which has the correct signature, to parse the query.
+            # This ensures the validation happens in the right context without causing re-declaration errors.
+            self.parse_fol_formula(query_str, custom_parser=parser_with_signature)
 
             msg = f"Query '{query_str}' successfully validated against the belief set's context."
             logger.info(msg)
             return True, msg
-        except jpype.JException as e:
-            # This exception is thrown for any parsing error, including undeclared predicates/constants,
-            # which is exactly what we want to catch.
-            error_msg = f"Validation failed for query '{query_str}': {e.getMessage()}"
+        except (jpype.JException, ValueError) as e:
+            # Catches both JPype exceptions (e.g., parsing errors from Tweety) and ValueErrors
+            # that might be raised from our Python wrappers (e.g., from parse_fol_belief_set).
+            error_msg = f"Validation failed for query '{query_str}': {e}"
             logger.warning(error_msg)
-            return False, error_msg
+            return False, str(e)
