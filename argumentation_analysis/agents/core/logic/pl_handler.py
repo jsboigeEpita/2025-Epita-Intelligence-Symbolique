@@ -105,9 +105,27 @@ class PLHandler:
 
     def parse_pl_formula(self, formula_str: str, constants: Optional[List[str]] = None):
         """Parses a PL formula string into a TweetyProject PlFormula object."""
-        if not isinstance(formula_str, str) or not formula_str.strip() or formula_str.strip() == '```':
-            logger.debug(f"Skipping parsing of invalid or empty formula: '{formula_str}'")
-            return None # Retourne None pour indiquer que la formule doit être ignorée
+        # Enhanced filtering for markdown artifacts and invalid formulas
+        if not isinstance(formula_str, str):
+            return None
+            
+        formula_str = formula_str.strip()
+        
+        # Filter out markdown artifacts and invalid formulas
+        invalid_patterns = [
+            '',  # Empty string
+            '```',  # Markdown code fence
+            '```plaintext',  # Markdown code fence with language
+            'plaintext',  # Just the language specifier
+        ]
+        
+        if (not formula_str or
+            formula_str in invalid_patterns or
+            formula_str.startswith('```') or
+            formula_str.endswith('```') or
+            '```' in formula_str):
+            logger.debug(f"Skipping parsing of invalid/markdown formula: '{formula_str}'")
+            return None
 
         normalized_formula = self._normalize_formula(formula_str)
         logger.debug(f"Attempting to parse normalized PL formula: {normalized_formula}")
