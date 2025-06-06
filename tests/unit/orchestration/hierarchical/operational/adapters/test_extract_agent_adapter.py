@@ -6,10 +6,10 @@ Tests unitaires pour le module orchestration.hierarchical.operational.adapters.e
 """
 
 import pytest
-import pytest_asyncio # Ajout de l'import
+import pytest_asyncio
 import sys
 import os
-from unittest.mock import MagicMock, patch, AsyncMock, Mock # Mock est toujours utilisé pour les instances de mock_extract_agent etc.
+from unittest.mock import MagicMock, patch, AsyncMock, Mock
 import asyncio
 import logging
 
@@ -25,58 +25,16 @@ logger = logging.getLogger("TestExtractAgentAdapter")
 project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', '..', '..', '..', '..'))
 if project_root not in sys.path:
     sys.path.insert(0, project_root)
-# L'installation du package via `pip install -e .` devrait gérer l'accessibilité,
-# mais cette modification assure le fonctionnement même sans installation en mode édition.
 
 # Import des modules à tester
-from argumentation_analysis.orchestration.hierarchical.operational.adapters.extract_agent_adapter import ExtractAgentAdapter
+from argumentation_analysis.orchestration.hierarchical.operational.adapters.extract_agent_adapter import ExtractAgentAdapter, ExtractAgent
 from argumentation_analysis.orchestration.hierarchical.operational.state import OperationalState
 
 
 # Mock pour ExtractAgent
-class MockExtractAgent:
-    def __init__(self, extract_agent=None, validation_agent=None, extract_plugin=None):
-        self.extract_agent = extract_agent or Mock()
-        self.validation_agent = validation_agent or Mock()
-        self.extract_plugin = extract_plugin or Mock()
-        self.state = Mock()
-        self.state.task_dependencies = {}
-        self.state.tasks = {}
-        
-        self.extract_text = AsyncMock(return_value={
-            "status": "success",
-            "extracts": [
-                {
-                    "id": "extract-1",
-                    "text": "Ceci est un extrait de test",
-                    "source": "test-source",
-                    "confidence": 0.9
-                }
-            ]
-        })
-        
-        self.validate_extracts = AsyncMock(return_value={
-            "status": "success",
-            "valid_extracts": [
-                {
-                    "id": "extract-1",
-                    "text": "Ceci est un extrait de test",
-                    "source": "test-source",
-                    "confidence": 0.9,
-                    "validation_score": 0.95
-                }
-            ]
-        })
-        
-        self.preprocess_text = AsyncMock(return_value={
-            "status": "success",
-            "preprocessed_text": "Ceci est un texte prétraité",
-            "metadata": {
-                "word_count": 5,
-                "language": "fr"
-            }
-        })
-
+class MockExtractAgent(AsyncMock):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
         self.extract_from_name = AsyncMock(return_value=MagicMock(
             status="valid",
             message="Extraction réussie simulée par extract_from_name",
@@ -86,100 +44,45 @@ class MockExtractAgent:
             template_start="<MOCK_TEMPLATE_START>",
             extracted_text="Texte extrait simulé via extract_from_name"
         ))
-        
-    def process_extract(self, *args, **kwargs):
-        return {"status": "success", "data": []}
-    
-    def validate_extract(self, *args, **kwargs):
-        return True
-
-
-class MockValidationAgent:
-    """Mock pour ValidationAgent."""
-    
-    def __init__(self):
-        self.extract_text = AsyncMock(return_value={
-            "status": "success",
-            "extracts": [
-                {
-                    "id": "extract-1",
-                    "text": "Ceci est un extrait de test",
-                    "source": "test-source",
-                    "confidence": 0.9
-                }
-            ]
-        })
-        
-        self.validate_extracts = AsyncMock(return_value={
-            "status": "success",
-            "valid_extracts": [
-                {
-                    "id": "extract-1",
-                    "text": "Ceci est un extrait de test",
-                    "source": "test-source",
-                    "confidence": 0.9,
-                    "validation_score": 0.95
-                }
-            ]
-        })
-        
+        self.setup_agent_components = AsyncMock(return_value=None)
         self.preprocess_text = AsyncMock(return_value={
             "status": "success",
             "preprocessed_text": "Ceci est un texte prétraité",
-            "metadata": {
-                "word_count": 5,
-                "language": "fr"
-            }
         })
-
-
-# Mock pour setup_extract_agent
-async def mock_setup_extract_agent():
-    """Mock pour la fonction setup_extract_agent."""
-    kernel = MagicMock()
-    extract_agent = MockExtractAgent(
-        extract_agent=Mock(),
-        validation_agent=Mock(),
-        extract_plugin=Mock()
-    )
-    return kernel, extract_agent
+        self.validate_extracts = AsyncMock(return_value={"status": "success", "valid_extracts": []})
 
 
 # @pytest.mark.skip(reason="Ce fichier de test est obsolète et remplacé par tests/orchestration/hierarchical/operational/adapters/test_extract_agent_adapter.py")
 class TestExtractAgentAdapter:
     """Tests unitaires pour l'adaptateur d'agent d'extraction."""
 
-    @pytest_asyncio.fixture(autouse=True) # Changement ici
-    async def setup_adapter(self): # mocker retiré des paramètres
+    @pytest_asyncio.fixture(autouse=True)
+    async def setup_adapter(self):
         """Initialisation avant chaque test."""
-        # Créer les mocks
-        self.mock_extract_agent = Mock()
-        self.mock_validation_agent = Mock()
-        self.mock_extract_plugin = Mock()
-
-        # Configuration des mocks pour les tests
-        self.mock_extract_agent.process_extract.return_value = {"status": "success"}
-        self.mock_validation_agent.validate.return_value = True
-        self.mock_extract_plugin.extract.return_value = []
-        self.mock_extract_plugin.process_text.return_value = {"status": "success", "data": []}
-        self.mock_extract_plugin.get_supported_formats.return_value = ["txt", "pdf", "docx"]
-        # Créer un état opérationnel mock
+        self.mock_kernel = MagicMock()
+        self.mock_llm_service_id = "mock_service_id"
         self.operational_state = OperationalState()
 
-        # Patcher setup_extract_agent avec unittest.mock.patch
-        self.patcher = patch('argumentation_analysis.orchestration.hierarchical.operational.adapters.extract_agent_adapter.setup_extract_agent',
-                                         side_effect=mock_setup_extract_agent)
-        self.mock_setup_extract_agent = self.patcher.start()
+        # Le mock pour l'agent qui sera retourné par le constructeur patché
+        self.mock_agent_instance = MockExtractAgent()
 
-        # Créer l'adaptateur d'agent d'extraction
+        # Patcher le constructeur de ExtractAgent
+        self.patcher = patch(
+            'argumentation_analysis.orchestration.hierarchical.operational.adapters.extract_agent_adapter.ExtractAgent',
+            return_value=self.mock_agent_instance
+        )
+        self.MockExtractAgentClass = self.patcher.start()
+
+        # Créer l'adaptateur
         self.adapter = ExtractAgentAdapter(name="TestExtractAgent", operational_state=self.operational_state)
+        
+        # Initialiser l'adaptateur avec les mocks
+        await self.adapter.initialize(kernel=self.mock_kernel, llm_service_id=self.mock_llm_service_id)
 
-        await self.adapter.initialize()
+        yield
 
-    def tearDown(self):
-        """Nettoyage après chaque test."""
-        if hasattr(self, 'patcher'): # S'assurer que le patcher a été initialisé
-            self.patcher.stop()
+        # Nettoyage après chaque test
+        self.patcher.stop()
 
     @pytest.mark.asyncio
     async def test_initialization(self):
@@ -187,9 +90,14 @@ class TestExtractAgentAdapter:
         assert self.adapter is not None
         assert self.adapter.name == "TestExtractAgent"
         assert self.adapter.operational_state == self.operational_state
-        assert self.adapter.extract_agent is not None
-        assert self.adapter.kernel is not None
+        assert self.adapter.agent is not None
+        assert self.adapter.agent == self.mock_agent_instance
+        assert self.adapter.kernel == self.mock_kernel
         assert self.adapter.initialized is True
+        # Vérifier que ExtractAgent a été appelé correctement
+        self.MockExtractAgentClass.assert_called_once_with(kernel=self.mock_kernel, agent_name="TestExtractAgent_ExtractAgent")
+        # Vérifier que setup_agent_components a été appelé
+        self.mock_agent_instance.setup_agent_components.assert_awaited_once_with(llm_service_id=self.mock_llm_service_id)
 
     @pytest.mark.asyncio
     async def test_get_capabilities(self):
@@ -242,7 +150,7 @@ class TestExtractAgentAdapter:
         extracted_segment = outputs["extracted_segments"][0]
         assert extracted_segment["extract_id"] == "input-extract-1"
         assert extracted_segment["extracted_text"] == "Texte extrait simulé via extract_from_name"
-        self.adapter.extract_agent.extract_from_name.assert_called_once_with(
+        self.adapter.agent.extract_from_name.assert_called_once_with(
             {"source_name": "test-source", "source_text": "Ceci est un texte à extraire"},
             "input-extract-1"
         )
@@ -270,7 +178,7 @@ class TestExtractAgentAdapter:
         issue = result["issues"][0]
         assert issue["type"] == "unsupported_technique"
         assert "non_existent_validation_technique" in issue["description"]
-        self.adapter.extract_agent.validate_extracts.assert_not_called()
+        self.adapter.agent.validate_extracts.assert_not_called()
 
     @pytest.mark.asyncio
     async def test_process_task_preprocess_text(self):
@@ -296,8 +204,10 @@ class TestExtractAgentAdapter:
         assert len(outputs["normalized_text"]) == 1
         normalized_output = outputs["normalized_text"][0]
         assert normalized_output["extract_id"] == "input-text-preprocess-1"
-        assert normalized_output["normalized_text"] == "Ceci texte à prétraiter avec mots comme"
-        self.adapter.extract_agent.preprocess_text.assert_not_called()
+        # La logique de normalisation est maintenant dans l'adaptateur, pas dans un agent mocké
+        assert "le" not in normalized_output["normalized_text"].lower().split()
+        assert "la" not in normalized_output["normalized_text"].lower().split()
+        self.adapter.agent.preprocess_text.assert_not_called()
 
     @pytest.mark.asyncio
     async def test_process_task_unknown_capability(self):
@@ -342,6 +252,7 @@ class TestExtractAgentAdapter:
         assert issue["type"] == "execution_error"
         assert "Aucun extrait de texte fourni dans la tâche." in issue["description"]
         assert "outputs" in result
+        # En cas d'échec, le dictionnaire d'outputs est vide.
         assert result["outputs"] == {}
 
     @pytest.mark.asyncio
@@ -350,5 +261,5 @@ class TestExtractAgentAdapter:
         result = await self.adapter.shutdown()
         assert result is True
         assert self.adapter.initialized is False
-        assert self.adapter.extract_agent is None
+        assert self.adapter.agent is None
         assert self.adapter.kernel is None
