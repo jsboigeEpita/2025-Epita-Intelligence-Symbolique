@@ -9,19 +9,30 @@ from semantic_kernel.agents.strategies.selection.sequential_selection_strategy i
 from semantic_kernel.agents.strategies.termination.termination_strategy import TerminationStrategy
 from semantic_kernel.contents.chat_message_content import ChatMessageContent
 from pydantic import Field
+import logging
+
+# Configuration du logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
 
 from argumentation_analysis.core.enquete_states import EnqueteCluedoState
 from argumentation_analysis.orchestration.plugins.enquete_state_manager_plugin import EnqueteStateManagerPlugin
 from argumentation_analysis.agents.core.pm.sherlock_enquete_agent import SherlockEnqueteAgent
 from argumentation_analysis.agents.core.logic.watson_logic_assistant import WatsonLogicAssistant
+from semantic_kernel.functions.kernel_arguments import KernelArguments
+from semantic_kernel.filters.functions.function_invocation_context import FunctionInvocationContext
+from semantic_kernel.filters.filter_types import FilterTypes
 
 
 class CluedoTerminationStrategy(TerminationStrategy):
     """Stratégie de terminaison personnalisée pour le Cluedo."""
-    max_total_messages: int = Field(default=10)
-    termination_keywords: List[str] = Field(default_factory=list)
+    max_total_messages: int = Field(default=20) # Augmentation pour laisser plus de place à la conversation
+    is_solution_proposed: bool = Field(default=False, exclude=True)
 
-    async def should_terminate(self, agents: List[Agent], history: List[ChatMessageContent]) -> bool:
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    async def should_terminate(self, agent: Agent, history: List[ChatMessageContent]) -> bool:
         if len(history) >= self.max_total_messages:
             return True
 
@@ -29,27 +40,42 @@ class CluedoTerminationStrategy(TerminationStrategy):
             return False
 
         last_message = history[-1]
-        last_message_content = str(last_message.content).lower()
-
-        # La boucle s'arrête si le dernier message vient de Watson et contient un mot-clé d'accord.
-        if last_message.name == "Watson" and any(keyword.lower() in last_message_content for keyword in self.termination_keywords):
-            return True
         
-        # Condition de sortie pour la conclusion de Sherlock.
-        sherlock_conclusion_keywords = ["l'affaire est résolue", "le coupable est"]
+        # Vérifier si la solution a été proposée via l'état du plugin
+        # C'est une approche plus robuste que de parser le message.
+        # Accéder au plugin par son nom via la collection de plugins du kernel de l'agent.
+        if agent.kernel.plugins.get("EnqueteStatePlugin"):
+            enquete_state_plugin = agent.kernel.plugins["EnqueteStatePlugin"]
+            if hasattr(enquete_state_plugin, "_state") and enquete_state_plugin._state.is_solution_proposed:
+                self.is_solution_proposed = True
+                return True
+
+        # Garder une vérification sur le contenu du message comme fallback
+        last_message_content = str(last_message.content).lower()
+        sherlock_conclusion_keywords = ["conclusion finale:", "l'affaire est résolue", "le coupable est"]
         if last_message.name == "Sherlock" and any(keyword in last_message_content for keyword in sherlock_conclusion_keywords):
             return True
 
         return False
 
 
+async def logging_filter(context: FunctionInvocationContext, next):
+    """Filtre pour logger les appels de fonction."""
+    logger.info(f"[FILTER PRE] Appel de: {context.function.plugin_name}-{context.function.name}")
+    logger.info(f"[FILTER PRE] Arguments: {context.arguments}")
+    
+    await next(context)
+    
+    logger.info(f"[FILTER POST] Resultat de: {context.function.plugin_name}-{context.function.name}")
+    logger.info(f"[FILTER POST] Resultat: {context.result}")
+
 async def run_cluedo_game(
     kernel: Kernel,
     initial_question: str,
     history: List[ChatMessageContent] = None,
     max_messages: Optional[int] = 15
-) -> List[Dict[str, Any]]:
-    """Exécute une partie de Cluedo avec des agents et retourne l'historique."""
+) -> (List[Dict[str, Any]], EnqueteCluedoState):
+    """Exécute une partie de Cluedo avec des agents et retourne l'historique et l'état final."""
     if history is None:
         history = []
         
@@ -68,8 +94,21 @@ async def run_cluedo_game(
     plugin = EnqueteStateManagerPlugin(enquete_state)
     kernel.add_plugin(plugin, "EnqueteStatePlugin")
 
+    # Ajout du filtre de journalisation
+    kernel.add_filter(FilterTypes.FUNCTION_INVOCATION, logging_filter)
+
+    # Préparer les constantes pour l'agent logique
+    elements = enquete_state.elements_jeu_cluedo
+    all_constants = [
+        name.replace(" ", "") for name in elements.get("suspects", [])
+    ] + [
+        name.replace(" ", "") for name in elements.get("armes", [])
+    ] + [
+        name.replace(" ", "") for name in elements.get("lieux", [])
+    ]
+
     sherlock = SherlockEnqueteAgent(kernel=kernel, agent_name="Sherlock")
-    watson = WatsonLogicAssistant(kernel=kernel, agent_name="Watson")
+    watson = WatsonLogicAssistant(kernel=kernel, agent_name="Watson", constants=all_constants)
 
     termination_strategy = CluedoTerminationStrategy(
         max_total_messages=max_messages,
@@ -94,22 +133,12 @@ async def run_cluedo_game(
     async for message in group_chat.invoke():
         history.append(message)
 
-    # Ajout d'un appel final à Sherlock pour la conclusion
-    conclusion_prompt = "Sherlock, veuillez résumer vos conclusions."
-    # Invoquer directement Sherlock pour la conclusion
-    final_responses = []
-    async for response in sherlock.invoke(conclusion_prompt):
-        final_responses.append(response)
-    
-    # La méthode invoke d'un agent retourne un générateur asynchrone de ChatMessageContent
-    if final_responses:
-        history.extend(final_responses)
-
+    # L'appel final à Sherlock est supprimé. La conclusion doit émerger de la conversation.
 
     # Retourne uniquement les messages des agents, en excluant le message système initial
     return [
         {"sender": msg.name, "message": str(msg.content)} for msg in history if msg.name != "System"
-    ]
+    ], enquete_state
 
 
 async def main():
@@ -119,12 +148,25 @@ async def main():
     # from semantic_kernel.connectors.ai.open_ai import OpenAIChatCompletion
     # kernel.add_service(OpenAIChatCompletion(service_id="default", ...))
 
-    final_history = await run_cluedo_game(kernel, "L'enquête commence. Sherlock, à vous.")
+    final_history, final_state = await run_cluedo_game(kernel, "L'enquête commence. Sherlock, à vous.")
     
-    print("\n--- Historique Final ---")
+    print("\n--- Historique Final de la Conversation ---")
     for entry in final_history:
         print(f"  {entry['sender']}: {entry['message']}")
-    print("--- Fin ---")
+    print("--- Fin de la Conversation ---")
+
+    print("\n--- État Final de l'Enquête ---")
+    print(f"Nom de l'enquête: {final_state.nom_enquete}")
+    print(f"Description: {final_state.description_cas}")
+    print(f"Solution proposée: {final_state.solution_proposee}")
+    print(f"Solution correcte: {final_state.solution_correcte}")
+    print("\nHypothèses:")
+    for hypo in final_state.hypotheses.values():
+        print(f"  - ID: {hypo['id']}, Text: {hypo['text']}, Confiance: {hypo['confidence_score']}, Statut: {hypo['status']}")
+    print("\nTâches:")
+    for task in final_state.tasks.values():
+        print(f"  - ID: {task['id']}, Description: {task['description']}, Assigné à: {task['assignee']}, Statut: {task['status']}")
+    print("--- Fin de l'État ---")
 
 
 if __name__ == "__main__":

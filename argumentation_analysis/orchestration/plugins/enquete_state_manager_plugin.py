@@ -265,6 +265,18 @@ class EnqueteStateManagerPlugin:
             self._logger.error(f"Erreur dans get_cluedo_main_belief_set_id: {e}", exc_info=True)
             return json.dumps({"error": str(e)})
 
+    @kernel_function(description="Propose une solution finale à l'enquête Cluedo.", name="propose_final_solution")
+    def propose_final_solution(self, solution: Dict[str, str]) -> str:
+        self._logger.info(f"Appel propose_final_solution: solution='{solution}'")
+        if not isinstance(self._state, EnqueteCluedoState):
+            return json.dumps({"error": "La méthode propose_final_solution n'est disponible que pour EnqueteCluedoState."})
+        try:
+            self._state.propose_final_solution(solution)
+            return json.dumps({"message": "Solution finale enregistrée.", "solution_proposed": True})
+        except Exception as e:
+            self._logger.error(f"Erreur dans propose_final_solution: {e}", exc_info=True)
+            return json.dumps({"error": str(e)})
+
 # Log de chargement du module
 module_logger = logging.getLogger(__name__)
 module_logger.debug("Module argumentation_analysis.orchestration.plugins.enquete_state_manager_plugin chargé.")

@@ -32,12 +32,33 @@ async def main():
     )
 
     initial_question = "L'enquête commence. Sherlock, à vous de jouer. Qui a commis le meurtre, avec quelle arme et dans quel lieu ?"
-    final_history = await run_cluedo_game(kernel, initial_question)
+    final_history, final_state = await run_cluedo_game(kernel, initial_question)
     
     print("\n--- Historique Final de la partie de Cluedo ---")
     for entry in final_history:
-        print(f"  {entry['sender']}: {entry['message']}")
+        # S'assurer que 'entry' est bien un dictionnaire avant d'accéder aux clés
+        if isinstance(entry, dict):
+            sender = entry.get('sender', 'N/A')
+            message = entry.get('message', '')
+            print(f"  {sender}: {message}")
     print("--- Fin de la partie ---")
+
+    print("\n--- État Final de l'Enquête ---")
+    print(f"Solution proposée: {final_state.final_solution}")
+    print(f"Solution correcte: {final_state.solution_secrete_cluedo}")
+    print("\nHypothèses:")
+    if final_state.hypotheses_enquete:
+        for hypo in final_state.hypotheses_enquete:
+            print(f"  - {hypo.get('text')} (Confiance: {hypo.get('confidence_score')}, Statut: {hypo.get('status')})")
+    else:
+        print("  Aucune hypothèse enregistrée.")
+    print("\nTâches:")
+    if final_state.tasks:
+        for task in final_state.tasks.values():
+            print(f"  - ID: {task.get('id', 'N/A')}, Description: {task.get('description', '')}, Assigné à: {task.get('assignee', 'N/A')}, Statut: {task.get('status', 'N/A')}")
+    else:
+        print("  Aucune tâche enregistrée.")
+    print("--- Fin de l'État ---")
 
 
 if __name__ == "__main__":
