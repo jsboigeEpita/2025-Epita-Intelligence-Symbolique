@@ -1,7 +1,7 @@
 {
     "metadata": {
-        "source_file": "C:\\Users\\MYIA\\AppData\\Local\\Temp\\tmpznw4264m.txt",
-        "timestamp": "2025-06-06T16:04:56.376844",
+        "source_file": "C:\\Users\\MYIA\\AppData\\Local\\Temp\\tmpzh1lx2qi.txt",
+        "timestamp": "2025-06-06T16:27:25.336829",
         "demo_version": "1.2.0"
     },
     "informal_analysis": {
@@ -57,8 +57,14 @@
     },
     "formal_analysis": {
         "logic_type_used": "first_order",
-        "status": "Failed",
-        "reason": "Belief set conversion failed.",
-        "details": "Ensemble de croyances invalide: Erreur de syntaxe FOL: JPype JException parsing FOL belief set: org.tweetyproject.commons.ParserException: org.tweetyproject.commons.ParserException: Term 'scientifique' has the wrong sort.. Belief Set was:\nconcept = { rechauffement_climatique, mythe, hiver_froid, preuve, mesures_drastiques, catastrophe_planetaire, scientifique, danger, conclusion, argument, fait, sophisme }\nperson = { certain, autre }\ntype(IsConcept(concept))\ntype(Affirms(person, concept))\ntype(CitesAsProof(person, concept))\ntype(Supports(person, concept))\ntype(AreNecessary(concept))\ntype(IsFinanciallyMotivated(person))\ntype(QuestionsConclusions(person, concept))\ntype(AnalyzesFacts(person, concept))\ntype(DeconstructsSophisms(person))\n\n\nIsConcept(rechauffement_climatique)\nIsConcept(mythe)\nIsConcept(hiver_froid)\nIsConcept(preuve)\nIsConcept(mesures_drastiques)\nIsConcept(catastrophe_planetaire)\nIsConcept(scientifique)\nIsConcept(danger)\nIsConcept(conclusion)\nIsConcept(argument)\nIsConcept(fait)\nIsConcept(sophisme)\nAffirms(certain, mythe)\nCitesAsProof(certain, hiver_froid)\nSupports(autre, mesures_drastiques)\nAreNecessary(mesures_drastiques)\nIsFinanciallyMotivated(scientifique)\nQuestionsConclusions(scientifique, danger)\nAnalyzesFacts(certain, fait)\nDeconstructsSophisms(certain)"
+        "status": "Success",
+        "belief_set_summary": {
+            "is_consistent": false,
+            "details": "Error during FOL consistency check: No matching overloads found for constructor org.tweetyproject.logics.fol.syntax.FolBeliefSet(org.tweetyproject.logics.fol.syntax.FolSignature), options are:\n\tpublic org.tweetyproject.logics.fol.syntax.FolBeliefSet(java.util.Collection)\n\tpublic org.tweetyproject.logics.fol.syntax.FolBeliefSet()\n"
+        },
+        "belief_set": [
+            "concept = { rechauffement_climatique, mythe, hiver_froid, preuve, mesures_drastiques, catastrophe_planetaire, danger, conclusions, faits, sophismes }\nscientist = { scientifiques }\ntype(IsComplex(concept))\ntype(IsMyth(concept))\ntype(CitesAsEvidence(concept, concept))\ntype(NeedsImmediateAction(concept))\ntype(IsMotivated(scientist))\ntype(QuestionsConclusions(scientist, concept))\ntype(AnalyzesWithRigour(concept))\ntype(DeconstructsSophisms(concept))\n\n\nIsComplex(rechauffement_climatique)\nIsMyth(mythe)\nCitesAsEvidence(mythe, hiver_froid)\nNeedsImmediateAction(mesures_drastiques)\nIsMotivated(scientifiques)\nQuestionsConclusions(scientifiques, conclusions)\nforall X: (QuestionsConclusions(scientifiques, X) => AnalyzesWithRigour(faits) && DeconstructsSophisms(sophismes))"
+        ],
+        "queries": []
     }
 }
