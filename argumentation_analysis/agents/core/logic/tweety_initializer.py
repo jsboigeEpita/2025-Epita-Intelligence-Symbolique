@@ -204,7 +204,8 @@ class TweetyInitializer:
             self._start_jvm()
         try:
             logger.debug("Initializing PL components...")
-            TweetyInitializer._pl_reasoner = jpype.JClass("org.tweetyproject.logics.pl.reasoner.SatReasoner")()
+            # Remplacer SatReasoner par SimplePlReasoner qui a une méthode isConsistent plus fiable via JPype
+            TweetyInitializer._pl_reasoner = jpype.JClass("org.tweetyproject.logics.pl.reasoner.SimplePlReasoner")()
             TweetyInitializer._pl_parser = jpype.JClass("org.tweetyproject.logics.pl.parser.PlParser")()
             logger.info("PL components initialized.")
             return TweetyInitializer._pl_parser, TweetyInitializer._pl_reasoner
