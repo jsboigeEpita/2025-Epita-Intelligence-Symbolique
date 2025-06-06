@@ -41,13 +41,15 @@ class TestFirstOrderLogicAgent:
 
         self.agent_name = "FirstOrderLogicAgent"
         
-        self.mock_text_to_fol_func = AsyncMock()
+        self.mock_text_to_fol_defs_func = AsyncMock()
+        self.mock_text_to_fol_formulas_func = AsyncMock()
         self.mock_gen_fol_queries_func = AsyncMock()
         self.mock_interpret_fol_func = AsyncMock()
 
         agent_functions_dict = {
-            "TextToFOLBeliefSet": self.mock_text_to_fol_func,
-            "GenerateFOLQueries": self.mock_gen_fol_queries_func,
+            "TextToFOLDefs": self.mock_text_to_fol_defs_func,
+            "TextToFOLFormulas": self.mock_text_to_fol_formulas_func,
+            "GenerateFOLQueryIdeas": self.mock_gen_fol_queries_func,
             "InterpretFOLResult": self.mock_interpret_fol_func
         }
 
@@ -84,24 +86,37 @@ class TestFirstOrderLogicAgent:
     async def test_text_to_belief_set_success(self):
         """Test de la conversion de texte en ensemble de croyances FOL avec succès."""
         import json
-        mock_json_output = {
+        
+        # Mock pour l'étape 1 : TextToFOLDefs
+        mock_defs_json = {
             "sorts": {"thing": ["a"]},
-            "predicates": [{"name": "P", "args": ["thing"]}, {"name": "Q", "args": ["thing"]}],
-            "formulas": ["forall X: (P(X) => Q(X))", "P(a)"]
+            "predicates": [{"name": "P", "args": ["thing"]}, {"name": "Q", "args": ["thing"]}]
         }
-        mock_sk_function_result = MagicMock()
-        mock_sk_function_result.__str__.return_value = json.dumps(mock_json_output)
-        self.mock_text_to_fol_func.invoke.return_value = mock_sk_function_result
+        mock_defs_result = MagicMock()
+        mock_defs_result.__str__.return_value = json.dumps(mock_defs_json)
+        self.mock_text_to_fol_defs_func.invoke.return_value = mock_defs_result
+        
+        # Mock pour l'étape 2 : TextToFOLFormulas (utilise des formules simples qui ne seront pas filtrées)
+        mock_formulas_json = {
+            "formulas": ["P(a)", "Q(a)"]
+        }
+        mock_formulas_result = MagicMock()
+        mock_formulas_result.__str__.return_value = json.dumps(mock_formulas_json)
+        self.mock_text_to_fol_formulas_func.invoke.return_value = mock_formulas_result
         
         # Simuler une validation réussie de Tweety
         self.mock_tweety_bridge_instance.validate_fol_belief_set.return_value = (True, "OK")
 
         belief_set, message = await self.agent.text_to_belief_set("Texte de test")
         
-        self.mock_text_to_fol_func.invoke.assert_called_once_with(self.kernel, input="Texte de test")
+        # Vérifier que les deux fonctions ont été appelées
+        self.mock_text_to_fol_defs_func.invoke.assert_called_once_with(self.kernel, input="Texte de test")
+        # TextToFOLFormulas est appelée avec le texte et les définitions corrigées
+        assert self.mock_text_to_fol_formulas_func.invoke.call_count == 1
         
-        # Vérifier que la validation a été appelée avec le contenu construit
-        constructed_content = self.agent._construct_kb_from_json(mock_json_output)
+        # Combiner les résultats pour construire le contenu final
+        combined_json = {**mock_defs_json, **mock_formulas_json}
+        constructed_content = self.agent._construct_kb_from_json(combined_json)
         self.mock_tweety_bridge_instance.validate_fol_belief_set.assert_called_once_with(constructed_content)
         
         assert isinstance(belief_set, FirstOrderBeliefSet)
@@ -119,11 +134,11 @@ class TestFirstOrderLogicAgent:
         }
         mock_sk_function_result = MagicMock()
         mock_sk_function_result.__str__.return_value = json.dumps(mock_json_output)
-        self.mock_text_to_fol_func.invoke.return_value = mock_sk_function_result
+        self.mock_text_to_fol_defs_func.invoke.return_value = mock_sk_function_result
         
         belief_set, message = await self.agent.text_to_belief_set("Texte de test")
         
-        self.mock_text_to_fol_func.invoke.assert_called_once_with(self.kernel, input="Texte de test")
+        self.mock_text_to_fol_defs_func.invoke.assert_called_once_with(self.kernel, input="Texte de test")
         self.mock_tweety_bridge_instance.validate_fol_belief_set.assert_not_called()
         
         assert belief_set is None
@@ -140,12 +155,12 @@ class TestFirstOrderLogicAgent:
         }
         mock_sk_function_result = MagicMock()
         mock_sk_function_result.__str__.return_value = json.dumps(mock_json_output)
-        self.mock_text_to_fol_func.invoke.return_value = mock_sk_function_result
+        self.mock_text_to_fol_defs_func.invoke.return_value = mock_sk_function_result
         self.mock_tweety_bridge_instance.validate_fol_belief_set.return_value = (False, "Erreur de syntaxe FOL")
         
         belief_set, message = await self.agent.text_to_belief_set("Texte de test")
         
-        self.mock_text_to_fol_func.invoke.assert_called_once_with(self.kernel, input="Texte de test")
+        self.mock_text_to_fol_defs_func.invoke.assert_called_once_with(self.kernel, input="Texte de test")
         
         constructed_content = self.agent._construct_kb_from_json(mock_json_output)
         self.mock_tweety_bridge_instance.validate_fol_belief_set.assert_called_once_with(constructed_content)
