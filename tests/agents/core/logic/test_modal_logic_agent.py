@@ -36,6 +36,7 @@ class TestModalLogicAgent:
         self.mock_tweety_bridge_instance.validate_modal_belief_set.return_value = (True, "Ensemble de croyances modal valide")
         self.mock_tweety_bridge_instance.validate_modal_formula.return_value = (True, "Formule modale valide")
         self.mock_tweety_bridge_instance.execute_modal_query.return_value = "Tweety Result: Modal Query '[]p' is ACCEPTED (True)."
+        self.mock_tweety_bridge_instance.is_modal_kb_consistent.return_value = (True, "Belief set is consistent")
 
         self.llm_service_id = "test_modal_llm_service"
         self.agent = ModalLogicAgent(self.kernel, service_id=self.llm_service_id)
