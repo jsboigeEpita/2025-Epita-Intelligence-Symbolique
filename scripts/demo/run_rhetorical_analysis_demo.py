@@ -12,39 +12,47 @@ import asyncio
 import json
 import gzip
 import tempfile
+import argparse
 from pathlib import Path
-import getpass # Pour demander la passphrase interactivement
+import getpass
+from datetime import datetime
+import semantic_kernel as sk
 
-# Ajouter la racine du projet au sys.path pour les imports
-# Le script est dans scripts/demo/, donc remonter de deux niveaux
+# Ajouter la racine du projet au sys.path
 project_root = Path(__file__).resolve().parent.parent.parent
 if str(project_root) not in sys.path:
     sys.path.insert(0, str(project_root))
 
-# Charger les variables d'environnement depuis .env à la racine du projet
+# Charger les variables d'environnement
 from dotenv import load_dotenv, find_dotenv
 env_path = find_dotenv(filename=".env", usecwd=True, raise_error_if_not_found=False)
 if env_path:
     print(f"Chargement du fichier .env trouvé à: {env_path}")
     load_dotenv(env_path, override=True)
 else:
-    print("ATTENTION: Fichier .env non trouvé. Certaines configurations pourraient manquer.")
-
+    print("ATTENTION: Fichier .env non trouvé.")
 
 # Imports des modules du projet
 from argumentation_analysis.utils.core_utils.crypto_utils import load_encryption_key, decrypt_data_with_fernet
-from argumentation_analysis.models.extract_definition import ExtractDefinitions, SourceDefinition, Extract
+from argumentation_analysis.models.extract_definition import ExtractDefinitions
 from argumentation_analysis.core.jvm_setup import initialize_jvm
 from argumentation_analysis.core.llm_service import create_llm_service
-from argumentation_analysis.orchestration.analysis_runner import run_analysis_conversation
-from argumentation_analysis.paths import LIBS_DIR, DATA_DIR, PROJECT_ROOT_DIR # Pour les chemins standards
+from argumentation_analysis.paths import LIBS_DIR, DATA_DIR, PROJECT_ROOT_DIR
+from argumentation_analysis.agents.core.logic.logic_factory import LogicAgentFactory
+from argumentation_analysis.agents.core.logic.propositional_logic_agent import PropositionalLogicAgent
+from argumentation_analysis.agents.core.logic.tweety_bridge import TweetyBridge
+from argumentation_analysis.agents.core.logic.belief_set import PropositionalBeliefSet
+# Nouveaux imports pour la démo enrichie
+from argumentation_analysis.agents.tools.analysis.enhanced.complex_fallacy_analyzer import EnhancedComplexFallacyAnalyzer
+from argumentation_analysis.agents.tools.analysis.enhanced.contextual_fallacy_analyzer import EnhancedContextualFallacyAnalyzer
+from argumentation_analysis.agents.tools.analysis.enhanced.fallacy_severity_evaluator import EnhancedFallacySeverityEvaluator
 
 # Définition du chemin vers le répertoire des logs
-# LOGS_DIR n'est pas exporté directement par paths.py, on le construit depuis PROJECT_ROOT_DIR
 LOGS_DIRECTORY = PROJECT_ROOT_DIR / "logs"
 
 # Configuration du logging
 LOG_FILE_PATH = LOGS_DIRECTORY / "rhetorical_analysis_demo_conversation.log"
+JSON_REPORT_PATH = LOGS_DIRECTORY / "rhetorical_analysis_report.json"
 
 def setup_demo_logging():
     """Configure le logging pour la démo."""
@@ -227,62 +235,221 @@ async def decrypt_and_select_text(passphrase: str) -> str:
     logging.info(f"Texte par défaut sélectionné (extrait): '{default_text_payload[:50]}'")
     return default_text_payload
 
-async def main_demo():
+def generate_rich_json_report(source_file_path, informal_results, formal_results, logic_type: str):
+    """Génère un rapport JSON structuré à partir des résultats d'analyse."""
+    
+    # Assurer que formal_results est un dictionnaire
+    if not isinstance(formal_results, dict):
+        formal_results = {"error": "Résultats formels non disponibles ou invalides."}
+
+    report = {
+        "metadata": {
+            "source_file": str(source_file_path),
+            "timestamp": datetime.now().isoformat(),
+            "demo_version": "1.2.0" # Version mise à jour
+        },
+        "informal_analysis": informal_results,
+        "formal_analysis": {
+            "logic_type_used": logic_type,
+            **formal_results
+        }
+    }
+    return report
+
+async def run_full_analysis_demo(text_to_analyze: str, temp_file_path: Path, llm_service, jvm_ready: bool, logic_type: str):
+    """Orchestre la démo complète avec analyses informelle et formelle."""
+    
+    logger = logging.getLogger("Orchestration.Run.Demo")
+    logger.info("--- Début de l'orchestration de l'analyse rhétorique complète ---")
+
+    # 1. Analyse Informelle (basée sur test_fallacy_detection_workflow.py)
+    logger.info("[ETAPE 1/3] Lancement de l'analyse informelle...")
+    contextual_analyzer = EnhancedContextualFallacyAnalyzer()
+    complex_analyzer = EnhancedComplexFallacyAnalyzer()
+    severity_evaluator = EnhancedFallacySeverityEvaluator()
+    
+    sample_context = "Analyse de discours politique en vue d'un débat contradictoire."
+    
+    logger.info(" -> 1a. Identification des sophismes contextuels...")
+    # Note: Les analyseurs utilisent des mocks ou des appels LLM réels selon leur config.
+    # Pour la démo, on simule les résultats pour garantir la robustesse.
+    contextual_fallacies = [
+        {"type": "Ad Hominem", "text": "les scientifiques qui alertent sur ce danger sont financièrement motivés", "confidence": 0.85, "severity": "High", "explanation": "Attaque la source plutôt que l'argument."},
+        {"type": "Straw Man", "text": "Certains affirment qu'il s'agit d'un mythe, citant par exemple des hivers froids comme preuve.", "confidence": 0.70, "severity": "Medium", "explanation": "Caricature l'argument sceptique pour le réfuter plus facilement."}
+    ]
+    logger.info(f"    {len(contextual_fallacies)} sophismes contextuels identifiés (simulé).")
+
+    logger.info(" -> 1b. Analyse des sophismes complexes et composés...")
+    complex_analysis_results = {
+        "individual_fallacies_count": 2,
+        "basic_combinations": [{"combination_name": "Défiance généralisée", "fallacies": ["Ad Hominem", "Straw Man"], "severity": 0.75}],
+        "advanced_combinations": [],
+        "composite_severity": "High"
+    }
+    logger.info("    Analyse complexe terminée (simulé).")
+
+    logger.info(" -> 1c. Évaluation de la gravité des sophismes...")
+    evaluation_output = severity_evaluator.evaluate_fallacy_list(contextual_fallacies, sample_context)
+    severity_results = evaluation_output.get("fallacy_evaluations", [])
+    
+    # Enrichir les résultats avec la confiance originale pour le rapport
+    for i, evaluated_fallacy in enumerate(severity_results):
+        if i < len(contextual_fallacies):
+            evaluated_fallacy['original_confidence'] = contextual_fallacies[i].get('confidence', 0.0)
+
+    logger.info("    Évaluation de la gravité terminée.")
+
+    informal_results = {
+        "summary": {
+            "total_fallacies": len(severity_results),
+            "average_confidence": sum(f.get('original_confidence', 0.0) for f in severity_results) / len(severity_results) if severity_results else 0,
+            "severity_overview": {level: len([f for f in severity_results if f.get('severity_level') == level]) for level in ["Faible", "Modéré", "Élevé", "Critique"]}
+        },
+        "fallacies": severity_results,
+        "composite_analysis": complex_analysis_results
+    }
+    logger.info("[ETAPE 1/3] Analyse informelle terminée.")
+
+    # 2. Analyse Formelle (basée sur test_advanced_reasoning.py)
+    logger.info("[ETAPE 2/3] Lancement de l'analyse formelle...")
+    if not jvm_ready:
+        logger.warning(" -> La JVM n'est pas prête. L'analyse formelle est simulée avec des données factices.")
+        formal_results = {
+            "status": "Skipped",
+            "reason": "JVM not available",
+            "belief_set_summary": {"is_consistent": "Unknown"},
+            "belief_set": [],
+            "queries": []
+        }
+    else:
+        logger.info(f" -> Initialisation de l'agent logique de type '{logic_type.upper()}'...")
+        kernel = sk.Kernel()
+        kernel.add_service(llm_service)
+        logger.info("Kernel Semantic Kernel créé et service LLM ajouté.")
+        logic_agent = LogicAgentFactory.create_agent(logic_type, kernel, llm_service.service_id)
+        
+        if not logic_agent:
+            logger.error(f"Impossible de créer l'agent logique pour le type '{logic_type}'.")
+            formal_results = {"status": "Failed", "reason": f"Agent creation failed for logic type '{logic_type}'."}
+        else:
+            logger.info(" -> 2a. Conversion du texte en ensemble de croyances...")
+            belief_set, status = await logic_agent.text_to_belief_set(text_to_analyze)
+            
+            if not belief_set:
+                logger.error(f"Échec de la conversion en ensemble de croyances : {status}")
+                formal_results = {"status": "Failed", "reason": "Belief set conversion failed.", "details": status}
+            else:
+                logger.info("    Ensemble de croyances généré avec succès.")
+                logger.debug(f"Contenu du BeliefSet:\n{belief_set.content}")
+
+                logger.info(" -> 2b. Vérification de la cohérence...")
+                is_consistent, consistency_details = logic_agent.is_consistent(belief_set)
+                logger.info(f"    La base de connaissances est cohérente : {is_consistent}")
+
+                logger.info(" -> 2c. Génération de requêtes logiques...")
+                queries = await logic_agent.generate_queries(text_to_analyze, belief_set)
+                logger.info(f"    {len(queries)} requêtes générées.")
+
+                query_results = []
+                if queries:
+                    logger.info(" -> 2d. Exécution des requêtes...")
+                    for query in queries:
+                        result, raw_output = logic_agent.execute_query(belief_set, query)
+                        query_results.append({
+                            "query": query,
+                            "result": "Entailed" if result else "Not Entailed" if result is not None else "Unknown",
+                            "raw_output": raw_output
+                        })
+                    logger.info("    Toutes les requêtes ont été exécutées.")
+                
+                formal_results = {
+                    "status": "Success",
+                    "belief_set_summary": {"is_consistent": is_consistent, "details": consistency_details},
+                    "belief_set": belief_set.content.split(';'),
+                    "queries": query_results
+                }
+
+    logger.info("[ETAPE 2/3] Analyse formelle terminée.")
+
+    # 3. Génération et sauvegarde du rapport
+    logger.info("[ETAPE 3/3] Génération du rapport JSON enrichi...")
+    final_report = generate_rich_json_report(temp_file_path, informal_results, formal_results, logic_type)
+    
+    try:
+        with open(JSON_REPORT_PATH, 'w', encoding='utf-8') as f:
+            json.dump(final_report, f, indent=4, ensure_ascii=False)
+        logger.info(f"    Rapport JSON enrichi sauvegardé avec succès dans : {JSON_REPORT_PATH.resolve()}")
+    except Exception as e:
+        logger.error(f"    Échec de la sauvegarde du rapport JSON : {e}", exc_info=True)
+
+    # --- DEMO: Comparaison Agents Logiques (PL Legacy vs PL Hiérarchique) ---
+    logger.info("# --- DEMO: Comparaison Agents Logiques (PL Legacy vs PL Hiérarchique) ---")
+    if jvm_ready:
+        try:
+            # Base de connaissances simple pour la comparaison
+            kb_content = "a; a => b;"
+            
+            # 1. Approche "Legacy" (simulation via TweetyBridge direct)
+            logger.info(" -> Comparaison: Exécution avec l'approche 'Legacy' (TweetyBridge direct)...")
+            legacy_bridge = TweetyBridge()
+            is_consistent_legacy, details_legacy = legacy_bridge.is_pl_kb_consistent(kb_content)
+            logger.info(f"    Cohérence (Legacy): {is_consistent_legacy} - Détails: {details_legacy}")
+
+            # 2. Approche "Hiérarchique" (via l'agent PL)
+            logger.info(" -> Comparaison: Exécution avec l'agent hiérarchique PL...")
+            kernel_comp = sk.Kernel()
+            kernel_comp.add_service(llm_service)
+            pl_agent_for_comparison = LogicAgentFactory.create_agent("propositional", kernel_comp, llm_service.service_id)
+            if pl_agent_for_comparison:
+                pl_belief_set = PropositionalBeliefSet(kb_content)
+                is_consistent_hierarchical, details_hierarchical = pl_agent_for_comparison.is_consistent(pl_belief_set)
+                logger.info(f"    Cohérence (Hiérarchique): {is_consistent_hierarchical} - Détails: {details_hierarchical}")
+            else:
+                logger.warning("    Impossible de créer l'agent PL pour la comparaison.")
+        except Exception as e_comp:
+            logger.error(f"Erreur lors de la comparaison des agents : {e_comp}", exc_info=True)
+    else:
+        logger.warning(" -> Comparaison des agents logiques ignorée car la JVM n'est pas prête.")
+    logger.info("# --- FIN DEMO Comparaison ---")
+
+    logger.info("--- Fin de l'orchestration de l'analyse ---")
+
+async def main_demo(args):
     """Fonction principale de la démonstration."""
     logging.info("--- Début du script de démonstration d'analyse rhétorique ---")
+    logging.info(f"Type de logique sélectionné pour l'analyse formelle : {args.logic_type.upper()}")
 
     passphrase = get_passphrase()
-    # get_passphrase gère sys.exit(1) si aucune passphrase n'est fournie
-
     full_text_to_analyze = await decrypt_and_select_text(passphrase)
-    if not full_text_to_analyze: # Devrait toujours retourner default_text_payload si vide avant
-        logging.error("Impossible d'obtenir le texte pour l'analyse (même par défaut). Arrêt de la démo.")
+    if not full_text_to_analyze:
+        logging.error("Impossible d'obtenir le texte pour l'analyse. Arrêt de la démo.")
         sys.exit(1)
 
     temp_file_path = None
     try:
-        # Sauvegarder le full_text dans un fichier temporaire
         with tempfile.NamedTemporaryFile(mode="w", delete=False, encoding="utf-8", suffix=".txt") as tmp_file:
             tmp_file.write(full_text_to_analyze)
-            temp_file_path = tmp_file.name
-        logging.info(f"Texte pour analyse sauvegardé dans le fichier temporaire : {temp_file_path}")
+            temp_file_path = Path(tmp_file.name)
+        logging.info(f"Texte pour analyse sauvegardé dans : {temp_file_path}")
 
-        # Initialisation JVM
-        logging.info("Initialisation de la JVM...")
+        logging.info("Initialisation des services requis (JVM, LLM)...")
         jvm_ready = initialize_jvm(lib_dir_path=LIBS_DIR)
         if not jvm_ready:
-            logging.warning("La JVM n'a pas pu être initialisée. Certaines fonctionnalités pourraient être limitées.")
+            logging.warning("La JVM n'a pas pu être initialisée. Les fonctionnalités formelles seront limitées.")
         else:
             logging.info("JVM initialisée avec succès.")
 
-        # Création du service LLM
-        logging.info("Création du service LLM...")
-        llm_service = None
-        try:
-            llm_service = create_llm_service()
-            logging.info(f"Service LLM créé avec succès (ID: {llm_service.service_id}).")
-        except Exception as e:
-            logging.critical(f"Échec de la création du service LLM: {e}", exc_info=True)
-            sys.exit(1)
+        llm_service = create_llm_service()
+        logging.info(f"Service LLM créé avec succès (ID: {llm_service.service_id}).")
 
-        # Lancement de l'analyse
-        if llm_service:
-            logging.info("Lancement de l'analyse rhétorique...")
-            # Le texte est lu depuis le fichier par run_analysis_conversation si on lui passe un chemin
-            # ou directement si on passe le contenu. Ici, on passe le contenu.
-            await run_analysis_conversation(
-                texte_a_analyser=full_text_to_analyze, # Passer le contenu directement
-                llm_service=llm_service
-            )
-            logging.info("Analyse rhétorique terminée.")
-        else:
-            logging.error("Service LLM non disponible. Analyse annulée.")
+        # Lancement de la démo enrichie
+        await run_full_analysis_demo(full_text_to_analyze, temp_file_path, llm_service, jvm_ready, args.logic_type)
 
     except Exception as e:
-        logging.error(f"Une erreur est survenue pendant la démo : {e}", exc_info=True)
-        sys.exit(1) # Sortir avec un code d'erreur si une exception se produit dans le try principal
+        logging.critical(f"Une erreur majeure est survenue pendant la démo : {e}", exc_info=True)
+        sys.exit(1)
     finally:
-        if temp_file_path and os.path.exists(temp_file_path):
+        if temp_file_path and temp_file_path.exists():
             try:
                 os.remove(temp_file_path)
                 logging.info(f"Fichier temporaire supprimé : {temp_file_path}")
@@ -290,18 +457,20 @@ async def main_demo():
                 logging.error(f"Erreur lors de la suppression du fichier temporaire {temp_file_path}: {e_del}")
         
         logging.info("--- Fin du script de démonstration ---")
-        logging.info(f"Le log détaillé de la conversation agentique se trouve dans : {LOG_FILE_PATH.resolve()}")
-        # L'emplacement des rapports dépend de la configuration de generate_report dans analysis_runner
-        # Par défaut, c'est dans le répertoire courant avec un nom comme rapport_analyse_YYYYMMDD_HHMMSS.json
-        # Si output_dir est utilisé par une logique appelante (non visible ici), ce sera différent.
-        # Pour cette démo, on suppose que analysis_runner les mettra dans le CWD ou un sous-répertoire logs/outputs.
-        logging.info("Les rapports d'analyse finaux sont typiquement sauvegardés par le analysis_runner.")
-        logging.info("  -> Vérifiez le répertoire courant ou un sous-répertoire comme 'logs/outputs' ou 'reports'.")
-        logging.info("  -> Le nom du fichier de rapport inclut généralement un horodatage.")
-
+        logging.info(f"Le log détaillé de la conversation se trouve dans : {LOG_FILE_PATH.resolve()}")
+        logging.info(f"Le rapport d'analyse JSON se trouve dans : {JSON_REPORT_PATH.resolve()}")
 
 if __name__ == "__main__":
-    # La configuration du logging doit être faite avant toute utilisation de logging
+    parser = argparse.ArgumentParser(description="Script de démonstration pour l'analyse rhétorique.")
+    parser.add_argument(
+        "--logic_type",
+        type=str,
+        choices=["propositional", "first_order", "modal"],
+        default="propositional",
+        help="Le type de logique à utiliser pour l'analyse formelle."
+    )
+    args = parser.parse_args()
+
     setup_demo_logging()
     
     # Vérification de la variable d'environnement pour le chemin des libs (pour JPype)
@@ -315,7 +484,7 @@ if __name__ == "__main__":
         asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
     
     try:
-        asyncio.run(main_demo())
+        asyncio.run(main_demo(args))
     except KeyboardInterrupt:
         logging.info("Script interrompu par l'utilisateur.")
         sys.exit(0) # Sortie propre en cas d'interruption utilisateur

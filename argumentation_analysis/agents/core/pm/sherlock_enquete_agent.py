@@ -3,160 +3,117 @@ import logging
 from typing import Optional, List, AsyncGenerator, ClassVar, Any
 
 from semantic_kernel import Kernel
-from semantic_kernel.agents import Agent
-from semantic_kernel.agents.channels.agent_channel import AgentChannel
-from semantic_kernel.contents import ChatMessageContent, StreamingChatMessageContent
-from semantic_kernel.contents.chat_history import ChatHistory
+from semantic_kernel.agents.chat_completion.chat_completion_agent import ChatCompletionAgent
+from semantic_kernel.functions.kernel_plugin import KernelPlugin
+from semantic_kernel.functions import kernel_function
 
-from .pm_agent import ProjectManagerAgent
+# from .pm_agent import ProjectManagerAgent # No longer inheriting
 # from .pm_definitions import PM_INSTRUCTIONS # Remplacé par le prompt spécifique
 
 SHERLOCK_ENQUETE_AGENT_SYSTEM_PROMPT = """Vous êtes Sherlock Holmes, un détective consultant de renommée mondiale. Votre mission est de résoudre l'enquête en cours décrite dans l'état partagé.
-Vous devez analyser les informations disponibles, formuler des hypothèses et diriger l'enquête.
-Utilisez l'agent WatsonLogicAssistant pour effectuer des déductions logiques basées sur les faits et les règles établies.
-Pour interagir avec l'état de l'enquête (géré par StateManagerPlugin), utilisez les fonctions disponibles pour :
-- Lire la description du cas : `get_case_description()`
-- Consulter les éléments identifiés : `get_identified_elements()`
-- Consulter les hypothèses actuelles : `get_hypotheses()`
-- Ajouter une nouvelle hypothèse : `add_hypothesis(hypothesis_text: str, confidence_score: float)`
-- Mettre à jour une hypothèse : `update_hypothesis(hypothesis_id: str, new_text: str, new_confidence: float)`
-- Demander une déduction à Watson : `query_watson(logical_query: str, belief_set_id: str)` (Watson mettra à jour l'état avec sa réponse)
-- Consulter le log des requêtes à Watson : `get_query_log()`
-- Marquer une tâche comme terminée : `complete_task(task_id: str)`
-- Ajouter une nouvelle tâche : `add_task(description: str, assignee: str)`
-- Consulter les tâches : `get_tasks()`
-- Proposer une solution finale : `propose_final_solution(solution_details: dict)`
+
+**Votre méthode d'enquête :**
+1.  **Analyser l'état** : Utilisez `get_case_description`, `get_identified_elements`, et `get_hypotheses` pour comprendre la situation.
+2.  **Synthétiser** : Résumez les informations connues et l'état actuel de l'enquête pour vous-même.
+3.  **Décider de la prochaine action** : Sur la base de votre synthèse, choisissez UNE action concrète et décisive. N'hésitez pas.
+4.  **Agir** : Exécutez l'action choisie en utilisant un outil.
+5.  **Conclure** : Lorsque les preuves sont suffisantes, utilisez `propose_final_solution`.
+
+**Règle Impérative : Ne demandez jamais "Que dois-je faire maintenant ?" ou des questions similaires. Analysez l'état et agissez. Proposez toujours une action concrète.**
+
+**Interaction avec les outils :**
+Utilisez l'agent WatsonLogicAssistant pour effectuer des déductions logiques.
+Pour interagir avec l'état de l'enquête (géré par StateManagerPlugin), utilisez les fonctions disponibles dans le plugin 'SherlockTools':
+- Lire la description du cas : `SherlockTools.get_case_description()`
+- Consulter les éléments identifiés : `SherlockTools.get_identified_elements()`
+- Consulter les hypothèses actuelles : `SherlockTools.get_hypotheses()`
+- Ajouter une nouvelle hypothèse : `SherlockTools.add_hypothesis(text: str, confidence_score: float)`
+- Mettre à jour une hypothèse : `SherlockTools.update_hypothesis(hypothesis_id: str, new_text: str, new_confidence: float)`
+- Demander une déduction à Watson : `SherlockTools.query_watson(logical_query: str, belief_set_id: str)` (Watson mettra à jour l'état avec sa réponse)
+- Consulter le log des requêtes à Watson : `SherlockTools.get_query_log()`
+- Marquer une tâche comme terminée : `SherlockTools.complete_task(task_id: str)`
+- Ajouter une nouvelle tâche : `SherlockTools.add_task(description: str, assignee: str)`
+- Consulter les tâches : `SherlockTools.get_tasks()`
+- Proposer une solution finale : `SherlockTools.propose_final_solution(solution_details: dict)`
 
 Votre objectif est de parvenir à une conclusion logique et bien étayée.
 Dans le contexte d'une enquête Cluedo, vous devez identifier le coupable, l'arme et le lieu du crime."""
 
-class CluedoChannel(AgentChannel):
-    """Un canal de communication pour le jeu Cluedo."""
-    async def get_history(self, **kwargs: Any) -> AsyncGenerator[List[ChatMessageContent], Any]:
-        yield []
-    async def invoke(self, agent: "Agent", **kwargs: Any) -> AsyncGenerator[List[ChatMessageContent], Any]:
-        yield True, ChatMessageContent(role="user", content="test")
-    async def invoke_stream(self, agent: "Agent", **kwargs: Any) -> AsyncGenerator[List[StreamingChatMessageContent], Any]:
-        yield []
-    async def receive(self, messages: List[ChatMessageContent], **kwargs: Any) -> None:
-        pass
-    async def reset(self, **kwargs: Any) -> None:
-        pass
 
-class SherlockEnqueteAgent(ProjectManagerAgent):
-    channel_type: ClassVar[type[AgentChannel]] = CluedoChannel
+class SherlockTools:
+    """
+    Plugin contenant les outils natifs pour l'agent Sherlock.
+    Ces méthodes interagissent avec le EnqueteStateManagerPlugin.
+    """
+    def __init__(self, kernel: Kernel):
+        self._kernel = kernel
+        self._logger = logging.getLogger(self.__class__.__name__)
+
+    @kernel_function(name="get_case_description", description="Récupère la description de l'affaire en cours.")
+    async def get_current_case_description(self) -> str:
+        self._logger.info("Récupération de la description de l'affaire en cours.")
+        try:
+            result = await self._kernel.invoke(
+                plugin_name="EnqueteStatePlugin",
+                function_name="get_case_description"
+            )
+            if hasattr(result, 'value'):
+                return str(result.value)
+            return str(result)
+        except Exception as e:
+            self._logger.error(f"Erreur lors de la récupération de la description de l'affaire: {e}")
+            return f"Erreur: Impossible de récupérer la description de l'affaire: {e}"
+
+    @kernel_function(name="add_hypothesis", description="Ajoute une nouvelle hypothèse à l'état de l'enquête.")
+    async def add_new_hypothesis(self, text: str, confidence_score: float) -> str:
+        self._logger.info(f"Ajout d'une nouvelle hypothèse: '{text}' avec confiance {confidence_score}")
+        try:
+            await self._kernel.invoke(
+                plugin_name="EnqueteStatePlugin",
+                function_name="add_hypothesis",
+                text=text,
+                confidence_score=confidence_score
+            )
+            return f"Hypothèse '{text}' ajoutée avec succès."
+        except Exception as e:
+            self._logger.error(f"Erreur lors de l'ajout de l'hypothèse: {e}")
+            return f"Erreur lors de l'ajout de l'hypothèse: {e}"
+
+
+class SherlockEnqueteAgent(ChatCompletionAgent):
     """
     Agent spécialisé dans la gestion d'enquêtes complexes, inspiré par Sherlock Holmes.
-    Il planifie les étapes d'investigation, identifie les pistes à suivre et
-    synthétise les informations pour résoudre l'affaire.
+    Il utilise le ChatCompletionAgent comme base pour la conversation et des outils
+    pour interagir avec l'état de l'enquête.
     """
 
-    def __init__(self, kernel: Kernel, agent_name: str = "SherlockEnqueteAgent", system_prompt: Optional[str] = SHERLOCK_ENQUETE_AGENT_SYSTEM_PROMPT):
+    def __init__(self, kernel: Kernel, agent_name: str = "Sherlock", **kwargs):
         """
         Initialise une instance de SherlockEnqueteAgent.
 
         Args:
             kernel: Le kernel Semantic Kernel à utiliser.
             agent_name: Le nom de l'agent.
-            system_prompt: Le prompt système pour guider l'agent.
         """
-        super().__init__(kernel, agent_name=agent_name, system_prompt=system_prompt)
-        self.kernel = kernel  # Stocker la référence au kernel
-        # self.logger = logging.getLogger(agent_name) # Assurer un logger spécifique - Géré par BaseAgent._logger
-        self._logger.info(f"SherlockEnqueteAgent '{agent_name}' initialisé.")
-
-    async def invoke(
-        self,
-        messages: List[ChatMessageContent],
-        **kwargs,
-    ) -> List[ChatMessageContent]:
-        """Invoke the agent with a list of messages."""
-        self._logger.info(f"--- SherlockEnqueteAgent INVOKED with {len(messages)} messages ---")
-        chat_history = ChatHistory(messages=messages)
-        chat_history.add_system_message(self.instructions)
+        # Le plugin avec les outils de Sherlock, en lui passant le kernel
+        sherlock_tools = SherlockTools(kernel=kernel)
         
-        # Pass runtime to the kernel invocation
-        runtime = kwargs.pop("runtime", None)
-        if not runtime:
-            raise ValueError("Runtime not provided in kwargs for agent invocation.")
+        # Ajoute le plugin au kernel de l'agent pour qu'il puisse l'utiliser
+        plugins = kwargs.pop("plugins", [])
+        plugins.append(sherlock_tools)
 
-        result = await self.kernel.invoke(
-            prompt=str(chat_history),
-            runtime=runtime,
-            **kwargs,
+        super().__init__(
+            kernel=kernel,
+            name=agent_name,
+            instructions=SHERLOCK_ENQUETE_AGENT_SYSTEM_PROMPT,
+            plugins=plugins,
+            **kwargs
         )
-        # Assuming result is ChatMessageContent or similar
-        response_message = result if isinstance(result, ChatMessageContent) else ChatMessageContent(role="assistant", content=str(result))
-        return [response_message]
+        self._logger = logging.getLogger(f"agent.{self.__class__.__name__}.{agent_name}")
+        self._logger.info(f"SherlockEnqueteAgent '{agent_name}' initialisé avec les outils.")
 
-    async def invoke_stream(
-        self,
-        messages: List[ChatMessageContent],
-        **kwargs,
-    ) -> AsyncGenerator[List[ChatMessageContent], None]:
-        """Invoke the agent with a stream of messages."""
-        # Basic (non-streaming) implementation for now
-        response = await self.invoke(messages, **kwargs)
-        yield response
-
-    async def get_response(
-        self,
-        messages: List[ChatMessageContent],
-        **kwargs,
-    ) -> List[ChatMessageContent]:
-        """Get a response from the agent."""
-        return await self.invoke(messages, **kwargs)
-
-    async def get_current_case_description(self) -> str:
-        """
-        Récupère la description de l'affaire en cours via le EnqueteStateManagerPlugin.
-
-        Returns:
-            La description de l'affaire.
-        """
-        self._logger.info("Récupération de la description de l'affaire en cours.")
-        try:
-            result = await self.kernel.invoke(
-                plugin_name="EnqueteStatePlugin",
-                function_name="get_case_description"
-            )
-            # La valeur réelle est souvent dans result.value ou directement result selon la config du kernel
-            # Pour l'instant, supposons que 'result' est directement la chaîne ou a un attribut 'value'
-            # Ceci pourrait nécessiter un ajustement basé sur le comportement réel de 'invoke'
-            if hasattr(result, 'value'):
-                return str(result.value)
-            return str(result)
-        except Exception as e:
-            self._logger.error(f"Erreur lors de la récupération de la description de l'affaire: {e}")
-            # Retourner une chaîne vide ou lever une exception spécifique pourrait être mieux
-            return "Erreur: Impossible de récupérer la description de l'affaire."
-
-    async def add_new_hypothesis(self, hypothesis_text: str, confidence_score: float) -> Optional[dict]:
-        """
-        Ajoute une nouvelle hypothèse à l'état de l'enquête.
-
-        Args:
-            hypothesis_text: Le texte de l'hypothèse.
-            confidence_score: Le score de confiance de l'hypothèse.
-
-        Returns:
-            Le dictionnaire de l'hypothèse ajoutée ou None en cas d'erreur.
-        """
-        self._logger.info(f"Ajout d'une nouvelle hypothèse: '{hypothesis_text}' avec confiance {confidence_score}")
-        try:
-            result = await self.kernel.invoke(
-                plugin_name="EnqueteStatePlugin",
-                function_name="add_hypothesis",
-                text=hypothesis_text, # type: ignore
-                confidence_score=confidence_score # type: ignore
-            )
-            # Supposant que 'result' est le dictionnaire de l'hypothèse ou a un attribut 'value'
-            if hasattr(result, 'value'):
-                return result.value # type: ignore
-            return result # type: ignore
-        except Exception as e:
-            self._logger.error(f"Erreur lors de l'ajout de l'hypothèse: {e}")
-            return None
+    # Les méthodes de logique métier sont maintenant dans SherlockTools et exposées comme des fonctions du kernel.
+    # Il n'est plus nécessaire de les dupliquer ici.
 
 # Pourrait être étendu avec des capacités spécifiques à Sherlock plus tard
 # def get_agent_capabilities(self) -> Dict[str, Any]:
