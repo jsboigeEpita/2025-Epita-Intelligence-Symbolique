@@ -1,7 +1,7 @@
 {
     "metadata": {
-        "source_file": "C:\\Users\\MYIA\\AppData\\Local\\Temp\\tmpljb1iq7o.txt",
-        "timestamp": "2025-06-06T17:03:35.267585",
+        "source_file": "C:\\Users\\MYIA\\AppData\\Local\\Temp\\tmpfc2sqmo1.txt",
+        "timestamp": "2025-06-06T17:06:16.634589",
         "demo_version": "1.2.0"
     },
     "informal_analysis": {
@@ -57,8 +57,14 @@
     },
     "formal_analysis": {
         "logic_type_used": "first_order",
-        "status": "Failed",
-        "reason": "Belief set conversion failed.",
-        "details": "Validation ou erreur de syntaxe FOL: Ensemble de croyances invalide selon Tweety: Erreur de syntaxe FOL: JPype JException parsing FOL belief set: org.tweetyproject.commons.ParserException: org.tweetyproject.commons.ParserException: Term 'arguments' has the wrong sort.. Belief Set was:\nsubject = { rechauffement_climatique, sujet, mythe, hivers_froids, mesures_drastiques, catastrophe_planetaire, scientifiques, danger, conclusions, faits, sophismes }\nargument = { arguments }\ntype(IsComplex(subject))\ntype(Affirms(subject, argument))\ntype(CitesAsProof(subject, subject))\ntype(Supports(subject, argument))\ntype(AreNecessary(subject))\ntype(IsMotivated(subject))\ntype(Doubts(subject, subject))\ntype(Analyzes(subject, subject))\ntype(Deconstructs(subject))\n\n\nIsComplex(rechauffement_climatique)\nAffirms(mythe, arguments)\nCitesAsProof(hivers_froids, mythe)\nSupports(mesures_drastiques, arguments)\nAreNecessary(mesures_drastiques)\nDoubts(conclusions, scientifiques)\nIsMotivated(scientifiques)\nAnalyzes(faits, arguments)\nDeconstructs(sophismes)\nContenu:\nsubject = { rechauffement_climatique, sujet, mythe, hivers_froids, mesures_drastiques, catastrophe_planetaire, scientifiques, danger, conclusions, faits, sophismes }\nargument = { arguments }\ntype(IsComplex(subject))\ntype(Affirms(subject, argument))\ntype(CitesAsProof(subject, subject))\ntype(Supports(subject, argument))\ntype(AreNecessary(subject))\ntype(IsMotivated(subject))\ntype(Doubts(subject, subject))\ntype(Analyzes(subject, subject))\ntype(Deconstructs(subject))\n\n\nIsComplex(rechauffement_climatique)\nAffirms(mythe, arguments)\nCitesAsProof(hivers_froids, mythe)\nSupports(mesures_drastiques, arguments)\nAreNecessary(mesures_drastiques)\nDoubts(conclusions, scientifiques)\nIsMotivated(scientifiques)\nAnalyzes(faits, arguments)\nDeconstructs(sophismes)"
+        "status": "Success",
+        "belief_set_summary": {
+            "is_consistent": true,
+            "details": "Ensemble de croyances FOL valide"
+        },
+        "belief_set": [
+            "subject = { rechauffement_climatique, mythe, hiver_froid, mesure_drastique, catastrophe_planetaire, scientifique, danger, conclusion, fait, sophisme }\nconcept = { complexite, preuve, motivation_financiere }\ntype(IsASubject(subject))\ntype(IsAMyth(subject))\ntype(CitesAsProof(subject, subject))\ntype(NeedImmediateAction(subject))\ntype(IsCatastrophic(subject))\ntype(AlertsOnDanger(subject))\ntype(IsFinanciallyMotivated(subject))\ntype(DoubtsConclusions(subject))\ntype(AnalyzesFacts(subject))\ntype(DeconstructsSophisms(subject))\n\n\nIsASubject(rechauffement_climatique)\nIsASubject(mythe)\nCitesAsProof(mythe, hiver_froid)\nNeedImmediateAction(mesure_drastique)\nIsCatastrophic(catastrophe_planetaire)\nAlertsOnDanger(scientifique)\nIsFinanciallyMotivated(scientifique)\nDoubtsConclusions(scientifique)"
+        ],
+        "queries": []
     }
 }

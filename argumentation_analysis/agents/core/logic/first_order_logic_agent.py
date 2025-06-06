@@ -501,6 +501,46 @@ class FirstOrderLogicAgent(BaseLogicAgent):
             "formulas": formulas_json.get("formulas", [])
         }
         
+        # --- Étape 4: Filtrage impitoyable des formules ---
+        self.logger.info("Étape 4: Filtrage des formules basé sur les constantes déclarées...")
+        try:
+            # Créer un ensemble de toutes les constantes valides déclarées
+            valid_constants = set()
+            for sort_name, constants in kb_json.get("sorts", {}).items():
+                valid_constants.update(constants)
+            self.logger.debug(f"Constantes valides déclarées: {valid_constants}")
+
+            # Filtrer les formules
+            valid_formulas = []
+            original_formula_count = len(kb_json.get("formulas", []))
+            
+            for formula in kb_json.get("formulas", []):
+                # Extraire tous les termes potentiels (mots en minuscules, snake_case)
+                # Cette regex cible les identifiants qui ne sont pas des noms de prédicats (commençant par une majuscule)
+                # et qui ne sont pas des mots-clés logiques.
+                terms = re.findall(r'\b[a-z_][a-z0-9_]*\b', formula)
+                
+                # Vérifier si tous les termes extraits sont des constantes valides
+                is_formula_valid = True
+                for term in terms:
+                    if term not in valid_constants:
+                        self.logger.warning(f"Terme invalide '{term}' trouvé dans la formule '{formula}'. La formule sera rejetée.")
+                        is_formula_valid = False
+                        break
+                
+                if is_formula_valid:
+                    valid_formulas.append(formula)
+                
+            # Remplacer la liste de formules par la liste filtrée
+            kb_json["formulas"] = valid_formulas
+            filtered_formula_count = len(valid_formulas)
+            self.logger.info(f"Filtrage terminé. {filtered_formula_count}/{original_formula_count} formules conservées.")
+
+        except Exception as e:
+            error_msg = f"Échec de l'étape de filtrage des formules: {e}"
+            self.logger.error(error_msg, exc_info=True)
+            return None, error_msg
+
         current_kb_json = kb_json
         
         for attempt in range(max_retries):
