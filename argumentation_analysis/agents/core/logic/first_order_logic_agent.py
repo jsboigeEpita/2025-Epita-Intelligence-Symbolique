@@ -407,12 +407,13 @@ class FirstOrderLogicAgent(BaseLogicAgent):
 
     async def text_to_belief_set(self, text: str, context: Optional[Dict[str, Any]] = None) -> Tuple[Optional[BeliefSet], str]:
         """
-        Convertit un texte en langage naturel en un ensemble de croyances FOL en deux étapes.
+        Convertit un texte en langage naturel en un ensemble de croyances FOL en plusieurs étapes.
         1. Génère les sorts et prédicats.
-        2. Génère les formules en se basant sur les définitions de l'étape 1.
-        3. Assemble et valide le tout avec une boucle de correction.
+        2. Corrige programmatiquement les types d'arguments des prédicats.
+        3. Génère les formules en se basant sur les définitions corrigées.
+        4. Assemble et valide le tout.
         """
-        self.logger.info(f"Conversion de texte en ensemble de croyances FOL pour {self.name} (approche en 2 étapes)...")
+        self.logger.info(f"Conversion de texte en ensemble de croyances FOL pour {self.name} (approche en plusieurs étapes)...")
         
         max_retries = 3
         last_error = ""
@@ -431,6 +432,51 @@ class FirstOrderLogicAgent(BaseLogicAgent):
         except (json.JSONDecodeError, Exception) as e:
             error_msg = f"Échec de la génération des définitions (sorts/prédicats): {e}"
             self.logger.error(error_msg)
+            return None, error_msg
+
+        # --- Étape 1.5: Correction programmatique des types de prédicats ---
+        self.logger.info("Étape 1.5: Correction des arguments des prédicats...")
+        try:
+            # Créer une structure inversée mappant chaque constante à son sort.
+            sorts_map = {
+                constant: sort_name
+                for sort_name, constants in defs_json.get("sorts", {}).items()
+                for constant in constants
+            }
+            
+            corrected_predicates = []
+            predicates_to_correct = defs_json.get("predicates", [])
+            
+            for predicate in predicates_to_correct:
+                corrected_args = []
+                # Itérer sur les arguments de chaque prédicat.
+                for arg in predicate.get("args", []):
+                    # Si l'argument n'est pas un sort valide, il est considéré comme une constante.
+                    if arg not in defs_json.get("sorts", {}):
+                        # Trouver le sort correct pour cette constante.
+                        correct_sort = sorts_map.get(arg)
+                        if correct_sort:
+                            self.logger.debug(f"Correction: Remplacement de la constante '{arg}' par le sort '{correct_sort}' dans le prédicat '{predicate['name']}'.")
+                            corrected_args.append(correct_sort)
+                        else:
+                            # Si la constante n'est mappée à aucun sort, conserver l'original et logger un avertissement.
+                            self.logger.warning(f"Impossible de trouver un sort pour la constante '{arg}' dans le prédicat '{predicate['name']}'. Argument conservé.")
+                            corrected_args.append(arg)
+                    else:
+                        # L'argument est déjà un sort valide.
+                        corrected_args.append(arg)
+                
+                # Créer le prédicat corrigé.
+                corrected_predicate = {"name": predicate["name"], "args": corrected_args}
+                corrected_predicates.append(corrected_predicate)
+            
+            # Mettre à jour le JSON des définitions avec la liste des prédicats corrigée.
+            defs_json["predicates"] = corrected_predicates
+            self.logger.info("Correction des prédicats terminée.")
+
+        except Exception as e:
+            error_msg = f"Échec de l'étape de correction des prédicats: {e}"
+            self.logger.error(error_msg, exc_info=True)
             return None, error_msg
 
         # --- Étape 2: Génération des Formules ---
