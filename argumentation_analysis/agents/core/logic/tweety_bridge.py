@@ -135,7 +135,7 @@ class TweetyBridge:
         for line_content in raw_lines:
             # 1. Enlever les commentaires de la ligne entière (Tweety utilise '%' ou '//')
             line_no_comments = line_content.split('%')[0].split('//')[0].strip()
-            if not line_no_comments: # Si la ligne est vide ou ne contient qu'un commentaire
+            if not line_no_comments or line_no_comments == '```': # Si la ligne est vide ou ne contient qu'un commentaire ou une balise markdown
                 continue
 
             # 2. Séparer les formules sur la ligne par des points-virgules.
@@ -251,13 +251,14 @@ class TweetyBridge:
             self._logger.error(error_msg, exc_info=True)
             return None, f"ERREUR: {error_msg}"
 
-    def execute_pl_query(self, belief_set_content: str, query_string: str) -> str:
+    def execute_pl_query(self, belief_set_content: str, query_string: str, constants: Optional[List[str]] = None) -> Tuple[Optional[bool], str]:
         """
         Exécute une requête en logique propositionnelle sur un ensemble de croyances donné.
-        Délègue l'exécution au PLHandler et retourne une chaîne formatée.
+        Délègue l'exécution au PLHandler et retourne un tuple (résultat_bool, chaîne_formatée).
         """
-        _, result_str = self.perform_pl_query(belief_set_content, query_string)
-        return result_str
+        self._logger.info(f"TweetyBridge.execute_pl_query: Query='{query_string}' sur BS: ('{belief_set_content[:60]}...')")
+        # La méthode perform_pl_query est maintenant la méthode publique principale
+        return self.perform_pl_query(belief_set_content, query_string, constants)
 
     def is_pl_kb_consistent(self, belief_set_content: str) -> Tuple[bool, str]:
         """Vérifie la cohérence d'une base de connaissances propositionnelle."""
@@ -375,6 +376,21 @@ class TweetyBridge:
     # Les méthodes _parse_fol_formula, _parse_fol_belief_set, _execute_fol_query_internal
     # sont maintenant encapsulées dans FOLHandler et peuvent être supprimées ici.
     
+    def validate_fol_query_with_context(self, belief_set_str: str, query_str: str) -> Tuple[bool, str]:
+        """
+        Valide une requête FOL en utilisant le contexte (signature) d'une base de connaissances.
+        Délègue la validation au FOLHandler.
+        """
+        if not self.is_jvm_ready() or not hasattr(self, '_fol_handler'):
+            return False, "TweetyBridge ou FOLHandler non prêt."
+
+        self._logger.debug(f"TweetyBridge.validate_fol_query_with_context appelée pour query: '{query_str}'")
+        try:
+            return self._fol_handler.validate_fol_query_with_context(belief_set_str, query_str)
+        except (ValueError, RuntimeError) as e:
+            self._logger.error(f"Erreur lors de la validation contextuelle de la requête FOL '{query_str}': {e}", exc_info=True)
+            return False, str(e)
+
     # --- Méthodes pour la logique modale ---
 
     def validate_modal_formula(self, formula_string: str, modal_logic_str: str = "S4", signature_declarations_str: Optional[str] = None) -> Tuple[bool, str]:

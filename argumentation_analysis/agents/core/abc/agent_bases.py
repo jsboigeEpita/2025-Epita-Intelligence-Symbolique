@@ -17,7 +17,7 @@ from argumentation_analysis.agents.core.logic.belief_set import BeliefSet
 # from argumentation_analysis.agents.core.logic.tweety_bridge import TweetyBridge
 
 
-class BaseAgent(ABC):
+class BaseAgent(Agent):
     """
     Classe de base abstraite pour tous les agents du système.
 
@@ -52,10 +52,12 @@ class BaseAgent(ABC):
         :param description: La description optionnelle de l'agent.
         :type description: Optional[str]
         """
-        self._agent_name = agent_name
-        self.description = description if description else (system_prompt if system_prompt else f"Agent {agent_name}")
-        self.instructions = system_prompt if system_prompt else ""
-        self._kernel = kernel
+        super().__init__(
+            name=agent_name,
+            description=description if description else (system_prompt if system_prompt else f"Agent {agent_name}"),
+            instructions=system_prompt if system_prompt else "",
+            kernel=kernel
+        )
         self._logger = logging.getLogger(f"agent.{self.__class__.__name__}.{agent_name}")
         self._llm_service_id = None # Initialisé dans setup_agent_components
         self._system_prompt = system_prompt

@@ -248,6 +248,7 @@ class EnqueteCluedoState(EnquetePoliciereState):
         self.belief_set_initial_watson: Dict[str, List[str]] = {} # Initialisation de l'attribut
         self.is_solution_proposed: bool = False
         self.final_solution: Optional[Dict[str, str]] = None
+        self.suggestions_historique: List[Dict] = []
         
         self._initialize_cluedo_belief_set()
 
