@@ -37,6 +37,7 @@ class TestFirstOrderLogicAgent:
         self.mock_tweety_bridge_instance.validate_fol_belief_set.return_value = (True, "Ensemble de croyances FOL valide")
         self.mock_tweety_bridge_instance.validate_fol_formula.return_value = (True, "Formule FOL valide")
         self.mock_tweety_bridge_instance.execute_fol_query.return_value = "Tweety Result: FOL Query 'P(a)' is ACCEPTED (True)."
+        self.mock_tweety_bridge_instance.is_fol_kb_consistent.return_value = (True, "Belief set is consistent")
 
         self.agent_name = "FirstOrderLogicAgent"
         
@@ -82,24 +83,42 @@ class TestFirstOrderLogicAgent:
     @pytest.mark.asyncio
     async def test_text_to_belief_set_success(self):
         """Test de la conversion de texte en ensemble de croyances FOL avec succès."""
+        import json
+        mock_json_output = {
+            "sorts": {"thing": ["a"]},
+            "predicates": [{"name": "P", "args": ["thing"]}, {"name": "Q", "args": ["thing"]}],
+            "formulas": ["forall X: (P(X) => Q(X))", "P(a)"]
+        }
         mock_sk_function_result = MagicMock()
-        mock_sk_function_result.__str__.return_value = "forall X: (P(X) => Q(X));"
+        mock_sk_function_result.__str__.return_value = json.dumps(mock_json_output)
         self.mock_text_to_fol_func.invoke.return_value = mock_sk_function_result
         
+        # Simuler une validation réussie de Tweety
+        self.mock_tweety_bridge_instance.validate_fol_belief_set.return_value = (True, "OK")
+
         belief_set, message = await self.agent.text_to_belief_set("Texte de test")
         
         self.mock_text_to_fol_func.invoke.assert_called_once_with(self.kernel, input="Texte de test")
-        self.mock_tweety_bridge_instance.validate_fol_belief_set.assert_called_once_with("forall X: (P(X) => Q(X));")
+        
+        # Vérifier que la validation a été appelée avec le contenu construit
+        constructed_content = self.agent._construct_kb_from_json(mock_json_output)
+        self.mock_tweety_bridge_instance.validate_fol_belief_set.assert_called_once_with(constructed_content)
         
         assert isinstance(belief_set, FirstOrderBeliefSet)
-        assert belief_set.content == "forall X: (P(X) => Q(X));"
+        assert belief_set.content == constructed_content
         assert message == "Conversion réussie"
 
     @pytest.mark.asyncio
     async def test_text_to_belief_set_empty_result(self):
         """Test de la conversion de texte en ensemble de croyances FOL avec résultat vide."""
+        import json
+        mock_json_output = {
+            "sorts": {},
+            "predicates": [],
+            "formulas": []
+        }
         mock_sk_function_result = MagicMock()
-        mock_sk_function_result.__str__.return_value = ""
+        mock_sk_function_result.__str__.return_value = json.dumps(mock_json_output)
         self.mock_text_to_fol_func.invoke.return_value = mock_sk_function_result
         
         belief_set, message = await self.agent.text_to_belief_set("Texte de test")
@@ -108,20 +127,28 @@ class TestFirstOrderLogicAgent:
         self.mock_tweety_bridge_instance.validate_fol_belief_set.assert_not_called()
         
         assert belief_set is None
-        assert message == "La conversion a produit un ensemble de croyances vide"
+        assert message == "La conversion a produit une base de connaissances vide."
 
     @pytest.mark.asyncio
     async def test_text_to_belief_set_invalid_belief_set(self):
         """Test de la conversion de texte en ensemble de croyances FOL avec ensemble invalide."""
+        import json
+        mock_json_output = {
+            "sorts": {"thing": ["a"]},
+            "predicates": [{"name": "P", "args": ["thing"]}],
+            "formulas": ["P(a)"]
+        }
         mock_sk_function_result = MagicMock()
-        mock_sk_function_result.__str__.return_value = "forall X (P(X)"
+        mock_sk_function_result.__str__.return_value = json.dumps(mock_json_output)
         self.mock_text_to_fol_func.invoke.return_value = mock_sk_function_result
         self.mock_tweety_bridge_instance.validate_fol_belief_set.return_value = (False, "Erreur de syntaxe FOL")
         
         belief_set, message = await self.agent.text_to_belief_set("Texte de test")
         
         self.mock_text_to_fol_func.invoke.assert_called_once_with(self.kernel, input="Texte de test")
-        self.mock_tweety_bridge_instance.validate_fol_belief_set.assert_called_once_with("forall X (P(X)")
+        
+        constructed_content = self.agent._construct_kb_from_json(mock_json_output)
+        self.mock_tweety_bridge_instance.validate_fol_belief_set.assert_called_once_with(constructed_content)
         
         assert belief_set is None
         assert message == "Ensemble de croyances invalide: Erreur de syntaxe FOL"
