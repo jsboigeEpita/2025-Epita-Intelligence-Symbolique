@@ -1,0 +1,23 @@
+{
+  "agents": [
+    {"name": "A1", "personality": "stubborn", "preferences": ["A", "B", "C"], "options": ["A", "B", "C"]},
+    {"name": "A2", "personality": "flexible", "preferences": ["B", "C", "A"], "options": ["A", "B", "C"]},
+    {"name": "A3", "personality": "strategic", "preferences": ["C", "A", "B"], "options": ["A", "B", "C"]},
+    {"name": "A4", "personality": "random", "preferences": ["A", "C", "B"], "options": ["A", "B", "C"]},
+    {"name": "A5", "personality": "flexible", "preferences": ["B", "A", "C"], "options": ["A", "B", "C"]},
+    {"name": "A6", "personality": "strategic", "preferences": ["C", "B", "A"], "options": ["A", "B", "C"]}
+  ],
+  "options": ["A", "B", "C"],
+  "context": {
+    "description": "6 agents in a ring network, mixed personalities, 3 options.",
+    "adjacency": [
+      [0,1,0,0,0,1],
+      [1,0,1,0,0,0],
+      [0,1,0,1,0,0],
+      [0,0,1,0,1,0],
+      [0,0,0,1,0,1],
+      [1,0,0,0,1,0]
+    ],
+    "tags": ["network"]
+  }
+} 

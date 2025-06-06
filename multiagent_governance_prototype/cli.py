@@ -5,7 +5,7 @@ from agents.agent_factory import AgentFactory
 from governance.methods import GOVERNANCE_METHODS
 from scenarios.loader import load_scenario, list_scenarios
 from runner import run_simulation
-from metrics.metrics import summarize_results, per_agent_satisfaction
+from metrics.metrics import summarize_results, per_agent_satisfaction, validate_scenario
 from reporting.visualize import plot_results, plot_method_comparison, plot_manipulability_impact
 from governance.simulation import manipulability_analysis
 import json
@@ -165,6 +165,29 @@ def manipulability_analysis_cmd(scenario, method):
         plot_manipulability_impact(results_list)
     except Exception as e:
         console.print(f"[red]Error in manipulability analysis: {e}[/red]")
+
+@cli.command('validate-scenarios')
+def validate_scenarios_cmd():
+    """Validate all scenario files in the scenarios/ directory."""
+    import os
+    import json
+    scenario_dir = os.path.join(os.path.dirname(__file__), 'scenarios')
+    scenario_files = [f for f in os.listdir(scenario_dir) if f.endswith('.json')]
+    all_valid = True
+    for fname in scenario_files:
+        with open(os.path.join(scenario_dir, fname)) as f:
+            scenario = json.load(f)
+        valid, msg = validate_scenario(scenario)
+        if valid:
+            console.print(f"[green][OK] {fname}[/green]")
+        else:
+            console.print(f"[red][ERROR] {fname}: {msg}[/red]")
+            all_valid = False
+    if not all_valid:
+        console.print("[red]Some scenarios are invalid.[/red]")
+        exit(1)
+    else:
+        console.print("[green]All scenarios are valid.[/green]")
 
 if __name__ == '__main__':
     cli() 
