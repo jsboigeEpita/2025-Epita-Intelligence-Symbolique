@@ -224,7 +224,7 @@ Les agents logiques sont exposés via l'API Web, permettant leur utilisation à 
 - Endpoint `/api/logic/interpret`: Interprète les résultats des requêtes (Note: Cet endpoint n'est actuellement pas implémenté dans [`libs/web_api/routes/logic_routes.py`](../../libs/web_api/routes/logic_routes.py)).
 
 Pour un exemple concret d'intégration et d'utilisation de ces endpoints API, référez-vous au script [`api_integration_example.py`](../../examples/logic_agents/api_integration_example.py).
-De plus, des tests d'intégration pour les agents logiques, y compris leur interaction via l'API, sont disponibles dans [`tests/integration/test_logic_agents_integration.py`](../../tests/integration/test_logic_agents_integration.py).
+De plus, des tests d'intégration pour les agents logiques, y compris leur interaction via l'API, sont disponibles dans [`tests/integration/test_logic_agents_integration.py`](../tests/integration/test_logic_agents_integration.py).
 
 ## Bonnes pratiques
 
@@ -291,7 +291,10 @@ logging.basicConfig(level=logging.DEBUG)
     - En complément du tutoriel `logic_agents_tutorial.ipynb` déjà listé, le notebook [`api_logic_tutorial.ipynb`](../../examples/notebooks/api_logic_tutorial.ipynb) peut offrir des exemples d'utilisation de l'API des agents logiques (vérifiez sa disponibilité et pertinence exacte pour votre besoin).
 - **Tests d'intégration**:
     - Pour comprendre comment les agents logiques sont testés et pour voir des exemples d'utilisation dans des scénarios d'intégration, consultez :
-        - Le fichier de test principal : [`tests/integration/test_logic_agents_integration.py`](../../tests/integration/test_logic_agents_integration.py).
+        - Le fichier de test principal : [`tests/integration/test_logic_agents_integration.py`](../tests/integration/test_logic_agents_integration.py).
         - Le répertoire [`tests/integration/jpype_tweety/`](../../tests/integration/jpype_tweety/) pour des tests spécifiques à l'intégration avec TweetyProject via JPype, qui est un composant clé.
 - **Données d'exemple**:
     - Les données utilisées par les exemples ou les tests des agents logiques peuvent se trouver dans le répertoire [`examples/test_data/`](../../examples/test_data/). Il est recommandé d'explorer ce répertoire pour trouver des fichiers de données spécifiques si vous travaillez sur des exemples ou reproduisez des tests.
+
+
+

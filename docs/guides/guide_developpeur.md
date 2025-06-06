@@ -1304,7 +1304,7 @@ class TestCommunicationIntegration(unittest.TestCase):
         tactical_thread.join()
 ```
 
-Un exemple de test d'intégration pertinent est [`argumentation_analysis/tests/test_communication_integration.py`](argumentation_analysis/tests/test_communication_integration.py:0), qui vérifie l'interaction entre différents composants de communication.
+Un exemple de test d'intégration pertinent est [`../../tests/unit/argumentation_analysis/test_communication_integration.py`](../../tests/unit/argumentation_analysis/test_communication_integration.py:0), qui vérifie l'interaction entre différents composants de communication.
 
 #### 3. Tests de performance
 
