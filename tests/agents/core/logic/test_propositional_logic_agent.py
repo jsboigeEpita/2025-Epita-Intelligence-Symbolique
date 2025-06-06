@@ -66,7 +66,7 @@ class TestPropositionalLogicAgent:
         assert isinstance(kwargs['arguments'], KernelArguments)
         assert kwargs['arguments']['input'] == "Texte de test"
         
-        self.mock_tweety_bridge_instance.validate_belief_set.assert_called_once_with(belief_set_str="a => b")
+        self.mock_tweety_bridge_instance.validate_belief_set.assert_called_once_with(belief_set_string="a => b")
         
         assert isinstance(belief_set, PropositionalBeliefSet)
         assert belief_set.content == "a => b"
