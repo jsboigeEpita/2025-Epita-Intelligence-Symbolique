@@ -134,64 +134,27 @@ class FOLHandler:
         """
         logger.debug(f"Checking FOL consistency for KB: {knowledge_base_str}")
         try:
-            FolBeliefSet = jpype.JClass("org.tweetyproject.logics.fol.syntax.FolBeliefSet")
-            FolSignature = jpype.JClass("org.tweetyproject.logics.fol.syntax.FolSignature")
-            
-            # Create a signature. If declarations are provided, parse them.
-            # This is a complex part: Tweety doesn't have a simple string parser for full signatures.
-            # Declarations often come from a file or are built programmatically.
-            # For now, we'll assume an empty or default signature if not provided,
-            # or a very simplified parsing if signature_declarations_str is used.
-            signature = FolSignature() # Default empty signature
-
+            # Combine signature and knowledge base for parsing
+            full_kb_str = knowledge_base_str
             if signature_declarations_str:
-                logger.warning("Parsing FOL signature declarations from string is complex and not fully implemented here.")
-                # Simplified: one might need a dedicated parser for "sort X;" "predicate P(X,Y);" etc.
-                # For example, one could parse "predicate Friends(person,person);"
-                # and then programmatically add this to the signature.
-                # This is where the `fol_add_sort` and `fol_add_predicate` logic would be invoked.
-                # This is a placeholder for a more robust signature handling mechanism.
-                pass
+                full_kb_str = signature_declarations_str + "\n" + knowledge_base_str
 
+            # Use the robust parsing method
+            kb, _, _ = self.parse_fol_belief_set(full_kb_str)
 
-            kb = FolBeliefSet(signature)
-            formula_strings = [f.strip() for f in knowledge_base_str.split(';') if f.strip()]
-            if not formula_strings:
-                logger.info("Empty FOL knowledge base is considered consistent.")
-                return True
-
-            for f_str in formula_strings:
-                parsed_formula = self.parse_fol_formula(f_str)
-                kb.add(parsed_formula)
+            # Actual FOL consistency check requires a prover.
+            # This is a placeholder until a proper prover is implemented.
+            logger.warning("FOL consistency check in TweetyProject is complex and may require specific reasoners. This implementation is a placeholder and assumes consistency if parsing succeeds.")
             
-            # FOL consistency often requires a specific reasoner.
-            # DefaultProver = jpype.JClass("org.tweetyproject.logics.fol.reasoner.DefaultProver")
-            # reasoner = DefaultProver() # Or another suitable FOL reasoner
-            # For now, let's assume FolBeliefSet might have a simple consistency check or this needs a reasoner.
-            # Tweety's examples often use more specific reasoners for FOL tasks.
-            # The general `isConsistent` might not be available or meaningful without a proper setup.
-            # This is a known area that needs more specific TweetyProject API knowledge for FOL.
-            logger.warning("FOL consistency check in TweetyProject is complex and may require specific reasoners and full signature setup. This implementation is basic.")
-            
-            # Placeholder: Actual FOL consistency in Tweety usually involves a prover.
-            # For example, checking if kb is satisfiable.
-            # If kb.getModels() is not empty (this is for finite models, FOL is more complex)
-            # Or using a prover: prover.query(kb, Contradiction.getInstance()) == false
-            # This is a simplification.
-            # A common way is to check if the knowledge base has a model.
-            # However, `isConsistent` on `FolBeliefSet` itself is not standard.
-            # We might need to use a prover like `ResolutionProver` or `Prover9Prover`.
-            # For example:
+            # A real implementation would look like this:
             # Prover = jpype.JClass("org.tweetyproject.logics.fol.reasoner.ResolutionProver")()
-            # Contradiction = jpype.JClass("org.tweetyproject.logics.fol.syntax.Contradiction")
-            # is_consistent = not Prover.query(kb, Contradiction.getInstance())
+            # Contradiction = jpype.JClass("org.tweetyproject.logics.fol.syntax.Contradiction").getInstance()
+            # is_consistent = not Prover.query(kb, Contradiction)
+            # logger.info(f"FOL Knowledge base consistency check result: {is_consistent}")
+            # return is_consistent
             
-            # Given the test failures were about "predicate ... has not been declared",
-            # the issue is more about signature than the consistency check logic itself.
-            # For now, let's assume if parsing succeeds and no exceptions, it's "consistent" for this basic handler.
-            # This is NOT a real consistency check for FOL.
-            logger.info(f"FOL Knowledge base '{knowledge_base_str}' parsed (basic check, not full consistency).")
-            return True # Placeholder - needs real FOL reasoner integration
+            # For now, return True if parsing was successful.
+            return True
 
         except ValueError as e: # Catch parsing errors
             logger.error(f"Error parsing formula for FOL consistency check: {e}", exc_info=True)
@@ -209,22 +172,17 @@ class FOLHandler:
         """
         logger.debug(f"Performing FOL query. KB: '{knowledge_base_str}', Query: '{query_formula_str}'")
         try:
-            FolBeliefSet = jpype.JClass("org.tweetyproject.logics.fol.syntax.FolBeliefSet")
-            FolSignature = jpype.JClass("org.tweetyproject.logics.fol.syntax.FolSignature")
-            signature = FolSignature() # Default empty signature
-
+            # La méthode parse_fol_belief_set gère la création de la KB et de la signature
+            # à partir de la chaîne de caractères complète.
+            # On combine les déclarations de signature et la base de connaissances en une seule chaîne.
+            full_kb_str = knowledge_base_str
             if signature_declarations_str:
-                logger.warning("Parsing FOL signature declarations from string is complex and not fully implemented here.")
-                # Add logic to parse declarations and populate signature if developed
-                pass
+                full_kb_str = signature_declarations_str + "\n" + knowledge_base_str
 
-            kb = FolBeliefSet(signature)
-            kb_formula_strings = [f.strip() for f in knowledge_base_str.split(';') if f.strip()]
-            for f_str in kb_formula_strings:
-                parsed_formula = self.parse_fol_formula(f_str)
-                kb.add(parsed_formula)
+            kb, signature, parser_with_signature = self.parse_fol_belief_set(full_kb_str)
             
-            query_formula = self.parse_fol_formula(query_formula_str)
+            # Utiliser le parser qui a été configuré avec la signature de la KB
+            query_formula = self.parse_fol_formula(query_formula_str, custom_parser=parser_with_signature)
             
             # FOL querying requires a specific reasoner.
             # Example with ResolutionProver:
@@ -250,4 +208,34 @@ class FOLHandler:
             logger.error(f"Unexpected error during FOL query: {e}", exc_info=True)
             raise
 
-    # Add other FOL-specific methods as needed
+    def validate_fol_query_with_context(self, belief_set_str: str, query_str: str) -> tuple[bool, str]:
+        """
+        Validates a FOL query using the context (signature) from a belief set.
+
+        This method first parses the belief set to establish a context (sorts, predicates, etc.)
+        and then parses the query within that same context.
+
+        :param belief_set_str: The full string of the knowledge base, including signature.
+        :param query_str: The query string to validate.
+        :return: A tuple (bool, str) indicating success and a message.
+        """
+        logger.debug(f"Validating query '{query_str}' with context from belief set.")
+        try:
+            # This method creates a dedicated, configured parser for the validation task,
+            # avoiding state conflicts with the shared self._fol_parser.
+            # It parses the belief set and returns a parser ready for use.
+            _, _, parser_with_signature = self.parse_fol_belief_set(belief_set_str)
+
+            # Use the newly created parser, which has the correct signature, to parse the query.
+            # This ensures the validation happens in the right context without causing re-declaration errors.
+            self.parse_fol_formula(query_str, custom_parser=parser_with_signature)
+
+            msg = f"Query '{query_str}' successfully validated against the belief set's context."
+            logger.info(msg)
+            return True, msg
+        except (jpype.JException, ValueError) as e:
+            # Catches both JPype exceptions (e.g., parsing errors from Tweety) and ValueErrors
+            # that might be raised from our Python wrappers (e.g., from parse_fol_belief_set).
+            error_msg = f"Validation failed for query '{query_str}': {e}"
+            logger.warning(error_msg)
+            return False, str(e)

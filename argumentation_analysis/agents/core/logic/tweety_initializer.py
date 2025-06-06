@@ -53,8 +53,11 @@ class TweetyInitializer:
 
         try:
             # Importation dynamique de get_project_root UNIQUEMENT si on doit démarrer la JVM
-            from argumentation_analysis.utils.system_utils import get_project_root # Chemin corrigé
-            project_root = get_project_root()
+            # La fonction get_project_root() semble retourner un chemin incorrect.
+            # Utilisons une méthode plus fiable basée sur l'emplacement de ce fichier.
+            # Ce fichier est dans argumentation_analysis/agents/core/logic/
+            # La racine du projet est 4 niveaux au-dessus.
+            project_root = Path(__file__).resolve().parents[4]
             tweety_lib_path = project_root / "libs" / "tweety"
             
             # Log des contenus des répertoires pour le débogage

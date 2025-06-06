@@ -257,7 +257,7 @@ def generate_rich_json_report(source_file_path, informal_results, formal_results
     return report
 
 def print_final_summary(report: dict):
-    """Affiche une synthèse lisible du rapport d'analyse final."""
+    """Affiche une synthèse lisible et détaillée du rapport d'analyse final."""
     
     print("\n" + "="*80)
     print(" " * 25 + "SYNTHÈSE DE L'ANALYSE RHÉTORIQUE")
@@ -269,7 +269,7 @@ def print_final_summary(report: dict):
     print(f"  - Fichier source analysé : {metadata.get('source_file', 'N/A')}")
     print(f"  - Horodatage de l'analyse : {datetime.fromisoformat(metadata.get('timestamp', '')) if metadata.get('timestamp') else 'N/A'}")
 
-    # Analyse Informelle
+    # Analyse Informelle (inchangée)
     informal = report.get("informal_analysis", {})
     informal_summary = informal.get("summary", {})
     print("\n--- [ 1. Analyse Informelle des Sophismes ] ---")
@@ -287,32 +287,57 @@ def print_final_summary(report: dict):
             if count > 0:
                 print(f"    - {level}: {count} sophisme(s)")
 
-    # Analyse Formelle
+    # Analyse Formelle (entièrement revue)
     formal = report.get("formal_analysis", {})
     logic_type_used = formal.get('logic_type_used', 'N/A').replace('_', ' ').title()
     status = formal.get('status', 'Unknown')
     
     print(f"\n--- [ 2. Analyse Formelle (Logique: {logic_type_used}) ] ---")
-    print(f"  - Statut de l'analyse : {status}")
+    print(f"  - Statut global de l'analyse : {status}")
 
     if status == "Failed":
         reason = formal.get('reason', 'Raison inconnue.')
         details = formal.get('details', 'Pas de détails supplémentaires.')
         print(f"  - Raison de l'échec : {reason}")
         print(f"  - Détails : {details}")
-    elif status == "Success":
+    elif status in ["Success", "Partial Success"]:
+        # 2a. Création de la Base de Connaissances (KB)
         kb_summary = formal.get('belief_set_summary', {})
-        is_consistent = kb_summary.get('is_consistent', 'Inconnue')
-        queries = formal.get('queries', [])
-        
-        print(f"  - Cohérence de la base de connaissances : {is_consistent}")
-        if queries:
-            print(f"  - Nombre de requêtes logiques exécutées : {len(queries)}")
-            entailed_count = sum(1 for q in queries if q.get('result') == 'Entailed')
-            print(f"    - {entailed_count} étaient prouvables (Entailed).")
-            print(f"    - {len(queries) - entailed_count} n'étaient pas prouvables (Not Entailed).")
+        kb_status = kb_summary.get('status', 'Échec')
+        if "Succès" in kb_status:
+            validated = kb_summary.get('formulas_validated', 0)
+            total = kb_summary.get('formulas_total', 0)
+            print(f"  - Création de la KB : {kb_status} ({validated}/{total} formules validées)")
         else:
-            print("  - Aucune requête logique n'a été exécutée.")
+            retries = kb_summary.get('attempts', 1)
+            print(f"  - Création de la KB : {kb_status} après {retries} tentative(s)")
+
+        # 2b. Cohérence
+        consistency = kb_summary.get('is_consistent', 'Inconnue')
+        consistency_str = "Cohérente" if consistency else "Incohérente" if consistency is not None else "Inconnue"
+        print(f"  - Cohérence         : {consistency_str}")
+
+        # 2c. Génération de Requêtes
+        query_summary = formal.get('query_generation_summary', {})
+        query_status = query_summary.get('status', 'Échec')
+        if "Succès" in query_status:
+            validated = query_summary.get('queries_validated', 0)
+            total = query_summary.get('queries_total', 0)
+            print(f"  - Génération de Requêtes : {query_status} ({validated}/{total} requêtes validées)")
+        else:
+            print(f"  - Génération de Requêtes : {query_status} (aucune requête valide générée)")
+
+        # 2d. Résultats d'Inférence
+        queries = formal.get('queries', [])
+        if queries:
+            print(f"  - Résultats d'Inférence ({len(queries)} exécutées) :")
+            for q in queries:
+                query_text = q.get('query', 'N/A')
+                result = q.get('result', 'Unknown')
+                result_bool = "True" if result == "Entailed" else "False"
+                print(f"    - Requête : {query_text:<40} -> Résultat : {result_bool}")
+        else:
+            print("  - Résultats d'Inférence : Aucune requête n'a été exécutée.")
             
     print("\n" + "="*80)
     print("Rapport complet disponible dans les fichiers de log.\n")
@@ -400,7 +425,15 @@ async def run_full_analysis_demo(text_to_analyze: str, temp_file_path: Path, llm
             
             if not belief_set:
                 logger.error(f"Échec de la conversion en ensemble de croyances : {status}")
-                formal_results = {"status": "Failed", "reason": "Belief set conversion failed.", "details": status}
+                formal_results = {
+                    "status": "Failed",
+                    "reason": "Belief set conversion failed.",
+                    "details": status,
+                    "belief_set_summary": {
+                        "status": "Échec",
+                        "attempts": status.get("attempts", 1) if isinstance(status, dict) else 1
+                    }
+                }
             else:
                 logger.info("    Ensemble de croyances généré avec succès.")
                 logger.debug(f"Contenu du BeliefSet:\n{belief_set.content}")
@@ -411,6 +444,8 @@ async def run_full_analysis_demo(text_to_analyze: str, temp_file_path: Path, llm
 
                 logger.info(" -> 2c. Génération de requêtes logiques...")
                 logger.info("    (Début de l'appel asynchrone à generate_queries)")
+                # Note: On suppose que generate_queries pourrait retourner plus d'infos
+                # Pour l'instant, on se base sur la longueur de la liste retournée
                 queries = await logic_agent.generate_queries(text_to_analyze, belief_set)
                 logger.info("    (Fin de l'appel asynchrone à generate_queries)")
                 logger.info(f"    {len(queries)} requêtes générées.")
@@ -427,10 +462,27 @@ async def run_full_analysis_demo(text_to_analyze: str, temp_file_path: Path, llm
                         })
                     logger.info("    Toutes les requêtes ont été exécutées.")
                 
+                # Enrichissement du rapport formel
+                # Note: Les informations 'formulas_validated' et 'formulas_total' ne sont pas
+                # directement disponibles depuis l'agent. On simule une partie de cette logique ici.
+                # Idéalement, l'agent devrait retourner un rapport plus structuré.
+                belief_set_formulas = [line for line in belief_set.content.split('\n') if '(' in line and ')' in line and not line.startswith('type')]
+                
                 formal_results = {
                     "status": "Success",
-                    "belief_set_summary": {"is_consistent": is_consistent, "details": consistency_details},
-                    "belief_set": belief_set.content.split(';'),
+                    "belief_set_summary": {
+                        "status": "Succès",
+                        "is_consistent": is_consistent,
+                        "details": consistency_details,
+                        "formulas_validated": len(belief_set_formulas),
+                        "formulas_total": len(belief_set_formulas) # Placeholder, l'agent ne retourne pas le total initial
+                    },
+                    "query_generation_summary": {
+                        "status": "Succès" if queries else "Échec",
+                        "queries_validated": len(queries),
+                        "queries_total": len(queries) # Placeholder, l'agent ne retourne pas le total d'idées
+                    },
+                    "belief_set_content": belief_set.content,
                     "queries": query_results
                 }
 

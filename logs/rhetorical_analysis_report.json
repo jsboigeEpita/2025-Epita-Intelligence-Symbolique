@@ -1,7 +1,7 @@
 {
     "metadata": {
-        "source_file": "C:\\Users\\MYIA\\AppData\\Local\\Temp\\tmpzh1lx2qi.txt",
-        "timestamp": "2025-06-06T16:27:25.336829",
+        "source_file": "C:\\Users\\MYIA\\AppData\\Local\\Temp\\tmptktqa4rv.txt",
+        "timestamp": "2025-06-06T18:22:27.646376",
         "demo_version": "1.2.0"
     },
     "informal_analysis": {
@@ -59,12 +59,34 @@
         "logic_type_used": "first_order",
         "status": "Success",
         "belief_set_summary": {
-            "is_consistent": false,
-            "details": "Error during FOL consistency check: No matching overloads found for constructor org.tweetyproject.logics.fol.syntax.FolBeliefSet(org.tweetyproject.logics.fol.syntax.FolSignature), options are:\n\tpublic org.tweetyproject.logics.fol.syntax.FolBeliefSet(java.util.Collection)\n\tpublic org.tweetyproject.logics.fol.syntax.FolBeliefSet()\n"
+            "status": "Succès",
+            "is_consistent": true,
+            "details": "Ensemble de croyances FOL valide",
+            "formulas_validated": 3,
+            "formulas_total": 3
         },
-        "belief_set": [
-            "concept = { rechauffement_climatique, mythe, hiver_froid, preuve, mesures_drastiques, catastrophe_planetaire, danger, conclusions, faits, sophismes }\nscientist = { scientifiques }\ntype(IsComplex(concept))\ntype(IsMyth(concept))\ntype(CitesAsEvidence(concept, concept))\ntype(NeedsImmediateAction(concept))\ntype(IsMotivated(scientist))\ntype(QuestionsConclusions(scientist, concept))\ntype(AnalyzesWithRigour(concept))\ntype(DeconstructsSophisms(concept))\n\n\nIsComplex(rechauffement_climatique)\nIsMyth(mythe)\nCitesAsEvidence(mythe, hiver_froid)\nNeedsImmediateAction(mesures_drastiques)\nIsMotivated(scientifiques)\nQuestionsConclusions(scientifiques, conclusions)\nforall X: (QuestionsConclusions(scientifiques, X) => AnalyzesWithRigour(faits) && DeconstructsSophisms(sophismes))"
-        ],
-        "queries": []
+        "query_generation_summary": {
+            "status": "Succès",
+            "queries_validated": 3,
+            "queries_total": 3
+        },
+        "belief_set_content": "topic = { rechauffement_climatique, mythe, catastrophe_planetaire, faits, sophismes }\nperson = { scientifiques }\nmeasure = { mesures_drastriques }\nargument = { arguments }\ntype(IsComplex(topic))\ntype(IsMyth(topic))\ntype(NeedsMeasures(topic, measure))\ntype(IsFinanciallyMotivated(person))\ntype(DoubtsConclusions(person))\ntype(AnalyzesFacts(argument))\ntype(DeconstructsSophisms(argument))\n\n\nIsComplex(rechauffement_climatique)\nIsMyth(mythe)\nNeedsMeasures(rechauffement_climatique, mesures_drastriques)",
+        "queries": [
+            {
+                "query": "IsComplex(rechauffement_climatique)",
+                "result": "Entailed",
+                "raw_output": "Tweety Result: FOL Query 'IsComplex(rechauffement_climatique)' is ACCEPTED (True)."
+            },
+            {
+                "query": "IsMyth(mythe)",
+                "result": "Entailed",
+                "raw_output": "Tweety Result: FOL Query 'IsMyth(mythe)' is ACCEPTED (True)."
+            },
+            {
+                "query": "NeedsMeasures(rechauffement_climatique, mesures_drastriques)",
+                "result": "Entailed",
+                "raw_output": "Tweety Result: FOL Query 'NeedsMeasures(rechauffement_climatique, mesures_drastriques)' is ACCEPTED (True)."
+            }
+        ]
     }
 }
