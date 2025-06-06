@@ -1,7 +1,7 @@
 {
     "metadata": {
-        "source_file": "C:\\Users\\MYIA\\AppData\\Local\\Temp\\tmpb9ixsq66.txt",
-        "timestamp": "2025-06-06T18:19:48.914068",
+        "source_file": "C:\\Users\\MYIA\\AppData\\Local\\Temp\\tmptktqa4rv.txt",
+        "timestamp": "2025-06-06T18:22:27.646376",
         "demo_version": "1.2.0"
     },
     "informal_analysis": {
@@ -62,20 +62,30 @@
             "status": "Succès",
             "is_consistent": true,
             "details": "Ensemble de croyances FOL valide",
-            "formulas_validated": 5,
-            "formulas_total": 5
+            "formulas_validated": 3,
+            "formulas_total": 3
         },
         "query_generation_summary": {
             "status": "Succès",
-            "queries_validated": 1,
-            "queries_total": 1
+            "queries_validated": 3,
+            "queries_total": 3
         },
-        "belief_set_content": "subject = { rechauffement_climatique, mythe, hiver_froid, mesures_drastiques, catastrophe_planetaire, scientifiques, danger, conclusions, arguments, faits, sophismes }\nconcept = { complexite, urgence, motivation_financiere, rigueur }\ntype(IsComplexSubject(subject))\ntype(IsMyth(subject))\ntype(CitesAsProof(subject, subject))\ntype(NeedsDrasticMeasures(subject))\ntype(AvoidsPlanetaryCatastrophe(subject))\ntype(AlertsOnDanger(subject))\ntype(FinanciallyMotivated(subject))\ntype(AnalyzesFacts(subject))\ntype(DeconstructsSophisms(subject))\n\n\nIsComplexSubject(rechauffement_climatique)\nNeedsDrasticMeasures(mesures_drastiques)\nAvoidsPlanetaryCatastrophe(catastrophe_planetaire)\nAnalyzesFacts(faits)\nDeconstructsSophisms(sophismes)",
+        "belief_set_content": "topic = { rechauffement_climatique, mythe, catastrophe_planetaire, faits, sophismes }\nperson = { scientifiques }\nmeasure = { mesures_drastriques }\nargument = { arguments }\ntype(IsComplex(topic))\ntype(IsMyth(topic))\ntype(NeedsMeasures(topic, measure))\ntype(IsFinanciallyMotivated(person))\ntype(DoubtsConclusions(person))\ntype(AnalyzesFacts(argument))\ntype(DeconstructsSophisms(argument))\n\n\nIsComplex(rechauffement_climatique)\nIsMyth(mythe)\nNeedsMeasures(rechauffement_climatique, mesures_drastriques)",
         "queries": [
             {
-                "query": "IsComplexSubject(rechauffement_climatique)",
+                "query": "IsComplex(rechauffement_climatique)",
                 "result": "Entailed",
-                "raw_output": "Tweety Result: FOL Query 'IsComplexSubject(rechauffement_climatique)' is ACCEPTED (True)."
+                "raw_output": "Tweety Result: FOL Query 'IsComplex(rechauffement_climatique)' is ACCEPTED (True)."
+            },
+            {
+                "query": "IsMyth(mythe)",
+                "result": "Entailed",
+                "raw_output": "Tweety Result: FOL Query 'IsMyth(mythe)' is ACCEPTED (True)."
+            },
+            {
+                "query": "NeedsMeasures(rechauffement_climatique, mesures_drastriques)",
+                "result": "Entailed",
+                "raw_output": "Tweety Result: FOL Query 'NeedsMeasures(rechauffement_climatique, mesures_drastriques)' is ACCEPTED (True)."
             }
         ]
     }
