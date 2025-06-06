@@ -10,14 +10,13 @@ from abc import ABC, abstractmethod
 from typing import Dict, Any, Optional, Tuple, List
 import logging
 
-from semantic_kernel.agents import Agent
 from semantic_kernel import Kernel # Exemple d'importation
 
 from argumentation_analysis.agents.core.logic.belief_set import BeliefSet
 # from argumentation_analysis.agents.core.logic.tweety_bridge import TweetyBridge
 
 
-class BaseAgent(Agent):
+class BaseAgent(ABC):
     """
     Classe de base abstraite pour tous les agents du système.
 
@@ -37,7 +36,8 @@ class BaseAgent(Agent):
     _agent_name: str
     _logger: logging.Logger
     _llm_service_id: Optional[str]
-    # _system_prompt: Optional[str] # Déjà dans Agent as instructions
+    _system_prompt: Optional[str]
+    _description: Optional[str]
 
     def __init__(self, kernel: 'Kernel', agent_name: str, system_prompt: Optional[str] = None, description: Optional[str] = None):
         """
@@ -52,15 +52,12 @@ class BaseAgent(Agent):
         :param description: La description optionnelle de l'agent.
         :type description: Optional[str]
         """
-        super().__init__(
-            name=agent_name,
-            description=description if description else (system_prompt if system_prompt else f"Agent {agent_name}"),
-            instructions=system_prompt if system_prompt else "",
-            kernel=kernel
-        )
+        self._kernel = kernel  # Stockage local du kernel pour l'accès via la property sk_kernel
+        self._agent_name = agent_name
         self._logger = logging.getLogger(f"agent.{self.__class__.__name__}.{agent_name}")
         self._llm_service_id = None # Initialisé dans setup_agent_components
         self._system_prompt = system_prompt
+        self._description = description if description else (system_prompt if system_prompt else f"Agent {agent_name}")
 
     @property
     def name(self) -> str:
@@ -71,6 +68,26 @@ class BaseAgent(Agent):
         :rtype: str
         """
         return self._agent_name
+    
+    @property
+    def description(self) -> Optional[str]:
+        """
+        Retourne la description de l'agent.
+
+        :return: La description de l'agent.
+        :rtype: Optional[str]
+        """
+        return self._description
+    
+    @property
+    def instructions(self) -> Optional[str]:
+        """
+        Retourne les instructions système de l'agent.
+
+        :return: Les instructions système de l'agent.
+        :rtype: Optional[str]
+        """
+        return self._system_prompt
 
     @property
     def sk_kernel(self) -> 'Kernel':
@@ -148,17 +165,20 @@ class BaseAgent(Agent):
             "capabilities": self.get_agent_capabilities()
         }
     
+    @abstractmethod
     async def get_response(self, *args, **kwargs):
-        """Méthode abstraite de Agent."""
-        raise NotImplementedError("get_response n'est pas implémenté dans BaseAgent.")
+        """Méthode abstraite pour obtenir une réponse de l'agent."""
+        pass
 
+    @abstractmethod
     async def invoke(self, *args, **kwargs):
-        """Méthode abstraite de Agent."""
-        raise NotImplementedError("invoke n'est pas implémenté dans BaseAgent.")
+        """Méthode abstraite pour invoquer l'agent."""
+        pass
 
     async def invoke_stream(self, *args, **kwargs):
-        """Méode abstraite de Agent."""
-        raise NotImplementedError("invoke_stream n'est pas implémenté dans BaseAgent.")
+        """Méthode par défaut pour le streaming - peut être surchargée."""
+        result = await self.invoke(*args, **kwargs)
+        yield result
  
      # Optionnel, à considérer pour une interface d'appel atomique standardisée
      # def invoke_atomic(self, method_name: str, **kwargs) -> Any:

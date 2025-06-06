@@ -165,7 +165,7 @@ class TestStrategicTacticalInterface:
         }
         
         # Configurer le mock pour get_pending_reports
-        self.mock_strategic_adapter.get_pending_reports.return_value = []
+        mock_strategic_adapter.get_pending_reports.return_value = []
         
         # Appeler la méthode à tester
         result = interface.process_tactical_report(tactical_report)
@@ -368,6 +368,8 @@ class TestStrategicTacticalInterface:
         
         # Vérifier que la méthode request_tactical_info a été appelée (corrigé)
         mock_strategic_adapter.request_tactical_info.assert_called_once_with( # Corrigé ici
+            request_type="tactical_status",
+            parameters={},
             recipient_id="tactical_coordinator",
             timeout=5.0
         )
