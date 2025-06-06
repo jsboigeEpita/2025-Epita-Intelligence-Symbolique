@@ -140,28 +140,70 @@ Prompt pour générer des formules FOL à partir d'un texte et de définitions.
 Attend `$input` (texte source) et `$definitions` (JSON des sorts et prédicats).
 """
 
-PROMPT_GEN_FOL_QUERIES = """
-Vous êtes un expert en logique du premier ordre. Votre tâche est de générer des requêtes pertinentes en logique du premier ordre pour interroger un ensemble de croyances (belief set) donné.
+PROMPT_GEN_FOL_QUERIES_IDEAS = """
+Vous êtes un expert en logique du premier ordre. Votre tâche est de générer des "idées" de requêtes pertinentes pour interroger un ensemble de croyances (belief set) donné.
 
-Voici le texte source:
+**Contexte Fourni:**
+1.  **Texte Original**: Le texte qui motive l'analyse.
+2.  **Ensemble de Croyances (Knowledge Base)**: Une description structurée de la logique extraite du texte, contenant les `sorts` (types et leurs constantes) et les `predicates` (relations et leur arité).
+
+**Votre Tâche:**
+Générez un objet JSON contenant UNIQUEMENT la clé `query_ideas`.
+La valeur de `query_ideas` doit être une liste d'objets JSON, où chaque objet représente une idée de requête et contient deux clés :
+1.  `predicate_name`: Le nom d'un prédicat à interroger (ex: "IsMan").
+2.  `constants`: Une liste des constantes à utiliser comme arguments pour ce prédicat (ex: ["socrates"]).
+
+**Règles Strictes:**
+*   **Utilisation Exclusive**: N'utilisez QUE les `predicates` et `constants` qui existent dans l'ensemble de croyances fourni. N'en inventez pas.
+*   **Pertinence**: Les idées de requêtes doivent être pertinentes par rapport au texte original et chercher à vérifier des conclusions ou des faits intéressants.
+*   **Format de Sortie**: Votre sortie DOIT être un objet JSON valide, sans aucun texte ou explication supplémentaire.
+
+**Exemple:**
+Texte Original: "Socrate est un homme. Tous les hommes sont mortels."
+Ensemble de Croyances:
+```json
+{
+  "sorts": {
+    "person": ["socrates"],
+    "concept": ["mortal"]
+  },
+  "predicates": [
+    { "name": "IsMan", "args": ["person"] },
+    { "name": "IsMortal", "args": ["person"] }
+  ],
+  "formulas": [
+    "IsMan(socrates)",
+    "forall X: (IsMan(X) => IsMortal(X))"
+  ]
+}
+```
+
+**Sortie JSON attendue:**
+```json
+{
+  "query_ideas": [
+    {
+      "predicate_name": "IsMortal",
+      "constants": ["socrates"]
+    },
+    {
+      "predicate_name": "IsMan",
+      "constants": ["socrates"]
+    }
+  ]
+}
+```
+
+Maintenant, analysez le contexte suivant et générez les idées de requêtes.
+
+**Texte Original:**
 {{$input}}
 
-Voici l'ensemble de croyances en logique du premier ordre:
+**Ensemble de Croyances:**
 {{$belief_set}}
-
-Générez 3 à 5 requêtes pertinentes en logique du premier ordre qui permettraient de vérifier des implications importantes ou des conclusions intéressantes à partir de cet ensemble de croyances. Utilisez la même syntaxe que celle de l'ensemble de croyances.
-
-Règles importantes:
-1. Les requêtes doivent être des formules bien formées en logique du premier ordre
-2. Utilisez uniquement des prédicats, constantes et variables déjà définis dans l'ensemble de croyances
-3. Chaque requête doit être sur une ligne séparée
-4. N'incluez pas de point-virgule à la fin des requêtes
-5. Assurez-vous que les requêtes sont pertinentes par rapport au texte source
-
-Répondez uniquement avec les requêtes, sans explications supplémentaires.
 """
 """
-Prompt pour générer des requêtes FOL pertinentes à partir d'un texte et d'un ensemble de croyances FOL.
+Prompt pour générer des idées de requêtes FOL au format JSON.
 Attend `$input` (texte source) et `$belief_set` (l'ensemble de croyances FOL).
 """
 
@@ -291,8 +333,8 @@ class FirstOrderLogicAgent(BaseLogicAgent):
              "Extrait les sorts et prédicats FOL d'un texte."),
             ("TextToFOLFormulas", PROMPT_TEXT_TO_FOL_FORMULAS,
              "Génère les formules FOL à partir d'un texte et de définitions."),
-            ("GenerateFOLQueries", PROMPT_GEN_FOL_QUERIES,
-             "Génère requêtes FOL pertinentes (syntaxe Tweety pour logique du premier ordre)."),
+            ("GenerateFOLQueryIdeas", PROMPT_GEN_FOL_QUERIES_IDEAS,
+             "Génère des idées de requêtes FOL au format JSON."),
             ("InterpretFOLResult", PROMPT_INTERPRET_FOL,
              "Interprète résultat requête FOL Tweety formaté.")
         ]
@@ -625,86 +667,132 @@ class FirstOrderLogicAgent(BaseLogicAgent):
         is_valid, message = self.tweety_bridge.validate_fol_formula(query)
         return is_valid, message if not is_valid else None
 
-    async def generate_queries(self, text: str, belief_set: BeliefSet, context: Optional[Dict[str, Any]] = None) -> List[str]:
+    def _parse_belief_set_content(self, belief_set_content: str) -> Dict[str, Any]:
         """
-        Génère des requêtes FOL pertinentes avec une boucle d'auto-correction.
-
-        Tente de générer et valider des requêtes. Si toutes les requêtes d'une
-        tentative sont invalides, il utilise les erreurs pour demander au LLM de
-        les corriger, jusqu'à un maximum de 3 tentatives.
-
-        :param text: Le texte en langage naturel source.
-        :param belief_set: L'ensemble de croyances FOL associé.
-        :param context: Un dictionnaire optionnel de contexte.
-        :return: Une liste de requêtes FOL valides, ou une liste vide si aucune
-                 requête valide n'a pu être générée.
+        Analyse le contenu textuel d'un belief set pour en extraire les sorts,
+        constantes et prédicats avec leur arité.
         """
-        self.logger.info(f"Génération de requêtes FOL pour l'agent {self.name}...")
-        
-        max_retries = 3
-        last_errors = []
-        
-        # Initialiser les arguments pour le premier appel
-        args = {
-            "input": text,
-            "belief_set": belief_set.content
+        knowledge_base = {
+            "sorts": {},
+            "constants": set(),
+            "predicates": {}
         }
 
-        for attempt in range(max_retries):
-            self.logger.info(f"Tentative de génération de requêtes {attempt + 1}/{max_retries}...")
+        # Extraction des sorts et constantes
+        sort_matches = re.findall(r'(\w+)\s*=\s*\{\s*([^}]+)\s*\}', belief_set_content)
+        for sort_name, constants_str in sort_matches:
+            constants = {c.strip() for c in constants_str.split(',')}
+            knowledge_base["sorts"][sort_name] = constants
+            knowledge_base["constants"].update(constants)
+
+        # Extraction des prédicats et de leur arité
+        predicate_matches = re.findall(r'type\(([\w_]+)(?:\(([^)]*)\))?\)', belief_set_content)
+        for pred_name, args_str in predicate_matches:
+            if args_str:
+                args = [arg.strip() for arg in args_str.split(',')]
+                arity = len(args)
+            else:
+                arity = 0
+            knowledge_base["predicates"][pred_name] = arity
             
-            try:
-                result = await self.sk_kernel.plugins[self.name]["GenerateFOLQueries"].invoke(self.sk_kernel, **args)
-                queries_text = str(result)
-                
-                potential_queries = [q.strip() for q in queries_text.split('\n') if q.strip()]
-                
-                if not potential_queries:
-                    self.logger.warning("Le LLM n'a généré aucune requête. Nouvelle tentative.")
-                    args["input"] = f"La tentative précédente n'a produit aucune requête. Veuillez générer des requêtes valides basées sur le texte original:\n{text}"
-                    continue
+        return knowledge_base
 
-                valid_queries = []
-                invalid_queries_with_errors = []
+    async def generate_queries(self, text: str, belief_set: BeliefSet, context: Optional[Dict[str, Any]] = None) -> List[str]:
+        """
+        Génère des requêtes FOL valides en utilisant une approche de "Modèle de Requête".
+        
+        1. Le LLM génère des "idées" de requêtes (prédicat + constantes).
+        2. Le code Python valide rigoureusement chaque idée par rapport à la base de connaissances.
+        3. Le code Python assemble les requêtes finales uniquement pour les idées valides.
+        
+        Cette approche garantit que 100% des requêtes générées sont syntaxiquement et
+        sémantiquement correctes.
+        """
+        self.logger.info(f"Génération de requêtes FOL via le modèle de requête pour {self.name}...")
+        response_text = ""
+        try:
+            # Étape 1: Extraire les informations de la base de connaissances
+            kb_details = self._parse_belief_set_content(belief_set.content)
+            self.logger.debug(f"Détails de la KB extraits: {kb_details}")
 
-                for query in potential_queries:
-                    is_valid, error_message = self._validate_query(query)
-                    if is_valid:
-                        valid_queries.append(query)
-                    else:
-                        invalid_queries_with_errors.append(f"- Requête: `{query}`\n  Erreur: {error_message}")
+            # Étape 2: Générer les idées de requêtes avec le LLM
+            args = {
+                "input": text,
+                "belief_set": belief_set.content
+            }
+            
+            result = await self.sk_kernel.plugins[self.name]["GenerateFOLQueryIdeas"].invoke(self.sk_kernel, **args)
+            response_text = str(result)
+            
+            # Extraire le bloc JSON de la réponse
+            json_block = self._extract_json_block(response_text)
+            if not json_block:
+                self.logger.error("Aucun bloc JSON trouvé dans la réponse du LLM pour les idées de requêtes.")
+                return []
                 
-                if valid_queries:
-                    self.logger.info(f"Génération de {len(valid_queries)} requêtes valides réussie.")
-                    return valid_queries
-                
-                # Si on arrive ici, toutes les requêtes étaient invalides
-                self.logger.warning(f"Toutes les {len(potential_queries)} requêtes générées sont invalides à la tentative {attempt + 1}.")
-                
-                last_errors = invalid_queries_with_errors
-                errors_str = "\n".join(last_errors)
-                
-                # Préparer le prompt pour la prochaine tentative de correction
-                correction_prompt = (
-                    f"Les requêtes précédemment générées étaient toutes syntaxiquement incorrectes. "
-                    f"Veuillez les corriger en respectant la syntaxe de la logique du premier ordre et les prédicats/sorts définis.\n\n"
-                    f"Texte original:\n{text}\n\n"
-                    f"Ensemble de croyances:\n{belief_set.content}\n\n"
-                    f"Requêtes invalides et erreurs:\n{errors_str}\n\n"
-                    f"Veuillez fournir une nouvelle liste de requêtes corrigées et valides."
-                )
-                args["input"] = correction_prompt
+            query_ideas_data = json.loads(json_block)
+            query_ideas = query_ideas_data.get("query_ideas", [])
 
-            except Exception as e:
-                self.logger.error(f"Erreur inattendue lors de la génération des requêtes à la tentative {attempt + 1}: {e}", exc_info=True)
-                # En cas d'erreur majeure, on arrête la boucle
+            if not query_ideas:
+                self.logger.warning("Le LLM n'a généré aucune idée de requête.")
                 return []
 
-        self.logger.error(f"Échec de la génération de requêtes valides après {max_retries} tentatives.")
-        if last_errors:
-            self.logger.error(f"Dernières erreurs de validation:\n" + "\n".join(last_errors))
-            
-        return []
+            self.logger.info(f"{len(query_ideas)} idées de requêtes reçues du LLM.")
+
+            # Étape 3: Assemblage et validation des requêtes
+            valid_queries = []
+            for idea in query_ideas:
+                predicate_name = idea.get("predicate_name")
+                constants = idea.get("constants", [])
+
+                # Validation 1: Le nom du prédicat est-il une chaîne de caractères ?
+                if not isinstance(predicate_name, str):
+                    self.logger.warning(f"Idée de requête ignorée: 'predicate_name' n'est pas une chaîne -> {predicate_name}")
+                    continue
+
+                # Validation 2: Le prédicat existe-t-il dans la KB ?
+                if predicate_name not in kb_details["predicates"]:
+                    self.logger.warning(f"Idée de requête ignorée: Le prédicat '{predicate_name}' n'existe pas dans la KB.")
+                    continue
+
+                # Validation 3: Les constantes sont-elles une liste ?
+                if not isinstance(constants, list):
+                    self.logger.warning(f"Idée de requête ignorée pour '{predicate_name}': 'constants' n'est pas une liste -> {constants}")
+                    continue
+
+                # Validation 4: Toutes les constantes existent-elles dans la KB ?
+                if not all(c in kb_details["constants"] for c in constants):
+                    invalid_consts = [c for c in constants if c not in kb_details["constants"]]
+                    self.logger.warning(f"Idée de requête ignorée pour '{predicate_name}': Constantes non valides: {invalid_consts}")
+                    continue
+
+                # Validation 5: L'arité du prédicat correspond-elle au nombre de constantes ?
+                expected_arity = kb_details["predicates"][predicate_name]
+                actual_arity = len(constants)
+                if expected_arity != actual_arity:
+                    self.logger.warning(f"Idée de requête ignorée pour '{predicate_name}': Incohérence d'arité. Attendu: {expected_arity}, Reçu: {actual_arity}")
+                    continue
+                
+                # Si toutes les validations passent, on assemble la requête
+                query_string = f"{predicate_name}({', '.join(constants)})"
+                
+                # Une dernière validation avec Tweety pour être sûr
+                is_valid, _ = self._validate_query(query_string)
+                if is_valid:
+                    self.logger.info(f"Requête valide assemblée: {query_string}")
+                    valid_queries.append(query_string)
+                else:
+                    self.logger.warning(f"Requête assemblée '{query_string}' a échoué à la validation finale de Tweety.")
+
+            self.logger.info(f"Génération terminée. {len(valid_queries)} requêtes valides assemblées.")
+            return valid_queries
+
+        except json.JSONDecodeError as e:
+            self.logger.error(f"Erreur de décodage JSON lors de la génération des requêtes: {e}\nRéponse du LLM: {response_text}")
+            return []
+        except Exception as e:
+            self.logger.error(f"Erreur inattendue lors de la génération des requêtes: {e}", exc_info=True)
+            return []
     
     def execute_query(self, belief_set: BeliefSet, query: str) -> Tuple[Optional[bool], str]:
         """
