@@ -352,10 +352,10 @@ class TestTweetyBridge(unittest.TestCase):
         else:
             # Exécuter une requête acceptée avec la vraie JVM
             result = self.tweety_bridge.execute_pl_query("a; a=>b", "b") # KB: a, a implies b. Query: b.
-            self.assertIn("ACCEPTED", result, f"Query 'b' from 'a; a=>b' should be ACCEPTED. Result: {result}")
+            self.assertIn("ACCEPTED (True)", result[1], f"Query 'b' from 'a; a=>b' should be ACCEPTED. Result: {result}")
             
             result_complex = self.tweety_bridge.execute_pl_query("p1; p2; (p1 && p2) => q", "q")
-            self.assertIn("ACCEPTED", result_complex, f"Query 'q' from 'p1; p2; (p1 && p2) => q' should be ACCEPTED. Result: {result_complex}")
+            self.assertIn("ACCEPTED (True)", result_complex[1], f"Query 'q' from 'p1; p2; (p1 && p2) => q' should be ACCEPTED. Result: {result_complex}")
 
     def test_execute_pl_query_rejected(self):
         """Test de l'exécution d'une requête propositionnelle rejetée."""
@@ -389,7 +389,7 @@ class TestTweetyBridge(unittest.TestCase):
         else:
             # Exécuter une requête rejetée avec la vraie JVM
             result = self.tweety_bridge.execute_pl_query("a; a=>b", "c") # KB: a, a implies b. Query: c.
-            self.assertIn("REJECTED", result, f"Query 'c' from 'a; a=>b' should be REJECTED. Result: {result}")
+            self.assertIn("REJECTED (False)", result[1], f"Query 'c' from 'a; a=>b' should be REJECTED. Result: {result}")
 
     def test_execute_pl_query_error(self):
         """Test de l'exécution d'une requête propositionnelle avec erreur."""
@@ -409,9 +409,9 @@ class TestTweetyBridge(unittest.TestCase):
         else:
             # Exécuter une requête avec erreur de syntaxe dans la base avec la vraie JVM
             result = self.tweety_bridge.execute_pl_query("a ==>; b", "c") 
-            self.assertIn("FUNC_ERROR", result, f"Query with syntax error in KB should be FUNC_ERROR. Result: {result}")
+            self.assertIn("ERREUR:", result[1], f"Query with syntax error in KB should be ERREUR. Result: {result}")
             self.assertTrue(result) # S'assurer que le message d'erreur n'est pas vide
-            self.assertTrue("error" in result.lower() or "exception" in result.lower() or "parsing" in result.lower(), f"Error message '{result}' should contain 'error', 'exception', or 'parsing'.")
+            self.assertTrue("error" in result[1].lower() or "exception" in result[1].lower() or "parsing" in result[1].lower(), f"Error message '{result}' should contain 'error', 'exception', or 'parsing'.")
 
     def test_validate_fol_formula(self):
         """Test de la validation d'une formule du premier ordre."""

@@ -17,6 +17,9 @@ import sys
 from pathlib import Path
 import semantic_kernel as sk
 
+# Configuration pytest-asyncio
+pytestmark = pytest.mark.asyncio
+
 # Ajouter le répertoire parent au chemin de recherche des modules
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
@@ -29,8 +32,6 @@ from argumentation_analysis.orchestration.hierarchical.tactical.state import Tac
 from argumentation_analysis.core.communication import MessageMiddleware, Channel, ChannelType
 
 from argumentation_analysis.paths import RESULTS_DIR
-
-
 
 # Désactiver les logs pendant les tests
 logging.basicConfig(level=logging.ERROR)
@@ -72,8 +73,17 @@ class TestOperationalAgentsIntegration:
         
         yield tactical_state, operational_state, interface, manager, sample_text
         
+        # Cleanup AsyncIO tasks
+        try:
+            tasks = [task for task in asyncio.all_tasks() if not task.done()]
+            if tasks:
+                await asyncio.gather(*tasks, return_exceptions=True)
+        except Exception:
+            pass
+        
         await manager.stop()
     
+    @pytest.mark.asyncio
     async def test_agent_registry_initialization(self, operational_components):
         """Teste l'initialisation du registre d'agents."""
         _, operational_state, _, _, _ = operational_components
@@ -95,6 +105,7 @@ class TestOperationalAgentsIntegration:
         assert "text_extraction" in capabilities
     
     @patch("argumentation_analysis.orchestration.hierarchical.operational.adapters.extract_agent_adapter.ExtractAgentAdapter.process_task")
+    @pytest.mark.asyncio
     async def test_extract_agent_task_processing(self, mock_process_task, operational_components):
         """Teste le traitement d'une tâche par l'agent d'extraction."""
         tactical_state, _, _, manager, sample_text = operational_components

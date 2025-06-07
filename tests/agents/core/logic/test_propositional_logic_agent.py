@@ -98,7 +98,7 @@ class TestPropositionalLogicAgent:
         belief_set, message = await self.agent.text_to_belief_set("Texte de test")
         
         self.kernel.invoke.assert_called_once()
-        self.mock_tweety_bridge_instance.validate_belief_set.assert_called_once_with(belief_set_str="invalid_pl_syntax {")
+        self.mock_tweety_bridge_instance.validate_belief_set.assert_called_once_with(belief_set_string="invalid_pl_syntax {")
         
         assert belief_set is None
         assert message == "Ensemble de croyances invalide: Erreur de syntaxe"

@@ -5,14 +5,41 @@ Tests unitaires pour l'agent d'extraction.
 
 import asyncio
 import pytest
-from unittest.mock import MagicMock # patch n'est plus utilisé comme décorateur ici
+import pytest_asyncio
+from unittest.mock import MagicMock, AsyncMock # patch n'est plus utilisé comme décorateur ici
 import argumentation_analysis.agents.core.extract.extract_agent as agent_module_to_patch # Module à patcher
 
 from argumentation_analysis.agents.core.extract.extract_agent import ExtractAgent
 from argumentation_analysis.agents.core.extract.extract_definitions import ExtractAgentPlugin, ExtractResult
 
-@pytest.fixture
-def extract_agent_data():
+
+class MockExtractAgent(ExtractAgent):
+    """Mock d'ExtractAgent qui implémente les méthodes abstraites."""
+    
+    def __init__(self, kernel, find_similar_text_func=None, extract_text_func=None):
+        super().__init__(
+            kernel=kernel,
+            agent_name="MockExtractAgent",
+            find_similar_text_func=find_similar_text_func,
+            extract_text_func=extract_text_func
+        )
+    
+    def get_agent_capabilities(self):
+        return {"text_extraction": True, "marker_detection": True}
+    
+    async def setup_agent_components(self, llm_service_id: str):
+        self._llm_service_id = llm_service_id
+        # Mock setup
+        pass
+    
+    async def get_response(self, *args, **kwargs):
+        return MagicMock()
+    
+    async def invoke(self, *args, **kwargs):
+        return MagicMock()
+
+@pytest_asyncio.fixture
+async def extract_agent_data():
     """Fixture pour initialiser l'agent d'extraction et ses mocks, et patcher load_source_text DANS le module agent."""
 
     original_load_source_text_in_agent_module = agent_module_to_patch.load_source_text
@@ -24,7 +51,7 @@ def extract_agent_data():
     find_similar_text_mock = MagicMock()
     extract_text_mock = MagicMock()
 
-    agent = ExtractAgent(
+    agent = MockExtractAgent(
         kernel=kernel_mock,
         find_similar_text_func=find_similar_text_mock,
         extract_text_func=extract_text_mock
@@ -51,13 +78,21 @@ def extract_agent_data():
 
     yield fixture_data
 
+    # Cleanup AsyncIO tasks
+    try:
+        tasks = [task for task in asyncio.all_tasks() if not task.done()]
+        if tasks:
+            await asyncio.gather(*tasks, return_exceptions=True)
+    except Exception:
+        pass
+
     agent_module_to_patch.load_source_text = original_load_source_text_in_agent_module
 
 
 class TestExtractAgent:
     """Tests pour la classe ExtractAgent."""
 
-    @pytest.mark.anyio
+    @pytest.mark.asyncio
     async def test_extract_from_name_success(self, extract_agent_data):
         """Teste l'extraction réussie à partir du nom."""
         agent = extract_agent_data["agent"]
@@ -98,7 +133,7 @@ class TestExtractAgent:
             ""
         )
 
-    @pytest.mark.anyio
+    @pytest.mark.asyncio
     async def test_extract_from_name_invalid_markers(self, extract_agent_data):
         """Teste l'extraction avec des marqueurs invalides."""
         agent = extract_agent_data["agent"]
@@ -123,7 +158,7 @@ class TestExtractAgent:
         kernel_mock.invoke.assert_called_once()
         extract_text_mock.assert_not_called()
 
-    @pytest.mark.anyio
+    @pytest.mark.asyncio
     async def test_extract_from_name_markers_not_found(self, extract_agent_data):
         """Teste l'extraction avec des marqueurs non trouvés dans le texte."""
         agent = extract_agent_data["agent"]
@@ -150,7 +185,7 @@ class TestExtractAgent:
         kernel_mock.invoke.assert_called_once()
         extract_text_mock.assert_called_once()
 
-    @pytest.mark.anyio
+    @pytest.mark.asyncio
     async def test_extract_from_name_validation_rejected(self, extract_agent_data):
         """Teste l'extraction avec validation rejetée."""
         agent = extract_agent_data["agent"]
@@ -184,7 +219,7 @@ class TestExtractAgent:
         assert kernel_mock.invoke.call_count == 2
         extract_text_mock.assert_called_once()
 
-    @pytest.mark.anyio
+    @pytest.mark.asyncio
     async def test_repair_extract_valid(self, extract_agent_data):
         """Teste la réparation d'un extrait valide."""
         agent = extract_agent_data["agent"]
@@ -220,7 +255,7 @@ class TestExtractAgent:
         extract_text_mock.assert_called_once()
         kernel_mock.invoke.assert_not_called()
 
-    @pytest.mark.anyio
+    @pytest.mark.asyncio
     async def test_update_extract_markers(self, extract_agent_data):
         """Teste la mise à jour des marqueurs d'un extrait."""
         agent = extract_agent_data["agent"]
@@ -262,7 +297,7 @@ class TestExtractAgent:
         
         assert len(extract_plugin_mock.extract_results) > 0
 
-    @pytest.mark.anyio
+    @pytest.mark.asyncio
     async def test_add_new_extract(self, extract_agent_data):
         """Teste l'ajout d'un nouvel extrait."""
         agent = extract_agent_data["agent"]
