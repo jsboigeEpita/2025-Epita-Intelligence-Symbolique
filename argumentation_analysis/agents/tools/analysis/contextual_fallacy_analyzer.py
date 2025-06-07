@@ -331,3 +331,52 @@ if __name__ == "__main__":
     # Exemple d'identification de sophismes contextuels
     fallacies = analyzer.identify_contextual_fallacies(text, context)
     print(f"Sophismes contextuels identifiés: {json.dumps(fallacies, indent=2, ensure_ascii=False)}")
+def get_taxonomy_path() -> str:
+    """
+    Retourne le chemin vers le fichier de taxonomie des sophismes.
+    
+    Returns:
+        str: Chemin vers le fichier de taxonomie
+    """
+    # Chemin par défaut vers la taxonomie
+    current_dir = Path(__file__).parent
+    project_root = current_dir.parent.parent.parent
+    taxonomy_path = project_root / "data" / "fallacy_taxonomy.json"
+    
+    # Créer un fichier de taxonomie par défaut s'il n'existe pas
+    if not taxonomy_path.exists():
+        taxonomy_path.parent.mkdir(parents=True, exist_ok=True)
+        default_taxonomy = {
+            "fallacies": {
+                "Appel à l'autorité": {
+                    "description": "Utilisation de l'autorité d'une personne comme argument",
+                    "context_relevance": ["politique", "scientifique", "commercial"],
+                    "severity": "medium"
+                },
+                "Appel à la popularité": {
+                    "description": "Argument basé sur la popularité d'une idée",
+                    "context_relevance": ["politique", "commercial", "social"],
+                    "severity": "medium"
+                },
+                "Ad hominem": {
+                    "description": "Attaque contre la personne plutôt que l'argument",
+                    "context_relevance": ["politique", "juridique", "académique"],
+                    "severity": "high"
+                },
+                "Homme de paille": {
+                    "description": "Déformation de l'argument de l'adversaire",
+                    "context_relevance": ["politique", "académique", "juridique"],
+                    "severity": "high"
+                },
+                "Faux dilemme": {
+                    "description": "Présentation de seulement deux options alors qu'il y en a plus",
+                    "context_relevance": ["politique", "commercial", "juridique"],
+                    "severity": "medium"
+                }
+            }
+        }
+        
+        with open(taxonomy_path, 'w', encoding='utf-8') as f:
+            json.dump(default_taxonomy, f, ensure_ascii=False, indent=2)
+    
+    return str(taxonomy_path)
