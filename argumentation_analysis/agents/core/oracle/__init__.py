@@ -13,23 +13,27 @@ from .moriarty_interrogator_agent import MoriartyInterrogatorAgent, MoriartyTool
 from .cluedo_dataset import CluedoDataset, CluedoSuggestion, ValidationResult, RevelationRecord
 from .dataset_access_manager import DatasetAccessManager, CluedoDatasetManager, QueryCache
 from .permissions import (
-    QueryType, RevealPolicy, PermissionRule, QueryResult, 
+    QueryType, RevealPolicy, PermissionRule, QueryResult,
     OracleResponse, AccessLog, PermissionManager,
     validate_cluedo_method_access, get_default_cluedo_permissions
+)
+from .phase_d_extensions import (
+    PhaseDExtensions, RevealStrategy, NarrativeTwist,
+    RevealationTiming, NarrativeMoment, extend_oracle_state_phase_d
 )
 
 # Classes principales exportées
 __all__ = [
     # Agents Oracle
     "OracleBaseAgent",
-    "OracleTools", 
+    "OracleTools",
     "MoriartyInterrogatorAgent",
     "MoriartyTools",
     
     # Dataset et gestion
     "CluedoDataset",
     "CluedoSuggestion",
-    "ValidationResult", 
+    "ValidationResult",
     "RevelationRecord",
     "DatasetAccessManager",
     "CluedoDatasetManager",
@@ -40,11 +44,19 @@ __all__ = [
     "RevealPolicy",
     "PermissionRule",
     "QueryResult",
-    "OracleResponse", 
+    "OracleResponse",
     "AccessLog",
     "PermissionManager",
     "validate_cluedo_method_access",
     "get_default_cluedo_permissions",
+    
+    # Extensions Phase D
+    "PhaseDExtensions",
+    "RevealStrategy",
+    "NarrativeTwist",
+    "RevealationTiming",
+    "NarrativeMoment",
+    "extend_oracle_state_phase_d",
 ]
 
 # Configuration par défaut
@@ -61,8 +73,9 @@ def get_oracle_version() -> str:
     """Retourne la version du système Oracle Enhanced"""
     return __version__
 
-def get_oracle_info() -> Dict[str, Any]:
+def get_oracle_info():
     """Retourne les informations du système Oracle"""
+    from typing import Dict, Any
     return {
         "version": __version__,
         "author": __author__,
