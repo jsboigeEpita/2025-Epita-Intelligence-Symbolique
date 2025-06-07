@@ -82,7 +82,7 @@ class CluedoOracleState(EnqueteCluedoState):
         
         # Extraction des cartes de Moriarty pour le dataset
         moriarty_cards = self.cartes_distribuees.get("Moriarty", [])
-        self.cluedo_dataset = CluedoDataset(moriarty_cards=moriarty_cards)
+        self.cluedo_dataset = CluedoDataset(moriarty_cards=moriarty_cards, elements_jeu=elements_jeu_cluedo)
         
         # Configuration de la politique de révélation
         self.cluedo_dataset.reveal_policy = policy_mapping.get(oracle_strategy, RevealPolicy.BALANCED)
@@ -122,8 +122,25 @@ class CluedoOracleState(EnqueteCluedoState):
             "start_time": datetime.now().isoformat()
         }
         
+        # Attributs requis par les tests
+        self.oracle_interactions = 0  # Compatibilité tests
+        self.cards_revealed = 0  # Compteur de cartes révélées
+        self.agent_turns = {}  # Tracking détaillé des tours d'agents
+        self.recent_revelations = []  # Liste des révélations récentes (max 10)
+        
         self._logger = logging.getLogger(f"{self.__class__.__name__}.{self.workflow_id}")
         self._logger.info(f"CluedoOracleState initialisé avec {len(self.get_moriarty_cards())} cartes Moriarty - Stratégie: {oracle_strategy}")
+    
+    # Propriétés de compatibilité pour les tests
+    @property
+    def nom_enquete(self) -> str:
+        """Compatibilité avec les tests : retourne nom_enquete_cluedo."""
+        return self.nom_enquete_cluedo
+    
+    @property
+    def hypotheses(self) -> List[Dict]:
+        """Compatibilité avec les tests : retourne hypotheses_enquete."""
+        return self.hypotheses_enquete
     
     def _distribute_cards(self) -> Dict[str, List[str]]:
         """
@@ -283,6 +300,7 @@ class CluedoOracleState(EnqueteCluedoState):
         
         self.oracle_queries_count += 1
         self.workflow_metrics["oracle_interactions"] += 1
+        self.oracle_interactions += 1  # Synchronisation attribut test
         
         # Enhanced Oracle: Auto-revelation logic
         self._logger.debug(f"Enhanced Oracle check: strategy={self.oracle_strategy}, authorized={oracle_response.authorized}, query_type={query_type_enum}")
@@ -401,26 +419,44 @@ class CluedoOracleState(EnqueteCluedoState):
                 }
                 self.revelations_log.append(revelation_log)
                 self.workflow_metrics["cards_revealed"] += 1
+                self.cards_revealed += 1  # Synchronisation attribut test
     
     # Interface pour suggestions Cluedo avec Oracle
     
-    def validate_suggestion_with_oracle(self, suspect: str, arme: str, lieu: str, suggesting_agent: str) -> Dict[str, Any]:
+    async def validate_suggestion_with_oracle(self, suggestion: Dict[str, str] = None, requesting_agent: str = None,
+                                            suspect: str = None, arme: str = None, lieu: str = None, suggesting_agent: str = None) -> OracleResponse:
         """
         Valide une suggestion Cluedo via l'Oracle et enregistre le résultat.
+        Compatible avec les deux signatures de test.
         
         Args:
-            suspect: Suspect suggéré
-            arme: Arme suggérée
-            lieu: Lieu suggéré
-            suggesting_agent: Agent qui fait la suggestion
+            suggestion: Dictionnaire suggestion (nouvelle signature)
+            requesting_agent: Agent demandeur (nouvelle signature)
+            suspect: Suspect suggéré (ancienne signature)
+            arme: Arme suggérée (ancienne signature)
+            lieu: Lieu suggéré (ancienne signature)
+            suggesting_agent: Agent suggérant (ancienne signature)
             
         Returns:
-            Dictionnaire avec le résultat de validation
+            OracleResponse avec le résultat de validation
         """
+        # Compatibilité entre les deux signatures
+        if suggestion and requesting_agent:
+            # Nouvelle signature des tests
+            suspect = suggestion.get("suspect")
+            arme = suggestion.get("arme")
+            lieu = suggestion.get("lieu")
+            suggesting_agent = requesting_agent
+        elif suspect and arme and lieu and suggesting_agent:
+            # Ancienne signature
+            suggestion = {"suspect": suspect, "arme": arme, "lieu": lieu}
+        else:
+            raise ValueError("Paramètres de suggestion invalides")
+        
         # Enregistrement de la suggestion
         suggestion_record = {
             "timestamp": datetime.now().isoformat(),
-            "suggestion": {"suspect": suspect, "arme": arme, "lieu": lieu},
+            "suggestion": suggestion,
             "suggesting_agent": suggesting_agent,
             "turn_number": len(self.interaction_pattern)
         }
@@ -429,25 +465,32 @@ class CluedoOracleState(EnqueteCluedoState):
         self.workflow_metrics["suggestions_count"] += 1
         
         # Validation via Oracle
-        oracle_response = self.query_oracle(
+        oracle_response = await self.query_oracle(
             agent_name=suggesting_agent,
             query_type="suggestion_validation",
             query_params={
-                "suggestion": {"suspect": suspect, "arme": arme, "lieu": lieu}
+                "suggestion": suggestion
             }
         )
         
         # Enrichissement du record avec le résultat Oracle
+        can_refute = False
+        if oracle_response.data:
+            if hasattr(oracle_response.data, 'can_refute'):
+                can_refute = oracle_response.data.can_refute
+            elif isinstance(oracle_response.data, dict):
+                can_refute = oracle_response.data.get('can_refute', False)
+        
         suggestion_record["oracle_response"] = {
             "authorized": oracle_response.authorized,
-            "can_refute": oracle_response.data.can_refute if oracle_response.data else False,
+            "can_refute": can_refute,
             "revealed_cards": oracle_response.revealed_information,
             "message": oracle_response.message
         }
         
         self.suggestions_validated_by_oracle.append(suggestion_record)
         
-        return suggestion_record
+        return oracle_response
     
     # Méthodes d'accès aux données Oracle
     
@@ -462,6 +505,36 @@ class CluedoOracleState(EnqueteCluedoState):
     def get_revealed_cards_to_agent(self, agent_name: str) -> List[str]:
         """Retourne les cartes révélées à un agent spécifique."""
         return self.cluedo_dataset.get_revealed_cards_to_agent(agent_name)
+    
+    def add_revelation(self, revelation, revealing_agent: str) -> None:
+        """
+        Ajoute une révélation à la liste des révélations récentes.
+        
+        Args:
+            revelation: RevelationRecord à ajouter
+            revealing_agent: Nom de l'agent qui révèle l'information
+        """
+        revelation_entry = {
+            "timestamp": datetime.now().isoformat(),
+            "card_revealed": revelation.card_revealed,
+            "revelation_type": revelation.revelation_type,
+            "message": revelation.message,
+            "strategic_value": getattr(revelation, 'strategic_value', 0.8),
+            "revealing_agent": revealing_agent
+        }
+        
+        # Ajout en début de liste (plus récent en premier)
+        self.recent_revelations.insert(0, revelation_entry)
+        
+        # Limitation à 10 révélations récentes maximum
+        if len(self.recent_revelations) > 10:
+            self.recent_revelations = self.recent_revelations[:10]
+        
+        # Mise à jour des compteurs
+        self.cards_revealed += 1
+        self.workflow_metrics["cards_revealed"] += 1
+        
+        self._logger.info(f"Révélation ajoutée: {revelation.card_revealed} par {revealing_agent}")
     
     def get_oracle_statistics(self) -> Dict[str, Any]:
         """Retourne les statistiques complètes de l'Oracle."""
@@ -480,11 +553,11 @@ class CluedoOracleState(EnqueteCluedoState):
             },
             "cards_distribution": {
                 "moriarty_cards": len(self.get_moriarty_cards()),
-                "autres_joueurs_cards": len(self.get_autres_joueurs_cards()),
+                "autres_joueurs_cards": "ACCÈS_RESTREINT_INTÉGRITÉ_CLUEDO",
                 "total_revealed": len(self.revelations_log)
             },
             "dataset_statistics": dataset_stats,
-            "recent_revelations": self.revelations_log[-5:] if self.revelations_log else []
+            "recent_revelations": self.recent_revelations[-5:] if self.recent_revelations else []
         }
         
         return stats
@@ -502,6 +575,29 @@ class CluedoOracleState(EnqueteCluedoState):
         """
         self.interaction_pattern.append(agent_name)
         self.workflow_metrics["total_turns"] += 1
+        
+        # Initialisation de l'agent dans agent_turns si nécessaire
+        if agent_name not in self.agent_turns:
+            self.agent_turns[agent_name] = {
+                "total_turns": 0,
+                "recent_actions": []
+            }
+        
+        # Mise à jour des statistiques de l'agent
+        self.agent_turns[agent_name]["total_turns"] += 1
+        
+        # Ajout de l'action récente
+        action_record = {
+            "action_type": action_type,
+            "action_details": action_details or {},
+            "timestamp": datetime.now().isoformat(),
+            "turn_number": len(self.interaction_pattern)
+        }
+        self.agent_turns[agent_name]["recent_actions"].append(action_record)
+        
+        # Limitation à 10 actions récentes maximum
+        if len(self.agent_turns[agent_name]["recent_actions"]) > 10:
+            self.agent_turns[agent_name]["recent_actions"] = self.agent_turns[agent_name]["recent_actions"][-10:]
         
         # Log de l'action
         self.add_log_message(

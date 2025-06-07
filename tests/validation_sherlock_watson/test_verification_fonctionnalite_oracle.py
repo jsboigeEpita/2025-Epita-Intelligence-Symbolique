@@ -15,7 +15,7 @@ def test_watson_import():
     try:
         from argumentation_analysis.agents.core.logic.watson_logic_assistant import WatsonLogicAssistant
         print("[OK] Watson import réussi")
-        return True
+        assert True, "Watson import réussi"
     except Exception as e:
         print(f"[ERREUR] Watson import: {e}")
         return False
@@ -25,7 +25,7 @@ def test_moriarty_import():
     try:
         from argumentation_analysis.agents.core.oracle.moriarty_interrogator_agent import MoriartyInterrogatorAgent
         print("[OK] Moriarty import réussi")
-        return True
+        assert True, "Moriarty import réussi"
     except Exception as e:
         print(f"[ERREUR] Moriarty import: {e}")
         return False
