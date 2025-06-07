@@ -265,7 +265,10 @@ def test_validation_complete_integrite_apres_corrections():
         logger.info(f"  ✅ {succes}")
     
     logger.info("🎉 CONCLUSION: L'intégrité des règles du Cluedo a été restaurée avec succès !")
-    return True
+    
+    # Assertion pour que pytest reconnaisse le succès
+    assert len(succes_tests) == 7, f"Expected 7 successful tests, got {len(succes_tests)}"
+    assert True, "Validation complète réussie"
 
 
 if __name__ == "__main__":
