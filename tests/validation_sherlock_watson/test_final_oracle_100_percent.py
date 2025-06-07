@@ -24,7 +24,7 @@ def run_oracle_tests():
             cmd,
             capture_output=True,
             text=True,
-            cwd="d:/2025-Epita-Intelligence-Symbolique"
+            cwd="."
         )
         
         output = result.stdout + result.stderr
@@ -89,6 +89,16 @@ def validate_group3_fixes():
     print("✅ Remplacement de execute_query par execute_oracle_query dans tous les tests")
     print("✅ Harmonisation des noms de méthodes Oracle")
     print("✅ Validation de la compatibilité complète")
+
+def test_oracle_100_percent_validation():
+    """Test pytest pour validation Oracle 100%"""
+    # Validation des corrections Groupe 3
+    validate_group3_fixes()
+    
+    # Test final
+    success = run_oracle_tests()
+    
+    assert success, "Les tests Oracle ne sont pas à 100%"
 
 if __name__ == "__main__":
     # Validation des corrections Groupe 3

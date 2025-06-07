@@ -157,6 +157,55 @@ class ProjectManagerAgent(BaseAgent):
             # Retourner une chaîne d'erreur ou lever une exception spécifique
             return f"ERREUR: Impossible d'écrire la conclusion. Détails: {e}"
 
+    # Implémentation des méthodes abstraites de BaseAgent
+    async def get_response(self, request: str, context: str = "", **kwargs) -> str:
+        """
+        Méthode pour obtenir une réponse de l'agent basée sur une requête.
+        
+        Args:
+            request: La requête ou question posée à l'agent
+            context: Le contexte supplémentaire pour la requête
+            **kwargs: Arguments supplémentaires
+            
+        Returns:
+            La réponse de l'agent sous forme de chaîne
+        """
+        self.logger.info(f"get_response appelée avec: {request}")
+        
+        # Logique simple pour déterminer le type de réponse selon la requête
+        if "task" in request.lower() or "delegate" in request.lower():
+            return await self.define_tasks_and_delegate(context, request)
+        elif "conclusion" in request.lower() or "final" in request.lower():
+            return await self.write_conclusion(context, request)
+        else:
+            # Réponse générique basée sur les capacités de l'agent
+            capabilities = self.get_agent_capabilities()
+            return f"Agent ProjectManager prêt. Capacités: {', '.join(capabilities.keys())}"
+
+    async def invoke(self, function_name: str, **kwargs) -> str:
+        """
+        Méthode pour invoquer une fonction spécifique de l'agent.
+        
+        Args:
+            function_name: Le nom de la fonction à invoquer
+            **kwargs: Arguments pour la fonction
+            
+        Returns:
+            Le résultat de l'invocation
+        """
+        self.logger.info(f"invoke appelée pour la fonction: {function_name}")
+        
+        if function_name == "define_tasks_and_delegate":
+            analysis_state = kwargs.get("analysis_state_snapshot", "")
+            raw_text = kwargs.get("raw_text", "")
+            return await self.define_tasks_and_delegate(analysis_state, raw_text)
+        elif function_name == "write_conclusion":
+            analysis_state = kwargs.get("analysis_state_snapshot", "")
+            raw_text = kwargs.get("raw_text", "")
+            return await self.write_conclusion(analysis_state, raw_text)
+        else:
+            raise ValueError(f"Fonction inconnue: {function_name}")
+
     # D'autres méthodes métiers pourraient être ajoutées ici si nécessaire,
     # par exemple, une méthode qui encapsule la logique de décision principale du PM
     # basée sur l'état actuel, et qui appellerait ensuite define_tasks_and_delegate ou write_conclusion.
@@ -182,22 +231,129 @@ class ProjectManagerAgent(BaseAgent):
     #     pass
 
 if __name__ == '__main__':
-    # Section pour des tests unitaires ou des exemples d'utilisation rapides
-    # Nécessiterait un kernel configuré, un service LLM, etc.
+    import argparse
+    import asyncio
+    import os
+    from semantic_kernel.connectors.ai.open_ai import OpenAIChatCompletion
     
-    # Configuration du logging de base pour les tests
-    logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    # Configuration du logging
+    logging.basicConfig(level=logging.INFO, format='%(asctime)s [%(levelname)s] [%(name)s] %(message)s')
     logger_main = logging.getLogger(__name__)
     
-    logger_main.info("Exemple d'initialisation et d'utilisation (nécessite un kernel configuré):")
-
-    # # Exemple (nécessite un kernel et un service LLM configurés)
-    # # from semantic_kernel.connectors.ai.open_ai import AzureChatCompletion, OpenAIChatCompletion
-    # # kernel_instance = Kernel()
-    # # llm_service_instance = OpenAIChatCompletion(service_id="default", ai_model_id="gpt-3.5-turbo", api_key="...", org_id="...") # Remplacer par vos infos
-    # # kernel_instance.add_service(llm_service_instance)
+    # Parse des arguments de ligne de commande
+    parser = argparse.ArgumentParser(description='Project Manager Agent - Générateur de rapports via SK')
+    parser.add_argument('--generate-report', action='store_true', help='Génère un rapport d\'analyse')
+    parser.add_argument('--trace-file', type=str, help='Fichier de trace d\'entrée')
+    parser.add_argument('--model', type=str, default='gpt-4o-mini', help='Modèle LLM à utiliser')
+    parser.add_argument('--output', type=str, help='Fichier de sortie (optionnel, sinon stdout)')
     
-    # # pm_agent = ProjectManagerAgent(kernel=kernel_instance)
+    args = parser.parse_args()
+    
+    if args.generate_report:
+        async def generate_report():
+            try:
+                # Lecture du fichier de trace
+                trace_content = ""
+                if args.trace_file and os.path.exists(args.trace_file):
+                    with open(args.trace_file, 'r', encoding='utf-8') as f:
+                        trace_content = f.read()
+                    logger_main.info(f"Fichier de trace lu: {args.trace_file}")
+                else:
+                    logger_main.warning("Aucun fichier de trace spécifié ou fichier inexistant")
+                
+                # Configuration du kernel SK
+                kernel_instance = Kernel()
+                
+                # Configuration du service LLM OpenAI
+                api_key = os.getenv('OPENAI_API_KEY', '').strip('"')
+                if not api_key:
+                    raise ValueError("OPENAI_API_KEY non configurée")
+                
+                llm_service = OpenAIChatCompletion(
+                    service_id="openai_service",
+                    ai_model_id=args.model,
+                    api_key=api_key
+                )
+                kernel_instance.add_service(llm_service)
+                
+                # Création de l'agent PM
+                pm_agent = ProjectManagerAgent(kernel=kernel_instance)
+                pm_agent.setup_agent_components("openai_service")
+                
+                # Prompt de génération de rapport
+                report_prompt = f"""
+# Génération de Rapport d'Analyse - EPITA Intelligence Symbolique
+
+Basé sur la trace d'exécution suivante, génère un rapport complet d'analyse :
+
+## Trace d'Exécution
+```
+{trace_content}
+```
+
+## Instructions
+Génère un rapport structuré en markdown qui inclut :
+
+1. **Résumé Exécutif**
+   - Statut global du projet (100% de succès)
+   - Points clés de l'analyse
+
+2. **Analyse Détaillée**
+   - Modules testés et leur statut
+   - Corrections apportées
+   - Technologies utilisées
+
+3. **Architecture Technique**
+   - Description de l'architecture hybride Python/Java
+   - Utilisation du Semantic Kernel
+   - Pipeline agentique
+
+4. **Résultats et Métriques**
+   - Taux de succès par catégorie
+   - Performance globale
+   - Améliorations réalisées
+
+5. **Conclusion et Recommandations**
+   - Succès du projet
+   - Perspective d'évolution
+   - Bonnes pratiques identifiées
+
+Le rapport doit être professionnel, technique et complet.
+"""
+
+                # Invocation directe via le kernel
+                from semantic_kernel.functions import KernelFunction
+                from semantic_kernel.prompt_template import InputVariable, PromptTemplateConfig
+                
+                # Création d'une fonction de génération de rapport
+                report_function = KernelFunction.from_prompt(
+                    prompt=report_prompt,
+                    function_name="GenerateReport",
+                    plugin_name="ReportGenerator"
+                )
+                
+                # Exécution de la génération
+                result = await kernel_instance.invoke(report_function)
+                report_content = str(result)
+                
+                # Sortie du rapport
+                if args.output:
+                    with open(args.output, 'w', encoding='utf-8') as f:
+                        f.write(report_content)
+                    logger_main.info(f"Rapport généré: {args.output}")
+                else:
+                    print(report_content)
+                
+                logger_main.info("Génération de rapport terminée avec succès")
+                
+            except Exception as e:
+                logger_main.error(f"Erreur lors de la génération du rapport: {e}")
+                raise
+        
+        # Exécution asynchrone
+        asyncio.run(generate_report())
+    else:
+        logger_main.info("Exemple d'initialisation et d'utilisation (nécessite un kernel configuré):")
     # # pm_agent.setup_agent_components(llm_service_id="default")
     
     # # print(pm_agent.get_agent_info())
