@@ -401,6 +401,33 @@ class CluedoExtendedOrchestrator:
             async for message in self.group_chat.invoke():
                 history.append(message)
                 
+                # CORRECTIF ORACLE: Interception des suggestions pour déclencher Oracle
+                if message.name != "System" and message.name != "Moriarty":
+                    message_content = str(message.content)
+                    
+                    # Détection de suggestion Cluedo
+                    suggestion = self._extract_cluedo_suggestion(message_content)
+                    if suggestion:
+                        self._logger.info(f"🔮 SUGGESTION DÉTECTÉE: {suggestion} par {message.name}")
+                        
+                        # Force Oracle révélation par Moriarty
+                        oracle_response = await self._force_moriarty_oracle_revelation(
+                            suggestion=suggestion,
+                            suggesting_agent=message.name
+                        )
+                        
+                        if oracle_response:
+                            # Injection de la réponse Oracle dans le chat
+                            oracle_message = ChatMessageContent(
+                                role="assistant",
+                                content=oracle_response['content'],
+                                name="Moriarty"
+                            )
+                            await self.group_chat.add_chat_message(message=oracle_message)
+                            history.append(oracle_message)
+                            
+                            self._logger.info(f"🎭 [Moriarty Oracle]: {oracle_response['content'][:100]}...")
+                
                 # PHASE C: Enregistrement du message pour mémoire contextuelle
                 if message.name != "System":
                     message_content = str(message.content)
@@ -620,6 +647,136 @@ class CluedoExtendedOrchestrator:
         reactions = []
         content_lower = content.lower()
         
+# CORRECTIF ORACLE: Méthodes pour détection et révélation automatique
+    
+    def _extract_cluedo_suggestion(self, message_content: str) -> Optional[Dict[str, str]]:
+        """
+        Extrait une suggestion Cluedo d'un message (suspect, arme, lieu).
+        
+        Args:
+            message_content: Contenu du message à analyser
+            
+        Returns:
+            Dict avec suspect/arme/lieu ou None si pas de suggestion détectée
+        """
+        content_lower = message_content.lower()
+        
+        # Mots-clés indiquant une suggestion
+        suggestion_keywords = ['suggère', 'propose', 'accuse', 'pense que', 'suspect', 'suppose']
+        if not any(keyword in content_lower for keyword in suggestion_keywords):
+            return None
+        
+        # Listes des éléments Cluedo (en minuscules pour matching)
+        suspects = ["colonel moutarde", "professeur violet", "mademoiselle rose", "docteur orchidée"]
+        armes = ["poignard", "chandelier", "revolver", "corde"]
+        lieux = ["salon", "cuisine", "bureau", "bibliothèque"]
+        
+        # Recherche d'éléments dans le message
+        found_suspect = None
+        found_arme = None
+        found_lieu = None
+        
+        for suspect in suspects:
+            if suspect in content_lower:
+                found_suspect = suspect.title()
+                break
+        
+        for arme in armes:
+            if arme in content_lower:
+                found_arme = arme.title()
+                break
+        
+        for lieu in lieux:
+            if lieu in content_lower:
+                found_lieu = lieu.title()
+                break
+        
+        # Suggestion valide seulement si au moins 2 éléments trouvés
+        if sum(x is not None for x in [found_suspect, found_arme, found_lieu]) >= 2:
+            return {
+                "suspect": found_suspect or "Indéterminé",
+                "arme": found_arme or "Indéterminée", 
+                "lieu": found_lieu or "Indéterminé"
+            }
+        
+        return None
+    
+    async def _force_moriarty_oracle_revelation(self, suggestion: Dict[str, str], suggesting_agent: str) -> Optional[Dict[str, Any]]:
+        """
+        Force Moriarty à révéler ses cartes pour une suggestion donnée.
+        
+        Args:
+            suggestion: Dict avec suspect/arme/lieu
+            suggesting_agent: Nom de l'agent qui fait la suggestion
+            
+        Returns:
+            Réponse Oracle de Moriarty ou None si erreur
+        """
+        try:
+            self._logger.info(f"🔮 Force Oracle révélation: {suggestion} par {suggesting_agent}")
+            
+            # Appel direct à Moriarty pour validation Oracle
+            oracle_result = self.moriarty_agent.validate_suggestion_cluedo(
+                suspect=suggestion.get('suspect', ''),
+                arme=suggestion.get('arme', ''),
+                lieu=suggestion.get('lieu', ''),
+                suggesting_agent=suggesting_agent
+            )
+            
+            # Construction de la réponse théâtrale selon le résultat
+            if oracle_result.authorized and oracle_result.data and oracle_result.data.can_refute:
+                # Moriarty peut réfuter - révèle ses cartes
+                revealed_cards = oracle_result.revealed_information or []
+                
+                moriarty_responses = [
+                    f"*sourire énigmatique* Ah, {suggesting_agent}... Je possède {', '.join(revealed_cards)} ! Votre théorie s'effondre.",
+                    f"*regard perçant* Hélas... {', '.join(revealed_cards)} repose dans ma main. Réfléchissez encore.",
+                    f"Tiens, tiens... {', '.join(revealed_cards)} me permet de contrarier vos plans, {suggesting_agent}.",
+                    f"*applaudit* Magnifique tentative ! Mais j'ai {', '.join(revealed_cards)}. Continuez à chercher."
+                ]
+                
+                content = moriarty_responses[len(revealed_cards) % len(moriarty_responses)]
+                
+                return {
+                    "content": content,
+                    "type": "oracle_revelation",
+                    "revealed_cards": revealed_cards,
+                    "can_refute": True,
+                    "suggestion": suggestion
+                }
+            else:
+                # Moriarty ne peut pas réfuter - suggestion potentiellement correcte
+                warning_responses = [
+                    f"*silence inquiétant* Intéressant, {suggesting_agent}... Je ne peux rien révéler sur cette suggestion.",
+                    f"*sourire mystérieux* Voilà qui est... troublant. Aucune carte à révéler, {suggesting_agent}.",
+                    f"*regard intense* Cette combinaison me laisse sans réponse... Serait-ce la vérité ?",
+                    f"Ah... *pause dramatique* Vous touchez peut-être au but, {suggesting_agent}."
+                ]
+                
+                content = warning_responses[0]  # Première réponse par défaut
+                
+                return {
+                    "content": content,
+                    "type": "oracle_no_refutation",
+                    "revealed_cards": [],
+                    "can_refute": False,
+                    "suggestion": suggestion,
+                    "warning": "Suggestion potentiellement correcte"
+                }
+                
+        except Exception as e:
+            self._logger.error(f"❌ Erreur Oracle révélation: {e}", exc_info=True)
+            
+            # Réponse d'erreur théâtrale
+            error_content = f"*confusion momentanée* Pardonnez-moi, {suggesting_agent}... Un mystère technique m'empêche de répondre."
+            
+            return {
+                "content": error_content,
+                "type": "oracle_error",
+                "revealed_cards": [],
+                "can_refute": False,
+                "error": str(e)
+            }
         # Trouver l'agent et le contenu qui ont déclenché la réaction
         trigger_agent = None
         trigger_content = ""

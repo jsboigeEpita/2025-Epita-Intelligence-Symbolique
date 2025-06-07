@@ -1,0 +1,5 @@
+2025-06-07 05:18:44,200 - argumentation_analysis - INFO - Package 'argumentation_analysis' chargé.
+2025-06-07 05:18:44,220 - root - WARNING - Certaines classes/fonctions de 'agents.core.extract' n'ont pas pu être exposées: cannot import name 'BaseLogicAgent' from partially initialized module 'argumentation_analysis.agents.core.abc.agent_bases' (most likely due to a circular import) (D:\2025-Epita-Intelligence-Symbolique\argumentation_analysis\agents\core\abc\agent_bases.py)
+2025-06-07 05:18:44,527 - App.ProjectCore.FileLoaders - INFO - Utilitaires de chargement de fichiers (FileLoaders) définis.
+2025-06-07 05:18:44,528 - InformalDefinitions - INFO - Classe InformalAnalysisPlugin (V12 avec nouvelles fonctions) définie.
+2025-06-07 05:18:44,530 - InformalDefinitions - INFO - Instructions Système INFORMAL_AGENT_INSTRUCTIONS (V15 avec nouvelles fonctions) définies.
