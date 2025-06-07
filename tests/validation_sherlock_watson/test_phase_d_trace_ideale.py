@@ -17,7 +17,7 @@ from typing import Dict, List, Any
 import statistics
 
 # Import des extensions Phase D
-from phase_d_extensions import PhaseDExtensions, extend_oracle_state_phase_d
+from argumentation_analysis.agents.core.oracle.phase_d_extensions import PhaseDExtensions, extend_oracle_state_phase_d
 
 # Configuration du logging
 logging.basicConfig(
