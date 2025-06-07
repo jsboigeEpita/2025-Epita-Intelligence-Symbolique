@@ -275,7 +275,7 @@ def run_demo_interactive() -> bool:
         description = cat_info['description']
         fonctionnalites = cat_info['fonctionnalites']
     else:
-        titre = "🎯 Cas d'Usage Complets"
+        titre = "[DEMO] Cas d'Usage Complets"
         description = "Applications pratiques"
         fonctionnalites = [
             "Résolution Cluedo Sherlock-Watson",
@@ -348,7 +348,7 @@ def run_demo_rapide() -> bool:
     """Lance une démonstration rapide (non-interactive)"""
     logger = DemoLogger("cas_usage")
     
-    logger.header("🎯 DÉMONSTRATION RAPIDE - CAS D'USAGE")
+    logger.header("[DEMO] DÉMONSTRATION RAPIDE - CAS D'USAGE")
     
     # Tests essentiels seulement
     tests_essentiels = [

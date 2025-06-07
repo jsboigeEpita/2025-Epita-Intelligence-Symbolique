@@ -208,7 +208,7 @@ def run_demo_interactive() -> bool:
         description = cat_info['description']
         fonctionnalites = cat_info['fonctionnalites']
     else:
-        titre = "🔧 Services Core & Extraction"
+        titre = "[CORE] Services Core & Extraction"
         description = "Architecture fondamentale"
         fonctionnalites = [
             "Agents d'extraction de données",
@@ -281,7 +281,7 @@ def run_demo_rapide() -> bool:
     """Lance une démonstration rapide (non-interactive)"""
     logger = DemoLogger("services_core")
     
-    logger.header("🔧 DÉMONSTRATION RAPIDE - SERVICES CORE")
+    logger.header("[CORE] DÉMONSTRATION RAPIDE - SERVICES CORE")
     
     # Tests essentiels seulement
     tests_essentiels = [

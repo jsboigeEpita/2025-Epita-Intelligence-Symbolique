@@ -74,8 +74,8 @@ def demo_tests_orchestration(logger: DemoLogger, config: Dict[str, Any]) -> bool
     
     if succes:
         logger.success(f"{Symbols.CHECK} Architecture hiérarchique validée !")
-        print(f"\n{Colors.GREEN}✓ Niveau Tactique : Communication inter-agents{Colors.ENDC}")
-        print(f"{Colors.GREEN}✓ Niveau Opérationnel : Adaptation de protocoles{Colors.ENDC}")
+        print(f"\n{Colors.GREEN}[OK] Niveau Tactique : Communication inter-agents{Colors.ENDC}")
+        print(f"{Colors.GREEN}[OK] Niveau Opérationnel : Adaptation de protocoles{Colors.ENDC}")
     
     afficher_stats_tests(resultats)
     return succes
@@ -144,7 +144,7 @@ def run_demo_interactive() -> bool:
         description = cat_info['description']
         fonctionnalites = cat_info['fonctionnalites']
     else:
-        titre = "📚 Tests & Validation"
+        titre = "[TEST] Tests & Validation"
         description = "99.7% succès"
         fonctionnalites = [
             "Tests unitaires avec métriques",
@@ -198,7 +198,7 @@ def run_demo_rapide() -> bool:
     logger = DemoLogger("tests_validation")
     config = charger_config_categories()
     
-    logger.header("📚 DÉMONSTRATION RAPIDE - TESTS & VALIDATION")
+    logger.header("[TEST] DÉMONSTRATION RAPIDE - TESTS & VALIDATION")
     
     # Tests essentiels seulement
     tests_essentiels = [

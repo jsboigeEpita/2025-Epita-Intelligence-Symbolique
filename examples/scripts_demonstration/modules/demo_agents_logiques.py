@@ -183,7 +183,7 @@ def run_demo_interactive() -> bool:
         description = cat_info['description']
         fonctionnalites = cat_info['fonctionnalites']
     else:
-        titre = "🧠 Agents Logiques & Argumentation"
+        titre = "[AI] Agents Logiques & Argumentation"
         description = "Raisonnement symbolique"
         fonctionnalites = [
             "Logique propositionnelle et prédicats",
@@ -255,7 +255,7 @@ def run_demo_rapide() -> bool:
     """Lance une démonstration rapide (non-interactive)"""
     logger = DemoLogger("agents_logiques")
     
-    logger.header("🧠 DÉMONSTRATION RAPIDE - AGENTS LOGIQUES")
+    logger.header("[AI] DÉMONSTRATION RAPIDE - AGENTS LOGIQUES")
     
     # Tests essentiels seulement
     tests_essentiels = [

@@ -38,7 +38,7 @@ class Symbols:
     BOOK = "[COURS]"
     ROCKET = "[START]"
     CHECK = "[OK]"
-    CROSS = "[ECHEC]"
+    CROSS = "[FAIL]"
     QUESTION = "[?]"
     BULB = "[ASTUCE]"
     GEAR = "[EXEC]"
