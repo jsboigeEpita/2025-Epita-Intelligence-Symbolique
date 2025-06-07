@@ -159,13 +159,31 @@ class FallacyService:
                 'name': 'Homme de paille',
                 'description': 'Déformer l\'argument de l\'adversaire pour le réfuter plus facilement',
                 'category': 'informal',
-                'patterns': [ 
+                'patterns': [
+                    # Formes directes
                     'vous dites que.*mais',
                     'selon vous.*ce qui est',
                     'votre position.*implique',
                     'vous prétendez que',
                     'vous suggérez que',
-                    'vous insinuez que'
+                    'vous insinuez que',
+                    # Formes indirectes - caricatures et exagérations
+                    'veulent qu\'on retourne à',
+                    'veulent.*retour à',
+                    'prônent.*retour à',
+                    'préconisent.*retour à',
+                    'souhaitent.*retour à',
+                    'veulent.*âge de pierre',
+                    'veulent.*primitif',
+                    'veulent.*abolir',
+                    'veulent.*détruire',
+                    'veulent.*éliminer.*tout',
+                    'prônent.*abandon.*total',
+                    'préconisent.*suppression.*totale',
+                    # Généralisations exagérées
+                    'tous.*veulent.*extrême',
+                    'ils.*veulent.*radical',
+                    'ces.*gens.*veulent.*extrême'
                 ],
                 'severity': 0.8
             },
@@ -251,21 +269,6 @@ class FallacyService:
                 ],
                 'severity': 0.5
             },
-            'circular_reasoning': {
-                'name': 'Raisonnement circulaire',
-                'description': 'Utiliser la conclusion comme prémisse',
-                'category': 'informal',
-                'patterns': [ 
-                    'parce que.*c\'est',
-                    'car.*donc',
-                    'puisque.*c\'est',
-                    'car.*c\'est',
-                    'parce que.*cela',
-                    'car.*cela',
-                    'puisque.*cela'
-                ],
-                'severity': 0.8
-            },
             'hasty_generalization': {
                 'name': 'Généralisation hâtive',
                 'description': 'Tirer une conclusion générale à partir d\'exemples insuffisants',
@@ -314,14 +317,15 @@ class FallacyService:
             fallacies = []
             
             # Détection avec les analyseurs existants
-            if self.contextual_analyzer:
+            if self.contextual_analyzer and (not request.options or getattr(request.options, 'use_contextual', True)):
                 fallacies.extend(self._detect_with_contextual_analyzer(request.text, request.options))
             
-            if self.enhanced_analyzer:
+            if self.enhanced_analyzer and (not request.options or getattr(request.options, 'use_enhanced', True)):
                 fallacies.extend(self._detect_with_enhanced_analyzer(request.text, request.options))
             
             # Détection avec les patterns intégrés
-            fallacies.extend(self._detect_with_patterns(request.text, request.options))
+            if not request.options or getattr(request.options, 'use_patterns', True):
+                fallacies.extend(self._detect_with_patterns(request.text, request.options))
             
             # Filtrage et déduplication
             fallacies = self._filter_and_deduplicate(fallacies, request.options)
@@ -372,7 +376,8 @@ class FallacyService:
         
         try:
             if self.contextual_analyzer:
-                results = self.contextual_analyzer.analyze_fallacies(text) # Logique de HEAD
+                # Utiliser la méthode qui existe réellement
+                results = self.contextual_analyzer.identify_contextual_fallacies(text, "general")
                 
                 if results:
                     for result in results:
@@ -407,7 +412,14 @@ class FallacyService:
         
         try:
             if self.enhanced_analyzer:
-                results = self.enhanced_analyzer.analyze_fallacies(text)
+                # Pour l'enhanced analyzer, vérifier d'abord s'il a analyze_fallacies
+                if hasattr(self.enhanced_analyzer, 'analyze_fallacies'):
+                    results = self.enhanced_analyzer.analyze_fallacies(text)
+                elif hasattr(self.enhanced_analyzer, 'identify_contextual_fallacies'):
+                    results = self.enhanced_analyzer.identify_contextual_fallacies(text, "general")
+                else:
+                    self.logger.warning("Enhanced analyzer n'a pas de méthode d'analyse appropriée")
+                    results = []
                 
                 if results:
                     for result in results:
@@ -444,12 +456,12 @@ class FallacyService:
         print(f"[DEBUG] Détection patterns - Texte: '{text}'")
         print(f"[DEBUG] Texte normalisé: '{text_lower}'")
         print(f"[DEBUG] Nombre de patterns dans fallacy_patterns: {len(self.fallacy_patterns)}")
-        print(f"[DEBUG] Nombre de patterns dans fallacies: {len(self.fallacies)}")
+        print(f"[DEBUG] Nombre de patterns dans fallacy_patterns: {len(self.fallacy_patterns)}")
         
         try:
-            # CORRECTION: Utiliser self.fallacies au lieu de self.fallacy_patterns
-            patterns_source = self.fallacies if hasattr(self, 'fallacies') and self.fallacies else self.fallacy_patterns
-            print(f"[DEBUG] Source utilisée: {'self.fallacies' if patterns_source is self.fallacies else 'self.fallacy_patterns'}")
+            # CORRECTION: Utiliser uniquement self.fallacy_patterns
+            patterns_source = self.fallacy_patterns
+            print(f"[DEBUG] Source utilisée: self.fallacy_patterns")
             
             for fallacy_type, fallacy_info in patterns_source.items():
                 print(f"[DEBUG] Test sophisme: {fallacy_type}")
