@@ -43,9 +43,9 @@ def demo_agents_argumentation(logger: DemoLogger, config: Dict[str, Any]) -> boo
     """Démonstration des agents d'argumentation"""
     logger.header(f"{Symbols.TARGET} AGENTS D'ARGUMENTATION")
     
-    # Tests des agents d'argumentation
+    # Tests des agents d'argumentation - VERSION AUTHENTIQUE
     tests_args = [
-        "tests/unit/argumentation_analysis/test_strategies.py",
+        "tests/unit/argumentation_analysis/test_strategies_real.py",
         "tests/unit/argumentation_analysis/test_run_analysis_conversation.py"
     ]
     
@@ -257,9 +257,9 @@ def run_demo_rapide() -> bool:
     
     logger.header("[AI] DÉMONSTRATION RAPIDE - AGENTS LOGIQUES")
     
-    # Tests essentiels qui réussissent à 100% (évite les tests JVM problématiques)
+    # Tests essentiels qui réussissent à 100% - VERSION AUTHENTIQUE
     tests_essentiels = [
-        "tests/unit/argumentation_analysis/test_strategies.py",
+        "tests/unit/argumentation_analysis/test_strategies_real.py",
         "tests/unit/argumentation_analysis/test_mock_communication.py"
     ]
     

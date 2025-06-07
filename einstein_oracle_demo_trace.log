@@ -8,3 +8,8 @@
 2025-06-07 06:26:08,279 - App.ProjectCore.FileLoaders - INFO - Utilitaires de chargement de fichiers (FileLoaders) définis.
 2025-06-07 06:26:08,280 - InformalDefinitions - INFO - Classe InformalAnalysisPlugin (V12 avec nouvelles fonctions) définie.
 2025-06-07 06:26:08,280 - InformalDefinitions - INFO - Instructions Système INFORMAL_AGENT_INSTRUCTIONS (V15 avec nouvelles fonctions) définies.
+2025-06-07 14:51:15,614 - argumentation_analysis - INFO - Package 'argumentation_analysis' chargé.
+2025-06-07 14:51:15,618 - root - WARNING - Certaines classes/fonctions de 'agents.core.extract' n'ont pas pu être exposées: cannot import name 'BaseLogicAgent' from partially initialized module 'argumentation_analysis.agents.core.abc.agent_bases' (most likely due to a circular import) (d:\Dev\2025-Epita-Intelligence-Symbolique\argumentation_analysis\agents\core\abc\agent_bases.py)
+2025-06-07 14:51:16,363 - App.ProjectCore.FileLoaders - INFO - Utilitaires de chargement de fichiers (FileLoaders) définis.
+2025-06-07 14:51:16,364 - InformalDefinitions - INFO - Classe InformalAnalysisPlugin (V12 avec nouvelles fonctions) définie.
+2025-06-07 14:51:16,365 - InformalDefinitions - INFO - Instructions Système INFORMAL_AGENT_INSTRUCTIONS (V15 avec nouvelles fonctions) définies.

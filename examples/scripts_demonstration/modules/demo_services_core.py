@@ -22,7 +22,7 @@ def demo_agents_extraction(logger: DemoLogger, config: Dict[str, Any]) -> bool:
     
     # Tests des agents d'extraction
     tests_extraction = [
-        "tests/unit/argumentation_analysis/test_setup_extract_agent.py",
+        "tests/unit/argumentation_analysis/test_setup_extract_agent_real.py",
         "tests/unit/orchestration/hierarchical/operational/adapters/test_extract_agent_adapter.py"
     ]
     
@@ -285,7 +285,7 @@ def run_demo_rapide() -> bool:
     
     # Tests essentiels seulement
     tests_essentiels = [
-        "tests/unit/argumentation_analysis/test_setup_extract_agent.py",
+        "tests/unit/argumentation_analysis/test_setup_extract_agent_real.py",
         "tests/unit/argumentation_analysis/test_shared_state.py"
     ]
     

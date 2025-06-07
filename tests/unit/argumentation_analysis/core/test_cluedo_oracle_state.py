@@ -20,7 +20,7 @@ from datetime import datetime
 # Imports du système
 from argumentation_analysis.core.cluedo_oracle_state import CluedoOracleState
 from argumentation_analysis.core.enquete_states import EnqueteCluedoState
-from argumentation_analysis.agents.core.oracle.cluedo_dataset import CluedoDataset, RevealPolicy, CluedoRevelation
+from argumentation_analysis.agents.core.oracle.cluedo_dataset import CluedoDataset, RevealPolicy, RevelationRecord
 from argumentation_analysis.agents.core.oracle.dataset_access_manager import DatasetAccessManager
 from argumentation_analysis.agents.core.oracle.permissions import QueryType, OracleResponse, QueryResult
 
@@ -198,11 +198,14 @@ class TestCluedoOracleState:
     
     def test_add_revelation(self, oracle_state):
         """Test l'ajout de révélations Oracle."""
-        revelation = CluedoRevelation(
-            card_revealed="Professeur Violet",
-            revelation_type="owned_card",
-            message="Moriarty possède Professeur Violet",
-            strategic_value=0.8
+        from datetime import datetime
+        revelation = RevelationRecord(
+            card="Professeur Violet",
+            revealed_to="Investigation_Team",
+            timestamp=datetime.now(),
+            reason="Moriarty possède Professeur Violet",
+            query_type=QueryType.CARD_INQUIRY,
+            metadata={"strategic_value": 0.8}
         )
         
         oracle_state.add_revelation(revelation, "Moriarty")
@@ -221,11 +224,12 @@ class TestCluedoOracleState:
     
     def test_multiple_revelations_management(self, oracle_state):
         """Test la gestion de révélations multiples."""
+        from datetime import datetime
         # Ajout de plusieurs révélations
         revelations = [
-            CluedoRevelation("Card1", "type1", "Message 1"),
-            CluedoRevelation("Card2", "type2", "Message 2"), 
-            CluedoRevelation("Card3", "type3", "Message 3")
+            RevelationRecord("Card1", "Team", datetime.now(), "Message 1", QueryType.CARD_INQUIRY),
+            RevelationRecord("Card2", "Team", datetime.now(), "Message 2", QueryType.CARD_INQUIRY),
+            RevelationRecord("Card3", "Team", datetime.now(), "Message 3", QueryType.CARD_INQUIRY)
         ]
         
         for i, revelation in enumerate(revelations):
@@ -248,7 +252,8 @@ class TestCluedoOracleState:
         oracle_state.record_agent_turn("Watson", "test", {})
         oracle_state.record_agent_turn("Moriarty", "test", {})
         
-        revelation = CluedoRevelation("Test Card", "test_type", "Test message")
+        from datetime import datetime
+        revelation = RevelationRecord("Test Card", "Team", datetime.now(), "Test message", QueryType.CARD_INQUIRY)
         oracle_state.add_revelation(revelation, "Moriarty")
         
         stats = oracle_state.get_oracle_statistics()
