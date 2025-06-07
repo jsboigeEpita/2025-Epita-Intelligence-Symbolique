@@ -190,12 +190,12 @@ def mode_quick_start() -> None:
         module_name = cat_info.get('module')
         if module_name:
             try:
-                print(f"\n{Colors.CYAN}{cat_info.get('icon', '📋')} {cat_info.get('nom', 'Catégorie')}{Colors.ENDC}")
+                print(f"\n{Colors.CYAN}{cat_info.get('icon', '[INFO]')} {cat_info.get('nom', 'Catégorie')}{Colors.ENDC}")
                 succes = charger_et_executer_module(module_name, mode_interactif=False)
                 if succes:
-                    print(f"{Colors.GREEN}  ✅ Terminé{Colors.ENDC}")
+                    print(f"{Colors.GREEN}  [OK] Terminé{Colors.ENDC}")
                 else:
-                    print(f"{Colors.FAIL}  ❌ Erreur{Colors.ENDC}")
+                    print(f"{Colors.FAIL}  [FAIL] Erreur{Colors.ENDC}")
                 time.sleep(0.5)
             except Exception as e:
                 logger.error(f"Erreur module {module_name}: {e}")
@@ -249,6 +249,147 @@ def mode_execution_legacy() -> None:
     except Exception as e:
         print(f"{Colors.FAIL}Erreur lors de l'exécution du mode legacy : {e}{Colors.ENDC}")
 
+def execute_all_categories_non_interactive(config: Dict[str, Any]) -> None:
+    """Exécute toutes les catégories de tests en mode non-interactif avec trace complète."""
+    logger = DemoLogger("all_tests")
+    
+    # Bannière pour le mode all-tests
+    print(f"""
+{Colors.CYAN}{Colors.BOLD}
++==============================================================================+
+|              [EPITA] MODE --ALL-TESTS - Trace Complète Non-Interactive     |
+|                     Exécution de toutes les catégories                     |
++==============================================================================+
+{Colors.ENDC}""")
+    
+    start_time = time.time()
+    categories = config.get('categories', {})
+    categories_triees = sorted(categories.items(), key=lambda x: x[1]['id'])
+    
+    logger.info(f"{Symbols.ROCKET} Début de l'exécution complète - {len(categories_triees)} catégories à traiter")
+    logger.info(f"[TIME] Timestamp de démarrage : {time.strftime('%Y-%m-%d %H:%M:%S')}")
+    
+    # Statistiques globales
+    total_categories = len(categories_triees)
+    categories_reussies = 0
+    categories_echouees = 0
+    resultats_detailles = []
+    
+    for i, (cat_id, cat_info) in enumerate(categories_triees, 1):
+        nom_module = cat_info.get('module', '')
+        nom_cat = cat_info.get('nom', cat_id)
+        icon = cat_info.get('icon', '•')
+        description = cat_info.get('description', '')
+        
+        print(f"\n{Colors.BOLD}{'=' * 80}{Colors.ENDC}")
+        print(f"{Colors.CYAN}{icon} CATÉGORIE {i}/{total_categories} : {nom_cat}{Colors.ENDC}")
+        print(f"{Colors.BLUE}Description : {description}{Colors.ENDC}")
+        print(f"{Colors.WARNING}Module : {nom_module}{Colors.ENDC}")
+        print(f"{'=' * 80}")
+        
+        cat_start_time = time.time()
+        
+        try:
+            # Exécution non-interactive du module
+            logger.info(f"[CAT] Début exécution catégorie : {nom_cat}")
+            succes = charger_et_executer_module(nom_module, mode_interactif=False)
+            cat_end_time = time.time()
+            cat_duration = cat_end_time - cat_start_time
+            
+            if succes:
+                categories_reussies += 1
+                status = "SUCCÈS"
+                color = Colors.GREEN
+                symbol = Symbols.CHECK
+                logger.success(f"{Symbols.CHECK} Catégorie '{nom_cat}' terminée avec succès en {cat_duration:.2f}s")
+            else:
+                categories_echouees += 1
+                status = "ÉCHEC"
+                color = Colors.FAIL
+                symbol = Symbols.CROSS
+                logger.error(f"[FAIL] Échec de la catégorie '{nom_cat}' après {cat_duration:.2f}s")
+            
+            resultats_detailles.append({
+                'categorie': nom_cat,
+                'module': nom_module,
+                'status': status,
+                'duration': cat_duration,
+                'index': i
+            })
+            
+            print(f"\n{color}{symbol} Statut : {status} (durée: {cat_duration:.2f}s){Colors.ENDC}")
+            
+        except Exception as e:
+            categories_echouees += 1
+            cat_end_time = time.time()
+            cat_duration = cat_end_time - cat_start_time
+            
+            logger.error(f"[ERROR] Erreur critique dans la catégorie '{nom_cat}': {e}")
+            print(f"\n{Colors.FAIL}{Symbols.CROSS} ERREUR CRITIQUE : {e}{Colors.ENDC}")
+            
+            resultats_detailles.append({
+                'categorie': nom_cat,
+                'module': nom_module,
+                'status': 'ERREUR',
+                'duration': cat_duration,
+                'index': i,
+                'erreur': str(e)
+            })
+    
+    # Rapport final
+    end_time = time.time()
+    total_duration = end_time - start_time
+    taux_reussite = (categories_reussies / total_categories) * 100 if total_categories > 0 else 0
+    
+    print(f"\n{Colors.BOLD}{'=' * 80}{Colors.ENDC}")
+    print(f"{Colors.CYAN}{Colors.BOLD}           RAPPORT FINAL - EXÉCUTION COMPLÈTE{Colors.ENDC}")
+    print(f"{'=' * 80}")
+    
+    print(f"\n{Colors.BOLD}[STATS] STATISTIQUES GÉNÉRALES :{Colors.ENDC}")
+    print(f"   [TIME] Timestamp de fin : {time.strftime('%Y-%m-%d %H:%M:%S')}")
+    print(f"   [TIME] Durée totale : {total_duration:.2f} secondes")
+    print(f"   [INFO] Total catégories : {total_categories}")
+    print(f"   [OK] Catégories réussies : {categories_reussies}")
+    print(f"   [FAIL] Catégories échouées : {categories_echouees}")
+    print(f"   [CHART] Taux de réussite : {taux_reussite:.1f}%")
+    
+    print(f"\n{Colors.BOLD}[INFO] DÉTAILS PAR CATÉGORIE :{Colors.ENDC}")
+    for resultat in resultats_detailles:
+        status_color = Colors.GREEN if resultat['status'] == 'SUCCÈS' else Colors.FAIL
+        status_symbol = '[OK]' if resultat['status'] == 'SUCCÈS' else '[FAIL]'
+        
+        print(f"   {status_symbol} {resultat['index']:2d}. {resultat['categorie']:<30} "
+              f"{status_color}[{resultat['status']}]{Colors.ENDC} "
+              f"({resultat['duration']:.2f}s)")
+        
+        if 'erreur' in resultat:
+            print(f"      [ERROR] Erreur: {resultat['erreur']}")
+    
+    # Métriques techniques
+    print(f"\n{Colors.BOLD}[TECH] MÉTRIQUES TECHNIQUES :{Colors.ENDC}")
+    print(f"   [PYTHON] Architecture : {config.get('config', {}).get('architecture', 'Python + Java (JPype)')}")
+    print(f"   [VERSION] Version : {config.get('config', {}).get('version', '2.0.0')}")
+    print(f"   [TARGET] Taux succès tests : {config.get('config', {}).get('taux_succes_tests', 99.7)}%")
+    
+    domaines = config.get('config', {}).get('domaines', [])
+    if domaines:
+        print(f"   [BRAIN] Domaines couverts :")
+        for domaine in domaines:
+            print(f"      • {domaine}")
+    
+    # Message final
+    if categories_echouees == 0:
+        final_color = Colors.GREEN
+        final_message = f"[SUCCESS] EXÉCUTION COMPLÈTE RÉUSSIE - Tous les tests ont été exécutés avec succès !"
+        logger.success(final_message)
+    else:
+        final_color = Colors.WARNING
+        final_message = f"[WARNING] EXÉCUTION TERMINÉE AVEC {categories_echouees} ÉCHEC(S)"
+        logger.warning(final_message)
+    
+    print(f"\n{final_color}{Colors.BOLD}{final_message}{Colors.ENDC}")
+    print(f"{'=' * 80}")
+
 def parse_arguments():
     """Parse les arguments de ligne de commande"""
     parser = argparse.ArgumentParser(
@@ -260,6 +401,7 @@ Modes disponibles :
   --interactive      Mode interactif avec pauses pédagogiques
   --quick-start      Mode Quick Start pour étudiants
   --metrics          Affichage des métriques uniquement
+  --all-tests        Exécution complète non-interactive de toutes les catégories
   --legacy           Exécution du script original (compatibilité)
         """
     )
@@ -272,6 +414,8 @@ Modes disponibles :
                        help='Affichage des métriques uniquement')
     parser.add_argument('--legacy', '-l', action='store_true',
                        help='Exécution du script original (compatibilité)')
+    parser.add_argument('--all-tests', action='store_true',
+                       help='Exécute tous les tests de toutes les catégories en mode non-interactif')
     
     return parser.parse_args()
 
@@ -293,7 +437,9 @@ def main():
         return
     
     # Sélection du mode d'exécution
-    if args.quick_start:
+    if args.all_tests:
+        execute_all_categories_non_interactive(config)
+    elif args.quick_start:
         mode_quick_start()
     elif args.metrics:
         mode_metrics_only(config)
