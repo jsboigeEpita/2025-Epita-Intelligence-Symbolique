@@ -7,6 +7,7 @@ import asyncio
 import sys
 import traceback
 from datetime import datetime
+import pytest
 
 # Test des imports critiques
 try:
@@ -185,6 +186,7 @@ def test_add_revelation():
     
     print("[OK] add_revelation compatible")
 
+@pytest.mark.asyncio
 async def test_validate_suggestion_async():
     """Test de la méthode async validate_suggestion_with_oracle."""
     print("\n[TEST] validate_suggestion_with_oracle (async)...")

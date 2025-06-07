@@ -1,0 +1,133 @@
+{
+  "timestamp": "2025-06-07T16:13:45.045259",
+  "conversation_summary": {
+    "total_messages": 1,
+    "messages_by_agent": {
+      "AgentGroupChat": 1
+    },
+    "sample_conversation": [
+      {
+        "sender": "AgentGroupChat",
+        "message": "{'text': \"L'enquête commence. Sherlock, menez l'investigation !\", 'agents_involved': ['Sherlock', 'Watson', 'Moriarty'], 'individual_results': {'Sherlock': {'agent_id': 'Sherlock', 'analysis_type': 'general_analysis', 'confidence': 0.85, 'findings': [\"Analyse de Sherlock pour le texte: L'enquête commence. Sherlock, menez l'investigatio...\", 'Détection de patterns par Sherlock', 'Évaluation contextuelle par Sherlock'], 'processing_time': 2.1e-05, 'text_length': 53, 'agent_capabilities': {}}, 'Watson': {'agent_id': 'Watson', 'analysis_type': 'general_analysis', 'confidence': 0.85, 'findings': [\"Analyse de Watson pour le texte: L'enquête commence. Sherlock, menez l'investigatio...\", 'Détection de patterns par Watson', 'Évaluation contextuelle par Watson'], 'processing_time': 1.2e-05, 'text_length': 53, 'agent_capabilities': {}}, 'Moriarty': {'agent_id': 'Moriarty', 'analysis_type': 'general_analysis', 'confidence': 0.85, 'findings': [\"Analyse de Moriarty pour le texte: L'enquête commence. Sherlock, menez l'investigatio...\", 'Détection de patterns par Moriarty', 'Évaluation contextuelle par Moriarty'], 'processing_time': 5e-06, 'text_length': 53, 'agent_capabilities': {'dataset_access': 'Accès contrôlé aux datasets via permissions ACL', 'permission_validation': 'Validation des autorisations par agent et type de requête', 'controlled_revelation': \"Révélation d'informations selon stratégie configurée\", 'audit_logging': 'Audit complet de toutes les interactions', 'oracle_tools': ['validate_query_permission', 'execute_authorized_query', 'get_available_query_types', 'reveal_information_controlled', 'validate_cluedo_suggestion', 'reveal_card_if_owned', 'provide_game_clue', 'simulate_other_player_response'], 'access_level': 'standard', 'allowed_query_types': ['card_inquiry', 'game_state', 'clue_request']}}}, 'consolidated_analysis': {'summary': 'Analyse collaborative terminée avec 3 agents réussis', 'agents_count': 3, 'successful_agents': 3, 'failed_agents': 0, 'average_confidence': 0.85, 'weighted_confidence': 0.8499999999999999, 'key_findings': [{'source_agent': 'Sherlock', 'finding': \"Analyse de Sherlock pour le texte: L'enquête commence. Sherlock, menez l'investigatio...\", 'confidence': 0.85}, {'source_agent': 'Sherlock', 'finding': 'Détection de patterns par Sherlock', 'confidence': 0.85}, {'source_agent': 'Sherlock', 'finding': 'Évaluation contextuelle par Sherlock', 'confidence': 0.85}, {'source_agent': 'Watson', 'finding': \"Analyse de Watson pour le texte: L'enquête commence. Sherlock, menez l'investigatio...\", 'confidence': 0.85}, {'source_agent': 'Watson', 'finding': 'Détection de patterns par Watson', 'confidence': 0.85}, {'source_agent': 'Watson', 'finding': 'Évaluation contextuelle par Watson', 'confidence': 0.85}, {'source_agent': 'Moriarty', 'finding': \"Analyse de Moriarty pour le texte: L'enquête commence. Sherlock, menez l'investigatio...\", 'confidence': 0.85}, {'source_agent': 'Moriarty', 'finding': 'Détection de patterns par Moriarty', 'confidence': 0.85}, {'source_agent': 'Moriarty', 'finding': 'Évaluation contextuelle par Moriarty', 'confidence': 0.85}], 'consensus_areas': [{'theme': 'analyse sherlock de', 'agents': ['Sherlock', 'Watson', 'Moriarty'], 'confidence': 0.85, 'findings_count': 3}, {'theme': 'patterns de détection', 'agents': ['Sherlock', 'Watson', 'Moriarty'], 'confidence': 0.85, 'findings_count': 3}, {'theme': 'par contextuelle évaluation', 'agents': ['Sherlock', 'Watson', 'Moriarty'], 'confidence': 0.85, 'findings_count': 3}], 'divergent_views': [], 'error_summary': []}, 'timestamp': '2025-06-07T16:13:45.043421', 'execution_mode': 'async', 'total_processing_time': 0.0008}"
+      }
+    ]
+  },
+  "quality_scores": {
+    "naturalite": 7.0,
+    "pertinence": 5.0,
+    "progression": 4.5,
+    "global": 5.5
+  },
+  "improvements": [
+    "Renforcer les rôles spécifiques de chaque agent",
+    "Optimiser la logique de progression vers la solution"
+  ],
+  "full_results": {
+    "workflow_info": {
+      "strategy": "balanced",
+      "max_turns": 8,
+      "max_cycles": 3,
+      "execution_time_seconds": 0.001492,
+      "timestamp": "2025-06-07T16:13:45.044792"
+    },
+    "solution_analysis": {
+      "success": false,
+      "reason": "Aucune solution proposée",
+      "proposed_solution": null,
+      "correct_solution": {
+        "suspect": "Docteur Orchidée",
+        "arme": "Chandelier",
+        "lieu": "Cuisine"
+      }
+    },
+    "conversation_history": [
+      {
+        "sender": "AgentGroupChat",
+        "message": "{'text': \"L'enquête commence. Sherlock, menez l'investigation !\", 'agents_involved': ['Sherlock', 'Watson', 'Moriarty'], 'individual_results': {'Sherlock': {'agent_id': 'Sherlock', 'analysis_type': 'general_analysis', 'confidence': 0.85, 'findings': [\"Analyse de Sherlock pour le texte: L'enquête commence. Sherlock, menez l'investigatio...\", 'Détection de patterns par Sherlock', 'Évaluation contextuelle par Sherlock'], 'processing_time': 2.1e-05, 'text_length': 53, 'agent_capabilities': {}}, 'Watson': {'agent_id': 'Watson', 'analysis_type': 'general_analysis', 'confidence': 0.85, 'findings': [\"Analyse de Watson pour le texte: L'enquête commence. Sherlock, menez l'investigatio...\", 'Détection de patterns par Watson', 'Évaluation contextuelle par Watson'], 'processing_time': 1.2e-05, 'text_length': 53, 'agent_capabilities': {}}, 'Moriarty': {'agent_id': 'Moriarty', 'analysis_type': 'general_analysis', 'confidence': 0.85, 'findings': [\"Analyse de Moriarty pour le texte: L'enquête commence. Sherlock, menez l'investigatio...\", 'Détection de patterns par Moriarty', 'Évaluation contextuelle par Moriarty'], 'processing_time': 5e-06, 'text_length': 53, 'agent_capabilities': {'dataset_access': 'Accès contrôlé aux datasets via permissions ACL', 'permission_validation': 'Validation des autorisations par agent et type de requête', 'controlled_revelation': \"Révélation d'informations selon stratégie configurée\", 'audit_logging': 'Audit complet de toutes les interactions', 'oracle_tools': ['validate_query_permission', 'execute_authorized_query', 'get_available_query_types', 'reveal_information_controlled', 'validate_cluedo_suggestion', 'reveal_card_if_owned', 'provide_game_clue', 'simulate_other_player_response'], 'access_level': 'standard', 'allowed_query_types': ['card_inquiry', 'game_state', 'clue_request']}}}, 'consolidated_analysis': {'summary': 'Analyse collaborative terminée avec 3 agents réussis', 'agents_count': 3, 'successful_agents': 3, 'failed_agents': 0, 'average_confidence': 0.85, 'weighted_confidence': 0.8499999999999999, 'key_findings': [{'source_agent': 'Sherlock', 'finding': \"Analyse de Sherlock pour le texte: L'enquête commence. Sherlock, menez l'investigatio...\", 'confidence': 0.85}, {'source_agent': 'Sherlock', 'finding': 'Détection de patterns par Sherlock', 'confidence': 0.85}, {'source_agent': 'Sherlock', 'finding': 'Évaluation contextuelle par Sherlock', 'confidence': 0.85}, {'source_agent': 'Watson', 'finding': \"Analyse de Watson pour le texte: L'enquête commence. Sherlock, menez l'investigatio...\", 'confidence': 0.85}, {'source_agent': 'Watson', 'finding': 'Détection de patterns par Watson', 'confidence': 0.85}, {'source_agent': 'Watson', 'finding': 'Évaluation contextuelle par Watson', 'confidence': 0.85}, {'source_agent': 'Moriarty', 'finding': \"Analyse de Moriarty pour le texte: L'enquête commence. Sherlock, menez l'investigatio...\", 'confidence': 0.85}, {'source_agent': 'Moriarty', 'finding': 'Détection de patterns par Moriarty', 'confidence': 0.85}, {'source_agent': 'Moriarty', 'finding': 'Évaluation contextuelle par Moriarty', 'confidence': 0.85}], 'consensus_areas': [{'theme': 'analyse sherlock de', 'agents': ['Sherlock', 'Watson', 'Moriarty'], 'confidence': 0.85, 'findings_count': 3}, {'theme': 'patterns de détection', 'agents': ['Sherlock', 'Watson', 'Moriarty'], 'confidence': 0.85, 'findings_count': 3}, {'theme': 'par contextuelle évaluation', 'agents': ['Sherlock', 'Watson', 'Moriarty'], 'confidence': 0.85, 'findings_count': 3}], 'divergent_views': [], 'error_summary': []}, 'timestamp': '2025-06-07T16:13:45.043421', 'execution_mode': 'async', 'total_processing_time': 0.0008}"
+      }
+    ],
+    "oracle_statistics": {
+      "workflow_id": "9a862df2-3ae9-4fdf-a55f-3ace39786584",
+      "oracle_strategy": "balanced",
+      "workflow_metrics": {
+        "total_turns": 1,
+        "oracle_interactions": 0,
+        "cards_revealed": 0,
+        "suggestions_count": 0,
+        "start_time": "2025-06-07T16:13:44.594051"
+      },
+      "agent_interactions": {
+        "total_turns": 1,
+        "interaction_pattern": [
+          "AgentGroupChat"
+        ],
+        "oracle_queries": 0,
+        "suggestions_validated": 0,
+        "agents_active": [
+          "AgentGroupChat",
+          "Sherlock",
+          "Moriarty",
+          "Watson"
+        ]
+      },
+      "cards_distribution": {
+        "moriarty_cards": 3,
+        "autres_joueurs_cards": "ACCÈS_RESTREINT_INTÉGRITÉ_CLUEDO",
+        "total_revealed": 0
+      },
+      "dataset_statistics": {
+        "total_queries": 0,
+        "total_revelations": 0,
+        "moriarty_cards_count": 3,
+        "reveal_policy": "balanced",
+        "revelations_by_agent": {}
+      },
+      "recent_revelations": []
+    },
+    "performance_metrics": {
+      "efficiency": {
+        "turns_per_minute": 40214.47721179625,
+        "oracle_queries_per_turn": 0.0,
+        "cards_revealed_per_query": 0.0
+      },
+      "collaboration": {
+        "oracle_utilization_rate": 0.0,
+        "information_sharing_efficiency": 0,
+        "agent_balance": {
+          "expected_turns_per_agent": 0.3333333333333333,
+          "balance_score": 1.0,
+          "note": "Équilibre cyclique théorique - à améliorer avec métriques réelles"
+        }
+      },
+      "comparison_2vs3_agents": {
+        "estimated_2agent_turns": 1.5,
+        "efficiency_gain": "15-25% reduction in turns (estimated)",
+        "information_richness": "+0 cards revealed"
+      }
+    },
+    "phase_c_fluidity_metrics": {
+      "total_messages": 1,
+      "contextual_references": 0,
+      "emotional_reactions": 0,
+      "contextual_reference_rate": 0.0,
+      "emotional_reaction_rate": 0.0,
+      "fluidity_score": 0.0,
+      "narrative_continuity": "Continuité faible",
+      "phase_c_target": {
+        "reference_target": 90.0,
+        "reaction_target": 70.0,
+        "score_target": 6.5
+      }
+    },
+    "final_state": {
+      "solution_proposed": false,
+      "final_solution": null,
+      "secret_solution": {
+        "suspect": "Docteur Orchidée",
+        "arme": "Chandelier",
+        "lieu": "Cuisine"
+      },
+      "game_solvable_by_elimination": false
+    }
+  }
+}

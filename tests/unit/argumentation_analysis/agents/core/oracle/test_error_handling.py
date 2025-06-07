@@ -1,5 +1,5 @@
 """
-Tests pour le module error_handling.py du système Oracle Enhanced
+Tests pour le module error_handling.py du système Oracle Enhanced v2.1.0
 """
 
 import pytest

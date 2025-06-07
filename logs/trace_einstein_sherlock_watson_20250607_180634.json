@@ -1,0 +1,307 @@
+{
+  "test_info": {
+    "test_name": "Einstein Problem-Solving Sherlock-Watson",
+    "start_time": "2025-06-07T18:06:24.386667",
+    "end_time": "2025-06-07T18:06:34.396301",
+    "total_duration_seconds": 10.009634,
+    "agents_count": 2
+  },
+  "conversation_trace": [
+    {
+      "timestamp": "2025-06-07T18:06:24.387831",
+      "elapsed_seconds": 0.001164,
+      "agent_name": "Sherlock",
+      "message_type": "PROBLEM_ANALYSIS",
+      "content": "Analyse structurelle du puzzle Einstein",
+      "metadata": {}
+    },
+    {
+      "timestamp": "2025-06-07T18:06:26.808616",
+      "elapsed_seconds": 2.421949,
+      "agent_name": "Watson",
+      "message_type": "STEP_VALIDATION",
+      "content": "Validation des déductions: 1 étapes",
+      "metadata": {}
+    },
+    {
+      "timestamp": "2025-06-07T18:06:28.225593",
+      "elapsed_seconds": 3.838926,
+      "agent_name": "Watson",
+      "message_type": "VALIDATION_RESULT",
+      "content": "Validation: {'logical_validity': True, 'coherence_score': 0.92, 'validated_steps': 1, 'suggestions': ['Continuer avec les cigarettes et animaux']}",
+      "metadata": {}
+    },
+    {
+      "timestamp": "2025-06-07T18:06:29.235032",
+      "elapsed_seconds": 4.848365,
+      "agent_name": "Sherlock",
+      "message_type": "LOGICAL_DEDUCTION",
+      "content": "Application des règles de déduction",
+      "metadata": {}
+    },
+    {
+      "timestamp": "2025-06-07T18:06:31.862349",
+      "elapsed_seconds": 7.475682,
+      "agent_name": "Watson",
+      "message_type": "NEXT_STEPS",
+      "content": "Proposition des étapes suivantes",
+      "metadata": {}
+    },
+    {
+      "timestamp": "2025-06-07T18:06:34.396301",
+      "elapsed_seconds": 10.009634,
+      "agent_name": "Sherlock",
+      "message_type": "SOLUTION_FOUND",
+      "content": "Solution trouvée: L'Allemand possède le poisson (maison 4)",
+      "metadata": {}
+    },
+    {
+      "timestamp": "2025-06-07T18:06:34.396301",
+      "elapsed_seconds": 10.009634,
+      "agent_name": "Watson",
+      "message_type": "FINAL_VALIDATION",
+      "content": "Solution logiquement cohérente et complète",
+      "metadata": {}
+    }
+  ],
+  "tool_usage_trace": [
+    {
+      "timestamp": "2025-06-07T18:06:25.188514",
+      "elapsed_seconds": 0.801847,
+      "agent_name": "Sherlock",
+      "tool_name": "constraint_analyzer",
+      "tool_input": "[{'type': 'direct', 'rule': 1, 'relation': 'Anglais -> Maison Rouge'}, {'type': 'direct', 'rule': 2, 'relation': 'Suédois -> Chien'}, {'type': 'direct', 'rule': 3, 'relation': 'Danois -> Thé'}, {'type",
+      "tool_output": "{'direct_constraints': 8, 'adjacency_constraints': 5, 'position_constraints': 2, 'complexity_score': 0.9}",
+      "success": true
+    },
+    {
+      "timestamp": "2025-06-07T18:06:25.795642",
+      "elapsed_seconds": 1.408975,
+      "agent_name": "Sherlock",
+      "tool_name": "starting_point_finder",
+      "tool_input": "logical_deduction",
+      "tool_output": "{'fixed_positions': ['Maison 1: Norvégien', 'Maison 3: Lait'], 'direct_relations': ['Anglais -> Rouge', 'Suédois -> Chien'], 'deduction_order': 'position -> direct -> adjacency'}",
+      "success": true
+    },
+    {
+      "timestamp": "2025-06-07T18:06:27.621561",
+      "elapsed_seconds": 3.234894,
+      "agent_name": "Watson",
+      "tool_name": "logic_validator",
+      "tool_input": "[{'maison_1': 'Norvégien', 'maison_3': 'Lait', 'reasoning': 'Points fixes identifiés par les règles de position'}]",
+      "tool_output": "{'valid': True, 'validated_steps': 1, 'consistency_score': 0.95, 'logic_errors': []}",
+      "success": true
+    },
+    {
+      "timestamp": "2025-06-07T18:06:28.225593",
+      "elapsed_seconds": 3.838926,
+      "agent_name": "Watson",
+      "tool_name": "coherence_checker",
+      "tool_input": "logical_consistency",
+      "tool_output": "{'score': 0.92, 'conflicts': [], 'completeness': 0.75}",
+      "success": true
+    },
+    {
+      "timestamp": "2025-06-07T18:06:29.948415",
+      "elapsed_seconds": 5.561748,
+      "agent_name": "Sherlock",
+      "tool_name": "color_deduction",
+      "tool_input": "{'maison_1': 'Norvégien', 'maison_3': 'Lait', 'reasoning': 'Points fixes identifiés par les règles de position'}",
+      "tool_output": "{'maison_1': 'Norvégien + pas rouge (car Anglais->Rouge)', 'maison_2': 'Bleue (car Norvégien adjacent maison bleue)', 'maison_3': 'Lait + pas verte (car Verte->Café)', 'reasoning': \"Élimination et con",
+      "success": true
+    },
+    {
+      "timestamp": "2025-06-07T18:06:30.848875",
+      "elapsed_seconds": 6.462208,
+      "agent_name": "Sherlock",
+      "tool_name": "nationality_deduction",
+      "tool_input": "{'maison_1': 'Norvégien + pas rouge (car Anglais->Rouge)', 'maison_2': 'Bleue (car Norvégien adjacent maison bleue)', 'maison_3': 'Lait + pas verte (car Verte->Café)', 'reasoning': \"Élimination et con",
+      "tool_output": "{'maison_1': {'nationalite': 'Norvégien', 'couleur': 'Jaune', 'cigarette': 'Dunhill'}, 'maison_2': {'couleur': 'Bleue', 'nationalite': 'Danois', 'boisson': 'Thé'}, 'maison_3': {'boisson': 'Lait', 'nat",
+      "success": true
+    },
+    {
+      "timestamp": "2025-06-07T18:06:32.374320",
+      "elapsed_seconds": 7.987653,
+      "agent_name": "Watson",
+      "tool_name": "remaining_analysis",
+      "tool_input": "{'maison_1': {'nationalite': 'Norvégien', 'couleur': 'Jaune', 'cigarette': 'Dunhill'}, 'maison_2': {'couleur': 'Bleue', 'nationalite': 'Danois', 'boisson': 'Thé'}, 'maison_3': {'boisson': 'Lait', 'nat",
+      "tool_output": "{'animals_to_assign': ['Chien', 'Oiseaux', 'Chats', 'Chevaux', 'Poisson'], 'cigarettes_remaining': ['Pall Mall', 'Blend', 'Blue Master', 'Prince'], 'critical_constraint': 'Qui possède le poisson?'}",
+      "success": true
+    },
+    {
+      "timestamp": "2025-06-07T18:06:33.385128",
+      "elapsed_seconds": 8.998461,
+      "agent_name": "Watson",
+      "tool_name": "solution_completer",
+      "tool_input": "{'maison_1': {'nationalite': 'Norvégien', 'couleur': 'Jaune', 'cigarette': 'Dunhill'}, 'maison_2': {'couleur': 'Bleue', 'nationalite': 'Danois', 'boisson': 'Thé'}, 'maison_3': {'boisson': 'Lait', 'nat",
+      "tool_output": "{'maison_1': {'nationalite': 'Norvégien', 'couleur': 'Jaune', 'boisson': 'Eau', 'cigarette': 'Dunhill', 'animal': 'Chats'}, 'maison_2': {'nationalite': 'Danois', 'couleur': 'Bleue', 'boisson': 'Thé', ",
+      "success": true
+    }
+  ],
+  "shared_state_evolution": [
+    {
+      "timestamp": "2025-06-07T18:06:24.386667",
+      "elapsed_seconds": 0.0,
+      "description": "Initialisation",
+      "state_data": {
+        "problem": "logic_puzzle",
+        "agents": 2
+      }
+    },
+    {
+      "timestamp": "2025-06-07T18:06:24.386667",
+      "elapsed_seconds": 0.0,
+      "description": "Puzzle Initialisé",
+      "state_data": {
+        "categories": 5,
+        "constraints": 15,
+        "problem_type": "Einstein 5-Houses Logic Puzzle"
+      }
+    },
+    {
+      "timestamp": "2025-06-07T18:06:25.795642",
+      "elapsed_seconds": 1.408975,
+      "description": "Déductions Initiales Sherlock",
+      "state_data": {
+        "maison_1": "Norvégien",
+        "maison_3": "Lait",
+        "reasoning": "Points fixes identifiés par les règles de position"
+      }
+    },
+    {
+      "timestamp": "2025-06-07T18:06:28.225593",
+      "elapsed_seconds": 3.838926,
+      "description": "Validation Watson",
+      "state_data": {
+        "logical_validity": true,
+        "coherence_score": 0.92,
+        "validated_steps": 1,
+        "suggestions": [
+          "Continuer avec les cigarettes et animaux"
+        ]
+      }
+    },
+    {
+      "timestamp": "2025-06-07T18:06:34.396301",
+      "elapsed_seconds": 10.009634,
+      "description": "Solution Finale Validée",
+      "state_data": {
+        "answer": "L'Allemand possède le poisson (maison 4)",
+        "method": "step-by-step logical deduction",
+        "validation": "Watson confirmed",
+        "completeness": 1.0
+      }
+    }
+  ],
+  "logical_steps_trace": [
+    {
+      "timestamp": "2025-06-07T18:06:25.795642",
+      "elapsed_seconds": 1.408975,
+      "step_number": 1,
+      "description": "Identification des points fixes",
+      "reasoning": "Règles 8 et 9 donnent des positions absolues",
+      "result": {
+        "maison_1": "Norvégien",
+        "maison_3": "Lait",
+        "reasoning": "Points fixes identifiés par les règles de position"
+      }
+    },
+    {
+      "timestamp": "2025-06-07T18:06:29.948415",
+      "elapsed_seconds": 5.561748,
+      "step_number": 2,
+      "description": "Déduction des couleurs de maisons",
+      "reasoning": "Norvégien en maison 1 + règle 14 -> maison 2 est bleue",
+      "result": {
+        "maison_1": "Norvégien + pas rouge (car Anglais->Rouge)",
+        "maison_2": "Bleue (car Norvégien adjacent maison bleue)",
+        "maison_3": "Lait + pas verte (car Verte->Café)",
+        "reasoning": "Élimination et contraintes d'adjacence"
+      }
+    },
+    {
+      "timestamp": "2025-06-07T18:06:30.848875",
+      "elapsed_seconds": 6.462208,
+      "step_number": 3,
+      "description": "Déduction nationalités et boissons",
+      "reasoning": "Application des règles directes et contraintes d'adjacence",
+      "result": {
+        "maison_1": {
+          "nationalite": "Norvégien",
+          "couleur": "Jaune",
+          "cigarette": "Dunhill"
+        },
+        "maison_2": {
+          "couleur": "Bleue",
+          "nationalite": "Danois",
+          "boisson": "Thé"
+        },
+        "maison_3": {
+          "boisson": "Lait",
+          "nationalite": "Anglais",
+          "couleur": "Rouge"
+        },
+        "maison_4": {
+          "couleur": "Verte",
+          "boisson": "Café"
+        },
+        "maison_5": {
+          "couleur": "Blanche"
+        },
+        "reasoning": "Application systématique des règles directes"
+      }
+    },
+    {
+      "timestamp": "2025-06-07T18:06:33.385128",
+      "elapsed_seconds": 8.998461,
+      "step_number": 4,
+      "description": "Finalisation de la solution",
+      "reasoning": "Application des contraintes restantes pour les animaux",
+      "result": {
+        "maison_1": {
+          "nationalite": "Norvégien",
+          "couleur": "Jaune",
+          "boisson": "Eau",
+          "cigarette": "Dunhill",
+          "animal": "Chats"
+        },
+        "maison_2": {
+          "nationalite": "Danois",
+          "couleur": "Bleue",
+          "boisson": "Thé",
+          "cigarette": "Blend",
+          "animal": "Chevaux"
+        },
+        "maison_3": {
+          "nationalite": "Anglais",
+          "couleur": "Rouge",
+          "boisson": "Lait",
+          "cigarette": "Pall Mall",
+          "animal": "Oiseaux"
+        },
+        "maison_4": {
+          "nationalite": "Allemand",
+          "couleur": "Verte",
+          "boisson": "Café",
+          "cigarette": "Prince",
+          "animal": "Poisson"
+        },
+        "maison_5": {
+          "nationalite": "Suédois",
+          "couleur": "Blanche",
+          "boisson": "Bière",
+          "cigarette": "Blue Master",
+          "animal": "Chien"
+        },
+        "answer": "L'Allemand possède le poisson (maison 4)"
+      }
+    }
+  ],
+  "metrics": {
+    "total_messages": 7,
+    "total_tool_calls": 8,
+    "state_updates": 5,
+    "logical_steps": 4,
+    "average_response_time": 1.4299477142857142
+  }
+}
