@@ -1,0 +1,106 @@
+{
+  "report_info": {
+    "generated_at": "2025-06-07T18:13:04.022273",
+    "total_tests_analyzed": 3,
+    "analyzer_version": "v2.1.0-conversation"
+  },
+  "conversation_analyses": {
+    "Cluedo Sherlock-Watson (sans Moriarty)": {
+      "conversation_patterns": {
+        "pattern_distribution": {},
+        "agent_pattern_usage": {},
+        "conversation_flow": [],
+        "total_exchanges": 0,
+        "pattern_diversity": 0
+      },
+      "interaction_quality": {
+        "quality_score": 0.0,
+        "interaction_depth": "insufficient"
+      },
+      "conversation_realism": {
+        "realism_score": 0.0,
+        "realism_level": "poor"
+      },
+      "solution_convergence": {
+        "convergence_score": 0.5,
+        "convergence_quality": "adequate",
+        "hypothesis_count": 0,
+        "solution_indicators": 0,
+        "state_evolution_steps": 6,
+        "state_progress_score": 1.0
+      },
+      "overall_conversation_score": 0.1
+    },
+    "Cluedo Sherlock-Watson-Moriarty (avec Moriarty)": {
+      "conversation_patterns": {
+        "pattern_distribution": {},
+        "agent_pattern_usage": {},
+        "conversation_flow": [],
+        "total_exchanges": 0,
+        "pattern_diversity": 0
+      },
+      "interaction_quality": {
+        "quality_score": 0.0,
+        "interaction_depth": "insufficient"
+      },
+      "conversation_realism": {
+        "realism_score": 0.0,
+        "realism_level": "poor"
+      },
+      "solution_convergence": {
+        "convergence_score": 0.5,
+        "convergence_quality": "adequate",
+        "hypothesis_count": 0,
+        "solution_indicators": 0,
+        "state_evolution_steps": 7,
+        "state_progress_score": 1.0
+      },
+      "overall_conversation_score": 0.1
+    },
+    "Einstein Problem-Solving Sherlock-Watson": {
+      "conversation_patterns": {
+        "pattern_distribution": {},
+        "agent_pattern_usage": {},
+        "conversation_flow": [],
+        "total_exchanges": 0,
+        "pattern_diversity": 0
+      },
+      "interaction_quality": {
+        "quality_score": 0.0,
+        "interaction_depth": "insufficient"
+      },
+      "conversation_realism": {
+        "realism_score": 0.0,
+        "realism_level": "poor"
+      },
+      "solution_convergence": {
+        "convergence_score": 0.4,
+        "convergence_quality": "adequate",
+        "hypothesis_count": 0,
+        "solution_indicators": 0,
+        "state_evolution_steps": 5,
+        "state_progress_score": 0.8
+      },
+      "overall_conversation_score": 0.08000000000000002
+    }
+  },
+  "global_conversation_metrics": {
+    "average_conversation_score": 0.09333333333333334,
+    "average_quality_score": 0.0,
+    "average_realism_score": 0.0,
+    "average_convergence_score": 0.4666666666666666,
+    "tests_excellent_conversation": 0,
+    "conversation_success_rate": 0.0
+  },
+  "conversation_summary": {
+    "conversation_validation": false,
+    "conversation_quality_level": "NEEDS_IMPROVEMENT",
+    "validation_status": "FAILED",
+    "conversation_recommendations": [
+      "❌ Améliorer la naturalité des conversations",
+      "❌ Renforcer l'interaction entre agents",
+      "❌ Optimiser la convergence vers les solutions",
+      "❌ Diversifier les patterns conversationnels"
+    ]
+  }
+}
