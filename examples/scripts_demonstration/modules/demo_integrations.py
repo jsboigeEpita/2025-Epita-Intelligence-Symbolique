@@ -26,7 +26,7 @@ def demo_integration_operational(logger: DemoLogger, config: Dict[str, Any]) -> 
     ]
     
     logger.info(f"{Symbols.ROCKET} Tests d'intégration agents opérationnels...")
-    succes, resultats = executer_tests(tests_operational, logger, timeout=150)
+    succes, resultats = executer_tests(tests_operational, logger, timeout=35)
     
     if succes:
         logger.success(f"{Symbols.CHECK} Intégration opérationnelle validée !")
@@ -57,7 +57,7 @@ def demo_interface_tactique_strategique(logger: DemoLogger, config: Dict[str, An
     ]
     
     logger.info(f"{Symbols.CHART} Tests interface stratégique-tactique...")
-    succes, resultats = executer_tests(tests_interface, logger, timeout=120)
+    succes, resultats = executer_tests(tests_interface, logger, timeout=25)
     
     if succes:
         logger.success(f"{Symbols.FIRE} Interface stratégique-tactique opérationnelle !")
@@ -88,7 +88,7 @@ def demo_interface_tactique_operationnel(logger: DemoLogger, config: Dict[str, A
     ]
     
     logger.info(f"{Symbols.ROCKET} Tests interface tactique-opérationnel...")
-    succes, resultats = executer_tests(tests_interface, logger, timeout=120)
+    succes, resultats = executer_tests(tests_interface, logger, timeout=25)
     
     if succes:
         logger.success(f"{Symbols.CHECK} Interface tactique-opérationnel validée !")
@@ -310,14 +310,13 @@ def run_demo_rapide() -> bool:
     
     logger.header("[API] DÉMONSTRATION RAPIDE - INTÉGRATIONS")
     
-    # Tests essentiels seulement
+    # Tests essentiels seulement - remplacés par tests plus rapides
     tests_essentiels = [
-        "tests/unit/argumentation_analysis/test_operational_agents_integration.py",
-        "tests/unit/argumentation_analysis/test_strategic_tactical_interface.py"
+        "tests/unit/argumentation_analysis/test_tactical_operational_interface.py"
     ]
     
     logger.info(f"{Symbols.ROCKET} Tests intégrations opérationnelles et interfaces...")
-    succes, resultats = executer_tests(tests_essentiels, logger, timeout=120)
+    succes, resultats = executer_tests(tests_essentiels, logger, timeout=30)
     
     afficher_stats_tests(resultats)
     
