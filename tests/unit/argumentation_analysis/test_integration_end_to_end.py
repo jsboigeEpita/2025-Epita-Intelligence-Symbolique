@@ -9,6 +9,7 @@ les différents agents et la gestion des erreurs.
 
 import asyncio
 import pytest
+import pytest_asyncio
 import json
 import time
 from unittest.mock import MagicMock, AsyncMock, patch, call
@@ -24,9 +25,11 @@ from argumentation_analysis.models.extract_definition import ExtractDefinitions,
 from argumentation_analysis.services.extract_service import ExtractService
 from argumentation_analysis.services.fetch_service import FetchService
 
+# Configuration pytest-asyncio
+pytestmark = pytest.mark.asyncio
 
-@pytest.fixture
-def analysis_fixture():
+@pytest_asyncio.fixture
+async def analysis_fixture():
     """Fixture pour initialiser les composants de base pour les tests d'analyse."""
     test_text = """
     La Terre est plate car l'horizon semble plat quand on regarde au loin.
@@ -39,7 +42,16 @@ def analysis_fixture():
     kernel = sk.Kernel()
     state_manager = StateManagerPlugin(state)
     kernel.add_plugin(state_manager, "StateManager")
-    return state, llm_service, kernel, test_text
+    
+    yield state, llm_service, kernel, test_text
+    
+    # Cleanup AsyncIO tasks
+    try:
+        tasks = [task for task in asyncio.all_tasks() if not task.done()]
+        if tasks:
+            await asyncio.gather(*tasks, return_exceptions=True)
+    except Exception:
+        pass
 
 
 class TestEndToEndAnalysis:
@@ -51,6 +63,7 @@ class TestEndToEndAnalysis:
     @patch('argumentation_analysis.orchestration.analysis_runner.setup_pl_kernel')
     @patch('argumentation_analysis.orchestration.analysis_runner.setup_informal_kernel')
     @patch('argumentation_analysis.orchestration.analysis_runner.setup_pm_kernel')
+    @pytest.mark.asyncio
     async def test_complete_analysis_flow(
         self,
         mock_setup_pm_kernel,
@@ -148,6 +161,7 @@ class TestEndToEndAnalysis:
     @patch('argumentation_analysis.orchestration.analysis_runner.setup_pl_kernel')
     @patch('argumentation_analysis.orchestration.analysis_runner.setup_informal_kernel')
     @patch('argumentation_analysis.orchestration.analysis_runner.setup_pm_kernel')
+    @pytest.mark.asyncio
     async def test_error_handling_and_recovery(
         self,
         mock_setup_pm_kernel,

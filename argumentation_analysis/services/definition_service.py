@@ -63,7 +63,7 @@ class DefinitionService:
         if fallback_file:
             self.logger.info(f"Fichier de secours configuré: {fallback_file}")
     
-    def load_definitions(self) -> ExtractDefinitions:
+    def load_definitions(self) -> Tuple[ExtractDefinitions, Optional[str]]:
         """
         Charge les définitions d'extraits à partir du fichier de configuration.
 
@@ -73,9 +73,8 @@ class DefinitionService:
         `self.fallback_file` (JSON brut). Si tout échoue, utilise
         `self.default_definitions`.
 
-        :return: Un objet `ExtractDefinitions` contenant les définitions chargées.
-                 Retourne des définitions vides en cas d'échec persistant.
-        :rtype: ExtractDefinitions
+        :return: Un tuple contenant un objet `ExtractDefinitions` et un message d'erreur optionnel.
+        :rtype: Tuple[ExtractDefinitions, Optional[str]]
         """
         definitions_list = []
         error_message = None
@@ -135,6 +134,8 @@ class DefinitionService:
             log_message = "Aucune définition trouvée ou erreur de chargement persistante, utilisation des définitions par défaut."
             if error_message: # Si une erreur précédente a été loggée
                 self.logger.warning(f"{log_message} (Erreur précédente: {error_message})")
+                # Mettre à jour le message d'erreur pour refléter l'utilisation des définitions par défaut
+                error_message = f"Utilisation des définitions par défaut. (Erreur précédente: {error_message})"
             else: # Si aucune définition n'a été trouvée sans erreur explicite
                  error_message = "Aucune définition trouvée, utilisation des définitions par défaut." # Pour info interne
                  self.logger.warning(log_message)
@@ -155,7 +156,7 @@ class DefinitionService:
         if error_message: # Log final de l'erreur si une s'est produite et n'a pas été résolue par un fallback
             self.logger.info(f"Processus de chargement des définitions terminé avec message: {error_message}")
             
-        return extract_definitions
+        return extract_definitions, error_message
     
     def save_definitions(self, definitions: ExtractDefinitions) -> Tuple[bool, Optional[str]]:
         """

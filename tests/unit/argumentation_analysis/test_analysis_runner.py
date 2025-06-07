@@ -10,7 +10,7 @@ import asyncio
 from argumentation_analysis.orchestration.analysis_runner import AnalysisRunner, run_analysis
 
 
-class TestAnalysisRunner: # Suppression de l'héritage AsyncTestCase
+class TestAnalysisRunner(unittest.TestCase):
     """Tests pour la classe AnalysisRunner."""
 
     def setUp(self):
@@ -26,8 +26,8 @@ class TestAnalysisRunner: # Suppression de l'héritage AsyncTestCase
         # Configurer le mock
         mock_run_analysis_conversation.return_value = "Résultat de l'analyse"
         
-        # Appeler la méthode à tester
-        result = await self.runner.run_analysis(
+        # Appeler la méthode à tester (utilise run_analysis_async)
+        result = await self.runner.run_analysis_async(
             text_content=self.test_text,
             llm_service=self.mock_llm_service
         )
@@ -41,7 +41,7 @@ class TestAnalysisRunner: # Suppression de l'héritage AsyncTestCase
             llm_service=self.mock_llm_service
         )
 
-    @patch('argumentation_analysis.orchestration.analysis_runner.create_llm_service')
+    @patch('argumentation_analysis.core.llm_service.create_llm_service')
     @patch('argumentation_analysis.orchestration.analysis_runner.run_analysis_conversation')
     async def test_run_analysis_without_llm_service(self, mock_run_analysis_conversation, mock_create_llm_service):
         """Teste l'exécution de l'analyse sans service LLM fourni."""
@@ -49,8 +49,8 @@ class TestAnalysisRunner: # Suppression de l'héritage AsyncTestCase
         mock_create_llm_service.return_value = self.mock_llm_service
         mock_run_analysis_conversation.return_value = "Résultat de l'analyse"
         
-        # Appeler la méthode à tester
-        result = await self.runner.run_analysis(text_content=self.test_text)
+        # Appeler la méthode à tester (utilise run_analysis_async)
+        result = await self.runner.run_analysis_async(text_content=self.test_text)
         
         # Vérifier les résultats
         self.assertEqual(result, "Résultat de l'analyse")
@@ -62,7 +62,7 @@ class TestAnalysisRunner: # Suppression de l'héritage AsyncTestCase
             llm_service=self.mock_llm_service
         )
 
-    @patch('argumentation_analysis.orchestration.analysis_runner.create_llm_service')
+    @patch('argumentation_analysis.core.llm_service.create_llm_service')
     @patch('argumentation_analysis.orchestration.analysis_runner.run_analysis_conversation')
     async def test_run_analysis_function_with_llm_service(self, mock_run_analysis_conversation, mock_create_llm_service):
         """Teste la fonction run_analysis avec un service LLM fourni."""
@@ -85,7 +85,7 @@ class TestAnalysisRunner: # Suppression de l'héritage AsyncTestCase
             llm_service=self.mock_llm_service
         )
 
-    @patch('argumentation_analysis.orchestration.analysis_runner.create_llm_service')
+    @patch('argumentation_analysis.core.llm_service.create_llm_service')
     @patch('argumentation_analysis.orchestration.analysis_runner.run_analysis_conversation')
     async def test_run_analysis_function_without_llm_service(self, mock_run_analysis_conversation, mock_create_llm_service):
         """Teste la fonction run_analysis sans service LLM fourni."""

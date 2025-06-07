@@ -13,6 +13,9 @@ from unittest.mock import MagicMock, patch, AsyncMock, Mock
 import asyncio
 import logging
 
+# Configuration pytest-asyncio pour éviter les conflits d'event loop
+pytestmark = pytest.mark.asyncio
+
 # Configurer le logging pour les tests
 logging.basicConfig(
     level=logging.INFO,
@@ -80,6 +83,14 @@ class TestExtractAgentAdapter:
         await self.adapter.initialize(kernel=self.mock_kernel, llm_service_id=self.mock_llm_service_id)
 
         yield
+
+        # Cleanup AsyncIO tasks before stopping patches
+        try:
+            tasks = [task for task in asyncio.all_tasks() if not task.done()]
+            if tasks:
+                await asyncio.gather(*tasks, return_exceptions=True)
+        except Exception:
+            pass
 
         # Nettoyage après chaque test
         self.patcher.stop()
