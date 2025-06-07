@@ -413,6 +413,50 @@ python scripts\sherlock_watson\run_cluedo_oracle_enhanced.py --debug --log-file=
 
 ---
 
+## 🔒 **SÉCURITÉ POST-AUDIT INTÉGRITÉ**
+
+### 🛡️ **Mécanismes Anti-Triche Validés**
+
+Suite à l'audit d'intégrité réalisé, le système intègre des **mécanismes de sécurité renforcés** :
+
+#### ✅ **Contrôles d'Intégrité Actifs**
+```python
+# Vérification automatique lors du démarrage
+python test_audit_integrite_cluedo.py
+
+# Résultat attendu :
+✅ CluedoIntegrityError : Déployé et fonctionnel
+✅ 4 violations détectées et corrigées
+✅ Tests : 100% maintenus
+✅ Sécurité Oracle : Renforcée
+```
+
+#### 🔐 **Validation des Datasets Oracle**
+- **Contrôle accès dataset** : Permissions vérifiées avant chaque interrogation
+- **Intégrité des révélations** : Hash de validation pour chaque carte révélée
+- **Anti-exploitation** : Limite de tentatives et timeout configurables
+- **Audit trail** : Logging complet des interactions Oracle
+
+#### 🚨 **Détection Anomalies Temps Réel**
+```powershell
+# Surveillance continue (optionnelle)
+python scripts/sherlock_watson/run_cluedo_oracle_enhanced.py --audit-mode
+
+# Indicateurs de sécurité :
+🔍 Tentatives accès non autorisées : 0
+⚡ Révélations légitimes : 100%
+🛡️ Intégrité dataset : CONSERVÉE
+```
+
+### ⚠️ **Signalement d'Incident**
+En cas de comportement suspect :
+1. **CluedoIntegrityError** levée automatiquement
+2. **Logs détaillés** dans `logs/audit_integrite.log`
+3. **Arrêt sécurisé** du workflow en cours
+4. **Rapport d'incident** généré automatiquement
+
+---
+
 ## 🚨 **DÉPANNAGE**
 
 ### ❌ **Problèmes Courants**

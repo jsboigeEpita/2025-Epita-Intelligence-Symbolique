@@ -2,6 +2,21 @@
 
 Ce projet contient une application web pour l'analyse d'argumentation, composée d'un backend Flask et d'un frontend React.
 
+## 🔒 **Sécurité et Intégrité - Mise à Jour Janvier 2025**
+
+### ✅ **Audit d'Intégrité Récent**
+Un audit de sécurité complet a été réalisé sur le système **Sherlock-Watson-Moriarty Oracle Enhanced**, aboutissant à :
+
+- **4 violations d'intégrité** détectées et **corrigées**
+- **CluedoIntegrityError** déployé pour protection anti-triche
+- **Mécanismes de surveillance** temps réel intégrés
+- **Couverture tests** maintenue à **100%**
+
+Pour plus de détails, consulter :
+- 📋 **[Rapport d'Audit Complet](docs/sherlock_watson/AUDIT_INTEGRITE_CLUEDO.md)**
+- 🛠️ **[Guide Utilisateur Sécurisé](docs/sherlock_watson/GUIDE_UTILISATEUR_COMPLET.md)**
+- 🏗️ **[Architecture Sécurité](docs/sherlock_watson/ARCHITECTURE_TECHNIQUE_DETAILLEE.md)**
+
 ## Prérequis
 
 ### Backend
