@@ -1,0 +1,139 @@
+{
+  "results": [
+    {
+      "batch": "utils_core",
+      "files_tested": 3,
+      "passed": 0,
+      "failed": 0,
+      "success_rate": 0,
+      "returncode": 4,
+      "files": [
+        "tests\\unit\\argumentation_analysis\\utils\\core_utils\\test_cli_utils.py",
+        "tests\\unit\\argumentation_analysis\\utils\\core_utils\\test_crypto_utils.py",
+        "tests\\unit\\argumentation_analysis\\utils\\core_utils\\test_file_utils.py"
+      ]
+    },
+    {
+      "batch": "mocks",
+      "files_tested": 3,
+      "passed": 0,
+      "failed": 0,
+      "success_rate": 0,
+      "returncode": 4,
+      "files": [
+        "tests\\comparison\\test_mock_vs_real_behavior.py",
+        "tests\\mocks\\test_jpype_mock.py",
+        "tests\\mocks\\test_jpype_mock_simple.py"
+      ]
+    },
+    {
+      "batch": "validation_sherlock",
+      "files_tested": 3,
+      "passed": 0,
+      "failed": 0,
+      "success_rate": 0,
+      "returncode": 4,
+      "files": [
+        "tests\\validation_sherlock_watson\\test_analyse_simple.py",
+        "tests\\validation_sherlock_watson\\test_api_corrections.py",
+        "tests\\validation_sherlock_watson\\test_api_corrections_simple.py"
+      ]
+    },
+    {
+      "batch": "agents",
+      "files_tested": 3,
+      "passed": 0,
+      "failed": 0,
+      "success_rate": 0,
+      "returncode": 4,
+      "files": [
+        "tests\\agents\\core\\informal\\test_informal_agent.py",
+        "tests\\agents\\core\\informal\\test_informal_agent_creation.py",
+        "tests\\agents\\core\\informal\\test_informal_analysis_methods.py"
+      ]
+    },
+    {
+      "batch": "logic_jpype",
+      "files_tested": 3,
+      "passed": 0,
+      "failed": 0,
+      "success_rate": 0,
+      "returncode": 4,
+      "files": [
+        "tests\\functional\\test_logic_graph.py",
+        "tests\\integration\\jpype_tweety\\test_advanced_reasoning.py",
+        "tests\\integration\\jpype_tweety\\test_agent_integration.py"
+      ]
+    },
+    {
+      "batch": "openai_semantic",
+      "files_tested": 2,
+      "passed": 0,
+      "failed": 0,
+      "success_rate": 0,
+      "returncode": 4,
+      "files": [
+        "tests\\config\\test_config_real_gpt.py",
+        "tests\\integration\\test_sherlock_watson_moriarty_real_gpt.py"
+      ]
+    },
+    {
+      "batch": "integration",
+      "files_tested": 3,
+      "passed": 0,
+      "failed": 0,
+      "success_rate": 0,
+      "returncode": 4,
+      "files": [
+        "tests\\integration\\test_cluedo_extended_workflow.py",
+        "tests\\integration\\test_cluedo_oracle_enhanced_real.py",
+        "tests\\integration\\test_cluedo_orchestration_integration.py"
+      ]
+    },
+    {
+      "batch": "ui_playwright",
+      "files_tested": 2,
+      "passed": 0,
+      "failed": 0,
+      "success_rate": 0,
+      "returncode": 4,
+      "files": [
+        "tests\\ui\\test_extract_definition_persistence.py",
+        "tests\\ui\\test_utils.py"
+      ]
+    },
+    {
+      "batch": "other",
+      "files_tested": 3,
+      "passed": 0,
+      "failed": 0,
+      "success_rate": 0,
+      "returncode": 4,
+      "files": [
+        "tests\\argumentation_analysis\\utils\\dev_tools\\test_repair_utils.py",
+        "tests\\core\\test_enquete_states.py",
+        "tests\\environment_checks\\test_core_dependencies.py"
+      ]
+    }
+  ],
+  "summary": {
+    "total_tested": 0,
+    "total_passed": 0,
+    "total_failed": 0,
+    "success_rate": 0,
+    "estimated_1850_success_rate": 0,
+    "estimated_1850_passed": 0
+  },
+  "categories": {
+    "utils_core": 8,
+    "mocks": 20,
+    "unit_basic": 0,
+    "validation_sherlock": 32,
+    "agents": 36,
+    "logic_jpype": 16,
+    "openai_semantic": 2,
+    "integration": 13,
+    "ui_playwright": 2,
+    "other": 98
+  }
+}
