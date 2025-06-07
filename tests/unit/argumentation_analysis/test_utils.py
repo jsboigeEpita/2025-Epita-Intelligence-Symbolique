@@ -57,9 +57,9 @@ class TestSystemUtils:
         
         # Vérifier que c'est bien la racine du projet (contient des fichiers/dossiers clés)
         # Note: Cette vérification peut varier selon la structure du projet
-        assert (root / "agents").exists() or \
-               (root / "core").exists() or \
-               (root / "utils").exists()
+        assert (root / "argumentation_analysis").exists() or \
+               (root / "tests").exists() or \
+               (root / "scripts").exists()
 
     def test_is_running_in_notebook(self):
         """Teste la détection d'exécution dans un notebook."""
