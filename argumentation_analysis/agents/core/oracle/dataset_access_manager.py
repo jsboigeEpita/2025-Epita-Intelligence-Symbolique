@@ -396,6 +396,19 @@ class DatasetAccessManager:
         """Ajoute une règle de permission."""
         self.permission_manager.add_permission_rule(rule)
     
+    def check_permission(self, agent_name: str, query_type: QueryType) -> bool:
+        """
+        Vérifie si un agent a les permissions pour un type de requête.
+        
+        Args:
+            agent_name: Nom de l'agent à vérifier
+            query_type: Type de requête à autoriser
+            
+        Returns:
+            True si l'agent est autorisé, False sinon
+        """
+        return self.permission_manager.is_authorized(agent_name, query_type)
+    
     def get_access_statistics(self) -> Dict[str, Any]:
         """Retourne les statistiques d'accès complètes."""
         uptime = (datetime.now() - self.start_time).total_seconds()
