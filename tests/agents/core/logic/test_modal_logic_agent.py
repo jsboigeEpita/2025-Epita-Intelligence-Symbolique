@@ -35,6 +35,7 @@ class TestModalLogicAgent:
         self.mock_tweety_bridge_instance.is_jvm_ready.return_value = True
         self.mock_tweety_bridge_instance.validate_modal_belief_set.return_value = (True, "Ensemble de croyances modal valide")
         self.mock_tweety_bridge_instance.validate_modal_formula.return_value = (True, "Formule modale valide")
+        self.mock_tweety_bridge_instance.validate_modal_query_with_context.return_value = (True, "Requête modale valide")
         self.mock_tweety_bridge_instance.execute_modal_query.return_value = "Tweety Result: Modal Query '[]p' is ACCEPTED (True)."
         self.mock_tweety_bridge_instance.is_modal_kb_consistent.return_value = (True, "Belief set is consistent")
 
@@ -48,7 +49,15 @@ class TestModalLogicAgent:
         self.mock_text_to_modal_function.invoke.return_value = mock_text_to_modal_sk_result
 
         mock_gen_queries_sk_result = MagicMock()
-        mock_gen_queries_sk_result.__str__.return_value = "p\n[]p\n<>q"
+        mock_gen_queries_sk_result.__str__.return_value = '''
+        {
+            "query_ideas": [
+                {"formula": "p"},
+                {"formula": "[]p"},
+                {"formula": "<>q"}
+            ]
+        }
+        '''
         self.mock_generate_queries_function = AsyncMock()
         self.mock_generate_queries_function.invoke.return_value = mock_gen_queries_sk_result
         
@@ -131,15 +140,15 @@ class TestModalLogicAgent:
     @pytest.mark.asyncio
     async def test_generate_queries(self):
         """Test de la génération de requêtes modales."""
-        self.mock_tweety_bridge_instance.validate_modal_formula.return_value = (True, "Formule modale valide")
+        self.mock_tweety_bridge_instance.validate_modal_query_with_context.return_value = (True, "Requête modale valide")
         
-        belief_set_obj = ModalBeliefSet("[]p;")
+        belief_set_obj = ModalBeliefSet("[]p; <>q;")
         queries = await self.agent.generate_queries("Texte de test", belief_set_obj)
         
         # Vérification que la fonction invoke a été appelée (sans vérifier les paramètres spécifiques)
         assert self.mock_generate_queries_function.invoke.called
-        assert self.mock_tweety_bridge_instance.validate_modal_formula.call_count == 3
-        self.mock_tweety_bridge_instance.validate_modal_formula.assert_any_call("p")
+        assert self.mock_tweety_bridge_instance.validate_modal_query_with_context.call_count == 3
+        self.mock_tweety_bridge_instance.validate_modal_query_with_context.assert_any_call("[]p; <>q;", "p")
         
         assert queries == ["p", "[]p", "<>q"]
 
@@ -147,20 +156,28 @@ class TestModalLogicAgent:
     async def test_generate_queries_with_invalid_query(self):
         """Test de la génération de requêtes modales avec une requête invalide."""
         invalid_queries_sk_result = MagicMock()
-        invalid_queries_sk_result.__str__.return_value = "p\n[]invalid\n<>q"
+        invalid_queries_sk_result.__str__.return_value = """
+        {
+            "query_ideas": [
+                {"formula": "p"},
+                {"formula": "[]invalid"},
+                {"formula": "<>q"}
+            ]
+        }
+        """
         self.mock_generate_queries_function.invoke.return_value = invalid_queries_sk_result
 
-        def validate_side_effect(formula_str):
+        def validate_side_effect(belief_set_content, formula_str):
             if formula_str == "[]invalid":
                 return (False, "Erreur de syntaxe modale")
             return (True, "Formule modale valide")
-        self.mock_tweety_bridge_instance.validate_modal_formula.side_effect = validate_side_effect
+        self.mock_tweety_bridge_instance.validate_modal_query_with_context.side_effect = validate_side_effect
         
-        belief_set_obj = ModalBeliefSet("[]p;")
+        belief_set_obj = ModalBeliefSet("[]p; <>q;")
         queries = await self.agent.generate_queries("Texte de test", belief_set_obj)
         
-        self.mock_generate_queries_function.invoke.assert_called_once_with(self.kernel, input="Texte de test", belief_set="[]p;")
-        assert self.mock_tweety_bridge_instance.validate_modal_formula.call_count == 3
+        self.mock_generate_queries_function.invoke.assert_called_once_with(self.kernel, input="Texte de test", belief_set="[]p; <>q;")
+        assert self.mock_tweety_bridge_instance.validate_modal_query_with_context.call_count == 3
         assert queries == ["p", "<>q"]
 
     def test_execute_query_accepted(self):

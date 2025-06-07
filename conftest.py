@@ -204,3 +204,31 @@ else:
 @pytest.fixture(autouse=True)
 def anyio_backend():
     return "asyncio"
+# Ajout de fixtures pour les nouveaux modules Oracle Enhanced
+
+import pytest
+from argumentation_analysis.agents.core.oracle.error_handling import OracleErrorHandler
+from argumentation_analysis.agents.core.oracle.interfaces import StandardOracleResponse
+
+@pytest.fixture
+def oracle_error_handler():
+    """Fixture pour OracleErrorHandler"""
+    return OracleErrorHandler()
+
+@pytest.fixture  
+def standard_oracle_response_success():
+    """Fixture pour StandardOracleResponse de succès"""
+    return StandardOracleResponse(
+        success=True,
+        data={"test": "data"},
+        message="Test successful"
+    )
+
+@pytest.fixture
+def standard_oracle_response_error():
+    """Fixture pour StandardOracleResponse d'erreur"""
+    return StandardOracleResponse(
+        success=False,
+        message="Test error",
+        error_code="TEST_ERROR"
+    )

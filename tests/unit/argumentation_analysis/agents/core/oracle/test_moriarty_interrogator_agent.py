@@ -329,7 +329,7 @@ class TestMoriartyInterrogatorAgentIntegration:
             
             # Vérifications
             assert hasattr(result, 'can_refute')
-            assert hasattr(result, 'suggestion_valid')
+            assert hasattr(result, 'is_valid')
     
     def test_real_card_revelation_flow(self, mock_kernel_real, real_cluedo_dataset):
         """Test du flux de révélation de carte avec dataset réel."""
