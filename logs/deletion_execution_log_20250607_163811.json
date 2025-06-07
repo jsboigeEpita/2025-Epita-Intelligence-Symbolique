@@ -1,0 +1,144 @@
+{
+  "task": "TÂCHE 2/6: Suppression sécurisée des fichiers obsolètes",
+  "timestamp": "2025-06-07T16:38:11.258375",
+  "oracle_version": "Oracle Enhanced v2.1.0",
+  "backup_archive": "D:\\2025-Epita-Intelligence-Symbolique\\archives\\pre_deletion_backup_20250607_163757.tar.gz",
+  "total_files_processed": 19,
+  "deletion_log": [
+    {
+      "file_path": "logs/orphan_tests_organization_report.md",
+      "deleted_at": "2025-06-07T16:37:57.947505",
+      "file_size": 10275,
+      "md5_checksum": "4ea3e34b68a8b11108fd40ad64ef5241",
+      "status": "deleted"
+    },
+    {
+      "file_path": "archives/pre_cleanup_backup_20250607_153122.tar.gz",
+      "deleted_at": "2025-06-07T16:37:57.949510",
+      "file_size": 1704004,
+      "md5_checksum": "6983cc1d70332e3b15694e7b6123100c",
+      "status": "deleted"
+    },
+    {
+      "file_path": "logs/tache_1_validation_completion.md",
+      "deleted_at": "2025-06-07T16:37:57.949510",
+      "file_size": 4811,
+      "md5_checksum": "9f5c9afe932520b6d57b7ca57ac593be",
+      "status": "deleted"
+    },
+    {
+      "file_path": "logs/orphan_organization_summary_20250607_143255.json",
+      "deleted_at": "2025-06-07T16:37:57.950510",
+      "file_size": 874,
+      "md5_checksum": "f2724e797e74d94bc4cb447377c4978c",
+      "status": "deleted"
+    },
+    {
+      "file_path": "logs/backup_README.md_20250607_143255",
+      "deleted_at": "2025-06-07T16:37:57.950510",
+      "file_size": 14155,
+      "md5_checksum": "d180876875b4c49486fe36c1746d0476",
+      "status": "deleted"
+    },
+    {
+      "file_path": "logs/oracle_files_analysis_summary.md",
+      "deleted_at": "2025-06-07T16:38:01.275636",
+      "file_size": 5768,
+      "md5_checksum": "4df418f5c7a26cb5c03638ddfc6570d9",
+      "status": "deleted"
+    },
+    {
+      "file_path": "logs/code_recovery_report.md",
+      "deleted_at": "2025-06-07T16:38:01.275636",
+      "file_size": 7586,
+      "md5_checksum": "7464155fd3f7b329c7cc4fd2c32177dc",
+      "status": "deleted"
+    },
+    {
+      "file_path": "logs/backup_rapport_genere_par_agents_sk.md_20250607_143255",
+      "deleted_at": "2025-06-07T16:38:01.275636",
+      "file_size": 8730,
+      "md5_checksum": "8f7a6524abf721317b8d01056220e217",
+      "status": "deleted"
+    },
+    {
+      "file_path": "logs/oracle_files_categorization_detailed.json",
+      "deleted_at": "2025-06-07T16:38:01.277149",
+      "file_size": 124941,
+      "md5_checksum": "fadbbb602028ac64f87670ba8ed5a626",
+      "status": "deleted"
+    },
+    {
+      "file_path": "logs/post_cleanup_validation_report.md",
+      "deleted_at": "2025-06-07T16:38:01.277149",
+      "file_size": 5360,
+      "md5_checksum": "2a36d0b51e11e3255ddf0a425216dcfe",
+      "status": "deleted"
+    },
+    {
+      "file_path": "logs/cleanup_plan_phase4.md",
+      "deleted_at": "2025-06-07T16:38:04.585376",
+      "file_size": 5270,
+      "md5_checksum": "794668dfbf73b9924c0599ed9e830be4",
+      "status": "deleted"
+    },
+    {
+      "file_path": "logs/orphan_files_analysis_20250607_142422.md",
+      "deleted_at": "2025-06-07T16:38:04.585376",
+      "file_size": 4323,
+      "md5_checksum": "8adca29353906b2c4f5f65e659233843",
+      "status": "deleted"
+    },
+    {
+      "file_path": "archives/pre_cleanup_backup_20250607_153104.tar.gz",
+      "deleted_at": "2025-06-07T16:38:04.587889",
+      "file_size": 1704019,
+      "md5_checksum": "62d08f5086a32f852e87a144885ae54d",
+      "status": "deleted"
+    },
+    {
+      "file_path": "logs/git_cleanup_action_plan.md",
+      "deleted_at": "2025-06-07T16:38:04.587889",
+      "file_size": 186169,
+      "md5_checksum": "b460b1996f0e54d4ad10558abde08cf3",
+      "status": "deleted"
+    },
+    {
+      "file_path": "logs/orphan_tests_categorization.json",
+      "deleted_at": "2025-06-07T16:38:04.588883",
+      "file_size": 829,
+      "md5_checksum": "8dc73c143f2557e2ab1224009e498f65",
+      "status": "deleted"
+    },
+    {
+      "file_path": "logs/metriques_finales_nettoyage.json",
+      "deleted_at": "2025-06-07T16:38:07.935217",
+      "file_size": 6667,
+      "md5_checksum": "24c53392fd06862f5207e59cf0914571",
+      "status": "deleted"
+    },
+    {
+      "file_path": "logs/backup_GUIDE_INSTALLATION_ETUDIANTS.md_20250607_143255",
+      "deleted_at": "2025-06-07T16:38:07.935217",
+      "file_size": 17674,
+      "md5_checksum": "be3fe48c56ae1cfc0ed7c0f2723394cb",
+      "status": "deleted"
+    },
+    {
+      "file_path": "logs/orphan_files_data_20250607_142422.json",
+      "deleted_at": "2025-06-07T16:38:07.935741",
+      "file_size": 128800,
+      "md5_checksum": "ec82088928146a8dead4ea384cfe110f",
+      "status": "deleted"
+    },
+    {
+      "file_path": "logs/cleanup_execution_log.json",
+      "deleted_at": "2025-06-07T16:38:07.935741",
+      "file_size": 2391,
+      "md5_checksum": "ec2083ec1c82dac32fa44fb14c846f03",
+      "status": "deleted"
+    }
+  ],
+  "integrity_status": "Oracle Enhanced fonctionnel",
+  "completion_status": "SUCCESS"
+}
