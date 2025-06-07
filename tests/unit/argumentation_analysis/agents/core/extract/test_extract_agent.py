@@ -164,7 +164,7 @@ class TestExtractAgent:
 
     @pytest.mark.asyncio
     @patch('argumentation_analysis.agents.core.extract.extract_agent.load_source_text')
-    @patch('argumentation_analysis.core.utils.text_utils.extract_text_with_markers') # Correction de l'emplacement du patch
+    @patch('argumentation_analysis.ui.extract_utils.extract_text_with_markers') # Correction de l'emplacement du patch
     async def test_extract_from_name_json_error(self, mock_extract_text_with_markers, mock_load_source_text, extract_agent_setup):
         agent = extract_agent_setup['agent']
         mock_sk_kernel = extract_agent_setup['mock_sk_kernel']
