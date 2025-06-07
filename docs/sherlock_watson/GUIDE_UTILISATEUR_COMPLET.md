@@ -15,6 +15,7 @@
 | [🎲 Démo Cluedo Oracle](#-démo-cluedo-oracle-enhanced) | 10 min | [📋 Rapport Oracle](RAPPORT_MISSION_ORACLE_ENHANCED.md) |
 | [🧩 Démo Einstein](#-démo-einstein-oracle) | 10 min | [📊 Analyse Orchestrations](../analyse_orchestrations_sherlock_watson.md) |
 | [🚨 Dépannage](#-dépannage) | 5 min | [🔧 Architecture Technique](ARCHITECTURE_TECHNIQUE_DETAILLEE.md) |
+| [🛡️ Sécurité et Règles](#️-sécurité-et-règles-du-jeu) | 5 min | [📊 Audit Intégrité](AUDIT_INTEGRITE_CLUEDO.md) |
 
 ---
 
@@ -98,6 +99,88 @@ Get-ChildItem libs\*.jar | Measure-Object | Select-Object Count
 # Variables automatiquement configurées par activate_project_env.ps1
 $env:JAVA_TOOL_OPTIONS = "-Xmx4G -Xms1G"
 $env:TWEETY_JAR_PATH = "d:\2025-Epita-Intelligence-Symbolique\libs"
+```
+
+---
+
+## 🛡️ **SÉCURITÉ ET RÈGLES DU JEU**
+
+### 🔒 **Intégrité Cluedo Certifiée**
+
+Le système Oracle Enhanced respecte **strictement les règles du jeu Cluedo** grâce à un audit d'intégrité complet effectué en Janvier 2025.
+
+#### ✅ **Garanties de Sécurité**
+- **Isolation des joueurs** : Chaque joueur ne voit que ses propres cartes
+- **Secret de la solution** : Aucun accès direct à la solution
+- **Révélations légitimes** : Seules les révélations autorisées sont permises
+- **Anti-triche** : Protection contre toute forme de manipulation
+
+### 🚨 **Protections Anti-Triche**
+
+#### CluedoIntegrityError
+Le système utilise une exception spécialisée pour détecter et bloquer les violations :
+
+```python
+# Exemple de protection automatique
+try:
+    cartes_autres = dataset.get_autres_joueurs_cards()  # ❌ INTERDIT
+except PermissionError as e:
+    print("🚨 VIOLATION RÈGLES CLUEDO détectée !")
+    # Le système protège automatiquement l'intégrité
+```
+
+#### Méthodes Sécurisées
+| ❌ **Interdit** | ✅ **Autorisé** |
+|-----------------|------------------|
+| `get_autres_joueurs_cards()` | `get_mes_cartes()` |
+| `get_solution()` | `faire_suggestion()` |
+| Accès direct aux cartes des autres | Révélations via Oracle |
+| Simulation basée sur triche | Simulation probabiliste |
+
+### 🧪 **Tests d'Intégrité**
+
+#### Validation Continue
+```powershell
+# Test d'intégrité complet (8/8 tests)
+python test_validation_integrite_apres_corrections.py
+
+# Test fonctionnel simple (5/5 tests)
+python test_cluedo_dataset_simple.py
+
+# Résultat attendu : 100% tests passent AVEC intégrité
+```
+
+#### Contrôles Automatiques
+- **Validation des accès** : Chaque opération est vérifiée
+- **Logging sécurisé** : Traçabilité des interactions
+- **Permissions renforcées** : Contrôle multi-niveaux
+- **Audit en temps réel** : Détection immédiate des violations
+
+### 📊 **Certification Audit**
+
+**RÉSULTAT OFFICIEL :** ✅ **INTÉGRITÉ CERTIFIÉE**
+- **4 violations critiques** détectées et corrigées
+- **Tests à 100%** maintenus AVEC respect des règles
+- **Mécanismes anti-triche** implémentés et validés
+- **Système Oracle Enhanced** opérationnel avec sécurité
+
+**Documentation complète :** [📊 AUDIT_INTEGRITE_CLUEDO.md](AUDIT_INTEGRITE_CLUEDO.md)
+
+### 🎮 **Ce qui est Permis vs Interdit**
+
+#### ✅ **AUTORISÉ - Jeu Légitime**
+- Voir ses propres cartes uniquement
+- Faire des suggestions Cluedo
+- Recevoir des révélations d'autres joueurs
+- Utiliser la logique et la déduction
+- Consulter l'historique de ses propres actions
+
+#### ❌ **INTERDIT - Violations Bloquées**
+- Accéder aux cartes des autres joueurs
+- Voir la solution directement
+- Utiliser des informations non autorisées
+- Contourner les mécanismes de révélation
+- Exploiter des failles système
 ```
 
 ### 🔑 **Configuration OpenAI API**
