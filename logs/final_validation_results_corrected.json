@@ -1,0 +1,148 @@
+{
+  "validation_date": "2025-06-07T17:36:58.757592",
+  "oracle_enhanced_version": "2.1.0",
+  "tests_performed": {
+    "oracle_main_import": {
+      "success": false,
+      "timestamp": "2025-06-07T17:37:00.511263",
+      "details": "Import principal Oracle échoué",
+      "error": "File \"<string>\", line 1\n    import\n          ^\nSyntaxError: invalid syntax\nERROR conda.cli.main_run:execute(41): `conda run python -c import` failed. (See above for error)"
+    },
+    "cluedo_oracle_state": {
+      "success": false,
+      "timestamp": "2025-06-07T17:37:02.298574",
+      "details": "CluedoOracleState non accessible",
+      "error": "File \"<string>\", line 1\n    from\n        ^\nSyntaxError: invalid syntax\nERROR conda.cli.main_run:execute(41): `conda run python -c from` failed. (See above for error)"
+    },
+    "sherlock_agent": {
+      "success": false,
+      "timestamp": "2025-06-07T17:37:04.181225",
+      "details": "Agent sherlock_agent non accessible",
+      "error": "File \"<string>\", line 1\n    from\n        ^\nSyntaxError: invalid syntax\nERROR conda.cli.main_run:execute(41): `conda run python -c from` failed. (See above for error)"
+    },
+    "watson_agent": {
+      "success": false,
+      "timestamp": "2025-06-07T17:37:05.995742",
+      "details": "Agent watson_agent non accessible",
+      "error": "File \"<string>\", line 1\n    from\n        ^\nSyntaxError: invalid syntax\nERROR conda.cli.main_run:execute(41): `conda run python -c from` failed. (See above for error)"
+    },
+    "moriarty_agent": {
+      "success": false,
+      "timestamp": "2025-06-07T17:37:07.813829",
+      "details": "Agent moriarty_agent non accessible",
+      "error": "File \"<string>\", line 1\n    from\n        ^\nSyntaxError: invalid syntax\nERROR conda.cli.main_run:execute(41): `conda run python -c from` failed. (See above for error)"
+    },
+    "state_creation": {
+      "success": false,
+      "timestamp": "2025-06-07T17:37:09.423624",
+      "details": "Création d'état Oracle échouée",
+      "error": "File \"<string>\", line 1\n    from\n        ^\nSyntaxError: invalid syntax\nERROR conda.cli.main_run:execute(41): `conda run python -c from` failed. (See above for error)"
+    },
+    "dataset_creation": {
+      "success": false,
+      "timestamp": "2025-06-07T17:37:11.263940",
+      "details": "Création de dataset Oracle échouée",
+      "error": "File \"<string>\", line 1\n    from\n        ^\nSyntaxError: invalid syntax\nERROR conda.cli.main_run:execute(41): `conda run python -c from` failed. (See above for error)"
+    },
+    "project_structure": {
+      "success": true,
+      "timestamp": "2025-06-07T17:37:11.263940",
+      "details": "Structure du projet intacte",
+      "error": null
+    },
+    "refactored_files": {
+      "success": true,
+      "timestamp": "2025-06-07T17:37:11.264940",
+      "details": "Tous les fichiers refactorisés accessibles",
+      "error": null
+    },
+    "validation_scripts": {
+      "success": false,
+      "timestamp": "2025-06-07T17:37:11.264940",
+      "details": "Seulement 1/3 scripts accessibles",
+      "error": null
+    },
+    "phase_d_integration": {
+      "success": true,
+      "timestamp": "2025-06-07T17:37:14.484851",
+      "details": "Test Phase D intégration réussi",
+      "error": null
+    },
+    "group1_simple": {
+      "success": false,
+      "timestamp": "2025-06-07T17:37:14.484851",
+      "details": "Script test_group1_simple.py introuvable",
+      "error": null
+    },
+    "group2_simple": {
+      "success": false,
+      "timestamp": "2025-06-07T17:37:14.484851",
+      "details": "Script test_group2_corrections_simple.py introuvable",
+      "error": null
+    },
+    "git_status": {
+      "success": true,
+      "timestamp": "2025-06-07T17:37:14.511859",
+      "details": "Git analysé: 65 changements détectés",
+      "error": null
+    }
+  },
+  "critical_tests": {
+    "imports": 0.0,
+    "functionality": 0.0,
+    "integrity": 0.6666666666666666,
+    "scripts": 0.6
+  },
+  "import_tests": {
+    "oracle_main": false,
+    "cluedo_state": false,
+    "sherlock_agent": false,
+    "watson_agent": false,
+    "moriarty_agent": false
+  },
+  "integration_tests": {
+    "state_creation": false,
+    "dataset_creation": false
+  },
+  "system_integrity": {
+    "structure": true,
+    "refactored_files": true,
+    "validation_scripts": false
+  },
+  "git_analysis": {
+    "modified_files": 1,
+    "added_files": 0,
+    "deleted_files": 0,
+    "untracked_files": 59,
+    "total_changes": 65,
+    "status_detail": "M conftest.py\n M tests/unit/argumentation_analysis/agents/core/oracle/test_error_handling.py\n M tests/unit/argumentation_analysis/agents/core/oracle/test_interfaces.py\n M tests/unit/argumentation_analysis/agents/core/oracle/test_new_modules_integration.py\n D tests/validation_sherlock_watson/test_asyncmock_issues.py\n D tests/validation_sherlock_watson/test_audit_integrite_cluedo.py\n?? RAPPORT_COMPLET_NETTOYAGE_ORPHELINS.md\n?? archives/\n?? cluedo_oracle_enhanced_trace.log\n?? docs/GUIDE_MAINTENANCE_ORACLE_ENHANCED.md\n?? docs/PROJECT_STRUCTURE_POST_CLEANUP.md\n?? docs/sherlock_watson/README_recovered1.md\n?? docs/sherlock_watson/README_recovered2.md\n?? docs/sherlock_watson/README_recovered3.md\n?? einstein_oracle_demo_trace.log\n?? logs/TACHE_1_INVENTAIRE_COMPLET_SYNTHESE.md\n?? logs/complete_orphan_files_action_plan.json\n?? logs/complete_orphan_files_action_plan.md\n?? logs/deletion_execution_log_20250607_163811.json\n?? logs/final_validation_results.json\n?? logs/git_cleanup_action_plan.md\n?? logs/git_files_analysis_report.md\n?? logs/git_files_decision_matrix.json\n?? logs/manual_review_analysis_report.md\n?? logs/oracle_enhanced_compatibility_test_report.md\n?? logs/orphan_files_move_plan.json\n?? logs/orphan_files_move_plan.md\n?? logs/post_deletion_integrity_report_20250607_163811.md\n?? logs/post_integration_validation_report.md\n?? logs/recovered/\n?? logs/recovered_code_integration_mapping.json\n?? logs/recovered_code_testing_report.md\n?? logs/refactor_review_files.log\n?? logs/review_files_final_decisions.json\n?? logs/task_4_6_refactorization_completion_report.md\n?? scripts/maintenance/analyze_oracle_references_detailed.py\n?? scripts/maintenance/cleanup_obsolete_files.py\n?? scripts/maintenance/final_system_validation.py\n?? scripts/maintenance/final_system_validation_corrected.py\n?? scripts/maintenance/git_files_inventory.py\n?? scripts/maintenance/git_files_inventory_fast.py\n?? scripts/maintenance/git_files_inventory_simple.py\n?? scripts/maintenance/integrate_recovered_code.py\n?? scripts/maintenance/organize_orphan_tests.py\n?? scripts/maintenance/orphan_files_processor.py\n?? scripts/maintenance/real_orphan_files_processor.py\n?? scripts/maintenance/recover_precious_code.py\n?? scripts/maintenance/recovered/\n?? scripts/maintenance/refactor_review_files.py\n?? scripts/maintenance/safe_file_deletion.py\n?? scripts/maintenance/test_oracle_enhanced_compatibility.py\n?? test_phase_c_fluidite.log\n?? tests/integration/conftest_gpt_enhanced.py\n?? tests/integration/test_cluedo_extended_workflow_recovered1.py\n?? tests/integration/test_oracle_integration_recovered1.py\n?? tests/unit/argumentation_analysis/agents/core/oracle/test_oracle_base_agent_recovered1.py\n?? tests/unit/argumentation_analysis/agents/core/oracle/test_oracle_behavior_demo.py\n?? tests/unit/argumentation_analysis/agents/core/oracle/test_oracle_behavior_demo.py_refactored\n?? tests/unit/argumentation_analysis/agents/core/oracle/test_oracle_behavior_simple.py\n?? tests/unit/argumentation_analysis/agents/core/oracle/test_oracle_behavior_simple.py_refactored\n?? tests/unit/argumentation_analysis/agents/core/oracle/update_test_coverage.py\n?? tests/unit/argumentation_analysis/agents/core/oracle/update_test_coverage.py_refactored\n?? tests/unit/mocks/test_mock_vs_real_behavior.py\n?? tests/validation/test_recovered_code_validation.py\n?? tests/validation_sherlock_watson/test_recovered_code_validation.py"
+  },
+  "performance_tests": {
+    "phase_d_script": true,
+    "simple_scripts_score": 0.0
+  },
+  "overall_score": 0.2866666666666666,
+  "status": "❌ CRITIQUE",
+  "errors": [
+    "oracle_main_import: File \"<string>\", line 1\n    import\n          ^\nSyntaxError: invalid syntax\nERROR conda.cli.main_run:execute(41): `conda run python -c import` failed. (See above for error)",
+    "cluedo_oracle_state: File \"<string>\", line 1\n    from\n        ^\nSyntaxError: invalid syntax\nERROR conda.cli.main_run:execute(41): `conda run python -c from` failed. (See above for error)",
+    "sherlock_agent: File \"<string>\", line 1\n    from\n        ^\nSyntaxError: invalid syntax\nERROR conda.cli.main_run:execute(41): `conda run python -c from` failed. (See above for error)",
+    "watson_agent: File \"<string>\", line 1\n    from\n        ^\nSyntaxError: invalid syntax\nERROR conda.cli.main_run:execute(41): `conda run python -c from` failed. (See above for error)",
+    "moriarty_agent: File \"<string>\", line 1\n    from\n        ^\nSyntaxError: invalid syntax\nERROR conda.cli.main_run:execute(41): `conda run python -c from` failed. (See above for error)",
+    "state_creation: File \"<string>\", line 1\n    from\n        ^\nSyntaxError: invalid syntax\nERROR conda.cli.main_run:execute(41): `conda run python -c from` failed. (See above for error)",
+    "dataset_creation: File \"<string>\", line 1\n    from\n        ^\nSyntaxError: invalid syntax\nERROR conda.cli.main_run:execute(41): `conda run python -c from` failed. (See above for error)"
+  ],
+  "warnings": [
+    "validation_scripts: Seulement 1/3 scripts accessibles",
+    "group1_simple: Script test_group1_simple.py introuvable",
+    "group2_simple: Script test_group2_corrections_simple.py introuvable"
+  ],
+  "recommendations": [
+    "🔧 CRITIQUE: Corriger les problèmes d'imports Oracle Enhanced",
+    "🛠️ IMPORTANTE: Déboguer les fonctionnalités de base",
+    "🔧 PRIORITÉ: Restaurer l'intégrité de la structure du projet",
+    "✅ BON: Scripts de validation fonctionnels",
+    "📋 INFO: 65 changements Git détectés - Préparer commit structuré"
+  ],
+  "execution_time": 15.754266738891602
+}

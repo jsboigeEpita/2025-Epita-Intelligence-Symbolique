@@ -1,0 +1,594 @@
+{
+  "timestamp": "2025-06-07T16:42:04.753170",
+  "inventory": {
+    "docs/recovered": [
+      "docs\\recovered\\README.md"
+    ],
+    "tests/comparison/recovered": [
+      "tests\\comparison\\recovered\\test_mock_vs_real_behavior.py",
+      "tests\\comparison\\recovered\\__pycache__\\test_mock_vs_real_behavior.cpython-310-pytest-8.4.0.pyc"
+    ],
+    "tests/integration/recovered": [
+      "tests\\integration\\recovered\\conftest_gpt_enhanced.py",
+      "tests\\integration\\recovered\\README.md",
+      "tests\\integration\\recovered\\test_cluedo_extended_workflow.py",
+      "tests\\integration\\recovered\\test_oracle_integration.py",
+      "tests\\integration\\recovered\\__pycache__\\conftest_gpt_enhanced.cpython-310-pytest-8.4.0.pyc",
+      "tests\\integration\\recovered\\__pycache__\\test_cluedo_extended_workflow.cpython-310-pytest-8.4.0.pyc",
+      "tests\\integration\\recovered\\__pycache__\\test_oracle_integration.cpython-310-pytest-8.4.0.pyc"
+    ],
+    "tests/unit/recovered": [
+      "tests\\unit\\recovered\\test_oracle_base_agent.py",
+      "tests\\unit\\recovered\\__pycache__\\test_oracle_base_agent.cpython-310-pytest-8.4.0.pyc"
+    ],
+    "scripts/maintenance/recovered": [
+      "scripts\\maintenance\\recovered\\README.md",
+      "scripts\\maintenance\\recovered\\test_oracle_behavior_demo.py",
+      "scripts\\maintenance\\recovered\\test_oracle_behavior_simple.py",
+      "scripts\\maintenance\\recovered\\update_test_coverage.py",
+      "scripts\\maintenance\\recovered\\__pycache__\\test_oracle_behavior_demo.cpython-310-pytest-8.4.0.pyc",
+      "scripts\\maintenance\\recovered\\__pycache__\\test_oracle_behavior_simple.cpython-310-pytest-8.4.0.pyc",
+      "scripts\\maintenance\\recovered\\__pycache__\\update_test_coverage.cpython-310-pytest-8.4.0.pyc"
+    ],
+    "tests/validation": [
+      "tests/validation/test_recovered_code_validation.py"
+    ]
+  },
+  "analyses": {
+    "docs\\recovered\\README.md": {
+      "path": "docs\\recovered\\README.md",
+      "exists": true,
+      "size": 471,
+      "type": "documentation",
+      "priority": "medium",
+      "oracle_related": false,
+      "imports": [],
+      "functions": [],
+      "classes": [],
+      "dependencies": []
+    },
+    "tests\\comparison\\recovered\\test_mock_vs_real_behavior.py": {
+      "path": "tests\\comparison\\recovered\\test_mock_vs_real_behavior.py",
+      "exists": true,
+      "size": 32445,
+      "type": "python_test",
+      "priority": "high",
+      "oracle_related": true,
+      "imports": [
+        "import pytest",
+        "import asyncio",
+        "import time",
+        "import os",
+        "from unittest.mock import Mock, AsyncMock",
+        "from typing import Dict, Any, List, Optional",
+        "from datetime import datetime",
+        "import statistics",
+        "from semantic_kernel.kernel import Kernel",
+        "from semantic_kernel.connectors.ai.open_ai import OpenAIChatCompletion"
+      ],
+      "functions": [],
+      "classes": [],
+      "dependencies": []
+    },
+    "tests\\comparison\\recovered\\__pycache__\\test_mock_vs_real_behavior.cpython-310-pytest-8.4.0.pyc": {
+      "path": "tests\\comparison\\recovered\\__pycache__\\test_mock_vs_real_behavior.cpython-310-pytest-8.4.0.pyc",
+      "exists": true,
+      "size": 25242,
+      "type": "other",
+      "priority": "medium",
+      "oracle_related": false,
+      "imports": [],
+      "functions": [],
+      "classes": [],
+      "dependencies": []
+    },
+    "tests\\integration\\recovered\\conftest_gpt_enhanced.py": {
+      "path": "tests\\integration\\recovered\\conftest_gpt_enhanced.py",
+      "exists": true,
+      "size": 17387,
+      "type": "python_test",
+      "priority": "high",
+      "oracle_related": true,
+      "imports": [
+        "import os",
+        "import sys",
+        "import pytest",
+        "import asyncio",
+        "import time",
+        "import logging",
+        "from typing import Dict, Any, Optional",
+        "from unittest.mock import Mock, AsyncMock",
+        "from semantic_kernel.kernel import Kernel",
+        "from semantic_kernel.connectors.ai.open_ai import OpenAIChatCompletion"
+      ],
+      "functions": [],
+      "classes": [],
+      "dependencies": []
+    },
+    "tests\\integration\\recovered\\README.md": {
+      "path": "tests\\integration\\recovered\\README.md",
+      "exists": true,
+      "size": 509,
+      "type": "documentation",
+      "priority": "medium",
+      "oracle_related": false,
+      "imports": [],
+      "functions": [],
+      "classes": [],
+      "dependencies": []
+    },
+    "tests\\integration\\recovered\\test_cluedo_extended_workflow.py": {
+      "path": "tests\\integration\\recovered\\test_cluedo_extended_workflow.py",
+      "exists": true,
+      "size": 29065,
+      "type": "python_test",
+      "priority": "high",
+      "oracle_related": true,
+      "imports": [
+        "import pytest",
+        "import asyncio",
+        "import time",
+        "from unittest.mock import Mock, patch, AsyncMock",
+        "from typing import Dict, Any, List, Tuple",
+        "from datetime import datetime",
+        "from semantic_kernel.kernel import Kernel",
+        "from semantic_kernel.contents.chat_message_content import ChatMessageContent",
+        "from argumentation_analysis.orchestration.cluedo_orchestrator import run_cluedo_game",
+        "from argumentation_analysis.orchestration.cluedo_extended_orchestrator import run_cluedo_oracle_game"
+      ],
+      "functions": [],
+      "classes": [],
+      "dependencies": []
+    },
+    "tests\\integration\\recovered\\test_oracle_integration.py": {
+      "path": "tests\\integration\\recovered\\test_oracle_integration.py",
+      "exists": true,
+      "size": 23872,
+      "type": "python_test",
+      "priority": "high",
+      "oracle_related": true,
+      "imports": [
+        "import pytest",
+        "import asyncio",
+        "import time",
+        "from unittest.mock import Mock, patch, AsyncMock",
+        "from typing import Dict, Any, List",
+        "from datetime import datetime",
+        "from semantic_kernel.kernel import Kernel",
+        "from semantic_kernel.contents.chat_message_content import ChatMessageContent",
+        "from argumentation_analysis.orchestration.cluedo_extended_orchestrator import (",
+        "from argumentation_analysis.core.cluedo_oracle_state import CluedoOracleState"
+      ],
+      "functions": [],
+      "classes": [],
+      "dependencies": []
+    },
+    "tests\\integration\\recovered\\__pycache__\\conftest_gpt_enhanced.cpython-310-pytest-8.4.0.pyc": {
+      "path": "tests\\integration\\recovered\\__pycache__\\conftest_gpt_enhanced.cpython-310-pytest-8.4.0.pyc",
+      "exists": true,
+      "size": 14289,
+      "type": "other",
+      "priority": "medium",
+      "oracle_related": false,
+      "imports": [],
+      "functions": [],
+      "classes": [],
+      "dependencies": []
+    },
+    "tests\\integration\\recovered\\__pycache__\\test_cluedo_extended_workflow.cpython-310-pytest-8.4.0.pyc": {
+      "path": "tests\\integration\\recovered\\__pycache__\\test_cluedo_extended_workflow.cpython-310-pytest-8.4.0.pyc",
+      "exists": true,
+      "size": 27908,
+      "type": "other",
+      "priority": "medium",
+      "oracle_related": false,
+      "imports": [],
+      "functions": [],
+      "classes": [],
+      "dependencies": []
+    },
+    "tests\\integration\\recovered\\__pycache__\\test_oracle_integration.cpython-310-pytest-8.4.0.pyc": {
+      "path": "tests\\integration\\recovered\\__pycache__\\test_oracle_integration.cpython-310-pytest-8.4.0.pyc",
+      "exists": true,
+      "size": 28613,
+      "type": "other",
+      "priority": "medium",
+      "oracle_related": false,
+      "imports": [],
+      "functions": [],
+      "classes": [],
+      "dependencies": []
+    },
+    "tests\\unit\\recovered\\test_oracle_base_agent.py": {
+      "path": "tests\\unit\\recovered\\test_oracle_base_agent.py",
+      "exists": true,
+      "size": 18362,
+      "type": "python_test",
+      "priority": "high",
+      "oracle_related": true,
+      "imports": [
+        "import pytest",
+        "import asyncio",
+        "from unittest.mock import Mock, AsyncMock, patch, MagicMock",
+        "from typing import Dict, Any, List",
+        "from semantic_kernel.kernel import Kernel",
+        "from semantic_kernel.contents.chat_message_content import ChatMessageContent",
+        "from semantic_kernel.functions.kernel_arguments import KernelArguments",
+        "from oracle_enhanced.agents.core.oracle.oracle_base_agent import OracleBaseAgent, OracleTools",
+        "from oracle_enhanced.agents.core.oracle.dataset_access_manager import DatasetAccessManager",
+        "from oracle_enhanced.agents.core.oracle.permissions import QueryType, PermissionRule, OracleResponse, QueryResult"
+      ],
+      "functions": [],
+      "classes": [],
+      "dependencies": []
+    },
+    "tests\\unit\\recovered\\__pycache__\\test_oracle_base_agent.cpython-310-pytest-8.4.0.pyc": {
+      "path": "tests\\unit\\recovered\\__pycache__\\test_oracle_base_agent.cpython-310-pytest-8.4.0.pyc",
+      "exists": true,
+      "size": 23330,
+      "type": "other",
+      "priority": "medium",
+      "oracle_related": false,
+      "imports": [],
+      "functions": [],
+      "classes": [],
+      "dependencies": []
+    },
+    "scripts\\maintenance\\recovered\\README.md": {
+      "path": "scripts\\maintenance\\recovered\\README.md",
+      "exists": true,
+      "size": 549,
+      "type": "documentation",
+      "priority": "medium",
+      "oracle_related": false,
+      "imports": [],
+      "functions": [],
+      "classes": [],
+      "dependencies": []
+    },
+    "scripts\\maintenance\\recovered\\test_oracle_behavior_demo.py": {
+      "path": "scripts\\maintenance\\recovered\\test_oracle_behavior_demo.py",
+      "exists": true,
+      "size": 16964,
+      "type": "python_test",
+      "priority": "high",
+      "oracle_related": true,
+      "imports": [
+        "import json",
+        "import asyncio",
+        "from datetime import datetime",
+        "from typing import Dict, List, Any",
+        "from pathlib import Path"
+      ],
+      "functions": [],
+      "classes": [],
+      "dependencies": []
+    },
+    "scripts\\maintenance\\recovered\\test_oracle_behavior_simple.py": {
+      "path": "scripts\\maintenance\\recovered\\test_oracle_behavior_simple.py",
+      "exists": true,
+      "size": 16653,
+      "type": "python_test",
+      "priority": "high",
+      "oracle_related": true,
+      "imports": [
+        "import json",
+        "import asyncio",
+        "from datetime import datetime",
+        "from typing import Dict, List, Any",
+        "from pathlib import Path"
+      ],
+      "functions": [],
+      "classes": [],
+      "dependencies": []
+    },
+    "scripts\\maintenance\\recovered\\update_test_coverage.py": {
+      "path": "scripts\\maintenance\\recovered\\update_test_coverage.py",
+      "exists": true,
+      "size": 35924,
+      "type": "python_test",
+      "priority": "high",
+      "oracle_related": true,
+      "imports": [
+        "import os",
+        "import sys",
+        "from pathlib import Path",
+        "from datetime import datetime",
+        "import pytest",
+        "import logging",
+        "from unittest.mock import Mock, patch",
+        "from datetime import datetime",
+        "from argumentation_analysis.agents.core.oracle.error_handling import (",
+        "import pytest"
+      ],
+      "functions": [],
+      "classes": [],
+      "dependencies": []
+    },
+    "scripts\\maintenance\\recovered\\__pycache__\\test_oracle_behavior_demo.cpython-310-pytest-8.4.0.pyc": {
+      "path": "scripts\\maintenance\\recovered\\__pycache__\\test_oracle_behavior_demo.cpython-310-pytest-8.4.0.pyc",
+      "exists": true,
+      "size": 13250,
+      "type": "other",
+      "priority": "medium",
+      "oracle_related": false,
+      "imports": [],
+      "functions": [],
+      "classes": [],
+      "dependencies": []
+    },
+    "scripts\\maintenance\\recovered\\__pycache__\\test_oracle_behavior_simple.cpython-310-pytest-8.4.0.pyc": {
+      "path": "scripts\\maintenance\\recovered\\__pycache__\\test_oracle_behavior_simple.cpython-310-pytest-8.4.0.pyc",
+      "exists": true,
+      "size": 12688,
+      "type": "other",
+      "priority": "medium",
+      "oracle_related": false,
+      "imports": [],
+      "functions": [],
+      "classes": [],
+      "dependencies": []
+    },
+    "scripts\\maintenance\\recovered\\__pycache__\\update_test_coverage.cpython-310-pytest-8.4.0.pyc": {
+      "path": "scripts\\maintenance\\recovered\\__pycache__\\update_test_coverage.cpython-310-pytest-8.4.0.pyc",
+      "exists": true,
+      "size": 35084,
+      "type": "other",
+      "priority": "medium",
+      "oracle_related": false,
+      "imports": [],
+      "functions": [],
+      "classes": [],
+      "dependencies": []
+    },
+    "tests/validation/test_recovered_code_validation.py": {
+      "path": "tests/validation/test_recovered_code_validation.py",
+      "exists": true,
+      "size": 13721,
+      "type": "python_test",
+      "priority": "high",
+      "oracle_related": true,
+      "imports": [
+        "import pytest",
+        "import os",
+        "import sys",
+        "import importlib",
+        "import ast",
+        "from pathlib import Path",
+        "from typing import List, Dict, Any"
+      ],
+      "functions": [],
+      "classes": [],
+      "dependencies": []
+    }
+  },
+  "test_results": {
+    "tests\\comparison\\recovered\\test_mock_vs_real_behavior.py": {
+      "file": "tests\\comparison\\recovered\\test_mock_vs_real_behavior.py",
+      "syntax_check": true,
+      "import_check": false,
+      "pytest_collect": true,
+      "errors": [
+        "Import error: Traceback (most recent call last):\n  File \"<string>\", line 1, in <module>\nOSError: [Errno 22] Invalid argument: 'tests\\\\comparison\\recovered\\test_mock_vs_real_behavior.py'\n"
+      ]
+    },
+    "tests\\integration\\recovered\\conftest_gpt_enhanced.py": {
+      "file": "tests\\integration\\recovered\\conftest_gpt_enhanced.py",
+      "syntax_check": true,
+      "import_check": false,
+      "pytest_collect": false,
+      "errors": [
+        "Import error: Traceback (most recent call last):\n  File \"<string>\", line 1, in <module>\nOSError: [Errno 22] Invalid argument: 'tests\\\\integration\\recovered\\\\conftest_gpt_enhanced.py'\n",
+        "Pytest collect error: "
+      ]
+    },
+    "tests\\integration\\recovered\\test_cluedo_extended_workflow.py": {
+      "file": "tests\\integration\\recovered\\test_cluedo_extended_workflow.py",
+      "syntax_check": true,
+      "import_check": false,
+      "pytest_collect": true,
+      "errors": [
+        "Import error: Traceback (most recent call last):\n  File \"<string>\", line 1, in <module>\nOSError: [Errno 22] Invalid argument: 'tests\\\\integration\\recovered\\test_cluedo_extended_workflow.py'\n"
+      ]
+    },
+    "tests\\integration\\recovered\\test_oracle_integration.py": {
+      "file": "tests\\integration\\recovered\\test_oracle_integration.py",
+      "syntax_check": true,
+      "import_check": false,
+      "pytest_collect": true,
+      "errors": [
+        "Import error: Traceback (most recent call last):\n  File \"<string>\", line 1, in <module>\nOSError: [Errno 22] Invalid argument: 'tests\\\\integration\\recovered\\test_oracle_integration.py'\n"
+      ]
+    },
+    "tests\\unit\\recovered\\test_oracle_base_agent.py": {
+      "file": "tests\\unit\\recovered\\test_oracle_base_agent.py",
+      "syntax_check": true,
+      "import_check": false,
+      "pytest_collect": true,
+      "errors": [
+        "Import error:   File \"<string>\", line 1\n    import sys; sys.path.insert(0, '.'); exec(open('tests\\unit\\recovered\\test_oracle_base_agent.py').read())\n                                                                                                   ^\nSyntaxError: (unicode error) 'unicodeescape' codec can't decode bytes in position 5-6: truncated \\uXXXX escape\n"
+      ]
+    },
+    "scripts\\maintenance\\recovered\\test_oracle_behavior_demo.py": {
+      "file": "scripts\\maintenance\\recovered\\test_oracle_behavior_demo.py",
+      "syntax_check": true,
+      "import_check": false,
+      "pytest_collect": false,
+      "errors": [
+        "Import error: Traceback (most recent call last):\n  File \"<string>\", line 1, in <module>\nOSError: [Errno 22] Invalid argument: 'scripts\\\\maintenance\\recovered\\test_oracle_behavior_demo.py'\n",
+        "Pytest collect error: "
+      ]
+    },
+    "scripts\\maintenance\\recovered\\test_oracle_behavior_simple.py": {
+      "file": "scripts\\maintenance\\recovered\\test_oracle_behavior_simple.py",
+      "syntax_check": true,
+      "import_check": false,
+      "pytest_collect": false,
+      "errors": [
+        "Import error: Traceback (most recent call last):\n  File \"<string>\", line 1, in <module>\nOSError: [Errno 22] Invalid argument: 'scripts\\\\maintenance\\recovered\\test_oracle_behavior_simple.py'\n",
+        "Pytest collect error: "
+      ]
+    },
+    "scripts\\maintenance\\recovered\\update_test_coverage.py": {
+      "file": "scripts\\maintenance\\recovered\\update_test_coverage.py",
+      "syntax_check": true,
+      "import_check": false,
+      "pytest_collect": false,
+      "errors": [
+        "Import error:   File \"<string>\", line 1\n    import sys; sys.path.insert(0, '.'); exec(open('scripts\\maintenance\\recovered\\update_test_coverage.py').read())\n                                                                                                          ^\nSyntaxError: (unicode error) 'unicodeescape' codec can't decode bytes in position 29-30: truncated \\uXXXX escape\n",
+        "Pytest collect error: "
+      ]
+    },
+    "tests/validation/test_recovered_code_validation.py": {
+      "file": "tests/validation/test_recovered_code_validation.py",
+      "syntax_check": true,
+      "import_check": false,
+      "pytest_collect": true,
+      "errors": [
+        "Import error: Traceback (most recent call last):\n  File \"<string>\", line 1, in <module>\nOSError: [Errno 22] Invalid argument: 'tests\\x0balidation\\test_recovered_code_validation.py'\n"
+      ]
+    }
+  },
+  "integrations": {
+    "docs\\recovered\\README.md": {
+      "source": "docs\\recovered\\README.md",
+      "target": "docs\\sherlock_watson\\README_recovered1.md",
+      "status": "integrated",
+      "backup_created": false,
+      "modernized": false
+    },
+    "tests\\comparison\\recovered\\test_mock_vs_real_behavior.py": {
+      "source": "tests\\comparison\\recovered\\test_mock_vs_real_behavior.py",
+      "target": "tests\\unit\\mocks\\test_mock_vs_real_behavior.py",
+      "status": "integrated",
+      "backup_created": false,
+      "modernized": true
+    },
+    "tests\\comparison\\recovered\\__pycache__\\test_mock_vs_real_behavior.cpython-310-pytest-8.4.0.pyc": {
+      "source": "tests\\comparison\\recovered\\__pycache__\\test_mock_vs_real_behavior.cpython-310-pytest-8.4.0.pyc",
+      "target": "tests\\unit\\mocks\\test_mock_vs_real_behavior.cpython-310-pytest-8.4.0.pyc",
+      "status": "integrated",
+      "backup_created": false,
+      "modernized": false
+    },
+    "tests\\integration\\recovered\\conftest_gpt_enhanced.py": {
+      "source": "tests\\integration\\recovered\\conftest_gpt_enhanced.py",
+      "target": "tests\\integration\\conftest_gpt_enhanced.py",
+      "status": "integrated",
+      "backup_created": false,
+      "modernized": true
+    },
+    "tests\\integration\\recovered\\README.md": {
+      "source": "tests\\integration\\recovered\\README.md",
+      "target": "docs\\sherlock_watson\\README_recovered2.md",
+      "status": "integrated",
+      "backup_created": false,
+      "modernized": false
+    },
+    "tests\\integration\\recovered\\test_cluedo_extended_workflow.py": {
+      "source": "tests\\integration\\recovered\\test_cluedo_extended_workflow.py",
+      "target": "tests\\integration\\test_cluedo_extended_workflow_recovered1.py",
+      "status": "integrated",
+      "backup_created": false,
+      "modernized": true
+    },
+    "tests\\integration\\recovered\\test_oracle_integration.py": {
+      "source": "tests\\integration\\recovered\\test_oracle_integration.py",
+      "target": "tests\\integration\\test_oracle_integration_recovered1.py",
+      "status": "integrated",
+      "backup_created": false,
+      "modernized": true
+    },
+    "tests\\integration\\recovered\\__pycache__\\conftest_gpt_enhanced.cpython-310-pytest-8.4.0.pyc": {
+      "source": "tests\\integration\\recovered\\__pycache__\\conftest_gpt_enhanced.cpython-310-pytest-8.4.0.pyc",
+      "target": "tests\\integration\\conftest_gpt_enhanced.cpython-310-pytest-8.4.0.pyc",
+      "status": "integrated",
+      "backup_created": false,
+      "modernized": false
+    },
+    "tests\\integration\\recovered\\__pycache__\\test_cluedo_extended_workflow.cpython-310-pytest-8.4.0.pyc": {
+      "source": "tests\\integration\\recovered\\__pycache__\\test_cluedo_extended_workflow.cpython-310-pytest-8.4.0.pyc",
+      "target": "tests\\integration\\test_cluedo_extended_workflow.cpython-310-pytest-8.4.0.pyc",
+      "status": "integrated",
+      "backup_created": false,
+      "modernized": false
+    },
+    "tests\\integration\\recovered\\__pycache__\\test_oracle_integration.cpython-310-pytest-8.4.0.pyc": {
+      "source": "tests\\integration\\recovered\\__pycache__\\test_oracle_integration.cpython-310-pytest-8.4.0.pyc",
+      "target": "tests\\integration\\test_oracle_integration.cpython-310-pytest-8.4.0.pyc",
+      "status": "integrated",
+      "backup_created": false,
+      "modernized": false
+    },
+    "tests\\unit\\recovered\\test_oracle_base_agent.py": {
+      "source": "tests\\unit\\recovered\\test_oracle_base_agent.py",
+      "target": "tests\\unit\\argumentation_analysis\\agents\\core\\oracle\\test_oracle_base_agent_recovered1.py",
+      "status": "integrated",
+      "backup_created": false,
+      "modernized": true
+    },
+    "tests\\unit\\recovered\\__pycache__\\test_oracle_base_agent.cpython-310-pytest-8.4.0.pyc": {
+      "source": "tests\\unit\\recovered\\__pycache__\\test_oracle_base_agent.cpython-310-pytest-8.4.0.pyc",
+      "target": "tests\\unit\\argumentation_analysis\\agents\\core\\oracle\\test_oracle_base_agent.cpython-310-pytest-8.4.0.pyc",
+      "status": "integrated",
+      "backup_created": false,
+      "modernized": false
+    },
+    "scripts\\maintenance\\recovered\\README.md": {
+      "source": "scripts\\maintenance\\recovered\\README.md",
+      "target": "docs\\sherlock_watson\\README_recovered3.md",
+      "status": "integrated",
+      "backup_created": false,
+      "modernized": false
+    },
+    "scripts\\maintenance\\recovered\\test_oracle_behavior_demo.py": {
+      "source": "scripts\\maintenance\\recovered\\test_oracle_behavior_demo.py",
+      "target": "tests\\unit\\argumentation_analysis\\agents\\core\\oracle\\test_oracle_behavior_demo.py",
+      "status": "integrated",
+      "backup_created": false,
+      "modernized": true
+    },
+    "scripts\\maintenance\\recovered\\test_oracle_behavior_simple.py": {
+      "source": "scripts\\maintenance\\recovered\\test_oracle_behavior_simple.py",
+      "target": "tests\\unit\\argumentation_analysis\\agents\\core\\oracle\\test_oracle_behavior_simple.py",
+      "status": "integrated",
+      "backup_created": false,
+      "modernized": true
+    },
+    "scripts\\maintenance\\recovered\\update_test_coverage.py": {
+      "source": "scripts\\maintenance\\recovered\\update_test_coverage.py",
+      "target": "tests\\unit\\argumentation_analysis\\agents\\core\\oracle\\update_test_coverage.py",
+      "status": "integrated",
+      "backup_created": false,
+      "modernized": true
+    },
+    "scripts\\maintenance\\recovered\\__pycache__\\test_oracle_behavior_demo.cpython-310-pytest-8.4.0.pyc": {
+      "source": "scripts\\maintenance\\recovered\\__pycache__\\test_oracle_behavior_demo.cpython-310-pytest-8.4.0.pyc",
+      "target": "tests\\unit\\argumentation_analysis\\agents\\core\\oracle\\test_oracle_behavior_demo.cpython-310-pytest-8.4.0.pyc",
+      "status": "integrated",
+      "backup_created": false,
+      "modernized": false
+    },
+    "scripts\\maintenance\\recovered\\__pycache__\\test_oracle_behavior_simple.cpython-310-pytest-8.4.0.pyc": {
+      "source": "scripts\\maintenance\\recovered\\__pycache__\\test_oracle_behavior_simple.cpython-310-pytest-8.4.0.pyc",
+      "target": "tests\\unit\\argumentation_analysis\\agents\\core\\oracle\\test_oracle_behavior_simple.cpython-310-pytest-8.4.0.pyc",
+      "status": "integrated",
+      "backup_created": false,
+      "modernized": false
+    },
+    "scripts\\maintenance\\recovered\\__pycache__\\update_test_coverage.cpython-310-pytest-8.4.0.pyc": {
+      "source": "scripts\\maintenance\\recovered\\__pycache__\\update_test_coverage.cpython-310-pytest-8.4.0.pyc",
+      "target": "docs\\recovered_integration\\update_test_coverage.cpython-310-pytest-8.4.0.pyc",
+      "status": "integrated",
+      "backup_created": false,
+      "modernized": false
+    },
+    "tests/validation/test_recovered_code_validation.py": {
+      "source": "tests/validation/test_recovered_code_validation.py",
+      "target": "tests\\validation_sherlock_watson\\test_recovered_code_validation.py",
+      "status": "integrated",
+      "backup_created": false,
+      "modernized": true
+    }
+  }
+}
