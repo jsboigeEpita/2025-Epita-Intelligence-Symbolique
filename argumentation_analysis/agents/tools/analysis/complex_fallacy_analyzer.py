@@ -369,14 +369,16 @@ class ComplexFallacyAnalyzer:
         """
         self.logger.info(f"Identification des motifs de sophismes dans le texte (longueur: {len(text)})")
         
-        # Diviser le texte en paragraphes
-        paragraphs = text.split("\n\n")
+        # Diviser le texte en paragraphes (plus robuste)
+        paragraphs = [p.strip() for p in text.split("\n\n") if p.strip()]
+        
+        # Si on n'a qu'un paragraphe, essayer de diviser par lignes vides multiples
+        if len(paragraphs) == 1:
+            paragraphs = [p.strip() for p in text.split("\n") if p.strip()]
         
         # Identifier les sophismes dans chaque paragraphe
         paragraph_fallacies = []
         for i, paragraph in enumerate(paragraphs):
-            if not paragraph.strip():
-                continue
             
             fallacies = self.contextual_analyzer.identify_contextual_fallacies(
                 argument=paragraph,
@@ -451,25 +453,37 @@ class ComplexFallacyAnalyzer:
         
         for type1 in fallacy_types:
             for type2 in fallacy_types:
-                if type1 == type2:
+                if type1 == type2 or type1 >= type2:  # Éviter les doublons
                     continue
                 
-                # Vérifier s'il y a un motif d'alternance
+                # Vérifier s'il y a un motif d'alternance (cycles complets)
                 alternation_count = 0
                 involved_paragraphs = []
                 
-                for i in range(len(paragraph_fallacies) - 1):
+                # Chercher des cycles complets A→B→A ou B→A→B
+                for i in range(len(paragraph_fallacies) - 2):
                     fallacies1 = [f["fallacy_type"] for f in paragraph_fallacies[i]["fallacies"]]
                     fallacies2 = [f["fallacy_type"] for f in paragraph_fallacies[i + 1]["fallacies"]]
+                    fallacies3 = [f["fallacy_type"] for f in paragraph_fallacies[i + 2]["fallacies"]]
                     
-                    if type1 in fallacies1 and type2 in fallacies2:
+                    # Cycle A→B→A
+                    if type1 in fallacies1 and type2 in fallacies2 and type1 in fallacies3:
                         alternation_count += 1
-                        involved_paragraphs.extend([paragraph_fallacies[i]["paragraph_index"], paragraph_fallacies[i + 1]["paragraph_index"]])
-                    elif type2 in fallacies1 and type1 in fallacies2:
+                        involved_paragraphs.extend([
+                            paragraph_fallacies[i]["paragraph_index"],
+                            paragraph_fallacies[i + 1]["paragraph_index"],
+                            paragraph_fallacies[i + 2]["paragraph_index"]
+                        ])
+                    # Cycle B→A→B
+                    elif type2 in fallacies1 and type1 in fallacies2 and type2 in fallacies3:
                         alternation_count += 1
-                        involved_paragraphs.extend([paragraph_fallacies[i]["paragraph_index"], paragraph_fallacies[i + 1]["paragraph_index"]])
+                        involved_paragraphs.extend([
+                            paragraph_fallacies[i]["paragraph_index"],
+                            paragraph_fallacies[i + 1]["paragraph_index"],
+                            paragraph_fallacies[i + 2]["paragraph_index"]
+                        ])
                 
-                # Si nous avons au moins 2 alternances, c'est un motif
+                # Si nous avons au moins 2 cycles complets, c'est un motif
                 if alternation_count >= 2:
                     alternation_patterns.append({
                         "fallacy_type1": type1,
