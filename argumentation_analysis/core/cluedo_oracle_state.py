@@ -18,6 +18,69 @@ from ..agents.core.oracle.permissions import QueryType, OracleResponse, get_defa
 from ..agents.core.oracle.phase_d_extensions import extend_oracle_state_phase_d
 
 
+class OrchestrationTracer:
+    """
+    Tracer pour les orchestrations Sherlock-Watson améliorées
+    """
+    def __init__(self):
+        self.trace = {
+            "test_info": {
+                "start_time": datetime.now().isoformat(),
+                "end_time": None,
+                "total_duration_seconds": 0
+            },
+            "conversation_trace": [],
+            "tool_usage_trace": [],
+            "shared_state_trace": [],
+            "metrics": {
+                "total_messages": 0,
+                "total_tool_calls": 0,
+                "state_updates": 0
+            }
+        }
+    
+    def log_message(self, agent_name: str, message_type: str, content: str):
+        """Enregistre un message d'agent"""
+        self.trace["conversation_trace"].append({
+            "timestamp": datetime.now().isoformat(),
+            "agent_name": agent_name,
+            "message_type": message_type,
+            "content": content
+        })
+        self.trace["metrics"]["total_messages"] += 1
+    
+    def log_tool_usage(self, agent_name: str, tool_name: str, input_data: Any, output_data: Any):
+        """Enregistre l'utilisation d'un outil"""
+        self.trace["tool_usage_trace"].append({
+            "timestamp": datetime.now().isoformat(),
+            "agent_name": agent_name,
+            "tool_name": tool_name,
+            "input": str(input_data),
+            "output": str(output_data)
+        })
+        self.trace["metrics"]["total_tool_calls"] += 1
+    
+    def log_shared_state(self, state_key: str, state_value: Any):
+        """Enregistre une mise à jour d'état partagé"""
+        self.trace["shared_state_trace"].append({
+            "timestamp": datetime.now().isoformat(),
+            "state_key": state_key,
+            "state_value": state_value
+        })
+        self.trace["metrics"]["state_updates"] += 1
+    
+    def generate_report(self) -> Dict[str, Any]:
+        """Génère le rapport final"""
+        end_time = datetime.now()
+        self.trace["test_info"]["end_time"] = end_time.isoformat()
+        
+        start_time = datetime.fromisoformat(self.trace["test_info"]["start_time"])
+        duration = (end_time - start_time).total_seconds()
+        self.trace["test_info"]["total_duration_seconds"] = duration
+        
+        return self.trace
+
+
 class CluedoOracleState(EnqueteCluedoState):
     """
     Extension d'EnqueteCluedoState pour supporter le workflow à 3 agents
