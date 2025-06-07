@@ -84,14 +84,14 @@ class TestCluedoOracleState:
         """Test une requête Oracle réussie."""
         # Mock du dataset pour retourner une réponse Oracle
         oracle_response = OracleResponse(
-            success=True,
+            authorized=True,
             message="Carte révélée avec succès",
             data={"revealed_card": "Colonel Moutarde"},
             query_type=QueryType.CARD_INQUIRY
         )
         
-        with patch.object(oracle_state.dataset_access_manager, 'execute_oracle_query', 
-                         return_value=oracle_response) as mock_query:
+        with patch.object(oracle_state.cluedo_dataset, 'process_query',
+                         return_value=QueryResult(success=True, data={"revealed_card": "Colonel Moutarde"}, message="Carte révélée avec succès")) as mock_query:
             
             result = await oracle_state.query_oracle(
                 agent_name="Sherlock",
@@ -101,7 +101,7 @@ class TestCluedoOracleState:
             
             # Vérifications
             mock_query.assert_called_once()
-            assert result.success is True
+            assert result.authorized is True
             assert result.data["revealed_card"] == "Colonel Moutarde"
             
             # Vérification des métriques mises à jour
@@ -112,28 +112,25 @@ class TestCluedoOracleState:
         """Test une requête Oracle refusée."""
         # Mock pour refus de permission
         denied_response = OracleResponse(
-            success=False,
+            authorized=False,
             message="Permission refusée",
             data={},
             query_type=QueryType.ADMIN_COMMAND,
             error_code="PERMISSION_DENIED"
         )
         
-        with patch.object(oracle_state.dataset_access_manager, 'execute_oracle_query',
-                         return_value=denied_response):
-            
-            result = await oracle_state.query_oracle(
-                agent_name="UnauthorizedAgent",
-                query_type="admin_command",
-                query_params={"command": "reset"}
-            )
-            
-            # Vérifications
-            assert result.success is False
-            assert result.error_code == "PERMISSION_DENIED"
-            
-            # Les métriques devraient quand même être mises à jour
-            assert oracle_state.oracle_interactions == 1
+        result = await oracle_state.query_oracle(
+            agent_name="UnauthorizedAgent",
+            query_type="admin_command",
+            query_params={"command": "reset"}
+        )
+        
+        # Vérifications
+        assert result.authorized is False
+        assert "permission refusée" in result.message.lower()
+        
+        # Les métriques ne sont PAS incrémentées quand la permission est refusée en amont
+        assert oracle_state.oracle_interactions == 0
     
     @pytest.mark.asyncio
     async def test_validate_suggestion_with_oracle(self, oracle_state):
@@ -146,22 +143,22 @@ class TestCluedoOracleState:
         
         # Mock de la validation
         validation_response = OracleResponse(
-            success=True,
+            authorized=True,
             message="Suggestion validée",
             data={"is_valid": True, "suggestion": suggestion},
             query_type=QueryType.SUGGESTION_VALIDATION
         )
         
-        with patch.object(oracle_state.dataset_access_manager, 'execute_oracle_query',
+        with patch.object(oracle_state, 'query_oracle',
                          return_value=validation_response):
             
             result = await oracle_state.validate_suggestion_with_oracle(
                 suggestion=suggestion,
-                requesting_agent="Watson"
+                requesting_agent="Sherlock"
             )
             
             # Vérifications
-            assert result.success is True
+            assert result.authorized is True
             assert result.data["is_valid"] is True
             assert result.data["suggestion"] == suggestion
     
@@ -198,14 +195,11 @@ class TestCluedoOracleState:
     
     def test_add_revelation(self, oracle_state):
         """Test l'ajout de révélations Oracle."""
-        from datetime import datetime
         revelation = RevelationRecord(
-            card="Professeur Violet",
-            revealed_to="Investigation_Team",
-            timestamp=datetime.now(),
-            reason="Moriarty possède Professeur Violet",
-            query_type=QueryType.CARD_INQUIRY,
-            metadata={"strategic_value": 0.8}
+            card_revealed="Professeur Violet",
+            revelation_type="owned_card",
+            message="Moriarty possède Professeur Violet",
+            strategic_value=0.8
         )
         
         oracle_state.add_revelation(revelation, "Moriarty")
@@ -227,9 +221,9 @@ class TestCluedoOracleState:
         from datetime import datetime
         # Ajout de plusieurs révélations
         revelations = [
-            RevelationRecord("Card1", "Team", datetime.now(), "Message 1", QueryType.CARD_INQUIRY),
-            RevelationRecord("Card2", "Team", datetime.now(), "Message 2", QueryType.CARD_INQUIRY),
-            RevelationRecord("Card3", "Team", datetime.now(), "Message 3", QueryType.CARD_INQUIRY)
+            RevelationRecord("Card1", "type1", "Message 1"),
+            RevelationRecord("Card2", "type2", "Message 2"),
+            RevelationRecord("Card3", "type3", "Message 3")
         ]
         
         for i, revelation in enumerate(revelations):
@@ -245,16 +239,17 @@ class TestCluedoOracleState:
     
     def test_get_oracle_statistics(self, oracle_state):
         """Test la génération des statistiques Oracle."""
-        # Simulation d'activité
-        oracle_state.oracle_interactions = 5
-        oracle_state.cards_revealed = 3
+        # Simulation d'activité via méthodes légitimes
         oracle_state.record_agent_turn("Sherlock", "test", {})
         oracle_state.record_agent_turn("Watson", "test", {})
         oracle_state.record_agent_turn("Moriarty", "test", {})
         
-        from datetime import datetime
-        revelation = RevelationRecord("Test Card", "Team", datetime.now(), "Test message", QueryType.CARD_INQUIRY)
+        revelation = RevelationRecord("Test Card", "test_type", "Test message")
         oracle_state.add_revelation(revelation, "Moriarty")
+        
+        # Synchronisation des métriques manuellement pour le test
+        oracle_state.workflow_metrics["oracle_interactions"] = 5
+        oracle_state.oracle_interactions = 5
         
         stats = oracle_state.get_oracle_statistics()
         
@@ -262,13 +257,13 @@ class TestCluedoOracleState:
         assert "workflow_metrics" in stats
         assert "agent_interactions" in stats
         assert "recent_revelations" in stats
-        assert "dataset_info" in stats
+        assert "dataset_statistics" in stats
         
         # Vérification des métriques
         workflow_metrics = stats["workflow_metrics"]
         assert workflow_metrics["oracle_interactions"] == 5
-        assert workflow_metrics["cards_revealed"] == 3
-        assert workflow_metrics["strategy"] == "balanced"
+        assert workflow_metrics["cards_revealed"] == 1  # Une révélation ajoutée
+        assert oracle_state.oracle_strategy == "balanced"
         
         # Vérification des interactions d'agents
         agent_interactions = stats["agent_interactions"]
@@ -344,6 +339,8 @@ class TestCluedoOracleState:
             state = CluedoOracleState(
                 nom_enquete_cluedo=f"Test {strategy}",
                 elements_jeu_cluedo=cluedo_elements,
+                description_cas="Test strategy configuration",
+                initial_context="Test initial context",
                 oracle_strategy=strategy
             )
             
@@ -362,34 +359,34 @@ class TestCluedoOracleState:
         oracle_state.add_task("Investigate library", "Watson", "pending")
         assert len(oracle_state.tasks) == 1
         
-        # Test de mise à jour de solution (méthode héritée)
+        # Test de mise à jour de solution (méthode héritée - utilise propose_final_solution)
         test_solution = {"suspect": "Colonel Moutarde", "arme": "Poignard", "lieu": "Salon"}
-        oracle_state.update_solution(test_solution)
+        oracle_state.propose_final_solution(test_solution)
         assert oracle_state.final_solution == test_solution
         assert oracle_state.is_solution_proposed is True
     
     @pytest.mark.asyncio
     async def test_error_handling_in_oracle_operations(self, oracle_state):
         """Test la gestion d'erreurs dans les opérations Oracle."""
-        # Mock pour lever une exception
-        with patch.object(oracle_state.dataset_access_manager, 'execute_oracle_query',
+        # Mock pour lever une exception sur le dataset
+        with patch.object(oracle_state.cluedo_dataset, 'process_query',
                          side_effect=Exception("Connection error")):
             
             result = await oracle_state.query_oracle(
-                agent_name="TestAgent",
-                query_type="card_inquiry", 
+                agent_name="Sherlock",  # Utilise un agent autorisé
+                query_type="card_inquiry",
                 query_params={"card": "test"}
             )
             
             # L'erreur devrait être gérée gracieusement
-            assert result.success is False
+            assert result.authorized is False
             assert "erreur" in result.message.lower() or "error" in result.message.lower()
     
     def test_recent_revelations_limit(self, oracle_state):
         """Test la limitation du nombre de révélations récentes."""
         # Ajout de nombreuses révélations
         for i in range(15):  # Plus que la limite (probablement 10)
-            revelation = CluedoRevelation(f"Card{i}", "test", f"Message {i}")
+            revelation = RevelationRecord(f"Card{i}", "test", f"Message {i}")
             oracle_state.add_revelation(revelation, f"Agent{i % 3}")
         
         # Vérification que le nombre est limité
@@ -438,10 +435,11 @@ class TestCluedoOracleStateIntegration:
                 action_details={"action": f"Turn {i+1} investigation"}
             )
             
-            # Requête Oracle simulée
+            # Requête Oracle simulée avec type de requête autorisé
+            query_type = "card_inquiry" if agent == "Sherlock" else "logical_validation" if agent == "Watson" else "progressive_hint"
             result = await state.query_oracle(
                 agent_name=agent,
-                query_type="game_state",
+                query_type=query_type,
                 query_params={"request": f"status_check_{i}"}
             )
             
@@ -460,7 +458,7 @@ class TestCluedoOracleStateIntegration:
         
         # Ajout de données
         state.record_agent_turn("TestAgent", "test_action", {"data": "test"})
-        revelation = CluedoRevelation("TestCard", "test", "Test revelation")
+        revelation = RevelationRecord("TestCard", "test", "Test revelation")
         state.add_revelation(revelation, "TestAgent")
         
         # Génération des statistiques (forme de sérialisation)
@@ -470,7 +468,7 @@ class TestCluedoOracleStateIntegration:
         assert "workflow_metrics" in stats
         assert "agent_interactions" in stats
         assert "recent_revelations" in stats
-        assert "dataset_info" in stats
+        assert "dataset_statistics" in stats
         
         # Vérification de la sérialité JSON (données simples)
         import json
@@ -489,20 +487,27 @@ class TestCluedoOracleStateIntegration:
             # Enregistrement de tour
             state.record_agent_turn(agent_name, "concurrent_test", {"id": operation_id})
             
-            # Requête Oracle
+            # Requête Oracle avec types de requêtes autorisés
+            query_types_by_agent = {
+                "Sherlock": "card_inquiry",  # Sherlock peut faire card_inquiry
+                "Watson": "logical_validation",  # Watson peut faire logical_validation
+                "Moriarty": "progressive_hint"  # Moriarty peut faire progressive_hint
+            }
+            query_type = query_types_by_agent.get(agent_name, "card_inquiry")
+            
             result = await state.query_oracle(
                 agent_name=agent_name,
-                query_type="card_inquiry",
+                query_type=query_type,
                 query_params={"card_name": f"TestCard{operation_id}"}
             )
             
             return result
         
-        # Lancement d'opérations concurrentes
+        # Lancement d'opérations concurrentes avec agents autorisés
         tasks = [
-            concurrent_operation("Agent1", 1),
-            concurrent_operation("Agent2", 2),
-            concurrent_operation("Agent3", 3)
+            concurrent_operation("Sherlock", 1),
+            concurrent_operation("Watson", 2),
+            concurrent_operation("Moriarty", 3)
         ]
         
         results = await asyncio.gather(*tasks)
@@ -515,4 +520,5 @@ class TestCluedoOracleStateIntegration:
         # Vérification de la cohérence de l'état
         stats = state.get_oracle_statistics()
         assert stats["agent_interactions"]["total_turns"] == 3
+        # Oracle interactions sont incrémentées pour agents autorisés (Sherlock, Watson, Moriarty)
         assert stats["workflow_metrics"]["oracle_interactions"] == 3

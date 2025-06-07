@@ -1,34 +1,84 @@
-# argumentation_analysis/agents/core/oracle/__init__.py
 """
-Module Oracle - Gestion des agents Oracle avec système ACL et datasets.
-
-Ce module implémente le pattern Oracle pour l'extension du workflow Sherlock/Watson,
-permettant la gestion de datasets avec contrôle d'accès granulaire et révélations progressives.
-
-Classes principales:
-- OracleBaseAgent: Agent de base avec système ACL
-- MoriartyInterrogatorAgent: Agent Oracle spécialisé pour Cluedo
-- DatasetAccessManager: Gestionnaire d'accès aux datasets
-- PermissionManager: Gestionnaire des permissions ACL
+Sherlock-Watson-Moriarty Oracle Enhanced System
+Agent Oracle de base et système de gestion des données Cluedo
 """
 
-from .oracle_base_agent import OracleBaseAgent
-from .moriarty_interrogator_agent import MoriartyInterrogatorAgent
-from .dataset_access_manager import DatasetAccessManager, PermissionManager
-from .cluedo_dataset import CluedoDataset
-from .permissions import PermissionRule, QueryResult, ValidationResult, OracleResponse
+# Version et métadonnées
+__version__ = "2.1.0"
+__author__ = "Sherlock-Watson-Moriarty Oracle Enhanced Team"
 
+# Imports principaux
+from .oracle_base_agent import OracleBaseAgent, OracleTools
+from .moriarty_interrogator_agent import MoriartyInterrogatorAgent, MoriartyTools
+from .cluedo_dataset import CluedoDataset, CluedoSuggestion, ValidationResult, RevelationRecord
+from .dataset_access_manager import DatasetAccessManager, CluedoDatasetManager, QueryCache
+from .permissions import (
+    QueryType, RevealPolicy, PermissionRule, QueryResult,
+    OracleResponse, AccessLog, PermissionManager,
+    validate_cluedo_method_access, get_default_cluedo_permissions
+)
+from .phase_d_extensions import (
+    PhaseDExtensions, RevealStrategy, NarrativeTwist,
+    RevealationTiming, NarrativeMoment, extend_oracle_state_phase_d
+)
+
+# Classes principales exportées
 __all__ = [
+    # Agents Oracle
     "OracleBaseAgent",
-    "MoriartyInterrogatorAgent", 
-    "DatasetAccessManager",
-    "PermissionManager",
+    "OracleTools",
+    "MoriartyInterrogatorAgent",
+    "MoriartyTools",
+    
+    # Dataset et gestion
     "CluedoDataset",
+    "CluedoSuggestion",
+    "ValidationResult",
+    "RevelationRecord",
+    "DatasetAccessManager",
+    "CluedoDatasetManager",
+    "QueryCache",
+    
+    # Permissions et types
+    "QueryType",
+    "RevealPolicy",
     "PermissionRule",
     "QueryResult",
-    "ValidationResult",
-    "OracleResponse"
+    "OracleResponse",
+    "AccessLog",
+    "PermissionManager",
+    "validate_cluedo_method_access",
+    "get_default_cluedo_permissions",
+    
+    # Extensions Phase D
+    "PhaseDExtensions",
+    "RevealStrategy",
+    "NarrativeTwist",
+    "RevealationTiming",
+    "NarrativeMoment",
+    "extend_oracle_state_phase_d",
 ]
 
-__version__ = "1.0.0"
-__author__ = "Équipe Projet Sherlock/Watson"
+# Configuration par défaut
+DEFAULT_ORACLE_CONFIG = {
+    "max_revelations_per_agent": 3,
+    "revelation_strategy": "strategic",
+    "cache_size": 1000,
+    "cache_ttl": 300,
+    "enable_logging": True,
+    "log_level": "INFO"
+}
+
+def get_oracle_version() -> str:
+    """Retourne la version du système Oracle Enhanced"""
+    return __version__
+
+def get_oracle_info():
+    """Retourne les informations du système Oracle"""
+    from typing import Dict, Any
+    return {
+        "version": __version__,
+        "author": __author__,
+        "components": len(__all__),
+        "config": DEFAULT_ORACLE_CONFIG
+    }

@@ -69,7 +69,7 @@ Variez vos expressions - pas de formules répétitives :
     print(f"\nPHASE B ACCOMPLIE!")
     print("Naturalité conversationnelle optimisée")
     
-    return True
+    assert True, "Phase B accomplie avec succès"
 
 def main():
     """Test principal"""

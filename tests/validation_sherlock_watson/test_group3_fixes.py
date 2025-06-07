@@ -84,7 +84,7 @@ def test_oracle_tools_kernel_function_decorators():
                 print("Pas d'attribut 'description' trouvé")
         
         print("OK Test 11 reussi!")
-        return True
+        assert True, "Test 11 réussi"
         
     except Exception as e:
         print(f"ERREUR Test 11 echoue: {e}")

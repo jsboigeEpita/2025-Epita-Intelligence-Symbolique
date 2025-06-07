@@ -43,26 +43,52 @@ class ValidationResult:
     reason: str
     revealed_cards: List[str] = field(default_factory=list)
     metadata: Dict[str, Any] = field(default_factory=dict)
+    
+    @property
+    def authorized(self) -> bool:
+        """Compatibilité avec l'ancienne API."""
+        return True  # Les validations sont toujours autorisées, seule la validité change
+    
+    @property
+    def can_refute(self) -> bool:
+        """Compatibilité avec l'ancienne API - peut réfuter si la suggestion n'est pas valide."""
+        return not self.is_valid
 
 
 @dataclass
 class RevelationRecord:
     """Enregistrement d'une révélation de carte."""
-    card: str
-    revealed_to: str
-    timestamp: datetime
-    reason: str
-    query_type: QueryType
+    card_revealed: str
+    revelation_type: str
+    message: str
+    strategic_value: float = 0.8
+    revealed_to: str = ""
+    timestamp: datetime = field(default_factory=datetime.now)
+    query_type: Optional[QueryType] = None
     metadata: Dict[str, Any] = field(default_factory=dict)
+    
+    # Compatibilité avec l'ancienne API
+    @property
+    def card(self) -> str:
+        """Compatibilité avec l'ancienne API."""
+        return self.card_revealed
+    
+    @property
+    def reason(self) -> str:
+        """Compatibilité avec l'ancienne API."""
+        return self.message
     
     def to_dict(self) -> Dict[str, Any]:
         """Convertit l'enregistrement en dictionnaire."""
         return {
-            "card": self.card,
+            "card": self.card_revealed,
+            "card_revealed": self.card_revealed,
+            "revelation_type": self.revelation_type,
+            "message": self.message,
+            "strategic_value": self.strategic_value,
             "revealed_to": self.revealed_to,
             "timestamp": self.timestamp.isoformat(),
-            "reason": self.reason,
-            "query_type": self.query_type.value,
+            "query_type": self.query_type.value if self.query_type else None,
             "metadata": self.metadata
         }
 
@@ -74,27 +100,91 @@ class CluedoDataset:
     Gère les cartes détenues par Moriarty et les révélations strategiques.
     """
     
-    def __init__(self, moriarty_cards: List[str]):
+    def __init__(self, moriarty_cards: Optional[List[str]] = None, elements_jeu: Optional[Dict[str, List[str]]] = None,
+                 solution_secrete: Optional[Dict[str, str]] = None, cartes_distribuees: Optional[Dict[str, List[str]]] = None):
         """
         Initialise le dataset avec les cartes de Moriarty.
         
         Args:
             moriarty_cards: Liste des cartes détenues par Moriarty
+            elements_jeu: Éléments du jeu (suspects, armes, lieux)
+            solution_secrete: Solution secrète du Cluedo (pour compatibilité avec anciens tests)
+            cartes_distribuees: Cartes distribuées par joueur (pour compatibilité avec anciens tests)
         """
-        self.moriarty_cards = set(moriarty_cards)
+        # Éléments du jeu (passés en paramètre ou par défaut)
+        if elements_jeu:
+            self._elements_jeu = elements_jeu
+        else:
+            self._elements_jeu = {
+                "suspects": ["Colonel Moutarde", "Docteur Olive", "Madame Leblanc",
+                           "Mademoiselle Rose", "Professeur Violet", "Monsieur Pervenche"],
+                "armes": ["Corde", "Poignard", "Barre de fer", "Revolver", "Chandelier", "Clé anglaise"],
+                "lieux": ["Bureau", "Salon", "Cuisine", "Salle de bal", "Conservatoire",
+                         "Salle de billard", "Bibliothèque", "Hall", "Véranda"]
+            }
+        
+        # Gérer la solution secrète et les cartes de Moriarty
+        if solution_secrete:
+            # Mode compatibilité avec anciens tests : solution secrète fournie
+            self._solution_secrete = solution_secrete
+            if cartes_distribuees and "moriarty" in cartes_distribuees:
+                self.moriarty_cards = set(cartes_distribuees["moriarty"])
+            elif moriarty_cards:
+                self.moriarty_cards = set(moriarty_cards)
+            else:
+                # Déduire les cartes de Moriarty : toutes les cartes sauf la solution secrète
+                all_cards = (set(self._elements_jeu["suspects"]) |
+                           set(self._elements_jeu["armes"]) |
+                           set(self._elements_jeu["lieux"]))
+                solution_cards = {solution_secrete["suspect"], solution_secrete["arme"], solution_secrete["lieu"]}
+                self.moriarty_cards = all_cards - solution_cards
+        else:
+            # Mode normal : cartes de Moriarty fournies, calculer la solution secrète
+            self.moriarty_cards = set(moriarty_cards) if moriarty_cards else set()
+            self._solution_secrete = self._calculate_solution_secrete()
+        
         self.revelations_history: List[RevelationRecord] = []
         self.total_queries = 0
         self.reveal_policy = RevealPolicy.BALANCED
         
         # Solution secrète (cartes que Moriarty ne détient PAS)
-        self._all_suspects = {"Colonel Moutarde", "Docteur Olive", "Madame Leblanc", 
-                             "Mademoiselle Rose", "Professeur Violet", "Monsieur Pervenche"}
-        self._all_weapons = {"Corde", "Poignard", "Barre de fer", "Revolver", "Chandelier", "Clé anglaise"}
-        self._all_rooms = {"Bureau", "Salon", "Cuisine", "Salle de bal", "Conservatoire", 
-                          "Salle de billard", "Bibliothèque", "Hall", "Véranda"}
+        self._all_suspects = set(self._elements_jeu["suspects"])
+        self._all_weapons = set(self._elements_jeu["armes"])
+        self._all_rooms = set(self._elements_jeu["lieux"])
         
         self._logger = logging.getLogger(f"CluedoDataset")
-        self._logger.info(f"CluedoDataset initialisé avec {len(moriarty_cards)} cartes Moriarty")
+        self._logger.info(f"CluedoDataset initialisé avec {len(self.moriarty_cards)} cartes Moriarty")
+    
+    @property
+    def solution_secrete(self) -> Dict[str, str]:
+        """
+        Retourne la solution secrète du Cluedo.
+        
+        Returns:
+            Dictionnaire avec les clés 'suspect', 'arme', 'lieu'
+        """
+        return self._solution_secrete.copy()
+    
+    def _calculate_solution_secrete(self) -> Dict[str, str]:
+        """
+        Calcule la solution secrète basée sur les cartes que Moriarty ne possède pas.
+        
+        Returns:
+            Dictionnaire avec la solution secrète
+        """
+        # Suspects que Moriarty ne possède pas
+        available_suspects = [s for s in self._elements_jeu["suspects"] if s not in self.moriarty_cards]
+        # Armes que Moriarty ne possède pas
+        available_weapons = [a for a in self._elements_jeu["armes"] if a not in self.moriarty_cards]
+        # Lieux que Moriarty ne possède pas
+        available_rooms = [l for l in self._elements_jeu["lieux"] if l not in self.moriarty_cards]
+        
+        # Prendre le premier disponible pour chaque catégorie (ou une stratégie cohérente)
+        return {
+            "suspect": available_suspects[0] if available_suspects else "Colonel Moutarde",
+            "arme": available_weapons[0] if available_weapons else "Poignard",
+            "lieu": available_rooms[0] if available_rooms else "Salon"
+        }
     
     def get_moriarty_cards(self) -> List[str]:
         """Retourne la liste des cartes de Moriarty."""
@@ -112,7 +202,7 @@ class CluedoDataset:
     def get_revealed_cards_to_agent(self, agent_name: str) -> List[str]:
         """Retourne les cartes révélées à un agent spécifique."""
         revelations = self.get_revelations_for_agent(agent_name)
-        return [r.card for r in revelations]
+        return [r.card_revealed for r in revelations]
     
     def reveal_card(self, card: str, to_agent: str, reason: str, query_type: QueryType) -> RevelationRecord:
         """
@@ -131,10 +221,12 @@ class CluedoDataset:
             raise ValueError(f"Moriarty ne possède pas la carte: {card}")
         
         revelation = RevelationRecord(
-            card=card,
+            card_revealed=card,
+            revelation_type="owned_card",
+            message=reason,
+            strategic_value=0.8,
             revealed_to=to_agent,
             timestamp=datetime.now(),
-            reason=reason,
             query_type=query_type,
             metadata={"total_revelations": len(self.revelations_history) + 1}
         )
@@ -213,6 +305,39 @@ class CluedoDataset:
                 }
             )
     
+    def can_refute_suggestion(self, suggestion: CluedoSuggestion) -> List[str]:
+        """
+        Détermine si Moriarty peut réfuter une suggestion et retourne les cartes possédées.
+        
+        Args:
+            suggestion: Suggestion à analyser
+            
+        Returns:
+            Liste des cartes de la suggestion que Moriarty possède
+        """
+        owned_cards = []
+        suggestion_cards = [suggestion.suspect, suggestion.arme, suggestion.lieu]
+        
+        for card in suggestion_cards:
+            if card in self.moriarty_cards:
+                owned_cards.append(card)
+        
+        return owned_cards
+    
+    def reveal_card_compatible(self, card: str, to_agent: str, reason: str) -> RevelationRecord:
+        """
+        Version compatible de reveal_card sans query_type requis.
+        
+        Args:
+            card: Carte à révéler
+            to_agent: Agent à qui révéler
+            reason: Raison de la révélation
+            
+        Returns:
+            Enregistrement de la révélation
+        """
+        return self.reveal_card(card, to_agent, reason, QueryType.CARD_INQUIRY)
+    
     def _choose_cards_to_reveal(self, owned_cards: List[str], requesting_agent: str) -> List[str]:
         """
         Choisit quelles cartes révéler selon la stratégie.
@@ -252,11 +377,11 @@ class CluedoDataset:
         revelations_count = len(self.get_revelations_for_agent(agent_name))
         
         if revelations_count == 0:
-            return "Observez attentivement les réactions des autres joueurs."
+            return "Observez attentivement les réactions des autres joueurs. Moriarty détient des cartes importantes."
         elif revelations_count < 3:
-            return "Certaines cartes ont été révélées. Analysez les patterns."
+            return "Certaines cartes ont été révélées. Analysez les patterns et indices disponibles."
         else:
-            return "Vous avez suffisamment d'informations pour déduire la solution."
+            return "Vous avez suffisamment d'informations pour déduire la solution. Utilisez les cartes révélées."
     
     def get_statistics(self) -> Dict[str, Any]:
         """
@@ -416,3 +541,23 @@ class CluedoDataset:
         self.revelations_history.clear()
         self.total_queries = 0
         self._logger.info("Dataset CluedoDataset remis à zéro")
+    
+    @property
+    def elements_jeu(self) -> Dict[str, List[str]]:
+        """Retourne les éléments du jeu (compatibilité tests)."""
+        return self._elements_jeu
+    
+    def is_game_solvable_by_elimination(self) -> bool:
+        """
+        Vérifie si le jeu peut être résolu par élimination complète.
+        
+        Returns:
+            True si suffisamment de cartes ont été révélées pour permettre la résolution
+        """
+        # Calcul simple: si plus de 70% des cartes non-solution ont été révélées
+        total_cards = len(self._all_suspects) + len(self._all_weapons) + len(self._all_rooms)
+        solution_cards = 3  # suspect + arme + lieu
+        non_solution_cards = total_cards - solution_cards
+        
+        # Si plus de 70% des cartes non-solution révélées, jeu résolvable
+        return len(self.revelations_history) >= (non_solution_cards * 0.7)

@@ -129,6 +129,12 @@ class OracleResponse:
     metadata: Dict[str, Any] = field(default_factory=dict)
     revelation_triggered: bool = False  # Enhanced Oracle functionality
     hint_content: Optional[str] = None  # Progressive hints for Enhanced Oracle
+    error_code: Optional[str] = None  # Error code for failed responses
+    
+    @property
+    def success(self) -> bool:
+        """Compatibilité avec les tests : retourne authorized."""
+        return self.authorized
     
     def __str__(self) -> str:
         status = "AUTHORIZED" if self.authorized else "DENIED"
