@@ -36,6 +36,8 @@ def oracle_enhanced_state(enhanced_elements):
     return CluedoOracleState(
         nom_enquete_cluedo="Test Oracle Enhanced",
         elements_jeu_cluedo=enhanced_elements,
+        description_cas="Test Oracle Enhanced Case",
+        initial_context={"test": "context"},
         oracle_strategy="enhanced_auto_reveal"
     )
 
@@ -232,6 +234,8 @@ class TestOracleEnhancedBehavior:
         standard_state = CluedoOracleState(
             nom_enquete_cluedo="Test Standard",
             elements_jeu_cluedo=enhanced_elements,
+            description_cas="Test Standard Case",
+            initial_context={"test": "standard"},
             oracle_strategy="balanced"
         )
         
@@ -239,6 +243,8 @@ class TestOracleEnhancedBehavior:
         enhanced_state = CluedoOracleState(
             nom_enquete_cluedo="Test Enhanced",
             elements_jeu_cluedo=enhanced_elements,
+            description_cas="Test Enhanced Case",
+            initial_context={"test": "enhanced"},
             oracle_strategy="enhanced_auto_reveal"
         )
         
@@ -299,6 +305,8 @@ class TestOracleEnhancedEdgeCases:
         oracle_state = CluedoOracleState(
             nom_enquete_cluedo="Test Minimal Enhanced",
             elements_jeu_cluedo=minimal_elements,
+            description_cas="Test Minimal Enhanced Case",
+            initial_context={"test": "minimal"},
             oracle_strategy="enhanced_auto_reveal"
         )
         
@@ -333,6 +341,8 @@ class TestOracleEnhancedEdgeCases:
         valid_state = CluedoOracleState(
             nom_enquete_cluedo="Test Validation",
             elements_jeu_cluedo=enhanced_elements,
+            description_cas="Test Validation Case",
+            initial_context={"test": "validation"},
             oracle_strategy="enhanced_auto_reveal"
         )
         assert valid_state.oracle_strategy == "enhanced_auto_reveal"
@@ -349,6 +359,8 @@ class TestOracleEnhancedEdgeCases:
                 test_state = CluedoOracleState(
                     nom_enquete_cluedo=f"Test {strategy}",
                     elements_jeu_cluedo=enhanced_elements,
+                    description_cas=f"Test {strategy} Case",
+                    initial_context={"test": strategy},
                     oracle_strategy=strategy
                 )
                 # Si la stratégie est acceptée, vérifier qu'elle est bien configurée

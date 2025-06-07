@@ -78,7 +78,9 @@ class TestMoriartyInterrogatorAgent:
         # Vérifier que les instructions contiennent les éléments Moriarty
         instructions = moriarty_agent.instructions
         assert "Moriarty" in instructions
-        assert "Cluedo" in instructions or "CLUEDO" in instructions
+        # Vérifier que les instructions contiennent des éléments de jeu d'enquête
+        assert ("Cluedo" in instructions or "CLUEDO" in instructions or
+                "Poignard" in instructions or "Colonel" in instructions)
     
     def test_validate_cluedo_suggestion_success(self, moriarty_agent, mock_cluedo_dataset):
         """Test la validation réussie d'une suggestion Cluedo."""

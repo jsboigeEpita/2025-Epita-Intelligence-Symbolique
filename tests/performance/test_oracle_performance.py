@@ -21,7 +21,7 @@ from concurrent.futures import ThreadPoolExecutor
 
 # Imports Semantic Kernel pour tests réels
 from semantic_kernel.kernel import Kernel
-from semantic_kernel.services.openai import OpenAIChatCompletion
+from semantic_kernel.connectors.ai.open_ai import OpenAIChatCompletion
 from semantic_kernel.connectors.ai.open_ai import OpenAIChatPromptExecutionSettings
 
 # Imports du système Oracle

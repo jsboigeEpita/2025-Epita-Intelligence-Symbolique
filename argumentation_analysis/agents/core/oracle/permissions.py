@@ -35,6 +35,8 @@ class QueryType(Enum):
     GAME_STATE = "game_state"
     ADMIN_COMMAND = "admin_command"
     PERMISSION_CHECK = "permission_check"
+    PROGRESSIVE_HINT = "progressive_hint"  # Enhanced Oracle functionality
+    RAPID_TEST = "rapid_test"  # Enhanced Oracle rapid testing
 
 
 class RevealPolicy(Enum):
@@ -125,6 +127,8 @@ class OracleResponse:
     agent_name: str = ""
     timestamp: datetime = field(default_factory=datetime.now)
     metadata: Dict[str, Any] = field(default_factory=dict)
+    revelation_triggered: bool = False  # Enhanced Oracle functionality
+    hint_content: Optional[str] = None  # Progressive hints for Enhanced Oracle
     
     def __str__(self) -> str:
         status = "AUTHORIZED" if self.authorized else "DENIED"
@@ -234,9 +238,38 @@ class PermissionManager:
         }
 
 
-# Configuration par défaut pour les permissions Cluedo
+class CluedoIntegrityError(Exception):
+    """Exception levée lors de violation des règles d'intégrité du Cluedo."""
+    pass
+
+
+def validate_cluedo_method_access(method_name: str, agent_name: str) -> None:
+    """
+    Valide l'accès aux méthodes selon les règles d'intégrité du Cluedo.
+    
+    Args:
+        method_name: Nom de la méthode appelée
+        agent_name: Nom de l'agent demandeur
+        
+    Raises:
+        CluedoIntegrityError: Si la méthode viole les règles du Cluedo
+    """
+    # Méthodes interdites qui violent les règles du Cluedo
+    FORBIDDEN_METHODS = {
+        "get_autres_joueurs_cards": "Violation règle fondamentale : un joueur ne peut voir les cartes des autres",
+        "get_solution": "Violation règle fondamentale : la solution ne peut être révélée qu'à la fin",
+        "direct_card_access": "Accès direct aux cartes interdit sans révélation explicite"
+    }
+    
+    if method_name in FORBIDDEN_METHODS:
+        raise CluedoIntegrityError(
+            f"INTÉGRITÉ CLUEDO VIOLÉE par {agent_name}: {FORBIDDEN_METHODS[method_name]}"
+        )
+
+
+# Configuration par défaut pour les permissions Cluedo RENFORCÉES
 def get_default_cluedo_permissions() -> Dict[str, PermissionRule]:
-    """Retourne les règles de permission par défaut pour Cluedo."""
+    """Retourne les règles de permission par défaut pour Cluedo AVEC INTÉGRITÉ RENFORCÉE."""
     return {
         "SherlockEnqueteAgent": PermissionRule(
             agent_name="SherlockEnqueteAgent",
@@ -247,8 +280,17 @@ def get_default_cluedo_permissions() -> Dict[str, PermissionRule]:
             ],
             conditions={
                 "max_daily_queries": 30,
-                "forbidden_fields": ["solution_secrete"],
-                "reveal_policy": RevealPolicy.PROGRESSIVE.value
+                "forbidden_fields": [
+                    "solution_secrete",
+                    "autres_joueurs_cards",  # NOUVELLE PROTECTION
+                    "direct_solution_access"  # NOUVELLE PROTECTION
+                ],
+                "forbidden_methods": [  # NOUVELLE PROTECTION
+                    "get_autres_joueurs_cards",
+                    "get_solution"
+                ],
+                "reveal_policy": RevealPolicy.PROGRESSIVE.value,
+                "integrity_enforced": True  # NOUVEAU FLAG D'INTÉGRITÉ
             }
         ),
         "WatsonLogicAssistant": PermissionRule(
@@ -260,7 +302,40 @@ def get_default_cluedo_permissions() -> Dict[str, PermissionRule]:
             conditions={
                 "max_daily_queries": 100,
                 "logical_queries_only": True,
-                "reveal_policy": RevealPolicy.BALANCED.value
+                "forbidden_fields": [
+                    "solution_secrete",
+                    "autres_joueurs_cards",  # NOUVELLE PROTECTION
+                    "direct_solution_access"  # NOUVELLE PROTECTION
+                ],
+                "forbidden_methods": [  # NOUVELLE PROTECTION
+                    "get_autres_joueurs_cards",
+                    "get_solution"
+                ],
+                "reveal_policy": RevealPolicy.BALANCED.value,
+                "integrity_enforced": True  # NOUVEAU FLAG D'INTÉGRITÉ
+            }
+        ),
+        "MoriartyInterrogator": PermissionRule(
+            agent_name="MoriartyInterrogator",
+            allowed_query_types=[
+                QueryType.SUGGESTION_VALIDATION,
+                QueryType.CARD_INQUIRY,
+                QueryType.CLUE_REQUEST,
+                QueryType.PROGRESSIVE_HINT
+            ],
+            conditions={
+                "max_daily_queries": 50,
+                "can_reveal_own_cards": True,  # Moriarty peut révéler SES cartes
+                "forbidden_fields": [
+                    "autres_joueurs_cards",  # PROTECTION: Ne peut voir les cartes des autres
+                    "direct_solution_access"  # PROTECTION: Pas d'accès direct à la solution
+                ],
+                "forbidden_methods": [  # PROTECTION RENFORCÉE
+                    "get_autres_joueurs_cards",
+                    "get_solution"
+                ],
+                "reveal_policy": RevealPolicy.BALANCED.value,
+                "integrity_enforced": True  # NOUVEAU FLAG D'INTÉGRITÉ
             }
         )
     }

@@ -162,9 +162,7 @@ class TestOracleBaseAgent:
         )
         
         # Vérifications
-        mock_dataset_manager.check_permission.assert_called_once_with(
-            agent_name="Watson",
-            query_type=QueryType.CARD_INQUIRY
+        mock_dataset_manager.check_permission.assert_called_once_with("Watson", QueryType.CARD_INQUIRY
         )
         assert "Watson a les permissions" in result
         assert "card_inquiry" in result
@@ -209,7 +207,7 @@ class TestOracleBaseAgent:
     async def test_oracle_error_handling(self, oracle_base_agent, mock_dataset_manager):
         """Test la gestion des erreurs dans les requêtes Oracle."""
         # Configuration du mock pour lever une exception
-        mock_dataset_manager.execute_query = AsyncMock(side_effect=Exception("Erreur de connexion dataset"))
+        mock_dataset_manager.execute_oracle_query.side_effect = Exception("Erreur de connexion dataset")
         
         # Exécution
         result = await oracle_base_agent.oracle_tools.execute_oracle_query(
@@ -337,9 +335,7 @@ class TestOracleTools:
         )
         
         # Vérifications
-        mock_dataset_manager.check_permission.assert_called_once_with(
-            agent_name="AuthorizedAgent",
-            query_type=QueryType.CARD_INQUIRY
+        mock_dataset_manager.check_permission.assert_called_once_with("AuthorizedAgent", QueryType.CARD_INQUIRY
         )
         assert "AuthorizedAgent a les permissions" in result
     

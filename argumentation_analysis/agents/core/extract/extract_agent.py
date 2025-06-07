@@ -677,8 +677,49 @@ class ExtractAgent(BaseAgent):
         
         self.logger.info(f"Nouvel extrait '{extract_name}' ajouté à '{source_info.get('source_name', '')}' à l'index {new_extract_idx}.")
         return True, new_extract_idx
+
+    async def get_response(self, message: str, **kwargs) -> str:
+        """
+        Méthode implémentée pour satisfaire l'interface BaseAgent.
         
-        return False, -1
+        Retourne une réponse basée sur les capacités d'extraction de l'agent.
+        
+        :param message: Le message/texte à traiter
+        :param kwargs: Arguments supplémentaires
+        :return: Réponse de l'agent
+        """
+        # Pour un agent d'extraction, on peut retourner une description des capacités
+        # ou traiter le message selon le contexte
+        capabilities = self.get_agent_capabilities()
+        return f"ExtractAgent '{self.name}' prêt. Capacités: {', '.join(capabilities.keys())}"
+
+    async def invoke(self, action: str = "extract_from_name", **kwargs) -> Any:
+        """
+        Méthode d'invocation principale pour l'agent d'extraction.
+        
+        :param action: L'action à effectuer ('extract_from_name', 'repair_extract', etc.)
+        :param kwargs: Arguments spécifiques à l'action
+        :return: Résultat de l'action
+        """
+        if action == "extract_from_name":
+            source_info = kwargs.get("source_info")
+            extract_name = kwargs.get("extract_name")
+            if source_info and extract_name:
+                return await self.extract_from_name(source_info, extract_name)
+            else:
+                raise ValueError("extract_from_name requires 'source_info' and 'extract_name' parameters")
+        
+        elif action == "repair_extract":
+            extract_definitions = kwargs.get("extract_definitions")
+            source_idx = kwargs.get("source_idx")
+            extract_idx = kwargs.get("extract_idx")
+            if extract_definitions is not None and source_idx is not None and extract_idx is not None:
+                return await self.repair_extract(extract_definitions, source_idx, extract_idx)
+            else:
+                raise ValueError("repair_extract requires 'extract_definitions', 'source_idx', and 'extract_idx' parameters")
+        
+        else:
+            raise ValueError(f"Unknown action: {action}. Available actions: extract_from_name, repair_extract")
 
 # La fonction setup_extract_agent n'est plus nécessaire ici,
 # car l'initialisation du kernel et du service LLM se fait à l'extérieur

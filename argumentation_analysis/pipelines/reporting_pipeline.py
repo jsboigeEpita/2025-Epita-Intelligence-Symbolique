@@ -17,8 +17,18 @@ import argparse
 import time
 import pandas as pd
 import numpy as np
-import matplotlib.pyplot as plt
-import seaborn as sns
+# Import paresseux de matplotlib pour éviter les imports circulaires
+def _import_matplotlib():
+    """Import paresseux de matplotlib pour éviter les problèmes d'imports circulaires."""
+    try:
+        import matplotlib.pyplot as plt
+        import seaborn as sns
+        return plt, sns
+    except ImportError as e:
+        raise ImportError(f"matplotlib et seaborn sont requis pour la génération de rapports: {e}")
+
+plt = None
+sns = None
 from pathlib import Path
 from datetime import datetime
 from typing import Dict, List, Any, Optional, Tuple, Union
@@ -363,6 +373,9 @@ def _generate_visualizations(
     """
     output_dir.mkdir(parents=True, exist_ok=True)
     visualization_paths = {}
+    
+    # Import paresseux de matplotlib
+    plt, sns = _import_matplotlib()
     
     # Graphique 1: Sophismes par corpus
     plt.figure(figsize=(12, 8))
