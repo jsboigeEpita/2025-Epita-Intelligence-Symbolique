@@ -149,7 +149,7 @@ class WatsonLogicAssistant(ChatCompletionAgent):
     pour interagir avec la logique propositionnelle via TweetyBridge.
     """
 
-    def __init__(self, kernel: Kernel, agent_name: str = "Watson", constants: Optional[List[str]] = None, **kwargs):
+    def __init__(self, kernel: Kernel, agent_name: str = "Watson", constants: Optional[List[str]] = None, system_prompt: Optional[str] = None, **kwargs):
         """
         Initialise une instance de WatsonLogicAssistant.
 
@@ -157,16 +157,20 @@ class WatsonLogicAssistant(ChatCompletionAgent):
             kernel: Le kernel Semantic Kernel à utiliser.
             agent_name: Le nom de l'agent.
             constants: Une liste optionnelle de constantes logiques à utiliser.
+            system_prompt: Prompt système optionnel. Si non fourni, utilise le prompt par défaut.
         """
         watson_tools = WatsonTools(constants=constants)
         
         plugins = kwargs.pop("plugins", [])
         plugins.append(watson_tools)
+        
+        # Utiliser le system_prompt fourni ou le prompt par défaut
+        instructions = system_prompt if system_prompt is not None else WATSON_LOGIC_ASSISTANT_SYSTEM_PROMPT
 
         super().__init__(
             kernel=kernel,
             name=agent_name,
-            instructions=WATSON_LOGIC_ASSISTANT_SYSTEM_PROMPT,
+            instructions=instructions,
             plugins=plugins,
             **kwargs
         )
@@ -183,7 +187,7 @@ class WatsonLogicAssistant(ChatCompletionAgent):
         Returns:
             Le contenu de l'ensemble de croyances, ou None si non trouvé ou en cas d'erreur.
         """
-        self.logger.info(f"Récupération du contenu de l'ensemble de croyances ID: {belief_set_id}")
+        self._logger.info(f"Récupération du contenu de l'ensemble de croyances ID: {belief_set_id}")
         try:
             # Préparation des arguments pour la fonction du plugin
             # Le nom du paramètre dans la fonction du plugin doit correspondre à "belief_set_id"
@@ -203,7 +207,7 @@ class WatsonLogicAssistant(ChatCompletionAgent):
                 return str(result.value) if result.value is not None else None
             return str(result) if result is not None else None
         except Exception as e:
-            self.logger.error(f"Erreur lors de la récupération du contenu de l'ensemble de croyances {belief_set_id}: {e}")
+            self._logger.error(f"Erreur lors de la récupération du contenu de l'ensemble de croyances {belief_set_id}: {e}")
             return None
 
 # Pourrait être étendu avec des capacités spécifiques à Watson plus tard
