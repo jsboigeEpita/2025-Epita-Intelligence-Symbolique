@@ -1,8 +1,8 @@
 # 🕵️ Système Sherlock-Watson-Moriarty
 ## Index Principal - Documentation Complète
 
-> **Système multi-agents de raisonnement collaboratif avec Oracle Enhanced**  
-> Version actuelle : Oracle Enhanced + Démo Einstein (Janvier 2025)
+> **Système multi-agents de raisonnement collaboratif avec Oracle Enhanced**
+> Version actuelle : Oracle Enhanced + Intégrité Cluedo Certifiée (Janvier 2025)
 
 ---
 
@@ -55,12 +55,14 @@ python scripts\sherlock_watson\run_cluedo_oracle_enhanced.py
 python scripts\sherlock_watson\run_einstein_oracle_demo.py
 ```
 
-### 🎯 **Nouveautés Oracle Enhanced**
+### 🎯 **Nouveautés Oracle Enhanced + Intégrité Certifiée**
 
 - ✅ **Moriarty Oracle authentique** : Révélations automatiques vs suggestions triviales
 - ✅ **Démo Einstein** : Indices progressifs pour résolution logique
 - ✅ **Workflow 3-agents** : Sherlock → Watson → Moriarty avec orchestration cyclique
 - ✅ **Scripts dédiés** : Exécution simplifiée des différentes démos
+- 🛡️ **INTÉGRITÉ CLUEDO** : Tests 100% AVEC respect strict des règles
+- 🔒 **ANTI-TRICHE** : CluedoIntegrityError et protections renforcées
 
 ---
 
@@ -165,13 +167,35 @@ docs/sherlock_watson/
 
 ---
 
+## 🛡️ **AUDIT D'INTÉGRITÉ CLUEDO (JANVIER 2025)**
+
+### ✅ **CERTIFICATION INTÉGRITÉ**
+- **4 violations critiques** détectées et corrigées
+- **Tests à 100%** maintenus AVEC respect strict des règles
+- **CluedoIntegrityError** pour protections anti-triche
+- **Permissions renforcées** dans le système Oracle
+
+### 📋 **Documentation Audit**
+- 📊 [AUDIT_INTEGRITE_CLUEDO.md](AUDIT_INTEGRITE_CLUEDO.md) - Rapport complet d'audit
+- 🧪 Tests d'intégrité : `test_validation_integrite_apres_corrections.py` (8/8 ✅)
+- 🎮 Tests fonctionnels : `test_cluedo_dataset_simple.py` (5/5 ✅)
+
+### 🔒 **Mécanismes de Sécurité**
+- **Violation #1** : `get_autres_joueurs_cards()` → Méthode sécurisée
+- **Violation #2** : `get_solution()` → Accès bloqué avec PermissionError
+- **Violation #3** : `simulate_other_player_response()` → Simulation légitime
+- **Violation #4** : Permissions système renforcées
+
+---
+
 ## 🎯 **PROCHAINES ÉTAPES**
 
-### Phase 1 - Consolidation (En cours)
+### Phase 1 - Consolidation (✅ TERMINÉE)
 - ✅ **Oracle Enhanced** - Moriarty révélations authentiques
-- ✅ **Démo Einstein** - Indices progressifs 
-- 🔄 **Documentation complète** - Suite documentaire structurée
-- 🎯 **Tests intégration** - Validation workflows 2-agents et 3-agents
+- ✅ **Démo Einstein** - Indices progressifs
+- ✅ **Intégrité Cluedo** - Audit complet et corrections
+- ✅ **Documentation complète** - Suite documentaire structurée
+- ✅ **Tests intégration** - Validation workflows 2-agents et 3-agents
 
 ### Phase 2 - Extensions (2-4 mois)
 - 🚀 **Oracle multi-datasets** - Support différents types d'enquêtes
