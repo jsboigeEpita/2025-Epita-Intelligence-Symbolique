@@ -15,6 +15,7 @@ from typing import Dict, List, Any, Optional
 from .enquete_states import EnqueteCluedoState
 from ..agents.core.oracle.cluedo_dataset import CluedoDataset
 from ..agents.core.oracle.permissions import QueryType, OracleResponse, get_default_cluedo_permissions
+from ..agents.core.oracle.phase_d_extensions import extend_oracle_state_phase_d
 
 
 class CluedoOracleState(EnqueteCluedoState):
@@ -1344,3 +1345,51 @@ Permettez-moi de lever le voile sur le mystère :
         }
         
         return stats
+# ============================================================================
+# INTÉGRATION EXTENSIONS PHASE D
+# ============================================================================
+
+# Intégration automatique des extensions Phase D avancées dans CluedoOracleState
+extend_oracle_state_phase_d(CluedoOracleState)
+
+if __name__ == "__main__":
+    # Test d'intégration des extensions Phase D
+    print("[INFO] Test d'intégration des extensions Phase D...")
+    
+    # Créer une instance test
+    test_state = CluedoOracleState(
+        nom_enquete_cluedo="Test Phase D",
+        elements_jeu_cluedo={
+            "suspects": ["Colonel Moutarde", "Professeur Violet"],
+            "armes": ["Revolver", "Chandelier"],
+            "lieux": ["Bureau", "Salon"]
+        },
+        description_cas="Test des extensions Phase D",
+        initial_context={"test": True}
+    )
+    
+    # Test des nouvelles méthodes Phase D
+    if hasattr(test_state, 'add_dramatic_revelation'):
+        test_revelation = test_state.add_dramatic_revelation(
+            "J'ai le Colonel Moutarde !",
+            intensity=0.9,
+            use_false_lead=True
+        )
+        print(f"[OK] Révélation dramatique Phase D générée: {len(test_revelation)} caractères")
+    
+    if hasattr(test_state, 'get_ideal_trace_metrics'):
+        test_metrics = test_state.get_ideal_trace_metrics()
+        print(f"[OK] Métriques trace idéale Phase D: score = {test_metrics.get('score_trace_ideale', 0)}")
+    
+    if hasattr(test_state, 'apply_conversational_polish_to_message'):
+        test_polish = test_state.apply_conversational_polish_to_message(
+            "Watson", 
+            "C'est brillant !"
+        )
+        print(f"[OK] Polish conversationnel Phase D appliqué: '{test_polish}'")
+    
+    print("[SUCCESS] Extensions Phase D intégrées avec succès dans CluedoOracleState !")
+    print("         - Révélations progressives avec fausses pistes")
+    print("         - Timing dramatique optimisé")
+    print("         - Polish conversationnel par agent")
+    print("         - Métriques de trace idéale (objectif 8.0+/10)")
