@@ -168,7 +168,7 @@ class TestOracleBaseAgent:
         )
         
         # Vérifications
-        mock_dataset_manager.permission_manager.is_authorized.assert_called_once_with(
+        mock_dataset_manager.check_permission.assert_called_once_with(
             "Watson",
             QueryType.CARD_INQUIRY
         )
@@ -179,7 +179,7 @@ class TestOracleBaseAgent:
     async def test_validate_agent_permissions_failure(self, oracle_base_agent, mock_dataset_manager):
         """Test la validation échouée des permissions d'agent."""
         # Configuration
-        mock_dataset_manager.permission_manager.is_authorized.return_value = False
+        mock_dataset_manager.check_permission.return_value = False
         
         # Exécution
         result = await oracle_base_agent.oracle_tools.validate_agent_permissions(
@@ -188,11 +188,11 @@ class TestOracleBaseAgent:
         )
         
         # Vérifications
-        mock_dataset_manager.permission_manager.is_authorized.assert_called_once_with(
+        mock_dataset_manager.check_permission.assert_called_once_with(
             "UnauthorizedAgent",
             QueryType.ADMIN_COMMAND
         )
-        assert "Permission refusée" in result
+        assert "UnauthorizedAgent n'a pas les permissions pour admin_command" in result
         assert "UnauthorizedAgent" in result
         assert "admin_command" in result
     

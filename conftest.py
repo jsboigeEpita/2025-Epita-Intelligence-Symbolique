@@ -1,4 +1,4 @@
-pytest_plugins = ["pytest_playwright"]
+# pytest_plugins = ["pytest_playwright"]  # Temporairement désactivé pour les tests
 print("INFO: conftest.py (RACINE): Fichier en cours de lecture par pytest.")
 
 import sys

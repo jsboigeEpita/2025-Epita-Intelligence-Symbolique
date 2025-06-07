@@ -17,7 +17,7 @@ from datetime import datetime
 
 # Imports Semantic Kernel
 from semantic_kernel.kernel import Kernel
-from semantic_kernel.services.openai import OpenAIChatCompletion
+from semantic_kernel.connectors.ai.open_ai import OpenAIChatCompletion
 from semantic_kernel.connectors.ai.open_ai import OpenAIChatPromptExecutionSettings
 from semantic_kernel.contents.chat_message_content import ChatMessageContent
 

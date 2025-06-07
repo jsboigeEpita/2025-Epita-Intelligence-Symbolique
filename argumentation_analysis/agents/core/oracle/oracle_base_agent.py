@@ -12,7 +12,13 @@ from datetime import datetime
 
 from semantic_kernel import Kernel
 from semantic_kernel.functions import kernel_function
-from semantic_kernel.agents.chat_completion.chat_completion_agent import ChatCompletionAgent
+# Note: ChatCompletionAgent might not be available in this version of semantic_kernel
+# Using a mock or fallback approach for tests
+try:
+    from semantic_kernel.agents.chat_completion.chat_completion_agent import ChatCompletionAgent
+except ImportError:
+    # Fallback for older versions of semantic_kernel
+    ChatCompletionAgent = None
 
 from ..abc.agent_bases import BaseAgent
 from .dataset_access_manager import DatasetAccessManager
@@ -211,7 +217,7 @@ class OracleTools:
         return await self.check_agent_permission(query_type, target_agent)
 
 
-class OracleBaseAgent(ChatCompletionAgent):
+class OracleBaseAgent(BaseAgent):
     """
     Agent Oracle de base pour la gestion d'accès aux datasets avec contrôle de permissions.
     
@@ -256,6 +262,7 @@ Vous êtes un gardien impartial mais stratégique des données."""
                  access_level: Optional[str] = None,
                  system_prompt_suffix: Optional[str] = None,
                  allowed_query_types: Optional[List[QueryType]] = None,
+                 plugins: Optional[List] = None,
                  **kwargs):
         """
         Initialise une instance d'OracleBaseAgent.
@@ -267,6 +274,7 @@ Vous êtes un gardien impartial mais stratégique des données."""
             custom_instructions: Instructions personnalisées (optionnel)
             access_level: Niveau d'accès de l'agent (optionnel, pour tests)
             system_prompt_suffix: Suffixe du prompt système (optionnel, pour tests)
+            plugins: Liste des plugins à ajouter (optionnel)
         """
         # Instructions système (base + personnalisées)
         base_prompt = """Vous êtes un Agent Oracle, gardien des données et des informations.
@@ -299,30 +307,40 @@ Vous êtes un gardien impartial mais stratégique des données."""
         if system_prompt_suffix:
             instructions += f"\n\n{system_prompt_suffix}"
         
-        # Initialiser ChatCompletionAgent
+        # Initialiser BaseAgent
         super().__init__(
             kernel=kernel,
-            name=agent_name,
-            instructions=instructions,
+            agent_name=agent_name,
+            system_prompt=instructions,
             **kwargs
         )
         
-        # Initialisation des attributs spécifiques à Oracle (via object.__setattr__ pour contourner Pydantic)
-        object.__setattr__(self, 'dataset_manager', dataset_manager)
-        object.__setattr__(self, 'access_log', [])
-        object.__setattr__(self, 'revealed_information', set())
-        object.__setattr__(self, 'access_level', access_level or "standard")
+        # Stocker les attributs spécifiques à Semantic Kernel
+        self.kernel = kernel
+        
+        # Initialisation des attributs spécifiques à Oracle
+        self.dataset_manager = dataset_manager
+        self.access_log = []
+        self.revealed_information = set()
+        self.access_level = access_level or "standard"
         
         # Configurer les types de requêtes autorisées
         if allowed_query_types is None:
             allowed_query_types = [QueryType.CARD_INQUIRY, QueryType.GAME_STATE, QueryType.CLUE_REQUEST]
-        object.__setattr__(self, 'allowed_query_types', allowed_query_types)
+        self.allowed_query_types = allowed_query_types
         
         # Outils Oracle
-        object.__setattr__(self, 'oracle_tools', OracleTools(dataset_manager, agent_name))
+        self.oracle_tools = OracleTools(dataset_manager, agent_name)
         
-        # Enregistrement des outils Oracle comme plugin dans le kernel
-        kernel.add_plugin(self.oracle_tools, plugin_name=f"oracle_tools_{agent_name}")
+        # Enregistrement des outils Oracle comme plugin dans le kernel (si kernel disponible)
+        if kernel:
+            kernel.add_plugin(self.oracle_tools, plugin_name=f"oracle_tools_{agent_name}")
+            
+            # Ajouter les plugins supplémentaires si fournis
+            if plugins:
+                for i, plugin in enumerate(plugins):
+                    plugin_name = f"plugin_{agent_name}_{i}"
+                    kernel.add_plugin(plugin, plugin_name=plugin_name)
         
         # Logger spécialisé
         self._logger = logging.getLogger(f"agent.{self.__class__.__name__}.{agent_name}")
@@ -459,9 +477,31 @@ Vous êtes un gardien impartial mais stratégique des données."""
         # Réponse basique - peut être améliorée selon les besoins
         return f"Oracle '{self.name}' a reçu votre message. Utilisez les outils Oracle pour des requêtes spécifiques."
     
-    # Suppression de invoke personnalisé - utilisation de ChatCompletionAgent.invoke()
+    async def invoke(self, message: str = None, **kwargs) -> str:
+        """
+        Implémentation de la méthode invoke requise par BaseAgent.
+        
+        Args:
+            message: Message à traiter par l'agent Oracle
+            **kwargs: Arguments supplémentaires
+            
+        Returns:
+            str: Réponse de l'agent Oracle
+        """
+        if message is None:
+            message = kwargs.get('input', kwargs.get('query', ''))
+        
+        self._logger.info(f"Oracle '{self.name}' invoke appelé avec: {message[:100] if message else 'message vide'}...")
+        
+        # Pour un agent Oracle, on délègue vers get_response
+        try:
+            response = await self.get_response(message, **kwargs)
+            return response
+        except Exception as e:
+            self._logger.error(f"Erreur lors de invoke: {e}")
+            return f"Erreur Oracle: {str(e)}"
     
-    # Properties héritées de ChatCompletionAgent : name, instructions, etc.
+    # Properties héritées de BaseAgent : name, instructions, etc.
     
     # Méthodes à surcharger par les agents spécialisés
     

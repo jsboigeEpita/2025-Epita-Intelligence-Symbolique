@@ -13,7 +13,8 @@ from functools import lru_cache
 
 from .permissions import (
     PermissionManager, QueryType, QueryResult, OracleResponse,
-    PermissionDeniedError, InvalidQueryError, PermissionRule
+    PermissionDeniedError, InvalidQueryError, PermissionRule,
+    CluedoIntegrityError, validate_cluedo_method_access
 )
 from .cluedo_dataset import CluedoDataset
 
@@ -169,6 +170,26 @@ class DatasetAccessManager:
         start_time = datetime.now()
         
         try:
+            # VALIDATION D'INTÉGRITÉ CLUEDO (NOUVELLE PROTECTION)
+            permission_rule = self.permission_manager.get_permission_rule(agent_name)
+            if permission_rule and permission_rule.conditions.get("integrity_enforced", False):
+                forbidden_methods = permission_rule.conditions.get("forbidden_methods", [])
+                for method in forbidden_methods:
+                    try:
+                        validate_cluedo_method_access(method, agent_name)
+                    except CluedoIntegrityError as e:
+                        self.denied_queries += 1
+                        error_msg = f"INTÉGRITÉ CLUEDO VIOLÉE: {str(e)}"
+                        self._logger.error(error_msg)
+                        self.permission_manager.log_access(agent_name, query_type, False, error_msg)
+                        
+                        return QueryResult(
+                            success=False,
+                            message=error_msg,
+                            query_type=query_type,
+                            metadata={"error_type": "integrity_violation", "violation_details": str(e)}
+                        )
+            
             # Validation des permissions
             if not self.permission_manager.is_authorized(agent_name, query_type):
                 self.denied_queries += 1

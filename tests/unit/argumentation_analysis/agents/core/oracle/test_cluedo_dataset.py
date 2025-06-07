@@ -20,9 +20,10 @@ from typing import Dict, Any, List, Set
 from argumentation_analysis.agents.core.oracle.cluedo_dataset import (
     CluedoDataset,
     CluedoSuggestion,
-    CluedoRevelation,
-    RevealPolicy
+    RevelationRecord,
+    ValidationResult
 )
+from argumentation_analysis.agents.core.oracle.permissions import RevealPolicy
 from argumentation_analysis.agents.core.oracle.permissions import QueryType, QueryResult
 
 
@@ -41,20 +42,10 @@ class TestCluedoDataset:
     @pytest.fixture
     def cluedo_dataset(self, standard_elements):
         """Dataset Cluedo configuré pour les tests."""
-        solution_secrete = {
-            "suspect": "Colonel Moutarde",
-            "arme": "Poignard",
-            "lieu": "Salon"
-        }
-        cartes_distribuees = {
-            "Moriarty": ["Professeur Violet", "Chandelier"],
-            "AutresJoueurs": ["Cuisine", "Bureau"]
-        }
-        return CluedoDataset(
-            solution_secrete=solution_secrete,
-            cartes_distribuees=cartes_distribuees,
-            reveal_policy=RevealPolicy.BALANCED
-        )
+        moriarty_cards = ["Professeur Violet", "Chandelier"]
+        dataset = CluedoDataset(moriarty_cards)
+        dataset.reveal_policy = RevealPolicy.BALANCED
+        return dataset
     
     def test_cluedo_dataset_initialization(self, cluedo_dataset, standard_elements):
         """Test l'initialisation correcte du CluedoDataset."""
@@ -154,8 +145,8 @@ class TestCluedoDataset:
         
         revelation = cluedo_dataset.reveal_card(moriarty_card, "TestAgent", "Test de révélation")
         
-        assert isinstance(revelation, CluedoRevelation)
-        assert revelation.card_revealed == moriarty_card
+        assert isinstance(revelation, RevelationRecord)
+        assert revelation.card == moriarty_card
         assert len(revelation.reason) > 0
     
     def test_reveal_card_not_owned(self, cluedo_dataset):
@@ -323,43 +314,42 @@ class TestCluedoSuggestion:
         assert suggestion_dict["lieu"] == "Cuisine"
 
 
-class TestCluedoRevelation:
-    """Tests pour la classe CluedoRevelation."""
+class TestRevelationRecord:
+    """Tests pour la classe RevelationRecord."""
     
-    def test_cluedo_revelation_creation(self):
-        """Test la création d'une révélation Cluedo."""
+    def test_revelation_record_creation(self):
+        """Test la création d'un enregistrement de révélation."""
         from datetime import datetime
-        revelation = CluedoRevelation(
-            timestamp=datetime.now(),
-            card_revealed="Colonel Moutarde",
+        revelation = RevelationRecord(
+            card="Colonel Moutarde",
             revealed_to="TestAgent",
-            revealed_by="Moriarty",
+            timestamp=datetime.now(),
             reason="Test de révélation",
             query_type=QueryType.CARD_INQUIRY
         )
         
-        assert revelation.card_revealed == "Colonel Moutarde"
+        assert revelation.card == "Colonel Moutarde"
         assert revelation.revealed_to == "TestAgent"
-        assert revelation.revealed_by == "Moriarty"
         assert revelation.reason == "Test de révélation"
+        assert revelation.query_type == QueryType.CARD_INQUIRY
     
-    def test_cluedo_revelation_metadata(self):
+    def test_revelation_record_metadata(self):
         """Test les métadonnées d'une révélation."""
         from datetime import datetime
-        revelation = CluedoRevelation(
-            timestamp=datetime.now(),
-            card_revealed="Poignard",
+        revelation = RevelationRecord(
+            card="Poignard",
             revealed_to="TestAgent",
-            revealed_by="Moriarty",
+            timestamp=datetime.now(),
             reason="Information stratégique révélée",
-            query_type=QueryType.CARD_INQUIRY
+            query_type=QueryType.CARD_INQUIRY,
+            metadata={"strategy": "test"}
         )
         
-        assert revelation.card_revealed == "Poignard"
+        assert revelation.card == "Poignard"
         assert revelation.revealed_to == "TestAgent"
-        assert revelation.revealed_by == "Moriarty"
         assert revelation.reason == "Information stratégique révélée"
         assert revelation.query_type == QueryType.CARD_INQUIRY
+        assert revelation.metadata["strategy"] == "test"
 
 
 @pytest.mark.integration
@@ -369,20 +359,10 @@ class TestCluedoDatasetIntegration:
     @pytest.fixture
     def full_cluedo_setup(self):
         """Configuration Cluedo complète réaliste."""
-        solution_secrete = {
-            "suspect": "Colonel Moutarde",
-            "arme": "Poignard",
-            "lieu": "Salon"
-        }
-        cartes_distribuees = {
-            "Moriarty": ["Professeur Violet", "Chandelier", "Cuisine", "Clé anglaise"],
-            "AutresJoueurs": ["Mademoiselle Rose", "Docteur Orchidée", "Madame Leblanc", "Monsieur Olive", "Revolver", "Corde", "Tuyau de plomb", "Bureau", "Bibliothèque", "Salle de billard", "Serre", "Hall", "Salle à manger", "Cave"]
-        }
-        return CluedoDataset(
-            solution_secrete=solution_secrete,
-            cartes_distribuees=cartes_distribuees,
-            reveal_policy=RevealPolicy.BALANCED
-        )
+        moriarty_cards = ["Professeur Violet", "Chandelier", "Cuisine", "Clé anglaise"]
+        dataset = CluedoDataset(moriarty_cards)
+        dataset.reveal_policy = RevealPolicy.BALANCED
+        return dataset
     
     @pytest.mark.asyncio
     async def test_complete_game_simulation(self, full_cluedo_setup):
