@@ -117,13 +117,14 @@ class SherlockEnqueteAgent(ChatCompletionAgent):
     pour interagir avec l'état de l'enquête.
     """
 
-    def __init__(self, kernel: Kernel, agent_name: str = "Sherlock", **kwargs):
+    def __init__(self, kernel: Kernel, agent_name: str = "Sherlock", system_prompt: Optional[str] = None, **kwargs):
         """
         Initialise une instance de SherlockEnqueteAgent.
 
         Args:
             kernel: Le kernel Semantic Kernel à utiliser.
             agent_name: Le nom de l'agent.
+            system_prompt: Prompt système optionnel. Si non fourni, utilise le prompt par défaut.
         """
         # Le plugin avec les outils de Sherlock, en lui passant le kernel
         sherlock_tools = SherlockTools(kernel=kernel)
@@ -131,16 +132,43 @@ class SherlockEnqueteAgent(ChatCompletionAgent):
         # Ajoute le plugin au kernel de l'agent pour qu'il puisse l'utiliser
         plugins = kwargs.pop("plugins", [])
         plugins.append(sherlock_tools)
+        
+        # Utiliser le system_prompt fourni ou le prompt par défaut
+        instructions = system_prompt if system_prompt is not None else SHERLOCK_ENQUETE_AGENT_SYSTEM_PROMPT
 
         super().__init__(
             kernel=kernel,
             name=agent_name,
-            instructions=SHERLOCK_ENQUETE_AGENT_SYSTEM_PROMPT,
+            instructions=instructions,
             plugins=plugins,
             **kwargs
         )
         self._logger = logging.getLogger(f"agent.{self.__class__.__name__}.{agent_name}")
         self._logger.info(f"SherlockEnqueteAgent '{agent_name}' initialisé avec les outils.")
+        
+    async def get_current_case_description(self) -> str:
+        """
+        Récupère la description du cas actuel.
+        
+        Returns:
+            La description du cas actuel.
+        """
+        # Méthode temporaire pour les tests - à implémenter correctement plus tard
+        return "Description du cas actuel placeholder"
+        
+    async def add_new_hypothesis(self, hypothesis_text: str, confidence_score: float) -> dict:
+        """
+        Ajoute une nouvelle hypothèse.
+        
+        Args:
+            hypothesis_text: Le texte de l'hypothèse.
+            confidence_score: Le score de confiance.
+            
+        Returns:
+            Résultat de l'ajout de l'hypothèse.
+        """
+        # Méthode temporaire pour les tests - à implémenter correctement plus tard
+        return {"status": "success", "hypothesis": hypothesis_text, "confidence": confidence_score}
 
     # Les méthodes de logique métier sont maintenant dans SherlockTools et exposées comme des fonctions du kernel.
     # Il n'est plus nécessaire de les dupliquer ici.
