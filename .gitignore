@@ -130,6 +130,10 @@ logs/ # Ajouté depuis HEAD
 # Logs spécifiques au projet
 extract_agent.log
 repair_extract_markers.log
+pytest_*.log
+trace_*.log
+sherlock_watson_*.log
+setup_*.log
 
 # Archives (si non voulues dans le repo)
 _archives/
