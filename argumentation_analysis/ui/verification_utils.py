@@ -160,7 +160,7 @@ def verify_extract_definitions(definitions_list: List[Dict[str, Any]], app_confi
                     results.append(f"<li>{source_name} -> {extract_name}: <strong style='color:red;'>{', '.join(marker_errors)}</strong></li>")
                     total_errors += 1
                 else:
-                    verification_logger.info(f"      -> ✅ OK: Extrait '{extract_name}'")
+                    verification_logger.info(f"      -> [OK] OK: Extrait '{extract_name}'")
         else:
             num_extracts = len(source_info.get("extracts",[]))
             # source_type n'est plus directement utilisé ici pour la condition is_plaintext

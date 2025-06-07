@@ -41,7 +41,7 @@ def load_extract_definitions(
             
             decompressed_data = gzip.decompress(decrypted_compressed_data)
             definitions = json.loads(decompressed_data.decode('utf-8'))
-            file_ops_logger.info("✅ Définitions chargées et déchiffrées.")
+            file_ops_logger.info("[OK] Définitions chargées et déchiffrées.")
 
         except InvalidToken: 
             file_ops_logger.error(f"❌ InvalidToken explicitement levée lors du déchiffrement de '{config_file}'. Utilisation définitions par défaut.", exc_info=True)
@@ -55,7 +55,7 @@ def load_extract_definitions(
         try:
             with open(config_file, 'r', encoding='utf-8') as f:
                 definitions = json.load(f)
-            file_ops_logger.info(f"✅ Définitions chargées comme JSON simple depuis '{config_file}'.")
+            file_ops_logger.info(f"[OK] Définitions chargées comme JSON simple depuis '{config_file}'.")
         
         except json.JSONDecodeError as e_json:
             file_ops_logger.error(f"❌ Erreur décodage JSON pour '{config_file}': {e_json}. L'exception sera relancée.", exc_info=False)
@@ -143,7 +143,7 @@ def save_extract_definitions(
         config_file.parent.mkdir(parents=True, exist_ok=True)
         with open(config_file, 'wb') as f:
             f.write(encrypted_data_to_save)
-        file_ops_logger.info(f"✅ Définitions sauvegardées dans '{config_file}'.")
+        file_ops_logger.info(f"[OK] Définitions sauvegardées dans '{config_file}'.")
         return True
     except Exception as e:
         file_ops_logger.error(f"❌ Erreur lors de la sauvegarde chiffrée vers '{config_file}': {e}", exc_info=True)

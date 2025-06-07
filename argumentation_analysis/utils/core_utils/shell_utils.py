@@ -89,7 +89,7 @@ def run_shell_command(
             logger.warning(f"Stderr (aperçu):\n{stderr_str[:500]}{'...' if len(stderr_str) > 500 else ''}")
         
         if result.returncode == 0:
-            logger.info(f"✅ {description} terminé avec succès (code: {result.returncode}).")
+            logger.info(f"[OK] {description} terminé avec succès (code: {result.returncode}).")
         else:
             logger.error(f"❌ {description} a échoué (code: {result.returncode}).")
         

@@ -65,7 +65,7 @@ def create_complete_encrypted_config():
         with open(EXTRACT_SOURCES_UPDATED_PATH, 'r', encoding='utf-8') as f:
             extract_sources = json.load(f)
         
-        print(f"✅ Fichier de configuration '{EXTRACT_SOURCES_UPDATED_PATH}' chargé avec succès.")
+        print(f"[OK] Fichier de configuration '{EXTRACT_SOURCES_UPDATED_PATH}' chargé avec succès.")
         print(f"   - {len(extract_sources)} sources trouvées.")
         
         # Créer un dictionnaire pour stocker les sources et leur contenu
@@ -101,7 +101,7 @@ def create_complete_encrypted_config():
             # Lire le contenu du fichier de cache
             try:
                 cache_content = cache_filepath.read_text(encoding='utf-8')
-                print(f"✅ Fichier de cache '{cache_filepath.name}' chargé pour la source '{source_name}'.")
+                print(f"[OK] Fichier de cache '{cache_filepath.name}' chargé pour la source '{source_name}'.")
                 print(f"   - Longueur: {len(cache_content)} caractères.")
                 
                 # Ajouter le contenu du cache au dictionnaire
@@ -115,7 +115,7 @@ def create_complete_encrypted_config():
         
         # Compresser les données
         compressed_data = gzip.compress(json_data)
-        print(f"✅ Données compressées: {len(json_data)} -> {len(compressed_data)} octets.")
+        print(f"[OK] Données compressées: {len(json_data)} -> {len(compressed_data)} octets.")
         
         # Chiffrer les données
         encrypted_data = encrypt_data(compressed_data, ENCRYPTION_KEY)
@@ -128,7 +128,7 @@ def create_complete_encrypted_config():
         with open(CONFIG_FILE_ENC, 'wb') as f:
             f.write(encrypted_data)
         
-        print(f"✅ Fichier chiffré '{CONFIG_FILE_ENC}' créé avec succès.")
+        print(f"[OK] Fichier chiffré '{CONFIG_FILE_ENC}' créé avec succès.")
         print(f"   - Taille: {CONFIG_FILE_ENC.stat().st_size} octets.")
         
         return True
@@ -151,7 +151,7 @@ def main():
     success = create_complete_encrypted_config()
     
     if success:
-        print("\n✅ Création du fichier encrypté complet réussie !")
+        print("\n[OK] Création du fichier encrypté complet réussie !")
     else:
         print("\n❌ Échec de la création du fichier encrypté complet.")
     

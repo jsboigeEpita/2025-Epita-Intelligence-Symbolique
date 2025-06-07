@@ -39,9 +39,9 @@ def load_json_file(file_path: Path) -> Optional[Union[List[Dict[str, Any]], Dict
             data = loaded_initial_data
         
         if isinstance(data, list):
-            loaders_logger.info(f"✅ {len(data)} éléments (liste) chargés avec succès depuis {file_path}")
+            loaders_logger.info(f"[OK] {len(data)} éléments (liste) chargés avec succès depuis {file_path}")
         elif isinstance(data, dict):
-            loaders_logger.info(f"✅ Dictionnaire chargé avec succès depuis {file_path}")
+            loaders_logger.info(f"[OK] Dictionnaire chargé avec succès depuis {file_path}")
         else:
             loaders_logger.error(f"Type de données inattendu ({type(data)}) après chargement de {file_path}. Attendu List ou Dict. Retour de None.")
             return None
@@ -91,7 +91,7 @@ def load_text_file(file_path: Path, encoding: str = "utf-8") -> Optional[str]:
     try:
         with open(file_path, 'r', encoding=encoding) as f:
             content = f.read()
-        loaders_logger.info(f"✅ Fichier texte {file_path} chargé avec succès")
+        loaders_logger.info(f"[OK] Fichier texte {file_path} chargé avec succès")
         return content
     except FileNotFoundError:
         loaders_logger.error(f"❌ Fichier non trouvé: {file_path}")
@@ -120,7 +120,7 @@ def load_csv_file(file_path: Path) -> Optional[Any]:
     loaders_logger.info(f"Chargement des données CSV depuis {file_path}")
     try:
         df = pd.read_csv(file_path, encoding='utf-8')
-        loaders_logger.info(f"✅ Fichier CSV chargé avec succès ({len(df)} lignes) depuis {file_path}")
+        loaders_logger.info(f"[OK] Fichier CSV chargé avec succès ({len(df)} lignes) depuis {file_path}")
         return df
     except FileNotFoundError:
         loaders_logger.error(f"❌ Fichier CSV non trouvé: {file_path}")

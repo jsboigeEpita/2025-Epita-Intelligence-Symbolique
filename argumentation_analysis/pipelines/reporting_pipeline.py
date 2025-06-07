@@ -576,7 +576,7 @@ def _generate_markdown_report(
 
     with open(output_file, 'w', encoding='utf-8', errors="replace") as f:
         f.write('\n'.join(report_content))
-    logger.info(f"✅ Rapport Markdown généré: {output_file}")
+    logger.info(f"[OK] Rapport Markdown généré: {output_file}")
 
 def _generate_html_report(markdown_file: Path, output_file: Path, visualization_dir: Path) -> None:
     """
@@ -599,7 +599,7 @@ def _generate_html_report(markdown_file: Path, output_file: Path, visualization_
             return
 
         if save_markdown_to_html(markdown_content, output_file):
-            logger.info(f"✅ Rapport HTML généré avec succès via l'utilitaire: {output_file}")
+            logger.info(f"[OK] Rapport HTML généré avec succès via l'utilitaire: {output_file}")
         else:
             logger.error(f"❌ Échec de la génération du rapport HTML via l'utilitaire pour {output_file}")
     except Exception as e:
@@ -752,7 +752,7 @@ def run_comprehensive_report_pipeline(
     logger.info("Génération du rapport HTML...")
     _generate_html_report(markdown_file, html_file, visualization_dir)
     
-    logger.info(f"✅ Pipeline de génération du rapport complet terminé. Résultats dans {output_dir}")
+    logger.info(f"[OK] Pipeline de génération du rapport complet terminé. Résultats dans {output_dir}")
     logger.info(f"Rapport Markdown: {markdown_file}")
     logger.info(f"Rapport HTML: {html_file}")
     return True
