@@ -1,0 +1,110 @@
+# Configuration des catégories de démonstration EPITA
+# Architecture modulaire - Intelligence Symbolique
+
+categories:
+  tests_validation:
+    id: 1
+    icon: "📚"
+    nom: "Tests & Validation"
+    description: "99.7% succès"
+    module: "demo_tests_validation"
+    tests_associes:
+      - "tests/unit/argumentation_analysis/"
+      - "tests/validation_sherlock_watson/"
+      - "tests/unit/orchestration/"
+    fonctionnalites:
+      - "Exécution tests unitaires avec métriques"
+      - "Validation des composants principaux"
+      - "Rapports de couverture et performance"
+
+  agents_logiques:
+    id: 2
+    icon: "🧠"
+    nom: "Agents Logiques & Argumentation"
+    description: "Raisonnement symbolique"
+    module: "demo_agents_logiques"
+    tests_associes:
+      - "tests/unit/argumentation_analysis/test_pl_definitions.py"
+      - "tests/unit/argumentation_analysis/test_strategies.py"
+      - "tests/unit/argumentation_analysis/test_run_analysis_conversation.py"
+    fonctionnalites:
+      - "Logique propositionnelle et prédicats"
+      - "Logique modale et temporelle"
+      - "Détection de sophismes"
+      - "Agents conversationnels"
+
+  services_core:
+    id: 3
+    icon: "🔧"
+    nom: "Services Core & Extraction"
+    description: "Architecture fondamentale"
+    module: "demo_services_core"
+    tests_associes:
+      - "tests/unit/argumentation_analysis/test_setup_extract_agent.py"
+      - "tests/unit/argumentation_analysis/test_repair_extract_markers.py"
+      - "tests/unit/argumentation_analysis/test_verify_extracts.py"
+    fonctionnalites:
+      - "Agents d'extraction de données"
+      - "Services de communication"
+      - "Gestion des définitions"
+      - "État partagé et synchronisation"
+
+  integrations:
+    id: 4
+    icon: "🌐"
+    nom: "Intégrations & Interfaces"
+    description: "Python-Java & APIs"
+    module: "demo_integrations"
+    tests_associes:
+      - "tests/unit/argumentation_analysis/test_operational_agents_integration.py"
+      - "tests/unit/argumentation_analysis/test_strategic_tactical_interface.py"
+      - "tests/unit/argumentation_analysis/test_tactical_operational_interface.py"
+    fonctionnalites:
+      - "Intégration JPype-Tweety"
+      - "Interfaces tactiques/opérationnelles"
+      - "Communication inter-niveaux"
+      - "Adaptation de protocoles"
+
+  cas_usage:
+    id: 5
+    icon: "🎯"
+    nom: "Cas d'Usage Complets"
+    description: "Applications pratiques"
+    module: "demo_cas_usage"
+    tests_associes:
+      - "tests/validation_sherlock_watson/test_final_oracle_100_percent.py"
+      - "tests/validation_sherlock_watson/test_phase_a_personnalites_distinctes.py"
+      - "tests/validation_sherlock_watson/test_phase_b_naturalite_dialogue.py"
+    fonctionnalites:
+      - "Résolution Cluedo Sherlock-Watson"
+      - "Workflows rhétoriques"
+      - "Collaboration multi-agents"
+      - "Scénarios complets"
+
+  outils_utils:
+    id: 6
+    icon: "⚙️"
+    nom: "Outils & Utilitaires"
+    description: "Développement & Debug"
+    module: "demo_outils_utils"
+    tests_associes:
+      - "tests/unit/mocks/"
+      - "tests/unit/argumentation_analysis/utils/"
+      - "tests/utils/"
+    fonctionnalites:
+      - "Générateurs de données"
+      - "Utilitaires de mocking"
+      - "Outils de développement"
+      - "Métriques et visualisation"
+
+# Configuration globale
+config:
+  projet_nom: "EPITA - Intelligence Symbolique"
+  version: "2.0.0"
+  taux_succes_tests: 99.7
+  architecture: "Python + Java (JPype)"
+  domaines:
+    - "Logique formelle"
+    - "Argumentation"
+    - "IA symbolique"
+    - "Systèmes multi-agents"
