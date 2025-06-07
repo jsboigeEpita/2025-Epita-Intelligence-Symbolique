@@ -111,7 +111,7 @@ class ExtractService:
             if not end_found:
                 status += "⚠️ Marqueur fin non trouvé. "
             if start_found and end_found:
-                status = "✅ Extraction réussie"
+                status = "[OK] Extraction réussie"
             return extracted_text, status, start_found, end_found
         else:
             return None, "❌ Conflit de marqueurs ou texte vide", start_found, end_found

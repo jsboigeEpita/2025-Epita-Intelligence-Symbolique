@@ -177,12 +177,12 @@ class OracleTerminationStrategy(TerminationStrategy):
         # Critère 1: Solution proposée et correcte
         if self._check_solution_found():
             self.is_solution_found = True
-            self._logger.info("✅ Solution correcte trouvée et validée. Terminaison.")
+            self._logger.info("[OK] Solution correcte trouvée et validée. Terminaison.")
             return True
         
         # Critère 2: Solution par élimination complète
         if self._check_elimination_complete():
-            self._logger.info("✅ Toutes les cartes révélées - solution par élimination possible. Terminaison.")
+            self._logger.info("[OK] Toutes les cartes révélées - solution par élimination possible. Terminaison.")
             return True
         
         # Critère 3: Timeout par nombre de tours
@@ -452,7 +452,7 @@ class CluedoExtendedOrchestrator:
         # Collecte des métriques finales
         workflow_result = await self._collect_final_metrics(history)
         
-        self._logger.info("✅ Workflow 3-agents terminé")
+        self._logger.info("[OK] Workflow 3-agents terminé")
         return workflow_result
     
     async def _collect_final_metrics(self, history: List[ChatMessageContent]) -> Dict[str, Any]:
@@ -898,7 +898,7 @@ async def main():
         print(f"⏱️  TEMPS: {result['workflow_info']['execution_time_seconds']:.2f}s")
         
         if result['solution_analysis']['success']:
-            print(f"✅ Solution: {result['final_state']['final_solution']}")
+            print(f"[OK] Solution: {result['final_state']['final_solution']}")
         else:
             print(f"❌ Solution proposée: {result['final_state']['final_solution']}")
             print(f"🎯 Solution correcte: {result['final_state']['correct_solution']}")

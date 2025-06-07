@@ -192,7 +192,7 @@ def initialize_jvm(lib_dir_path: Optional[str] = None, jdk_path: Optional[Path] 
             logger.error(f"JVM_SETUP: {final_error_msg}")
             raise RuntimeError(final_error_msg)
             
-        # logger.info("✅ JVM démarrée avec succès (ou tentatives faites).") # Commenté car redondant avec les logs des tentatives
+        # logger.info("[OK] JVM démarrée avec succès (ou tentatives faites).") # Commenté car redondant avec les logs des tentatives
         
         try:
             _ = jpype.JClass("org.tweetyproject.logics.pl.syntax.PlSignature")

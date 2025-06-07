@@ -237,10 +237,10 @@ class MoriartyInterrogatorAgent(OracleBaseAgent):
 
 **MESSAGES COURTS** (80-120 caractères max) :
 ❌ "Cette fois, je crains que votre déduction ne se heurte à un petit obstacle"
-✅ "*sourire* Hélas... j'ai le Poignard"
+[OK] "*sourire* Hélas... j'ai le Poignard"
 
 ❌ "Permettez-moi de troubler vos certitudes concernant le Colonel"
-✅ "Tiens... le Colonel repose dans ma main"
+[OK] "Tiens... le Colonel repose dans ma main"
 
 **RÉVÉLATIONS THÉÂTRALES** mais concises !
 Votre mission : Fasciner par votre mystère élégant."""

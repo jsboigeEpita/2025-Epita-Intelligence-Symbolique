@@ -29,7 +29,7 @@ def save_json_file(file_path: Path, data: Any, indent: int = 4) -> bool:
 
         with open(file_path, 'w', encoding='utf-8') as f:
             json.dump(data, f, indent=indent, ensure_ascii=False)
-        savers_logger.info(f"✅ Données JSON sauvegardées avec succès dans {file_path}")
+        savers_logger.info(f"[OK] Données JSON sauvegardées avec succès dans {file_path}")
         return True
     except IOError as e:
         savers_logger.error(f"❌ Erreur d'E/S lors de la sauvegarde du fichier JSON {file_path}: {e}", exc_info=True)
@@ -53,7 +53,7 @@ def save_text_file(file_path: Path, content: str, encoding: str = "utf-8") -> bo
 
         with open(file_path, 'w', encoding=encoding) as f:
             f.write(content)
-        savers_logger.info(f"✅ Contenu sauvegardé avec succès dans {file_path}")
+        savers_logger.info(f"[OK] Contenu sauvegardé avec succès dans {file_path}")
         return True
     except IOError as e:
         savers_logger.error(f"❌ Erreur d'E/S lors de la sauvegarde du fichier {file_path}: {e}", exc_info=True)
@@ -86,7 +86,7 @@ def save_temp_extracts_json(
         temp_file_path = current_temp_dir / f"{filename_prefix}{timestamp}.json"
         
         if save_json_file(temp_file_path, extract_definitions, indent=2): # Appel à la fonction de ce module
-            savers_logger.info(f"✅ Définitions d'extraits sauvegardées avec succès dans {temp_file_path.resolve()}")
+            savers_logger.info(f"[OK] Définitions d'extraits sauvegardées avec succès dans {temp_file_path.resolve()}")
             return temp_file_path
         else:
             savers_logger.error(f"Échec de la sauvegarde des extraits temporaires dans {temp_file_path} via save_json_file.")

@@ -184,7 +184,7 @@ async def main():
     logger.info(f"  - Score moyen d'intégrité: {avg_integrity:.2f}/5")
     
     # Afficher un message de succès
-    print(f"\n✅ Vérification des extraits terminée avec succès. Rapport généré dans {output_file}")
+    print(f"\n[OK] Vérification des extraits terminée avec succès. Rapport généré dans {output_file}")
     print(f"Résumé: {valid_count} valides, {invalid_count} invalides, {error_count} erreurs")
     print(f"Scores moyens: Cohérence {avg_coherence:.2f}/5, Pertinence {avg_relevance:.2f}/5, Intégrité {avg_integrity:.2f}/5")
 

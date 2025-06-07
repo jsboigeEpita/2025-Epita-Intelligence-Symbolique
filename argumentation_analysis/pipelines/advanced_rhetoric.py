@@ -70,7 +70,7 @@ def run_advanced_rhetoric_pipeline(
                 "fallacy_severity_evaluator": EnhancedFallacySeverityEvaluator(),
                 "rhetorical_result_analyzer": EnhancedRhetoricalResultAnalyzer()
             }
-            logger.info("✅ Outils d'analyse rhétorique avancés (réels) initialisés.")
+            logger.info("[OK] Outils d'analyse rhétorique avancés (réels) initialisés.")
         except Exception as e: # Attraper une exception plus large au cas où l'init échoue
             logger.warning(f"Erreur lors de l'initialisation des outils réels: {e}. Utilisation des mocks.")
             tools = create_mock_advanced_rhetorical_tools()
@@ -78,7 +78,7 @@ def run_advanced_rhetoric_pipeline(
         if use_real_tools and not REAL_TOOLS_AVAILABLE:
             logger.warning("Les outils réels ont été demandés mais ne sont pas disponibles. Utilisation des mocks.")
         tools = create_mock_advanced_rhetorical_tools()
-        logger.info("✅ Outils d'analyse rhétorique avancés (mocks) initialisés.")
+        logger.info("[OK] Outils d'analyse rhétorique avancés (mocks) initialisés.")
             
     base_results_dict: Dict[str, Dict[str, Any]] = {}
     for result in base_results:
@@ -126,6 +126,6 @@ def run_advanced_rhetoric_pipeline(
         output_file.parent.mkdir(parents=True, exist_ok=True) # S'assurer que le répertoire parent existe
         with open(output_file, 'w', encoding='utf-8') as f:
             json.dump(all_pipeline_results, f, ensure_ascii=False, indent=2)
-        logger.info(f"✅ Résultats du pipeline d'analyse avancée sauvegardés dans {output_file}")
+        logger.info(f"[OK] Résultats du pipeline d'analyse avancée sauvegardés dans {output_file}")
     except Exception as e:
         logger.error(f"❌ Erreur lors de la sauvegarde des résultats du pipeline: {e}", exc_info=True)

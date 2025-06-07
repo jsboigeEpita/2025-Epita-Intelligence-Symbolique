@@ -97,7 +97,7 @@ async def main():
     jvm_ready_status = initialize_jvm(lib_dir_path=LIBS_DIR)
 
     if jvm_ready_status:
-        logging.info("✅ JVM initialisée avec succès ou déjà active.")
+        logging.info("[OK] JVM initialisée avec succès ou déjà active.")
     else:
         logging.warning("⚠️ JVM n'a pas pu être initialisée. L'agent PropositionalLogicAgent ne fonctionnera pas.")
 
@@ -107,7 +107,7 @@ async def main():
     try:
         logging.info("Création du service LLM...")
         llm_service = create_llm_service()  # Utilise l'ID par défaut
-        logging.info(f"✅ Service LLM créé avec succès (ID: {llm_service.service_id}).")
+        logging.info(f"[OK] Service LLM créé avec succès (ID: {llm_service.service_id}).")
     except Exception as e:
         logging.critical(f"❌ Échec critique de la création du service LLM: {e}", exc_info=True)
         print(f"❌ ERREUR: Impossible de créer le service LLM. Vérifiez la configuration .env et les logs.")
@@ -122,14 +122,14 @@ async def main():
             try:
                 with open(args.text_file, 'r', encoding='utf-8') as f:
                     texte_pour_analyse = f.read()
-                logging.info(f"✅ Texte chargé depuis le fichier: {args.text_file}")
+                logging.info(f"[OK] Texte chargé depuis le fichier: {args.text_file}")
             except Exception as e:
                 logging.error(f"❌ Erreur lors de la lecture du fichier texte: {e}")
                 return
         else:
             # Texte d'exemple si aucun fichier n'est spécifié
             texte_pour_analyse = "Ceci est un texte d'exemple pour l'analyse rhétorique."
-            logging.info("✅ Utilisation du texte d'exemple prédéfini.")
+            logging.info("[OK] Utilisation du texte d'exemple prédéfini.")
     else:
         # Mode normal avec UI
         try:
@@ -157,8 +157,8 @@ async def main():
         print("\n❌ Aucun texte préparé. L'analyse ne peut pas continuer.")
         return
     else:
-        logging.info(f"\n✅ Texte prêt pour l'analyse (longueur: {len(texte_pour_analyse)}).")
-        print(f"\n✅ Texte prêt pour l'analyse (longueur: {len(texte_pour_analyse)}). Passage à l'exécution.")
+        logging.info(f"\n[OK] Texte prêt pour l'analyse (longueur: {len(texte_pour_analyse)}).")
+        print(f"\n[OK] Texte prêt pour l'analyse (longueur: {len(texte_pour_analyse)}). Passage à l'exécution.")
         # print("--- Extrait Texte --- \n", texte_pour_analyse[:500] + "...") # Décommenter pour voir extrait
 
     # 6. Exécution de l'Analyse Collaborative

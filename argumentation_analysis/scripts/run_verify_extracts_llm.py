@@ -216,7 +216,7 @@ async def main():
             if result.get("status") == "invalid":
                 logger.info(f"  - {result.get('source_name')} - {result.get('extract_name')}: {result.get('comments')}")
 
-    print(f"\n✅ Vérification des extraits terminée avec succès. Rapport généré dans {report_path.resolve()}")
+    print(f"\n[OK] Vérification des extraits terminée avec succès. Rapport généré dans {report_path.resolve()}")
     print(f"Résumé: {final_valid_count} valides, {final_invalid_count} invalides, {final_error_count} erreurs")
     print(f"Scores moyens: Cohérence {final_avg_coherence:.2f}/5, Pertinence {final_avg_relevance:.2f}/5, Intégrité {final_avg_integrity:.2f}/5")
 

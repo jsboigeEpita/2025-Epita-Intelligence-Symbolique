@@ -55,7 +55,7 @@ def cleanup_files():
             # Supprimer le répertoire
             shutil.rmtree(TEXT_CACHE_DIR)
             dirs_removed += 1
-            print(f"✅ Répertoire de cache '{TEXT_CACHE_DIR}' supprimé.")
+            print(f"[OK] Répertoire de cache '{TEXT_CACHE_DIR}' supprimé.")
             print(f"   - {len(cache_files)} fichiers de cache supprimés.")
         except Exception as e:
             print(f"⚠️ Avertissement: Erreur lors de la suppression du répertoire de cache '{TEXT_CACHE_DIR}': {e}")
@@ -73,7 +73,7 @@ def cleanup_files():
             # Supprimer le répertoire
             shutil.rmtree(TEMP_DOWNLOADS_DIR)
             dirs_removed += 1
-            print(f"✅ Répertoire de téléchargements temporaires '{TEMP_DOWNLOADS_DIR}' supprimé.")
+            print(f"[OK] Répertoire de téléchargements temporaires '{TEMP_DOWNLOADS_DIR}' supprimé.")
             print(f"   - {len(temp_files)} fichiers temporaires supprimés.")
         except Exception as e:
             print(f"⚠️ Avertissement: Erreur lors de la suppression du répertoire de téléchargements temporaires '{TEMP_DOWNLOADS_DIR}': {e}")
@@ -86,7 +86,7 @@ def cleanup_files():
         try:
             EXTRACT_SOURCES_JSON.unlink()
             files_removed += 1
-            print(f"✅ Fichier '{EXTRACT_SOURCES_JSON}' supprimé.")
+            print(f"[OK] Fichier '{EXTRACT_SOURCES_JSON}' supprimé.")
         except Exception as e:
             print(f"⚠️ Avertissement: Erreur lors de la suppression du fichier '{EXTRACT_SOURCES_JSON}': {e}")
     else:
@@ -118,7 +118,7 @@ def main():
     success = cleanup_files()
     
     if success:
-        print("\n✅ Nettoyage des fichiers non nécessaires réussi !")
+        print("\n[OK] Nettoyage des fichiers non nécessaires réussi !")
     else:
         print("\n❌ Échec du nettoyage des fichiers non nécessaires.")
     

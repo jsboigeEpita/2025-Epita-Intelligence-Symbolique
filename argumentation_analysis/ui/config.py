@@ -29,7 +29,7 @@ FIXED_SALT = b'q\x8b\t\x97\x8b\xe9\xa3\xf2\xe4\x8e\xea\xf5\xe8\xb7\xd6\x8c' # Se
 
 config_logger.info(f"Utilisation de la phrase secrète fixe pour la dérivation de la clé.")
 if passphrase: # Cette condition sera toujours vraie maintenant
-    config_logger.info(f"✅ Phrase secrète définie sur \"{passphrase}\". Dérivation de la clé...")
+    config_logger.info(f"[OK] Phrase secrète définie sur \"{passphrase}\". Dérivation de la clé...")
     try:
         kdf = PBKDF2HMAC(
             algorithm=hashes.SHA256(), length=32, salt=FIXED_SALT,
@@ -37,7 +37,7 @@ if passphrase: # Cette condition sera toujours vraie maintenant
         )
         derived_key_raw = kdf.derive(passphrase.encode('utf-8'))
         ENCRYPTION_KEY = base64.urlsafe_b64encode(derived_key_raw)
-        if ENCRYPTION_KEY: config_logger.info("✅ Clé de chiffrement dérivée et encodée.")
+        if ENCRYPTION_KEY: config_logger.info("[OK] Clé de chiffrement dérivée et encodée.")
     except Exception as e:
         config_logger.error(f"⚠️ Erreur dérivation clé : {e}. Chiffrement désactivé.", exc_info=True)
         ENCRYPTION_KEY = None
