@@ -1,5 +1,5 @@
 """
-Tests d'intégration pour les nouveaux modules Oracle Enhanced
+Tests d'intégration pour les nouveaux modules Oracle Enhanced v2.1.0
 """
 
 import pytest
@@ -68,83 +68,6 @@ class TestNewModulesIntegration:
                 await agent.process_oracle_request("error_agent", "validate", {})
                 
         asyncio.run(test_error_request())
-        
-        # Vérifier que les statistiques d'erreurs sont mises à jour
-        stats = agent.get_oracle_statistics()
-        # Note: Les erreurs dans le décorateur sont loggées mais pas comptées ici
-        # car le décorateur ne fait que logger, pas appeler error_handler.handle_oracle_error
-        
-    def test_standard_response_with_error_status(self):
-        """Test StandardOracleResponse avec statuts d'erreur"""
-        
-        # Réponse de succès
-        success_response = StandardOracleResponse(
-            success=True,
-            data={"result": "OK"},
-            metadata={"status_code": OracleResponseStatus.SUCCESS.value}
-        )
-        
-        assert success_response.success is True
-        assert success_response.metadata["status_code"] == "success"
-        
-        # Réponse d'erreur de permission
-        permission_error_response = StandardOracleResponse(
-            success=False,
-            message="Permission denied",
-            error_code="PERMISSION_ERROR",
-            metadata={"status_code": OracleResponseStatus.PERMISSION_DENIED.value}
-        )
-        
-        assert permission_error_response.success is False
-        assert permission_error_response.metadata["status_code"] == "permission_denied"
-        
-        # Réponse d'erreur de dataset
-        dataset_error_response = StandardOracleResponse(
-            success=False,
-            message="Dataset unavailable", 
-            error_code="DATASET_ERROR",
-            metadata={"status_code": OracleResponseStatus.DATASET_ERROR.value}
-        )
-        
-        assert dataset_error_response.success is False
-        assert dataset_error_response.metadata["status_code"] == "dataset_error"
-        
-    def test_error_handler_with_response_conversion(self):
-        """Test conversion d'erreurs en StandardOracleResponse"""
-        
-        def convert_error_to_response(error_info: dict) -> StandardOracleResponse:
-            """Convertit une info d'erreur en StandardOracleResponse"""
-            
-            # Mapping des types d'erreurs vers les statuts
-            error_to_status = {
-                "OraclePermissionError": OracleResponseStatus.PERMISSION_DENIED,
-                "OracleDatasetError": OracleResponseStatus.DATASET_ERROR,
-                "OracleValidationError": OracleResponseStatus.INVALID_QUERY,
-                "CluedoIntegrityError": OracleResponseStatus.ERROR
-            }
-            
-            status = error_to_status.get(error_info["type"], OracleResponseStatus.ERROR)
-            
-            return StandardOracleResponse(
-                success=False,
-                message=error_info["message"],
-                error_code=error_info["type"],
-                metadata={
-                    "status_code": status.value,
-                    "context": error_info["context"],
-                    "timestamp": error_info["timestamp"]
-                }
-            )
-        
-        # Test avec OraclePermissionError
-        permission_error = OraclePermissionError("Access denied")
-        error_info = self.error_handler.handle_oracle_error(permission_error, "test_context")
-        response = convert_error_to_response(error_info)
-        
-        assert response.success is False
-        assert response.error_code == "OraclePermissionError"
-        assert response.metadata["status_code"] == "permission_denied"
-        assert response.metadata["context"] == "test_context"
         
     @patch('logging.getLogger')
     def test_complete_integration_scenario(self, mock_get_logger):

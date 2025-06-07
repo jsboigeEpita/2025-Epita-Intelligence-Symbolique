@@ -1,0 +1,1011 @@
+{
+  "metadata": {
+    "generated_at": "2025-06-07T16:20:54.569098",
+    "total_orphan_files": 42,
+    "summary": {
+      "delete": 15,
+      "keep": 22,
+      "integrate": 5,
+      "review": 0
+    }
+  },
+  "actions": {
+    "delete": [
+      {
+        "path": "logs/backup_GUIDE_INSTALLATION_ETUDIANTS.md_20250607_143255",
+        "category": "logs",
+        "recommendation": "delete",
+        "reason": "Fichier de log temporaire - supprimer",
+        "size": 17674,
+        "modified": "2025-06-02T01:42:43.649826",
+        "content_analysis": {
+          "lines": 221,
+          "size": 17114,
+          "has_imports": true,
+          "has_functions": false,
+          "has_classes": false,
+          "has_tests": false,
+          "has_oracle": true,
+          "has_sherlock": false,
+          "is_empty": false,
+          "first_lines": [
+            "# Guide d'Installation et de Configuration de l'Environnement de Développement",
+            "",
+            "Ce guide vous accompagnera à travers les étapes nécessaires pour configurer votre environnement de développement pour le projet. L'utilisation des scripts fournis simplifie grandement ce processus.",
+            "",
+            "## Prérequis Essentiels"
+          ]
+        }
+      },
+      {
+        "path": "logs/backup_README.md_20250607_143255",
+        "category": "logs",
+        "recommendation": "delete",
+        "reason": "Fichier de log temporaire - supprimer",
+        "size": 14155,
+        "modified": "2025-06-07T14:09:48.636756",
+        "content_analysis": {
+          "lines": 280,
+          "size": 13583,
+          "has_imports": true,
+          "has_functions": false,
+          "has_classes": false,
+          "has_tests": false,
+          "has_oracle": true,
+          "has_sherlock": true,
+          "is_empty": false,
+          "first_lines": [
+            "﻿# Projet d'Analyse d'Argumentation",
+            "",
+            "Ce projet contient une application web pour l'analyse d'argumentation, composée d'un backend Flask et d'un frontend React.",
+            "",
+            "## 🔒 **Sécurité et Intégrité - Mise à Jour Janvier 2025**"
+          ]
+        }
+      },
+      {
+        "path": "logs/backup_rapport_genere_par_agents_sk.md_20250607_143255",
+        "category": "logs",
+        "recommendation": "delete",
+        "reason": "Fichier de log temporaire - supprimer",
+        "size": 8730,
+        "modified": "2025-06-07T14:16:15.891442",
+        "content_analysis": {
+          "lines": 191,
+          "size": 7606,
+          "has_imports": false,
+          "has_functions": false,
+          "has_classes": false,
+          "has_tests": true,
+          "has_oracle": true,
+          "has_sherlock": true,
+          "is_empty": false,
+          "first_lines": [
+            "﻿# Rapport d'Analyse - EPITA Intelligence Symbolique",
+            "## Pipeline Agentique Semantic Kernel + GPT-4o-mini",
+            "",
+            "---",
+            ""
+          ]
+        }
+      },
+      {
+        "path": "logs/cleanup_execution_log.json",
+        "category": "logs",
+        "recommendation": "delete",
+        "reason": "Fichier de log temporaire - supprimer",
+        "size": 2391,
+        "modified": "2025-06-07T15:50:20.539501",
+        "content_analysis": {
+          "lines": 67,
+          "size": 2314,
+          "has_imports": false,
+          "has_functions": false,
+          "has_classes": false,
+          "has_tests": true,
+          "has_oracle": true,
+          "has_sherlock": true,
+          "is_empty": false,
+          "first_lines": [
+            "{",
+            "  \"timestamp\": \"2025-06-07T15:50:00.000Z\",",
+            "  \"cleanup_version\": \"1.0.0\",",
+            "  \"task\": \"4/5 - Nettoyage contrôlé des fichiers obsolètes\",",
+            "  \"actions\": ["
+          ]
+        }
+      },
+      {
+        "path": "logs/cleanup_plan_phase4.md",
+        "category": "logs",
+        "recommendation": "delete",
+        "reason": "Fichier de log temporaire - supprimer",
+        "size": 5270,
+        "modified": "2025-06-07T15:25:42.470676",
+        "content_analysis": {
+          "lines": 82,
+          "size": 5003,
+          "has_imports": false,
+          "has_functions": false,
+          "has_classes": false,
+          "has_tests": true,
+          "has_oracle": true,
+          "has_sherlock": true,
+          "is_empty": false,
+          "first_lines": [
+            "# Plan de nettoyage Phase 4 - Tests orphelins",
+            "*Généré le 2025-06-07T15:25:42.447667*",
+            "",
+            "## Résumé de l'organisation",
+            ""
+          ]
+        }
+      },
+      {
+        "path": "logs/code_recovery_report.md",
+        "category": "logs",
+        "recommendation": "delete",
+        "reason": "Fichier de log temporaire - supprimer",
+        "size": 7586,
+        "modified": "2025-06-07T15:02:18.771918",
+        "content_analysis": {
+          "lines": 177,
+          "size": 7183,
+          "has_imports": false,
+          "has_functions": false,
+          "has_classes": false,
+          "has_tests": true,
+          "has_oracle": true,
+          "has_sherlock": false,
+          "is_empty": false,
+          "first_lines": [
+            "# Rapport de Récupération du Code Précieux",
+            "",
+            "**TÂCHE 2/5** - Récupération du code précieux identifié dans l'analyse",
+            "**Date**: 2025-01-07 15:01:32",
+            "**Version cible**: Oracle Enhanced v2.1.0"
+          ]
+        }
+      },
+      {
+        "path": "logs/git_cleanup_action_plan.md",
+        "category": "logs",
+        "recommendation": "delete",
+        "reason": "Fichier de log temporaire - supprimer",
+        "size": 186169,
+        "modified": "2025-06-07T16:17:29.565629",
+        "content_analysis": {
+          "lines": 1790,
+          "size": 184379,
+          "has_imports": false,
+          "has_functions": false,
+          "has_classes": false,
+          "has_tests": true,
+          "has_oracle": true,
+          "has_sherlock": true,
+          "is_empty": false,
+          "first_lines": [
+            "# Plan d'Actions - Nettoyage Git",
+            "",
+            "**Date:** 2025-06-07 16:17:29",
+            "",
+            "## Actions Prioritaires"
+          ]
+        }
+      },
+      {
+        "path": "logs/metriques_finales_nettoyage.json",
+        "category": "logs",
+        "recommendation": "delete",
+        "reason": "Fichier de log temporaire - supprimer",
+        "size": 6667,
+        "modified": "2025-06-07T15:54:01.522219",
+        "content_analysis": {
+          "lines": 199,
+          "size": 6446,
+          "has_imports": false,
+          "has_functions": false,
+          "has_classes": false,
+          "has_tests": true,
+          "has_oracle": true,
+          "has_sherlock": true,
+          "is_empty": false,
+          "first_lines": [
+            "{",
+            "  \"metadata\": {",
+            "    \"date_generation\": \"2025-06-07T15:52:00Z\",",
+            "    \"version_oracle\": \"v2.1.0\",",
+            "    \"phase_mission\": \"5/5 - Finalisation\","
+          ]
+        }
+      },
+      {
+        "path": "logs/oracle_files_analysis_summary.md",
+        "category": "logs",
+        "recommendation": "delete",
+        "reason": "Fichier de log temporaire - supprimer",
+        "size": 5768,
+        "modified": "2025-06-07T14:41:00.301247",
+        "content_analysis": {
+          "lines": 190,
+          "size": 5390,
+          "has_imports": false,
+          "has_functions": false,
+          "has_classes": false,
+          "has_tests": true,
+          "has_oracle": true,
+          "has_sherlock": true,
+          "is_empty": false,
+          "first_lines": [
+            "# Analyse Détaillée des Fichiers avec Références Oracle",
+            "",
+            "**Date d'analyse :** 7 juin 2025, 14:40  ",
+            "**Version de l'analyseur :** 1.0.0  ",
+            "**Total de fichiers analysés :** 102 fichiers"
+          ]
+        }
+      },
+      {
+        "path": "logs/oracle_files_categorization_detailed.json",
+        "category": "logs",
+        "recommendation": "delete",
+        "reason": "Fichier de log temporaire - supprimer",
+        "size": 124941,
+        "modified": "2025-06-07T14:40:12.686049",
+        "content_analysis": {
+          "lines": 2887,
+          "size": 121400,
+          "has_imports": true,
+          "has_functions": true,
+          "has_classes": false,
+          "has_tests": true,
+          "has_oracle": true,
+          "has_sherlock": true,
+          "is_empty": false,
+          "first_lines": [
+            "{",
+            "  \"analysis_metadata\": {",
+            "    \"timestamp\": \"2025-06-07T14:40:12.682004\",",
+            "    \"analyzer_version\": \"1.0.0\",",
+            "    \"total_files_analyzed\": 102,"
+          ]
+        }
+      },
+      {
+        "path": "logs/orphan_organization_summary_20250607_143255.json",
+        "category": "logs",
+        "recommendation": "delete",
+        "reason": "Fichier de log temporaire - supprimer",
+        "size": 874,
+        "modified": "2025-06-07T14:32:55.433376",
+        "content_analysis": {
+          "lines": 33,
+          "size": 842,
+          "has_imports": false,
+          "has_functions": false,
+          "has_classes": false,
+          "has_tests": true,
+          "has_oracle": true,
+          "has_sherlock": false,
+          "is_empty": false,
+          "first_lines": [
+            "{",
+            "  \"timestamp\": \"2025-06-07T14:32:55.430377\",",
+            "  \"phase_d_integration\": {",
+            "    \"status\": \"SUCCESS\",",
+            "    \"file_moved\": \"phase_d_extensions.py -> argumentation_analysis/agents/core/oracle/\","
+          ]
+        }
+      },
+      {
+        "path": "logs/orphan_tests_categorization.json",
+        "category": "logs",
+        "recommendation": "delete",
+        "reason": "Fichier de log temporaire - supprimer",
+        "size": 829,
+        "modified": "2025-06-07T15:25:42.460670",
+        "content_analysis": {
+          "lines": 32,
+          "size": 798,
+          "has_imports": false,
+          "has_functions": false,
+          "has_classes": false,
+          "has_tests": false,
+          "has_oracle": false,
+          "has_sherlock": false,
+          "is_empty": false,
+          "first_lines": [
+            "{",
+            "  \"metadata\": {",
+            "    \"timestamp\": \"2025-06-07T15:25:42.447667\",",
+            "    \"organizer_version\": \"1.0.0\",",
+            "    \"total_orphan_tests\": 51,"
+          ]
+        }
+      },
+      {
+        "path": "logs/orphan_tests_organization_report.md",
+        "category": "logs",
+        "recommendation": "delete",
+        "reason": "Fichier de log temporaire - supprimer",
+        "size": 10275,
+        "modified": "2025-06-07T15:25:42.471677",
+        "content_analysis": {
+          "lines": 324,
+          "size": 9715,
+          "has_imports": false,
+          "has_functions": false,
+          "has_classes": false,
+          "has_tests": true,
+          "has_oracle": true,
+          "has_sherlock": true,
+          "is_empty": false,
+          "first_lines": [
+            "# Rapport d'organisation des tests orphelins",
+            "",
+            "*Généré le 2025-06-07T15:25:42.447667*",
+            "",
+            "## Résumé exécutif"
+          ]
+        }
+      },
+      {
+        "path": "logs/post_cleanup_validation_report.md",
+        "category": "logs",
+        "recommendation": "delete",
+        "reason": "Fichier de log temporaire - supprimer",
+        "size": 5360,
+        "modified": "2025-06-07T15:50:54.991553",
+        "content_analysis": {
+          "lines": 122,
+          "size": 5085,
+          "has_imports": false,
+          "has_functions": false,
+          "has_classes": false,
+          "has_tests": true,
+          "has_oracle": true,
+          "has_sherlock": true,
+          "is_empty": false,
+          "first_lines": [
+            "# Rapport de validation post-nettoyage",
+            "*Généré le 2025-06-07T15:50:21*",
+            "",
+            "## Résumé du nettoyage",
+            ""
+          ]
+        }
+      },
+      {
+        "path": "logs/tache_1_validation_completion.md",
+        "category": "logs",
+        "recommendation": "delete",
+        "reason": "Fichier de log temporaire - supprimer",
+        "size": 4811,
+        "modified": "2025-06-07T14:42:05.251346",
+        "content_analysis": {
+          "lines": 134,
+          "size": 4454,
+          "has_imports": false,
+          "has_functions": false,
+          "has_classes": false,
+          "has_tests": false,
+          "has_oracle": true,
+          "has_sherlock": false,
+          "is_empty": false,
+          "first_lines": [
+            "# TÂCHE 1/5 : VALIDATION DE COMPLETION",
+            "",
+            "## ✅ Analyse détaillée des 102 fichiers avec références Oracle - TERMINÉE",
+            "",
+            "**Date de completion :** 7 juin 2025, 14:41  "
+          ]
+        }
+      }
+    ],
+    "keep": [
+      {
+        "path": "RAPPORT_COMPLET_NETTOYAGE_ORPHELINS.md",
+        "category": "documentation",
+        "recommendation": "keep",
+        "reason": "Documentation - examiner et conserver",
+        "size": 10632,
+        "modified": "2025-06-07T15:53:24.021138",
+        "content_analysis": {
+          "lines": 241,
+          "size": 9510,
+          "has_imports": false,
+          "has_functions": false,
+          "has_classes": false,
+          "has_tests": true,
+          "has_oracle": true,
+          "has_sherlock": true,
+          "is_empty": false,
+          "first_lines": [
+            "# Rapport Complet de Nettoyage des Fichiers Orphelins Oracle Enhanced",
+            "*Mission finale - 2025-06-07*",
+            "",
+            "## Synthèse exécutive",
+            ""
+          ]
+        }
+      },
+      {
+        "path": "archives/",
+        "category": "archives",
+        "recommendation": "keep",
+        "reason": "Archive à examiner avant suppression",
+        "size": 0,
+        "modified": "2025-06-07T15:31:22.657723",
+        "content_analysis": {
+          "error": "[Errno 13] Permission denied: 'D:\\\\2025-Epita-Intelligence-Symbolique\\\\archives'"
+        }
+      },
+      {
+        "path": "cluedo_oracle_enhanced_trace.log",
+        "category": "oracle_related",
+        "recommendation": "keep",
+        "reason": "Fichier Oracle/Sherlock - conserver et examiner",
+        "size": 0,
+        "modified": "2025-06-07T16:18:51.411979",
+        "content_analysis": {
+          "lines": 0,
+          "size": 0,
+          "has_imports": false,
+          "has_functions": false,
+          "has_classes": false,
+          "has_tests": false,
+          "has_oracle": false,
+          "has_sherlock": false,
+          "is_empty": true,
+          "first_lines": []
+        }
+      },
+      {
+        "path": "docs/GUIDE_MAINTENANCE_ORACLE_ENHANCED.md",
+        "category": "oracle_related",
+        "recommendation": "keep",
+        "reason": "Fichier Oracle/Sherlock - conserver et examiner",
+        "size": 14106,
+        "modified": "2025-06-07T15:55:06.409854",
+        "content_analysis": {
+          "lines": 431,
+          "size": 13298,
+          "has_imports": true,
+          "has_functions": true,
+          "has_classes": true,
+          "has_tests": true,
+          "has_oracle": true,
+          "has_sherlock": true,
+          "is_empty": false,
+          "first_lines": [
+            "# Guide de Maintenance Oracle Enhanced v2.1.0",
+            "*Post-nettoyage des fichiers orphelins - 2025-06-07*",
+            "",
+            "## Vue d'ensemble",
+            ""
+          ]
+        }
+      },
+      {
+        "path": "docs/PROJECT_STRUCTURE_POST_CLEANUP.md",
+        "category": "documentation",
+        "recommendation": "keep",
+        "reason": "Documentation - examiner et conserver",
+        "size": 12494,
+        "modified": "2025-06-07T15:57:16.415061",
+        "content_analysis": {
+          "lines": 295,
+          "size": 10398,
+          "has_imports": false,
+          "has_functions": false,
+          "has_classes": false,
+          "has_tests": true,
+          "has_oracle": true,
+          "has_sherlock": true,
+          "is_empty": false,
+          "first_lines": [
+            "# Structure du Projet Post-Nettoyage Oracle Enhanced v2.1.0",
+            "*État final après organisation complète des fichiers orphelins - 2025-06-07*",
+            "",
+            "## Vue d'ensemble de l'architecture finale",
+            ""
+          ]
+        }
+      },
+      {
+        "path": "einstein_oracle_demo_trace.log",
+        "category": "oracle_related",
+        "recommendation": "keep",
+        "reason": "Fichier Oracle/Sherlock - conserver et examiner",
+        "size": 0,
+        "modified": "2025-06-07T16:18:55.445446",
+        "content_analysis": {
+          "lines": 0,
+          "size": 0,
+          "has_imports": false,
+          "has_functions": false,
+          "has_classes": false,
+          "has_tests": false,
+          "has_oracle": false,
+          "has_sherlock": false,
+          "is_empty": true,
+          "first_lines": []
+        }
+      },
+      {
+        "path": "logs/git_files_analysis_report.md",
+        "category": "logs",
+        "recommendation": "keep",
+        "reason": "Rapport d'inventaire récent - conserver",
+        "size": 404006,
+        "modified": "2025-06-07T16:17:29.548615",
+        "content_analysis": {
+          "lines": 12328,
+          "size": 391678,
+          "has_imports": false,
+          "has_functions": false,
+          "has_classes": false,
+          "has_tests": true,
+          "has_oracle": true,
+          "has_sherlock": true,
+          "is_empty": false,
+          "first_lines": [
+            "# Rapport d'Analyse des Fichiers Git",
+            "",
+            "**Date de generation:** 2025-06-07 16:17:29",
+            "**Projet:** Intelligence Symbolique - Sherlock Watson",
+            "**Total de fichiers analyses:** 1752"
+          ]
+        }
+      },
+      {
+        "path": "logs/git_files_decision_matrix.json",
+        "category": "logs",
+        "recommendation": "keep",
+        "reason": "Rapport d'inventaire récent - conserver",
+        "size": 596252,
+        "modified": "2025-06-07T16:17:29.564629",
+        "content_analysis": {
+          "lines": 17604,
+          "size": 578649,
+          "has_imports": false,
+          "has_functions": false,
+          "has_classes": false,
+          "has_tests": true,
+          "has_oracle": true,
+          "has_sherlock": true,
+          "is_empty": false,
+          "first_lines": [
+            "{",
+            "  \"metadata\": {",
+            "    \"generated_at\": \"2025-06-07T16:17:29.548615\",",
+            "    \"total_files\": 1752,",
+            "    \"project\": \"Intelligence Symbolique - Sherlock Watson\""
+          ]
+        }
+      },
+      {
+        "path": "logs/orphan_files_analysis_20250607_142422.md",
+        "category": "logs",
+        "recommendation": "keep",
+        "reason": "Rapport d'inventaire récent - conserver",
+        "size": 4323,
+        "modified": "2025-06-07T14:24:22.987304",
+        "content_analysis": {
+          "lines": 65,
+          "size": 4176,
+          "has_imports": false,
+          "has_functions": false,
+          "has_classes": false,
+          "has_tests": true,
+          "has_oracle": true,
+          "has_sherlock": true,
+          "is_empty": false,
+          "first_lines": [
+            "",
+            "# Rapport d'Analyse des Fichiers Orphelins Oracle/Sherlock/Watson/Moriarty",
+            "Généré le 2025-06-07 14:24:22",
+            "",
+            "## Résumé Exécutif"
+          ]
+        }
+      },
+      {
+        "path": "logs/orphan_files_data_20250607_142422.json",
+        "category": "logs",
+        "recommendation": "keep",
+        "reason": "Rapport d'inventaire récent - conserver",
+        "size": 128800,
+        "modified": "2025-06-07T14:24:22.988303",
+        "content_analysis": {
+          "lines": 2040,
+          "size": 126392,
+          "has_imports": true,
+          "has_functions": true,
+          "has_classes": true,
+          "has_tests": true,
+          "has_oracle": true,
+          "has_sherlock": true,
+          "is_empty": false,
+          "first_lines": [
+            "{",
+            "  \"analysis_report\": {",
+            "    \"timestamp\": \"2025-06-07T14:21:37.531799\",",
+            "    \"total_files_scanned\": 38939,",
+            "    \"orphan_files_found\": 124,"
+          ]
+        }
+      },
+      {
+        "path": "logs/orphan_files_move_plan.json",
+        "category": "logs",
+        "recommendation": "keep",
+        "reason": "Rapport d'inventaire récent - conserver",
+        "size": 189,
+        "modified": "2025-06-07T16:19:39.524323",
+        "content_analysis": {
+          "lines": 8,
+          "size": 182,
+          "has_imports": false,
+          "has_functions": false,
+          "has_classes": false,
+          "has_tests": false,
+          "has_oracle": false,
+          "has_sherlock": true,
+          "is_empty": false,
+          "first_lines": [
+            "{",
+            "  \"metadata\": {",
+            "    \"generated_at\": \"2025-06-07T16:19:39.523321\",",
+            "    \"total_orphan_files\": 0,",
+            "    \"target_directory\": \"tests\\\\validation_sherlock_watson\""
+          ]
+        }
+      },
+      {
+        "path": "logs/orphan_files_move_plan.md",
+        "category": "logs",
+        "recommendation": "keep",
+        "reason": "Rapport d'inventaire récent - conserver",
+        "size": 361,
+        "modified": "2025-06-07T16:19:39.526322",
+        "content_analysis": {
+          "lines": 17,
+          "size": 336,
+          "has_imports": false,
+          "has_functions": false,
+          "has_classes": false,
+          "has_tests": false,
+          "has_oracle": false,
+          "has_sherlock": true,
+          "is_empty": false,
+          "first_lines": [
+            "# Plan de Déplacement - Fichiers Orphelins",
+            "",
+            "**Date:** 2025-06-07T16:19:39.523321",
+            "**Fichiers identifiés:** 0",
+            "**Répertoire cible:** `tests\\validation_sherlock_watson`"
+          ]
+        }
+      },
+      {
+        "path": "scripts/maintenance/analyze_oracle_references_detailed.py",
+        "category": "maintenance_scripts",
+        "recommendation": "keep",
+        "reason": "Script de maintenance récent - conserver",
+        "size": 19429,
+        "modified": "2025-06-07T14:40:06.052110",
+        "content_analysis": {
+          "lines": 466,
+          "size": 18839,
+          "has_imports": true,
+          "has_functions": true,
+          "has_classes": true,
+          "has_tests": true,
+          "has_oracle": true,
+          "has_sherlock": true,
+          "is_empty": false,
+          "first_lines": [
+            "#!/usr/bin/env python3",
+            "\"\"\"",
+            "Script d'analyse détaillée des fichiers avec références Oracle.",
+            "",
+            "Ce script analyse en profondeur les 208 fichiers identifiés avec des références"
+          ]
+        }
+      },
+      {
+        "path": "scripts/maintenance/cleanup_obsolete_files.py",
+        "category": "maintenance_scripts",
+        "recommendation": "keep",
+        "reason": "Script de maintenance récent - conserver",
+        "size": 20739,
+        "modified": "2025-06-07T15:31:15.724059",
+        "content_analysis": {
+          "lines": 504,
+          "size": 20079,
+          "has_imports": true,
+          "has_functions": true,
+          "has_classes": true,
+          "has_tests": true,
+          "has_oracle": true,
+          "has_sherlock": true,
+          "is_empty": false,
+          "first_lines": [
+            "#!/usr/bin/env python3",
+            "\"\"\"",
+            "Script de nettoyage contrôlé des fichiers obsolètes",
+            "Tâche 4/5 - Nettoyage sécurisé selon le plan d'organisation",
+            ""
+          ]
+        }
+      },
+      {
+        "path": "scripts/maintenance/git_files_inventory.py",
+        "category": "maintenance_scripts",
+        "recommendation": "keep",
+        "reason": "Script de maintenance récent - conserver",
+        "size": 18018,
+        "modified": "2025-06-07T16:14:21.485009",
+        "content_analysis": {
+          "lines": 434,
+          "size": 17472,
+          "has_imports": true,
+          "has_functions": true,
+          "has_classes": true,
+          "has_tests": true,
+          "has_oracle": true,
+          "has_sherlock": true,
+          "is_empty": false,
+          "first_lines": [
+            "#!/usr/bin/env python3",
+            "\"\"\"",
+            "Script d'inventaire des fichiers sous contrôle Git avec recommandations détaillées",
+            "\"\"\"",
+            ""
+          ]
+        }
+      },
+      {
+        "path": "scripts/maintenance/git_files_inventory_fast.py",
+        "category": "maintenance_scripts",
+        "recommendation": "keep",
+        "reason": "Script de maintenance récent - conserver",
+        "size": 16043,
+        "modified": "2025-06-07T16:16:13.388356",
+        "content_analysis": {
+          "lines": 391,
+          "size": 15551,
+          "has_imports": true,
+          "has_functions": true,
+          "has_classes": true,
+          "has_tests": true,
+          "has_oracle": true,
+          "has_sherlock": true,
+          "is_empty": false,
+          "first_lines": [
+            "#!/usr/bin/env python3",
+            "\"\"\"",
+            "Script d'inventaire rapide des fichiers sous contrôle Git avec recommandations détaillées",
+            "Version accélérée sans tests de fonctionnalité",
+            "\"\"\""
+          ]
+        }
+      },
+      {
+        "path": "scripts/maintenance/git_files_inventory_simple.py",
+        "category": "maintenance_scripts",
+        "recommendation": "keep",
+        "reason": "Script de maintenance récent - conserver",
+        "size": 15894,
+        "modified": "2025-06-07T16:17:22.852238",
+        "content_analysis": {
+          "lines": 390,
+          "size": 15501,
+          "has_imports": true,
+          "has_functions": true,
+          "has_classes": true,
+          "has_tests": true,
+          "has_oracle": true,
+          "has_sherlock": true,
+          "is_empty": false,
+          "first_lines": [
+            "#!/usr/bin/env python3",
+            "\"\"\"",
+            "Script d'inventaire des fichiers sous contrôle Git avec recommandations détaillées",
+            "Version simplifiée sans emojis",
+            "\"\"\""
+          ]
+        }
+      },
+      {
+        "path": "scripts/maintenance/organize_orphan_tests.py",
+        "category": "maintenance_scripts",
+        "recommendation": "keep",
+        "reason": "Script de maintenance récent - conserver",
+        "size": 20745,
+        "modified": "2025-06-07T15:25:35.984502",
+        "content_analysis": {
+          "lines": 444,
+          "size": 20139,
+          "has_imports": true,
+          "has_functions": true,
+          "has_classes": true,
+          "has_tests": true,
+          "has_oracle": true,
+          "has_sherlock": false,
+          "is_empty": false,
+          "first_lines": [
+            "#!/usr/bin/env python3",
+            "\"\"\"",
+            "Script d'organisation des tests orphelins identifiés dans la tâche 1/5.",
+            "",
+            "Ce script organise les 51 tests orphelins selon leur valeur et destination :"
+          ]
+        }
+      },
+      {
+        "path": "scripts/maintenance/orphan_files_processor.py",
+        "category": "maintenance_scripts",
+        "recommendation": "keep",
+        "reason": "Script de maintenance récent - conserver",
+        "size": 9974,
+        "modified": "2025-06-07T16:19:32.609019",
+        "content_analysis": {
+          "lines": 245,
+          "size": 9683,
+          "has_imports": true,
+          "has_functions": true,
+          "has_classes": true,
+          "has_tests": true,
+          "has_oracle": true,
+          "has_sherlock": true,
+          "is_empty": false,
+          "first_lines": [
+            "#!/usr/bin/env python3",
+            "\"\"\"",
+            "Script pour traiter les fichiers orphelins identifiés dans VSCode",
+            "mais non trackés par Git dans le projet Sherlock Watson.",
+            "\"\"\""
+          ]
+        }
+      },
+      {
+        "path": "scripts/maintenance/real_orphan_files_processor.py",
+        "category": "maintenance_scripts",
+        "recommendation": "keep",
+        "reason": "Script de maintenance récent - conserver",
+        "size": 13057,
+        "modified": "2025-06-07T16:20:46.323542",
+        "content_analysis": {
+          "lines": 314,
+          "size": 12691,
+          "has_imports": true,
+          "has_functions": true,
+          "has_classes": true,
+          "has_tests": true,
+          "has_oracle": true,
+          "has_sherlock": true,
+          "is_empty": false,
+          "first_lines": [
+            "#!/usr/bin/env python3",
+            "\"\"\"",
+            "Script pour traiter les vrais fichiers orphelins identifiés par Git ",
+            "dans le projet Sherlock Watson.",
+            "\"\"\""
+          ]
+        }
+      },
+      {
+        "path": "scripts/maintenance/recover_precious_code.py",
+        "category": "maintenance_scripts",
+        "recommendation": "keep",
+        "reason": "Script de maintenance récent - conserver",
+        "size": 19780,
+        "modified": "2025-06-07T15:01:32.254354",
+        "content_analysis": {
+          "lines": 502,
+          "size": 18983,
+          "has_imports": true,
+          "has_functions": true,
+          "has_classes": true,
+          "has_tests": true,
+          "has_oracle": true,
+          "has_sherlock": false,
+          "is_empty": false,
+          "first_lines": [
+            "#!/usr/bin/env python3",
+            "\"\"\"",
+            "Script de récupération automatique du code précieux identifié.",
+            "Script principal pour TÂCHE 2/5 - Récupération du code précieux identifié dans l'analyse",
+            ""
+          ]
+        }
+      },
+      {
+        "path": "scripts/maintenance/recovered/",
+        "category": "maintenance_scripts",
+        "recommendation": "keep",
+        "reason": "Script de maintenance récent - conserver",
+        "size": 0,
+        "modified": "2025-06-07T14:54:48.164649",
+        "content_analysis": {
+          "error": "[Errno 13] Permission denied: 'D:\\\\2025-Epita-Intelligence-Symbolique\\\\scripts\\\\maintenance\\\\recovered'"
+        }
+      }
+    ],
+    "integrate": [
+      {
+        "path": "docs/recovered/",
+        "category": "recovered_code",
+        "recommendation": "integrate",
+        "reason": "Code récupéré - examiner pour intégration",
+        "size": 0,
+        "modified": "2025-06-07T14:43:36.213877",
+        "content_analysis": {
+          "error": "[Errno 13] Permission denied: 'D:\\\\2025-Epita-Intelligence-Symbolique\\\\docs\\\\recovered'"
+        }
+      },
+      {
+        "path": "tests/comparison/recovered/",
+        "category": "recovered_code",
+        "recommendation": "integrate",
+        "reason": "Code récupéré - examiner pour intégration",
+        "size": 0,
+        "modified": "2025-06-07T14:49:16.010858",
+        "content_analysis": {
+          "error": "[Errno 13] Permission denied: 'D:\\\\2025-Epita-Intelligence-Symbolique\\\\tests\\\\comparison\\\\recovered'"
+        }
+      },
+      {
+        "path": "tests/integration/recovered/",
+        "category": "recovered_code",
+        "recommendation": "integrate",
+        "reason": "Code récupéré - examiner pour intégration",
+        "size": 0,
+        "modified": "2025-06-07T14:56:52.115270",
+        "content_analysis": {
+          "error": "[Errno 13] Permission denied: 'D:\\\\2025-Epita-Intelligence-Symbolique\\\\tests\\\\integration\\\\recovered'"
+        }
+      },
+      {
+        "path": "tests/unit/recovered/",
+        "category": "recovered_code",
+        "recommendation": "integrate",
+        "reason": "Code récupéré - examiner pour intégration",
+        "size": 0,
+        "modified": "2025-06-07T14:58:19.102761",
+        "content_analysis": {
+          "error": "[Errno 13] Permission denied: 'D:\\\\2025-Epita-Intelligence-Symbolique\\\\tests\\\\unit\\\\recovered'"
+        }
+      },
+      {
+        "path": "tests/validation/test_recovered_code_validation.py",
+        "category": "test_files",
+        "recommendation": "integrate",
+        "reason": "Test de validation - déplacer vers tests/validation/",
+        "size": 13721,
+        "modified": "2025-06-07T15:00:17.608702",
+        "content_analysis": {
+          "lines": 321,
+          "size": 13278,
+          "has_imports": true,
+          "has_functions": true,
+          "has_classes": true,
+          "has_tests": true,
+          "has_oracle": true,
+          "has_sherlock": false,
+          "is_empty": false,
+          "first_lines": [
+            "\"\"\"",
+            "Tests de validation pour le code récupéré.",
+            "Validation complète des 9 fichiers priorité 8-10 récupérés et adaptés pour Oracle Enhanced v2.1.0",
+            "",
+            "Tests couvrant:"
+          ]
+        }
+      }
+    ],
+    "review": []
+  }
+}

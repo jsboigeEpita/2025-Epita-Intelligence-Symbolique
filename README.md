@@ -1,6 +1,134 @@
 ﻿# Projet d'Intelligence Symbolique EPITA
 
-**Architecture Sophistiquée d'Analyse d'Argumentation** - Intelligence Symbolique avec Stratégies Authentiques Validées
+**Bienvenue dans l'Architecture Sophistiquée d'Analyse d'Argumentation** - Intelligence Symbolique avec Stratégies Authentiques Validées
+
+---
+
+## 🎓 **Bienvenue Étudiants et Visiteurs !**
+
+Ce projet constitue une démonstration avancée d'intelligence symbolique développée dans le cadre du cours EPITA. Il combine recherche académique rigoureuse et développement technique moderne pour offrir aux étudiants une expérience complète d'exploration des concepts d'IA symbolique et d'analyse argumentative.
+
+### 🎯 **Objectifs Pédagogiques**
+- **Comprendre** les fondements de l'intelligence symbolique et de l'IA explicable
+- **Maîtriser** les techniques d'analyse argumentative et de détection de sophismes
+- **Explorer** l'orchestration multi-agents avec Semantic Kernel
+- **Intégrer** des technologies modernes (Python, Java, React) dans un système cohérent
+- **Développer** des compétences en architecture logicielle et test automatisé
+
+---
+
+## 🚀 **4 Points d'Entrée Principaux**
+
+### 1. 🎭 **Démo EPITA - Exploration des Fonctionnalités**
+**Point d'entrée recommandé pour découvrir le système**
+
+Le script [`demonstration_epita.py`](examples/scripts_demonstration/demonstration_epita.py) est votre **porte d'entrée principale** avec 4 modes adaptés :
+
+```bash
+# 🎓 Mode interactif pédagogique (RECOMMANDÉ pour étudiants)
+python examples/scripts_demonstration/demonstration_epita.py --interactive
+
+# 🚀 Démarrage rapide avec suggestions de projets
+python examples/scripts_demonstration/demonstration_epita.py --quick-start
+
+# 📊 Menu catégorisé (mode par défaut)
+python examples/scripts_demonstration/demonstration_epita.py
+
+# ⚙️ Tests complets avec métriques
+python examples/scripts_demonstration/demonstration_epita.py --all-tests
+```
+
+**Fonctionnalités** :
+- 🧠 **Intelligence Symbolique** - Raisonnement logique et contraintes  
+- 🎭 **Analyse d'Argumentation** - Stratégies rhétoriques sophistiquées
+- ⚙️ **Orchestration Agentique** - Coordination multi-agents
+- 🔗 **Intégration Java-Python** - Bridges JPype avancés
+- 🌐 **Services Web** - APIs et interfaces web
+- 🧪 **Tests et Validation** - Couverture complète et métriques
+
+📋 **Documentation** : [`demonstration_epita_README.md`](examples/scripts_demonstration/demonstration_epita_README.md)
+
+### 2. ⚙️ **Système d'Analyse Rhétorique Unifié**
+**Orchestration avancée avec paramètres de contrôle**
+
+Le script [`run_orchestration.py`](argumentation_analysis/run_orchestration.py) offre un contrôle fin de l'orchestration :
+
+```bash
+# Analyse interactive avec choix des agents
+python argumentation_analysis/run_orchestration.py --interactive
+
+# Analyse avec agents spécifiques
+python argumentation_analysis/run_orchestration.py --agents "ExtractAgent,LogicAgent" --text "Votre texte"
+
+# Mode verbeux pour debugging
+python argumentation_analysis/run_orchestration.py --verbose --interactive
+
+# Génération de rapport détaillé
+python argumentation_analysis/run_orchestration.py --report --output-format json
+```
+
+**Paramètres disponibles** :
+- 🎯 **Source** : Texte direct, fichier, ou entrée interactive
+- 🔀 **Orchestration** : Choix des agents et stratégies
+- 🤖 **Agents** : Sélection spécifique d'agents d'analyse
+- 📢 **Verbosité** : Contrôle des logs et traces d'exécution  
+- 📊 **Rapport** : Formats de sortie (console, JSON, markdown)
+
+### 3. 🌐 **Application Web avec Manager Dédié**
+**Interface moderne pour services d'analyse**
+
+Système web complet avec backend Flask et frontend React :
+
+```bash
+# Démarrage Backend (Port 5005)
+cd services/web_api
+python start_api.py --port 5005
+
+# Démarrage Frontend (Port 3001) - Terminal séparé
+cd services/web_api/interface-web-argumentative  
+npm install && npm start
+
+# Ou utilisation des scripts PowerShell intégrés
+.\scripts\run_backend.cmd 5005
+.\scripts\run_frontend.cmd 3001
+```
+
+**Services disponibles** :
+- 🔍 **API REST** : Endpoints d'analyse argumentative (`/api/analyze`, `/api/validate`)
+- 🌐 **Interface Web** : Dashboard React pour interaction utilisateur
+- 🧪 **Tests Playwright** : Validation automatisée de l'interface
+- 📊 **Monitoring** : Métriques de performance et santé des services
+
+📋 **Documentation** : [`services/README.md`](services/README.md)
+
+### 4. 🕵️ **Système d'Enquête Sherlock-Watson-Moriarty**
+**Pipeline d'analyse Oracle Enhanced avec intégrité garantie**
+
+Système multi-agents sophistiqué pour résolution de problèmes logiques :
+
+```bash
+# Démo Cluedo Oracle Enhanced
+python -m scripts.sherlock_watson.run_cluedo_oracle_enhanced
+
+# Démo Puzzle d'Einstein  
+python -m scripts.sherlock_watson.run_einstein_oracle_demo
+
+# Tests de validation comportementale
+python -m scripts.sherlock_watson.test_oracle_behavior_simple
+
+# Validation couverture complète (148+ tests)
+python -m scripts.maintenance.validate_oracle_coverage
+```
+
+**Agents disponibles** :
+- 🔍 **Sherlock Holmes** : Agent d'investigation logique avec raisonnement déductif
+- 👨‍⚕️ **Dr Watson** : Agent de déduction médicale et assistance analytique  
+- 🎭 **Professor Moriarty** : Agent Oracle authentique avec révélations automatiques
+- 🛡️ **Système d'Intégrité** : Protection anti-triche avec `CluedoIntegrityError`
+
+📋 **Documentation** : [`docs/sherlock_watson/`](docs/sherlock_watson/) - Guide complet utilisateur et développeur
+
+---
 
 ## 🔒 **Sécurité et Intégrité - Mise à Jour Janvier 2025**
 
@@ -16,38 +144,6 @@ Pour plus de détails, consulter :
 - 📋 **[Rapport d'Audit Complet](docs/sherlock_watson/AUDIT_INTEGRITE_CLUEDO.md)**
 - 🛠️ **[Guide Utilisateur Sécurisé](docs/sherlock_watson/GUIDE_UTILISATEUR_COMPLET.md)**
 - 🏗️ **[Architecture Sécurité](docs/sherlock_watson/ARCHITECTURE_TECHNIQUE_DETAILLEE.md)**
-
-## 🎯 **Quick Start - Point d'Entrée Principal**
-
-### ⚡ **Démonstration Immédiate**
-Le script [`demonstration_epita.py`](examples/scripts_demonstration/demonstration_epita.py) est votre **point d'entrée principal** pour découvrir toutes les capacités du système :
-
-```bash
-# 🚀 Démarrage rapide pour étudiants
-python examples/scripts_demonstration/demonstration_epita.py --quick-start
-
-# 🎓 Mode interactif avec pauses pédagogiques
-python examples/scripts_demonstration/demonstration_epita.py --interactive
-
-# 📊 Menu catégorisé (mode par défaut)
-python examples/scripts_demonstration/demonstration_epita.py
-
-# 📈 Métriques du projet uniquement
-python examples/scripts_demonstration/demonstration_epita.py --metrics
-
-# ⚙️ Exécution complète de tous les tests
-python examples/scripts_demonstration/demonstration_epita.py --all-tests
-```
-
-### 🎯 **Modules de Démonstration Disponibles**
-Le script `demonstration_epita.py` intègre **6 catégories modulaires** :
-
-- 🧠 **Intelligence Symbolique** - Raisonnement logique et contraintes
-- 🎭 **Analyse d'Argumentation** - Stratégies rhétoriques sophistiquées
-- ⚙️ **Orchestration Agentique** - Coordination multi-agents
-- 🔗 **Intégration Java-Python** - Bridges JPype avancés
-- 🌐 **Services Web** - APIs et interfaces web
-- 🧪 **Tests et Validation** - Couverture complète et métriques
 
 ## 🏆 **Certification d'Authenticité - Post-Audit Anti-Mock**
 
@@ -70,21 +166,6 @@ Suite à l'audit critique anti-mock, le système a été **100% validé** avec d
 - 🔍 **[Audit Anti-Mock](docs/architecture/strategies/audit_anti_mock.md)** - Rapport de validation complet (106/106 tests)
 - 🔗 **[Intégration Semantic Kernel](docs/architecture/strategies/semantic_kernel_integration.md)** - Conformité aux interfaces standard
 - 📊 **[État Partagé](docs/architecture/strategies/shared_state_architecture.md)** - Architecture de coordination
-
-## 🔒 **Sécurité et Intégrité - Audit Sherlock-Watson (Janvier 2025)**
-
-### ✅ **Audit d'Intégrité Cluedo Réussi**
-Un audit de sécurité complet a été réalisé sur le système **Sherlock-Watson-Moriarty Oracle Enhanced** :
-
-- **4 violations d'intégrité** détectées et **corrigées**
-- **CluedoIntegrityError** déployé pour protection anti-triche
-- **Mécanismes de surveillance** temps réel intégrés
-- **Couverture tests** maintenue à **100%**
-
-**Documentation Sécurité** :
-- 📋 **[Rapport d'Audit Complet](docs/sherlock_watson/AUDIT_INTEGRITE_CLUEDO.md)**
-- 🛠️ **[Guide Utilisateur Sécurisé](docs/sherlock_watson/GUIDE_UTILISATEUR_COMPLET.md)**
-- 🏗️ **[Architecture Sécurité](docs/sherlock_watson/ARCHITECTURE_TECHNIQUE_DETAILLEE.md)**
 
 ## 🔧 **Configuration et Prérequis**
 
@@ -124,10 +205,10 @@ Le projet inclut des **scripts d'environnement automatisés** pour simplifier la
 #### **Script Principal : `scripts\env\activate_project_env.ps1`**
 ```powershell
 # Exécution avec commande (recommandé)
-.\activate_project_env.ps1 -CommandToRun "python examples/scripts_demonstration/demonstration_epita.py"
+.\scripts\env\activate_project_env.ps1 -CommandToRun "python examples/scripts_demonstration/demonstration_epita.py"
 
 # Configuration d'environnement uniquement
-.\activate_project_env.ps1
+.\scripts\env\activate_project_env.ps1
 ```
 
 **Fonctionnalités** :
@@ -139,10 +220,10 @@ Le projet inclut des **scripts d'environnement automatisés** pour simplifier la
 #### **Scripts Raccourcis à la Racine**
 ```powershell
 # Lancement direct de démonstrations
-.\activate_project_env.ps1 -CommandToRun "python examples/scripts_demonstration/demonstration_epita.py --interactive"
+.\scripts\env\activate_project_env.ps1 -CommandToRun "python examples/scripts_demonstration/demonstration_epita.py --interactive"
 
 # Setup complet du projet
-.\setup_project_env.ps1 -CommandToRun "python examples/scripts_demonstration/demonstration_epita.py --all-tests"
+.\scripts\env\activate_project_env.ps1 -CommandToRun "python examples/scripts_demonstration/demonstration_epita.py --all-tests"
 ```
 
 ### 🌐 **Configuration Application Web** (Optionnel)
@@ -159,10 +240,10 @@ echo "REACT_APP_API_BASE_URL=http://localhost:5005" > .env
 
 # 3. Lancement (2 terminaux)
 # Terminal 1 - Backend:
-.\activate_project_env.ps1 -CommandToRun "scripts\run_backend.cmd 5005"
+.\scripts\env\activate_project_env.ps1 -CommandToRun "scripts\run_backend.cmd 5005"
 
 # Terminal 2 - Frontend:
-.\activate_project_env.ps1 -CommandToRun "scripts\run_frontend.cmd 3001"
+.\scripts\env\activate_project_env.ps1 -CommandToRun "scripts\run_frontend.cmd 3001"
 ```
 
 ## 📚 **Documentation Technique Complète**
@@ -195,6 +276,7 @@ echo "REACT_APP_API_BASE_URL=http://localhost:5005" > .env
 
 **Couverture de Tests** :
 - ✅ **106/106 tests authentiques** réussis (stratégies d'argumentation)
+- ✅ **148/148 tests Oracle Enhanced** réussis (système Sherlock-Watson-Moriarty)
 - ✅ **100% couverture** des composants critiques validés
 - ✅ **0 mock critique** dans les composants stratégiques
 - ✅ **Architecture modulaire** entièrement testée
@@ -206,14 +288,14 @@ python examples/scripts_demonstration/demonstration_epita.py --all-tests
 
 # Tests des stratégies spécifiquement
 python -m pytest tests/unit/argumentation_analysis/test_strategies_real.py -v
+
+# Validation Oracle Enhanced
+python -m scripts.maintenance.validate_oracle_coverage
 ```
 
 ---
 
-**📢 Ce projet constitue une démonstration avancée d'intelligence symbolique avec validation technique complète. Le script [`demonstration_epita.py`](examples/scripts_demonstration/demonstration_epita.py) est votre point d'entrée idéal pour explorer toutes les capacités du système.**
-
-
-## 🎭 Système Sherlock-Watson-Moriarty Oracle Enhanced
+## 🎭 **Système Sherlock-Watson-Moriarty Oracle Enhanced v2.1.0**
 
 ### Vue d'ensemble
 Le système Oracle Enhanced implémente un véritable système multi-agents avec:
@@ -309,3 +391,7 @@ print(response.data)  # Révélation automatique ou validation
 - **v2.1.0** (2025-01-07): Refactorisation complète, nouveaux modules
 - **v2.0.0** (2025-01-06): Oracle Enhanced authentique, 100% tests
 - **v1.0.0** (2024-12): Version initiale multi-agents
+
+---
+
+**📢 Ce projet constitue une démonstration avancée d'intelligence symbolique avec validation technique complète. Commencez par le script [`demonstration_epita.py`](examples/scripts_demonstration/demonstration_epita.py) en mode interactif pour explorer toutes les capacités du système de manière pédagogique.**
