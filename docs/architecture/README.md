@@ -16,6 +16,14 @@ Analyse et description du système de communication inter-agents, incluant l'év
 ### [Analyse des Orchestrations Agentiques Sherlock/Watson](./analyse_orchestrations_sherlock_watson.md)
 Analyse complète des flux d'orchestration dans les conversations agentiques entre Sherlock Holmes et Dr. Watson, en se concentrant sur leurs interactions, outils utilisés, et notamment l'usage des solvers Tweety par Watson. Couvre les patterns d'interaction pour les workflows Cluedo (logique informelle) et Einstein (logique formelle obligatoire).
 
+### [Stratégies d'Argumentation Sophistiquées](./strategies/)
+**NOUVEAUTÉ POST-AUDIT** : Documentation complète de l'architecture sophistiquée des stratégies d'argumentation découverte lors de l'audit anti-mock réussi (106/106 tests). Couvre les 3 stratégies authentiques intégrées avec Semantic Kernel et coordonnées par un état partagé innovant.
+
+- **[Architecture des Stratégies](./strategies/strategies_architecture.md)** : Vue d'ensemble des 3 stratégies authentiques (SimpleTermination, DelegatingSelection, BalancedParticipation)
+- **[Audit Anti-Mock](./strategies/audit_anti_mock.md)** : Validation complète 106/106 tests sans mocks critiques
+- **[Intégration Semantic Kernel](./strategies/semantic_kernel_integration.md)** : Patterns avancés d'intégration SK avec innovations
+- **[État Partagé](./strategies/shared_state_architecture.md)** : Architecture du hub central RhetoricalAnalysisState
+
 ### [Conception du Système de Communication Multi-Canal](../conception_systeme_communication_multi_canal.md) <!-- Lien corrigé de ./conception_multi_canal.md -->
 Présentation de la conception détaillée du système de communication multi-canal, incluant le rôle du middleware et les différents types de canaux.
 
