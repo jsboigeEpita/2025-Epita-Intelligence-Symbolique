@@ -34,7 +34,7 @@ class OracleTools:
         """Valide les permissions d'un agent pour un type de requête."""
         try:
             query_type_enum = QueryType(query_type)
-            is_authorized = self.dataset_manager.permission_manager.is_authorized(agent_name, query_type_enum)
+            is_authorized = self.dataset_manager.check_permission(agent_name, query_type_enum)
             
             if is_authorized:
                 return f"Agent {agent_name} autorisé pour {query_type}"
@@ -179,7 +179,7 @@ class OracleTools:
                 return f"Requête Oracle refusée: {response.message}"
                 
         except ValueError:
-            return f"Type de requête invalide: {query_type}"
+            raise ValueError(f"Type de requête invalide: {query_type}")
         except Exception as e:
             self._logger.error(f"Erreur requête Oracle: {e}", exc_info=True)
             return f"Erreur lors de la requête Oracle: {str(e)}"
@@ -190,15 +190,16 @@ class OracleTools:
         try:
             query_type_enum = QueryType(query_type)
             agent_to_check = target_agent or self.agent_name
-            is_authorized = self.dataset_manager.permission_manager.is_authorized(agent_to_check, query_type_enum)
+            is_authorized = self.dataset_manager.check_permission(agent_to_check, query_type_enum)
             
             if is_authorized:
-                return f"Permission accordée: {agent_to_check} peut exécuter {query_type}"
+                return f"{agent_to_check} a les permissions pour {query_type}"
             else:
-                return f"Permission refusée: {agent_to_check} ne peut pas exécuter {query_type}"
+                return f"{agent_to_check} n'a pas les permissions pour {query_type}"
                 
-        except ValueError:
-            return f"Type de requête invalide: {query_type}"
+        except ValueError as e:
+            self._logger.error(f"Type de requête invalide: {query_type}")
+            raise ValueError(f"Type de requête invalide: {query_type}")
         except Exception as e:
             self._logger.error(f"Erreur vérification permission: {e}")
             return f"Erreur lors de la vérification: {str(e)}"
@@ -317,6 +318,9 @@ Vous êtes un gardien impartial mais stratégique des données."""
         
         # Outils Oracle
         self.oracle_tools = OracleTools(dataset_manager, agent_name)
+        
+        # Enregistrement des outils Oracle comme plugin dans le kernel
+        kernel.add_plugin(self.oracle_tools, plugin_name=f"oracle_tools_{agent_name}")
         
         # Logger spécialisé
         self._logger = logging.getLogger(f"agent.{self.__class__.__name__}.{agent_name}")
