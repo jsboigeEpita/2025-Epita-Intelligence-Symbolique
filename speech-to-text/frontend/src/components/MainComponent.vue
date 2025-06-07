@@ -125,7 +125,7 @@
                 <v-row class="mt-4">
                   <v-col>
                     <v-btn
-                      @click="processInput"
+                      @click="inputType===0 ? processInput() : processYoutubeInput()"
                       color="primary"
                       x-large
                       block
@@ -133,7 +133,7 @@
                       :disabled="!canProcess"
                     >
                       <v-icon left>mdi-play</v-icon>
-                      Analyze Audio
+                      Analyze {{ inputType===0 ? "Audio" : "Youtube Link"}}
                     </v-btn>
                   </v-col>
                 </v-row>
@@ -344,6 +344,8 @@
 </template>
 
 <script>
+import WhisperApiClient from '@/api/whisperApiClient'; // Placeholder for Whisper API client
+
 export default {
   name: 'ArgumentAnalyzer',
   data() {
@@ -359,8 +361,24 @@ export default {
         checkSolidity: true,
         extractClaims: true
       },
-      analysisResults: null
+      analysisResults: null,
+      whisperApiClient: null // Placeholder for Whisper API client instance
     }
+  },
+  mounted() {
+    const USERNAME = import.meta.env.VITE_WHISPER_USERNAME;
+    const PASSWORD = import.meta.env.VITE_WHISPER_PASSWORD;
+    const HUGGING_FACE_API_KEY = import.meta.env.VITE_HUGGING_FACE_API_KEY;
+    console.log('Initializing Whisper API client with:', {
+      USERNAME,
+      PASSWORD,
+      HUGGING_FACE_API_KEY
+    });
+    this.whisperApiClient = new WhisperApiClient(
+        "https://whisper-webui.myia.io/",
+        USERNAME,
+        PASSWORD,
+        HUGGING_FACE_API_KEY);
   },
   computed: {
     canProcess() {
@@ -380,7 +398,7 @@ export default {
       const pattern = /^(https?:\/\/)?(www\.)?(youtube\.com|youtu\.be)\/.+/;
       return pattern.test(url);
     },
-    async processInput() {
+    async processAudioInput() {
       this.processing = true;
       this.analysisResults = null;
       
@@ -407,7 +425,7 @@ export default {
         */
         
         // Simulate API response
-        this.analysisResults = this.generateMockResults();
+        this.analysisResults = this.generateResults();
         
       } catch (error) {
         console.error('Processing error:', error);
@@ -417,31 +435,23 @@ export default {
         this.processingStatus = 'Initializing...';
       }
     },
-    generateMockResults() {
-      return {
-        transcription: "In this debate, the speaker argues that climate change is not real because it snowed yesterday in their hometown. They also claim that scientists are just trying to get funding, so we can't trust their research. Furthermore, they argue that since the climate has always changed naturally, human activity cannot be the cause.",
-        fallacies: this.analysisOptions.detectFallacies ? [
-          { type: "Anecdotal Evidence", description: "Using personal experience as evidence" },
-          { type: "Ad Hominem", description: "Attacking the character of scientists rather than their arguments" },
-          { type: "False Cause", description: "Assuming natural climate change means humans can't cause it" }
-        ] : null,
-        validity: this.analysisOptions.validateArguments ? {
-          valid: false,
-          score: 3,
-          summary: "The argument contains multiple logical fallacies and unsupported claims."
-        } : null,
-        solidity: this.analysisOptions.checkSolidity ? {
-          score: 2.5,
-          rating: "Weak",
-          explanation: "The argument lacks solid evidence and relies heavily on logical fallacies."
-        } : null,
-        claims: this.analysisOptions.extractClaims ? [
-          "Climate change is not real",
-          "Scientists are motivated by funding",
-          "Climate has always changed naturally",
-          "Human activity cannot cause climate change"
-        ] : null
-      };
+    async processYoutubeInput() {
+      this.processing = true;
+      this.analysisResults = null;
+      try {
+        const results = await this.whisperApiClient.transcribeYouTube(this.youtubeUrl);
+        console.log('Transcription results:', results);
+       
+      } catch (error) {
+        console.error('Processing error:', error);
+        // Handle error
+      } finally {
+        this.processing = false;
+        this.processingStatus = 'Initializing...';
+      }
+    },
+    generateResults() {
+   
     },
     simulateDelay(ms) {
       return new Promise(resolve => setTimeout(resolve, ms));
