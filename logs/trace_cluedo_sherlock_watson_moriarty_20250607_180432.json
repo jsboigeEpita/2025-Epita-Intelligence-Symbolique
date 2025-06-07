@@ -1,0 +1,274 @@
+{
+  "test_info": {
+    "test_name": "Cluedo Sherlock-Watson-Moriarty (avec Moriarty)",
+    "start_time": "2025-06-07T18:04:25.161720",
+    "end_time": "2025-06-07T18:04:32.057981",
+    "total_duration_seconds": 6.896261,
+    "agents_count": 3
+  },
+  "conversation_trace": [
+    {
+      "timestamp": "2025-06-07T18:04:26.819015",
+      "elapsed_seconds": 1.657295,
+      "agent_name": "Sherlock",
+      "message_type": "ANALYSIS_START",
+      "content": "Début de l'analyse du cas Cluedo complexe",
+      "metadata": {}
+    },
+    {
+      "timestamp": "2025-06-07T18:04:26.819015",
+      "elapsed_seconds": 1.657295,
+      "agent_name": "Sherlock",
+      "message_type": "HYPOTHESIS",
+      "content": "Hypothèse initiale: {'suspect': 'Docteur Olive', 'arme': 'Barre de fer', 'lieu': 'Salon', 'confidence': 0.4, 'reasoning': \"Basé sur l'analyse des indices disponibles\"}",
+      "metadata": {}
+    },
+    {
+      "timestamp": "2025-06-07T18:04:27.823620",
+      "elapsed_seconds": 2.6619,
+      "agent_name": "Moriarty",
+      "message_type": "MISDIRECTION_START",
+      "content": "Analyse de l'hypothèse pour créer confusion: {'suspect': 'Docteur Olive', 'arme': 'Barre de fer', 'lieu': 'Salon', 'confidence': 0.4, 'reasoning': \"Basé sur l'analyse des indices disponibles\"}",
+      "metadata": {}
+    },
+    {
+      "timestamp": "2025-06-07T18:04:27.823620",
+      "elapsed_seconds": 2.6619,
+      "agent_name": "Moriarty",
+      "message_type": "FALSE_LEAD",
+      "content": "Fausse piste introduite: {'false_suspect': 'Madame Leblanc', 'false_evidence': 'Traces de pas dans la bibliothèque', 'misdirection_type': 'False witness testimony', 'strategic_value': 0.8, 'intended_confusion': 'Détourner de la vraie solution'}",
+      "metadata": {}
+    },
+    {
+      "timestamp": "2025-06-07T18:04:28.831907",
+      "elapsed_seconds": 3.670187,
+      "agent_name": "Watson",
+      "message_type": "LOGIC_VALIDATION",
+      "content": "Validation logique de: {'suspect': 'Docteur Olive', 'arme': 'Barre de fer', 'lieu': 'Salon', 'confidence': 0.4, 'reasoning': \"Basé sur l'analyse des indices disponibles\"}",
+      "metadata": {}
+    },
+    {
+      "timestamp": "2025-06-07T18:04:30.046659",
+      "elapsed_seconds": 4.884939,
+      "agent_name": "Watson",
+      "message_type": "VALIDATION_RESULT",
+      "content": "Résultat validation: {'hypothesis_valid': True, 'logical_consistency': True, 'evidence_strength': 'Forte', 'moriarty_factor_considered': True}",
+      "metadata": {}
+    },
+    {
+      "timestamp": "2025-06-07T18:04:31.049971",
+      "elapsed_seconds": 5.888251,
+      "agent_name": "Moriarty",
+      "message_type": "STRATEGIC_REVEAL",
+      "content": "Révélation stratégique pour: {'suspect': 'Docteur Olive', 'arme': 'Barre de fer', 'lieu': 'Salon', 'confidence': 0.4, 'reasoning': \"Basé sur l'analyse des indices disponibles\"}",
+      "metadata": {}
+    },
+    {
+      "timestamp": "2025-06-07T18:04:32.057981",
+      "elapsed_seconds": 6.896261,
+      "agent_name": "Sherlock",
+      "message_type": "COLLABORATION",
+      "content": "Collaboration avec Watson pour résoudre contradictions Moriarty",
+      "metadata": {}
+    },
+    {
+      "timestamp": "2025-06-07T18:04:32.057981",
+      "elapsed_seconds": 6.896261,
+      "agent_name": "Watson",
+      "message_type": "COLLABORATION",
+      "content": "Analyse collaborative pour détecter les fausses pistes",
+      "metadata": {}
+    },
+    {
+      "timestamp": "2025-06-07T18:04:32.057981",
+      "elapsed_seconds": 6.896261,
+      "agent_name": "Sherlock",
+      "message_type": "FINAL_AGREEMENT",
+      "content": "Accord sur la solution collaborative",
+      "metadata": {}
+    },
+    {
+      "timestamp": "2025-06-07T18:04:32.057981",
+      "elapsed_seconds": 6.896261,
+      "agent_name": "Watson",
+      "message_type": "FINAL_VALIDATION",
+      "content": "Validation logique de la solution finale",
+      "metadata": {}
+    },
+    {
+      "timestamp": "2025-06-07T18:04:32.057981",
+      "elapsed_seconds": 6.896261,
+      "agent_name": "Moriarty",
+      "message_type": "DEFEATED",
+      "content": "Tentatives de confusion échouées, solution trouvée",
+      "metadata": {}
+    }
+  ],
+  "tool_usage_trace": [
+    {
+      "timestamp": "2025-06-07T18:04:26.819015",
+      "elapsed_seconds": 1.657295,
+      "agent_name": "Sherlock",
+      "tool_name": "dataset_access",
+      "tool_input": "get_suspects",
+      "tool_output": "['Colonel Moutarde', 'Docteur Olive', 'Madame Leblanc', 'Mademoiselle Rose', 'Professeur Violet', 'Monsieur Pervenche']",
+      "success": true
+    },
+    {
+      "timestamp": "2025-06-07T18:04:26.819015",
+      "elapsed_seconds": 1.657295,
+      "agent_name": "Sherlock",
+      "tool_name": "dataset_access",
+      "tool_input": "get_armes",
+      "tool_output": "['Corde', 'Poignard', 'Barre de fer', 'Revolver', 'Chandelier', 'Clé anglaise']",
+      "success": true
+    },
+    {
+      "timestamp": "2025-06-07T18:04:26.819015",
+      "elapsed_seconds": 1.657295,
+      "agent_name": "Sherlock",
+      "tool_name": "dataset_access",
+      "tool_input": "get_lieux",
+      "tool_output": "['Bureau', 'Salon', 'Cuisine', 'Salle de bal', 'Conservatoire', 'Salle de billard', 'Bibliothèque', 'Hall', 'Véranda']",
+      "success": true
+    },
+    {
+      "timestamp": "2025-06-07T18:04:27.823620",
+      "elapsed_seconds": 2.6619,
+      "agent_name": "Moriarty",
+      "tool_name": "moriarty_cards_access",
+      "tool_input": "check_refutation",
+      "tool_output": "{'known_cards': ['Docteur Olive', 'Chandelier', 'Cuisine'], 'can_refute': True}",
+      "success": true
+    },
+    {
+      "timestamp": "2025-06-07T18:04:29.534715",
+      "elapsed_seconds": 4.372995,
+      "agent_name": "Watson",
+      "tool_name": "reasoning_tool",
+      "tool_input": "{'suspect': 'Docteur Olive', 'arme': 'Barre de fer', 'lieu': 'Salon', 'confidence': 0.4, 'reasoning': \"Basé sur l'analyse des indices disponibles\"}",
+      "tool_output": "{'validity_score': 0.75, 'evidence_strength': 'Forte', 'logical_consistency': True, 'missing_evidence': ['Analyse Moriarty', 'Vérification cartes']}",
+      "success": true
+    },
+    {
+      "timestamp": "2025-06-07T18:04:30.046659",
+      "elapsed_seconds": 4.884939,
+      "agent_name": "Watson",
+      "tool_name": "contradiction_analysis",
+      "tool_input": "{'false_suspect': 'Madame Leblanc', 'false_evidence': 'Traces de pas dans la bibliothèque', 'misdirection_type': 'False witness testimony', 'strategic_value': 0.8, 'intended_confusion': 'Détourner de ",
+      "tool_output": "{'contradiction_detected': True, 'contradiction_type': 'False evidence', 'reliability_score': 0.3, 'recommended_action': 'Ignore and verify independently'}",
+      "success": true
+    },
+    {
+      "timestamp": "2025-06-07T18:04:31.049971",
+      "elapsed_seconds": 5.888251,
+      "agent_name": "Moriarty",
+      "tool_name": "card_revelation",
+      "tool_input": "{'suspect': 'Docteur Olive', 'arme': 'Barre de fer', 'lieu': 'Salon', 'confidence': 0.4, 'reasoning': \"Basé sur l'analyse des indices disponibles\"}",
+      "tool_output": "{'card_revealed': 'Docteur Olive', 'revelation_type': 'Strategic refutation', 'impact': 'Invalidates part of suggestion', 'moriarty_advantage': True}",
+      "success": true
+    }
+  ],
+  "shared_state_evolution": [
+    {
+      "timestamp": "2025-06-07T18:04:25.161720",
+      "elapsed_seconds": 0.0,
+      "description": "Initialisation",
+      "state_data": {
+        "scenario": "complex",
+        "agents": 3
+      }
+    },
+    {
+      "timestamp": "2025-06-07T18:04:26.819015",
+      "elapsed_seconds": 1.657295,
+      "description": "Dataset initialisé",
+      "state_data": {
+        "suspects": 6,
+        "armes": 6,
+        "lieux": 9,
+        "moriarty_cards": 3
+      }
+    },
+    {
+      "timestamp": "2025-06-07T18:04:26.819015",
+      "elapsed_seconds": 1.657295,
+      "description": "Hypothèse Sherlock",
+      "state_data": {
+        "suspect": "Docteur Olive",
+        "arme": "Barre de fer",
+        "lieu": "Salon",
+        "confidence": 0.4,
+        "reasoning": "Basé sur l'analyse des indices disponibles"
+      }
+    },
+    {
+      "timestamp": "2025-06-07T18:04:27.823620",
+      "elapsed_seconds": 2.6619,
+      "description": "Fausse Piste Moriarty",
+      "state_data": {
+        "false_suspect": "Madame Leblanc",
+        "false_evidence": "Traces de pas dans la bibliothèque",
+        "misdirection_type": "False witness testimony",
+        "strategic_value": 0.8,
+        "intended_confusion": "Détourner de la vraie solution"
+      }
+    },
+    {
+      "timestamp": "2025-06-07T18:04:30.046659",
+      "elapsed_seconds": 4.884939,
+      "description": "Validation Watson",
+      "state_data": {
+        "hypothesis_valid": true,
+        "logical_consistency": true,
+        "evidence_strength": "Forte",
+        "moriarty_factor_considered": true
+      }
+    },
+    {
+      "timestamp": "2025-06-07T18:04:31.049971",
+      "elapsed_seconds": 5.888251,
+      "description": "Révélation Moriarty",
+      "state_data": {
+        "card_revealed": "Docteur Olive",
+        "revelation_type": "Strategic refutation",
+        "impact": "Invalidates part of suggestion",
+        "moriarty_advantage": true
+      }
+    },
+    {
+      "timestamp": "2025-06-07T18:04:32.057981",
+      "elapsed_seconds": 6.896261,
+      "description": "Solution Collaborative Finale",
+      "state_data": {
+        "suspect": "Professeur Violet",
+        "arme": "Poignard",
+        "lieu": "Salon",
+        "confidence": 0.9,
+        "collaborative_reasoning": true,
+        "moriarty_misdirection_resolved": true,
+        "false_leads_identified": 1,
+        "strategic_revelations_analyzed": true
+      }
+    }
+  ],
+  "conflict_resolution_trace": [
+    {
+      "timestamp": "2025-06-07T18:04:32.057981",
+      "elapsed_seconds": 6.896261,
+      "conflict_type": "Moriarty Misdirection",
+      "participants": [
+        "Sherlock",
+        "Watson"
+      ],
+      "resolution": "Collaboration pour ignorer fausses pistes"
+    }
+  ],
+  "metrics": {
+    "total_messages": 12,
+    "total_tool_calls": 7,
+    "state_updates": 7,
+    "conflicts_resolved": 1,
+    "average_response_time": 0.5746884166666667
+  }
+}
