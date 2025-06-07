@@ -62,14 +62,14 @@ def afficher_banniere_principale():
     print(f"""
 {Colors.CYAN}{Colors.BOLD}
 +==============================================================================+
-|                🎓 DÉMONSTRATION EPITA - Intelligence Symbolique              |
+|                [EPITA] DEMONSTRATION - Intelligence Symbolique              |
 |                        Architecture Modulaire v2.0                         |
 +==============================================================================+
 {Colors.ENDC}""")
 
 def afficher_menu_categories(config: Dict[str, Any]) -> None:
     """Affiche le menu catégorisé principal"""
-    print(f"\n{Colors.BOLD}═══════════════════════════════════════════════{Colors.ENDC}")
+    print(f"\n{Colors.BOLD}{'=' * 47}{Colors.ENDC}")
     
     if 'categories' not in config:
         print(f"{Colors.FAIL}Configuration des catégories non trouvée{Colors.ENDC}")
@@ -302,7 +302,7 @@ def main():
     elif args.interactive:
         # Mode interactif avancé - exécution séquentielle des modules
         logger = DemoLogger("demo_complet")
-        logger.header("🎓 DÉMONSTRATION COMPLÈTE - MODE INTERACTIF")
+        logger.header("[EPITA] DÉMONSTRATION COMPLÈTE - MODE INTERACTIF")
         
         categories = config.get('categories', {})
         categories_triees = sorted(categories.items(), key=lambda x: x[1]['id'])

@@ -199,14 +199,14 @@ def demo_metriques_visualisation(logger: DemoLogger, config: Dict[str, Any]) -> 
         ]
         
         for viz in visualisations:
-            print(f"  {Colors.WARNING}📊{Colors.ENDC} {viz}")
+            print(f"  {Colors.WARNING}[CHART]{Colors.ENDC} {viz}")
         
         # Dashboard de monitoring
         print(f"\n{Colors.BOLD}{Symbols.STAR} Dashboard de monitoring :{Colors.ENDC}")
-        print(f'  {Colors.GREEN}✓ Système Status: OPERATIONAL (99.7%){Colors.ENDC}')
-        print(f'  {Colors.BLUE}📈 Tests Success Rate: 99.7%{Colors.ENDC}')
-        print(f'  {Colors.CYAN}⚡ Avg Response Time: 250ms{Colors.ENDC}')
-        print(f'  {Colors.WARNING}🔧 Active Agents: 6/6{Colors.ENDC}')
+        print(f'  {Colors.GREEN}[OK] Système Status: OPERATIONAL (99.7%){Colors.ENDC}')
+        print(f'  {Colors.BLUE}[METRICS] Tests Success Rate: 99.7%{Colors.ENDC}')
+        print(f'  {Colors.CYAN}[SPEED] Avg Response Time: 250ms{Colors.ENDC}')
+        print(f'  {Colors.WARNING}[TOOLS] Active Agents: 6/6{Colors.ENDC}')
     
     afficher_stats_tests(resultats)
     return succes
@@ -281,7 +281,7 @@ def demo_outils_reporting(logger: DemoLogger, config: Dict[str, Any]) -> bool:
         ]
         
         for rapport in types_rapports:
-            print(f"  {Colors.CYAN}📋{Colors.ENDC} {rapport}")
+            print(f"  {Colors.CYAN}[REPORT]{Colors.ENDC} {rapport}")
         
         # Format de sortie
         print(f"\n{Colors.BLUE}{Symbols.BULB} Formats de sortie supportés :{Colors.ENDC}")
@@ -314,7 +314,7 @@ def run_demo_interactive() -> bool:
         description = cat_info['description']
         fonctionnalites = cat_info['fonctionnalites']
     else:
-        titre = "⚙️ Outils & Utilitaires"
+        titre = "[UTILS] Outils & Utilitaires"
         description = "Développement & Debug"
         fonctionnalites = [
             "Générateurs de données",
@@ -387,7 +387,7 @@ def run_demo_rapide() -> bool:
     """Lance une démonstration rapide (non-interactive)"""
     logger = DemoLogger("outils_utils")
     
-    logger.header("⚙️ DÉMONSTRATION RAPIDE - OUTILS & UTILITAIRES")
+    logger.header("[UTILS] DÉMONSTRATION RAPIDE - OUTILS & UTILITAIRES")
     
     # Tests essentiels seulement
     tests_essentiels = [

@@ -4,7 +4,7 @@
 categories:
   tests_validation:
     id: 1
-    icon: "📚"
+    icon: "[TEST]"
     nom: "Tests & Validation"
     description: "99.7% succès"
     module: "demo_tests_validation"
@@ -19,7 +19,7 @@ categories:
 
   agents_logiques:
     id: 2
-    icon: "🧠"
+    icon: "[AI]"
     nom: "Agents Logiques & Argumentation"
     description: "Raisonnement symbolique"
     module: "demo_agents_logiques"
@@ -35,7 +35,7 @@ categories:
 
   services_core:
     id: 3
-    icon: "🔧"
+    icon: "[CORE]"
     nom: "Services Core & Extraction"
     description: "Architecture fondamentale"
     module: "demo_services_core"
@@ -51,7 +51,7 @@ categories:
 
   integrations:
     id: 4
-    icon: "🌐"
+    icon: "[API]"
     nom: "Intégrations & Interfaces"
     description: "Python-Java & APIs"
     module: "demo_integrations"
@@ -67,7 +67,7 @@ categories:
 
   cas_usage:
     id: 5
-    icon: "🎯"
+    icon: "[DEMO]"
     nom: "Cas d'Usage Complets"
     description: "Applications pratiques"
     module: "demo_cas_usage"
@@ -83,7 +83,7 @@ categories:
 
   outils_utils:
     id: 6
-    icon: "⚙️"
+    icon: "[UTILS]"
     nom: "Outils & Utilitaires"
     description: "Développement & Debug"
     module: "demo_outils_utils"

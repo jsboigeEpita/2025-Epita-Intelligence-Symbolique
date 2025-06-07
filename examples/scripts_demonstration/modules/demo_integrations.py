@@ -235,7 +235,7 @@ def run_demo_interactive() -> bool:
         description = cat_info['description']
         fonctionnalites = cat_info['fonctionnalites']
     else:
-        titre = "🌐 Intégrations & Interfaces"
+        titre = "[API] Intégrations & Interfaces"
         description = "Python-Java & APIs"
         fonctionnalites = [
             "Intégration JPype-Tweety",
@@ -308,7 +308,7 @@ def run_demo_rapide() -> bool:
     """Lance une démonstration rapide (non-interactive)"""
     logger = DemoLogger("integrations")
     
-    logger.header("🌐 DÉMONSTRATION RAPIDE - INTÉGRATIONS")
+    logger.header("[API] DÉMONSTRATION RAPIDE - INTÉGRATIONS")
     
     # Tests essentiels seulement
     tests_essentiels = [
