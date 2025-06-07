@@ -45,22 +45,25 @@ class CyclicSelectionStrategy(SelectionStrategy):
     selon l'état du jeu et les interactions précédentes.
     """
     
-    def __init__(self, agents: List[Agent], adaptive_selection: bool = False):
+    def __init__(self, agents: List[Agent], adaptive_selection: bool = False, oracle_state: 'CluedoOracleState' = None):
         """
         Initialise la stratégie de sélection cyclique.
         
         Args:
             agents: Liste des agents dans l'ordre cyclique souhaité
             adaptive_selection: Active les adaptations contextuelles (Phase 2)
+            oracle_state: État Oracle pour accès au contexte (Phase C)
         """
         super().__init__()
-        self.agents = agents
-        self.agent_order = [agent.name for agent in agents]
-        self.current_index = 0
-        self.adaptive_selection = adaptive_selection
-        self.turn_count = 0
+        # Stockage direct dans __dict__ pour éviter les problèmes Pydantic
+        self.__dict__['agents'] = agents
+        self.__dict__['agent_order'] = [agent.name for agent in agents]
+        self.__dict__['current_index'] = 0
+        self.__dict__['adaptive_selection'] = adaptive_selection
+        self.__dict__['turn_count'] = 0
+        self.__dict__['oracle_state'] = oracle_state  # PHASE C: Accès au contexte
         
-        self._logger = logging.getLogger(self.__class__.__name__)
+        self.__dict__['_logger'] = logging.getLogger(self.__class__.__name__)
         self._logger.info(f"CyclicSelectionStrategy initialisée avec ordre: {self.agent_order}")
     
     async def next(self, agents: List[Agent], history: List[ChatMessageContent]) -> Agent:
@@ -85,9 +88,17 @@ class CyclicSelectionStrategy(SelectionStrategy):
             self._logger.warning(f"Agent {selected_agent_name} non trouvé, sélection du premier agent disponible")
             selected_agent = agents[0]
         
-        # Avance l'index cyclique
-        self.current_index = (self.current_index + 1) % len(self.agent_order)
-        self.turn_count += 1
+        # PHASE C: Injection du contexte récent dans l'agent sélectionné
+        if self.oracle_state and hasattr(selected_agent, '_context_enhanced_prompt'):
+            contextual_addition = self.oracle_state.get_contextual_prompt_addition(selected_agent.name)
+            if contextual_addition:
+                # Stockage temporaire du contexte pour l'agent
+                selected_agent._current_context = contextual_addition
+                self._logger.debug(f"Contexte injecté pour {selected_agent.name}: {len(contextual_addition)} caractères")
+        
+        # Avance l'index cyclique (contournement Pydantic)
+        object.__setattr__(self, 'current_index', (self.current_index + 1) % len(self.agent_order))
+        object.__setattr__(self, 'turn_count', self.turn_count + 1)
         
         # Adaptations contextuelles (optionnelles pour Phase 1)
         if self.adaptive_selection:
@@ -132,7 +143,7 @@ class OracleTerminationStrategy(TerminationStrategy):
     turn_count: int = Field(default=0, exclude=True)
     cycle_count: int = Field(default=0, exclude=True)
     is_solution_found: bool = Field(default=False, exclude=True)
-    oracle_state: CluedoOracleState = Field(...)
+    oracle_state: CluedoOracleState = Field(default=None)
     
     def __init__(self, max_turns: int = 15, max_cycles: int = 5, oracle_state: CluedoOracleState = None, **kwargs):
         super().__init__(**kwargs)
@@ -339,7 +350,7 @@ class CluedoExtendedOrchestrator:
         
         # Configuration des stratégies
         agents = [self.sherlock_agent, self.watson_agent, self.moriarty_agent]
-        selection_strategy = CyclicSelectionStrategy(agents, self.adaptive_selection)
+        selection_strategy = CyclicSelectionStrategy(agents, self.adaptive_selection, self.oracle_state)  # PHASE C: Passer oracle_state
         termination_strategy = OracleTerminationStrategy(
             max_turns=self.max_turns,
             max_cycles=self.max_cycles,
@@ -390,6 +401,18 @@ class CluedoExtendedOrchestrator:
             async for message in self.group_chat.invoke():
                 history.append(message)
                 
+                # PHASE C: Enregistrement du message pour mémoire contextuelle
+                if message.name != "System":
+                    message_content = str(message.content)
+                    self.oracle_state.add_conversation_message(
+                        agent_name=message.name,
+                        content=message_content,
+                        message_type=self._detect_message_type(message_content)
+                    )
+                    
+                    # Analyse des références contextuelles et réactions émotionnelles
+                    self._analyze_contextual_elements(message.name, message_content, history)
+                
                 # Enregistrement du tour dans l'état Oracle
                 self.oracle_state.record_agent_turn(
                     agent_name=message.name,
@@ -425,6 +448,9 @@ class CluedoExtendedOrchestrator:
         # Métriques Oracle
         oracle_stats = self.oracle_state.get_oracle_statistics()
         
+        # PHASE C: Métriques de fluidité et continuité narrative
+        fluidity_metrics = self.oracle_state.get_fluidity_metrics()
+        
         # Évaluation du succès
         solution_correcte = self._evaluate_solution_success()
         
@@ -443,6 +469,7 @@ class CluedoExtendedOrchestrator:
             "conversation_history": conversation_history,
             "oracle_statistics": oracle_stats,
             "performance_metrics": performance_metrics,
+            "phase_c_fluidity_metrics": fluidity_metrics,  # PHASE C: Nouvelles métriques
             "final_state": {
                 "solution_proposed": self.oracle_state.is_solution_proposed,
                 "final_solution": self.oracle_state.final_solution,
@@ -514,6 +541,154 @@ class CluedoExtendedOrchestrator:
             "balance_score": 1.0,  # À améliorer avec tracking réel par agent
             "note": "Équilibre cyclique théorique - à améliorer avec métriques réelles"
         }
+    
+    # PHASE C: Méthodes d'analyse contextuelle pour fluidité
+    
+    def _detect_message_type(self, content: str) -> str:
+        """
+        Détecte le type de message basé sur son contenu.
+        
+        Args:
+            content: Contenu du message
+            
+        Returns:
+            Type de message détecté
+        """
+        content_lower = content.lower()
+        
+        if any(keyword in content_lower for keyword in ["révèle", "possède", "carte", "j'ai"]):
+            return "revelation"
+        elif any(keyword in content_lower for keyword in ["suggère", "propose", "suspect", "arme", "lieu"]):
+            return "suggestion"
+        elif any(keyword in content_lower for keyword in ["analyse", "déduction", "conclusion", "donc"]):
+            return "analysis"
+        elif any(keyword in content_lower for keyword in ["brillant", "exactement", "aha", "intéressant", "magistral"]):
+            return "reaction"
+        else:
+            return "message"
+    
+    def _analyze_contextual_elements(self, agent_name: str, content: str, history: List) -> None:
+        """
+        Analyse les éléments contextuels d'un message et enregistre les références/réactions.
+        
+        Args:
+            agent_name: Nom de l'agent qui parle
+            content: Contenu du message
+            history: Historique des messages
+        """
+        content_lower = content.lower()
+        
+        # Détection des références contextuelles explicites
+        reference_indicators = [
+            ("suite à", "building_on"),
+            ("en réaction à", "reacting_to"),
+            ("après cette", "responding_to"),
+            ("comme dit", "referencing"),
+            ("précédemment", "referencing")
+        ]
+        
+        for indicator, ref_type in reference_indicators:
+            if indicator in content_lower:
+                # Trouve le message précédent le plus proche
+                if len(history) > 1:
+                    target_turn = len(history) - 1  # Message précédent
+                    self.oracle_state.record_contextual_reference(
+                        source_agent=agent_name,
+                        target_message_turn=target_turn,
+                        reference_type=ref_type,
+                        reference_content=indicator
+                    )
+                break
+        
+        # Détection des réactions émotionnelles
+        emotional_patterns = self._detect_emotional_reactions(agent_name, content, history)
+        for reaction in emotional_patterns:
+            self.oracle_state.record_emotional_reaction(**reaction)
+    
+    def _detect_emotional_reactions(self, agent_name: str, content: str, history: List) -> List[Dict[str, str]]:
+        """
+        Détecte les réactions émotionnelles spécifiques à chaque agent.
+        
+        Args:
+            agent_name: Nom de l'agent
+            content: Contenu du message
+            history: Historique des messages
+            
+        Returns:
+            Liste des réactions détectées
+        """
+        reactions = []
+        content_lower = content.lower()
+        
+        # Trouver l'agent et le contenu qui ont déclenché la réaction
+        trigger_agent = None
+        trigger_content = ""
+        
+        if len(history) > 1:
+            last_message = history[-2]  # Message précédent (avant le message actuel)
+            trigger_agent = last_message.name
+            trigger_content = str(last_message.content)
+        
+        if not trigger_agent or trigger_agent == "System":
+            return reactions
+        
+        # Patterns de réaction spécifiques par agent
+        if agent_name == "Watson":
+            watson_reactions = [
+                (["brillant", "exactement", "ça colle parfaitement"], "approval"),
+                (["aha", "intéressant retournement", "ça change la donne"], "surprise"),
+                (["précisément", "logique", "cohérent"], "analysis")
+            ]
+            
+            for keywords, reaction_type in watson_reactions:
+                if any(keyword in content_lower for keyword in keywords):
+                    reactions.append({
+                        "agent_name": agent_name,
+                        "trigger_agent": trigger_agent,
+                        "trigger_content": trigger_content,
+                        "reaction_type": reaction_type,
+                        "reaction_content": content[:100]
+                    })
+                    break
+        
+        elif agent_name == "Sherlock":
+            sherlock_reactions = [
+                (["précisément watson", "tu vises juste", "c'est noté"], "approval"),
+                (["comme prévu", "merci pour cette clarification", "parfait"], "satisfaction"),
+                (["intéressant", "fascinant", "remarquable"], "analysis")
+            ]
+            
+            for keywords, reaction_type in sherlock_reactions:
+                if any(keyword in content_lower for keyword in keywords):
+                    reactions.append({
+                        "agent_name": agent_name,
+                        "trigger_agent": trigger_agent,
+                        "trigger_content": trigger_content,
+                        "reaction_type": reaction_type,
+                        "reaction_content": content[:100]
+                    })
+                    break
+        
+        elif agent_name == "Moriarty":
+            moriarty_reactions = [
+                (["chaud", "très chaud", "vous brûlez"], "encouragement"),
+                (["pas tout à fait", "pas si vite"], "correction"),
+                (["magistral", "vous m'impressionnez", "bien joué"], "excitement"),
+                (["hmm", "attendez"], "suspense")
+            ]
+            
+            for keywords, reaction_type in moriarty_reactions:
+                if any(keyword in content_lower for keyword in keywords):
+                    reactions.append({
+                        "agent_name": agent_name,
+                        "trigger_agent": trigger_agent,
+                        "trigger_content": trigger_content,
+                        "reaction_type": reaction_type,
+                        "reaction_content": content[:100]
+                    })
+                    break
+        
+        return reactions
 
 
 async def run_cluedo_oracle_game(

@@ -12,6 +12,7 @@ from datetime import datetime
 
 from semantic_kernel import Kernel
 from semantic_kernel.functions import kernel_function
+from semantic_kernel.agents.chat_completion.chat_completion_agent import ChatCompletionAgent
 
 from ..abc.agent_bases import BaseAgent
 from .dataset_access_manager import DatasetAccessManager
@@ -210,7 +211,7 @@ class OracleTools:
         return await self.check_agent_permission(query_type, target_agent)
 
 
-class OracleBaseAgent(BaseAgent):
+class OracleBaseAgent(ChatCompletionAgent):
     """
     Agent Oracle de base pour la gestion d'accès aux datasets avec contrôle de permissions.
     
@@ -298,26 +299,27 @@ Vous êtes un gardien impartial mais stratégique des données."""
         if system_prompt_suffix:
             instructions += f"\n\n{system_prompt_suffix}"
         
-        # Initialiser BaseAgent
+        # Initialiser ChatCompletionAgent
         super().__init__(
             kernel=kernel,
-            agent_name=agent_name,
-            system_prompt=instructions
+            name=agent_name,
+            instructions=instructions,
+            **kwargs
         )
         
-        # Initialisation des attributs spécifiques à Oracle
-        self.dataset_manager = dataset_manager
-        self.access_log = []
-        self.revealed_information = set()
-        self.access_level = access_level or "standard"
+        # Initialisation des attributs spécifiques à Oracle (via object.__setattr__ pour contourner Pydantic)
+        object.__setattr__(self, 'dataset_manager', dataset_manager)
+        object.__setattr__(self, 'access_log', [])
+        object.__setattr__(self, 'revealed_information', set())
+        object.__setattr__(self, 'access_level', access_level or "standard")
         
         # Configurer les types de requêtes autorisées
         if allowed_query_types is None:
             allowed_query_types = [QueryType.CARD_INQUIRY, QueryType.GAME_STATE, QueryType.CLUE_REQUEST]
-        self.allowed_query_types = allowed_query_types
+        object.__setattr__(self, 'allowed_query_types', allowed_query_types)
         
         # Outils Oracle
-        self.oracle_tools = OracleTools(dataset_manager, agent_name)
+        object.__setattr__(self, 'oracle_tools', OracleTools(dataset_manager, agent_name))
         
         # Enregistrement des outils Oracle comme plugin dans le kernel
         kernel.add_plugin(self.oracle_tools, plugin_name=f"oracle_tools_{agent_name}")
@@ -457,32 +459,9 @@ Vous êtes un gardien impartial mais stratégique des données."""
         # Réponse basique - peut être améliorée selon les besoins
         return f"Oracle '{self.name}' a reçu votre message. Utilisez les outils Oracle pour des requêtes spécifiques."
     
-    async def invoke(self, function_name: str, **kwargs) -> Any:
-        """Invoque une fonction spécifique de l'agent Oracle."""
-        if hasattr(self.oracle_tools, function_name):
-            tool_method = getattr(self.oracle_tools, function_name)
-            if callable(tool_method):
-                self._logger.info(f"Oracle '{self.name}' invoque {function_name}")
-                # Gestion async/sync
-                if hasattr(tool_method, '__call__'):
-                    try:
-                        result = await tool_method(**kwargs)
-                    except TypeError:
-                        # Si la méthode n'est pas async, l'appeler normalement
-                        result = tool_method(**kwargs)
-                    return result
-        
-        raise AttributeError(f"Oracle '{self.name}' n'a pas de fonction '{function_name}'")
+    # Suppression de invoke personnalisé - utilisation de ChatCompletionAgent.invoke()
     
-    @property
-    def name(self) -> str:
-        """Retourne le nom de l'agent."""
-        return self._agent_name
-    
-    @property
-    def instructions(self) -> Optional[str]:
-        """Retourne les instructions système de l'agent."""
-        return self._system_prompt
+    # Properties héritées de ChatCompletionAgent : name, instructions, etc.
     
     # Méthodes à surcharger par les agents spécialisés
     
