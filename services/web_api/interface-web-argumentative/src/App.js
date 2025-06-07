@@ -62,9 +62,12 @@ function App() {
               onClick={() => setActiveTab(tab.id)}
               disabled={apiStatus !== 'connected'}
               data-testid={
+                tab.id === 'analyzer' ? 'analyzer-tab' :
                 tab.id === 'fallacies' ? 'fallacy-detector-tab' :
                 tab.id === 'reconstructor' ? 'reconstructor-tab' :
-                tab.id === 'logic-graph' ? 'logic-graph-tab' : undefined
+                tab.id === 'logic-graph' ? 'logic-graph-tab' :
+                tab.id === 'validation' ? 'validation-tab' :
+                tab.id === 'framework' ? 'framework-tab' : undefined
               }
             >
               {tab.label}

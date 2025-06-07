@@ -129,7 +129,7 @@ def health_check():
 
 
 @app.route('/api/analyze', methods=['POST'])
-async def analyze_text():
+def analyze_text():
     """
     Analyse complète d'un texte argumentatif.
     
@@ -177,7 +177,7 @@ async def analyze_text():
             ).dict()), 400
         
         # Analyse du texte
-        result = await analysis_service.analyze_text(analysis_request)
+        result = analysis_service.analyze_text(analysis_request)
         
         return jsonify(result.dict())
         
@@ -428,7 +428,7 @@ def list_endpoints():
 
 
 @app.route('/api/logic/belief-set', methods=['POST'])
-async def create_belief_set():
+def create_belief_set():
     """
     Convertit un texte en ensemble de croyances logiques.
     
@@ -462,7 +462,7 @@ async def create_belief_set():
             ).dict()), 400
         
         # Conversion du texte en ensemble de croyances
-        result = await logic_service.text_to_belief_set(belief_set_request)
+        result = logic_service.text_to_belief_set(belief_set_request)
         
         return jsonify(result.dict())
         
@@ -476,7 +476,7 @@ async def create_belief_set():
 
 
 @app.route('/api/logic/query', methods=['POST'])
-async def execute_logic_query():
+def execute_logic_query():
     """
     Exécute une requête logique sur un ensemble de croyances.
     
@@ -510,7 +510,7 @@ async def execute_logic_query():
             ).dict()), 400
         
         # Exécution de la requête
-        result = await logic_service.execute_query(query_request)
+        result = logic_service.execute_query(query_request)
         
         return jsonify(result.dict())
         
@@ -524,7 +524,7 @@ async def execute_logic_query():
 
 
 @app.route('/api/logic/generate-queries', methods=['POST'])
-async def generate_logic_queries():
+def generate_logic_queries():
     """
     Génère des requêtes logiques pertinentes.
     
@@ -558,7 +558,7 @@ async def generate_logic_queries():
             ).dict()), 400
         
         # Génération des requêtes
-        result = await logic_service.generate_queries(generate_request)
+        result = logic_service.generate_queries(generate_request)
         
         return jsonify(result.dict())
         
@@ -572,7 +572,7 @@ async def generate_logic_queries():
 
 
 @app.route('/api/logic/interpret', methods=['POST'])
-async def interpret_logic_results():
+def interpret_logic_results():
     """
     Interprète les résultats de requêtes logiques.
     
@@ -636,7 +636,7 @@ async def interpret_logic_results():
             ).dict()), 400
         
         # Interprétation des résultats
-        result = await logic_service.interpret_results(
+        result = logic_service.interpret_results(
             belief_set_id=belief_set_id,
             logic_type=logic_type,
             text=text,
@@ -669,7 +669,7 @@ def favicon():
 
 if __name__ == '__main__':
     # Configuration pour le développement
-    port = int(os.environ.get('PORT', 5000))
+    port = int(os.environ.get('PORT', 5003))
     debug = os.environ.get('DEBUG', 'True').lower() == 'true'
     
     logger.info(f"Démarrage de l'API sur le port {port}")
