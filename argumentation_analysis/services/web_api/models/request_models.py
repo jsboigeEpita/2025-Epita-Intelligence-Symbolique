@@ -73,6 +73,9 @@ class FallacyOptions(BaseModel):
     include_context: bool = Field(default=True, description="Inclure le contexte")
     max_fallacies: int = Field(default=10, ge=1, le=50, description="Nombre maximum de sophismes à retourner")
     categories: Optional[List[str]] = Field(default=None, description="Catégories de sophismes à rechercher")
+    use_enhanced: bool = Field(default=True, description="Utiliser l'analyseur Enhanced Contextual")
+    use_contextual: bool = Field(default=True, description="Utiliser l'analyseur Contextual")
+    use_patterns: bool = Field(default=True, description="Utiliser la détection par patterns")
 
 
 class FallacyRequest(BaseModel):
