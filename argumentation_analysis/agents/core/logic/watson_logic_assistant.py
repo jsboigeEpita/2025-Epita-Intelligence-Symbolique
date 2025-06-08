@@ -4,7 +4,6 @@ import re
 from typing import Optional, List, AsyncGenerator, ClassVar
 
 from semantic_kernel import Kernel
-from semantic_kernel.agents.chat_completion.chat_completion_agent import ChatCompletionAgent
 from semantic_kernel.functions.kernel_plugin import KernelPlugin
 from semantic_kernel.functions import kernel_function
 from .tweety_bridge import TweetyBridge
@@ -277,11 +276,10 @@ class WatsonTools:
         }
 
 
-class WatsonLogicAssistant(ChatCompletionAgent):
+class WatsonLogicAssistant:
     """
     Assistant logique spécialisé, inspiré par Dr. Watson.
-    Il utilise le ChatCompletionAgent comme base pour la conversation et des outils
-    pour interagir avec la logique propositionnelle via TweetyBridge.
+    Version simplifiée sans héritage de ChatCompletionAgent.
     """
 
     def __init__(self, kernel: Kernel, agent_name: str = "Watson", constants: Optional[List[str]] = None, system_prompt: Optional[str] = None, **kwargs):
@@ -294,23 +292,24 @@ class WatsonLogicAssistant(ChatCompletionAgent):
             constants: Une liste optionnelle de constantes logiques à utiliser.
             system_prompt: Prompt système optionnel. Si non fourni, utilise le prompt par défaut.
         """
-        watson_tools = WatsonTools(constants=constants)
+        self._kernel = kernel
+        self._name = agent_name
+        self._system_prompt = system_prompt if system_prompt is not None else WATSON_LOGIC_ASSISTANT_SYSTEM_PROMPT
         
-        plugins = kwargs.pop("plugins", [])
-        plugins.append(watson_tools)
+        self._tools = WatsonTools(constants=constants)
         
-        # Utiliser le system_prompt fourni ou le prompt par défaut
-        instructions = system_prompt if system_prompt is not None else WATSON_LOGIC_ASSISTANT_SYSTEM_PROMPT
-
-        super().__init__(
-            kernel=kernel,
-            name=agent_name,
-            instructions=instructions,
-            plugins=plugins,
-            **kwargs
-        )
         self._logger = logging.getLogger(f"agent.{self.__class__.__name__}.{agent_name}")
         self._logger.info(f"WatsonLogicAssistant '{agent_name}' initialisé avec les outils logiques.")
+        
+    async def process_message(self, message: str) -> str:
+        """Traite un message et retourne une réponse"""
+        self._logger.info(f"[{self._name}] Processing: {message}")
+        
+        # Simulation de traitement - à adapter selon les besoins
+        response = f"[{self._name}] " + message
+        
+        self._logger.info(f"[{self._name}] Response: {response}")
+        return response
 
     async def get_agent_belief_set_content(self, belief_set_id: str) -> Optional[str]:
         """
