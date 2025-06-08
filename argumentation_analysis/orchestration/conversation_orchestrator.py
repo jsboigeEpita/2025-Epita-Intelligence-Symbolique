@@ -22,7 +22,6 @@ from pathlib import Path
 # Imports Semantic Kernel et architecture
 from argumentation_analysis.core.shared_state import RhetoricalAnalysisState
 from argumentation_analysis.core.llm_service import create_llm_service
-from argumentation_analysis.orchestration.real_llm_orchestrator import RealConversationLogger
 
 logger = logging.getLogger("ConversationOrchestrator")
 

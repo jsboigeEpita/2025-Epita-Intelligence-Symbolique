@@ -16,17 +16,17 @@ from pathlib import Path
 import time
 from datetime import datetime
 
-# Import des composants internes
-from ..analyzers.syntactic_analyzer import SyntacticAnalyzer
-from ..analyzers.semantic_analyzer import SemanticAnalyzer  
-from ..analyzers.pragmatic_analyzer import PragmaticAnalyzer
-from ..analyzers.logical_analyzer import LogicalAnalyzer
-from ..extraction.entity_extractor import EntityExtractor
-from ..extraction.relation_extractor import RelationExtractor
-from ..validation.consistency_validator import ConsistencyValidator
-from ..validation.coherence_validator import CoherenceValidator
-from ..utils.error_handler import ErrorHandler
-from ..pipelines.unified_text_analysis import UnifiedTextAnalyzer
+# Import des composants internes refactoriés
+from ..agents.tools.analysis.rhetorical_result_analyzer import RhetoricalResultAnalyzer
+from ..agents.tools.analysis.enhanced.rhetorical_result_analyzer import EnhancedRhetoricalResultAnalyzer
+from ..agents.tools.analysis.enhanced.complex_fallacy_analyzer import EnhancedComplexFallacyAnalyzer
+from ..agents.tools.analysis.enhanced.contextual_fallacy_analyzer import EnhancedContextualFallacyAnalyzer
+from ..agents.tools.analysis.new.semantic_argument_analyzer import SemanticArgumentAnalyzer
+# Note: Import circulaire évité - UnifiedTextAnalysisPipeline sera instancié localement si nécessaire
+
+# Import et alias pour ConversationLogger
+from .conversation_orchestrator import ConversationLogger
+RealConversationLogger = ConversationLogger
 
 
 @dataclass
@@ -74,17 +74,13 @@ class RealLLMOrchestrator:
         self.active_sessions = {}
         self.analysis_cache = {}
         
-        # Composants d'analyse
-        self.syntactic_analyzer = None
-        self.semantic_analyzer = None
-        self.pragmatic_analyzer = None
-        self.logical_analyzer = None
-        self.entity_extractor = None
-        self.relation_extractor = None
-        self.consistency_validator = None
-        self.coherence_validator = None
-        self.unified_analyzer = None
-        self.error_handler = None
+        # Composants d'analyse refactoriés
+        self.rhetorical_analyzer = None
+        self.enhanced_rhetorical_analyzer = None
+        self.complex_fallacy_analyzer = None
+        self.contextual_fallacy_analyzer = None
+        self.semantic_argument_analyzer = None
+        self.unified_pipeline = None
         
         # Métriques et monitoring
         self.metrics = {
@@ -110,14 +106,11 @@ class RealLLMOrchestrator:
             'enable_metrics': True,
             'log_level': 'INFO',
             'analysis_types': [
-                'syntactic',
-                'semantic', 
-                'pragmatic',
-                'logical',
-                'entity_extraction',
-                'relation_extraction',
-                'consistency_validation',
-                'coherence_validation',
+                'rhetorical_analysis',
+                'enhanced_rhetorical_analysis',
+                'fallacy_detection',
+                'contextual_analysis',
+                'semantic_argument_analysis',
                 'unified_analysis'
             ]
         }
@@ -132,22 +125,15 @@ class RealLLMOrchestrator:
         try:
             self.logger.info("Initialisation des composants d'analyse...")
             
-            # Initialiser les analyseurs
-            self.syntactic_analyzer = SyntacticAnalyzer()
-            self.semantic_analyzer = SemanticAnalyzer()
-            self.pragmatic_analyzer = PragmaticAnalyzer()
-            self.logical_analyzer = LogicalAnalyzer()
+            # Initialiser les analyseurs refactoriés
+            self.rhetorical_analyzer = RhetoricalResultAnalyzer()
+            self.enhanced_rhetorical_analyzer = EnhancedRhetoricalResultAnalyzer()
+            self.complex_fallacy_analyzer = EnhancedComplexFallacyAnalyzer()
+            self.contextual_fallacy_analyzer = EnhancedContextualFallacyAnalyzer()
+            self.semantic_argument_analyzer = SemanticArgumentAnalyzer()
             
-            # Initialiser les extracteurs
-            self.entity_extractor = EntityExtractor()
-            self.relation_extractor = RelationExtractor()
-            
-            # Initialiser les validateurs
-            self.consistency_validator = ConsistencyValidator()
-            self.coherence_validator = CoherenceValidator()
-            
-            # Initialiser l'analyseur unifié
-            self.unified_analyzer = UnifiedTextAnalyzer()
+            # Note: unified_pipeline sera initialisé à la demande pour éviter l'import circulaire
+            self.unified_pipeline = None
             
             # Initialiser le gestionnaire d'erreurs
             self.error_handler = ErrorHandler()
