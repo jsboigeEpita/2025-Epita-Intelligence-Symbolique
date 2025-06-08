@@ -4,6 +4,44 @@
 
 ---
 
+## 🚀 **Démarrage Rapide**
+
+### Lancer l'Application Web
+```bash
+# Démarrage complet (backend + frontend)
+python start_webapp.py
+
+# Backend seul
+python start_webapp.py --backend-only
+
+# Frontend seul
+python start_webapp.py --frontend-only
+
+# Mode configuration personnalisée
+python start_webapp.py --config config/webapp_config.yml --verbose
+```
+
+### Migration depuis PowerShell
+Les anciens scripts PowerShell ont été **modernisés** ! Voir [MIGRATION_WEBAPP.md](MIGRATION_WEBAPP.md) pour migrer depuis l'ancien `start_web_application.ps1`.
+
+**Ancienne méthode** (obsolète) → **Nouvelle méthode** (recommandée) :
+```bash
+# ❌ Obsolète
+.\start_web_application.ps1
+
+# ✅ Moderne
+python start_webapp.py
+```
+
+### Avantages de la Nouvelle Approche
+- ✅ **Configuration YAML** centralisée
+- ✅ **Logs structurés** avec niveaux de verbosité
+- ✅ **Gestion d'erreurs** robuste
+- ✅ **Tests automatisés** intégrés
+- ✅ **Health checks** des services
+
+---
+
 ## 🎓 **Bienvenue Étudiants et Visiteurs !**
 
 Ce projet constitue une démonstration avancée d'intelligence symbolique développée dans le cadre du cours EPITA. Il combine recherche académique rigoureuse et développement technique moderne pour offrir aux étudiants une expérience complète d'exploration des concepts d'IA symbolique et d'analyse argumentative.

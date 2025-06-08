@@ -1,12 +1,11 @@
 import pytest
 from playwright.sync_api import Page, expect, TimeoutError
-from tests.functional.conftest import PlaywrightHelpers
 
 
 class TestFrameworkBuilder:
     """Tests fonctionnels pour l'onglet Framework basés sur la structure réelle"""
 
-    def test_framework_creation_workflow(self, framework_page: Page, test_helpers: PlaywrightHelpers):
+    def test_framework_creation_workflow(self, page: Page):
         """Test du workflow principal de création de framework"""
         page = framework_page
         
