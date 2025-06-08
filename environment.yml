@@ -43,7 +43,9 @@ dependencies:
   - markdown # Ajouté pour corriger ModuleNotFoundError
   - pip:
     - Flask-CORS # Spécifique, souvent via pip
-    - semantic-kernel==1.32.2 # Version spécifique
+    - semantic-kernel==1.32.2 # Version spécifique - Note: agents extra non disponible, utilise fallback
     - markdown
     - playwright
     - pytest-playwright
+    # Note: semantic-kernel[agents] non disponible dans cette version
+    # Fallback implémenté dans project_core/semantic_kernel_agents_fallback.py
