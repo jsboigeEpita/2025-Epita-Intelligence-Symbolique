@@ -1,0 +1,268 @@
+{
+  "metadata": {
+    "timestamp": "2025-06-09T01:46:58.590655",
+    "mode": "exhaustive",
+    "complexity": "complex",
+    "synthetic_enabled": false,
+    "version": "2.0"
+  },
+  "components": {
+    "Scripts EPITA": {
+      "tests": [
+        {
+          "name": "demonstration_epita.py",
+          "status": "SUCCESS",
+          "details": "3/3 modes valides",
+          "timestamp": "2025-06-09T01:47:31.932131",
+          "execution_time": 33.34147572517395,
+          "authenticity_score": 1.0
+        },
+        {
+          "name": "module_custom_data_processor",
+          "status": "FAILED",
+          "details": "Erreur importation: Traceback (most recent call last):\n  File \"<string>\", line 1, in <module>\nModuleNotFoundError: No mo",
+          "timestamp": "2025-06-09T01:47:31.966483",
+          "execution_time": 0.033818960189819336,
+          "authenticity_score": 0.0
+        },
+        {
+          "name": "module_demo_agents_logiques",
+          "status": "FAILED",
+          "details": "Erreur importation: Traceback (most recent call last):\n  File \"<string>\", line 1, in <module>\nModuleNotFoundError: No mo",
+          "timestamp": "2025-06-09T01:47:32.000761",
+          "execution_time": 0.034278154373168945,
+          "authenticity_score": 0.0
+        },
+        {
+          "name": "module_demo_cas_usage",
+          "status": "FAILED",
+          "details": "Erreur importation: Traceback (most recent call last):\n  File \"<string>\", line 1, in <module>\nModuleNotFoundError: No mo",
+          "timestamp": "2025-06-09T01:47:32.039043",
+          "execution_time": 0.03828167915344238,
+          "authenticity_score": 0.0
+        },
+        {
+          "name": "module_demo_integrations",
+          "status": "FAILED",
+          "details": "Erreur importation: Traceback (most recent call last):\n  File \"<string>\", line 1, in <module>\nModuleNotFoundError: No mo",
+          "timestamp": "2025-06-09T01:47:32.070407",
+          "execution_time": 0.03136444091796875,
+          "authenticity_score": 0.0
+        },
+        {
+          "name": "module_demo_outils_utils",
+          "status": "FAILED",
+          "details": "Erreur importation: Traceback (most recent call last):\n  File \"<string>\", line 1, in <module>\nModuleNotFoundError: No mo",
+          "timestamp": "2025-06-09T01:47:32.105213",
+          "execution_time": 0.0348052978515625,
+          "authenticity_score": 0.0
+        },
+        {
+          "name": "module_demo_services_core",
+          "status": "FAILED",
+          "details": "Erreur importation: Traceback (most recent call last):\n  File \"<string>\", line 1, in <module>\nModuleNotFoundError: No mo",
+          "timestamp": "2025-06-09T01:47:32.138895",
+          "execution_time": 0.033683061599731445,
+          "authenticity_score": 0.0
+        },
+        {
+          "name": "module_demo_tests_validation",
+          "status": "FAILED",
+          "details": "Erreur importation: Traceback (most recent call last):\n  File \"<string>\", line 1, in <module>\nModuleNotFoundError: No mo",
+          "timestamp": "2025-06-09T01:47:32.175444",
+          "execution_time": 0.03654837608337402,
+          "authenticity_score": 0.0
+        },
+        {
+          "name": "module_demo_utils",
+          "status": "FAILED",
+          "details": "Erreur importation: Traceback (most recent call last):\n  File \"<string>\", line 1, in <module>\nModuleNotFoundError: No mo",
+          "timestamp": "2025-06-09T01:47:32.213575",
+          "execution_time": 0.0381312370300293,
+          "authenticity_score": 0.0
+        },
+        {
+          "name": "module_test_elimination_mocks_validation",
+          "status": "FAILED",
+          "details": "Erreur importation: Traceback (most recent call last):\n  File \"<string>\", line 1, in <module>\nModuleNotFoundError: No mo",
+          "timestamp": "2025-06-09T01:47:32.255413",
+          "execution_time": 0.04183816909790039,
+          "authenticity_score": 0.0
+        },
+        {
+          "name": "module_test_final_validation_ascii",
+          "status": "FAILED",
+          "details": "Erreur importation: Traceback (most recent call last):\n  File \"<string>\", line 1, in <module>\nModuleNotFoundError: No mo",
+          "timestamp": "2025-06-09T01:47:32.285834",
+          "execution_time": 0.029509305953979492,
+          "authenticity_score": 0.0
+        }
+      ],
+      "score": 25,
+      "status": "PENDING",
+      "total_execution_time": 33.69373440742493,
+      "average_authenticity": 0.09090909090909091
+    },
+    "ServiceManager": {
+      "tests": [
+        {
+          "name": "import_test",
+          "status": "FAILED",
+          "details": "Erreur: C:\\Users\\jsboi\\AppData\\Roaming\\Python\\Python39\\site-packages\\pydantic\\_internal\\_config.py:341: UserWarning: Valid config keys have changed in V2:\n* 'allow_population_by_field_name' has been renamed to 'populate_by_name'\n  warnings.warn(message, UserWarning)\n01:47:34 [INFO] [App.UI.CacheUtils] Utilitaires de cache UI définis.\n01:47:34 [INFO] [App.UI.FetchUtils] Utilitaires de fetch UI définis.\n01:47:34 [INFO] [App.UI.VerificationUtils] Utilitaires de vérification UI définis.\n01:47:34 [INFO] [App.UI.Utils] Module principal des utilitaires UI (utils.py) initialisé et sous-modules importés.\n01:47:34 [INFO] [Services.CacheService] Répertoire de cache initialisé: C:\\dev\\2025-Epita-Intelligence-Symbolique\\_temp\\text_cache\n01:47:34 [INFO] [Services.FetchService] FetchService initialisé avec Tika URL: https://tika.open-webui.myia.io/tika, timeout: 30s\n01:47:34 [WARNING] [Services.CryptoService] Service de chiffrement initialisé sans clé. Le chiffrement est désactivé.\n01:47:34 [INFO] [InformalDefinitions] Classe InformalAnalysisPlugin (V12 avec nouvelles fonctions) définie.\n01:47:34 [INFO] [InformalDefinitions] Instructions Système INFORMAL_AGENT_INSTRUCTIONS (V15 avec nouvelles fonctions) définies.\nTraceback (most recent call last):\n  File \"<string>\", line 1, in <module>\nModuleNotFoundError: No module named 'argumentation_analysis.orchestration.service_manager'\n",
+          "timestamp": "2025-06-09T01:47:34.795181",
+          "execution_time": 2.509347438812256,
+          "authenticity_score": 0.0
+        }
+      ],
+      "score": 0,
+      "status": "PENDING",
+      "total_execution_time": 2.509347438812256,
+      "average_authenticity": 0.0
+    },
+    "Interface Web": {
+      "tests": [
+        {
+          "name": "app.py",
+          "status": "FAILED",
+          "details": "Fichier manquant: C:\\dev\\2025-Epita-Intelligence-Symbolique\\interface_web\\app.py",
+          "timestamp": "2025-06-09T01:47:34.795181",
+          "execution_time": 0.0,
+          "authenticity_score": 0.0
+        },
+        {
+          "name": "index.html",
+          "status": "FAILED",
+          "details": "Fichier manquant: C:\\dev\\2025-Epita-Intelligence-Symbolique\\interface_web\\templates\\index.html",
+          "timestamp": "2025-06-09T01:47:34.795181",
+          "execution_time": 0.0,
+          "authenticity_score": 0.0
+        }
+      ],
+      "score": 0,
+      "status": "PENDING",
+      "total_execution_time": 0.0,
+      "average_authenticity": 0.0
+    },
+    "Tests Playwright": {
+      "tests": [
+        {
+          "name": "test_playwright_setup.py",
+          "status": "SUCCESS",
+          "details": "Syntaxe valide",
+          "timestamp": "2025-06-09T01:47:34.855617",
+          "execution_time": 0.06043577194213867,
+          "authenticity_score": 0.7
+        },
+        {
+          "name": "test_playwright_setup_fixed.py",
+          "status": "SUCCESS",
+          "details": "Syntaxe valide",
+          "timestamp": "2025-06-09T01:47:34.920753",
+          "execution_time": 0.06513619422912598,
+          "authenticity_score": 0.7
+        },
+        {
+          "name": "test_react_webapp_full.py",
+          "status": "SUCCESS",
+          "details": "Syntaxe valide",
+          "timestamp": "2025-06-09T01:47:34.988887",
+          "execution_time": 0.06813430786132812,
+          "authenticity_score": 0.7
+        },
+        {
+          "name": "test_webapp_interface_demo.py",
+          "status": "SUCCESS",
+          "details": "Syntaxe valide",
+          "timestamp": "2025-06-09T01:47:35.053892",
+          "execution_time": 0.06500482559204102,
+          "authenticity_score": 0.7
+        }
+      ],
+      "score": 100,
+      "status": "PENDING",
+      "total_execution_time": 0.2587110996246338,
+      "average_authenticity": 0.7
+    },
+    "Système Unifié": {
+      "tests": [
+        {
+          "name": "service_manager",
+          "status": "FAILED",
+          "details": "Import échoué: C:\\Users\\jsboi\\AppData\\Roaming\\Python\\Python39\\site-packages\\pydantic\\_internal\\_config.py:341: User",
+          "timestamp": "2025-06-09T01:47:37.456338",
+          "execution_time": 2.4024457931518555,
+          "authenticity_score": 0.0
+        },
+        {
+          "name": "first_order_logic_agent",
+          "status": "FAILED",
+          "details": "Import échoué: C:\\Users\\jsboi\\AppData\\Roaming\\Python\\Python39\\site-packages\\pydantic\\_internal\\_config.py:341: User",
+          "timestamp": "2025-06-09T01:47:39.932205",
+          "execution_time": 2.475867509841919,
+          "authenticity_score": 0.0
+        },
+        {
+          "name": "fallacy_detection_agent",
+          "status": "FAILED",
+          "details": "Import échoué: C:\\Users\\jsboi\\AppData\\Roaming\\Python\\Python39\\site-packages\\pydantic\\_internal\\_config.py:341: User",
+          "timestamp": "2025-06-09T01:47:42.395005",
+          "execution_time": 2.462799310684204,
+          "authenticity_score": 0.0
+        }
+      ],
+      "score": 0,
+      "status": "PENDING",
+      "total_execution_time": 7.3411126136779785,
+      "average_authenticity": 0.0
+    },
+    "Intégration Complète": {
+      "tests": [
+        {
+          "name": "integration_test",
+          "status": "FAILED",
+          "details": "Échec: C:\\Users\\jsboi\\AppData\\Roaming\\Python\\Python39\\site-packages\\pydantic\\_internal\\_config.py:341: UserWarning: Valid config keys have changed in V2:\n* 'allow_population_by_field_name' has been renamed t",
+          "timestamp": "2025-06-09T01:47:44.782392",
+          "execution_time": 2.387387275695801,
+          "authenticity_score": 0.0
+        }
+      ],
+      "score": 0,
+      "status": "PENDING",
+      "total_execution_time": 2.387387275695801,
+      "average_authenticity": 0.0
+    }
+  },
+  "score": 125,
+  "max_score": 550,
+  "certification": "VALIDATION_PARTIELLE",
+  "performance_metrics": {
+    "total_execution_time": 46.190292835235596,
+    "total_tests": 22,
+    "avg_time_per_test": 2.0995587652379815,
+    "components_count": 6
+  },
+  "authenticity_scores": {
+    "global_authenticity": 0.1318181818181818,
+    "by_component": {
+      "Scripts EPITA": 0.09090909090909091,
+      "ServiceManager": 0.0,
+      "Interface Web": 0.0,
+      "Tests Playwright": 0.7,
+      "Système Unifié": 0.0,
+      "Intégration Complète": 0.0
+    }
+  },
+  "score_percentage": 22.727272727272727,
+  "enhanced_metrics": {
+    "execution_profile": {
+      "fastest_component": "Interface Web",
+      "slowest_component": "Scripts EPITA",
+      "most_authentic_component": "Tests Playwright"
+    },
+    "quality_indicators": {
+      "test_coverage": 6,
+      "authenticity_variance": 0.06566804407713496,
+      "performance_efficiency": 0.47629055045127616
+    }
+  }
+}
