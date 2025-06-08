@@ -142,7 +142,7 @@ def check_java_environment() -> bool:
         # Mais on a déjà loggué un warning pour JAVA_HOME.
 
     if java_ok:
-        logger.info("✅ L'environnement Java semble correctement configuré (au moins 'java -version' fonctionne).")
+        logger.info("[OK] L'environnement Java semble correctement configuré (au moins 'java -version' fonctionne).")
     else:
         logger.error("❌ Des problèmes ont été détectés avec l'environnement Java.")
 
@@ -161,7 +161,7 @@ def check_java_environment() -> bool:
         # car une configuration "correcte" implique généralement un JAVA_HOME valide.
 
     if final_status:
-        logger.info("✅ L'environnement Java est jugé correctement configuré (java -version OK et JAVA_HOME valide).")
+        logger.info("[OK] L'environnement Java est jugé correctement configuré (java -version OK et JAVA_HOME valide).")
     else:
         logger.error("❌ L'environnement Java n'est pas considéré comme correctement configuré.")
         
@@ -249,7 +249,7 @@ def check_jpype_config() -> bool:
                 jpype_ok = False # Si on ne peut pas arrêter proprement, c'est un souci.
 
     if jpype_ok:
-        logger.info("✅ JPype semble correctement configuré et la JVM est gérable.")
+        logger.info("[OK] JPype semble correctement configuré et la JVM est gérable.")
     else:
         logger.error("❌ Des problèmes ont été détectés avec la configuration de JPype ou la gestion de la JVM.")
 
@@ -382,10 +382,10 @@ def check_python_dependencies(requirements_file_path: typing.Union[str, _PathInt
                 
                 # Si req.specifier est vide (pas de version spécifiée dans le fichier reqs)
                 if not req.specs: # req.specs est une liste de tuples (opérateur, version)
-                    logger.info(f"    ✅ {req_name}: Version {installed_version_str} installée (aucune version spécifique requise).")
+                    logger.info(f"    [OK] {req_name}: Version {installed_version_str} installée (aucune version spécifique requise).")
                 # Utiliser req.specifier qui est un objet SpecifierSet
                 elif req.specifier.contains(installed_version_str, prereleases=True): # Autoriser les pré-releases si spécifiées
-                    logger.info(f"    ✅ {req_name}: Version {installed_version_str} installée satisfait {req.specifier}")
+                    logger.info(f"    [OK] {req_name}: Version {installed_version_str} installée satisfait {req.specifier}")
                 else:
                     logger.warning(f"    ❌ {req_name}: Version {installed_version_str} installée ne satisfait PAS {req.specifier}")
                     overall_all_ok = False
@@ -404,7 +404,7 @@ def check_python_dependencies(requirements_file_path: typing.Union[str, _PathInt
         return False # Retourner False en cas d'erreur majeure
 
     if overall_all_ok:
-        logger.info("✅ Toutes les dépendances Python du fichier sont satisfaites.")
+        logger.info("[OK] Toutes les dépendances Python du fichier sont satisfaites.")
     else:
         logger.warning("⚠️  Certaines dépendances Python du fichier ne sont pas satisfaites ou sont manquantes.")
         

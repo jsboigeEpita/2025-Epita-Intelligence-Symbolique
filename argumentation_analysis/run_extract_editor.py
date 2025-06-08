@@ -20,11 +20,11 @@ def main():
     # Importer le module depuis son nouvel emplacement
     try:
         from argumentation_analysis.ui.extract_editor.extract_marker_editor import main as editor_main
-        print("✅ Module extract_marker_editor importé avec succès.")
+        print("[OK] Module extract_marker_editor importé avec succès.")
         
         # Lancer l'interface
         editor_main()
-        print("\n✅ Interface lancée avec succès.")
+        print("\n[OK] Interface lancée avec succès.")
     except ImportError as e:
         print(f"❌ Erreur lors de l'importation du module extract_marker_editor: {e}")
         print("Vérifiez que le fichier extract_marker_editor.py est présent dans le répertoire ui/extract_editor/.")

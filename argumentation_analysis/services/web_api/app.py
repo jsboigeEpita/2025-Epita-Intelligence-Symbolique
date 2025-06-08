@@ -11,6 +11,8 @@ pour permettre aux étudiants de créer des interfaces web facilement.
 import os
 import sys
 import logging
+import argparse
+from datetime import datetime
 from pathlib import Path
 from flask import Flask, request, jsonify, redirect, url_for
 from flask_cors import CORS
@@ -59,22 +61,56 @@ try:
         LogicBeliefSetResponse, LogicQueryResponse, LogicGenerateQueriesResponse, LogicInterpretationResponse, LogicQueryResult # Ajout de LogicQueryResult depuis HEAD
     )
 except ImportError as e_abs:
-    logger.warning(f"ImportError avec imports absolus ({e_abs}). Tentative d'imports relatifs (style pr-student-1).")
-    # Fallback pour les imports relatifs (style pr-student-1)
-    # Ceci est conservé au cas où l'environnement d'exécution ne trouverait pas `argumentation_analysis` comme top-level package.
-    from .services.analysis_service import AnalysisService
-    from .services.validation_service import ValidationService
-    from .services.fallacy_service import FallacyService
-    from .services.framework_service import FrameworkService
-    from .services.logic_service import LogicService
-    from .models.request_models import (
-        AnalysisRequest, ValidationRequest, FallacyRequest, FrameworkRequest,
-        LogicBeliefSetRequest, LogicQueryRequest, LogicGenerateQueriesRequest, LogicOptions # Ajout de LogicOptions
-    )
-    from .models.response_models import (
-        AnalysisResponse, ValidationResponse, FallacyResponse, FrameworkResponse, ErrorResponse,
-        LogicBeliefSetResponse, LogicQueryResponse, LogicGenerateQueriesResponse, LogicInterpretationResponse, LogicQueryResult # Ajout de LogicQueryResult
-    )
+    logger.warning(f"ImportError avec imports absolus ({e_abs}). Tentative d'imports relatifs.")
+    try:
+        # Fallback pour les imports relatifs (style pr-student-1)
+        from .services.analysis_service import AnalysisService
+        from .services.validation_service import ValidationService
+        from .services.fallacy_service import FallacyService
+        from .services.framework_service import FrameworkService
+        from .services.logic_service import LogicService
+        from .models.request_models import (
+            AnalysisRequest, ValidationRequest, FallacyRequest, FrameworkRequest,
+            LogicBeliefSetRequest, LogicQueryRequest, LogicGenerateQueriesRequest, LogicOptions
+        )
+        from .models.response_models import (
+            AnalysisResponse, ValidationResponse, FallacyResponse, FrameworkResponse, ErrorResponse,
+            LogicBeliefSetResponse, LogicQueryResponse, LogicGenerateQueriesResponse, LogicInterpretationResponse, LogicQueryResult
+        )
+        logger.info("Services complets chargés avec imports relatifs")
+    except ImportError as e_rel:
+        logger.warning(f"ImportError avec imports relatifs ({e_rel}). Utilisation des services de fallback.")
+        # Utilisation des services de fallback
+        from .services.fallback_services import (
+            FallbackAnalysisService as AnalysisService,
+            FallbackValidationService as ValidationService,
+            FallbackFallacyService as FallacyService,
+            FallbackFrameworkService as FrameworkService,
+            FallbackLogicService as LogicService
+        )
+        
+        # Classes de modèles simples pour fallback
+        class SimpleRequest:
+            def __init__(self, **kwargs):
+                for key, value in kwargs.items():
+                    setattr(self, key, value)
+        
+        AnalysisRequest = ValidationRequest = FallacyRequest = FrameworkRequest = SimpleRequest
+        LogicBeliefSetRequest = LogicQueryRequest = LogicGenerateQueriesRequest = SimpleRequest
+        LogicOptions = SimpleRequest
+        
+        class SimpleResponse:
+            def __init__(self, **kwargs):
+                self.data = kwargs
+            def dict(self):
+                return self.data
+        
+        AnalysisResponse = ValidationResponse = FallacyResponse = FrameworkResponse = SimpleResponse
+        LogicBeliefSetResponse = LogicQueryResponse = LogicGenerateQueriesResponse = SimpleResponse
+        LogicInterpretationResponse = LogicQueryResult = SimpleResponse
+        ErrorResponse = SimpleResponse
+        
+        logger.info("Services de fallback chargés")
 
 # Création de l'application Flask
 app = Flask(__name__)
@@ -84,12 +120,47 @@ CORS(app)  # Activer CORS pour les appels depuis React
 app.config['JSON_AS_ASCII'] = False  # Support des caractères UTF-8
 app.config['JSONIFY_PRETTYPRINT_REGULAR'] = True
 
-# Initialisation des services
-analysis_service = AnalysisService()
-validation_service = ValidationService()
-fallacy_service = FallacyService()
-framework_service = FrameworkService()
-logic_service = LogicService()
+# Initialisation lazy des services (à la demande pour éviter de bloquer le démarrage)
+_analysis_service = None
+_validation_service = None
+_fallacy_service = None
+_framework_service = None
+_logic_service = None
+
+def get_analysis_service():
+    global _analysis_service
+    if _analysis_service is None:
+        logger.info("Initialisation du service d'analyse...")
+        _analysis_service = AnalysisService()
+    return _analysis_service
+
+def get_validation_service():
+    global _validation_service
+    if _validation_service is None:
+        logger.info("Initialisation du service de validation...")
+        _validation_service = ValidationService()
+    return _validation_service
+
+def get_fallacy_service():
+    global _fallacy_service
+    if _fallacy_service is None:
+        logger.info("Initialisation du service de détection de sophismes...")
+        _fallacy_service = FallacyService()
+    return _fallacy_service
+
+def get_framework_service():
+    global _framework_service
+    if _framework_service is None:
+        logger.info("Initialisation du service de framework...")
+        _framework_service = FrameworkService()
+    return _framework_service
+
+def get_logic_service():
+    global _logic_service
+    if _logic_service is None:
+        logger.info("Initialisation du service logique...")
+        _logic_service = LogicService()
+    return _logic_service
 
 
 @app.errorhandler(Exception)
@@ -111,21 +182,22 @@ def health_check():
             "status": "healthy",
             "message": "API d'analyse argumentative opérationnelle",
             "version": "1.0.0",
+            "timestamp": datetime.now().isoformat(),
             "services": {
-                "analysis": analysis_service.is_healthy(),
-                "validation": validation_service.is_healthy(),
-                "fallacy": fallacy_service.is_healthy(),
-                "framework": framework_service.is_healthy(),
-                "logic": logic_service.is_healthy()
+                "analysis": bool(_analysis_service),
+                "validation": bool(_validation_service),
+                "fallacy": bool(_fallacy_service),
+                "framework": bool(_framework_service),
+                "logic": bool(_logic_service)
             }
         })
     except Exception as e:
         logger.error(f"Erreur lors du health check: {str(e)}")
-        return jsonify(ErrorResponse(
-            error="Erreur de health check",
-            message=str(e),
-            status_code=500
-        ).dict()), 500
+        return jsonify({
+            "status": "error",
+            "message": f"Erreur de health check: {str(e)}",
+            "timestamp": datetime.now().isoformat()
+        }), 500
 
 
 @app.route('/api/analyze', methods=['POST'])
@@ -177,7 +249,7 @@ def analyze_text():
             ).dict()), 400
         
         # Analyse du texte
-        result = analysis_service.analyze_text(analysis_request)
+        result = get_analysis_service().analyze_text(analysis_request)
         
         return jsonify(result.dict())
         
@@ -222,7 +294,7 @@ def validate_argument():
             ).dict()), 400
         
         # Validation de l'argument
-        result = validation_service.validate_argument(validation_request)
+        result = get_validation_service().validate_argument(validation_request)
         
         return jsonify(result.dict())
         
@@ -269,7 +341,7 @@ def detect_fallacies():
             ).dict()), 400
         
         # Détection des sophismes
-        result = fallacy_service.detect_fallacies(fallacy_request)
+        result = get_fallacy_service().detect_fallacies(fallacy_request)
         
         return jsonify(result.dict())
         
@@ -322,7 +394,7 @@ def build_framework():
             ).dict()), 400
         
         # Construction du framework
-        result = framework_service.build_framework(framework_request)
+        result = get_framework_service().build_framework(framework_request)
         
         return jsonify(result.dict())
         
@@ -462,7 +534,7 @@ def create_belief_set():
             ).dict()), 400
         
         # Conversion du texte en ensemble de croyances
-        result = logic_service.text_to_belief_set(belief_set_request)
+        result = get_logic_service().text_to_belief_set(belief_set_request)
         
         return jsonify(result.dict())
         
@@ -510,7 +582,7 @@ def execute_logic_query():
             ).dict()), 400
         
         # Exécution de la requête
-        result = logic_service.execute_query(query_request)
+        result = get_logic_service().execute_query(query_request)
         
         return jsonify(result.dict())
         
@@ -558,7 +630,7 @@ def generate_logic_queries():
             ).dict()), 400
         
         # Génération des requêtes
-        result = logic_service.generate_queries(generate_request)
+        result = get_logic_service().generate_queries(generate_request)
         
         return jsonify(result.dict())
         
@@ -636,7 +708,7 @@ def interpret_logic_results():
             ).dict()), 400
         
         # Interprétation des résultats
-        result = logic_service.interpret_results(
+        result = get_logic_service().interpret_results(
             belief_set_id=belief_set_id,
             logic_type=logic_type,
             text=text,
@@ -668,15 +740,24 @@ def favicon():
 
 
 if __name__ == '__main__':
-    # Configuration pour le développement
-    port = int(os.environ.get('PORT', 5003))
-    debug = os.environ.get('DEBUG', 'True').lower() == 'true'
+    # Configuration des arguments de ligne de commande
+    parser = argparse.ArgumentParser(description='API Flask pour l\'analyse argumentative')
+    parser.add_argument('--port', type=int,
+                       default=int(os.environ.get('PORT', 5003)),
+                       help='Port d\'écoute du serveur (défaut: 5003)')
+    parser.add_argument('--host', type=str, default='0.0.0.0',
+                       help='Adresse d\'écoute du serveur (défaut: 0.0.0.0)')
+    parser.add_argument('--debug', action='store_true',
+                       default=os.environ.get('DEBUG', 'False').lower() == 'true',
+                       help='Mode debug (défaut: False)')
     
-    logger.info(f"Démarrage de l'API sur le port {port}")
-    logger.info(f"Mode debug: {debug}")
+    args = parser.parse_args()
+    
+    logger.info(f"Démarrage de l'API sur {args.host}:{args.port}")
+    logger.info(f"Mode debug: {args.debug}")
     
     app.run(
-        host='0.0.0.0',
-        port=port,
-        debug=debug
+        host=args.host,
+        port=args.port,
+        debug=args.debug
     )

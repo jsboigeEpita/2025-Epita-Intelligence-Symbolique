@@ -48,7 +48,7 @@ def verify_encrypted_config():
         return False
     
     crypto_service.set_encryption_key(encryption_key)
-    logger.info("✅ Service de chiffrement initialisé avec succès.")
+    logger.info("[OK] Service de chiffrement initialisé avec succès.")
     
     # Définir les chemins des fichiers
     config_file = current_dir / DATA_DIR / "extract_sources.json.gz.enc"
@@ -58,7 +58,7 @@ def verify_encrypted_config():
         logger.error(f"❌ Le fichier '{config_file}' n'existe pas.")
         return False
     
-    logger.info(f"✅ Fichier '{config_file}' trouvé.")
+    logger.info(f"[OK] Fichier '{config_file}' trouvé.")
     
     # Initialiser le service de définition
     definition_service = DefinitionService(
@@ -73,7 +73,7 @@ def verify_encrypted_config():
         logger.error(f"❌ Erreur lors du chargement des définitions: {error_message}")
         return False
     
-    logger.info(f"✅ Définitions chargées avec succès.")
+    logger.info(f"[OK] Définitions chargées avec succès.")
     logger.info(f"   - {len(extract_definitions.sources)} sources trouvées.")
     
     # Afficher les détails des sources
@@ -99,7 +99,7 @@ def verify_encrypted_config():
             logger.error(f"   - {error}")
         return False
     
-    logger.info(f"✅ Les définitions sont valides.")
+    logger.info(f"[OK] Les définitions sont valides.")
     
     return True
 
@@ -110,7 +110,7 @@ def main():
     success = verify_encrypted_config()
     
     if success:
-        print("\n✅ Vérification du fichier de configuration encrypté réussie !")
+        print("\n[OK] Vérification du fichier de configuration encrypté réussie !")
         print("   Le fichier est correctement formaté et contient des définitions d'extraits valides.")
     else:
         print("\n❌ Échec de la vérification du fichier de configuration encrypté.")

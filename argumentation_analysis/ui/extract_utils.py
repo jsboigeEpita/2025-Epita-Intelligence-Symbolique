@@ -343,7 +343,7 @@ def export_definitions_to_json(
         with open(output_path, 'w', encoding='utf-8') as f:
             f.write(json_data)
         
-        return True, f"✅ Définitions exportées avec succès vers {output_path}"
+        return True, f"[OK] Définitions exportées avec succès vers {output_path}"
     except Exception as e:
         logger.error(f"Erreur lors de l'exportation des définitions: {e}")
         return False, f"❌ Erreur lors de l'exportation: {str(e)}"
