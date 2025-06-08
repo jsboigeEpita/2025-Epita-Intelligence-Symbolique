@@ -100,7 +100,7 @@ async def test_phase_d_simple():
         total_count = len(validations)
         
         for criterion, passed in validations.items():
-            status = "✅" if passed else "❌"
+            status = "[OK]" if passed else "[NON]"
             print(f"{status} {criterion.replace('_', ' ').title()}")
             if passed:
                 passed_count += 1
@@ -118,13 +118,13 @@ async def test_phase_d_simple():
         
         # Évaluation finale
         if global_score >= 8.0:
-            final_status = "🎉 TRACE IDÉALE ATTEINTE"
+            final_status = "[TRACE IDEALE ATTEINTE]"
             success = True
         elif global_score >= 7.0:
-            final_status = "⚠️  AMÉLIORATION NÉCESSAIRE"
+            final_status = "[AMELIORATION NECESSAIRE]"
             success = False
         else:
-            final_status = "❌ ÉCHEC TRACE IDÉALE"
+            final_status = "[ECHEC TRACE IDEALE]"
             success = False
         
         print(f"\n{final_status}")

@@ -8,8 +8,9 @@ import time
 import logging
 from pathlib import Path
 
-# Ajouter project_core au path
-sys.path.insert(0, str(Path(__file__).parent / "project_core"))
+# Ajouter project_core au path (depuis la racine du projet)
+project_root = Path(__file__).parent.parent.parent
+sys.path.insert(0, str(project_root / "project_core"))
 
 from service_manager import ServiceManager, ServiceConfig, create_default_configs
 
