@@ -99,7 +99,29 @@ npm install && npm start
 - 🧪 **Tests Playwright** : Validation automatisée de l'interface
 - 📊 **Monitoring** : Métriques de performance et santé des services
 
-📋 **Documentation** : [`services/README.md`](services/README.md)
+#### 🎭 **Démos Playwright Opérationnelles**
+**Interface complète avec tests automatisés et captures d'écran**
+
+Les démos Playwright sont maintenant **100% opérationnelles** avec backend mock intégré :
+
+```bash
+# 🚀 Démo complète automatisée (RECOMMANDÉ)
+python demo_playwright_complet.py
+
+# 🔧 Orchestrateur intégré (backend réel)
+python scripts/run_webapp_integration.py --visible --frontend
+
+# ⚡ Tests Playwright directs
+powershell -File scripts/env/activate_project_env.ps1 -CommandToRun "python -m pytest tests/functional/test_webapp_homepage.py -v --headed"
+```
+
+**Fonctionnalités démontrées** :
+- 🎯 **6 Onglets d'Analyse** : Analyseur, Sophismes, Reconstructeur, Graphe Logique, Validation, Framework
+- 📸 **Captures Automatiques** : Screenshots générés dans `logs/` pour chaque démonstration
+- 🔄 **Tests d'Interaction** : Navigation complète et validation fonctionnelle
+- 🛡️ **Backend Mock** : Démos fonctionnelles même sans backend complet
+
+📋 **Documentation** : [`services/README.md`](services/README.md) | **Démos** : [`README_DEMOS_PLAYWRIGHT.md`](README_DEMOS_PLAYWRIGHT.md)
 
 ### 4. 🕵️ **Système d'Enquête Sherlock-Watson-Moriarty**
 **Pipeline d'analyse Oracle Enhanced avec intégrité garantie**

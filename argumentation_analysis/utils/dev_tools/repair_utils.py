@@ -11,7 +11,8 @@ from typing import Optional, List, Dict, Any, Tuple # Ajout des types nécessair
 # Imports pour les fonctions déplacées
 import semantic_kernel as sk
 from semantic_kernel.contents import ChatMessageContent #, AuthorRole # Temporairement commenté
-# from semantic_kernel.agents import ChatCompletionAgent # Temporairement commenté
+# CORRECTIF COMPATIBILITÉ: Utilisation du module de compatibilité
+from argumentation_analysis.utils.semantic_kernel_compatibility import ChatCompletionAgent
 from semantic_kernel.functions.kernel_arguments import KernelArguments
 
 from argumentation_analysis.models.extract_definition import ExtractDefinitions, SourceDefinition, Extract # Ajustement du chemin
