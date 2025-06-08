@@ -35,9 +35,17 @@ from enum import Enum
 
 # Imports internes
 from .backend_manager import BackendManager
-from .frontend_manager import FrontendManager  
+from .frontend_manager import FrontendManager
 from .playwright_runner import PlaywrightRunner
 from .process_cleaner import ProcessCleaner
+
+# Import du gestionnaire centralisé des ports
+try:
+    from project_core.config.port_manager import get_port_manager, set_environment_variables
+    CENTRAL_PORT_MANAGER_AVAILABLE = True
+except ImportError:
+    CENTRAL_PORT_MANAGER_AVAILABLE = False
+    print("[WARNING] Gestionnaire centralisé des ports non disponible, utilisation des ports par défaut")
 
 class WebAppStatus(Enum):
     """États de l'application web"""
@@ -124,7 +132,30 @@ class UnifiedWebOrchestrator:
             yaml.dump(default_config, f, default_flow_style=False, allow_unicode=True)
     
     def _get_default_config(self) -> Dict[str, Any]:
-        """Configuration par défaut de l'application web"""
+        """Configuration par défaut de l'application web avec gestion centralisée des ports"""
+        
+        # Configuration avec gestionnaire centralisé si disponible
+        if CENTRAL_PORT_MANAGER_AVAILABLE:
+            try:
+                port_manager = get_port_manager()
+                backend_port = port_manager.get_port('backend')
+                frontend_port = port_manager.get_port('frontend')
+                fallback_ports = port_manager.config['ports']['backend'].get('fallback', [5004, 5005, 5006])
+                
+                # Configuration des variables d'environnement
+                set_environment_variables()
+                print(f"[PORTS] Configuration centralisée chargée - Backend: {backend_port}, Frontend: {frontend_port}")
+                
+            except Exception as e:
+                print(f"[PORTS] Erreur gestionnaire centralisé: {e}, utilisation des valeurs par défaut")
+                backend_port = 5003
+                frontend_port = 3000
+                fallback_ports = [5004, 5005, 5006]
+        else:
+            backend_port = 5003
+            frontend_port = 3000
+            fallback_ports = [5004, 5005, 5006]
+        
         return {
             'webapp': {
                 'name': 'Argumentation Analysis Web App',
@@ -134,8 +165,8 @@ class UnifiedWebOrchestrator:
             'backend': {
                 'enabled': True,
                 'module': 'argumentation_analysis.services.web_api.app',
-                'start_port': 5003,
-                'fallback_ports': [5004, 5005, 5006],
+                'start_port': backend_port,
+                'fallback_ports': fallback_ports,
                 'max_attempts': 5,
                 'timeout_seconds': 30,
                 'health_endpoint': '/api/health',
@@ -144,7 +175,7 @@ class UnifiedWebOrchestrator:
             'frontend': {
                 'enabled': False,  # Optionnel selon besoins
                 'path': 'services/web_api/interface-web-argumentative',
-                'port': 3000,
+                'port': frontend_port,
                 'start_command': 'npm start',
                 'timeout_seconds': 90
             },
