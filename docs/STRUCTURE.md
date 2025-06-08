@@ -119,4 +119,4 @@ La structure de la documentation est conçue pour évoluer avec le projet. Les p
 3. **Évolutivité** : Permettre l'ajout de nouveaux contenus sans perturber la structure existante
 4. **Minimalisme** : Éviter la duplication et la fragmentation excessive
 
-Pour proposer des modifications à cette structure, veuillez consulter le [guide de contribution](CONTRIBUTING.md).
+Pour proposer des modifications à cette structure, veuillez consulter le [guide de contribution](docs/CONTRIBUTING.md).
