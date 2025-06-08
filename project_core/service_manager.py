@@ -404,6 +404,53 @@ class ServiceManager:
     def list_all_services(self) -> List[Dict]:
         """Liste le statut de tous les services enregistrés"""
         return [self.get_service_status(name) for name in self.services.keys()]
+    
+    def start_backend(self, port: int = 5000) -> bool:
+        """Démarre le service backend (méthode simplifiée pour compatibilité)"""
+        backend_config = ServiceConfig(
+            name="backend-default",
+            command=["python", "-c", "from flask import Flask; app = Flask(__name__); @app.route('/health'); def health(): return {'status': 'ok'}; app.run(host='0.0.0.0', port=" + str(port) + ", debug=True)"],
+            working_dir=".",
+            port=port,
+            health_check_url=f"http://localhost:{port}/health",
+            startup_timeout=30,
+            max_port_attempts=5
+        )
+        
+        self.register_service(backend_config)
+        success, actual_port = self.start_service_with_failover("backend-default")
+        return success
+    
+    def start_frontend(self, port: int = 3000) -> bool:
+        """Démarre le service frontend (méthode simplifiée pour compatibilité)"""
+        frontend_config = ServiceConfig(
+            name="frontend-default",
+            command=["python", "-m", "http.server", str(port)],
+            working_dir=".",
+            port=port,
+            health_check_url=f"http://localhost:{port}",
+            startup_timeout=30,
+            max_port_attempts=5
+        )
+        
+        self.register_service(frontend_config)
+        success, actual_port = self.start_service_with_failover("frontend-default")
+        return success
+    
+    def cleanup_processes(self) -> int:
+        """Nettoie tous les processus managés (méthode simplifiée pour compatibilité)"""
+        initial_count = len(self.running_services)
+        self.stop_all_services()
+        return initial_count
+    
+    def get_port_info(self, port: int) -> Dict:
+        """Obtient les informations sur un port (méthode simplifiée pour compatibilité)"""
+        is_available = self.port_manager.is_port_available(port)
+        return {
+            "port": port,
+            "available": is_available,
+            "in_use": not is_available
+        }
 
 
 def create_default_configs() -> List[ServiceConfig]:
