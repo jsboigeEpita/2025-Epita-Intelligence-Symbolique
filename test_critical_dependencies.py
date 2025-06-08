@@ -11,25 +11,25 @@ def test_semantic_kernel_version():
     """Test de la version de semantic-kernel"""
     try:
         import semantic_kernel
-        print(f"✓ semantic-kernel version: {semantic_kernel.__version__}")
+        print(f"[OK] semantic-kernel version: {getattr(semantic_kernel, '__version__', 'version non disponible')}")
         return True
     except Exception as e:
-        print(f"✗ Erreur import semantic-kernel: {e}")
+        print(f"[ERREUR] Erreur import semantic-kernel: {e}")
         return False
 
 def test_author_role_import():
     """Test de l'import AuthorRole"""
     try:
         from semantic_kernel.agents import AuthorRole
-        print("✓ AuthorRole import réussi")
-        print(f"✓ AuthorRole disponible: {AuthorRole}")
+        print("[OK] AuthorRole import reussi")
+        print(f"[OK] AuthorRole disponible: {AuthorRole}")
         return True
     except ImportError as e:
-        print(f"✗ Erreur import AuthorRole: {e}")
+        print(f"[ERREUR] Erreur import AuthorRole: {e}")
         print("Tentative de fallback...")
         return test_author_role_fallback()
     except Exception as e:
-        print(f"✗ Erreur inattendue AuthorRole: {e}")
+        print(f"[ERREUR] Erreur inattendue AuthorRole: {e}")
         return False
 
 def test_author_role_fallback():
@@ -43,20 +43,20 @@ def test_author_role_fallback():
             ASSISTANT = "assistant"
             SYSTEM = "system"
         
-        print("✓ Fallback AuthorRole créé avec succès")
+        print("[OK] Fallback AuthorRole cree avec succes")
         return True
     except Exception as e:
-        print(f"✗ Échec du fallback AuthorRole: {e}")
+        print(f"[ERREUR] Echec du fallback AuthorRole: {e}")
         return False
 
 def test_pytest_asyncio():
     """Test de pytest-asyncio"""
     try:
         import pytest_asyncio
-        print(f"✓ pytest-asyncio disponible")
+        print(f"[OK] pytest-asyncio disponible")
         return True
     except Exception as e:
-        print(f"✗ Erreur pytest-asyncio: {e}")
+        print(f"[ERREUR] Erreur pytest-asyncio: {e}")
         return False
 
 def test_critical_imports():
@@ -73,10 +73,10 @@ def test_critical_imports():
     for module in critical_modules:
         try:
             __import__(module)
-            print(f"✓ {module} disponible")
+            print(f"[OK] {module} disponible")
             results[module] = True
         except Exception as e:
-            print(f"✗ {module} indisponible: {e}")
+            print(f"[ERREUR] {module} indisponible: {e}")
             results[module] = False
     
     return all(results.values())
@@ -94,7 +94,7 @@ def main():
     
     print("\n=== Résumé des tests ===")
     for test_name, success in results.items():
-        status = "✓ PASS" if success else "✗ FAIL"
+        status = "[OK] PASS" if success else "[ERREUR] FAIL"
         print(f"{test_name}: {status}")
     
     success_rate = sum(results.values()) / len(results) * 100
