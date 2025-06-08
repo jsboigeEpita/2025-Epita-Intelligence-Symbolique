@@ -20,9 +20,9 @@ if str(PROJECT_ROOT) not in sys.path:
 
 def print_banner():
     """Affiche la bannière du gestionnaire."""
-    print("🌍 ================================================================")
-    print("🌍 GESTIONNAIRE ENVIRONNEMENT DÉDIÉ - Oracle Enhanced v2.1.0")
-    print("🌍 ================================================================")
+    print("[MONDE] ================================================================")
+    print("[MONDE] GESTIONNAIRE ENVIRONNEMENT DÉDIÉ - Oracle Enhanced v2.1.0")
+    print("[MONDE] ================================================================")
 
 def cmd_status():
     """Affiche le statut de l'environnement."""
@@ -33,11 +33,11 @@ def cmd_status():
         status = get_environment_status()
         
         print(f"\n📍 STATUT ENVIRONNEMENT")
-        print(f"   Environnement projet: {'✅ OUI' if status['is_project_env'] else '❌ NON'}")
+        print(f"   Environnement projet: {'[OK] OUI' if status['is_project_env'] else '[X] NON'}")
         print(f"   Message: {status['status_message']}")
         print(f"   Python: {status['python_version']}")
         print(f"   Exécutable: {status['python_executable']}")
-        print(f"   PYTHONPATH: {'✅ Configuré' if status['pythonpath_configured'] else '❌ Non configuré'}")
+        print(f"   PYTHONPATH: {'[OK] Configuré' if status['pythonpath_configured'] else '[X] Non configuré'}")
         
         if status['conda_env']:
             print(f"   Conda: {status['conda_env']}")
@@ -47,21 +47,21 @@ def cmd_status():
         return 0 if status['is_project_env'] else 1
         
     except ImportError:
-        print("\n❌ Helpers d'environnement non disponibles")
-        print("💡 Utilisez: .\\setup_project_env.ps1 -CommandToRun \"python scripts/env/manage_environment.py status\"")
+        print("\n[X] Helpers d'environnement non disponibles")
+        print("[AMPOULE] Utilisez: .\\setup_project_env.ps1 -CommandToRun \"python scripts/env/manage_environment.py status\"")
         return 1
 
 def cmd_check():
     """Vérification rapide de l'environnement."""
     print_banner()
-    print("\n🔍 VÉRIFICATION RAPIDE...")
+    print("\n[LOUPE] VÉRIFICATION RAPIDE...")
     
     try:
         result = subprocess.run([sys.executable, str(PROJECT_ROOT / "scripts/env/check_environment.py")], 
                               capture_output=False)
         return result.returncode
     except Exception as e:
-        print(f"❌ Erreur lors de la vérification: {e}")
+        print(f"[X] Erreur lors de la vérification: {e}")
         return 1
 
 def cmd_diagnose():
@@ -74,17 +74,17 @@ def cmd_diagnose():
                               capture_output=False)
         return result.returncode
     except Exception as e:
-        print(f"❌ Erreur lors du diagnostic: {e}")
+        print(f"[X] Erreur lors du diagnostic: {e}")
         return 1
 
 def cmd_setup():
     """Configuration initiale de l'environnement."""
     print_banner()
-    print("\n🚀 CONFIGURATION INITIALE...")
+    print("\n[FUSEE] CONFIGURATION INITIALE...")
     
     env_yml = PROJECT_ROOT / "environment.yml"
     if not env_yml.exists():
-        print("❌ Fichier environment.yml non trouvé!")
+        print("[X] Fichier environment.yml non trouvé!")
         return 1
     
     print("1. Création de l'environnement conda...")
@@ -92,11 +92,11 @@ def cmd_setup():
         result = subprocess.run(["conda", "env", "create", "-f", str(env_yml)], 
                               capture_output=False)
         if result.returncode != 0:
-            print("❌ Échec de la création de l'environnement conda")
+            print("[X] Échec de la création de l'environnement conda")
             return 1
     except FileNotFoundError:
-        print("❌ Conda non disponible!")
-        print("💡 Installez Anaconda/Miniconda d'abord")
+        print("[X] Conda non disponible!")
+        print("[AMPOULE] Installez Anaconda/Miniconda d'abord")
         return 1
     
     print("2. Vérification de l'installation...")
@@ -104,38 +104,38 @@ def cmd_setup():
         result = subprocess.run(["conda", "activate", "projet-is", "&&", "python", "--version"], 
                               shell=True, capture_output=False)
     except Exception as e:
-        print(f"⚠️  Vérification manuelle requise: {e}")
+        print(f"[ATTENTION]  Vérification manuelle requise: {e}")
     
-    print("\n✅ Configuration terminée!")
-    print("💡 Testez avec: conda activate projet-is")
+    print("\n[OK] Configuration terminée!")
+    print("[AMPOULE] Testez avec: conda activate projet-is")
     return 0
 
 def cmd_fix():
     """Tentative de réparation automatique."""
     print_banner()
-    print("\n🔧 RÉPARATION AUTOMATIQUE...")
+    print("\n[CLE] RÉPARATION AUTOMATIQUE...")
     
     # 1. Vérifier si l'environnement existe
     try:
         result = subprocess.run(["conda", "env", "list"], capture_output=True, text=True)
         if "projet-is" not in result.stdout:
-            print("⚠️  Environnement 'projet-is' absent, création...")
+            print("[ATTENTION]  Environnement 'projet-is' absent, création...")
             return cmd_setup()
     except FileNotFoundError:
-        print("❌ Conda non disponible, impossible de réparer")
+        print("[X] Conda non disponible, impossible de réparer")
         return 1
     
     # 2. Réinstaller les dépendances
-    print("🔄 Mise à jour des dépendances...")
+    print("[ROTATION] Mise à jour des dépendances...")
     try:
         result = subprocess.run(["conda", "env", "update", "-f", str(PROJECT_ROOT / "environment.yml")], 
                               capture_output=False)
         if result.returncode == 0:
-            print("✅ Dépendances mises à jour")
+            print("[OK] Dépendances mises à jour")
         else:
-            print("⚠️  Mise à jour partielle")
+            print("[ATTENTION]  Mise à jour partielle")
     except Exception as e:
-        print(f"❌ Erreur mise à jour: {e}")
+        print(f"[X] Erreur mise à jour: {e}")
         return 1
     
     return 0
@@ -143,14 +143,14 @@ def cmd_fix():
 def cmd_update_scripts():
     """Met à jour les scripts pour utiliser l'environnement dédié."""
     print_banner()
-    print("\n🔧 MISE À JOUR DES SCRIPTS...")
+    print("\n[CLE] MISE À JOUR DES SCRIPTS...")
     
     try:
         result = subprocess.run([sys.executable, str(PROJECT_ROOT / "scripts/env/update_demo_scripts.py")], 
                               capture_output=False)
         return result.returncode
     except Exception as e:
-        print(f"❌ Erreur mise à jour scripts: {e}")
+        print(f"[X] Erreur mise à jour scripts: {e}")
         return 1
 
 def cmd_help():
@@ -159,22 +159,22 @@ def cmd_help():
     print("""
 🆘 COMMANDES DISPONIBLES:
 
-📊 DIAGNOSTIC:
+[GRAPHIQUE] DIAGNOSTIC:
    status     - Affiche le statut actuel de l'environnement
    check      - Vérification rapide (recommandé pour débuter)
    diagnose   - Diagnostic complet avec détails
 
-🔧 CONFIGURATION:
+[CLE] CONFIGURATION:
    setup      - Configuration initiale (première fois)
    fix        - Tentative de réparation automatique
    update     - Met à jour les scripts de démonstration
 
-💡 UTILISATION RECOMMANDÉE:
+[AMPOULE] UTILISATION RECOMMANDÉE:
    1. python scripts/env/manage_environment.py check
    2. Si problème: python scripts/env/manage_environment.py setup
    3. Pour diagnostic: python scripts/env/manage_environment.py diagnose
 
-⚠️  IMPORTANT: Pour un environnement optimal, utilisez:
+[ATTENTION]  IMPORTANT: Pour un environnement optimal, utilisez:
    .\\setup_project_env.ps1 -CommandToRun "python scripts/env/manage_environment.py <commande>"
 """)
     return 0
@@ -202,10 +202,10 @@ def main():
     try:
         return commands[args.command]()
     except KeyboardInterrupt:
-        print("\n\n⚠️  Opération interrompue par l'utilisateur")
+        print("\n\n[ATTENTION]  Opération interrompue par l'utilisateur")
         return 1
     except Exception as e:
-        print(f"\n❌ Erreur inattendue: {e}")
+        print(f"\n[X] Erreur inattendue: {e}")
         return 1
 
 if __name__ == "__main__":
