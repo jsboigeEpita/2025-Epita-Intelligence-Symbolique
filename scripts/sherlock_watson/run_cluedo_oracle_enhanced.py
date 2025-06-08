@@ -90,35 +90,33 @@ class EnhancedOracleOrchestrator:
         
         # 2. Création de l'état Oracle
         self.oracle_state = self.CluedoOracleState(
-            nom_enquete="Cluedo Oracle Enhanced - Test Authentique",
-            elements_jeu=elements,
-            cluedo_dataset=cluedo_dataset
+            nom_enquete_cluedo="Cluedo Oracle Enhanced - Test Authentique",
+            elements_jeu_cluedo=elements,
+            description_cas="Enquête Cluedo avec Oracle Moriarty - Test de validation post-Git",
+            initial_context={"type": "validation_test", "version": "v2.1.0", "dataset": "cluedo_enhanced"},
+            oracle_strategy=self.oracle_strategy
         )
         
         # 3. Création des agents avec rôles clarifiés
         # Sherlock - Enquêteur principal
         self.agents['sherlock'] = self.SherlockEnqueteAgent(
             kernel=self.kernel,
-            enquete_state=self.oracle_state,
             agent_name="Sherlock",
-            custom_instructions="Tu es Sherlock Holmes. Tu SUGGÈRES des solutions (suspect, arme, lieu) pour que Moriarty puisse les valider avec ses cartes. Sois direct et propose des combinaisons précises."
+            system_prompt="Tu es Sherlock Holmes. Tu SUGGÈRES des solutions (suspect, arme, lieu) pour que Moriarty puisse les valider avec ses cartes. Sois direct et propose des combinaisons précises."
         )
         
-        # Watson - Assistant logique 
+        # Watson - Assistant logique
         self.agents['watson'] = self.WatsonLogicAssistant(
             kernel=self.kernel,
-            enquete_state=self.oracle_state,
             agent_name="Watson",
-            custom_instructions="Tu es Watson. Tu aides Sherlock en analysant les révélations de Moriarty et en suggérant des stratégies. Tu peux aussi faire des suggestions pour tester l'Oracle."
+            system_prompt="Tu es Watson. Tu aides Sherlock en analysant les révélations de Moriarty et en suggérant des stratégies. Tu peux aussi faire des suggestions pour tester l'Oracle."
         )
         
         # Moriarty - Oracle pur (PAS de conversation normale)
         self.agents['moriarty'] = self.MoriartyInterrogatorAgent(
             kernel=self.kernel,
-            cluedo_dataset=cluedo_dataset,
-            game_strategy=self.oracle_strategy,
             agent_name="Moriarty",
-            custom_instructions="Tu es MORIARTY - ORACLE PUR. Tu ne fais PAS de conversation normale. Ton rôle : RÉVÉLER tes cartes quand on te fait une suggestion. Si tu possèdes une carte suggérée, tu DOIS la révéler. Sois théâtral mais PRÉCIS dans tes révélations."
+            cluedo_dataset=cluedo_dataset
         )
         
         logger.info(f"✅ Oracle State configuré - Solution: {self.oracle_state.get_solution_secrete()}")

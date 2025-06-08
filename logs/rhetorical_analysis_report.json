@@ -1,8 +1,9 @@
 {
     "metadata": {
-        "source_file": "C:\\Users\\MYIA\\AppData\\Local\\Temp\\tmptktqa4rv.txt",
-        "timestamp": "2025-06-06T18:22:27.646376",
-        "demo_version": "1.2.0"
+        "source_file": "C:\\Users\\MYIA\\AppData\\Local\\Temp\\tmp0dhpqvk_.txt",
+        "timestamp": "2025-06-08T15:50:11.353717",
+        "demo_version": "1.3.0",
+        "analysis_type": "logic"
     },
     "informal_analysis": {
         "summary": {
@@ -56,36 +57,41 @@
         }
     },
     "formal_analysis": {
-        "logic_type_used": "first_order",
+        "logic_type_used": "propositional",
         "status": "Success",
         "belief_set_summary": {
             "status": "Succès",
             "is_consistent": true,
-            "details": "Ensemble de croyances FOL valide",
-            "formulas_validated": 3,
-            "formulas_total": 3
+            "details": "Consistency check returned: True",
+            "formulas_validated": 0,
+            "formulas_total": 0
         },
         "query_generation_summary": {
             "status": "Succès",
-            "queries_validated": 3,
-            "queries_total": 3
+            "queries_validated": 4,
+            "queries_total": 4
         },
-        "belief_set_content": "topic = { rechauffement_climatique, mythe, catastrophe_planetaire, faits, sophismes }\nperson = { scientifiques }\nmeasure = { mesures_drastriques }\nargument = { arguments }\ntype(IsComplex(topic))\ntype(IsMyth(topic))\ntype(NeedsMeasures(topic, measure))\ntype(IsFinanciallyMotivated(person))\ntype(DoubtsConclusions(person))\ntype(AnalyzesFacts(argument))\ntype(DeconstructsSophisms(argument))\n\n\nIsComplex(rechauffement_climatique)\nIsMyth(mythe)\nNeedsMeasures(rechauffement_climatique, mesures_drastriques)",
+        "belief_set_content": "```\ncomplex_issue\nmyth_claim => winter_cold_proof\ndrastic_measures_needed => avoid_planetary_catastrophe\nscientists_financially_motivated => doubt_conclusions\nfacts_analyzed_with_rigor => dismantle_fallacies\n```",
         "queries": [
             {
-                "query": "IsComplex(rechauffement_climatique)",
-                "result": "Entailed",
-                "raw_output": "Tweety Result: FOL Query 'IsComplex(rechauffement_climatique)' is ACCEPTED (True)."
+                "query": "```",
+                "result": "Not Entailed",
+                "raw_output": "Tweety Result: Query '```' is REJECTED (False)."
             },
             {
-                "query": "IsMyth(mythe)",
-                "result": "Entailed",
-                "raw_output": "Tweety Result: FOL Query 'IsMyth(mythe)' is ACCEPTED (True)."
+                "query": "complex_issue => !myth_claim",
+                "result": "Not Entailed",
+                "raw_output": "Tweety Result: Query 'complex_issue => !myth_claim' is REJECTED (False)."
             },
             {
-                "query": "NeedsMeasures(rechauffement_climatique, mesures_drastriques)",
-                "result": "Entailed",
-                "raw_output": "Tweety Result: FOL Query 'NeedsMeasures(rechauffement_climatique, mesures_drastriques)' is ACCEPTED (True)."
+                "query": "drastic_measures_needed => facts_analyzed_with_rigor",
+                "result": "Not Entailed",
+                "raw_output": "Tweety Result: Query 'drastic_measures_needed => facts_analyzed_with_rigor' is REJECTED (False)."
+            },
+            {
+                "query": "```",
+                "result": "Not Entailed",
+                "raw_output": "Tweety Result: Query '```' is REJECTED (False)."
             }
         ]
     }
