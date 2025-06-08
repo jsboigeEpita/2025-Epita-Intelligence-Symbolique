@@ -1,0 +1,88 @@
+{
+  "test_timestamp": "2025-06-08T17:15:26.198541",
+  "test_type": "Phase C - Fluidite Transitions",
+  "fluidity_metrics": {
+    "total_messages": 3,
+    "contextual_references": 2,
+    "emotional_reactions": 2,
+    "contextual_reference_rate": 66.7,
+    "emotional_reaction_rate": 66.7,
+    "fluidity_score": 6.7,
+    "narrative_continuity": "Continuité modérée",
+    "phase_c_target": {
+      "reference_target": 90.0,
+      "reaction_target": 70.0,
+      "score_target": 6.5
+    }
+  },
+  "contextual_references": [
+    {
+      "timestamp": "2025-06-08T17:15:26.193535",
+      "source_agent": "Watson",
+      "source_turn": 3,
+      "target_turn": 1,
+      "reference_type": "building_on",
+      "reference_content": "suite a votre observation"
+    },
+    {
+      "timestamp": "2025-06-08T17:15:26.193535",
+      "source_agent": "Moriarty",
+      "source_turn": 3,
+      "target_turn": 2,
+      "reference_type": "reacting_to",
+      "reference_content": "en reaction a vos deductions"
+    }
+  ],
+  "emotional_reactions": [
+    {
+      "timestamp": "2025-06-08T17:15:26.193535",
+      "turn_number": 3,
+      "reacting_agent": "Watson",
+      "trigger_agent": "Sherlock",
+      "trigger_content": "observation salon",
+      "reaction_type": "approval",
+      "reaction_content": "Brillant !"
+    },
+    {
+      "timestamp": "2025-06-08T17:15:26.193535",
+      "turn_number": 3,
+      "reacting_agent": "Moriarty",
+      "trigger_agent": "Watson",
+      "trigger_content": "analyse logique",
+      "reaction_type": "encouragement",
+      "reaction_content": "Vous brulez !"
+    }
+  ],
+  "conversation_history": [
+    {
+      "timestamp": "2025-06-08T17:15:26.193535",
+      "turn_number": 1,
+      "agent_name": "Sherlock",
+      "content": "Je commence mon enquete. J'observe des indices dans le salon.",
+      "message_type": "analysis",
+      "content_preview": "Je commence mon enquete. J'observe des indices dans le salon."
+    },
+    {
+      "timestamp": "2025-06-08T17:15:26.193535",
+      "turn_number": 2,
+      "agent_name": "Watson",
+      "content": "Suite a votre observation Sherlock, l'analyse logique suggere que le salon est crucial. Brillant !",
+      "message_type": "reaction",
+      "content_preview": "Suite a votre observation Sherlock, l'analyse logique suggere que le salon est crucial. Brillant !"
+    },
+    {
+      "timestamp": "2025-06-08T17:15:26.193535",
+      "turn_number": 3,
+      "agent_name": "Moriarty",
+      "content": "En reaction a vos deductions, je revele que j'ai le Chandelier. Vous brulez !",
+      "message_type": "revelation",
+      "content_preview": "En reaction a vos deductions, je revele que j'ai le Chandelier. Vous brulez !"
+    }
+  ],
+  "phase_c_evaluation": {
+    "references_success": false,
+    "reactions_success": false,
+    "score_success": true,
+    "overall_success": false
+  }
+}
