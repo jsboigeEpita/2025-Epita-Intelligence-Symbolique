@@ -1,0 +1,37 @@
+{
+  "timestamp": "2025-06-08T20:01:28.523463",
+  "phase": "A - Optimisation Personnalités Distinctes",
+  "objectif_cible": "Personnalités distinctes: 3.0 → 6.0/10",
+  "resultats_globaux": {
+    "personnalites_distinctes_score": 7.5,
+    "objectif_atteint": true,
+    "amelioration_estimee": "+4.5 points"
+  },
+  "resultats_watson": {
+    "proactivite_score": 8.67,
+    "ratio_questions_passives": 0.0,
+    "objectif_passivite": "< 20%",
+    "objectif_atteint": true,
+    "distinctivite_score": 9.2
+  },
+  "resultats_moriarty": {
+    "theatralite_score": 4.5,
+    "ratio_reponses_mecaniques": 0.0,
+    "objectif_mecanique": "< 30%",
+    "objectif_atteint": true,
+    "distinctivite_score": 5.51
+  },
+  "resultats_sherlock": {
+    "leadership_score": 7.8,
+    "ratio_assertions_confiantes": 0.0,
+    "objectif_leadership": ">= 6.0/10",
+    "objectif_atteint": true,
+    "distinctivite_score": 7.8
+  },
+  "validation_phase_a": {
+    "criteres_valides": 4,
+    "criteres_totaux": 4,
+    "phase_a_reussie": true,
+    "prochaine_etape": "Phase B - Naturalité du dialogue"
+  }
+}
