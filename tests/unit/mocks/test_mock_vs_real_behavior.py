@@ -210,7 +210,7 @@ class BehaviorComparator:
         
         return kernel
     
-    def _create_real_kernel(self) -> Kernel:
+    def _create_real_kernel(self):
         """Crée un kernel réel GPT-4o-mini Oracle Enhanced v2.1.0."""
         kernel = Kernel()
         
