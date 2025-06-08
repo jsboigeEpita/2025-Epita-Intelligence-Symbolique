@@ -34,10 +34,10 @@ from dataclasses import dataclass, asdict
 from enum import Enum
 
 # Imports internes
-from .backend_manager import BackendManager
-from .frontend_manager import FrontendManager
-from .playwright_runner import PlaywrightRunner
-from .process_cleaner import ProcessCleaner
+from scripts.webapp.backend_manager import BackendManager
+from scripts.webapp.frontend_manager import FrontendManager
+from scripts.webapp.playwright_runner import PlaywrightRunner
+from scripts.webapp.process_cleaner import ProcessCleaner
 
 # Import du gestionnaire centralisé des ports
 try:

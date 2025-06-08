@@ -63,21 +63,29 @@ class AnalysisService:
     def _initialize_components(self):
         """Initialise les composants d'analyse."""
         try:
+            self.logger.info("=== DIAGNOSTIC ANALYSIS SERVICE ===")
+            
             # Initialisation des analyseurs
             if ComplexFallacyAnalyzer:
                 self.complex_analyzer = ComplexFallacyAnalyzer()
+                self.logger.info("✅ ComplexFallacyAnalyzer initialized")
             else:
                 self.complex_analyzer = None
+                self.logger.warning("❌ ComplexFallacyAnalyzer not available")
                 
             if ContextualFallacyAnalyzer:
                 self.contextual_analyzer = ContextualFallacyAnalyzer()
+                self.logger.info("✅ ContextualFallacyAnalyzer initialized")
             else:
                 self.contextual_analyzer = None
+                self.logger.warning("❌ ContextualFallacyAnalyzer not available")
                 
             if FallacySeverityEvaluator:
                 self.severity_evaluator = FallacySeverityEvaluator()
+                self.logger.info("✅ FallacySeverityEvaluator initialized")
             else:
                 self.severity_evaluator = None
+                self.logger.warning("❌ FallacySeverityEvaluator not available")
             
             # Configuration des outils pour l'agent informel
             self.tools = {}
@@ -90,6 +98,18 @@ class AnalysisService:
             
             # Initialisation de l'agent informel
             if InformalAgent:
+                self.logger.info("📝 Attempting to initialize InformalAgent...")
+                
+                # Vérifier les variables d'environnement OpenAI
+                openai_key = os.environ.get('OPENAI_API_KEY')
+                openai_org = os.environ.get('OPENAI_ORG_ID')
+                env_file_path = os.path.join(root_dir, '.env')
+                
+                self.logger.info(f"OpenAI API Key: {'SET' if openai_key else 'NOT_SET'}")
+                self.logger.info(f"OpenAI Org ID: {'SET' if openai_org else 'NOT_SET'}")
+                self.logger.info(f".env file path: {env_file_path}")
+                self.logger.info(f".env file exists: {os.path.exists(env_file_path)}")
+                
                 # Création d'un kernel SK de base pour l'agent
                 kernel = sk.Kernel()
                 
@@ -100,17 +120,20 @@ class AnalysisService:
                     kernel.add_service(
                         OpenAIChatCompletion(
                             service_id=service_id,
-                            env_file_path=os.path.join(root_dir, '.env') # Assurez-vous que le .env est au bon endroit
+                            env_file_path=env_file_path
                         )
                     )
                     self.informal_agent = InformalAgent(kernel=kernel)
                     # La configuration des composants (plugins) se fait via setup_agent_components
                     self.informal_agent.setup_agent_components(llm_service_id=service_id)
+                    self.logger.info("✅ InformalAgent initialized successfully")
 
                 except Exception as e:
-                    self.logger.error(f"Impossible de configurer le service LLM pour le kernel: {e}")
+                    self.logger.error(f"❌ Failed to configure LLM service for kernel: {e}")
+                    self.logger.error(f"   This is likely due to missing OpenAI configuration")
                     self.informal_agent = None
             else:
+                self.logger.warning("❌ InformalAgent class not available")
                 self.informal_agent = None
             
             self.is_initialized = True
@@ -122,10 +145,17 @@ class AnalysisService:
     
     def is_healthy(self) -> bool:
         """Vérifie l'état de santé du service."""
-        return self.is_initialized and (
-            self.informal_agent is not None or 
-            any([self.complex_analyzer, self.contextual_analyzer, self.severity_evaluator])
-        )
+        has_informal = self.informal_agent is not None
+        has_analyzers = any([self.complex_analyzer, self.contextual_analyzer, self.severity_evaluator])
+        is_healthy = self.is_initialized and (has_informal or has_analyzers)
+        
+        self.logger.info(f"=== HEALTH CHECK ===")
+        self.logger.info(f"is_initialized: {self.is_initialized}")
+        self.logger.info(f"has_informal_agent: {has_informal}")
+        self.logger.info(f"has_analyzers: {has_analyzers}")
+        self.logger.info(f"overall_health: {is_healthy}")
+        
+        return is_healthy
     
     async def analyze_text(self, request: AnalysisRequest) -> AnalysisResponse:
         """
