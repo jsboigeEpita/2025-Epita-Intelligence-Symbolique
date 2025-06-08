@@ -173,3 +173,14 @@ _temp/
 logs/documentation_analysis_data.json
 logs/obsolete_documentation_report_*.json
 logs/obsolete_documentation_report_*.md
+
+# Playwright test artifacts
+playwright-report/
+test-results/
+
+# Node.js dependencies (éviter pollution racine)
+node_modules/
+
+# Temporary files
+.temp/
+environment_evaluation_report.json
