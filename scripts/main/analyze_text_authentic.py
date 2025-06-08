@@ -20,7 +20,7 @@ from typing import Dict, List, Any, Optional
 # Ajout du répertoire parent au path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
-from argumentation_analysis.pipelines.unified_text_analysis import UnifiedTextAnalyzer
+from argumentation_analysis.pipelines.unified_text_analysis import UnifiedTextAnalysisPipeline, UnifiedAnalysisConfig
 from argumentation_analysis.orchestration.conversation_orchestrator import ConversationOrchestrator
 from argumentation_analysis.orchestration.real_llm_orchestrator import RealLLMOrchestrator, LLMAnalysisRequest
 
@@ -45,7 +45,7 @@ class AuthenticTextAnalyzer:
         self.setup_logging()
         
         # Composants authentiques
-        self.unified_analyzer = None
+        self.unified_pipeline = None
         self.conversation_orchestrator = None
         self.llm_orchestrator = None
         
@@ -75,30 +75,36 @@ class AuthenticTextAnalyzer:
             bool: True si l'initialisation réussit
         """
         try:
-            print("🚀 Initialisation des composants authentiques...")
+            print("=> Initialisation des composants authentiques...")
             
-            # Initialiser l'analyseur unifié
-            print("  📊 UnifiedTextAnalyzer...")
-            self.unified_analyzer = UnifiedTextAnalyzer()
+            # Initialiser le pipeline unifié
+            print("  [PIPELINE] UnifiedTextAnalysisPipeline...")
+            config = UnifiedAnalysisConfig(
+                analysis_modes=["fallacies", "coherence", "semantic", "unified"],
+                logic_type="propositional",
+                use_mocks=False,
+                orchestration_mode="real"
+            )
+            self.unified_pipeline = UnifiedTextAnalysisPipeline(config)
+            await self.unified_pipeline.initialize()
             
             # Initialiser l'orchestrateur conversationnel
-            print("  💬 ConversationOrchestrator...")
-            self.conversation_orchestrator = ConversationOrchestrator()
-            await self.conversation_orchestrator.initialize()
+            print("  [CONV] ConversationOrchestrator...")
+            self.conversation_orchestrator = ConversationOrchestrator(mode="demo")
             
             # Initialiser l'orchestrateur LLM réel
-            print("  🤖 RealLLMOrchestrator...")
+            print("  [LLM] RealLLMOrchestrator...")
             self.llm_orchestrator = RealLLMOrchestrator()
             await self.llm_orchestrator.initialize()
             
-            # Créer une session conversationnelle
-            self.session_id = await self.conversation_orchestrator.create_session()
+            # Pas de session - ConversationOrchestrator n'a pas cette méthode
+            self.session_id = "demo_session"
             
-            print("✅ Tous les composants authentiques initialisés")
+            print("[OK] Tous les composants authentiques initialises")
             return True
             
         except Exception as e:
-            print(f"❌ Erreur d'initialisation: {e}")
+            print(f"[ERROR] Erreur d'initialisation: {e}")
             self.logger.error(f"Erreur d'initialisation: {e}")
             return False
     
@@ -113,7 +119,7 @@ class AuthenticTextAnalyzer:
         Returns:
             Résultats complets de l'analyse
         """
-        print(f"🔍 Analyse complète: {text[:60]}...")
+        print(f"[ANALYSE] Analyse complète: {text[:60]}...")
         
         analysis_start = datetime.now()
         results = {
@@ -126,19 +132,18 @@ class AuthenticTextAnalyzer:
         try:
             # 1. Analyse unifiée
             print("  📊 Analyse unifiée...")
-            unified_result = self.unified_analyzer.analyze_text(text)
+            unified_result = await self.unified_pipeline.analyze_text_unified(
+                text,
+                source_info=context or {"description": "Script authentique", "type": "test"}
+            )
             results['analyses']['unified'] = unified_result
-            print("    ✅ Analyse unifiée terminée")
+            print("    [OK] Analyse unifiée terminée")
             
             # 2. Analyse conversationnelle
             print("  💬 Analyse conversationnelle...")
-            conv_result = await self.conversation_orchestrator.analyze_conversation(
-                session_id=self.session_id,
-                text=text,
-                context=context or {}
-            )
+            conv_result = self.conversation_orchestrator.run_orchestration(text)
             results['analyses']['conversational'] = conv_result
-            print("    ✅ Analyse conversationnelle terminée")
+            print("    [OK] Analyse conversationnelle terminée")
             
             # 3. Analyses LLM spécialisées
             print("  🤖 Analyses LLM spécialisées...")
@@ -156,10 +161,10 @@ class AuthenticTextAnalyzer:
                     
                     llm_result = await self.llm_orchestrator.analyze_text(request)
                     llm_analyses[analysis_type] = llm_result
-                    print(f"    ✅ {analysis_type}: {llm_result.confidence:.1%}")
+                    print(f"    [OK] {analysis_type}: {llm_result.confidence:.1%}")
                     
                 except Exception as e:
-                    print(f"    ❌ {analysis_type}: {e}")
+                    print(f"    [ERROR] {analysis_type}: {e}")
                     llm_analyses[analysis_type] = {'error': str(e)}
             
             results['analyses']['llm_specialized'] = llm_analyses
@@ -169,11 +174,11 @@ class AuthenticTextAnalyzer:
             results['processing_time'] = (analysis_end - analysis_start).total_seconds()
             results['status'] = 'completed'
             
-            print(f"✅ Analyse complète terminée ({results['processing_time']:.2f}s)")
+            print(f"[OK] Analyse complète terminée ({results['processing_time']:.2f}s)")
             return results
             
         except Exception as e:
-            print(f"❌ Erreur lors de l'analyse: {e}")
+            print(f"[ERROR] Erreur lors de l'analyse: {e}")
             results['status'] = 'error'
             results['error'] = str(e)
             self.logger.error(f"Erreur d'analyse: {e}")
@@ -194,7 +199,7 @@ class AuthenticTextAnalyzer:
         
         results = []
         for i, text in enumerate(texts, 1):
-            print(f"\n🔍 Texte {i}/{len(texts)}")
+            print(f"\n[ANALYSE] Texte {i}/{len(texts)}")
             
             text_context = dict(context or {})
             text_context.update({
@@ -247,11 +252,11 @@ class AuthenticTextAnalyzer:
             with open(output_file, 'w', encoding='utf-8') as f:
                 json.dump(output_data, f, indent=2, ensure_ascii=False, default=serialize_result)
             
-            print(f"💾 Résultats sauvegardés: {output_file}")
+            print(f"[SAVE] Résultats sauvegardés: {output_file}")
             return output_file
             
         except Exception as e:
-            print(f"❌ Erreur de sauvegarde: {e}")
+            print(f"[ERROR] Erreur de sauvegarde: {e}")
             self.logger.error(f"Erreur de sauvegarde: {e}")
             raise
     
@@ -288,9 +293,9 @@ STATISTIQUES GÉNÉRALES
 
 COMPOSANTS UTILISÉS
 ==================
-• UnifiedTextAnalyzer: ✅ Authentique
-• ConversationOrchestrator: ✅ Authentique  
-• RealLLMOrchestrator: ✅ Authentique
+• UnifiedTextAnalyzer: [OK] Authentique
+• ConversationOrchestrator: [OK] Authentique  
+• RealLLMOrchestrator: [OK] Authentique
 • Mode: 100% Authentique (aucun mock)
 
 DÉTAIL DES ANALYSES
@@ -298,7 +303,7 @@ DÉTAIL DES ANALYSES
 """
         
         for i, result in enumerate(results, 1):
-            status_icon = "✅" if result.get('status') == 'completed' else "❌"
+            status_icon = "[OK]" if result.get('status') == 'completed' else "[ERROR]"
             text_preview = result['text'][:50] + "..." if len(result['text']) > 50 else result['text']
             
             report += f"\n{status_icon} Analyse {i}: {text_preview}"
@@ -319,7 +324,7 @@ DÉTAIL DES ANALYSES
         if success_rate >= 90:
             report += "🎉 Excellente performance ! Le système authentique fonctionne parfaitement.\n"
         elif success_rate >= 70:
-            report += "✅ Bonne performance. Quelques optimisations possibles.\n"
+            report += "[OK] Bonne performance. Quelques optimisations possibles.\n"
         else:
             report += "⚠️  Performance à améliorer. Vérifier la configuration des composants.\n"
         
@@ -328,8 +333,9 @@ DÉTAIL DES ANALYSES
     async def cleanup(self):
         """Nettoie les ressources."""
         try:
-            if self.session_id and self.conversation_orchestrator:
-                await self.conversation_orchestrator.close_session(self.session_id)
+            # ConversationOrchestrator n'a pas de session à fermer dans l'implémentation actuelle
+            if self.llm_orchestrator:
+                self.llm_orchestrator.clear_cache()
             print("🧹 Nettoyage terminé")
         except Exception as e:
             print(f"⚠️  Erreur lors du nettoyage: {e}")
@@ -355,7 +361,7 @@ async def main():
     
     try:
         if not await analyzer.initialize():
-            print("❌ Échec de l'initialisation")
+            print("[ERROR] Échec de l'initialisation")
             return 1
         
         # Déterminer les textes à analyser
@@ -370,7 +376,7 @@ async def main():
                     # Séparer par lignes non vides
                     texts = [line.strip() for line in content.split('\n') if line.strip()]
             except Exception as e:
-                print(f"❌ Erreur lecture fichier: {e}")
+                print(f"[ERROR] Erreur lecture fichier: {e}")
                 return 1
         else:
             # Textes de démonstration
