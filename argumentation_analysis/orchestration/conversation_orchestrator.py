@@ -694,6 +694,27 @@ class ConversationOrchestrator:
             "completed": self.state.completed
         }
 
+    async def run_demo_conversation(self, text: str) -> Dict[str, Any]:
+        """
+        Interface asynchrone pour le pipeline unifié.
+        
+        Args:
+            text: Texte à analyser
+            
+        Returns:
+            Dict contenant les résultats de l'orchestration
+        """
+        # Lancer l'orchestration synchrone et retourner un format compatible
+        report = self.run_orchestration(text)
+        
+        return {
+            "status": "success",
+            "report": report,
+            "conversation_state": self.get_conversation_state(),
+            "text_analyzed": text,
+            "mode": self.mode
+        }
+
 
 def create_conversation_orchestrator(mode: str = "demo") -> ConversationOrchestrator:
     """Factory pour créer un orchestrateur conversationnel."""
