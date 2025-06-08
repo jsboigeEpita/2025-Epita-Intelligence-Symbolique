@@ -1,5 +1,4 @@
-﻿<<<<<<< MAIN
-#!/usr/bin/env python3
+﻿#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
 Test d'intégration ConversationOrchestrator avec RealLLMOrchestrator
@@ -8,295 +7,233 @@ Test d'intégration ConversationOrchestrator avec RealLLMOrchestrator
 Valide que les deux composants refactorisés peuvent s'intégrer harmonieusement.
 """
 
+import asyncio
 import sys
-import io
 from pathlib import Path
+import logging
 
-# Configuration encodage
-if hasattr(sys.stdout, 'buffer'):
-    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
+# Ajout du répertoire parent au path
+sys.path.insert(0, str(Path(__file__).parent))
 
-# Ajout du chemin projet
-PROJECT_ROOT = Path(__file__).resolve().parent
-sys.path.insert(0, str(PROJECT_ROOT))
+from argumentation_analysis.orchestration.conversation_orchestrator import ConversationOrchestrator
+from argumentation_analysis.orchestration.real_llm_orchestrator import RealLLMOrchestrator, LLMAnalysisRequest
 
-def test_imports():
-    """Test que les imports des composants refactorisés fonctionnent."""
-    print("[TEST] Test des imports...")
+
+def setup_logging():
+    """Configure le logging pour les tests."""
+    logging.basicConfig(
+        level=logging.INFO,
+        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    )
+
+
+async def test_components_initialization():
+    """Test l'initialisation des deux composants."""
+    print("🚀 Test d'initialisation des composants...")
     
     try:
-        from argumentation_analysis.orchestration.conversation_orchestrator import (
-            ConversationOrchestrator,
-            create_conversation_orchestrator,
-            run_mode_micro
+        # Initialiser ConversationOrchestrator
+        conv_orchestrator = ConversationOrchestrator()
+        conv_init = await conv_orchestrator.initialize()
+        print(f"  ✅ ConversationOrchestrator: {'✓' if conv_init else '✗'}")
+        
+        # Initialiser RealLLMOrchestrator
+        llm_orchestrator = RealLLMOrchestrator()
+        llm_init = await llm_orchestrator.initialize()
+        print(f"  ✅ RealLLMOrchestrator: {'✓' if llm_init else '✗'}")
+        
+        return conv_init and llm_init, (conv_orchestrator, llm_orchestrator)
+        
+    except Exception as e:
+        print(f"  ❌ Erreur d'initialisation: {e}")
+        return False, (None, None)
+
+
+async def test_basic_integration(conv_orchestrator, llm_orchestrator):
+    """Test l'intégration basique entre les deux composants."""
+    print("\n🔗 Test d'intégration basique...")
+    
+    try:
+        # Texte de test
+        test_text = "L'argumentation logique nécessite des prémisses valides et un raisonnement rigoureux."
+        
+        # Test 1: Analyse via ConversationOrchestrator
+        session_id = await conv_orchestrator.create_session()
+        conv_result = await conv_orchestrator.analyze_conversation(
+            session_id=session_id,
+            text=test_text,
+            context={'test': 'integration'}
         )
-        print("[OK] ConversationOrchestrator importé avec succès")
-    except Exception as e:
-        print(f"[ERROR] Erreur import ConversationOrchestrator: {e}")
-        return False
-    
-    try:
-        from argumentation_analysis.orchestration.real_llm_orchestrator import (
-            RealConversationLogger
+        print(f"  ✅ ConversationOrchestrator: analyse réussie")
+        
+        # Test 2: Analyse via RealLLMOrchestrator
+        llm_request = LLMAnalysisRequest(
+            text=test_text,
+            analysis_type="unified_analysis",
+            context={'test': 'integration'}
         )
-        print("[OK] RealLLMOrchestrator importé avec succès")
-    except Exception as e:
-        print(f"[ERROR] Erreur import RealLLMOrchestrator: {e}")
-        return False
-    
-    return True
-
-def test_conversation_orchestrator():
-    """Test que ConversationOrchestrator fonctionne en mode micro."""
-    print("\n[TEST] Test ConversationOrchestrator mode micro...")
-    
-    try:
-        from argumentation_analysis.orchestration.conversation_orchestrator import create_conversation_orchestrator
+        llm_result = await llm_orchestrator.analyze_text(llm_request)
+        print(f"  ✅ RealLLMOrchestrator: analyse réussie (confiance: {llm_result.confidence:.1%})")
         
-        orchestrator = create_conversation_orchestrator("micro")
-        report = orchestrator.run_orchestration("Test d'intégration réussi")
+        # Nettoyage
+        await conv_orchestrator.close_session(session_id)
         
-        # Vérifications basiques
-        assert "Test d'intégration réussi" in report
-        assert "Score global:" in report
-        assert "Analyse complète" in report
-        
-        print("[OK] ConversationOrchestrator micro test réussi")
         return True
         
     except Exception as e:
-        print(f"[ERROR] Erreur test ConversationOrchestrator: {e}")
+        print(f"  ❌ Erreur d'intégration: {e}")
         return False
 
-def test_logger_compatibility():
-    """Test la compatibilité des loggers."""
-    print("\n[TEST] Test compatibilité des loggers...")
+
+async def test_cross_communication(conv_orchestrator, llm_orchestrator):
+    """Test la communication croisée entre les composants."""
+    print("\n🌉 Test de communication croisée...")
     
     try:
-        from argumentation_analysis.orchestration.conversation_orchestrator import ConversationLogger
-        from argumentation_analysis.orchestration.real_llm_orchestrator import RealConversationLogger
+        # Créer une session conversationnelle
+        session_id = await conv_orchestrator.create_session()
         
-        # Test ConversationLogger
-        conv_logger = ConversationLogger("micro")
-        conv_logger.log_agent_message("TestAgent", "Message de test", "test")
-        conv_logger.log_tool_call("TestAgent", "test_tool", {"param": "value"}, "result")
+        # Analyser plusieurs textes via les deux composants
+        texts = [
+            "La logique déductive part de prémisses générales vers des conclusions spécifiques.",
+            "L'induction raisonne du particulier vers le général.",
+            "L'abduction cherche la meilleure explication possible."
+        ]
         
-        # Test RealConversationLogger
-        real_logger = RealConversationLogger()
-        real_logger.log_agent_message("TestAgent", "Message de test", "test")
+        for i, text in enumerate(texts, 1):
+            # Analyse conversationnelle
+            conv_result = await conv_orchestrator.analyze_conversation(
+                session_id=session_id,
+                text=text,
+                context={'iteration': i, 'cross_test': True}
+            )
+            
+            # Analyse LLM complémentaire
+            llm_request = LLMAnalysisRequest(
+                text=text,
+                analysis_type="logical",
+                context={'iteration': i, 'cross_test': True}
+            )
+            llm_result = await llm_orchestrator.analyze_text(llm_request)
+            
+            print(f"  ✅ Texte {i}: Conv ✓ + LLM ✓ (conf: {llm_result.confidence:.1%})")
         
-        print("[OK] Compatibilité des loggers validée")
+        # Vérifier l'état du système
+        conv_status = await conv_orchestrator.get_system_status()
+        llm_metrics = llm_orchestrator.get_metrics()
+        
+        print(f"  📊 Sessions conv: {conv_status.get('active_sessions', 0)}")
+        print(f"  📊 Analyses LLM: {llm_metrics.get('total_requests', 0)}")
+        
+        # Nettoyage
+        await conv_orchestrator.close_session(session_id)
+        
         return True
         
     except Exception as e:
-        print(f"[ERROR] Erreur test compatibilité loggers: {e}")
+        print(f"  ❌ Erreur de communication croisée: {e}")
         return False
 
-def test_state_compatibility():
-    """Test la compatibilité des états."""
-    print("\n[TEST] Test compatibilité des états...")
+
+async def test_performance_integration(conv_orchestrator, llm_orchestrator):
+    """Test les performances d'intégration."""
+    print("\n⚡ Test de performance d'intégration...")
     
     try:
-        from argumentation_analysis.orchestration.conversation_orchestrator import AnalysisState
+        import time
         
-        state = AnalysisState()
-        state.update_from_informal({"fallacies_count": 2, "sophistication_score": 0.8})
-        state.update_from_modal({"propositions_count": 3, "consistency": 0.7})
+        # Test de charge légère
+        test_text = "Test de performance pour l'intégration des orchestrateurs."
+        num_tests = 5
         
-        # Test conversion
-        state_dict = state.to_dict()
-        assert "score" in state_dict
-        assert "completed" in state_dict
+        # Mesurer le temps pour ConversationOrchestrator
+        start_time = time.time()
+        session_id = await conv_orchestrator.create_session()
         
-        print("[OK] Compatibilité des états validée")
+        for i in range(num_tests):
+            await conv_orchestrator.analyze_conversation(
+                session_id=session_id,
+                text=f"{test_text} Itération {i+1}",
+                context={'perf_test': True, 'iteration': i+1}
+            )
+        
+        conv_time = time.time() - start_time
+        await conv_orchestrator.close_session(session_id)
+        
+        # Mesurer le temps pour RealLLMOrchestrator
+        start_time = time.time()
+        
+        for i in range(num_tests):
+            request = LLMAnalysisRequest(
+                text=f"{test_text} Itération {i+1}",
+                analysis_type="syntactic",
+                context={'perf_test': True, 'iteration': i+1}
+            )
+            await llm_orchestrator.analyze_text(request)
+        
+        llm_time = time.time() - start_time
+        
+        print(f"  ⏱️  ConversationOrchestrator: {conv_time:.2f}s ({num_tests} analyses)")
+        print(f"  ⏱️  RealLLMOrchestrator: {llm_time:.2f}s ({num_tests} analyses)")
+        print(f"  📈 Ratio performance: {llm_time/conv_time:.2f}x")
+        
         return True
         
     except Exception as e:
-        print(f"[ERROR] Erreur test compatibilité états: {e}")
+        print(f"  ❌ Erreur de test de performance: {e}")
         return False
+
 
 def main():
-    """Point d'entrée principal."""
-    print("TEST D'INTEGRATION CONVERSATION ORCHESTRATOR")
-    print("=" * 50)
+    """Fonction principale des tests d'intégration."""
+    setup_logging()
     
-    tests = [
-        test_imports,
-        test_conversation_orchestrator,
-        test_logger_compatibility,
-        test_state_compatibility
-    ]
+    print("🧪 TESTS D'INTÉGRATION - ConversationOrchestrator + RealLLMOrchestrator")
+    print("=" * 80)
     
-    passed = 0
-    for test in tests:
-        try:
-            if test():
-                passed += 1
-        except Exception as e:
-            print(f"[ERROR] Erreur inattendue dans {test.__name__}: {e}")
+    async def run_tests():
+        success_count = 0
+        total_tests = 4
+        
+        # Test 1: Initialisation
+        init_success, components = await test_components_initialization()
+        if init_success:
+            success_count += 1
+            conv_orchestrator, llm_orchestrator = components
+        else:
+            print("❌ Échec critique - arrêt des tests")
+            return False
+        
+        # Test 2: Intégration basique
+        if await test_basic_integration(conv_orchestrator, llm_orchestrator):
+            success_count += 1
+        
+        # Test 3: Communication croisée
+        if await test_cross_communication(conv_orchestrator, llm_orchestrator):
+            success_count += 1
+        
+        # Test 4: Performance
+        if await test_performance_integration(conv_orchestrator, llm_orchestrator):
+            success_count += 1
+        
+        # Rapport final
+        print(f"\n📊 RÉSULTATS FINAUX")
+        print("=" * 80)
+        print(f"✅ Tests réussis: {success_count}/{total_tests}")
+        print(f"📈 Taux de succès: {success_count/total_tests*100:.1f}%")
+        
+        if success_count == total_tests:
+            print("🎉 INTÉGRATION VALIDÉE - Tous les tests sont passés!")
+            return True
+        else:
+            print("⚠️  INTÉGRATION PARTIELLE - Certains tests ont échoué")
+            return False
     
-    print(f"\nRESULTATS: {passed}/{len(tests)} tests réussis")
-    
-    if passed == len(tests):
-        print("TOUS LES TESTS D'INTEGRATION REUSSIS!")
-        print("Les composants refactorisés sont parfaitement compatibles")
-    else:
-        print("Certains tests ont échoué")
-    
-    return passed == len(tests)
+    # Exécuter les tests
+    success = asyncio.run(run_tests())
+    return success
+
 
 if __name__ == "__main__":
     success = main()
     sys.exit(0 if success else 1)
-
-=======
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-"""
-Test d'intégration ConversationOrchestrator avec RealLLMOrchestrator
-===================================================================
-
-Valide que les deux composants refactorisés peuvent s'intégrer harmonieusement.
-"""
-
-import sys
-import io
-from pathlib import Path
-
-# Configuration encodage
-if hasattr(sys.stdout, 'buffer'):
-    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
-
-# Ajout du chemin projet
-PROJECT_ROOT = Path(__file__).resolve().parent
-sys.path.insert(0, str(PROJECT_ROOT))
-
-def test_imports():
-    """Test que les imports des composants refactorisés fonctionnent."""
-    print("[TEST] Test des imports...")
-    
-    try:
-        from argumentation_analysis.orchestration.conversation_orchestrator import (
-            ConversationOrchestrator,
-            create_conversation_orchestrator,
-            run_mode_micro
-        )
-        print("[OK] ConversationOrchestrator importé avec succès")
-    except Exception as e:
-        print(f"[ERROR] Erreur import ConversationOrchestrator: {e}")
-        return False
-    
-    try:
-        from argumentation_analysis.orchestration.real_llm_orchestrator import (
-            RealConversationLogger
-        )
-        print("[OK] RealLLMOrchestrator importé avec succès")
-    except Exception as e:
-        print(f"[ERROR] Erreur import RealLLMOrchestrator: {e}")
-        return False
-    
-    return True
-
-def test_conversation_orchestrator():
-    """Test que ConversationOrchestrator fonctionne en mode micro."""
-    print("\n[TEST] Test ConversationOrchestrator mode micro...")
-    
-    try:
-        from argumentation_analysis.orchestration.conversation_orchestrator import create_conversation_orchestrator
-        
-        orchestrator = create_conversation_orchestrator("micro")
-        report = orchestrator.run_orchestration("Test d'intégration réussi")
-        
-        # Vérifications basiques
-        assert "Test d'intégration réussi" in report
-        assert "Score global:" in report
-        assert "Analyse complète" in report
-        
-        print("[OK] ConversationOrchestrator micro test réussi")
-        return True
-        
-    except Exception as e:
-        print(f"[ERROR] Erreur test ConversationOrchestrator: {e}")
-        return False
-
-def test_logger_compatibility():
-    """Test la compatibilité des loggers."""
-    print("\n[TEST] Test compatibilité des loggers...")
-    
-    try:
-        from argumentation_analysis.orchestration.conversation_orchestrator import ConversationLogger
-        from argumentation_analysis.orchestration.real_llm_orchestrator import RealConversationLogger
-        
-        # Test ConversationLogger
-        conv_logger = ConversationLogger("micro")
-        conv_logger.log_agent_message("TestAgent", "Message de test", "test")
-        conv_logger.log_tool_call("TestAgent", "test_tool", {"param": "value"}, "result")
-        
-        # Test RealConversationLogger
-        real_logger = RealConversationLogger()
-        real_logger.log_agent_message("TestAgent", "Message de test", "test")
-        
-        print("[OK] Compatibilité des loggers validée")
-        return True
-        
-    except Exception as e:
-        print(f"[ERROR] Erreur test compatibilité loggers: {e}")
-        return False
-
-def test_state_compatibility():
-    """Test la compatibilité des états."""
-    print("\n[TEST] Test compatibilité des états...")
-    
-    try:
-        from argumentation_analysis.orchestration.conversation_orchestrator import AnalysisState
-        
-        state = AnalysisState()
-        state.update_from_informal({"fallacies_count": 2, "sophistication_score": 0.8})
-        state.update_from_modal({"propositions_count": 3, "consistency": 0.7})
-        
-        # Test conversion
-        state_dict = state.to_dict()
-        assert "score" in state_dict
-        assert "completed" in state_dict
-        
-        print("[OK] Compatibilité des états validée")
-        return True
-        
-    except Exception as e:
-        print(f"[ERROR] Erreur test compatibilité états: {e}")
-        return False
-
-def main():
-    """Point d'entrée principal."""
-    print("TEST D'INTEGRATION CONVERSATION ORCHESTRATOR")
-    print("=" * 50)
-    
-    tests = [
-        test_imports,
-        test_conversation_orchestrator,
-        test_logger_compatibility,
-        test_state_compatibility
-    ]
-    
-    passed = 0
-    for test in tests:
-        try:
-            if test():
-                passed += 1
-        except Exception as e:
-            print(f"[ERROR] Erreur inattendue dans {test.__name__}: {e}")
-    
-    print(f"\nRESULTATS: {passed}/{len(tests)} tests réussis")
-    
-    if passed == len(tests):
-        print("TOUS LES TESTS D'INTEGRATION REUSSIS!")
-        print("Les composants refactorisés sont parfaitement compatibles")
-    else:
-        print("Certains tests ont échoué")
-    
-    return passed == len(tests)
-
-if __name__ == "__main__":
-    success = main()
-    sys.exit(0 if success else 1)
->>>>>>> BACKUP
