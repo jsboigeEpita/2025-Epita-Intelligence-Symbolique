@@ -91,7 +91,7 @@ class FrontendManager:
             self.logger.info(f"Démarrage frontend: {self.start_command}")
             
             if sys.platform == "win32":
-                cmd = self.start_command.split()
+                cmd = ['cmd', '/c'] + self.start_command.split()
             else:
                 cmd = ['sh', '-c', self.start_command]
             

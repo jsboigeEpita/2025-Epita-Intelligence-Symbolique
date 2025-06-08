@@ -45,7 +45,7 @@ backend:
 # CONFIGURATION FRONTEND REACT (OPTIONNEL)
 # =============================================================================
 frontend:
-  enabled: false  # Désactivé par défaut - activer selon besoins
+  enabled: true  # Activé pour les tests Playwright
   
   # Chemin et configuration
   path: "services/web_api/interface-web-argumentative"

@@ -58,7 +58,7 @@ Exemples:
     
     args = parser.parse_args()
     
-    print("🚀 TESTS D'INTÉGRATION APPLICATION WEB")
+    print("TESTS D'INTEGRATION APPLICATION WEB")
     print("=" * 50)
     
     # Configuration orchestrateur
@@ -77,26 +77,26 @@ Exemples:
             )
             
             if success:
-                print(f"✅ Backend opérationnel: {orchestrator.app_info.backend_url}")
+                print(f"Backend opérationnel: {orchestrator.app_info.backend_url}")
                 
                 # Test health check
                 health_ok = await orchestrator.backend_manager.health_check()
-                print(f"🏥 Health check: {'✅ OK' if health_ok else '❌ KO'}")
+                print(f"Health check: {'OK' if health_ok else 'KO'}")
                 
                 # Attente pour inspection manuelle
-                print("⏳ Backend actif. Appuyez sur Ctrl+C pour arrêter...")
+                print("Backend actif. Appuyez sur Ctrl+C pour arrêter...")
                 try:
                     while True:
                         await asyncio.sleep(1)
                 except KeyboardInterrupt:
-                    print("\n🛑 Arrêt demandé")
+                    print("\nArrêt demandé")
             else:
-                print("❌ Échec démarrage backend")
+                print("Échec démarrage backend")
                 return False
                 
         else:
             # Mode intégration complète
-            mode = "🎯 Mode: Intégration complète"
+            mode = "Mode: Intégration complète"
             if args.visible:
                 mode += " (Visible)"
             if args.frontend:
@@ -114,7 +114,7 @@ Exemples:
             # Exécution
             success = await orchestrator.full_integration_test(
                 headless=orchestrator.headless,
-                frontend_enabled=args.frontend,
+                frontend_enabled=args.frontend if args.frontend else None,
                 test_paths=test_paths
             )
             
@@ -128,21 +128,21 @@ Exemples:
             print(f"   Mode: {'Visible' if not orchestrator.headless else 'Headless'}")
             print(f"   Durée: {(orchestrator.trace_log[-1].timestamp if orchestrator.trace_log else 'N/A')}")
         else:
-            print("❌ TESTS ÉCHOUÉS")
+            print("TESTS ÉCHOUÉS")
             print("Voir logs dans logs/webapp_integration_trace.md")
         
         return success
         
     except KeyboardInterrupt:
-        print("\n🛑 Interruption utilisateur")
+        print("\nInterruption utilisateur")
         await orchestrator.stop_webapp()
         return False
     except Exception as e:
-        print(f"❌ Erreur critique: {e}")
+        print(f"Erreur critique: {e}")
         await orchestrator.stop_webapp()
         return False
 
 if __name__ == "__main__":
     success = asyncio.run(main())
-    print(f"\n🏁 Script terminé - {'Succès' if success else 'Échec'}")
+    print(f"\nScript terminé - {'Succès' if success else 'Échec'}")
     sys.exit(0 if success else 1)
