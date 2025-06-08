@@ -1,0 +1,38 @@
+# Rapport d'Analyse Unifie
+
+**Date**: 2025-06-08 19:09:45
+
+**Resultats**: {
+  "metadata": {
+    "analysis_timestamp": "2025-06-08T19:09:45.293405",
+    "pipeline_version": "unified_2.0",
+    "analysis_modes": [
+      "informal"
+    ],
+    "orchestration_mode": "conversation",
+    "text_length": 317,
+    "source_info": "Non spécifié"
+  },
+  "informal_analysis": {
+    "status": "Unknown",
+    "fallacies": [],
+    "summary": {
+      "total_fallacies": 0,
+      "average_confidence": 0,
+      "severity_distribution": {
+        "Faible": 0,
+        "Moyen": 0,
+        "Élevé": 0,
+        "Critique": 0
+      }
+    }
+  },
+  "formal_analysis": {},
+  "unified_analysis": {},
+  "orchestration_analysis": {},
+  "recommendations": [
+    "Analyse pipeline unifiée complétée - examen des détails recommandé"
+  ],
+  "conversation_log": {},
+  "execution_time": 0.0
+}
