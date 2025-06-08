@@ -8,6 +8,7 @@ Démonstration avancée du système d'analyse rhétorique unifié
 import asyncio
 import json
 import logging
+import os
 from datetime import datetime
 from argumentation_analysis.pipelines.unified_text_analysis import UnifiedTextAnalysisPipeline, UnifiedAnalysisConfig
 from argumentation_analysis.orchestration.conversation_orchestrator import ConversationOrchestrator
@@ -60,11 +61,14 @@ async def demo_unified_pipeline():
         # Configuration adaptée au niveau de complexité
         use_advanced = complexity in ["argumentatif", "sophisme"]
         
+        # Respecter l'environnement pour l'authenticité
+        use_mocks = os.getenv('FORCE_AUTHENTIC_EXECUTION', 'false').lower() != 'true'
+        
         config = UnifiedAnalysisConfig(
             analysis_modes=["fallacies", "coherence", "semantic"],
             logic_type="propositional",
             use_advanced_tools=use_advanced,
-            use_mocks=True,  # Utiliser mocks pour la stabilité
+            use_mocks=use_mocks,  # Respecte FORCE_AUTHENTIC_EXECUTION
             orchestration_mode="standard"
         )
         
