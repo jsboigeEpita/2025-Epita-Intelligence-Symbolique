@@ -9,6 +9,7 @@ Test direct des fonctionnalités principales sans dépendances complexes.
 
 import asyncio
 import logging
+import os
 import sys
 from pathlib import Path
 
@@ -43,10 +44,13 @@ async def test_basic_config_creation():
     """Test de création de configuration basique."""
     logger.info("[TEST] Creation configuration basique")
     
+    # Respecter l'environnement pour l'authenticité
+    use_mocks = os.getenv('FORCE_AUTHENTIC_EXECUTION', 'false').lower() != 'true'
+    
     try:
         config = UnifiedAnalysisConfig(
             analysis_modes=["fallacies"],
-            use_mocks=True,
+            use_mocks=use_mocks,
             enable_jvm=False,
             orchestration_mode="standard"
         )
@@ -70,10 +74,13 @@ async def test_pipeline_initialization():
     """Test d'initialisation du pipeline."""
     logger.info("[TEST] Initialisation pipeline")
     
+    # Respecter l'environnement pour l'authenticité
+    use_mocks = os.getenv('FORCE_AUTHENTIC_EXECUTION', 'false').lower() != 'true'
+    
     try:
         config = UnifiedAnalysisConfig(
             analysis_modes=["fallacies"],
-            use_mocks=True,
+            use_mocks=use_mocks,
             enable_jvm=False,
             orchestration_mode="standard"
         )
@@ -104,9 +111,12 @@ async def test_text_analysis():
         Donc Jean ment.
         """
         
+        # Respecter l'environnement pour l'authenticité
+        use_mocks = os.getenv('FORCE_AUTHENTIC_EXECUTION', 'false').lower() != 'true'
+        
         config = UnifiedAnalysisConfig(
             analysis_modes=["fallacies"],
-            use_mocks=True,
+            use_mocks=use_mocks,
             enable_jvm=False,
             orchestration_mode="standard",
             enable_conversation_logging=False
@@ -152,9 +162,12 @@ async def test_multiple_analysis_modes():
     try:
         test_text = "Argument pour test multi-modes."
         
+        # Respecter l'environnement pour l'authenticité
+        use_mocks = os.getenv('FORCE_AUTHENTIC_EXECUTION', 'false').lower() != 'true'
+        
         config = UnifiedAnalysisConfig(
             analysis_modes=["fallacies", "coherence", "semantic"],
-            use_mocks=True,
+            use_mocks=use_mocks,
             enable_jvm=False,
             orchestration_mode="standard"
         )
@@ -187,9 +200,12 @@ async def test_orchestration_mode():
     try:
         test_text = "Test orchestration."
         
+        # Respecter l'environnement pour l'authenticité
+        use_mocks = os.getenv('FORCE_AUTHENTIC_EXECUTION', 'false').lower() != 'true'
+        
         config = UnifiedAnalysisConfig(
             analysis_modes=["fallacies"],
-            use_mocks=True,
+            use_mocks=use_mocks,
             enable_jvm=False,
             orchestration_mode="conversation",
             enable_conversation_logging=True
@@ -225,9 +241,12 @@ async def test_performance_measurement():
         
         start_time = time.time()
         
+        # Respecter l'environnement pour l'authenticité
+        use_mocks = os.getenv('FORCE_AUTHENTIC_EXECUTION', 'false').lower() != 'true'
+        
         config = UnifiedAnalysisConfig(
             analysis_modes=["fallacies"],
-            use_mocks=True,
+            use_mocks=use_mocks,
             enable_jvm=False,
             orchestration_mode="standard"
         )

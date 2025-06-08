@@ -7,6 +7,7 @@ Test simple du système d'analyse rhétorique unifié
 
 import asyncio
 import logging
+import os
 from argumentation_analysis.pipelines.unified_text_analysis import UnifiedTextAnalysisPipeline, UnifiedAnalysisConfig
 from argumentation_analysis.orchestration.conversation_orchestrator import ConversationOrchestrator
 from argumentation_analysis.orchestration.real_llm_orchestrator import RealLLMOrchestrator
@@ -17,11 +18,13 @@ async def test_unified_pipeline():
     print("[TEST] Pipeline unifié...")
     
     try:
-        # Configuration pour utiliser les mocks (plus stable pour les tests)
+        # Respecter l'environnement pour l'authenticité
+        use_mocks = os.getenv('FORCE_AUTHENTIC_EXECUTION', 'false').lower() != 'true'
+        
         config = UnifiedAnalysisConfig(
             analysis_modes=["fallacies", "coherence"],
             logic_type="propositional",
-            use_mocks=True,  # Utiliser les mocks pour éviter les dépendances externes
+            use_mocks=use_mocks,  # Respecte FORCE_AUTHENTIC_EXECUTION
             orchestration_mode="standard"
         )
         
