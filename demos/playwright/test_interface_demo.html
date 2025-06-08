@@ -60,30 +60,42 @@
             setTimeout(() => status.innerHTML = '', 3000);
         }
         
-        analyzeBtn.addEventListener('click', function() {
+        function chargerExemple() {
+            textInput.value = 'Si tous les hommes sont mortels, et que Socrate est un homme, alors Socrate est mortel. Cet argument est valide car il suit la structure logique du syllogisme.';
+            showStatus('Exemple charge', 'success');
+        }
+        
+        function analyserTexte() {
             const text = textInput.value.trim();
             if (!text) {
-                showStatus('Veuillez entrer du texte Ã  analyser', 'error');
+                showStatus('Veuillez entrer du texte a analyser', 'error');
                 return;
             }
             
             showStatus('Analyse en cours...', 'success');
-            results.innerHTML = '<strong>Analyse de:</strong> "' + text.substring(0, 100) + (text.length > 100 ? '..." ' : '" ') + 
-                               '<br><br><strong>DÃ©tections:</strong><br>â€¢ Arguments dÃ©tectÃ©s: ' + Math.floor(Math.random() * 5 + 1) + 
-                               '<br>â€¢ Sophismes potentiels: ' + Math.floor(Math.random() * 3) + 
-                               '<br>â€¢ Score de cohÃ©rence: ' + (Math.random() * 0.3 + 0.7).toFixed(2);
-        });
+            afficherResultats(text);
+        }
         
-        clearBtn.addEventListener('click', function() {
+        function afficherResultats(text) {
+            const argumentsDetectes = Math.floor(Math.random() * 5 + 1);
+            const sophismes = Math.floor(Math.random() * 3);
+            const scoreCoherence = (Math.random() * 0.3 + 0.7).toFixed(2);
+            
+            results.innerHTML = '<strong>Analyse de:</strong> "' + text.substring(0, 100) + (text.length > 100 ? '..." ' : '" ') +
+                               '<br><br><strong>Detections:</strong><br>• Arguments detectes: ' + argumentsDetectes +
+                               '<br>• Sophismes potentiels: ' + sophismes +
+                               '<br>• Score de coherence: ' + scoreCoherence;
+        }
+        
+        function effacerTexte() {
             textInput.value = '';
-            results.innerHTML = 'Aucune analyse effectuÃ©e';
-            showStatus('Texte effacÃ©', 'success');
-        });
+            results.innerHTML = 'Aucune analyse effectuee';
+            showStatus('Texte efface', 'success');
+        }
         
-        exampleBtn.addEventListener('click', function() {
-            textInput.value = 'Si tous les hommes sont mortels, et que Socrate est un homme, alors Socrate est mortel. Cet argument est valide car il suit la structure logique du syllogisme.';
-            showStatus('Exemple chargÃ©', 'success');
-        });
+        analyzeBtn.addEventListener('click', analyserTexte);
+        clearBtn.addEventListener('click', effacerTexte);
+        exampleBtn.addEventListener('click', chargerExemple);
     </script>
 </body>
 </html>
