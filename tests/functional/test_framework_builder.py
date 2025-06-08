@@ -1,13 +1,36 @@
 import pytest
 from playwright.sync_api import Page, expect, TimeoutError
 
+# Import de la classe PlaywrightHelpers
+try:
+    from .conftest_original import PlaywrightHelpers
+except ImportError:
+    # Fallback pour définir une classe PlaywrightHelpers basique
+    class PlaywrightHelpers:
+        def __init__(self, page: Page):
+            self.page = page
+            self.API_CONNECTION_TIMEOUT = 30000
+            self.DEFAULT_TIMEOUT = 10000
+        
+        def navigate_to_tab(self, tab_name: str):
+            tab_selectors = {
+                'validation': '[data-testid="validation-tab"]',
+                'framework': '[data-testid="framework-tab"]',
+                'analyzer': '[data-testid="analyzer-tab"]',
+                'fallacy_detector': '[data-testid="fallacy-detector-tab"]',
+                'reconstructor': '[data-testid="reconstructor-tab"]',
+                'logic_graph': '[data-testid="logic-graph-tab"]'
+            }
+            if tab_name in tab_selectors:
+                self.page.locator(tab_selectors[tab_name]).click()
+
 
 class TestFrameworkBuilder:
     """Tests fonctionnels pour l'onglet Framework basés sur la structure réelle"""
 
     def test_framework_creation_workflow(self, page: Page):
         """Test du workflow principal de création de framework"""
-        page = framework_page
+        test_helpers = PlaywrightHelpers(page)
         
         # Navigation vers l'onglet Framework
         test_helpers.navigate_to_tab("framework")
@@ -58,9 +81,9 @@ class TestFrameworkBuilder:
         # Nous vérifions que l'état du framework persiste correctement
         expect(page.locator('.argument-card')).to_have_count(2)
 
-    def test_framework_rule_management(self, framework_page: Page, test_helpers: PlaywrightHelpers):
+    def test_framework_rule_management(self, page: Page):
         """Test de la gestion des règles et contraintes du framework"""
-        page = framework_page
+        test_helpers = PlaywrightHelpers(page)
         
         # Navigation vers l'onglet Framework
         test_helpers.navigate_to_tab("framework")
@@ -109,9 +132,9 @@ class TestFrameworkBuilder:
         page.locator('.attack-item .remove-button').first.click()
         expect(page.locator('.attack-item')).to_have_count(1)
 
-    def test_framework_validation_integration(self, framework_page: Page, test_helpers: PlaywrightHelpers):
+    def test_framework_validation_integration(self, page: Page):
         """Test de l'intégration avec le système de validation"""
-        page = framework_page
+        test_helpers = PlaywrightHelpers(page)
         
         # Navigation vers l'onglet Framework
         test_helpers.navigate_to_tab("framework")
@@ -147,9 +170,9 @@ class TestFrameworkBuilder:
         # Vérification que les arguments persistent
         expect(page.locator('.argument-card')).to_have_count(2)
 
-    def test_framework_persistence(self, framework_page: Page, test_helpers: PlaywrightHelpers):
+    def test_framework_persistence(self, page: Page):
         """Test de la persistance et sauvegarde du framework"""
-        page = framework_page
+        test_helpers = PlaywrightHelpers(page)
         
         # Navigation vers l'onglet Framework
         test_helpers.navigate_to_tab("framework")
@@ -190,9 +213,9 @@ class TestFrameworkBuilder:
         # Note: La persistance dépend de l'implémentation React et du state management
         expect(page.locator('.framework-section').first).to_be_visible()
 
-    def test_framework_extension_analysis(self, framework_page: Page, test_helpers: PlaywrightHelpers):
+    def test_framework_extension_analysis(self, page: Page):
         """Test de l'analyse des extensions du framework"""
-        page = framework_page
+        test_helpers = PlaywrightHelpers(page)
         
         # Navigation vers l'onglet Framework
         test_helpers.navigate_to_tab("framework")

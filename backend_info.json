@@ -1,0 +1,9 @@
+{
+  "status": "SUCCESS",
+  "port": 5003,
+  "url": "http://localhost:5003",
+  "pid": 7912,
+  "job_id": 7912,
+  "health_endpoint": "http://localhost:5003/api/health",
+  "start_time": 1749414458.4447787
+}
