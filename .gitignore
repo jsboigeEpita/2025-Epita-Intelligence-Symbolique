@@ -184,3 +184,23 @@ node_modules/
 # Temporary files
 .temp/
 environment_evaluation_report.json
+
+# Fichiers temporaires de tests
+test_imports*.py
+temp_*.py
+diagnostic_*.py
+
+# Rapports JSON temporaires
+*rapport*.json
+validation_*_report*.json
+donnees_synthetiques_*.json
+
+# Logs de tests
+tests/*.log
+tests/*.json
+test_phase_*.log
+
+# Fichiers de sortie temporaires
+validation_outputs_*.txt
+$null
+$outputFile
