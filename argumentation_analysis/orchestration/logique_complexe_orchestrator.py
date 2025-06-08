@@ -3,8 +3,8 @@
 import logging
 from typing import Optional, List, Dict, Any
 from semantic_kernel import Kernel
-from semantic_kernel.agents import AgentGroupChat, ChatCompletionAgent
-from semantic_kernel.agents.strategies import SequentialSelectionStrategy
+# CORRECTIF COMPATIBILITÉ: Utilisation du module de compatibilité
+from argumentation_analysis.utils.semantic_kernel_compatibility import AgentGroupChat, ChatCompletionAgent, SequentialSelectionStrategy
 from semantic_kernel.functions import KernelArguments
 from semantic_kernel.contents import ChatMessageContent
 

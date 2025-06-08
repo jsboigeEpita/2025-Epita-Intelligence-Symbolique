@@ -14,13 +14,13 @@ from datetime import datetime
 import semantic_kernel as sk
 from semantic_kernel.functions import kernel_function
 from semantic_kernel.kernel import Kernel
-from semantic_kernel.agents import Agent, AgentGroupChat
-from semantic_kernel.agents.strategies.selection.selection_strategy import SelectionStrategy
-from semantic_kernel.agents.strategies.termination.termination_strategy import TerminationStrategy
+# CORRECTIF COMPATIBILITÉ: Utilisation du module de compatibilité pour agents et filters
+from argumentation_analysis.utils.semantic_kernel_compatibility import (
+    Agent, AgentGroupChat, SelectionStrategy, TerminationStrategy,
+    FunctionInvocationContext, FilterTypes
+)
 from semantic_kernel.contents.chat_message_content import ChatMessageContent
 from semantic_kernel.functions.kernel_arguments import KernelArguments
-from semantic_kernel.filters.functions.function_invocation_context import FunctionInvocationContext
-from semantic_kernel.filters.filter_types import FilterTypes
 # from semantic_kernel.processes.runtime.in_process_runtime import InProcessRuntime  # Module non disponible
 from pydantic import Field
 
