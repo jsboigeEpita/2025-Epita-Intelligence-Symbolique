@@ -289,6 +289,23 @@ def analyze_tweety_error(error_message: str, attempt_number: int = 1, context: O
     return analyzer.generate_bnf_feedback_message(feedback, attempt_number)
 
 
+def create_bnf_feedback_for_error(error_message: str, context: Optional[str] = None, attempt_number: int = 1) -> str:
+    """
+    Crée un feedback BNF pour une erreur Tweety.
+    
+    Cette fonction est un alias pour analyze_tweety_error pour compatibilité avec les tests.
+    
+    Args:
+        error_message: Message d'erreur Tweety
+        context: Contexte optionnel
+        attempt_number: Numéro de tentative courante
+        
+    Returns:
+        Message de feedback BNF formaté
+    """
+    return analyze_tweety_error(error_message, attempt_number, context)
+
+
 # Logger du module
 logger = logging.getLogger(__name__)
 logger.debug("Module tweety_error_analyzer chargé.")

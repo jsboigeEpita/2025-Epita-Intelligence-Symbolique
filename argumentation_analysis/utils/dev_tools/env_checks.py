@@ -16,15 +16,49 @@ from pathlib import Path as _PathInternal # Modifié: import spécifique pour pa
 import pathlib # Gardé pour les annotations de type si nécessaire, ou peut être enlevé si _PathInternal suffit.
 import typing # Ajouté pour l'annotation de type
 import importlib.metadata # Ajouté pour la vérification des versions
+from typing import List, Tuple, Optional
+
+# Imports pour alternatives à pkg_resources
+try:
+    from packaging.version import parse as parse_version
+    from packaging.requirements import Requirement
+    PACKAGING_AVAILABLE = True
+except ImportError:
+    PACKAGING_AVAILABLE = False
+    parse_version = None
+    Requirement = None
+
 try:
     import pkg_resources # Pour parser les requirements
-except ImportError:
-    # pkg_resources est déprécié et peut ne pas être disponible dans les nouvelles installations de setuptools.
-    # Tenter une alternative ou logguer une erreur si nécessaire pour le parsing des requirements.
-    # Pour l'instant, on suppose qu'il est disponible ou que le code gérera son absence.
-    logger.warning("pkg_resources n'a pas pu être importé. Le parsing des requirements pourrait échouer.")
+    PKG_RESOURCES_AVAILABLE = True
+except (ImportError, PermissionError) as e:
+    # pkg_resources est déprécié et peut causer des erreurs de permissions lors des tests
+    PKG_RESOURCES_AVAILABLE = False
     pkg_resources = None
-from typing import List, Tuple, Optional
+
+# Logger défini après les imports
+logger = logging.getLogger(__name__)
+
+if not PKG_RESOURCES_AVAILABLE:
+    logger.warning(f"pkg_resources n'est pas disponible. Utilisation d'alternatives modernes.")
+
+def _parse_requirement(req_string):
+    """Parse une requirement string en utilisant pkg_resources ou packaging comme fallback."""
+    if PKG_RESOURCES_AVAILABLE:
+        return pkg_resources.Requirement.parse(req_string)
+    elif PACKAGING_AVAILABLE:
+        return Requirement(req_string)
+    else:
+        raise ImportError("Ni pkg_resources ni packaging ne sont disponibles pour parser les requirements")
+
+def _parse_version(version_string):
+    """Parse une version string en utilisant pkg_resources ou packaging comme fallback."""
+    if PKG_RESOURCES_AVAILABLE:
+        return pkg_resources.parse_version(version_string)
+    elif PACKAGING_AVAILABLE:
+        return parse_version(version_string)
+    else:
+        raise ImportError("Ni pkg_resources ni packaging ne sont disponibles pour parser les versions")
 
 # Configuration du logging pour ce module
 logger = logging.getLogger(__name__)
@@ -318,7 +352,7 @@ def check_python_dependencies(requirements_file_path: typing.Union[str, _PathInt
                     continue 
                 
                 line_parts = current_processing_line.split('#')[0].split(';')[0].strip()
-                parsed_req = pkg_resources.Requirement.parse(line_parts)
+                parsed_req = _parse_requirement(line_parts)
                 parsed_requirements.append(parsed_req)
                 line_successfully_parsed_or_recovered = True
             except ValueError as ve_initial_parse:
@@ -332,7 +366,7 @@ def check_python_dependencies(requirements_file_path: typing.Union[str, _PathInt
                     logger.warning(f"    Impossible de parser complètement la ligne '{current_processing_line}' avec pkg_resources: {ve_initial_parse}. Tentative avec nom '{potential_name}'.")
                     # Créer un requirement sans specifier si le parsing échoue mais qu'on a un nom
                     try:
-                        parsed_requirements.append(pkg_resources.Requirement.parse(potential_name))
+                        parsed_requirements.append(_parse_requirement(potential_name))
                         line_successfully_parsed_or_recovered = True
                         # La vérification de version ci-dessous déterminera si overall_all_ok doit être False
                         # car un requirement sans specifier sera toujours "satisfait" s'il est installé,
@@ -377,8 +411,8 @@ def check_python_dependencies(requirements_file_path: typing.Union[str, _PathInt
             req_name = req.project_name # Utiliser project_name qui est normalisé
             try:
                 installed_version_str = importlib.metadata.version(req_name)
-                # Utiliser pkg_resources.parse_version pour la comparaison
-                installed_version = pkg_resources.parse_version(installed_version_str)
+                # Utiliser la fonction helper pour parser la version
+                installed_version = _parse_version(installed_version_str)
                 
                 # Si req.specifier est vide (pas de version spécifiée dans le fichier reqs)
                 if not req.specs: # req.specs est une liste de tuples (opérateur, version)
