@@ -1,6 +1,6 @@
 {
-  "success": false,
-  "return_code": 4,
+  "success": true,
+  "return_code": 0,
   "stats": {
     "total": 0,
     "passed": 0,
@@ -9,8 +9,8 @@
     "errors": 0,
     "duration": 0.0
   },
-  "stdout_lines": 87,
-  "stderr_lines": 8,
+  "stdout_lines": 12,
+  "stderr_lines": 5,
   "artifacts": {
     "screenshots": [],
     "traces": [],
