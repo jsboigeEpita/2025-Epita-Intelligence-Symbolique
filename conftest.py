@@ -72,11 +72,17 @@ print(f"INFO: conftest.py (RACINE): os.environ['JPYPE_REAL_JVM_INITIALIZED'] dé
 
 print("INFO: conftest.py (RACINE): Initialisation minimale terminée.")
 
-if jpype.isJVMStarted():
-    print("INFO: conftest.py (RACINE): Vérification jpype.isJVMStarted() = True. L'enregistrement des domaines est géré par jvm_setup.py.")
-    pass 
-else:
-    print("INFO: conftest.py (RACINE): jpype.isJVMStarted() = False. L'enregistrement des domaines sera géré par jvm_setup.py lors du démarrage.")
+try:
+    import jpype
+    if jpype.isJVMStarted():
+        print("INFO: conftest.py (RACINE): Vérification jpype.isJVMStarted() = True. L'enregistrement des domaines est géré par jvm_setup.py.")
+        pass
+    else:
+        print("INFO: conftest.py (RACINE): jpype.isJVMStarted() = False. L'enregistrement des domaines sera géré par jvm_setup.py lors du démarrage.")
+except ImportError:
+    print("INFO: conftest.py (RACINE): jpype non disponible, vérification JVM sautée.")
+except Exception as e_jpype_check:
+    print(f"ERREUR: conftest.py (RACINE): Erreur lors de la vérification jpype: {e_jpype_check}")
 
 
 # @pytest.fixture(scope="module")
