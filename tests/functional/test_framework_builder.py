@@ -81,12 +81,18 @@ class TestFrameworkBuilder:
         # Nous vérifions que l'état du framework persiste correctement
         expect(page.locator('.argument-card')).to_have_count(2)
 
+<<<<<<< HEAD
     def test_framework_rule_management(self, page: Page):
         """Test de la gestion des règles et contraintes du framework"""
         test_helpers = PlaywrightHelpers(page)
         
         # Navigation vers l'onglet Framework
         test_helpers.navigate_to_tab("framework")
+=======
+    def test_framework_rule_management(self, framework_page: Page):
+        """Test de la gestion des règles et contraintes du framework"""
+        # La fixture framework_page navigue déjà vers l'onglet
+>>>>>>> fdc7998 (✅ Interface Web EPITA - Mission Accomplie - 7 tests OK)
         
         # Ajout de plusieurs arguments
         arguments = [
@@ -132,12 +138,18 @@ class TestFrameworkBuilder:
         page.locator('.attack-item .remove-button').first.click()
         expect(page.locator('.attack-item')).to_have_count(1)
 
+<<<<<<< HEAD
     def test_framework_validation_integration(self, page: Page):
         """Test de l'intégration avec le système de validation"""
         test_helpers = PlaywrightHelpers(page)
         
         # Navigation vers l'onglet Framework
         test_helpers.navigate_to_tab("framework")
+=======
+    def test_framework_validation_integration(self, framework_page: Page):
+        """Test de l'intégration avec le système de validation"""
+        # La fixture framework_page navigue déjà vers l'onglet
+>>>>>>> fdc7998 (✅ Interface Web EPITA - Mission Accomplie - 7 tests OK)
         
         # Construction d'un framework simple mais valide
         page.locator('#arg-content').fill('Argument A')
@@ -170,12 +182,18 @@ class TestFrameworkBuilder:
         # Vérification que les arguments persistent
         expect(page.locator('.argument-card')).to_have_count(2)
 
+<<<<<<< HEAD
     def test_framework_persistence(self, page: Page):
         """Test de la persistance et sauvegarde du framework"""
         test_helpers = PlaywrightHelpers(page)
         
         # Navigation vers l'onglet Framework
         test_helpers.navigate_to_tab("framework")
+=======
+    def test_framework_persistence(self, framework_page: Page):
+        """Test de la persistance et sauvegarde du framework"""
+        # La fixture framework_page navigue déjà vers l'onglet
+>>>>>>> fdc7998 (✅ Interface Web EPITA - Mission Accomplie - 7 tests OK)
         
         # Construction d'un framework avec données de test
         test_arguments = [
@@ -213,12 +231,18 @@ class TestFrameworkBuilder:
         # Note: La persistance dépend de l'implémentation React et du state management
         expect(page.locator('.framework-section').first).to_be_visible()
 
+<<<<<<< HEAD
     def test_framework_extension_analysis(self, page: Page):
         """Test de l'analyse des extensions du framework"""
         test_helpers = PlaywrightHelpers(page)
         
         # Navigation vers l'onglet Framework
         test_helpers.navigate_to_tab("framework")
+=======
+    def test_framework_extension_analysis(self, framework_page: Page):
+        """Test de l'analyse des extensions du framework"""
+        # La fixture framework_page navigue déjà vers l'onglet
+>>>>>>> fdc7998 (✅ Interface Web EPITA - Mission Accomplie - 7 tests OK)
         
         # Construction d'un framework plus complexe pour générer des extensions intéressantes
         complex_arguments = [

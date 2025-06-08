@@ -28,57 +28,67 @@ except ImportError:
 class TestValidationForm:
     """Tests fonctionnels pour l'onglet Validation basés sur la structure réelle"""
 
-    def test_validation_form_argument_validation(self, page: Page):
+    def test_validation_form_argument_validation(self, validation_page: Page):
         """Test du workflow principal de validation d'argument"""
+<<<<<<< HEAD
         test_helpers = PlaywrightHelpers(page)
         
         # Navigation vers l'onglet Validation
         test_helpers.navigate_to_tab("validation")
+=======
+        # La fixture validation_page navigue déjà vers l'onglet et attend la visibilité
+>>>>>>> fdc7998 (✅ Interface Web EPITA - Mission Accomplie - 7 tests OK)
         
         # Vérification de la présence des éléments du formulaire réels
-        expect(page.locator('#argument-type')).to_be_visible()
-        expect(page.locator('.premise-textarea')).to_be_visible()
-        expect(page.locator('#conclusion')).to_be_visible()
-        expect(page.locator('.validate-button')).to_be_visible()
+        expect(validation_page.locator('#argument-type')).to_be_visible()
+        expect(validation_page.locator('.premise-textarea')).to_be_visible()
+        expect(validation_page.locator('#conclusion')).to_be_visible()
+        expect(validation_page.locator('.validate-button')).to_be_visible()
         
         # Sélection du type d'argument
-        page.locator('#argument-type').select_option('deductive')
+        validation_page.locator('#argument-type').select_option('deductive')
         
         # Saisie d'une prémisse
-        page.locator('.premise-textarea').first.fill('Tous les hommes sont mortels')
+        validation_page.locator('.premise-textarea').first.fill('Tous les hommes sont mortels')
         
         # Ajout d'une seconde prémisse
-        page.locator('.add-premise-button').click()
-        premise_textareas = page.locator('.premise-textarea')
+        validation_page.locator('.add-premise-button').click()
+        premise_textareas = validation_page.locator('.premise-textarea')
         premise_textareas.nth(1).fill('Socrate est un homme')
         
         # Saisie de la conclusion
-        page.locator('#conclusion').fill('Socrate est mortel')
+        validation_page.locator('#conclusion').fill('Socrate est mortel')
         
         # Déclenchement de la validation
-        page.locator('.validate-button').click()
+        validation_page.locator('.validate-button').click()
         
         # Attendre les résultats
-        expect(page.locator('.validation-status')).to_be_visible(timeout=test_helpers.API_CONNECTION_TIMEOUT)
+        expect(validation_page.locator('.validation-status')).to_be_visible(timeout=15000)
         
         # Vérification des résultats
-        results = page.locator('.results-section')
+        results = validation_page.locator('.results-section')
         expect(results).to_be_visible()
         
         # Vérification du score de confiance si présent
-        confidence_score = page.locator('.confidence-score')
+        confidence_score = validation_page.locator('.confidence-score')
         if confidence_score.is_visible():
             expect(confidence_score).to_contain_text('%')
 
+<<<<<<< HEAD
     def test_validation_error_scenarios(self, page: Page):
         """Test des scénarios d'erreur et de validation invalide"""
         test_helpers = PlaywrightHelpers(page)
         
         # Navigation vers l'onglet Validation
         test_helpers.navigate_to_tab("validation")
+=======
+    def test_validation_error_scenarios(self, validation_page: Page):
+        """Test des scénarios d'erreur et de validation invalide"""
+        # La fixture validation_page navigue déjà vers l'onglet
+>>>>>>> fdc7998 (✅ Interface Web EPITA - Mission Accomplie - 7 tests OK)
         
         # Test avec formulaire vide - le bouton devrait être désactivé
-        validate_button = page.locator('.validate-button')
+        validate_button = validation_page.locator('.validate-button')
         expect(validate_button).to_be_disabled()
         
         # Test avec seulement des prémisses vides
@@ -107,12 +117,18 @@ class TestValidationForm:
         except TimeoutError:
             pytest.fail("Aucun résultat ou message d'erreur affiché après validation")
 
+<<<<<<< HEAD
     def test_validation_form_reset_functionality(self, page: Page):
         """Test de la fonctionnalité de réinitialisation du formulaire"""
         test_helpers = PlaywrightHelpers(page)
         
         # Navigation vers l'onglet Validation
         test_helpers.navigate_to_tab("validation")
+=======
+    def test_validation_form_reset_functionality(self, validation_page: Page):
+        """Test de la fonctionnalité de réinitialisation du formulaire"""
+        # La fixture validation_page navigue déjà vers l'onglet
+>>>>>>> fdc7998 (✅ Interface Web EPITA - Mission Accomplie - 7 tests OK)
         
         # Remplissage du formulaire
         page.locator('#argument-type').select_option('inductive')
@@ -132,12 +148,18 @@ class TestValidationForm:
         expect(page.locator('#conclusion')).to_have_value('')
         expect(page.locator('#argument-type')).to_have_value('deductive')  # Valeur par défaut
 
+<<<<<<< HEAD
     def test_validation_example_functionality(self, page: Page):
         """Test de la fonctionnalité de chargement d'exemple"""
         test_helpers = PlaywrightHelpers(page)
         
         # Navigation vers l'onglet Validation
         test_helpers.navigate_to_tab("validation")
+=======
+    def test_validation_example_functionality(self, validation_page: Page):
+        """Test de la fonctionnalité de chargement d'exemple"""
+        # La fixture validation_page navigue déjà vers l'onglet
+>>>>>>> fdc7998 (✅ Interface Web EPITA - Mission Accomplie - 7 tests OK)
         
         # Chargement d'un exemple
         page.locator('.example-button').click()

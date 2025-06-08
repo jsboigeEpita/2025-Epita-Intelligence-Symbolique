@@ -1,0 +1,583 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Argumentation Analysis App</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        .main-container {
+            padding: 2rem 0;
+        }
+        
+        .card {
+            border: none;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            backdrop-filter: blur(10px);
+            background: rgba(255,255,255,0.95);
+        }
+        
+        .card-header {
+            background: linear-gradient(135deg, #4e54c8 0%, #8f94fb 100%);
+            color: white;
+            border-radius: 15px 15px 0 0 !important;
+            padding: 1.5rem;
+        }
+        
+        .btn-analyze {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            border-radius: 25px;
+            padding: 12px 30px;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-analyze:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+        
+        .status-indicator {
+            position: absolute;
+            top: 10px;
+            right: 15px;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background-color: #28a745;
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+        
+        .results-container {
+            background: rgba(248,249,250,0.8);
+            border-radius: 10px;
+            padding: 1.5rem;
+            margin-top: 1rem;
+        }
+        
+        .metric-card {
+            background: white;
+            border-radius: 8px;
+            padding: 1rem;
+            text-align: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+        
+        .loading-spinner {
+            display: none;
+        }
+        
+        .example-btn {
+            margin: 0.25rem;
+            border-radius: 20px;
+            font-size: 0.9rem;
+        }
+        
+        .footer {
+            background: rgba(0,0,0,0.8);
+            color: white;
+            padding: 2rem 0;
+            margin-top: 3rem;
+        }
+        
+        .progress-ring {
+            transform: rotate(-90deg);
+        }
+        
+        .progress-ring-circle {
+            stroke-dasharray: 251.2;
+            stroke-dashoffset: 251.2;
+            transition: stroke-dashoffset 0.5s ease-in-out;
+        }
+    </style>
+</head>
+<body>
+    <div class="container main-container">
+        <!-- Header -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header position-relative">
+                        <div class="status-indicator" id="statusIndicator"></div>
+                        <h1 class="mb-0">
+                            <i class="fas fa-brain me-3"></i>
+                            Analyse Argumentative EPITA
+                        </h1>
+                        <p class="mb-0 mt-2 opacity-75">
+                            Intelligence Symbolique - Système d'analyse de logique et d'argumentation
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Interface -->
+        <div class="row">
+            <div class="col-lg-8">
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="mb-0">
+                            <i class="fas fa-edit me-2"></i>
+                            Saisie du Texte
+                        </h3>
+                    </div>
+                    <div class="card-body">
+                        <form id="analysisForm">
+                            <div class="mb-3">
+                                <label for="textInput" class="form-label">
+                                    <strong>Texte à analyser :</strong>
+                                </label>
+                                <textarea 
+                                    class="form-control" 
+                                    id="textInput" 
+                                    rows="8" 
+                                    placeholder="Saisissez ici le texte que vous souhaitez analyser... (max 10 000 caractères)"
+                                    maxlength="10000"
+                                ></textarea>
+                                <div class="form-text">
+                                    <span id="charCount">0</span>/10000 caractères
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="analysisType" class="form-label">
+                                    <strong>Type d'analyse :</strong>
+                                </label>
+                                <select class="form-select" id="analysisType">
+                                    <option value="comprehensive">Analyse Complète</option>
+                                    <option value="propositional">Logique Propositionnelle</option>
+                                    <option value="modal">Logique Modale</option>
+                                    <option value="epistemic">Logique Épistémique</option>
+                                    <option value="fallacy">Détection de Sophismes</option>
+                                    <option value="conversation">Analyse Conversationnelle</option>
+                                </select>
+                            </div>
+
+                            <div class="mb-3">
+                                <h6>Exemples rapides :</h6>
+                                <button type="button" class="btn btn-outline-primary btn-sm example-btn" onclick="loadExample('logic')">
+                                    Logique Simple
+                                </button>
+                                <button type="button" class="btn btn-outline-info btn-sm example-btn" onclick="loadExample('modal')">
+                                    Logique Modale
+                                </button>
+                                <button type="button" class="btn btn-outline-success btn-sm example-btn" onclick="loadExample('complex')">
+                                    Argumentation Complexe
+                                </button>
+                                <button type="button" class="btn btn-outline-warning btn-sm example-btn" onclick="loadExample('paradox')">
+                                    Paradoxe
+                                </button>
+                            </div>
+
+                            <div class="d-grid">
+                                <button type="submit" class="btn btn-analyze btn-primary">
+                                    <span class="loading-spinner spinner-border spinner-border-sm me-2" id="loadingSpinner"></span>
+                                    <i class="fas fa-cogs me-2"></i>
+                                    Lancer l'Analyse
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-4">
+                <div class="card">
+                    <div class="card-header">
+                        <h4 class="mb-0">
+                            <i class="fas fa-info-circle me-2"></i>
+                            Statut du Système
+                        </h4>
+                    </div>
+                    <div class="card-body">
+                        <div id="systemStatus">
+                            <div class="text-center">
+                                <div class="spinner-border text-primary" role="status">
+                                    <span class="visually-hidden">Chargement...</span>
+                                </div>
+                                <p class="mt-2">Vérification du statut...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card mt-3">
+                    <div class="card-header">
+                        <h4 class="mb-0">
+                            <i class="fas fa-lightbulb me-2"></i>
+                            Aide
+                        </h4>
+                    </div>
+                    <div class="card-body">
+                        <h6>Types d'analyse disponibles :</h6>
+                        <ul class="list-unstyled">
+                            <li><strong>Complète :</strong> Analyse tous les aspects</li>
+                            <li><strong>Propositionnelle :</strong> Logique de base</li>
+                            <li><strong>Modale :</strong> Nécessité et possibilité</li>
+                            <li><strong>Épistémique :</strong> Connaissance et croyance</li>
+                            <li><strong>Sophismes :</strong> Détection d'erreurs logiques</li>
+                            <li><strong>Conversationnelle :</strong> Analyse de dialogue</li>
+                        </ul>
+
+                        <h6 class="mt-3">Conseils :</h6>
+                        <ul class="small">
+                            <li>Utilisez des phrases complètes</li>
+                            <li>Soyez explicite dans vos arguments</li>
+                            <li>Testez différents types d'analyse</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Results Section -->
+        <div class="row mt-4" id="resultsSection" style="display: none;">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="mb-0">
+                            <i class="fas fa-chart-line me-2"></i>
+                            Résultats d'Analyse
+                        </h3>
+                    </div>
+                    <div class="card-body">
+                        <div id="resultsContent">
+                            <!-- Results will be inserted here -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="row">
+                <div class="col-md-6">
+                    <h5>EPITA Intelligence Symbolique</h5>
+                    <p>Système avancé d'analyse argumentative et de logique formelle.</p>
+                </div>
+                <div class="col-md-6 text-md-end">
+                    <p>Version 1.0.0 - 2025</p>
+                    <p>
+                        <i class="fas fa-server me-1"></i>
+                        Statut: <span id="footerStatus" class="text-success">Opérationnel</span>
+                    </p>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Variables globales
+        let examples = {};
+        let systemOnline = false;
+
+        // Initialisation
+        document.addEventListener('DOMContentLoaded', function() {
+            loadSystemStatus();
+            loadExamples();
+            setupEventListeners();
+            updateCharCount();
+        });
+
+        function setupEventListeners() {
+            // Formulaire d'analyse
+            document.getElementById('analysisForm').addEventListener('submit', handleAnalysis);
+            
+            // Compteur de caractères
+            document.getElementById('textInput').addEventListener('input', updateCharCount);
+        }
+
+        function updateCharCount() {
+            const textInput = document.getElementById('textInput');
+            const charCount = document.getElementById('charCount');
+            charCount.textContent = textInput.value.length;
+            
+            if (textInput.value.length > 9000) {
+                charCount.style.color = '#dc3545';
+            } else if (textInput.value.length > 7000) {
+                charCount.style.color = '#ffc107';
+            } else {
+                charCount.style.color = '#6c757d';
+            }
+        }
+
+        async function loadSystemStatus() {
+            try {
+                const response = await fetch('/status');
+                const status = await response.json();
+                
+                systemOnline = status.status === 'operational';
+                updateStatusDisplay(status);
+                
+            } catch (error) {
+                console.error('Erreur lors du chargement du statut:', error);
+                updateStatusDisplay({
+                    status: 'error',
+                    error: 'Impossible de contacter le serveur'
+                });
+            }
+        }
+
+        function updateStatusDisplay(status) {
+            const statusContainer = document.getElementById('systemStatus');
+            const statusIndicator = document.getElementById('statusIndicator');
+            const footerStatus = document.getElementById('footerStatus');
+            
+            let statusHtml = '';
+            let indicatorColor = '#dc3545'; // rouge par défaut
+            let footerText = 'Hors ligne';
+            
+            if (status.status === 'operational') {
+                indicatorColor = '#28a745'; // vert
+                footerText = 'Opérationnel';
+                statusHtml = `
+                    <div class="alert alert-success">
+                        <i class="fas fa-check-circle me-2"></i>
+                        <strong>Système Opérationnel</strong>
+                    </div>
+                    <div class="row">
+                        <div class="col-6">
+                            <div class="metric-card">
+                                <h6>ServiceManager</h6>
+                                <span class="badge bg-success">Actif</span>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="metric-card">
+                                <h6>Interface Web</h6>
+                                <span class="badge bg-success">V1.0.0</span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            } else if (status.status === 'degraded') {
+                indicatorColor = '#ffc107'; // jaune
+                footerText = 'Mode Dégradé';
+                statusHtml = `
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        <strong>Mode Dégradé</strong>
+                    </div>
+                    <p class="small">Certains services ne sont pas disponibles. L'analyse basique reste fonctionnelle.</p>
+                `;
+            } else {
+                statusHtml = `
+                    <div class="alert alert-danger">
+                        <i class="fas fa-times-circle me-2"></i>
+                        <strong>Système Hors Ligne</strong>
+                    </div>
+                    <p class="small">Impossible de contacter les services d'analyse.</p>
+                `;
+            }
+            
+            statusContainer.innerHTML = statusHtml;
+            statusIndicator.style.backgroundColor = indicatorColor;
+            footerStatus.textContent = footerText;
+            footerStatus.className = status.status === 'operational' ? 'text-success' : 
+                                    status.status === 'degraded' ? 'text-warning' : 'text-danger';
+        }
+
+        async function loadExamples() {
+            try {
+                const response = await fetch('/api/examples');
+                const data = await response.json();
+                examples = data.examples.reduce((acc, example) => {
+                    acc[example.type] = example;
+                    return acc;
+                }, {});
+            } catch (error) {
+                console.error('Erreur lors du chargement des exemples:', error);
+            }
+        }
+
+        function loadExample(type) {
+            const textInput = document.getElementById('textInput');
+            const analysisType = document.getElementById('analysisType');
+            
+            const exampleMap = {
+                'logic': examples.propositional || {
+                    text: 'Si il pleut, alors la route est mouillée. Il pleut. Donc la route est mouillée.',
+                    type: 'propositional'
+                },
+                'modal': examples.modal || {
+                    text: 'Il est nécessaire que tous les hommes soient mortels. Socrate est un homme.',
+                    type: 'modal'
+                },
+                'complex': examples.comprehensive || {
+                    text: 'L\'intelligence artificielle représente une opportunité et un défi majeurs pour notre société.',
+                    type: 'comprehensive'
+                },
+                'paradox': examples.paradox || {
+                    text: 'Cette phrase est fausse. Si elle est vraie, alors elle est fausse.',
+                    type: 'comprehensive'
+                }
+            };
+            
+            const example = exampleMap[type];
+            if (example) {
+                textInput.value = example.text;
+                analysisType.value = example.type;
+                updateCharCount();
+            }
+        }
+
+        async function handleAnalysis(event) {
+            event.preventDefault();
+            
+            const textInput = document.getElementById('textInput');
+            const analysisType = document.getElementById('analysisType');
+            const loadingSpinner = document.getElementById('loadingSpinner');
+            const submitBtn = event.target.querySelector('button[type="submit"]');
+            
+            const text = textInput.value.trim();
+            if (!text) {
+                alert('Veuillez saisir un texte à analyser.');
+                return;
+            }
+            
+            // Interface de chargement
+            loadingSpinner.style.display = 'inline-block';
+            submitBtn.disabled = true;
+            
+            try {
+                const response = await fetch('/analyze', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        text: text,
+                        analysis_type: analysisType.value,
+                        options: {}
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    displayResults(result);
+                } else {
+                    displayError(result.error || 'Erreur lors de l\'analyse');
+                }
+                
+            } catch (error) {
+                console.error('Erreur:', error);
+                displayError('Erreur de communication avec le serveur');
+            } finally {
+                loadingSpinner.style.display = 'none';
+                submitBtn.disabled = false;
+            }
+        }
+
+        function displayResults(result) {
+            const resultsSection = document.getElementById('resultsSection');
+            const resultsContent = document.getElementById('resultsContent');
+            
+            let resultsHtml = `
+                <div class="alert alert-success">
+                    <i class="fas fa-check-circle me-2"></i>
+                    <strong>Analyse terminée avec succès</strong> 
+                    <small>(ID: ${result.analysis_id})</small>
+                </div>
+            `;
+            
+            // Résumé des métriques
+            if (result.summary) {
+                resultsHtml += `
+                    <div class="row mb-4">
+                        <div class="col-md-3">
+                            <div class="metric-card">
+                                <h5>${result.summary.text_metrics.word_count}</h5>
+                                <small>Mots</small>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="metric-card">
+                                <h5>${result.summary.text_metrics.sentence_count}</h5>
+                                <small>Phrases</small>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="metric-card">
+                                <h5>${result.summary.analysis_metrics.complexity_level}</h5>
+                                <small>Complexité</small>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="metric-card">
+                                <h5>${(result.metadata.duration || 0).toFixed(2)}s</h5>
+                                <small>Temps</small>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+            
+            // Détails des résultats
+            resultsHtml += `
+                <div class="results-container">
+                    <h5>Détails de l'analyse :</h5>
+                    <pre class="bg-light p-3 rounded">${JSON.stringify(result.results, null, 2)}</pre>
+                </div>
+            `;
+            
+            // Composants utilisés
+            if (result.metadata && result.metadata.components_used) {
+                resultsHtml += `
+                    <div class="mt-3">
+                        <h6>Composants utilisés :</h6>
+                        <div>
+                            ${result.metadata.components_used.map(component => 
+                                `<span class="badge bg-info me-1">${component}</span>`
+                            ).join('')}
+                        </div>
+                    </div>
+                `;
+            }
+            
+            resultsContent.innerHTML = resultsHtml;
+            resultsSection.style.display = 'block';
+            
+            // Scroll vers les résultats
+            resultsSection.scrollIntoView({ behavior: 'smooth' });
+        }
+
+        function displayError(errorMessage) {
+            const resultsSection = document.getElementById('resultsSection');
+            const resultsContent = document.getElementById('resultsContent');
+            
+            resultsContent.innerHTML = `
+                <div class="alert alert-danger">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    <strong>Erreur lors de l'analyse :</strong> ${errorMessage}
+                </div>
+            `;
+            
+            resultsSection.style.display = 'block';
+            resultsSection.scrollIntoView({ behavior: 'smooth' });
+        }
+
+        // Actualisation périodique du statut
+        setInterval(loadSystemStatus, 30000); // Toutes les 30 secondes
+    </script>
+</body>
+</html>
