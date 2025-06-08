@@ -693,3 +693,394 @@
 2025-06-07 19:32:52,466 - scripts.webapp.unified_web_orchestrator - INFO -    Résultat: Toutes les ressources liberees
 2025-06-07 19:32:52,466 - scripts.webapp.unified_web_orchestrator - INFO - [96m[19:32:52.466] [SAVE] TRACE SAUVEGARDEE[0m
 2025-06-07 19:32:52,467 - scripts.webapp.unified_web_orchestrator - INFO -    Détails: Fichier: logs\webapp_integration_trace.md
+2025-06-08 14:38:02,888 - scripts.webapp.unified_web_orchestrator - INFO - [96m[14:38:02.888] [START] DEMARRAGE APPLICATION WEB[0m
+2025-06-08 14:38:02,888 - scripts.webapp.unified_web_orchestrator - INFO -    Détails: Mode: Headless
+2025-06-08 14:38:02,888 - scripts.webapp.unified_web_orchestrator - INFO -    Résultat: Initialisation orchestrateur
+2025-06-08 14:38:02,888 - scripts.webapp.unified_web_orchestrator - INFO - [96m[14:38:02.888] [CLEAN] NETTOYAGE PREALABLE[0m
+2025-06-08 14:38:02,888 - scripts.webapp.unified_web_orchestrator - INFO -    Détails: Arret instances existantes
+2025-06-08 14:38:02,888 - scripts.webapp.unified_web_orchestrator - INFO - [CLEAN] Debut nettoyage processus application web
+2025-06-08 14:38:06,780 - scripts.webapp.unified_web_orchestrator - INFO - Aucun processus d'application web trouvé
+2025-06-08 14:38:06,780 - scripts.webapp.unified_web_orchestrator - INFO - [96m[14:38:06.780] [BACKEND] DEMARRAGE BACKEND[0m
+2025-06-08 14:38:06,780 - scripts.webapp.unified_web_orchestrator - INFO -    Détails: Lancement avec failover de ports
+2025-06-08 14:38:06,780 - scripts.webapp.unified_web_orchestrator - INFO - Tentative 1/4 - Port 5003
+2025-06-08 14:38:06,784 - scripts.webapp.unified_web_orchestrator - INFO - Démarrage backend: python -m argumentation_analysis.services.web_api.app --port 5003
+2025-06-08 14:38:06,797 - scripts.webapp.unified_web_orchestrator - INFO - Attente backend sur http://localhost:5003/api/health (timeout: 30s)
+2025-06-08 14:38:11,124 - scripts.webapp.unified_web_orchestrator - ERROR - Processus backend terminé prématurément (code: 1)
+2025-06-08 14:38:11,124 - scripts.webapp.unified_web_orchestrator - INFO - Tentative 2/4 - Port 5004
+2025-06-08 14:38:11,135 - scripts.webapp.unified_web_orchestrator - INFO - Démarrage backend: python -m argumentation_analysis.services.web_api.app --port 5004
+2025-06-08 14:38:11,140 - scripts.webapp.unified_web_orchestrator - INFO - Attente backend sur http://localhost:5004/api/health (timeout: 30s)
+2025-06-08 14:38:15,429 - scripts.webapp.unified_web_orchestrator - ERROR - Processus backend terminé prématurément (code: 1)
+2025-06-08 14:38:15,429 - scripts.webapp.unified_web_orchestrator - INFO - Tentative 3/4 - Port 5005
+2025-06-08 14:38:15,435 - scripts.webapp.unified_web_orchestrator - INFO - Démarrage backend: python -m argumentation_analysis.services.web_api.app --port 5005
+2025-06-08 14:38:15,440 - scripts.webapp.unified_web_orchestrator - INFO - Attente backend sur http://localhost:5005/api/health (timeout: 30s)
+2025-06-08 14:38:19,730 - scripts.webapp.unified_web_orchestrator - ERROR - Processus backend terminé prématurément (code: 1)
+2025-06-08 14:38:19,730 - scripts.webapp.unified_web_orchestrator - INFO - Tentative 4/4 - Port 5006
+2025-06-08 14:38:19,741 - scripts.webapp.unified_web_orchestrator - INFO - Démarrage backend: python -m argumentation_analysis.services.web_api.app --port 5006
+2025-06-08 14:38:19,744 - scripts.webapp.unified_web_orchestrator - INFO - Attente backend sur http://localhost:5006/api/health (timeout: 30s)
+2025-06-08 14:38:24,044 - scripts.webapp.unified_web_orchestrator - ERROR - Processus backend terminé prématurément (code: 1)
+2025-06-08 14:38:24,046 - scripts.webapp.unified_web_orchestrator - INFO - [91m[14:38:24.044] [ERROR] ECHEC BACKEND[0m
+2025-06-08 14:38:24,046 - scripts.webapp.unified_web_orchestrator - INFO -    Détails: Impossible de démarrer sur les ports: [5003, 5004, 5005, 5006]
+2025-06-08 15:34:40,062 - scripts.webapp.unified_web_orchestrator - INFO - [96m[15:34:40.062] [TEST] INTEGRATION COMPLETE[0m
+2025-06-08 15:34:40,062 - scripts.webapp.unified_web_orchestrator - INFO -    Détails: Démarrage orchestration complète
+2025-06-08 15:34:40,062 - scripts.webapp.unified_web_orchestrator - INFO - [96m[15:34:40.062] [START] DEMARRAGE APPLICATION WEB[0m
+2025-06-08 15:34:40,062 - scripts.webapp.unified_web_orchestrator - INFO -    Détails: Mode: Visible
+2025-06-08 15:34:40,062 - scripts.webapp.unified_web_orchestrator - INFO -    Résultat: Initialisation orchestrateur
+2025-06-08 15:34:40,062 - scripts.webapp.unified_web_orchestrator - INFO - [96m[15:34:40.062] [CLEAN] NETTOYAGE PREALABLE[0m
+2025-06-08 15:34:40,062 - scripts.webapp.unified_web_orchestrator - INFO -    Détails: Arret instances existantes
+2025-06-08 15:34:40,062 - scripts.webapp.unified_web_orchestrator - INFO - [CLEAN] Debut nettoyage processus application web
+2025-06-08 15:34:43,770 - scripts.webapp.unified_web_orchestrator - INFO - Processus sur port webapp: PID 16104 - Port 5003
+2025-06-08 15:34:44,281 - scripts.webapp.unified_web_orchestrator - INFO - Processus trouvé: PID 38132 - c:\program files\nodejs\node.exe d:\dev\2025-epita-intelligence-symbolique\services\web_api\interfac
+2025-06-08 15:34:44,282 - scripts.webapp.unified_web_orchestrator - INFO - Processus trouvé: PID 38472 - node d:\dev\2025-epita-intelligence-symbolique\services\web_api\interface-web-argumentative\node_mod
+2025-06-08 15:34:44,339 - scripts.webapp.unified_web_orchestrator - INFO - Processus trouvés: 3
+2025-06-08 15:34:44,341 - scripts.webapp.unified_web_orchestrator - INFO - Envoi signal TERM aux processus...
+2025-06-08 15:34:44,341 - scripts.webapp.unified_web_orchestrator - INFO - TERM envoyé à PID 16104
+2025-06-08 15:34:44,341 - scripts.webapp.unified_web_orchestrator - INFO - TERM envoyé à PID 38132
+2025-06-08 15:34:44,342 - scripts.webapp.unified_web_orchestrator - INFO - TERM envoyé à PID 38472
+2025-06-08 15:34:44,342 - scripts.webapp.unified_web_orchestrator - INFO - Attente arrêt propre (5s)...
+2025-06-08 15:34:49,354 - scripts.webapp.unified_web_orchestrator - INFO - Tous les processus arrêtés proprement
+2025-06-08 15:34:52,569 - scripts.webapp.unified_web_orchestrator - INFO - Vérification libération des ports...
+2025-06-08 15:34:52,581 - scripts.webapp.unified_web_orchestrator - INFO - Tous les ports libérés
+2025-06-08 15:34:52,581 - scripts.webapp.unified_web_orchestrator - INFO - Nettoyage fichiers temporaires...
+2025-06-08 15:34:52,582 - scripts.webapp.unified_web_orchestrator - INFO - Supprimé: backend_info.json
+2025-06-08 15:34:52,582 - scripts.webapp.unified_web_orchestrator - INFO - Fichiers temporaires nettoyés: 1
+2025-06-08 15:34:52,582 - scripts.webapp.unified_web_orchestrator - INFO - [OK] Nettoyage processus terminé
+2025-06-08 15:34:52,582 - scripts.webapp.unified_web_orchestrator - INFO - [96m[15:34:52.582] [BACKEND] DEMARRAGE BACKEND[0m
+2025-06-08 15:34:52,582 - scripts.webapp.unified_web_orchestrator - INFO -    Détails: Lancement avec failover de ports
+2025-06-08 15:34:52,582 - scripts.webapp.unified_web_orchestrator - INFO - Tentative 1/4 - Port 5003
+2025-06-08 15:34:52,585 - scripts.webapp.unified_web_orchestrator - INFO - Démarrage backend: python -m argumentation_analysis.services.web_api.app --port 5003
+2025-06-08 15:34:52,591 - scripts.webapp.unified_web_orchestrator - INFO - Attente backend sur http://localhost:5003/api/health (timeout: 30s)
+2025-06-08 15:34:56,925 - scripts.webapp.unified_web_orchestrator - ERROR - Processus backend terminé prématurément (code: 1)
+2025-06-08 15:34:56,925 - scripts.webapp.unified_web_orchestrator - INFO - Tentative 2/4 - Port 5004
+2025-06-08 15:34:56,932 - scripts.webapp.unified_web_orchestrator - INFO - Démarrage backend: python -m argumentation_analysis.services.web_api.app --port 5004
+2025-06-08 15:34:56,936 - scripts.webapp.unified_web_orchestrator - INFO - Attente backend sur http://localhost:5004/api/health (timeout: 30s)
+2025-06-08 15:35:01,238 - scripts.webapp.unified_web_orchestrator - ERROR - Processus backend terminé prématurément (code: 1)
+2025-06-08 15:35:01,239 - scripts.webapp.unified_web_orchestrator - INFO - Tentative 3/4 - Port 5005
+2025-06-08 15:35:01,243 - scripts.webapp.unified_web_orchestrator - INFO - Démarrage backend: python -m argumentation_analysis.services.web_api.app --port 5005
+2025-06-08 15:35:01,247 - scripts.webapp.unified_web_orchestrator - INFO - Attente backend sur http://localhost:5005/api/health (timeout: 30s)
+2025-06-08 15:35:05,546 - scripts.webapp.unified_web_orchestrator - ERROR - Processus backend terminé prématurément (code: 1)
+2025-06-08 15:35:05,547 - scripts.webapp.unified_web_orchestrator - INFO - Tentative 4/4 - Port 5006
+2025-06-08 15:35:05,554 - scripts.webapp.unified_web_orchestrator - INFO - Démarrage backend: python -m argumentation_analysis.services.web_api.app --port 5006
+2025-06-08 15:35:05,561 - scripts.webapp.unified_web_orchestrator - INFO - Attente backend sur http://localhost:5006/api/health (timeout: 30s)
+2025-06-08 15:35:09,862 - scripts.webapp.unified_web_orchestrator - ERROR - Processus backend terminé prématurément (code: 1)
+2025-06-08 15:35:09,864 - scripts.webapp.unified_web_orchestrator - INFO - [91m[15:35:09.864] [ERROR] ECHEC BACKEND[0m
+2025-06-08 15:35:09,865 - scripts.webapp.unified_web_orchestrator - INFO -    Détails: Impossible de démarrer sur les ports: [5003, 5004, 5005, 5006]
+2025-06-08 15:35:09,865 - scripts.webapp.unified_web_orchestrator - INFO - [96m[15:35:09.865] [STOP] ARRET APPLICATION WEB[0m
+2025-06-08 15:35:09,866 - scripts.webapp.unified_web_orchestrator - INFO -    Détails: Nettoyage en cours
+2025-06-08 15:35:09,866 - scripts.webapp.unified_web_orchestrator - INFO - [CLEAN] Debut nettoyage processus application web
+2025-06-08 15:35:12,942 - scripts.webapp.unified_web_orchestrator - INFO - Aucun processus d'application web trouvé
+2025-06-08 15:35:12,942 - scripts.webapp.unified_web_orchestrator - INFO - [96m[15:35:12.942] [OK] ARRET TERMINE[0m
+2025-06-08 15:35:12,942 - scripts.webapp.unified_web_orchestrator - INFO -    Résultat: Toutes les ressources liberees
+2025-06-08 15:35:12,943 - scripts.webapp.unified_web_orchestrator - INFO - [96m[15:35:12.943] [SAVE] TRACE SAUVEGARDEE[0m
+2025-06-08 15:35:12,944 - scripts.webapp.unified_web_orchestrator - INFO -    Détails: Fichier: logs\webapp_integration_trace.md
+2025-06-08 15:54:53,883 - scripts.webapp.unified_web_orchestrator - INFO - [96m[15:54:53.883] [TEST] INTEGRATION COMPLETE[0m
+2025-06-08 15:54:53,883 - scripts.webapp.unified_web_orchestrator - INFO -    Détails: Démarrage orchestration complète
+2025-06-08 15:54:53,883 - scripts.webapp.unified_web_orchestrator - INFO - [96m[15:54:53.883] [START] DEMARRAGE APPLICATION WEB[0m
+2025-06-08 15:54:53,883 - scripts.webapp.unified_web_orchestrator - INFO -    Détails: Mode: Visible
+2025-06-08 15:54:53,884 - scripts.webapp.unified_web_orchestrator - INFO -    Résultat: Initialisation orchestrateur
+2025-06-08 15:54:53,884 - scripts.webapp.unified_web_orchestrator - INFO - [96m[15:54:53.884] [CLEAN] NETTOYAGE PREALABLE[0m
+2025-06-08 15:54:53,884 - scripts.webapp.unified_web_orchestrator - INFO -    Détails: Arret instances existantes
+2025-06-08 15:54:53,884 - scripts.webapp.unified_web_orchestrator - INFO - [CLEAN] Debut nettoyage processus application web
+2025-06-08 15:54:57,645 - scripts.webapp.unified_web_orchestrator - INFO - Processus trouvé: PID 33804 - node d:\dev\2025-epita-intelligence-symbolique\services\web_api\interface-web-argumentative\node_mod
+2025-06-08 15:54:57,733 - scripts.webapp.unified_web_orchestrator - INFO - Processus trouvé: PID 38676 - c:\program files\nodejs\node.exe d:\dev\2025-epita-intelligence-symbolique\services\web_api\interfac
+2025-06-08 15:54:57,835 - scripts.webapp.unified_web_orchestrator - INFO - Processus trouvés: 2
+2025-06-08 15:54:57,835 - scripts.webapp.unified_web_orchestrator - INFO - Envoi signal TERM aux processus...
+2025-06-08 15:54:57,835 - scripts.webapp.unified_web_orchestrator - INFO - TERM envoyé à PID 33804
+2025-06-08 15:54:57,835 - scripts.webapp.unified_web_orchestrator - INFO - TERM envoyé à PID 38676
+2025-06-08 15:54:57,835 - scripts.webapp.unified_web_orchestrator - INFO - Attente arrêt propre (5s)...
+2025-06-08 15:55:02,837 - scripts.webapp.unified_web_orchestrator - INFO - Tous les processus arrêtés proprement
+2025-06-08 15:55:05,885 - scripts.webapp.unified_web_orchestrator - INFO - Vérification libération des ports...
+2025-06-08 15:55:05,896 - scripts.webapp.unified_web_orchestrator - INFO - Tous les ports libérés
+2025-06-08 15:55:05,896 - scripts.webapp.unified_web_orchestrator - INFO - Nettoyage fichiers temporaires...
+2025-06-08 15:55:05,896 - scripts.webapp.unified_web_orchestrator - INFO - Aucun fichier temporaire à nettoyer
+2025-06-08 15:55:05,896 - scripts.webapp.unified_web_orchestrator - INFO - [OK] Nettoyage processus terminé
+2025-06-08 15:55:05,896 - scripts.webapp.unified_web_orchestrator - INFO - [96m[15:55:05.896] [BACKEND] DEMARRAGE BACKEND[0m
+2025-06-08 15:55:05,896 - scripts.webapp.unified_web_orchestrator - INFO -    Détails: Lancement avec failover de ports
+2025-06-08 15:55:05,896 - scripts.webapp.unified_web_orchestrator - INFO - Tentative 1/4 - Port 5003
+2025-06-08 15:55:05,898 - scripts.webapp.unified_web_orchestrator - INFO - Démarrage backend: python -m argumentation_analysis.services.web_api.app --port 5003
+2025-06-08 15:55:05,902 - scripts.webapp.unified_web_orchestrator - INFO - Attente backend sur http://localhost:5003/api/health (timeout: 30s)
+2025-06-08 15:55:23,387 - scripts.webapp.unified_web_orchestrator - INFO - Backend accessible sur http://localhost:5003/api/health
+2025-06-08 15:55:23,389 - scripts.webapp.unified_web_orchestrator - INFO - Info backend sauvées: backend_info.json
+2025-06-08 15:55:23,389 - scripts.webapp.unified_web_orchestrator - INFO - [96m[15:55:23.389] [OK] BACKEND OPERATIONNEL[0m
+2025-06-08 15:55:23,389 - scripts.webapp.unified_web_orchestrator - INFO -    Détails: Port: 5003 | PID: 41528
+2025-06-08 15:55:23,389 - scripts.webapp.unified_web_orchestrator - INFO -    Résultat: URL: http://localhost:5003
+2025-06-08 15:55:23,389 - scripts.webapp.unified_web_orchestrator - INFO - [96m[15:55:23.389] [FRONTEND] DEMARRAGE FRONTEND[0m
+2025-06-08 15:55:23,389 - scripts.webapp.unified_web_orchestrator - INFO -    Détails: Lancement interface React
+2025-06-08 15:55:23,390 - scripts.webapp.unified_web_orchestrator - INFO - Démarrage frontend: npm start
+2025-06-08 15:55:33,692 - scripts.webapp.unified_web_orchestrator - INFO - Frontend accessible sur http://localhost:3000
+2025-06-08 15:55:33,693 - scripts.webapp.unified_web_orchestrator - INFO - [96m[15:55:33.692] [OK] FRONTEND OPERATIONNEL[0m
+2025-06-08 15:55:33,693 - scripts.webapp.unified_web_orchestrator - INFO -    Détails: Port: 3000
+2025-06-08 15:55:33,693 - scripts.webapp.unified_web_orchestrator - INFO -    Résultat: URL: http://localhost:3000
+2025-06-08 15:55:33,693 - scripts.webapp.unified_web_orchestrator - INFO - [96m[15:55:33.693] [CHECK] VALIDATION SERVICES[0m
+2025-06-08 15:55:33,693 - scripts.webapp.unified_web_orchestrator - INFO -    Détails: Verification endpoints
+2025-06-08 15:55:33,948 - scripts.webapp.unified_web_orchestrator - INFO - Backend health: {'message': "API d'analyse argumentative opérationnelle", 'services': {'analysis': False, 'fallacy': False, 'framework': False, 'logic': False, 'validation': False}, 'status': 'healthy', 'timestamp': '2025-06-08T15:55:33.947436', 'version': '1.0.0'}
+2025-06-08 15:55:34,213 - scripts.webapp.unified_web_orchestrator - INFO - Frontend health OK
+2025-06-08 15:55:34,213 - scripts.webapp.unified_web_orchestrator - INFO - [96m[15:55:34.213] [OK] SERVICES VALIDES[0m
+2025-06-08 15:55:34,213 - scripts.webapp.unified_web_orchestrator - INFO -    Détails: Tous les endpoints repondent
+2025-06-08 15:55:34,213 - scripts.webapp.unified_web_orchestrator - INFO - [96m[15:55:34.213] [OK] APPLICATION WEB OPERATIONNELLE[0m
+2025-06-08 15:55:34,213 - scripts.webapp.unified_web_orchestrator - INFO -    Détails: Backend: http://localhost:5003
+2025-06-08 15:55:34,214 - scripts.webapp.unified_web_orchestrator - INFO -    Résultat: Tous les services démarrés
+2025-06-08 15:55:36,223 - scripts.webapp.unified_web_orchestrator - INFO - [96m[15:55:36.223] [TEST] EXECUTION TESTS PLAYWRIGHT[0m
+2025-06-08 15:55:36,223 - scripts.webapp.unified_web_orchestrator - INFO -    Détails: Tests: tous
+2025-06-08 15:55:36,223 - scripts.webapp.unified_web_orchestrator - INFO - Démarrage tests Playwright: ['tests/functional/']
+2025-06-08 15:55:36,223 - scripts.webapp.unified_web_orchestrator - INFO - Configuration: {'backend_url': 'http://localhost:5003', 'frontend_url': 'http://localhost:3000', 'headless': False, 'browser': 'chromium', 'timeout_ms': 10000, 'slow_timeout_ms': 20000, 'screenshots': True, 'traces': True}
+2025-06-08 15:55:36,224 - scripts.webapp.unified_web_orchestrator - INFO - Variables test configurées: {'BACKEND_URL': 'http://localhost:5003', 'FRONTEND_URL': 'http://localhost:3000', 'HEADLESS': 'false', 'BROWSER': 'chromium', 'SCREENSHOTS_DIR': 'logs\\screenshots', 'TRACES_DIR': 'logs\\traces'}
+2025-06-08 15:55:36,226 - scripts.webapp.unified_web_orchestrator - INFO - Commande test: powershell -File scripts/env/activate_project_env.ps1 -CommandToRun python -m pytest -v -s --tb=short --headed --browser=chromium --screenshot=on --video=on tests/functional/ -m playwright
+2025-06-08 15:55:38,739 - scripts.webapp.unified_web_orchestrator - INFO - Tests terminés - Code retour: 0
+2025-06-08 15:55:38,739 - scripts.webapp.unified_web_orchestrator - INFO - Tests réussis: {'total': 0, 'passed': 0, 'failed': 0, 'skipped': 0, 'errors': 0, 'duration': 0.0}
+2025-06-08 15:55:38,740 - scripts.webapp.unified_web_orchestrator - INFO - Rapport test sauvé: logs\traces\test_report.json
+2025-06-08 15:55:38,740 - scripts.webapp.unified_web_orchestrator - INFO - [96m[15:55:38.740] [SUCCESS] INTEGRATION REUSSIE[0m
+2025-06-08 15:55:38,740 - scripts.webapp.unified_web_orchestrator - INFO -    Détails: Tous les tests ont passé
+2025-06-08 15:55:38,740 - scripts.webapp.unified_web_orchestrator - INFO -    Résultat: Application web validée
+2025-06-08 15:55:38,740 - scripts.webapp.unified_web_orchestrator - INFO - [96m[15:55:38.740] [STOP] ARRET APPLICATION WEB[0m
+2025-06-08 15:55:38,740 - scripts.webapp.unified_web_orchestrator - INFO -    Détails: Nettoyage en cours
+2025-06-08 15:55:38,740 - scripts.webapp.unified_web_orchestrator - INFO - Arrêt frontend PID 9688
+2025-06-08 15:55:38,741 - scripts.webapp.unified_web_orchestrator - INFO - Frontend arrêté
+2025-06-08 15:55:38,741 - scripts.webapp.unified_web_orchestrator - INFO - Arrêt backend PID 41528
+2025-06-08 15:55:38,762 - scripts.webapp.unified_web_orchestrator - INFO - Backend arrêté
+2025-06-08 15:55:38,762 - scripts.webapp.unified_web_orchestrator - INFO - [CLEAN] Debut nettoyage processus application web
+2025-06-08 15:55:41,407 - scripts.webapp.unified_web_orchestrator - INFO - Processus trouvé: PID 11728 - c:\program files\nodejs\node.exe d:\dev\2025-epita-intelligence-symbolique\services\web_api\interfac
+2025-06-08 15:55:41,919 - scripts.webapp.unified_web_orchestrator - INFO - Processus trouvé: PID 32900 - node d:\dev\2025-epita-intelligence-symbolique\services\web_api\interface-web-argumentative\node_mod
+2025-06-08 15:55:42,070 - scripts.webapp.unified_web_orchestrator - INFO - Processus trouvés: 2
+2025-06-08 15:55:42,070 - scripts.webapp.unified_web_orchestrator - INFO - Envoi signal TERM aux processus...
+2025-06-08 15:55:42,070 - scripts.webapp.unified_web_orchestrator - INFO - TERM envoyé à PID 11728
+2025-06-08 15:55:42,070 - scripts.webapp.unified_web_orchestrator - INFO - TERM envoyé à PID 32900
+2025-06-08 15:55:42,070 - scripts.webapp.unified_web_orchestrator - INFO - Attente arrêt propre (5s)...
+2025-06-08 15:55:47,071 - scripts.webapp.unified_web_orchestrator - INFO - Tous les processus arrêtés proprement
+2025-06-08 15:55:50,100 - scripts.webapp.unified_web_orchestrator - INFO - Vérification libération des ports...
+2025-06-08 15:55:50,111 - scripts.webapp.unified_web_orchestrator - INFO - Tous les ports libérés
+2025-06-08 15:55:50,111 - scripts.webapp.unified_web_orchestrator - INFO - Nettoyage fichiers temporaires...
+2025-06-08 15:55:50,112 - scripts.webapp.unified_web_orchestrator - INFO - Supprimé: backend_info.json
+2025-06-08 15:55:50,112 - scripts.webapp.unified_web_orchestrator - INFO - Fichiers temporaires nettoyés: 1
+2025-06-08 15:55:50,112 - scripts.webapp.unified_web_orchestrator - INFO - [OK] Nettoyage processus terminé
+2025-06-08 15:55:50,112 - scripts.webapp.unified_web_orchestrator - INFO - [96m[15:55:50.112] [OK] ARRET TERMINE[0m
+2025-06-08 15:55:50,112 - scripts.webapp.unified_web_orchestrator - INFO -    Résultat: Toutes les ressources liberees
+2025-06-08 15:55:50,112 - scripts.webapp.unified_web_orchestrator - INFO - [96m[15:55:50.112] [SAVE] TRACE SAUVEGARDEE[0m
+2025-06-08 15:55:50,112 - scripts.webapp.unified_web_orchestrator - INFO -    Détails: Fichier: logs\webapp_integration_trace.md
+2025-06-08 15:55:50,112 - scripts.webapp.unified_web_orchestrator - INFO - [96m[15:55:50.112] [STOP] ARRET APPLICATION WEB[0m
+2025-06-08 15:55:50,112 - scripts.webapp.unified_web_orchestrator - INFO -    Détails: Nettoyage en cours
+2025-06-08 15:55:50,112 - scripts.webapp.unified_web_orchestrator - INFO - [CLEAN] Debut nettoyage processus application web
+2025-06-08 15:55:53,076 - scripts.webapp.unified_web_orchestrator - INFO - Aucun processus d'application web trouvé
+2025-06-08 15:55:53,076 - scripts.webapp.unified_web_orchestrator - INFO - [96m[15:55:53.076] [OK] ARRET TERMINE[0m
+2025-06-08 15:55:53,076 - scripts.webapp.unified_web_orchestrator - INFO -    Résultat: Toutes les ressources liberees
+2025-06-08 15:57:36,757 - scripts.webapp.unified_web_orchestrator - INFO - [96m[15:57:36.757] [TEST] INTEGRATION COMPLETE[0m
+2025-06-08 15:57:36,757 - scripts.webapp.unified_web_orchestrator - INFO -    Détails: Démarrage orchestration complète
+2025-06-08 15:57:36,757 - scripts.webapp.unified_web_orchestrator - INFO - [96m[15:57:36.757] [START] DEMARRAGE APPLICATION WEB[0m
+2025-06-08 15:57:36,757 - scripts.webapp.unified_web_orchestrator - INFO -    Détails: Mode: Visible
+2025-06-08 15:57:36,757 - scripts.webapp.unified_web_orchestrator - INFO -    Résultat: Initialisation orchestrateur
+2025-06-08 15:57:36,757 - scripts.webapp.unified_web_orchestrator - INFO - [96m[15:57:36.757] [CLEAN] NETTOYAGE PREALABLE[0m
+2025-06-08 15:57:36,757 - scripts.webapp.unified_web_orchestrator - INFO -    Détails: Arret instances existantes
+2025-06-08 15:57:36,757 - scripts.webapp.unified_web_orchestrator - INFO - [CLEAN] Debut nettoyage processus application web
+2025-06-08 15:57:40,810 - scripts.webapp.unified_web_orchestrator - INFO - Aucun processus d'application web trouvé
+2025-06-08 15:57:40,810 - scripts.webapp.unified_web_orchestrator - INFO - [96m[15:57:40.810] [BACKEND] DEMARRAGE BACKEND[0m
+2025-06-08 15:57:40,810 - scripts.webapp.unified_web_orchestrator - INFO -    Détails: Lancement avec failover de ports
+2025-06-08 15:57:40,810 - scripts.webapp.unified_web_orchestrator - INFO - Tentative 1/4 - Port 5003
+2025-06-08 15:57:40,813 - scripts.webapp.unified_web_orchestrator - INFO - Démarrage backend: python -m argumentation_analysis.services.web_api.app --port 5003
+2025-06-08 15:57:40,817 - scripts.webapp.unified_web_orchestrator - INFO - Attente backend sur http://localhost:5003/api/health (timeout: 30s)
+2025-06-08 15:57:45,385 - scripts.webapp.unified_web_orchestrator - INFO - Backend accessible sur http://localhost:5003/api/health
+2025-06-08 15:57:45,386 - scripts.webapp.unified_web_orchestrator - INFO - Info backend sauvées: backend_info.json
+2025-06-08 15:57:45,386 - scripts.webapp.unified_web_orchestrator - INFO - [96m[15:57:45.386] [OK] BACKEND OPERATIONNEL[0m
+2025-06-08 15:57:45,386 - scripts.webapp.unified_web_orchestrator - INFO -    Détails: Port: 5003 | PID: 8188
+2025-06-08 15:57:45,386 - scripts.webapp.unified_web_orchestrator - INFO -    Résultat: URL: http://localhost:5003
+2025-06-08 15:57:45,386 - scripts.webapp.unified_web_orchestrator - INFO - [96m[15:57:45.386] [FRONTEND] DEMARRAGE FRONTEND[0m
+2025-06-08 15:57:45,386 - scripts.webapp.unified_web_orchestrator - INFO -    Détails: Lancement interface React
+2025-06-08 15:57:45,386 - scripts.webapp.unified_web_orchestrator - INFO - Démarrage frontend: npm start
+2025-06-08 15:57:55,677 - scripts.webapp.unified_web_orchestrator - INFO - Frontend accessible sur http://localhost:3000
+2025-06-08 15:57:55,678 - scripts.webapp.unified_web_orchestrator - INFO - [96m[15:57:55.677] [OK] FRONTEND OPERATIONNEL[0m
+2025-06-08 15:57:55,678 - scripts.webapp.unified_web_orchestrator - INFO -    Détails: Port: 3000
+2025-06-08 15:57:55,678 - scripts.webapp.unified_web_orchestrator - INFO -    Résultat: URL: http://localhost:3000
+2025-06-08 15:57:55,678 - scripts.webapp.unified_web_orchestrator - INFO - [96m[15:57:55.678] [CHECK] VALIDATION SERVICES[0m
+2025-06-08 15:57:55,678 - scripts.webapp.unified_web_orchestrator - INFO -    Détails: Verification endpoints
+2025-06-08 15:57:55,942 - scripts.webapp.unified_web_orchestrator - INFO - Backend health: {'message': "API d'analyse argumentative opérationnelle", 'services': {'analysis': False, 'fallacy': False, 'framework': False, 'logic': False, 'validation': False}, 'status': 'healthy', 'timestamp': '2025-06-08T15:57:55.941247', 'version': '1.0.0'}
+2025-06-08 15:57:56,209 - scripts.webapp.unified_web_orchestrator - INFO - Frontend health OK
+2025-06-08 15:57:56,209 - scripts.webapp.unified_web_orchestrator - INFO - [96m[15:57:56.209] [OK] SERVICES VALIDES[0m
+2025-06-08 15:57:56,209 - scripts.webapp.unified_web_orchestrator - INFO -    Détails: Tous les endpoints repondent
+2025-06-08 15:57:56,209 - scripts.webapp.unified_web_orchestrator - INFO - [96m[15:57:56.209] [OK] APPLICATION WEB OPERATIONNELLE[0m
+2025-06-08 15:57:56,209 - scripts.webapp.unified_web_orchestrator - INFO -    Détails: Backend: http://localhost:5003
+2025-06-08 15:57:56,209 - scripts.webapp.unified_web_orchestrator - INFO -    Résultat: Tous les services démarrés
+2025-06-08 15:57:58,212 - scripts.webapp.unified_web_orchestrator - INFO - [96m[15:57:58.212] [TEST] EXECUTION TESTS PLAYWRIGHT[0m
+2025-06-08 15:57:58,212 - scripts.webapp.unified_web_orchestrator - INFO -    Détails: Tests: ['tests/functional/test_webapp_homepage.py']
+2025-06-08 15:57:58,212 - scripts.webapp.unified_web_orchestrator - INFO - Démarrage tests Playwright: ['tests/functional/test_webapp_homepage.py']
+2025-06-08 15:57:58,212 - scripts.webapp.unified_web_orchestrator - INFO - Configuration: {'backend_url': 'http://localhost:5003', 'frontend_url': 'http://localhost:3000', 'headless': False, 'browser': 'chromium', 'timeout_ms': 10000, 'slow_timeout_ms': 20000, 'screenshots': True, 'traces': True}
+2025-06-08 15:57:58,212 - scripts.webapp.unified_web_orchestrator - INFO - Variables test configurées: {'BACKEND_URL': 'http://localhost:5003', 'FRONTEND_URL': 'http://localhost:3000', 'HEADLESS': 'false', 'BROWSER': 'chromium', 'SCREENSHOTS_DIR': 'logs\\screenshots', 'TRACES_DIR': 'logs\\traces'}
+2025-06-08 15:57:58,214 - scripts.webapp.unified_web_orchestrator - INFO - Commande test: powershell -File scripts/env/activate_project_env.ps1 -CommandToRun python -m pytest -v -s --tb=short --headed --browser=chromium --screenshot=on --video=on tests/functional/test_webapp_homepage.py -m playwright
+2025-06-08 15:58:00,792 - scripts.webapp.unified_web_orchestrator - INFO - Tests terminés - Code retour: 0
+2025-06-08 15:58:00,793 - scripts.webapp.unified_web_orchestrator - INFO - Tests réussis: {'total': 0, 'passed': 0, 'failed': 0, 'skipped': 0, 'errors': 0, 'duration': 0.0}
+2025-06-08 15:58:00,793 - scripts.webapp.unified_web_orchestrator - INFO - Rapport test sauvé: logs\traces\test_report.json
+2025-06-08 15:58:00,793 - scripts.webapp.unified_web_orchestrator - INFO - [96m[15:58:00.793] [SUCCESS] INTEGRATION REUSSIE[0m
+2025-06-08 15:58:00,793 - scripts.webapp.unified_web_orchestrator - INFO -    Détails: Tous les tests ont passé
+2025-06-08 15:58:00,793 - scripts.webapp.unified_web_orchestrator - INFO -    Résultat: Application web validée
+2025-06-08 15:58:00,793 - scripts.webapp.unified_web_orchestrator - INFO - [96m[15:58:00.793] [STOP] ARRET APPLICATION WEB[0m
+2025-06-08 15:58:00,793 - scripts.webapp.unified_web_orchestrator - INFO -    Détails: Nettoyage en cours
+2025-06-08 15:58:00,793 - scripts.webapp.unified_web_orchestrator - INFO - Arrêt frontend PID 33224
+2025-06-08 15:58:00,795 - scripts.webapp.unified_web_orchestrator - INFO - Frontend arrêté
+2025-06-08 15:58:00,795 - scripts.webapp.unified_web_orchestrator - INFO - Arrêt backend PID 8188
+2025-06-08 15:58:00,814 - scripts.webapp.unified_web_orchestrator - INFO - Backend arrêté
+2025-06-08 15:58:00,814 - scripts.webapp.unified_web_orchestrator - INFO - [CLEAN] Debut nettoyage processus application web
+2025-06-08 15:58:03,272 - scripts.webapp.unified_web_orchestrator - INFO - Processus trouvé: PID 10684 - node d:\dev\2025-epita-intelligence-symbolique\services\web_api\interface-web-argumentative\node_mod
+2025-06-08 15:58:03,881 - scripts.webapp.unified_web_orchestrator - INFO - Processus trouvé: PID 34428 - c:\program files\nodejs\node.exe d:\dev\2025-epita-intelligence-symbolique\services\web_api\interfac
+2025-06-08 15:58:04,033 - scripts.webapp.unified_web_orchestrator - INFO - Processus trouvés: 2
+2025-06-08 15:58:04,033 - scripts.webapp.unified_web_orchestrator - INFO - Envoi signal TERM aux processus...
+2025-06-08 15:58:04,034 - scripts.webapp.unified_web_orchestrator - INFO - TERM envoyé à PID 10684
+2025-06-08 15:58:04,034 - scripts.webapp.unified_web_orchestrator - INFO - TERM envoyé à PID 34428
+2025-06-08 15:58:04,034 - scripts.webapp.unified_web_orchestrator - INFO - Attente arrêt propre (5s)...
+2025-06-08 15:58:09,035 - scripts.webapp.unified_web_orchestrator - INFO - Tous les processus arrêtés proprement
+2025-06-08 15:58:12,148 - scripts.webapp.unified_web_orchestrator - INFO - Vérification libération des ports...
+2025-06-08 15:58:12,162 - scripts.webapp.unified_web_orchestrator - INFO - Tous les ports libérés
+2025-06-08 15:58:12,162 - scripts.webapp.unified_web_orchestrator - INFO - Nettoyage fichiers temporaires...
+2025-06-08 15:58:12,163 - scripts.webapp.unified_web_orchestrator - INFO - Supprimé: backend_info.json
+2025-06-08 15:58:12,163 - scripts.webapp.unified_web_orchestrator - INFO - Fichiers temporaires nettoyés: 1
+2025-06-08 15:58:12,163 - scripts.webapp.unified_web_orchestrator - INFO - [OK] Nettoyage processus terminé
+2025-06-08 15:58:12,163 - scripts.webapp.unified_web_orchestrator - INFO - [96m[15:58:12.163] [OK] ARRET TERMINE[0m
+2025-06-08 15:58:12,163 - scripts.webapp.unified_web_orchestrator - INFO -    Résultat: Toutes les ressources liberees
+2025-06-08 15:58:12,164 - scripts.webapp.unified_web_orchestrator - INFO - [96m[15:58:12.164] [SAVE] TRACE SAUVEGARDEE[0m
+2025-06-08 15:58:12,164 - scripts.webapp.unified_web_orchestrator - INFO -    Détails: Fichier: logs\webapp_integration_trace.md
+2025-06-08 15:58:12,164 - scripts.webapp.unified_web_orchestrator - INFO - [96m[15:58:12.164] [STOP] ARRET APPLICATION WEB[0m
+2025-06-08 15:58:12,164 - scripts.webapp.unified_web_orchestrator - INFO -    Détails: Nettoyage en cours
+2025-06-08 15:58:12,164 - scripts.webapp.unified_web_orchestrator - INFO - [CLEAN] Debut nettoyage processus application web
+2025-06-08 15:58:15,234 - scripts.webapp.unified_web_orchestrator - INFO - Aucun processus d'application web trouvé
+2025-06-08 15:58:15,235 - scripts.webapp.unified_web_orchestrator - INFO - [96m[15:58:15.235] [OK] ARRET TERMINE[0m
+2025-06-08 15:58:15,235 - scripts.webapp.unified_web_orchestrator - INFO -    Résultat: Toutes les ressources liberees
+2025-06-08 15:58:42,773 - scripts.webapp.unified_web_orchestrator - INFO - [96m[15:58:42.773] [TEST] INTEGRATION COMPLETE[0m
+2025-06-08 15:58:42,773 - scripts.webapp.unified_web_orchestrator - INFO -    Détails: Démarrage orchestration complète
+2025-06-08 15:58:42,773 - scripts.webapp.unified_web_orchestrator - INFO - [96m[15:58:42.773] [START] DEMARRAGE APPLICATION WEB[0m
+2025-06-08 15:58:42,773 - scripts.webapp.unified_web_orchestrator - INFO -    Détails: Mode: Visible
+2025-06-08 15:58:42,773 - scripts.webapp.unified_web_orchestrator - INFO -    Résultat: Initialisation orchestrateur
+2025-06-08 15:58:42,773 - scripts.webapp.unified_web_orchestrator - INFO - [96m[15:58:42.773] [CLEAN] NETTOYAGE PREALABLE[0m
+2025-06-08 15:58:42,773 - scripts.webapp.unified_web_orchestrator - INFO -    Détails: Arret instances existantes
+2025-06-08 15:58:42,773 - scripts.webapp.unified_web_orchestrator - INFO - [CLEAN] Debut nettoyage processus application web
+2025-06-08 15:58:46,819 - scripts.webapp.unified_web_orchestrator - INFO - Aucun processus d'application web trouvé
+2025-06-08 15:58:46,820 - scripts.webapp.unified_web_orchestrator - INFO - [96m[15:58:46.820] [BACKEND] DEMARRAGE BACKEND[0m
+2025-06-08 15:58:46,820 - scripts.webapp.unified_web_orchestrator - INFO -    Détails: Lancement avec failover de ports
+2025-06-08 15:58:46,820 - scripts.webapp.unified_web_orchestrator - INFO - Tentative 1/4 - Port 5003
+2025-06-08 15:58:46,823 - scripts.webapp.unified_web_orchestrator - INFO - Démarrage backend: python -m argumentation_analysis.services.web_api.app --port 5003
+2025-06-08 15:58:46,826 - scripts.webapp.unified_web_orchestrator - INFO - Attente backend sur http://localhost:5003/api/health (timeout: 30s)
+2025-06-08 15:58:51,388 - scripts.webapp.unified_web_orchestrator - INFO - Backend accessible sur http://localhost:5003/api/health
+2025-06-08 15:58:51,390 - scripts.webapp.unified_web_orchestrator - INFO - Info backend sauvées: backend_info.json
+2025-06-08 15:58:51,390 - scripts.webapp.unified_web_orchestrator - INFO - [96m[15:58:51.390] [OK] BACKEND OPERATIONNEL[0m
+2025-06-08 15:58:51,391 - scripts.webapp.unified_web_orchestrator - INFO -    Détails: Port: 5003 | PID: 28764
+2025-06-08 15:58:51,391 - scripts.webapp.unified_web_orchestrator - INFO -    Résultat: URL: http://localhost:5003
+2025-06-08 15:58:51,391 - scripts.webapp.unified_web_orchestrator - INFO - [96m[15:58:51.391] [FRONTEND] DEMARRAGE FRONTEND[0m
+2025-06-08 15:58:51,391 - scripts.webapp.unified_web_orchestrator - INFO -    Détails: Lancement interface React
+2025-06-08 15:58:51,391 - scripts.webapp.unified_web_orchestrator - INFO - Démarrage frontend: npm start
+2025-06-08 15:59:01,670 - scripts.webapp.unified_web_orchestrator - INFO - Frontend accessible sur http://localhost:3000
+2025-06-08 15:59:01,670 - scripts.webapp.unified_web_orchestrator - INFO - [96m[15:59:01.670] [OK] FRONTEND OPERATIONNEL[0m
+2025-06-08 15:59:01,670 - scripts.webapp.unified_web_orchestrator - INFO -    Détails: Port: 3000
+2025-06-08 15:59:01,670 - scripts.webapp.unified_web_orchestrator - INFO -    Résultat: URL: http://localhost:3000
+2025-06-08 15:59:01,670 - scripts.webapp.unified_web_orchestrator - INFO - [96m[15:59:01.670] [CHECK] VALIDATION SERVICES[0m
+2025-06-08 15:59:01,670 - scripts.webapp.unified_web_orchestrator - INFO -    Détails: Verification endpoints
+2025-06-08 15:59:01,926 - scripts.webapp.unified_web_orchestrator - INFO - Backend health: {'message': "API d'analyse argumentative opérationnelle", 'services': {'analysis': False, 'fallacy': False, 'framework': False, 'logic': False, 'validation': False}, 'status': 'healthy', 'timestamp': '2025-06-08T15:59:01.925445', 'version': '1.0.0'}
+2025-06-08 15:59:02,192 - scripts.webapp.unified_web_orchestrator - INFO - Frontend health OK
+2025-06-08 15:59:02,193 - scripts.webapp.unified_web_orchestrator - INFO - [96m[15:59:02.193] [OK] SERVICES VALIDES[0m
+2025-06-08 15:59:02,193 - scripts.webapp.unified_web_orchestrator - INFO -    Détails: Tous les endpoints repondent
+2025-06-08 15:59:02,193 - scripts.webapp.unified_web_orchestrator - INFO - [96m[15:59:02.193] [OK] APPLICATION WEB OPERATIONNELLE[0m
+2025-06-08 15:59:02,193 - scripts.webapp.unified_web_orchestrator - INFO -    Détails: Backend: http://localhost:5003
+2025-06-08 15:59:02,193 - scripts.webapp.unified_web_orchestrator - INFO -    Résultat: Tous les services démarrés
+2025-06-08 15:59:04,196 - scripts.webapp.unified_web_orchestrator - INFO - [96m[15:59:04.196] [TEST] EXECUTION TESTS PLAYWRIGHT[0m
+2025-06-08 15:59:04,196 - scripts.webapp.unified_web_orchestrator - INFO -    Détails: Tests: ['tests/functional/test_webapp_homepage.py']
+2025-06-08 15:59:04,196 - scripts.webapp.unified_web_orchestrator - INFO - Démarrage tests Playwright: ['tests/functional/test_webapp_homepage.py']
+2025-06-08 15:59:04,197 - scripts.webapp.unified_web_orchestrator - INFO - Configuration: {'backend_url': 'http://localhost:5003', 'frontend_url': 'http://localhost:3000', 'headless': False, 'browser': 'chromium', 'timeout_ms': 10000, 'slow_timeout_ms': 20000, 'screenshots': True, 'traces': True}
+2025-06-08 15:59:04,197 - scripts.webapp.unified_web_orchestrator - INFO - Variables test configurées: {'BACKEND_URL': 'http://localhost:5003', 'FRONTEND_URL': 'http://localhost:3000', 'HEADLESS': 'false', 'BROWSER': 'chromium', 'SCREENSHOTS_DIR': 'logs\\screenshots', 'TRACES_DIR': 'logs\\traces'}
+2025-06-08 15:59:04,198 - scripts.webapp.unified_web_orchestrator - INFO - Commande test: powershell -File scripts/env/activate_project_env.ps1 -CommandToRun python -m pytest -v -s --tb=short --headed --browser=chromium --screenshot=on --video=on tests/functional/test_webapp_homepage.py
+2025-06-08 15:59:06,726 - scripts.webapp.unified_web_orchestrator - INFO - Tests terminés - Code retour: 0
+2025-06-08 15:59:06,727 - scripts.webapp.unified_web_orchestrator - INFO - Tests réussis: {'total': 0, 'passed': 0, 'failed': 0, 'skipped': 0, 'errors': 0, 'duration': 0.0}
+2025-06-08 15:59:06,727 - scripts.webapp.unified_web_orchestrator - INFO - Rapport test sauvé: logs\traces\test_report.json
+2025-06-08 15:59:06,727 - scripts.webapp.unified_web_orchestrator - INFO - [96m[15:59:06.727] [SUCCESS] INTEGRATION REUSSIE[0m
+2025-06-08 15:59:06,727 - scripts.webapp.unified_web_orchestrator - INFO -    Détails: Tous les tests ont passé
+2025-06-08 15:59:06,727 - scripts.webapp.unified_web_orchestrator - INFO -    Résultat: Application web validée
+2025-06-08 15:59:06,727 - scripts.webapp.unified_web_orchestrator - INFO - [96m[15:59:06.727] [STOP] ARRET APPLICATION WEB[0m
+2025-06-08 15:59:06,727 - scripts.webapp.unified_web_orchestrator - INFO -    Détails: Nettoyage en cours
+2025-06-08 15:59:06,727 - scripts.webapp.unified_web_orchestrator - INFO - Arrêt frontend PID 39788
+2025-06-08 15:59:06,729 - scripts.webapp.unified_web_orchestrator - INFO - Frontend arrêté
+2025-06-08 15:59:06,729 - scripts.webapp.unified_web_orchestrator - INFO - Arrêt backend PID 28764
+2025-06-08 15:59:06,748 - scripts.webapp.unified_web_orchestrator - INFO - Backend arrêté
+2025-06-08 15:59:06,748 - scripts.webapp.unified_web_orchestrator - INFO - [CLEAN] Debut nettoyage processus application web
+2025-06-08 15:59:09,549 - scripts.webapp.unified_web_orchestrator - INFO - Processus trouvé: PID 20432 - c:\program files\nodejs\node.exe d:\dev\2025-epita-intelligence-symbolique\services\web_api\interfac
+2025-06-08 15:59:09,957 - scripts.webapp.unified_web_orchestrator - INFO - Processus trouvé: PID 35068 - node d:\dev\2025-epita-intelligence-symbolique\services\web_api\interface-web-argumentative\node_mod
+2025-06-08 15:59:10,094 - scripts.webapp.unified_web_orchestrator - INFO - Processus trouvés: 2
+2025-06-08 15:59:10,094 - scripts.webapp.unified_web_orchestrator - INFO - Envoi signal TERM aux processus...
+2025-06-08 15:59:10,095 - scripts.webapp.unified_web_orchestrator - INFO - TERM envoyé à PID 20432
+2025-06-08 15:59:10,095 - scripts.webapp.unified_web_orchestrator - INFO - TERM envoyé à PID 35068
+2025-06-08 15:59:10,095 - scripts.webapp.unified_web_orchestrator - INFO - Attente arrêt propre (5s)...
+2025-06-08 15:59:15,096 - scripts.webapp.unified_web_orchestrator - INFO - Tous les processus arrêtés proprement
+2025-06-08 15:59:18,186 - scripts.webapp.unified_web_orchestrator - INFO - Vérification libération des ports...
+2025-06-08 15:59:18,201 - scripts.webapp.unified_web_orchestrator - INFO - Tous les ports libérés
+2025-06-08 15:59:18,201 - scripts.webapp.unified_web_orchestrator - INFO - Nettoyage fichiers temporaires...
+2025-06-08 15:59:18,201 - scripts.webapp.unified_web_orchestrator - INFO - Supprimé: backend_info.json
+2025-06-08 15:59:18,202 - scripts.webapp.unified_web_orchestrator - INFO - Fichiers temporaires nettoyés: 1
+2025-06-08 15:59:18,202 - scripts.webapp.unified_web_orchestrator - INFO - [OK] Nettoyage processus terminé
+2025-06-08 15:59:18,202 - scripts.webapp.unified_web_orchestrator - INFO - [96m[15:59:18.202] [OK] ARRET TERMINE[0m
+2025-06-08 15:59:18,202 - scripts.webapp.unified_web_orchestrator - INFO -    Résultat: Toutes les ressources liberees
+2025-06-08 15:59:18,202 - scripts.webapp.unified_web_orchestrator - INFO - [96m[15:59:18.202] [SAVE] TRACE SAUVEGARDEE[0m
+2025-06-08 15:59:18,202 - scripts.webapp.unified_web_orchestrator - INFO -    Détails: Fichier: logs\webapp_integration_trace.md
+2025-06-08 15:59:18,202 - scripts.webapp.unified_web_orchestrator - INFO - [96m[15:59:18.202] [STOP] ARRET APPLICATION WEB[0m
+2025-06-08 15:59:18,202 - scripts.webapp.unified_web_orchestrator - INFO -    Détails: Nettoyage en cours
+2025-06-08 15:59:18,202 - scripts.webapp.unified_web_orchestrator - INFO - [CLEAN] Debut nettoyage processus application web
+2025-06-08 15:59:21,267 - scripts.webapp.unified_web_orchestrator - INFO - Aucun processus d'application web trouvé
+2025-06-08 15:59:21,267 - scripts.webapp.unified_web_orchestrator - INFO - [96m[15:59:21.267] [OK] ARRET TERMINE[0m
+2025-06-08 15:59:21,267 - scripts.webapp.unified_web_orchestrator - INFO -    Résultat: Toutes les ressources liberees
+2025-06-08 15:59:34,149 - scripts.webapp.unified_web_orchestrator - INFO - [96m[15:59:34.149] [STOP] ARRET APPLICATION WEB[0m
+2025-06-08 15:59:34,149 - scripts.webapp.unified_web_orchestrator - INFO -    Détails: Nettoyage en cours
+2025-06-08 15:59:34,149 - scripts.webapp.unified_web_orchestrator - INFO - [CLEAN] Debut nettoyage processus application web
+2025-06-08 15:59:38,031 - scripts.webapp.unified_web_orchestrator - INFO - Aucun processus d'application web trouvé
+2025-06-08 15:59:38,032 - scripts.webapp.unified_web_orchestrator - INFO - [96m[15:59:38.032] [OK] ARRET TERMINE[0m
+2025-06-08 15:59:38,032 - scripts.webapp.unified_web_orchestrator - INFO -    Résultat: Toutes les ressources liberees
+2025-06-08 16:01:18,526 - scripts.webapp.unified_web_orchestrator - INFO - [96m[16:01:18.526] [START] DEMARRAGE APPLICATION WEB[0m
+2025-06-08 16:01:18,526 - scripts.webapp.unified_web_orchestrator - INFO -    Détails: Mode: Visible
+2025-06-08 16:01:18,526 - scripts.webapp.unified_web_orchestrator - INFO -    Résultat: Initialisation orchestrateur
+2025-06-08 16:01:18,526 - scripts.webapp.unified_web_orchestrator - INFO - [96m[16:01:18.526] [CLEAN] NETTOYAGE PREALABLE[0m
+2025-06-08 16:01:18,526 - scripts.webapp.unified_web_orchestrator - INFO -    Détails: Arret instances existantes
+2025-06-08 16:01:18,526 - scripts.webapp.unified_web_orchestrator - INFO - [CLEAN] Debut nettoyage processus application web
+2025-06-08 16:01:22,358 - scripts.webapp.unified_web_orchestrator - INFO - Aucun processus d'application web trouvé
+2025-06-08 16:01:22,358 - scripts.webapp.unified_web_orchestrator - INFO - [96m[16:01:22.358] [BACKEND] DEMARRAGE BACKEND[0m
+2025-06-08 16:01:22,358 - scripts.webapp.unified_web_orchestrator - INFO -    Détails: Lancement avec failover de ports
+2025-06-08 16:01:22,358 - scripts.webapp.unified_web_orchestrator - INFO - Tentative 1/4 - Port 5003
+2025-06-08 16:01:22,363 - scripts.webapp.unified_web_orchestrator - INFO - Démarrage backend: python -m argumentation_analysis.services.web_api.app --port 5003
+2025-06-08 16:01:22,371 - scripts.webapp.unified_web_orchestrator - INFO - Attente backend sur http://localhost:5003/api/health (timeout: 30s)
+2025-06-08 16:01:26,946 - scripts.webapp.unified_web_orchestrator - INFO - Backend accessible sur http://localhost:5003/api/health
+2025-06-08 16:01:26,947 - scripts.webapp.unified_web_orchestrator - INFO - Info backend sauvées: backend_info.json
+2025-06-08 16:01:26,947 - scripts.webapp.unified_web_orchestrator - INFO - [96m[16:01:26.947] [OK] BACKEND OPERATIONNEL[0m
+2025-06-08 16:01:26,948 - scripts.webapp.unified_web_orchestrator - INFO -    Détails: Port: 5003 | PID: 6804
+2025-06-08 16:01:26,948 - scripts.webapp.unified_web_orchestrator - INFO -    Résultat: URL: http://localhost:5003
+2025-06-08 16:01:26,948 - scripts.webapp.unified_web_orchestrator - INFO - [96m[16:01:26.948] [FRONTEND] DEMARRAGE FRONTEND[0m
+2025-06-08 16:01:26,948 - scripts.webapp.unified_web_orchestrator - INFO -    Détails: Lancement interface React
+2025-06-08 16:01:26,948 - scripts.webapp.unified_web_orchestrator - INFO - Démarrage frontend: npm start
+2025-06-08 16:01:37,243 - scripts.webapp.unified_web_orchestrator - INFO - Frontend accessible sur http://localhost:3000
+2025-06-08 16:01:37,244 - scripts.webapp.unified_web_orchestrator - INFO - [96m[16:01:37.244] [OK] FRONTEND OPERATIONNEL[0m
+2025-06-08 16:01:37,244 - scripts.webapp.unified_web_orchestrator - INFO -    Détails: Port: 3000
+2025-06-08 16:01:37,244 - scripts.webapp.unified_web_orchestrator - INFO -    Résultat: URL: http://localhost:3000
+2025-06-08 16:01:37,244 - scripts.webapp.unified_web_orchestrator - INFO - [96m[16:01:37.244] [CHECK] VALIDATION SERVICES[0m
+2025-06-08 16:01:37,244 - scripts.webapp.unified_web_orchestrator - INFO -    Détails: Verification endpoints
+2025-06-08 16:01:37,501 - scripts.webapp.unified_web_orchestrator - INFO - Backend health: {'message': "API d'analyse argumentative opérationnelle", 'services': {'analysis': False, 'fallacy': False, 'framework': False, 'logic': False, 'validation': False}, 'status': 'healthy', 'timestamp': '2025-06-08T16:01:37.501306', 'version': '1.0.0'}
+2025-06-08 16:01:37,764 - scripts.webapp.unified_web_orchestrator - INFO - Frontend health OK
+2025-06-08 16:01:37,765 - scripts.webapp.unified_web_orchestrator - INFO - [96m[16:01:37.765] [OK] SERVICES VALIDES[0m
+2025-06-08 16:01:37,765 - scripts.webapp.unified_web_orchestrator - INFO -    Détails: Tous les endpoints repondent
+2025-06-08 16:01:37,765 - scripts.webapp.unified_web_orchestrator - INFO - [96m[16:01:37.765] [OK] APPLICATION WEB OPERATIONNELLE[0m
+2025-06-08 16:01:37,765 - scripts.webapp.unified_web_orchestrator - INFO -    Détails: Backend: http://localhost:5003
+2025-06-08 16:01:37,765 - scripts.webapp.unified_web_orchestrator - INFO -    Résultat: Tous les services démarrés
+2025-06-08 16:02:20,232 - scripts.webapp.unified_web_orchestrator - INFO - [96m[16:02:20.232] [STOP] ARRET APPLICATION WEB[0m
+2025-06-08 16:02:20,232 - scripts.webapp.unified_web_orchestrator - INFO -    Détails: Nettoyage en cours
+2025-06-08 16:02:20,232 - scripts.webapp.unified_web_orchestrator - INFO - Arrêt frontend PID 14160
+2025-06-08 16:02:20,234 - scripts.webapp.unified_web_orchestrator - INFO - Frontend arrêté
+2025-06-08 16:02:20,234 - scripts.webapp.unified_web_orchestrator - INFO - Arrêt backend PID 6804
+2025-06-08 16:02:20,253 - scripts.webapp.unified_web_orchestrator - INFO - Backend arrêté
+2025-06-08 16:02:20,253 - scripts.webapp.unified_web_orchestrator - INFO - [CLEAN] Debut nettoyage processus application web
+2025-06-08 16:02:20,263 - scripts.webapp.unified_web_orchestrator - INFO - Processus sur port webapp: PID 0 - Port 3000
+2025-06-08 16:02:23,194 - scripts.webapp.unified_web_orchestrator - INFO - Processus trouvé: PID 29392 - c:\program files\nodejs\node.exe d:\dev\2025-epita-intelligence-symbolique\services\web_api\interfac
+2025-06-08 16:02:23,275 - scripts.webapp.unified_web_orchestrator - INFO - Processus trouvé: PID 31720 - node d:\dev\2025-epita-intelligence-symbolique\services\web_api\interface-web-argumentative\node_mod
+2025-06-08 16:02:23,416 - scripts.webapp.unified_web_orchestrator - INFO - Processus trouvés: 3
+2025-06-08 16:02:23,416 - scripts.webapp.unified_web_orchestrator - INFO - Envoi signal TERM aux processus...
+2025-06-08 16:02:23,416 - scripts.webapp.unified_web_orchestrator - INFO - TERM envoyé à PID 29392
+2025-06-08 16:02:23,417 - scripts.webapp.unified_web_orchestrator - INFO - TERM envoyé à PID 31720
+2025-06-08 16:02:23,417 - scripts.webapp.unified_web_orchestrator - INFO - Attente arrêt propre (5s)...
+2025-06-08 16:02:28,417 - scripts.webapp.unified_web_orchestrator - WARNING - 1 processus encore actifs
+2025-06-08 16:02:28,436 - scripts.webapp.unified_web_orchestrator - INFO - Processus sur port webapp: PID 0 - Port 3000
+2025-06-08 16:02:31,515 - scripts.webapp.unified_web_orchestrator - WARNING - Force kill de 1 processus récalcitrants
+2025-06-08 16:02:31,515 - scripts.webapp.unified_web_orchestrator - ERROR - Impossible de tuer PID 0: (pid=0, name='System Idle Process')
+2025-06-08 16:02:31,515 - scripts.webapp.unified_web_orchestrator - INFO - Vérification libération des ports...
+2025-06-08 16:02:31,527 - scripts.webapp.unified_web_orchestrator - INFO - Tous les ports libérés
+2025-06-08 16:02:31,527 - scripts.webapp.unified_web_orchestrator - INFO - Nettoyage fichiers temporaires...
+2025-06-08 16:02:31,527 - scripts.webapp.unified_web_orchestrator - INFO - Supprimé: backend_info.json
+2025-06-08 16:02:31,528 - scripts.webapp.unified_web_orchestrator - INFO - Fichiers temporaires nettoyés: 1
+2025-06-08 16:02:31,528 - scripts.webapp.unified_web_orchestrator - INFO - [OK] Nettoyage processus terminé
+2025-06-08 16:02:31,528 - scripts.webapp.unified_web_orchestrator - INFO - [96m[16:02:31.528] [OK] ARRET TERMINE[0m
+2025-06-08 16:02:31,528 - scripts.webapp.unified_web_orchestrator - INFO -    Résultat: Toutes les ressources liberees

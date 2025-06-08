@@ -1,67 +1,74 @@
 # 🎯 TRACE D'EXÉCUTION - ORCHESTRATEUR WEB UNIFIÉ
 
-**Date d'exécution:** 07/06/2025 19:32:52  
-**Mode:** Interface Cachée (Headless)  
+**Date d'exécution:** 08/06/2025 15:59:18  
+**Mode:** Interface Visible  
 **Backend:** Non démarré  
 **Frontend:** Non démarré  
-**Durée totale:** 21.82 secondes
+**Durée totale:** 35.43 secondes
 
 ---
 
 ## 📋 ACTIONS DÉTAILLÉES
 
 
-### ✅ 19:32:30.649 - [TEST] INTEGRATION COMPLETE
+### ✅ 15:58:42.773 - [TEST] INTEGRATION COMPLETE
 **Détails:** Démarrage orchestration complète
 
-### ✅ 19:32:30.649 - [START] DEMARRAGE APPLICATION WEB
-**Détails:** Mode: Headless
+### ✅ 15:58:42.773 - [START] DEMARRAGE APPLICATION WEB
+**Détails:** Mode: Visible
 **Résultat:** Initialisation orchestrateur
 
-### ✅ 19:32:30.649 - [CLEAN] NETTOYAGE PREALABLE
+### ✅ 15:58:42.773 - [CLEAN] NETTOYAGE PREALABLE
 **Détails:** Arret instances existantes
 
-### ✅ 19:32:34.533 - [BACKEND] DEMARRAGE BACKEND
+### ✅ 15:58:46.820 - [BACKEND] DEMARRAGE BACKEND
 **Détails:** Lancement avec failover de ports
 
-### ✅ 19:32:40.140 - [OK] BACKEND OPERATIONNEL
-**Détails:** Port: 5003 | PID: 31388
+### ✅ 15:58:51.390 - [OK] BACKEND OPERATIONNEL
+**Détails:** Port: 5003 | PID: 28764
 **Résultat:** URL: http://localhost:5003
 
-### ✅ 19:32:40.140 - [CHECK] VALIDATION SERVICES
+### ✅ 15:58:51.391 - [FRONTEND] DEMARRAGE FRONTEND
+**Détails:** Lancement interface React
+
+### ✅ 15:59:01.670 - [OK] FRONTEND OPERATIONNEL
+**Détails:** Port: 3000
+**Résultat:** URL: http://localhost:3000
+
+### ✅ 15:59:01.670 - [CHECK] VALIDATION SERVICES
 **Détails:** Verification endpoints
 
-### ✅ 19:32:40.401 - [OK] SERVICES VALIDES
+### ✅ 15:59:02.193 - [OK] SERVICES VALIDES
 **Détails:** Tous les endpoints repondent
 
-### ✅ 19:32:40.401 - [OK] APPLICATION WEB OPERATIONNELLE
+### ✅ 15:59:02.193 - [OK] APPLICATION WEB OPERATIONNELLE
 **Détails:** Backend: http://localhost:5003
 **Résultat:** Tous les services démarrés
 
-### ✅ 19:32:42.417 - [TEST] EXECUTION TESTS PLAYWRIGHT
+### ✅ 15:59:04.196 - [TEST] EXECUTION TESTS PLAYWRIGHT
 **Détails:** Tests: ['tests/functional/test_webapp_homepage.py']
 
-### ❌ 19:32:48.472 - [ERROR] ECHEC INTEGRATION
-**Détails:** Certains tests ont échoué
-**Résultat:** Voir logs détaillés
+### ✅ 15:59:06.727 - [SUCCESS] INTEGRATION REUSSIE
+**Détails:** Tous les tests ont passé
+**Résultat:** Application web validée
 
-### ✅ 19:32:48.472 - [STOP] ARRET APPLICATION WEB
+### ✅ 15:59:06.727 - [STOP] ARRET APPLICATION WEB
 **Détails:** Nettoyage en cours
 
-### ✅ 19:32:52.466 - [OK] ARRET TERMINE
+### ✅ 15:59:18.202 - [OK] ARRET TERMINE
 **Résultat:** Toutes les ressources liberees
 
 
 ---
 
 ## 📊 RÉSUMÉ D'EXÉCUTION
-- **Nombre d'actions:** 12
-- **Succès:** 11
-- **Erreurs:** 1
-- **Statut final:** ❌ ÉCHEC
+- **Nombre d'actions:** 14
+- **Succès:** 14
+- **Erreurs:** 0
+- **Statut final:** ✅ SUCCÈS
 
 ## 🔧 CONFIGURATION TECHNIQUE
 - **Backend Port:** None
 - **Frontend Port:** None
-- **Mode Headless:** True
+- **Mode Headless:** False
 - **Config:** config\webapp_config.yml
