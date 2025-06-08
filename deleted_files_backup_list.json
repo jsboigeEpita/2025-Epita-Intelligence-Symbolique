@@ -1,0 +1,151 @@
+{
+  "timestamp": "2025-06-08T13:51:54.459822",
+  "total_files": 19,
+  "files_by_category": {
+    "DEMOS": [
+      "demo_correction_intelligente.py",
+      "demo_orchestrateur_master.py",
+      "demo_unified_reporting_system.py",
+      "scripts/demo/complete_rhetorical_analysis_demo.py",
+      "scripts/demo/demo_conversation_capture_complete.py",
+      "scripts/demo/explore_corpus_extracts.py",
+      "scripts/demo/run_analysis_with_complete_trace.py",
+      "argumentation_analysis/examples/rhetorical_analysis_demo.py"
+    ],
+    "MAINTENANCE": [
+      "scripts/utils/cleanup_decrypt_traces.py"
+    ],
+    "VALIDATION": [
+      "scripts/validate_authentic_system.py",
+      "scripts/validate_complete_ecosystem.py",
+      "scripts/validate_unified_orchestrations.py",
+      "scripts/validate_unified_orchestrations_simple.py"
+    ],
+    "UTILITIES": [
+      "scripts/data_processing/integrate_new_source_to_corpus.py",
+      "scripts/utils/decrypt_specific_extract.py",
+      "scripts/utils/list_encrypted_extracts.py"
+    ],
+    "DOCS": [
+      "docs/GUIDE_INTEGRATION_SYSTEME_RECUPERE.md",
+      "docs/OPTIMISATIONS_PERFORMANCE_SYSTEME.md",
+      "docs/SYSTEM_UNIVERSEL_GUIDE.md"
+    ]
+  },
+  "files": [
+    {
+      "path": "demo_correction_intelligente.py",
+      "category": "DEMOS",
+      "size": 7414,
+      "modified": 1749377425.8008852
+    },
+    {
+      "path": "demo_orchestrateur_master.py",
+      "category": "DEMOS",
+      "size": 13182,
+      "modified": 1749377425.8051805
+    },
+    {
+      "path": "demo_unified_reporting_system.py",
+      "category": "DEMOS",
+      "size": 14259,
+      "modified": 1749315889.9444573
+    },
+    {
+      "path": "scripts/demo/complete_rhetorical_analysis_demo.py",
+      "category": "DEMOS",
+      "size": 22558,
+      "modified": 1749377428.69299
+    },
+    {
+      "path": "scripts/demo/demo_conversation_capture_complete.py",
+      "category": "DEMOS",
+      "size": 14772,
+      "modified": 1749315889.9639716
+    },
+    {
+      "path": "scripts/demo/explore_corpus_extracts.py",
+      "category": "DEMOS",
+      "size": 7930,
+      "modified": 1749315889.9649749
+    },
+    {
+      "path": "scripts/demo/run_analysis_with_complete_trace.py",
+      "category": "DEMOS",
+      "size": 15441,
+      "modified": 1749315889.9649749
+    },
+    {
+      "path": "argumentation_analysis/examples/rhetorical_analysis_demo.py",
+      "category": "DEMOS",
+      "size": 58146,
+      "modified": 1749377427.0017366
+    },
+    {
+      "path": "scripts/utils/cleanup_decrypt_traces.py",
+      "category": "MAINTENANCE",
+      "size": 2731,
+      "modified": 1749315889.9689767
+    },
+    {
+      "path": "scripts/validate_authentic_system.py",
+      "category": "VALIDATION",
+      "size": 39010,
+      "modified": 1749377428.6299512
+    },
+    {
+      "path": "scripts/validate_complete_ecosystem.py",
+      "category": "VALIDATION",
+      "size": 44434,
+      "modified": 1749377428.6319451
+    },
+    {
+      "path": "scripts/validate_unified_orchestrations.py",
+      "category": "VALIDATION",
+      "size": 45652,
+      "modified": 1749377428.6350598
+    },
+    {
+      "path": "scripts/validate_unified_orchestrations_simple.py",
+      "category": "VALIDATION",
+      "size": 30998,
+      "modified": 1749377428.637385
+    },
+    {
+      "path": "scripts/data_processing/integrate_new_source_to_corpus.py",
+      "category": "UTILITIES",
+      "size": 10772,
+      "modified": 1749315889.9639716
+    },
+    {
+      "path": "scripts/utils/decrypt_specific_extract.py",
+      "category": "UTILITIES",
+      "size": 11980,
+      "modified": 1749315889.9689767
+    },
+    {
+      "path": "scripts/utils/list_encrypted_extracts.py",
+      "category": "UTILITIES",
+      "size": 10455,
+      "modified": 1749315889.9689767
+    },
+    {
+      "path": "docs/GUIDE_INTEGRATION_SYSTEME_RECUPERE.md",
+      "category": "DOCS",
+      "size": 14813,
+      "modified": 1749318602.8406734
+    },
+    {
+      "path": "docs/OPTIMISATIONS_PERFORMANCE_SYSTEME.md",
+      "category": "DOCS",
+      "size": 30325,
+      "modified": 1749318714.4604151
+    },
+    {
+      "path": "docs/SYSTEM_UNIVERSEL_GUIDE.md",
+      "category": "DOCS",
+      "size": 12049,
+      "modified": 1749318518.8738444
+    }
+  ]
+}
