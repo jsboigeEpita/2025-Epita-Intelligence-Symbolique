@@ -33,6 +33,7 @@ from ..abc.agent_bases import BaseAgent
 # Import des définitions et des prompts
 from .informal_definitions import InformalAnalysisPlugin, INFORMAL_AGENT_INSTRUCTIONS
 from .prompts import prompt_identify_args_v8, prompt_analyze_fallacies_v2, prompt_justify_fallacy_attribution_v1
+from .taxonomy_sophism_detector import TaxonomySophismDetector, get_global_detector
 
 
 # Configuration du logging
