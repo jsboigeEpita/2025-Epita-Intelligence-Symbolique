@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Système de démonstration unifié - Consolidation de 8 fichiers démo
+Systeme de demonstration unifie - Consolidation de 8 fichiers demo
 ================================================================
 
 Ce fichier consolide la logique de :
@@ -15,7 +15,7 @@ Ce fichier consolide la logique de :
 - scripts/demo/explore_corpus_extracts.py
 - scripts/demo/run_analysis_with_complete_trace.py
 
-Toute la logique fonctionnelle est préservée sans simulation.
+Toute la logique fonctionnelle est preservee sans simulation.
 """
 
 import asyncio
@@ -44,7 +44,7 @@ if str(project_root) not in sys.path:
     sys.path.insert(0, str(project_root))
 
 try:
-    # Imports de l'écosystème refactorisé
+    # Imports de l'ecosysteme refactorise
     from argumentation_analysis.pipelines.unified_text_analysis import UnifiedTextAnalysisPipeline, UnifiedAnalysisConfig
     from argumentation_analysis.orchestration.real_llm_orchestrator import RealLLMOrchestrator, RealConversationLogger
     from argumentation_analysis.orchestration.conversation_orchestrator import ConversationOrchestrator
@@ -63,12 +63,12 @@ try:
     UNIFIED_COMPONENTS_AVAILABLE = True
 except ImportError as e:
     UNIFIED_COMPONENTS_AVAILABLE = False
-    print(f"⚠️ Certains composants unifiés non disponibles: {e}")
+    print(f"[WARNING] Certains composants unifies non disponibles: {e}")
 
 logger = logging.getLogger("UnifiedDemoSystem")
 
 class DemoMode(Enum):
-    """Modes de démonstration disponibles."""
+    """Modes de demonstration disponibles."""
     EDUCATIONAL = "educational"
     RESEARCH = "research"
     SHOWCASE = "showcase"
@@ -80,7 +80,7 @@ class DemoMode(Enum):
 
 @dataclass
 class UnifiedDemoConfiguration:
-    """Configuration complète pour toutes les démonstrations unifiées."""
+    """Configuration complete pour toutes les demonstrations unifiees."""
     mode: DemoMode = DemoMode.EDUCATIONAL
     orchestrator_type: str = "conversation"
     source_type: str = "demo_extract"
@@ -99,7 +99,7 @@ class UnifiedDemoConfiguration:
 
 class UnifiedDemoSystem:
     """
-    Système de démonstration unifié intégrant toutes les fonctionnalités.
+    Systeme de demonstration unifie integrant toutes les fonctionnalites.
     """
     
     def __init__(self, config: UnifiedDemoConfiguration):
@@ -116,7 +116,7 @@ class UnifiedDemoSystem:
         self._initialize_for_mode()
     
     def _initialize_for_mode(self):
-        """Initialise le système selon le mode de démonstration."""
+        """Initialise le systeme selon le mode de demonstration."""
         logger.info(f"Initialisation pour le mode: {self.config.mode.value}")
         
         if self.config.mode == DemoMode.TRACE_COMPLETE and self.config.enable_trace_capture:
@@ -126,22 +126,22 @@ class UnifiedDemoSystem:
             self._initialize_unified_components()
     
     def _initialize_trace_capture(self):
-        """Initialise la capture de traces complètes."""
+        """Initialise la capture de traces completes."""
         if UNIFIED_COMPONENTS_AVAILABLE:
             self.trace_analyzer = RealTimeTraceAnalyzer()
             start_conversation_capture()
-            logger.info("Capture de traces activée")
+            logger.info("Capture de traces activee")
     
     def _initialize_unified_components(self):
-        """Initialise les composants unifiés de l'écosystème."""
+        """Initialise les composants unifies de l'ecosysteme."""
         try:
-            # Configuration des sources unifiées
+            # Configuration des sources unifiees
             source_config = UnifiedSourceConfig(
                 source_type=UnifiedSourceType.SIMPLE if self.config.source_type == "demo_extract" else UnifiedSourceType.FREE_TEXT
             )
             self.source_manager = UnifiedSourceManager(source_config)
             
-            # Configuration de l'analyse unifiée
+            # Configuration de l'analyse unifiee
             analysis_config = UnifiedAnalysisConfig(
                 analysis_modes=self._get_analysis_modes(),
                 orchestration_mode=self.config.orchestrator_type,
@@ -153,15 +153,15 @@ class UnifiedDemoSystem:
             # Initialisation de l'orchestrateur
             self._initialize_orchestrator()
             
-            logger.info("Composants unifiés initialisés")
+            logger.info("Composants unifies initialises")
         except Exception as e:
-            logger.error(f"Erreur lors de l'initialisation des composants unifiés: {e}")
+            logger.error(f"Erreur lors de l'initialisation des composants unifies: {e}")
             self.source_manager = None
             self.text_analyzer = None
             self.orchestrator = None
     
     def _get_analysis_modes(self) -> List[str]:
-        """Détermine les modes d'analyse selon la configuration."""
+        """Determine les modes d'analyse selon la configuration."""
         if self.config.analysis_depth == "basic":
             return ["fallacies"]
         elif self.config.analysis_depth == "standard":
@@ -175,20 +175,20 @@ class UnifiedDemoSystem:
         """Initialise l'orchestrateur selon la configuration."""
         if self.config.orchestrator_type == "real_llm" and self.config.enable_real_llm:
             self.orchestrator = RealLLMOrchestrator(mode="real")
-            logger.info("Orchestrateur LLM réel initialisé")
+            logger.info("Orchestrateur LLM reel initialise")
         elif self.config.orchestrator_type == "conversation":
             self.orchestrator = ConversationOrchestrator()
-            logger.info("Orchestrateur conversationnel initialisé")
+            logger.info("Orchestrateur conversationnel initialise")
         else:
             self.orchestrator = None
             logger.info("Mode orchestration standard")
 
     async def run_demo(self, text_content: str = None, **kwargs) -> Dict[str, Any]:
         """
-        Exécute la démonstration selon le mode configuré.
+        Execute la demonstration selon le mode configure.
         """
         start_time = time.time()
-        logger.info(f"Démarrage démonstration mode: {self.config.mode.value}")
+        logger.info(f"Demarrage demonstration mode: {self.config.mode.value}")
         
         try:
             if self.config.mode == DemoMode.CORRECTION_INTELLIGENTE:
@@ -203,7 +203,7 @@ class UnifiedDemoSystem:
                 return await self._run_unified_analysis_demo(text_content)
                 
         except Exception as e:
-            logger.error(f"Erreur dans la démonstration: {e}")
+            logger.error(f"Erreur dans la demonstration: {e}")
             return {
                 "status": "ERROR",
                 "error": str(e),
@@ -211,7 +211,7 @@ class UnifiedDemoSystem:
             }
 
     async def _run_correction_intelligente_demo(self) -> Dict[str, Any]:
-        """Démonstration du système de correction intelligente des erreurs modales."""
+        """Demonstration du systeme de correction intelligente des erreurs modales."""
         print("=" * 80)
         print("SYSTEME DE CORRECTION INTELLIGENTE DES ERREURS MODALES")
         print("Transformation des echecs SK Retry en apprentissage constructif")
@@ -223,11 +223,11 @@ class UnifiedDemoSystem:
         }
         
         try:
-            # Utilisation du TweetyErrorAnalyzer réel
+            # Utilisation du TweetyErrorAnalyzer reel
             analyzer = TweetyErrorAnalyzer()
             error = "Predicate 'constantanalyser_faits_rigueur' has not been declared"
             
-            print("\n[AVANT] Mécanisme SK Retry aveugle:")
+            print("\n[AVANT] Mecanisme SK Retry aveugle:")
             print("-" * 40)
             print("Tentative 1: Predicate 'constantanalyser_faits_rigueur' has not been declared")
             print("Tentative 2: Predicate 'constantanalyser_faits_rigueur' has not been declared") 
@@ -237,7 +237,7 @@ class UnifiedDemoSystem:
             print("\n[APRES] Correction intelligente avec feedback BNF:")
             print("-" * 40)
             
-            # Analyse réelle de l'erreur
+            # Analyse reelle de l'erreur
             feedback = analyzer.analyze_error(error)
             
             print(f"[OK] Type d'erreur: {feedback.error_type}")
@@ -245,7 +245,7 @@ class UnifiedDemoSystem:
             print(f"[OK] Regles BNF: {len(feedback.bnf_rules)} regles generees")
             print(f"[OK] Corrections: {len(feedback.corrections)} corrections proposees")
             
-            # Génération du feedback BNF réel
+            # Generation du feedback BNF reel
             feedback_msg = analyzer.generate_bnf_feedback_message(feedback, 1)
             
             results.update({
@@ -259,17 +259,17 @@ class UnifiedDemoSystem:
                 "feedback_message": feedback_msg
             })
             
-            print("\n[SUCCESS] Système de correction intelligente opérationnel!")
+            print("\n[SUCCESS] Systeme de correction intelligente operationnel!")
             return results
             
         except Exception as e:
-            logger.error(f"Erreur dans la démonstration correction intelligente: {e}")
+            logger.error(f"Erreur dans la demonstration correction intelligente: {e}")
             results["status"] = "ERROR"
             results["error"] = str(e)
             return results
 
     async def _run_orchestrateur_master_demo(self) -> Dict[str, Any]:
-        """Démonstration de l'orchestrateur master de validation."""
+        """Demonstration de l'orchestrateur master de validation."""
         print("="*80)
         print("[DEMO] DEMONSTRATION - ORCHESTRATEUR MASTER DE VALIDATION")
         print("       Intelligence Symbolique - Nouveaux Composants")
@@ -281,7 +281,7 @@ class UnifiedDemoSystem:
         }
         
         try:
-            # Affichage des informations système
+            # Affichage des informations systeme
             print("\n[INFO] SYSTEME DE VALIDATION CREE")
             print("-"*40)
             print("[OK] Orchestrateur Python principal")
@@ -290,13 +290,13 @@ class UnifiedDemoSystem:
             print("[OK] Rapport de validation markdown")
             print("[OK] Guide d'utilisation complet")
             
-            # Vérification des composants disponibles
+            # Verification des composants disponibles
             components = [
                 ("TweetyErrorAnalyzer", "21 tests", "Analyseur d'erreurs Tweety + feedback BNF"),
-                ("UnifiedConfig", "12 tests", "Système de configuration unifié"),  
+                ("UnifiedConfig", "12 tests", "Systeme de configuration unifie"),  
                 ("FirstOrderLogicAgent", "25 tests", "Agent logique premier ordre + Tweety"),
-                ("AuthenticitySystem", "17 tests", "Élimination mocks + composants authentiques"),
-                ("UnifiedOrchestrations", "8 tests", "Orchestrations système unifiées")
+                ("AuthenticitySystem", "17 tests", "Elimination mocks + composants authentiques"),
+                ("UnifiedOrchestrations", "8 tests", "Orchestrations systeme unifiees")
             ]
             
             print("\n[TESTS] COMPOSANTS VALIDES (83 tests)")
@@ -304,11 +304,11 @@ class UnifiedDemoSystem:
             for name, tests, desc in components:
                 print(f"  {name:<22} : {tests:<8} - {desc}")
             
-            # Vérification de l'existence des scripts
+            # Verification de l'existence des scripts
             scripts = [
                 ("run_all_new_component_tests.py", "Orchestrateur Python principal"),
                 ("run_all_new_component_tests.ps1", "Version PowerShell Windows"),
-                ("tests/run_unified_config_tests.py", "Orchestrateur spécialisé"),
+                ("tests/run_unified_config_tests.py", "Orchestrateur specialise"),
             ]
             
             print("\n[SCRIPTS] SCRIPTS DISPONIBLES")
@@ -342,9 +342,9 @@ class UnifiedDemoSystem:
                         
                         print(f"[CODE] Code de retour : {result.returncode}")
                         if result.returncode == 0:
-                            print("[SUCCESS] Tests rapides passés!")
+                            print("[SUCCESS] Tests rapides passes!")
                         else:
-                            print("[WARNING] Certains tests ont échoué")
+                            print("[WARNING] Certains tests ont echoue")
                             
                     except subprocess.TimeoutExpired:
                         print("[TIMEOUT] Test trop long")
@@ -360,18 +360,18 @@ class UnifiedDemoSystem:
                 "total_tests": 83
             })
             
-            print("\n[SUCCESS] Démonstration orchestrateur master terminée!")
+            print("\n[SUCCESS] Demonstration orchestrateur master terminee!")
             return results
             
         except Exception as e:
-            logger.error(f"Erreur dans la démonstration orchestrateur master: {e}")
+            logger.error(f"Erreur dans la demonstration orchestrateur master: {e}")
             results["status"] = "ERROR"
             results["error"] = str(e)
             return results
 
     async def _run_exploration_corpus_demo(self, passphrase: str = None) -> Dict[str, Any]:
-        """Démonstration d'exploration du corpus chiffré."""
-        print("=== EXPLORATION DU CORPUS CHIFFRÉ ===")
+        """Demonstration d'exploration du corpus chiffre."""
+        print("=== EXPLORATION DU CORPUS CHIFFRE ===")
         
         results = {
             "demo_type": "exploration_corpus",
@@ -379,47 +379,47 @@ class UnifiedDemoSystem:
         }
         
         try:
-            # Récupération de la phrase secrète
+            # Recuperation de la phrase secrete
             if not passphrase:
                 passphrase = os.getenv("TEXT_CONFIG_PASSPHRASE")
                 if not passphrase:
                     try:
-                        passphrase = getpass.getpass("Phrase secrète pour déchiffrer le corpus : ")
+                        passphrase = getpass.getpass("Phrase secrete pour dechiffrer le corpus : ")
                     except Exception as e:
-                        print(f"Impossible de lire la phrase secrète: {e}")
+                        print(f"Impossible de lire la phrase secrete: {e}")
                         results["status"] = "ERROR"
-                        results["error"] = "Phrase secrète requise"
+                        results["error"] = "Phrase secrete requise"
                         return results
             
-            # Chargement de la clé de chiffrement
+            # Chargement de la cle de chiffrement
             encryption_key = load_encryption_key(passphrase_arg=passphrase)
             if not encryption_key:
-                print("Impossible de dériver la clé de chiffrement")
+                print("Impossible de deriver la cle de chiffrement")
                 results["status"] = "ERROR"
-                results["error"] = "Clé de chiffrement invalide"
+                results["error"] = "Cle de chiffrement invalide"
                 return results
             
-            # Chemin vers le fichier chiffré
+            # Chemin vers le fichier chiffre
             encrypted_file_path = DATA_DIR / "extract_sources.json.gz.enc"
             if not encrypted_file_path.exists():
-                print(f"Fichier chiffré non trouvé : {encrypted_file_path}")
+                print(f"Fichier chiffre non trouve : {encrypted_file_path}")
                 results["status"] = "ERROR"
-                results["error"] = f"Fichier non trouvé: {encrypted_file_path}"
+                results["error"] = f"Fichier non trouve: {encrypted_file_path}"
                 return results
             
-            # Déchiffrement réel des données
-            print("Déchiffrement du corpus en cours...")
+            # Dechiffrement reel des donnees
+            print("Dechiffrement du corpus en cours...")
             with open(encrypted_file_path, "rb") as f:
                 encrypted_data = f.read()
             
             decrypted_gzipped_data = decrypt_data_with_fernet(encrypted_data, encryption_key)
             if not decrypted_gzipped_data:
-                print("Échec du déchiffrement des données")
+                print("Echec du dechiffrement des donnees")
                 results["status"] = "ERROR"
-                results["error"] = "Échec du déchiffrement"
+                results["error"] = "Echec du dechiffrement"
                 return results
             
-            # Décompression et parsing JSON
+            # Decompression et parsing JSON
             json_data_bytes = gzip.decompress(decrypted_gzipped_data)
             sources_list_dict = json.loads(json_data_bytes.decode('utf-8'))
             
@@ -427,15 +427,15 @@ class UnifiedDemoSystem:
             extract_definitions = ExtractDefinitions.from_dict_list(sources_list_dict)
             
             if not extract_definitions or not extract_definitions.sources:
-                print("Aucune source trouvée dans le corpus déchiffré")
+                print("Aucune source trouvee dans le corpus dechiffre")
                 results["status"] = "ERROR"
                 results["error"] = "Corpus vide"
                 return results
             
-            print(f"Corpus déchiffré avec succès!")
+            print(f"Corpus dechiffre avec succes!")
             print(f"Nombre de sources: {len(extract_definitions.sources)}")
             
-            # Exploration des extraits et recherche 8_0 à 8_4
+            # Exploration des extraits et recherche 8_0 a 8_4
             extracts_found = {}
             target_extracts = ["8_0", "8_1", "8_2", "8_3", "8_4"]
             
@@ -453,10 +453,10 @@ class UnifiedDemoSystem:
                         if hasattr(extract, 'full_text') and extract.full_text:
                             text_length = len(extract.full_text)
                             text_preview = extract.full_text[:100].replace('\n', ' ')
-                            print(f"      - Longueur: {text_length} caractères")
-                            print(f"      - Aperçu: {text_preview}...")
+                            print(f"      - Longueur: {text_length} caracteres")
+                            print(f"      - Aperu: {text_preview}...")
                             
-                            # Vérification si c'est un des extraits ciblés
+                            # Verification si c'est un des extraits cibles
                             if extract_id in target_extracts:
                                 extracts_found[extract_id] = {
                                     'source_index': i,
@@ -466,7 +466,7 @@ class UnifiedDemoSystem:
                                     'text_length': text_length,
                                     'full_text': extract.full_text
                                 }
-                                print(f"      *** EXTRAIT CIBLE TROUVÉ: {extract_id} ***")
+                                print(f"      *** EXTRAIT CIBLE TROUV: {extract_id} ***")
             
             results.update({
                 "status": "SUCCESS",
@@ -476,9 +476,9 @@ class UnifiedDemoSystem:
                 "target_extracts_found": list(extracts_found.keys())
             })
             
-            print(f"\n=== EXTRAITS CIBLES TROUVÉS: {len(extracts_found)} ===")
+            print(f"\n=== EXTRAITS CIBLES TROUVS: {len(extracts_found)} ===")
             for extract_id, info in extracts_found.items():
-                print(f"Extrait {extract_id}: {info['extract_name']} ({info['text_length']} caractères)")
+                print(f"Extrait {extract_id}: {info['extract_name']} ({info['text_length']} caracteres)")
             
             return results
             
@@ -489,7 +489,7 @@ class UnifiedDemoSystem:
             return results
 
     async def _run_trace_complete_demo(self, text_content: str = None) -> Dict[str, Any]:
-        """Démonstration d'analyse avec capture complète de traces."""
+        """Demonstration d'analyse avec capture complete de traces."""
         print("=== ANALYSE AVEC CAPTURE COMPLETE DE TRACES ===")
         
         results = {
@@ -498,33 +498,33 @@ class UnifiedDemoSystem:
         }
         
         if not UNIFIED_COMPONENTS_AVAILABLE:
-            print("⚠️ Composants de traçage non disponibles")
+            print("WARNING Composants de traage non disponibles")
             results["status"] = "ERROR"
-            results["error"] = "Composants de traçage non disponibles"
+            results["error"] = "Composants de traage non disponibles"
             return results
         
         try:
             # Initialisation de la capture de traces
             if self.trace_analyzer:
-                print("Capture de traces démarrée")
+                print("Capture de traces demarree")
                 
-                # Texte par défaut si non fourni
+                # Texte par defaut si non fourni
                 if not text_content:
                     text_content = """
                     Modern Ukraine was entirely created by Russia or, to be more precise, 
                     by Bolshevik, Communist Russia. This process started practically right 
                     after the 1917 revolution, and Lenin and his associates did it in a way 
-                    that was extremely harsh on Russia – by separating, severing what is 
+                    that was extremely harsh on Russia  by separating, severing what is 
                     historically Russian land.
                     """
                 
-                # Enregistrement du début de l'analyse
+                # Enregistrement du debut de l'analyse
                 self.trace_analyzer.start_capture()
                 
-                # Ici, on effectuerait une vraie analyse avec les agents réels
+                # Ici, on effectuerait une vraie analyse avec les agents reels
                 # et le trace_analyzer capturerait automatiquement tous les appels
                 
-                # Arrêt de la capture et génération du rapport
+                # Arrt de la capture et generation du rapport
                 conversation_report = get_conversation_report()
                 
                 # Sauvegarde du rapport
@@ -539,11 +539,11 @@ class UnifiedDemoSystem:
                     "conversation_blocks": len(conversation_report.get("agent_blocks", []))
                 })
                 
-                print(f"[SUCCESS] Trace complète capturée: {report_path}")
+                print(f"[SUCCESS] Trace complete capturee: {report_path}")
                 
             else:
                 results["status"] = "ERROR"
-                results["error"] = "Trace analyzer non initialisé"
+                results["error"] = "Trace analyzer non initialise"
             
             return results
             
@@ -554,34 +554,34 @@ class UnifiedDemoSystem:
             return results
 
     async def _run_unified_analysis_demo(self, text_content: str = None) -> Dict[str, Any]:
-        """Démonstration d'analyse unifiée complète."""
+        """Demonstration d'analyse unifiee complete."""
         if not UNIFIED_COMPONENTS_AVAILABLE:
-            print("⚠️ Composants unifiés non disponibles - Mode dégradé")
+            print("WARNING Composants unifies non disponibles - Mode degrade")
             return {
                 "status": "ERROR",
-                "error": "Composants unifiés non disponibles",
+                "error": "Composants unifies non disponibles",
                 "demo_type": "unified_analysis"
             }
         
         start_time = time.time()
         
         try:
-            # Texte par défaut
+            # Texte par defaut
             if not text_content:
                 text_content = """
-                Citoyens ! Notre nation traverse une période cruciale de son histoire. 
+                Citoyens ! Notre nation traverse une periode cruciale de son histoire. 
                 Nous devons choisir entre deux voies distinctes : soit nous acceptons 
-                le déclin et la médiocrité, soit nous relevons le défi et retrouvons 
+                le declin et la mediocrite, soit nous relevons le defi et retrouvons 
                 notre grandeur perdue.
                 """
             
             # Phase 1: Gestion des sources
             source_results = await self._process_sources(text_content)
             
-            # Phase 2: Analyse unifiée
+            # Phase 2: Analyse unifiee
             analysis_results = await self._run_unified_analysis(text_content)
             
-            # Phase 3: Génération de rapports
+            # Phase 3: Generation de rapports
             report_results = await self._generate_unified_reports(analysis_results)
             
             total_time = time.time() - start_time
@@ -598,7 +598,7 @@ class UnifiedDemoSystem:
             return results
             
         except Exception as e:
-            logger.error(f"Erreur dans l'analyse unifiée: {e}")
+            logger.error(f"Erreur dans l'analyse unifiee: {e}")
             return {
                 "status": "ERROR",
                 "error": str(e),
@@ -606,9 +606,9 @@ class UnifiedDemoSystem:
             }
 
     async def _process_sources(self, text_content: str) -> Dict[str, Any]:
-        """Traite les sources via le gestionnaire unifié."""
+        """Traite les sources via le gestionnaire unifie."""
         if self.source_manager:
-            # Traitement réel via le source manager
+            # Traitement reel via le source manager
             source_metadata = {
                 "text_length": len(text_content),
                 "source_type": str(self.config.source_type),
@@ -623,34 +623,34 @@ class UnifiedDemoSystem:
         return {"status": "no_source_manager"}
 
     async def _run_unified_analysis(self, text_content: str) -> Dict[str, Any]:
-        """Exécute l'analyse via le pipeline unifié."""
+        """Execute l'analyse via le pipeline unifie."""
         if self.text_analyzer:
             try:
-                # Analyse réelle via le pipeline unifié
+                # Analyse reelle via le pipeline unifie
                 analysis_results = await self.text_analyzer.analyze_text_unified(text_content)
                 return analysis_results
             except Exception as e:
-                logger.error(f"Erreur dans l'analyse unifiée: {e}")
+                logger.error(f"Erreur dans l'analyse unifiee: {e}")
                 return {"status": "analysis_error", "error": str(e)}
         return {"status": "no_text_analyzer"}
 
     async def _generate_unified_reports(self, analysis_data: Dict[str, Any]) -> Dict[str, Any]:
-        """Génère les rapports via le système unifié."""
+        """Genere les rapports via le systeme unifie."""
         reports_generated = {}
         
         for format_type in self.config.output_formats:
             try:
                 if format_type == "console":
-                    print("\n=== RÉSULTATS D'ANALYSE UNIFIÉE ===")
+                    print("\n=== RSULTATS D'ANALYSE UNIFIE ===")
                     print(f"Statut: {analysis_data.get('status', 'N/A')}")
                     reports_generated["console"] = {"displayed": True}
                     
                 elif format_type == "markdown":
                     report_path = self.logs_directory / "unified_analysis_report.md"
                     with open(report_path, 'w', encoding='utf-8') as f:
-                        f.write(f"# Rapport d'Analyse Unifié\n\n")
+                        f.write(f"# Rapport d'Analyse Unifie\n\n")
                         f.write(f"**Date**: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n\n")
-                        f.write(f"**Résultats**: {json.dumps(analysis_data, indent=2, ensure_ascii=False)}\n")
+                        f.write(f"**Resultats**: {json.dumps(analysis_data, indent=2, ensure_ascii=False)}\n")
                     reports_generated["markdown"] = {"path": str(report_path)}
                     
                 elif format_type == "json":
@@ -660,15 +660,15 @@ class UnifiedDemoSystem:
                     reports_generated["json"] = {"path": str(report_path)}
                     
             except Exception as e:
-                logger.error(f"Erreur génération rapport {format_type}: {e}")
+                logger.error(f"Erreur generation rapport {format_type}: {e}")
                 reports_generated[format_type] = {"error": str(e)}
         
         return reports_generated
 
-# Factory functions pour création de démos spécialisées
+# Factory functions pour creation de demos specialisees
 
 def create_correction_intelligente_demo() -> UnifiedDemoSystem:
-    """Crée une démo de correction intelligente."""
+    """Cree une demo de correction intelligente."""
     config = UnifiedDemoConfiguration(
         mode=DemoMode.CORRECTION_INTELLIGENTE,
         output_formats=["console"]
@@ -676,7 +676,7 @@ def create_correction_intelligente_demo() -> UnifiedDemoSystem:
     return UnifiedDemoSystem(config)
 
 def create_orchestrateur_master_demo(validate_components: bool = False) -> UnifiedDemoSystem:
-    """Crée une démo d'orchestrateur master."""
+    """Cree une demo d'orchestrateur master."""
     config = UnifiedDemoConfiguration(
         mode=DemoMode.ORCHESTRATEUR_MASTER,
         validate_components=validate_components,
@@ -685,7 +685,7 @@ def create_orchestrateur_master_demo(validate_components: bool = False) -> Unifi
     return UnifiedDemoSystem(config)
 
 def create_exploration_corpus_demo() -> UnifiedDemoSystem:
-    """Crée une démo d'exploration de corpus."""
+    """Cree une demo d'exploration de corpus."""
     config = UnifiedDemoConfiguration(
         mode=DemoMode.EXPLORATION_CORPUS,
         output_formats=["console"]
@@ -693,7 +693,7 @@ def create_exploration_corpus_demo() -> UnifiedDemoSystem:
     return UnifiedDemoSystem(config)
 
 def create_trace_complete_demo() -> UnifiedDemoSystem:
-    """Crée une démo avec capture de traces complètes."""
+    """Cree une demo avec capture de traces completes."""
     config = UnifiedDemoConfiguration(
         mode=DemoMode.TRACE_COMPLETE,
         enable_trace_capture=True,
@@ -702,7 +702,7 @@ def create_trace_complete_demo() -> UnifiedDemoSystem:
     return UnifiedDemoSystem(config)
 
 def create_unified_analysis_demo() -> UnifiedDemoSystem:
-    """Crée une démo d'analyse unifiée."""
+    """Cree une demo d'analyse unifiee."""
     config = UnifiedDemoConfiguration(
         mode=DemoMode.EDUCATIONAL,
         orchestrator_type="conversation",
@@ -711,18 +711,18 @@ def create_unified_analysis_demo() -> UnifiedDemoSystem:
     )
     return UnifiedDemoSystem(config)
 
-# Interface simplifiée pour utilisation standalone
+# Interface simplifiee pour utilisation standalone
 async def run_demo(mode: str = "educational", text: str = None, **kwargs) -> Dict[str, Any]:
     """
-    Interface simplifiée pour exécuter une démonstration.
+    Interface simplifiee pour executer une demonstration.
     
     Args:
-        mode: Mode de démonstration 
-        text: Texte à analyser (optionnel)
-        **kwargs: Arguments supplémentaires
+        mode: Mode de demonstration 
+        text: Texte a analyser (optionnel)
+        **kwargs: Arguments supplementaires
         
     Returns:
-        Résultats de la démonstration
+        Resultats de la demonstration
     """
     demo_map = {
         "correction_intelligente": create_correction_intelligente_demo,
@@ -743,20 +743,20 @@ if __name__ == "__main__":
     # Interface en ligne de commande
     import argparse
     
-    parser = argparse.ArgumentParser(description="Système de démonstration unifié")
+    parser = argparse.ArgumentParser(description="Systeme de demonstration unifie")
     parser.add_argument("--mode", default="educational", 
                        choices=["correction_intelligente", "orchestrateur_master", 
                                "exploration_corpus", "trace_complete", "educational"],
-                       help="Mode de démonstration")
-    parser.add_argument("--text", help="Texte à analyser")
+                       help="Mode de demonstration")
+    parser.add_argument("--text", help="Texte a analyser")
     parser.add_argument("--validate", action="store_true", 
                        help="Valider les composants (pour mode orchestrateur_master)")
-    parser.add_argument("--passphrase", help="Phrase secrète pour l'exploration corpus")
+    parser.add_argument("--passphrase", help="Phrase secrete pour l'exploration corpus")
     
     args = parser.parse_args()
     
     async def main():
-        print("🚀 Système de Démonstration Unifié")
+        print("[SYSTEME] Demonstration Unifiee")
         print("=" * 50)
         
         kwargs = {}
@@ -767,11 +767,11 @@ if __name__ == "__main__":
             
         results = await run_demo(args.mode, args.text, **kwargs)
         
-        print(f"\n✅ Démonstration terminée: {results.get('status', 'UNKNOWN')}")
+        print(f"\n[SUCCESS] Demonstration terminee: {results.get('status', 'UNKNOWN')}")
         if 'execution_time' in results:
-            print(f"⏱️ Temps d'exécution: {results['execution_time']:.2f}s")
+            print(f"[TIME] Temps d'execution: {results['execution_time']:.2f}s")
     
-    # Gestion de la boucle d'événements pour Windows
+    # Gestion de la boucle d'evenements pour Windows
     if sys.platform == "win32":
         asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
     
