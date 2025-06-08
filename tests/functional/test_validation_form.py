@@ -1,12 +1,11 @@
 import pytest
 from playwright.sync_api import Page, expect, TimeoutError
-from tests.functional.conftest import PlaywrightHelpers
 
 
 class TestValidationForm:
     """Tests fonctionnels pour l'onglet Validation basés sur la structure réelle"""
 
-    def test_validation_form_argument_validation(self, validation_page: Page, test_helpers: PlaywrightHelpers):
+    def test_validation_form_argument_validation(self, page: Page):
         """Test du workflow principal de validation d'argument"""
         page = validation_page
         
