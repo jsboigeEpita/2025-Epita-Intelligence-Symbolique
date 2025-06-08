@@ -129,7 +129,7 @@ def save_markdown_to_html(markdown_content: str, output_path: Path) -> bool:
         """
         with open(output_path, 'w', encoding='utf-8', errors="replace") as f:
             f.write(html_document)
-        markdown_logger.info(f"✅ Contenu HTML sauvegardé avec succès dans {output_path}")
+        markdown_logger.info(f"[OK] Contenu HTML sauvegardé avec succès dans {output_path}")
         return True
     except Exception as e:
         markdown_logger.error(f"❌ Erreur lors de la conversion Markdown en HTML ou de la sauvegarde dans {output_path}: {e}", exc_info=True)

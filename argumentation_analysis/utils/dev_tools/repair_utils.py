@@ -297,7 +297,7 @@ async def run_extract_repair_pipeline(
             logger.info("Sauvegarde des modifications (pipeline)...")
             success, error_msg_save = definition_service.save_definitions(updated_definitions)
             if success:
-                logger.info("✅ Modifications sauvegardées avec succès (pipeline).")
+                logger.info("[OK] Modifications sauvegardées avec succès (pipeline).")
             else:
                 logger.error(f"❌ Erreur lors de la sauvegarde (pipeline): {error_msg_save}")
         

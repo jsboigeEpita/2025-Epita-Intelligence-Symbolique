@@ -52,7 +52,7 @@ def check_dependencies():
         print("📦 Installez-les avec: pip install -r requirements.txt")
         return False
     
-    print("✅ Toutes les dépendances sont installées")
+    print("[OK] Toutes les dépendances sont installées")
     return True
 
 def check_port(port: int):

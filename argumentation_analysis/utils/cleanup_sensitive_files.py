@@ -78,7 +78,7 @@ def verify_encrypted_file():
         logger.error("Les définitions d'extraits n'ont pas été chargées correctement.")
         return False
     
-    logger.info(f"✅ Le fichier chiffré {CONFIG_FILE_ENC} peut être déchiffré correctement.")
+    logger.info(f"[OK] Le fichier chiffré {CONFIG_FILE_ENC} peut être déchiffré correctement.")
     logger.info(f"   - {len(extract_definitions)} sources trouvées.")
     
     return True
@@ -127,11 +127,11 @@ def update_gitignore():
         with open(gitignore_path, 'a', encoding='utf-8') as f:
             f.write("\n\n" + "\n".join(entries_to_add) + "\n")
         
-        logger.info(f"✅ Fichier .gitignore mis à jour avec {len(entries_added)} nouvelles entrées:")
+        logger.info(f"[OK] Fichier .gitignore mis à jour avec {len(entries_added)} nouvelles entrées:")
         for entry in entries_added:
             logger.info(f"   - {entry}")
     else:
-        logger.info("✅ Toutes les entrées nécessaires sont déjà présentes dans le fichier .gitignore.")
+        logger.info("[OK] Toutes les entrées nécessaires sont déjà présentes dans le fichier .gitignore.")
     
     return True
 
@@ -164,7 +164,7 @@ def delete_sensitive_files():
         if file_path.exists():
             try:
                 file_path.unlink()
-                logger.info(f"✅ Fichier supprimé: {file_path}")
+                logger.info(f"[OK] Fichier supprimé: {file_path}")
                 deleted_files.append(str(file_path))
             except Exception as e:
                 logger.error(f"❌ Erreur lors de la suppression du fichier {file_path}: {e}")
@@ -178,7 +178,7 @@ def delete_sensitive_files():
             for cache_file in cache_files:
                 try:
                     cache_file.unlink()
-                    logger.info(f"✅ Fichier cache supprimé: {cache_file}")
+                    logger.info(f"[OK] Fichier cache supprimé: {cache_file}")
                     deleted_files.append(str(cache_file))
                 except Exception as e:
                     logger.error(f"❌ Erreur lors de la suppression du fichier cache {cache_file}: {e}")
@@ -220,7 +220,7 @@ def main():
     else:
         logger.info("Aucun fichier n'a été supprimé.")
     
-    logger.info("\n✅ Nettoyage terminé avec succès.")
+    logger.info("\n[OK] Nettoyage terminé avec succès.")
 
 if __name__ == "__main__":
     main()

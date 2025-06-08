@@ -202,14 +202,14 @@ def configure_analysis_task() -> Optional[str]:
         if source_doc_dropdown.value: update_extract_options_ui({'new': source_doc_dropdown.value})
         else: extract_dropdown.options = []; update_extraction_box_visibility()
 
-        with main_output_area: clear_output(wait=True); app_logger.info("✅ Définitions chargées/actualisées.")
+        with main_output_area: clear_output(wait=True); app_logger.info("[OK] Définitions chargées/actualisées.")
         save_config_button.disabled = (not ENCRYPTION_KEY)
 
     def on_save_config_click_ui(b):
         nonlocal main_output_area, local_current_extract_definitions
         with main_output_area: clear_output(wait=True); app_logger.info("⏳ Sauvegarde définitions...")
         success = save_extract_definitions(local_current_extract_definitions, CONFIG_FILE, ENCRYPTION_KEY)
-        if success: app_logger.info("✅ Définitions sauvegardées.")
+        if success: app_logger.info("[OK] Définitions sauvegardées.")
         else: app_logger.error("❌ Échec sauvegarde.")
 
     def on_verify_click_ui(b):
@@ -381,7 +381,7 @@ def configure_analysis_task() -> Optional[str]:
                      preview = texte_analyse_prepare_local[:1500]
                      print(preview + ('\n[...]' if len(texte_analyse_prepare_local) > 1500 else ''))
                      print("-" * 30)
-                     print(f"\n✅ Texte préparé (Source: {source_description}, Longueur: {len(texte_analyse_prepare_local)}).")
+                     print(f"\n[OK] Texte préparé (Source: {source_description}, Longueur: {len(texte_analyse_prepare_local)}).")
                      if len(texte_analyse_prepare_local) > 0: print("\n➡️ Cliquez sur 'Lancer l'Analyse'."); run_button.disabled = False
                      else: print("\nTexte vide. Impossible de lancer l'analyse."); run_button.disabled = True
 
@@ -545,7 +545,7 @@ def initialize_text_cache():
 
     app_logger.info("\n--- Fin Initialisation du Cache ---")
     if initialisation_errors > 0: app_logger.warning(f"⚠️ {initialisation_errors} erreur(s) rencontrée(s) pendant init cache.")
-    else: app_logger.info("✅ Cache initialisé/vérifié.")
+    else: app_logger.info("[OK] Cache initialisé/vérifié.")
 
 
 # Log de chargement du module

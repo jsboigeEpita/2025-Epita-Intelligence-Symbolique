@@ -148,12 +148,12 @@ def check_path_exists(path: Path, path_type: str = "file") -> bool:
         if not path.is_file():
             path_ops_logger.critical(f"❌ ERREUR CRITIQUE: Le chemin {path} existe mais n'est pas un fichier (attendu: fichier).")
             sys.exit(1)
-        path_ops_logger.info(f"✅ Le fichier {path} existe et est un fichier.")
+        path_ops_logger.info(f"[OK] Le fichier {path} existe et est un fichier.")
     elif path_type == PATH_TYPE_DIRECTORY: # Utilisation de la constante
         if not path.is_dir():
             path_ops_logger.critical(f"❌ ERREUR CRITIQUE: Le chemin {path} existe mais n'est pas un répertoire (attendu: répertoire).")
             sys.exit(1)
-        path_ops_logger.info(f"✅ Le répertoire {path} existe et est un répertoire.")
+        path_ops_logger.info(f"[OK] Le répertoire {path} existe et est un répertoire.")
     else:
         path_ops_logger.critical(f"❌ ERREUR CRITIQUE: Type de chemin non supporté '{path_type}'. Utilisez '{PATH_TYPE_FILE}' ou '{PATH_TYPE_DIRECTORY}'.")
         sys.exit(1)
@@ -217,7 +217,7 @@ def archive_file(source_path: Path, archive_path: Path) -> bool:
         archive_path.parent.mkdir(parents=True, exist_ok=True)
         path_ops_logger.debug(f"Répertoire parent {archive_path.parent} pour l'archive vérifié/créé.")
         shutil.move(str(source_path), str(archive_path))
-        path_ops_logger.info(f"✅ Fichier {source_path} archivé avec succès vers {archive_path}")
+        path_ops_logger.info(f"[OK] Fichier {source_path} archivé avec succès vers {archive_path}")
         return True
     except FileNotFoundError:
         path_ops_logger.error(f"❌ Erreur (FileNotFoundError) lors de la tentative d'archivage : {source_path} non trouvé.")

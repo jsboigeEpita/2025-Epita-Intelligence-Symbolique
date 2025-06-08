@@ -78,7 +78,7 @@ async def setup_environment() -> Any:
     logging.info("Création du service LLM...")
     try:
         llm_service = create_llm_service()
-        logging.info(f"✅ Service LLM créé avec succès (ID: {llm_service.service_id}).")
+        logging.info(f"[OK] Service LLM créé avec succès (ID: {llm_service.service_id}).")
         return llm_service
     except Exception as e:
         logging.critical(f"❌ Échec de la création du service LLM: {e}", exc_info=True)
