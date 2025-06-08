@@ -1,0 +1,61 @@
+{
+  "timestamp": "2025-06-08T17:15:16.219626",
+  "phase": "B - Naturalite",
+  "resultats": {
+    "Watson": {
+      "agent_name": "Watson",
+      "messages_total": 5,
+      "longueur_moyenne": 50.6,
+      "longueur_mediane": 51,
+      "expressions_naturelles": 7,
+      "expressions_techniques": 2,
+      "repetitions_mecaniques": 0,
+      "variete_lexicale": 0.8717948717948718,
+      "score_naturalite": 7.2,
+      "exemples_messages": [
+        "Hmm, voyons voir... cette piste revele quelque chose d'important",
+        "Ah ! Ca change tout ! Trois connexions se dessinent",
+        "Interessant... En fait, cette deduction mene ailleurs"
+      ]
+    },
+    "Moriarty": {
+      "agent_name": "Moriarty",
+      "messages_total": 5,
+      "longueur_moyenne": 44.4,
+      "longueur_mediane": 46,
+      "expressions_naturelles": 7,
+      "expressions_techniques": 1,
+      "repetitions_mecaniques": 0,
+      "variete_lexicale": 0.90625,
+      "score_naturalite": 7.2,
+      "exemples_messages": [
+        "*sourire enigmatique* Helas... j'ai le Poignard",
+        "Tiens, tiens... Le Colonel repose dans ma main",
+        "Ah ah... Quelle surprise delicieuse !"
+      ]
+    },
+    "Sherlock": {
+      "agent_name": "Sherlock",
+      "messages_total": 5,
+      "longueur_moyenne": 41.4,
+      "longueur_mediane": 39,
+      "expressions_naturelles": 2,
+      "expressions_techniques": 2,
+      "repetitions_mecaniques": 0,
+      "variete_lexicale": 0.8857142857142857,
+      "score_naturalite": 6.5,
+      "exemples_messages": [
+        "Mon instinct dit que c'est crucial pour l'enquete",
+        "Elementaire ! Cette piste mene au Salon",
+        "Aha ! Regardons ca de plus pres Watson"
+      ]
+    }
+  },
+  "validation": {
+    "longueur_optimisee": true,
+    "naturalite_cible": false,
+    "zero_repetitions": true,
+    "tous_agents_optimises": true
+  },
+  "statut_global": false
+}
