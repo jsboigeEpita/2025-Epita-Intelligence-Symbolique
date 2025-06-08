@@ -1,0 +1,102 @@
+[2025-06-08 13:19:01] INFO: ============================================================
+[2025-06-08 13:19:01] INFO: [DEBUT] DEMARRAGE DU NETTOYAGE DES FICHIERS REDONDANTS
+[2025-06-08 13:19:01] INFO: [DIR] Repertoire de base: D:\2025-Epita-Intelligence-Symbolique-4
+[2025-06-08 13:19:01] INFO: [MODE] Mode: DRY-RUN
+[2025-06-08 13:19:01] INFO: ============================================================
+[2025-06-08 13:19:01] INFO: === VÉRIFICATION DES FICHIERS CONSOLIDÉS ===
+[2025-06-08 13:19:01] INFO: [TROUVE] demos/demo_unified_system.py (35285 bytes)
+[2025-06-08 13:19:01] INFO: [TROUVE] scripts/maintenance/unified_maintenance.py (43978 bytes)
+[2025-06-08 13:19:01] INFO: [TROUVE] scripts/validation/unified_validation.py (57403 bytes)
+[2025-06-08 13:19:01] INFO: [TROUVE] scripts/unified_utilities.py (50021 bytes)
+[2025-06-08 13:19:01] INFO: [TROUVE] docs/UNIFIED_SYSTEM_GUIDE.md (34302 bytes)
+[2025-06-08 13:19:01] INFO: [SUCCES] Tous les 5 fichiers consolides existent
+[2025-06-08 13:19:01] INFO: [DEJA SUPPRIME] scripts/maintenance/depot_cleanup_migration.py
+[2025-06-08 13:19:01] INFO: [DEJA SUPPRIME] scripts/maintenance/depot_cleanup_migration_simple.py
+[2025-06-08 13:19:01] INFO: === VÉRIFICATION DE SÉCURITÉ ===
+[2025-06-08 13:19:01] INFO: [SECURITE] 19 fichiers valides pour suppression
+[2025-06-08 13:19:01] INFO: [BACKUP] Liste de sauvegarde creee: D:\2025-Epita-Intelligence-Symbolique-4\deleted_files_backup_list.json
+[2025-06-08 13:19:01] INFO: === EXÉCUTION DE LA SUPPRESSION ===
+[2025-06-08 13:19:01] INFO: [DRY-RUN] Supprimerait demo_correction_intelligente.py (DEMOS)
+[2025-06-08 13:19:01] INFO: [DRY-RUN] Supprimerait demo_orchestrateur_master.py (DEMOS)
+[2025-06-08 13:19:01] INFO: [DRY-RUN] Supprimerait demo_unified_reporting_system.py (DEMOS)
+[2025-06-08 13:19:01] INFO: [DRY-RUN] Supprimerait scripts/demo/complete_rhetorical_analysis_demo.py (DEMOS)
+[2025-06-08 13:19:01] INFO: [DRY-RUN] Supprimerait scripts/demo/demo_conversation_capture_complete.py (DEMOS)
+[2025-06-08 13:19:01] INFO: [DRY-RUN] Supprimerait scripts/demo/explore_corpus_extracts.py (DEMOS)
+[2025-06-08 13:19:01] INFO: [DRY-RUN] Supprimerait scripts/demo/run_analysis_with_complete_trace.py (DEMOS)
+[2025-06-08 13:19:01] INFO: [DRY-RUN] Supprimerait argumentation_analysis/examples/rhetorical_analysis_demo.py (DEMOS)
+[2025-06-08 13:19:01] INFO: [DRY-RUN] Supprimerait scripts/utils/cleanup_decrypt_traces.py (MAINTENANCE)
+[2025-06-08 13:19:01] INFO: [DRY-RUN] Supprimerait scripts/validate_authentic_system.py (VALIDATION)
+[2025-06-08 13:19:01] INFO: [DRY-RUN] Supprimerait scripts/validate_complete_ecosystem.py (VALIDATION)
+[2025-06-08 13:19:01] INFO: [DRY-RUN] Supprimerait scripts/validate_unified_orchestrations.py (VALIDATION)
+[2025-06-08 13:19:01] INFO: [DRY-RUN] Supprimerait scripts/validate_unified_orchestrations_simple.py (VALIDATION)
+[2025-06-08 13:19:01] INFO: [DRY-RUN] Supprimerait scripts/data_processing/integrate_new_source_to_corpus.py (UTILITIES)
+[2025-06-08 13:19:01] INFO: [DRY-RUN] Supprimerait scripts/utils/decrypt_specific_extract.py (UTILITIES)
+[2025-06-08 13:19:01] INFO: [DRY-RUN] Supprimerait scripts/utils/list_encrypted_extracts.py (UTILITIES)
+[2025-06-08 13:19:01] INFO: [DRY-RUN] Supprimerait docs/GUIDE_INTEGRATION_SYSTEME_RECUPERE.md (DOCS)
+[2025-06-08 13:19:01] INFO: [DRY-RUN] Supprimerait docs/OPTIMISATIONS_PERFORMANCE_SYSTEME.md (DOCS)
+[2025-06-08 13:19:01] INFO: [DRY-RUN] Supprimerait docs/SYSTEM_UNIVERSEL_GUIDE.md (DOCS)
+[2025-06-08 13:19:01] INFO: === RAPPORT FINAL ===
+[2025-06-08 13:19:01] INFO: [STATS] Statistiques par categorie:
+[2025-06-08 13:19:01] INFO:    DEMOS: 8 fichiers
+[2025-06-08 13:19:01] INFO:    MAINTENANCE: 1 fichiers
+[2025-06-08 13:19:01] INFO:    VALIDATION: 4 fichiers
+[2025-06-08 13:19:01] INFO:    UTILITIES: 3 fichiers
+[2025-06-08 13:19:01] INFO:    DOCS: 3 fichiers
+[2025-06-08 13:19:01] INFO: [STATS] Statistiques globales:
+[2025-06-08 13:19:01] INFO:    Total traites: 19
+[2025-06-08 13:19:01] INFO:    Supprimes: 19
+[2025-06-08 13:19:01] INFO:    Echecs: 0
+[2025-06-08 13:19:01] INFO:    Ignores: 0
+[2025-06-08 13:19:01] INFO: [MODE] Mode d'execution: DRY-RUN
+[2025-06-08 13:19:01] INFO: [TERMINE] NETTOYAGE TERMINE AVEC SUCCES
+[2025-06-08 13:51:54] INFO: ============================================================
+[2025-06-08 13:51:54] INFO: [DEBUT] DEMARRAGE DU NETTOYAGE DES FICHIERS REDONDANTS
+[2025-06-08 13:51:54] INFO: [DIR] Repertoire de base: D:\2025-Epita-Intelligence-Symbolique-4
+[2025-06-08 13:51:54] INFO: [MODE] Mode: SUPPRESSION REELLE
+[2025-06-08 13:51:54] INFO: ============================================================
+[2025-06-08 13:51:54] INFO: === VÉRIFICATION DES FICHIERS CONSOLIDÉS ===
+[2025-06-08 13:51:54] INFO: [TROUVE] demos/demo_unified_system.py (35285 bytes)
+[2025-06-08 13:51:54] INFO: [TROUVE] scripts/maintenance/unified_maintenance.py (43978 bytes)
+[2025-06-08 13:51:54] INFO: [TROUVE] scripts/validation/unified_validation.py (57403 bytes)
+[2025-06-08 13:51:54] INFO: [TROUVE] scripts/unified_utilities.py (50021 bytes)
+[2025-06-08 13:51:54] INFO: [TROUVE] docs/UNIFIED_SYSTEM_GUIDE.md (34302 bytes)
+[2025-06-08 13:51:54] INFO: [SUCCES] Tous les 5 fichiers consolides existent
+[2025-06-08 13:51:54] INFO: [DEJA SUPPRIME] scripts/maintenance/depot_cleanup_migration.py
+[2025-06-08 13:51:54] INFO: [DEJA SUPPRIME] scripts/maintenance/depot_cleanup_migration_simple.py
+[2025-06-08 13:51:54] INFO: === VÉRIFICATION DE SÉCURITÉ ===
+[2025-06-08 13:51:54] INFO: [SECURITE] 19 fichiers valides pour suppression
+[2025-06-08 13:51:54] INFO: [BACKUP] Liste de sauvegarde creee: D:\2025-Epita-Intelligence-Symbolique-4\deleted_files_backup_list.json
+[2025-06-08 13:51:54] INFO: === EXÉCUTION DE LA SUPPRESSION ===
+[2025-06-08 13:51:54] INFO: [SUPPRIME] demo_correction_intelligente.py (DEMOS)
+[2025-06-08 13:51:54] INFO: [SUPPRIME] demo_orchestrateur_master.py (DEMOS)
+[2025-06-08 13:51:54] INFO: [SUPPRIME] demo_unified_reporting_system.py (DEMOS)
+[2025-06-08 13:51:54] INFO: [SUPPRIME] scripts/demo/complete_rhetorical_analysis_demo.py (DEMOS)
+[2025-06-08 13:51:54] INFO: [SUPPRIME] scripts/demo/demo_conversation_capture_complete.py (DEMOS)
+[2025-06-08 13:51:54] INFO: [SUPPRIME] scripts/demo/explore_corpus_extracts.py (DEMOS)
+[2025-06-08 13:51:54] INFO: [SUPPRIME] scripts/demo/run_analysis_with_complete_trace.py (DEMOS)
+[2025-06-08 13:51:54] INFO: [SUPPRIME] argumentation_analysis/examples/rhetorical_analysis_demo.py (DEMOS)
+[2025-06-08 13:51:54] INFO: [SUPPRIME] scripts/utils/cleanup_decrypt_traces.py (MAINTENANCE)
+[2025-06-08 13:51:54] INFO: [SUPPRIME] scripts/validate_authentic_system.py (VALIDATION)
+[2025-06-08 13:51:54] INFO: [SUPPRIME] scripts/validate_complete_ecosystem.py (VALIDATION)
+[2025-06-08 13:51:54] INFO: [SUPPRIME] scripts/validate_unified_orchestrations.py (VALIDATION)
+[2025-06-08 13:51:54] INFO: [SUPPRIME] scripts/validate_unified_orchestrations_simple.py (VALIDATION)
+[2025-06-08 13:51:54] INFO: [SUPPRIME] scripts/data_processing/integrate_new_source_to_corpus.py (UTILITIES)
+[2025-06-08 13:51:54] INFO: [SUPPRIME] scripts/utils/decrypt_specific_extract.py (UTILITIES)
+[2025-06-08 13:51:54] INFO: [SUPPRIME] scripts/utils/list_encrypted_extracts.py (UTILITIES)
+[2025-06-08 13:51:54] INFO: [SUPPRIME] docs/GUIDE_INTEGRATION_SYSTEME_RECUPERE.md (DOCS)
+[2025-06-08 13:51:54] INFO: [SUPPRIME] docs/OPTIMISATIONS_PERFORMANCE_SYSTEME.md (DOCS)
+[2025-06-08 13:51:54] INFO: [SUPPRIME] docs/SYSTEM_UNIVERSEL_GUIDE.md (DOCS)
+[2025-06-08 13:51:54] INFO: === RAPPORT FINAL ===
+[2025-06-08 13:51:54] INFO: [STATS] Statistiques par categorie:
+[2025-06-08 13:51:54] INFO:    DEMOS: 8 fichiers
+[2025-06-08 13:51:54] INFO:    MAINTENANCE: 1 fichiers
+[2025-06-08 13:51:54] INFO:    VALIDATION: 4 fichiers
+[2025-06-08 13:51:54] INFO:    UTILITIES: 3 fichiers
+[2025-06-08 13:51:54] INFO:    DOCS: 3 fichiers
+[2025-06-08 13:51:54] INFO: [STATS] Statistiques globales:
+[2025-06-08 13:51:54] INFO:    Total traites: 19
+[2025-06-08 13:51:54] INFO:    Supprimes: 19
+[2025-06-08 13:51:54] INFO:    Echecs: 0
+[2025-06-08 13:51:54] INFO:    Ignores: 0
+[2025-06-08 13:51:54] INFO: [MODE] Mode d'execution: REEL
+[2025-06-08 13:51:54] INFO: [TERMINE] NETTOYAGE TERMINE AVEC SUCCES
