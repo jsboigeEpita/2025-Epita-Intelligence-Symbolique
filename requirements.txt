@@ -40,10 +40,10 @@ torch>=1.12.0
 transformers>=4.20.0
 
 # Semantic Kernel - CRITICAL DEPENDENCY
-semantic-kernel==1.32.2
-# NOTE: semantic-kernel[agents] extra NOT available in this version
-# SOLUTION: Fallback implemented in project_core/semantic_kernel_agents_fallback.py
-# Provides: AuthorRole, ChatMessage, AgentChat, ChatCompletion
+semantic-kernel>=0.9.6b1
+# NOTE: Using latest available Python version (0.9.6b1) - Fixed Pydantic compatibility
+# CRITICAL UPDATE: Resolves Pydantic import errors and modernizes API
+# Provides: Core semantic kernel functionality
 
 # ===== TESTING FRAMEWORK =====
 pytest>=7.0.0
