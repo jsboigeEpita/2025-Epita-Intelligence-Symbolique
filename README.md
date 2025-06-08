@@ -152,6 +152,43 @@ python -m scripts.maintenance.validate_oracle_coverage
 
 ---
 
+## 🔒 **Sécurité et Intégrité - Mise à Jour Janvier 2025**
+
+### ✅ **Audit d'Intégrité Récent**
+Un audit de sécurité complet a été réalisé sur le système **Sherlock-Watson-Moriarty Oracle Enhanced**, aboutissant à :
+
+- **4 violations d'intégrité** détectées et **corrigées**
+- **CluedoIntegrityError** déployé pour protection anti-triche
+- **Mécanismes de surveillance** temps réel intégrés
+- **Couverture tests** maintenue à **100%**
+
+Pour plus de détails, consulter :
+- 📋 **[Rapport d'Audit Complet](docs/sherlock_watson/AUDIT_INTEGRITE_CLUEDO.md)**
+- 🛠️ **[Guide Utilisateur Sécurisé](docs/sherlock_watson/GUIDE_UTILISATEUR_COMPLET.md)**
+- 🏗️ **[Architecture Sécurité](docs/sherlock_watson/ARCHITECTURE_ORACLE_ENHANCED.md)**
+
+## 🏆 **Certification d'Authenticité - Post-Audit Anti-Mock**
+
+### ✅ **Validation Critique Réussie (Juin 2025)**
+Suite à l'audit critique anti-mock, le système a été **100% validé** avec des composants entièrement authentiques :
+
+**🎯 Résultats de l'Audit** :
+- **📊 106/106 tests authentiques** réussis (100% de succès)
+- **🚫 0 mock critique** dans les composants stratégiques
+- **⚡ 3 stratégies sophistiquées** intégrées avec Semantic Kernel
+- **🎯 État partagé innovant** pour coordination inter-stratégies
+
+**🔍 Stratégies Authentiques Découvertes** :
+- ✅ **[`SimpleTerminationStrategy`](docs/architecture/strategies/strategies_architecture.md#1-simpleterminationstrategy)** : Terminaison intelligente basée sur conclusion + max_steps
+- ✅ **[`DelegatingSelectionStrategy`](docs/architecture/strategies/strategies_architecture.md#2-delegatingselectionstrategy)** : Sélection avec désignation explicite via état partagé
+- ✅ **[`BalancedParticipationStrategy`](docs/architecture/strategies/strategies_architecture.md#3-balancedparticipationstrategy)** : Équilibrage algorithmique sophistiqué
+
+**📋 Documentation Technique Complète** :
+- 🏗️ **[Architecture des Stratégies](docs/architecture/strategies/strategies_architecture.md)** - Spécifications techniques détaillées
+- 🔍 **[Audit Anti-Mock](docs/architecture/strategies/audit_anti_mock.md)** - Rapport de validation complet (106/106 tests)
+- 🔗 **[Intégration Semantic Kernel](docs/architecture/strategies/semantic_kernel_integration.md)** - Conformité aux interfaces standard
+- 📊 **[État Partagé](docs/architecture/strategies/shared_state_architecture.md)** - Architecture de coordination
+
 ## 🔧 **Configuration et Prérequis**
 
 ### ⚡ **Installation Rapide**
@@ -244,7 +281,7 @@ echo "REACT_APP_API_BASE_URL=http://localhost:5005" > .env
 **Sécurité et Intégrité Sherlock-Watson** :
 - 📋 **[Audit d'Intégrité Cluedo](docs/sherlock_watson/AUDIT_INTEGRITE_CLUEDO.md)** - Rapport de sécurité complet
 - 🛠️ **[Guide Utilisateur Sécurisé](docs/sherlock_watson/GUIDE_UTILISATEUR_COMPLET.md)** - Utilisation sécurisée
-- 🏗️ **[Architecture Sécurité](docs/sherlock_watson/ARCHITECTURE_TECHNIQUE_DETAILLEE.md)** - Spécifications techniques
+- 🏗️ **[Architecture Sécurité](docs/sherlock_watson/ARCHITECTURE_ORACLE_ENHANCED.md)** - Spécifications techniques
 
 ### 📖 **Documentation Générale**
 

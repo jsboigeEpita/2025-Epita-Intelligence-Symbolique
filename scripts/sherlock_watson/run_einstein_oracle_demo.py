@@ -150,17 +150,17 @@ class EinsteinOracleOrchestrator:
         dummy_dataset = CluedoDataset(elements)
         
         self.dummy_oracle_state = self.CluedoOracleState(
-            nom_enquete="Puzzle Einstein Oracle Demo",
-            elements_jeu=elements,
-            cluedo_dataset=dummy_dataset
+            nom_enquete_cluedo="Puzzle Einstein Oracle Demo",
+            elements_jeu_cluedo=elements,
+            description_cas="Puzzle d'Einstein avec Oracle Moriarty - Test de validation post-Git",
+            initial_context={"type": "validation_test", "puzzle": "einstein", "version": "v2.1.0"}
         )
         
         # Création des agents adaptés pour Einstein
         self.agents['sherlock'] = self.SherlockEnqueteAgent(
             kernel=self.kernel,
-            enquete_state=self.dummy_oracle_state,
             agent_name="Sherlock",
-            custom_instructions="""Tu es Sherlock Holmes face au puzzle d'Einstein. 
+            system_prompt="""Tu es Sherlock Holmes face au puzzle d'Einstein.
             Ton objectif : déterminer QUI POSSÈDE LE POISSON en utilisant les indices de Moriarty.
             Analyse logiquement chaque indice, fais des déductions méthodiques.
             Quand tu penses connaître la réponse, dis clairement : 'Je conclus que [PERSONNE] possède le poisson'."""
@@ -168,9 +168,8 @@ class EinsteinOracleOrchestrator:
         
         self.agents['watson'] = self.WatsonLogicAssistant(
             kernel=self.kernel,
-            enquete_state=self.dummy_oracle_state,
             agent_name="Watson",
-            custom_instructions="""Tu es Watson, assistant logique de Holmes pour le puzzle Einstein.
+            system_prompt="""Tu es Watson, assistant logique de Holmes pour le puzzle Einstein.
             Aide Sherlock en organisant les informations, en proposant des grilles logiques,
             et en vérifiant les déductions. Tu peux aussi proposer des solutions intermédiaires."""
         )

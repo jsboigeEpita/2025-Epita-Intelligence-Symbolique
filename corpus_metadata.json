@@ -1,0 +1,348 @@
+{
+  "total_sources": 8,
+  "extraction_timestamp": "",
+  "sources": [
+    {
+      "source_index": 0,
+      "source_name": "Lincoln-Douglas DAcbat 1 (NPS)",
+      "source_type": "jina",
+      "schema": "unknown",
+      "extract_count": 5,
+      "extracts": [
+        {
+          "extract_index": 0,
+          "extract_id": "0_0",
+          "extract_name": "1. DAcbat Complet (Ottawa, 1858)",
+          "start_marker": "**August 21, 1858**",
+          "end_marker": "(Three times three cheers were here given for Senator Douglas.)",
+          "has_content": false,
+          "content_length": 0,
+          "metadata": {}
+        },
+        {
+          "extract_index": 1,
+          "extract_id": "0_1",
+          "extract_name": "2. Discours Principal de Lincoln",
+          "start_marker": "MY FELLOW-CITIZENS: When a man hears himself",
+          "end_marker": "The Judge can take his half hour.",
+          "has_content": false,
+          "content_length": 0,
+          "metadata": {}
+        },
+        {
+          "extract_index": 2,
+          "extract_id": "0_2",
+          "extract_name": "3. Discours d'Ouverture de Douglas",
+          "start_marker": "Ladies and gentlemen: I appear before you",
+          "end_marker": "occupy an half hour in replying to him.",
+          "has_content": false,
+          "content_length": 0,
+          "metadata": {}
+        },
+        {
+          "extract_index": 3,
+          "extract_id": "0_3",
+          "extract_name": "4. Lincoln sur Droits Naturels/A%galitAc",
+          "start_marker": "I will say here, while upon this subject,",
+          "end_marker": "equal of every living man._ [Great applause.]",
+          "has_content": false,
+          "content_length": 0,
+          "metadata": {}
+        },
+        {
+          "extract_index": 4,
+          "extract_id": "0_4",
+          "extract_name": "5. Douglas sur Race/Dred Scott",
+          "start_marker": "utterly opposed to the Dred Scott decision,",
+          "end_marker": "equality with the white man. (\"Good.\")",
+          "has_content": false,
+          "content_length": 0,
+          "metadata": {}
+        }
+      ]
+    },
+    {
+      "source_index": 1,
+      "source_name": "Lincoln-Douglas DAcbat 2 (NPS)",
+      "source_type": "jina",
+      "schema": "unknown",
+      "extract_count": 5,
+      "extracts": [
+        {
+          "extract_index": 0,
+          "extract_id": "1_0",
+          "extract_name": "1. DAcbat Complet (Freeport, 1858)",
+          "start_marker": "It was a cloudy, cool, and damp day.",
+          "end_marker": "I cannot, gentlemen, my time has expired.",
+          "has_content": false,
+          "content_length": 0,
+          "metadata": {}
+        },
+        {
+          "extract_index": 1,
+          "extract_id": "1_1",
+          "extract_name": "2. Discours Principal de Douglas",
+          "start_marker": "**Mr. Douglas' Speech**\n\nLadies and Gentlemen-",
+          "end_marker": "stopped on the moment.",
+          "has_content": false,
+          "content_length": 0,
+          "metadata": {}
+        },
+        {
+          "extract_index": 2,
+          "extract_id": "1_2",
+          "extract_name": "3. Discours d'Ouverture de Lincoln",
+          "start_marker": "LADIES AND GENTLEMEN - On Saturday last,",
+          "end_marker": "Go on, Judge Douglas.",
+          "has_content": false,
+          "content_length": 0,
+          "metadata": {}
+        },
+        {
+          "extract_index": 3,
+          "extract_id": "1_3",
+          "extract_name": "4. Doctrine de Freeport (Douglas)",
+          "start_marker": "The next question propounded to me by Mr. Lincoln is,",
+          "end_marker": "satisfactory on that point.",
+          "has_content": false,
+          "content_length": 0,
+          "metadata": {}
+        },
+        {
+          "extract_index": 4,
+          "extract_id": "1_4",
+          "extract_name": "5. Lincoln rAcpond aux 7 questions",
+          "start_marker": "The first one of these interrogatories is in these words:",
+          "end_marker": "agravate [sic] the slavery question among ourselves. [Cries of good, good.]",
+          "has_content": false,
+          "content_length": 0,
+          "metadata": {}
+        }
+      ]
+    },
+    {
+      "source_index": 2,
+      "source_name": "Kremlin Discours 21/02/2022",
+      "source_type": "jina",
+      "schema": "unknown",
+      "extract_count": 5,
+      "extracts": [
+        {
+          "extract_index": 0,
+          "extract_id": "2_0",
+          "extract_name": "1. Discours Complet",
+          "start_marker": "Citizens of Russia, friends,",
+          "end_marker": "Thank you.",
+          "has_content": false,
+          "content_length": 0,
+          "metadata": {}
+        },
+        {
+          "extract_index": 1,
+          "extract_id": "2_1",
+          "extract_name": "2. Argument Historique Ukraine",
+          "start_marker": "So, I will start with the fact that modern Ukraine",
+          "end_marker": "He was its creator and architect.",
+          "has_content": false,
+          "content_length": 0,
+          "metadata": {}
+        },
+        {
+          "extract_index": 2,
+          "extract_id": "2_2",
+          "extract_name": "3. Menace OTAN",
+          "start_marker": "Ukraine is home to NATO training missions",
+          "end_marker": "These principled proposals of ours have been ignored.",
+          "has_content": false,
+          "content_length": 0,
+          "metadata": {}
+        },
+        {
+          "extract_index": 3,
+          "extract_id": "2_3",
+          "extract_name": "4. DAccommunisation selon Poutine",
+          "start_marker": "And today the“grateful progeny”",
+          "end_marker": "what real decommunizations would mean for Ukraine.",
+          "has_content": false,
+          "content_length": 0,
+          "metadata": {}
+        },
+        {
+          "extract_index": 4,
+          "extract_id": "2_4",
+          "extract_name": "5. DAccision Reconnaissance Donbass",
+          "start_marker": "Everything was in vain.",
+          "end_marker": "These two documents will be prepared and signed shortly.",
+          "has_content": false,
+          "content_length": 0,
+          "metadata": {}
+        }
+      ]
+    },
+    {
+      "source_index": 3,
+      "source_name": "Discours de politique générale de Gabriel Attal (30 janvier 2024)",
+      "source_type": "Discours politique",
+      "schema": "unknown",
+      "extract_count": 5,
+      "extracts": [
+        {
+          "extract_index": 0,
+          "extract_id": "3_0",
+          "extract_name": "Discours Complet Attal",
+          "start_marker": "Déclaration de politique générale de M. Gabriel Attal, Premier ministre, sur les grandes orientations de la politique gouvernementale notamment en matière d'industrialisation, de santé, d'éducation, de sécurité et d'agriculture, à l'Assemblée nationale le 30 janvier 2024.",
+          "end_marker": "Source https://www.gouvernement.fr, le 31 janvier 2024",
+          "has_content": false,
+          "content_length": 0,
+          "metadata": {}
+        },
+        {
+          "extract_index": 1,
+          "extract_id": "3_1",
+          "extract_name": "Attal sur l'Agriculture",
+          "start_marker": "Mesdames et Messieurs les députés, je le dis ici dès le début de mon intervention : notre agriculture est notre force.",
+          "end_marker": "Nous serons au rendez-vous. Sans ambiguïté.",
+          "has_content": false,
+          "content_length": 0,
+          "metadata": {}
+        },
+        {
+          "extract_index": 2,
+          "extract_id": "3_2",
+          "extract_name": "Attal sur la Désmicardisation",
+          "start_marker": "On ne peut accepter une France où beaucoup sont condamnés à rester proches du SMIC toute leur carrière. La progression salariale doit, toujours, permettre de récompenser l'effort et le mérite.",
+          "end_marker": "Dès le prochain projet de loi de finance, en nous appuyant sur les propositions des parlementaires, des partenaires sociaux et sur un certain nombre de travaux d'experts qui sont actuellement conduits, nous commencerons à réformer ce système.",
+          "has_content": false,
+          "content_length": 0,
+          "metadata": {}
+        },
+        {
+          "extract_index": 3,
+          "extract_id": "3_3",
+          "extract_name": "Attal sur les Médecins Étrangers",
+          "start_marker": "C'est pourquoi, comme l'a annoncé le Président de la République, nous procèderons à la régularisation des médecins étrangers sur notre territoire.",
+          "end_marker": "Nous devons trouver les moyens de faire revenir nos jeunes français, qui sont partis étudier à l'étranger.",
+          "has_content": false,
+          "content_length": 0,
+          "metadata": {}
+        },
+        {
+          "extract_index": 4,
+          "extract_id": "3_4",
+          "extract_name": "Attal sur le Choc des Savoirs",
+          "start_marker": "Pour élever le niveau des élèves, j'ai lancé le « choc des savoirs », il doit maintenant se déployer.",
+          "end_marker": "Nous assumons de porter une école des savoirs et de l'excellence, où chacun apprend à son rythme.",
+          "has_content": false,
+          "content_length": 0,
+          "metadata": {}
+        }
+      ]
+    },
+    {
+      "source_index": 4,
+      "source_name": "Assemblée Nationale",
+      "source_type": "web",
+      "schema": "unknown",
+      "extract_count": 1,
+      "extracts": [
+        {
+          "extract_index": 0,
+          "extract_id": "4_0",
+          "extract_name": "Justification principale de la censure (Bompard)",
+          "start_marker": "Ce sera insuffisant pour dresser la liste de toutes vos infamies. J’irai donc à l’essentiel. Il faut vous censurer pour protéger le peuple des souffrances que vous voulez lui infliger",
+          "end_marker": "Vous êtes le doux visage de la brutalité sociale. _(Applaudissements sur les bancs du groupe LFI-NUPES et sur quelques bancs du groupe GDR-NUPES.)_",
+          "has_content": false,
+          "content_length": 0,
+          "metadata": {}
+        }
+      ]
+    },
+    {
+      "source_index": 5,
+      "source_name": "Compte rendu du rapport de la mission d'information sur l'IA (Assemblée Nationale)",
+      "source_type": "Rapport parlementaire",
+      "schema": "unknown",
+      "extract_count": 5,
+      "extracts": [
+        {
+          "extract_index": 0,
+          "extract_id": "5_0",
+          "extract_name": "Rapport IA Complet (CR)",
+          "start_marker": "Compte rendu",
+          "end_marker": "1",
+          "has_content": false,
+          "content_length": 0,
+          "metadata": {}
+        },
+        {
+          "extract_index": 1,
+          "extract_id": "5_1",
+          "extract_name": "Rapport IA - Recommandations Clés",
+          "start_marker": "Mme Anne Bouverot. – Nous avons formulé 25 recommandations. Je reviendrai sur 7 d’entre elles, qui nous paraissent particulièrement importantes.",
+          "end_marker": "Au‑delà de ces recommandations, nous sommes convaincus que notre capacité à nous différencier dans le domaine de l’IA dépendra de notre capacité à prendre aussi en compte les enjeux environnementaux associés.",
+          "has_content": false,
+          "content_length": 0,
+          "metadata": {}
+        },
+        {
+          "extract_index": 2,
+          "extract_id": "5_2",
+          "extract_name": "Rapport IA - Impact Économique et Emploi",
+          "start_marker": "M. Philippe Aghion, co-président de la Commission de l’intelligence artificielle. – La révolution de l’IA, et son accélération avec le développement de l’IA générative, suscitent à la fois de la crainte et de l’espoir.",
+          "end_marker": "L’IA représente ainsi un grand potentiel de croissance et de création d’emplois. Pour exploiter ce potentiel et faire pleinement de l’IA un facteur de progrès, il nous faudra toutefois réformer nos institutions et nos politiques publiques, en matière d’éducation, de concurrence, d’adaptation du marché du travail, etc.",
+          "has_content": false,
+          "content_length": 0,
+          "metadata": {}
+        },
+        {
+          "extract_index": 3,
+          "extract_id": "5_3",
+          "extract_name": "Rapport IA - Données Personnelles et CNIL",
+          "start_marker": "La quatrième recommandation serait de transformer notre approche de la donnée personnelle, pour pouvoir à la fois continuer à protéger nos concitoyens, en confortant le rôle de la Cnil et du RGPD, tout en étant capables de soutenir l’innovation au bénéfice de tous, dans le domaine de la santé notamment.",
+          "end_marker": "Nous estimons que cette autorisation préalable pourrait être supprimée, au profit d’une logique de responsabilisation des acteurs et de validation ex post. À défaut, le risque serait que ces solutions continuent d’être développées par d’autres et que nous soyons amenés, pour répondre à des enjeux de santé, à retenir des innovations ne provenant majoritairement pas d’acteurs français.",
+          "has_content": false,
+          "content_length": 0,
+          "metadata": {}
+        },
+        {
+          "extract_index": 4,
+          "extract_id": "5_4",
+          "extract_name": "Rapport IA - Appel à l'Union Nationale",
+          "start_marker": "Pour le pilotage de la mise en œuvre des recommandations de notre rapport, nous aurons besoin de vous.",
+          "end_marker": "par‑delà les alternances ou les divergences politiques.",
+          "has_content": false,
+          "content_length": 0,
+          "metadata": {}
+        }
+      ]
+    },
+    {
+      "source_index": 6,
+      "source_name": "Vildanden - Henrik Ibsen",
+      "source_type": "text",
+      "schema": "unknown",
+      "extract_count": 1,
+      "extracts": [
+        {
+          "extract_index": 0,
+          "extract_id": "6_0",
+          "extract_name": "Oeuvre Complète",
+          "start_marker": "*** START OF THE PROJECT GUTENBERG EBOOK 13041 ***",
+          "end_marker": "*** END OF THE PROJECT GUTENBERG EBOOK 13041 ***",
+          "has_content": false,
+          "content_length": 0,
+          "metadata": {}
+        }
+      ]
+    },
+    {
+      "source_index": 7,
+      "source_name": "Source_7",
+      "source_type": "tika",
+      "schema": "unknown",
+      "extract_count": 0,
+      "extracts": []
+    }
+  ],
+  "total_extracts": 27
+}
