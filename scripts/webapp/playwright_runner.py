@@ -161,7 +161,6 @@ class PlaywrightRunner:
             '-v',  # Verbose
             '-s',  # Pas de capture stdout
             '--tb=short',  # Traceback court
-            f'--timeout={config["timeout_ms"] // 1000}',  # Timeout en secondes
         ]
         
         # Options Playwright
@@ -259,7 +258,7 @@ class PlaywrightRunner:
         
         # Log résumé
         if success:
-            self.logger.info(f"✅ Tests réussis: {stats}")
+            self.logger.info(f"Tests réussis: {stats}")
         else:
             self.logger.error(f"[ERROR] Tests échoués: {stats}")
             
