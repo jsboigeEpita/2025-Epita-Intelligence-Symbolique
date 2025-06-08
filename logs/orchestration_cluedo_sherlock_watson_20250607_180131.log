@@ -1,7 +1,0 @@
-2025-06-07 18:01:31,624 [INFO] [__main__] === DÉMARRAGE TEST 1: CLUEDO SHERLOCK-WATSON (SANS MORIARTY) ===
-2025-06-07 18:01:31,624 [INFO] [__main__] ÉTAT PARTAGÉ: Initialisation
-2025-06-07 18:01:31,625 [INFO] [argumentation_analysis] Package 'argumentation_analysis' chargé.
-2025-06-07 18:01:32,769 [WARNING] [root] Certaines classes/fonctions de 'agents.core.extract' n'ont pas pu être exposées: cannot import name 'BaseLogicAgent' from partially initialized module 'argumentation_analysis.agents.core.abc.agent_bases' (most likely due to a circular import) (D:\2025-Epita-Intelligence-Symbolique\argumentation_analysis\agents\core\abc\agent_bases.py)
-2025-06-07 18:01:33,112 [INFO] [App.ProjectCore.FileLoaders] Utilitaires de chargement de fichiers (FileLoaders) définis.
-2025-06-07 18:01:33,114 [INFO] [InformalDefinitions] Classe InformalAnalysisPlugin (V12 avec nouvelles fonctions) définie.
-2025-06-07 18:01:33,114 [INFO] [InformalDefinitions] Instructions Système INFORMAL_AGENT_INSTRUCTIONS (V15 avec nouvelles fonctions) définies.
