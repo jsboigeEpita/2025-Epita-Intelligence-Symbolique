@@ -1,0 +1,55 @@
+{
+  "metadata": {
+    "timestamp": "2025-06-08 18:19:47",
+    "source_description": "Source inconnue",
+    "source_type": "text",
+    "text_length": 317,
+    "analysis_config": {
+      "analysis_modes": [
+        "fallacies",
+        "coherence",
+        "semantic",
+        "taxonomic"
+      ],
+      "logic_type": "propositional",
+      "output_format": "dict",
+      "use_advanced_tools": true,
+      "use_mocks": false,
+      "enable_jvm": true,
+      "orchestration_mode": "conversation",
+      "enable_conversation_logging": true
+    },
+    "pipeline_version": "unified_v1.0",
+    "processing_time_ms": 0.0
+  },
+  "informal_analysis": {
+    "fallacies": [
+      {
+        "type": "Généralisation hâtive",
+        "text_fragment": "\n                Citoyens ! Notre nation traverse une periode cruciale de son histoire. \n                Nous devons choisir entre deux voies distinct...",
+        "explanation": "Affirmation générale basée sur des exemples limités",
+        "confidence": 0.78,
+        "severity": "Modéré",
+        "pipeline_version": "unified"
+      }
+    ],
+    "coherence_analysis": {},
+    "semantic_analysis": {},
+    "summary": {
+      "total_fallacies": 1,
+      "average_confidence": 0.78,
+      "severity_distribution": {
+        "Critique": 0,
+        "Élevé": 0,
+        "Modéré": 1,
+        "Faible": 0
+      }
+    }
+  },
+  "formal_analysis": {},
+  "unified_analysis": {},
+  "orchestration_analysis": {},
+  "recommendations": [
+    "Analyse pipeline unifiée complétée - examen des détails recommandé"
+  ]
+}
