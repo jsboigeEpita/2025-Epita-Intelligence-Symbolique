@@ -1,16 +1,18 @@
 # -*- coding: utf-8 -*-
 """
 Script principal de démonstration EPITA - Architecture Modulaire
-Intelligence Symbolique - Menu Catégorisé
+Intelligence Symbolique - Menu Catégorisé + Validation Données Custom
 
-VERSION 2.0 - Refactorisation complète en architecture modulaire
-Ancien script sauvegardé dans demonstration_epita_legacy.py
+VERSION 2.1 - Ajout validation avec données dédiées en paramètre
+Détection automatique des mocks vs traitement réel
 
 Utilisation :
   python demonstration_epita.py                    # Menu interactif
   python demonstration_epita.py --interactive      # Mode interactif avec modules
-  python demonstration_epita.py --quick-start      # Quick start étudiants  
+  python demonstration_epita.py --quick-start      # Quick start étudiants
   python demonstration_epita.py --metrics          # Métriques seulement
+  python demonstration_epita.py --validate-custom  # Validation avec données dédiées
+  python demonstration_epita.py --custom-data "texte"  # Test avec données custom
 """
 
 import sys
@@ -19,8 +21,12 @@ import argparse
 import importlib.util
 import subprocess
 import time
+import hashlib
+import json
 from pathlib import Path
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List, Tuple
+from dataclasses import dataclass
+from datetime import datetime
 
 # Configuration du chemin pour les modules
 project_root = Path(__file__).resolve().parent.parent.parent
@@ -38,6 +44,152 @@ def ensure_yaml_dependency():
         import yaml
 
 ensure_yaml_dependency()
+
+# Classes pour la validation avec données dédiées
+@dataclass
+class CustomTestDataset:
+    """Dataset de test personnalisé pour validation Épita."""
+    name: str
+    content: str
+    content_hash: str
+    expected_indicators: List[str]
+    test_purpose: str
+    marker: str
+
+@dataclass
+class ValidationResult:
+    """Résultat de validation d'un test."""
+    dataset_name: str
+    mode_tested: str
+    timestamp: str
+    success: bool
+    output_captured: str
+    real_processing_detected: bool
+    mock_detected: bool
+    custom_data_processed: bool
+    execution_time: float
+    error: str = ""
+
+class EpitaValidator:
+    """Validateur pour détecter mocks vs traitement réel."""
+    
+    def __init__(self):
+        self.real_indicators = [
+            "analyse en cours", "traitement", "parsing", "détection",
+            "calcul", "métrique", "score", "résultat", "argument", "sophisme"
+        ]
+        self.mock_indicators = [
+            "simulation", "mock", "exemple générique", "données factices",
+            "placeholder", "test pattern", "demo content"
+        ]
+    
+    def create_custom_datasets(self) -> List[CustomTestDataset]:
+        """Crée des datasets avec marqueurs uniques."""
+        timestamp = int(time.time())
+        datasets = []
+        
+        # Dataset 1: Logique Épita avec marqueur unique
+        content1 = f"[EPITA_VALID_{timestamp}] Tous les algorithmes Épita sont optimisés. Cet algorithme est optimisé. Donc cet algorithme est un algorithme Épita."
+        datasets.append(CustomTestDataset(
+            name="logique_epita_custom",
+            content=content1,
+            content_hash=hashlib.md5(content1.encode()).hexdigest(),
+            expected_indicators=["syllogisme", "logique", "prémisse"],
+            test_purpose="Test logique avec identifiant unique",
+            marker=f"EPITA_VALID_{timestamp}"
+        ))
+        
+        # Dataset 2: Sophisme technique avec marqueur
+        content2 = f"[EPITA_TECH_{timestamp + 1}] Cette technologie est adoptée par 90% des entreprises. Notre projet doit donc l'utiliser pour réussir."
+        datasets.append(CustomTestDataset(
+            name="sophisme_tech_custom",
+            content=content2,
+            content_hash=hashlib.md5(content2.encode()).hexdigest(),
+            expected_indicators=["argumentum ad populum", "sophisme", "fallacy"],
+            test_purpose="Détection sophisme technique",
+            marker=f"EPITA_TECH_{timestamp + 1}"
+        ))
+        
+        # Dataset 3: Unicode et caractères spéciaux
+        content3 = f"[EPITA_UNICODE_{timestamp + 2}] Algorithme: O(n²) → O(n log n) 🚀 Performance: +100% ✓ Café ☕"
+        datasets.append(CustomTestDataset(
+            name="unicode_test_custom",
+            content=content3,
+            content_hash=hashlib.md5(content3.encode()).hexdigest(),
+            expected_indicators=["algorithme", "complexité", "unicode"],
+            test_purpose="Test robustesse Unicode",
+            marker=f"EPITA_UNICODE_{timestamp + 2}"
+        ))
+        
+        return datasets
+    
+    def validate_with_dataset(self, dataset: CustomTestDataset, module_func, mode: str) -> ValidationResult:
+        """Valide un module avec un dataset custom."""
+        start_time = time.time()
+        
+        try:
+            # Créer un fichier temporaire avec les données custom
+            temp_file = Path(f"temp_epita_test_{dataset.name}_{int(time.time())}.txt")
+            temp_file.write_text(dataset.content, encoding='utf-8')
+            
+            # Capturer stdout/stderr pour analyser la sortie
+            import io
+            import contextlib
+            
+            captured_output = io.StringIO()
+            
+            with contextlib.redirect_stdout(captured_output), contextlib.redirect_stderr(captured_output):
+                try:
+                    if hasattr(module_func, '__call__'):
+                        # Tenter de passer les données custom au module
+                        result = module_func() if not module_func.__code__.co_argcount else module_func(dataset.content)
+                    else:
+                        result = True
+                except Exception as e:
+                    result = False
+            
+            output = captured_output.getvalue()
+            execution_time = time.time() - start_time
+            
+            # Analyser la sortie pour détecter traitement réel vs mock
+            real_processing = any(indicator.lower() in output.lower() for indicator in self.real_indicators)
+            mock_detected = any(indicator.lower() in output.lower() for indicator in self.mock_indicators)
+            
+            # Vérifier si le marqueur custom apparaît (preuve que les données ont été lues)
+            custom_data_processed = (dataset.marker in output or
+                                   dataset.content_hash in output or
+                                   any(expected.lower() in output.lower() for expected in dataset.expected_indicators))
+            
+            # Nettoyer le fichier temporaire
+            if temp_file.exists():
+                temp_file.unlink()
+            
+            return ValidationResult(
+                dataset_name=dataset.name,
+                mode_tested=mode,
+                timestamp=datetime.now().isoformat(),
+                success=result is not False,
+                output_captured=output[:500],  # Limiter la sortie
+                real_processing_detected=real_processing,
+                mock_detected=mock_detected,
+                custom_data_processed=custom_data_processed,
+                execution_time=execution_time
+            )
+            
+        except Exception as e:
+            execution_time = time.time() - start_time
+            return ValidationResult(
+                dataset_name=dataset.name,
+                mode_tested=mode,
+                timestamp=datetime.now().isoformat(),
+                success=False,
+                output_captured="",
+                real_processing_detected=False,
+                mock_detected=False,
+                custom_data_processed=False,
+                execution_time=execution_time,
+                error=str(e)
+            )
 
 # Import des utilitaires depuis le module
 modules_path = Path(__file__).parent / "modules"
@@ -390,10 +542,225 @@ def execute_all_categories_non_interactive(config: Dict[str, Any]) -> None:
     print(f"\n{final_color}{Colors.BOLD}{final_message}{Colors.ENDC}")
     print(f"{'=' * 80}")
 
+def mode_validation_custom_data(config: Dict[str, Any]) -> None:
+    """Mode validation avec données dédiées pour détecter mocks vs réel."""
+    logger = DemoLogger("validation_custom")
+    
+    print(f"""
+{Colors.CYAN}{Colors.BOLD}
++==============================================================================+
+|              [EPITA] VALIDATION AVEC DONNÉES DÉDIÉES                        |
+|                   Détection Mocks vs Traitement Réel                        |
++==============================================================================+
+{Colors.ENDC}""")
+    
+    validator = EpitaValidator()
+    datasets = validator.create_custom_datasets()
+    
+    logger.info(f"🧪 Création de {len(datasets)} datasets de test personnalisés")
+    
+    # Tester chaque catégorie avec les datasets custom
+    categories = config.get('categories', {})
+    categories_triees = sorted(categories.items(), key=lambda x: x[1]['id'])
+    
+    all_results = []
+    
+    for cat_id, cat_info in categories_triees:
+        nom_module = cat_info.get('module', '')
+        nom_cat = cat_info.get('nom', cat_id)
+        
+        print(f"\n{Colors.BOLD}{'=' * 60}{Colors.ENDC}")
+        print(f"{Colors.CYAN}🔍 VALIDATION MODULE: {nom_cat}{Colors.ENDC}")
+        print(f"{'=' * 60}")
+        
+        for dataset in datasets:
+            print(f"\n{Colors.WARNING}📊 Test avec dataset: {dataset.name}{Colors.ENDC}")
+            print(f"   Marqueur: {dataset.marker}")
+            print(f"   Objectif: {dataset.test_purpose}")
+            
+            try:
+                # Charger le module et tester avec le dataset
+                module_path = modules_path / f"{nom_module}.py"
+                if module_path.exists():
+                    spec = importlib.util.spec_from_file_location(nom_module, module_path)
+                    module = importlib.util.module_from_spec(spec)
+                    spec.loader.exec_module(module)
+                    
+                    # Trouver la fonction de démo appropriée
+                    demo_func = None
+                    if hasattr(module, 'run_demo_rapide'):
+                        demo_func = module.run_demo_rapide
+                    elif hasattr(module, 'run_demo_interactive'):
+                        demo_func = module.run_demo_interactive
+                    
+                    if demo_func:
+                        result = validator.validate_with_dataset(dataset, demo_func, nom_cat)
+                        all_results.append(result)
+                        
+                        # Afficher les résultats
+                        if result.success:
+                            print(f"   {Colors.GREEN}✅ Exécution: SUCCÈS{Colors.ENDC}")
+                        else:
+                            print(f"   {Colors.FAIL}❌ Exécution: ÉCHEC{Colors.ENDC}")
+                        
+                        if result.custom_data_processed:
+                            print(f"   {Colors.GREEN}📝 Données custom: TRAITÉES{Colors.ENDC}")
+                        else:
+                            print(f"   {Colors.WARNING}📝 Données custom: NON DÉTECTÉES{Colors.ENDC}")
+                        
+                        if result.real_processing_detected:
+                            print(f"   {Colors.GREEN}🔧 Traitement réel: DÉTECTÉ{Colors.ENDC}")
+                        else:
+                            print(f"   {Colors.WARNING}🔧 Traitement réel: NON DÉTECTÉ{Colors.ENDC}")
+                        
+                        if result.mock_detected:
+                            print(f"   {Colors.FAIL}🎭 Mocks détectés: OUI{Colors.ENDC}")
+                        else:
+                            print(f"   {Colors.GREEN}🎭 Mocks détectés: NON{Colors.ENDC}")
+                        
+                        print(f"   ⏱️ Temps d'exécution: {result.execution_time:.3f}s")
+                        
+                        if result.error:
+                            print(f"   {Colors.FAIL}💥 Erreur: {result.error}{Colors.ENDC}")
+                    else:
+                        print(f"   {Colors.WARNING}⚠️ Aucune fonction de démo trouvée{Colors.ENDC}")
+                else:
+                    print(f"   {Colors.FAIL}❌ Module non trouvé: {module_path}{Colors.ENDC}")
+                    
+            except Exception as e:
+                print(f"   {Colors.FAIL}💥 Erreur lors du test: {e}{Colors.ENDC}")
+    
+    # Rapport final de validation
+    print(f"\n{Colors.BOLD}{'=' * 80}{Colors.ENDC}")
+    print(f"{Colors.CYAN}{Colors.BOLD}           RAPPORT FINAL - VALIDATION DONNÉES CUSTOM{Colors.ENDC}")
+    print(f"{'=' * 80}")
+    
+    if all_results:
+        total_tests = len(all_results)
+        success_tests = sum(1 for r in all_results if r.success)
+        real_processing_tests = sum(1 for r in all_results if r.real_processing_detected)
+        custom_data_tests = sum(1 for r in all_results if r.custom_data_processed)
+        mock_detected_tests = sum(1 for r in all_results if r.mock_detected)
+        
+        print(f"\n{Colors.BOLD}📊 STATISTIQUES GÉNÉRALES:{Colors.ENDC}")
+        print(f"   Total tests effectués: {total_tests}")
+        print(f"   Tests réussis: {success_tests}/{total_tests} ({success_tests/total_tests*100:.1f}%)")
+        print(f"   Traitement réel détecté: {real_processing_tests}/{total_tests} ({real_processing_tests/total_tests*100:.1f}%)")
+        print(f"   Données custom traitées: {custom_data_tests}/{total_tests} ({custom_data_tests/total_tests*100:.1f}%)")
+        print(f"   Mocks détectés: {mock_detected_tests}/{total_tests} ({mock_detected_tests/total_tests*100:.1f}%)")
+        
+        print(f"\n{Colors.BOLD}🎯 ÉVALUATION CAPACITÉS:{Colors.ENDC}")
+        if custom_data_tests > total_tests * 0.7:
+            print(f"   {Colors.GREEN}✅ EXCELLENTE acceptation des données custom{Colors.ENDC}")
+        elif custom_data_tests > total_tests * 0.4:
+            print(f"   {Colors.WARNING}⚠️ MODÉRÉE acceptation des données custom{Colors.ENDC}")
+        else:
+            print(f"   {Colors.FAIL}❌ FAIBLE acceptation des données custom{Colors.ENDC}")
+        
+        if real_processing_tests > total_tests * 0.6:
+            print(f"   {Colors.GREEN}✅ TRAITEMENT RÉEL prédominant{Colors.ENDC}")
+        else:
+            print(f"   {Colors.WARNING}⚠️ MOCKS ou simulations détectés{Colors.ENDC}")
+        
+        # Sauvegarder le rapport détaillé
+        rapport_path = Path("logs") / f"validation_epita_custom_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
+        rapport_path.parent.mkdir(exist_ok=True)
+        
+        with open(rapport_path, 'w', encoding='utf-8') as f:
+            json.dump([result.__dict__ for result in all_results], f, indent=2, ensure_ascii=False)
+        
+        print(f"\n{Colors.BLUE}📄 Rapport détaillé sauvegardé: {rapport_path}{Colors.ENDC}")
+    else:
+        print(f"{Colors.FAIL}❌ Aucun résultat de validation généré{Colors.ENDC}")
+
+def mode_custom_data_test(custom_text: str, config: Dict[str, Any]) -> None:
+    """Test avec des données custom spécifiques fournies par l'utilisateur."""
+    logger = DemoLogger("custom_data_test")
+    
+    print(f"""
+{Colors.CYAN}{Colors.BOLD}
++==============================================================================+
+|              [EPITA] TEST AVEC DONNÉES CUSTOM SPÉCIFIQUES                   |
+|                        Texte fourni par l'utilisateur                       |
++==============================================================================+
+{Colors.ENDC}""")
+    
+    print(f"\n{Colors.BOLD}📝 DONNÉES À TESTER:{Colors.ENDC}")
+    print(f"   Longueur: {len(custom_text)} caractères")
+    print(f"   Hash: {hashlib.md5(custom_text.encode()).hexdigest()[:8]}...")
+    print(f"   Aperçu: {custom_text[:100]}{'...' if len(custom_text) > 100 else ''}")
+    
+    # Créer un dataset custom avec les données utilisateur
+    timestamp = int(time.time())
+    marker = f"USER_DATA_{timestamp}"
+    custom_dataset = CustomTestDataset(
+        name="user_provided_data",
+        content=f"[{marker}] {custom_text}",
+        content_hash=hashlib.md5(custom_text.encode()).hexdigest(),
+        expected_indicators=["analyse", "traitement", "résultat"],
+        test_purpose="Test avec données utilisateur spécifiques",
+        marker=marker
+    )
+    
+    validator = EpitaValidator()
+    categories = config.get('categories', {})
+    
+    print(f"\n{Colors.BOLD}🔍 TEST SUR TOUTES LES CATÉGORIES:{Colors.ENDC}")
+    
+    results = []
+    for cat_id, cat_info in sorted(categories.items(), key=lambda x: x[1]['id']):
+        nom_module = cat_info.get('module', '')
+        nom_cat = cat_info.get('nom', cat_id)
+        
+        print(f"\n{Colors.CYAN}📊 {nom_cat}:{Colors.ENDC}")
+        
+        try:
+            module_path = modules_path / f"{nom_module}.py"
+            if module_path.exists():
+                spec = importlib.util.spec_from_file_location(nom_module, module_path)
+                module = importlib.util.module_from_spec(spec)
+                spec.loader.exec_module(module)
+                
+                demo_func = getattr(module, 'run_demo_rapide', None) or getattr(module, 'run_demo_interactive', None)
+                
+                if demo_func:
+                    result = validator.validate_with_dataset(custom_dataset, demo_func, nom_cat)
+                    results.append(result)
+                    
+                    status = "✅ SUCCÈS" if result.success else "❌ ÉCHEC"
+                    data_processed = "📝 TRAITÉES" if result.custom_data_processed else "📝 NON DÉTECTÉES"
+                    real_processing = "🔧 RÉEL" if result.real_processing_detected else "🔧 SIMULÉ"
+                    
+                    print(f"   {status} | {data_processed} | {real_processing} | ⏱️ {result.execution_time:.3f}s")
+                else:
+                    print(f"   {Colors.WARNING}⚠️ Fonction de démo non trouvée{Colors.ENDC}")
+            else:
+                print(f"   {Colors.FAIL}❌ Module non trouvé{Colors.ENDC}")
+        except Exception as e:
+            print(f"   {Colors.FAIL}💥 Erreur: {str(e)[:50]}...{Colors.ENDC}")
+    
+    # Résumé final
+    if results:
+        success_rate = sum(1 for r in results if r.success) / len(results) * 100
+        processing_rate = sum(1 for r in results if r.custom_data_processed) / len(results) * 100
+        real_rate = sum(1 for r in results if r.real_processing_detected) / len(results) * 100
+        
+        print(f"\n{Colors.BOLD}📈 RÉSUMÉ VALIDATION DONNÉES CUSTOM:{Colors.ENDC}")
+        print(f"   Taux de succès: {success_rate:.1f}%")
+        print(f"   Taux de traitement des données: {processing_rate:.1f}%")
+        print(f"   Taux de traitement réel: {real_rate:.1f}%")
+        
+        if processing_rate > 70:
+            print(f"   {Colors.GREEN}🎯 CONCLUSION: Les données custom sont bien acceptées et traitées{Colors.ENDC}")
+        elif processing_rate > 30:
+            print(f"   {Colors.WARNING}🎯 CONCLUSION: Acceptation partielle des données custom{Colors.ENDC}")
+        else:
+            print(f"   {Colors.FAIL}🎯 CONCLUSION: Les données custom ne semblent pas être traitées{Colors.ENDC}")
+
 def parse_arguments():
     """Parse les arguments de ligne de commande"""
     parser = argparse.ArgumentParser(
-        description="Script de démonstration EPITA - Architecture Modulaire v2.0",
+        description="Script de démonstration EPITA - Architecture Modulaire v2.1",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Modes disponibles :
@@ -402,6 +769,8 @@ Modes disponibles :
   --quick-start      Mode Quick Start pour étudiants
   --metrics          Affichage des métriques uniquement
   --all-tests        Exécution complète non-interactive de toutes les catégories
+  --validate-custom  Validation avec datasets dédiés pour détecter mocks vs réel
+  --custom-data      Test avec des données custom spécifiques
   --legacy           Exécution du script original (compatibilité)
         """
     )
@@ -416,6 +785,10 @@ Modes disponibles :
                        help='Exécution du script original (compatibilité)')
     parser.add_argument('--all-tests', action='store_true',
                        help='Exécute tous les tests de toutes les catégories en mode non-interactif')
+    parser.add_argument('--validate-custom', action='store_true',
+                       help='Mode validation avec données dédiées pour détecter mocks vs traitement réel')
+    parser.add_argument('--custom-data', type=str, metavar='TEXT',
+                       help='Test avec des données custom spécifiques fournies en paramètre')
     
     return parser.parse_args()
 
@@ -437,7 +810,11 @@ def main():
         return
     
     # Sélection du mode d'exécution
-    if args.all_tests:
+    if args.validate_custom:
+        mode_validation_custom_data(config)
+    elif args.custom_data:
+        mode_custom_data_test(args.custom_data, config)
+    elif args.all_tests:
         execute_all_categories_non_interactive(config)
     elif args.quick_start:
         mode_quick_start()
