@@ -16,7 +16,7 @@ def run_oracle_tests():
         # Commande pour executer les tests Oracle sans pytest-playwright
         cmd = [
             sys.executable, "-m", "pytest",
-            "tests/unit/argumentation_analysis/agents/core/oracle/",
+            "unit/argumentation_analysis/agents/core/oracle/",
             "-v", "--tb=short", "--no-header",
             "--disable-warnings"
         ]
@@ -25,7 +25,7 @@ def run_oracle_tests():
             cmd,
             capture_output=True,
             text=True,
-            cwd="."
+            cwd="tests"
         )
         
         output = result.stdout + result.stderr
