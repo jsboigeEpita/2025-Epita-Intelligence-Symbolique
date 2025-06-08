@@ -1,456 +1,474 @@
-﻿<<<<<<< MAIN
-#!/usr/bin/env python3
+﻿#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 """
 Test du système de correction intelligente des erreurs modales avec feedback BNF
 ===============================================================================
 
-Ce script teste le nouveau système de correction intelligente qui remplace
-les tentatives aveugles SK Retry par un apprentissage progressif basé sur le feedback BNF.
+Test complet du système de correction d'erreurs modales avec génération
+de feedback BNF constructif pour guider les corrections.
 """
 
 import asyncio
-import logging
 import sys
 from pathlib import Path
+import logging
+from datetime import datetime
+from typing import Dict, List, Any, Optional
 
-# Ajouter le chemin du projet
+# Ajout du répertoire parent au path
 sys.path.insert(0, str(Path(__file__).parent))
 
-from argumentation_analysis.orchestration.real_llm_orchestrator import RealLLMOrchestrator
-from argumentation_analysis.utils.tweety_error_analyzer import TweetyErrorAnalyzer, create_bnf_feedback_for_error
-
-# Configuration du logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
-
-logger = logging.getLogger("IntelligentModalCorrectionTest")
+from argumentation_analysis.utils.tweety_error_analyzer import TweetyErrorAnalyzer, analyze_tweety_error
 
 
-async def test_tweety_error_analyzer():
-    """Test de l'analyseur d'erreurs Tweety."""
-    print("\n🔍 TEST 1: Analyseur d'erreurs Tweety")
-    print("="*50)
+class ModalCorrectionTester:
+    """
+    Testeur pour le système de correction intelligente des erreurs modales.
     
-    analyzer = TweetyErrorAnalyzer()
+    Teste la capacité du système à détecter et corriger les erreurs
+    modales avec génération de feedback BNF approprié.
+    """
     
-    # Test des différents types d'erreurs
-    test_errors = [
-        "Predicate 'constantanalyser_faits_rigueur' has not been declared",
-        "Predicate 'constantanalyser_faits_avec_rigueur' has not been declared", 
-        "JSON structure invalid: missing key 'propositions'",
-        "Expected modal operator but found constant"
-    ]
-    
-    for i, error in enumerate(test_errors, 1):
-        print(f"\n📋 Test d'erreur {i}: {error}")
-        feedback = analyzer.analyze_error(error)
-        print(f"   Type: {feedback.error_type}")
-        print(f"   Confiance: {feedback.confidence:.2f}")
-        print(f"   Règles BNF: {len(feedback.bnf_rules)} règles")
-        print(f"   Corrections: {len(feedback.corrections)} corrections")
+    def __init__(self):
+        """Initialise le testeur."""
+        self.logger = logging.getLogger(__name__)
+        self.setup_logging()
         
-        # Test du message de feedback complet
-        message = analyzer.generate_bnf_feedback_message(feedback, attempt_number=i)
-        print(f"   Message généré: {len(message)} caractères")
+        self.analyzer = TweetyErrorAnalyzer()
+        self.test_results = []
+        
+        # Erreurs de test
+        self.test_errors = [
+            {
+                'type': 'syntax_error',
+                'message': 'syntax error at token "rule"',
+                'expected_bnf': ['rule ::= head \':-\' body \'.\'']
+            },
+            {
+                'type': 'atom_error', 
+                'message': 'atom "undefined_predicate" not defined',
+                'expected_bnf': ['atom ::= predicate \'(\' terms \')\'']
+            },
+            {
+                'type': 'variable_error',
+                'message': 'singleton variable X in rule',
+                'expected_bnf': ['variable ::= uppercase_identifier']
+            },
+            {
+                'type': 'constraint_error',
+                'message': 'integrity constraint violated',
+                'expected_bnf': ['constraint ::= \':-\' body \'.\'']
+            }
+        ]
+        
+        self.logger.info("Testeur de correction modale initialisé")
     
-    print("\n✅ Test de l'analyseur d'erreurs terminé")
-
-
-async def test_enhanced_prompt_construction():
-    """Test de la construction de prompts enrichis."""
-    print("\n🔧 TEST 2: Construction de prompts enrichis")
-    print("="*50)
+    def setup_logging(self):
+        """Configure le logging."""
+        logging.basicConfig(
+            level=logging.INFO,
+            format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+        )
     
-    orchestrator = RealLLMOrchestrator()
-    
-    # Simuler un historique de feedback BNF
-    analyzer = TweetyErrorAnalyzer()
-    feedback1 = analyzer.analyze_error("Predicate 'constantanalyser_faits' has not been declared")
-    feedback2 = analyzer.analyze_error("JSON structure invalid: missing modal_formulas")
-    
-    bnf_feedback_history = [
-        {
-            "attempt": 1,
-            "error": "Predicate error",
-            "feedback": feedback1,
-            "feedback_message": "Feedback message 1"
-        },
-        {
-            "attempt": 2, 
-            "error": "JSON error",
-            "feedback": feedback2,
-            "feedback_message": "Feedback message 2"
+    def test_error_detection(self) -> Dict[str, Any]:
+        """
+        Test la détection des types d'erreurs.
+        
+        Returns:
+            Résultats du test de détection
+        """
+        print("🔍 Test de détection des types d'erreurs...")
+        
+        results = {
+            'total_tests': len(self.test_errors),
+            'successful_detections': 0,
+            'failed_detections': 0,
+            'details': []
         }
-    ]
-    
-    # Test de construction du prompt enrichi
-    original_text = "Analyser les faits avec rigueur permet d'éviter les erreurs."
-    enhanced_prompt = orchestrator._build_enhanced_prompt_with_bnf_feedback(original_text, bnf_feedback_history)
-    
-    print(f"Texte original: {len(original_text)} caractères")
-    print(f"Prompt enrichi: {len(enhanced_prompt)} caractères")
-    print(f"Feedback intégrés: {len(bnf_feedback_history)} tentatives")
-    
-    # Vérifier que le prompt contient les éléments attendus
-    expected_elements = ["RÈGLES BNF", "CORRECTIONS SPÉCIFIQUES", "INSTRUCTIONS STRICTES"]
-    for element in expected_elements:
-        if element in enhanced_prompt:
-            print(f"   ✅ Contient: {element}")
-        else:
-            print(f"   ❌ Manque: {element}")
-    
-    print("\n✅ Test de construction de prompts terminé")
-
-
-async def test_correction_failure_analysis():
-    """Test de l'analyse d'échec de correction."""
-    print("\n📊 TEST 3: Analyse d'échec de correction")
-    print("="*50)
-    
-    orchestrator = RealLLMOrchestrator()
-    
-    # Simuler différents scénarios d'échec
-    analyzer = TweetyErrorAnalyzer()
-    
-    # Scénario 1: Erreur récurrente
-    feedback1 = analyzer.analyze_error("Predicate 'constanttest' has not been declared")
-    feedback2 = analyzer.analyze_error("Predicate 'constanttest2' has not been declared")
-    feedback3 = analyzer.analyze_error("Predicate 'constanttest3' has not been declared")
-    
-    recurring_failure_history = [
-        {"attempt": 1, "feedback": feedback1},
-        {"attempt": 2, "feedback": feedback2}, 
-        {"attempt": 3, "feedback": feedback3}
-    ]
-    
-    analysis1 = orchestrator._analyze_correction_failure(recurring_failure_history)
-    print(f"Scénario erreurs récurrentes: {analysis1}")
-    
-    # Scénario 2: Types d'erreurs différents
-    feedback_json = analyzer.analyze_error("JSON structure invalid")
-    feedback_modal = analyzer.analyze_error("Expected modal operator")
-    
-    varied_failure_history = [
-        {"attempt": 1, "feedback": feedback1},
-        {"attempt": 2, "feedback": feedback_json},
-        {"attempt": 3, "feedback": feedback_modal}
-    ]
-    
-    analysis2 = orchestrator._analyze_correction_failure(varied_failure_history)
-    print(f"Scénario erreurs variées: {analysis2}")
-    
-    # Scénario 3: Historique vide
-    analysis3 = orchestrator._analyze_correction_failure([])
-    print(f"Scénario historique vide: {analysis3}")
-    
-    print("\n✅ Test d'analyse d'échec terminé")
-
-
-async def test_integration_with_real_orchestrator():
-    """Test d'intégration avec l'orchestrateur réel."""
-    print("\n🚀 TEST 4: Intégration avec orchestrateur réel")
-    print("="*50)
-    
-    # Note: Ce test nécessite une configuration LLM réelle
-    print("⚠️  Ce test nécessite une configuration LLM réelle.")
-    print("    Il sera exécuté uniquement si les services sont disponibles.")
-    
-    try:
-        orchestrator = RealLLMOrchestrator(mode="real")
         
-        # Test d'initialisation
-        init_success = await orchestrator.initialize()
-        if init_success:
-            print("   ✅ Initialisation de l'orchestrateur réussie")
+        for i, test_case in enumerate(self.test_errors, 1):
+            print(f"  Test {i}: {test_case['type']}")
             
-            # Test avec un texte simple qui pourrait générer des erreurs modales
-            test_text = "Il est nécessaire d'analyser les faits avec rigueur pour éviter les erreurs logiques."
-            
-            print(f"   📝 Test avec: {test_text}")
-            print("   🔄 Lancement de l'analyse avec correction intelligente...")
-            
-            # Exécuter l'analyse complète (cela déclenchera le système de correction si nécessaire)
-            result = await orchestrator.orchestrate_analysis(test_text)
-            
-            if result.get("orchestration", {}).get("success"):
-                print("   ✅ Analyse terminée avec succès")
+            try:
+                feedback = self.analyzer.analyze_error(test_case['message'])
+                detected_type = feedback.error_type
                 
-                # Analyser les résultats de correction intelligente
-                modal_results = result.get("analysis_results", {}).get("agents_results", {}).get("modal", {})
-                if "correction_attempted" in modal_results:
-                    print("   🎯 Système de correction intelligente utilisé!")
-                    if "bnf_feedback_history" in modal_results:
-                        feedback_count = len(modal_results["bnf_feedback_history"])
-                        print(f"   📚 {feedback_count} feedback(s) BNF générés")
+                if detected_type == test_case['type']:
+                    print(f"    ✅ Type détecté correctement: {detected_type}")
+                    results['successful_detections'] += 1
+                    status = 'success'
                 else:
-                    print("   ✅ Analyse réussie sans correction nécessaire")
-            else:
-                print("   ⚠️  Analyse échouée - vérifier la configuration")
+                    print(f"    ❌ Type incorrect: attendu {test_case['type']}, obtenu {detected_type}")
+                    results['failed_detections'] += 1
+                    status = 'failed'
                 
-        else:
-            print("   ❌ Échec d'initialisation - services LLM indisponibles")
-            
-    except Exception as e:
-        print(f"   ❌ Erreur durant le test d'intégration: {e}")
-        print("   💡 Ceci est normal si les services LLM ne sont pas configurés")
+                results['details'].append({
+                    'test_case': test_case,
+                    'detected_type': detected_type,
+                    'status': status,
+                    'feedback': feedback
+                })
+                
+            except Exception as e:
+                print(f"    💥 Erreur: {e}")
+                results['failed_detections'] += 1
+                results['details'].append({
+                    'test_case': test_case,
+                    'error': str(e),
+                    'status': 'error'
+                })
+        
+        detection_rate = results['successful_detections'] / results['total_tests'] * 100
+        print(f"📊 Taux de détection: {detection_rate:.1f}%")
+        
+        return results
     
-    print("\n✅ Test d'intégration terminé")
+    def test_bnf_generation(self) -> Dict[str, Any]:
+        """
+        Test la génération de règles BNF.
+        
+        Returns:
+            Résultats du test de génération BNF
+        """
+        print("\n📝 Test de génération des règles BNF...")
+        
+        results = {
+            'total_tests': len(self.test_errors),
+            'successful_generations': 0,
+            'failed_generations': 0,
+            'details': []
+        }
+        
+        for i, test_case in enumerate(self.test_errors, 1):
+            print(f"  Test {i}: {test_case['type']}")
+            
+            try:
+                feedback = self.analyzer.analyze_error(test_case['message'])
+                generated_rules = feedback.bnf_rules
+                
+                if generated_rules and len(generated_rules) > 0:
+                    print(f"    ✅ {len(generated_rules)} règles BNF générées")
+                    results['successful_generations'] += 1
+                    status = 'success'
+                    
+                    # Vérifier si une règle attendue est présente
+                    expected_found = any(
+                        expected in rule 
+                        for expected in test_case['expected_bnf']
+                        for rule in generated_rules
+                    )
+                    
+                    if expected_found:
+                        print(f"    ✅ Règle attendue trouvée")
+                    else:
+                        print(f"    ⚠️  Règle attendue non trouvée")
+                        
+                else:
+                    print(f"    ❌ Aucune règle BNF générée")
+                    results['failed_generations'] += 1
+                    status = 'failed'
+                
+                results['details'].append({
+                    'test_case': test_case,
+                    'generated_rules': generated_rules,
+                    'rule_count': len(generated_rules) if generated_rules else 0,
+                    'status': status
+                })
+                
+            except Exception as e:
+                print(f"    💥 Erreur: {e}")
+                results['failed_generations'] += 1
+                results['details'].append({
+                    'test_case': test_case,
+                    'error': str(e),
+                    'status': 'error'
+                })
+        
+        generation_rate = results['successful_generations'] / results['total_tests'] * 100
+        print(f"📊 Taux de génération BNF: {generation_rate:.1f}%")
+        
+        return results
+    
+    def test_feedback_formatting(self) -> Dict[str, Any]:
+        """
+        Test le formatage du feedback.
+        
+        Returns:
+            Résultats du test de formatage
+        """
+        print("\n💬 Test de formatage du feedback...")
+        
+        results = {
+            'total_tests': len(self.test_errors),
+            'successful_formats': 0,
+            'failed_formats': 0,
+            'details': []
+        }
+        
+        for i, test_case in enumerate(self.test_errors, 1):
+            print(f"  Test {i}: {test_case['type']}")
+            
+            try:
+                # Utiliser la fonction utilitaire
+                formatted_feedback = analyze_tweety_error(
+                    test_case['message'],
+                    attempt_number=i,
+                    context={'test': True}
+                )
+                
+                # Vérifier que le feedback contient les sections attendues
+                required_sections = [
+                    'Analyse d\'erreur Tweety',
+                    'Type d\'erreur détecté',
+                    'Règles BNF pertinentes',
+                    'Suggestions de correction',
+                    'Exemple de correction'
+                ]
+                
+                sections_found = sum(
+                    1 for section in required_sections 
+                    if section in formatted_feedback
+                )
+                
+                if sections_found >= 4:  # Au moins 4/5 sections
+                    print(f"    ✅ Feedback bien formaté ({sections_found}/5 sections)")
+                    results['successful_formats'] += 1
+                    status = 'success'
+                else:
+                    print(f"    ❌ Feedback mal formaté ({sections_found}/5 sections)")
+                    results['failed_formats'] += 1
+                    status = 'failed'
+                
+                results['details'].append({
+                    'test_case': test_case,
+                    'formatted_feedback': formatted_feedback,
+                    'sections_found': sections_found,
+                    'total_sections': len(required_sections),
+                    'status': status
+                })
+                
+            except Exception as e:
+                print(f"    💥 Erreur: {e}")
+                results['failed_formats'] += 1
+                results['details'].append({
+                    'test_case': test_case,
+                    'error': str(e),
+                    'status': 'error'
+                })
+        
+        format_rate = results['successful_formats'] / results['total_tests'] * 100
+        print(f"📊 Taux de formatage réussi: {format_rate:.1f}%")
+        
+        return results
+    
+    def test_confidence_calculation(self) -> Dict[str, Any]:
+        """
+        Test le calcul de confiance.
+        
+        Returns:
+            Résultats du test de confiance
+        """
+        print("\n🎯 Test de calcul de confiance...")
+        
+        results = {
+            'total_tests': len(self.test_errors),
+            'valid_confidences': 0,
+            'invalid_confidences': 0,
+            'average_confidence': 0,
+            'details': []
+        }
+        
+        total_confidence = 0
+        
+        for i, test_case in enumerate(self.test_errors, 1):
+            print(f"  Test {i}: {test_case['type']}")
+            
+            try:
+                feedback = self.analyzer.analyze_error(test_case['message'])
+                confidence = feedback.confidence
+                
+                if 0 <= confidence <= 1:
+                    print(f"    ✅ Confiance valide: {confidence:.1%}")
+                    results['valid_confidences'] += 1
+                    total_confidence += confidence
+                    status = 'success'
+                else:
+                    print(f"    ❌ Confiance invalide: {confidence}")
+                    results['invalid_confidences'] += 1
+                    status = 'failed'
+                
+                results['details'].append({
+                    'test_case': test_case,
+                    'confidence': confidence,
+                    'status': status
+                })
+                
+            except Exception as e:
+                print(f"    💥 Erreur: {e}")
+                results['invalid_confidences'] += 1
+                results['details'].append({
+                    'test_case': test_case,
+                    'error': str(e),
+                    'status': 'error'
+                })
+        
+        if results['valid_confidences'] > 0:
+            results['average_confidence'] = total_confidence / results['valid_confidences']
+        
+        confidence_rate = results['valid_confidences'] / results['total_tests'] * 100
+        print(f"📊 Taux de confiance valide: {confidence_rate:.1f}%")
+        print(f"📊 Confiance moyenne: {results['average_confidence']:.1%}")
+        
+        return results
+    
+    def generate_report(self, all_results: Dict[str, Any]) -> str:
+        """
+        Génère un rapport complet des tests.
+        
+        Args:
+            all_results: Tous les résultats de tests
+            
+        Returns:
+            Rapport formaté
+        """
+        report = f"""
+RAPPORT DE TEST - SYSTÈME DE CORRECTION INTELLIGENTE DES ERREURS MODALES
+========================================================================
+Généré le: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+
+RÉSUMÉ EXÉCUTIF
+===============
+Ce rapport présente les résultats des tests du système de correction
+intelligente des erreurs modales avec feedback BNF constructif.
+
+"""
+        
+        for test_name, results in all_results.items():
+            if 'total_tests' in results:
+                successful = results.get('successful_detections', 0) + \
+                           results.get('successful_generations', 0) + \
+                           results.get('successful_formats', 0) + \
+                           results.get('valid_confidences', 0)
+                
+                total = results['total_tests'] * len([k for k in results.keys() if 'successful' in k or 'valid' in k])
+                if total == 0:
+                    total = results['total_tests']
+                
+                success_rate = (successful / total * 100) if total > 0 else 0
+                
+                report += f"\n{test_name.upper().replace('_', ' ')}\n"
+                report += "=" * len(test_name) + "\n"
+                report += f"• Tests exécutés: {results['total_tests']}\n"
+                report += f"• Taux de succès: {success_rate:.1f}%\n"
+                
+                if 'average_confidence' in results:
+                    report += f"• Confiance moyenne: {results['average_confidence']:.1%}\n"
+        
+        # Recommandations
+        report += f"\nRECOMMANDATIONS\n"
+        report += "===============\n"
+        
+        overall_success = all(
+            any(k.startswith('successful') and v > 0 for k, v in result.items() if isinstance(v, int))
+            for result in all_results.values() if 'total_tests' in result
+        )
+        
+        if overall_success:
+            report += "🎉 Le système de correction intelligente fonctionne correctement.\n"
+            report += "✅ Tous les composants principaux sont opérationnels.\n"
+        else:
+            report += "⚠️  Certains composants nécessitent des améliorations.\n"
+            report += "🔧 Vérifier la configuration et les patterns d'erreur.\n"
+        
+        report += f"\n📋 PROCHAINES ÉTAPES\n"
+        report += "====================\n"
+        report += "1. Intégrer le système dans le pipeline principal\n"
+        report += "2. Tester avec des erreurs réelles de production\n"
+        report += "3. Affiner les patterns de détection\n"
+        report += "4. Enrichir les règles BNF et corrections\n"
+        
+        return report
+    
+    async def run_all_tests(self) -> Dict[str, Any]:
+        """
+        Exécute tous les tests.
+        
+        Returns:
+            Résultats complets de tous les tests
+        """
+        print("🧪 TESTS DU SYSTÈME DE CORRECTION INTELLIGENTE DES ERREURS MODALES")
+        print("=" * 75)
+        print("Ce script teste le nouveau système de feedback BNF pour la correction")
+        print("d'erreurs modales dans l'analyse d'argumentation.")
+        print()
+        
+        all_results = {}
+        
+        # Test 1: Détection des erreurs
+        all_results['detection'] = self.test_error_detection()
+        
+        # Test 2: Génération BNF
+        all_results['bnf_generation'] = self.test_bnf_generation()
+        
+        # Test 3: Formatage du feedback
+        all_results['feedback_formatting'] = self.test_feedback_formatting()
+        
+        # Test 4: Calcul de confiance
+        all_results['confidence_calculation'] = self.test_confidence_calculation()
+        
+        return all_results
 
 
 async def main():
-    """Fonction principale de test."""
-    print("🧪 TESTS DU SYSTÈME DE CORRECTION INTELLIGENTE DES ERREURS MODALES")
-    print("================================================================")
-    print("Ce script teste le nouveau système de feedback BNF pour la correction")
-    print("automatique des erreurs TweetyProject dans l'agent modal.")
-    print()
-    
-    # Exécuter tous les tests
-    await test_tweety_error_analyzer()
-    await test_enhanced_prompt_construction()
-    await test_correction_failure_analysis()
-    await test_integration_with_real_orchestrator()
-    
-    print("\n🎉 TOUS LES TESTS TERMINÉS")
-    print("="*50)
-    print("✅ Le système de correction intelligente est opérationnel")
-    print("🎯 Les agents modaux peuvent maintenant apprendre de leurs erreurs")
-    print("📚 Le feedback BNF guide les corrections automatiques")
-    print()
-    print("Pour tester en conditions réelles, exécutez:")
-    print("powershell -File .\\scripts\\env\\activate_project_env.ps1 -CommandToRun \"python -m scripts.main.analyze_text --source-type simple --modes 'fallacies,coherence,semantic,unified' --format markdown --verbose\"")
-
-
-if __name__ == "__main__":
-    asyncio.run(main())
-
-=======
-#!/usr/bin/env python3
-"""
-Test du système de correction intelligente des erreurs modales avec feedback BNF
-===============================================================================
-
-Ce script teste le nouveau système de correction intelligente qui remplace
-les tentatives aveugles SK Retry par un apprentissage progressif basé sur le feedback BNF.
-"""
-
-import asyncio
-import logging
-import sys
-from pathlib import Path
-
-# Ajouter le chemin du projet
-sys.path.insert(0, str(Path(__file__).parent))
-
-from argumentation_analysis.orchestration.real_llm_orchestrator import RealLLMOrchestrator
-from argumentation_analysis.utils.tweety_error_analyzer import TweetyErrorAnalyzer, create_bnf_feedback_for_error
-
-# Configuration du logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
-
-logger = logging.getLogger("IntelligentModalCorrectionTest")
-
-
-async def test_tweety_error_analyzer():
-    """Test de l'analyseur d'erreurs Tweety."""
-    print("\n🔍 TEST 1: Analyseur d'erreurs Tweety")
-    print("="*50)
-    
-    analyzer = TweetyErrorAnalyzer()
-    
-    # Test des différents types d'erreurs
-    test_errors = [
-        "Predicate 'constantanalyser_faits_rigueur' has not been declared",
-        "Predicate 'constantanalyser_faits_avec_rigueur' has not been declared", 
-        "JSON structure invalid: missing key 'propositions'",
-        "Expected modal operator but found constant"
-    ]
-    
-    for i, error in enumerate(test_errors, 1):
-        print(f"\n📋 Test d'erreur {i}: {error}")
-        feedback = analyzer.analyze_error(error)
-        print(f"   Type: {feedback.error_type}")
-        print(f"   Confiance: {feedback.confidence:.2f}")
-        print(f"   Règles BNF: {len(feedback.bnf_rules)} règles")
-        print(f"   Corrections: {len(feedback.corrections)} corrections")
-        
-        # Test du message de feedback complet
-        message = analyzer.generate_bnf_feedback_message(feedback, attempt_number=i)
-        print(f"   Message généré: {len(message)} caractères")
-    
-    print("\n✅ Test de l'analyseur d'erreurs terminé")
-
-
-async def test_enhanced_prompt_construction():
-    """Test de la construction de prompts enrichis."""
-    print("\n🔧 TEST 2: Construction de prompts enrichis")
-    print("="*50)
-    
-    orchestrator = RealLLMOrchestrator()
-    
-    # Simuler un historique de feedback BNF
-    analyzer = TweetyErrorAnalyzer()
-    feedback1 = analyzer.analyze_error("Predicate 'constantanalyser_faits' has not been declared")
-    feedback2 = analyzer.analyze_error("JSON structure invalid: missing modal_formulas")
-    
-    bnf_feedback_history = [
-        {
-            "attempt": 1,
-            "error": "Predicate error",
-            "feedback": feedback1,
-            "feedback_message": "Feedback message 1"
-        },
-        {
-            "attempt": 2, 
-            "error": "JSON error",
-            "feedback": feedback2,
-            "feedback_message": "Feedback message 2"
-        }
-    ]
-    
-    # Test de construction du prompt enrichi
-    original_text = "Analyser les faits avec rigueur permet d'éviter les erreurs."
-    enhanced_prompt = orchestrator._build_enhanced_prompt_with_bnf_feedback(original_text, bnf_feedback_history)
-    
-    print(f"Texte original: {len(original_text)} caractères")
-    print(f"Prompt enrichi: {len(enhanced_prompt)} caractères")
-    print(f"Feedback intégrés: {len(bnf_feedback_history)} tentatives")
-    
-    # Vérifier que le prompt contient les éléments attendus
-    expected_elements = ["RÈGLES BNF", "CORRECTIONS SPÉCIFIQUES", "INSTRUCTIONS STRICTES"]
-    for element in expected_elements:
-        if element in enhanced_prompt:
-            print(f"   ✅ Contient: {element}")
-        else:
-            print(f"   ❌ Manque: {element}")
-    
-    print("\n✅ Test de construction de prompts terminé")
-
-
-async def test_correction_failure_analysis():
-    """Test de l'analyse d'échec de correction."""
-    print("\n📊 TEST 3: Analyse d'échec de correction")
-    print("="*50)
-    
-    orchestrator = RealLLMOrchestrator()
-    
-    # Simuler différents scénarios d'échec
-    analyzer = TweetyErrorAnalyzer()
-    
-    # Scénario 1: Erreur récurrente
-    feedback1 = analyzer.analyze_error("Predicate 'constanttest' has not been declared")
-    feedback2 = analyzer.analyze_error("Predicate 'constanttest2' has not been declared")
-    feedback3 = analyzer.analyze_error("Predicate 'constanttest3' has not been declared")
-    
-    recurring_failure_history = [
-        {"attempt": 1, "feedback": feedback1},
-        {"attempt": 2, "feedback": feedback2}, 
-        {"attempt": 3, "feedback": feedback3}
-    ]
-    
-    analysis1 = orchestrator._analyze_correction_failure(recurring_failure_history)
-    print(f"Scénario erreurs récurrentes: {analysis1}")
-    
-    # Scénario 2: Types d'erreurs différents
-    feedback_json = analyzer.analyze_error("JSON structure invalid")
-    feedback_modal = analyzer.analyze_error("Expected modal operator")
-    
-    varied_failure_history = [
-        {"attempt": 1, "feedback": feedback1},
-        {"attempt": 2, "feedback": feedback_json},
-        {"attempt": 3, "feedback": feedback_modal}
-    ]
-    
-    analysis2 = orchestrator._analyze_correction_failure(varied_failure_history)
-    print(f"Scénario erreurs variées: {analysis2}")
-    
-    # Scénario 3: Historique vide
-    analysis3 = orchestrator._analyze_correction_failure([])
-    print(f"Scénario historique vide: {analysis3}")
-    
-    print("\n✅ Test d'analyse d'échec terminé")
-
-
-async def test_integration_with_real_orchestrator():
-    """Test d'intégration avec l'orchestrateur réel."""
-    print("\n🚀 TEST 4: Intégration avec orchestrateur réel")
-    print("="*50)
-    
-    # Note: Ce test nécessite une configuration LLM réelle
-    print("⚠️  Ce test nécessite une configuration LLM réelle.")
-    print("    Il sera exécuté uniquement si les services sont disponibles.")
+    """Fonction principale."""
+    tester = ModalCorrectionTester()
     
     try:
-        orchestrator = RealLLMOrchestrator(mode="real")
+        # Exécuter tous les tests
+        results = await tester.run_all_tests()
         
-        # Test d'initialisation
-        init_success = await orchestrator.initialize()
-        if init_success:
-            print("   ✅ Initialisation de l'orchestrateur réussie")
-            
-            # Test avec un texte simple qui pourrait générer des erreurs modales
-            test_text = "Il est nécessaire d'analyser les faits avec rigueur pour éviter les erreurs logiques."
-            
-            print(f"   📝 Test avec: {test_text}")
-            print("   🔄 Lancement de l'analyse avec correction intelligente...")
-            
-            # Exécuter l'analyse complète (cela déclenchera le système de correction si nécessaire)
-            result = await orchestrator.orchestrate_analysis(test_text)
-            
-            if result.get("orchestration", {}).get("success"):
-                print("   ✅ Analyse terminée avec succès")
-                
-                # Analyser les résultats de correction intelligente
-                modal_results = result.get("analysis_results", {}).get("agents_results", {}).get("modal", {})
-                if "correction_attempted" in modal_results:
-                    print("   🎯 Système de correction intelligente utilisé!")
-                    if "bnf_feedback_history" in modal_results:
-                        feedback_count = len(modal_results["bnf_feedback_history"])
-                        print(f"   📚 {feedback_count} feedback(s) BNF générés")
-                else:
-                    print("   ✅ Analyse réussie sans correction nécessaire")
-            else:
-                print("   ⚠️  Analyse échouée - vérifier la configuration")
-                
+        # Générer et afficher le rapport
+        report = tester.generate_report(results)
+        print("\n" + report)
+        
+        # Sauvegarder le rapport
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        report_file = f"modal_correction_test_report_{timestamp}.txt"
+        
+        with open(report_file, 'w', encoding='utf-8') as f:
+            f.write(report)
+        
+        print(f"\n💾 Rapport sauvegardé: {report_file}")
+        
+        # Déterminer le succès global
+        success_count = sum(
+            1 for result in results.values()
+            if 'total_tests' in result and any(
+                k.startswith('successful') and v > 0 
+                for k, v in result.items() if isinstance(v, int)
+            )
+        )
+        
+        total_test_categories = len(results)
+        success_rate = success_count / total_test_categories * 100 if total_test_categories > 0 else 0
+        
+        print(f"\n🏁 RÉSULTAT GLOBAL")
+        print("=" * 50)
+        print(f"📊 Catégories de test réussies: {success_count}/{total_test_categories}")
+        print(f"📈 Taux de succès global: {success_rate:.1f}%")
+        
+        if success_rate >= 75:
+            print("🎉 Tests réussis! Le système est opérationnel.")
+            return True
         else:
-            print("   ❌ Échec d'initialisation - services LLM indisponibles")
-            
+            print("⚠️  Tests partiellement réussis. Améliorations nécessaires.")
+            return False
+        
     except Exception as e:
-        print(f"   ❌ Erreur durant le test d'intégration: {e}")
-        print("   💡 Ceci est normal si les services LLM ne sont pas configurés")
-    
-    print("\n✅ Test d'intégration terminé")
-
-
-async def main():
-    """Fonction principale de test."""
-    print("🧪 TESTS DU SYSTÈME DE CORRECTION INTELLIGENTE DES ERREURS MODALES")
-    print("================================================================")
-    print("Ce script teste le nouveau système de feedback BNF pour la correction")
-    print("automatique des erreurs TweetyProject dans l'agent modal.")
-    print()
-    
-    # Exécuter tous les tests
-    await test_tweety_error_analyzer()
-    await test_enhanced_prompt_construction()
-    await test_correction_failure_analysis()
-    await test_integration_with_real_orchestrator()
-    
-    print("\n🎉 TOUS LES TESTS TERMINÉS")
-    print("="*50)
-    print("✅ Le système de correction intelligente est opérationnel")
-    print("🎯 Les agents modaux peuvent maintenant apprendre de leurs erreurs")
-    print("📚 Le feedback BNF guide les corrections automatiques")
-    print()
-    print("Pour tester en conditions réelles, exécutez:")
-    print("powershell -File .\\scripts\\env\\activate_project_env.ps1 -CommandToRun \"python -m scripts.main.analyze_text --source-type simple --modes 'fallacies,coherence,semantic,unified' --format markdown --verbose\"")
+        print(f"💥 Erreur fatale lors des tests: {e}")
+        return False
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
->>>>>>> BACKUP
+    success = asyncio.run(main())
+    sys.exit(0 if success else 1)
