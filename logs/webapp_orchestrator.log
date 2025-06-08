@@ -1,3 +1,171 @@
+<<<<<<< HEAD
+2025-06-08 22:22:01,444 - __main__ - INFO - [96m[22:22:01.444] [START] DEMARRAGE APPLICATION WEB[0m
+2025-06-08 22:22:01,445 - __main__ - INFO -    Détails: Mode: Visible
+2025-06-08 22:22:01,445 - __main__ - INFO -    Résultat: Initialisation orchestrateur
+2025-06-08 22:22:01,445 - __main__ - INFO - [96m[22:22:01.445] [CLEAN] NETTOYAGE PREALABLE[0m
+2025-06-08 22:22:01,445 - __main__ - INFO -    Détails: Arret instances existantes
+2025-06-08 22:22:01,445 - __main__ - INFO - [CLEAN] Debut nettoyage processus application web
+2025-06-08 22:22:02,888 - __main__ - INFO - Processus trouvé: PID 3956 - node c:/dev/roo-extensions/mcps/internal/servers/quickfiles-server/build/index.js
+2025-06-08 22:22:04,614 - __main__ - INFO - Processus trouvé: PID 6116 - node c:\users\jsboi\appdata\local\npm-cache\_npx\a3241bba59c344f5\node_modules\.bin\\..\@modelcontex
+2025-06-08 22:22:06,433 - __main__ - INFO - Processus trouvé: PID 16092 - c:\program files\nodejs\node.exe c:\dev\2025-epita-intelligence-symbolique\services\web_api\interfac
+2025-06-08 22:22:06,531 - __main__ - INFO - Processus trouvé: PID 21124 - node c:\users\jsboi\npm-cache\_npx\0b9ff77863cb6e9f\node_modules\.bin\\..\@executeautomation\playwri
+2025-06-08 22:22:06,536 - __main__ - INFO - Processus trouvé: PID 21672 - c:\users\jsboi\.conda\envs\projet-is\python.exe c:\users\jsboi\.vscode\extensions\ms-python.isort-20
+2025-06-08 22:22:06,794 - __main__ - INFO - Processus trouvé: PID 26476 - node c:\dev\2025-epita-intelligence-symbolique\services\web_api\interface-web-argumentative\node_mod
+2025-06-08 22:22:06,921 - __main__ - INFO - Processus trouvé: PID 31052 - c:\program files\nodejs\\node.exe c:\program files\nodejs\\node_modules\npm\bin\npx-cli.js -y @execu
+2025-06-08 22:22:06,923 - __main__ - INFO - Processus trouvé: PID 31384 - node c:\users\jsboi\appdata\roaming\npm\\node_modules\@modelcontextprotocol\server-github\dist\index
+2025-06-08 22:22:06,974 - __main__ - INFO - Processus trouvé: PID 32772 - node c:/dev/roo-extensions/mcps/internal/servers/github-projects-mcp/dist/index.js
+2025-06-08 22:22:06,975 - __main__ - INFO - Processus trouvé: PID 33188 - c:\program files\nodejs\\node.exe c:\program files\nodejs\\node_modules\npm\bin\npx-cli.js -y @simon
+2025-06-08 22:22:07,111 - __main__ - INFO - Processus trouvé: PID 37732 - c:\users\jsboi\.vscode\extensions\ms-dotnettools.csdevkit-1.20.35-win32-x64\components\vs-green-serv
+2025-06-08 22:22:07,111 - __main__ - INFO - Processus trouvé: PID 37852 - c:\program files\nodejs\\node.exe c:\program files\nodejs\\node_modules\npm\bin\npx-cli.js -y @model
+2025-06-08 22:22:07,221 - __main__ - INFO - Processus trouvé: PID 39712 - c:\program files\nodejs\\node.exe c:\program files\nodejs\\node_modules\npm\bin\npx-cli.js -y @model
+2025-06-08 22:22:07,223 - __main__ - INFO - Processus trouvé: PID 40884 - c:\program files\nodejs\\node.exe c:\program files\nodejs\\node_modules\npm\bin\npx-cli.js -y @model
+2025-06-08 22:22:07,266 - __main__ - INFO - Processus trouvé: PID 42800 - node c:\users\jsboi\npm-cache\_npx\a3241bba59c344f5\node_modules\.bin\\..\@modelcontextprotocol\serv
+2025-06-08 22:22:07,266 - __main__ - INFO - Processus trouvé: PID 42852 - node c:\users\jsboi\npm-cache\_npx\3dfbf5a9eea4a1b3\node_modules\.bin\\..\@modelcontextprotocol\serv
+2025-06-08 22:22:07,267 - __main__ - INFO - Processus trouvé: PID 43272 - node c:/dev/roo-extensions/mcps/internal/servers/jupyter-mcp-server/dist/index.js
+2025-06-08 22:22:07,317 - __main__ - INFO - Processus trouvé: PID 45960 - node c:\users\jsboi\appdata\local\npm-cache\_npx\b7043670c3149184\node_modules\.bin\\..\@simonb97\se
+2025-06-08 22:22:07,321 - __main__ - INFO - Processus trouvé: PID 47220 - c:\program files\nodejs\\node.exe c:\program files\nodejs\\node_modules\npm\bin\npx-cli.js -y @model
+2025-06-08 22:22:07,359 - __main__ - INFO - Processus trouvé: PID 49308 - node c:/dev/roo-extensions/mcps/internal/servers/jinavigator-server/dist/index.js
+2025-06-08 22:22:07,394 - __main__ - INFO - Processus trouvé: PID 51128 - node c:/dev/roo-extensions/mcps/internal/servers/jupyter-mcp-server/dist/index.js
+2025-06-08 22:22:07,394 - __main__ - INFO - Processus trouvés: 21
+2025-06-08 22:22:07,394 - __main__ - INFO - Envoi signal TERM aux processus...
+2025-06-08 22:22:07,394 - __main__ - INFO - TERM envoyé à PID 3956
+2025-06-08 22:22:07,394 - __main__ - INFO - TERM envoyé à PID 6116
+2025-06-08 22:22:07,395 - __main__ - INFO - TERM envoyé à PID 16092
+2025-06-08 22:22:07,395 - __main__ - INFO - TERM envoyé à PID 21124
+2025-06-08 22:22:07,395 - __main__ - INFO - TERM envoyé à PID 21672
+2025-06-08 22:22:07,395 - __main__ - INFO - TERM envoyé à PID 26476
+2025-06-08 22:22:07,395 - __main__ - INFO - TERM envoyé à PID 31052
+2025-06-08 22:22:07,395 - __main__ - INFO - TERM envoyé à PID 31384
+2025-06-08 22:22:07,396 - __main__ - INFO - TERM envoyé à PID 32772
+2025-06-08 22:22:07,396 - __main__ - INFO - TERM envoyé à PID 33188
+2025-06-08 22:22:07,397 - __main__ - INFO - TERM envoyé à PID 37732
+2025-06-08 22:22:07,397 - __main__ - INFO - TERM envoyé à PID 37852
+2025-06-08 22:22:07,397 - __main__ - INFO - TERM envoyé à PID 39712
+2025-06-08 22:22:07,397 - __main__ - INFO - TERM envoyé à PID 40884
+2025-06-08 22:22:07,398 - __main__ - INFO - TERM envoyé à PID 42800
+2025-06-08 22:22:07,398 - __main__ - INFO - TERM envoyé à PID 42852
+2025-06-08 22:22:07,398 - __main__ - INFO - TERM envoyé à PID 43272
+2025-06-08 22:22:07,398 - __main__ - INFO - TERM envoyé à PID 45960
+2025-06-08 22:22:07,399 - __main__ - INFO - TERM envoyé à PID 47220
+2025-06-08 22:22:07,400 - __main__ - INFO - TERM envoyé à PID 49308
+2025-06-08 22:22:07,400 - __main__ - INFO - TERM envoyé à PID 51128
+2025-06-08 22:22:07,400 - __main__ - INFO - Attente arrêt propre (5s)...
+2025-06-08 22:22:12,414 - __main__ - INFO - Tous les processus arrêtés proprement
+2025-06-08 22:22:16,807 - __main__ - INFO - Processus trouvé: PID 38776 - c:\users\jsboi\.conda\envs\projet-is\python.exe c:\users\jsboi\.vscode\extensions\ms-python.isort-20
+2025-06-08 22:22:16,956 - __main__ - WARNING - Force kill de 1 processus récalcitrants
+2025-06-08 22:22:16,956 - __main__ - WARNING - KILL forcé sur PID 38776
+2025-06-08 22:22:16,982 - __main__ - INFO - Vérification libération des ports...
+2025-06-08 22:22:17,003 - __main__ - INFO - Tous les ports libérés
+2025-06-08 22:22:17,004 - __main__ - INFO - Nettoyage fichiers temporaires...
+2025-06-08 22:22:17,004 - __main__ - INFO - Aucun fichier temporaire à nettoyer
+2025-06-08 22:22:17,004 - __main__ - INFO - [OK] Nettoyage processus terminé
+2025-06-08 22:22:17,005 - __main__ - INFO - [96m[22:22:17.005] [BACKEND] DEMARRAGE BACKEND[0m
+2025-06-08 22:22:17,005 - __main__ - INFO -    Détails: Lancement avec failover de ports
+2025-06-08 22:22:17,005 - __main__ - INFO - Tentative 1/4 - Port 5003
+2025-06-08 22:22:17,011 - __main__ - INFO - Démarrage backend: python -m argumentation_analysis.services.web_api.app --port 5003
+2025-06-08 22:22:17,023 - __main__ - INFO - Attente backend sur http://localhost:5003/api/health (timeout: 30s)
+2025-06-08 22:22:23,162 - __main__ - INFO - Backend accessible sur http://localhost:5003/api/health
+2025-06-08 22:22:23,169 - __main__ - INFO - Info backend sauvées: backend_info.json
+2025-06-08 22:22:23,170 - __main__ - INFO - [96m[22:22:23.169] [OK] BACKEND OPERATIONNEL[0m
+2025-06-08 22:22:23,171 - __main__ - INFO -    Détails: Port: 5003 | PID: 48160
+2025-06-08 22:22:23,171 - __main__ - INFO -    Résultat: URL: http://localhost:5003
+2025-06-08 22:22:23,172 - __main__ - INFO - [96m[22:22:23.172] [CHECK] VALIDATION SERVICES[0m
+2025-06-08 22:22:23,173 - __main__ - INFO -    Détails: Verification endpoints
+2025-06-08 22:22:23,444 - __main__ - INFO - Backend health: {'message': "API d'analyse argumentative opérationnelle", 'services': {'analysis': False, 'fallacy': False, 'framework': False, 'logic': False, 'validation': False}, 'status': 'healthy', 'timestamp': '2025-06-08T22:22:23.444066', 'version': '1.0.0'}
+2025-06-08 22:22:23,445 - __main__ - INFO - [96m[22:22:23.445] [OK] SERVICES VALIDES[0m
+2025-06-08 22:22:23,445 - __main__ - INFO -    Détails: Tous les endpoints repondent
+2025-06-08 22:22:23,445 - __main__ - INFO - [96m[22:22:23.445] [OK] APPLICATION WEB OPERATIONNELLE[0m
+2025-06-08 22:22:23,446 - __main__ - INFO -    Détails: Backend: http://localhost:5003
+2025-06-08 22:22:23,446 - __main__ - INFO -    Résultat: Tous les services démarrés
+2025-06-08 22:25:38,038 - __main__ - INFO - [96m[22:25:38.038] [START] DEMARRAGE APPLICATION WEB[0m
+2025-06-08 22:25:38,038 - __main__ - INFO -    Détails: Mode: Visible
+2025-06-08 22:25:38,039 - __main__ - INFO -    Résultat: Initialisation orchestrateur
+2025-06-08 22:25:38,039 - __main__ - INFO - [96m[22:25:38.039] [CLEAN] NETTOYAGE PREALABLE[0m
+2025-06-08 22:25:38,039 - __main__ - INFO -    Détails: Arret instances existantes
+2025-06-08 22:25:38,039 - __main__ - INFO - [CLEAN] Debut nettoyage processus application web
+2025-06-08 22:25:43,422 - __main__ - INFO - Processus trouvé: PID 42948 - c:\users\jsboi\.conda\envs\projet-is\python.exe c:\users\jsboi\.vscode\extensions\ms-python.isort-20
+2025-06-08 22:25:43,616 - __main__ - INFO - Processus trouvés: 1
+2025-06-08 22:25:43,616 - __main__ - INFO - Envoi signal TERM aux processus...
+2025-06-08 22:25:43,616 - __main__ - INFO - TERM envoyé à PID 42948
+2025-06-08 22:25:43,616 - __main__ - INFO - Attente arrêt propre (5s)...
+2025-06-08 22:25:48,617 - __main__ - INFO - Tous les processus arrêtés proprement
+2025-06-08 22:25:53,002 - __main__ - INFO - Processus trouvé: PID 21172 - c:\users\jsboi\.conda\envs\projet-is\python.exe c:\users\jsboi\.vscode\extensions\ms-python.isort-20
+2025-06-08 22:25:53,652 - __main__ - WARNING - Force kill de 1 processus récalcitrants
+2025-06-08 22:25:53,653 - __main__ - WARNING - KILL forcé sur PID 21172
+2025-06-08 22:25:53,692 - __main__ - INFO - Vérification libération des ports...
+2025-06-08 22:25:53,713 - __main__ - INFO - Tous les ports libérés
+2025-06-08 22:25:53,714 - __main__ - INFO - Nettoyage fichiers temporaires...
+2025-06-08 22:25:53,714 - __main__ - INFO - Supprimé: backend_info.json
+2025-06-08 22:25:53,714 - __main__ - INFO - Fichiers temporaires nettoyés: 1
+2025-06-08 22:25:53,714 - __main__ - INFO - [OK] Nettoyage processus terminé
+2025-06-08 22:25:53,714 - __main__ - INFO - [96m[22:25:53.714] [BACKEND] DEMARRAGE BACKEND[0m
+2025-06-08 22:25:53,714 - __main__ - INFO -    Détails: Lancement avec failover de ports
+2025-06-08 22:25:53,714 - __main__ - INFO - Tentative 1/4 - Port 5003
+2025-06-08 22:25:53,717 - __main__ - INFO - Démarrage backend: python -m argumentation_analysis.services.web_api.app --port 5003
+2025-06-08 22:25:53,723 - __main__ - INFO - Attente backend sur http://localhost:5003/api/health (timeout: 30s)
+2025-06-08 22:25:59,340 - __main__ - INFO - Backend accessible sur http://localhost:5003/api/health
+2025-06-08 22:25:59,340 - __main__ - INFO - Info backend sauvées: backend_info.json
+2025-06-08 22:25:59,340 - __main__ - INFO - [96m[22:25:59.340] [OK] BACKEND OPERATIONNEL[0m
+2025-06-08 22:25:59,340 - __main__ - INFO -    Détails: Port: 5003 | PID: 22796
+2025-06-08 22:25:59,340 - __main__ - INFO -    Résultat: URL: http://localhost:5003
+2025-06-08 22:25:59,340 - __main__ - INFO - [96m[22:25:59.340] [CHECK] VALIDATION SERVICES[0m
+2025-06-08 22:25:59,340 - __main__ - INFO -    Détails: Verification endpoints
+2025-06-08 22:25:59,602 - __main__ - INFO - Backend health: {'message': "API d'analyse argumentative opérationnelle", 'services': {'analysis': False, 'fallacy': False, 'framework': False, 'logic': False, 'validation': False}, 'status': 'healthy', 'timestamp': '2025-06-08T22:25:59.601888', 'version': '1.0.0'}
+2025-06-08 22:25:59,602 - __main__ - INFO - [96m[22:25:59.602] [OK] SERVICES VALIDES[0m
+2025-06-08 22:25:59,602 - __main__ - INFO -    Détails: Tous les endpoints repondent
+2025-06-08 22:25:59,602 - __main__ - INFO - [96m[22:25:59.602] [OK] APPLICATION WEB OPERATIONNELLE[0m
+2025-06-08 22:25:59,602 - __main__ - INFO -    Détails: Backend: http://localhost:5003
+2025-06-08 22:25:59,602 - __main__ - INFO -    Résultat: Tous les services démarrés
+2025-06-08 22:27:17,836 - __main__ - INFO - [96m[22:27:17.836] [START] DEMARRAGE APPLICATION WEB[0m
+2025-06-08 22:27:17,837 - __main__ - INFO -    Détails: Mode: Visible
+2025-06-08 22:27:17,837 - __main__ - INFO -    Résultat: Initialisation orchestrateur
+2025-06-08 22:27:17,837 - __main__ - INFO - [96m[22:27:17.837] [CLEAN] NETTOYAGE PREALABLE[0m
+2025-06-08 22:27:17,837 - __main__ - INFO -    Détails: Arret instances existantes
+2025-06-08 22:27:17,837 - __main__ - INFO - [CLEAN] Debut nettoyage processus application web
+2025-06-08 22:27:22,380 - __main__ - INFO - Processus trouvé: PID 22796 - python -m argumentation_analysis.services.web_api.app --port 5003
+2025-06-08 22:27:22,861 - __main__ - INFO - Processus trouvé: PID 37760 - c:\users\jsboi\.conda\envs\projet-is\python.exe c:\users\jsboi\.vscode\extensions\ms-python.isort-20
+2025-06-08 22:27:23,018 - __main__ - INFO - Processus trouvés: 2
+2025-06-08 22:27:23,018 - __main__ - INFO - Envoi signal TERM aux processus...
+2025-06-08 22:27:23,019 - __main__ - INFO - TERM envoyé à PID 22796
+2025-06-08 22:27:23,020 - __main__ - INFO - TERM envoyé à PID 37760
+2025-06-08 22:27:23,020 - __main__ - INFO - Attente arrêt propre (5s)...
+2025-06-08 22:27:28,021 - __main__ - INFO - Tous les processus arrêtés proprement
+2025-06-08 22:27:32,704 - __main__ - INFO - Processus trouvé: PID 43272 - c:\users\jsboi\.conda\envs\projet-is\python.exe c:\users\jsboi\.vscode\extensions\ms-python.isort-20
+2025-06-08 22:27:32,773 - __main__ - WARNING - Force kill de 1 processus récalcitrants
+2025-06-08 22:27:32,773 - __main__ - WARNING - KILL forcé sur PID 43272
+2025-06-08 22:27:32,819 - __main__ - INFO - Vérification libération des ports...
+2025-06-08 22:27:32,842 - __main__ - INFO - Tous les ports libérés
+2025-06-08 22:27:32,843 - __main__ - INFO - Nettoyage fichiers temporaires...
+2025-06-08 22:27:32,843 - __main__ - INFO - Supprimé: backend_info.json
+2025-06-08 22:27:32,844 - __main__ - INFO - Fichiers temporaires nettoyés: 1
+2025-06-08 22:27:32,844 - __main__ - INFO - [OK] Nettoyage processus terminé
+2025-06-08 22:27:32,844 - __main__ - INFO - [96m[22:27:32.844] [BACKEND] DEMARRAGE BACKEND[0m
+2025-06-08 22:27:32,844 - __main__ - INFO -    Détails: Lancement avec failover de ports
+2025-06-08 22:27:32,844 - __main__ - INFO - Tentative 1/4 - Port 5003
+2025-06-08 22:27:32,847 - __main__ - INFO - Démarrage backend: python -m argumentation_analysis.services.web_api.app --port 5003
+2025-06-08 22:27:32,855 - __main__ - INFO - Attente backend sur http://localhost:5003/api/health (timeout: 30s)
+2025-06-08 22:27:38,443 - __main__ - INFO - Backend accessible sur http://localhost:5003/api/health
+2025-06-08 22:27:38,449 - __main__ - INFO - Info backend sauvées: backend_info.json
+2025-06-08 22:27:38,450 - __main__ - INFO - [96m[22:27:38.450] [OK] BACKEND OPERATIONNEL[0m
+2025-06-08 22:27:38,450 - __main__ - INFO -    Détails: Port: 5003 | PID: 7912
+2025-06-08 22:27:38,450 - __main__ - INFO -    Résultat: URL: http://localhost:5003
+2025-06-08 22:27:38,451 - __main__ - INFO - [96m[22:27:38.450] [FRONTEND] DEMARRAGE FRONTEND[0m
+2025-06-08 22:27:38,451 - __main__ - INFO -    Détails: Lancement interface React
+2025-06-08 22:27:38,452 - __main__ - INFO - Démarrage frontend: npm start
+2025-06-08 22:27:48,771 - __main__ - INFO - Frontend accessible sur http://localhost:3000
+2025-06-08 22:27:48,772 - __main__ - INFO - [96m[22:27:48.772] [OK] FRONTEND OPERATIONNEL[0m
+2025-06-08 22:27:48,772 - __main__ - INFO -    Détails: Port: 3000
+2025-06-08 22:27:48,772 - __main__ - INFO -    Résultat: URL: http://localhost:3000
+2025-06-08 22:27:48,773 - __main__ - INFO - [96m[22:27:48.772] [CHECK] VALIDATION SERVICES[0m
+2025-06-08 22:27:48,773 - __main__ - INFO -    Détails: Verification endpoints
+2025-06-08 22:27:49,055 - __main__ - INFO - Backend health: {'message': "API d'analyse argumentative opérationnelle", 'services': {'analysis': False, 'fallacy': False, 'framework': False, 'logic': False, 'validation': False}, 'status': 'healthy', 'timestamp': '2025-06-08T22:27:49.049735', 'version': '1.0.0'}
+2025-06-08 22:27:49,324 - __main__ - INFO - Frontend health OK
+2025-06-08 22:27:49,325 - __main__ - INFO - [96m[22:27:49.325] [OK] SERVICES VALIDES[0m
+2025-06-08 22:27:49,325 - __main__ - INFO -    Détails: Tous les endpoints repondent
+2025-06-08 22:27:49,325 - __main__ - INFO - [96m[22:27:49.325] [OK] APPLICATION WEB OPERATIONNELLE[0m
+2025-06-08 22:27:49,325 - __main__ - INFO -    Détails: Backend: http://localhost:5003
+2025-06-08 22:27:49,325 - __main__ - INFO -    Résultat: Tous les services démarrés
+=======
 2025-06-08 20:19:59,677 - __main__ - INFO - [96m[20:19:59.676] [START] DEMARRAGE APPLICATION WEB[0m
 2025-06-08 20:19:59,677 - __main__ - INFO -    Détails: Mode: Headless
 2025-06-08 20:19:59,677 - __main__ - INFO -    Résultat: Initialisation orchestrateur
@@ -129,54 +297,346 @@
 2025-06-08 20:26:49,740 - __main__ - INFO - [96m[20:26:49.740] [OK] APPLICATION WEB OPERATIONNELLE[0m
 2025-06-08 20:26:49,740 - __main__ - INFO -    Détails: Backend: http://localhost:5003
 2025-06-08 20:26:49,740 - __main__ - INFO -    Résultat: Tous les services démarrés
-2025-06-08 23:33:38,638 - __main__ - INFO - [96m[23:33:38.638] [START] DEMARRAGE APPLICATION WEB[0m
-2025-06-08 23:33:38,638 - __main__ - INFO -    Détails: Mode: Headless
-2025-06-08 23:33:38,638 - __main__ - INFO -    Résultat: Initialisation orchestrateur
-2025-06-08 23:33:38,638 - __main__ - INFO - [96m[23:33:38.638] [CLEAN] NETTOYAGE PREALABLE[0m
-2025-06-08 23:33:38,638 - __main__ - INFO -    Détails: Arret instances existantes
-2025-06-08 23:33:38,638 - __main__ - INFO - [CLEAN] Debut nettoyage processus application web
-2025-06-08 23:33:41,755 - __main__ - INFO - Processus trouvé: PID 7224 - c:\tools\miniconda3\python.exe start_webapp.py
-2025-06-08 23:33:42,348 - __main__ - INFO - Processus trouvé: PID 12564 - python -m argumentation_analysis.services.web_api.app --port 5003
-2025-06-08 23:33:42,486 - __main__ - INFO - Processus trouvé: PID 16784 - node d:\dev\2025-epita-intelligence-symbolique\services\web_api\interface-web-argumentative\node_mod
-2025-06-08 23:33:43,096 - __main__ - INFO - Processus trouvé: PID 33072 - c:\tools\miniconda3\python.exe c:\users\jsboi\.vscode\extensions\ms-python.isort-2025.0.0\bundled\to
-2025-06-08 23:33:43,185 - __main__ - INFO - Processus trouvé: PID 36736 - c:\program files\nodejs\node.exe d:\dev\2025-epita-intelligence-symbolique\services\web_api\interfac
-2025-06-08 23:33:43,220 - __main__ - INFO - Processus trouvé: PID 37404 - d:\dev\2025-epita-intelligence-symbolique\venv_test\scripts\python.exe c:\users\jsboi\.vscode\extens
-2025-06-08 23:33:43,343 - __main__ - INFO - Processus trouvés: 6
-2025-06-08 23:33:43,343 - __main__ - INFO - Envoi signal TERM aux processus...
-2025-06-08 23:33:43,343 - __main__ - INFO - TERM envoyé à PID 7224
-2025-06-08 23:33:43,344 - __main__ - INFO - TERM envoyé à PID 12564
-2025-06-08 23:33:43,344 - __main__ - INFO - TERM envoyé à PID 16784
-2025-06-08 23:33:43,344 - __main__ - INFO - TERM envoyé à PID 33072
-2025-06-08 23:33:43,344 - __main__ - INFO - TERM envoyé à PID 36736
-2025-06-08 23:33:43,345 - __main__ - INFO - TERM envoyé à PID 37404
-2025-06-08 23:33:43,345 - __main__ - INFO - Attente arrêt propre (5s)...
-2025-06-08 23:33:48,374 - __main__ - INFO - Tous les processus arrêtés proprement
-2025-06-08 23:33:51,863 - __main__ - INFO - Processus trouvé: PID 27920 - c:\tools\miniconda3\python.exe c:\users\jsboi\.vscode\extensions\ms-python.isort-2025.0.0\bundled\to
-2025-06-08 23:33:52,101 - __main__ - INFO - Processus trouvé: PID 38404 - d:\dev\2025-epita-intelligence-symbolique\venv_test\scripts\python.exe c:\users\jsboi\.vscode\extens
-2025-06-08 23:33:52,135 - __main__ - WARNING - Force kill de 2 processus récalcitrants
-2025-06-08 23:33:52,135 - __main__ - WARNING - KILL forcé sur PID 27920
-2025-06-08 23:33:52,153 - __main__ - ERROR - Impossible de tuer PID 38404: process no longer exists (pid=38404, name='python.exe')
-2025-06-08 23:33:52,153 - __main__ - INFO - Vérification libération des ports...
-2025-06-08 23:33:52,172 - __main__ - INFO - Tous les ports libérés
-2025-06-08 23:33:52,173 - __main__ - INFO - Nettoyage fichiers temporaires...
-2025-06-08 23:33:52,173 - __main__ - INFO - Supprimé: backend_info.json
-2025-06-08 23:33:52,173 - __main__ - INFO - Fichiers temporaires nettoyés: 1
-2025-06-08 23:33:52,173 - __main__ - INFO - [OK] Nettoyage processus terminé
-2025-06-08 23:33:52,173 - __main__ - INFO - [96m[23:33:52.173] [BACKEND] DEMARRAGE BACKEND[0m
-2025-06-08 23:33:52,173 - __main__ - INFO -    Détails: Lancement avec failover de ports
-2025-06-08 23:33:52,173 - __main__ - INFO - Tentative 1/4 - Port 5003
-2025-06-08 23:33:52,178 - __main__ - INFO - Démarrage backend: python -m argumentation_analysis.services.web_api.app --port 5003
-2025-06-08 23:33:52,181 - __main__ - INFO - Attente backend sur http://localhost:5003/api/health (timeout: 30s)
-2025-06-08 23:34:06,851 - __main__ - INFO - Backend accessible sur http://localhost:5003/api/health
-2025-06-08 23:34:06,852 - __main__ - INFO - Info backend sauvées: backend_info.json
-2025-06-08 23:34:06,852 - __main__ - INFO - [96m[23:34:06.852] [OK] BACKEND OPERATIONNEL[0m
-2025-06-08 23:34:06,852 - __main__ - INFO -    Détails: Port: 5003 | PID: 41616
-2025-06-08 23:34:06,852 - __main__ - INFO -    Résultat: URL: http://localhost:5003
-2025-06-08 23:34:06,852 - __main__ - INFO - [96m[23:34:06.852] [CHECK] VALIDATION SERVICES[0m
-2025-06-08 23:34:06,852 - __main__ - INFO -    Détails: Verification endpoints
-2025-06-08 23:34:07,122 - __main__ - INFO - Backend health: {'message': "API d'analyse argumentative opérationnelle", 'services': {'analysis': False, 'fallacy': False, 'framework': False, 'logic': False, 'validation': False}, 'status': 'healthy', 'timestamp': '2025-06-08T23:34:07.121706', 'version': '1.0.0'}
-2025-06-08 23:34:07,123 - __main__ - INFO - [96m[23:34:07.123] [OK] SERVICES VALIDES[0m
-2025-06-08 23:34:07,123 - __main__ - INFO -    Détails: Tous les endpoints repondent
-2025-06-08 23:34:07,124 - __main__ - INFO - [96m[23:34:07.124] [OK] APPLICATION WEB OPERATIONNELLE[0m
-2025-06-08 23:34:07,124 - __main__ - INFO -    Détails: Backend: http://localhost:5003
-2025-06-08 23:34:07,124 - __main__ - INFO -    Résultat: Tous les services démarrés
+>>>>>>> ae720019b76f26a1ab46b71220b5ace5159857b0
+2025-06-08 23:32:09,871 - __main__ - INFO - [96m[23:32:09.871] [START] DEMARRAGE APPLICATION WEB[0m
+2025-06-08 23:32:09,871 - __main__ - INFO -    Détails: Mode: Headless
+2025-06-08 23:32:09,871 - __main__ - INFO -    Résultat: Initialisation orchestrateur
+2025-06-08 23:32:09,871 - __main__ - INFO - [96m[23:32:09.871] [CLEAN] NETTOYAGE PREALABLE[0m
+2025-06-08 23:32:09,871 - __main__ - INFO -    Détails: Arret instances existantes
+2025-06-08 23:32:09,871 - __main__ - INFO - [CLEAN] Debut nettoyage processus application web
+2025-06-08 23:32:11,270 - __main__ - INFO - Processus trouvé: PID 4092 - node c:\users\jsboi\npm-cache\_npx\a3241bba59c344f5\node_modules\.bin\\..\@modelcontextprotocol\serv
+2025-06-08 23:32:11,666 - __main__ - INFO - Processus trouvé: PID 4500 - node c:\users\jsboi\appdata\local\npm-cache\_npx\b7043670c3149184\node_modules\.bin\\..\@simonb97\se
+2025-06-08 23:32:11,948 - __main__ - INFO - Processus trouvé: PID 5132 - node c:\users\jsboi\npm-cache\_npx\3dfbf5a9eea4a1b3\node_modules\.bin\\..\@modelcontextprotocol\serv
+2025-06-08 23:32:13,645 - __main__ - INFO - Processus trouvé: PID 10064 - node c:\users\jsboi\appdata\roaming\npm\\node_modules\@modelcontextprotocol\server-github\dist\index
+2025-06-08 23:32:13,671 - __main__ - INFO - Processus trouvé: PID 10264 - c:\program files\nodejs\\node.exe c:\program files\nodejs\\node_modules\npm\bin\npx-cli.js -y @simon
+2025-06-08 23:32:14,515 - __main__ - INFO - Processus trouvé: PID 14256 - node c:/dev/roo-extensions/mcps/internal/servers/quickfiles-server/build/index.js
+2025-06-08 23:32:14,750 - __main__ - INFO - Processus trouvé: PID 15132 - node c:\users\jsboi\npm-cache\_npx\0b9ff77863cb6e9f\node_modules\.bin\\..\@executeautomation\playwri
+2025-06-08 23:32:14,795 - __main__ - INFO - Processus trouvé: PID 16456 - node c:/dev/roo-extensions/mcps/internal/servers/jinavigator-server/dist/index.js
+2025-06-08 23:32:14,903 - __main__ - INFO - Processus trouvé: PID 20416 - node c:\dev\2025-epita-intelligence-symbolique\services\web_api\interface-web-argumentative\node_mod
+2025-06-08 23:32:14,940 - __main__ - INFO - Processus trouvé: PID 21564 - c:\program files\nodejs\\node.exe c:\program files\nodejs\\node_modules\npm\bin\npx-cli.js -y @execu
+2025-06-08 23:32:15,154 - __main__ - INFO - Processus trouvé: PID 25924 - c:\users\jsboi\.conda\envs\projet-is\python.exe c:\users\jsboi\.vscode\extensions\ms-python.isort-20
+2025-06-08 23:32:15,258 - __main__ - INFO - Processus trouvé: PID 27504 - node c:/dev/roo-extensions/mcps/internal/servers/github-projects-mcp/dist/index.js
+2025-06-08 23:32:15,262 - __main__ - INFO - Processus trouvé: PID 27664 - c:\users\jsboi\.vscode\extensions\ms-dotnettools.csdevkit-1.20.35-win32-x64\components\vs-green-serv
+2025-06-08 23:32:15,382 - __main__ - INFO - Processus trouvé: PID 30432 - c:\program files\nodejs\\node.exe c:\program files\nodejs\\node_modules\npm\bin\npx-cli.js -y @model
+2025-06-08 23:32:15,494 - __main__ - INFO - Processus trouvé: PID 33764 - c:\program files\nodejs\\node.exe c:\program files\nodejs\\node_modules\npm\bin\npx-cli.js -y @model
+2025-06-08 23:32:15,671 - __main__ - INFO - Processus trouvé: PID 39344 - node c:/dev/roo-extensions/mcps/internal/servers/jupyter-mcp-server/dist/index.js
+2025-06-08 23:32:15,683 - __main__ - INFO - Processus trouvé: PID 42488 - node c:\users\jsboi\appdata\local\npm-cache\_npx\a3241bba59c344f5\node_modules\.bin\\..\@modelcontex
+2025-06-08 23:32:15,715 - __main__ - INFO - Processus trouvé: PID 43872 - c:\program files\nodejs\\node.exe c:\program files\nodejs\\node_modules\npm\bin\npx-cli.js -y @model
+2025-06-08 23:32:15,717 - __main__ - INFO - Processus trouvé: PID 44708 - c:\program files\nodejs\node.exe c:\dev\2025-epita-intelligence-symbolique\services\web_api\interfac
+2025-06-08 23:32:15,720 - __main__ - INFO - Processus trouvé: PID 45436 - c:\program files\nodejs\\node.exe c:\program files\nodejs\\node_modules\npm\bin\npx-cli.js -y @model
+2025-06-08 23:32:15,773 - __main__ - INFO - Processus trouvés: 20
+2025-06-08 23:32:15,773 - __main__ - INFO - Envoi signal TERM aux processus...
+2025-06-08 23:32:15,774 - __main__ - INFO - TERM envoyé à PID 4092
+2025-06-08 23:32:15,774 - __main__ - INFO - TERM envoyé à PID 4500
+2025-06-08 23:32:15,774 - __main__ - INFO - TERM envoyé à PID 5132
+2025-06-08 23:32:15,775 - __main__ - INFO - TERM envoyé à PID 10064
+2025-06-08 23:32:15,775 - __main__ - INFO - TERM envoyé à PID 10264
+2025-06-08 23:32:15,775 - __main__ - INFO - TERM envoyé à PID 14256
+2025-06-08 23:32:15,775 - __main__ - INFO - TERM envoyé à PID 15132
+2025-06-08 23:32:15,776 - __main__ - INFO - TERM envoyé à PID 16456
+2025-06-08 23:32:15,776 - __main__ - INFO - TERM envoyé à PID 20416
+2025-06-08 23:32:15,776 - __main__ - INFO - TERM envoyé à PID 21564
+2025-06-08 23:32:15,776 - __main__ - INFO - TERM envoyé à PID 25924
+2025-06-08 23:32:15,777 - __main__ - INFO - TERM envoyé à PID 27504
+2025-06-08 23:32:15,777 - __main__ - INFO - TERM envoyé à PID 27664
+2025-06-08 23:32:15,777 - __main__ - INFO - TERM envoyé à PID 30432
+2025-06-08 23:32:15,778 - __main__ - INFO - TERM envoyé à PID 33764
+2025-06-08 23:32:15,778 - __main__ - INFO - TERM envoyé à PID 39344
+2025-06-08 23:32:15,778 - __main__ - INFO - TERM envoyé à PID 42488
+2025-06-08 23:32:15,779 - __main__ - INFO - TERM envoyé à PID 43872
+2025-06-08 23:32:15,779 - __main__ - INFO - TERM envoyé à PID 44708
+2025-06-08 23:32:15,779 - __main__ - INFO - TERM envoyé à PID 45436
+2025-06-08 23:32:15,779 - __main__ - INFO - Attente arrêt propre (5s)...
+2025-06-08 23:32:20,786 - __main__ - INFO - Tous les processus arrêtés proprement
+2025-06-08 23:32:24,012 - __main__ - INFO - Processus trouvé: PID 14012 - c:\users\jsboi\.conda\envs\projet-is\python.exe c:\users\jsboi\.vscode\extensions\ms-python.isort-20
+2025-06-08 23:32:24,887 - __main__ - WARNING - Force kill de 1 processus récalcitrants
+2025-06-08 23:32:24,888 - __main__ - WARNING - KILL forcé sur PID 14012
+2025-06-08 23:32:24,908 - __main__ - INFO - Vérification libération des ports...
+2025-06-08 23:32:24,919 - __main__ - INFO - Tous les ports libérés
+2025-06-08 23:32:24,919 - __main__ - INFO - Nettoyage fichiers temporaires...
+2025-06-08 23:32:24,920 - __main__ - INFO - Supprimé: backend_info.json
+2025-06-08 23:32:24,920 - __main__ - INFO - Fichiers temporaires nettoyés: 1
+2025-06-08 23:32:24,920 - __main__ - INFO - [OK] Nettoyage processus terminé
+2025-06-08 23:32:24,920 - __main__ - INFO - [96m[23:32:24.920] [BACKEND] DEMARRAGE BACKEND[0m
+2025-06-08 23:32:24,920 - __main__ - INFO -    Détails: Lancement avec failover de ports
+2025-06-08 23:32:24,920 - __main__ - INFO - Tentative 1/4 - Port 5003
+2025-06-08 23:32:24,922 - __main__ - INFO - Démarrage backend: python -m argumentation_analysis.services.web_api.app --port 5003
+2025-06-08 23:32:24,926 - __main__ - INFO - Attente backend sur http://localhost:5003/api/health (timeout: 30s)
+2025-06-08 23:32:30,531 - __main__ - INFO - Backend accessible sur http://localhost:5003/api/health
+2025-06-08 23:32:30,534 - __main__ - INFO - Info backend sauvées: backend_info.json
+2025-06-08 23:32:30,535 - __main__ - INFO - [96m[23:32:30.535] [OK] BACKEND OPERATIONNEL[0m
+2025-06-08 23:32:30,535 - __main__ - INFO -    Détails: Port: 5003 | PID: 47084
+2025-06-08 23:32:30,535 - __main__ - INFO -    Résultat: URL: http://localhost:5003
+2025-06-08 23:32:30,535 - __main__ - INFO - [96m[23:32:30.535] [CHECK] VALIDATION SERVICES[0m
+2025-06-08 23:32:30,536 - __main__ - INFO -    Détails: Verification endpoints
+2025-06-08 23:32:30,795 - __main__ - INFO - Backend health: {'message': "API d'analyse argumentative opérationnelle", 'services': {'analysis': False, 'fallacy': False, 'framework': False, 'logic': False, 'validation': False}, 'status': 'healthy', 'timestamp': '2025-06-08T23:32:30.794995', 'version': '1.0.0'}
+2025-06-08 23:32:30,795 - __main__ - INFO - [96m[23:32:30.795] [OK] SERVICES VALIDES[0m
+2025-06-08 23:32:30,795 - __main__ - INFO -    Détails: Tous les endpoints repondent
+2025-06-08 23:32:30,796 - __main__ - INFO - [96m[23:32:30.796] [OK] APPLICATION WEB OPERATIONNELLE[0m
+2025-06-08 23:32:30,796 - __main__ - INFO -    Détails: Backend: http://localhost:5003
+2025-06-08 23:32:30,796 - __main__ - INFO -    Résultat: Tous les services démarrés
+2025-06-08 23:35:52,596 - __main__ - INFO - [96m[23:35:52.596] [START] DEMARRAGE APPLICATION WEB[0m
+2025-06-08 23:35:52,596 - __main__ - INFO -    Détails: Mode: Headless
+2025-06-08 23:35:52,596 - __main__ - INFO -    Résultat: Initialisation orchestrateur
+2025-06-08 23:35:52,596 - __main__ - INFO - [96m[23:35:52.596] [CLEAN] NETTOYAGE PREALABLE[0m
+2025-06-08 23:35:52,596 - __main__ - INFO -    Détails: Arret instances existantes
+2025-06-08 23:35:52,596 - __main__ - INFO - [CLEAN] Debut nettoyage processus application web
+2025-06-08 23:35:55,751 - __main__ - INFO - Processus trouvé: PID 6992 - c:\users\jsboi\.conda\envs\projet-is\python.exe c:\users\jsboi\.vscode\extensions\ms-python.isort-20
+2025-06-08 23:35:58,118 - __main__ - INFO - Processus trouvé: PID 47084 - python -m argumentation_analysis.services.web_api.app --port 5003
+2025-06-08 23:35:58,149 - __main__ - INFO - Processus trouvés: 2
+2025-06-08 23:35:58,149 - __main__ - INFO - Envoi signal TERM aux processus...
+2025-06-08 23:35:58,149 - __main__ - INFO - TERM envoyé à PID 6992
+2025-06-08 23:35:58,150 - __main__ - INFO - TERM envoyé à PID 47084
+2025-06-08 23:35:58,150 - __main__ - INFO - Attente arrêt propre (5s)...
+2025-06-08 23:36:03,150 - __main__ - INFO - Tous les processus arrêtés proprement
+2025-06-08 23:36:07,785 - __main__ - INFO - Processus trouvé: PID 44820 - c:\users\jsboi\.conda\envs\projet-is\python.exe c:\users\jsboi\.vscode\extensions\ms-python.isort-20
+2025-06-08 23:36:07,818 - __main__ - WARNING - Force kill de 1 processus récalcitrants
+2025-06-08 23:36:07,819 - __main__ - WARNING - KILL forcé sur PID 44820
+2025-06-08 23:36:07,841 - __main__ - INFO - Vérification libération des ports...
+2025-06-08 23:36:07,850 - __main__ - INFO - Tous les ports libérés
+2025-06-08 23:36:07,850 - __main__ - INFO - Nettoyage fichiers temporaires...
+2025-06-08 23:36:07,851 - __main__ - INFO - Supprimé: backend_info.json
+2025-06-08 23:36:07,851 - __main__ - INFO - Fichiers temporaires nettoyés: 1
+2025-06-08 23:36:07,851 - __main__ - INFO - [OK] Nettoyage processus terminé
+2025-06-08 23:36:07,851 - __main__ - INFO - [96m[23:36:07.851] [BACKEND] DEMARRAGE BACKEND[0m
+2025-06-08 23:36:07,851 - __main__ - INFO -    Détails: Lancement avec failover de ports
+2025-06-08 23:36:07,851 - __main__ - INFO - Tentative 1/4 - Port 5003
+2025-06-08 23:36:07,853 - __main__ - INFO - Démarrage backend: python -m argumentation_analysis.services.web_api.app --port 5003
+2025-06-08 23:36:07,858 - __main__ - INFO - Attente backend sur http://localhost:5003/api/health (timeout: 30s)
+2025-06-08 23:36:16,495 - __main__ - ERROR - Processus backend terminé prématurément (code: 1)
+2025-06-08 23:36:16,498 - __main__ - INFO - Tentative 2/4 - Port 5004
+2025-06-08 23:36:16,507 - __main__ - INFO - Démarrage backend: python -m argumentation_analysis.services.web_api.app --port 5004
+2025-06-08 23:36:16,534 - __main__ - INFO - Attente backend sur http://localhost:5004/api/health (timeout: 30s)
+2025-06-08 23:36:20,857 - __main__ - ERROR - Processus backend terminé prématurément (code: 1)
+2025-06-08 23:36:20,858 - __main__ - INFO - Tentative 3/4 - Port 5005
+2025-06-08 23:36:20,867 - __main__ - INFO - Démarrage backend: python -m argumentation_analysis.services.web_api.app --port 5005
+2025-06-08 23:36:20,881 - __main__ - INFO - Attente backend sur http://localhost:5005/api/health (timeout: 30s)
+2025-06-08 23:36:29,507 - __main__ - ERROR - Processus backend terminé prématurément (code: 1)
+2025-06-08 23:36:29,508 - __main__ - INFO - Tentative 4/4 - Port 5006
+2025-06-08 23:36:29,516 - __main__ - INFO - Démarrage backend: python -m argumentation_analysis.services.web_api.app --port 5006
+2025-06-08 23:36:29,525 - __main__ - INFO - Attente backend sur http://localhost:5006/api/health (timeout: 30s)
+2025-06-08 23:36:33,838 - __main__ - ERROR - Processus backend terminé prématurément (code: 1)
+2025-06-08 23:36:33,839 - __main__ - INFO - [91m[23:36:33.839] [ERROR] ECHEC BACKEND[0m
+2025-06-08 23:36:33,839 - __main__ - INFO -    Détails: Impossible de démarrer sur les ports: [5003, 5004, 5005, 5006]
+2025-06-08 23:42:15,634 - __main__ - INFO - [96m[23:42:15.634] [START] DEMARRAGE APPLICATION WEB[0m
+2025-06-08 23:42:15,634 - __main__ - INFO -    Détails: Mode: Headless
+2025-06-08 23:42:15,635 - __main__ - INFO -    Résultat: Initialisation orchestrateur
+2025-06-08 23:42:15,635 - __main__ - INFO - [96m[23:42:15.635] [CLEAN] NETTOYAGE PREALABLE[0m
+2025-06-08 23:42:15,635 - __main__ - INFO -    Détails: Arret instances existantes
+2025-06-08 23:42:15,635 - __main__ - INFO - [CLEAN] Debut nettoyage processus application web
+2025-06-08 23:42:20,551 - __main__ - INFO - Processus trouvé: PID 42528 - c:\users\jsboi\.conda\envs\projet-is\python.exe c:\users\jsboi\.vscode\extensions\ms-python.isort-20
+2025-06-08 23:42:20,623 - __main__ - INFO - Processus trouvés: 1
+2025-06-08 23:42:20,623 - __main__ - INFO - Envoi signal TERM aux processus...
+2025-06-08 23:42:20,623 - __main__ - INFO - TERM envoyé à PID 42528
+2025-06-08 23:42:20,623 - __main__ - INFO - Attente arrêt propre (5s)...
+2025-06-08 23:42:25,626 - __main__ - INFO - Tous les processus arrêtés proprement
+2025-06-08 23:42:30,408 - __main__ - INFO - Processus trouvé: PID 22372 - c:\users\jsboi\.conda\envs\projet-is\python.exe c:\users\jsboi\.vscode\extensions\ms-python.isort-20
+2025-06-08 23:42:30,918 - __main__ - WARNING - Force kill de 1 processus récalcitrants
+2025-06-08 23:42:30,918 - __main__ - WARNING - KILL forcé sur PID 22372
+2025-06-08 23:42:30,936 - __main__ - INFO - Vérification libération des ports...
+2025-06-08 23:42:30,947 - __main__ - INFO - Tous les ports libérés
+2025-06-08 23:42:30,947 - __main__ - INFO - Nettoyage fichiers temporaires...
+2025-06-08 23:42:30,947 - __main__ - INFO - Aucun fichier temporaire à nettoyer
+2025-06-08 23:42:30,947 - __main__ - INFO - [OK] Nettoyage processus terminé
+2025-06-08 23:42:30,947 - __main__ - INFO - [96m[23:42:30.947] [BACKEND] DEMARRAGE BACKEND[0m
+2025-06-08 23:42:30,947 - __main__ - INFO -    Détails: Lancement avec failover de ports
+2025-06-08 23:42:30,947 - __main__ - INFO - Tentative 1/4 - Port 5003
+2025-06-08 23:42:30,951 - __main__ - INFO - Démarrage backend: python -m argumentation_analysis.services.web_api.app --port 5003
+2025-06-08 23:42:30,957 - __main__ - INFO - Attente backend sur http://localhost:5003/api/health (timeout: 30s)
+2025-06-08 23:42:36,576 - __main__ - INFO - Backend accessible sur http://localhost:5003/api/health
+2025-06-08 23:42:36,580 - __main__ - INFO - Info backend sauvées: backend_info.json
+2025-06-08 23:42:36,581 - __main__ - INFO - [96m[23:42:36.581] [OK] BACKEND OPERATIONNEL[0m
+2025-06-08 23:42:36,581 - __main__ - INFO -    Détails: Port: 5003 | PID: 49952
+2025-06-08 23:42:36,582 - __main__ - INFO -    Résultat: URL: http://localhost:5003
+2025-06-08 23:42:36,582 - __main__ - INFO - [96m[23:42:36.582] [CHECK] VALIDATION SERVICES[0m
+2025-06-08 23:42:36,582 - __main__ - INFO -    Détails: Verification endpoints
+2025-06-08 23:42:36,848 - __main__ - INFO - Backend health: {'message': "API d'analyse argumentative opérationnelle", 'services': {'analysis': False, 'fallacy': False, 'framework': False, 'logic': False, 'validation': False}, 'status': 'healthy', 'timestamp': '2025-06-08T23:42:36.847293', 'version': '1.0.0'}
+2025-06-08 23:42:36,848 - __main__ - INFO - [96m[23:42:36.848] [OK] SERVICES VALIDES[0m
+2025-06-08 23:42:36,848 - __main__ - INFO -    Détails: Tous les endpoints repondent
+2025-06-08 23:42:36,848 - __main__ - INFO - [96m[23:42:36.848] [OK] APPLICATION WEB OPERATIONNELLE[0m
+2025-06-08 23:42:36,848 - __main__ - INFO -    Détails: Backend: http://localhost:5003
+2025-06-08 23:42:36,849 - __main__ - INFO -    Résultat: Tous les services démarrés
+2025-06-08 23:43:52,186 - __main__ - INFO - [96m[23:43:52.186] [START] DEMARRAGE APPLICATION WEB[0m
+2025-06-08 23:43:52,186 - __main__ - INFO -    Détails: Mode: Headless
+2025-06-08 23:43:52,186 - __main__ - INFO -    Résultat: Initialisation orchestrateur
+2025-06-08 23:43:52,186 - __main__ - INFO - [96m[23:43:52.186] [CLEAN] NETTOYAGE PREALABLE[0m
+2025-06-08 23:43:52,186 - __main__ - INFO -    Détails: Arret instances existantes
+2025-06-08 23:43:52,186 - __main__ - INFO - [CLEAN] Debut nettoyage processus application web
+2025-06-08 23:43:57,734 - __main__ - INFO - Processus trouvé: PID 42428 - c:\users\jsboi\.conda\envs\projet-is\python.exe c:\users\jsboi\.vscode\extensions\ms-python.isort-20
+2025-06-08 23:43:57,805 - __main__ - INFO - Processus trouvés: 1
+2025-06-08 23:43:57,805 - __main__ - INFO - Envoi signal TERM aux processus...
+2025-06-08 23:43:57,805 - __main__ - INFO - TERM envoyé à PID 42428
+2025-06-08 23:43:57,805 - __main__ - INFO - Attente arrêt propre (5s)...
+2025-06-08 23:44:02,820 - __main__ - INFO - Tous les processus arrêtés proprement
+2025-06-08 23:44:07,758 - __main__ - INFO - Vérification libération des ports...
+2025-06-08 23:44:07,768 - __main__ - INFO - Tous les ports libérés
+2025-06-08 23:44:07,768 - __main__ - INFO - Nettoyage fichiers temporaires...
+2025-06-08 23:44:07,768 - __main__ - INFO - Supprimé: backend_info.json
+2025-06-08 23:44:07,769 - __main__ - INFO - Fichiers temporaires nettoyés: 1
+2025-06-08 23:44:07,769 - __main__ - INFO - [OK] Nettoyage processus terminé
+2025-06-08 23:44:07,769 - __main__ - INFO - [96m[23:44:07.769] [BACKEND] DEMARRAGE BACKEND[0m
+2025-06-08 23:44:07,769 - __main__ - INFO -    Détails: Lancement avec failover de ports
+2025-06-08 23:44:07,769 - __main__ - INFO - Tentative 1/4 - Port 5003
+2025-06-08 23:44:07,772 - __main__ - INFO - Démarrage backend: python -m argumentation_analysis.services.web_api.app --port 5003
+2025-06-08 23:44:07,781 - __main__ - INFO - Attente backend sur http://localhost:5003/api/health (timeout: 30s)
+2025-06-08 23:44:12,878 - __main__ - INFO - Backend accessible sur http://localhost:5003/api/health
+2025-06-08 23:44:12,885 - __main__ - INFO - Info backend sauvées: backend_info.json
+2025-06-08 23:44:12,885 - __main__ - INFO - [96m[23:44:12.885] [OK] BACKEND OPERATIONNEL[0m
+2025-06-08 23:44:12,886 - __main__ - INFO -    Détails: Port: 5003 | PID: 8860
+2025-06-08 23:44:12,886 - __main__ - INFO -    Résultat: URL: http://localhost:5003
+2025-06-08 23:44:12,887 - __main__ - INFO - [96m[23:44:12.887] [CHECK] VALIDATION SERVICES[0m
+2025-06-08 23:44:12,887 - __main__ - INFO -    Détails: Verification endpoints
+2025-06-08 23:44:13,164 - __main__ - INFO - Backend health: {'message': "API d'analyse argumentative opérationnelle", 'services': {'analysis': False, 'fallacy': False, 'framework': False, 'logic': False, 'validation': False}, 'status': 'healthy', 'timestamp': '2025-06-08T23:44:13.163147', 'version': '1.0.0'}
+2025-06-08 23:44:13,164 - __main__ - INFO - [96m[23:44:13.164] [OK] SERVICES VALIDES[0m
+2025-06-08 23:44:13,165 - __main__ - INFO -    Détails: Tous les endpoints repondent
+2025-06-08 23:44:13,165 - __main__ - INFO - [96m[23:44:13.165] [OK] APPLICATION WEB OPERATIONNELLE[0m
+2025-06-08 23:44:13,165 - __main__ - INFO -    Détails: Backend: http://localhost:5003
+2025-06-08 23:44:13,165 - __main__ - INFO -    Résultat: Tous les services démarrés
+2025-06-08 23:51:52,601 - __main__ - INFO - [96m[23:51:52.601] [STOP] ARRET APPLICATION WEB[0m
+2025-06-08 23:51:52,602 - __main__ - INFO -    Détails: Nettoyage en cours
+2025-06-08 23:51:52,602 - __main__ - INFO - [CLEAN] Debut nettoyage processus application web
+2025-06-08 23:51:56,034 - __main__ - INFO - Processus trouvé: PID 8860 - python -m argumentation_analysis.services.web_api.app --port 5003
+2025-06-08 23:51:57,827 - __main__ - INFO - Processus trouvé: PID 49332 - python -m argumentation_analysis.services.web_api.app
+2025-06-08 23:51:57,831 - __main__ - INFO - Processus trouvés: 2
+2025-06-08 23:51:57,831 - __main__ - INFO - Envoi signal TERM aux processus...
+2025-06-08 23:51:57,832 - __main__ - INFO - TERM envoyé à PID 8860
+2025-06-08 23:51:57,832 - __main__ - INFO - TERM envoyé à PID 49332
+2025-06-08 23:51:57,832 - __main__ - INFO - Attente arrêt propre (5s)...
+2025-06-08 23:52:02,832 - __main__ - INFO - Tous les processus arrêtés proprement
+2025-06-08 23:52:06,706 - __main__ - INFO - Vérification libération des ports...
+2025-06-08 23:52:06,715 - __main__ - INFO - Tous les ports libérés
+2025-06-08 23:52:06,715 - __main__ - INFO - Nettoyage fichiers temporaires...
+2025-06-08 23:52:06,716 - __main__ - INFO - Supprimé: backend_info.json
+2025-06-08 23:52:06,716 - __main__ - INFO - Fichiers temporaires nettoyés: 1
+2025-06-08 23:52:06,716 - __main__ - INFO - [OK] Nettoyage processus terminé
+2025-06-08 23:52:06,716 - __main__ - INFO - [96m[23:52:06.716] [OK] ARRET TERMINE[0m
+2025-06-08 23:52:06,716 - __main__ - INFO -    Résultat: Toutes les ressources liberees
+2025-06-08 23:52:19,204 - __main__ - INFO - [96m[23:52:19.204] [START] DEMARRAGE APPLICATION WEB[0m
+2025-06-08 23:52:19,204 - __main__ - INFO -    Détails: Mode: Headless
+2025-06-08 23:52:19,204 - __main__ - INFO -    Résultat: Initialisation orchestrateur
+2025-06-08 23:52:19,204 - __main__ - INFO - [96m[23:52:19.204] [CLEAN] NETTOYAGE PREALABLE[0m
+2025-06-08 23:52:19,204 - __main__ - INFO -    Détails: Arret instances existantes
+2025-06-08 23:52:19,204 - __main__ - INFO - [CLEAN] Debut nettoyage processus application web
+2025-06-08 23:52:24,237 - __main__ - INFO - Aucun processus d'application web trouvé
+2025-06-08 23:52:24,237 - __main__ - INFO - [96m[23:52:24.237] [BACKEND] DEMARRAGE BACKEND[0m
+2025-06-08 23:52:24,237 - __main__ - INFO -    Détails: Lancement avec failover de ports
+2025-06-08 23:52:24,237 - __main__ - INFO - Tentative 1/4 - Port 5003
+2025-06-08 23:52:24,240 - __main__ - INFO - Démarrage backend: python -m argumentation_analysis.services.web_api.app --port 5003
+2025-06-08 23:52:24,245 - __main__ - INFO - Attente backend sur http://localhost:5003/api/health (timeout: 30s)
+2025-06-08 23:52:44,540 - __main__ - INFO - Backend accessible sur http://localhost:5003/api/health
+2025-06-08 23:52:44,541 - __main__ - INFO - Info backend sauvées: backend_info.json
+2025-06-08 23:52:44,541 - __main__ - INFO - [96m[23:52:44.541] [OK] BACKEND OPERATIONNEL[0m
+2025-06-08 23:52:44,541 - __main__ - INFO -    Détails: Port: 5003 | PID: 42192
+2025-06-08 23:52:44,541 - __main__ - INFO -    Résultat: URL: http://localhost:5003
+2025-06-08 23:52:44,542 - __main__ - INFO - [96m[23:52:44.542] [CHECK] VALIDATION SERVICES[0m
+2025-06-08 23:52:44,542 - __main__ - INFO -    Détails: Verification endpoints
+2025-06-08 23:52:45,473 - __main__ - INFO - Backend health: {'message': "API d'analyse argumentative opérationnelle", 'services': {'analysis': True, 'fallacy': True, 'framework': True, 'logic': False, 'validation': True}, 'status': 'healthy', 'timestamp': '2025-06-08T23:52:45.473008', 'version': '1.0.0'}
+2025-06-08 23:52:45,474 - __main__ - INFO - [96m[23:52:45.474] [OK] SERVICES VALIDES[0m
+2025-06-08 23:52:45,474 - __main__ - INFO -    Détails: Tous les endpoints repondent
+2025-06-08 23:52:45,474 - __main__ - INFO - [96m[23:52:45.474] [OK] APPLICATION WEB OPERATIONNELLE[0m
+2025-06-08 23:52:45,474 - __main__ - INFO -    Détails: Backend: http://localhost:5003
+2025-06-08 23:52:45,474 - __main__ - INFO -    Résultat: Tous les services démarrés
+2025-06-08 23:53:02,027 - __main__ - INFO - [91m[23:53:02.027] [WARNING] APPLICATION NON DEMARREE[0m
+2025-06-08 23:53:02,027 - __main__ - INFO -    Résultat: Demarrage requis avant tests
+2025-06-08 23:53:14,763 - __main__ - INFO - [96m[23:53:14.762] [TEST] INTEGRATION COMPLETE[0m
+2025-06-08 23:53:14,763 - __main__ - INFO -    Détails: Démarrage orchestration complète
+2025-06-08 23:53:14,763 - __main__ - INFO - [96m[23:53:14.763] [START] DEMARRAGE APPLICATION WEB[0m
+2025-06-08 23:53:14,763 - __main__ - INFO -    Détails: Mode: Headless
+2025-06-08 23:53:14,763 - __main__ - INFO -    Résultat: Initialisation orchestrateur
+2025-06-08 23:53:14,763 - __main__ - INFO - [96m[23:53:14.763] [CLEAN] NETTOYAGE PREALABLE[0m
+2025-06-08 23:53:14,763 - __main__ - INFO -    Détails: Arret instances existantes
+2025-06-08 23:53:14,763 - __main__ - INFO - [CLEAN] Debut nettoyage processus application web
+2025-06-08 23:53:19,837 - __main__ - INFO - Processus trouvé: PID 42192 - python -m argumentation_analysis.services.web_api.app --port 5003
+2025-06-08 23:53:19,901 - __main__ - INFO - Processus trouvés: 1
+2025-06-08 23:53:19,902 - __main__ - INFO - Envoi signal TERM aux processus...
+2025-06-08 23:53:19,902 - __main__ - INFO - TERM envoyé à PID 42192
+2025-06-08 23:53:19,902 - __main__ - INFO - Attente arrêt propre (5s)...
+2025-06-08 23:53:24,903 - __main__ - INFO - Tous les processus arrêtés proprement
+2025-06-08 23:53:28,802 - __main__ - INFO - Vérification libération des ports...
+2025-06-08 23:53:28,812 - __main__ - INFO - Tous les ports libérés
+2025-06-08 23:53:28,812 - __main__ - INFO - Nettoyage fichiers temporaires...
+2025-06-08 23:53:28,813 - __main__ - INFO - Supprimé: backend_info.json
+2025-06-08 23:53:28,813 - __main__ - INFO - Fichiers temporaires nettoyés: 1
+2025-06-08 23:53:28,813 - __main__ - INFO - [OK] Nettoyage processus terminé
+2025-06-08 23:53:28,813 - __main__ - INFO - [96m[23:53:28.813] [BACKEND] DEMARRAGE BACKEND[0m
+2025-06-08 23:53:28,813 - __main__ - INFO -    Détails: Lancement avec failover de ports
+2025-06-08 23:53:28,813 - __main__ - INFO - Tentative 1/4 - Port 5003
+2025-06-08 23:53:28,815 - __main__ - INFO - Démarrage backend: python -m argumentation_analysis.services.web_api.app --port 5003
+2025-06-08 23:53:28,819 - __main__ - INFO - Attente backend sur http://localhost:5003/api/health (timeout: 30s)
+2025-06-08 23:53:49,515 - __main__ - INFO - Backend accessible sur http://localhost:5003/api/health
+2025-06-08 23:53:49,515 - __main__ - INFO - Info backend sauvées: backend_info.json
+2025-06-08 23:53:49,516 - __main__ - INFO - [96m[23:53:49.516] [OK] BACKEND OPERATIONNEL[0m
+2025-06-08 23:53:49,516 - __main__ - INFO -    Détails: Port: 5003 | PID: 50448
+2025-06-08 23:53:49,516 - __main__ - INFO -    Résultat: URL: http://localhost:5003
+2025-06-08 23:53:49,516 - __main__ - INFO - [96m[23:53:49.516] [CHECK] VALIDATION SERVICES[0m
+2025-06-08 23:53:49,516 - __main__ - INFO -    Détails: Verification endpoints
+2025-06-08 23:53:50,474 - __main__ - INFO - Backend health: {'message': "API d'analyse argumentative opérationnelle", 'services': {'analysis': True, 'fallacy': True, 'framework': True, 'logic': False, 'validation': True}, 'status': 'healthy', 'timestamp': '2025-06-08T23:53:50.474014', 'version': '1.0.0'}
+2025-06-08 23:53:50,475 - __main__ - INFO - [96m[23:53:50.475] [OK] SERVICES VALIDES[0m
+2025-06-08 23:53:50,475 - __main__ - INFO -    Détails: Tous les endpoints repondent
+2025-06-08 23:53:50,475 - __main__ - INFO - [96m[23:53:50.475] [OK] APPLICATION WEB OPERATIONNELLE[0m
+2025-06-08 23:53:50,475 - __main__ - INFO -    Détails: Backend: http://localhost:5003
+2025-06-08 23:53:50,475 - __main__ - INFO -    Résultat: Tous les services démarrés
+2025-06-08 23:53:52,484 - __main__ - INFO - [96m[23:53:52.484] [TEST] EXECUTION TESTS PLAYWRIGHT[0m
+2025-06-08 23:53:52,484 - __main__ - INFO -    Détails: Tests: tous
+2025-06-08 23:53:52,485 - __main__ - INFO - Démarrage tests Playwright: ['tests/functional/']
+2025-06-08 23:53:52,485 - __main__ - INFO - Configuration: {'backend_url': 'http://localhost:5003', 'frontend_url': 'http://localhost:5003', 'headless': True, 'browser': 'chromium', 'timeout_ms': 10000, 'slow_timeout_ms': 20000, 'screenshots': True, 'traces': True}
+2025-06-08 23:53:52,485 - __main__ - INFO - Variables test configurées: {'BACKEND_URL': 'http://localhost:5003', 'FRONTEND_URL': 'http://localhost:5003', 'HEADLESS': 'true', 'BROWSER': 'chromium', 'SCREENSHOTS_DIR': 'logs\\screenshots', 'TRACES_DIR': 'logs\\traces'}
+2025-06-08 23:53:52,486 - __main__ - INFO - Commande test: powershell -File scripts/env/activate_project_env.ps1 -CommandToRun python -m pytest -v -s --tb=short --headless --browser=chromium --screenshot=on --video=on tests/functional/
+2025-06-08 23:53:56,103 - __main__ - INFO - Tests terminés - Code retour: 0
+2025-06-08 23:53:56,104 - __main__ - INFO - Tests réussis: {'total': 0, 'passed': 0, 'failed': 0, 'skipped': 0, 'errors': 0, 'duration': 0.0}
+2025-06-08 23:53:56,104 - __main__ - INFO - Rapport test sauvé: logs\traces\test_report.json
+2025-06-08 23:53:56,104 - __main__ - INFO - [96m[23:53:56.104] [SUCCESS] INTEGRATION REUSSIE[0m
+2025-06-08 23:53:56,104 - __main__ - INFO -    Détails: Tous les tests ont passé
+2025-06-08 23:53:56,104 - __main__ - INFO -    Résultat: Application web validée
+2025-06-08 23:53:56,104 - __main__ - INFO - [96m[23:53:56.104] [STOP] ARRET APPLICATION WEB[0m
+2025-06-08 23:53:56,104 - __main__ - INFO -    Détails: Nettoyage en cours
+2025-06-08 23:53:56,104 - __main__ - INFO - Arrêt backend PID 50448
+2025-06-08 23:53:56,194 - __main__ - INFO - Backend arrêté
+2025-06-08 23:53:56,195 - __main__ - INFO - [CLEAN] Debut nettoyage processus application web
+2025-06-08 23:54:00,157 - __main__ - INFO - Aucun processus d'application web trouvé
+2025-06-08 23:54:00,157 - __main__ - INFO - [96m[23:54:00.157] [OK] ARRET TERMINE[0m
+2025-06-08 23:54:00,157 - __main__ - INFO -    Résultat: Toutes les ressources liberees
+2025-06-08 23:54:00,158 - __main__ - INFO - [96m[23:54:00.158] [SAVE] TRACE SAUVEGARDEE[0m
+2025-06-08 23:54:00,158 - __main__ - INFO -    Détails: Fichier: logs\webapp_integration_trace.md
+2025-06-08 23:54:53,817 - __main__ - INFO - [96m[23:54:53.817] [START] DEMARRAGE APPLICATION WEB[0m
+2025-06-08 23:54:53,817 - __main__ - INFO -    Détails: Mode: Headless
+2025-06-08 23:54:53,817 - __main__ - INFO -    Résultat: Initialisation orchestrateur
+2025-06-08 23:54:53,818 - __main__ - INFO - [96m[23:54:53.818] [CLEAN] NETTOYAGE PREALABLE[0m
+2025-06-08 23:54:53,818 - __main__ - INFO -    Détails: Arret instances existantes
+2025-06-08 23:54:53,818 - __main__ - INFO - [CLEAN] Debut nettoyage processus application web
+2025-06-08 23:54:59,115 - __main__ - INFO - Aucun processus d'application web trouvé
+2025-06-08 23:54:59,115 - __main__ - INFO - [96m[23:54:59.115] [BACKEND] DEMARRAGE BACKEND[0m
+2025-06-08 23:54:59,115 - __main__ - INFO -    Détails: Lancement avec failover de ports
+2025-06-08 23:54:59,115 - __main__ - INFO - Tentative 1/4 - Port 5003
+2025-06-08 23:54:59,117 - __main__ - INFO - Démarrage backend: python -m argumentation_analysis.services.web_api.app --port 5003
+2025-06-08 23:54:59,129 - __main__ - INFO - Attente backend sur http://localhost:5003/api/health (timeout: 30s)
+2025-06-08 23:55:19,518 - __main__ - INFO - Backend accessible sur http://localhost:5003/api/health
+2025-06-08 23:55:19,519 - __main__ - INFO - Info backend sauvées: backend_info.json
+2025-06-08 23:55:19,519 - __main__ - INFO - [96m[23:55:19.519] [OK] BACKEND OPERATIONNEL[0m
+2025-06-08 23:55:19,519 - __main__ - INFO -    Détails: Port: 5003 | PID: 42180
+2025-06-08 23:55:19,519 - __main__ - INFO -    Résultat: URL: http://localhost:5003
+2025-06-08 23:55:19,519 - __main__ - INFO - [96m[23:55:19.519] [CHECK] VALIDATION SERVICES[0m
+2025-06-08 23:55:19,519 - __main__ - INFO -    Détails: Verification endpoints
+2025-06-08 23:55:20,454 - __main__ - INFO - Backend health: {'message': "API d'analyse argumentative opérationnelle", 'services': {'analysis': True, 'fallacy': True, 'framework': True, 'logic': False, 'validation': True}, 'status': 'healthy', 'timestamp': '2025-06-08T23:55:20.453227', 'version': '1.0.0'}
+2025-06-08 23:55:20,454 - __main__ - INFO - [96m[23:55:20.454] [OK] SERVICES VALIDES[0m
+2025-06-08 23:55:20,454 - __main__ - INFO -    Détails: Tous les endpoints repondent
+2025-06-08 23:55:20,454 - __main__ - INFO - [96m[23:55:20.454] [OK] APPLICATION WEB OPERATIONNELLE[0m
+2025-06-08 23:55:20,454 - __main__ - INFO -    Détails: Backend: http://localhost:5003
+2025-06-08 23:55:20,454 - __main__ - INFO -    Résultat: Tous les services démarrés
+2025-06-08 23:56:16,394 - __main__ - INFO - [96m[23:56:16.394] [STOP] ARRET APPLICATION WEB[0m
+2025-06-08 23:56:16,394 - __main__ - INFO -    Détails: Nettoyage en cours
+2025-06-08 23:56:16,394 - __main__ - INFO - [CLEAN] Debut nettoyage processus application web
+2025-06-08 23:56:21,474 - __main__ - INFO - Processus trouvé: PID 42180 - python -m argumentation_analysis.services.web_api.app --port 5003
+2025-06-08 23:56:21,584 - __main__ - INFO - Processus trouvés: 1
+2025-06-08 23:56:21,584 - __main__ - INFO - Envoi signal TERM aux processus...
+2025-06-08 23:56:21,585 - __main__ - INFO - TERM envoyé à PID 42180
+2025-06-08 23:56:21,585 - __main__ - INFO - Attente arrêt propre (5s)...
+2025-06-08 23:56:26,587 - __main__ - INFO - Tous les processus arrêtés proprement
+2025-06-08 23:56:31,044 - __main__ - INFO - Vérification libération des ports...
+2025-06-08 23:56:31,073 - __main__ - INFO - Tous les ports libérés
+2025-06-08 23:56:31,074 - __main__ - INFO - Nettoyage fichiers temporaires...
+2025-06-08 23:56:31,074 - __main__ - INFO - Supprimé: backend_info.json
+2025-06-08 23:56:31,075 - __main__ - INFO - Fichiers temporaires nettoyés: 1
+2025-06-08 23:56:31,075 - __main__ - INFO - [OK] Nettoyage processus terminé
+2025-06-08 23:56:31,075 - __main__ - INFO - [96m[23:56:31.075] [OK] ARRET TERMINE[0m
+2025-06-08 23:56:31,075 - __main__ - INFO -    Résultat: Toutes les ressources liberees

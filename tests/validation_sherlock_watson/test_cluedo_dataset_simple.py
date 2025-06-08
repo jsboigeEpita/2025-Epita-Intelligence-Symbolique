@@ -46,10 +46,11 @@ def test_cluedo_suggestion_creation():
 def test_revelation_record_creation():
     """Test de création d'enregistrement de révélation."""
     revelation = RevelationRecord(
-        card="Professeur Violet",
+        card_revealed="Professeur Violet",
+        revelation_type="owned_card",
+        message="Test révélation",
         revealed_to="TestAgent",
         timestamp=datetime.now(),
-        reason="Test révélation",
         query_type=QueryType.CARD_INQUIRY
     )
     

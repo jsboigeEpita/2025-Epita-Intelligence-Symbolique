@@ -92,6 +92,7 @@ async def main():
 
     # 3. Initialisation de la JVM
     from argumentation_analysis.core.jvm_setup import initialize_jvm
+    from argumentation_analysis.paths import LIBS_DIR
     logging.info("Tentative d'initialisation de la JVM...")
     # La fonction initialize_jvm gère maintenant aussi le téléchargement des JARs
     jvm_ready_status = initialize_jvm(lib_dir_path=LIBS_DIR)
@@ -168,7 +169,6 @@ async def main():
         print("\n🚀 Lancement de l'analyse collaborative (peut prendre du temps)... ")
         # Importer les dépendances nécessaires
         from argumentation_analysis.orchestration.analysis_runner import run_analysis_conversation
-        from argumentation_analysis.paths import LIBS_DIR
         
         try:
             # Exécuter la fonction d'analyse en passant le texte et le service LLM

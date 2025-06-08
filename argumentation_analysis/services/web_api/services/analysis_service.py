@@ -17,16 +17,32 @@ try:
     from argumentation_analysis.agents.tools.analysis.contextual_fallacy_analyzer import ContextualFallacyAnalyzer
     from argumentation_analysis.agents.tools.analysis.fallacy_severity_evaluator import FallacySeverityEvaluator
     from argumentation_analysis.orchestration.hierarchical.operational.manager import OperationalManager
-    from argumentation_analysis.core.llm_service import create_llm_service # Ajouté
-    from argumentation_analysis.utils.taxonomy_loader import get_taxonomy_path # Ajouté
+    
+    # Imports optionnels qui peuvent échouer
+    try:
+        from argumentation_analysis.core.llm_service import create_llm_service
+        print("[OK] create_llm_service imported successfully")
+    except ImportError as llm_e:
+        print(f"[ERROR] create_llm_service import failed: {llm_e}")
+        create_llm_service = None
+        
+    try:
+        from argumentation_analysis.utils.taxonomy_loader import get_taxonomy_path
+        print("[OK] get_taxonomy_path imported successfully")
+    except ImportError as tax_e:
+        print(f"[ERROR] get_taxonomy_path import failed: {tax_e}")
+        get_taxonomy_path = None
+        
 except ImportError as e:
-    logging.warning(f"Impossible d'importer les modules d'analyse ou llm_service/taxonomy_loader: {e}")
+    logging.warning(f"[ERROR] CRITICAL: Core analysis modules import failed: {e}")
     # Mode dégradé pour les tests
     InformalAgent = None
     ComplexFallacyAnalyzer = None
     ContextualFallacyAnalyzer = None
     FallacySeverityEvaluator = None
     OperationalManager = None
+    create_llm_service = None
+    get_taxonomy_path = None
 
 # Imports des modèles (style HEAD)
 from argumentation_analysis.services.web_api.models.request_models import AnalysisRequest
@@ -66,21 +82,29 @@ class AnalysisService:
         :rtype: None
         """
         try:
+            self.logger.info("=== DIAGNOSTIC ANALYSIS SERVICE STARTUP ===")
+            
             # Initialisation des analyseurs
             if ComplexFallacyAnalyzer:
                 self.complex_analyzer = ComplexFallacyAnalyzer()
+                self.logger.info("[OK] ComplexFallacyAnalyzer initialized")
             else:
                 self.complex_analyzer = None
+                self.logger.warning("[ERROR] ComplexFallacyAnalyzer not available")
                 
             if ContextualFallacyAnalyzer:
                 self.contextual_analyzer = ContextualFallacyAnalyzer()
+                self.logger.info("[OK] ContextualFallacyAnalyzer initialized")
             else:
                 self.contextual_analyzer = None
+                self.logger.warning("[ERROR] ContextualFallacyAnalyzer not available")
                 
             if FallacySeverityEvaluator:
                 self.severity_evaluator = FallacySeverityEvaluator()
+                self.logger.info("[OK] FallacySeverityEvaluator initialized")
             else:
                 self.severity_evaluator = None
+                self.logger.warning("[ERROR] FallacySeverityEvaluator not available")
             
             # Initialisation du FallacyService corrigé
             try:
@@ -101,50 +125,52 @@ class AnalysisService:
             
             # Initialisation de l'agent informel (version b282af4)
             if InformalAgent:
-                # Création du kernel et ajout du service LLM
-                kernel = sk.Kernel()
-                llm_service = None
-                if create_llm_service:
+                self.logger.info("[INIT] Attempting to initialize InformalAgent...")
+                
+                # Vérification des dépendances disponibles
+                self.logger.info(f"create_llm_service available: {create_llm_service is not None}")
+                self.logger.info(f"get_taxonomy_path available: {get_taxonomy_path is not None}")
+                
+                # Mode compatible sans dépendances manquantes
+                if not create_llm_service or not get_taxonomy_path:
+                    self.logger.warning("[ERROR] Missing LLM service dependencies - using fallback mode")
+                    self.informal_agent = None
+                else:
+                    # Création du kernel et ajout du service LLM
+                    kernel = sk.Kernel()
+                    llm_service = None
                     try:
                         llm_service = create_llm_service(service_id="default_analysis_llm")
                         kernel.add_service(llm_service)
-                        self.logger.info("Service LLM créé et ajouté au kernel pour AnalysisService.")
+                        self.logger.info("[OK] Service LLM cree et ajoute au kernel")
                     except Exception as llm_e:
-                        self.logger.error(f"Erreur lors de la création ou de l'ajout du service LLM: {llm_e}")
-                else:
-                    self.logger.error("create_llm_service non disponible.")
+                        self.logger.error(f"[ERROR] Failed to create LLM service: {llm_e}")
 
-                taxonomy_path = None
-                if get_taxonomy_path:
+                    taxonomy_path = None
                     try:
                         taxonomy_path = get_taxonomy_path()
-                        self.logger.info(f"Chemin de la taxonomie obtenu: {taxonomy_path}")
+                        self.logger.info(f"[OK] Taxonomy path obtained: {taxonomy_path}")
                     except Exception as tax_e:
-                        self.logger.error(f"Erreur lors de l'obtention du chemin de la taxonomie: {tax_e}")
-                else:
-                    self.logger.error("get_taxonomy_path non disponible.")
-                
-                if kernel and llm_service: # S'assurer que le kernel et le service LLM sont prêts
-                    self.informal_agent = InformalAgent(
-                        kernel=kernel,
-                        agent_name="web_api_informal_agent", # Utilisation de agent_name
-                        taxonomy_file_path=str(taxonomy_path) if taxonomy_path else None # Passer le chemin de la taxonomie
-                    )
-                    # Configurer les composants de l'agent (plugins, fonctions sémantiques)
-                    # L'ID du service LLM est nécessaire ici. create_llm_service devrait le retourner ou le rendre accessible.
-                    # Supposons que l'ID est "default_analysis_llm" comme utilisé ci-dessus.
-                    try:
-                        self.informal_agent.setup_agent_components(llm_service_id="default_analysis_llm")
-                        self.logger.info("Composants de InformalAgent configurés.")
-                    except Exception as setup_e:
-                        self.logger.error(f"Erreur lors de la configuration des composants de InformalAgent: {setup_e}")
-                        self.informal_agent = None # Invalider l'agent si la configuration échoue
-                else:
-                    self.logger.error("Kernel ou LLM Service non initialisé, impossible de créer InformalAgent.")
-                    self.informal_agent = None
+                        self.logger.error(f"[ERROR] Failed to get taxonomy path: {tax_e}")
+                    
+                    if kernel and llm_service:
+                        self.informal_agent = InformalAgent(
+                            kernel=kernel,
+                            agent_name="web_api_informal_agent",
+                            taxonomy_file_path=str(taxonomy_path) if taxonomy_path else None
+                        )
+                        try:
+                            self.informal_agent.setup_agent_components(llm_service_id="default_analysis_llm")
+                            self.logger.info("[OK] InformalAgent configured successfully")
+                        except Exception as setup_e:
+                            self.logger.error(f"[ERROR] Failed to setup InformalAgent: {setup_e}")
+                            self.informal_agent = None
+                    else:
+                        self.logger.error("[ERROR] Cannot initialize InformalAgent - missing kernel or LLM service")
+                        self.informal_agent = None
             else:
                 self.informal_agent = None
-                self.logger.warning("Classe InformalAgent non disponible.")
+                self.logger.warning("[ERROR] InformalAgent class not available")
             
             self.is_initialized = True # Peut-être conditionner cela au succès de l'init de l'agent
             if self.informal_agent:
@@ -164,10 +190,24 @@ class AnalysisService:
                  False sinon.
         :rtype: bool
         """
-        return self.is_initialized and (
-            self.informal_agent is not None or
-            any([self.complex_analyzer, self.contextual_analyzer, self.severity_evaluator])
-        )
+        has_informal = self.informal_agent is not None
+        has_analyzers = any([self.complex_analyzer, self.contextual_analyzer, self.severity_evaluator])
+        has_fallback_service = hasattr(self, 'fallacy_service') and self.fallacy_service is not None
+        
+        # Mode fallback : si on a au moins le FallacyService, on considère le service comme opérationnel
+        is_healthy = self.is_initialized and (has_informal or has_analyzers or has_fallback_service)
+        
+        self.logger.info(f"=== HEALTH CHECK ANALYSIS SERVICE ===")
+        self.logger.info(f"is_initialized: {self.is_initialized}")
+        self.logger.info(f"has_informal_agent: {has_informal}")
+        self.logger.info(f"has_analyzers: {has_analyzers}")
+        self.logger.info(f"has_fallback_service: {has_fallback_service}")
+        self.logger.info(f"complex_analyzer: {self.complex_analyzer is not None}")
+        self.logger.info(f"contextual_analyzer: {self.contextual_analyzer is not None}")
+        self.logger.info(f"severity_evaluator: {self.severity_evaluator is not None}")
+        self.logger.info(f"overall_health: {is_healthy}")
+        
+        return is_healthy
     
     async def analyze_text(self, request: AnalysisRequest) -> AnalysisResponse:
         """
@@ -186,8 +226,8 @@ class AnalysisService:
         """
         start_time = time.time()
         
-        # 🚨 LOGS ULTRA-VISIBLES POUR DIAGNOSTIC
-        self.logger.critical(f"🚨🚨🚨 analyze_text APPELÉE avec texte: '{request.text[:30]}...'")
+        # LOGS ULTRA-VISIBLES POUR DIAGNOSTIC
+        self.logger.critical(f"[DEBUG] analyze_text APPELEE avec texte: '{request.text[:30]}...'")
         self.logger.critical(f"🚨 Options: {request.options}")
         
         try:
