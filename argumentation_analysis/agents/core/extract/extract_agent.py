@@ -149,6 +149,9 @@ class ExtractAgent(BaseAgent):
         """
         super().__init__(kernel, agent_name, EXTRACT_AGENT_INSTRUCTIONS)
         
+        # Configuration du plugin name pour les tests et l'orchestration
+        self.plugin_name = "extract_plugin"
+        
         # Fonctions helper spécifiques à cet agent
         self.find_similar_text_func = find_similar_text_func or find_similar_text
         self.extract_text_func = extract_text_func or extract_text_with_markers
