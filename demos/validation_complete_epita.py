@@ -282,7 +282,8 @@ class ValidationEpitaComplete:
                 
                 try:
                     # Test d'importation authentique
-                    cmd = [sys.executable, "-c", f"import sys; sys.path.insert(0, '{SCRIPTS_DEMO_DIR}'); import modules.{module_file.stem}"]
+                    safe_path = str(SCRIPTS_DEMO_DIR).replace('\\', '\\\\')
+                    cmd = [sys.executable, "-c", f"import sys; sys.path.insert(0, r'{safe_path}'); import modules.{module_file.stem}"]
                     result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
                     
                     exec_time = time.time() - start_time
