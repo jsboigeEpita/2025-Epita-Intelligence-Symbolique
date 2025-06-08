@@ -1,52 +1,58 @@
 {
-  "validation_date": "2025-06-07T17:31:51.854068",
+  "validation_date": "2025-06-07T19:38:46.636066",
   "oracle_enhanced_version": "2.1.0",
   "tests_performed": {
     "oracle_main_import": {
       "success": false,
-      "timestamp": "2025-06-07T17:31:53.593569",
+      "timestamp": "2025-06-07T19:38:47.664371",
       "details": "Import principal Oracle échoué",
-      "error": "File \"<string>\", line 1\n    import\n          ^\nSyntaxError: invalid syntax\nERROR conda.cli.main_run:execute(41): `conda run python -c import` failed. (See above for error)"
+      "error": "D:\\2025-Epita-Intelligence-Symbolique\\scripts\\env\\activate_project_env.ps1 : Impossible de trouver un paramÃ¨tre \npositionnel acceptant l'argument Â«argumentation_analysis.agents.core.oracle;Â».\n    + CategoryInfo          : InvalidArgument : (:) [activate_project_env.ps1], ParentContainsErrorRecordException\n    + FullyQualifiedErrorId : PositionalParameterNotFound,activate_project_env.ps1"
     },
     "oracle_integration_test": {
-      "success": false,
-      "timestamp": "2025-06-07T17:31:57.713056",
-      "details": "Tests d'intégration Oracle échoués",
-      "error": "ERROR: not found: D:\\2025-Epita-Intelligence-Symbolique\\tests\\integration\\test_oracle_integration_recovered1.py::test_oracle_base_functionality\n(no match in any of [<Module test_oracle_integration_recovered1.py>])\n\nERROR conda.cli.main_run:execute(41): `conda run python -m pytest tests/integration/test_oracle_integration_recovered1.py::test_oracle_base_functionality -v` failed. (See above for error)"
+      "success": true,
+      "timestamp": "2025-06-07T19:38:54.255367",
+      "details": "Tests d'intégration Oracle réussis",
+      "error": null
     },
     "cluedo_workflow_test": {
-      "success": false,
-      "timestamp": "2025-06-07T17:32:01.770610",
-      "details": "Workflow Cluedo étendu défaillant",
-      "error": "ERROR: not found: D:\\2025-Epita-Intelligence-Symbolique\\tests\\integration\\test_cluedo_extended_workflow_recovered1.py::test_basic_workflow\n(no match in any of [<Module test_cluedo_extended_workflow_recovered1.py>])\n\nERROR conda.cli.main_run:execute(41): `conda run python -m pytest tests/integration/test_cluedo_extended_workflow_recovered1.py::test_basic_workflow -v` failed. (See above for error)"
+      "success": true,
+      "timestamp": "2025-06-07T19:38:58.281425",
+      "details": "Workflow Cluedo étendu fonctionnel",
+      "error": null
     },
     "project_structure": {
       "success": true,
-      "timestamp": "2025-06-07T17:32:01.770610",
+      "timestamp": "2025-06-07T19:38:58.281425",
       "details": "Structure du projet intacte",
       "error": null
     },
     "refactored_files": {
       "success": true,
-      "timestamp": "2025-06-07T17:32:01.770610",
+      "timestamp": "2025-06-07T19:38:58.281425",
       "details": "Tous les fichiers refactorisés accessibles",
       "error": null
     },
     "phase_d_integration": {
       "success": true,
-      "timestamp": "2025-06-07T17:32:05.153543",
+      "timestamp": "2025-06-07T19:39:01.757333",
       "details": "Test Phase D intégration réussi",
+      "error": null
+    },
+    "documentation_links": {
+      "success": false,
+      "timestamp": "2025-06-07T19:39:40.442893",
+      "details": "Documentation obsolète détectée: 249668 liens brisés",
       "error": null
     },
     "git_status": {
       "success": true,
-      "timestamp": "2025-06-07T17:32:05.188544",
-      "details": "Git analysé: 63 changements détectés",
+      "timestamp": "2025-06-07T19:39:40.475405",
+      "details": "Git analysé: 9 changements détectés",
       "error": null
     }
   },
   "critical_tests": {
-    "functionality": 0.0,
+    "functionality": 1.0,
     "integrity": 1.0,
     "non_regression": 0.6
   },
@@ -54,35 +60,35 @@
     "oracle_main": false
   },
   "integration_tests": {
-    "oracle_agents": false,
-    "cluedo_workflow": false,
+    "oracle_agents": true,
+    "cluedo_workflow": true,
     "phase_d_script": true,
     "group_tests_score": 0.0
   },
   "system_integrity": {
     "structure": true,
-    "refactored_files": true
+    "refactored_files": true,
+    "documentation_health": false
   },
   "git_analysis": {
     "modified_files": 1,
     "added_files": 0,
     "deleted_files": 0,
-    "untracked_files": 57,
-    "total_changes": 63,
-    "status_detail": "M conftest.py\n M tests/unit/argumentation_analysis/agents/core/oracle/test_error_handling.py\n M tests/unit/argumentation_analysis/agents/core/oracle/test_interfaces.py\n M tests/unit/argumentation_analysis/agents/core/oracle/test_new_modules_integration.py\n D tests/validation_sherlock_watson/test_asyncmock_issues.py\n D tests/validation_sherlock_watson/test_audit_integrite_cluedo.py\n?? RAPPORT_COMPLET_NETTOYAGE_ORPHELINS.md\n?? archives/\n?? cluedo_oracle_enhanced_trace.log\n?? docs/GUIDE_MAINTENANCE_ORACLE_ENHANCED.md\n?? docs/PROJECT_STRUCTURE_POST_CLEANUP.md\n?? docs/sherlock_watson/README_recovered1.md\n?? docs/sherlock_watson/README_recovered2.md\n?? docs/sherlock_watson/README_recovered3.md\n?? einstein_oracle_demo_trace.log\n?? logs/TACHE_1_INVENTAIRE_COMPLET_SYNTHESE.md\n?? logs/complete_orphan_files_action_plan.json\n?? logs/complete_orphan_files_action_plan.md\n?? logs/deletion_execution_log_20250607_163811.json\n?? logs/git_cleanup_action_plan.md\n?? logs/git_files_analysis_report.md\n?? logs/git_files_decision_matrix.json\n?? logs/manual_review_analysis_report.md\n?? logs/oracle_enhanced_compatibility_test_report.md\n?? logs/orphan_files_move_plan.json\n?? logs/orphan_files_move_plan.md\n?? logs/post_deletion_integrity_report_20250607_163811.md\n?? logs/post_integration_validation_report.md\n?? logs/recovered/\n?? logs/recovered_code_integration_mapping.json\n?? logs/recovered_code_testing_report.md\n?? logs/refactor_review_files.log\n?? logs/review_files_final_decisions.json\n?? logs/task_4_6_refactorization_completion_report.md\n?? scripts/maintenance/analyze_oracle_references_detailed.py\n?? scripts/maintenance/cleanup_obsolete_files.py\n?? scripts/maintenance/final_system_validation.py\n?? scripts/maintenance/git_files_inventory.py\n?? scripts/maintenance/git_files_inventory_fast.py\n?? scripts/maintenance/git_files_inventory_simple.py\n?? scripts/maintenance/integrate_recovered_code.py\n?? scripts/maintenance/organize_orphan_tests.py\n?? scripts/maintenance/orphan_files_processor.py\n?? scripts/maintenance/real_orphan_files_processor.py\n?? scripts/maintenance/recover_precious_code.py\n?? scripts/maintenance/recovered/\n?? scripts/maintenance/refactor_review_files.py\n?? scripts/maintenance/safe_file_deletion.py\n?? scripts/maintenance/test_oracle_enhanced_compatibility.py\n?? test_phase_c_fluidite.log\n?? tests/integration/conftest_gpt_enhanced.py\n?? tests/integration/test_cluedo_extended_workflow_recovered1.py\n?? tests/integration/test_oracle_integration_recovered1.py\n?? tests/unit/argumentation_analysis/agents/core/oracle/test_oracle_base_agent_recovered1.py\n?? tests/unit/argumentation_analysis/agents/core/oracle/test_oracle_behavior_demo.py\n?? tests/unit/argumentation_analysis/agents/core/oracle/test_oracle_behavior_demo.py_refactored\n?? tests/unit/argumentation_analysis/agents/core/oracle/test_oracle_behavior_simple.py\n?? tests/unit/argumentation_analysis/agents/core/oracle/test_oracle_behavior_simple.py_refactored\n?? tests/unit/argumentation_analysis/agents/core/oracle/update_test_coverage.py\n?? tests/unit/argumentation_analysis/agents/core/oracle/update_test_coverage.py_refactored\n?? tests/unit/mocks/test_mock_vs_real_behavior.py\n?? tests/validation/test_recovered_code_validation.py\n?? tests/validation_sherlock_watson/test_recovered_code_validation.py"
+    "untracked_files": 7,
+    "total_changes": 9,
+    "status_detail": "M scripts/env/activate_project_env.ps1\n M scripts/maintenance/final_system_validation.py\n?? docs/maintenance/\n?? logs/initial_documentation_analysis.md\n?? logs/obsolete_documentation_report_20250607_192958.md\n?? logs/obsolete_documentation_report_20250607_193937.json\n?? logs/rapport_validation_demo_epita.md\n?? scripts/maintenance/analyze_obsolete_documentation.py\n?? scripts/maintenance/run_documentation_maintenance.py"
   },
-  "overall_score": 0.35,
-  "status": "❌ CRITIQUE",
+  "overall_score": 0.54,
+  "status": "[PARTIEL] PARTIEL",
   "errors": [
-    "oracle_main_import: File \"<string>\", line 1\n    import\n          ^\nSyntaxError: invalid syntax\nERROR conda.cli.main_run:execute(41): `conda run python -c import` failed. (See above for error)",
-    "oracle_integration_test: ERROR: not found: D:\\2025-Epita-Intelligence-Symbolique\\tests\\integration\\test_oracle_integration_recovered1.py::test_oracle_base_functionality\n(no match in any of [<Module test_oracle_integration_recovered1.py>])\n\nERROR conda.cli.main_run:execute(41): `conda run python -m pytest tests/integration/test_oracle_integration_recovered1.py::test_oracle_base_functionality -v` failed. (See above for error)",
-    "cluedo_workflow_test: ERROR: not found: D:\\2025-Epita-Intelligence-Symbolique\\tests\\integration\\test_cluedo_extended_workflow_recovered1.py::test_basic_workflow\n(no match in any of [<Module test_cluedo_extended_workflow_recovered1.py>])\n\nERROR conda.cli.main_run:execute(41): `conda run python -m pytest tests/integration/test_cluedo_extended_workflow_recovered1.py::test_basic_workflow -v` failed. (See above for error)"
+    "oracle_main_import: D:\\2025-Epita-Intelligence-Symbolique\\scripts\\env\\activate_project_env.ps1 : Impossible de trouver un paramÃ¨tre \npositionnel acceptant l'argument Â«argumentation_analysis.agents.core.oracle;Â».\n    + CategoryInfo          : InvalidArgument : (:) [activate_project_env.ps1], ParentContainsErrorRecordException\n    + FullyQualifiedErrorId : PositionalParameterNotFound,activate_project_env.ps1"
   ],
-  "warnings": [],
+  "warnings": [
+    "📚 CRITIQUE: Seulement 0.3% des liens de documentation sont valides"
+  ],
   "recommendations": [
-    "🔧 CRITIQUE: Corriger les problèmes d'imports Oracle Enhanced",
-    "🕵️ HAUTE PRIORITÉ: Déboguer les fonctionnalités Sherlock-Watson-Moriarty",
-    "📋 INFO: 63 changements Git détectés - Préparer commit structuré"
+    "[CRITIQUE] CRITIQUE: Corriger les problèmes d'imports Oracle Enhanced",
+    "📚 IMPORTANT: Corriger les liens brisés dans la documentation"
   ],
-  "execution_time": 13.333966493606567
+  "execution_time": 53.839338541030884
 }

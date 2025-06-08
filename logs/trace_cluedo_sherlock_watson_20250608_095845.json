@@ -1,0 +1,205 @@
+{
+  "test_info": {
+    "test_name": "Cluedo Sherlock-Watson (sans Moriarty)",
+    "start_time": "2025-06-08T09:58:40.147665",
+    "end_time": "2025-06-08T09:58:45.317491",
+    "total_duration_seconds": 5.169826,
+    "agents_count": 2
+  },
+  "conversation_trace": [
+    {
+      "timestamp": "2025-06-08T09:58:42.782988",
+      "elapsed_seconds": 2.635323,
+      "agent_name": "Sherlock",
+      "message_type": "ANALYSIS_START",
+      "content": "Début de l'analyse du cas Cluedo",
+      "metadata": {}
+    },
+    {
+      "timestamp": "2025-06-08T09:58:42.783986",
+      "elapsed_seconds": 2.636321,
+      "agent_name": "Sherlock",
+      "message_type": "HYPOTHESIS",
+      "content": "Hypothèse initiale: {'suspect': 'Colonel Moutarde', 'arme': 'Corde', 'lieu': 'Bureau', 'confidence': 0.3}",
+      "metadata": {}
+    },
+    {
+      "timestamp": "2025-06-08T09:58:43.788183",
+      "elapsed_seconds": 3.640518,
+      "agent_name": "Watson",
+      "message_type": "CHALLENGE_START",
+      "content": "Analyse de l'hypothèse: {'suspect': 'Colonel Moutarde', 'arme': 'Corde', 'lieu': 'Bureau', 'confidence': 0.3}",
+      "metadata": {}
+    },
+    {
+      "timestamp": "2025-06-08T09:58:44.301688",
+      "elapsed_seconds": 4.154023,
+      "agent_name": "Watson",
+      "message_type": "QUESTION",
+      "content": "Quelle preuve avons-nous contre Colonel Moutarde?",
+      "metadata": {}
+    },
+    {
+      "timestamp": "2025-06-08T09:58:44.301688",
+      "elapsed_seconds": 4.154023,
+      "agent_name": "Watson",
+      "message_type": "QUESTION",
+      "content": "L'arme Corde était-elle disponible?",
+      "metadata": {}
+    },
+    {
+      "timestamp": "2025-06-08T09:58:44.301688",
+      "elapsed_seconds": 4.154023,
+      "agent_name": "Watson",
+      "message_type": "QUESTION",
+      "content": "Y a-t-il des témoins dans Bureau?",
+      "metadata": {}
+    },
+    {
+      "timestamp": "2025-06-08T09:58:44.301688",
+      "elapsed_seconds": 4.154023,
+      "agent_name": "Watson",
+      "message_type": "ALTERNATIVE",
+      "content": "Proposition alternative: {'suspect': 'Autre suspect', 'arme': 'Autre arme', 'lieu': 'Autre lieu', 'confidence': 0.4, 'reasoning': \"Basé sur l'analyse logique\"}",
+      "metadata": {}
+    },
+    {
+      "timestamp": "2025-06-08T09:58:45.315450",
+      "elapsed_seconds": 5.167785,
+      "agent_name": "Sherlock",
+      "message_type": "REVISION",
+      "content": "Révision de l'hypothèse basée sur les questions de Watson",
+      "metadata": {}
+    },
+    {
+      "timestamp": "2025-06-08T09:58:45.316485",
+      "elapsed_seconds": 5.16882,
+      "agent_name": "Watson",
+      "message_type": "VALIDATION",
+      "content": "Validation de la solution collaborative",
+      "metadata": {}
+    }
+  ],
+  "tool_usage_trace": [
+    {
+      "timestamp": "2025-06-08T09:58:42.782988",
+      "elapsed_seconds": 2.635323,
+      "agent_name": "Sherlock",
+      "tool_name": "dataset_access",
+      "tool_input": "get_suspects",
+      "tool_output": "['Colonel Moutarde', 'Docteur Olive', 'Madame Leblanc', 'Mademoiselle Rose', 'Professeur Violet', 'Monsieur Pervenche']",
+      "success": true
+    },
+    {
+      "timestamp": "2025-06-08T09:58:42.782988",
+      "elapsed_seconds": 2.635323,
+      "agent_name": "Sherlock",
+      "tool_name": "dataset_access",
+      "tool_input": "get_armes",
+      "tool_output": "['Corde', 'Poignard', 'Barre de fer', 'Revolver', 'Chandelier', 'Clé anglaise']",
+      "success": true
+    },
+    {
+      "timestamp": "2025-06-08T09:58:42.783986",
+      "elapsed_seconds": 2.636321,
+      "agent_name": "Sherlock",
+      "tool_name": "dataset_access",
+      "tool_input": "get_lieux",
+      "tool_output": "['Bureau', 'Salon', 'Cuisine', 'Salle de bal', 'Conservatoire', 'Salle de billard', 'Bibliothèque', 'Hall', 'Véranda']",
+      "success": true
+    },
+    {
+      "timestamp": "2025-06-08T09:58:44.301688",
+      "elapsed_seconds": 4.154023,
+      "agent_name": "Watson",
+      "tool_name": "reasoning_tool",
+      "tool_input": "{'suspect': 'Colonel Moutarde', 'arme': 'Corde', 'lieu': 'Bureau', 'confidence': 0.3}",
+      "tool_output": "{'validity_score': 0.6, 'evidence_strength': 'Modérée', 'logical_consistency': True, 'missing_evidence': ['Alibi', 'Motif', 'Opportunité']}",
+      "success": true
+    },
+    {
+      "timestamp": "2025-06-08T09:58:45.316485",
+      "elapsed_seconds": 5.16882,
+      "agent_name": "Sherlock",
+      "tool_name": "hypothesis_refinement",
+      "tool_input": "{'suspect': 'Autre suspect', 'arme': 'Autre arme', 'lieu': 'Autre lieu', 'confidence': 0.4, 'reasoning': \"Basé sur l'analyse logique\"}",
+      "tool_output": "{'suspect': 'Autre suspect', 'arme': 'Corde', 'lieu': 'Autre lieu', 'confidence': 0.8, 'collaborative_reasoning': True}",
+      "success": true
+    }
+  ],
+  "shared_state_evolution": [
+    {
+      "timestamp": "2025-06-08T09:58:40.147665",
+      "elapsed_seconds": 0.0,
+      "description": "Initialisation",
+      "state_data": {
+        "scenario": "basic",
+        "agents": 2
+      }
+    },
+    {
+      "timestamp": "2025-06-08T09:58:42.782988",
+      "elapsed_seconds": 2.635323,
+      "description": "Dataset initialisé",
+      "state_data": {
+        "suspects": 6,
+        "armes": 6,
+        "lieux": 9
+      }
+    },
+    {
+      "timestamp": "2025-06-08T09:58:42.783986",
+      "elapsed_seconds": 2.636321,
+      "description": "Hypothèse Sherlock",
+      "state_data": {
+        "suspect": "Colonel Moutarde",
+        "arme": "Corde",
+        "lieu": "Bureau",
+        "confidence": 0.3
+      }
+    },
+    {
+      "timestamp": "2025-06-08T09:58:44.301688",
+      "elapsed_seconds": 4.154023,
+      "description": "Alternative Watson",
+      "state_data": {
+        "suspect": "Autre suspect",
+        "arme": "Autre arme",
+        "lieu": "Autre lieu",
+        "confidence": 0.4,
+        "reasoning": "Basé sur l'analyse logique"
+      }
+    },
+    {
+      "timestamp": "2025-06-08T09:58:45.316485",
+      "elapsed_seconds": 5.16882,
+      "description": "Hypothèse Collaborative",
+      "state_data": {
+        "suspect": "Autre suspect",
+        "arme": "Corde",
+        "lieu": "Autre lieu",
+        "confidence": 0.8,
+        "collaborative_reasoning": true
+      }
+    },
+    {
+      "timestamp": "2025-06-08T09:58:45.316485",
+      "elapsed_seconds": 5.16882,
+      "description": "Solution Finale",
+      "state_data": {
+        "suspect": "Autre suspect",
+        "arme": "Corde",
+        "lieu": "Autre lieu",
+        "confidence": 0.9,
+        "validation_watson": true,
+        "collaborative_process": true
+      }
+    }
+  ],
+  "metrics": {
+    "total_messages": 9,
+    "total_tool_calls": 5,
+    "state_updates": 6,
+    "average_response_time": 0.574425111111111
+  }
+}

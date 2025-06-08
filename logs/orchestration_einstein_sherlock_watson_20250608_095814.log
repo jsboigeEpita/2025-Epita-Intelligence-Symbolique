@@ -1,0 +1,41 @@
+2025-06-08 09:58:14,575 [INFO] [__main__] === DÉMARRAGE TEST 3: EINSTEIN PROBLEM-SOLVING SHERLOCK-WATSON ===
+2025-06-08 09:58:14,575 [INFO] [__main__] ÉTAT PARTAGÉ: Initialisation
+2025-06-08 09:58:14,575 [INFO] [__main__] ÉTAT PARTAGÉ: Puzzle Initialisé
+2025-06-08 09:58:14,575 [INFO] [__main__] Agents créés: Sherlock (logique) et Watson (validation)
+2025-06-08 09:58:14,575 [INFO] [__main__] === SÉQUENCE DE RÉSOLUTION LOGIQUE ===
+2025-06-08 09:58:14,576 [INFO] [__main__] [Sherlock] PROBLEM_ANALYSIS: Analyse structurelle du puzzle Einstein...
+2025-06-08 09:58:15,388 [INFO] [__main__] [Sherlock] OUTIL constraint_analyzer: True
+2025-06-08 09:58:15,997 [INFO] [__main__] [Sherlock] OUTIL starting_point_finder: True
+2025-06-08 09:58:15,997 [INFO] [__main__] ÉTAPE LOGIQUE 1: Identification des points fixes
+2025-06-08 09:58:15,997 [INFO] [__main__] ÉTAT PARTAGÉ: Déductions Initiales Sherlock
+2025-06-08 09:58:17,009 [INFO] [__main__] [Watson] STEP_VALIDATION: Validation des déductions: 1 étapes...
+2025-06-08 09:58:17,815 [INFO] [__main__] [Watson] OUTIL logic_validator: True
+2025-06-08 09:58:18,425 [INFO] [__main__] [Watson] OUTIL coherence_checker: True
+2025-06-08 09:58:18,425 [INFO] [__main__] [Watson] VALIDATION_RESULT: Validation: {'logical_validity': True, 'coherence_score': 0.92, 'validated_steps': 1, 'suggestions':...
+2025-06-08 09:58:18,425 [INFO] [__main__] ÉTAT PARTAGÉ: Validation Watson
+2025-06-08 09:58:19,438 [INFO] [__main__] [Sherlock] LOGICAL_DEDUCTION: Application des règles de déduction...
+2025-06-08 09:58:20,140 [INFO] [__main__] [Sherlock] OUTIL color_deduction: True
+2025-06-08 09:58:20,140 [INFO] [__main__] ÉTAPE LOGIQUE 2: Déduction des couleurs de maisons
+2025-06-08 09:58:21,055 [INFO] [__main__] [Sherlock] OUTIL nationality_deduction: True
+2025-06-08 09:58:21,056 [INFO] [__main__] ÉTAPE LOGIQUE 3: Déduction nationalités et boissons
+2025-06-08 09:58:22,060 [INFO] [__main__] [Watson] NEXT_STEPS: Proposition des étapes suivantes...
+2025-06-08 09:58:22,574 [INFO] [__main__] [Watson] OUTIL remaining_analysis: True
+2025-06-08 09:58:23,590 [INFO] [__main__] [Watson] OUTIL solution_completer: True
+2025-06-08 09:58:23,590 [INFO] [__main__] ÉTAPE LOGIQUE 4: Finalisation de la solution
+2025-06-08 09:58:24,601 [INFO] [__main__] ÉTAT PARTAGÉ: Solution Finale Validée
+2025-06-08 09:58:24,601 [INFO] [__main__] [Sherlock] SOLUTION_FOUND: Solution trouvée: L'Allemand possède le poisson (maison 4)...
+2025-06-08 09:58:24,602 [INFO] [__main__] [Watson] FINAL_VALIDATION: Solution logiquement cohérente et complète...
+2025-06-08 09:58:24,612 [INFO] [__main__] Trace sauvegardée: logs/trace_einstein_sherlock_watson_20250608_095824.json
+2025-06-08 09:58:24,613 [INFO] [__main__] === VALIDATION OBJECTIFS TEST 3 ===
+2025-06-08 09:58:24,613 [INFO] [__main__] ✅ sherlock_analyzed: True
+2025-06-08 09:58:24,613 [INFO] [__main__] ✅ watson_validated: True
+2025-06-08 09:58:24,613 [INFO] [__main__] ✅ tools_used_productively: True
+2025-06-08 09:58:24,613 [INFO] [__main__] ✅ step_by_step_solution: True
+2025-06-08 09:58:24,614 [INFO] [__main__] ✅ solution_validated: True
+2025-06-08 09:58:24,614 [INFO] [__main__] === RÉSULTATS TEST 3 ===
+2025-06-08 09:58:24,615 [INFO] [__main__] Durée totale: 10.03 secondes
+2025-06-08 09:58:24,615 [INFO] [__main__] Messages échangés: 7
+2025-06-08 09:58:24,615 [INFO] [__main__] Appels d'outils: 8
+2025-06-08 09:58:24,615 [INFO] [__main__] Mises à jour d'état: 5
+2025-06-08 09:58:24,616 [INFO] [__main__] Étapes logiques: 4
+2025-06-08 09:58:24,616 [INFO] [__main__] Objectifs atteints: True
