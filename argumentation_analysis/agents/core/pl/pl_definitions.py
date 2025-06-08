@@ -58,7 +58,7 @@ class PropositionalLogicPlugin:
             self._reasoner_instance = self._SatReasoner()
             # Si tout réussit :
             self._jvm_ok = True
-            self._logger.info("[OK] Classes et instances Java Tweety chargées avec succès.")
+            self._logger.info("✅ Classes et instances Java Tweety chargées avec succès.")
         except Exception as e:
             self._logger.critical(f"❌ Erreur chargement classes/instances Tweety (JVM démarrée): {e}", exc_info=True)
             self._jvm_ok = False # Échec de l'initialisation

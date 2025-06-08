@@ -1,0 +1,222 @@
+{
+  "total_files": 135,
+  "categories": {
+    "tests": 49,
+    "demos": 12,
+    "scripts": 32,
+    "config": 4,
+    "agents": 5,
+    "orchestration": 3,
+    "utilities": 2,
+    "docs": 10,
+    "temp_files": 1,
+    "unclassified": 17
+  },
+  "redundancy_analysis": {
+    "tests": {
+      "count": 49,
+      "similar_groups": [
+        {
+          "group": "general",
+          "files": [
+            "run_all_new_component_tests.py",
+            "scripts/demo/test_enhanced_pm_components.py",
+            "scripts/test_practical_capabilities.py",
+            "scripts/utils/create_test_encrypted_extracts.py",
+            "scripts/validate_new_components_tests.py",
+            "test_advanced_rhetorical_enhanced.py",
+            "test_conversation_integration.py",
+            "test_importation_consolidee.py",
+            "test_performance_systeme.py",
+            "test_pipeline_bout_en_bout.py",
+            "test_report_generation.py",
+            "test_rhetorical_demo_integration.py",
+            "test_robustesse_systeme.py",
+            "test_simple_unified_pipeline.py",
+            "test_sk_retry_demo.py",
+            "test_source_management_integration.py",
+            "test_system_stability.py",
+            "test_trace_analyzer_conversation_format.py",
+            "test_unified_report_generation_integration.py",
+            "test_unified_text_analysis_integration.py",
+            "test_validation_environnement.py",
+            "tests/integration/test_authentic_components.py",
+            "tests/integration/test_authentic_components_integration.py",
+            "tests/integration/test_unified_system_integration.py",
+            "tests/run_unified_config_tests.py",
+            "tests/unit/argumentation_analysis/test_configuration_cli.py",
+            "tests/unit/argumentation_analysis/test_mock_elimination.py",
+            "tests/unit/argumentation_analysis/test_source_manager.py",
+            "tests/unit/argumentation_analysis/test_synthesis_agent.py",
+            "tests/unit/argumentation_analysis/test_synthesis_data_models.py",
+            "tests/unit/argumentation_analysis/test_trace_analyzer.py",
+            "tests/unit/argumentation_analysis/test_tweety_error_analyzer.py",
+            "tests/unit/argumentation_analysis/test_unified_config.py"
+          ]
+        },
+        {
+          "group": "fol",
+          "files": [
+            "scripts/run_fol_tests.py",
+            "test_fol_demo.py",
+            "test_fol_demo_simple.py",
+            "test_fol_llm_integration.py",
+            "tests/integration/test_fol_pipeline_integration.py",
+            "tests/integration/test_fol_tweety_integration.py",
+            "tests/unit/argumentation_analysis/test_fol_logic_agent.py",
+            "tests/validation/test_fol_complete_validation.py"
+          ]
+        },
+        {
+          "group": "modal",
+          "files": [
+            "test_final_modal_correction_demo.py",
+            "test_intelligent_modal_correction.py",
+            "test_modal_correction_validation.py",
+            "test_modal_retry_mechanism.py",
+            "tests/unit/argumentation_analysis/test_modal_logic_agent.py"
+          ]
+        },
+        {
+          "group": "orchestration",
+          "files": [
+            "test_micro_orchestration.py",
+            "tests/unit/argumentation_analysis/test_unified_orchestration.py",
+            "tests/unit/orchestration/test_unified_orchestrations.py"
+          ]
+        }
+      ],
+      "candidates_for_removal": [],
+      "essential_files": []
+    },
+    "demos": {
+      "count": 12,
+      "similar_groups": [
+        {
+          "group": "general",
+          "files": [
+            "argumentation_analysis/examples/rhetorical_analysis_demo.py",
+            "demo_correction_intelligente.py",
+            "demo_orchestrateur_master.py",
+            "demo_unified_reporting_system.py",
+            "scripts/demo/complete_rhetorical_analysis_demo.py",
+            "scripts/demo/demo_conversation_capture_complete.py",
+            "scripts/demo/explore_corpus_extracts.py",
+            "scripts/demo/run_analysis_with_complete_trace.py"
+          ]
+        },
+        {
+          "group": "orchestration",
+          "files": [
+            "demo_real_sk_orchestration.py",
+            "demo_real_sk_orchestration_fixed.py"
+          ]
+        }
+      ],
+      "candidates_for_removal": [],
+      "essential_files": []
+    },
+    "scripts": {
+      "count": 32,
+      "similar_groups": [
+        {
+          "group": "maintenance",
+          "files": [
+            "cleanup_simple.ps1",
+            "cleanup_temporary_files.ps1",
+            "scripts/maintenance/depot_cleanup_migration.ps1",
+            "scripts/maintenance/depot_cleanup_migration_simple.ps1",
+            "scripts/utils/cleanup_decrypt_traces.py"
+          ]
+        },
+        {
+          "group": "testing",
+          "files": [
+            "run_all_new_component_tests.ps1",
+            "scripts/demo/test_system_simple.ps1",
+            "scripts/demo/test_unified_system_simple.ps1",
+            "scripts/test/",
+            "tests/scripts/test_unified_config_cli.ps1"
+          ]
+        },
+        {
+          "group": "other",
+          "files": [
+            "scripts/README_CONFLICT_RESOLUTION.md",
+            "scripts/README_ORCHESTRATION_CONVERSATION.md",
+            "scripts/core/",
+            "scripts/data_processing/integrate_new_source_to_corpus.py",
+            "scripts/diagnostic_git_corruption.ps1",
+            "scripts/git_conflict_resolver.ps1",
+            "scripts/main/",
+            "scripts/migrate_to_unified.py",
+            "scripts/orchestration_conversation_unified.py",
+            "scripts/orchestration_llm_real.py",
+            "scripts/utils/RAPPORT_COMPLETION_EXTRACTION_EXTRAITS.md",
+            "scripts/utils/README_decrypt_system.md",
+            "scripts/utils/decrypt_specific_extract.py",
+            "scripts/utils/list_encrypted_extracts.py",
+            "scripts/validation/mock_elimination.py"
+          ]
+        },
+        {
+          "group": "validation",
+          "files": [
+            "scripts/maintenance/validate_migration.ps1",
+            "scripts/validate_authentic_system.py",
+            "scripts/validate_complete_ecosystem.py",
+            "scripts/validate_unified_orchestrations.py",
+            "scripts/validate_unified_orchestrations_simple.py",
+            "scripts/validate_unified_system.py"
+          ]
+        }
+      ],
+      "candidates_for_removal": [],
+      "essential_files": []
+    },
+    "config": {
+      "count": 4,
+      "similar_groups": [],
+      "candidates_for_removal": [],
+      "essential_files": []
+    },
+    "agents": {
+      "count": 5,
+      "similar_groups": [],
+      "candidates_for_removal": [],
+      "essential_files": []
+    },
+    "orchestration": {
+      "count": 3,
+      "similar_groups": [],
+      "candidates_for_removal": [],
+      "essential_files": []
+    },
+    "utilities": {
+      "count": 2,
+      "similar_groups": [],
+      "candidates_for_removal": [],
+      "essential_files": []
+    },
+    "docs": {
+      "count": 10,
+      "similar_groups": [],
+      "candidates_for_removal": [],
+      "essential_files": []
+    },
+    "temp_files": {
+      "count": 1,
+      "similar_groups": [],
+      "candidates_for_removal": [],
+      "essential_files": []
+    },
+    "unclassified": {
+      "count": 17,
+      "similar_groups": [],
+      "candidates_for_removal": [],
+      "essential_files": []
+    }
+  },
+  "estimated_final_count": 65,
+  "reduction_percentage": 51.85185185185185
+}
