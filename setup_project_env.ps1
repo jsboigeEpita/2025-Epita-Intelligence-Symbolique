@@ -12,7 +12,7 @@ Write-Host "🚀 ===============================================================
 
 # Gestion des paramètres spéciaux
 if ($Help) {
-    Write-Host "
+    Write-Host @"
 💡 UTILISATION DU SCRIPT PRINCIPAL:
 
 🔍 VÉRIFICATIONS:
@@ -33,7 +33,7 @@ if ($Help) {
    Voir: CORRECTED_RECOMMENDATIONS.md
 
 ⚠️  IMPORTANT: Ce script active automatiquement l'environnement dédié 'projet-is'
-" -ForegroundColor Cyan
+"@ -ForegroundColor Cyan
     exit 0
 }
 
