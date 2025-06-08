@@ -12,6 +12,7 @@ import os
 import sys
 import logging
 import argparse
+import asyncio
 from datetime import datetime
 from pathlib import Path
 from flask import Flask, request, jsonify, redirect, url_for
@@ -287,7 +288,7 @@ def analyze_text():
             ).dict()), 400
         
         # Analyse du texte
-        result = get_analysis_service().analyze_text(analysis_request)
+        result = asyncio.run(get_analysis_service().analyze_text(analysis_request))
         
         return jsonify(result.dict())
         
