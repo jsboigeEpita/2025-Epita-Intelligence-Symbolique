@@ -35,7 +35,7 @@ class EnvironmentDiagnostic:
         
     def run_full_diagnostic(self, verbose: bool = False) -> Dict:
         """Exécute le diagnostic complet."""
-        print("🔍 DIAGNOSTIC ENVIRONNEMENT - Oracle Enhanced v2.1.0")
+        print("[LOUPE] DIAGNOSTIC ENVIRONNEMENT - Oracle Enhanced v2.1.0")
         print("=" * 60)
         
         # 1. Détection environnement actuel
@@ -76,16 +76,16 @@ class EnvironmentDiagnostic:
             env_type = "conda"
             env_name = conda_env
             if conda_env == EXPECTED_ENV_NAME:
-                print(f"✅ Environnement conda correct: {conda_env}")
+                print(f"[OK] Environnement conda correct: {conda_env}")
             else:
-                print(f"⚠️  Environnement conda: {conda_env} (attendu: {EXPECTED_ENV_NAME})")
+                print(f"[ATTENTION]  Environnement conda: {conda_env} (attendu: {EXPECTED_ENV_NAME})")
                 self.warnings.append(f"Environnement conda incorrect: {conda_env}")
         elif virtual_env:
             env_type = "venv"
             env_name = Path(virtual_env).name
             print(f"ℹ️  Environnement venv: {env_name}")
         else:
-            print(f"⚠️  Python système utilisé (non recommandé)")
+            print(f"[ATTENTION]  Python système utilisé (non recommandé)")
             self.warnings.append("Python système utilisé au lieu de l'environnement dédié")
         
         self.results['environment'] = {
@@ -107,9 +107,9 @@ class EnvironmentDiagnostic:
         print(f"Exécutable: {sys.executable}")
         
         if f"{version.major}.{version.minor}" == expected_version:
-            print(f"✅ Version Python correcte: {expected_version}")
+            print(f"[OK] Version Python correcte: {expected_version}")
         else:
-            print(f"⚠️  Version Python: {version.major}.{version.minor} (recommandé: {expected_version})")
+            print(f"[ATTENTION]  Version Python: {version.major}.{version.minor} (recommandé: {expected_version})")
             self.warnings.append(f"Version Python {version.major}.{version.minor} (recommandé: {expected_version})")
         
         self.results['python'] = {
@@ -133,9 +133,9 @@ class EnvironmentDiagnostic:
         missing_paths = []
         for path in required_paths:
             if path in sys.path:
-                print(f"✅ {path}")
+                print(f"[OK] {path}")
             else:
-                print(f"❌ {path} (manquant dans sys.path)")
+                print(f"[X] {path} (manquant dans sys.path)")
                 missing_paths.append(path)
         
         if missing_paths:
@@ -161,12 +161,12 @@ class EnvironmentDiagnostic:
                 version = getattr(module, '__version__', 'unknown')
                 installed[package] = version
                 if verbose:
-                    print(f"✅ {package}: {version}")
+                    print(f"[OK] {package}: {version}")
                 else:
-                    print(f"✅ {package}")
+                    print(f"[OK] {package}")
             except ImportError:
                 missing.append(package)
-                print(f"❌ {package}: MANQUANT")
+                print(f"[X] {package}: MANQUANT")
         
         if missing:
             self.errors.append(f"Dépendances manquantes: {', '.join(missing)}")
@@ -193,9 +193,9 @@ class EnvironmentDiagnostic:
             # Vérifier fallback agents
             try:
                 from project_core.semantic_kernel_agents_fallback import AuthorRole
-                print("✅ Fallback agents: OK")
+                print("[OK] Fallback agents: OK")
             except ImportError:
-                print("⚠️  Fallback agents: Non disponible")
+                print("[ATTENTION]  Fallback agents: Non disponible")
                 self.warnings.append("Fallback semantic-kernel agents non disponible")
                 
         except ImportError:
@@ -206,22 +206,22 @@ class EnvironmentDiagnostic:
         jpype_ok = False
         try:
             import jpype1
-            print(f"✅ JPype1: {jpype1.__version__}")
+            print(f"[OK] JPype1: {jpype1.__version__}")
             jpype_ok = True
         except ImportError:
             try:
                 from tests.mocks import jpype_mock
-                print("✅ JPype Mock: OK")
+                print("[OK] JPype Mock: OK")
                 jpype_ok = True
             except ImportError:
-                print("⚠️  JPype/Mock: Non disponible")
+                print("[ATTENTION]  JPype/Mock: Non disponible")
                 self.warnings.append("JPype non disponible (tests Java limités)")
         
         self.results['jpype'] = jpype_ok
     
     def _check_available_environments(self):
         """Vérifie les environnements disponibles."""
-        print("\n🌍 ENVIRONNEMENTS DISPONIBLES")
+        print("\n[MONDE] ENVIRONNEMENTS DISPONIBLES")
         
         # Conda
         conda_envs = []
@@ -234,11 +234,11 @@ class EnvironmentDiagnostic:
                         env_name = line.split()[0]
                         conda_envs.append(env_name)
                         if env_name == EXPECTED_ENV_NAME:
-                            print(f"✅ Conda: {env_name} (TARGET)")
+                            print(f"[OK] Conda: {env_name} (TARGET)")
                         else:
                             print(f"ℹ️  Conda: {env_name}")
         except (subprocess.TimeoutExpired, FileNotFoundError):
-            print("⚠️  Conda: Non disponible")
+            print("[ATTENTION]  Conda: Non disponible")
         
         # Venv locaux
         venv_dirs = []
@@ -273,16 +273,16 @@ class EnvironmentDiagnostic:
             path = PROJECT_ROOT / fallback
             if path.exists():
                 available_fallbacks.append(fallback)
-                print(f"✅ {fallback}")
+                print(f"[OK] {fallback}")
             else:
-                print(f"❌ {fallback}")
+                print(f"[X] {fallback}")
         
         self.results['fallbacks'] = available_fallbacks
     
     def _generate_report(self):
         """Génère le rapport final."""
         print("\n" + "=" * 60)
-        print("📊 RÉSUMÉ DIAGNOSTIC")
+        print("[GRAPHIQUE] RÉSUMÉ DIAGNOSTIC")
         print("=" * 60)
         
         # Score global
@@ -306,27 +306,27 @@ class EnvironmentDiagnostic:
         
         # Statut
         if score >= 90:
-            print("✅ ENVIRONNEMENT OPTIMAL")
+            print("[OK] ENVIRONNEMENT OPTIMAL")
         elif score >= 70:
-            print("⚠️  ENVIRONNEMENT ACCEPTABLE (améliorations recommandées)")
+            print("[ATTENTION]  ENVIRONNEMENT ACCEPTABLE (améliorations recommandées)")
         else:
-            print("❌ ENVIRONNEMENT PROBLÉMATIQUE (action requise)")
+            print("[X] ENVIRONNEMENT PROBLÉMATIQUE (action requise)")
         
         # Warnings
         if self.warnings:
-            print(f"\n⚠️  Avertissements ({len(self.warnings)}):")
+            print(f"\n[ATTENTION]  Avertissements ({len(self.warnings)}):")
             for warning in self.warnings:
                 print(f"   • {warning}")
         
         # Erreurs
         if self.errors:
-            print(f"\n❌ Erreurs ({len(self.errors)}):")
+            print(f"\n[X] Erreurs ({len(self.errors)}):")
             for error in self.errors:
                 print(f"   • {error}")
         
         # Solutions
         if self.solutions:
-            print(f"\n🔧 Solutions recommandées:")
+            print(f"\n[CLE] Solutions recommandées:")
             for solution in self.solutions:
                 print(f"   • {solution}")
         

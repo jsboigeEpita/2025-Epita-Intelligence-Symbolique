@@ -34,7 +34,7 @@ def catalogue_composants_demo_epita():
     
     composants = {
         "demo_unified_system.py": {
-            "status": "❌ ÉCHEC",
+            "status": "[X] ÉCHEC",
             "description": "Système de démonstration unifié - Consolidation de 8 fichiers démo",
             "problemes": [
                 "ModuleNotFoundError: No module named 'semantic_kernel.agents'",
@@ -55,7 +55,7 @@ def catalogue_composants_demo_epita():
         },
         
         "playwright/demo_service_manager_validated.py": {
-            "status": "✅ SUCCÈS COMPLET",
+            "status": "[OK] SUCCÈS COMPLET",
             "description": "Démonstration complète du ServiceManager - Validation finale",
             "problemes": [],
             "fonctionnalites": [
@@ -71,7 +71,7 @@ def catalogue_composants_demo_epita():
         },
         
         "playwright/test_interface_demo.html": {
-            "status": "✅ SUCCÈS COMPLET",
+            "status": "[OK] SUCCÈS COMPLET",
             "description": "Interface web d'analyse argumentative - Interface de test",
             "problemes": [],
             "fonctionnalites": [
@@ -87,7 +87,7 @@ def catalogue_composants_demo_epita():
         },
         
         "playwright/README.md": {
-            "status": "✅ SUCCÈS", 
+            "status": "[OK] SUCCÈS", 
             "description": "Documentation des 9 tests fonctionnels Playwright",
             "problemes": [],
             "fonctionnalites": [
@@ -148,34 +148,34 @@ def evaluer_qualite_pedagogique():
     
     evaluation = {
         "strengths": [
-            "✅ ServiceManager COMPLÈTEMENT fonctionnel (ports, services, nettoyage)",
-            "✅ Interface web PARFAITEMENT opérationnelle (design + fonctionnalités)",
+            "[OK] ServiceManager COMPLÈTEMENT fonctionnel (ports, services, nettoyage)",
+            "[OK] Interface web PARFAITEMENT opérationnelle (design + fonctionnalités)",
             "🎯 Diversité des modes de démonstration (8 modes différents)",
             "📚 Documentation complète des 9 tests fonctionnels Playwright",
             "🏗️ Architecture modulaire et extensible validée",
-            "💡 Exemples pédagogiques concrets (syllogisme Socrate)",
-            "🔄 Intégration système Sherlock/Watson validé à 88-96%",
+            "[AMPOULE] Exemples pédagogiques concrets (syllogisme Socrate)",
+            "[ROTATION] Intégration système Sherlock/Watson validé à 88-96%",
             "🧹 Nettoyage automatique des processus (48 processus Node gérés)"
         ],
         
         "weaknesses": [
-            "❌ demo_unified_system.py non fonctionnel (semantic_kernel.agents)",
-            "⚠️ Problèmes d'encodage Unicode en environnement Windows",
+            "[X] demo_unified_system.py non fonctionnel (semantic_kernel.agents)",
+            "[ATTENTION] Problèmes d'encodage Unicode en environnement Windows",
             "📦 Dépendances psutil/requests nécessitent installation manuelle",
-            "🔧 Configuration environnement complexe pour certains composants"
+            "[CLE] Configuration environnement complexe pour certains composants"
         ],
         
         "tests_realises": [
-            "✅ ServiceManager: Gestion ports, services, nettoyage (SUCCÈS COMPLET)",
-            "✅ Interface web: Chargement, exemple, analyse (SUCCÈS COMPLET)",
-            "❌ Système unifié: Bloqué par dépendances (ÉCHEC DÉPENDANCES)",
+            "[OK] ServiceManager: Gestion ports, services, nettoyage (SUCCÈS COMPLET)",
+            "[OK] Interface web: Chargement, exemple, analyse (SUCCÈS COMPLET)",
+            "[X] Système unifié: Bloqué par dépendances (ÉCHEC DÉPENDANCES)",
             "📄 Documentation: 9 tests Playwright catalogués (COMPLET)"
         ],
         
         "recommandations": [
-            "🔧 Installer semantic-kernel[agents] pour débloquer système unifié",
+            "[CLE] Installer semantic-kernel[agents] pour débloquer système unifié",
             "📦 Créer requirements.txt avec psutil, requests, semantic-kernel",
-            "🚀 Script setup.py automatique pour installation Épita",
+            "[FUSEE] Script setup.py automatique pour installation Épita",
             "📖 Guide démarrage rapide spécifique étudiants",
             "🎬 Capturer démos vidéo des composants fonctionnels"
         ],
@@ -224,7 +224,7 @@ def main():
     # Catalogue des composants
     composants = catalogue_composants_demo_epita()
     
-    print("\n📊 RÉSUMÉ COMPOSANTS:")
+    print("\n[GRAPHIQUE] RÉSUMÉ COMPOSANTS:")
     for nom, info in composants.items():
         print(f"  {info['status']} {nom}")
         print(f"     {info['description']}")
@@ -232,19 +232,19 @@ def main():
     # Diagnostic des problèmes
     problemes = diagnostiquer_problemes_dependances()
     
-    print(f"\n⚠️ PROBLÈMES IDENTIFIÉS: {len(problemes)}")
+    print(f"\n[ATTENTION] PROBLÈMES IDENTIFIÉS: {len(problemes)}")
     for nom, details in problemes.items():
         print(f"  • {nom}: {details['criticite']}")
         
     # Évaluation pédagogique
     evaluation = evaluer_qualite_pedagogique()
     
-    print(f"\n🎓 ÉVALUATION PÉDAGOGIQUE: {evaluation['score_global']}")
+    print(f"\n[DIPLOME] ÉVALUATION PÉDAGOGIQUE: {evaluation['score_global']}")
     
     # Plan de correction
     plan = generer_plan_correction()
     
-    print(f"\n🔧 PROCHAINES ÉTAPES: {len(plan['priorite_1_critique'])} actions critiques")
+    print(f"\n[CLE] PROCHAINES ÉTAPES: {len(plan['priorite_1_critique'])} actions critiques")
     
     return {
         "composants": composants,
@@ -256,4 +256,4 @@ def main():
 
 if __name__ == "__main__":
     diagnostic = main()
-    print(f"\n✅ Diagnostic généré avec succès")
+    print(f"\n[OK] Diagnostic généré avec succès")
