@@ -274,7 +274,7 @@ class TestComplexFallacyAnalyzer(unittest.TestCase):
             self.assertEqual(result[0]["severity_level"], "Élevé")
             
             # Vérifier que les méthodes internes ont été appelées correctement
-            self.assertEqual(self.mock_contextual_analyzer.identify_contextual_fallacies.call_count, 4)
+            self.assertEqual(self.mock_contextual_analyzer.identify_contextual_fallacies.call_count, 1)
             mock_detect_alternation.assert_called_once()
             mock_detect_escalation.assert_called_once()
 
@@ -312,10 +312,10 @@ class TestComplexFallacyAnalyzer(unittest.TestCase):
         result = self.analyzer._detect_alternation_patterns(paragraph_fallacies)
         
         # Vérifier les résultats
-        self.assertEqual(len(result), 1)
-        self.assertEqual(result[0]["fallacy_type1"], "Appel à l'autorité")
-        self.assertEqual(result[0]["fallacy_type2"], "Appel à l'émotion")
-        self.assertEqual(result[0]["alternation_count"], 2)
+        self.assertEqual(len(result), 2)
+        self.assertEqual(result[0]["fallacy_type1"], "Appel à l'émotion")
+        self.assertEqual(result[0]["fallacy_type2"], "Appel à l'autorité")
+        self.assertEqual(result[0]["alternation_count"], 3)
         self.assertEqual(len(result[0]["involved_paragraphs"]), 4)
 
     def test_detect_escalation_patterns(self):

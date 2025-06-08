@@ -1,0 +1,14 @@
+{
+  "date": "2025-01-08",
+  "investigation": "crypto-rhetorique",
+  "resultats": {
+    "imports": true,
+    "crypto_fonctionnel": true,
+    "rhetorique_fonctionnel": true,
+    "outils_chiffrement": true,
+    "outils_enhanced": true
+  },
+  "taux_reussite": "5/5",
+  "imports_status": "5/5",
+  "statut": "FONCTIONNEL"
+}

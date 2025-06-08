@@ -547,6 +547,21 @@ class CluedoDataset:
         """Retourne les éléments du jeu (compatibilité tests)."""
         return self._elements_jeu
     
+    @property
+    def suspects(self) -> List[str]:
+        """Retourne la liste des suspects."""
+        return self._elements_jeu["suspects"]
+    
+    @property
+    def armes(self) -> List[str]:
+        """Retourne la liste des armes."""
+        return self._elements_jeu["armes"]
+    
+    @property
+    def lieux(self) -> List[str]:
+        """Retourne la liste des lieux."""
+        return self._elements_jeu["lieux"]
+    
     def is_game_solvable_by_elimination(self) -> bool:
         """
         Vérifie si le jeu peut être résolu par élimination complète.
