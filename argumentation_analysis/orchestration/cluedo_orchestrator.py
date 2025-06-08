@@ -4,11 +4,13 @@ from typing import List, Dict, Any, Optional
 import semantic_kernel as sk
 from semantic_kernel.functions import kernel_function
 from semantic_kernel.kernel import Kernel
-from semantic_kernel.agents import Agent
-from semantic_kernel.agents.group_chat.agent_group_chat import AgentGroupChat
-from semantic_kernel.agents.strategies.selection.sequential_selection_strategy import SequentialSelectionStrategy
-from semantic_kernel.agents.strategies.termination.termination_strategy import TerminationStrategy
+# CORRECTIF COMPATIBILITÉ: Utilisation du module de compatibilité pour agents et filters
+from argumentation_analysis.utils.semantic_kernel_compatibility import (
+    Agent, AgentGroupChat, SequentialSelectionStrategy, TerminationStrategy,
+    FunctionInvocationContext, FilterTypes
+)
 from semantic_kernel.contents.chat_message_content import ChatMessageContent
+from semantic_kernel.functions.kernel_arguments import KernelArguments
 from pydantic import Field
 import logging
 
@@ -20,9 +22,6 @@ from argumentation_analysis.core.enquete_states import EnqueteCluedoState
 from argumentation_analysis.orchestration.plugins.enquete_state_manager_plugin import EnqueteStateManagerPlugin
 from argumentation_analysis.agents.core.pm.sherlock_enquete_agent import SherlockEnqueteAgent
 from argumentation_analysis.agents.core.logic.watson_logic_assistant import WatsonLogicAssistant
-from semantic_kernel.functions.kernel_arguments import KernelArguments
-from semantic_kernel.filters.functions.function_invocation_context import FunctionInvocationContext
-from semantic_kernel.filters.filter_types import FilterTypes
 
 
 class CluedoTerminationStrategy(TerminationStrategy):

@@ -1,0 +1,7 @@
+﻿============================= test session starts =============================
+platform win32 -- Python 3.9.12, pytest-8.4.0, pluggy-1.6.0 -- C:\tools\miniconda3\python.exe
+cachedir: .pytest_cache
+rootdir: C:\dev\2025-Epita-Intelligence-Symbolique\tests
+configfile: pytest.ini
+plugins: anyio-4.9.0, asyncio-1.0.0, mock-3.14.1
+asyncio: mode=strict, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function

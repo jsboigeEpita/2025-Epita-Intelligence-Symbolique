@@ -10,7 +10,8 @@ from pathlib import Path
 
 from semantic_kernel import Kernel
 from semantic_kernel.connectors.ai.open_ai import OpenAIChatCompletion
-from semantic_kernel.agents.group_chat.agent_group_chat import AgentGroupChat
+# CORRECTIF COMPATIBILITÉ: Utilisation du module de compatibilité
+from argumentation_analysis.utils.semantic_kernel_compatibility import AgentGroupChat
 
 # Import des vrais agents
 from argumentation_analysis.agents.core.pm.sherlock_enquete_agent import SherlockEnqueteAgent
