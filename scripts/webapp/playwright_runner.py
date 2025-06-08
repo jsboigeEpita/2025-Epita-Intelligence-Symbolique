@@ -178,8 +178,8 @@ class PlaywrightRunner:
         # Chemins de tests
         pytest_args.extend(test_paths)
         
-        # Marqueurs Playwright
-        pytest_args.extend(['-m', 'playwright'])
+        # Marqueurs Playwright - temporairement désactivé pour débuggage
+        # pytest_args.extend(['-m', 'playwright'])
         
         # Intégration dans commande
         if sys.platform == "win32":
