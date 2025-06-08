@@ -1,7 +1,6 @@
 # core/strategies.py
-from semantic_kernel.agents import Agent
-from semantic_kernel.agents.strategies.termination.termination_strategy import TerminationStrategy
-from semantic_kernel.agents.strategies.selection.selection_strategy import SelectionStrategy
+# CORRECTIF COMPATIBILITÉ: Utilisation du module de compatibilité
+from argumentation_analysis.utils.semantic_kernel_compatibility import Agent, TerminationStrategy, SelectionStrategy
 from semantic_kernel.contents import ChatMessageContent, AuthorRole
 from typing import List, Dict, TYPE_CHECKING
 import logging

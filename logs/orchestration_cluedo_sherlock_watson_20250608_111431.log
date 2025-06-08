@@ -1,0 +1,9 @@
+2025-06-08 11:14:31,128 [INFO] [__main__] === DÉMARRAGE TEST 1: CLUEDO SHERLOCK-WATSON (SANS MORIARTY) ===
+2025-06-08 11:14:31,129 [INFO] [__main__] ÉTAT PARTAGÉ: Initialisation
+2025-06-08 11:14:31,130 [INFO] [argumentation_analysis] Package 'argumentation_analysis' chargé.
+2025-06-08 11:14:31,140 [WARNING] [root] Certaines classes/fonctions de 'agents.core.extract' n'ont pas pu être exposées: No module named 'semantic_kernel'
+2025-06-08 11:14:31,143 [WARNING] [root] Certains composants de 'agents.core.informal' n'ont pas pu être importés/exposés: No module named 'semantic_kernel'
+2025-06-08 11:14:31,148 [WARNING] [root] Le sous-module 'logic' de 'agents.core' n'a pas pu être importé: No module named 'semantic_kernel'
+2025-06-08 11:14:31,176 [WARNING] [root] Impossible d'importer les définitions PL: No module named 'semantic_kernel'
+2025-06-08 11:14:31,180 [WARNING] [root] Le sous-module 'synthesis' de 'agents.core' n'a pas pu être importé: No module named 'semantic_kernel'
+2025-06-08 11:14:31,183 [ERROR] [__main__] Erreur dans la démonstration: No module named 'semantic_kernel'

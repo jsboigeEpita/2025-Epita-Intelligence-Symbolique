@@ -22,7 +22,6 @@ from pathlib import Path
 # Imports Semantic Kernel et architecture
 from argumentation_analysis.core.shared_state import RhetoricalAnalysisState
 from argumentation_analysis.core.llm_service import create_llm_service
-from argumentation_analysis.orchestration.real_llm_orchestrator import RealConversationLogger
 
 logger = logging.getLogger("ConversationOrchestrator")
 
@@ -693,6 +692,27 @@ class ConversationOrchestrator:
             "tools_count": len(self.conv_logger.tool_calls),
             "processing_time": self.state.processing_time,
             "completed": self.state.completed
+        }
+
+    async def run_demo_conversation(self, text: str) -> Dict[str, Any]:
+        """
+        Interface asynchrone pour le pipeline unifié.
+        
+        Args:
+            text: Texte à analyser
+            
+        Returns:
+            Dict contenant les résultats de l'orchestration
+        """
+        # Lancer l'orchestration synchrone et retourner un format compatible
+        report = self.run_orchestration(text)
+        
+        return {
+            "status": "success",
+            "report": report,
+            "conversation_state": self.get_conversation_state(),
+            "text_analyzed": text,
+            "mode": self.mode
         }
 
 

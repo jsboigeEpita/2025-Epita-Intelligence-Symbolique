@@ -10,7 +10,8 @@ import logging
 import matplotlib.pyplot as plt
 import numpy as np
 from typing import Dict, List, Tuple
-from semantic_kernel.agents import Agent
+# CORRECTIF COMPATIBILITÉ: Utilisation du module de compatibilité
+from argumentation_analysis.utils.semantic_kernel_compatibility import Agent
 from semantic_kernel.contents import ChatMessageContent, AuthorRole
 from unittest.mock import MagicMock
 

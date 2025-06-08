@@ -1,0 +1,72 @@
+﻿============================= test session starts =============================
+platform win32 -- Python 3.9.12, pytest-8.4.0, pluggy-1.6.0 -- C:\tools\miniconda3\python.exe
+cachedir: .pytest_cache
+rootdir: C:\dev\2025-Epita-Intelligence-Symbolique\tests
+configfile: pytest.ini
+plugins: anyio-4.9.0, asyncio-1.0.0, mock-3.14.1
+asyncio: mode=strict, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collecting ... collected 32 items
+
+unit/argumentation_analysis/test_extract_service.py::TestExtractService::test_extract_text_with_markers_valid FAILED [  3%]
+unit/argumentation_analysis/test_extract_service.py::TestExtractService::test_extract_text_with_markers_invalid_start PASSED [  6%]
+unit/argumentation_analysis/test_extract_service.py::TestExtractService::test_extract_text_with_markers_invalid_end PASSED [  9%]
+unit/argumentation_analysis/test_extract_service.py::TestExtractService::test_extract_text_with_template FAILED [ 12%]
+unit/argumentation_analysis/test_extract_service.py::TestExtractService::test_extract_text_empty_text PASSED [ 15%]
+unit/argumentation_analysis/test_extract_service.py::TestExtractService::test_find_similar_text PASSED [ 18%]
+unit/argumentation_analysis/test_extract_service.py::TestExtractService::test_find_similar_text_empty PASSED [ 21%]
+unit/argumentation_analysis/test_extract_service.py::TestExtractService::test_find_similar_text_long_marker PASSED [ 25%]
+unit/argumentation_analysis/test_extract_service.py::TestExtractService::test_highlight_text PASSED [ 28%]
+unit/argumentation_analysis/test_extract_service.py::TestExtractService::test_highlight_text_empty PASSED [ 31%]
+unit/argumentation_analysis/test_extract_service.py::TestExtractService::test_search_in_text PASSED [ 34%]
+unit/argumentation_analysis/test_extract_service.py::TestExtractService::test_search_in_text_case_sensitive PASSED [ 37%]
+unit/argumentation_analysis/test_extract_service.py::TestExtractService::test_highlight_search_results PASSED [ 40%]
+unit/argumentation_analysis/test_extract_service.py::TestExtractService::test_highlight_search_results_empty PASSED [ 43%]
+unit/argumentation_analysis/test_extract_service.py::TestExtractService::test_extract_blocks PASSED [ 46%]
+unit/argumentation_analysis/test_extract_service.py::TestExtractService::test_extract_blocks_empty PASSED [ 50%]
+unit/argumentation_analysis/test_extract_service.py::TestExtractService::test_search_text_dichotomically PASSED [ 53%]
+unit/argumentation_analysis/test_extract_service.py::TestExtractService::test_search_text_dichotomically_empty PASSED [ 56%]
+unit/argumentation_analysis/test_cache_service.py::TestCacheService::test_init PASSED [ 59%]
+unit/argumentation_analysis/test_cache_service.py::TestCacheService::test_get_cache_filepath PASSED [ 62%]
+unit/argumentation_analysis/test_cache_service.py::TestCacheService::test_save_to_cache PASSED [ 65%]
+unit/argumentation_analysis/test_cache_service.py::TestCacheService::test_save_to_cache_empty_text PASSED [ 68%]
+unit/argumentation_analysis/test_cache_service.py::TestCacheService::test_load_from_cache PASSED [ 71%]
+unit/argumentation_analysis/test_cache_service.py::TestCacheService::test_load_from_cache_nonexistent PASSED [ 75%]
+unit/argumentation_analysis/test_cache_service.py::TestCacheService::test_load_from_cache_error PASSED [ 78%]
+unit/argumentation_analysis/test_cache_service.py::TestCacheService::test_clear_cache_specific_url PASSED [ 81%]
+unit/argumentation_analysis/test_cache_service.py::TestCacheService::test_clear_cache_nonexistent_url PASSED [ 84%]
+unit/argumentation_analysis/test_cache_service.py::TestCacheService::test_clear_cache_all PASSED [ 87%]
+unit/argumentation_analysis/test_cache_service.py::TestCacheService::test_clear_cache_error PASSED [ 90%]
+unit/argumentation_analysis/test_cache_service.py::TestCacheService::test_get_cache_size PASSED [ 93%]
+unit/argumentation_analysis/test_cache_service.py::TestCacheService::test_get_cache_info PASSED [ 96%]
+unit/argumentation_analysis/test_cache_service.py::TestCacheService::test_format_size PASSED [100%]2025-06-08 16:57:42,499 - tests.mocks.jpype_setup - INFO - jpype_setup.py: pytest_sessionfinish hook triggered. Exit status: 1
+2025-06-08 16:57:42,499 - tests.mocks.jpype_setup - INFO -    pytest_sessionfinish: sys.modules['jpype'] IS _REAL_JPYPE_MODULE. Le vrai JPype a potentiellement été utilisé.
+2025-06-08 16:57:42,499 - tests.mocks.jpype_setup - INFO -    pytest_sessionfinish: Tentative d'arrêt de la JVM via shutdown_jvm_if_needed() car le vrai JPype a potentiellement été utilisé.
+2025-06-08 16:57:42,499 - tests.mocks.jpype_setup - INFO -    pytest_sessionfinish: Vérification de l'état de la JVM après tentative d'arrêt.
+2025-06-08 16:57:42,499 - tests.mocks.jpype_setup - INFO -    pytest_sessionfinish: JVM encore démarrée après tentative d'arrêt: False
+2025-06-08 16:57:42,499 - tests.mocks.jpype_setup - INFO -    pytest_sessionfinish: destroy_jvm est False (selon config): False
+2025-06-08 16:57:42,499 - tests.mocks.jpype_setup - INFO -    pytest_sessionfinish: JVM non démarrée ou destroy_jvm est True. Pas de gestion spéciale de sys.modules pour atexit depuis ici.
+
+
+================================== FAILURES ===================================
+___________ TestExtractService.test_extract_text_with_markers_valid ___________
+unit\argumentation_analysis\test_extract_service.py:61: in test_extract_text_with_markers_valid
+    assert "\u2705 Extraction r\xe9ussie" in status
+E   AssertionError: assert '\u2705 Extraction r\xe9ussie' in '[OK] Extraction r\xe9ussie'
+---------------------------- Captured stdout setup ----------------------------
+2025-06-08 16:57:41,964 - tests.mocks.jpype_setup - INFO - Test test_extract_text_with_markers_valid utilise MOCK JPype.
+2025-06-08 16:57:41,964 - tests.mocks.jpype_setup - INFO - �tat (_jvm_started, _jvm_path, config.jvm_path) du mock JPype r�initialis� pour le test.
+-------------------------- Captured stdout teardown ---------------------------
+2025-06-08 16:57:42,227 - tests.mocks.jpype_setup - INFO - �tat de JPype restaur� apr�s test test_extract_text_with_markers_valid (utilisation du mock).
+_____________ TestExtractService.test_extract_text_with_template ______________
+unit\argumentation_analysis\test_extract_service.py:122: in test_extract_text_with_template
+    assert "\u2705 Extraction r\xe9ussie" in status
+E   AssertionError: assert '\u2705 Extraction r\xe9ussie' in '[OK] Extraction r\xe9ussie'
+---------------------------- Captured stdout setup ----------------------------
+2025-06-08 16:57:42,239 - tests.mocks.jpype_setup - INFO - Test test_extract_text_with_template utilise MOCK JPype.
+2025-06-08 16:57:42,239 - tests.mocks.jpype_setup - INFO - �tat (_jvm_started, _jvm_path, config.jvm_path) du mock JPype r�initialis� pour le test.
+-------------------------- Captured stdout teardown ---------------------------
+2025-06-08 16:57:42,249 - tests.mocks.jpype_setup - INFO - �tat de JPype restaur� apr�s test test_extract_text_with_template (utilisation du mock).
+=========================== short test summary info ===========================
+FAILED unit/argumentation_analysis/test_extract_service.py::TestExtractService::test_extract_text_with_markers_valid
+FAILED unit/argumentation_analysis/test_extract_service.py::TestExtractService::test_extract_text_with_template
+======================== 2 failed, 30 passed in 0.69s =========================

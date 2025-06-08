@@ -1,13 +1,6 @@
 #!/usr/bin/env python3
 """
-Test Phase B - Optimisation Naturalité Dialogue
-Script de validation des améliorations conversationnelles après optimisation des prompts.
-
-OBJECTIFS PHASE B :
-- Verbosité : 223 → 80-120 caractères par message  
-- Langage : Technique → Conversationnel naturel
-- Répétitions : Éliminer formules mécaniques
-- Score naturalité : 4.0 → 7.0/10
+Test Phase B - Naturalite Dialogue (Version simplifiee)
 """
 
 import sys
@@ -17,12 +10,9 @@ from datetime import datetime
 from typing import Dict, List, Tuple, Any
 from dataclasses import dataclass, asdict
 
-# Ajout du chemin pour les imports
-sys.path.append('.')
-
 @dataclass
 class NaturaliteMetrics:
-    """Métriques de naturalité conversationnelle"""
+    """Metriques de naturalite conversationnelle"""
     agent_name: str
     messages_total: int
     longueur_moyenne: float
@@ -34,48 +24,48 @@ class NaturaliteMetrics:
     score_naturalite: float
     exemples_messages: List[str]
 
-class TestPhaseB:
-    """Tests pour la Phase B - Naturalité du dialogue"""
+class TestPhaseBSimple:
+    """Tests simplifies pour la Phase B - Naturalite du dialogue"""
     
     def __init__(self):
         self.rapport = {
             "phase": "B",
-            "objectif": "Naturalité conversationnelle", 
+            "objectif": "Naturalite conversationnelle", 
             "timestamp": datetime.now().isoformat(),
             "metriques": {},
             "comparaison": {},
             "validation": {}
         }
         
-        # Patterns naturalité vs technique
+        # Patterns naturalite vs technique
         self.patterns_naturels = [
             r'\b(hmm|ah|oh|eh|ben|bon|alors|tiens|voyons)\b',
-            r'\b(parfait|excellent|magnifique|bravo|super|génial)\b',
-            r'\b(curieux|intéressant|fascinant|étonnant|bizarre)\b',
-            r'\b(évidemment|bien sûr|naturellement|clairement)\b',
-            r'\*[^*]+\*',  # Actions entre astérisques *sourire*
+            r'\b(parfait|excellent|magnifique|bravo|super|genial)\b',
+            r'\b(curieux|interessant|fascinant|etonnant|bizarre)\b',
+            r'\b(evidemment|bien sur|naturellement|clairement)\b',
+            r'\*[^*]+\*',  # Actions entre asterisques *sourire*
             r'\b(attendez|moment|en fait|d\'ailleurs|au fait)\b'
         ]
         
         self.patterns_techniques = [
-            r'\b(j\'exécute|procédons|examination|implications)\b',
-            r'\b(analyse|déduction|validation|vérification)\b',
-            r'\b(méthodiquement|systématiquement|rigoureusement)\b',
+            r'\b(j\'execute|procedons|examination|implications)\b',
+            r'\b(analyse|deduction|validation|verification)\b',
+            r'\b(methodiquement|systematiquement|rigoureusement)\b',
             r'\b(permettez-moi de|je propose la suggestion)\b'
         ]
         
-        # Formules mécaniques à détecter
+        # Formules mecaniques a detecter
         self.formules_mecaniques = [
             r'j\'observe que.*',
             r'logiquement, cela implique.*',
             r'permettez-moi de.*',
             r'je pressens que.*',
-            r'\*\*RÉFUTATION\*\*.*',
-            r'\*\*RÉVÉLATION\*\*.*'
+            r'\*\*REFUTATION\*\*.*',
+            r'\*\*REVELATION\*\*.*'
         ]
 
     def analyser_naturalite_message(self, message: str) -> Dict[str, Any]:
-        """Analyse la naturalité d'un message individuel"""
+        """Analyse la naturalite d'un message individuel"""
         message_clean = message.lower().strip()
         
         # Longueur
@@ -85,13 +75,13 @@ class TestPhaseB:
         naturelles = sum(len(re.findall(pattern, message_clean)) for pattern in self.patterns_naturels)
         techniques = sum(len(re.findall(pattern, message_clean)) for pattern in self.patterns_techniques)
         
-        # Répétitions mécaniques
+        # Repetitions mecaniques
         mecaniques = sum(len(re.findall(pattern, message_clean)) for pattern in self.formules_mecaniques)
         
-        # Score naturalité (0-10)
+        # Score naturalite (0-10)
         score_base = 5.0
         
-        # Bonus naturalité
+        # Bonus naturalite
         if longueur <= 120:
             score_base += 1.0
         if longueur <= 80:
@@ -117,37 +107,37 @@ class TestPhaseB:
         }
 
     def simuler_messages_watson(self) -> List[str]:
-        """Simule des messages Watson avec nouveaux prompts optimisés"""
+        """Simule des messages Watson avec nouveaux prompts optimises"""
         return [
-            "Hmm, voyons voir... cette piste révèle quelque chose d'important",
-            "Ah ! Ça change tout ! Trois connexions se dessinent",
-            "Intéressant... En fait, cette déduction mène ailleurs", 
+            "Hmm, voyons voir... cette piste revele quelque chose d'important",
+            "Ah ! Ca change tout ! Trois connexions se dessinent",
+            "Interessant... En fait, cette deduction mene ailleurs", 
             "Moment... Cette logique cache une faille",
-            "Parfait ! Cette analyse confirme mes soupçons"
+            "Parfait ! Cette analyse confirme mes soupcons"
         ]
         
     def simuler_messages_moriarty(self) -> List[str]:
-        """Simule des messages Moriarty avec nouveaux prompts optimisés"""
+        """Simule des messages Moriarty avec nouveaux prompts optimises"""
         return [
-            "*sourire énigmatique* Hélas... j'ai le Poignard",
+            "*sourire enigmatique* Helas... j'ai le Poignard",
             "Tiens, tiens... Le Colonel repose dans ma main",
-            "Ah ah... Quelle surprise délicieuse !",
-            "*applaudit* Magnifique déduction, Holmes !",
-            "Comme c'est... savoureux. Voyez-vous le Révolver ?"
+            "Ah ah... Quelle surprise delicieuse !",
+            "*applaudit* Magnifique deduction, Holmes !",
+            "Comme c'est... savoureux. Voyez-vous le Revolver ?"
         ]
         
     def simuler_messages_sherlock(self) -> List[str]:
-        """Simule des messages Sherlock avec nouveaux prompts optimisés"""
+        """Simule des messages Sherlock avec nouveaux prompts optimises"""
         return [
-            "Mon instinct dit que c'est crucial pour l'enquête",
-            "Élémentaire ! Cette piste mène au Salon", 
-            "Aha ! Regardons ça de plus près Watson",
-            "C'est clair ! Procédons méthodiquement",
-            "Fascinant... Bien sûr ! L'évidence était là"
+            "Mon instinct dit que c'est crucial pour l'enquete",
+            "Elementaire ! Cette piste mene au Salon", 
+            "Aha ! Regardons ca de plus pres Watson",
+            "C'est clair ! Procedons methodiquement",
+            "Fascinant... Bien sur ! L'evidence etait la"
         ]
 
     def tester_naturalite_agents(self) -> Dict[str, NaturaliteMetrics]:
-        """Teste la naturalité des 3 agents optimisés"""
+        """Teste la naturalite des 3 agents optimises"""
         print("TEST NATURALITE CONVERSATIONNELLE")
         print("=" * 50)
         
@@ -164,7 +154,7 @@ class TestPhaseB:
             
             analyses = [self.analyser_naturalite_message(msg) for msg in messages]
             
-            # Calculs métriques
+            # Calculs metriques
             longueurs = [a['longueur'] for a in analyses]
             longueur_moyenne = sum(longueurs) / len(longueurs)
             longueur_mediane = sorted(longueurs)[len(longueurs)//2]
@@ -176,7 +166,7 @@ class TestPhaseB:
             scores = [a['score'] for a in analyses]
             score_naturalite = sum(scores) / len(scores)
             
-            # Variété lexicale (approximation)
+            # Variete lexicale (approximation)
             mots_uniques = len(set(' '.join(messages).lower().split()))
             mots_total = len(' '.join(messages).split())
             variete_lexicale = mots_uniques / mots_total if mots_total > 0 else 0
@@ -196,7 +186,7 @@ class TestPhaseB:
             
             resultats[agent_name] = metrics
             
-            # Affichage résultats
+            # Affichage resultats
             print(f"  Longueur moyenne: {longueur_moyenne:.1f} caracteres")
             print(f"  Expressions naturelles: {total_naturelles}")
             print(f"  Expressions techniques: {total_techniques}")
@@ -208,62 +198,11 @@ class TestPhaseB:
             status_naturalite = "[OK]" if score_naturalite >= 7.0 else "[NON]"
             status_mecaniques = "[OK]" if total_mecaniques == 0 else "[NON]"
             
-            print(f"  {status_longueur} Longueur cible (≤120): {longueur_moyenne:.1f}")
-            print(f"  {status_naturalite} Naturalité cible (≥7.0): {score_naturalite:.2f}")
-            print(f"  {status_mecaniques} Zéro répétition mécanique: {total_mecaniques}")
+            print(f"  {status_longueur} Longueur cible (<=120): {longueur_moyenne:.1f}")
+            print(f"  {status_naturalite} Naturalite cible (>=7.0): {score_naturalite:.2f}")
+            print(f"  {status_mecaniques} Zero repetition mecanique: {total_mecaniques}")
         
         return resultats
-
-    def generer_comparaison_avant_apres(self, resultats: Dict[str, NaturaliteMetrics]):
-        """Génère la comparaison avant/après Phase B"""
-        print(f"\nCOMPARAISON AVANT/APRES PHASE B")
-        print("=" * 50)
-        
-        # Données "avant" simulées (Phase A)
-        avant_phase_b = {
-            'longueur_moyenne': 223,
-            'score_naturalite': 4.0,
-            'expressions_techniques': 12,
-            'repetitions_mecaniques': 8
-        }
-        
-        # Calcul moyennes "après"
-        longueur_apres = sum(m.longueur_moyenne for m in resultats.values()) / len(resultats)
-        naturalite_apres = sum(m.score_naturalite for m in resultats.values()) / len(resultats)
-        techniques_apres = sum(m.expressions_techniques for m in resultats.values()) / len(resultats)
-        mecaniques_apres = sum(m.repetitions_mecaniques for m in resultats.values()) / len(resultats)
-        
-        # Affichage comparaison
-        print(f"Longueur moyenne:")
-        print(f"   AVANT: {avant_phase_b['longueur_moyenne']} caractères")
-        print(f"   APRÈS: {longueur_apres:.1f} caractères")
-        print(f"   AMÉLIORATION: {((avant_phase_b['longueur_moyenne'] - longueur_apres) / avant_phase_b['longueur_moyenne'] * 100):.1f}%")
-        
-        print(f"\nScore naturalite:")
-        print(f"   AVANT: {avant_phase_b['score_naturalite']}/10")
-        print(f"   APRÈS: {naturalite_apres:.2f}/10")
-        print(f"   AMÉLIORATION: +{(naturalite_apres - avant_phase_b['score_naturalite']):.2f} points")
-        
-        print(f"\nExpressions techniques:")
-        print(f"   AVANT: {avant_phase_b['expressions_techniques']}")
-        print(f"   APRÈS: {techniques_apres:.1f}")
-        print(f"   RÉDUCTION: {((avant_phase_b['expressions_techniques'] - techniques_apres) / avant_phase_b['expressions_techniques'] * 100):.1f}%")
-        
-        print(f"\nRepetitions mecaniques:")
-        print(f"   AVANT: {avant_phase_b['repetitions_mecaniques']}")
-        print(f"   APRÈS: {mecaniques_apres:.1f}")
-        reduction_mecaniques = 100 if avant_phase_b['repetitions_mecaniques'] > 0 and mecaniques_apres == 0 else 0
-        print(f"   RÉDUCTION: {reduction_mecaniques}%")
-        
-        return {
-            'avant': avant_phase_b,
-            'apres': {
-                'longueur_moyenne': longueur_apres,
-                'score_naturalite': naturalite_apres,
-                'expressions_techniques': techniques_apres,
-                'repetitions_mecaniques': mecaniques_apres
-            }
-        }
 
     def valider_objectifs_phase_b(self, resultats: Dict[str, NaturaliteMetrics]) -> Dict[str, bool]:
         """Valide l'atteinte des objectifs Phase B"""
@@ -275,7 +214,7 @@ class TestPhaseB:
         naturalite_moyenne_globale = sum(m.score_naturalite for m in resultats.values()) / len(resultats)
         mecaniques_total = sum(m.repetitions_mecaniques for m in resultats.values())
         
-        # Validation critères
+        # Validation criteres
         criteres = {
             'longueur_optimisee': longueur_moyenne_globale <= 120,
             'naturalite_cible': naturalite_moyenne_globale >= 7.0,
@@ -294,74 +233,52 @@ class TestPhaseB:
         
         return criteres
 
-    def generer_rapport_phase_b(self, resultats: Dict[str, NaturaliteMetrics], 
-                               comparaison: Dict, validation: Dict[str, bool]):
-        """Génère le rapport complet Phase B"""
-        
-        # Mise à jour du rapport
-        self.rapport["metriques"] = {
-            agent: asdict(metrics) for agent, metrics in resultats.items()
-        }
-        self.rapport["comparaison"] = comparaison
-        self.rapport["validation"] = validation
-        
-        # Calculs summary
-        longueur_moyenne = sum(m.longueur_moyenne for m in resultats.values()) / len(resultats)
-        naturalite_moyenne = sum(m.score_naturalite for m in resultats.values()) / len(resultats)
-        
-        self.rapport["summary"] = {
-            "longueur_moyenne_globale": longueur_moyenne,
-            "naturalite_moyenne_globale": naturalite_moyenne,
-            "statut_global": all(validation.values()),
-            "progression_naturalite": naturalite_moyenne - 4.0,
-            "reduction_verbosité": ((223 - longueur_moyenne) / 223 * 100)
-        }
-        
-        # Sauvegarde
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        filename = f"rapport_validation_phase_b_{timestamp}.json"
-        
-        with open(filename, 'w', encoding='utf-8') as f:
-            json.dump(self.rapport, f, indent=2, ensure_ascii=False)
-            
-        print(f"\nRapport sauvegarde: {filename}")
-        return filename
-
     def executer_test_complet(self):
-        """Exécute le test complet Phase B"""
+        """Execute le test complet Phase B"""
         print("DEBUT TEST PHASE B - NATURALITE DIALOGUE")
         print("Objectif: Optimiser la naturalite conversationnelle")
         print("Phase A accomplie: Personnalites distinctes (7.5/10)")
         print()
         
-        # Tests de naturalité  
+        # Tests de naturalite  
         resultats = self.tester_naturalite_agents()
-        
-        # Comparaison avant/après
-        comparaison = self.generer_comparaison_avant_apres(resultats)
         
         # Validation objectifs
         validation = self.valider_objectifs_phase_b(resultats)
         
-        # Rapport final
-        rapport_file = self.generer_rapport_phase_b(resultats, comparaison, validation)
+        # Sauvegarde simplifiee
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        filename = f"phase_b_simple_results_{timestamp}.json"
         
-        print(f"\nTEST PHASE B TERMINE")
-        return resultats, validation, rapport_file
+        rapport_data = {
+            "timestamp": datetime.now().isoformat(),
+            "phase": "B - Naturalite",
+            "resultats": {agent: asdict(metrics) for agent, metrics in resultats.items()},
+            "validation": validation,
+            "statut_global": all(validation.values())
+        }
+        
+        with open(filename, 'w', encoding='utf-8') as f:
+            json.dump(rapport_data, f, indent=2, ensure_ascii=False)
+            
+        print(f"\nRapport sauvegarde: {filename}")
+        print(f"TEST PHASE B TERMINE")
+        
+        return resultats, validation, filename
 
 def main():
-    """Point d'entrée principal"""
-    test_phase_b = TestPhaseB()
+    """Point d'entree principal"""
+    test_phase_b = TestPhaseBSimple()
     resultats, validation, rapport = test_phase_b.executer_test_complet()
     
-    # Résumé final
+    # Resume final
     if all(validation.values()):
         print(f"\nPHASE B REUSSIE ! Naturalite conversationnelle optimisee")
         print(f"Prochaine etape: Continuez vers les phases suivantes")
+        return 0
     else:
         print(f"\nPHASE B A PEAUFINER. Ajustements recommandes.")
-        
-    return 0
+        return 1
 
 if __name__ == "__main__":
     sys.exit(main())
