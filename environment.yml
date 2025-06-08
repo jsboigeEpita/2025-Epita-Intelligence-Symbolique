@@ -43,7 +43,7 @@ dependencies:
   - markdown # Ajouté pour corriger ModuleNotFoundError
   - pip:
     - Flask-CORS # Spécifique, souvent via pip
-    - semantic-kernel>=0.9.6b1 # Latest available Python version - Fixed Pydantic compatibility
+    - semantic-kernel>=1.32.2 # Latest version from GitHub releases - Full modern API
     - markdown
     - playwright
     - pytest-playwright
