@@ -150,7 +150,10 @@ class TestWebAppAPIInvestigation:
                 result = response.json()
                 print(f"   [OK] Framework construit")
                 extensions = result.get('extensions', {})
-                print(f"   Extensions calculées: {list(extensions.keys())}")
+                if isinstance(extensions, dict):
+                    print(f"   Extensions calculées: {list(extensions.keys())}")
+                else:
+                    print(f"   Extensions calculées: {extensions}")
             else:
                 print(f"   [ERROR] Erreur: {response.text}")
                 

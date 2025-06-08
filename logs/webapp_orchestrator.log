@@ -70,3 +70,62 @@
 2025-06-08 20:20:29,518 - __main__ - INFO - [96m[20:20:29.518] [OK] APPLICATION WEB OPERATIONNELLE[0m
 2025-06-08 20:20:29,518 - __main__ - INFO -    Détails: Backend: http://localhost:5003
 2025-06-08 20:20:29,518 - __main__ - INFO -    Résultat: Tous les services démarrés
+2025-06-08 20:26:21,970 - __main__ - INFO - [96m[20:26:21.970] [START] DEMARRAGE APPLICATION WEB[0m
+2025-06-08 20:26:21,970 - __main__ - INFO -    Détails: Mode: Headless
+2025-06-08 20:26:21,970 - __main__ - INFO -    Résultat: Initialisation orchestrateur
+2025-06-08 20:26:21,971 - __main__ - INFO - [96m[20:26:21.971] [CLEAN] NETTOYAGE PREALABLE[0m
+2025-06-08 20:26:21,971 - __main__ - INFO -    Détails: Arret instances existantes
+2025-06-08 20:26:21,971 - __main__ - INFO - [CLEAN] Debut nettoyage processus application web
+2025-06-08 20:26:23,781 - __main__ - INFO - Processus trouvé: PID 5368 - node d:/dev/roo-extensions/mcps/internal/servers/jinavigator-server/dist/index.js
+2025-06-08 20:26:24,824 - __main__ - INFO - Processus trouvé: PID 7116 - c:\tools\miniconda3\python.exe c:\users\jsboi\.vscode\extensions\ms-python.isort-2025.0.0\bundled\to
+2025-06-08 20:26:25,502 - __main__ - INFO - Processus trouvé: PID 14740 - c:\tools\miniconda3\python.exe start_webapp.py --frontend --timeout 5
+2025-06-08 20:26:25,642 - __main__ - INFO - Processus trouvé: PID 21120 - python -m argumentation_analysis.services.web_api.app --port 5003
+2025-06-08 20:26:25,799 - __main__ - INFO - Processus trouvé: PID 26024 - node d:/dev/roo-extensions/mcps/internal/servers/quickfiles-server/build/index.js
+2025-06-08 20:26:26,000 - __main__ - INFO - Processus trouvé: PID 37388 - d:\dev\2025-epita-intelligence-symbolique\venv_test\scripts\python.exe c:\users\jsboi\.vscode\extens
+2025-06-08 20:26:26,045 - __main__ - INFO - Processus trouvés: 6
+2025-06-08 20:26:26,045 - __main__ - INFO - Envoi signal TERM aux processus...
+2025-06-08 20:26:26,045 - __main__ - INFO - TERM envoyé à PID 5368
+2025-06-08 20:26:26,045 - __main__ - INFO - TERM envoyé à PID 7116
+2025-06-08 20:26:26,045 - __main__ - INFO - TERM envoyé à PID 14740
+2025-06-08 20:26:26,045 - __main__ - INFO - TERM envoyé à PID 21120
+2025-06-08 20:26:26,045 - __main__ - INFO - TERM envoyé à PID 26024
+2025-06-08 20:26:26,046 - __main__ - INFO - TERM envoyé à PID 37388
+2025-06-08 20:26:26,046 - __main__ - INFO - Attente arrêt propre (5s)...
+2025-06-08 20:26:31,068 - __main__ - INFO - Tous les processus arrêtés proprement
+2025-06-08 20:26:31,351 - __main__ - INFO - Processus trouvé: PID 2040 - c:\tools\miniconda3\python.exe c:\users\jsboi\.vscode\extensions\ms-python.isort-2025.0.0\bundled\to
+2025-06-08 20:26:34,264 - __main__ - INFO - Processus trouvé: PID 35704 - d:\dev\2025-epita-intelligence-symbolique\venv_test\scripts\python.exe c:\users\jsboi\.vscode\extens
+2025-06-08 20:26:34,339 - __main__ - WARNING - Force kill de 2 processus récalcitrants
+2025-06-08 20:26:34,339 - __main__ - WARNING - KILL forcé sur PID 2040
+2025-06-08 20:26:34,360 - __main__ - ERROR - Impossible de tuer PID 35704: process no longer exists (pid=35704, name='python.exe')
+2025-06-08 20:26:34,360 - __main__ - INFO - Vérification libération des ports...
+2025-06-08 20:26:34,369 - __main__ - INFO - Tous les ports libérés
+2025-06-08 20:26:34,369 - __main__ - INFO - Nettoyage fichiers temporaires...
+2025-06-08 20:26:34,371 - __main__ - INFO - Supprimé: backend_info.json
+2025-06-08 20:26:34,371 - __main__ - INFO - Fichiers temporaires nettoyés: 1
+2025-06-08 20:26:34,371 - __main__ - INFO - [OK] Nettoyage processus terminé
+2025-06-08 20:26:34,371 - __main__ - INFO - [96m[20:26:34.371] [BACKEND] DEMARRAGE BACKEND[0m
+2025-06-08 20:26:34,371 - __main__ - INFO -    Détails: Lancement avec failover de ports
+2025-06-08 20:26:34,371 - __main__ - INFO - Tentative 1/4 - Port 5003
+2025-06-08 20:26:34,373 - __main__ - INFO - Démarrage backend: python -m argumentation_analysis.services.web_api.app --port 5003
+2025-06-08 20:26:34,377 - __main__ - INFO - Attente backend sur http://localhost:5003/api/health (timeout: 30s)
+2025-06-08 20:26:38,954 - __main__ - INFO - Backend accessible sur http://localhost:5003/api/health
+2025-06-08 20:26:38,955 - __main__ - INFO - Info backend sauvées: backend_info.json
+2025-06-08 20:26:38,955 - __main__ - INFO - [96m[20:26:38.955] [OK] BACKEND OPERATIONNEL[0m
+2025-06-08 20:26:38,955 - __main__ - INFO -    Détails: Port: 5003 | PID: 12564
+2025-06-08 20:26:38,955 - __main__ - INFO -    Résultat: URL: http://localhost:5003
+2025-06-08 20:26:38,956 - __main__ - INFO - [96m[20:26:38.956] [FRONTEND] DEMARRAGE FRONTEND[0m
+2025-06-08 20:26:38,956 - __main__ - INFO -    Détails: Lancement interface React
+2025-06-08 20:26:38,956 - __main__ - INFO - Démarrage frontend: npm start
+2025-06-08 20:26:49,226 - __main__ - INFO - Frontend accessible sur http://localhost:3000
+2025-06-08 20:26:49,226 - __main__ - INFO - [96m[20:26:49.226] [OK] FRONTEND OPERATIONNEL[0m
+2025-06-08 20:26:49,226 - __main__ - INFO -    Détails: Port: 3000
+2025-06-08 20:26:49,226 - __main__ - INFO -    Résultat: URL: http://localhost:3000
+2025-06-08 20:26:49,226 - __main__ - INFO - [96m[20:26:49.226] [CHECK] VALIDATION SERVICES[0m
+2025-06-08 20:26:49,226 - __main__ - INFO -    Détails: Verification endpoints
+2025-06-08 20:26:49,484 - __main__ - INFO - Backend health: {'message': "API d'analyse argumentative opérationnelle", 'services': {'analysis': False, 'fallacy': False, 'framework': False, 'logic': False, 'validation': False}, 'status': 'healthy', 'timestamp': '2025-06-08T20:26:49.484940', 'version': '1.0.0'}
+2025-06-08 20:26:49,740 - __main__ - INFO - Frontend health OK
+2025-06-08 20:26:49,740 - __main__ - INFO - [96m[20:26:49.740] [OK] SERVICES VALIDES[0m
+2025-06-08 20:26:49,740 - __main__ - INFO -    Détails: Tous les endpoints repondent
+2025-06-08 20:26:49,740 - __main__ - INFO - [96m[20:26:49.740] [OK] APPLICATION WEB OPERATIONNELLE[0m
+2025-06-08 20:26:49,740 - __main__ - INFO -    Détails: Backend: http://localhost:5003
+2025-06-08 20:26:49,740 - __main__ - INFO -    Résultat: Tous les services démarrés
