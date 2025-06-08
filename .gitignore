@@ -168,3 +168,8 @@ data/extract_sources.json # Configuration UI non chiffrée
 *.txt
 
 _temp/
+
+# Documentation analysis large files
+logs/documentation_analysis_data.json
+logs/obsolete_documentation_report_*.json
+logs/obsolete_documentation_report_*.md
