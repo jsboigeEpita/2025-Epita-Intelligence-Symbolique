@@ -48,105 +48,72 @@ logger = logging.getLogger("UnifiedTextAnalysis")
 
 
 class UnifiedAnalysisConfig:
-    """Configuration d'analyse unifiée - Version pipeline réutilisable."""
+    """Configuration unifiée pour l'analyse textuelle."""
     
-    def __init__(self, 
+    def __init__(self,
                  analysis_modes: List[str] = None,
-                 logic_type: str = "propositional",
-                 output_format: str = "dict",
-                 use_advanced_tools: bool = False,
+                 orchestration_mode: str = "pipeline",
+                 logic_type: str = "fol",
                  use_mocks: bool = False,
-                 enable_jvm: bool = True,
-                 orchestration_mode: str = "standard",
+                 use_advanced_tools: bool = True,
+                 output_format: str = "detailed",
                  enable_conversation_logging: bool = True):
         """
-        Initialise la configuration d'analyse unifiée.
+        Initialise la configuration unifiée.
         
         Args:
-            analysis_modes: Modes d'analyse à effectuer
-            logic_type: Type de logique pour analyse formelle
-            output_format: Format de sortie ("dict", "json", etc.)
-            use_advanced_tools: Utiliser outils d'analyse avancés
-            use_mocks: Forcer utilisation des mocks
-            enable_jvm: Activer l'initialisation JVM
-            orchestration_mode: Mode d'orchestration ("standard", "real", "conversation")
-            enable_conversation_logging: Activer logging conversationnel
+            analysis_modes: Modes d'analyse ["informal", "formal", "unified"]
+            orchestration_mode: Mode orchestrateur ["pipeline", "real", "conversation"]
+            logic_type: Type de logique ["fol", "modal", "propositional"]
+            use_mocks: Utilisation de mocks pour les tests
+            use_advanced_tools: Activation des outils avancés
+            output_format: Format de sortie ["summary", "detailed", "json"]
+            enable_conversation_logging: Log des conversations
         """
-        self.analysis_modes = analysis_modes or ["fallacies", "coherence", "semantic"]
-        self.logic_type = logic_type
-        self.output_format = output_format
-        self.use_advanced_tools = use_advanced_tools
-        self.use_mocks = use_mocks
-        self.enable_jvm = enable_jvm
+        self.analysis_modes = analysis_modes or ["informal", "formal"]
         self.orchestration_mode = orchestration_mode
+        self.logic_type = logic_type
+        self.use_mocks = use_mocks
+        self.use_advanced_tools = use_advanced_tools
+        self.output_format = output_format
         self.enable_conversation_logging = enable_conversation_logging
         
-    def to_dict(self) -> Dict[str, Any]:
-        """Convertit la configuration en dictionnaire."""
-        return {
-            "analysis_modes": self.analysis_modes,
-            "logic_type": self.logic_type,
-            "output_format": self.output_format,
-            "use_advanced_tools": self.use_advanced_tools,
-            "use_mocks": self.use_mocks,
-            "enable_jvm": self.enable_jvm,
-            "orchestration_mode": self.orchestration_mode,
-            "enable_conversation_logging": self.enable_conversation_logging
-        }
-    
-    @classmethod
-    def from_legacy_config(cls, legacy_config: Dict[str, Any]) -> 'UnifiedAnalysisConfig':
-        """Crée une config unifiée depuis une ancienne configuration."""
-        return cls(
-            analysis_modes=legacy_config.get("analysis_modes", ["fallacies"]),
-            logic_type=legacy_config.get("logic_type", "propositional"),
-            output_format=legacy_config.get("output_format", "dict"),
-            use_advanced_tools=legacy_config.get("use_advanced_tools", False),
-            use_mocks=legacy_config.get("use_mocks", False),
-            enable_jvm=legacy_config.get("enable_jvm", True)
-        )
+        # Validation des modes
+        valid_modes = {"informal", "formal", "unified"}
+        self.analysis_modes = [mode for mode in self.analysis_modes if mode in valid_modes]
+        
+        if not self.analysis_modes:
+            self.analysis_modes = ["informal"]
 
 
 class UnifiedTextAnalysisPipeline:
-    """
-    Pipeline unifié d'analyse textuelle - Version refactorisée et réutilisable.
-    
-    Intègre les fonctionnalités du script analyze_text.py dans l'architecture pipeline
-    tout en tirant parti des orchestrateurs refactorisés.
-    """
+    """Pipeline unifié d'analyse textuelle consolidant les fonctionnalités de analyze_text.py."""
     
     def __init__(self, config: UnifiedAnalysisConfig):
-        """
-        Initialise le pipeline unifié.
-        
-        Args:
-            config: Configuration d'analyse unifiée
-        """
+        """Initialise le pipeline unifié."""
         self.config = config
-        self.jvm_ready = False
         self.llm_service = None
-        self.analysis_tools = {}
         self.orchestrator = None
+        self.analysis_tools = {}
+        self.jvm_ready = False
         self.conversation_logger = None
         
-        # Initialisation du logging conversationnel si activé
-        if self.config.enable_conversation_logging:
-            if self.config.orchestration_mode == "real":
-                self.conversation_logger = RealConversationLogger()
-            else:
-                self.conversation_logger = ConversationOrchestrator(mode="demo").logger
-                
-    async def initialize(self) -> bool:
-        """
-        Initialise tous les services et composants nécessaires.
+        # État interne
+        self.initialized = False
+        self.start_time = None
         
-        Returns:
-            True si l'initialisation s'est déroulée correctement
-        """
-        logger.info(f"[INIT] Initialisation du pipeline unifie d'analyse (mode: {self.config.orchestration_mode})")
+    async def initialize(self) -> bool:
+        """Initialise tous les composants du pipeline."""
+        logger.info("[INIT] Initialisation du pipeline unifie...")
+        self.start_time = time.time()
+        
+        # Configuration du logger conversationnel
+        if self.config.enable_conversation_logging:
+            self.conversation_logger = RealConversationLogger()
+            logger.info("[INIT] Logger conversationnel active")
         
         # 1. Initialisation JVM si nécessaire
-        if self.config.enable_jvm and "formal" in self.config.analysis_modes:
+        if "formal" in self.config.analysis_modes or "unified" in self.config.analysis_modes:
             logger.info("[JVM] Initialisation de la JVM pour analyse formelle...")
             try:
                 self.jvm_ready = initialize_jvm(lib_dir_path=LIBS_DIR)
@@ -248,156 +215,115 @@ class UnifiedTextAnalysisPipeline:
                 await self._initialize_analysis_tools()  # Récursion avec mocks
     
     async def analyze_text_unified(self, 
-                                  text: str, 
-                                  source_info: Dict[str, Any] = None) -> Dict[str, Any]:
+                                   text: str, 
+                                   source_info: Optional[str] = None) -> Dict[str, Any]:
         """
-        Effectue une analyse complète et unifiée du texte.
+        Lance l'analyse unifiée d'un texte selon la configuration.
         
         Args:
             text: Texte à analyser
-            source_info: Informations sur la source (optionnel)
+            source_info: Information sur la source (optionnel)
             
         Returns:
-            Dict contenant tous les résultats d'analyse
+            Dictionnaire des résultats d'analyse
         """
-        start_time = datetime.now()
-        source_info = source_info or {"description": "Source inconnue", "type": "text"}
+        logger.info(f"[ANALYZE] Debut analyse unifiee (modes: {self.config.analysis_modes})")
+        analysis_start = time.time()
         
-        logger.info(f"[ANALYSIS] Debut analyse unifiee - Modes: {', '.join(self.config.analysis_modes)}")
-        if self.conversation_logger and hasattr(self.conversation_logger, 'info'):
-            self.conversation_logger.info(f"Pipeline: Debut analyse: {len(text)} caracteres")
-        
+        # Structure de résultats unifiée
         results = {
             "metadata": {
-                "timestamp": start_time.strftime("%Y-%m-%d %H:%M:%S"),
-                "source_description": source_info.get("description", "Source inconnue"),
-                "source_type": source_info.get("type", "unknown"),
+                "analysis_timestamp": datetime.now().isoformat(),
+                "pipeline_version": "unified_2.0",
+                "analysis_modes": self.config.analysis_modes.copy(),
+                "orchestration_mode": self.config.orchestration_mode,
                 "text_length": len(text),
-                "analysis_config": self.config.to_dict(),
-                "pipeline_version": "unified_v1.0"
+                "source_info": source_info or "Non spécifié"
             },
             "informal_analysis": {},
             "formal_analysis": {},
             "unified_analysis": {},
             "orchestration_analysis": {},
-            "recommendations": []
+            "recommendations": [],
+            "conversation_log": {},
+            "execution_time": 0
         }
         
-        # 1. Analyse via orchestrateur si disponible
-        if self.orchestrator:
-            logger.info("🎯 Analyse via orchestrateur...")
-            try:
-                orchestration_results = await self._analyze_with_orchestrator(text, source_info)
-                results["orchestration_analysis"] = orchestration_results
-                
-                if self.conversation_logger:
-                    self.conversation_logger.log_agent_message(
-                        "Orchestrator", "Analyse orchestrée terminée", "orchestration"
-                    )
-            except Exception as e:
-                logger.error(f"❌ Erreur analyse orchestrateur: {e}")
-                results["orchestration_analysis"] = {"status": "error", "message": str(e)}
+        try:
+            # Analyse informelle
+            if "informal" in self.config.analysis_modes:
+                logger.info("[ANALYZE] Execution analyse informelle...")
+                if self.config.orchestration_mode in ["real", "conversation"] and self.orchestrator:
+                    results["informal_analysis"] = await self._perform_informal_analysis_orchestrated(text)
+                else:
+                    results["informal_analysis"] = await self._perform_informal_analysis(text)
+            
+            # Analyse formelle
+            if "formal" in self.config.analysis_modes:
+                logger.info("[ANALYZE] Execution analyse formelle...")
+                results["formal_analysis"] = await self._perform_formal_analysis(text)
+            
+            # Analyse unifiée (combinaison sophistiquée)
+            if "unified" in self.config.analysis_modes:
+                logger.info("[ANALYZE] Execution analyse unifiee...")
+                results["unified_analysis"] = await self._perform_unified_analysis(text)
+            
+            # Orchestration si activée
+            if self.orchestrator and self.config.orchestration_mode != "pipeline":
+                logger.info("[ANALYZE] Execution orchestration avancee...")
+                results["orchestration_analysis"] = await self._perform_orchestration_analysis(text)
+            
+            # Génération des recommandations
+            results["recommendations"] = self._generate_recommendations(results)
+            
+            # Log conversationnel
+            if self.conversation_logger:
+                results["conversation_log"] = self.get_conversation_log()
+            
+        except Exception as e:
+            logger.error(f"[ANALYZE] Erreur durant l'analyse: {e}")
+            results["error"] = str(e)
         
-        # 2. Analyse informelle (sophismes, cohérence, sémantique)
-        if any(mode in self.config.analysis_modes for mode in ["fallacies", "coherence", "semantic"]):
-            # Si on a des données d'orchestration, extraire depuis là au lieu de refaire l'analyse
-            if "orchestration_analysis" in results and results["orchestration_analysis"].get("status") == "success":
-                logger.info("[INFORMAL] Extraction des données d'orchestration...")
-                results["informal_analysis"] = self._extract_informal_from_orchestration(results["orchestration_analysis"])
-            else:
-                logger.info("[INFORMAL] Analyse informelle en cours...")
-                results["informal_analysis"] = await self._perform_informal_analysis(text)
+        # Calcul du temps d'exécution
+        results["execution_time"] = time.time() - analysis_start
         
-        # 3. Analyse formelle (logique)
-        if "formal" in self.config.analysis_modes:
-            logger.info("[FORMAL] Analyse formelle en cours...")
-            results["formal_analysis"] = await self._perform_formal_analysis(text)
-        
-        # 4. Analyse unifiée (SynthesisAgent)
-        if "unified" in self.config.analysis_modes and "synthesis_agent" in self.analysis_tools:
-            logger.info("[UNIFIED] Analyse unifiee en cours...")
-            results["unified_analysis"] = await self._perform_unified_analysis(text)
-        
-        # 5. Génération des recommandations
-        results["recommendations"] = self._generate_recommendations(results)
-        
-        # 6. Finalisation
-        processing_time = (datetime.now() - start_time).total_seconds() * 1000
-        results["metadata"]["processing_time_ms"] = processing_time
-        
-        logger.info(f"[ANALYSIS] Analyse unifiee terminee en {processing_time:.2f}ms")
-        if self.conversation_logger and hasattr(self.conversation_logger, 'info'):
-            self.conversation_logger.info(f"Pipeline: Analyse terminee ({processing_time:.1f}ms)")
-        
+        logger.info(f"[ANALYZE] Analyse unifiee terminee en {results['execution_time']:.2f}s")
         return results
     
-    async def _analyze_with_orchestrator(self, text: str, source_info: Dict[str, Any]) -> Dict[str, Any]:
-        """Effectue l'analyse via l'orchestrateur configuré."""
-        if not self.orchestrator:
-            return {"status": "skipped", "reason": "Aucun orchestrateur disponible"}
-        
-        try:
-            if isinstance(self.orchestrator, RealLLMOrchestrator):
-                # Utilisation de l'orchestrateur LLM réel
-                conversation_result = await self.orchestrator.orchestrate_analysis(text)
-                return {
-                    "status": "success",
-                    "type": "real_llm_orchestration",
-                    "conversation_log": conversation_result.get("conversation_log", []),
-                    "final_synthesis": conversation_result.get("final_synthesis", ""),
-                    "processing_time_ms": conversation_result.get("processing_time_ms", 0)
-                }
-            else:
-                # Utilisation de l'orchestrateur conversationnel
-                demo_result = await self.orchestrator.run_demo_conversation(text)
-                return {
-                    "status": "success", 
-                    "type": "conversation_orchestration",
-                    "demo_result": demo_result,
-                    "conversation_log": getattr(self.orchestrator.logger, 'messages', [])
-                }
-        except Exception as e:
-            logger.error(f"Erreur orchestration: {e}")
-            return {"status": "error", "message": str(e)}
-    
     async def _perform_informal_analysis(self, text: str) -> Dict[str, Any]:
-        """Effectue l'analyse informelle (fallacies, coherence, semantic)."""
+        """Effectue l'analyse informelle avec les outils classiques."""
         informal_results = {
+            "status": "Unknown",
             "fallacies": [],
-            "coherence_analysis": {},
-            "semantic_analysis": {},
             "summary": {}
         }
         
-        if self.config.use_mocks:
-            # Analyse avec mocks
-            fallacy_detector = self.analysis_tools.get("fallacy_detector")
-            if fallacy_detector:
-                arguments = self._split_text_into_arguments(text)
-                fallacies = fallacy_detector.detect_multiple_contextual_fallacies(
-                    arguments, "Analyse pipeline unifiée"
-                )
-                informal_results["fallacies"] = fallacies.get("detected_fallacies", [])
-        else:
-            # Analyse avec outils réels
-            try:
-                contextual_analyzer = self.analysis_tools.get("contextual_analyzer")
-                severity_evaluator = self.analysis_tools.get("severity_evaluator")
-                
+        try:
+            # Utilisation des analyseurs contextuels et complexes
+            contextual_analyzer = self.analysis_tools.get("contextual_analyzer")
+            severity_evaluator = self.analysis_tools.get("severity_evaluator")
+            
+            if contextual_analyzer:
                 # Analyse contextuelle des sophismes
-                arguments = self._split_text_into_arguments(text)
-                sample_context = "Pipeline unifié d'analyse argumentative"
+                context_text = text[:500] + "..." if len(text) > 500 else text
+                sample_context = {"text": context_text, "context_type": "sample_for_analysis"}
                 
-                # Simulation des résultats sophistiqués
-                contextual_fallacies = [
+                contextual_fallacies = contextual_analyzer.detect_fallacies_with_context(
+                    text,
+                    sample_context,
+                    include_confidence=True
+                )
+                
+                # Format des sophismes détectés
+                informal_results["fallacies"] = [
                     {
-                        "type": "Généralisation hâtive",
-                        "text_fragment": text[:150] + "..." if len(text) > 150 else text,
-                        "explanation": "Affirmation générale basée sur des exemples limités",
-                        "confidence": 0.78,
-                        "severity": "Modéré",
-                        "pipeline_version": "unified"
+                        "type": f.get("type", "Type inconnu"),
+                        "text_fragment": f.get("text_fragment", "Fragment non disponible"),
+                        "explanation": f.get("explanation", "Explication non disponible"),
+                        "severity": f.get("severity", "Moyen"),
+                        "confidence": f.get("confidence", 0.0)
                     }
+                    for f in contextual_fallacies
                 ]
                 
                 # Évaluation de la sévérité si disponible
@@ -407,9 +333,9 @@ class UnifiedTextAnalysisPipeline:
                 else:
                     informal_results["fallacies"] = contextual_fallacies
                     
-            except Exception as e:
-                logger.error(f"Erreur analyse informelle: {e}")
-                informal_results["fallacies"] = []
+        except Exception as e:
+            logger.error(f"Erreur analyse informelle: {e}")
+            informal_results["fallacies"] = []
         
         # Résumé de l'analyse informelle
         fallacies = informal_results["fallacies"]
@@ -498,10 +424,8 @@ class UnifiedTextAnalysisPipeline:
         unified_results = {
             "status": "Unknown",
             "synthesis_report": "",
-            "overall_validity": "Unknown",
-            "confidence_level": 0.0,
-            "contradictions": [],
-            "recommendations": []
+            "combined_insights": [],
+            "meta_analysis": {}
         }
         
         synthesis_agent = self.analysis_tools.get("synthesis_agent")
@@ -511,20 +435,23 @@ class UnifiedTextAnalysisPipeline:
             return unified_results
         
         try:
-            # Exécution de l'analyse unifiée
-            unified_report = await synthesis_agent.synthesize_analysis(text)
+            # Analyse unifiée avec le SynthesisAgent
+            synthesis_result = await synthesis_agent.synthesize_analysis(
+                text_input=text,
+                context={"source": "unified_pipeline", "timestamp": datetime.now().isoformat()}
+            )
             
-            # Génération du rapport textuel
-            text_report = await synthesis_agent.generate_report(unified_report)
-            
-            unified_results.update({
-                "status": "Success",
-                "synthesis_report": text_report,
-                "overall_validity": getattr(unified_report, 'overall_validity', "Unknown"),
-                "confidence_level": getattr(unified_report, 'confidence_level', 0.0),
-                "processing_time_ms": getattr(unified_report, 'total_processing_time_ms', 0)
-            })
-            
+            if synthesis_result and synthesis_result.get("status") == "success":
+                unified_results.update({
+                    "status": "Success",
+                    "synthesis_report": synthesis_result.get("synthesis", ""),
+                    "combined_insights": synthesis_result.get("insights", []),
+                    "meta_analysis": synthesis_result.get("meta_analysis", {})
+                })
+            else:
+                unified_results["status"] = "Failed"
+                unified_results["reason"] = synthesis_result.get("error", "Erreur inconnue")
+                
         except Exception as e:
             logger.error(f"Erreur analyse unifiée: {e}")
             unified_results["status"] = "Error"
@@ -532,141 +459,141 @@ class UnifiedTextAnalysisPipeline:
         
         return unified_results
     
-    def _split_text_into_arguments(self, text: str) -> List[str]:
-        """Divise le texte en arguments distincts."""
-        sentences = [s.strip() for s in text.split('.') if s.strip()]
-        if not sentences:
-            return [text]
-        return sentences
-    
-    def _calculate_severity_distribution(self, fallacies: List[Dict]) -> Dict[str, int]:
-        """Calcule la distribution des sévérités des sophismes."""
-        distribution = {"Critique": 0, "Élevé": 0, "Modéré": 0, "Faible": 0}
-        for fallacy in fallacies:
-            severity = fallacy.get("severity", "Faible")
-            if severity in distribution:
-                distribution[severity] += 1
-        return distribution
-    
-    def _extract_informal_from_orchestration(self, orchestration_data: Dict[str, Any]) -> Dict[str, Any]:
-        """Extrait les données d'analyse informelle depuis les résultats d'orchestration."""
-        logger.info("🔍 Extraction des sophismes depuis l'orchestrateur...")
-        
-        informal_results = {
-            "fallacies": [],
-            "summary": {}
+    async def _perform_orchestration_analysis(self, text: str) -> Dict[str, Any]:
+        """Effectue l'analyse orchestrée."""
+        orchestration_results = {
+            "status": "Unknown",
+            "orchestrator_type": self.config.orchestration_mode,
+            "agents_used": [],
+            "conversation_summary": {}
         }
         
+        if not self.orchestrator:
+            orchestration_results["status"] = "Skipped"
+            orchestration_results["reason"] = "Orchestrateur non disponible"
+            return orchestration_results
+        
         try:
-            conversation_log = orchestration_data.get("conversation_log", {})
+            if hasattr(self.orchestrator, 'analyze_text_comprehensive'):
+                # Pour RealLLMOrchestrator
+                orch_result = await self.orchestrator.analyze_text_comprehensive(
+                    text, 
+                    context={"source": "unified_pipeline"}
+                )
+                
+                orchestration_results.update({
+                    "status": "success",
+                    "agents_used": orch_result.get("agents_used", []),
+                    "conversation_summary": orch_result.get("conversation_summary", {}),
+                    "analysis_results": orch_result.get("results", {})
+                })
+                
+            elif hasattr(self.orchestrator, 'run_conversation'):
+                # Pour ConversationOrchestrator
+                conv_result = await self.orchestrator.run_conversation(text)
+                
+                orchestration_results.update({
+                    "status": "success",
+                    "conversation_summary": conv_result,
+                    "agents_used": ["ConversationOrchestrator"]
+                })
+            else:
+                orchestration_results["status"] = "Failed"
+                orchestration_results["reason"] = "Méthode d'orchestration non reconnue"
+                
+        except Exception as e:
+            logger.error(f"Erreur orchestration: {e}")
+            orchestration_results["status"] = "Error"
+            orchestration_results["reason"] = str(e)
+        
+        return orchestration_results
+    
+    async def _perform_informal_analysis_orchestrated(self, text: str) -> Dict[str, Any]:
+        """Effectue l'analyse informelle via l'orchestrateur."""
+        informal_results = {
+            "status": "Unknown",
+            "fallacies": [],
+            "summary": {},
+            "extraction_method": "orchestrated"
+        }
+        
+        if not self.orchestrator:
+            logger.warning("Orchestrateur non disponible pour analyse informelle")
+            return await self._perform_informal_analysis(text)
+        
+        try:
+            # Exécution de l'analyse via l'orchestrateur
+            if hasattr(self.orchestrator, 'analyze_text_comprehensive'):
+                orch_result = await self.orchestrator.analyze_text_comprehensive(
+                    text, 
+                    context={"analysis_focus": "informal", "extract_fallacies": True}
+                )
+                conversation_log = orch_result.get("conversation_log", {})
+                
+            elif hasattr(self.orchestrator, 'run_conversation'):
+                conversation_log = await self.orchestrator.run_conversation(text)
+            else:
+                logger.warning("Méthode d'orchestration non reconnue, fallback vers analyse standard")
+                return await self._perform_informal_analysis(text)
             
-            # PRIORITÉ 1: Chercher dans les tool calls pour avoir les données JSON complètes
-            if "tool_calls" in conversation_log:
-                logger.info(f"🔍 DEBUG: Analyse de {len(conversation_log['tool_calls'])} tool calls pour PRIORITÉ 1")
+            # EXTRACTION DES SOPHISMES DEPUIS LE LOG CONVERSATIONNEL
+            logger.info("🔍 Extraction des sophismes depuis le log conversationnel...")
+            
+            # PRIORITÉ 1: Chercher dans les tool_calls
+            if isinstance(conversation_log, dict) and "tool_calls" in conversation_log:
                 for i, tool_call in enumerate(conversation_log["tool_calls"]):
                     if isinstance(tool_call, dict):
-                        tool_name = tool_call.get("tool", "")
                         result = tool_call.get("result", {})
-                        logger.info(f"🔍 DEBUG: Tool call {i}: {tool_name}, result type: {type(result)}")
                         
-                        # Chercher les résultats de perform_complete_analysis (agent informel)
-                        if "perform_complete_analysis" in tool_name:
-                            logger.info(f"🔍 DEBUG: Tool call {i} correspond à perform_complete_analysis")
+                        # Chercher les résultats d'InformalAnalysisAgent ou les fallacies
+                        if isinstance(result, dict):
+                            # Essayer plusieurs clés possibles pour les sophismes
+                            sophismes_data = (
+                                result.get("fallacies") or 
+                                result.get("sophismes") or 
+                                result.get("detected_fallacies") or
+                                result.get("fallacy_analysis", {}).get("fallacies", [])
+                            )
                             
-                            # Si le résultat est un dict, chercher les données de sophismes
-                            if isinstance(result, dict):
-                                # Chercher dans différents emplacements possibles
-                                sophismes_data = result.get("fallacies", [])
-                                if not sophismes_data:
-                                    sophismes_data = result.get("informal_analysis", {}).get("fallacies", [])
-                                if not sophismes_data:
-                                    # GPT-4o-mini retourne dans "sophismes"
-                                    sophismes_data = result.get("sophismes", [])
-                                
-                                logger.info(f"🔍 DEBUG: {len(sophismes_data)} fallacies trouvés dans le tool call {i}")
-                                
-                                for sophisme_data in sophismes_data:
-                                    if isinstance(sophisme_data, dict):
-                                        # Extraire la confiance depuis plusieurs sources possibles
-                                        confidence_value = (
-                                            sophisme_data.get("confidence", 0) or
-                                            sophisme_data.get("match_score", 0) or
-                                            sophisme_data.get("detection_confidence", 0) or
-                                            0.7  # Valeur par défaut raisonnable au lieu de 0.0
-                                        )
-                                        
-                                        sophisme = {
-                                            "type": sophisme_data.get("type", sophisme_data.get("name", sophisme_data.get("nom", "Type inconnu"))),
-                                            "text_fragment": sophisme_data.get("fragment", sophisme_data.get("citation", "Fragment non disponible")),
-                                            "explanation": sophisme_data.get("explanation", sophisme_data.get("explication", "Explication non disponible")),
-                                            "severity": sophisme_data.get("severity", "Moyen"),
-                                            "confidence": confidence_value,
-                                            "reformulation": sophisme_data.get("reformulation", "")
-                                        }
-                                        informal_results["fallacies"].append(sophisme)
-                                        
-                                if sophismes_data:
-                                    logger.info(f"✅ PRIORITÉ 1 réussie : {len(sophismes_data)} sophismes extraits depuis tool call {i}")
-                                    break  # Arrêter une fois qu'on a trouvé les données
+                            # Fallback: chercher dans informal_analysis
+                            if not sophismes_data:
+                                sophismes_data = result.get("informal_analysis", {}).get("fallacies", [])
+                            if not sophismes_data:
+                                # GPT-4o-mini retourne dans "sophismes"
+                                sophismes_data = result.get("sophismes", [])
                             
-                            # Si le résultat est une string, chercher le JSON brut de GPT-4o-mini
-                            elif isinstance(result, str) and "sophismes" in result:
-                                logger.info(f"🔍 DEBUG: Tool call {i} contient JSON brut, tentative d'extraction...")
-                                try:
-                                    import json
-                                    # Chercher le JSON des sophismes dans le string
-                                    json_start = result.find('{"sophismes"')
-                                    if json_start == -1:
-                                        json_start = result.find('{\n  "sophismes"')
+                            logger.info(f"🔍 DEBUG: {len(sophismes_data)} fallacies trouvés dans le tool call {i}")
+                            
+                            for sophisme_data in sophismes_data:
+                                if isinstance(sophisme_data, dict):
+                                    # Extraire la confiance depuis plusieurs sources possibles
+                                    confidence_value = (
+                                        sophisme_data.get("confidence", 0) or
+                                        sophisme_data.get("match_score", 0) or
+                                        sophisme_data.get("detection_confidence", 0) or
+                                        0.7  # Valeur par défaut raisonnable au lieu de 0.0
+                                    )
                                     
-                                    if json_start != -1:
-                                        # Trouver la fin du JSON
-                                        bracket_count = 0
-                                        json_end = json_start
-                                        for j, char in enumerate(result[json_start:], json_start):
-                                            if char == '{':
-                                                bracket_count += 1
-                                            elif char == '}':
-                                                bracket_count -= 1
-                                                if bracket_count == 0:
-                                                    json_end = j + 1
-                                                    break
-                                        
-                                        json_text = result[json_start:json_end]
-                                        sophismes_json = json.loads(json_text)
-                                        
-                                        for sophisme_data in sophismes_json.get("sophismes", []):
-                                            sophisme = {
-                                                "type": sophisme_data.get("nom", "Type inconnu"),
-                                                "text_fragment": sophisme_data.get("citation", "Fragment non disponible"),
-                                                "explanation": sophisme_data.get("explication", "Explication non disponible"),
-                                                "severity": "Moyen",  # Valeur par défaut
-                                                "confidence": 0.0,  # Pas de confiance dans le JSON original
-                                                "reformulation": sophisme_data.get("reformulation", "")
-                                            }
-                                            informal_results["fallacies"].append(sophisme)
-                                        
-                                        logger.info(f"✅ PRIORITÉ 1 JSON réussie : {len(sophismes_json.get('sophismes', []))} sophismes extraits depuis tool call {i}")
-                                        break
-                                        
-                                except (json.JSONDecodeError, Exception) as e:
-                                    logger.debug(f"Échec parsing JSON PRIORITÉ 1: {e}")
-                                
-            # PRIORITÉ 2: Chercher le JSON brut de GPT-4o-mini dans les tool calls
-            if not informal_results["fallacies"] and "tool_calls" in conversation_log:
-                import json
-                logger.info(f"🔍 DEBUG: Recherche JSON dans {len(conversation_log['tool_calls'])} tool calls")
-                for i, tool_call in enumerate(conversation_log["tool_calls"]):
-                    if isinstance(tool_call, dict):
-                        result = tool_call.get("result", "")
-                        tool_name = tool_call.get("tool", "unknown")
-                        logger.info(f"🔍 DEBUG: Tool call {i}: {tool_name}, result type: {type(result)}")
+                                    sophisme = {
+                                        "type": sophisme_data.get("type", sophisme_data.get("name", sophisme_data.get("nom", "Type inconnu"))),
+                                        "text_fragment": sophisme_data.get("fragment", sophisme_data.get("citation", "Fragment non disponible")),
+                                        "explanation": sophisme_data.get("explanation", sophisme_data.get("explication", "Explication non disponible")),
+                                        "severity": sophisme_data.get("severity", "Moyen"),
+                                        "confidence": confidence_value,
+                                        "reformulation": sophisme_data.get("reformulation", "")
+                                    }
+                                    informal_results["fallacies"].append(sophisme)
+                                    
+                            if sophismes_data:
+                                logger.info(f"✅ PRIORITÉ 1 réussie : {len(sophismes_data)} sophismes extraits depuis tool call {i}")
+                                break  # Arrêter une fois qu'on a trouvé les données
                         
-                        # Si le résultat est une string contenant du JSON
-                        if isinstance(result, str) and "sophismes" in result:
-                            logger.info(f"✅ DEBUG: JSON sophismes trouvé dans tool call {i} ({tool_name})")
+                        # Si le résultat est une string, chercher le JSON brut de GPT-4o-mini
+                        elif isinstance(result, str) and "sophismes" in result:
+                            logger.info(f"🔍 DEBUG: Tool call {i} contient JSON brut, tentative d'extraction...")
                             try:
-                                # Chercher le JSON des sophismes
+                                import json
+                                # Chercher le JSON des sophismes dans le string
                                 json_start = result.find('{"sophismes"')
                                 if json_start == -1:
                                     json_start = result.find('{\n  "sophismes"')
@@ -675,13 +602,13 @@ class UnifiedTextAnalysisPipeline:
                                     # Trouver la fin du JSON
                                     bracket_count = 0
                                     json_end = json_start
-                                    for i, char in enumerate(result[json_start:], json_start):
+                                    for j, char in enumerate(result[json_start:], json_start):
                                         if char == '{':
                                             bracket_count += 1
                                         elif char == '}':
                                             bracket_count -= 1
                                             if bracket_count == 0:
-                                                json_end = i + 1
+                                                json_end = j + 1
                                                 break
                                     
                                     json_text = result[json_start:json_end]
@@ -698,12 +625,56 @@ class UnifiedTextAnalysisPipeline:
                                         }
                                         informal_results["fallacies"].append(sophisme)
                                     
-                                    logger.info(f"✅ {len(sophismes_json.get('sophismes', []))} sophismes extraits depuis JSON brut")
+                                    logger.info(f"✅ PRIORITÉ 1 JSON réussie : {len(sophismes_json.get('sophismes', []))} sophismes extraits depuis tool call {i}")
                                     break
                                     
                             except (json.JSONDecodeError, Exception) as e:
                                 logger.warning(f"Erreur lors du parsing JSON des sophismes: {e}")
-                                
+                        
+            # PRIORITÉ 2: Chercher dans les messages (fallback pour autre format d'orchestrateur)
+            if not informal_results["fallacies"] and isinstance(conversation_log, list):
+                for msg in conversation_log:
+                    if isinstance(msg, dict) and "sophismes" in str(msg):
+                        try:
+                            # Chercher des sophismes dans les messages
+                            content = str(msg.get("content", ""))
+                            if "sophismes" in content.lower():
+                                # Essayer d'extraire le JSON depuis le contenu
+                                import json
+                                json_start = content.find('{"sophismes"')
+                                if json_start != -1:
+                                    # Chercher la fin du JSON
+                                    bracket_count = 0
+                                    json_end = json_start
+                                    for j, char in enumerate(content[json_start:], json_start):
+                                        if char == '{':
+                                            bracket_count += 1
+                                        elif char == '}':
+                                            bracket_count -= 1
+                                            if bracket_count == 0:
+                                                json_end = j + 1
+                                                break
+                                    
+                                    json_text = content[json_start:json_end]
+                                    sophismes_json = json.loads(json_text)
+                                    
+                                    for sophisme_data in sophismes_json.get("sophismes", []):
+                                        sophisme = {
+                                            "type": sophisme_data.get("nom", "Type inconnu"),
+                                            "text_fragment": sophisme_data.get("citation", "Fragment non disponible"),
+                                            "explanation": sophisme_data.get("explication", "Explication non disponible"),
+                                            "severity": "Moyen",
+                                            "confidence": 0.0,
+                                            "reformulation": sophisme_data.get("reformulation", "")
+                                        }
+                                        informal_results["fallacies"].append(sophisme)
+                                    
+                                    logger.info(f"✅ {len(sophismes_json.get('sophismes', []))} sophismes extraits depuis JSON brut")
+                                    break
+                                    
+                        except (json.JSONDecodeError, Exception) as e:
+                            logger.warning(f"Erreur lors du parsing JSON des sophismes: {e}")
+                            
             # PRIORITÉ 3 (Fallback): Chercher dans les messages d'orchestration
             if not informal_results["fallacies"] and isinstance(conversation_log, dict) and "messages" in conversation_log:
                 for msg in conversation_log["messages"]:
@@ -803,3 +774,110 @@ class UnifiedTextAnalysisPipeline:
                 "state_snapshots": getattr(self.conversation_logger, 'state_snapshots', [])
             }
         return {}
+    
+    def _calculate_severity_distribution(self, fallacies: List[Dict[str, Any]]) -> Dict[str, int]:
+        """Calcule la distribution des niveaux de sévérité."""
+        distribution = {"Faible": 0, "Moyen": 0, "Élevé": 0, "Critique": 0}
+        for fallacy in fallacies:
+            severity = fallacy.get("severity", "Moyen")
+            if severity in distribution:
+                distribution[severity] += 1
+        return distribution
+
+
+# ==========================================
+# FONCTIONS D'ENTRÉE PUBLIQUES DU PIPELINE
+# ==========================================
+
+async def run_unified_text_analysis_pipeline(
+    text: str,
+    config: Optional[UnifiedAnalysisConfig] = None,
+    source_info: Optional[str] = None
+) -> Dict[str, Any]:
+    """
+    Fonction d'entrée principale pour le pipeline unifié d'analyse textuelle.
+    
+    Args:
+        text: Texte à analyser
+        config: Configuration d'analyse (optionnel, valeurs par défaut utilisées)
+        source_info: Information sur la source du texte (optionnel)
+    
+    Returns:
+        Dictionnaire complet des résultats d'analyse
+    """
+    # Configuration par défaut si non fournie
+    if config is None:
+        config = UnifiedAnalysisConfig(
+            analysis_modes=["informal", "formal"],
+            orchestration_mode="pipeline",
+            use_mocks=False
+        )
+    
+    # Création et initialisation du pipeline
+    pipeline = UnifiedTextAnalysisPipeline(config)
+    
+    try:
+        # Initialisation
+        init_success = await pipeline.initialize()
+        if not init_success:
+            return {
+                "error": "Échec de l'initialisation du pipeline",
+                "status": "failed"
+            }
+        
+        # Analyse
+        results = await pipeline.analyze_text_unified(text, source_info)
+        results["status"] = "success"
+        
+        return results
+        
+    except Exception as e:
+        logger.error(f"Erreur pipeline unifié: {e}")
+        return {
+            "error": str(e),
+            "status": "failed",
+            "metadata": {
+                "analysis_timestamp": datetime.now().isoformat(),
+                "pipeline_version": "unified_2.0",
+                "text_length": len(text) if text else 0
+            }
+        }
+
+
+def create_unified_config_from_legacy(
+    mode: str = "formal",
+    use_mocks: bool = False,
+    orchestration_mode: str = "pipeline",
+    **kwargs
+) -> UnifiedAnalysisConfig:
+    """
+    Crée une configuration unifiée depuis les paramètres legacy.
+    
+    Args:
+        mode: Mode d'analyse principal ("formal", "informal", "unified")
+        use_mocks: Utilisation des mocks pour les tests
+        orchestration_mode: Mode d'orchestrateur
+        **kwargs: Paramètres additionnels
+    
+    Returns:
+        Configuration unifiée
+    """
+    # Mapping des modes legacy vers les nouveaux modes
+    mode_mapping = {
+        "formal": ["formal"],
+        "informal": ["informal"],
+        "unified": ["informal", "formal", "unified"],
+        "all": ["informal", "formal", "unified"]
+    }
+    
+    analysis_modes = mode_mapping.get(mode, ["informal"])
+    
+    return UnifiedAnalysisConfig(
+        analysis_modes=analysis_modes,
+        orchestration_mode=orchestration_mode,
+        logic_type=kwargs.get("logic_type", "fol"),
+        use_mocks=use_mocks,
+        use_advanced_tools=kwargs.get("use_advanced_tools", True),
+        output_format=kwargs.get("output_format", "detailed"),
+        enable_conversation_logging=kwargs.get("enable_conversation_logging", True)
+    )
