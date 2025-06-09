@@ -46,6 +46,8 @@ class FrontendManager:
         self.process: Optional[subprocess.Popen] = None
         self.current_url: Optional[str] = None
         self.pid: Optional[int] = None
+        self.frontend_stdout_log_file: Optional[Any] = None
+        self.frontend_stderr_log_file: Optional[Any] = None
         
     async def start(self) -> Dict[str, Any]:
         """
@@ -95,10 +97,32 @@ class FrontendManager:
             else:
                 cmd = ['sh', '-c', self.start_command]
             
+            # Préparation des fichiers de log pour le frontend
+            log_dir = Path("logs")
+            log_dir.mkdir(parents=True, exist_ok=True) # parents=True pour créer logs/ si besoin
+            
+            # S'assurer de fermer les anciens fichiers de log s'ils existent
+            if self.frontend_stdout_log_file:
+                try:
+                    self.frontend_stdout_log_file.close()
+                except Exception:
+                    pass # Ignorer les erreurs de fermeture
+            if self.frontend_stderr_log_file:
+                try:
+                    self.frontend_stderr_log_file.close()
+                except Exception:
+                    pass
+
+            self.frontend_stdout_log_file = open(log_dir / "frontend_stdout.log", "wb") # 'wb' pour write bytes (écrase)
+            self.frontend_stderr_log_file = open(log_dir / "frontend_stderr.log", "wb") # 'wb' pour write bytes (écrase)
+
+            self.logger.info(f"Redirection stdout du frontend vers: {log_dir / 'frontend_stdout.log'}")
+            self.logger.info(f"Redirection stderr du frontend vers: {log_dir / 'frontend_stderr.log'}")
+
             self.process = subprocess.Popen(
                 cmd,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
+                stdout=self.frontend_stdout_log_file,
+                stderr=self.frontend_stderr_log_file,
                 cwd=self.frontend_path,
                 env=self._get_frontend_env()
             )
@@ -246,6 +270,20 @@ class FrontendManager:
             except Exception as e:
                 self.logger.error(f"Erreur arrêt frontend: {e}")
             finally:
+                if self.frontend_stdout_log_file:
+                    try:
+                        self.frontend_stdout_log_file.close()
+                    except Exception as log_e:
+                        self.logger.error(f"Erreur fermeture frontend_stdout_log_file: {log_e}")
+                    self.frontend_stdout_log_file = None
+                
+                if self.frontend_stderr_log_file:
+                    try:
+                        self.frontend_stderr_log_file.close()
+                    except Exception as log_e:
+                        self.logger.error(f"Erreur fermeture frontend_stderr_log_file: {log_e}")
+                    self.frontend_stderr_log_file = None
+
                 self.process = None
                 self.current_url = None
                 self.pid = None
