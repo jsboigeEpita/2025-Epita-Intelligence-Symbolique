@@ -19,7 +19,7 @@ import argparse
 from typing import Dict, List, Optional, Tuple, Any
 from pathlib import Path
 
-from .common_utils import Logger, LogLevel, safe_exit, get_project_root
+from common_utils import Logger, LogLevel, safe_exit, get_project_root
 
 
 class EnvironmentManager:

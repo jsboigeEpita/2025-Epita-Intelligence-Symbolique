@@ -1,6 +1,17 @@
 #!/usr/bin/env python3
 """Test simple du générateur de rapports récupéré"""
 
+# ===== ONE-LINER AUTO-ACTIVATEUR =====
+import scripts.core.auto_env  # Auto-activation environnement intelligent
+# =====================================
+
+import sys
+import os
+# Ajout de la racine du projet au PYTHONPATH
+project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
+if project_root not in sys.path:
+    sys.path.insert(0, project_root)
+
 print('=== TEST GÉNÉRATEUR RAPPORTS RÉCUPÉRÉ ===')
 try:
     from argumentation_analysis.utils.report_generation import generate_unified_report

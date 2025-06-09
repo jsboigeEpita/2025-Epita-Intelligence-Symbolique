@@ -72,7 +72,7 @@ def run_oracle_tests():
                 print("🎯 MISSION ACCOMPLIE - SYSTÈME ORACLE OPÉRATIONNEL À 100%")
                 return True
             elif failed_count == 0:
-                print(f"✅ TOUS LES TESTS PASSENT! ({passed_count}/{passed_count})")
+                print(f"[OK] TOUS LES TESTS PASSENT! ({passed_count}/{passed_count})")
                 if passed_count >= 90:
                     print("🎯 OBJECTIF EXCELLENT ATTEINT!")
                 return True
@@ -93,19 +93,19 @@ def validate_group3_fixes():
     print("\n=== VALIDATION SPÉCIFIQUE GROUPE 3 ===")
     
     fixes_applied = [
-        "✅ Test 11: kernel_function_decorators - Correction de l'accès à __kernel_function__.description",
-        "✅ Test 12: execute_oracle_query_invalid_json - Correction du message d'erreur JSON",
-        "✅ Test 13: check_agent_permission_invalid_query_type - ValueError correctement levée",
-        "✅ Test 14: oracle_tools_error_handling - Correction du message d'erreur système"
+        "[OK] Test 11: kernel_function_decorators - Correction de l'accès à __kernel_function__.description",
+        "[OK] Test 12: execute_oracle_query_invalid_json - Correction du message d'erreur JSON",
+        "[OK] Test 13: check_agent_permission_invalid_query_type - ValueError correctement levée",
+        "[OK] Test 14: oracle_tools_error_handling - Correction du message d'erreur système"
     ]
     
     for fix in fixes_applied:
         print(fix)
     
     print("\n🔧 Corrections supplémentaires appliquées:")
-    print("✅ Remplacement de execute_query par execute_oracle_query dans tous les tests")
-    print("✅ Harmonisation des noms de méthodes Oracle")
-    print("✅ Validation de la compatibilité complète")
+    print("[OK] Remplacement de execute_query par execute_oracle_query dans tous les tests")
+    print("[OK] Harmonisation des noms de méthodes Oracle")
+    print("[OK] Validation de la compatibilité complète")
 
 def test_oracle_100_percent_validation():
     """Test pytest pour validation Oracle 100%"""

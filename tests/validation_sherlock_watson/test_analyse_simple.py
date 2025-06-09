@@ -1,3 +1,4 @@
+import pytest
 #!/usr/bin/env python3
 """
 Test simple d'analyse de trace Sherlock-Watson-Moriarty
@@ -18,6 +19,7 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 logger = logging.getLogger(__name__)
 
 
+@pytest.mark.anyio
 async def test_workflow_simple():
     """Test simple du workflow 3-agents."""
     logger.info("DEBUT - Test du workflow 3-agents")

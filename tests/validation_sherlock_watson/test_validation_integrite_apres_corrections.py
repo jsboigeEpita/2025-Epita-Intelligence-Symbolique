@@ -38,8 +38,8 @@ class TestValidationIntegriteApresCorrections:
         logger.info("=== VALIDATION INTÉGRITÉ APRÈS CORRECTIONS ===")
     
     def test_get_autres_joueurs_cards_maintenant_securisee(self):
-        """✅ VALIDATION: get_autres_joueurs_cards() est maintenant sécurisée."""
-        logger.info("✅ TEST: Méthode get_autres_joueurs_cards() sécurisée")
+        """[OK] VALIDATION: get_autres_joueurs_cards() est maintenant sécurisée."""
+        logger.info("[OK] TEST: Méthode get_autres_joueurs_cards() sécurisée")
         
         # Cette méthode DOIT maintenant lever une PermissionError
         with pytest.raises(PermissionError) as exc_info:
@@ -49,11 +49,11 @@ class TestValidationIntegriteApresCorrections:
         assert "VIOLATION RÈGLES CLUEDO" in str(exc_info.value)
         assert "cartes des autres joueurs" in str(exc_info.value)
         
-        logger.info("✅ SUCCÈS: get_autres_joueurs_cards() est maintenant sécurisée")
+        logger.info("[OK] SUCCÈS: get_autres_joueurs_cards() est maintenant sécurisée")
     
     def test_get_solution_maintenant_securisee(self):
-        """✅ VALIDATION: get_solution() est maintenant sécurisée."""
-        logger.info("✅ TEST: Méthode get_solution() sécurisée")
+        """[OK] VALIDATION: get_solution() est maintenant sécurisée."""
+        logger.info("[OK] TEST: Méthode get_solution() sécurisée")
         
         # Cette méthode DOIT maintenant lever une PermissionError
         with pytest.raises(PermissionError) as exc_info:
@@ -63,11 +63,11 @@ class TestValidationIntegriteApresCorrections:
         assert "VIOLATION RÈGLES CLUEDO" in str(exc_info.value)
         assert "solution" in str(exc_info.value)
         
-        logger.info("✅ SUCCÈS: get_solution() est maintenant sécurisée")
+        logger.info("[OK] SUCCÈS: get_solution() est maintenant sécurisée")
     
     def test_simulate_other_player_response_maintenant_legitime(self):
-        """✅ VALIDATION: simulate_other_player_response() fonctionne sans tricher."""
-        logger.info("✅ TEST: Simulation joueur maintenant légitime")
+        """[OK] VALIDATION: simulate_other_player_response() fonctionne sans tricher."""
+        logger.info("[OK] TEST: Simulation joueur maintenant légitime")
         
         from argumentation_analysis.agents.core.oracle.moriarty_interrogator_agent import MoriartyTools
         
@@ -87,11 +87,11 @@ class TestValidationIntegriteApresCorrections:
             # Le résultat doit être une simulation probabiliste
             assert "simulation probabiliste" in result or "Simulation impossible" in result
         
-        logger.info("✅ SUCCÈS: Simulation joueur fonctionne sans tricher")
+        logger.info("[OK] SUCCÈS: Simulation joueur fonctionne sans tricher")
     
     def test_systeme_permissions_renforce_fonctionne(self):
-        """✅ VALIDATION: Le système de permissions renforcé fonctionne."""
-        logger.info("✅ TEST: Système de permissions renforcé")
+        """[OK] VALIDATION: Le système de permissions renforcé fonctionne."""
+        logger.info("[OK] TEST: Système de permissions renforcé")
         
         # Récupération des permissions par défaut renforcées
         permissions = get_default_cluedo_permissions()
@@ -109,11 +109,11 @@ class TestValidationIntegriteApresCorrections:
         with pytest.raises(CluedoIntegrityError):
             validate_cluedo_method_access("get_solution", "TestAgent")
         
-        logger.info("✅ SUCCÈS: Système de permissions renforcé fonctionne")
+        logger.info("[OK] SUCCÈS: Système de permissions renforcé fonctionne")
     
     def test_fonctionnalites_legitimes_preservees(self):
-        """✅ VALIDATION: Les fonctionnalités légitimes sont préservées."""
-        logger.info("✅ TEST: Fonctionnalités légitimes préservées")
+        """[OK] VALIDATION: Les fonctionnalités légitimes sont préservées."""
+        logger.info("[OK] TEST: Fonctionnalités légitimes préservées")
         
         # Les cartes de Moriarty sont toujours accessibles (légitime)
         moriarty_cards = self.dataset.get_moriarty_cards()
@@ -133,11 +133,11 @@ class TestValidationIntegriteApresCorrections:
         )
         assert result.success is True
         
-        logger.info("✅ SUCCÈS: Fonctionnalités légitimes préservées")
+        logger.info("[OK] SUCCÈS: Fonctionnalités légitimes préservées")
     
     def test_oracle_enhanced_respecte_integrite(self):
-        """✅ VALIDATION: Oracle Enhanced respecte l'intégrité."""
-        logger.info("✅ TEST: Oracle Enhanced respecte l'intégrité")
+        """[OK] VALIDATION: Oracle Enhanced respecte l'intégrité."""
+        logger.info("[OK] TEST: Oracle Enhanced respecte l'intégrité")
         
         # Test d'une validation de suggestion (légitime)
         query_params = {
@@ -163,11 +163,11 @@ class TestValidationIntegriteApresCorrections:
                 if card_name:
                     assert card_name in cartes_moriarty, f"Carte révélée non autorisée: {card_name}"
         
-        logger.info("✅ SUCCÈS: Oracle Enhanced respecte l'intégrité")
+        logger.info("[OK] SUCCÈS: Oracle Enhanced respecte l'intégrité")
     
     def test_regles_cluedo_maintenant_respectees(self):
-        """✅ VALIDATION: Les règles du Cluedo sont maintenant respectées."""
-        logger.info("✅ TEST: Règles du Cluedo respectées")
+        """[OK] VALIDATION: Les règles du Cluedo sont maintenant respectées."""
+        logger.info("[OK] TEST: Règles du Cluedo respectées")
         
         violations = []
         
@@ -176,30 +176,30 @@ class TestValidationIntegriteApresCorrections:
             autres_cartes = self.dataset.get_autres_joueurs_cards()
             violations.append("RÈGLE 1 VIOLÉE: Accès aux cartes des autres joueurs")
         except PermissionError:
-            logger.info("✅ RÈGLE 1: Accès aux cartes des autres joueurs bloqué - CONFORME")
+            logger.info("[OK] RÈGLE 1: Accès aux cartes des autres joueurs bloqué - CONFORME")
         
         # RÈGLE 2: Les révélations doivent être explicites et tracées
         cartes_revelees = self.dataset.get_revealed_cards_to_agent("TestAgent")
         if len(cartes_revelees) == 0:
-            logger.info("✅ RÈGLE 2: Aucune révélation non autorisée - CONFORME")
+            logger.info("[OK] RÈGLE 2: Aucune révélation non autorisée - CONFORME")
         
         # RÈGLE 3: La solution ne doit jamais être accessible directement
         try:
             solution = self.dataset.get_solution()
             violations.append("RÈGLE 3 VIOLÉE: Accès direct à la solution")
         except PermissionError:
-            logger.info("✅ RÈGLE 3: Accès direct à la solution bloqué - CONFORME")
+            logger.info("[OK] RÈGLE 3: Accès direct à la solution bloqué - CONFORME")
         
         # RÈGLE 4: Moriarty ne doit révéler que SES propres cartes
         moriarty_cards = set(self.dataset.get_moriarty_cards())
         # Cette vérification nécessiterait l'accès aux cartes des autres, qui est maintenant bloqué
         # Donc cette règle est respectée par construction
-        logger.info("✅ RÈGLE 4: Séparation cartes Moriarty/autres par construction - CONFORME")
+        logger.info("[OK] RÈGLE 4: Séparation cartes Moriarty/autres par construction - CONFORME")
         
         # Aucune violation ne doit être détectée
         assert len(violations) == 0, f"Violations détectées après corrections: {violations}"
         
-        logger.info("✅ SUCCÈS: Toutes les règles du Cluedo sont respectées")
+        logger.info("[OK] SUCCÈS: Toutes les règles du Cluedo sont respectées")
 
 
 def test_validation_complete_integrite_apres_corrections():
@@ -260,9 +260,9 @@ def test_validation_complete_integrite_apres_corrections():
         logger.error(f"❌ ÉCHEC: Règles Cluedo - {e}")
         return False
     
-    logger.info(f"✅ VALIDATION RÉUSSIE: {len(succes_tests)} tests d'intégrité passés")
+    logger.info(f"[OK] VALIDATION RÉUSSIE: {len(succes_tests)} tests d'intégrité passés")
     for succes in succes_tests:
-        logger.info(f"  ✅ {succes}")
+        logger.info(f"  [OK] {succes}")
     
     logger.info("🎉 CONCLUSION: L'intégrité des règles du Cluedo a été restaurée avec succès !")
     
@@ -277,13 +277,13 @@ if __name__ == "__main__":
     if resultat:
         print("\n🎉 VALIDATION RÉUSSIE: L'intégrité des règles du Cluedo a été restaurée !")
         print("📋 Résultats:")
-        print("✅ get_autres_joueurs_cards() sécurisée")
-        print("✅ get_solution() sécurisée") 
-        print("✅ simulate_other_player_response() légitime")
-        print("✅ Système de permissions renforcé")
-        print("✅ Fonctionnalités légitimes préservées")
-        print("✅ Oracle Enhanced respecte l'intégrité")
-        print("✅ Règles du Cluedo respectées")
+        print("[OK] get_autres_joueurs_cards() sécurisée")
+        print("[OK] get_solution() sécurisée") 
+        print("[OK] simulate_other_player_response() légitime")
+        print("[OK] Système de permissions renforcé")
+        print("[OK] Fonctionnalités légitimes préservées")
+        print("[OK] Oracle Enhanced respecte l'intégrité")
+        print("[OK] Règles du Cluedo respectées")
         print("\n🎯 OBJECTIF ATTEINT: 100% de tests AVEC intégrité du Cluedo respectée !")
         exit(0)
     else:

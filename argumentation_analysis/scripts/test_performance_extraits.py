@@ -599,14 +599,18 @@ async def generate_performance_report(results: List[Dict[str, Any]]) -> Path:
 
 ## Résultats par Extrait
 
-{chr(10).join([f"""### {r['id']}
-- **Description:** {r['description']}
-- **Temps total:** {r['performances']['temps_total']:.2f} secondes
-- **Nombre d'arguments identifiés:** {r['performances']['nombre_arguments']}
-- **Nombre de sophismes identifiés:** {r['performances']['nombre_sophismes']}
-- **Temps d'identification des arguments:** {r['performances']['temps_identification_arguments']:.2f} secondes
-- **Temps d'analyse des sophismes:** {r['performances']['temps_analyse_sophismes']:.2f} secondes
-""" for r in report['resultats_par_extrait']])}
+{
+    chr(10).join([
+        f"### {r['id']}\n"
+        f"- **Description:** {r['description']}\n"
+        f"- **Temps total:** {r['performances']['temps_total']:.2f} secondes\n"
+        f"- **Nombre d'arguments identifiés:** {r['performances']['nombre_arguments']}\n"
+        f"- **Nombre de sophismes identifiés:** {r['performances']['nombre_sophismes']}\n"
+        f"- **Temps d'identification des arguments:** {r['performances']['temps_identification_arguments']:.2f} secondes\n"
+        f"- **Temps d'analyse des sophismes:** {r['performances']['temps_analyse_sophismes']:.2f} secondes"
+        for r in report['resultats_par_extrait']
+    ])
+}
 
 ## Conclusion
 Ce rapport a été généré automatiquement après l'exécution des tests de performance sur les extraits spécifiés. Une analyse manuelle plus approfondie est recommandée pour évaluer la qualité de l'analyse rhétorique produite.
