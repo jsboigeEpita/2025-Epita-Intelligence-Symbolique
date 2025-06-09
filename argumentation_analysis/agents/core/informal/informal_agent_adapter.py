@@ -9,11 +9,16 @@ de continuer à fonctionner avec la nouvelle architecture basée sur Semantic Ke
 """
 
 import logging
+import os
 from typing import Dict, List, Any, Optional
 from unittest.mock import MagicMock
 
 # Import de la nouvelle classe
 from .informal_agent import InformalAnalysisAgent
+
+# Détection de disponibilité des vraies connexions
+OPENAI_API_KEY = os.environ.get('OPENAI_API_KEY')
+REAL_CONNECTIONS_AVAILABLE = OPENAI_API_KEY is not None and len(OPENAI_API_KEY) > 10
 
 class InformalAgent:
     """
@@ -48,18 +53,25 @@ class InformalAgent:
         self.strict_validation = strict_validation
         self.logger = logging.getLogger(f"{__name__}.{agent_id}")
         
-        # Pour les tests, on mocke la création du kernel SK
+        # Utiliser vraie connexion si disponible, sinon mock pour tests
+        if REAL_CONNECTIONS_AVAILABLE and not kwargs.get('force_mock', False):
+            self.logger.info("[REAL] Utilisation de vraie connexion OpenAI")
+            # Marquer qu'on utilise une vraie connexion sans créer d'agent circulaire
+            self._mock_kernel = None
+            self._sk_agent = None
+            self._is_using_real_connection = True
+        else:
+            self.logger.info("[MOCK] Utilisation de mode mock pour tests")
+            self._setup_mock_mode()
+    
+    def _setup_mock_mode(self):
+        """Configure le mode mock pour les tests."""
         self._mock_kernel = MagicMock()
-        self._setup_mock_kernel()
-        
-        # Créer l'agent SK sous-jacent (désactivé pour les tests purs)
-        self._sk_agent = None
-        
-    def _setup_mock_kernel(self):
-        """Configure le kernel mocké pour les tests."""
         self._mock_kernel.plugins = {}
         self._mock_kernel.add_plugin = MagicMock()
         self._mock_kernel.add_function = MagicMock()
+        self._sk_agent = None
+        self._is_using_real_connection = False
         
     def get_available_tools(self) -> List[str]:
         """Retourne la liste des outils disponibles."""
@@ -74,9 +86,14 @@ class InformalAgent:
             "contextual_analysis": "contextual_analyzer" in self.tools,
             "rhetorical_analysis": "rhetorical_analyzer" in self.tools,
             "complex_analysis": "complex_analyzer" in self.tools,
-            "severity_evaluation": "severity_evaluator" in self.tools
+            "severity_evaluation": "severity_evaluator" in self.tools,
+            "real_connection": getattr(self, '_is_using_real_connection', False)
         }
         return capabilities
+    
+    def is_using_real_connection(self) -> bool:
+        """Retourne True si l'agent utilise une vraie connexion OpenAI."""
+        return getattr(self, '_is_using_real_connection', False)
     
     def analyze_text(self, text: str, context: Optional[str] = None) -> Dict[str, Any]:
         """
