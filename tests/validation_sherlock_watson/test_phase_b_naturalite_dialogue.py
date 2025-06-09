@@ -34,7 +34,7 @@ class NaturaliteMetrics:
     score_naturalite: float
     exemples_messages: List[str]
 
-class TestPhaseB:
+class PhaseBValidator:
     """Tests pour la Phase B - Naturalité du dialogue"""
     
     def __init__(self):

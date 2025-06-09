@@ -1,3 +1,4 @@
+import pytest
 #!/usr/bin/env python3
 """
 Test Phase D : Validation de la trace idéale avec score 8.0+/10
@@ -27,6 +28,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
+@pytest.mark.anyio
 async def test_phase_d_trace_ideale():
     """
     Test complet de la Phase D pour atteindre la trace idéale (8.0+/10).
@@ -167,7 +169,7 @@ async def test_phase_d_trace_ideale():
         print("-" * 30)
         
         for metric_name, score in ideal_metrics.items():
-            status = "✅" if score >= 8.0 else "⚠️" if score >= 7.0 else "❌"
+            status = "[OK]" if score >= 8.0 else "⚠️" if score >= 7.0 else "[FAIL]"
             print(f"{status} {metric_name.replace('_', ' ').title()}: {score:.1f}/10")
         
         # Score global et évaluation
@@ -253,7 +255,7 @@ async def test_phase_d_trace_ideale():
         total_criteria = len(validation_criteria)
         
         for criterion, passed in validation_criteria.items():
-            status = "✅ VALIDÉ" if passed else "❌ ÉCHEC"
+            status = "[OK] VALIDÉ" if passed else "[FAIL] ÉCHEC"
             print(f"{status} {criterion}")
             if passed:
                 passed_criteria += 1
@@ -269,7 +271,7 @@ async def test_phase_d_trace_ideale():
             final_status = "⚠️  PHASE D PARTIELLEMENT RÉUSSIE"
             phase_d_success = False
         else:
-            final_status = "❌ PHASE D ÉCHOUÉE"
+            final_status = "[FAIL] PHASE D ÉCHOUÉE"
             phase_d_success = False
         
         print(f"\n{final_status}")
@@ -335,6 +337,7 @@ async def test_phase_d_trace_ideale():
         return None
 
 
+@pytest.mark.anyio
 async def demonstration_trace_ideale():
     """
     Démonstration complète d'une conversation trace idéale.
@@ -489,7 +492,7 @@ if __name__ == "__main__":
             if results.get("phase_d_success", False):
                 demo_results = await demonstration_trace_ideale()
                 if demo_results:
-                    print("\n✅ DÉMONSTRATION TRACE IDÉALE COMPLÉTÉE")
+                    print("\n[OK] DÉMONSTRATION TRACE IDÉALE COMPLÉTÉE")
             
         print("\n🎉 PHASE D - TOUS LES TESTS TERMINÉS")
     

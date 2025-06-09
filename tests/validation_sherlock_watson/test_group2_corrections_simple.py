@@ -1,3 +1,4 @@
+import pytest
 #!/usr/bin/env python3
 """
 Script de test pour verifier les corrections du Groupe 2.
@@ -48,6 +49,7 @@ def test_dataset_manager_check_permission():
     print("SUCCES Test 1: check_permission fonctionne correctement")
 
 
+@pytest.mark.anyio
 async def test_mock_permission_setup():
     """Test que les mocks peuvent etre configures correctement pour les tests."""
     print("Test 2: Configuration des mocks pour permission_manager")
@@ -74,6 +76,7 @@ async def test_mock_permission_setup():
     print("SUCCES Test 2: Les mocks sont correctement configures")
 
 
+@pytest.mark.anyio
 async def test_oracle_tools_integration():
     """Test l'integration avec OracleTools."""
     print("Test 3: Integration OracleTools avec check_agent_permission")
