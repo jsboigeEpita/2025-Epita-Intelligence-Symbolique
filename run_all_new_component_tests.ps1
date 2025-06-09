@@ -1,8 +1,45 @@
-﻿# Script PowerShell pour Validation des Nouveaux Composants
-# ========================================================
-#
-# Version PowerShell native du script de validation master
-# Compatible Windows avec gestion d'environnements et permissions
+﻿#!/usr/bin/env pwsh
+<#
+.SYNOPSIS
+Script de validation complète des nouveaux composants
+
+.DESCRIPTION
+Lance la validation de tous les nouveaux composants du projet.
+Version refactorisée utilisant les modules Python mutualisés.
+
+.PARAMETER Authentic
+Mode authentique (composants réels, API, etc.)
+
+.PARAMETER Verbose
+Affichage détaillé
+
+.PARAMETER Fast
+Tests unitaires rapides seulement
+
+.PARAMETER Component
+Exécuter un composant spécifique
+
+.PARAMETER Level
+Niveau de tests (unit|integration|all)
+
+.PARAMETER Report
+Fichier de sortie pour le rapport JSON
+
+.PARAMETER Output
+Alias pour -Report
+
+.PARAMETER Help
+Afficher l'aide
+
+.EXAMPLE
+.\run_all_new_component_tests.ps1 -Authentic -Verbose
+.\run_all_new_component_tests.ps1 -Fast
+.\run_all_new_component_tests.ps1 -Component "TweetyErrorAnalyzer"
+
+.NOTES
+Auteur: Intelligence Symbolique EPITA
+Date: 09/06/2025 - Version refactorisée
+#>
 
 param(
     [switch]$Authentic,
@@ -15,42 +52,23 @@ param(
     [switch]$Help
 )
 
-# Configuration des couleurs
-$Colors = @{
-    Green = [ConsoleColor]::Green
-    Red = [ConsoleColor]::Red
-    Yellow = [ConsoleColor]::Yellow
-    Blue = [ConsoleColor]::Blue
-    Cyan = [ConsoleColor]::Cyan
-    White = [ConsoleColor]::White
-    Gray = [ConsoleColor]::Gray
-}
+# Configuration
+$ProjectRoot = $PSScriptRoot
 
-function Write-ColoredOutput {
-    param(
-        [string]$Message,
-        [ConsoleColor]$Color = [ConsoleColor]::White
-    )
-    
-    $previousColor = $Host.UI.RawUI.ForegroundColor
-    $Host.UI.RawUI.ForegroundColor = $Color
-    Write-Output $Message
-    $Host.UI.RawUI.ForegroundColor = $previousColor
-}
-
-function Show-Help {
+# Affichage de l'aide
+if ($Help) {
     Write-Host @"
-Orchestrateur Master de Validation des Nouveaux Composants
-========================================================
+🧪 VALIDATION COMPLÈTE DES NOUVEAUX COMPOSANTS
+==============================================
 
 USAGE:
     .\run_all_new_component_tests.ps1 [OPTIONS]
 
 OPTIONS:
-    -Authentic          Mode authentique (composants reels, API, etc.)
-    -Verbose           Affichage detaille
+    -Authentic          Mode authentique (composants réels, API, etc.)
+    -Verbose           Affichage détaillé
     -Fast              Tests unitaires rapides seulement
-    -Component <name>  Executer un composant specifique
+    -Component <name>  Exécuter un composant spécifique
     -Level <level>     Niveau de tests (unit|integration|all)
     -Report <file>     Fichier de sortie pour le rapport JSON
     -Output <file>     Alias pour -Report
@@ -68,191 +86,162 @@ COMPOSANTS DISPONIBLES:
     - FirstOrderLogicAgent
     - AuthenticitySystem
     - UnifiedOrchestrations
-"@
+"@ -ForegroundColor Cyan
+    exit 0
 }
 
-function Test-Prerequisites {
-    Write-ColoredOutput "[CHECK] Verification des prerequis..." $Colors.Blue
+try {
+    # Import des modules Python mutualisés
+    $reportFile = if ($Report) { $Report } elseif ($Output) { $Output } else { "" }
     
-    $issues = @()
-    
-    # Test Python
-    try {
-        $pythonVersion = & python --version 2>&1
-        if ($LASTEXITCODE -ne 0) {
-            $issues += "Python non disponible"
-        } else {
-            Write-ColoredOutput "[OK] Python: $pythonVersion" $Colors.Green
-        }
-    } catch {
-        $issues += "Python non disponible"
-    }
-    
-    # Test pytest
-    try {
-        $pytestVersion = & python -m pytest --version 2>&1
-        if ($LASTEXITCODE -ne 0) {
-            $issues += "pytest non disponible"
-        } else {
-            Write-ColoredOutput "[OK] pytest disponible" $Colors.Green
-        }
-    } catch {
-        $issues += "pytest non disponible"
-    }
-    
-    # Test configuration unifiee
-    if (Test-Path "config\unified_config.py") {
-        Write-ColoredOutput "[OK] Configuration unifiee trouvee" $Colors.Green
-    } else {
-        $issues += "Configuration unifiee manquante"
-    }
-    
-    # Tests authentiques si requis
-    if ($Authentic) {
-        # Test cle API OpenAI
-        if ($env:OPENAI_API_KEY) {
-            Write-ColoredOutput "[OK] Cle API OpenAI configuree" $Colors.Green
-        } else {
-            $issues += "Cle API OpenAI manquante (variable OPENAI_API_KEY)"
-        }
-        
-        # Test JAR Tweety
-        if (Test-Path "libs\tweety.jar") {
-            Write-ColoredOutput "[OK] JAR Tweety trouve" $Colors.Green
-        } else {
-            $issues += "JAR Tweety manquant (libs\tweety.jar)"
-        }
-        
-        # Test taxonomie
-        if (Test-Path "config\taxonomies") {
-            Write-ColoredOutput "[OK] Taxonomie sophismes trouvee" $Colors.Green
-        } else {
-            $issues += "Taxonomie sophismes manquante"
-        }
-    }
-    
-    return $issues
-}
+    $pythonCommand = @"
+import sys
+import os
+sys.path.append(os.path.join('$ProjectRoot', 'scripts', 'core'))
 
-function Invoke-PythonScript {
-    Write-ColoredOutput "`n[RUN] Execution du script Python..." $Colors.Blue
+from test_runner import TestRunner
+from validation_engine import ValidationEngine
+from common_utils import setup_logging, print_colored
+
+# Configuration du logging
+logger = setup_logging(verbose=$($Verbose.ToString().ToLower()))
+
+# Affichage des informations de configuration
+print_colored("🧪 VALIDATION COMPLÈTE DES NOUVEAUX COMPOSANTS", "blue")
+print_colored("=" * 50, "blue")
+print_colored(f"Mode authentique: $($Authentic)", "white")
+print_colored(f"Mode verbose: $($Verbose)", "white")
+print_colored(f"Mode rapide: $($Fast)", "white")
+component_display = '$Component' if '$Component' else 'Tous'
+print_colored(f"Composant spécifique: {component_display}", "white")
+print_colored(f"Niveau: $Level", "white")
+report_display = '$reportFile' if '$reportFile' else 'Console uniquement'
+print_colored(f"Rapport: {report_display}", "white")
+print_colored("=" * 50, "white")
+
+try:
+    # Initialisation des modules
+    validator = ValidationEngine()
+    test_runner = TestRunner()
+    
+    # Configuration du test
+    test_config = {
+        'target_script': 'run_all_new_component_tests.py',
+        'authentic': $($Authentic.ToString().ToLower()),
+        'verbose': $($Verbose.ToString().ToLower()),
+        'fast': $($Fast.ToString().ToLower()),
+        'component': '$Component' if '$Component' else None,
+        'level': '$Level',
+        'report_file': '$reportFile' if '$reportFile' else None
+    }
     
     # Construction des arguments
-    $pythonArgs = @("run_all_new_component_tests.py")
+    test_args = []
+    if $($Authentic.ToString().ToLower()):
+        test_args.append('--authentic')
+    if $($Verbose.ToString().ToLower()):
+        test_args.append('--verbose')
+    if $($Fast.ToString().ToLower()):
+        test_args.append('--fast')
+    if '$Component':
+        test_args.extend(['--component', '$Component'])
+    if '$Level' != 'all':
+        test_args.extend(['--level', '$Level'])
+    if '$reportFile':
+        test_args.extend(['--report', '$reportFile'])
     
-    if ($Authentic) { $pythonArgs += "--authentic" }
-    if ($Verbose) { $pythonArgs += "--verbose" }
-    if ($Fast) { $pythonArgs += "--fast" }
-    if ($Component) { $pythonArgs += "--component", $Component }
-    if ($Level -ne "all") { $pythonArgs += "--level", $Level }
-    if ($Report) { $pythonArgs += "--report", $Report }
-    if ($Output) { $pythonArgs += "--output", $Output }
+    # Vérification des prérequis système
+    print_colored("Vérification des prérequis système...", "blue")
+    prereq_result = validator.check_system_requirements()
     
-    # Affichage de la commande si verbose
-    if ($Verbose) {
-        $commandStr = "python " + ($pythonArgs -join " ")
-        Write-ColoredOutput "[CMD] Commande: $commandStr" $Colors.Gray
-    }
-    
-    # Execution
-    try {
-        & python @pythonArgs
-        $exitCode = $LASTEXITCODE
+    if not prereq_result['valid']:
+        print_colored("❌ Prérequis non satisfaits:", "red")
+        for issue in prereq_result['issues']:
+            print_colored(f"  - {issue}", "red")
         
-        if ($exitCode -eq 0) {
-            Write-ColoredOutput "`n[SUCCESS] Validation completee avec succes!" $Colors.Green
-        } else {
-            Write-ColoredOutput "`n[WARNING] Validation terminee avec des erreurs (code: $exitCode)" $Colors.Yellow
-        }
+        # En mode non-authentique, on peut continuer en mode dégradé
+        if not $($Authentic.ToString().ToLower()):
+            print_colored("⚠️  Passage en mode dégradé possible", "yellow")
+        else:
+            print_colored("❌ Impossible de continuer en mode authentique", "red")
+            sys.exit(1)
+    else:
+        print_colored("✅ Prérequis validés", "green")
+    
+    # Vérifications spécifiques au mode authentique
+    if $($Authentic.ToString().ToLower()):
+        print_colored("Vérifications mode authentique...", "blue")
+        auth_checks = validator.check_authentic_requirements()
         
-        return $exitCode
-    } catch {
-        Write-ColoredOutput "`n[ERROR] Erreur lors de l'execution: $($_.Exception.Message)" $Colors.Red
-        return 1
-    }
-}
-
-function Main {
-    # Affichage de l'aide si demande
-    if ($Help) {
-        Show-Help
-        exit 0
-    }
+        if not auth_checks['valid']:
+            print_colored("❌ Prérequis mode authentique non satisfaits:", "red")
+            for issue in auth_checks['issues']:
+                print_colored(f"  - {issue}", "red")
+            sys.exit(1)
+        else:
+            print_colored("✅ Mode authentique validé", "green")
     
-    # En-tete
-    Write-ColoredOutput @"
-
-[TEST] VALIDATION COMPLETE DES NOUVEAUX COMPOSANTS
-============================================
-PowerShell Edition - Windows Native
-"@ $Colors.Blue
+    # Vérification de l'existence du script Python cible
+    script_path = os.path.join('$ProjectRoot', test_config['target_script'])
+    if not os.path.exists(script_path):
+        print_colored(f"❌ Script Python principal introuvable: {script_path}", "red")
+        print_colored("Assurez-vous que run_all_new_component_tests.py est présent.", "red")
+        sys.exit(1)
     
-    # Informations de configuration
-    Write-ColoredOutput "`n[CONFIG] CONFIGURATION:" $Colors.Cyan
-    Write-ColoredOutput "Mode authentique: $(if ($Authentic) { 'OUI' } else { 'NON' })" $Colors.White
-    Write-ColoredOutput "Mode verbose: $(if ($Verbose) { 'OUI' } else { 'NON' })" $Colors.White
-    Write-ColoredOutput "Mode rapide: $(if ($Fast) { 'OUI' } else { 'NON' })" $Colors.White
-    if ($Component) {
-        Write-ColoredOutput "Composant: $Component" $Colors.White
-    }
-    Write-ColoredOutput "Niveau: $Level" $Colors.White
+    # Exécution des tests
+    print_colored("Lancement de la validation des composants...", "blue")
     
-    # Verification des prerequis
-    $issues = Test-Prerequisites
-    
-    if ($issues.Count -gt 0) {
-        Write-ColoredOutput "`n[ERROR] PREREQUIS MANQUANTS:" $Colors.Red
-        foreach ($issue in $issues) {
-            Write-ColoredOutput "  - $issue" $Colors.Red
-        }
-        
-        if (-not $Authentic) {
-            Write-ColoredOutput "`n[INFO] Passage en mode degrade possible" $Colors.Yellow
-        } else {
-            Write-ColoredOutput "`n[ERROR] Impossible de continuer en mode authentique" $Colors.Red
-            exit 1
-        }
-    }
-    
-    # Verification de l'existence du script Python
-    if (-not (Test-Path "run_all_new_component_tests.py")) {
-        Write-ColoredOutput "`n[ERROR] Script Python principal introuvable!" $Colors.Red
-        Write-ColoredOutput "Assurez-vous que run_all_new_component_tests.py est present." $Colors.Red
-        exit 1
-    }
-    
-    # Execution du script Python
-    $exitCode = Invoke-PythonScript
+    result = test_runner.run_specific_test(
+        script_path=test_config['target_script'],
+        test_args=test_args,
+        working_dir='$ProjectRoot'
+    )
     
     # Rapport final
-    Write-ColoredOutput "`n[REPORT] RAPPORT FINAL:" $Colors.Blue
-    if ($exitCode -eq 0) {
-        Write-ColoredOutput "[OK] Tous les tests sont passes avec succes" $Colors.Green
-        Write-ColoredOutput "[READY] Systeme pret pour la production" $Colors.Green
-    } else {
-        Write-ColoredOutput "[FAIL] Des erreurs ont ete detectees" $Colors.Red
-        Write-ColoredOutput "[CHECK] Verifiez les logs pour plus de details" $Colors.Yellow
-    }
-    
-    # Information sur les rapports
-    if ($Report -or $Output) {
-        $reportFile = if ($Report) { $Report } else { $Output }
-        if (Test-Path $reportFile) {
-            Write-ColoredOutput "[FILE] Rapport JSON disponible: $reportFile" $Colors.Cyan
-        }
-    }
-    
-    exit $exitCode
-}
+    print_colored("📊 RAPPORT FINAL", "blue")
+    if result['success']:
+        print_colored("✅ Tous les tests sont passés avec succès", "green")
+        print_colored("🚀 Système prêt pour la production", "green")
+        
+        if '$reportFile' and os.path.exists('$reportFile'):
+            print_colored(f"📄 Rapport JSON disponible: $reportFile", "cyan")
+        
+        print_colored("🎉 MISSION ACCOMPLIE - Validation des nouveaux composants", "green")
+        sys.exit(0)
+    else:
+        print_colored("❌ Des erreurs ont été détectées", "red")
+        print_colored("🔍 Vérifiez les logs pour plus de détails", "yellow")
+        
+        if 'error' in result:
+            print_colored(f"Erreur: {result['error']}", "red")
+        
+        sys.exit(1)
+        
+except Exception as e:
+    print_colored(f"❌ Erreur critique: {str(e)}", "red")
+    if $($Verbose.ToString().ToLower()):
+        import traceback
+        print_colored(f"Stack trace: {traceback.format_exc()}", "red")
+    sys.exit(2)
+"@
 
-# Point d'entree
-try {
-    Main
-} catch {
-    Write-ColoredOutput "`n[CRITICAL] ERREUR CRITIQUE: $($_.Exception.Message)" $Colors.Red
-    if ($Verbose) {
-        Write-ColoredOutput "`nDetails de l'erreur:" $Colors.Gray
-        Write-ColoredOutput $_.Exception.ToString() $Colors.Gray
+    # Exécution via l'environnement projet
+    $activationScript = Join-Path $ProjectRoot "scripts\env\activate_project_env.ps1"
+    $command = "python -c `"$($pythonCommand -replace '"', '\"')`""
+    
+    if (Test-Path $activationScript) {
+        & $activationScript -CommandToRun $command
+    } else {
+        # Fallback si le script d'activation n'existe pas
+        Invoke-Expression $command
     }
-    exit 1
+    
+    exit $LASTEXITCODE
+    
+} catch {
+    Write-Host "❌ Erreur critique: $($_.Exception.Message)" -ForegroundColor Red
+    if ($Verbose) {
+        Write-Host "Stack trace: $($_.ScriptStackTrace)" -ForegroundColor Gray
+    }
+    exit 2
 }

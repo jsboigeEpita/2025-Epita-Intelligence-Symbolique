@@ -1,4 +1,4 @@
-import pytest
+﻿import pytest
 from playwright.sync_api import Page, expect, TimeoutError
 
 # Import de la classe PlaywrightHelpers
@@ -81,12 +81,9 @@ class TestFrameworkBuilder:
         # Nous vérifions que l'état du framework persiste correctement
         expect(page.locator('.argument-card')).to_have_count(2)
 
-    def test_framework_rule_management(self, page: Page):
+    def test_framework_rule_management(self, framework_page: Page):
         """Test de la gestion des règles et contraintes du framework"""
-        test_helpers = PlaywrightHelpers(page)
-        
-        # Navigation vers l'onglet Framework
-        test_helpers.navigate_to_tab("framework")
+        # La fixture framework_page navigue déjà vers l'onglet
         
         # Ajout de plusieurs arguments
         arguments = [
@@ -132,26 +129,23 @@ class TestFrameworkBuilder:
         page.locator('.attack-item .remove-button').first.click()
         expect(page.locator('.attack-item')).to_have_count(1)
 
-    def test_framework_validation_integration(self, page: Page):
+    def test_framework_validation_integration(self, framework_page: Page):
         """Test de l'intégration avec le système de validation"""
-        test_helpers = PlaywrightHelpers(page)
-        
-        # Navigation vers l'onglet Framework
-        test_helpers.navigate_to_tab("framework")
+        # La fixture framework_page navigue déjà vers l'onglet
         
         # Construction d'un framework simple mais valide
-        page.locator('#arg-content').fill('Argument A')
-        page.get_by_role("button", name="Ajouter l'argument").click()
+        framework_page.locator('#arg-content').fill('Argument A')
+        framework_page.get_by_role("button", name="Ajouter l'argument").click()
         
-        page.locator('#arg-content').fill('Argument B')
-        page.get_by_role("button", name="Ajouter l'argument").click()
+        framework_page.locator('#arg-content').fill('Argument B')
+        framework_page.get_by_role("button", name="Ajouter l'argument").click()
         
         # Configuration des options
-        page.locator('#semantics').select_option('grounded')
+        framework_page.locator('#semantics').select_option('grounded')
         
         # Vérification des options de construction
-        compute_extensions = page.locator('input[type="checkbox"]').first
-        include_visualization = page.locator('input[type="checkbox"]').nth(1)
+        compute_extensions = framework_page.locator('input[type="checkbox"]').first
+        include_visualization = framework_page.locator('input[type="checkbox"]').nth(1)
         
         expect(compute_extensions).to_be_checked()  # Par défaut
         expect(include_visualization).to_be_checked()  # Par défaut
@@ -161,21 +155,18 @@ class TestFrameworkBuilder:
         expect(include_visualization).not_to_be_checked()
         
         # Construction du framework (note: l'interface a actuellement une erreur JS)
-        page.locator('.build-button').click()
+        framework_page.locator('.build-button').click()
         
         # Vérification que la configuration a été appliquée correctement
-        expect(page.locator('#semantics')).to_have_value('grounded')
+        expect(framework_page.locator('#semantics')).to_have_value('grounded')
         expect(include_visualization).not_to_be_checked()
         
         # Vérification que les arguments persistent
-        expect(page.locator('.argument-card')).to_have_count(2)
+        expect(framework_page.locator('.argument-card')).to_have_count(2)
 
-    def test_framework_persistence(self, page: Page):
+    def test_framework_persistence(self, framework_page: Page):
         """Test de la persistance et sauvegarde du framework"""
-        test_helpers = PlaywrightHelpers(page)
-        
-        # Navigation vers l'onglet Framework
-        test_helpers.navigate_to_tab("framework")
+        # La fixture framework_page navigue déjà vers l'onglet
         
         # Construction d'un framework avec données de test
         test_arguments = [
@@ -184,25 +175,25 @@ class TestFrameworkBuilder:
         ]
         
         for arg_content in test_arguments:
-            page.locator('#arg-content').fill(arg_content)
-            page.get_by_role("button", name="Ajouter l'argument").click()
+            framework_page.locator('#arg-content').fill(arg_content)
+            framework_page.get_by_role("button", name="Ajouter l'argument").click()
         
         # Ajout d'une attaque
-        page.locator('#attack-source').select_option(index=1)
-        page.locator('#attack-target').select_option(index=2)
-        page.get_by_role("button", name="Ajouter l'attaque").click()
+        framework_page.locator('#attack-source').select_option(index=1)
+        framework_page.locator('#attack-target').select_option(index=2)
+        framework_page.get_by_role("button", name="Ajouter l'attaque").click()
         
         # Configuration et construction
-        page.locator('#semantics').select_option('complete')
-        page.locator('.build-button').click()
+        framework_page.locator('#semantics').select_option('complete')
+        framework_page.locator('.build-button').click()
         
         # Note: Les résultats ne s'affichent pas à cause d'une erreur JavaScript dans l'app
         # Nous vérifions que la configuration a été appliquée correctement
         
         # Vérification que les données persistantes sont présentes
-        expect(page.locator('.argument-card')).to_have_count(2)
-        expect(page.locator('.attack-item')).to_have_count(1)
-        expect(page.locator('#semantics')).to_have_value('complete')
+        expect(framework_page.locator('.argument-card')).to_have_count(2)
+        expect(framework_page.locator('.attack-item')).to_have_count(1)
+        expect(framework_page.locator('#semantics')).to_have_value('complete')
         
         # Test de navigation et retour (simulation de persistance)
         # Aller vers un autre onglet puis revenir
@@ -211,14 +202,11 @@ class TestFrameworkBuilder:
         
         # Vérification que le framework est toujours là (dans la session)
         # Note: La persistance dépend de l'implémentation React et du state management
-        expect(page.locator('.framework-section').first).to_be_visible()
+        expect(framework_page.locator('.framework-section').first).to_be_visible()
 
-    def test_framework_extension_analysis(self, page: Page):
+    def test_framework_extension_analysis(self, framework_page: Page):
         """Test de l'analyse des extensions du framework"""
-        test_helpers = PlaywrightHelpers(page)
-        
-        # Navigation vers l'onglet Framework
-        test_helpers.navigate_to_tab("framework")
+        # La fixture framework_page navigue déjà vers l'onglet
         
         # Construction d'un framework plus complexe pour générer des extensions intéressantes
         complex_arguments = [
@@ -229,8 +217,8 @@ class TestFrameworkBuilder:
         ]
         
         for arg_content in complex_arguments:
-            page.locator('#arg-content').fill(arg_content)
-            page.get_by_role("button", name="Ajouter l'argument").click()
+            framework_page.locator('#arg-content').fill(arg_content)
+            framework_page.get_by_role("button", name="Ajouter l'argument").click()
         
         # Création d'un réseau d'attaques complexe
         attacks = [
@@ -241,21 +229,21 @@ class TestFrameworkBuilder:
         ]
         
         for source_idx, target_idx in attacks:
-            page.locator('#attack-source').select_option(index=source_idx)
-            page.locator('#attack-target').select_option(index=target_idx)
-            page.get_by_role("button", name="Ajouter l'attaque").click()
+            framework_page.locator('#attack-source').select_option(index=source_idx)
+            framework_page.locator('#attack-target').select_option(index=target_idx)
+            framework_page.get_by_role("button", name="Ajouter l'attaque").click()
         
         # Test avec différentes sémantiques
         semantics_to_test = ['grounded', 'preferred', 'stable']
         
         # Test avec la première sémantique seulement (à cause de l'erreur JS dans l'app)
         semantic = semantics_to_test[0]  # Test seulement 'grounded'
-        page.locator('#semantics').select_option(semantic)
-        page.locator('.build-button').click()
+        framework_page.locator('#semantics').select_option(semantic)
+        framework_page.locator('.build-button').click()
         
         # Vérification que la sémantique a été correctement sélectionnée
-        expect(page.locator('#semantics')).to_have_value(semantic)
+        expect(framework_page.locator('#semantics')).to_have_value(semantic)
         
         # Vérification que tous les arguments et attaques sont toujours présents
-        expect(page.locator('.argument-card')).to_have_count(4)
-        expect(page.locator('.attack-item')).to_have_count(4)
+        expect(framework_page.locator('.argument-card')).to_have_count(4)
+        expect(framework_page.locator('.attack-item')).to_have_count(4)

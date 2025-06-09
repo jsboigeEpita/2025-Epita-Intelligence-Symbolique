@@ -12,9 +12,10 @@ import logging
 
 from semantic_kernel import Kernel # Exemple d'importation
 
+# Import paresseux pour éviter le cycle d'import - uniquement pour le typage
 if TYPE_CHECKING:
     from argumentation_analysis.agents.core.logic.belief_set import BeliefSet
-# from argumentation_analysis.agents.core.logic.tweety_bridge import TweetyBridge
+    from argumentation_analysis.agents.core.logic.tweety_bridge import TweetyBridge
 
 
 class BaseAgent(ABC):
@@ -33,14 +34,14 @@ class BaseAgent(ABC):
         _llm_service_id (Optional[str]): L'ID du service LLM utilisé, configuré via `setup_agent_components`.
         _system_prompt (Optional[str]): Le prompt système global pour l'agent.
     """
-    _kernel: 'Kernel'  # Utilisation de guillemets pour forward reference si Kernel n'est pas encore importé
+    _kernel: "Kernel"  # Utilisation de guillemets pour forward reference si Kernel n'est pas encore importé
     _agent_name: str
     _logger: logging.Logger
     _llm_service_id: Optional[str]
     _system_prompt: Optional[str]
     _description: Optional[str]
 
-    def __init__(self, kernel: 'Kernel', agent_name: str, system_prompt: Optional[str] = None, description: Optional[str] = None):
+    def __init__(self, kernel: "Kernel", agent_name: str, system_prompt: Optional[str] = None, description: Optional[str] = None):
         """
         Initialise une instance de BaseAgent.
 
@@ -91,7 +92,7 @@ class BaseAgent(ABC):
         return self._system_prompt
 
     @property
-    def sk_kernel(self) -> 'Kernel':
+    def sk_kernel(self) -> "Kernel":
         """
         Retourne le kernel Semantic Kernel associé à l'agent.
 
@@ -206,13 +207,13 @@ class BaseLogicAgent(BaseAgent, ABC):
         _logic_type_name (str): Nom du type de logique (ex: "PL", "FOL", "ML").
         _syntax_bnf (Optional[str]): Description BNF de la syntaxe logique (optionnel).
     """
-    _tweety_bridge: 'TweetyBridge'
+    _tweety_bridge: "TweetyBridge"
     _logic_type_name: str
     _syntax_bnf: Optional[str]
     # _parser: Any  # Ces éléments seront gérés par TweetyBridge
     # _solver: Any  # Ces éléments seront gérés par TweetyBridge
 
-    def __init__(self, kernel: 'Kernel', agent_name: str, logic_type_name: str, system_prompt: Optional[str] = None):
+    def __init__(self, kernel: "Kernel", agent_name: str, logic_type_name: str, system_prompt: Optional[str] = None):
         """
         Initialise une instance de BaseLogicAgent.
 
@@ -244,7 +245,7 @@ class BaseLogicAgent(BaseAgent, ABC):
         return self._logic_type_name
 
     @property
-    def tweety_bridge(self) -> 'TweetyBridge':
+    def tweety_bridge(self) -> "TweetyBridge":
         """
         Retourne l'instance de `TweetyBridge` associée à cet agent.
 
@@ -263,7 +264,7 @@ class BaseLogicAgent(BaseAgent, ABC):
         return self._tweety_bridge
 
     @abstractmethod
-    def text_to_belief_set(self, text: str, context: Optional[Dict[str, Any]] = None) -> Tuple[Optional['BeliefSet'], str]:
+    def text_to_belief_set(self, text: str, context: Optional[Dict[str, Any]] = None) -> Tuple[Optional["BeliefSet"], str]:
         """
         Méthode abstraite pour convertir un texte en langage naturel en un ensemble de croyances.
 
@@ -277,7 +278,7 @@ class BaseLogicAgent(BaseAgent, ABC):
         pass
 
     @abstractmethod
-    def generate_queries(self, text: str, belief_set: 'BeliefSet', context: Optional[Dict[str, Any]] = None) -> List[str]:
+    def generate_queries(self, text: str, belief_set: "BeliefSet", context: Optional[Dict[str, Any]] = None) -> List[str]:
         """
         Méthode abstraite pour générer des requêtes logiques pertinentes.
 
@@ -293,7 +294,7 @@ class BaseLogicAgent(BaseAgent, ABC):
         pass
 
     @abstractmethod
-    def execute_query(self, belief_set: 'BeliefSet', query: str) -> Tuple[Optional[bool], str]:
+    def execute_query(self, belief_set: "BeliefSet", query: str) -> Tuple[Optional[bool], str]:
         """
         Méthode abstraite pour exécuter une requête logique sur un ensemble de croyances.
 
@@ -310,7 +311,7 @@ class BaseLogicAgent(BaseAgent, ABC):
         pass
 
     @abstractmethod
-    def interpret_results(self, text: str, belief_set: 'BeliefSet', queries: List[str], results: List[Tuple[Optional[bool], str]], context: Optional[Dict[str, Any]] = None) -> str:
+    def interpret_results(self, text: str, belief_set: "BeliefSet", queries: List[str], results: List[Tuple[Optional[bool], str]], context: Optional[Dict[str, Any]] = None) -> str:
         """
         Méthode abstraite pour interpréter les résultats des requêtes logiques en langage naturel.
 
@@ -348,7 +349,7 @@ class BaseLogicAgent(BaseAgent, ABC):
         pass
 
     @abstractmethod
-    def is_consistent(self, belief_set: 'BeliefSet') -> Tuple[bool, str]:
+    def is_consistent(self, belief_set: "BeliefSet") -> Tuple[bool, str]:
         """
         Vérifie si un ensemble de croyances est cohérent.
 
