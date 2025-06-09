@@ -1,6 +1,9 @@
 """
-This file contains utilitary functions used by the local_llm package.
+This file contains utilitary functions.
 """
+
+import re
+import json
 
 LEGACY_PROMPT = """
 You are a specialist in fallacies.
@@ -57,7 +60,7 @@ Rules:
 - Format your answer in JSON as shown below.
 - End your response with <END> on a new line.
 
-Output format (JSON):
+Output format (must be a valid JSON):
 {{
   "arguments": [
     {{
@@ -101,3 +104,35 @@ def clean_output(output: str) -> str:
         if index != -1:
             return output[:index]
     return "No end of output found, here is the full output:\n\n" + output
+
+
+def extract_json_from_string(input_string):
+    """
+    Extracts the first JSON object found within a given string.
+
+    The function searches for a substring that resembles a JSON object (enclosed
+    in curly braces `{}`), attempts to parse it, and returns it as a Python dictionary.
+
+    Args:
+        input_string (str): The string containing text and a JSON object.
+
+    Returns:
+        dict or None: The parsed JSON object as a dictionary if found and valid,
+                      otherwise None.
+    """
+    pattern = r"(\{(?:.|\n)*\})"
+    match = re.search(pattern, input_string)
+
+    if match:
+        json_string = match.group(1)
+
+        print(json_string)
+        try:
+            json_obj = json.loads(json_string)
+            return json_obj
+        except json.JSONDecodeError:
+            print("Error decoding JSON.")
+            return None
+    else:
+        print("No JSON object found.")
+        return None
