@@ -7,12 +7,13 @@ une logique formelle. Ces classes utilisent le pattern Abstract Base Class (ABC)
 pour définir une interface commune que les agents concrets doivent implémenter.
 """
 from abc import ABC, abstractmethod
-from typing import Dict, Any, Optional, Tuple, List
+from typing import Dict, Any, Optional, Tuple, List, TYPE_CHECKING
 import logging
 
 from semantic_kernel import Kernel # Exemple d'importation
 
-from argumentation_analysis.agents.core.logic.belief_set import BeliefSet
+if TYPE_CHECKING:
+    from argumentation_analysis.agents.core.logic.belief_set import BeliefSet
 # from argumentation_analysis.agents.core.logic.tweety_bridge import TweetyBridge
 
 

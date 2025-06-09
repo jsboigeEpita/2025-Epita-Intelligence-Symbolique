@@ -29,7 +29,7 @@ class TestWebAppInterfaceDemo:
         expect(page.locator("#clear-btn")).to_be_visible()
         expect(page.locator("#example-btn")).to_be_visible()
         
-        print("✅ Page chargée avec succès")
+        print("[OK] Page chargée avec succès")
     
     def test_example_button_functionality(self, page: Page):
         """Test du bouton d'exemple"""
@@ -45,7 +45,7 @@ class TestWebAppInterfaceDemo:
         # Vérifier le message de statut
         expect(page.locator("#status")).to_contain_text("Exemple chargé")
         
-        print("✅ Bouton exemple fonctionne")
+        print("[OK] Bouton exemple fonctionne")
     
     def test_clear_button_functionality(self, page: Page):
         """Test du bouton d'effacement"""
@@ -66,7 +66,7 @@ class TestWebAppInterfaceDemo:
         # Vérifier le message de statut
         expect(page.locator("#status")).to_contain_text("Texte effacé")
         
-        print("✅ Bouton effacer fonctionne")
+        print("[OK] Bouton effacer fonctionne")
     
     def test_analyze_button_functionality(self, page: Page):
         """Test du bouton d'analyse"""
@@ -86,7 +86,7 @@ class TestWebAppInterfaceDemo:
         expect(results).to_contain_text("Sophismes potentiels:")
         expect(results).to_contain_text("Score de cohérence:")
         
-        print("✅ Bouton analyser fonctionne")
+        print("[OK] Bouton analyser fonctionne")
     
     def test_empty_text_validation(self, page: Page):
         """Test de validation du texte vide"""
@@ -98,7 +98,7 @@ class TestWebAppInterfaceDemo:
         # Vérifier le message d'erreur
         expect(page.locator("#status")).to_contain_text("Veuillez entrer du texte à analyser")
         
-        print("✅ Validation du texte vide fonctionne")
+        print("[OK] Validation du texte vide fonctionne")
     
     def test_ui_responsive_elements(self, page: Page):
         """Test de la responsivité de l'interface"""
@@ -114,7 +114,7 @@ class TestWebAppInterfaceDemo:
         page.set_viewport_size({"width": 375, "height": 667})
         expect(page.locator(".container")).to_be_visible()
         
-        print("✅ Interface responsive")
+        print("[OK] Interface responsive")
 
 def main():
     """Exécution autonome des tests"""
@@ -142,13 +142,13 @@ def main():
             browser.close()
             
             print("\n" + "=" * 60)
-            print("✅ TOUS LES TESTS PASSÉS")
-            print("✅ INTERFACE WEB STATIQUE FONCTIONNELLE")
+            print("[OK] TOUS LES TESTS PASSÉS")
+            print("[OK] INTERFACE WEB STATIQUE FONCTIONNELLE")
             print("=" * 60)
             return 0
             
     except Exception as e:
-        print(f"❌ Erreur lors des tests: {e}")
+        print(f"[ERREUR] Erreur lors des tests: {e}")
         import traceback
         traceback.print_exc()
         return 1

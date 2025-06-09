@@ -179,13 +179,13 @@ class TestExtractAgent:
             invoked_function_name = kwargs.get('function_name')
             kernel_arguments = kwargs.get('arguments', {})
 
-            if invoked_plugin_name == agent.plugin_name and invoked_function_name == ExtractAgent.EXTRACT_SEMANTIC_FUNCTION_NAME:
+            if invoked_plugin_name == agent.name and invoked_function_name == ExtractAgent.EXTRACT_SEMANTIC_FUNCTION_NAME:
                 # Réponse non-JSON pour l'extraction
                 response_mock = MagicMock(spec=FunctionResult)
                 response_mock.value = 'Réponse non-JSON avec "start_marker": "Ceci est", "end_marker": "extraction.", "explanation": "Explication"'
                 response_mock.__str__ = lambda self_mock: self_mock.value # Assurer que str(response_mock) retourne la string
                 return response_mock
-            elif invoked_plugin_name == agent.plugin_name and invoked_function_name == ExtractAgent.VALIDATE_SEMANTIC_FUNCTION_NAME:
+            elif invoked_plugin_name == agent.name and invoked_function_name == ExtractAgent.VALIDATE_SEMANTIC_FUNCTION_NAME:
                 # Réponse valide pour la validation (peut être appelée ou non selon l'échec)
                 response_mock = MagicMock(spec=FunctionResult)
                 response_mock.value = '{"valid": true, "reason": "Extrait valide"}'
@@ -208,7 +208,7 @@ class TestExtractAgent:
         result = await agent.extract_from_name(source_info, extract_name)
         
         assert result.status == "error"
-        assert "Erreur lors du parsing de la réponse JSON" in result.error_message
+        assert "Erreur lors du parsing de la réponse JSON" in result.message
         mock_load_source_text.assert_called_once_with(source_info)
         
         # Vérifier que la fonction sémantique d'extraction a été appelée

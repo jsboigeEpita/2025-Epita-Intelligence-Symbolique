@@ -1,13 +1,36 @@
 import pytest
 from playwright.sync_api import Page, expect, TimeoutError
 
+# Import de la classe PlaywrightHelpers
+try:
+    from .conftest_original import PlaywrightHelpers
+except ImportError:
+    # Fallback pour définir une classe PlaywrightHelpers basique
+    class PlaywrightHelpers:
+        def __init__(self, page: Page):
+            self.page = page
+            self.API_CONNECTION_TIMEOUT = 30000
+            self.DEFAULT_TIMEOUT = 10000
+        
+        def navigate_to_tab(self, tab_name: str):
+            tab_selectors = {
+                'validation': '[data-testid="validation-tab"]',
+                'framework': '[data-testid="framework-tab"]',
+                'analyzer': '[data-testid="analyzer-tab"]',
+                'fallacy_detector': '[data-testid="fallacy-detector-tab"]',
+                'reconstructor': '[data-testid="reconstructor-tab"]',
+                'logic_graph': '[data-testid="logic-graph-tab"]'
+            }
+            if tab_name in tab_selectors:
+                self.page.locator(tab_selectors[tab_name]).click()
+
 
 class TestValidationForm:
     """Tests fonctionnels pour l'onglet Validation basés sur la structure réelle"""
 
     def test_validation_form_argument_validation(self, page: Page):
         """Test du workflow principal de validation d'argument"""
-        page = validation_page
+        test_helpers = PlaywrightHelpers(page)
         
         # Navigation vers l'onglet Validation
         test_helpers.navigate_to_tab("validation")
@@ -47,9 +70,9 @@ class TestValidationForm:
         if confidence_score.is_visible():
             expect(confidence_score).to_contain_text('%')
 
-    def test_validation_error_scenarios(self, validation_page: Page, test_helpers: PlaywrightHelpers):
+    def test_validation_error_scenarios(self, page: Page):
         """Test des scénarios d'erreur et de validation invalide"""
-        page = validation_page
+        test_helpers = PlaywrightHelpers(page)
         
         # Navigation vers l'onglet Validation
         test_helpers.navigate_to_tab("validation")
@@ -84,9 +107,9 @@ class TestValidationForm:
         except TimeoutError:
             pytest.fail("Aucun résultat ou message d'erreur affiché après validation")
 
-    def test_validation_form_reset_functionality(self, validation_page: Page, test_helpers: PlaywrightHelpers):
+    def test_validation_form_reset_functionality(self, page: Page):
         """Test de la fonctionnalité de réinitialisation du formulaire"""
-        page = validation_page
+        test_helpers = PlaywrightHelpers(page)
         
         # Navigation vers l'onglet Validation
         test_helpers.navigate_to_tab("validation")
@@ -109,9 +132,9 @@ class TestValidationForm:
         expect(page.locator('#conclusion')).to_have_value('')
         expect(page.locator('#argument-type')).to_have_value('deductive')  # Valeur par défaut
 
-    def test_validation_example_functionality(self, validation_page: Page, test_helpers: PlaywrightHelpers):
+    def test_validation_example_functionality(self, page: Page):
         """Test de la fonctionnalité de chargement d'exemple"""
-        page = validation_page
+        test_helpers = PlaywrightHelpers(page)
         
         # Navigation vers l'onglet Validation
         test_helpers.navigate_to_tab("validation")
