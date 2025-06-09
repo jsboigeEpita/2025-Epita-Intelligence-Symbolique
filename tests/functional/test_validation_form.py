@@ -1,4 +1,4 @@
-import pytest
+﻿import pytest
 from playwright.sync_api import Page, expect, TimeoutError
 
 # Import de la classe PlaywrightHelpers
@@ -30,14 +30,10 @@ class TestValidationForm:
 
     def test_validation_form_argument_validation(self, validation_page: Page):
         """Test du workflow principal de validation d'argument"""
-<<<<<<< HEAD
-        test_helpers = PlaywrightHelpers(page)
+        test_helpers = PlaywrightHelpers(validation_page)
         
         # Navigation vers l'onglet Validation
         test_helpers.navigate_to_tab("validation")
-=======
-        # La fixture validation_page navigue déjà vers l'onglet et attend la visibilité
->>>>>>> fdc7998 (✅ Interface Web EPITA - Mission Accomplie - 7 tests OK)
         
         # Vérification de la présence des éléments du formulaire réels
         expect(validation_page.locator('#argument-type')).to_be_visible()
@@ -74,18 +70,15 @@ class TestValidationForm:
         if confidence_score.is_visible():
             expect(confidence_score).to_contain_text('%')
 
-<<<<<<< HEAD
     def test_validation_error_scenarios(self, page: Page):
         """Test des scénarios d'erreur et de validation invalide"""
         test_helpers = PlaywrightHelpers(page)
         
         # Navigation vers l'onglet Validation
         test_helpers.navigate_to_tab("validation")
-=======
     def test_validation_error_scenarios(self, validation_page: Page):
         """Test des scénarios d'erreur et de validation invalide"""
         # La fixture validation_page navigue déjà vers l'onglet
->>>>>>> fdc7998 (✅ Interface Web EPITA - Mission Accomplie - 7 tests OK)
         
         # Test avec formulaire vide - le bouton devrait être désactivé
         validate_button = validation_page.locator('.validate-button')
@@ -117,18 +110,15 @@ class TestValidationForm:
         except TimeoutError:
             pytest.fail("Aucun résultat ou message d'erreur affiché après validation")
 
-<<<<<<< HEAD
     def test_validation_form_reset_functionality(self, page: Page):
         """Test de la fonctionnalité de réinitialisation du formulaire"""
         test_helpers = PlaywrightHelpers(page)
         
         # Navigation vers l'onglet Validation
         test_helpers.navigate_to_tab("validation")
-=======
     def test_validation_form_reset_functionality(self, validation_page: Page):
         """Test de la fonctionnalité de réinitialisation du formulaire"""
         # La fixture validation_page navigue déjà vers l'onglet
->>>>>>> fdc7998 (✅ Interface Web EPITA - Mission Accomplie - 7 tests OK)
         
         # Remplissage du formulaire
         page.locator('#argument-type').select_option('inductive')
@@ -148,18 +138,15 @@ class TestValidationForm:
         expect(page.locator('#conclusion')).to_have_value('')
         expect(page.locator('#argument-type')).to_have_value('deductive')  # Valeur par défaut
 
-<<<<<<< HEAD
     def test_validation_example_functionality(self, page: Page):
         """Test de la fonctionnalité de chargement d'exemple"""
         test_helpers = PlaywrightHelpers(page)
         
         # Navigation vers l'onglet Validation
         test_helpers.navigate_to_tab("validation")
-=======
     def test_validation_example_functionality(self, validation_page: Page):
         """Test de la fonctionnalité de chargement d'exemple"""
         # La fixture validation_page navigue déjà vers l'onglet
->>>>>>> fdc7998 (✅ Interface Web EPITA - Mission Accomplie - 7 tests OK)
         
         # Chargement d'un exemple
         page.locator('.example-button').click()
