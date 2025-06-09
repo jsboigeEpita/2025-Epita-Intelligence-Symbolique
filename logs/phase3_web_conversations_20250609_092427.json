@@ -1,0 +1,81 @@
+{
+  "session_id": "4c1b37fa",
+  "test_data": {
+    "debate_text": "DÉBAT SUR LA RÉGLEMENTATION DES CRYPTOMONNAIES QUANTIQUES",
+    "arguments_pro": "Innovation technologique et liberté financière",
+    "arguments_contra": "Risques environnementaux et instabilité économique",
+    "sophisms_to_detect": [
+      "Ad hominem",
+      "Homme de paille",
+      "Faux dilemme"
+    ],
+    "analysis_type": "fallacy",
+    "full_debate_text": "\n    DÉBAT SUR LA RÉGLEMENTATION DES CRYPTOMONNAIES QUANTIQUES\n    \n    Arguments Pour la réglementation:\n    Les cryptomonnaies quantiques représentent des risques environnementaux considérables\n    car leur minage consume énormément d'énergie. De plus, elles créent une instabilité \n    économique dangereuse pour les marchés traditionnels. Les défenseurs de ces \n    technologies sont souvent des spéculateurs sans scrupules qui ne pensent qu'à \n    s'enrichir rapidement.\n    \n    Arguments Contre la réglementation:\n    L'innovation technologique ne doit pas être entravée par une réglementation excessive.\n    Les cryptomonnaies quantiques offrent une liberté financière sans précédent et \n    permettent de s'affranchir du contrôle des banques centrales. Soit nous embrassons \n    cette révolution, soit nous restons dans l'âge de pierre financier.\n    \n    Conclusion: Ce débat illustre plusieurs sophismes logiques qu'il convient d'identifier\n    pour une argumentation rationnelle.\n    "
+  },
+  "conversations": [
+    {
+      "timestamp": "2025-06-09T09:23:57.348882",
+      "action": "interface_access",
+      "url": "http://localhost:3000",
+      "title": "Argumentation Analysis App",
+      "status": " Système Opérationnel\nServiceManager\nActif\nInterface Web\nV1.0.0",
+      "screenshot": "D:\\Dev\\2025-Epita-Intelligence-Symbolique\\logs\\phase3_step1_interface_4c1b37fa.png"
+    },
+    {
+      "timestamp": "2025-06-09T09:24:00.852886",
+      "action": "sophism_analysis",
+      "input_text": "\n    DÉBAT SUR LA RÉGLEMENTATION DES CRYPTOMONNAIES QUANTIQUES\n    \n    Arguments Pour la réglementation:\n    Les cryptomonnaies quantiques représentent des risques environnementaux considérables\n    ...",
+      "analysis_type": "fallacy",
+      "results_preview": " Analyse terminée avec succès (ID: 82d73414)\n114\nMots\n7\nPhrases\nélevée\nComplexité\n0.10s\nTemps\nDétails de l'analyse :\n{\n  \"fallback\": \"service_manager_detected\"\n}\nComposants utilisés :\nAnalyse Basique...",
+      "screenshots": [
+        "D:\\Dev\\2025-Epita-Intelligence-Symbolique\\logs\\phase3_step2_before_analysis_4c1b37fa.png",
+        "D:\\Dev\\2025-Epita-Intelligence-Symbolique\\logs\\phase3_step2_results_4c1b37fa.png"
+      ]
+    },
+    {
+      "timestamp": "2025-06-09T09:24:01.942267",
+      "action": "example_navigation",
+      "example_type": "logic",
+      "loaded_text": "Si il pleut, alors la route est mouillée. Il pleut. Donc la route est mouillée....",
+      "selected_analysis": "propositional"
+    },
+    {
+      "timestamp": "2025-06-09T09:24:04.056329",
+      "action": "example_navigation",
+      "example_type": "modal",
+      "loaded_text": "Il est nécessaire que tous les hommes soient mortels. Socrate est un homme. Il est donc nécessaire q...",
+      "selected_analysis": "modal"
+    },
+    {
+      "timestamp": "2025-06-09T09:24:06.141090",
+      "action": "example_navigation",
+      "example_type": "complex",
+      "loaded_text": "L'intelligence artificielle représente à la fois une opportunité et un défi. D'un côté, elle peut ré...",
+      "selected_analysis": "comprehensive"
+    },
+    {
+      "timestamp": "2025-06-09T09:24:08.246344",
+      "action": "example_navigation",
+      "example_type": "paradox",
+      "loaded_text": "Cette phrase est fausse. Si elle est vraie, alors elle est fausse. Si elle est fausse, alors elle es...",
+      "selected_analysis": ""
+    },
+    {
+      "timestamp": "2025-06-09T09:24:15.741746",
+      "action": "form_validation",
+      "tests": [
+        "empty_text",
+        "too_long_text",
+        "valid_text"
+      ],
+      "final_screenshot": "D:\\Dev\\2025-Epita-Intelligence-Symbolique\\logs\\phase3_step4_validation_4c1b37fa.png"
+    }
+  ],
+  "api_interactions_count": 18,
+  "screenshots_captured": [
+    "D:\\Dev\\2025-Epita-Intelligence-Symbolique\\logs\\phase3_step1_interface_4c1b37fa.png",
+    "D:\\Dev\\2025-Epita-Intelligence-Symbolique\\logs\\phase3_step2_before_analysis_4c1b37fa.png",
+    "D:\\Dev\\2025-Epita-Intelligence-Symbolique\\logs\\phase3_step2_results_4c1b37fa.png",
+    "D:\\Dev\\2025-Epita-Intelligence-Symbolique\\logs\\phase3_step4_validation_4c1b37fa.png"
+  ]
+}
