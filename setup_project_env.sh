@@ -1,15 +1,15 @@
 #!/bin/bash
 
 # =============================================================================
-# Script d'activation de l'environnement projet (Version Unix/Linux/MacOS)
+# Script de configuration de l'environnement projet (Version Unix/Linux/MacOS)
 # =============================================================================
 #
-# Activation de l'environnement conda/venv du projet avec gestion des erreurs
+# Configuration complète de l'environnement conda/venv du projet
 # Version refactorisée utilisant les modules Python mutualisés
 #
 # Usage:
-#   ./activate_project_env.sh [--command "commande à exécuter"]
-#   ./activate_project_env.sh --help
+#   ./setup_project_env.sh [--force] [--verbose]
+#   ./setup_project_env.sh --help
 #
 # Auteur: Intelligence Symbolique EPITA
 # Date: 09/06/2025 - Version refactorisée
@@ -25,30 +25,31 @@ RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
+CYAN='\033[0;36m'
 NC='\033[0m' # No Color
 
 # Fonction d'aide
 show_help() {
     cat << EOF
-🚀 ACTIVATION ENVIRONNEMENT PROJET
-==================================
+⚙️  CONFIGURATION ENVIRONNEMENT PROJET
+====================================
 
 USAGE:
-    ./activate_project_env.sh [OPTIONS]
+    ./setup_project_env.sh [OPTIONS]
 
 OPTIONS:
-    --command "cmd"     Exécuter une commande dans l'environnement activé
+    --force            Force la recréation de l'environnement
     --verbose          Mode verbeux
     --help             Afficher cette aide
 
 EXEMPLES:
-    ./activate_project_env.sh
-    ./activate_project_env.sh --command "python --version"
-    ./activate_project_env.sh --command "python run_tests.py" --verbose
+    ./setup_project_env.sh
+    ./setup_project_env.sh --force --verbose
 
 DESCRIPTION:
-    Active l'environnement conda/venv du projet et permet d'exécuter
-    des commandes dans cet environnement ou de lancer un shell interactif.
+    Configure automatiquement l'environnement conda/venv du projet avec
+    toutes les dépendances nécessaires. Installe les packages Python,
+    configure les variables d'environnement et vérifie l'installation.
 EOF
 }
 
@@ -68,15 +69,15 @@ log_message() {
 }
 
 # Variables par défaut
-COMMAND_TO_RUN=""
+FORCE_RECREATE=false
 VERBOSE=false
 
 # Parsing des arguments
 while [[ $# -gt 0 ]]; do
     case $1 in
-        --command)
-            COMMAND_TO_RUN="$2"
-            shift 2
+        --force)
+            FORCE_RECREATE=true
+            shift
             ;;
         --verbose)
             VERBOSE=true
@@ -96,7 +97,7 @@ done
 
 # Fonction principale
 main() {
-    log_message "INFO" "Activation de l'environnement projet..."
+    log_message "INFO" "Configuration de l'environnement projet..."
     
     # Préparation de la commande Python
     local python_command
@@ -105,6 +106,7 @@ import sys
 import os
 sys.path.append(os.path.join(os.getcwd(), 'scripts', 'core'))
 
+from project_setup import ProjectSetup
 from environment_manager import EnvironmentManager
 from common_utils import setup_logging, print_colored
 
@@ -112,38 +114,52 @@ from common_utils import setup_logging, print_colored
 logger = setup_logging(verbose=%s)
 
 try:
-    # Initialisation du gestionnaire d'environnement
+    print_colored("⚙️  CONFIGURATION ENVIRONNEMENT PROJET", "blue")
+    print_colored("=" * 42, "blue")
+    print_colored(f"Force recréation: %s", "white")
+    print_colored(f"Mode verbeux: %s", "white")
+    print_colored("=" * 42, "white")
+    
+    # Initialisation des gestionnaires
+    project_setup = ProjectSetup()
     env_manager = EnvironmentManager()
     
-    print_colored("🚀 ACTIVATION ENVIRONNEMENT PROJET", "blue")
-    print_colored("=" * 40, "blue")
+    # Configuration du projet
+    print_colored("🔧 Configuration du projet...", "blue")
+    setup_result = project_setup.setup_complete_environment(
+        force_recreate=%s,
+        verbose=%s
+    )
     
-    # Activation de l'environnement
-    print_colored("Activation de l'environnement...", "blue")
-    result = env_manager.activate_environment()
-    
-    if result['success']:
-        print_colored("✅ Environnement activé avec succès", "green")
+    if setup_result['success']:
+        print_colored("✅ Configuration terminée avec succès", "green")
         
-        # Affichage des informations sur l'environnement
-        env_info = env_manager.get_environment_info()
-        print_colored(f"Python: {env_info.get('python_version', 'N/A')}", "white")
-        print_colored(f"Environnement: {env_info.get('env_name', 'N/A')}", "white")
-        print_colored(f"Chemin: {env_info.get('env_path', 'N/A')}", "white")
+        # Vérification de l'environnement
+        print_colored("🔍 Vérification de l'environnement...", "blue")
+        verify_result = env_manager.verify_environment()
         
-        # Exécution de la commande si spécifiée
-        command = "%s"
-        if command:
-            print_colored(f"Exécution de: {command}", "blue")
-            exit_code = env_manager.run_command_in_environment(command)
-            sys.exit(exit_code)
-        else:
-            print_colored("🎯 Environnement prêt ! Lancez vos commandes Python.", "green")
+        if verify_result['valid']:
+            print_colored("✅ Environnement validé", "green")
+            
+            # Affichage des informations
+            env_info = env_manager.get_environment_info()
+            print_colored("📋 Informations sur l'environnement:", "cyan")
+            print_colored(f"  Python: {env_info.get('python_version', 'N/A')}", "white")
+            print_colored(f"  Environnement: {env_info.get('env_name', 'N/A')}", "white")
+            print_colored(f"  Chemin: {env_info.get('env_path', 'N/A')}", "white")
+            print_colored(f"  Packages installés: {len(env_info.get('packages', []))}", "white")
+            
+            print_colored("🎉 MISSION ACCOMPLIE - Environnement prêt !", "green")
             sys.exit(0)
+        else:
+            print_colored("❌ Erreurs de validation détectées", "red")
+            for issue in verify_result.get('issues', []):
+                print_colored(f"  - {issue}", "red")
+            sys.exit(1)
     else:
-        print_colored("❌ Échec de l'activation de l'environnement", "red")
-        if 'error' in result:
-            print_colored(f"Erreur: {result['error']}", "red")
+        print_colored("❌ Échec de la configuration", "red")
+        if 'error' in setup_result:
+            print_colored(f"Erreur: {setup_result['error']}", "red")
         sys.exit(1)
         
 except Exception as e:
@@ -158,7 +174,9 @@ EOF
     local formatted_command
     formatted_command=$(printf "$python_command" \
         "$(echo "$VERBOSE" | tr '[:upper:]' '[:lower:]')" \
-        "$COMMAND_TO_RUN" \
+        "$(echo "$FORCE_RECREATE" | tr '[:upper:]' '[:lower:]')" \
+        "$(echo "$FORCE_RECREATE" | tr '[:upper:]' '[:lower:]')" \
+        "$(echo "$VERBOSE" | tr '[:upper:]' '[:lower:]')" \
         "$(echo "$VERBOSE" | tr '[:upper:]' '[:lower:]')")
     
     # Vérification de Python
@@ -179,6 +197,7 @@ EOF
     if [[ "$VERBOSE" == "true" ]]; then
         log_message "INFO" "Utilisation de: $python_cmd"
         log_message "INFO" "Répertoire de travail: $PROJECT_ROOT"
+        log_message "INFO" "Force recréation: $FORCE_RECREATE"
     fi
     
     cd "$PROJECT_ROOT"
@@ -186,11 +205,9 @@ EOF
     exit_code=$?
     
     if [[ $exit_code -eq 0 ]]; then
-        if [[ -z "$COMMAND_TO_RUN" ]]; then
-            log_message "SUCCESS" "🎉 Environnement activé ! Utilisez 'python' pour vos commandes."
-        fi
+        log_message "SUCCESS" "🎉 Configuration terminée avec succès !"
     else
-        log_message "ERROR" "Échec de l'activation (code: $exit_code)"
+        log_message "ERROR" "Échec de la configuration (code: $exit_code)"
     fi
     
     exit $exit_code
