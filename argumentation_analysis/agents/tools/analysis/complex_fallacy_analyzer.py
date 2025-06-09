@@ -449,6 +449,9 @@ class ComplexFallacyAnalyzer:
             for fallacy in paragraph["fallacies"]:
                 fallacy_types.add(fallacy["fallacy_type"])
         
+        # Trier les types pour avoir un ordre déterministe
+        fallacy_types = sorted(fallacy_types)
+        
         for type1 in fallacy_types:
             for type2 in fallacy_types:
                 if type1 == type2:

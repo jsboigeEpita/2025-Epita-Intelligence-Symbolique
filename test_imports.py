@@ -1,6 +1,9 @@
 #!/usr/bin/env python3
 """Test d'import de tous les modules de démonstration"""
 
+# Auto-activation environnement intelligent
+import scripts.core.auto_env
+
 import sys
 import traceback
 

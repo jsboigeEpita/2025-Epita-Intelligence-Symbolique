@@ -7,6 +7,9 @@ Ce script vérifie que les modifications des prompts n'ont pas cassé la fonctio
 technique des agents Watson, Moriarty et Sherlock.
 """
 
+# Auto-activation environnement intelligent
+import scripts.core.auto_env
+
 import sys
 import importlib.util
 
