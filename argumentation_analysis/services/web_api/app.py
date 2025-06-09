@@ -12,6 +12,7 @@ import os
 import sys
 import logging
 import argparse
+import asyncio
 from datetime import datetime
 from pathlib import Path
 from flask import Flask, request, jsonify, redirect, url_for
@@ -178,18 +179,56 @@ def handle_error(error):
 def health_check():
     """Vérification de l'état de l'API."""
     try:
+        # Initialiser les services et vérifier leur état
+        services_status = {}
+        
+        # Test du service d'analyse
+        try:
+            analysis_svc = get_analysis_service()
+            services_status["analysis"] = analysis_svc.is_healthy()
+            logger.info(f"Service analysis: {services_status['analysis']}")
+        except Exception as e:
+            logger.error(f"Erreur service analysis: {e}")
+            services_status["analysis"] = False
+            
+        # Test du service de validation
+        try:
+            validation_svc = get_validation_service()
+            services_status["validation"] = hasattr(validation_svc, 'is_healthy') and validation_svc.is_healthy()
+        except Exception as e:
+            logger.error(f"Erreur service validation: {e}")
+            services_status["validation"] = False
+            
+        # Test du service de détection de sophismes
+        try:
+            fallacy_svc = get_fallacy_service()
+            services_status["fallacy"] = hasattr(fallacy_svc, 'is_healthy') and fallacy_svc.is_healthy()
+        except Exception as e:
+            logger.error(f"Erreur service fallacy: {e}")
+            services_status["fallacy"] = False
+            
+        # Test du service de framework
+        try:
+            framework_svc = get_framework_service()
+            services_status["framework"] = hasattr(framework_svc, 'is_healthy') and framework_svc.is_healthy()
+        except Exception as e:
+            logger.error(f"Erreur service framework: {e}")
+            services_status["framework"] = False
+            
+        # Test du service de logique
+        try:
+            logic_svc = get_logic_service()
+            services_status["logic"] = hasattr(logic_svc, 'is_healthy') and logic_svc.is_healthy()
+        except Exception as e:
+            logger.error(f"Erreur service logic: {e}")
+            services_status["logic"] = False
+        
         return jsonify({
             "status": "healthy",
             "message": "API d'analyse argumentative opérationnelle",
             "version": "1.0.0",
             "timestamp": datetime.now().isoformat(),
-            "services": {
-                "analysis": bool(_analysis_service),
-                "validation": bool(_validation_service),
-                "fallacy": bool(_fallacy_service),
-                "framework": bool(_framework_service),
-                "logic": bool(_logic_service)
-            }
+            "services": services_status
         })
     except Exception as e:
         logger.error(f"Erreur lors du health check: {str(e)}")
@@ -216,12 +255,12 @@ def analyze_text():
     }
     """
     try:
-        # 🚨🚨🚨 LOGS ULTRA-VISIBLES ENDPOINT DEBUG V2 🚨🚨🚨
-        print("🔥🔥🔥 VERSION MODIFIÉE - ENDPOINT /api/analyze APPELÉ V2 🔥🔥🔥")
-        logger.critical("🚨🚨🚨 ENDPOINT /api/analyze APPELÉ V2")
+        # LOGS ULTRA-VISIBLES ENDPOINT DEBUG V2
+        print("[DEBUG] VERSION MODIFIEE - ENDPOINT /api/analyze APPELE V2")
+        logger.critical("[DEBUG] ENDPOINT /api/analyze APPELE V2")
         try:
             data = request.get_json()
-            logger.critical(f"🚨 JSON reçu: {data}")
+            logger.critical(f"[DEBUG] JSON recu: {data}")
         except HTTPException as he:
             # Intercepter les erreurs HTTP spécifiques de Werkzeug (ex: 400, 415)
             logger.warning(f"Erreur HTTP lors de la récupération du JSON: {str(he)}")
@@ -249,7 +288,7 @@ def analyze_text():
             ).dict()), 400
         
         # Analyse du texte
-        result = get_analysis_service().analyze_text(analysis_request)
+        result = asyncio.run(get_analysis_service().analyze_text(analysis_request))
         
         return jsonify(result.dict())
         

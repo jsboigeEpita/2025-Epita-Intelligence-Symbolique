@@ -33,7 +33,7 @@ def quick_environment_check():
         env_status = "acceptable"
     elif virtual_env:
         venv_name = Path(virtual_env).name
-        print(f"ℹ️  Environnement: VENV ({venv_name})")
+        print(f"Environnement: VENV ({venv_name})")
         env_status = "acceptable"
     else:
         print("[X] Environnement: SYSTÈME (non recommandé)")
@@ -71,7 +71,7 @@ def quick_environment_check():
     print("\n" + "=" * 40)
     
     if env_status == "optimal" and not missing:
-        print("🎉 STATUT: ENVIRONNEMENT OPTIMAL")
+        print("STATUT: ENVIRONNEMENT OPTIMAL")
         return 0
     elif env_status != "problematic" and len(missing) <= 2:
         print("[ATTENTION]  STATUT: ENVIRONNEMENT ACCEPTABLE")

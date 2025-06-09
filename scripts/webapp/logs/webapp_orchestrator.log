@@ -1,0 +1,50 @@
+2025-06-08 23:58:45,147 - __main__ - INFO - [96m[23:58:45.147] [TEST] INTEGRATION COMPLETE[0m
+2025-06-08 23:58:45,147 - __main__ - INFO -    Détails: Démarrage orchestration complète
+2025-06-08 23:58:45,148 - __main__ - INFO - [96m[23:58:45.148] [START] DEMARRAGE APPLICATION WEB[0m
+2025-06-08 23:58:45,148 - __main__ - INFO -    Détails: Mode: Headless
+2025-06-08 23:58:45,148 - __main__ - INFO -    Résultat: Initialisation orchestrateur
+2025-06-08 23:58:45,148 - __main__ - INFO - [96m[23:58:45.148] [CLEAN] NETTOYAGE PREALABLE[0m
+2025-06-08 23:58:45,149 - __main__ - INFO -    Détails: Arret instances existantes
+2025-06-08 23:58:45,151 - __main__ - INFO - [CLEAN] Debut nettoyage processus application web
+2025-06-08 23:58:52,329 - __main__ - INFO - Aucun processus d'application web trouvé
+2025-06-08 23:58:52,329 - __main__ - INFO - [96m[23:58:52.329] [BACKEND] DEMARRAGE BACKEND[0m
+2025-06-08 23:58:52,329 - __main__ - INFO -    Détails: Lancement avec failover de ports
+2025-06-08 23:58:52,329 - __main__ - INFO - Tentative 1/4 - Port 5003
+2025-06-08 23:58:52,333 - __main__ - INFO - Démarrage backend: python -m argumentation_analysis.services.web_api.app --port 5003
+2025-06-08 23:58:52,342 - __main__ - INFO - Attente backend sur http://localhost:5003/api/health (timeout: 30s)
+2025-06-08 23:59:24,407 - __main__ - INFO - Backend accessible sur http://localhost:5003/api/health
+2025-06-08 23:59:24,410 - __main__ - INFO - Info backend sauvées: backend_info.json
+2025-06-08 23:59:24,410 - __main__ - INFO - [96m[23:59:24.410] [OK] BACKEND OPERATIONNEL[0m
+2025-06-08 23:59:24,411 - __main__ - INFO -    Détails: Port: 5003 | PID: 37760
+2025-06-08 23:59:24,411 - __main__ - INFO -    Résultat: URL: http://localhost:5003
+2025-06-08 23:59:24,411 - __main__ - INFO - [96m[23:59:24.411] [CHECK] VALIDATION SERVICES[0m
+2025-06-08 23:59:24,411 - __main__ - INFO -    Détails: Verification endpoints
+2025-06-08 23:59:25,689 - __main__ - INFO - Backend health: {'message': "API d'analyse argumentative opérationnelle", 'services': {'analysis': True, 'fallacy': True, 'framework': True, 'logic': False, 'validation': True}, 'status': 'healthy', 'timestamp': '2025-06-08T23:59:25.688465', 'version': '1.0.0'}
+2025-06-08 23:59:25,690 - __main__ - INFO - [96m[23:59:25.690] [OK] SERVICES VALIDES[0m
+2025-06-08 23:59:25,690 - __main__ - INFO -    Détails: Tous les endpoints repondent
+2025-06-08 23:59:25,690 - __main__ - INFO - [96m[23:59:25.690] [OK] APPLICATION WEB OPERATIONNELLE[0m
+2025-06-08 23:59:25,690 - __main__ - INFO -    Détails: Backend: http://localhost:5003
+2025-06-08 23:59:25,691 - __main__ - INFO -    Résultat: Tous les services démarrés
+2025-06-08 23:59:27,699 - __main__ - INFO - [96m[23:59:27.699] [TEST] EXECUTION TESTS PLAYWRIGHT[0m
+2025-06-08 23:59:27,699 - __main__ - INFO -    Détails: Tests: tous
+2025-06-08 23:59:27,699 - __main__ - INFO - Démarrage tests Playwright: ['tests/functional/']
+2025-06-08 23:59:27,699 - __main__ - INFO - Configuration: {'backend_url': 'http://localhost:5003', 'frontend_url': 'http://localhost:5003', 'headless': True, 'browser': 'chromium', 'timeout_ms': 10000, 'slow_timeout_ms': 20000, 'screenshots': True, 'traces': True}
+2025-06-08 23:59:27,699 - __main__ - INFO - Variables test configurées: {'BACKEND_URL': 'http://localhost:5003', 'FRONTEND_URL': 'http://localhost:5003', 'HEADLESS': 'true', 'BROWSER': 'chromium', 'SCREENSHOTS_DIR': 'logs\\screenshots', 'TRACES_DIR': 'logs\\traces'}
+2025-06-08 23:59:27,700 - __main__ - INFO - Commande test: powershell -File scripts/env/activate_project_env.ps1 -CommandToRun python -m pytest -v -s --tb=short --headless --browser=chromium --screenshot=on --video=on tests/functional/
+2025-06-08 23:59:27,847 - __main__ - INFO - Tests terminés - Code retour: 4294770688
+2025-06-08 23:59:27,849 - __main__ - ERROR - [ERROR] Tests échoués: {'total': 0, 'passed': 0, 'failed': 0, 'skipped': 0, 'errors': 0, 'duration': 0.0}
+2025-06-08 23:59:27,849 - __main__ - ERROR -    L'argument ®ÿscripts/env/activate_project_env.ps1ÿ¯ du paramŠtre -File n'existe pas. Indiquez le chemin d'accŠs vers un fichier ®ÿ.ps1ÿ¯ existant pour l'argument du paramŠtre -File.
+2025-06-08 23:59:27,851 - __main__ - INFO - Rapport test sauvé: logs\traces\test_report.json
+2025-06-08 23:59:27,852 - __main__ - INFO - [91m[23:59:27.852] [ERROR] ECHEC INTEGRATION[0m
+2025-06-08 23:59:27,852 - __main__ - INFO -    Détails: Certains tests ont échoué
+2025-06-08 23:59:27,852 - __main__ - INFO -    Résultat: Voir logs détaillés
+2025-06-08 23:59:27,852 - __main__ - INFO - [96m[23:59:27.852] [STOP] ARRET APPLICATION WEB[0m
+2025-06-08 23:59:27,852 - __main__ - INFO -    Détails: Nettoyage en cours
+2025-06-08 23:59:27,852 - __main__ - INFO - Arrêt backend PID 37760
+2025-06-08 23:59:27,942 - __main__ - INFO - Backend arrêté
+2025-06-08 23:59:27,943 - __main__ - INFO - [CLEAN] Debut nettoyage processus application web
+2025-06-08 23:59:33,033 - __main__ - INFO - Aucun processus d'application web trouvé
+2025-06-08 23:59:33,033 - __main__ - INFO - [96m[23:59:33.033] [OK] ARRET TERMINE[0m
+2025-06-08 23:59:33,033 - __main__ - INFO -    Résultat: Toutes les ressources liberees
+2025-06-08 23:59:33,037 - __main__ - INFO - [96m[23:59:33.037] [SAVE] TRACE SAUVEGARDEE[0m
+2025-06-08 23:59:33,037 - __main__ - INFO -    Détails: Fichier: logs\webapp_integration_trace.md
