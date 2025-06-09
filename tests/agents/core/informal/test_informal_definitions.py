@@ -14,24 +14,22 @@ import pytest # Déjà présent, gardé
 # sont maintenant gérés globalement dans tests/conftest.py
 
 # Import des fixtures
-from .fixtures import (
-    mock_semantic_kernel_instance, 
-    setup_test_taxonomy_csv, 
-    taxonomy_loader_patches, 
-    informal_analysis_plugin_instance
+from .fixtures_authentic import (
+    authentic_semantic_kernel,
+    setup_authentic_taxonomy_csv,
+    authentic_informal_analysis_plugin
 )
 
 # Import du module à tester
 from argumentation_analysis.agents.core.informal.informal_definitions import InformalAnalysisPlugin, setup_informal_kernel
 
 
-@pytest.mark.usefixtures("taxonomy_loader_patches")
 @pytest.mark.use_real_numpy # Ajout pour utiliser le vrai NumPy/Pandas
 class TestInformalDefinitions: # Suppression de l'héritage unittest.TestCase
     """Tests unitaires pour les définitions de l'agent informel."""
 
-    def test_initialization(self, informal_analysis_plugin_instance):
-        plugin = informal_analysis_plugin_instance
+    def test_initialization(self, authentic_informal_analysis_plugin):
+        plugin = authentic_informal_analysis_plugin
         assert plugin is not None
         assert plugin._logger is not None # pylint: disable=protected-access
         # Vérifier que le chemin du fichier de taxonomie est défini et que le DataFrame est chargé
@@ -40,8 +38,8 @@ class TestInformalDefinitions: # Suppression de l'héritage unittest.TestCase
         assert plugin._get_taxonomy_dataframe() is not None # pylint: disable=protected-access
     
     @pytest.mark.skip(reason="Problème persistant avec TypeError: int() argument must be a string... not '_NoValueType' lors de set_index, potentiellement lié à l'état de NumPy/Pandas dans l'environnement de test.")
-    def test_get_taxonomy_dataframe(self, informal_analysis_plugin_instance):
-        plugin = informal_analysis_plugin_instance
+    def test_get_taxonomy_dataframe(self, authentic_informal_analysis_plugin):
+        plugin = authentic_informal_analysis_plugin
         df = plugin._get_taxonomy_dataframe() # pylint: disable=protected-access
         assert df is not None
         
@@ -59,8 +57,8 @@ class TestInformalDefinitions: # Suppression de l'héritage unittest.TestCase
             assert len(df._data) > 0 # pylint: disable=protected-access
 
     @pytest.mark.skip(reason="TypeError persistante avec NumPy/Pandas sous use_real_numpy lors de l'exécution groupée (numpy.core._methods.py:49: TypeError: int() argument must be a string, a bytes-like object or a real number, not '_NoValueType')")
-    def test_explore_fallacy_hierarchy(self, informal_analysis_plugin_instance):
-        plugin = informal_analysis_plugin_instance
+    def test_explore_fallacy_hierarchy(self, authentic_informal_analysis_plugin):
+        plugin = authentic_informal_analysis_plugin
         hierarchy_json = plugin.explore_fallacy_hierarchy("1") 
         assert isinstance(hierarchy_json, str)
         hierarchy = json.loads(hierarchy_json)
@@ -71,8 +69,8 @@ class TestInformalDefinitions: # Suppression de l'héritage unittest.TestCase
     
     @pytest.mark.skip(reason="TypeError persistante avec NumPy/Pandas sous use_real_numpy lors de l'exécution groupée (numpy.core._methods.py:49: TypeError: int() argument must be a string, a bytes-like object or a real number, not '_NoValueType')")
     # @pytest.mark.use_real_numpy # Gardons la marque au cas où, mais le skip la rend inactive
-    def test_get_fallacy_details(self, informal_analysis_plugin_instance):
-        plugin = informal_analysis_plugin_instance
+    def test_get_fallacy_details(self, authentic_informal_analysis_plugin):
+        plugin = authentic_informal_analysis_plugin
         details_json = plugin.get_fallacy_details("1")
         assert isinstance(details_json, str)
         details = json.loads(details_json)
@@ -82,11 +80,11 @@ class TestInformalDefinitions: # Suppression de l'héritage unittest.TestCase
         assert details["Name"] == "Appel a l'autorite"
         assert "Description" in details
     
-    def test_setup_informal_kernel(self, mock_semantic_kernel_instance, setup_test_taxonomy_csv): # Ajout de setup_test_taxonomy_csv
-        kernel = mock_semantic_kernel_instance
+    def test_setup_informal_kernel(self, authentic_semantic_kernel, setup_authentic_taxonomy_csv): # Ajout de setup_authentic_taxonomy_csv
+        kernel = authentic_semantic_kernel.get_kernel()  # Correction: utiliser get_kernel()
         llm_service = MagicMock()
-        test_taxonomy_path = str(setup_test_taxonomy_csv) # Utiliser le chemin de la fixture
-        
+        test_taxonomy_path = str(setup_authentic_taxonomy_csv) # Utiliser le chemin de la fixture
+
         setup_informal_kernel(kernel, llm_service, taxonomy_file_path=test_taxonomy_path) # Utiliser test_taxonomy_path
         assert "InformalAnalyzer" in kernel.plugins
 

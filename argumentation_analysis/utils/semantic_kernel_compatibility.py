@@ -15,9 +15,19 @@ from semantic_kernel import Kernel
 from semantic_kernel.contents.chat_message_content import ChatMessageContent
 from semantic_kernel.functions.kernel_arguments import KernelArguments
 from semantic_kernel.services.ai_service_selector import AIServiceSelector
+from enum import Enum
 
 
 logger = logging.getLogger(__name__)
+
+
+# Ajout d'AuthorRole pour la compatibilité
+class AuthorRole(Enum):
+    """Énumération des rôles d'auteur pour les messages de chat."""
+    USER = "user"
+    ASSISTANT = "assistant"
+    SYSTEM = "system"
+    TOOL = "tool"
 
 
 # Classes pour la compatibilité des filters

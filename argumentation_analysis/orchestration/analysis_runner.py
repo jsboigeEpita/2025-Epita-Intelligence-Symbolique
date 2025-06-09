@@ -30,9 +30,9 @@ from semantic_kernel.kernel import Kernel as SKernel # Alias pour éviter confli
 # KernelArguments est déjà importé plus bas
  # Imports Semantic Kernel
 import semantic_kernel as sk
-from semantic_kernel.contents import ChatMessageContent, AuthorRole
+from semantic_kernel.contents import ChatMessageContent
 # CORRECTIF COMPATIBILITÉ: Utilisation du module de compatibilité
-from argumentation_analysis.utils.semantic_kernel_compatibility import AgentGroupChat, ChatCompletionAgent, Agent
+from argumentation_analysis.utils.semantic_kernel_compatibility import AgentGroupChat, ChatCompletionAgent, Agent, AuthorRole
 from semantic_kernel.exceptions import AgentChatException
 from semantic_kernel.connectors.ai.open_ai import OpenAIChatCompletion, AzureChatCompletion # Pour type hint
 from semantic_kernel.connectors.ai.function_choice_behavior import FunctionChoiceBehavior
