@@ -1,3 +1,7 @@
+# ===== ONE-LINER AUTO-ACTIVATEUR =====
+import scripts.core.auto_env  # Auto-activation environnement intelligent
+# =====================================
+
 import sys
 from pathlib import Path
 import logging
@@ -20,7 +24,7 @@ except NameError:
     project_root_for_test = Path.cwd().parent # Tentative de fallback améliorée, mais __file__ est préférable
 
 try:
-    from project_core.bootstrap import initialize_project_environment, ProjectContext
+    from argumentation_analysis.core.bootstrap import initialize_project_environment, ProjectContext
 except ImportError as e:
     logger.error(f"Impossible d'importer depuis project_core.bootstrap: {e}")
     logger.error("Assurez-vous que la racine du projet est correctement ajoutée à sys.path.")

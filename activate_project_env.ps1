@@ -42,7 +42,8 @@ try {
     Write-Log "Activation environnement projet via Python..."
     
     # Construction de la commande Python
-    $pythonArgs = @("python", $PythonModule)
+    $pythonScriptPath = Join-Path $ProjectRoot $PythonModule
+    $pythonArgs = @("python", $pythonScriptPath)
     
     if ($CommandToRun) {
         $pythonArgs += "--command", $CommandToRun

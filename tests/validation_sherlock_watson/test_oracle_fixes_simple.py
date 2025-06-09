@@ -1,3 +1,4 @@
+import pytest
 #!/usr/bin/env python3
 """Script de test rapide pour vérifier nos corrections Oracle."""
 
@@ -12,6 +13,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from argumentation_analysis.agents.core.oracle.oracle_base_agent import OracleBaseAgent
 from argumentation_analysis.agents.core.oracle.permissions import QueryType
 
+@pytest.mark.anyio
 async def test_oracle_fixes():
     """Test rapide des corrections Oracle."""
     print("=== Test des corrections Oracle ===")

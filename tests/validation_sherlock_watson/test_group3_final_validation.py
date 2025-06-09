@@ -1,3 +1,4 @@
+import pytest
 #!/usr/bin/env python3
 """
 Test de validation finale pour les 4 corrections du Groupe 3.
@@ -15,6 +16,7 @@ from argumentation_analysis.agents.core.oracle.dataset_access_manager import Dat
 from argumentation_analysis.agents.core.oracle.permissions import QueryType, OracleResponse
 from semantic_kernel.kernel import Kernel
 
+@pytest.mark.anyio
 async def test_all_group3_fixes():
     """Test complet des 4 corrections appliquées"""
     print("=== VALIDATION FINALE GROUPE 3 ===")
@@ -149,6 +151,6 @@ async def test_all_group3_fixes():
 if __name__ == "__main__":
     success = asyncio.run(test_all_group3_fixes())
     if success:
-        print("\n✅ VALIDATION FINALE RÉUSSIE - GROUPE 3 CORRIGÉ À 100%")
+        print("\n[OK] VALIDATION FINALE RÉUSSIE - GROUPE 3 CORRIGÉ À 100%")
     else:
         print("\n❌ VALIDATION FINALE ÉCHOUÉE - CORRECTIONS SUPPLÉMENTAIRES NÉCESSAIRES")
