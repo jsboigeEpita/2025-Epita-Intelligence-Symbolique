@@ -11,6 +11,18 @@ logger = logging.getLogger("Orchestration.JPype")
 # Détermination du répertoire racine du projet
 PROJECT_ROOT_DIR = Path(__file__).resolve().parent.parent.parent
 
+# Chargement des variables d'environnement depuis .env
+try:
+    from dotenv import load_dotenv, find_dotenv
+    env_file = find_dotenv()
+    if env_file:
+        load_dotenv(env_file, override=True)
+        logger.info(f"Variables d'environnement chargées depuis: {env_file}")
+    else:
+        logger.warning("Fichier .env non trouvé, utilisation des variables système")
+except ImportError:
+    logger.warning("python-dotenv non disponible, utilisation des variables système uniquement")
+
 # Définition des chemins possibles pour LIBS_DIR
 LIBS_DIR_PRIMARY = PROJECT_ROOT_DIR / "libs" / "tweety"
 LIBS_DIR_FALLBACK = PROJECT_ROOT_DIR / "libs"
@@ -35,14 +47,26 @@ TWEETY_VERSION = "1.28"
 
 PORTABLE_JDK_PATH: Optional[Path] = None
 try:
-    # PROJECT_ROOT_DIR = Path(__file__).resolve().parent.parent.parent # Défini globalement à la ligne 12
-    _JDK_SUBDIR = "libs/portable_jdk/jdk-17.0.11+9" 
-    _potential_jdk_path = PROJECT_ROOT_DIR / _JDK_SUBDIR # Utilise le PROJECT_ROOT_DIR global
-    if _potential_jdk_path.is_dir():
-        PORTABLE_JDK_PATH = _potential_jdk_path
-        logger.info(f"(OK) JDK portable détecté : {PORTABLE_JDK_PATH}")
-    else:
-        logger.warning(f"(ATTENTION) JDK portable non trouvé à l'emplacement attendu : {_potential_jdk_path}")
+    # Priorité 1: Variable d'environnement JAVA_HOME
+    java_home = os.getenv('JAVA_HOME')
+    if java_home:
+        _potential_jdk_path = Path(java_home)
+        if _potential_jdk_path.is_dir():
+            PORTABLE_JDK_PATH = _potential_jdk_path
+            logger.info(f"(OK) JDK détecté via JAVA_HOME : {PORTABLE_JDK_PATH}")
+        else:
+            logger.warning(f"(ATTENTION) JAVA_HOME défini mais répertoire inexistant : {_potential_jdk_path}")
+    
+    # Priorité 2: Chemin par défaut si JAVA_HOME non défini ou invalide
+    if PORTABLE_JDK_PATH is None:
+        _JDK_SUBDIR = "libs/portable_jdk/jdk-17.0.11+9"
+        _potential_jdk_path = PROJECT_ROOT_DIR / _JDK_SUBDIR
+        if _potential_jdk_path.is_dir():
+            PORTABLE_JDK_PATH = _potential_jdk_path
+            logger.info(f"(OK) JDK portable détecté via chemin par défaut : {PORTABLE_JDK_PATH}")
+        else:
+            logger.warning(f"(ATTENTION) JDK portable non trouvé à l'emplacement par défaut : {_potential_jdk_path}")
+            
 except Exception as e:
     logger.error(f"(ERREUR) Erreur lors de la détection du JDK portable : {e}", exc_info=True)
 
