@@ -22,6 +22,8 @@ sys.stderr.reconfigure(encoding='utf-8')
 
 PROJECT_ROOT = Path(__file__).parent.parent.parent.absolute()  # Remonte vers la racine du projet
 sys.path.insert(0, str(PROJECT_ROOT))
+# AUTO-ACTIVATION ENVIRONNEMENT + CHARGEMENT .ENV
+import scripts.core.auto_env  # Auto-activation environnement intelligent
 
 # Configuration du logging
 logging.basicConfig(
