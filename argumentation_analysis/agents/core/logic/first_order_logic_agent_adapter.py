@@ -9,17 +9,12 @@ de continuer à fonctionner avec la nouvelle architecture basée sur Semantic Ke
 """
 
 import logging
-import os
 from typing import Dict, List, Any, Optional, Tuple
 from unittest.mock import MagicMock
 
 # Import de la nouvelle classe
 from .first_order_logic_agent import FirstOrderLogicAgent as NewFirstOrderLogicAgent
 from .belief_set import FirstOrderBeliefSet, BeliefSet
-
-# Détection de disponibilité des vraies connexions
-OPENAI_API_KEY = os.environ.get('OPENAI_API_KEY')
-REAL_CONNECTIONS_AVAILABLE = OPENAI_API_KEY is not None and len(OPENAI_API_KEY) > 10
 
 class FirstOrderLogicAgent:
     """
@@ -56,31 +51,9 @@ class FirstOrderLogicAgent:
         self.service_id = service_id
         self.logger = logging.getLogger(f"{__name__}.{agent_name}")
         
-        # Utiliser vraie connexion si disponible, sinon mock pour tests
-        if REAL_CONNECTIONS_AVAILABLE and not kwargs.get('force_mock', False):
-            self.logger.info("[REAL] Utilisation de vraie connexion OpenAI pour FOL")
-            try:
-                # Créer l'agent FOL réel avec vraie connexion
-                self._real_agent = NewFirstOrderLogicAgent(
-                    kernel=self.kernel if self.kernel and not hasattr(self.kernel, '_mock_name') else None,
-                    agent_name=self.name
-                )
-                self._mock_tweety_bridge = None
-                self._is_using_real_connection = True
-            except Exception as e:
-                self.logger.warning(f"[WARN] Echec connexion reelle FOL, fallback vers mock: {e}")
-                self._setup_mock_mode()
-        else:
-            self.logger.info("[MOCK] Utilisation de mode mock pour tests FOL")
-            self._setup_mock_mode()
-    
-    def _setup_mock_mode(self):
-        """Configure le mode mock pour les tests."""
         # Mock TweetyBridge pour éviter les problèmes JVM
         self._mock_tweety_bridge = MagicMock()
         self._setup_mock_tweety_bridge()
-        self._real_agent = None
-        self._is_using_real_connection = False
         
     def _setup_mock_tweety_bridge(self):
         """Configure TweetyBridge mocké pour les tests."""
@@ -98,7 +71,6 @@ class FirstOrderLogicAgent:
             "name": self.name,
             "logic_type": self.logic_type,
             "description": "Agent capable d'analyser du texte en utilisant la logique du premier ordre (FOL)",
-            "real_connection": getattr(self, '_is_using_real_connection', False),
             "methods": {
                 "text_to_belief_set": "Convertit un texte en ensemble de croyances FOL",
                 "generate_queries": "Génère des requêtes FOL pertinentes",
@@ -107,10 +79,6 @@ class FirstOrderLogicAgent:
                 "validate_formula": "Valide la syntaxe d'une formule FOL"
             }
         }
-    
-    def is_using_real_connection(self) -> bool:
-        """Retourne True si l'agent utilise une vraie connexion OpenAI."""
-        return getattr(self, '_is_using_real_connection', False)
     
     def text_to_belief_set(self, text: str, context: Optional[Dict[str, Any]] = None) -> Tuple[Optional[BeliefSet], str]:
         """
