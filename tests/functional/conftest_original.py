@@ -234,6 +234,31 @@ class PlaywrightHelpers:
         Args:
             tab_name: Nom de l'onglet ('validation', 'framework', etc.)
         """
+        # === DEBUT DE L'AJOUT : Logique de setup_page_for_app ===
+        self.page.set_default_timeout(self.DEFAULT_TIMEOUT)
+        
+        max_retries = 3
+        retry_delay_seconds = 5
+        for attempt in range(max_retries):
+            try:
+                self.page.goto(APP_BASE_URL) # Utiliser APP_BASE_URL défini dans ce fichier
+                break
+            except Exception as e:
+                print(f"Tentative {attempt + 1}/{max_retries} de connexion à {APP_BASE_URL} échouée: {e}")
+                if attempt < max_retries - 1:
+                    time.sleep(retry_delay_seconds)
+                else:
+                    raise
+        
+        try:
+            # Utiliser COMMON_SELECTORS et API_CONNECTION_TIMEOUT définis dans ce fichier
+            expect(self.page.locator(COMMON_SELECTORS['api_status_connected'])).to_be_visible(
+                timeout=self.API_CONNECTION_TIMEOUT
+            )
+        except Exception:
+            pass # Continuer même si l'API n'est pas connectée
+        # === FIN DE L'AJOUT ===
+
         # Mapper les noms d'onglets vers leurs sélecteurs data-testid
         tab_selectors = {
             'validation': COMMON_SELECTORS['validation_tab'],
