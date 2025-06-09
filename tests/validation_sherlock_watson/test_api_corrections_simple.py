@@ -186,7 +186,7 @@ def test_add_revelation():
     
     print("[OK] add_revelation compatible")
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_validate_suggestion_async():
     """Test de la méthode async validate_suggestion_with_oracle."""
     print("\n[TEST] validate_suggestion_with_oracle (async)...")

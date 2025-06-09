@@ -2,7 +2,13 @@
 
 # ===== ONE-LINER AUTO-ACTIVATEUR D'ENVIRONNEMENT =====
 # Assure l'activation automatique de l'environnement projet
-import scripts.core.auto_env  # Auto-activation environnement intelligent
+import sys
+import os
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(__file__)), '..'))
+try:
+    import scripts.core.auto_env  # Auto-activation environnement intelligent
+except ImportError:
+    print("[WARN] Auto-activation d'environnement non disponible - continuons sans")
 
 try:
     from semantic_kernel.agents.chat_completion.chat_completion_agent import ChatCompletionAgent
