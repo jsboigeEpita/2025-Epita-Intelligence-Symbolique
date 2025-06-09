@@ -28,6 +28,45 @@ class AuthorRole(Enum):
     ASSISTANT = "assistant"
     SYSTEM = "system"
     TOOL = "tool"
+    
+    @property
+    def name(self):
+        """Retourne le nom du rôle pour compatibilité."""
+        return self.value
+
+
+# Classe de compatibilité pour FunctionChoiceBehavior
+class FunctionChoiceBehavior:
+    """
+    Classe de compatibilité pour semantic_kernel.connectors.ai.function_choice_behavior.FunctionChoiceBehavior
+    
+    Fournit le comportement de choix de fonction pour la compatibilité.
+    """
+    
+    def __init__(self, auto_invoke_kernel_functions=False, max_auto_invoke_attempts=1):
+        self.auto_invoke_kernel_functions = auto_invoke_kernel_functions
+        self.max_auto_invoke_attempts = max_auto_invoke_attempts
+        self.type_ = "auto" if auto_invoke_kernel_functions else "manual"
+    
+    @classmethod
+    def Auto(cls, auto_invoke_kernel_functions=True, max_auto_invoke_attempts=5):
+        """Crée un comportement de choix automatique."""
+        return cls(auto_invoke_kernel_functions=auto_invoke_kernel_functions,
+                  max_auto_invoke_attempts=max_auto_invoke_attempts)
+    
+    @classmethod
+    def Manual(cls):
+        """Crée un comportement de choix manuel."""
+        return cls(auto_invoke_kernel_functions=False, max_auto_invoke_attempts=1)
+    
+    def __str__(self):
+        return f"enable_kernel_functions={self.auto_invoke_kernel_functions} maximum_auto_invoke_attempts={self.max_auto_invoke_attempts} filters=None type_=<FunctionChoiceType.AUTO: '{self.type_}'>"
+
+
+# Exception compatible
+class AgentChatException(Exception):
+    """Exception compatible pour les erreurs de chat d'agents."""
+    pass
 
 
 # Classes pour la compatibilité des filters

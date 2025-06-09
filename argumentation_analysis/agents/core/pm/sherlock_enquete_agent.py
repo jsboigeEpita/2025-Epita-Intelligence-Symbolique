@@ -2,9 +2,11 @@
 import logging
 from typing import Optional, List, AsyncGenerator, ClassVar, Any
 
+import semantic_kernel as sk # Ajout de l'importation
 from semantic_kernel import Kernel
 from semantic_kernel.functions.kernel_plugin import KernelPlugin
 from semantic_kernel.functions import kernel_function
+from semantic_kernel.functions.kernel_arguments import KernelArguments # Ajout de l'importation
 
 # from .pm_agent import ProjectManagerAgent # No longer inheriting
 # from .pm_definitions import PM_INSTRUCTIONS # Remplacé par le prompt spécifique
@@ -219,16 +221,39 @@ class SherlockEnqueteAgent:
         return self._name
         
     async def process_message(self, message: str) -> str:
-        """Traite un message et retourne une réponse"""
+        """Traite un message et retourne une réponse en utilisant le kernel."""
         self._logger.info(f"[{self._name}] Processing: {message}")
         
-        # Simulation de traitement - à adapter selon les besoins
-        response = f"[{self._name}] " + message
+        # Créer un prompt simple pour l'agent Sherlock
+        prompt = f"""Vous êtes Sherlock Holmes. Répondez à la question suivante en tant que détective:
+        Question: {message}
+        Réponse:"""
         
-        self._logger.info(f"[{self._name}] Response: {response}")
-        return response
-        self._logger.info(f"SherlockEnqueteAgent '{agent_name}' initialisé avec les outils.")
+        try:
+            # Utiliser le kernel pour générer une réponse via le service OpenAI
+            # Assurez-vous que le service "authentic_test" est bien ajouté au kernel
+            response = await self._kernel.invoke_prompt(
+                prompt=prompt,
+                service_id="authentic_test", # Utiliser le service configuré dans le test
+                arguments=KernelArguments(input=message) # Utiliser KernelArguments directement
+            )
+            
+            ai_response = str(response)
+            self._logger.info(f"[{self._name}] AI Response: {ai_response}")
+            return ai_response
+            
+        except Exception as e:
+            self._logger.error(f"[{self._name}] Erreur lors de l'invocation du prompt: {e}")
+            return f"[{self._name}] Erreur: {e}"
         
+    async def invoke(self, message: str, **kwargs) -> str:
+        """
+        Point d'entrée pour l'invocation de l'agent par AgentGroupChat.
+        Délègue au process_message.
+        """
+        self._logger.info(f"[{self._name}] Invoke called with message: {message}")
+        return await self.process_message(message)
+
     async def get_current_case_description(self) -> str:
         """
         Récupère la description du cas actuel.

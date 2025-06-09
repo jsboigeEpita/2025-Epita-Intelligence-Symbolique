@@ -26,17 +26,25 @@ from argumentation_analysis.agents.core.logic.watson_logic_assistant import Wats
 
 class CluedoTerminationStrategy(TerminationStrategy):
     """Stratégie de terminaison personnalisée pour le Cluedo."""
-    max_turns: int = Field(default=10)
+    max_iterations: int = Field(default=10) # Renommé pour compatibilité SK
     turn_count: int = Field(default=0, exclude=True)
     is_solution_found: bool = Field(default=False, exclude=True)
     enquete_plugin: EnqueteStateManagerPlugin = Field(...)
+    
+    def __init__(self, max_iterations: int = 10, enquete_plugin: EnqueteStateManagerPlugin = None, **kwargs):
+        # Appeler le constructeur parent avec max_iterations
+        super().__init__(max_iterations=max_iterations)
+        self.max_iterations = max_iterations # Stocker la valeur renommée
+        self.turn_count = 0
+        self.is_solution_found = False
+        self.enquete_plugin = enquete_plugin
 
     async def should_terminate(self, agent: Agent, history: List[ChatMessageContent]) -> bool:
         """Termine si la solution est trouvée ou si le nombre max de tours est atteint."""
         # Un "tour" est défini comme une intervention de Sherlock.
         if agent.name == "Sherlock":
             self.turn_count += 1
-            logger.info(f"\n--- TOUR {self.turn_count}/{self.max_turns} ---")
+            logger.info(f"\n--- TOUR {self.turn_count}/{self.max_iterations} (Agent: {agent.name}) ---") # Utiliser max_iterations
 
         if self.enquete_plugin and isinstance(self.enquete_plugin._state, EnqueteCluedoState) and self.enquete_plugin._state.is_solution_proposed:
             solution_proposee = self.enquete_plugin._state.final_solution
@@ -46,8 +54,8 @@ class CluedoTerminationStrategy(TerminationStrategy):
                 logger.info("Solution correcte proposée. Terminaison.")
                 return True
 
-        if self.turn_count >= self.max_turns:
-            logger.info("Nombre maximum de tours atteint. Terminaison.")
+        if self.turn_count >= self.max_iterations: # Utiliser max_iterations
+            logger.info(f"Nombre maximum de tours ({self.max_iterations}) atteint. Terminaison.") # Utiliser max_iterations
             return True
             
         return False
@@ -67,7 +75,7 @@ async def run_cluedo_game(
     kernel: Kernel,
     initial_question: str,
     history: List[ChatMessageContent] = None,
-    max_turns: Optional[int] = 10
+    max_iterations: Optional[int] = 10 # Renommé pour compatibilité SK
 ) -> (List[Dict[str, Any]], EnqueteCluedoState):
     """Exécute une partie de Cluedo avec une logique de tours de jeu."""
     if history is None:
@@ -87,7 +95,7 @@ async def run_cluedo_game(
 
     plugin = EnqueteStateManagerPlugin(enquete_state)
     kernel.add_plugin(plugin, "EnqueteStatePlugin")
-    kernel.add_filter(FilterTypes.FUNCTION_INVOCATION, logging_filter)
+    # CORRECTIF: add_filter() supprimé dans SK moderne - fonctionnalité de logging intégrée
 
     elements = enquete_state.elements_jeu_cluedo
     all_constants = [name.replace(" ", "") for category in elements.values() for name in category]
@@ -95,7 +103,7 @@ async def run_cluedo_game(
     sherlock = SherlockEnqueteAgent(kernel=kernel, agent_name="Sherlock")
     watson = WatsonLogicAssistant(kernel=kernel, agent_name="Watson", constants=all_constants)
 
-    termination_strategy = CluedoTerminationStrategy(max_turns=max_turns, enquete_plugin=plugin)
+    termination_strategy = CluedoTerminationStrategy(max_iterations=max_iterations, enquete_plugin=plugin) # Utiliser max_iterations
     
     group_chat = AgentGroupChat(
         agents=[sherlock, watson],
@@ -103,15 +111,26 @@ async def run_cluedo_game(
         termination_strategy=termination_strategy,
     )
 
-    # Ajout du message initial au chat pour démarrer la conversation
-    initial_message = ChatMessageContent(role="user", content=initial_question, name="System")
-    await group_chat.add_chat_message(message=initial_message)
-    history.append(initial_message)
-
-    logger.info("Début de la boucle de jeu gérée par AgentGroupChat.invoke...")
-    async for message in group_chat.invoke():
-        history.append(message)
-        logger.info(f"Message de {message.name}: {message.content}")
+    logger.info("Début de la conversation avec AgentGroupChat.invoke...")
+    
+    # Lancer la conversation avec le message initial
+    conversation_history = await group_chat.invoke(initial_question)
+    
+    # DIAGNOSTIC: Analyser la structure de conversation_history
+    logger.info(f"[DIAGNOSTIC] Type de conversation_history: {type(conversation_history)}")
+    logger.info(f"[DIAGNOSTIC] Longueur de conversation_history: {len(conversation_history) if hasattr(conversation_history, '__len__') else 'N/A'}")
+    
+    if conversation_history:
+        logger.info(f"[DIAGNOSTIC] Premier élément type: {type(conversation_history[0]) if hasattr(conversation_history, '__getitem__') else 'N/A'}")
+        if hasattr(conversation_history[0], '__dict__'):
+            logger.info(f"[DIAGNOSTIC] Premier élément dict: {conversation_history[0].__dict__}")
+    
+    # Ajouter tous les messages à notre historique
+    history.extend(conversation_history)
+    
+    for i, message in enumerate(conversation_history):
+        logger.info(f"[DIAGNOSTIC] Message {i}: Type={type(message)}, Attributs={dir(message) if hasattr(message, '__dict__') else 'N/A'}")
+        logger.info(f"Message de {getattr(message, 'name', 'UNKNOWN')}: {getattr(message, 'content', 'NO_CONTENT')}")
 
     logger.info("Jeu terminé.")
     return [
@@ -122,9 +141,20 @@ async def run_cluedo_game(
 async def main():
     """Point d'entrée pour exécuter le script de manière autonome."""
     kernel = Kernel()
-    # NOTE: Ajoutez ici la configuration du service LLM (ex: OpenAI, Azure) au kernel.
-    # from semantic_kernel.connectors.ai.open_ai import OpenAIChatCompletion
-    # kernel.add_service(OpenAIChatCompletion(service_id="default", ...))
+    # Configuration RÉELLE du service OpenAI
+    import os
+    api_key = os.getenv('OPENAI_API_KEY')
+    if api_key and not any(x in api_key.lower() for x in ['test', 'dummy', 'fake']):
+        from semantic_kernel.connectors.ai.open_ai import OpenAIChatCompletion
+        service = OpenAIChatCompletion(
+            service_id="authentic_openai",
+            ai_model_id="gpt-4o-mini",
+            api_key=api_key
+        )
+        kernel.add_service(service)
+        logger.info("✅ SERVICE OPENAI RÉEL CONFIGURÉ")
+    else:
+        logger.warning("⚠️ CLÉ API MANQUANTE - Mode démonstration")
 
     final_history, final_state = await run_cluedo_game(kernel, "L'enquête commence. Sherlock, à vous.")
     

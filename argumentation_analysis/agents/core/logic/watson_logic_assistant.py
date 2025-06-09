@@ -4,9 +4,11 @@ import re
 from typing import Optional, List, AsyncGenerator, ClassVar
 import json
 
+import semantic_kernel as sk # Ajout de l'importation
 from semantic_kernel import Kernel
 from semantic_kernel.functions.kernel_plugin import KernelPlugin
 from semantic_kernel.functions import kernel_function
+from semantic_kernel.functions.kernel_arguments import KernelArguments # Ajout de l'importation
 from .tweety_bridge import TweetyBridge
 
 # from .propositional_logic_agent import PropositionalLogicAgent # No longer inheriting
@@ -315,14 +317,38 @@ class WatsonLogicAssistant:
         return self._name
         
     async def process_message(self, message: str) -> str:
-        """Traite un message et retourne une réponse"""
+        """Traite un message et retourne une réponse en utilisant le kernel."""
         self._logger.info(f"[{self._name}] Processing: {message}")
         
-        # Simulation de traitement - à adapter selon les besoins
-        response = f"[{self._name}] " + message
+        # Créer un prompt simple pour l'agent Watson
+        prompt = f"""Vous êtes Watson, l'assistant logique de Sherlock Holmes. Répondez à la question suivante en tant que logicien:
+        Question: {message}
+        Réponse:"""
         
-        self._logger.info(f"[{self._name}] Response: {response}")
-        return response
+        try:
+            # Utiliser le kernel pour générer une réponse via le service OpenAI
+            # Assurez-vous que le service "authentic_test" est bien ajouté au kernel
+            response = await self._kernel.invoke_prompt(
+                prompt=prompt,
+                service_id="authentic_test", # Utiliser le service configuré dans le test
+                arguments=KernelArguments(input=message) # Utiliser KernelArguments directement
+            )
+            
+            ai_response = str(response)
+            self._logger.info(f"[{self._name}] AI Response: {ai_response}")
+            return ai_response
+            
+        except Exception as e:
+            self._logger.error(f"[{self._name}] Erreur lors de l'invocation du prompt: {e}")
+            return f"[{self._name}] Erreur: {e}"
+
+    async def invoke(self, message: str, **kwargs) -> str:
+        """
+        Point d'entrée pour l'invocation de l'agent par AgentGroupChat.
+        Délègue au process_message.
+        """
+        self._logger.info(f"[{self._name}] Invoke called with message: {message}")
+        return await self.process_message(message)
 
     async def get_agent_belief_set_content(self, belief_set_id: str) -> Optional[str]:
         """
