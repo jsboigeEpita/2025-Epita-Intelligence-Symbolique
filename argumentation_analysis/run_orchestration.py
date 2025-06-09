@@ -15,6 +15,7 @@ import asyncio
 import argparse
 import logging
 from pathlib import Path
+from typing import Any, Optional, List
 
 # Ajouter le répertoire parent au chemin de recherche des modules
 current_dir = Path(__file__).parent
@@ -118,7 +119,7 @@ async def run_orchestration(text_content: str, llm_service: Any, agents: Optiona
             llm_service=llm_service
         )
         
-        logging.info("🏁 Orchestration terminée avec succès.")
+        logging.info("✅ Orchestration terminée avec succès.")
     except Exception as e:
         logging.error(f"❌ Erreur lors de l'orchestration: {e}", exc_info=True)
 
