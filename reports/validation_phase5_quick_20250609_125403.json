@@ -1,0 +1,44 @@
+{
+  "timestamp": "2025-06-09T12:53:40.091127",
+  "interfaces_tested": {},
+  "regression_detected": true,
+  "summary": {
+    "accessible_interfaces": 0,
+    "functional_endpoints": 0,
+    "import_success_rate": 100.0,
+    "critical_issues": [
+      "Aucune interface accessible"
+    ],
+    "status": "critical"
+  },
+  "functionality_tests": {
+    "service_manager_import": true,
+    "config_loading": false,
+    "file_structure": true,
+    "data_directories": true,
+    "existing_directories": [
+      "interface_web",
+      "services",
+      "scripts",
+      "tests"
+    ],
+    "existing_data_dirs": [
+      "data",
+      "results",
+      "logs"
+    ]
+  },
+  "import_tests": {
+    "imports_successful": [
+      "argumentation_analysis",
+      "argumentation_analysis.orchestration.service_manager",
+      "flask",
+      "requests",
+      "json",
+      "pathlib"
+    ],
+    "imports_failed": [],
+    "total_tested": 6,
+    "success_rate": 100.0
+  }
+}
