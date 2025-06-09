@@ -1,12 +1,7 @@
 <template>
   <v-app>
     <!-- App Bar -->
-    <v-app-bar
-      app
-      color="#212138"
-      dark
-      elevation="4"
-    >
+    <v-app-bar app dark elevation="4">
       <v-icon class="ml-3">mdi-bullhorn-variant</v-icon>
       <v-toolbar-title class="text-h5">
         Argument Analyzer
@@ -43,12 +38,7 @@
             <v-card class="card-shadow" elevation="0">
               <v-card-text class="pa-6">
                 <!-- Input Type Selector -->
-                <v-tabs
-                  v-model="inputType"
-                  color="primary"
-                  class="mb-6"
-                  centered
-                >
+                <v-tabs v-model="inputType" color="primary" class="mb-6" centered>
                   <v-tab>
                     <v-icon left>mdi-file-music</v-icon>
                     Audio File
@@ -62,78 +52,51 @@
                 <v-tabs-items v-model="inputType">
                   <!-- Audio File Upload Tab -->
                   <v-tab-item v-if="inputType === 0">
-                    <v-file-input
-                      v-model="audioFile"
-                      accept="audio/*"
-                      label="Upload Audio File"
-                      prepend-icon="mdi-file-music"
-                      show-size
-                      outlined
-                      :loading="processing"
-                      :disabled="processing"
-                    ></v-file-input>
+                    <v-file-input v-model="audioFile" accept="audio/*" label="Upload Audio File"
+                      prepend-icon="mdi-file-music" show-size outlined :loading="processing"
+                      :disabled="processing"></v-file-input>
                   </v-tab-item>
 
                   <!-- YouTube Link Tab -->
                   <v-tab-item v-if="inputType === 1">
-                    <v-text-field
-                      v-model="youtubeUrl"
-                      label="YouTube Video URL"
-                      prepend-icon="mdi-youtube"
-                      placeholder="https://www.youtube.com/watch?v=..."
-                      outlined
-                      :loading="processing"
-                      :disabled="processing"
-                      :rules="[urlValidation]"
-                    ></v-text-field>
+                    <v-text-field v-model="youtubeUrl" label="YouTube Video URL" prepend-icon="mdi-youtube"
+                      placeholder="https://www.youtube.com/watch?v=..." outlined :loading="processing"
+                      :disabled="processing" :rules="[urlValidation]"></v-text-field>
                   </v-tab-item>
                 </v-tabs-items>
 
                 <!-- Analysis Options -->
                 <v-row class="mt-4">
                   <v-col cols="12" md="6">
-                    <v-checkbox
-                      v-model="analysisOptions.detectFallacies"
-                      label="Detect Logical Fallacies"
-                      color="primary"
-                    ></v-checkbox>
+                    <v-checkbox v-model="analysisOptions.detectFallacies" label="Detect Logical Fallacies"
+                      color="primary"></v-checkbox>
                   </v-col>
                   <v-col cols="12" md="6">
-                    <v-checkbox
-                      v-model="analysisOptions.validateArguments"
-                      label="Validate Arguments"
-                      color="primary"
-                    ></v-checkbox>
+                    <v-checkbox v-model="analysisOptions.analyzeStructure" label="Analyze Structure"
+                      color="primary"></v-checkbox>
                   </v-col>
                   <v-col cols="12" md="6">
-                    <v-checkbox
-                      v-model="analysisOptions.checkSolidity"
-                      label="Check Argument Solidity"
-                      color="primary"
-                    ></v-checkbox>
+                    <v-checkbox v-model="analysisOptions.evaluateCoherence" label="Evaluate Coherence"
+                      color="primary"></v-checkbox>
                   </v-col>
                   <v-col cols="12" md="6">
-                    <v-checkbox
-                      v-model="analysisOptions.extractClaims"
-                      label="Extract Key Claims"
-                      color="primary"
-                    ></v-checkbox>
+                    <v-checkbox v-model="analysisOptions.includeContext" label="Include Context in Analysis"
+                      color="primary"></v-checkbox>
+                  </v-col>
+                  <v-col cols="12" md="6">
+                    <v-text-field v-model.number="analysisOptions.severityThreshold" label="Severity Threshold"
+                      type="number" step="0.01" min="0" max="1" :disabled="processing" outlined
+                      hint="Set a value between 0 and 1" persistent-hint></v-text-field>
                   </v-col>
                 </v-row>
 
                 <!-- Action Buttons -->
                 <v-row class="mt-4">
                   <v-col>
-                    <v-btn
-                      @click="inputType===0 ? processInput() : processYoutubeInput()"
-                      color="primary"
-                      x-large
-                      block
-                      :loading="processing"
-                      :disabled="!canProcess"
-                    >
+                    <v-btn @click="inputType === 0 ? processInput() : processYoutubeInput()" color="primary" x-large
+                      block :loading="processing" :disabled="!canProcess">
                       <v-icon left>mdi-play</v-icon>
-                      Analyze {{ inputType===0 ? "Audio" : "Youtube Link"}}
+                      Analyze {{ inputType === 0 ? "Audio" : "Youtube Link" }}
                     </v-btn>
                   </v-col>
                 </v-row>
@@ -147,12 +110,7 @@
           <v-col cols="12" md="8">
             <v-card>
               <v-card-text class="text-center pa-6">
-                <v-progress-circular
-                  indeterminate
-                  color="primary"
-                  size="64"
-                  class="mb-4"
-                ></v-progress-circular>
+                <v-progress-circular indeterminate color="primary" size="64" class="mb-4"></v-progress-circular>
                 <h3 class="text-h6 mb-2">{{ processingStatus }}</h3>
                 <p class="text-body-2 grey--text">
                   This may take a few moments depending on the audio length
@@ -172,8 +130,8 @@
                   <v-icon left color="blue">mdi-text</v-icon>
                   Transcription
                 </v-card-title>
-                <v-card-text>
-                  <p class="text-body-1">{{ analysisResults.transcription }}</p>
+                <v-card-text class="text-wrap scrollable-text">
+                  <p class="text-body-1">{{ analysisResults.text_analyzed }}</p>
                 </v-card-text>
               </v-card>
             </v-col>
@@ -187,12 +145,7 @@
                 <v-card-title class="red--text">
                   <v-icon left color="red">mdi-alert-circle</v-icon>
                   Logical Fallacies
-                  <v-chip
-                    class="ml-2"
-                    color="red"
-                    text-color="white"
-                    small
-                  >
+                  <v-chip class="ml-2" color="red" text-color="white" small>
                     {{ analysisResults.fallacies.length }}
                   </v-chip>
                 </v-card-title>
@@ -203,15 +156,8 @@
                     </v-alert>
                   </div>
                   <div v-else>
-                    <v-chip
-                      v-for="fallacy in analysisResults.fallacies"
-                      :key="fallacy.type"
-                      class="fallacy-chip"
-                      color="red"
-                      text-color="white"
-                      small
-                      :title="fallacy.description"
-                    >
+                    <v-chip v-for="fallacy in analysisResults.fallacies" :key="fallacy.type" class="fallacy-chip"
+                      color="red" text-color="white" small :title="fallacy.description">
                       {{ fallacy.type }}
                     </v-chip>
                   </div>
@@ -219,25 +165,87 @@
               </v-card>
             </v-col>
 
-            <!-- Argument Validity -->
-            <v-col v-if="analysisResults.validity" cols="12" md="6">
+            <!-- Argument Structure Card -->
+            <v-col v-if="analysisResults.argument_structure" cols="12" md="6">
               <v-card class="analysis-card h-100">
                 <v-card-title>
-                  <v-icon left :color="analysisResults.validity.valid ? 'green' : 'orange'">
-                    mdi-check-circle
-                  </v-icon>
-                  Argument Validity
+                  <v-icon left color="indigo">mdi-sitemap</v-icon>
+                  Argument Structure
                 </v-card-title>
                 <v-card-text>
-                  <v-alert
-                    :type="analysisResults.validity.valid ? 'success' : 'warning'"
-                    text
-                  >
-                    {{ analysisResults.validity.summary }}
-                  </v-alert>
-                  <p class="mt-3">
-                    <strong>Score:</strong> {{ analysisResults.validity.score }}/10
-                  </p>
+                  <v-list dense>
+                    <v-list-item>
+                      <v-list-item-content>
+                        <v-list-item-title>
+                          <strong>Type:</strong> {{ analysisResults.argument_structure.argument_type }}
+                        </v-list-item-title>
+                      </v-list-item-content>
+                    </v-list-item>
+                    <v-list-item>
+                      <v-list-item-content>
+                        <v-list-item-title>
+                          <strong>Coherence:</strong> {{ analysisResults.argument_structure.coherence }}
+                        </v-list-item-title>
+                      </v-list-item-content>
+                    </v-list-item>
+                    <v-list-item>
+                      <v-list-item-content>
+                        <v-list-item-title>
+                          <strong>Strength:</strong> {{ analysisResults.argument_structure.strength }}
+                        </v-list-item-title>
+                      </v-list-item-content>
+                    </v-list-item>
+                    <v-list-item>
+                      <v-list-item-content>
+                        <v-list-item-title>
+                          <strong>Conclusion:</strong>
+                          <span class="text-wrap">{{ analysisResults.argument_structure.conclusion }}</span>
+                        </v-list-item-title>
+                      </v-list-item-content>
+                    </v-list-item>
+                    <v-list-item>
+                      <v-list-item-content>
+                        <v-list-item-title>
+                          <strong>Premises ({{ analysisResults.argument_structure.premises.length }}):</strong>
+                        </v-list-item-title>
+                        <v-list dense class="ml-4" style="max-height: 120px; overflow-y: auto;">
+                          <v-list-item v-for="(premise, idx) in analysisResults.argument_structure.premises.slice(0, 5)"
+                            :key="idx">
+                            <v-list-item-content>
+                              <v-list-item-title class="text-wrap">{{ premise }}</v-list-item-title>
+                            </v-list-item-content>
+                          </v-list-item>
+                          <v-list-item v-if="analysisResults.argument_structure.premises.length > 5">
+                            <v-list-item-content>
+                              <v-list-item-title class="grey--text">...and {{
+                                analysisResults.argument_structure.premises.length - 5 }} more</v-list-item-title>
+                            </v-list-item-content>
+                          </v-list-item>
+                        </v-list>
+                      </v-list-item-content>
+                    </v-list-item>
+                  </v-list>
+                </v-card-text>
+              </v-card>
+            </v-col>
+
+            <!-- Overall Quality Card -->
+            <v-col v-if="analysisResults.overall_quality !== undefined" cols="12" md="6">
+              <v-card class="analysis-card h-100">
+                <v-card-title>
+                  <v-icon left :color="overallQualityColor">mdi-star-circle</v-icon>
+                  Overall Quality
+                </v-card-title>
+                <v-card-text class="text-center">
+                  <v-progress-circular :model-value="analysisResults.overall_quality * 100" :color="overallQualityColor"
+                    size="70" width="8" class="mb-2">
+                    {{ (analysisResults.overall_quality * 100).toFixed(0) }}%
+                  </v-progress-circular>
+                  <div>
+                    <span :style="{ color: overallQualityColor, fontWeight: 'bold' }">
+                      {{ overallQualityLabel }}
+                    </span>
+                  </div>
                 </v-card-text>
               </v-card>
             </v-col>
@@ -250,12 +258,8 @@
                   Argument Solidity
                 </v-card-title>
                 <v-card-text>
-                  <v-progress-linear
-                    :value="analysisResults.solidity.score * 10"
-                    color="purple"
-                    height="8"
-                    class="mb-3"
-                  ></v-progress-linear>
+                  <v-progress-linear :value="analysisResults.solidity.score * 10" color="purple" height="8"
+                    class="mb-3"></v-progress-linear>
                   <p>
                     <strong>Rating:</strong> {{ analysisResults.solidity.rating }}
                   </p>
@@ -275,10 +279,7 @@
                 </v-card-title>
                 <v-card-text>
                   <v-list dense>
-                    <v-list-item
-                      v-for="(claim, index) in analysisResults.claims"
-                      :key="index"
-                    >
+                    <v-list-item v-for="(claim, index) in analysisResults.claims" :key="index">
                       <v-list-item-content>
                         <v-list-item-title class="text-wrap">
                           {{ claim }}
@@ -300,19 +301,11 @@
                   Export Results
                 </v-card-title>
                 <v-card-actions>
-                  <v-btn
-                    @click="exportResults('json')"
-                    color="primary"
-                    outlined
-                  >
+                  <v-btn @click="exportResults('json')" color="primary" outlined>
                     <v-icon left>mdi-code-json</v-icon>
                     Export as JSON
                   </v-btn>
-                  <v-btn
-                    @click="exportResults('pdf')"
-                    color="secondary"
-                    outlined
-                  >
+                  <v-btn @click="exportResults('pdf')" color="secondary" outlined>
                     <v-icon left>mdi-file-pdf-box</v-icon>
                     Export as PDF
                   </v-btn>
@@ -325,11 +318,7 @@
     </v-main>
 
     <!-- Footer -->
-    <v-footer
-      dark
-      padless
-      class="gradient-bg-footer"
-    >
+    <v-footer dark padless class="gradient-bg-footer">
       <v-container>
         <v-row justify="center">
           <v-col class="text-center">
@@ -356,13 +345,16 @@ export default {
       processing: false,
       processingStatus: 'Initializing...',
       analysisOptions: {
+        analyzeStructure: true,
         detectFallacies: true,
-        validateArguments: true,
-        checkSolidity: true,
-        extractClaims: true
+        evaluateCoherence: true,
+        includeContext: true,
+        severityThreshold: 0.5,
       },
       analysisResults: null,
-      whisperApiClient: null // Placeholder for Whisper API client instance
+      whisperApiClient: null, // Placeholder for Whisper API client instance
+      textToAnalyze: '',
+      analyzeApiUrl: '', // Placeholder for analysis API URL
     }
   },
   mounted() {
@@ -375,10 +367,11 @@ export default {
       HUGGING_FACE_API_KEY
     });
     this.whisperApiClient = new WhisperApiClient(
-        "https://whisper-webui.myia.io/",
-        USERNAME,
-        PASSWORD,
-        HUGGING_FACE_API_KEY);
+      "https://whisper-webui.myia.io/",
+      USERNAME,
+      PASSWORD,
+      HUGGING_FACE_API_KEY);
+    this.analyzeApiUrl = import.meta.env.VITE_ANALYZE_API_URL || 'http://localhost:5000/api';
   },
   computed: {
     canProcess() {
@@ -387,7 +380,19 @@ export default {
       } else {
         return this.youtubeUrl.trim() !== '' && this.isValidYouTubeUrl(this.youtubeUrl);
       }
-    }
+    },
+    overallQualityColor() {
+      const q = this.analysisResults?.overall_quality;
+      if (q >= 0.8) return 'green';
+      if (q >= 0.5) return 'orange';
+      return 'red';
+    },
+    overallQualityLabel() {
+      const q = this.analysisResults?.overall_quality;
+      if (q >= 0.8) return 'Excellent';
+      if (q >= 0.5) return 'Average';
+      return 'Poor';
+    },
   },
   methods: {
     urlValidation(value) {
@@ -401,7 +406,7 @@ export default {
     async processAudioInput() {
       this.processing = true;
       this.analysisResults = null;
-      
+
       try {
         // Step 1: Convert to text
         this.processingStatus = 'Converting audio to text...';
@@ -409,24 +414,21 @@ export default {
         /* 
             FIX ME: Implement Whisper API client logic here
         */
-        
         // Step 2: Analyze text
         this.processingStatus = 'Analyzing arguments and detecting fallacies...';
         await this.simulateDelay(3000);
         /* 
             FIX ME: Implement argument analyzer logic here
         */
-        
         // Step 3: Generate results
         this.processingStatus = 'Generating analysis report...';
         await this.simulateDelay(1000);
         /* 
             FIX ME: Generate analysis report logic here
         */
-        
         // Simulate API response
         this.analysisResults = this.generateResults();
-        
+
       } catch (error) {
         console.error('Processing error:', error);
         // Handle error
@@ -441,7 +443,16 @@ export default {
       try {
         const results = await this.whisperApiClient.transcribeYouTube(this.youtubeUrl);
         console.log('Transcription results:', results);
-       
+
+        if (results) {
+          this.textToAnalyze = results.raw.data[0];
+          console.log("Text to analyze:", this.textToAnalyze);
+          this.processingStatus = 'Analyzing arguments and detecting fallacies...';
+          await this.generateResults();
+        } else {
+          console.error('No transcription text found');
+          this.processingStatus = 'Error: No transcription text found';
+        }
       } catch (error) {
         console.error('Processing error:', error);
         // Handle error
@@ -450,8 +461,39 @@ export default {
         this.processingStatus = 'Initializing...';
       }
     },
-    generateResults() {
-   
+    async generateResults() {
+      const analysisParameters = {
+        "options": {
+          "analyze_structure": this.analysisOptions.analyzeStructure,
+          "detect_fallacies": this.analysisOptions.detectFallacies,
+          "evaluate_coherence": this.analysisOptions.evaluateCoherence,
+          "include_context": this.analysisOptions.includeContext,
+          "severity_threshold": this.analysisOptions.severityThreshold
+        },
+        "text": this.textToAnalyze
+      };
+
+      // Make the API call to analyze the text
+      try {
+        this.processingStatus = 'Analyzing arguments...';
+        const response = await fetch(`${this.analyzeApiUrl}/analyze`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(analysisParameters)
+        });
+        if (!response.ok) {
+          throw new Error('API request failed');
+        }
+        this.analysisResults = await response.json();
+        console.log('Analysis results:', this.analysisResults);
+        this.processingStatus = 'Analysis complete';
+      } catch (error) {
+        console.error('API call error:', error);
+        return null;
+      }
+
     },
     simulateDelay(ms) {
       return new Promise(resolve => setTimeout(resolve, ms));
@@ -459,7 +501,7 @@ export default {
     exportResults(format) {
       if (format === 'json') {
         const dataStr = JSON.stringify(this.analysisResults, null, 2);
-        const dataBlob = new Blob([dataStr], {type: 'application/json'});
+        const dataBlob = new Blob([dataStr], { type: 'application/json' });
         this.downloadFile(dataBlob, 'analysis-results.json');
       } else if (format === 'pdf') {
         // Simulate PDF export
@@ -508,5 +550,10 @@ export default {
 .loading-overlay {
   background: rgba(255, 255, 255, 0.9);
   backdrop-filter: blur(4px);
+}
+
+.scrollable-text {
+  max-height: 300px;
+  overflow-y: auto;
 }
 </style>
