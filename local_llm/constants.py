@@ -1,13 +1,14 @@
-# Update this file freely in order to add/remove the
-# models you downloaded so you can use them with
-# the local_llm package.
-# 
-# Instructions:
-# - Create your root folder and put it in "MODEL_FOLDER_PATH"
-# - Create a subfolder for your model and name it as you want, then add it
-#   in the enum "ModelEnum".
-# - Put your downloaded model in the subfolder and name the file "model.gguf".
+"""
+Update this file freely in order to add/remove the
+models you downloaded so you can use them with
+the local_llm package.
 
+Instructions:
+- Create your root folder and put it in "MODEL_FOLDER_PATH"
+- Create a subfolder for your model and name it as you want, then add it
+  in the enum "ModelEnum".
+- Put your downloaded model in the subfolder and name the file "model.gguf".
+"""
 
 from enum import Enum, auto
 
@@ -16,7 +17,12 @@ from enum import Enum, auto
 #############
 
 MODEL_FOLDER_PATH = "models"
+
+# pylint: disable=invalid-name
 class ModelEnum(Enum):
+    """
+    Enum containing all the supported models.
+    """
     TinyLlama1_1B_Q8 = 0
     Llama3_1B_Q8 = auto()
     Llama3_3B_Q6 = auto()
@@ -26,6 +32,7 @@ class ModelEnum(Enum):
     MistralNemo_8B_Q8 = auto()
     Phi2_2B_Q8 = auto()
     Phi4_3B_Q4 = auto()
+# pylint: enable=invalid-name
 
 #############
 #    END    #

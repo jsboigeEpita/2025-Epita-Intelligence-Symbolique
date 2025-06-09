@@ -1,7 +1,8 @@
-# This file contains utilitary functions
-# used by the local_llm package.
+"""
+This file contains utilitary functions used by the local_llm package.
+"""
 
-legacy_prompt = f"""
+LEGACY_PROMPT = """
 You are a specialist in fallacies.
 Your task is to:
 1. Identify the main arguments in the input.
@@ -23,7 +24,24 @@ Input (between <input> and </input>):
 Your analysis (end your answer with <END>):
 """
 
+
 def get_full_prompt(prompt: str) -> str:
+    """
+    Constructs a full prompt for a fallacy analysis task.
+
+    The returned prompt instructs a language model to:
+    1. Identify arguments in the input.
+    2. Determine whether each argument is valid or fallacious.
+    3. Name and explain any detected fallacies.
+    4. Return the output in a specific JSON format, ending with <END>.
+
+    Args:
+        prompt (str): The input text containing potential arguments.
+
+    Returns:
+        str: A formatted multi-line instruction prompt embedding the input.
+    """
+
     full_prompt = f"""
 You are a specialist in fallacies.
 Your task is to:
@@ -63,9 +81,23 @@ Your analysis (in JSON, end with <END>):
 
     return full_prompt.strip()
 
+
 def clean_output(output: str) -> str:
+    """
+    Cleans the model's output by removing everything after an end marker.
+
+    Searches for known end tags (e.g., <END>, (END), END) and truncates the output
+    at the first occurrence of any of them. If no end marker is found, returns the full
+    output prefixed with a warning message.
+
+    Args:
+        output (str): The raw output string to clean.
+
+    Returns:
+        str: The cleaned output string, or the original output with a warning if no end tag.
+    """
     for ending_tag in ["<END>", "(END)", "</END>", "</END/>", "END"]:
         index = output.find(ending_tag)
-        if (index != -1):
+        if index != -1:
             return output[:index]
-    return  "No end of output found, here is the full output:\n\n" + output
+    return "No end of output found, here is the full output:\n\n" + output
