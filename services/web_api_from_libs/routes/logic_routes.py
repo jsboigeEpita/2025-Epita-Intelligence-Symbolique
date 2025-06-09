@@ -14,7 +14,7 @@ from argumentation_analysis.services.web_api.models.request_models import (
 from services.web_api.models.response_models import (
     LogicBeliefSetResponse, LogicQueryResponse, LogicGenerateQueriesResponse
 )
-from libs.web_api.models.response_models import ErrorResponse # Ajusté pour ErrorResponse
+from ..models.response_models import ErrorResponse # Ajusté pour ErrorResponse
 from pydantic import ValidationError # Import manquant pour la gestion d'erreur
 
 logger = logging.getLogger("WebAPI.LogicRoutes")

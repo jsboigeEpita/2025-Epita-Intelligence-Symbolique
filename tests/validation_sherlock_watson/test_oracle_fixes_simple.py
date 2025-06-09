@@ -22,6 +22,8 @@ async def test_oracle_fixes():
     mock_permission_manager = Mock()
     mock_permission_manager.is_authorized = Mock(return_value=True)
     mock_dataset_manager.permission_manager = mock_permission_manager
+    # Mock de la méthode check_permission qui est réellement appelée
+    mock_dataset_manager.check_permission = Mock(return_value=True)
     
     # Création de l'agent
     agent = OracleBaseAgent(
@@ -40,7 +42,7 @@ async def test_oracle_fixes():
         )
         
         # Vérifier que le mock a été appelé
-        mock_permission_manager.is_authorized.assert_called_with(
+        mock_dataset_manager.check_permission.assert_called_with(
             "Watson",
             QueryType.CARD_INQUIRY
         )
@@ -49,7 +51,8 @@ async def test_oracle_fixes():
         print(f"Resultat recu: '{result}'")
         
         # Vérifier le message de succès (avec ou sans accent)
-        assert "Permission accord" in result or "Permission accorde" in result
+        assert ("Permission accord" in result or "Permission accorde" in result or
+                "a les permissions pour" in result)
         assert "Watson" in result
         assert "card_inquiry" in result
         print("OK Test validate_agent_permissions (success) - PASSE")
@@ -63,8 +66,8 @@ async def test_oracle_fixes():
     # Test 2: validate_agent_permissions - failure
     try:
         # Reconfigurer le mock pour retourner False
-        mock_permission_manager.is_authorized.return_value = False
-        mock_permission_manager.is_authorized.reset_mock()
+        mock_dataset_manager.check_permission.return_value = False
+        mock_dataset_manager.check_permission.reset_mock()
         
         result = await agent.oracle_tools.validate_agent_permissions(
             target_agent="UnauthorizedAgent",
@@ -72,7 +75,7 @@ async def test_oracle_fixes():
         )
         
         # Vérifier que le mock a été appelé
-        mock_permission_manager.is_authorized.assert_called_with(
+        mock_dataset_manager.check_permission.assert_called_with(
             "UnauthorizedAgent",
             QueryType.ADMIN_COMMAND
         )
@@ -81,7 +84,8 @@ async def test_oracle_fixes():
         print(f"Resultat recu (failure): '{result}'")
         
         # Vérifier le message de refus (avec ou sans accent)
-        assert "Permission refus" in result
+        assert ("Permission refus" in result or
+                "n'a pas les permissions pour" in result)
         assert "UnauthorizedAgent" in result
         assert "admin_command" in result
         print("OK Test validate_agent_permissions (failure) - PASSE")

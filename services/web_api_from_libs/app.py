@@ -32,20 +32,20 @@ from argumentation_analysis.services.web_api.services.logic_service import Logic
 from argumentation_analysis.services.web_api.models.request_models import (
     LogicBeliefSetRequest, LogicQueryRequest, LogicGenerateQueriesRequest
 )
-# Les modèles de réponse pour la logique sont dans un chemin différent, comme corrigé précédemment
+# Import des modèles locaux
+from .models.request_models import (
+    AnalysisRequest, ValidationRequest, FallacyRequest, FrameworkRequest
+)
+from .models.response_models import (
+    AnalysisResponse, ValidationResponse, FallacyResponse, FrameworkResponse, ErrorResponse
+)
+# Les modèles de réponse pour la logique depuis l'autre service
 from services.web_api.models.response_models import (
     LogicBeliefSetResponse, LogicQueryResponse, LogicGenerateQueriesResponse
 )
 
-from libs.web_api.models.request_models import (
-    AnalysisRequest, ValidationRequest, FallacyRequest, FrameworkRequest
-)
-from libs.web_api.models.response_models import (
-    AnalysisResponse, ValidationResponse, FallacyResponse, FrameworkResponse, ErrorResponse
-)
-
 # Import du Blueprint pour les routes logiques
-from libs.web_api.routes.logic_routes import logic_bp # initialize_logic_blueprint n'est plus nécessaire
+from .routes.logic_routes import logic_bp # initialize_logic_blueprint n'est plus nécessaire
 
 # Configuration du logging
 logging.basicConfig(

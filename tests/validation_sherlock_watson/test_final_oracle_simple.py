@@ -13,10 +13,27 @@ def run_oracle_tests():
     print("=== TEST FINAL - OBJECTIF 100% ORACLE (94/94) ===")
     
     try:
-        # Commande pour executer les tests Oracle sans pytest-playwright
+        # Commande pour exécuter les tests Oracle avec chemin corrigé
+        import os
+        
+        # Chemin relatif depuis le répertoire courant (nous serons dans tests/)
+        oracle_tests_path = os.path.join("unit", "argumentation_analysis", "agents", "core", "oracle")
+        
+        # Construire le chemin absolu pour vérification
+        current_dir = os.getcwd()
+        if current_dir.endswith("tests"):
+            full_oracle_path = os.path.join(current_dir, oracle_tests_path)
+        else:
+            full_oracle_path = os.path.join(current_dir, "tests", oracle_tests_path)
+        
+        # Vérifier que le chemin existe
+        if not os.path.exists(full_oracle_path):
+            print(f"[ERREUR] Chemin Oracle non trouve: {full_oracle_path}")
+            return False
+        
         cmd = [
             sys.executable, "-m", "pytest",
-            "unit/argumentation_analysis/agents/core/oracle/",
+            oracle_tests_path,
             "-v", "--tb=short", "--no-header",
             "--disable-warnings"
         ]
@@ -25,7 +42,7 @@ def run_oracle_tests():
             cmd,
             capture_output=True,
             text=True,
-            cwd="tests"
+            cwd="tests" if not os.getcwd().endswith("tests") else "."
         )
         
         output = result.stdout + result.stderr
