@@ -207,6 +207,16 @@ class SherlockEnqueteAgent:
         self._tools = SherlockTools(kernel=kernel)
         
         self._logger = logging.getLogger(f"agent.{self.__class__.__name__}.{agent_name}")
+    
+    @property
+    def name(self) -> str:
+        """
+        Retourne le nom de l'agent - Compatibilité avec l'interface BaseAgent.
+        
+        Returns:
+            Le nom de l'agent.
+        """
+        return self._name
         
     async def process_message(self, message: str) -> str:
         """Traite un message et retourne une réponse"""

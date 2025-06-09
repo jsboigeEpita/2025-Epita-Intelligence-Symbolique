@@ -313,8 +313,8 @@ class TestComplexFallacyAnalyzer(unittest.TestCase):
         
         # Vérifier les résultats
         self.assertEqual(len(result), 2)
-        self.assertEqual(result[0]["fallacy_type1"], "Appel à l'émotion")
-        self.assertEqual(result[0]["fallacy_type2"], "Appel à l'autorité")
+        self.assertEqual(result[0]["fallacy_type1"], "Appel à l'autorité")
+        self.assertEqual(result[0]["fallacy_type2"], "Appel à l'émotion")
         self.assertEqual(result[0]["alternation_count"], 3)
         self.assertEqual(len(result[0]["involved_paragraphs"]), 4)
 

@@ -19,17 +19,17 @@ class TestContextualFallacyAnalyzer(unittest.TestCase):
     def setUp(self):
         """Initialisation avant chaque test."""
         # Patch pour éviter le chargement réel de la taxonomie
-        self.taxonomy_path_patcher = patch('argumentation_analysis.agents.tools.analysis.contextual_fallacy_analyzer.get_taxonomy_path')
+        self.taxonomy_path_patcher = patch('argumentation_analysis.utils.taxonomy_loader.get_taxonomy_path')
         self.mock_get_taxonomy_path = self.taxonomy_path_patcher.start()
         self.mock_get_taxonomy_path.return_value = "mock_taxonomy_path.csv"
         
-        self.validate_taxonomy_patcher = patch('argumentation_analysis.agents.tools.analysis.contextual_fallacy_analyzer.validate_taxonomy_file')
+        self.validate_taxonomy_patcher = patch('argumentation_analysis.utils.taxonomy_loader.validate_taxonomy_file')
         self.mock_validate_taxonomy = self.validate_taxonomy_patcher.start()
         self.mock_validate_taxonomy.return_value = True
         
-        # Patch pour pd.read_csv et DataFrame
-        self.pandas_patcher = patch('argumentation_analysis.agents.tools.analysis.contextual_fallacy_analyzer.pd')
-        self.mock_pandas = self.pandas_patcher.start()
+        # Patch pour pandas.read_csv
+        self.pandas_patcher = patch('pandas.read_csv')
+        self.mock_read_csv = self.pandas_patcher.start()
         
         # Créer un mock pour le DataFrame
         self.test_df = MagicMock()
@@ -76,7 +76,7 @@ class TestContextualFallacyAnalyzer(unittest.TestCase):
         
         self.test_df.loc.__getitem__.side_effect = mock_loc_getitem
         
-        self.mock_pandas.read_csv.return_value = self.test_df
+        self.mock_read_csv.return_value = self.test_df
         
         # Créer l'instance à tester
         self.analyzer = ContextualFallacyAnalyzer()
@@ -95,6 +95,11 @@ class TestContextualFallacyAnalyzer(unittest.TestCase):
 
     def test_load_taxonomy(self):
         """Teste le chargement de la taxonomie."""
+        # Réinitialiser les mocks pour ne compter que l'appel de ce test
+        self.mock_get_taxonomy_path.reset_mock()
+        self.mock_validate_taxonomy.reset_mock()
+        self.mock_read_csv.reset_mock()
+        
         # Appeler la méthode à tester
         df = self.analyzer._load_taxonomy()
         
@@ -103,11 +108,11 @@ class TestContextualFallacyAnalyzer(unittest.TestCase):
         self.assertEqual(len(df), 4)
         self.mock_get_taxonomy_path.assert_called_once()
         self.mock_validate_taxonomy.assert_called_once()
-        self.mock_pandas.read_csv.assert_called_once_with("mock_taxonomy_path.csv", encoding='utf-8')
+        self.mock_read_csv.assert_called_once_with("mock_taxonomy_path.csv", encoding='utf-8')
         
         # Tester avec un chemin personnalisé
         df = self.analyzer._load_taxonomy("custom_path.csv")
-        self.mock_pandas.read_csv.assert_called_with("custom_path.csv", encoding='utf-8')
+        self.mock_read_csv.assert_called_with("custom_path.csv", encoding='utf-8')
         
         # Tester avec une erreur de validation
         self.mock_validate_taxonomy.return_value = False

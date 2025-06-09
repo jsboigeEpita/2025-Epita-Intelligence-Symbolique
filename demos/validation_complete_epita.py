@@ -7,6 +7,9 @@ Ce script valide entièrement la démonstration EPITA avec des tests authentique
 qui testent réellement les composants LLM et de logique argumentative.
 """
 
+# Auto-activation environnement intelligent
+import scripts.core.auto_env
+
 import asyncio
 import sys
 import os
