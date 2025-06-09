@@ -93,41 +93,41 @@ class TestFrameworkBuilder:
         ]
         
         for arg_content in arguments:
-            page.locator('#arg-content').fill(arg_content)
-            page.get_by_role("button", name="Ajouter l'argument").click()
+            framework_page.locator('#arg-content').fill(arg_content)
+            framework_page.get_by_role("button", name="Ajouter l'argument").click()
             # Vérification que l'argument spécifique a été ajouté (en évitant strict mode violation)
-            expect(page.locator('.argument-card').last).to_contain_text(arg_content)
+            expect(framework_page.locator('.argument-card').last).to_contain_text(arg_content)
         
         # Vérification du nombre d'arguments
-        expect(page.locator('.argument-card')).to_have_count(3)
+        expect(framework_page.locator('.argument-card')).to_have_count(3)
         
         # Test de suppression d'un argument
-        remove_buttons = page.locator('.argument-card .remove-button')
+        remove_buttons = framework_page.locator('.argument-card .remove-button')
         remove_buttons.first.click()
         
         # Vérification que l'argument a été supprimé
-        expect(page.locator('.argument-card')).to_have_count(2)
+        expect(framework_page.locator('.argument-card')).to_have_count(2)
         
         # Ajout d'attaques multiples
-        attack_source = page.locator('#attack-source')
-        attack_target = page.locator('#attack-target')
+        attack_source = framework_page.locator('#attack-source')
+        attack_target = framework_page.locator('#attack-target')
         
         # Première attaque
         attack_source.select_option(index=1)
         attack_target.select_option(index=2)
-        page.get_by_role("button", name="Ajouter l'attaque").click()
+        framework_page.get_by_role("button", name="Ajouter l'attaque").click()
         
         # Seconde attaque (inverse)
         attack_source.select_option(index=2)
         attack_target.select_option(index=1)
-        page.get_by_role("button", name="Ajouter l'attaque").click()
+        framework_page.get_by_role("button", name="Ajouter l'attaque").click()
         
         # Vérification des attaques
-        expect(page.locator('.attack-item')).to_have_count(2)
+        expect(framework_page.locator('.attack-item')).to_have_count(2)
         
         # Test de suppression d'attaque
-        page.locator('.attack-item .remove-button').first.click()
-        expect(page.locator('.attack-item')).to_have_count(1)
+        framework_page.locator('.attack-item .remove-button').first.click()
+        expect(framework_page.locator('.attack-item')).to_have_count(1)
 
     def test_framework_validation_integration(self, framework_page: Page):
         """Test de l'intégration avec le système de validation"""
@@ -166,6 +166,7 @@ class TestFrameworkBuilder:
 
     def test_framework_persistence(self, framework_page: Page):
         """Test de la persistance et sauvegarde du framework"""
+        test_helpers = PlaywrightHelpers(framework_page)
         # La fixture framework_page navigue déjà vers l'onglet
         
         # Construction d'un framework avec données de test

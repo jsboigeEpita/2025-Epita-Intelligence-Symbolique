@@ -28,10 +28,26 @@ COMMON_SELECTORS = {
 
 def setup_page_for_app(page: Page) -> Page:
     """Helper pour configurer une page pour l'application."""
+    print(f"DEBUG: Entrée dans setup_page_for_app. URL actuelle de la page: {page.url}")
     page.set_default_timeout(DEFAULT_TIMEOUT)
-    page.goto(APP_BASE_URL)
     
-    # Attendre que l'API soit connectée
+    # Boucle de re-essai pour page.goto
+    max_retries = 3
+    retry_delay_seconds = 5
+    for attempt in range(max_retries):
+        try:
+            page.goto(APP_BASE_URL)
+            # Si goto réussit, sortir de la boucle
+            break
+        except Exception as e:
+            print(f"Tentative {attempt + 1}/{max_retries} de connexion à {APP_BASE_URL} échouée: {e}")
+            if attempt < max_retries - 1:
+                time.sleep(retry_delay_seconds)
+            else:
+                # Si toutes les tentatives échouent, relancer l'exception
+                raise
+    
+    # Attendre que l'API soit connectée (logique existante)
     try:
         expect(page.locator(COMMON_SELECTORS['api_status_connected'])).to_be_visible(
             timeout=API_CONNECTION_TIMEOUT
@@ -96,8 +112,13 @@ def validation_page(page: Page) -> Page:
 def framework_page(page: Page) -> Page:
     """Page avec l'onglet Framework Builder activé."""
     app_page = setup_page_for_app(page)
-    app_page.locator(COMMON_SELECTORS['framework_tab']).click()
-    expect(app_page.locator('[data-testid="framework-name-input"]')).to_be_visible()
+    # Vérification explicite de la visibilité et de l'activation de l'onglet avant le clic
+    framework_tab_selector = COMMON_SELECTORS['framework_tab']
+    expect(app_page.locator(framework_tab_selector)).to_be_visible(timeout=DEFAULT_TIMEOUT)
+    expect(app_page.locator(framework_tab_selector)).to_be_enabled(timeout=DEFAULT_TIMEOUT)
+    
+    app_page.locator(framework_tab_selector).click()
+    expect(app_page.locator('#arg-content')).to_be_visible(timeout=DEFAULT_TIMEOUT)
     return app_page
 
 # ============================================================================
