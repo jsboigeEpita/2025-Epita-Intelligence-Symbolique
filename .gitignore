@@ -205,3 +205,10 @@ test_phase_*.log
 validation_outputs_*.txt
 $null
 $outputFile
+
+# Fichiers de résultats et rapports spécifiques non suivis
+backend_info.json
+validation_report.md
+phase_c_test_results_*.json
+phase_d_simple_results.json
+phase_d_trace_ideale_results_*.json
