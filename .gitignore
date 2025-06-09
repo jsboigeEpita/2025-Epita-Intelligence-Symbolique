@@ -90,7 +90,10 @@ ENV/
 env.bak/
 venv.bak/
 config/.env
+config/.env.authentic
 **/.env # Plus générique que *.env
+.api_key_backup
+*.api_key*
 
 # IDEs et éditeurs
 .vscode/

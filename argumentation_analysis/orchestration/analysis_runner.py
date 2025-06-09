@@ -1,4 +1,4 @@
-# orchestration/analysis_runner.py
+﻿# orchestration/analysis_runner.py
 import sys
 import os
 # Ajout pour résoudre les problèmes d'import de project_core
@@ -32,10 +32,8 @@ from semantic_kernel.kernel import Kernel as SKernel # Alias pour éviter confli
 import semantic_kernel as sk
 from semantic_kernel.contents import ChatMessageContent
 # CORRECTIF COMPATIBILITÉ: Utilisation du module de compatibilité
-from argumentation_analysis.utils.semantic_kernel_compatibility import AgentGroupChat, ChatCompletionAgent, Agent, AuthorRole
-from semantic_kernel.exceptions import AgentChatException
+from argumentation_analysis.utils.semantic_kernel_compatibility import AgentGroupChat, ChatCompletionAgent, Agent, AuthorRole, AgentChatException, FunctionChoiceBehavior
 from semantic_kernel.connectors.ai.open_ai import OpenAIChatCompletion, AzureChatCompletion # Pour type hint
-from semantic_kernel.connectors.ai.function_choice_behavior import FunctionChoiceBehavior
 from semantic_kernel.functions.kernel_arguments import KernelArguments
 
 # Imports depuis les modules du projet
@@ -196,7 +194,13 @@ async def run_analysis_conversation(
         run_logger.info("8. Initialisation historique et lancement invoke...")
         initial_prompt = f"Bonjour à tous. Le texte à analyser est :\n'''\n{texte_a_analyser}\n'''\nProjectManagerAgent, merci de définir les premières tâches d'analyse en suivant la séquence logique."
 
-        print(f"\n--- Tour 0 (Utilisateur) --- \n{initial_prompt}\n")
+        # Gestion sécurisée de l'affichage Unicode
+        try:
+            print(f"\n--- Tour 0 (Utilisateur) --- \n{initial_prompt}\n")
+        except UnicodeEncodeError:
+            # Fallback pour les consoles qui ne supportent pas l'Unicode
+            safe_prompt = initial_prompt.encode('ascii', errors='replace').decode('ascii')
+            print(f"\n--- Tour 0 (Utilisateur) --- \n{safe_prompt}\n")
         run_logger.info(f"Message initial (Utilisateur): {initial_prompt}")
 
         if hasattr(local_group_chat, 'history') and hasattr(local_group_chat.history, 'add_user_message'):
