@@ -9,6 +9,8 @@ simulation du comportement d'autres joueurs, et révélations progressives selon
 import logging
 from typing import Dict, List, Any, Optional, ClassVar
 from datetime import datetime
+import random
+import uuid
 
 from semantic_kernel import Kernel
 from semantic_kernel.functions import kernel_function
@@ -182,7 +184,6 @@ class MoriartyTools(OracleTools):
                     elements_possibles_pour_refutation.append(element)
             
             # Simulation probabiliste basée sur la logique du jeu
-            import random
             if elements_possibles_pour_refutation and random.random() > 0.3:  # 70% de chance de pouvoir réfuter
                 # Choisit un élément au hasard parmi ceux possibles
                 revealed_card = random.choice(elements_possibles_pour_refutation)
@@ -280,7 +281,6 @@ Votre mission : Fasciner par votre mystère élégant."""
         )
         
         # CORRECTIF CRITICAL: Ajout de l'attribut 'id' requis par Semantic Kernel AgentGroupChat
-        import uuid
         object.__setattr__(self, 'id', str(uuid.uuid4()))
         
         # Configuration de la stratégie de jeu APRÈS super().__init__
@@ -325,6 +325,19 @@ Votre mission : Fasciner par votre mystère élégant."""
         """
         response = self.dataset_manager.validate_cluedo_suggestion(suggesting_agent, suspect, arme, lieu)
         
+        # Enrichissement de la réponse avec la personnalité de Moriarty
+        original_message = response.message
+        if response.authorized and response.data and response.data.can_refute:
+            # Cas où Moriarty réfute
+            revealed_card = response.revealed_information[0] if response.revealed_information else "une de mes cartes"
+            response.message = f"Un sourire énigmatique se dessine. C'est un jeu fascinant, n'est-ce pas ? Hélas, votre théorie sur '{suspect}' se heurte à un petit obstacle : j'ai la carte '{revealed_card}'."
+        elif response.authorized:
+            # Cas où Moriarty ne peut pas réfuter
+            response.message = f"Tiens, tiens... Votre suggestion pour '{suspect}' est délicieuse. Un mystère intrigant. Je ne peux rien dire pour le moment, le spectacle doit continuer."
+        else:
+            # Cas non autorisé
+            response.message = f"Ah ah... Pensez-vous vraiment que je vais répondre à cela, {suggesting_agent} ? Quelle audace théâtrale."
+
         # Tracking local
         suggestion_record = {
             "timestamp": datetime.now().isoformat(),
