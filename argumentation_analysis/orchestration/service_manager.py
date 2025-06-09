@@ -85,7 +85,7 @@ class ServiceManagerState:
         return (datetime.now() - self.start_time).total_seconds()
 
 
-class ServiceManager:
+class OrchestrationServiceManager:
     """
     Gestionnaire Unifié des Services d'Orchestration.
     
@@ -93,7 +93,7 @@ class ServiceManager:
     et fournit une interface unifiée pour :
     
     - Gestion des gestionnaires hiérarchiques
-    - Coordination des orchestrateurs spécialisés  
+    - Coordination des orchestrateurs spécialisés
     - Interface avec les agents d'analyse
     - Gestion des communications inter-services
     - Monitoring et logging centralisé
@@ -102,7 +102,7 @@ class ServiceManager:
     
     ```python
     # Création du service manager
-    service_manager = ServiceManager()
+    service_manager = OrchestrationServiceManager()
     
     # Initialisation des services
     await service_manager.initialize()
@@ -557,29 +557,49 @@ class ServiceManager:
 
 # Fonctions utilitaires pour faciliter l'utilisation
 
-async def create_service_manager(config: Optional[Dict[str, Any]] = None) -> ServiceManager:
+async def create_service_manager(config: Optional[Dict[str, Any]] = None) -> OrchestrationServiceManager:
     """
-    Crée et initialise un ServiceManager.
+    Crée et initialise un OrchestrationServiceManager.
     
     Args:
         config: Configuration optionnelle
         
     Returns:
-        ServiceManager initialisé
+        OrchestrationServiceManager initialisé
     """
-    manager = ServiceManager(config)
+    manager = OrchestrationServiceManager(config)
     await manager.initialize()
     return manager
 
 
-def get_default_service_manager() -> ServiceManager:
+def get_default_service_manager() -> OrchestrationServiceManager:
     """
-    Retourne une instance par défaut du ServiceManager (non initialisée).
+    Retourne une instance par défaut du OrchestrationServiceManager (non initialisée).
     
     Returns:
-        ServiceManager avec configuration par défaut
+        OrchestrationServiceManager avec configuration par défaut
     """
-    return ServiceManager()
+    return OrchestrationServiceManager()
+
+
+# Alias temporaire pour compatibilité - DEPRECATED
+import warnings
+
+def ServiceManager(*args, **kwargs):
+    """
+    DEPRECATED: Utilisez OrchestrationServiceManager à la place.
+    
+    Cette fonction sera supprimée dans une version future.
+    Migrez votre code vers OrchestrationServiceManager.
+    """
+    warnings.warn(
+        "ServiceManager est déprécié dans argumentation_analysis.orchestration.service_manager. "
+        "Utilisez OrchestrationServiceManager à la place. "
+        "Cette compatibilité sera supprimée dans une version future.",
+        DeprecationWarning,
+        stacklevel=2
+    )
+    return OrchestrationServiceManager(*args, **kwargs)
 
 
 # Point d'entrée pour les tests rapides
@@ -588,7 +608,7 @@ if __name__ == "__main__":
         print("=== Test du ServiceManager ===")
         
         # Création et initialisation
-        manager = ServiceManager()
+        manager = OrchestrationServiceManager()
         success = await manager.initialize()
         
         if success:
