@@ -228,8 +228,8 @@ class ProcessCleanup:
         sys.exit(0)
 
 
-class ServiceManager:
-    """Gestionnaire centralisé des services backend/frontend"""
+class InfrastructureServiceManager:
+    """Gestionnaire centralisé des services backend/frontend (infrastructure)"""
     
     def __init__(self, log_level: int = logging.INFO):
         self.logger = self._setup_logging(log_level)
@@ -477,9 +477,29 @@ def create_default_configs() -> List[ServiceConfig]:
     ]
 
 
+# Alias temporaire pour compatibilité - DEPRECATED
+import warnings
+
+def ServiceManager(*args, **kwargs):
+    """
+    DEPRECATED: Utilisez InfrastructureServiceManager à la place.
+    
+    Cette fonction sera supprimée dans une version future.
+    Migrez votre code vers InfrastructureServiceManager.
+    """
+    warnings.warn(
+        "ServiceManager est déprécié dans project_core.service_manager. "
+        "Utilisez InfrastructureServiceManager à la place. "
+        "Cette compatibilité sera supprimée dans une version future.",
+        DeprecationWarning,
+        stacklevel=2
+    )
+    return InfrastructureServiceManager(*args, **kwargs)
+
+
 if __name__ == "__main__":
     # Test rapide du ServiceManager
-    manager = ServiceManager()
+    manager = InfrastructureServiceManager()
     
     # Enregistrement des configurations par défaut
     for config in create_default_configs():

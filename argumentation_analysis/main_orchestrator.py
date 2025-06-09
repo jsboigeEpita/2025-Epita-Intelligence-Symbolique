@@ -165,8 +165,8 @@ async def main():
     # 6. Exécution de l'Analyse Collaborative
     # Lancer seulement si on a un texte ET un service LLM valide
     if texte_pour_analyse and llm_service:
-        logging.info("\n🚀 Tentative de lancement de l'exécution asynchrone de l'analyse...")
-        print("\n🚀 Lancement de l'analyse collaborative (peut prendre du temps)... ")
+        logging.info("\n[LAUNCH] Tentative de lancement de l'execution asynchrone de l'analyse...")
+        print("\n[LAUNCH] Lancement de l'analyse collaborative (peut prendre du temps)... ")
         # Importer les dépendances nécessaires
         from argumentation_analysis.orchestration.analysis_runner import run_analysis_conversation
         
@@ -177,8 +177,8 @@ async def main():
                 llm_service=llm_service
             )
 
-            logging.info("\n🏁 Exécution terminée.")
-            print("\n🏁 Analyse terminée.")
+            logging.info("\n[FINISH] Execution terminee.")
+            print("\n[FINISH] Analyse terminee.")
 
         except ImportError as e_import_run:
             logging.critical(f"❌ ERREUR: Impossible d'importer 'run_analysis_conversation': {e_import_run}")
