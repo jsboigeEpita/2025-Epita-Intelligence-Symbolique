@@ -19,7 +19,7 @@ from unittest.mock import Mock, patch, MagicMock
 sys.path.insert(0, str(Path(__file__).parent.parent.parent / "project_core"))
 
 from service_manager import (
-    ServiceManager, PortManager, ProcessCleanup, 
+    InfrastructureServiceManager, PortManager, ProcessCleanup,
     ServiceConfig, create_default_configs
 )
 
@@ -192,10 +192,10 @@ class TestServiceConfig(unittest.TestCase):
 
 
 class TestServiceManager(unittest.TestCase):
-    """Tests unitaires pour ServiceManager"""
+    """Tests unitaires pour InfrastructureServiceManager"""
     
     def setUp(self):
-        self.manager = ServiceManager()
+        self.manager = InfrastructureServiceManager()
         self.test_config = ServiceConfig(
             name="test-service",
             command=["python", "-c", "import time; time.sleep(1)"],
@@ -284,10 +284,10 @@ class TestCreateDefaultConfigs(unittest.TestCase):
 
 
 class TestServiceManagerIntegration(unittest.TestCase):
-    """Tests d'intégration pour ServiceManager"""
+    """Tests d'intégration pour InfrastructureServiceManager"""
     
     def setUp(self):
-        self.manager = ServiceManager()
+        self.manager = InfrastructureServiceManager()
     
     def test_full_service_lifecycle_simulation(self):
         """Test cycle de vie complet d'un service (simulation)"""
