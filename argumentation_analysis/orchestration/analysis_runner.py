@@ -129,9 +129,12 @@ async def run_analysis_conversation(
         informal_agent_refactored.setup_agent_components(llm_service_id=llm_service_id_str)
         run_logger.info(f"   Agent {informal_agent_refactored.name} instancié et configuré.")
 
-        pl_agent_refactored = PropositionalLogicAgent(kernel=local_kernel, agent_name="PropositionalLogicAgent_Refactored")
-        pl_agent_refactored.setup_agent_components(llm_service_id=llm_service_id_str)
-        run_logger.info(f"   Agent {pl_agent_refactored.name} instancié et configuré.")
+        # TEMPORAIREMENT DÉSACTIVÉ - Problème compatibilité Java (version 59.0 vs 52.0)
+        # pl_agent_refactored = PropositionalLogicAgent(kernel=local_kernel, agent_name="PropositionalLogicAgent_Refactored")
+        # pl_agent_refactored.setup_agent_components(llm_service_id=llm_service_id_str)
+        # run_logger.info(f"   Agent {pl_agent_refactored.name} instancié et configuré.")
+        run_logger.warning("ATTENTION: PropositionalLogicAgent DÉSACTIVÉ temporairement (incompatibilité Java)")
+        pl_agent_refactored = None  # Placeholder pour éviter les erreurs
 
         extract_agent_refactored = ExtractAgent(kernel=local_kernel, agent_name="ExtractAgent_Refactored")
         extract_agent_refactored.setup_agent_components(llm_service_id=llm_service_id_str)
@@ -139,32 +142,37 @@ async def run_analysis_conversation(
         
         run_logger.debug(f"   Plugins enregistrés dans local_kernel après setup des agents: {list(local_kernel.plugins.keys())}")
 
-        run_logger.info("5. Création des instances ChatCompletionAgent pour AgentGroupChat...")
-        prompt_exec_settings = local_kernel.get_prompt_execution_settings_from_service_id(llm_service.service_id)
-        prompt_exec_settings.function_choice_behavior = FunctionChoiceBehavior.Auto(auto_invoke_kernel_functions=True, max_auto_invoke_attempts=5)
-        run_logger.info(f"   Settings LLM pour ChatCompletionAgent (auto function call): {prompt_exec_settings.function_choice_behavior}")
-
-        local_pm_agent = ChatCompletionAgent(
-            kernel=local_kernel, service=llm_service, name="ProjectManagerAgent",
+        run_logger.info("5. Création des instances Agent de compatibilité pour AgentGroupChat...")
+        
+        # Utiliser nos propres agents de compatibilité au lieu de ChatCompletionAgent
+        from argumentation_analysis.utils.semantic_kernel_compatibility import Agent
+        
+        local_pm_agent = Agent(
+            name="ProjectManagerAgent",
+            kernel=local_kernel,
             instructions=pm_agent_refactored.system_prompt,
-            arguments=KernelArguments(settings=prompt_exec_settings)
+            description="Chef de projet pour l'analyse argumentative"
         )
-        local_informal_agent = ChatCompletionAgent(
-            kernel=local_kernel, service=llm_service, name="InformalAnalysisAgent",
+        local_informal_agent = Agent(
+            name="InformalAnalysisAgent",
+            kernel=local_kernel,
             instructions=informal_agent_refactored.system_prompt,
-            arguments=KernelArguments(settings=prompt_exec_settings)
+            description="Analyste des sophismes informels"
         )
-        local_pl_agent = ChatCompletionAgent(
-            kernel=local_kernel, service=llm_service, name="PropositionalLogicAgent",
-            instructions=pl_agent_refactored.system_prompt,
-            arguments=KernelArguments(settings=prompt_exec_settings)
-        )
-        local_extract_agent = ChatCompletionAgent(
-            kernel=local_kernel, service=llm_service, name="ExtractAgent",
+        # TEMPORAIREMENT DÉSACTIVÉ - PropositionalLogicAgent
+        # local_pl_agent = Agent(
+        #     name="PropositionalLogicAgent",
+        #     kernel=local_kernel,
+        #     instructions=pl_agent_refactored.system_prompt,
+        #     description="Analyste de logique propositionnelle"
+        # )
+        local_extract_agent = Agent(
+            name="ExtractAgent",
+            kernel=local_kernel,
             instructions=extract_agent_refactored.system_prompt,
-            arguments=KernelArguments(settings=prompt_exec_settings)
+            description="Agent d'extraction de données"
         )
-        agent_list_local = [local_pm_agent, local_informal_agent, local_pl_agent, local_extract_agent]
+        agent_list_local = [local_pm_agent, local_informal_agent, local_extract_agent]  # Sans PropositionalLogicAgent
         run_logger.info(f"   Instances ChatCompletionAgent créées pour AgentGroupChat: {[agent.name for agent in agent_list_local]}.")
 
         run_logger.info("6. Création instances stratégies locales...")
@@ -201,42 +209,45 @@ async def run_analysis_conversation(
         run_logger.info(">>> Début boucle invocation AgentGroupChat <<<")
         turn = 0
 
-        async for message in local_group_chat.invoke():
-             turn += 1
-             if not message: 
-                 run_logger.warning(f"Tour {turn}: Invoke a retourné un message vide. Arrêt.")
-                 break
+        # AgentGroupChat.invoke() retourne List[ChatMessageContent], pas un async iterator
+        conversation_messages = await local_group_chat.invoke(initial_prompt)
+        run_logger.info(f"Conversation terminée avec {len(conversation_messages)} messages")
+        
+        # Afficher tous les messages de la conversation
+        for turn, message in enumerate(conversation_messages, 1):
+            if not message:
+                run_logger.warning(f"Tour {turn}: Message vide trouvé. Ignoré.")
+                continue
 
-             author_display_name = message.name or getattr(message, 'author_name', f"Role:{message.role.name}")
-             role_display_name = message.role.name
+            author_display_name = message.name or getattr(message, 'author_name', f"Role:{getattr(message, 'role', 'unknown')}")
+            role_display_name = getattr(message, 'role', 'unknown')
 
-             print(f"\n--- Tour {turn} ({author_display_name} / {role_display_name}) ---")
-             run_logger.info(f"----- Début Tour {turn} - Agent/Author: '{author_display_name}', Role: {role_display_name} -----")
+            print(f"\n--- Tour {turn} ({author_display_name} / {role_display_name}) ---")
+            run_logger.info(f"----- Tour {turn} - Agent/Author: '{author_display_name}', Role: {role_display_name} -----")
 
-             content_str = str(message.content) if message.content else ""
-             content_display = content_str[:2000] + "..." if len(content_str) > 2000 else content_str
-             print(f"  Content: {content_display}")
-             run_logger.debug(f"  Msg Content T{turn} (Full): {content_str}")
+            content_str = str(message.content) if message.content else ""
+            content_display = content_str[:2000] + "..." if len(content_str) > 2000 else content_str
+            print(f"  Content: {content_display}")
+            run_logger.debug(f"  Msg Content T{turn} (Full): {content_str}")
  
-             tool_calls = getattr(message, 'tool_calls', []) or []
-             if tool_calls:
-                 print("   Tool Calls:")
-                 run_logger.info("   Tool Calls:")
-                 for tc in tool_calls:
-                     plugin_name, func_name = 'N/A', 'N/A'
-                     function_name_attr = getattr(getattr(tc, 'function', None), 'name', None)
-                     if function_name_attr and isinstance(function_name_attr, str) and '-' in function_name_attr:
-                         parts = function_name_attr.split('-', 1)
-                         if len(parts) == 2: plugin_name, func_name = parts
-                     args_dict = getattr(getattr(tc, 'function', None), 'arguments', {}) or {}
-                     args_str = json.dumps(args_dict) if args_dict else "{}"
-                     args_display = args_str[:200] + "..." if len(args_str) > 200 else args_str
-                     log_msg_tc = f"     - ID: {getattr(tc, 'id', 'N/A')}, Func: {plugin_name}-{func_name}, Args: {args_display}"
-                     print(log_msg_tc)
-                     run_logger.info(log_msg_tc)
-                     run_logger.debug(f"     - Tool Call Full Args: {args_str}")
-
-             await asyncio.sleep(0.05)
+            # Recherche d'appels d'outils potentiels
+            tool_calls = getattr(message, 'tool_calls', []) or []
+            if tool_calls:
+                print("   Tool Calls:")
+                run_logger.info("   Tool Calls:")
+                for tc in tool_calls:
+                    plugin_name, func_name = 'N/A', 'N/A'
+                    function_name_attr = getattr(getattr(tc, 'function', None), 'name', None)
+                    if function_name_attr and isinstance(function_name_attr, str) and '-' in function_name_attr:
+                        parts = function_name_attr.split('-', 1)
+                        if len(parts) == 2: plugin_name, func_name = parts
+                    args_dict = getattr(getattr(tc, 'function', None), 'arguments', {}) or {}
+                    args_str = json.dumps(args_dict) if args_dict else "{}"
+                    args_display = args_str[:200] + "..." if len(args_str) > 200 else args_str
+                    log_msg_tc = f"     - ID: {getattr(tc, 'id', 'N/A')}, Func: {plugin_name}-{func_name}, Args: {args_display}"
+                    print(log_msg_tc)
+                    run_logger.info(log_msg_tc)
+                    run_logger.debug(f"     - Tool Call Full Args: {args_str}")
 
         invoke_duration = time.time() - invoke_start_time
         run_logger.info(f"<<< Fin boucle invocation ({invoke_duration:.2f} sec) >>>")
@@ -261,19 +272,22 @@ async def run_analysis_conversation(
 
          print("\n--- Historique Détaillé de la Conversation ---")
          final_history_messages = []
-         if local_group_chat and hasattr(local_group_chat, 'history') and hasattr(local_group_chat.history, 'messages'):
-             final_history_messages = local_group_chat.history.messages
+         # Utiliser conversation_messages si disponible, sinon essayer local_group_chat.history
+         if 'conversation_messages' in locals() and conversation_messages:
+             final_history_messages = conversation_messages
+         elif local_group_chat and hasattr(local_group_chat, 'history'):
+             final_history_messages = local_group_chat.history
          
          if final_history_messages:
-             for msg_idx, msg in enumerate(final_history_messages): 
-                 author = msg.name or getattr(msg, 'author_name', f"Role:{msg.role.name}")
-                 role_name = msg.role.name
+             for msg_idx, msg in enumerate(final_history_messages):
+                 author = msg.name or getattr(msg, 'author_name', f"Role:{getattr(msg, 'role', 'unknown')}")
+                 role_name = getattr(msg, 'role', 'unknown')
                  content_display = str(msg.content)[:2000] + "..." if len(str(msg.content)) > 2000 else str(msg.content)
-                 print(f"[{msg_idx}] [{author} ({role_name})]: {content_display}") 
+                 print(f"[{msg_idx}] [{author} ({role_name})]: {content_display}")
                  tool_calls = getattr(msg, 'tool_calls', []) or []
                  if tool_calls:
                      print("   Tool Calls:")
-                     for tc_idx, tc in enumerate(tool_calls): 
+                     for tc_idx, tc in enumerate(tool_calls):
                          plugin_name, func_name = 'N/A', 'N/A'
                          function_name_attr = getattr(getattr(tc, 'function', None), 'name', None)
                          if function_name_attr and isinstance(function_name_attr, str) and '-' in function_name_attr:
