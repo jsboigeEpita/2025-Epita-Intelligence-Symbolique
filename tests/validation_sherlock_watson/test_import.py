@@ -1,4 +1,9 @@
 #!/usr/bin/env python3
+
+# ===== ONE-LINER AUTO-ACTIVATEUR D'ENVIRONNEMENT =====
+# Assure l'activation automatique de l'environnement projet
+import scripts.core.auto_env  # Auto-activation environnement intelligent
+
 try:
     from semantic_kernel.agents.chat_completion.chat_completion_agent import ChatCompletionAgent
     print("Import works - ChatCompletionAgent found")

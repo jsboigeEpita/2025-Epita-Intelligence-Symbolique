@@ -319,10 +319,73 @@ class EnvironmentManager:
             return 0
 
 
+def is_conda_env_active(env_name: str = "projet-is") -> bool:
+    """Vérifie si l'environnement conda spécifié est actuellement actif"""
+    current_env = os.environ.get('CONDA_DEFAULT_ENV', '')
+    return current_env == env_name
+
+
 def check_conda_env(env_name: str = "projet-is", logger: Logger = None) -> bool:
     """Fonction utilitaire pour vérifier un environnement conda"""
     manager = EnvironmentManager(logger)
     return manager.check_conda_env_exists(env_name)
+
+
+def auto_activate_env(env_name: str = "projet-is", silent: bool = True) -> bool:
+    """
+    One-liner auto-activateur d'environnement intelligent
+    
+    Détecte si l'environnement conda est actif et l'active automatiquement si nécessaire.
+    Gracieux pour les utilisateurs ayant déjà activé l'environnement.
+    
+    Args:
+        env_name: Nom de l'environnement conda
+        silent: Mode silencieux (pas de logs verbeux)
+    
+    Returns:
+        True si environnement actif/activé, False sinon
+    """
+    try:
+        # Vérifier si l'environnement est déjà actif
+        if is_conda_env_active(env_name):
+            if not silent:
+                print(f"[OK] Environnement '{env_name}' deja actif")
+            return True
+        
+        # Logger minimal pour auto-activation
+        logger = Logger(verbose=not silent)
+        manager = EnvironmentManager(logger)
+        
+        # Vérifier si conda et l'environnement existent
+        if not manager.check_conda_available():
+            if not silent:
+                print(f"[ERROR] Conda non disponible - impossible d'activer '{env_name}'")
+            return False
+        
+        if not manager.check_conda_env_exists(env_name):
+            if not silent:
+                print(f"[ERROR] Environnement '{env_name}' non trouve")
+            return False
+        
+        # Auto-activation silencieuse
+        if not silent:
+            print(f"[INFO] Auto-activation de l'environnement '{env_name}'...")
+        
+        # Configurer les variables d'environnement
+        manager.setup_environment_variables()
+        
+        # Marquer l'environnement comme actif pour cette session
+        os.environ['CONDA_DEFAULT_ENV'] = env_name
+        
+        if not silent:
+            print(f"[OK] Environnement '{env_name}' auto-active")
+        
+        return True
+        
+    except Exception as e:
+        if not silent:
+            print(f"❌ Erreur auto-activation: {e}")
+        return False
 
 
 def activate_project_env(command: str = None, env_name: str = "projet-is", logger: Logger = None) -> int:
