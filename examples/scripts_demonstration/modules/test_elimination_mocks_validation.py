@@ -6,7 +6,7 @@ Test direct des nouvelles capacités
 
 import sys
 from datetime import datetime
-from custom_data_processor import CustomDataProcessor, AdaptiveAnalyzer
+from .custom_data_processor import CustomDataProcessor, AdaptiveAnalyzer
 
 def test_elimination_mocks():
     """Test principal de validation de l'élimination des mocks"""

@@ -471,8 +471,8 @@ class ValidationEpitaComplete:
         # Test de cohérence des imports
         core_modules = [
             "argumentation_analysis.orchestration.service_manager",
-            "argumentation_analysis.agents.first_order_logic_agent",
-            "argumentation_analysis.agents.fallacy_detection_agent"
+            "argumentation_analysis.agents.core.logic.first_order_logic_agent",
+            "argumentation_analysis.agents.core.informal.informal_agent"
         ]
         
         success_count = 0

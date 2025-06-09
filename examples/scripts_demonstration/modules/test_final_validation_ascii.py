@@ -6,7 +6,7 @@ Validation de l'elimination des mocks
 
 import sys
 from datetime import datetime
-from custom_data_processor import CustomDataProcessor, AdaptiveAnalyzer
+from .custom_data_processor import CustomDataProcessor, AdaptiveAnalyzer
 
 def test_final_validation():
     """Test final avec datasets ASCII-safe"""

@@ -1,25 +1,24 @@
 # [REPORT] Rapport d'Investigation - API Web d'Analyse Argumentative
 
-**Date:** 09/06/2025 01:26:06
-**Base URL:** http://localhost:5003
+**Date:** 09/06/2025 02:12:47
+**Base URL:** http://localhost:3000
 
 ## [ANALYZE] État des Endpoints
 
 ### /api/health
-- **Status:** [OK] Opérationnel (200)
-- **Services:** ['analysis', 'fallacy', 'framework', 'logic', 'validation']
+- **Status:** [ERROR] Erreur (404)
 
 ### /api/analyze
-- **Status:** [ERROR] Erreur (500)
+- **Status:** [ERROR] Erreur (404)
 
 ### /api/fallacies
-- **Status:** [OK] Opérationnel (400)
+- **Status:** [ERROR] Erreur (404)
 
 ### /api/validate
-- **Status:** [OK] Opérationnel (400)
+- **Status:** [ERROR] Erreur (404)
 
 ### /api/framework
-- **Status:** [OK] Opérationnel (400)
+- **Status:** [ERROR] Erreur (404)
 
 
 ## 📋 Résumé des Fonctionnalités
