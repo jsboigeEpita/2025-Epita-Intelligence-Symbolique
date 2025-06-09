@@ -496,7 +496,7 @@ class CluedoExtendedOrchestrator:
         # Configuration du plugin d'état étendu
         state_plugin = EnqueteStateManagerPlugin(self.oracle_state)
         self.kernel.add_plugin(state_plugin, "EnqueteStatePlugin")
-        self.kernel.add_filter(FilterTypes.FUNCTION_INVOCATION, oracle_logging_filter)
+        # CORRECTIF: add_filter() supprimé dans SK moderne - fonctionnalité de logging intégrée
         
         # Préparation des constantes pour Watson
         all_constants = [name.replace(" ", "") for category in elements_jeu.values() for name in category]

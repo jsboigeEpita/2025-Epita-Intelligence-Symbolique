@@ -1,4 +1,4 @@
-# orchestration/analysis_runner.py
+﻿# orchestration/analysis_runner.py
 import sys
 import os
 # Ajout pour résoudre les problèmes d'import de project_core
@@ -32,10 +32,8 @@ from semantic_kernel.kernel import Kernel as SKernel # Alias pour éviter confli
 import semantic_kernel as sk
 from semantic_kernel.contents import ChatMessageContent
 # CORRECTIF COMPATIBILITÉ: Utilisation du module de compatibilité
-from argumentation_analysis.utils.semantic_kernel_compatibility import AgentGroupChat, ChatCompletionAgent, Agent, AuthorRole
-from semantic_kernel.exceptions import AgentChatException
+from argumentation_analysis.utils.semantic_kernel_compatibility import AgentGroupChat, ChatCompletionAgent, Agent, AuthorRole, AgentChatException, FunctionChoiceBehavior
 from semantic_kernel.connectors.ai.open_ai import OpenAIChatCompletion, AzureChatCompletion # Pour type hint
-from semantic_kernel.connectors.ai.function_choice_behavior import FunctionChoiceBehavior
 from semantic_kernel.functions.kernel_arguments import KernelArguments
 
 # Imports depuis les modules du projet
@@ -140,9 +138,9 @@ async def run_analysis_conversation(
         run_logger.debug(f"   Plugins enregistrés dans local_kernel après setup des agents: {list(local_kernel.plugins.keys())}")
 
         run_logger.info("5. Création des instances ChatCompletionAgent pour AgentGroupChat...")
-        prompt_exec_settings = local_kernel.get_prompt_execution_settings_from_service_id(llm_service.service_id)
-        prompt_exec_settings.function_choice_behavior = FunctionChoiceBehavior.Auto(auto_invoke_kernel_functions=True, max_auto_invoke_attempts=5)
-        run_logger.info(f"   Settings LLM pour ChatCompletionAgent (auto function call): {prompt_exec_settings.function_choice_behavior}")
+        prompt_exec_settings = llm_service.instantiate_prompt_execution_settings(function_choice_behavior=FunctionChoiceBehavior.Auto(auto_invoke_kernel_functions=True, max_auto_invoke_attempts=5))
+
+        run_logger.info("   Settings LLM pour ChatCompletionAgent (auto function call) configures")
 
         local_pm_agent = ChatCompletionAgent(
             kernel=local_kernel, service=llm_service, name="ProjectManagerAgent",
@@ -188,7 +186,13 @@ async def run_analysis_conversation(
         run_logger.info("8. Initialisation historique et lancement invoke...")
         initial_prompt = f"Bonjour à tous. Le texte à analyser est :\n'''\n{texte_a_analyser}\n'''\nProjectManagerAgent, merci de définir les premières tâches d'analyse en suivant la séquence logique."
 
-        print(f"\n--- Tour 0 (Utilisateur) --- \n{initial_prompt}\n")
+        # Gestion sécurisée de l'affichage Unicode
+        try:
+            print(f"\n--- Tour 0 (Utilisateur) --- \n{initial_prompt}\n")
+        except UnicodeEncodeError:
+            # Fallback pour les consoles qui ne supportent pas l'Unicode
+            safe_prompt = initial_prompt.encode('ascii', errors='replace').decode('ascii')
+            print(f"\n--- Tour 0 (Utilisateur) --- \n{safe_prompt}\n")
         run_logger.info(f"Message initial (Utilisateur): {initial_prompt}")
 
         if hasattr(local_group_chat, 'history') and hasattr(local_group_chat.history, 'add_user_message'):
@@ -201,13 +205,14 @@ async def run_analysis_conversation(
         run_logger.info(">>> Début boucle invocation AgentGroupChat <<<")
         turn = 0
 
-        async for message in local_group_chat.invoke():
+        result = await local_group_chat.invoke(initial_prompt)
+        for message in result:
              turn += 1
              if not message: 
                  run_logger.warning(f"Tour {turn}: Invoke a retourné un message vide. Arrêt.")
                  break
 
-             author_display_name = message.name or getattr(message, 'author_name', f"Role:{message.role.name}")
+             author_display_name = getattr(message, 'author_name', None) or getattr(message, 'name', None) or f"Role:{message.role.name}"
              role_display_name = message.role.name
 
              print(f"\n--- Tour {turn} ({author_display_name} / {role_display_name}) ---")
