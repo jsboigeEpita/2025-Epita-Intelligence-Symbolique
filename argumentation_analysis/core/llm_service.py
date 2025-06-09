@@ -51,7 +51,11 @@ def create_llm_service(service_id: str = "global_llm_service", force_mock: bool 
     # FIN AJOUT
     model_id = os.getenv("OPENAI_CHAT_MODEL_ID")
     endpoint = os.getenv("OPENAI_ENDPOINT")
+    base_url = os.getenv("OPENAI_BASE_URL")  # Support pour OpenRouter et autres providers
     org_id = os.getenv("OPENAI_ORG_ID")
+    
+    # Log de la configuration détectée
+    logger.info(f"Configuration détectée - base_url: {base_url}, endpoint: {endpoint}")
     use_azure_openai = bool(endpoint)
 
     llm_instance = None
@@ -131,11 +135,22 @@ def create_llm_service(service_id: str = "global_llm_service", force_mock: bool 
             # Création du client AsyncOpenAI avec le client httpx personnalisé
             org_to_use = org_id if (org_id and "your_openai_org_id_here" not in org_id) else None
             
-            openai_custom_async_client = AsyncOpenAI(
-                api_key=api_key,
-                organization=org_to_use,
-                http_client=custom_httpx_client
-            )
+            # Configuration du client avec support pour OpenRouter et autres providers
+            client_kwargs = {
+                "api_key": api_key,
+                "http_client": custom_httpx_client
+            }
+            
+            # Ajouter base_url si configuré (pour OpenRouter, etc.)
+            if base_url:
+                client_kwargs["base_url"] = base_url
+                logger.info(f"Utilisation de base_url personnalisée: {base_url}")
+            
+            # Ajouter organization si configuré
+            if org_to_use:
+                client_kwargs["organization"] = org_to_use
+                
+            openai_custom_async_client = AsyncOpenAI(**client_kwargs)
             
             llm_instance = OpenAIChatCompletion(
                 service_id=service_id,
