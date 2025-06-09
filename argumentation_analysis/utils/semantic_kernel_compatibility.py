@@ -193,11 +193,18 @@ class Agent:
         """
         Invoque l'agent avec un message et retourne la réponse.
         
-        Utilise les services disponibles dans le kernel pour générer une réponse.
+        Utilise les services disponibles dans le kernel pour générer une réponse
+        et peut exécuter des fonctions si nécessaire.
         """
         try:
             # Construire le prompt complet avec instructions et contexte
             full_prompt = self._build_full_prompt(message)
+            
+            # Ajouter les fonctions disponibles au prompt
+            functions_info = self._get_available_functions_info()
+            if functions_info:
+                full_prompt += f"\n\nFonctions disponibles:\n{functions_info}"
+                full_prompt += "\n\nPour utiliser une fonction, incluez dans votre réponse: FUNCTION_CALL: NomPlugin.nom_fonction(param1=valeur1, param2=valeur2)"
             
             # Utiliser le premier service de chat disponible
             chat_service = self._get_chat_service()
@@ -206,13 +213,31 @@ class Agent:
                 if arguments is None:
                     arguments = KernelArguments()
                 
-                # Exécuter avec le service de chat
-                response = await chat_service.get_chat_message_content(
-                    chat_history=[ChatMessageContent(role="user", content=full_prompt)],
-                    settings=None
+                # Créer des settings appropriés pour OpenAI
+                from semantic_kernel.connectors.ai.open_ai.prompt_execution_settings.open_ai_prompt_execution_settings import OpenAIChatPromptExecutionSettings
+                
+                settings = OpenAIChatPromptExecutionSettings(
+                    max_tokens=1000,
+                    temperature=0.1
                 )
                 
-                return str(response.content) if response else "Aucune réponse générée."
+                # Créer un ChatHistory avec les messages
+                from semantic_kernel.contents.chat_history import ChatHistory
+                chat_history = ChatHistory()
+                chat_history.add_user_message(full_prompt)
+                
+                # Exécuter avec le service de chat
+                response = await chat_service.get_chat_message_content(
+                    chat_history=chat_history,
+                    settings=settings
+                )
+                
+                response_text = str(response.content) if response else "Aucune réponse générée."
+                
+                # Traiter les appels de fonction dans la réponse
+                processed_response = await self._process_function_calls(response_text)
+                
+                return processed_response
             else:
                 self._logger.warning(f"Aucun service de chat disponible pour {self.name}")
                 return f"[{self.name}] Service de chat non disponible - réponse simulée."
@@ -247,6 +272,144 @@ class Agent:
         except Exception as e:
             self._logger.error(f"Erreur lors de la récupération du service de chat: {e}")
             return None
+    
+    def _get_available_functions_info(self) -> str:
+        """Récupère des informations sur les fonctions disponibles dans le kernel."""
+        try:
+            functions_info = []
+            plugins = getattr(self.kernel, 'plugins', {})
+            
+            self._logger.debug(f"Plugins trouvés: {list(plugins.keys())}")
+            
+            for plugin_name, plugin in plugins.items():
+                self._logger.debug(f"Inspection du plugin: {plugin_name} (type: {type(plugin)})")
+                
+                # Semantic Kernel 1.x encapsule les plugins dans des KernelPlugin
+                # Les fonctions sont dans plugin.functions
+                if hasattr(plugin, 'functions'):
+                    functions_dict = getattr(plugin, 'functions')
+                    self._logger.debug(f"  Plugin {plugin_name} a {len(functions_dict)} fonctions: {list(functions_dict.keys())}")
+                    
+                    for func_name, kernel_function in functions_dict.items():
+                        try:
+                            # Extraire les paramètres depuis les métadonnées de la fonction
+                            params = []
+                            if hasattr(kernel_function, 'metadata') and hasattr(kernel_function.metadata, 'parameters'):
+                                for param in kernel_function.metadata.parameters:
+                                    param_name = param.name
+                                    if hasattr(param, 'is_required') and not param.is_required:
+                                        if hasattr(param, 'default_value') and param.default_value is not None:
+                                            param_name += f"={param.default_value}"
+                                        else:
+                                            param_name += "=None"
+                                    params.append(param_name)
+                            
+                            param_str = ', '.join(params)
+                            functions_info.append(f"- {plugin_name}.{func_name}({param_str})")
+                            self._logger.debug(f"    {func_name}({param_str}) - ajouté")
+                            
+                        except Exception as func_error:
+                            # Fallback sans signature détaillée
+                            functions_info.append(f"- {plugin_name}.{func_name}()")
+                            self._logger.debug(f"    {func_name}() - ajouté (fallback): {func_error}")
+                else:
+                    self._logger.debug(f"  Plugin {plugin_name} n'a pas d'attribut 'functions'")
+            
+            result = "\n".join(functions_info) if functions_info else "Aucune fonction disponible"
+            self._logger.info(f"Fonctions disponibles détectées ({len(functions_info)}): {[f.split('- ')[1] if f.startswith('- ') else f for f in functions_info]}")
+            return result
+            
+        except Exception as e:
+            self._logger.error(f"Erreur lors de la récupération des fonctions: {e}", exc_info=True)
+            return "Erreur lors de la récupération des fonctions"
+    
+    async def _process_function_calls(self, response_text: str) -> str:
+        """Traite les appels de fonction dans la réponse de l'agent."""
+        try:
+            import re
+            
+            # Chercher les patterns FUNCTION_CALL: PluginName.function_name(params)
+            function_pattern = r'FUNCTION_CALL:\s*([^.]+)\.([^(]+)\(([^)]*)\)'
+            matches = re.findall(function_pattern, response_text)
+            
+            processed_response = response_text
+            
+            for plugin_name, function_name, params_str in matches:
+                try:
+                    # Récupérer le plugin
+                    plugins = getattr(self.kernel, 'plugins', {})
+                    plugin = plugins.get(plugin_name)
+                    
+                    # Vérifier si le plugin existe et a des fonctions
+                    if plugin and hasattr(plugin, 'functions'):
+                        functions_dict = getattr(plugin, 'functions')
+                        if function_name in functions_dict:
+                            kernel_function = functions_dict[function_name]
+                            
+                            # Parser les paramètres (format simple: param1=value1, param2=value2)
+                            kwargs = {}
+                            if params_str.strip():
+                                param_pairs = params_str.split(',')
+                                for pair in param_pairs:
+                                    if '=' in pair:
+                                        key, value = pair.split('=', 1)
+                                        key = key.strip()
+                                        value = value.strip().strip('"\'')
+                                        # Convertir les valeurs booléennes
+                                        if value.lower() == 'true':
+                                            value = True
+                                        elif value.lower() == 'false':
+                                            value = False
+                                        kwargs[key] = value
+                            
+                            # Exécuter la fonction via invoke du kernel
+                            try:
+                                kernel_args = KernelArguments(**kwargs)
+                                result = await self.kernel.invoke(kernel_function, kernel_args)
+                                result_content = str(result.value) if hasattr(result, 'value') else str(result)
+                            except Exception as invoke_error:
+                                self._logger.debug(f"Échec invoke kernel, tentative méthode directe: {invoke_error}")
+                                # Fallback: accès direct à la méthode
+                                if hasattr(kernel_function, 'method'):
+                                    direct_method = kernel_function.method
+                                    if asyncio.iscoroutinefunction(direct_method):
+                                        result_content = await direct_method(**kwargs)
+                                    else:
+                                        result_content = direct_method(**kwargs)
+                                    result_content = str(result_content)
+                                else:
+                                    raise invoke_error
+                            
+                            # Remplacer l'appel de fonction par le résultat
+                            function_call = f"FUNCTION_CALL: {plugin_name}.{function_name}({params_str})"
+                            function_result = f"[Résultat de {plugin_name}.{function_name}]: {result_content}"
+                            processed_response = processed_response.replace(function_call, function_result)
+                            
+                            self._logger.info(f"Fonction exécutée: {plugin_name}.{function_name} -> {result_content[:100]}...")
+                        
+                        else:
+                            error_msg = f"[Erreur]: Fonction {function_name} non trouvée dans le plugin {plugin_name}"
+                            function_call = f"FUNCTION_CALL: {plugin_name}.{function_name}({params_str})"
+                            processed_response = processed_response.replace(function_call, error_msg)
+                            self._logger.warning(f"Fonction non trouvée: {plugin_name}.{function_name} (fonctions disponibles: {list(functions_dict.keys())})")
+                    
+                    else:
+                        error_msg = f"[Erreur]: Plugin {plugin_name} non trouvé ou sans fonctions"
+                        function_call = f"FUNCTION_CALL: {plugin_name}.{function_name}({params_str})"
+                        processed_response = processed_response.replace(function_call, error_msg)
+                        self._logger.warning(f"Plugin non trouvé: {plugin_name} (plugins disponibles: {list(plugins.keys())})")
+                        
+                except Exception as func_error:
+                    error_msg = f"[Erreur lors de l'exécution]: {str(func_error)}"
+                    function_call = f"FUNCTION_CALL: {plugin_name}.{function_name}({params_str})"
+                    processed_response = processed_response.replace(function_call, error_msg)
+                    self._logger.error(f"Erreur lors de l'exécution de {plugin_name}.{function_name}: {func_error}")
+            
+            return processed_response
+            
+        except Exception as e:
+            self._logger.error(f"Erreur lors du traitement des appels de fonction: {e}")
+            return response_text
 
 
 class ChatCompletionAgent(Agent):
