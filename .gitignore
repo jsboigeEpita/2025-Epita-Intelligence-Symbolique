@@ -78,8 +78,17 @@ docs/_build/
 profile_default/
 ipython_config.py
 
-# Environnements
+# Environnements et fichiers de configuration sensibles
 .env
+.env.*
+.env.local
+.env.production
+.env.development
+.env.backup*
+.env.save*
+**/.env*
+*.env
+config/.env*
 .venv/
 venv/
 venv_test/
@@ -88,8 +97,6 @@ env/
 ENV/
 env.bak/
 venv.bak/
-config/.env
-**/.env # Plus générique que *.env
 
 # IDEs et éditeurs
 .vscode/
