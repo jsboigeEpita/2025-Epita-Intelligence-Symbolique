@@ -22,6 +22,11 @@ from enum import Enum
 
 # Configuration des chemins
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
+if not (PROJECT_ROOT / "examples" / "scripts_demonstration").exists():
+    # Cas où on est dans le sous-répertoire, ajuster le chemin
+    PROJECT_ROOT = Path(__file__).resolve().parent.parent
+    if not (PROJECT_ROOT / "examples").exists():
+        PROJECT_ROOT = Path(__file__).resolve().parent
 SCRIPTS_DEMO_DIR = PROJECT_ROOT / "examples" / "scripts_demonstration"
 DEMOS_DIR = PROJECT_ROOT / "demos"
 ARGUMENTATION_DIR = PROJECT_ROOT / "argumentation_analysis"
@@ -282,7 +287,8 @@ class ValidationEpitaComplete:
                 
                 try:
                     # Test d'importation authentique
-                    cmd = [sys.executable, "-c", f"import sys; sys.path.insert(0, '{SCRIPTS_DEMO_DIR}'); import modules.{module_file.stem}"]
+                    scripts_path = str(SCRIPTS_DEMO_DIR).replace('\\', '/')
+                    cmd = [sys.executable, "-c", f"import sys; sys.path.insert(0, r'{scripts_path}'); import modules.{module_file.stem}"]
                     result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
                     
                     exec_time = time.time() - start_time

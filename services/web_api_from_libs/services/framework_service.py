@@ -9,8 +9,8 @@ import time
 import logging
 from typing import Dict, List, Any, Optional, Set, Tuple
 
-from libs.web_api.models.request_models import FrameworkRequest, Argument
-from libs.web_api.models.response_models import (
+from ..models.request_models import FrameworkRequest, Argument
+from ..models.response_models import (
     FrameworkResponse, ArgumentNode, Extension, FrameworkVisualization
 )
 
