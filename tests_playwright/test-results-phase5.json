@@ -1,0 +1,935 @@
+{
+  "config": {
+    "configFile": "D:\\2025-Epita-Intelligence-Symbolique\\tests_playwright\\playwright-phase5.config.js",
+    "rootDir": "D:/2025-Epita-Intelligence-Symbolique/tests_playwright/tests",
+    "forbidOnly": false,
+    "fullyParallel": false,
+    "globalSetup": null,
+    "globalTeardown": null,
+    "globalTimeout": 0,
+    "grep": {},
+    "grepInvert": null,
+    "maxFailures": 0,
+    "metadata": {
+      "actualWorkers": 1
+    },
+    "preserveOutput": "always",
+    "reporter": [
+      [
+        "line",
+        null
+      ],
+      [
+        "json",
+        {
+          "outputFile": "test-results-phase5.json"
+        }
+      ],
+      [
+        "html",
+        {
+          "outputFolder": "playwright-report-phase5"
+        }
+      ]
+    ],
+    "reportSlowTests": {
+      "max": 5,
+      "threshold": 300000
+    },
+    "quiet": false,
+    "projects": [
+      {
+        "outputDir": "D:/2025-Epita-Intelligence-Symbolique/tests_playwright/test-results",
+        "repeatEach": 1,
+        "retries": 1,
+        "metadata": {
+          "actualWorkers": 1
+        },
+        "id": "chromium",
+        "name": "chromium",
+        "testDir": "D:/2025-Epita-Intelligence-Symbolique/tests_playwright/tests",
+        "testIgnore": [],
+        "testMatch": [
+          "**/phase5-non-regression.spec.js"
+        ],
+        "timeout": 30000
+      }
+    ],
+    "shard": null,
+    "updateSnapshots": "missing",
+    "updateSourceMethod": "patch",
+    "version": "1.52.0",
+    "workers": 16,
+    "webServer": null
+  },
+  "suites": [
+    {
+      "title": "phase5-non-regression.spec.js",
+      "file": "phase5-non-regression.spec.js",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "Phase 5 - Validation Non-Régression",
+          "file": "phase5-non-regression.spec.js",
+          "line": 8,
+          "column": 6,
+          "specs": [
+            {
+              "title": "Interface React - Vérification accessibilité",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 2582,
+                      "errors": [],
+                      "stdout": [
+                        {
+                          "text": "Préparation tests Phase 5...\n"
+                        },
+                        {
+                          "text": "🔍 Test Interface React sur port 3000\n"
+                        },
+                        {
+                          "text": "❌ Interface React non accessible: page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:3000/\nCall log:\n\u001b[2m  - navigating to \"http://localhost:3000/\", waiting until \"load\"\u001b[22m\n\n"
+                        }
+                      ],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2025-06-09T10:07:10.982Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "14a8a6cbd8636fb4ac49-3e2b2e5f6fb844c310d2",
+              "file": "phase5-non-regression.spec.js",
+              "line": 19,
+              "column": 3
+            },
+            {
+              "title": "Interface Simple - Vérification accessibilité",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 4812,
+                      "errors": [],
+                      "stdout": [
+                        {
+                          "text": "🔧 Test Interface Simple sur port 3001\n"
+                        },
+                        {
+                          "text": "⚠️ Interface Simple non accessible sur 3001: page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:3001/\nCall log:\n\u001b[2m  - navigating to \"http://localhost:3001/\", waiting until \"load\"\u001b[22m\n\n"
+                        },
+                        {
+                          "text": "❌ Interface Simple complètement inaccessible: page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:3000/\nCall log:\n\u001b[2m  - navigating to \"http://localhost:3000/\", waiting until \"load\"\u001b[22m\n\n"
+                        }
+                      ],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2025-06-09T10:07:13.639Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "14a8a6cbd8636fb4ac49-85067a07c82438ab87c0",
+              "file": "phase5-non-regression.spec.js",
+              "line": 40,
+              "column": 3
+            },
+            {
+              "title": "API Status - Validation des endpoints",
+              "ok": false,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "failed",
+                      "duration": 631,
+                      "error": {
+                        "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBeGreaterThan\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m\n\nExpected: > \u001b[32m0\u001b[39m\nReceived:   \u001b[31m0\u001b[39m",
+                        "stack": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBeGreaterThan\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m\n\nExpected: > \u001b[32m0\u001b[39m\nReceived:   \u001b[31m0\u001b[39m\n    at D:\\2025-Epita-Intelligence-Symbolique\\tests_playwright\\tests\\phase5-non-regression.spec.js:90:33",
+                        "location": {
+                          "file": "D:\\2025-Epita-Intelligence-Symbolique\\tests_playwright\\tests\\phase5-non-regression.spec.js",
+                          "column": 33,
+                          "line": 90
+                        },
+                        "snippet": "\u001b[0m \u001b[90m 88 |\u001b[39m     \n \u001b[90m 89 |\u001b[39m     \u001b[90m// Au moins une interface doit être accessible\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 90 |\u001b[39m     expect(workingPorts\u001b[33m.\u001b[39mlength)\u001b[33m.\u001b[39mtoBeGreaterThan(\u001b[35m0\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m    |\u001b[39m                                 \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 91 |\u001b[39m     console\u001b[33m.\u001b[39mlog(\u001b[32m`✅ ${workingPorts.length} interface(s) fonctionnelle(s)`\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m 92 |\u001b[39m   })\u001b[33m;\u001b[39m\n \u001b[90m 93 |\u001b[39m\u001b[0m"
+                      },
+                      "errors": [
+                        {
+                          "location": {
+                            "file": "D:\\2025-Epita-Intelligence-Symbolique\\tests_playwright\\tests\\phase5-non-regression.spec.js",
+                            "column": 33,
+                            "line": 90
+                          },
+                          "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBeGreaterThan\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m\n\nExpected: > \u001b[32m0\u001b[39m\nReceived:   \u001b[31m0\u001b[39m\n\n  88 |     \n  89 |     // Au moins une interface doit être accessible\n> 90 |     expect(workingPorts.length).toBeGreaterThan(0);\n     |                                 ^\n  91 |     console.log(`✅ ${workingPorts.length} interface(s) fonctionnelle(s)`);\n  92 |   });\n  93 |\n    at D:\\2025-Epita-Intelligence-Symbolique\\tests_playwright\\tests\\phase5-non-regression.spec.js:90:33"
+                        }
+                      ],
+                      "stdout": [
+                        {
+                          "text": "🔌 Test des endpoints API\n"
+                        },
+                        {
+                          "text": "❌ Port 3000: Non accessible\n"
+                        },
+                        {
+                          "text": "❌ Port 3001: Non accessible\n"
+                        }
+                      ],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2025-06-09T10:07:18.455Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "_error-context-0",
+                          "contentType": "text/markdown",
+                          "path": "D:\\2025-Epita-Intelligence-Symbolique\\tests_playwright\\test-results\\phase5-non-regression-Phas-4242d----Validation-des-endpoints-chromium\\error-context.md"
+                        }
+                      ],
+                      "errorLocation": {
+                        "file": "D:\\2025-Epita-Intelligence-Symbolique\\tests_playwright\\tests\\phase5-non-regression.spec.js",
+                        "column": 33,
+                        "line": 90
+                      }
+                    },
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 0,
+                      "status": "failed",
+                      "duration": 661,
+                      "error": {
+                        "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBeGreaterThan\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m\n\nExpected: > \u001b[32m0\u001b[39m\nReceived:   \u001b[31m0\u001b[39m",
+                        "stack": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBeGreaterThan\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m\n\nExpected: > \u001b[32m0\u001b[39m\nReceived:   \u001b[31m0\u001b[39m\n    at D:\\2025-Epita-Intelligence-Symbolique\\tests_playwright\\tests\\phase5-non-regression.spec.js:90:33",
+                        "location": {
+                          "file": "D:\\2025-Epita-Intelligence-Symbolique\\tests_playwright\\tests\\phase5-non-regression.spec.js",
+                          "column": 33,
+                          "line": 90
+                        },
+                        "snippet": "\u001b[0m \u001b[90m 88 |\u001b[39m     \n \u001b[90m 89 |\u001b[39m     \u001b[90m// Au moins une interface doit être accessible\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 90 |\u001b[39m     expect(workingPorts\u001b[33m.\u001b[39mlength)\u001b[33m.\u001b[39mtoBeGreaterThan(\u001b[35m0\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m    |\u001b[39m                                 \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 91 |\u001b[39m     console\u001b[33m.\u001b[39mlog(\u001b[32m`✅ ${workingPorts.length} interface(s) fonctionnelle(s)`\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m 92 |\u001b[39m   })\u001b[33m;\u001b[39m\n \u001b[90m 93 |\u001b[39m\u001b[0m"
+                      },
+                      "errors": [
+                        {
+                          "location": {
+                            "file": "D:\\2025-Epita-Intelligence-Symbolique\\tests_playwright\\tests\\phase5-non-regression.spec.js",
+                            "column": 33,
+                            "line": 90
+                          },
+                          "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBeGreaterThan\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m\n\nExpected: > \u001b[32m0\u001b[39m\nReceived:   \u001b[31m0\u001b[39m\n\n  88 |     \n  89 |     // Au moins une interface doit être accessible\n> 90 |     expect(workingPorts.length).toBeGreaterThan(0);\n     |                                 ^\n  91 |     console.log(`✅ ${workingPorts.length} interface(s) fonctionnelle(s)`);\n  92 |   });\n  93 |\n    at D:\\2025-Epita-Intelligence-Symbolique\\tests_playwright\\tests\\phase5-non-regression.spec.js:90:33"
+                        }
+                      ],
+                      "stdout": [
+                        {
+                          "text": "Préparation tests Phase 5...\n"
+                        },
+                        {
+                          "text": "🔌 Test des endpoints API\n"
+                        },
+                        {
+                          "text": "❌ Port 3000: Non accessible\n"
+                        },
+                        {
+                          "text": "❌ Port 3001: Non accessible\n"
+                        }
+                      ],
+                      "stderr": [],
+                      "retry": 1,
+                      "startTime": "2025-06-09T10:07:19.632Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "_error-context-0",
+                          "contentType": "text/markdown",
+                          "path": "D:\\2025-Epita-Intelligence-Symbolique\\tests_playwright\\test-results\\phase5-non-regression-Phas-4242d----Validation-des-endpoints-chromium-retry1\\error-context.md"
+                        },
+                        {
+                          "name": "trace",
+                          "contentType": "application/zip",
+                          "path": "D:\\2025-Epita-Intelligence-Symbolique\\tests_playwright\\test-results\\phase5-non-regression-Phas-4242d----Validation-des-endpoints-chromium-retry1\\trace.zip"
+                        }
+                      ],
+                      "errorLocation": {
+                        "file": "D:\\2025-Epita-Intelligence-Symbolique\\tests_playwright\\tests\\phase5-non-regression.spec.js",
+                        "column": 33,
+                        "line": 90
+                      }
+                    }
+                  ],
+                  "status": "unexpected"
+                }
+              ],
+              "id": "14a8a6cbd8636fb4ac49-0db06f7f204ff050cffd",
+              "file": "phase5-non-regression.spec.js",
+              "line": 65,
+              "column": 3
+            },
+            {
+              "title": "API Examples - Validation des exemples",
+              "ok": false,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 2,
+                      "parallelIndex": 0,
+                      "status": "failed",
+                      "duration": 646,
+                      "error": {
+                        "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBe\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // Object.is equality\u001b[22m\n\nExpected: \u001b[32mtrue\u001b[39m\nReceived: \u001b[31mfalse\u001b[39m",
+                        "stack": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBe\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // Object.is equality\u001b[22m\n\nExpected: \u001b[32mtrue\u001b[39m\nReceived: \u001b[31mfalse\u001b[39m\n    at D:\\2025-Epita-Intelligence-Symbolique\\tests_playwright\\tests\\phase5-non-regression.spec.js:123:27",
+                        "location": {
+                          "file": "D:\\2025-Epita-Intelligence-Symbolique\\tests_playwright\\tests\\phase5-non-regression.spec.js",
+                          "column": 27,
+                          "line": 123
+                        },
+                        "snippet": "\u001b[0m \u001b[90m 121 |\u001b[39m     }\n \u001b[90m 122 |\u001b[39m     \n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 123 |\u001b[39m     expect(examplesFound)\u001b[33m.\u001b[39mtoBe(\u001b[36mtrue\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m     |\u001b[39m                           \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 124 |\u001b[39m   })\u001b[33m;\u001b[39m\n \u001b[90m 125 |\u001b[39m\n \u001b[90m 126 |\u001b[39m   test(\u001b[32m'ServiceManager - Test d\\'intégration'\u001b[39m\u001b[33m,\u001b[39m \u001b[36masync\u001b[39m ({ request }) \u001b[33m=>\u001b[39m {\u001b[0m"
+                      },
+                      "errors": [
+                        {
+                          "location": {
+                            "file": "D:\\2025-Epita-Intelligence-Symbolique\\tests_playwright\\tests\\phase5-non-regression.spec.js",
+                            "column": 27,
+                            "line": 123
+                          },
+                          "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBe\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // Object.is equality\u001b[22m\n\nExpected: \u001b[32mtrue\u001b[39m\nReceived: \u001b[31mfalse\u001b[39m\n\n  121 |     }\n  122 |     \n> 123 |     expect(examplesFound).toBe(true);\n      |                           ^\n  124 |   });\n  125 |\n  126 |   test('ServiceManager - Test d\\'intégration', async ({ request }) => {\n    at D:\\2025-Epita-Intelligence-Symbolique\\tests_playwright\\tests\\phase5-non-regression.spec.js:123:27"
+                        }
+                      ],
+                      "stdout": [
+                        {
+                          "text": "Préparation tests Phase 5...\n"
+                        },
+                        {
+                          "text": "📚 Test des exemples API\n"
+                        },
+                        {
+                          "text": "❌ Port 3000: Exemples non accessibles\n"
+                        },
+                        {
+                          "text": "❌ Port 3001: Exemples non accessibles\n"
+                        }
+                      ],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2025-06-09T10:07:20.826Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "_error-context-0",
+                          "contentType": "text/markdown",
+                          "path": "D:\\2025-Epita-Intelligence-Symbolique\\tests_playwright\\test-results\\phase5-non-regression-Phas-ae5a5-s---Validation-des-exemples-chromium\\error-context.md"
+                        }
+                      ],
+                      "errorLocation": {
+                        "file": "D:\\2025-Epita-Intelligence-Symbolique\\tests_playwright\\tests\\phase5-non-regression.spec.js",
+                        "column": 27,
+                        "line": 123
+                      }
+                    },
+                    {
+                      "workerIndex": 3,
+                      "parallelIndex": 0,
+                      "status": "failed",
+                      "duration": 655,
+                      "error": {
+                        "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBe\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // Object.is equality\u001b[22m\n\nExpected: \u001b[32mtrue\u001b[39m\nReceived: \u001b[31mfalse\u001b[39m",
+                        "stack": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBe\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // Object.is equality\u001b[22m\n\nExpected: \u001b[32mtrue\u001b[39m\nReceived: \u001b[31mfalse\u001b[39m\n    at D:\\2025-Epita-Intelligence-Symbolique\\tests_playwright\\tests\\phase5-non-regression.spec.js:123:27",
+                        "location": {
+                          "file": "D:\\2025-Epita-Intelligence-Symbolique\\tests_playwright\\tests\\phase5-non-regression.spec.js",
+                          "column": 27,
+                          "line": 123
+                        },
+                        "snippet": "\u001b[0m \u001b[90m 121 |\u001b[39m     }\n \u001b[90m 122 |\u001b[39m     \n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 123 |\u001b[39m     expect(examplesFound)\u001b[33m.\u001b[39mtoBe(\u001b[36mtrue\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m     |\u001b[39m                           \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 124 |\u001b[39m   })\u001b[33m;\u001b[39m\n \u001b[90m 125 |\u001b[39m\n \u001b[90m 126 |\u001b[39m   test(\u001b[32m'ServiceManager - Test d\\'intégration'\u001b[39m\u001b[33m,\u001b[39m \u001b[36masync\u001b[39m ({ request }) \u001b[33m=>\u001b[39m {\u001b[0m"
+                      },
+                      "errors": [
+                        {
+                          "location": {
+                            "file": "D:\\2025-Epita-Intelligence-Symbolique\\tests_playwright\\tests\\phase5-non-regression.spec.js",
+                            "column": 27,
+                            "line": 123
+                          },
+                          "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBe\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // Object.is equality\u001b[22m\n\nExpected: \u001b[32mtrue\u001b[39m\nReceived: \u001b[31mfalse\u001b[39m\n\n  121 |     }\n  122 |     \n> 123 |     expect(examplesFound).toBe(true);\n      |                           ^\n  124 |   });\n  125 |\n  126 |   test('ServiceManager - Test d\\'intégration', async ({ request }) => {\n    at D:\\2025-Epita-Intelligence-Symbolique\\tests_playwright\\tests\\phase5-non-regression.spec.js:123:27"
+                        }
+                      ],
+                      "stdout": [
+                        {
+                          "text": "Préparation tests Phase 5...\n"
+                        },
+                        {
+                          "text": "📚 Test des exemples API\n"
+                        },
+                        {
+                          "text": "❌ Port 3000: Exemples non accessibles\n"
+                        },
+                        {
+                          "text": "❌ Port 3001: Exemples non accessibles\n"
+                        }
+                      ],
+                      "stderr": [],
+                      "retry": 1,
+                      "startTime": "2025-06-09T10:07:22.017Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "_error-context-0",
+                          "contentType": "text/markdown",
+                          "path": "D:\\2025-Epita-Intelligence-Symbolique\\tests_playwright\\test-results\\phase5-non-regression-Phas-ae5a5-s---Validation-des-exemples-chromium-retry1\\error-context.md"
+                        },
+                        {
+                          "name": "trace",
+                          "contentType": "application/zip",
+                          "path": "D:\\2025-Epita-Intelligence-Symbolique\\tests_playwright\\test-results\\phase5-non-regression-Phas-ae5a5-s---Validation-des-exemples-chromium-retry1\\trace.zip"
+                        }
+                      ],
+                      "errorLocation": {
+                        "file": "D:\\2025-Epita-Intelligence-Symbolique\\tests_playwright\\tests\\phase5-non-regression.spec.js",
+                        "column": 27,
+                        "line": 123
+                      }
+                    }
+                  ],
+                  "status": "unexpected"
+                }
+              ],
+              "id": "14a8a6cbd8636fb4ac49-d10a337e939da134eb16",
+              "file": "phase5-non-regression.spec.js",
+              "line": 94,
+              "column": 3
+            },
+            {
+              "title": "ServiceManager - Test d'intégration",
+              "ok": false,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 4,
+                      "parallelIndex": 0,
+                      "status": "failed",
+                      "duration": 637,
+                      "error": {
+                        "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBe\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // Object.is equality\u001b[22m\n\nExpected: \u001b[32mtrue\u001b[39m\nReceived: \u001b[31mfalse\u001b[39m",
+                        "stack": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBe\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // Object.is equality\u001b[22m\n\nExpected: \u001b[32mtrue\u001b[39m\nReceived: \u001b[31mfalse\u001b[39m\n    at D:\\2025-Epita-Intelligence-Symbolique\\tests_playwright\\tests\\phase5-non-regression.spec.js:168:34",
+                        "location": {
+                          "file": "D:\\2025-Epita-Intelligence-Symbolique\\tests_playwright\\tests\\phase5-non-regression.spec.js",
+                          "column": 34,
+                          "line": 168
+                        },
+                        "snippet": "\u001b[0m \u001b[90m 166 |\u001b[39m     \n \u001b[90m 167 |\u001b[39m     \u001b[90m// ServiceManager devrait être disponible sur au moins une interface\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 168 |\u001b[39m     expect(serviceManagerActive)\u001b[33m.\u001b[39mtoBe(\u001b[36mtrue\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m     |\u001b[39m                                  \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 169 |\u001b[39m   })\u001b[33m;\u001b[39m\n \u001b[90m 170 |\u001b[39m\n \u001b[90m 171 |\u001b[39m   test(\u001b[32m'Interface React - Test fonctionnalité complète'\u001b[39m\u001b[33m,\u001b[39m \u001b[36masync\u001b[39m ({ page }) \u001b[33m=>\u001b[39m {\u001b[0m"
+                      },
+                      "errors": [
+                        {
+                          "location": {
+                            "file": "D:\\2025-Epita-Intelligence-Symbolique\\tests_playwright\\tests\\phase5-non-regression.spec.js",
+                            "column": 34,
+                            "line": 168
+                          },
+                          "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBe\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // Object.is equality\u001b[22m\n\nExpected: \u001b[32mtrue\u001b[39m\nReceived: \u001b[31mfalse\u001b[39m\n\n  166 |     \n  167 |     // ServiceManager devrait être disponible sur au moins une interface\n> 168 |     expect(serviceManagerActive).toBe(true);\n      |                                  ^\n  169 |   });\n  170 |\n  171 |   test('Interface React - Test fonctionnalité complète', async ({ page }) => {\n    at D:\\2025-Epita-Intelligence-Symbolique\\tests_playwright\\tests\\phase5-non-regression.spec.js:168:34"
+                        }
+                      ],
+                      "stdout": [
+                        {
+                          "text": "Préparation tests Phase 5...\n"
+                        },
+                        {
+                          "text": "⚙️ Test intégration ServiceManager\n"
+                        },
+                        {
+                          "text": "❌ Port 3000: Erreur ServiceManager\n"
+                        },
+                        {
+                          "text": "❌ Port 3001: Erreur ServiceManager\n"
+                        }
+                      ],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2025-06-09T10:07:23.212Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "_error-context-0",
+                          "contentType": "text/markdown",
+                          "path": "D:\\2025-Epita-Intelligence-Symbolique\\tests_playwright\\test-results\\phase5-non-regression-Phas-9a6f7-anager---Test-d-intégration-chromium\\error-context.md"
+                        }
+                      ],
+                      "errorLocation": {
+                        "file": "D:\\2025-Epita-Intelligence-Symbolique\\tests_playwright\\tests\\phase5-non-regression.spec.js",
+                        "column": 34,
+                        "line": 168
+                      }
+                    },
+                    {
+                      "workerIndex": 5,
+                      "parallelIndex": 0,
+                      "status": "failed",
+                      "duration": 667,
+                      "error": {
+                        "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBe\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // Object.is equality\u001b[22m\n\nExpected: \u001b[32mtrue\u001b[39m\nReceived: \u001b[31mfalse\u001b[39m",
+                        "stack": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBe\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // Object.is equality\u001b[22m\n\nExpected: \u001b[32mtrue\u001b[39m\nReceived: \u001b[31mfalse\u001b[39m\n    at D:\\2025-Epita-Intelligence-Symbolique\\tests_playwright\\tests\\phase5-non-regression.spec.js:168:34",
+                        "location": {
+                          "file": "D:\\2025-Epita-Intelligence-Symbolique\\tests_playwright\\tests\\phase5-non-regression.spec.js",
+                          "column": 34,
+                          "line": 168
+                        },
+                        "snippet": "\u001b[0m \u001b[90m 166 |\u001b[39m     \n \u001b[90m 167 |\u001b[39m     \u001b[90m// ServiceManager devrait être disponible sur au moins une interface\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 168 |\u001b[39m     expect(serviceManagerActive)\u001b[33m.\u001b[39mtoBe(\u001b[36mtrue\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m     |\u001b[39m                                  \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 169 |\u001b[39m   })\u001b[33m;\u001b[39m\n \u001b[90m 170 |\u001b[39m\n \u001b[90m 171 |\u001b[39m   test(\u001b[32m'Interface React - Test fonctionnalité complète'\u001b[39m\u001b[33m,\u001b[39m \u001b[36masync\u001b[39m ({ page }) \u001b[33m=>\u001b[39m {\u001b[0m"
+                      },
+                      "errors": [
+                        {
+                          "location": {
+                            "file": "D:\\2025-Epita-Intelligence-Symbolique\\tests_playwright\\tests\\phase5-non-regression.spec.js",
+                            "column": 34,
+                            "line": 168
+                          },
+                          "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBe\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // Object.is equality\u001b[22m\n\nExpected: \u001b[32mtrue\u001b[39m\nReceived: \u001b[31mfalse\u001b[39m\n\n  166 |     \n  167 |     // ServiceManager devrait être disponible sur au moins une interface\n> 168 |     expect(serviceManagerActive).toBe(true);\n      |                                  ^\n  169 |   });\n  170 |\n  171 |   test('Interface React - Test fonctionnalité complète', async ({ page }) => {\n    at D:\\2025-Epita-Intelligence-Symbolique\\tests_playwright\\tests\\phase5-non-regression.spec.js:168:34"
+                        }
+                      ],
+                      "stdout": [
+                        {
+                          "text": "Préparation tests Phase 5...\n"
+                        },
+                        {
+                          "text": "⚙️ Test intégration ServiceManager\n"
+                        },
+                        {
+                          "text": "❌ Port 3000: Erreur ServiceManager\n"
+                        },
+                        {
+                          "text": "❌ Port 3001: Erreur ServiceManager\n"
+                        }
+                      ],
+                      "stderr": [],
+                      "retry": 1,
+                      "startTime": "2025-06-09T10:07:24.384Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "_error-context-0",
+                          "contentType": "text/markdown",
+                          "path": "D:\\2025-Epita-Intelligence-Symbolique\\tests_playwright\\test-results\\phase5-non-regression-Phas-9a6f7-anager---Test-d-intégration-chromium-retry1\\error-context.md"
+                        },
+                        {
+                          "name": "trace",
+                          "contentType": "application/zip",
+                          "path": "D:\\2025-Epita-Intelligence-Symbolique\\tests_playwright\\test-results\\phase5-non-regression-Phas-9a6f7-anager---Test-d-intégration-chromium-retry1\\trace.zip"
+                        }
+                      ],
+                      "errorLocation": {
+                        "file": "D:\\2025-Epita-Intelligence-Symbolique\\tests_playwright\\tests\\phase5-non-regression.spec.js",
+                        "column": 34,
+                        "line": 168
+                      }
+                    }
+                  ],
+                  "status": "unexpected"
+                }
+              ],
+              "id": "14a8a6cbd8636fb4ac49-7a07824e811eaf929206",
+              "file": "phase5-non-regression.spec.js",
+              "line": 126,
+              "column": 3
+            },
+            {
+              "title": "Interface React - Test fonctionnalité complète",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 6,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 2590,
+                      "errors": [],
+                      "stdout": [
+                        {
+                          "text": "Préparation tests Phase 5...\n"
+                        },
+                        {
+                          "text": "🎯 Test fonctionnalité complète Interface React\n"
+                        },
+                        {
+                          "text": "❌ Test fonctionnalité React échoué: page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:3000/\nCall log:\n\u001b[2m  - navigating to \"http://localhost:3000/\", waiting until \"load\"\u001b[22m\n\n"
+                        }
+                      ],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2025-06-09T10:07:25.625Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "14a8a6cbd8636fb4ac49-80999a71ec2139e54813",
+              "file": "phase5-non-regression.spec.js",
+              "line": 171,
+              "column": 3
+            },
+            {
+              "title": "Coexistence - Test simultané des interfaces",
+              "ok": false,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 6,
+                      "parallelIndex": 0,
+                      "status": "failed",
+                      "duration": 4853,
+                      "error": {
+                        "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBeGreaterThan\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m\n\nExpected: > \u001b[32m0\u001b[39m\nReceived:   \u001b[31m0\u001b[39m",
+                        "stack": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBeGreaterThan\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m\n\nExpected: > \u001b[32m0\u001b[39m\nReceived:   \u001b[31m0\u001b[39m\n    at D:\\2025-Epita-Intelligence-Symbolique\\tests_playwright\\tests\\phase5-non-regression.spec.js:254:36",
+                        "location": {
+                          "file": "D:\\2025-Epita-Intelligence-Symbolique\\tests_playwright\\tests\\phase5-non-regression.spec.js",
+                          "column": 36,
+                          "line": 254
+                        },
+                        "snippet": "\u001b[0m \u001b[90m 252 |\u001b[39m       \n \u001b[90m 253 |\u001b[39m       \u001b[90m// Au moins une interface doit être accessible\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 254 |\u001b[39m       expect(accessibleInterfaces)\u001b[33m.\u001b[39mtoBeGreaterThan(\u001b[35m0\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m     |\u001b[39m                                    \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 255 |\u001b[39m       \n \u001b[90m 256 |\u001b[39m       console\u001b[33m.\u001b[39mlog(\u001b[32m`✅ ${accessibleInterfaces} interface(s) coexistent`\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m 257 |\u001b[39m       \u001b[0m"
+                      },
+                      "errors": [
+                        {
+                          "location": {
+                            "file": "D:\\2025-Epita-Intelligence-Symbolique\\tests_playwright\\tests\\phase5-non-regression.spec.js",
+                            "column": 36,
+                            "line": 254
+                          },
+                          "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBeGreaterThan\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m\n\nExpected: > \u001b[32m0\u001b[39m\nReceived:   \u001b[31m0\u001b[39m\n\n  252 |       \n  253 |       // Au moins une interface doit être accessible\n> 254 |       expect(accessibleInterfaces).toBeGreaterThan(0);\n      |                                    ^\n  255 |       \n  256 |       console.log(`✅ ${accessibleInterfaces} interface(s) coexistent`);\n  257 |       \n    at D:\\2025-Epita-Intelligence-Symbolique\\tests_playwright\\tests\\phase5-non-regression.spec.js:254:36"
+                        }
+                      ],
+                      "stdout": [
+                        {
+                          "text": "🤝 Test coexistence des interfaces\n"
+                        },
+                        {
+                          "text": "❌ Interface React non accessible: page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:3000/\nCall log:\n\u001b[2m  - navigating to \"http://localhost:3000/\", waiting until \"load\"\u001b[22m\n\n"
+                        },
+                        {
+                          "text": "⚠️ Interface Simple non accessible sur port 3001\n"
+                        },
+                        {
+                          "text": "❌ Interface Simple complètement inaccessible\n"
+                        }
+                      ],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2025-06-09T10:07:28.285Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "screenshot",
+                          "contentType": "image/png",
+                          "path": "D:\\2025-Epita-Intelligence-Symbolique\\tests_playwright\\test-results\\phase5-non-regression-Phas-56fb3-st-simultané-des-interfaces-chromium\\test-failed-1.png"
+                        },
+                        {
+                          "name": "screenshot",
+                          "contentType": "image/png",
+                          "path": "D:\\2025-Epita-Intelligence-Symbolique\\tests_playwright\\test-results\\phase5-non-regression-Phas-56fb3-st-simultané-des-interfaces-chromium\\test-failed-2.png"
+                        },
+                        {
+                          "name": "_error-context-0",
+                          "contentType": "text/markdown",
+                          "path": "D:\\2025-Epita-Intelligence-Symbolique\\tests_playwright\\test-results\\phase5-non-regression-Phas-56fb3-st-simultané-des-interfaces-chromium\\error-context.md"
+                        }
+                      ],
+                      "errorLocation": {
+                        "file": "D:\\2025-Epita-Intelligence-Symbolique\\tests_playwright\\tests\\phase5-non-regression.spec.js",
+                        "column": 36,
+                        "line": 254
+                      }
+                    },
+                    {
+                      "workerIndex": 7,
+                      "parallelIndex": 0,
+                      "status": "failed",
+                      "duration": 4962,
+                      "error": {
+                        "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBeGreaterThan\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m\n\nExpected: > \u001b[32m0\u001b[39m\nReceived:   \u001b[31m0\u001b[39m",
+                        "stack": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBeGreaterThan\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m\n\nExpected: > \u001b[32m0\u001b[39m\nReceived:   \u001b[31m0\u001b[39m\n    at D:\\2025-Epita-Intelligence-Symbolique\\tests_playwright\\tests\\phase5-non-regression.spec.js:254:36",
+                        "location": {
+                          "file": "D:\\2025-Epita-Intelligence-Symbolique\\tests_playwright\\tests\\phase5-non-regression.spec.js",
+                          "column": 36,
+                          "line": 254
+                        },
+                        "snippet": "\u001b[0m \u001b[90m 252 |\u001b[39m       \n \u001b[90m 253 |\u001b[39m       \u001b[90m// Au moins une interface doit être accessible\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 254 |\u001b[39m       expect(accessibleInterfaces)\u001b[33m.\u001b[39mtoBeGreaterThan(\u001b[35m0\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m     |\u001b[39m                                    \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 255 |\u001b[39m       \n \u001b[90m 256 |\u001b[39m       console\u001b[33m.\u001b[39mlog(\u001b[32m`✅ ${accessibleInterfaces} interface(s) coexistent`\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m 257 |\u001b[39m       \u001b[0m"
+                      },
+                      "errors": [
+                        {
+                          "location": {
+                            "file": "D:\\2025-Epita-Intelligence-Symbolique\\tests_playwright\\tests\\phase5-non-regression.spec.js",
+                            "column": 36,
+                            "line": 254
+                          },
+                          "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBeGreaterThan\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m\n\nExpected: > \u001b[32m0\u001b[39m\nReceived:   \u001b[31m0\u001b[39m\n\n  252 |       \n  253 |       // Au moins une interface doit être accessible\n> 254 |       expect(accessibleInterfaces).toBeGreaterThan(0);\n      |                                    ^\n  255 |       \n  256 |       console.log(`✅ ${accessibleInterfaces} interface(s) coexistent`);\n  257 |       \n    at D:\\2025-Epita-Intelligence-Symbolique\\tests_playwright\\tests\\phase5-non-regression.spec.js:254:36"
+                        }
+                      ],
+                      "stdout": [
+                        {
+                          "text": "Préparation tests Phase 5...\n"
+                        },
+                        {
+                          "text": "🤝 Test coexistence des interfaces\n"
+                        },
+                        {
+                          "text": "❌ Interface React non accessible: page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:3000/\nCall log:\n\u001b[2m  - navigating to \"http://localhost:3000/\", waiting until \"load\"\u001b[22m\n\n"
+                        },
+                        {
+                          "text": "⚠️ Interface Simple non accessible sur port 3001\n"
+                        },
+                        {
+                          "text": "❌ Interface Simple complètement inaccessible\n"
+                        }
+                      ],
+                      "stderr": [],
+                      "retry": 1,
+                      "startTime": "2025-06-09T10:07:33.726Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "screenshot",
+                          "contentType": "image/png",
+                          "path": "D:\\2025-Epita-Intelligence-Symbolique\\tests_playwright\\test-results\\phase5-non-regression-Phas-56fb3-st-simultané-des-interfaces-chromium-retry1\\test-failed-1.png"
+                        },
+                        {
+                          "name": "screenshot",
+                          "contentType": "image/png",
+                          "path": "D:\\2025-Epita-Intelligence-Symbolique\\tests_playwright\\test-results\\phase5-non-regression-Phas-56fb3-st-simultané-des-interfaces-chromium-retry1\\test-failed-2.png"
+                        },
+                        {
+                          "name": "_error-context-0",
+                          "contentType": "text/markdown",
+                          "path": "D:\\2025-Epita-Intelligence-Symbolique\\tests_playwright\\test-results\\phase5-non-regression-Phas-56fb3-st-simultané-des-interfaces-chromium-retry1\\error-context.md"
+                        },
+                        {
+                          "name": "trace",
+                          "contentType": "application/zip",
+                          "path": "D:\\2025-Epita-Intelligence-Symbolique\\tests_playwright\\test-results\\phase5-non-regression-Phas-56fb3-st-simultané-des-interfaces-chromium-retry1\\trace.zip"
+                        }
+                      ],
+                      "errorLocation": {
+                        "file": "D:\\2025-Epita-Intelligence-Symbolique\\tests_playwright\\tests\\phase5-non-regression.spec.js",
+                        "column": 36,
+                        "line": 254
+                      }
+                    }
+                  ],
+                  "status": "unexpected"
+                }
+              ],
+              "id": "14a8a6cbd8636fb4ac49-7777af44674bc671a8fa",
+              "file": "phase5-non-regression.spec.js",
+              "line": 212,
+              "column": 3
+            },
+            {
+              "title": "Régression - Validation des anciennes fonctionnalités",
+              "ok": false,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 8,
+                      "parallelIndex": 0,
+                      "status": "failed",
+                      "duration": 629,
+                      "error": {
+                        "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBe\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // Object.is equality\u001b[22m\n\nExpected: \u001b[32mtrue\u001b[39m\nReceived: \u001b[31mfalse\u001b[39m",
+                        "stack": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBe\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // Object.is equality\u001b[22m\n\nExpected: \u001b[32mtrue\u001b[39m\nReceived: \u001b[31mfalse\u001b[39m\n    at D:\\2025-Epita-Intelligence-Symbolique\\tests_playwright\\tests\\phase5-non-regression.spec.js:312:46",
+                        "location": {
+                          "file": "D:\\2025-Epita-Intelligence-Symbolique\\tests_playwright\\tests\\phase5-non-regression.spec.js",
+                          "column": 46,
+                          "line": 312
+                        },
+                        "snippet": "\u001b[0m \u001b[90m 310 |\u001b[39m     \n \u001b[90m 311 |\u001b[39m     \u001b[90m// Vérifications de non-régression\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 312 |\u001b[39m     expect(regressionResults\u001b[33m.\u001b[39mstatusEndpoint)\u001b[33m.\u001b[39mtoBe(\u001b[36mtrue\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m     |\u001b[39m                                              \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 313 |\u001b[39m     expect(regressionResults\u001b[33m.\u001b[39mexamplesEndpoint)\u001b[33m.\u001b[39mtoBe(\u001b[36mtrue\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m 314 |\u001b[39m     expect(regressionResults\u001b[33m.\u001b[39manalysisEndpoint)\u001b[33m.\u001b[39mtoBe(\u001b[36mtrue\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m 315 |\u001b[39m     \u001b[0m"
+                      },
+                      "errors": [
+                        {
+                          "location": {
+                            "file": "D:\\2025-Epita-Intelligence-Symbolique\\tests_playwright\\tests\\phase5-non-regression.spec.js",
+                            "column": 46,
+                            "line": 312
+                          },
+                          "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBe\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // Object.is equality\u001b[22m\n\nExpected: \u001b[32mtrue\u001b[39m\nReceived: \u001b[31mfalse\u001b[39m\n\n  310 |     \n  311 |     // Vérifications de non-régression\n> 312 |     expect(regressionResults.statusEndpoint).toBe(true);\n      |                                              ^\n  313 |     expect(regressionResults.examplesEndpoint).toBe(true);\n  314 |     expect(regressionResults.analysisEndpoint).toBe(true);\n  315 |     \n    at D:\\2025-Epita-Intelligence-Symbolique\\tests_playwright\\tests\\phase5-non-regression.spec.js:312:46"
+                        }
+                      ],
+                      "stdout": [
+                        {
+                          "text": "Préparation tests Phase 5...\n"
+                        },
+                        {
+                          "text": "🔍 Test de régression des fonctionnalités\n"
+                        },
+                        {
+                          "text": "Port 3000 non testé: apiRequestContext.get: connect ECONNREFUSED ::1:3000\nCall log:\n\u001b[2m  - → GET http://localhost:3000/status\u001b[22m\n\u001b[2m    - user-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.7103.25 Safari/537.36\u001b[22m\n\u001b[2m    - accept: */*\u001b[22m\n\u001b[2m    - accept-encoding: gzip,deflate,br\u001b[22m\n\n"
+                        },
+                        {
+                          "text": "Port 3001 non testé: apiRequestContext.get: connect ECONNREFUSED ::1:3001\nCall log:\n\u001b[2m  - → GET http://localhost:3001/status\u001b[22m\n\u001b[2m    - user-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.7103.25 Safari/537.36\u001b[22m\n\u001b[2m    - accept: */*\u001b[22m\n\u001b[2m    - accept-encoding: gzip,deflate,br\u001b[22m\n\n"
+                        }
+                      ],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2025-06-09T10:07:39.340Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "_error-context-0",
+                          "contentType": "text/markdown",
+                          "path": "D:\\2025-Epita-Intelligence-Symbolique\\tests_playwright\\test-results\\phase5-non-regression-Phas-5c248-s-anciennes-fonctionnalités-chromium\\error-context.md"
+                        }
+                      ],
+                      "errorLocation": {
+                        "file": "D:\\2025-Epita-Intelligence-Symbolique\\tests_playwright\\tests\\phase5-non-regression.spec.js",
+                        "column": 46,
+                        "line": 312
+                      }
+                    },
+                    {
+                      "workerIndex": 9,
+                      "parallelIndex": 0,
+                      "status": "failed",
+                      "duration": 654,
+                      "error": {
+                        "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBe\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // Object.is equality\u001b[22m\n\nExpected: \u001b[32mtrue\u001b[39m\nReceived: \u001b[31mfalse\u001b[39m",
+                        "stack": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBe\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // Object.is equality\u001b[22m\n\nExpected: \u001b[32mtrue\u001b[39m\nReceived: \u001b[31mfalse\u001b[39m\n    at D:\\2025-Epita-Intelligence-Symbolique\\tests_playwright\\tests\\phase5-non-regression.spec.js:312:46",
+                        "location": {
+                          "file": "D:\\2025-Epita-Intelligence-Symbolique\\tests_playwright\\tests\\phase5-non-regression.spec.js",
+                          "column": 46,
+                          "line": 312
+                        },
+                        "snippet": "\u001b[0m \u001b[90m 310 |\u001b[39m     \n \u001b[90m 311 |\u001b[39m     \u001b[90m// Vérifications de non-régression\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 312 |\u001b[39m     expect(regressionResults\u001b[33m.\u001b[39mstatusEndpoint)\u001b[33m.\u001b[39mtoBe(\u001b[36mtrue\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m     |\u001b[39m                                              \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 313 |\u001b[39m     expect(regressionResults\u001b[33m.\u001b[39mexamplesEndpoint)\u001b[33m.\u001b[39mtoBe(\u001b[36mtrue\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m 314 |\u001b[39m     expect(regressionResults\u001b[33m.\u001b[39manalysisEndpoint)\u001b[33m.\u001b[39mtoBe(\u001b[36mtrue\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m 315 |\u001b[39m     \u001b[0m"
+                      },
+                      "errors": [
+                        {
+                          "location": {
+                            "file": "D:\\2025-Epita-Intelligence-Symbolique\\tests_playwright\\tests\\phase5-non-regression.spec.js",
+                            "column": 46,
+                            "line": 312
+                          },
+                          "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBe\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // Object.is equality\u001b[22m\n\nExpected: \u001b[32mtrue\u001b[39m\nReceived: \u001b[31mfalse\u001b[39m\n\n  310 |     \n  311 |     // Vérifications de non-régression\n> 312 |     expect(regressionResults.statusEndpoint).toBe(true);\n      |                                              ^\n  313 |     expect(regressionResults.examplesEndpoint).toBe(true);\n  314 |     expect(regressionResults.analysisEndpoint).toBe(true);\n  315 |     \n    at D:\\2025-Epita-Intelligence-Symbolique\\tests_playwright\\tests\\phase5-non-regression.spec.js:312:46"
+                        }
+                      ],
+                      "stdout": [
+                        {
+                          "text": "Préparation tests Phase 5...\n"
+                        },
+                        {
+                          "text": "🔍 Test de régression des fonctionnalités\n"
+                        },
+                        {
+                          "text": "Port 3000 non testé: apiRequestContext.get: connect ECONNREFUSED ::1:3000\nCall log:\n\u001b[2m  - → GET http://localhost:3000/status\u001b[22m\n\u001b[2m    - user-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.7103.25 Safari/537.36\u001b[22m\n\u001b[2m    - accept: */*\u001b[22m\n\u001b[2m    - accept-encoding: gzip,deflate,br\u001b[22m\n\n"
+                        },
+                        {
+                          "text": "Port 3001 non testé: apiRequestContext.get: connect ECONNREFUSED ::1:3001\nCall log:\n\u001b[2m  - → GET http://localhost:3001/status\u001b[22m\n\u001b[2m    - user-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.7103.25 Safari/537.36\u001b[22m\n\u001b[2m    - accept: */*\u001b[22m\n\u001b[2m    - accept-encoding: gzip,deflate,br\u001b[22m\n\n"
+                        }
+                      ],
+                      "stderr": [],
+                      "retry": 1,
+                      "startTime": "2025-06-09T10:07:40.550Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "_error-context-0",
+                          "contentType": "text/markdown",
+                          "path": "D:\\2025-Epita-Intelligence-Symbolique\\tests_playwright\\test-results\\phase5-non-regression-Phas-5c248-s-anciennes-fonctionnalités-chromium-retry1\\error-context.md"
+                        },
+                        {
+                          "name": "trace",
+                          "contentType": "application/zip",
+                          "path": "D:\\2025-Epita-Intelligence-Symbolique\\tests_playwright\\test-results\\phase5-non-regression-Phas-5c248-s-anciennes-fonctionnalités-chromium-retry1\\trace.zip"
+                        }
+                      ],
+                      "errorLocation": {
+                        "file": "D:\\2025-Epita-Intelligence-Symbolique\\tests_playwright\\tests\\phase5-non-regression.spec.js",
+                        "column": 46,
+                        "line": 312
+                      }
+                    }
+                  ],
+                  "status": "unexpected"
+                }
+              ],
+              "id": "14a8a6cbd8636fb4ac49-5093d5067c051284653e",
+              "file": "phase5-non-regression.spec.js",
+              "line": 264,
+              "column": 3
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "errors": [],
+  "stats": {
+    "startTime": "2025-06-09T10:07:10.417Z",
+    "duration": 30824.316,
+    "expected": 3,
+    "skipped": 0,
+    "unexpected": 5,
+    "flaky": 0
+  }
+}

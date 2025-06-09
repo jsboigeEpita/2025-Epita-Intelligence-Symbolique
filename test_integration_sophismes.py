@@ -25,6 +25,25 @@ Franchement, si on commence à interdire les voitures en ville, bientôt on inte
 BASE_URL = "http://localhost:3000"
 TIMEOUT = 30
 
+# Exemples de sophismes spécifiques pour Phase 3
+SOPHISMES_SPECIFIQUES = [
+    {
+        "name": "ad_hominem",
+        "text": "Tu ne peux pas critiquer le gouvernement, tu n'es même pas citoyen",
+        "expected": "ad hominem"
+    },
+    {
+        "name": "faux_dilemme",
+        "text": "Soit tu es avec nous, soit tu es contre nous",
+        "expected": "false dilemma"
+    },
+    {
+        "name": "appel_popularite",
+        "text": "Tout le monde fait ça, donc c'est normal",
+        "expected": "bandwagon"
+    }
+]
+
 def test_status_endpoint():
     """Teste l'endpoint de statut"""
     print("[TEST] Vérification de l'endpoint /status...")
@@ -78,6 +97,91 @@ def test_analyze_endpoint():
             
     except Exception as e:
         print(f"[ERROR] Erreur lors de l'analyse: {e}")
+        return False
+
+def test_specific_sophismes():
+    """Teste les sophismes spécifiques de la Phase 3"""
+    print("\n[TEST PHASE 3] Analyse des sophismes spécifiques...")
+    results = []
+    
+    for sophisme in SOPHISMES_SPECIFIQUES:
+        print(f"\n[TEST] {sophisme['name']}: {sophisme['text']}")
+        
+        try:
+            data = {
+                'text': sophisme['text'],
+                'analysis_type': 'fallacy_detection'
+            }
+            
+            start_time = time.time()
+            response = requests.post(
+                f"{BASE_URL}/analyze",
+                json=data,
+                timeout=TIMEOUT,
+                headers={'Content-Type': 'application/json'}
+            )
+            processing_time = time.time() - start_time
+            
+            if response.status_code == 200:
+                result_data = response.json()
+                
+                # Vérifier si des sophismes sont détectés
+                sophismes_detectes = 0
+                servicemanager_used = 'analysis_id' in result_data
+                
+                if 'results' in result_data:
+                    analysis_results = result_data['results']
+                    if 'fallacies' in analysis_results:
+                        sophismes_detectes = len(analysis_results['fallacies'])
+                    elif 'fallacy_analysis' in analysis_results:
+                        sophismes_detectes = analysis_results['fallacy_analysis'].get('total_fallacies', 0)
+                
+                test_result = {
+                    'name': sophisme['name'],
+                    'success': sophismes_detectes > 0,
+                    'response_time': processing_time,
+                    'servicemanager_used': servicemanager_used,
+                    'fallacies_count': sophismes_detectes
+                }
+                
+                print(f"[RESULTAT] Sophismes détectés: {sophismes_detectes}")
+                print(f"[RESULTAT] ServiceManager: {'Oui' if servicemanager_used else 'Non'}")
+                print(f"[RESULTAT] Temps: {processing_time:.2f}s")
+                
+                results.append(test_result)
+                
+            else:
+                print(f"[ERREUR] Status {response.status_code}")
+                results.append({
+                    'name': sophisme['name'],
+                    'success': False,
+                    'error': f"HTTP {response.status_code}"
+                })
+        
+        except Exception as e:
+            print(f"[ERREUR] Exception: {e}")
+            results.append({
+                'name': sophisme['name'],
+                'success': False,
+                'error': str(e)
+            })
+        
+        time.sleep(0.5)  # Pause entre les tests
+    
+    # Résumé des tests Phase 3
+    print(f"\n[PHASE 3 RESUMÉ]")
+    successful_tests = sum(1 for r in results if r.get('success', False))
+    total_tests = len(results)
+    servicemanager_usage = sum(1 for r in results if r.get('servicemanager_used', False))
+    
+    print(f"Tests réussis: {successful_tests}/{total_tests}")
+    print(f"Usage ServiceManager: {servicemanager_usage}/{total_tests}")
+    
+    if successful_tests >= total_tests * 0.8:  # 80% de réussite
+        print("[SUCCESS] Phase 3 validation réussie!")
+        return True
+    else:
+        print("[WARNING] Phase 3 validation partielle")
         return False
 
 def analyze_results(results: Dict[str, Any], processing_time: float):
@@ -163,26 +267,61 @@ def save_results(results: Dict[str, Any]):
 
 def main():
     """Point d'entrée principal"""
-    print("[TEST] TEST D'INTÉGRATION - DÉTECTION DE SOPHISMES")
-    print("=" * 50)
+    print("[TEST] VALIDATION INTÉGRATION API/SERVICEMANAGER - PHASE 3")
+    print("=" * 60)
     print(f"Cible: {BASE_URL}")
     print(f"Timestamp: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-    print("=" * 50)
+    print("=" * 60)
+    
+    results_summary = {
+        'status_test': False,
+        'analyze_test': False,
+        'phase3_sophismes': False,
+        'overall_success': False
+    }
     
     # 1. Test de connectivité
+    print("\n[ÉTAPE 1] Test de connectivité API...")
     if not test_status_endpoint():
         print("[FATAL] Impossible de contacter l'interface. Test interrompu.")
         return False
+    results_summary['status_test'] = True
     
-    # 2. Test d'analyse
-    if test_analyze_endpoint():
-        print("\n[FINAL] [SUCCESS] Tests d'intégration RÉUSSIS")
-        print("Transformation de mock en vrai système VALIDÉE")
-        return True
+    # 2. Test d'analyse générale
+    print("\n[ÉTAPE 2] Test d'analyse générale...")
+    results_summary['analyze_test'] = test_analyze_endpoint()
+    
+    # 3. Tests spécifiques Phase 3
+    print("\n[ÉTAPE 3] Tests spécifiques Phase 3...")
+    results_summary['phase3_sophismes'] = test_specific_sophismes()
+    
+    # 4. Résumé final
+    print("\n" + "="*60)
+    print("RÉSUMÉ VALIDATION PHASE 3")
+    print("="*60)
+    print(f"✓ Test connectivité: {'OK' if results_summary['status_test'] else 'ÉCHEC'}")
+    print(f"✓ Test analyse générale: {'OK' if results_summary['analyze_test'] else 'ÉCHEC'}")
+    print(f"✓ Tests sophismes Phase 3: {'OK' if results_summary['phase3_sophismes'] else 'ÉCHEC'}")
+    
+    # Critères de validation Phase 3
+    phase3_success = (
+        results_summary['status_test'] and
+        results_summary['analyze_test'] and
+        results_summary['phase3_sophismes']
+    )
+    
+    results_summary['overall_success'] = phase3_success
+    
+    if phase3_success:
+        print("\n[SUCCESS] PHASE 3 VALIDÉE avec succès!")
+        print("✅ Intégration API/ServiceManager opérationnelle")
+        print("✅ Détection de sophismes fonctionnelle")
+        print("✅ Analyses en temps réel validées")
     else:
-        print("\n[FINAL] [FAILED] Tests d'intégration PARTIELS")
-        print("Système fonctionnel mais optimisations possibles")
-        return False
+        print("\n[PARTIAL] PHASE 3 validation partielle")
+        print("Système fonctionnel mais optimisations nécessaires")
+    
+    return phase3_success
 
 if __name__ == "__main__":
     try:
