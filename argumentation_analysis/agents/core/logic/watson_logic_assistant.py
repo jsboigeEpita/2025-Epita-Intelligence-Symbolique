@@ -2,6 +2,7 @@
 import logging
 import re
 from typing import Optional, List, AsyncGenerator, ClassVar
+import json
 
 from semantic_kernel import Kernel
 from semantic_kernel.functions.kernel_plugin import KernelPlugin
@@ -164,7 +165,6 @@ class WatsonTools:
         self._logger.info(f"Analyse formelle step-by-step demandée pour: {problem_description[:100]}...")
         
         try:
-            import json
             
             # Phase 1: FORMALISATION
             formalization_results = []
@@ -222,7 +222,10 @@ class WatsonTools:
             }
             
             self._logger.info(f"Analyse formelle terminée avec {len(deduction_steps)} étapes de déduction")
-            return json.dumps(structured_solution, ensure_ascii=False, indent=2)
+            
+            # Enrichissement de la réponse avec la personnalité de Watson
+            json_output = json.dumps(structured_solution, ensure_ascii=False, indent=2)
+            return f"Voyons... analysons logiquement ce que nous avons. En tant que partenaire, je dois être rigoureux. Voici mon analyse step-by-step : \n\n{json_output}"
             
         except Exception as e:
             self._logger.error(f"Erreur lors de l'analyse formelle: {e}")
