@@ -12,7 +12,7 @@ from typing import List, Dict, Any, Optional, Union, Callable, Awaitable
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from semantic_kernel import Kernel
-from semantic_kernel.contents.chat_message_content import ChatMessageContent
+from semantic_kernel.contents.chat_message_content import ChatMessageContent as OriginalChatMessageContent
 from semantic_kernel.functions.kernel_arguments import KernelArguments
 from semantic_kernel.services.ai_service_selector import AIServiceSelector
 from enum import Enum
@@ -441,7 +441,7 @@ class SelectionStrategy(ABC):
         self._logger = logging.getLogger(self.__class__.__name__)
     
     @abstractmethod
-    async def next(self, agents: List[Agent], history: List[ChatMessageContent]) -> Agent:
+    async def next(self, agents: List[Agent], history: List['ChatMessageContent']) -> Agent:
         """Sélectionne le prochain agent à exécuter."""
         pass
     
@@ -462,7 +462,7 @@ class SequentialSelectionStrategy(SelectionStrategy):
         self.agents = agents or []
         self.current_index = 0
     
-    async def next(self, agents: List[Agent], history: List[ChatMessageContent]) -> Agent:
+    async def next(self, agents: List[Agent], history: List['ChatMessageContent']) -> Agent:
         """Sélectionne le prochain agent de manière séquentielle."""
         if not agents:
             raise ValueError("Aucun agent disponible pour la sélection")
@@ -497,7 +497,7 @@ class TerminationStrategy(ABC):
         self._logger = logging.getLogger(self.__class__.__name__)
     
     @abstractmethod
-    async def should_terminate(self, agent: Agent, history: List[ChatMessageContent]) -> bool:
+    async def should_terminate(self, agent: Agent, history: List['ChatMessageContent']) -> bool:
         """Détermine si l'exécution doit se terminer."""
         pass
     
@@ -514,7 +514,7 @@ class MaxIterationsTerminationStrategy(TerminationStrategy):
     def __init__(self, max_iterations: int = 10):
         super().__init__(max_iterations)
     
-    async def should_terminate(self, agent: Agent, history: List[ChatMessageContent]) -> bool:
+    async def should_terminate(self, agent: Agent, history: List['ChatMessageContent']) -> bool:
         """Termine après max_iterations tours."""
         self.iteration_count += 1
         should_stop = self.iteration_count >= self.max_iterations
@@ -542,7 +542,7 @@ class AgentGroupChat:
         self.selection_strategy = selection_strategy or SequentialSelectionStrategy(self.agents)
         self.termination_strategy = termination_strategy or MaxIterationsTerminationStrategy()
         
-        self.history: List[ChatMessageContent] = []
+        self.history: List['ChatMessageContent'] = []
         self.is_active = False
         
         self._logger = logging.getLogger(self.__class__.__name__)
@@ -553,7 +553,7 @@ class AgentGroupChat:
             self.agents.append(agent)
             self._logger.info(f"Agent {agent.name} ajouté au groupe")
     
-    async def invoke(self, message: str) -> List[ChatMessageContent]:
+    async def invoke(self, message: str) -> List['ChatMessageContent']:
         """
         Lance une conversation de groupe avec le message initial.
         
@@ -645,3 +645,43 @@ FunctionInvocationFilter = FunctionInvocationFilter
 logger.info("Module de compatibilité semantic_kernel agents chargé")
 logger.info("Module de compatibilité semantic_kernel filters chargé")
 logger.info(f"Version: {get_semantic_kernel_version()}")
+
+
+# Classe de compatibilité pour ChatMessageContent avec propriété .name
+class ChatMessageContent(OriginalChatMessageContent):
+    """
+    Classe de compatibilité pour ChatMessageContent qui ajoute le support de la propriété .name
+    en utilisant metadata["name"] pour maintenir la compatibilité avec l'ancienne API.
+    """
+    
+    def __init__(self, role=None, content=None, name=None, **kwargs):
+        # Si name est fourni comme paramètre, l'ajouter aux metadata
+        if name is not None:
+            if 'metadata' not in kwargs:
+                kwargs['metadata'] = {}
+            kwargs['metadata']['name'] = name
+        
+        # Appeler le constructeur parent sans le paramètre name
+        super().__init__(role=role, content=content, **kwargs)
+    
+    @property
+    def name(self):
+        """Propriété de compatibilité pour accéder au nom via metadata."""
+        return self.metadata.get("name", "") if self.metadata else ""
+    
+    @name.setter
+    def name(self, value):
+        """Setter pour la propriété name qui utilise metadata."""
+        if self.metadata is None:
+            self.metadata = {}
+        self.metadata["name"] = value
+
+
+# Export de la classe de compatibilité
+__all__ = [
+    'AuthorRole', 'FunctionChoiceBehavior', 'AgentChatException',
+    'FunctionInvocationContext', 'FilterTypes', 'FunctionInvocationFilter',
+    'Agent', 'ChatCompletionAgent', 'SelectionStrategy', 'SequentialSelectionStrategy',
+    'TerminationStrategy', 'MaxIterationsTerminationStrategy', 'AgentGroupChat',
+    'ChatMessageContent', 'get_semantic_kernel_version'
+]

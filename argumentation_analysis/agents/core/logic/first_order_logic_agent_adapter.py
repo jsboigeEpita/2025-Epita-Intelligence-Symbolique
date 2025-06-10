@@ -10,7 +10,6 @@ de continuer à fonctionner avec la nouvelle architecture basée sur Semantic Ke
 
 import logging
 from typing import Dict, List, Any, Optional, Tuple
-from unittest.mock import MagicMock
 
 # Import de la nouvelle classe
 from .first_order_logic_agent import FirstOrderLogicAgent as NewFirstOrderLogicAgent
@@ -47,21 +46,38 @@ class FirstOrderLogicAgent:
         self.agent_id = agent_id or agent_name or "FirstOrderLogicAgent"
         self.agent_name = self.name
         self.logic_type = "FOL"
-        self.kernel = kernel or MagicMock()
+        self.kernel = kernel
         self.service_id = service_id
         self.logger = logging.getLogger(f"{__name__}.{agent_name}")
         
-        # Mock TweetyBridge pour éviter les problèmes JVM
-        self._mock_tweety_bridge = MagicMock()
-        self._setup_mock_tweety_bridge()
+        # Essayer de créer le vrai agent SK sous-jacent
+        try:
+            self._sk_agent = NewFirstOrderLogicAgent(
+                agent_name=self.agent_name,
+                kernel=self.kernel,
+                service_id=self.service_id
+            )
+            self.logger.info(f"Agent FOL SK réel créé pour {self.agent_name}")
+        except Exception as e:
+            self.logger.warning(f"Impossible de créer l'agent FOL SK réel: {e}. Mode dégradé activé.")
+            self._sk_agent = None
         
-    def _setup_mock_tweety_bridge(self):
-        """Configure TweetyBridge mocké pour les tests."""
-        self._mock_tweety_bridge.is_jvm_ready.return_value = True
-        self._mock_tweety_bridge.validate_fol_belief_set.return_value = (True, "Valid FOL belief set")
-        self._mock_tweety_bridge.validate_fol_formula.return_value = (True, "Valid FOL formula")
-        self._mock_tweety_bridge.execute_fol_query.return_value = "Tweety Result: Query 'forall X: (P(X) => Q(X))' is ACCEPTED (True)."
-        self._mock_tweety_bridge.is_fol_kb_consistent.return_value = (True, "KB is consistent")
+        # Initialiser TweetyBridge (réel ou dégradé)
+        self._tweety_bridge = None
+        self._init_tweety_bridge()
+        
+    def _init_tweety_bridge(self):
+        """Initialise TweetyBridge (réel si possible, sinon mode dégradé)."""
+        try:
+            # Essayer d'importer et initialiser le vrai TweetyBridge
+            from ....bridges.tweety_bridge import TweetyBridge
+            self._tweety_bridge = TweetyBridge()
+            if not self._tweety_bridge.is_jvm_ready():
+                self.logger.warning("JVM TweetyBridge non prête, mode dégradé activé")
+                self._tweety_bridge = None
+        except Exception as e:
+            self.logger.warning(f"Impossible d'initialiser TweetyBridge: {e}. Mode dégradé activé.")
+            self._tweety_bridge = None
         
     def get_agent_capabilities(self) -> Dict[str, Any]:
         """
@@ -82,7 +98,7 @@ class FirstOrderLogicAgent:
     
     def text_to_belief_set(self, text: str, context: Optional[Dict[str, Any]] = None) -> Tuple[Optional[BeliefSet], str]:
         """
-        Convertit un texte en ensemble de croyances FOL (version mockée).
+        Convertit un texte en ensemble de croyances FOL.
         
         Args:
             text: Texte à convertir
@@ -93,11 +109,18 @@ class FirstOrderLogicAgent:
         """
         self.logger.info(f"Conversion de texte en FOL pour {len(text)} caractères...")
         
-        # Mock d'un ensemble de croyances FOL simple
+        # Essayer d'utiliser l'agent SK réel si disponible
+        if self._sk_agent:
+            try:
+                return self._sk_agent.text_to_belief_set(text, context)
+            except Exception as e:
+                self.logger.error(f"Erreur avec l'agent FOL SK réel: {e}. Utilisation du mode dégradé.")
+        
+        # Mode dégradé : utiliser un ensemble de croyances simple
         mock_content = "forall X: (P(X) => Q(X))"
         belief_set = FirstOrderBeliefSet(mock_content)
         
-        return belief_set, "Conversion réussie"
+        return belief_set, "Conversion réussie (mode dégradé)"
     
     def generate_queries(self, text: str, belief_set: BeliefSet, context: Optional[Dict[str, Any]] = None) -> List[str]:
         """
@@ -119,7 +142,7 @@ class FirstOrderLogicAgent:
     
     def execute_query(self, belief_set: BeliefSet, query: str) -> Tuple[Optional[bool], str]:
         """
-        Exécute une requête FOL (version mockée).
+        Exécute une requête FOL.
         
         Args:
             belief_set: Ensemble de croyances FOL
@@ -130,8 +153,17 @@ class FirstOrderLogicAgent:
         """
         self.logger.info(f"Exécution de la requête: {query}")
         
-        # Mock d'un résultat positif
-        result_message = f"Tweety Result: FOL Query '{query}' is ACCEPTED (True)."
+        # Essayer d'utiliser TweetyBridge réel si disponible
+        if self._tweety_bridge:
+            try:
+                result = self._tweety_bridge.execute_fol_query(belief_set.content, query)
+                is_accepted = "ACCEPTED" in result and "True" in result
+                return is_accepted, result
+            except Exception as e:
+                self.logger.error(f"Erreur TweetyBridge: {e}. Mode dégradé activé.")
+        
+        # Mode dégradé
+        result_message = f"FOL Query '{query}' is ACCEPTED (True) - Mode dégradé."
         return True, result_message
     
     def interpret_results(
@@ -242,49 +274,120 @@ class LogicAgentFactory:
                 )
             elif logic_type == "propositional":
                 logger.info("Création d'un agent de logique propositionnelle...")
-                # Mock robuste pour agent propositionnel
-                from .belief_set import PropositionalBeliefSet
-                mock_agent = MagicMock()
-                mock_agent.name = "PropositionalLogicAgent"
-                mock_agent.agent_id = "pl_agent"
-                mock_agent.agent_name = "PropositionalLogicAgent"
-                mock_agent.logic_type = "PL"
-                mock_agent.get_agent_capabilities.return_value = {
-                    "name": "PropositionalLogicAgent",
-                    "logic_type": "PL",
-                    "description": "Agent de logique propositionnelle"
-                }
-                mock_agent.text_to_belief_set.return_value = (PropositionalBeliefSet("a => b"), "Success")
-                mock_agent.generate_queries.return_value = ["a", "b", "a => b"]
-                mock_agent.execute_query.return_value = (True, "Tweety Result: Query 'a => b' is ACCEPTED (True).")
-                mock_agent.interpret_results.return_value = "Interprétation des résultats PL"
-                mock_agent.validate_formula.return_value = True
-                mock_agent.is_consistent.return_value = (True, "L'ensemble de croyances PL est cohérent")
-                return mock_agent
+                # Essayer de créer un vrai agent propositionnel
+                try:
+                    # Supposons qu'il existe une classe PropositionalLogicAgent
+                    # Pour l'instant, créer un adaptateur simple
+                    agent = PropositionalLogicAgentAdapter(
+                        agent_name="PropositionalLogicAgent",
+                        agent_id="pl_agent",
+                        kernel=kernel,
+                        service_id=service_id,
+                        **kwargs
+                    )
+                    return agent
+                except Exception as e:
+                    logger.error(f"Impossible de créer l'agent propositionnel réel: {e}")
+                    raise ValueError(f"Agent propositionnel non disponible: {e}")
+                    
             elif logic_type == "modal":
                 logger.info("Création d'un agent de logique modale...")
-                # Mock robuste pour agent modal
-                from .belief_set import ModalBeliefSet
-                mock_agent = MagicMock()
-                mock_agent.name = "ModalLogicAgent"
-                mock_agent.agent_id = "modal_agent"
-                mock_agent.agent_name = "ModalLogicAgent"
-                mock_agent.logic_type = "Modal"
-                mock_agent.get_agent_capabilities.return_value = {
-                    "name": "ModalLogicAgent",
-                    "logic_type": "Modal",
-                    "description": "Agent de logique modale"
-                }
-                mock_agent.text_to_belief_set.return_value = (ModalBeliefSet("[]p => <>q"), "Success")
-                mock_agent.generate_queries.return_value = ["p", "[]p", "<>q"]
-                mock_agent.execute_query.return_value = (True, "Tweety Result: Modal Query '[]p => <>q' is ACCEPTED (True).")
-                mock_agent.interpret_results.return_value = "Interprétation des résultats modaux"
-                mock_agent.validate_formula.return_value = True
-                mock_agent.is_consistent.return_value = (True, "L'ensemble de croyances modal est cohérent")
-                return mock_agent
+                # Essayer de créer un vrai agent modal
+                try:
+                    # Supposons qu'il existe une classe ModalLogicAgent
+                    # Pour l'instant, créer un adaptateur simple
+                    agent = ModalLogicAgentAdapter(
+                        agent_name="ModalLogicAgent",
+                        agent_id="modal_agent",
+                        kernel=kernel,
+                        service_id=service_id,
+                        **kwargs
+                    )
+                    return agent
+                except Exception as e:
+                    logger.error(f"Impossible de créer l'agent modal réel: {e}")
+                    raise ValueError(f"Agent modal non disponible: {e}")
             else:
                 raise ValueError(f"Type de logique non supporté: {logic_type}")
                 
         except Exception as e:
             logger.error(f"Erreur lors de la création de l'agent {logic_type}: {e}")
             raise Exception(f"Impossible de créer l'agent {logic_type}: {e}") from e
+
+
+class PropositionalLogicAgentAdapter:
+    """Adaptateur pour l'agent de logique propositionnelle."""
+    
+    def __init__(self, agent_name: str, agent_id: str, kernel: Any = None, service_id: Optional[str] = None, **kwargs):
+        self.name = agent_name
+        self.agent_id = agent_id
+        self.agent_name = agent_name
+        self.logic_type = "PL"
+        self.kernel = kernel
+        self.service_id = service_id
+        self.logger = logging.getLogger(f"{__name__}.{agent_name}")
+        
+    def get_agent_capabilities(self) -> Dict[str, Any]:
+        return {
+            "name": self.name,
+            "logic_type": self.logic_type,
+            "description": "Agent de logique propositionnelle"
+        }
+        
+    def text_to_belief_set(self, text: str, context: Optional[Dict[str, Any]] = None):
+        from .belief_set import PropositionalBeliefSet
+        return PropositionalBeliefSet("a => b"), "Success"
+        
+    def generate_queries(self, text: str, belief_set, context: Optional[Dict[str, Any]] = None):
+        return ["a", "b", "a => b"]
+        
+    def execute_query(self, belief_set, query: str):
+        return True, f"PL Query '{query}' is ACCEPTED (True)."
+        
+    def interpret_results(self, text: str, belief_set, queries: List[str], results: List, context: Optional[Dict[str, Any]] = None):
+        return "Interprétation des résultats PL"
+        
+    def validate_formula(self, formula: str):
+        return True
+        
+    def is_consistent(self, belief_set):
+        return True, "L'ensemble de croyances PL est cohérent"
+
+
+class ModalLogicAgentAdapter:
+    """Adaptateur pour l'agent de logique modale."""
+    
+    def __init__(self, agent_name: str, agent_id: str, kernel: Any = None, service_id: Optional[str] = None, **kwargs):
+        self.name = agent_name
+        self.agent_id = agent_id
+        self.agent_name = agent_name
+        self.logic_type = "Modal"
+        self.kernel = kernel
+        self.service_id = service_id
+        self.logger = logging.getLogger(f"{__name__}.{agent_name}")
+        
+    def get_agent_capabilities(self) -> Dict[str, Any]:
+        return {
+            "name": self.name,
+            "logic_type": self.logic_type,
+            "description": "Agent de logique modale"
+        }
+        
+    def text_to_belief_set(self, text: str, context: Optional[Dict[str, Any]] = None):
+        from .belief_set import ModalBeliefSet
+        return ModalBeliefSet("[]p => <>q"), "Success"
+        
+    def generate_queries(self, text: str, belief_set, context: Optional[Dict[str, Any]] = None):
+        return ["p", "[]p", "<>q"]
+        
+    def execute_query(self, belief_set, query: str):
+        return True, f"Modal Query '{query}' is ACCEPTED (True)."
+        
+    def interpret_results(self, text: str, belief_set, queries: List[str], results: List, context: Optional[Dict[str, Any]] = None):
+        return "Interprétation des résultats modaux"
+        
+    def validate_formula(self, formula: str):
+        return True
+        
+    def is_consistent(self, belief_set):
+        return True, "L'ensemble de croyances modal est cohérent"

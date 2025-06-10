@@ -12,7 +12,8 @@ import numpy as np
 from typing import Dict, List, Tuple
 # CORRECTIF COMPATIBILITÉ: Utilisation du module de compatibilité
 from argumentation_analysis.utils.semantic_kernel_compatibility import Agent
-from semantic_kernel.contents import ChatMessageContent, AuthorRole
+from semantic_kernel.contents import ChatMessageContent
+from argumentation_analysis.utils.semantic_kernel_compatibility import AuthorRole
 from unittest.mock import MagicMock
 
 # Import des modules du projet

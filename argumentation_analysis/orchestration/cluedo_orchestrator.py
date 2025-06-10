@@ -9,7 +9,7 @@ from argumentation_analysis.utils.semantic_kernel_compatibility import (
     Agent, AgentGroupChat, SequentialSelectionStrategy, TerminationStrategy,
     FunctionInvocationContext, FilterTypes
 )
-from semantic_kernel.contents.chat_message_content import ChatMessageContent
+from argumentation_analysis.utils.semantic_kernel_compatibility import ChatMessageContent
 from semantic_kernel.functions.kernel_arguments import KernelArguments
 from pydantic import Field
 import logging
