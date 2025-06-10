@@ -22,6 +22,10 @@ import psutil
 from typing import Dict, List, Optional, Any
 from pathlib import Path
 import aiohttp
+import shutil # Ajout pour shutil.which
+
+# Import pour l'activation de l'environnement et la recherche de Python
+# from scripts.core.environment_manager import auto_activate_env # auto_activate_env est appelé par le script parent start_webapp.py
 
 class BackendManager:
     """
@@ -89,35 +93,88 @@ class BackendManager:
             'pid': None
         }
     
+    async def _get_conda_env_python_executable(self, env_name: str) -> Optional[str]:
+        """Tente de trouver l'exécutable Python pour un environnement Conda donné."""
+        try:
+            # Essayer de trouver conda d'abord
+            conda_exe = shutil.which("conda")
+            if not conda_exe:
+                self.logger.warning("Exécutable Conda non trouvé via shutil.which('conda').")
+                conda_exe = os.environ.get("CONDA_EXE")
+                if not conda_exe or not Path(conda_exe).exists():
+                    self.logger.error("CONDA_EXE non trouvé ou invalide dans l'environnement.")
+                    return None
+
+            # Obtenir les informations sur les environnements Conda
+            # Utilisation de asyncio.to_thread pour exécuter la commande bloquante subprocess.run
+            result = await asyncio.to_thread(
+                subprocess.run,
+                [conda_exe, "info", "--envs", "--json"],
+                capture_output=True,
+                text=True,
+                check=True, # Lève une exception si la commande échoue
+                timeout=30
+            )
+            envs_info = json.loads(result.stdout)
+            
+            for env_path_str in envs_info.get("envs", []):
+                env_path = Path(env_path_str)
+                if env_path.name == env_name:
+                    # Construire le chemin vers python.exe (Windows) ou python (Unix)
+                    python_exe = env_path / "python.exe" # Pour Windows
+                    if not python_exe.exists():
+                        python_exe = env_path / "bin" / "python" # Pour Unix-like
+                    
+                    if python_exe.exists():
+                        self.logger.info(f"Exécutable Python trouvé pour l'env '{env_name}': {python_exe}")
+                        return str(python_exe)
+                    else:
+                        self.logger.warning(f"Exécutable Python non trouvé dans le chemin de l'env '{env_name}': {env_path}")
+                        break
+            
+            self.logger.error(f"Impossible de trouver le chemin de l'exécutable Python pour l'environnement Conda '{env_name}'.")
+            return None
+        except FileNotFoundError:
+            self.logger.error("La commande 'conda' n'a pas été trouvée. Assurez-vous que Conda est installé et dans le PATH.")
+            return None
+        except subprocess.CalledProcessError as e:
+            self.logger.error(f"Erreur lors de l'exécution de 'conda info --envs --json': {e.stderr}")
+            return None
+        except subprocess.TimeoutExpired:
+            self.logger.error("Timeout lors de l'exécution de 'conda info --envs --json'.")
+            return None
+        except json.JSONDecodeError:
+            self.logger.error("Erreur lors du parsing de la sortie JSON de 'conda info --envs --json'.")
+            return None
+        except Exception as e:
+            self.logger.error(f"Erreur inattendue lors de la recherche de l'exécutable Python de Conda: {e}")
+            return None
+
     async def _start_on_port(self, port: int) -> Dict[str, Any]:
         """Démarre le backend sur un port spécifique"""
         try:
-            # Nom de l'environnement Conda (à rendre configurable si nécessaire)
-            conda_env_name = "projet-is" # Utilisé pour construire le chemin python_exe
+            conda_env_name = "projet-is" # Nom de l'environnement cible
             
-            # Construire le chemin vers l'exécutable Python de l'environnement Conda
-            # Ceci est une estimation basée sur les logs précédents.
-            # Idéalement, ce chemin devrait être découvert dynamiquement ou configurable.
-            python_exe_path = str(Path.home() / ".conda" / "envs" / conda_env_name / "python.exe")
+            # Obtenir l'exécutable Python de l'environnement Conda cible
+            python_exe_path = await self._get_conda_env_python_executable(conda_env_name)
             
-            # Vérifier si cet exécutable existe, sinon fallback ou erreur plus explicite.
-            if not Path(python_exe_path).exists():
-                self.logger.error(f"L'exécutable Python pour l'environnement Conda '{conda_env_name}' n'a pas été trouvé à '{python_exe_path}'.")
-                # Fallback vers une tentative de 'python -m uvicorn' si conda n'est pas la méthode principale.
-                # Ou simplement échouer ici. Pour l'instant, on continue avec le chemin construit,
-                # l'erreur Popen le signalera s'il est incorrect.
-                # Une meilleure approche serait de lire la config de l'env_activation.
-                # Pour l'instant, on tente avec le chemin construit.
-                # Si cela échoue, il faudra une méthode plus robuste pour trouver python.exe.
-                # Alternative: utiliser sys.executable si le script principal est déjà lancé avec le bon python.
-                # Mais BackendManager peut être appelé par un autre python.
-                # Tentons avec le chemin construit, c'est le plus probable pour l'environnement de l'utilisateur.
-                pass # On laisse Popen échouer si le chemin est mauvais.
+            if not python_exe_path:
+                self.logger.error(f"Impossible de démarrer le backend: exécutable Python pour '{conda_env_name}' non trouvé.")
+                return {
+                    'success': False,
+                    'error': f"Exécutable Python pour l'environnement '{conda_env_name}' introuvable.",
+                    'url': None, 'port': port, 'pid': None
+                }
+            
+            self.logger.info(f"Utilisation de l'interpréteur Python de l'environnement Conda '{conda_env_name}': {python_exe_path}")
 
-            # Commande de démarrage pour FastAPI avec Uvicorn en utilisant le python.exe de l'env Conda
-            cmd = [python_exe_path, '-m', 'uvicorn', self.module, '--host', '0.0.0.0', '--port', str(port)]
+            # Commande de démarrage pour FastAPI avec Uvicorn
+            cmd = [
+                python_exe_path, '-m', 'uvicorn', self.module,
+                '--host', '0.0.0.0', '--port', str(port)
+            ]
             
-            self.logger.info(f"Démarrage backend FastAPI avec Python de Conda: {' '.join(cmd)}")
+            self.logger.info(f"Démarrage backend FastAPI: {' '.join(cmd)}")
             
             # Créer le répertoire de logs s'il n'existe pas
             log_dir = Path.cwd() / "logs"
@@ -130,7 +187,21 @@ class BackendManager:
 
             # Démarrage processus en arrière-plan
             env = os.environ.copy()
-            env['PYTHONPATH'] = str(Path.cwd()) + os.pathsep + env.get('PYTHONPATH', '')
+            
+            # Définir PYTHONPATH pour inclure la racine du projet.
+            # Path.cwd() devrait être la racine du projet si start_webapp.py est à la racine.
+            project_root = str(Path.cwd())
+            
+            # Construire PYTHONPATH : s'assurer que project_root est le premier élément.
+            # Cela permet aux imports relatifs à la racine du projet de fonctionner.
+            existing_pythonpath = env.get('PYTHONPATH', '')
+            if existing_pythonpath:
+                env['PYTHONPATH'] = project_root + os.pathsep + existing_pythonpath
+            else:
+                env['PYTHONPATH'] = project_root
+            
+            self.logger.info(f"PYTHONPATH pour Uvicorn: {env['PYTHONPATH']}")
+            self.logger.info(f"CWD pour Uvicorn: {project_root}")
 
             # Ouvrir les fichiers de log pour la redirection
             with open(stdout_log_file, 'wb') as f_stdout, open(stderr_log_file, 'wb') as f_stderr:
@@ -138,9 +209,8 @@ class BackendManager:
                     cmd,
                     stdout=f_stdout, # Rediriger stdout vers le fichier
                     stderr=f_stderr, # Rediriger stderr vers le fichier
-                    cwd=Path.cwd(),
+                    cwd=project_root, # Exécuter depuis la racine du projet
                     env=env,
-                    # text, bufsize, universal_newlines ne sont plus nécessaires si on écrit en binaire dans les fichiers
                     shell=False
                 )
             
@@ -179,7 +249,7 @@ class BackendManager:
                 'port': None,
                 'pid': None
             }
-    
+
     async def _wait_for_backend(self, port: int) -> bool:
         """Attend que le backend soit accessible via health check"""
         url = f"http://localhost:{port}{self.health_endpoint}"

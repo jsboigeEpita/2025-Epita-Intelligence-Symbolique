@@ -212,25 +212,52 @@ def run_orchestrator_with_conda(args: argparse.Namespace, logger: logging.Logger
     if args.timeout:
         orchestrator_cmd.extend(["--timeout", str(args.timeout)])
     
-    # Commande complète avec conda run
-    full_cmd = [
-        conda_exe, "run", "-n", CONDA_ENV_NAME
-    ] + orchestrator_cmd
+    # Commande complète à exécuter directement (en supposant que l'environnement est activé)
+    full_cmd = orchestrator_cmd # Utiliser directement orchestrator_cmd
     
-    print(f"\n{Colors.GREEN}🚀 LANCEMENT ORCHESTRATEUR{Colors.END}")
-    print(f"{Colors.YELLOW}📋 Commande:{Colors.END} {' '.join(orchestrator_cmd)}")
-    print(f"{Colors.YELLOW}🐍 Environnement:{Colors.END} {CONDA_ENV_NAME}")
+    print(f"\n{Colors.GREEN}🚀 LANCEMENT ORCHESTRATEUR (direct après activation){Colors.END}")
+    print(f"{Colors.YELLOW}📋 Commande:{Colors.END} {' '.join(full_cmd)}")
+    print(f"{Colors.YELLOW}🐍 Environnement (attendu):{Colors.END} {CONDA_ENV_NAME}")
     print()
     
     try:
         # Changement vers le répertoire projet
         os.chdir(PROJECT_ROOT)
         
-        # Lancement avec gestion interactive
+        # Préparer l'environnement pour la commande conda run
+        env_vars = os.environ.copy()
+        # S'assurer que PROJECT_ROOT est dans PYTHONPATH pour l'exécution de l'orchestrateur
+        project_root_str = str(PROJECT_ROOT)
+        current_python_path = env_vars.get('PYTHONPATH', '')
+        if project_root_str not in current_python_path.split(os.pathsep):
+            env_vars['PYTHONPATH'] = project_root_str + os.pathsep + current_python_path
+        else:
+            env_vars['PYTHONPATH'] = current_python_path
+
+        logger.info(f"PYTHONPATH pour conda run: {env_vars['PYTHONPATH']}")
+
+        # TEST D'IMPORTATION de l'application ASGI avant de lancer l'orchestrateur
+        logger.info("Tentative d'importation manuelle de l'application ASGI (depuis start_webapp.py)...")
+        try:
+            # S'assurer que le PROJECT_ROOT est bien dans sys.path pour ce test
+            # car l'orchestrateur et le backend_manager en dépendent.
+            if str(PROJECT_ROOT) not in sys.path:
+                sys.path.insert(0, str(PROJECT_ROOT))
+            from argumentation_analysis.services.web_api import app as asgi_app_test
+            logger.info(f"Importation de test réussie: {asgi_app_test}")
+        except Exception as import_err:
+            logger.error("ERREUR D'IMPORTATION DE L'APPLICATION ASGI (depuis start_webapp.py):", exc_info=True)
+            logger.error("Veuillez corriger l'erreur d'importation ci-dessus avant de continuer.")
+            return False # Arrêter ici si l'import échoue
+
+        # Lancement avec gestion interactive et environnement modifié
+        # L'activation de l'environnement est gérée par le script appelant (activate_project_env.ps1)
+        # On exécute donc directement la commande python.
         process = subprocess.run(
-            full_cmd,
+            full_cmd, # La commande est maintenant juste ["python", "-m", "scripts.webapp.unified_web_orchestrator", ...]
             cwd=PROJECT_ROOT,
-            check=False  # Ne pas lever d'exception sur code de retour non-zéro
+            check=False, # Ne pas lever d'exception sur code de retour non-zéro
+            env=env_vars # Passer les variables d'environnement modifiées (surtout PYTHONPATH)
         )
         
         success = process.returncode == 0
