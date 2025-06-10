@@ -304,7 +304,7 @@ class AuthenticSherlockWatsonDemo:
             results = processor.process_custom_data(test_content, "agents_logiques")
             
             # Validation résultats authentiques
-            assert results['mock_used'] == False, "Mock détecté - violation Phase 2"
+            assert results['processing_metadata']['mock_used'] == False, "Mock détecté - violation Phase 2"
             assert 'content_hash' in results, "Hash manquant - traitement invalide"
             
             logger.info(f"✅ Traitement authentique confirmé: Hash {results['content_hash'][:8]}")

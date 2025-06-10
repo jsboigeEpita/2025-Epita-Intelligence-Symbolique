@@ -70,8 +70,8 @@ class TestAdvancedReasoning:
         # ClingoSolver s'attend à une String (contenu du programme ou chemin)
         reasoner = ClingoSolver(file_content_str)
 
-        # Configuration du chemin de Clingo
-        clingo_exe_path = r"C:\Users\jsboi\.conda\envs\clingo_env\Library\bin" # Modifié pour pointer vers le répertoire
+        # Configuration du chemin de Clingo (générique)
+        clingo_exe_path = os.path.expanduser(r"~\.conda\envs\clingo_env\Library\bin") # Chemin générique
         if os.path.exists(clingo_exe_path): # Vérifie si le répertoire existe
             logger.info(f"ASPConsistency: Tentative de définition du répertoire Clingo sur : {clingo_exe_path}")
             reasoner.setPathToClingo(clingo_exe_path)
@@ -132,7 +132,7 @@ class TestAdvancedReasoning:
         program_obj = ASPParserClass.parseProgram(file_content_str)
         assert program_obj is not None, "La théorie ASP (Program) n'a pas pu être chargée."
 
-        clingo_exe_path = r"C:\Users\jsboi\.conda\envs\clingo_env\Library\bin\clingo.exe" # Chemin complet vers l'exécutable
+        clingo_exe_path = os.path.expanduser(r"~\.conda\envs\clingo_env\Library\bin\clingo.exe") # Chemin générique vers l'exécutable
         if not os.path.isfile(clingo_exe_path): # Vérifier si c'est un fichier
             logger.error(f"ASPEntailment: Exécutable Clingo NON TROUVÉ: {clingo_exe_path}. Le test va échouer.")
             pytest.fail(f"Exécutable Clingo non trouvé: {clingo_exe_path}")
@@ -293,8 +293,8 @@ class TestAdvancedReasoning:
         # ClingoSolver est initialisé avec le contenu string, mais query prend un Program et un ASPLiteral
         reasoner = ClingoSolver(file_content_str)
 
-        # Configuration du chemin de Clingo
-        clingo_exe_path = r"C:\Users\jsboi\.conda\envs\clingo_env\Library\bin" # Modifié pour pointer vers le répertoire
+        # Configuration du chemin de Clingo (générique)
+        clingo_exe_path = os.path.expanduser(r"~\.conda\envs\clingo_env\Library\bin") # Chemin générique
         if os.path.exists(clingo_exe_path): # Vérifie si le répertoire existe
             logger.info(f"ASPNonEntailment: Tentative de définition du répertoire Clingo sur : {clingo_exe_path}")
             reasoner.setPathToClingo(clingo_exe_path)

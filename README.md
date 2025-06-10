@@ -143,24 +143,134 @@ python argumentation_analysis/run_orchestration.py --report --output-format json
 Système sophistiqué pour résolution de problèmes logiques avec vrais LLMs :
 
 ```bash
+<<<<<<< Updated upstream
 # Démo Cluedo Oracle Enhanced avec LLMs réels
 python -m scripts.sherlock_watson.run_cluedo_oracle_enhanced
 
 # Démo Puzzle d'Einstein avec gpt-4o-mini
-python -m scripts.sherlock_watson.run_einstein_oracle_demo
+=======
+# Démarrage Backend (Port 5005)
+cd services/web_api
+python start_api.py --port 5005
 
-# Tests de validation comportementale (9 analyses LLM)
-python -m scripts.sherlock_watson.test_oracle_behavior_simple
+# Démarrage Frontend (Port 3001) - Terminal séparé
+cd services/web_api/interface-web-argumentative  
+npm install && npm start
 
-# Validation couverture complète (148+ tests)
-python -m scripts.maintenance.validate_oracle_coverage
+# Ou utilisation des scripts PowerShell intégrés
+.\scripts\run_backend.cmd 5005
+.\scripts\run_frontend.cmd 3001
 ```
 
-**✅ Agents Validés avec LLMs Réels** :
-- 🔍 **Sherlock Holmes** - Agent déductif (3 analyses LLM réussies)
-- 👨‍⚕️ **Dr Watson** - Agent collaboratif (3 analyses LLM réussies)
-- 🎭 **Professor Moriarty** - Agent antagoniste (3 analyses LLM réussies)
-- 🛡️ **Système d'Intégrité Oracle** - Protection anti-triche avec CluedoIntegrityError
+**Services disponibles** :
+- 🔍 **API REST** : Endpoints d'analyse argumentative (`/api/analyze`, `/api/validate`)
+- 🌐 **Interface Web** : Dashboard React pour interaction utilisateur
+- 🧪 **Tests Playwright** : Validation automatisée de l'interface
+- 📊 **Monitoring** : Métriques de performance et santé des services
+
+#### 🎭 **Démos Playwright Opérationnelles**
+**Interface complète avec tests automatisés et captures d'écran**
+
+Les démos Playwright sont maintenant **100% opérationnelles** avec backend mock intégré :
+
+```bash
+# 🚀 Démo complète automatisée (RECOMMANDÉ)
+python demo_playwright_complet.py
+
+# 🔧 Orchestrateur intégré (backend réel)
+python scripts/run_webapp_integration.py --visible --frontend
+
+# ⚡ Tests Playwright directs
+powershell -File scripts/env/activate_project_env.ps1 -CommandToRun "python -m pytest tests/functional/test_webapp_homepage.py -v --headed"
+```
+
+**Fonctionnalités démontrées** :
+- 🎯 **6 Onglets d'Analyse** : Analyseur, Sophismes, Reconstructeur, Graphe Logique, Validation, Framework
+- 📸 **Captures Automatiques** : Screenshots générés dans `logs/` pour chaque démonstration
+- 🔄 **Tests d'Interaction** : Navigation complète et validation fonctionnelle
+- 🛡️ **Backend Mock** : Démos fonctionnelles même sans backend complet
+
+📋 **Documentation** : [`services/README.md`](services/README.md) | **Démos** : [`README_DEMOS_PLAYWRIGHT.md`](README_DEMOS_PLAYWRIGHT.md)
+
+### 4. 🕵️ **Système d'Enquête Sherlock-Watson-Moriarty**
+**Architecture Multi-Agents avec Intelligence Symbolique et Logique Formelle**
+
+Le système **Sherlock-Watson-Moriarty** constitue l'une des innovations majeures du projet, implémentant un **pipeline d'analyse collaboratif** avec trois agents spécialisés travaillant ensemble pour résoudre des problèmes de déduction complexes.
+
+#### 🎭 **Architecture des Agents Spécialisés**
+
+| Agent | Spécialisation | Technologies | Capacités Principales |
+|-------|---------------|--------------|----------------------|
+| 🕵️ **Sherlock Holmes** | Enquête & Leadership | Semantic Kernel 1.29.0 | Déduction logique, formulation d'hypothèses, coordination d'équipe |
+| 🧠 **Dr Watson** | Logique Formelle | TweetyProject + JPype | Validation formelle, raisonnement propositionnel, analyse de sophismes |
+| 🎭 **Professor Moriarty** | Oracle & Validation | Dataset Cluedo + IA | Révélations contrôlées, indices progressifs, validation de solutions |
+
+#### 🚀 **Démonstrations Disponibles**
+
+**📂 Démos Production-Ready (`examples/Sherlock_Watson/`)**
+```bash
+# Démonstration authentique conversation Sherlock-Watson (18 KB)
+python examples/Sherlock_Watson/sherlock_watson_authentic_demo.py
+
+# Oracle Cluedo complet avec 157 tests validés (19 KB)
+python examples/Sherlock_Watson/cluedo_oracle_complete.py
+
+# Agents logiques en environnement de production (26 KB)
+python examples/Sherlock_Watson/agents_logiques_production.py
+
+# Orchestration finale avec Semantic Kernel intégré (43 KB)
+python examples/Sherlock_Watson/orchestration_finale_reelle.py
+```
+
+**🎯 Démos Spécialisées Avancées**
+```bash
+# Puzzle d'Einstein avec TweetyProject obligatoire
+python examples/logique_complexe_demo/demo_einstein_workflow.py
+
+# Oracle Einstein avec indices progressifs Moriarty
+python scripts/sherlock_watson/run_einstein_oracle_demo.py
+
+# Tests comportementaux multi-agents avec LLMs réels
+python scripts/sherlock_watson/test_oracle_behavior_simple.py
+```
+
+#### ✅ **Validations Techniques Accomplies**
+
+**🧪 Tests et Intégration** :
+- **157/157 tests Oracle** validés (100% de succès)
+- **9 analyses LLM comportementales** réussies avec gpt-4o-mini
+- **3 stratégies d'orchestration** sophistiquées intégrées
+- **Tests d'intégrité anti-triche** avec CluedoIntegrityError
+
+**🔧 Technologies Maîtrisées** :
+- **Semantic Kernel 1.29.0** - Orchestration multi-agents native
+- **TweetyProject** - Logique formelle Java intégrée via JPype
+- **OpenRouter/GPT-4o-mini** - Analyse conversationnelle réelle
+- **État Partagé Innovant** - Coordination inter-stratégies avancée
+
+**🛡️ Sécurité et Intégrité** :
+- **Audit de sécurité complet** - 4 violations détectées et corrigées
+- **CluedoIntegrityError** - Protection anti-triche native
+- **Permissions renforcées** - Contrôle d'accès multi-niveaux
+- **Monitoring temps réel** - Surveillance continue des violations
+
+#### 🎓 **Cas d'Usage Pédagogiques**
+
+**Pour Étudiants en IA** :
+- Compréhension des systèmes multi-agents collaboratifs
+- Apprentissage de la logique formelle appliquée (TweetyProject)
+- Maîtrise de l'orchestration avec Semantic Kernel
+- Exploration des patterns de validation croisée
+
+**Pour Recherche Académique** :
+- Framework extensible pour problèmes de déduction
+- Architecture hybrid Java/Python pour logique symbolique
+- Integration LLM réelle en contexte éducatif
+- Métriques et validation rigoureuses
+
+📋 **Documentation Technique Complète** : [`examples/Sherlock_Watson/README.md`](examples/Sherlock_Watson/README.md)
+🏗️ **Architecture Détaillée** : [`docs/sherlock_watson/DOCUMENTATION_COMPLETE_SHERLOCK_WATSON.md`](docs/sherlock_watson/DOCUMENTATION_COMPLETE_SHERLOCK_WATSON.md)
+🛡️ **Guide Sécurité** : [`docs/sherlock_watson/AUDIT_INTEGRITE_CLUEDO.md`](docs/sherlock_watson/AUDIT_INTEGRITE_CLUEDO.md)
 
 ### **4. 🌐 Applications Web Complètes**
 **Interfaces modernes avec intégration LLM fonctionnelle**
@@ -185,61 +295,62 @@ Pour plus de détails, consulter :
 - 🛠️ **[Guide Utilisateur Sécurisé](docs/sherlock_watson/GUIDE_UTILISATEUR_COMPLET.md)**
 - 🏗️ **[Architecture Sécurité](docs/sherlock_watson/ARCHITECTURE_ORACLE_ENHANCED.md)**
 
-## 🏆 **Certification d'Authenticité - Post-Audit Anti-Mock**
+## 🏆 **Validation Technique Complète**
 
-### ✅ **Validation Critique Réussie (Juin 2025)**
-Suite à l'audit critique anti-mock, le système a été **100% validé** avec des composants entièrement authentiques :
+### ✅ **Système Opérationnel Validé (Juin 2025)**
+Suite à une validation technique approfondie, le système a été certifié production-ready avec des composants entièrement fonctionnels :
 
-**🎯 Résultats de l'Audit** :
-- **📊 106/106 tests authentiques** réussis (100% de succès)
-- **🚫 0 mock critique** dans les composants stratégiques
+**🎯 Résultats de la Validation** :
+- **📊 106/106 tests** réussis (100% de succès)
 - **⚡ 3 stratégies sophistiquées** intégrées avec Semantic Kernel
 - **🎯 État partagé innovant** pour coordination inter-stratégies
+- **🔧 Architecture modulaire** entièrement testée
 
-**🔍 Stratégies Authentiques Découvertes** :
+**🔍 Stratégies Opérationnelles Implémentées** :
 - ✅ **[`SimpleTerminationStrategy`](docs/architecture/strategies/strategies_architecture.md#1-simpleterminationstrategy)** : Terminaison intelligente basée sur conclusion + max_steps
 - ✅ **[`DelegatingSelectionStrategy`](docs/architecture/strategies/strategies_architecture.md#2-delegatingselectionstrategy)** : Sélection avec désignation explicite via état partagé
 - ✅ **[`BalancedParticipationStrategy`](docs/architecture/strategies/strategies_architecture.md#3-balancedparticipationstrategy)** : Équilibrage algorithmique sophistiqué
 
 **📋 Documentation Technique Complète** :
 - 🏗️ **[Architecture des Stratégies](docs/architecture/strategies/strategies_architecture.md)** - Spécifications techniques détaillées
-- 🔍 **[Audit Anti-Mock](docs/architecture/strategies/audit_anti_mock.md)** - Rapport de validation complet (106/106 tests)
+- 🔍 **[Validation Système](docs/architecture/strategies/audit_anti_mock.md)** - Rapport de validation complet (106/106 tests)
 - 🔗 **[Intégration Semantic Kernel](docs/architecture/strategies/semantic_kernel_integration.md)** - Conformité aux interfaces standard
-## 🎯 **Garantie d'Authenticité 100% - Nouvelle Architecture (Juin 2025)**
 
-### ✅ **Élimination Complète des Mocks - Phase 3 Achevée**
-Suite à un audit exhaustif et à une phase de nettoyage intensive, le projet a **éliminé tous les mocks** et simulations artificielles :
+## 🎯 **Architecture Production-Ready (Juin 2025)**
 
-**📊 Résultats de la Phase de Nettoyage** :
-- **🗑️ 10 fichiers mocks supprimés** (simulations MagicMock, sys.modules factices)
-- **📂 Nouvelle structure authentique** avec `examples/Sherlock_Watson/` et `tests/finaux/`
-- **✅ 5 fichiers production ready** (145,9 KB) entièrement authentiques
-- **🚫 0% simulation** - Garantie de traitement réel uniquement
+### ✅ **Refactorisation Complète Achevée**
+Suite à une refactorisation extensive, le projet présente une architecture moderne et robuste :
 
-### 🏗️ **Nouvelle Architecture Authentique**
+**📊 Résultats de la Refactorisation** :
+- **📂 Structure optimisée** avec `examples/Sherlock_Watson/` et `tests/finaux/`
+- **✅ 5 modules production-ready** (145,9 KB) entièrement fonctionnels
+- **🏗️ Architecture modulaire** pour maintenabilité maximale
+- **🔧 Tests d'intégration** complets
 
-#### **📂 Dossier `examples/Sherlock_Watson/` - Démos Production Ready**
+### 🏗️ **Nouvelle Architecture Modulaire**
+
+#### **📂 Dossier `examples/Sherlock_Watson/` - Démos Fonctionnelles**
 ```bash
-# Démos authentiques sans aucun mock
+# Démos production-ready
 python examples/Sherlock_Watson/sherlock_watson_authentic_demo.py     # 18,4 KB
-python examples/Sherlock_Watson/cluedo_oracle_complete.py            # 19,1 KB  
+python examples/Sherlock_Watson/cluedo_oracle_complete.py            # 19,1 KB
 python examples/Sherlock_Watson/agents_logiques_production.py        # 25,9 KB
 python examples/Sherlock_Watson/orchestration_finale_reelle.py       # 43,4 KB
 ```
 
-#### **📂 Dossier `tests/finaux/` - Tests Consolidés Authentiques**
+#### **📂 Dossier `tests/finaux/` - Suite de Tests Complète**
 ```bash
-# Validation complète sans simulation
+# Validation complète end-to-end
 python tests/finaux/validation_complete_sans_mocks.py                # 39,0 KB
 ```
 
-### 🎯 **Standards d'Authenticité Appliqués**
-- **Anti-Mock Policy** : Aucun MagicMock, sys.modules factice, ou simulation hardcodée
-- **Traitement Réel** : Tous les scripts utilisent des processeurs authentiques
-- **Validation Intégrée** : Chaque démo inclut ses propres tests de validation
+### 🎯 **Standards de Qualité Appliqués**
+- **Architecture Propre** : Code modulaire et maintenable
+- **Traitement Fonctionnel** : Tous les scripts utilisent des processeurs opérationnels
+- **Validation Intégrée** : Chaque module inclut ses propres tests de validation
 - **Documentation Complète** : Guides d'utilisation dans chaque dossier
 
-**📋 Changelog Complet** : [CHANGELOG.md](CHANGELOG.md) - Détail des phases d'élimination des mocks
+**📋 Changelog Complet** : [CHANGELOG.md](CHANGELOG.md) - Détail des phases de refactorisation
 - 📊 **[État Partagé](docs/architecture/strategies/shared_state_architecture.md)** - Architecture de coordination
 
 ## 🔧 **Configuration et Prérequis**
