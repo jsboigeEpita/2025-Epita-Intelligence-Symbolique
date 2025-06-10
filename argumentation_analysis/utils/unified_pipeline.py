@@ -114,7 +114,7 @@ class UnifiedAnalysisPipeline:
         start_time = time.time()
         analysis_id = f"analysis_{len(self.results_cache) + 1}"
         
-        self.logger.info(f"🔍 Analyse {analysis_id}: {len(text)} caractères")
+        self.logger.info(f"[ANALYSE] Analyse {analysis_id}: {len(text)} caractères")
         
         result = AnalysisResult(
             id=analysis_id,
@@ -136,14 +136,14 @@ class UnifiedAnalysisPipeline:
             result.status = "completed"
             result.execution_time = time.time() - start_time
             
-            self.logger.info(f"✅ Analyse {analysis_id} terminée en {result.execution_time:.2f}s")
+            self.logger.info(f"[OK] Analyse {analysis_id} terminée en {result.execution_time:.2f}s")
             
         except Exception as e:
             result.status = "error"
             result.errors.append(str(e))
             result.execution_time = time.time() - start_time
             
-            self.logger.error(f"❌ Erreur analyse {analysis_id}: {e}")
+            self.logger.error(f"[ERREUR] Erreur analyse {analysis_id}: {e}")
         
         self.results_cache.append(result)
         return result
@@ -159,7 +159,7 @@ class UnifiedAnalysisPipeline:
         Returns:
             Liste des résultats d'analyse
         """
-        self.logger.info(f"📦 Analyse batch: {len(texts)} textes")
+        self.logger.info(f"[BATCH] Analyse batch: {len(texts)} textes")
         
         if self.config.enable_parallel:
             return await self._analyze_batch_parallel(texts, source_type)
@@ -176,7 +176,7 @@ class UnifiedAnalysisPipeline:
         Returns:
             Liste des résultats d'analyse
         """
-        self.logger.info("🗂️ Analyse de données de corpus")
+        self.logger.info("[CORPUS] Analyse de données de corpus")
         
         texts_to_analyze = []
         
@@ -205,12 +205,12 @@ class UnifiedAnalysisPipeline:
             except Exception as e:
                 if attempt < self.config.retry_count - 1:
                     delay = self.config.retry_delay * (2 ** attempt)
-                    self.logger.warning(f"⚠️ Tentative {attempt + 1} échouée: {e}, retry dans {delay}s")
+                    self.logger.warning(f"[WARNING] Tentative {attempt + 1} échouée: {e}, retry dans {delay}s")
                     await asyncio.sleep(delay)
                 else:
                     # Fallback si activé
                     if self.config.enable_fallback:
-                        self.logger.warning(f"🔄 Activation du fallback pour {mode.value}")
+                        self.logger.warning(f"[FALLBACK] Activation du fallback pour {mode.value}")
                         return await self._fallback_analysis(text, mode)
                     raise
     
@@ -218,25 +218,55 @@ class UnifiedAnalysisPipeline:
         """Analyse authentique via LLM."""
         try:
             # Import dynamique pour éviter les erreurs
-            from config.unified_config import UnifiedConfig, LogicType, MockLevel
+            from config.unified_config import UnifiedConfig, LogicType, MockLevel, AgentType
             from argumentation_analysis.agents.core.informal.informal_agent import InformalAnalysisAgent
+            import semantic_kernel as sk
+            import os
             
             # Configuration selon le mode d'authenticité
             mock_level = MockLevel.NONE if self.config.mock_level == "none" else MockLevel.MINIMAL
             
             analysis_config = UnifiedConfig(
-                logic_type=LogicType.FOL,
+                logic_type=LogicType.PL,  # ← CHANGÉ: Propositional Logic sans Java
+                agents=[AgentType.INFORMAL, AgentType.SYNTHESIS],  # ← CHANGÉ: Exclure FOL_LOGIC
                 mock_level=mock_level,
-                enable_jvm=self.config.require_real_tweety,
+                enable_jvm=False,  # ← CHANGÉ: Désactiver Java pour éviter les complications
                 orchestration_type="unified"
             )
             
-            # Création et exécution de l'agent
-            agent = InformalAnalysisAgent(config=analysis_config.to_dict())
-            await agent.setup_agent_components()
+            # Création du kernel avec service OpenAI configuré
+            kernel = sk.Kernel()
             
-            # Analyse selon le mode
-            analysis_result = await agent.analyze(text[:1000])  # Limite pour performance
+            # Configuration du service OpenAI
+            api_key = os.getenv("OPENAI_API_KEY")
+            if not api_key:
+                self.logger.warning("[API-KEY] OPENAI_API_KEY non trouvée, utilisation fallback")
+                return await self._fallback_analysis(text, mode)
+            
+            # Ajout du service OpenAI au kernel
+            from semantic_kernel.connectors.ai.open_ai import OpenAIChatCompletion
+            
+            kernel.add_service(
+                OpenAIChatCompletion(
+                    service_id="openai",
+                    ai_model_id=self.config.llm_model,
+                    api_key=api_key
+                )
+            )
+            
+            self.logger.info(f"[OPENAI] Service OpenAI configuré avec modèle: {self.config.llm_model}")
+            
+            # Création et exécution de l'agent avec les bons paramètres
+            agent = InformalAnalysisAgent(
+                kernel=kernel,
+                agent_name="PipelineInformalAgent"
+            )
+            
+            # Setup avec un service LLM par défaut (méthode synchrone)
+            agent.setup_agent_components(llm_service_id="openai")
+            
+            # Analyse selon le mode - utiliser la méthode appropriée
+            analysis_result = await agent.analyze_text(text[:1000])  # Limite pour performance
             
             return {
                 "mode": mode.value,
@@ -332,7 +362,7 @@ class UnifiedAnalysisPipeline:
         results = []
         
         for i, text in enumerate(texts):
-            self.logger.info(f"📄 Analyse {i+1}/{len(texts)}")
+            self.logger.info(f"[DOC] Analyse {i+1}/{len(texts)}")
             try:
                 result = await self.analyze_text(text, source_type)
                 results.append(result)

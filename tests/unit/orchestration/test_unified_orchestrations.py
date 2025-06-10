@@ -1,11 +1,5 @@
 
-# Authentic gpt-4o-mini imports (replacing mocks)
-import openai
-from semantic_kernel.contents import ChatHistory
-from semantic_kernel.core_plugins import ConversationSummaryPlugin
-from config.unified_config import UnifiedConfig
-
-﻿#!/usr/bin/env python3
+#!/usr/bin/env python3
 """
 Tests unitaires avancés pour les orchestrations unifiées
 ======================================================
@@ -13,6 +7,13 @@ Tests unitaires avancés pour les orchestrations unifiées
 Suite finale de tests pour ConversationOrchestrator, RealLLMOrchestrator,
 et coordination système complète avec composants authentiques.
 """
+
+# Authentic gpt-4o-mini imports (replacing mocks)
+import openai
+from semantic_kernel.contents import ChatHistory
+from semantic_kernel.core_plugins import ConversationSummaryPlugin
+from config.unified_config import UnifiedConfig
+from unittest.mock import MagicMock, AsyncMock
 
 import pytest
 import asyncio
@@ -256,7 +257,7 @@ class TestRealLLMOrchestrationAdvanced:
     def setup_method(self):
         """Configuration initiale pour chaque test."""
         self.test_text = "L'Ukraine a été créée par la Russie. Donc Poutine a raison."
-        self.mock_llm_service = await self._create_authentic_gpt4o_mini_instance()
+        self.mock_llm_service = MagicMock()
         self.mock_llm_service.invoke = AsyncMock(return_value="Mock LLM response")
     
     @pytest.mark.asyncio
@@ -372,7 +373,7 @@ class TestUnifiedSystemCoordination:
         assert isinstance(conv_result, str)
         
         # Phase 2: Transfert vers orchestration LLM réelle
-        mock_llm = await self._create_authentic_gpt4o_mini_instance()
+        mock_llm = MagicMock()
         real_orchestrator = RealLLMOrchestrator(llm_service=mock_llm)
         
         # Simuler le transfert d'état

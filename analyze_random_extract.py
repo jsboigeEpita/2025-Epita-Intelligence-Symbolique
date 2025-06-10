@@ -12,6 +12,10 @@ import random
 import logging
 from pathlib import Path
 
+# Charger les variables d'environnement depuis .env
+from dotenv import load_dotenv
+load_dotenv()
+
 # Configuration du logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s [%(levelname)s] %(message)s')
 logger = logging.getLogger(__name__)
@@ -117,7 +121,7 @@ async def analyze_random_extract():
 
 async def analyze_text_with_modules(text: str, description: str) -> bool:
     """
-    Analyse un texte avec l'analyseur rhétorique modulaire.
+    Analyse un texte avec le pipeline unifié et GPT-4o-mini.
     
     Args:
         text: Le texte à analyser
@@ -127,49 +131,82 @@ async def analyze_text_with_modules(text: str, description: str) -> bool:
         bool: True si l'analyse a réussi
     """
     try:
-        from scripts.consolidated.universal_rhetorical_analyzer import UniversalRhetoricalAnalyzer, AnalysisConfig, SourceType, WorkflowMode
-        
-        logger.info(f"Lancement de l'analyse: {description}")
-        logger.info(f"Longueur du texte: {len(text)} caractères")
-        
-        # Configuration de l'analyse
-        config = AnalysisConfig(
-            source_type=SourceType.TEXT,
-            workflow_mode=WorkflowMode.ANALYSIS,
-            require_authentic=False,
-            enable_decryption=False,
-            parallel_workers=1
+        from argumentation_analysis.utils.unified_pipeline import (
+            UnifiedAnalysisPipeline, AnalysisConfig, AnalysisMode, SourceType
         )
         
-        # Créer l'analyseur avec la configuration
-        analyzer = UniversalRhetoricalAnalyzer(config)
+        logger.info(f"🚀 Lancement de l'analyse avec GPT-4o-mini: {description}")
+        logger.info(f"📝 Longueur du texte: {len(text)} caractères")
+        
+        # Configuration du modèle depuis .env
+        llm_model = os.getenv("OPENAI_CHAT_MODEL_ID", "gpt-4o-mini")
+        logger.info(f"🤖 Modèle configuré: {llm_model}")
+        
+        # Configuration de l'analyse avec GPT-4o-mini authentique
+        config = AnalysisConfig(
+            analysis_modes=[AnalysisMode.FALLACIES],  # Mode sophismes pour commencer
+            llm_service="openai",
+            llm_model=llm_model,
+            llm_temperature=0.3,
+            require_real_llm=True,  # ← CRITIQUE: Forcer l'utilisation réelle de l'LLM
+            require_real_tweety=False,  # Désactiver TweetyProject pour éviter les erreurs Java
+            enable_fallback=True,
+            detailed_logging=True,
+            retry_count=2,
+            enable_parallel=False  # Mode séquentiel pour debugging
+        )
+        
+        # Créer le pipeline
+        pipeline = UnifiedAnalysisPipeline(config)
         
         # Lancer l'analyse
-        logger.info("Début de l'analyse rhétorique...")
-        results = await analyzer.analyze(text)
+        logger.info("🔥 Début de l'analyse avec GPT-4o-mini authentique...")
+        result = await pipeline.analyze_text(text, SourceType.TEXT)
         
-        # Afficher les résultats
-        logger.info("=== RÉSULTATS DE L'ANALYSE ===")
-        logger.info(f"Source: {description}")
+        # Afficher les résultats détaillés
+        logger.info("🎯 === RÉSULTATS DE L'ANALYSE GPT-4o-mini ===")
+        logger.info(f"📄 Source: {description}")
+        logger.info(f"⏱️ Temps d'exécution: {result.execution_time:.2f}s")
+        logger.info(f"✅ Statut: {result.status}")
         
-        if results.get("fallacies"):
-            logger.info(f"Sophismes détectés: {len(results['fallacies'])}")
-            for fallacy in results["fallacies"][:3]:  # Afficher les 3 premiers
-                logger.info(f"  - {fallacy.get('type', 'N/A')}: {fallacy.get('description', 'N/A')}")
+        if result.errors:
+            logger.error(f"❌ Erreurs: {result.errors}")
         
-        if results.get("sentiment"):
-            sentiment = results["sentiment"]
-            logger.info(f"Sentiment: {sentiment.get('polarity', 'N/A')} (confiance: {sentiment.get('confidence', 'N/A')})")
+        if result.warnings:
+            logger.warning(f"⚠️ Avertissements: {result.warnings}")
         
-        if results.get("analysis_summary"):
-            summary = results["analysis_summary"]
-            logger.info(f"Résumé: {summary}")
+        # Afficher les résultats d'analyse
+        for mode, analysis_result in result.results.items():
+            logger.info(f"\n🔍 === RÉSULTATS {mode.upper()} ===")
+            logger.info(f"🤖 Modèle utilisé: {analysis_result.get('model_used', 'N/A')}")
+            logger.info(f"🎯 Authentique: {analysis_result.get('authentic', False)}")
+            
+            if analysis_result.get('fallacies_detected'):
+                fallacies = analysis_result['fallacies_detected']
+                logger.info(f"🎭 Sophismes détectés: {len(fallacies)}")
+                for fallacy in fallacies:
+                    logger.info(f"  🚩 {fallacy}")
+            
+            if analysis_result.get('result'):
+                logger.info(f"📊 Résultat: {analysis_result['result']}")
+            
+            if analysis_result.get('confidence'):
+                logger.info(f"🎯 Confiance: {analysis_result['confidence']}")
         
-        logger.info("=== FIN DE L'ANALYSE ===")
-        return True
+        # Afficher le résumé de session
+        session_summary = pipeline.get_session_summary()
+        logger.info(f"\n📈 === RÉSUMÉ SESSION ===")
+        logger.info(f"🆔 Session ID: {session_summary['session_id']}")
+        logger.info(f"📊 Taux de succès: {session_summary['success_rate']:.2%}")
+        logger.info(f"⏱️ Temps moyen: {session_summary['average_execution_time']:.2f}s")
+        
+        logger.info("🎉 === FIN DE L'ANALYSE ===")
+        return result.status == "completed"
         
     except Exception as e:
-        logger.error(f"Erreur lors de l'analyse: {e}")
+        logger.error(f"💥 Erreur lors de l'analyse: {e}")
+        import traceback
+        logger.error(f"📋 Traceback: {traceback.format_exc()}")
         return False
 
 if __name__ == "__main__":
