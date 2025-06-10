@@ -1,0 +1,122 @@
+05:07:28 [INFO] [root] Logging configuré avec le niveau INFO.
+05:07:28 [INFO] [root] Logging configuré avec le niveau INFO.
+05:07:28 [INFO] [root] Logging configuré avec le niveau INFO.
+05:07:28 [INFO] [root] Logging configuré avec le niveau INFO.
+05:07:28 [INFO] [Orchestration.AgentPL.Defs] Classe PropositionalLogicPlugin (V10.1) définie.
+05:07:28 [INFO] [Orchestration.AgentPL.Defs] Instructions Système PL_AGENT_INSTRUCTIONS (V10) définies.
+05:07:28 [INFO] [argumentation_analysis.utils.semantic_kernel_compatibility] Module de compatibilité semantic_kernel agents chargé
+05:07:28 [INFO] [argumentation_analysis.utils.semantic_kernel_compatibility] Module de compatibilité semantic_kernel filters chargé
+05:07:28 [INFO] [argumentation_analysis.utils.semantic_kernel_compatibility] Version: semantic_kernel 1.33.0 (compatibilité agents via adaptateur)
+05:07:29 [INFO] [Orchestration.LLM] <<<<< MODULE llm_service.py LOADED >>>>>
+05:07:29 [INFO] [Orchestration.JPype] Variables d'environnement chargées depuis: c:\dev\2025-Epita-Intelligence-Symbolique\argumentation_analysis\.env
+05:07:29 [INFO] [Orchestration.JPype] LIBS_DIR (global) défini sur (primaire): C:\dev\2025-Epita-Intelligence-Symbolique\libs\tweety
+05:07:29 [INFO] [Orchestration.JPype] (OK) JDK portable détecté via chemin par défaut : C:\dev\2025-Epita-Intelligence-Symbolique\libs\portable_jdk\jdk-17.0.11+9
+05:07:29 [INFO] [argumentation_analysis.service_setup] Package 'argumentation_analysis.service_setup' chargé.
+05:07:29 [INFO] [argumentation_analysis.analytics] Package 'argumentation_analysis.analytics' chargé.
+05:07:29 [INFO] [Orchestration.AgentPM.Defs] Plugin PM (vide) défini.
+05:07:29 [INFO] [Orchestration.AgentPM.Defs] Instructions Système PM_INSTRUCTIONS (V9 - Ajout ExtractAgent) définies.
+[OK] create_llm_service imported successfully
+[OK] get_taxonomy_path imported successfully
+05:07:29 [INFO] [argumentation_analysis.core.bootstrap] Project root (from bootstrap.py) added to sys.path: C:\dev\2025-Epita-Intelligence-Symbolique
+05:07:29 [INFO] [argumentation_analysis.orchestration.service_manager] ServiceManager créé avec session_id: badf5dee-57e4-4767-9528-2170fff8b169
+05:07:29 [INFO] [argumentation_analysis.orchestration.service_manager] Initialisation du ServiceManager...
+05:07:29 [INFO] [argumentation_analysis.orchestration.service_manager] Service LLM 'gpt-4o-mini' (gpt-4o-mini) ajouté au kernel.
+05:07:29 [INFO] [argumentation_analysis.orchestration.service_manager] Middleware de communication initialisé
+05:07:29 [INFO] [MessageMiddleware] Channel registered: hierarchical
+05:07:29 [INFO] [argumentation_analysis.orchestration.service_manager] Canal HIERARCHICAL 'hierarchical_main' enregistré dans le middleware.
+05:07:29 [INFO] [argumentation_analysis.orchestration.service_manager] StrategicManager initialisé
+05:07:29 [INFO] [HierarchicalChannel.hierarchical_main] Subscriber tactical_coordinator registered with ID sub-3b2352d7
+05:07:29 [INFO] [argumentation_analysis.orchestration.hierarchical.tactical.coordinator] Abonnement aux directives stratégiques effectué.
+05:07:29 [INFO] [argumentation_analysis.orchestration.service_manager] TacticalManager initialisé
+05:07:29 [INFO] [HierarchicalChannel.hierarchical_main] Subscriber operational_manager registered with ID sub-07211b39
+05:07:29 [INFO] [HierarchicalChannel.hierarchical_main] Subscriber operational_manager_status registered with ID sub-14c01d0a
+05:07:29 [INFO] [OperationalManager] Abonnement aux tâches et messages effectué sur le canal HIERARCHICAL.
+05:07:29 [INFO] [argumentation_analysis.orchestration.service_manager] OperationalManager initialisé
+05:07:29 [INFO] [argumentation_analysis.orchestration.cluedo_orchestrator.CluedoOrchestrator] CluedoOrchestrator initialisé avec un kernel.
+05:07:29 [INFO] [argumentation_analysis.orchestration.service_manager] CluedoOrchestrator initialisé
+05:07:29 [INFO] [argumentation_analysis.orchestration.conversation_orchestrator.ConversationOrchestrator] Mode demo: 3 agents configurés
+05:07:29 [INFO] [argumentation_analysis.orchestration.service_manager] ConversationOrchestrator initialisé
+05:07:29 [INFO] [argumentation_analysis.orchestration.real_llm_orchestrator] RealLLMOrchestrator initialisé
+05:07:29 [INFO] [argumentation_analysis.orchestration.service_manager] RealLLMOrchestrator initialisé avec service LLM du kernel.
+05:07:29 [INFO] [argumentation_analysis.orchestration.service_manager] ServiceManager initialisé avec succès
+INFO:     127.0.0.1:64141 - "GET /api/status HTTP/1.1" 200 OK
+05:07:30 [INFO] [argumentation_analysis.orchestration.service_manager] ServiceManager créé avec session_id: afd64fe0-d42b-4c08-b004-cf33ef78e8c9
+05:07:30 [INFO] [argumentation_analysis.orchestration.service_manager] Initialisation du ServiceManager...
+05:07:30 [INFO] [argumentation_analysis.orchestration.service_manager] Service LLM 'gpt-4o-mini' (gpt-4o-mini) ajouté au kernel.
+05:07:30 [INFO] [argumentation_analysis.orchestration.service_manager] Middleware de communication initialisé
+05:07:30 [INFO] [MessageMiddleware] Channel registered: hierarchical
+05:07:30 [INFO] [argumentation_analysis.orchestration.service_manager] Canal HIERARCHICAL 'hierarchical_main' enregistré dans le middleware.
+05:07:30 [INFO] [argumentation_analysis.orchestration.service_manager] StrategicManager initialisé
+05:07:30 [INFO] [HierarchicalChannel.hierarchical_main] Subscriber tactical_coordinator registered with ID sub-017b78f5
+05:07:30 [INFO] [argumentation_analysis.orchestration.hierarchical.tactical.coordinator] Abonnement aux directives stratégiques effectué.
+05:07:30 [INFO] [argumentation_analysis.orchestration.service_manager] TacticalManager initialisé
+05:07:30 [INFO] [HierarchicalChannel.hierarchical_main] Subscriber operational_manager registered with ID sub-834aaa15
+05:07:30 [INFO] [HierarchicalChannel.hierarchical_main] Subscriber operational_manager_status registered with ID sub-342fd303
+05:07:30 [INFO] [OperationalManager] Abonnement aux tâches et messages effectué sur le canal HIERARCHICAL.
+05:07:30 [INFO] [argumentation_analysis.orchestration.service_manager] OperationalManager initialisé
+05:07:30 [INFO] [argumentation_analysis.orchestration.cluedo_orchestrator.CluedoOrchestrator] CluedoOrchestrator initialisé avec un kernel.
+05:07:30 [INFO] [argumentation_analysis.orchestration.service_manager] CluedoOrchestrator initialisé
+05:07:30 [INFO] [argumentation_analysis.orchestration.conversation_orchestrator.ConversationOrchestrator] Mode demo: 3 agents configurés
+05:07:30 [INFO] [argumentation_analysis.orchestration.service_manager] ConversationOrchestrator initialisé
+05:07:30 [INFO] [argumentation_analysis.orchestration.real_llm_orchestrator] RealLLMOrchestrator initialisé
+05:07:30 [INFO] [argumentation_analysis.orchestration.service_manager] RealLLMOrchestrator initialisé avec service LLM du kernel.
+05:07:30 [INFO] [argumentation_analysis.orchestration.service_manager] ServiceManager initialisé avec succès
+INFO:     127.0.0.1:64149 - "GET /api/status HTTP/1.1" 200 OK
+08:02:14 [INFO] [argumentation_analysis.orchestration.service_manager] ServiceManager créé avec session_id: d3614755-57a3-4504-95a0-f60465632a05
+08:02:14 [INFO] [argumentation_analysis.orchestration.service_manager] Initialisation du ServiceManager...
+08:02:14 [INFO] [argumentation_analysis.orchestration.service_manager] Service LLM 'gpt-4o-mini' (gpt-4o-mini) ajouté au kernel.
+08:02:14 [INFO] [argumentation_analysis.orchestration.service_manager] Middleware de communication initialisé
+08:02:14 [INFO] [MessageMiddleware] Channel registered: hierarchical
+08:02:14 [INFO] [argumentation_analysis.orchestration.service_manager] Canal HIERARCHICAL 'hierarchical_main' enregistré dans le middleware.
+08:02:14 [INFO] [argumentation_analysis.orchestration.service_manager] StrategicManager initialisé
+08:02:14 [INFO] [HierarchicalChannel.hierarchical_main] Subscriber tactical_coordinator registered with ID sub-8723dff7
+08:02:14 [INFO] [argumentation_analysis.orchestration.hierarchical.tactical.coordinator] Abonnement aux directives stratégiques effectué.
+08:02:14 [INFO] [argumentation_analysis.orchestration.service_manager] TacticalManager initialisé
+08:02:14 [INFO] [HierarchicalChannel.hierarchical_main] Subscriber operational_manager registered with ID sub-36ec0f7c
+08:02:14 [INFO] [HierarchicalChannel.hierarchical_main] Subscriber operational_manager_status registered with ID sub-d36c00a1
+08:02:14 [INFO] [OperationalManager] Abonnement aux tâches et messages effectué sur le canal HIERARCHICAL.
+08:02:14 [INFO] [argumentation_analysis.orchestration.service_manager] OperationalManager initialisé
+08:02:14 [INFO] [argumentation_analysis.orchestration.cluedo_orchestrator.CluedoOrchestrator] CluedoOrchestrator initialisé avec un kernel.
+08:02:14 [INFO] [argumentation_analysis.orchestration.service_manager] CluedoOrchestrator initialisé
+08:02:14 [INFO] [argumentation_analysis.orchestration.conversation_orchestrator.ConversationOrchestrator] Mode demo: 3 agents configurés
+08:02:14 [INFO] [argumentation_analysis.orchestration.service_manager] ConversationOrchestrator initialisé
+08:02:14 [INFO] [argumentation_analysis.orchestration.real_llm_orchestrator] RealLLMOrchestrator initialisé
+08:02:14 [INFO] [argumentation_analysis.orchestration.service_manager] RealLLMOrchestrator initialisé avec service LLM du kernel.
+08:02:14 [INFO] [argumentation_analysis.orchestration.service_manager] ServiceManager initialisé avec succès
+08:02:14 [INFO] [argumentation_analysis.orchestration.service_manager] Début d'analyse 7f942a15-1e14-47fd-9349-b09597896664 - Type: comprehensive
+08:02:14 [INFO] [argumentation_analysis.orchestration.service_manager] ServiceManager._run_strategic_analysis appelée pour le texte : 'Il est nécessaire que la logique formelle capture ...'
+08:02:14 [INFO] [argumentation_analysis.orchestration.service_manager] Appel de strategic_manager.initialize_analysis...
+08:02:14 [INFO] [argumentation_analysis.orchestration.hierarchical.strategic.manager] Initialisation d'une nouvelle analyse rhétorique
+08:02:14 [INFO] [argumentation_analysis.orchestration.hierarchical.strategic.manager] Décision stratégique: Initialisation de l'analyse - Analyse préliminaire du texte et définition des objectifs initiaux
+08:02:14 [INFO] [argumentation_analysis.orchestration.service_manager] strategic_manager.initialize_analysis retourné : {'objectives': [{'id': 'obj-1', 'description': 'Identifier les arguments principaux du texte', 'priority': 'high', 'success_criteria': 'Au moins 90% des arguments principaux identifiés'}, {'id': 'obj-2', 'description': 'Détecter les sophismes et fallacies', 'priority': 'high', 'success_criteria': 'Identification précise des sophismes avec justification'}, {'id': 'obj-3', 'description': 'Analyser la structure logique des arguments', 'priority': 'medium', 'success_criteria': 'Formalisation correcte des arguments principaux'}, {'id': 'obj-4', 'description': "Évaluer la cohérence globale de l'argumentation", 'priority': 'medium', 'success_criteria': 'Évaluation quantitative de la cohérence avec justification'}], 'strategic_plan': {'phases': [{'id': 'phase-1', 'name': 'Analyse préliminaire', 'description': 'Identification des éléments clés du texte', 'objectives': ['obj-1'], 'estimated_duration': 'short'}, {'id': 'phase-2', 'name': 'Analyse approfondie', 'description': 'Détection des sophismes et analyse logique', 'objectives': ['obj-2', 'obj-3'], 'estimated_duration': 'medium'}, {'id': 'phase-3', 'name': 'Synthèse et évaluation', 'description': 'Évaluation de la cohérence et synthèse finale', 'objectives': ['obj-4'], 'estimated_duration': 'short'}], 'dependencies': {'phase-2': ['phase-1'], 'phase-3': ['phase-2']}, 'priorities': {'phase-1': 'high', 'phase-2': 'high', 'phase-3': 'medium'}, 'success_criteria': {'phase-1': "Identification d'au moins 5 arguments principaux", 'phase-2': "Détection d'au moins 80% des sophismes", 'phase-3': 'Score de cohérence calculé avec justification'}}}
+08:02:14 [INFO] [argumentation_analysis.orchestration.service_manager] Définition de 4 objectifs stratégiques...
+08:02:14 [INFO] [argumentation_analysis.orchestration.service_manager] Appel de strategic_manager.define_strategic_goal pour l'objectif : obj-1
+08:02:14 [INFO] [argumentation_analysis.orchestration.hierarchical.strategic.manager] Définition du but stratégique: obj-1
+08:02:14 [INFO] [HierarchicalChannel.hierarchical_main] Message command-187667eb sent to tactical_coordinator
+08:02:14 [INFO] [MessageMiddleware] Message sent: command-187667eb via hierarchical
+08:02:14 [INFO] [StrategicAdapter.strategic_manager] Directive new_strategic_goal issued to tactical_coordinator
+08:02:14 [INFO] [argumentation_analysis.orchestration.service_manager] Objectif obj-1 transmis au niveau tactique (via define_strategic_goal).
+08:02:14 [INFO] [argumentation_analysis.orchestration.service_manager] Appel de strategic_manager.define_strategic_goal pour l'objectif : obj-2
+08:02:14 [INFO] [argumentation_analysis.orchestration.hierarchical.strategic.manager] Définition du but stratégique: obj-2
+08:02:14 [INFO] [HierarchicalChannel.hierarchical_main] Message command-611889ef sent to tactical_coordinator
+08:02:14 [INFO] [MessageMiddleware] Message sent: command-611889ef via hierarchical
+08:02:14 [INFO] [StrategicAdapter.strategic_manager] Directive new_strategic_goal issued to tactical_coordinator
+08:02:14 [INFO] [argumentation_analysis.orchestration.service_manager] Objectif obj-2 transmis au niveau tactique (via define_strategic_goal).
+08:02:14 [INFO] [argumentation_analysis.orchestration.service_manager] Appel de strategic_manager.define_strategic_goal pour l'objectif : obj-3
+08:02:14 [INFO] [argumentation_analysis.orchestration.hierarchical.strategic.manager] Définition du but stratégique: obj-3
+08:02:14 [INFO] [HierarchicalChannel.hierarchical_main] Message command-580dbdfa sent to tactical_coordinator
+08:02:14 [INFO] [MessageMiddleware] Message sent: command-580dbdfa via hierarchical
+08:02:14 [INFO] [StrategicAdapter.strategic_manager] Directive new_strategic_goal issued to tactical_coordinator
+08:02:14 [INFO] [argumentation_analysis.orchestration.service_manager] Objectif obj-3 transmis au niveau tactique (via define_strategic_goal).
+08:02:14 [INFO] [argumentation_analysis.orchestration.service_manager] Appel de strategic_manager.define_strategic_goal pour l'objectif : obj-4
+08:02:14 [INFO] [argumentation_analysis.orchestration.hierarchical.strategic.manager] Définition du but stratégique: obj-4
+08:02:14 [INFO] [HierarchicalChannel.hierarchical_main] Message command-00b5cf8b sent to tactical_coordinator
+08:02:14 [INFO] [MessageMiddleware] Message sent: command-00b5cf8b via hierarchical
+08:02:14 [INFO] [StrategicAdapter.strategic_manager] Directive new_strategic_goal issued to tactical_coordinator
+08:02:14 [INFO] [argumentation_analysis.orchestration.service_manager] Objectif obj-4 transmis au niveau tactique (via define_strategic_goal).
+08:02:14 [INFO] [argumentation_analysis.orchestration.service_manager] ServiceManager._run_tactical_analysis appelée pour le texte : 'Il est nécessaire que la logique formelle capture ...'. Options: None
+08:02:14 [WARNING] [argumentation_analysis.orchestration.service_manager] _run_tactical_analysis est un stub et ne fait rien activement pour le moment.
+08:02:14 [INFO] [argumentation_analysis.orchestration.service_manager] ServiceManager._run_operational_analysis appelée pour le texte : 'Il est nécessaire que la logique formelle capture ...'. Options: None
+08:02:14 [WARNING] [argumentation_analysis.orchestration.service_manager] _run_operational_analysis est un stub et ne fait rien activement pour le moment.
+08:02:14 [INFO] [argumentation_analysis.orchestration.service_manager] Analyse 7f942a15-1e14-47fd-9349-b09597896664 terminée avec succès
+INFO:     127.0.0.1:49178 - "POST /api/analyze HTTP/1.1" 200 OK

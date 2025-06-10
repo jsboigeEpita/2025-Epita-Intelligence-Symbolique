@@ -24,6 +24,35 @@ from argumentation_analysis.agents.core.pm.sherlock_enquete_agent import Sherloc
 from argumentation_analysis.agents.core.logic.watson_logic_assistant import WatsonLogicAssistant
 
 
+# Classe Orchestrateur pour le jeu Cluedo
+class CluedoOrchestrator:
+    def __init__(self, kernel: Optional[Kernel] = None, logger_override: Optional[logging.Logger] = None):
+        self.kernel = kernel
+        self.logger = logger_override if logger_override else logging.getLogger(__name__ + ".CluedoOrchestrator")
+        if self.kernel:
+            self.logger.info("CluedoOrchestrator initialisé avec un kernel.")
+        else:
+            self.logger.warning("CluedoOrchestrator initialisé SANS kernel. Certaines fonctionnalités pourraient être limitées.")
+
+    async def start_enquete(
+        self,
+        initial_question: str,
+        history: List[ChatMessageContent] = None,
+        max_iterations: Optional[int] = 10
+    ) -> (List[Dict[str, Any]], EnqueteCluedoState):
+        """
+        Démarre et gère une session d'enquête Cluedo.
+        """
+        self.logger.info(f"Démarrage de l'enquête Cluedo avec la question: {initial_question}")
+        # La fonction run_cluedo_game contient déjà la logique principale.
+        # L'orchestrateur pourrait ajouter de la gestion d'état ou des étapes supplémentaires si nécessaire.
+        return await run_cluedo_game(
+            kernel=self.kernel,
+            initial_question=initial_question,
+            history=history,
+            max_iterations=max_iterations
+        )
+
 class CluedoTerminationStrategy(TerminationStrategy):
     """Stratégie de terminaison personnalisée pour le Cluedo."""
     max_iterations: int = Field(default=10) # Renommé pour compatibilité SK

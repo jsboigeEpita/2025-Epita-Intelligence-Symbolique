@@ -45,8 +45,8 @@ class BackendManager:
         self.fallback_ports = config.get('fallback_ports', [5004, 5005, 5006])
         self.max_attempts = config.get('max_attempts', 5)
         self.timeout_seconds = config.get('timeout_seconds', 30)
-        self.health_endpoint = config.get('health_endpoint', '/api/health')
-        self.env_activation = config.get('env_activation', 
+        self.health_endpoint = config.get('health_endpoint', '/api/status') # Correction: utiliser /api/status
+        self.env_activation = config.get('env_activation',
                                        'powershell -File scripts/env/activate_project_env.ps1')
         
         # État runtime
@@ -92,22 +92,57 @@ class BackendManager:
     async def _start_on_port(self, port: int) -> Dict[str, Any]:
         """Démarre le backend sur un port spécifique"""
         try:
-            # Commande de démarrage directe avec services de fallback
-            cmd = ['python', '-m', self.module, '--port', str(port)]
+            # Nom de l'environnement Conda (à rendre configurable si nécessaire)
+            conda_env_name = "projet-is" # Utilisé pour construire le chemin python_exe
             
-            self.logger.info(f"Démarrage backend: {' '.join(cmd)}")
+            # Construire le chemin vers l'exécutable Python de l'environnement Conda
+            # Ceci est une estimation basée sur les logs précédents.
+            # Idéalement, ce chemin devrait être découvert dynamiquement ou configurable.
+            python_exe_path = str(Path.home() / ".conda" / "envs" / conda_env_name / "python.exe")
             
+            # Vérifier si cet exécutable existe, sinon fallback ou erreur plus explicite.
+            if not Path(python_exe_path).exists():
+                self.logger.error(f"L'exécutable Python pour l'environnement Conda '{conda_env_name}' n'a pas été trouvé à '{python_exe_path}'.")
+                # Fallback vers une tentative de 'python -m uvicorn' si conda n'est pas la méthode principale.
+                # Ou simplement échouer ici. Pour l'instant, on continue avec le chemin construit,
+                # l'erreur Popen le signalera s'il est incorrect.
+                # Une meilleure approche serait de lire la config de l'env_activation.
+                # Pour l'instant, on tente avec le chemin construit.
+                # Si cela échoue, il faudra une méthode plus robuste pour trouver python.exe.
+                # Alternative: utiliser sys.executable si le script principal est déjà lancé avec le bon python.
+                # Mais BackendManager peut être appelé par un autre python.
+                # Tentons avec le chemin construit, c'est le plus probable pour l'environnement de l'utilisateur.
+                pass # On laisse Popen échouer si le chemin est mauvais.
+
+            # Commande de démarrage pour FastAPI avec Uvicorn en utilisant le python.exe de l'env Conda
+            cmd = [python_exe_path, '-m', 'uvicorn', 'api.main:app', '--host', '0.0.0.0', '--port', str(port)]
+            
+            self.logger.info(f"Démarrage backend FastAPI avec Python de Conda: {' '.join(cmd)}")
+            
+            # Créer le répertoire de logs s'il n'existe pas
+            log_dir = Path.cwd() / "logs"
+            log_dir.mkdir(parents=True, exist_ok=True)
+            stdout_log_file = log_dir / f"uvicorn_stdout_{port}.log"
+            stderr_log_file = log_dir / f"uvicorn_stderr_{port}.log"
+
+            self.logger.info(f"Logging stdout de Uvicorn dans: {stdout_log_file}")
+            self.logger.info(f"Logging stderr de Uvicorn dans: {stderr_log_file}")
+
             # Démarrage processus en arrière-plan
             env = os.environ.copy()
-            env['PYTHONPATH'] = str(Path.cwd())  # Assurer que PYTHONPATH inclut le répertoire courant
-            
-            self.process = subprocess.Popen(
-                cmd,
-                stdout=subprocess.DEVNULL,  # Éviter les problèmes d'encodage
-                stderr=subprocess.DEVNULL,
-                cwd=Path.cwd(),
-                env=env
-            )
+            env['PYTHONPATH'] = str(Path.cwd()) + os.pathsep + env.get('PYTHONPATH', '')
+
+            # Ouvrir les fichiers de log pour la redirection
+            with open(stdout_log_file, 'wb') as f_stdout, open(stderr_log_file, 'wb') as f_stderr:
+                self.process = subprocess.Popen(
+                    cmd,
+                    stdout=f_stdout, # Rediriger stdout vers le fichier
+                    stderr=f_stderr, # Rediriger stderr vers le fichier
+                    cwd=Path.cwd(),
+                    env=env,
+                    # text, bufsize, universal_newlines ne sont plus nécessaires si on écrit en binaire dans les fichiers
+                    shell=False
+                )
             
             # Attente démarrage
             backend_ready = await self._wait_for_backend(port)
@@ -156,15 +191,28 @@ class BackendManager:
             try:
                 # Vérifier d'abord si le processus est toujours vivant
                 if self.process and self.process.poll() is not None:
-                    self.logger.error(f"Processus backend terminé prématurément (code: {self.process.returncode})")
-                    # Essayer de lire la sortie disponible (non-bloquant)
+                    return_code = self.process.returncode
+                    self.logger.error(f"Processus backend terminé prématurément (code: {return_code})")
+                    
+                    # Lire stdout et stderr du processus terminé
+                    stdout_output = ""
+                    stderr_output = ""
                     try:
+                        # Utiliser communicate pour éviter les deadlocks si les buffers sont pleins
+                        # stdout_output, stderr_output = self.process.communicate(timeout=1) # communicate ne peut être appelé qu'une fois
+                        # Comme le processus est déjà terminé (poll() is not None), on peut lire directement.
                         if self.process.stdout:
-                            output = self.process.stdout.read()
-                            if output:
-                                self.logger.error(f"Sortie processus: {output}")
-                    except:
-                        pass
+                            stdout_output = "".join(self.process.stdout.readlines()) # Lire ce qui reste
+                        if self.process.stderr:
+                            stderr_output = "".join(self.process.stderr.readlines()) # Lire ce qui reste
+                            
+                        if stdout_output:
+                            self.logger.error(f"Sortie standard du processus backend:\n{stdout_output}")
+                        if stderr_output:
+                            self.logger.error(f"Sortie d'erreur du processus backend:\n{stderr_output}")
+                        
+                    except Exception as e_read:
+                        self.logger.error(f"Erreur lors de la lecture de la sortie du processus backend: {e_read}")
                     return False
                 
                 async with aiohttp.ClientSession() as session:
@@ -179,6 +227,12 @@ class BackendManager:
             await asyncio.sleep(2)
         
         self.logger.error(f"Timeout - Backend non accessible sur {url}")
+        # Si timeout et le processus est toujours là mais ne répond pas, logguer sa sortie aussi
+        if self.process and self.process.poll() is None: # Processus encore en cours
+            self.logger.info("Le processus backend est toujours en cours mais ne répond pas au health check.")
+            # Tenter de lire la sortie non bloquante (peut être vide si rien n'a été écrit récemment)
+            # Note: Cela est délicat avec Popen en mode non bloquant sans threads séparés pour lire les pipes.
+            # Les modifications ci-dessus pour la terminaison prématurée sont plus fiables pour obtenir la sortie.
         return False
     
     async def _is_port_occupied(self, port: int) -> bool:
