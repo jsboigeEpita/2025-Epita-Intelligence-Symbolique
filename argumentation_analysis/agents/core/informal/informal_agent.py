@@ -782,3 +782,5 @@ class InformalAnalysisAgent(BaseAgent):
 
 # Log de chargement
 # logging.getLogger(__name__).debug("Module agents.core.informal.informal_agent chargé.") # Géré par BaseAgent
+# Alias pour compatibilité avec les imports existants
+InformalAgent = InformalAnalysisAgent
