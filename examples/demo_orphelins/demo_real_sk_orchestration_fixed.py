@@ -85,7 +85,8 @@ async def run_simplified_orchestration_demo(texte_a_analyser: str, llm_service):
         # Essayer d'ajouter le message à l'historique
         try:
             # Créer un ChatMessageContent pour l'historique
-            from semantic_kernel.contents import ChatMessageContent, AuthorRole
+            from semantic_kernel.contents import ChatMessageContent
+            from argumentation_analysis.utils.semantic_kernel_compatibility import AuthorRole
             user_message = ChatMessageContent(
                 role=AuthorRole.USER,
                 content=simple_prompt
