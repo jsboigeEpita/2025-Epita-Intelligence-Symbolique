@@ -541,29 +541,174 @@ class OrchestrationServiceManager:
             return {'error': str(e), 'status': 'failed_in_strategic_manager'}
         
     async def _run_tactical_analysis(self, text: str, options: Optional[Dict[str, Any]]) -> Dict[str, Any]:
-        """Lance l'analyse tactique."""
+        """Lance l'analyse tactique avec de vrais appels LLM."""
         self.logger.info(f"ServiceManager._run_tactical_analysis appelée pour le texte : '{text[:50]}...'. Options: {options}")
-        self.logger.warning("_run_tactical_analysis est un stub et ne fait rien activement pour le moment.")
-        # Normalement, cette méthode pourrait être utilisée pour récupérer des résultats tactiques
-        # ou interagir avec le TacticalManager si le flux n'est pas purement événementiel.
-        return {
-            'level': 'tactical',
-            'status': 'stub_called',
-            'message': 'Cette fonction est un placeholder et n\'a pas activement appelé TacticalManager.',
-            'manager': 'TacticalManager'
-        }
+        
+        if not self.tactical_manager:
+            self.logger.error("TacticalManager non initialisé")
+            return {
+                'level': 'tactical',
+                'status': 'error',
+                'message': 'TacticalManager non disponible',
+                'manager': 'TacticalManager'
+            }
+        
+        try:
+            # Utiliser l'API OpenAI async pour les vrais appels LLM non-bloquants
+            import openai
+            import time
+            
+            api_key = os.getenv("OPENAI_API_KEY")
+            if not api_key:
+                self.logger.error("OPENAI_API_KEY non configuré")
+                return {
+                    'level': 'tactical',
+                    'status': 'error',
+                    'message': 'API key non configuré',
+                    'manager': 'TacticalManager'
+                }
+            
+            # Prompt pour l'analyse tactique
+            tactical_prompt = f"""Effectue une analyse tactique du texte suivant en identifiant les arguments, les sophismes potentiels, et la structure rhétorique:
+
+TEXTE À ANALYSER:
+{text}
+
+INSTRUCTIONS:
+1. Identifie les arguments principaux et secondaires
+2. Détecte les sophismes logiques éventuels
+3. Analyse la structure rhétorique
+4. Évalue la cohérence argumentative
+5. Fournis des recommandations tactiques
+
+Réponds au format JSON avec les clés: arguments, sophismes, structure_rhetorique, coherence, recommandations."""
+
+            # Configuration OpenAI standard avec AsyncOpenAI
+            client = openai.AsyncOpenAI(api_key=api_key)
+            model = "gpt-4o-mini"
+            
+            # Mesurer le temps de début
+            start_time = time.time()
+            
+            # Faire l'appel LLM authentique async
+            response = await client.chat.completions.create(
+                model=model,
+                messages=[{"role": "user", "content": tactical_prompt}],
+                max_tokens=1500,
+                temperature=0.3
+            )
+            
+            # Mesurer le temps de fin
+            end_time = time.time()
+            response_time = end_time - start_time
+            
+            llm_result = response.choices[0].message.content if response.choices else "Aucune réponse du LLM"
+            
+            return {
+                'level': 'tactical',
+                'status': 'completed',
+                'llm_response': llm_result,
+                'prompt_used': tactical_prompt,
+                'model': model,
+                'response_time': response_time,
+                'manager': 'TacticalManager',
+                'options': options
+            }
+            
+        except Exception as e:
+            self.logger.error(f"Erreur dans l'analyse tactique: {e}", exc_info=True)
+            return {
+                'level': 'tactical',
+                'status': 'error',
+                'error': str(e),
+                'manager': 'TacticalManager'
+            }
         
     async def _run_operational_analysis(self, text: str, options: Optional[Dict[str, Any]]) -> Dict[str, Any]:
-        """Lance l'analyse opérationnelle."""
+        """Lance l'analyse opérationnelle avec de vrais appels LLM."""
         self.logger.info(f"ServiceManager._run_operational_analysis appelée pour le texte : '{text[:50]}...'. Options: {options}")
-        self.logger.warning("_run_operational_analysis est un stub et ne fait rien activement pour le moment.")
-        # Similaire à _run_tactical_analysis, cette méthode est un placeholder.
-        return {
-            'level': 'operational',
-            'status': 'stub_called',
-            'message': 'Cette fonction est un placeholder et n\'a pas activement appelé OperationalManager.',
-            'manager': 'OperationalManager'
-        }
+        
+        if not self.operational_manager:
+            self.logger.error("OperationalManager non initialisé")
+            return {
+                'level': 'operational',
+                'status': 'error',
+                'message': 'OperationalManager non disponible',
+                'manager': 'OperationalManager'
+            }
+        
+        try:
+            # Utiliser l'API OpenAI async pour les vrais appels LLM non-bloquants
+            import openai
+            import time
+            
+            api_key = os.getenv("OPENAI_API_KEY")
+            if not api_key:
+                self.logger.error("OPENAI_API_KEY non configuré")
+                return {
+                    'level': 'operational',
+                    'status': 'error',
+                    'message': 'API key non configuré',
+                    'manager': 'OperationalManager'
+                }
+            
+            # Prompt pour l'analyse opérationnelle détaillée
+            operational_prompt = f"""Effectue une analyse opérationnelle approfondie du texte suivant en te concentrant sur l'extraction d'éléments concrets et l'identification de patterns:
+
+TEXTE À ANALYSER:
+{text}
+
+INSTRUCTIONS OPÉRATIONNELLES:
+1. Extrais toutes les entités nommées (personnes, lieux, dates, concepts)
+2. Identifie les relations logiques explicites et implicites
+3. Détecte les patterns linguistiques et rhétoriques
+4. Analyse les mécanismes de persuasion utilisés
+5. Extrait les prémisses et conclusions principales
+6. Identifie les biais cognitifs potentiels
+7. Fournis une évaluation de la validité logique
+
+Réponds au format JSON avec les clés: entites, relations, patterns, persuasion, premisses, conclusions, biais, validite_logique."""
+
+            # Configuration OpenAI standard avec AsyncOpenAI
+            client = openai.AsyncOpenAI(api_key=api_key)
+            model = "gpt-4o-mini"
+            
+            # Mesurer le temps de début
+            start_time = time.time()
+            
+            # Faire l'appel LLM authentique async
+            response = await client.chat.completions.create(
+                model=model,
+                messages=[{"role": "user", "content": operational_prompt}],
+                max_tokens=2000,
+                temperature=0.2
+            )
+            
+            # Mesurer le temps de fin
+            end_time = time.time()
+            response_time = end_time - start_time
+            
+            llm_result = response.choices[0].message.content if response.choices else "Aucune réponse du LLM"
+            
+            return {
+                'level': 'operational',
+                'status': 'completed',
+                'llm_response': llm_result,
+                'prompt_used': operational_prompt,
+                'model': model,
+                'response_time': response_time,
+                'manager': 'OperationalManager',
+                'options': options
+            }
+            
+        except Exception as e:
+            self.logger.error(f"Erreur dans l'analyse opérationnelle: {e}", exc_info=True)
+            return {
+                'level': 'operational',
+                'status': 'error',
+                'error': str(e),
+                'manager': 'OperationalManager'
+            }
         
     async def _save_results(self, results: Dict[str, Any]):
         """Sauvegarde les résultats d'analyse."""

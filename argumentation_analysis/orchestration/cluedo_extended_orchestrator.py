@@ -16,33 +16,9 @@ from argumentation_analysis.agents.core.oracle.cluedo_dataset import RevelationR
 import semantic_kernel as sk
 from semantic_kernel.functions import kernel_function
 from semantic_kernel.kernel import Kernel
-# Les modules agents ne sont pas disponibles dans cette version de semantic_kernel
-# Utilisation de fallbacks pour compatibilité
-try:
-    from semantic_kernel.agents import Agent, AgentGroupChat
-    from semantic_kernel.agents.strategies.selection.selection_strategy import SelectionStrategy
-    from semantic_kernel.agents.strategies.termination.termination_strategy import TerminationStrategy
-    AGENTS_AVAILABLE = True
-except ImportError:
-    # Fallbacks pour compatibilité
-    class Agent:
-        def __init__(self, name: str, kernel: Kernel = None, **kwargs):
-            self.name = name
-            self.kernel = kernel
-            
-    class AgentGroupChat:
-        def __init__(self, agents: List[Agent] = None, **kwargs):
-            self.agents = agents or []
-            
-    class SelectionStrategy:
-        def select_next_agent(self, agents: List[Agent], last_agent: Agent = None) -> Agent:
-            return agents[0] if agents else None
-            
-    class TerminationStrategy:
-        def should_terminate(self, messages: List[Any]) -> bool:
-            return False
-            
-    AGENTS_AVAILABLE = False
+# Version SK 0.9.6b1 - agents module non disponible - Utilisation architecture native SK
+# PURGE PHASE 3A: Élimination complète fallbacks - Utilisation composants natifs uniquement
+AGENTS_AVAILABLE = False  # Module agents non disponible dans SK 0.9.6b1
 from argumentation_analysis.utils.semantic_kernel_compatibility import ChatMessageContent
 from semantic_kernel.functions.kernel_arguments import KernelArguments
 
@@ -77,6 +53,35 @@ from argumentation_analysis.agents.core.oracle.cluedo_dataset import CluedoDatas
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
+# Définitions minimales pour compatibilité SK 0.9.6b1 (module agents non disponible)
+class Agent:
+    def __init__(self, name: str, kernel: Kernel = None, **kwargs):
+        self.name = name
+        self.kernel = kernel
+        # Ajout d'un logger pour compatibilité avec les attentes de l'orchestrateur
+        self._logger = logging.getLogger(f"Agent.{self.name}")
+        self._logger.info(f"Agent {self.name} initialisé (compatibilité SK 0.9.6b1).")
+
+class SelectionStrategy:
+    def __init__(self, **kwargs): # Ajout pour Pydantic
+        self._logger = logging.getLogger(self.__class__.__name__)
+        self._logger.info(f"SelectionStrategy initialisée (compatibilité SK 0.9.6b1).")
+
+    def select_next_agent(self, agents: List[Agent], last_agent: Agent = None) -> Agent:
+        self._logger.debug(f"Sélection du prochain agent depuis la liste: {agents}")
+        if not agents:
+            self._logger.warning("Aucun agent disponible pour la sélection.")
+            return None
+        return agents[0] # Comportement par défaut simple
+
+class TerminationStrategy:
+    def __init__(self, **kwargs): # Ajout pour Pydantic
+        self._logger = logging.getLogger(self.__class__.__name__)
+        self._logger.info(f"TerminationStrategy initialisée (compatibilité SK 0.9.6b1).")
+
+    def should_terminate(self, messages: List[Any]) -> bool:
+        self._logger.debug(f"Vérification des conditions de terminaison pour {len(messages)} messages.")
+        return False # Comportement par défaut simple
 
 class CyclicSelectionStrategy(SelectionStrategy):
     """

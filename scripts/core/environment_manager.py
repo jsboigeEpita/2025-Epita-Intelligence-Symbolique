@@ -22,7 +22,15 @@ import shutil # Ajout pour shutil.which
 import platform # Ajout pour la détection OS-spécifique des chemins communs
 from dotenv import load_dotenv, find_dotenv # Ajout pour la gestion .env
 
-from .common_utils import Logger, LogLevel, safe_exit, get_project_root # Import relatif corrigé
+# Import relatif corrigé - gestion des erreurs d'import
+try:
+    from .common_utils import Logger, LogLevel, safe_exit, get_project_root
+except ImportError:
+    # Fallback pour execution directe
+    import sys
+    import os
+    sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+    from common_utils import Logger, LogLevel, safe_exit, get_project_root
 
 
 # --- Début de l'insertion pour sys.path ---
