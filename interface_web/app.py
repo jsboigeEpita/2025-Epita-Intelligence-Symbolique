@@ -42,7 +42,7 @@ except Exception as e:
 
 # Configuration de l'application Flask
 app = Flask(__name__)
-app.secret_key = os.environ.get('SECRET_KEY', 'dev-key-epita-2025')
+app.secret_key = os.environ.get('SECRET_KEY', 'dev-key-EPITA-2025')
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max
 
 # Configuration CORS simple sans dépendance externe
