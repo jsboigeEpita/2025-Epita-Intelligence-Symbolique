@@ -10,7 +10,7 @@ integrate with other services and applications.
 - **POST /v1/fallacy-detection**:
     - Analyzes a given text for logical fallacies.
     - The request body should include the `model` to be used for detection, the
-    `text` to be analyzed.
+    `input` to be analyzed.
     - The response returns a list of detected fallacies (if any), including
     their type, validity of the argument, description, and the specific
     context where the fallacy was found in the input text.
@@ -19,7 +19,7 @@ integrate with other services and applications.
     POST /v1/fallacy-detection
     {
         "model": "fallacy-detector-v1",
-        "text": "If you don't support this policy, you're against progress.",
+        "input": "If you don't support this policy, you're against progress.",
     }
 
 ### Response Example:
@@ -59,19 +59,15 @@ class FallacyDetectionRequest(BaseModel):
     A model to represent the request data for fallacy detection.
 
     This class defines the input data expected when making a request to the
-    `/v1/fallacy-detection` endpoint. It includes the following fields:
-
-    - `model` (str): The name or identifier of the model to be used for fallacy detection.
-                      This allows for future model flexibility if multiple models are available.
-    - `text` (str): The text to analyze for logical fallacies.
+    `/v1/fallacy-detection` endpoint.
 
     Attributes:
     - model: Specifies which model should be used for fallacy detection.
-    - text: The input text that will be analyzed for logical fallacies.
+    - input: The input text that will be analyzed for logical fallacies.
     """
 
     model: str
-    text: str
+    input: str
 
 
 @app.post("/v1/fallacy-detection")
@@ -102,7 +98,9 @@ async def fallacy_detection(request: FallacyDetectionRequest):
             },
         ) from exc
 
-    fallacies = extract_json_from_string(instances(model, request.text, max_tokens=500))
+    fallacies = extract_json_from_string(
+        instances(model, request.input, max_tokens=500)
+    )
 
     if not fallacies:
         raise HTTPException(
