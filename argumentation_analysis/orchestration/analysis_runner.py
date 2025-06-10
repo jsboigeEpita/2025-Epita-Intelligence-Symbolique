@@ -1,4 +1,5 @@
 ﻿# orchestration/analysis_runner.py
+import scripts.core.auto_env  # Auto-activation environnement intelligent
 import sys
 import os
 # Ajout pour résoudre les problèmes d'import de project_core
