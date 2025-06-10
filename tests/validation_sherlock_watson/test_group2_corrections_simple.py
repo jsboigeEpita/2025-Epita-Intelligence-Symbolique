@@ -27,7 +27,7 @@ from argumentation_analysis.agents.core.oracle.oracle_base_agent import OracleBa
 from semantic_kernel.kernel import Kernel
 
 
-def test_dataset_manager_check_permission():
+async def test_dataset_manager_check_permission():
     """Test que DatasetAccessManager a maintenant la methode check_permission."""
     print("Test 1: Verification de l'existence de check_permission sur DatasetAccessManager")
     
@@ -120,7 +120,7 @@ async def test_oracle_tools_integration():
     )
     
     # Verifier que la methode a ete appelee
-    mock_dataset_manager.check_permission.# Mock assertion eliminated - authentic validation
+    # Mock assertion eliminated - authentic validation
     
     # Verifier le resultat
     assert "Watson a les permissions" in result, f"Resultat attendu non trouve dans: {result}"

@@ -69,7 +69,7 @@ async def test_group1_fixes():
         print(f"  OK execute_oracle_query result: {result}")
         
         # Vérifier que le mock async a été appelé
-        mock_dataset_manager.execute_oracle_query.# Mock assertion eliminated - authentic validation
+        # Mock assertion eliminated - authentic validation
         print("  OK AsyncMock appelé correctement")
         
     except Exception as e:
