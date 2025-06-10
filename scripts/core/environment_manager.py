@@ -22,6 +22,17 @@ from pathlib import Path
 from common_utils import Logger, LogLevel, safe_exit, get_project_root
 
 
+# --- Début de l'insertion pour sys.path ---
+# Déterminer la racine du projet (remonter de deux niveaux depuis scripts/core)
+# __file__ est scripts/core/environment_manager.py
+# .parent est scripts/core
+# .parent.parent est scripts
+# .parent.parent.parent est la racine du projet
+_project_root_for_sys_path = Path(__file__).resolve().parent.parent.parent
+if str(_project_root_for_sys_path) not in sys.path:
+    sys.path.insert(0, str(_project_root_for_sys_path))
+# --- Fin de l'insertion pour sys.path ---
+from scripts.core.auto_env import _load_dotenv_intelligent # MODIFIÉ ICI
 class EnvironmentManager:
     """Gestionnaire centralisé des environnements Python/conda"""
     
@@ -34,6 +45,27 @@ class EnvironmentManager:
         """
         self.logger = logger or Logger()
         self.project_root = get_project_root()
+        # Charger .env via _load_dotenv_intelligent
+        # _load_dotenv_intelligent prend (project_root, silent)
+        if _load_dotenv_intelligent(Path(self.project_root), silent=False): # silent=False pour voir les logs
+             self.logger.info(f".env chargé par _load_dotenv_intelligent depuis {self.project_root}")
+        else:
+             self.logger.warning(f"Échec du chargement de .env par _load_dotenv_intelligent depuis {self.project_root}")
+        
+        # Assurer que JAVA_HOME est absolu s'il vient du .env
+        if 'JAVA_HOME' in os.environ: # Vérifier si JAVA_HOME a été chargé
+            java_home_value = os.environ['JAVA_HOME']
+            java_home_path = Path(java_home_value)
+            if not java_home_path.is_absolute():
+                # Le chemin dans .env est relatif à la racine du projet
+                absolute_java_home = (Path(self.project_root) / java_home_path).resolve()
+                if absolute_java_home.exists() and absolute_java_home.is_dir():
+                    os.environ['JAVA_HOME'] = str(absolute_java_home)
+                    self.logger.info(f"JAVA_HOME (de .env) mis à jour en chemin absolu: {os.environ['JAVA_HOME']}")
+                else:
+                    self.logger.warning(f"Le chemin JAVA_HOME (de .env) résolu {absolute_java_home} n'existe pas ou n'est pas un répertoire.")
+            # else: JAVA_HOME est déjà absolu ou n'a pas besoin d'être modifié par ce bloc
+        
         self.default_conda_env = "projet-is"
         self.required_python_version = (3, 8)
         
@@ -169,6 +201,7 @@ class EnvironmentManager:
         
         # Construire la commande conda run
         conda_cmd = ['conda', 'run', '-n', env_name, '--no-capture-output'] + command
+        self.logger.info(f"DEBUG: Commande conda construite: {' '.join(conda_cmd)}") 
         
         self.logger.debug(f"Exécution dans conda '{env_name}': {' '.join(command)}")
         
@@ -306,8 +339,14 @@ class EnvironmentManager:
             self.logger.info(f"Exécution de: {command_to_run}")
             
             try:
-                # Parser la commande (simple split par espaces)
-                cmd_parts = command_to_run.split()
+                # Parser la commande
+                # Si la commande est un .py, on la préfixe par python
+                if command_to_run.endswith(".py"):
+                    cmd_parts = ["python", command_to_run]
+                else:
+                    cmd_parts = command_to_run.split()
+                
+                self.logger.info(f"DEBUG: cmd_parts avant run_in_conda_env: {cmd_parts}") 
                 result = self.run_in_conda_env(cmd_parts, env_name=env_name)
                 return result.returncode
             
@@ -396,14 +435,18 @@ def activate_project_env(command: str = None, env_name: str = "projet-is", logge
 
 def main():
     """Point d'entrée principal pour utilisation en ligne de commande"""
+    temp_logger = Logger(verbose=True) 
+    temp_logger.info(f"DEBUG: sys.argv au début de main(): {sys.argv}")
+
     parser = argparse.ArgumentParser(
         description="Gestionnaire d'environnements Python/conda"
     )
     
     parser.add_argument(
-        '--command', '-c',
+        '--command', '-c', # Option nommée, attendue par activate_project_env.ps1 (version lue)
         type=str,
-        help='Commande à exécuter dans l\'environnement'
+        default=None,
+        help='Commande à exécuter dans l\'environnement (optionnel)'
     )
     
     parser.add_argument(
@@ -425,12 +468,16 @@ def main():
         help='Mode verbeux'
     )
     
-    args = parser.parse_args()
+    args = parser.parse_args() 
     
-    # Configuration du logger
-    logger = Logger(verbose=args.verbose)
+    logger = Logger(verbose=True) # FORCER VERBOSE POUR DEBUG (ou utiliser args.verbose)
+    logger.info("DEBUG: Début de main() dans environment_manager.py (après parsing)")
+    logger.info(f"DEBUG: Args parsés par argparse: {args}")
+    
     manager = EnvironmentManager(logger)
     
+    command_to_run_final = args.command 
+
     if args.check_only:
         # Mode vérification uniquement
         logger.info("Vérification de l'environnement...")
@@ -458,8 +505,9 @@ def main():
     
     else:
         # Mode activation et exécution
+        logger.info(f"DEBUG: Valeur passée comme command_to_run: {command_to_run_final}")
         exit_code = manager.activate_project_environment(
-            command_to_run=args.command,
+            command_to_run=command_to_run_final,
             env_name=args.env_name
         )
         safe_exit(exit_code, logger)
