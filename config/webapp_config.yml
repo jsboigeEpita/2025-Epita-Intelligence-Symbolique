@@ -23,7 +23,7 @@ backend:
   enabled: true
   
   # Module Python à démarrer
-  module: "argumentation_analysis.services.web_api.app"
+  module: "api.main_simple:app"
   
   # Gestion des ports avec failover automatique
   start_port: 5003
@@ -32,7 +32,7 @@ backend:
   timeout_seconds: 30
   
   # Endpoints de surveillance
-  health_endpoint: "/api/status" # Correction: Doit être /api/status
+  health_endpoint: "/health"
   
   # Activation environnement conda
   env_activation: "powershell -File scripts/env/activate_project_env.ps1"

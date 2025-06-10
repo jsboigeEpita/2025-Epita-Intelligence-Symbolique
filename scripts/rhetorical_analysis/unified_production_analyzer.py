@@ -20,9 +20,14 @@ Version: 1.0.0
 Créé: 10/06/2025
 Auteur: Roo
 """
+import os # Déplacé ici
+import sys # Déplacé ici
 
-import os
-import sys
+# Configuration UTF-8 pour la sortie standard et les erreurs
+if sys.stdout.encoding != 'utf-8':
+    sys.stdout.reconfigure(encoding='utf-8')
+if sys.stderr.encoding != 'utf-8':
+    sys.stderr.reconfigure(encoding='utf-8')
 import asyncio
 import logging
 import argparse
@@ -40,19 +45,49 @@ project_root = Path(__file__).resolve().parent.parent.parent
 if str(project_root) not in sys.path:
     sys.path.insert(0, str(project_root))
 
-# Configuration avancée du logging
+# Configuration avancée du logging (déplacée ici AVANT l'activation de l'env)
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s [%(levelname)8s] %(name)s: %(message)s',
     datefmt='%H:%M:%S'
 )
-logger = logging.getLogger("UnifiedProductionAnalyzer")
+logger = logging.getLogger("UnifiedProductionAnalyzer_Global") # Nom différent pour éviter conflit potentiel
 
+# Auto-activation environnement au démarrage
+try:
+    _current_script_path_upa = Path(__file__).resolve()
+    _project_root_upa = _current_script_path_upa.parent.parent.parent # Remonter de scripts/rhetorical_analysis
+    if str(_project_root_upa) not in sys.path:
+        sys.path.insert(0, str(_project_root_upa))
+    
+    from scripts.core.environment_manager import auto_activate_env
+    
+    logger.info("[UPA] Tentative d'auto-activation de l'environnement conda 'projet-is'...")
+    # Correction: suppression de project_root_path car non supporté par la signature de auto_activate_env
+    # La fonction auto_activate_env devrait utiliser son propre mécanisme pour déterminer la racine du projet si nécessaire.
+    if auto_activate_env("projet-is", silent=False):
+        logger.info("[UPA] Environnement 'projet-is' auto-activé pour UPA.")
+    else:
+        logger.warning("[UPA] Impossible d'auto-activer l'environnement 'projet-is' pour UPA.")
+    
+    # Recharger dotenv au cas où l'activation de l'env l'aurait affecté ou pour être sûr
+    from dotenv import load_dotenv
+    if load_dotenv(project_root / ".env"): # S'assurer de charger depuis la racine du projet
+         logger.info("[UPA] Fichier .env rechargé après tentative d'activation de l'environnement.")
+    else:
+         logger.warning("[UPA] Fichier .env non trouvé à la racine après tentative d'activation.")
 
+except Exception as e_env_act:
+    logger.error(f"[UPA_ENV_ERROR] Erreur lors de l'auto-activation de l'environnement pour UPA: {e_env_act}")
+    logger.warning("[UPA_ENV_WARN] Poursuite sans auto-activation explicite par UPA...")
+
+# L'import de dotenv et load_dotenv() était déjà là, je le déplace ici pour qu'il soit après l'activation de l'env.
+# from dotenv import load_dotenv # Déjà importé ci-dessus
+# load_dotenv() # Déjà appelé ci-dessus
 class LogicType(Enum):
     """Types de logique supportés avec fallback automatique"""
     FOL = "fol"
-    PL = "propositional" 
+    PL = "propositional"
     MODAL = "modal"
 
 
@@ -453,8 +488,15 @@ class DependencyValidator:
         
         try:
             import jpype1 as jpype
+            # S'assurer que la JVM est démarrée avant de vérifier son état
             if not jpype.isJVMStarted():
-                errors.append("JVM TweetyProject non démarrée")
+                try:
+                    jpype.startJVM(jpype.getDefaultJVMPath(), convertStrings=False)
+                    self.logger.info("JVM démarrée avec succès par DependencyValidator.")
+                except Exception as e:
+                    errors.append(f"Impossible de démarrer la JVM pour TweetyProject: {e}")
+            if not jpype.isJVMStarted() and not any("Impossible de démarrer la JVM" in err for err in errors): # Revérifier après tentative de démarrage
+                errors.append("JVM TweetyProject non démarrée (après tentative)")
         except ImportError:
             errors.append("JPype1 non installé - requis pour TweetyProject")
             
