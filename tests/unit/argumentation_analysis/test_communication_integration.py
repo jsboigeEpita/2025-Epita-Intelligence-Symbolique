@@ -12,6 +12,7 @@ import threading
 import time
 import uuid
 import logging
+import random
 from unittest.mock import MagicMock, patch
 import pytest
 
@@ -696,9 +697,9 @@ class TestCommunicationIntegration(unittest.TestCase):
 
 
 @pytest.fixture
-async def async_test_environment():
-    """Fixture pour initialiser l'environnement de test asynchrone."""
-    logger.info("Setting up async test environment")
+def sync_test_environment():
+    """Fixture pour initialiser l'environnement de test synchrone."""
+    logger.info("Setting up sync test environment")
     
     # Créer le middleware
     middleware = MessageMiddleware()
@@ -713,7 +714,7 @@ async def async_test_environment():
     middleware.register_channel(data_channel)
     
     # Attendre avant enregistrement pour éviter les race conditions
-    await asyncio.sleep(0.1)
+    time.sleep(0.1)
     
     # Initialiser les protocoles
     middleware.initialize_protocols()
@@ -723,7 +724,7 @@ async def async_test_environment():
     tactical_adapter = TacticalAdapter("tactical-agent-1", middleware)
     operational_adapter = OperationalAdapter("operational-agent-1", middleware)
     
-    logger.info("Async test environment setup complete")
+    logger.info("Sync test environment setup complete")
     
     # Yield de l'environnement pour les tests
     yield {
@@ -737,45 +738,49 @@ async def async_test_environment():
     }
     
     # Code de teardown
-    logger.info("Tearing down async test environment")
+    logger.info("Tearing down sync test environment")
     
-    # Phase 2: Cleanup AsyncIO proper avec gestion des tâches
+    # Phase 2: Cleanup synchrone avec gestion des tâches
     try:
-        # Annuler toutes les tâches en cours
-        current_task = asyncio.current_task()
-        all_tasks = asyncio.all_tasks()
-        pending_tasks = [task for task in all_tasks if not task.done() and task != current_task]
-        
-        if pending_tasks:
-            logger.info(f"Cancelling {len(pending_tasks)} pending tasks")
-            for task in pending_tasks:
-                task.cancel()
-            
-            # Attendre que les tâches se terminent avec un timeout
-            try:
-                await asyncio.wait_for(
-                    asyncio.gather(*pending_tasks, return_exceptions=True),
-                    timeout=2.0
-                )
-            except asyncio.TimeoutError:
-                logger.warning("Some tasks did not terminate within timeout")
+        # Obtenir la boucle d'événements si elle existe
+        loop = None
+        try:
+            loop = asyncio.get_event_loop()
+            if loop.is_running():
+                # Annuler toutes les tâches en cours
+                pending_tasks = [task for task in asyncio.all_tasks(loop) if not task.done()]
+                if pending_tasks:
+                    logger.info(f"Cancelling {len(pending_tasks)} pending tasks")
+                    for task in pending_tasks:
+                        task.cancel()
+                    # Attendre que les tâches se terminent proprement avec timeout
+                    try:
+                        loop.run_until_complete(asyncio.wait_for(
+                            asyncio.gather(*pending_tasks, return_exceptions=True),
+                            timeout=2.0
+                        ))
+                    except asyncio.TimeoutError:
+                        logger.warning("Some tasks did not terminate within timeout")
+        except RuntimeError:
+            # Pas de boucle d'événements active, ce qui est normal pour les tests synchrones
+            pass
     except Exception as e:
-        logger.warning(f"Error during async cleanup: {e}")
+        logger.warning(f"Error during sync cleanup: {e}")
     
     # Arrêter proprement le middleware
     middleware.shutdown()
     
     # Attendre un peu pour que tout se termine
-    await asyncio.sleep(0.5)
+    time.sleep(0.5)
     
-    logger.info("Async test environment teardown complete")
+    logger.info("Sync test environment teardown complete")
     
 @pytest.mark.asyncio
-async def test_async_request_response(async_test_environment):
+async def test_async_request_response(sync_test_environment):
     """Test de la communication asynchrone par requête-réponse."""
     logger.info("Starting async test_async_request_response")
     
-    env = async_test_environment
+    env = sync_test_environment
     middleware = env['middleware']
     tactical_adapter = env['tactical_adapter']
     
@@ -905,11 +910,11 @@ async def test_async_request_response(async_test_environment):
         middleware.request_response.send_request_async = original_send_request_async
     
 @pytest.mark.asyncio
-async def test_async_parallel_requests(async_test_environment):
+async def test_async_parallel_requests(sync_test_environment):
     """Test de l'envoi parallèle de requêtes asynchrones (version simplifiée)."""
     logger.info("Starting async test_async_parallel_requests")
     
-    env = async_test_environment
+    env = sync_test_environment
     tactical_adapter = env['tactical_adapter']
     
     # Version simplifiée pour éviter les blocages

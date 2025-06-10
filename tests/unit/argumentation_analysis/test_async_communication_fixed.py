@@ -40,7 +40,7 @@ logger = logging.getLogger("AsyncTests")
 
 
 @pytest.fixture
-async def test_environment():
+def test_environment():
     """Fixture pour initialiser l'environnement de test."""
     logger.info("Setting up test environment")
     
@@ -56,8 +56,7 @@ async def test_environment():
     middleware.register_channel(collaboration_channel)
     middleware.register_channel(data_channel)
     
-    # Initialiser les protocoles avec un verrou AsyncIO
-    await asyncio.sleep(0.1)  # Race condition fix: attendre avant enregistrement
+    # Initialiser les protocoles
     middleware.initialize_protocols()
     
     # Créer les adaptateurs pour les agents
@@ -87,9 +86,6 @@ async def test_environment():
     
     # Arrêter proprement le middleware
     middleware.shutdown()
-    
-    # Attendre un peu pour que tout se termine
-    await asyncio.sleep(0.5)
     
     logger.info("Test environment teardown complete")
     
