@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+﻿# -*- coding: utf-8 -*-
 """
 Utilitaires communs pour les modules de démonstration EPITA
 Architecture modulaire - Intelligence Symbolique

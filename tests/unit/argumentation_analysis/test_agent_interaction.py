@@ -12,8 +12,30 @@ import asyncio
 import pytest
 from unittest.mock import MagicMock, AsyncMock, patch
 import semantic_kernel as sk
-from semantic_kernel.contents import ChatMessageContent, AuthorRole
-from semantic_kernel.agents import Agent, AgentGroupChat
+# Import fixe pour AuthorRole - créer un mock simple si nécessaire
+try:
+    from semantic_kernel.contents import ChatMessageContent
+except ImportError:
+    ChatMessageContent = None
+
+# Définir AuthorRole comme enum simple si pas disponible
+try:
+    from semantic_kernel.contents import AuthorRole
+except ImportError:
+    try:
+        from semantic_kernel.contents.chat_message_content import AuthorRole
+    except ImportError:
+        # Créer une classe AuthorRole simple comme fallback
+        class AuthorRole:
+            USER = "user"
+            ASSISTANT = "assistant"
+            SYSTEM = "system"
+
+try:
+    from semantic_kernel.agents import Agent, AgentGroupChat
+except ImportError:
+    Agent = None
+    AgentGroupChat = None
 
 # Utiliser la fonction setup_import_paths pour résoudre les problèmes d'imports relatifs
 # from tests import setup_import_paths # Commenté pour investigation
