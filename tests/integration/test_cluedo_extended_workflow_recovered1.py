@@ -19,7 +19,7 @@ from typing import Dict, Any, List, Tuple
 from datetime import datetime
 
 from semantic_kernel.kernel import Kernel
-from argumentation_analysis.utils.semantic_kernel_compatibility import ChatMessageContent
+from semantic_kernel.contents.chat_message_content import ChatMessageContent
 
 # Imports des orchestrateurs (adaptés v2.1.0)
 from argumentation_analysis.orchestration.cluedo_orchestrator import run_cluedo_game

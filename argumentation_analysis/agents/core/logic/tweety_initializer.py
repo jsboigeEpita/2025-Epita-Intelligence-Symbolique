@@ -119,50 +119,16 @@ class TweetyInitializer:
             classpath = [str(p) for p in classpath_entries]
             logger.info(f"Calculated Classpath: {classpath}")
 
-            # Vérification environnement de test pour éviter Access Violations
-            import sys
-            is_test_env = (
-                "pytest" in sys.modules or
-                "PYTEST_CURRENT_TEST" in os.environ or
-                os.environ.get("FORCE_JPYPE_MOCK", "false").lower() == "true"
-            )
-            
-            if is_test_env:
-                logger.info("Environnement de test détecté - utilisation des mocks JPype")
-                # Force le passage au mode mock pour éviter Access Violations
-                if 'tests.mocks.jpype_setup' not in sys.modules:
-                    from tests.mocks.jpype_setup import setup_jpype_mocks
-                    setup_jpype_mocks()
-                TweetyInitializer._jvm_started = True
-                logger.info("Mocks JPype configurés avec succès.")
-                return
-            
             if not jpype.isJVMStarted():
                 logger.info("Starting JVM...")
-                try:
-                    # Solutions éprouvées pour éviter Access Violations
-                    jpype.startJVM(
-                        jpype.getDefaultJVMPath(),
-                        f"-Djava.class.path={os.pathsep.join(classpath)}", # Utilisation de os.pathsep
-                        "-Xmx1g",  # Limite mémoire raisonnable
-                        "-Xms256m",  # Mémoire initiale
-                        "-XX:+UseG1GC",  # Garbage collector stable
-                        "-XX:MaxMetaspaceSize=256m",  # Limite Metaspace
-                        "-Dfile.encoding=UTF-8",  # Encoding explicite
-                        convertStrings=False,
-                        ignoreUnrecognized=False
-                    )
-                    TweetyInitializer._jvm_started = True
-                    logger.info("JVM started successfully.")
-                except Exception as e:
-                    logger.error(f"Échec d'initialisation JVM: {e}")
-                    logger.info("Fallback vers le mode mock JPype...")
-                    # Force le passage au mode mock en cas d'échec JVM
-                    import sys
-                    if 'tests.mocks.jpype_setup' not in sys.modules:
-                        from tests.mocks.jpype_setup import setup_jpype_mocks
-                        setup_jpype_mocks()
-                    raise
+                jpype.startJVM(
+                    jpype.getDefaultJVMPath(),
+                    "-ea",
+                    f"-Djava.class.path={os.pathsep.join(classpath)}", # Utilisation de os.pathsep
+                    convertStrings=False
+                )
+                TweetyInitializer._jvm_started = True
+                logger.info("JVM started successfully.")
             else:
                 logger.info("JVM was already started by another component.")
                 TweetyInitializer._jvm_started = True
@@ -239,24 +205,6 @@ class TweetyInitializer:
         """Initializes components for Propositional Logic."""
         if not TweetyInitializer._jvm_started:
             self._start_jvm()
-        
-        # Vérification environnement de test pour éviter Access Violations
-        import sys
-        is_test_env = (
-            "pytest" in sys.modules or
-            "PYTEST_CURRENT_TEST" in os.environ or
-            os.environ.get("FORCE_JPYPE_MOCK", "false").lower() == "true"
-        )
-        
-        if is_test_env:
-            logger.info("Environnement de test détecté - utilisation des mocks pour PL components")
-            # Créer des mocks pour les composants PL
-            from unittest.mock import MagicMock
-            TweetyInitializer._pl_reasoner = MagicMock(name="pl_reasoner_mock")
-            TweetyInitializer._pl_parser = MagicMock(name="pl_parser_mock")
-            logger.info("PL components mocks configurés avec succès.")
-            return TweetyInitializer._pl_parser, TweetyInitializer._pl_reasoner
-        
         try:
             logger.debug("Initializing PL components...")
             # Remplacer SatReasoner par SimplePlReasoner qui a une méthode isConsistent plus fiable via JPype
@@ -272,24 +220,6 @@ class TweetyInitializer:
         """Initializes components for First-Order Logic."""
         if not TweetyInitializer._jvm_started:
             self._start_jvm()
-        
-        # Vérification environnement de test pour éviter Access Violations
-        import sys
-        is_test_env = (
-            "pytest" in sys.modules or
-            "PYTEST_CURRENT_TEST" in os.environ or
-            os.environ.get("FORCE_JPYPE_MOCK", "false").lower() == "true"
-        )
-        
-        if is_test_env:
-            logger.info("Environnement de test détecté - utilisation des mocks pour FOL components")
-            # Créer des mocks pour les composants FOL
-            from unittest.mock import MagicMock
-            TweetyInitializer._fol_parser = MagicMock(name="fol_parser_mock")
-            # TweetyInitializer._fol_reasoner = MagicMock(name="fol_reasoner_mock")
-            logger.info("FOL components mocks configurés avec succès.")
-            return TweetyInitializer._fol_parser
-        
         try:
             logger.debug("Initializing FOL components...")
             TweetyInitializer._fol_parser = jpype.JClass("org.tweetyproject.logics.fol.parser.FolParser")()
@@ -306,24 +236,6 @@ class TweetyInitializer:
         """Initializes components for Modal Logic."""
         if not TweetyInitializer._jvm_started:
             self._start_jvm()
-        
-        # Vérification environnement de test pour éviter Access Violations
-        import sys
-        is_test_env = (
-            "pytest" in sys.modules or
-            "PYTEST_CURRENT_TEST" in os.environ or
-            os.environ.get("FORCE_JPYPE_MOCK", "false").lower() == "true"
-        )
-        
-        if is_test_env:
-            logger.info("Environnement de test détecté - utilisation des mocks pour Modal Logic components")
-            # Créer des mocks pour les composants Modal Logic
-            from unittest.mock import MagicMock
-            TweetyInitializer._modal_parser = MagicMock(name="modal_parser_mock")
-            # TweetyInitializer._modal_reasoner = MagicMock(name="modal_reasoner_mock")
-            logger.info("Modal Logic components mocks configurés avec succès.")
-            return TweetyInitializer._modal_parser
-        
         try:
             logger.debug("Initializing Modal Logic components...")
             # Modal logic might have different types (K, S4, S5 etc.)

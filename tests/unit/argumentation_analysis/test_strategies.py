@@ -11,8 +11,7 @@ try:
 except ImportError:
     # Fallback si les agents ne sont pas disponibles
     Agent = None
-from semantic_kernel.contents import ChatMessageContent
-from argumentation_analysis.utils.semantic_kernel_compatibility import AuthorRole
+from semantic_kernel.contents import ChatMessageContent, AuthorRole
 from argumentation_analysis.core.strategies import SimpleTerminationStrategy, DelegatingSelectionStrategy, BalancedParticipationStrategy
 from argumentation_analysis.core.shared_state import RhetoricalAnalysisState
 # from tests.async_test_case import AsyncTestCase # Suppression de l'import
