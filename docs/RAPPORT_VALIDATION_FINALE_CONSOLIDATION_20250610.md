@@ -62,7 +62,7 @@ AVANT (42 scripts dispersés)  →  APRÈS (3 scripts consolidés)
 ├── scripts/main/analyze_*       
 ├── [39+ autres scripts...]      
                                  ↓
-                                 scripts/consolidated/
+                                 scripts/rhetorical_analysis/
                                  ├── unified_production_analyzer.py ✅ 
                                  ├── educational_system_integrated.py
                                  └── comprehensive_workflow_processor.py

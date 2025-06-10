@@ -51,13 +51,13 @@ python start_webapp.py
 #### 1. **🚀 Analyseur de Production Unifié** - *673 lignes (-45%)*
 ```bash
 # Analyse standard en production
-python scripts/consolidated/unified_production_analyzer.py "votre texte" \
+python scripts/rhetorical_analysis/unified_production_analyzer.py "votre texte" \
   --orchestration-type unified \
   --analysis-modes unified \
   --mock-level none
 
 # Interface CLI complète (40+ paramètres préservés)
-python scripts/consolidated/unified_production_analyzer.py --help
+python scripts/rhetorical_analysis/unified_production_analyzer.py --help
 ```
 - **Rôle :** Façade CLI principale pour analyse rhétorique en production
 - **Architecture :** Délégation au pipeline unifié central
@@ -66,13 +66,13 @@ python scripts/consolidated/unified_production_analyzer.py --help
 #### 2. **🎓 Système Éducatif EPITA** - *487 lignes*
 ```bash
 # Démonstration EPITA interactive
-python scripts/consolidated/educational_showcase_system.py \
+python scripts/rhetorical_analysis/educational_showcase_system.py \
   --demo-mode interactive \
   --agents sherlock watson \
   --conversation-capture
 
 # Corpus chiffré pédagogique
-python scripts/consolidated/educational_showcase_system.py \
+python scripts/rhetorical_analysis/educational_showcase_system.py \
   --corpus-decryption-demo \
   --epita-config
 ```
@@ -83,13 +83,13 @@ python scripts/consolidated/educational_showcase_system.py \
 #### 3. **📊 Processeur de Workflow Compréhensif** - *990 lignes*
 ```bash
 # Traitement corpus chiffré
-python scripts/consolidated/comprehensive_workflow_processor.py \
+python scripts/rhetorical_analysis/comprehensive_workflow_processor.py \
   --corpus-encrypted data/corpus_chiffre.enc \
   --workflow-mode full \
   --batch-processing
 
 # Workflow batch standard
-python scripts/consolidated/comprehensive_workflow_processor.py \
+python scripts/rhetorical_analysis/comprehensive_workflow_processor.py \
   --input-directory corpus/ \
   --parallel-processing
 ```
@@ -121,14 +121,14 @@ python scripts/consolidated/comprehensive_workflow_processor.py \
 ### 📋 **Documentation Complète**
 
 - **📊 Rapport Final :** [RAPPORT_FINAL_ARCHITECTURE_CENTRALISEE.md](docs/RAPPORT_FINAL_ARCHITECTURE_CENTRALISEE.md)
-- **🏗️ Guide Architecture :** [README_ARCHITECTURE_CENTRALE.md](scripts/consolidated/README_ARCHITECTURE_CENTRALE.md)
+- **🏗️ Guide Architecture :** [README_ARCHITECTURE_CENTRALE.md](scripts/rhetorical_analysis/README_ARCHITECTURE_CENTRALE.md)
 - **🔄 Migration Legacy :** Interface CLI préservée à 100% - Aucun changement nécessaire
 
 ### ✅ **Nettoyage Accompli**
 
 - **51 éléments archivés** : Scripts et répertoires obsolètes
 - **2.03 MB libérés** : Espace disque récupéré
-- **Structure finale :** `scripts/consolidated/` + utilitaires essentiels
+- **Structure finale :** `scripts/rhetorical_analysis/` + utilitaires essentiels
 - **Archive :** `archived_scripts/obsolete_migration_2025/`
 
 ### 🎯 **Avantages Architecture Centralisée**

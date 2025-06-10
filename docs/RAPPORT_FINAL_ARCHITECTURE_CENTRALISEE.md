@@ -31,9 +31,9 @@
 | **Maintenance** | Fragmentée | Centralisée | **Unifié** |
 
 ### Scripts Consolidés Finaux
-1. **[`unified_production_analyzer.py`](scripts/consolidated/unified_production_analyzer.py)** - 673 lignes (-45%)
-2. **[`educational_showcase_system.py`](scripts/consolidated/educational_showcase_system.py)** - 487 lignes
-3. **[`comprehensive_workflow_processor.py`](scripts/consolidated/comprehensive_workflow_processor.py)** - 990 lignes
+1. **[`unified_production_analyzer.py`](scripts/rhetorical_analysis/unified_production_analyzer.py)** - 673 lignes (-45%)
+2. **[`educational_showcase_system.py`](scripts/rhetorical_analysis/educational_showcase_system.py)** - 487 lignes
+3. **[`comprehensive_workflow_processor.py`](scripts/rhetorical_analysis/comprehensive_workflow_processor.py)** - 990 lignes
 
 ### Architecture Pipeline Unifié
 - **Point central** : [`unified_orchestration_pipeline.py`](argumentation_analysis/pipelines/unified_orchestration_pipeline.py)
@@ -195,7 +195,7 @@ $ python test_comprehensive_migration.py
 ### ✅ **Corpus Chiffré Déchiffrable**
 ```bash
 # Test déchiffrement corpus réussi
-$ python scripts/consolidated/comprehensive_workflow_processor.py --corpus-encrypted
+$ python scripts/rhetorical_analysis/comprehensive_workflow_processor.py --corpus-encrypted
 ✓ Déchiffrement corpus automatique
 ✓ Analyse workflow complète
 ✓ Traçabilité orchestration
@@ -205,7 +205,7 @@ $ python scripts/consolidated/comprehensive_workflow_processor.py --corpus-encry
 ### ✅ **Configuration EPITA Validée**
 ```bash
 # Test configuration éducative EPITA
-$ python scripts/consolidated/educational_showcase_system.py --demo-mode
+$ python scripts/rhetorical_analysis/educational_showcase_system.py --demo-mode
 ✓ Mode conversationnel Sherlock/Watson
 ✓ Capture conversation agentielle
 ✓ Interface pédagogique active
@@ -219,25 +219,25 @@ $ python scripts/consolidated/educational_showcase_system.py --demo-mode
 ### **1. Script Principal - Production**
 ```bash
 # Analyse production authentique (recommandé)
-python scripts/consolidated/unified_production_analyzer.py "votre texte" \
+python scripts/rhetorical_analysis/unified_production_analyzer.py "votre texte" \
   --orchestration-type unified \
   --analysis-modes unified \
   --mock-level none
 
 # Interface CLI complète préservée (40+ paramètres)
-python scripts/consolidated/unified_production_analyzer.py --help
+python scripts/rhetorical_analysis/unified_production_analyzer.py --help
 ```
 
 ### **2. Script Éducatif - EPITA**
 ```bash
 # Démonstration éducative interactive
-python scripts/consolidated/educational_showcase_system.py \
+python scripts/rhetorical_analysis/educational_showcase_system.py \
   --demo-mode interactive \
   --agents sherlock watson \
   --conversation-capture
 
 # Configuration cours EPITA
-python scripts/consolidated/educational_showcase_system.py \
+python scripts/rhetorical_analysis/educational_showcase_system.py \
   --epita-config \
   --pedagogical-mode
 ```
@@ -245,13 +245,13 @@ python scripts/consolidated/educational_showcase_system.py \
 ### **3. Script Workflow - Corpus**
 ```bash
 # Traitement corpus chiffré
-python scripts/consolidated/comprehensive_workflow_processor.py \
+python scripts/rhetorical_analysis/comprehensive_workflow_processor.py \
   --corpus-encrypted data/corpus_chiffre.enc \
   --workflow-mode full \
   --batch-processing
 
 # Workflow standard
-python scripts/consolidated/comprehensive_workflow_processor.py \
+python scripts/rhetorical_analysis/comprehensive_workflow_processor.py \
   --input-directory corpus/ \
   --output-directory results/ \
   --parallel-processing
@@ -308,7 +308,7 @@ python scripts/consolidated/comprehensive_workflow_processor.py \
 ### **Validation Corpus Chiffré**
 ```bash
 # Accès corpus chiffré validé
-$ python scripts/consolidated/comprehensive_workflow_processor.py \
+$ python scripts/rhetorical_analysis/comprehensive_workflow_processor.py \
     --test-decryption
 ✓ Déchiffrement automatique réussi
 ✓ Accès données sensibles sécurisé
@@ -328,7 +328,7 @@ $ python scripts/consolidated/comprehensive_workflow_processor.py \
 ### **Corpus Pédagogique Accessible**
 ```bash
 # Mode démonstration EPITA avec corpus chiffré
-python scripts/consolidated/educational_showcase_system.py \
+python scripts/rhetorical_analysis/educational_showcase_system.py \
   --epita-demo \
   --corpus-decryption-demo \
   --agents-conversation \
