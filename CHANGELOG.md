@@ -7,6 +7,40 @@ et ce projet adhère au [Versioning Sémantique](https://semver.org/lang/fr/).
 
 ---
 
+## [2.1.0] - 2025-06-10
+
+### 🧪 Finalisation : Tests d'Intégration et Documentation Professionnelle
+
+#### ✅ Ajouts
+- **Nouveau dossier `tests/integration/`** avec suite complète de tests d'intégration :
+  - `test_sherlock_watson_demo_integration.py` - Tests end-to-end démo principale
+  - `test_cluedo_oracle_integration.py` - Tests Oracle Cluedo avec révélations automatiques
+  - `test_agents_logiques_integration.py` - Tests agents logiques avec détection sophistiques
+  - `test_orchestration_finale_integration.py` - Tests orchestration multi-workflows
+- **Tests d'intégration complets** couvrant tous les points d'entrée critiques
+- **Validation end-to-end** avec gestion fallback pour environnements partiels
+- **Tests de conformité** anti-mock intégrés dans chaque module
+
+#### 📝 Améliorations Documentation
+- **Langage professionnel** : Suppression des mentions "garantie d'authenticité"
+- **Terminologie sobre** : Remplacement par "fonctionnel", "opérationnel", "production-ready"
+- **Focus fonctionnalités** : Mise en avant des capacités techniques plutôt que des aspects marketing
+- **README.md nettoyé** : Langage plus professionnel et technique
+
+#### 🔧 Améliorations Techniques
+- **Tests autonomes** : Chaque test fonctionne indépendamment avec fallbacks
+- **Gestion d'erreurs robuste** : Skip automatique en cas de configuration manquante
+- **Validation infrastructure** : Tests environnement OpenAI et Semantic Kernel
+- **Métriques de performance** : Suivi durée et taux succès des tests
+
+#### 📊 Couverture Tests
+- **4 modules de tests d'intégration** nouveaux (285 lignes/module en moyenne)
+- **Tests end-to-end** pour chaque démo principale
+- **Validation complète** sans dépendances externes obligatoires
+- **Documentation technique** mise à jour
+
+---
+
 ## [2.0.0] - 2025-06-10
 
 ### 🚀 Changements Majeurs

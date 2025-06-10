@@ -243,7 +243,7 @@ class CluedoGameEngine:
     def _generate_oracle_cards(self, suspects: List[str], armes: List[str], lieux: List[str], solution: Dict[str, str]) -> List[str]:
         """Génération cartes Oracle (exclut solution secrète)"""
         all_cards = suspects + armes + lieux
-        solution_cards = [solution["coupable"], solution["arme"], solution["lieu"]]
+        solution_cards = [solution["suspect"], solution["arme"], solution["lieu"]]
         
         # Oracle possède cartes qui ne sont PAS la solution
         available_cards = [card for card in all_cards if card not in solution_cards]
