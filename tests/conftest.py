@@ -67,8 +67,9 @@ if not logging.getLogger().handlers: # Si le root logger n'a pas de handlers, ba
 else:
     _conftest_setup_logger.info("Configuration globale du logging déjà présente ou appliquée par un autre module.")
 # --- Début Patching JPype Mock au niveau module si nécessaire ---
-_SHOULD_USE_REAL_JPYPE = os.environ.get('USE_REAL_JPYPE', 'false').lower() in ('true', '1')
-_conftest_setup_logger.info(f"conftest.py: USE_REAL_JPYPE={os.environ.get('USE_REAL_JPYPE', 'false')}, _SHOULD_USE_REAL_JPYPE={_SHOULD_USE_REAL_JPYPE}")
+# Modification pour utiliser le vrai JPype par défaut si USE_REAL_JPYPE n'est pas définie.
+_SHOULD_USE_REAL_JPYPE = os.environ.get('USE_REAL_JPYPE', 'true').lower() in ('true', '1')
+_conftest_setup_logger.info(f"conftest.py: USE_REAL_JPYPE={os.environ.get('USE_REAL_JPYPE', 'true')}, _SHOULD_USE_REAL_JPYPE={_SHOULD_USE_REAL_JPYPE}")
 
 if not _SHOULD_USE_REAL_JPYPE:
     _conftest_setup_logger.info("conftest.py: Application du mock JPype au niveau module dans sys.modules.")
