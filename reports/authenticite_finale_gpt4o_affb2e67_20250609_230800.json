@@ -1,0 +1,50 @@
+{
+  "test_session": {
+    "id": "affb2e67",
+    "timestamp": "20250609_230649",
+    "objective": "Prouver authenticité système via appels API réels"
+  },
+  "tests": {
+    "direct_api": {
+      "success": true,
+      "model": "gpt-4o-mini",
+      "latency_ms": 15074.432373046875,
+      "tokens_used": 877,
+      "response_length": 3171,
+      "authenticity_score": 4051,
+      "authenticity_markers": {
+        "mentions_test_id": true,
+        "mentions_timestamp": false,
+        "has_reasoning": true,
+        "response_length": 3171,
+        "latency_realistic": true,
+        "token_usage": 877
+      },
+      "trace": {
+        "test_id": "affb2e67",
+        "timestamp": "2025-06-09T23:07:05.329830",
+        "prompt_hash": "c3a004f5ae7c55d1",
+        "model": "gpt-4o-mini",
+        "latency_ms": 15074.432373046875,
+        "tokens_used": 877,
+        "response_length": 3171,
+        "authenticity_markers": {
+          "mentions_test_id": true,
+          "mentions_timestamp": false,
+          "has_reasoning": true,
+          "response_length": 3171,
+          "latency_realistic": true,
+          "token_usage": 877
+        },
+        "full_response": "Investigation ID: affb2e67\n\nPour résoudre ce mystère de la disparition au laboratoire de physique quantique, nous devons examiner chaque élément de l'affaire avec la rigueur d'un esprit logique.\n\n1. **Les suspects** :\n   - **Dr. Heisenberg** : Spécialiste des incertitudes. Sa recherche est centrée sur les limites de la mesure et la manière dont la connaissance d'un système affecte son état. Cela pourrait indiquer une tendance à manipuler des données ou des résultats.\n   - **Prof. Schrödinger** : Expert en superposition. Sa théorie du chat de Schrödinger illustre le concept de superposition quantique, où un système peut exister dans plusieurs états à la fois jusqu'à ce qu'il soit observé. Cela pourrait le rendre capable de dissimuler ou de cacher des éléments dans un état indéterminé.\n   - **Dr. Einstein** : Théoricien de la relativité. Bien qu'il soit connu pour sa théorie sur la perception du temps et de l'espace, il pourrait également avoir des motivations différentes, mais moins liées à la physique quantique.\n\n2. **Indices** :\n   - **Équation incomplète au tableau** : Cela pourrait indiquer que l'un des suspects a tenté de dissimuler une théorie ou un résultat. L'incomplétude suggère une intention de créer un désordre ou de cacher quelque chose d'important.\n   - **Particule manquante dans l'accélérateur** : Une particule disparue pourrait indiquer une manipulation délibérée de l'équipement ou une expérience qui a mal tourné. Cela pourrait aussi signifier que quelqu'un a tenté de voler ou de cacher un élément important pour ses propres recherches.\n   - **Chat quantique absent** : Cet indice fait référence à la célèbre expérience de pensée de Schrödinger. L'absence du « chat » pourrait symboliser un état de non-observation, ce qui pourrait être le résultat d'une intervention intentionnelle.\n\n### Analyse logique :\n\nD'après les indices, plusieurs éléments se combinent. La disparition de la particule dans l'accélérateur pourrait très bien être la cause de l'échec d'une expérience. L'équation incomplète au tableau suggère que quelqu'un a tenté de brouiller les pistes ou d'empêcher d'autres de comprendre ce qui s'est passé. \n\nLe Dr. Heisenberg, avec son expertise en incertitudes, pourrait avoir voulu désorienter le laboratoire pour protéger un secret ou une découverte. Cependant, l'absence du chat quantique nous dirige vers le Prof. Schrödinger, qui pourrait avoir utilisé cette métaphore pour dissimuler une expérience ou une vérité sur une particule.\n\n### Conclusion :\n\nIl semble que le Prof. Schrödinger soit le plus probablement responsable de l'incident. Son expertise en superposition et sa capacité à penser en termes de probabilités lui auraient permis de manipuler la situation. Il aurait pu créer une situation où la particule manquante était réellement dans un état de superposition, et l'équation incomplète serait une diversion pour empêcher les autres de découvrir la vérité.\n\nAinsi, je conclus que le Prof. Schrödinger est le principal suspect, ayant orchestré la disparition d'une particule pour mener à bien une expérience secrète, tout en laissant des indices pour brouiller les pistes.\n\nInvestigation ID: affb2e67."
+      },
+      "authenticity": "AUTHENTIC"
+    },
+    "orchestrateur": {
+      "success": false,
+      "error": "'builtin_function_or_method' object is not subscriptable",
+      "authenticity": "ERROR"
+    }
+  },
+  "final_authenticity_score": 50.0
+}
