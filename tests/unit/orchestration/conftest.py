@@ -8,6 +8,7 @@ Configuration pytest locale pour les tests d'orchestration.
 
 import pytest
 import sys
+import os
 import logging
 from pathlib import Path
 
@@ -19,14 +20,30 @@ project_root = Path(__file__).parent.parent.parent.parent
 sys.path.insert(0, str(project_root))
 
 # INTÉGRATION AUTO_ENV - CRITIQUE POUR ÉVITER LES ENVIRONNEMENTS GLOBAUX
+# Assurer l'activation automatique de l'environnement projet avant tous les tests
 try:
-    from scripts.core.auto_env import ensure_env
-    ensure_env()
-    print("[OK] Environnement projet active via auto_env")
+    # Import direct par chemin absolu pour éviter les problèmes d'import
+    import sys
+    scripts_core_path = project_root / "scripts" / "core"
+    if str(scripts_core_path) not in sys.path:
+        sys.path.insert(0, str(scripts_core_path))
+    
+    from auto_env import ensure_env
+    success = ensure_env(silent=False)
+    
+    if success:
+        print("[OK AUTO_ENV] Environnement projet active avec succes")
+        print(f"[INFO] Python: {sys.executable}")
+        print(f"[INFO] Environnement conda: {os.environ.get('CONDA_DEFAULT_ENV', 'Non defini')}")
+    else:
+        print("[WARN AUTO_ENV] Activation en mode degrade - continuez dans l'environnement actuel")
+        
 except ImportError as e:
-    print(f"[WARNING] Auto_env non disponible: {e}")
+    print(f"[ERROR AUTO_ENV] Module auto_env non disponible: {e}")
+    print("[INFO] Tests continueront dans l'environnement actuel")
 except Exception as e:
-    print(f"[WARNING] Erreur auto_env: {e}")
+    print(f"[ERROR AUTO_ENV] Erreur lors de l'activation: {e}")
+    print("[INFO] Tests continueront dans l'environnement actuel")
 
 @pytest.fixture(scope="session", autouse=True)
 def setup_test_environment():

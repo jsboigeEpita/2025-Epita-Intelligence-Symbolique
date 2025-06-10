@@ -23,6 +23,7 @@ import os
 import sys
 from pathlib import Path
 
+
 def ensure_env(env_name: str = "projet-is", silent: bool = True) -> bool:
     """
     One-liner auto-activateur d'environnement avec chargement .env
@@ -49,8 +50,7 @@ def ensure_env(env_name: str = "projet-is", silent: bool = True) -> bool:
             sys.path.insert(0, str(scripts_core))
         
         # 2. AUTO-ACTIVATION CONDA
-        from scripts.core.environment_manager import auto_activate_env
-        conda_activated = auto_activate_env(env_name, silent)
+        conda_activated = _auto_activate_conda_env(env_name, silent)
         
         if not silent and dotenv_loaded:
             print(f"[OK] .env chargé + conda activé: {conda_activated}")
@@ -64,9 +64,60 @@ def ensure_env(env_name: str = "projet-is", silent: bool = True) -> bool:
         return False
 
 
+def _update_conda_path_from_env(silent: bool = True) -> bool:
+    """
+    Met à jour le PATH système avec le chemin conda depuis la variable CONDA_PATH
+    
+    Args:
+        silent: Mode silencieux
+        
+    Returns:
+        bool: True si PATH mis à jour avec succès
+    """
+    try:
+        conda_path = os.environ.get('CONDA_PATH', '')
+        if not conda_path:
+            if not silent:
+                print("[INFO] CONDA_PATH non défini dans .env")
+            return False
+        
+        # Diviser les chemins (séparés par ;)
+        conda_paths = [p.strip() for p in conda_path.split(';') if p.strip()]
+        
+        # Obtenir le PATH actuel
+        current_path = os.environ.get('PATH', '')
+        path_elements = current_path.split(os.pathsep)
+        
+        # Ajouter les chemins conda au début si pas déjà présents
+        updated = False
+        for conda_dir in reversed(conda_paths):  # Reversed pour maintenir l'ordre
+            if conda_dir not in path_elements:
+                path_elements.insert(0, conda_dir)
+                updated = True
+                if not silent:
+                    print(f"[CONDA] Ajout au PATH: {conda_dir}")
+        
+        if updated:
+            # Mettre à jour le PATH
+            new_path = os.pathsep.join(path_elements)
+            os.environ['PATH'] = new_path
+            if not silent:
+                print("[CONDA] PATH mis à jour avec les chemins conda")
+            return True
+        else:
+            if not silent:
+                print("[CONDA] PATH déjà configuré pour conda")
+            return True
+            
+    except Exception as e:
+        if not silent:
+            print(f"[WARN] Erreur mise à jour PATH conda: {e}")
+        return False
+
+
 def _load_dotenv_intelligent(project_root: Path, silent: bool = True) -> bool:
     """
-    Charge le fichier .env de manière intelligente
+    Charge le fichier .env de manière intelligente et met à jour le PATH conda
     
     Args:
         project_root: Racine du projet
@@ -85,14 +136,20 @@ def _load_dotenv_intelligent(project_root: Path, silent: bool = True) -> bool:
             if env_path:
                 if not silent:
                     print(f"[OK] Chargement .env trouvé: {env_path}")
-                return load_dotenv(env_path, override=False)  # Ne pas override les vars existantes
+                loaded = load_dotenv(env_path, override=False)  # Ne pas override les vars existantes
+                if loaded:
+                    _update_conda_path_from_env(silent)
+                return loaded
             else:
                 # Fallback: chercher dans project_root
                 env_path = project_root / '.env'
                 if env_path.exists():
                     if not silent:
                         print(f"[OK] Chargement .env: {env_path}")
-                    return load_dotenv(str(env_path), override=False)
+                    loaded = load_dotenv(str(env_path), override=False)
+                    if loaded:
+                        _update_conda_path_from_env(silent)
+                    return loaded
                 else:
                     if not silent:
                         print("[INFO] Fichier .env non trouvé")
@@ -125,6 +182,8 @@ def _load_dotenv_intelligent(project_root: Path, silent: bool = True) -> bool:
                             if key and key not in os.environ:
                                 os.environ[key] = value
                 
+                # Après chargement .env, mettre à jour le PATH conda
+                _update_conda_path_from_env(silent)
                 return True
             else:
                 if not silent:
@@ -134,6 +193,121 @@ def _load_dotenv_intelligent(project_root: Path, silent: bool = True) -> bool:
     except Exception as e:
         if not silent:
             print(f"[WARN] Erreur chargement .env: {e}")
+        return False
+
+
+def _auto_activate_conda_env(env_name: str = "projet-is", silent: bool = True) -> bool:
+    """
+    Auto-activation intelligente de l'environnement conda
+    
+    Args:
+        env_name: Nom de l'environnement conda
+        silent: Mode silencieux
+    
+    Returns:
+        True si environnement actif/activé
+    """
+    try:
+        import subprocess
+        import json
+        
+        # Vérifier si l'environnement est déjà actif
+        current_env = os.environ.get('CONDA_DEFAULT_ENV', '')
+        if current_env == env_name:
+            if not silent:
+                print(f"[OK] Environnement '{env_name}' déjà actif")
+            return True
+        
+        # Vérifier si conda est disponible
+        try:
+            result = subprocess.run(
+                ['conda', '--version'],
+                capture_output=True,
+                text=True,
+                timeout=10
+            )
+            if result.returncode != 0:
+                if not silent:
+                    print(f"[ERROR] Conda non disponible")
+                return False
+        except (subprocess.SubprocessError, FileNotFoundError):
+            if not silent:
+                print(f"[ERROR] Conda non disponible")
+            return False
+        
+        # Obtenir la liste des environnements conda
+        try:
+            result = subprocess.run(
+                ['conda', 'info', '--envs', '--json'],
+                capture_output=True,
+                text=True,
+                timeout=30
+            )
+            
+            if result.returncode == 0:
+                env_data = json.loads(result.stdout)
+                env_path = None
+                
+                for env_dir in env_data.get('envs', []):
+                    if Path(env_dir).name == env_name:
+                        env_path = env_dir
+                        break
+                
+                if env_path:
+                    # Activer vraiment l'environnement en modifiant le PATH
+                    env_bin_path = os.path.join(env_path, 'Scripts')  # Windows
+                    if not os.path.exists(env_bin_path):
+                        env_bin_path = os.path.join(env_path, 'bin')  # Unix
+                    
+                    if os.path.exists(env_bin_path):
+                        # Mettre le chemin de l'environnement en premier dans le PATH
+                        current_path = os.environ.get('PATH', '')
+                        path_parts = current_path.split(os.pathsep)
+                        
+                        # Retirer les anciens chemins conda s'ils existent
+                        path_parts = [p for p in path_parts if not ('conda' in p.lower() and 'envs' in p.lower())]
+                        
+                        # Ajouter le nouveau chemin en premier
+                        path_parts.insert(0, env_bin_path)
+                        os.environ['PATH'] = os.pathsep.join(path_parts)
+                        
+                        # Configurer les variables d'environnement conda
+                        os.environ['CONDA_DEFAULT_ENV'] = env_name
+                        os.environ['CONDA_PREFIX'] = env_path
+                        
+                        # Variables d'environnement du projet
+                        project_root = str(Path(__file__).parent.parent.parent.absolute())
+                        os.environ['PYTHONIOENCODING'] = 'utf-8'
+                        os.environ['PYTHONPATH'] = project_root
+                        os.environ['PROJECT_ROOT'] = project_root
+                        
+                        if not silent:
+                            print(f"[INFO] Auto-activation de l'environnement '{env_name}'...")
+                            print(f"[CONDA] PATH mis à jour: {env_bin_path}")
+                            print(f"[OK] Environnement '{env_name}' auto-actif")
+                        
+                        return True
+                    else:
+                        if not silent:
+                            print(f"[ERROR] Répertoire bin/Scripts non trouvé: {env_bin_path}")
+                        return False
+                else:
+                    if not silent:
+                        print(f"[ERROR] Environnement '{env_name}' non trouvé")
+                    return False
+            else:
+                if not silent:
+                    print(f"[ERROR] Impossible d'obtenir les infos conda: {result.stderr}")
+                return False
+                
+        except Exception as e:
+            if not silent:
+                print(f"[ERROR] Erreur lors de l'obtention du chemin conda: {e}")
+            return False
+        
+    except Exception as e:
+        if not silent:
+            print(f"❌ Erreur auto-activation: {e}")
         return False
 
 
