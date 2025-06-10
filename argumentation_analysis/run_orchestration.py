@@ -48,7 +48,7 @@ def setup_logging(verbose: bool = False) -> None:
     
     # Garder INFO pour l'orchestration et les agents
     logging.getLogger("Orchestration").setLevel(level)
-    logging.getLogger("semantic_kernel.agents").setLevel(level)
+    # logging.getLogger("semantic_kernel.agents").setLevel(level) # Module inexistant
     
     logging.info("Logging configuré pour l'orchestration.")
 
