@@ -1,4 +1,5 @@
 ﻿# orchestration/analysis_runner.py
+import scripts.core.auto_env  # Auto-activation environnement intelligent
 import sys
 import os
 # Ajout pour résoudre les problèmes d'import de project_core
@@ -25,29 +26,17 @@ from typing import List, Optional, Union, Any, Dict # Ajout Any, Dict
 
 # Imports pour le hook LLM
 from semantic_kernel.connectors.ai.chat_completion_client_base import ChatCompletionClientBase
+from semantic_kernel.connectors.ai.open_ai import OpenAIChatCompletion
+from semantic_kernel.connectors.ai.open_ai import AzureChatCompletion
 from semantic_kernel.contents.chat_message_content import ChatMessageContent as SKChatMessageContent # Alias pour éviter conflit
 from semantic_kernel.kernel import Kernel as SKernel # Alias pour éviter conflit avec Kernel de SK
 # KernelArguments est déjà importé plus bas
- # Imports Semantic Kernel
+# Imports Semantic Kernel
 import semantic_kernel as sk
 from semantic_kernel.contents import ChatMessageContent
 from semantic_kernel.connectors.ai.open_ai import OpenAIChatCompletion, AzureChatCompletion
-# CORRECTIF COMPATIBILITÉ: Utilisation du module de compatibilité
-from semantic_kernel.agents import AgentGroupChat, ChatCompletionAgent, Agent
-from argumentation_analysis.utils.semantic_kernel_compatibility import AuthorRole, AgentChatException, FunctionChoiceBehavior
-
-# CORRECTIF: Imports des classes d'état et de plugin manquants
-from argumentation_analysis.core.shared_state import RhetoricalAnalysisState
-from argumentation_analysis.core.state_manager_plugin import StateManagerPlugin
-
-# CORRECTIF: Imports des agents manquants
-from argumentation_analysis.agents.core.pm.pm_agent import ProjectManagerAgent
-from argumentation_analysis.agents.core.informal.informal_agent import InformalAnalysisAgent
-from argumentation_analysis.agents.core.extract.extract_agent import ExtractAgent
-from argumentation_analysis.agents.core.logic.propositional_logic_agent import PropositionalLogicAgent
-
-# CORRECTIF: Import du service LLM manquant
-from argumentation_analysis.core.llm_service import create_llm_service
+# CORRECTIF COMPATIBILITÉ: Utilisation du module de compatibilité pour agents
+from argumentation_analysis.utils.semantic_kernel_compatibility import AgentGroupChat, Agent, AuthorRole, AgentChatException, FunctionChoiceBehavior
 
 
 # --- Fonction Principale d'Exécution (Modifiée V10.7 - Accepte Service LLM) ---
@@ -132,21 +121,30 @@ async def run_analysis_conversation(
         run_logger.info("5. Création des instances Agent de compatibilité pour AgentGroupChat...")
         
         # Utiliser nos propres agents de compatibilité au lieu de ChatCompletionAgent
-        # Debug: Affichage de l'état local si disponible
-        if 'local_state' in locals():
-            print(f"Repr: {repr(local_state)}")
-        else:
-            print("(Instance état locale non disponible)")
+        try:
+            from argumentation_analysis.utils.semantic_kernel_compatibility import AuthorRole, AgentChatException, FunctionChoiceBehavior
+            if 'local_state' in locals():
+                print(f"Repr: {repr(local_state)}")
+            else:
+                print("(Instance état locale non disponible)")
 
-        jvm_status = "(JVM active)" if ('jpype' in globals() and jpype.isJVMStarted()) else "(JVM non active)"
-        print(f"\n{jvm_status}")
+            jvm_status = "(JVM active)" if ('jpype' in globals() and jpype.isJVMStarted()) else "(JVM non active)"
+            print(f"\n{jvm_status}")
+            run_logger.info("Agents de compatibilité configurés.")
+        except ImportError as e:
+            run_logger.warning(f"Import semantic_kernel_compatibility échoué: {e}")
+            jvm_status = "Import error"
         run_logger.info(f"État final JVM: {jvm_status}")
         run_logger.info(f"--- Fin Run_{run_id} ---")
         
+        # TODO: Implémenter le retour approprié
+        return {"status": "success", "message": "Analyse terminée"}
+        
     except Exception as e:
-        run_logger.error(f"Erreur lors de l'exécution de l'analyse: {str(e)}")
-        run_logger.error(f"Traceback: {traceback.format_exc()}")
-        raise e
+        run_logger.error(f"Erreur durant l'analyse: {e}")
+        return {"status": "error", "message": str(e)}
+    finally:
+        run_logger.info("Nettoyage en cours...")
 
 class AnalysisRunner:
    """

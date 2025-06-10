@@ -128,36 +128,40 @@ class OperationalManager:
                 # Ajouter la tâche à la file d'attente
                 asyncio.create_task(self._process_task_async(task_data, message.sender))
         
-        # S'abonner aux tâches opérationnelles
-        self.middleware.get_channel(ChannelType.HIERARCHICAL).subscribe(
-            subscriber_id="operational_manager",
-            callback=handle_task,
-            filter_criteria={
-                "recipient": "operational_manager",
-                "type": MessageType.COMMAND,
-                "sender_level": AgentLevel.TACTICAL
-            }
-        )
-        
-        # S'abonner aux demandes de statut
-        def handle_status_request(message: Message) -> None:
-            request_type = message.content.get("request_type")
+        hierarchical_channel = self.middleware.get_channel(ChannelType.HIERARCHICAL)
+
+        if hierarchical_channel:
+            # S'abonner aux tâches opérationnelles
+            hierarchical_channel.subscribe(
+                subscriber_id="operational_manager",
+                callback=handle_task,
+                filter_criteria={
+                    "recipient": "operational_manager",
+                    "type": MessageType.COMMAND,
+                    "sender_level": AgentLevel.TACTICAL
+                }
+            )
             
-            if request_type == "operational_status":
-                # Envoyer le statut opérationnel
-                asyncio.create_task(self._send_operational_status(message.sender))
-        
-        self.middleware.get_channel(ChannelType.HIERARCHICAL).subscribe(
-            subscriber_id="operational_manager_status",
-            callback=handle_status_request,
-            filter_criteria={
-                "recipient": "operational_manager",
-                "type": MessageType.REQUEST,
-                "content.request_type": "operational_status"
-            }
-        )
-        
-        self.logger.info("Abonnement aux tâches et messages effectué")
+            # S'abonner aux demandes de statut
+            def handle_status_request(message: Message) -> None:
+                request_type = message.content.get("request_type")
+                
+                if request_type == "operational_status":
+                    # Envoyer le statut opérationnel
+                    asyncio.create_task(self._send_operational_status(message.sender))
+            
+            hierarchical_channel.subscribe(
+                subscriber_id="operational_manager_status",
+                callback=handle_status_request,
+                filter_criteria={
+                    "recipient": "operational_manager",
+                    "type": MessageType.REQUEST,
+                    "content.request_type": "operational_status"
+                }
+            )
+            self.logger.info("Abonnement aux tâches et messages effectué sur le canal HIERARCHICAL.")
+        else:
+            self.logger.error("Impossible de s'abonner aux tâches et messages: Canal HIERARCHICAL non trouvé dans le middleware.")
     
     async def _process_task_async(self, task: Dict[str, Any], sender_id: str) -> None:
         """

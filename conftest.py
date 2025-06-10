@@ -7,6 +7,9 @@ import pytest # Importé plus haut pour être disponible globalement
 import jpype
 import jpype.imports # Assurer que jpype.imports est disponible
 
+# Auto-activation environnement intelligent (one-liner)
+import scripts.core.auto_env  # Auto-activation environnement intelligent
+
 # Charger .env le plus tôt possible, dès l'import de ce conftest.py racine
 # Ceci est fait avant que pytest ne charge les conftest.py des sous-répertoires ou les modules de test.
 _DOTENV_LOADED_SUCCESSFULLY = False

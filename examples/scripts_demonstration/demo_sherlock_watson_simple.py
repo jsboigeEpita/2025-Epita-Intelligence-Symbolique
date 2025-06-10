@@ -13,6 +13,9 @@ Démonstration basée sur les résultats de validation réels:
 Cette démonstration montre les fonctionnalités core validées.
 """
 
+# ===== AUTO-ACTIVATION ENVIRONNEMENT =====
+import scripts.core.auto_env  # Auto-activation environnement intelligent
+# =========================================
 import sys
 import json
 from datetime import datetime

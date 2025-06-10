@@ -8,6 +8,13 @@ Ce module fournit GroupChatOrchestration qui coordonne les interactions
 entre plusieurs agents dans un contexte de groupe chat.
 """
 
+# ===== AUTO-ACTIVATION ENVIRONNEMENT =====
+try:
+    import scripts.core.auto_env  # Auto-activation environnement intelligent
+except ImportError:
+    # Dans le contexte des tests, auto_env peut déjà être activé
+    pass
+# =========================================
 import logging
 from typing import Dict, List, Any, Optional
 from datetime import datetime

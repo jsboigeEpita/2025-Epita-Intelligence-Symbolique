@@ -15,6 +15,12 @@ from flask_cors import CORS
 import threading
 import time
 
+# AUTO_ENV: Activation automatique environnement
+try:
+    import scripts.core.auto_env  # Auto-activation environnement intelligent
+except ImportError:
+    print("[WARNING] auto_env non disponible - environnement non activé")
+
 # Configuration logging
 logging.basicConfig(
     level=logging.INFO,
