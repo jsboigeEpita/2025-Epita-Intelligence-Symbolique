@@ -113,11 +113,12 @@ class EpitaDemoConsolidator:
                 cmd = f'powershell -c "cd {self.project_root}; python {self.demo_principal} {mode_args}"'
                 
                 result = subprocess.run(
-                    cmd, 
-                    shell=True, 
-                    capture_output=True, 
-                    text=True, 
+                    cmd,
+                    shell=True,
+                    capture_output=True,
+                    text=True,
                     encoding='utf-8',
+                    errors='replace',
                     timeout=timeout
                 )
                 
@@ -221,7 +222,7 @@ class EpitaDemoConsolidator:
     
     def creer_tests_integration(self) -> Dict[str, Any]:
         """Crée des tests d'intégration pour la démo EPITA."""
-        print("\n🧪 CRÉATION DES TESTS D'INTÉGRATION")
+        print("\n[TEST] CRÉATION DES TESTS D'INTÉGRATION")
         print("=" * 60)
         
         tests_integration = {
@@ -231,17 +232,17 @@ class EpitaDemoConsolidator:
         }
         
         # Test 1: Validation de l'architecture modulaire
-        print("📝 Test 1: Architecture modulaire")
+        print("[TEST] Test 1: Architecture modulaire")
         architecture_test = self.valider_architecture_modulaire()
         tests_integration["validations"]["architecture"] = architecture_test
         
         # Test 2: Validation des configurations
-        print("📝 Test 2: Configurations YAML")  
+        print("[TEST] Test 2: Configurations YAML")
         config_test = self.valider_configurations()
         tests_integration["validations"]["configurations"] = config_test
         
         # Test 3: Validation des modules
-        print("📝 Test 3: Modules de démonstration")
+        print("[TEST] Test 3: Modules de démonstration")
         modules_test = self.valider_modules_demo()
         tests_integration["validations"]["modules"] = modules_test
         

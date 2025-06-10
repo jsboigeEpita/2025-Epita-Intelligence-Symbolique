@@ -10,8 +10,8 @@ import logging
 
 # Import des composants existants
 from .shared_state import RhetoricalAnalysisState
-from ..pipelines.unified_text_analysis import UnifiedTextAnalysisPipeline, UnifiedAnalysisConfig
-from ..services.web_api.services.analysis_service import AnalysisService
+from argumentation_analysis.pipelines.unified_text_analysis import UnifiedTextAnalysisPipeline, UnifiedAnalysisConfig
+from argumentation_analysis.services.web_api.services.analysis_service import AnalysisService
 
 
 class ArgumentationAnalyzer:
