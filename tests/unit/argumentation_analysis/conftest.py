@@ -101,9 +101,11 @@ def integration_services():
     
     Et voici la suite du texte après l'extrait.
     """
-    mock_fetch_service.fetch_text# Mock eliminated - using authentic gpt-4o-mini (sample_text, "https://example.com/test")
+    # Mock eliminated - using authentic gpt-4o-mini
+    mock_fetch_service.fetch_text(sample_text, "https://example.com/test")
     
-    mock_extract_service.extract_text_with_markers# Mock eliminated - using authentic gpt-4o-mini (
+    # Mock eliminated - using authentic gpt-4o-mini
+    mock_extract_service.extract_text_with_markers(
         "Ceci est le contenu de l'extrait.\nIl peut contenir plusieurs lignes.",
         "✅ Extraction réussie",
         True,
