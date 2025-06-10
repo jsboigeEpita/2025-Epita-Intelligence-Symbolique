@@ -14,7 +14,7 @@ import time
 import sys
 import subprocess
 from pathlib import Path
-from unittest.mock import patch, Mock
+# Imports de mocks supprimés - Phase 3A purge complète
 from typing import Dict, Any, List
 
 # Configuration pour tests réels GPT-4o-mini
