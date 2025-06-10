@@ -272,7 +272,8 @@ def fallback_direct_launch(args: argparse.Namespace, logger: logging.Logger) -> 
             sys.argv.append("--frontend")
         
         if args.backend_only:
-            sys.argv.extend(["--start", "--no-frontend"])
+            sys.argv.extend(["--start"]) # --no-frontend n'est pas un argument valide pour UnifiedWebOrchestrator
+                                         # L'absence de --frontend suffit.
         
         if args.config:
             sys.argv.extend(["--config", args.config])

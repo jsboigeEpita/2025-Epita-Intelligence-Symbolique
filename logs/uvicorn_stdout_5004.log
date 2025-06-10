@@ -1,0 +1,46 @@
+03:35:37 [INFO] [root] Logging configuré avec le niveau INFO.
+03:35:37 [INFO] [root] Logging configuré avec le niveau INFO.
+03:35:37 [INFO] [root] Logging configuré avec le niveau INFO.
+03:35:37 [INFO] [root] Logging configuré avec le niveau INFO.
+03:35:37 [INFO] [Orchestration.AgentPL.Defs] Classe PropositionalLogicPlugin (V10.1) définie.
+03:35:37 [INFO] [Orchestration.AgentPL.Defs] Instructions Système PL_AGENT_INSTRUCTIONS (V10) définies.
+03:35:37 [INFO] [argumentation_analysis.utils.semantic_kernel_compatibility] Module de compatibilité semantic_kernel agents chargé
+03:35:37 [INFO] [argumentation_analysis.utils.semantic_kernel_compatibility] Module de compatibilité semantic_kernel filters chargé
+03:35:37 [INFO] [argumentation_analysis.utils.semantic_kernel_compatibility] Version: semantic_kernel 1.33.0 (compatibilité agents via adaptateur)
+03:35:39 [INFO] [Orchestration.LLM] <<<<< MODULE llm_service.py LOADED >>>>>
+03:35:39 [INFO] [Orchestration.JPype] Variables d'environnement chargées depuis: c:\dev\2025-Epita-Intelligence-Symbolique\argumentation_analysis\.env
+03:35:39 [INFO] [Orchestration.JPype] LIBS_DIR (global) défini sur (primaire): C:\dev\2025-Epita-Intelligence-Symbolique\libs\tweety
+03:35:39 [INFO] [Orchestration.JPype] (OK) JDK portable détecté via chemin par défaut : C:\dev\2025-Epita-Intelligence-Symbolique\libs\portable_jdk\jdk-17.0.11+9
+03:35:39 [INFO] [argumentation_analysis.service_setup] Package 'argumentation_analysis.service_setup' chargé.
+03:35:39 [INFO] [argumentation_analysis.analytics] Package 'argumentation_analysis.analytics' chargé.
+03:35:39 [INFO] [Orchestration.AgentPM.Defs] Plugin PM (vide) défini.
+03:35:39 [INFO] [Orchestration.AgentPM.Defs] Instructions Système PM_INSTRUCTIONS (V9 - Ajout ExtractAgent) définies.
+[OK] create_llm_service imported successfully
+[OK] get_taxonomy_path imported successfully
+03:35:39 [INFO] [argumentation_analysis.core.bootstrap] Project root (from bootstrap.py) added to sys.path: C:\dev\2025-Epita-Intelligence-Symbolique
+03:35:39 [WARNING] [root] Certains gestionnaires hiérarchiques ne sont pas disponibles: No module named 'argumentation_analysis.orchestration.hierarchical.tactical.manager'
+03:35:39 [WARNING] [root] Certains orchestrateurs spécialisés ne sont pas disponibles: cannot import name 'CluedoOrchestrator' from 'argumentation_analysis.orchestration.cluedo_orchestrator' (c:\dev\2025-Epita-Intelligence-Symbolique\argumentation_analysis\orchestration\cluedo_orchestrator.py)
+03:35:39 [INFO] [argumentation_analysis.orchestration.service_manager] ServiceManager créé avec session_id: 8d60e7b3-4886-4eb8-b3ca-f40bfb513e7b
+INFO:     127.0.0.1:62217 - "GET /api/status HTTP/1.1" 500 Internal Server Error
+03:35:41 [INFO] [argumentation_analysis.orchestration.service_manager] ServiceManager créé avec session_id: bcceb440-7cd9-4ebb-b6b0-2fa59823f2da
+INFO:     127.0.0.1:62229 - "GET /api/status HTTP/1.1" 500 Internal Server Error
+03:35:43 [INFO] [argumentation_analysis.orchestration.service_manager] ServiceManager créé avec session_id: 64187027-c87e-41d8-a721-54baa6fc7b95
+INFO:     127.0.0.1:62238 - "GET /api/status HTTP/1.1" 500 Internal Server Error
+03:35:46 [INFO] [argumentation_analysis.orchestration.service_manager] ServiceManager créé avec session_id: bd4fe528-4615-4f96-99de-dc5bee38a98a
+INFO:     127.0.0.1:62245 - "GET /api/status HTTP/1.1" 500 Internal Server Error
+03:35:48 [INFO] [argumentation_analysis.orchestration.service_manager] ServiceManager créé avec session_id: 585e9605-b419-4627-9d3b-59ea7974a961
+INFO:     127.0.0.1:62251 - "GET /api/status HTTP/1.1" 500 Internal Server Error
+03:35:50 [INFO] [argumentation_analysis.orchestration.service_manager] ServiceManager créé avec session_id: 8eeac7f1-ba34-4aa8-89c4-a8a0bf85e79a
+INFO:     127.0.0.1:62263 - "GET /api/status HTTP/1.1" 500 Internal Server Error
+03:35:53 [INFO] [argumentation_analysis.orchestration.service_manager] ServiceManager créé avec session_id: 523416bf-3b19-4bff-b6dc-a0a7cd5bbb00
+INFO:     127.0.0.1:62271 - "GET /api/status HTTP/1.1" 500 Internal Server Error
+03:35:55 [INFO] [argumentation_analysis.orchestration.service_manager] ServiceManager créé avec session_id: 833b7432-18e4-4af2-a0db-8e08c529f8a1
+INFO:     127.0.0.1:62278 - "GET /api/status HTTP/1.1" 500 Internal Server Error
+03:35:57 [INFO] [argumentation_analysis.orchestration.service_manager] ServiceManager créé avec session_id: f7f60233-595f-4070-a1f5-69f44c62f873
+INFO:     127.0.0.1:62282 - "GET /api/status HTTP/1.1" 500 Internal Server Error
+03:35:59 [INFO] [argumentation_analysis.orchestration.service_manager] ServiceManager créé avec session_id: f72f8dc6-8fad-4614-bd52-c72dce2130f9
+INFO:     127.0.0.1:62298 - "GET /api/status HTTP/1.1" 500 Internal Server Error
+03:36:02 [INFO] [argumentation_analysis.orchestration.service_manager] ServiceManager créé avec session_id: eb3b4192-70e1-4f59-986c-a681e364b944
+INFO:     127.0.0.1:62306 - "GET /api/status HTTP/1.1" 500 Internal Server Error
+03:36:04 [INFO] [argumentation_analysis.orchestration.service_manager] ServiceManager créé avec session_id: ee13beb2-ebc4-490c-a275-03c5def9fbb2
+INFO:     127.0.0.1:62314 - "GET /api/status HTTP/1.1" 500 Internal Server Error

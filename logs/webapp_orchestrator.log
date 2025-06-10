@@ -1,0 +1,683 @@
+2025-06-10 04:10:35,116 - scripts.webapp.unified_web_orchestrator - INFO - [96m[04:10:35.116] [START] DEMARRAGE APPLICATION WEB[0m
+2025-06-10 04:10:35,117 - scripts.webapp.unified_web_orchestrator - INFO -    Détails: Mode: Headless
+2025-06-10 04:10:35,117 - scripts.webapp.unified_web_orchestrator - INFO -    Résultat: Initialisation orchestrateur
+2025-06-10 04:10:35,117 - scripts.webapp.unified_web_orchestrator - INFO - [96m[04:10:35.117] [CLEAN] NETTOYAGE PREALABLE[0m
+2025-06-10 04:10:35,117 - scripts.webapp.unified_web_orchestrator - INFO -    Détails: Arret instances existantes
+2025-06-10 04:10:35,120 - scripts.webapp.unified_web_orchestrator - INFO - [CLEAN] Debut nettoyage processus application web
+2025-06-10 04:10:39,893 - scripts.webapp.unified_web_orchestrator - INFO - Processus trouvé: PID 13504 - python scripts/apps/start_webapp.py --no-conda
+2025-06-10 04:10:40,887 - scripts.webapp.unified_web_orchestrator - INFO - Processus trouvé: PID 35756 - c:\users\jsboi\.conda\envs\projet-is\python.exe c:\users\jsboi\.vscode\extensions\ms-python.isort-20
+2025-06-10 04:10:41,350 - scripts.webapp.unified_web_orchestrator - INFO - Processus sur port webapp: PID 53200 - Port 5003
+2025-06-10 04:10:41,350 - scripts.webapp.unified_web_orchestrator - INFO - Processus trouvés: 3
+2025-06-10 04:10:41,350 - scripts.webapp.unified_web_orchestrator - INFO - Envoi signal TERM aux processus...
+2025-06-10 04:20:31,616 - scripts.webapp.unified_web_orchestrator - INFO - [96m[04:20:31.616] [START] DEMARRAGE APPLICATION WEB[0m
+2025-06-10 04:20:31,616 - scripts.webapp.unified_web_orchestrator - INFO -    Détails: Mode: Headless
+2025-06-10 04:20:31,616 - scripts.webapp.unified_web_orchestrator - INFO -    Résultat: Initialisation orchestrateur
+2025-06-10 04:20:31,616 - scripts.webapp.unified_web_orchestrator - INFO - [96m[04:20:31.616] [CLEAN] NETTOYAGE PREALABLE[0m
+2025-06-10 04:20:31,616 - scripts.webapp.unified_web_orchestrator - INFO -    Détails: Arret instances existantes
+2025-06-10 04:20:31,617 - scripts.webapp.unified_web_orchestrator - INFO - [CLEAN] Debut nettoyage processus application web
+2025-06-10 04:20:31,690 - scripts.webapp.unified_web_orchestrator - INFO - Processus trouvé: PID 800 - node c:\users\jsboi\appdata\local\npm-cache\_npx\b7043670c3149184\node_modules\.bin\\..\@simonb97\se
+2025-06-10 04:20:32,393 - scripts.webapp.unified_web_orchestrator - INFO - Processus trouvé: PID 2452 - c:\program files\nodejs\\node.exe c:\program files\nodejs\\node_modules\npm\bin\npx-cli.js -y @model
+2025-06-10 04:20:35,222 - scripts.webapp.unified_web_orchestrator - INFO - Processus trouvé: PID 7160 - c:\program files\nodejs\node.exe tests_playwright\node_modules\@playwright\test\cli.js test-server -
+2025-06-10 04:20:35,597 - scripts.webapp.unified_web_orchestrator - INFO - Processus trouvé: PID 10128 - node c:\users\jsboi\appdata\roaming\npm\\node_modules\@modelcontextprotocol\server-github\dist\index
+2025-06-10 04:20:35,660 - scripts.webapp.unified_web_orchestrator - INFO - Processus trouvé: PID 10432 - node c:/dev/roo-extensions/mcps/internal/servers/github-projects-mcp/dist/index.js
+2025-06-10 04:20:35,716 - scripts.webapp.unified_web_orchestrator - INFO - Processus trouvé: PID 10776 - node c:\users\jsboi\appdata\local\npm-cache\_npx\a3241bba59c344f5\node_modules\.bin\\..\@modelcontex
+2025-06-10 04:20:36,905 - scripts.webapp.unified_web_orchestrator - INFO - Processus trouvé: PID 18876 - node c:/dev/roo-extensions/mcps/internal/servers/jupyter-mcp-server/dist/index.js
+2025-06-10 04:20:37,284 - scripts.webapp.unified_web_orchestrator - INFO - Processus trouvé: PID 24504 - c:\program files\nodejs\\node.exe c:\program files\nodejs\\node_modules\npm\bin\npx-cli.js -y @model
+2025-06-10 04:20:37,289 - scripts.webapp.unified_web_orchestrator - INFO - Processus trouvé: PID 25112 - node c:\users\jsboi\npm-cache\_npx\a3241bba59c344f5\node_modules\.bin\\..\@modelcontextprotocol\serv
+2025-06-10 04:20:37,474 - scripts.webapp.unified_web_orchestrator - INFO - Processus trouvé: PID 29640 - python scripts/apps/start_webapp.py --no-conda
+2025-06-10 04:20:37,513 - scripts.webapp.unified_web_orchestrator - INFO - Processus trouvé: PID 31644 - c:\program files\nodejs\\node.exe c:\program files\nodejs\\node_modules\npm\bin\npx-cli.js -y @model
+2025-06-10 04:20:37,574 - scripts.webapp.unified_web_orchestrator - INFO - Processus trouvé: PID 33924 - c:\users\jsboi\.conda\envs\projet-is\python.exe c:\users\jsboi\.vscode\extensions\ms-python.isort-20
+2025-06-10 04:20:37,577 - scripts.webapp.unified_web_orchestrator - INFO - Processus trouvé: PID 34780 - c:\program files\nodejs\\node.exe c:\program files\nodejs\\node_modules\npm\bin\npx-cli.js -y @execu
+2025-06-10 04:20:37,581 - scripts.webapp.unified_web_orchestrator - INFO - Processus trouvé: PID 35756 - c:\program files\nodejs\\node.exe c:\program files\nodejs\\node_modules\npm\bin\npx-cli.js -y @model
+2025-06-10 04:20:37,853 - scripts.webapp.unified_web_orchestrator - INFO - Processus trouvé: PID 41080 - node c:/dev/roo-extensions/mcps/internal/servers/quickfiles-server/build/index.js
+2025-06-10 04:20:37,949 - scripts.webapp.unified_web_orchestrator - INFO - Processus trouvé: PID 46368 - c:\users\jsboi\.vscode\extensions\ms-dotnettools.csdevkit-1.20.35-win32-x64\components\vs-green-serv
+2025-06-10 04:20:37,953 - scripts.webapp.unified_web_orchestrator - INFO - Processus trouvé: PID 47620 - node c:\users\jsboi\npm-cache\_npx\0b9ff77863cb6e9f\node_modules\.bin\\..\@executeautomation\playwri
+2025-06-10 04:20:37,954 - scripts.webapp.unified_web_orchestrator - INFO - Processus trouvé: PID 48304 - c:\program files\nodejs\\node.exe c:\program files\nodejs\\node_modules\npm\bin\npx-cli.js -y @simon
+2025-06-10 04:20:38,014 - scripts.webapp.unified_web_orchestrator - INFO - Processus trouvé: PID 49684 - node c:\users\jsboi\npm-cache\_npx\3dfbf5a9eea4a1b3\node_modules\.bin\\..\@modelcontextprotocol\serv
+2025-06-10 04:20:38,047 - scripts.webapp.unified_web_orchestrator - INFO - Processus trouvé: PID 50804 - node c:/dev/roo-extensions/mcps/internal/servers/jinavigator-server/dist/index.js
+2025-06-10 04:20:38,053 - scripts.webapp.unified_web_orchestrator - INFO - Processus sur port webapp: PID 53200 - Port 5003
+2025-06-10 04:20:38,054 - scripts.webapp.unified_web_orchestrator - INFO - Processus trouvés: 21
+2025-06-10 04:20:38,054 - scripts.webapp.unified_web_orchestrator - INFO - Envoi signal TERM aux processus...
+2025-06-10 04:20:38,054 - scripts.webapp.unified_web_orchestrator - INFO - TERM envoyé à PID 800
+2025-06-10 04:20:38,054 - scripts.webapp.unified_web_orchestrator - INFO - TERM envoyé à PID 2452
+2025-06-10 04:20:38,055 - scripts.webapp.unified_web_orchestrator - INFO - TERM envoyé à PID 7160
+2025-06-10 04:20:38,055 - scripts.webapp.unified_web_orchestrator - INFO - TERM envoyé à PID 10128
+2025-06-10 04:20:38,055 - scripts.webapp.unified_web_orchestrator - INFO - TERM envoyé à PID 10432
+2025-06-10 04:20:38,055 - scripts.webapp.unified_web_orchestrator - INFO - TERM envoyé à PID 10776
+2025-06-10 04:20:38,056 - scripts.webapp.unified_web_orchestrator - INFO - TERM envoyé à PID 18876
+2025-06-10 04:20:38,056 - scripts.webapp.unified_web_orchestrator - INFO - TERM envoyé à PID 24504
+2025-06-10 04:20:38,057 - scripts.webapp.unified_web_orchestrator - INFO - TERM envoyé à PID 25112
+2025-06-10 04:21:55,606 - scripts.webapp.unified_web_orchestrator - INFO - [96m[04:21:55.605] [START] DEMARRAGE APPLICATION WEB[0m
+2025-06-10 04:21:55,606 - scripts.webapp.unified_web_orchestrator - INFO -    Détails: Mode: Headless
+2025-06-10 04:21:55,606 - scripts.webapp.unified_web_orchestrator - INFO -    Résultat: Initialisation orchestrateur
+2025-06-10 04:21:55,606 - scripts.webapp.unified_web_orchestrator - INFO - [96m[04:21:55.606] [CLEAN] NETTOYAGE PREALABLE[0m
+2025-06-10 04:21:55,606 - scripts.webapp.unified_web_orchestrator - INFO -    Détails: Arret instances existantes
+2025-06-10 04:21:55,606 - scripts.webapp.unified_web_orchestrator - INFO - [CLEAN] Debut nettoyage processus application web
+2025-06-10 04:22:03,443 - scripts.webapp.unified_web_orchestrator - INFO - Processus trouvé: PID 26328 - python scripts/apps/start_webapp.py --no-conda
+2025-06-10 04:22:03,741 - scripts.webapp.unified_web_orchestrator - INFO - Processus trouvé: PID 33924 - c:\users\jsboi\.conda\envs\projet-is\python.exe c:\users\jsboi\.vscode\extensions\ms-python.isort-20
+2025-06-10 04:22:03,746 - scripts.webapp.unified_web_orchestrator - INFO - Processus trouvé: PID 34780 - c:\program files\nodejs\\node.exe c:\program files\nodejs\\node_modules\npm\bin\npx-cli.js -y @execu
+2025-06-10 04:22:03,752 - scripts.webapp.unified_web_orchestrator - INFO - Processus trouvé: PID 35756 - c:\program files\nodejs\\node.exe c:\program files\nodejs\\node_modules\npm\bin\npx-cli.js -y @model
+2025-06-10 04:22:04,031 - scripts.webapp.unified_web_orchestrator - INFO - Processus trouvé: PID 41080 - node c:/dev/roo-extensions/mcps/internal/servers/quickfiles-server/build/index.js
+2025-06-10 04:22:04,131 - scripts.webapp.unified_web_orchestrator - INFO - Processus trouvé: PID 46368 - c:\users\jsboi\.vscode\extensions\ms-dotnettools.csdevkit-1.20.35-win32-x64\components\vs-green-serv
+2025-06-10 04:22:04,136 - scripts.webapp.unified_web_orchestrator - INFO - Processus trouvé: PID 47620 - node c:\users\jsboi\npm-cache\_npx\0b9ff77863cb6e9f\node_modules\.bin\\..\@executeautomation\playwri
+2025-06-10 04:22:04,188 - scripts.webapp.unified_web_orchestrator - INFO - Processus trouvé: PID 49684 - node c:\users\jsboi\npm-cache\_npx\3dfbf5a9eea4a1b3\node_modules\.bin\\..\@modelcontextprotocol\serv
+2025-06-10 04:22:04,238 - scripts.webapp.unified_web_orchestrator - INFO - Processus trouvé: PID 50804 - node c:/dev/roo-extensions/mcps/internal/servers/jinavigator-server/dist/index.js
+2025-06-10 04:22:04,253 - scripts.webapp.unified_web_orchestrator - INFO - Processus sur port webapp: PID 53200 - Port 5003
+2025-06-10 04:22:04,254 - scripts.webapp.unified_web_orchestrator - INFO - Processus trouvés: 10
+2025-06-10 04:22:04,254 - scripts.webapp.unified_web_orchestrator - INFO - Envoi signal TERM aux processus...
+2025-06-10 04:22:54,429 - scripts.webapp.unified_web_orchestrator - INFO - [96m[04:22:54.429] [START] DEMARRAGE APPLICATION WEB[0m
+2025-06-10 04:22:54,429 - scripts.webapp.unified_web_orchestrator - INFO -    Détails: Mode: Headless
+2025-06-10 04:22:54,429 - scripts.webapp.unified_web_orchestrator - INFO -    Résultat: Initialisation orchestrateur
+2025-06-10 04:22:54,429 - scripts.webapp.unified_web_orchestrator - INFO - [96m[04:22:54.429] [CLEAN] NETTOYAGE PREALABLE[0m
+2025-06-10 04:22:54,429 - scripts.webapp.unified_web_orchestrator - INFO -    Détails: Arret instances existantes
+2025-06-10 04:22:54,429 - scripts.webapp.unified_web_orchestrator - INFO - [CLEAN] Debut nettoyage processus application web
+2025-06-10 04:23:00,375 - scripts.webapp.unified_web_orchestrator - INFO - Processus trouvé (cmdline): PID 33924 - c:\users\jsboi\.conda\envs\projet-is\python.exe c:\users\jsboi\.vscode\extensions\ms-python.isort-20
+2025-06-10 04:23:00,388 - scripts.webapp.unified_web_orchestrator - INFO - Processus trouvé (cmdline): PID 34780 - c:\program files\nodejs\\node.exe c:\program files\nodejs\\node_modules\npm\bin\npx-cli.js -y @execu
+2025-06-10 04:23:00,400 - scripts.webapp.unified_web_orchestrator - INFO - Processus trouvé (cmdline): PID 35756 - c:\program files\nodejs\\node.exe c:\program files\nodejs\\node_modules\npm\bin\npx-cli.js -y @model
+2025-06-10 04:23:00,672 - scripts.webapp.unified_web_orchestrator - INFO - Processus trouvé (cmdline): PID 41080 - node c:/dev/roo-extensions/mcps/internal/servers/quickfiles-server/build/index.js
+2025-06-10 04:23:00,758 - scripts.webapp.unified_web_orchestrator - INFO - Processus trouvé (cmdline): PID 46368 - c:\users\jsboi\.vscode\extensions\ms-dotnettools.csdevkit-1.20.35-win32-x64\components\vs-green-serv
+2025-06-10 04:23:00,763 - scripts.webapp.unified_web_orchestrator - INFO - Processus trouvé (cmdline): PID 47620 - node c:\users\jsboi\npm-cache\_npx\0b9ff77863cb6e9f\node_modules\.bin\\..\@executeautomation\playwri
+2025-06-10 04:23:00,802 - scripts.webapp.unified_web_orchestrator - INFO - Processus trouvé (cmdline): PID 49684 - node c:\users\jsboi\npm-cache\_npx\3dfbf5a9eea4a1b3\node_modules\.bin\\..\@modelcontextprotocol\serv
+2025-06-10 04:23:00,836 - scripts.webapp.unified_web_orchestrator - INFO - Processus trouvé (cmdline): PID 50804 - node c:/dev/roo-extensions/mcps/internal/servers/jinavigator-server/dist/index.js
+2025-06-10 04:23:00,846 - scripts.webapp.unified_web_orchestrator - INFO - Processus trouvé (port): PID 53200 - Port 5003
+2025-06-10 04:23:00,846 - scripts.webapp.unified_web_orchestrator - INFO - Processus trouvés: 9
+2025-06-10 04:23:00,846 - scripts.webapp.unified_web_orchestrator - INFO - Envoi signal TERM aux processus...
+2025-06-10 04:23:00,847 - scripts.webapp.unified_web_orchestrator - INFO - TERM envoyé à PID 33924
+2025-06-10 04:23:00,847 - scripts.webapp.unified_web_orchestrator - INFO - TERM envoyé à PID 34780
+2025-06-10 04:23:00,847 - scripts.webapp.unified_web_orchestrator - INFO - TERM envoyé à PID 35756
+2025-06-10 04:23:00,847 - scripts.webapp.unified_web_orchestrator - INFO - TERM envoyé à PID 41080
+2025-06-10 04:23:00,848 - scripts.webapp.unified_web_orchestrator - INFO - TERM envoyé à PID 46368
+2025-06-10 04:23:00,848 - scripts.webapp.unified_web_orchestrator - INFO - TERM envoyé à PID 47620
+2025-06-10 04:23:00,848 - scripts.webapp.unified_web_orchestrator - INFO - TERM envoyé à PID 49684
+2025-06-10 04:23:00,848 - scripts.webapp.unified_web_orchestrator - INFO - TERM envoyé à PID 50804
+2025-06-10 04:23:00,848 - scripts.webapp.unified_web_orchestrator - INFO - TERM envoyé à PID 53200
+2025-06-10 04:23:00,849 - scripts.webapp.unified_web_orchestrator - INFO - Attente arrêt propre (5s)...
+2025-06-10 04:23:05,880 - scripts.webapp.unified_web_orchestrator - INFO - Tous les processus arrêtés proprement
+2025-06-10 04:23:11,286 - scripts.webapp.unified_web_orchestrator - INFO - Processus trouvé (cmdline): PID 39472 - c:\users\jsboi\.conda\envs\projet-is\python.exe c:\users\jsboi\.vscode\extensions\ms-python.isort-20
+2025-06-10 04:23:11,479 - scripts.webapp.unified_web_orchestrator - WARNING - Force kill de 1 processus récalcitrants
+2025-06-10 04:23:11,480 - scripts.webapp.unified_web_orchestrator - WARNING - KILL forcé sur PID 39472
+2025-06-10 04:23:11,566 - scripts.webapp.unified_web_orchestrator - INFO - Vérification libération des ports...
+2025-06-10 04:23:11,591 - scripts.webapp.unified_web_orchestrator - INFO - Tous les ports libérés
+2025-06-10 04:23:11,591 - scripts.webapp.unified_web_orchestrator - INFO - Nettoyage fichiers temporaires...
+2025-06-10 04:23:11,592 - scripts.webapp.unified_web_orchestrator - INFO - Supprimé: backend_info.json
+2025-06-10 04:23:11,593 - scripts.webapp.unified_web_orchestrator - INFO - Fichiers temporaires nettoyés: 1
+2025-06-10 04:23:11,593 - scripts.webapp.unified_web_orchestrator - INFO - [OK] Nettoyage processus terminé
+2025-06-10 04:23:11,593 - scripts.webapp.unified_web_orchestrator - INFO - [96m[04:23:11.593] [BACKEND] DEMARRAGE BACKEND[0m
+2025-06-10 04:23:11,593 - scripts.webapp.unified_web_orchestrator - INFO -    Détails: Lancement avec failover de ports
+2025-06-10 04:23:11,594 - scripts.webapp.unified_web_orchestrator - INFO - Tentative 1/4 - Port 5003
+2025-06-10 04:23:11,598 - scripts.webapp.unified_web_orchestrator - INFO - Démarrage backend FastAPI avec Python de Conda: C:\Users\jsboi\.conda\envs\projet-is\python.exe -m uvicorn api.main:app --host 0.0.0.0 --port 5003
+2025-06-10 04:23:11,599 - scripts.webapp.unified_web_orchestrator - INFO - Logging stdout de Uvicorn dans: c:\dev\2025-Epita-Intelligence-Symbolique\logs\uvicorn_stdout_5003.log
+2025-06-10 04:23:11,599 - scripts.webapp.unified_web_orchestrator - INFO - Logging stderr de Uvicorn dans: c:\dev\2025-Epita-Intelligence-Symbolique\logs\uvicorn_stderr_5003.log
+2025-06-10 04:23:11,606 - scripts.webapp.unified_web_orchestrator - INFO - Attente backend sur http://localhost:5003/api/status (timeout: 30s)
+2025-06-10 04:23:18,234 - scripts.webapp.unified_web_orchestrator - INFO - Backend accessible sur http://localhost:5003/api/status
+2025-06-10 04:23:18,237 - scripts.webapp.unified_web_orchestrator - INFO - Info backend sauvées: backend_info.json
+2025-06-10 04:23:18,238 - scripts.webapp.unified_web_orchestrator - INFO - [96m[04:23:18.238] [OK] BACKEND OPERATIONNEL[0m
+2025-06-10 04:23:18,238 - scripts.webapp.unified_web_orchestrator - INFO -    Détails: Port: 5003 | PID: 44156
+2025-06-10 04:23:18,239 - scripts.webapp.unified_web_orchestrator - INFO -    Résultat: URL: http://localhost:5003
+2025-06-10 04:23:18,239 - scripts.webapp.unified_web_orchestrator - INFO - [96m[04:23:18.239] [CHECK] VALIDATION SERVICES[0m
+2025-06-10 04:23:18,239 - scripts.webapp.unified_web_orchestrator - INFO -    Détails: Verification endpoints
+2025-06-10 04:23:18,510 - scripts.webapp.unified_web_orchestrator - INFO - Backend health: {'status': 'operational', 'service_status': {'overall_status': 'available', 'session_id': '893c8d5d-20ac-4fc0-beaf-9795f8b857ab', 'start_time': '2025-06-10T04:23:18.507389', 'uptime_seconds': 0.0, 'last_activity': '2025-06-10T04:23:18.507389', 'initialized': True, 'shutdown_initiated': False, 'configuration': {'enable_hierarchical': True, 'enable_specialized_orchestrators': True, 'enable_communication_middleware': True, 'max_concurrent_analyses': 10, 'analysis_timeout': 300, 'auto_cleanup': True, 'save_results': True, 'results_dir': 'C:\\dev\\2025-Epita-Intelligence-Symbolique\\results', 'data_dir': 'C:\\dev\\2025-Epita-Intelligence-Symbolique\\argumentation_analysis\\data'}, 'active_components': {'strategic_manager': False, 'tactical_manager': False, 'operational_manager': False, 'cluedo_orchestrator': False, 'conversation_orchestrator': False, 'llm_orchestrator': False, 'middleware': True}, 'component_specific_status': {}}}
+2025-06-10 04:23:18,510 - scripts.webapp.unified_web_orchestrator - INFO - [96m[04:23:18.510] [OK] SERVICES VALIDES[0m
+2025-06-10 04:23:18,510 - scripts.webapp.unified_web_orchestrator - INFO -    Détails: Tous les endpoints repondent
+2025-06-10 04:23:18,510 - scripts.webapp.unified_web_orchestrator - INFO - [96m[04:23:18.510] [OK] APPLICATION WEB OPERATIONNELLE[0m
+2025-06-10 04:23:18,510 - scripts.webapp.unified_web_orchestrator - INFO -    Détails: Backend: http://localhost:5003
+2025-06-10 04:23:18,511 - scripts.webapp.unified_web_orchestrator - INFO -    Résultat: Tous les services démarrés
+2025-06-10 04:25:59,347 - scripts.webapp.unified_web_orchestrator - INFO - [96m[04:25:59.347] [START] DEMARRAGE APPLICATION WEB[0m
+2025-06-10 04:25:59,347 - scripts.webapp.unified_web_orchestrator - INFO -    Détails: Mode: Headless
+2025-06-10 04:25:59,347 - scripts.webapp.unified_web_orchestrator - INFO -    Résultat: Initialisation orchestrateur
+2025-06-10 04:25:59,347 - scripts.webapp.unified_web_orchestrator - INFO - [96m[04:25:59.347] [CLEAN] NETTOYAGE PREALABLE[0m
+2025-06-10 04:25:59,347 - scripts.webapp.unified_web_orchestrator - INFO -    Détails: Arret instances existantes
+2025-06-10 04:25:59,347 - scripts.webapp.unified_web_orchestrator - INFO - [CLEAN] Debut nettoyage processus application web
+2025-06-10 04:26:05,443 - scripts.webapp.unified_web_orchestrator - INFO - Processus trouvé (cmdline): PID 29200 - c:\users\jsboi\.conda\envs\projet-is\python.exe c:\users\jsboi\.vscode\extensions\ms-python.isort-20
+2025-06-10 04:26:06,021 - scripts.webapp.unified_web_orchestrator - INFO - Processus trouvé (port): PID 44156 - Port 5003
+2025-06-10 04:26:06,211 - scripts.webapp.unified_web_orchestrator - INFO - Processus trouvés: 2
+2025-06-10 04:26:06,211 - scripts.webapp.unified_web_orchestrator - INFO - Envoi signal TERM aux processus...
+2025-06-10 04:26:06,211 - scripts.webapp.unified_web_orchestrator - INFO - TERM envoyé à PID 29200
+2025-06-10 04:26:06,212 - scripts.webapp.unified_web_orchestrator - INFO - TERM envoyé à PID 44156
+2025-06-10 04:26:06,212 - scripts.webapp.unified_web_orchestrator - INFO - Attente arrêt propre (5s)...
+2025-06-10 04:26:11,212 - scripts.webapp.unified_web_orchestrator - INFO - Tous les processus arrêtés proprement
+2025-06-10 04:26:17,177 - scripts.webapp.unified_web_orchestrator - INFO - Processus trouvé (cmdline): PID 47060 - c:\users\jsboi\.conda\envs\projet-is\python.exe c:\users\jsboi\.vscode\extensions\ms-python.isort-20
+2025-06-10 04:26:17,246 - scripts.webapp.unified_web_orchestrator - WARNING - Force kill de 1 processus récalcitrants
+2025-06-10 04:26:17,246 - scripts.webapp.unified_web_orchestrator - WARNING - KILL forcé sur PID 47060
+2025-06-10 04:26:17,279 - scripts.webapp.unified_web_orchestrator - INFO - Vérification libération des ports...
+2025-06-10 04:26:17,301 - scripts.webapp.unified_web_orchestrator - INFO - Tous les ports libérés
+2025-06-10 04:26:17,301 - scripts.webapp.unified_web_orchestrator - INFO - Nettoyage fichiers temporaires...
+2025-06-10 04:26:17,302 - scripts.webapp.unified_web_orchestrator - INFO - Supprimé: backend_info.json
+2025-06-10 04:26:17,302 - scripts.webapp.unified_web_orchestrator - INFO - Fichiers temporaires nettoyés: 1
+2025-06-10 04:26:17,302 - scripts.webapp.unified_web_orchestrator - INFO - [OK] Nettoyage processus terminé
+2025-06-10 04:26:17,303 - scripts.webapp.unified_web_orchestrator - INFO - [96m[04:26:17.303] [BACKEND] DEMARRAGE BACKEND[0m
+2025-06-10 04:26:17,303 - scripts.webapp.unified_web_orchestrator - INFO -    Détails: Lancement avec failover de ports
+2025-06-10 04:26:17,303 - scripts.webapp.unified_web_orchestrator - INFO - Tentative 1/4 - Port 5003
+2025-06-10 04:26:17,307 - scripts.webapp.unified_web_orchestrator - INFO - Démarrage backend FastAPI avec Python de Conda: C:\Users\jsboi\.conda\envs\projet-is\python.exe -m uvicorn api.main:app --host 0.0.0.0 --port 5003
+2025-06-10 04:26:17,307 - scripts.webapp.unified_web_orchestrator - INFO - Logging stdout de Uvicorn dans: c:\dev\2025-Epita-Intelligence-Symbolique\logs\uvicorn_stdout_5003.log
+2025-06-10 04:26:17,308 - scripts.webapp.unified_web_orchestrator - INFO - Logging stderr de Uvicorn dans: c:\dev\2025-Epita-Intelligence-Symbolique\logs\uvicorn_stderr_5003.log
+2025-06-10 04:26:17,315 - scripts.webapp.unified_web_orchestrator - INFO - Attente backend sur http://localhost:5003/api/status (timeout: 30s)
+2025-06-10 04:26:22,422 - scripts.webapp.unified_web_orchestrator - INFO - Backend accessible sur http://localhost:5003/api/status
+2025-06-10 04:26:22,429 - scripts.webapp.unified_web_orchestrator - INFO - Info backend sauvées: backend_info.json
+2025-06-10 04:26:22,430 - scripts.webapp.unified_web_orchestrator - INFO - [96m[04:26:22.430] [OK] BACKEND OPERATIONNEL[0m
+2025-06-10 04:26:22,431 - scripts.webapp.unified_web_orchestrator - INFO -    Détails: Port: 5003 | PID: 22108
+2025-06-10 04:26:22,431 - scripts.webapp.unified_web_orchestrator - INFO -    Résultat: URL: http://localhost:5003
+2025-06-10 04:26:22,432 - scripts.webapp.unified_web_orchestrator - INFO - [96m[04:26:22.432] [CHECK] VALIDATION SERVICES[0m
+2025-06-10 04:26:22,432 - scripts.webapp.unified_web_orchestrator - INFO -    Détails: Verification endpoints
+2025-06-10 04:26:22,709 - scripts.webapp.unified_web_orchestrator - INFO - Backend health: {'status': 'operational', 'service_status': {'overall_status': 'available', 'session_id': '8bedd9ee-4ab3-412d-8e7f-490b2a7d69d3', 'start_time': '2025-06-10T04:26:22.705606', 'uptime_seconds': 0.001, 'last_activity': '2025-06-10T04:26:22.706606', 'initialized': True, 'shutdown_initiated': False, 'configuration': {'enable_hierarchical': True, 'enable_specialized_orchestrators': True, 'enable_communication_middleware': True, 'max_concurrent_analyses': 10, 'analysis_timeout': 300, 'auto_cleanup': True, 'save_results': True, 'results_dir': 'C:\\dev\\2025-Epita-Intelligence-Symbolique\\results', 'data_dir': 'C:\\dev\\2025-Epita-Intelligence-Symbolique\\argumentation_analysis\\data'}, 'active_components': {'strategic_manager': False, 'tactical_manager': False, 'operational_manager': False, 'cluedo_orchestrator': False, 'conversation_orchestrator': False, 'llm_orchestrator': False, 'middleware': True}, 'component_specific_status': {}}}
+2025-06-10 04:26:22,711 - scripts.webapp.unified_web_orchestrator - INFO - [96m[04:26:22.711] [OK] SERVICES VALIDES[0m
+2025-06-10 04:26:22,712 - scripts.webapp.unified_web_orchestrator - INFO -    Détails: Tous les endpoints repondent
+2025-06-10 04:26:22,713 - scripts.webapp.unified_web_orchestrator - INFO - [96m[04:26:22.712] [OK] APPLICATION WEB OPERATIONNELLE[0m
+2025-06-10 04:26:22,713 - scripts.webapp.unified_web_orchestrator - INFO -    Détails: Backend: http://localhost:5003
+2025-06-10 04:26:22,713 - scripts.webapp.unified_web_orchestrator - INFO -    Résultat: Tous les services démarrés
+2025-06-10 04:27:13,648 - scripts.webapp.unified_web_orchestrator - INFO - [96m[04:27:13.648] [START] DEMARRAGE APPLICATION WEB[0m
+2025-06-10 04:27:13,648 - scripts.webapp.unified_web_orchestrator - INFO -    Détails: Mode: Headless
+2025-06-10 04:27:13,648 - scripts.webapp.unified_web_orchestrator - INFO -    Résultat: Initialisation orchestrateur
+2025-06-10 04:27:13,649 - scripts.webapp.unified_web_orchestrator - INFO - [96m[04:27:13.649] [CLEAN] NETTOYAGE PREALABLE[0m
+2025-06-10 04:27:13,649 - scripts.webapp.unified_web_orchestrator - INFO -    Détails: Arret instances existantes
+2025-06-10 04:27:13,649 - scripts.webapp.unified_web_orchestrator - INFO - [CLEAN] Debut nettoyage processus application web
+2025-06-10 04:27:19,871 - scripts.webapp.unified_web_orchestrator - INFO - Processus trouvé (port): PID 22108 - Port 5003
+2025-06-10 04:27:20,783 - scripts.webapp.unified_web_orchestrator - INFO - Processus trouvé (cmdline): PID 46160 - c:\users\jsboi\.conda\envs\projet-is\python.exe c:\users\jsboi\.vscode\extensions\ms-python.isort-20
+2025-06-10 04:27:20,866 - scripts.webapp.unified_web_orchestrator - INFO - Processus trouvés: 2
+2025-06-10 04:27:20,866 - scripts.webapp.unified_web_orchestrator - INFO - Envoi signal TERM aux processus...
+2025-06-10 04:27:20,866 - scripts.webapp.unified_web_orchestrator - INFO - TERM envoyé à PID 22108
+2025-06-10 04:27:20,866 - scripts.webapp.unified_web_orchestrator - INFO - TERM envoyé à PID 46160
+2025-06-10 04:27:20,866 - scripts.webapp.unified_web_orchestrator - INFO - Attente arrêt propre (5s)...
+2025-06-10 04:27:25,867 - scripts.webapp.unified_web_orchestrator - INFO - Tous les processus arrêtés proprement
+2025-06-10 04:27:31,272 - scripts.webapp.unified_web_orchestrator - INFO - Processus trouvé (cmdline): PID 43028 - c:\users\jsboi\.conda\envs\projet-is\python.exe c:\users\jsboi\.vscode\extensions\ms-python.isort-20
+2025-06-10 04:27:31,440 - scripts.webapp.unified_web_orchestrator - WARNING - Force kill de 1 processus récalcitrants
+2025-06-10 04:27:31,440 - scripts.webapp.unified_web_orchestrator - WARNING - KILL forcé sur PID 43028
+2025-06-10 04:27:31,472 - scripts.webapp.unified_web_orchestrator - INFO - Vérification libération des ports...
+2025-06-10 04:27:31,491 - scripts.webapp.unified_web_orchestrator - INFO - Tous les ports libérés
+2025-06-10 04:27:31,491 - scripts.webapp.unified_web_orchestrator - INFO - Nettoyage fichiers temporaires...
+2025-06-10 04:27:31,492 - scripts.webapp.unified_web_orchestrator - INFO - Supprimé: backend_info.json
+2025-06-10 04:27:31,492 - scripts.webapp.unified_web_orchestrator - INFO - Fichiers temporaires nettoyés: 1
+2025-06-10 04:27:31,492 - scripts.webapp.unified_web_orchestrator - INFO - [OK] Nettoyage processus terminé
+2025-06-10 04:27:31,492 - scripts.webapp.unified_web_orchestrator - INFO - [96m[04:27:31.492] [BACKEND] DEMARRAGE BACKEND[0m
+2025-06-10 04:27:31,493 - scripts.webapp.unified_web_orchestrator - INFO -    Détails: Lancement avec failover de ports
+2025-06-10 04:27:31,493 - scripts.webapp.unified_web_orchestrator - INFO - Tentative 1/4 - Port 5003
+2025-06-10 04:27:31,498 - scripts.webapp.unified_web_orchestrator - INFO - Démarrage backend FastAPI avec Python de Conda: C:\Users\jsboi\.conda\envs\projet-is\python.exe -m uvicorn api.main:app --host 0.0.0.0 --port 5003
+2025-06-10 04:27:31,498 - scripts.webapp.unified_web_orchestrator - INFO - Logging stdout de Uvicorn dans: c:\dev\2025-Epita-Intelligence-Symbolique\logs\uvicorn_stdout_5003.log
+2025-06-10 04:27:31,499 - scripts.webapp.unified_web_orchestrator - INFO - Logging stderr de Uvicorn dans: c:\dev\2025-Epita-Intelligence-Symbolique\logs\uvicorn_stderr_5003.log
+2025-06-10 04:27:31,512 - scripts.webapp.unified_web_orchestrator - INFO - Attente backend sur http://localhost:5003/api/status (timeout: 30s)
+2025-06-10 04:27:36,637 - scripts.webapp.unified_web_orchestrator - INFO - Backend accessible sur http://localhost:5003/api/status
+2025-06-10 04:27:36,646 - scripts.webapp.unified_web_orchestrator - INFO - Info backend sauvées: backend_info.json
+2025-06-10 04:27:36,647 - scripts.webapp.unified_web_orchestrator - INFO - [96m[04:27:36.647] [OK] BACKEND OPERATIONNEL[0m
+2025-06-10 04:27:36,647 - scripts.webapp.unified_web_orchestrator - INFO -    Détails: Port: 5003 | PID: 18520
+2025-06-10 04:27:36,647 - scripts.webapp.unified_web_orchestrator - INFO -    Résultat: URL: http://localhost:5003
+2025-06-10 04:27:36,648 - scripts.webapp.unified_web_orchestrator - INFO - [96m[04:27:36.648] [CHECK] VALIDATION SERVICES[0m
+2025-06-10 04:27:36,648 - scripts.webapp.unified_web_orchestrator - INFO -    Détails: Verification endpoints
+2025-06-10 04:27:36,915 - scripts.webapp.unified_web_orchestrator - INFO - Backend health: {'status': 'operational', 'service_status': {'overall_status': 'available', 'session_id': 'b3bd51da-93d4-48ee-91a8-bd119196e185', 'start_time': '2025-06-10T04:27:36.913085', 'uptime_seconds': 0.000944, 'last_activity': '2025-06-10T04:27:36.914029', 'initialized': True, 'shutdown_initiated': False, 'configuration': {'enable_hierarchical': True, 'enable_specialized_orchestrators': True, 'enable_communication_middleware': True, 'max_concurrent_analyses': 10, 'analysis_timeout': 300, 'auto_cleanup': True, 'save_results': True, 'results_dir': 'C:\\dev\\2025-Epita-Intelligence-Symbolique\\results', 'data_dir': 'C:\\dev\\2025-Epita-Intelligence-Symbolique\\argumentation_analysis\\data'}, 'active_components': {'strategic_manager': False, 'tactical_manager': False, 'operational_manager': False, 'cluedo_orchestrator': True, 'conversation_orchestrator': True, 'llm_orchestrator': True, 'middleware': True}, 'component_specific_status': {'llm_orchestrator': {'is_initialized': False, 'active_sessions': 0, 'cache_size': 0, 'config': {'max_concurrent_analyses': 10, 'default_timeout': 30, 'cache_enabled': True, 'cache_ttl': 3600, 'retry_attempts': 3, 'retry_delay': 1.0, 'enable_metrics': True, 'log_level': 'INFO', 'analysis_types': ['rhetorical_analysis', 'enhanced_rhetorical_analysis', 'fallacy_detection', 'contextual_analysis', 'semantic_argument_analysis', 'unified_analysis']}, 'metrics': {'total_requests': 0, 'successful_analyses': 0, 'failed_analyses': 0, 'average_processing_time': 0.0, 'cache_hits': 0, 'cache_misses': 0}}}}}
+2025-06-10 04:27:36,915 - scripts.webapp.unified_web_orchestrator - INFO - [96m[04:27:36.915] [OK] SERVICES VALIDES[0m
+2025-06-10 04:27:36,915 - scripts.webapp.unified_web_orchestrator - INFO -    Détails: Tous les endpoints repondent
+2025-06-10 04:27:36,915 - scripts.webapp.unified_web_orchestrator - INFO - [96m[04:27:36.915] [OK] APPLICATION WEB OPERATIONNELLE[0m
+2025-06-10 04:27:36,915 - scripts.webapp.unified_web_orchestrator - INFO -    Détails: Backend: http://localhost:5003
+2025-06-10 04:27:36,916 - scripts.webapp.unified_web_orchestrator - INFO -    Résultat: Tous les services démarrés
+2025-06-10 04:29:50,222 - scripts.webapp.unified_web_orchestrator - INFO - [96m[04:29:50.222] [START] DEMARRAGE APPLICATION WEB[0m
+2025-06-10 04:29:50,222 - scripts.webapp.unified_web_orchestrator - INFO -    Détails: Mode: Headless
+2025-06-10 04:29:50,222 - scripts.webapp.unified_web_orchestrator - INFO -    Résultat: Initialisation orchestrateur
+2025-06-10 04:29:50,222 - scripts.webapp.unified_web_orchestrator - INFO - [96m[04:29:50.222] [CLEAN] NETTOYAGE PREALABLE[0m
+2025-06-10 04:29:50,222 - scripts.webapp.unified_web_orchestrator - INFO -    Détails: Arret instances existantes
+2025-06-10 04:29:50,223 - scripts.webapp.unified_web_orchestrator - INFO - [CLEAN] Debut nettoyage processus application web
+2025-06-10 04:29:55,458 - scripts.webapp.unified_web_orchestrator - INFO - Processus trouvé (port): PID 18520 - Port 5003
+2025-06-10 04:29:56,321 - scripts.webapp.unified_web_orchestrator - INFO - Processus trouvé (cmdline): PID 39596 - c:\users\jsboi\.conda\envs\projet-is\python.exe c:\users\jsboi\.vscode\extensions\ms-python.isort-20
+2025-06-10 04:29:56,545 - scripts.webapp.unified_web_orchestrator - INFO - Processus trouvés: 2
+2025-06-10 04:29:56,546 - scripts.webapp.unified_web_orchestrator - INFO - Envoi signal TERM aux processus...
+2025-06-10 04:29:56,546 - scripts.webapp.unified_web_orchestrator - INFO - TERM envoyé à PID 18520
+2025-06-10 04:29:56,546 - scripts.webapp.unified_web_orchestrator - INFO - TERM envoyé à PID 39596
+2025-06-10 04:29:56,546 - scripts.webapp.unified_web_orchestrator - INFO - Attente arrêt propre (5s)...
+2025-06-10 04:30:01,547 - scripts.webapp.unified_web_orchestrator - INFO - Tous les processus arrêtés proprement
+2025-06-10 04:30:06,522 - scripts.webapp.unified_web_orchestrator - INFO - Processus trouvé (cmdline): PID 49516 - c:\users\jsboi\.conda\envs\projet-is\python.exe c:\users\jsboi\.vscode\extensions\ms-python.isort-20
+2025-06-10 04:30:06,577 - scripts.webapp.unified_web_orchestrator - WARNING - Force kill de 1 processus récalcitrants
+2025-06-10 04:30:06,577 - scripts.webapp.unified_web_orchestrator - WARNING - KILL forcé sur PID 49516
+2025-06-10 04:30:06,621 - scripts.webapp.unified_web_orchestrator - INFO - Vérification libération des ports...
+2025-06-10 04:30:06,634 - scripts.webapp.unified_web_orchestrator - INFO - Tous les ports libérés
+2025-06-10 04:30:06,634 - scripts.webapp.unified_web_orchestrator - INFO - Nettoyage fichiers temporaires...
+2025-06-10 04:30:06,635 - scripts.webapp.unified_web_orchestrator - INFO - Supprimé: backend_info.json
+2025-06-10 04:30:06,635 - scripts.webapp.unified_web_orchestrator - INFO - Fichiers temporaires nettoyés: 1
+2025-06-10 04:30:06,636 - scripts.webapp.unified_web_orchestrator - INFO - [OK] Nettoyage processus terminé
+2025-06-10 04:30:06,636 - scripts.webapp.unified_web_orchestrator - INFO - [96m[04:30:06.636] [BACKEND] DEMARRAGE BACKEND[0m
+2025-06-10 04:30:06,636 - scripts.webapp.unified_web_orchestrator - INFO -    Détails: Lancement avec failover de ports
+2025-06-10 04:30:06,636 - scripts.webapp.unified_web_orchestrator - INFO - Tentative 1/4 - Port 5003
+2025-06-10 04:30:06,640 - scripts.webapp.unified_web_orchestrator - INFO - Démarrage backend FastAPI avec Python de Conda: C:\Users\jsboi\.conda\envs\projet-is\python.exe -m uvicorn api.main:app --host 0.0.0.0 --port 5003
+2025-06-10 04:30:06,640 - scripts.webapp.unified_web_orchestrator - INFO - Logging stdout de Uvicorn dans: c:\dev\2025-Epita-Intelligence-Symbolique\logs\uvicorn_stdout_5003.log
+2025-06-10 04:30:06,640 - scripts.webapp.unified_web_orchestrator - INFO - Logging stderr de Uvicorn dans: c:\dev\2025-Epita-Intelligence-Symbolique\logs\uvicorn_stderr_5003.log
+2025-06-10 04:30:06,646 - scripts.webapp.unified_web_orchestrator - INFO - Attente backend sur http://localhost:5003/api/status (timeout: 30s)
+2025-06-10 04:30:11,240 - scripts.webapp.unified_web_orchestrator - INFO - Backend accessible sur http://localhost:5003/api/status
+2025-06-10 04:30:11,241 - scripts.webapp.unified_web_orchestrator - INFO - Info backend sauvées: backend_info.json
+2025-06-10 04:30:11,241 - scripts.webapp.unified_web_orchestrator - INFO - [96m[04:30:11.241] [OK] BACKEND OPERATIONNEL[0m
+2025-06-10 04:30:11,241 - scripts.webapp.unified_web_orchestrator - INFO -    Détails: Port: 5003 | PID: 16052
+2025-06-10 04:30:11,241 - scripts.webapp.unified_web_orchestrator - INFO -    Résultat: URL: http://localhost:5003
+2025-06-10 04:30:11,241 - scripts.webapp.unified_web_orchestrator - INFO - [96m[04:30:11.241] [CHECK] VALIDATION SERVICES[0m
+2025-06-10 04:30:11,241 - scripts.webapp.unified_web_orchestrator - INFO -    Détails: Verification endpoints
+2025-06-10 04:30:11,503 - scripts.webapp.unified_web_orchestrator - INFO - Backend health: {'status': 'operational', 'service_status': {'overall_status': 'available', 'session_id': 'ec6ba47e-d364-47ba-bf5c-cecdf97c51b0', 'start_time': '2025-06-10T04:30:11.502181', 'uptime_seconds': 0.0, 'last_activity': '2025-06-10T04:30:11.502181', 'initialized': True, 'shutdown_initiated': False, 'configuration': {'enable_hierarchical': True, 'enable_specialized_orchestrators': True, 'enable_communication_middleware': True, 'max_concurrent_analyses': 10, 'analysis_timeout': 300, 'auto_cleanup': True, 'save_results': True, 'results_dir': 'C:\\dev\\2025-Epita-Intelligence-Symbolique\\results', 'data_dir': 'C:\\dev\\2025-Epita-Intelligence-Symbolique\\argumentation_analysis\\data'}, 'active_components': {'strategic_manager': False, 'tactical_manager': False, 'operational_manager': False, 'cluedo_orchestrator': True, 'conversation_orchestrator': True, 'llm_orchestrator': True, 'middleware': True}, 'component_specific_status': {'llm_orchestrator': {'is_initialized': False, 'active_sessions': 0, 'cache_size': 0, 'config': {'max_concurrent_analyses': 10, 'default_timeout': 30, 'cache_enabled': True, 'cache_ttl': 3600, 'retry_attempts': 3, 'retry_delay': 1.0, 'enable_metrics': True, 'log_level': 'INFO', 'analysis_types': ['rhetorical_analysis', 'enhanced_rhetorical_analysis', 'fallacy_detection', 'contextual_analysis', 'semantic_argument_analysis', 'unified_analysis']}, 'metrics': {'total_requests': 0, 'successful_analyses': 0, 'failed_analyses': 0, 'average_processing_time': 0.0, 'cache_hits': 0, 'cache_misses': 0}}}}}
+2025-06-10 04:30:11,503 - scripts.webapp.unified_web_orchestrator - INFO - [96m[04:30:11.503] [OK] SERVICES VALIDES[0m
+2025-06-10 04:30:11,503 - scripts.webapp.unified_web_orchestrator - INFO -    Détails: Tous les endpoints repondent
+2025-06-10 04:30:11,503 - scripts.webapp.unified_web_orchestrator - INFO - [96m[04:30:11.503] [OK] APPLICATION WEB OPERATIONNELLE[0m
+2025-06-10 04:30:11,504 - scripts.webapp.unified_web_orchestrator - INFO -    Détails: Backend: http://localhost:5003
+2025-06-10 04:30:11,504 - scripts.webapp.unified_web_orchestrator - INFO -    Résultat: Tous les services démarrés
+2025-06-10 04:31:05,891 - scripts.webapp.unified_web_orchestrator - INFO - [96m[04:31:05.891] [START] DEMARRAGE APPLICATION WEB[0m
+2025-06-10 04:31:05,891 - scripts.webapp.unified_web_orchestrator - INFO -    Détails: Mode: Headless
+2025-06-10 04:31:05,891 - scripts.webapp.unified_web_orchestrator - INFO -    Résultat: Initialisation orchestrateur
+2025-06-10 04:31:05,891 - scripts.webapp.unified_web_orchestrator - INFO - [96m[04:31:05.891] [CLEAN] NETTOYAGE PREALABLE[0m
+2025-06-10 04:31:05,891 - scripts.webapp.unified_web_orchestrator - INFO -    Détails: Arret instances existantes
+2025-06-10 04:31:05,891 - scripts.webapp.unified_web_orchestrator - INFO - [CLEAN] Debut nettoyage processus application web
+2025-06-10 04:31:11,598 - scripts.webapp.unified_web_orchestrator - INFO - Processus trouvé (port): PID 16052 - Port 5003
+2025-06-10 04:31:12,061 - scripts.webapp.unified_web_orchestrator - INFO - Processus trouvé (cmdline): PID 26328 - c:\users\jsboi\.conda\envs\projet-is\python.exe c:\users\jsboi\.vscode\extensions\ms-python.isort-20
+2025-06-10 04:31:12,702 - scripts.webapp.unified_web_orchestrator - INFO - Processus trouvés: 2
+2025-06-10 04:31:12,703 - scripts.webapp.unified_web_orchestrator - INFO - Envoi signal TERM aux processus...
+2025-06-10 04:31:12,703 - scripts.webapp.unified_web_orchestrator - INFO - TERM envoyé à PID 16052
+2025-06-10 04:31:12,703 - scripts.webapp.unified_web_orchestrator - INFO - TERM envoyé à PID 26328
+2025-06-10 04:31:12,703 - scripts.webapp.unified_web_orchestrator - INFO - Attente arrêt propre (5s)...
+2025-06-10 04:31:17,704 - scripts.webapp.unified_web_orchestrator - INFO - Tous les processus arrêtés proprement
+2025-06-10 04:31:23,561 - scripts.webapp.unified_web_orchestrator - INFO - Processus trouvé (cmdline): PID 43996 - c:\users\jsboi\.conda\envs\projet-is\python.exe c:\users\jsboi\.vscode\extensions\ms-python.isort-20
+2025-06-10 04:31:23,707 - scripts.webapp.unified_web_orchestrator - WARNING - Force kill de 1 processus récalcitrants
+2025-06-10 04:31:23,708 - scripts.webapp.unified_web_orchestrator - WARNING - KILL forcé sur PID 43996
+2025-06-10 04:31:23,735 - scripts.webapp.unified_web_orchestrator - INFO - Vérification libération des ports...
+2025-06-10 04:31:23,752 - scripts.webapp.unified_web_orchestrator - INFO - Tous les ports libérés
+2025-06-10 04:31:23,752 - scripts.webapp.unified_web_orchestrator - INFO - Nettoyage fichiers temporaires...
+2025-06-10 04:31:23,753 - scripts.webapp.unified_web_orchestrator - INFO - Supprimé: backend_info.json
+2025-06-10 04:31:23,754 - scripts.webapp.unified_web_orchestrator - INFO - Fichiers temporaires nettoyés: 1
+2025-06-10 04:31:23,754 - scripts.webapp.unified_web_orchestrator - INFO - [OK] Nettoyage processus terminé
+2025-06-10 04:31:23,754 - scripts.webapp.unified_web_orchestrator - INFO - [96m[04:31:23.754] [BACKEND] DEMARRAGE BACKEND[0m
+2025-06-10 04:31:23,754 - scripts.webapp.unified_web_orchestrator - INFO -    Détails: Lancement avec failover de ports
+2025-06-10 04:31:23,754 - scripts.webapp.unified_web_orchestrator - INFO - Tentative 1/4 - Port 5003
+2025-06-10 04:31:23,757 - scripts.webapp.unified_web_orchestrator - INFO - Démarrage backend FastAPI avec Python de Conda: C:\Users\jsboi\.conda\envs\projet-is\python.exe -m uvicorn api.main:app --host 0.0.0.0 --port 5003
+2025-06-10 04:31:23,757 - scripts.webapp.unified_web_orchestrator - INFO - Logging stdout de Uvicorn dans: c:\dev\2025-Epita-Intelligence-Symbolique\logs\uvicorn_stdout_5003.log
+2025-06-10 04:31:23,757 - scripts.webapp.unified_web_orchestrator - INFO - Logging stderr de Uvicorn dans: c:\dev\2025-Epita-Intelligence-Symbolique\logs\uvicorn_stderr_5003.log
+2025-06-10 04:31:23,766 - scripts.webapp.unified_web_orchestrator - INFO - Attente backend sur http://localhost:5003/api/status (timeout: 30s)
+2025-06-10 04:31:28,341 - scripts.webapp.unified_web_orchestrator - INFO - Backend accessible sur http://localhost:5003/api/status
+2025-06-10 04:31:28,344 - scripts.webapp.unified_web_orchestrator - INFO - Info backend sauvées: backend_info.json
+2025-06-10 04:31:28,344 - scripts.webapp.unified_web_orchestrator - INFO - [96m[04:31:28.344] [OK] BACKEND OPERATIONNEL[0m
+2025-06-10 04:31:28,344 - scripts.webapp.unified_web_orchestrator - INFO -    Détails: Port: 5003 | PID: 36476
+2025-06-10 04:31:28,344 - scripts.webapp.unified_web_orchestrator - INFO -    Résultat: URL: http://localhost:5003
+2025-06-10 04:31:28,344 - scripts.webapp.unified_web_orchestrator - INFO - [96m[04:31:28.344] [CHECK] VALIDATION SERVICES[0m
+2025-06-10 04:31:28,344 - scripts.webapp.unified_web_orchestrator - INFO -    Détails: Verification endpoints
+2025-06-10 04:31:28,604 - scripts.webapp.unified_web_orchestrator - INFO - Backend health: {'status': 'operational', 'service_status': {'overall_status': 'available', 'session_id': '4ed0e346-97ac-496e-a42e-a5909da5bba2', 'start_time': '2025-06-10T04:31:28.602275', 'uptime_seconds': 0.001034, 'last_activity': '2025-06-10T04:31:28.603309', 'initialized': True, 'shutdown_initiated': False, 'configuration': {'enable_hierarchical': True, 'enable_specialized_orchestrators': True, 'enable_communication_middleware': True, 'max_concurrent_analyses': 10, 'analysis_timeout': 300, 'auto_cleanup': True, 'save_results': True, 'results_dir': 'C:\\dev\\2025-Epita-Intelligence-Symbolique\\results', 'data_dir': 'C:\\dev\\2025-Epita-Intelligence-Symbolique\\argumentation_analysis\\data'}, 'active_components': {'strategic_manager': True, 'tactical_manager': False, 'operational_manager': False, 'cluedo_orchestrator': True, 'conversation_orchestrator': True, 'llm_orchestrator': True, 'middleware': True}, 'component_specific_status': {'llm_orchestrator': {'is_initialized': False, 'active_sessions': 0, 'cache_size': 0, 'config': {'max_concurrent_analyses': 10, 'default_timeout': 30, 'cache_enabled': True, 'cache_ttl': 3600, 'retry_attempts': 3, 'retry_delay': 1.0, 'enable_metrics': True, 'log_level': 'INFO', 'analysis_types': ['rhetorical_analysis', 'enhanced_rhetorical_analysis', 'fallacy_detection', 'contextual_analysis', 'semantic_argument_analysis', 'unified_analysis']}, 'metrics': {'total_requests': 0, 'successful_analyses': 0, 'failed_analyses': 0, 'average_processing_time': 0.0, 'cache_hits': 0, 'cache_misses': 0}}}}}
+2025-06-10 04:31:28,605 - scripts.webapp.unified_web_orchestrator - INFO - [96m[04:31:28.605] [OK] SERVICES VALIDES[0m
+2025-06-10 04:31:28,605 - scripts.webapp.unified_web_orchestrator - INFO -    Détails: Tous les endpoints repondent
+2025-06-10 04:31:28,605 - scripts.webapp.unified_web_orchestrator - INFO - [96m[04:31:28.605] [OK] APPLICATION WEB OPERATIONNELLE[0m
+2025-06-10 04:31:28,605 - scripts.webapp.unified_web_orchestrator - INFO -    Détails: Backend: http://localhost:5003
+2025-06-10 04:31:28,606 - scripts.webapp.unified_web_orchestrator - INFO -    Résultat: Tous les services démarrés
+2025-06-10 04:33:17,281 - scripts.webapp.unified_web_orchestrator - INFO - [96m[04:33:17.280] [START] DEMARRAGE APPLICATION WEB[0m
+2025-06-10 04:33:17,281 - scripts.webapp.unified_web_orchestrator - INFO -    Détails: Mode: Headless
+2025-06-10 04:33:17,281 - scripts.webapp.unified_web_orchestrator - INFO -    Résultat: Initialisation orchestrateur
+2025-06-10 04:33:17,281 - scripts.webapp.unified_web_orchestrator - INFO - [96m[04:33:17.281] [CLEAN] NETTOYAGE PREALABLE[0m
+2025-06-10 04:33:17,281 - scripts.webapp.unified_web_orchestrator - INFO -    Détails: Arret instances existantes
+2025-06-10 04:33:17,281 - scripts.webapp.unified_web_orchestrator - INFO - [CLEAN] Debut nettoyage processus application web
+2025-06-10 04:33:22,833 - scripts.webapp.unified_web_orchestrator - INFO - Processus trouvé (cmdline): PID 29348 - c:\users\jsboi\.conda\envs\projet-is\python.exe c:\users\jsboi\.vscode\extensions\ms-python.isort-20
+2025-06-10 04:33:23,004 - scripts.webapp.unified_web_orchestrator - INFO - Processus trouvé (port): PID 36476 - Port 5003
+2025-06-10 04:33:23,447 - scripts.webapp.unified_web_orchestrator - INFO - Processus trouvés: 2
+2025-06-10 04:33:23,447 - scripts.webapp.unified_web_orchestrator - INFO - Envoi signal TERM aux processus...
+2025-06-10 04:33:23,447 - scripts.webapp.unified_web_orchestrator - INFO - TERM envoyé à PID 29348
+2025-06-10 04:33:23,447 - scripts.webapp.unified_web_orchestrator - INFO - TERM envoyé à PID 36476
+2025-06-10 04:33:23,447 - scripts.webapp.unified_web_orchestrator - INFO - Attente arrêt propre (5s)...
+2025-06-10 04:33:28,448 - scripts.webapp.unified_web_orchestrator - INFO - Tous les processus arrêtés proprement
+2025-06-10 04:33:32,810 - scripts.webapp.unified_web_orchestrator - INFO - Processus trouvé (cmdline): PID 33656 - c:\users\jsboi\.conda\envs\projet-is\python.exe c:\users\jsboi\.vscode\extensions\ms-python.isort-20
+2025-06-10 04:33:33,233 - scripts.webapp.unified_web_orchestrator - WARNING - Force kill de 1 processus récalcitrants
+2025-06-10 04:33:33,233 - scripts.webapp.unified_web_orchestrator - WARNING - KILL forcé sur PID 33656
+2025-06-10 04:33:33,255 - scripts.webapp.unified_web_orchestrator - INFO - Vérification libération des ports...
+2025-06-10 04:33:33,270 - scripts.webapp.unified_web_orchestrator - INFO - Tous les ports libérés
+2025-06-10 04:33:33,270 - scripts.webapp.unified_web_orchestrator - INFO - Nettoyage fichiers temporaires...
+2025-06-10 04:33:33,271 - scripts.webapp.unified_web_orchestrator - INFO - Supprimé: backend_info.json
+2025-06-10 04:33:33,271 - scripts.webapp.unified_web_orchestrator - INFO - Fichiers temporaires nettoyés: 1
+2025-06-10 04:33:33,271 - scripts.webapp.unified_web_orchestrator - INFO - [OK] Nettoyage processus terminé
+2025-06-10 04:33:33,271 - scripts.webapp.unified_web_orchestrator - INFO - [96m[04:33:33.271] [BACKEND] DEMARRAGE BACKEND[0m
+2025-06-10 04:33:33,271 - scripts.webapp.unified_web_orchestrator - INFO -    Détails: Lancement avec failover de ports
+2025-06-10 04:33:33,271 - scripts.webapp.unified_web_orchestrator - INFO - Tentative 1/4 - Port 5003
+2025-06-10 04:33:33,274 - scripts.webapp.unified_web_orchestrator - INFO - Démarrage backend FastAPI avec Python de Conda: C:\Users\jsboi\.conda\envs\projet-is\python.exe -m uvicorn api.main:app --host 0.0.0.0 --port 5003
+2025-06-10 04:33:33,275 - scripts.webapp.unified_web_orchestrator - INFO - Logging stdout de Uvicorn dans: c:\dev\2025-Epita-Intelligence-Symbolique\logs\uvicorn_stdout_5003.log
+2025-06-10 04:33:33,275 - scripts.webapp.unified_web_orchestrator - INFO - Logging stderr de Uvicorn dans: c:\dev\2025-Epita-Intelligence-Symbolique\logs\uvicorn_stderr_5003.log
+2025-06-10 04:33:33,281 - scripts.webapp.unified_web_orchestrator - INFO - Attente backend sur http://localhost:5003/api/status (timeout: 30s)
+2025-06-10 04:33:37,874 - scripts.webapp.unified_web_orchestrator - INFO - Backend accessible sur http://localhost:5003/api/status
+2025-06-10 04:33:37,876 - scripts.webapp.unified_web_orchestrator - INFO - Info backend sauvées: backend_info.json
+2025-06-10 04:33:37,876 - scripts.webapp.unified_web_orchestrator - INFO - [96m[04:33:37.876] [OK] BACKEND OPERATIONNEL[0m
+2025-06-10 04:33:37,876 - scripts.webapp.unified_web_orchestrator - INFO -    Détails: Port: 5003 | PID: 2824
+2025-06-10 04:33:37,876 - scripts.webapp.unified_web_orchestrator - INFO -    Résultat: URL: http://localhost:5003
+2025-06-10 04:33:37,876 - scripts.webapp.unified_web_orchestrator - INFO - [96m[04:33:37.876] [CHECK] VALIDATION SERVICES[0m
+2025-06-10 04:33:37,876 - scripts.webapp.unified_web_orchestrator - INFO -    Détails: Verification endpoints
+2025-06-10 04:33:38,141 - scripts.webapp.unified_web_orchestrator - INFO - Backend health: {'status': 'operational', 'service_status': {'overall_status': 'available', 'session_id': '037c678d-ee93-423a-a84e-4fc37bb41563', 'start_time': '2025-06-10T04:33:38.139091', 'uptime_seconds': 0.001, 'last_activity': '2025-06-10T04:33:38.140091', 'initialized': True, 'shutdown_initiated': False, 'configuration': {'enable_hierarchical': True, 'enable_specialized_orchestrators': True, 'enable_communication_middleware': True, 'max_concurrent_analyses': 10, 'analysis_timeout': 300, 'auto_cleanup': True, 'save_results': True, 'results_dir': 'C:\\dev\\2025-Epita-Intelligence-Symbolique\\results', 'data_dir': 'C:\\dev\\2025-Epita-Intelligence-Symbolique\\argumentation_analysis\\data'}, 'active_components': {'strategic_manager': True, 'tactical_manager': True, 'operational_manager': False, 'cluedo_orchestrator': True, 'conversation_orchestrator': True, 'llm_orchestrator': True, 'middleware': True}, 'component_specific_status': {'llm_orchestrator': {'is_initialized': False, 'active_sessions': 0, 'cache_size': 0, 'config': {'max_concurrent_analyses': 10, 'default_timeout': 30, 'cache_enabled': True, 'cache_ttl': 3600, 'retry_attempts': 3, 'retry_delay': 1.0, 'enable_metrics': True, 'log_level': 'INFO', 'analysis_types': ['rhetorical_analysis', 'enhanced_rhetorical_analysis', 'fallacy_detection', 'contextual_analysis', 'semantic_argument_analysis', 'unified_analysis']}, 'metrics': {'total_requests': 0, 'successful_analyses': 0, 'failed_analyses': 0, 'average_processing_time': 0.0, 'cache_hits': 0, 'cache_misses': 0}}}}}
+2025-06-10 04:33:38,141 - scripts.webapp.unified_web_orchestrator - INFO - [96m[04:33:38.141] [OK] SERVICES VALIDES[0m
+2025-06-10 04:33:38,141 - scripts.webapp.unified_web_orchestrator - INFO -    Détails: Tous les endpoints repondent
+2025-06-10 04:33:38,142 - scripts.webapp.unified_web_orchestrator - INFO - [96m[04:33:38.141] [OK] APPLICATION WEB OPERATIONNELLE[0m
+2025-06-10 04:33:38,142 - scripts.webapp.unified_web_orchestrator - INFO -    Détails: Backend: http://localhost:5003
+2025-06-10 04:33:38,142 - scripts.webapp.unified_web_orchestrator - INFO -    Résultat: Tous les services démarrés
+2025-06-10 04:35:14,186 - scripts.webapp.unified_web_orchestrator - INFO - [96m[04:35:14.186] [START] DEMARRAGE APPLICATION WEB[0m
+2025-06-10 04:35:14,186 - scripts.webapp.unified_web_orchestrator - INFO -    Détails: Mode: Headless
+2025-06-10 04:35:14,186 - scripts.webapp.unified_web_orchestrator - INFO -    Résultat: Initialisation orchestrateur
+2025-06-10 04:35:14,186 - scripts.webapp.unified_web_orchestrator - INFO - [96m[04:35:14.186] [CLEAN] NETTOYAGE PREALABLE[0m
+2025-06-10 04:35:14,186 - scripts.webapp.unified_web_orchestrator - INFO -    Détails: Arret instances existantes
+2025-06-10 04:35:14,186 - scripts.webapp.unified_web_orchestrator - INFO - [CLEAN] Debut nettoyage processus application web
+2025-06-10 04:35:15,141 - scripts.webapp.unified_web_orchestrator - INFO - Processus trouvé (port): PID 2824 - Port 5003
+2025-06-10 04:35:21,352 - scripts.webapp.unified_web_orchestrator - INFO - Processus trouvé (cmdline): PID 51812 - c:\users\jsboi\.conda\envs\projet-is\python.exe c:\users\jsboi\.vscode\extensions\ms-python.isort-20
+2025-06-10 04:35:21,359 - scripts.webapp.unified_web_orchestrator - INFO - Processus trouvés: 2
+2025-06-10 04:35:21,359 - scripts.webapp.unified_web_orchestrator - INFO - Envoi signal TERM aux processus...
+2025-06-10 04:35:21,359 - scripts.webapp.unified_web_orchestrator - INFO - TERM envoyé à PID 2824
+2025-06-10 04:35:21,359 - scripts.webapp.unified_web_orchestrator - INFO - TERM envoyé à PID 51812
+2025-06-10 04:35:21,359 - scripts.webapp.unified_web_orchestrator - INFO - Attente arrêt propre (5s)...
+2025-06-10 04:35:26,360 - scripts.webapp.unified_web_orchestrator - INFO - Tous les processus arrêtés proprement
+2025-06-10 04:35:31,440 - scripts.webapp.unified_web_orchestrator - INFO - Processus trouvé (cmdline): PID 15292 - c:\users\jsboi\.conda\envs\projet-is\python.exe c:\users\jsboi\.vscode\extensions\ms-python.isort-20
+2025-06-10 04:35:32,279 - scripts.webapp.unified_web_orchestrator - WARNING - Force kill de 1 processus récalcitrants
+2025-06-10 04:35:32,280 - scripts.webapp.unified_web_orchestrator - WARNING - KILL forcé sur PID 15292
+2025-06-10 04:35:32,311 - scripts.webapp.unified_web_orchestrator - INFO - Vérification libération des ports...
+2025-06-10 04:35:32,330 - scripts.webapp.unified_web_orchestrator - INFO - Tous les ports libérés
+2025-06-10 04:35:32,330 - scripts.webapp.unified_web_orchestrator - INFO - Nettoyage fichiers temporaires...
+2025-06-10 04:35:32,331 - scripts.webapp.unified_web_orchestrator - INFO - Supprimé: backend_info.json
+2025-06-10 04:35:32,331 - scripts.webapp.unified_web_orchestrator - INFO - Fichiers temporaires nettoyés: 1
+2025-06-10 04:35:32,331 - scripts.webapp.unified_web_orchestrator - INFO - [OK] Nettoyage processus terminé
+2025-06-10 04:35:32,331 - scripts.webapp.unified_web_orchestrator - INFO - [96m[04:35:32.331] [BACKEND] DEMARRAGE BACKEND[0m
+2025-06-10 04:35:32,331 - scripts.webapp.unified_web_orchestrator - INFO -    Détails: Lancement avec failover de ports
+2025-06-10 04:35:32,331 - scripts.webapp.unified_web_orchestrator - INFO - Tentative 1/4 - Port 5003
+2025-06-10 04:35:32,334 - scripts.webapp.unified_web_orchestrator - INFO - Démarrage backend FastAPI avec Python de Conda: C:\Users\jsboi\.conda\envs\projet-is\python.exe -m uvicorn api.main:app --host 0.0.0.0 --port 5003
+2025-06-10 04:35:32,334 - scripts.webapp.unified_web_orchestrator - INFO - Logging stdout de Uvicorn dans: c:\dev\2025-Epita-Intelligence-Symbolique\logs\uvicorn_stdout_5003.log
+2025-06-10 04:35:32,334 - scripts.webapp.unified_web_orchestrator - INFO - Logging stderr de Uvicorn dans: c:\dev\2025-Epita-Intelligence-Symbolique\logs\uvicorn_stderr_5003.log
+2025-06-10 04:35:32,338 - scripts.webapp.unified_web_orchestrator - INFO - Attente backend sur http://localhost:5003/api/status (timeout: 30s)
+2025-06-10 04:35:36,925 - scripts.webapp.unified_web_orchestrator - INFO - Backend accessible sur http://localhost:5003/api/status
+2025-06-10 04:35:36,927 - scripts.webapp.unified_web_orchestrator - INFO - Info backend sauvées: backend_info.json
+2025-06-10 04:35:36,927 - scripts.webapp.unified_web_orchestrator - INFO - [96m[04:35:36.927] [OK] BACKEND OPERATIONNEL[0m
+2025-06-10 04:35:36,928 - scripts.webapp.unified_web_orchestrator - INFO -    Détails: Port: 5003 | PID: 43100
+2025-06-10 04:35:36,928 - scripts.webapp.unified_web_orchestrator - INFO -    Résultat: URL: http://localhost:5003
+2025-06-10 04:35:36,928 - scripts.webapp.unified_web_orchestrator - INFO - [96m[04:35:36.928] [CHECK] VALIDATION SERVICES[0m
+2025-06-10 04:35:36,928 - scripts.webapp.unified_web_orchestrator - INFO -    Détails: Verification endpoints
+2025-06-10 04:35:37,184 - scripts.webapp.unified_web_orchestrator - INFO - Backend health: {'status': 'operational', 'service_status': {'overall_status': 'available', 'session_id': '41b8c5b2-59cd-4653-8fe3-62deaa7747af', 'start_time': '2025-06-10T04:35:37.182064', 'uptime_seconds': 0.001001, 'last_activity': '2025-06-10T04:35:37.183065', 'initialized': True, 'shutdown_initiated': False, 'configuration': {'enable_hierarchical': True, 'enable_specialized_orchestrators': True, 'enable_communication_middleware': True, 'max_concurrent_analyses': 10, 'analysis_timeout': 300, 'auto_cleanup': True, 'save_results': True, 'results_dir': 'C:\\dev\\2025-Epita-Intelligence-Symbolique\\results', 'data_dir': 'C:\\dev\\2025-Epita-Intelligence-Symbolique\\argumentation_analysis\\data'}, 'active_components': {'strategic_manager': True, 'tactical_manager': True, 'operational_manager': True, 'cluedo_orchestrator': True, 'conversation_orchestrator': True, 'llm_orchestrator': True, 'middleware': True}, 'component_specific_status': {'llm_orchestrator': {'is_initialized': False, 'active_sessions': 0, 'cache_size': 0, 'config': {'max_concurrent_analyses': 10, 'default_timeout': 30, 'cache_enabled': True, 'cache_ttl': 3600, 'retry_attempts': 3, 'retry_delay': 1.0, 'enable_metrics': True, 'log_level': 'INFO', 'analysis_types': ['rhetorical_analysis', 'enhanced_rhetorical_analysis', 'fallacy_detection', 'contextual_analysis', 'semantic_argument_analysis', 'unified_analysis']}, 'metrics': {'total_requests': 0, 'successful_analyses': 0, 'failed_analyses': 0, 'average_processing_time': 0.0, 'cache_hits': 0, 'cache_misses': 0}}}}}
+2025-06-10 04:35:37,184 - scripts.webapp.unified_web_orchestrator - INFO - [96m[04:35:37.184] [OK] SERVICES VALIDES[0m
+2025-06-10 04:35:37,184 - scripts.webapp.unified_web_orchestrator - INFO -    Détails: Tous les endpoints repondent
+2025-06-10 04:35:37,184 - scripts.webapp.unified_web_orchestrator - INFO - [96m[04:35:37.184] [OK] APPLICATION WEB OPERATIONNELLE[0m
+2025-06-10 04:35:37,184 - scripts.webapp.unified_web_orchestrator - INFO -    Détails: Backend: http://localhost:5003
+2025-06-10 04:35:37,184 - scripts.webapp.unified_web_orchestrator - INFO -    Résultat: Tous les services démarrés
+2025-06-10 04:38:44,384 - scripts.webapp.unified_web_orchestrator - INFO - [96m[04:38:44.384] [START] DEMARRAGE APPLICATION WEB[0m
+2025-06-10 04:38:44,385 - scripts.webapp.unified_web_orchestrator - INFO -    Détails: Mode: Headless
+2025-06-10 04:38:44,385 - scripts.webapp.unified_web_orchestrator - INFO -    Résultat: Initialisation orchestrateur
+2025-06-10 04:38:44,385 - scripts.webapp.unified_web_orchestrator - INFO - [96m[04:38:44.385] [CLEAN] NETTOYAGE PREALABLE[0m
+2025-06-10 04:38:44,385 - scripts.webapp.unified_web_orchestrator - INFO -    Détails: Arret instances existantes
+2025-06-10 04:38:44,385 - scripts.webapp.unified_web_orchestrator - INFO - [CLEAN] Debut nettoyage processus application web
+2025-06-10 04:38:45,808 - scripts.webapp.unified_web_orchestrator - INFO - Processus trouvé (cmdline): PID 3508 - c:\users\jsboi\.conda\envs\projet-is\python.exe c:\users\jsboi\.vscode\extensions\ms-python.isort-20
+2025-06-10 04:38:50,513 - scripts.webapp.unified_web_orchestrator - INFO - Processus trouvé (port): PID 43100 - Port 5003
+2025-06-10 04:38:50,746 - scripts.webapp.unified_web_orchestrator - INFO - Processus trouvés: 2
+2025-06-10 04:38:50,746 - scripts.webapp.unified_web_orchestrator - INFO - Envoi signal TERM aux processus...
+2025-06-10 04:38:50,746 - scripts.webapp.unified_web_orchestrator - INFO - TERM envoyé à PID 3508
+2025-06-10 04:38:50,747 - scripts.webapp.unified_web_orchestrator - INFO - TERM envoyé à PID 43100
+2025-06-10 04:38:50,747 - scripts.webapp.unified_web_orchestrator - INFO - Attente arrêt propre (5s)...
+2025-06-10 04:38:55,748 - scripts.webapp.unified_web_orchestrator - INFO - Tous les processus arrêtés proprement
+2025-06-10 04:39:00,940 - scripts.webapp.unified_web_orchestrator - INFO - Processus trouvé (cmdline): PID 52456 - c:\users\jsboi\.conda\envs\projet-is\python.exe c:\users\jsboi\.vscode\extensions\ms-python.isort-20
+2025-06-10 04:39:00,941 - scripts.webapp.unified_web_orchestrator - WARNING - Force kill de 1 processus récalcitrants
+2025-06-10 04:39:00,942 - scripts.webapp.unified_web_orchestrator - WARNING - KILL forcé sur PID 52456
+2025-06-10 04:39:00,973 - scripts.webapp.unified_web_orchestrator - INFO - Vérification libération des ports...
+2025-06-10 04:39:00,981 - scripts.webapp.unified_web_orchestrator - INFO - Tous les ports libérés
+2025-06-10 04:39:00,982 - scripts.webapp.unified_web_orchestrator - INFO - Nettoyage fichiers temporaires...
+2025-06-10 04:39:00,982 - scripts.webapp.unified_web_orchestrator - INFO - Supprimé: backend_info.json
+2025-06-10 04:39:00,982 - scripts.webapp.unified_web_orchestrator - INFO - Fichiers temporaires nettoyés: 1
+2025-06-10 04:39:00,982 - scripts.webapp.unified_web_orchestrator - INFO - [OK] Nettoyage processus terminé
+2025-06-10 04:39:00,982 - scripts.webapp.unified_web_orchestrator - INFO - [96m[04:39:00.982] [BACKEND] DEMARRAGE BACKEND[0m
+2025-06-10 04:39:00,982 - scripts.webapp.unified_web_orchestrator - INFO -    Détails: Lancement avec failover de ports
+2025-06-10 04:39:00,982 - scripts.webapp.unified_web_orchestrator - INFO - Tentative 1/4 - Port 5003
+2025-06-10 04:39:00,984 - scripts.webapp.unified_web_orchestrator - INFO - Démarrage backend FastAPI avec Python de Conda: C:\Users\jsboi\.conda\envs\projet-is\python.exe -m uvicorn api.main:app --host 0.0.0.0 --port 5003
+2025-06-10 04:39:00,985 - scripts.webapp.unified_web_orchestrator - INFO - Logging stdout de Uvicorn dans: c:\dev\2025-Epita-Intelligence-Symbolique\logs\uvicorn_stdout_5003.log
+2025-06-10 04:39:00,985 - scripts.webapp.unified_web_orchestrator - INFO - Logging stderr de Uvicorn dans: c:\dev\2025-Epita-Intelligence-Symbolique\logs\uvicorn_stderr_5003.log
+2025-06-10 04:39:00,993 - scripts.webapp.unified_web_orchestrator - INFO - Attente backend sur http://localhost:5003/api/status (timeout: 30s)
+2025-06-10 04:39:05,578 - scripts.webapp.unified_web_orchestrator - INFO - Backend accessible sur http://localhost:5003/api/status
+2025-06-10 04:39:05,579 - scripts.webapp.unified_web_orchestrator - INFO - Info backend sauvées: backend_info.json
+2025-06-10 04:39:05,579 - scripts.webapp.unified_web_orchestrator - INFO - [96m[04:39:05.579] [OK] BACKEND OPERATIONNEL[0m
+2025-06-10 04:39:05,580 - scripts.webapp.unified_web_orchestrator - INFO -    Détails: Port: 5003 | PID: 37088
+2025-06-10 04:39:05,580 - scripts.webapp.unified_web_orchestrator - INFO -    Résultat: URL: http://localhost:5003
+2025-06-10 04:39:05,580 - scripts.webapp.unified_web_orchestrator - INFO - [96m[04:39:05.580] [CHECK] VALIDATION SERVICES[0m
+2025-06-10 04:39:05,580 - scripts.webapp.unified_web_orchestrator - INFO -    Détails: Verification endpoints
+2025-06-10 04:39:05,838 - scripts.webapp.unified_web_orchestrator - INFO - Backend health: {'status': 'operational', 'service_status': {'overall_status': 'available', 'session_id': '770cc9ef-9fdc-4f50-9b89-c86ee6b1f126', 'start_time': '2025-06-10T04:39:05.835947', 'uptime_seconds': 0.000963, 'last_activity': '2025-06-10T04:39:05.836910', 'initialized': True, 'shutdown_initiated': False, 'configuration': {'enable_hierarchical': True, 'enable_specialized_orchestrators': True, 'enable_communication_middleware': True, 'max_concurrent_analyses': 10, 'analysis_timeout': 300, 'auto_cleanup': True, 'save_results': True, 'results_dir': 'C:\\dev\\2025-Epita-Intelligence-Symbolique\\results', 'data_dir': 'C:\\dev\\2025-Epita-Intelligence-Symbolique\\argumentation_analysis\\data'}, 'active_components': {'strategic_manager': True, 'tactical_manager': True, 'operational_manager': True, 'cluedo_orchestrator': True, 'conversation_orchestrator': True, 'llm_orchestrator': True, 'middleware': True}, 'component_specific_status': {'llm_orchestrator': {'is_initialized': False, 'active_sessions': 0, 'cache_size': 0, 'config': {'max_concurrent_analyses': 10, 'default_timeout': 30, 'cache_enabled': True, 'cache_ttl': 3600, 'retry_attempts': 3, 'retry_delay': 1.0, 'enable_metrics': True, 'log_level': 'INFO', 'analysis_types': ['rhetorical_analysis', 'enhanced_rhetorical_analysis', 'fallacy_detection', 'contextual_analysis', 'semantic_argument_analysis', 'unified_analysis']}, 'metrics': {'total_requests': 0, 'successful_analyses': 0, 'failed_analyses': 0, 'average_processing_time': 0.0, 'cache_hits': 0, 'cache_misses': 0}}}}}
+2025-06-10 04:39:05,839 - scripts.webapp.unified_web_orchestrator - INFO - [96m[04:39:05.838] [OK] SERVICES VALIDES[0m
+2025-06-10 04:39:05,839 - scripts.webapp.unified_web_orchestrator - INFO -    Détails: Tous les endpoints repondent
+2025-06-10 04:39:05,839 - scripts.webapp.unified_web_orchestrator - INFO - [96m[04:39:05.839] [OK] APPLICATION WEB OPERATIONNELLE[0m
+2025-06-10 04:39:05,839 - scripts.webapp.unified_web_orchestrator - INFO -    Détails: Backend: http://localhost:5003
+2025-06-10 04:39:05,839 - scripts.webapp.unified_web_orchestrator - INFO -    Résultat: Tous les services démarrés
+2025-06-10 04:42:52,292 - scripts.webapp.unified_web_orchestrator - INFO - [96m[04:42:52.292] [START] DEMARRAGE APPLICATION WEB[0m
+2025-06-10 04:42:52,293 - scripts.webapp.unified_web_orchestrator - INFO -    Détails: Mode: Headless
+2025-06-10 04:42:52,293 - scripts.webapp.unified_web_orchestrator - INFO -    Résultat: Initialisation orchestrateur
+2025-06-10 04:42:52,293 - scripts.webapp.unified_web_orchestrator - INFO - [96m[04:42:52.293] [CLEAN] NETTOYAGE PREALABLE[0m
+2025-06-10 04:42:52,293 - scripts.webapp.unified_web_orchestrator - INFO -    Détails: Arret instances existantes
+2025-06-10 04:42:52,293 - scripts.webapp.unified_web_orchestrator - INFO - [CLEAN] Debut nettoyage processus application web
+2025-06-10 04:42:58,810 - scripts.webapp.unified_web_orchestrator - INFO - Processus trouvé (port): PID 37088 - Port 5003
+2025-06-10 04:42:59,216 - scripts.webapp.unified_web_orchestrator - INFO - Processus trouvé (cmdline): PID 52900 - c:\users\jsboi\.conda\envs\projet-is\python.exe c:\users\jsboi\.vscode\extensions\ms-python.isort-20
+2025-06-10 04:42:59,216 - scripts.webapp.unified_web_orchestrator - INFO - Processus trouvés: 2
+2025-06-10 04:42:59,216 - scripts.webapp.unified_web_orchestrator - INFO - Envoi signal TERM aux processus...
+2025-06-10 04:42:59,216 - scripts.webapp.unified_web_orchestrator - INFO - TERM envoyé à PID 37088
+2025-06-10 04:42:59,216 - scripts.webapp.unified_web_orchestrator - INFO - TERM envoyé à PID 52900
+2025-06-10 04:42:59,216 - scripts.webapp.unified_web_orchestrator - INFO - Attente arrêt propre (5s)...
+2025-06-10 04:43:04,217 - scripts.webapp.unified_web_orchestrator - INFO - Tous les processus arrêtés proprement
+2025-06-10 04:43:08,025 - scripts.webapp.unified_web_orchestrator - INFO - Processus trouvé (cmdline): PID 8700 - c:\users\jsboi\.conda\envs\projet-is\python.exe c:\users\jsboi\.vscode\extensions\ms-python.isort-20
+2025-06-10 04:43:10,137 - scripts.webapp.unified_web_orchestrator - WARNING - Force kill de 1 processus récalcitrants
+2025-06-10 04:43:10,138 - scripts.webapp.unified_web_orchestrator - WARNING - KILL forcé sur PID 8700
+2025-06-10 04:43:10,190 - scripts.webapp.unified_web_orchestrator - INFO - Vérification libération des ports...
+2025-06-10 04:43:10,204 - scripts.webapp.unified_web_orchestrator - INFO - Tous les ports libérés
+2025-06-10 04:43:10,204 - scripts.webapp.unified_web_orchestrator - INFO - Nettoyage fichiers temporaires...
+2025-06-10 04:43:10,205 - scripts.webapp.unified_web_orchestrator - INFO - Supprimé: backend_info.json
+2025-06-10 04:43:10,205 - scripts.webapp.unified_web_orchestrator - INFO - Fichiers temporaires nettoyés: 1
+2025-06-10 04:43:10,205 - scripts.webapp.unified_web_orchestrator - INFO - [OK] Nettoyage processus terminé
+2025-06-10 04:43:10,206 - scripts.webapp.unified_web_orchestrator - INFO - [96m[04:43:10.206] [BACKEND] DEMARRAGE BACKEND[0m
+2025-06-10 04:43:10,206 - scripts.webapp.unified_web_orchestrator - INFO -    Détails: Lancement avec failover de ports
+2025-06-10 04:43:10,206 - scripts.webapp.unified_web_orchestrator - INFO - Tentative 1/4 - Port 5003
+2025-06-10 04:43:10,210 - scripts.webapp.unified_web_orchestrator - INFO - Démarrage backend FastAPI avec Python de Conda: C:\Users\jsboi\.conda\envs\projet-is\python.exe -m uvicorn api.main:app --host 0.0.0.0 --port 5003
+2025-06-10 04:43:10,210 - scripts.webapp.unified_web_orchestrator - INFO - Logging stdout de Uvicorn dans: c:\dev\2025-Epita-Intelligence-Symbolique\logs\uvicorn_stdout_5003.log
+2025-06-10 04:43:10,211 - scripts.webapp.unified_web_orchestrator - INFO - Logging stderr de Uvicorn dans: c:\dev\2025-Epita-Intelligence-Symbolique\logs\uvicorn_stderr_5003.log
+2025-06-10 04:43:10,217 - scripts.webapp.unified_web_orchestrator - INFO - Attente backend sur http://localhost:5003/api/status (timeout: 30s)
+2025-06-10 04:43:15,326 - scripts.webapp.unified_web_orchestrator - INFO - Backend accessible sur http://localhost:5003/api/status
+2025-06-10 04:43:15,327 - scripts.webapp.unified_web_orchestrator - INFO - Info backend sauvées: backend_info.json
+2025-06-10 04:43:15,327 - scripts.webapp.unified_web_orchestrator - INFO - [96m[04:43:15.327] [OK] BACKEND OPERATIONNEL[0m
+2025-06-10 04:43:15,327 - scripts.webapp.unified_web_orchestrator - INFO -    Détails: Port: 5003 | PID: 16176
+2025-06-10 04:43:15,327 - scripts.webapp.unified_web_orchestrator - INFO -    Résultat: URL: http://localhost:5003
+2025-06-10 04:43:15,327 - scripts.webapp.unified_web_orchestrator - INFO - [96m[04:43:15.327] [CHECK] VALIDATION SERVICES[0m
+2025-06-10 04:43:15,328 - scripts.webapp.unified_web_orchestrator - INFO -    Détails: Verification endpoints
+2025-06-10 04:43:15,585 - scripts.webapp.unified_web_orchestrator - INFO - Backend health: {'status': 'operational', 'service_status': {'overall_status': 'available', 'session_id': 'd39a9dab-6e85-4b02-9ef3-750468ae4042', 'start_time': '2025-06-10T04:43:15.582709', 'uptime_seconds': 0.002001, 'last_activity': '2025-06-10T04:43:15.584710', 'initialized': True, 'shutdown_initiated': False, 'configuration': {'enable_hierarchical': True, 'enable_specialized_orchestrators': True, 'enable_communication_middleware': True, 'max_concurrent_analyses': 10, 'analysis_timeout': 300, 'auto_cleanup': True, 'save_results': True, 'results_dir': 'C:\\dev\\2025-Epita-Intelligence-Symbolique\\results', 'data_dir': 'C:\\dev\\2025-Epita-Intelligence-Symbolique\\argumentation_analysis\\data'}, 'active_components': {'strategic_manager': True, 'tactical_manager': True, 'operational_manager': True, 'cluedo_orchestrator': True, 'conversation_orchestrator': True, 'llm_orchestrator': True, 'middleware': True}, 'component_specific_status': {'llm_orchestrator': {'is_initialized': False, 'active_sessions': 0, 'cache_size': 0, 'config': {'max_concurrent_analyses': 10, 'default_timeout': 30, 'cache_enabled': True, 'cache_ttl': 3600, 'retry_attempts': 3, 'retry_delay': 1.0, 'enable_metrics': True, 'log_level': 'INFO', 'analysis_types': ['rhetorical_analysis', 'enhanced_rhetorical_analysis', 'fallacy_detection', 'contextual_analysis', 'semantic_argument_analysis', 'unified_analysis']}, 'metrics': {'total_requests': 0, 'successful_analyses': 0, 'failed_analyses': 0, 'average_processing_time': 0.0, 'cache_hits': 0, 'cache_misses': 0}}}}}
+2025-06-10 04:43:15,586 - scripts.webapp.unified_web_orchestrator - INFO - [96m[04:43:15.586] [OK] SERVICES VALIDES[0m
+2025-06-10 04:43:15,586 - scripts.webapp.unified_web_orchestrator - INFO -    Détails: Tous les endpoints repondent
+2025-06-10 04:43:15,586 - scripts.webapp.unified_web_orchestrator - INFO - [96m[04:43:15.586] [OK] APPLICATION WEB OPERATIONNELLE[0m
+2025-06-10 04:43:15,586 - scripts.webapp.unified_web_orchestrator - INFO -    Détails: Backend: http://localhost:5003
+2025-06-10 04:43:15,587 - scripts.webapp.unified_web_orchestrator - INFO -    Résultat: Tous les services démarrés
+2025-06-10 04:46:02,597 - scripts.webapp.unified_web_orchestrator - INFO - [96m[04:46:02.597] [START] DEMARRAGE APPLICATION WEB[0m
+2025-06-10 04:46:02,597 - scripts.webapp.unified_web_orchestrator - INFO -    Détails: Mode: Headless
+2025-06-10 04:46:02,597 - scripts.webapp.unified_web_orchestrator - INFO -    Résultat: Initialisation orchestrateur
+2025-06-10 04:46:02,597 - scripts.webapp.unified_web_orchestrator - INFO - [96m[04:46:02.597] [CLEAN] NETTOYAGE PREALABLE[0m
+2025-06-10 04:46:02,597 - scripts.webapp.unified_web_orchestrator - INFO -    Détails: Arret instances existantes
+2025-06-10 04:46:02,597 - scripts.webapp.unified_web_orchestrator - INFO - [CLEAN] Debut nettoyage processus application web
+2025-06-10 04:46:06,003 - scripts.webapp.unified_web_orchestrator - INFO - Processus trouvé (cmdline): PID 7676 - c:\users\jsboi\.conda\envs\projet-is\python.exe c:\users\jsboi\.vscode\extensions\ms-python.isort-20
+2025-06-10 04:46:07,771 - scripts.webapp.unified_web_orchestrator - INFO - Processus trouvé (port): PID 16176 - Port 5003
+2025-06-10 04:46:08,897 - scripts.webapp.unified_web_orchestrator - INFO - Processus trouvés: 2
+2025-06-10 04:46:08,897 - scripts.webapp.unified_web_orchestrator - INFO - Envoi signal TERM aux processus...
+2025-06-10 04:46:08,897 - scripts.webapp.unified_web_orchestrator - INFO - TERM envoyé à PID 7676
+2025-06-10 04:46:08,897 - scripts.webapp.unified_web_orchestrator - INFO - TERM envoyé à PID 16176
+2025-06-10 04:46:08,897 - scripts.webapp.unified_web_orchestrator - INFO - Attente arrêt propre (5s)...
+2025-06-10 04:46:13,898 - scripts.webapp.unified_web_orchestrator - INFO - Tous les processus arrêtés proprement
+2025-06-10 04:46:14,814 - scripts.webapp.unified_web_orchestrator - INFO - Processus trouvé (cmdline): PID 3040 - c:\users\jsboi\.conda\envs\projet-is\python.exe c:\users\jsboi\.vscode\extensions\ms-python.isort-20
+2025-06-10 04:46:18,868 - scripts.webapp.unified_web_orchestrator - WARNING - Force kill de 1 processus récalcitrants
+2025-06-10 04:46:18,868 - scripts.webapp.unified_web_orchestrator - WARNING - KILL forcé sur PID 3040
+2025-06-10 04:46:18,934 - scripts.webapp.unified_web_orchestrator - INFO - Vérification libération des ports...
+2025-06-10 04:46:18,945 - scripts.webapp.unified_web_orchestrator - INFO - Tous les ports libérés
+2025-06-10 04:46:18,945 - scripts.webapp.unified_web_orchestrator - INFO - Nettoyage fichiers temporaires...
+2025-06-10 04:46:18,945 - scripts.webapp.unified_web_orchestrator - INFO - Supprimé: backend_info.json
+2025-06-10 04:46:18,945 - scripts.webapp.unified_web_orchestrator - INFO - Fichiers temporaires nettoyés: 1
+2025-06-10 04:46:18,945 - scripts.webapp.unified_web_orchestrator - INFO - [OK] Nettoyage processus terminé
+2025-06-10 04:46:18,946 - scripts.webapp.unified_web_orchestrator - INFO - [96m[04:46:18.945] [BACKEND] DEMARRAGE BACKEND[0m
+2025-06-10 04:46:18,946 - scripts.webapp.unified_web_orchestrator - INFO -    Détails: Lancement avec failover de ports
+2025-06-10 04:46:18,946 - scripts.webapp.unified_web_orchestrator - INFO - Tentative 1/4 - Port 5003
+2025-06-10 04:46:18,947 - scripts.webapp.unified_web_orchestrator - INFO - Démarrage backend FastAPI avec Python de Conda: C:\Users\jsboi\.conda\envs\projet-is\python.exe -m uvicorn api.main:app --host 0.0.0.0 --port 5003
+2025-06-10 04:46:18,948 - scripts.webapp.unified_web_orchestrator - INFO - Logging stdout de Uvicorn dans: c:\dev\2025-Epita-Intelligence-Symbolique\logs\uvicorn_stdout_5003.log
+2025-06-10 04:46:18,948 - scripts.webapp.unified_web_orchestrator - INFO - Logging stderr de Uvicorn dans: c:\dev\2025-Epita-Intelligence-Symbolique\logs\uvicorn_stderr_5003.log
+2025-06-10 04:46:18,952 - scripts.webapp.unified_web_orchestrator - INFO - Attente backend sur http://localhost:5003/api/status (timeout: 30s)
+2025-06-10 04:46:24,177 - scripts.webapp.unified_web_orchestrator - INFO - Backend accessible sur http://localhost:5003/api/status
+2025-06-10 04:46:24,179 - scripts.webapp.unified_web_orchestrator - INFO - Info backend sauvées: backend_info.json
+2025-06-10 04:46:24,179 - scripts.webapp.unified_web_orchestrator - INFO - [96m[04:46:24.179] [OK] BACKEND OPERATIONNEL[0m
+2025-06-10 04:46:24,179 - scripts.webapp.unified_web_orchestrator - INFO -    Détails: Port: 5003 | PID: 12868
+2025-06-10 04:46:24,179 - scripts.webapp.unified_web_orchestrator - INFO -    Résultat: URL: http://localhost:5003
+2025-06-10 04:46:24,180 - scripts.webapp.unified_web_orchestrator - INFO - [96m[04:46:24.180] [CHECK] VALIDATION SERVICES[0m
+2025-06-10 04:46:24,180 - scripts.webapp.unified_web_orchestrator - INFO -    Détails: Verification endpoints
+2025-06-10 04:46:24,476 - scripts.webapp.unified_web_orchestrator - INFO - Backend health: {'status': 'operational', 'service_status': {'overall_status': 'available', 'session_id': '195d9896-7b6c-44ca-9eac-7f1375705908', 'start_time': '2025-06-10T04:46:24.445689', 'uptime_seconds': 0.029806, 'last_activity': '2025-06-10T04:46:24.474500', 'initialized': True, 'shutdown_initiated': False, 'configuration': {'enable_hierarchical': True, 'enable_specialized_orchestrators': True, 'enable_communication_middleware': True, 'max_concurrent_analyses': 10, 'analysis_timeout': 300, 'auto_cleanup': True, 'save_results': True, 'results_dir': 'C:\\dev\\2025-Epita-Intelligence-Symbolique\\results', 'data_dir': 'C:\\dev\\2025-Epita-Intelligence-Symbolique\\argumentation_analysis\\data'}, 'active_components': {'strategic_manager': True, 'tactical_manager': True, 'operational_manager': True, 'cluedo_orchestrator': True, 'conversation_orchestrator': True, 'llm_orchestrator': True, 'middleware': True}, 'component_specific_status': {'llm_orchestrator': {'is_initialized': False, 'active_sessions': 0, 'cache_size': 0, 'config': {'max_concurrent_analyses': 10, 'default_timeout': 30, 'cache_enabled': True, 'cache_ttl': 3600, 'retry_attempts': 3, 'retry_delay': 1.0, 'enable_metrics': True, 'log_level': 'INFO', 'analysis_types': ['rhetorical_analysis', 'enhanced_rhetorical_analysis', 'fallacy_detection', 'contextual_analysis', 'semantic_argument_analysis', 'unified_analysis']}, 'metrics': {'total_requests': 0, 'successful_analyses': 0, 'failed_analyses': 0, 'average_processing_time': 0.0, 'cache_hits': 0, 'cache_misses': 0}}}}}
+2025-06-10 04:46:24,477 - scripts.webapp.unified_web_orchestrator - INFO - [96m[04:46:24.477] [OK] SERVICES VALIDES[0m
+2025-06-10 04:46:24,477 - scripts.webapp.unified_web_orchestrator - INFO -    Détails: Tous les endpoints repondent
+2025-06-10 04:46:24,477 - scripts.webapp.unified_web_orchestrator - INFO - [96m[04:46:24.477] [OK] APPLICATION WEB OPERATIONNELLE[0m
+2025-06-10 04:46:24,477 - scripts.webapp.unified_web_orchestrator - INFO -    Détails: Backend: http://localhost:5003
+2025-06-10 04:46:24,477 - scripts.webapp.unified_web_orchestrator - INFO -    Résultat: Tous les services démarrés
+2025-06-10 04:51:41,612 - scripts.webapp.unified_web_orchestrator - INFO - [96m[04:51:41.612] [START] DEMARRAGE APPLICATION WEB[0m
+2025-06-10 04:51:41,612 - scripts.webapp.unified_web_orchestrator - INFO -    Détails: Mode: Headless
+2025-06-10 04:51:41,612 - scripts.webapp.unified_web_orchestrator - INFO -    Résultat: Initialisation orchestrateur
+2025-06-10 04:51:41,612 - scripts.webapp.unified_web_orchestrator - INFO - [96m[04:51:41.612] [CLEAN] NETTOYAGE PREALABLE[0m
+2025-06-10 04:51:41,612 - scripts.webapp.unified_web_orchestrator - INFO -    Détails: Arret instances existantes
+2025-06-10 04:51:41,612 - scripts.webapp.unified_web_orchestrator - INFO - [CLEAN] Debut nettoyage processus application web
+2025-06-10 04:51:46,022 - scripts.webapp.unified_web_orchestrator - INFO - Processus trouvé (port): PID 12868 - Port 5003
+2025-06-10 04:51:47,845 - scripts.webapp.unified_web_orchestrator - INFO - Processus trouvé (cmdline): PID 53044 - c:\users\jsboi\.conda\envs\projet-is\python.exe c:\users\jsboi\.vscode\extensions\ms-python.isort-20
+2025-06-10 04:51:47,845 - scripts.webapp.unified_web_orchestrator - INFO - Processus trouvés: 2
+2025-06-10 04:51:47,846 - scripts.webapp.unified_web_orchestrator - INFO - Envoi signal TERM aux processus...
+2025-06-10 04:51:47,846 - scripts.webapp.unified_web_orchestrator - INFO - TERM envoyé à PID 12868
+2025-06-10 04:51:47,846 - scripts.webapp.unified_web_orchestrator - INFO - TERM envoyé à PID 53044
+2025-06-10 04:51:47,846 - scripts.webapp.unified_web_orchestrator - INFO - Attente arrêt propre (5s)...
+2025-06-10 04:51:52,847 - scripts.webapp.unified_web_orchestrator - INFO - Tous les processus arrêtés proprement
+2025-06-10 04:51:57,774 - scripts.webapp.unified_web_orchestrator - INFO - Processus trouvé (cmdline): PID 29868 - c:\users\jsboi\.conda\envs\projet-is\python.exe c:\users\jsboi\.vscode\extensions\ms-python.isort-20
+2025-06-10 04:51:58,192 - scripts.webapp.unified_web_orchestrator - WARNING - Force kill de 1 processus récalcitrants
+2025-06-10 04:51:58,193 - scripts.webapp.unified_web_orchestrator - WARNING - KILL forcé sur PID 29868
+2025-06-10 04:51:58,232 - scripts.webapp.unified_web_orchestrator - INFO - Vérification libération des ports...
+2025-06-10 04:51:58,248 - scripts.webapp.unified_web_orchestrator - INFO - Tous les ports libérés
+2025-06-10 04:51:58,249 - scripts.webapp.unified_web_orchestrator - INFO - Nettoyage fichiers temporaires...
+2025-06-10 04:51:58,249 - scripts.webapp.unified_web_orchestrator - INFO - Supprimé: backend_info.json
+2025-06-10 04:51:58,250 - scripts.webapp.unified_web_orchestrator - INFO - Fichiers temporaires nettoyés: 1
+2025-06-10 04:51:58,250 - scripts.webapp.unified_web_orchestrator - INFO - [OK] Nettoyage processus terminé
+2025-06-10 04:51:58,250 - scripts.webapp.unified_web_orchestrator - INFO - [96m[04:51:58.250] [BACKEND] DEMARRAGE BACKEND[0m
+2025-06-10 04:51:58,250 - scripts.webapp.unified_web_orchestrator - INFO -    Détails: Lancement avec failover de ports
+2025-06-10 04:51:58,250 - scripts.webapp.unified_web_orchestrator - INFO - Tentative 1/4 - Port 5003
+2025-06-10 04:51:58,253 - scripts.webapp.unified_web_orchestrator - INFO - Démarrage backend FastAPI avec Python de Conda: C:\Users\jsboi\.conda\envs\projet-is\python.exe -m uvicorn api.main:app --host 0.0.0.0 --port 5003
+2025-06-10 04:51:58,254 - scripts.webapp.unified_web_orchestrator - INFO - Logging stdout de Uvicorn dans: c:\dev\2025-Epita-Intelligence-Symbolique\logs\uvicorn_stdout_5003.log
+2025-06-10 04:51:58,254 - scripts.webapp.unified_web_orchestrator - INFO - Logging stderr de Uvicorn dans: c:\dev\2025-Epita-Intelligence-Symbolique\logs\uvicorn_stderr_5003.log
+2025-06-10 04:51:58,262 - scripts.webapp.unified_web_orchestrator - INFO - Attente backend sur http://localhost:5003/api/status (timeout: 30s)
+2025-06-10 04:52:02,939 - scripts.webapp.unified_web_orchestrator - INFO - Backend accessible sur http://localhost:5003/api/status
+2025-06-10 04:52:02,941 - scripts.webapp.unified_web_orchestrator - INFO - Info backend sauvées: backend_info.json
+2025-06-10 04:52:02,942 - scripts.webapp.unified_web_orchestrator - INFO - [96m[04:52:02.942] [OK] BACKEND OPERATIONNEL[0m
+2025-06-10 04:52:02,942 - scripts.webapp.unified_web_orchestrator - INFO -    Détails: Port: 5003 | PID: 33448
+2025-06-10 04:52:02,943 - scripts.webapp.unified_web_orchestrator - INFO -    Résultat: URL: http://localhost:5003
+2025-06-10 04:52:02,944 - scripts.webapp.unified_web_orchestrator - INFO - [96m[04:52:02.943] [CHECK] VALIDATION SERVICES[0m
+2025-06-10 04:52:02,944 - scripts.webapp.unified_web_orchestrator - INFO -    Détails: Verification endpoints
+2025-06-10 04:52:03,237 - scripts.webapp.unified_web_orchestrator - INFO - Backend health: {'status': 'operational', 'service_status': {'overall_status': 'available', 'session_id': 'b7dad814-088e-4422-b100-70c3356fd40a', 'start_time': '2025-06-10T04:52:03.200923', 'uptime_seconds': 0.0347, 'last_activity': '2025-06-10T04:52:03.235623', 'initialized': True, 'shutdown_initiated': False, 'configuration': {'enable_hierarchical': True, 'enable_specialized_orchestrators': True, 'enable_communication_middleware': True, 'max_concurrent_analyses': 10, 'analysis_timeout': 300, 'auto_cleanup': True, 'save_results': True, 'results_dir': 'C:\\dev\\2025-Epita-Intelligence-Symbolique\\results', 'data_dir': 'C:\\dev\\2025-Epita-Intelligence-Symbolique\\argumentation_analysis\\data'}, 'active_components': {'strategic_manager': True, 'tactical_manager': True, 'operational_manager': True, 'cluedo_orchestrator': True, 'conversation_orchestrator': True, 'llm_orchestrator': True, 'middleware': True}, 'component_specific_status': {'llm_orchestrator': {'is_initialized': False, 'active_sessions': 0, 'cache_size': 0, 'config': {'max_concurrent_analyses': 10, 'default_timeout': 30, 'cache_enabled': True, 'cache_ttl': 3600, 'retry_attempts': 3, 'retry_delay': 1.0, 'enable_metrics': True, 'log_level': 'INFO', 'analysis_types': ['rhetorical_analysis', 'enhanced_rhetorical_analysis', 'fallacy_detection', 'contextual_analysis', 'semantic_argument_analysis', 'unified_analysis']}, 'metrics': {'total_requests': 0, 'successful_analyses': 0, 'failed_analyses': 0, 'average_processing_time': 0.0, 'cache_hits': 0, 'cache_misses': 0}}}}}
+2025-06-10 04:52:03,238 - scripts.webapp.unified_web_orchestrator - INFO - [96m[04:52:03.238] [OK] SERVICES VALIDES[0m
+2025-06-10 04:52:03,238 - scripts.webapp.unified_web_orchestrator - INFO -    Détails: Tous les endpoints repondent
+2025-06-10 04:52:03,238 - scripts.webapp.unified_web_orchestrator - INFO - [96m[04:52:03.238] [OK] APPLICATION WEB OPERATIONNELLE[0m
+2025-06-10 04:52:03,238 - scripts.webapp.unified_web_orchestrator - INFO -    Détails: Backend: http://localhost:5003
+2025-06-10 04:52:03,238 - scripts.webapp.unified_web_orchestrator - INFO -    Résultat: Tous les services démarrés
+2025-06-10 04:59:43,310 - scripts.webapp.unified_web_orchestrator - INFO - [96m[04:59:43.310] [START] DEMARRAGE APPLICATION WEB[0m
+2025-06-10 04:59:43,310 - scripts.webapp.unified_web_orchestrator - INFO -    Détails: Mode: Headless
+2025-06-10 04:59:43,310 - scripts.webapp.unified_web_orchestrator - INFO -    Résultat: Initialisation orchestrateur
+2025-06-10 04:59:43,310 - scripts.webapp.unified_web_orchestrator - INFO - [96m[04:59:43.310] [CLEAN] NETTOYAGE PREALABLE[0m
+2025-06-10 04:59:43,310 - scripts.webapp.unified_web_orchestrator - INFO -    Détails: Arret instances existantes
+2025-06-10 04:59:43,310 - scripts.webapp.unified_web_orchestrator - INFO - [CLEAN] Debut nettoyage processus application web
+2025-06-10 04:59:49,234 - scripts.webapp.unified_web_orchestrator - INFO - Processus trouvé (port): PID 33448 - Port 5003
+2025-06-10 04:59:49,664 - scripts.webapp.unified_web_orchestrator - INFO - Processus trouvé (cmdline): PID 45512 - c:\users\jsboi\.conda\envs\projet-is\python.exe c:\users\jsboi\.vscode\extensions\ms-python.isort-20
+2025-06-10 04:59:49,775 - scripts.webapp.unified_web_orchestrator - INFO - Processus trouvés: 2
+2025-06-10 04:59:49,776 - scripts.webapp.unified_web_orchestrator - INFO - Envoi signal TERM aux processus...
+2025-06-10 04:59:49,776 - scripts.webapp.unified_web_orchestrator - INFO - TERM envoyé à PID 33448
+2025-06-10 04:59:49,776 - scripts.webapp.unified_web_orchestrator - INFO - TERM envoyé à PID 45512
+2025-06-10 04:59:49,776 - scripts.webapp.unified_web_orchestrator - INFO - Attente arrêt propre (5s)...
+2025-06-10 04:59:54,777 - scripts.webapp.unified_web_orchestrator - INFO - Tous les processus arrêtés proprement
+2025-06-10 04:59:59,955 - scripts.webapp.unified_web_orchestrator - INFO - Processus trouvé (cmdline): PID 48212 - c:\users\jsboi\.conda\envs\projet-is\python.exe c:\users\jsboi\.vscode\extensions\ms-python.isort-20
+2025-06-10 05:00:00,063 - scripts.webapp.unified_web_orchestrator - WARNING - Force kill de 1 processus récalcitrants
+2025-06-10 05:00:00,063 - scripts.webapp.unified_web_orchestrator - WARNING - KILL forcé sur PID 48212
+2025-06-10 05:00:00,133 - scripts.webapp.unified_web_orchestrator - INFO - Vérification libération des ports...
+2025-06-10 05:00:00,148 - scripts.webapp.unified_web_orchestrator - INFO - Tous les ports libérés
+2025-06-10 05:00:00,149 - scripts.webapp.unified_web_orchestrator - INFO - Nettoyage fichiers temporaires...
+2025-06-10 05:00:00,150 - scripts.webapp.unified_web_orchestrator - INFO - Supprimé: backend_info.json
+2025-06-10 05:00:00,150 - scripts.webapp.unified_web_orchestrator - INFO - Fichiers temporaires nettoyés: 1
+2025-06-10 05:00:00,150 - scripts.webapp.unified_web_orchestrator - INFO - [OK] Nettoyage processus terminé
+2025-06-10 05:00:00,150 - scripts.webapp.unified_web_orchestrator - INFO - [96m[05:00:00.150] [BACKEND] DEMARRAGE BACKEND[0m
+2025-06-10 05:00:00,150 - scripts.webapp.unified_web_orchestrator - INFO -    Détails: Lancement avec failover de ports
+2025-06-10 05:00:00,150 - scripts.webapp.unified_web_orchestrator - INFO - Tentative 1/4 - Port 5003
+2025-06-10 05:00:00,152 - scripts.webapp.unified_web_orchestrator - INFO - Démarrage backend FastAPI avec Python de Conda: C:\Users\jsboi\.conda\envs\projet-is\python.exe -m uvicorn api.main:app --host 0.0.0.0 --port 5003
+2025-06-10 05:00:00,152 - scripts.webapp.unified_web_orchestrator - INFO - Logging stdout de Uvicorn dans: c:\dev\2025-Epita-Intelligence-Symbolique\logs\uvicorn_stdout_5003.log
+2025-06-10 05:00:00,152 - scripts.webapp.unified_web_orchestrator - INFO - Logging stderr de Uvicorn dans: c:\dev\2025-Epita-Intelligence-Symbolique\logs\uvicorn_stderr_5003.log
+2025-06-10 05:00:00,265 - scripts.webapp.unified_web_orchestrator - INFO - Attente backend sur http://localhost:5003/api/status (timeout: 30s)
+2025-06-10 05:00:05,058 - scripts.webapp.unified_web_orchestrator - INFO - Backend accessible sur http://localhost:5003/api/status
+2025-06-10 05:00:05,059 - scripts.webapp.unified_web_orchestrator - INFO - Info backend sauvées: backend_info.json
+2025-06-10 05:00:05,060 - scripts.webapp.unified_web_orchestrator - INFO - [96m[05:00:05.060] [OK] BACKEND OPERATIONNEL[0m
+2025-06-10 05:00:05,060 - scripts.webapp.unified_web_orchestrator - INFO -    Détails: Port: 5003 | PID: 18880
+2025-06-10 05:00:05,060 - scripts.webapp.unified_web_orchestrator - INFO -    Résultat: URL: http://localhost:5003
+2025-06-10 05:00:05,060 - scripts.webapp.unified_web_orchestrator - INFO - [96m[05:00:05.060] [CHECK] VALIDATION SERVICES[0m
+2025-06-10 05:00:05,060 - scripts.webapp.unified_web_orchestrator - INFO -    Détails: Verification endpoints
+2025-06-10 05:00:05,348 - scripts.webapp.unified_web_orchestrator - INFO - Backend health: {'status': 'operational', 'service_status': {'overall_status': 'available', 'session_id': '167ffdbd-8290-46cc-a7aa-3941dfc33710', 'start_time': '2025-06-10T05:00:05.321531', 'uptime_seconds': 0.02454, 'last_activity': '2025-06-10T05:00:05.346071', 'initialized': True, 'shutdown_initiated': False, 'configuration': {'enable_hierarchical': True, 'enable_specialized_orchestrators': True, 'enable_communication_middleware': True, 'max_concurrent_analyses': 10, 'analysis_timeout': 300, 'auto_cleanup': True, 'save_results': True, 'results_dir': 'C:\\dev\\2025-Epita-Intelligence-Symbolique\\results', 'data_dir': 'C:\\dev\\2025-Epita-Intelligence-Symbolique\\argumentation_analysis\\data'}, 'active_components': {'strategic_manager': True, 'tactical_manager': True, 'operational_manager': True, 'cluedo_orchestrator': True, 'conversation_orchestrator': True, 'llm_orchestrator': True, 'middleware': True}, 'component_specific_status': {'llm_orchestrator': {'is_initialized': False, 'active_sessions': 0, 'cache_size': 0, 'config': {'max_concurrent_analyses': 10, 'default_timeout': 30, 'cache_enabled': True, 'cache_ttl': 3600, 'retry_attempts': 3, 'retry_delay': 1.0, 'enable_metrics': True, 'log_level': 'INFO', 'analysis_types': ['rhetorical_analysis', 'enhanced_rhetorical_analysis', 'fallacy_detection', 'contextual_analysis', 'semantic_argument_analysis', 'unified_analysis']}, 'metrics': {'total_requests': 0, 'successful_analyses': 0, 'failed_analyses': 0, 'average_processing_time': 0.0, 'cache_hits': 0, 'cache_misses': 0}}}}}
+2025-06-10 05:00:05,348 - scripts.webapp.unified_web_orchestrator - INFO - [96m[05:00:05.348] [OK] SERVICES VALIDES[0m
+2025-06-10 05:00:05,349 - scripts.webapp.unified_web_orchestrator - INFO -    Détails: Tous les endpoints repondent
+2025-06-10 05:00:05,349 - scripts.webapp.unified_web_orchestrator - INFO - [96m[05:00:05.349] [OK] APPLICATION WEB OPERATIONNELLE[0m
+2025-06-10 05:00:05,349 - scripts.webapp.unified_web_orchestrator - INFO -    Détails: Backend: http://localhost:5003
+2025-06-10 05:00:05,349 - scripts.webapp.unified_web_orchestrator - INFO -    Résultat: Tous les services démarrés
+2025-06-10 05:02:47,949 - scripts.webapp.unified_web_orchestrator - INFO - [96m[05:02:47.949] [START] DEMARRAGE APPLICATION WEB[0m
+2025-06-10 05:02:47,950 - scripts.webapp.unified_web_orchestrator - INFO -    Détails: Mode: Headless
+2025-06-10 05:02:47,950 - scripts.webapp.unified_web_orchestrator - INFO -    Résultat: Initialisation orchestrateur
+2025-06-10 05:02:47,950 - scripts.webapp.unified_web_orchestrator - INFO - [96m[05:02:47.950] [CLEAN] NETTOYAGE PREALABLE[0m
+2025-06-10 05:02:47,950 - scripts.webapp.unified_web_orchestrator - INFO -    Détails: Arret instances existantes
+2025-06-10 05:02:47,950 - scripts.webapp.unified_web_orchestrator - INFO - [CLEAN] Debut nettoyage processus application web
+2025-06-10 05:02:53,481 - scripts.webapp.unified_web_orchestrator - INFO - Processus trouvé (port): PID 18880 - Port 5003
+2025-06-10 05:02:54,604 - scripts.webapp.unified_web_orchestrator - INFO - Processus trouvé (cmdline): PID 51620 - c:\users\jsboi\.conda\envs\projet-is\python.exe c:\users\jsboi\.vscode\extensions\ms-python.isort-20
+2025-06-10 05:02:54,608 - scripts.webapp.unified_web_orchestrator - INFO - Processus trouvés: 2
+2025-06-10 05:02:54,608 - scripts.webapp.unified_web_orchestrator - INFO - Envoi signal TERM aux processus...
+2025-06-10 05:02:54,608 - scripts.webapp.unified_web_orchestrator - INFO - TERM envoyé à PID 18880
+2025-06-10 05:02:54,608 - scripts.webapp.unified_web_orchestrator - INFO - TERM envoyé à PID 51620
+2025-06-10 05:02:54,609 - scripts.webapp.unified_web_orchestrator - INFO - Attente arrêt propre (5s)...
+2025-06-10 05:02:59,609 - scripts.webapp.unified_web_orchestrator - INFO - Tous les processus arrêtés proprement
+2025-06-10 05:03:04,281 - scripts.webapp.unified_web_orchestrator - INFO - Processus trouvé (cmdline): PID 17520 - c:\users\jsboi\.conda\envs\projet-is\python.exe c:\users\jsboi\.vscode\extensions\ms-python.isort-20
+2025-06-10 05:03:05,049 - scripts.webapp.unified_web_orchestrator - WARNING - Force kill de 1 processus récalcitrants
+2025-06-10 05:03:05,049 - scripts.webapp.unified_web_orchestrator - WARNING - KILL forcé sur PID 17520
+2025-06-10 05:03:05,070 - scripts.webapp.unified_web_orchestrator - INFO - Vérification libération des ports...
+2025-06-10 05:03:05,080 - scripts.webapp.unified_web_orchestrator - INFO - Tous les ports libérés
+2025-06-10 05:03:05,080 - scripts.webapp.unified_web_orchestrator - INFO - Nettoyage fichiers temporaires...
+2025-06-10 05:03:05,080 - scripts.webapp.unified_web_orchestrator - INFO - Supprimé: backend_info.json
+2025-06-10 05:03:05,080 - scripts.webapp.unified_web_orchestrator - INFO - Fichiers temporaires nettoyés: 1
+2025-06-10 05:03:05,081 - scripts.webapp.unified_web_orchestrator - INFO - [OK] Nettoyage processus terminé
+2025-06-10 05:03:05,081 - scripts.webapp.unified_web_orchestrator - INFO - [96m[05:03:05.081] [BACKEND] DEMARRAGE BACKEND[0m
+2025-06-10 05:03:05,081 - scripts.webapp.unified_web_orchestrator - INFO -    Détails: Lancement avec failover de ports
+2025-06-10 05:03:05,081 - scripts.webapp.unified_web_orchestrator - INFO - Tentative 1/4 - Port 5003
+2025-06-10 05:03:05,082 - scripts.webapp.unified_web_orchestrator - INFO - Démarrage backend FastAPI avec Python de Conda: C:\Users\jsboi\.conda\envs\projet-is\python.exe -m uvicorn api.main:app --host 0.0.0.0 --port 5003
+2025-06-10 05:03:05,083 - scripts.webapp.unified_web_orchestrator - INFO - Logging stdout de Uvicorn dans: c:\dev\2025-Epita-Intelligence-Symbolique\logs\uvicorn_stdout_5003.log
+2025-06-10 05:03:05,083 - scripts.webapp.unified_web_orchestrator - INFO - Logging stderr de Uvicorn dans: c:\dev\2025-Epita-Intelligence-Symbolique\logs\uvicorn_stderr_5003.log
+2025-06-10 05:03:05,089 - scripts.webapp.unified_web_orchestrator - INFO - Attente backend sur http://localhost:5003/api/status (timeout: 30s)
+2025-06-10 05:03:10,377 - scripts.webapp.unified_web_orchestrator - INFO - Backend accessible sur http://localhost:5003/api/status
+2025-06-10 05:03:10,379 - scripts.webapp.unified_web_orchestrator - INFO - Info backend sauvées: backend_info.json
+2025-06-10 05:03:10,379 - scripts.webapp.unified_web_orchestrator - INFO - [96m[05:03:10.379] [OK] BACKEND OPERATIONNEL[0m
+2025-06-10 05:03:10,379 - scripts.webapp.unified_web_orchestrator - INFO -    Détails: Port: 5003 | PID: 45528
+2025-06-10 05:03:10,379 - scripts.webapp.unified_web_orchestrator - INFO -    Résultat: URL: http://localhost:5003
+2025-06-10 05:03:10,379 - scripts.webapp.unified_web_orchestrator - INFO - [96m[05:03:10.379] [CHECK] VALIDATION SERVICES[0m
+2025-06-10 05:03:10,379 - scripts.webapp.unified_web_orchestrator - INFO -    Détails: Verification endpoints
+2025-06-10 05:03:10,664 - scripts.webapp.unified_web_orchestrator - INFO - Backend health: {'status': 'operational', 'service_status': {'overall_status': 'available', 'session_id': '95adf7a6-2e01-43d9-8696-34c69b50fc7e', 'start_time': '2025-06-10T05:03:10.645094', 'uptime_seconds': 0.01758, 'last_activity': '2025-06-10T05:03:10.662674', 'initialized': True, 'shutdown_initiated': False, 'configuration': {'enable_hierarchical': True, 'enable_specialized_orchestrators': True, 'enable_communication_middleware': True, 'max_concurrent_analyses': 10, 'analysis_timeout': 300, 'auto_cleanup': True, 'save_results': True, 'results_dir': 'C:\\dev\\2025-Epita-Intelligence-Symbolique\\results', 'data_dir': 'C:\\dev\\2025-Epita-Intelligence-Symbolique\\argumentation_analysis\\data'}, 'active_components': {'strategic_manager': True, 'tactical_manager': False, 'operational_manager': False, 'cluedo_orchestrator': True, 'conversation_orchestrator': True, 'llm_orchestrator': True, 'middleware': True}, 'component_specific_status': {'llm_orchestrator': {'is_initialized': False, 'active_sessions': 0, 'cache_size': 0, 'config': {'max_concurrent_analyses': 10, 'default_timeout': 30, 'cache_enabled': True, 'cache_ttl': 3600, 'retry_attempts': 3, 'retry_delay': 1.0, 'enable_metrics': True, 'log_level': 'INFO', 'analysis_types': ['rhetorical_analysis', 'enhanced_rhetorical_analysis', 'fallacy_detection', 'contextual_analysis', 'semantic_argument_analysis', 'unified_analysis']}, 'metrics': {'total_requests': 0, 'successful_analyses': 0, 'failed_analyses': 0, 'average_processing_time': 0.0, 'cache_hits': 0, 'cache_misses': 0}}}}}
+2025-06-10 05:03:10,665 - scripts.webapp.unified_web_orchestrator - INFO - [96m[05:03:10.665] [OK] SERVICES VALIDES[0m
+2025-06-10 05:03:10,665 - scripts.webapp.unified_web_orchestrator - INFO -    Détails: Tous les endpoints repondent
+2025-06-10 05:03:10,665 - scripts.webapp.unified_web_orchestrator - INFO - [96m[05:03:10.665] [OK] APPLICATION WEB OPERATIONNELLE[0m
+2025-06-10 05:03:10,665 - scripts.webapp.unified_web_orchestrator - INFO -    Détails: Backend: http://localhost:5003
+2025-06-10 05:03:10,665 - scripts.webapp.unified_web_orchestrator - INFO -    Résultat: Tous les services démarrés
+2025-06-10 05:07:01,410 - scripts.webapp.unified_web_orchestrator - INFO - [96m[05:07:01.410] [START] DEMARRAGE APPLICATION WEB[0m
+2025-06-10 05:07:01,411 - scripts.webapp.unified_web_orchestrator - INFO -    Détails: Mode: Headless
+2025-06-10 05:07:01,411 - scripts.webapp.unified_web_orchestrator - INFO -    Résultat: Initialisation orchestrateur
+2025-06-10 05:07:01,411 - scripts.webapp.unified_web_orchestrator - INFO - [96m[05:07:01.411] [CLEAN] NETTOYAGE PREALABLE[0m
+2025-06-10 05:07:01,411 - scripts.webapp.unified_web_orchestrator - INFO -    Détails: Arret instances existantes
+2025-06-10 05:07:01,411 - scripts.webapp.unified_web_orchestrator - INFO - [CLEAN] Debut nettoyage processus application web
+2025-06-10 05:07:09,325 - scripts.webapp.unified_web_orchestrator - INFO - Processus trouvé (cmdline): PID 37676 - c:\users\jsboi\.conda\envs\projet-is\python.exe c:\users\jsboi\.vscode\extensions\ms-python.isort-20
+2025-06-10 05:07:09,626 - scripts.webapp.unified_web_orchestrator - INFO - Processus trouvé (port): PID 45528 - Port 5003
+2025-06-10 05:07:09,790 - scripts.webapp.unified_web_orchestrator - INFO - Processus trouvés: 2
+2025-06-10 05:07:09,790 - scripts.webapp.unified_web_orchestrator - INFO - Envoi signal TERM aux processus...
+2025-06-10 05:07:09,790 - scripts.webapp.unified_web_orchestrator - INFO - TERM envoyé à PID 37676
+2025-06-10 05:07:09,791 - scripts.webapp.unified_web_orchestrator - INFO - TERM envoyé à PID 45528
+2025-06-10 05:07:09,791 - scripts.webapp.unified_web_orchestrator - INFO - Attente arrêt propre (5s)...
+2025-06-10 05:07:14,792 - scripts.webapp.unified_web_orchestrator - INFO - Tous les processus arrêtés proprement
+2025-06-10 05:07:23,561 - scripts.webapp.unified_web_orchestrator - INFO - Processus trouvé (cmdline): PID 26024 - c:\users\jsboi\.conda\envs\projet-is\python.exe c:\users\jsboi\.vscode\extensions\ms-python.isort-20
+2025-06-10 05:07:24,395 - scripts.webapp.unified_web_orchestrator - WARNING - Force kill de 1 processus récalcitrants
+2025-06-10 05:07:24,395 - scripts.webapp.unified_web_orchestrator - WARNING - KILL forcé sur PID 26024
+2025-06-10 05:07:24,447 - scripts.webapp.unified_web_orchestrator - INFO - Vérification libération des ports...
+2025-06-10 05:07:24,461 - scripts.webapp.unified_web_orchestrator - INFO - Tous les ports libérés
+2025-06-10 05:07:24,462 - scripts.webapp.unified_web_orchestrator - INFO - Nettoyage fichiers temporaires...
+2025-06-10 05:07:24,462 - scripts.webapp.unified_web_orchestrator - INFO - Supprimé: backend_info.json
+2025-06-10 05:07:24,463 - scripts.webapp.unified_web_orchestrator - INFO - Fichiers temporaires nettoyés: 1
+2025-06-10 05:07:24,463 - scripts.webapp.unified_web_orchestrator - INFO - [OK] Nettoyage processus terminé
+2025-06-10 05:07:24,463 - scripts.webapp.unified_web_orchestrator - INFO - [96m[05:07:24.463] [BACKEND] DEMARRAGE BACKEND[0m
+2025-06-10 05:07:24,464 - scripts.webapp.unified_web_orchestrator - INFO -    Détails: Lancement avec failover de ports
+2025-06-10 05:07:24,464 - scripts.webapp.unified_web_orchestrator - INFO - Tentative 1/4 - Port 5003
+2025-06-10 05:07:24,467 - scripts.webapp.unified_web_orchestrator - INFO - Démarrage backend FastAPI avec Python de Conda: C:\Users\jsboi\.conda\envs\projet-is\python.exe -m uvicorn api.main:app --host 0.0.0.0 --port 5003
+2025-06-10 05:07:24,467 - scripts.webapp.unified_web_orchestrator - INFO - Logging stdout de Uvicorn dans: c:\dev\2025-Epita-Intelligence-Symbolique\logs\uvicorn_stdout_5003.log
+2025-06-10 05:07:24,467 - scripts.webapp.unified_web_orchestrator - INFO - Logging stderr de Uvicorn dans: c:\dev\2025-Epita-Intelligence-Symbolique\logs\uvicorn_stderr_5003.log
+2025-06-10 05:07:24,479 - scripts.webapp.unified_web_orchestrator - INFO - Attente backend sur http://localhost:5003/api/status (timeout: 30s)
+2025-06-10 05:07:29,842 - scripts.webapp.unified_web_orchestrator - INFO - Backend accessible sur http://localhost:5003/api/status
+2025-06-10 05:07:29,850 - scripts.webapp.unified_web_orchestrator - INFO - Info backend sauvées: backend_info.json
+2025-06-10 05:07:29,856 - scripts.webapp.unified_web_orchestrator - INFO - [96m[05:07:29.855] [OK] BACKEND OPERATIONNEL[0m
+2025-06-10 05:07:29,858 - scripts.webapp.unified_web_orchestrator - INFO -    Détails: Port: 5003 | PID: 20276
+2025-06-10 05:07:29,860 - scripts.webapp.unified_web_orchestrator - INFO -    Résultat: URL: http://localhost:5003
+2025-06-10 05:07:29,862 - scripts.webapp.unified_web_orchestrator - INFO - [96m[05:07:29.862] [CHECK] VALIDATION SERVICES[0m
+2025-06-10 05:07:29,863 - scripts.webapp.unified_web_orchestrator - INFO -    Détails: Verification endpoints
+2025-06-10 05:07:30,175 - scripts.webapp.unified_web_orchestrator - INFO - Backend health: {'status': 'operational', 'service_status': {'overall_status': 'available', 'session_id': 'afd64fe0-d42b-4c08-b004-cf33ef78e8c9', 'start_time': '2025-06-10T05:07:30.134196', 'uptime_seconds': 0.03898, 'last_activity': '2025-06-10T05:07:30.173176', 'initialized': True, 'shutdown_initiated': False, 'configuration': {'enable_hierarchical': True, 'enable_specialized_orchestrators': True, 'enable_communication_middleware': True, 'max_concurrent_analyses': 10, 'analysis_timeout': 300, 'auto_cleanup': True, 'save_results': True, 'results_dir': 'C:\\dev\\2025-Epita-Intelligence-Symbolique\\results', 'data_dir': 'C:\\dev\\2025-Epita-Intelligence-Symbolique\\argumentation_analysis\\data'}, 'active_components': {'strategic_manager': True, 'tactical_manager': True, 'operational_manager': True, 'cluedo_orchestrator': True, 'conversation_orchestrator': True, 'llm_orchestrator': True, 'middleware': True}, 'component_specific_status': {'llm_orchestrator': {'is_initialized': False, 'active_sessions': 0, 'cache_size': 0, 'config': {'max_concurrent_analyses': 10, 'default_timeout': 30, 'cache_enabled': True, 'cache_ttl': 3600, 'retry_attempts': 3, 'retry_delay': 1.0, 'enable_metrics': True, 'log_level': 'INFO', 'analysis_types': ['rhetorical_analysis', 'enhanced_rhetorical_analysis', 'fallacy_detection', 'contextual_analysis', 'semantic_argument_analysis', 'unified_analysis']}, 'metrics': {'total_requests': 0, 'successful_analyses': 0, 'failed_analyses': 0, 'average_processing_time': 0.0, 'cache_hits': 0, 'cache_misses': 0}}}}}
+2025-06-10 05:07:30,176 - scripts.webapp.unified_web_orchestrator - INFO - [96m[05:07:30.175] [OK] SERVICES VALIDES[0m
+2025-06-10 05:07:30,176 - scripts.webapp.unified_web_orchestrator - INFO -    Détails: Tous les endpoints repondent
+2025-06-10 05:07:30,176 - scripts.webapp.unified_web_orchestrator - INFO - [96m[05:07:30.176] [OK] APPLICATION WEB OPERATIONNELLE[0m
+2025-06-10 05:07:30,176 - scripts.webapp.unified_web_orchestrator - INFO -    Détails: Backend: http://localhost:5003
+2025-06-10 05:07:30,176 - scripts.webapp.unified_web_orchestrator - INFO -    Résultat: Tous les services démarrés
