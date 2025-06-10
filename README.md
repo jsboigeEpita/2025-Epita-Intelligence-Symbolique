@@ -42,6 +42,55 @@ python start_webapp.py
 
 ---
 
+## 🔧 **Scripts Consolidés (Nouveau !)**
+
+Suite à la refactorisation architecturale, l'ancien ensemble de 42 scripts a été consolidé en **3 scripts unifiés** pour une meilleure maintenabilité et facilité d'usage.
+
+### 📊 Scripts Principaux
+
+#### 1. **Analyseur de Production Unifié**
+```bash
+python scripts/consolidated/unified_production_analyzer.py --config scripts/consolidated/config_example.json
+```
+- **Usage :** Analyse rhétorique complète et détection de sophismes
+- **Config :** `scripts/consolidated/config_example.json`
+- **Test :** `scripts/consolidated/test_unified_analyzer.py`
+- **Documentation :** [README.md](scripts/consolidated/README.md)
+
+#### 2. **Système de Démonstration Éducatif**
+```bash
+python scripts/consolidated/educational_showcase_system.py --config scripts/consolidated/educational_config_example.json
+```
+- **Usage :** Démonstrations interactives et apprentissage
+- **Config :** `scripts/consolidated/educational_config_example.json`
+- **Test :** `scripts/consolidated/test_educational_showcase_system.py`
+- **Documentation :** [README_educational_showcase_system.md](scripts/consolidated/README_educational_showcase_system.md)
+
+#### 3. **Processeur de Workflow Compréhensif**
+```bash
+python scripts/consolidated/comprehensive_workflow_processor.py --config scripts/consolidated/comprehensive_config_example.json
+```
+- **Usage :** Orchestration de workflows complexes
+- **Config :** `scripts/consolidated/comprehensive_config_example.json`
+- **Test :** `scripts/consolidated/test_comprehensive_workflow.py`
+- **Documentation :** [README_comprehensive_workflow.md](scripts/consolidated/README_comprehensive_workflow.md)
+
+### 🔄 Migration depuis les Anciens Scripts
+
+Si vous utilisiez les anciens scripts, utilisez notre guide de migration :
+```bash
+python scripts/consolidated/migration_guide.py interactive
+```
+
+**Avantages de la consolidation :**
+- ✅ **Architecture simplifiée** : 3 scripts au lieu de 42
+- ✅ **Configuration unifiée** : Fichiers JSON standardisés
+- ✅ **Tests intégrés** : Validation automatique
+- ✅ **Documentation complète** : README dédiés
+- ✅ **Maintenance facilitée** : Code organisé et modulaire
+
+---
+
 ## 🎓 **Bienvenue Étudiants et Visiteurs !**
 
 Ce projet constitue une démonstration avancée d'intelligence symbolique développée dans le cadre du cours EPITA. Il combine recherche académique rigoureuse et développement technique moderne pour offrir aux étudiants une expérience complète d'exploration des concepts d'IA symbolique et d'analyse argumentative.
