@@ -8,6 +8,9 @@ Ce module fournit une classe adaptateur qui permet aux tests existants
 de continuer à fonctionner avec la nouvelle architecture basée sur Semantic Kernel.
 """
 
+# ===== AUTO-ACTIVATION ENVIRONNEMENT =====
+import scripts.core.auto_env  # Auto-activation environnement intelligent
+# =========================================
 import logging
 from typing import Dict, List, Any, Optional, Tuple
 
