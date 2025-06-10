@@ -41,7 +41,7 @@ try:
         sys.path.insert(0, str(_project_root))
     
     from scripts.core.environment_manager import auto_activate_env
-    from scripts.core.auto_env import _load_dotenv_intelligent
+    # from scripts.core.auto_env import _load_dotenv_intelligent # Supprimé car géré par EnvironmentManager et auto_activate_env
     
     # Activation automatique de l'environnement projet-is
     print("[INFO] Auto-activation environnement conda...")
@@ -50,9 +50,10 @@ try:
     else:
         print("[WARN] Impossible d'auto-activer l'environnement, continuons quand même...")
     
-    # Chargement .env intelligent
-    if _load_dotenv_intelligent(_project_root, silent=False):
-        print("[OK] Configuration .env chargée")
+    # Chargement .env intelligent (cette section n'est plus nécessaire,
+    # car auto_activate_env via EnvironmentManager gère maintenant le chargement de .env)
+    # if _load_dotenv_intelligent(_project_root, silent=False):
+    #     print("[OK] Configuration .env chargée")
     
 except Exception as e:
     print(f"[ERREUR] Erreur auto-activation: {e}")
