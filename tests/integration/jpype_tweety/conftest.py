@@ -11,11 +11,11 @@ from argumentation_analysis.core.jvm_setup import LIBS_DIR as CORE_LIBS_DIR
 try:
     from scripts.core.auto_env import ensure_env
     ensure_env()
-    print("✅ Environnement projet activé via auto_env (jpype_tweety conftest)")
+    print("[OK] Environnement projet active via auto_env (jpype_tweety conftest)")
 except ImportError as e:
-    print(f"⚠️ Auto_env non disponible dans jpype_tweety conftest: {e}")
+    print(f"[WARNING] Auto_env non disponible dans jpype_tweety conftest: {e}")
 except Exception as e:
-    print(f"⚠️ Erreur auto_env dans jpype_tweety conftest: {e}")
+    print(f"[WARNING] Erreur auto_env dans jpype_tweety conftest: {e}")
 # ==================================================================================
 
 # Configuration du logger pour ce fichier conftest spécifique
