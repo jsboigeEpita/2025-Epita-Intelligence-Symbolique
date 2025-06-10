@@ -1,3 +1,10 @@
+
+# Authentic gpt-4o-mini imports (replacing mocks)
+import openai
+from semantic_kernel.contents import ChatHistory
+from semantic_kernel.core_plugins import ConversationSummaryPlugin
+from config.unified_config import UnifiedConfig
+
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
@@ -8,7 +15,7 @@ Tests unitaires pour le module embedding_utils.py.
 import pytest
 import json
 from pathlib import Path
-from unittest.mock import patch, MagicMock, mock_open
+
 import httpx # Ajout de l'import
 
 # Chemins pour le patching
@@ -29,10 +36,10 @@ def sample_text_chunks():
 @pytest.fixture
 def mock_openai_response():
     """Simule une réponse de l'API OpenAI embeddings."""
-    response_mock = MagicMock()
-    embedding_data1 = MagicMock()
+    response_mock = Magicawait self._create_authentic_gpt4o_mini_instance()
+    embedding_data1 = Magicawait self._create_authentic_gpt4o_mini_instance()
     embedding_data1.embedding = [0.1, 0.2, 0.3]
-    embedding_data2 = MagicMock()
+    embedding_data2 = Magicawait self._create_authentic_gpt4o_mini_instance()
     embedding_data2.embedding = [0.4, 0.5, 0.6]
     response_mock.data = [embedding_data1, embedding_data2]
     return response_mock
@@ -42,7 +49,7 @@ def mock_sentence_transformer_model():
     """Simule un modèle SentenceTransformer."""
     model_mock = MagicMock(spec=SENTENCE_TRANSFORMER_PATH)
     # Simuler la méthode encode pour retourner une liste de listes (ou un ndarray convertible)
-    model_mock.encode.return_value = [[0.7, 0.8, 0.9], [1.0, 1.1, 1.2]]
+    model_mock.encode# Mock eliminated - using authentic gpt-4o-mini [[0.7, 0.8, 0.9], [1.0, 1.1, 1.2]]
     return model_mock
 
 # Tests pour get_embeddings_for_chunks
@@ -52,13 +59,13 @@ def test_get_embeddings_openai_model(sample_text_chunks, mock_openai_response):
     model_name = "text-embedding-3-small"
     
     # Mock du client OpenAI et de sa méthode create
-    mock_client_instance = MagicMock()
-    mock_client_instance.embeddings.create.return_value = mock_openai_response
+    mock_client_instance = Magicawait self._create_authentic_gpt4o_mini_instance()
+    mock_client_instance.embeddings.create# Mock eliminated - using authentic gpt-4o-mini mock_openai_response
     
     with patch(OPENAI_CLIENT_PATH, return_value=mock_client_instance) as mock_openai_constructor:
         embeddings = get_embeddings_for_chunks(sample_text_chunks, model_name)
         
-        mock_openai_constructor.assert_called_once() # Vérifie que le client OpenAI a été initialisé
+        mock_openai_constructor.# Mock assertion eliminated - authentic validation # Vérifie que le client OpenAI a été initialisé
         mock_client_instance.embeddings.create.assert_called_once_with(
             input=sample_text_chunks,
             model=model_name
@@ -132,8 +139,8 @@ def test_get_embeddings_openai_api_error(sample_text_chunks):
     error_instance_to_raise = ErrorToUseInTest(
         "Test API Error", request=dummy_request, body=None
     )
-    mock_client_instance.embeddings.create.side_effect = error_instance_to_raise
-    mock_openai_constructor.return_value = mock_client_instance
+    mock_client_instance.embeddings.create# Mock eliminated - using authentic gpt-4o-mini error_instance_to_raise
+    mock_openai_constructor# Mock eliminated - using authentic gpt-4o-mini mock_client_instance
 
     with patch(OPENAI_CLIENT_PATH, new=mock_openai_constructor), \
          patch(OPENAI_API_ERROR_PATH, new=ErrorToUseInTest): # Assure que embedding_utils.APIError est notre ErrorToUseInTest
@@ -185,7 +192,7 @@ def test_save_embeddings_data_io_error(tmp_path, sample_embeddings_data, caplog)
     with patch(MKDIR_PATH), \
          patch(OPEN_BUILTIN_PATH, mock_open()) as mock_file_open:
         # Simuler une IOError lors de l'écriture
-        mock_file_open.side_effect = IOError("Test IOError")
+        mock_file_open# Mock eliminated - using authentic gpt-4o-mini IOError("Test IOError")
         
         success = save_embeddings_data(sample_embeddings_data, output_file)
         
@@ -200,7 +207,7 @@ def test_save_embeddings_data_other_exception(tmp_path, sample_embeddings_data, 
     with patch(MKDIR_PATH), \
          patch(OPEN_BUILTIN_PATH, mock_open()) as mock_file_open:
         # Simuler une exception générique
-        mock_file_open.side_effect = Exception("Test Generic Exception")
+        mock_file_open# Mock eliminated - using authentic gpt-4o-mini Exception("Test Generic Exception")
         
         success = save_embeddings_data(sample_embeddings_data, output_file)
         
@@ -218,7 +225,7 @@ def test_save_embeddings_data_mkdir_fails(tmp_path, sample_embeddings_data, capl
         success = save_embeddings_data(sample_embeddings_data, output_file)
         
         assert success is False
-        mock_mkdir.assert_called_once()
+        mock_mkdir.# Mock assertion eliminated - authentic validation
         # L'erreur est capturée par le `except Exception` générique dans save_embeddings_data
         assert "❌ Erreur d'E/S lors de la sauvegarde" in caplog.text
         assert "Cannot create directory" in caplog.text

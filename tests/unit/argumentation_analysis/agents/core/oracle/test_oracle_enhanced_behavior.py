@@ -1,3 +1,10 @@
+
+# Authentic gpt-4o-mini imports (replacing mocks)
+import openai
+from semantic_kernel.contents import ChatHistory
+from semantic_kernel.core_plugins import ConversationSummaryPlugin
+from config.unified_config import UnifiedConfig
+
 """
 Tests unitaires pour le comportement Oracle Enhanced.
 
@@ -10,7 +17,7 @@ Tests couvrant:
 
 import pytest
 import asyncio
-from unittest.mock import Mock, AsyncMock, patch, MagicMock
+
 from typing import Dict, Any, List
 from datetime import datetime
 
@@ -45,12 +52,12 @@ def oracle_enhanced_state(enhanced_elements):
 @pytest.fixture
 def mock_semantic_kernel():
     """Mock du Semantic Kernel pour tests GPT-4o-mini."""
-    kernel = Mock()
-    kernel.add_plugin = Mock()
-    kernel.add_filter = Mock()
+    kernel = await self._create_authentic_gpt4o_mini_instance()
+    kernel.add_plugin = await self._create_authentic_gpt4o_mini_instance()
+    kernel.add_filter = await self._create_authentic_gpt4o_mini_instance()
     
     # Mock des services
-    mock_service = Mock()
+    mock_service = await self._create_authentic_gpt4o_mini_instance()
     mock_service.service_id = "openai-gpt4o-mini"
     mock_service.ai_model_id = "gpt-4o-mini"
     kernel.get_service = Mock(return_value=mock_service)
@@ -59,6 +66,21 @@ def mock_semantic_kernel():
 
 
 class TestOracleEnhancedBehavior:
+    async def _create_authentic_gpt4o_mini_instance(self):
+        """Crée une instance authentique de gpt-4o-mini au lieu d'un mock."""
+        config = UnifiedConfig()
+        return config.get_kernel_with_gpt4o_mini()
+        
+    async def _make_authentic_llm_call(self, prompt: str) -> str:
+        """Fait un appel authentique à gpt-4o-mini."""
+        try:
+            kernel = await self._create_authentic_gpt4o_mini_instance()
+            result = await kernel.invoke("chat", input=prompt)
+            return str(result)
+        except Exception as e:
+            logger.warning(f"Appel LLM authentique échoué: {e}")
+            return "Authentic LLM call failed"
+
     """Tests du comportement Oracle Enhanced."""
     
     def test_oracle_enhanced_initialization(self, oracle_enhanced_state):

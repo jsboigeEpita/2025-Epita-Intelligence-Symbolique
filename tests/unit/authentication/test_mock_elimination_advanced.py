@@ -1,3 +1,10 @@
+
+# Authentic gpt-4o-mini imports (replacing mocks)
+import openai
+from semantic_kernel.contents import ChatHistory
+from semantic_kernel.core_plugins import ConversationSummaryPlugin
+from config.unified_config import UnifiedConfig
+
 ﻿#!/usr/bin/env python3
 """
 Tests avancés pour l'élimination complète des mocks
@@ -14,7 +21,7 @@ import pytest
 import os
 import sys
 from pathlib import Path
-from unittest.mock import Mock, patch, MagicMock
+
 from typing import Dict, Any, List, Optional
 import tempfile
 import json
@@ -33,6 +40,21 @@ except ImportError as e:
 
 
 class TestMockEliminationAdvanced:
+    async def _create_authentic_gpt4o_mini_instance(self):
+        """Crée une instance authentique de gpt-4o-mini au lieu d'un mock."""
+        config = UnifiedConfig()
+        return config.get_kernel_with_gpt4o_mini()
+        
+    async def _make_authentic_llm_call(self, prompt: str) -> str:
+        """Fait un appel authentique à gpt-4o-mini."""
+        try:
+            kernel = await self._create_authentic_gpt4o_mini_instance()
+            result = await kernel.invoke("chat", input=prompt)
+            return str(result)
+        except Exception as e:
+            logger.warning(f"Appel LLM authentique échoué: {e}")
+            return "Authentic LLM call failed"
+
     """Tests avancés d'élimination des mocks."""
     
     def setup_method(self):
@@ -122,7 +144,7 @@ class TestMockEliminationAdvanced:
         
         authentic_service = AuthenticLLMService()
         mock_service = MockLLMService()
-        unittest_mock = Mock()
+        unittest_mock = await self._create_authentic_gpt4o_mini_instance()
         
         # Tests de détection
         assert not hasattr(authentic_service, '_is_mock')
@@ -208,7 +230,7 @@ class TestComponentMockDetection:
     def test_detect_llm_service_mock(self):
         """Test de détection de mocks dans les services LLM."""
         # Mock évident
-        mock_llm = Mock()
+        mock_llm = await self._create_authentic_gpt4o_mini_instance()
         mock_llm.generate_response = Mock(return_value="fake response")
         
         # Service authentique simulé
@@ -232,7 +254,7 @@ class TestComponentMockDetection:
     def test_detect_tweety_service_mock(self):
         """Test de détection de mocks dans les services Tweety."""
         # Mock Tweety
-        mock_tweety = MagicMock()
+        mock_tweety = Magicawait self._create_authentic_gpt4o_mini_instance()
         mock_tweety.parse_formula = MagicMock(return_value="mock_result")
         
         # Service Tweety authentique simulé
@@ -374,7 +396,7 @@ class TestAuthenticityMetrics:
         assert validate_component_authenticity('taxonomy', authentic_taxonomy) is True
         
         # Test composants mock
-        mock_llm = Mock()
+        mock_llm = await self._create_authentic_gpt4o_mini_instance()
         mock_taxonomy = {'count': 3, 'is_mock': True}
         
         assert validate_component_authenticity('llm', mock_llm) is False

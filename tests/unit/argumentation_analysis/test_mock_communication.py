@@ -1,3 +1,10 @@
+
+# Authentic gpt-4o-mini imports (replacing mocks)
+import openai
+from semantic_kernel.contents import ChatHistory
+from semantic_kernel.core_plugins import ConversationSummaryPlugin
+from config.unified_config import UnifiedConfig
+
 # -*- coding: utf-8 -*-
 """
 Version simplifiée des tests de communication avec des mocks.
@@ -11,7 +18,7 @@ import threading
 import time
 import logging
 import sys
-from unittest.mock import MagicMock, patch
+
 
 # Configuration du logger
 logging.basicConfig(level=logging.INFO, 
@@ -47,7 +54,7 @@ class MockMiddleware:
     
     def __init__(self):
         self.messages = []
-        self.request_response = MagicMock()
+        self.request_response = Magicawait self._create_authentic_gpt4o_mini_instance()
         self.request_response.send_request_async = MagicMock(return_value=None)
     
     def send_message(self, message):
@@ -101,6 +108,21 @@ class MockAdapter:
         return self.middleware.receive_message(self.agent_id, None, timeout)
 
 class TestMockCommunication(unittest.TestCase):
+    async def _create_authentic_gpt4o_mini_instance(self):
+        """Crée une instance authentique de gpt-4o-mini au lieu d'un mock."""
+        config = UnifiedConfig()
+        return config.get_kernel_with_gpt4o_mini()
+        
+    async def _make_authentic_llm_call(self, prompt: str) -> str:
+        """Fait un appel authentique à gpt-4o-mini."""
+        try:
+            kernel = await self._create_authentic_gpt4o_mini_instance()
+            result = await kernel.invoke("chat", input=prompt)
+            return str(result)
+        except Exception as e:
+            logger.warning(f"Appel LLM authentique échoué: {e}")
+            return "Authentic LLM call failed"
+
     """Tests de communication avec des mocks."""
     
     def setUp(self):

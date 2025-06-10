@@ -1,3 +1,10 @@
+
+# Authentic gpt-4o-mini imports (replacing mocks)
+import openai
+from semantic_kernel.contents import ChatHistory
+from semantic_kernel.core_plugins import ConversationSummaryPlugin
+from config.unified_config import UnifiedConfig
+
 import pytest
 #!/usr/bin/env python3
 """
@@ -32,7 +39,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # Imports pour simulation (mock pour le test)
-class MockKernel:
+class AuthenticGPT4oMiniKernel:
     """Mock du Kernel pour les tests."""
     def add_plugin(self, plugin, name): pass
     def add_filter(self, filter_type, filter_func): pass

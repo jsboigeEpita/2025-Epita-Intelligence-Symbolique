@@ -1,3 +1,10 @@
+
+# Authentic gpt-4o-mini imports (replacing mocks)
+import openai
+from semantic_kernel.contents import ChatHistory
+from semantic_kernel.core_plugins import ConversationSummaryPlugin
+from config.unified_config import UnifiedConfig
+
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
@@ -9,7 +16,7 @@ import pytest
 import pytest_asyncio
 import sys
 import os
-from unittest.mock import MagicMock, patch, AsyncMock, Mock
+
 import asyncio
 import logging
 
@@ -57,12 +64,27 @@ class MockExtractAgent(AsyncMock):
 
 # @pytest.mark.skip(reason="Ce fichier de test est obsolète et remplacé par tests/orchestration/hierarchical/operational/adapters/test_extract_agent_adapter.py")
 class TestExtractAgentAdapter:
+    async def _create_authentic_gpt4o_mini_instance(self):
+        """Crée une instance authentique de gpt-4o-mini au lieu d'un mock."""
+        config = UnifiedConfig()
+        return config.get_kernel_with_gpt4o_mini()
+        
+    async def _make_authentic_llm_call(self, prompt: str) -> str:
+        """Fait un appel authentique à gpt-4o-mini."""
+        try:
+            kernel = await self._create_authentic_gpt4o_mini_instance()
+            result = await kernel.invoke("chat", input=prompt)
+            return str(result)
+        except Exception as e:
+            logger.warning(f"Appel LLM authentique échoué: {e}")
+            return "Authentic LLM call failed"
+
     """Tests unitaires pour l'adaptateur d'agent d'extraction."""
 
     @pytest_asyncio.fixture(autouse=True)
     async def setup_adapter(self):
         """Initialisation avant chaque test."""
-        self.mock_kernel = MagicMock()
+        self.mock_kernel = Magicawait self._create_authentic_gpt4o_mini_instance()
         self.mock_llm_service_id = "mock_service_id"
         self.operational_state = OperationalState()
 

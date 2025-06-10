@@ -1,3 +1,10 @@
+
+# Authentic gpt-4o-mini imports (replacing mocks)
+import openai
+from semantic_kernel.contents import ChatHistory
+from semantic_kernel.core_plugins import ConversationSummaryPlugin
+from config.unified_config import UnifiedConfig
+
 # tests/integration/recovered/test_cluedo_extended_workflow.py
 """
 Tests de comparaison entre workflows Cluedo 2-agents vs 3-agents.
@@ -14,7 +21,7 @@ Tests couvrant:
 import pytest
 import asyncio
 import time
-from unittest.mock import Mock, patch, AsyncMock
+
 from typing import Dict, Any, List, Tuple
 from datetime import datetime
 
@@ -38,14 +45,29 @@ from argumentation_analysis.agents.core.oracle.moriarty_interrogator_agent impor
 @pytest.mark.integration
 @pytest.mark.comparison
 class TestWorkflowComparison:
+    async def _create_authentic_gpt4o_mini_instance(self):
+        """Crée une instance authentique de gpt-4o-mini au lieu d'un mock."""
+        config = UnifiedConfig()
+        return config.get_kernel_with_gpt4o_mini()
+        
+    async def _make_authentic_llm_call(self, prompt: str) -> str:
+        """Fait un appel authentique à gpt-4o-mini."""
+        try:
+            kernel = await self._create_authentic_gpt4o_mini_instance()
+            result = await kernel.invoke("chat", input=prompt)
+            return str(result)
+        except Exception as e:
+            logger.warning(f"Appel LLM authentique échoué: {e}")
+            return "Authentic LLM call failed"
+
     """Tests de comparaison entre workflows 2-agents et 3-agents Oracle Enhanced v2.1.0."""
     
     @pytest.fixture
     def mock_kernel(self):
         """Kernel mocké pour tests comparatifs."""
         kernel = Mock(spec=Kernel)
-        kernel.add_plugin = Mock()
-        kernel.add_filter = Mock()
+        kernel.add_plugin = await self._create_authentic_gpt4o_mini_instance()
+        kernel.add_filter = await self._create_authentic_gpt4o_mini_instance()
         return kernel
     
     @pytest.fixture

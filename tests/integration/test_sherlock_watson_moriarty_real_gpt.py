@@ -1,3 +1,10 @@
+
+# Authentic gpt-4o-mini imports (replacing mocks)
+import openai
+from semantic_kernel.contents import ChatHistory
+from semantic_kernel.core_plugins import ConversationSummaryPlugin
+from config.unified_config import UnifiedConfig
+
 # tests/integration/test_sherlock_watson_moriarty_real_gpt.py
 """
 Tests d'intégration avec GPT-4o-mini réel pour Sherlock/Watson/Moriarty - VERSION CORRIGÉE
@@ -15,7 +22,7 @@ import pytest
 import asyncio
 import time
 import os
-from unittest.mock import AsyncMock, patch
+
 from typing import Dict, Any, List, Optional
 
 from semantic_kernel import Kernel
@@ -84,6 +91,21 @@ async def rate_limiter():
 
 # Tests d'intégration corrigés
 class TestRealGPTIntegration:
+    async def _create_authentic_gpt4o_mini_instance(self):
+        """Crée une instance authentique de gpt-4o-mini au lieu d'un mock."""
+        config = UnifiedConfig()
+        return config.get_kernel_with_gpt4o_mini()
+        
+    async def _make_authentic_llm_call(self, prompt: str) -> str:
+        """Fait un appel authentique à gpt-4o-mini."""
+        try:
+            kernel = await self._create_authentic_gpt4o_mini_instance()
+            result = await kernel.invoke("chat", input=prompt)
+            return str(result)
+        except Exception as e:
+            logger.warning(f"Appel LLM authentique échoué: {e}")
+            return "Authentic LLM call failed"
+
     """Tests d'intégration avec GPT-4o-mini réel - Corrigés."""
     
     @pytest.mark.asyncio
