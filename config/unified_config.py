@@ -227,7 +227,7 @@ class UnifiedConfig:
         return {
             "logic_type": self.logic_type.value,
             "agents": [agent.value for agent in self.agents],
-            "orchestration_type": self.orchestration_type.value,
+            "orchestration_type": self.orchestration_type.value if hasattr(self.orchestration_type, 'value') else self.orchestration_type,
             "mock_level": self.mock_level.value,
             "taxonomy_size": self.taxonomy_size.value,
             "analysis_modes": self.analysis_modes,

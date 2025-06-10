@@ -19,6 +19,7 @@ import os
 
 import asyncio
 import logging
+from unittest.mock import AsyncMock, MagicMock, patch
 
 # Configuration pytest-asyncio pour éviter les conflits d'event loop
 pytestmark = pytest.mark.asyncio
@@ -84,7 +85,7 @@ class TestExtractAgentAdapter:
     @pytest_asyncio.fixture(autouse=True)
     async def setup_adapter(self):
         """Initialisation avant chaque test."""
-        self.mock_kernel = Magicawait self._create_authentic_gpt4o_mini_instance()
+        self.mock_kernel = MagicMock()
         self.mock_llm_service_id = "mock_service_id"
         self.operational_state = OperationalState()
 

@@ -216,7 +216,7 @@ def mock_dependencies():
     from tests.mocks.jpype_mock import isJVMStarted, startJVM, getJVMPath, getJVMVersion, getDefaultJVMPath, JClass, JException, JObject, JVMNotFoundException, imports, _jpype
     
     # Créer les mocks pour numpy
-    numpy_mock = Magicawait self._create_authentic_gpt4o_mini_instance()
+    numpy_mock = MagicMock()
     numpy_mock.array = array
     numpy_mock.ndarray = ndarray
     numpy_mock.mean = mean
@@ -234,7 +234,7 @@ def mock_dependencies():
     numpy_mock.random = random
     
     # Créer les mocks pour pandas
-    pandas_mock = Magicawait self._create_authentic_gpt4o_mini_instance()
+    pandas_mock = MagicMock()
     pandas_mock.DataFrame = DataFrame
     pandas_mock.read_csv = read_csv
     pandas_mock.read_json = read_json
@@ -245,7 +245,7 @@ def mock_dependencies():
     pandas_mock.notna = lambda x: x is not None
     
     # Créer les mocks pour jpype
-    jpype_mock = Magicawait self._create_authentic_gpt4o_mini_instance()
+    jpype_mock = MagicMock()
     jpype_mock.isJVMStarted = isJVMStarted
     jpype_mock.startJVM = startJVM
     jpype_mock.getJVMPath = getJVMPath
