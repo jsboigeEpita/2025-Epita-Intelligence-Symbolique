@@ -220,3 +220,4 @@ phase_d_simple_results.json
 phase_d_trace_ideale_results_*.json
 logs/
 reports/
+venv_temp/

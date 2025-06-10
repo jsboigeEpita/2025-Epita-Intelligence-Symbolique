@@ -24,6 +24,10 @@ sys.stderr.reconfigure(encoding='utf-8')
 PROJECT_ROOT = Path(__file__).parent.parent.parent.absolute()  # Remonte vers la racine du projet
 sys.path.insert(0, str(PROJECT_ROOT))
 
+# Activation automatique de l'environnement
+from scripts.core.auto_env import ensure_env
+ensure_env()
+
 # Configuration du logging avec UTF-8 (avant tout autre import)
 logging.basicConfig(
     level=logging.INFO,
@@ -35,15 +39,8 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# Chargement des variables d'environnement depuis .env
-try:
-    from dotenv import load_dotenv
-    load_dotenv(PROJECT_ROOT / '.env')
-    logger.info("✅ Variables d'environnement chargées depuis .env")
-except ImportError:
-    logger.warning("⚠️ python-dotenv non disponible, utilisation variables système")
-except Exception as e:
-    logger.warning(f"⚠️ Erreur chargement .env : {e}")
+# Variables d'environnement déjà configurées par auto_env
+logger.info("✅ Variables d'environnement configurées via auto_env")
 
 
 async def setup_real_agents_and_run():
