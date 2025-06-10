@@ -24,7 +24,7 @@ sys.stderr.reconfigure(encoding='utf-8')
 PROJECT_ROOT = Path(__file__).parent.parent.parent.absolute()  # Remonte vers la racine du projet
 sys.path.insert(0, str(PROJECT_ROOT))
 
-# Configuration du logging avec UTF-8
+# Configuration du logging avec UTF-8 (avant tout autre import)
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
@@ -34,6 +34,16 @@ logging.basicConfig(
     ]
 )
 logger = logging.getLogger(__name__)
+
+# Chargement des variables d'environnement depuis .env
+try:
+    from dotenv import load_dotenv
+    load_dotenv(PROJECT_ROOT / '.env')
+    logger.info("✅ Variables d'environnement chargées depuis .env")
+except ImportError:
+    logger.warning("⚠️ python-dotenv non disponible, utilisation variables système")
+except Exception as e:
+    logger.warning(f"⚠️ Erreur chargement .env : {e}")
 
 
 async def setup_real_agents_and_run():
@@ -90,10 +100,11 @@ async def setup_real_agents_and_run():
             logger.info("📝 Veuillez configurer votre clé API OpenAI")
             return None
         
-        # Service ChatGPT réel
+        # Service ChatGPT réel - utilise gpt-4o-mini comme configuré dans .env
+        model_id = os.getenv('OPENAI_CHAT_MODEL_ID', 'gpt-4o-mini')
         chat_service = OpenAIChatCompletion(
             service_id="openai_chat",
-            ai_model_id="gpt-4",
+            ai_model_id=model_id,
             api_key=api_key
         )
         kernel.add_service(chat_service)
@@ -179,10 +190,11 @@ async def run_with_orchestrator_module(orchestrator_module):
             logger.info("📝 Continuons avec l'exécution pour tester l'environnement...")
             # On continue quand même pour tester les imports
         else:
-            # Service ChatGPT réel
+            # Service ChatGPT réel - utilise gpt-4o-mini comme configuré dans .env
+            model_id = os.getenv('OPENAI_CHAT_MODEL_ID', 'gpt-4o-mini')
             chat_service = OpenAIChatCompletion(
                 service_id="openai_chat",
-                ai_model_id="gpt-4",
+                ai_model_id=model_id,
                 api_key=api_key
             )
             kernel.add_service(chat_service)
