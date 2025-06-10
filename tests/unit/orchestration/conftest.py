@@ -22,11 +22,11 @@ sys.path.insert(0, str(project_root))
 try:
     from scripts.core.auto_env import ensure_env
     ensure_env()
-    print("✅ Environnement projet activé via auto_env")
+    print("[OK] Environnement projet active via auto_env")
 except ImportError as e:
-    print(f"⚠️ Auto_env non disponible: {e}")
+    print(f"[WARNING] Auto_env non disponible: {e}")
 except Exception as e:
-    print(f"⚠️ Erreur auto_env: {e}")
+    print(f"[WARNING] Erreur auto_env: {e}")
 
 @pytest.fixture(scope="session", autouse=True)
 def setup_test_environment():
