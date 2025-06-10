@@ -31,12 +31,12 @@ from semantic_kernel.connectors.ai.open_ai import AzureChatCompletion
 from semantic_kernel.contents.chat_message_content import ChatMessageContent as SKChatMessageContent # Alias pour éviter conflit
 from semantic_kernel.kernel import Kernel as SKernel # Alias pour éviter conflit avec Kernel de SK
 # KernelArguments est déjà importé plus bas
- # Imports Semantic Kernel
+# Imports Semantic Kernel
 import semantic_kernel as sk
 from semantic_kernel.contents import ChatMessageContent
-# CORRECTIF COMPATIBILITÉ: Utilisation du module de compatibilité
-from semantic_kernel.agents import AgentGroupChat, ChatCompletionAgent, Agent
-from argumentation_analysis.utils.semantic_kernel_compatibility import AuthorRole, AgentChatException, FunctionChoiceBehavior
+from semantic_kernel.connectors.ai.open_ai import OpenAIChatCompletion, AzureChatCompletion
+# CORRECTIF COMPATIBILITÉ: Utilisation du module de compatibilité pour agents
+from argumentation_analysis.utils.semantic_kernel_compatibility import AgentGroupChat, Agent, AuthorRole, AgentChatException, FunctionChoiceBehavior
 
 
 # --- Fonction Principale d'Exécution (Modifiée V10.7 - Accepte Service LLM) ---
@@ -130,16 +130,21 @@ async def run_analysis_conversation(
 
             jvm_status = "(JVM active)" if ('jpype' in globals() and jpype.isJVMStarted()) else "(JVM non active)"
             print(f"\n{jvm_status}")
+            run_logger.info("Agents de compatibilité configurés.")
         except ImportError as e:
             run_logger.warning(f"Import semantic_kernel_compatibility échoué: {e}")
             jvm_status = "Import error"
-        
         run_logger.info(f"État final JVM: {jvm_status}")
         run_logger.info(f"--- Fin Run_{run_id} ---")
         
+        # TODO: Implémenter le retour approprié
+        return {"status": "success", "message": "Analyse terminée"}
+        
     except Exception as e:
-        run_logger.error(f"Erreur dans run_analysis_conversation: {e}")
-        raise
+        run_logger.error(f"Erreur durant l'analyse: {e}")
+        return {"status": "error", "message": str(e)}
+    finally:
+        run_logger.info("Nettoyage en cours...")
 
 class AnalysisRunner:
    """

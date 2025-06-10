@@ -21,6 +21,9 @@ FONCTIONNALITES DEMONSTREES :
 5. Orchestration des agents avec personnalités distinctes
 """
 
+# ===== AUTO-ACTIVATION ENVIRONNEMENT =====
+import scripts.core.auto_env  # Auto-activation environnement intelligent
+# =========================================
 import asyncio
 import logging
 import json

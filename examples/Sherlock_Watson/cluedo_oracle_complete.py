@@ -17,6 +17,9 @@ MISSION: Oracle Cluedo prêt pour production SANS AUCUN MOCK
 ✅ API OpenAI réelle intégrée
 """
 
+# ===== AUTO-ACTIVATION ENVIRONNEMENT =====
+import scripts.core.auto_env  # Auto-activation environnement intelligent
+# =========================================
 import asyncio
 import os
 import sys

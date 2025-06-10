@@ -390,7 +390,7 @@ if __name__ == '__main__':
     logger_main_tools.info("Example test call (downloads JDK if not present, skips Octave):")
     logger_main_tools.info(f"# installed = setup_tools('{test_tools_dir}', logger_instance=logger_main_tools, interactive=False, force_reinstall=False, skip_octave=True)")
     
-    # installed = setup_tools(test_tools_dir, logger_instance=logger_main_tools, interactive=False, force_reinstall=False, skip_octave=True)
+    installed = setup_tools(test_tools_dir, logger_instance=logger_main_tools, interactive=False, force_reinstall=False, skip_octave=True)
     # if installed.get("JAVA_HOME"):
     #     logger_main_tools.info(f"JAVA_HOME set to: {installed['JAVA_HOME']}")
     # else:
