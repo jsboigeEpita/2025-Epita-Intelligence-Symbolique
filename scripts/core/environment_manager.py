@@ -19,7 +19,15 @@ import argparse
 from typing import Dict, List, Optional, Tuple, Any
 from pathlib import Path
 
-from .common_utils import Logger, LogLevel, safe_exit, get_project_root # Import relatif corrigé
+# Import relatif corrigé - gestion des erreurs d'import
+try:
+    from .common_utils import Logger, LogLevel, safe_exit, get_project_root
+except ImportError:
+    # Fallback pour execution directe
+    import sys
+    import os
+    sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+    from common_utils import Logger, LogLevel, safe_exit, get_project_root
 
 
 # --- Début de l'insertion pour sys.path ---
