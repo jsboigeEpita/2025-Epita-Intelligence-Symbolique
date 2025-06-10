@@ -57,7 +57,7 @@ if (-not (Test-Path "node_modules")) {
 # Execution du test principal
 Write-Host "`nEXECUTION DES TESTS" -ForegroundColor Yellow
 
-$testCommand = "npx playwright test investigation-textes-varies.spec.js --reporter=html"
+$testCommand = "npx playwright test investigation-textes-varies.spec.js --reporter=list"
 
 Write-Host "Commande: $testCommand" -ForegroundColor Cyan
 

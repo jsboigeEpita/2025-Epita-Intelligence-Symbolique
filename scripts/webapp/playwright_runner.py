@@ -207,6 +207,8 @@ class PlaywrightRunner:
                     cmd,
                     capture_output=True,
                     text=True,
+                    encoding='utf-8',
+                    errors='replace',
                     timeout=config.get('test_timeout', 300),  # 5 min par défaut
                     cwd=Path.cwd()
                 )
@@ -215,6 +217,8 @@ class PlaywrightRunner:
                     cmd,
                     capture_output=True,
                     text=True,
+                    encoding='utf-8',
+                    errors='replace',
                     timeout=config.get('test_timeout', 300),
                     cwd=Path.cwd()
                 )
