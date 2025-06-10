@@ -119,23 +119,13 @@ class TweetyInitializer:
             classpath = [str(p) for p in classpath_entries]
             logger.info(f"Calculated Classpath: {classpath}")
 
-            # Vérification environnement de test pour éviter Access Violations
+            # Vérification environnement de test avec variable d'environnement explicite uniquement
             import sys
-            is_test_env = (
-                "pytest" in sys.modules or
-                "PYTEST_CURRENT_TEST" in os.environ or
-                os.environ.get("FORCE_JPYPE_MOCK", "false").lower() == "true"
-            )
-            
-            if is_test_env:
-                logger.info("Environnement de test détecté - utilisation des mocks JPype")
-                # Force le passage au mode mock pour éviter Access Violations
-                if 'tests.mocks.jpype_setup' not in sys.modules:
-                    from tests.mocks.jpype_setup import setup_jpype_mocks
-                    setup_jpype_mocks()
-                TweetyInitializer._jvm_started = True
-                logger.info("Mocks JPype configurés avec succès.")
-                return
+            # MOCK ÉLIMINÉ PHASE 3 - ZÉRO TOLÉRANCE
+            force_mock = os.environ.get("FORCE_JPYPE_MOCK", "false").lower() == "true"
+            if force_mock:
+                logger.error("FORCE_JPYPE_MOCK détecté mais mocks éliminés Phase 3")
+                raise NotImplementedError("Mocks JPype éliminés - utiliser JAR Tweety authentique uniquement")
             
             if not jpype.isJVMStarted():
                 logger.info("Starting JVM...")
@@ -156,13 +146,9 @@ class TweetyInitializer:
                     logger.info("JVM started successfully.")
                 except Exception as e:
                     logger.error(f"Échec d'initialisation JVM: {e}")
-                    logger.info("Fallback vers le mode mock JPype...")
-                    # Force le passage au mode mock en cas d'échec JVM
-                    import sys
-                    if 'tests.mocks.jpype_setup' not in sys.modules:
-                        from tests.mocks.jpype_setup import setup_jpype_mocks
-                        setup_jpype_mocks()
-                    raise
+                    logger.error("Aucun fallback disponible - l'application nécessite une JVM fonctionnelle")
+                    # Plus de fallback automatique vers les mocks
+                    raise RuntimeError(f"Impossible d'initialiser la JVM: {e}") from e
             else:
                 logger.info("JVM was already started by another component.")
                 TweetyInitializer._jvm_started = True
@@ -240,22 +226,14 @@ class TweetyInitializer:
         if not TweetyInitializer._jvm_started:
             self._start_jvm()
         
-        # Vérification environnement de test pour éviter Access Violations
+        # Vérification environnement de test avec variable d'environnement explicite uniquement
         import sys
-        is_test_env = (
-            "pytest" in sys.modules or
-            "PYTEST_CURRENT_TEST" in os.environ or
-            os.environ.get("FORCE_JPYPE_MOCK", "false").lower() == "true"
-        )
+        force_mock = os.environ.get("FORCE_JPYPE_MOCK", "false").lower() == "true"
         
-        if is_test_env:
-            logger.info("Environnement de test détecté - utilisation des mocks pour PL components")
-            # Créer des mocks pour les composants PL
-            from unittest.mock import MagicMock
-            TweetyInitializer._pl_reasoner = MagicMock(name="pl_reasoner_mock")
-            TweetyInitializer._pl_parser = MagicMock(name="pl_parser_mock")
-            logger.info("PL components mocks configurés avec succès.")
-            return TweetyInitializer._pl_parser, TweetyInitializer._pl_reasoner
+        if force_mock:
+            logger.warning("FORCE_JPYPE_MOCK demandé mais les mocks ont été éliminés en Phase 2")
+            logger.info("Force l'utilisation des vrais composants PL - pas de mock possible")
+            # AUCUN fallback - on force l'initialisation réelle même si FORCE_JPYPE_MOCK=true
         
         try:
             logger.debug("Initializing PL components...")
@@ -273,22 +251,14 @@ class TweetyInitializer:
         if not TweetyInitializer._jvm_started:
             self._start_jvm()
         
-        # Vérification environnement de test pour éviter Access Violations
+        # Vérification environnement de test avec variable d'environnement explicite uniquement
         import sys
-        is_test_env = (
-            "pytest" in sys.modules or
-            "PYTEST_CURRENT_TEST" in os.environ or
-            os.environ.get("FORCE_JPYPE_MOCK", "false").lower() == "true"
-        )
+        force_mock = os.environ.get("FORCE_JPYPE_MOCK", "false").lower() == "true"
         
-        if is_test_env:
-            logger.info("Environnement de test détecté - utilisation des mocks pour FOL components")
-            # Créer des mocks pour les composants FOL
-            from unittest.mock import MagicMock
-            TweetyInitializer._fol_parser = MagicMock(name="fol_parser_mock")
-            # TweetyInitializer._fol_reasoner = MagicMock(name="fol_reasoner_mock")
-            logger.info("FOL components mocks configurés avec succès.")
-            return TweetyInitializer._fol_parser
+        if force_mock:
+            logger.warning("FORCE_JPYPE_MOCK demandé mais les mocks ont été éliminés en Phase 2")
+            logger.info("Force l'utilisation des vrais composants FOL - pas de mock possible")
+            # AUCUN fallback - on force l'initialisation réelle même si FORCE_JPYPE_MOCK=true
         
         try:
             logger.debug("Initializing FOL components...")
@@ -307,22 +277,14 @@ class TweetyInitializer:
         if not TweetyInitializer._jvm_started:
             self._start_jvm()
         
-        # Vérification environnement de test pour éviter Access Violations
+        # Vérification environnement de test avec variable d'environnement explicite uniquement
         import sys
-        is_test_env = (
-            "pytest" in sys.modules or
-            "PYTEST_CURRENT_TEST" in os.environ or
-            os.environ.get("FORCE_JPYPE_MOCK", "false").lower() == "true"
-        )
+        force_mock = os.environ.get("FORCE_JPYPE_MOCK", "false").lower() == "true"
         
-        if is_test_env:
-            logger.info("Environnement de test détecté - utilisation des mocks pour Modal Logic components")
-            # Créer des mocks pour les composants Modal Logic
-            from unittest.mock import MagicMock
-            TweetyInitializer._modal_parser = MagicMock(name="modal_parser_mock")
-            # TweetyInitializer._modal_reasoner = MagicMock(name="modal_reasoner_mock")
-            logger.info("Modal Logic components mocks configurés avec succès.")
-            return TweetyInitializer._modal_parser
+        if force_mock:
+            logger.warning("FORCE_JPYPE_MOCK demandé mais les mocks ont été éliminés en Phase 2")
+            logger.info("Force l'utilisation des vrais composants Modal Logic - pas de mock possible")
+            # AUCUN fallback - on force l'initialisation réelle même si FORCE_JPYPE_MOCK=true
         
         try:
             logger.debug("Initializing Modal Logic components...")

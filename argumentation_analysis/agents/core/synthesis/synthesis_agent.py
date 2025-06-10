@@ -380,17 +380,17 @@ class SynthesisAgent(BaseAgent):
         # Pour la Phase 1, on simule les agents logiques
         self._logger.info(f"Simulation agent logique: {logic_type}")
         if logic_type not in self._logic_agents_cache:
-            # Créer un agent simulé
-            self._logic_agents_cache[logic_type] = MockLogicAgent(logic_type)
+            # MOCK ÉLIMINÉ PHASE 3 - FORCER ERREUR RÉELLE
+            raise NotImplementedError(f"MockLogicAgent éliminé - implémenter agent authentique {logic_type}")
         
         return self._logic_agents_cache.get(logic_type)
     
     def _get_informal_agent(self):
         """Récupère ou crée l'agent d'analyse informelle (simulation Phase 1)."""
         if self._informal_agent is None:
-            # Pour la Phase 1, on simule l'agent informel
-            self._logger.info("Simulation agent informel")
-            self._informal_agent = MockInformalAgent()
+            # MOCK ÉLIMINÉ PHASE 3 - FORCER ERREUR RÉELLE
+            self._logger.error("MockInformalAgent éliminé")
+            raise NotImplementedError("MockInformalAgent éliminé - implémenter agent authentique")
         
         return self._informal_agent
     
@@ -589,50 +589,7 @@ class SynthesisAgent(BaseAgent):
         # Simulation d'un stream pour la compatibilité
         yield result
 # =====================================
-# Classes Mock pour Phase 1 (simulation)
+# MOCKS ÉLIMINÉS PHASE 3 - ZÉRO TOLÉRANCE
 # =====================================
-
-class MockLogicAgent:
-    """Agent logique simulé pour la Phase 1."""
-    
-    def __init__(self, logic_type: str):
-        self.logic_type = logic_type
-        
-    async def analyze_text(self, text: str) -> str:
-        """Simulation d'analyse logique."""
-        if self.logic_type == "propositional":
-            return f"Analyse PL simulée: Structure logique basique détectée dans '{text[:50]}...'"
-        elif self.logic_type == "first_order":
-            return f"Analyse FOL simulée: Prédicats et quantificateurs analysés dans '{text[:50]}...'"
-        elif self.logic_type == "modal":
-            return f"Analyse ML simulée: Modalités nécessité/possibilité évaluées dans '{text[:50]}...'"
-        else:
-            return f"Analyse {self.logic_type} simulée pour '{text[:50]}...'"
-
-
-class MockInformalAgent:
-    """Agent informel simulé pour la Phase 1."""
-    
-    async def analyze_text(self, text: str) -> dict:
-        """Simulation d'analyse informelle."""
-        # Simulation basique de détection de sophismes
-        fallacies = []
-        if "absolument" in text.lower() or "évident" in text.lower():
-            fallacies.append({
-                "type": "assertion_non_fondée",
-                "confidence": 0.7,
-                "description": "Assertion présentée comme évidente sans justification"
-            })
-        
-        if "tout le monde sait" in text.lower():
-            fallacies.append({
-                "type": "appel_au_sens_commun",
-                "confidence": 0.8,
-                "description": "Appel non justifié au sens commun"
-            })
-        
-        return {
-            "fallacies": fallacies,
-            "structure": f"Analyse rhétorique simulée: {len(text)} caractères analysés",
-            "devices": ["assertion", "argumentation"] if len(text) > 50 else ["assertion"]
-        }
+# Classes Mock supprimées brutalement selon consignes élimination
+# Utiliser agents authentiques au lieu de masquer avec mocks

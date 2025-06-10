@@ -9,58 +9,27 @@ import sys
 import os
 import subprocess
 
-def fix_matplotlib_circular_import():
+def fix_matplotlib_import():
     """
-    Corrige le problème d'import circulaire matplotlib
+    Corrige le problème d'import matplotlib avec VRAIE installation
     """
-    print("=== CORRECTION MATPLOTLIB ===")
+    print("=== INSTALLATION RÉELLE MATPLOTLIB ===")
     
-    # Créer un mock pour éviter l'import circulaire
-    matplotlib_mock_content = '''"""
-Mock pour matplotlib - Sprint 3
-Évite les imports circulaires critiques
-"""
-
-import sys
-from unittest.mock import MagicMock
-
-class MockPyplot:
-    """Mock simple pour pyplot"""
-    
-    def __init__(self):
-        self.figure = MagicMock()
-        self.subplot = MagicMock()
-        self.plot = MagicMock()
-        self.scatter = MagicMock()
-        self.title = MagicMock()
-        self.xlabel = MagicMock()
-        self.ylabel = MagicMock()
-        self.legend = MagicMock()
-        self.show = MagicMock()
-        self.savefig = MagicMock()
-        self.close = MagicMock()
-        self.subplots = MagicMock(return_value=(MagicMock(), MagicMock()))
-
-# Remplacer matplotlib temporairement
-if 'matplotlib.pyplot' not in sys.modules:
-    sys.modules['matplotlib.pyplot'] = type(sys)('matplotlib.pyplot')
-    sys.modules['matplotlib.pyplot'].plt = MockPyplot()
-
-plt = MockPyplot()
-
-print("[OK] Mock matplotlib appliqué pour éviter l'import circulaire")
-'''
-    
-    # Sauvegarder le mock
-    mock_dir = "argumentation_analysis/agents/tools/analysis/mocks"
-    os.makedirs(mock_dir, exist_ok=True)
-    
-    with open(f"{mock_dir}/matplotlib_mock.py", 'w', encoding='utf-8') as f:
-        f.write(matplotlib_mock_content)
-    
-    print(f"[OK] Mock matplotlib créé: {mock_dir}/matplotlib_mock.py")
-    
-    return True
+    try:
+        import matplotlib.pyplot as plt
+        print("[OK] Matplotlib déjà installé et fonctionnel")
+        return True
+    except ImportError:
+        print("[INFO] Installation de matplotlib...")
+        cmd = "conda run -n epita_symbolic_ai_sherlock pip install matplotlib"
+        result = subprocess.run(cmd, shell=True, capture_output=True, text=True)
+        
+        if result.returncode == 0:
+            print("[OK] Matplotlib installé avec succès")
+            return True
+        else:
+            print(f"[ERROR] Échec installation matplotlib: {result.stderr}")
+            return False
 
 def install_playwright():
     """
@@ -242,7 +211,7 @@ if __name__ == "__main__":
     
     try:
         # 1. Corriger matplotlib
-        if fix_matplotlib_circular_import():
+        if fix_matplotlib_import():
             success_count += 1
         
         # 2. Installer Playwright

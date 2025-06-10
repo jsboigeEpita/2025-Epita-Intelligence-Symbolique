@@ -31,12 +31,11 @@ from tqdm import tqdm
 
 from argumentation_analysis.utils.text_processing import split_text_into_arguments, generate_sample_text
 from argumentation_analysis.utils.core_utils.file_utils import load_json_data, save_json_data
-# Importer les mocks centralisés
-from argumentation_analysis.mocks.analysis_tools import (
-    MockContextualFallacyDetector,
-    MockArgumentCoherenceEvaluator,
-    MockSemanticArgumentAnalyzer as CentralizedMockSemanticArgumentAnalyzer # Alias pour éviter conflit
-)
+
+# VRAIES IMPLÉMENTATIONS UNIQUEMENT - PLUS AUCUN MOCK !
+from argumentation_analysis.agents.tools.analysis.new.contextual_fallacy_detector import ContextualFallacyDetector
+from argumentation_analysis.agents.tools.analysis.new.argument_coherence_evaluator import ArgumentCoherenceEvaluator
+from argumentation_analysis.agents.tools.analysis.new.semantic_argument_analyzer import SemanticArgumentAnalyzer
 
 
 # Configuration du logging
@@ -176,8 +175,7 @@ def analyze_extract(
 
 def analyze_extracts(
     extract_definitions: List[Dict[str, Any]],
-    output_file: Path,
-    use_mocks: bool = False  # Nouveau paramètre pour utiliser les mocks
+    output_file: Path
 ) -> None:
     """
     Analyse tous les extraits et sauvegarde les résultats.
@@ -185,46 +183,16 @@ def analyze_extracts(
     Args:
         extract_definitions (List[Dict[str, Any]]): Définitions des extraits
         output_file (Path): Chemin du fichier de sortie
-        use_mocks (bool): Si True, utilise les outils d'analyse simulés.
     """
-    logger.info("Initialisation des outils d'analyse rhétorique...")
+    logger.info("Initialisation des outils d'analyse rhétorique RÉELS...")
     
-    if use_mocks:
-        logger.warning("Utilisation des outils d'analyse rhétorique simulés (centralisés).")
-        tools = {
-            "fallacy_detector": MockContextualFallacyDetector(),
-            "coherence_evaluator": MockArgumentCoherenceEvaluator(),
-            "semantic_analyzer": CentralizedMockSemanticArgumentAnalyzer()
-        }
-        logger.info("✅ Outils d'analyse rhétorique simulés (centralisés) initialisés")
-    else:
-        # Initialiser les outils d'analyse réels
-        try:
-            tools = {
-                "fallacy_detector": ContextualFallacyDetector(),
-                "coherence_evaluator": ArgumentCoherenceEvaluator(),
-                "semantic_analyzer": SemanticArgumentAnalyzer()
-            }
-            logger.info("✅ Outils d'analyse rhétorique réels initialisés")
-        except NameError as e:
-            logger.error(f"Erreur lors de l'initialisation des outils réels (NameError): {e}")
-            logger.error("Les outils réels n'ont pas pu être importés. Vérifiez les dépendances et la configuration.")
-            logger.warning("Passage à l'utilisation des mocks centralisés comme solution de repli.")
-            tools = {
-                "fallacy_detector": MockContextualFallacyDetector(),
-                "coherence_evaluator": MockArgumentCoherenceEvaluator(),
-                "semantic_analyzer": CentralizedMockSemanticArgumentAnalyzer()
-            }
-            logger.info("✅ Outils d'analyse rhétorique simulés (centralisés) initialisés comme solution de repli.")
-        except Exception as e:
-            logger.error(f"Erreur inattendue lors de l'initialisation des outils réels: {e}")
-            logger.warning("Passage à l'utilisation des mocks centralisés comme solution de repli.")
-            tools = {
-                "fallacy_detector": MockContextualFallacyDetector(),
-                "coherence_evaluator": MockArgumentCoherenceEvaluator(),
-                "semantic_analyzer": CentralizedMockSemanticArgumentAnalyzer()
-            }
-            logger.info("✅ Outils d'analyse rhétorique simulés (centralisés) initialisés comme solution de repli.")
+    # VRAIES IMPLÉMENTATIONS UNIQUEMENT - AUCUN FALLBACK !
+    tools = {
+        "fallacy_detector": ContextualFallacyDetector(),
+        "coherence_evaluator": ArgumentCoherenceEvaluator(),
+        "semantic_analyzer": SemanticArgumentAnalyzer()
+    }
+    logger.info("✅ Outils d'analyse rhétorique RÉELS initialisés - AUCUN MOCK !")
     
     # Compter le nombre total d'extraits
     total_extracts = sum(len(source.get("extracts", [])) for source in extract_definitions)
@@ -295,12 +263,6 @@ def parse_arguments():
         help="Affiche des informations de débogage supplémentaires"
     )
     
-    parser.add_argument(
-        "--use-mocks",
-        action="store_true",
-        help="Utilise les outils d'analyse rhétorique simulés (mocks) au lieu des outils réels."
-    )
-    
     return parser.parse_args()
 
 def main():
@@ -352,7 +314,7 @@ def main():
         sys.exit(1)
     
     # Analyser les extraits
-    analyze_extracts(extract_definitions, output_path, args.use_mocks) # Passer l'argument use_mocks
+    analyze_extracts(extract_definitions, output_path)
     
     logger.info("Analyse rhétorique terminée avec succès.")
 
