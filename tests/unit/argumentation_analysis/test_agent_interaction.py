@@ -7,7 +7,6 @@ entre les différents agents (PM, PL, Informal, Extract) dans le contexte
 de la stratégie d'équilibrage de participation.
 """
 
-import unittest
 import asyncio
 import pytest
 from unittest.mock import MagicMock, AsyncMock, patch
@@ -18,18 +17,8 @@ try:
 except ImportError:
     ChatMessageContent = None
 
-# Définir AuthorRole comme enum simple si pas disponible
-try:
-    from semantic_kernel.contents import AuthorRole
-except ImportError:
-    try:
-        from semantic_kernel.contents.chat_message_content import AuthorRole
-    except ImportError:
-        # Créer une classe AuthorRole simple comme fallback
-        class AuthorRole:
-            USER = "user"
-            ASSISTANT = "assistant"
-            SYSTEM = "system"
+# Import AuthorRole depuis le module de compatibilité
+from argumentation_analysis.utils.semantic_kernel_compatibility import AuthorRole
 
 try:
     from semantic_kernel.agents import Agent, AgentGroupChat
@@ -55,7 +44,8 @@ from argumentation_analysis.agents.core.pm.pm_definitions import setup_pm_kernel
 class TestAgentInteraction: # Suppression de l'héritage AsyncTestCase
     """Tests d'intégration pour l'interaction entre les différents agents."""
 
-    def setUp(self):
+    @pytest.fixture(autouse=True)
+    def setup_method(self):
         """Initialisation avant chaque test."""
         self.test_text = """
         La Terre est plate car l'horizon semble plat quand on regarde au loin.
@@ -93,6 +83,7 @@ class TestAgentInteraction: # Suppression de l'héritage AsyncTestCase
             default_agent_name="ProjectManagerAgent"
         )
 
+    @pytest.mark.asyncio
     async def test_pm_informal_interaction(self):
         history = []
         
@@ -100,7 +91,7 @@ class TestAgentInteraction: # Suppression de l'héritage AsyncTestCase
         self.state.designate_next_agent("InformalAnalysisAgent")
         
         selected_agent = await self.balanced_strategy.next(self.agents, history)
-        self.assertEqual(selected_agent, self.informal_agent)
+        assert selected_agent == self.informal_agent
         
         informal_message = MagicMock(spec=ChatMessageContent)
         informal_message.role = AuthorRole.ASSISTANT
@@ -121,12 +112,13 @@ class TestAgentInteraction: # Suppression de l'héritage AsyncTestCase
         )
         
         selected_agent = await self.balanced_strategy.next(self.agents, history)
-        self.assertNotEqual(selected_agent, self.informal_agent)
+        assert selected_agent != self.informal_agent
         
-        self.assertEqual(len(self.state.analysis_tasks), 1)
-        self.assertEqual(len(self.state.identified_arguments), 2)
-        self.assertEqual(len(self.state.answers), 1)
+        assert len(self.state.analysis_tasks) == 1
+        assert len(self.state.identified_arguments) == 2
+        assert len(self.state.answers) == 1
 
+    @pytest.mark.asyncio
     async def test_informal_pl_interaction(self):
         history = []
         
@@ -141,7 +133,7 @@ class TestAgentInteraction: # Suppression de l'héritage AsyncTestCase
         self.state.designate_next_agent("PropositionalLogicAgent")
         
         selected_agent = await self.balanced_strategy.next(self.agents, history)
-        self.assertEqual(selected_agent, self.pl_agent)
+        assert selected_agent == self.pl_agent
         
         pl_message = MagicMock(spec=ChatMessageContent)
         pl_message.role = AuthorRole.ASSISTANT
@@ -152,10 +144,11 @@ class TestAgentInteraction: # Suppression de l'héritage AsyncTestCase
         bs_id = self.state.add_belief_set("Propositional", "p => q\np\n")
         log_id = self.state.log_query(bs_id, "p => q", "ACCEPTED (True)")
         
-        self.assertEqual(len(self.state.identified_arguments), 1)
-        self.assertEqual(len(self.state.belief_sets), 1)
-        self.assertEqual(len(self.state.query_log), 1)
+        assert len(self.state.identified_arguments) == 1
+        assert len(self.state.belief_sets) == 1
+        assert len(self.state.query_log) == 1
 
+    @pytest.mark.asyncio
     async def test_pl_extract_interaction(self):
         history = []
         
@@ -170,7 +163,7 @@ class TestAgentInteraction: # Suppression de l'héritage AsyncTestCase
         self.state.designate_next_agent("ExtractAgent")
         
         selected_agent = await self.balanced_strategy.next(self.agents, history)
-        self.assertEqual(selected_agent, self.extract_agent)
+        assert selected_agent == self.extract_agent
         
         extract_message = MagicMock(spec=ChatMessageContent)
         extract_message.role = AuthorRole.ASSISTANT
@@ -180,9 +173,10 @@ class TestAgentInteraction: # Suppression de l'héritage AsyncTestCase
         
         extract_id = self.state.add_extract("Extrait du texte", "La Terre est plate car l'horizon semble plat")
         
-        self.assertEqual(len(self.state.belief_sets), 1)
-        self.assertEqual(len(self.state.extracts), 1)
+        assert len(self.state.belief_sets) == 1
+        assert len(self.state.extracts) == 1
 
+    @pytest.mark.asyncio
     async def test_extract_pm_interaction(self):
         history = []
         
@@ -197,7 +191,7 @@ class TestAgentInteraction: # Suppression de l'héritage AsyncTestCase
         self.state.designate_next_agent("ProjectManagerAgent")
         
         selected_agent = await self.balanced_strategy.next(self.agents, history)
-        self.assertEqual(selected_agent, self.pm_agent)
+        assert selected_agent == self.pm_agent
         
         pm_message = MagicMock(spec=ChatMessageContent)
         pm_message.role = AuthorRole.ASSISTANT
@@ -207,9 +201,10 @@ class TestAgentInteraction: # Suppression de l'héritage AsyncTestCase
         
         self.state.set_conclusion("Le texte contient plusieurs sophismes qui invalident l'argument principal.")
         
-        self.assertEqual(len(self.state.extracts), 1)
-        self.assertIsNotNone(self.state.final_conclusion)
+        assert len(self.state.extracts) == 1
+        assert self.state.final_conclusion is not None
 
+    @pytest.mark.asyncio
     async def test_full_agent_interaction_cycle(self):
         history = []
         
@@ -224,7 +219,7 @@ class TestAgentInteraction: # Suppression de l'héritage AsyncTestCase
         self.state.designate_next_agent("InformalAnalysisAgent")
         
         selected_agent = await self.balanced_strategy.next(self.agents, history)
-        self.assertEqual(selected_agent, self.informal_agent)
+        assert selected_agent == self.informal_agent
         
         arg1_id = self.state.add_argument("La Terre est plate car l'horizon semble plat")
         
@@ -237,7 +232,7 @@ class TestAgentInteraction: # Suppression de l'héritage AsyncTestCase
         self.state.designate_next_agent("PropositionalLogicAgent")
         
         selected_agent = await self.balanced_strategy.next(self.agents, history)
-        self.assertEqual(selected_agent, self.pl_agent)
+        assert selected_agent == self.pl_agent
         
         bs_id = self.state.add_belief_set("Propositional", "p => q\np\n")
         
@@ -250,7 +245,7 @@ class TestAgentInteraction: # Suppression de l'héritage AsyncTestCase
         self.state.designate_next_agent("ExtractAgent")
         
         selected_agent = await self.balanced_strategy.next(self.agents, history)
-        self.assertEqual(selected_agent, self.extract_agent)
+        assert selected_agent == self.extract_agent
         
         extract_id = self.state.add_extract("Extrait du texte", "La Terre est plate car l'horizon semble plat")
         
@@ -263,27 +258,28 @@ class TestAgentInteraction: # Suppression de l'héritage AsyncTestCase
         self.state.designate_next_agent("ProjectManagerAgent")
         
         selected_agent = await self.balanced_strategy.next(self.agents, history)
-        self.assertEqual(selected_agent, self.pm_agent)
+        assert selected_agent == self.pm_agent
         
         self.state.set_conclusion("Le texte contient plusieurs sophismes qui invalident l'argument principal.")
         
-        self.assertEqual(len(self.state.analysis_tasks), 1)
-        self.assertEqual(len(self.state.identified_arguments), 1)
-        self.assertEqual(len(self.state.belief_sets), 1)
-        self.assertEqual(len(self.state.extracts), 1)
-        self.assertIsNotNone(self.state.final_conclusion)
+        assert len(self.state.analysis_tasks) == 1
+        assert len(self.state.identified_arguments) == 1
+        assert len(self.state.belief_sets) == 1
+        assert len(self.state.extracts) == 1
+        assert self.state.final_conclusion is not None
         
-        self.assertEqual(self.balanced_strategy._participation_counts["ProjectManagerAgent"], 1)
-        self.assertEqual(self.balanced_strategy._participation_counts["InformalAnalysisAgent"], 1)
-        self.assertEqual(self.balanced_strategy._participation_counts["PropositionalLogicAgent"], 1)
-        self.assertEqual(self.balanced_strategy._participation_counts["ExtractAgent"], 1)
-        self.assertEqual(self.balanced_strategy._total_turns, 4)
+        assert self.balanced_strategy._participation_counts["ProjectManagerAgent"] == 1
+        assert self.balanced_strategy._participation_counts["InformalAnalysisAgent"] == 1
+        assert self.balanced_strategy._participation_counts["PropositionalLogicAgent"] == 1
+        assert self.balanced_strategy._participation_counts["ExtractAgent"] == 1
+        assert self.balanced_strategy._total_turns == 4
 
 
 class TestAgentInteractionWithErrors: # Suppression de l'héritage AsyncTestCase
     """Tests d'intégration pour l'interaction entre les agents avec des erreurs."""
 
-    def setUp(self):
+    @pytest.fixture(autouse=True)
+    def setup_method(self):
         self.test_text = """
         La Terre est plate car l'horizon semble plat quand on regarde au loin.
         De plus, si la Terre était ronde, les gens à l'autre bout tomberaient.
@@ -320,6 +316,7 @@ class TestAgentInteractionWithErrors: # Suppression de l'héritage AsyncTestCase
             default_agent_name="ProjectManagerAgent"
         )
 
+    @pytest.mark.asyncio
     async def test_error_recovery_interaction(self):
         history = []
         
@@ -334,7 +331,7 @@ class TestAgentInteractionWithErrors: # Suppression de l'héritage AsyncTestCase
         self.state.designate_next_agent("InformalAnalysisAgent")
         
         selected_agent = await self.balanced_strategy.next(self.agents, history)
-        self.assertEqual(selected_agent, self.informal_agent)
+        assert selected_agent == self.informal_agent
         
         self.state.log_error("InformalAnalysisAgent", "Erreur lors de l'identification des arguments")
         
@@ -347,7 +344,7 @@ class TestAgentInteractionWithErrors: # Suppression de l'héritage AsyncTestCase
         self.state.designate_next_agent("ProjectManagerAgent")
         
         selected_agent = await self.balanced_strategy.next(self.agents, history)
-        self.assertEqual(selected_agent, self.pm_agent)
+        assert selected_agent == self.pm_agent
         
         self.state.add_task("Analyser directement les sophismes potentiels")
         
@@ -360,7 +357,7 @@ class TestAgentInteractionWithErrors: # Suppression de l'héritage AsyncTestCase
         self.state.designate_next_agent("PropositionalLogicAgent")
         
         selected_agent = await self.balanced_strategy.next(self.agents, history)
-        self.assertEqual(selected_agent, self.pl_agent)
+        assert selected_agent == self.pl_agent
         
         pl_message = MagicMock(spec=ChatMessageContent)
         pl_message.role = AuthorRole.ASSISTANT
@@ -368,15 +365,15 @@ class TestAgentInteractionWithErrors: # Suppression de l'héritage AsyncTestCase
         pl_message.content = "Je vais formaliser les arguments potentiels."
         history.append(pl_message)
         
-        self.assertEqual(len(self.state.analysis_tasks), 2)
-        self.assertEqual(len(self.state.errors), 1)
-        self.assertEqual(self.state.errors[0]["agent_name"], "InformalAnalysisAgent")
-        self.assertEqual(self.state.errors[0]["message"], "Erreur lors de l'identification des arguments")
+        assert len(self.state.analysis_tasks) == 2
+        assert len(self.state.errors) == 1
+        assert self.state.errors[0]["agent_name"] == "InformalAnalysisAgent"
+        assert self.state.errors[0]["message"] == "Erreur lors de l'identification des arguments"
         
-        self.assertEqual(self.balanced_strategy._participation_counts["ProjectManagerAgent"], 1)
-        self.assertEqual(self.balanced_strategy._participation_counts["InformalAnalysisAgent"], 1)
-        self.assertEqual(self.balanced_strategy._participation_counts["PropositionalLogicAgent"], 1)
-        self.assertEqual(self.balanced_strategy._total_turns, 3)
+        assert self.balanced_strategy._participation_counts["ProjectManagerAgent"] == 1
+        assert self.balanced_strategy._participation_counts["InformalAnalysisAgent"] == 1
+        assert self.balanced_strategy._participation_counts["PropositionalLogicAgent"] == 1
+        assert self.balanced_strategy._total_turns == 3
 
 
 if __name__ == '__main__':
