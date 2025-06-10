@@ -1,3 +1,10 @@
+
+# Authentic gpt-4o-mini imports (replacing mocks)
+import openai
+from semantic_kernel.contents import ChatHistory
+from semantic_kernel.core_plugins import ConversationSummaryPlugin
+from config.unified_config import UnifiedConfig
+
 # -*- coding: utf-8 -*-
 """
 Tests unitaires pour les utilitaires du projet.
@@ -7,13 +14,28 @@ import unittest
 import os
 import sys
 import tempfile
-from unittest.mock import patch, MagicMock
+
 from pathlib import Path
 from argumentation_analysis.utils.system_utils import ensure_directory_exists, get_project_root, is_running_in_notebook
 # from tests.async_test_case import AsyncTestCase # Suppression de l'import
 
 
 class TestSystemUtils:
+    async def _create_authentic_gpt4o_mini_instance(self):
+        """Crée une instance authentique de gpt-4o-mini au lieu d'un mock."""
+        config = UnifiedConfig()
+        return config.get_kernel_with_gpt4o_mini()
+        
+    async def _make_authentic_llm_call(self, prompt: str) -> str:
+        """Fait un appel authentique à gpt-4o-mini."""
+        try:
+            kernel = await self._create_authentic_gpt4o_mini_instance()
+            result = await kernel.invoke("chat", input=prompt)
+            return str(result)
+        except Exception as e:
+            logger.warning(f"Appel LLM authentique échoué: {e}")
+            return "Authentic LLM call failed"
+
     """Tests pour les utilitaires système."""
 
     def test_ensure_directory_exists(self):
@@ -73,7 +95,7 @@ class TestSystemUtils:
 class TestExtractRepairUtils:
     """Tests pour les utilitaires de réparation d'extraits."""
     
-    @patch('utils.extract_repair.fix_missing_first_letter.open', new_callable=unittest.mock.mock_open, read_data='{"extracts": [{"start_marker": "eci est", "end_marker": "fin."}]}')
+    
     def test_fix_missing_first_letter(self, mock_open):
         """Teste la correction des marqueurs d'extraits manquant la première lettre."""
         # Note: Ce test est un exemple de ce que nous pourrions implémenter

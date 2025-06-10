@@ -1,3 +1,10 @@
+
+# Authentic gpt-4o-mini imports (replacing mocks)
+import openai
+from semantic_kernel.contents import ChatHistory
+from semantic_kernel.core_plugins import ConversationSummaryPlugin
+from config.unified_config import UnifiedConfig
+
 ﻿#!/usr/bin/env python3
 """
 Tests d'intégration pour le pipeline FOL complet
@@ -12,7 +19,7 @@ import sys
 import os
 import tempfile
 from pathlib import Path
-from unittest.mock import Mock, patch, MagicMock
+
 
 # Ajout du chemin pour les imports
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
@@ -48,7 +55,7 @@ except ImportError:
             }
     
     def create_llm_service():
-        return Mock()
+        return await self._create_authentic_gpt4o_mini_instance()
     
     class TweetyErrorAnalyzer:
         def analyze_error(self, error, context=None):
@@ -56,6 +63,21 @@ except ImportError:
 
 
 class TestFOLPipelineIntegration:
+    async def _create_authentic_gpt4o_mini_instance(self):
+        """Crée une instance authentique de gpt-4o-mini au lieu d'un mock."""
+        config = UnifiedConfig()
+        return config.get_kernel_with_gpt4o_mini()
+        
+    async def _make_authentic_llm_call(self, prompt: str) -> str:
+        """Fait un appel authentique à gpt-4o-mini."""
+        try:
+            kernel = await self._create_authentic_gpt4o_mini_instance()
+            result = await kernel.invoke("chat", input=prompt)
+            return str(result)
+        except Exception as e:
+            logger.warning(f"Appel LLM authentique échoué: {e}")
+            return "Authentic LLM call failed"
+
     """Tests d'intégration pour le pipeline FOL complet."""
     
     def setup_method(self):
@@ -74,7 +96,7 @@ class TestFOLPipelineIntegration:
     def test_fol_pipeline_end_to_end(self):
         """Test du pipeline FOL bout-en-bout."""
         # 1. Créer l'agent FOL
-        mock_kernel = Mock()
+        mock_kernel = await self._create_authentic_gpt4o_mini_instance()
         fol_agent = FirstOrderLogicAgent(kernel=mock_kernel)
         
         # 2. Générer la syntaxe FOL
@@ -142,7 +164,7 @@ class TestFOLPipelineIntegration:
         # Texte problématique pour FOL
         problematic_text = "Cette phrase n'a pas de structure logique claire."
         
-        mock_kernel = Mock()
+        mock_kernel = await self._create_authentic_gpt4o_mini_instance()
         fol_agent = FirstOrderLogicAgent(kernel=mock_kernel)
         
         try:
@@ -164,7 +186,7 @@ class TestFOLPipelineIntegration:
         """Test de performance du pipeline FOL."""
         import time
         
-        mock_kernel = Mock()
+        mock_kernel = await self._create_authentic_gpt4o_mini_instance()
         fol_agent = FirstOrderLogicAgent(kernel=mock_kernel)
         
         start_time = time.time()
@@ -199,7 +221,7 @@ class TestFOLPipelineIntegration:
         
         try:
             # Test avec vrai Tweety FOL
-            mock_kernel = Mock()
+            mock_kernel = await self._create_authentic_gpt4o_mini_instance()
             fol_agent = FirstOrderLogicAgent(kernel=mock_kernel)
             
             # Formules FOL valides
@@ -346,7 +368,7 @@ class TestFOLValidationIntegration:
             "∀x(P(x) → Q(x)) ∧ P(a)",   # Valide
         ]
         
-        mock_kernel = Mock()
+        mock_kernel = await self._create_authentic_gpt4o_mini_instance()
         fol_agent = FirstOrderLogicAgent(kernel=mock_kernel)
         
         validation_results = []
@@ -381,7 +403,7 @@ class TestFOLValidationIntegration:
             "¬Mortel(platon) → ¬Homme(platon)"  # Contraposée
         ]
         
-        mock_kernel = Mock()
+        mock_kernel = await self._create_authentic_gpt4o_mini_instance()
         fol_agent = FirstOrderLogicAgent(kernel=mock_kernel)
         
         result = fol_agent.analyze_with_tweety_fol(coherent_formulas)

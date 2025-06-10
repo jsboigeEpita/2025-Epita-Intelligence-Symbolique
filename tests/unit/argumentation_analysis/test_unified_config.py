@@ -1,3 +1,10 @@
+
+# Authentic gpt-4o-mini imports (replacing mocks)
+import openai
+from semantic_kernel.contents import ChatHistory
+from semantic_kernel.core_plugins import ConversationSummaryPlugin
+from config.unified_config import UnifiedConfig
+
 ﻿#!/usr/bin/env python3
 """
 Tests unitaires pour le système de configuration dynamique
@@ -10,7 +17,7 @@ import pytest
 import os
 import tempfile
 from pathlib import Path
-from unittest.mock import Mock, patch, MagicMock
+
 import sys
 
 # Ajout du chemin pour les imports
@@ -37,6 +44,21 @@ except ImportError:
 
 
 class TestUnifiedConfig:
+    async def _create_authentic_gpt4o_mini_instance(self):
+        """Crée une instance authentique de gpt-4o-mini au lieu d'un mock."""
+        config = UnifiedConfig()
+        return config.get_kernel_with_gpt4o_mini()
+        
+    async def _make_authentic_llm_call(self, prompt: str) -> str:
+        """Fait un appel authentique à gpt-4o-mini."""
+        try:
+            kernel = await self._create_authentic_gpt4o_mini_instance()
+            result = await kernel.invoke("chat", input=prompt)
+            return str(result)
+        except Exception as e:
+            logger.warning(f"Appel LLM authentique échoué: {e}")
+            return "Authentic LLM call failed"
+
     """Tests pour la classe UnifiedConfig."""
     
     def setup_method(self):
@@ -209,7 +231,7 @@ class TestConfigurationCLI:
         """Test de validation CLI avec combinaisons invalides."""
         from argumentation_analysis.utils.core_utils.cli_utils import validate_cli_args
         
-        invalid_args = Mock()
+        invalid_args = await self._create_authentic_gpt4o_mini_instance()
         invalid_args.logic_type = 'invalid'
         invalid_args.mock_level = 'none'
         

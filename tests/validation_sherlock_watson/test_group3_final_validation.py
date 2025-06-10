@@ -1,3 +1,10 @@
+
+# Authentic gpt-4o-mini imports (replacing mocks)
+import openai
+from semantic_kernel.contents import ChatHistory
+from semantic_kernel.core_plugins import ConversationSummaryPlugin
+from config.unified_config import UnifiedConfig
+
 import pytest
 #!/usr/bin/env python3
 """
@@ -7,7 +14,7 @@ Test de validation finale pour les 4 corrections du Groupe 3.
 import sys
 import asyncio
 import traceback
-from unittest.mock import Mock, AsyncMock
+
 
 # Imports du système Oracle
 sys.path.append('.')
@@ -25,10 +32,10 @@ async def test_all_group3_fixes():
     
     # Setup de base
     mock_kernel = Mock(spec=Kernel)
-    mock_kernel.add_plugin = Mock()
+    mock_kernel.add_plugin = await self._create_authentic_gpt4o_mini_instance()
     
     mock_dataset_manager = Mock(spec=DatasetAccessManager)
-    mock_permission_manager = Mock()
+    mock_permission_manager = await self._create_authentic_gpt4o_mini_instance()
     mock_permission_manager.is_authorized = Mock(return_value=True)
     mock_dataset_manager.permission_manager = mock_permission_manager
     

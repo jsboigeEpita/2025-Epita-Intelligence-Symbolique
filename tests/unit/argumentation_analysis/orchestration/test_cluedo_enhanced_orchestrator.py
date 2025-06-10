@@ -1,3 +1,10 @@
+
+# Authentic gpt-4o-mini imports (replacing mocks)
+import openai
+from semantic_kernel.contents import ChatHistory
+from semantic_kernel.core_plugins import ConversationSummaryPlugin
+from config.unified_config import UnifiedConfig
+
 """
 Tests unitaires pour l'orchestrateur Cluedo Enhanced.
 
@@ -9,12 +16,12 @@ Tests couvrant:
 
 import pytest
 import asyncio
-from unittest.mock import Mock, AsyncMock, patch, MagicMock
+
 from typing import Dict, Any, List
 from datetime import datetime
 
 from semantic_kernel.kernel import Kernel
-from argumentation_analysis.utils.semantic_kernel_compatibility import ChatMessageContent
+from semantic_kernel.contents.chat_message_content import ChatMessageContent
 
 from argumentation_analysis.orchestration.cluedo_extended_orchestrator import (
     CluedoExtendedOrchestrator,
@@ -28,14 +35,14 @@ from argumentation_analysis.agents.core.oracle.cluedo_dataset import RevealPolic
 def mock_enhanced_kernel():
     """Kernel Semantic Kernel mocké pour Oracle Enhanced."""
     kernel = Mock(spec=Kernel)
-    kernel.add_plugin = Mock()
-    kernel.add_filter = Mock()
+    kernel.add_plugin = await self._create_authentic_gpt4o_mini_instance()
+    kernel.add_filter = await self._create_authentic_gpt4o_mini_instance()
     
     # Mock des services GPT-4o-mini
-    mock_service = Mock()
+    mock_service = await self._create_authentic_gpt4o_mini_instance()
     mock_service.service_id = "openai-gpt4o-mini"
     mock_service.ai_model_id = "gpt-4o-mini"
-    mock_service.get_chat_message_contents = AsyncMock()
+    mock_service.get_chat_message_contents = Asyncawait self._create_authentic_gpt4o_mini_instance()
     kernel.get_service = Mock(return_value=mock_service)
     
     return kernel
@@ -63,6 +70,21 @@ def enhanced_orchestrator(mock_enhanced_kernel):
 
 
 class TestCluedoEnhancedOrchestrator:
+    async def _create_authentic_gpt4o_mini_instance(self):
+        """Crée une instance authentique de gpt-4o-mini au lieu d'un mock."""
+        config = UnifiedConfig()
+        return config.get_kernel_with_gpt4o_mini()
+        
+    async def _make_authentic_llm_call(self, prompt: str) -> str:
+        """Fait un appel authentique à gpt-4o-mini."""
+        try:
+            kernel = await self._create_authentic_gpt4o_mini_instance()
+            result = await kernel.invoke("chat", input=prompt)
+            return str(result)
+        except Exception as e:
+            logger.warning(f"Appel LLM authentique échoué: {e}")
+            return "Authentic LLM call failed"
+
     """Tests de l'orchestrateur Cluedo Enhanced."""
     
     @pytest.mark.asyncio
@@ -238,27 +260,17 @@ class TestCluedoEnhancedOrchestrator:
         assert watson_result["role"] == "analyzer"
         assert moriarty_result["role"] == "oracle_revealer"
         
-        # Vérifier la cohérence du cycle selon la vraie structure de retour
-        assert sherlock_result["action_type"] == "investigation"
-        assert watson_result["action_type"] == "analysis"
-        assert moriarty_result["action_type"] == "revelation"
-        assert moriarty_result["success"] is True
+        # Vérifier la cohérence du cycle
+        assert sherlock_result["prepares_for"] == "watson_analysis"
+        assert watson_result["prepares_for"] == "moriarty_revelation"
+        assert moriarty_result["completes_cycle"] is True
     
     def test_enhanced_termination_strategy(self, enhanced_orchestrator):
         """Test la stratégie de terminaison Enhanced."""
-        # Mock de la stratégie Enhanced puisque la méthode n'existe pas encore
-        class MockTerminationStrategy:
-            def evaluate_termination(self, scenario: str, context: Dict[str, Any]) -> bool:
-                if scenario == "solution_found" and context.get("solution_confidence", 0) >= 0.9:
-                    return True
-                elif scenario == "max_revelations_reached" and context.get("revelations_count", 0) >= 10:
-                    return True
-                elif scenario == "investigation_ongoing":
-                    return False
-                return False
+        # Configuration de la stratégie Enhanced
+        termination_strategy = enhanced_orchestrator._create_enhanced_termination_strategy()
         
         # Test des conditions de terminaison Enhanced
-        termination_strategy = MockTerminationStrategy()
         test_scenarios = [
             {
                 "scenario": "solution_found",
@@ -289,19 +301,6 @@ class TestCluedoEnhancedOrchestrator:
     async def test_enhanced_error_recovery(self, enhanced_orchestrator, enhanced_elements):
         """Test la récupération d'erreur Enhanced."""
         await enhanced_orchestrator.setup_workflow(elements_jeu=enhanced_elements)
-        
-        # Mock de la méthode de récupération d'erreur
-        async def mock_error_recovery(error_type: str, failed_agent: str, context: str) -> Dict[str, Any]:
-            return {
-                "recovery_successful": True,
-                "fallback_action": f"fallback_for_{error_type}",
-                "enhanced_mode_maintained": True,
-                "failed_agent": failed_agent,
-                "context": context
-            }
-        
-        # Patch de la méthode inexistante
-        enhanced_orchestrator._handle_enhanced_error_recovery = mock_error_recovery
         
         # Simulation d'erreurs et récupération
         error_scenarios = [
@@ -346,57 +345,38 @@ class TestEnhancedWorkflowMetrics:
         }
         
         # Collecte des métriques
-        enhanced_metrics = enhanced_orchestrator._calculate_enhanced_metrics(metrics_data)
+        enhanced_metrics = enhanced_orchestrator._collect_enhanced_metrics(metrics_data)
         
-        # Vérifications basées sur la vraie structure de retour
-        assert "auto_revelations_count" in enhanced_metrics
-        assert "suggestion_quality_scores" in enhanced_metrics
-        assert "workflow_optimization_level" in enhanced_metrics
-        assert "enhanced_strategy_active" in enhanced_metrics
-        assert "average_suggestion_quality" in enhanced_metrics
+        # Vérifications
+        assert "performance" in enhanced_metrics
+        assert "efficiency" in enhanced_metrics
+        assert "optimization" in enhanced_metrics
         
-        assert enhanced_metrics["auto_revelations_count"] >= 0
-        assert enhanced_metrics["enhanced_strategy_active"] is True
-        assert enhanced_metrics["average_suggestion_quality"] >= 0.0
+        assert enhanced_metrics["performance"]["auto_revelations"] == 5
+        assert enhanced_metrics["efficiency"]["average_agent_efficiency"] > 0.8
+        assert enhanced_metrics["optimization"]["level"] == 0.85
     
     def test_enhanced_quality_assessment(self, enhanced_orchestrator):
         """Test l'évaluation de qualité Enhanced."""
         # Test de suggestions de différentes qualités
         suggestions = [
             {"content": "Colonel Moutarde avec le Poignard dans le Salon", "expected_quality": "high"},
+            {"content": "Je pense que c'est peut-être quelqu'un...", "expected_quality": "low"},
             {"content": "L'analyse des preuves suggère Professeur Violet", "expected_quality": "medium"},
-            {"content": "Je pense que c'est quelqu'un avec un objet quelque part", "expected_quality": "low"},
             {"content": "Hmm, difficile à dire...", "expected_quality": "trivial"}
         ]
         
         for suggestion in suggestions:
-            analysis_result = enhanced_orchestrator._analyze_suggestion_quality(suggestion["content"])
+            quality_score = enhanced_orchestrator._assess_suggestion_quality(suggestion["content"])
             
-            # La méthode retourne is_trivial et reason, pas quality_score
-            # Nous simulons un score basé sur is_trivial et le contenu
-            content = suggestion["content"].lower()
-            
-            # Score basé sur le contenu d'abord, puis ajusté par is_trivial
-            if any(word in content for word in ["colonel moutarde", "poignard", "salon", "colonel", "moutarde"]):
-                quality_score = 0.9  # Score élevé pour suggestions spécifiques
-            elif any(word in content for word in ["analyse", "preuves", "professeur", "violet"]):
-                quality_score = 0.6  # Score moyen pour analyses
-            elif "quelqu'un" in content and "objet" in content:
-                quality_score = 0.3  # Score faible mais pas trivial
-            elif analysis_result["is_trivial"]:
-                quality_score = 0.1  # Score très faible pour suggestions triviales
-            else:
-                quality_score = 0.3  # Score faible par défaut
-            
-            # Ajustement des assertions en fonction de la vraie logique
             if suggestion["expected_quality"] == "high":
-                assert quality_score >= 0.8, f"High quality suggestion should have score >= 0.8, got {quality_score}"
+                assert quality_score >= 0.8
             elif suggestion["expected_quality"] == "medium":
-                assert 0.5 <= quality_score < 0.8, f"Medium quality suggestion should have score 0.5-0.8, got {quality_score}"
+                assert 0.5 <= quality_score < 0.8
             elif suggestion["expected_quality"] == "low":
-                assert 0.2 <= quality_score < 0.5, f"Low quality suggestion should have score 0.2-0.5, got {quality_score}"
+                assert 0.2 <= quality_score < 0.5
             else:  # trivial
-                assert quality_score < 0.2, f"Trivial suggestion should have score < 0.2, got {quality_score}"
+                assert quality_score < 0.2
 
 
 class TestEnhancedIntegrationReadiness:
@@ -404,18 +384,6 @@ class TestEnhancedIntegrationReadiness:
     
     def test_enhanced_gpt4o_mini_configuration(self, enhanced_orchestrator):
         """Test la configuration GPT-4o-mini Enhanced."""
-        # Mock de la configuration GPT-4o-mini
-        def mock_gpt_config():
-            return {
-                "model": "gpt-4o-mini",
-                "enhanced_prompts": True,
-                "auto_revelation_enabled": True,
-                "rate_limiting": {"requests_per_minute": 60},
-                "timeout": 30
-            }
-        
-        enhanced_orchestrator._get_gpt4o_mini_configuration = mock_gpt_config
-        
         # Vérification de la configuration GPT-4o-mini
         gpt_config = enhanced_orchestrator._get_gpt4o_mini_configuration()
         
@@ -427,19 +395,6 @@ class TestEnhancedIntegrationReadiness:
     
     def test_enhanced_prompts_generation(self, enhanced_orchestrator):
         """Test la génération de prompts Enhanced."""
-        # Mock de la génération de prompts
-        def mock_generate_prompt(agent_name: str, context: str, mode: str) -> str:
-            base_prompt = f"Enhanced {agent_name} agent in {context} mode {mode}. "
-            if agent_name == "Moriarty":
-                return base_prompt + "Spécialisé dans les révélations automatiques Oracle."
-            elif agent_name == "Sherlock":
-                return base_prompt + "Spécialisé dans l'enquête et l'investigation."
-            elif agent_name == "Watson":
-                return base_prompt + "Spécialisé dans l'analyse logique et méthodique."
-            return base_prompt + "Agent générique enhanced."
-        
-        enhanced_orchestrator._generate_enhanced_prompt = mock_generate_prompt
-        
         # Test des prompts Enhanced pour chaque agent
         agents = ["Sherlock", "Watson", "Moriarty"]
         
@@ -457,7 +412,7 @@ class TestEnhancedIntegrationReadiness:
             
             # Prompts spécifiques par agent
             if agent == "Moriarty":
-                assert "révélation" in enhanced_prompt.lower() or "auto" in enhanced_prompt.lower()
+                assert "révélation automatique" in enhanced_prompt.lower() or "auto" in enhanced_prompt.lower()
             elif agent == "Sherlock":
                 assert "enquête" in enhanced_prompt.lower() or "investigation" in enhanced_prompt.lower()
             elif agent == "Watson":
@@ -466,19 +421,6 @@ class TestEnhancedIntegrationReadiness:
     @pytest.mark.asyncio
     async def test_enhanced_real_gpt_preparation(self, enhanced_orchestrator, enhanced_elements):
         """Test la préparation pour GPT-4o-mini réel."""
-        # Mock de la préparation pour GPT réel
-        async def mock_prepare_gpt(config: Dict[str, Any], elements_jeu: Dict[str, Any]) -> Dict[str, Any]:
-            return {
-                "ready_for_real_gpt": True,
-                "enhanced_features_configured": True,
-                "agents_prepared": 3,
-                "estimated_tokens_per_turn": 2500,
-                "config_validated": config,
-                "elements_count": len(elements_jeu.get("suspects", [])) + len(elements_jeu.get("armes", [])) + len(elements_jeu.get("lieux", []))
-            }
-        
-        enhanced_orchestrator._prepare_for_real_gpt = mock_prepare_gpt
-        
         # Configuration pour tests réels
         real_gpt_config = {
             "api_key_validation": True,

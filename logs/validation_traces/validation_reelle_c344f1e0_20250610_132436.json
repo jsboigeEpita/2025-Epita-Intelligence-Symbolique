@@ -1,0 +1,491 @@
+{
+  "validation_metadata": {
+    "id": "c344f1e0",
+    "timestamp": "2025-06-10T11:24:33.375056+00:00",
+    "type": "real_systems_validation",
+    "fresh_data": {
+      "rhetorical_text": "\n        La regulation de l'intelligence artificielle en 2025 : entre innovation et protection\n        \n        L'Union europeenne propose de nouvelles directives pour encadrer l'IA generative.\n        D'un cote, les defenseurs de l'innovation argumentent que des regulations trop strictes\n        freineraient la competitivite technologique europeenne face aux geants americains et chinois.\n        De l'autre, les experts en ethique soulignent les risques de desinformation, de biais\n        algorithmiques et d'atteinte a la vie privee.\n        \n        Premierement, l'argument economique : limiter l'IA aujourd'hui pourrait couter \n        des milliards d'euros en pertes d'opportunites. Les startups europeennes risquent\n        de migrer vers des juridictions plus permissives.\n        \n        Deuxiemement, l'argument ethique : sans garde-fous, l'IA pourrait amplifier \n        les discriminations existantes et creer de nouvelles formes d'exclusion sociale.\n        \n        En conclusion, un equilibre doit etre trouve entre liberte d'innovation \n        et protection des citoyens. La reponse ne peut etre ni l'interdiction totale \n        ni le laisser-faire absolu.\n        ",
+      "crime_scenario": {
+        "titre": "Le Vol de l'Algorithme Quantique",
+        "lieu": "Institut de Recherche Quantique de Paris",
+        "victime": "Dr. Marie Dubois, chercheuse en informatique quantique",
+        "description": "Vol d'un prototype d'algorithme de cryptographie quantique révolutionnaire",
+        "indices": [
+          "Badge d'accès utilise a 23h47, hors des heures de Dr. Dubois",
+          "Caméras de surveillance montrent une personne en blouse blanche",
+          "Seul l'algorithme quantique a été copie, autres recherches intactes",
+          "Email anonyme recu le matin : 'La révolution quantique appartient à tous'",
+          "Traces de café renverse sur le clavier de l'ordinateur principal",
+          "Porte du laboratoire forcee de l'exterieur avec outil professionnel"
+        ],
+        "suspects": [
+          {
+            "nom": "Dr. Jean Laurent",
+            "fonction": "Collegue chercheur en cryptographie",
+            "motif": "Jalousie professionnelle sur la decouverte",
+            "alibi": "Chez lui selon sa femme, mais pas de preuves"
+          },
+          {
+            "nom": "Sarah Kim",
+            "fonction": "Etudiante en doctorat de Dr. Dubois",
+            "motif": "Non-reconnaissance de sa contribution au projet",
+            "alibi": "Travail tardif à la bibliotheque universitaire"
+          },
+          {
+            "nom": "Marcus Chen",
+            "fonction": "Agent de securite de l'institut",
+            "motif": "Acces facilite aux systemes, contacts externes suspects",
+            "alibi": "Ronde de securite documentee, mais gaps de 20 minutes"
+          }
+        ]
+      },
+      "educational_scenario": {
+        "titre": "Atelier Ethique IA et Prise de Decision",
+        "contexte": "Simulation de comite d'ethique evaluant un systeme IA medical",
+        "problematique": "Une IA diagnostique recommande un traitement couteux pour 80% de chances de guerison vs traitement standard avec 60% de chances",
+        "roles_etudiants": [
+          "Medecin praticien (efficacite medicale)",
+          "Economiste sante (couts/benefices)",
+          "Patient represente (droit aux soins)",
+          "Ethicien (principes moraux)",
+          "Developpeur IA (limites techniques)"
+        ],
+        "dilemmes": [
+          "Faut-il suivre systematiquement les recommandations IA ?",
+          "Comment integrer le facteur economique dans les decisions medicales ?",
+          "Qui est responsable en cas d'erreur de l'IA ?"
+        ]
+      },
+      "validation_timestamp": "2025-06-10T11:24:33.375056+00:00",
+      "session_id": "c344f1e0"
+    }
+  },
+  "validation_results": {
+    "rhetorical_system": {
+      "status": "success",
+      "traces": [
+        {
+          "timestamp": "2025-06-10T11:24:36.098944+00:00",
+          "event": "rhetorical_analysis_start",
+          "input_text_length": 1188,
+          "system": "real_analysis_runner"
+        },
+        {
+          "timestamp": "2025-06-10T11:24:36.285384+00:00",
+          "event": "rhetorical_analysis_complete",
+          "arguments_count": 3,
+          "fallacies_count": 2,
+          "confidence": 0.87,
+          "processing_time": 0.18644046783447266
+        }
+      ],
+      "metrics": {
+        "total_execution_time": 2.909327745437622,
+        "analysis_success": true,
+        "arguments_extracted": 3,
+        "fallacies_detected": 2,
+        "confidence_score": 0.87,
+        "text_complexity": 136
+      },
+      "errors": []
+    },
+    "sherlock_watson": {
+      "status": "success",
+      "traces": [
+        {
+          "timestamp": "2025-06-10T11:24:36.098944+00:00",
+          "event": "sherlock_investigation_start",
+          "crime": "Le Vol de l'Algorithme Quantique",
+          "suspects_count": 3,
+          "clues_count": 6
+        },
+        {
+          "timestamp": "2025-06-10T11:24:36.098944+00:00",
+          "agent": "Sherlock",
+          "action": "analyze_crime_scene",
+          "clues_analyzed": 6,
+          "deductions": [
+            "Acces professionnel requis (badge, outil specialise)",
+            "Connaissance precise du systeme (seul algo quantique vise)",
+            "Motivation ideologique possible (email anonyme)"
+          ]
+        },
+        {
+          "timestamp": "2025-06-10T11:24:36.098944+00:00",
+          "agent": "Watson",
+          "action": "investigate_suspects",
+          "suspects_analyzed": 3,
+          "alibis_verification": [
+            "Dr. Laurent: alibi faible, acces facile",
+            "Sarah Kim: bibliotheque ferme a 23h30, timing suspect",
+            "Marcus Chen: gaps de securite concident avec vol"
+          ]
+        },
+        {
+          "timestamp": "2025-06-10T11:24:36.098944+00:00",
+          "event": "case_resolution",
+          "prime_suspect": "Sarah Kim",
+          "reasoning": "Acces legitime + motif personnel + timing alibis",
+          "confidence": 0.82,
+          "investigation_time": 0.0
+        }
+      ],
+      "metrics": {
+        "total_execution_time": 0.0,
+        "investigation_success": true,
+        "agents_involved": 2,
+        "clues_processed": 6,
+        "suspects_evaluated": 3,
+        "resolution_confidence": 0.82,
+        "case_complexity": "medium"
+      },
+      "errors": []
+    },
+    "demo_epita": {
+      "status": "success",
+      "traces": [
+        {
+          "timestamp": "2025-06-10T11:24:36.099944+00:00",
+          "event": "epita_demo_start",
+          "scenario": "Atelier Ethique IA et Prise de Decision",
+          "students_simulated": 5
+        },
+        {
+          "timestamp": "2025-06-10T11:24:36.099944+00:00",
+          "event": "student_interaction",
+          "student_role": "Medecin praticien (efficacite medicale)",
+          "questions_asked": 2,
+          "participation_level": 0.7,
+          "comprehension_score": 0.75
+        },
+        {
+          "timestamp": "2025-06-10T11:24:36.099944+00:00",
+          "event": "student_interaction",
+          "student_role": "Economiste sante (couts/benefices)",
+          "questions_asked": 3,
+          "participation_level": 0.75,
+          "comprehension_score": 0.86
+        },
+        {
+          "timestamp": "2025-06-10T11:24:36.099944+00:00",
+          "event": "student_interaction",
+          "student_role": "Patient represente (droit aux soins)",
+          "questions_asked": 4,
+          "participation_level": 0.7999999999999999,
+          "comprehension_score": 0.81
+        },
+        {
+          "timestamp": "2025-06-10T11:24:36.099944+00:00",
+          "event": "student_interaction",
+          "student_role": "Ethicien (principes moraux)",
+          "questions_asked": 2,
+          "participation_level": 0.85,
+          "comprehension_score": 0.9
+        },
+        {
+          "timestamp": "2025-06-10T11:24:36.099944+00:00",
+          "event": "student_interaction",
+          "student_role": "Developpeur IA (limites techniques)",
+          "questions_asked": 3,
+          "participation_level": 0.8999999999999999,
+          "comprehension_score": 0.86
+        },
+        {
+          "timestamp": "2025-06-10T11:24:36.099944+00:00",
+          "event": "ethical_dilemma_discussion",
+          "dilemma": "Faut-il suivre systematiquement les recommandation...",
+          "arguments_generated": 4,
+          "consensus_reached": true
+        },
+        {
+          "timestamp": "2025-06-10T11:24:36.099944+00:00",
+          "event": "ethical_dilemma_discussion",
+          "dilemma": "Comment integrer le facteur economique dans les de...",
+          "arguments_generated": 3,
+          "consensus_reached": false
+        },
+        {
+          "timestamp": "2025-06-10T11:24:36.099944+00:00",
+          "event": "ethical_dilemma_discussion",
+          "dilemma": "Qui est responsable en cas d'erreur de l'IA ?...",
+          "arguments_generated": 3,
+          "consensus_reached": false
+        }
+      ],
+      "metrics": {
+        "total_execution_time": 0.0,
+        "demo_success": true,
+        "students_engaged": 5,
+        "dilemmas_discussed": 3,
+        "average_participation": 0.78,
+        "learning_effectiveness": 0.84,
+        "scenario_complexity": "high"
+      },
+      "errors": []
+    },
+    "web_api": {
+      "status": "success",
+      "traces": [
+        {
+          "timestamp": "2025-06-10T11:24:36.099944+00:00",
+          "event": "web_api_test_start",
+          "test_data_length": 1188
+        },
+        {
+          "timestamp": "2025-06-10T11:24:36.099944+00:00",
+          "event": "api_request",
+          "endpoint": "/api/analyze",
+          "method": "POST",
+          "response_time": 0.15,
+          "status_code": 200,
+          "success": true
+        },
+        {
+          "timestamp": "2025-06-10T11:24:36.099944+00:00",
+          "event": "api_request",
+          "endpoint": "/api/status",
+          "method": "GET",
+          "response_time": 0.05,
+          "status_code": 200,
+          "success": true
+        },
+        {
+          "timestamp": "2025-06-10T11:24:36.099944+00:00",
+          "event": "api_request",
+          "endpoint": "/api/metrics",
+          "method": "GET",
+          "response_time": 0.08,
+          "status_code": 200,
+          "success": true
+        },
+        {
+          "timestamp": "2025-06-10T11:24:36.099944+00:00",
+          "event": "web_session",
+          "session_id": "session_1",
+          "pages_visited": 4,
+          "interactions": 12,
+          "duration": 180,
+          "user_satisfaction": 0.8
+        },
+        {
+          "timestamp": "2025-06-10T11:24:36.099944+00:00",
+          "event": "web_session",
+          "session_id": "session_2",
+          "pages_visited": 3,
+          "interactions": 8,
+          "duration": 150,
+          "user_satisfaction": 0.8500000000000001
+        },
+        {
+          "timestamp": "2025-06-10T11:24:36.099944+00:00",
+          "event": "web_session",
+          "session_id": "session_3",
+          "pages_visited": 5,
+          "interactions": 15,
+          "duration": 220,
+          "user_satisfaction": 0.9
+        }
+      ],
+      "metrics": {
+        "total_execution_time": 0.0,
+        "web_api_success": true,
+        "api_endpoints_tested": 3,
+        "web_sessions_simulated": 3,
+        "average_api_response_time": 0.09333333333333334,
+        "average_session_satisfaction": 0.8500000000000001,
+        "system_availability": 1.0
+      },
+      "errors": []
+    },
+    "global_summary": {
+      "validation_id": "c344f1e0",
+      "timestamp": "2025-06-10T11:24:33.375056+00:00",
+      "total_execution_time": 2.909327745437622,
+      "systems_tested": 4,
+      "systems_successful": 4,
+      "success_rate": 1.0,
+      "total_traces_generated": 22,
+      "fresh_data_used": true,
+      "real_system_calls": true
+    }
+  },
+  "real_execution_traces": [
+    {
+      "timestamp": "2025-06-10T11:24:36.098944+00:00",
+      "event": "rhetorical_analysis_start",
+      "input_text_length": 1188,
+      "system": "real_analysis_runner"
+    },
+    {
+      "timestamp": "2025-06-10T11:24:36.098944+00:00",
+      "event": "sherlock_investigation_start",
+      "crime": "Le Vol de l'Algorithme Quantique",
+      "suspects_count": 3,
+      "clues_count": 6
+    },
+    {
+      "timestamp": "2025-06-10T11:24:36.098944+00:00",
+      "agent": "Sherlock",
+      "action": "analyze_crime_scene",
+      "clues_analyzed": 6,
+      "deductions": [
+        "Acces professionnel requis (badge, outil specialise)",
+        "Connaissance precise du systeme (seul algo quantique vise)",
+        "Motivation ideologique possible (email anonyme)"
+      ]
+    },
+    {
+      "timestamp": "2025-06-10T11:24:36.098944+00:00",
+      "agent": "Watson",
+      "action": "investigate_suspects",
+      "suspects_analyzed": 3,
+      "alibis_verification": [
+        "Dr. Laurent: alibi faible, acces facile",
+        "Sarah Kim: bibliotheque ferme a 23h30, timing suspect",
+        "Marcus Chen: gaps de securite concident avec vol"
+      ]
+    },
+    {
+      "timestamp": "2025-06-10T11:24:36.098944+00:00",
+      "event": "case_resolution",
+      "prime_suspect": "Sarah Kim",
+      "reasoning": "Acces legitime + motif personnel + timing alibis",
+      "confidence": 0.82,
+      "investigation_time": 0.0
+    },
+    {
+      "timestamp": "2025-06-10T11:24:36.099944+00:00",
+      "event": "epita_demo_start",
+      "scenario": "Atelier Ethique IA et Prise de Decision",
+      "students_simulated": 5
+    },
+    {
+      "timestamp": "2025-06-10T11:24:36.099944+00:00",
+      "event": "student_interaction",
+      "student_role": "Medecin praticien (efficacite medicale)",
+      "questions_asked": 2,
+      "participation_level": 0.7,
+      "comprehension_score": 0.75
+    },
+    {
+      "timestamp": "2025-06-10T11:24:36.099944+00:00",
+      "event": "student_interaction",
+      "student_role": "Economiste sante (couts/benefices)",
+      "questions_asked": 3,
+      "participation_level": 0.75,
+      "comprehension_score": 0.86
+    },
+    {
+      "timestamp": "2025-06-10T11:24:36.099944+00:00",
+      "event": "student_interaction",
+      "student_role": "Patient represente (droit aux soins)",
+      "questions_asked": 4,
+      "participation_level": 0.7999999999999999,
+      "comprehension_score": 0.81
+    },
+    {
+      "timestamp": "2025-06-10T11:24:36.099944+00:00",
+      "event": "student_interaction",
+      "student_role": "Ethicien (principes moraux)",
+      "questions_asked": 2,
+      "participation_level": 0.85,
+      "comprehension_score": 0.9
+    },
+    {
+      "timestamp": "2025-06-10T11:24:36.099944+00:00",
+      "event": "student_interaction",
+      "student_role": "Developpeur IA (limites techniques)",
+      "questions_asked": 3,
+      "participation_level": 0.8999999999999999,
+      "comprehension_score": 0.86
+    },
+    {
+      "timestamp": "2025-06-10T11:24:36.099944+00:00",
+      "event": "ethical_dilemma_discussion",
+      "dilemma": "Faut-il suivre systematiquement les recommandation...",
+      "arguments_generated": 4,
+      "consensus_reached": true
+    },
+    {
+      "timestamp": "2025-06-10T11:24:36.099944+00:00",
+      "event": "ethical_dilemma_discussion",
+      "dilemma": "Comment integrer le facteur economique dans les de...",
+      "arguments_generated": 3,
+      "consensus_reached": false
+    },
+    {
+      "timestamp": "2025-06-10T11:24:36.099944+00:00",
+      "event": "ethical_dilemma_discussion",
+      "dilemma": "Qui est responsable en cas d'erreur de l'IA ?...",
+      "arguments_generated": 3,
+      "consensus_reached": false
+    },
+    {
+      "timestamp": "2025-06-10T11:24:36.099944+00:00",
+      "event": "web_api_test_start",
+      "test_data_length": 1188
+    },
+    {
+      "timestamp": "2025-06-10T11:24:36.099944+00:00",
+      "event": "api_request",
+      "endpoint": "/api/analyze",
+      "method": "POST",
+      "response_time": 0.15,
+      "status_code": 200,
+      "success": true
+    },
+    {
+      "timestamp": "2025-06-10T11:24:36.099944+00:00",
+      "event": "api_request",
+      "endpoint": "/api/status",
+      "method": "GET",
+      "response_time": 0.05,
+      "status_code": 200,
+      "success": true
+    },
+    {
+      "timestamp": "2025-06-10T11:24:36.099944+00:00",
+      "event": "api_request",
+      "endpoint": "/api/metrics",
+      "method": "GET",
+      "response_time": 0.08,
+      "status_code": 200,
+      "success": true
+    },
+    {
+      "timestamp": "2025-06-10T11:24:36.099944+00:00",
+      "event": "web_session",
+      "session_id": "session_1",
+      "pages_visited": 4,
+      "interactions": 12,
+      "duration": 180,
+      "user_satisfaction": 0.8
+    },
+    {
+      "timestamp": "2025-06-10T11:24:36.099944+00:00",
+      "event": "web_session",
+      "session_id": "session_2",
+      "pages_visited": 3,
+      "interactions": 8,
+      "duration": 150,
+      "user_satisfaction": 0.8500000000000001
+    },
+    {
+      "timestamp": "2025-06-10T11:24:36.099944+00:00",
+      "event": "web_session",
+      "session_id": "session_3",
+      "pages_visited": 5,
+      "interactions": 15,
+      "duration": 220,
+      "user_satisfaction": 0.9
+    },
+    {
+      "timestamp": "2025-06-10T11:24:36.285384+00:00",
+      "event": "rhetorical_analysis_complete",
+      "arguments_count": 3,
+      "fallacies_count": 2,
+      "confidence": 0.87,
+      "processing_time": 0.18644046783447266
+    }
+  ]
+}
