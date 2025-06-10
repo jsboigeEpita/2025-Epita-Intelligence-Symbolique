@@ -47,17 +47,15 @@ try:
     # Importer directement depuis les modules du projet
     from argumentation_analysis.ui.file_operations import load_extract_definitions
     from argumentation_analysis.agents.core.informal.informal_agent import InformalAnalysisAgent as InformalAgent
-    from argumentation_analysis.mocks.fallacy_detection import MockFallacyDetector
-    from argumentation_analysis.mocks.rhetorical_analysis import MockRhetoricalAnalyzer
-    from argumentation_analysis.mocks.argument_mining import MockArgumentMiner
-    from argumentation_analysis.mocks.claim_mining import MockClaimMiner
-    from argumentation_analysis.mocks.evidence_detection import MockEvidenceDetector
-    from argumentation_analysis.mocks.bias_detection import MockBiasDetector
-    from argumentation_analysis.mocks.emotional_tone_analysis import MockEmotionalToneAnalyzer
-    from argumentation_analysis.mocks.engagement_analysis import MockEngagementAnalyzer
-    from argumentation_analysis.mocks.clarity_scoring import MockClarityScorer
-    from argumentation_analysis.mocks.coherence_analysis import MockCoherenceAnalyzer
-    from argumentation_analysis.mocks.fallacy_categorization import MockFallacyCategorizer
+    
+    # VRAIES IMPLÉMENTATIONS - PLUS AUCUN MOCK !
+    from argumentation_analysis.agents.tools.analysis.new.contextual_fallacy_detector import ContextualFallacyDetector
+    from argumentation_analysis.agents.tools.analysis.rhetorical_result_analyzer import RhetoricalResultAnalyzer
+    from argumentation_analysis.agents.tools.analysis.complex_fallacy_analyzer import ComplexFallacyAnalyzer
+    from argumentation_analysis.agents.tools.analysis.contextual_fallacy_analyzer import ContextualFallacyAnalyzer
+    from argumentation_analysis.agents.tools.analysis.new.argument_coherence_evaluator import ArgumentCoherenceEvaluator
+    from argumentation_analysis.agents.tools.analysis.new.semantic_argument_analyzer import SemanticArgumentAnalyzer
+    from argumentation_analysis.agents.tools.analysis.fallacy_severity_evaluator import FallacySeverityEvaluator
     # Pour l'instant, on ne prévoit pas d'utiliser le Kernel sémantique directement ici.
     # from semantic_kernel import Kernel
 except ImportError as e:
@@ -214,18 +212,25 @@ def main():
 
     # 3. Initialiser l'agent d'analyse
     try:
-        mock_tools = {
-            "fallacy_detector": MockFallacyDetector()
+        # VRAIES IMPLÉMENTATIONS - ÉLIMINATION TOTALE DES MOCKS !
+        real_tools = {
+            "fallacy_detector": ContextualFallacyDetector(),
+            "rhetorical_analyzer": RhetoricalResultAnalyzer(),
+            "complex_fallacy_analyzer": ComplexFallacyAnalyzer(),
+            "contextual_fallacy_analyzer": ContextualFallacyAnalyzer(),
+            "coherence_evaluator": ArgumentCoherenceEvaluator(),
+            "semantic_analyzer": SemanticArgumentAnalyzer(),
+            "severity_evaluator": FallacySeverityEvaluator()
         }
 
         informal_agent = InformalAgent(
             agent_id="PythonWorkflowAgent",
-            tools=mock_tools,
+            tools=real_tools,
             semantic_kernel=None,
             informal_plugin=None,
             strict_validation=False
         )
-        logger.info("Agent d'analyse rhétorique (InformalAgent) initialisé avec des outils mockés.")
+        logger.info("Agent d'analyse rhétorique (InformalAgent) initialisé avec 7 VRAIES IMPLÉMENTATIONS - AUCUN MOCK !")
     except Exception as e:
         logger.error(f"Erreur lors de l'initialisation de l'agent d'analyse (InformalAgent): {e}", exc_info=True)
         sys.exit(1)

@@ -33,7 +33,6 @@ from argumentation_analysis.utils.core_utils.file_utils import load_extracts, lo
 from argumentation_analysis.utils.text_processing import split_text_into_arguments
 from argumentation_analysis.utils.data_generation import generate_sample_text
 from argumentation_analysis.utils.analysis_comparison import compare_rhetorical_analyses
-from argumentation_analysis.mocks.advanced_tools import create_mock_advanced_rhetorical_tools
 from argumentation_analysis.orchestration.advanced_analyzer import analyze_extract_advanced
 from argumentation_analysis.pipelines.advanced_rhetoric import run_advanced_rhetoric_pipeline
 
