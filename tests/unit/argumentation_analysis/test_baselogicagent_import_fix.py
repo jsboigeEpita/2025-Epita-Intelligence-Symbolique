@@ -20,7 +20,6 @@ def test_baseagent_import_success():
         assert BaseAgent is not None
         assert BaseAgent.__module__ == "argumentation_analysis.agents.core.abc.agent_bases"
         print("SUCCESS: BaseAgent importé avec succès")
-        return True
     except Exception as e:
         pytest.fail(f"ECHEC: Impossible d'importer BaseAgent: {e}")
 
@@ -31,7 +30,6 @@ def test_baselogicagent_import_success():
         assert BaseLogicAgent is not None
         assert BaseLogicAgent.__module__ == "argumentation_analysis.agents.core.abc.agent_bases"
         print("SUCCESS: BaseLogicAgent importé avec succès")
-        return True
     except ImportError as e:
         if "partially initialized module" in str(e):
             pytest.fail(f"ECHEC: Cycle d'import détecté pour BaseLogicAgent: {e}")
@@ -47,7 +45,6 @@ def test_service_manager_can_import_baselogicagent():
         # Si on arrive ici, c'est que ServiceManager peut être importé sans problème
         assert ServiceManager is not None
         print("SUCCESS: ServiceManager importé avec succès")
-        return True
     except ImportError as e:
         if "BaseLogicAgent" in str(e) or "partially initialized module" in str(e):
             pytest.fail(f"ECHEC: ServiceManager ne peut toujours pas importer BaseLogicAgent: {e}")
