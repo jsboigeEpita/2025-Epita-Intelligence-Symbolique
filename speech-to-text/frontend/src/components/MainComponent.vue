@@ -93,8 +93,8 @@
                 <!-- Action Buttons -->
                 <v-row class="mt-4">
                   <v-col>
-                    <v-btn @click="inputType === 0 ? processInput() : processYoutubeInput()" color="primary" x-large
-                      block :loading="processing" :disabled="!canProcess">
+                    <v-btn @click="inputType === 0 ? processAudioInput() : processYoutubeInput()" color="primary"
+                      x-large block :loading="processing" :disabled="!canProcess">
                       <v-icon left>mdi-play</v-icon>
                       Analyze {{ inputType === 0 ? "Audio" : "Youtube Link" }}
                     </v-btn>
@@ -355,6 +355,7 @@ export default {
       whisperApiClient: null, // Placeholder for Whisper API client instance
       textToAnalyze: '',
       analyzeApiUrl: '', // Placeholder for analysis API URL
+      audioFilePath: '', // Placeholder for audio file path
     }
   },
   mounted() {
@@ -372,6 +373,7 @@ export default {
       PASSWORD,
       HUGGING_FACE_API_KEY);
     this.analyzeApiUrl = import.meta.env.VITE_ANALYZE_API_URL || 'http://localhost:5000/api';
+    this.audioFilePath = import.meta.env.VITE_FILE_UPLOAD_DIR || '/tmp/uploads';
   },
   computed: {
     canProcess() {
@@ -406,37 +408,63 @@ export default {
     async processAudioInput() {
       this.processing = true;
       this.analysisResults = null;
-
       try {
-        // Step 1: Convert to text
-        this.processingStatus = 'Converting audio to text...';
-        await this.simulateDelay(2000);
-        /* 
-            FIX ME: Implement Whisper API client logic here
-        */
-        // Step 2: Analyze text
-        this.processingStatus = 'Analyzing arguments and detecting fallacies...';
-        await this.simulateDelay(3000);
-        /* 
-            FIX ME: Implement argument analyzer logic here
-        */
-        // Step 3: Generate results
-        this.processingStatus = 'Generating analysis report...';
-        await this.simulateDelay(1000);
-        /* 
-            FIX ME: Generate analysis report logic here
-        */
-        // Simulate API response
-        this.analysisResults = this.generateResults();
+        // Add file type validation
+        if (!(this.audioFile instanceof File)) {
+          throw new Error('Invalid file object');
+        }
 
+        console.log("Processing file:", this.audioFile.name);
+
+        // Use the main transcribeFile method instead of test
+        await this.whisperApiClient.debugGradioInterface();
+        // const results = await this.whisperApiClient.transcribeFileTest(
+        const results = await this.rawTranscribe(
+          this.audioFile
+        );
+        console.log('Transcription results:', results);
+        if (results?.transcription) {
+          this.textToAnalyze = results.transcription;
+          await this.generateResults();
+        }
       } catch (error) {
         console.error('Processing error:', error);
-        // Handle error
+        this.processingStatus = `Error: ${error.message}`;
       } finally {
         this.processing = false;
         this.processingStatus = 'Initializing...';
       }
     },
+    async rawTranscribe(file) {
+      try {
+        // Create basic auth header
+        const auth = btoa(`${this.username}:${this.password}`);
+
+        // Create form data
+        const formData = new FormData();
+        formData.append('file', file);
+
+        // Make direct request
+        const response = await fetch(`${this.analyzeApiUrl}/transcribe_file`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Basic ${auth}`,
+            'Access-Control-Allow-Origin': '*' // 👈 Add this
+          },
+          body: formData
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+
+        return await response.json();
+      } catch (error) {
+        console.error('RAW request error:', error);
+        throw error;
+      }
+    },
+
     async processYoutubeInput() {
       this.processing = true;
       this.analysisResults = null;
