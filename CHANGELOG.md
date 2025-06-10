@@ -7,6 +7,59 @@ et ce projet adhère au [Versioning Sémantique](https://semver.org/lang/fr/).
 
 ---
 
+## [2.1.1] - 2025-06-10
+
+### 📚 Mise à Jour Documentation Sherlock/Watson/Moriarty Complète
+
+#### ✅ Ajouts Majeurs Documentation
+- **README.md Principal Enrichi** : Section dédiée Sherlock/Watson/Moriarty avec architecture détaillée
+  - 🎭 Tableau spécialisations agents (Sherlock, Watson, Moriarty)
+  - 🚀 Démonstrations production-ready avec liens directs
+  - ✅ Validations techniques accomplies (157 tests, 9 analyses LLM)
+  - 🛡️ Sécurité et intégrité avec audit complet
+  - 🎓 Cas d'usage pédagogiques structurés
+
+- **examples/Sherlock_Watson/README.md** : Documentation complète spécialisée (311 lignes)
+  - 🏗️ Architecture tri-agents détaillée avec technologies
+  - 📂 4 démonstrations documentées avec exemples d'exécution
+  - ⚙️ Prérequis techniques détaillés (Python, Java, APIs)
+  - 🎯 Cas d'usage typiques pour étudiants et recherche
+  - 🛠️ Troubleshooting complet avec solutions
+  - 📊 Métriques de performance validées
+
+- **docs/sherlock_watson/ARCHITECTURE_MULTI_AGENTS_TECHNIQUE.md** : Spécifications techniques
+  - 🤖 Spécifications détaillées des 3 agents avec configurations
+  - 🔧 Intégration Semantic Kernel 1.29.0 complète
+  - ⚙️ Bridge TweetyProject avec 35+ JARs documentés
+  - 🔄 Patterns d'orchestration avancés avec code
+  - 🛡️ Système de sécurité multi-niveaux détaillé
+
+- **docs/sherlock_watson/GUIDE_UTILISATEUR_SHERLOCK_WATSON_COMPLET.md** : Manuel utilisateur (600 lignes)
+  - 🚀 Guide démarrage rapide (5 minutes)
+  - 🎯 Configuration détaillée (Python, Java, APIs)
+  - 🎭 Utilisation démonstrations avec paramètres
+  - 🔧 Personnalisation avancée (agents, oracles, stratégies)
+  - 🛠️ Résolution problèmes avec diagnostic complet
+  - 📊 Métriques et analyse système
+  - 🎓 Cas d'usage pédagogiques structurés
+
+#### 🔧 Améliorations Architecture Documentation
+- **Inventaire complet** des composants Sherlock/Watson/Moriarty
+- **Documentation technique** des 4 démonstrations principales
+- **Spécifications** Semantic Kernel 1.29.0 + TweetyProject
+- **Guides installation** multi-plateforme (Linux, macOS, Windows)
+- **Troubleshooting** avec solutions détaillées
+- **Métriques performance** validées et documentées
+
+#### 📊 Couverture Documentation Enrichie
+- **README principal** : Section dédiée 70+ lignes enrichies
+- **Documentation spécialisée** : 3 nouveaux documents techniques complets
+- **Guides utilisateur** : Manuel 600 lignes avec exemples pratiques
+- **Architecture technique** : Spécifications complètes avec code
+- **Liens et références** : Navigation optimisée entre documents
+
+---
+
 ## [2.1.0] - 2025-06-10
 
 ### 🧪 Finalisation : Tests d'Intégration et Documentation Professionnelle
