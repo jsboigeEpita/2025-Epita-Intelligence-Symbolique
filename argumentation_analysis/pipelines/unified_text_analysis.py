@@ -174,45 +174,32 @@ class UnifiedTextAnalysisPipeline:
         """Initialise les outils d'analyse selon la configuration."""
         logger.info("[TOOLS] Initialisation des outils d'analyse...")
         
+        # PHASE 2: Mocks éliminés - utilisation exclusive des outils réels
         if self.config.use_mocks:
-            logger.info("[TOOLS] Utilisation des outils d'analyse simules")
-            from argumentation_analysis.mocks.analysis_tools import (
-                MockContextualFallacyDetector,
-                MockArgumentCoherenceEvaluator,
-                MockSemanticArgumentAnalyzer
+            logger.warning("use_mocks=True demandé mais les mocks ont été éliminés en Phase 2")
+            logger.info("Forçage de l'utilisation des outils réels")
+        
+        logger.info("[TOOLS] Utilisation des outils d'analyse réels uniquement")
+        
+        # Pas de try/except - on laisse les vraies erreurs apparaître
+        self.analysis_tools = {
+            "contextual_analyzer": EnhancedContextualFallacyAnalyzer(),
+            "complex_analyzer": EnhancedComplexFallacyAnalyzer(),
+            "severity_evaluator": EnhancedFallacySeverityEvaluator()
+        }
+        
+        # SynthesisAgent pour analyse unifiée
+        if self.llm_service and "unified" in self.config.analysis_modes:
+            kernel = sk.Kernel()
+            kernel.add_service(self.llm_service)
+            self.analysis_tools["synthesis_agent"] = SynthesisAgent(
+                kernel=kernel,
+                agent_name="UnifiedPipeline_SynthesisAgent",
+                enable_advanced_features=self.config.use_advanced_tools
             )
-            
-            self.analysis_tools = {
-                "fallacy_detector": MockContextualFallacyDetector(),
-                "coherence_evaluator": MockArgumentCoherenceEvaluator(),
-                "semantic_analyzer": MockSemanticArgumentAnalyzer(),
-            }
-        else:
-            logger.info("[TOOLS] Utilisation des outils d'analyse reels")
-            try:
-                self.analysis_tools = {
-                    "contextual_analyzer": EnhancedContextualFallacyAnalyzer(),
-                    "complex_analyzer": EnhancedComplexFallacyAnalyzer(),
-                    "severity_evaluator": EnhancedFallacySeverityEvaluator()
-                }
-                
-                # SynthesisAgent pour analyse unifiée
-                if self.llm_service and "unified" in self.config.analysis_modes:
-                    kernel = sk.Kernel()
-                    kernel.add_service(self.llm_service)
-                    self.analysis_tools["synthesis_agent"] = SynthesisAgent(
-                        kernel=kernel,
-                        agent_name="UnifiedPipeline_SynthesisAgent",
-                        enable_advanced_features=self.config.use_advanced_tools
-                    )
-                    self.analysis_tools["synthesis_agent"].setup_agent_components(self.llm_service.service_id)
-                
-                logger.info("[TOOLS] Outils d'analyse reels initialises")
-            except Exception as e:
-                logger.error(f"[TOOLS] Erreur initialisation outils reels: {e}")
-                logger.warning("[TOOLS] Basculement vers les mocks")
-                self.config.use_mocks = True
-                await self._initialize_analysis_tools()  # Récursion avec mocks
+            self.analysis_tools["synthesis_agent"].setup_agent_components(self.llm_service.service_id)
+        
+        logger.info("[TOOLS] Outils d'analyse réels initialisés avec succès")
     
     async def analyze_text_unified(self, 
                                    text: str, 

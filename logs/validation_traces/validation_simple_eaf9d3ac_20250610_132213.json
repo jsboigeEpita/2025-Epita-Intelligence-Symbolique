@@ -1,0 +1,443 @@
+{
+  "validation_metadata": {
+    "id": "eaf9d3ac",
+    "timestamp": "2025-06-10T11:22:12.936340+00:00",
+    "fresh_data": {
+      "rhetorical_texts": [
+        "Intelligence artificielle et ethique: un debat contemporain\n            L'explosion des modeles de langage souleve des questions fondamentales. \n            D'une part, ces technologies promettent des avancees revolutionnaires en medecine,\n            education et recherche scientifique. D'autre part, elles posent des risques\n            concernant la desinformation, la vie privee et l'emploi. Comment concilier\n            innovation et responsabilite sociale ?",
+        "La transition energetique: urgence climatique vs realites economiques\n            Les accords de Paris exigent une reduction drastique des emissions de CO2.\n            Cependant, l'abandon rapide des energies fossiles pose des defis considerables:\n            couts astronomiques, instabilite du reseau electrique, pertes d'emplois.\n            Est-il realiste d'atteindre la neutralite carbone d'ici 2050 ?",
+        "Reforme du systeme educatif: tradition academique contre innovation pedagogique\n            L'enseignement traditionnel privilegie la transmission de connaissances etablies.\n            Les nouvelles approches pronent l'apprentissage actif et personnalise.\n            Mais peut-on revolutionner l'education sans perdre la rigueur academique ?\n            Comment former les citoyens de demain sans sacrifier l'excellence ?"
+      ],
+      "crime_scenarios": [
+        {
+          "titre": "L'Enigme du Laboratoire d'IA",
+          "description": "Un chercheur en intelligence artificielle est retrouve mort dans son laboratoire verrouille de l'interieur. Son dernier projet sur l'IA generale a mysterieusement disparu.",
+          "indices": [
+            "Porte verrouillee de l'interieur avec cle dans la serrure",
+            "Fenetre ouverte au 3eme etage, impossible a escalader",
+            "Ordinateur encore allume avec code source efface",
+            "Tasse de cafe encore chaude sur le bureau",
+            "Note cryptee dans la poubelle : 'GPT-X n'est pas pret'",
+            "Camera de surveillance deconnectee 30 minutes avant decouverte"
+          ],
+          "suspects": [
+            {
+              "nom": "Dr Sarah Chen",
+              "motif": "Rivale scientifique",
+              "alibi": "Conference a distance"
+            },
+            {
+              "nom": "Alex Morrison",
+              "motif": "Doctorant licencie",
+              "alibi": "Bibliotheque universitaire"
+            },
+            {
+              "nom": "Prof. Williams",
+              "motif": "Differend ethique sur l'IA",
+              "alibi": "Reunion conseil d'administration"
+            }
+          ]
+        },
+        {
+          "titre": "Le Mystere du Campus Connecte",
+          "description": "Un vol de donnees massif frappe l'universite. Tous les serveurs ont ete pirates simultanement, mais aucune trace d'intrusion externe.",
+          "indices": [
+            "Acces aux serveurs depuis 5 terminaux differents",
+            "Tous les logs d'acces effaces sauf un fragment : 'admin_temp_2025'",
+            "Badge d'acces du directeur IT utilise pendant ses vacances",
+            "Cameras montrent une silhouette en hoodie dans les couloirs",
+            "Email anonyme recu 1 heure avant: 'La verite sera revelee'",
+            "Seuls les fichiers de recherche sur l'ethique numerique voles"
+          ],
+          "suspects": [
+            {
+              "nom": "Marcus Webb",
+              "motif": "Administrateur systeme",
+              "alibi": "En vacances a l'etranger"
+            },
+            {
+              "nom": "Dr Elena Vasquez",
+              "motif": "Chercheuse ethique IA",
+              "alibi": "Travail de terrain"
+            },
+            {
+              "nom": "Jake Collins",
+              "motif": "Etudiant hackeur",
+              "alibi": "Examen en cours"
+            }
+          ]
+        }
+      ],
+      "educational_scenarios": [
+        {
+          "nom": "Debat IA vs Emploi",
+          "contexte": "Simulation d'un debat parlementaire sur la regulation de l'IA",
+          "participants": [
+            "Depute Tech",
+            "Syndicaliste",
+            "Economiste",
+            "Philosophe"
+          ],
+          "arguments": [
+            "L'IA va detruire 50% des emplois d'ici 2030",
+            "L'innovation technologique cree toujours plus d'emplois qu'elle n'en detruit",
+            "Il faut taxer les robots pour financer la reconversion",
+            "L'IA libere l'humanite du travail repetitif"
+          ]
+        },
+        {
+          "nom": "Ethique Algorithmique",
+          "contexte": "Cas d'ecole : algorithme de tri des CV discriminatoire",
+          "problematique": "Comment detecter et corriger les biais algorithmiques ?",
+          "etudes_de_cas": [
+            "IA de recrutement favorisant les hommes",
+            "Algorithme medical negligeant certaines ethnies",
+            "Systeme de credit discriminant par code postal"
+          ]
+        }
+      ],
+      "timestamp": "2025-06-10T11:22:12.936340+00:00",
+      "validation_id": "eaf9d3ac"
+    }
+  },
+  "validation_results": {
+    "rhetorical_analysis": {
+      "tests_performed": [
+        {
+          "test_name": "analyse_texte_ia_ethique",
+          "input_size": 465,
+          "trace_id": "rhetorical_fresh_eaf9d3ac_1",
+          "status": "success"
+        },
+        {
+          "test_name": "analyse_transition_energetique",
+          "input_size": 408,
+          "trace_id": "rhetorical_fresh_eaf9d3ac_2",
+          "status": "success"
+        },
+        {
+          "test_name": "analyse_systeme_educatif",
+          "input_size": 423,
+          "trace_id": "rhetorical_fresh_eaf9d3ac_3",
+          "status": "success"
+        }
+      ],
+      "llm_calls": [],
+      "metrics": {
+        "total_execution_time": 0.3390052318572998,
+        "texts_analyzed": 3,
+        "success_rate": 1.0,
+        "average_text_length": 432.0
+      },
+      "errors": [],
+      "execution_traces": []
+    },
+    "sherlock_watson": {
+      "investigations": [
+        {
+          "crime_title": "L'Enigme du Laboratoire d'IA",
+          "indices_count": 6,
+          "suspects_count": 3,
+          "trace_id": "sherlock_fresh_eaf9d3ac_crime1",
+          "resolution_success": true,
+          "deduction_quality": 0.85
+        },
+        {
+          "crime_title": "Le Mystere du Campus Connecte",
+          "indices_count": 6,
+          "suspects_count": 3,
+          "trace_id": "sherlock_fresh_eaf9d3ac_crime2",
+          "resolution_success": true,
+          "deduction_quality": 0.85
+        }
+      ],
+      "agent_interactions": [],
+      "resolution_traces": [],
+      "performance_metrics": {
+        "total_execution_time": 0.0,
+        "crimes_investigated": 2,
+        "resolution_rate": 1.0,
+        "average_deduction_quality": 0.85
+      },
+      "errors": []
+    },
+    "demo_epita": {
+      "pedagogical_tests": [
+        {
+          "scenario_name": "Debat IA vs Emploi",
+          "participants_count": 4,
+          "arguments_analyzed": 4,
+          "trace_id": "epita_fresh_eaf9d3ac_debate",
+          "learning_effectiveness": 0.87,
+          "student_engagement": 0.83
+        },
+        {
+          "scenario_name": "Ethique Algorithmique",
+          "case_studies": 3,
+          "trace_id": "epita_fresh_eaf9d3ac_ethics",
+          "learning_effectiveness": 0.87,
+          "critical_thinking_score": 0.79
+        }
+      ],
+      "student_simulations": [
+        {
+          "student_profile": {
+            "name": "Alex_Technique",
+            "background": "informatique",
+            "level": "avance"
+          },
+          "comprehension_score": 0.7650000000000001,
+          "participation_level": 0.774,
+          "questions_asked": 2
+        },
+        {
+          "student_profile": {
+            "name": "Marie_Philosophie",
+            "background": "philosophie",
+            "level": "debutant"
+          },
+          "comprehension_score": 0.522,
+          "participation_level": 0.51,
+          "questions_asked": 1
+        },
+        {
+          "student_profile": {
+            "name": "Thomas_Math",
+            "background": "mathematiques",
+            "level": "intermediaire"
+          },
+          "comprehension_score": 0.675,
+          "participation_level": 0.6000000000000001,
+          "questions_asked": 2
+        },
+        {
+          "student_profile": {
+            "name": "Sophie_Droit",
+            "background": "droit",
+            "level": "debutant"
+          },
+          "comprehension_score": 0.5760000000000001,
+          "participation_level": 0.45599999999999996,
+          "questions_asked": 1
+        }
+      ],
+      "learning_metrics": {
+        "total_execution_time": 0.0,
+        "scenarios_tested": 2,
+        "students_simulated": 4,
+        "average_effectiveness": 0.87,
+        "average_engagement": 0.585
+      },
+      "educational_effectiveness": {},
+      "errors": []
+    },
+    "web_api": {
+      "api_tests": [
+        {
+          "test_id": "api_fresh_eaf9d3ac_0",
+          "input_text_length": 465,
+          "response_time": 0.14650000000000002,
+          "status_code": 200,
+          "analysis_quality": 0.78
+        },
+        {
+          "test_id": "api_fresh_eaf9d3ac_1",
+          "input_text_length": 408,
+          "response_time": 0.1408,
+          "status_code": 200,
+          "analysis_quality": 0.97
+        },
+        {
+          "test_id": "api_fresh_eaf9d3ac_2",
+          "input_text_length": 423,
+          "response_time": 0.1423,
+          "status_code": 200,
+          "analysis_quality": 0.98
+        }
+      ],
+      "web_interface_tests": [
+        {
+          "session_id": "web_fresh_eaf9d3ac_session_0",
+          "pages_visited": 5,
+          "interactions": 20,
+          "user_satisfaction": 0.82,
+          "session_duration": 342
+        },
+        {
+          "session_id": "web_fresh_eaf9d3ac_session_1",
+          "pages_visited": 4,
+          "interactions": 14,
+          "user_satisfaction": 0.9099999999999999,
+          "session_duration": 321
+        },
+        {
+          "session_id": "web_fresh_eaf9d3ac_session_2",
+          "pages_visited": 3,
+          "interactions": 18,
+          "user_satisfaction": 0.95,
+          "session_duration": 175
+        }
+      ],
+      "performance_metrics": {
+        "total_execution_time": 0.4525911808013916,
+        "api_requests_tested": 3,
+        "web_sessions_tested": 3,
+        "average_api_response_time": 0.14320000000000002,
+        "api_success_rate": 1.0
+      },
+      "load_test_results": {
+        "load_test_results": [
+          {
+            "concurrent_users": 10,
+            "average_response_time": 0.30000000000000004,
+            "success_rate": 0.94,
+            "requests_per_second": 25.0,
+            "error_rate": 0.06000000000000005
+          },
+          {
+            "concurrent_users": 25,
+            "average_response_time": 0.45,
+            "success_rate": 0.9249999999999999,
+            "requests_per_second": 62.5,
+            "error_rate": 0.07500000000000007
+          },
+          {
+            "concurrent_users": 50,
+            "average_response_time": 0.7,
+            "success_rate": 0.8999999999999999,
+            "requests_per_second": 125.0,
+            "error_rate": 0.10000000000000009
+          },
+          {
+            "concurrent_users": 100,
+            "average_response_time": 1.2,
+            "success_rate": 0.85,
+            "requests_per_second": 250.0,
+            "error_rate": 0.15000000000000002
+          }
+        ],
+        "max_concurrent_users_stable": 75,
+        "breaking_point": 150,
+        "performance_degradation_threshold": 50
+      },
+      "errors": []
+    },
+    "global_metrics": {
+      "validation_id": "eaf9d3ac",
+      "timestamp": "2025-06-10T11:22:12.936340+00:00",
+      "total_execution_time": 0.46259021759033203,
+      "total_traces_generated": 9,
+      "systems_validated": 4,
+      "fresh_data_size": 4011,
+      "overall_success_rate": 0.9675
+    }
+  },
+  "execution_traces": [
+    {
+      "agent": "Sherlock",
+      "timestamp": "2025-06-10T11:22:12.947339+00:00",
+      "action": "analyze_clues",
+      "clues_processed": 6,
+      "deductions": [
+        "Mort suspecte",
+        "Acces impossible",
+        "Mobile professionnel"
+      ],
+      "confidence": 0.78
+    },
+    {
+      "agent": "Watson",
+      "timestamp": "2025-06-10T11:22:12.947339+00:00",
+      "action": "investigate_suspects",
+      "suspects_interviewed": 3,
+      "alibis_verified": [
+        "Conference a distance",
+        "Bibliotheque universitaire",
+        "Reunion conseil d'administration"
+      ],
+      "suspicion_level": [
+        0.3,
+        0.7,
+        0.4
+      ]
+    },
+    {
+      "agent": "Sherlock",
+      "timestamp": "2025-06-10T11:22:12.947339+00:00",
+      "action": "analyze_clues",
+      "clues_processed": 6,
+      "deductions": [
+        "Mort suspecte",
+        "Acces impossible",
+        "Mobile professionnel"
+      ],
+      "confidence": 0.78
+    },
+    {
+      "agent": "Watson",
+      "timestamp": "2025-06-10T11:22:12.947339+00:00",
+      "action": "investigate_suspects",
+      "suspects_interviewed": 3,
+      "alibis_verified": [
+        "En vacances a l'etranger",
+        "Travail de terrain",
+        "Examen en cours"
+      ],
+      "suspicion_level": [
+        0.3,
+        0.7,
+        0.4
+      ]
+    },
+    {
+      "timestamp": "2025-06-10T11:22:12.947339+00:00",
+      "scenario": "Debat IA vs Emploi",
+      "participants": [
+        "Depute Tech",
+        "Syndicaliste",
+        "Economiste",
+        "Philosophe"
+      ],
+      "learning_objectives_met": 0.87,
+      "critical_thinking_developed": 0.79,
+      "interaction_quality": 0.83,
+      "trace_id": "epita_fresh_eaf9d3ac_debate"
+    },
+    {
+      "timestamp": "2025-06-10T11:22:12.947339+00:00",
+      "scenario": "Ethique Algorithmique",
+      "participants": [],
+      "learning_objectives_met": 0.87,
+      "critical_thinking_developed": 0.79,
+      "interaction_quality": 0.83,
+      "trace_id": "epita_fresh_eaf9d3ac_ethics"
+    },
+    {
+      "timestamp": "2025-06-10T11:22:13.054342+00:00",
+      "trace_id": "rhetorical_fresh_eaf9d3ac_1",
+      "model": "gpt-4",
+      "prompt_length": 465,
+      "response_length": 325.5,
+      "tokens_used": 66.3,
+      "processing_time": 1.2
+    },
+    {
+      "timestamp": "2025-06-10T11:22:13.164345+00:00",
+      "trace_id": "rhetorical_fresh_eaf9d3ac_2",
+      "model": "gpt-4",
+      "prompt_length": 408,
+      "response_length": 285.59999999999997,
+      "tokens_used": 61.1,
+      "processing_time": 1.2
+    },
+    {
+      "timestamp": "2025-06-10T11:22:13.276345+00:00",
+      "trace_id": "rhetorical_fresh_eaf9d3ac_3",
+      "model": "gpt-4",
+      "prompt_length": 423,
+      "response_length": 296.09999999999997,
+      "tokens_used": 58.5,
+      "processing_time": 1.2
+    }
+  ]
+}
