@@ -126,7 +126,6 @@ def extract_json_from_string(input_string):
     if match:
         json_string = match.group(1)
 
-        print(json_string)
         try:
             json_obj = json.loads(json_string)
             return json_obj
