@@ -19,7 +19,7 @@ import argparse
 from typing import Dict, List, Optional, Tuple, Any
 from pathlib import Path
 
-from .common_utils import Logger, LogLevel, safe_exit, get_project_root # Correction: import relatif explicite
+from common_utils import Logger, LogLevel, safe_exit, get_project_root # Import absolu
 
 
 # --- Début de l'insertion pour sys.path ---
@@ -374,8 +374,7 @@ def auto_activate_env(env_name: str = "projet-is", silent: bool = True) -> bool:
     """
     One-liner auto-activateur d'environnement intelligent
     
-    Détecte si l'environnement conda est actif et l'active automatiquement si nécessaire.
-    Gracieux pour les utilisateurs ayant déjà activé l'environnement.
+    Active véritablement l'environnement conda en modifiant le PATH et les variables.
     
     Args:
         env_name: Nom de l'environnement conda
@@ -385,12 +384,6 @@ def auto_activate_env(env_name: str = "projet-is", silent: bool = True) -> bool:
         True si environnement actif/activé, False sinon
     """
     try:
-        # Vérifier si l'environnement est déjà actif
-        if is_conda_env_active(env_name):
-            if not silent:
-                print(f"[OK] Environnement '{env_name}' deja actif")
-            return True
-        
         # Logger minimal pour auto-activation
         logger = Logger(verbose=not silent)
         manager = EnvironmentManager(logger)
@@ -406,20 +399,75 @@ def auto_activate_env(env_name: str = "projet-is", silent: bool = True) -> bool:
                 print(f"[ERROR] Environnement '{env_name}' non trouve")
             return False
         
-        # Auto-activation silencieuse
-        if not silent:
-            print(f"[INFO] Auto-activation de l'environnement '{env_name}'...")
-        
-        # Configurer les variables d'environnement
-        manager.setup_environment_variables()
-        
-        # Marquer l'environnement comme actif pour cette session
-        os.environ['CONDA_DEFAULT_ENV'] = env_name
-        
-        if not silent:
-            print(f"[OK] Environnement '{env_name}' auto-active")
-        
-        return True
+        # Obtenir le chemin de l'environnement conda
+        try:
+            result = subprocess.run(
+                ['conda', 'info', '--envs', '--json'],
+                capture_output=True,
+                text=True,
+                timeout=30
+            )
+            
+            if result.returncode == 0:
+                import json
+                env_data = json.loads(result.stdout)
+                env_path = None
+                
+                for env_dir in env_data.get('envs', []):
+                    if Path(env_dir).name == env_name:
+                        env_path = env_dir
+                        break
+                
+                if env_path:
+                    # Activer vraiment l'environnement en modifiant le PATH
+                    env_bin_path = os.path.join(env_path, 'Scripts')  # Windows
+                    if not os.path.exists(env_bin_path):
+                        env_bin_path = os.path.join(env_path, 'bin')  # Unix
+                    
+                    if os.path.exists(env_bin_path):
+                        # Mettre le chemin de l'environnement en premier dans le PATH
+                        current_path = os.environ.get('PATH', '')
+                        path_parts = current_path.split(os.pathsep)
+                        
+                        # Retirer les anciens chemins conda s'ils existent
+                        path_parts = [p for p in path_parts if not ('conda' in p.lower() and 'envs' in p.lower())]
+                        
+                        # Ajouter le nouveau chemin en premier
+                        path_parts.insert(0, env_bin_path)
+                        os.environ['PATH'] = os.pathsep.join(path_parts)
+                        
+                        # Configurer les variables d'environnement conda
+                        os.environ['CONDA_DEFAULT_ENV'] = env_name
+                        os.environ['CONDA_PREFIX'] = env_path
+                        
+                        if not silent:
+                            print(f"[INFO] Auto-activation de l'environnement '{env_name}'...")
+                            print(f"[CONDA] PATH mis à jour: {env_bin_path}")
+                        
+                        # Configurer les variables d'environnement du projet
+                        manager.setup_environment_variables()
+                        
+                        if not silent:
+                            print(f"[OK] Environnement '{env_name}' auto-actif")
+                        
+                        return True
+                    else:
+                        if not silent:
+                            print(f"[ERROR] Répertoire bin/Scripts non trouvé: {env_bin_path}")
+                        return False
+                else:
+                    if not silent:
+                        print(f"[ERROR] Chemin de l'environnement '{env_name}' non trouvé")
+                    return False
+            else:
+                if not silent:
+                    print(f"[ERROR] Impossible d'obtenir les infos conda: {result.stderr}")
+                return False
+                
+        except Exception as e:
+            if not silent:
+                print(f"[ERROR] Erreur lors de l'obtention du chemin conda: {e}")
+            return False
         
     except Exception as e:
         if not silent:
