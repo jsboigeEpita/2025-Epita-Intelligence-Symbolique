@@ -18,6 +18,9 @@ import subprocess
 import argparse
 from typing import Dict, List, Optional, Tuple, Any
 from pathlib import Path
+import shutil # Ajout pour shutil.which
+import platform # Ajout pour la détection OS-spécifique des chemins communs
+from dotenv import load_dotenv, find_dotenv # Ajout pour la gestion .env
 
 from .common_utils import Logger, LogLevel, safe_exit, get_project_root # Import relatif corrigé
 
@@ -32,7 +35,7 @@ _project_root_for_sys_path = Path(__file__).resolve().parent.parent.parent
 if str(_project_root_for_sys_path) not in sys.path:
     sys.path.insert(0, str(_project_root_for_sys_path))
 # --- Fin de l'insertion pour sys.path ---
-from scripts.core.auto_env import _load_dotenv_intelligent # MODIFIÉ ICI
+# from scripts.core.auto_env import _load_dotenv_intelligent # MODIFIÉ ICI - Sera supprimé
 class EnvironmentManager:
     """Gestionnaire centralisé des environnements Python/conda"""
     
@@ -45,14 +48,12 @@ class EnvironmentManager:
         """
         self.logger = logger or Logger()
         self.project_root = get_project_root()
-        # Charger .env via _load_dotenv_intelligent
-        # _load_dotenv_intelligent prend (project_root, silent)
-        if _load_dotenv_intelligent(Path(self.project_root), silent=False): # silent=False pour voir les logs
-             self.logger.info(f".env chargé par _load_dotenv_intelligent depuis {self.project_root}")
-        else:
-             self.logger.warning(f"Échec du chargement de .env par _load_dotenv_intelligent depuis {self.project_root}")
+        # Le chargement initial de .env (y compris la découverte/persistance de CONDA_PATH)
+        # est maintenant géré au début de la méthode auto_activate_env.
+        # L'appel à _load_dotenv_intelligent ici est donc redondant et supprimé.
         
         # Assurer que JAVA_HOME est absolu s'il vient du .env
+        # Cette logique reste pertinente si JAVA_HOME est défini par un .env chargé par auto_activate_env.
         if 'JAVA_HOME' in os.environ: # Vérifier si JAVA_HOME a été chargé
             java_home_value = os.environ['JAVA_HOME']
             java_home_path = Path(java_home_value)
@@ -354,9 +355,235 @@ class EnvironmentManager:
                 self.logger.error(f"Erreur lors de l'exécution: {e}")
                 return 1
         else:
-            self.logger.success(f"Environnement '{env_name}' activé")
+            self.logger.success(f"Environnement '{env_name}' activé (via activate_project_environment)")
             return 0
 
+    # --- Méthodes transférées et adaptées depuis auto_env.py ---
+
+    def _update_system_path_from_conda_env_var(self, silent: bool = True) -> bool:
+        """
+        Met à jour le PATH système avec le chemin conda depuis la variable CONDA_PATH (os.environ).
+        """
+        try:
+            conda_path_value = os.environ.get('CONDA_PATH', '')
+            if not conda_path_value:
+                if not silent:
+                    self.logger.info("CONDA_PATH non défini dans os.environ pour _update_system_path_from_conda_env_var.")
+                return False
+            
+            conda_paths_list = [p.strip() for p in conda_path_value.split(os.pathsep) if p.strip()]
+            
+            current_os_path = os.environ.get('PATH', '')
+            path_elements = current_os_path.split(os.pathsep)
+            
+            updated = False
+            for conda_dir_to_add in reversed(conda_paths_list): # reversed pour maintenir l'ordre d'ajout
+                if conda_dir_to_add not in path_elements:
+                    path_elements.insert(0, conda_dir_to_add)
+                    updated = True
+                    if not silent:
+                        self.logger.info(f"[PATH] Ajout au PATH système: {conda_dir_to_add}")
+            
+            if updated:
+                new_path_str = os.pathsep.join(path_elements)
+                os.environ['PATH'] = new_path_str
+                if not silent:
+                    self.logger.info("[PATH] PATH système mis à jour avec les chemins de CONDA_PATH.")
+                return True
+            else:
+                if not silent:
+                    self.logger.info("[PATH] PATH système déjà configuré avec les chemins de CONDA_PATH.")
+                return True # Déjà configuré est un succès
+                
+        except Exception as e_path_update:
+            if not silent:
+                self.logger.warning(f"[PATH] Erreur lors de la mise à jour du PATH système depuis CONDA_PATH: {e_path_update}")
+            return False
+
+    def _discover_and_persist_conda_path_in_env_file(self, project_root: Path, silent: bool = True) -> bool:
+        """
+        Tente de découvrir les chemins d'installation de Conda et, si CONDA_PATH
+        n'est pas déjà dans os.environ (via .env initial), met à jour le fichier .env.
+        Recharge ensuite os.environ depuis .env.
+        Retourne True si CONDA_PATH est maintenant dans os.environ (après tentative de découverte et écriture).
+        """
+        if os.environ.get('CONDA_PATH'):
+            if not silent:
+                self.logger.info("[.ENV DISCOVERY] CONDA_PATH déjà présent dans l'environnement.")
+            return True
+
+        if not silent:
+            self.logger.info("[.ENV DISCOVERY] CONDA_PATH non trouvé dans l'environnement initial. Tentative de découverte...")
+
+        discovered_paths_collector = []
+        
+        conda_exe_env_var = os.environ.get('CONDA_EXE')
+        if conda_exe_env_var:
+            conda_exe_file_path = Path(conda_exe_env_var)
+            if conda_exe_file_path.is_file():
+                if not silent: self.logger.debug(f"[.ENV DISCOVERY] CONDA_EXE trouvé: {conda_exe_file_path}")
+                condabin_dir_path = conda_exe_file_path.parent
+                scripts_dir_path = condabin_dir_path.parent / "Scripts"
+                if condabin_dir_path.is_dir(): discovered_paths_collector.append(str(condabin_dir_path))
+                if scripts_dir_path.is_dir(): discovered_paths_collector.append(str(scripts_dir_path))
+        
+        if not discovered_paths_collector:
+            conda_root_env_var = os.environ.get('CONDA_ROOT') or os.environ.get('CONDA_PREFIX')
+            if conda_root_env_var:
+                conda_root_dir_path = Path(conda_root_env_var)
+                if conda_root_dir_path.is_dir():
+                    if not silent: self.logger.debug(f"[.ENV DISCOVERY] CONDA_ROOT/PREFIX trouvé: {conda_root_dir_path}")
+                    condabin_dir_path = conda_root_dir_path / "condabin"
+                    scripts_dir_path = conda_root_dir_path / "Scripts"
+                    if condabin_dir_path.is_dir(): discovered_paths_collector.append(str(condabin_dir_path))
+                    if scripts_dir_path.is_dir(): discovered_paths_collector.append(str(scripts_dir_path))
+
+        if not discovered_paths_collector:
+            conda_executable_shutil = shutil.which('conda')
+            if conda_executable_shutil:
+                conda_exe_shutil_path = Path(conda_executable_shutil).resolve()
+                if conda_exe_shutil_path.is_file():
+                    if not silent: self.logger.debug(f"[.ENV DISCOVERY] 'conda' trouvé via shutil.which: {conda_exe_shutil_path}")
+                    if conda_exe_shutil_path.parent.name.lower() in ["condabin", "scripts", "bin"]:
+                        conda_install_root_path = conda_exe_shutil_path.parent.parent
+                        
+                        cb_dir = conda_install_root_path / "condabin"
+                        s_dir_win = conda_install_root_path / "Scripts"
+                        b_dir_unix = conda_install_root_path / "bin"
+                        lib_bin_win = conda_install_root_path / "Library" / "bin"
+
+                        if cb_dir.is_dir(): discovered_paths_collector.append(str(cb_dir))
+                        if platform.system() == "Windows":
+                            if s_dir_win.is_dir(): discovered_paths_collector.append(str(s_dir_win))
+                            if lib_bin_win.is_dir(): discovered_paths_collector.append(str(lib_bin_win))
+                        else:
+                            if b_dir_unix.is_dir(): discovered_paths_collector.append(str(b_dir_unix))
+        
+        if not discovered_paths_collector:
+            if not silent: self.logger.debug("[.ENV DISCOVERY] Tentative de recherche dans les chemins d'installation communs...")
+            potential_install_roots_list = []
+            system_os_name = platform.system()
+            home_dir = Path.home()
+
+            if system_os_name == "Windows":
+                program_data_dir = Path(os.environ.get("ProgramData", "C:/ProgramData"))
+                local_app_data_env_str = os.environ.get("LOCALAPPDATA")
+                local_app_data_dir = Path(local_app_data_env_str) if local_app_data_env_str else home_dir / "AppData" / "Local"
+                
+                potential_install_roots_list.extend([
+                    Path("C:/tools/miniconda3"), Path("C:/tools/anaconda3"),
+                    home_dir / "anaconda3", home_dir / "miniconda3",
+                    home_dir / "Anaconda3", home_dir / "Miniconda3",
+                    program_data_dir / "Anaconda3", program_data_dir / "Miniconda3",
+                    local_app_data_dir / "Continuum" / "anaconda3"
+                ])
+            else:
+                potential_install_roots_list.extend([
+                    home_dir / "anaconda3", home_dir / "miniconda3",
+                    home_dir / ".anaconda3", home_dir / ".miniconda3",
+                    Path("/opt/anaconda3"), Path("/opt/miniconda3"),
+                    Path("/usr/local/anaconda3"), Path("/usr/local/miniconda3")
+                ])
+            
+            found_root_from_common_paths = None
+            for root_candidate_path in potential_install_roots_list:
+                if root_candidate_path.is_dir():
+                    condabin_check_path = root_candidate_path / "condabin"
+                    scripts_check_win_path = root_candidate_path / "Scripts"
+                    bin_check_unix_path = root_candidate_path / "bin"
+                    
+                    conda_exe_found_in_candidate = False
+                    if system_os_name == "Windows":
+                        if (condabin_check_path / "conda.bat").exists() or \
+                           (condabin_check_path / "conda.exe").exists() or \
+                           (scripts_check_win_path / "conda.exe").exists():
+                            conda_exe_found_in_candidate = True
+                    else:
+                        if (bin_check_unix_path / "conda").exists() or \
+                           (condabin_check_path / "conda").exists():
+                            conda_exe_found_in_candidate = True
+
+                    if conda_exe_found_in_candidate and condabin_check_path.is_dir() and \
+                       ((system_os_name == "Windows" and scripts_check_win_path.is_dir()) or \
+                        (system_os_name != "Windows" and bin_check_unix_path.is_dir())):
+                        if not silent: self.logger.debug(f"[.ENV DISCOVERY] Racine Conda potentielle trouvée: {root_candidate_path}")
+                        found_root_from_common_paths = root_candidate_path
+                        break
+            
+            if found_root_from_common_paths:
+                cb_p = found_root_from_common_paths / "condabin"
+                s_p_win = found_root_from_common_paths / "Scripts"
+                b_p_unix = found_root_from_common_paths / "bin"
+                lb_p_win = found_root_from_common_paths / "Library" / "bin"
+
+                def add_valid_path_to_list(path_obj_to_add, target_list):
+                    if path_obj_to_add.is_dir() and str(path_obj_to_add) not in target_list:
+                        target_list.append(str(path_obj_to_add))
+
+                add_valid_path_to_list(cb_p, discovered_paths_collector)
+                if system_os_name == "Windows":
+                    add_valid_path_to_list(s_p_win, discovered_paths_collector)
+                    add_valid_path_to_list(lb_p_win, discovered_paths_collector)
+                else:
+                    add_valid_path_to_list(b_p_unix, discovered_paths_collector)
+
+        ordered_unique_paths_list = []
+        seen_paths_set = set()
+        for p_str_item in discovered_paths_collector:
+            if p_str_item not in seen_paths_set:
+                ordered_unique_paths_list.append(p_str_item)
+                seen_paths_set.add(p_str_item)
+        
+        if ordered_unique_paths_list:
+            conda_path_to_write = os.pathsep.join(ordered_unique_paths_list)
+            if not silent: self.logger.debug(f"[.ENV DISCOVERY] Chemins Conda consolidés: {conda_path_to_write}")
+
+            env_file = project_root / ".env"
+            current_env_lines = []
+            conda_path_line_updated_in_file = False
+
+            if env_file.exists():
+                with open(env_file, 'r', encoding='utf-8') as f_read_env:
+                    current_env_lines = f_read_env.readlines()
+                
+                for i, line_content in enumerate(current_env_lines):
+                    stripped_line_content = line_content.strip()
+                    if stripped_line_content.startswith("CONDA_PATH="):
+                        current_env_lines[i] = f'CONDA_PATH="{conda_path_to_write}"\n'
+                        conda_path_line_updated_in_file = True
+                        if not silent: self.logger.info(f"[.ENV] Ligne CONDA_PATH existante mise à jour dans {env_file}")
+                        break
+            
+            if not conda_path_line_updated_in_file:
+                if current_env_lines and not current_env_lines[-1].endswith('\n') and current_env_lines[-1].strip() != "":
+                    current_env_lines.append('\n')
+                current_env_lines.append(f'CONDA_PATH="{conda_path_to_write}"\n')
+                if not silent: self.logger.info(f"[.ENV] Nouvelle ligne CONDA_PATH ajoutée à {env_file}")
+
+            try:
+                with open(env_file, 'w', encoding='utf-8') as f_write_env:
+                    f_write_env.writelines(current_env_lines)
+                if not silent: self.logger.info(f"[.ENV] Fichier {env_file} sauvegardé avec CONDA_PATH='{conda_path_to_write}'")
+                
+                # Recharger .env pour que os.environ soit mis à jour
+                dotenv_path_for_reload_op = find_dotenv(str(env_file), usecwd=True, raise_error_if_not_found=False)
+                if dotenv_path_for_reload_op:
+                     load_dotenv(dotenv_path_for_reload_op, override=True) # Override pour prendre la nouvelle valeur
+                     if not silent: self.logger.info(f"[.ENV] Variables rechargées depuis {dotenv_path_for_reload_op}")
+                     return True # CONDA_PATH est maintenant dans os.environ
+                else: # Ne devrait pas arriver
+                    if not silent: self.logger.warning(f"[.ENV] Erreur: {env_file} non trouvé par find_dotenv après écriture.")
+                    os.environ['CONDA_PATH'] = conda_path_to_write # Forcer au cas où
+                    return True # Indiquer que CONDA_PATH est au moins dans os.environ
+
+            except Exception as e_write_env:
+                if not silent: self.logger.warning(f"[.ENV] Échec de la mise à jour du fichier {env_file}: {e_write_env}")
+                return False # Échec de la persistance
+        else:
+            if not silent: self.logger.info("[.ENV DISCOVERY] Impossible de découvrir automatiquement les chemins Conda.")
+            return False # Pas de chemins découverts, CONDA_PATH n'est pas résolu par cette fonction
+
+    # --- Fin des méthodes transférées ---
 
 def is_conda_env_active(env_name: str = "projet-is") -> bool:
     """Vérifie si l'environnement conda spécifié est actuellement actif"""
@@ -385,10 +612,24 @@ def auto_activate_env(env_name: str = "projet-is", silent: bool = True) -> bool:
     """
     try:
         # Logger minimal pour auto-activation
+        # Note: La création d'une nouvelle instance de EnvironmentManager ici peut être problématique
+        # si auto_activate_env est appelée sur une instance existante.
+        # Pour l'instant, on garde la logique originale de auto_env.py qui crée son propre manager.
         logger = Logger(verbose=not silent)
-        manager = EnvironmentManager(logger)
+        manager = EnvironmentManager(logger) # Crée une instance, __init__ sera appelé.
+
+        # --- Début des modifications pour la refactorisation ---
+        # 1. S'assurer que CONDA_PATH est dans .env et chargé dans os.environ, et que le PATH système de base est correct
+        # self.project_root est disponible via manager.project_root
+        # Note: manager._discover_and_persist_conda_path_in_env_file va appeler load_dotenv si .env est modifié.
+        manager._discover_and_persist_conda_path_in_env_file(Path(manager.project_root), silent)
+        
+        # 2. Mettre à jour le PATH système à partir de CONDA_PATH (qui devrait être dans os.environ maintenant)
+        manager._update_system_path_from_conda_env_var(silent)
+        # --- Fin des modifications pour la refactorisation ---
         
         # Vérifier si conda et l'environnement existent
+        # manager.check_conda_available() devrait maintenant mieux fonctionner car le PATH a été mis à jour.
         if not manager.check_conda_available():
             if not silent:
                 print(f"[ERROR] Conda non disponible - impossible d'activer '{env_name}'")

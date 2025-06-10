@@ -115,7 +115,7 @@ class BackendManager:
                 pass # On laisse Popen échouer si le chemin est mauvais.
 
             # Commande de démarrage pour FastAPI avec Uvicorn en utilisant le python.exe de l'env Conda
-            cmd = [python_exe_path, '-m', 'uvicorn', 'api.main:app', '--host', '0.0.0.0', '--port', str(port)]
+            cmd = [python_exe_path, '-m', 'uvicorn', self.module, '--host', '0.0.0.0', '--port', str(port)]
             
             self.logger.info(f"Démarrage backend FastAPI avec Python de Conda: {' '.join(cmd)}")
             
