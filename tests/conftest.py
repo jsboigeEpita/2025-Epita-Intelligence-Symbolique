@@ -13,6 +13,33 @@ from unittest.mock import patch, MagicMock
 import importlib.util
 import logging
 import threading # Ajout de l'import pour l'inspection des threads
+
+# --- AUTO-ACTIVATION ENVIRONNEMENT (AJOUT) ---
+# Auto-activation de l'environnement conda via auto_env
+_conftest_auto_env_logger = logging.getLogger("conftest.auto_env")
+try:
+    # Ajouter le chemin scripts/core pour l'import auto_env
+    _current_dir_auto_env = os.path.dirname(os.path.abspath(__file__))
+    _project_root_auto_env = os.path.dirname(_current_dir_auto_env)
+    _scripts_core_path = os.path.join(_project_root_auto_env, 'scripts', 'core')
+    
+    if os.path.exists(_scripts_core_path) and _scripts_core_path not in sys.path:
+        sys.path.insert(0, _scripts_core_path)
+        _conftest_auto_env_logger.info(f"Ajout de {_scripts_core_path} à sys.path pour auto_env")
+    
+    # Import et activation automatique de l'environnement
+    from auto_env import ensure_env
+    _env_activated = ensure_env(silent=False)
+    
+    if _env_activated:
+        _conftest_auto_env_logger.info("[OK] Auto-activation environnement réussie dans conftest.py")
+    else:
+        _conftest_auto_env_logger.warning("[WARN] Auto-activation environnement échouée, continuez en mode dégradé")
+        
+except Exception as e:
+    _conftest_auto_env_logger.error(f"[ERROR] Échec auto-activation environnement dans conftest.py: {e}")
+    _conftest_auto_env_logger.info("[INFO] Continuez en mode dégradé sans auto-activation")
+# --- FIN AUTO-ACTIVATION ENVIRONNEMENT ---
 # --- Configuration globale du Logging pour les tests ---
 # Le logger global pour conftest est déjà défini plus bas,
 # mais nous avons besoin de configurer basicConfig tôt.

@@ -19,7 +19,7 @@ from typing import Dict, Any, List
 from datetime import datetime
 
 from semantic_kernel.kernel import Kernel
-from semantic_kernel.contents.chat_message_content import ChatMessageContent
+from argumentation_analysis.utils.semantic_kernel_compatibility import ChatMessageContent
 
 # Imports du système Oracle
 from argumentation_analysis.orchestration.cluedo_extended_orchestrator import (
