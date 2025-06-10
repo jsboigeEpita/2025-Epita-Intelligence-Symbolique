@@ -2,13 +2,13 @@ backend:
   enabled: true
   env_activation: powershell -File scripts/env/activate_project_env.ps1
   fallback_ports:
-  - 5004
-  - 5005
-  - 5006
-  health_endpoint: /api/health
+  - 3001
+  - 3002
+  - 3003
+  health_endpoint: /status
   max_attempts: 5
-  module: argumentation_analysis.services.web_api.app
-  start_port: 5003
+  module: interface_web.app
+  start_port: 3000
   timeout_seconds: 30
 cleanup:
   auto_cleanup: true
