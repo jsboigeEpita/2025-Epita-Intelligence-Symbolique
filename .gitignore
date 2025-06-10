@@ -150,6 +150,8 @@ argumentation_analysis/tests/tools/reports/test_report_*.txt
 results/rhetorical_analysis_*.json
 libs/portable_jdk/
 libs/portable_octave/
+# Protection contre duplication portable_jdk à la racine
+portable_jdk/
 libs/_temp*/
 results/
 rapport_ia_2024.txt

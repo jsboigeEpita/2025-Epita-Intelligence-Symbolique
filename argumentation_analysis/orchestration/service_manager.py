@@ -17,6 +17,9 @@ Auteur: Intelligence Symbolique EPITA
 Date: 09/06/2025
 """
 
+# ===== AUTO-ACTIVATION ENVIRONNEMENT =====
+import scripts.core.auto_env  # Auto-activation environnement intelligent
+# =========================================
 import logging
 import asyncio
 import uuid

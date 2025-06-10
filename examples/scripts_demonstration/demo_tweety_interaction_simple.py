@@ -11,6 +11,9 @@ Objectif:
 4. Afficher la formule parsée.
 """
 
+# ===== AUTO-ACTIVATION ENVIRONNEMENT =====
+import scripts.core.auto_env  # Auto-activation environnement intelligent
+# =========================================
 import jpype
 import jpype.imports
 from jpype.types import JString
