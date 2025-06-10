@@ -906,3 +906,695 @@
 2025-06-10 10:21:47,486 - __main__ - INFO - [96m[10:21:47.486] [OK] APPLICATION WEB OPERATIONNELLE[0m
 2025-06-10 10:21:47,486 - __main__ - INFO -    Détails: Backend: http://localhost:5003
 2025-06-10 10:21:47,486 - __main__ - INFO -    Résultat: Tous les services démarrés
+2025-06-10 21:46:36,154 - __main__ - INFO - [96m[21:46:36.154] [START] DEMARRAGE APPLICATION WEB[0m
+2025-06-10 21:46:36,154 - __main__ - INFO -    Détails: Mode: Headless
+2025-06-10 21:46:36,154 - __main__ - INFO -    Résultat: Initialisation orchestrateur
+2025-06-10 21:46:36,155 - __main__ - INFO - [96m[21:46:36.154] [CLEAN] NETTOYAGE PREALABLE[0m
+2025-06-10 21:46:36,155 - __main__ - INFO -    Détails: Arret instances existantes
+2025-06-10 21:46:36,155 - __main__ - INFO - [CLEAN] Debut nettoyage processus application web
+2025-06-10 21:46:41,460 - __main__ - INFO - Processus trouvé (cmdline): PID 8908 - node c:\users\myia\appdata\local\npm-cache\_npx\3dfbf5a9eea4a1b3\node_modules\.bin\\..\@modelcontext
+2025-06-10 21:46:41,505 - __main__ - INFO - Processus trouvé (cmdline): PID 9276 - c:\users\myia\.vscode\extensions\ms-dotnettools.csdevkit-1.20.35-win32-x64\components\vs-green-serve
+2025-06-10 21:46:41,593 - __main__ - INFO - Processus trouvé (cmdline): PID 9636 - node d:\roo-extensions\mcps\internal\servers\quickfiles-server\build\index.js
+2025-06-10 21:46:42,412 - __main__ - INFO - Processus trouvé (cmdline): PID 17268 - node c:\users\myia\appdata\local\npm-cache\_npx\a3241bba59c344f5\node_modules\.bin\\..\@modelcontext
+2025-06-10 21:46:42,447 - __main__ - INFO - Processus trouvé (cmdline): PID 21492 - c:\users\myia\.vscode\extensions\ms-dotnettools.csdevkit-1.20.35-win32-x64\components\vs-green-serve
+2025-06-10 21:46:42,476 - __main__ - INFO - Processus trouvé (cmdline): PID 22024 - node d:\roo-extensions\mcps\internal\servers\quickfiles-server\build\index.js
+2025-06-10 21:46:42,539 - __main__ - INFO - Processus trouvé (cmdline): PID 23660 - node d:/roo-extensions/mcps/external/mcp-server-ftp/build/index.js
+2025-06-10 21:46:42,543 - __main__ - INFO - Processus trouvé (cmdline): PID 25544 - c:\program files\nodejs\node.exe node_modules\@playwright\test\cli.js test-server -c playwright.conf
+2025-06-10 21:46:42,546 - __main__ - INFO - Processus trouvé (cmdline): PID 27696 - node d:\roo-extensions\mcps\internal\servers\roo-state-manager\build\index.js
+2025-06-10 21:46:42,771 - __main__ - INFO - Processus trouvé (cmdline): PID 33728 - node d:\roo-extensions\mcps\internal\servers\jupyter-mcp-server\dist\index.js
+2025-06-10 21:46:42,773 - __main__ - INFO - Processus trouvé (cmdline): PID 34580 - node d:\roo-extensions\mcps\internal\servers\jupyter-mcp-server\dist\index.js
+2025-06-10 21:46:42,775 - __main__ - INFO - Processus trouvé (cmdline): PID 35240 - c:\program files\nodejs\\node.exe c:\program files\nodejs\\node_modules\npm\bin\npx-cli.js -y @model
+2025-06-10 21:46:42,778 - __main__ - INFO - Processus trouvé (cmdline): PID 36520 - node d:\roo-extensions\mcps\internal\servers\jinavigator-server\dist\index.js
+2025-06-10 21:46:42,778 - __main__ - INFO - Processus trouvé (cmdline): PID 36848 - c:\program files\nodejs\\node.exe c:\program files\nodejs\\node_modules\npm\bin\npx-cli.js -y @model
+2025-06-10 21:46:42,814 - __main__ - INFO - Processus trouvé (cmdline): PID 39516 - c:\program files\nodejs\node.exe tests_playwright\node_modules\@playwright\test\cli.js test-server -
+2025-06-10 21:46:42,815 - __main__ - INFO - Processus trouvé (cmdline): PID 39672 - node d:/roo-extensions/mcps/external/mcp-server-ftp/build/index.js
+2025-06-10 21:46:42,816 - __main__ - INFO - Processus trouvé (cmdline): PID 40192 - c:\program files\nodejs\\node.exe c:\program files\nodejs\\node_modules\npm\bin\npx-cli.js -y @model
+2025-06-10 21:46:42,930 - __main__ - INFO - Processus trouvé (cmdline): PID 47592 - c:\python312\python.exe c:\users\myia\.vscode\extensions\ms-python.isort-2025.0.0\bundled\tool\lsp_s
+2025-06-10 21:46:42,967 - __main__ - INFO - Processus trouvé (cmdline): PID 48696 - node c:\users\myia\appdata\local\npm-cache\_npx\3dfbf5a9eea4a1b3\node_modules\.bin\\..\@modelcontext
+2025-06-10 21:46:42,967 - __main__ - INFO - Processus trouvé (cmdline): PID 48840 - node d:\roo-extensions\mcps\internal\servers\jinavigator-server\dist\index.js
+2025-06-10 21:46:42,970 - __main__ - INFO - Processus trouvé (cmdline): PID 50228 - c:\program files\nodejs\\node.exe c:\program files\nodejs\\node_modules\npm\bin\npx-cli.js -y @model
+2025-06-10 21:46:43,004 - __main__ - INFO - Processus trouvé (cmdline): PID 51132 - c:\tools\miniconda3\python.exe .\start_webapp.py
+2025-06-10 21:46:43,007 - __main__ - INFO - Processus trouvé (cmdline): PID 53028 - node d:\roo-extensions\mcps\internal\servers\roo-state-manager\build\index.js
+2025-06-10 21:46:43,046 - __main__ - INFO - Processus trouvé (cmdline): PID 54864 - node c:\users\myia\appdata\local\npm-cache\_npx\a3241bba59c344f5\node_modules\.bin\\..\@modelcontext
+2025-06-10 21:46:43,048 - __main__ - INFO - Processus trouvé (cmdline): PID 55084 - c:\python312\python.exe c:\users\myia\.vscode\extensions\ms-python.isort-2025.0.0\bundled\tool\lsp_s
+2025-06-10 21:46:43,051 - __main__ - INFO - Processus trouvés: 25
+2025-06-10 21:46:43,051 - __main__ - INFO - Envoi signal TERM aux processus...
+2025-06-10 21:46:43,051 - __main__ - INFO - TERM envoyé à PID 8908
+2025-06-10 21:46:43,052 - __main__ - INFO - TERM envoyé à PID 9276
+2025-06-10 21:46:43,052 - __main__ - INFO - TERM envoyé à PID 9636
+2025-06-10 21:46:43,052 - __main__ - INFO - TERM envoyé à PID 17268
+2025-06-10 21:46:43,053 - __main__ - INFO - TERM envoyé à PID 21492
+2025-06-10 21:46:43,053 - __main__ - INFO - TERM envoyé à PID 22024
+2025-06-10 21:46:43,053 - __main__ - INFO - TERM envoyé à PID 23660
+2025-06-10 21:46:43,053 - __main__ - INFO - TERM envoyé à PID 25544
+2025-06-10 21:46:43,054 - __main__ - INFO - TERM envoyé à PID 27696
+2025-06-10 21:46:43,054 - __main__ - INFO - TERM envoyé à PID 33728
+2025-06-10 21:46:43,054 - __main__ - INFO - TERM envoyé à PID 34580
+2025-06-10 21:46:43,054 - __main__ - INFO - TERM envoyé à PID 35240
+2025-06-10 21:46:43,055 - __main__ - INFO - TERM envoyé à PID 36520
+2025-06-10 21:46:43,055 - __main__ - INFO - TERM envoyé à PID 36848
+2025-06-10 21:46:43,055 - __main__ - INFO - TERM envoyé à PID 39516
+2025-06-10 21:46:43,056 - __main__ - INFO - TERM envoyé à PID 39672
+2025-06-10 21:46:43,056 - __main__ - INFO - TERM envoyé à PID 40192
+2025-06-10 21:46:43,056 - __main__ - INFO - TERM envoyé à PID 47592
+2025-06-10 21:46:43,056 - __main__ - INFO - TERM envoyé à PID 48696
+2025-06-10 21:46:43,056 - __main__ - INFO - TERM envoyé à PID 48840
+2025-06-10 21:46:43,057 - __main__ - INFO - TERM envoyé à PID 50228
+2025-06-10 21:46:43,057 - __main__ - INFO - TERM envoyé à PID 51132
+2025-06-10 21:46:43,057 - __main__ - INFO - TERM envoyé à PID 53028
+2025-06-10 21:46:43,057 - __main__ - INFO - TERM envoyé à PID 54864
+2025-06-10 21:46:43,057 - __main__ - INFO - TERM envoyé à PID 55084
+2025-06-10 21:46:43,058 - __main__ - INFO - Attente arrêt propre (5s)...
+2025-06-10 21:46:48,095 - __main__ - INFO - Tous les processus arrêtés proprement
+2025-06-10 21:46:51,871 - __main__ - INFO - Processus trouvé (cmdline): PID 48168 - c:\python312\python.exe c:\users\myia\.vscode\extensions\ms-python.isort-2025.0.0\bundled\tool\lsp_s
+2025-06-10 21:46:51,918 - __main__ - INFO - Processus trouvé (cmdline): PID 53988 - c:\python312\python.exe c:\users\myia\.vscode\extensions\ms-python.isort-2025.0.0\bundled\tool\lsp_s
+2025-06-10 21:46:51,922 - __main__ - WARNING - Force kill de 2 processus récalcitrants
+2025-06-10 21:46:51,922 - __main__ - WARNING - KILL forcé sur PID 48168
+2025-06-10 21:46:51,950 - __main__ - WARNING - KILL forcé sur PID 53988
+2025-06-10 21:46:51,976 - __main__ - INFO - Vérification libération des ports...
+2025-06-10 21:46:51,980 - __main__ - INFO - Tous les ports libérés
+2025-06-10 21:46:51,980 - __main__ - INFO - Nettoyage fichiers temporaires...
+2025-06-10 21:46:51,981 - __main__ - INFO - Aucun fichier temporaire à nettoyer
+2025-06-10 21:46:51,981 - __main__ - INFO - [OK] Nettoyage processus terminé
+2025-06-10 21:46:51,981 - __main__ - INFO - [96m[21:46:51.981] [BACKEND] DEMARRAGE BACKEND[0m
+2025-06-10 21:46:51,981 - __main__ - INFO -    Détails: Lancement avec failover de ports
+2025-06-10 21:46:51,981 - __main__ - INFO - Tentative 1/4 - Port 5003
+2025-06-10 21:46:51,982 - __main__ - ERROR - L'exécutable Python pour l'environnement Conda 'projet-is' n'a pas été trouvé à 'C:\Users\MYIA\.conda\envs\projet-is\python.exe'.
+2025-06-10 21:46:51,982 - __main__ - INFO - Démarrage backend FastAPI avec Python de Conda: C:\Users\MYIA\.conda\envs\projet-is\python.exe -m uvicorn argumentation_analysis.services.web_api.app --host 0.0.0.0 --port 5003
+2025-06-10 21:46:51,982 - __main__ - INFO - Logging stdout de Uvicorn dans: D:\2025-Epita-Intelligence-Symbolique-4\logs\uvicorn_stdout_5003.log
+2025-06-10 21:46:51,982 - __main__ - INFO - Logging stderr de Uvicorn dans: D:\2025-Epita-Intelligence-Symbolique-4\logs\uvicorn_stderr_5003.log
+2025-06-10 21:46:51,983 - __main__ - ERROR - Erreur démarrage backend port 5003: [WinError 2] Le fichier spécifié est introuvable
+2025-06-10 21:46:51,983 - __main__ - INFO - Tentative 2/4 - Port 5004
+2025-06-10 21:46:51,983 - __main__ - ERROR - L'exécutable Python pour l'environnement Conda 'projet-is' n'a pas été trouvé à 'C:\Users\MYIA\.conda\envs\projet-is\python.exe'.
+2025-06-10 21:46:51,983 - __main__ - INFO - Démarrage backend FastAPI avec Python de Conda: C:\Users\MYIA\.conda\envs\projet-is\python.exe -m uvicorn argumentation_analysis.services.web_api.app --host 0.0.0.0 --port 5004
+2025-06-10 21:46:51,984 - __main__ - INFO - Logging stdout de Uvicorn dans: D:\2025-Epita-Intelligence-Symbolique-4\logs\uvicorn_stdout_5004.log
+2025-06-10 21:46:51,984 - __main__ - INFO - Logging stderr de Uvicorn dans: D:\2025-Epita-Intelligence-Symbolique-4\logs\uvicorn_stderr_5004.log
+2025-06-10 21:46:51,984 - __main__ - ERROR - Erreur démarrage backend port 5004: [WinError 2] Le fichier spécifié est introuvable
+2025-06-10 21:46:51,984 - __main__ - INFO - Tentative 3/4 - Port 5005
+2025-06-10 21:46:51,985 - __main__ - ERROR - L'exécutable Python pour l'environnement Conda 'projet-is' n'a pas été trouvé à 'C:\Users\MYIA\.conda\envs\projet-is\python.exe'.
+2025-06-10 21:46:51,985 - __main__ - INFO - Démarrage backend FastAPI avec Python de Conda: C:\Users\MYIA\.conda\envs\projet-is\python.exe -m uvicorn argumentation_analysis.services.web_api.app --host 0.0.0.0 --port 5005
+2025-06-10 21:46:51,985 - __main__ - INFO - Logging stdout de Uvicorn dans: D:\2025-Epita-Intelligence-Symbolique-4\logs\uvicorn_stdout_5005.log
+2025-06-10 21:46:51,985 - __main__ - INFO - Logging stderr de Uvicorn dans: D:\2025-Epita-Intelligence-Symbolique-4\logs\uvicorn_stderr_5005.log
+2025-06-10 21:46:51,986 - __main__ - ERROR - Erreur démarrage backend port 5005: [WinError 2] Le fichier spécifié est introuvable
+2025-06-10 21:46:51,986 - __main__ - INFO - Tentative 4/4 - Port 5006
+2025-06-10 21:46:51,987 - __main__ - ERROR - L'exécutable Python pour l'environnement Conda 'projet-is' n'a pas été trouvé à 'C:\Users\MYIA\.conda\envs\projet-is\python.exe'.
+2025-06-10 21:46:51,987 - __main__ - INFO - Démarrage backend FastAPI avec Python de Conda: C:\Users\MYIA\.conda\envs\projet-is\python.exe -m uvicorn argumentation_analysis.services.web_api.app --host 0.0.0.0 --port 5006
+2025-06-10 21:46:51,987 - __main__ - INFO - Logging stdout de Uvicorn dans: D:\2025-Epita-Intelligence-Symbolique-4\logs\uvicorn_stdout_5006.log
+2025-06-10 21:46:51,987 - __main__ - INFO - Logging stderr de Uvicorn dans: D:\2025-Epita-Intelligence-Symbolique-4\logs\uvicorn_stderr_5006.log
+2025-06-10 21:46:51,987 - __main__ - ERROR - Erreur démarrage backend port 5006: [WinError 2] Le fichier spécifié est introuvable
+2025-06-10 21:46:51,987 - __main__ - INFO - [91m[21:46:51.987] [ERROR] ECHEC BACKEND[0m
+2025-06-10 21:46:51,987 - __main__ - INFO -    Détails: Impossible de démarrer sur les ports: [5003, 5004, 5005, 5006]
+2025-06-10 21:49:18,848 - __main__ - INFO - [96m[21:49:18.848] [START] DEMARRAGE APPLICATION WEB[0m
+2025-06-10 21:49:18,848 - __main__ - INFO -    Détails: Mode: Headless
+2025-06-10 21:49:18,848 - __main__ - INFO -    Résultat: Initialisation orchestrateur
+2025-06-10 21:49:18,848 - __main__ - INFO - [96m[21:49:18.848] [CLEAN] NETTOYAGE PREALABLE[0m
+2025-06-10 21:49:18,848 - __main__ - INFO -    Détails: Arret instances existantes
+2025-06-10 21:49:18,848 - __main__ - INFO - [CLEAN] Debut nettoyage processus application web
+2025-06-10 21:49:23,615 - __main__ - INFO - Processus trouvé (cmdline): PID 11664 - c:\program files\nodejs\node.exe node_modules\@playwright\test\cli.js test-server -c playwright.conf
+2025-06-10 21:49:24,176 - __main__ - INFO - Processus trouvé (cmdline): PID 25768 - c:\python312\python.exe c:\users\myia\.vscode\extensions\ms-python.isort-2025.0.0\bundled\tool\lsp_s
+2025-06-10 21:49:24,244 - __main__ - INFO - Processus trouvé (cmdline): PID 31652 - c:\python312\python.exe c:\users\myia\.vscode\extensions\ms-python.isort-2025.0.0\bundled\tool\lsp_s
+2025-06-10 21:49:24,490 - __main__ - INFO - Processus trouvé (cmdline): PID 40524 - c:\tools\miniconda3\python.exe .\start_webapp.py
+2025-06-10 21:49:24,685 - __main__ - INFO - Processus trouvés: 4
+2025-06-10 21:49:24,685 - __main__ - INFO - Envoi signal TERM aux processus...
+2025-06-10 21:49:24,685 - __main__ - INFO - TERM envoyé à PID 11664
+2025-06-10 21:49:24,686 - __main__ - INFO - TERM envoyé à PID 25768
+2025-06-10 21:49:24,686 - __main__ - INFO - TERM envoyé à PID 31652
+2025-06-10 21:49:24,686 - __main__ - INFO - TERM envoyé à PID 40524
+2025-06-10 21:49:24,686 - __main__ - INFO - Attente arrêt propre (5s)...
+2025-06-10 21:49:29,707 - __main__ - INFO - Tous les processus arrêtés proprement
+2025-06-10 21:49:32,924 - __main__ - INFO - Processus trouvé (cmdline): PID 27952 - c:\python312\python.exe c:\users\myia\.vscode\extensions\ms-python.isort-2025.0.0\bundled\tool\lsp_s
+2025-06-10 21:49:33,140 - __main__ - INFO - Processus trouvé (cmdline): PID 43832 - c:\python312\python.exe c:\users\myia\.vscode\extensions\ms-python.isort-2025.0.0\bundled\tool\lsp_s
+2025-06-10 21:49:33,233 - __main__ - WARNING - Force kill de 2 processus récalcitrants
+2025-06-10 21:49:33,233 - __main__ - WARNING - KILL forcé sur PID 27952
+2025-06-10 21:49:33,257 - __main__ - WARNING - KILL forcé sur PID 43832
+2025-06-10 21:49:33,282 - __main__ - INFO - Vérification libération des ports...
+2025-06-10 21:49:33,287 - __main__ - INFO - Tous les ports libérés
+2025-06-10 21:49:33,287 - __main__ - INFO - Nettoyage fichiers temporaires...
+2025-06-10 21:49:33,287 - __main__ - INFO - Aucun fichier temporaire à nettoyer
+2025-06-10 21:49:33,287 - __main__ - INFO - [OK] Nettoyage processus terminé
+2025-06-10 21:49:33,287 - __main__ - INFO - [96m[21:49:33.287] [BACKEND] DEMARRAGE BACKEND[0m
+2025-06-10 21:49:33,287 - __main__ - INFO -    Détails: Lancement avec failover de ports
+2025-06-10 21:49:33,287 - __main__ - INFO - Tentative 1/4 - Port 5003
+2025-06-10 21:49:33,288 - __main__ - INFO - Tentative d'activation de l'environnement Conda 'projet-is' depuis BackendManager...
+2025-06-10 21:49:35,049 - __main__ - INFO - Environnement Conda 'projet-is' activé avec succès (ou déjà actif).
+2025-06-10 21:49:35,049 - __main__ - INFO - Utilisation de l'exécutable Python trouvé via shutil.which: C:\Tools\miniconda3\python.EXE
+2025-06-10 21:49:35,050 - __main__ - INFO - Démarrage backend FastAPI avec Python de Conda: C:\Tools\miniconda3\python.EXE -m uvicorn argumentation_analysis.services.web_api.app --host 0.0.0.0 --port 5003
+2025-06-10 21:49:35,050 - __main__ - INFO - Logging stdout de Uvicorn dans: D:\2025-Epita-Intelligence-Symbolique-4\logs\uvicorn_stdout_5003.log
+2025-06-10 21:49:35,050 - __main__ - INFO - Logging stderr de Uvicorn dans: D:\2025-Epita-Intelligence-Symbolique-4\logs\uvicorn_stderr_5003.log
+2025-06-10 21:49:35,052 - __main__ - INFO - Attente backend sur http://localhost:5003/api/status (timeout: 30s)
+2025-06-10 21:49:39,378 - __main__ - ERROR - Processus backend terminé prématurément (code: 1)
+2025-06-10 21:49:39,378 - __main__ - INFO - Tentative 2/4 - Port 5004
+2025-06-10 21:49:39,379 - __main__ - INFO - Tentative d'activation de l'environnement Conda 'projet-is' depuis BackendManager...
+2025-06-10 21:49:41,223 - __main__ - INFO - Environnement Conda 'projet-is' activé avec succès (ou déjà actif).
+2025-06-10 21:49:41,223 - __main__ - INFO - Utilisation de l'exécutable Python trouvé via shutil.which: C:\Tools\miniconda3\python.EXE
+2025-06-10 21:49:41,223 - __main__ - INFO - Démarrage backend FastAPI avec Python de Conda: C:\Tools\miniconda3\python.EXE -m uvicorn argumentation_analysis.services.web_api.app --host 0.0.0.0 --port 5004
+2025-06-10 21:49:41,224 - __main__ - INFO - Logging stdout de Uvicorn dans: D:\2025-Epita-Intelligence-Symbolique-4\logs\uvicorn_stdout_5004.log
+2025-06-10 21:49:41,224 - __main__ - INFO - Logging stderr de Uvicorn dans: D:\2025-Epita-Intelligence-Symbolique-4\logs\uvicorn_stderr_5004.log
+2025-06-10 21:49:41,226 - __main__ - INFO - Attente backend sur http://localhost:5004/api/status (timeout: 30s)
+2025-06-10 21:49:45,548 - __main__ - ERROR - Processus backend terminé prématurément (code: 1)
+2025-06-10 21:49:45,548 - __main__ - INFO - Tentative 3/4 - Port 5005
+2025-06-10 21:49:45,549 - __main__ - INFO - Tentative d'activation de l'environnement Conda 'projet-is' depuis BackendManager...
+2025-06-10 21:49:47,426 - __main__ - INFO - Environnement Conda 'projet-is' activé avec succès (ou déjà actif).
+2025-06-10 21:49:47,426 - __main__ - INFO - Utilisation de l'exécutable Python trouvé via shutil.which: C:\Tools\miniconda3\python.EXE
+2025-06-10 21:49:47,427 - __main__ - INFO - Démarrage backend FastAPI avec Python de Conda: C:\Tools\miniconda3\python.EXE -m uvicorn argumentation_analysis.services.web_api.app --host 0.0.0.0 --port 5005
+2025-06-10 21:49:47,427 - __main__ - INFO - Logging stdout de Uvicorn dans: D:\2025-Epita-Intelligence-Symbolique-4\logs\uvicorn_stdout_5005.log
+2025-06-10 21:49:47,427 - __main__ - INFO - Logging stderr de Uvicorn dans: D:\2025-Epita-Intelligence-Symbolique-4\logs\uvicorn_stderr_5005.log
+2025-06-10 21:49:47,429 - __main__ - INFO - Attente backend sur http://localhost:5005/api/status (timeout: 30s)
+2025-06-10 21:49:51,732 - __main__ - ERROR - Processus backend terminé prématurément (code: 1)
+2025-06-10 21:49:51,732 - __main__ - INFO - Tentative 4/4 - Port 5006
+2025-06-10 21:49:51,733 - __main__ - INFO - Tentative d'activation de l'environnement Conda 'projet-is' depuis BackendManager...
+2025-06-10 21:49:53,593 - __main__ - INFO - Environnement Conda 'projet-is' activé avec succès (ou déjà actif).
+2025-06-10 21:49:53,594 - __main__ - INFO - Utilisation de l'exécutable Python trouvé via shutil.which: C:\Tools\miniconda3\python.EXE
+2025-06-10 21:49:53,595 - __main__ - INFO - Démarrage backend FastAPI avec Python de Conda: C:\Tools\miniconda3\python.EXE -m uvicorn argumentation_analysis.services.web_api.app --host 0.0.0.0 --port 5006
+2025-06-10 21:49:53,595 - __main__ - INFO - Logging stdout de Uvicorn dans: D:\2025-Epita-Intelligence-Symbolique-4\logs\uvicorn_stdout_5006.log
+2025-06-10 21:49:53,595 - __main__ - INFO - Logging stderr de Uvicorn dans: D:\2025-Epita-Intelligence-Symbolique-4\logs\uvicorn_stderr_5006.log
+2025-06-10 21:49:53,598 - __main__ - INFO - Attente backend sur http://localhost:5006/api/status (timeout: 30s)
+2025-06-10 21:49:57,914 - __main__ - ERROR - Processus backend terminé prématurément (code: 1)
+2025-06-10 21:49:57,914 - __main__ - INFO - [91m[21:49:57.914] [ERROR] ECHEC BACKEND[0m
+2025-06-10 21:49:57,914 - __main__ - INFO -    Détails: Impossible de démarrer sur les ports: [5003, 5004, 5005, 5006]
+2025-06-10 21:50:36,682 - __main__ - INFO - [96m[21:50:36.682] [START] DEMARRAGE APPLICATION WEB[0m
+2025-06-10 21:50:36,682 - __main__ - INFO -    Détails: Mode: Headless
+2025-06-10 21:50:36,682 - __main__ - INFO -    Résultat: Initialisation orchestrateur
+2025-06-10 21:50:36,682 - __main__ - INFO - [96m[21:50:36.682] [CLEAN] NETTOYAGE PREALABLE[0m
+2025-06-10 21:50:36,683 - __main__ - INFO -    Détails: Arret instances existantes
+2025-06-10 21:50:36,683 - __main__ - INFO - [CLEAN] Debut nettoyage processus application web
+2025-06-10 21:50:37,681 - __main__ - INFO - Processus trouvé (cmdline): PID 3128 - c:\python312\python.exe c:\users\myia\.vscode\extensions\ms-python.isort-2025.0.0\bundled\tool\lsp_s
+2025-06-10 21:50:37,761 - __main__ - INFO - Processus trouvé (cmdline): PID 3248 - c:\tools\miniconda3\python.exe .\start_webapp.py
+2025-06-10 21:50:41,629 - __main__ - INFO - Processus trouvé (cmdline): PID 46024 - c:\program files\nodejs\node.exe node_modules\@playwright\test\cli.js test-server -c playwright.conf
+2025-06-10 21:50:41,772 - __main__ - INFO - Processus trouvé (cmdline): PID 54320 - c:\python312\python.exe c:\users\myia\.vscode\extensions\ms-python.isort-2025.0.0\bundled\tool\lsp_s
+2025-06-10 21:50:41,777 - __main__ - INFO - Processus trouvés: 4
+2025-06-10 21:50:41,777 - __main__ - INFO - Envoi signal TERM aux processus...
+2025-06-10 21:50:41,777 - __main__ - INFO - TERM envoyé à PID 3128
+2025-06-10 21:50:41,778 - __main__ - INFO - TERM envoyé à PID 3248
+2025-06-10 21:50:41,778 - __main__ - INFO - TERM envoyé à PID 46024
+2025-06-10 21:50:41,778 - __main__ - INFO - TERM envoyé à PID 54320
+2025-06-10 21:50:41,778 - __main__ - INFO - Attente arrêt propre (5s)...
+2025-06-10 21:50:46,789 - __main__ - INFO - Tous les processus arrêtés proprement
+2025-06-10 21:50:50,126 - __main__ - INFO - Processus trouvé (cmdline): PID 38000 - c:\python312\python.exe c:\users\myia\.vscode\extensions\ms-python.isort-2025.0.0\bundled\tool\lsp_s
+2025-06-10 21:50:50,249 - __main__ - INFO - Processus trouvé (cmdline): PID 49648 - c:\python312\python.exe c:\users\myia\.vscode\extensions\ms-python.isort-2025.0.0\bundled\tool\lsp_s
+2025-06-10 21:50:50,297 - __main__ - WARNING - Force kill de 2 processus récalcitrants
+2025-06-10 21:50:50,297 - __main__ - WARNING - KILL forcé sur PID 38000
+2025-06-10 21:50:50,321 - __main__ - WARNING - KILL forcé sur PID 49648
+2025-06-10 21:50:50,348 - __main__ - INFO - Vérification libération des ports...
+2025-06-10 21:50:50,353 - __main__ - INFO - Tous les ports libérés
+2025-06-10 21:50:50,353 - __main__ - INFO - Nettoyage fichiers temporaires...
+2025-06-10 21:50:50,353 - __main__ - INFO - Aucun fichier temporaire à nettoyer
+2025-06-10 21:50:50,353 - __main__ - INFO - [OK] Nettoyage processus terminé
+2025-06-10 21:50:50,353 - __main__ - INFO - [96m[21:50:50.353] [BACKEND] DEMARRAGE BACKEND[0m
+2025-06-10 21:50:50,353 - __main__ - INFO -    Détails: Lancement avec failover de ports
+2025-06-10 21:50:50,353 - __main__ - INFO - Tentative 1/4 - Port 5003
+2025-06-10 21:50:50,354 - __main__ - INFO - Tentative d'activation de l'environnement Conda 'projet-is' depuis BackendManager...
+2025-06-10 21:50:52,104 - __main__ - INFO - Environnement Conda 'projet-is' activé avec succès (ou déjà actif).
+2025-06-10 21:50:52,105 - __main__ - INFO - Utilisation de l'exécutable Python trouvé via shutil.which: C:\Tools\miniconda3\python.EXE
+2025-06-10 21:50:52,105 - __main__ - INFO - Démarrage backend FastAPI avec Python de Conda: C:\Tools\miniconda3\python.EXE -m uvicorn argumentation_analysis.services.web_api.app --host 0.0.0.0 --port 5003
+2025-06-10 21:50:52,105 - __main__ - INFO - Logging stdout de Uvicorn dans: D:\2025-Epita-Intelligence-Symbolique-4\logs\uvicorn_stdout_5003.log
+2025-06-10 21:50:52,105 - __main__ - INFO - Logging stderr de Uvicorn dans: D:\2025-Epita-Intelligence-Symbolique-4\logs\uvicorn_stderr_5003.log
+2025-06-10 21:50:52,108 - __main__ - INFO - Attente backend sur http://localhost:5003/api/status (timeout: 30s)
+2025-06-10 21:50:56,436 - __main__ - ERROR - Processus backend terminé prématurément (code: 1)
+2025-06-10 21:50:56,436 - __main__ - INFO - Tentative 2/4 - Port 5004
+2025-06-10 21:50:56,437 - __main__ - INFO - Tentative d'activation de l'environnement Conda 'projet-is' depuis BackendManager...
+2025-06-10 21:50:58,360 - __main__ - INFO - Environnement Conda 'projet-is' activé avec succès (ou déjà actif).
+2025-06-10 21:50:58,362 - __main__ - INFO - Utilisation de l'exécutable Python trouvé via shutil.which: C:\Tools\miniconda3\python.EXE
+2025-06-10 21:50:58,362 - __main__ - INFO - Démarrage backend FastAPI avec Python de Conda: C:\Tools\miniconda3\python.EXE -m uvicorn argumentation_analysis.services.web_api.app --host 0.0.0.0 --port 5004
+2025-06-10 21:50:58,362 - __main__ - INFO - Logging stdout de Uvicorn dans: D:\2025-Epita-Intelligence-Symbolique-4\logs\uvicorn_stdout_5004.log
+2025-06-10 21:50:58,362 - __main__ - INFO - Logging stderr de Uvicorn dans: D:\2025-Epita-Intelligence-Symbolique-4\logs\uvicorn_stderr_5004.log
+2025-06-10 21:50:58,365 - __main__ - INFO - Attente backend sur http://localhost:5004/api/status (timeout: 30s)
+2025-06-10 21:51:02,660 - __main__ - ERROR - Processus backend terminé prématurément (code: 1)
+2025-06-10 21:51:02,660 - __main__ - INFO - Tentative 3/4 - Port 5005
+2025-06-10 21:51:02,661 - __main__ - INFO - Tentative d'activation de l'environnement Conda 'projet-is' depuis BackendManager...
+2025-06-10 21:51:04,497 - __main__ - INFO - Environnement Conda 'projet-is' activé avec succès (ou déjà actif).
+2025-06-10 21:51:04,498 - __main__ - INFO - Utilisation de l'exécutable Python trouvé via shutil.which: C:\Tools\miniconda3\python.EXE
+2025-06-10 21:51:04,498 - __main__ - INFO - Démarrage backend FastAPI avec Python de Conda: C:\Tools\miniconda3\python.EXE -m uvicorn argumentation_analysis.services.web_api.app --host 0.0.0.0 --port 5005
+2025-06-10 21:51:04,498 - __main__ - INFO - Logging stdout de Uvicorn dans: D:\2025-Epita-Intelligence-Symbolique-4\logs\uvicorn_stdout_5005.log
+2025-06-10 21:51:04,498 - __main__ - INFO - Logging stderr de Uvicorn dans: D:\2025-Epita-Intelligence-Symbolique-4\logs\uvicorn_stderr_5005.log
+2025-06-10 21:51:04,501 - __main__ - INFO - Attente backend sur http://localhost:5005/api/status (timeout: 30s)
+2025-06-10 21:51:08,820 - __main__ - ERROR - Processus backend terminé prématurément (code: 1)
+2025-06-10 21:51:08,820 - __main__ - INFO - Tentative 4/4 - Port 5006
+2025-06-10 21:51:08,821 - __main__ - INFO - Tentative d'activation de l'environnement Conda 'projet-is' depuis BackendManager...
+2025-06-10 21:51:10,729 - __main__ - INFO - Environnement Conda 'projet-is' activé avec succès (ou déjà actif).
+2025-06-10 21:51:10,730 - __main__ - INFO - Utilisation de l'exécutable Python trouvé via shutil.which: C:\Tools\miniconda3\python.EXE
+2025-06-10 21:51:10,730 - __main__ - INFO - Démarrage backend FastAPI avec Python de Conda: C:\Tools\miniconda3\python.EXE -m uvicorn argumentation_analysis.services.web_api.app --host 0.0.0.0 --port 5006
+2025-06-10 21:51:10,730 - __main__ - INFO - Logging stdout de Uvicorn dans: D:\2025-Epita-Intelligence-Symbolique-4\logs\uvicorn_stdout_5006.log
+2025-06-10 21:51:10,730 - __main__ - INFO - Logging stderr de Uvicorn dans: D:\2025-Epita-Intelligence-Symbolique-4\logs\uvicorn_stderr_5006.log
+2025-06-10 21:51:10,733 - __main__ - INFO - Attente backend sur http://localhost:5006/api/status (timeout: 30s)
+2025-06-10 21:51:15,054 - __main__ - ERROR - Processus backend terminé prématurément (code: 1)
+2025-06-10 21:51:15,054 - __main__ - INFO - [91m[21:51:15.054] [ERROR] ECHEC BACKEND[0m
+2025-06-10 21:51:15,054 - __main__ - INFO -    Détails: Impossible de démarrer sur les ports: [5003, 5004, 5005, 5006]
+2025-06-10 21:51:46,777 - __main__ - INFO - [96m[21:51:46.777] [START] DEMARRAGE APPLICATION WEB[0m
+2025-06-10 21:51:46,777 - __main__ - INFO -    Détails: Mode: Headless
+2025-06-10 21:51:46,777 - __main__ - INFO -    Résultat: Initialisation orchestrateur
+2025-06-10 21:51:46,777 - __main__ - INFO - [96m[21:51:46.777] [CLEAN] NETTOYAGE PREALABLE[0m
+2025-06-10 21:51:46,777 - __main__ - INFO -    Détails: Arret instances existantes
+2025-06-10 21:51:46,777 - __main__ - INFO - [CLEAN] Debut nettoyage processus application web
+2025-06-10 21:51:51,709 - __main__ - INFO - Processus trouvé (cmdline): PID 16304 - node d:\roo-extensions\mcps\internal\servers\jinavigator-server\dist\index.js
+2025-06-10 21:51:51,839 - __main__ - INFO - Processus trouvé (cmdline): PID 22856 - node d:\roo-extensions\mcps\internal\servers\roo-state-manager\build\index.js
+2025-06-10 21:51:51,842 - __main__ - INFO - Processus trouvé (cmdline): PID 23644 - c:\python312\python.exe c:\users\myia\.vscode\extensions\ms-python.isort-2025.0.0\bundled\tool\lsp_s
+2025-06-10 21:51:51,856 - __main__ - INFO - Processus trouvé (cmdline): PID 27536 - c:\program files\nodejs\node.exe tests_playwright\node_modules\@playwright\test\cli.js test-server -
+2025-06-10 21:51:51,922 - __main__ - INFO - Processus trouvé (cmdline): PID 31456 - c:\python312\python.exe c:\users\myia\.vscode\extensions\ms-python.isort-2025.0.0\bundled\tool\lsp_s
+2025-06-10 21:51:52,147 - __main__ - INFO - Processus trouvé (cmdline): PID 39644 - c:\tools\miniconda3\python.exe .\start_webapp.py
+2025-06-10 21:51:52,226 - __main__ - INFO - Processus trouvé (cmdline): PID 44228 - python -m mcp_server_git
+2025-06-10 21:51:52,226 - __main__ - INFO - Processus trouvé (cmdline): PID 44324 - c:\program files\nodejs\\node.exe c:\program files\nodejs\\node_modules\npm\bin\npx-cli.js -y @model
+2025-06-10 21:51:52,228 - __main__ - INFO - Processus trouvé (cmdline): PID 46564 - node c:\users\myia\appdata\local\npm-cache\_npx\3dfbf5a9eea4a1b3\node_modules\.bin\\..\@modelcontext
+2025-06-10 21:51:52,229 - __main__ - INFO - Processus trouvé (cmdline): PID 47380 - node d:\roo-extensions\mcps\internal\servers\quickfiles-server\build\index.js
+2025-06-10 21:51:52,297 - __main__ - INFO - Processus trouvé (cmdline): PID 48836 - node c:\users\myia\appdata\local\npm-cache\_npx\a3241bba59c344f5\node_modules\.bin\\..\@modelcontext
+2025-06-10 21:51:52,362 - __main__ - INFO - Processus trouvé (cmdline): PID 52140 - node d:/roo-extensions/mcps/external/mcp-server-ftp/build/index.js
+2025-06-10 21:51:52,401 - __main__ - INFO - Processus trouvé (cmdline): PID 53776 - node d:\roo-extensions\mcps\internal\servers\jupyter-mcp-server\dist\index.js
+2025-06-10 21:51:52,402 - __main__ - INFO - Processus trouvé (cmdline): PID 54496 - c:\program files\nodejs\node.exe node_modules\@playwright\test\cli.js test-server -c playwright.conf
+2025-06-10 21:51:52,405 - __main__ - INFO - Processus trouvé (cmdline): PID 55208 - c:\users\myia\.vscode\extensions\ms-dotnettools.csdevkit-1.20.35-win32-x64\components\vs-green-serve
+2025-06-10 21:51:52,408 - __main__ - INFO - Processus trouvé (cmdline): PID 56192 - c:\program files\nodejs\\node.exe c:\program files\nodejs\\node_modules\npm\bin\npx-cli.js -y @model
+2025-06-10 21:51:52,408 - __main__ - INFO - Processus trouvés: 16
+2025-06-10 21:51:52,408 - __main__ - INFO - Envoi signal TERM aux processus...
+2025-06-10 21:51:52,408 - __main__ - INFO - TERM envoyé à PID 16304
+2025-06-10 21:51:52,408 - __main__ - INFO - TERM envoyé à PID 22856
+2025-06-10 21:51:52,408 - __main__ - INFO - TERM envoyé à PID 23644
+2025-06-10 21:51:52,408 - __main__ - INFO - TERM envoyé à PID 27536
+2025-06-10 21:51:52,409 - __main__ - INFO - TERM envoyé à PID 31456
+2025-06-10 21:51:52,409 - __main__ - INFO - TERM envoyé à PID 39644
+2025-06-10 21:51:52,409 - __main__ - INFO - TERM envoyé à PID 44228
+2025-06-10 21:51:52,409 - __main__ - INFO - TERM envoyé à PID 44324
+2025-06-10 21:51:52,410 - __main__ - INFO - TERM envoyé à PID 46564
+2025-06-10 21:51:52,410 - __main__ - INFO - TERM envoyé à PID 47380
+2025-06-10 21:51:52,410 - __main__ - INFO - TERM envoyé à PID 48836
+2025-06-10 21:51:52,410 - __main__ - INFO - TERM envoyé à PID 52140
+2025-06-10 21:51:52,410 - __main__ - INFO - TERM envoyé à PID 53776
+2025-06-10 21:51:52,410 - __main__ - INFO - TERM envoyé à PID 54496
+2025-06-10 21:51:52,410 - __main__ - INFO - TERM envoyé à PID 55208
+2025-06-10 21:51:52,410 - __main__ - INFO - TERM envoyé à PID 56192
+2025-06-10 21:51:52,411 - __main__ - INFO - Attente arrêt propre (5s)...
+2025-06-10 21:51:57,424 - __main__ - INFO - Tous les processus arrêtés proprement
+2025-06-10 21:52:00,364 - __main__ - INFO - Processus trouvé (cmdline): PID 17512 - c:\python312\python.exe c:\users\myia\.vscode\extensions\ms-python.isort-2025.0.0\bundled\tool\lsp_s
+2025-06-10 21:52:00,766 - __main__ - WARNING - Force kill de 1 processus récalcitrants
+2025-06-10 21:52:00,766 - __main__ - WARNING - KILL forcé sur PID 17512
+2025-06-10 21:52:00,789 - __main__ - INFO - Vérification libération des ports...
+2025-06-10 21:52:00,795 - __main__ - INFO - Tous les ports libérés
+2025-06-10 21:52:00,795 - __main__ - INFO - Nettoyage fichiers temporaires...
+2025-06-10 21:52:00,796 - __main__ - INFO - Aucun fichier temporaire à nettoyer
+2025-06-10 21:52:00,796 - __main__ - INFO - [OK] Nettoyage processus terminé
+2025-06-10 21:52:00,796 - __main__ - INFO - [96m[21:52:00.796] [BACKEND] DEMARRAGE BACKEND[0m
+2025-06-10 21:52:00,796 - __main__ - INFO -    Détails: Lancement avec failover de ports
+2025-06-10 21:52:00,796 - __main__ - INFO - Tentative 1/4 - Port 5003
+2025-06-10 21:52:00,797 - __main__ - INFO - Démarrage backend FastAPI avec Python de Conda: conda run -n projet-is --no-capture-output python -m uvicorn argumentation_analysis.services.web_api.app --host 0.0.0.0 --port 5003
+2025-06-10 21:52:00,797 - __main__ - INFO - Logging stdout de Uvicorn dans: D:\2025-Epita-Intelligence-Symbolique-4\logs\uvicorn_stdout_5003.log
+2025-06-10 21:52:00,797 - __main__ - INFO - Logging stderr de Uvicorn dans: D:\2025-Epita-Intelligence-Symbolique-4\logs\uvicorn_stderr_5003.log
+2025-06-10 21:52:00,799 - __main__ - INFO - Attente backend sur http://localhost:5003/api/status (timeout: 30s)
+2025-06-10 21:52:05,093 - __main__ - ERROR - Processus backend terminé prématurément (code: 1)
+2025-06-10 21:52:05,093 - __main__ - INFO - Tentative 2/4 - Port 5004
+2025-06-10 21:52:05,094 - __main__ - INFO - Démarrage backend FastAPI avec Python de Conda: conda run -n projet-is --no-capture-output python -m uvicorn argumentation_analysis.services.web_api.app --host 0.0.0.0 --port 5004
+2025-06-10 21:52:05,095 - __main__ - INFO - Logging stdout de Uvicorn dans: D:\2025-Epita-Intelligence-Symbolique-4\logs\uvicorn_stdout_5004.log
+2025-06-10 21:52:05,095 - __main__ - INFO - Logging stderr de Uvicorn dans: D:\2025-Epita-Intelligence-Symbolique-4\logs\uvicorn_stderr_5004.log
+2025-06-10 21:52:05,097 - __main__ - INFO - Attente backend sur http://localhost:5004/api/status (timeout: 30s)
+2025-06-10 21:52:09,381 - __main__ - ERROR - Processus backend terminé prématurément (code: 1)
+2025-06-10 21:52:09,381 - __main__ - INFO - Tentative 3/4 - Port 5005
+2025-06-10 21:52:09,383 - __main__ - INFO - Démarrage backend FastAPI avec Python de Conda: conda run -n projet-is --no-capture-output python -m uvicorn argumentation_analysis.services.web_api.app --host 0.0.0.0 --port 5005
+2025-06-10 21:52:09,383 - __main__ - INFO - Logging stdout de Uvicorn dans: D:\2025-Epita-Intelligence-Symbolique-4\logs\uvicorn_stdout_5005.log
+2025-06-10 21:52:09,383 - __main__ - INFO - Logging stderr de Uvicorn dans: D:\2025-Epita-Intelligence-Symbolique-4\logs\uvicorn_stderr_5005.log
+2025-06-10 21:52:09,385 - __main__ - INFO - Attente backend sur http://localhost:5005/api/status (timeout: 30s)
+2025-06-10 21:52:13,662 - __main__ - ERROR - Processus backend terminé prématurément (code: 1)
+2025-06-10 21:52:13,662 - __main__ - INFO - Tentative 4/4 - Port 5006
+2025-06-10 21:52:13,663 - __main__ - INFO - Démarrage backend FastAPI avec Python de Conda: conda run -n projet-is --no-capture-output python -m uvicorn argumentation_analysis.services.web_api.app --host 0.0.0.0 --port 5006
+2025-06-10 21:52:13,663 - __main__ - INFO - Logging stdout de Uvicorn dans: D:\2025-Epita-Intelligence-Symbolique-4\logs\uvicorn_stdout_5006.log
+2025-06-10 21:52:13,663 - __main__ - INFO - Logging stderr de Uvicorn dans: D:\2025-Epita-Intelligence-Symbolique-4\logs\uvicorn_stderr_5006.log
+2025-06-10 21:52:13,666 - __main__ - INFO - Attente backend sur http://localhost:5006/api/status (timeout: 30s)
+2025-06-10 21:52:17,946 - __main__ - ERROR - Processus backend terminé prématurément (code: 1)
+2025-06-10 21:52:17,946 - __main__ - INFO - [91m[21:52:17.946] [ERROR] ECHEC BACKEND[0m
+2025-06-10 21:52:17,946 - __main__ - INFO -    Détails: Impossible de démarrer sur les ports: [5003, 5004, 5005, 5006]
+2025-06-10 21:52:50,151 - __main__ - INFO - [96m[21:52:50.151] [START] DEMARRAGE APPLICATION WEB[0m
+2025-06-10 21:52:50,151 - __main__ - INFO -    Détails: Mode: Headless
+2025-06-10 21:52:50,151 - __main__ - INFO -    Résultat: Initialisation orchestrateur
+2025-06-10 21:52:50,151 - __main__ - INFO - [96m[21:52:50.151] [CLEAN] NETTOYAGE PREALABLE[0m
+2025-06-10 21:52:50,151 - __main__ - INFO -    Détails: Arret instances existantes
+2025-06-10 21:52:50,151 - __main__ - INFO - [CLEAN] Debut nettoyage processus application web
+2025-06-10 21:52:54,863 - __main__ - INFO - Processus trouvé (cmdline): PID 39172 - c:\tools\miniconda3\python.exe .\start_webapp.py
+2025-06-10 21:52:55,067 - __main__ - INFO - Processus trouvé (cmdline): PID 54380 - c:\python312\python.exe c:\users\myia\.vscode\extensions\ms-python.isort-2025.0.0\bundled\tool\lsp_s
+2025-06-10 21:52:55,070 - __main__ - INFO - Processus trouvé (cmdline): PID 55236 - c:\program files\nodejs\node.exe node_modules\@playwright\test\cli.js test-server -c playwright.conf
+2025-06-10 21:52:55,073 - __main__ - INFO - Processus trouvés: 3
+2025-06-10 21:52:55,073 - __main__ - INFO - Envoi signal TERM aux processus...
+2025-06-10 21:52:55,073 - __main__ - INFO - TERM envoyé à PID 39172
+2025-06-10 21:52:55,073 - __main__ - INFO - TERM envoyé à PID 54380
+2025-06-10 21:52:55,073 - __main__ - INFO - TERM envoyé à PID 55236
+2025-06-10 21:52:55,074 - __main__ - INFO - Attente arrêt propre (5s)...
+2025-06-10 21:53:00,086 - __main__ - INFO - Tous les processus arrêtés proprement
+2025-06-10 21:53:03,002 - __main__ - INFO - Processus trouvé (cmdline): PID 24144 - c:\python312\python.exe c:\users\myia\.vscode\extensions\ms-python.isort-2025.0.0\bundled\tool\lsp_s
+2025-06-10 21:53:03,320 - __main__ - WARNING - Force kill de 1 processus récalcitrants
+2025-06-10 21:53:03,320 - __main__ - WARNING - KILL forcé sur PID 24144
+2025-06-10 21:53:03,344 - __main__ - INFO - Vérification libération des ports...
+2025-06-10 21:53:03,349 - __main__ - INFO - Tous les ports libérés
+2025-06-10 21:53:03,349 - __main__ - INFO - Nettoyage fichiers temporaires...
+2025-06-10 21:53:03,349 - __main__ - INFO - Aucun fichier temporaire à nettoyer
+2025-06-10 21:53:03,349 - __main__ - INFO - [OK] Nettoyage processus terminé
+2025-06-10 21:53:03,349 - __main__ - INFO - [96m[21:53:03.349] [BACKEND] DEMARRAGE BACKEND[0m
+2025-06-10 21:53:03,349 - __main__ - INFO -    Détails: Lancement avec failover de ports
+2025-06-10 21:53:03,349 - __main__ - INFO - Tentative 1/4 - Port 5003
+2025-06-10 21:53:03,352 - __main__ - INFO - Démarrage backend FastAPI avec Python de Conda: conda run -n projet-is --no-capture-output python -m uvicorn argumentation_analysis.services.web_api.app --host 0.0.0.0 --port 5003
+2025-06-10 21:53:03,352 - __main__ - INFO - Logging stdout de Uvicorn dans: D:\2025-Epita-Intelligence-Symbolique-4\logs\uvicorn_stdout_5003.log
+2025-06-10 21:53:03,352 - __main__ - INFO - Logging stderr de Uvicorn dans: D:\2025-Epita-Intelligence-Symbolique-4\logs\uvicorn_stderr_5003.log
+2025-06-10 21:53:03,354 - __main__ - INFO - Attente backend sur http://localhost:5003/api/status (timeout: 30s)
+2025-06-10 21:53:07,670 - __main__ - ERROR - Processus backend terminé prématurément (code: 1)
+2025-06-10 21:53:07,670 - __main__ - INFO - Tentative 2/4 - Port 5004
+2025-06-10 21:53:07,672 - __main__ - INFO - Démarrage backend FastAPI avec Python de Conda: conda run -n projet-is --no-capture-output python -m uvicorn argumentation_analysis.services.web_api.app --host 0.0.0.0 --port 5004
+2025-06-10 21:53:07,672 - __main__ - INFO - Logging stdout de Uvicorn dans: D:\2025-Epita-Intelligence-Symbolique-4\logs\uvicorn_stdout_5004.log
+2025-06-10 21:53:07,672 - __main__ - INFO - Logging stderr de Uvicorn dans: D:\2025-Epita-Intelligence-Symbolique-4\logs\uvicorn_stderr_5004.log
+2025-06-10 21:53:07,674 - __main__ - INFO - Attente backend sur http://localhost:5004/api/status (timeout: 30s)
+2025-06-10 21:53:11,976 - __main__ - ERROR - Processus backend terminé prématurément (code: 1)
+2025-06-10 21:53:11,976 - __main__ - INFO - Tentative 3/4 - Port 5005
+2025-06-10 21:53:11,978 - __main__ - INFO - Démarrage backend FastAPI avec Python de Conda: conda run -n projet-is --no-capture-output python -m uvicorn argumentation_analysis.services.web_api.app --host 0.0.0.0 --port 5005
+2025-06-10 21:53:11,978 - __main__ - INFO - Logging stdout de Uvicorn dans: D:\2025-Epita-Intelligence-Symbolique-4\logs\uvicorn_stdout_5005.log
+2025-06-10 21:53:11,978 - __main__ - INFO - Logging stderr de Uvicorn dans: D:\2025-Epita-Intelligence-Symbolique-4\logs\uvicorn_stderr_5005.log
+2025-06-10 21:53:11,981 - __main__ - INFO - Attente backend sur http://localhost:5005/api/status (timeout: 30s)
+2025-06-10 21:53:16,280 - __main__ - ERROR - Processus backend terminé prématurément (code: 1)
+2025-06-10 21:53:16,280 - __main__ - INFO - Tentative 4/4 - Port 5006
+2025-06-10 21:53:16,281 - __main__ - INFO - Démarrage backend FastAPI avec Python de Conda: conda run -n projet-is --no-capture-output python -m uvicorn argumentation_analysis.services.web_api.app --host 0.0.0.0 --port 5006
+2025-06-10 21:53:16,281 - __main__ - INFO - Logging stdout de Uvicorn dans: D:\2025-Epita-Intelligence-Symbolique-4\logs\uvicorn_stdout_5006.log
+2025-06-10 21:53:16,281 - __main__ - INFO - Logging stderr de Uvicorn dans: D:\2025-Epita-Intelligence-Symbolique-4\logs\uvicorn_stderr_5006.log
+2025-06-10 21:53:16,284 - __main__ - INFO - Attente backend sur http://localhost:5006/api/status (timeout: 30s)
+2025-06-10 21:53:20,595 - __main__ - ERROR - Processus backend terminé prématurément (code: 1)
+2025-06-10 21:53:20,595 - __main__ - INFO - [91m[21:53:20.595] [ERROR] ECHEC BACKEND[0m
+2025-06-10 21:53:20,595 - __main__ - INFO -    Détails: Impossible de démarrer sur les ports: [5003, 5004, 5005, 5006]
+2025-06-10 21:53:54,546 - __main__ - INFO - [96m[21:53:54.546] [START] DEMARRAGE APPLICATION WEB[0m
+2025-06-10 21:53:54,546 - __main__ - INFO -    Détails: Mode: Headless
+2025-06-10 21:53:54,546 - __main__ - INFO -    Résultat: Initialisation orchestrateur
+2025-06-10 21:53:54,546 - __main__ - INFO - [96m[21:53:54.546] [CLEAN] NETTOYAGE PREALABLE[0m
+2025-06-10 21:53:54,547 - __main__ - INFO -    Détails: Arret instances existantes
+2025-06-10 21:53:54,547 - __main__ - INFO - [CLEAN] Debut nettoyage processus application web
+2025-06-10 21:53:59,151 - __main__ - INFO - Processus trouvé (cmdline): PID 23656 - c:\python312\python.exe c:\users\myia\.vscode\extensions\ms-python.isort-2025.0.0\bundled\tool\lsp_s
+2025-06-10 21:53:59,399 - __main__ - INFO - Processus trouvé (cmdline): PID 33548 - c:\program files\nodejs\node.exe node_modules\@playwright\test\cli.js test-server -c playwright.conf
+2025-06-10 21:53:59,652 - __main__ - INFO - Processus trouvé (cmdline): PID 54916 - c:\tools\miniconda3\python.exe .\start_webapp.py
+2025-06-10 21:53:59,656 - __main__ - INFO - Processus trouvés: 3
+2025-06-10 21:53:59,656 - __main__ - INFO - Envoi signal TERM aux processus...
+2025-06-10 21:53:59,657 - __main__ - INFO - TERM envoyé à PID 23656
+2025-06-10 21:53:59,657 - __main__ - INFO - TERM envoyé à PID 33548
+2025-06-10 21:53:59,657 - __main__ - INFO - TERM envoyé à PID 54916
+2025-06-10 21:53:59,657 - __main__ - INFO - Attente arrêt propre (5s)...
+2025-06-10 21:54:04,663 - __main__ - INFO - Tous les processus arrêtés proprement
+2025-06-10 21:54:08,123 - __main__ - INFO - Vérification libération des ports...
+2025-06-10 21:54:08,126 - __main__ - INFO - Tous les ports libérés
+2025-06-10 21:54:08,126 - __main__ - INFO - Nettoyage fichiers temporaires...
+2025-06-10 21:54:08,127 - __main__ - INFO - Aucun fichier temporaire à nettoyer
+2025-06-10 21:54:08,127 - __main__ - INFO - [OK] Nettoyage processus terminé
+2025-06-10 21:54:08,127 - __main__ - INFO - [96m[21:54:08.127] [BACKEND] DEMARRAGE BACKEND[0m
+2025-06-10 21:54:08,127 - __main__ - INFO -    Détails: Lancement avec failover de ports
+2025-06-10 21:54:08,127 - __main__ - INFO - Tentative 1/4 - Port 5003
+2025-06-10 21:54:08,128 - __main__ - INFO - Démarrage backend FastAPI avec Python de Conda: conda run -n projet-is --no-capture-output python -m uvicorn argumentation_analysis.services.web_api.app --host 0.0.0.0 --port 5003
+2025-06-10 21:54:08,128 - __main__ - INFO - Logging stdout de Uvicorn dans: D:\2025-Epita-Intelligence-Symbolique-4\logs\uvicorn_stdout_5003.log
+2025-06-10 21:54:08,128 - __main__ - INFO - Logging stderr de Uvicorn dans: D:\2025-Epita-Intelligence-Symbolique-4\logs\uvicorn_stderr_5003.log
+2025-06-10 21:54:08,130 - __main__ - INFO - Attente backend sur http://localhost:5003/api/status (timeout: 30s)
+2025-06-10 21:54:12,438 - __main__ - ERROR - Processus backend terminé prématurément (code: 1)
+2025-06-10 21:54:12,438 - __main__ - INFO - Tentative 2/4 - Port 5004
+2025-06-10 21:54:12,440 - __main__ - INFO - Démarrage backend FastAPI avec Python de Conda: conda run -n projet-is --no-capture-output python -m uvicorn argumentation_analysis.services.web_api.app --host 0.0.0.0 --port 5004
+2025-06-10 21:54:12,441 - __main__ - INFO - Logging stdout de Uvicorn dans: D:\2025-Epita-Intelligence-Symbolique-4\logs\uvicorn_stdout_5004.log
+2025-06-10 21:54:12,441 - __main__ - INFO - Logging stderr de Uvicorn dans: D:\2025-Epita-Intelligence-Symbolique-4\logs\uvicorn_stderr_5004.log
+2025-06-10 21:54:12,444 - __main__ - INFO - Attente backend sur http://localhost:5004/api/status (timeout: 30s)
+2025-06-10 21:54:16,744 - __main__ - ERROR - Processus backend terminé prématurément (code: 1)
+2025-06-10 21:54:16,744 - __main__ - INFO - Tentative 3/4 - Port 5005
+2025-06-10 21:54:16,747 - __main__ - INFO - Démarrage backend FastAPI avec Python de Conda: conda run -n projet-is --no-capture-output python -m uvicorn argumentation_analysis.services.web_api.app --host 0.0.0.0 --port 5005
+2025-06-10 21:54:16,747 - __main__ - INFO - Logging stdout de Uvicorn dans: D:\2025-Epita-Intelligence-Symbolique-4\logs\uvicorn_stdout_5005.log
+2025-06-10 21:54:16,747 - __main__ - INFO - Logging stderr de Uvicorn dans: D:\2025-Epita-Intelligence-Symbolique-4\logs\uvicorn_stderr_5005.log
+2025-06-10 21:54:16,751 - __main__ - INFO - Attente backend sur http://localhost:5005/api/status (timeout: 30s)
+2025-06-10 21:54:21,026 - __main__ - ERROR - Processus backend terminé prématurément (code: 1)
+2025-06-10 21:54:21,026 - __main__ - INFO - Tentative 4/4 - Port 5006
+2025-06-10 21:54:21,030 - __main__ - INFO - Démarrage backend FastAPI avec Python de Conda: conda run -n projet-is --no-capture-output python -m uvicorn argumentation_analysis.services.web_api.app --host 0.0.0.0 --port 5006
+2025-06-10 21:54:21,030 - __main__ - INFO - Logging stdout de Uvicorn dans: D:\2025-Epita-Intelligence-Symbolique-4\logs\uvicorn_stdout_5006.log
+2025-06-10 21:54:21,030 - __main__ - INFO - Logging stderr de Uvicorn dans: D:\2025-Epita-Intelligence-Symbolique-4\logs\uvicorn_stderr_5006.log
+2025-06-10 21:54:21,034 - __main__ - INFO - Attente backend sur http://localhost:5006/api/status (timeout: 30s)
+2025-06-10 21:54:25,324 - __main__ - ERROR - Processus backend terminé prématurément (code: 1)
+2025-06-10 21:54:25,324 - __main__ - INFO - [91m[21:54:25.324] [ERROR] ECHEC BACKEND[0m
+2025-06-10 21:54:25,324 - __main__ - INFO -    Détails: Impossible de démarrer sur les ports: [5003, 5004, 5005, 5006]
+2025-06-10 21:59:20,068 - __main__ - INFO - [96m[21:59:20.068] [START] DEMARRAGE APPLICATION WEB[0m
+2025-06-10 21:59:20,068 - __main__ - INFO -    Détails: Mode: Headless
+2025-06-10 21:59:20,068 - __main__ - INFO -    Résultat: Initialisation orchestrateur
+2025-06-10 21:59:20,068 - __main__ - INFO - [96m[21:59:20.068] [CLEAN] NETTOYAGE PREALABLE[0m
+2025-06-10 21:59:20,068 - __main__ - INFO -    Détails: Arret instances existantes
+2025-06-10 21:59:20,068 - __main__ - INFO - [CLEAN] Debut nettoyage processus application web
+2025-06-10 21:59:24,902 - __main__ - INFO - Processus trouvé (cmdline): PID 24136 - c:\tools\miniconda3\python.exe .\start_webapp.py
+2025-06-10 21:59:25,362 - __main__ - INFO - Processus trouvé (cmdline): PID 52352 - c:\program files\nodejs\node.exe node_modules\@playwright\test\cli.js test-server -c playwright.conf
+2025-06-10 21:59:25,458 - __main__ - INFO - Processus trouvés: 2
+2025-06-10 21:59:25,458 - __main__ - INFO - Envoi signal TERM aux processus...
+2025-06-10 21:59:25,458 - __main__ - INFO - TERM envoyé à PID 24136
+2025-06-10 21:59:25,458 - __main__ - INFO - TERM envoyé à PID 52352
+2025-06-10 21:59:25,458 - __main__ - INFO - Attente arrêt propre (5s)...
+2025-06-10 21:59:30,466 - __main__ - INFO - Tous les processus arrêtés proprement
+2025-06-10 21:59:33,924 - __main__ - INFO - Vérification libération des ports...
+2025-06-10 21:59:33,928 - __main__ - INFO - Tous les ports libérés
+2025-06-10 21:59:33,928 - __main__ - INFO - Nettoyage fichiers temporaires...
+2025-06-10 21:59:33,928 - __main__ - INFO - Aucun fichier temporaire à nettoyer
+2025-06-10 21:59:33,928 - __main__ - INFO - [OK] Nettoyage processus terminé
+2025-06-10 21:59:33,928 - __main__ - INFO - [96m[21:59:33.928] [BACKEND] DEMARRAGE BACKEND[0m
+2025-06-10 21:59:33,928 - __main__ - INFO -    Détails: Lancement avec failover de ports
+2025-06-10 21:59:33,928 - __main__ - INFO - Tentative 1/4 - Port 5003
+2025-06-10 21:59:33,929 - __main__ - INFO - Démarrage backend FastAPI avec Python de Conda: conda run -n projet-is --no-capture-output python -m uvicorn argumentation_analysis.services.web_api.app --host 0.0.0.0 --port 5003
+2025-06-10 21:59:33,929 - __main__ - INFO - Logging stdout de Uvicorn dans: D:\2025-Epita-Intelligence-Symbolique-4\logs\uvicorn_stdout_5003.log
+2025-06-10 21:59:33,929 - __main__ - INFO - Logging stderr de Uvicorn dans: D:\2025-Epita-Intelligence-Symbolique-4\logs\uvicorn_stderr_5003.log
+2025-06-10 21:59:33,932 - __main__ - INFO - Attente backend sur http://localhost:5003/api/status (timeout: 30s)
+2025-06-10 21:59:38,266 - __main__ - ERROR - Processus backend terminé prématurément (code: 1)
+2025-06-10 21:59:38,266 - __main__ - INFO - Tentative 2/4 - Port 5004
+2025-06-10 21:59:38,269 - __main__ - INFO - Démarrage backend FastAPI avec Python de Conda: conda run -n projet-is --no-capture-output python -m uvicorn argumentation_analysis.services.web_api.app --host 0.0.0.0 --port 5004
+2025-06-10 21:59:38,270 - __main__ - INFO - Logging stdout de Uvicorn dans: D:\2025-Epita-Intelligence-Symbolique-4\logs\uvicorn_stdout_5004.log
+2025-06-10 21:59:38,270 - __main__ - INFO - Logging stderr de Uvicorn dans: D:\2025-Epita-Intelligence-Symbolique-4\logs\uvicorn_stderr_5004.log
+2025-06-10 21:59:38,274 - __main__ - INFO - Attente backend sur http://localhost:5004/api/status (timeout: 30s)
+2025-06-10 21:59:42,562 - __main__ - ERROR - Processus backend terminé prématurément (code: 1)
+2025-06-10 21:59:42,562 - __main__ - INFO - Tentative 3/4 - Port 5005
+2025-06-10 21:59:42,563 - __main__ - INFO - Démarrage backend FastAPI avec Python de Conda: conda run -n projet-is --no-capture-output python -m uvicorn argumentation_analysis.services.web_api.app --host 0.0.0.0 --port 5005
+2025-06-10 21:59:42,563 - __main__ - INFO - Logging stdout de Uvicorn dans: D:\2025-Epita-Intelligence-Symbolique-4\logs\uvicorn_stdout_5005.log
+2025-06-10 21:59:42,563 - __main__ - INFO - Logging stderr de Uvicorn dans: D:\2025-Epita-Intelligence-Symbolique-4\logs\uvicorn_stderr_5005.log
+2025-06-10 21:59:42,565 - __main__ - INFO - Attente backend sur http://localhost:5005/api/status (timeout: 30s)
+2025-06-10 21:59:46,872 - __main__ - ERROR - Processus backend terminé prématurément (code: 1)
+2025-06-10 21:59:46,872 - __main__ - INFO - Tentative 4/4 - Port 5006
+2025-06-10 21:59:46,873 - __main__ - INFO - Démarrage backend FastAPI avec Python de Conda: conda run -n projet-is --no-capture-output python -m uvicorn argumentation_analysis.services.web_api.app --host 0.0.0.0 --port 5006
+2025-06-10 21:59:46,873 - __main__ - INFO - Logging stdout de Uvicorn dans: D:\2025-Epita-Intelligence-Symbolique-4\logs\uvicorn_stdout_5006.log
+2025-06-10 21:59:46,873 - __main__ - INFO - Logging stderr de Uvicorn dans: D:\2025-Epita-Intelligence-Symbolique-4\logs\uvicorn_stderr_5006.log
+2025-06-10 21:59:46,876 - __main__ - INFO - Attente backend sur http://localhost:5006/api/status (timeout: 30s)
+2025-06-10 21:59:51,188 - __main__ - ERROR - Processus backend terminé prématurément (code: 1)
+2025-06-10 21:59:51,188 - __main__ - INFO - [91m[21:59:51.188] [ERROR] ECHEC BACKEND[0m
+2025-06-10 21:59:51,188 - __main__ - INFO -    Détails: Impossible de démarrer sur les ports: [5003, 5004, 5005, 5006]
+2025-06-10 22:00:32,190 - __main__ - INFO - [96m[22:00:32.190] [START] DEMARRAGE APPLICATION WEB[0m
+2025-06-10 22:00:32,190 - __main__ - INFO -    Détails: Mode: Headless
+2025-06-10 22:00:32,190 - __main__ - INFO -    Résultat: Initialisation orchestrateur
+2025-06-10 22:00:32,190 - __main__ - INFO - [96m[22:00:32.190] [CLEAN] NETTOYAGE PREALABLE[0m
+2025-06-10 22:00:32,190 - __main__ - INFO -    Détails: Arret instances existantes
+2025-06-10 22:00:32,190 - __main__ - INFO - [CLEAN] Debut nettoyage processus application web
+2025-06-10 22:00:37,111 - __main__ - INFO - Processus trouvé (cmdline): PID 31412 - c:\tools\miniconda3\python.exe .\start_webapp.py
+2025-06-10 22:00:37,710 - __main__ - INFO - Processus trouvé (cmdline): PID 55616 - c:\program files\nodejs\node.exe node_modules\@playwright\test\cli.js test-server -c playwright.conf
+2025-06-10 22:00:37,758 - __main__ - INFO - Processus trouvés: 2
+2025-06-10 22:00:37,758 - __main__ - INFO - Envoi signal TERM aux processus...
+2025-06-10 22:00:37,758 - __main__ - INFO - TERM envoyé à PID 31412
+2025-06-10 22:00:37,758 - __main__ - INFO - TERM envoyé à PID 55616
+2025-06-10 22:00:37,759 - __main__ - INFO - Attente arrêt propre (5s)...
+2025-06-10 22:00:42,774 - __main__ - INFO - Tous les processus arrêtés proprement
+2025-06-10 22:00:46,222 - __main__ - INFO - Vérification libération des ports...
+2025-06-10 22:00:46,227 - __main__ - INFO - Tous les ports libérés
+2025-06-10 22:00:46,227 - __main__ - INFO - Nettoyage fichiers temporaires...
+2025-06-10 22:00:46,227 - __main__ - INFO - Aucun fichier temporaire à nettoyer
+2025-06-10 22:00:46,227 - __main__ - INFO - [OK] Nettoyage processus terminé
+2025-06-10 22:00:46,227 - __main__ - INFO - [96m[22:00:46.227] [BACKEND] DEMARRAGE BACKEND[0m
+2025-06-10 22:00:46,227 - __main__ - INFO -    Détails: Lancement avec failover de ports
+2025-06-10 22:00:46,227 - __main__ - INFO - Tentative 1/4 - Port 5003
+2025-06-10 22:00:46,228 - __main__ - INFO - Utilisation de l'interpréteur Python: C:\Tools\miniconda3\python.exe
+2025-06-10 22:00:46,229 - __main__ - INFO - Démarrage backend FastAPI avec Python de Conda: C:\Tools\miniconda3\python.exe -m uvicorn argumentation_analysis.services.web_api.app --host 0.0.0.0 --port 5003
+2025-06-10 22:00:46,229 - __main__ - INFO - Logging stdout de Uvicorn dans: D:\2025-Epita-Intelligence-Symbolique-4\logs\uvicorn_stdout_5003.log
+2025-06-10 22:00:46,229 - __main__ - INFO - Logging stderr de Uvicorn dans: D:\2025-Epita-Intelligence-Symbolique-4\logs\uvicorn_stderr_5003.log
+2025-06-10 22:00:46,232 - __main__ - INFO - Attente backend sur http://localhost:5003/api/status (timeout: 30s)
+2025-06-10 22:00:50,540 - __main__ - ERROR - Processus backend terminé prématurément (code: 1)
+2025-06-10 22:00:50,540 - __main__ - INFO - Tentative 2/4 - Port 5004
+2025-06-10 22:00:50,541 - __main__ - INFO - Utilisation de l'interpréteur Python: C:\Tools\miniconda3\python.exe
+2025-06-10 22:00:50,542 - __main__ - INFO - Démarrage backend FastAPI avec Python de Conda: C:\Tools\miniconda3\python.exe -m uvicorn argumentation_analysis.services.web_api.app --host 0.0.0.0 --port 5004
+2025-06-10 22:00:50,542 - __main__ - INFO - Logging stdout de Uvicorn dans: D:\2025-Epita-Intelligence-Symbolique-4\logs\uvicorn_stdout_5004.log
+2025-06-10 22:00:50,542 - __main__ - INFO - Logging stderr de Uvicorn dans: D:\2025-Epita-Intelligence-Symbolique-4\logs\uvicorn_stderr_5004.log
+2025-06-10 22:00:50,546 - __main__ - INFO - Attente backend sur http://localhost:5004/api/status (timeout: 30s)
+2025-06-10 22:00:54,856 - __main__ - ERROR - Processus backend terminé prématurément (code: 1)
+2025-06-10 22:00:54,857 - __main__ - INFO - Tentative 3/4 - Port 5005
+2025-06-10 22:00:54,861 - __main__ - INFO - Utilisation de l'interpréteur Python: C:\Tools\miniconda3\python.exe
+2025-06-10 22:00:54,861 - __main__ - INFO - Démarrage backend FastAPI avec Python de Conda: C:\Tools\miniconda3\python.exe -m uvicorn argumentation_analysis.services.web_api.app --host 0.0.0.0 --port 5005
+2025-06-10 22:00:54,862 - __main__ - INFO - Logging stdout de Uvicorn dans: D:\2025-Epita-Intelligence-Symbolique-4\logs\uvicorn_stdout_5005.log
+2025-06-10 22:00:54,862 - __main__ - INFO - Logging stderr de Uvicorn dans: D:\2025-Epita-Intelligence-Symbolique-4\logs\uvicorn_stderr_5005.log
+2025-06-10 22:00:54,865 - __main__ - INFO - Attente backend sur http://localhost:5005/api/status (timeout: 30s)
+2025-06-10 22:00:59,149 - __main__ - ERROR - Processus backend terminé prématurément (code: 1)
+2025-06-10 22:00:59,149 - __main__ - INFO - Tentative 4/4 - Port 5006
+2025-06-10 22:00:59,150 - __main__ - INFO - Utilisation de l'interpréteur Python: C:\Tools\miniconda3\python.exe
+2025-06-10 22:00:59,150 - __main__ - INFO - Démarrage backend FastAPI avec Python de Conda: C:\Tools\miniconda3\python.exe -m uvicorn argumentation_analysis.services.web_api.app --host 0.0.0.0 --port 5006
+2025-06-10 22:00:59,150 - __main__ - INFO - Logging stdout de Uvicorn dans: D:\2025-Epita-Intelligence-Symbolique-4\logs\uvicorn_stdout_5006.log
+2025-06-10 22:00:59,150 - __main__ - INFO - Logging stderr de Uvicorn dans: D:\2025-Epita-Intelligence-Symbolique-4\logs\uvicorn_stderr_5006.log
+2025-06-10 22:00:59,153 - __main__ - INFO - Attente backend sur http://localhost:5006/api/status (timeout: 30s)
+2025-06-10 22:01:03,460 - __main__ - ERROR - Processus backend terminé prématurément (code: 1)
+2025-06-10 22:01:03,460 - __main__ - INFO - [91m[22:01:03.460] [ERROR] ECHEC BACKEND[0m
+2025-06-10 22:01:03,460 - __main__ - INFO -    Détails: Impossible de démarrer sur les ports: [5003, 5004, 5005, 5006]
+2025-06-10 22:04:07,170 - __main__ - INFO - [96m[22:04:07.170] [START] DEMARRAGE APPLICATION WEB[0m
+2025-06-10 22:04:07,170 - __main__ - INFO -    Détails: Mode: Headless
+2025-06-10 22:04:07,170 - __main__ - INFO -    Résultat: Initialisation orchestrateur
+2025-06-10 22:04:07,170 - __main__ - INFO - [96m[22:04:07.170] [CLEAN] NETTOYAGE PREALABLE[0m
+2025-06-10 22:04:07,170 - __main__ - INFO -    Détails: Arret instances existantes
+2025-06-10 22:04:07,170 - __main__ - INFO - [CLEAN] Debut nettoyage processus application web
+2025-06-10 22:04:12,527 - __main__ - INFO - Processus trouvé (cmdline): PID 47700 - c:\tools\miniconda3\python.exe .\start_webapp.py
+2025-06-10 22:04:12,567 - __main__ - INFO - Processus trouvé (cmdline): PID 50988 - c:\program files\nodejs\node.exe node_modules\@playwright\test\cli.js test-server -c playwright.conf
+2025-06-10 22:04:12,740 - __main__ - INFO - Processus trouvés: 2
+2025-06-10 22:04:12,740 - __main__ - INFO - Envoi signal TERM aux processus...
+2025-06-10 22:04:12,740 - __main__ - INFO - TERM envoyé à PID 47700
+2025-06-10 22:04:12,740 - __main__ - INFO - TERM envoyé à PID 50988
+2025-06-10 22:04:12,740 - __main__ - INFO - Attente arrêt propre (5s)...
+2025-06-10 22:04:17,751 - __main__ - INFO - Tous les processus arrêtés proprement
+2025-06-10 22:04:21,387 - __main__ - INFO - Vérification libération des ports...
+2025-06-10 22:04:21,398 - __main__ - INFO - Tous les ports libérés
+2025-06-10 22:04:21,398 - __main__ - INFO - Nettoyage fichiers temporaires...
+2025-06-10 22:04:21,399 - __main__ - INFO - Aucun fichier temporaire à nettoyer
+2025-06-10 22:04:21,399 - __main__ - INFO - [OK] Nettoyage processus terminé
+2025-06-10 22:04:21,399 - __main__ - INFO - [96m[22:04:21.399] [BACKEND] DEMARRAGE BACKEND[0m
+2025-06-10 22:04:21,399 - __main__ - INFO -    Détails: Lancement avec failover de ports
+2025-06-10 22:04:21,399 - __main__ - INFO - Tentative 1/4 - Port 5003
+2025-06-10 22:04:21,923 - __main__ - INFO - Exécutable Python trouvé pour l'env 'projet-is': C:\Users\MYIA\miniconda3\envs\projet-is\python.exe
+2025-06-10 22:04:21,923 - __main__ - INFO - Utilisation de l'interpréteur Python de l'environnement Conda 'projet-is': C:\Users\MYIA\miniconda3\envs\projet-is\python.exe
+2025-06-10 22:04:21,923 - __main__ - INFO - Démarrage backend FastAPI: C:\Users\MYIA\miniconda3\envs\projet-is\python.exe -m uvicorn argumentation_analysis.services.web_api.app --host 0.0.0.0 --port 5003
+2025-06-10 22:04:21,923 - __main__ - INFO - Logging stdout de Uvicorn dans: D:\2025-Epita-Intelligence-Symbolique-4\logs\uvicorn_stdout_5003.log
+2025-06-10 22:04:21,923 - __main__ - INFO - Logging stderr de Uvicorn dans: D:\2025-Epita-Intelligence-Symbolique-4\logs\uvicorn_stderr_5003.log
+2025-06-10 22:04:21,927 - __main__ - INFO - Attente backend sur http://localhost:5003/api/status (timeout: 30s)
+2025-06-10 22:04:26,208 - __main__ - ERROR - Processus backend terminé prématurément (code: 1)
+2025-06-10 22:04:26,208 - __main__ - INFO - Tentative 2/4 - Port 5004
+2025-06-10 22:04:26,745 - __main__ - INFO - Exécutable Python trouvé pour l'env 'projet-is': C:\Users\MYIA\miniconda3\envs\projet-is\python.exe
+2025-06-10 22:04:26,745 - __main__ - INFO - Utilisation de l'interpréteur Python de l'environnement Conda 'projet-is': C:\Users\MYIA\miniconda3\envs\projet-is\python.exe
+2025-06-10 22:04:26,745 - __main__ - INFO - Démarrage backend FastAPI: C:\Users\MYIA\miniconda3\envs\projet-is\python.exe -m uvicorn argumentation_analysis.services.web_api.app --host 0.0.0.0 --port 5004
+2025-06-10 22:04:26,745 - __main__ - INFO - Logging stdout de Uvicorn dans: D:\2025-Epita-Intelligence-Symbolique-4\logs\uvicorn_stdout_5004.log
+2025-06-10 22:04:26,745 - __main__ - INFO - Logging stderr de Uvicorn dans: D:\2025-Epita-Intelligence-Symbolique-4\logs\uvicorn_stderr_5004.log
+2025-06-10 22:04:26,748 - __main__ - INFO - Attente backend sur http://localhost:5004/api/status (timeout: 30s)
+2025-06-10 22:04:31,048 - __main__ - ERROR - Processus backend terminé prématurément (code: 1)
+2025-06-10 22:04:31,048 - __main__ - INFO - Tentative 3/4 - Port 5005
+2025-06-10 22:04:31,578 - __main__ - INFO - Exécutable Python trouvé pour l'env 'projet-is': C:\Users\MYIA\miniconda3\envs\projet-is\python.exe
+2025-06-10 22:04:31,578 - __main__ - INFO - Utilisation de l'interpréteur Python de l'environnement Conda 'projet-is': C:\Users\MYIA\miniconda3\envs\projet-is\python.exe
+2025-06-10 22:04:31,578 - __main__ - INFO - Démarrage backend FastAPI: C:\Users\MYIA\miniconda3\envs\projet-is\python.exe -m uvicorn argumentation_analysis.services.web_api.app --host 0.0.0.0 --port 5005
+2025-06-10 22:04:31,578 - __main__ - INFO - Logging stdout de Uvicorn dans: D:\2025-Epita-Intelligence-Symbolique-4\logs\uvicorn_stdout_5005.log
+2025-06-10 22:04:31,578 - __main__ - INFO - Logging stderr de Uvicorn dans: D:\2025-Epita-Intelligence-Symbolique-4\logs\uvicorn_stderr_5005.log
+2025-06-10 22:04:31,581 - __main__ - INFO - Attente backend sur http://localhost:5005/api/status (timeout: 30s)
+2025-06-10 22:04:35,882 - __main__ - ERROR - Processus backend terminé prématurément (code: 1)
+2025-06-10 22:04:35,882 - __main__ - INFO - Tentative 4/4 - Port 5006
+2025-06-10 22:04:36,397 - __main__ - INFO - Exécutable Python trouvé pour l'env 'projet-is': C:\Users\MYIA\miniconda3\envs\projet-is\python.exe
+2025-06-10 22:04:36,398 - __main__ - INFO - Utilisation de l'interpréteur Python de l'environnement Conda 'projet-is': C:\Users\MYIA\miniconda3\envs\projet-is\python.exe
+2025-06-10 22:04:36,398 - __main__ - INFO - Démarrage backend FastAPI: C:\Users\MYIA\miniconda3\envs\projet-is\python.exe -m uvicorn argumentation_analysis.services.web_api.app --host 0.0.0.0 --port 5006
+2025-06-10 22:04:36,398 - __main__ - INFO - Logging stdout de Uvicorn dans: D:\2025-Epita-Intelligence-Symbolique-4\logs\uvicorn_stdout_5006.log
+2025-06-10 22:04:36,398 - __main__ - INFO - Logging stderr de Uvicorn dans: D:\2025-Epita-Intelligence-Symbolique-4\logs\uvicorn_stderr_5006.log
+2025-06-10 22:04:36,401 - __main__ - INFO - Attente backend sur http://localhost:5006/api/status (timeout: 30s)
+2025-06-10 22:04:40,726 - __main__ - ERROR - Processus backend terminé prématurément (code: 1)
+2025-06-10 22:04:40,726 - __main__ - INFO - [91m[22:04:40.726] [ERROR] ECHEC BACKEND[0m
+2025-06-10 22:04:40,726 - __main__ - INFO -    Détails: Impossible de démarrer sur les ports: [5003, 5004, 5005, 5006]
+2025-06-10 22:06:18,338 - __main__ - INFO - [96m[22:06:18.338] [START] DEMARRAGE APPLICATION WEB[0m
+2025-06-10 22:06:18,339 - __main__ - INFO -    Détails: Mode: Headless
+2025-06-10 22:06:18,339 - __main__ - INFO -    Résultat: Initialisation orchestrateur
+2025-06-10 22:06:18,339 - __main__ - INFO - [96m[22:06:18.339] [CLEAN] NETTOYAGE PREALABLE[0m
+2025-06-10 22:06:18,339 - __main__ - INFO -    Détails: Arret instances existantes
+2025-06-10 22:06:18,339 - __main__ - INFO - [CLEAN] Debut nettoyage processus application web
+2025-06-10 22:06:23,332 - __main__ - INFO - Processus trouvé (cmdline): PID 24088 - c:\tools\miniconda3\python.exe .\start_webapp.py
+2025-06-10 22:06:23,894 - __main__ - INFO - Processus trouvé (cmdline): PID 51636 - c:\program files\nodejs\node.exe node_modules\@playwright\test\cli.js test-server -c playwright.conf
+2025-06-10 22:06:23,990 - __main__ - INFO - Processus trouvés: 2
+2025-06-10 22:06:23,990 - __main__ - INFO - Envoi signal TERM aux processus...
+2025-06-10 22:06:23,990 - __main__ - INFO - TERM envoyé à PID 24088
+2025-06-10 22:06:23,990 - __main__ - INFO - TERM envoyé à PID 51636
+2025-06-10 22:06:23,990 - __main__ - INFO - Attente arrêt propre (5s)...
+2025-06-10 22:06:29,002 - __main__ - INFO - Tous les processus arrêtés proprement
+2025-06-10 22:06:32,658 - __main__ - INFO - Vérification libération des ports...
+2025-06-10 22:06:32,669 - __main__ - INFO - Tous les ports libérés
+2025-06-10 22:06:32,669 - __main__ - INFO - Nettoyage fichiers temporaires...
+2025-06-10 22:06:32,669 - __main__ - INFO - Aucun fichier temporaire à nettoyer
+2025-06-10 22:06:32,669 - __main__ - INFO - [OK] Nettoyage processus terminé
+2025-06-10 22:06:32,669 - __main__ - INFO - [96m[22:06:32.669] [BACKEND] DEMARRAGE BACKEND[0m
+2025-06-10 22:06:32,669 - __main__ - INFO -    Détails: Lancement avec failover de ports
+2025-06-10 22:06:32,669 - __main__ - INFO - Tentative 1/4 - Port 5003
+2025-06-10 22:06:33,210 - __main__ - INFO - Exécutable Python trouvé pour l'env 'projet-is': C:\Users\MYIA\miniconda3\envs\projet-is\python.exe
+2025-06-10 22:06:33,210 - __main__ - INFO - Utilisation de l'interpréteur Python de l'environnement Conda 'projet-is': C:\Users\MYIA\miniconda3\envs\projet-is\python.exe
+2025-06-10 22:06:33,210 - __main__ - INFO - Démarrage backend FastAPI: C:\Users\MYIA\miniconda3\envs\projet-is\python.exe -m uvicorn argumentation_analysis.services.web_api.app --host 0.0.0.0 --port 5003
+2025-06-10 22:06:33,210 - __main__ - INFO - Logging stdout de Uvicorn dans: D:\2025-Epita-Intelligence-Symbolique-4\logs\uvicorn_stdout_5003.log
+2025-06-10 22:06:33,210 - __main__ - INFO - Logging stderr de Uvicorn dans: D:\2025-Epita-Intelligence-Symbolique-4\logs\uvicorn_stderr_5003.log
+2025-06-10 22:06:33,210 - __main__ - INFO - PYTHONPATH pour Uvicorn: D:\2025-Epita-Intelligence-Symbolique-4;D:\2025-Epita-Intelligence-Symbolique-4
+2025-06-10 22:06:33,210 - __main__ - INFO - CWD pour Uvicorn: D:\2025-Epita-Intelligence-Symbolique-4
+2025-06-10 22:06:33,214 - __main__ - INFO - Attente backend sur http://localhost:5003/api/status (timeout: 30s)
+2025-06-10 22:06:37,524 - __main__ - ERROR - Processus backend terminé prématurément (code: 1)
+2025-06-10 22:06:37,524 - __main__ - INFO - Tentative 2/4 - Port 5004
+2025-06-10 22:06:38,047 - __main__ - INFO - Exécutable Python trouvé pour l'env 'projet-is': C:\Users\MYIA\miniconda3\envs\projet-is\python.exe
+2025-06-10 22:06:38,048 - __main__ - INFO - Utilisation de l'interpréteur Python de l'environnement Conda 'projet-is': C:\Users\MYIA\miniconda3\envs\projet-is\python.exe
+2025-06-10 22:06:38,048 - __main__ - INFO - Démarrage backend FastAPI: C:\Users\MYIA\miniconda3\envs\projet-is\python.exe -m uvicorn argumentation_analysis.services.web_api.app --host 0.0.0.0 --port 5004
+2025-06-10 22:06:38,048 - __main__ - INFO - Logging stdout de Uvicorn dans: D:\2025-Epita-Intelligence-Symbolique-4\logs\uvicorn_stdout_5004.log
+2025-06-10 22:06:38,048 - __main__ - INFO - Logging stderr de Uvicorn dans: D:\2025-Epita-Intelligence-Symbolique-4\logs\uvicorn_stderr_5004.log
+2025-06-10 22:06:38,048 - __main__ - INFO - PYTHONPATH pour Uvicorn: D:\2025-Epita-Intelligence-Symbolique-4;D:\2025-Epita-Intelligence-Symbolique-4
+2025-06-10 22:06:38,048 - __main__ - INFO - CWD pour Uvicorn: D:\2025-Epita-Intelligence-Symbolique-4
+2025-06-10 22:06:38,050 - __main__ - INFO - Attente backend sur http://localhost:5004/api/status (timeout: 30s)
+2025-06-10 22:06:42,355 - __main__ - ERROR - Processus backend terminé prématurément (code: 1)
+2025-06-10 22:06:42,355 - __main__ - INFO - Tentative 3/4 - Port 5005
+2025-06-10 22:06:42,901 - __main__ - INFO - Exécutable Python trouvé pour l'env 'projet-is': C:\Users\MYIA\miniconda3\envs\projet-is\python.exe
+2025-06-10 22:06:42,901 - __main__ - INFO - Utilisation de l'interpréteur Python de l'environnement Conda 'projet-is': C:\Users\MYIA\miniconda3\envs\projet-is\python.exe
+2025-06-10 22:06:42,901 - __main__ - INFO - Démarrage backend FastAPI: C:\Users\MYIA\miniconda3\envs\projet-is\python.exe -m uvicorn argumentation_analysis.services.web_api.app --host 0.0.0.0 --port 5005
+2025-06-10 22:06:42,901 - __main__ - INFO - Logging stdout de Uvicorn dans: D:\2025-Epita-Intelligence-Symbolique-4\logs\uvicorn_stdout_5005.log
+2025-06-10 22:06:42,901 - __main__ - INFO - Logging stderr de Uvicorn dans: D:\2025-Epita-Intelligence-Symbolique-4\logs\uvicorn_stderr_5005.log
+2025-06-10 22:06:42,901 - __main__ - INFO - PYTHONPATH pour Uvicorn: D:\2025-Epita-Intelligence-Symbolique-4;D:\2025-Epita-Intelligence-Symbolique-4
+2025-06-10 22:06:42,901 - __main__ - INFO - CWD pour Uvicorn: D:\2025-Epita-Intelligence-Symbolique-4
+2025-06-10 22:06:42,905 - __main__ - INFO - Attente backend sur http://localhost:5005/api/status (timeout: 30s)
+2025-06-10 22:06:47,214 - __main__ - ERROR - Processus backend terminé prématurément (code: 1)
+2025-06-10 22:06:47,214 - __main__ - INFO - Tentative 4/4 - Port 5006
+2025-06-10 22:06:47,750 - __main__ - INFO - Exécutable Python trouvé pour l'env 'projet-is': C:\Users\MYIA\miniconda3\envs\projet-is\python.exe
+2025-06-10 22:06:47,750 - __main__ - INFO - Utilisation de l'interpréteur Python de l'environnement Conda 'projet-is': C:\Users\MYIA\miniconda3\envs\projet-is\python.exe
+2025-06-10 22:06:47,750 - __main__ - INFO - Démarrage backend FastAPI: C:\Users\MYIA\miniconda3\envs\projet-is\python.exe -m uvicorn argumentation_analysis.services.web_api.app --host 0.0.0.0 --port 5006
+2025-06-10 22:06:47,750 - __main__ - INFO - Logging stdout de Uvicorn dans: D:\2025-Epita-Intelligence-Symbolique-4\logs\uvicorn_stdout_5006.log
+2025-06-10 22:06:47,750 - __main__ - INFO - Logging stderr de Uvicorn dans: D:\2025-Epita-Intelligence-Symbolique-4\logs\uvicorn_stderr_5006.log
+2025-06-10 22:06:47,750 - __main__ - INFO - PYTHONPATH pour Uvicorn: D:\2025-Epita-Intelligence-Symbolique-4;D:\2025-Epita-Intelligence-Symbolique-4
+2025-06-10 22:06:47,750 - __main__ - INFO - CWD pour Uvicorn: D:\2025-Epita-Intelligence-Symbolique-4
+2025-06-10 22:06:47,752 - __main__ - INFO - Attente backend sur http://localhost:5006/api/status (timeout: 30s)
+2025-06-10 22:06:52,047 - __main__ - ERROR - Processus backend terminé prématurément (code: 1)
+2025-06-10 22:06:52,047 - __main__ - INFO - [91m[22:06:52.047] [ERROR] ECHEC BACKEND[0m
+2025-06-10 22:06:52,047 - __main__ - INFO -    Détails: Impossible de démarrer sur les ports: [5003, 5004, 5005, 5006]
+2025-06-10 22:15:26,546 - __main__ - INFO - [96m[22:15:26.546] [START] DEMARRAGE APPLICATION WEB[0m
+2025-06-10 22:15:26,546 - __main__ - INFO -    Détails: Mode: Headless
+2025-06-10 22:15:26,546 - __main__ - INFO -    Résultat: Initialisation orchestrateur
+2025-06-10 22:15:26,546 - __main__ - INFO - [96m[22:15:26.546] [CLEAN] NETTOYAGE PREALABLE[0m
+2025-06-10 22:15:26,546 - __main__ - INFO -    Détails: Arret instances existantes
+2025-06-10 22:15:26,546 - __main__ - INFO - [CLEAN] Debut nettoyage processus application web
+2025-06-10 22:15:32,085 - __main__ - INFO - Processus trouvé (cmdline): PID 50340 - c:\program files\nodejs\node.exe node_modules\@playwright\test\cli.js test-server -c playwright.conf
+2025-06-10 22:15:32,238 - __main__ - INFO - Processus trouvé (cmdline): PID 53220 - c:\tools\miniconda3\python.exe .\start_webapp.py
+2025-06-10 22:15:32,258 - __main__ - INFO - Processus trouvés: 2
+2025-06-10 22:15:32,258 - __main__ - INFO - Envoi signal TERM aux processus...
+2025-06-10 22:15:32,259 - __main__ - INFO - TERM envoyé à PID 50340
+2025-06-10 22:15:32,259 - __main__ - INFO - TERM envoyé à PID 53220
+2025-06-10 22:15:32,259 - __main__ - INFO - Attente arrêt propre (5s)...
+2025-06-10 22:15:37,269 - __main__ - INFO - Tous les processus arrêtés proprement
+2025-06-10 22:15:41,059 - __main__ - INFO - Vérification libération des ports...
+2025-06-10 22:15:41,071 - __main__ - INFO - Tous les ports libérés
+2025-06-10 22:15:41,071 - __main__ - INFO - Nettoyage fichiers temporaires...
+2025-06-10 22:15:41,071 - __main__ - INFO - Aucun fichier temporaire à nettoyer
+2025-06-10 22:15:41,071 - __main__ - INFO - [OK] Nettoyage processus terminé
+2025-06-10 22:15:41,071 - __main__ - INFO - [96m[22:15:41.071] [BACKEND] DEMARRAGE BACKEND[0m
+2025-06-10 22:15:41,071 - __main__ - INFO -    Détails: Lancement avec failover de ports
+2025-06-10 22:15:41,071 - __main__ - INFO - Tentative 1/4 - Port 5003
+2025-06-10 22:15:41,588 - __main__ - INFO - Exécutable Python trouvé pour l'env 'projet-is': C:\Users\MYIA\miniconda3\envs\projet-is\python.exe
+2025-06-10 22:15:41,588 - __main__ - INFO - Utilisation de l'interpréteur Python de l'environnement Conda 'projet-is': C:\Users\MYIA\miniconda3\envs\projet-is\python.exe
+2025-06-10 22:15:41,588 - __main__ - INFO - Démarrage backend FastAPI: C:\Users\MYIA\miniconda3\envs\projet-is\python.exe -m uvicorn argumentation_analysis.services.web_api.app --host 0.0.0.0 --port 5003
+2025-06-10 22:15:41,588 - __main__ - INFO - Logging stdout de Uvicorn dans: D:\2025-Epita-Intelligence-Symbolique-4\logs\uvicorn_stdout_5003.log
+2025-06-10 22:15:41,588 - __main__ - INFO - Logging stderr de Uvicorn dans: D:\2025-Epita-Intelligence-Symbolique-4\logs\uvicorn_stderr_5003.log
+2025-06-10 22:15:41,588 - __main__ - INFO - PYTHONPATH pour Uvicorn: D:\2025-Epita-Intelligence-Symbolique-4;D:\2025-Epita-Intelligence-Symbolique-4
+2025-06-10 22:15:41,588 - __main__ - INFO - CWD pour Uvicorn: D:\2025-Epita-Intelligence-Symbolique-4
+2025-06-10 22:15:41,591 - __main__ - INFO - Attente backend sur http://localhost:5003/api/status (timeout: 30s)
+2025-06-10 22:15:45,886 - __main__ - ERROR - Processus backend terminé prématurément (code: 1)
+2025-06-10 22:15:45,886 - __main__ - INFO - Tentative 2/4 - Port 5004
+2025-06-10 22:15:46,414 - __main__ - INFO - Exécutable Python trouvé pour l'env 'projet-is': C:\Users\MYIA\miniconda3\envs\projet-is\python.exe
+2025-06-10 22:15:46,414 - __main__ - INFO - Utilisation de l'interpréteur Python de l'environnement Conda 'projet-is': C:\Users\MYIA\miniconda3\envs\projet-is\python.exe
+2025-06-10 22:15:46,414 - __main__ - INFO - Démarrage backend FastAPI: C:\Users\MYIA\miniconda3\envs\projet-is\python.exe -m uvicorn argumentation_analysis.services.web_api.app --host 0.0.0.0 --port 5004
+2025-06-10 22:15:46,414 - __main__ - INFO - Logging stdout de Uvicorn dans: D:\2025-Epita-Intelligence-Symbolique-4\logs\uvicorn_stdout_5004.log
+2025-06-10 22:15:46,414 - __main__ - INFO - Logging stderr de Uvicorn dans: D:\2025-Epita-Intelligence-Symbolique-4\logs\uvicorn_stderr_5004.log
+2025-06-10 22:15:46,415 - __main__ - INFO - PYTHONPATH pour Uvicorn: D:\2025-Epita-Intelligence-Symbolique-4;D:\2025-Epita-Intelligence-Symbolique-4
+2025-06-10 22:15:46,415 - __main__ - INFO - CWD pour Uvicorn: D:\2025-Epita-Intelligence-Symbolique-4
+2025-06-10 22:15:46,418 - __main__ - INFO - Attente backend sur http://localhost:5004/api/status (timeout: 30s)
+2025-06-10 22:15:50,738 - __main__ - ERROR - Processus backend terminé prématurément (code: 1)
+2025-06-10 22:15:50,738 - __main__ - INFO - Tentative 3/4 - Port 5005
+2025-06-10 22:15:51,296 - __main__ - INFO - Exécutable Python trouvé pour l'env 'projet-is': C:\Users\MYIA\miniconda3\envs\projet-is\python.exe
+2025-06-10 22:15:51,296 - __main__ - INFO - Utilisation de l'interpréteur Python de l'environnement Conda 'projet-is': C:\Users\MYIA\miniconda3\envs\projet-is\python.exe
+2025-06-10 22:15:51,296 - __main__ - INFO - Démarrage backend FastAPI: C:\Users\MYIA\miniconda3\envs\projet-is\python.exe -m uvicorn argumentation_analysis.services.web_api.app --host 0.0.0.0 --port 5005
+2025-06-10 22:15:51,296 - __main__ - INFO - Logging stdout de Uvicorn dans: D:\2025-Epita-Intelligence-Symbolique-4\logs\uvicorn_stdout_5005.log
+2025-06-10 22:15:51,296 - __main__ - INFO - Logging stderr de Uvicorn dans: D:\2025-Epita-Intelligence-Symbolique-4\logs\uvicorn_stderr_5005.log
+2025-06-10 22:15:51,297 - __main__ - INFO - PYTHONPATH pour Uvicorn: D:\2025-Epita-Intelligence-Symbolique-4;D:\2025-Epita-Intelligence-Symbolique-4
+2025-06-10 22:15:51,297 - __main__ - INFO - CWD pour Uvicorn: D:\2025-Epita-Intelligence-Symbolique-4
+2025-06-10 22:15:51,300 - __main__ - INFO - Attente backend sur http://localhost:5005/api/status (timeout: 30s)
+2025-06-10 22:15:55,573 - __main__ - ERROR - Processus backend terminé prématurément (code: 1)
+2025-06-10 22:15:55,573 - __main__ - INFO - Tentative 4/4 - Port 5006
+2025-06-10 22:15:56,154 - __main__ - INFO - Exécutable Python trouvé pour l'env 'projet-is': C:\Users\MYIA\miniconda3\envs\projet-is\python.exe
+2025-06-10 22:15:56,154 - __main__ - INFO - Utilisation de l'interpréteur Python de l'environnement Conda 'projet-is': C:\Users\MYIA\miniconda3\envs\projet-is\python.exe
+2025-06-10 22:15:56,154 - __main__ - INFO - Démarrage backend FastAPI: C:\Users\MYIA\miniconda3\envs\projet-is\python.exe -m uvicorn argumentation_analysis.services.web_api.app --host 0.0.0.0 --port 5006
+2025-06-10 22:15:56,154 - __main__ - INFO - Logging stdout de Uvicorn dans: D:\2025-Epita-Intelligence-Symbolique-4\logs\uvicorn_stdout_5006.log
+2025-06-10 22:15:56,154 - __main__ - INFO - Logging stderr de Uvicorn dans: D:\2025-Epita-Intelligence-Symbolique-4\logs\uvicorn_stderr_5006.log
+2025-06-10 22:15:56,154 - __main__ - INFO - PYTHONPATH pour Uvicorn: D:\2025-Epita-Intelligence-Symbolique-4;D:\2025-Epita-Intelligence-Symbolique-4
+2025-06-10 22:15:56,154 - __main__ - INFO - CWD pour Uvicorn: D:\2025-Epita-Intelligence-Symbolique-4
+2025-06-10 22:15:56,157 - __main__ - INFO - Attente backend sur http://localhost:5006/api/status (timeout: 30s)
+2025-06-10 22:16:00,454 - __main__ - ERROR - Processus backend terminé prématurément (code: 1)
+2025-06-10 22:16:00,454 - __main__ - INFO - [91m[22:16:00.454] [ERROR] ECHEC BACKEND[0m
+2025-06-10 22:16:00,454 - __main__ - INFO -    Détails: Impossible de démarrer sur les ports: [5003, 5004, 5005, 5006]

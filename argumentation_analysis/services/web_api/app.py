@@ -19,6 +19,7 @@ from flask import Flask, request, jsonify, redirect, url_for
 from flask_cors import CORS
 from werkzeug.exceptions import HTTPException # Ajout pour la gestion des erreurs HTTP
 from typing import Dict, Any, Optional
+from a2wsgi import ASGIMiddleware # MODIF: Correction du nom de l'import pour a2wsgi
 
 # Ajouter le répertoire racine au chemin Python
 current_dir = Path(__file__).parent
@@ -114,12 +115,15 @@ except ImportError as e_abs:
         logger.info("Services de fallback chargés")
 
 # Création de l'application Flask
-app = Flask(__name__)
-CORS(app)  # Activer CORS pour les appels depuis React
+flask_app = Flask(__name__) # MODIF: Renommer en flask_app
+CORS(flask_app)  # Activer CORS pour les appels depuis React
+
+# Envelopper l'application Flask avec ASGIMiddleware pour Uvicorn
+app = ASGIMiddleware(flask_app) # MODIF: Créer l'objet app ASGI
 
 # Configuration
-app.config['JSON_AS_ASCII'] = False  # Support des caractères UTF-8
-app.config['JSONIFY_PRETTYPRINT_REGULAR'] = True
+flask_app.config['JSON_AS_ASCII'] = False  # Support des caractères UTF-8 # MODIF: Utiliser flask_app
+flask_app.config['JSONIFY_PRETTYPRINT_REGULAR'] = True # MODIF: Utiliser flask_app
 
 # Initialisation lazy des services (à la demande pour éviter de bloquer le démarrage)
 _analysis_service = None
@@ -164,7 +168,7 @@ def get_logic_service():
     return _logic_service
 
 
-@app.errorhandler(Exception)
+@flask_app.errorhandler(Exception) # MODIF: Utiliser flask_app
 def handle_error(error):
     """Gestionnaire d'erreurs global."""
     logger.error(f"Erreur non gérée: {str(error)}", exc_info=True)
@@ -175,7 +179,7 @@ def handle_error(error):
     ).dict()), 500
 
 
-@app.route('/api/health', methods=['GET'])
+@flask_app.route('/api/health', methods=['GET']) # MODIF: Utiliser flask_app
 def health_check():
     """Vérification de l'état de l'API."""
     try:
@@ -239,7 +243,7 @@ def health_check():
         }), 500
 
 
-@app.route('/api/analyze', methods=['POST'])
+@flask_app.route('/api/analyze', methods=['POST']) # MODIF: Utiliser flask_app
 def analyze_text():
     """
     Analyse complète d'un texte argumentatif.
@@ -301,7 +305,7 @@ def analyze_text():
         ).dict()), 500
 
 
-@app.route('/api/validate', methods=['POST'])
+@flask_app.route('/api/validate', methods=['POST']) # MODIF: Utiliser flask_app
 def validate_argument():
     """
     Validation logique d'un argument.
@@ -346,7 +350,7 @@ def validate_argument():
         ).dict()), 500
 
 
-@app.route('/api/fallacies', methods=['POST'])
+@flask_app.route('/api/fallacies', methods=['POST']) # MODIF: Utiliser flask_app
 def detect_fallacies():
     """
     Détection de sophismes dans un texte.
@@ -393,7 +397,7 @@ def detect_fallacies():
         ).dict()), 500
 
 
-@app.route('/api/framework', methods=['POST'])
+@flask_app.route('/api/framework', methods=['POST']) # MODIF: Utiliser flask_app
 def build_framework():
     """
     Construction d'un framework de Dung.
@@ -446,7 +450,7 @@ def build_framework():
         ).dict()), 500
 
 
-@app.route('/api/endpoints', methods=['GET'])
+@flask_app.route('/api/endpoints', methods=['GET']) # MODIF: Utiliser flask_app
 def list_endpoints():
     """Liste tous les endpoints disponibles avec leur documentation."""
     endpoints = {
@@ -538,7 +542,7 @@ def list_endpoints():
     })
 
 
-@app.route('/api/logic/belief-set', methods=['POST'])
+@flask_app.route('/api/logic/belief-set', methods=['POST']) # MODIF: Utiliser flask_app
 def create_belief_set():
     """
     Convertit un texte en ensemble de croyances logiques.
@@ -586,7 +590,7 @@ def create_belief_set():
         ).dict()), 500
 
 
-@app.route('/api/logic/query', methods=['POST'])
+@flask_app.route('/api/logic/query', methods=['POST']) # MODIF: Utiliser flask_app
 def execute_logic_query():
     """
     Exécute une requête logique sur un ensemble de croyances.
@@ -634,7 +638,7 @@ def execute_logic_query():
         ).dict()), 500
 
 
-@app.route('/api/logic/generate-queries', methods=['POST'])
+@flask_app.route('/api/logic/generate-queries', methods=['POST']) # MODIF: Utiliser flask_app
 def generate_logic_queries():
     """
     Génère des requêtes logiques pertinentes.
@@ -682,7 +686,7 @@ def generate_logic_queries():
         ).dict()), 500
 
 
-@app.route('/api/logic/interpret', methods=['POST'])
+@flask_app.route('/api/logic/interpret', methods=['POST']) # MODIF: Utiliser flask_app
 def interpret_logic_results():
     """
     Interprète les résultats de requêtes logiques.
@@ -767,12 +771,12 @@ def interpret_logic_results():
         ).dict()), 500
 
 # Ajout des routes de pr-student-1
-@app.route('/', methods=['GET'])
+@flask_app.route('/', methods=['GET']) # MODIF: Utiliser flask_app
 def index():
     """Redirection vers la documentation de l'API."""
     return redirect('/api/endpoints')
 
-@app.route('/favicon.ico', methods=['GET'])
+@flask_app.route('/favicon.ico', methods=['GET']) # MODIF: Utiliser flask_app
 def favicon():
     """Gestion du favicon."""
     return '', 204  # No content
@@ -795,8 +799,10 @@ if __name__ == '__main__':
     logger.info(f"Démarrage de l'API sur {args.host}:{args.port}")
     logger.info(f"Mode debug: {args.debug}")
     
-    app.run(
-        host=args.host,
-        port=args.port,
-        debug=args.debug
-    )
+    # MODIF: Uvicorn est maintenant responsable du lancement, donc app.run n'est plus nécessaire ici.
+    # Si on lance ce script directement, on pourrait utiliser uvicorn.run(app, ...)
+    # Mais comme c'est BackendManager qui lance Uvicorn, on commente cette section.
+    # import uvicorn
+    # uvicorn.run(app, host=args.host, port=args.port, log_level="info" if not args.debug else "debug")
+    logger.info("L'application est prête à être servie par Uvicorn via BackendManager.")
+    logger.info("Pour lancer directement: uvicorn argumentation_analysis.services.web_api.app:app --host <host> --port <port>")

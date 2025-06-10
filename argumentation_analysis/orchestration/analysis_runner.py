@@ -36,7 +36,9 @@ import semantic_kernel as sk
 from semantic_kernel.contents import ChatMessageContent
 from semantic_kernel.connectors.ai.open_ai import OpenAIChatCompletion, AzureChatCompletion
 # CORRECTIF COMPATIBILITÉ: Utilisation du module de compatibilité pour agents
-from argumentation_analysis.utils.semantic_kernel_compatibility import AgentGroupChat, Agent, AuthorRole, AgentChatException, FunctionChoiceBehavior
+from semantic_kernel.agents import AgentGroupChat, Agent, AgentChatException
+from semantic_kernel.contents import AuthorRole
+from semantic_kernel.functions import FunctionChoiceBehavior
 
 
 # --- Fonction Principale d'Exécution (Modifiée V10.7 - Accepte Service LLM) ---
