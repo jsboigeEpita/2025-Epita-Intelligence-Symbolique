@@ -25,7 +25,7 @@ import json
 from typing import Dict, List, Any, Optional, AsyncGenerator
 import semantic_kernel as sk
 from semantic_kernel.functions.kernel_arguments import KernelArguments
-from argumentation_analysis.utils.semantic_kernel_compatibility import ChatMessageContent
+from semantic_kernel.contents import ChatMessageContent
 
 # Import de la classe de base
 from ..abc.agent_bases import BaseAgent

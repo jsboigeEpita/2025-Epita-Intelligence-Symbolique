@@ -49,5 +49,6 @@ dependencies:
     - pytest-playwright
     - fastapi
     - "uvicorn[standard]"
+    - a2wsgi>=1.8.0 # Ajout pour servir Flask avec Uvicorn
     # Note: semantic-kernel[agents] non disponible dans cette version
     # Fallback implémenté dans project_core/semantic_kernel_agents_fallback.py
