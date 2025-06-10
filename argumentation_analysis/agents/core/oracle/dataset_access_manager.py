@@ -321,7 +321,7 @@ class DatasetAccessManager:
     
     def _filter_forbidden_fields(self, data: Any, forbidden_fields: List[str]) -> Any:
         """Filtre les champs interdits des données."""
-        # Vérification de sécurité pour éviter les erreurs avec les mocks
+        # Vérification de sécurité pour éviter les erreurs de données
         if not forbidden_fields or not hasattr(forbidden_fields, '__iter__'):
             return data
             

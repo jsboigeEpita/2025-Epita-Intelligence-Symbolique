@@ -1,0 +1,33 @@
+2025-06-10 13:22:12,936 - __main__ - INFO - [START] DEBUT VALIDATION COMPLETE AVEC DONNEES FRAICHES
+2025-06-10 13:22:12,937 - __main__ - INFO - ID Session: eaf9d3ac
+2025-06-10 13:22:12,937 - __main__ - INFO - Timestamp: 2025-06-10 11:22:12.936340+00:00
+2025-06-10 13:22:12,937 - __main__ - INFO - [RHETORIQUE] VALIDATION SYSTEME RHETORIQUE - DONNEES FRAICHES
+2025-06-10 13:22:12,937 - __main__ - INFO - Analyse rhetorique du texte: Intelligence artificielle et ethique: un debat contemporain
+            L'explosion des modeles de l...
+2025-06-10 13:22:12,937 - __main__ - INFO - [rhetorical_fresh_eaf9d3ac_1] Debut analyse rhetorique
+2025-06-10 13:22:12,947 - __main__ - INFO - [SHERLOCK] VALIDATION SYSTEME SHERLOCK/WATSON - CRIMES INEDITS
+2025-06-10 13:22:12,947 - __main__ - INFO - Investigation du crime: L'Enigme du Laboratoire d'IA
+2025-06-10 13:22:12,947 - __main__ - INFO - [sherlock_fresh_eaf9d3ac_crime1] Investigation: L'Enigme du Laboratoire d'IA
+2025-06-10 13:22:12,947 - __main__ - INFO - [sherlock_fresh_eaf9d3ac_crime1] Crime resolu: Alex Morrison
+2025-06-10 13:22:12,947 - __main__ - INFO - [sherlock_fresh_eaf9d3ac_crime2] Investigation: Le Mystere du Campus Connecte
+2025-06-10 13:22:12,947 - __main__ - INFO - [sherlock_fresh_eaf9d3ac_crime2] Crime resolu: Dr Elena Vasquez
+2025-06-10 13:22:12,947 - __main__ - INFO - [OK] Validation Sherlock/Watson terminee en 0.00s
+2025-06-10 13:22:12,947 - __main__ - INFO - [EPITA] VALIDATION DEMO EPITA - SCENARIOS INEDITS
+2025-06-10 13:22:12,947 - __main__ - INFO - Simulation pedagogique: Debat IA vs Emploi
+2025-06-10 13:22:12,947 - __main__ - INFO - [epita_fresh_eaf9d3ac_debate] Scenario: Debat IA vs Emploi
+2025-06-10 13:22:12,947 - __main__ - INFO - [epita_fresh_eaf9d3ac_debate] Scenario complete: efficacite 0.87
+2025-06-10 13:22:12,947 - __main__ - INFO - [epita_fresh_eaf9d3ac_ethics] Scenario: Ethique Algorithmique
+2025-06-10 13:22:12,947 - __main__ - INFO - [epita_fresh_eaf9d3ac_ethics] Scenario complete: efficacite 0.87
+2025-06-10 13:22:12,947 - __main__ - INFO - [OK] Validation EPITA terminee en 0.00s
+2025-06-10 13:22:12,947 - __main__ - INFO - [WEB] VALIDATION WEB & API - REQUETES FRAICHES
+2025-06-10 13:22:13,054 - __main__ - INFO - [rhetorical_fresh_eaf9d3ac_1] Analyse terminee: 5 arguments detectes
+2025-06-10 13:22:13,054 - __main__ - INFO - [rhetorical_fresh_eaf9d3ac_2] Debut analyse rhetorique
+2025-06-10 13:22:13,164 - __main__ - INFO - [rhetorical_fresh_eaf9d3ac_2] Analyse terminee: 5 arguments detectes
+2025-06-10 13:22:13,164 - __main__ - INFO - [rhetorical_fresh_eaf9d3ac_3] Debut analyse rhetorique
+2025-06-10 13:22:13,276 - __main__ - INFO - [rhetorical_fresh_eaf9d3ac_3] Analyse terminee: 5 arguments detectes
+2025-06-10 13:22:13,276 - __main__ - INFO - [OK] Validation rhetorique terminee en 0.34s
+2025-06-10 13:22:13,399 - __main__ - INFO - [OK] Validation Web & API terminee en 0.45s
+2025-06-10 13:22:13,400 - __main__ - INFO - [SAVE] Traces sauvegardees: ..\..\logs\validation_traces\validation_simple_eaf9d3ac_20250610_132213.json
+2025-06-10 13:22:13,400 - __main__ - INFO - [SAVE] Traces detaillees: ..\..\logs\validation_traces\detailed_traces_simple_eaf9d3ac.jsonl
+2025-06-10 13:22:13,400 - __main__ - INFO - [SUCCESS] VALIDATION COMPLETE TERMINEE en 0.46s
+2025-06-10 13:22:13,400 - __main__ - INFO - [METRICS] Taux de succes global: 96.75%
