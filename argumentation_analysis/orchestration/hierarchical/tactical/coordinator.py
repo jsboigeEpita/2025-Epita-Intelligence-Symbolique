@@ -74,36 +74,61 @@ class TaskCoordinator:
         # Définir le callback pour les directives
         def handle_directive(message: Message) -> None:
             directive_type = message.content.get("directive_type")
-            content = message.content.get("content", {})
+            # Le 'goal' est dans les 'parameters' du message envoyé par StrategicManager
+            parameters = message.content.get("parameters", {})
             
-            if directive_type == "objective":
-                # Traiter l'objectif
-                self.logger.info(f"Directive stratégique reçue: objectif {content.get('objective', {}).get('id')}")
+            self.logger.info(f"TaskCoordinator.handle_directive reçue: type='{directive_type}', sender='{message.sender}', content='{message.content}'")
+
+            if directive_type == "new_strategic_goal":
+                objective_data = parameters # 'parameters' contient directement le dictionnaire de l'objectif
+                if not isinstance(objective_data, dict) or not objective_data.get("id"):
+                    self.logger.error(f"Données d'objectif invalides ou manquantes dans la directive 'new_strategic_goal': {objective_data}")
+                    return
+
+                self.logger.info(f"Directive stratégique 'new_strategic_goal' reçue pour l'objectif: {objective_data.get('id')}")
                 
                 # Ajouter l'objectif à l'état tactique
-                self.state.add_assigned_objective(content.get("objective", {}))
+                self.state.add_assigned_objective(objective_data)
+                self.logger.info(f"Objectif {objective_data.get('id')} ajouté à TacticalState.")
                 
                 # Décomposer l'objectif en tâches
-                tasks = self._decompose_objective_to_tasks(content.get("objective", {}))
+                tasks = self._decompose_objective_to_tasks(objective_data)
+                self.logger.info(f"Objectif {objective_data.get('id')} décomposé en {len(tasks)} tâches.")
                 
                 # Établir les dépendances entre les tâches
                 self._establish_task_dependencies(tasks)
+                self.logger.info(f"Dépendances établies pour les tâches de l'objectif {objective_data.get('id')}.")
                 
                 # Ajouter les tâches à l'état tactique
                 for task in tasks:
                     self.state.add_task(task)
+                self.logger.info(f"{len(tasks)} tâches ajoutées à TacticalState pour l'objectif {objective_data.get('id')}.")
                 
                 # Journaliser l'action
                 self._log_action(
-                    "Décomposition d'objectif", 
-                    f"Décomposition de l'objectif {content.get('objective', {}).get('id')} en {len(tasks)} tâches"
+                    "Décomposition d'objectif",
+                    f"Décomposition de l'objectif {objective_data.get('id')} en {len(tasks)} tâches"
                 )
                 
+                # Assigner les tâches (nouvel ajout basé sur la logique de process_strategic_objectives)
+                self.logger.info(f"Assignation des {len(tasks)} tâches pour l'objectif {objective_data.get('id')}...")
+                for task in tasks:
+                    # Utiliser la méthode assign_task_to_operational qui est async
+                    # Si handle_directive est synchrone, cela pourrait nécessiter une refonte
+                    # ou l'exécution dans une tâche asyncio séparée.
+                    # Pour l'instant, on suppose que le middleware gère l'exécution du callback
+                    # d'une manière qui permet les opérations asynchrones ou qu'elles sont non bloquantes.
+                    # Si assign_task_to_operational est async, handle_directive doit être async.
+                    # Pour l'instant, on appelle une version hypothétique synchrone ou on logue l'intention.
+                    self.logger.info(f"Intention d'assigner la tâche : {task.get('id')}")
+                    # await self.assign_task_to_operational(task) # Si handle_directive devient async
+                    self._assign_task_to_operational_agent(task) # Utilisation de la méthode existante _assign_task_to_operational_agent
+
                 # Envoyer un accusé de réception
                 self.adapter.send_report(
                     report_type="directive_acknowledgement",
                     content={
-                        "objective_id": content.get("objective", {}).get("id"),
+                        "objective_id": objective_data.get("id"),
                         "tasks_created": len(tasks)
                     },
                     recipient_id=message.sender,
@@ -132,17 +157,20 @@ class TaskCoordinator:
                 )
         
         # S'abonner aux directives stratégiques
-        self.middleware.get_channel(ChannelType.HIERARCHICAL).subscribe(
-            subscriber_id="tactical_coordinator",
-            callback=handle_directive,
-            filter_criteria={
-                "recipient": "tactical_coordinator",
-                "type": MessageType.COMMAND,
-                "sender_level": AgentLevel.STRATEGIC
-            }
-        )
-        
-        self.logger.info("Abonnement aux directives stratégiques effectué")
+        hierarchical_channel = self.middleware.get_channel(ChannelType.HIERARCHICAL)
+        if hierarchical_channel:
+            hierarchical_channel.subscribe(
+                subscriber_id="tactical_coordinator",
+                callback=handle_directive,
+                filter_criteria={
+                    "recipient": "tactical_coordinator",
+                    "type": MessageType.COMMAND, # Rétabli à COMMAND
+                    "sender_level": AgentLevel.STRATEGIC
+                }
+            )
+            self.logger.info("Abonnement aux directives stratégiques effectué.")
+        else:
+            self.logger.error(f"Impossible de s'abonner aux directives stratégiques: Canal HIERARCHICAL non trouvé dans le middleware.")
     
     def process_strategic_objectives(self, objectives: List[Dict[str, Any]]) -> Dict[str, Any]:
         """
@@ -178,6 +206,7 @@ class TaskCoordinator:
                         f"Décomposition de {len(objectives)} objectifs en {len(all_tasks)} tâches")
         
         # Assigner les tâches aux agents opérationnels via le système de communication
+        self.logger.info(f"Assignation de {len(all_tasks)} tâches globalement...")
         for task in all_tasks:
             self._assign_task_to_operational_agent(task)
         
@@ -222,25 +251,39 @@ class TaskCoordinator:
                 }
             )
             
-            self.logger.info(f"Tâche {task.get('id')} assignée à {recipient_id}")
+            self.logger.info(f"Tâche {task.get('id')} assignée à {recipient_id} via adaptateur.")
         else:
             # Publier la tâche pour que n'importe quel agent avec les capacités requises puisse la prendre
-            self.middleware.publish(
-                topic_id=f"operational_tasks.{'.'.join(required_capabilities)}",
-                sender="tactical_coordinator",
-                sender_level=AgentLevel.TACTICAL,
-                content={
-                    "task_type": "operational_task",
-                    "task_data": task
-                },
-                priority=message_priority,
-                metadata={
-                    "objective_id": task.get("objective_id"),
-                    "requires_capabilities": required_capabilities
-                }
-            )
+            # S'assurer que le topic_id est valide et que le middleware est configuré pour le gérer.
+            topic = f"operational_tasks.{'.'.join(sorted(list(set(required_capabilities))))}" # Normaliser le topic
+            self.logger.info(f"Aucun agent spécifique trouvé pour la tâche {task.get('id')}. Publication sur le topic: {topic}")
             
-            self.logger.info(f"Tâche {task.get('id')} publiée pour les agents avec capacités: {required_capabilities}")
+            # Vérifier si le middleware existe avant de publier
+            if self.middleware:
+                self.middleware.publish(
+                    # topic_id=topic, # Utiliser un ID de canal ou un topic plus générique si nécessaire
+                    channel_id=self.adapter.hierarchical_channel_id, # Publier sur le canal hiérarchique principal
+                    message=Message(
+                        message_id=str(uuid.uuid4()),
+                        sender_id="tactical_coordinator",
+                        recipient_id="operational_level", # Ou un broadcast spécifique si le canal le supporte
+                        message_type=MessageType.TASK_ASSIGNMENT, # Un type de message plus approprié
+                        content={
+                            "task_type": "operational_task", # Conserver pour la compatibilité
+                            "task_data": task,
+                            "required_capabilities": required_capabilities # Répéter pour le filtrage par les agents
+                        },
+                        priority=message_priority,
+                        timestamp=datetime.now().isoformat(),
+                        metadata={
+                            "objective_id": task.get("objective_id"),
+                            "task_origin": "tactical_coordinator"
+                        }
+                    )
+                )
+                self.logger.info(f"Tâche {task.get('id')} publiée sur le canal '{self.adapter.hierarchical_channel_id}' pour les agents avec capacités: {required_capabilities}")
+            else:
+                self.logger.error("Middleware non disponible. Impossible de publier la tâche.")
     
     def _determine_appropriate_agent(self, required_capabilities: List[str]) -> Optional[str]:
         """
@@ -280,6 +323,7 @@ class TaskCoordinator:
         for task in tasks:
             self.state.add_task(task)
         
+        self.logger.info(f"Objectif {objective.get('id')} décomposé en {len(tasks)} tâches (via decompose_strategic_goal).")
         return {"tasks": tasks}
 
     def _decompose_objective_to_tasks(self, objective: Dict[str, Any]) -> List[Dict[str, Any]]:

@@ -47,5 +47,7 @@ dependencies:
     - markdown
     - playwright
     - pytest-playwright
+    - fastapi
+    - "uvicorn[standard]"
     # Note: semantic-kernel[agents] non disponible dans cette version
     # Fallback implémenté dans project_core/semantic_kernel_agents_fallback.py
