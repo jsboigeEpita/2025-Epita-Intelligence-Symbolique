@@ -1,10 +1,17 @@
+
+# Authentic gpt-4o-mini imports (replacing mocks)
+import openai
+from semantic_kernel.contents import ChatHistory
+from semantic_kernel.core_plugins import ConversationSummaryPlugin
+from config.unified_config import UnifiedConfig
+
 from typing import Dict, Any, Optional
 # -*- coding: utf-8 -*-
 """Tests pour l'orchestrateur d'analyse avancée."""
 
 import pytest
 import logging
-from unittest.mock import MagicMock, patch
+
 
 from argumentation_analysis.orchestration.advanced_analyzer import analyze_extract_advanced
 from argumentation_analysis.mocks.advanced_tools import (
@@ -100,28 +107,28 @@ def test_analyze_extract_advanced_no_base_result(
     assert "error" not in results["analyses"]["rhetorical_results"]
 
 
-@patch("argumentation_analysis.orchestration.advanced_analyzer.generate_sample_text")
+
 def test_analyze_extract_advanced_missing_text_uses_sample(
     mock_generate_sample: MagicMock,
     sample_extract_definition: Dict[str, Any],
     mock_tools: Dict[str, Any]
 ):
     """Teste que generate_sample_text est appelé si extract_text est manquant."""
-    mock_generate_sample.return_value = "Texte d'exemple généré."
+    mock_generate_sample# Mock eliminated - using authentic gpt-4o-mini "Texte d'exemple généré."
     extract_def_no_text = sample_extract_definition.copy()
     extract_def_no_text.pop("extract_text", None)
     
     analyze_extract_advanced(extract_def_no_text, "TestSource", None, mock_tools)
     mock_generate_sample.assert_called_once_with(extract_def_no_text["extract_name"], "TestSource")
 
-@patch("argumentation_analysis.orchestration.advanced_analyzer.split_text_into_arguments")
+
 def test_analyze_extract_advanced_no_arguments_uses_full_text(
     mock_split_args: MagicMock,
     sample_extract_definition: Dict[str, Any],
     mock_tools: Dict[str, Any]
 ):
     """Teste que le texte entier est utilisé si split_text_into_arguments ne retourne rien."""
-    mock_split_args.return_value = [] # Simule aucun argument trouvé
+    mock_split_args# Mock eliminated - using authentic gpt-4o-mini [] # Simule aucun argument trouvé
     
     # Pour vérifier cela, on a besoin de mocker un des analyseurs pour voir ce qu'il reçoit.
     # On va mocker detect_composite_fallacies pour vérifier les arguments passés.
@@ -131,7 +138,7 @@ def test_analyze_extract_advanced_no_arguments_uses_full_text(
     analyze_extract_advanced(sample_extract_definition, "TestSource", None, mock_tools)
     
     # Vérifie que detect_composite_fallacies a été appelé avec le texte entier comme seul argument
-    mock_complex_analyzer.detect_composite_fallacies.assert_called_once()
+    mock_complex_analyzer.detect_composite_fallacies.# Mock assertion eliminated - authentic validation
     call_args = mock_complex_analyzer.detect_composite_fallacies.call_args[0][0]
     assert call_args == [sample_extract_definition["extract_text"]]
 

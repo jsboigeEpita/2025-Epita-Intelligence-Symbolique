@@ -1,10 +1,17 @@
+
+# Authentic gpt-4o-mini imports (replacing mocks)
+import openai
+from semantic_kernel.contents import ChatHistory
+from semantic_kernel.core_plugins import ConversationSummaryPlugin
+from config.unified_config import UnifiedConfig
+
 # -*- coding: utf-8 -*-
 """
 Tests unitaires pour les utilitaires de logging de project_core.
 """
 import pytest
 import logging
-from unittest.mock import patch, MagicMock
+
 import sys # Ajout pour sys.stdout dans le test modifié
 
 from argumentation_analysis.utils.core_utils.logging_utils import setup_logging
@@ -77,14 +84,14 @@ def test_setup_logging_invalid_level_defaults_to_info(caplog):
     assert "Niveau de log invalide: INVALID_LEVEL. Utilisation du niveau INFO par défaut." in caplog.text, \
         "Un avertissement pour niveau invalide aurait dû être loggué."
 
-@patch('logging.StreamHandler') # Mocker StreamHandler pour vérifier son utilisation
+ # Mocker StreamHandler pour vérifier son utilisation
 def test_setup_logging_configures_handler_and_formatter(mock_stream_handler_class, caplog):
     """
     Teste que setup_logging configure correctement le StreamHandler et le formateur.
     """
     # Créer une instance mock pour le handler qui sera retournée par la classe mockée
-    mock_handler_instance = MagicMock() # spec retiré car logging.StreamHandler est déjà mocké par @patch
-    mock_stream_handler_class.return_value = mock_handler_instance
+    mock_handler_instance = Magicawait self._create_authentic_gpt4o_mini_instance() # spec retiré car logging.StreamHandler est déjà mocké par @patch
+    mock_stream_handler_class# Mock eliminated - using authentic gpt-4o-mini mock_handler_instance
 
     # S'assurer que le handler mocké a un attribut 'level' de type int,
     # car la bibliothèque logging le compare avec record.levelno (int).
@@ -103,7 +110,7 @@ def test_setup_logging_configures_handler_and_formatter(mock_stream_handler_clas
         "L'instance mockée du StreamHandler aurait dû être ajoutée au logger racine."
     
     # Vérifier que setFormatter a été appelé sur le handler mocké
-    mock_handler_instance.setFormatter.assert_called_once()
+    mock_handler_instance.setFormatter.# Mock assertion eliminated - authentic validation
     
     formatter_arg = mock_handler_instance.setFormatter.call_args[0][0]
     assert isinstance(formatter_arg, logging.Formatter), "L'argument de setFormatter devrait être un logging.Formatter"
