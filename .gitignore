@@ -130,6 +130,7 @@ temp_extracts/
 pr1_diff.txt
 {output_file_path}
 logs/ # Ajouté depuis HEAD
+reports/ # Dossier des rapports temporaires
 
 # Logs spécifiques au projet
 extract_agent.log

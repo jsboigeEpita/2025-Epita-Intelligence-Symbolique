@@ -12,7 +12,7 @@ Start-Sleep 2
 # 2. Lancer le backend en arrière-plan
 Write-Host "2. Lancement du backend sur port 5003..." -ForegroundColor Yellow
 $backendJob = Start-Job -ScriptBlock {
-    Set-Location "C:\dev\2025-Epita-Intelligence-Symbolique"
+    Set-Location $using:PWD
     & powershell -File ".\scripts\env\activate_project_env.ps1" -CommandToRun "python -m argumentation_analysis.services.web_api.app"
 }
 

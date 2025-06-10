@@ -1,0 +1,50 @@
+{
+  "test_session": {
+    "id": "77d779cd",
+    "timestamp": "20250609_211830",
+    "objective": "Prouver authenticité système via appels API réels"
+  },
+  "tests": {
+    "direct_api": {
+      "success": true,
+      "model": "gpt-4o-mini",
+      "latency_ms": 9164.433002471924,
+      "tokens_used": 653,
+      "response_length": 2222,
+      "authenticity_score": 2876,
+      "authenticity_markers": {
+        "mentions_test_id": false,
+        "mentions_timestamp": false,
+        "has_reasoning": false,
+        "response_length": 2222,
+        "latency_realistic": true,
+        "token_usage": 653
+      },
+      "trace": {
+        "test_id": "77d779cd",
+        "timestamp": "2025-06-09T21:18:40.707528",
+        "prompt_hash": "a2409f1cab6e8234",
+        "model": "gpt-4o-mini",
+        "latency_ms": 9164.433002471924,
+        "tokens_used": 653,
+        "response_length": 2222,
+        "authenticity_markers": {
+          "mentions_test_id": false,
+          "mentions_timestamp": false,
+          "has_reasoning": false,
+          "response_length": 2222,
+          "latency_realistic": true,
+          "token_usage": 653
+        },
+        "response_preview": "Pour résoudre cette mystérieuse disparition dans le laboratoire de physique quantique, examinons les éléments clés de l'affaire en nous basant sur les indices fournis et les profils des suspects.\n\n1. ..."
+      },
+      "authenticity": "AUTHENTIC"
+    },
+    "orchestrateur": {
+      "success": false,
+      "error": "JVM Initialization failed: No JVM shared library file (jvm.dll) found. Try setting up the JAVA_HOME environment variable properly.",
+      "authenticity": "ERROR"
+    }
+  },
+  "final_authenticity_score": 50.0
+}

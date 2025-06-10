@@ -1,0 +1,26 @@
+2025-06-10 11:54:09,095 - INFO - 🚀 Début de la validation complète des Scripts Démo EPITA
+2025-06-10 11:54:09,104 - INFO - 🔍 TEST 1: Script de démonstration principal
+2025-06-10 11:54:09,183 - WARNING - ❌ Script Principal Demo EPITA: ÉCHEC
+2025-06-10 11:54:09,183 - INFO - 🎓 TEST 2: Scénarios pédagogiques
+2025-06-10 11:54:09,183 - INFO - ✅ Scénarios Pédagogiques: SUCCÈS
+2025-06-10 11:54:09,183 - INFO - 📚 TEST 3: Données éducatives réalistes
+2025-06-10 11:54:09,183 - INFO - ✅ Données Éducatives Réalistes: SUCCÈS
+2025-06-10 11:54:09,183 - INFO - 🏗️ TEST 4: Architecture pédagogique
+2025-06-10 11:54:09,184 - INFO - ✅ Architecture Pédagogique: SUCCÈS
+2025-06-10 11:54:09,184 - INFO - 🛡️ TEST 5: Robustesse éducative
+2025-06-10 11:54:09,184 - INFO - ✅ Robustesse Éducative: SUCCÈS
+2025-06-10 11:54:09,184 - INFO - 📊 TEST 6: Traces pédagogiques
+2025-06-10 11:54:09,185 - INFO - ✅ Traces Pédagogiques: SUCCÈS
+2025-06-10 11:54:09,185 - INFO - ⚡ TEST 7: Performance pédagogique
+2025-06-10 11:54:09,186 - INFO - ✅ Performance Pédagogique: SUCCÈS
+2025-06-10 11:54:09,186 - INFO - 🏫 TEST 8: Intégration EPITA
+2025-06-10 11:54:09,186 - INFO - ✅ Intégration EPITA: SUCCÈS
+2025-06-10 11:54:09,186 - INFO - 🏁 Validation terminée: 7/8 tests réussis
+2025-06-10 11:54:09,188 - ERROR - Erreur durant la validation: 'charmap' codec can't encode character '\U0001f4c4' in position 2: character maps to <undefined>
+2025-06-10 11:54:09,188 - ERROR - Traceback (most recent call last):
+  File "D:\2025-Epita-Intelligence-Symbolique\scripts\demo\test_epita_demo_validation.py", line 518, in main
+    print(f"\n📄 Rapport: {report_file}")
+  File "C:\Tools\miniconda3\lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+UnicodeEncodeError: 'charmap' codec can't encode character '\U0001f4c4' in position 2: character maps to <undefined>
+

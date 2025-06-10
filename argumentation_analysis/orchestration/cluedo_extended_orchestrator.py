@@ -11,7 +11,7 @@ import logging
 from typing import List, Dict, Any, Optional
 from datetime import datetime
 
-from ..agents.core.oracle.cluedo_dataset import RevelationRecord
+from argumentation_analysis.agents.core.oracle.cluedo_dataset import RevelationRecord
 
 import semantic_kernel as sk
 from semantic_kernel.functions import kernel_function
@@ -43,7 +43,7 @@ except ImportError:
             return False
             
     AGENTS_AVAILABLE = False
-from semantic_kernel.contents.chat_message_content import ChatMessageContent
+from argumentation_analysis.utils.semantic_kernel_compatibility import ChatMessageContent
 from semantic_kernel.functions.kernel_arguments import KernelArguments
 
 # Import conditionnel pour les modules filters qui peuvent ne pas exister
@@ -65,13 +65,13 @@ except ImportError:
 from pydantic import Field
 
 # Imports locaux
-from ..core.cluedo_oracle_state import CluedoOracleState
-from ..orchestration.plugins.enquete_state_manager_plugin import EnqueteStateManagerPlugin
-from ..orchestration.group_chat import GroupChatOrchestration
-from ..agents.core.pm.sherlock_enquete_agent import SherlockEnqueteAgent
-from ..agents.core.logic.watson_logic_assistant import WatsonLogicAssistant
-from ..agents.core.oracle.moriarty_interrogator_agent import MoriartyInterrogatorAgent
-from ..agents.core.oracle.cluedo_dataset import CluedoDataset
+from argumentation_analysis.core.cluedo_oracle_state import CluedoOracleState
+from argumentation_analysis.orchestration.plugins.enquete_state_manager_plugin import EnqueteStateManagerPlugin
+from argumentation_analysis.orchestration.group_chat import GroupChatOrchestration
+from argumentation_analysis.agents.core.pm.sherlock_enquete_agent import SherlockEnqueteAgent
+from argumentation_analysis.agents.core.logic.watson_logic_assistant import WatsonLogicAssistant
+from argumentation_analysis.agents.core.oracle.moriarty_interrogator_agent import MoriartyInterrogatorAgent
+from argumentation_analysis.agents.core.oracle.cluedo_dataset import CluedoDataset
 
 # Configuration du logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')

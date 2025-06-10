@@ -13,14 +13,14 @@ conda run -n projet-is --no-capture-output --live-stream pip install -e .
 # Lancer le backend en arrière-plan
 Write-Host "Démarrage du serveur backend en arrière-plan..."
 Start-Job -ScriptBlock {
-    cd 'C:\dev\2025-Epita-Intelligence-Symbolique'
+    cd $PWD
     conda run -n projet-is --no-capture-output --live-stream python argumentation_analysis/services/web_api/start_api.py --port 5003
 } -Name "Backend"
 
 # Lancer le frontend en arrière-plan
 Write-Host "Démarrage du serveur frontend en arrière-plan..."
 Start-Job -ScriptBlock {
-    cd 'C:\dev\2025-Epita-Intelligence-Symbolique'
+    cd $PWD
     conda run -n projet-is --no-capture-output --live-stream npm start --prefix services/web_api/interface-web-argumentative
 } -Name "Frontend"
 

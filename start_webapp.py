@@ -272,7 +272,8 @@ def fallback_direct_launch(args: argparse.Namespace, logger: logging.Logger) -> 
             sys.argv.append("--frontend")
         
         if args.backend_only:
-            sys.argv.extend(["--start", "--no-frontend"])
+            sys.argv.append("--start")
+            # Note: pas d'argument --frontend = backend seulement
         
         if args.config:
             sys.argv.extend(["--config", args.config])

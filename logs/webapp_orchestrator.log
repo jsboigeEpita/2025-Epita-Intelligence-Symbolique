@@ -1,0 +1,45 @@
+2025-06-10 12:26:09,113 - scripts.webapp.unified_web_orchestrator - INFO - [96m[12:26:09.113] [START] DEMARRAGE APPLICATION WEB[0m
+2025-06-10 12:26:09,113 - scripts.webapp.unified_web_orchestrator - INFO -    Détails: Mode: Headless
+2025-06-10 12:26:09,113 - scripts.webapp.unified_web_orchestrator - INFO -    Résultat: Initialisation orchestrateur
+2025-06-10 12:26:09,113 - scripts.webapp.unified_web_orchestrator - INFO - [96m[12:26:09.113] [CLEAN] NETTOYAGE PREALABLE[0m
+2025-06-10 12:26:09,113 - scripts.webapp.unified_web_orchestrator - INFO -    Détails: Arret instances existantes
+2025-06-10 12:26:09,113 - scripts.webapp.unified_web_orchestrator - INFO - [CLEAN] Debut nettoyage processus application web
+2025-06-10 12:26:12,145 - scripts.webapp.unified_web_orchestrator - INFO - Processus trouvé: PID 7052 - node d:\roo-extensions\mcps\internal\servers\roo-state-manager\build\index.js
+2025-06-10 12:26:12,870 - scripts.webapp.unified_web_orchestrator - INFO - Processus trouvé: PID 11364 - node d:/roo-extensions/mcps/external/mcp-server-ftp/build/index.js
+2025-06-10 12:26:13,217 - scripts.webapp.unified_web_orchestrator - INFO - Processus trouvé: PID 13884 - node c:\users\myia\appdata\local\npm-cache\_npx\a3241bba59c344f5\node_modules\.bin\\..\@modelcontext
+2025-06-10 12:26:13,343 - scripts.webapp.unified_web_orchestrator - INFO - Processus trouvé: PID 15100 - node d:\roo-extensions\mcps\internal\servers\jinavigator-server\dist\index.js
+2025-06-10 12:26:13,448 - scripts.webapp.unified_web_orchestrator - INFO - Processus trouvé: PID 17772 - c:\program files\nodejs\\node.exe c:\program files\nodejs\\node_modules\npm\bin\npx-cli.js -y @model
+2025-06-10 12:26:13,450 - scripts.webapp.unified_web_orchestrator - INFO - Processus trouvé: PID 18248 - c:\program files\nodejs\\node.exe c:\program files\nodejs\\node_modules\npm\bin\npx-cli.js -y @model
+2025-06-10 12:26:13,479 - scripts.webapp.unified_web_orchestrator - INFO - Processus trouvé: PID 18668 - c:\tools\miniconda3\python.exe start_webapp.py --backend-only --no-conda --verbose --timeout 1
+2025-06-10 12:26:13,523 - scripts.webapp.unified_web_orchestrator - INFO - Processus trouvé: PID 21688 - node d:\roo-extensions\mcps\internal\servers\roo-state-manager\build\index.js
+2025-06-10 12:26:13,616 - scripts.webapp.unified_web_orchestrator - INFO - Processus trouvé: PID 24220 - c:\users\myia\.vscode\extensions\ms-dotnettools.csdevkit-1.20.35-win32-x64\components\vs-green-serve
+2025-06-10 12:26:13,676 - scripts.webapp.unified_web_orchestrator - INFO - Processus trouvé: PID 26824 - c:\users\myia\.vscode\extensions\ms-dotnettools.csdevkit-1.20.35-win32-x64\components\vs-green-serve
+2025-06-10 12:26:13,676 - scripts.webapp.unified_web_orchestrator - INFO - Processus trouvé: PID 26928 - node d:\roo-extensions\mcps\internal\servers\roo-state-manager\build\index.js
+2025-06-10 12:26:13,702 - scripts.webapp.unified_web_orchestrator - INFO - Processus trouvé: PID 27224 - c:\program files\nodejs\\node.exe c:\program files\nodejs\\node_modules\npm\bin\npx-cli.js -y @model
+2025-06-10 12:26:13,764 - scripts.webapp.unified_web_orchestrator - INFO - Processus trouvé: PID 30088 - c:\python312\python.exe c:\users\myia\.vscode\extensions\ms-python.isort-2025.0.0\bundled\tool\lsp_s
+2025-06-10 12:26:13,769 - scripts.webapp.unified_web_orchestrator - INFO - Processus trouvé: PID 31068 - node d:\roo-extensions\mcps\internal\servers\quickfiles-server\build\index.js
+2025-06-10 12:26:13,856 - scripts.webapp.unified_web_orchestrator - INFO - Processus trouvé: PID 33416 - node d:\roo-extensions\mcps\internal\servers\jupyter-mcp-server\dist\index.js
+2025-06-10 12:26:13,864 - scripts.webapp.unified_web_orchestrator - INFO - Processus trouvé: PID 34384 - c:\python312\python.exe c:\users\myia\.vscode\extensions\ms-python.isort-2025.0.0\bundled\tool\lsp_s
+2025-06-10 12:26:13,874 - scripts.webapp.unified_web_orchestrator - INFO - Processus trouvé: PID 35616 - c:\program files\nodejs\node.exe tests_playwright\node_modules\@playwright\test\cli.js test-server -
+2025-06-10 12:26:13,881 - scripts.webapp.unified_web_orchestrator - INFO - Processus trouvé: PID 36944 - node d:\roo-extensions\mcps\internal\servers\jupyter-mcp-server\dist\index.js
+2025-06-10 12:26:13,888 - scripts.webapp.unified_web_orchestrator - INFO - Processus trouvé: PID 38140 - node d:\roo-extensions\mcps\internal\servers\jupyter-mcp-server\dist\index.js
+2025-06-10 12:26:13,898 - scripts.webapp.unified_web_orchestrator - INFO - Processus trouvé: PID 40308 - node c:\users\myia\appdata\local\npm-cache\_npx\a3241bba59c344f5\node_modules\.bin\\..\@modelcontext
+2025-06-10 12:26:13,932 - scripts.webapp.unified_web_orchestrator - INFO - Processus trouvé: PID 41748 - c:\program files\nodejs\\node.exe c:\program files\nodejs\\node_modules\npm\bin\npx-cli.js -y @model
+2025-06-10 12:26:13,933 - scripts.webapp.unified_web_orchestrator - INFO - Processus trouvé: PID 42396 - node c:\users\myia\appdata\local\npm-cache\_npx\3dfbf5a9eea4a1b3\node_modules\.bin\\..\@modelcontext
+2025-06-10 12:26:13,938 - scripts.webapp.unified_web_orchestrator - INFO - Processus trouvé: PID 43192 - node d:\roo-extensions\mcps\internal\servers\jupyter-mcp-server\dist\index.js
+2025-06-10 12:26:13,942 - scripts.webapp.unified_web_orchestrator - INFO - Processus trouvé: PID 43972 - node d:\roo-extensions\mcps\internal\servers\jinavigator-server\dist\index.js
+2025-06-10 12:26:13,944 - scripts.webapp.unified_web_orchestrator - INFO - Processus trouvé: PID 44328 - node d:\roo-extensions\mcps\internal\servers\jupyter-mcp-server\dist\index.js
+2025-06-10 12:26:13,995 - scripts.webapp.unified_web_orchestrator - INFO - Processus trouvé: PID 46164 - node d:\roo-extensions\mcps\internal\servers\roo-state-manager\build\index.js
+2025-06-10 12:26:14,043 - scripts.webapp.unified_web_orchestrator - INFO - Processus trouvé: PID 49012 - node c:\users\myia\appdata\local\npm-cache\_npx\3dfbf5a9eea4a1b3\node_modules\.bin\\..\@modelcontext
+2025-06-10 12:26:14,044 - scripts.webapp.unified_web_orchestrator - INFO - Processus trouvé: PID 49240 - node d:/roo-extensions/mcps/external/mcp-server-ftp/build/index.js
+2025-06-10 12:26:14,046 - scripts.webapp.unified_web_orchestrator - INFO - Processus trouvé: PID 49568 - c:\program files\nodejs\node.exe node_modules\@playwright\test\cli.js test-server -c playwright.conf
+2025-06-10 12:26:14,047 - scripts.webapp.unified_web_orchestrator - INFO - Processus trouvé: PID 49672 - node d:\roo-extensions\mcps\internal\servers\roo-state-manager\build\index.js
+2025-06-10 12:26:14,056 - scripts.webapp.unified_web_orchestrator - INFO - Processus trouvé: PID 51152 - node d:\roo-extensions\mcps\internal\servers\quickfiles-server\build\index.js
+2025-06-10 12:26:14,058 - scripts.webapp.unified_web_orchestrator - INFO - Processus trouvés: 31
+2025-06-10 12:26:14,058 - scripts.webapp.unified_web_orchestrator - INFO - Envoi signal TERM aux processus...
+2025-06-10 12:26:14,058 - scripts.webapp.unified_web_orchestrator - INFO - TERM envoyé à PID 7052
+2025-06-10 12:26:14,058 - scripts.webapp.unified_web_orchestrator - INFO - TERM envoyé à PID 11364
+2025-06-10 12:26:14,058 - scripts.webapp.unified_web_orchestrator - INFO - TERM envoyé à PID 13884
+2025-06-10 12:26:14,058 - scripts.webapp.unified_web_orchestrator - INFO - TERM envoyé à PID 15100
+2025-06-10 12:26:14,058 - scripts.webapp.unified_web_orchestrator - INFO - TERM envoyé à PID 17772
+2025-06-10 12:26:14,058 - scripts.webapp.unified_web_orchestrator - INFO - TERM envoyé à PID 18248
