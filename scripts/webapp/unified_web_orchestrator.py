@@ -44,18 +44,18 @@ try:
     from scripts.core.auto_env import _load_dotenv_intelligent
     
     # Activation automatique de l'environnement projet-is
-    print("🔧 Auto-activation environnement conda...")
+    print("[INFO] Auto-activation environnement conda...")
     if auto_activate_env("projet-is", silent=False):
-        print("✅ Environnement 'projet-is' auto-activé")
+        print("[OK] Environnement 'projet-is' auto-activé")
     else:
-        print("⚠️ Impossible d'auto-activer l'environnement, continuons quand même...")
+        print("[WARN] Impossible d'auto-activer l'environnement, continuons quand même...")
     
     # Chargement .env intelligent
     if _load_dotenv_intelligent(_project_root, silent=False):
-        print("✅ Configuration .env chargée")
+        print("[OK] Configuration .env chargée")
     
 except Exception as e:
-    print(f"⚠️ Erreur auto-activation: {e}")
+    print(f"[ERREUR] Erreur auto-activation: {e}")
     print("Continuons sans auto-activation...")
 
 # Imports internes

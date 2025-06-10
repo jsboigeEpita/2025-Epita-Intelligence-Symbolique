@@ -219,6 +219,49 @@ def _auto_activate_conda_env(env_name: str = "projet-is", silent: bool = True) -
             return True
         
         # Vérifier si conda est disponible
+            # Tentative de détection de Conda via CONDA_EXE si CONDA_PATH n'a pas fonctionné
+            conda_exe_path_str = os.environ.get('CONDA_EXE')
+            if conda_exe_path_str:
+                conda_exe_file = Path(conda_exe_path_str)
+                if conda_exe_file.is_file():
+                    if not silent:
+                        print(f"[INFO] CONDA_EXE trouvé: {conda_exe_file}")
+                    
+                    condabin_dir = conda_exe_file.parent # e.g., C:\...\anaconda3\condabin
+                    
+                    # Déterminer le répertoire Scripts, typiquement un frère de condabin
+                    # (e.g., C:\...\anaconda3\Scripts)
+                    scripts_dir = condabin_dir.parent / "Scripts"
+                    
+                    paths_to_add_to_os_path = []
+                    if condabin_dir.is_dir():
+                        paths_to_add_to_os_path.append(str(condabin_dir))
+                    if scripts_dir.is_dir():
+                        paths_to_add_to_os_path.append(str(scripts_dir))
+                    
+                    if paths_to_add_to_os_path:
+                        current_os_path = os.environ.get('PATH', '')
+                        path_elements = current_os_path.split(os.pathsep)
+                        
+                        path_updated_by_conda_exe = False
+                        # Ajouter les chemins au début du PATH s'ils ne sont pas déjà présents
+                        for p_to_add in reversed(paths_to_add_to_os_path): # reversed pour maintenir l'ordre
+                            if p_to_add not in path_elements:
+                                path_elements.insert(0, p_to_add)
+                                path_updated_by_conda_exe = True
+                                if not silent:
+                                    print(f"[CONDA_EXE] Ajout au PATH système: {p_to_add}")
+                        
+                        if path_updated_by_conda_exe:
+                            os.environ['PATH'] = os.pathsep.join(path_elements)
+                            if not silent:
+                                print(f"[CONDA_EXE] PATH système mis à jour via les informations de CONDA_EXE.")
+                elif not silent:
+                    print(f"[INFO] CONDA_EXE ('{conda_exe_path_str}') ne pointe pas vers un fichier valide.")
+            elif not silent:
+                print(f"[INFO] Variable d'environnement CONDA_EXE non trouvée.")
+            # Fin de la tentative de détection via CONDA_EXE
+
         try:
             result = subprocess.run(
                 ['conda', '--version'],
