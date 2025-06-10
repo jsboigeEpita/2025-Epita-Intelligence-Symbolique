@@ -245,10 +245,18 @@ class OrchestrationServiceManager:
                 
             if RealLLMOrchestrator:
                 self.llm_orchestrator = RealLLMOrchestrator()
-                self.logger.info("RealLLMOrchestrator initialisé")
+                # Initialisation asynchrone requise pour RealLLMOrchestrator
+                init_success = await self.llm_orchestrator.initialize()
+                if init_success:
+                    self.logger.info("RealLLMOrchestrator initialisé avec succès")
+                else:
+                    self.logger.error("Échec initialisation RealLLMOrchestrator")
+                    self.llm_orchestrator = None
                 
         except Exception as e:
-            self.logger.warning(f"Erreur lors de l'initialisation des orchestrateurs spécialisés: {e}")
+            self.logger.error(f"Erreur critique lors de l'initialisation des orchestrateurs spécialisés: {e}")
+            self.llm_orchestrator = None
+            raise Exception(f"Impossible d'initialiser les orchestrateurs: {e}")
             
     async def analyze_text(self, 
                           text: str, 
@@ -340,33 +348,56 @@ class OrchestrationServiceManager:
             'conversation': self.conversation_orchestrator,
             'dialogue': self.conversation_orchestrator,
             'llm': self.llm_orchestrator,
-            'language_model': self.llm_orchestrator
+            'language_model': self.llm_orchestrator,
+            # Force tous les types d'analyse vers RealLLMOrchestrator
+            'comprehensive': self.llm_orchestrator,
+            'modal': self.llm_orchestrator,
+            'propositional': self.llm_orchestrator,
+            'logical': self.llm_orchestrator,
+            'rhetorical': self.llm_orchestrator
         }
         
-        return orchestrator_map.get(analysis_type.lower())
+        # Si aucun mapping spécifique, utilise RealLLMOrchestrator par défaut
+        result = orchestrator_map.get(analysis_type.lower())
+        return result if result is not None else self.llm_orchestrator
         
-    async def _run_specialized_analysis(self, 
-                                      orchestrator: Any, 
-                                      text: str, 
+    async def _run_specialized_analysis(self,
+                                      orchestrator: Any,
+                                      text: str,
                                       options: Optional[Dict[str, Any]]) -> Dict[str, Any]:
         """Lance une analyse avec un orchestrateur spécialisé."""
         try:
-            # Interface générique pour les orchestrateurs
-            if hasattr(orchestrator, 'analyze'):
+            # Interface spécialisée pour RealLLMOrchestrator
+            if hasattr(orchestrator, 'analyze_text'):
+                from .real_llm_orchestrator import LLMAnalysisRequest
+                request = LLMAnalysisRequest(
+                    text=text,
+                    analysis_type=options.get('analysis_type', 'comprehensive') if options else 'comprehensive',
+                    context=options.get('context') if options else None,
+                    parameters=options or {}
+                )
+                result = await orchestrator.analyze_text(request)
+                return {
+                    'method': 'real_llm',
+                    'request_id': result.request_id,
+                    'analysis_type': result.analysis_type,
+                    'result': result.result,
+                    'confidence': result.confidence,
+                    'processing_time': result.processing_time,
+                    'timestamp': result.timestamp.isoformat(),
+                    'orchestrator': orchestrator.__class__.__name__
+                }
+            # Interface générique pour autres orchestrateurs
+            elif hasattr(orchestrator, 'analyze'):
                 return await orchestrator.analyze(text, options)
             elif hasattr(orchestrator, 'process'):
                 return await orchestrator.process(text, options)
             else:
-                # Fallback : analyse basique
-                return {
-                    'method': 'fallback',
-                    'text_length': len(text),
-                    'word_count': len(text.split()),
-                    'orchestrator': orchestrator.__class__.__name__
-                }
+                # Plus de fallback autorisé
+                raise Exception(f"Orchestrateur {orchestrator.__class__.__name__} sans méthode d'analyse supportée")
         except Exception as e:
-            self.logger.warning(f"Erreur dans l'orchestrateur spécialisé: {e}")
-            return {'error': str(e), 'method': 'specialized_failed'}
+            self.logger.error(f"Erreur critique dans l'orchestrateur spécialisé: {e}")
+            raise Exception(f"Échec analyse orchestrateur: {e}")
             
     async def _run_hierarchical_analysis(self, 
                                        text: str, 

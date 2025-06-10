@@ -34,11 +34,11 @@ try:
     SERVICE_MANAGER_AVAILABLE = True
     logging.info("ServiceManager importé avec succès")
 except ImportError as e:
-    logging.warning(f"ServiceManager non disponible: {e}")
-    SERVICE_MANAGER_AVAILABLE = False
+    logging.error(f"ServiceManager non disponible: {e}")
+    raise ImportError(f"ServiceManager requis mais non disponible: {e}")
 except Exception as e:
-    logging.warning(f"Erreur lors de l'import du ServiceManager: {e}")
-    SERVICE_MANAGER_AVAILABLE = False
+    logging.error(f"Erreur lors de l'import du ServiceManager: {e}")
+    raise ImportError(f"ServiceManager requis mais erreur d'import: {e}")
 
 # Configuration de l'application Flask
 app = Flask(__name__)
@@ -70,22 +70,24 @@ def initialize_services():
     global service_manager
     
     try:
-        if SERVICE_MANAGER_AVAILABLE:
-            service_manager = ServiceManager(config={
-                'enable_hierarchical': True,
-                'enable_specialized_orchestrators': True,
-                'enable_communication_middleware': True,
-                'save_results': True,
-                'results_dir': str(RESULTS_DIR)
-            })
+        service_manager = ServiceManager(config={
+            'enable_hierarchical': True,
+            'enable_specialized_orchestrators': True,
+            'enable_communication_middleware': True,
+            'save_results': True,
+            'results_dir': str(RESULTS_DIR)
+        })
+        
+        # Initialisation asynchrone requise
+        async def init_service_manager():
+            await service_manager.initialize()
             
-            # Initialisation synchrone pour simplicité
-            logger.info("ServiceManager configuré")
-        else:
-            logger.warning("ServiceManager non disponible - mode dégradé")
+        asyncio.run(init_service_manager())
+        logger.info("ServiceManager configuré et initialisé")
             
     except Exception as e:
-        logger.error(f"Erreur lors de l'initialisation des services: {e}")
+        logger.error(f"Erreur critique lors de l'initialisation des services: {e}")
+        raise RuntimeError(f"Impossible d'initialiser le ServiceManager: {e}")
 
 
 @app.route('/')
@@ -123,50 +125,47 @@ def analyze():
         
         logger.info(f"Analyse {analysis_id} démarrée - Type: {analysis_type}")
         
-        # Analyse avec ServiceManager si disponible
-        if service_manager:
-            try:
-                # Utilisation synchrone simplifiée
-                result = {'results': {'fallback': 'service_manager_detected'}, 'duration': 0.1}
-                
-                # Formatage des résultats pour l'interface web
-                formatted_result = {
-                    'analysis_id': analysis_id,
-                    'status': 'success',
-                    'timestamp': start_time.isoformat(),
-                    'input': {
-                        'text': text[:200] + '...' if len(text) > 200 else text,
-                        'text_length': len(text),
-                        'analysis_type': analysis_type
-                    },
-                    'results': result.get('results', {}),
-                    'metadata': {
-                        'duration': result.get('duration', 0),
-                        'service_status': 'active',
-                        'components_used': _extract_components_used(result)
-                    },
-                    'summary': _generate_analysis_summary(result, text)
-                }
-                
-                logger.info(f"Analyse {analysis_id} terminée avec succès")
-                return jsonify(formatted_result)
-                
-            except Exception as e:
-                logger.error(f"Erreur dans l'analyse {analysis_id}: {e}")
-                return jsonify({
-                    'analysis_id': analysis_id,
-                    'status': 'error',
-                    'error': str(e),
-                    'timestamp': start_time.isoformat()
-                }), 500
-        else:
-            # Mode dégradé sans ServiceManager
-            fallback_result = _fallback_analysis(text, analysis_type, options)
-            fallback_result['analysis_id'] = analysis_id
-            fallback_result['timestamp'] = start_time.isoformat()
+        # Analyse avec ServiceManager - OBLIGATOIRE
+        try:
+            # Appel asynchrone au ServiceManager réel
+            async def run_analysis():
+                return await service_manager.analyze_text(text, analysis_type, options)
             
-            logger.info(f"Analyse {analysis_id} en mode dégradé")
-            return jsonify(fallback_result)
+            result = asyncio.run(run_analysis())
+            end_time = datetime.now()
+            duration = (end_time - start_time).total_seconds()
+            
+            # Formatage des résultats pour l'interface web
+            formatted_result = {
+                'analysis_id': analysis_id,
+                'status': 'success',
+                'timestamp': start_time.isoformat(),
+                'input': {
+                    'text': text[:200] + '...' if len(text) > 200 else text,
+                    'text_length': len(text),
+                    'analysis_type': analysis_type
+                },
+                'results': result.get('results', {}),
+                'metadata': {
+                    'duration': duration,
+                    'service_status': 'active',
+                    'components_used': _extract_components_used(result),
+                    'real_llm_used': True
+                },
+                'summary': _generate_analysis_summary(result, text)
+            }
+            
+            logger.info(f"Analyse {analysis_id} terminée avec succès - Durée: {duration:.2f}s")
+            return jsonify(formatted_result)
+            
+        except Exception as e:
+            logger.error(f"Erreur critique dans l'analyse {analysis_id}: {e}")
+            return jsonify({
+                'analysis_id': analysis_id,
+                'status': 'error',
+                'error': f"Erreur ServiceManager: {str(e)}",
+                'timestamp': start_time.isoformat()
+            }), 500
             
     except Exception as e:
         logger.error(f"Erreur inattendue dans /analyze: {e}")
@@ -300,72 +299,8 @@ def _generate_analysis_summary(result: Dict[str, Any], text: str) -> Dict[str, A
     }
 
 
-def _fallback_analysis(text: str, analysis_type: str, options: Dict[str, Any]) -> Dict[str, Any]:
-    """
-    Mode d'analyse de secours quand le ServiceManager n'est pas disponible.
-    
-    Fournit une analyse basique du texte.
-    """
-    start_time = datetime.now()
-    
-    # Analyse textuelle basique
-    word_count = len(text.split())
-    sentence_count = text.count('.') + text.count('!') + text.count('?')
-    character_count = len(text)
-    
-    # Détection de mots-clés logiques
-    logic_keywords = ['si', 'alors', 'donc', 'tous', 'nécessairement', 'possible']
-    logic_score = sum(1 for keyword in logic_keywords if keyword.lower() in text.lower())
-    
-    # Simulation d'un délai de traitement
-    import time
-    time.sleep(0.1)
-    
-    end_time = datetime.now()
-    duration = (end_time - start_time).total_seconds()
-    
-    return {
-        'status': 'success',
-        'mode': 'fallback',
-        'input': {
-            'text': text[:200] + '...' if len(text) > 200 else text,
-            'text_length': len(text),
-            'analysis_type': analysis_type
-        },
-        'results': {
-            'fallback': {
-                'text_analysis': {
-                    'word_count': word_count,
-                    'sentence_count': sentence_count,
-                    'character_count': character_count,
-                    'logic_keywords_detected': logic_score
-                },
-                'assessment': {
-                    'complexity': 'élevée' if word_count > 100 else 'moyenne' if word_count > 50 else 'simple',
-                    'logical_structure': 'présente' if logic_score > 0 else 'limitée',
-                    'analysis_confidence': 0.7
-                }
-            }
-        },
-        'metadata': {
-            'duration': duration,
-            'service_status': 'fallback',
-            'components_used': ['Analyseur Basique']
-        },
-        'summary': {
-            'text_metrics': {
-                'word_count': word_count,
-                'sentence_count': sentence_count,
-                'character_count': character_count
-            },
-            'analysis_metrics': {
-                'logic_keywords_found': logic_score,
-                'complexity_level': 'élevée' if word_count > 100 else 'moyenne' if word_count > 50 else 'simple'
-            },
-            'components_summary': ['Analyseur Basique'],
-            'processing_time': duration
-        }
-    }
+# Fonction _fallback_analysis supprimée - Pas de fallback autorisé
+# L'application doit crasher si l'environnement n'est pas opérationnel
 
 
 @app.errorhandler(404)
