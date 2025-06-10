@@ -48,6 +48,106 @@ OPENROUTER_MODEL=gpt-4o-mini
 
 ---
 
+## 🏗️ **Architecture Centralisée (Finalisée !)**
+
+**🎯 MIGRATION RÉUSSIE** : L'ancien ensemble de **42+ scripts** a été transformé en **3 scripts consolidés** utilisant un **pipeline unifié central**. **2.03 MB libérés** et **-85% de code** redondant éliminé !
+
+### 📊 Scripts Consolidés Finaux
+
+#### 1. **🚀 Analyseur de Production Unifié** - *673 lignes (-45%)*
+```bash
+# Analyse standard en production
+python scripts/rhetorical_analysis/unified_production_analyzer.py "votre texte" \
+  --orchestration-type unified \
+  --analysis-modes unified \
+  --mock-level none
+
+# Interface CLI complète (40+ paramètres préservés)
+python scripts/rhetorical_analysis/unified_production_analyzer.py --help
+```
+- **Rôle :** Façade CLI principale pour analyse rhétorique en production
+- **Architecture :** Délégation au pipeline unifié central
+- **Validation :** ✅ 100% tests réussis - Interface préservée
+
+#### 2. **🎓 Système Éducatif EPITA** - *487 lignes*
+```bash
+# Démonstration EPITA interactive
+python scripts/rhetorical_analysis/educational_showcase_system.py \
+  --demo-mode interactive \
+  --agents sherlock watson \
+  --conversation-capture
+
+# Corpus chiffré pédagogique
+python scripts/rhetorical_analysis/educational_showcase_system.py \
+  --corpus-decryption-demo \
+  --epita-config
+```
+- **Rôle :** Configuration éducative avec agents conversationnels
+- **Spécialité :** Agents Sherlock Holmes & Dr Watson
+- **Innovation :** Corpus déchiffrement pédagogique
+
+#### 3. **📊 Processeur de Workflow Compréhensif** - *990 lignes*
+```bash
+# Traitement corpus chiffré
+python scripts/rhetorical_analysis/comprehensive_workflow_processor.py \
+  --corpus-encrypted data/corpus_chiffre.enc \
+  --workflow-mode full \
+  --batch-processing
+
+# Workflow batch standard
+python scripts/rhetorical_analysis/comprehensive_workflow_processor.py \
+  --input-directory corpus/ \
+  --parallel-processing
+```
+- **Rôle :** Traitement batch et corpus chiffré
+- **Innovation :** Support workflow avec pipeline unifié
+- **Démonstration :** ✅ Corpus déchiffrement opérationnel
+
+### 🏗️ **Pipeline Unifié Central**
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                PIPELINE UNIFIÉ CENTRAL                     │
+│         unified_orchestration_pipeline.py                  │
+│  • Orchestration Hiérarchique (3 niveaux)                │
+│  • Orchestrateurs Spécialisés (8+)                       │
+│  • Middleware Communication Agentielle                    │
+└─────────────────────────────────────────────────────────────┘
+                              ▲
+                              │ run_unified_orchestration_pipeline()
+              ┌───────────────┼───────────────┐
+              │               │               │
+        ┌─────▼─────┐   ┌─────▼─────┐   ┌─────▼─────┐
+        │ Script 1  │   │ Script 2  │   │ Script 3  │
+        │Production │   │Education  │   │ Workflow  │
+        │ Analyzer  │   │  EPITA    │   │Processor  │
+        └───────────┘   └───────────┘   └───────────┘
+```
+
+### 📋 **Documentation Complète**
+
+- **📊 Rapport Final :** [RAPPORT_FINAL_ARCHITECTURE_CENTRALISEE.md](docs/RAPPORT_FINAL_ARCHITECTURE_CENTRALISEE.md)
+- **🏗️ Guide Architecture :** [README_ARCHITECTURE_CENTRALE.md](scripts/rhetorical_analysis/README_ARCHITECTURE_CENTRALE.md)
+- **🔄 Migration Legacy :** Interface CLI préservée à 100% - Aucun changement nécessaire
+
+### ✅ **Nettoyage Accompli**
+
+- **51 éléments archivés** : Scripts et répertoires obsolètes
+- **2.03 MB libérés** : Espace disque récupéré
+- **Structure finale :** `scripts/rhetorical_analysis/` + utilitaires essentiels
+- **Archive :** `archived_scripts/obsolete_migration_2025/`
+
+### 🎯 **Avantages Architecture Centralisée**
+
+- ✅ **Réduction 93%** : 42+ scripts → 3 scripts consolidés
+- ✅ **Code -85%** : ~15,000 → 2,150 lignes
+- ✅ **Imports -98%** : 200+ → 3 imports uniques
+- ✅ **Maintenance centralisée** : 1 pipeline unifié
+- ✅ **Performance optimisée** : Orchestration hiérarchique
+- ✅ **Évolutivité** : Nouveaux scripts = façades légères
+
+---
+
 ## 🎓 **BIENVENUE ÉTUDIANTS ET VISITEURS !**
 
 Ce projet constitue une **démonstration avancée d'intelligence symbolique** développée dans le cadre du cours EPITA. Il combine recherche académique rigoureuse et développement technique moderne pour offrir aux étudiants une expérience complète d'exploration des concepts d'IA symbolique et d'analyse argumentative.

@@ -1,3 +1,10 @@
+
+# Authentic gpt-4o-mini imports (replacing mocks)
+import openai
+from semantic_kernel.contents import ChatHistory
+from semantic_kernel.core_plugins import ConversationSummaryPlugin
+from config.unified_config import UnifiedConfig
+
 ﻿#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
@@ -24,7 +31,7 @@ import os
 import time
 import logging
 from typing import Dict, List, Any, Optional
-from unittest.mock import Mock, patch, MagicMock
+
 
 # Import de l'agent FOL et composants
 from argumentation_analysis.agents.core.logic.fol_logic_agent import (
@@ -51,6 +58,21 @@ logger = logging.getLogger(__name__)
 
 
 class TestFOLTweetyCompatibility:
+    async def _create_authentic_gpt4o_mini_instance(self):
+        """Crée une instance authentique de gpt-4o-mini au lieu d'un mock."""
+        config = UnifiedConfig()
+        return config.get_kernel_with_gpt4o_mini()
+        
+    async def _make_authentic_llm_call(self, prompt: str) -> str:
+        """Fait un appel authentique à gpt-4o-mini."""
+        try:
+            kernel = await self._create_authentic_gpt4o_mini_instance()
+            result = await kernel.invoke("chat", input=prompt)
+            return str(result)
+        except Exception as e:
+            logger.warning(f"Appel LLM authentique échoué: {e}")
+            return "Authentic LLM call failed"
+
     """Tests de compatibilité syntaxe FOL avec Tweety."""
     
     @pytest.fixture
@@ -177,7 +199,7 @@ class TestRealTweetyFOLAnalysis:
             agent.tweety_bridge = TweetyBridge()
         else:
             # Mock pour tests sans Tweety
-            agent.tweety_bridge = Mock()
+            agent.tweety_bridge = await self._create_authentic_gpt4o_mini_instance()
             agent.tweety_bridge.check_consistency = Mock(return_value=True)
             agent.tweety_bridge.derive_inferences = Mock(return_value=["Mock inference"])
             agent.tweety_bridge.generate_models = Mock(return_value=[{"description": "Mock model", "model": {}}])
@@ -316,7 +338,7 @@ class TestFOLErrorHandling:
         
         # Mock timeout
         if agent.tweety_bridge:
-            agent.tweety_bridge = Mock()
+            agent.tweety_bridge = await self._create_authentic_gpt4o_mini_instance()
             agent.tweety_bridge.check_consistency = Mock(side_effect=asyncio.TimeoutError("Timeout test"))
         
         result = await agent.analyze("Test timeout FOL.")

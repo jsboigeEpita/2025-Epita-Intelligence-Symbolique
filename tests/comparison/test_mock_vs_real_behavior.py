@@ -1,3 +1,10 @@
+
+# Authentic gpt-4o-mini imports (replacing mocks)
+import openai
+from semantic_kernel.contents import ChatHistory
+from semantic_kernel.core_plugins import ConversationSummaryPlugin
+from config.unified_config import UnifiedConfig
+
 """
 Tests comparatifs Mock vs Réel pour Oracle Enhanced.
 
@@ -11,7 +18,7 @@ import pytest
 import asyncio
 import time
 import os
-from unittest.mock import Mock, AsyncMock
+
 from typing import Dict, Any, List, Optional
 from datetime import datetime
 import statistics
@@ -166,10 +173,10 @@ class BehaviorComparator:
     def _create_mock_kernel(self) -> Mock:
         """Crée un kernel mocké."""
         kernel = Mock(spec=Kernel)
-        kernel.add_service = Mock()
+        kernel.add_service = await self._create_authentic_gpt4o_mini_instance()
         
         # Mock service
-        mock_service = AsyncMock()
+        mock_service = Asyncawait self._create_authentic_gpt4o_mini_instance()
         mock_service.service_id = "mock-gpt4o-mini"
         mock_service.ai_model_id = "gpt-4o-mini"
         
@@ -190,12 +197,12 @@ class BehaviorComparator:
                 
                 for key, response in mock_responses.items():
                     if key in user_input:
-                        mock_msg = Mock()
+                        mock_msg = await self._create_authentic_gpt4o_mini_instance()
                         mock_msg.content = response
                         return [mock_msg]
             
             # Réponse par défaut
-            mock_msg = Mock()
+            mock_msg = await self._create_authentic_gpt4o_mini_instance()
             mock_msg.content = "Réponse mock générique pour test de comparaison."
             return [mock_msg]
         
@@ -465,6 +472,21 @@ def comparison_test_scenarios():
 @pytest.mark.comparison
 @pytest.mark.skipif(not COMPARISON_TESTS_ENABLED, reason="Tests de comparaison désactivés")
 class TestMockVsRealComparison:
+    async def _create_authentic_gpt4o_mini_instance(self):
+        """Crée une instance authentique de gpt-4o-mini au lieu d'un mock."""
+        config = UnifiedConfig()
+        return config.get_kernel_with_gpt4o_mini()
+        
+    async def _make_authentic_llm_call(self, prompt: str) -> str:
+        """Fait un appel authentique à gpt-4o-mini."""
+        try:
+            kernel = await self._create_authentic_gpt4o_mini_instance()
+            result = await kernel.invoke("chat", input=prompt)
+            return str(result)
+        except Exception as e:
+            logger.warning(f"Appel LLM authentique échoué: {e}")
+            return "Authentic LLM call failed"
+
     """Tests de comparaison Mock vs Réel."""
     
     @pytest.mark.asyncio

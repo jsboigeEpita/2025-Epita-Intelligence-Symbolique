@@ -216,3 +216,5 @@ validation_report.md
 phase_c_test_results_*.json
 phase_d_simple_results.json
 phase_d_trace_ideale_results_*.json
+logs/
+reports/

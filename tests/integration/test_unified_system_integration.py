@@ -1,3 +1,10 @@
+
+# Authentic gpt-4o-mini imports (replacing mocks)
+import openai
+from semantic_kernel.contents import ChatHistory
+from semantic_kernel.core_plugins import ConversationSummaryPlugin
+from config.unified_config import UnifiedConfig
+
 ﻿#!/usr/bin/env python3
 """
 Tests d'intégration système pour orchestrations unifiées
@@ -13,7 +20,7 @@ import sys
 import time
 import tempfile
 from pathlib import Path
-from unittest.mock import Mock, patch, MagicMock, AsyncMock
+
 from typing import Dict, Any, List
 
 # Ajout du chemin pour les imports
@@ -114,6 +121,21 @@ except ImportError as e:
 
 
 class TestUnifiedSystemIntegration:
+    async def _create_authentic_gpt4o_mini_instance(self):
+        """Crée une instance authentique de gpt-4o-mini au lieu d'un mock."""
+        config = UnifiedConfig()
+        return config.get_kernel_with_gpt4o_mini()
+        
+    async def _make_authentic_llm_call(self, prompt: str) -> str:
+        """Fait un appel authentique à gpt-4o-mini."""
+        try:
+            kernel = await self._create_authentic_gpt4o_mini_instance()
+            result = await kernel.invoke("chat", input=prompt)
+            return str(result)
+        except Exception as e:
+            logger.warning(f"Appel LLM authentique échoué: {e}")
+            return "Authentic LLM call failed"
+
     """Tests d'intégration système complet."""
     
     def setup_method(self):
@@ -172,7 +194,7 @@ class TestUnifiedSystemIntegration:
         
         # Phase 2: Transition vers LLM réel
         real_config = UnifiedConfig(orchestration_type='REAL_LLM')
-        mock_llm = Mock()
+        mock_llm = await self._create_authentic_gpt4o_mini_instance()
         real_orchestrator = RealLLMOrchestrator(
             mode="real", 
             llm_service=mock_llm, 

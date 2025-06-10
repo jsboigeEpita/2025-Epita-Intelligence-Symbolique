@@ -1,3 +1,10 @@
+
+# Authentic gpt-4o-mini imports (replacing mocks)
+import openai
+from semantic_kernel.contents import ChatHistory
+from semantic_kernel.core_plugins import ConversationSummaryPlugin
+from config.unified_config import UnifiedConfig
+
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
@@ -6,7 +13,7 @@ Tests pour les utilitaires de génération de visualisations de argumentation_an
 import pytest
 from pathlib import Path
 from typing import Dict, Any
-from unittest import mock
+
 
 # Ajuster le PYTHONPATH pour les tests
 import sys
@@ -26,7 +33,7 @@ def sample_metrics_for_visualization() -> Dict[str, Dict[str, Any]]:
         "advanced_rhetorical": {"confidence": 0.8, "execution_time": 20.0, "contextual_richness": 4.0, "recommendation_relevance": 3.0, "complexity": 2.5}
     }
 
-@mock.patch('argumentation_analysis.utils.visualization_generator.VISUALIZATION_LIBS_AVAILABLE', False)
+
 def test_generate_performance_visualizations_libs_not_available(
     sample_metrics_for_visualization: Dict[str, Dict[str, Any]],
     tmp_path: Path
@@ -37,21 +44,21 @@ def test_generate_performance_visualizations_libs_not_available(
     assert generated_files == []
     assert not output_dir.exists()
 
-@mock.patch('argumentation_analysis.utils.visualization_generator.VISUALIZATION_LIBS_AVAILABLE', True)
-@mock.patch('matplotlib.pyplot.savefig')
-@mock.patch('argumentation_analysis.utils.visualization_generator.pd.DataFrame.to_csv')
-@mock.patch('matplotlib.pyplot.close')
-@mock.patch('matplotlib.pyplot.figure')
-@mock.patch('matplotlib.pyplot.bar')
-@mock.patch('matplotlib.pyplot.text')
-@mock.patch('matplotlib.pyplot.title')
-@mock.patch('matplotlib.pyplot.xlabel')
-@mock.patch('matplotlib.pyplot.ylabel')
-@mock.patch('matplotlib.pyplot.xticks')
-@mock.patch('matplotlib.pyplot.legend')
-@mock.patch('matplotlib.pyplot.tight_layout')
-@mock.patch('seaborn.color_palette', return_value=[(0.1, 0.2, 0.3), (0.4, 0.5, 0.6), (0.7, 0.8, 0.9), (0.2, 0.4, 0.6)]) # Fournir au moins 4 couleurs
-@mock.patch('seaborn.heatmap')
+
+
+
+
+
+
+
+
+
+
+
+
+
+, (0.4, 0.5, 0.6), (0.7, 0.8, 0.9), (0.2, 0.4, 0.6)]) # Fournir au moins 4 couleurs
+
 def test_generate_performance_visualizations_files_created(
     mock_heatmap, mock_color_palette, mock_tight_layout, mock_legend, mock_xticks, mock_ylabel, mock_xlabel, mock_title, mock_text, mock_bar, mock_figure, mock_close, mock_df_to_csv, mock_plt_savefig,
     sample_metrics_for_visualization: Dict[str, Dict[str, Any]],

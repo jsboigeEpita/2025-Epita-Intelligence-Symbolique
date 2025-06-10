@@ -20,7 +20,7 @@ import logging
 import asyncio
 from typing import Dict, List, Any, Optional, Union, Tuple
 from dataclasses import dataclass, field
-from unittest.mock import Mock
+# Mock éliminé en Phase 2 - utilisation d'objets réels uniquement
 
 try:
     from semantic_kernel import Kernel
@@ -45,7 +45,16 @@ except ImportError:
         def __init__(self):
             self.beliefs = []
         def add_belief(self, content):
-            self.beliefs.append(Mock(content=content))
+            # Créer un objet belief simple au lieu d'un Mock
+            class SimpleBelief:
+                def __init__(self, content):
+                    self.content = content
+                def __str__(self):
+                    return str(self.content)
+                def __repr__(self):
+                    return f"Belief({self.content})"
+            
+            self.beliefs.append(SimpleBelief(content))
 
 # Import TweetyBridge avec fallback
 try:
@@ -96,8 +105,11 @@ class FOLLogicAgent(BaseLogicAgent):
             agent_name: Nom de l'agent
         """
         # Initialisation de la classe parente avec logic_type
+        if kernel is None:
+            raise ValueError("Un kernel Semantic Kernel réel est requis - pas de Mock autorisé en Phase 2")
+        
         super().__init__(
-            kernel=kernel or Mock(),
+            kernel=kernel,
             agent_name=agent_name,
             logic_type_name="first_order"
         )

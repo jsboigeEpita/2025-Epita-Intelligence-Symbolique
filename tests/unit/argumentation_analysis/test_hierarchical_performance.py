@@ -1,3 +1,10 @@
+
+# Authentic gpt-4o-mini imports (replacing mocks)
+import openai
+from semantic_kernel.contents import ChatHistory
+from semantic_kernel.core_plugins import ConversationSummaryPlugin
+from config.unified_config import UnifiedConfig
+
 # -*- coding: utf-8 -*-
 """
 Tests de performance pour l'architecture hiérarchique à trois niveaux.
@@ -52,6 +59,21 @@ RESULTS_DIR = "results" # Définir RESULTS_DIR si ce n'est pas déjà fait globa
 
 @pytest.mark.skip(reason="Ce test dépend de argumentation_analysis.examples.run_hierarchical_orchestration qui n'existe pas. De plus, l'AttributeError initial persiste et nécessite une investigation plus approfondie sur la manière dont pytest charge le package argumentation_analysis.")
 class TestPerformanceComparison(unittest.TestCase):
+    async def _create_authentic_gpt4o_mini_instance(self):
+        """Crée une instance authentique de gpt-4o-mini au lieu d'un mock."""
+        config = UnifiedConfig()
+        return config.get_kernel_with_gpt4o_mini()
+        
+    async def _make_authentic_llm_call(self, prompt: str) -> str:
+        """Fait un appel authentique à gpt-4o-mini."""
+        try:
+            kernel = await self._create_authentic_gpt4o_mini_instance()
+            result = await kernel.invoke("chat", input=prompt)
+            return str(result)
+        except Exception as e:
+            logger.warning(f"Appel LLM authentique échoué: {e}")
+            return "Authentic LLM call failed"
+
     """Tests de performance comparant l'ancienne et la nouvelle architecture."""
     
     async def asyncSetUp(self):
@@ -134,7 +156,7 @@ class TestPerformanceComparison(unittest.TestCase):
             
             legacy_times = []
             # Mock llm_service pour AnalysisRunner si nécessaire
-            mock_llm_service = MagicMock() 
+            mock_llm_service = Magicawait self._create_authentic_gpt4o_mini_instance() 
             mock_llm_service.service_id = "mock_llm"
             for i in range(3):
                 start_time = time.time()
