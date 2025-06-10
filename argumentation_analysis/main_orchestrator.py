@@ -69,7 +69,7 @@ def setup_logging():
     
     # Garder INFO pour l'orchestration et les agents
     logging.getLogger("Orchestration").setLevel(logging.INFO)
-    logging.getLogger("semantic_kernel.agents").setLevel(logging.INFO)
+    # logging.getLogger("semantic_kernel.agents").setLevel(logging.INFO) # Module inexistant
     logging.getLogger("App.UI").setLevel(logging.INFO)  # Logger pour l'UI
 
     logging.info("Logging configuré.")
