@@ -33,10 +33,10 @@ class MockExtractAgent(ExtractAgent):
         pass
     
     async def get_response(self, *args, **kwargs):
-        return MagicMock()
+        return AsyncMock()
     
     async def invoke(self, *args, **kwargs):
-        return MagicMock()
+        return AsyncMock()
 
 @pytest_asyncio.fixture
 async def extract_agent_data():
@@ -46,7 +46,7 @@ async def extract_agent_data():
     mock_lts_for_agent_module = MagicMock()
     agent_module_to_patch.load_source_text = mock_lts_for_agent_module
 
-    kernel_mock = MagicMock()
+    kernel_mock = AsyncMock()
     extract_plugin_mock = MagicMock(spec=ExtractAgentPlugin)
     find_similar_text_mock = MagicMock()
     extract_text_mock = MagicMock()
@@ -110,10 +110,11 @@ class TestExtractAgent:
         mock_validation_response = MagicMock()
         mock_validation_response.__str__.return_value = '{"valid": true, "reason": "Extrait valide"}'
 
-        kernel_mock.invoke.side_effect = [
+        # Pour AsyncMock, on configure directement les futures
+        kernel_mock.invoke = AsyncMock(side_effect=[
             mock_extract_response,
             mock_validation_response
-        ]
+        ])
         
         extract_text_mock.return_value = ("Ceci est un texte de test pour l'extraction.", "success", True, True)
         
