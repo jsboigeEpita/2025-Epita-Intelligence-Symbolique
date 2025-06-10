@@ -38,13 +38,4 @@ module.exports = defineConfig({
     },
   ],
 
-  webServer: [
-    {
-      command: 'python ../interface_web/app.py',
-      url: 'http://localhost:3000',
-      reuseExistingServer: !process.env.CI,
-      timeout: 120 * 1000,
-      cwd: '../',
-    }
-  ],
 });
