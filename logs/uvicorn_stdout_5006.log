@@ -1,46 +1,15 @@
-03:36:41 [INFO] [root] Logging configuré avec le niveau INFO.
-03:36:41 [INFO] [root] Logging configuré avec le niveau INFO.
-03:36:41 [INFO] [root] Logging configuré avec le niveau INFO.
-03:36:41 [INFO] [root] Logging configuré avec le niveau INFO.
-03:36:41 [INFO] [Orchestration.AgentPL.Defs] Classe PropositionalLogicPlugin (V10.1) définie.
-03:36:41 [INFO] [Orchestration.AgentPL.Defs] Instructions Système PL_AGENT_INSTRUCTIONS (V10) définies.
-03:36:41 [INFO] [argumentation_analysis.utils.semantic_kernel_compatibility] Module de compatibilité semantic_kernel agents chargé
-03:36:41 [INFO] [argumentation_analysis.utils.semantic_kernel_compatibility] Module de compatibilité semantic_kernel filters chargé
-03:36:41 [INFO] [argumentation_analysis.utils.semantic_kernel_compatibility] Version: semantic_kernel 1.33.0 (compatibilité agents via adaptateur)
-03:36:42 [INFO] [Orchestration.LLM] <<<<< MODULE llm_service.py LOADED >>>>>
-03:36:42 [INFO] [Orchestration.JPype] Variables d'environnement chargées depuis: c:\dev\2025-Epita-Intelligence-Symbolique\argumentation_analysis\.env
-03:36:42 [INFO] [Orchestration.JPype] LIBS_DIR (global) défini sur (primaire): C:\dev\2025-Epita-Intelligence-Symbolique\libs\tweety
-03:36:42 [INFO] [Orchestration.JPype] (OK) JDK portable détecté via chemin par défaut : C:\dev\2025-Epita-Intelligence-Symbolique\libs\portable_jdk\jdk-17.0.11+9
-03:36:42 [INFO] [argumentation_analysis.service_setup] Package 'argumentation_analysis.service_setup' chargé.
-03:36:42 [INFO] [argumentation_analysis.analytics] Package 'argumentation_analysis.analytics' chargé.
-03:36:42 [INFO] [Orchestration.AgentPM.Defs] Plugin PM (vide) défini.
-03:36:42 [INFO] [Orchestration.AgentPM.Defs] Instructions Système PM_INSTRUCTIONS (V9 - Ajout ExtractAgent) définies.
-[OK] create_llm_service imported successfully
-[OK] get_taxonomy_path imported successfully
-03:36:43 [INFO] [argumentation_analysis.core.bootstrap] Project root (from bootstrap.py) added to sys.path: C:\dev\2025-Epita-Intelligence-Symbolique
-03:36:43 [WARNING] [root] Certains gestionnaires hiérarchiques ne sont pas disponibles: No module named 'argumentation_analysis.orchestration.hierarchical.tactical.manager'
-03:36:43 [WARNING] [root] Certains orchestrateurs spécialisés ne sont pas disponibles: cannot import name 'CluedoOrchestrator' from 'argumentation_analysis.orchestration.cluedo_orchestrator' (c:\dev\2025-Epita-Intelligence-Symbolique\argumentation_analysis\orchestration\cluedo_orchestrator.py)
-03:36:43 [INFO] [argumentation_analysis.orchestration.service_manager] ServiceManager créé avec session_id: 9c5b4445-98d8-4f86-ac3b-104ef96c02a0
-INFO:     127.0.0.1:62467 - "GET /api/status HTTP/1.1" 500 Internal Server Error
-03:36:45 [INFO] [argumentation_analysis.orchestration.service_manager] ServiceManager créé avec session_id: ec219b60-d874-44bd-aef1-f8687153e7c2
-INFO:     127.0.0.1:62475 - "GET /api/status HTTP/1.1" 500 Internal Server Error
-03:36:47 [INFO] [argumentation_analysis.orchestration.service_manager] ServiceManager créé avec session_id: a943c197-df06-4d82-b0e6-021d1553132f
-INFO:     127.0.0.1:62481 - "GET /api/status HTTP/1.1" 500 Internal Server Error
-03:36:50 [INFO] [argumentation_analysis.orchestration.service_manager] ServiceManager créé avec session_id: d3540f51-abd2-45d9-8501-66da0b619605
-INFO:     127.0.0.1:62496 - "GET /api/status HTTP/1.1" 500 Internal Server Error
-03:36:52 [INFO] [argumentation_analysis.orchestration.service_manager] ServiceManager créé avec session_id: 0e25fb59-84ee-4517-b722-356ef15e248a
-INFO:     127.0.0.1:62501 - "GET /api/status HTTP/1.1" 500 Internal Server Error
-03:36:54 [INFO] [argumentation_analysis.orchestration.service_manager] ServiceManager créé avec session_id: eb54e81c-43b2-4f82-b90a-6b3cfc80a027
-INFO:     127.0.0.1:62507 - "GET /api/status HTTP/1.1" 500 Internal Server Error
-03:36:57 [INFO] [argumentation_analysis.orchestration.service_manager] ServiceManager créé avec session_id: c70a5689-ea01-4f80-a98e-6687c40e90f3
-INFO:     127.0.0.1:62513 - "GET /api/status HTTP/1.1" 500 Internal Server Error
-03:36:59 [INFO] [argumentation_analysis.orchestration.service_manager] ServiceManager créé avec session_id: ab7c6f5c-7dc9-4582-98da-0f7e3db64b4a
-INFO:     127.0.0.1:62523 - "GET /api/status HTTP/1.1" 500 Internal Server Error
-03:37:01 [INFO] [argumentation_analysis.orchestration.service_manager] ServiceManager créé avec session_id: 7e0f991d-2587-4111-b9ef-a86ac28f0367
-INFO:     127.0.0.1:62533 - "GET /api/status HTTP/1.1" 500 Internal Server Error
-03:37:03 [INFO] [argumentation_analysis.orchestration.service_manager] ServiceManager créé avec session_id: 46ed4ec4-3e2e-4a58-941b-b5367f989f77
-INFO:     127.0.0.1:62541 - "GET /api/status HTTP/1.1" 500 Internal Server Error
-03:37:06 [INFO] [argumentation_analysis.orchestration.service_manager] ServiceManager créé avec session_id: b174ad6f-102f-4201-aacb-8558f507d94f
-INFO:     127.0.0.1:62547 - "GET /api/status HTTP/1.1" 500 Internal Server Error
-03:37:08 [INFO] [argumentation_analysis.orchestration.service_manager] ServiceManager créé avec session_id: 968dcfca-1e96-4f49-b02c-0ce96fe1f7af
-INFO:     127.0.0.1:62558 - "GET /api/status HTTP/1.1" 500 Internal Server Error
+10:19:41 [INFO] [root] Logging configuré avec le niveau INFO.
+10:19:41 [INFO] [root] Logging configuré avec le niveau INFO.
+10:19:41 [INFO] [root] Logging configuré avec le niveau INFO.
+10:19:41 [INFO] [root] Logging configuré avec le niveau INFO.
+10:19:41 [INFO] [Orchestration.AgentPL.Defs] Classe PropositionalLogicPlugin (V10.1) définie.
+10:19:41 [INFO] [Orchestration.AgentPL.Defs] Instructions Système PL_AGENT_INSTRUCTIONS (V10) définies.
+10:19:41 [INFO] [argumentation_analysis.utils.semantic_kernel_compatibility] Module de compatibilité semantic_kernel agents chargé
+10:19:41 [INFO] [argumentation_analysis.utils.semantic_kernel_compatibility] Module de compatibilité semantic_kernel filters chargé
+10:19:41 [INFO] [argumentation_analysis.utils.semantic_kernel_compatibility] Version: semantic_kernel 1.33.0 (compatibilité agents via adaptateur)
+10:19:42 [INFO] [Orchestration.LLM] <<<<< MODULE llm_service.py LOADED >>>>>
+10:19:42 [INFO] [Orchestration.JPype] Variables d'environnement chargées depuis: C:\dev\2025-Epita-Intelligence-Symbolique\argumentation_analysis\.env
+10:19:42 [INFO] [Orchestration.JPype] LIBS_DIR (global) défini sur (primaire): C:\dev\2025-Epita-Intelligence-Symbolique\libs\tweety
+10:19:42 [INFO] [Orchestration.JPype] (OK) JDK portable détecté via chemin par défaut : C:\dev\2025-Epita-Intelligence-Symbolique\libs\portable_jdk\jdk-17.0.11+9
+10:19:42 [INFO] [argumentation_analysis.service_setup] Package 'argumentation_analysis.service_setup' chargé.
+10:19:42 [INFO] [argumentation_analysis.analytics] Package 'argumentation_analysis.analytics' chargé.

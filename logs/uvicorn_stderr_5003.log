@@ -1,17 +1,17 @@
 C:\Users\jsboi\.conda\envs\projet-is\lib\site-packages\pydantic\_internal\_config.py:341: UserWarning: Valid config keys have changed in V2:
 * 'allow_population_by_field_name' has been renamed to 'populate_by_name'
   warnings.warn(message, UserWarning)
-05:07:27 [INFO] [App.UI.CacheUtils] Utilitaires de cache UI définis.
-05:07:27 [INFO] [App.UI.FetchUtils] Utilitaires de fetch UI définis.
-05:07:27 [INFO] [App.UI.VerificationUtils] Utilitaires de vérification UI définis.
-05:07:27 [INFO] [App.UI.Utils] Module principal des utilitaires UI (utils.py) initialisé et sous-modules importés.
-05:07:27 [INFO] [Services.CacheService] Répertoire de cache initialisé: c:\dev\2025-Epita-Intelligence-Symbolique\_temp\text_cache
-05:07:27 [INFO] [Services.FetchService] FetchService initialisé avec Tika URL: https://tika.open-webui.myia.io/tika, timeout: 30s
-05:07:27 [WARNING] [Services.CryptoService] Service de chiffrement initialisé sans clé. Le chiffrement est désactivé.
-05:07:28 [INFO] [InformalDefinitions] Classe InformalAnalysisPlugin (V12 avec nouvelles fonctions) définie.
-05:07:28 [INFO] [InformalDefinitions] Instructions Système INFORMAL_AGENT_INSTRUCTIONS (V15 avec nouvelles fonctions) définies.
-05:07:29 [INFO] [argumentation_analysis.core.bootstrap] Project root (from bootstrap.py) added to sys.path: C:\dev\2025-Epita-Intelligence-Symbolique
-INFO:     Started server process [20276]
+10:21:44 [INFO] [App.UI.CacheUtils] Utilitaires de cache UI définis.
+10:21:44 [INFO] [App.UI.FetchUtils] Utilitaires de fetch UI définis.
+10:21:44 [INFO] [App.UI.VerificationUtils] Utilitaires de vérification UI définis.
+10:21:44 [INFO] [App.UI.Utils] Module principal des utilitaires UI (utils.py) initialisé et sous-modules importés.
+10:21:44 [INFO] [Services.CacheService] Répertoire de cache initialisé: C:\dev\2025-Epita-Intelligence-Symbolique\_temp\text_cache
+10:21:44 [INFO] [Services.FetchService] FetchService initialisé avec Tika URL: https://tika.open-webui.myia.io/tika, timeout: 30s
+10:21:44 [WARNING] [Services.CryptoService] Service de chiffrement initialisé sans clé. Le chiffrement est désactivé.
+10:21:45 [INFO] [InformalDefinitions] Classe InformalAnalysisPlugin (V12 avec nouvelles fonctions) définie.
+10:21:45 [INFO] [InformalDefinitions] Instructions Système INFORMAL_AGENT_INSTRUCTIONS (V15 avec nouvelles fonctions) définies.
+10:21:46 [INFO] [argumentation_analysis.core.bootstrap] Project root (from bootstrap.py) added to sys.path: C:\dev\2025-Epita-Intelligence-Symbolique
+INFO:     Started server process [40468]
 INFO:     Waiting for application startup.
 INFO:     Application startup complete.
 INFO:     Uvicorn running on http://0.0.0.0:5003 (Press CTRL+C to quit)

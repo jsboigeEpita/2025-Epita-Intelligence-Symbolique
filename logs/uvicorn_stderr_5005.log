@@ -1,509 +1,76 @@
 C:\Users\jsboi\.conda\envs\projet-is\lib\site-packages\pydantic\_internal\_config.py:341: UserWarning: Valid config keys have changed in V2:
 * 'allow_population_by_field_name' has been renamed to 'populate_by_name'
   warnings.warn(message, UserWarning)
-03:36:09 [INFO] [App.UI.CacheUtils] Utilitaires de cache UI définis.
-03:36:09 [INFO] [App.UI.FetchUtils] Utilitaires de fetch UI définis.
-03:36:09 [INFO] [App.UI.VerificationUtils] Utilitaires de vérification UI définis.
-03:36:09 [INFO] [App.UI.Utils] Module principal des utilitaires UI (utils.py) initialisé et sous-modules importés.
-03:36:09 [INFO] [Services.CacheService] Répertoire de cache initialisé: c:\dev\2025-Epita-Intelligence-Symbolique\_temp\text_cache
-03:36:09 [INFO] [Services.FetchService] FetchService initialisé avec Tika URL: https://tika.open-webui.myia.io/tika, timeout: 30s
-03:36:09 [WARNING] [Services.CryptoService] Service de chiffrement initialisé sans clé. Le chiffrement est désactivé.
-03:36:09 [INFO] [InformalDefinitions] Classe InformalAnalysisPlugin (V12 avec nouvelles fonctions) définie.
-03:36:09 [INFO] [InformalDefinitions] Instructions Système INFORMAL_AGENT_INSTRUCTIONS (V15 avec nouvelles fonctions) définies.
-03:36:11 [INFO] [argumentation_analysis.core.bootstrap] Project root (from bootstrap.py) added to sys.path: C:\dev\2025-Epita-Intelligence-Symbolique
-INFO:     Started server process [10888]
-INFO:     Waiting for application startup.
-INFO:     Application startup complete.
-INFO:     Uvicorn running on http://0.0.0.0:5005 (Press CTRL+C to quit)
-ERROR:    Exception in ASGI application
+10:19:32 [INFO] [App.UI.CacheUtils] Utilitaires de cache UI définis.
+10:19:32 [INFO] [App.UI.FetchUtils] Utilitaires de fetch UI définis.
+10:19:32 [INFO] [App.UI.VerificationUtils] Utilitaires de vérification UI définis.
+10:19:32 [INFO] [App.UI.Utils] Module principal des utilitaires UI (utils.py) initialisé et sous-modules importés.
+10:19:32 [INFO] [Services.CacheService] Répertoire de cache initialisé: C:\dev\2025-Epita-Intelligence-Symbolique\_temp\text_cache
+10:19:32 [INFO] [Services.FetchService] FetchService initialisé avec Tika URL: https://tika.open-webui.myia.io/tika, timeout: 30s
+10:19:32 [WARNING] [Services.CryptoService] Service de chiffrement initialisé sans clé. Le chiffrement est désactivé.
+10:19:32 [INFO] [InformalDefinitions] Classe InformalAnalysisPlugin (V12 avec nouvelles fonctions) définie.
+10:19:32 [INFO] [InformalDefinitions] Instructions Système INFORMAL_AGENT_INSTRUCTIONS (V15 avec nouvelles fonctions) définies.
 Traceback (most recent call last):
-  File "C:\Users\jsboi\.conda\envs\projet-is\lib\site-packages\uvicorn\protocols\http\httptools_impl.py", line 409, in run_asgi
-    result = await app(  # type: ignore[func-returns-value]
-  File "C:\Users\jsboi\.conda\envs\projet-is\lib\site-packages\uvicorn\middleware\proxy_headers.py", line 60, in __call__
-    return await self.app(scope, receive, send)
-  File "C:\Users\jsboi\.conda\envs\projet-is\lib\site-packages\fastapi\applications.py", line 1054, in __call__
-    await super().__call__(scope, receive, send)
-  File "C:\Users\jsboi\.conda\envs\projet-is\lib\site-packages\starlette\applications.py", line 112, in __call__
-    await self.middleware_stack(scope, receive, send)
-  File "C:\Users\jsboi\.conda\envs\projet-is\lib\site-packages\starlette\middleware\errors.py", line 187, in __call__
-    raise exc
-  File "C:\Users\jsboi\.conda\envs\projet-is\lib\site-packages\starlette\middleware\errors.py", line 165, in __call__
-    await self.app(scope, receive, _send)
-  File "C:\Users\jsboi\.conda\envs\projet-is\lib\site-packages\starlette\middleware\exceptions.py", line 62, in __call__
-    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
-  File "C:\Users\jsboi\.conda\envs\projet-is\lib\site-packages\starlette\_exception_handler.py", line 53, in wrapped_app
-    raise exc
-  File "C:\Users\jsboi\.conda\envs\projet-is\lib\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app
-    await app(scope, receive, sender)
-  File "C:\Users\jsboi\.conda\envs\projet-is\lib\site-packages\starlette\routing.py", line 714, in __call__
-    await self.middleware_stack(scope, receive, send)
-  File "C:\Users\jsboi\.conda\envs\projet-is\lib\site-packages\starlette\routing.py", line 734, in app
-    await route.handle(scope, receive, send)
-  File "C:\Users\jsboi\.conda\envs\projet-is\lib\site-packages\starlette\routing.py", line 288, in handle
-    await self.app(scope, receive, send)
-  File "C:\Users\jsboi\.conda\envs\projet-is\lib\site-packages\starlette\routing.py", line 76, in app
-    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
-  File "C:\Users\jsboi\.conda\envs\projet-is\lib\site-packages\starlette\_exception_handler.py", line 53, in wrapped_app
-    raise exc
-  File "C:\Users\jsboi\.conda\envs\projet-is\lib\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app
-    await app(scope, receive, sender)
-  File "C:\Users\jsboi\.conda\envs\projet-is\lib\site-packages\starlette\routing.py", line 73, in app
-    response = await f(request)
-  File "C:\Users\jsboi\.conda\envs\projet-is\lib\site-packages\fastapi\routing.py", line 301, in app
-    raw_response = await run_endpoint_function(
-  File "C:\Users\jsboi\.conda\envs\projet-is\lib\site-packages\fastapi\routing.py", line 212, in run_endpoint_function
-    return await dependant.call(**values)
-  File "c:\dev\2025-Epita-Intelligence-Symbolique\api\endpoints.py", line 61, in status_endpoint
-    service_available = await analysis_service.is_available() # Supposing this method exists
-TypeError: object bool can't be used in 'await' expression
-ERROR:    Exception in ASGI application
-Traceback (most recent call last):
-  File "C:\Users\jsboi\.conda\envs\projet-is\lib\site-packages\uvicorn\protocols\http\httptools_impl.py", line 409, in run_asgi
-    result = await app(  # type: ignore[func-returns-value]
-  File "C:\Users\jsboi\.conda\envs\projet-is\lib\site-packages\uvicorn\middleware\proxy_headers.py", line 60, in __call__
-    return await self.app(scope, receive, send)
-  File "C:\Users\jsboi\.conda\envs\projet-is\lib\site-packages\fastapi\applications.py", line 1054, in __call__
-    await super().__call__(scope, receive, send)
-  File "C:\Users\jsboi\.conda\envs\projet-is\lib\site-packages\starlette\applications.py", line 112, in __call__
-    await self.middleware_stack(scope, receive, send)
-  File "C:\Users\jsboi\.conda\envs\projet-is\lib\site-packages\starlette\middleware\errors.py", line 187, in __call__
-    raise exc
-  File "C:\Users\jsboi\.conda\envs\projet-is\lib\site-packages\starlette\middleware\errors.py", line 165, in __call__
-    await self.app(scope, receive, _send)
-  File "C:\Users\jsboi\.conda\envs\projet-is\lib\site-packages\starlette\middleware\exceptions.py", line 62, in __call__
-    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
-  File "C:\Users\jsboi\.conda\envs\projet-is\lib\site-packages\starlette\_exception_handler.py", line 53, in wrapped_app
-    raise exc
-  File "C:\Users\jsboi\.conda\envs\projet-is\lib\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app
-    await app(scope, receive, sender)
-  File "C:\Users\jsboi\.conda\envs\projet-is\lib\site-packages\starlette\routing.py", line 714, in __call__
-    await self.middleware_stack(scope, receive, send)
-  File "C:\Users\jsboi\.conda\envs\projet-is\lib\site-packages\starlette\routing.py", line 734, in app
-    await route.handle(scope, receive, send)
-  File "C:\Users\jsboi\.conda\envs\projet-is\lib\site-packages\starlette\routing.py", line 288, in handle
-    await self.app(scope, receive, send)
-  File "C:\Users\jsboi\.conda\envs\projet-is\lib\site-packages\starlette\routing.py", line 76, in app
-    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
-  File "C:\Users\jsboi\.conda\envs\projet-is\lib\site-packages\starlette\_exception_handler.py", line 53, in wrapped_app
-    raise exc
-  File "C:\Users\jsboi\.conda\envs\projet-is\lib\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app
-    await app(scope, receive, sender)
-  File "C:\Users\jsboi\.conda\envs\projet-is\lib\site-packages\starlette\routing.py", line 73, in app
-    response = await f(request)
-  File "C:\Users\jsboi\.conda\envs\projet-is\lib\site-packages\fastapi\routing.py", line 301, in app
-    raw_response = await run_endpoint_function(
-  File "C:\Users\jsboi\.conda\envs\projet-is\lib\site-packages\fastapi\routing.py", line 212, in run_endpoint_function
-    return await dependant.call(**values)
-  File "c:\dev\2025-Epita-Intelligence-Symbolique\api\endpoints.py", line 61, in status_endpoint
-    service_available = await analysis_service.is_available() # Supposing this method exists
-TypeError: object bool can't be used in 'await' expression
-ERROR:    Exception in ASGI application
-Traceback (most recent call last):
-  File "C:\Users\jsboi\.conda\envs\projet-is\lib\site-packages\uvicorn\protocols\http\httptools_impl.py", line 409, in run_asgi
-    result = await app(  # type: ignore[func-returns-value]
-  File "C:\Users\jsboi\.conda\envs\projet-is\lib\site-packages\uvicorn\middleware\proxy_headers.py", line 60, in __call__
-    return await self.app(scope, receive, send)
-  File "C:\Users\jsboi\.conda\envs\projet-is\lib\site-packages\fastapi\applications.py", line 1054, in __call__
-    await super().__call__(scope, receive, send)
-  File "C:\Users\jsboi\.conda\envs\projet-is\lib\site-packages\starlette\applications.py", line 112, in __call__
-    await self.middleware_stack(scope, receive, send)
-  File "C:\Users\jsboi\.conda\envs\projet-is\lib\site-packages\starlette\middleware\errors.py", line 187, in __call__
-    raise exc
-  File "C:\Users\jsboi\.conda\envs\projet-is\lib\site-packages\starlette\middleware\errors.py", line 165, in __call__
-    await self.app(scope, receive, _send)
-  File "C:\Users\jsboi\.conda\envs\projet-is\lib\site-packages\starlette\middleware\exceptions.py", line 62, in __call__
-    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
-  File "C:\Users\jsboi\.conda\envs\projet-is\lib\site-packages\starlette\_exception_handler.py", line 53, in wrapped_app
-    raise exc
-  File "C:\Users\jsboi\.conda\envs\projet-is\lib\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app
-    await app(scope, receive, sender)
-  File "C:\Users\jsboi\.conda\envs\projet-is\lib\site-packages\starlette\routing.py", line 714, in __call__
-    await self.middleware_stack(scope, receive, send)
-  File "C:\Users\jsboi\.conda\envs\projet-is\lib\site-packages\starlette\routing.py", line 734, in app
-    await route.handle(scope, receive, send)
-  File "C:\Users\jsboi\.conda\envs\projet-is\lib\site-packages\starlette\routing.py", line 288, in handle
-    await self.app(scope, receive, send)
-  File "C:\Users\jsboi\.conda\envs\projet-is\lib\site-packages\starlette\routing.py", line 76, in app
-    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
-  File "C:\Users\jsboi\.conda\envs\projet-is\lib\site-packages\starlette\_exception_handler.py", line 53, in wrapped_app
-    raise exc
-  File "C:\Users\jsboi\.conda\envs\projet-is\lib\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app
-    await app(scope, receive, sender)
-  File "C:\Users\jsboi\.conda\envs\projet-is\lib\site-packages\starlette\routing.py", line 73, in app
-    response = await f(request)
-  File "C:\Users\jsboi\.conda\envs\projet-is\lib\site-packages\fastapi\routing.py", line 301, in app
-    raw_response = await run_endpoint_function(
-  File "C:\Users\jsboi\.conda\envs\projet-is\lib\site-packages\fastapi\routing.py", line 212, in run_endpoint_function
-    return await dependant.call(**values)
-  File "c:\dev\2025-Epita-Intelligence-Symbolique\api\endpoints.py", line 61, in status_endpoint
-    service_available = await analysis_service.is_available() # Supposing this method exists
-TypeError: object bool can't be used in 'await' expression
-ERROR:    Exception in ASGI application
-Traceback (most recent call last):
-  File "C:\Users\jsboi\.conda\envs\projet-is\lib\site-packages\uvicorn\protocols\http\httptools_impl.py", line 409, in run_asgi
-    result = await app(  # type: ignore[func-returns-value]
-  File "C:\Users\jsboi\.conda\envs\projet-is\lib\site-packages\uvicorn\middleware\proxy_headers.py", line 60, in __call__
-    return await self.app(scope, receive, send)
-  File "C:\Users\jsboi\.conda\envs\projet-is\lib\site-packages\fastapi\applications.py", line 1054, in __call__
-    await super().__call__(scope, receive, send)
-  File "C:\Users\jsboi\.conda\envs\projet-is\lib\site-packages\starlette\applications.py", line 112, in __call__
-    await self.middleware_stack(scope, receive, send)
-  File "C:\Users\jsboi\.conda\envs\projet-is\lib\site-packages\starlette\middleware\errors.py", line 187, in __call__
-    raise exc
-  File "C:\Users\jsboi\.conda\envs\projet-is\lib\site-packages\starlette\middleware\errors.py", line 165, in __call__
-    await self.app(scope, receive, _send)
-  File "C:\Users\jsboi\.conda\envs\projet-is\lib\site-packages\starlette\middleware\exceptions.py", line 62, in __call__
-    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
-  File "C:\Users\jsboi\.conda\envs\projet-is\lib\site-packages\starlette\_exception_handler.py", line 53, in wrapped_app
-    raise exc
-  File "C:\Users\jsboi\.conda\envs\projet-is\lib\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app
-    await app(scope, receive, sender)
-  File "C:\Users\jsboi\.conda\envs\projet-is\lib\site-packages\starlette\routing.py", line 714, in __call__
-    await self.middleware_stack(scope, receive, send)
-  File "C:\Users\jsboi\.conda\envs\projet-is\lib\site-packages\starlette\routing.py", line 734, in app
-    await route.handle(scope, receive, send)
-  File "C:\Users\jsboi\.conda\envs\projet-is\lib\site-packages\starlette\routing.py", line 288, in handle
-    await self.app(scope, receive, send)
-  File "C:\Users\jsboi\.conda\envs\projet-is\lib\site-packages\starlette\routing.py", line 76, in app
-    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
-  File "C:\Users\jsboi\.conda\envs\projet-is\lib\site-packages\starlette\_exception_handler.py", line 53, in wrapped_app
-    raise exc
-  File "C:\Users\jsboi\.conda\envs\projet-is\lib\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app
-    await app(scope, receive, sender)
-  File "C:\Users\jsboi\.conda\envs\projet-is\lib\site-packages\starlette\routing.py", line 73, in app
-    response = await f(request)
-  File "C:\Users\jsboi\.conda\envs\projet-is\lib\site-packages\fastapi\routing.py", line 301, in app
-    raw_response = await run_endpoint_function(
-  File "C:\Users\jsboi\.conda\envs\projet-is\lib\site-packages\fastapi\routing.py", line 212, in run_endpoint_function
-    return await dependant.call(**values)
-  File "c:\dev\2025-Epita-Intelligence-Symbolique\api\endpoints.py", line 61, in status_endpoint
-    service_available = await analysis_service.is_available() # Supposing this method exists
-TypeError: object bool can't be used in 'await' expression
-ERROR:    Exception in ASGI application
-Traceback (most recent call last):
-  File "C:\Users\jsboi\.conda\envs\projet-is\lib\site-packages\uvicorn\protocols\http\httptools_impl.py", line 409, in run_asgi
-    result = await app(  # type: ignore[func-returns-value]
-  File "C:\Users\jsboi\.conda\envs\projet-is\lib\site-packages\uvicorn\middleware\proxy_headers.py", line 60, in __call__
-    return await self.app(scope, receive, send)
-  File "C:\Users\jsboi\.conda\envs\projet-is\lib\site-packages\fastapi\applications.py", line 1054, in __call__
-    await super().__call__(scope, receive, send)
-  File "C:\Users\jsboi\.conda\envs\projet-is\lib\site-packages\starlette\applications.py", line 112, in __call__
-    await self.middleware_stack(scope, receive, send)
-  File "C:\Users\jsboi\.conda\envs\projet-is\lib\site-packages\starlette\middleware\errors.py", line 187, in __call__
-    raise exc
-  File "C:\Users\jsboi\.conda\envs\projet-is\lib\site-packages\starlette\middleware\errors.py", line 165, in __call__
-    await self.app(scope, receive, _send)
-  File "C:\Users\jsboi\.conda\envs\projet-is\lib\site-packages\starlette\middleware\exceptions.py", line 62, in __call__
-    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
-  File "C:\Users\jsboi\.conda\envs\projet-is\lib\site-packages\starlette\_exception_handler.py", line 53, in wrapped_app
-    raise exc
-  File "C:\Users\jsboi\.conda\envs\projet-is\lib\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app
-    await app(scope, receive, sender)
-  File "C:\Users\jsboi\.conda\envs\projet-is\lib\site-packages\starlette\routing.py", line 714, in __call__
-    await self.middleware_stack(scope, receive, send)
-  File "C:\Users\jsboi\.conda\envs\projet-is\lib\site-packages\starlette\routing.py", line 734, in app
-    await route.handle(scope, receive, send)
-  File "C:\Users\jsboi\.conda\envs\projet-is\lib\site-packages\starlette\routing.py", line 288, in handle
-    await self.app(scope, receive, send)
-  File "C:\Users\jsboi\.conda\envs\projet-is\lib\site-packages\starlette\routing.py", line 76, in app
-    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
-  File "C:\Users\jsboi\.conda\envs\projet-is\lib\site-packages\starlette\_exception_handler.py", line 53, in wrapped_app
-    raise exc
-  File "C:\Users\jsboi\.conda\envs\projet-is\lib\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app
-    await app(scope, receive, sender)
-  File "C:\Users\jsboi\.conda\envs\projet-is\lib\site-packages\starlette\routing.py", line 73, in app
-    response = await f(request)
-  File "C:\Users\jsboi\.conda\envs\projet-is\lib\site-packages\fastapi\routing.py", line 301, in app
-    raw_response = await run_endpoint_function(
-  File "C:\Users\jsboi\.conda\envs\projet-is\lib\site-packages\fastapi\routing.py", line 212, in run_endpoint_function
-    return await dependant.call(**values)
-  File "c:\dev\2025-Epita-Intelligence-Symbolique\api\endpoints.py", line 61, in status_endpoint
-    service_available = await analysis_service.is_available() # Supposing this method exists
-TypeError: object bool can't be used in 'await' expression
-ERROR:    Exception in ASGI application
-Traceback (most recent call last):
-  File "C:\Users\jsboi\.conda\envs\projet-is\lib\site-packages\uvicorn\protocols\http\httptools_impl.py", line 409, in run_asgi
-    result = await app(  # type: ignore[func-returns-value]
-  File "C:\Users\jsboi\.conda\envs\projet-is\lib\site-packages\uvicorn\middleware\proxy_headers.py", line 60, in __call__
-    return await self.app(scope, receive, send)
-  File "C:\Users\jsboi\.conda\envs\projet-is\lib\site-packages\fastapi\applications.py", line 1054, in __call__
-    await super().__call__(scope, receive, send)
-  File "C:\Users\jsboi\.conda\envs\projet-is\lib\site-packages\starlette\applications.py", line 112, in __call__
-    await self.middleware_stack(scope, receive, send)
-  File "C:\Users\jsboi\.conda\envs\projet-is\lib\site-packages\starlette\middleware\errors.py", line 187, in __call__
-    raise exc
-  File "C:\Users\jsboi\.conda\envs\projet-is\lib\site-packages\starlette\middleware\errors.py", line 165, in __call__
-    await self.app(scope, receive, _send)
-  File "C:\Users\jsboi\.conda\envs\projet-is\lib\site-packages\starlette\middleware\exceptions.py", line 62, in __call__
-    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
-  File "C:\Users\jsboi\.conda\envs\projet-is\lib\site-packages\starlette\_exception_handler.py", line 53, in wrapped_app
-    raise exc
-  File "C:\Users\jsboi\.conda\envs\projet-is\lib\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app
-    await app(scope, receive, sender)
-  File "C:\Users\jsboi\.conda\envs\projet-is\lib\site-packages\starlette\routing.py", line 714, in __call__
-    await self.middleware_stack(scope, receive, send)
-  File "C:\Users\jsboi\.conda\envs\projet-is\lib\site-packages\starlette\routing.py", line 734, in app
-    await route.handle(scope, receive, send)
-  File "C:\Users\jsboi\.conda\envs\projet-is\lib\site-packages\starlette\routing.py", line 288, in handle
-    await self.app(scope, receive, send)
-  File "C:\Users\jsboi\.conda\envs\projet-is\lib\site-packages\starlette\routing.py", line 76, in app
-    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
-  File "C:\Users\jsboi\.conda\envs\projet-is\lib\site-packages\starlette\_exception_handler.py", line 53, in wrapped_app
-    raise exc
-  File "C:\Users\jsboi\.conda\envs\projet-is\lib\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app
-    await app(scope, receive, sender)
-  File "C:\Users\jsboi\.conda\envs\projet-is\lib\site-packages\starlette\routing.py", line 73, in app
-    response = await f(request)
-  File "C:\Users\jsboi\.conda\envs\projet-is\lib\site-packages\fastapi\routing.py", line 301, in app
-    raw_response = await run_endpoint_function(
-  File "C:\Users\jsboi\.conda\envs\projet-is\lib\site-packages\fastapi\routing.py", line 212, in run_endpoint_function
-    return await dependant.call(**values)
-  File "c:\dev\2025-Epita-Intelligence-Symbolique\api\endpoints.py", line 61, in status_endpoint
-    service_available = await analysis_service.is_available() # Supposing this method exists
-TypeError: object bool can't be used in 'await' expression
-ERROR:    Exception in ASGI application
-Traceback (most recent call last):
-  File "C:\Users\jsboi\.conda\envs\projet-is\lib\site-packages\uvicorn\protocols\http\httptools_impl.py", line 409, in run_asgi
-    result = await app(  # type: ignore[func-returns-value]
-  File "C:\Users\jsboi\.conda\envs\projet-is\lib\site-packages\uvicorn\middleware\proxy_headers.py", line 60, in __call__
-    return await self.app(scope, receive, send)
-  File "C:\Users\jsboi\.conda\envs\projet-is\lib\site-packages\fastapi\applications.py", line 1054, in __call__
-    await super().__call__(scope, receive, send)
-  File "C:\Users\jsboi\.conda\envs\projet-is\lib\site-packages\starlette\applications.py", line 112, in __call__
-    await self.middleware_stack(scope, receive, send)
-  File "C:\Users\jsboi\.conda\envs\projet-is\lib\site-packages\starlette\middleware\errors.py", line 187, in __call__
-    raise exc
-  File "C:\Users\jsboi\.conda\envs\projet-is\lib\site-packages\starlette\middleware\errors.py", line 165, in __call__
-    await self.app(scope, receive, _send)
-  File "C:\Users\jsboi\.conda\envs\projet-is\lib\site-packages\starlette\middleware\exceptions.py", line 62, in __call__
-    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
-  File "C:\Users\jsboi\.conda\envs\projet-is\lib\site-packages\starlette\_exception_handler.py", line 53, in wrapped_app
-    raise exc
-  File "C:\Users\jsboi\.conda\envs\projet-is\lib\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app
-    await app(scope, receive, sender)
-  File "C:\Users\jsboi\.conda\envs\projet-is\lib\site-packages\starlette\routing.py", line 714, in __call__
-    await self.middleware_stack(scope, receive, send)
-  File "C:\Users\jsboi\.conda\envs\projet-is\lib\site-packages\starlette\routing.py", line 734, in app
-    await route.handle(scope, receive, send)
-  File "C:\Users\jsboi\.conda\envs\projet-is\lib\site-packages\starlette\routing.py", line 288, in handle
-    await self.app(scope, receive, send)
-  File "C:\Users\jsboi\.conda\envs\projet-is\lib\site-packages\starlette\routing.py", line 76, in app
-    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
-  File "C:\Users\jsboi\.conda\envs\projet-is\lib\site-packages\starlette\_exception_handler.py", line 53, in wrapped_app
-    raise exc
-  File "C:\Users\jsboi\.conda\envs\projet-is\lib\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app
-    await app(scope, receive, sender)
-  File "C:\Users\jsboi\.conda\envs\projet-is\lib\site-packages\starlette\routing.py", line 73, in app
-    response = await f(request)
-  File "C:\Users\jsboi\.conda\envs\projet-is\lib\site-packages\fastapi\routing.py", line 301, in app
-    raw_response = await run_endpoint_function(
-  File "C:\Users\jsboi\.conda\envs\projet-is\lib\site-packages\fastapi\routing.py", line 212, in run_endpoint_function
-    return await dependant.call(**values)
-  File "c:\dev\2025-Epita-Intelligence-Symbolique\api\endpoints.py", line 61, in status_endpoint
-    service_available = await analysis_service.is_available() # Supposing this method exists
-TypeError: object bool can't be used in 'await' expression
-ERROR:    Exception in ASGI application
-Traceback (most recent call last):
-  File "C:\Users\jsboi\.conda\envs\projet-is\lib\site-packages\uvicorn\protocols\http\httptools_impl.py", line 409, in run_asgi
-    result = await app(  # type: ignore[func-returns-value]
-  File "C:\Users\jsboi\.conda\envs\projet-is\lib\site-packages\uvicorn\middleware\proxy_headers.py", line 60, in __call__
-    return await self.app(scope, receive, send)
-  File "C:\Users\jsboi\.conda\envs\projet-is\lib\site-packages\fastapi\applications.py", line 1054, in __call__
-    await super().__call__(scope, receive, send)
-  File "C:\Users\jsboi\.conda\envs\projet-is\lib\site-packages\starlette\applications.py", line 112, in __call__
-    await self.middleware_stack(scope, receive, send)
-  File "C:\Users\jsboi\.conda\envs\projet-is\lib\site-packages\starlette\middleware\errors.py", line 187, in __call__
-    raise exc
-  File "C:\Users\jsboi\.conda\envs\projet-is\lib\site-packages\starlette\middleware\errors.py", line 165, in __call__
-    await self.app(scope, receive, _send)
-  File "C:\Users\jsboi\.conda\envs\projet-is\lib\site-packages\starlette\middleware\exceptions.py", line 62, in __call__
-    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
-  File "C:\Users\jsboi\.conda\envs\projet-is\lib\site-packages\starlette\_exception_handler.py", line 53, in wrapped_app
-    raise exc
-  File "C:\Users\jsboi\.conda\envs\projet-is\lib\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app
-    await app(scope, receive, sender)
-  File "C:\Users\jsboi\.conda\envs\projet-is\lib\site-packages\starlette\routing.py", line 714, in __call__
-    await self.middleware_stack(scope, receive, send)
-  File "C:\Users\jsboi\.conda\envs\projet-is\lib\site-packages\starlette\routing.py", line 734, in app
-    await route.handle(scope, receive, send)
-  File "C:\Users\jsboi\.conda\envs\projet-is\lib\site-packages\starlette\routing.py", line 288, in handle
-    await self.app(scope, receive, send)
-  File "C:\Users\jsboi\.conda\envs\projet-is\lib\site-packages\starlette\routing.py", line 76, in app
-    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
-  File "C:\Users\jsboi\.conda\envs\projet-is\lib\site-packages\starlette\_exception_handler.py", line 53, in wrapped_app
-    raise exc
-  File "C:\Users\jsboi\.conda\envs\projet-is\lib\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app
-    await app(scope, receive, sender)
-  File "C:\Users\jsboi\.conda\envs\projet-is\lib\site-packages\starlette\routing.py", line 73, in app
-    response = await f(request)
-  File "C:\Users\jsboi\.conda\envs\projet-is\lib\site-packages\fastapi\routing.py", line 301, in app
-    raw_response = await run_endpoint_function(
-  File "C:\Users\jsboi\.conda\envs\projet-is\lib\site-packages\fastapi\routing.py", line 212, in run_endpoint_function
-    return await dependant.call(**values)
-  File "c:\dev\2025-Epita-Intelligence-Symbolique\api\endpoints.py", line 61, in status_endpoint
-    service_available = await analysis_service.is_available() # Supposing this method exists
-TypeError: object bool can't be used in 'await' expression
-ERROR:    Exception in ASGI application
-Traceback (most recent call last):
-  File "C:\Users\jsboi\.conda\envs\projet-is\lib\site-packages\uvicorn\protocols\http\httptools_impl.py", line 409, in run_asgi
-    result = await app(  # type: ignore[func-returns-value]
-  File "C:\Users\jsboi\.conda\envs\projet-is\lib\site-packages\uvicorn\middleware\proxy_headers.py", line 60, in __call__
-    return await self.app(scope, receive, send)
-  File "C:\Users\jsboi\.conda\envs\projet-is\lib\site-packages\fastapi\applications.py", line 1054, in __call__
-    await super().__call__(scope, receive, send)
-  File "C:\Users\jsboi\.conda\envs\projet-is\lib\site-packages\starlette\applications.py", line 112, in __call__
-    await self.middleware_stack(scope, receive, send)
-  File "C:\Users\jsboi\.conda\envs\projet-is\lib\site-packages\starlette\middleware\errors.py", line 187, in __call__
-    raise exc
-  File "C:\Users\jsboi\.conda\envs\projet-is\lib\site-packages\starlette\middleware\errors.py", line 165, in __call__
-    await self.app(scope, receive, _send)
-  File "C:\Users\jsboi\.conda\envs\projet-is\lib\site-packages\starlette\middleware\exceptions.py", line 62, in __call__
-    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
-  File "C:\Users\jsboi\.conda\envs\projet-is\lib\site-packages\starlette\_exception_handler.py", line 53, in wrapped_app
-    raise exc
-  File "C:\Users\jsboi\.conda\envs\projet-is\lib\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app
-    await app(scope, receive, sender)
-  File "C:\Users\jsboi\.conda\envs\projet-is\lib\site-packages\starlette\routing.py", line 714, in __call__
-    await self.middleware_stack(scope, receive, send)
-  File "C:\Users\jsboi\.conda\envs\projet-is\lib\site-packages\starlette\routing.py", line 734, in app
-    await route.handle(scope, receive, send)
-  File "C:\Users\jsboi\.conda\envs\projet-is\lib\site-packages\starlette\routing.py", line 288, in handle
-    await self.app(scope, receive, send)
-  File "C:\Users\jsboi\.conda\envs\projet-is\lib\site-packages\starlette\routing.py", line 76, in app
-    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
-  File "C:\Users\jsboi\.conda\envs\projet-is\lib\site-packages\starlette\_exception_handler.py", line 53, in wrapped_app
-    raise exc
-  File "C:\Users\jsboi\.conda\envs\projet-is\lib\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app
-    await app(scope, receive, sender)
-  File "C:\Users\jsboi\.conda\envs\projet-is\lib\site-packages\starlette\routing.py", line 73, in app
-    response = await f(request)
-  File "C:\Users\jsboi\.conda\envs\projet-is\lib\site-packages\fastapi\routing.py", line 301, in app
-    raw_response = await run_endpoint_function(
-  File "C:\Users\jsboi\.conda\envs\projet-is\lib\site-packages\fastapi\routing.py", line 212, in run_endpoint_function
-    return await dependant.call(**values)
-  File "c:\dev\2025-Epita-Intelligence-Symbolique\api\endpoints.py", line 61, in status_endpoint
-    service_available = await analysis_service.is_available() # Supposing this method exists
-TypeError: object bool can't be used in 'await' expression
-ERROR:    Exception in ASGI application
-Traceback (most recent call last):
-  File "C:\Users\jsboi\.conda\envs\projet-is\lib\site-packages\uvicorn\protocols\http\httptools_impl.py", line 409, in run_asgi
-    result = await app(  # type: ignore[func-returns-value]
-  File "C:\Users\jsboi\.conda\envs\projet-is\lib\site-packages\uvicorn\middleware\proxy_headers.py", line 60, in __call__
-    return await self.app(scope, receive, send)
-  File "C:\Users\jsboi\.conda\envs\projet-is\lib\site-packages\fastapi\applications.py", line 1054, in __call__
-    await super().__call__(scope, receive, send)
-  File "C:\Users\jsboi\.conda\envs\projet-is\lib\site-packages\starlette\applications.py", line 112, in __call__
-    await self.middleware_stack(scope, receive, send)
-  File "C:\Users\jsboi\.conda\envs\projet-is\lib\site-packages\starlette\middleware\errors.py", line 187, in __call__
-    raise exc
-  File "C:\Users\jsboi\.conda\envs\projet-is\lib\site-packages\starlette\middleware\errors.py", line 165, in __call__
-    await self.app(scope, receive, _send)
-  File "C:\Users\jsboi\.conda\envs\projet-is\lib\site-packages\starlette\middleware\exceptions.py", line 62, in __call__
-    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
-  File "C:\Users\jsboi\.conda\envs\projet-is\lib\site-packages\starlette\_exception_handler.py", line 53, in wrapped_app
-    raise exc
-  File "C:\Users\jsboi\.conda\envs\projet-is\lib\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app
-    await app(scope, receive, sender)
-  File "C:\Users\jsboi\.conda\envs\projet-is\lib\site-packages\starlette\routing.py", line 714, in __call__
-    await self.middleware_stack(scope, receive, send)
-  File "C:\Users\jsboi\.conda\envs\projet-is\lib\site-packages\starlette\routing.py", line 734, in app
-    await route.handle(scope, receive, send)
-  File "C:\Users\jsboi\.conda\envs\projet-is\lib\site-packages\starlette\routing.py", line 288, in handle
-    await self.app(scope, receive, send)
-  File "C:\Users\jsboi\.conda\envs\projet-is\lib\site-packages\starlette\routing.py", line 76, in app
-    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
-  File "C:\Users\jsboi\.conda\envs\projet-is\lib\site-packages\starlette\_exception_handler.py", line 53, in wrapped_app
-    raise exc
-  File "C:\Users\jsboi\.conda\envs\projet-is\lib\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app
-    await app(scope, receive, sender)
-  File "C:\Users\jsboi\.conda\envs\projet-is\lib\site-packages\starlette\routing.py", line 73, in app
-    response = await f(request)
-  File "C:\Users\jsboi\.conda\envs\projet-is\lib\site-packages\fastapi\routing.py", line 301, in app
-    raw_response = await run_endpoint_function(
-  File "C:\Users\jsboi\.conda\envs\projet-is\lib\site-packages\fastapi\routing.py", line 212, in run_endpoint_function
-    return await dependant.call(**values)
-  File "c:\dev\2025-Epita-Intelligence-Symbolique\api\endpoints.py", line 61, in status_endpoint
-    service_available = await analysis_service.is_available() # Supposing this method exists
-TypeError: object bool can't be used in 'await' expression
-ERROR:    Exception in ASGI application
-Traceback (most recent call last):
-  File "C:\Users\jsboi\.conda\envs\projet-is\lib\site-packages\uvicorn\protocols\http\httptools_impl.py", line 409, in run_asgi
-    result = await app(  # type: ignore[func-returns-value]
-  File "C:\Users\jsboi\.conda\envs\projet-is\lib\site-packages\uvicorn\middleware\proxy_headers.py", line 60, in __call__
-    return await self.app(scope, receive, send)
-  File "C:\Users\jsboi\.conda\envs\projet-is\lib\site-packages\fastapi\applications.py", line 1054, in __call__
-    await super().__call__(scope, receive, send)
-  File "C:\Users\jsboi\.conda\envs\projet-is\lib\site-packages\starlette\applications.py", line 112, in __call__
-    await self.middleware_stack(scope, receive, send)
-  File "C:\Users\jsboi\.conda\envs\projet-is\lib\site-packages\starlette\middleware\errors.py", line 187, in __call__
-    raise exc
-  File "C:\Users\jsboi\.conda\envs\projet-is\lib\site-packages\starlette\middleware\errors.py", line 165, in __call__
-    await self.app(scope, receive, _send)
-  File "C:\Users\jsboi\.conda\envs\projet-is\lib\site-packages\starlette\middleware\exceptions.py", line 62, in __call__
-    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
-  File "C:\Users\jsboi\.conda\envs\projet-is\lib\site-packages\starlette\_exception_handler.py", line 53, in wrapped_app
-    raise exc
-  File "C:\Users\jsboi\.conda\envs\projet-is\lib\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app
-    await app(scope, receive, sender)
-  File "C:\Users\jsboi\.conda\envs\projet-is\lib\site-packages\starlette\routing.py", line 714, in __call__
-    await self.middleware_stack(scope, receive, send)
-  File "C:\Users\jsboi\.conda\envs\projet-is\lib\site-packages\starlette\routing.py", line 734, in app
-    await route.handle(scope, receive, send)
-  File "C:\Users\jsboi\.conda\envs\projet-is\lib\site-packages\starlette\routing.py", line 288, in handle
-    await self.app(scope, receive, send)
-  File "C:\Users\jsboi\.conda\envs\projet-is\lib\site-packages\starlette\routing.py", line 76, in app
-    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
-  File "C:\Users\jsboi\.conda\envs\projet-is\lib\site-packages\starlette\_exception_handler.py", line 53, in wrapped_app
-    raise exc
-  File "C:\Users\jsboi\.conda\envs\projet-is\lib\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app
-    await app(scope, receive, sender)
-  File "C:\Users\jsboi\.conda\envs\projet-is\lib\site-packages\starlette\routing.py", line 73, in app
-    response = await f(request)
-  File "C:\Users\jsboi\.conda\envs\projet-is\lib\site-packages\fastapi\routing.py", line 301, in app
-    raw_response = await run_endpoint_function(
-  File "C:\Users\jsboi\.conda\envs\projet-is\lib\site-packages\fastapi\routing.py", line 212, in run_endpoint_function
-    return await dependant.call(**values)
-  File "c:\dev\2025-Epita-Intelligence-Symbolique\api\endpoints.py", line 61, in status_endpoint
-    service_available = await analysis_service.is_available() # Supposing this method exists
-TypeError: object bool can't be used in 'await' expression
-ERROR:    Exception in ASGI application
-Traceback (most recent call last):
-  File "C:\Users\jsboi\.conda\envs\projet-is\lib\site-packages\uvicorn\protocols\http\httptools_impl.py", line 409, in run_asgi
-    result = await app(  # type: ignore[func-returns-value]
-  File "C:\Users\jsboi\.conda\envs\projet-is\lib\site-packages\uvicorn\middleware\proxy_headers.py", line 60, in __call__
-    return await self.app(scope, receive, send)
-  File "C:\Users\jsboi\.conda\envs\projet-is\lib\site-packages\fastapi\applications.py", line 1054, in __call__
-    await super().__call__(scope, receive, send)
-  File "C:\Users\jsboi\.conda\envs\projet-is\lib\site-packages\starlette\applications.py", line 112, in __call__
-    await self.middleware_stack(scope, receive, send)
-  File "C:\Users\jsboi\.conda\envs\projet-is\lib\site-packages\starlette\middleware\errors.py", line 187, in __call__
-    raise exc
-  File "C:\Users\jsboi\.conda\envs\projet-is\lib\site-packages\starlette\middleware\errors.py", line 165, in __call__
-    await self.app(scope, receive, _send)
-  File "C:\Users\jsboi\.conda\envs\projet-is\lib\site-packages\starlette\middleware\exceptions.py", line 62, in __call__
-    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
-  File "C:\Users\jsboi\.conda\envs\projet-is\lib\site-packages\starlette\_exception_handler.py", line 53, in wrapped_app
-    raise exc
-  File "C:\Users\jsboi\.conda\envs\projet-is\lib\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app
-    await app(scope, receive, sender)
-  File "C:\Users\jsboi\.conda\envs\projet-is\lib\site-packages\starlette\routing.py", line 714, in __call__
-    await self.middleware_stack(scope, receive, send)
-  File "C:\Users\jsboi\.conda\envs\projet-is\lib\site-packages\starlette\routing.py", line 734, in app
-    await route.handle(scope, receive, send)
-  File "C:\Users\jsboi\.conda\envs\projet-is\lib\site-packages\starlette\routing.py", line 288, in handle
-    await self.app(scope, receive, send)
-  File "C:\Users\jsboi\.conda\envs\projet-is\lib\site-packages\starlette\routing.py", line 76, in app
-    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
-  File "C:\Users\jsboi\.conda\envs\projet-is\lib\site-packages\starlette\_exception_handler.py", line 53, in wrapped_app
-    raise exc
-  File "C:\Users\jsboi\.conda\envs\projet-is\lib\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app
-    await app(scope, receive, sender)
-  File "C:\Users\jsboi\.conda\envs\projet-is\lib\site-packages\starlette\routing.py", line 73, in app
-    response = await f(request)
-  File "C:\Users\jsboi\.conda\envs\projet-is\lib\site-packages\fastapi\routing.py", line 301, in app
-    raw_response = await run_endpoint_function(
-  File "C:\Users\jsboi\.conda\envs\projet-is\lib\site-packages\fastapi\routing.py", line 212, in run_endpoint_function
-    return await dependant.call(**values)
-  File "c:\dev\2025-Epita-Intelligence-Symbolique\api\endpoints.py", line 61, in status_endpoint
-    service_available = await analysis_service.is_available() # Supposing this method exists
-TypeError: object bool can't be used in 'await' expression
+  File "C:\Users\jsboi\.conda\envs\projet-is\lib\runpy.py", line 196, in _run_module_as_main
+    return _run_code(code, main_globals, None,
+  File "C:\Users\jsboi\.conda\envs\projet-is\lib\runpy.py", line 86, in _run_code
+    exec(code, run_globals)
+  File "C:\Users\jsboi\.conda\envs\projet-is\lib\site-packages\uvicorn\__main__.py", line 4, in <module>
+    uvicorn.main()
+  File "C:\Users\jsboi\.conda\envs\projet-is\lib\site-packages\click\core.py", line 1442, in __call__
+    return self.main(*args, **kwargs)
+  File "C:\Users\jsboi\.conda\envs\projet-is\lib\site-packages\click\core.py", line 1363, in main
+    rv = self.invoke(ctx)
+  File "C:\Users\jsboi\.conda\envs\projet-is\lib\site-packages\click\core.py", line 1226, in invoke
+    return ctx.invoke(self.callback, **ctx.params)
+  File "C:\Users\jsboi\.conda\envs\projet-is\lib\site-packages\click\core.py", line 794, in invoke
+    return callback(*args, **kwargs)
+  File "C:\Users\jsboi\.conda\envs\projet-is\lib\site-packages\uvicorn\main.py", line 413, in main
+    run(
+  File "C:\Users\jsboi\.conda\envs\projet-is\lib\site-packages\uvicorn\main.py", line 580, in run
+    server.run()
+  File "C:\Users\jsboi\.conda\envs\projet-is\lib\site-packages\uvicorn\server.py", line 66, in run
+    return asyncio.run(self.serve(sockets=sockets))
+  File "C:\Users\jsboi\.conda\envs\projet-is\lib\asyncio\runners.py", line 44, in run
+    return loop.run_until_complete(main)
+  File "C:\Users\jsboi\.conda\envs\projet-is\lib\asyncio\base_events.py", line 649, in run_until_complete
+    return future.result()
+  File "C:\Users\jsboi\.conda\envs\projet-is\lib\site-packages\uvicorn\server.py", line 70, in serve
+    await self._serve(sockets)
+  File "C:\Users\jsboi\.conda\envs\projet-is\lib\site-packages\uvicorn\server.py", line 77, in _serve
+    config.load()
+  File "C:\Users\jsboi\.conda\envs\projet-is\lib\site-packages\uvicorn\config.py", line 435, in load
+    self.loaded_app = import_from_string(self.app)
+  File "C:\Users\jsboi\.conda\envs\projet-is\lib\site-packages\uvicorn\importer.py", line 19, in import_from_string
+    module = importlib.import_module(module_str)
+  File "C:\Users\jsboi\.conda\envs\projet-is\lib\importlib\__init__.py", line 126, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+  File "<frozen importlib._bootstrap>", line 1050, in _gcd_import
+  File "<frozen importlib._bootstrap>", line 1027, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 1006, in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 688, in _load_unlocked
+  File "<frozen importlib._bootstrap_external>", line 883, in exec_module
+  File "<frozen importlib._bootstrap>", line 241, in _call_with_frames_removed
+  File "C:\dev\2025-Epita-Intelligence-Symbolique\api\main.py", line 2, in <module>
+    from .endpoints import router as api_router
+  File "C:\dev\2025-Epita-Intelligence-Symbolique\api\endpoints.py", line 3, in <module>
+    from .dependencies import get_analysis_service, AnalysisService # Import AnalysisService for type hinting
+  File "C:\dev\2025-Epita-Intelligence-Symbolique\api\dependencies.py", line 2, in <module>
+    from argumentation_analysis.orchestration.service_manager import OrchestrationServiceManager
+  File "C:\dev\2025-Epita-Intelligence-Symbolique\argumentation_analysis\orchestration\__init__.py", line 6, in <module>
+    from .cluedo_extended_orchestrator import (
+  File "C:\dev\2025-Epita-Intelligence-Symbolique\argumentation_analysis\orchestration\cluedo_extended_orchestrator.py", line 68, in <module>
+    from ..core.cluedo_oracle_state import CluedoOracleState
+  File "C:\dev\2025-Epita-Intelligence-Symbolique\argumentation_analysis\core\__init__.py", line 10, in <module>
+    from .argumentation_analyzer import ArgumentationAnalyzer, Analyzer
+  File "C:\dev\2025-Epita-Intelligence-Symbolique\argumentation_analysis\core\argumentation_analyzer.py", line 13, in <module>
+    from ..pipelines.unified_text_analysis import UnifiedTextAnalysisPipeline, UnifiedAnalysisConfig
+  File "C:\dev\2025-Epita-Intelligence-Symbolique\argumentation_analysis\pipelines\unified_text_analysis.py", line 38, in <module>
+    from argumentation_analysis.pipelines.analysis_pipeline import run_text_analysis_pipeline
+  File "C:\dev\2025-Epita-Intelligence-Symbolique\argumentation_analysis\pipelines\analysis_pipeline.py", line 26, in <module>
+    from argumentation_analysis.analytics.text_analyzer import perform_text_analysis
+  File "C:\dev\2025-Epita-Intelligence-Symbolique\argumentation_analysis\analytics\text_analyzer.py", line 21, in <module>
+    from argumentation_analysis.orchestration.analysis_runner import run_analysis_conversation
+  File "C:\dev\2025-Epita-Intelligence-Symbolique\argumentation_analysis\orchestration\analysis_runner.py", line 42, in <module>
+    llm_service: Union[OpenAIChatCompletion, AzureChatCompletion] # Service LLM passé en argument
+NameError: name 'OpenAIChatCompletion' is not defined

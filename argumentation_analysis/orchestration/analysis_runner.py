@@ -25,6 +25,8 @@ from typing import List, Optional, Union, Any, Dict # Ajout Any, Dict
 
 # Imports pour le hook LLM
 from semantic_kernel.connectors.ai.chat_completion_client_base import ChatCompletionClientBase
+from semantic_kernel.connectors.ai.open_ai import OpenAIChatCompletion
+from semantic_kernel.connectors.ai.azure import AzureChatCompletion
 from semantic_kernel.contents.chat_message_content import ChatMessageContent as SKChatMessageContent # Alias pour éviter conflit
 from semantic_kernel.kernel import Kernel as SKernel # Alias pour éviter conflit avec Kernel de SK
 # KernelArguments est déjà importé plus bas
@@ -33,7 +35,7 @@ import semantic_kernel as sk
 from semantic_kernel.contents import ChatMessageContent
 # CORRECTIF COMPATIBILITÉ: Utilisation du module de compatibilité
 from semantic_kernel.agents import AgentGroupChat, ChatCompletionAgent, Agent
-from argumentation_analysis.utils.semantic_kernel_compatibility import AuthorRole, AgentChatException, FunctionChoiceBehavior; formatter = logging.Formatter('%(asctime)s [%(levelname)s] [%(name)s] %(message)s', datefmt='%H:%M:%S'); handler.setFormatter(formatter); logger.addHandler(handler); logger.setLevel(logging.INFO)
+from argumentation_analysis.utils.semantic_kernel_compatibility import AuthorRole, AgentChatException, FunctionChoiceBehavior
 
 
 # --- Fonction Principale d'Exécution (Modifiée V10.7 - Accepte Service LLM) ---
@@ -118,13 +120,25 @@ async def run_analysis_conversation(
         run_logger.info("5. Création des instances Agent de compatibilité pour AgentGroupChat...")
         
         # Utiliser nos propres agents de compatibilité au lieu de ChatCompletionAgent
-from argumentation_analysis.utils.semantic_kernel_compatibility import AuthorRole, AgentChatException, FunctionChoiceBehavior; print(f"Repr: {repr(local_state)}")
-         else: print("(Instance état locale non disponible)")
+        try:
+            from argumentation_analysis.utils.semantic_kernel_compatibility import AuthorRole, AgentChatException, FunctionChoiceBehavior
+            if 'local_state' in locals():
+                print(f"Repr: {repr(local_state)}")
+            else:
+                print("(Instance état locale non disponible)")
 
-         jvm_status = "(JVM active)" if ('jpype' in globals() and jpype.isJVMStarted()) else "(JVM non active)"
-         print(f"\n{jvm_status}")
-         run_logger.info(f"État final JVM: {jvm_status}")
-         run_logger.info(f"--- Fin Run_{run_id} ---")
+            jvm_status = "(JVM active)" if ('jpype' in globals() and jpype.isJVMStarted()) else "(JVM non active)"
+            print(f"\n{jvm_status}")
+        except ImportError as e:
+            run_logger.warning(f"Import semantic_kernel_compatibility échoué: {e}")
+            jvm_status = "Import error"
+        
+        run_logger.info(f"État final JVM: {jvm_status}")
+        run_logger.info(f"--- Fin Run_{run_id} ---")
+        
+    except Exception as e:
+        run_logger.error(f"Erreur dans run_analysis_conversation: {e}")
+        raise
 
 class AnalysisRunner:
    """
