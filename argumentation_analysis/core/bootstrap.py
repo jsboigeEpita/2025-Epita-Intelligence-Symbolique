@@ -252,10 +252,10 @@ def initialize_project_environment(env_path_str: str = None, root_path_str: str 
 
     if create_llm_service_func:
         logger.info("Initialisation de LLMService via create_llm_service...")
-        # Toujours forcer le mock pour éviter les erreurs d'authentification pendant le débogage
+        # Utiliser le service LLM réel avec configuration depuis .env
         try:
-            context.llm_service = create_llm_service_func(service_id="default_llm_bootstrap", force_mock=True)
-            logger.info("LLMService initialisé en mode mock forcé.")
+            context.llm_service = create_llm_service_func(service_id="default_llm_bootstrap", force_mock=False)
+            logger.info("LLMService initialisé en mode réel.")
         except Exception as e:
             logger.error(f"Erreur lors de l'appel à create_llm_service avec force_mock=True : {e}", exc_info=True)
     else:
