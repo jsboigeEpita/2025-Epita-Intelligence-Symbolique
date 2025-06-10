@@ -1,7 +1,0 @@
-INFO:     Started server process [51760]
-INFO:     Waiting for application startup.
-INFO:api.main_simple:\U0001f680 Démarrage API FastAPI Simplifiée
-INFO:api.main_simple:\U0001f916 GPT-4o-mini activé
-INFO:api.main_simple:\u2705 API prête pour les analyses
-INFO:     Application startup complete.
-INFO:     Uvicorn running on http://0.0.0.0:5003 (Press CTRL+C to quit)
