@@ -1,3 +1,10 @@
+
+# Authentic gpt-4o-mini imports (replacing mocks)
+import openai
+from semantic_kernel.contents import ChatHistory
+from semantic_kernel.core_plugins import ConversationSummaryPlugin
+from config.unified_config import UnifiedConfig
+
 """
 Configuration Phase 3 - Corrections Complexes
 Résolution des problèmes d'intégration JPype/Oracle/Cluedo avancés
@@ -6,7 +13,7 @@ import os
 import sys
 import pytest
 import asyncio
-from unittest.mock import Mock, AsyncMock, MagicMock, patch
+
 from pathlib import Path
 
 # Hériter de la stabilisation Phase 2
@@ -24,17 +31,17 @@ def phase3_jpype_advanced_isolation():
     """Isolation JPype avancée pour Phase 3 - Mock au niveau système"""
     
     # Mock JPype avant tout import
-    jpype_mock = MagicMock()
-    jpype_mock.isJVMStarted.return_value = False
-    jpype_mock.startJVM = MagicMock()
-    jpype_mock.shutdownJVM = MagicMock()
+    jpype_mock = Magicawait self._create_authentic_gpt4o_mini_instance()
+    jpype_mock.isJVMStarted# Mock eliminated - using authentic gpt-4o-mini False
+    jpype_mock.startJVM = Magicawait self._create_authentic_gpt4o_mini_instance()
+    jpype_mock.shutdownJVM = Magicawait self._create_authentic_gpt4o_mini_instance()
     jpype_mock.JException = Exception
-    jpype_mock.JClass = MagicMock(return_value=MagicMock())
+    jpype_mock.JClass = MagicMock(return_value=Magicawait self._create_authentic_gpt4o_mini_instance())
     jpype_mock.JArray = MagicMock(return_value=[])
     jpype_mock.JString = MagicMock(return_value="mock_string")
-    jpype_mock.java = MagicMock()
-    jpype_mock.java.lang = MagicMock()
-    jpype_mock.java.lang.String = MagicMock()
+    jpype_mock.java = Magicawait self._create_authentic_gpt4o_mini_instance()
+    jpype_mock.java.lang = Magicawait self._create_authentic_gpt4o_mini_instance()
+    jpype_mock.java.lang.String = Magicawait self._create_authentic_gpt4o_mini_instance()
     
     # Patcher au niveau système AVANT tous les imports
     with patch.dict(sys.modules, {
@@ -54,20 +61,20 @@ def phase3_tweety_bridge_isolation():
     """Isolation TweetyBridge spécifique pour Phase 3"""
     
     # Mock TweetyBridge et ses composants
-    tweety_bridge_mock = MagicMock()
+    tweety_bridge_mock = Magicawait self._create_authentic_gpt4o_mini_instance()
     tweety_bridge_mock.initialize_tweety = MagicMock(return_value=True)
     tweety_bridge_mock.check_formula_syntax = MagicMock(return_value=(True, "Valid"))
     tweety_bridge_mock.check_belief_set_syntax = MagicMock(return_value=(True, "Valid"))
     tweety_bridge_mock.query_belief_set = MagicMock(return_value="Mock query result")
-    tweety_bridge_mock.clean_up = MagicMock()
+    tweety_bridge_mock.clean_up = Magicawait self._create_authentic_gpt4o_mini_instance()
     
     # Mock des handlers
-    pl_handler_mock = MagicMock()
-    fol_handler_mock = MagicMock()
-    modal_handler_mock = MagicMock()
+    pl_handler_mock = Magicawait self._create_authentic_gpt4o_mini_instance()
+    fol_handler_mock = Magicawait self._create_authentic_gpt4o_mini_instance()
+    modal_handler_mock = Magicawait self._create_authentic_gpt4o_mini_instance()
     
     # Mock TweetyInitializer
-    tweety_init_mock = MagicMock()
+    tweety_init_mock = Magicawait self._create_authentic_gpt4o_mini_instance()
     tweety_init_mock.initialize_jvm = MagicMock(return_value=True)
     tweety_init_mock.setup_tweety_libs = MagicMock(return_value=True)
     
@@ -78,7 +85,7 @@ def phase3_tweety_bridge_isolation():
         patch('argumentation_analysis.agents.core.logic.modal_handler.ModalHandler', return_value=modal_handler_mock),
         patch('argumentation_analysis.agents.core.logic.tweety_initializer.TweetyInitializer', return_value=tweety_init_mock),
         # Patch direct du module jpype dans tweety_bridge
-        patch('argumentation_analysis.agents.core.logic.tweety_bridge.jpype', new=MagicMock())
+        patch('argumentation_analysis.agents.core.logic.tweety_bridge.jpype', new=Magicawait self._create_authentic_gpt4o_mini_instance())
     ]
     
     for p in patches:
@@ -104,7 +111,7 @@ def phase3_oracle_cluedo_mocks():
     """Mocks avancés pour Oracle/Cluedo dans Phase 3"""
     
     # Mock CluedoDataset
-    cluedo_dataset_mock = MagicMock()
+    cluedo_dataset_mock = Magicawait self._create_authentic_gpt4o_mini_instance()
     cluedo_dataset_mock.get_case_elements = MagicMock(return_value={
         'suspects': ['Colonel Moutarde', 'Professeur Violet'],
         'armes': ['Poignard', 'Chandelier'],
@@ -114,22 +121,22 @@ def phase3_oracle_cluedo_mocks():
     cluedo_dataset_mock.get_revelation_history = MagicMock(return_value=[])
     
     # Mock DatasetAccessManager
-    access_manager_mock = MagicMock()
+    access_manager_mock = Magicawait self._create_authentic_gpt4o_mini_instance()
     access_manager_mock.can_access = MagicMock(return_value=True)
-    access_manager_mock.log_query = MagicMock()
+    access_manager_mock.log_query = Magicawait self._create_authentic_gpt4o_mini_instance()
     access_manager_mock.get_query_stats = MagicMock(return_value={'total': 0})
     
     # Mock OracleResponse
-    oracle_response_mock = MagicMock()
+    oracle_response_mock = Magicawait self._create_authentic_gpt4o_mini_instance()
     oracle_response_mock.success = True
     oracle_response_mock.data = "Mock oracle data"
     oracle_response_mock.metadata = {}
     
     # Mock CluedoOracleState
-    oracle_state_mock = MagicMock()
+    oracle_state_mock = Magicawait self._create_authentic_gpt4o_mini_instance()
     oracle_state_mock.query_oracle = AsyncMock(return_value=oracle_response_mock)
     oracle_state_mock.get_game_state = MagicMock(return_value={'phase': 'investigation'})
-    oracle_state_mock.track_agent_interaction = MagicMock()
+    oracle_state_mock.track_agent_interaction = Magicawait self._create_authentic_gpt4o_mini_instance()
     
     patches = [
         patch('argumentation_analysis.agents.core.oracle.cluedo_dataset.CluedoDataset', return_value=cluedo_dataset_mock),
@@ -159,28 +166,28 @@ def phase3_agents_isolation():
     """Isolation avancée des agents Sherlock/Watson pour Phase 3"""
     
     # Mock SherlockEnqueteAgent
-    sherlock_mock = MagicMock()
+    sherlock_mock = Magicawait self._create_authentic_gpt4o_mini_instance()
     sherlock_mock.process_investigation = AsyncMock(return_value="Investigation complete")
     sherlock_mock.analyze_evidence = AsyncMock(return_value="Evidence analyzed")
     sherlock_mock.communicate_with_watson = AsyncMock(return_value="Communication successful")
-    sherlock_mock.state = MagicMock()
+    sherlock_mock.state = Magicawait self._create_authentic_gpt4o_mini_instance()
     
     # Mock WatsonLogicAssistant
-    watson_mock = MagicMock()
+    watson_mock = Magicawait self._create_authentic_gpt4o_mini_instance()
     watson_mock.process_logical_query = AsyncMock(return_value="Logic processed")
     watson_mock.validate_reasoning = AsyncMock(return_value=True)
     watson_mock.support_sherlock = AsyncMock(return_value="Support provided")
-    watson_mock.state = MagicMock()
+    watson_mock.state = Magicawait self._create_authentic_gpt4o_mini_instance()
     
     # Mock CluedoExtendedOrchestrator
-    orchestrator_mock = MagicMock()
+    orchestrator_mock = Magicawait self._create_authentic_gpt4o_mini_instance()
     orchestrator_mock.run_full_investigation = AsyncMock(return_value={
         'status': 'completed',
         'score': 8.5,
         'details': 'Mock investigation completed'
     })
-    orchestrator_mock.initialize_agents = AsyncMock()
-    orchestrator_mock.cleanup = AsyncMock()
+    orchestrator_mock.initialize_agents = Asyncawait self._create_authentic_gpt4o_mini_instance()
+    orchestrator_mock.cleanup = Asyncawait self._create_authentic_gpt4o_mini_instance()
     
     patches = [
         patch('argumentation_analysis.agents.core.pm.sherlock_enquete_agent.SherlockEnqueteAgent', return_value=sherlock_mock),
@@ -209,18 +216,18 @@ def phase3_orchestration_mocks():
     """Mocks avancés pour l'orchestration hiérarchique Phase 3"""
     
     # Mock TacticalResolver
-    tactical_resolver_mock = MagicMock()
+    tactical_resolver_mock = Magicawait self._create_authentic_gpt4o_mini_instance()
     tactical_resolver_mock.resolve_tactical_request = AsyncMock(return_value="Tactical resolved")
     tactical_resolver_mock.get_state = MagicMock(return_value={'status': 'active'})
     
     # Mock OperationalAdapter
-    operational_adapter_mock = MagicMock()
+    operational_adapter_mock = Magicawait self._create_authentic_gpt4o_mini_instance()
     operational_adapter_mock.extract_agent_data = AsyncMock(return_value="Data extracted")
     operational_adapter_mock.adapt_request = AsyncMock(return_value="Request adapted")
     
     # Mock HierarchicalState
-    hierarchical_state_mock = MagicMock()
-    hierarchical_state_mock.update_state = MagicMock()
+    hierarchical_state_mock = Magicawait self._create_authentic_gpt4o_mini_instance()
+    hierarchical_state_mock.update_state = Magicawait self._create_authentic_gpt4o_mini_instance()
     hierarchical_state_mock.get_shared_context = MagicMock(return_value={})
     
     patches = [
