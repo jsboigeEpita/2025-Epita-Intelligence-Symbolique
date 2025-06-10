@@ -1,7 +1,7 @@
 ﻿# core/strategies.py
-# CORRECTIF COMPATIBILITÉ: Utilisation du module de compatibilité
-from argumentation_analysis.utils.semantic_kernel_compatibility import Agent, TerminationStrategy, SelectionStrategy
+# CORRECTIF COMPATIBILITÉ: Import direct depuis semantic_kernel
 from semantic_kernel.contents import ChatMessageContent
+# Note: Agent, TerminationStrategy, SelectionStrategy non disponibles dans SK 0.9.6b1
 from typing import List, Dict, TYPE_CHECKING
 import logging
 from pydantic import PrivateAttr

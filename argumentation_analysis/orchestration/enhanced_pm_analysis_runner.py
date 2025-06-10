@@ -35,7 +35,9 @@ if project_root not in sys.path:
 # Imports Semantic Kernel
 import semantic_kernel as sk
 from semantic_kernel.contents import ChatMessageContent
-from argumentation_analysis.utils.semantic_kernel_compatibility import AuthorRole, AgentGroupChat, ChatCompletionAgent, Agent, AgentChatException, FunctionChoiceBehavior
+from semantic_kernel.contents import AuthorRole, ChatMessageContent
+from semantic_kernel.agents import AgentGroupChat, ChatCompletionAgent, Agent, AgentChatException
+from semantic_kernel.functions import FunctionChoiceBehavior
 from semantic_kernel.connectors.ai.open_ai import OpenAIChatCompletion, AzureChatCompletion
 from semantic_kernel.functions.kernel_arguments import KernelArguments
 

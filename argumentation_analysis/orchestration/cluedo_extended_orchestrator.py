@@ -19,7 +19,7 @@ from semantic_kernel.kernel import Kernel
 # Version SK 0.9.6b1 - agents module non disponible - Utilisation architecture native SK
 # PURGE PHASE 3A: Élimination complète fallbacks - Utilisation composants natifs uniquement
 AGENTS_AVAILABLE = False  # Module agents non disponible dans SK 0.9.6b1
-from argumentation_analysis.utils.semantic_kernel_compatibility import ChatMessageContent
+from semantic_kernel.contents import ChatMessageContent
 from semantic_kernel.functions.kernel_arguments import KernelArguments
 
 # Import conditionnel pour les modules filters qui peuvent ne pas exister

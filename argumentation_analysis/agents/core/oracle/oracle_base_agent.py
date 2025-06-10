@@ -16,7 +16,7 @@ from semantic_kernel.functions import kernel_function
 # Using a mock or fallback approach for tests
 # CORRECTIF COMPATIBILITÉ: Utilisation du module de compatibilité
 try:
-    from argumentation_analysis.utils.semantic_kernel_compatibility import ChatCompletionAgent
+    from semantic_kernel.contents import ChatCompletionAgent
 except ImportError:
     # Fallback for older versions of semantic_kernel
     ChatCompletionAgent = None

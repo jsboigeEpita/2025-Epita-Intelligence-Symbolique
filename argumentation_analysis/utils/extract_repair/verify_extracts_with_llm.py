@@ -34,9 +34,9 @@ logger.addHandler(file_handler)
 
 import semantic_kernel as sk
 from semantic_kernel.contents import ChatMessageContent
-from argumentation_analysis.utils.semantic_kernel_compatibility import AuthorRole
+from semantic_kernel.contents import AuthorRole
 # CORRECTIF COMPATIBILITÉ: Utilisation du module de compatibilité
-from argumentation_analysis.utils.semantic_kernel_compatibility import ChatCompletionAgent
+from semantic_kernel.agents import ChatCompletionAgent
 try:
     # Import relatif depuis le package utils
     logger.info("Tentative d'import relatif...")
