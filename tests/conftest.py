@@ -20,6 +20,18 @@ import pytest
 import importlib.util
 import logging
 import threading # Ajout de l'import pour l'inspection des threads
+
+# ===== INTÉGRATION AUTO_ENV - CRITIQUE POUR ÉVITER LES ENVIRONNEMENTS GLOBAUX =====
+# DOIT ÊTRE EXÉCUTÉ AVANT TOUTE AUTRE CONFIGURATION
+try:
+    from scripts.core.auto_env import ensure_env
+    ensure_env()
+    print("✅ Environnement projet activé via auto_env (conftest.py principal)")
+except ImportError as e:
+    print(f"⚠️ Auto_env non disponible dans conftest principal: {e}")
+except Exception as e:
+    print(f"⚠️ Erreur auto_env dans conftest principal: {e}")
+# ==================================================================================
 # --- Configuration globale du Logging pour les tests ---
 # Le logger global pour conftest est déjà défini plus bas,
 # mais nous avons besoin de configurer basicConfig tôt.

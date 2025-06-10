@@ -18,6 +18,16 @@ logging.basicConfig(level=logging.WARNING)
 project_root = Path(__file__).parent.parent.parent.parent
 sys.path.insert(0, str(project_root))
 
+# INTÉGRATION AUTO_ENV - CRITIQUE POUR ÉVITER LES ENVIRONNEMENTS GLOBAUX
+try:
+    from scripts.core.auto_env import ensure_env
+    ensure_env()
+    print("✅ Environnement projet activé via auto_env")
+except ImportError as e:
+    print(f"⚠️ Auto_env non disponible: {e}")
+except Exception as e:
+    print(f"⚠️ Erreur auto_env: {e}")
+
 @pytest.fixture(scope="session", autouse=True)
 def setup_test_environment():
     """Configuration de l'environnement de test."""
