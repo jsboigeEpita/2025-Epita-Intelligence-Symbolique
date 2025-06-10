@@ -193,38 +193,84 @@ powershell -File scripts/env/activate_project_env.ps1 -CommandToRun "python -m p
 📋 **Documentation** : [`services/README.md`](services/README.md) | **Démos** : [`README_DEMOS_PLAYWRIGHT.md`](README_DEMOS_PLAYWRIGHT.md)
 
 ### 4. 🕵️ **Système d'Enquête Sherlock-Watson-Moriarty**
-**Pipeline d'analyse Oracle Enhanced opérationnel**
+**Architecture Multi-Agents avec Intelligence Symbolique et Logique Formelle**
 
-Système multi-agents sophistiqué pour résolution de problèmes logiques :
+Le système **Sherlock-Watson-Moriarty** constitue l'une des innovations majeures du projet, implémentant un **pipeline d'analyse collaboratif** avec trois agents spécialisés travaillant ensemble pour résoudre des problèmes de déduction complexes.
 
+#### 🎭 **Architecture des Agents Spécialisés**
+
+| Agent | Spécialisation | Technologies | Capacités Principales |
+|-------|---------------|--------------|----------------------|
+| 🕵️ **Sherlock Holmes** | Enquête & Leadership | Semantic Kernel 1.29.0 | Déduction logique, formulation d'hypothèses, coordination d'équipe |
+| 🧠 **Dr Watson** | Logique Formelle | TweetyProject + JPype | Validation formelle, raisonnement propositionnel, analyse de sophismes |
+| 🎭 **Professor Moriarty** | Oracle & Validation | Dataset Cluedo + IA | Révélations contrôlées, indices progressifs, validation de solutions |
+
+#### 🚀 **Démonstrations Disponibles**
+
+**📂 Démos Production-Ready (`examples/Sherlock_Watson/`)**
 ```bash
-# Démo Cluedo Oracle Enhanced
-python -m scripts.sherlock_watson.run_cluedo_oracle_enhanced
+# Démonstration authentique conversation Sherlock-Watson (18 KB)
+python examples/Sherlock_Watson/sherlock_watson_authentic_demo.py
 
-# Démo Puzzle d'Einstein
->>>>>>> Stashed changes
-python -m scripts.sherlock_watson.run_einstein_oracle_demo
+# Oracle Cluedo complet avec 157 tests validés (19 KB)
+python examples/Sherlock_Watson/cluedo_oracle_complete.py
 
-# Tests de validation comportementale (9 analyses LLM)
-python -m scripts.sherlock_watson.test_oracle_behavior_simple
+# Agents logiques en environnement de production (26 KB)
+python examples/Sherlock_Watson/agents_logiques_production.py
 
-# Validation couverture complète (148+ tests)
-python -m scripts.maintenance.validate_oracle_coverage
+# Orchestration finale avec Semantic Kernel intégré (43 KB)
+python examples/Sherlock_Watson/orchestration_finale_reelle.py
 ```
 
-<<<<<<< Updated upstream
-**✅ Agents Validés avec LLMs Réels** :
-- 🔍 **Sherlock Holmes** - Agent déductif (3 analyses LLM réussies)
-- 👨‍⚕️ **Dr Watson** - Agent collaboratif (3 analyses LLM réussies)
-- 🎭 **Professor Moriarty** - Agent antagoniste (3 analyses LLM réussies)
-- 🛡️ **Système d'Intégrité Oracle** - Protection anti-triche avec CluedoIntegrityError
-=======
-**Agents disponibles** :
-- 🔍 **Sherlock Holmes** : Agent d'investigation logique avec raisonnement déductif
-- 👨‍⚕️ **Dr Watson** : Agent de déduction médicale et assistance analytique
-- 🎭 **Professor Moriarty** : Agent Oracle fonctionnel avec révélations automatiques
-- 🛡️ **Système d'Intégrité** : Protection anti-triche avec `CluedoIntegrityError`
->>>>>>> Stashed changes
+**🎯 Démos Spécialisées Avancées**
+```bash
+# Puzzle d'Einstein avec TweetyProject obligatoire
+python examples/logique_complexe_demo/demo_einstein_workflow.py
+
+# Oracle Einstein avec indices progressifs Moriarty
+python scripts/sherlock_watson/run_einstein_oracle_demo.py
+
+# Tests comportementaux multi-agents avec LLMs réels
+python scripts/sherlock_watson/test_oracle_behavior_simple.py
+```
+
+#### ✅ **Validations Techniques Accomplies**
+
+**🧪 Tests et Intégration** :
+- **157/157 tests Oracle** validés (100% de succès)
+- **9 analyses LLM comportementales** réussies avec gpt-4o-mini
+- **3 stratégies d'orchestration** sophistiquées intégrées
+- **Tests d'intégrité anti-triche** avec CluedoIntegrityError
+
+**🔧 Technologies Maîtrisées** :
+- **Semantic Kernel 1.29.0** - Orchestration multi-agents native
+- **TweetyProject** - Logique formelle Java intégrée via JPype
+- **OpenRouter/GPT-4o-mini** - Analyse conversationnelle réelle
+- **État Partagé Innovant** - Coordination inter-stratégies avancée
+
+**🛡️ Sécurité et Intégrité** :
+- **Audit de sécurité complet** - 4 violations détectées et corrigées
+- **CluedoIntegrityError** - Protection anti-triche native
+- **Permissions renforcées** - Contrôle d'accès multi-niveaux
+- **Monitoring temps réel** - Surveillance continue des violations
+
+#### 🎓 **Cas d'Usage Pédagogiques**
+
+**Pour Étudiants en IA** :
+- Compréhension des systèmes multi-agents collaboratifs
+- Apprentissage de la logique formelle appliquée (TweetyProject)
+- Maîtrise de l'orchestration avec Semantic Kernel
+- Exploration des patterns de validation croisée
+
+**Pour Recherche Académique** :
+- Framework extensible pour problèmes de déduction
+- Architecture hybrid Java/Python pour logique symbolique
+- Integration LLM réelle en contexte éducatif
+- Métriques et validation rigoureuses
+
+📋 **Documentation Technique Complète** : [`examples/Sherlock_Watson/README.md`](examples/Sherlock_Watson/README.md)
+🏗️ **Architecture Détaillée** : [`docs/sherlock_watson/DOCUMENTATION_COMPLETE_SHERLOCK_WATSON.md`](docs/sherlock_watson/DOCUMENTATION_COMPLETE_SHERLOCK_WATSON.md)
+🛡️ **Guide Sécurité** : [`docs/sherlock_watson/AUDIT_INTEGRITE_CLUEDO.md`](docs/sherlock_watson/AUDIT_INTEGRITE_CLUEDO.md)
 
 ### **4. 🌐 Applications Web Complètes**
 **Interfaces modernes avec intégration LLM fonctionnelle**
