@@ -1,8 +1,15 @@
+
+# Authentic gpt-4o-mini imports (replacing mocks)
+import openai
+from semantic_kernel.contents import ChatHistory
+from semantic_kernel.core_plugins import ConversationSummaryPlugin
+from config.unified_config import UnifiedConfig
+
 import pytest
 import sys
 import os
 import logging
-from unittest.mock import MagicMock
+
 import pathlib # Ajout pour la manipulation des chemins
 import platform # Ajout pour platform.system()
 

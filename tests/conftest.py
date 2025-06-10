@@ -1,3 +1,10 @@
+
+# Authentic gpt-4o-mini imports (replacing mocks)
+import openai
+from semantic_kernel.contents import ChatHistory
+from semantic_kernel.core_plugins import ConversationSummaryPlugin
+from config.unified_config import UnifiedConfig
+
 """
 Configuration pour les tests pytest.
 
@@ -9,7 +16,7 @@ automatiquement utilisé en raison de problèmes de compatibilité.
 import sys
 import os
 import pytest
-from unittest.mock import patch, MagicMock
+
 import importlib.util
 import logging
 import threading # Ajout de l'import pour l'inspection des threads
@@ -109,10 +116,10 @@ else:
 #         _conftest_setup_logger.info("Mock pour NumPy (tests.mocks.numpy_mock) activé via sys.modules.")
 #     except ImportError:
 #         _conftest_setup_logger.error("Mock spécifique tests.mocks.numpy_mock non trouvé. Utilisation de MagicMock pour NumPy.")
-#         sys.modules['numpy'] = MagicMock()
+#         sys.modules['numpy'] = Magicawait self._create_authentic_gpt4o_mini_instance()
 #     except Exception as e_numpy_mock:
 #         _conftest_setup_logger.error(f"Erreur inattendue lors du chargement du mock NumPy: {e_numpy_mock}. Utilisation de MagicMock.")
-#         sys.modules['numpy'] = MagicMock()
+#         sys.modules['numpy'] = Magicawait self._create_authentic_gpt4o_mini_instance()
 
 #     # Mock pour Pandas
 #     try:
@@ -123,10 +130,10 @@ else:
 #         _conftest_setup_logger.info("Mock pour Pandas (tests.mocks.pandas_mock) activé via sys.modules.")
 #     except ImportError:
 #         _conftest_setup_logger.error("Mock spécifique tests.mocks.pandas_mock non trouvé. Utilisation de MagicMock pour Pandas.")
-#         sys.modules['pandas'] = MagicMock()
+#         sys.modules['pandas'] = Magicawait self._create_authentic_gpt4o_mini_instance()
 #     except Exception as e_pandas_mock:
 #         _conftest_setup_logger.error(f"Erreur inattendue lors du chargement du mock Pandas: {e_pandas_mock}. Utilisation de MagicMock.")
-#         sys.modules['pandas'] = MagicMock()
+#         sys.modules['pandas'] = Magicawait self._create_authentic_gpt4o_mini_instance()
 # _conftest_setup_logger.info("Fin de la gestion des imports conditionnels pour NumPy et Pandas.")
 # # --- Fin Gestion des imports conditionnels ---
 # --- Fin Configuration globale du Logging ---
