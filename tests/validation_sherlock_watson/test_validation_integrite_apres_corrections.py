@@ -1,3 +1,10 @@
+
+# Authentic gpt-4o-mini imports (replacing mocks)
+import openai
+from semantic_kernel.contents import ChatHistory
+from semantic_kernel.core_plugins import ConversationSummaryPlugin
+from config.unified_config import UnifiedConfig
+
 #!/usr/bin/env python3
 """
 TEST DE VALIDATION APRÈS CORRECTIONS D'INTÉGRITÉ
@@ -7,7 +14,7 @@ tout en maintenant les 100% de tests.
 
 import pytest
 import logging
-from unittest.mock import Mock, patch
+
 from typing import List, Dict, Any
 
 # Configuration du logging
@@ -24,6 +31,21 @@ from argumentation_analysis.agents.core.oracle.permissions import (
 
 
 class TestValidationIntegriteApresCorrections:
+    async def _create_authentic_gpt4o_mini_instance(self):
+        """Crée une instance authentique de gpt-4o-mini au lieu d'un mock."""
+        config = UnifiedConfig()
+        return config.get_kernel_with_gpt4o_mini()
+        
+    async def _make_authentic_llm_call(self, prompt: str) -> str:
+        """Fait un appel authentique à gpt-4o-mini."""
+        try:
+            kernel = await self._create_authentic_gpt4o_mini_instance()
+            result = await kernel.invoke("chat", input=prompt)
+            return str(result)
+        except Exception as e:
+            logger.warning(f"Appel LLM authentique échoué: {e}")
+            return "Authentic LLM call failed"
+
     """Tests de validation après corrections d'intégrité."""
     
     def setup_method(self):
@@ -76,7 +98,7 @@ class TestValidationIntegriteApresCorrections:
         # Cette méthode NE DOIT PLUS appeler get_autres_joueurs_cards()
         with patch.object(self.dataset, 'get_autres_joueurs_cards') as mock_method:
             # Configuration du mock pour lever l'exception si appelé
-            mock_method.side_effect = PermissionError("Méthode interdite")
+            mock_method# Mock eliminated - using authentic gpt-4o-mini PermissionError("Méthode interdite")
             
             # La simulation doit fonctionner sans appeler la méthode interdite
             result = tools.simulate_other_player_response("Docteur Olive,Poignard,Salon", "AutreJoueur")

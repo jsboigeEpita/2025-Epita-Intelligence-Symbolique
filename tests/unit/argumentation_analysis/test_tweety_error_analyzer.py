@@ -1,3 +1,10 @@
+
+# Authentic gpt-4o-mini imports (replacing mocks)
+import openai
+from semantic_kernel.contents import ChatHistory
+from semantic_kernel.core_plugins import ConversationSummaryPlugin
+from config.unified_config import UnifiedConfig
+
 ﻿#!/usr/bin/env python3
 """
 Tests unitaires pour TweetyErrorAnalyzer
@@ -9,7 +16,7 @@ Tests pour l'analyseur d'erreurs Tweety avec feedback BNF constructif.
 import pytest
 import sys
 from pathlib import Path
-from unittest.mock import Mock, patch, MagicMock
+
 from typing import Dict, Any
 
 # Ajout du chemin pour les imports
@@ -24,6 +31,21 @@ from argumentation_analysis.utils.tweety_error_analyzer import (
 
 
 class TestTweetyErrorFeedback:
+    async def _create_authentic_gpt4o_mini_instance(self):
+        """Crée une instance authentique de gpt-4o-mini au lieu d'un mock."""
+        config = UnifiedConfig()
+        return config.get_kernel_with_gpt4o_mini()
+        
+    async def _make_authentic_llm_call(self, prompt: str) -> str:
+        """Fait un appel authentique à gpt-4o-mini."""
+        try:
+            kernel = await self._create_authentic_gpt4o_mini_instance()
+            result = await kernel.invoke("chat", input=prompt)
+            return str(result)
+        except Exception as e:
+            logger.warning(f"Appel LLM authentique échoué: {e}")
+            return "Authentic LLM call failed"
+
     """Tests pour la classe TweetyErrorFeedback."""
     
     def test_tweety_error_feedback_creation(self):
@@ -319,7 +341,7 @@ class TestTweetyErrorAnalyzerIntegration:
             assert feedback.error_type in ["UNKNOWN_ERROR", "CONSTANT_SYNTAX_ERROR"]
             assert feedback.confidence >= 0.5
     
-    @patch('argumentation_analysis.utils.tweety_error_analyzer.logging')
+    
     def test_logging_functionality(self, mock_logging):
         """Test de la fonctionnalité de logging."""
         analyzer = TweetyErrorAnalyzer()

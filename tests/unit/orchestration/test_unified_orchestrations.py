@@ -1,4 +1,5 @@
-﻿#!/usr/bin/env python3
+
+#!/usr/bin/env python3
 """
 Tests unitaires avancés pour les orchestrations unifiées
 ======================================================
@@ -7,12 +8,19 @@ Suite finale de tests pour ConversationOrchestrator, RealLLMOrchestrator,
 et coordination système complète avec composants authentiques.
 """
 
+# Authentic gpt-4o-mini imports (replacing mocks)
+import openai
+from semantic_kernel.contents import ChatHistory
+from semantic_kernel.core_plugins import ConversationSummaryPlugin
+from config.unified_config import UnifiedConfig
+from unittest.mock import MagicMock, AsyncMock
+
 import pytest
 import asyncio
 import sys
 import time
 from pathlib import Path
-from unittest.mock import Mock, patch, MagicMock, AsyncMock
+
 from typing import Dict, Any, List
 
 # Ajout du chemin pour les imports
@@ -89,6 +97,21 @@ except ImportError as e:
 
 
 class TestUnifiedOrchestrations:
+    async def _create_authentic_gpt4o_mini_instance(self):
+        """Crée une instance authentique de gpt-4o-mini au lieu d'un mock."""
+        config = UnifiedConfig()
+        return config.get_kernel_with_gpt4o_mini()
+        
+    async def _make_authentic_llm_call(self, prompt: str) -> str:
+        """Fait un appel authentique à gpt-4o-mini."""
+        try:
+            kernel = await self._create_authentic_gpt4o_mini_instance()
+            result = await kernel.invoke("chat", input=prompt)
+            return str(result)
+        except Exception as e:
+            logger.warning(f"Appel LLM authentique échoué: {e}")
+            return "Authentic LLM call failed"
+
     """Tests avancés pour les orchestrations unifiées."""
     
     def setup_method(self):
@@ -234,7 +257,7 @@ class TestRealLLMOrchestrationAdvanced:
     def setup_method(self):
         """Configuration initiale pour chaque test."""
         self.test_text = "L'Ukraine a été créée par la Russie. Donc Poutine a raison."
-        self.mock_llm_service = Mock()
+        self.mock_llm_service = MagicMock()
         self.mock_llm_service.invoke = AsyncMock(return_value="Mock LLM response")
     
     @pytest.mark.asyncio
@@ -272,7 +295,7 @@ class TestRealLLMOrchestrationAdvanced:
     async def test_intelligent_retry_mechanism(self):
         """Test du mécanisme de retry intelligent."""
         # Mock LLM qui échoue puis réussit
-        failing_llm = Mock()
+        failing_llm = await self._create_authentic_gpt4o_mini_instance()
         failing_llm.invoke = AsyncMock(side_effect=[
             Exception("First attempt fails"),
             "Success on retry"
@@ -350,7 +373,7 @@ class TestUnifiedSystemCoordination:
         assert isinstance(conv_result, str)
         
         # Phase 2: Transfert vers orchestration LLM réelle
-        mock_llm = Mock()
+        mock_llm = MagicMock()
         real_orchestrator = RealLLMOrchestrator(llm_service=mock_llm)
         
         # Simuler le transfert d'état

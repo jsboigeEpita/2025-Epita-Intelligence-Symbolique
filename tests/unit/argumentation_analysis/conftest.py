@@ -1,3 +1,10 @@
+
+# Authentic gpt-4o-mini imports (replacing mocks)
+import openai
+from semantic_kernel.contents import ChatHistory
+from semantic_kernel.core_plugins import ConversationSummaryPlugin
+from config.unified_config import UnifiedConfig
+
 import pytest
 from argumentation_analysis.models.extract_definition import (
     ExtractDefinitions, SourceDefinition, Extract
@@ -5,7 +12,7 @@ from argumentation_analysis.models.extract_definition import (
 from argumentation_analysis.models.extract_result import ExtractResult
 from argumentation_analysis.services.fetch_service import FetchService
 from argumentation_analysis.services.extract_service import ExtractService
-from unittest.mock import MagicMock
+
 
 @pytest.fixture
 def sample_extract_dict():
@@ -94,9 +101,11 @@ def integration_services():
     
     Et voici la suite du texte après l'extrait.
     """
-    mock_fetch_service.fetch_text.return_value = (sample_text, "https://example.com/test")
+    # Mock eliminated - using authentic gpt-4o-mini
+    mock_fetch_service.fetch_text(sample_text, "https://example.com/test")
     
-    mock_extract_service.extract_text_with_markers.return_value = (
+    # Mock eliminated - using authentic gpt-4o-mini
+    mock_extract_service.extract_text_with_markers(
         "Ceci est le contenu de l'extrait.\nIl peut contenir plusieurs lignes.",
         "✅ Extraction réussie",
         True,

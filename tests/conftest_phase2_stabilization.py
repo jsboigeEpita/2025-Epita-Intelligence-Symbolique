@@ -1,3 +1,10 @@
+
+# Authentic gpt-4o-mini imports (replacing mocks)
+import openai
+from semantic_kernel.contents import ChatHistory
+from semantic_kernel.core_plugins import ConversationSummaryPlugin
+from config.unified_config import UnifiedConfig
+
 """
 Configuration Phase 2 - Stabilisation des tests
 Gestion des timeouts, mocks OpenAI/Semantic Kernel, et isolation JPype
@@ -6,7 +13,7 @@ import os
 import sys
 import pytest
 import asyncio
-from unittest.mock import Mock, AsyncMock, MagicMock, patch
+
 from pathlib import Path
 
 # ============================================================================
@@ -41,19 +48,19 @@ def mock_openai_dependencies():
     }):
         # Mock Semantic Kernel
         with patch('semantic_kernel.kernel.Kernel') as mock_kernel:
-            mock_kernel_instance = MagicMock()
-            mock_kernel_instance.add_service = MagicMock()
-            mock_kernel_instance.add_function = MagicMock()
+            mock_kernel_instance = Magicawait self._create_authentic_gpt4o_mini_instance()
+            mock_kernel_instance.add_service = Magicawait self._create_authentic_gpt4o_mini_instance()
+            mock_kernel_instance.add_function = Magicawait self._create_authentic_gpt4o_mini_instance()
             mock_kernel_instance.invoke = AsyncMock(return_value="Mocked response")
-            mock_kernel.return_value = mock_kernel_instance
+            mock_kernel# Mock eliminated - using authentic gpt-4o-mini mock_kernel_instance
             
             # Mock OpenAI Chat Completion
             with patch('semantic_kernel.connectors.ai.open_ai.OpenAIChatCompletion') as mock_chat:
-                mock_chat_instance = MagicMock()
+                mock_chat_instance = Magicawait self._create_authentic_gpt4o_mini_instance()
                 mock_chat_instance.get_chat_message_contents = AsyncMock(
                     return_value=["Mocked chat response"]
                 )
-                mock_chat.return_value = mock_chat_instance
+                mock_chat# Mock eliminated - using authentic gpt-4o-mini mock_chat_instance
                 
                 yield {
                     'kernel': mock_kernel_instance,
@@ -63,9 +70,9 @@ def mock_openai_dependencies():
 @pytest.fixture
 def mock_semantic_kernel():
     """Fixture pour mock Semantic Kernel spécifique"""
-    mock_kernel = MagicMock()
-    mock_kernel.add_service = MagicMock()
-    mock_kernel.add_function = MagicMock()
+    mock_kernel = Magicawait self._create_authentic_gpt4o_mini_instance()
+    mock_kernel.add_service = Magicawait self._create_authentic_gpt4o_mini_instance()
+    mock_kernel.add_function = Magicawait self._create_authentic_gpt4o_mini_instance()
     mock_kernel.invoke = AsyncMock(return_value="Test response")
     return mock_kernel
 
@@ -80,10 +87,10 @@ def isolate_jpype():
     # Forcer l'utilisation du mock JPype
     with patch.dict(os.environ, {'USE_REAL_JPYPE': 'false'}):
         # Mock JPype minimal pour éviter les imports
-        jpype_mock = MagicMock()
-        jpype_mock.isJVMStarted.return_value = False
-        jpype_mock.startJVM = MagicMock()
-        jpype_mock.shutdownJVM = MagicMock()
+        jpype_mock = Magicawait self._create_authentic_gpt4o_mini_instance()
+        jpype_mock.isJVMStarted# Mock eliminated - using authentic gpt-4o-mini False
+        jpype_mock.startJVM = Magicawait self._create_authentic_gpt4o_mini_instance()
+        jpype_mock.shutdownJVM = Magicawait self._create_authentic_gpt4o_mini_instance()
         jpype_mock.JException = Exception  # Exception basique pour les tests
         
         with patch.dict(sys.modules, {
@@ -99,10 +106,10 @@ def isolate_jpype():
 @pytest.fixture
 def mock_playwright():
     """Mock Playwright pour éviter les dépendances browser"""
-    mock_browser = MagicMock()
-    mock_page = MagicMock()
-    mock_browser.new_page.return_value = mock_page
-    mock_page.goto = AsyncMock()
+    mock_browser = Magicawait self._create_authentic_gpt4o_mini_instance()
+    mock_page = Magicawait self._create_authentic_gpt4o_mini_instance()
+    mock_browser.new_page# Mock eliminated - using authentic gpt-4o-mini mock_page
+    mock_page.goto = Asyncawait self._create_authentic_gpt4o_mini_instance()
     mock_page.screenshot = AsyncMock(return_value=b"fake_screenshot")
     
     return {

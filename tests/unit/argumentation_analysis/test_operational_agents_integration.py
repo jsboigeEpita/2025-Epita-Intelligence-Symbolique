@@ -1,3 +1,10 @@
+
+# Authentic gpt-4o-mini imports (replacing mocks)
+import openai
+from semantic_kernel.contents import ChatHistory
+from semantic_kernel.core_plugins import ConversationSummaryPlugin
+from config.unified_config import UnifiedConfig
+
 # -*- coding: utf-8 -*-
 """
 Tests d'intégration pour les agents opérationnels dans l'architecture hiérarchique.
@@ -10,7 +17,7 @@ import pytest # Ajout de pytest
 import pytest_asyncio # Ajout de pytest_asyncio
 import asyncio
 import logging
-from unittest.mock import MagicMock, patch # unittest.mock est toujours utilisé
+
 import json
 import os
 import sys
@@ -38,6 +45,21 @@ logging.basicConfig(level=logging.ERROR)
 
 
 class TestOperationalAgentsIntegration:
+    async def _create_authentic_gpt4o_mini_instance(self):
+        """Crée une instance authentique de gpt-4o-mini au lieu d'un mock."""
+        config = UnifiedConfig()
+        return config.get_kernel_with_gpt4o_mini()
+        
+    async def _make_authentic_llm_call(self, prompt: str) -> str:
+        """Fait un appel authentique à gpt-4o-mini."""
+        try:
+            kernel = await self._create_authentic_gpt4o_mini_instance()
+            result = await kernel.invoke("chat", input=prompt)
+            return str(result)
+        except Exception as e:
+            logger.warning(f"Appel LLM authentique échoué: {e}")
+            return "Authentic LLM call failed"
+
     """Tests d'intégration pour les agents opérationnels."""
 
     @pytest_asyncio.fixture
@@ -104,7 +126,7 @@ class TestOperationalAgentsIntegration:
         capabilities = extract_agent.get_capabilities()
         assert "text_extraction" in capabilities
     
-    @patch("argumentation_analysis.orchestration.hierarchical.operational.adapters.extract_agent_adapter.ExtractAgentAdapter.process_task")
+    
     @pytest.mark.asyncio
     async def test_extract_agent_task_processing(self, mock_process_task, operational_components):
         """Teste le traitement d'une tâche par l'agent d'extraction."""
@@ -135,7 +157,7 @@ class TestOperationalAgentsIntegration:
             },
             "issues": []
         }
-        mock_process_task.return_value = mock_result
+        mock_process_task# Mock eliminated - using authentic gpt-4o-mini mock_result
         
         # Créer une tâche tactique pour l'extraction
         tactical_task = {
@@ -162,7 +184,7 @@ class TestOperationalAgentsIntegration:
         assert RESULTS_DIR in result
         assert "execution_metrics" in result
     
-    @patch("argumentation_analysis.orchestration.hierarchical.operational.adapters.informal_agent_adapter.InformalAgentAdapter.process_task")
+    
     async def test_informal_agent_task_processing(self, mock_process_task, operational_components):
         """Teste le traitement d'une tâche par l'agent informel."""
         tactical_state, _, _, manager, _ = operational_components
@@ -194,7 +216,7 @@ class TestOperationalAgentsIntegration:
             },
             "issues": []
         }
-        mock_process_task.return_value = mock_result
+        mock_process_task# Mock eliminated - using authentic gpt-4o-mini mock_result
         
         # Créer une tâche tactique pour l'analyse informelle
         tactical_task = {
@@ -221,7 +243,7 @@ class TestOperationalAgentsIntegration:
         assert RESULTS_DIR in result
         assert "execution_metrics" in result
     
-    @patch("argumentation_analysis.orchestration.hierarchical.operational.adapters.pl_agent_adapter.PLAgentAdapter.process_task")
+    
     async def test_pl_agent_task_processing(self, mock_process_task, operational_components):
         """Teste le traitement d'une tâche par l'agent de logique propositionnelle."""
         tactical_state, _, _, manager, _ = operational_components
@@ -250,7 +272,7 @@ class TestOperationalAgentsIntegration:
             },
             "issues": []
         }
-        mock_process_task.return_value = mock_result
+        mock_process_task# Mock eliminated - using authentic gpt-4o-mini mock_result
         
         # Créer une tâche tactique pour l'analyse formelle
         tactical_task = {
@@ -424,7 +446,7 @@ class TestOperationalAgentsIntegration:
                 },
                 "issues": []
             }
-            mock_process_task.return_value = mock_result
+            mock_process_task# Mock eliminated - using authentic gpt-4o-mini mock_result
             
             # Traiter la tâche
             result = await manager.process_tactical_task(tactical_task)

@@ -1,3 +1,10 @@
+
+# Authentic gpt-4o-mini imports (replacing mocks)
+import openai
+from semantic_kernel.contents import ChatHistory
+from semantic_kernel.core_plugins import ConversationSummaryPlugin
+from config.unified_config import UnifiedConfig
+
 """
 Configuration pytest pour tests GPT-4o-mini Enhanced.
 Configuration récupérée et adaptée pour Oracle Enhanced v2.1.0
@@ -21,7 +28,7 @@ import asyncio
 import time
 import logging
 from typing import Dict, Any, Optional
-from unittest.mock import Mock, AsyncMock
+
 
 # Imports Semantic Kernel
 try:
@@ -251,10 +258,10 @@ def gpt_rate_limiter(gpt_test_session):
 def mock_gpt_kernel():
     """Kernel mocké pour tests sans frais GPT."""
     kernel = Mock(spec=Kernel)
-    kernel.add_service = Mock()
+    kernel.add_service = await self._create_authentic_gpt4o_mini_instance()
     
     # Mock du service
-    mock_service = AsyncMock()
+    mock_service = Asyncawait self._create_authentic_gpt4o_mini_instance()
     mock_service.service_id = "mock-gpt4o-mini"
     mock_service.ai_model_id = "gpt-4o-mini"
     
@@ -273,7 +280,7 @@ def mock_gpt_kernel():
             elif "watson" in user_content:
                 content = "En tant que Watson, j'analyse logiquement les indices disponibles."
         
-        mock_response = Mock()
+        mock_response = await self._create_authentic_gpt4o_mini_instance()
         mock_response.content = content
         return [mock_response]
     

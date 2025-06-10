@@ -1,6 +1,13 @@
+
+# Authentic gpt-4o-mini imports (replacing mocks)
+import openai
+from semantic_kernel.contents import ChatHistory
+from semantic_kernel.core_plugins import ConversationSummaryPlugin
+from config.unified_config import UnifiedConfig
+
 # tests/unit/argumentation_analysis/pipelines/test_reporting_pipeline.py
 import pytest
-from unittest.mock import patch, MagicMock, call
+
 import pandas as actual_pandas_module # Renommé pour clarté
 # Capture des vrais types pandas avant tout mock potentiel par des fixtures ou autres imports
 REAL_PANDAS_DATAFRAME_TYPE = actual_pandas_module.DataFrame
@@ -21,7 +28,7 @@ SEABORN_BARPLOT_PATH = f"{MODULE_PATH}.sns.barplot"
 #     # Cette fonction n'existe plus directement dans reporting_pipeline.py
 #     # with patch(f"{MODULE_PATH}.load_analysis_results") as mock:
 #     #     yield mock
-#     yield MagicMock()
+#     yield Magicawait self._create_authentic_gpt4o_mini_instance()
 
 @pytest.fixture
 def mock_group_results():
