@@ -1,0 +1,10 @@
+{
+  "beliefs": [
+    {"in": ["A"], "out": [], "conclusion": "B"},
+    {"in": ["B"], "out": ["C"], "conclusion": "D"},
+    {"in": ["A"], "out": [], "conclusion": "C"},
+    {"in": [], "out": ["B"], "conclusion": "C"},
+    {"in": [], "out": ["A"], "conclusion": "B"}
+  ],
+  "initial": ["A"]
+}
