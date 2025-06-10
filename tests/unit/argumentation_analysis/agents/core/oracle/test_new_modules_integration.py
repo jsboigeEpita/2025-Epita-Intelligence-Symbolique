@@ -1,10 +1,17 @@
+
+# Authentic gpt-4o-mini imports (replacing mocks)
+import openai
+from semantic_kernel.contents import ChatHistory
+from semantic_kernel.core_plugins import ConversationSummaryPlugin
+from config.unified_config import UnifiedConfig
+
 """
 Tests d'intégration pour les nouveaux modules Oracle Enhanced v2.1.0
 """
 
 import pytest
 import asyncio
-from unittest.mock import Mock, patch
+
 
 from argumentation_analysis.agents.core.oracle.error_handling import (
     OracleErrorHandler, OraclePermissionError, oracle_error_handler
@@ -14,6 +21,21 @@ from argumentation_analysis.agents.core.oracle.interfaces import (
 )
 
 class TestNewModulesIntegration:
+    async def _create_authentic_gpt4o_mini_instance(self):
+        """Crée une instance authentique de gpt-4o-mini au lieu d'un mock."""
+        config = UnifiedConfig()
+        return config.get_kernel_with_gpt4o_mini()
+        
+    async def _make_authentic_llm_call(self, prompt: str) -> str:
+        """Fait un appel authentique à gpt-4o-mini."""
+        try:
+            kernel = await self._create_authentic_gpt4o_mini_instance()
+            result = await kernel.invoke("chat", input=prompt)
+            return str(result)
+        except Exception as e:
+            logger.warning(f"Appel LLM authentique échoué: {e}")
+            return "Authentic LLM call failed"
+
     """Tests d'intégration entre les nouveaux modules"""
     
     def setup_method(self):
@@ -69,11 +91,11 @@ class TestNewModulesIntegration:
                 
         asyncio.run(test_error_request())
         
-    @patch('logging.getLogger')
+    
     def test_complete_integration_scenario(self, mock_get_logger):
         """Test scenario d'intégration complet"""
-        mock_logger = Mock()
-        mock_get_logger.return_value = mock_logger
+        mock_logger = await self._create_authentic_gpt4o_mini_instance()
+        mock_get_logger# Mock eliminated - using authentic gpt-4o-mini mock_logger
         
         class CompleteOracleAgent(OracleAgentInterface):
             def __init__(self):

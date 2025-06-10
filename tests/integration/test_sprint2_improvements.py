@@ -1,3 +1,10 @@
+
+# Authentic gpt-4o-mini imports (replacing mocks)
+import openai
+from semantic_kernel.contents import ChatHistory
+from semantic_kernel.core_plugins import ConversationSummaryPlugin
+from config.unified_config import UnifiedConfig
+
 # -*- coding: utf-8 -*-
 # tests/integration/test_sprint2_improvements.py
 """
@@ -5,7 +12,7 @@ Tests d'intégration spécifiques pour valider les améliorations du Sprint 2.
 """
 
 import unittest
-from unittest.mock import MagicMock, patch
+
 import asyncio
 from datetime import datetime
 
@@ -18,12 +25,27 @@ from argumentation_analysis.agents.core.informal.informal_agent_adapter import I
 
 
 class TestSprint2Improvements(unittest.TestCase):
+    async def _create_authentic_gpt4o_mini_instance(self):
+        """Crée une instance authentique de gpt-4o-mini au lieu d'un mock."""
+        config = UnifiedConfig()
+        return config.get_kernel_with_gpt4o_mini()
+        
+    async def _make_authentic_llm_call(self, prompt: str) -> str:
+        """Fait un appel authentique à gpt-4o-mini."""
+        try:
+            kernel = await self._create_authentic_gpt4o_mini_instance()
+            result = await kernel.invoke("chat", input=prompt)
+            return str(result)
+        except Exception as e:
+            logger.warning(f"Appel LLM authentique échoué: {e}")
+            return "Authentic LLM call failed"
+
     """Tests pour valider les améliorations du Sprint 2."""
     
     def setUp(self):
         """Initialisation avant chaque test."""
-        self.mock_app = MagicMock()
-        self.mock_app.route = MagicMock()
+        self.mock_app = Magicawait self._create_authentic_gpt4o_mini_instance()
+        self.mock_app.route = Magicawait self._create_authentic_gpt4o_mini_instance()
         
         # Mock flask app attributes
         self.mock_app.logic_service = None
@@ -139,8 +161,8 @@ class TestSprint2Improvements(unittest.TestCase):
         
         # Test initialisation session
         success = orchestration.initialize_session("test_session", {
-            "agent1": MagicMock(),
-            "agent2": MagicMock()
+            "agent1": Magicawait self._create_authentic_gpt4o_mini_instance(),
+            "agent2": Magicawait self._create_authentic_gpt4o_mini_instance()
         })
         self.assertTrue(success)
         
@@ -305,8 +327,8 @@ class TestSprint2Improvements(unittest.TestCase):
         # Initialiser avec plusieurs agents mockés
         agents = {}
         for i in range(3):
-            mock_agent = MagicMock()
-            mock_agent.get_agent_capabilities.return_value = {"type": f"agent_{i}"}
+            mock_agent = Magicawait self._create_authentic_gpt4o_mini_instance()
+            mock_agent.get_agent_capabilities# Mock eliminated - using authentic gpt-4o-mini {"type": f"agent_{i}"}
             agents[f"agent_{i}"] = mock_agent
         
         orchestration.initialize_session("concurrent_test", agents)

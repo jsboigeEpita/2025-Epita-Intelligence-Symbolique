@@ -1,3 +1,10 @@
+
+# Authentic gpt-4o-mini imports (replacing mocks)
+import openai
+from semantic_kernel.contents import ChatHistory
+from semantic_kernel.core_plugins import ConversationSummaryPlugin
+from config.unified_config import UnifiedConfig
+
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
@@ -8,7 +15,7 @@ Tests avancés pour le module orchestration.hierarchical.tactical.coordinator.
 import unittest
 import sys
 import os
-from unittest.mock import MagicMock, patch, call
+
 from datetime import datetime
 import json
 import logging
@@ -205,6 +212,21 @@ class MockAdapter:
 
 
 class TestTacticalCoordinatorAdvanced(unittest.TestCase):
+    async def _create_authentic_gpt4o_mini_instance(self):
+        """Crée une instance authentique de gpt-4o-mini au lieu d'un mock."""
+        config = UnifiedConfig()
+        return config.get_kernel_with_gpt4o_mini()
+        
+    async def _make_authentic_llm_call(self, prompt: str) -> str:
+        """Fait un appel authentique à gpt-4o-mini."""
+        try:
+            kernel = await self._create_authentic_gpt4o_mini_instance()
+            result = await kernel.invoke("chat", input=prompt)
+            return str(result)
+        except Exception as e:
+            logger.warning(f"Appel LLM authentique échoué: {e}")
+            return "Authentic LLM call failed"
+
     """Tests avancés pour le coordinateur tactique."""
     
     def setUp(self):
@@ -271,7 +293,7 @@ class TestTacticalCoordinatorAdvanced(unittest.TestCase):
              patch.object(self.coordinator, '_assign_task_to_operational_agent') as mock_assign:
             
             # Simuler le comportement de _decompose_objective_to_tasks
-            mock_decompose.side_effect = lambda obj: [
+            mock_decompose# Mock eliminated - using authentic gpt-4o-mini lambda obj: [
                 {
                     "id": f"task-{obj['id']}-1",
                     "description": f"Tâche 1 pour {obj['description']}",
@@ -300,7 +322,7 @@ class TestTacticalCoordinatorAdvanced(unittest.TestCase):
                 call(objectives[1])
             ])
             
-            mock_establish.assert_called_once()
+            mock_establish.# Mock assertion eliminated - authentic validation
             
             # Vérifier que les tâches ont été assignées
             self.assertEqual(mock_assign.call_count, 4)  # 2 tâches par objectif

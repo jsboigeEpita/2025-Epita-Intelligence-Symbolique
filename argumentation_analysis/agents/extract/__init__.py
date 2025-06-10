@@ -24,24 +24,8 @@ try:
     sys.modules['argumentation_analysis.agents.extract.extract_agent'] = core_extract_agent_module
 except ImportError as e:
     import logging
-    import sys
-    from unittest.mock import MagicMock, AsyncMock
-    
-    logging.warning(f"Erreur lors de l'importation depuis agents.core.extract: {e}")
-    
-    # Créer des mocks pour les classes et fonctions nécessaires
-    class ExtractAgentMock(MagicMock):
-        """Mock pour la classe ExtractAgent."""
-        pass
-    
-    # Exposer les mocks
-    ExtractAgent = ExtractAgentMock
-    # setup_extract_agent n'est plus exposé car supprimé
-    
-    # Créer un module mock pour extract_agent
-    extract_agent_mock = MagicMock()
-    extract_agent_mock.ExtractAgent = ExtractAgentMock
-    # extract_agent_mock.setup_extract_agent n'est plus nécessaire
-    
-    # Installer le mock dans sys.modules
-    sys.modules['argumentation_analysis.agents.extract.extract_agent'] = extract_agent_mock
+    logger = logging.getLogger(__name__)
+    logger.error(f"ERREUR RÉELLE D'IMPORT (mocks éliminés Phase 2): {e}")
+    logger.error("Corrigez le problème d'import au lieu d'utiliser des mocks")
+    # AUCUN MOCK - on laisse l'erreur se propager pour forcer la correction
+    raise ImportError(f"Import ExtractAgent échoué - corrigez le problème: {e}") from e

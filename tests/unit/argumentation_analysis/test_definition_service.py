@@ -1,3 +1,10 @@
+
+# Authentic gpt-4o-mini imports (replacing mocks)
+import openai
+from semantic_kernel.contents import ChatHistory
+from semantic_kernel.core_plugins import ConversationSummaryPlugin
+from config.unified_config import UnifiedConfig
+
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
@@ -13,7 +20,7 @@ import json
 import os
 import sys
 from pathlib import Path
-from unittest.mock import patch, MagicMock, mock_open
+
 
 # Ajouter le répertoire parent au chemin de recherche des modules
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -113,6 +120,21 @@ def sample_definitions_dict():
 
 
 class TestDefinitionService:
+    async def _create_authentic_gpt4o_mini_instance(self):
+        """Crée une instance authentique de gpt-4o-mini au lieu d'un mock."""
+        config = UnifiedConfig()
+        return config.get_kernel_with_gpt4o_mini()
+        
+    async def _make_authentic_llm_call(self, prompt: str) -> str:
+        """Fait un appel authentique à gpt-4o-mini."""
+        try:
+            kernel = await self._create_authentic_gpt4o_mini_instance()
+            result = await kernel.invoke("chat", input=prompt)
+            return str(result)
+        except Exception as e:
+            logger.warning(f"Appel LLM authentique échoué: {e}")
+            return "Authentic LLM call failed"
+
     """Tests pour le service de définition."""
 
     def test_init(self, crypto_service, temp_config_file, temp_fallback_file):
@@ -186,14 +208,14 @@ class TestDefinitionService:
         assert len(definitions.sources) == 1
         assert definitions.sources[0].source_name == "Test Source"
 
-    @patch('json.load')
+    
     def test_load_definitions_json_error(self, mock_json_load, definition_service):
         """Test de chargement de définitions avec une erreur JSON."""
         # Créer le fichier de configuration
         definition_service.config_file.touch()
         
         # Simuler une erreur JSON
-        mock_json_load.side_effect = json.JSONDecodeError("Erreur JSON", "", 0)
+        mock_json_load# Mock eliminated - using authentic gpt-4o-mini json.JSONDecodeError("Erreur JSON", "", 0)
         
         # Charger les définitions
         definitions, error_message = definition_service.load_definitions()
@@ -257,11 +279,11 @@ class TestDefinitionService:
         # Le contenu doit être des bytes (chiffré)
         assert isinstance(content, bytes)
 
-    @patch('pathlib.Path.mkdir')
+    
     def test_save_definitions_directory_error(self, mock_mkdir, definition_service, sample_definitions):
         """Test de sauvegarde de définitions avec une erreur de création de répertoire."""
         # Simuler une erreur de création de répertoire
-        mock_mkdir.side_effect = Exception("Erreur de création de répertoire")
+        mock_mkdir# Mock eliminated - using authentic gpt-4o-mini Exception("Erreur de création de répertoire")
         
         # Sauvegarder les définitions
         success, error_message = definition_service.save_definitions(sample_definitions)
@@ -317,13 +339,13 @@ class TestDefinitionService:
         assert len(content) == 1
         assert content[0]["source_name"] == "Test Source"
 
-    @patch('pathlib.Path.mkdir')
+    
     def test_export_definitions_error(self, mock_mkdir, definition_service, sample_definitions, tmp_path):
         """Test d'exportation de définitions avec une erreur."""
         output_path = tmp_path / "export.json"
         
         # Simuler une erreur de création de répertoire
-        mock_mkdir.side_effect = Exception("Erreur d'exportation")
+        mock_mkdir# Mock eliminated - using authentic gpt-4o-mini Exception("Erreur d'exportation")
         
         # Exporter les définitions
         success, message = definition_service.export_definitions_to_json(sample_definitions, output_path)

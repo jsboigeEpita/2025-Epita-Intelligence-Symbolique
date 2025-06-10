@@ -1,3 +1,10 @@
+
+# Authentic gpt-4o-mini imports (replacing mocks)
+import openai
+from semantic_kernel.contents import ChatHistory
+from semantic_kernel.core_plugins import ConversationSummaryPlugin
+from config.unified_config import UnifiedConfig
+
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
@@ -7,7 +14,7 @@ Tests unitaires pour le module text_analyzer.py.
 
 import pytest
 import logging
-from unittest.mock import patch, MagicMock, AsyncMock
+
 
 # Cible pour le patching
 RUN_ANALYSIS_CONVERSATION_PATH = "argumentation_analysis.analytics.text_analyzer.run_analysis_conversation"

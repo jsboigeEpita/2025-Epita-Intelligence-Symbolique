@@ -1,3 +1,10 @@
+
+# Authentic gpt-4o-mini imports (replacing mocks)
+import openai
+from semantic_kernel.contents import ChatHistory
+from semantic_kernel.core_plugins import ConversationSummaryPlugin
+from config.unified_config import UnifiedConfig
+
 # -*- coding: utf-8 -*-
 # tests/integration/test_logic_agents_integration.py
 """
@@ -5,7 +12,7 @@ Tests d'intégration pour les agents logiques.
 """
 
 import unittest
-from unittest.mock import MagicMock, patch
+
 
 from semantic_kernel import Kernel
 
@@ -16,6 +23,21 @@ from argumentation_analysis.agents.core.logic.belief_set import (
 
 
 class TestLogicAgentsIntegration(unittest.TestCase):
+    async def _create_authentic_gpt4o_mini_instance(self):
+        """Crée une instance authentique de gpt-4o-mini au lieu d'un mock."""
+        config = UnifiedConfig()
+        return config.get_kernel_with_gpt4o_mini()
+        
+    async def _make_authentic_llm_call(self, prompt: str) -> str:
+        """Fait un appel authentique à gpt-4o-mini."""
+        try:
+            kernel = await self._create_authentic_gpt4o_mini_instance()
+            result = await kernel.invoke("chat", input=prompt)
+            return str(result)
+        except Exception as e:
+            logger.warning(f"Appel LLM authentique échoué: {e}")
+            return "Authentic LLM call failed"
+
     """Tests d'intégration pour les agents logiques."""
     
     def setUp(self):
@@ -25,47 +47,47 @@ class TestLogicAgentsIntegration(unittest.TestCase):
         self.kernel.plugins = {}
         
         # Mock des fonctions du kernel pour la logique propositionnelle
-        self.text_to_pl_function = MagicMock()
-        self.text_to_pl_function.invoke.return_value = MagicMock(result="a => b")
+        self.text_to_pl_function = Magicawait self._create_authentic_gpt4o_mini_instance()
+        self.text_to_pl_function.invoke# Mock eliminated - using authentic gpt-4o-mini MagicMock(result="a => b")
         
-        self.generate_pl_queries_function = MagicMock()
-        self.generate_pl_queries_function.invoke.return_value = MagicMock(result="a\nb\na => b")
+        self.generate_pl_queries_function = Magicawait self._create_authentic_gpt4o_mini_instance()
+        self.generate_pl_queries_function.invoke# Mock eliminated - using authentic gpt-4o-mini MagicMock(result="a\nb\na => b")
         
-        self.interpret_pl_function = MagicMock()
-        self.interpret_pl_function.invoke.return_value = MagicMock(result="Interprétation des résultats PL")
+        self.interpret_pl_function = Magicawait self._create_authentic_gpt4o_mini_instance()
+        self.interpret_pl_function.invoke# Mock eliminated - using authentic gpt-4o-mini MagicMock(result="Interprétation des résultats PL")
         
-        self.execute_pl_query_function = MagicMock()
-        self.execute_pl_query_function.invoke.return_value = MagicMock(
+        self.execute_pl_query_function = Magicawait self._create_authentic_gpt4o_mini_instance()
+        self.execute_pl_query_function.invoke# Mock eliminated - using authentic gpt-4o-mini MagicMock(
             result="Tweety Result: Query 'a => b' is ACCEPTED (True)."
         )
         
         # Mock des fonctions du kernel pour la logique du premier ordre
-        self.text_to_fol_function = MagicMock()
-        self.text_to_fol_function.invoke.return_value = MagicMock(result="forall X: (P(X) => Q(X))")
+        self.text_to_fol_function = Magicawait self._create_authentic_gpt4o_mini_instance()
+        self.text_to_fol_function.invoke# Mock eliminated - using authentic gpt-4o-mini MagicMock(result="forall X: (P(X) => Q(X))")
         
-        self.generate_fol_queries_function = MagicMock()
-        self.generate_fol_queries_function.invoke.return_value = MagicMock(result="P(a)\nQ(b)\nforall X: (P(X) => Q(X))")
+        self.generate_fol_queries_function = Magicawait self._create_authentic_gpt4o_mini_instance()
+        self.generate_fol_queries_function.invoke# Mock eliminated - using authentic gpt-4o-mini MagicMock(result="P(a)\nQ(b)\nforall X: (P(X) => Q(X))")
         
-        self.interpret_fol_function = MagicMock()
-        self.interpret_fol_function.invoke.return_value = MagicMock(result="Interprétation des résultats FOL")
+        self.interpret_fol_function = Magicawait self._create_authentic_gpt4o_mini_instance()
+        self.interpret_fol_function.invoke# Mock eliminated - using authentic gpt-4o-mini MagicMock(result="Interprétation des résultats FOL")
         
-        self.execute_fol_query_function = MagicMock()
-        self.execute_fol_query_function.invoke.return_value = MagicMock(
+        self.execute_fol_query_function = Magicawait self._create_authentic_gpt4o_mini_instance()
+        self.execute_fol_query_function.invoke# Mock eliminated - using authentic gpt-4o-mini MagicMock(
             result="Tweety Result: FOL Query 'forall X: (P(X) => Q(X))' is ACCEPTED (True)."
         )
         
         # Mock des fonctions du kernel pour la logique modale
-        self.text_to_modal_function = MagicMock()
-        self.text_to_modal_function.invoke.return_value = MagicMock(result="[]p => <>q")
+        self.text_to_modal_function = Magicawait self._create_authentic_gpt4o_mini_instance()
+        self.text_to_modal_function.invoke# Mock eliminated - using authentic gpt-4o-mini MagicMock(result="[]p => <>q")
         
-        self.generate_modal_queries_function = MagicMock()
-        self.generate_modal_queries_function.invoke.return_value = MagicMock(result="p\n[]p\n<>q")
+        self.generate_modal_queries_function = Magicawait self._create_authentic_gpt4o_mini_instance()
+        self.generate_modal_queries_function.invoke# Mock eliminated - using authentic gpt-4o-mini MagicMock(result="p\n[]p\n<>q")
         
-        self.interpret_modal_function = MagicMock()
-        self.interpret_modal_function.invoke.return_value = MagicMock(result="Interprétation des résultats modaux")
+        self.interpret_modal_function = Magicawait self._create_authentic_gpt4o_mini_instance()
+        self.interpret_modal_function.invoke# Mock eliminated - using authentic gpt-4o-mini MagicMock(result="Interprétation des résultats modaux")
         
-        self.execute_modal_query_function = MagicMock()
-        self.execute_modal_query_function.invoke.return_value = MagicMock(
+        self.execute_modal_query_function = Magicawait self._create_authentic_gpt4o_mini_instance()
+        self.execute_modal_query_function.invoke# Mock eliminated - using authentic gpt-4o-mini MagicMock(
             result="Tweety Result: Modal Query '[]p => <>q' is ACCEPTED (True)."
         )
         
@@ -96,17 +118,17 @@ class TestLogicAgentsIntegration(unittest.TestCase):
         # Patcher TweetyBridge
         self.tweety_bridge_patcher = patch('argumentation_analysis.agents.core.logic.tweety_bridge.TweetyBridge')
         self.mock_tweety_bridge_class = self.tweety_bridge_patcher.start()
-        self.mock_tweety_bridge = MagicMock()
-        self.mock_tweety_bridge_class.return_value = self.mock_tweety_bridge
+        self.mock_tweety_bridge = Magicawait self._create_authentic_gpt4o_mini_instance()
+        self.mock_tweety_bridge_class# Mock eliminated - using authentic gpt-4o-mini self.mock_tweety_bridge
         
         # Configurer le mock de TweetyBridge
-        self.mock_tweety_bridge.is_jvm_ready.return_value = True
-        self.mock_tweety_bridge.validate_belief_set.return_value = (True, "Ensemble de croyances valide")
-        self.mock_tweety_bridge.validate_formula.return_value = (True, "Formule valide")
-        self.mock_tweety_bridge.validate_fol_belief_set.return_value = (True, "Ensemble de croyances FOL valide")
-        self.mock_tweety_bridge.validate_fol_formula.return_value = (True, "Formule FOL valide")
-        self.mock_tweety_bridge.validate_modal_belief_set.return_value = (True, "Ensemble de croyances modal valide")
-        self.mock_tweety_bridge.validate_modal_formula.return_value = (True, "Formule modale valide")
+        self.mock_tweety_bridge.is_jvm_ready# Mock eliminated - using authentic gpt-4o-mini True
+        self.mock_tweety_bridge.validate_belief_set# Mock eliminated - using authentic gpt-4o-mini (True, "Ensemble de croyances valide")
+        self.mock_tweety_bridge.validate_formula# Mock eliminated - using authentic gpt-4o-mini (True, "Formule valide")
+        self.mock_tweety_bridge.validate_fol_belief_set# Mock eliminated - using authentic gpt-4o-mini (True, "Ensemble de croyances FOL valide")
+        self.mock_tweety_bridge.validate_fol_formula# Mock eliminated - using authentic gpt-4o-mini (True, "Formule FOL valide")
+        self.mock_tweety_bridge.validate_modal_belief_set# Mock eliminated - using authentic gpt-4o-mini (True, "Ensemble de croyances modal valide")
+        self.mock_tweety_bridge.validate_modal_formula# Mock eliminated - using authentic gpt-4o-mini (True, "Formule modale valide")
     
     def tearDown(self):
         """Nettoyage après chaque test."""

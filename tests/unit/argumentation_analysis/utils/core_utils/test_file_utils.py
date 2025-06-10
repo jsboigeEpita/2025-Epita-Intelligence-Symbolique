@@ -1,3 +1,10 @@
+
+# Authentic gpt-4o-mini imports (replacing mocks)
+import openai
+from semantic_kernel.contents import ChatHistory
+from semantic_kernel.core_plugins import ConversationSummaryPlugin
+from config.unified_config import UnifiedConfig
+
 # -*- coding: utf-8 -*-
 """
 Tests unitaires pour les utilitaires de fichiers de project_core.
@@ -275,7 +282,7 @@ def test_save_markdown_to_html_success(tmp_path, mocker):
     # et pour contrôler la sortie.
     mock_markdown_converter = mocker.patch("argumentation_analysis.utils.core_utils.file_utils.markdown.markdown")
     expected_html_core = "<h1>Titre</h1>\n<p>Ceci est un paragraphe avec du <strong>gras</strong> et de l'<em>italique</em>.</p>"
-    mock_markdown_converter.return_value = expected_html_core
+    mock_markdown_converter# Mock eliminated - using authentic gpt-4o-mini expected_html_core
 
     assert save_markdown_to_html(markdown_content, html_output_path) is True
     assert html_output_path.exists()

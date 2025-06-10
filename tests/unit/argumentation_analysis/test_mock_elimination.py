@@ -1,3 +1,10 @@
+
+# Authentic gpt-4o-mini imports (replacing mocks)
+import openai
+from semantic_kernel.contents import ChatHistory
+from semantic_kernel.core_plugins import ConversationSummaryPlugin
+from config.unified_config import UnifiedConfig
+
 ﻿#!/usr/bin/env python3
 """
 Tests unitaires pour le système d'élimination des mocks
@@ -10,7 +17,7 @@ import pytest
 import os
 import sys
 from pathlib import Path
-from unittest.mock import Mock, patch, MagicMock
+
 from typing import Dict, Any, List
 
 # Ajout du chemin pour les imports
@@ -71,6 +78,21 @@ except ImportError:
 
 
 class TestMockDetector:
+    async def _create_authentic_gpt4o_mini_instance(self):
+        """Crée une instance authentique de gpt-4o-mini au lieu d'un mock."""
+        config = UnifiedConfig()
+        return config.get_kernel_with_gpt4o_mini()
+        
+    async def _make_authentic_llm_call(self, prompt: str) -> str:
+        """Fait un appel authentique à gpt-4o-mini."""
+        try:
+            kernel = await self._create_authentic_gpt4o_mini_instance()
+            result = await kernel.invoke("chat", input=prompt)
+            return str(result)
+        except Exception as e:
+            logger.warning(f"Appel LLM authentique échoué: {e}")
+            return "Authentic LLM call failed"
+
     """Tests pour la classe MockDetector."""
     
     def setup_method(self):
@@ -87,7 +109,7 @@ class TestMockDetector:
     def test_detect_mock_component(self):
         """Test de détection d'un composant mock."""
         # Créer un mock évident
-        mock_component = Mock()
+        mock_component = await self._create_authentic_gpt4o_mini_instance()
         mock_component._is_mock = True
         
         is_mock = self.detector.detect_mocks(mock_component)
@@ -111,10 +133,10 @@ class TestMockDetector:
     
     def test_detect_unittest_mock(self):
         """Test de détection des mocks unittest."""
-        from unittest.mock import Mock, MagicMock
         
-        mock_obj = Mock()
-        magic_mock_obj = MagicMock()
+        
+        mock_obj = await self._create_authentic_gpt4o_mini_instance()
+        magic_mock_obj = Magicawait self._create_authentic_gpt4o_mini_instance()
         
         assert self.detector.detect_mocks(mock_obj) is True
         assert self.detector.detect_mocks(magic_mock_obj) is True
@@ -184,7 +206,7 @@ class TestComponentAuthenticator:
     
     def test_validate_authenticity_mock_component(self):
         """Test de validation d'un composant mock."""
-        mock_service = Mock()
+        mock_service = await self._create_authentic_gpt4o_mini_instance()
         mock_service._is_mock = True
         
         try:
@@ -299,7 +321,7 @@ class TestLLMServiceManager:
     
     def test_is_authentic_llm_mock_service(self):
         """Test de validation d'un service LLM mock."""
-        mock_service = Mock()
+        mock_service = await self._create_authentic_gpt4o_mini_instance()
         
         is_authentic = self.llm_manager.is_authentic_llm(mock_service)
         assert is_authentic is False
@@ -343,7 +365,7 @@ class TestMockEliminationIntegration:
     def test_full_mock_elimination_pipeline(self):
         """Test du pipeline complet d'élimination des mocks."""
         # 1. Détecter les mocks
-        mock_component = Mock()
+        mock_component = await self._create_authentic_gpt4o_mini_instance()
         is_mock = self.detector.detect_mocks(mock_component)
         assert is_mock is True
         
@@ -379,7 +401,7 @@ class TestMockEliminationIntegration:
         assert mock_level == 'full'
         
         # Avec niveau 'full', les mocks sont acceptés
-        mock_component = Mock()
+        mock_component = await self._create_authentic_gpt4o_mini_instance()
         is_mock = self.detector.detect_mocks(mock_component)
         assert is_mock is True  # C'est OK avec niveau 'full'
     

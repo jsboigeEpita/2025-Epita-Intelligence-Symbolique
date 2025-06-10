@@ -88,6 +88,11 @@ class ProcessCleaner:
             for proc in psutil.process_iter(['pid', 'name', 'cmdline']):
                 try:
                     proc_info = proc.info
+
+                    # Ignorer le processus courant
+                    if proc_info['pid'] == os.getpid():
+                        self.logger.debug(f"Ignoré (processus courant): PID {proc_info['pid']}")
+                        continue
                     
                     # Vérification par nom de processus
                     if proc_info['name'] and any(name in proc_info['name'].lower()
@@ -99,18 +104,20 @@ class ProcessCleaner:
                             
                             if any(pattern in cmdline for pattern in self.process_patterns):
                                 webapp_processes.append(proc)
-                                self.logger.info(f"Processus trouvé: PID {proc_info['pid']} - {cmdline[:100]}")
-                                continue
+                                self.logger.info(f"Processus trouvé (cmdline): PID {proc_info['pid']} - {cmdline[:100]}")
+                                continue # Déjà ajouté, passer au suivant
                     
                     # Vérification par ports utilisés - récupération séparée des connexions
+                    # Ne sera exécuté que si le processus n'a pas été ajouté par la cmdline
                     try:
                         connections = proc.connections()
                         for conn in connections:
                             if hasattr(conn, 'laddr') and conn.laddr:
                                 if conn.laddr.port in self.webapp_ports:
+                                    # Le test proc_info['pid'] == os.getpid() est déjà fait plus haut
                                     webapp_processes.append(proc)
-                                    self.logger.info(f"Processus sur port webapp: PID {proc_info['pid']} - Port {conn.laddr.port}")
-                                    break
+                                    self.logger.info(f"Processus trouvé (port): PID {proc_info['pid']} - Port {conn.laddr.port}")
+                                    break # Un port suffit pour identifier
                     except (psutil.AccessDenied, psutil.NoSuchProcess):
                         # Certains processus n'autorisent pas l'accès aux connexions
                         pass

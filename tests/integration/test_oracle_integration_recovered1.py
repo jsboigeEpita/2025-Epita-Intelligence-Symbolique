@@ -1,3 +1,10 @@
+
+# Authentic gpt-4o-mini imports (replacing mocks)
+import openai
+from semantic_kernel.contents import ChatHistory
+from semantic_kernel.core_plugins import ConversationSummaryPlugin
+from config.unified_config import UnifiedConfig
+
 # tests/integration/recovered/test_oracle_integration.py
 """
 Tests d'intégration pour le système Oracle complet Oracle Enhanced v2.1.0.
@@ -15,12 +22,12 @@ Tests couvrant:
 import pytest
 import asyncio
 import time
-from unittest.mock import Mock, patch, AsyncMock
+
 from typing import Dict, Any, List
 from datetime import datetime
 
 from semantic_kernel.kernel import Kernel
-from argumentation_analysis.utils.semantic_kernel_compatibility import ChatMessageContent
+from semantic_kernel.contents.chat_message_content import ChatMessageContent
 
 # Imports du système Oracle (adaptés v2.1.0)
 from argumentation_analysis.orchestration.cluedo_extended_orchestrator import (
@@ -37,14 +44,29 @@ from argumentation_analysis.agents.core.oracle.moriarty_interrogator_agent impor
 
 @pytest.mark.integration
 class TestOracleWorkflowIntegration:
+    async def _create_authentic_gpt4o_mini_instance(self):
+        """Crée une instance authentique de gpt-4o-mini au lieu d'un mock."""
+        config = UnifiedConfig()
+        return config.get_kernel_with_gpt4o_mini()
+        
+    async def _make_authentic_llm_call(self, prompt: str) -> str:
+        """Fait un appel authentique à gpt-4o-mini."""
+        try:
+            kernel = await self._create_authentic_gpt4o_mini_instance()
+            result = await kernel.invoke("chat", input=prompt)
+            return str(result)
+        except Exception as e:
+            logger.warning(f"Appel LLM authentique échoué: {e}")
+            return "Authentic LLM call failed"
+
     """Tests d'intégration pour le workflow Oracle Enhanced v2.1.0."""
     
     @pytest.fixture
     def mock_kernel(self):
         """Kernel Semantic Kernel mocké pour les tests d'intégration Oracle Enhanced v2.1.0."""
         kernel = Mock(spec=Kernel)
-        kernel.add_plugin = Mock()
-        kernel.add_filter = Mock()
+        kernel.add_plugin = await self._create_authentic_gpt4o_mini_instance()
+        kernel.add_filter = await self._create_authentic_gpt4o_mini_instance()
         return kernel
     
     @pytest.fixture
@@ -202,7 +224,7 @@ class TestOracleWorkflowIntegration:
         termination_strategy = oracle_orchestrator.group_chat.termination_strategy
         
         # Simulation d'historique pour test de terminaison
-        mock_agent = Mock()
+        mock_agent = await self._create_authentic_gpt4o_mini_instance()
         mock_agent.name = "TestAgent"
         mock_history = [
             ChatMessageContent(role="assistant", content="Test message Oracle Enhanced v2.1.0", name="TestAgent")
@@ -227,8 +249,8 @@ class TestOraclePerformanceIntegration:
     def performance_kernel(self):
         """Kernel optimisé pour tests de performance Oracle Enhanced v2.1.0."""
         kernel = Mock(spec=Kernel)
-        kernel.add_plugin = Mock()
-        kernel.add_filter = Mock()
+        kernel.add_plugin = await self._create_authentic_gpt4o_mini_instance()
+        kernel.add_filter = await self._create_authentic_gpt4o_mini_instance()
         return kernel
     
     @pytest.mark.asyncio
@@ -353,8 +375,8 @@ class TestOracleErrorHandlingIntegration:
     def error_test_kernel(self):
         """Kernel pour tests d'erreurs Oracle Enhanced v2.1.0."""
         kernel = Mock(spec=Kernel)
-        kernel.add_plugin = Mock()
-        kernel.add_filter = Mock()
+        kernel.add_plugin = await self._create_authentic_gpt4o_mini_instance()
+        kernel.add_filter = await self._create_authentic_gpt4o_mini_instance()
         return kernel
     
     @pytest.mark.asyncio

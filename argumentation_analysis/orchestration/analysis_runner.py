@@ -25,6 +25,8 @@ from typing import List, Optional, Union, Any, Dict # Ajout Any, Dict
 
 # Imports pour le hook LLM
 from semantic_kernel.connectors.ai.chat_completion_client_base import ChatCompletionClientBase
+from semantic_kernel.connectors.ai.open_ai import OpenAIChatCompletion
+from semantic_kernel.connectors.ai.open_ai import AzureChatCompletion
 from semantic_kernel.contents.chat_message_content import ChatMessageContent as SKChatMessageContent # Alias pour éviter conflit
 from semantic_kernel.kernel import Kernel as SKernel # Alias pour éviter conflit avec Kernel de SK
 # KernelArguments est déjà importé plus bas
@@ -118,12 +120,19 @@ async def run_analysis_conversation(
         run_logger.info("5. Création des instances Agent de compatibilité pour AgentGroupChat...")
         
         # Utiliser nos propres agents de compatibilité au lieu de ChatCompletionAgent
-        from argumentation_analysis.utils.semantic_kernel_compatibility import AuthorRole, AgentChatException, FunctionChoiceBehavior
-        
-        # TODO: Implémenter la logique des agents de compatibilité
-        run_logger.info("Agents de compatibilité configurés.")
-        
-        jvm_status = "(JVM active)" if ('jpype' in globals() and jpype.isJVMStarted()) else "(JVM non active)"
+        try:
+            from argumentation_analysis.utils.semantic_kernel_compatibility import AuthorRole, AgentChatException, FunctionChoiceBehavior
+            if 'local_state' in locals():
+                print(f"Repr: {repr(local_state)}")
+            else:
+                print("(Instance état locale non disponible)")
+
+            jvm_status = "(JVM active)" if ('jpype' in globals() and jpype.isJVMStarted()) else "(JVM non active)"
+            print(f"\n{jvm_status}")
+            run_logger.info("Agents de compatibilité configurés.")
+        except ImportError as e:
+            run_logger.warning(f"Import semantic_kernel_compatibility échoué: {e}")
+            jvm_status = "Import error"
         run_logger.info(f"État final JVM: {jvm_status}")
         run_logger.info(f"--- Fin Run_{run_id} ---")
         
@@ -135,7 +144,6 @@ async def run_analysis_conversation(
         return {"status": "error", "message": str(e)}
     finally:
         run_logger.info("Nettoyage en cours...")
-
 
 class AnalysisRunner:
    """

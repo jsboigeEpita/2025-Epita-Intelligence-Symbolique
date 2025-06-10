@@ -27,6 +27,9 @@ from typing import Dict, List, Any, Optional, Union, Callable, Type
 from datetime import datetime
 from pathlib import Path
 import json
+import os
+import semantic_kernel as sk
+from semantic_kernel.connectors.ai.open_ai import OpenAIChatCompletion
 
 # Imports du système de base
 from argumentation_analysis.paths import DATA_DIR, RESULTS_DIR
@@ -55,13 +58,19 @@ except ImportError as e:
 
 # Imports des systèmes de communication
 try:
+    # Utiliser les exports directs du package communication grâce à son __init__.py
     from argumentation_analysis.core.communication import (
-        MessageMiddleware, Message, ChannelType, 
-        MessagePriority, MessageType, AgentLevel
+        MessageMiddleware, Message, ChannelType,
+        MessagePriority, MessageType, AgentLevel,
+        HierarchicalChannel  # Importer la classe concrète du canal
     )
 except ImportError as e:
-    logging.warning(f"Système de communication non disponible: {e}")
-    MessageMiddleware = None
+    logging.error(f"Échec critique de l'importation des modules de communication: {e}", exc_info=True)
+    # Si ces imports échouent, le ServiceManager ne peut pas fonctionner.
+    # Il est préférable de laisser l'application échouer tôt ou de gérer cela plus radicalement.
+    MessageMiddleware = None # Pour éviter des NameError plus loin si on continue malgré tout
+    HierarchicalChannel = None # Idem
+    # Les autres (Message, ChannelType, etc.) causeront des NameError s'ils sont utilisés.
 
 
 class ServiceManagerError(Exception):
@@ -151,6 +160,10 @@ class OrchestrationServiceManager:
         
         # Middleware de communication
         self.middleware: Optional[MessageMiddleware] = None
+
+        # Kernel Semantic Kernel et service LLM principal
+        self.kernel: Optional[sk.Kernel] = None
+        self.llm_service_id: Optional[str] = "gpt-4o-mini" # Default, sera confirmé lors de l'ajout au kernel
         
         # État d'initialisation
         self._initialized = False
@@ -193,13 +206,47 @@ class OrchestrationServiceManager:
             
         try:
             self.logger.info("Initialisation du ServiceManager...")
+
+            # 1. Initialisation du Kernel Semantic Kernel et du service LLM
+            self.kernel = sk.Kernel()
+            api_key = os.getenv("OPENAI_API_KEY")
+            # Utiliser un ID de service cohérent, par exemple le nom du modèle
+            self.llm_service_id = self.config.get("default_llm_service_id", "gpt-4o-mini")
+
+            if api_key:
+                try:
+                    self.kernel.add_service(
+                        OpenAIChatCompletion(
+                            service_id=self.llm_service_id,
+                            ai_model_id="gpt-4o-mini", # ou un autre modèle si configurable
+                            api_key=api_key
+                        )
+                    )
+                    self.logger.info(f"Service LLM '{self.llm_service_id}' (gpt-4o-mini) ajouté au kernel.")
+                except Exception as e_kernel_service:
+                    self.logger.error(f"Échec de l'ajout du service LLM au kernel: {e_kernel_service}", exc_info=True)
+                    # Continuer sans service LLM fonctionnel dans le kernel peut être problématique
+            else:
+                self.logger.warning("OPENAI_API_KEY non trouvée. Le service LLM ne sera pas configuré dans le kernel.")
             
-            # Initialisation du middleware de communication
+            # 2. Initialisation du middleware de communication
             if self.config.get('enable_communication_middleware', True) and MessageMiddleware:
                 self.middleware = MessageMiddleware()
                 self.logger.info("Middleware de communication initialisé")
+
+                # Enregistrer les canaux nécessaires
+                if HierarchicalChannel:
+                    try:
+                        hierarchical_channel_id = self.config.get('hierarchical_channel_id', 'hierarchical_main')
+                        hc = HierarchicalChannel(channel_id=hierarchical_channel_id)
+                        self.middleware.register_channel(hc)
+                        self.logger.info(f"Canal HIERARCHICAL '{hierarchical_channel_id}' enregistré dans le middleware.")
+                    except Exception as e_chan:
+                        self.logger.error(f"Échec de l'enregistrement du HierarchicalChannel: {e_chan}", exc_info=True)
+                else:
+                    self.logger.error("Classe HierarchicalChannel non disponible pour enregistrement.")
                 
-            # Initialisation des gestionnaires hiérarchiques
+            # 3. Initialisation des gestionnaires hiérarchiques
             if self.config.get('enable_hierarchical', True):
                 await self._initialize_hierarchical_managers()
                 
@@ -227,10 +274,14 @@ class OrchestrationServiceManager:
             if TacticalManager:
                 self.tactical_manager = TacticalManager(middleware=self.middleware)
                 self.logger.info("TacticalManager initialisé")
-                
-            if OperationalManager:
-                self.operational_manager = OperationalManager(middleware=self.middleware)
-                self.logger.info("OperationalManager initialisé")
+                if OperationalManager:
+                    self.operational_manager = OperationalManager(
+                        middleware=self.middleware,
+                        kernel=self.kernel,
+                        llm_service_id=self.llm_service_id
+                    )
+                    self.logger.info("OperationalManager initialisé")
+                    
                 
         except Exception as e:
             self.logger.warning(f"Erreur lors de l'initialisation des gestionnaires hiérarchiques: {e}")
@@ -239,16 +290,26 @@ class OrchestrationServiceManager:
         """Initialise les orchestrateurs spécialisés."""
         try:
             if CluedoOrchestrator:
-                self.cluedo_orchestrator = CluedoOrchestrator()
+                self.cluedo_orchestrator = CluedoOrchestrator(kernel=self.kernel) # Passer le kernel
                 self.logger.info("CluedoOrchestrator initialisé")
                 
             if ConversationOrchestrator:
+                # Supposons qu'il puisse aussi bénéficier du kernel ou d'un llm_service
+                # Pour l'instant, on garde son initialisation simple.
                 self.conversation_orchestrator = ConversationOrchestrator()
                 self.logger.info("ConversationOrchestrator initialisé")
                 
             if RealLLMOrchestrator:
-                self.llm_orchestrator = RealLLMOrchestrator()
-                self.logger.info("RealLLMOrchestrator initialisé")
+                # RealLLMOrchestrator attend 'llm_service'. On peut lui passer le service du kernel.
+                llm_service_instance = None
+                if self.kernel and self.llm_service_id:
+                    try:
+                        llm_service_instance = self.kernel.get_service(self.llm_service_id)
+                    except Exception as e_get_service:
+                        self.logger.warning(f"Impossible de récupérer le service '{self.llm_service_id}' du kernel pour RealLLMOrchestrator: {e_get_service}")
+                
+                self.llm_orchestrator = RealLLMOrchestrator(llm_service=llm_service_instance)
+                self.logger.info(f"RealLLMOrchestrator initialisé {'avec' if llm_service_instance else 'sans'} service LLM du kernel.")
                 
         except Exception as e:
             self.logger.warning(f"Erreur lors de l'initialisation des orchestrateurs spécialisés: {e}")
@@ -411,35 +472,71 @@ class OrchestrationServiceManager:
             
     async def _run_strategic_analysis(self, text: str, options: Optional[Dict[str, Any]]) -> Dict[str, Any]:
         """Lance l'analyse stratégique."""
-        return {
-            'level': 'strategic',
-            'text_analysis': {
-                'length': len(text),
-                'complexity': 'medium' if len(text) > 100 else 'simple'
-            },
-            'manager': 'StrategicManager'
-        }
+        self.logger.info(f"ServiceManager._run_strategic_analysis appelée pour le texte : '{text[:50]}...'")
+        if not self.strategic_manager:
+            self.logger.warning("StrategicManager non disponible pour _run_strategic_analysis.")
+            return {'error': 'StrategicManager not available', 'status': 'skipped'}
+
+        try:
+            # Note: Les méthodes du StrategicManager sont synchrones.
+            # Si elles devenaient asynchrones, il faudrait utiliser await.
+            # Pour l'instant, on les appelle directement. Si elles bloquent trop,
+            # envisager asyncio.to_thread pour les exécuter dans un thread séparé.
+            
+            self.logger.info("Appel de strategic_manager.initialize_analysis...")
+            initial_strategic_data = self.strategic_manager.initialize_analysis(text)
+            self.logger.info(f"strategic_manager.initialize_analysis retourné : {initial_strategic_data}")
+            
+            objectives = initial_strategic_data.get('objectives', [])
+            if not objectives:
+                self.logger.warning("Aucun objectif stratégique retourné par initialize_analysis.")
+                return {
+                    'level': 'strategic',
+                    'status': 'completed_no_objectives',
+                    'initial_data': initial_strategic_data,
+                    'manager': 'StrategicManager'
+                }
+
+            self.logger.info(f"Définition de {len(objectives)} objectifs stratégiques...")
+            # Itérer sur une copie de la liste pour éviter les problèmes de modification pendant l'itération
+            for objective in list(objectives):
+                self.logger.info(f"Appel de strategic_manager.define_strategic_goal pour l'objectif : {objective.get('id')}")
+                self.strategic_manager.define_strategic_goal(objective) # Synchrone
+                self.logger.info(f"Objectif {objective.get('id')} transmis au niveau tactique (via define_strategic_goal).")
+            
+            return {
+                'level': 'strategic',
+                'status': 'objectives_defined',
+                'objectives_count': len(objectives),
+                'initial_plan': initial_strategic_data.get('strategic_plan'),
+                'manager': 'StrategicManager'
+            }
+        except Exception as e:
+            self.logger.error(f"Erreur dans _run_strategic_analysis: {e}", exc_info=True)
+            return {'error': str(e), 'status': 'failed_in_strategic_manager'}
         
     async def _run_tactical_analysis(self, text: str, options: Optional[Dict[str, Any]]) -> Dict[str, Any]:
         """Lance l'analyse tactique."""
+        self.logger.info(f"ServiceManager._run_tactical_analysis appelée pour le texte : '{text[:50]}...'. Options: {options}")
+        self.logger.warning("_run_tactical_analysis est un stub et ne fait rien activement pour le moment.")
+        # Normalement, cette méthode pourrait être utilisée pour récupérer des résultats tactiques
+        # ou interagir avec le TacticalManager si le flux n'est pas purement événementiel.
         return {
-            'level': 'tactical', 
-            'processing': {
-                'word_count': len(text.split()),
-                'sentence_estimation': text.count('.') + text.count('!') + text.count('?')
-            },
+            'level': 'tactical',
+            'status': 'stub_called',
+            'message': 'Cette fonction est un placeholder et n\'a pas activement appelé TacticalManager.',
             'manager': 'TacticalManager'
         }
         
     async def _run_operational_analysis(self, text: str, options: Optional[Dict[str, Any]]) -> Dict[str, Any]:
         """Lance l'analyse opérationnelle."""
+        self.logger.info(f"ServiceManager._run_operational_analysis appelée pour le texte : '{text[:50]}...'. Options: {options}")
+        self.logger.warning("_run_operational_analysis est un stub et ne fait rien activement pour le moment.")
+        # Similaire à _run_tactical_analysis, cette méthode est un placeholder.
         return {
             'level': 'operational',
-            'execution': {
-                'characters': len(text),
-                'words': len(text.split()),
-                'timestamp': datetime.now().isoformat()
-            },
+            'status': 'stub_called',
+            'message': 'Cette fonction est un placeholder et n\'a pas activement appelé OperationalManager.',
             'manager': 'OperationalManager'
         }
         
@@ -511,6 +608,92 @@ class OrchestrationServiceManager:
             }
             
         return health_status
+
+    def is_available(self) -> bool:
+        """
+        Vérifie si le service est opérationnel.
+
+        Returns:
+            True si le service est initialisé et non arrêté, False sinon.
+        """
+        return self._initialized and not self._shutdown
+
+    def get_status_details(self) -> Dict[str, Any]:
+        """
+        Retourne des détails sur l'état des services internes.
+        S'inspire de ce qu'une API Flask pourrait retourner pour le statut.
+        """
+        service_details = {
+            'overall_status': 'available' if self.is_available() else 'unavailable',
+            'session_id': self.state.session_id,
+            'start_time': self.state.start_time.isoformat(),
+            'uptime_seconds': self.state.get_uptime(),
+            'last_activity': self.state.last_activity.isoformat(),
+            'initialized': self._initialized,
+            'shutdown_initiated': self._shutdown,
+            'configuration': self.config,
+            'active_components': {},
+            'component_specific_status': {}
+        }
+
+        # Statut des gestionnaires hiérarchiques
+        if self.config.get('enable_hierarchical', True):
+            service_details['active_components']['strategic_manager'] = self.strategic_manager is not None
+            service_details['active_components']['tactical_manager'] = self.tactical_manager is not None
+            service_details['active_components']['operational_manager'] = self.operational_manager is not None
+            
+            if self.strategic_manager and hasattr(self.strategic_manager, 'get_status'):
+                try:
+                    service_details['component_specific_status']['strategic_manager'] = self.strategic_manager.get_status()
+                except Exception as e:
+                    service_details['component_specific_status']['strategic_manager'] = {'error': str(e)}
+            
+            if self.tactical_manager and hasattr(self.tactical_manager, 'get_status'):
+                try:
+                    service_details['component_specific_status']['tactical_manager'] = self.tactical_manager.get_status()
+                except Exception as e:
+                    service_details['component_specific_status']['tactical_manager'] = {'error': str(e)}
+
+            if self.operational_manager and hasattr(self.operational_manager, 'get_status'):
+                try:
+                    service_details['component_specific_status']['operational_manager'] = self.operational_manager.get_status()
+                except Exception as e:
+                    service_details['component_specific_status']['operational_manager'] = {'error': str(e)}
+
+        # Statut des orchestrateurs spécialisés
+        if self.config.get('enable_specialized_orchestrators', True):
+            service_details['active_components']['cluedo_orchestrator'] = self.cluedo_orchestrator is not None
+            service_details['active_components']['conversation_orchestrator'] = self.conversation_orchestrator is not None
+            service_details['active_components']['llm_orchestrator'] = self.llm_orchestrator is not None
+
+            if self.cluedo_orchestrator and hasattr(self.cluedo_orchestrator, 'get_status'):
+                try:
+                    service_details['component_specific_status']['cluedo_orchestrator'] = self.cluedo_orchestrator.get_status()
+                except Exception as e:
+                    service_details['component_specific_status']['cluedo_orchestrator'] = {'error': str(e)}
+            
+            if self.conversation_orchestrator and hasattr(self.conversation_orchestrator, 'get_status'):
+                try:
+                    service_details['component_specific_status']['conversation_orchestrator'] = self.conversation_orchestrator.get_status()
+                except Exception as e:
+                    service_details['component_specific_status']['conversation_orchestrator'] = {'error': str(e)}
+
+            if self.llm_orchestrator and hasattr(self.llm_orchestrator, 'get_status'):
+                try:
+                    service_details['component_specific_status']['llm_orchestrator'] = self.llm_orchestrator.get_status()
+                except Exception as e:
+                    service_details['component_specific_status']['llm_orchestrator'] = {'error': str(e)}
+        
+        # Statut du middleware de communication
+        if self.config.get('enable_communication_middleware', True):
+            service_details['active_components']['middleware'] = self.middleware is not None
+            if self.middleware and hasattr(self.middleware, 'get_status'):
+                try:
+                    service_details['component_specific_status']['middleware'] = self.middleware.get_status()
+                except Exception as e:
+                    service_details['component_specific_status']['middleware'] = {'error': str(e)}
+        
+        return service_details
         
     async def shutdown(self):
         """Arrête proprement le ServiceManager."""
