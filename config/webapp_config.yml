@@ -32,7 +32,7 @@ backend:
   timeout_seconds: 30
   
   # Endpoints de surveillance
-  health_endpoint: "/api/health"
+  health_endpoint: "/api/status" # Correction: Doit être /api/status
   
   # Activation environnement conda
   env_activation: "powershell -File scripts/env/activate_project_env.ps1"

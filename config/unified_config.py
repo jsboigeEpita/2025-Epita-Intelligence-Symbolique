@@ -222,6 +222,61 @@ class UnifiedConfig:
             "node_count": 1000 if self.taxonomy_size == TaxonomySize.FULL else 3
         }
 
+    def get_kernel_with_gpt4o_mini(self):
+        """
+        Crée un Kernel Semantic Kernel avec service LLM GPT-4o-mini authentique.
+        
+        Cette méthode est le pont principal entre UnifiedConfig et le service LLM réel.
+        Elle respecte la configuration d'authenticité (mock_level=NONE par défaut).
+        
+        Returns:
+            Kernel: Instance Semantic Kernel configurée avec GPT-4o-mini authentique
+            
+        Raises:
+            ValueError: Si la configuration est incohérente pour l'authenticité
+            RuntimeError: Si la création du service LLM échoue
+        """
+        from semantic_kernel import Kernel
+        from argumentation_analysis.core.llm_service import create_llm_service
+        
+        # Validation d'authenticité stricte
+        if self.mock_level != MockLevel.NONE:
+            raise ValueError(
+                f"get_kernel_with_gpt4o_mini() nécessite mock_level=NONE pour l'authenticité. "
+                f"Trouvé: {self.mock_level.value}"
+            )
+        
+        if not self.use_authentic_llm:
+            raise ValueError(
+                "get_kernel_with_gpt4o_mini() nécessite use_authentic_llm=True pour l'authenticité"
+            )
+        
+        if self.use_mock_llm:
+            raise ValueError(
+                "get_kernel_with_gpt4o_mini() est incompatible avec use_mock_llm=True"
+            )
+        
+        # Création du Kernel avec service LLM authentique
+        kernel = Kernel()
+        
+        # Service LLM GPT-4o-mini authentique (jamais de mock)
+        llm_service = create_llm_service(
+            service_id="gpt-4o-mini-authentic",
+            force_mock=False  # Force l'authenticité
+        )
+        
+        # Ajout du service au kernel
+        kernel.add_service(llm_service)
+        
+        # Log validation authenticité
+        import logging
+        logger = logging.getLogger("UnifiedConfig.Authentic")
+        logger.info(f"✅ Kernel authentique créé - Service: {type(llm_service).__name__}")
+        logger.info(f"✅ Model: {self.default_model}, Provider: {self.default_provider}")
+        logger.info(f"✅ MockLevel: {self.mock_level.value}, Authentique: {self.use_authentic_llm}")
+        
+        return kernel
+
     def to_dict(self) -> Dict[str, Any]:
         """Convertit la configuration en dictionnaire."""
         return {

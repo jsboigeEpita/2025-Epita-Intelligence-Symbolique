@@ -13,6 +13,9 @@ Ce module intègre :
 - Capture enrichie avec évolution d'état
 """
 
+# ===== AUTO-ACTIVATION ENVIRONNEMENT =====
+import scripts.core.auto_env  # Auto-activation environnement intelligent
+# =========================================
 import sys
 import os
 import time

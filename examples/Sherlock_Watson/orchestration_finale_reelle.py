@@ -22,6 +22,9 @@ MISSION: Orchestration finale production-ready SANS AUCUN MOCK
 ✅ Validation continue anti-mock
 """
 
+# ===== AUTO-ACTIVATION ENVIRONNEMENT =====
+import scripts.core.auto_env  # Auto-activation environnement intelligent
+# =========================================
 import asyncio
 import os
 import sys

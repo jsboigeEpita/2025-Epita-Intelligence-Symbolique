@@ -1,3 +1,10 @@
+# ===== AUTO-ACTIVATION ENVIRONNEMENT =====
+try:
+    import scripts.core.auto_env  # Auto-activation environnement intelligent
+except ImportError:
+    # Dans le contexte des tests, auto_env peut déjà être activé
+    pass
+# =========================================
 import jpype
 import jpype.imports
 from jpype.types import JString

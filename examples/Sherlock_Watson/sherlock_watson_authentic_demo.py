@@ -18,6 +18,9 @@ EXIGENCES STRICTES:
 ✅ Tests fonctionnels inclus
 """
 
+# ===== AUTO-ACTIVATION ENVIRONNEMENT =====
+import scripts.core.auto_env  # Auto-activation environnement intelligent
+# =========================================
 import asyncio
 import os
 import sys
