@@ -1,0 +1,37 @@
+2025-06-09 22:21:10,319 [INFO] [WebAppRunner] 🎯 DÉMARRAGE VALIDATION POINT D'ENTRÉE 4 : Applications Web
+2025-06-09 22:21:10,320 [INFO] [WebAppRunner] 📍 Phase 1: Lancement des applications web
+2025-06-09 22:21:10,321 [INFO] [WebAppRunner] 🚀 Lancement Interface Flask Simple (port 3000)...
+2025-06-09 22:21:12,377 [INFO] [WebAppRunner] ✅ Service Interface Flask Simple prêt
+2025-06-09 22:21:12,377 [INFO] [WebAppRunner] ✅ Interface Flask démarrée avec succès
+2025-06-09 22:21:12,377 [INFO] [WebAppRunner] 🚀 Lancement Backend API (port 5003)...
+2025-06-09 22:21:14,430 [INFO] [WebAppRunner] ✅ Service Backend API React prêt
+2025-06-09 22:21:14,430 [INFO] [WebAppRunner] ✅ Backend API démarré avec succès
+2025-06-09 22:21:14,432 [INFO] [WebAppRunner] 📍 Phase 2: Tests fonctionnels avec vrais LLMs
+2025-06-09 22:21:14,432 [INFO] [WebAppRunner] 🧪 Tests fonctionnels Interface Flask...
+2025-06-09 22:21:16,484 [INFO] [WebAppRunner] ✅ Status Check: True
+2025-06-09 22:21:18,529 [INFO] [WebAppRunner] ✅ Examples API: True (4 exemples)
+2025-06-09 22:21:18,530 [INFO] [WebAppRunner] 🔬 Test analyse 1: Logique Propositionnelle
+2025-06-09 22:21:20,582 [INFO] [WebAppRunner] ✅ Analyse Logique Propositionnelle: ID 1e59a180
+2025-06-09 22:21:20,582 [INFO] [WebAppRunner] 🔬 Test analyse 2: Argumentation Complexe
+2025-06-09 22:21:22,614 [INFO] [WebAppRunner] ✅ Analyse Argumentation Complexe: ID 17827920
+2025-06-09 22:21:22,615 [INFO] [WebAppRunner] 🔬 Test analyse 3: Logique Modale
+2025-06-09 22:21:24,688 [INFO] [WebAppRunner] ✅ Analyse Logique Modale: ID cf8174e9
+2025-06-09 22:21:24,688 [INFO] [WebAppRunner] 🧪 Tests fonctionnels Backend API...
+2025-06-09 22:21:26,735 [INFO] [WebAppRunner] ✅ Health Check API: True
+2025-06-09 22:21:28,774 [INFO] [WebAppRunner] ✅ Endpoints API: True (5 endpoints)
+2025-06-09 22:21:28,775 [INFO] [WebAppRunner] 📍 Phase 3: Tests Playwright automatisés
+2025-06-09 22:21:28,775 [INFO] [WebAppRunner] 🎭 Exécution tests Playwright...
+2025-06-09 22:21:28,778 [ERROR] [WebAppRunner] ❌ Erreur tests Playwright: [WinError 2] Le fichier spécifié est introuvable
+2025-06-09 22:21:28,788 [INFO] [WebAppRunner] 📍 Phase 4: Génération du rapport final
+2025-06-09 22:21:28,789 [INFO] [WebAppRunner] 📊 Rapport sauvegardé: d:\2025-Epita-Intelligence-Symbolique-4\results\validation_point_entree_4\rapport_validation_point_entree_4_20250609_222128.json
+2025-06-09 22:21:28,789 [INFO] [WebAppRunner] ============================================================
+2025-06-09 22:21:28,789 [INFO] [WebAppRunner] 🎉 VALIDATION POINT D'ENTRÉE 4 TERMINÉE
+2025-06-09 22:21:28,789 [INFO] [WebAppRunner] ✅ Tests réussis: 7
+2025-06-09 22:21:28,789 [INFO] [WebAppRunner] ❌ Tests échoués: 0
+2025-06-09 22:21:28,790 [INFO] [WebAppRunner] 📊 Taux de réussite: 100.0%
+2025-06-09 22:21:28,790 [INFO] [WebAppRunner] 🧪 Analyses LLM: 3
+2025-06-09 22:21:28,790 [INFO] [WebAppRunner] ============================================================
+2025-06-09 22:21:28,790 [INFO] [WebAppRunner] 🧹 Nettoyage des processus...
+2025-06-09 22:21:28,805 [INFO] [WebAppRunner] ✅ Processus arrêté gracieusement
+2025-06-09 22:21:28,830 [INFO] [WebAppRunner] ✅ Processus arrêté gracieusement
+2025-06-09 22:21:28,830 [INFO] [WebAppRunner] 🧹 Nettoyage des processus...

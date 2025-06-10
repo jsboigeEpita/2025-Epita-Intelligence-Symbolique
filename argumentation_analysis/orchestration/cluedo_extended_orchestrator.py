@@ -43,7 +43,7 @@ except ImportError:
             return False
             
     AGENTS_AVAILABLE = False
-from semantic_kernel.contents.chat_message_content import ChatMessageContent
+from argumentation_analysis.utils.semantic_kernel_compatibility import ChatMessageContent
 from semantic_kernel.functions.kernel_arguments import KernelArguments
 
 # Import conditionnel pour les modules filters qui peuvent ne pas exister
