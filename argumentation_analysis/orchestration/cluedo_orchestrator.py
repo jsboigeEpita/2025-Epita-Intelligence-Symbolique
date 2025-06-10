@@ -184,4 +184,3 @@ if __name__ == "__main__":
         print(f"Une erreur est survenue: {e}")
         import traceback
         traceback.print_exc()
->>>>>>> f90f814 (VALIDATION FINALE - Corrections incrémentales tests unitaires - AuthorRole/semantic_kernel imports fixes - JPype/JVM Access Violations fixes - ChatMessageContent API compatibility - pytest-asyncio markers fixes - pytest markers warnings elimination)
