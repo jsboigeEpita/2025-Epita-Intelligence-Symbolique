@@ -26,7 +26,7 @@ from typing import List, Optional, Union, Any, Dict # Ajout Any, Dict
 # Imports pour le hook LLM
 from semantic_kernel.connectors.ai.chat_completion_client_base import ChatCompletionClientBase
 from semantic_kernel.connectors.ai.open_ai import OpenAIChatCompletion
-from semantic_kernel.connectors.ai.azure import AzureChatCompletion
+from semantic_kernel.connectors.ai.open_ai import AzureChatCompletion
 from semantic_kernel.contents.chat_message_content import ChatMessageContent as SKChatMessageContent # Alias pour éviter conflit
 from semantic_kernel.kernel import Kernel as SKernel # Alias pour éviter conflit avec Kernel de SK
 # KernelArguments est déjà importé plus bas
