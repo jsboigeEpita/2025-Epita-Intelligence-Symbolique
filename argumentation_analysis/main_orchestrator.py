@@ -45,6 +45,10 @@ current_dir = Path(__file__).parent
 if str(current_dir) not in sys.path:
     sys.path.append(str(current_dir))
 
+# Activation automatique de l'environnement
+from scripts.core.auto_env import ensure_env
+ensure_env()
+
 def setup_logging():
     """Configuration du logging global"""
     # Configuration de base - Les modules peuvent définir des loggers plus spécifiques
@@ -77,10 +81,8 @@ async def main():
     parser.add_argument("--text-file", type=str, help="Chemin vers un fichier texte à analyser (utilisé avec --skip-ui)")
     args = parser.parse_args()
 
-    # 1. Chargement de l'environnement (.env)
-    from dotenv import load_dotenv, find_dotenv
-    loaded = load_dotenv(find_dotenv(), override=True)
-    print(f".env chargé: {loaded}")
+    # 1. Environnement déjà configuré par auto_env
+    print("✅ Environnement configuré via auto_env")
 
     # Vérification rapide de quelques variables clés (optionnel)
     print(f"LLM Model ID présent: {'OPENAI_CHAT_MODEL_ID' in os.environ}")

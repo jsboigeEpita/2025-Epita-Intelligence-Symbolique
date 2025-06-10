@@ -21,6 +21,10 @@ from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Any, Optional
 
+# Activation automatique de l'environnement
+from scripts.core.auto_env import ensure_env
+ensure_env()
+
 # Configuration des chemins
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 DATA_DIR = PROJECT_ROOT / "data"

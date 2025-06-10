@@ -25,6 +25,10 @@ import sys
 from pathlib import Path
 from typing import Dict, List, Any
 
+# Activation automatique de l'environnement
+from scripts.core.auto_env import ensure_env
+ensure_env()
+
 def catalogue_composants_demo_epita():
     """Catalogue complet des composants de démo Épita découverts"""
     
