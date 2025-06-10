@@ -6,18 +6,24 @@ It serves as the primary entry point for accessing the project's
 core functionalities.
 """
 
-# Import principal pour l'analyse d'argumentation
-from .argumentation_analyzer import ArgumentationAnalyzer, Analyzer
-
-# Imports des autres composants core
+# Imports des composants core (sans dépendance circulaire)
 from .shared_state import RhetoricalAnalysisState
 from .llm_service import create_llm_service
 from .bootstrap import *
 
 # Exports principaux
 __all__ = [
-    'ArgumentationAnalyzer',
-    'Analyzer',
     'RhetoricalAnalysisState',
     'create_llm_service'
 ]
+
+# Import conditionnel pour éviter la dépendance circulaire
+def get_argumentation_analyzer():
+    """Importe et retourne ArgumentationAnalyzer de manière lazy."""
+    from .argumentation_analyzer import ArgumentationAnalyzer
+    return ArgumentationAnalyzer
+
+def get_analyzer():
+    """Importe et retourne Analyzer de manière lazy."""
+    from .argumentation_analyzer import Analyzer
+    return Analyzer
