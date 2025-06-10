@@ -6,7 +6,7 @@ Orchestrateur Unifié d'Application Web Python
 
 Remplace tous les scripts PowerShell redondants d'intégration web :
 - integration_test_with_trace.ps1
-- integration_test_with_trace_robust.ps1  
+- integration_test_with_trace_robust.ps1
 - integration_test_with_trace_fixed.ps1
 - integration_test_trace_working.ps1
 - integration_test_trace_simple_success.ps1
@@ -32,6 +32,31 @@ from pathlib import Path
 from datetime import datetime
 from dataclasses import dataclass, asdict
 from enum import Enum
+
+# Auto-activation environnement au démarrage
+try:
+    _current_script_path = Path(__file__).resolve()
+    _project_root = _current_script_path.parent.parent.parent
+    if str(_project_root) not in sys.path:
+        sys.path.insert(0, str(_project_root))
+    
+    from scripts.core.environment_manager import auto_activate_env
+    from scripts.core.auto_env import _load_dotenv_intelligent
+    
+    # Activation automatique de l'environnement projet-is
+    print("[INFO] Auto-activation environnement conda...")
+    if auto_activate_env("projet-is", silent=False):
+        print("[OK] Environnement 'projet-is' auto-activé")
+    else:
+        print("[WARN] Impossible d'auto-activer l'environnement, continuons quand même...")
+    
+    # Chargement .env intelligent
+    if _load_dotenv_intelligent(_project_root, silent=False):
+        print("[OK] Configuration .env chargée")
+    
+except Exception as e:
+    print(f"[ERREUR] Erreur auto-activation: {e}")
+    print("Continuons sans auto-activation...")
 
 # Imports internes
 from scripts.webapp.backend_manager import BackendManager
@@ -164,12 +189,12 @@ class UnifiedWebOrchestrator:
             },
             'backend': {
                 'enabled': True,
-                'module': 'argumentation_analysis.services.web_api.app',
+                'module': 'api.main_simple:app',
                 'start_port': backend_port,
                 'fallback_ports': fallback_ports,
                 'max_attempts': 5,
                 'timeout_seconds': 30,
-                'health_endpoint': '/api/health',
+                'health_endpoint': '/health',
                 'env_activation': 'powershell -File scripts/env/activate_project_env.ps1'
             },
             'frontend': {
