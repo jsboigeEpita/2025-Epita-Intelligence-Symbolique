@@ -9,7 +9,7 @@ const { test, expect } = require('@playwright/test');
 
 test.describe('API Backend - Services d\'Analyse', () => {
   
-  const API_BASE_URL = 'http://localhost:5003';
+  const API_BASE_URL = process.env.API_BASE_URL || 'http://localhost:5004';
 
   test('Health Check - Vérification de l\'état de l\'API', async ({ request }) => {
     // Test du endpoint de health check
