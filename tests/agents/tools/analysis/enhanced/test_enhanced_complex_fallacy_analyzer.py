@@ -29,8 +29,8 @@ if project_root not in sys.path:
 
 # Importer les mocks pour numpy et pandas
 # Le répertoire tests/mocks est ajouté à sys.path par conftest.py
-from tests.mocks.legacy_numpy_array_mock import *
-from tests.mocks.pandas_mock import *
+# Imports de mocks legacy supprimés. Les tests sont conçus pour ne pas dépendre
+# de l'implémentation réelle de numpy/pandas ici, mais des structures de données retournées.
 
 # Import du module à tester
 from argumentation_analysis.agents.tools.analysis.enhanced.complex_fallacy_analyzer import EnhancedComplexFallacyAnalyzer

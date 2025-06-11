@@ -1,23 +1,9 @@
-
-# Authentic gpt-4o-mini imports (replacing mocks)
-import openai
-from semantic_kernel.contents import ChatHistory
-from semantic_kernel.core_plugins import ConversationSummaryPlugin
-from config.unified_config import UnifiedConfig
-
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
-
-"""
-Tests unitaires pour le module agents.tools.analysis.enhanced.contextual_fallacy_analyzer.
-"""
-
 import sys
 import os
 import json
 import logging
 import pytest
-
+from unittest.mock import MagicMock, patch
 
 # Configurer le logging pour les tests
 logging.basicConfig(
@@ -27,116 +13,41 @@ logging.basicConfig(
 )
 logger = logging.getLogger("TestEnhancedContextualFallacyAnalyzerPytest")
 
-# Importer les mocks pour numpy et pandas (si nécessaire, bien que conftest devrait gérer)
-# from legacy_numpy_array_mock import * # Assurez-vous que c'est géré par conftest.py ou importez explicitement
-# from pandas_mock import * # Assurez-vous que c'est géré par conftest.py ou importez explicitement
-
-# Import des bibliothèques réelles si disponibles, sinon utiliser des mocks
-try:
-    import torch
-    import transformers
-    HAS_REAL_LIBS = True
-except ImportError:
-    HAS_REAL_LIBS = False
-
-    class MockTorch:
-        def __init__(self): pass
-        @staticmethod
-        def tensor(data): return data
-        @staticmethod
-        def no_grad():
-            class NoGrad:
-                def __enter__(self): return None
-                def __exit__(self, *args): pass
-            return NoGrad()
-
-    class MockTransformers:
-        class AutoTokenizer:
-            @staticmethod
-            def from_pretrained(model_name):
-                tokenizer = Magicawait self._create_authentic_gpt4o_mini_instance()
-                tokenizer.encode = lambda text, return_tensors: [0, 1, 2, 3]
-                tokenizer.decode = lambda tokens: "Texte décodé"
-                return tokenizer
-
-        class AutoModelForSequenceClassification:
-            @staticmethod
-            def from_pretrained(model_name):
-                model = Magicawait self._create_authentic_gpt4o_mini_instance()
-                model.forward = lambda input_ids: MagicMock(logits=[[0.1, 0.9]])
-                return model
-
-        class pipeline:
-            def __init__(self, task, model=None):
-                self.task = task
-                self.model = model
-
-            def __call__(self, text):
-                if self.task == "sentiment-analysis": return [{"label": "POSITIVE", "score": 0.9}]
-                elif self.task == "text-generation": return [{"generated_text": "Texte généré"}]
-                elif self.task == "ner": return [{"entity": "B-PER", "word": "Einstein", "score": 0.9}]
-                return []
-
-    # Mocker torch et transformers si non disponibles (conftest.py devrait aussi les gérer)
-    # Ces mocks sont définis ici pour être utilisés par les patchs si HAS_REAL_LIBS est False
-    if 'torch' not in sys.modules:
-        sys.modules['torch'] = MagicMock(spec=MockTorch)
-    if 'transformers' not in sys.modules:
-        sys.modules['transformers'] = MagicMock(spec=MockTransformers)
-
-
 # Import du module à tester
-from argumentation_analysis.agents.tools.analysis.enhanced.contextual_fallacy_analyzer import EnhancedContextualFallacyAnalyzer
-
-@pytest.fixture(scope="module", autouse=True)
-def setup_module_patches():
-    """Applique les patchs au niveau du module."""
-    logger.info("Début de setup_module_patches pour TestEnhancedContextualFallacyAnalyzer.")
-    patches_module = []
-    
-    try:
-        from tests.mocks.numpy_mock import percentile as numpy_mock_percentile
-    except ImportError:
-        logger.error("Impossible d'importer percentile depuis tests.mocks.numpy_mock pour le patch.")
-        numpy_mock_percentile = Magicawait self._create_authentic_gpt4o_mini_instance()
-
-    numpy_module = sys.modules.get('numpy')
-    is_numpy_mocked = hasattr(numpy_module, '__version__') and numpy_module.__version__ == '1.24.3' # Exemple de condition de mock
-
-    if is_numpy_mocked:
-        if not hasattr(numpy_module, 'percentile') or getattr(numpy_module, 'percentile') is not numpy_mock_percentile:
-            percentile_patch = patch('numpy.percentile', numpy_mock_percentile)
-            patches_module.append(percentile_patch)
-            percentile_patch.start()
-            logger.info("Patch appliqué pour numpy.percentile dans setup_module_patches.")
-
-    if not HAS_REAL_LIBS:
-        # Utiliser les classes MockTorch et MockTransformers définies ci-dessus
-        torch_patch = patch('argumentation_analysis.agents.tools.analysis.enhanced.contextual_fallacy_analyzer.torch', MagicMock(spec=MockTorch))
-        patches_module.append(torch_patch)
-        torch_patch.start()
-        
-        transformers_patch = patch('argumentation_analysis.agents.tools.analysis.enhanced.contextual_fallacy_analyzer.transformers', MagicMock(spec=MockTransformers))
-        patches_module.append(transformers_patch)
-        transformers_patch.start()
-        
-        has_transformers_patch = patch('argumentation_analysis.agents.tools.analysis.enhanced.contextual_fallacy_analyzer.HAS_TRANSFORMERS', True)
-        patches_module.append(has_transformers_patch)
-        has_transformers_patch.start()
-        logger.info("Patches pour torch, transformers et HAS_TRANSFORMERS appliqués.")
-
-    yield # Permet aux tests de s'exécuter
-
-    logger.info("Fin de setup_module_patches, arrêt des patchs.")
-    for patcher in patches_module:
-        patcher.stop()
+from argumentation_analysis.agents.tools.analysis.enhanced.contextual_fallacy_analyzer import EnhancedContextualFallacyAnalyzer, HAS_TRANSFORMERS
 
 @pytest.fixture
-def analyzer_instance():
+def mock_dependencies(mocker):
+    """Fixture to mock heavy dependencies like torch and transformers."""
+    # Mock 'torch'
+    mock_torch = MagicMock()
+    mocker.patch.dict(sys.modules, {'torch': mock_torch})
+
+    # Mock 'transformers'
+    mock_transformers = MagicMock()
+    mock_auto_tokenizer = MagicMock()
+    mock_auto_tokenizer.from_pretrained.return_value = MagicMock()
+    mock_transformers.AutoTokenizer = mock_auto_tokenizer
+    
+    mock_auto_model = MagicMock()
+    mock_auto_model.from_pretrained.return_value = MagicMock()
+    mock_transformers.AutoModelForSequenceClassification = mock_auto_model
+
+    mock_pipeline = MagicMock()
+    mock_transformers.pipeline = mock_pipeline
+    
+    mocker.patch.dict(sys.modules, {'transformers': mock_transformers})
+    
+    # Patch the HAS_TRANSFORMERS flag in the module under test
+    mocker.patch('argumentation_analysis.agents.tools.analysis.enhanced.contextual_fallacy_analyzer.HAS_TRANSFORMERS', True)
+
+    return mock_torch, mock_transformers
+
+@pytest.fixture
+def analyzer_instance(mock_dependencies):
     """Fixture pour initialiser EnhancedContextualFallacyAnalyzer pour chaque test."""
     logger.debug("Initialisation de EnhancedContextualFallacyAnalyzer pour un test.")
     analyzer = EnhancedContextualFallacyAnalyzer(model_name="distilbert-base-uncased")
-    # La réinitialisation d'état qui était dans setUp est gérée par la recréation de l'instance
     return analyzer
 
 def test_initialization(analyzer_instance):
@@ -174,8 +85,8 @@ def test_analyze_context(analyzer_instance):
         
         mock_analyze_context.assert_called_once_with(context)
         mock_identify_fallacies.assert_called_once_with(text)
-        mock_filter_context.# Mock assertion eliminated - authentic validation
-        mock_analyze_relations.# Mock assertion eliminated - authentic validation
+        mock_filter_context.assert_called_once()
+        mock_analyze_relations.assert_called_once()
         
         assert isinstance(result, dict)
         assert "context_analysis" in result
@@ -275,13 +186,9 @@ def test_provide_feedback(analyzer_instance):
     analyzer_instance.last_analysis_fallacies = {
         "fallacy_1": {"fallacy_type": "Appel à l'autorité", "confidence": 0.7}
     }
-    # L'état est réinitialisé par la fixture, pas besoin de le faire ici explicitement
-    # analyzer_instance.feedback_history = []
-    # analyzer_instance.learning_data["feedback_history"] = []
-    # analyzer_instance.learning_data["confidence_adjustments"] = {}
     with patch.object(analyzer_instance, '_save_learning_data') as mock_save:
         analyzer_instance.provide_feedback("fallacy_1", True, "Bonne détection")
-        mock_save.# Mock assertion eliminated - authentic validation
+        mock_save.assert_called_once()
         assert len(analyzer_instance.feedback_history) == 1
         feedback = analyzer_instance.feedback_history[0]
         assert feedback["fallacy_id"] == "fallacy_1"
@@ -290,15 +197,6 @@ def test_provide_feedback(analyzer_instance):
 
 def test_get_contextual_fallacy_examples(analyzer_instance):
     """Test l'obtention d'exemples de sophismes contextuels."""
-    # Accéder à la classe parente via __bases__[0] peut être fragile.
-    # Si EnhancedContextualFallacyAnalyzer hérite directement de object, cela ne fonctionnera pas.
-    # Il faut s'assurer que la classe parente est bien celle qui a la méthode.
-    # Pour ce test, on suppose que la structure d'héritage est connue et stable.
-    # Une meilleure approche serait de mocker directement la méthode sur l'instance si possible,
-    # ou de tester le comportement de la méthode parente dans ses propres tests.
-    
-    # Supposons que la classe parente est la première dans __bases__
-    # et qu'elle a la méthode 'get_contextual_fallacy_examples'
     parent_class_mock_target = 'argumentation_analysis.agents.tools.analysis.contextual_fallacy_analyzer.ContextualFallacyAnalyzer.get_contextual_fallacy_examples'
     
     with patch(parent_class_mock_target, return_value=[
@@ -315,5 +213,3 @@ def test_get_contextual_fallacy_examples(analyzer_instance):
         assert isinstance(result, list)
         assert len(result) == 2
         assert result[0]["explanation"] == "Expl."
-
-# Pas besoin de if __name__ == "__main__": avec pytest
