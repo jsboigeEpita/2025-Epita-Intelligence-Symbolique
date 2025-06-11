@@ -6,7 +6,7 @@ from semantic_kernel.agents import Agent # AJOUTÉ POUR CORRIGER NameError
 from typing import List, Dict, TYPE_CHECKING
 import logging
 from pydantic import PrivateAttr
-from argumentation_analysis.orchestration.cluedo_extended_orchestrator import TerminationStrategy
+from argumentation_analysis.orchestration.cluedo_extended_orchestrator import TerminationStrategy, SelectionStrategy
 
 # Importer la classe d'état
 from .shared_state import RhetoricalAnalysisState
