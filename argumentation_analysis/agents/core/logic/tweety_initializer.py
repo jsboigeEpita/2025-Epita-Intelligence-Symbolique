@@ -43,6 +43,48 @@ class TweetyInitializer:
         if not TweetyInitializer._jvm_started:
             self._start_jvm()
 
+    def _get_jvm_path(self):
+        """Détermine le chemin JVM correct en fonction de JAVA_HOME ou utilise le défaut."""
+        import os
+        from pathlib import Path
+        
+        # Vérifier si JAVA_HOME est défini et valide
+        java_home = os.environ.get('JAVA_HOME')
+        if java_home:
+            # Résoudre le chemin relatif par rapport au répertoire du projet
+            java_home_path = Path(java_home)
+            if not java_home_path.is_absolute():
+                # Si chemin relatif, le résoudre par rapport au répertoire racine du projet
+                # __file__ est dans argumentation_analysis/agents/core/logic/tweety_initializer.py
+                # donc nous remontons de 5 niveaux pour atteindre la racine
+                project_root = Path(__file__).resolve().parent.parent.parent.parent.parent
+                # Nettoyer le chemin relatif (enlever ./ au début s'il existe)
+                java_home_clean = java_home.lstrip('./')
+                java_home_path = project_root / java_home_clean
+            
+            logger.info(f"Chemin JAVA_HOME original: {java_home}")
+            logger.info(f"Chemin JAVA_HOME résolu: {java_home_path}")
+            
+            # Chercher le bon exécutable JVM
+            if os.name == 'nt':  # Windows
+                jvm_dll = java_home_path / 'bin' / 'server' / 'jvm.dll'
+                if jvm_dll.exists():
+                    logger.info(f"Utilisation du JVM depuis JAVA_HOME: {jvm_dll}")
+                    return str(jvm_dll)
+                else:
+                    logger.warning(f"JVM introuvable dans JAVA_HOME: {jvm_dll}")
+            else:  # Unix/Linux
+                jvm_so = java_home_path / 'lib' / 'server' / 'libjvm.so'
+                if jvm_so.exists():
+                    logger.info(f"Utilisation du JVM depuis JAVA_HOME: {jvm_so}")
+                    return str(jvm_so)
+                else:
+                    logger.warning(f"JVM introuvable dans JAVA_HOME: {jvm_so}")
+        
+        # Fallback vers le JVM par défaut
+        logger.info("Utilisation du JVM par défaut du système")
+        return jpype.getDefaultJVMPath()
+
     def _start_jvm(self):
         """Starts the JVM and sets up the classpath."""
         global logger # Assurer qu'on référence le logger du module
@@ -137,9 +179,13 @@ class TweetyInitializer:
             if not jpype.isJVMStarted():
                 logger.info("Starting JVM...")
                 try:
+                    # Déterminer le chemin JVM correct
+                    jvm_path = self._get_jvm_path()
+                    logger.info(f"Utilisation du JVM: {jvm_path}")
+                    
                     # Solutions éprouvées pour éviter Access Violations
                     jpype.startJVM(
-                        jpype.getDefaultJVMPath(),
+                        jvm_path,
                         f"-Djava.class.path={os.pathsep.join(classpath)}", # Utilisation de os.pathsep
                         "-Xmx1g",  # Limite mémoire raisonnable
                         "-Xms256m",  # Mémoire initiale
