@@ -35,34 +35,10 @@ from datetime import datetime
 from dataclasses import dataclass, asdict
 from enum import Enum
 from playwright.async_api import async_playwright, Playwright, Browser
+import aiohttp
 
-# Auto-activation environnement au démarrage
-try:
-    _current_script_path = Path(__file__).resolve()
-    _project_root = _current_script_path.parent.parent.parent
-    if str(_project_root) not in sys.path:
-        sys.path.insert(0, str(_project_root))
-    
-    from scripts.core.environment_manager import auto_activate_env
-    # from scripts.core.auto_env import _load_dotenv_intelligent # Supprimé car géré par EnvironmentManager et auto_activate_env
-    
-    # Activation automatique de l'environnement projet-is
-    print("[INFO] Auto-activation environnement conda...")
-    if auto_activate_env("projet-is", silent=False):
-        print("[OK] Environnement 'projet-is' auto-activé")
-    else:
-        print("[WARN] Impossible d'auto-activer l'environnement, continuons quand même...")
-    
-    # Chargement .env intelligent (cette section n'est plus nécessaire,
-    # car auto_activate_env via EnvironmentManager gère maintenant le chargement de .env)
-    # if _load_dotenv_intelligent(_project_root, silent=False):
-    #     print("[OK] Configuration .env chargée")
-    
-except Exception as e:
-    print(f"[ERREUR] Erreur auto-activation: {e}")
-    print("Continuons sans auto-activation...")
-
-# Imports internes
+# Imports internes (sans activation d'environnement au niveau du module)
+# Le bootstrap se fera dans la fonction main()
 from scripts.webapp.backend_manager import BackendManager
 from scripts.webapp.frontend_manager import FrontendManager
 from scripts.webapp.playwright_runner import PlaywrightRunner
@@ -119,7 +95,19 @@ class UnifiedWebOrchestrator:
     - Configuration centralisée
     """
     
-    def __init__(self, config_path: str = "config/webapp_config.yml"):
+    API_ENDPOINTS_TO_CHECK = [
+        "/api/health",
+        "/api/analyze",
+        "/api/load_text",
+        "/api/get_arguments",
+        "/api/get_graph",
+        "/api/download_results",
+        "/api/status",
+        "/api/config",
+        "/api/feedback"
+    ]
+
+    def __init__(self, config_path: str = "scripts/webapp/config/webapp_config.yml"):
         self.config_path = Path(config_path)
         self.config = self._load_config()
         self.logger = self._setup_logging()
@@ -145,7 +133,7 @@ class UnifiedWebOrchestrator:
         self.enable_trace = True
 
         self._setup_signal_handlers()
-        
+
     def _setup_signal_handlers(self):
         """Configure les gestionnaires de signaux pour un arrêt propre."""
         loop = asyncio.get_event_loop()
@@ -323,6 +311,8 @@ class UnifiedWebOrchestrator:
             
             # 2. Démarrage backend (obligatoire)
             if not await self._start_backend():
+                self.app_info.status = WebAppStatus.ERROR
+                self.add_trace("[ERROR] ECHEC DEMARRAGE BACKEND", "Le backend n'a pas pu démarrer.", status="error")
                 return False
             
             # 3. Démarrage frontend (optionnel)
@@ -376,16 +366,23 @@ class UnifiedWebOrchestrator:
 
         # La communication avec Playwright se fait via les variables d'environnement
         # que playwright.config.js lira (par exemple, BASE_URL)
-        os.environ['BASE_URL'] = self.app_info.frontend_url or self.app_info.backend_url
-        os.environ['BACKEND_URL'] = self.app_info.backend_url
+        base_url = self.app_info.frontend_url or self.app_info.backend_url
+        backend_url = self.app_info.backend_url
+        os.environ['BASE_URL'] = base_url
+        os.environ['BACKEND_URL'] = backend_url
         
+        self.add_trace("[PLAYWRIGHT] CONFIGURATION URLS",
+                      f"BASE_URL={base_url}",
+                      f"BACKEND_URL={backend_url}")
+
         return await self.playwright_runner.run_tests(test_paths, test_config)
     
     async def stop_webapp(self):
         """Arrête l'application web et nettoie les ressources de manière gracieuse."""
-        if self.app_info.status in [WebAppStatus.STOPPING, WebAppStatus.STOPPED]:
-            self.logger.warning("Arrêt déjà en cours ou terminé.")
-            return
+        # On ne quitte plus prématurément, on tente toujours de nettoyer.
+        # if self.app_info.status in [WebAppStatus.STOPPING, WebAppStatus.STOPPED]:
+        #     self.logger.warning("Arrêt déjà en cours ou terminé.")
+        #     return
 
         self.add_trace("[STOP] ARRET APPLICATION WEB", "Nettoyage gracieux en cours")
         self.app_info.status = WebAppStatus.STOPPING
@@ -465,18 +462,29 @@ class UnifiedWebOrchestrator:
     # ========================================================================
     
     async def _cleanup_previous_instances(self):
-        """Nettoie les instances précédentes"""
+        """Nettoie les instances précédentes en vérifiant tous les ports concernés."""
         self.add_trace("[CLEAN] NETTOYAGE PREALABLE", "Arrêt instances existantes")
+
+        backend_config = self.config.get('backend', {})
+        frontend_config = self.config.get('frontend', {})
         
-        # Vérification et nettoyage des ports
-        backend_port = self.config.get('backend', {}).get('start_port')
-        frontend_port = self.config.get('frontend', {}).get('port')
+        ports_to_check = []
+        if backend_config.get('enabled'):
+            ports_to_check.append(backend_config.get('start_port'))
+            ports_to_check.extend(backend_config.get('fallback_ports', []))
         
-        if self._is_port_in_use(backend_port) or self._is_port_in_use(frontend_port):
-             self.add_trace("[CLEAN] PORTS OCCUPES", f"Ports {backend_port}/{frontend_port} utilisés. Tentative de nettoyage.")
-             await self.process_cleaner.cleanup_webapp_processes()
+        if frontend_config.get('enabled'):
+            ports_to_check.append(frontend_config.get('port'))
+        
+        ports_to_check = [p for p in ports_to_check if p is not None]
+        
+        used_ports = [p for p in ports_to_check if self._is_port_in_use(p)]
+
+        if used_ports:
+            self.add_trace("[CLEAN] PORTS OCCUPES", f"Ports {used_ports} utilisés. Nettoyage forcé.")
+            await self.process_cleaner.cleanup_webapp_processes(ports=used_ports)
         else:
-             self.add_trace("[CLEAN] PORTS LIBRES", "Aucun service détecté sur les ports cibles.")
+            self.add_trace("[CLEAN] PORTS LIBRES", f"Aucun service détecté sur les ports cibles : {ports_to_check}")
 
     async def _launch_playwright_browser(self):
         """Lance et configure le navigateur Playwright."""
@@ -552,22 +560,61 @@ class UnifiedWebOrchestrator:
             return True  # Non bloquant
     
     async def _validate_services(self) -> bool:
-        """Valide que les services répondent correctement"""
-        self.add_trace("[CHECK] VALIDATION SERVICES", "Verification endpoints")
-        
-        # Test backend obligatoire
-        if not await self.backend_manager.health_check():
-            self.add_trace("[ERROR] BACKEND INACCESSIBLE", "", "Echec validation", status="error")
+        """Valide que les services backend et frontend répondent correctement."""
+        self.add_trace("[CHECK] VALIDATION SERVICES", "Vérification des endpoints critiques")
+
+        backend_ok = await self._check_all_api_endpoints()
+        if not backend_ok:
             return False
-            
-        # Test frontend optionnel
+
         if self.app_info.frontend_url:
             frontend_ok = await self.frontend_manager.health_check()
             if not frontend_ok:
-                self.add_trace("[WARNING] FRONTEND INACCESSIBLE", "", "Continue avec backend seul")
-        
-        self.add_trace("[OK] SERVICES VALIDES", "Tous les endpoints repondent")
+                self.add_trace("[WARNING] FRONTEND INACCESSIBLE", "L'interface utilisateur ne répond pas, mais le backend est OK.", status="warning")
+
+        self.add_trace("[OK] SERVICES VALIDES", "Tous les endpoints critiques répondent.")
         return True
+
+    async def _check_all_api_endpoints(self) -> bool:
+        """Vérifie tous les endpoints API critiques listés dans la classe."""
+        if not self.app_info.backend_url:
+            self.add_trace("[ERROR] URL Backend non définie", "Impossible de valider les endpoints", status="error")
+            return False
+
+        self.add_trace("[CHECK] BACKEND ENDPOINTS", f"Validation de {len(self.API_ENDPOINTS_TO_CHECK)} endpoints...")
+        
+        async with aiohttp.ClientSession() as session:
+            tasks = []
+            for endpoint in self.API_ENDPOINTS_TO_CHECK:
+                url = f"{self.app_info.backend_url}{endpoint}"
+                tasks.append(session.get(url, timeout=10))
+
+            results = await asyncio.gather(*tasks, return_exceptions=True)
+
+        all_ok = True
+        for i, res in enumerate(results):
+            endpoint = self.API_ENDPOINTS_TO_CHECK[i]
+            if isinstance(res, Exception):
+                details = f"Échec de la connexion à {endpoint}"
+                result = str(res)
+                all_ok = False
+                status = "error"
+            elif res.status >= 400:
+                details = f"Endpoint {endpoint} a retourné une erreur"
+                result = f"Status: {res.status}"
+                all_ok = False
+                status = "error"
+            else:
+                details = f"Endpoint {endpoint} est accessible"
+                result = f"Status: {res.status}"
+                status = "success"
+            
+            self.add_trace(f"[API CHECK] {endpoint}", details, result, status=status)
+
+        if not all_ok:
+            self.add_trace("[ERROR] BACKEND INCOMPLET", "Un ou plusieurs endpoints API ne sont pas fonctionnels.", status="error")
+
+        return all_ok
     
     async def _save_trace_report(self):
         """Sauvegarde le rapport de trace"""
@@ -636,10 +683,35 @@ class UnifiedWebOrchestrator:
         
         return content
 
+def _bootstrap_environment():
+    """Active l'environnement Conda et configure le sys.path."""
+    try:
+        _current_script_path = Path(__file__).resolve()
+        _project_root = _current_script_path.parent.parent.parent
+        if str(_project_root) not in sys.path:
+            sys.path.insert(0, str(_project_root))
+        
+        from scripts.core.environment_manager import auto_activate_env
+        
+        print("[INFO] Auto-activation de l'environnement conda...")
+        if auto_activate_env("projet-is", silent=False):
+            print("[OK] Environnement 'projet-is' auto-activé.")
+            return True
+        else:
+            print("[WARN] Impossible d'auto-activer l'environnement.")
+            return False
+    except Exception as e:
+        print(f"[ERREUR] Échec critique lors du bootstrap de l'environnement: {e}")
+        return False
+
 def main():
     """Point d'entrée principal en ligne de commande"""
+    if not _bootstrap_environment():
+        print("Arrêt dû à un échec de l'initialisation de l'environnement.", file=sys.stderr)
+        sys.exit(1)
+
     parser = argparse.ArgumentParser(description="Orchestrateur Unifié d'Application Web")
-    parser.add_argument('--config', default='config/webapp_config.yml', 
+    parser.add_argument('--config', default='scripts/webapp/config/webapp_config.yml',
                        help='Chemin du fichier de configuration')
     parser.add_argument('--headless', action='store_true', default=True,
                        help='Mode headless pour les tests')
