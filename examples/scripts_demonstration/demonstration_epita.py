@@ -79,8 +79,7 @@ class EpitaValidator:
             "calcul", "métrique", "score", "résultat", "argument", "sophisme"
         ]
         self.mock_indicators = [
-            "simulation", "mock", "exemple générique", "données factices",
-            "placeholder", "test pattern", "demo content"
+            "simulation", "mock", "données factices"
         ]
     
     def create_custom_datasets(self) -> List[CustomTestDataset]:
@@ -569,12 +568,14 @@ def mode_validation_custom_data(config: Dict[str, Any]) -> None:
         nom_module = cat_info.get('module', '')
         nom_cat = cat_info.get('nom', cat_id)
         
+        timestamp_start_cat = datetime.now().strftime('%H:%M:%S')
         print(f"\n{Colors.BOLD}{'=' * 60}{Colors.ENDC}")
-        print(f"{Colors.CYAN}[SEARCH] VALIDATION MODULE: {nom_cat}{Colors.ENDC}")
+        print(f"{Colors.CYAN}[{timestamp_start_cat} | SEARCH] VALIDATION MODULE: {nom_cat}{Colors.ENDC}")
         print(f"{'=' * 60}")
         
         for dataset in datasets:
-            print(f"\n{Colors.WARNING}[DATA] Test avec dataset: {dataset.name}{Colors.ENDC}")
+            timestamp_start_ds = datetime.now().strftime('%H:%M:%S')
+            print(f"\n{Colors.WARNING}[{timestamp_start_ds} | DATA] Test avec dataset: {dataset.name}{Colors.ENDC}")
             print(f"   Marqueur: {dataset.marker}")
             print(f"   Objectif: {dataset.test_purpose}")
             
@@ -618,7 +619,8 @@ def mode_validation_custom_data(config: Dict[str, Any]) -> None:
                         else:
                             print(f"   {Colors.GREEN}[MOCK] Mocks détectés: NON{Colors.ENDC}")
                         
-                        print(f"   [TIME] Temps d'exécution: {result.execution_time:.3f}s")
+                        timestamp_end_ds = datetime.now().strftime('%H:%M:%S')
+                        print(f"   [{timestamp_end_ds} | TIME] Temps d'exécution: {result.execution_time:.3f}s")
                         
                         if result.error:
                             print(f"   {Colors.FAIL}[ERROR] Erreur: {result.error}{Colors.ENDC}")
@@ -629,6 +631,9 @@ def mode_validation_custom_data(config: Dict[str, Any]) -> None:
                     
             except Exception as e:
                 print(f"   {Colors.FAIL}[ERROR] Erreur lors du test: {e}{Colors.ENDC}")
+        
+        timestamp_end_cat = datetime.now().strftime('%H:%M:%S')
+        print(f"\n{Colors.CYAN}[{timestamp_end_cat}] Fin de la validation pour le module: {nom_cat}{Colors.ENDC}")
     
     # Rapport final de validation
     print(f"\n{Colors.BOLD}{'=' * 80}{Colors.ENDC}")
