@@ -20,6 +20,11 @@ import unittest
 import os
 import sys
 
+import logging
+from unittest.mock import MagicMock, patch
+
+# Configuration du logger
+logger = logging.getLogger(__name__)
 from pathlib import Path
 
 # Configuration des chemins pour les tests
