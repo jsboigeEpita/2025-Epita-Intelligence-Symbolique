@@ -27,10 +27,9 @@ except ImportError:
         pass
 
 # Import des services JTMS
-sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
-from services.jtms_service import JTMSService
-from services.jtms_session_manager import JTMSSessionManager
-from plugins.semantic_kernel.jtms_plugin import JTMSSemanticKernelPlugin, create_jtms_plugin
+from argumentation_analysis.services.jtms_service import JTMSService
+from argumentation_analysis.services.jtms_session_manager import JTMSSessionManager
+from argumentation_analysis.plugins.semantic_kernel.jtms_plugin import JTMSSemanticKernelPlugin, create_jtms_plugin
 
 class JTMSKernelIntegration:
     """

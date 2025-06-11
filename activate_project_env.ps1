@@ -19,7 +19,8 @@ Refactorisé - Utilise scripts/core/environment_manager.py
 #>
 
 param(
-    [string]$CommandToRun = $null
+    [string]$CommandToRun = $null,
+    [switch]$Verbose = $false
 )
 
 # Configuration
@@ -64,6 +65,9 @@ try {
             if (-not [string]::IsNullOrWhiteSpace($cmd)) {
                 Write-Log "Exécution de la sous-commande: $cmd"
                 $pythonExecArgs = @("python", $pythonScriptPath, "--command", $cmd)
+                if ($Verbose) {
+                    $pythonExecArgs += "--verbose"
+                }
                 
                 # Exécution via le module Python
                 & $pythonExecArgs[0] $pythonExecArgs[1..($pythonExecArgs.Length-1)]
@@ -82,6 +86,9 @@ try {
         # Si aucune commande n'est fournie, juste activer l'environnement
         Write-Log "Activation simple de l'environnement (pas de commande à exécuter)."
         $pythonActivateOnlyArgs = @("python", $pythonScriptPath)
+        if ($Verbose) {
+            $pythonActivateOnlyArgs += "--verbose"
+        }
         & $pythonActivateOnlyArgs[0] $pythonActivateOnlyArgs[1..($pythonActivateOnlyArgs.Length-1)]
         $exitCode = $LASTEXITCODE
         if ($exitCode -eq 0) {

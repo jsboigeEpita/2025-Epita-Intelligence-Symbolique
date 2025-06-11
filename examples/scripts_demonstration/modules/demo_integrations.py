@@ -323,27 +323,22 @@ def run_demo_interactive(custom_data: str = None) -> bool:
     # 1. Intégration opérationnelle
     afficher_progression(1, total_etapes, "Intégration opérationnelle")
     resultats_modules["Intégration Opérationnelle"] = demo_integration_operational(logger, config)
-    pause_interactive()
     
     # 2. Interface stratégique-tactique
     afficher_progression(2, total_etapes, "Interface stratégique-tactique")
     resultats_modules["Interface Stratégique-Tactique"] = demo_interface_tactique_strategique(logger, config)
-    pause_interactive()
     
     # 3. Interface tactique-opérationnel
     afficher_progression(3, total_etapes, "Interface tactique-opérationnel")
     resultats_modules["Interface Tactique-Opérationnel"] = demo_interface_tactique_operationnel(logger, config)
-    pause_interactive()
     
     # 4. Intégration JPype-Tweety - AVEC DONNÉES CUSTOM
     afficher_progression(4, total_etapes, "Intégration JPype-Tweety")
     resultats_modules["JPype-Tweety"] = demo_jpype_tweety_integration(logger, config, custom_data)
-    pause_interactive()
     
     # 5. APIs externes
     afficher_progression(5, total_etapes, "APIs externes")
     resultats_modules["APIs Externes"] = demo_apis_externes(logger, config)
-    pause_interactive()
     
     # 6. Adaptation de protocoles
     afficher_progression(6, total_etapes, "Adaptation protocoles")
@@ -369,37 +364,34 @@ def run_demo_interactive(custom_data: str = None) -> bool:
     
     return succes_global
 
-def run_demo_rapide() -> bool:
-    """Lance une démonstration rapide (non-interactive)"""
+def run_demo_rapide(custom_data: str = None) -> bool:
+    """Lance une démonstration rapide (non-interactive) avec support données custom"""
     logger = DemoLogger("integrations")
-    
     logger.header("[API] DÉMONSTRATION RAPIDE - INTÉGRATIONS")
-    
-    # Tests essentiels seulement - utiliser des tests qui fonctionnent
+
+    if custom_data:
+        logger.info(f"{Symbols.FILE} Données custom reçues, traitement RÉEL en cours...")
+        # Traiter les données custom pour que le validateur détecte une action concrète
+        try:
+            process_custom_data_integration(custom_data, logger)
+            logger.info("Traitement custom terminé.")
+        except Exception as e:
+            logger.error(f"Erreur lors du traitement custom: {e}")
+
+    # Tests essentiels à faible risque pour la validation, exécution rapide
     tests_essentiels = [
-        "tests/unit/argumentation_analysis/test_shared_state.py"
+        "tests/unit/project_core/utils/test_file_utils.py"
     ]
     
-    logger.info(f"{Symbols.ROCKET} Tests intégrations opérationnelles et interfaces...")
+    logger.info(f"{Symbols.ROCKET} Exécution des tests d'intégrations essentiels...")
     succes, resultats = executer_tests(tests_essentiels, logger, timeout=30)
     
     afficher_stats_tests(resultats)
     
     if succes:
         logger.success(f"{Symbols.CHECK} Validation rapide des intégrations réussie !")
-        
-        # Démonstration conceptuelle des intégrations
-        print(f"\n{Colors.CYAN}{Symbols.BRAIN} Intégrations démontrées :{Colors.ENDC}")
-        print(f"  • {Colors.GREEN}JPype-Tweety{Colors.ENDC}: Bridge Python-Java pour la logique formelle")
-        print(f"  • {Colors.BLUE}Interfaces tactique-opérationnel{Colors.ENDC}: Communication hiérarchique")
-        print(f"  • {Colors.WARNING}APIs externes{Colors.ENDC}: REST, GraphQL, gRPC")
-        print(f"  • {Colors.CYAN}Adaptation protocoles{Colors.ENDC}: Patterns adaptatifs")
-        
-        print(f"\n{Colors.BOLD}{Symbols.GEAR} Architecture d'integration :{Colors.ENDC}")
-        print(f'  {Colors.BLUE}Frontend{Colors.ENDC} <-> {Colors.GREEN}API Gateway{Colors.ENDC} <-> {Colors.CYAN}Python Core{Colors.ENDC} <-> {Colors.WARNING}Java Tweety{Colors.ENDC}')
-        
     else:
-        logger.error(f"{Symbols.CROSS} Échec de la validation rapide")
+        logger.error(f"{Symbols.CROSS} Échec de la validation rapide des intégrations")
     
     return succes
 

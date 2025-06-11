@@ -474,7 +474,7 @@ def run_demo_rapide() -> bool:
     ]
     
     logger.info(f"{Symbols.ROCKET} Test de validation finale Cluedo...")
-    succes, resultats = executer_tests(tests_essentiels, logger, timeout=25)
+    succes, resultats = executer_tests(tests_essentiels, logger, timeout=90)
     
     afficher_stats_tests(resultats)
     

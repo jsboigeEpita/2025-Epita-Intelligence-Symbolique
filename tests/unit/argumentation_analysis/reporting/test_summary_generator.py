@@ -13,6 +13,7 @@ import json
 from pathlib import Path
 
 from typing import List, Dict, Any
+from unittest.mock import MagicMock
 
 from argumentation_analysis.reporting.summary_generator import (
     run_summary_generation_pipeline,
@@ -72,9 +73,9 @@ def test_run_summary_generation_pipeline_successful_run(
     """Teste une exécution réussie du pipeline de génération de résumés."""
     
     # Configurer les mocks pour qu'ils retournent des valeurs attendues
-    mock_generate_analysis# Mock eliminated - using authentic gpt-4o-mini {"analysis_data": "mocked_analysis"}
-    mock_generate_markdown# Mock eliminated - using authentic gpt-4o-mini temp_output_reports_dir / "summaries" / "mock_summary.md"
-    mock_generate_global_summary# Mock eliminated - using authentic gpt-4o-mini temp_output_reports_dir / "global_mock_report.md"
+    mock_generate_analysis.return_value = {"analysis_data": "mocked_analysis"}
+    mock_generate_markdown.return_value = temp_output_reports_dir / "summaries" / "mock_summary.md"
+    mock_generate_global_summary.return_value = temp_output_reports_dir / "global_mock_report.md"
 
     run_summary_generation_pipeline(
         sample_simulated_sources_data,
@@ -98,20 +99,20 @@ def test_run_summary_generation_pipeline_successful_run(
     assert first_call_args_analysis[3] == sample_common_fallacies_data # common_fallacies_data
 
     # Vérifier l'appel à generate_global_summary_report
-    mock_generate_global_summary.# Mock assertion eliminated - authentic validation
+    mock_generate_global_summary.assert_called_once()
     args_global_summary = mock_generate_global_summary.call_args[0]
     assert len(args_global_summary[0]) == 4 # all_generated_analyses
     assert args_global_summary[1] == temp_output_reports_dir
     assert args_global_summary[2] == sample_rhetorical_agents_data
 
     # Vérifier la sauvegarde JSON globale
-    mock_open_global_json.# Mock assertion eliminated - authentic validation # Doit être appelé pour le JSON global
+    mock_open_global_json.assert_called_once() # Doit être appelé pour le JSON global
     # Le nom du fichier contient un timestamp, donc on vérifie le répertoire et le suffixe
     assert mock_open_global_json.call_args[0][0].parent == temp_output_reports_dir
     assert mock_open_global_json.call_args[0][0].name.startswith("all_rhetorical_analyses_simulated_")
     assert mock_open_global_json.call_args[0][0].name.endswith(".json")
     
-    mock_json_dump.# Mock assertion eliminated - authentic validation
+    mock_json_dump.assert_called_once()
     assert len(mock_json_dump.call_args[0][0]) == 4 # all_generated_analyses
 
     # Vérifier que le sous-répertoire summaries a été créé (implicitement par generate_markdown_summary_for_analysis)
@@ -121,10 +122,6 @@ def test_run_summary_generation_pipeline_successful_run(
     first_call_args_markdown = mock_generate_markdown.call_args_list[0][0]
     assert first_call_args_markdown[1] == summaries_dir
 
-
-
-)
-)
 
 
 def test_run_summary_generation_pipeline_empty_inputs(
@@ -172,9 +169,9 @@ def test_run_summary_generation_pipeline_empty_inputs(
         [], # Fallacies vides
         temp_output_reports_dir
     )
-    mock_g_analysis.# Mock assertion eliminated - authentic validation # Appelée une fois
-    mock_g_md.# Mock assertion eliminated - authentic validation
-    mock_g_global.# Mock assertion eliminated - authentic validation
+    mock_g_analysis.assert_called_once() # Appelée une fois
+    mock_g_md.assert_called_once()
+    mock_g_global.assert_called_once()
 
 
 # Des tests plus détaillés pour chaque fonction de génération (generate_rhetorical_analysis_for_extract, etc.)

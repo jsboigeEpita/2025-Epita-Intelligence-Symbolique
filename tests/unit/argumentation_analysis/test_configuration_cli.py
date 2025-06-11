@@ -188,7 +188,7 @@ class TestCLIArgumentValidation:
     def test_validate_invalid_logic_type(self):
         """Test de validation avec type de logique invalide."""
         # Mock des arguments invalides
-        invalid_args = await self._create_authentic_gpt4o_mini_instance()
+        invalid_args = argparse.Namespace()
         invalid_args.logic_type = 'invalid_logic'
         invalid_args.mock_level = 'minimal'
         
@@ -197,7 +197,7 @@ class TestCLIArgumentValidation:
     
     def test_validate_invalid_mock_level(self):
         """Test de validation avec niveau de mock invalide."""
-        invalid_args = await self._create_authentic_gpt4o_mini_instance()
+        invalid_args = argparse.Namespace()
         invalid_args.logic_type = 'propositional'
         invalid_args.mock_level = 'invalid_level'
         
@@ -254,7 +254,7 @@ class TestCLIConfigurationDefaults:
         defaults = get_default_cli_config()
         
         # Créer un namespace à partir des defaults
-        default_args = await self._create_authentic_gpt4o_mini_instance()
+        default_args = argparse.Namespace()
         default_args.logic_type = defaults['logic_type']
         default_args.mock_level = defaults['mock_level']
         
@@ -382,7 +382,7 @@ class TestCLIIntegrationWithScripts:
     def test_cli_arguments_from_command_line(self, mock_argv):
         """Test de lecture des arguments depuis la ligne de commande."""
         # Simuler sys.argv
-        mock_argv# Mock eliminated - using authentic gpt-4o-mini [
+        mock_argv = [ # Mock eliminated - using authentic gpt-4o-mini
             'script.py',
             '--logic-type', 'modal',
             '--mock-level', 'none',
