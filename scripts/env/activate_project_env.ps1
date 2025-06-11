@@ -18,7 +18,7 @@ param(
     [string]$CommandToRun,
 
     [Parameter(Mandatory=$false)]
-    [switch]$ForceReinstall
+    [string[]]$Reinstall
 )
 
 # Configuration
@@ -55,8 +55,9 @@ try {
         $EnvironmentManagerScript
     )
 
-    if ($ForceReinstall.IsPresent) {
-        $ArgumentList += "--force-reinstall"
+    if ($Reinstall) {
+        $ArgumentList += "--reinstall"
+        $ArgumentList += $Reinstall
     }
 
     if ($CommandToRun) {
