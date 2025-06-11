@@ -10,7 +10,7 @@ class Belief:
         self.implications = []
 
     def __str__(self):
-        return f"{self.name} -> {"UNKNOWN" if self.valid == None else "VALID" if self.valid else "INVALID"}"
+        return f"{self.name} -> {'UNKNOWN' if self.valid == None else 'VALID' if self.valid else 'INVALID'}"
     
     def __repr__(self):
         return f"{self.name}"
@@ -27,7 +27,7 @@ class Belief:
         self.implications.append(justification)
 
     def remove_implication(self, justification):
-        self.implications.pop(self.justifications.index(justification))
+        self.implications.pop(self.implications.index(justification))
 
     def set_truth_value(self, value):
         self.valid = value
