@@ -230,8 +230,9 @@ class TestConfigurationCLI:
     def test_cli_validation_invalid_combinations(self):
         """Test de validation CLI avec combinaisons invalides."""
         from argumentation_analysis.utils.core_utils.cli_utils import validate_cli_args
+        from types import SimpleNamespace
         
-        invalid_args = await self._create_authentic_gpt4o_mini_instance()
+        invalid_args = SimpleNamespace()
         invalid_args.logic_type = 'invalid'
         invalid_args.mock_level = 'none'
         

@@ -9,31 +9,39 @@ class AnalysisService:
         # Pour l'instant, nous n'avons pas de dépendances complexes.
         pass
 
-    def analyze_text(self, text: str) -> AnalysisResponse:
+    async def analyze_text(self, text: str) -> dict:
         """
-        Effectue l'analyse du texte pour détecter les sophismes.
-        Cette implémentation est un mock et devra être remplacée par la logique réelle.
+        Effectue une analyse simulée du texte.
+        Retourne un dictionnaire qui sera utilisé pour construire AnalysisResponse.
         """
-        # Logique de mock similaire à celle dans endpoints.py pour la cohérence,
-        # mais idéalement, cette logique ne devrait exister qu'ici.
-        if not text or not text.strip():
-            # Gérer le cas d'un texte vide ou ne contenant que des espaces.
-            # Bien que la validation Pydantic puisse déjà le faire, une double vérification est possible.
-            return AnalysisResponse(original_text=text, fallacies_detected=[])
+        import uuid
+        import time
 
+        start_time = time.time()
+        
         if "example fallacy" in text.lower():
             fallacies = [
-                Fallacy(type="Ad Hominem (Service)", description="Attacking the person instead of the argument."),
-                Fallacy(type="Straw Man (Service)", description="Misrepresenting the opponent's argument.")
+                {"type": "Ad Hominem (Service)", "description": "Attacking the person instead of the argument."},
+                {"type": "Straw Man (Service)", "description": "Misrepresenting the opponent's argument."}
             ]
+            summary = "Plusieurs sophismes potentiels détectés."
         elif "no fallacy" in text.lower():
             fallacies = []
+            summary = "Aucun sophisme évident détecté."
         else:
             fallacies = [
-                Fallacy(type="Hasty Generalization (Service)", description="Drawing a conclusion based on a small sample size.")
+                {"type": "Hasty Generalization (Service)", "description": "Drawing a conclusion based on a small sample size."}
             ]
+            summary = "Analyse préliminaire effectuée."
+
+        duration = time.time() - start_time
         
-        return AnalysisResponse(original_text=text, fallacies_detected=fallacies)
+        return {
+            "fallacies": fallacies,
+            "duration": duration,
+            "components_used": ["MockAnalysisComponent"],
+            "summary": summary
+        }
 
 # Exemple d'autres services qui pourraient être ajoutés :
 # class UserService:
