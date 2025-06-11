@@ -1,3 +1,4 @@
+from unittest.mock import patch, MagicMock
 
 # Authentic gpt-4o-mini imports (replacing mocks)
 import openai
@@ -43,16 +44,16 @@ class TestComplexFallacyAnalyzer(unittest.TestCase):
         # Patch pour les dépendances
         self.contextual_analyzer_patcher = patch('argumentation_analysis.agents.tools.analysis.complex_fallacy_analyzer.ContextualFallacyAnalyzer')
         self.mock_contextual_analyzer_class = self.contextual_analyzer_patcher.start()
-        self.mock_contextual_analyzer = Magicawait self._create_authentic_gpt4o_mini_instance()
-        self.mock_contextual_analyzer_class# Mock eliminated - using authentic gpt-4o-mini self.mock_contextual_analyzer
+        self.mock_contextual_analyzer = MagicMock()
+        self.mock_contextual_analyzer_class.return_value = self.mock_contextual_analyzer
         
         self.severity_evaluator_patcher = patch('argumentation_analysis.agents.tools.analysis.complex_fallacy_analyzer.FallacySeverityEvaluator')
         self.mock_severity_evaluator_class = self.severity_evaluator_patcher.start()
-        self.mock_severity_evaluator = Magicawait self._create_authentic_gpt4o_mini_instance()
-        self.mock_severity_evaluator_class# Mock eliminated - using authentic gpt-4o-mini self.mock_severity_evaluator
+        self.mock_severity_evaluator = MagicMock()
+        self.mock_severity_evaluator_class.return_value = self.mock_severity_evaluator
         
         # Configurer le mock de l'évaluateur de sévérité
-        self.mock_severity_evaluator._determine_severity_level# Mock eliminated - using authentic gpt-4o-mini "Moyen"
+        self.mock_severity_evaluator._determine_severity_level.return_value = "Moyen"
         
         # Créer l'instance à tester
         self.analyzer = ComplexFallacyAnalyzer()
@@ -87,7 +88,7 @@ class TestComplexFallacyAnalyzer(unittest.TestCase):
     def test_identify_combined_fallacies_with_matches(self):
         """Teste l'identification des combinaisons de sophismes avec des correspondances."""
         # Configurer le mock de l'analyseur contextuel
-        self.mock_contextual_analyzer.identify_contextual_fallacies# Mock eliminated - using authentic gpt-4o-mini [
+        self.mock_contextual_analyzer.identify_contextual_fallacies.return_value = [
             {
                 "fallacy_type": "Appel à l'autorité",
                 "keyword": "expert",
@@ -123,7 +124,7 @@ class TestComplexFallacyAnalyzer(unittest.TestCase):
     def test_identify_combined_fallacies_without_matches(self):
         """Teste l'identification des combinaisons de sophismes sans correspondances."""
         # Configurer le mock de l'analyseur contextuel
-        self.mock_contextual_analyzer.identify_contextual_fallacies# Mock eliminated - using authentic gpt-4o-mini [
+        self.mock_contextual_analyzer.identify_contextual_fallacies.return_value = [
             {
                 "fallacy_type": "Appel à l'autorité",
                 "keyword": "expert",
@@ -148,7 +149,7 @@ class TestComplexFallacyAnalyzer(unittest.TestCase):
     def test_analyze_structural_fallacies(self):
         """Teste l'analyse des sophismes structurels."""
         # Configurer le mock de l'analyseur contextuel
-        self.mock_contextual_analyzer.identify_contextual_fallacies# Mock eliminated - using authentic gpt-4o-mini [
+        self.mock_contextual_analyzer.identify_contextual_fallacies.return_value = [
             {
                 "fallacy_type": "Appel à l'autorité",
                 "keyword": "expert",
@@ -162,7 +163,7 @@ class TestComplexFallacyAnalyzer(unittest.TestCase):
              patch.object(self.analyzer, '_detect_circular_arguments') as mock_detect_circular_arguments:
             
             # Configurer les mocks des méthodes internes
-            mock_detect_contradictions# Mock eliminated - using authentic gpt-4o-mini [
+            mock_detect_contradictions.return_value = [
                 {
                     "involved_arguments": [0, 1],
                     "details": {
@@ -171,7 +172,7 @@ class TestComplexFallacyAnalyzer(unittest.TestCase):
                     }
                 }
             ]
-            mock_detect_circular_arguments# Mock eliminated - using authentic gpt-4o-mini []
+            mock_detect_circular_arguments.return_value = []
             
             # Appeler la méthode à tester
             arguments = [
@@ -226,39 +227,35 @@ class TestComplexFallacyAnalyzer(unittest.TestCase):
     def test_identify_fallacy_patterns(self):
         """Teste l'identification des motifs de sophismes."""
         # Configurer le mock de l'analyseur contextuel
-        self.mock_contextual_analyzer.identify_contextual_fallacies# Mock eliminated - using authentic gpt-4o-mini [
-            [  # Premier paragraphe
-                {
-                    "fallacy_type": "Appel à l'autorité",
-                    "keyword": "expert",
-                    "context_text": "Les experts affirment que...",
-                    "confidence": 0.8
-                }
-            ],
-            [  # Deuxième paragraphe
-                {
-                    "fallacy_type": "Appel à l'émotion",
-                    "keyword": "peur",
-                    "context_text": "Vous devriez avoir peur de...",
-                    "confidence": 0.7
-                }
-            ],
-            [  # Troisième paragraphe
-                {
-                    "fallacy_type": "Appel à l'autorité",
-                    "keyword": "scientifique",
-                    "context_text": "Les scientifiques ont prouvé que...",
-                    "confidence": 0.8
-                }
-            ],
-            [  # Quatrième paragraphe
-                {
-                    "fallacy_type": "Appel à l'émotion",
-                    "keyword": "inquiétude",
-                    "context_text": "Cela devrait vous inquiéter...",
-                    "confidence": 0.7
-                }
-            ]
+        self.mock_contextual_analyzer.identify_contextual_fallacies.return_value = [
+            # Premier paragraphe
+            {
+                "fallacy_type": "Appel à l'autorité",
+                "keyword": "expert",
+                "context_text": "Les experts affirment que...",
+                "confidence": 0.8
+            },
+            # Deuxième paragraphe
+            {
+                "fallacy_type": "Appel à l'émotion",
+                "keyword": "peur",
+                "context_text": "Vous devriez avoir peur de...",
+                "confidence": 0.7
+            },
+            # Troisième paragraphe
+            {
+                "fallacy_type": "Appel à l'autorité",
+                "keyword": "scientifique",
+                "context_text": "Les scientifiques ont prouvé que...",
+                "confidence": 0.8
+            },
+            # Quatrième paragraphe
+            {
+                "fallacy_type": "Appel à l'émotion",
+                "keyword": "inquiétude",
+                "context_text": "Cela devrait vous inquiéter...",
+                "confidence": 0.7
+            }
         ]
         
         # Patch pour les méthodes internes
@@ -266,7 +263,7 @@ class TestComplexFallacyAnalyzer(unittest.TestCase):
              patch.object(self.analyzer, '_detect_escalation_patterns') as mock_detect_escalation:
             
             # Configurer les mocks des méthodes internes
-            mock_detect_alternation# Mock eliminated - using authentic gpt-4o-mini [
+            mock_detect_alternation.return_value = [
                 {
                     "fallacy_type1": "Appel à l'autorité",
                     "fallacy_type2": "Appel à l'émotion",
@@ -274,7 +271,7 @@ class TestComplexFallacyAnalyzer(unittest.TestCase):
                     "involved_paragraphs": [0, 1, 2, 3]
                 }
             ]
-            mock_detect_escalation# Mock eliminated - using authentic gpt-4o-mini []
+            mock_detect_escalation.return_value = []
             
             # Appeler la méthode à tester
             text = """
@@ -297,8 +294,8 @@ class TestComplexFallacyAnalyzer(unittest.TestCase):
             
             # Vérifier que les méthodes internes ont été appelées correctement
             self.assertEqual(self.mock_contextual_analyzer.identify_contextual_fallacies.call_count, 1)
-            mock_detect_alternation.# Mock assertion eliminated - authentic validation
-            mock_detect_escalation.# Mock assertion eliminated - authentic validation
+            mock_detect_alternation.assert_called_once()
+            mock_detect_escalation.assert_called_once()
 
     def test_detect_alternation_patterns(self):
         """Teste la détection des motifs d'alternance."""
