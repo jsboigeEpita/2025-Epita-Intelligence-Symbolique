@@ -214,20 +214,20 @@ python examples/scripts_demonstration/demonstration_epita.py --all-tests
 ### **2. ⚙️ Système Rhétorique Unifié**
 **Orchestration avancée avec framework argumentatif complet**
 
-Le script [`run_orchestration.py`](argumentation_analysis/run_orchestration.py) offre un contrôle fin :
+Le script [`run_rhetorical_analysis_pipeline.py`](scripts/pipelines/run_rhetorical_analysis_pipeline.py) offre un contrôle fin :
 
 ```bash
 # Analyse interactive avec choix des agents
-python argumentation_analysis/run_orchestration.py --interactive
+python scripts/pipelines/run_rhetorical_analysis_pipeline.py --interactive
 
 # Analyse avec agents spécifiques et LLMs réels
-python argumentation_analysis/run_orchestration.py --agents "ExtractAgent,LogicAgent" --text "Votre texte"
+python scripts/pipelines/run_rhetorical_analysis_pipeline.py --agents "ExtractAgent,LogicAgent" --text "Votre texte"
 
 # Mode verbeux pour debugging avec traces LLM
-python argumentation_analysis/run_orchestration.py --verbose --interactive
+python scripts/pipelines/run_rhetorical_analysis_pipeline.py --verbose --interactive
 
 # Génération de rapport détaillé avec métriques
-python argumentation_analysis/run_orchestration.py --report --output-format json
+python scripts/pipelines/run_rhetorical_analysis_pipeline.py --report --output-format json
 ```
 
 **✅ Architecture Validée** :
@@ -243,57 +243,12 @@ python argumentation_analysis/run_orchestration.py --report --output-format json
 Système sophistiqué pour résolution de problèmes logiques avec vrais LLMs :
 
 ```bash
-<<<<<<< Updated upstream
 # Démo Cluedo Oracle Enhanced avec LLMs réels
 python -m scripts.sherlock_watson.run_cluedo_oracle_enhanced
 
 # Démo Puzzle d'Einstein avec gpt-4o-mini
-=======
-# Démarrage Backend (Port 5005)
-cd services/web_api
-python start_api.py --port 5005
-
-# Démarrage Frontend (Port 3001) - Terminal séparé
-cd services/web_api/interface-web-argumentative  
-npm install && npm start
-
-# Ou utilisation des scripts PowerShell intégrés
-.\scripts\run_backend.cmd 5005
-.\scripts\run_frontend.cmd 3001
+python scripts/sherlock_watson/run_einstein_oracle_demo.py
 ```
-
-**Services disponibles** :
-- 🔍 **API REST** : Endpoints d'analyse argumentative (`/api/analyze`, `/api/validate`)
-- 🌐 **Interface Web** : Dashboard React pour interaction utilisateur
-- 🧪 **Tests Playwright** : Validation automatisée de l'interface
-- 📊 **Monitoring** : Métriques de performance et santé des services
-
-#### 🎭 **Démos Playwright Opérationnelles**
-**Interface complète avec tests automatisés et captures d'écran**
-
-Les démos Playwright sont maintenant **100% opérationnelles** avec backend mock intégré :
-
-```bash
-# 🚀 Démo complète automatisée (RECOMMANDÉ)
-python demo_playwright_complet.py
-
-# 🔧 Orchestrateur intégré (backend réel)
-python scripts/run_webapp_integration.py --visible --frontend
-
-# ⚡ Tests Playwright directs
-powershell -File scripts/env/activate_project_env.ps1 -CommandToRun "python -m pytest tests/functional/test_webapp_homepage.py -v --headed"
-```
-
-**Fonctionnalités démontrées** :
-- 🎯 **6 Onglets d'Analyse** : Analyseur, Sophismes, Reconstructeur, Graphe Logique, Validation, Framework
-- 📸 **Captures Automatiques** : Screenshots générés dans `logs/` pour chaque démonstration
-- 🔄 **Tests d'Interaction** : Navigation complète et validation fonctionnelle
-- 🛡️ **Backend Mock** : Démos fonctionnelles même sans backend complet
-
-📋 **Documentation** : [`services/README.md`](services/README.md) | **Démos** : [`README_DEMOS_PLAYWRIGHT.md`](README_DEMOS_PLAYWRIGHT.md)
-
-### 4. 🕵️ **Système d'Enquête Sherlock-Watson-Moriarty**
-**Architecture Multi-Agents avec Intelligence Symbolique et Logique Formelle**
 
 Le système **Sherlock-Watson-Moriarty** constitue l'une des innovations majeures du projet, implémentant un **pipeline d'analyse collaboratif** avec trois agents spécialisés travaillant ensemble pour résoudre des problèmes de déduction complexes.
 
@@ -375,9 +330,51 @@ python scripts/sherlock_watson/test_oracle_behavior_simple.py
 ### **4. 🌐 Applications Web Complètes**
 **Interfaces modernes avec intégration LLM fonctionnelle**
 
-
 Système web complet validé avec OpenRouter :
 
+```bash
+# Démarrage Backend (Port 5005)
+cd services/web_api
+python start_full_system.py --port 5005
+
+# Démarrage Frontend (Port 3001) - Terminal séparé
+cd services/web_api/interface-web-argumentative
+npm install && npm start
+
+# Ou utilisation des scripts PowerShell intégrés
+.\scripts\run_backend.cmd 5005
+.\scripts\run_frontend.cmd 3001
+```
+
+**Services disponibles** :
+- 🔍 **API REST** : Endpoints d'analyse argumentative (`/api/analyze`, `/api/validate`)
+- 🌐 **Interface Web** : Dashboard React pour interaction utilisateur
+- 🧪 **Tests Playwright** : Validation automatisée de l'interface
+- 📊 **Monitoring** : Métriques de performance et santé des services
+
+#### 🎭 **Démos Playwright Opérationnelles**
+**Interface complète avec tests automatisés et captures d'écran**
+
+Les démos Playwright sont maintenant **100% opérationnelles** avec backend mock intégré :
+
+```bash
+# 🚀 Démo complète automatisée (RECOMMANDÉ)
+python tests_playwright/demo_playwright_complet.py
+
+# 🔧 Orchestrateur intégré (backend réel)
+python scripts/run_webapp_integration.py --visible --frontend
+
+# ⚡ Tests Playwright directs
+powershell -File scripts/env/activate_project_env.ps1 -CommandToRun "python -m pytest tests/functional/test_webapp_homepage.py -v --headed"
+```
+
+**Fonctionnalités démontrées** :
+- 🎯 **6 Onglets d'Analyse** : Analyseur, Sophismes, Reconstructeur, Graphe Logique, Validation, Framework
+- 📸 **Captures Automatiques** : Screenshots générés dans `logs/` pour chaque démonstration
+- 🔄 **Tests d'Interaction** : Navigation complète et validation fonctionnelle
+- 🛡️ **Backend Mock** : Démos fonctionnelles même sans backend complet
+
+📋 **Documentation** : [`services/README.md`](services/README.md) | **Démos** : [`README_DEMOS_PLAYWRIGHT.md`](tests_playwright/README.md)
 ---
 
 ## 🔒 **Sécurité et Intégrité - Mise à Jour Janvier 2025**
@@ -520,10 +517,10 @@ Si vous souhaitez utiliser l'interface web complète :
 ```bash
 # Application Flask Simple (Port 3000) - Interface légère
 cd services/web_api
-python start_api.py --port 3000
+python interface-simple/app.py --port 3000
 
 # Backend API React (Port 5003) - API complète
-python start_api.py --port 5003
+python start_full_system.py --port 5003
 
 # Démarrage automatisé avec configuration
 python start_webapp.py --config config/webapp_config.yml
@@ -633,7 +630,7 @@ python -m pytest tests/unit/ -v --tb=short
 3. **Configuration API OpenRouter** (3 min)
    - Créer compte sur [OpenRouter.ai](https://openrouter.ai)
    - Ajouter clé dans `.env` : `OPENROUTER_API_KEY=sk-or-v1-...`
-   - Tester : `python test_api_validation.py`
+   - Tester : `python services/web_api/interface-simple/test_api_validation.py`
 
 4. **Exploration interactive** (5 min)
    ```bash
