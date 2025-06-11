@@ -40,8 +40,22 @@ from dotenv import load_dotenv
 # Configuration UTF-8
 sys.stdout.reconfigure(encoding='utf-8')
 sys.stderr.reconfigure(encoding='utf-8')
-PROJECT_ROOT = Path(__file__).parent.absolute()
-sys.path.insert(0, str(PROJECT_ROOT))
+
+# Assurer que la VRAIE racine du projet est dans sys.path pour les imports absolus comme "examples.scripts_demonstration"
+# __file__ est examples/Sherlock_Watson/orchestration_finale_reelle.py
+# .parent est examples/Sherlock_Watson
+# .parent.parent est examples
+# .parent.parent.parent est la racine du projet c:/dev/2025-Epita-Intelligence-Symbolique
+_SCRIPT_DIR = Path(__file__).resolve().parent
+_PROJECT_ACTUAL_ROOT = _SCRIPT_DIR.parent.parent # Rétablir à .parent.parent
+if str(_PROJECT_ACTUAL_ROOT) not in sys.path:
+    sys.path.insert(0, str(_PROJECT_ACTUAL_ROOT))
+if str(_SCRIPT_DIR.parent) not in sys.path: # examples
+    sys.path.insert(0, str(_SCRIPT_DIR.parent))
+
+
+PROJECT_ROOT = Path(__file__).parent.absolute() # Reste examples/Sherlock_Watson pour la logique existante du script
+# sys.path.insert(0, str(PROJECT_ROOT)) # Déjà géré ou potentiellement conflictuel avec l'ajout de la vraie racine
 
 # Configuration logging
 logging.basicConfig(
@@ -141,6 +155,14 @@ class RealOrchestrationEngine:
     async def initialize_authentic_environment(self) -> bool:
         """Initialisation environnement authentique complet"""
         logger.info("🚀 INITIALISATION ENVIRONNEMENT AUTHENTIQUE COMPLET")
+
+        # Assurer que la VRAIE racine du projet est dans sys.path pour les imports absolus
+        # comme "examples.scripts_demonstration" lors de la validation des composants.
+        _script_dir_in_method = Path(__file__).resolve().parent # examples/Sherlock_Watson
+        _project_actual_root_in_method = _script_dir_in_method.parent.parent # c:/dev/2025-Epita-Intelligence-Symbolique
+        if str(_project_actual_root_in_method) not in sys.path:
+            sys.path.insert(0, str(_project_actual_root_in_method))
+            logger.info(f"Ajout de {_project_actual_root_in_method} à sys.path")
         
         try:
             # Chargement variables environnement
@@ -180,6 +202,27 @@ class RealOrchestrationEngine:
             self.authenticity_checks["semantic_kernel_authentic"] = True
             
             # Validation imports composants authentiques
+# Forcer la racine du projet au début de sys.path juste avant la validation critique
+            # __file__ est examples/Sherlock_Watson/orchestration_finale_reelle.py
+            # .parent -> examples/Sherlock_Watson
+            # .parent.parent -> c:/dev/2025-Epita-Intelligence-Symbolique (racine du projet)
+            project_root_critical_path = Path(__file__).resolve().parent.parent.parent
+            project_root_critical = str(project_root_critical_path)
+            
+            # Normaliser le chemin à insérer pour la comparaison
+            project_root_norm = os.path.normpath(project_root_critical)
+
+            # Retirer toutes les occurrences existantes (normalisées) de ce chemin
+            new_sys_path_temp = []
+            for p_item in sys.path:
+                if os.path.normpath(p_item) != project_root_norm:
+                    new_sys_path_temp.append(p_item)
+            sys.path[:] = new_sys_path_temp
+            
+            # Insérer le chemin (non normalisé original) au début
+            sys.path.insert(0, project_root_critical)
+            
+            logger.info(f"DEBUG: sys.path avant _validate_authentic_components: {sys.path}")
             authentic_components = await self._validate_authentic_components()
             self.authenticity_checks["environment_validated"] = authentic_components
             
@@ -206,24 +249,26 @@ class RealOrchestrationEngine:
         
         components_to_check = [
             # Orchestrateurs
-            ("argumentation_analysis.orchestration.cluedo_orchestrator", "run_cluedo_game"),
-            ("argumentation_analysis.orchestration.logique_complexe_orchestrator", "LogiqueComplexeOrchestrator"),
+            ("argumentation_analysis.orchestration.cluedo_extended_orchestrator", "run_cluedo_oracle_game"), # Corrigé pour pointer vers la bonne fonction et le bon module
+            ("argumentation_analysis.orchestration.logique_complexe_orchestrator", "LogiqueComplexeOrchestrator"), # Décommenté après ajout définition minimale
             
             # Agents
             ("argumentation_analysis.agents.core.pm.sherlock_enquete_agent", "SherlockEnqueteAgent"),
             ("argumentation_analysis.agents.core.logic.watson_logic_assistant", "WatsonLogicAssistant"),
             
             # Processeurs
-            ("examples.scripts_demonstration.modules.custom_data_processor", "CustomDataProcessor"),
+            ("examples.scripts_demonstration.modules.custom_data_processor", "CustomDataProcessor"), 
             
             # États et outils
             ("argumentation_analysis.core.cluedo_oracle_state", "CluedoOracleState")
         ]
-        
+        # Amorçage nécessaire pour que les imports dynamiques ultérieurs fonctionnent correctement
+        import examples.scripts_demonstration
         available_components = 0
         for module_path, component_name in components_to_check:
             try:
                 module = __import__(module_path, fromlist=[component_name])
+
                 if hasattr(module, component_name):
                     available_components += 1
                     logger.debug(f"✅ {module_path}.{component_name} disponible")
@@ -231,6 +276,8 @@ class RealOrchestrationEngine:
                     logger.warning(f"⚠️ {component_name} non trouvé dans {module_path}")
             except ImportError as e:
                 logger.warning(f"⚠️ Import {module_path} échoué: {e}")
+            except Exception as ex_general: # Attraper d'autres erreurs potentielles
+                logger.warning(f"⚠️ Erreur générale lors de la vérification de {module_path}.{component_name}: {ex_general}")
         
         availability_rate = (available_components / len(components_to_check)) * 100
         logger.info(f"📊 Composants disponibles: {available_components}/{len(components_to_check)} ({availability_rate:.1f}%)")
@@ -246,20 +293,34 @@ class RealOrchestrationEngine:
             "mock", "MagicMock", "unittest.mock", "@patch",
             "simulation", "fake", "dummy", "stub"
         ]
+        # Liste d'exceptions pour les modules connus contenant "mock" mais étant légitimes
+        allowed_module_substrings = [
+            "pydantic._internal._mock_val_ser", # Interne à Pydantic
+            "httpx._transports.mock",           # Interne à httpx pour les tests/types
+            "trio._core._mock_clock",           # Interne à Trio
+            "httpcore._backends.mock",          # Interne à httpcore
+            "jedi.inference.gradual.stub_value" # Interne à Jedi (autocomplétion)
+        ]
         
         # Vérification variables environnement
         env_clean = True
         for key, value in os.environ.items():
+            # Pour les variables d'environnement, on reste strict car elles sont moins susceptibles d'avoir des faux positifs.
             if any(pattern.lower() in str(value).lower() for pattern in forbidden_patterns):
-                logger.warning(f"⚠️ Pattern mock détecté dans {key}: {value}")
+                logger.warning(f"⚠️ Pattern mock détecté dans la variable d'environnement {key}: {value}")
                 env_clean = False
         
         # Vérification modules chargés
         modules_clean = True
         for module_name in sys.modules.keys():
-            if any(pattern.lower() in module_name.lower() for pattern in forbidden_patterns):
-                logger.warning(f"⚠️ Module mock détecté: {module_name}")
+            is_forbidden = any(pattern.lower() in module_name.lower() for pattern in forbidden_patterns)
+            is_allowed = any(allowed_substring in module_name for allowed_substring in allowed_module_substrings)
+            
+            if is_forbidden and not is_allowed:
+                logger.warning(f"⚠️ Module mock détecté et non autorisé: {module_name}")
                 modules_clean = False
+            elif is_forbidden and is_allowed:
+                logger.debug(f"✅ Module contenant un pattern mock mais autorisé: {module_name}")
         
         overall_clean = env_clean and modules_clean
         
@@ -280,7 +341,7 @@ class RealOrchestrationEngine:
         
         try:
             # Import orchestrateur Cluedo authentique
-            from argumentation_analysis.orchestration.cluedo_orchestrator import run_cluedo_game
+            from argumentation_analysis.orchestration.cluedo_extended_orchestrator import run_cluedo_oracle_game
             
             # Cas par défaut si non fourni
             if not case_data:
@@ -297,13 +358,13 @@ class RealOrchestrationEngine:
             """
             
             # Exécution avec orchestrateur authentique
-            final_history, final_state = await run_cluedo_game(self.kernel, initial_question)
+            cluedo_result_dict = await run_cluedo_oracle_game(self.kernel, initial_question)
+            final_history = cluedo_result_dict.get("conversation_history")
+            raw_final_state = cluedo_result_dict.get("final_state", {})
             
             # Analyse résultats
-            investigation_successful = (
-                final_history and len(final_history) > 0 and
-                final_state and hasattr(final_state, 'final_solution')
-            )
+            # La structure de cluedo_result_dict["solution_analysis"] contient déjà le booléen de succès
+            investigation_successful = cluedo_result_dict.get("solution_analysis", {}).get("success", False)
             
             duration = asyncio.get_event_loop().time() - start_time
             
@@ -313,7 +374,7 @@ class RealOrchestrationEngine:
                 duration=duration,
                 results={
                     "conversation_length": len(final_history) if final_history else 0,
-                    "final_solution": getattr(final_state, 'final_solution', None),
+                    "final_solution": raw_final_state.get('final_solution'),
                     "oracle_interactions": self._count_oracle_interactions(final_history),
                     "case_title": case_data.get('titre', 'Cas inconnu')
                 },
