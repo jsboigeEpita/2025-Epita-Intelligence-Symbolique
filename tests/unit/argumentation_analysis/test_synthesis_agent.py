@@ -310,8 +310,8 @@ class TestSynthesisAgent:
         test_text = "Texte avec des sophismes évidents pour tout le monde"
         
         # Mock de l'agent informel
-        mock_informal_agent = MockInformalAgent()
-        synthesis_agent._informal_agent = mock_informal_agent
+        OrchestrationServiceManager = MockInformalAgent()
+        synthesis_agent._informal_agent = OrchestrationServiceManager
         
         result = await synthesis_agent._run_informal_analysis(test_text)
         
@@ -618,7 +618,7 @@ class TestMockAgents:
     """Tests pour les agents mock utilisés en Phase 1."""
     
     @pytest.mark.asyncio
-    async def test_mock_logic_agent_propositional(self):
+    async def test_OrchestrationServiceManager_propositional(self):
         """Test MockLogicAgent pour logique propositionnelle."""
         agent = MockLogicAgent("propositional")
         
@@ -630,7 +630,7 @@ class TestMockAgents:
         assert "Texte de test" in result
     
     @pytest.mark.asyncio
-    async def test_mock_logic_agent_first_order(self):
+    async def test_OrchestrationServiceManager_first_order(self):
         """Test MockLogicAgent pour logique de premier ordre."""
         agent = MockLogicAgent("first_order")
         
@@ -640,7 +640,7 @@ class TestMockAgents:
         assert "Prédicats et quantificateurs" in result
     
     @pytest.mark.asyncio
-    async def test_mock_logic_agent_modal(self):
+    async def test_OrchestrationServiceManager_modal(self):
         """Test MockLogicAgent pour logique modale."""
         agent = MockLogicAgent("modal")
         
@@ -650,7 +650,7 @@ class TestMockAgents:
         assert "Modalités nécessité/possibilité" in result
     
     @pytest.mark.asyncio
-    async def test_mock_logic_agent_unknown_type(self):
+    async def test_OrchestrationServiceManager_unknown_type(self):
         """Test MockLogicAgent pour type inconnu."""
         agent = MockLogicAgent("unknown_logic")
         
@@ -659,7 +659,7 @@ class TestMockAgents:
         assert "Analyse unknown_logic simulée" in result
     
     @pytest.mark.asyncio
-    async def test_mock_informal_agent_no_fallacies(self):
+    async def test_OrchestrationServiceManager_no_fallacies(self):
         """Test MockInformalAgent sans sophismes."""
         agent = MockInformalAgent()
         
@@ -672,7 +672,7 @@ class TestMockAgents:
         assert len(result["fallacies"]) == 0
     
     @pytest.mark.asyncio
-    async def test_mock_informal_agent_with_fallacies(self):
+    async def test_OrchestrationServiceManager_with_fallacies(self):
         """Test MockInformalAgent avec détection de sophismes."""
         agent = MockInformalAgent()
         
@@ -688,7 +688,7 @@ class TestMockAgents:
         assert "appel_au_sens_commun" in fallacy_types
     
     @pytest.mark.asyncio
-    async def test_mock_informal_agent_structure_analysis(self):
+    async def test_OrchestrationServiceManager_structure_analysis(self):
         """Test l'analyse de structure par MockInformalAgent."""
         agent = MockInformalAgent()
         

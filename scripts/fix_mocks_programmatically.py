@@ -76,14 +76,31 @@ def main():
         description="Nettoie les mocks problématiques dans les fichiers de test Python de manière programmatique.",
         formatter_class=argparse.RawTextHelpFormatter
     )
-    parser.add_argument('files', nargs='+', help="Liste des fichiers Python à traiter.")
+    group = parser.add_mutually_exclusive_group(required=True)
+    group.add_argument('--files', nargs='+', help="Liste des fichiers Python à traiter.")
+    group.add_argument('--directory', help="Répertoire à scanner récursivement pour les fichiers .py.")
     parser.add_argument(
-        '--report-file', 
-        default='reports/fix_mocks_report.txt', 
+        '--report-file',
+        default='reports/fix_mocks_report.txt',
         help="Fichier pour enregistrer le rapport détaillé des modifications (par défaut: reports/fix_mocks_report.txt)."
     )
     
     args = parser.parse_args()
+
+    files_to_process = []
+    if args.directory:
+        if not os.path.isdir(args.directory):
+            print(f"ERREUR: Le répertoire spécifié n'existe pas : {args.directory}", file=sys.stderr)
+            sys.exit(1)
+        for root, _, files in os.walk(args.directory):
+            for file_name in files:
+                if file_name.endswith(".py"):
+                    files_to_process.append(os.path.join(root, file_name))
+        if not files_to_process:
+            print(f"INFO: Aucun fichier .py trouvé dans le répertoire : {args.directory}")
+            sys.exit(0)
+    else:
+        files_to_process = args.files
     
     all_modifications_summary = []
     total_files_processed = 0
@@ -99,9 +116,9 @@ def main():
             # Continuer sans enregistrer dans un fichier si le répertoire ne peut être créé
             args.report_file = None 
 
-    print(f"INFO: Début du traitement de {len(args.files)} fichier(s).")
+    print(f"INFO: Début du traitement de {len(files_to_process)} fichier(s).")
 
-    for filepath in args.files:
+    for filepath in files_to_process:
         if os.path.isfile(filepath):
             print(f"INFO: Traitement du fichier : {filepath}...")
             total_files_processed += 1

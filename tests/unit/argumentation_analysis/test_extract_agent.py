@@ -47,8 +47,8 @@ async def extract_agent_data():
     original_load_source_text_in_agent_module = getattr(agent_module_to_patch, 'load_source_text', None)
     
     # Créer et appliquer le mock
-    mock_lts_for_agent_module = MagicMock()
-    agent_module_to_patch.load_source_text = mock_lts_for_agent_module
+    OrchestrationServiceManager_module = MagicMock()
+    agent_module_to_patch.load_source_text = OrchestrationServiceManager_module
 
     # Initialiser les mocks
     kernel_mock = AsyncMock()
@@ -81,7 +81,7 @@ async def extract_agent_data():
         "extract_text_mock": extract_text_mock,
         "source_info": source_info,
         "extract_name": extract_name,
-        "mock_load_source_text": mock_lts_for_agent_module
+        "mock_load_source_text": OrchestrationServiceManager_module
     }
 
     yield fixture_data

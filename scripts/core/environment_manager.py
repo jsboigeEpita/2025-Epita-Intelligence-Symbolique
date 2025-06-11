@@ -673,44 +673,32 @@ def auto_activate_env(env_name: str = "projet-is", silent: bool = True) -> bool:
     """
     try:
         # Logger minimal pour auto-activation
-        # Note: La création d'une nouvelle instance de EnvironmentManager ici peut être problématique
-        # si auto_activate_env est appelée sur une instance existante.
-        # Pour l'instant, on garde la logique originale de auto_env.py qui crée son propre manager.
         logger = Logger(verbose=not silent)
-        manager = EnvironmentManager(logger) # Crée une instance, __init__ sera appelé.
+        manager = EnvironmentManager(logger) 
 
-        # --- Début des modifications pour la refactorisation ---
-        # 1. S'assurer que CONDA_PATH est dans .env et chargé dans os.environ, et que le PATH système de base est correct
-        # self.project_root est disponible via manager.project_root
-        # Note: manager._discover_and_persist_conda_path_in_env_file va appeler load_dotenv si .env est modifié.
         manager._discover_and_persist_conda_path_in_env_file(Path(manager.project_root), silent)
-        
-        # 2. Mettre à jour le PATH système à partir de CONDA_PATH (qui devrait être dans os.environ maintenant)
         manager._update_system_path_from_conda_env_var(silent)
-        # --- Fin des modifications pour la refactorisation ---
         
-        # Vérifier si conda et l'environnement existent
-        # manager.check_conda_available() devrait maintenant mieux fonctionner car le PATH a été mis à jour.
         if not manager.check_conda_available():
             if not silent:
-                print(f"[ERROR] Conda non disponible - impossible d'activer '{env_name}'")
+                logger.error(f"[ERROR] Conda non disponible - impossible d'activer '{env_name}'")
             return False
         
         if not manager.check_conda_env_exists(env_name):
             if not silent:
-                print(f"[ERROR] Environnement '{env_name}' non trouve")
+                logger.error(f"[ERROR] Environnement '{env_name}' non trouve")
             return False
         
         # Obtenir le chemin de l'environnement conda
         try:
             # Utiliser la même logique que list_conda_environments() corrigée
-            conda_path = os.environ.get('CONDA_PATH', 'C:\\tools\\miniconda3\\condabin;C:\\tools\\miniconda3\\Scripts;C:\\tools\\miniconda3\\Library\\bin')
-            cmd_env_path = f'$env:PATH = "{conda_path};$env:PATH"; conda info --envs --json'
+            conda_path_env_var = os.environ.get('CONDA_PATH', 'C:\\tools\\miniconda3\\condabin;C:\\tools\\miniconda3\\Scripts;C:\\tools\\miniconda3\\Library\\bin')
+            cmd_env_path_info = f'$env:PATH = "{conda_path_env_var};$env:PATH"; conda info --envs --json'
             if not silent:
-                print(f"[DEBUG] Exécution: {cmd_env_path}")
+                logger.debug(f"[DEBUG] Exécution pour obtenir env_path: {cmd_env_path_info}")
             
             result = subprocess.run(
-                ['powershell', '-c', cmd_env_path],
+                ['powershell', '-c', cmd_env_path_info],
                 capture_output=True,
                 text=True,
                 timeout=30
@@ -726,7 +714,6 @@ def auto_activate_env(env_name: str = "projet-is", silent: bool = True) -> bool:
                         break
                 json_content = '\n'.join(lines[json_start:])
                 
-                # import json # Supprimé car importé au niveau supérieur
                 env_data = json.loads(json_content)
                 env_path = None
                 
@@ -758,37 +745,51 @@ def auto_activate_env(env_name: str = "projet-is", silent: bool = True) -> bool:
                         os.environ['CONDA_PREFIX'] = env_path
                         
                         if not silent:
-                            print(f"[INFO] Auto-activation de l'environnement '{env_name}'...")
-                            print(f"[CONDA] PATH mis à jour: {env_bin_path}")
+                            logger.info(f"[INFO] Auto-activation de l'environnement '{env_name}'...")
+                            logger.info(f"[CONDA] PATH mis à jour: {env_bin_path}")
                         
                         # Configurer les variables d'environnement du projet
                         manager.setup_environment_variables()
                         
                         if not silent:
-                            print(f"[OK] Environnement '{env_name}' auto-actif")
+                            logger.info(f"[OK] Environnement '{env_name}' auto-actif")
                         
                         return True
                     else:
                         if not silent:
-                            print(f"[ERROR] Répertoire bin/Scripts non trouvé: {env_bin_path}")
+                            logger.error(f"[ERROR] Répertoire bin/Scripts non trouvé: {env_bin_path}")
                         return False
                 else:
                     if not silent:
-                        print(f"[ERROR] Chemin de l'environnement '{env_name}' non trouvé")
+                        logger.error(f"[ERROR] Chemin de l'environnement '{env_name}' non trouvé (après parsing JSON)")
                     return False
+            # Gestion des erreurs de la sous-commande (result.returncode != 0)
             else:
                 if not silent:
-                    print(f"[ERROR] Impossible d'obtenir les infos conda: {result.stderr}")
+                    logger.error(f"Commande pour obtenir les infos conda a échoué avec le code {result.returncode}.")
+                    logger.error(f"STDOUT: {result.stdout}")
+                    logger.error(f"STDERR: {result.stderr}")
                 return False
                 
-        except Exception as e:
+        except subprocess.TimeoutExpired as e_timeout:
+            logger.error(f"Timeout lors de l'exécution de la commande pour obtenir les infos conda: {e_timeout}")
             if not silent:
-                print(f"[ERROR] Erreur lors de l'obtention du chemin conda: {e}")
+                logger.error(f"[ERROR] Timeout lors de l'obtention des infos conda: {e_timeout}")
+            return False
+        except json.JSONDecodeError as e_json: # Attraper l'erreur de décodage JSON ici
+            logger.error(f"Erreur de décodage JSON pour la sortie de la commande conda info: {e_json}")
+            if 'result' in locals() and result and hasattr(result, 'stdout'): # S'assurer que result et result.stdout existent
+                 logger.error(f"Sortie STDOUT qui a causé l'erreur: >>>\n{result.stdout}\n<<<")
+            return False
+        except Exception as e_general: # Autres exceptions
+            logger.error(f"Erreur inattendue lors de l'obtention du chemin conda: {e_general}", exc_info=True)
+            if not silent:
+                logger.error(f"[ERROR] Erreur générale lors de l'obtention du chemin conda: {e_general}")
             return False
         
     except Exception as e:
         if not silent:
-            print(f"❌ Erreur auto-activation: {e}")
+            logger.error(f"❌ Erreur auto-activation: {e}", exc_info=True) # Ajout de exc_info
         return False
 
 

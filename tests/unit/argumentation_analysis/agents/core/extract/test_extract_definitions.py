@@ -178,17 +178,19 @@ class TestExtractAgentPlugin(unittest.TestCase):
             self.assertIn("position", result)
             self.assertIn("context", result)
 
-    def test_find_similar_markers_with_custom_function(self):
+    async def test_find_similar_markers_with_custom_function(self):
         """Test de la méthode find_similar_markers avec une fonction personnalisée."""
         marker = "texte de test"
         
         # Créer une fonction mock
-        mock_find_similar_text = Magicawait self._create_authentic_gpt4o_mini_instance()
-        mock_find_similar_text# Mock eliminated - using authentic gpt-4o-mini [
+        mock_find_similar_text = AsyncMock()
+        # Simuler le retour de la fonction find_similar_text
+        # Elle devrait retourner une liste de tuples (contexte, position, texte_marqueur_trouvé)
+        mock_find_similar_text.return_value = [
             ("contexte avant texte de test contexte après", 10, "texte de test")
         ]
         
-        results = self.plugin.find_similar_markers(
+        results = await self.plugin.find_similar_markers( # find_similar_markers est probablement async
             self.test_text, marker, find_similar_text_func=mock_find_similar_text
         )
         
