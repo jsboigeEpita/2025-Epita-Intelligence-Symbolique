@@ -149,13 +149,21 @@ class TestConversationOrchestrator:
         assert len(result) > 0
     
     
+    @pytest.fixture
+    def mock_agent_class(self, mocker):
+        """Fixture pour mocker une classe d'agent."""
+        mock_agent = mocker.MagicMock()
+        mock_agent.agent_name = "TestAgent"
+        mock_agent.analyze_text.return_value = "Agent analysis result"
+        
+        mock_class = mocker.MagicMock()
+        mock_class.return_value = mock_agent
+        return mock_class
+
     def test_orchestrator_with_simulated_agents(self, mock_agent_class):
         """Test de l'orchestrateur avec agents simulés."""
         # Configuration du mock agent
-        mock_agent = await self._create_authentic_gpt4o_mini_instance()
-        mock_agent.agent_name = "TestAgent"
-        mock_agent.analyze_text# Mock eliminated - using authentic gpt-4o-mini "Agent analysis result"
-        mock_agent_class# Mock eliminated - using authentic gpt-4o-mini mock_agent
+        mock_agent = mock_agent_class.return_value
         
         orchestrator = ConversationOrchestrator(mode="demo")
         
@@ -195,17 +203,22 @@ class TestConversationOrchestrator:
 class TestRealLLMOrchestrator:
     """Tests pour la classe RealLLMOrchestrator."""
     
+    @pytest.fixture
+    def mock_llm_service(self, mocker):
+        """Fixture pour mocker le service LLM."""
+        mock_service = mocker.MagicMock()
+        mock_service.invoke.return_value = "LLM analysis result"
+        return mock_service
+
     def setup_method(self):
         """Configuration initiale pour chaque test."""
         self.test_text = "L'Ukraine a été créée par la Russie. Donc Poutine a raison."
-        self.mock_llm_service = await self._create_authentic_gpt4o_mini_instance()
-        self.mock_llm_service.invoke# Mock eliminated - using authentic gpt-4o-mini "LLM analysis result"
     
     def test_real_llm_orchestrator_initialization(self):
         """Test d'initialisation de l'orchestrateur LLM réel."""
-        orchestrator = RealLLMOrchestrator(llm_service=self.mock_llm_service)
+        orchestrator = RealLLMOrchestrator(llm_service=mock_llm_service)
         
-        assert orchestrator.llm_service == self.mock_llm_service
+        assert orchestrator.llm_service == mock_llm_service
         assert hasattr(orchestrator, 'agents')
         assert isinstance(orchestrator.agents, list)
     
@@ -217,9 +230,9 @@ class TestRealLLMOrchestrator:
         assert hasattr(orchestrator, 'llm_service')
     
     @pytest.mark.asyncio
-    async def test_run_real_llm_orchestration(self):
+    async def test_run_real_llm_orchestration(self, mock_llm_service):
         """Test d'exécution d'orchestration LLM réelle."""
-        orchestrator = RealLLMOrchestrator(llm_service=self.mock_llm_service)
+        orchestrator = RealLLMOrchestrator(llm_service=mock_llm_service)
         
         result = await orchestrator.run_real_llm_orchestration(self.test_text)
         
@@ -229,9 +242,9 @@ class TestRealLLMOrchestrator:
         assert "analysis" in result
     
     @pytest.mark.asyncio
-    async def test_real_llm_orchestration_with_agents(self):
+    async def test_real_llm_orchestration_with_agents(self, mock_llm_service):
         """Test d'orchestration avec agents LLM réels."""
-        orchestrator = RealLLMOrchestrator(llm_service=self.mock_llm_service)
+        orchestrator = RealLLMOrchestrator(llm_service=mock_llm_service)
         
         result = await orchestrator.run_real_llm_orchestration(self.test_text)
         
@@ -243,11 +256,11 @@ class TestRealLLMOrchestrator:
             assert any("Real" in agent for agent in agents)
     
     @pytest.mark.asyncio
-    async def test_real_llm_orchestration_error_handling(self):
+    async def test_real_llm_orchestration_error_handling(self, mocker):
         """Test de gestion d'erreurs de l'orchestration LLM réelle."""
         # LLM service qui lève une erreur
-        error_llm_service = await self._create_authentic_gpt4o_mini_instance()
-        error_llm_service.invoke# Mock eliminated - using authentic gpt-4o-mini Exception("LLM service error")
+        error_llm_service = mocker.MagicMock()
+        error_llm_service.invoke.side_effect = Exception("LLM service error")
         
         orchestrator = RealLLMOrchestrator(llm_service=error_llm_service)
         
@@ -262,25 +275,28 @@ class TestRealLLMOrchestrator:
             assert "LLM service error" in str(e)
     
     
-    def test_real_llm_orchestrator_with_error_analyzer(self, mock_analyzer_class):
+    @pytest.fixture
+    def mock_analyzer_class(self, mocker):
+        return mocker.patch('argumentation_analysis.reporting.trace_analyzer.TraceAnalyzer')
+
+    def test_real_llm_orchestrator_with_error_analyzer(self, mock_analyzer_class, mock_llm_service, mocker):
         """Test d'orchestrateur avec analyseur d'erreurs."""
-        mock_analyzer = await self._create_authentic_gpt4o_mini_instance()
-        mock_analyzer.analyze_error# Mock eliminated - using authentic gpt-4o-mini Mock(
+        mock_analyzer = mock_analyzer_class.return_value
+        mock_analyzer.analyze_error.return_value = mocker.Mock(
             error_type="TEST_ERROR",
             corrections=["Fix 1", "Fix 2"]
         )
-        mock_analyzer_class# Mock eliminated - using authentic gpt-4o-mini mock_analyzer
         
-        orchestrator = RealLLMOrchestrator(llm_service=self.mock_llm_service)
+        orchestrator = RealLLMOrchestrator(llm_service=mock_llm_service)
         
         # Si l'orchestrateur utilise l'analyseur d'erreurs
         if hasattr(orchestrator, 'error_analyzer'):
             assert orchestrator.error_analyzer is not None
     
     @pytest.mark.asyncio
-    async def test_real_llm_orchestration_performance(self):
+    async def test_real_llm_orchestration_performance(self, mock_llm_service):
         """Test de performance de l'orchestration LLM réelle."""
-        orchestrator = RealLLMOrchestrator(llm_service=self.mock_llm_service)
+        orchestrator = RealLLMOrchestrator(llm_service=mock_llm_service)
         
         import time
         start_time = time.time()
@@ -355,7 +371,7 @@ class TestOrchestrationIntegration:
         """Configuration initiale pour chaque test."""
         self.test_text = "L'Ukraine a été créée par la Russie. Donc Poutine a raison."
     
-    def test_conversation_to_real_llm_transition(self):
+    def test_conversation_to_real_llm_transition(self, mock_llm_service):
         """Test de transition d'orchestration conversation vers LLM réel."""
         # Phase 1 : Orchestration conversationnelle
         conv_orchestrator = ConversationOrchestrator(mode="demo")
@@ -364,23 +380,21 @@ class TestOrchestrationIntegration:
         assert isinstance(conv_result, str)
         
         # Phase 2 : Orchestration LLM réelle
-        mock_llm = await self._create_authentic_gpt4o_mini_instance()
-        real_orchestrator = RealLLMOrchestrator(llm_service=mock_llm)
+        real_orchestrator = RealLLMOrchestrator(llm_service=mock_llm_service)
         
         # Simuler la transition
         assert conv_orchestrator.mode == "demo"
-        assert real_orchestrator.llm_service == mock_llm
+        assert real_orchestrator.llm_service == mock_llm_service
     
     @pytest.mark.asyncio
-    async def test_unified_orchestration_pipeline(self):
+    async def test_unified_orchestration_pipeline(self, mock_llm_service):
         """Test du pipeline d'orchestration unifié."""
         # 1. Mode conversation
         conv_result = run_mode_demo(self.test_text)
         assert isinstance(conv_result, str)
         
         # 2. Mode LLM réel
-        mock_llm = await self._create_authentic_gpt4o_mini_instance()
-        real_orchestrator = RealLLMOrchestrator(llm_service=mock_llm)
+        real_orchestrator = RealLLMOrchestrator(llm_service=mock_llm_service)
         real_result = await real_orchestrator.run_real_llm_orchestration(self.test_text)
         assert isinstance(real_result, dict)
         
@@ -388,7 +402,8 @@ class TestOrchestrationIntegration:
         assert len(conv_result) > 0
         assert "status" in real_result or "analysis" in real_result
     
-    def test_orchestration_with_different_configurations(self):
+    @pytest.mark.asyncio
+    async def test_orchestration_with_different_configurations(self, mock_llm_service):
         """Test d'orchestration avec différentes configurations."""
         configurations = [
             {"mode": "micro", "use_real_llm": False},
@@ -399,9 +414,9 @@ class TestOrchestrationIntegration:
         for config in configurations:
             if config["use_real_llm"]:
                 # Test avec LLM réel (mode async)
-                mock_llm = await self._create_authentic_gpt4o_mini_instance()
-                orchestrator = RealLLMOrchestrator(llm_service=mock_llm)
+                orchestrator = RealLLMOrchestrator(llm_service=mock_llm_service)
                 assert orchestrator.llm_service is not None
+                await orchestrator.run_real_llm_orchestration(self.test_text)
             else:
                 # Test avec orchestration conversationnelle
                 orchestrator = ConversationOrchestrator(mode=config["mode"])
@@ -443,12 +458,11 @@ class TestOrchestrationPerformance:
         assert elapsed_time < 2.0
     
     @pytest.mark.asyncio
-    async def test_real_llm_orchestration_performance(self):
+    async def test_real_llm_orchestration_performance(self, mock_llm_service):
         """Test de performance de l'orchestration LLM réelle."""
-        mock_llm = await self._create_authentic_gpt4o_mini_instance()
-        mock_llm.invoke# Mock eliminated - using authentic gpt-4o-mini "Fast LLM response"
+        mock_llm_service.invoke.return_value = "Fast LLM response"
         
-        orchestrator = RealLLMOrchestrator(llm_service=mock_llm)
+        orchestrator = RealLLMOrchestrator(llm_service=mock_llm_service)
         
         import time
         start_time = time.time()

@@ -156,7 +156,7 @@ class TestPerformanceComparison(unittest.TestCase):
             
             legacy_times = []
             # Mock llm_service pour AnalysisRunner si nécessaire
-            mock_llm_service = Magicawait self._create_authentic_gpt4o_mini_instance() 
+            mock_llm_service = await self._create_authentic_gpt4o_mini_instance()
             mock_llm_service.service_id = "mock_llm"
             for i in range(3):
                 start_time = time.time()

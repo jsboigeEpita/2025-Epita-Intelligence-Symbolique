@@ -19,6 +19,8 @@ import json
 
 from typing import Dict, Any, Optional, Tuple, List
 
+from unittest.mock import MagicMock, AsyncMock, Mock, patch
+
 # Import du module à tester
 from argumentation_analysis.agents.core.logic.modal_logic_agent import (
     ModalLogicAgent,
@@ -32,21 +34,6 @@ from semantic_kernel import Kernel
 
 
 class TestModalLogicAgent:
-    async def _create_authentic_gpt4o_mini_instance(self):
-        """Crée une instance authentique de gpt-4o-mini au lieu d'un mock."""
-        config = UnifiedConfig()
-        return config.get_kernel_with_gpt4o_mini()
-        
-    async def _make_authentic_llm_call(self, prompt: str) -> str:
-        """Fait un appel authentique à gpt-4o-mini."""
-        try:
-            kernel = await self._create_authentic_gpt4o_mini_instance()
-            result = await kernel.invoke("chat", input=prompt)
-            return str(result)
-        except Exception as e:
-            logger.warning(f"Appel LLM authentique échoué: {e}")
-            return "Authentic LLM call failed"
-
     """Classe de tests pour ModalLogicAgent."""
     
     @pytest.fixture
@@ -55,19 +42,19 @@ class TestModalLogicAgent:
         kernel = Mock(spec=Kernel)
         kernel.plugins = {}
         kernel.get_prompt_execution_settings_from_service_id = Mock(return_value=None)
-        kernel.add_function = await self._create_authentic_gpt4o_mini_instance()
+        kernel.add_function = MagicMock()
         return kernel
     
     @pytest.fixture
     def mock_tweety_bridge(self):
         """Fixture pour un TweetyBridge mocké."""
-        bridge = await self._create_authentic_gpt4o_mini_instance()
-        bridge.is_jvm_ready# Mock eliminated - using authentic gpt-4o-mini True
-        bridge.validate_modal_belief_set# Mock eliminated - using authentic gpt-4o-mini (True, "Valid")
-        bridge.validate_modal_formula# Mock eliminated - using authentic gpt-4o-mini (True, "Valid formula")
-        bridge.validate_modal_query_with_context# Mock eliminated - using authentic gpt-4o-mini (True, "Valid query")
-        bridge.execute_modal_query# Mock eliminated - using authentic gpt-4o-mini "ACCEPTED: Query result"
-        bridge.is_modal_kb_consistent# Mock eliminated - using authentic gpt-4o-mini (True, "Consistent")
+        bridge = MagicMock()
+        bridge.is_jvm_ready.return_value = True
+        bridge.validate_modal_belief_set.return_value = (True, "Valid")
+        bridge.validate_modal_formula.return_value = (True, "Valid formula")
+        bridge.validate_modal_query_with_context.return_value = (True, "Valid query")
+        bridge.execute_modal_query.return_value = "ACCEPTED: Query result"
+        bridge.is_modal_kb_consistent.return_value = (True, "Consistent")
         return bridge
     
     @pytest.fixture
@@ -101,10 +88,10 @@ class TestModalLogicAgent:
         assert "interpret_results" in methods
         assert "validate_formula" in methods
     
-    
+    @patch('argumentation_analysis.agents.core.logic.modal_logic_agent.TweetyBridge')
     def test_setup_agent_components(self, mock_tweety_class, modal_agent, mock_tweety_bridge):
         """Test la configuration des composants de l'agent."""
-        mock_tweety_class# Mock eliminated - using authentic gpt-4o-mini mock_tweety_bridge
+        mock_tweety_class.return_value = mock_tweety_bridge
         
         # Simulation des plugins mockés
         modal_agent.sk_kernel.plugins = {"TestModalAgent": {}}
@@ -221,11 +208,11 @@ class TestModalLogicAgent:
         modal_agent._tweety_bridge = mock_tweety_bridge
         
         # Mock de la fonction sémantique
-        mock_result = await self._create_authentic_gpt4o_mini_instance()
-        mock_result.__str__ = lambda self: '{"propositions": ["urgent"], "modal_formulas": ["[]urgent"]}'
+        mock_result = MagicMock()
+        mock_result.result.return_value = '{"propositions": ["urgent"], "modal_formulas": ["[]urgent"]}'
         
         mock_plugin = {
-            "TextToModalBeliefSet": await self._create_authentic_gpt4o_mini_instance()
+            "TextToModalBeliefSet": MagicMock()
         }
         mock_plugin["TextToModalBeliefSet"].invoke = AsyncMock(return_value=mock_result)
         modal_agent.sk_kernel.plugins = {"TestModalAgent": mock_plugin}
@@ -244,11 +231,11 @@ class TestModalLogicAgent:
         modal_agent._tweety_bridge = mock_tweety_bridge
         
         # Mock retournant un JSON invalide
-        mock_result = await self._create_authentic_gpt4o_mini_instance()
-        mock_result.__str__ = lambda: 'JSON invalide {'
+        mock_result = MagicMock()
+        mock_result.result.return_value = 'JSON invalide {'
         
         mock_plugin = {
-            "TextToModalBeliefSet": await self._create_authentic_gpt4o_mini_instance()
+            "TextToModalBeliefSet": MagicMock()
         }
         mock_plugin["TextToModalBeliefSet"].invoke = AsyncMock(return_value=mock_result)
         modal_agent.sk_kernel.plugins = {"TestModalAgent": mock_plugin}
@@ -288,11 +275,11 @@ class TestModalLogicAgent:
         belief_set = ModalBeliefSet("prop(urgent)\n[]urgent")
         
         # Mock de la réponse LLM
-        mock_result = await self._create_authentic_gpt4o_mini_instance()
-        mock_result.__str__ = lambda self: '{"query_ideas": [{"formula": "[]urgent"}, {"formula": "<>urgent"}]}'
+        mock_result = MagicMock()
+        mock_result.result.return_value = '{"query_ideas": [{"formula": "[]urgent"}, {"formula": "<>urgent"}]}'
         
         mock_plugin = {
-            "GenerateModalQueryIdeas": await self._create_authentic_gpt4o_mini_instance()
+            "GenerateModalQueryIdeas": MagicMock()
         }
         mock_plugin["GenerateModalQueryIdeas"].invoke = AsyncMock(return_value=mock_result)
         modal_agent.sk_kernel.plugins = {"TestModalAgent": mock_plugin}
@@ -311,11 +298,11 @@ class TestModalLogicAgent:
         belief_set = ModalBeliefSet("prop(test)\n[]test")
         
         # Mock retournant une réponse vide
-        mock_result = await self._create_authentic_gpt4o_mini_instance()
-        mock_result.__str__ = lambda: '{"query_ideas": []}'
+        mock_result = MagicMock()
+        mock_result.result.return_value = '{"query_ideas": []}'
         
         mock_plugin = {
-            "GenerateModalQueryIdeas": await self._create_authentic_gpt4o_mini_instance()
+            "GenerateModalQueryIdeas": MagicMock()
         }
         mock_plugin["GenerateModalQueryIdeas"].invoke = AsyncMock(return_value=mock_result)
         modal_agent.sk_kernel.plugins = {"TestModalAgent": mock_plugin}
@@ -328,7 +315,7 @@ class TestModalLogicAgent:
     def test_execute_query_success(self, modal_agent, mock_tweety_bridge):
         """Test l'exécution réussie d'une requête."""
         modal_agent._tweety_bridge = mock_tweety_bridge
-        mock_tweety_bridge.execute_modal_query# Mock eliminated - using authentic gpt-4o-mini "ACCEPTED: Query validated"
+        mock_tweety_bridge.execute_modal_query.return_value = "ACCEPTED: Query validated"
         
         belief_set = ModalBeliefSet("prop(urgent)\n[]urgent")
         query = "[]urgent"
@@ -341,7 +328,7 @@ class TestModalLogicAgent:
     def test_execute_query_rejected(self, modal_agent, mock_tweety_bridge):
         """Test l'exécution d'une requête rejetée."""
         modal_agent._tweety_bridge = mock_tweety_bridge
-        mock_tweety_bridge.execute_modal_query# Mock eliminated - using authentic gpt-4o-mini "REJECTED: Query not valid"
+        mock_tweety_bridge.execute_modal_query.return_value = "REJECTED: Query not valid"
         
         belief_set = ModalBeliefSet("prop(urgent)\n[]urgent")
         query = "invalid_query"
@@ -354,7 +341,7 @@ class TestModalLogicAgent:
     def test_execute_query_error(self, modal_agent, mock_tweety_bridge):
         """Test la gestion d'erreur lors de l'exécution de requête."""
         modal_agent._tweety_bridge = mock_tweety_bridge
-        mock_tweety_bridge.execute_modal_query# Mock eliminated - using authentic gpt-4o-mini Exception("Test error")
+        mock_tweety_bridge.execute_modal_query.side_effect = Exception("Test error")
         
         belief_set = ModalBeliefSet("prop(urgent)\n[]urgent")
         query = "[]urgent"
@@ -368,11 +355,11 @@ class TestModalLogicAgent:
     async def test_interpret_results_success(self, modal_agent):
         """Test l'interprétation réussie des résultats."""
         # Mock de la fonction d'interprétation
-        mock_result = await self._create_authentic_gpt4o_mini_instance()
-        mock_result.__str__ = lambda self: "Interprétation: La requête []urgent est acceptée, indiquant une nécessité."
+        mock_result = MagicMock()
+        mock_result.result.return_value = "Interprétation: La requête []urgent est acceptée, indiquant une nécessité."
         
         mock_plugin = {
-            "InterpretModalResult": await self._create_authentic_gpt4o_mini_instance()
+            "InterpretModalResult": MagicMock()
         }
         mock_plugin["InterpretModalResult"].invoke = AsyncMock(return_value=mock_result)
         modal_agent.sk_kernel.plugins = {"TestModalAgent": mock_plugin}
@@ -392,7 +379,7 @@ class TestModalLogicAgent:
         """Test la gestion d'erreur lors de l'interprétation."""
         # Mock qui lève une exception
         mock_plugin = {
-            "InterpretModalResult": await self._create_authentic_gpt4o_mini_instance()
+            "InterpretModalResult": MagicMock()
         }
         mock_plugin["InterpretModalResult"].invoke = AsyncMock(side_effect=Exception("Interpret error"))
         modal_agent.sk_kernel.plugins = {"TestModalAgent": mock_plugin}
@@ -409,7 +396,7 @@ class TestModalLogicAgent:
     def test_validate_formula_success(self, modal_agent, mock_tweety_bridge):
         """Test la validation réussie d'une formule."""
         modal_agent._tweety_bridge = mock_tweety_bridge
-        mock_tweety_bridge.validate_modal_formula# Mock eliminated - using authentic gpt-4o-mini (True, "Valid")
+        mock_tweety_bridge.validate_modal_formula.return_value = (True, "Valid")
         
         formula = "[]urgent"
         is_valid = modal_agent.validate_formula(formula)
@@ -419,7 +406,7 @@ class TestModalLogicAgent:
     def test_validate_formula_invalid(self, modal_agent, mock_tweety_bridge):
         """Test la validation d'une formule invalide."""
         modal_agent._tweety_bridge = mock_tweety_bridge
-        mock_tweety_bridge.validate_modal_formula# Mock eliminated - using authentic gpt-4o-mini (False, "Invalid syntax")
+        mock_tweety_bridge.validate_modal_formula.return_value = (False, "Invalid syntax")
         
         formula = "invalid_formula"
         is_valid = modal_agent.validate_formula(formula)
@@ -441,7 +428,7 @@ class TestModalLogicAgent:
     def test_is_consistent_success(self, modal_agent, mock_tweety_bridge):
         """Test la vérification de cohérence réussie."""
         modal_agent._tweety_bridge = mock_tweety_bridge
-        mock_tweety_bridge.is_modal_kb_consistent# Mock eliminated - using authentic gpt-4o-mini (True, "Consistent KB")
+        mock_tweety_bridge.is_modal_kb_consistent.return_value = (True, "Consistent KB")
         
         belief_set = ModalBeliefSet("prop(urgent)\n[]urgent")
         is_consistent, message = modal_agent.is_consistent(belief_set)
@@ -452,7 +439,7 @@ class TestModalLogicAgent:
     def test_is_consistent_inconsistent(self, modal_agent, mock_tweety_bridge):
         """Test la détection d'incohérence."""
         modal_agent._tweety_bridge = mock_tweety_bridge
-        mock_tweety_bridge.is_modal_kb_consistent# Mock eliminated - using authentic gpt-4o-mini (False, "Inconsistent KB")
+        mock_tweety_bridge.is_modal_kb_consistent.return_value = (False, "Inconsistent KB")
         
         belief_set = ModalBeliefSet("prop(p)\n[]p\n[]!p")  # Contradictoire
         is_consistent, message = modal_agent.is_consistent(belief_set)
@@ -517,13 +504,13 @@ class TestModalLogicAgentIntegration:
     def integration_agent(self):
         """Agent configuré pour tests d'intégration."""
         # Créer un mock kernel simple
-        mock_kernel = await self._create_authentic_gpt4o_mini_instance()
+        mock_kernel = MagicMock(spec=Kernel)
         mock_kernel.plugins = {}
         
         # Créer un mock tweety bridge
-        mock_tweety_bridge = await self._create_authentic_gpt4o_mini_instance()
-        mock_tweety_bridge.execute_modal_query# Mock eliminated - using authentic gpt-4o-mini "ACCEPTED: Query valid"
-        mock_tweety_bridge.validate_modal_belief_set# Mock eliminated - using authentic gpt-4o-mini (True, "Valid belief set")
+        mock_tweety_bridge = MagicMock()
+        mock_tweety_bridge.execute_modal_query.return_value = "ACCEPTED: Query valid"
+        mock_tweety_bridge.validate_modal_belief_set.return_value = (True, "Valid belief set")
         
         agent = ModalLogicAgent(mock_kernel, "IntegrationAgent")
         agent._tweety_bridge = mock_tweety_bridge
@@ -535,23 +522,23 @@ class TestModalLogicAgentIntegration:
         # Configuration des mocks pour un workflow complet
         
         # 1. Mock pour text_to_belief_set
-        mock_text_result = await self._create_authentic_gpt4o_mini_instance()
-        mock_text_result.__str__ = lambda self: '{"propositions": ["urgent", "action"], "modal_formulas": ["[]urgent", "<>action"]}'
+        mock_text_result = MagicMock()
+        mock_text_result.result.return_value = '{"propositions": ["urgent", "action"], "modal_formulas": ["[]urgent", "<>action"]}'
         
         # 2. Mock pour generate_queries
-        mock_query_result = await self._create_authentic_gpt4o_mini_instance()
-        mock_query_result.__str__ = lambda self: '{"query_ideas": [{"formula": "[]urgent"}, {"formula": "<>action"}]}'
+        mock_query_result = MagicMock()
+        mock_query_result.result.return_value = '{"query_ideas": [{"formula": "[]urgent"}, {"formula": "<>action"}]}'
         
         # 3. Mock pour interpret_results
-        mock_interpret_result = await self._create_authentic_gpt4o_mini_instance()
-        mock_interpret_result.__str__ = lambda self: "L'analyse modale montre que l'urgence est nécessaire et l'action est possible."
+        mock_interpret_result = MagicMock()
+        mock_interpret_result.result.return_value = "L'analyse modale montre que l'urgence est nécessaire et l'action est possible."
         
         # Configuration des plugins mockés
         mock_plugins = {
             "IntegrationAgent": {
-                "TextToModalBeliefSet": await self._create_authentic_gpt4o_mini_instance(),
-                "GenerateModalQueryIdeas": await self._create_authentic_gpt4o_mini_instance(),
-                "InterpretModalResult": await self._create_authentic_gpt4o_mini_instance()
+                "TextToModalBeliefSet": MagicMock(),
+                "GenerateModalQueryIdeas": MagicMock(),
+                "InterpretModalResult": MagicMock()
             }
         }
         
@@ -562,7 +549,7 @@ class TestModalLogicAgentIntegration:
         integration_agent.sk_kernel.plugins = mock_plugins
         
         # Configuration du TweetyBridge
-        integration_agent._tweety_bridge.execute_modal_query# Mock eliminated - using authentic gpt-4o-mini [
+        integration_agent._tweety_bridge.execute_modal_query.return_value = [
             "ACCEPTED: Urgency is necessary",
             "ACCEPTED: Action is possible"
         ]

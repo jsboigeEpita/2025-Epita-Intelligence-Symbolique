@@ -133,7 +133,7 @@ def test_generate_specific_rhetorical_markdown_report_success(tmp_path, sample_a
     
     generate_specific_rhetorical_markdown_report(sample_analysis_results, output_file)
     
-    mock_save_text.# Mock assertion eliminated - authentic validation
+    mock_save_text.assert_called_once()
     # Vérifier le contenu du rapport passé à save_text_report
     args, _ = mock_save_text.call_args
     report_content_generated = args[0]
@@ -276,7 +276,7 @@ def test_generate_performance_comparison_markdown_report_runs(tmp_path, mocker):
     
     generate_performance_comparison_markdown_report(base_metrics, advanced_metrics, output_file)
     
-    mock_save_text.# Mock assertion eliminated - authentic validation
+    mock_save_text.assert_called_once()
     args, _ = mock_save_text.call_args
     report_content = args[0]
     assert "# Rapport de comparaison des performances" in report_content
