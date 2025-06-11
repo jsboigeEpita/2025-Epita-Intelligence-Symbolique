@@ -15,6 +15,7 @@ entre les différents composants du système.
 
 import asyncio
 import pytest
+from unittest.mock import MagicMock
 
 import semantic_kernel as sk
 
@@ -60,13 +61,13 @@ class TestBasicIntegration:
     async def test_component_interaction(self, mock_agent_class, mock_kernel_class, basic_state):
         """Teste l'interaction de base entre les composants."""
         state = basic_state
-        pm_agent = Magicawait self._create_authentic_gpt4o_mini_instance()
+        pm_agent = await self._create_authentic_gpt4o_mini_instance()
         pm_agent.name = "ProjectManagerAgent"
         
-        pl_agent = Magicawait self._create_authentic_gpt4o_mini_instance()
+        pl_agent = await self._create_authentic_gpt4o_mini_instance()
         pl_agent.name = "PropositionalLogicAgent"
         
-        informal_agent = Magicawait self._create_authentic_gpt4o_mini_instance()
+        informal_agent = await self._create_authentic_gpt4o_mini_instance()
         informal_agent.name = "InformalAnalysisAgent"
         
         agents = [pm_agent, pl_agent, informal_agent]
@@ -97,7 +98,7 @@ class TestSimulatedAnalysisFlow:
     async def test_simulated_analysis_flow(self, mock_run_analysis, basic_state):
         """Simule un flux d'analyse complet."""
         state = basic_state
-        mock_run_analysis# Mock eliminated - using authentic gpt-4o-mini (True, "Analyse terminée avec succès")
+        mock_run_analysis.return_value = (True, "Analyse terminée avec succès")
         
         task1_id = state.add_task("Identifier les arguments dans le texte")
         task2_id = state.add_task("Analyser les sophismes dans les arguments")
@@ -156,9 +157,9 @@ def mocked_services():
     
     Et voici la suite du texte après l'extrait.
     """
-    mock_fetch_service.fetch_text# Mock eliminated - using authentic gpt-4o-mini (sample_text, "https://example.com/test")
+    mock_fetch_service.fetch_text.return_value = (sample_text, "https://example.com/test")
     
-    mock_extract_service.extract_text_with_markers# Mock eliminated - using authentic gpt-4o-mini (
+    mock_extract_service.extract_text_with_markers.return_value = (
         "Ceci est le contenu de l'extrait.\nIl peut contenir plusieurs lignes.",
         "✅ Extraction réussie",
         True,

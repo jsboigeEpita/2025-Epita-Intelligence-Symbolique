@@ -22,6 +22,8 @@ from argumentation_analysis.utils.dev_tools.env_checks import (
 )
 
 # Mocks for check_java_environment
+from unittest import mock
+
 @pytest.fixture
 def mock_os_environ_java():
     with mock.patch.dict(os.environ, {}, clear=True) as mock_env:
@@ -70,22 +72,22 @@ def mock_path_java(mock_run_command_java, unique_id_gen): # mock_run_command_jav
     )
     
     # Configure the class mock to return our instance mock when called
-    mock_path_class_replacement# Mock eliminated - using authentic gpt-4o-mini mock_path_instance
+    mock_path_class_replacement.return_value = mock_path_instance
 
     # Configure the behavior of the mocked Path instance
     java_exe_mock = mock.MagicMock(spec=original_path_class_for_spec(), name=f"JavaExeMock_{unique_id}")
-    java_exe_mock.is_file# Mock eliminated - using authentic gpt-4o-mini True
+    java_exe_mock.is_file.return_value = True
     java_exe_mock.configure_mock(**{'__str__': lambda self: "/mocked/java_home/bin/java"}) # Accepte self
 
     bin_dir_mock = mock.MagicMock(spec=original_path_class_for_spec(), name=f"BinDirMock_{unique_id}")
-    bin_dir_mock.__truediv__# Mock eliminated - using authentic gpt-4o-mini java_exe_mock
-    bin_dir_mock.is_dir# Mock eliminated - using authentic gpt-4o-mini True
-    bin_dir_mock.exists# Mock eliminated - using authentic gpt-4o-mini True
+    bin_dir_mock.__truediv__.return_value = java_exe_mock
+    bin_dir_mock.is_dir.return_value = True
+    bin_dir_mock.exists.return_value = True
     bin_dir_mock.configure_mock(**{'__str__': lambda self: "/mocked/java_home/bin"}) # Accepte self
 
 
-    mock_path_instance.is_dir# Mock eliminated - using authentic gpt-4o-mini True
-    mock_path_instance.exists# Mock eliminated - using authentic gpt-4o-mini True
+    mock_path_instance.is_dir.return_value = True
+    mock_path_instance.exists.return_value = True
 
     def custom_truediv(other):
         if other == "bin":
@@ -93,24 +95,24 @@ def mock_path_java(mock_run_command_java, unique_id_gen): # mock_run_command_jav
             return bin_dir_mock
         # logging.debug(f"MockPathInstance_{unique_id}.__truediv__('{other}') returning a new default mock")
         default_divided_mock = mock.MagicMock(spec=original_path_class_for_spec(), name=f"DividedMock_{other}_{unique_id}")
-        default_divided_mock.exists# Mock eliminated - using authentic gpt-4o-mini False
+        default_divided_mock.exists.return_value = False
         return default_divided_mock
 
-    mock_path_instance.__truediv__# Mock eliminated - using authentic gpt-4o-mini custom_truediv
+    mock_path_instance.__truediv__.side_effect = custom_truediv
     mock_path_instance.configure_mock(**{'__str__': lambda self: "/mocked/java_home"}) # Accepte self
     
     # Fonction de configuration pour les tests, attachée à l'instance mockée
     def configure_java_exe_path_on_instance(is_dir_java_home, java_exe_exists_in_bin, java_exe_is_file_in_bin):
-        mock_path_instance.is_dir# Mock eliminated - using authentic gpt-4o-mini is_dir_java_home
-        mock_path_instance.exists# Mock eliminated - using authentic gpt-4o-mini is_dir_java_home # Si c'est un dir, ça existe
+        mock_path_instance.is_dir.return_value = is_dir_java_home
+        mock_path_instance.exists.return_value = is_dir_java_home # Si c'est un dir, ça existe
         
         # Configurer le comportement de /opt/java/bin/java
-        java_exe_mock.exists# Mock eliminated - using authentic gpt-4o-mini java_exe_exists_in_bin
-        java_exe_mock.is_file# Mock eliminated - using authentic gpt-4o-mini java_exe_is_file_in_bin
+        java_exe_mock.exists.return_value = java_exe_exists_in_bin
+        java_exe_mock.is_file.return_value = java_exe_is_file_in_bin
         
         # Configurer le comportement de /opt/java/bin
-        bin_dir_mock.is_dir# Mock eliminated - using authentic gpt-4o-mini True # On assume que 'bin' est toujours un dir s'il est atteint
-        bin_dir_mock.exists# Mock eliminated - using authentic gpt-4o-mini True
+        bin_dir_mock.is_dir.return_value = True # On assume que 'bin' est toujours un dir s'il est atteint
+        bin_dir_mock.exists.return_value = True
 
     mock_path_instance.configure_java_exe_path = configure_java_exe_path_on_instance
 
@@ -144,7 +146,7 @@ def mock_run_command_java():
 def test_check_java_environment_all_ok(mock_os_environ_java, mock_path_java, mock_run_command_java, caplog):
     mock_os_environ_java["JAVA_HOME"] = "/opt/java"
     mock_path_java.configure_java_exe_path(is_dir_java_home=True, java_exe_exists_in_bin=True, java_exe_is_file_in_bin=True)
-    mock_run_command_java# Mock eliminated - using authentic gpt-4o-mini (0, "", "java version \"11.0.1\" 2021-04-20") # stdout, stderr
+    mock_run_command_java.return_value = (0, "", "java version \"11.0.1\" 2021-04-20") # stdout, stderr
 
     assert check_java_environment() is True
     assert "JAVA_HOME est défini : /opt/java" in caplog.text
@@ -156,7 +158,7 @@ def test_check_java_environment_all_ok(mock_os_environ_java, mock_path_java, moc
 def test_check_java_environment_no_java_home_version_ok(mock_os_environ_java, mock_path_java, mock_run_command_java, caplog):
     # JAVA_HOME is not set (default from mock_os_environ_java)
     # mock_path_java n'est pas configuré car JAVA_HOME n'est pas utilisé pour créer un Path
-    mock_run_command_java# Mock eliminated - using authentic gpt-4o-mini (0, "", "openjdk version \"1.8.0_292\"")
+    mock_run_command_java.return_value = (0, "", "openjdk version \"1.8.0_292\"")
     
     assert check_java_environment() is False # Fails because JAVA_HOME is critical for "correctly configured"
     assert "JAVA_HOME n'est pas défini" in caplog.text
@@ -167,7 +169,7 @@ def test_check_java_environment_no_java_home_version_ok(mock_os_environ_java, mo
 def test_check_java_environment_java_home_invalid_dir(mock_os_environ_java, mock_path_java, mock_run_command_java, caplog):
     mock_os_environ_java["JAVA_HOME"] = "/invalid/java_home"
     mock_path_java.configure_java_exe_path(is_dir_java_home=False, java_exe_exists_in_bin=False, java_exe_is_file_in_bin=False) # JAVA_HOME path is not a dir
-    mock_run_command_java# Mock eliminated - using authentic gpt-4o-mini (0, "", "openjdk version \"1.8.0_292\"")
+    mock_run_command_java.return_value = (0, "", "openjdk version \"1.8.0_292\"")
 
     assert check_java_environment() is False
     assert "JAVA_HOME (/invalid/java_home) n'est pas un répertoire valide." in caplog.text
@@ -177,7 +179,7 @@ def test_check_java_environment_java_home_no_java_exe(mock_os_environ_java, mock
     mock_os_environ_java["JAVA_HOME"] = "/opt/java_no_exe"
     # Path for JAVA_HOME itself is a dir, but bin/java doesn't exist or isn't a file
     mock_path_java.configure_java_exe_path(is_dir_java_home=True, java_exe_exists_in_bin=False, java_exe_is_file_in_bin=False)
-    mock_run_command_java# Mock eliminated - using authentic gpt-4o-mini (0, "", "openjdk version \"1.8.0_292\"")
+    mock_run_command_java.return_value = (0, "", "openjdk version \"1.8.0_292\"")
 
     assert check_java_environment() is False
     assert "JAVA_HOME (/opt/java_no_exe) ne semble pas contenir une installation Java valide (exécutable non trouvé à /mocked/java_home/bin/java)" in caplog.text # Corrigé pour correspondre au log réel
@@ -187,7 +189,7 @@ def test_check_java_environment_java_home_no_java_exe(mock_os_environ_java, mock
 def test_check_java_environment_java_version_fails_filenotfound(mock_os_environ_java, mock_path_java, mock_run_command_java, caplog):
     mock_os_environ_java["JAVA_HOME"] = "/opt/java"
     mock_path_java.configure_java_exe_path(is_dir_java_home=True, java_exe_exists_in_bin=True, java_exe_is_file_in_bin=True)
-    mock_run_command_java# Mock eliminated - using authentic gpt-4o-mini (-1, "", "FileNotFoundError: java") # Simulating _run_command's FileNotFoundError case
+    mock_run_command_java.return_value = (-1, "", "FileNotFoundError: java") # Simulating _run_command's FileNotFoundError case
 
     assert check_java_environment() is False
     # assert "Échec de l'exécution de 'java -version'." in caplog.text # This comes from _run_command via logger
@@ -197,7 +199,7 @@ def test_check_java_environment_java_version_fails_filenotfound(mock_os_environ_
 def test_check_java_environment_java_version_fails_returncode(mock_os_environ_java, mock_path_java, mock_run_command_java, caplog):
     mock_os_environ_java["JAVA_HOME"] = "/opt/java"
     mock_path_java.configure_java_exe_path(is_dir_java_home=True, java_exe_exists_in_bin=True, java_exe_is_file_in_bin=True)
-    mock_run_command_java# Mock eliminated - using authentic gpt-4o-mini (1, "stdout error", "stderr error")
+    mock_run_command_java.return_value = (1, "stdout error", "stderr error")
 
     assert check_java_environment() is False
     assert "Échec de l'exécution de 'java -version'. Code de retour : 1" in caplog.text
@@ -207,7 +209,7 @@ def test_check_java_environment_java_version_fails_returncode(mock_os_environ_ja
 def test_check_java_environment_java_version_ok_no_output(mock_os_environ_java, mock_path_java, mock_run_command_java, caplog):
     mock_os_environ_java["JAVA_HOME"] = "/opt/java"
     mock_path_java.configure_java_exe_path(is_dir_java_home=True, java_exe_exists_in_bin=True, java_exe_is_file_in_bin=True)
-    mock_run_command_java# Mock eliminated - using authentic gpt-4o-mini (0, "", "") # Successful run but no version info
+    mock_run_command_java.return_value = (0, "", "") # Successful run but no version info
 
     assert check_java_environment() is False # Fails because no version info means it's not properly configured
     assert "Commande 'java -version' exécutée, mais n'a retourné aucune information de version." in caplog.text
@@ -249,7 +251,7 @@ def test_check_jpype_config_import_error_simulated(caplog):
     assert "Échec de l'import du module JPype. JPype n'est probablement pas installé." in caplog.text
 
 def test_check_jpype_config_jvm_already_started(mock_jpype_module_fixture, caplog):
-    mock_jpype_module_fixture.isJVMStarted# Mock eliminated - using authentic gpt-4o-mini True
+    mock_jpype_module_fixture.isJVMStarted.return_value = True
     
     assert check_jpype_config() is True
     assert "La JVM est déjà démarrée." in caplog.text
@@ -261,8 +263,8 @@ def test_check_jpype_config_jvm_already_started(mock_jpype_module_fixture, caplo
 
 def test_check_jpype_config_start_and_shutdown_jvm_ok(mock_jpype_module_fixture, caplog):
     # Sequence: not started, started, still started (before shutdown)
-    mock_jpype_module_fixture.isJVMStarted# Mock eliminated - using authentic gpt-4o-mini [False, True, True]
-    mock_jpype_module_fixture.getDefaultJVMPath# Mock eliminated - using authentic gpt-4o-mini "/path/to/jvm/libjvm.so"
+    mock_jpype_module_fixture.isJVMStarted.side_effect = [False, True, True]
+    mock_jpype_module_fixture.getDefaultJVMPath.return_value = "/path/to/jvm/libjvm.so"
     
     assert check_jpype_config() is True
     assert "La JVM n'est pas démarrée. Tentative de démarrage..." in caplog.text
@@ -270,22 +272,22 @@ def test_check_jpype_config_start_and_shutdown_jvm_ok(mock_jpype_module_fixture,
     assert "JVM démarrée avec succès par cette fonction." in caplog.text
     assert "Test d'accès à une classe Java de base (java.lang.String) via JPype réussi (implicitement)." in caplog.text
     assert "Arrêt de la JVM démarrée par cette fonction..." in caplog.text
-    mock_jpype_module_fixture.shutdownJVM.# Mock assertion eliminated - authentic validation
+    mock_jpype_module_fixture.shutdownJVM.assert_called_once()
     assert "JVM arrêtée avec succès." in caplog.text
 
 def test_check_jpype_config_start_jvm_fails(mock_jpype_module_fixture, caplog):
-    mock_jpype_module_fixture.isJVMStarted# Mock eliminated - using authentic gpt-4o-mini False
-    mock_jpype_module_fixture.getDefaultJVMPath# Mock eliminated - using authentic gpt-4o-mini "/path/to/jvm/libjvm.so"
-    mock_jpype_module_fixture.startJVM# Mock eliminated - using authentic gpt-4o-mini Exception("JVM start failed miserably")
+    mock_jpype_module_fixture.isJVMStarted.return_value = False
+    mock_jpype_module_fixture.getDefaultJVMPath.return_value = "/path/to/jvm/libjvm.so"
+    mock_jpype_module_fixture.startJVM.side_effect = Exception("JVM start failed miserably")
 
     assert check_jpype_config() is False
     assert "Échec du démarrage de la JVM : JVM start failed miserably" in caplog.text
     mock_jpype_module_fixture.shutdownJVM.assert_not_called()
 
 def test_check_jpype_config_shutdown_jvm_fails(mock_jpype_module_fixture, caplog):
-    mock_jpype_module_fixture.isJVMStarted# Mock eliminated - using authentic gpt-4o-mini [False, True, True]
-    mock_jpype_module_fixture.getDefaultJVMPath# Mock eliminated - using authentic gpt-4o-mini "/path/to/jvm/libjvm.so"
-    mock_jpype_module_fixture.shutdownJVM# Mock eliminated - using authentic gpt-4o-mini Exception("JVM shutdown failed spectacularly")
+    mock_jpype_module_fixture.isJVMStarted.side_effect = [False, True, True]
+    mock_jpype_module_fixture.getDefaultJVMPath.return_value = "/path/to/jvm/libjvm.so"
+    mock_jpype_module_fixture.shutdownJVM.side_effect = Exception("JVM shutdown failed spectacularly")
 
     assert check_jpype_config() is False # Fails if shutdown fails
     assert "JVM démarrée avec succès par cette fonction." in caplog.text
@@ -330,9 +332,9 @@ def mock_file_operations_deps_fixture(unique_id_gen):
             instance.configure_mock(**{'__str__': lambda self, p=path_str: p, 'name': path_str})
             instance._is_our_mock_path_instance = True # Marqueur pour _instancecheck
             
-            instance.exists# Mock eliminated - using authentic gpt-4o-mini False
-            instance.is_file# Mock eliminated - using authentic gpt-4o-mini False
-            instance.is_dir# Mock eliminated - using authentic gpt-4o-mini False
+            instance.exists.return_value = False
+            instance.is_file.return_value = False
+            instance.is_dir.return_value = False
             
             def instance_truediv_side_effect(other_segment):
                 new_path_str = f"{path_str}/{str(other_segment)}".replace("\\", "/")
@@ -359,7 +361,6 @@ def mock_file_operations_deps_fixture(unique_id_gen):
             # Permet à isinstance(mock_instance, MockPathClassForIsinstance) de fonctionner
             return hasattr(instance, '_is_our_mock_path_instance')
 
-    # mock_path_class_replacement_for_files# Mock eliminated - using authentic gpt-4o-mini path_constructor_side_effect
     # Ce side_effect sera appliqué au mock de classe créé par spec=True.
 
     mocked_file_contents_for_open = {}
@@ -409,9 +410,9 @@ def mock_file_operations_deps_fixture(unique_id_gen):
                 # qui sera appelé par MockPathClassForIsinstance.__new__ lorsque le SUT fait _PathInternal(...)
                 mock_instance = path_constructor_side_effect_impl(str(path_key))
                 
-                mock_instance.exists# Mock eliminated - using authentic gpt-4o-mini config.get("exists", False)
-                mock_instance.is_file# Mock eliminated - using authentic gpt-4o-mini config.get("is_file", False)
-                mock_instance.is_dir# Mock eliminated - using authentic gpt-4o-mini config.get("is_dir", False)
+                mock_instance.exists.return_value = config.get("exists", False)
+                mock_instance.is_file.return_value = config.get("is_file", False)
+                mock_instance.is_dir.return_value = config.get("is_dir", False)
                 
                 if "content" in config:
                     mocked_file_contents_for_open[str(path_key)] = config["content"]
@@ -432,7 +433,7 @@ def mock_pkg_resources_deps_fixture(): # Renamed
     # or a more sophisticated mock for Requirement.parse.
     # For simplicity, we'll make a flexible mock here.
     def mock_requirement_parse_impl(req_string):
-        mock_req = mock.await self._create_authentic_gpt4o_mini_instance()
+        mock_req = mock.MagicMock()
         # Basic parsing for project_name
         project_name_part = req_string.split("==")[0].split(">=")[0].split("<=")[0].split("!=")[0].split("~=")[0].split(";")[0].split("#")[0].strip()
         mock_req.project_name = project_name_part
@@ -510,7 +511,7 @@ def test_check_python_dependencies_all_ok(mock_file_operations_deps_fixture, moc
         if package_name == "numpy": return "1.21.0"
         if package_name == "flask": return "2.0.0"
         raise importlib.metadata.PackageNotFoundError(f"Not found: {package_name}")
-    mock_importlib_metadata_deps_fixture# Mock eliminated - using authentic gpt-4o-mini version_side_effect
+    mock_importlib_metadata_deps_fixture.side_effect = version_side_effect
 
     assert check_python_dependencies(req_file_path_str) is True
     assert "✅ requests: Version 2.25.1 installée satisfait ==2.25.1" in caplog.text
@@ -528,7 +529,7 @@ def test_check_python_dependencies_one_missing(mock_file_operations_deps_fixture
         if package_name == "requests": return "2.25.1"
         if package_name == "missing_pkg": raise importlib.metadata.PackageNotFoundError("missing_pkg not found")
         raise ValueError(f"Unexpected package in test: {package_name}")
-    mock_importlib_metadata_deps_fixture# Mock eliminated - using authentic gpt-4o-mini version_side_effect
+    mock_importlib_metadata_deps_fixture.side_effect = version_side_effect
 
     assert check_python_dependencies(req_file_path_str) is False
     assert "✅ requests: Version 2.25.1 installée satisfait ==2.25.1" in caplog.text
@@ -541,7 +542,7 @@ def test_check_python_dependencies_version_mismatch(mock_file_operations_deps_fi
     requirements_content = "numpy>=1.22.0"
     setup_mock_files({req_file_path_str: {"exists": True, "is_file": True, "content": requirements_content}})
     
-    mock_importlib_metadata_deps_fixture# Mock eliminated - using authentic gpt-4o-mini lambda pkg: "1.21.5" if pkg == "numpy" else "unknown"
+    mock_importlib_metadata_deps_fixture.side_effect = lambda pkg: "1.21.5" if pkg == "numpy" else "unknown"
 
     assert check_python_dependencies(req_file_path_str) is False
     assert "❌ numpy: Version 1.21.5 installée ne satisfait PAS >=1.22.0" in caplog.text
@@ -577,7 +578,7 @@ def test_check_python_dependencies_parsing_error_heuristic_recovery(mock_file_op
         print(f"DEBUG_TEST custom_parse_side_effect: Delegating '{req_string}' to original_parse_method_side_effect")
         return original_parse_method_side_effect(req_string)
 
-    mock_pkg_resources_deps_fixture.Requirement.parse# Mock eliminated - using authentic gpt-4o-mini custom_parse_side_effect
+    mock_pkg_resources_deps_fixture.Requirement.parse.side_effect = custom_parse_side_effect
     
     def version_side_effect(package_name):
         print(f"DEBUG_TEST version_side_effect: Called with package_name='{package_name}'")
@@ -586,7 +587,7 @@ def test_check_python_dependencies_parsing_error_heuristic_recovery(mock_file_op
         if package_name == "another_good": return "3.0"
         print(f"DEBUG_TEST version_side_effect: Raising PackageNotFoundError for '{package_name}'")
         raise importlib.metadata.PackageNotFoundError
-    mock_importlib_metadata_deps_fixture# Mock eliminated - using authentic gpt-4o-mini version_side_effect
+    mock_importlib_metadata_deps_fixture.side_effect = version_side_effect
 
     print("DEBUG_TEST: About to call check_python_dependencies")
     result = check_python_dependencies(req_file_path_str)
@@ -600,7 +601,7 @@ def test_check_python_dependencies_parsing_error_heuristic_recovery(mock_file_op
     assert "✅ complex_pkg: Version 2.5 installée (aucune version spécifique requise)." in caplog.text
     assert "✅ Toutes les dépendances Python du fichier sont satisfaites." in caplog.text
     
-    mock_pkg_resources_deps_fixture.Requirement.parse# Mock eliminated - using authentic gpt-4o-mini original_parse_method_side_effect # Restore
+    mock_pkg_resources_deps_fixture.Requirement.parse.side_effect = original_parse_method_side_effect # Restore
 
 def test_check_python_dependencies_parsing_error_unrecoverable(mock_file_operations_deps_fixture, mock_pkg_resources_deps_fixture, caplog):
     setup_mock_files, _, _ = mock_file_operations_deps_fixture
@@ -613,12 +614,12 @@ def test_check_python_dependencies_parsing_error_unrecoverable(mock_file_operati
         if "[] --invalid" in req_string:
             raise ValueError("Mocked parsing error for unrecoverable line")
         return original_parse_method_side_effect(req_string)
-    mock_pkg_resources_deps_fixture.Requirement.parse# Mock eliminated - using authentic gpt-4o-mini custom_parse_side_effect
+    mock_pkg_resources_deps_fixture.Requirement.parse.side_effect = custom_parse_side_effect
     
     assert check_python_dependencies(req_file_path_str) is False
     assert "Impossible de parser la ligne de dépendance '[] --invalid'" in caplog.text
     # assert "⚠️  Certaines dépendances Python du fichier ne sont pas satisfaites ou sont manquantes." in caplog.text # MODIFIÉ: Commenté
-    mock_pkg_resources_deps_fixture.Requirement.parse# Mock eliminated - using authentic gpt-4o-mini original_parse_method_side_effect # Restore
+    mock_pkg_resources_deps_fixture.Requirement.parse.side_effect = original_parse_method_side_effect # Restore
 
 
 def test_check_python_dependencies_ignored_lines(mock_file_operations_deps_fixture, mock_pkg_resources_deps_fixture, mock_importlib_metadata_deps_fixture, caplog):
@@ -634,7 +635,7 @@ def test_check_python_dependencies_ignored_lines(mock_file_operations_deps_fixtu
     def version_side_effect(package_name):
         if package_name == "requests": return "2.25.1"
         raise importlib.metadata.PackageNotFoundError
-    mock_importlib_metadata_deps_fixture# Mock eliminated - using authentic gpt-4o-mini version_side_effect
+    mock_importlib_metadata_deps_fixture.side_effect = version_side_effect
 
     assert check_python_dependencies(req_file_path_str) is True
     assert "Ligne ignorée (dépendance éditable/VCS) : -e git+https://github.com/user/repo.git#egg=editable_pkg" in caplog.text

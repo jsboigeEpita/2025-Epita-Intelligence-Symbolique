@@ -36,10 +36,10 @@ from config.unified_config import (
 )
 
 # Import des fonctions CLI à tester
-from scripts.main.analyze_text import (
-    create_unified_config_from_args,
-    convert_unified_to_pipeline_config,
-    create_argument_parser
+from scripts.rhetorical_analysis.unified_production_analyzer import (
+    create_config_from_args as create_unified_config_from_args,
+    # convert_unified_to_pipeline_config, # Cette fonction n'existe plus dans le nouveau script
+    create_cli_parser as create_argument_parser
 )
 
 
@@ -241,7 +241,7 @@ class TestConfigurationCLI:
         args_unknown = MockArgs(agents='informal,unknown_agent,synthesis')
         with patch('scripts.main.analyze_text.logger') as mock_logger:
             config = create_unified_config_from_args(args_unknown)
-            mock_logger.warning.# Mock assertion eliminated - authentic validation"⚠️ Agent inconnu ignoré: unknown_agent")
+            mock_logger.warning.assert_any_call("⚠️ Agent inconnu ignoré: unknown_agent")
             # L'agent inconnu doit être ignoré
             expected_agents = [AgentType.INFORMAL, AgentType.SYNTHESIS]
             assert config.agents == expected_agents
@@ -330,32 +330,11 @@ class TestConfigurationCLI:
         assert config.output_mode == 'file'
         assert config.output_path == '/path/to/output.json'
 
-    def test_conversion_to_pipeline_config(self):
-        """Test la conversion vers UnifiedAnalysisConfig pour le pipeline."""
-        unified_config = UnifiedConfig(
-            logic_type=LogicType.FOL,
-            orchestration_type=OrchestrationType.CONVERSATION,
-            mock_level=MockLevel.PARTIAL,
-            analysis_modes=['fallacies', 'coherence'],
-            output_format='markdown',
-            enable_advanced_tools=True,
-            enable_jvm=True,
-            enable_conversation_logging=True,
-            require_real_gpt=False,
-            require_real_tweety=False,
-            require_full_taxonomy=False
-        )
-        
-        pipeline_config = convert_unified_to_pipeline_config(unified_config)
-        
-        assert pipeline_config.logic_type == 'fol'
-        assert pipeline_config.orchestration_mode == 'conversation'
-        assert pipeline_config.use_mocks is True  # PARTIAL != NONE
-        assert pipeline_config.analysis_modes == ['fallacies', 'coherence']
-        assert pipeline_config.output_format == 'markdown'
-        assert pipeline_config.use_advanced_tools is True
-        assert pipeline_config.enable_jvm is True
-        assert pipeline_config.enable_conversation_logging is True
+    # def test_conversion_to_pipeline_config(self):
+    #     """Test la conversion vers UnifiedAnalysisConfig pour le pipeline."""
+    #     # NOTE: Cette fonction a été supprimée après la refactorisation majeure.
+    #     # Le nouveau pipeline utilise directement la configuration.
+    #     pass
 
     def test_argument_parser_creation(self):
         """Test la création du parser d'arguments."""
@@ -435,17 +414,17 @@ class TestCLIIntegration:
     def test_end_to_end_cli_flow(self, mock_report_gen, mock_pipeline, mock_selector):
         """Test du flux CLI de bout en bout."""
         # Configuration des mocks
-        mock_selector.return_value.load_source_batch# Mock eliminated - using authentic gpt-4o-mini (
+        mock_selector.return_value.load_source_batch.return_value = (
             "Test text", "Test description", "simple"
         )
-        mock_pipeline# Mock eliminated - using authentic gpt-4o-mini {
+        mock_pipeline.return_value = {
             "analysis_results": {"test": "data"},
             "metadata": {"version": "test"}
         }
-        mock_report_gen.return_value.generate_report# Mock eliminated - using authentic gpt-4o-mini "Test report"
+        mock_report_gen.return_value.generate_report.return_value = "Test report"
         
         # Import et test du main (simulation)
-        from scripts.main.analyze_text import create_unified_config_from_args
+        from scripts.rhetorical_analysis.unified_production_analyzer import create_config_from_args as create_unified_config_from_args
         
         args = MockArgs(
             source_type='simple',
