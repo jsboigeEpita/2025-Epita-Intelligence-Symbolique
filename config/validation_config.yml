@@ -1,0 +1,25 @@
+# Fichier de configuration minimal pour la validation E2E
+# Objectif: Forcer le backend à démarrer sur le port 5001
+
+backend:
+  enabled: true
+  
+  # Le module correct est l'application Flask de l'interface web
+  module: "interface_web.app:app"
+  
+  # Forcer le port de démarrage à 5001, attendu par les tests de validation
+  start_port: 5001
+  
+  # Désactiver les ports de secours pour un comportement prédictible
+  fallback_ports: []
+  
+  # Désactiver les autres composants non nécessaires pour ce test
+frontend:
+  enabled: false
+
+playwright:
+  enabled: false
+
+logging:
+  level: "INFO"
+  file: "logs/validation_backend.log"

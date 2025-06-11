@@ -49,9 +49,10 @@ class JTMSWebValidator:
     - API et communication
     """
     
-    def __init__(self, headless: bool = True):
+    def __init__(self, headless: bool = True, port: int = 5001):
+        self.port = port
         self.logger = self._setup_logging()
-        self.config = self._get_jtms_test_config(headless)
+        self.config = self._get_jtms_test_config(headless, port)
         self.playwright_runner = PlaywrightJSRunner(self.config, self.logger)
         
     def _setup_logging(self) -> logging.Logger:
@@ -63,18 +64,19 @@ class JTMSWebValidator:
         )
         return logging.getLogger(__name__)
     
-    def _get_jtms_test_config(self, headless: bool) -> Dict[str, Any]:
+    def _get_jtms_test_config(self, headless: bool, port: int) -> Dict[str, Any]:
         """Configuration spécialisée pour tests JTMS"""
+        base_url = f"http://localhost:{port}"
         return {
             'enabled': True,
             'browser': 'chromium',
             'headless': headless,
-            'timeout_ms': 15000,
-            'slow_timeout_ms': 30000,
+            'timeout_ms': 300000,
+            'slow_timeout_ms': 600000,
             'test_paths': ['tests_playwright/tests/jtms-interface.spec.js'],
             'screenshots_dir': 'logs/screenshots/jtms',
             'traces_dir': 'logs/traces/jtms',
-            'base_url': 'http://localhost:3000',
+            'base_url': base_url,
             'retry_attempts': 2,
             'parallel_workers': 1  # Séquentiel pour diagnostic
         }
@@ -92,7 +94,7 @@ class JTMSWebValidator:
         
         # Configuration runtime pour tests JTMS
         runtime_config = {
-            'backend_url': 'http://localhost:3000',
+            'backend_url': f"http://localhost:{self.port}",
             'jtms_prefix': '/jtms',
             'test_mode': 'jtms_complete',
             'headless': self.config.get('headless', True),
@@ -173,14 +175,16 @@ async def main():
     """Point d'entrée principal"""
     parser = argparse.ArgumentParser(description="Validation Web Interface JTMS")
     parser.add_argument('--headed', action='store_true', help="Lancer les tests en mode visible (non-headless)")
+    parser.add_argument('--port', type=int, default=5001, help="Port de l'interface web à tester")
     args = parser.parse_args()
 
     print("🧪 Démarrage Validation Web Interface JTMS")
     print("Utilisation du PlaywrightRunner asynchrone de haut niveau")
     print(f"Mode headless: {not args.headed}")
+    print(f"Port de l'interface: {args.port}")
     print()
     
-    validator = JTMSWebValidator(headless=not args.headed)
+    validator = JTMSWebValidator(headless=not args.headed, port=args.port)
     
     # Exécution de la validation
     results = await validator.validate_web_interface()

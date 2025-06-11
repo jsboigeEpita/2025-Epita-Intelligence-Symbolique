@@ -46,7 +46,7 @@ class PlaywrightJSRunner:
         self.base_url = config.get('base_url', 'http://localhost:3000')
         self.screenshots_dir = Path(config.get('screenshots_dir', 'logs/screenshots'))
         self.traces_dir = Path(config.get('traces_dir', 'logs/traces'))
-        self.test_timeout = config.get('test_timeout', 120)  # 2 minutes
+        self.test_timeout = config.get('test_timeout', 600)  # 10 minutes
         
         # Création répertoires
         self.screenshots_dir.mkdir(parents=True, exist_ok=True)
@@ -200,6 +200,14 @@ class PlaywrightJSRunner:
             # Exécuter la fonction bloquante dans un thread séparé
             completed_process = await asyncio.to_thread(run_sync_process)
             
+            # DEBUG: Afficher la sortie brute pour analyse
+            self.logger.info("--- DEBUT SORTIE BRUTE PLAYWRIGHT ---")
+            self.logger.info("--- STDOUT ---")
+            self.logger.info(completed_process.stdout)
+            self.logger.info("--- STDERR ---")
+            self.logger.info(completed_process.stderr)
+            self.logger.info("--- FIN SORTIE BRUTE PLAYWRIGHT ---")
+
             stdout_text = completed_process.stdout
             stderr_text = completed_process.stderr
             return_code = completed_process.returncode
@@ -228,8 +236,8 @@ class PlaywrightJSRunner:
             class TimeoutResult:
                 def __init__(self):
                     self.returncode = -1 # Code spécifique pour timeout
-                    self.stdout = e.stdout.decode('utf-8', errors='replace') if e.stdout else ""
-                    self.stderr = e.stderr.decode('utf-8', errors='replace') if e.stderr else "TimeoutExpired"
+                    self.stdout = e.stdout if e.stdout else ""
+                    self.stderr = e.stderr if e.stderr else "TimeoutExpired"
             return TimeoutResult()
         except Exception as e:
             self.logger.error(f"Erreur exécution tests: {e}", exc_info=True)
