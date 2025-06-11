@@ -14,6 +14,8 @@ Tests couvrant:
 - Métriques différences performance/qualité
 """
 
+from unittest.mock import Mock, patch, AsyncMock
+from semantic_kernel import Kernel
 import pytest
 import asyncio
 import time
@@ -170,13 +172,13 @@ class BehaviorComparator:
                 'cost': estimated_cost
             }
     
-    def _create_mock_kernel(self) -> Mock:
+    async def _create_mock_kernel(self) -> Mock:
         """Crée un kernel mocké."""
         kernel = Mock(spec=Kernel)
         kernel.add_service = await self._create_authentic_gpt4o_mini_instance()
         
         # Mock service
-        mock_service = Asyncawait self._create_authentic_gpt4o_mini_instance()
+        mock_service = await self._create_authentic_gpt4o_mini_instance()
         mock_service.service_id = "mock-gpt4o-mini"
         mock_service.ai_model_id = "gpt-4o-mini"
         
