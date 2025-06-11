@@ -32,8 +32,8 @@ except ImportError as e:
     print("Vérifiez que scripts/core/auto_env.py existe et est accessible")
     sys.exit(1)
 
-# Import du runner de haut niveau
-from scripts.webapp.playwright_runner import PlaywrightRunner
+# Import du runner JavaScript non-bloquant
+from validation.runners.playwright_js_runner import PlaywrightJSRunner
 
 class JTMSWebValidator:
     """
@@ -51,7 +51,7 @@ class JTMSWebValidator:
     def __init__(self):
         self.logger = self._setup_logging()
         self.config = self._get_jtms_test_config()
-        self.playwright_runner = PlaywrightRunner(self.config, self.logger)
+        self.playwright_runner = PlaywrightJSRunner(self.config, self.logger)
         
     def _setup_logging(self) -> logging.Logger:
         """Configuration logging avec formatage coloré"""
