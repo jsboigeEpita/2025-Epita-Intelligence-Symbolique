@@ -182,7 +182,7 @@ class TestFetchService:
         fetch_service.cache_service.save_to_cache(url, sample_text)
         
         # Simuler une réponse HTTP
-        mock_get# Mock eliminated - using authentic gpt-4o-mini MockResponse(sample_text + " (refreshed)")
+        mock_get.return_value = MockResponse(sample_text + " (refreshed)")
         
         # Récupérer le texte avec force_refresh
         text, message = fetch_service.fetch_text(sample_source_info, force_refresh=True)
@@ -192,7 +192,7 @@ class TestFetchService:
         assert message == url
         
         # Vérifier que requests.get a été appelé
-        mock_get.# Mock assertion eliminated - authentic validation
+        mock_get.assert_called_once()
 
     
     def test_fetch_text_invalid_url(self, mock_get, fetch_service):
@@ -223,7 +223,7 @@ class TestFetchService:
         jina_source_info["source_type"] = "jina"
         
         # Simuler une réponse HTTP
-        mock_get# Mock eliminated - using authentic gpt-4o-mini MockResponse("Markdown Content:" + sample_text)
+        mock_get.return_value = MockResponse("Markdown Content:" + sample_text)
         
         # Récupérer le texte
         with patch.object(fetch_service, 'fetch_with_jina', return_value=sample_text) as mock_fetch_jina:
@@ -231,7 +231,7 @@ class TestFetchService:
         
         # Vérifier que le texte est récupéré via Jina
         assert text == sample_text
-        mock_fetch_jina.# Mock assertion eliminated - authentic validation
+        mock_fetch_jina.assert_called_once_with(fetch_service.reconstruct_url(jina_source_info['schema'], jina_source_info['host_parts'], jina_source_info['path']))
 
     
     def test_fetch_text_tika(self, mock_get, fetch_service, sample_source_info, sample_text):
@@ -242,7 +242,7 @@ class TestFetchService:
         tika_source_info["path"] = "/test.pdf"  # Extension non texte
         
         # Simuler une réponse HTTP
-        mock_get# Mock eliminated - using authentic gpt-4o-mini MockResponse(sample_text)
+        mock_get.return_value = MockResponse(sample_text)
         
         # Récupérer le texte
         with patch.object(fetch_service, 'fetch_with_tika', return_value=sample_text) as mock_fetch_tika:
@@ -250,7 +250,7 @@ class TestFetchService:
         
         # Vérifier que le texte est récupéré via Tika
         assert text == sample_text
-        mock_fetch_tika.# Mock assertion eliminated - authentic validation
+        mock_fetch_tika.assert_called_once_with(url=fetch_service.reconstruct_url(tika_source_info['schema'], tika_source_info['host_parts'], tika_source_info['path']))
 
     
     def test_fetch_text_tika_plaintext(self, mock_get, fetch_service, sample_source_info, sample_text):
@@ -261,7 +261,7 @@ class TestFetchService:
         tika_source_info["path"] = "/test.txt"  # Extension texte
         
         # Simuler une réponse HTTP
-        mock_get# Mock eliminated - using authentic gpt-4o-mini MockResponse(sample_text)
+        mock_get.return_value = MockResponse(sample_text)
         
         # Récupérer le texte
         with patch.object(fetch_service, 'fetch_direct_text', return_value=sample_text) as mock_fetch_direct:
@@ -269,13 +269,13 @@ class TestFetchService:
         
         # Vérifier que le texte est récupéré directement
         assert text == sample_text
-        mock_fetch_direct.# Mock assertion eliminated - authentic validation
+        mock_fetch_direct.assert_called_once_with(fetch_service.reconstruct_url(tika_source_info['schema'], tika_source_info['host_parts'], tika_source_info['path']))
 
     
     def test_fetch_text_exception(self, mock_get, fetch_service, sample_source_info):
         """Test de récupération de texte avec une exception."""
         # Simuler une exception
-        mock_get# Mock eliminated - using authentic gpt-4o-mini Exception("Erreur de récupération")
+        mock_get.side_effect = Exception("Erreur de récupération")
         
         # Récupérer le texte
         text, message = fetch_service.fetch_text(sample_source_info)
@@ -288,7 +288,7 @@ class TestFetchService:
     def test_fetch_direct_text(self, mock_get, fetch_service, sample_url, sample_text):
         """Test de récupération directe de texte."""
         # Simuler une réponse HTTP
-        mock_get# Mock eliminated - using authentic gpt-4o-mini MockResponse(sample_text)
+        mock_get.return_value = MockResponse(sample_text)
         
         # Récupérer le texte
         text = fetch_service.fetch_direct_text(sample_url)
@@ -311,7 +311,7 @@ class TestFetchService:
     def test_fetch_direct_text_error(self, mock_get, fetch_service, sample_url):
         """Test de récupération directe de texte avec une erreur."""
         # Simuler une erreur HTTP
-        mock_get# Mock eliminated - using authentic gpt-4o-mini requests.exceptions.RequestException("Erreur HTTP")
+        mock_get.side_effect = requests.exceptions.RequestException("Erreur HTTP")
         
         # Récupérer le texte
         text = fetch_service.fetch_direct_text(sample_url)
@@ -323,7 +323,7 @@ class TestFetchService:
     def test_fetch_with_jina(self, mock_get, fetch_service, sample_url, sample_text):
         """Test de récupération de texte via Jina."""
         # Simuler une réponse HTTP
-        mock_get# Mock eliminated - using authentic gpt-4o-mini MockResponse("Markdown Content:" + sample_text)
+        mock_get.return_value = MockResponse("Markdown Content:" + sample_text)
         
         # Récupérer le texte
         text = fetch_service.fetch_with_jina(sample_url)
@@ -347,7 +347,7 @@ class TestFetchService:
     def test_fetch_with_jina_no_marker(self, mock_get, fetch_service, sample_url, sample_text):
         """Test de récupération de texte via Jina sans marqueur."""
         # Simuler une réponse HTTP sans marqueur
-        mock_get# Mock eliminated - using authentic gpt-4o-mini MockResponse(sample_text)
+        mock_get.return_value = MockResponse(sample_text)
         
         # Récupérer le texte
         text = fetch_service.fetch_with_jina(sample_url)
@@ -359,7 +359,7 @@ class TestFetchService:
     def test_fetch_with_jina_error(self, mock_get, fetch_service, sample_url):
         """Test de récupération de texte via Jina avec une erreur."""
         # Simuler une erreur HTTP
-        mock_get# Mock eliminated - using authentic gpt-4o-mini requests.exceptions.RequestException("Erreur HTTP")
+        mock_get.side_effect = requests.exceptions.RequestException("Erreur HTTP")
         
         # Récupérer le texte
         text = fetch_service.fetch_with_jina(sample_url)
@@ -372,13 +372,13 @@ class TestFetchService:
     def test_fetch_with_tika_url(self, mock_get, mock_put, fetch_service, sample_url, sample_text):
         """Test de récupération de texte via Tika avec une URL."""
         # Simuler une réponse HTTP pour le téléchargement
-        mock_get# Mock eliminated - using authentic gpt-4o-mini MockResponse(
+        mock_get.return_value = MockResponse(
             text="binary content",
             content=b"binary content"
         )
         
         # Simuler une réponse HTTP pour Tika
-        mock_put# Mock eliminated - using authentic gpt-4o-mini MockResponse(sample_text)
+        mock_put.return_value = MockResponse(sample_text)
         
         # Récupérer le texte
         text = fetch_service.fetch_with_tika(url=sample_url)
@@ -387,10 +387,10 @@ class TestFetchService:
         assert text == sample_text
         
         # Vérifier que requests.get a été appelé pour le téléchargement
-        mock_get.# Mock assertion eliminated - authentic validation
+        mock_get.assert_called_once_with(sample_url, timeout=30)
         
         # Vérifier que requests.put a été appelé pour Tika
-        mock_put.# Mock assertion eliminated - authentic validation
+        mock_put.assert_called_once()
         
         # Vérifier que le texte est sauvegardé dans le cache
         cached_text = fetch_service.cache_service.load_from_cache(sample_url)
@@ -414,7 +414,7 @@ class TestFetchService:
         assert text == sample_text
         
         # Vérifier que requests.put a été appelé pour Tika
-        mock_put.# Mock assertion eliminated - authentic validation
+        mock_put.assert_called_once()
         
         # Vérifier que le texte est sauvegardé dans le cache
         cache_key = f"file://{file_name}"
@@ -441,13 +441,13 @@ class TestFetchService:
     def test_fetch_with_tika_timeout(self, mock_get, mock_put, fetch_service, sample_url):
         """Test de récupération de texte via Tika avec un timeout."""
         # Simuler une réponse HTTP pour le téléchargement
-        mock_get# Mock eliminated - using authentic gpt-4o-mini MockResponse(
+        mock_get.return_value = MockResponse(
             text="binary content",
             content=b"binary content"
         )
         
         # Simuler un timeout pour Tika
-        mock_put# Mock eliminated - using authentic gpt-4o-mini requests.exceptions.Timeout("Timeout")
+        mock_put.side_effect = requests.exceptions.Timeout("Timeout")
         
         # Récupérer le texte
         text = fetch_service.fetch_with_tika(url=sample_url)
@@ -460,13 +460,13 @@ class TestFetchService:
     def test_fetch_with_tika_error(self, mock_get, mock_put, fetch_service, sample_url):
         """Test de récupération de texte via Tika avec une erreur."""
         # Simuler une réponse HTTP pour le téléchargement
-        mock_get# Mock eliminated - using authentic gpt-4o-mini MockResponse(
+        mock_get.return_value = MockResponse(
             text="binary content",
             content=b"binary content"
         )
         
         # Simuler une erreur pour Tika
-        mock_put# Mock eliminated - using authentic gpt-4o-mini requests.exceptions.RequestException("Erreur HTTP")
+        mock_put.side_effect = requests.exceptions.RequestException("Erreur HTTP")
         
         # Récupérer le texte
         text = fetch_service.fetch_with_tika(url=sample_url)
@@ -486,7 +486,7 @@ class TestFetchService:
     def test_fetch_with_tika_download_error(self, mock_get, fetch_service, sample_url):
         """Test de récupération de texte via Tika avec une erreur de téléchargement."""
         # Simuler une erreur de téléchargement
-        mock_get# Mock eliminated - using authentic gpt-4o-mini requests.exceptions.RequestException("Erreur de téléchargement")
+        mock_get.side_effect = requests.exceptions.RequestException("Erreur de téléchargement")
         
         # Récupérer le texte
         text = fetch_service.fetch_with_tika(url=sample_url)
@@ -505,10 +505,10 @@ class TestFetchService:
         raw_cache_path.write_bytes(b"cached binary content")
         
         # Simuler la lecture du fichier de cache
-        mock_read_bytes# Mock eliminated - using authentic gpt-4o-mini b"cached binary content"
+        mock_read_bytes.return_value = b"cached binary content"
         
         # Simuler une réponse HTTP pour Tika
-        mock_put# Mock eliminated - using authentic gpt-4o-mini MockResponse(sample_text)
+        mock_put.return_value = MockResponse(sample_text)
         
         # Récupérer le texte
         text = fetch_service.fetch_with_tika(url=sample_url)
@@ -520,7 +520,7 @@ class TestFetchService:
         mock_get.assert_not_called()
         
         # Vérifier que requests.put a été appelé pour Tika
-        mock_put.# Mock assertion eliminated - authentic validation
+        mock_put.assert_called_once()
 
     
     
@@ -533,16 +533,16 @@ class TestFetchService:
         raw_cache_path.write_bytes(b"cached binary content")
         
         # Simuler une erreur de lecture du fichier de cache
-        mock_read_bytes# Mock eliminated - using authentic gpt-4o-mini Exception("Erreur de lecture")
+        mock_read_bytes.side_effect = Exception("Erreur de lecture")
         
         # Simuler une réponse HTTP pour le téléchargement
-        mock_get# Mock eliminated - using authentic gpt-4o-mini MockResponse(
+        mock_get.return_value = MockResponse(
             text="binary content",
             content=b"binary content"
         )
         
         # Simuler une réponse HTTP pour Tika
-        mock_put# Mock eliminated - using authentic gpt-4o-mini MockResponse(sample_text)
+        mock_put.return_value = MockResponse(sample_text)
         
         # Récupérer le texte
         text = fetch_service.fetch_with_tika(url=sample_url)
@@ -551,4 +551,4 @@ class TestFetchService:
         assert text == sample_text
         
         # Vérifier que requests.get a été appelé pour le téléchargement
-        mock_get.# Mock assertion eliminated - authentic validation
+        mock_get.assert_called_once_with(sample_url, timeout=30)

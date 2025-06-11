@@ -54,13 +54,13 @@ def oracle_state():
          patch('argumentation_analysis.agents.core.oracle.dataset_access_manager.DatasetAccessManager') as mock_manager:
         
         # Configuration des mocks
-        mock_dataset_instance = Magicawait self._create_authentic_gpt4o_mini_instance()
+        mock_dataset_instance = MagicMock()
         mock_dataset_instance.elements_jeu = cluedo_elements
-        mock_dataset_instance.reveal_policy = Magicawait self._create_authentic_gpt4o_mini_instance()
+        mock_dataset_instance.reveal_policy = MagicMock()
         mock_dataset_instance.reveal_policy.value = "balanced"
         mock_dataset# Mock eliminated - using authentic gpt-4o-mini mock_dataset_instance
         
-        mock_manager_instance = Magicawait self._create_authentic_gpt4o_mini_instance()
+        mock_manager_instance = MagicMock()
         mock_manager_instance.dataset = mock_dataset_instance
         mock_manager# Mock eliminated - using authentic gpt-4o-mini mock_manager_instance
         
@@ -118,17 +118,17 @@ _mock_cache = {}
 def cached_jpype_mock():
     """Cache du mock JPype pour éviter les reinitialisations"""
     if 'jpype_mock' not in _mock_cache:
-        jpype_mock = Magicawait self._create_authentic_gpt4o_mini_instance()
+        jpype_mock = MagicMock()
         jpype_mock.isJVMStarted# Mock eliminated - using authentic gpt-4o-mini False
-        jpype_mock.startJVM = Magicawait self._create_authentic_gpt4o_mini_instance()
-        jpype_mock.shutdownJVM = Magicawait self._create_authentic_gpt4o_mini_instance()
+        jpype_mock.startJVM = MagicMock()
+        jpype_mock.shutdownJVM = MagicMock()
         jpype_mock.JException = Exception
-        jpype_mock.JClass = MagicMock(return_value=Magicawait self._create_authentic_gpt4o_mini_instance())
+        jpype_mock.JClass = MagicMock(return_value=MagicMock())
         jpype_mock.JArray = MagicMock(return_value=[])
         jpype_mock.JString = MagicMock(return_value="mock_string")
-        jpype_mock.java = Magicawait self._create_authentic_gpt4o_mini_instance()
-        jpype_mock.java.lang = Magicawait self._create_authentic_gpt4o_mini_instance()
-        jpype_mock.java.lang.String = Magicawait self._create_authentic_gpt4o_mini_instance()
+        jpype_mock.java = MagicMock()
+        jpype_mock.java.lang = MagicMock()
+        jpype_mock.java.lang.String = MagicMock()
         
         _mock_cache['jpype_mock'] = jpype_mock
     
@@ -138,9 +138,9 @@ def cached_jpype_mock():
 def cached_semantic_kernel_mock():
     """Cache du mock Semantic Kernel pour éviter les reinitialisations"""
     if 'semantic_kernel_mock' not in _mock_cache:
-        mock_kernel = Magicawait self._create_authentic_gpt4o_mini_instance()
-        mock_kernel.add_service = Magicawait self._create_authentic_gpt4o_mini_instance()
-        mock_kernel.add_function = Magicawait self._create_authentic_gpt4o_mini_instance()
+        mock_kernel = MagicMock()
+        mock_kernel.add_service = MagicMock()
+        mock_kernel.add_function = MagicMock()
         mock_kernel.invoke = AsyncMock(return_value="Cached mock response")
         
         _mock_cache['semantic_kernel_mock'] = mock_kernel
@@ -270,21 +270,21 @@ def phase4_nettoyage_intensif():
 @pytest.fixture
 def sherlock_agent_mock():
     """Mock optimisé de SherlockEnqueteAgent"""
-    sherlock_mock = Magicawait self._create_authentic_gpt4o_mini_instance()
+    sherlock_mock = MagicMock()
     sherlock_mock.process_investigation = AsyncMock(return_value="Investigation completed quickly")
     sherlock_mock.analyze_evidence = AsyncMock(return_value="Evidence analyzed efficiently")
     sherlock_mock.communicate_with_watson = AsyncMock(return_value="Communication optimized")
-    sherlock_mock.state = Magicawait self._create_authentic_gpt4o_mini_instance()
+    sherlock_mock.state = MagicMock()
     return sherlock_mock
 
 @pytest.fixture
 def watson_agent_mock():
     """Mock optimisé de WatsonLogicAssistant"""
-    watson_mock = Magicawait self._create_authentic_gpt4o_mini_instance()
+    watson_mock = MagicMock()
     watson_mock.process_logical_query = AsyncMock(return_value="Logic processed fast")
     watson_mock.validate_reasoning = AsyncMock(return_value=True)
     watson_mock.support_sherlock = AsyncMock(return_value="Support optimized")
-    watson_mock.state = Magicawait self._create_authentic_gpt4o_mini_instance()
+    watson_mock.state = MagicMock()
     return watson_mock
 
 # ============================================================================

@@ -1,18 +1,12 @@
 
-# Authentic gpt-4o-mini imports (replacing mocks)
-import openai
-from semantic_kernel.contents import ChatHistory
-from semantic_kernel.core_plugins import ConversationSummaryPlugin
-from config.unified_config import UnifiedConfig
-
 """
 Tests unitaires pour SourceManager.
 
 Ce module teste toutes les fonctionnalités du gestionnaire de sources,
-y compris le chargement de sources simples et complexes, la gestion 
+y compris le chargement de sources simples et complexes, la gestion
 du chiffrement et les fonctionnalités de nettoyage.
 """
-
+from unittest.mock import patch, mock_open
 import pytest
 import os
 import json
@@ -33,28 +27,13 @@ from argumentation_analysis.models.extract_definition import ExtractDefinitions
 
 
 class TestSourceType:
-    async def _create_authentic_gpt4o_mini_instance(self):
-        """Crée une instance authentique de gpt-4o-mini au lieu d'un mock."""
-        config = UnifiedConfig()
-        return config.get_kernel_with_gpt4o_mini()
-        
-    async def _make_authentic_llm_call(self, prompt: str) -> str:
-        """Fait un appel authentique à gpt-4o-mini."""
-        try:
-            kernel = await self._create_authentic_gpt4o_mini_instance()
-            result = await kernel.invoke("chat", input=prompt)
-            return str(result)
-        except Exception as e:
-            logger.warning(f"Appel LLM authentique échoué: {e}")
-            return "Authentic LLM call failed"
-
     """Tests pour l'énumération SourceType."""
-    
+
     def test_source_type_values(self):
         """Test les valeurs de l'énumération."""
         assert SourceType.SIMPLE.value == "simple"
         assert SourceType.COMPLEX.value == "complex"
-    
+
     def test_source_type_enum_members(self):
         """Test que l'énumération contient les membres attendus."""
         expected_members = {"SIMPLE", "COMPLEX"}
@@ -145,25 +124,23 @@ class TestSourceManager:
         )
         # Note: Ce test pourrait nécessiter un ajustement selon l'implémentation
         
-    def test_load_sources_simple_type(self, source_manager_simple):
+    def test_load_sources_simple_type(self, mocker, source_manager_simple):
         """Test le routage vers les sources simples."""
-        with patch.object(source_manager_simple, '_load_simple_sources') as mock_simple:
-            mock_simple# Mock eliminated - using authentic gpt-4o-mini (await self._create_authentic_gpt4o_mini_instance(), "Success")
-            
-            result = source_manager_simple.load_sources()
-            
-            mock_simple.# Mock assertion eliminated - authentic validation
-            assert result == (await self._create_authentic_gpt4o_mini_instance(), "Success")
-    
-    def test_load_sources_complex_type(self, source_manager_complex):
+        mock_simple = mocker.patch.object(source_manager_simple, '_load_simple_sources', return_value=(None, "Success"))
+
+        result = source_manager_simple.load_sources()
+
+        mock_simple.assert_called_once()
+        assert result == (None, "Success")
+
+    def test_load_sources_complex_type(self, mocker, source_manager_complex):
         """Test le routage vers les sources complexes."""
-        with patch.object(source_manager_complex, '_load_complex_sources') as mock_complex:
-            mock_complex# Mock eliminated - using authentic gpt-4o-mini (await self._create_authentic_gpt4o_mini_instance(), "Success")
-            
-            result = source_manager_complex.load_sources()
-            
-            mock_complex.# Mock assertion eliminated - authentic validation
-            assert result == (await self._create_authentic_gpt4o_mini_instance(), "Success")
+        mock_complex = mocker.patch.object(source_manager_complex, '_load_complex_sources', return_value=(None, "Success"))
+
+        result = source_manager_complex.load_sources()
+
+        mock_complex.assert_called_once()
+        assert result == (None, "Success")
     
     def test_load_sources_invalid_type(self):
         """Test avec un type de source invalide."""
@@ -180,16 +157,17 @@ class TestSourceManager:
         assert "non supporté" in message
     
     
-    def test_load_simple_sources_success(self, mock_from_dict, source_manager_simple):
+    def test_load_simple_sources_success(self, mocker, source_manager_simple):
         """Test le chargement réussi des sources simples."""
-        mock_extract_def = Mock(spec=ExtractDefinitions)
-        mock_from_dict# Mock eliminated - using authentic gpt-4o-mini mock_extract_def
+        mock_from_dict = mocker.patch('argumentation_analysis.core.source_manager.ExtractDefinitions.from_dict')
+        mock_extract_def = mocker.Mock(spec=ExtractDefinitions)
+        mock_from_dict.return_value = mock_extract_def
         
         definitions, message = source_manager_simple._load_simple_sources()
         
         assert definitions == mock_extract_def
         assert "Sources simples chargées avec succès" in message
-        mock_from_dict.# Mock assertion eliminated - authentic validation
+        mock_from_dict.assert_called_once()
         
         # Vérifier la structure des données mockées
         call_args = mock_from_dict.call_args[0][0]
@@ -206,9 +184,10 @@ class TestSourceManager:
         assert len(political_source["extracts"]) > 0
     
     
-    def test_load_simple_sources_exception(self, mock_from_dict, source_manager_simple):
+    def test_load_simple_sources_exception(self, mocker, source_manager_simple):
         """Test la gestion d'exception lors du chargement de sources simples."""
-        mock_from_dict# Mock eliminated - using authentic gpt-4o-mini Exception("Test error")
+        mock_from_dict = mocker.patch('argumentation_analysis.core.source_manager.ExtractDefinitions.from_dict')
+        mock_from_dict.side_effect = Exception("Test error")
         
         definitions, message = source_manager_simple._load_simple_sources()
         
@@ -221,66 +200,66 @@ class TestSourceManager:
     
     
     def test_load_complex_sources_success(
-        self, mock_from_dict, mock_decrypt, mock_load_key, mock_data_dir, source_manager_complex
+        self, mocker, source_manager_complex
     ):
         """Test le chargement réussi des sources complexes."""
         # Configuration des mocks
-        mock_data_dir# Mock eliminated - using authentic gpt-4o-mini Path("/mock/data")
-        mock_load_key# Mock eliminated - using authentic gpt-4o-mini b"mock_encryption_key"
+        mock_data_dir = mocker.patch('argumentation_analysis.core.source_manager.DATA_DIR', Path("/mock/data"))
+        mock_load_key = mocker.patch('argumentation_analysis.core.source_manager.CryptoUtils.derive_encryption_key', return_value=b"mock_encryption_key")
         
         # Mock du fichier chiffré
         encrypted_file_path = Path("/mock/data/extract_sources.json.gz.enc")
-        mock_data_dir.__truediv__ = Mock(return_value=encrypted_file_path)
+        mocker.patch.object(Path, 'exists', return_value=True)
         
         # Mock des données déchiffrées et décompressées
         original_data = [{"source_name": "Test source", "extracts": []}]
         json_data = json.dumps(original_data).encode('utf-8')
         gzipped_data = gzip.compress(json_data)
-        mock_decrypt# Mock eliminated - using authentic gpt-4o-mini gzipped_data
+        mock_decrypt = mocker.patch('argumentation_analysis.core.source_manager.CryptoUtils.decrypt_data_fernet', return_value=gzipped_data)
         
         # Mock ExtractDefinitions
-        mock_extract_def = Mock(spec=ExtractDefinitions)
-        mock_extract_def.sources = [await self._create_authentic_gpt4o_mini_instance()]  # Au moins une source
-        mock_from_dict# Mock eliminated - using authentic gpt-4o-mini mock_extract_def
+        mock_extract_def = mocker.Mock(spec=ExtractDefinitions)
+        mock_extract_def.sources = [mocker.Mock()]  # Au moins une source
+        mock_from_dict = mocker.patch('argumentation_analysis.core.source_manager.ExtractDefinitions.from_dict', return_value=mock_extract_def)
         
         # Mock file operations
-        with patch('builtins.open', mock_open(read_data=b"encrypted_data")):
-            with patch.object(Path, 'exists', return_value=True):
-                definitions, message = source_manager_complex._load_complex_sources()
+        mocker.patch('builtins.open', mock_open(read_data=b"encrypted_data"))
+        definitions, message = source_manager_complex._load_complex_sources()
         
         assert definitions == mock_extract_def
         assert "Corpus chiffré chargé avec succès" in message
         mock_load_key.assert_called_once_with(passphrase_arg="test_passphrase")
-        mock_decrypt.# Mock assertion eliminated - authentic validation
+        mock_decrypt.assert_called_once()
     
     def test_load_complex_sources_no_passphrase(self):
         """Test le chargement complexe sans passphrase."""
         config = SourceConfig(source_type=SourceType.COMPLEX)  # Pas de passphrase
         manager = SourceManager(config)
         
-        with patch.dict(os.environ, {}, clear=True):  # Pas de variable d'environnement
-            definitions, message = manager._load_complex_sources()
+        mocker.patch.dict(os.environ, {}, clear=True)
+        definitions, message = manager._load_complex_sources()
         
         assert definitions is None
         assert "Passphrase requise" in message
     
-    @patch.dict(os.environ, {'TEXT_CONFIG_PASSPHRASE': 'env_passphrase'})
-    
-    def test_load_complex_sources_env_passphrase(self, mock_load_key):
+    def test_load_complex_sources_env_passphrase(self, mocker):
         """Test l'utilisation de la passphrase depuis les variables d'environnement."""
+        mocker.patch.dict(os.environ, {'TEXT_CONFIG_PASSPHRASE': 'env_passphrase'}, clear=True)
+        mock_load_key = mocker.patch('argumentation_analysis.core.source_manager.CryptoUtils.derive_encryption_key')
         config = SourceConfig(source_type=SourceType.COMPLEX)  # Pas de passphrase dans config
         manager = SourceManager(config)
         
-        mock_load_key# Mock eliminated - using authentic gpt-4o-mini None  # Échec volontaire pour tester la passphrase
+        mock_load_key.return_value = None  # Échec volontaire pour tester la passphrase
         
         definitions, message = manager._load_complex_sources()
         
         mock_load_key.assert_called_once_with(passphrase_arg='env_passphrase')
     
     
-    def test_load_complex_sources_key_derivation_failure(self, mock_load_key, source_manager_complex):
+    def test_load_complex_sources_key_derivation_failure(self, mocker, source_manager_complex):
         """Test l'échec de dérivation de clé."""
-        mock_load_key# Mock eliminated - using authentic gpt-4o-mini None
+        mock_load_key = mocker.patch('argumentation_analysis.core.source_manager.CryptoUtils.derive_encryption_key')
+        mock_load_key.return_value = None
         
         definitions, message = source_manager_complex._load_complex_sources()
         
@@ -289,14 +268,12 @@ class TestSourceManager:
     
     
     
-    def test_load_complex_sources_file_not_found(self, mock_load_key, mock_data_dir, source_manager_complex):
+    def test_load_complex_sources_file_not_found(self, mocker, source_manager_complex):
         """Test avec fichier chiffré introuvable."""
-        mock_load_key# Mock eliminated - using authentic gpt-4o-mini b"test_key"
+        mocker.patch('argumentation_analysis.core.source_manager.CryptoUtils.derive_encryption_key', return_value=b"test_key")
         
         # Mock du chemin qui n'existe pas
-        encrypted_file_path = await self._create_authentic_gpt4o_mini_instance()
-        encrypted_file_path.exists# Mock eliminated - using authentic gpt-4o-mini False
-        mock_data_dir.__truediv__ = Mock(return_value=encrypted_file_path)
+        mocker.patch.object(Path, 'exists', return_value=False)
         
         definitions, message = source_manager_complex._load_complex_sources()
         
@@ -312,7 +289,7 @@ class TestSourceManager:
     
     def test_select_text_for_analysis_empty_sources(self, source_manager_simple):
         """Test la sélection de texte avec sources vides."""
-        mock_definitions = await self._create_authentic_gpt4o_mini_instance()
+        mock_definitions = mocker.MagicMock(spec=ExtractDefinitions)
         mock_definitions.sources = []
         
         text, description = source_manager_simple.select_text_for_analysis(mock_definitions)
@@ -320,17 +297,17 @@ class TestSourceManager:
         assert "fallback" in text.lower()
         assert "aucune source disponible" in description
     
-    def test_select_text_for_analysis_simple_sources(self, source_manager_simple):
+    def test_select_text_for_analysis_simple_sources(self, mocker, source_manager_simple):
         """Test la sélection de texte depuis sources simples."""
         # Mock des sources avec extraits
-        mock_extract = await self._create_authentic_gpt4o_mini_instance()
+        mock_extract = mocker.MagicMock()
         mock_extract.full_text = "Texte d'analyse depuis source simple"
         
-        mock_source = await self._create_authentic_gpt4o_mini_instance()
+        mock_source = mocker.MagicMock()
         mock_source.source_name = "Source de test"
         mock_source.extracts = [mock_extract]
         
-        mock_definitions = await self._create_authentic_gpt4o_mini_instance()
+        mock_definitions = mocker.MagicMock(spec=ExtractDefinitions)
         mock_definitions.sources = [mock_source]
         
         text, description = source_manager_simple.select_text_for_analysis(mock_definitions)
@@ -338,18 +315,18 @@ class TestSourceManager:
         assert text == "Texte d'analyse depuis source simple"
         assert "Source simple: Source de test" in description
     
-    def test_select_text_for_analysis_complex_sources(self, source_manager_complex):
+    def test_select_text_for_analysis_complex_sources(self, mocker, source_manager_complex):
         """Test la sélection de texte depuis sources complexes."""
         # Mock d'un extrait substantiel (>200 caractères)
         long_text = "x" * 250  # Texte de 250 caractères
-        mock_extract = await self._create_authentic_gpt4o_mini_instance()
+        mock_extract = mocker.MagicMock()
         mock_extract.full_text = long_text
         
-        mock_source = await self._create_authentic_gpt4o_mini_instance()
+        mock_source = mocker.MagicMock()
         mock_source.source_name = "Source politique complexe"
         mock_source.extracts = [mock_extract]
         
-        mock_definitions = await self._create_authentic_gpt4o_mini_instance()
+        mock_definitions = mocker.MagicMock(spec=ExtractDefinitions)
         mock_definitions.sources = [mock_source]
         
         text, description = source_manager_complex.select_text_for_analysis(mock_definitions)
@@ -358,7 +335,7 @@ class TestSourceManager:
         # Avec anonymisation activée par défaut
         assert "[ANONYMISÉ]" in description
     
-    def test_select_text_for_analysis_complex_no_anonymization(self):
+    def test_select_text_for_analysis_complex_no_anonymization(self, mocker):
         """Test la sélection complexe sans anonymisation."""
         config = SourceConfig(
             source_type=SourceType.COMPLEX,
@@ -367,31 +344,31 @@ class TestSourceManager:
         )
         manager = SourceManager(config)
         
-        mock_extract = await self._create_authentic_gpt4o_mini_instance()
+        mock_extract = mocker.MagicMock()
         mock_extract.full_text = "x" * 250
         
-        mock_source = await self._create_authentic_gpt4o_mini_instance()
+        mock_source = mocker.MagicMock()
         mock_source.source_name = "Source politique"
         mock_source.extracts = [mock_extract]
         
-        mock_definitions = await self._create_authentic_gpt4o_mini_instance()
+        mock_definitions = mocker.MagicMock(spec=ExtractDefinitions)
         mock_definitions.sources = [mock_source]
         
         text, description = manager.select_text_for_analysis(mock_definitions)
         
         assert "Source: Source politique" in description
     
-    def test_select_text_for_analysis_short_complex_content(self, source_manager_complex):
+    def test_select_text_for_analysis_short_complex_content(self, mocker, source_manager_complex):
         """Test avec contenu complexe trop court."""
         # Mock d'un extrait trop court (<200 caractères)
         short_text = "x" * 50
-        mock_extract = await self._create_authentic_gpt4o_mini_instance()
+        mock_extract = mocker.MagicMock()
         mock_extract.full_text = short_text
         
-        mock_source = await self._create_authentic_gpt4o_mini_instance()
+        mock_source = mocker.MagicMock()
         mock_source.extracts = [mock_extract]
         
-        mock_definitions = await self._create_authentic_gpt4o_mini_instance()
+        mock_definitions = mocker.MagicMock(spec=ExtractDefinitions)
         mock_definitions.sources = [mock_source]
         
         text, description = source_manager_complex.select_text_for_analysis(mock_definitions)
@@ -445,15 +422,15 @@ class TestSourceManager:
                 if path.exists():
                     path.unlink()
     
-    def test_cleanup_sensitive_data_exception_handling(self):
+    def test_cleanup_sensitive_data_exception_handling(self, mocker):
         """Test la gestion d'exception lors du nettoyage."""
         config = SourceConfig(source_type=SourceType.SIMPLE)
         manager = SourceManager(config)
         
         # Mock d'un fichier qui lève une exception lors de la suppression
-        mock_file = await self._create_authentic_gpt4o_mini_instance()
-        mock_file.exists# Mock eliminated - using authentic gpt-4o-mini True
-        mock_file.unlink# Mock eliminated - using authentic gpt-4o-mini PermissionError("Permission denied")
+        mock_file = mocker.MagicMock()
+        mock_file.exists.return_value = True
+        mock_file.unlink.side_effect = PermissionError("Permission denied")
         
         manager._temp_files = [mock_file]
         
@@ -468,21 +445,21 @@ class TestSourceManager:
         result = source_manager_simple.__enter__()
         assert result is source_manager_simple
     
-    def test_context_manager_exit(self, source_manager_simple):
+    def test_context_manager_exit(self, mocker, source_manager_simple):
         """Test la sortie du context manager."""
-        with patch.object(source_manager_simple, 'cleanup_sensitive_data') as mock_cleanup:
-            source_manager_simple.__exit__(None, None, None)
-            mock_cleanup.# Mock assertion eliminated - authentic validation
+        mock_cleanup = mocker.patch.object(source_manager_simple, 'cleanup_sensitive_data')
+        source_manager_simple.__exit__(None, None, None)
+        mock_cleanup.assert_called_once()
     
     def test_context_manager_usage(self):
         """Test d'utilisation complète du context manager."""
         config = SourceConfig(source_type=SourceType.SIMPLE)
         
-        with patch.object(SourceManager, 'cleanup_sensitive_data') as mock_cleanup:
-            with SourceManager(config) as manager:
-                assert isinstance(manager, SourceManager)
-            
-            mock_cleanup.# Mock assertion eliminated - authentic validation
+        mock_cleanup = mocker.patch.object(SourceManager, 'cleanup_sensitive_data')
+        with SourceManager(config) as manager:
+            assert isinstance(manager, SourceManager)
+        
+        mock_cleanup.assert_called_once()
 
 
 class TestCreateSourceManager:
@@ -555,55 +532,47 @@ class TestSourceManagerIntegration:
     
     
     
-    def test_full_complex_workflow(self, mock_from_dict, mock_decrypt, mock_load_key, mock_data_dir):
+    def test_full_complex_workflow(self, mocker):
         """Test du workflow complet avec sources complexes."""
-        # Configuration des mocks pour un workflow réussi
-        mock_data_dir.__truediv__ = Mock(return_value=await self._create_authentic_gpt4o_mini_instance())
-        mock_load_key# Mock eliminated - using authentic gpt-4o-mini b"test_key"
-        
+        mocker.patch("pathlib.Path.exists", return_value=True)
+        mocker.patch("argumentation_analysis.core.source_manager.DATA_DIR", Path("/mock/data"))
+        mocker.patch("argumentation_analysis.core.source_manager.CryptoUtils.derive_encryption_key", return_value=b"test_key")
+
         # Données de test
         test_data = [
             {
                 "source_name": "Test Political Speech",
-                "extracts": [
-                    {
-                        "extract_name": "Test Extract",
-                        "full_text": "x" * 300  # Texte substantiel
-                    }
-                ]
+                "extracts": [{"extract_name": "Test Extract", "full_text": "x" * 300}]
             }
         ]
-        
         json_data = json.dumps(test_data).encode('utf-8')
         gzipped_data = gzip.compress(json_data)
-        mock_decrypt# Mock eliminated - using authentic gpt-4o-mini gzipped_data
+        mocker.patch("argumentation_analysis.core.source_manager.CryptoUtils.decrypt_data_fernet", return_value=gzipped_data)
         
         # Mock ExtractDefinitions
-        mock_extract = await self._create_authentic_gpt4o_mini_instance()
+        mock_extract = mocker.MagicMock()
         mock_extract.full_text = "x" * 300
-        
-        mock_source = await self._create_authentic_gpt4o_mini_instance()
+        mock_source = mocker.MagicMock()
         mock_source.source_name = "Test Political Speech"
         mock_source.extracts = [mock_extract]
-        
-        mock_definitions = await self._create_authentic_gpt4o_mini_instance()
+        mock_definitions = mocker.MagicMock(spec=ExtractDefinitions)
         mock_definitions.sources = [mock_source]
-        mock_from_dict# Mock eliminated - using authentic gpt-4o-mini mock_definitions
+        mocker.patch("argumentation_analysis.core.source_manager.ExtractDefinitions.from_dict", return_value=mock_definitions)
         
-        with patch('builtins.open', mock_open(read_data=b"encrypted_data")):
-            with patch.object(Path, 'exists', return_value=True):
-                with create_source_manager("complex", passphrase="test") as manager:
-                    # Chargement des sources
-                    definitions, message = manager.load_sources()
-                    
-                    assert definitions is not None
-                    assert "succès" in message
-                    
-                    # Sélection de texte
-                    text, description = manager.select_text_for_analysis(definitions)
-                    
-                    assert len(text) >= 300
-                    assert "[ANONYMISÉ]" in description  # Anonymisation par défaut
+        mocker.patch('builtins.open', mock_open(read_data=b"encrypted_data"))
+        mocker.patch.object(Path, 'exists', return_value=True)
+        with create_source_manager("complex", passphrase="test") as manager:
+            # Chargement des sources
+            definitions, message = manager.load_sources()
+            
+            assert definitions is not None
+            assert "succès" in message
+            
+            # Sélection de texte
+            text, description = manager.select_text_for_analysis(definitions)
+            
+            assert len(text) >= 300
+            assert "[ANONYMISÉ]" in description  # Anonymisation par défaut
     
     def test_error_handling_workflow(self):
         """Test du workflow avec gestion d'erreurs."""
@@ -615,28 +584,28 @@ class TestSourceManagerIntegration:
             assert "aucune source disponible" in description
             
             # Test avec exception dans le chargement
-            with patch.object(manager, '_load_simple_sources', side_effect=Exception("Test error")):
-                definitions, message = manager.load_sources()
-                
-                # Le manager devrait gérer l'exception gracieusement dans load_sources
-                # ou la laisser remonter selon l'implémentation
+            mocker.patch.object(manager, '_load_simple_sources', side_effect=Exception("Test error"))
+            definitions, message = manager.load_sources()
+            
+            # Le manager devrait gérer l'exception gracieusement dans load_sources
+            # ou la laisser remonter selon l'implémentation
     
-    def test_logging_integration(self):
+    def test_logging_integration(self, mocker):
         """Test de l'intégration du système de logging."""
         import logging
         
         # Capturer les logs
-        with patch('logging.getLogger') as mock_get_logger:
-            mock_logger = await self._create_authentic_gpt4o_mini_instance()
-            mock_get_logger# Mock eliminated - using authentic gpt-4o-mini mock_logger
-            
-            manager = create_source_manager("simple")
-            
-            # Tester quelques opérations qui loggent
-            manager.load_sources()
-            
-            # Vérifier que le logger a été utilisé
-            mock_logger.info.assert_called()
+        mock_get_logger = mocker.patch('logging.getLogger')
+        mock_logger = mocker.MagicMock()
+        mock_get_logger.return_value = mock_logger
+        
+        manager = create_source_manager("simple")
+        
+        # Tester quelques opérations qui loggent
+        manager.load_sources()
+        
+        # Vérifier que le logger a été utilisé
+        mock_logger.info.assert_called()
     
     def test_memory_cleanup_integration(self):
         """Test du nettoyage mémoire en conditions réelles."""

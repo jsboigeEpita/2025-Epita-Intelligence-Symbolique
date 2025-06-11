@@ -14,8 +14,9 @@ from pathlib import Path
 import subprocess
 
 
+from unittest.mock import MagicMock, patch
 from argumentation_analysis.utils.core_utils.system_utils import run_shell_command
-
+ 
 @pytest.fixture
 def mock_subprocess_run():
     """Fixture pour mocker subprocess.run."""
@@ -29,11 +30,11 @@ def test_run_shell_command_success(mock_subprocess_run):
     expected_stderr = ""
     expected_return_code = 0
 
-    mock_process = Magicawait self._create_authentic_gpt4o_mini_instance()
+    mock_process = MagicMock()
     mock_process.stdout = expected_stdout
     mock_process.stderr = expected_stderr
     mock_process.returncode = expected_return_code
-    mock_subprocess_run# Mock eliminated - using authentic gpt-4o-mini mock_process
+    mock_subprocess_run.return_value = mock_process
 
     ret_code, out, err = run_shell_command(command)
 
@@ -56,11 +57,11 @@ def test_run_shell_command_with_error_output(mock_subprocess_run):
     expected_stderr = "WARN: Deprecated feature used."
     expected_return_code = 0
 
-    mock_process = Magicawait self._create_authentic_gpt4o_mini_instance()
+    mock_process = MagicMock()
     mock_process.stdout = expected_stdout
     mock_process.stderr = expected_stderr
     mock_process.returncode = expected_return_code
-    mock_subprocess_run# Mock eliminated - using authentic gpt-4o-mini mock_process
+    mock_subprocess_run.return_value = mock_process
 
     ret_code, out, err = run_shell_command(command)
 
@@ -75,11 +76,11 @@ def test_run_shell_command_failure_return_code(mock_subprocess_run):
     expected_stderr = "Error: Something went wrong."
     expected_return_code = 1
 
-    mock_process = Magicawait self._create_authentic_gpt4o_mini_instance()
+    mock_process = MagicMock()
     mock_process.stdout = expected_stdout
     mock_process.stderr = expected_stderr
     mock_process.returncode = expected_return_code
-    mock_subprocess_run# Mock eliminated - using authentic gpt-4o-mini mock_process
+    mock_subprocess_run.return_value = mock_process
 
     ret_code, out, err = run_shell_command(command)
 
@@ -97,7 +98,7 @@ def test_run_shell_command_timeout(mock_subprocess_run, caplog):
     timeout_exception = subprocess.TimeoutExpired(cmd=command, timeout=timeout_seconds)
     timeout_exception.stdout = b"Partial output before timeout"
     timeout_exception.stderr = b"Partial error before timeout"
-    mock_subprocess_run# Mock eliminated - using authentic gpt-4o-mini timeout_exception
+    mock_subprocess_run.side_effect = timeout_exception
 
     ret_code, out, err = run_shell_command(command, timeout_seconds=timeout_seconds)
 
@@ -111,7 +112,7 @@ def test_run_shell_command_file_not_found(mock_subprocess_run, caplog):
     command = "command_that_does_not_exist"
     
     # Simuler FileNotFoundError
-    mock_subprocess_run# Mock eliminated - using authentic gpt-4o-mini FileNotFoundError(f"[Errno 2] No such file or directory: '{command.split()[0]}'")
+    mock_subprocess_run.side_effect = FileNotFoundError(f"[Errno 2] No such file or directory: '{command.split()[0]}'")
 
     ret_code, out, err = run_shell_command(command)
 
@@ -129,7 +130,7 @@ def test_run_shell_command_unexpected_exception(mock_subprocess_run, caplog):
     generic_exception = Exception("A very unexpected error occurred.")
     # setattr(generic_exception, 'stdout', b"stdout from generic error") # Optionnel
     # setattr(generic_exception, 'stderr', b"stderr from generic error") # Optionnel
-    mock_subprocess_run# Mock eliminated - using authentic gpt-4o-mini generic_exception
+    mock_subprocess_run.side_effect = generic_exception
 
     ret_code, out, err = run_shell_command(command)
 
@@ -146,11 +147,11 @@ def test_run_shell_command_with_work_dir(mock_subprocess_run, tmp_path):
     work_dir.mkdir() # Le répertoire doit exister pour subprocess.run
 
     expected_stdout = str(work_dir.resolve())
-    mock_process = Magicawait self._create_authentic_gpt4o_mini_instance()
+    mock_process = MagicMock()
     mock_process.stdout = expected_stdout
     mock_process.stderr = ""
     mock_process.returncode = 0
-    mock_subprocess_run# Mock eliminated - using authentic gpt-4o-mini mock_process
+    mock_subprocess_run.return_value = mock_process
 
     ret_code, out, err = run_shell_command(command, work_dir=work_dir)
 

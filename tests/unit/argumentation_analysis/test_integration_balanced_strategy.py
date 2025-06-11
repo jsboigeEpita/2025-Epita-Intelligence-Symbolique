@@ -15,12 +15,14 @@ d'analyse argumentative.
 """
 
 import unittest
+from unittest.mock import MagicMock, AsyncMock, patch
 import asyncio
 import pytest
+import logging
 
 import semantic_kernel as sk
-from semantic_kernel.contents import ChatMessageContent, AuthorRole
-from semantic_kernel.agents import Agent, AgentGroupChat
+from semantic_kernel.contents import ChatMessageContent
+# from semantic_kernel.experimental.agents import Agent, AgentGroupChat
 
 # Utiliser la fonction setup_import_paths pour résoudre les problèmes d'imports relatifs
 # from tests import setup_import_paths # Commenté pour investigation
@@ -50,7 +52,7 @@ class TestBalancedStrategyIntegration: # Suppression de l'héritage AsyncTestCas
             result = await kernel.invoke("chat", input=prompt)
             return str(result)
         except Exception as e:
-            logger.warning(f"Appel LLM authentique échoué: {e}")
+            logging.warning(f"Appel LLM authentique échoué: {e}")
             return "Authentic LLM call failed"
 
     """Tests d'intégration pour la stratégie d'équilibrage de participation."""
@@ -65,7 +67,7 @@ class TestBalancedStrategyIntegration: # Suppression de l'héritage AsyncTestCas
         
         self.state = RhetoricalAnalysisState(self.test_text)
         
-        self.llm_service = Magicawait self._create_authentic_gpt4o_mini_instance()
+        self.llm_service = MagicMock()
         self.llm_service.service_id = "test_service"
         
         self.kernel = sk.Kernel()
@@ -99,17 +101,17 @@ class TestBalancedStrategyIntegration: # Suppression de l'héritage AsyncTestCas
             default_agent_name="ProjectManagerAgent"
         )
         
-        self.assertEqual(balanced_strategy._analysis_state, self.state)
-        self.assertEqual(balanced_strategy._default_agent_name, "ProjectManagerAgent")
-        self.assertEqual(len(balanced_strategy._agents_map), 4)
+        assert balanced_strategy._analysis_state == self.state
+        assert balanced_strategy._default_agent_name == "ProjectManagerAgent"
+        assert len(balanced_strategy._agents_map) == 4
         
         history = []
         
         selected_agent = await balanced_strategy.next(self.agents, history)
-        self.assertEqual(selected_agent, self.pm_agent)
+        assert selected_agent == self.pm_agent
         
         pm_message = MagicMock(spec=ChatMessageContent)
-        pm_message.role = AuthorRole.ASSISTANT
+        pm_message.role = "assistant"
         pm_message.name = "ProjectManagerAgent"
         pm_message.content = "Je vais définir les tâches d'analyse."
         history.append(pm_message)
@@ -117,17 +119,17 @@ class TestBalancedStrategyIntegration: # Suppression de l'héritage AsyncTestCas
         self.state.add_task("Identifier les arguments dans le texte")
         
         selected_agent = await balanced_strategy.next(self.agents, history)
-        self.assertNotEqual(selected_agent, self.pm_agent)
+        assert selected_agent != self.pm_agent
         
         agent_message = MagicMock(spec=ChatMessageContent)
-        agent_message.role = AuthorRole.ASSISTANT
+        agent_message.role = "assistant"
         agent_message.name = selected_agent.name
         agent_message.content = "Je vais analyser les arguments."
         history.append(agent_message)
         
-        self.assertEqual(balanced_strategy._participation_counts["ProjectManagerAgent"], 1)
-        self.assertEqual(balanced_strategy._participation_counts[selected_agent.name], 1)
-        self.assertEqual(balanced_strategy._total_turns, 2)
+        assert balanced_strategy._participation_counts["ProjectManagerAgent"] == 1
+        assert balanced_strategy._participation_counts[selected_agent.name] == 1
+        assert balanced_strategy._total_turns == 2
 
     async def test_balanced_strategy_with_designations(self):
         """Teste l'interaction entre la stratégie d'équilibrage et les désignations explicites."""
@@ -141,32 +143,32 @@ class TestBalancedStrategyIntegration: # Suppression de l'héritage AsyncTestCas
         
         self.state.designate_next_agent("PropositionalLogicAgent")
         selected_agent = await balanced_strategy.next(self.agents, history)
-        self.assertEqual(selected_agent, self.pl_agent)
+        assert selected_agent == self.pl_agent
         
         pl_message = MagicMock(spec=ChatMessageContent)
-        pl_message.role = AuthorRole.ASSISTANT
+        pl_message.role = "assistant"
         pl_message.name = "PropositionalLogicAgent"
         pl_message.content = "Je vais formaliser les arguments."
         history.append(pl_message)
         
         self.state.designate_next_agent("InformalAnalysisAgent")
         selected_agent = await balanced_strategy.next(self.agents, history)
-        self.assertEqual(selected_agent, self.informal_agent)
+        assert selected_agent == self.informal_agent
         
         informal_message = MagicMock(spec=ChatMessageContent)
-        informal_message.role = AuthorRole.ASSISTANT
+        informal_message.role = "assistant"
         informal_message.name = "InformalAnalysisAgent"
         informal_message.content = "Je vais identifier les sophismes."
         history.append(informal_message)
         
         selected_agent = await balanced_strategy.next(self.agents, history)
         
-        self.assertEqual(balanced_strategy._participation_counts["PropositionalLogicAgent"], 1)
-        self.assertEqual(balanced_strategy._participation_counts["InformalAnalysisAgent"], 1)
-        self.assertEqual(balanced_strategy._total_turns, 3)
+        assert balanced_strategy._participation_counts["PropositionalLogicAgent"] == 1
+        assert balanced_strategy._participation_counts["InformalAnalysisAgent"] == 1
+        assert balanced_strategy._total_turns == 3
         
-        self.assertGreaterEqual(balanced_strategy._imbalance_budget["ProjectManagerAgent"], 0)
-        self.assertGreaterEqual(balanced_strategy._imbalance_budget["ExtractAgent"], 0)
+        assert balanced_strategy._imbalance_budget["ProjectManagerAgent"] >= 0
+        assert balanced_strategy._imbalance_budget["ExtractAgent"] >= 0
 
     async def test_balanced_strategy_in_group_chat(self):
         """Teste l'utilisation de la stratégie d'équilibrage dans un AgentGroupChat."""
@@ -179,30 +181,30 @@ class TestBalancedStrategyIntegration: # Suppression de l'héritage AsyncTestCas
         history = []
         
         selected_agent = await balanced_strategy.next(self.agents, history)
-        self.assertEqual(selected_agent, self.pm_agent)
+        assert selected_agent == self.pm_agent
         
         pm_message = MagicMock(spec=ChatMessageContent)
-        pm_message.role = AuthorRole.ASSISTANT
+        pm_message.role = "assistant"
         pm_message.name = "ProjectManagerAgent"
         pm_message.content = "Message du PM"
         history.append(pm_message)
         
         selected_agent = await balanced_strategy.next(self.agents, history)
-        self.assertNotEqual(selected_agent, self.pm_agent)
+        assert selected_agent != self.pm_agent
         
         agent_message = MagicMock(spec=ChatMessageContent)
-        agent_message.role = AuthorRole.ASSISTANT
+        agent_message.role = "assistant"
         agent_message.name = selected_agent.name
         agent_message.content = "Message de l'agent"
         history.append(agent_message)
         
         selected_agent2 = await balanced_strategy.next(self.agents, history)
-        self.assertNotEqual(selected_agent2, self.pm_agent)
-        self.assertNotEqual(selected_agent2, selected_agent)
+        assert selected_agent2 != self.pm_agent
+        assert selected_agent2 != selected_agent
         
-        self.assertEqual(balanced_strategy._participation_counts["ProjectManagerAgent"], 1)
-        self.assertEqual(balanced_strategy._participation_counts[selected_agent.name], 1)
-        self.assertEqual(balanced_strategy._total_turns, 3)
+        assert balanced_strategy._participation_counts["ProjectManagerAgent"] == 1
+        assert balanced_strategy._participation_counts[selected_agent.name] == 1
+        assert balanced_strategy._total_turns == 3
 
 
 class TestBalancedStrategyEndToEnd: # Suppression de l'héritage AsyncTestCase
@@ -212,35 +214,35 @@ class TestBalancedStrategyEndToEnd: # Suppression de l'héritage AsyncTestCase
      # Corrigé le chemin du mock
     async def test_balanced_strategy_in_analysis_runner(self, mock_agent_group_chat, mock_balanced_strategy):
         """Teste l'utilisation de la stratégie d'équilibrage dans le runner d'analyse."""
-        mock_strategy_instance = Magicawait self._create_authentic_gpt4o_mini_instance()
-        mock_balanced_strategy# Mock eliminated - using authentic gpt-4o-mini mock_strategy_instance
+        mock_strategy_instance = MagicMock()
+        mock_balanced_strategy(return_value=mock_strategy_instance)
         
-        mock_extract_kernel = Magicawait self._create_authentic_gpt4o_mini_instance()
-        OrchestrationServiceManager = Magicawait self._create_authentic_gpt4o_mini_instance()
+        mock_extract_kernel = MagicMock()
+        OrchestrationServiceManager = MagicMock()
         OrchestrationServiceManager.id = "extract_agent_id"
         
-        mock_group_chat_instance = Magicawait self._create_authentic_gpt4o_mini_instance()
-        mock_agent_group_chat# Mock eliminated - using authentic gpt-4o-mini mock_group_chat_instance
+        mock_group_chat_instance = MagicMock()
+        mock_agent_group_chat(return_value=mock_group_chat_instance)
         
         async def mock_invoke():
-            message1 = Magicawait self._create_authentic_gpt4o_mini_instance()
+            message1 = MagicMock()
             message1.name = "ProjectManagerAgent"
-            message1.role = AuthorRole.ASSISTANT
+            message1.role = "assistant"
             message1.content = "Message du PM"
             yield message1
             
-            message2 = Magicawait self._create_authentic_gpt4o_mini_instance()
+            message2 = MagicMock()
             message2.name = "InformalAnalysisAgent"
-            message2.role = AuthorRole.ASSISTANT
+            message2.role = "assistant"
             message2.content = "Message de l'agent informel"
             yield message2
         
         mock_group_chat_instance.invoke = mock_invoke
-        mock_group_chat_instance.history = Magicawait self._create_authentic_gpt4o_mini_instance()
-        mock_group_chat_instance.history.add_user_message = Magicawait self._create_authentic_gpt4o_mini_instance()
+        mock_group_chat_instance.history = MagicMock()
+        mock_group_chat_instance.history.add_user_message = MagicMock()
         mock_group_chat_instance.history.messages = []
         
-        llm_service_mock = Magicawait self._create_authentic_gpt4o_mini_instance()
+        llm_service_mock = MagicMock()
         llm_service_mock.service_id = "test_service"
         
         with patch('argumentation_analysis.orchestration.analysis_runner.RhetoricalAnalysisState'), \
@@ -255,8 +257,8 @@ class TestBalancedStrategyEndToEnd: # Suppression de l'héritage AsyncTestCase
             
             await run_analysis_conversation("Texte de test", llm_service_mock)
         
-        mock_balanced_strategy.# Mock assertion eliminated - authentic validation
-        mock_agent_group_chat.# Mock assertion eliminated - authentic validation
+        mock_balanced_strategy.assert_called_once()
+        mock_agent_group_chat.assert_called_once()
 
 
 if __name__ == '__main__':

@@ -595,35 +595,36 @@ class TestTraceAnalyzer:
 
 class TestUtilityFunctions:
     """Tests pour les fonctions utilitaires."""
-    
-    
+
+    @pytest.fixture
+    def mock_analyzer_class(self, mocker):
+        """Fixture pour mocker la classe TraceAnalyzer."""
+        return mocker.patch('argumentation_analysis.reporting.trace_analyzer.TraceAnalyzer')
+
     def test_analyze_latest_traces_success(self, mock_analyzer_class):
         """Test de l'analyse des dernières traces."""
         # Mock de l'instance d'analyzer
-        mock_analyzer = await self._create_authentic_gpt4o_mini_instance()
-        mock_analyzer.load_traces# Mock eliminated - using authentic gpt-4o-mini True
-        mock_analyzer.generate_comprehensive_report# Mock eliminated - using authentic gpt-4o-mini "Test report"
-        mock_analyzer_class# Mock eliminated - using authentic gpt-4o-mini mock_analyzer
+        mock_analyzer = mock_analyzer_class.return_value
+        mock_analyzer.load_traces.return_value = True
+        mock_analyzer.generate_comprehensive_report.return_value = "Test report"
         
         result = analyze_latest_traces("./test_logs")
         
         assert result == "Test report"
         mock_analyzer_class.assert_called_once_with("./test_logs")
-        mock_analyzer.load_traces.# Mock assertion eliminated - authentic validation
-        mock_analyzer.generate_comprehensive_report.# Mock assertion eliminated - authentic validation
+        mock_analyzer.load_traces.assert_called()
+        mock_analyzer.generate_comprehensive_report.assert_called()
     
     
     def test_analyze_latest_traces_failure(self, mock_analyzer_class):
         """Test de l'analyse avec échec de chargement."""
-        mock_analyzer = await self._create_authentic_gpt4o_mini_instance()
-        mock_analyzer.load_traces# Mock eliminated - using authentic gpt-4o-mini False
-        mock_analyzer_class# Mock eliminated - using authentic gpt-4o-mini mock_analyzer
+        mock_analyzer = mock_analyzer_class.return_value
+        mock_analyzer.load_traces.return_value = False
         
         result = analyze_latest_traces("./test_logs")
         
         assert result == "Erreur: Impossible de charger les traces"
         mock_analyzer.generate_comprehensive_report.assert_not_called()
-    
     
     def test_quick_metadata_extract(self, mock_analyzer_class):
         """Test de l'extraction rapide de métadonnées."""
@@ -635,16 +636,15 @@ class TestUtilityFunctions:
             analysis_timestamp="2023-01-01T12:00:00"
         )
         
-        mock_analyzer = await self._create_authentic_gpt4o_mini_instance()
-        mock_analyzer.extract_metadata# Mock eliminated - using authentic gpt-4o-mini mock_metadata
-        mock_analyzer_class# Mock eliminated - using authentic gpt-4o-mini mock_analyzer
+        mock_analyzer = mock_analyzer_class.return_value
+        mock_analyzer.extract_metadata.return_value = mock_metadata
         
         result = quick_metadata_extract("./test_logs")
         
         assert result == mock_metadata
         mock_analyzer_class.assert_called_once_with("./test_logs")
-        mock_analyzer.load_traces.# Mock assertion eliminated - authentic validation
-        mock_analyzer.extract_metadata.# Mock assertion eliminated - authentic validation
+        mock_analyzer.load_traces.assert_called()
+        mock_analyzer.extract_metadata.assert_called()
 
 
 class TestTraceAnalyzerIntegration:
