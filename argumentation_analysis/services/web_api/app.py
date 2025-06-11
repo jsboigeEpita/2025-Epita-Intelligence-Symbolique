@@ -342,110 +342,38 @@ def handle_error(error):
     ).dict()), 500
 
 
-@flask_app.route('/api/health', methods=['GET']) # MODIF: Utiliser flask_app
+@flask_app.route('/api/health', methods=['GET'])
 def health_check():
-    """Vérification de l'état de l'API."""
-    logger.info("[HealthCheck] Endpoint /api/health CALLED") # Log d'entrée
-    sys.stderr.flush() # S'assurer que le log est écrit immédiatement
-    try:
-        # Initialiser les services et vérifier leur état
-        services_status = {}
-        
-        # Test du service d'analyse
-        logger.info("[HealthCheck] Test du service d'analyse...")
-        try:
-            logger.info("[HealthCheck] Appel de get_analysis_service()...")
-            analysis_svc = get_analysis_service()
-            logger.info("[HealthCheck] get_analysis_service() terminé.")
-            logger.info("[HealthCheck] Appel de analysis_svc.is_healthy()...")
-            services_status["analysis"] = analysis_svc.is_healthy()
-            logger.info(f"[HealthCheck] Service analysis.is_healthy(): {services_status['analysis']}")
-        except Exception as e:
-            logger.error(f"[HealthCheck] Erreur service analysis: {e}", exc_info=True)
-            services_status["analysis"] = False
-            
-        # Test du service de validation
-        logger.info("[HealthCheck] Test du service de validation...")
-        try:
-            logger.info("[HealthCheck] Appel de get_validation_service()...")
-            validation_svc = get_validation_service()
-            logger.info("[HealthCheck] get_validation_service() terminé.")
-            if hasattr(validation_svc, 'is_healthy'):
-                logger.info("[HealthCheck] Appel de validation_svc.is_healthy()...")
-                services_status["validation"] = validation_svc.is_healthy()
-                logger.info(f"[HealthCheck] Service validation.is_healthy(): {services_status['validation']}")
-            else:
-                logger.warning("[HealthCheck] Service validation n'a pas d'attribut 'is_healthy'.")
-                services_status["validation"] = False # Ou une autre valeur par défaut
-        except Exception as e:
-            logger.error(f"[HealthCheck] Erreur service validation: {e}", exc_info=True)
-            services_status["validation"] = False
-            
-        # Test du service de détection de sophismes
-        logger.info("[HealthCheck] Test du service de détection de sophismes...")
-        try:
-            logger.info("[HealthCheck] Appel de get_fallacy_service()...")
-            fallacy_svc = get_fallacy_service()
-            logger.info("[HealthCheck] get_fallacy_service() terminé.")
-            if hasattr(fallacy_svc, 'is_healthy'):
-                logger.info("[HealthCheck] Appel de fallacy_svc.is_healthy()...")
-                services_status["fallacy"] = fallacy_svc.is_healthy()
-                logger.info(f"[HealthCheck] Service fallacy.is_healthy(): {services_status['fallacy']}")
-            else:
-                logger.warning("[HealthCheck] Service fallacy n'a pas d'attribut 'is_healthy'.")
-                services_status["fallacy"] = False
-        except Exception as e:
-            logger.error(f"[HealthCheck] Erreur service fallacy: {e}", exc_info=True)
-            services_status["fallacy"] = False
-            
-        # Test du service de framework
-        logger.info("[HealthCheck] Test du service de framework...")
-        try:
-            logger.info("[HealthCheck] Appel de get_framework_service()...")
-            framework_svc = get_framework_service()
-            logger.info("[HealthCheck] get_framework_service() terminé.")
-            if hasattr(framework_svc, 'is_healthy'):
-                logger.info("[HealthCheck] Appel de framework_svc.is_healthy()...")
-                services_status["framework"] = framework_svc.is_healthy()
-                logger.info(f"[HealthCheck] Service framework.is_healthy(): {services_status['framework']}")
-            else:
-                logger.warning("[HealthCheck] Service framework n'a pas d'attribut 'is_healthy'.")
-                services_status["framework"] = False
-        except Exception as e:
-            logger.error(f"[HealthCheck] Erreur service framework: {e}", exc_info=True)
-            services_status["framework"] = False
-            
-        # Test du service de logique
-        logger.info("[HealthCheck] Test du service de logique...")
-        try:
-            logger.info("[HealthCheck] Appel de get_logic_service()...")
-            logic_svc = get_logic_service()
-            logger.info("[HealthCheck] get_logic_service() terminé.")
-            if hasattr(logic_svc, 'is_healthy'):
-                logger.info("[HealthCheck] Appel de logic_svc.is_healthy()...")
-                services_status["logic"] = logic_svc.is_healthy()
-                logger.info(f"[HealthCheck] Service logic.is_healthy(): {services_status['logic']}")
-            else:
-                logger.warning("[HealthCheck] Service logic n'a pas d'attribut 'is_healthy'.")
-                services_status["logic"] = False
-        except Exception as e:
-            logger.error(f"[HealthCheck] Erreur service logic: {e}", exc_info=True)
-            services_status["logic"] = False
-        
+    """Vérification rapide de l'état de l'API après pré-chargement."""
+    logger.info("[HealthCheck] Endpoint /api/health CALLED (lightweight version)")
+    
+    # Vérifie si les services (qui auraient dû être pré-chargés) sont initialisés.
+    services_status = {
+        "analysis": _analysis_service is not None,
+        "validation": _validation_service is not None,
+        "fallacy": _fallacy_service is not None,
+        "framework": _framework_service is not None,
+        "logic": _logic_service is not None
+    }
+    
+    all_healthy = all(services_status.values())
+    
+    if all_healthy:
         return jsonify({
             "status": "healthy",
-            "message": "API d'analyse argumentative opérationnelle",
+            "message": "API d'analyse argumentative opérationnelle (services pré-chargés)",
             "version": "1.0.0",
             "timestamp": datetime.now().isoformat(),
             "services": services_status
         })
-    except Exception as e:
-        logger.error(f"Erreur lors du health check: {str(e)}")
+    else:
+        logger.error(f"[HealthCheck] Échec: Un ou plusieurs services n'ont pas été pré-chargés. Statut: {services_status}")
         return jsonify({
-            "status": "error",
-            "message": f"Erreur de health check: {str(e)}",
-            "timestamp": datetime.now().isoformat()
-        }), 500
+            "status": "unhealthy",
+            "message": "Un ou plusieurs services n'ont pas pu être initialisés au démarrage.",
+            "timestamp": datetime.now().isoformat(),
+            "services": services_status
+        }), 503 # Service Unavailable
 
 logger.info(f"--- Route /api/health defined. Rules: {[str(rule) for rule in flask_app.url_map.iter_rules(endpoint='health_check')]} ---")
 sys.stderr.flush()
@@ -1008,6 +936,26 @@ try:
 except Exception as e_routes:
     logger.error(f"Erreur lors de la tentative de lister les routes Flask: {e_routes}", exc_info=True)
     sys.stderr.flush()
+
+
+# --- Pre-loading des services au démarrage de l'application ---
+def preload_all_services():
+    """Appelle tous les getters de service pour forcer leur initialisation."""
+    logger.info("--- Début du pré-chargement des services applicatifs ---")
+    try:
+        get_analysis_service()
+        get_validation_service()
+        get_fallacy_service()
+        get_framework_service()
+        get_logic_service()
+        logger.info("--- [SUCCESS] Pré-chargement des services terminé avec succès. ---")
+    except Exception as e:
+        logger.critical(f"--- [CRITICAL FAILURE] Échec lors du pré-chargement d'un service: {e} ---", exc_info=True)
+        # On pourrait vouloir quitter l'application si le pré-chargement échoue.
+        # Pour l'instant, on logue l'erreur critique. L'health check échouera.
+        
+# Appeler la fonction de pré-chargement lors du chargement du module par Uvicorn
+preload_all_services()
 
 
 if __name__ == '__main__':
