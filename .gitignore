@@ -242,3 +242,22 @@ console_logs.txt
 rapport_*.md
 *log.txt
 temp_*.txt
+
+# Ajouté par le script de nettoyage
+# Fichiers temporaires Python
+# Environnements virtuels
+env/
+# Fichiers de configuration sensibles
+*.env
+**/.env
+# Cache et téléchargements
+text_cache/
+# Données
+data/extract_sources.json
+# Rapports de tests et couverture
+.coverage*
+# Dossiers de backups
+*.jar
+# Fichiers temporaires Jupyter Notebook
+# Fichiers de configuration IDE / Editeur
+# Fichiers spécifiques OS

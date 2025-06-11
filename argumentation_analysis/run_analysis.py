@@ -23,9 +23,9 @@ if str(project_root) not in sys.path:
     sys.path.append(str(project_root))
 
 # Imports des modules du projet après ajustement du path
-from argumentation_analysis.utils.core_utils.logging_utils import setup_logging # Déjà présent, mais s'assurer qu'il est bien trouvé
+from argumentation_analysis.utils.core_utils.logging_utils import setup_logging
 from argumentation_analysis.pipelines.analysis_pipeline import run_text_analysis_pipeline
-from argumentation_analysis.paths import LIBS_DIR # Nécessaire pour la configuration des services
+from argumentation_analysis.paths import LIBS_DIR
 
 async def main():
     """
@@ -49,7 +49,7 @@ async def main():
     log_level_launcher = "DEBUG" if args.verbose else "INFO"
     # Note: setup_logging est appelé dans le pipeline, donc cet appel est pour les logs du lanceur lui-même.
     # Si le pipeline gère tous les logs, cette ligne peut être optionnelle ou ajustée.
-    setup_logging(log_level_str=log_level_launcher, logger_name="run_analysis_launcher")
+    setup_logging(log_level_str=log_level_launcher)
     launcher_logger = logging.getLogger("run_analysis_launcher")
     launcher_logger.info(f"Lanceur configuré avec le niveau de log: {log_level_launcher}")
 

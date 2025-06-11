@@ -221,25 +221,3 @@ async def run_text_analysis_pipeline(
 
     # Retourne les résultats de l'analyse (peut être None)
     return analysis_results
-
-# Exemple d'utilisation (pourrait être dans un bloc if __name__ == "__main__" pour des tests)
-# async def example_run():
-#     # Assurez-vous que LIBS_DIR est accessible ou configurez config_for_services autrement
-#     from argumentation_analysis.paths import LIBS_DIR
-#     default_config = {"LIBS_DIR_PATH": LIBS_DIR}
-#
-#     # Exemple avec un texte direct
-#     results = await run_text_analysis_pipeline(
-#         input_text_content="Ceci est un exemple de texte. Les oiseaux volent.",
-#         log_level="DEBUG",
-#         config_for_services=default_config
-#     )
-#     if results:
-#         print("Résultats de l'analyse:", results)
-#     else:
-#         print("L'analyse a échoué.")
-
-# if __name__ == '__main__':
-#     # Pour tester ce module directement (nécessite que l'environnement soit configuré)
-#     # asyncio.run(example_run())
-#     pass

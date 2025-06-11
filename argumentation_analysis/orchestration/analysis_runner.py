@@ -41,6 +41,14 @@ from argumentation_analysis.orchestration.cluedo_extended_orchestrator import Ag
 from semantic_kernel.contents import ChatRole as AuthorRole # semantic_kernel.agents.AuthorRole n'existe plus, utilisation de ChatRole
 # from semantic_kernel.functions import FunctionChoiceBehavior # Non disponible/utilisé dans SK 0.9.6b1
 
+# Correct imports
+from argumentation_analysis.core.shared_state import RhetoricalAnalysisState
+from argumentation_analysis.core.state_manager_plugin import StateManagerPlugin
+from argumentation_analysis.agents.core.pm.pm_agent import ProjectManagerAgent
+from argumentation_analysis.agents.core.informal.informal_agent import InformalAnalysisAgent
+from argumentation_analysis.agents.core.pl.pl_agent import PropositionalLogicAgent
+from argumentation_analysis.agents.core.extract.extract_agent import ExtractAgent
+
 
 # --- Fonction Principale d'Exécution (Modifiée V10.7 - Accepte Service LLM) ---
 async def run_analysis_conversation(
@@ -56,7 +64,6 @@ async def run_analysis_conversation(
     run_logger.info("--- Début Nouveau Run ---")
 
     run_logger.info(f"Type de llm_service: {type(llm_service)}")
-    run_logger.info(f"Attributs de llm_service: {dir(llm_service)}")
     
     class RawResponseLogger: 
         def __init__(self, logger_instance): self.logger = logger_instance
@@ -79,6 +86,7 @@ async def run_analysis_conversation(
     local_kernel: Optional[sk.Kernel] = None
     local_group_chat: Optional[Any] = None # AgentGroupChat non disponible
     local_state_manager_plugin: Optional[StateManagerPlugin] = None
+
     agent_list_local: List[Agent] = []
 
     try:
@@ -107,11 +115,7 @@ async def run_analysis_conversation(
         informal_agent_refactored = InformalAnalysisAgent(kernel=local_kernel, agent_name="InformalAnalysisAgent_Refactored")
         informal_agent_refactored.setup_agent_components(llm_service_id=llm_service_id_str)
         run_logger.info(f"   Agent {informal_agent_refactored.name} instancié et configuré.")
-
-        # TEMPORAIREMENT DÉSACTIVÉ - Problème compatibilité Java (version 59.0 vs 52.0)
-        # pl_agent_refactored = PropositionalLogicAgent(kernel=local_kernel, agent_name="PropositionalLogicAgent_Refactored")
-        # pl_agent_refactored.setup_agent_components(llm_service_id=llm_service_id_str)
-        # run_logger.info(f"   Agent {pl_agent_refactored.name} instancié et configuré.")
+        
         run_logger.warning("ATTENTION: PropositionalLogicAgent DÉSACTIVÉ temporairement (incompatibilité Java)")
         pl_agent_refactored = None  # Placeholder pour éviter les erreurs
 
@@ -123,220 +127,21 @@ async def run_analysis_conversation(
 
         run_logger.info("5. Création des instances Agent de compatibilité pour AgentGroupChat...")
         
-        # Utiliser nos propres agents de compatibilité au lieu de ChatCompletionAgent
-        try:
-            # from argumentation_analysis.utils.semantic_kernel_compatibility import AuthorRole, AgentChatException, FunctionChoiceBehavior # Fichier manquant
-            # Tentative d'importer AuthorRole directement si nécessaire, AgentChatException et FunctionChoiceBehavior non gérés pour l'instant
-            # from semantic_kernel.contents import ChatRole as AuthorRole # Déjà fait plus haut
-            # FunctionChoiceBehavior n'est pas directement utilisé ici, AgentChatException non plus.
-            if 'local_state' in locals():
-                print(f"Repr: {repr(local_state)}")
-            else:
-                print("(Instance état locale non disponible)")
+        if 'local_state' in locals():
+            print(f"Repr: {repr(local_state)}")
+        else:
+            print("(Instance état locale non disponible)")
 
-            jvm_status = "(JVM active)" if ('jpype' in globals() and jpype.isJVMStarted()) else "(JVM non active)"
-            print(f"\n{jvm_status}")
-            run_logger.info("Agents de compatibilité configurés.")
-        except ImportError as e:
-            run_logger.warning(f"Import semantic_kernel_compatibility échoué: {e}")
-            jvm_status = "Import error"
-        run_logger.info(f"État final JVM: {jvm_status}")
+        jvm_status = "(JVM active)" if ('jpype' in globals() and jpype.isJVMStarted()) else "(JVM non active)"
+        print(f"\n{jvm_status}")
+        run_logger.info("Agents de compatibilité configurés.")
+
         run_logger.info(f"--- Fin Run_{run_id} ---")
         
-        # TODO: Implémenter le retour approprié
         return {"status": "success", "message": "Analyse terminée"}
         
     except Exception as e:
-        run_logger.error(f"Erreur durant l'analyse: {e}")
+        run_logger.error(f"Erreur durant l'analyse: {e}", exc_info=True)
         return {"status": "error", "message": str(e)}
     finally:
         run_logger.info("Nettoyage en cours...")
-
-class AnalysisRunner:
-   """
-   Classe pour encapsuler la fonction run_analysis_conversation.
-   
-   Cette classe permet d'exécuter une analyse rhétorique en utilisant
-   la fonction run_analysis_conversation avec des paramètres supplémentaires.
-   """
-   
-   def __init__(self, strategy=None):
-       self.strategy = strategy
-       self.logger = logging.getLogger("AnalysisRunner")
-       self.logger.info("AnalysisRunner initialisé.")
-   
-   def run_analysis(self, text_content=None, input_file=None, output_dir=None, agent_type=None, analysis_type=None, llm_service=None, use_informal_agent=True, use_pl_agent=True, message_hook=None):
-       if text_content is None and input_file is not None:
-           extract_agent = self._get_agent_instance("extract")
-           text_content = extract_agent.extract_text_from_file(input_file)
-       elif text_content is None:
-           raise ValueError("text_content ou input_file doit être fourni")
-           
-       self.logger.info(f"Exécution de l'analyse sur un texte de {len(text_content)} caractères")
-       
-       if agent_type:
-           agent = self._get_agent_instance(agent_type)
-           if hasattr(agent, 'analyze_text'):
-               analysis_results = agent.analyze_text(text_content)
-           else:
-               analysis_results = {
-                   "fallacies": [],
-                   "analysis_metadata": {
-                       "timestamp": time.strftime("%Y-%m-%d %H:%M:%S"),
-                       "agent_type": agent_type,
-                       "analysis_type": analysis_type
-                   }
-               }
-       else:
-           analysis_results = {
-               "fallacies": [],
-               "analysis_metadata": {
-                   "timestamp": time.strftime("%Y-%m-%d %H:%M:%S"),
-                   "analysis_type": analysis_type or "general"
-               }
-           }
-       
-       if output_dir:
-           os.makedirs(output_dir, exist_ok=True)
-           timestamp = time.strftime("%Y%m%d_%H%M%S")
-           output_file = os.path.join(output_dir, f"analysis_result_{timestamp}.json")
-       else:
-           output_file = None
-           
-       return generate_report(analysis_results, output_file)
-   
-   async def run_analysis_async(self, text_content, llm_service=None, use_informal_agent=True, use_pl_agent=True, message_hook=None):
-       if llm_service is None:
-           from argumentation_analysis.core.llm_service import create_llm_service
-           llm_service = create_llm_service()
-           
-       self.logger.info(f"Exécution de l'analyse asynchrone sur un texte de {len(text_content)} caractères")
-       
-       return await run_analysis_conversation(
-           texte_a_analyser=text_content,
-           llm_service=llm_service
-       )
-   
-   def run_multi_document_analysis(self, input_files, output_dir=None, agent_type=None, analysis_type=None):
-       self.logger.info(f"Exécution de l'analyse multi-documents sur {len(input_files)} fichiers")
-       all_results = []
-       for input_file in input_files:
-           try:
-               extract_agent = self._get_agent_instance("extract")
-               text_content = extract_agent.extract_text_from_file(input_file)
-               if agent_type:
-                   agent = self._get_agent_instance(agent_type)
-                   if hasattr(agent, 'analyze_text'):
-                       file_results = agent.analyze_text(text_content)
-                   else:
-                       file_results = {"error": "Agent ne supporte pas analyze_text"}
-               else:
-                   file_results = {"error": "Type d'agent non spécifié"}
-               all_results.append({"file": input_file, "results": file_results})
-           except Exception as e:
-               self.logger.error(f"Erreur lors de l'analyse de {input_file}: {e}")
-               all_results.append({"file": input_file, "error": str(e)})
-       
-       if output_dir:
-           os.makedirs(output_dir, exist_ok=True)
-           timestamp = time.strftime("%Y%m%d_%H%M%S")
-           output_file = os.path.join(output_dir, f"multi_analysis_result_{timestamp}.json")
-       else:
-           output_file = None
-       return generate_report(all_results, output_file)
-   
-   def _get_agent_instance(self, agent_type, **kwargs):
-       self.logger.debug(f"Création d'une instance d'agent de type: {agent_type}")
-       if agent_type == "informal":
-           from argumentation_analysis.agents.core.informal.informal_agent import InformalAnalysisAgent
-           return InformalAnalysisAgent(agent_id=f"informal_agent_{agent_type}", **kwargs)
-       elif agent_type == "extract":
-           from argumentation_analysis.agents.core.extract.extract_agent import ExtractAgent
-           temp_kernel_for_extract = sk.Kernel() 
-           return ExtractAgent(kernel=temp_kernel_for_extract, agent_name=f"temp_extract_agent_for_file_read", **kwargs)
-       else:
-           raise ValueError(f"Type d'agent non supporté: {agent_type}")
-
-async def run_analysis(text_content, llm_service=None):
-   if llm_service is None:
-       llm_service = create_llm_service()
-   return await run_analysis_conversation(
-       texte_a_analyser=text_content,
-       llm_service=llm_service
-   )
-
-def generate_report(analysis_results, output_path=None):
-    logger = logging.getLogger("generate_report")
-    if output_path is None:
-        timestamp = time.strftime("%Y%m%d_%H%M%S")
-        output_path = f"rapport_analyse_{timestamp}.json"
-    output_dir = os.path.dirname(output_path)
-    if output_dir and not os.path.exists(output_dir):
-        os.makedirs(output_dir, exist_ok=True)
-    report_data = {
-        "timestamp": time.strftime("%Y-%m-%d %H:%M:%S"),
-        "analysis_results": analysis_results,
-        "metadata": {"generator": "AnalysisRunner", "version": "1.0"}
-    }
-    try:
-        with open(output_path, 'w', encoding='utf-8') as f:
-            json.dump(report_data, f, indent=2, ensure_ascii=False)
-        logger.info(f"Rapport généré: {output_path}")
-        return output_path
-    except Exception as e:
-        logger.error(f"Erreur lors de la génération du rapport: {e}")
-        raise
-
-module_logger = logging.getLogger(__name__)
-module_logger.debug("Module orchestration.analysis_runner chargé.")
-
-if __name__ == "__main__":
-    import argparse 
-    parser = argparse.ArgumentParser(description="Exécute l'analyse d'argumentation sur un texte donné.")
-    group = parser.add_mutually_exclusive_group(required=True)
-    group.add_argument("--text", type=str, help="Le texte à analyser directement.")
-    group.add_argument("--file-path", type=str, help="Chemin vers le fichier texte à analyser.")
-    args = parser.parse_args()
-
-    if not logging.getLogger().handlers:
-        logging.basicConfig(level=logging.DEBUG,
-                            format='%(asctime)s [%(levelname)s] [%(name)s] %(message)s',
-                            datefmt='%Y-%m-%d %H:%M:%S')
- 
-    runner_logger = logging.getLogger("AnalysisRunnerCLI")
-    
-    text_to_analyze = "" 
-    if args.text:
-        text_to_analyze = args.text
-        runner_logger.info(f"Lancement de AnalysisRunner en mode CLI pour le texte fourni (début) : \"{text_to_analyze[:100]}...\"")
-    elif args.file_path:
-        runner_logger.info(f"Lancement de AnalysisRunner en mode CLI pour le fichier : \"{args.file_path}\"")
-        try:
-            with open(args.file_path, 'r', encoding='utf-8') as f:
-                text_to_analyze = f.read()
-            runner_logger.info(f"Contenu du fichier '{args.file_path}' lu (longueur: {len(text_to_analyze)}).")
-            if not text_to_analyze.strip(): 
-                 runner_logger.error(f"Le fichier {args.file_path} est vide ou ne contient que des espaces.")
-                 sys.exit(1) 
-        except FileNotFoundError:
-            runner_logger.error(f"Fichier non trouvé : {args.file_path}")
-            sys.exit(1) 
-        except Exception as e:
-            runner_logger.error(f"Erreur lors de la lecture du fichier {args.file_path}: {e}", exc_info=True)
-            sys.exit(1) 
-    
-    try:
-        runner_logger.info("Initialisation explicite de la JVM depuis analysis_runner...")
-        jvm_ready = initialize_jvm(lib_dir_path=str(LIBS_DIR)) 
-        if not jvm_ready:
-            runner_logger.error("Échec de l'initialisation de la JVM. L'agent PL et d'autres fonctionnalités Java pourraient ne pas fonctionner.")
-        else:
-            runner_logger.info("JVM initialisée avec succès (ou déjà prête).")
-
-        runner = AnalysisRunner() 
-        asyncio.run(runner.run_analysis_async(text_content=text_to_analyze))
-        runner_logger.info("Analyse terminée avec succès.")
-    except Exception as e:
-        runner_logger.error(f"Une erreur est survenue lors de l'exécution de l'analyse : {e}", exc_info=True)
-        print(f"ERREUR CLI: {e}") 
-        traceback.print_exc()

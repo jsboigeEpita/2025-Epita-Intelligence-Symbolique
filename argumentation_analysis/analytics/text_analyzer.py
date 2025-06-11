@@ -66,7 +66,7 @@ async def perform_text_analysis(text: str, services: Dict[str, Any], analysis_ty
     # jvm_ready_status = services.get("jvm_ready", False) # Disponible si nécessaire
 
     if not llm_service:
-        logging.critical("❌ Le service LLM n'est pas disponible dans les services fournis. L'analyse ne peut pas continuer.")
+        logging.critical(" Le service LLM n'est pas disponible dans les services fournis. L'analyse ne peut pas continuer.")
         return None # Indique un échec critique
 
     # Une logique future pour le routage basé sur analysis_type peut être ajoutée ici.
@@ -87,16 +87,16 @@ async def perform_text_analysis(text: str, services: Dict[str, Any], analysis_ty
             # Si `analysis_type` ou d'autres `services` deviennent pertinents pour `run_analysis_conversation`,
             # ils devront être passés ici.
         )
-        logging.info(f"🏁 Analyse principale (type: '{analysis_type}') terminée avec succès (via run_analysis_conversation).")
+        logging.info(f"Analyse principale (type: '{analysis_type}') terminee avec succes (via run_analysis_conversation).")
         # Imite le comportement original : aucun résultat explicite retourné par ce chemin, le succès est journalisé.
         return # Ou un indicateur de succès plus spécifique si l'appelant en a besoin.
 
     except ImportError as ie:
         # Ceci serait typiquement intercepté au chargement du module si run_analysis_conversation est critique.
-        logging.error(f"❌ Échec de l'importation ou de l'utilisation des composants d'analyse pour le type '{analysis_type}': {ie}", exc_info=True)
+        logging.error(f" Échec de l'importation ou de l'utilisation des composants d'analyse pour le type '{analysis_type}': {ie}", exc_info=True)
         raise # Propage l'ImportError pour indiquer un problème de dépendance.
     except Exception as e:
-        logging.error(f"❌ Erreur lors de l'analyse du texte (type: {analysis_type}): {e}", exc_info=True)
+        logging.error(f" Erreur lors de l'analyse du texte (type: {analysis_type}): {e}", exc_info=True)
         # Il est important de ne pas masquer l'erreur originale si elle n'est pas gérée spécifiquement.
         # Retourner None ici pourrait masquer la cause racine d'un problème plus large.
         # Si une gestion spécifique de l'erreur est nécessaire, elle doit être ajoutée.

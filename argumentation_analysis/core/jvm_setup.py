@@ -14,7 +14,7 @@ PROJECT_ROOT_DIR = Path(__file__).resolve().parent.parent.parent
 # Chargement des variables d'environnement depuis .env
 try:
     from dotenv import load_dotenv, find_dotenv
-    env_file = find_dotenv()
+    env_file = find_dotenv(start=str(Path(__file__).parent.parent.parent))
     if env_file:
         load_dotenv(env_file, override=True)
         logger.info(f"Variables d'environnement chargées depuis: {env_file}")
