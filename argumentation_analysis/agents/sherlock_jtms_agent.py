@@ -26,8 +26,8 @@ class HypothesisTracker:
         self.active_hypotheses = {}
         self.hypothesis_networks = {}
         
-    def create_hypothesis(self, description: str, context: Dict = None, 
-                         confidence: float = 0.5) -> str:
+    def create_hypothesis(self, description: str, context: Dict = None,
+                         confidence: float = 0.5, agent_source: str = "unknown") -> str:
         """Crée une nouvelle hypothèse avec ID unique"""
         self.hypothesis_counter += 1
         hypothesis_id = f"hypothesis_{self.hypothesis_counter}"
@@ -41,7 +41,8 @@ class HypothesisTracker:
                 "creation_method": "sherlock_deduction",
                 **(context or {})
             },
-            confidence=confidence
+            confidence=confidence,
+            agent_source=agent_source
         )
         
         self.active_hypotheses[hypothesis_id] = {
@@ -207,7 +208,8 @@ class SherlockJTMSAgent(JTMSAgentBase):
             hypothesis_id = self._hypothesis_tracker.create_hypothesis(
                 description=base_hypothesis,
                 context={"source_context": context},
-                confidence=0.7  # Confiance initiale de Sherlock
+                confidence=0.7,  # Confiance initiale de Sherlock
+                agent_source=self.agent_name
             )
             
             # Lier les évidences si fournies
