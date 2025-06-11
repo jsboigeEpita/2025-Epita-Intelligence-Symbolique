@@ -17,6 +17,7 @@ import json
 import logging
 import os
 import uuid
+import argparse
 from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Any, Optional
@@ -384,9 +385,16 @@ def internal_server_error(e):
 
 
 if __name__ == '__main__':
-    # Configuration pour le développement
-    port = int(os.environ.get('PORT', 3000))
-    debug = os.environ.get('DEBUG', 'False').lower() == 'true'
+    # Gestion des arguments de la ligne de commande
+    parser = argparse.ArgumentParser(description="Lance l'interface web Flask pour l'analyse argumentative.")
+    parser.add_argument('--port', type=int, default=int(os.environ.get('PORT', 5001)),
+                        help='Port pour exécuter le serveur Flask.')
+    parser.add_argument('--debug', action='store_true',
+                        help='Active le mode debug de Flask.')
+    args = parser.parse_args()
+
+    port = args.port
+    debug = args.debug or (os.environ.get('DEBUG', 'False').lower() == 'true')
     
     logger.info(f"Démarrage de l'interface web sur le port {port}")
     logger.info(f"Mode debug: {debug}")
