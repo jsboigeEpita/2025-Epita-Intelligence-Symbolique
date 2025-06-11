@@ -36,9 +36,10 @@ import semantic_kernel as sk
 from semantic_kernel.contents import ChatMessageContent
 from semantic_kernel.connectors.ai.open_ai import OpenAIChatCompletion, AzureChatCompletion
 # CORRECTIF COMPATIBILITÉ: Utilisation du module de compatibilité pour agents
-from semantic_kernel.agents import AgentGroupChat, Agent, AgentChatException
-from semantic_kernel.contents import AuthorRole
-from semantic_kernel.functions import FunctionChoiceBehavior
+# from semantic_kernel.agents import AgentGroupChat, Agent, AgentChatException # Module non disponible dans SK 0.9.6b1
+from argumentation_analysis.orchestration.cluedo_extended_orchestrator import Agent # Fallback local
+from semantic_kernel.contents import ChatRole as AuthorRole # semantic_kernel.agents.AuthorRole n'existe plus, utilisation de ChatRole
+# from semantic_kernel.functions import FunctionChoiceBehavior # Non disponible/utilisé dans SK 0.9.6b1
 
 
 # --- Fonction Principale d'Exécution (Modifiée V10.7 - Accepte Service LLM) ---
@@ -76,7 +77,7 @@ async def run_analysis_conversation(
 
     local_state: Optional[RhetoricalAnalysisState] = None
     local_kernel: Optional[sk.Kernel] = None
-    local_group_chat: Optional[AgentGroupChat] = None
+    local_group_chat: Optional[Any] = None # AgentGroupChat non disponible
     local_state_manager_plugin: Optional[StateManagerPlugin] = None
     agent_list_local: List[Agent] = []
 
@@ -124,7 +125,10 @@ async def run_analysis_conversation(
         
         # Utiliser nos propres agents de compatibilité au lieu de ChatCompletionAgent
         try:
-            from argumentation_analysis.utils.semantic_kernel_compatibility import AuthorRole, AgentChatException, FunctionChoiceBehavior
+            # from argumentation_analysis.utils.semantic_kernel_compatibility import AuthorRole, AgentChatException, FunctionChoiceBehavior # Fichier manquant
+            # Tentative d'importer AuthorRole directement si nécessaire, AgentChatException et FunctionChoiceBehavior non gérés pour l'instant
+            # from semantic_kernel.contents import ChatRole as AuthorRole # Déjà fait plus haut
+            # FunctionChoiceBehavior n'est pas directement utilisé ici, AgentChatException non plus.
             if 'local_state' in locals():
                 print(f"Repr: {repr(local_state)}")
             else:

@@ -3,7 +3,7 @@
 
 # ===== CORE DEPENDENCIES =====
 # Python ML/Data Science Stack
-numpy==2.0.2
+numpy==1.26.4
 pandas==2.2.3
 scipy==1.13.1
 scikit-learn==1.6.1

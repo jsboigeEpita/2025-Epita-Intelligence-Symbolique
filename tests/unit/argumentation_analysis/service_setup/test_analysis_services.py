@@ -14,6 +14,7 @@ Tests unitaires pour le module analysis_services.py.
 
 import pytest
 import logging
+from unittest.mock import patch, MagicMock
 
 
 # Chemins pour le patching
@@ -51,13 +52,13 @@ def test_initialize_services_nominal_case(mock_load_dotenv, mock_find_dotenv, mo
         
         services = initialize_analysis_services(mock_config_valid_libs_dir)
 
-        mock_find_dotenv.# Mock assertion eliminated - authentic validation
+        mock_find_dotenv.assert_called_once()
         mock_load_dotenv.assert_called_once_with(".env.test", override=True)
         
         patched_jvm.assert_called_once_with(lib_dir_path="/fake/libs/dir")
         assert services.get("jvm_ready") is True
         
-        patched_llm.# Mock assertion eliminated - authentic validation
+        patched_llm.assert_called_once_with(config=mock_config_valid_libs_dir)
         assert services.get("llm_service") == mock_llm
         
         assert "Résultat du chargement de .env: True" in caplog.text
@@ -69,15 +70,17 @@ def test_initialize_services_nominal_case(mock_load_dotenv, mock_find_dotenv, mo
 def test_initialize_services_dotenv_fails(mock_load_dotenv, mock_find_dotenv, mock_config_valid_libs_dir, caplog):
     """Teste le cas où le chargement de .env échoue."""
     caplog.set_level(logging.INFO)
+    mock_find_dotenv.return_value = None
+    mock_load_dotenv.return_value = False
     with patch(INITIALIZE_JVM_PATH, return_value=True), \
-         patch(CREATE_LLM_SERVICE_PATH, return_value=Magicawait self._create_authentic_gpt4o_mini_instance()):
+         patch(CREATE_LLM_SERVICE_PATH, return_value=MagicMock()):
         
         initialize_analysis_services(mock_config_valid_libs_dir)
         assert "Résultat du chargement de .env: False" in caplog.text
 
 
 
-) # LLM réussit
+# ) # LLM réussit # Commentaire orphelin, la parenthèse a été supprimée
 def test_initialize_services_jvm_fails(mock_create_llm, mock_load_dotenv, mock_find_dotenv, mock_config_valid_libs_dir, caplog):
     """Teste le cas où l'initialisation de la JVM échoue."""
     caplog.set_level(logging.WARNING)
@@ -97,7 +100,7 @@ def test_initialize_services_llm_fails_returns_none(mock_init_jvm, mock_load_dot
     with patch(CREATE_LLM_SERVICE_PATH, return_value=None) as patched_llm:
         services = initialize_analysis_services(mock_config_valid_libs_dir)
         
-        patched_llm.# Mock assertion eliminated - authentic validation
+        patched_llm.assert_called_once_with(config=mock_config_valid_libs_dir)
         assert services.get("llm_service") is None
         assert "Le service LLM n'a pas pu être créé (create_llm_service a retourné None)." in caplog.text
 
@@ -111,14 +114,12 @@ def test_initialize_services_llm_fails_raises_exception(mock_init_jvm, mock_load
     with patch(CREATE_LLM_SERVICE_PATH, side_effect=expected_exception) as patched_llm:
         services = initialize_analysis_services(mock_config_valid_libs_dir) # L'exception est capturée et loguée
         
-        patched_llm.# Mock assertion eliminated - authentic validation
+        patched_llm.assert_called_once()
         assert services.get("llm_service") is None # Doit être None après l'exception
         assert f"Échec critique lors de la création du service LLM: {expected_exception}" in caplog.text
         # Vérifier que l'exception n'est pas propagée par initialize_analysis_services par défaut
 
 
-
-)
 def test_initialize_services_libs_dir_from_module_import(mock_create_llm, mock_load_dotenv, mock_find_dotenv, mock_config_no_libs_dir, caplog):
     """Teste l'utilisation de LIBS_DIR importé si non fourni dans config."""
     caplog.set_level(logging.INFO)
@@ -132,7 +133,6 @@ def test_initialize_services_libs_dir_from_module_import(mock_create_llm, mock_l
 
 
 
-)
 def test_initialize_services_libs_dir_is_none(mock_create_llm, mock_load_dotenv, mock_find_dotenv, mock_config_no_libs_dir, caplog):
     """Teste le cas où LIBS_DIR n'est ni dans config ni importable (devient None)."""
     caplog.set_level(logging.ERROR)

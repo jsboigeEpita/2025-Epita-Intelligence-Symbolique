@@ -11,7 +11,7 @@ Tests unitaires pour le module analysis_runner.
 """
 
 import unittest
-
+from unittest.mock import patch, MagicMock, AsyncMock
 import asyncio
 # from tests.async_test_case import AsyncTestCase # Suppression de l'import
 from argumentation_analysis.orchestration.analysis_runner import AnalysisRunner, run_analysis
@@ -39,9 +39,9 @@ class TestAnalysisRunner(unittest.TestCase):
         """Initialisation avant chaque test."""
         self.runner = AnalysisRunner()
         self.test_text = "Ceci est un texte de test pour l'analyse."
-        self.mock_llm_service = Magicawait self._create_authentic_gpt4o_mini_instance()
+        self.mock_llm_service = MagicMock()
         self.mock_llm_service.service_id = "test_service_id"
-
+ 
     
     async def test_run_analysis_with_llm_service(self, mock_run_analysis_conversation):
         """Teste l'exécution de l'analyse avec un service LLM fourni."""
@@ -78,7 +78,7 @@ class TestAnalysisRunner(unittest.TestCase):
         self.assertEqual(result, "Résultat de l'analyse")
         
         # Vérifier que les mocks ont été appelés correctement
-        mock_create_llm_service.# Mock assertion eliminated - authentic validation
+        mock_create_llm_service.assert_called_once()
         mock_run_analysis_conversation.assert_called_once_with(
             texte_a_analyser=self.test_text,
             llm_service=self.mock_llm_service
@@ -122,7 +122,7 @@ class TestAnalysisRunner(unittest.TestCase):
         self.assertEqual(result, "Résultat de l'analyse")
         
         # Vérifier que les mocks ont été appelés correctement
-        mock_create_llm_service.# Mock assertion eliminated - authentic validation
+        mock_create_llm_service.assert_called_once()
         mock_run_analysis_conversation.assert_called_once_with(
             texte_a_analyser=self.test_text,
             llm_service=self.mock_llm_service
