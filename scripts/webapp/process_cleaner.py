@@ -89,9 +89,15 @@ class ProcessCleaner:
                 try:
                     proc_info = proc.info
 
-                    # Ignorer le processus courant
-                    if proc_info['pid'] == os.getpid():
+                    # Ignorer le processus courant et son parent
+                    current_pid = os.getpid()
+                    parent_pid = os.getppid()
+
+                    if proc_info['pid'] == current_pid:
                         self.logger.debug(f"Ignoré (processus courant): PID {proc_info['pid']}")
+                        continue
+                    if proc_info['pid'] == parent_pid:
+                        self.logger.debug(f"Ignoré (processus parent): PID {proc_info['pid']}")
                         continue
                     
                     # Vérification par nom de processus

@@ -597,8 +597,14 @@ def main():
             return False
     
     # Exécution asynchrone
+    orchestrator.logger.info("Avant asyncio.run(run_command())")
     success = asyncio.run(run_command())
-    sys.exit(0 if success else 1)
+    orchestrator.logger.info(f"Après asyncio.run(run_command()), success = {success}")
+    
+    exit_code = 0 if success else 1
+    orchestrator.logger.info(f"Code de sortie déterminé : {exit_code}")
+    orchestrator.logger.info("Appel de sys.exit()...")
+    sys.exit(exit_code)
 
 if __name__ == "__main__":
     main()
