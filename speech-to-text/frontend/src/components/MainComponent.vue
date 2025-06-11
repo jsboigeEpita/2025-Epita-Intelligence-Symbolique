@@ -88,6 +88,12 @@
                       type="number" step="0.01" min="0" max="1" :disabled="processing" outlined
                       hint="Set a value between 0 and 1" persistent-hint></v-text-field>
                   </v-col>
+                  <!-- language selection menu (only french or english) -->
+                  <v-col cols="12" md="6">
+                    <v-select v-model="analysisOptions.language"
+                      :items="['afrikaans', 'albanian', 'amharic', 'arabic', 'armenian', 'assamese', 'azerbaijani', 'bashkir', 'basque', 'belarusian', 'bengali', 'bosnian', 'breton', 'bulgarian', 'cantonese', 'catalan', 'chinese', 'croatian', 'czech', 'danish', 'dutch', 'english', 'estonian', 'faroese', 'finnish', 'french', 'galician', 'georgian', 'german', 'greek', 'gujarati', 'haitian creole', 'hausa', 'hawaiian', 'hebrew', 'hindi', 'hungarian', 'icelandic', 'indonesian', 'italian', 'japanese', 'javanese', 'kannada', 'kazakh', 'khmer', 'korean', 'lao', 'latin', 'latvian', 'lingala', 'lithuanian', 'luxembourgish', 'macedonian', 'malagasy', 'malay', 'malayalam', 'maltese', 'maori', 'marathi', 'mongolian', 'myanmar', 'nepali', 'norwegian', 'nynorsk', 'occitan', 'pashto', 'persian', 'polish', 'portuguese', 'punjabi', 'romanian', 'russian', 'sanskrit', 'serbian', 'shona', 'sindhi', 'sinhala', 'slovak', 'slovenian', 'somali', 'spanish', 'sundanese', 'swahili', 'swedish', 'tagalog', 'tajik', 'tamil', 'tatar', 'telugu', 'thai', 'tibetan', 'turkish', 'turkmen', 'ukrainian', 'urdu', 'uzbek', 'vietnamese', 'welsh', 'yiddish', 'yoruba']"
+                      label="Language" outlined :disabled="processing"></v-select>
+                  </v-col>
                 </v-row>
 
                 <!-- Action Buttons -->
@@ -126,8 +132,8 @@
           <v-row justify="center" class="mt-6">
             <v-col cols="12" md="10">
               <v-card class="analysis-card">
-                <v-card-title>
-                  <v-icon left color="blue">mdi-text</v-icon>
+                <v-card-title class="pa-5">
+                  <v-icon left color="blue" class="mr-2">mdi-text</v-icon>
                   Transcription
                 </v-card-title>
                 <v-card-text class="text-wrap scrollable-text">
@@ -142,10 +148,10 @@
             <!-- Logical Fallacies -->
             <v-col v-if="analysisResults.fallacies" cols="12" md="6">
               <v-card class="analysis-card h-100">
-                <v-card-title class="red--text">
-                  <v-icon left color="red">mdi-alert-circle</v-icon>
+                <v-card-title class="red--text align-center pa-5">
+                  <v-icon left color="red" class="mr-2">mdi-alert-circle</v-icon>
                   Logical Fallacies
-                  <v-chip class="ml-2" color="red" text-color="white" small>
+                  <v-chip class=" ml-2" color="red" text-color="white" small>
                     {{ analysisResults.fallacies.length }}
                   </v-chip>
                 </v-card-title>
@@ -168,8 +174,8 @@
             <!-- Argument Structure Card -->
             <v-col v-if="analysisResults.argument_structure" cols="12" md="6">
               <v-card class="analysis-card h-100">
-                <v-card-title>
-                  <v-icon left color="indigo">mdi-sitemap</v-icon>
+                <v-card-title class="pa-5">
+                  <v-icon left color="indigo" class="mr-2">mdi-sitemap</v-icon>
                   Argument Structure
                 </v-card-title>
                 <v-card-text>
@@ -232,8 +238,8 @@
             <!-- Overall Quality Card -->
             <v-col v-if="analysisResults.overall_quality !== undefined" cols="12" md="6">
               <v-card class="analysis-card h-100">
-                <v-card-title>
-                  <v-icon left :color="overallQualityColor">mdi-star-circle</v-icon>
+                <v-card-title class="pa-5">
+                  <v-icon left :color="overallQualityColor" class="mr-2">mdi-star-circle</v-icon>
                   Overall Quality
                 </v-card-title>
                 <v-card-text class="text-center">
@@ -296,11 +302,11 @@
           <v-row justify="center" class="mt-6">
             <v-col cols="12" md="8">
               <v-card>
-                <v-card-title>
-                  <v-icon left>mdi-download</v-icon>
+                <v-card-title class="pa-5">
+                  <v-icon left class="mr-2">mdi-download</v-icon>
                   Export Results
                 </v-card-title>
-                <v-card-actions>
+                <v-card-actions class="justify-center">
                   <v-btn @click="exportResults('json')" color="primary" outlined>
                     <v-icon left>mdi-code-json</v-icon>
                     Export as JSON
@@ -334,6 +340,7 @@
 
 <script>
 import WhisperApiClient from '@/api/whisperApiClient'; // Placeholder for Whisper API client
+import jsPDF from 'jspdf';
 
 export default {
   name: 'ArgumentAnalyzer',
@@ -350,23 +357,20 @@ export default {
         evaluateCoherence: true,
         includeContext: true,
         severityThreshold: 0.5,
+        language: 'english', // Default language
       },
       analysisResults: null,
-      whisperApiClient: null, // Placeholder for Whisper API client instance
+      whisperApiClient: null,
       textToAnalyze: '',
-      analyzeApiUrl: '', // Placeholder for analysis API URL
-      audioFilePath: '', // Placeholder for audio file path
+      analyzeApiUrl: '',
+      audioFilePath: '',
     }
   },
   mounted() {
     const USERNAME = import.meta.env.VITE_WHISPER_USERNAME;
     const PASSWORD = import.meta.env.VITE_WHISPER_PASSWORD;
     const HUGGING_FACE_API_KEY = import.meta.env.VITE_HUGGING_FACE_API_KEY;
-    console.log('Initializing Whisper API client with:', {
-      USERNAME,
-      PASSWORD,
-      HUGGING_FACE_API_KEY
-    });
+    console.log('Initializing Whisper API client...');
     this.whisperApiClient = new WhisperApiClient(
       "https://whisper-webui.myia.io/",
       USERNAME,
@@ -416,13 +420,12 @@ export default {
 
         console.log("Processing file:", this.audioFile.name);
 
-        // Use the main transcribeFile method instead of test
-        await this.whisperApiClient.debugGradioInterface();
-        // const results = await this.whisperApiClient.transcribeFileTest(
-        const results = await this.rawTranscribe(
-          this.audioFile
-        );
-        console.log('Transcription results:', results);
+        // Uncomment to debug Gradio interface
+        // await this.whisperApiClient.debugGradioInterface();
+        const results = await this.whisperApiClient.transcribeFileTest(this.audioFile);
+        // const results = await this.rawTranscribe(
+        //   this.audioFile
+        // );
         if (results?.transcription) {
           this.textToAnalyze = results.transcription;
           await this.generateResults();
@@ -435,6 +438,7 @@ export default {
         this.processingStatus = 'Initializing...';
       }
     },
+    // Test method for direct API call
     async rawTranscribe(file) {
       try {
         // Create basic auth header
@@ -449,7 +453,7 @@ export default {
           method: 'POST',
           headers: {
             'Authorization': `Basic ${auth}`,
-            'Access-Control-Allow-Origin': '*' // 👈 Add this
+            'Access-Control-Allow-Origin': '*'
           },
           body: formData
         });
@@ -464,17 +468,14 @@ export default {
         throw error;
       }
     },
-
     async processYoutubeInput() {
       this.processing = true;
       this.analysisResults = null;
       try {
-        const results = await this.whisperApiClient.transcribeYouTube(this.youtubeUrl);
-        console.log('Transcription results:', results);
+        const results = await this.whisperApiClient.transcribeYouTube(this.youtubeUrl, { "param_4": this.analysisOptions.language });
 
         if (results) {
           this.textToAnalyze = results.raw.data[0];
-          console.log("Text to analyze:", this.textToAnalyze);
           this.processingStatus = 'Analyzing arguments and detecting fallacies...';
           await this.generateResults();
         } else {
@@ -483,7 +484,6 @@ export default {
         }
       } catch (error) {
         console.error('Processing error:', error);
-        // Handle error
       } finally {
         this.processing = false;
         this.processingStatus = 'Initializing...';
@@ -496,11 +496,11 @@ export default {
           "detect_fallacies": this.analysisOptions.detectFallacies,
           "evaluate_coherence": this.analysisOptions.evaluateCoherence,
           "include_context": this.analysisOptions.includeContext,
-          "severity_threshold": this.analysisOptions.severityThreshold
+          "severity_threshold": this.analysisOptions.severityThreshold,
+          "language": this.analysisOptions.language
         },
         "text": this.textToAnalyze
       };
-
       // Make the API call to analyze the text
       try {
         this.processingStatus = 'Analyzing arguments...';
@@ -515,7 +515,14 @@ export default {
           throw new Error('API request failed');
         }
         this.analysisResults = await response.json();
-        console.log('Analysis results:', this.analysisResults);
+        // Remove the first two sentences from the transcription
+        if (this.analysisResults.text_analyzed) {
+          // Split by sentence-ending punctuation followed by a space or line break
+          const sentences = this.analysisResults.text_analyzed.match(/[^.!?]+[.!?]+[\s\n]*/g);
+          if (sentences && sentences.length > 2) {
+            this.analysisResults.text_analyzed = sentences.slice(2).join('').trim();
+          }
+        }
         this.processingStatus = 'Analysis complete';
       } catch (error) {
         console.error('API call error:', error);
@@ -523,17 +530,160 @@ export default {
       }
 
     },
-    simulateDelay(ms) {
-      return new Promise(resolve => setTimeout(resolve, ms));
-    },
     exportResults(format) {
       if (format === 'json') {
         const dataStr = JSON.stringify(this.analysisResults, null, 2);
         const dataBlob = new Blob([dataStr], { type: 'application/json' });
         this.downloadFile(dataBlob, 'analysis-results.json');
       } else if (format === 'pdf') {
-        // Simulate PDF export
-        alert('PDF export functionality would be implemented here');
+        const doc = new jsPDF();
+        let y = 15;
+        const pageHeight = doc.internal.pageSize.getHeight();
+        const marginBottom = 20;
+
+        // Helper to check for page break
+        function checkPageBreak(lines = 1) {
+          if (y + lines * 6 > pageHeight - marginBottom) {
+            doc.addPage();
+            y = 15;
+          }
+        }
+
+        // Title
+        doc.setFontSize(18);
+        doc.text('Argument Analysis Results', 10, y);
+        y += 10;
+
+        // Transcription
+        doc.setFontSize(14);
+        checkPageBreak();
+        doc.text('Transcription:', 10, y);
+        y += 8;
+        doc.setFontSize(11);
+        const transcription = this.analysisResults.text_analyzed || '';
+        const transLines = doc.splitTextToSize(transcription, 180);
+        transLines.forEach(line => {
+          checkPageBreak();
+          doc.text(line, 10, y);
+          y += 6;
+        });
+
+        // Logical Fallacies
+        if (this.analysisResults.fallacies) {
+          doc.setFontSize(14);
+          checkPageBreak();
+          doc.text('Logical Fallacies:', 10, y);
+          y += 8;
+          doc.setFontSize(11);
+          if (this.analysisResults.fallacies.length === 0) {
+            checkPageBreak();
+            doc.text('- None detected', 12, y);
+            y += 6;
+          } else {
+            this.analysisResults.fallacies.forEach(fallacy => {
+              checkPageBreak();
+              doc.text(`- ${fallacy.type}: ${fallacy.description || ''}`, 12, y);
+              y += 6;
+            });
+          }
+          y += 2;
+        }
+
+        // Argument Structure
+        if (this.analysisResults.argument_structure) {
+          doc.setFontSize(14);
+          checkPageBreak();
+          doc.text('Argument Structure:', 10, y);
+          y += 8;
+          doc.setFontSize(11);
+          const arg = this.analysisResults.argument_structure;
+          [
+            `Type: ${arg.argument_type}`,
+            `Coherence: ${arg.coherence}`,
+            `Strength: ${arg.strength}`,
+            'Conclusion:'
+          ].forEach(text => {
+            checkPageBreak();
+            doc.text(text, 12, y);
+            y += 6;
+          });
+          const conclLines = doc.splitTextToSize(arg.conclusion || '', 170);
+          conclLines.forEach(line => {
+            checkPageBreak();
+            doc.text(line, 16, y);
+            y += 6;
+          });
+          checkPageBreak();
+          doc.text(`Premises (${arg.premises.length}):`, 12, y);
+          y += 6;
+          arg.premises.slice(0, 5).forEach((premise, idx) => {
+            const premiseLines = doc.splitTextToSize(`- ${premise}`, 170);
+            premiseLines.forEach(line => {
+              checkPageBreak();
+              doc.text(line, 16, y);
+              y += 6;
+            });
+          });
+          if (arg.premises.length > 5) {
+            checkPageBreak();
+            doc.text(`...and ${arg.premises.length - 5} more`, 16, y);
+            y += 6;
+          }
+          y += 2;
+        }
+
+        // Overall Quality
+        if (this.analysisResults.overall_quality !== undefined) {
+          doc.setFontSize(14);
+          checkPageBreak();
+          doc.text('Overall Quality:', 10, y);
+          y += 8;
+          doc.setFontSize(11);
+          checkPageBreak();
+          doc.text(
+            `${(this.analysisResults.overall_quality * 100).toFixed(1)}% (${this.overallQualityLabel})`,
+            12, y
+          );
+          y += 10;
+        }
+
+        // Solidity
+        if (this.analysisResults.solidity) {
+          doc.setFontSize(14);
+          checkPageBreak();
+          doc.text('Argument Solidity:', 10, y);
+          y += 8;
+          doc.setFontSize(11);
+          checkPageBreak();
+          doc.text(`Rating: ${this.analysisResults.solidity.rating}`, 12, y);
+          y += 6;
+          const explLines = doc.splitTextToSize(this.analysisResults.solidity.explanation || '', 170);
+          explLines.forEach(line => {
+            checkPageBreak();
+            doc.text(line, 12, y);
+            y += 6;
+          });
+          y += 2;
+        }
+
+        // Key Claims
+        if (this.analysisResults.claims) {
+          doc.setFontSize(14);
+          checkPageBreak();
+          doc.text('Key Claims:', 10, y);
+          y += 8;
+          doc.setFontSize(11);
+          this.analysisResults.claims.forEach((claim, idx) => {
+            const claimLines = doc.splitTextToSize(`- ${claim}`, 170);
+            claimLines.forEach(line => {
+              checkPageBreak();
+              doc.text(line, 12, y);
+              y += 6;
+            });
+          });
+        }
+
+        doc.save('analysis-results.pdf');
       }
     },
     downloadFile(blob, filename) {
