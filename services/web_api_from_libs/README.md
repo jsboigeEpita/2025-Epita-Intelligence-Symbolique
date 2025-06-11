@@ -1,4 +1,14 @@
-# API Web d'Analyse Argumentative
+# ⚠️ SERVICE DÉPRÉCIÉ ⚠️
+
+> **Attention** : Ce service Flask est obsolète et ne doit plus être utilisé pour de nouveaux développements. Il a été remplacé par une architecture centralisée basée sur FastAPI.
+>
+> Toute la logique a été migrée vers le backend principal situé dans le répertoire `/api`. L'interface utilisateur React a été mise à jour pour utiliser les nouveaux endpoints.
+>
+> Pour plus de détails sur la nouvelle architecture, veuillez consulter le [Plan d'Intégration et de Refactorisation](file://../../docs/plans/PLAN_INTEGRATION_AGENT_DUNG.md).
+>
+> Ce service sera **supprimé** dans une future version.
+
+# API Web d'Analyse Argumentative (Archivée)
 
 Cette API Flask expose les fonctionnalités du moteur d'analyse argumentative pour permettre aux étudiants de créer facilement des interfaces web React.
 
