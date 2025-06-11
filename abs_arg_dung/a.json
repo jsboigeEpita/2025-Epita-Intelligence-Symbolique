@@ -1,0 +1,16 @@
+{
+  "arguments": [
+    "test"
+  ],
+  "attacks": [
+    [
+      "test",
+      "test"
+    ]
+  ],
+  "metadata": {
+    "num_arguments": 1,
+    "num_attacks": 1,
+    "creation_time": null
+  }
+}
