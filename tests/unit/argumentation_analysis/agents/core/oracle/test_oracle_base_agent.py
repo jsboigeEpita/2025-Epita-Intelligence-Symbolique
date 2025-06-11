@@ -51,14 +51,14 @@ class TestOracleBaseAgent:
     """Tests pour la classe OracleBaseAgent."""
     
     @pytest.fixture
-    def mock_kernel(self):
+    async def mock_kernel(self):
         """Kernel Semantic Kernel mocké."""
         kernel = Mock(spec=Kernel)
         kernel.add_plugin = await self._create_authentic_gpt4o_mini_instance()
         return kernel
     
     @pytest.fixture
-    def mock_dataset_manager(self):
+    async def mock_dataset_manager(self):
         """DatasetAccessManager mocké."""
         manager = Mock(spec=DatasetAccessManager)
         
@@ -147,7 +147,7 @@ class TestOracleBaseAgent:
         )
         
         # Vérifications
-        mock_dataset_manager.execute_oracle_query.# Mock assertion eliminated - authentic validation
+        # mock_dataset_manager.execute_oracle_query.# Mock assertion eliminated - authentic validation
         call_args = mock_dataset_manager.execute_oracle_query.call_args
         assert call_args[1]["agent_name"] == "TestOracle"
         assert call_args[1]["query_type"] == QueryType.CARD_INQUIRY
@@ -298,10 +298,10 @@ class TestOracleTools:
     """Tests spécifiques pour la classe OracleTools."""
     
     @pytest.fixture
-    def mock_dataset_manager(self):
+    async def mock_dataset_manager(self):
         """DatasetAccessManager mocké pour les tests OracleTools."""
         manager = Mock(spec=DatasetAccessManager)
-        manager.execute_oracle_query = Asyncawait self._create_authentic_gpt4o_mini_instance()
+        manager.execute_oracle_query = await self._create_authentic_gpt4o_mini_instance()
         manager.validate_agent_access = await self._create_authentic_gpt4o_mini_instance()
         return manager
     

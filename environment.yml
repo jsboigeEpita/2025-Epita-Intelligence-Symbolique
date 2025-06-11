@@ -9,7 +9,7 @@ dependencies:
   # Core ML/Data Science
   - numpy>=2.0 # Permettre numpy 2.x compatible avec le projet et SK 1.x
   - pandas
-  - scipy==1.15.3
+  - scipy==1.13.1
   - scikit-learn
   - nltk
   - spacy>=3.7
@@ -28,7 +28,7 @@ dependencies:
   - matplotlib
   - seaborn
   - statsmodels
-  - networkx==3.4.2
+  - networkx==3.2.1
   # Java Bridge
   - jpype1
   # Logic & Reasoning
@@ -44,7 +44,7 @@ dependencies:
   - pyvis # Ajouté pour la visualisation de réseaux (JTMS)
   - pip:
     - Flask-CORS # Spécifique, souvent via pip
-    - semantic-kernel>=1.32.2 # Latest version from GitHub releases - Full modern API
+    - semantic-kernel==0.9.6b1 # Version compatible trouvée
     - markdown
     - playwright
     - pytest-playwright
