@@ -21,7 +21,7 @@ MODEL_FOLDER_PATH = "models"
 # pylint: disable=invalid-name
 class ModelEnum(Enum):
     """
-    Enum containing all the supported models.
+    Enum containing all the models you want to load.
     """
     TinyLlama1_1B_Q8 = 0
     Llama3_1B_Q8 = auto()
@@ -41,3 +41,4 @@ class ModelEnum(Enum):
 MODEL_PATHS = {
     entry.name: f"{MODEL_FOLDER_PATH}/{entry.name}/model.gguf" for entry in ModelEnum
 }
+
