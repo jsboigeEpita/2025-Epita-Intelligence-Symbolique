@@ -18,7 +18,7 @@ except ImportError:
     ChatMessageContent = None
 
 # Import AuthorRole depuis le module de compatibilité
-from argumentation_analysis.utils.semantic_kernel_compatibility import AuthorRole
+from semantic_kernel.contents import AuthorRole
 
 try:
     from semantic_kernel.agents import Agent, AgentGroupChat

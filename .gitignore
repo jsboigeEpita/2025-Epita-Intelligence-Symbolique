@@ -196,6 +196,7 @@ environment_evaluation_report.json
 test_imports*.py
 temp_*.py
 diagnostic_*.py
+diagnose_fastapi_startup.py
 
 # Rapports JSON temporaires
 *rapport*.json

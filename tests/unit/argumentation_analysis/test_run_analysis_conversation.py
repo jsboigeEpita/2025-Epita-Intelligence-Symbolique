@@ -56,11 +56,11 @@ class TestRunAnalysisConversation:
     
     async def test_run_analysis_conversation_success(
         self,
-        mock_chat_completion_agent,
+        OrchestrationServiceManager,
         mock_agent_group_chat,
         mock_balanced_participation_strategy,
         mock_simple_termination_strategy,
-        mock_setup_extract_agent,
+        OrchestrationServiceManager,
         mock_setup_pl_kernel,
         mock_setup_informal_kernel,
         mock_setup_pm_kernel,
@@ -85,20 +85,20 @@ class TestRunAnalysisConversation:
         mock_kernel.get_prompt_execution_settings_from_service_id# Mock eliminated - using authentic gpt-4o-mini mock_settings
         
         mock_extract_kernel = Magicawait self._create_authentic_gpt4o_mini_instance()
-        mock_extract_agent = Magicawait self._create_authentic_gpt4o_mini_instance()
-        mock_setup_extract_agent# Mock eliminated - using authentic gpt-4o-mini (mock_extract_kernel, mock_extract_agent)
+        OrchestrationServiceManager = Magicawait self._create_authentic_gpt4o_mini_instance()
+        OrchestrationServiceManager# Mock eliminated - using authentic gpt-4o-mini (mock_extract_kernel, OrchestrationServiceManager)
         
         # Configurer les mocks pour les agents
-        mock_pm_agent = Magicawait self._create_authentic_gpt4o_mini_instance()
-        mock_informal_agent = Magicawait self._create_authentic_gpt4o_mini_instance()
-        mock_pl_agent = Magicawait self._create_authentic_gpt4o_mini_instance()
-        mock_extract_agent_instance = Magicawait self._create_authentic_gpt4o_mini_instance()
+        OrchestrationServiceManager = Magicawait self._create_authentic_gpt4o_mini_instance()
+        OrchestrationServiceManager = Magicawait self._create_authentic_gpt4o_mini_instance()
+        OrchestrationServiceManager = Magicawait self._create_authentic_gpt4o_mini_instance()
+        OrchestrationServiceManager_instance = Magicawait self._create_authentic_gpt4o_mini_instance()
         
-        mock_chat_completion_agent# Mock eliminated - using authentic gpt-4o-mini [
-            mock_pm_agent,
-            mock_informal_agent,
-            mock_pl_agent,
-            mock_extract_agent_instance
+        OrchestrationServiceManager# Mock eliminated - using authentic gpt-4o-mini [
+            OrchestrationServiceManager,
+            OrchestrationServiceManager,
+            OrchestrationServiceManager,
+            OrchestrationServiceManager_instance
         ]
         
         # Configurer les mocks pour les stratégies
@@ -146,9 +146,9 @@ class TestRunAnalysisConversation:
         mock_setup_pm_kernel.assert_called_once_with(mock_kernel, mock_llm_service)
         mock_setup_informal_kernel.assert_called_once_with(mock_kernel, mock_llm_service)
         mock_setup_pl_kernel.assert_called_once_with(mock_kernel, mock_llm_service)
-        mock_setup_extract_agent.assert_called_once_with(mock_llm_service)
+        OrchestrationServiceManager.assert_called_once_with(mock_llm_service)
         mock_kernel.get_prompt_execution_settings_from_service_id.assert_called_once_with(mock_llm_service.service_id)
-        assert mock_chat_completion_agent.call_count == 4
+        assert OrchestrationServiceManager.call_count == 4
         mock_simple_termination_strategy.assert_called_once_with(mock_state, max_steps=15)
         mock_balanced_participation_strategy.# Mock assertion eliminated - authentic validation
         mock_agent_group_chat.# Mock assertion eliminated - authentic validation

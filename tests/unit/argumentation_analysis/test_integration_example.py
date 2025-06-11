@@ -120,7 +120,7 @@ def test_extract_service_with_fetch_service(integration_services):
 
 @pytest.mark.skip(reason="Le module 'scripts.repair_extract_markers' n'est pas trouvé, à corriger plus tard.")
 
-async def test_repair_extract_markers_integration(mock_setup_agents, integration_services):
+async def test_repair_extract_markers_integration(OrchestrationServiceManagers, integration_services):
     """Test d'intégration pour la fonction repair_extract_markers."""
     from scripts.repair_extract_markers import repair_extract_markers
     
@@ -132,7 +132,7 @@ async def test_repair_extract_markers_integration(mock_setup_agents, integration
     kernel_mock = mock_llm_service
     repair_agent_mock = mock_llm_service
     validation_agent_mock = mock_llm_service
-    mock_setup_agents# Mock eliminated - using authentic gpt-4o-mini (kernel_mock, repair_agent_mock, validation_agent_mock)
+    OrchestrationServiceManagers# Mock eliminated - using authentic gpt-4o-mini (kernel_mock, repair_agent_mock, validation_agent_mock)
     
     # Exécuter la fonction repair_extract_markers
     updated_definitions, results = await repair_extract_markers(

@@ -216,8 +216,8 @@ class TestBalancedStrategyEndToEnd: # Suppression de l'héritage AsyncTestCase
         mock_balanced_strategy# Mock eliminated - using authentic gpt-4o-mini mock_strategy_instance
         
         mock_extract_kernel = Magicawait self._create_authentic_gpt4o_mini_instance()
-        mock_extract_agent = Magicawait self._create_authentic_gpt4o_mini_instance()
-        mock_extract_agent.id = "extract_agent_id"
+        OrchestrationServiceManager = Magicawait self._create_authentic_gpt4o_mini_instance()
+        OrchestrationServiceManager.id = "extract_agent_id"
         
         mock_group_chat_instance = Magicawait self._create_authentic_gpt4o_mini_instance()
         mock_agent_group_chat# Mock eliminated - using authentic gpt-4o-mini mock_group_chat_instance
@@ -249,7 +249,7 @@ class TestBalancedStrategyEndToEnd: # Suppression de l'héritage AsyncTestCase
              patch('argumentation_analysis.orchestration.analysis_runner.setup_pm_kernel'), \
              patch('argumentation_analysis.orchestration.analysis_runner.setup_informal_kernel'), \
              patch('argumentation_analysis.orchestration.analysis_runner.setup_pl_kernel'), \
-             patch('argumentation_analysis.orchestration.analysis_runner.setup_extract_agent', return_value=(mock_extract_kernel, mock_extract_agent)), \
+             patch('argumentation_analysis.orchestration.analysis_runner.setup_extract_agent', return_value=(mock_extract_kernel, OrchestrationServiceManager)), \
              patch('argumentation_analysis.orchestration.analysis_runner.ChatCompletionAgent'), \
              patch('argumentation_analysis.orchestration.analysis_runner.SimpleTerminationStrategy'):
             

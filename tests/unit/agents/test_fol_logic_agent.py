@@ -3,9 +3,10 @@
 import openai
 from semantic_kernel.contents import ChatHistory
 from semantic_kernel.core_plugins import ConversationSummaryPlugin
+from semantic_kernel.functions.function_result import FunctionResult
 from config.unified_config import UnifiedConfig
 
-﻿#!/usr/bin/env python
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
 """
@@ -224,7 +225,7 @@ class TestFOLTweetyIntegration:
     """Tests d'intégration avec TweetyProject."""
     
     @pytest.fixture
-    def fol_agent_with_tweety(self):
+    async def fol_agent_with_tweety(self):
         """Agent FOL avec TweetyBridge mocké."""
         agent = FOLLogicAgent()
         
@@ -283,10 +284,11 @@ class TestFOLTweetyIntegration:
     async def test_tweety_results_analysis_fol(self, fol_agent_with_tweety):
         """Test analyse résultats Tweety FOL."""
         # Résultats Tweety complexes
-        fol_agent_with_tweety._tweety_bridge.derive_inferences# Mock eliminated - using authentic gpt-4o-mini [
-            "Mortal(socrate)", "∀x(Wise(x) → Human(x))"
+        fol_agent_with_tweety._tweety_bridge.derive_inferences = [ # Mock eliminated - using authentic gpt-4o-mini
+            "Mortal(socrate)",
+            "∀x(Wise(x) → Human(x))"
         ]
-        fol_agent_with_tweety._tweety_bridge.generate_models# Mock eliminated - using authentic gpt-4o-mini [
+        fol_agent_with_tweety._tweety_bridge.generate_models = [ # Mock eliminated - using authentic gpt-4o-mini
             {"description": "Modèle 1", "model": {"socrate": True}},
             {"description": "Modèle 2", "model": {"platon": True}}
         ]
@@ -305,14 +307,14 @@ class TestFOLAnalysisPipeline:
     """Tests du pipeline d'analyse FOL."""
     
     @pytest.fixture
-    def fol_agent_full(self):
+    async def fol_agent_full(self):
         """Agent FOL avec tous les composants mockés."""
         agent = FOLLogicAgent()
         
         # Mock kernel et fonctions sémantiques
         agent._kernel = await self._create_authentic_gpt4o_mini_instance()
         agent._kernel.services = True
-        agent._kernel.invoke = Asyncawait self._create_authentic_gpt4o_mini_instance()
+        agent._kernel.invoke = AsyncMock() # Corrigé Asyncawait et l'assignation
         
         # Mock TweetyBridge
         agent._tweety_bridge = await self._create_authentic_gpt4o_mini_instance()
@@ -326,24 +328,30 @@ class TestFOLAnalysisPipeline:
     async def test_sophism_analysis_with_fol(self, fol_agent_full):
         """Test analyse de sophismes avec logique FOL."""
         # Mock réponse LLM pour conversion
-        fol_agent_full.sk_kernel.invoke# Mock eliminated - using authentic gpt-4o-mini [
-            # Réponse conversion
-            json.dumps({
-                "formulas": ["∀x(Human(x) → Mortal(x))", "Human(socrate)"],
-                "predicates": {"Human": "être humain", "Mortal": "être mortel"},
-                "variables": {"x": "individu", "socrate": "constante"},
-                "reasoning": "Syllogisme classique"
-            }),
-            # Réponse analyse
-            json.dumps({
-                "consistency": True,
-                "inferences": ["Mortal(socrate)"],
-                "interpretations": [{"description": "Modèle valide", "model": {"socrate": "mortal"}}],
-                "errors": [],
-                "confidence": 0.95,
-                "reasoning_steps": ["Analyse syllogisme", "Validation FOL"]
-            })
-        ]
+        fol_agent_full._kernel.invoke = AsyncMock(side_effect=[
+            FunctionResult(
+                function_name="mock_conversion",
+                plugin_name="mock_plugin",
+                value=json.dumps({
+                    "formulas": ["∀x(Human(x) → Mortal(x))", "Human(socrate)"],
+                    "predicates": {"Human": "être humain", "Mortal": "être mortel"},
+                    "variables": {"x": "individu", "socrate": "constante"},
+                    "reasoning": "Syllogisme classique"
+                })
+            ),
+            FunctionResult(
+                function_name="mock_analysis",
+                plugin_name="mock_plugin",
+                value=json.dumps({
+                    "consistency": True,
+                    "inferences": ["Mortal(socrate)"],
+                    "interpretations": [{"description": "Modèle valide", "model": {"socrate": "mortal"}}],
+                    "errors": [],
+                    "confidence": 0.95,
+                    "reasoning_steps": ["Analyse syllogisme", "Validation FOL"]
+                })
+            )
+        ])
         
         # Test analyse sophisme classique
         sophism_text = "Tous les hommes sont mortels. Socrate est un homme. Donc Socrate est mortel."
@@ -361,11 +369,15 @@ class TestFOLAnalysisPipeline:
     async def test_fol_report_generation(self, fol_agent_full):
         """Test génération rapport avec formules FOL."""
         # Mock réponse simplifiée
-        fol_agent_full.sk_kernel.invoke# Mock eliminated - using authentic gpt-4o-mini json.dumps({
-            "formulas": ["∀x(P(x) → Q(x))"],
-            "predicates": {"P": "propriété P", "Q": "propriété Q"},
-            "reasoning": "Implication universelle"
-        })
+        fol_agent_full._kernel.invoke = AsyncMock(return_value=FunctionResult(
+            function_name="mock_report_generation",
+            plugin_name="mock_plugin",
+            value=json.dumps({
+                "formulas": ["∀x(P(x) → Q(x))"],
+                "predicates": {"P": "propriété P", "Q": "propriété Q"},
+                "reasoning": "Implication universelle"
+            })
+        ))
         
         text = "Tous les P sont Q."
         result = await fol_agent_full.analyze(text)
@@ -394,10 +406,14 @@ class TestFOLAnalysisPipeline:
         import time
         
         # Mock réponse rapide
-        fol_agent_full.sk_kernel.invoke# Mock eliminated - using authentic gpt-4o-mini json.dumps({
-            "formulas": ["∀x(Fast(x))"],
-            "reasoning": "Test performance"
-        })
+        fol_agent_full._kernel.invoke = AsyncMock(return_value=FunctionResult(
+            function_name="mock_performance_analysis",
+            plugin_name="mock_plugin",
+            value=json.dumps({
+                "formulas": ["∀x(Fast(x))"],
+                "reasoning": "Test performance"
+            })
+        ))
         
         # Test chronométré
         start_time = time.time()
