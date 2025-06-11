@@ -81,22 +81,22 @@ class TestEnhancedContextualFallacyAnalyzer(unittest.TestCase):
     def test_analyze_context(self, mock_analyze_relations, mock_filter_context, mock_identify_fallacies, mock_analyze_context):
         """Teste l'analyse du contexte."""
         # Configurer les mocks
-        mock_analyze_context# Mock eliminated - using authentic gpt-4o-mini {
+        mock_analyze_context.return_value = {
             "context_type": "commercial",
             "context_subtypes": ["publicitaire"],
             "audience_characteristics": ["généraliste"],
             "formality_level": "moyen",
             "confidence": 0.8
         }
-        mock_identify_fallacies# Mock eliminated - using authentic gpt-4o-mini [
+        mock_identify_fallacies.return_value = [
             {"fallacy_type": "Appel à l'autorité", "confidence": 0.7},
             {"fallacy_type": "Appel à la popularité", "confidence": 0.6}
         ]
-        mock_filter_context# Mock eliminated - using authentic gpt-4o-mini [
+        mock_filter_context.return_value = [
             {"fallacy_type": "Appel à l'autorité", "confidence": 0.8, "contextual_relevance": "Élevée"},
             {"fallacy_type": "Appel à la popularité", "confidence": 0.7, "contextual_relevance": "Élevée"}
         ]
-        mock_analyze_relations# Mock eliminated - using authentic gpt-4o-mini [
+        mock_analyze_relations.return_value = [
             {"relation_type": "complementary", "fallacy1_type": "Appel à l'autorité", "fallacy2_type": "Appel à la popularité"}
         ]
         
@@ -114,8 +114,8 @@ class TestEnhancedContextualFallacyAnalyzer(unittest.TestCase):
         # Vérifier que les mocks ont été appelés correctement
         mock_analyze_context.assert_called_once_with(self.test_context)
         mock_identify_fallacies.assert_called_once_with(self.test_text)
-        mock_filter_context.# Mock assertion eliminated - authentic validation
-        mock_analyze_relations.# Mock assertion eliminated - authentic validation
+        mock_filter_context.assert_called_once()
+        mock_analyze_relations.assert_called_once()
         
         # Vérifier que les sophismes ont été stockés pour l'apprentissage
         self.assertEqual(len(self.analyzer.last_analysis_fallacies), 2)
@@ -145,7 +145,7 @@ class TestEnhancedContextualFallacyAnalyzer(unittest.TestCase):
     def test_identify_potential_fallacies_with_nlp(self, mock_identify_potential):
         """Teste l'identification des sophismes potentiels avec NLP."""
         # Configurer le mock
-        mock_identify_potential# Mock eliminated - using authentic gpt-4o-mini [
+        mock_identify_potential.return_value = [
             {"fallacy_type": "Appel à l'autorité", "confidence": 0.7, "context_text": "Les experts sont unanimes"},
             {"fallacy_type": "Appel à la popularité", "confidence": 0.6, "context_text": "Des millions de personnes l'utilisent déjà"}
         ]
@@ -202,7 +202,7 @@ class TestEnhancedContextualFallacyAnalyzer(unittest.TestCase):
     def test_identify_contextual_fallacies(self, mock_analyze_context):
         """Teste l'identification des sophismes contextuels."""
         # Configurer le mock
-        mock_analyze_context# Mock eliminated - using authentic gpt-4o-mini {
+        mock_analyze_context.return_value = {
             "contextual_fallacies": [
                 {"fallacy_type": "Appel à l'autorité", "confidence": 0.8},
                 {"fallacy_type": "Appel à la popularité", "confidence": 0.6},
@@ -258,15 +258,15 @@ class TestEnhancedContextualFallacyAnalyzer(unittest.TestCase):
     def test_get_contextual_fallacy_examples(self, mock_correction, mock_explanation, mock_base_examples):
         """Teste l'obtention d'exemples enrichis de sophismes contextuels."""
         # Configurer les mocks
-        mock_base_examples# Mock eliminated - using authentic gpt-4o-mini [
+        mock_base_examples.return_value = [
             "Les experts disent que ce produit est sûr, donc vous devriez l'acheter.",
             "Ce produit est recommandé par le Dr. Smith, un célèbre dentiste."
         ]
-        mock_explanation# Mock eliminated - using authentic gpt-4o-mini [
+        mock_explanation.return_value = [
             "Explication pour l'exemple 1",
             "Explication pour l'exemple 2"
         ]
-        mock_correction# Mock eliminated - using authentic gpt-4o-mini [
+        mock_correction.return_value = [
             "Suggestion de correction pour l'exemple 1",
             "Suggestion de correction pour l'exemple 2"
         ]

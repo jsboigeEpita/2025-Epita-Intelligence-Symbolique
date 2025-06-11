@@ -21,8 +21,8 @@ import json
 import time
 
 import semantic_kernel as sk
-from semantic_kernel.contents import ChatMessageContent, AuthorRole
-from semantic_kernel.agents import Agent, AgentGroupChat
+from semantic_kernel.contents import ChatMessageContent
+# from semantic_kernel.agents import Agent, AgentGroupChat
 
 from argumentation_analysis.core.shared_state import RhetoricalAnalysisState
 from argumentation_analysis.core.state_manager_plugin import StateManagerPlugin
@@ -44,7 +44,7 @@ async def analysis_fixture():
     Certains scientifiques affirment que la Terre est ronde, mais ils sont payés par la NASA.
     """
     state = RhetoricalAnalysisState(test_text)
-    llm_service = Magicawait self._create_authentic_gpt4o_mini_instance()
+    llm_service = AsyncMock()
     llm_service.service_id = "test_service"
     kernel = sk.Kernel()
     state_manager = StateManagerPlugin(state)
@@ -92,35 +92,34 @@ class TestEndToEndAnalysis:
         mock_setup_informal_kernel,
         mock_setup_pl_kernel,
         OrchestrationServiceManager,
-        OrchestrationServiceManager,
         mock_agent_group_chat,
         analysis_fixture
     ):
         """Teste le flux complet d'analyse argumentative de bout en bout."""
         state, llm_service, _, test_text = analysis_fixture
         
-        OrchestrationServiceManager = MagicMock(spec=Agent); OrchestrationServiceManager.name = "ProjectManagerAgent"
-        OrchestrationServiceManager = MagicMock(spec=Agent); OrchestrationServiceManager.name = "InformalAnalysisAgent"
-        OrchestrationServiceManager = MagicMock(spec=Agent); OrchestrationServiceManager.name = "PropositionalLogicAgent"
-        OrchestrationServiceManager = MagicMock(spec=Agent); OrchestrationServiceManager.name = "ExtractAgent"
+        OrchestrationServiceManager = MagicMock(); OrchestrationServiceManager.name = "ProjectManagerAgent"
+        OrchestrationServiceManager = MagicMock(); OrchestrationServiceManager.name = "InformalAnalysisAgent"
+        OrchestrationServiceManager = MagicMock(); OrchestrationServiceManager.name = "PropositionalLogicAgent"
+        OrchestrationServiceManager = MagicMock(); OrchestrationServiceManager.name = "ExtractAgent"
         
         OrchestrationServiceManager# Mock eliminated - using authentic gpt-4o-mini [OrchestrationServiceManager, OrchestrationServiceManager, OrchestrationServiceManager, OrchestrationServiceManager]
         
         mock_extract_kernel = MagicMock(spec=sk.Kernel)
         OrchestrationServiceManager# Mock eliminated - using authentic gpt-4o-mini (mock_extract_kernel, OrchestrationServiceManager)
         
-        mock_group_chat_instance = MagicMock(spec=AgentGroupChat)
+        mock_group_chat_instance = MagicMock()
         mock_agent_group_chat# Mock eliminated - using authentic gpt-4o-mini mock_group_chat_instance
         
         async def mock_invoke():
-            message1 = MagicMock(spec=ChatMessageContent); message1.name = "ProjectManagerAgent"; message1.role = AuthorRole.ASSISTANT
+            message1 = MagicMock(spec=ChatMessageContent); message1.name = "ProjectManagerAgent"; message1.role = "assistant"
             message1.content = "Je vais définir les tâches d'analyse."
             state.add_task("Identifier les arguments dans le texte")
             state.add_task("Analyser les sophismes dans les arguments")
             state.designate_next_agent("InformalAnalysisAgent")
             yield message1
             
-            message2 = MagicMock(spec=ChatMessageContent); message2.name = "InformalAnalysisAgent"; message2.role = AuthorRole.ASSISTANT
+            message2 = MagicMock(spec=ChatMessageContent); message2.name = "InformalAnalysisAgent"; message2.role = "assistant"
             message2.content = "J'ai identifié les arguments suivants."
             arg1_id = state.add_argument("La Terre est plate car l'horizon semble plat")
             arg2_id = state.add_argument("Si la Terre était ronde, les gens tomberaient")
@@ -130,7 +129,7 @@ class TestEndToEndAnalysis:
             state.designate_next_agent("InformalAnalysisAgent")
             yield message2
             
-            message3 = MagicMock(spec=ChatMessageContent); message3.name = "InformalAnalysisAgent"; message3.role = AuthorRole.ASSISTANT
+            message3 = MagicMock(spec=ChatMessageContent); message3.name = "InformalAnalysisAgent"; message3.role = "assistant"
             message3.content = "J'ai identifié les sophismes suivants."
             fallacy1_id = state.add_fallacy("Faux raisonnement", "Confusion", arg1_id)
             fallacy2_id = state.add_fallacy("Fausse analogie", "Gravité", arg2_id)
@@ -142,26 +141,26 @@ class TestEndToEndAnalysis:
             state.designate_next_agent("PropositionalLogicAgent")
             yield message3
             
-            message4 = MagicMock(spec=ChatMessageContent); message4.name = "PropositionalLogicAgent"; message4.role = AuthorRole.ASSISTANT
+            message4 = MagicMock(spec=ChatMessageContent); message4.name = "PropositionalLogicAgent"; message4.role = "assistant"
             message4.content = "Je vais formaliser l'argument principal."
             bs_id = state.add_belief_set("Propositional", "p => q\np\n")
             state.log_query(bs_id, "p => q", "ACCEPTED (True)")
             state.designate_next_agent("ExtractAgent")
             yield message4
             
-            message5 = MagicMock(spec=ChatMessageContent); message5.name = "ExtractAgent"; message5.role = AuthorRole.ASSISTANT
+            message5 = MagicMock(spec=ChatMessageContent); message5.name = "ExtractAgent"; message5.role = "assistant"
             message5.content = "J'ai analysé l'extrait du texte."
             state.add_extract("Extrait du texte", "La Terre est plate")
             state.designate_next_agent("ProjectManagerAgent")
             yield message5
             
-            message6 = MagicMock(spec=ChatMessageContent); message6.name = "ProjectManagerAgent"; message6.role = AuthorRole.ASSISTANT
+            message6 = MagicMock(spec=ChatMessageContent); message6.name = "ProjectManagerAgent"; message6.role = "assistant"
             message6.content = "Voici la conclusion de l'analyse."
             state.set_conclusion("Le texte contient plusieurs sophismes.")
             yield message6
         
         mock_group_chat_instance.invoke = mock_invoke
-        mock_group_chat_instance.history = Magicawait self._create_authentic_gpt4o_mini_instance(); mock_group_chat_instance.history.add_user_message = Magicawait self._create_authentic_gpt4o_mini_instance(); mock_group_chat_instance.history.messages = []
+        mock_group_chat_instance.history = MagicMock(); mock_group_chat_instance.history.add_user_message = MagicMock(); mock_group_chat_instance.history.messages = []
         
         await run_analysis_conversation(test_text, llm_service)
         
@@ -174,7 +173,7 @@ class TestEndToEndAnalysis:
         assert len(state.extracts) == 1
         assert state.final_conclusion is not None
         
-        mock_agent_group_chat.# Mock assertion eliminated - authentic validation
+        # mock_agent_group_chat.# Mock assertion eliminated - authentic validation
         assert OrchestrationServiceManager.call_count == 4
 
     
@@ -190,42 +189,41 @@ class TestEndToEndAnalysis:
         mock_setup_informal_kernel,
         mock_setup_pl_kernel,
         OrchestrationServiceManager,
-        OrchestrationServiceManager,
         mock_agent_group_chat,
         analysis_fixture
     ):
         state, llm_service, _, test_text = analysis_fixture
-        OrchestrationServiceManager = MagicMock(spec=Agent); OrchestrationServiceManager.name = "ProjectManagerAgent"
-        OrchestrationServiceManager = MagicMock(spec=Agent); OrchestrationServiceManager.name = "InformalAnalysisAgent"
-        OrchestrationServiceManager = MagicMock(spec=Agent); OrchestrationServiceManager.name = "PropositionalLogicAgent"
-        OrchestrationServiceManager = MagicMock(spec=Agent); OrchestrationServiceManager.name = "ExtractAgent"
+        OrchestrationServiceManager = MagicMock(); OrchestrationServiceManager.name = "ProjectManagerAgent"
+        OrchestrationServiceManager = MagicMock(); OrchestrationServiceManager.name = "InformalAnalysisAgent"
+        OrchestrationServiceManager = MagicMock(); OrchestrationServiceManager.name = "PropositionalLogicAgent"
+        OrchestrationServiceManager = MagicMock(); OrchestrationServiceManager.name = "ExtractAgent"
         
         OrchestrationServiceManager# Mock eliminated - using authentic gpt-4o-mini [OrchestrationServiceManager, OrchestrationServiceManager, OrchestrationServiceManager, OrchestrationServiceManager]
         mock_extract_kernel = MagicMock(spec=sk.Kernel)
         OrchestrationServiceManager# Mock eliminated - using authentic gpt-4o-mini (mock_extract_kernel, OrchestrationServiceManager)
-        mock_group_chat_instance = MagicMock(spec=AgentGroupChat)
+        mock_group_chat_instance = MagicMock()
         mock_agent_group_chat# Mock eliminated - using authentic gpt-4o-mini mock_group_chat_instance
         
         async def mock_invoke():
-            message1 = MagicMock(spec=ChatMessageContent); message1.name = "ProjectManagerAgent"; message1.role = AuthorRole.ASSISTANT
+            message1 = MagicMock(spec=ChatMessageContent); message1.name = "ProjectManagerAgent"; message1.role = "assistant"
             message1.content = "Définition des tâches."
             state.add_task("Identifier les arguments")
             state.designate_next_agent("InformalAnalysisAgent")
             yield message1
             
-            message2 = MagicMock(spec=ChatMessageContent); message2.name = "InformalAnalysisAgent"; message2.role = AuthorRole.ASSISTANT
+            message2 = MagicMock(spec=ChatMessageContent); message2.name = "InformalAnalysisAgent"; message2.role = "assistant"
             message2.content = "Erreur d'identification."
             state.log_error("InformalAnalysisAgent", "Erreur arguments")
             state.designate_next_agent("ProjectManagerAgent")
             yield message2
             
-            message3 = MagicMock(spec=ChatMessageContent); message3.name = "ProjectManagerAgent"; message3.role = AuthorRole.ASSISTANT
+            message3 = MagicMock(spec=ChatMessageContent); message3.name = "ProjectManagerAgent"; message3.role = "assistant"
             message3.content = "Gestion erreur."
             state.add_task("Analyser sophismes directement")
             state.designate_next_agent("InformalAnalysisAgent")
             yield message3
             
-            message4 = MagicMock(spec=ChatMessageContent); message4.name = "InformalAnalysisAgent"; message4.role = AuthorRole.ASSISTANT
+            message4 = MagicMock(spec=ChatMessageContent); message4.name = "InformalAnalysisAgent"; message4.role = "assistant"
             message4.content = "Analyse sophismes."
             arg1_id = state.add_argument("Argument récupéré")
             fallacy1_id = state.add_fallacy("Sophisme récupéré", "Desc", arg1_id)
@@ -236,13 +234,13 @@ class TestEndToEndAnalysis:
             state.designate_next_agent("ProjectManagerAgent")
             yield message4
             
-            message5 = MagicMock(spec=ChatMessageContent); message5.name = "ProjectManagerAgent"; message5.role = AuthorRole.ASSISTANT
+            message5 = MagicMock(spec=ChatMessageContent); message5.name = "ProjectManagerAgent"; message5.role = "assistant"
             message5.content = "Conclusion après récupération."
             state.set_conclusion("Analyse avec récupération.")
             yield message5
         
         mock_group_chat_instance.invoke = mock_invoke
-        mock_group_chat_instance.history = Magicawait self._create_authentic_gpt4o_mini_instance(); mock_group_chat_instance.history.add_user_message = Magicawait self._create_authentic_gpt4o_mini_instance(); mock_group_chat_instance.history.messages = []
+        mock_group_chat_instance.history = MagicMock(); mock_group_chat_instance.history.add_user_message = MagicMock(); mock_group_chat_instance.history.messages = []
         
         await run_analysis_conversation(test_text, llm_service)
         
@@ -261,7 +259,7 @@ class TestPerformanceIntegration:
     @pytest.fixture
     def performance_fixture(self):
         test_text = "Texte pour test de performance."
-        llm_service = Magicawait self._create_authentic_gpt4o_mini_instance(); llm_service.service_id = "test_service"
+        llm_service = AsyncMock(); llm_service.service_id = "test_service"
         return test_text, llm_service
 
     
@@ -272,25 +270,25 @@ class TestPerformanceIntegration:
     
     async def test_performance_metrics(
         self, mock_setup_pm_kernel, mock_setup_informal_kernel, mock_setup_pl_kernel,
-        OrchestrationServiceManager, OrchestrationServiceManager, mock_agent_group_chat,
+        OrchestrationServiceManager, mock_agent_group_chat,
         performance_fixture
     ):
         test_text, llm_service = performance_fixture
-        OrchestrationServiceManager = MagicMock(spec=Agent); OrchestrationServiceManager.name = "ProjectManagerAgent"
-        OrchestrationServiceManager = MagicMock(spec=Agent); OrchestrationServiceManager.name = "InformalAnalysisAgent"
-        OrchestrationServiceManager = MagicMock(spec=Agent); OrchestrationServiceManager.name = "PropositionalLogicAgent"
-        OrchestrationServiceManager = MagicMock(spec=Agent); OrchestrationServiceManager.name = "ExtractAgent"
+        OrchestrationServiceManager = MagicMock(); OrchestrationServiceManager.name = "ProjectManagerAgent"
+        OrchestrationServiceManager = MagicMock(); OrchestrationServiceManager.name = "InformalAnalysisAgent"
+        OrchestrationServiceManager = MagicMock(); OrchestrationServiceManager.name = "PropositionalLogicAgent"
+        OrchestrationServiceManager = MagicMock(); OrchestrationServiceManager.name = "ExtractAgent"
         
         OrchestrationServiceManager# Mock eliminated - using authentic gpt-4o-mini [OrchestrationServiceManager, OrchestrationServiceManager, OrchestrationServiceManager, OrchestrationServiceManager, OrchestrationServiceManager]
         mock_extract_kernel = MagicMock(spec=sk.Kernel)
         OrchestrationServiceManager# Mock eliminated - using authentic gpt-4o-mini (mock_extract_kernel, OrchestrationServiceManager)
-        mock_group_chat_instance = MagicMock(spec=AgentGroupChat)
+        mock_group_chat_instance = MagicMock()
         mock_agent_group_chat# Mock eliminated - using authentic gpt-4o-mini mock_group_chat_instance
         
         async def mock_invoke():
             async def sleep_and_yield(agent_name, content, delay):
                 msg = MagicMock(spec=ChatMessageContent)
-                msg.name = agent_name; msg.role = AuthorRole.ASSISTANT; msg.content = content
+                msg.name = agent_name; msg.role = "assistant"; msg.content = content
                 await asyncio.sleep(delay)
                 return msg  # Changed to return instead of yield
             
@@ -302,7 +300,7 @@ class TestPerformanceIntegration:
 
         mock_group_chat_instance.invoke = mock_invoke()
 
-        mock_group_chat_instance.history = Magicawait self._create_authentic_gpt4o_mini_instance(); mock_group_chat_instance.history.add_user_message = Magicawait self._create_authentic_gpt4o_mini_instance(); mock_group_chat_instance.history.messages = []
+        mock_group_chat_instance.history = MagicMock(); mock_group_chat_instance.history.add_user_message = MagicMock(); mock_group_chat_instance.history.messages = []
         
         start_time = time.time()
         await run_analysis_conversation(test_text, llm_service)
@@ -345,10 +343,10 @@ class TestExtractIntegrationWithBalancedStrategy:
         source = integration_sample_definitions.sources[0]
         extract_def = source.extracts[0]
         
-        pm_agent = MagicMock(spec=Agent); pm_agent.name = "ProjectManagerAgent"
-        pl_agent = MagicMock(spec=Agent); pl_agent.name = "PropositionalLogicAgent"
-        informal_agent = MagicMock(spec=Agent); informal_agent.name = "InformalAnalysisAgent"
-        extract_agent_mock = MagicMock(spec=Agent); extract_agent_mock.name = "ExtractAgent"
+        pm_agent = MagicMock(); pm_agent.name = "ProjectManagerAgent"
+        pl_agent = MagicMock(); pl_agent.name = "PropositionalLogicAgent"
+        informal_agent = MagicMock(); informal_agent.name = "InformalAnalysisAgent"
+        extract_agent_mock = MagicMock(); extract_agent_mock.name = "ExtractAgent"
         
         agents = [pm_agent, pl_agent, informal_agent, extract_agent_mock]
         
