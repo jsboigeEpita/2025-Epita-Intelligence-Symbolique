@@ -223,3 +223,6 @@ logs/
 reports/
 venv_temp/
 "sessions/" 
+
+# Log files
+*.log
