@@ -231,3 +231,8 @@ orchestration_finale_reelle.log
 
 # Dung agent logs
 abs_arg_dung/*.log
+
+# Fichiers de données de test générés
+test_orchestration_data.txt
+test_orchestration_data_extended.txt
+test_orchestration_data_simple.txt
