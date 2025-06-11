@@ -23,7 +23,7 @@ backend:
   enabled: true
   
   # Module Python à démarrer
-  module: "api.main_simple:app"
+  module: "argumentation_analysis.services.web_api.app:app"
   
   # Gestion des ports avec failover automatique
   start_port: 5003
