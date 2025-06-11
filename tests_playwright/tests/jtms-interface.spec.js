@@ -19,7 +19,7 @@ test.describe('Interface Web JTMS - Tests d\'Intégration Complète', () => {
     test.beforeEach(async ({ page }) => {
         // Vérifier que le serveur est disponible
         await page.goto(BASE_URL);
-        await expect(page).toHaveTitle(/Intelligence Symbolique EPITA/);
+        await expect(page).toHaveTitle(/Argumentation Analysis App/);
     });
 
     test.describe('Dashboard JTMS', () => {
