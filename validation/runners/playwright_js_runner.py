@@ -46,7 +46,7 @@ class PlaywrightJSRunner:
         self.base_url = config.get('base_url', 'http://localhost:3000')
         self.screenshots_dir = Path(config.get('screenshots_dir', 'logs/screenshots'))
         self.traces_dir = Path(config.get('traces_dir', 'logs/traces'))
-        self.test_timeout = config.get('test_timeout', 600)  # 10 minutes
+        self.test_timeout = config.get('test_timeout', 120)  # 2 minutes
         
         # Création répertoires
         self.screenshots_dir.mkdir(parents=True, exist_ok=True)
