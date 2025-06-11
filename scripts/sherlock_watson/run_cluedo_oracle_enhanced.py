@@ -11,6 +11,8 @@ Dans cette version corrigée :
 - Système Oracle authentique avec révélations progressives
 - Comportement Oracle stratégique (non pas conversation normale)
 """
+# Activation de l'environnement et chargement du .env
+import scripts.core.auto_env
 
 import sys
 import os
