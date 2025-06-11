@@ -1,4 +1,6 @@
 
+from unittest.mock import MagicMock
+
 # Authentic gpt-4o-mini imports (replacing mocks)
 import openai
 from semantic_kernel.contents import ChatHistory
@@ -54,7 +56,14 @@ class MockMiddleware:
     
     def __init__(self):
         self.messages = []
-        self.request_response = Magicawait self._create_authentic_gpt4o_mini_instance()
+        # Correction: Magicawait -> await (bien que ce soit dans un init sync, cela semble être une erreur de frappe)
+        # De plus, appeler une méthode async depuis un __init__ sync est problématique.
+        # Pour l'instant, je corrige la syntaxe, mais cela pourrait nécessiter une refonte.
+        # self.request_response = await self._create_authentic_gpt4o_mini_instance()
+        # Commenté pour l'instant car cela briserait l'exécution synchrone de l'init.
+        # Il est probable que cette ligne soit un vestige et non fonctionnelle.
+        # Je vais la neutraliser pour permettre au reste du fichier d'être parsé.
+        self.request_response = MagicMock() # Remplacé par un MagicMock simple pour éviter l'erreur async.
         self.request_response.send_request_async = MagicMock(return_value=None)
     
     def send_message(self, message):
