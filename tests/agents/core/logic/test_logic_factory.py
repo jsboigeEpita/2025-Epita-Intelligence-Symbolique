@@ -12,7 +12,8 @@ Tests unitaires pour la classe LogicAgentFactory.
 """
 
 import unittest
-
+import pytest
+from unittest.mock import MagicMock, patch
 
 from semantic_kernel import Kernel
 
@@ -23,7 +24,7 @@ from argumentation_analysis.agents.core.logic.first_order_logic_agent import Fir
 from argumentation_analysis.agents.core.logic.modal_logic_agent import ModalLogicAgent
 
 
-class TestLogicAgentFactory(unittest.TestCase):
+class TestLogicAgentFactory:
     async def _create_authentic_gpt4o_mini_instance(self):
         """Crée une instance authentique de gpt-4o-mini au lieu d'un mock."""
         config = UnifiedConfig()
@@ -36,20 +37,15 @@ class TestLogicAgentFactory(unittest.TestCase):
             result = await kernel.invoke("chat", input=prompt)
             return str(result)
         except Exception as e:
-            logger.warning(f"Appel LLM authentique échoué: {e}")
+            print(f"Authentic LLM call failed: {e}")
             return "Authentic LLM call failed"
 
     """Tests pour la classe LogicAgentFactory."""
     
-    def setUp(self):
-        """Initialisation avant chaque test."""
-        # Mock du kernel
-        self.kernel = MagicMock(spec=Kernel)
-        
-        # Mock du kernel
+    async def async_setUp(self):
+        """Initialisation asynchrone avant chaque test."""
         self.kernel = MagicMock(spec=Kernel)
 
-        # Mocks pour les classes d'agents et leurs instances
         self.mock_propositional_agent = MagicMock(spec=PropositionalLogicAgent)
         self.mock_first_order_agent = MagicMock(spec=FirstOrderLogicAgent)
         self.mock_modal_agent = MagicMock(spec=ModalLogicAgent)
@@ -58,108 +54,94 @@ class TestLogicAgentFactory(unittest.TestCase):
         self.mock_first_order_agent_class = MagicMock(spec=FirstOrderLogicAgent, return_value=self.mock_first_order_agent)
         self.mock_modal_agent_class = MagicMock(spec=ModalLogicAgent, return_value=self.mock_modal_agent)
 
-        # Patcher le dictionnaire _agent_classes de la factory
-        # Conserver une copie de l'original pour la restauration si nécessaire, bien que patch.dict gère cela.
-        # self.original_agent_classes = LogicAgentFactory._agent_classes.copy()
-
-        self.agent_classes_patcher = patch.dict(LogicAgentFactory._agent_classes, {
+        self.agent_classes_patch = patch.dict(LogicAgentFactory._agent_classes, {
             "propositional": self.mock_propositional_agent_class,
             "first_order": self.mock_first_order_agent_class,
             "modal": self.mock_modal_agent_class
-        }, clear=False) # clear=False pour ne pas affecter d'autres types potentiellement enregistrés
-        
-        self.agent_classes_patcher.start()
-        self.addCleanup(self.agent_classes_patcher.stop)
-
-    def tearDown(self):
-        """Nettoyage après chaque test."""
-        # addCleanup s'occupe de self.agent_classes_patcher.stop()
-        pass
+        }, clear=False)
     
-    def test_create_propositional_agent(self):
+    @pytest.mark.asyncio
+    async def test_create_propositional_agent(self):
         """Test de la création d'un agent de logique propositionnelle."""
-        agent = LogicAgentFactory.create_agent("propositional", self.kernel)
-        
-        # Vérifier que la classe d'agent a été appelée
-        self.mock_propositional_agent_class.assert_called_once_with(kernel=self.kernel, agent_name='PropositionalAgent')
-        
-        # Vérifier que l'agent a été configuré
-        self.mock_propositional_agent.setup_agent_components.assert_not_called() # MODIFIED
-        
-        # Vérifier le résultat
-        self.assertEqual(agent, self.mock_propositional_agent)
+        await self.async_setUp()
+        with self.agent_classes_patch:
+            agent = LogicAgentFactory.create_agent("propositional", self.kernel)
+            
+            self.mock_propositional_agent_class.assert_called_once_with(kernel=self.kernel, agent_name='PropositionalAgent')
+            self.mock_propositional_agent.setup_agent_components.assert_not_called()
+            
+            assert agent == self.mock_propositional_agent
     
-    def test_create_first_order_agent(self):
+    @pytest.mark.asyncio
+    async def test_create_first_order_agent(self):
         """Test de la création d'un agent de logique du premier ordre."""
-        agent = LogicAgentFactory.create_agent("first_order", self.kernel)
-        
-        # Vérifier que la classe d'agent a été appelée
-        self.mock_first_order_agent_class.assert_called_once_with(kernel=self.kernel, agent_name='First_orderAgent')
-        
-        # Vérifier que l'agent a été configuré
-        self.mock_first_order_agent.setup_agent_components.assert_not_called() # MODIFIED
-        
-        # Vérifier le résultat
-        self.assertEqual(agent, self.mock_first_order_agent)
+        await self.async_setUp()
+        with self.agent_classes_patch:
+            agent = LogicAgentFactory.create_agent("first_order", self.kernel)
+
+            self.mock_first_order_agent_class.assert_called_once_with(kernel=self.kernel, agent_name='First_orderAgent')
+            self.mock_first_order_agent.setup_agent_components.assert_not_called()
+            
+            assert agent == self.mock_first_order_agent
     
-    def test_create_modal_agent(self):
+    @pytest.mark.asyncio
+    async def test_create_modal_agent(self):
         """Test de la création d'un agent de logique modale."""
-        agent = LogicAgentFactory.create_agent("modal", self.kernel)
-        
-        # Vérifier que la classe d'agent a été appelée
-        self.mock_modal_agent_class.assert_called_once_with(kernel=self.kernel, agent_name='ModalAgent')
-        
-        # Vérifier que l'agent a été configuré
-        self.mock_modal_agent.setup_agent_components.assert_not_called() # MODIFIED
-        
-        # Vérifier le résultat
-        self.assertEqual(agent, self.mock_modal_agent)
+        await self.async_setUp()
+        with self.agent_classes_patch:
+            agent = LogicAgentFactory.create_agent("modal", self.kernel)
+            
+            self.mock_modal_agent_class.assert_called_once_with(kernel=self.kernel, agent_name='ModalAgent')
+            self.mock_modal_agent.setup_agent_components.assert_not_called()
+            
+            assert agent == self.mock_modal_agent
     
-    def test_create_agent_with_llm_service(self):
+    @pytest.mark.asyncio
+    async def test_create_agent_with_llm_service(self):
         """Test de la création d'un agent avec un service LLM."""
-        llm_service = Magicawait self._create_authentic_gpt4o_mini_instance()
-        
-        agent = LogicAgentFactory.create_agent("propositional", self.kernel, llm_service)
-        
-        # Vérifier que la classe d'agent a été appelée
-        self.mock_propositional_agent_class.assert_called_once_with(kernel=self.kernel, agent_name='PropositionalAgent')
-        
-        # Vérifier que l'agent a été configuré
-        self.mock_propositional_agent.setup_agent_components.assert_called_once_with(llm_service) # MODIFIED
-        
-        # Vérifier le résultat
-        self.assertEqual(agent, self.mock_propositional_agent)
+        await self.async_setUp()
+        with self.agent_classes_patch:
+            llm_service = await self._create_authentic_gpt4o_mini_instance()
+            
+            agent = LogicAgentFactory.create_agent("propositional", self.kernel, llm_service)
+            
+            self.mock_propositional_agent_class.assert_called_once_with(kernel=self.kernel, agent_name='PropositionalAgent')
+            self.mock_propositional_agent.setup_agent_components.assert_called_once_with(llm_service)
+            
+            assert agent == self.mock_propositional_agent
     
-    def test_create_agent_unsupported_type(self):
+    @pytest.mark.asyncio
+    async def test_create_agent_unsupported_type(self):
         """Test de la création d'un agent avec un type non supporté."""
-        agent = LogicAgentFactory.create_agent("unsupported", self.kernel)
-        
-        # Vérifier que les classes d'agents n'ont pas été appelées
-        self.mock_propositional_agent_class.assert_not_called()
-        self.mock_first_order_agent_class.assert_not_called()
-        self.mock_modal_agent_class.assert_not_called()
-        
-        # Vérifier le résultat
-        self.assertIsNone(agent)
+        await self.async_setUp()
+        with self.agent_classes_patch:
+            agent = LogicAgentFactory.create_agent("unsupported", self.kernel)
+            
+            self.mock_propositional_agent_class.assert_not_called()
+            self.mock_first_order_agent_class.assert_not_called()
+            self.mock_modal_agent_class.assert_not_called()
+            
+            assert agent is None
     
-    def test_create_agent_exception(self):
+    @pytest.mark.asyncio
+    async def test_create_agent_exception(self):
         """Test de la création d'un agent avec une exception."""
-        # Configurer le mock pour lever une exception
-        self.mock_propositional_agent_class# Mock eliminated - using authentic gpt-4o-mini Exception("Test exception")
-        
-        agent = LogicAgentFactory.create_agent("propositional", self.kernel)
-        
-        # Vérifier que la classe d'agent a été appelée
-        self.mock_propositional_agent_class.assert_called_once_with(kernel=self.kernel, agent_name='PropositionalAgent')
-        
-        # Vérifier le résultat
-        self.assertIsNone(agent)
+        await self.async_setUp()
+        with self.agent_classes_patch:
+            self.mock_propositional_agent_class.side_effect = Exception("Test exception")
+            
+            agent = LogicAgentFactory.create_agent("propositional", self.kernel)
+            
+            self.mock_propositional_agent_class.assert_called_once_with(kernel=self.kernel, agent_name='PropositionalAgent')
+            
+            assert agent is None
     
-    def test_register_agent_class(self):
+    @pytest.mark.asyncio
+    async def test_register_agent_class(self):
         """Test de l'enregistrement d'une nouvelle classe d'agent."""
-        # Créer une classe d'agent de test (sa définition réelle n'importe pas tant pour le mock)
+        await self.async_setUp()
         class TestLogicAgent(AbstractLogicAgent):
-            def setup_agent_components(self, llm_service_id: str): pass # MODIFIED
+            def setup_agent_components(self, llm_service_id: str): pass
             def text_to_belief_set(self, text): pass
             def generate_queries(self, text, belief_set): pass
             def execute_query(self, belief_set, query): pass
@@ -168,43 +150,34 @@ class TestLogicAgentFactory(unittest.TestCase):
 
         test_logic_type = f"test_agent_type_{id(self)}"
 
-        # Mock pour simuler le constructeur de TestLogicAgent et l'instance retournée
         mock_test_agent_instance = MagicMock(spec=TestLogicAgent)
-        # Ce mock représente la classe TestLogicAgent elle-même (son constructeur)
         mock_test_agent_constructor = MagicMock(return_value=mock_test_agent_instance)
-        mock_test_agent_constructor.__name__ = "MockedTestLogicAgent" # Pour satisfaire le logger dans register_agent_class
+        mock_test_agent_constructor.__name__ = "MockedTestLogicAgent"
 
-        # Enregistrer notre mock constructeur au lieu de la vraie classe TestLogicAgent
-        LogicAgentFactory.register_agent_class(test_logic_type, mock_test_agent_constructor)
-        # S'assurer que cette clé de test est retirée après le test pour ne pas polluer les autres tests
-        self.addCleanup(LogicAgentFactory._agent_classes.pop, test_logic_type, None)
-        
-        # Vérifier que la classe a été enregistrée
-        self.assertIn(test_logic_type, LogicAgentFactory.get_supported_logic_types())
-        
-        # Créer un agent avec le nouveau type
-        agent = LogicAgentFactory.create_agent(test_logic_type, self.kernel)
-        
-        # Vérifier que notre mock constructeur (qui simule la classe) a été appelé
-        # L'agent_name généré dynamiquement sera quelque chose comme Test_agent_type_123456Agent
-        mock_test_agent_constructor.# Mock assertion eliminated - authentic validation
-        args, kwargs = mock_test_agent_constructor.call_args
-        self.assertEqual(kwargs.get('kernel'), self.kernel)
-        self.assertTrue(kwargs.get('agent_name', '').startswith('Test_agent_type_'))
-        self.assertTrue(kwargs.get('agent_name', '').endswith('Agent'))
-        
-        # Vérifier le résultat
-        self.assertEqual(agent, mock_test_agent_instance)
+        try:
+            LogicAgentFactory.register_agent_class(test_logic_type, mock_test_agent_constructor)
+            
+            assert test_logic_type in LogicAgentFactory.get_supported_logic_types()
+            
+            agent = LogicAgentFactory.create_agent(test_logic_type, self.kernel)
+            
+            mock_test_agent_constructor.assert_called_once()
+            args, kwargs = mock_test_agent_constructor.call_args
+            assert kwargs.get('kernel') == self.kernel
+            assert kwargs.get('agent_name', '').startswith('Test_agent_type_')
+            assert kwargs.get('agent_name', '').endswith('Agent')
+            
+            assert agent == mock_test_agent_instance
+        finally:
+            LogicAgentFactory._agent_classes.pop(test_logic_type, None)
     
-    def test_get_supported_logic_types(self):
+    @pytest.mark.asyncio
+    async def test_get_supported_logic_types(self):
         """Test de la récupération des types de logique supportés."""
-        types = LogicAgentFactory.get_supported_logic_types()
-        
-        # Vérifier que les types de base sont présents
-        self.assertIn("propositional", types)
-        self.assertIn("first_order", types)
-        self.assertIn("modal", types)
-
-
-if __name__ == "__main__":
-    unittest.main()
+        await self.async_setUp()
+        with self.agent_classes_patch:
+            types = LogicAgentFactory.get_supported_logic_types()
+            
+            assert "propositional" in types
+            assert "first_order" in types
+            assert "modal" in types

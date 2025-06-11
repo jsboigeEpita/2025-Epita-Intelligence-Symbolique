@@ -50,7 +50,7 @@ def oracle_enhanced_state(enhanced_elements):
 
 
 @pytest.fixture
-def mock_semantic_kernel():
+async def mock_semantic_kernel():
     """Mock du Semantic Kernel pour tests GPT-4o-mini."""
     kernel = await self._create_authentic_gpt4o_mini_instance()
     kernel.add_plugin = await self._create_authentic_gpt4o_mini_instance()

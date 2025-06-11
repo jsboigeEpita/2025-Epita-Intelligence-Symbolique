@@ -92,7 +92,8 @@ class TestNewModulesIntegration:
         asyncio.run(test_error_request())
         
     
-    def test_complete_integration_scenario(self, mock_get_logger):
+    @pytest.mark.asyncio
+    async def test_complete_integration_scenario(self, mock_get_logger):
         """Test scenario d'intégration complet"""
         mock_logger = await self._create_authentic_gpt4o_mini_instance()
         mock_get_logger# Mock eliminated - using authentic gpt-4o-mini mock_logger

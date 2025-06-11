@@ -12,6 +12,7 @@ import logging
 import pytest
 import json
 from pathlib import Path
+from unittest.mock import MagicMock, call
 
 from typing import List, Dict, Any
 
@@ -68,21 +69,21 @@ def test_run_advanced_rhetoric_pipeline_success(
     """Teste une exécution réussie du pipeline."""
     
     # Configurer les mocks
-    mock_progress_bar_instance = Magicawait self._create_authentic_gpt4o_mini_instance()
-    mock_tqdm# Mock eliminated - using authentic gpt-4o-mini mock_progress_bar_instance
+    mock_progress_bar_instance = MagicMock()
+    mock_tqdm.return_value = mock_progress_bar_instance
     
     mock_tools_dict = {"mock_tool": "un outil"}
-    mock_create_mocks# Mock eliminated - using authentic gpt-4o-mini mock_tools_dict
+    mock_create_mocks.return_value = mock_tools_dict
     
     # Simuler les résultats de l'analyse d'un seul extrait
     def analyze_single_side_effect(extract_def, source_name, base_res, tools):
         return {"analyzed": True, "extract_name": extract_def["extract_name"], "source_name": source_name}
-    mock_analyze_single_extract# Mock eliminated - using authentic gpt-4o-mini analyze_single_side_effect
+    mock_analyze_single_extract.side_effect = analyze_single_side_effect
 
     run_advanced_rhetoric_pipeline(sample_extract_definitions, sample_base_results, temp_output_file)
 
     # Vérifications
-    mock_create_mocks.# Mock assertion eliminated - authentic validation # Doit utiliser les mocks par défaut
+    mock_create_mocks.assert_called_once_with(use_real_tools=False) # Doit utiliser les mocks par défaut
     
     assert mock_analyze_single_extract.call_count == 3 # 2 extraits pour Source1, 1 pour Source2
     
@@ -96,7 +97,7 @@ def test_run_advanced_rhetoric_pipeline_success(
 
     mock_tqdm.assert_called_once_with(total=3, desc="Pipeline d'analyse avancée", unit="extrait")
     assert mock_progress_bar_instance.update.call_count == 3
-    mock_progress_bar_instance.close.# Mock assertion eliminated - authentic validation
+    mock_progress_bar_instance.close.assert_called_once()
 
     mock_open.assert_called_once_with(temp_output_file, 'w', encoding='utf-8')
     # mock_json_dump.# Mock assertion eliminated - authentic validation # Le contenu exact est plus difficile à vérifier sans plus de détails
@@ -123,8 +124,8 @@ def test_run_advanced_rhetoric_pipeline_no_base_results(
 ):
     """Teste le pipeline sans résultats de base."""
     mock_tools_dict = {"mock_tool": "un outil"}
-    mock_create_mocks# Mock eliminated - using authentic gpt-4o-mini mock_tools_dict
-    mock_analyze_single_extract# Mock eliminated - using authentic gpt-4o-mini {"analyzed": True}
+    mock_create_mocks.return_value = mock_tools_dict
+    mock_analyze_single_extract.return_value = {"analyzed": True}
 
     run_advanced_rhetoric_pipeline(sample_extract_definitions, [], temp_output_file) # base_results est vide
 
@@ -133,11 +134,10 @@ def test_run_advanced_rhetoric_pipeline_no_base_results(
         for extract_def in extract_def_list["extracts"]:
              args, _ = next(c for c in mock_analyze_single_extract.call_args_list if c[0][0] == extract_def)
              assert args[2] is None # base_result doit être None
-
-
-)
-
-
+ 
+ 
+ 
+ 
 
 
 def test_run_advanced_rhetoric_pipeline_extract_analysis_error(
@@ -151,7 +151,7 @@ def test_run_advanced_rhetoric_pipeline_extract_analysis_error(
     caplog
 ):
     """Teste la gestion d'erreur si l'analyse d'un extrait échoue."""
-    mock_create_mocks# Mock eliminated - using authentic gpt-4o-mini {} # Peu importe les outils si l'analyse échoue
+    mock_create_mocks.return_value = {} # Peu importe les outils si l'analyse échoue
     
     with caplog.at_level(logging.ERROR):
         run_advanced_rhetoric_pipeline(sample_extract_definitions, [], temp_output_file)
@@ -168,7 +168,6 @@ def test_run_advanced_rhetoric_pipeline_extract_analysis_error(
 
 
 
-) # Simule une erreur d'écriture
 
 
 def test_run_advanced_rhetoric_pipeline_save_error(
