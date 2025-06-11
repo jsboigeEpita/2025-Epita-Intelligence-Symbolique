@@ -9,7 +9,7 @@ core functionalities.
 # Imports des composants core (sans dépendance circulaire)
 from .shared_state import RhetoricalAnalysisState
 from .llm_service import create_llm_service
-from .bootstrap import *
+# from .bootstrap import * # COMMENTÉ - L'initialisation doit être explicite
 
 # Exports principaux
 __all__ = [

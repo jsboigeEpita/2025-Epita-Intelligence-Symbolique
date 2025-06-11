@@ -4,7 +4,6 @@
 """
 Service d'analyse complète utilisant le moteur d'analyse argumentative.
 """
-
 import time
 import logging
 from typing import Dict, List, Any, Optional
@@ -21,16 +20,14 @@ try:
     # Imports optionnels qui peuvent échouer
     try:
         from argumentation_analysis.core.llm_service import create_llm_service
-        print("[OK] create_llm_service imported successfully")
     except ImportError as llm_e:
-        print(f"[ERROR] create_llm_service import failed: {llm_e}")
+        logging.warning(f"Failed to import create_llm_service: {llm_e}")
         create_llm_service = None
         
     try:
         from argumentation_analysis.utils.taxonomy_loader import get_taxonomy_path
-        print("[OK] get_taxonomy_path imported successfully")
     except ImportError as tax_e:
-        print(f"[ERROR] get_taxonomy_path import failed: {tax_e}")
+        logging.warning(f"Failed to import get_taxonomy_path: {tax_e}")
         get_taxonomy_path = None
         
 except ImportError as e:
@@ -44,6 +41,15 @@ except ImportError as e:
     create_llm_service = None
     get_taxonomy_path = None
 
+# # Fallback pour les variables qui seraient normalement importées
+# InformalAgent = None
+# ComplexFallacyAnalyzer = None
+# ContextualFallacyAnalyzer = None
+# FallacySeverityEvaluator = None
+# OperationalManager = None
+# create_llm_service = None
+# get_taxonomy_path = None
+
 # Imports des modèles (style HEAD)
 from argumentation_analysis.services.web_api.models.request_models import AnalysisRequest
 from argumentation_analysis.services.web_api.models.response_models import (
@@ -54,7 +60,6 @@ from argumentation_analysis.services.web_api.models.response_models import (
 from argumentation_analysis.services.web_api.services.fallacy_service import FallacyService
 
 logger = logging.getLogger("AnalysisService")
-
 
 class AnalysisService:
     """
@@ -82,36 +87,35 @@ class AnalysisService:
         :rtype: None
         """
         try:
-            self.logger.info("=== DIAGNOSTIC ANALYSIS SERVICE STARTUP ===")
-            
+            self.logger.info("=== Initializing Analysis Service Components ===")
             # Initialisation des analyseurs
             if ComplexFallacyAnalyzer:
                 self.complex_analyzer = ComplexFallacyAnalyzer()
                 self.logger.info("[OK] ComplexFallacyAnalyzer initialized")
             else:
                 self.complex_analyzer = None
-                self.logger.warning("[ERROR] ComplexFallacyAnalyzer not available")
-                
+                self.logger.warning("[WARN] ComplexFallacyAnalyzer not available (import failed or class not found)")
+            
             if ContextualFallacyAnalyzer:
                 self.contextual_analyzer = ContextualFallacyAnalyzer()
                 self.logger.info("[OK] ContextualFallacyAnalyzer initialized")
             else:
                 self.contextual_analyzer = None
-                self.logger.warning("[ERROR] ContextualFallacyAnalyzer not available")
-                
+                self.logger.warning("[WARN] ContextualFallacyAnalyzer not available (import failed or class not found)")
+            
             if FallacySeverityEvaluator:
                 self.severity_evaluator = FallacySeverityEvaluator()
                 self.logger.info("[OK] FallacySeverityEvaluator initialized")
             else:
                 self.severity_evaluator = None
-                self.logger.warning("[ERROR] FallacySeverityEvaluator not available")
+                self.logger.warning("[WARN] FallacySeverityEvaluator not available (import failed or class not found)")
             
             # Initialisation du FallacyService corrigé
             try:
                 self.fallacy_service = FallacyService()
-                self.logger.info("FallacyService corrigé initialisé avec succès")
+                self.logger.info("FallacyService initialized successfully")
             except Exception as e:
-                self.logger.error(f"Erreur lors de l'initialisation du FallacyService: {e}")
+                self.logger.error(f"Error initializing FallacyService: {e}")
                 self.fallacy_service = None
             
             # Configuration des outils pour l'agent informel
@@ -130,56 +134,56 @@ class AnalysisService:
                 # Vérification des dépendances disponibles
                 self.logger.info(f"create_llm_service available: {create_llm_service is not None}")
                 self.logger.info(f"get_taxonomy_path available: {get_taxonomy_path is not None}")
-                
+
                 # Mode compatible sans dépendances manquantes
                 if not create_llm_service or not get_taxonomy_path:
-                    self.logger.warning("[ERROR] Missing LLM service dependencies - using fallback mode")
+                    self.logger.warning("[WARN] Missing LLM service dependencies for InformalAgent - using fallback mode")
                     self.informal_agent = None
                 else:
                     # Création du kernel et ajout du service LLM
                     kernel = sk.Kernel()
-                    llm_service = None
+                    llm_service_instance = None # Renommé pour éviter conflit avec variable globale potentielle
                     try:
-                        llm_service = create_llm_service(service_id="default_analysis_llm")
-                        kernel.add_service(llm_service)
-                        self.logger.info("[OK] Service LLM cree et ajoute au kernel")
+                        llm_service_instance = create_llm_service(service_id="default_analysis_llm")
+                        kernel.add_service(llm_service_instance)
+                        self.logger.info("[OK] LLM service created and added to kernel for InformalAgent")
                     except Exception as llm_e:
-                        self.logger.error(f"[ERROR] Failed to create LLM service: {llm_e}")
+                        self.logger.error(f"[ERROR] Failed to create LLM service for InformalAgent: {llm_e}")
 
-                    taxonomy_path = None
+                    taxonomy_path_instance = None # Renommé
                     try:
-                        taxonomy_path = get_taxonomy_path()
-                        self.logger.info(f"[OK] Taxonomy path obtained: {taxonomy_path}")
+                        taxonomy_path_instance = get_taxonomy_path()
+                        self.logger.info(f"[OK] Taxonomy path obtained for InformalAgent: {taxonomy_path_instance}")
                     except Exception as tax_e:
-                        self.logger.error(f"[ERROR] Failed to get taxonomy path: {tax_e}")
+                        self.logger.error(f"[ERROR] Failed to get taxonomy path for InformalAgent: {tax_e}")
                     
-                    if kernel and llm_service:
+                    if kernel and llm_service_instance:
                         self.informal_agent = InformalAgent(
                             kernel=kernel,
                             agent_name="web_api_informal_agent",
-                            taxonomy_file_path=str(taxonomy_path) if taxonomy_path else None
+                            taxonomy_file_path=str(taxonomy_path_instance) if taxonomy_path_instance else None
                         )
                         try:
                             self.informal_agent.setup_agent_components(llm_service_id="default_analysis_llm")
                             self.logger.info("[OK] InformalAgent configured successfully")
                         except Exception as setup_e:
-                            self.logger.error(f"[ERROR] Failed to setup InformalAgent: {setup_e}")
+                            self.logger.error(f"[ERROR] Failed to setup InformalAgent components: {setup_e}")
                             self.informal_agent = None
                     else:
-                        self.logger.error("[ERROR] Cannot initialize InformalAgent - missing kernel or LLM service")
+                        self.logger.error("[ERROR] Cannot initialize InformalAgent - missing kernel or LLM service instance")
                         self.informal_agent = None
             else:
                 self.informal_agent = None
-                self.logger.warning("[ERROR] InformalAgent class not available")
+                self.logger.warning("[WARN] InformalAgent class not available (import failed or class not found)")
             
-            self.is_initialized = True # Peut-être conditionner cela au succès de l'init de l'agent
+            self.is_initialized = True
             if self.informal_agent:
-                self.logger.info("Service d'analyse initialisé avec succès (avec InformalAgent).")
+                self.logger.info("AnalysisService initialized successfully (with InformalAgent).")
             else:
-                self.logger.warning("Service d'analyse initialisé, mais InformalAgent n'a pas pu être créé/configuré.")
+                self.logger.warning("AnalysisService initialized, but InformalAgent could not be created/configured.")
             
         except Exception as e:
-            self.logger.error(f"Erreur lors de l'initialisation: {e}")
+            self.logger.error(f"Critical error during AnalysisService initialization: {e}")
             self.is_initialized = False
     
     def is_healthy(self) -> bool:
@@ -197,7 +201,7 @@ class AnalysisService:
         # Mode fallback : si on a au moins le FallacyService, on considère le service comme opérationnel
         is_healthy = self.is_initialized and (has_informal or has_analyzers or has_fallback_service)
         
-        self.logger.info(f"=== HEALTH CHECK ANALYSIS SERVICE ===")
+        self.logger.info(f"=== Health Check: Analysis Service ===")
         self.logger.info(f"is_initialized: {self.is_initialized}")
         self.logger.info(f"has_informal_agent: {has_informal}")
         self.logger.info(f"has_analyzers: {has_analyzers}")
@@ -226,18 +230,16 @@ class AnalysisService:
         """
         start_time = time.time()
         
-        # LOGS ULTRA-VISIBLES POUR DIAGNOSTIC
-        self.logger.critical(f"[DEBUG] analyze_text APPELEE avec texte: '{request.text[:30]}...'")
-        self.logger.critical(f"🚨 Options: {request.options}")
+        self.logger.info(f"analyze_text called with text: '{request.text[:50]}...'")
+        self.logger.debug(f"Analysis options: {request.options}")
         
         try:
             # Vérification de l'état du service
-            self.logger.critical(f"🚨 Vérification is_healthy(): {self.is_healthy()}")
             if not self.is_healthy():
-                self.logger.critical("🚨 Service NOT HEALTHY - création fallback response")
+                self.logger.warning("AnalysisService is not healthy - creating fallback response.")
                 return self._create_fallback_response(request, start_time)
             
-            self.logger.critical("🚨 Service healthy - appel de _detect_fallacies")
+            self.logger.debug("AnalysisService is healthy - proceeding with analysis.")
             # Analyse des sophismes
             fallacies = await self._detect_fallacies(request.text, request.options)
             
@@ -294,21 +296,19 @@ class AnalysisService:
         """
         fallacies = []
         
-        # 🚨 LOGS ULTRA-VISIBLES POUR DIAGNOSTIC
-        self.logger.critical(f"🚨🚨🚨 _detect_fallacies APPELÉE avec texte: '{text[:30]}...'")
+        self.logger.info(f"_detect_fallacies called with text: '{text[:50]}...'")
         
         try:
             # DÉBOGAGE CRITIQUE: Vérifier l'état du FallacyService
             fallacy_service_exists = hasattr(self, 'fallacy_service')
-            fallacy_service_not_none = self.fallacy_service if fallacy_service_exists else None
-            self.logger.critical(f"🚨 DIAGNOSTIC: fallacy_service_exists={fallacy_service_exists}")
-            self.logger.critical(f"🚨 DIAGNOSTIC: fallacy_service_not_none={fallacy_service_not_none is not None}")
-            if fallacy_service_not_none:
-                self.logger.critical(f"🚨 DIAGNOSTIC: Type de fallacy_service: {type(fallacy_service_not_none)}")
+            fallacy_service_not_none = self.fallacy_service if fallacy_service_exists else None # Garder cette variable locale
+            self.logger.debug(f"FallacyService exists: {fallacy_service_exists}, FallacyService is not None: {fallacy_service_not_none is not None}")
+            if fallacy_service_not_none: # Utiliser la variable locale
+                self.logger.debug(f"Type of FallacyService: {type(fallacy_service_not_none)}")
             
             # PRIORITÉ 1: Utilisation du FallacyService corrigé avec les patterns regex fixes
-            if hasattr(self, 'fallacy_service') and self.fallacy_service:
-                self.logger.info("Utilisation du FallacyService corrigé pour la détection")
+            if fallacy_service_not_none: # Utiliser la variable locale
+                self.logger.info("Using FallacyService for detection.")
                 try:
                     # Créer une requête compatible
                     from argumentation_analysis.services.web_api.models.request_models import FallacyRequest, FallacyOptions
@@ -353,8 +353,8 @@ class AnalysisService:
                     # Continuer avec les autres méthodes en cas d'erreur
             
             # PRIORITÉ 2: Utilisation de l'agent informel si FallacyService non disponible
-            if not fallacies and self.informal_agent:
-                self.logger.info("Utilisation de l'agent informel pour la détection")
+            if not fallacies and self.informal_agent: # Sera False
+                self.logger.info("Utilisation de l'agent informel pour la détection (ne devrait pas arriver avec imports commentés)")
                 result = await self.informal_agent.analyze_text(text) # La signature de analyze_text peut varier
                 if result and 'fallacies' in result:
                     for fallacy_data in result['fallacies']:
@@ -371,8 +371,8 @@ class AnalysisService:
                         fallacies.append(fallacy)
             
             # PRIORITÉ 3: Analyse contextuelle si les autres méthodes n'ont rien donné
-            elif not fallacies and self.contextual_analyzer:
-                self.logger.info("Utilisation de l'analyseur contextuel pour la détection")
+            elif not fallacies and self.contextual_analyzer: # Sera False
+                self.logger.info("Utilisation de l'analyseur contextuel pour la détection (ne devrait pas arriver avec imports commentés)")
                 result = self.contextual_analyzer.analyze_fallacies(text)
                 if result:
                     for fallacy_data in result:
