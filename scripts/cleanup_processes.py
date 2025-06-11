@@ -11,7 +11,7 @@ def cleanup_processes():
     project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     project_path_marker = os.path.normpath(project_root)
     
-    script_names_to_kill = ['uvicorn', 'start_webapp.py', 'unified_web_orchestrator.py']
+    script_names_to_kill = ['uvicorn', 'start_webapp.py', 'unified_web_orchestrator.py', 'temp_run_playwright_js.py']
     
     processes_to_terminate = []
     print("Processus Python et Uvicorn liés au projet avant nettoyage:")

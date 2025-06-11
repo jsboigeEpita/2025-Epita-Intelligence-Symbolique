@@ -19,7 +19,7 @@ test.describe('Interface Web JTMS - Tests d\'Intégration Complète', () => {
     test.beforeEach(async ({ page }) => {
         // Vérifier que le serveur est disponible
         await page.goto(BASE_URL);
-        await expect(page).toHaveTitle(/Argumentation Analysis App/);
+        await expect(page).toHaveTitle(/Argumentation Analysis/);
     });
 
     test.describe('Dashboard JTMS', () => {
@@ -27,59 +27,51 @@ test.describe('Interface Web JTMS - Tests d\'Intégration Complète', () => {
         test('Accès au dashboard principal', async ({ page }) => {
             await page.goto(`${BASE_URL}${JTMS_PREFIX}/dashboard`);
             
-            // Vérifier les éléments principaux
-            await expect(page.locator('h1')).toContainText('Dashboard JTMS');
-            await expect(page.locator('#networkVisualization')).toBeVisible();
-            await expect(page.locator('#beliefsList')).toBeVisible();
-            await expect(page.locator('#sessionInfo')).toBeVisible();
+            // Vérifier les éléments principaux du dashboard Flask
+            await expect(page.locator('h4')).toContainText('Graphe de Croyances');
+            await expect(page.locator('#network-container')).toBeVisible();
+            await expect(page.locator('#stats-panel')).toBeVisible();
+            await expect(page.locator('#activity-log')).toBeVisible();
         });
 
         test('Ajout d\'une croyance via l\'interface', async ({ page }) => {
             await page.goto(`${BASE_URL}${JTMS_PREFIX}/dashboard`);
             
-            // Attendre que l'interface soit chargée
-            await page.waitForSelector('#addBeliefForm');
-            
             // Ajouter une nouvelle croyance
             const beliefName = `test_belief_${Date.now()}`;
-            await page.fill('#beliefNameInput', beliefName);
-            await page.click('#addBeliefBtn');
+            await page.fill('#new-belief', beliefName);
+            await page.click('button:has-text("Créer")');
             
-            // Vérifier que la croyance apparaît dans la liste
-            await expect(page.locator('#beliefsList')).toContainText(beliefName);
+            // Vérifier que l'ajout est loggué
+            await expect(page.locator('#activity-log')).toContainText(beliefName);
             
-            // Vérifier que le réseau se met à jour
-            await expect(page.locator('#networkVisualization .vis-network')).toBeVisible();
+            // Vérifier que le réseau se met à jour (il devrait y avoir des noeuds)
+            const nodeCount = await page.locator('#network-container .vis-network svg .vis-node').count();
+            expect(nodeCount).toBeGreaterThan(0);
         });
 
         test('Création et suppression de justification', async ({ page }) => {
             await page.goto(`${BASE_URL}${JTMS_PREFIX}/dashboard`);
-            
-            // Créer deux croyances
-            await page.fill('#beliefNameInput', 'premise_a');
-            await page.click('#addBeliefBtn');
-            await page.waitForTimeout(500);
-            
-            await page.fill('#beliefNameInput', 'premise_b');
-            await page.click('#addBeliefBtn');
-            await page.waitForTimeout(500);
-            
-            await page.fill('#beliefNameInput', 'conclusion_c');
-            await page.click('#addBeliefBtn');
-            await page.waitForTimeout(500);
-            
-            // Créer une justification
-            await page.click('#addJustificationBtn');
-            await page.fill('#conclusionSelect', 'conclusion_c');
-            await page.check('input[value="premise_a"]');
-            await page.check('input[value="premise_b"]');
-            await page.click('#createJustificationBtn');
-            
-            // Vérifier que la justification est créée
-            await expect(page.locator('#justificationsList')).toContainText('conclusion_c');
-            
-            // Vérifier les connexions dans le réseau
-            const edgeCount = await page.locator('#networkVisualization .vis-network svg line').count();
+
+            // Créer les croyances nécessaires
+            await page.fill('#new-belief', 'premise_a');
+            await page.click('button:has-text("Créer")');
+            await page.fill('#new-belief', 'premise_b');
+            await page.click('button:has-text("Créer")');
+            await page.fill('#new-belief', 'conclusion_c');
+            await page.click('button:has-text("Créer")');
+
+            // Créer la justification
+            await page.fill('#premises', 'premise_a, premise_b');
+            await page.fill('#conclusion', 'conclusion_c');
+            await page.click('button:has-text("Ajouter Justification")');
+
+            // Vérifier que la justification est logguée
+            await expect(page.locator('#activity-log')).toContainText('Justification ajoutée pour conclusion_c');
+
+            // Vérifier que le réseau contient des arêtes
+            await page.waitForTimeout(1000); // Laisser le temps au graphe de se redessiner
+            const edgeCount = await page.locator('#network-container .vis-network svg .vis-edge').count();
             expect(edgeCount).toBeGreaterThan(0);
         });
 
@@ -87,15 +79,14 @@ test.describe('Interface Web JTMS - Tests d\'Intégration Complète', () => {
             await page.goto(`${BASE_URL}${JTMS_PREFIX}/dashboard`);
             
             // Créer un système simple
-            await page.fill('#beliefNameInput', 'test_coherence');
-            await page.click('#addBeliefBtn');
+            await page.fill('#new-belief', 'test_coherence');
+            await page.click('button:has-text("Créer")');
             
             // Lancer la vérification de cohérence
-            await page.click('#checkConsistencyBtn');
+            await page.click('button:has-text("Vérifier Cohérence")');
             
-            // Vérifier que les résultats apparaissent
-            await expect(page.locator('#consistencyResults')).toBeVisible();
-            await expect(page.locator('#consistencyStatus')).toContainText(/cohérent|incohérent/);
+            // Vérifier que le résultat est loggué
+            await expect(page.locator('#activity-log')).toContainText(/cohérent/);
         });
 
         test('Export des données JTMS', async ({ page }) => {
