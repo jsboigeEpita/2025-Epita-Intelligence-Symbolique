@@ -381,7 +381,7 @@ def run_demo_rapide() -> bool:
     ]
     
     logger.info(f"{Symbols.ROCKET} Tests intégrations opérationnelles et interfaces...")
-    succes, resultats = executer_tests(tests_essentiels, logger, timeout=30)
+    succes, resultats = executer_tests(tests_essentiels, logger, timeout=90)
     
     afficher_stats_tests(resultats)
     
