@@ -5,7 +5,7 @@ from semantic_kernel.contents import ChatHistory
 from semantic_kernel.core_plugins import ConversationSummaryPlugin
 from config.unified_config import UnifiedConfig
 
-﻿#!/usr/bin/env python
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
 """
@@ -189,7 +189,7 @@ class TestRealTweetyFOLAnalysis:
     """Tests analyse FOL avec Tweety authentique."""
     
     @pytest.fixture
-    def fol_agent_real_tweety(self):
+    async def fol_agent_real_tweety(self):
         """Agent FOL avec Tweety réel si disponible."""
         config = PresetConfigs.authentic_fol()
         agent = FOLLogicAgent(agent_name="RealTweetyTest")

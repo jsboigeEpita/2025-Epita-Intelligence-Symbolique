@@ -29,7 +29,7 @@ from semantic_kernel.kernel import Kernel
 from semantic_kernel.contents.chat_message_content import ChatMessageContent
 
 # Imports des orchestrateurs (adaptés v2.1.0)
-from argumentation_analysis.orchestration.cluedo_orchestrator import run_cluedo_game
+# from argumentation_analysis.orchestration.cluedo_orchestrator import run_cluedo_game
 from argumentation_analysis.orchestration.cluedo_extended_orchestrator import run_cluedo_oracle_game
 
 # Imports des états (adaptés v2.1.0)
@@ -63,7 +63,7 @@ class TestWorkflowComparison:
     """Tests de comparaison entre workflows 2-agents et 3-agents Oracle Enhanced v2.1.0."""
     
     @pytest.fixture
-    def mock_kernel(self):
+    async def mock_kernel(self):
         """Kernel mocké pour tests comparatifs."""
         kernel = Mock(spec=Kernel)
         kernel.add_plugin = await self._create_authentic_gpt4o_mini_instance()

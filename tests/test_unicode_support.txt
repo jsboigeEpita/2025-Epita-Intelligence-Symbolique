@@ -1,0 +1,21 @@
+# Test d'encodage UTF-8
+
+## Émojis de statut
+✅ Success
+🔴 Error  
+⚠️ Warning
+❌ Critical
+
+## Tests de caractères spéciaux
+Français: àéèùçîï
+Allemand: äöüß
+Espagnol: ñáéíóú
+Russe: абвгдежз
+Chinois: 你好世界
+Japonais: こんにちは
+Arabe: مرحبا بالعالم
+
+## Symboles techniques
+→ → ← ↑ ↓
+∀ ∃ ∈ ∉ ⊆ ⊇
+∧ ∨ ¬ ⊤ ⊥
