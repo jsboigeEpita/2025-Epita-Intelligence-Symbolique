@@ -226,3 +226,6 @@ venv_temp/
 
 # Log files
 orchestration_finale_reelle.log
+
+# Dung agent logs
+abs_arg_dung/*.log
