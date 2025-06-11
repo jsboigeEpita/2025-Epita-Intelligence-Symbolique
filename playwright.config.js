@@ -15,7 +15,7 @@ module.exports = defineConfig({
   outputDir: 'test-results/',
   
   use: {
-    baseURL: 'http://localhost:5001',
+    baseURL: 'http://localhost:3000',
     headless: true,
     trace: 'on-first-retry',
     screenshot: 'always',
@@ -47,14 +47,22 @@ module.exports = defineConfig({
     },
   ],
 
-  // webServer: [
-  //   {
-  //     command: 'cd services/web_api/interface-web-argumentative && npm start',
-  //     port: 3000,
-  //     reuseExistingServer: !process.env.CI,
-  //     timeout: 120000,
-  //     stdout: 'pipe',
-  //     stderr: 'pipe',
-  //   }
-  // ],
+  webServer: [
+    {
+      command: 'powershell -c "conda run -n projet-is --no-capture-output python -m uvicorn argumentation_analysis.services.web_api.app:app --host 127.0.0.1 --port 5004"',
+      port: 5004,
+      reuseExistingServer: !process.env.CI,
+      timeout: 120000,
+      stdout: 'pipe',
+      stderr: 'pipe',
+    },
+    {
+      command: 'cd services/web_api/interface-web-argumentative && npm start',
+      port: 3000,
+      reuseExistingServer: !process.env.CI,
+      timeout: 120000,
+      stdout: 'pipe',
+      stderr: 'pipe',
+    }
+  ],
 });
