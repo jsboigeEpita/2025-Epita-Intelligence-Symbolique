@@ -10,14 +10,13 @@ import tempfile # Ajout pour les fichiers temporaires
 import re
 import logging
 
-# Importer la variable pour le décorateur skipif
-from tests.conftest import _REAL_JPYPE_AVAILABLE
+# La vérification _REAL_JPYPE_AVAILABLE est maintenant obsolète.
+# L'environnement est configuré par une fixture globale dans le conftest.py racine.
 
 logger = logging.getLogger(__name__)
 from argumentation_analysis.core.integration.tweety_clingo_utils import check_clingo_installed_python_way, get_clingo_models_python_way
 
 
-@pytest.mark.skipif(not _REAL_JPYPE_AVAILABLE, reason="Test requires real JPype and JVM.")
 @pytest.mark.real_jpype
 class TestAdvancedReasoning:
     """

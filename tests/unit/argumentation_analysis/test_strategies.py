@@ -12,7 +12,7 @@ import asyncio
 #     # Fallback si les agents ne sont pas disponibles
 #     Agent = None
 from semantic_kernel.contents import ChatMessageContent
-from semantic_kernel.contents import ChatRole as AuthorRole # Renommé pour compatibilité
+from semantic_kernel.contents.author_role import AuthorRole
 from argumentation_analysis.core.strategies import SimpleTerminationStrategy, DelegatingSelectionStrategy, BalancedParticipationStrategy
 from argumentation_analysis.core.shared_state import RhetoricalAnalysisState
 # from tests.async_test_case import AsyncTestCase # Suppression de l'import

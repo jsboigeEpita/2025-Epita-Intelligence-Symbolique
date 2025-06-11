@@ -6,17 +6,12 @@ import time
 import asyncio # Ajout pour l'asynchronisme
 
 # Assurer l'accès aux modules du projet
-try:
-    current_script_path = Path(__file__).resolve()
-    project_root = current_script_path.parent.parent.parent
-except NameError:
-    project_root = Path(os.getcwd())
-
-sys.path.insert(0, str(project_root))
-sys.path.insert(0, str(project_root / "scripts")) # Pour unified_web_orchestrator
+project_root = Path(__file__).resolve().parent.parent.parent
+if str(project_root) not in sys.path:
+    sys.path.insert(0, str(project_root))
 
 try:
-    from webapp.unified_web_orchestrator import UnifiedWebOrchestrator
+    from scripts.webapp.unified_web_orchestrator import UnifiedWebOrchestrator
 except ImportError as e:
     print(f"Erreur: Impossible d'importer UnifiedWebOrchestrator.")
     print(f"Détails: {e}")

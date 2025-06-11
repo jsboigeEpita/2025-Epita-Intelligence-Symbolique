@@ -402,8 +402,12 @@ def main():
         # Bannière de démarrage
         print_banner()
         
-        # Validation environnement conda (sauf si --no-conda)
-        if not args.no_conda:
+        # Validation environnement conda (sauf si --no-conda ou si déjà activé par un wrapper)
+        if os.environ.get('IS_ENV_ACTIVATED') == '1':
+            logger.info("Environnement déjà activé par le script wrapper. Lancement direct de l'orchestrateur.")
+            # Lancement direct de l'orchestrateur car l'env est prêt
+            success = run_orchestrator_with_conda(args, logger)
+        elif not args.no_conda:
             safe_print(f"{Colors.BLUE}[CHECK] VÉRIFICATION ENVIRONNEMENT{Colors.END}")
             if not check_conda_environment(logger):
                 safe_print(f"\n{Colors.RED}[ERROR] ÉCHEC: Environnement conda non disponible{Colors.END}")
@@ -412,7 +416,8 @@ def main():
                 safe_print("   2. Lancement direct: python start_webapp.py --no-conda")
                 sys.exit(1)
             
-            # Lancement via conda
+            # Lancement via conda, qui dans ce cas est redondant mais on garde la logique.
+            # Idéalement run_orchestrator_with_conda ne devrait pas gérer l'activation non plus.
             success = run_orchestrator_with_conda(args, logger)
         else:
             # Lancement direct

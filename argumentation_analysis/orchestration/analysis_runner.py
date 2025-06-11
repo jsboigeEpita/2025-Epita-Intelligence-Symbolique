@@ -38,7 +38,7 @@ from semantic_kernel.connectors.ai.open_ai import OpenAIChatCompletion, AzureCha
 # CORRECTIF COMPATIBILITÉ: Utilisation du module de compatibilité pour agents
 # from semantic_kernel.agents import AgentGroupChat, Agent, AgentChatException # Module non disponible dans SK 0.9.6b1
 from argumentation_analysis.orchestration.cluedo_extended_orchestrator import Agent # Fallback local
-from semantic_kernel.contents import ChatRole as AuthorRole # semantic_kernel.agents.AuthorRole n'existe plus, utilisation de ChatRole
+from semantic_kernel.contents.author_role import AuthorRole
 # from semantic_kernel.functions import FunctionChoiceBehavior # Non disponible/utilisé dans SK 0.9.6b1
 
 # Correct imports

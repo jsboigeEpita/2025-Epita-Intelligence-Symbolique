@@ -23,17 +23,15 @@ Write-Host "====================================================================
 Write-Host "[INFO] Racine du projet: $ProjectRoot"
 Write-Host "[INFO] Environnement Conda cible: $CondaEnvName"
 
-# --- 1. Vérification et Configuration de JAVA_HOME ---
-if (Test-Path $JavaHomePath) {
-    Write-Host "[JAVA] Configuration de JAVA_HOME sur: $JavaHomePath" -ForegroundColor Cyan
-    $env:JAVA_HOME = $JavaHomePath
-    # Ajouter JAVA_HOME/bin au PATH temporairement pour cette session si pas déjà fait par Conda
-    # $env:Path = "$($env:JAVA_HOME)\bin;$($env:Path)"
-    # Note: L'activation Conda pourrait déjà gérer le PATH pour Java si le JDK est installé via Conda.
-    # Cette ligne est plus pour un JDK portable non géré par Conda directement.
-} else {
-    Write-Warning "[JAVA] JDK portable non trouvé à $JavaHomePath. Assurez-vous que JAVA_HOME est correctement configuré."
-}
+# --- 1. Vérification et Configuration de JAVA_HOME (Désactivé)---
+# La configuration de l'environnement, y compris JAVA_HOME, est maintenant
+# entièrement gérée par le one-liner ci-dessous, via auto_env.py.
+# if (Test-Path $JavaHomePath) {
+#     Write-Host "[JAVA] Configuration de JAVA_HOME sur: $JavaHomePath" -ForegroundColor Cyan
+#     $env:JAVA_HOME = $JavaHomePath
+# } else {
+#     Write-Warning "[JAVA] JDK portable non trouvé à $JavaHomePath. Assurez-vous que JAVA_HOME est correctement configuré."
+# }
 
 # --- 2. Activation de l'environnement Conda et chargement .env (via start_webapp.py qui devrait le faire) ---
 # start_webapp.py gère l'activation de Conda.
@@ -48,16 +46,23 @@ Write-Host "[CONDA] Tentative de démarrage via start_webapp.py (qui devrait act
 
 # --- 3. Lancement de l'application web (Backend + Frontend) ---
 Write-Host "[WEBAPP] Lancement de l'application (Flask Backend + React Frontend)..." -ForegroundColor Cyan
-Write-Host "[COMMAND] python $StartWebappScript --frontend --visible"
+# Write-Host "[COMMAND] conda run -n $CondaEnvName python $StartWebappScript --frontend --visible" # Ancienne méthode
 
 try {
-    # Naviguer à la racine du projet pour que start_webapp.py fonctionne correctement
+    # Naviguer à la racine du projet pour que les chemins relatifs fonctionnent
     Push-Location $ProjectRoot
     
-    # Exécuter le script de démarrage
-    # L'option --visible est ajoutée pour voir le navigateur des tests Playwright plus tard.
-    # Si le frontend est headless par défaut via l'orchestrateur, --visible le forcera.
-    python $StartWebappScript --frontend --visible 
+    # --- MÉTHODE D'ACTIVATION VIA SCRIPT WRAPPER (la plus fiable) ---
+    # On appelle un script Python dédié qui se charge d'exécuter l'activation.
+    # Cela évite tous les problèmes de parsing de chaîne entre PowerShell et Python.
+    $ActivationWrapper = Join-Path $ProjectRoot "scripts\core\activate_env_wrapper.py"
+    
+    Write-Host "[INFO] Exécution du wrapper d'activation: python $ActivationWrapper" -ForegroundColor Cyan
+    python $ActivationWrapper
+    
+    # Lancement de l'application principale
+    Write-Host "[INFO] Lancement du script principal: python $StartWebappScript" -ForegroundColor Cyan
+    python $StartWebappScript --frontend --visible
     
     $ExitCode = $LASTEXITCODE
     if ($ExitCode -eq 0) {

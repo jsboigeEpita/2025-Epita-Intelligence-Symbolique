@@ -58,9 +58,9 @@ except ImportError:
 # .parent est scripts/core
 # .parent.parent est scripts
 # .parent.parent.parent est la racine du projet
-_project_root_for_sys_path = Path(__file__).resolve().parent.parent.parent
-if str(_project_root_for_sys_path) not in sys.path:
-    sys.path.insert(0, str(_project_root_for_sys_path))
+# _project_root_for_sys_path = Path(__file__).resolve().parent.parent.parent
+# if str(_project_root_for_sys_path) not in sys.path:
+#     sys.path.insert(0, str(_project_root_for_sys_path))
 # --- Fin de l'insertion pour sys.path ---
 # from scripts.core.auto_env import _load_dotenv_intelligent # MODIFIÉ ICI - Sera supprimé
 class EnvironmentManager:
@@ -86,10 +86,21 @@ class EnvironmentManager:
         self.required_python_version = (3, 8)
         
         # Variables d'environnement importantes
+        # On construit le PYTHONPATH en ajoutant la racine du projet au PYTHONPATH existant
+        # pour ne pas écraser les chemins qui pourraient être nécessaires (ex: par VSCode pour les tests)
+        project_path_str = str(self.project_root)
+        # existing_pythonpath = os.environ.get('PYTHONPATH', '')
+        
+        # path_components = existing_pythonpath.split(os.pathsep) if existing_pythonpath else []
+        # if project_path_str not in path_components:
+        #     path_components.insert(0, project_path_str)
+        
+        # new_pythonpath = os.pathsep.join(path_components)
+
         self.env_vars = {
             'PYTHONIOENCODING': 'utf-8',
-            'PYTHONPATH': str(self.project_root),
-            'PROJECT_ROOT': str(self.project_root)
+            'PYTHONPATH': project_path_str, # Simplifié
+            'PROJECT_ROOT': project_path_str
         }
         self.conda_executable_path = None # Cache pour le chemin de l'exécutable conda
 
@@ -228,15 +239,15 @@ class EnvironmentManager:
             os.environ[key] = value
             self.logger.debug(f"Variable d'environnement définie: {key}={value}")
         
-        # RUSTINE DE DERNIER RECOURS
-        # Ajouter manuellement le `site-packages` de l'environnement au PYTHONPATH.
-        conda_prefix = os.environ.get("CONDA_PREFIX")
-        if conda_prefix and "projet-is" in conda_prefix:
-            site_packages_path = os.path.join(conda_prefix, "lib", "site-packages")
-            python_path = os.environ.get("PYTHONPATH", "")
-            if site_packages_path not in python_path:
-                os.environ["PYTHONPATH"] = f"{site_packages_path}{os.pathsep}{python_path}"
-                self.logger.warning(f"RUSTINE: Ajout forcé de {site_packages_path} au PYTHONPATH.")
+        # RUSTINE DE DERNIER RECOURS - Commenté car c'est une mauvaise pratique
+        # # Ajouter manuellement le `site-packages` de l'environnement au PYTHONPATH.
+        # conda_prefix = os.environ.get("CONDA_PREFIX")
+        # if conda_prefix and "projet-is" in conda_prefix:
+        #     site_packages_path = os.path.join(conda_prefix, "lib", "site-packages")
+        #     python_path = os.environ.get("PYTHONPATH", "")
+        #     if site_packages_path not in python_path:
+        #         os.environ["PYTHONPATH"] = f"{site_packages_path}{os.pathsep}{python_path}"
+        #         self.logger.warning(f"RUSTINE: Ajout forcé de {site_packages_path} au PYTHONPATH.")
     
     def run_in_conda_env(self, command: Union[str, List[str]], env_name: str = None,
                          cwd: str = None, capture_output: bool = False) -> subprocess.CompletedProcess:
