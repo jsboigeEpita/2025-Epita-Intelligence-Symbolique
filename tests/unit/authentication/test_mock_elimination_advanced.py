@@ -23,6 +23,7 @@ import sys
 from pathlib import Path
 
 from typing import Dict, Any, List, Optional
+from unittest.mock import MagicMock, patch, Mock
 import tempfile
 import json
 import time
@@ -113,7 +114,7 @@ class TestMockEliminationAdvanced:
         assert config.taxonomy_size == TaxonomySize.FULL
         assert config.enable_cache is False  # Cache désactivé pour authenticité
     
-    def test_inconsistent_configuration_validation(self):
+    async def test_inconsistent_configuration_validation(self):
         """Test de validation de configurations incohérentes."""
         # Configuration incohérente : mocks activés mais authentique requis
         with pytest.raises(ValueError, match="Configuration incohérente"):
@@ -128,7 +129,7 @@ class TestMockEliminationAdvanced:
                 require_real_tweety=True  # Incohérent avec mocks partiels
             )
     
-    def test_authentic_component_validation(self):
+    async def test_authentic_component_validation(self):
         """Test de validation des composants authentiques."""
         # Simulation de composants authentiques vs mocks
         class AuthenticLLMService:
@@ -144,7 +145,7 @@ class TestMockEliminationAdvanced:
         
         authentic_service = AuthenticLLMService()
         mock_service = MockLLMService()
-        unittest_mock = await self._create_authentic_gpt4o_mini_instance()
+        unittest_mock = MagicMock()
         
         # Tests de détection
         assert not hasattr(authentic_service, '_is_mock')
@@ -227,11 +228,11 @@ class TestMockEliminationAdvanced:
 class TestComponentMockDetection:
     """Tests de détection de mocks dans les composants spécifiques."""
     
-    def test_detect_llm_service_mock(self):
+    async def test_detect_llm_service_mock(self):
         """Test de détection de mocks dans les services LLM."""
         # Mock évident
-        mock_llm = await self._create_authentic_gpt4o_mini_instance()
-        mock_llm.generate_response = Mock(return_value="fake response")
+        mock_llm = MagicMock()
+        mock_llm.generate_response = MagicMock(return_value="fake response")
         
         # Service authentique simulé
         class AuthenticLLM:
@@ -251,11 +252,11 @@ class TestComponentMockDetection:
         assert 'Mock' not in str(type(authentic_llm))
         assert not hasattr(authentic_llm.generate_response, '_mock_name')
     
-    def test_detect_tweety_service_mock(self):
+    async def test_detect_tweety_service_mock(self):
         """Test de détection de mocks dans les services Tweety."""
         # Mock Tweety
-        mock_tweety = Magicawait self._create_authentic_gpt4o_mini_instance()
-        mock_tweety.parse_formula = MagicMock(return_value="mock_result")
+        mock_tweety = MagicMock()
+        mock_tweety.parse_formula.return_value = "mock_result"
         
         # Service Tweety authentique simulé
         class AuthenticTweety:
@@ -347,7 +348,7 @@ class TestAuthenticityMetrics:
         assert mixed_metrics['is_100_percent_authentic'] is False
         assert mixed_metrics['mock_components'] == 2
     
-    def test_authenticity_validation_comprehensive(self):
+    async def test_authenticity_validation_comprehensive(self):
         """Test de validation complète d'authenticité."""
         def validate_component_authenticity(component_type: str, component: Any) -> bool:
             """Valide l'authenticité d'un composant."""
@@ -396,7 +397,7 @@ class TestAuthenticityMetrics:
         assert validate_component_authenticity('taxonomy', authentic_taxonomy) is True
         
         # Test composants mock
-        mock_llm = await self._create_authentic_gpt4o_mini_instance()
+        mock_llm = MagicMock()
         mock_taxonomy = {'count': 3, 'is_mock': True}
         
         assert validate_component_authenticity('llm', mock_llm) is False

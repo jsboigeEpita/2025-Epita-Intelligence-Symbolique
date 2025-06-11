@@ -57,7 +57,6 @@ def test_generate_performance_visualizations_libs_not_available(
 
 
 
-, (0.4, 0.5, 0.6), (0.7, 0.8, 0.9), (0.2, 0.4, 0.6)]) # Fournir au moins 4 couleurs
 
 def test_generate_performance_visualizations_files_created(
     mock_heatmap, mock_color_palette, mock_tight_layout, mock_legend, mock_xticks, mock_ylabel, mock_xlabel, mock_title, mock_text, mock_bar, mock_figure, mock_close, mock_df_to_csv, mock_plt_savefig,
