@@ -13,22 +13,27 @@ SYSTÈME 100% AUTHENTIQUE CONFIRMÉ:
 - Agents SherlockEnqueteAgent, WatsonLogicAssistant, MoriartyInterrogatorAgent
 - Architecture argumentation_analysis complète
 """
-
 import sys
 import os
+from pathlib import Path
+
+# Configuration initiale du path pour permettre l'import de auto_env
+PROJECT_ROOT = Path(__file__).parent.parent.parent.absolute()
+sys.path.insert(0, str(PROJECT_ROOT))
+
+# Auto-activation de l'environnement intelligent pour garantir le bon JDK
+import scripts.core.auto_env
+
+# Imports restants
 import json
 import asyncio
 import logging
 from datetime import datetime
-from pathlib import Path
 from typing import Dict, Any, List
 
 # Configuration UTF-8
 sys.stdout.reconfigure(encoding='utf-8')
 sys.stderr.reconfigure(encoding='utf-8')
-
-PROJECT_ROOT = Path(__file__).parent.parent.parent.absolute()
-sys.path.insert(0, str(PROJECT_ROOT))
 
 # Configuration du logging
 logging.basicConfig(
@@ -116,8 +121,9 @@ class AuthenticSherlockWatsonNoJava:
                 kernel=kernel,
                 max_turns=15,
                 max_cycles=4,
-                oracle_strategy="balanced", 
-                adaptive_selection=False
+                oracle_strategy="balanced",
+                adaptive_selection=False,
+                service_id=service_id
             )
             logger.info("✅ CluedoExtendedOrchestrator initialisé")
             
@@ -402,9 +408,33 @@ async def main():
         logger.error("❌ Échec configuration système authentique")
         return False
     
-    # Simulation d'investigation
-    if not await investigation.run_simulation_investigation():
-        logger.error("❌ Échec simulation investigation")
+    # Lancement du workflow authentique
+    logger.info("🚀 LANCEMENT DU WORKFLOW AUTHENTIQUE...")
+    initial_question = "L'enquête sur le mystère du laboratoire d'IA commence. Sherlock, quelle est votre première piste ?"
+    try:
+        resultat_workflow = await investigation.orchestrator.execute_workflow(initial_question)
+        
+        # Analyser et afficher le resultat_workflow
+        logger.info("🎉 WORKFLOW AUTHENTIQUE TERMINÉ !")
+        logger.info(f"Résultat: {resultat_workflow}")
+        
+        # Sauvegarde des résultats
+        final_results = {
+            "session_id": investigation.session_id,
+            "timestamp": datetime.now().isoformat(),
+            "mode": "execution_authentique_no_java",
+            "result": resultat_workflow,
+            "conversation_history": investigation.orchestrator.conversation_history if hasattr(investigation.orchestrator, 'conversation_history') else []
+        }
+        results_file = investigation.results_dir / "workflow_authentique_resultats.json"
+        with open(results_file, 'w', encoding='utf-8') as f:
+            json.dump(final_results, f, ensure_ascii=False, indent=2)
+        logger.info(f"✅ Résultats du workflow sauvegardés dans: {results_file}")
+
+    except Exception as e:
+        logger.error(f"❌ Échec de l'exécution du workflow authentique: {e}")
+        import traceback
+        logger.error(f"Traceback: {traceback.format_exc()}")
         return False
     
     logger.info("🎉 DÉMONSTRATION SYSTÈME AUTHENTIQUE RÉUSSIE !")

@@ -184,9 +184,9 @@ class RealOrchestrationEngine:
             
             # Service principal OpenAI
             primary_service = OpenAIChatCompletion(
-                service_id="orchestration_primary",
                 api_key=api_key,
-                ai_model_id=os.getenv("OPENAI_CHAT_MODEL_ID", "gpt-4o-mini")
+                ai_model_id=os.getenv("OPENAI_CHAT_MODEL_ID", "gpt-4o-mini"),
+                service_id="chat_completion"
             )
             self.kernel.add_service(primary_service)
             

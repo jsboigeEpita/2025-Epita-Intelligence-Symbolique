@@ -40,18 +40,18 @@ class TweetyInitializer:
 
     def __init__(self, tweety_bridge_instance):
         self._tweety_bridge = tweety_bridge_instance
-        # La JVM doit être démarrée par un processus de bootstrap de plus haut niveau,
-        # comme `argumentation_analysis.core.bootstrap`.
-        # Cet initialiseur s'assure seulement que les classes Java sont chargées
-        # et que les composants sont prêts, mais ne démarre plus la JVM lui-même.
+        # MODIFICATION: La JVM est maintenant démarrée ici si nécessaire.
+        # Cela résout le problème où `conda run` crée un nouveau processus sans l'état de la JVM.
         if not jpype.isJVMStarted():
-            error_msg = "CRITICAL: TweetyInitializer expects the JVM to be started by the bootstrap process before it is initialized."
-            logger.critical(error_msg)
-            raise RuntimeError(error_msg)
-        
-        # Si la JVM est démarrée, on met le flag de classe à jour.
-        TweetyInitializer._jvm_started = True
-        logger.info("TweetyInitializer confirmed that JVM is already started.")
+            logger.info("JVM not detected as started. TweetyInitializer will now attempt to start it.")
+            self._start_jvm()  # Cette méthode mettra aussi _jvm_started à True et importera les classes.
+        else:
+            logger.info("TweetyInitializer confirmed that JVM is already started by another component.")
+            # Si la JVM est déjà démarrée, on met juste le flag de classe à jour et on s'assure
+            # que les classes Java nécessaires sont importées, car le composant qui a
+            # démarré la JVM pourrait ne pas l'avoir fait.
+            TweetyInitializer._jvm_started = True
+            self._import_java_classes()
 
     def _get_jvm_path(self):
         """Détermine le chemin JVM correct en fonction de JAVA_HOME ou utilise le défaut."""
