@@ -61,20 +61,8 @@ class EnvironmentManager:
         # est maintenant géré au début de la méthode auto_activate_env.
         # L'appel à _load_dotenv_intelligent ici est donc redondant et supprimé.
         
-        # Assurer que JAVA_HOME est absolu s'il vient du .env
-        # Cette logique reste pertinente si JAVA_HOME est défini par un .env chargé par auto_activate_env.
-        if 'JAVA_HOME' in os.environ: # Vérifier si JAVA_HOME a été chargé
-            java_home_value = os.environ['JAVA_HOME']
-            java_home_path = Path(java_home_value)
-            if not java_home_path.is_absolute():
-                # Le chemin dans .env est relatif à la racine du projet
-                absolute_java_home = (Path(self.project_root) / java_home_path).resolve()
-                if absolute_java_home.exists() and absolute_java_home.is_dir():
-                    os.environ['JAVA_HOME'] = str(absolute_java_home)
-                    self.logger.info(f"JAVA_HOME (de .env) mis à jour en chemin absolu: {os.environ['JAVA_HOME']}")
-                else:
-                    self.logger.warning(f"Le chemin JAVA_HOME (de .env) résolu {absolute_java_home} n'existe pas ou n'est pas un répertoire.")
-            # else: JAVA_HOME est déjà absolu ou n'a pas besoin d'être modifié par ce bloc
+        # Le code pour rendre JAVA_HOME absolu est déplacé vers la méthode activate_project_environment
+        # pour s'assurer qu'il s'exécute APRÈS le chargement du fichier .env.
         
         self.default_conda_env = "projet-is"
         self.required_python_version = (3, 8)
@@ -214,13 +202,13 @@ class EnvironmentManager:
             os.environ[key] = value
             self.logger.debug(f"Variable d'environnement définie: {key}={value}")
     
-    def run_in_conda_env(self, command: List[str], env_name: str = None, 
-                        cwd: str = None, capture_output: bool = False) -> subprocess.CompletedProcess:
+    def run_in_conda_env(self, command: List[str], env_name: str = None,
+                         cwd: str = None, capture_output: bool = False) -> subprocess.CompletedProcess:
         """
-        Exécute une commande dans un environnement conda
+        Exécute une commande dans un environnement conda de manière robuste.
         
         Args:
-            command: Commande à exécuter (liste de strings)
+            command: Commande à exécuter (liste de strings ou chaîne)
             env_name: Nom de l'environnement conda (défaut: projet-is)
             cwd: Répertoire de travail (défaut: project_root)
             capture_output: Capturer la sortie au lieu de l'afficher
@@ -234,57 +222,68 @@ class EnvironmentManager:
         if cwd is None:
             cwd = self.project_root
         
-        # Vérifier que l'environnement existe
         if not self.check_conda_env_exists(env_name):
             self.logger.error(f"Environnement conda '{env_name}' non trouvé")
             raise RuntimeError(f"Environnement conda '{env_name}' non disponible")
 
-        # Si 'command' est une liste, la joindre. Si c'est une chaîne, la garder.
-        # Cela est pour préparer l'exécution via un shell si nécessaire.
         if isinstance(command, list):
             command_str_for_shell = ' '.join(command)
-        else: # Devrait déjà être une chaîne si on passe par activate_project_environment avec une chaîne de commandes
+        else:
             command_str_for_shell = command
 
-        # Construire la commande conda run pour exécuter la chaîne de commandes via le shell par défaut de l'OS
-        # Sur Windows, cmd.exe est souvent le shell par défaut pour conda run, qui gère les ';'
-        # Pour forcer PowerShell (plus robuste pour les scripts complexes) :
-        # conda_cmd = ['conda', 'run', '-n', env_name, '--no-capture-output', 'powershell', '-Command', command_str_for_shell]
-        # Pour l'instant, on laisse conda run utiliser son shell par défaut, qui devrait gérer les ';' sur Windows.
-        # Si la commande est simple (une seule commande logique), on peut l'exécuter directement.
-        # Si elle contient ';', elle est probablement destinée à un shell.
-        if ';' in command_str_for_shell or '&' in command_str_for_shell or '|' in command_str_for_shell:
-             # Sur Windows, cmd.exe est souvent le shell par défaut pour conda run.
-             # Pour s'assurer que les commandes multiples fonctionnent, on peut les passer à 'cmd /c'
-             # ou 'powershell -Command'. 'cmd /c' est plus simple pour les points-virgules.
-            if os.name == 'nt':
-                conda_cmd = ['conda', 'run', '-n', env_name, '--no-capture-output', 'cmd', '/c', command_str_for_shell]
-                self.logger.info(f"DEBUG: Commande conda (via cmd /c) construite: {' '.join(conda_cmd)}")
-            else: # Pour Unix, bash est typique
-                conda_cmd = ['conda', 'run', '-n', env_name, '--no-capture-output', 'bash', '-c', command_str_for_shell]
-                self.logger.info(f"DEBUG: Commande conda (via bash -c) construite: {' '.join(conda_cmd)}")
+        self.logger.debug(f"Commande brute à exécuter dans conda '{env_name}': {command_str_for_shell}")
+
+        exec_env = os.environ.copy()
+        command_prefix = ""
+
+        # Préparer un préfixe de commande pour forcer les variables d'environnement dans le shell distant
+        if os.name == 'nt':
+            if 'JAVA_HOME' in exec_env:
+                java_home_path = Path(exec_env['JAVA_HOME'])
+                command_prefix += f"set JAVA_HOME=\"{exec_env['JAVA_HOME']}\" && "
+                
+                java_bin_path = java_home_path / 'bin'
+                command_prefix += f'set PATH={java_bin_path};%PATH% && '
+
+                jvm_dll_path = java_home_path / 'bin' / 'server' / 'jvm.dll'
+                if jvm_dll_path.exists():
+                    self.logger.info(f"Préparation de PYJNIUS_JVM_PATH vers {jvm_dll_path}")
+                    exec_env['PYJNIUS_JVM_PATH'] = str(jvm_dll_path)
+                    command_prefix += f"set PYJNIUS_JVM_PATH=\"{str(jvm_dll_path)}\" && "
+                else:
+                    self.logger.warning(f"Fichier jvm.dll introuvable à {jvm_dll_path}.")
+        else: # Unix
+            if 'JAVA_HOME' in exec_env:
+                command_prefix += f"export JAVA_HOME='{exec_env['JAVA_HOME']}'; "
+                jvm_dll_path = Path(exec_env['JAVA_HOME']) / 'lib' / 'server' / 'libjvm.so' # .so for linux
+                if jvm_dll_path.exists():
+                     exec_env['PYJNIUS_JVM_PATH'] = str(jvm_dll_path)
+                     command_prefix += f"export PYJNIUS_JVM_PATH='{str(jvm_dll_path)}'; "
+
+        final_command_str = f"{command_prefix}{command_str_for_shell}"
+
+        if os.name == 'nt':
+            final_conda_cmd = ['conda', 'run', '-n', env_name, '--no-capture-output', 'cmd', '/c', final_command_str]
         else:
-            # Si c'est une commande simple (pas de ';', '&', '|'), on la passe comme avant (liste d'arguments)
-            # `command` doit être une liste ici. Si c'était une chaîne simple, elle devient une liste d'un élément.
-            final_command_parts = command_str_for_shell.split()
-            conda_cmd = ['conda', 'run', '-n', env_name, '--no-capture-output'] + final_command_parts
-            self.logger.info(f"DEBUG: Commande conda (directe) construite: {' '.join(conda_cmd)}")
-        
-        self.logger.debug(f"Exécution dans conda '{env_name}': {command_str_for_shell}")
-        
+            final_conda_cmd = ['conda', 'run', '-n', env_name, '--no-capture-output', 'bash', '-c', final_command_str]
+
+        self.logger.info(f"Commande conda finale construite: {' '.join(final_conda_cmd)}")
+
         try:
             if capture_output:
                 result = subprocess.run(
-                    conda_cmd,
+                    final_conda_cmd,
                     cwd=cwd,
                     capture_output=True,
                     text=True,
-                    timeout=300  # 5 minutes par défaut
+                    env=exec_env,
+                    timeout=300
                 )
             else:
                 result = subprocess.run(
-                    conda_cmd,
+                    final_conda_cmd,
                     cwd=cwd,
+                    env=exec_env,
                     timeout=300
                 )
             
@@ -389,6 +388,26 @@ class EnvironmentManager:
             env_name = self.default_conda_env
         
         self.logger.info(f"Activation de l'environnement '{env_name}'...")
+
+        # --- CHARGEMENT DU .env ---
+        # Essayer de trouver et charger un fichier .env à la racine du projet ou au-dessus
+        dotenv_path = find_dotenv()
+        if dotenv_path:
+            self.logger.info(f"Fichier .env trouvé et chargé depuis : {dotenv_path}")
+            load_dotenv(dotenv_path)
+        else:
+            self.logger.info("Aucun fichier .env trouvé.")
+
+        # Assurer que JAVA_HOME est un chemin absolu APRÈS avoir chargé .env
+        if 'JAVA_HOME' in os.environ:
+            java_home_value = os.environ['JAVA_HOME']
+            if not Path(java_home_value).is_absolute():
+                absolute_java_home = (Path(self.project_root) / java_home_value).resolve()
+                if absolute_java_home.exists() and absolute_java_home.is_dir():
+                    os.environ['JAVA_HOME'] = str(absolute_java_home)
+                    self.logger.info(f"JAVA_HOME (de .env) converti en chemin absolu: {os.environ['JAVA_HOME']}")
+                else:
+                    self.logger.warning(f"Le chemin JAVA_HOME (de .env) résolu vers {absolute_java_home} est invalide.")
         
         # Vérifications préalables
         if not self.check_conda_available():
