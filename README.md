@@ -670,7 +670,14 @@ python -m pytest tests/unit/ -v --tb=short
 
 ## 📚 **DOCUMENTATION TECHNIQUE COMPLÈTE**
 
-### **📋 Guides Essentiels**
+### **📄 Documentation du Projet JTMS**
+
+- 📖 **[Rapport Final d'Intégration](docs/reports/RAPPORT_FINAL_INTEGRATION_JTMS.md)**
+- 📘 **[Guide d'Utilisation](docs/guides/GUIDE_UTILISATION_JTMS_EPITA.md)**
+- 🛠️ **[Documentation Technique](docs/guides/DOCUMENTATION_TECHNIQUE_JTMS.md)**
+- ⚙️ **[Guide Administrateur](docs/guides/GUIDE_ADMIN_JTMS.md)**
+
+### ** Guides Essentiels**
 - **[Guide Utilisateur Complet](docs/sherlock_watson/GUIDE_UTILISATEUR_COMPLET.md)** - Utilisation complète du système
 - **[Architecture du Système](docs/architecture/README.md)** - Architecture hiérarchique et patterns
 - **[Patterns d'Orchestration](docs/guides/GUIDE_PATTERNS_ORCHESTRATION_MODES.md)** - 5 types d'orchestration avec templates
