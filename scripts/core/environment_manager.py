@@ -150,11 +150,14 @@ class EnvironmentManager:
             return []
         
         try:
+            # CORRECTION: Utiliser shell=True comme dans check_conda_available()
             result = subprocess.run(
-                ['conda', 'env', 'list', '--json'],
+                'conda env list --json',
+                shell=True,
                 capture_output=True,
                 text=True,
-                timeout=30
+                timeout=30,
+                executable=shutil.which('powershell') if platform.system() == "Windows" else None
             )
             
             if result.returncode == 0:
