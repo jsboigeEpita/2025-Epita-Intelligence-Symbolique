@@ -11,6 +11,7 @@ import pytest
 
 logger = logging.getLogger(__name__)
 
+@pytest.fixture(name="setup_numpy_for_tests_fixture")
 def setup_numpy_for_tests_fixture():
     """
     Fixture pour configurer NumPy dans les tests.
