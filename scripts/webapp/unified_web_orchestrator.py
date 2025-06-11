@@ -27,11 +27,14 @@ import logging
 import argparse
 import subprocess
 import threading
+import socket
+import signal
 from typing import Dict, List, Optional, Any, Tuple
 from pathlib import Path
 from datetime import datetime
 from dataclasses import dataclass, asdict
 from enum import Enum
+from playwright.async_api import async_playwright, Playwright, Browser
 
 # Auto-activation environnement au démarrage
 try:
@@ -132,11 +135,43 @@ class UnifiedWebOrchestrator:
         self.trace_log: List[TraceEntry] = []
         self.start_time = datetime.now()
         
+        # Support Playwright natif
+        self.playwright: Optional[Playwright] = None
+        self.browser: Optional[Browser] = None
+
         # Configuration runtime
         self.headless = True
         self.timeout_minutes = 10
         self.enable_trace = True
+
+        self._setup_signal_handlers()
         
+    def _setup_signal_handlers(self):
+        """Configure les gestionnaires de signaux pour un arrêt propre."""
+        loop = asyncio.get_event_loop()
+        for sig in (signal.SIGINT, signal.SIGTERM):
+            loop.add_signal_handler(sig, lambda s=sig: asyncio.create_task(self.shutdown(signal=s)))
+
+    async def shutdown(self, signal=None):
+        """Point d'entrée pour l'arrêt."""
+        if self.app_info.status in [WebAppStatus.STOPPING, WebAppStatus.STOPPED]:
+            return
+
+        if signal:
+            self.add_trace("[SHUTDOWN] SIGNAL RECU", f"Signal: {signal.name}", "Arrêt initié")
+        
+        await self.stop_webapp()
+
+    def _is_port_in_use(self, port: int) -> bool:
+        """Vérifie si un port est déjà utilisé en se connectant dessus."""
+        if not port: return False
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            s.settimeout(0.5)
+            is_used = s.connect_ex(('localhost', port)) == 0
+            if is_used:
+                self.logger.info(f"Port {port} détecté comme étant utilisé.")
+            return is_used
+            
     def _load_config(self) -> Dict[str, Any]:
         """Charge la configuration depuis le fichier YAML"""
         if not self.config_path.exists():
@@ -299,9 +334,13 @@ class UnifiedWebOrchestrator:
             if not await self._validate_services():
                 return False
             
+            # 5. Lancement du navigateur Playwright
+            if self.config.get('playwright', {}).get('enabled', False):
+                await self._launch_playwright_browser()
+
             self.app_info.status = WebAppStatus.RUNNING
             self.add_trace("[OK] APPLICATION WEB OPERATIONNELLE",
-                          f"Backend: {self.app_info.backend_url}", 
+                          f"Backend: {self.app_info.backend_url}",
                           "Tous les services démarrés")
             
             return True
@@ -313,56 +352,70 @@ class UnifiedWebOrchestrator:
     
     async def run_tests(self, test_paths: List[str] = None, **kwargs) -> bool:
         """
-        Exécute les tests Playwright
-        
-        Args:
-            test_paths: Chemins des tests à exécuter
-            **kwargs: Options supplémentaires pour Playwright
-            
-        Returns:
-            bool: True si tests réussis
+        Exécute les tests Playwright avec le support natif.
         """
         if self.app_info.status != WebAppStatus.RUNNING:
-            self.add_trace("[WARNING] APPLICATION NON DEMARREE", "", "Demarrage requis avant tests", status="error")
+            self.add_trace("[WARNING] APPLICATION NON DEMARREE", "", "Démarrage requis avant tests", status="error")
             return False
         
-        self.add_trace("[TEST] EXECUTION TESTS PLAYWRIGHT",
-                      f"Tests: {test_paths or 'tous'}")
+        if not self.browser and self.config.get('playwright', {}).get('enabled'):
+            self.add_trace("[WARNING] NAVIGATEUR PLAYWRIGHT NON PRÊT", "Tentative de lancement...", status="warning")
+            await self._launch_playwright_browser()
+            if not self.browser:
+                self.add_trace("[ERROR] ECHEC LANCEMENT NAVIGATEUR", "Impossible d'exécuter les tests", status="error")
+                return False
+
+        self.add_trace("[TEST] EXECUTION TESTS PLAYWRIGHT", f"Tests: {test_paths or 'tous'}")
         
-        # Configuration runtime pour Playwright
         test_config = {
             'backend_url': self.app_info.backend_url,
             'frontend_url': self.app_info.frontend_url or self.app_info.backend_url,
             'headless': self.headless,
             **kwargs
         }
+
+        # La communication avec Playwright se fait via les variables d'environnement
+        # que playwright.config.js lira (par exemple, BASE_URL)
+        os.environ['BASE_URL'] = self.app_info.frontend_url or self.app_info.backend_url
+        os.environ['BACKEND_URL'] = self.app_info.backend_url
         
         return await self.playwright_runner.run_tests(test_paths, test_config)
     
     async def stop_webapp(self):
-        """Arrête l'application web et nettoie les ressources"""
-        self.add_trace("[STOP] ARRET APPLICATION WEB", "Nettoyage en cours")
+        """Arrête l'application web et nettoie les ressources de manière gracieuse."""
+        if self.app_info.status in [WebAppStatus.STOPPING, WebAppStatus.STOPPED]:
+            self.logger.warning("Arrêt déjà en cours ou terminé.")
+            return
+
+        self.add_trace("[STOP] ARRET APPLICATION WEB", "Nettoyage gracieux en cours")
         self.app_info.status = WebAppStatus.STOPPING
         
         try:
-            # Arrêt frontend
+            # 1. Fermer le navigateur Playwright
+            await self._close_playwright_browser()
+
+            # 2. Arrêter les services
+            tasks = []
             if self.app_info.frontend_pid:
-                await self.frontend_manager.stop()
-                
-            # Arrêt backend  
+                tasks.append(self.frontend_manager.stop())
             if self.app_info.backend_pid:
-                await self.backend_manager.stop()
+                tasks.append(self.backend_manager.stop())
+            
+            if tasks:
+                await asyncio.gather(*tasks, return_exceptions=True)
                 
-            # Cleanup processus
+            # 3. Cleanup final des processus
             await self.process_cleaner.cleanup_webapp_processes()
             
             self.app_info = WebAppInfo()  # Reset
-            self.add_trace("[OK] ARRET TERMINE", "", "Toutes les ressources liberees")
+            self.add_trace("[OK] ARRET TERMINE", "", "Toutes les ressources libérées")
             
         except Exception as e:
             self.add_trace("[WARNING] ERREUR ARRET", str(e), "Nettoyage partiel", status="error")
+        finally:
+            self.app_info.status = WebAppStatus.STOPPED
     
-    async def full_integration_test(self, headless: bool = True, 
+    async def full_integration_test(self, headless: bool = True,
                                    frontend_enabled: bool = None,
                                    test_paths: List[str] = None) -> bool:
         """
@@ -413,9 +466,52 @@ class UnifiedWebOrchestrator:
     
     async def _cleanup_previous_instances(self):
         """Nettoie les instances précédentes"""
-        self.add_trace("[CLEAN] NETTOYAGE PREALABLE", "Arret instances existantes")
-        await self.process_cleaner.cleanup_webapp_processes()
-    
+        self.add_trace("[CLEAN] NETTOYAGE PREALABLE", "Arrêt instances existantes")
+        
+        # Vérification et nettoyage des ports
+        backend_port = self.config.get('backend', {}).get('start_port')
+        frontend_port = self.config.get('frontend', {}).get('port')
+        
+        if self._is_port_in_use(backend_port) or self._is_port_in_use(frontend_port):
+             self.add_trace("[CLEAN] PORTS OCCUPES", f"Ports {backend_port}/{frontend_port} utilisés. Tentative de nettoyage.")
+             await self.process_cleaner.cleanup_webapp_processes()
+        else:
+             self.add_trace("[CLEAN] PORTS LIBRES", "Aucun service détecté sur les ports cibles.")
+
+    async def _launch_playwright_browser(self):
+        """Lance et configure le navigateur Playwright."""
+        if self.browser:
+            return
+        
+        playwright_config = self.config.get('playwright', {})
+        if not playwright_config.get('enabled', False):
+            return
+
+        self.add_trace("[PLAYWRIGHT] LANCEMENT NAVIGATEUR", f"Browser: {playwright_config.get('browser', 'chromium')}")
+        try:
+            self.playwright = await async_playwright().start()
+            browser_type = getattr(self.playwright, playwright_config.get('browser', 'chromium'))
+            
+            launch_options = {
+                'headless': self.headless,
+                'slow_mo': playwright_config.get('slow_timeout_ms', 0) if not self.headless else 0
+            }
+            self.browser = await browser_type.launch(**launch_options)
+            self.add_trace("[OK] NAVIGATEUR PRÊT", "Playwright est initialisé.")
+        except Exception as e:
+            self.add_trace("[ERROR] ECHEC PLAYWRIGHT", str(e), status="error")
+            self.browser = None
+
+    async def _close_playwright_browser(self):
+        """Ferme le navigateur et l'instance Playwright."""
+        if self.browser:
+            self.add_trace("[PLAYWRIGHT] Fermeture du navigateur")
+            await self.browser.close()
+            self.browser = None
+        if self.playwright:
+            await self.playwright.stop()
+            self.playwright = None
+
     async def _start_backend(self) -> bool:
         """Démarre le backend avec failover de ports"""
         self.add_trace("[BACKEND] DEMARRAGE BACKEND", "Lancement avec failover de ports")
@@ -577,33 +673,39 @@ def main():
     orchestrator.timeout_minutes = args.timeout
     
     async def run_command():
+        success = False
         try:
-            if args.stop:
+            if args.start:
+                success = await orchestrator.start_webapp(headless, args.frontend)
+                if success:
+                    print("Application démarrée. Pressez Ctrl+C pour arrêter.")
+                    await asyncio.Event().wait() # Attendre indéfiniment
+            elif args.stop:
                 await orchestrator.stop_webapp()
-                return True
-            elif args.start:
-                return await orchestrator.start_webapp(headless, args.frontend)
+                success = True
             elif args.test:
-                return await orchestrator.run_tests(args.tests)
-            else:  # Integration par défaut
-                return await orchestrator.full_integration_test(
+                 # Pour les tests seuls, on fait un cycle complet mais sans arrêt entre les étapes.
+                if await orchestrator.start_webapp(headless, args.frontend):
+                    success = await orchestrator.run_tests(args.tests)
+            else:  # --integration par défaut
+                success = await orchestrator.full_integration_test(
                     headless, args.frontend, args.tests)
         except KeyboardInterrupt:
-            print("\n🛑 Interruption utilisateur")
-            await orchestrator.stop_webapp()
-            return False
+            print("\n🛑 Interruption utilisateur détectée. Arrêt en cours...")
+            # L'arrêt est géré par le signal handler
         except Exception as e:
-            print(f"❌ Erreur: {e}")
-            return False
+            orchestrator.logger.error(f"❌ Erreur inattendue dans l'orchestration : {e}", exc_info=True)
+            success = False
+        finally:
+            await orchestrator.shutdown()
+        return success
     
     # Exécution asynchrone
-    orchestrator.logger.info("Avant asyncio.run(run_command())")
-    success = asyncio.run(run_command())
-    orchestrator.logger.info(f"Après asyncio.run(run_command()), success = {success}")
+    loop = asyncio.get_event_loop()
+    success = loop.run_until_complete(run_command())
     
     exit_code = 0 if success else 1
-    orchestrator.logger.info(f"Code de sortie déterminé : {exit_code}")
-    orchestrator.logger.info("Appel de sys.exit()...")
+    orchestrator.logger.info(f"Code de sortie final : {exit_code}")
     sys.exit(exit_code)
 
 if __name__ == "__main__":
