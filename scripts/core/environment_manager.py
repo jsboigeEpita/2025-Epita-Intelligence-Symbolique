@@ -64,7 +64,7 @@ class EnvironmentManager:
         # Le code pour rendre JAVA_HOME absolu est déplacé vers la méthode activate_project_environment
         # pour s'assurer qu'il s'exécute APRÈS le chargement du fichier .env.
         
-        self.default_conda_env = "projet-is-v2"
+        self.default_conda_env = "projet-is"
         self.required_python_version = (3, 8)
         
         # Variables d'environnement importantes
@@ -698,19 +698,19 @@ class EnvironmentManager:
 
     # --- Fin des méthodes transférées ---
 
-def is_conda_env_active(env_name: str = "projet-is-v2") -> bool:
+def is_conda_env_active(env_name: str = "projet-is") -> bool:
     """Vérifie si l'environnement conda spécifié est actuellement actif"""
     current_env = os.environ.get('CONDA_DEFAULT_ENV', '')
     return current_env == env_name
 
 
-def check_conda_env(env_name: str = "projet-is-v2", logger: Logger = None) -> bool:
+def check_conda_env(env_name: str = "projet-is", logger: Logger = None) -> bool:
     """Fonction utilitaire pour vérifier un environnement conda"""
     manager = EnvironmentManager(logger)
     return manager.check_conda_env_exists(env_name)
 
 
-def auto_activate_env(env_name: str = "projet-is-v2", silent: bool = True) -> bool:
+def auto_activate_env(env_name: str = "projet-is", silent: bool = True) -> bool:
     """
     One-liner auto-activateur d'environnement intelligent.
     Cette fonction est maintenant une façade pour la logique d'activation centrale.
@@ -745,7 +745,7 @@ def auto_activate_env(env_name: str = "projet-is-v2", silent: bool = True) -> bo
         return False
 
 
-def activate_project_env(command: str = None, env_name: str = "projet-is-v2", logger: Logger = None) -> int:
+def activate_project_env(command: str = None, env_name: str = "projet-is", logger: Logger = None) -> int:
     """Fonction utilitaire pour activer l'environnement projet"""
     manager = EnvironmentManager(logger)
     return manager.activate_project_environment(command, env_name)
@@ -769,8 +769,8 @@ def main():
     parser.add_argument(
         '--env-name', '-e',
         type=str,
-        default='projet-is-v2',
-        help='Nom de l\'environnement conda (défaut: projet-is-v2)'
+        default='projet-is',
+        help='Nom de l\'environnement conda (défaut: projet-is)'
     )
     
     parser.add_argument(
