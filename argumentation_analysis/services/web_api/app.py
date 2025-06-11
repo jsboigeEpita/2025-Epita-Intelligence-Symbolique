@@ -7,19 +7,84 @@ API Flask pour l'analyse argumentative.
 Cette API expose les fonctionnalités du moteur d'analyse argumentative
 pour permettre aux étudiants de créer des interfaces web facilement.
 """
+import logging
+import sys
+
+# Configure logging immediately at the very top of the module execution.
+# This ensures that any subsequent logging calls, even before full app setup, are captured.
+logging.basicConfig(level=logging.DEBUG,
+                    format='%(asctime)s [%(levelname)s] %(name)s [%(module)s.%(funcName)s:%(lineno)d] - %(message)s',
+                    force=True) # force=True allows reconfiguring if it was called before (e.g. by a dependency)
+_top_module_logger = logging.getLogger(__name__) # Use __name__ to get 'argumentation_analysis.services.web_api.app'
+_top_module_logger.info("--- web_api/app.py module execution START, initial logging configured ---")
+sys.stderr.flush() # Ensure this initial log gets out.
+
+logger = _top_module_logger # Make it available globally as 'logger' for existing code
 
 import os
-import sys
-import logging
+# logging est déjà importé et configuré par basicConfig à la ligne 15
+# _top_module_logger est déjà défini à la ligne 18
 import argparse
 import asyncio
 from datetime import datetime
 from pathlib import Path
-from flask import Flask, request, jsonify, redirect, url_for
-from flask_cors import CORS
-from werkzeug.exceptions import HTTPException # Ajout pour la gestion des erreurs HTTP
-from typing import Dict, Any, Optional
-from a2wsgi import WSGIMiddleware # MODIF: Utiliser WSGIMiddleware pour envelopper une app Flask (WSGI)
+from typing import Dict, Any, Optional # Optional est déjà importé
+
+# Déclarer les variables avant le bloc try pour qu'elles aient un scope global dans le module
+flask_app = None # Sera assigné à flask_app_instance_for_init
+app = None # Sera assigné à app_object_for_uvicorn
+
+try:
+    _top_module_logger.info("--- Attempting critical imports: Flask, CORS, Werkzeug, a2wsgi ---")
+    sys.stderr.flush()
+    from flask import Flask, request, jsonify, redirect, url_for
+    from flask_cors import CORS
+    from werkzeug.exceptions import HTTPException
+    from a2wsgi import WSGIMiddleware
+    _top_module_logger.info("--- Critical imports SUCCESSFUL ---")
+    sys.stderr.flush()
+
+    _top_module_logger.info("--- Initializing Flask app instance ---")
+    sys.stderr.flush()
+    flask_app_instance_for_init = Flask(__name__) # Variable locale temporaire
+    _top_module_logger.info(f"--- Flask app instance CREATED: {type(flask_app_instance_for_init)} ---")
+    sys.stderr.flush()
+
+    _top_module_logger.info("--- Applying CORS to Flask app ---")
+    sys.stderr.flush()
+    CORS(flask_app_instance_for_init)
+    _top_module_logger.info("--- CORS applied ---")
+    sys.stderr.flush()
+
+    _top_module_logger.info("--- Wrapping Flask app with WSGIMiddleware for Uvicorn ---")
+    sys.stderr.flush()
+    app_object_for_uvicorn = WSGIMiddleware(flask_app_instance_for_init) # Variable locale temporaire
+    _top_module_logger.info(f"--- WSGIMiddleware WRAPPED: {type(app_object_for_uvicorn)} ---")
+    sys.stderr.flush()
+    
+    # Assigner aux variables globales du module si tout a réussi
+    flask_app = flask_app_instance_for_init
+    app = app_object_for_uvicorn
+    _top_module_logger.info(f"--- Global 'flask_app' and 'app' assigned. Type 'app': {type(app)} ---")
+    sys.stderr.flush()
+
+except ImportError as e_imports:
+    _top_module_logger.critical(f"!!! CRITICAL IMPORT ERROR (Flask/CORS/Werkzeug/a2wsgi): {e_imports} !!!", exc_info=True)
+    sys.stderr.flush()
+    raise
+except Exception as e_init:
+    _top_module_logger.critical(f"!!! CRITICAL ERROR during Flask/WSGIMiddleware initialization: {e_init} !!!", exc_info=True)
+    sys.stderr.flush()
+    raise
+
+if flask_app is None or app is None:
+    _critical_error_msg = "!!! flask_app or app object is None after initialization block - THIS SHOULD NOT HAPPEN if no exception was raised. !!!"
+    _top_module_logger.critical(_critical_error_msg)
+    sys.stderr.flush()
+    raise RuntimeError(_critical_error_msg)
+
+_top_module_logger.info("--- Flask app and WSGI wrapper 'app' successfully initialized. Proceeding with module. ---")
+sys.stderr.flush()
 
 # Ajouter le répertoire racine au chemin Python
 current_dir = Path(__file__).parent
@@ -38,30 +103,79 @@ if str(root_dir) not in sys.path:
     # qui est spécifique à pr-student-1 et potentiellement source de confusion.
     pass # On ne modifie plus sys.path ici, on se fie aux imports de HEAD.
 
-# Configuration du logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s [%(levelname)s] [%(name)s] %(message)s',
-    datefmt='%H:%M:%S'
-)
-logger = logging.getLogger("WebAPI")
+# Re-Configuration du logging avec le format désiré (déjà présent dans le code actuel)
+# logging.basicConfig(
+#     level=logging.INFO,
+#     format='%(asctime)s [%(levelname)s] [%(name)s] %(message)s (%(filename)s:%(lineno)d)',
+#     datefmt='%H:%M:%S',
+#     force=True
+# )
+# logger = logging.getLogger("WebAPI")
+# logger.info("--- Logging reconfiguré avec format complet (après initialisation app) ---")
+# sys.stderr.flush()
+# Le code existant à partir de la ligne 46 gère déjà la reconfiguration du logging
+# et l'initialisation de 'logger'. Les logs d'initialisation de Flask et WSGIMiddleware
+# sont également déjà présents (lignes 127-141).
+
+# La modification principale est l'encapsulation des imports critiques et l'appel initial à basicConfig.
+# Le reste du fichier à partir de la (nouvelle) ligne ~58 (anciennement ligne 30)
+# qui commence par `current_dir = Path(__file__).parent` devrait rester tel quel,
+# y compris la création de `flask_app` et `app` qui sont maintenant conditionnées
+# par le succès des imports critiques.
+
+# Pour s'assurer que `app` et `flask_app` sont définis globalement si les imports réussissent,
+# je vais les assigner après le bloc try-except si `flask_app_instance` et `app_instance_for_uvicorn`
+# ont été créés.
+
+# (Le code existant à partir de la ligne 126 pour la création de flask_app et app
+#  sera exécuté si les imports ont réussi. Les variables globales `app` et `flask_app`
+#  seront donc définies.)
 
 # Import des services (style HEAD, mais avec les try-except de pr-student-1 pour la robustesse)
+# Cette section est déjà présente et correcte.
 try:
     # Utilisation des imports absolus depuis la racine du module `argumentation_analysis` (style HEAD)
+    logger.info("Attempting import: AnalysisService")
+    sys.stderr.flush()
     from argumentation_analysis.services.web_api.services.analysis_service import AnalysisService
+    logger.info("Imported: AnalysisService")
+    sys.stderr.flush()
+    logger.info("Attempting import: ValidationService")
+    sys.stderr.flush()
     from argumentation_analysis.services.web_api.services.validation_service import ValidationService
+    logger.info("Imported: ValidationService")
+    sys.stderr.flush()
+    logger.info("Attempting import: FallacyService")
+    sys.stderr.flush()
     from argumentation_analysis.services.web_api.services.fallacy_service import FallacyService
+    logger.info("Imported: FallacyService")
+    sys.stderr.flush()
+    logger.info("Attempting import: FrameworkService")
+    sys.stderr.flush()
     from argumentation_analysis.services.web_api.services.framework_service import FrameworkService
+    logger.info("Imported: FrameworkService")
+    sys.stderr.flush()
+    logger.info("Attempting import: LogicService")
+    sys.stderr.flush()
     from argumentation_analysis.services.web_api.services.logic_service import LogicService
+    logger.info("Imported: LogicService")
+    sys.stderr.flush()
+    logger.info("Attempting import: Request Models")
+    sys.stderr.flush()
     from argumentation_analysis.services.web_api.models.request_models import (
         AnalysisRequest, ValidationRequest, FallacyRequest, FrameworkRequest,
         LogicBeliefSetRequest, LogicQueryRequest, LogicGenerateQueriesRequest, LogicOptions # Ajout de LogicOptions depuis HEAD
     )
+    logger.info("Imported: Request Models")
+    sys.stderr.flush()
+    logger.info("Attempting import: Response Models") # AJOUT
+    sys.stderr.flush() # AJOUT
     from argumentation_analysis.services.web_api.models.response_models import (
         AnalysisResponse, ValidationResponse, FallacyResponse, FrameworkResponse, ErrorResponse,
         LogicBeliefSetResponse, LogicQueryResponse, LogicGenerateQueriesResponse, LogicInterpretationResponse, LogicQueryResult # Ajout de LogicQueryResult depuis HEAD
     )
+    logger.info("Imported: Response Models") # AJOUT
+    sys.stderr.flush() # AJOUT
 except ImportError as e_abs:
     logger.warning(f"ImportError avec imports absolus ({e_abs}). Tentative d'imports relatifs.")
     try:
@@ -114,16 +228,12 @@ except ImportError as e_abs:
         
         logger.info("Services de fallback chargés")
 
-# Création de l'application Flask
-flask_app = Flask(__name__) # MODIF: Renommer en flask_app
-CORS(flask_app)  # Activer CORS pour les appels depuis React
+logger.info("--- Service import block (try-except) in app.py COMPLETED ---")
+sys.stderr.flush()
 
-# Envelopper l'application Flask avec WSGIMiddleware pour Uvicorn
-app = WSGIMiddleware(flask_app) # MODIF: Utiliser WSGIMiddleware
-
-# Configuration
-flask_app.config['JSON_AS_ASCII'] = False  # Support des caractères UTF-8 # MODIF: Utiliser flask_app
-flask_app.config['JSONIFY_PRETTYPRINT_REGULAR'] = True # MODIF: Utiliser flask_app
+# Configuration (l'initialisation de flask_app et app est faite plus haut)
+flask_app.config['JSON_AS_ASCII'] = False  # Support des caractères UTF-8
+flask_app.config['JSONIFY_PRETTYPRINT_REGULAR'] = True
 
 # Initialisation lazy des services (à la demande pour éviter de bloquer le démarrage)
 _analysis_service = None
@@ -182,49 +292,91 @@ def handle_error(error):
 @flask_app.route('/api/health', methods=['GET']) # MODIF: Utiliser flask_app
 def health_check():
     """Vérification de l'état de l'API."""
+    logger.info("[HealthCheck] Endpoint /api/health CALLED") # Log d'entrée
+    sys.stderr.flush() # S'assurer que le log est écrit immédiatement
     try:
         # Initialiser les services et vérifier leur état
         services_status = {}
         
         # Test du service d'analyse
+        logger.info("[HealthCheck] Test du service d'analyse...")
         try:
+            logger.info("[HealthCheck] Appel de get_analysis_service()...")
             analysis_svc = get_analysis_service()
+            logger.info("[HealthCheck] get_analysis_service() terminé.")
+            logger.info("[HealthCheck] Appel de analysis_svc.is_healthy()...")
             services_status["analysis"] = analysis_svc.is_healthy()
-            logger.info(f"Service analysis: {services_status['analysis']}")
+            logger.info(f"[HealthCheck] Service analysis.is_healthy(): {services_status['analysis']}")
         except Exception as e:
-            logger.error(f"Erreur service analysis: {e}")
+            logger.error(f"[HealthCheck] Erreur service analysis: {e}", exc_info=True)
             services_status["analysis"] = False
             
         # Test du service de validation
+        logger.info("[HealthCheck] Test du service de validation...")
         try:
+            logger.info("[HealthCheck] Appel de get_validation_service()...")
             validation_svc = get_validation_service()
-            services_status["validation"] = hasattr(validation_svc, 'is_healthy') and validation_svc.is_healthy()
+            logger.info("[HealthCheck] get_validation_service() terminé.")
+            if hasattr(validation_svc, 'is_healthy'):
+                logger.info("[HealthCheck] Appel de validation_svc.is_healthy()...")
+                services_status["validation"] = validation_svc.is_healthy()
+                logger.info(f"[HealthCheck] Service validation.is_healthy(): {services_status['validation']}")
+            else:
+                logger.warning("[HealthCheck] Service validation n'a pas d'attribut 'is_healthy'.")
+                services_status["validation"] = False # Ou une autre valeur par défaut
         except Exception as e:
-            logger.error(f"Erreur service validation: {e}")
+            logger.error(f"[HealthCheck] Erreur service validation: {e}", exc_info=True)
             services_status["validation"] = False
             
         # Test du service de détection de sophismes
+        logger.info("[HealthCheck] Test du service de détection de sophismes...")
         try:
+            logger.info("[HealthCheck] Appel de get_fallacy_service()...")
             fallacy_svc = get_fallacy_service()
-            services_status["fallacy"] = hasattr(fallacy_svc, 'is_healthy') and fallacy_svc.is_healthy()
+            logger.info("[HealthCheck] get_fallacy_service() terminé.")
+            if hasattr(fallacy_svc, 'is_healthy'):
+                logger.info("[HealthCheck] Appel de fallacy_svc.is_healthy()...")
+                services_status["fallacy"] = fallacy_svc.is_healthy()
+                logger.info(f"[HealthCheck] Service fallacy.is_healthy(): {services_status['fallacy']}")
+            else:
+                logger.warning("[HealthCheck] Service fallacy n'a pas d'attribut 'is_healthy'.")
+                services_status["fallacy"] = False
         except Exception as e:
-            logger.error(f"Erreur service fallacy: {e}")
+            logger.error(f"[HealthCheck] Erreur service fallacy: {e}", exc_info=True)
             services_status["fallacy"] = False
             
         # Test du service de framework
+        logger.info("[HealthCheck] Test du service de framework...")
         try:
+            logger.info("[HealthCheck] Appel de get_framework_service()...")
             framework_svc = get_framework_service()
-            services_status["framework"] = hasattr(framework_svc, 'is_healthy') and framework_svc.is_healthy()
+            logger.info("[HealthCheck] get_framework_service() terminé.")
+            if hasattr(framework_svc, 'is_healthy'):
+                logger.info("[HealthCheck] Appel de framework_svc.is_healthy()...")
+                services_status["framework"] = framework_svc.is_healthy()
+                logger.info(f"[HealthCheck] Service framework.is_healthy(): {services_status['framework']}")
+            else:
+                logger.warning("[HealthCheck] Service framework n'a pas d'attribut 'is_healthy'.")
+                services_status["framework"] = False
         except Exception as e:
-            logger.error(f"Erreur service framework: {e}")
+            logger.error(f"[HealthCheck] Erreur service framework: {e}", exc_info=True)
             services_status["framework"] = False
             
         # Test du service de logique
+        logger.info("[HealthCheck] Test du service de logique...")
         try:
+            logger.info("[HealthCheck] Appel de get_logic_service()...")
             logic_svc = get_logic_service()
-            services_status["logic"] = hasattr(logic_svc, 'is_healthy') and logic_svc.is_healthy()
+            logger.info("[HealthCheck] get_logic_service() terminé.")
+            if hasattr(logic_svc, 'is_healthy'):
+                logger.info("[HealthCheck] Appel de logic_svc.is_healthy()...")
+                services_status["logic"] = logic_svc.is_healthy()
+                logger.info(f"[HealthCheck] Service logic.is_healthy(): {services_status['logic']}")
+            else:
+                logger.warning("[HealthCheck] Service logic n'a pas d'attribut 'is_healthy'.")
+                services_status["logic"] = False
         except Exception as e:
-            logger.error(f"Erreur service logic: {e}")
+            logger.error(f"[HealthCheck] Erreur service logic: {e}", exc_info=True)
             services_status["logic"] = False
         
         return jsonify({
@@ -242,6 +394,8 @@ def health_check():
             "timestamp": datetime.now().isoformat()
         }), 500
 
+logger.info(f"--- Route /api/health defined. Rules: {[str(rule) for rule in flask_app.url_map.iter_rules(endpoint='health_check')]} ---")
+sys.stderr.flush()
 
 @flask_app.route('/api/analyze', methods=['POST']) # MODIF: Utiliser flask_app
 def analyze_text():
@@ -780,6 +934,27 @@ def index():
 def favicon():
     """Gestion du favicon."""
     return '', 204  # No content
+
+try:
+    # Log des routes enregistrées par Flask pour le débogage
+    # Cela doit être fait après que toutes les routes @flask_app.route() ont été déclarées.
+    # Et avant que l'application ne soit potentiellement exécutée si __name__ == '__main__'
+    # (bien que dans notre cas, Uvicorn lance 'app', donc __main__ n'est pas directement exécuté par Uvicorn)
+    
+    # Pour obtenir les routes, il faut un contexte d'application ou de test.
+    # Le plus simple ici est de le faire avant la section __main__.
+    # Cependant, pour être sûr que cela s'exécute lorsque le module est chargé par Uvicorn,
+    # nous le plaçons à la fin du scope global du module.
+    
+    # Créer une chaîne de caractères listant les règles de routage
+    rules_string = []
+    for rule in flask_app.url_map.iter_rules():
+        rules_string.append(f"Endpoint: {rule.endpoint}, Methods: {','.join(rule.methods)}, Path: {str(rule)}")
+    logger.info(f"--- Flask App Registered Routes ---\n{os.linesep.join(rules_string)}\n--- End of Flask Routes ---")
+    sys.stderr.flush()
+except Exception as e_routes:
+    logger.error(f"Erreur lors de la tentative de lister les routes Flask: {e_routes}", exc_info=True)
+    sys.stderr.flush()
 
 
 if __name__ == '__main__':

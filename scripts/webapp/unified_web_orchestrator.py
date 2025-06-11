@@ -190,7 +190,7 @@ class UnifiedWebOrchestrator:
             },
             'backend': {
                 'enabled': True,
-                'module': 'api.main_simple:app',
+                'module': 'argumentation_analysis.services.web_api.app:app',
                 'start_port': backend_port,
                 'fallback_ports': fallback_ports,
                 'max_attempts': 5,

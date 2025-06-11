@@ -48,8 +48,8 @@ class BackendManager:
         self.start_port = config.get('start_port', 5003)
         self.fallback_ports = config.get('fallback_ports', [5004, 5005, 5006])
         self.max_attempts = config.get('max_attempts', 5)
-        self.timeout_seconds = config.get('timeout_seconds', 30)
-        self.health_endpoint = config.get('health_endpoint', '/api/status') # Correction: utiliser /api/status
+        self.timeout_seconds = config.get('timeout_seconds', 60) # Augmenté à 60s
+        self.health_endpoint = config.get('health_endpoint', '/api/health')
         self.env_activation = config.get('env_activation',
                                        'powershell -File scripts/env/activate_project_env.ps1')
         
@@ -170,13 +170,37 @@ class BackendManager:
 
             # Commande de démarrage pour FastAPI avec Uvicorn
             # S'assurer que l'attribut de l'application (généralement 'app') est spécifié
-            app_module_with_attribute = f"{self.module}:app"
+            # Vérifier si self.module contient déjà l'attribut de l'application (ex: "module:app_instance")
+            if ':' in self.module:
+                app_module_with_attribute = self.module
+            else:
+                app_module_with_attribute = f"{self.module}:app"
+            backend_host = self.config.get('host', '127.0.0.1')
+            
+            # Construction de la commande pour uvicorn.main()
+            # Cela permet d'insérer un log de test avant l'appel à uvicorn
+            uvicorn_args_list = [
+                app_module_with_attribute,
+                f"--host={backend_host}",
+                f"--port={str(port)}"
+                # Ajoutez d'autres options uvicorn ici si nécessaire (ex: --log-level)
+            ]
+            # Formatter les arguments pour la chaîne de commande Python
+            # Ex: "['module:app', '--host=127.0.0.1', '--port=5003']"
+            uvicorn_args_str_for_python = str(uvicorn_args_list)
+
+            python_command_str = (
+                f"import sys; sys.stderr.write('--- PYTHON EXEC TEST IN UVICORN LOG OK ---\\n'); "
+                f"sys.stderr.flush(); import uvicorn; "
+                f"uvicorn.main({uvicorn_args_str_for_python})"
+            )
+
             cmd = [
-                python_exe_path, '-m', 'uvicorn', app_module_with_attribute,
-                '--host', '0.0.0.0', '--port', str(port)
+                python_exe_path, '-c', python_command_str
             ]
             
-            self.logger.info(f"Démarrage backend FastAPI: {' '.join(cmd)}")
+            self.logger.info(f"Démarrage backend FastAPI via uvicorn.main(): {python_exe_path} -c \"...uvicorn.main(...)\"")
+            self.logger.debug(f"Commande Python détaillée pour uvicorn.main(): {python_command_str}")
             
             # Créer le répertoire de logs s'il n'existe pas
             log_dir = Path.cwd() / "logs"
@@ -254,11 +278,22 @@ class BackendManager:
 
     async def _wait_for_backend(self, port: int) -> bool:
         """Attend que le backend soit accessible via health check"""
-        url = f"http://localhost:{port}{self.health_endpoint}"
+        # S'assurer que l'URL de health check utilise aussi 127.0.0.1 si c'est l'hôte d'écoute
+        backend_host_for_url = self.config.get('host', '127.0.0.1')
+        # Si backend_host_for_url est 0.0.0.0, le client doit utiliser localhost ou 127.0.0.1
+        if backend_host_for_url == "0.0.0.0":
+            connect_host = "127.0.0.1"
+        else:
+            connect_host = backend_host_for_url
+
+        url = f"http://{connect_host}:{port}{self.health_endpoint}"
         start_time = time.time()
         
         self.logger.info(f"Attente backend sur {url} (timeout: {self.timeout_seconds}s)")
         
+        self.logger.info("Pause initiale de 20 secondes avant de commencer les health checks...") # Augmentation de la pause
+        await asyncio.sleep(20) # Pause initiale plus longue
+
         while time.time() - start_time < self.timeout_seconds:
             try:
                 # Vérifier d'abord si le processus est toujours vivant
@@ -267,36 +302,32 @@ class BackendManager:
                     self.logger.error(f"Processus backend terminé prématurément (code: {return_code})")
                     
                     # Lire stdout et stderr du processus terminé
-                    stdout_output = ""
-                    stderr_output = ""
-                    try:
-                        # Utiliser communicate pour éviter les deadlocks si les buffers sont pleins
-                        # stdout_output, stderr_output = self.process.communicate(timeout=1) # communicate ne peut être appelé qu'une fois
-                        # Comme le processus est déjà terminé (poll() is not None), on peut lire directement.
-                        if self.process.stdout:
-                            stdout_output = "".join(self.process.stdout.readlines()) # Lire ce qui reste
-                        if self.process.stderr:
-                            stderr_output = "".join(self.process.stderr.readlines()) # Lire ce qui reste
-                            
-                        if stdout_output:
-                            self.logger.error(f"Sortie standard du processus backend:\n{stdout_output}")
-                        if stderr_output:
-                            self.logger.error(f"Sortie d'erreur du processus backend:\n{stderr_output}")
-                        
-                    except Exception as e_read:
-                        self.logger.error(f"Erreur lors de la lecture de la sortie du processus backend: {e_read}")
-                    return False
+                    # Note: la lecture directe des pipes après la fin du processus peut être délicate.
+                    # Les logs fichiers sont plus fiables.
+                    # stdout_output, stderr_output = self.process.communicate(timeout=1) # Ne peut être appelé qu'une fois
+                    # Pour l'instant, on se fie aux logs fichiers qui sont créés.
+                    return False # Processus mort, donc backend pas prêt
                 
                 async with aiohttp.ClientSession() as session:
-                    async with session.get(url, timeout=aiohttp.ClientTimeout(total=5)) as response:
+                    self.logger.info(f"Tentative de connexion GET à {url}...")
+                    sys.stdout.flush() # Forcer le flush pour voir ce log immédiatement
+                    # Augmentation du timeout pour chaque requête individuelle
+                    async with session.get(url, timeout=aiohttp.ClientTimeout(total=10)) as response:
+                        self.logger.info(f"Réponse reçue de {url} avec statut: {response.status}")
                         if response.status == 200:
                             self.logger.info(f"Backend accessible sur {url}")
                             return True
-            except Exception as e:
+            except aiohttp.ClientConnectorError as e_conn:
                 elapsed = time.time() - start_time
-                self.logger.debug(f"Tentative health check après {elapsed:.1f}s: {type(e).__name__}")
+                self.logger.debug(f"Tentative health check (connexion) après {elapsed:.1f}s: {type(e_conn).__name__} - {e_conn}")
+            except asyncio.TimeoutError as e_timeout_req: # Spécifique pour le timeout de la requête aiohttp
+                elapsed = time.time() - start_time
+                self.logger.debug(f"Tentative health check (timeout requête) après {elapsed:.1f}s: {type(e_timeout_req).__name__}")
+            except Exception as e_other: # Autres exceptions aiohttp ou génériques
+                elapsed = time.time() - start_time
+                self.logger.debug(f"Tentative health check (autre erreur) après {elapsed:.1f}s: {type(e_other).__name__} - {e_other}")
                 
-            await asyncio.sleep(2)
+            await asyncio.sleep(5) # Intervalle augmenté
         
         self.logger.error(f"Timeout - Backend non accessible sur {url}")
         # Si timeout et le processus est toujours là mais ne répond pas, logguer sa sortie aussi
