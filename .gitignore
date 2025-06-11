@@ -85,7 +85,7 @@ ipython_config.py
 venv/
 venv_test/
 venv_py310/
-env/
+/env/
 ENV/
 env.bak/
 venv.bak/
