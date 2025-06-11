@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JTMS Dashboard - Intelligence Symbolique EPITA</title>
+    
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    
+    <!-- Vis.js pour visualisation de graphes -->
+    <script src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
+    
+    <!-- Socket.IO pour temps réel -->
+    <script src="https://cdn.socket.io/4.0.0/socket.io.min.js"></script>
+    
+    <!-- CSS personnalisé JTMS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/jtms.css') }}">
+    
+    <style>
+        body {
+            background-color: #f8f9fa;
+        }
+        
+        #network-container {
+            height: 600px;
+            border: 2px solid #dee2e6;
+            border-radius: 8px;
+            background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        
+        .jtms-panel {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+            border: 1px solid #e9ecef;
+        }
+        
+        .jtms-panel h4, .jtms-panel h5 {
+            color: #495057;
+            margin-bottom: 20px;
+            font-weight: 600;
+        }
+        
+        .belief-status {
+            font-weight: 600;
+        }
+        
+        .belief-status.justified { 
+            color: #28a745; 
+        }
+        
+        .belief-status.unjustified { 
+            color: #dc3545; 
+        }
+        
+        .belief-status.unknown { 
+            color: #ffc107; 
+        }
+        
+        .belief-status.non-monotonic { 
+            color: #fd7e14;
+            font-style: italic;
+        }
+        
+        .stat-card {
+            text-align: center;
+            padding: 15px;
+            border-radius: 8px;
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+        }
+        
+        .stat-number {
+            font-size: 2rem;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        
+        .stat-label {
+            font-size: 0.875rem;
+            color: #6c757d;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .activity-log {
+            height: 300px;
+            overflow-y: auto;
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            padding: 15px;
+            background: #f8f9fa;
+            font-family: 'Courier New', monospace;
+            font-size: 0.875rem;
+        }
+        
+        .log-entry {
+            margin-bottom: 8px;
+            padding: 4px 8px;
+            border-radius: 4px;
+            background: white;
+            border-left: 3px solid #007bff;
+        }
+        
+        .log-timestamp {
+            color: #6c757d;
+            font-size: 0.75rem;
+        }
+        
+        .control-section {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 15px;
+            border: 1px solid #e9ecef;
+        }
+        
+        .nav-tabs .nav-link {
+            color: #495057;
+            font-weight: 500;
+        }
+        
+        .nav-tabs .nav-link.active {
+            background-color: #007bff;
+            border-color: #007bff;
+            color: white;
+        }
+        
+        .toast-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 9999;
+        }
+        
+        @media (max-width: 768px) {
+            .jtms-panel {
+                padding: 16px;
+            }
+            
+            #network-container {
+                height: 400px;
+            }
+            
+            .stat-number {
+                font-size: 1.5rem;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-4">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="{{ url_for('index') }}">
+                <i class="fas fa-brain"></i> Intelligence Symbolique EPITA
+            </a>
+            
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item">
+                        <a class="nav-link active" href="{{ url_for('jtms.dashboard') }}">
+                            <i class="fas fa-tachometer-alt"></i> Dashboard JTMS
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('jtms.sessions_management') }}">
+                            <i class="fas fa-layer-group"></i> Sessions
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('jtms.sherlock_watson_interface') }}">
+                            <i class="fas fa-user-secret"></i> Sherlock/Watson
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('jtms.tutorial') }}">
+                            <i class="fas fa-graduation-cap"></i> Tutoriel
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('jtms.playground') }}">
+                            <i class="fas fa-play"></i> Playground
+                        </a>
+                    </li>
+                </ul>
+                
+                <span class="navbar-text">
+                    <i class="fas fa-clock"></i> {{ timestamp[:19] if timestamp else '' }}
+                </span>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Conteneur principal -->
+    <div class="container-fluid">
+        <div class="row">
+            <!-- Panneau de contrôle gauche -->
+            <div class="col-lg-3 col-md-4">
+                <div class="jtms-panel">
+                    <h4><i class="fas fa-cogs"></i> Contrôles JTMS</h4>
+                    
+                    <!-- Onglets de contrôle -->
+                    <ul class="nav nav-tabs mb-3" id="controlTabs" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active" id="create-tab" data-bs-toggle="tab" data-bs-target="#create-panel" type="button">
+                                Créer
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="manage-tab" data-bs-toggle="tab" data-bs-target="#manage-panel" type="button">
+                                Gérer
+                            </button>
+                        </li>
+                    </ul>
+                    
+                    <div class="tab-content" id="controlTabsContent">
+                        <!-- Onglet Création -->
+                        <div class="tab-pane fade show active" id="create-panel" role="tabpanel">
+                            <!-- Création de croyances -->
+                            <div class="control-section">
+                                <label class="form-label fw-bold">
+                                    <i class="fas fa-lightbulb"></i> Nouvelle Croyance
+                                </label>
+                                <div class="input-group mb-2">
+                                    <input type="text" id="new-belief" class="form-control" 
+                                           placeholder="Nom de la croyance" maxlength="50">
+                                    <button class="btn btn-primary" type="button" onclick="addBelief()">
+                                        <i class="fas fa-plus"></i> Créer
+                                    </button>
+                                </div>
+                                <small class="text-muted">Ex: suspect_is_guilty, evidence_found</small>
+                            </div>
+                            
+                            <!-- Ajout de justifications -->
+                            <div class="control-section">
+                                <label class="form-label fw-bold">
+                                    <i class="fas fa-link"></i> Justification
+                                </label>
+                                <input type="text" id="premises" class="form-control mb-2" 
+                                       placeholder="Prémisses (séparées par virgules)">
+                                <input type="text" id="negatives" class="form-control mb-2" 
+                                       placeholder="Négations (séparées par virgules)">
+                                <input type="text" id="conclusion" class="form-control mb-2" 
+                                       placeholder="Conclusion">
+                                <button class="btn btn-success w-100" onclick="addJustification()">
+                                    <i class="fas fa-arrow-right"></i> Ajouter Justification
+                                </button>
+                                <small class="text-muted mt-1 d-block">
+                                    Format: A,B ⊢ C (¬D,E)
+                                </small>
+                            </div>
+                        </div>
+                        
+                        <!-- Onglet Gestion -->
+                        <div class="tab-pane fade" id="manage-panel" role="tabpanel">
+                            <!-- Sessions -->
+                            <div class="control-section">
+                                <label class="form-label fw-bold">
+                                    <i class="fas fa-layer-group"></i> Sessions
+                                </label>
+                                <select id="session-select" class="form-select mb-2" onchange="switchSession()">
+                                    <option value="global">Session Globale</option>
+                                    {% for session in sessions %}
+                                    <option value="{{ session.session_id }}">{{ session.name }}</option>
+                                    {% endfor %}
+                                </select>
+                                <div class="input-group">
+                                    <input type="text" id="new-session" class="form-control" 
+                                           placeholder="Nouvelle session">
+                                    <button class="btn btn-outline-primary" onclick="createSession()">
+                                        <i class="fas fa-plus"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            <!-- Actions -->
+                            <div class="control-section">
+                                <div class="d-grid gap-2">
+                                    <button class="btn btn-info" onclick="checkConsistency()">
+                                        <i class="fas fa-check-circle"></i> Vérifier Cohérence
+                                    </button>
+                                    <button class="btn btn-warning" onclick="exportJTMS()">
+                                        <i class="fas fa-download"></i> Exporter JSON
+                                    </button>
+                                    <button class="btn btn-outline-secondary" onclick="resetJTMS()">
+                                        <i class="fas fa-refresh"></i> Réinitialiser
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Panneau détails croyance sélectionnée -->
+                <div class="jtms-panel">
+                    <h5><i class="fas fa-info-circle"></i> Détails Croyance</h5>
+                    <div id="belief-details">
+                        <div class="text-center text-muted">
+                            <i class="fas fa-mouse-pointer fa-2x mb-2"></i>
+                            <p>Sélectionnez une croyance<br>dans le graphe</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Visualisation graphique centrale -->
+            <div class="col-lg-6 col-md-8">
+                <div class="jtms-panel">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h4><i class="fas fa-project-diagram"></i> Graphe de Croyances</h4>
+                        <div class="btn-group" role="group">
+                            <button type="button" class="btn btn-outline-secondary btn-sm" onclick="fitNetwork()">
+                                <i class="fas fa-expand-arrows-alt"></i>
+                            </button>
+                            <button type="button" class="btn btn-outline-secondary btn-sm" onclick="togglePhysics()">
+                                <i class="fas fa-pause"></i>
+                            </button>
+                            <button type="button" class="btn btn-outline-secondary btn-sm" onclick="saveVisualization()">
+                                <i class="fas fa-camera"></i>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div id="network-container">
+                        <div class="d-flex justify-content-center align-items-center h-100">
+                            <div class="text-center">
+                                <div class="spinner-border text-primary" role="status">
+                                    <span class="visually-hidden">Chargement...</span>
+                                </div>
+                                <p class="mt-2 text-muted">Initialisation du graphe JTMS...</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Légende -->
+                    <div class="mt-3">
+                        <small class="text-muted">
+                            <strong>Légende:</strong>
+                            <span class="belief-status justified">● Valide</span> |
+                            <span class="belief-status unjustified">● Invalide</span> |
+                            <span class="belief-status unknown">● Inconnu</span> |
+                            <span class="belief-status non-monotonic">● Non-monotonic</span>
+                        </small>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Panneau statistiques et logs -->
+            <div class="col-lg-3">
+                <div class="jtms-panel">
+                    <h4><i class="fas fa-chart-pie"></i> Statistiques</h4>
+                    <div id="stats-panel">
+                        <div class="row g-2 mb-3">
+                            <div class="col-6">
+                                <div class="stat-card">
+                                    <div id="total-beliefs" class="stat-number">0</div>
+                                    <div class="stat-label">Croyances</div>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="stat-card">
+                                    <div id="total-justifications" class="stat-number">0</div>
+                                    <div class="stat-label">Justifications</div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row g-2">
+                            <div class="col-6">
+                                <div class="stat-card">
+                                    <div id="valid-beliefs" class="stat-number belief-status justified">0</div>
+                                    <div class="stat-label">Validées</div>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="stat-card">
+                                    <div id="invalid-beliefs" class="stat-number belief-status unjustified">0</div>
+                                    <div class="stat-label">Invalides</div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row g-2 mt-2">
+                            <div class="col-6">
+                                <div class="stat-card">
+                                    <div id="unknown-beliefs" class="stat-number belief-status unknown">0</div>
+                                    <div class="stat-label">Inconnues</div>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="stat-card">
+                                    <div id="nonmonotonic-beliefs" class="stat-number belief-status non-monotonic">0</div>
+                                    <div class="stat-label">Non-mon.</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Log d'activité -->
+                <div class="jtms-panel">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h5><i class="fas fa-list-alt"></i> Log d'Activité</h5>
+                        <button class="btn btn-outline-secondary btn-sm" onclick="clearLog()">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                    <div id="activity-log" class="activity-log">
+                        <div class="log-entry">
+                            <span class="log-timestamp">{{ timestamp[:19] if timestamp else '00:00:00' }}</span><br>
+                            <span>🚀 Dashboard JTMS initialisé</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Container pour notifications -->
+    <div class="toast-container">
+        <div id="notification-toast" class="toast" role="alert">
+            <div class="toast-header">
+                <i class="fas fa-bell text-primary me-2"></i>
+                <strong class="me-auto">JTMS</strong>
+                <button type="button" class="btn-close" data-bs-dismiss="toast"></button>
+            </div>
+            <div class="toast-body" id="toast-message">
+                Message de notification
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://kit.fontawesome.com/your-fontawesome-kit.js" crossorigin="anonymous"></script>
+    
+    <!-- Script principal JTMS Dashboard -->
+    <script src="{{ url_for('static', filename='js/jtms_dashboard.js') }}"></script>
+    
+    <script>
+        // Initialisation au chargement de la page
+        document.addEventListener('DOMContentLoaded', function() {
+            // Initialisation du dashboard JTMS
+            window.jtmsDashboard = new JTMSDashboard();
+            
+            // Chargement des données initiales
+            loadInitialData();
+        });
+        
+        function loadInitialData() {
+            const currentSession = document.getElementById('session-select').value;
+            if (window.jtmsDashboard) {
+                window.jtmsDashboard.loadSession(currentSession);
+            }
+        }
+        
+        function showNotification(message, type = 'info') {
+            const toast = document.getElementById('notification-toast');
+            const toastMessage = document.getElementById('toast-message');
+            
+            toastMessage.textContent = message;
+            
+            // Changer la couleur selon le type
+            toast.className = `toast ${type === 'error' ? 'bg-danger text-white' : type === 'success' ? 'bg-success text-white' : ''}`;
+            
+            const bsToast = new bootstrap.Toast(toast);
+            bsToast.show();
+        }
+    </script>
+</body>
+</html>

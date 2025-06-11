@@ -1,0 +1,742 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestion des Sessions JTMS - Intelligence Symbolique EPITA</title>
+    
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/jtms.css') }}">
+    
+    <style>
+        .session-card {
+            transition: all 0.3s ease;
+            border: 1px solid #e9ecef;
+            border-radius: 12px;
+            background: white;
+            overflow: hidden;
+            position: relative;
+        }
+        
+        .session-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+            border-color: #007bff;
+        }
+        
+        .session-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 1.5rem;
+            position: relative;
+        }
+        
+        .session-header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(255,255,255,0.1);
+            backdrop-filter: blur(10px);
+        }
+        
+        .session-header > * {
+            position: relative;
+            z-index: 1;
+        }
+        
+        .session-title {
+            font-size: 1.25rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+        
+        .session-id {
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+            opacity: 0.8;
+            background: rgba(255,255,255,0.2);
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            display: inline-block;
+        }
+        
+        .session-body {
+            padding: 1.5rem;
+        }
+        
+        .session-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+        
+        .stat-item {
+            text-align: center;
+            padding: 1rem;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border: 1px solid #e9ecef;
+        }
+        
+        .stat-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #007bff;
+            margin-bottom: 0.25rem;
+        }
+        
+        .stat-label {
+            font-size: 0.75rem;
+            color: #6c757d;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .session-actions {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+        
+        .session-meta {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            font-size: 0.9rem;
+            color: #6c757d;
+        }
+        
+        .session-status {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            z-index: 2;
+        }
+        
+        .status-badge {
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .status-active {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .status-inactive {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        
+        .status-empty {
+            background: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+        }
+        
+        .create-session-card {
+            border: 2px dashed #dee2e6;
+            background: #f8f9fa;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 300px;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        
+        .create-session-card:hover {
+            border-color: #007bff;
+            background: #e3f2fd;
+            transform: translateY(-2px);
+        }
+        
+        .create-session-content {
+            text-align: center;
+            color: #6c757d;
+        }
+        
+        .create-session-content i {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            color: #007bff;
+        }
+        
+        .bulk-actions {
+            background: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            border: 1px solid #e9ecef;
+        }
+        
+        .session-search {
+            position: relative;
+            margin-bottom: 1.5rem;
+        }
+        
+        .session-search i {
+            position: absolute;
+            left: 1rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #6c757d;
+        }
+        
+        .session-search input {
+            padding-left: 3rem;
+        }
+        
+        .filters {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+        
+        .export-options {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+        
+        @media (max-width: 768px) {
+            .session-stats {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            
+            .session-actions {
+                justify-content: center;
+            }
+            
+            .filters {
+                flex-direction: column;
+                align-items: stretch;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-4">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="{{ url_for('index') }}">
+                <i class="fas fa-brain"></i> Intelligence Symbolique EPITA
+            </a>
+            
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('jtms.dashboard') }}">
+                            <i class="fas fa-tachometer-alt"></i> Dashboard JTMS
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link active" href="{{ url_for('jtms.sessions_management') }}">
+                            <i class="fas fa-layer-group"></i> Sessions
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('jtms.sherlock_watson_interface') }}">
+                            <i class="fas fa-user-secret"></i> Sherlock/Watson
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('jtms.tutorial') }}">
+                            <i class="fas fa-graduation-cap"></i> Tutoriel
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('jtms.playground') }}">
+                            <i class="fas fa-play"></i> Playground
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid">
+        <!-- En-tête de page -->
+        <div class="row mb-4">
+            <div class="col">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h1 class="h2 mb-2">
+                            <i class="fas fa-layer-group text-primary"></i>
+                            Gestion des Sessions JTMS
+                        </h1>
+                        <p class="text-muted mb-0">
+                            Gérez et organisez vos sessions de raisonnement JTMS
+                            <span class="badge bg-secondary ms-2">{{ total_sessions or 0 }} sessions</span>
+                        </p>
+                    </div>
+                    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#newSessionModal">
+                        <i class="fas fa-plus"></i> Nouvelle Session
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Actions groupées et filtres -->
+        <div class="bulk-actions">
+            <div class="row">
+                <div class="col-lg-6">
+                    <div class="session-search">
+                        <i class="fas fa-search"></i>
+                        <input type="text" id="sessionSearch" class="form-control" 
+                               placeholder="Rechercher une session...">
+                    </div>
+                </div>
+                <div class="col-lg-6">
+                    <div class="filters">
+                        <select id="statusFilter" class="form-select">
+                            <option value="">Tous les statuts</option>
+                            <option value="active">Actives</option>
+                            <option value="inactive">Inactives</option>
+                            <option value="empty">Vides</option>
+                        </select>
+                        
+                        <select id="sortBy" class="form-select">
+                            <option value="name">Trier par nom</option>
+                            <option value="created">Date de création</option>
+                            <option value="modified">Dernière modification</option>
+                            <option value="size">Taille</option>
+                        </select>
+                        
+                        <div class="export-options">
+                            <button class="btn btn-outline-secondary" onclick="exportAllSessions()">
+                                <i class="fas fa-download"></i> Exporter
+                            </button>
+                            <button class="btn btn-outline-danger" onclick="cleanupSessions()" 
+                                    title="Supprimer les sessions vides">
+                                <i class="fas fa-broom"></i> Nettoyer
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Grille des sessions -->
+        <div class="row" id="sessionsGrid">
+            <!-- Carte de création de nouvelle session -->
+            <div class="col-lg-4 col-md-6 mb-4">
+                <div class="session-card create-session-card h-100" 
+                     data-bs-toggle="modal" data-bs-target="#newSessionModal">
+                    <div class="create-session-content">
+                        <i class="fas fa-plus-circle"></i>
+                        <h5>Nouvelle Session</h5>
+                        <p class="mb-0">Créer un nouveau workspace JTMS</p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Sessions existantes -->
+            {% for session in sessions %}
+            <div class="col-lg-4 col-md-6 mb-4 session-item" 
+                 data-session-name="{{ session.name | lower }}"
+                 data-session-status="{{ session.status | default('inactive') }}">
+                <div class="session-card h-100">
+                    <div class="session-status">
+                        <span class="status-badge {{ 'status-active' if session.beliefs_count > 0 else 'status-empty' }}">
+                            {{ 'Active' if session.beliefs_count > 0 else 'Vide' }}
+                        </span>
+                    </div>
+                    
+                    <div class="session-header">
+                        <div class="session-title">{{ session.name }}</div>
+                        <div class="session-id">{{ session.session_id }}</div>
+                    </div>
+                    
+                    <div class="session-body">
+                        {% if session.description %}
+                        <div class="session-meta">
+                            <i class="fas fa-info-circle"></i>
+                            {{ session.description }}
+                        </div>
+                        {% endif %}
+                        
+                        <div class="session-stats">
+                            <div class="stat-item">
+                                <div class="stat-value">{{ session.beliefs_count | default(0) }}</div>
+                                <div class="stat-label">Croyances</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-value">{{ session.justifications_count | default(0) }}</div>
+                                <div class="stat-label">Justifications</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-value">{{ session.valid_beliefs | default(0) }}</div>
+                                <div class="stat-label">Valides</div>
+                            </div>
+                        </div>
+                        
+                        <div class="session-meta">
+                            <div class="row">
+                                <div class="col-6">
+                                    <small>
+                                        <i class="fas fa-calendar-plus"></i>
+                                        Créée: {{ session.created_at[:10] if session.created_at else 'N/A' }}
+                                    </small>
+                                </div>
+                                <div class="col-6">
+                                    <small>
+                                        <i class="fas fa-calendar-edit"></i>
+                                        Modifiée: {{ session.last_modified[:10] if session.last_modified else 'N/A' }}
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="session-actions">
+                            <a href="{{ url_for('jtms.dashboard') }}?session={{ session.session_id }}" 
+                               class="btn btn-primary btn-sm">
+                                <i class="fas fa-eye"></i> Ouvrir
+                            </a>
+                            <button class="btn btn-outline-secondary btn-sm" 
+                                    onclick="editSession('{{ session.session_id }}')">
+                                <i class="fas fa-edit"></i> Éditer
+                            </button>
+                            <button class="btn btn-outline-info btn-sm" 
+                                    onclick="duplicateSession('{{ session.session_id }}')">
+                                <i class="fas fa-copy"></i> Dupliquer
+                            </button>
+                            <button class="btn btn-outline-success btn-sm" 
+                                    onclick="exportSession('{{ session.session_id }}')">
+                                <i class="fas fa-download"></i> Export
+                            </button>
+                            <button class="btn btn-outline-danger btn-sm" 
+                                    onclick="deleteSession('{{ session.session_id }}', '{{ session.name }}')">
+                                <i class="fas fa-trash"></i> Supprimer
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        
+        <!-- Message si aucune session -->
+        {% if not sessions %}
+        <div class="text-center py-5" id="emptyState">
+            <i class="fas fa-layer-group fa-4x text-muted mb-4"></i>
+            <h3 class="text-muted">Aucune session trouvée</h3>
+            <p class="text-muted mb-4">Créez votre première session JTMS pour commencer à explorer le raisonnement justifié.</p>
+            <button class="btn btn-primary btn-lg" data-bs-toggle="modal" data-bs-target="#newSessionModal">
+                <i class="fas fa-plus"></i> Créer une Session
+            </button>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Modal Nouvelle Session -->
+    <div class="modal fade" id="newSessionModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="fas fa-plus-circle"></i> Nouvelle Session JTMS
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="newSessionForm">
+                        <div class="mb-3">
+                            <label for="sessionName" class="form-label">
+                                <i class="fas fa-tag"></i> Nom de la session *
+                            </label>
+                            <input type="text" class="form-control" id="sessionName" 
+                                   placeholder="Ex: Enquête Cluedo, Logique Propositionnelle..." required>
+                            <div class="form-text">Le nom affiché de votre session</div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="sessionId" class="form-label">
+                                <i class="fas fa-fingerprint"></i> Identifiant technique
+                            </label>
+                            <input type="text" class="form-control" id="sessionId" 
+                                   placeholder="Généré automatiquement..." readonly>
+                            <div class="form-text">Identifiant unique (généré automatiquement)</div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="sessionDescription" class="form-label">
+                                <i class="fas fa-info-circle"></i> Description
+                            </label>
+                            <textarea class="form-control" id="sessionDescription" rows="3"
+                                      placeholder="Description optionnelle de cette session..."></textarea>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">
+                                <i class="fas fa-cog"></i> Options
+                            </label>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="strictMode">
+                                <label class="form-check-label" for="strictMode">
+                                    Mode strict (validation renforcée)
+                                </label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="autoSave" checked>
+                                <label class="form-check-label" for="autoSave">
+                                    Sauvegarde automatique
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="sessionTemplate" class="form-label">
+                                <i class="fas fa-file-alt"></i> Modèle de départ
+                            </label>
+                            <select class="form-select" id="sessionTemplate">
+                                <option value="">Session vide</option>
+                                <option value="basic_logic">Logique propositionnelle de base</option>
+                                <option value="modal_logic">Logique modale</option>
+                                <option value="cluedo_investigation">Enquête Cluedo</option>
+                                <option value="diagnostic_medical">Diagnostic médical</option>
+                            </select>
+                            <div class="form-text">Choisir un modèle prédéfini (optionnel)</div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        Annuler
+                    </button>
+                    <button type="button" class="btn btn-primary" onclick="createNewSession()">
+                        <i class="fas fa-plus"></i> Créer la Session
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Édition Session -->
+    <div class="modal fade" id="editSessionModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="fas fa-edit"></i> Éditer la Session
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="editSessionForm">
+                        <input type="hidden" id="editSessionId">
+                        <div class="mb-3">
+                            <label for="editSessionName" class="form-label">Nom de la session</label>
+                            <input type="text" class="form-control" id="editSessionName" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="editSessionDescription" class="form-label">Description</label>
+                            <textarea class="form-control" id="editSessionDescription" rows="3"></textarea>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        Annuler
+                    </button>
+                    <button type="button" class="btn btn-primary" onclick="saveSessionEdits()">
+                        <i class="fas fa-save"></i> Sauvegarder
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://kit.fontawesome.com/your-fontawesome-kit.js" crossorigin="anonymous"></script>
+    
+    <script>
+        // Génération automatique d'identifiant de session
+        document.getElementById('sessionName').addEventListener('input', function() {
+            const name = this.value;
+            const id = name.toLowerCase()
+                         .replace(/[^a-z0-9\s]/g, '')
+                         .replace(/\s+/g, '_')
+                         .substring(0, 30);
+            document.getElementById('sessionId').value = id || '';
+        });
+        
+        // Recherche et filtrage des sessions
+        document.getElementById('sessionSearch').addEventListener('input', filterSessions);
+        document.getElementById('statusFilter').addEventListener('change', filterSessions);
+        document.getElementById('sortBy').addEventListener('change', sortSessions);
+        
+        function filterSessions() {
+            const searchTerm = document.getElementById('sessionSearch').value.toLowerCase();
+            const statusFilter = document.getElementById('statusFilter').value;
+            const sessionItems = document.querySelectorAll('.session-item');
+            
+            sessionItems.forEach(item => {
+                const sessionName = item.dataset.sessionName;
+                const sessionStatus = item.dataset.sessionStatus;
+                
+                const matchesSearch = sessionName.includes(searchTerm);
+                const matchesStatus = !statusFilter || sessionStatus === statusFilter;
+                
+                item.style.display = (matchesSearch && matchesStatus) ? 'block' : 'none';
+            });
+        }
+        
+        function sortSessions() {
+            const sortBy = document.getElementById('sortBy').value;
+            const grid = document.getElementById('sessionsGrid');
+            const items = Array.from(document.querySelectorAll('.session-item'));
+            
+            items.sort((a, b) => {
+                // Logique de tri selon le critère sélectionné
+                // (Simplifié pour la démo)
+                const aText = a.querySelector('.session-title').textContent;
+                const bText = b.querySelector('.session-title').textContent;
+                return aText.localeCompare(bText);
+            });
+            
+            // Réorganiser les éléments
+            const createCard = document.querySelector('.create-session-card').parentElement;
+            grid.appendChild(createCard);
+            items.forEach(item => grid.appendChild(item));
+        }
+        
+        // Création de nouvelle session
+        async function createNewSession() {
+            const form = document.getElementById('newSessionForm');
+            const formData = new FormData(form);
+            
+            const sessionData = {
+                session_id: document.getElementById('sessionId').value,
+                name: document.getElementById('sessionName').value,
+                description: document.getElementById('sessionDescription').value,
+                strict_mode: document.getElementById('strictMode').checked,
+                template: document.getElementById('sessionTemplate').value
+            };
+            
+            try {
+                const response = await fetch('/jtms/api/sessions', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(sessionData)
+                });
+                
+                if (response.ok) {
+                    const result = await response.json();
+                    
+                    // Fermer le modal
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('newSessionModal'));
+                    modal.hide();
+                    
+                    // Rediriger vers la nouvelle session
+                    window.location.href = `/jtms/dashboard?session=${result.session_id}`;
+                } else {
+                    const error = await response.json();
+                    alert(`Erreur: ${error.error}`);
+                }
+            } catch (error) {
+                console.error('Erreur création session:', error);
+                alert('Erreur lors de la création de la session');
+            }
+        }
+        
+        // Édition de session
+        function editSession(sessionId) {
+            // Charger les données de la session et afficher le modal d'édition
+            document.getElementById('editSessionId').value = sessionId;
+            const modal = new bootstrap.Modal(document.getElementById('editSessionModal'));
+            modal.show();
+        }
+        
+        // Duplication de session
+        async function duplicateSession(sessionId) {
+            if (confirm('Dupliquer cette session ?')) {
+                try {
+                    const response = await fetch(`/jtms/api/sessions/${sessionId}/duplicate`, {
+                        method: 'POST'
+                    });
+                    
+                    if (response.ok) {
+                        location.reload();
+                    }
+                } catch (error) {
+                    console.error('Erreur duplication:', error);
+                    alert('Erreur lors de la duplication');
+                }
+            }
+        }
+        
+        // Export de session
+        function exportSession(sessionId) {
+            window.open(`/jtms/api/session/${sessionId}`, '_blank');
+        }
+        
+        // Suppression de session
+        async function deleteSession(sessionId, sessionName) {
+            const confirmMessage = `Êtes-vous sûr de vouloir supprimer la session "${sessionName}" ?\n\nCette action est irréversible.`;
+            
+            if (confirm(confirmMessage)) {
+                try {
+                    const response = await fetch(`/jtms/api/sessions/${sessionId}`, {
+                        method: 'DELETE'
+                    });
+                    
+                    if (response.ok) {
+                        location.reload();
+                    } else {
+                        alert('Erreur lors de la suppression');
+                    }
+                } catch (error) {
+                    console.error('Erreur suppression:', error);
+                    alert('Erreur lors de la suppression');
+                }
+            }
+        }
+        
+        // Export de toutes les sessions
+        function exportAllSessions() {
+            window.open('/jtms/api/sessions/export', '_blank');
+        }
+        
+        // Nettoyage des sessions vides
+        async function cleanupSessions() {
+            if (confirm('Supprimer toutes les sessions vides ?')) {
+                try {
+                    const response = await fetch('/jtms/api/sessions/cleanup', {
+                        method: 'POST'
+                    });
+                    
+                    if (response.ok) {
+                        location.reload();
+                    }
+                } catch (error) {
+                    console.error('Erreur nettoyage:', error);
+                    alert('Erreur lors du nettoyage');
+                }
+            }
+        }
+        
+        console.log('📂 Interface de gestion des sessions JTMS chargée');
+    </script>
+</body>
+</html>
