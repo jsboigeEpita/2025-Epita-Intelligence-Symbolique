@@ -118,6 +118,10 @@ class PlaywrightRunner:
         env_vars = {
             'BACKEND_URL': config['backend_url'],
             'FRONTEND_URL': config['frontend_url'],
+            # PLAYWRIGHT_BASE_URL est utilisée par playwright.config.js pour les tests .spec.js
+            # On utilise backend_url par défaut, car c'est souvent la cible principale des tests d'interface.
+            # Si le frontend est sur un port différent et est la cible, ajuster ici ou via runtime_config.
+            'PLAYWRIGHT_BASE_URL': config.get('frontend_url') or config['backend_url'],
             'HEADLESS': str(config['headless']).lower(),
             'BROWSER': config['browser'],
             'SCREENSHOTS_DIR': str(self.screenshots_dir),
