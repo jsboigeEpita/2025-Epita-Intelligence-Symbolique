@@ -53,24 +53,28 @@ try {
     
     # Tentative d'activation conda
     try {
-        $CondaEnvs = & conda env list 2>$null | Where-Object { $_ -match "oracle|argum|intelligence|projet-is" }
-        if ($CondaEnvs) {
-            $EnvName = ($CondaEnvs[0] -split '\s+')[0]
-            Write-Host "✅ [CONDA] Activation environnement dédié: $EnvName" -ForegroundColor Green
-            & conda activate $EnvName 2>$null
+        # Trouver l'executable conda
+        $CondaExe = Get-Command conda -ErrorAction SilentlyContinue
+        if (!$CondaExe) {
+            # Chercher dans les chemins courants si ce n'est pas dans le PATH
+            $CondaPaths = @(
+                "$env:USERPROFILE\Miniconda3\Scripts\conda.exe",
+                "$env:USERPROFILE\Anaconda3\Scripts\conda.exe",
+                "C:\ProgramData\Miniconda3\Scripts\conda.exe",
+                "C:\ProgramData\Anaconda3\Scripts\conda.exe"
+            )
+            $CondaExe = $CondaPaths | Where-Object { Test-Path $_ } | Select-Object -First 1
+        }
+        
+        if ($CondaExe) {
+            $EnvName = "projet-is"
+            Write-Host "✅ [CONDA] Utilisation de l'environnement '$EnvName'" -ForegroundColor Green
             $CondaActivated = $true
-            
-            # Vérifier si c'est l'environnement recommandé
-            if ($EnvName -eq "projet-is") {
-                Write-Host "🎯 [OPTIMAL] Environnement recommandé 'projet-is' actif!" -ForegroundColor Green
-            } else {
-                Write-Host "⚠️  [ATTENTION] Environnement '$EnvName' (recommandé: 'projet-is')" -ForegroundColor Yellow
-            }
         } else {
-            Write-Host "[CONDA] Aucun environnement projet trouve (oracle|argum|intelligence|projet-is)" -ForegroundColor Yellow
+            Write-Host "[ATTENTION] Conda non trouvé." -ForegroundColor Yellow
         }
     } catch {
-        Write-Host "[ATTENTION] Conda non disponible, tentative venv..." -ForegroundColor Yellow
+        Write-Host "[ATTENTION] Erreur lors de la recherche de Conda: $($_.Exception.Message)" -ForegroundColor Red
     }
     
     # Tentative d'activation venv si conda echoue
@@ -126,11 +130,20 @@ try {
     $Arguments = if ($CommandParts.Length -gt 1) { $CommandParts[1] } else { "" }
     
     # Executer la commande
-    if ($Arguments) {
-        $ArgumentList = $Arguments -split ' '
-        & $Command $ArgumentList
+    if ($CondaActivated) {
+        $CommandParts = $CommandToRun.Split(' ', 2)
+        $Command = $CommandParts[0]
+        $Arguments = if ($CommandParts.Length -gt 1) { $CommandParts[1] } else { "" }
+        $condaRunCommand = "conda run -n $EnvName --no-capture-output $Command $Arguments"
+        Write-Host "[INFO] Commande CONDA: $condaRunCommand" -ForegroundColor Gray
+        Invoke-Expression $condaRunCommand
     } else {
-        & $Command
+         if ($Arguments) {
+            $ArgumentList = $Arguments -split ' '
+            & $Command $ArgumentList
+        } else {
+            & $Command
+        }
     }
     
     $ExitCode = $LASTEXITCODE
