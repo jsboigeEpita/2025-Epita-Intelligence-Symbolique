@@ -175,7 +175,7 @@ def save_embeddings_data(embeddings_data: Dict[str, Any], output_path: Path) -> 
             # `indent=4` formate le JSON pour une meilleure lisibilité.
             json.dump(embeddings_data, f, ensure_ascii=False, indent=4)
         
-        logger.info(f"✅ Données d'embeddings sauvegardées avec succès dans {output_path}")
+        logger.info(f"[OK] Données d'embeddings sauvegardées avec succès dans {output_path}")
         return True
     except IOError as e: # Gestion spécifique des erreurs d'entrée/sortie
         logger.error(f"❌ Erreur d'E/S lors de la sauvegarde des embeddings dans {output_path}: {e}", exc_info=True)

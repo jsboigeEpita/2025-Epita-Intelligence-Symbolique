@@ -51,7 +51,7 @@ def load_results_from_json(file_path: Path) -> List[Dict[str, Any]]:
             logger.warning(f"Les données dans {file_path} ne sont pas une liste JSON. Type trouvé: {type(results)}. Retourne une liste vide.")
             return []
             
-        logger.info(f"✅ {len(results)} résultats chargés avec succès depuis {file_path}")
+        logger.info(f"[OK] {len(results)} résultats chargés avec succès depuis {file_path}")
         return results
     except json.JSONDecodeError as e:
         logger.error(f"Erreur de décodage JSON dans {file_path}: {e}")

@@ -1,0 +1,45 @@
+backend:
+  enabled: true
+  env_activation: powershell -File scripts/env/activate_project_env.ps1
+  fallback_ports:
+  - 8001
+  - 8002
+  - 8003
+  health_endpoint: /api/health
+  max_attempts: 5
+  module: argumentation_analysis.services.web_api.app:app
+  start_port: 8000
+  timeout_seconds: 30
+cleanup:
+  auto_cleanup: true
+  kill_processes:
+  - python*
+  - node*
+  process_filters:
+  - app.py
+  - web_api
+  - serve
+frontend:
+  enabled: true
+  path: services/web_api/interface-web-argumentative
+  port: 3000
+  start_command: npm start
+  timeout_seconds: 90
+logging:
+  file: logs/webapp_orchestrator.log
+  format: '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+  level: INFO
+playwright:
+  browser: chromium
+  enabled: true
+  headless: true
+  screenshots_dir: logs/screenshots
+  slow_timeout_ms: 20000
+  test_paths:
+  - tests_playwright/tests/
+  timeout_ms: 10000
+  traces_dir: logs/traces
+webapp:
+  environment: development
+  name: Argumentation Analysis Web App
+  version: 1.0.0

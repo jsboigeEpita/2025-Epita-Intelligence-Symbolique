@@ -70,6 +70,9 @@ class BeliefSet(ABC):
                  ou `ModalBeliefSet`, ou None si `logic_type` n'est pas supporté.
         :rtype: Optional[BeliefSet]
         """
+        if data is None:
+            return None
+            
         logic_type = data.get("logic_type", "").lower()
         content = data.get("content", "")
         

@@ -1,0 +1,19 @@
+{
+  "success": false,
+  "return_code": 4294770688,
+  "stats": {
+    "total": 0,
+    "passed": 0,
+    "failed": 0,
+    "skipped": 0,
+    "errors": 0,
+    "duration": 0.0
+  },
+  "stdout_lines": 6,
+  "stderr_lines": 2,
+  "artifacts": {
+    "screenshots": [],
+    "traces": [],
+    "videos": []
+  }
+}

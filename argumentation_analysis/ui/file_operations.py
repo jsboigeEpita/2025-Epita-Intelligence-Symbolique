@@ -1,68 +1,29 @@
-"""
-Opérations sur les fichiers pour l'interface utilisateur (UI) de l'analyse d'argumentation.
-
-Ce module fournit des fonctions pour charger et sauvegarder les définitions d'extraits,
-en gérant le chiffrement, la décompression et la validation de base du format.
-Il interagit avec les modules de configuration et les services de cryptographie.
-"""
-from typing import Optional, Union, List, Dict, Any
 # argumentation_analysis/ui/file_operations.py
+from typing import Optional, Union, List, Dict, Any
 import json
 import gzip
 import logging
-import base64 # NOUVEAU: Pour décoder la clé b64 en clé Fernet
+import base64 
 from pathlib import Path
-from typing import Optional, List, Dict, Any
-from cryptography.fernet import InvalidToken # NÉCESSAIRE pour lever l'exception
-# cryptography.fernet et exceptions sont maintenant gérés dans project_core.utils.crypto_utils
-# et les fonctions encrypt/decrypt sont importées depuis là.
-# from cryptography.fernet import Fernet, InvalidToken # SUPPRIMÉ
-# from cryptography.exceptions import InvalidSignature # SUPPRIMÉ
+# from typing import Optional, List, Dict, Any # Redondant avec la première ligne
+from cryptography.fernet import InvalidToken 
 
-# Importer les éléments nécessaires depuis config et utils
-# Attention à ne pas recréer de cycle.
-# On importe 'config as ui_config_module' pour accéder aux constantes.
 from . import config as ui_config_module
-# On importe les fonctions de utils qui ne dépendent pas de config de manière cyclique.
-# encrypt_data et decrypt_data sont maintenant importées depuis project_core
-from .utils import get_full_text_for_source, utils_logger # utils_logger est déjà configuré dans utils.py
-from project_core.utils.crypto_utils import encrypt_data_with_fernet, decrypt_data_with_fernet # NOUVEAU
+from .utils import get_full_text_for_source, utils_logger 
+from argumentation_analysis.utils.core_utils.crypto_utils import encrypt_data_with_fernet, decrypt_data_with_fernet
 
-# Logger spécifique pour les opérations sur fichiers si besoin, ou utiliser utils_logger
-file_ops_logger = utils_logger # Ou logging.getLogger("App.UI.FileOps")
+file_ops_logger = utils_logger
 
 
 def load_extract_definitions(
     config_file: Path,
-    b64_derived_key: Optional[str], # MODIFIÉ: La clé reçue est la chaîne b64 dérivée, rendue optionnelle
-    # app_config est utilisé par get_full_text_for_source, mais load_extract_definitions
-    # lui-même ne l'utilise pas directement pour le chargement/déchiffrement.
-    # Cependant, si on voulait que load_extract_definitions peuple les full_text au chargement,
-    # il faudrait le passer. Pour l'instant, on le garde optionnel et non utilisé ici.
-    app_config: Optional[Dict[str, Any]] = None
-) -> List[Dict[str, Any]]:
-    """Charge, déchiffre (si clé fournie) et décompresse les définitions d'extraits.
-
-    Tente de charger depuis `config_file`. Si `b64_derived_key` est fournie,
-    tente de déchiffrer et décompresser. Sinon, tente de lire comme JSON simple.
-    Utilise `ui_config_module.DEFAULT_EXTRACT_SOURCES` comme fallback en cas d'erreur.
-
-    :param config_file: Chemin vers le fichier de configuration.
-    :type config_file: Path
-    :param b64_derived_key: La clé de chiffrement dérivée, encodée en base64 URL-safe.
-                            Si None, le fichier est traité comme du JSON non chiffré.
-    :type b64_derived_key: Optional[str]
-    :param app_config: Configuration de l'application (non utilisée directement ici,
-                       mais potentiellement par des fonctions appelées).
-    :type app_config: Optional[Dict[str, Any]]
-    :return: Une liste de dictionnaires représentant les définitions d'extraits.
-             Retourne les définitions par défaut en cas d'échec de chargement/déchiffrement.
-    :rtype: List[Dict[str, Any]]
-    :raises InvalidToken: Si le déchiffrement échoue avec un token invalide (peut être
-                          levée par `decrypt_data_with_fernet` si non attrapée là).
-    :raises json.JSONDecodeError: Si le fichier traité comme JSON simple est malformé.
-    """
-    fallback_definitions = ui_config_module.EXTRACT_SOURCES if ui_config_module.EXTRACT_SOURCES else ui_config_module.DEFAULT_EXTRACT_SOURCES
+    b64_derived_key: Optional[str], 
+    app_config: Optional[Dict[str, Any]] = None 
+) -> list:
+    """Charge, déchiffre et décompresse les définitions depuis le fichier chiffré."""
+    # Utiliser uniquement DEFAULT_EXTRACT_SOURCES comme fallback pour éviter le cycle avec EXTRACT_SOURCES
+    # qui est en cours de définition par l'appelant (config.py)
+    fallback_definitions = ui_config_module.DEFAULT_EXTRACT_SOURCES
 
     if not config_file.exists():
         file_ops_logger.info(f"Fichier config '{config_file}' non trouvé. Utilisation définitions par défaut.")
@@ -76,15 +37,15 @@ def load_extract_definitions(
             
             if not decrypted_compressed_data: # decrypt_data_with_fernet retourne None en cas d'InvalidToken ou autre erreur de déchiffrement
                 file_ops_logger.warning(f"⚠️ Échec du déchiffrement pour '{config_file}' (decrypt_data_with_fernet a retourné None). Utilisation des définitions par défaut.")
-                return [item.copy() for item in fallback_definitions] # MODIFIÉ: Retourner fallback au lieu de lever
+                return [item.copy() for item in fallback_definitions]
             
             decompressed_data = gzip.decompress(decrypted_compressed_data)
             definitions = json.loads(decompressed_data.decode('utf-8'))
-            file_ops_logger.info("✅ Définitions chargées et déchiffrées.")
+            file_ops_logger.info("[OK] Définitions chargées et déchiffrées.")
 
-        except InvalidToken: # Attrapé si decrypt_data_with_fernet lève InvalidToken (par ex. mock avec side_effect)
+        except InvalidToken: 
             file_ops_logger.error(f"❌ InvalidToken explicitement levée lors du déchiffrement de '{config_file}'. Utilisation définitions par défaut.", exc_info=True)
-            return [item.copy() for item in fallback_definitions] # MODIFIÉ: Retourner fallback
+            return [item.copy() for item in fallback_definitions]
         except Exception as e:
             file_ops_logger.error(f"❌ Erreur chargement/déchiffrement '{config_file}': {e}. Utilisation définitions par défaut.", exc_info=True)
             return [item.copy() for item in fallback_definitions]
@@ -94,7 +55,7 @@ def load_extract_definitions(
         try:
             with open(config_file, 'r', encoding='utf-8') as f:
                 definitions = json.load(f)
-            file_ops_logger.info(f"✅ Définitions chargées comme JSON simple depuis '{config_file}'.")
+            file_ops_logger.info(f"[OK] Définitions chargées comme JSON simple depuis '{config_file}'.")
         
         except json.JSONDecodeError as e_json:
             file_ops_logger.error(f"❌ Erreur décodage JSON pour '{config_file}': {e_json}. L'exception sera relancée.", exc_info=False)
@@ -119,33 +80,14 @@ def load_extract_definitions(
 def save_extract_definitions(
     extract_definitions: List[Dict[str, Any]],
     config_file: Path,
-    b64_derived_key: Optional[Union[str, bytes]], # MODIFIÉ: Accepte str, bytes ou None
+    b64_derived_key: Optional[Union[str, bytes]], 
     embed_full_text: bool = False,
-    config: Optional[Dict[str, Any]] = None # 'config' est le app_config passé à get_full_text_for_source
+    config: Optional[Dict[str, Any]] = None 
 ) -> bool:
-    """Sauvegarde les définitions d'extraits, en les compressant et chiffrant si une clé est fournie.
-
-    Peut optionnellement récupérer et embarquer le texte complet des sources avant la sauvegarde.
-
-    :param extract_definitions: La liste des définitions d'extraits à sauvegarder.
-    :type extract_definitions: List[Dict[str, Any]]
-    :param config_file: Chemin vers le fichier de configuration de sortie.
-    :type config_file: Path
-    :param b64_derived_key: La clé de chiffrement dérivée, encodée en base64 URL-safe.
-                            Si None ou vide, la sauvegarde chiffrée est annulée.
-    :type b64_derived_key: Optional[Union[str, bytes]]
-    :param embed_full_text: Si True, tente de récupérer et d'inclure le `full_text`
-                            pour chaque source avant la sauvegarde. Par défaut à False.
-    :type embed_full_text: bool
-    :param config: Configuration de l'application, passée à `get_full_text_for_source`
-                   si `embed_full_text` est True.
-    :type config: Optional[Dict[str, Any]]
-    :return: True si la sauvegarde (potentiellement chiffrée) a réussi, False sinon.
-    :rtype: bool
-    :raises ValueError: Si le chiffrement échoue après la compression des données
-                        (par exemple, `encrypt_data_with_fernet` retourne None).
+    """Sauvegarde, compresse et chiffre les définitions dans le fichier.
+    Peut optionnellement embarquer le texte complet des sources.
     """
-    if not b64_derived_key: # Vérifie si la clé est None ou une chaîne/bytes vide
+    if not b64_derived_key: 
         file_ops_logger.error("Clé chiffrement (b64_derived_key) absente ou vide. Sauvegarde annulée.")
         return False
     if not isinstance(extract_definitions, list):
@@ -154,14 +96,12 @@ def save_extract_definitions(
 
     file_ops_logger.info(f"Préparation sauvegarde vers '{config_file}'...")
 
-    # Copie profonde pour éviter de modifier la liste originale en dehors de cette fonction
-    # lors du traitement de embed_full_text
     definitions_to_process = [dict(d) for d in extract_definitions]
 
 
     if embed_full_text:
         file_ops_logger.info("Option embed_full_text activée. Tentative de récupération des textes complets manquants...")
-        for source_info in definitions_to_process: # Utiliser la copie
+        for source_info in definitions_to_process: 
             if not isinstance(source_info, dict):
                 file_ops_logger.warning(f"Élément non-dictionnaire ignoré dans extract_definitions: {type(source_info)}")
                 continue
@@ -171,7 +111,6 @@ def save_extract_definitions(
                 source_name = source_info.get('source_name', 'Source inconnue')
                 file_ops_logger.info(f"Texte complet manquant pour '{source_name}'. Récupération...")
                 try:
-                    # Utilise get_full_text_for_source de utils.py
                     retrieved_text = get_full_text_for_source(source_info, app_config=config)
                     if retrieved_text is not None:
                         source_info["full_text"] = retrieved_text
@@ -187,7 +126,7 @@ def save_extract_definitions(
                     source_info["full_text"] = None
     else:
         file_ops_logger.info("Option embed_full_text désactivée. Suppression des textes complets des définitions...")
-        for source_info in definitions_to_process: # Utiliser la copie
+        for source_info in definitions_to_process: 
             if not isinstance(source_info, dict):
                 continue
             if "full_text" in source_info:
@@ -195,19 +134,16 @@ def save_extract_definitions(
                 file_ops_logger.debug(f"Champ 'full_text' retiré pour '{source_info.get('source_name', 'Source inconnue')}'.")
 
     try:
-        # actual_fernet_key = base64.urlsafe_b64decode(b64_derived_key.encode('utf-8')) # SUPPRIMÉ: La fonction attend la str b64
-        json_data = json.dumps(definitions_to_process, indent=2, ensure_ascii=False).encode('utf-8') # Utiliser la copie traitée
+        json_data = json.dumps(definitions_to_process, indent=2, ensure_ascii=False).encode('utf-8')
         compressed_data = gzip.compress(json_data)
-        # MODIFIÉ: Utilisation de encrypt_data_with_fernet avec la clé b64_derived_key (str)
         encrypted_data_to_save = encrypt_data_with_fernet(compressed_data, b64_derived_key)
         if not encrypted_data_to_save:
-            # encrypt_data_with_fernet logge déjà l'erreur
             raise ValueError("Échec du chiffrement des données (encrypt_data_with_fernet a retourné None).")
 
         config_file.parent.mkdir(parents=True, exist_ok=True)
         with open(config_file, 'wb') as f:
             f.write(encrypted_data_to_save)
-        file_ops_logger.info(f"✅ Définitions sauvegardées dans '{config_file}'.")
+        file_ops_logger.info(f"[OK] Définitions sauvegardées dans '{config_file}'.")
         return True
     except Exception as e:
         file_ops_logger.error(f"❌ Erreur lors de la sauvegarde chiffrée vers '{config_file}': {e}", exc_info=True)

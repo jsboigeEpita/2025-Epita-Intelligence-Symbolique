@@ -20,7 +20,7 @@ class ChannelType(enum.Enum):
     """Types de canaux supportés par le système."""
     HIERARCHICAL = "hierarchical"
     COLLABORATION = "collaboration"
-    DATA = DATA_DIR 
+    DATA = "data"
     NEGOTIATION = "negotiation"
     FEEDBACK = "feedback"
     SYSTEM = "system"

@@ -1,0 +1,276 @@
+{
+  "metadata": {
+    "timestamp": "2025-06-10T11:48:58.260346",
+    "mode": "basic",
+    "complexity": "simple",
+    "synthetic_enabled": false,
+    "version": "2.0"
+  },
+  "components": {
+    "Scripts EPITA": {
+      "tests": [
+        {
+          "name": "demonstration_epita.py",
+          "status": "SUCCESS",
+          "details": "2/2 modes valides",
+          "timestamp": "2025-06-10T11:49:23.157377",
+          "execution_time": 24.895991563796997,
+          "authenticity_score": 1.0
+        },
+        {
+          "name": "module_custom_data_processor",
+          "status": "SUCCESS",
+          "details": "Module importé avec succès",
+          "timestamp": "2025-06-10T11:49:23.196772",
+          "execution_time": 0.03939533233642578,
+          "authenticity_score": 0.8
+        },
+        {
+          "name": "module_demo_agents_logiques",
+          "status": "SUCCESS",
+          "details": "Module importé avec succès",
+          "timestamp": "2025-06-10T11:49:23.260267",
+          "execution_time": 0.06349468231201172,
+          "authenticity_score": 0.8
+        },
+        {
+          "name": "module_demo_cas_usage",
+          "status": "FAILED",
+          "details": "Erreur importation: Traceback (most recent call last):\n  File \"<string>\", line 1, in <module>\n  File \"D:\\2025-Epita-Inte",
+          "timestamp": "2025-06-10T11:49:23.296282",
+          "execution_time": 0.03601503372192383,
+          "authenticity_score": 0.0
+        },
+        {
+          "name": "module_demo_integrations",
+          "status": "FAILED",
+          "details": "Erreur importation: Traceback (most recent call last):\n  File \"<string>\", line 1, in <module>\n  File \"D:\\2025-Epita-Inte",
+          "timestamp": "2025-06-10T11:49:23.332790",
+          "execution_time": 0.03650808334350586,
+          "authenticity_score": 0.0
+        },
+        {
+          "name": "module_demo_outils_utils",
+          "status": "FAILED",
+          "details": "Erreur importation: Traceback (most recent call last):\n  File \"<string>\", line 1, in <module>\n  File \"D:\\2025-Epita-Inte",
+          "timestamp": "2025-06-10T11:49:23.369300",
+          "execution_time": 0.03650999069213867,
+          "authenticity_score": 0.0
+        },
+        {
+          "name": "module_demo_services_core",
+          "status": "FAILED",
+          "details": "Erreur importation: Traceback (most recent call last):\n  File \"<string>\", line 1, in <module>\n  File \"D:\\2025-Epita-Inte",
+          "timestamp": "2025-06-10T11:49:23.404346",
+          "execution_time": 0.03504657745361328,
+          "authenticity_score": 0.0
+        },
+        {
+          "name": "module_demo_tests_validation",
+          "status": "FAILED",
+          "details": "Erreur importation: Traceback (most recent call last):\n  File \"<string>\", line 1, in <module>\n  File \"D:\\2025-Epita-Inte",
+          "timestamp": "2025-06-10T11:49:23.442862",
+          "execution_time": 0.038515567779541016,
+          "authenticity_score": 0.0
+        },
+        {
+          "name": "module_demo_utils",
+          "status": "SUCCESS",
+          "details": "Module importé avec succès",
+          "timestamp": "2025-06-10T11:49:23.504884",
+          "execution_time": 0.061022281646728516,
+          "authenticity_score": 0.8
+        },
+        {
+          "name": "module_test_elimination_mocks_validation",
+          "status": "SUCCESS",
+          "details": "Module importé avec succès",
+          "timestamp": "2025-06-10T11:49:23.545477",
+          "execution_time": 0.04059267044067383,
+          "authenticity_score": 0.8
+        },
+        {
+          "name": "module_test_final_validation_ascii",
+          "status": "SUCCESS",
+          "details": "Module importé avec succès",
+          "timestamp": "2025-06-10T11:49:23.583987",
+          "execution_time": 0.03851056098937988,
+          "authenticity_score": 0.8
+        }
+      ],
+      "score": 150,
+      "status": "PENDING",
+      "total_execution_time": 25.32160234451294,
+      "average_authenticity": 0.45454545454545453
+    },
+    "ServiceManager": {
+      "tests": [
+        {
+          "name": "import_test",
+          "status": "SUCCESS",
+          "details": "Import réussi",
+          "timestamp": "2025-06-10T11:49:25.343888",
+          "execution_time": 1.7599005699157715,
+          "authenticity_score": 0.9
+        }
+      ],
+      "score": 25,
+      "status": "PENDING",
+      "total_execution_time": 1.7599005699157715,
+      "average_authenticity": 0.9
+    },
+    "Interface Web": {
+      "tests": [
+        {
+          "name": "app.py",
+          "status": "SUCCESS",
+          "details": "Fichier trouvé: D:\\2025-Epita-Intelligence-Symbolique\\interface_web\\app.py",
+          "timestamp": "2025-06-10T11:49:25.343888",
+          "execution_time": 0.01,
+          "authenticity_score": 0.6
+        },
+        {
+          "name": "index.html",
+          "status": "SUCCESS",
+          "details": "Fichier trouvé: D:\\2025-Epita-Intelligence-Symbolique\\interface_web\\templates\\index.html",
+          "timestamp": "2025-06-10T11:49:25.343888",
+          "execution_time": 0.01,
+          "authenticity_score": 0.6
+        }
+      ],
+      "score": 50,
+      "status": "PENDING",
+      "total_execution_time": 0.02,
+      "average_authenticity": 0.6
+    },
+    "Tests Playwright": {
+      "tests": [
+        {
+          "name": "test_api_interactions.py",
+          "status": "SUCCESS",
+          "details": "Syntaxe valide",
+          "timestamp": "2025-06-10T11:49:25.388452",
+          "execution_time": 0.043569087982177734,
+          "authenticity_score": 0.7
+        },
+        {
+          "name": "test_playwright_setup.py",
+          "status": "SUCCESS",
+          "details": "Syntaxe valide",
+          "timestamp": "2025-06-10T11:49:25.427519",
+          "execution_time": 0.03906750679016113,
+          "authenticity_score": 0.7
+        },
+        {
+          "name": "test_playwright_setup_fixed.py",
+          "status": "SUCCESS",
+          "details": "Syntaxe valide",
+          "timestamp": "2025-06-10T11:49:25.468035",
+          "execution_time": 0.04051518440246582,
+          "authenticity_score": 0.7
+        },
+        {
+          "name": "test_react_webapp_full.py",
+          "status": "SUCCESS",
+          "details": "Syntaxe valide",
+          "timestamp": "2025-06-10T11:49:25.512245",
+          "execution_time": 0.04421067237854004,
+          "authenticity_score": 0.7
+        },
+        {
+          "name": "test_webapp_interface_demo.py",
+          "status": "SUCCESS",
+          "details": "Syntaxe valide",
+          "timestamp": "2025-06-10T11:49:25.556755",
+          "execution_time": 0.0445096492767334,
+          "authenticity_score": 0.7
+        }
+      ],
+      "score": 125,
+      "status": "PENDING",
+      "total_execution_time": 0.21187210083007812,
+      "average_authenticity": 0.7
+    },
+    "Système Unifié": {
+      "tests": [
+        {
+          "name": "service_manager",
+          "status": "SUCCESS",
+          "details": "Module disponible",
+          "timestamp": "2025-06-10T11:49:27.298854",
+          "execution_time": 1.7420990467071533,
+          "authenticity_score": 0.8
+        },
+        {
+          "name": "first_order_logic_agent",
+          "status": "FAILED",
+          "details": "Import échoué: C:\\Users\\MYIA\\AppData\\Roaming\\Python\\Python39\\site-packages\\pydantic\\_internal\\_config.py:341: UserW",
+          "timestamp": "2025-06-10T11:49:28.859757",
+          "execution_time": 1.5609025955200195,
+          "authenticity_score": 0.0
+        },
+        {
+          "name": "fallacy_detection_agent",
+          "status": "FAILED",
+          "details": "Import échoué: C:\\Users\\MYIA\\AppData\\Roaming\\Python\\Python39\\site-packages\\pydantic\\_internal\\_config.py:341: UserW",
+          "timestamp": "2025-06-10T11:49:30.427880",
+          "execution_time": 1.5681235790252686,
+          "authenticity_score": 0.0
+        }
+      ],
+      "score": 25,
+      "status": "PENDING",
+      "total_execution_time": 4.871125221252441,
+      "average_authenticity": 0.26666666666666666
+    },
+    "Intégration Complète": {
+      "tests": [
+        {
+          "name": "integration_test",
+          "status": "SUCCESS",
+          "details": "Test d'intégration réussi",
+          "timestamp": "2025-06-10T11:49:32.183845",
+          "execution_time": 1.7559645175933838,
+          "authenticity_score": 0.95
+        }
+      ],
+      "score": 25,
+      "status": "PENDING",
+      "total_execution_time": 1.7559645175933838,
+      "average_authenticity": 0.95
+    }
+  },
+  "score": 400,
+  "max_score": 575,
+  "certification": "VALIDATION_PARTIELLE",
+  "performance_metrics": {
+    "total_execution_time": 33.94046475410461,
+    "total_tests": 23,
+    "avg_time_per_test": 1.475672380613244,
+    "components_count": 6
+  },
+  "authenticity_scores": {
+    "global_authenticity": 0.6452020202020202,
+    "by_component": {
+      "Scripts EPITA": 0.45454545454545453,
+      "ServiceManager": 0.9,
+      "Interface Web": 0.6,
+      "Tests Playwright": 0.7,
+      "Système Unifié": 0.26666666666666666,
+      "Intégration Complète": 0.95
+    }
+  },
+  "score_percentage": 69.56521739130434,
+  "enhanced_metrics": {
+    "execution_profile": {
+      "fastest_component": "Interface Web",
+      "slowest_component": "Scripts EPITA",
+      "most_authentic_component": "Intégration Complète"
+    },
+    "quality_indicators": {
+      "test_coverage": 6,
+      "authenticity_variance": 0.05708480002040608,
+      "performance_efficiency": 0.6776571908084577
+    }
+  }
+}

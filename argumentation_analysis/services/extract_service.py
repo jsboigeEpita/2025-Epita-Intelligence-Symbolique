@@ -16,13 +16,13 @@ import os
 from pathlib import Path
 
 # Ajouter le répertoire parent au chemin de recherche des modules
-current_dir = Path(__file__).parent
-parent_dir = current_dir.parent
-if str(parent_dir) not in sys.path:
-    sys.path.insert(0, str(parent_dir))
+# current_dir = Path(__file__).parent # Commenté car start_api.py devrait gérer sys.path
+# parent_dir = current_dir.parent
+# if str(parent_dir) not in sys.path:
+#     sys.path.insert(0, str(parent_dir))
 
-from models.extract_result import ExtractResult
-from models.extract_definition import Extract, SourceDefinition, ExtractDefinitions
+# Correction des imports pour pointer vers le bon emplacement des modèles
+from argumentation_analysis.models.extract_definition import ExtractResult, Extract, SourceDefinition, ExtractDefinitions
 
 # Configuration du logging
 logger = logging.getLogger("Services.ExtractService")
@@ -111,7 +111,7 @@ class ExtractService:
             if not end_found:
                 status += "⚠️ Marqueur fin non trouvé. "
             if start_found and end_found:
-                status = "✅ Extraction réussie"
+                status = "[OK] Extraction réussie"
             return extracted_text, status, start_found, end_found
         else:
             return None, "❌ Conflit de marqueurs ou texte vide", start_found, end_found

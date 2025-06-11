@@ -35,7 +35,7 @@ TAXONOMY_FILE = DATA_DIR / "argumentum_fallacies_taxonomy.csv"
 # Modifiez cette variable pour changer le mode de fonctionnement:
 # - True: Utilise des données simulées (recommandé pour les tests)
 # - False: Tente de charger ou télécharger le fichier réel
-USE_MOCK = True
+USE_MOCK = False
 
 def get_taxonomy_path():
     """
@@ -62,9 +62,24 @@ def get_taxonomy_path():
         # Créer le dossier data s'il n'existe pas
         DATA_DIR.mkdir(exist_ok=True)
         
-        # Simuler l'existence du fichier
+        # Créer un fichier mock_taxonomy.csv avec un contenu valide et simplifié
         mock_path = DATA_DIR / "mock_taxonomy.csv"
-        logger.info(f"Chemin simulé vers la taxonomie: {mock_path}")
+        mock_csv_content = (
+            "PK,Name\n"
+            "1,Ad Hominem\n"
+            "2,Straw Man\n"
+            "3,Appeal to Authority\n"
+        )
+        try:
+            with open(mock_path, 'w', encoding='utf-8') as f:
+                f.write(mock_csv_content)
+            logger.info(f"Fichier mock_taxonomy.csv créé avec succès à: {mock_path}")
+        except Exception as e:
+            logger.error(f"Erreur lors de la création du fichier mock_taxonomy.csv: {e}")
+            # Retourner un chemin même en cas d'échec d'écriture pour ne pas bloquer certains tests,
+            # mais la lecture échouera probablement plus tard.
+        
+        logger.info(f"Chemin vers la taxonomie mock: {mock_path}")
         return mock_path
     else:
         # Version réelle (code conservé pour référence)
@@ -75,15 +90,11 @@ def get_taxonomy_path():
         # Créer le dossier data s'il n'existe pas
         DATA_DIR.mkdir(exist_ok=True)
         
-        # Note: Cette partie est commentée car nous utilisons la version mock
-        # Le téléchargement réel nécessiterait d'importer requests et d'exécuter:
-        """
+        # Téléchargement réel de la taxonomie
         logger.info(f"Téléchargement de la taxonomie depuis {TAXONOMY_URL}")
         try:
             import requests
-
-from argumentation_analysis.paths import DATA_DIR
-
+            
             response = requests.get(TAXONOMY_URL)
             response.raise_for_status()
             
@@ -93,12 +104,12 @@ from argumentation_analysis.paths import DATA_DIR
             logger.info(f"Taxonomie téléchargée avec succès: {TAXONOMY_FILE}")
             return TAXONOMY_FILE
         
+        except ImportError:
+            logger.error("La bibliothèque 'requests' n'est pas installée. Installation requise pour le téléchargement.")
+            raise ImportError("Installation manquante: pip install requests")
         except Exception as e:
             logger.error(f"Erreur lors du téléchargement de la taxonomie: {e}")
             raise
-        """
-        logger.error("Version réelle non implémentée en mode mock")
-        raise NotImplementedError("Version réelle non disponible en mode mock")
 
 def validate_taxonomy_file():
     """
@@ -253,7 +264,81 @@ class TaxonomyLoader:
             logger.info(f"Taxonomie mock chargée avec succès: {len(mock_entries)} entrées")
             return mock_entries
         else:
-            # Cette partie serait implémentée pour charger le fichier réel
-            # Pour l'instant, elle n'est pas implémentée car nous utilisons la version mock
-            logger.error("Version réelle de load_taxonomy() non implémentée")
-            raise NotImplementedError("Version réelle de load_taxonomy() non disponible en mode mock")
+            # Version réelle - charge les données depuis le fichier de taxonomie
+            logger.info("Chargement de la taxonomie réelle depuis le fichier")
+            try:
+                import csv
+                
+                taxonomy_path = get_taxonomy_path()
+                entries = []
+                
+                with open(taxonomy_path, 'r', encoding='utf-8') as f:
+                    # Détecter le délimiteur automatiquement
+                    sample = f.read(1024)
+                    f.seek(0)
+                    sniffer = csv.Sniffer()
+                    delimiter = sniffer.sniff(sample).delimiter
+                    
+                    reader = csv.DictReader(f, delimiter=delimiter)
+                    for row in reader:
+                        # Normaliser les clés des colonnes
+                        normalized_row = {}
+                        for key, value in row.items():
+                            if key and value:  # Ignorer les colonnes/valeurs vides
+                                normalized_row[key.strip()] = value.strip()
+                        
+                        if normalized_row:  # Seulement ajouter les lignes non-vides
+                            entries.append(normalized_row)
+                
+                logger.info(f"Taxonomie réelle chargée avec succès: {len(entries)} entrées")
+                return entries
+                
+            except Exception as e:
+                logger.error(f"Erreur lors du chargement de la taxonomie réelle: {e}")
+                # Fallback vers le mock en cas d'erreur
+                logger.warning("Fallback vers les données mock en raison de l'erreur")
+                return self._load_mock_taxonomy()
+    
+    def _load_mock_taxonomy(self):
+        """Méthode privée pour charger les données mock (utilisée comme fallback)"""
+        logger.info("Chargement des données mock de taxonomie")
+        mock_entries = [
+            {
+                "PK": "1",
+                "nom_vulgarisé": "Ad Hominem",
+                "text_fr": "Attaquer la personne plutôt que l'argument",
+                "category": "Fallacies",
+                "subcategory": "Relevance"
+            },
+            {
+                "PK": "2",
+                "nom_vulgarisé": "Faux Dilemme",
+                "text_fr": "Présenter seulement deux options alors qu'il en existe d'autres",
+                "category": "Fallacies",
+                "subcategory": "Structure"
+            },
+            {
+                "PK": "3",
+                "nom_vulgarisé": "Pente Glissante",
+                "text_fr": "Affirmer qu'un petit pas mènera inévitablement à une chaîne d'événements indésirables",
+                "category": "Fallacies",
+                "subcategory": "Causality"
+            },
+            {
+                "PK": "4",
+                "nom_vulgarisé": "Appel à l'Autorité",
+                "text_fr": "Affirmer qu'une proposition est vraie parce qu'une figure d'autorité le dit",
+                "category": "Fallacies",
+                "subcategory": "Relevance"
+            },
+            {
+                "PK": "5",
+                "nom_vulgarisé": "Homme de Paille",
+                "text_fr": "Déformer l'argument de l'adversaire pour le rendre plus facile à attaquer",
+                "category": "Fallacies",
+                "subcategory": "Relevance"
+            }
+        ]
+        
+        logger.info(f"Données mock chargées: {len(mock_entries)} entrées")
+        return mock_entries

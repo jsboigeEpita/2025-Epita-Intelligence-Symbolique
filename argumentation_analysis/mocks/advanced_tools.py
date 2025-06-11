@@ -115,5 +115,5 @@ def create_mock_advanced_rhetorical_tools() -> Dict[str, Any]:
         "fallacy_severity_evaluator": MockEnhancedFallacySeverityEvaluator(),
         "rhetorical_result_analyzer": MockEnhancedRhetoricalResultAnalyzer()
     }
-    logger.warning("✅ Outils d'analyse rhétorique avancés simulés créés et retournés.")
+    logger.warning("[OK] Outils d'analyse rhétorique avancés simulés créés et retournés.")
     return tools

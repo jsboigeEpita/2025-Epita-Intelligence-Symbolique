@@ -17,8 +17,18 @@ import argparse
 import time
 import pandas as pd
 import numpy as np
-import matplotlib.pyplot as plt
-import seaborn as sns
+# Import paresseux de matplotlib pour éviter les imports circulaires
+def _import_matplotlib():
+    """Import paresseux de matplotlib pour éviter les problèmes d'imports circulaires."""
+    try:
+        import matplotlib.pyplot as plt
+        import seaborn as sns
+        return plt, sns
+    except ImportError as e:
+        raise ImportError(f"matplotlib et seaborn sont requis pour la génération de rapports: {e}")
+
+plt = None
+sns = None
 from pathlib import Path
 from datetime import datetime
 from typing import Dict, List, Any, Optional, Tuple, Union
@@ -51,8 +61,8 @@ except NameError: # __file__ n'est pas défini (par exemple, dans un notebook in
         project_root_path_pipeline = Path(".") # Chemin relatif par défaut
 
 
-from project_core.utils.file_utils import load_json_file, load_text_file, load_csv_file, save_markdown_to_html
-from project_core.utils.reporting_utils import generate_markdown_report_for_corpus, generate_overall_summary_markdown
+from argumentation_analysis.utils.core_utils.file_utils import load_json_file, load_text_file, load_csv_file, save_markdown_to_html
+from argumentation_analysis.utils.core_utils.reporting_utils import generate_markdown_report_for_corpus, generate_overall_summary_markdown
 from argumentation_analysis.utils.data_processing_utils import group_results_by_corpus
 from argumentation_analysis.analytics.stats_calculator import calculate_average_scores
 
@@ -364,6 +374,9 @@ def _generate_visualizations(
     output_dir.mkdir(parents=True, exist_ok=True)
     visualization_paths = {}
     
+    # Import paresseux de matplotlib
+    plt, sns = _import_matplotlib()
+    
     # Graphique 1: Sophismes par corpus
     plt.figure(figsize=(12, 8))
     corpora = list(effectiveness.keys())
@@ -563,7 +576,7 @@ def _generate_markdown_report(
 
     with open(output_file, 'w', encoding='utf-8', errors="replace") as f:
         f.write('\n'.join(report_content))
-    logger.info(f"✅ Rapport Markdown généré: {output_file}")
+    logger.info(f"[OK] Rapport Markdown généré: {output_file}")
 
 def _generate_html_report(markdown_file: Path, output_file: Path, visualization_dir: Path) -> None:
     """
@@ -586,7 +599,7 @@ def _generate_html_report(markdown_file: Path, output_file: Path, visualization_
             return
 
         if save_markdown_to_html(markdown_content, output_file):
-            logger.info(f"✅ Rapport HTML généré avec succès via l'utilitaire: {output_file}")
+            logger.info(f"[OK] Rapport HTML généré avec succès via l'utilitaire: {output_file}")
         else:
             logger.error(f"❌ Échec de la génération du rapport HTML via l'utilitaire pour {output_file}")
     except Exception as e:
@@ -739,7 +752,7 @@ def run_comprehensive_report_pipeline(
     logger.info("Génération du rapport HTML...")
     _generate_html_report(markdown_file, html_file, visualization_dir)
     
-    logger.info(f"✅ Pipeline de génération du rapport complet terminé. Résultats dans {output_dir}")
+    logger.info(f"[OK] Pipeline de génération du rapport complet terminé. Résultats dans {output_dir}")
     logger.info(f"Rapport Markdown: {markdown_file}")
     logger.info(f"Rapport HTML: {html_file}")
     return True

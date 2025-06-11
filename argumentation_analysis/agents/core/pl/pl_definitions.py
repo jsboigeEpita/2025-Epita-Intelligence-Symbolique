@@ -243,7 +243,7 @@ def setup_pl_kernel(kernel: sk.Kernel, llm_service):
             
             # Vérifier que la fonction a été correctement ajoutée
             if plugin_name in kernel.plugins and func_name in kernel.plugins[plugin_name]:
-                logger.info(f"✅ Fonction {plugin_name}.{func_name} correctement enregistrée.")
+                logger.info(f"[OK] Fonction {plugin_name}.{func_name} correctement enregistrée.")
             else:
                 logger.error(f"❌ ERREUR CRITIQUE: Fonction {plugin_name}.{func_name} non trouvée après ajout!")
         except ValueError as ve:

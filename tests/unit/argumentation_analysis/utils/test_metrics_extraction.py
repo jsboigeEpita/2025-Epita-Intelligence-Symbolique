@@ -4,6 +4,8 @@
 Tests pour les utilitaires d'extraction de métriques de argumentation_analysis.utils.metrics_extraction.
 """
 import pytest
+import numpy as np
+from unittest.mock import Mock, patch
 from pathlib import Path # Bien que non utilisé directement, souvent utile pour les fixtures
 from typing import List, Dict, Any
 from datetime import datetime # Pour les noms d'extraits générés

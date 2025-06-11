@@ -7,28 +7,33 @@ Bienvenue dans la documentation du projet Intelligence Symbolique. Cette section
 La documentation est organisée en plusieurs sections thématiques :
 
 ### [Architecture](./architecture/README.md)
-Documentation de l'architecture du système d'analyse argumentative, incluant l'architecture hiérarchique à trois niveaux et les systèmes de communication entre agents.
+Documentation de l'architecture du système d'analyse argumentative, incluant l'architecture hiérarchique à trois niveaux, les systèmes de communication entre agents, et l'analyse des orchestrations agentiques Sherlock/Watson.
+
+### [Audit](./audit/README.md)
+Documentation relative aux audits du projet et de la documentation.
 
 ### [Composants](./composants/README.md)
 Description détaillée des différents composants qui constituent le système d'analyse argumentative, leur fonctionnement et leurs interactions.
 
 ### [Guides](./guides/README.md)
-Guides d'utilisation et tutoriels pour vous aider à comprendre et à utiliser efficacement le système d'analyse argumentative.
+Guides d'utilisation et tutoriels pour vous aider à comprendre et à utiliser efficacement le système d'analyse argumentative, incluant les patterns d'orchestration des modes.
+
+<!-- TODO: Le fichier docs/images/README.md est actuellement vide. Évaluer s'il doit être peuplé (par ex. avec une liste/catégorisation des images) ou si le lien dans cette section devrait pointer directement vers le dossier ./images/ ou si l'entrée "Images" devrait être supprimée si ce dossier n'est pas destiné à être navigué via un README. -->
+### [Images](./images/README.md)
+Diagrammes et schémas illustrant l'architecture et les concepts du système d'analyse argumentative.
 
 ### [Intégration](./integration/README.md)
 Documentation des processus d'intégration et de validation du système d'analyse argumentative, incluant les guides d'intégration et les procédures de validation.
 
+<!-- TODO: Vérifier la distinction et la pertinence des contenus entre le répertoire [Outils](./outils/README.md) (documentation détaillée, fonctionnement, utilisation) et le document [Outils d'Analyse Rhétorique](./outils_analyse_rhetorique.md) (présentation). S'assurer que les titres et descriptions reflètent clairement cette distinction et qu'il n'y a pas de chevauchement excessif. -->
 ### [Outils](./outils/README.md)
-Documentation des outils d'analyse rhétorique disponibles dans le système, leur fonctionnement et leur utilisation.
+Documentation des outils d'analyse rhétorique disponibles dans le système, leur fonctionnement, leur utilisation et leurs dernières fonctionnalités.
 
 ### [Projets](./projets/README.md)
 Présentation des sujets de projets proposés aux étudiants dans le cadre du cours d'intelligence symbolique.
 
 ### [Référence API](./reference/README.md)
 Documentation de référence pour les API du système d'analyse argumentative.
-
-### [Images](./images/README.md)
-Diagrammes et schémas illustrant l'architecture et les concepts du système d'analyse argumentative.
 
 ## Documents Principaux
 
@@ -46,6 +51,9 @@ Description détaillée de l'architecture hiérarchique à trois niveaux qui str
 
 ### [Système de Communication entre Agents](./architecture/communication_agents.md)
 Analyse du système de communication permettant aux agents de collaborer efficacement.
+
+### [Analyse des Orchestrations Agentiques Sherlock/Watson](./architecture/analyse_orchestrations_sherlock_watson.md)
+Analyse complète des flux d'orchestration dans les conversations agentiques entre Sherlock Holmes et Dr. Watson, incluant leurs interactions, outils utilisés, et l'usage des solvers Tweety.
 
 ### [Conception du Système de Communication Multi-Canal](./conception_systeme_communication_multi_canal.md)
 Présentation de la conception du système de communication multi-canal pour les agents.
@@ -67,6 +75,9 @@ Procédures et critères pour valider l'intégration du système.
 
 ### [Liste de Vérification pour le Déploiement](./liste_verification_deploiement.md)
 Liste exhaustive des points à vérifier avant le déploiement du système.
+
+### [Guide des Patterns d'Orchestration](./guides/GUIDE_PATTERNS_ORCHESTRATION_MODES.md)
+Guide complet des patterns d'orchestration utilisés dans le projet, incluant 5 types d'orchestration distincts avec leurs templates de communication et bonnes pratiques.
 
 ## Pour Commencer
 
@@ -92,7 +103,3 @@ La documentation est un élément essentiel du projet. Si vous souhaitez contrib
 - [README Principal du Projet](../README.md)
 - [Exemples d'Utilisation](../examples/README.md)
 - [Scripts Utilitaires](../scripts/README.md)
-
-## Système d'Analyse Rhétorique Amélioré
-
-Pour plus d'informations sur les nouvelles fonctionnalités du système d'analyse rhétorique, consultez la [documentation des outils d'analyse rhétorique](./outils/README.md).

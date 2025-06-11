@@ -41,11 +41,17 @@ class MockClaimMiner:
         logger.info("MockClaimMiner analyse le texte : %s...", text[:100])
         
         claims: List[Dict[str, Any]] = []
+        keyword_match_found = False
 
         # Scénario 1: Utiliser des mots-clés pour identifier des revendications
         for keyword in self.claim_keywords:
-            # Utiliser \b pour s'assurer que le mot-clé est un mot entier (ou début de phrase)
-            matches = list(re.finditer(rf"\b{re.escape(keyword)}\b", text, re.IGNORECASE))
+            search_pattern = re.escape(keyword)
+            if keyword.isalnum():
+                search_pattern = rf"\b{search_pattern}\b"
+            
+            matches = list(re.finditer(search_pattern, text, re.IGNORECASE))
+            if matches:
+                keyword_match_found = True
             for match in matches:
                 # Extraire la phrase ou la portion de texte suivant le mot-clé
                 claim_text_start = match.end()
@@ -56,7 +62,7 @@ class MockClaimMiner:
                     claim_text_end = period_match + 1
                 else:
                     # Sinon, prendre une portion de texte (ex: 100 caractères)
-                    claim_text_end = min(len(text), claim_text_start + 100) 
+                    claim_text_end = min(len(text), claim_text_start + 100)
                 
                 claim_content = text[claim_text_start:claim_text_end].strip()
                 
@@ -69,25 +75,9 @@ class MockClaimMiner:
                         "source_indices": (match.start(), claim_text_end)
                     })
 
-        # Scénario 2: Identifier les phrases assertives (simplifié: phrases se terminant par un point)
-        # et qui sont suffisamment longues. Éviter les doublons avec le scénario 1.
-        if not claims: # Seulement si aucun mot-clé n'a fonctionné pour éviter trop de bruit
-            sentences = [s.strip() for s in text.split('.') if s.strip()]
-            for sentence in sentences:
-                if len(sentence) >= self.min_claim_length:
-                    # Vérifier si cette phrase n'est pas déjà couverte par une revendication par mot-clé
-                    already_covered = False
-                    # (Cette logique de non-doublon est omise car on est dans le `if not claims`)
-
-                    claims.append({
-                        "type": "Revendication Assertive (Mock)",
-                        "claim_text": sentence,
-                        "confidence": 0.60,
-                        "source_indices": (text.find(sentence), text.find(sentence) + len(sentence))
-                    })
-        
-        # Scénario 3: Si toujours rien, et que le texte est assez long, prendre le texte entier.
-        if not claims and len(text) >= self.min_claim_length:
+        # Scénario 2: Si aucune revendication n'a été ajoutée ET aucun mot-clé n'a été trouvé,
+        # considérer le texte entier comme une "Revendication Globale".
+        if not claims and not keyword_match_found and len(text) >= self.min_claim_length:
             claims.append({
                 "type": "Revendication Globale (Mock)",
                 "claim_text": text,

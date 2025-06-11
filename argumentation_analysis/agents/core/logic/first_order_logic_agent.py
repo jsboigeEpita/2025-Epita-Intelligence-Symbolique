@@ -11,11 +11,18 @@ l'interprétation des résultats.
 """
 
 import logging
-from typing import Dict, List, Optional, Any, Tuple
+import re
+import json
+import jpype
+from typing import Dict, List, Optional, Any, Tuple, AsyncGenerator
 
-from semantic_kernel import Kernel # type: ignore
+from semantic_kernel import Kernel
+from semantic_kernel.connectors.ai.chat_completion_client_base import ChatCompletionClientBase
+from semantic_kernel.contents import ChatMessageContent
+from semantic_kernel.contents.chat_history import ChatHistory
+from pydantic import Field
 
-from ..abc.agent_bases import BaseLogicAgent # Modification de l'import
+from ..abc.agent_bases import BaseLogicAgent
 from .belief_set import BeliefSet, FirstOrderBeliefSet
 from .tweety_bridge import TweetyBridge
 
@@ -33,94 +40,59 @@ Prompt système pour l'agent de logique du premier ordre.
 Définit le rôle et les capacités générales de l'agent pour le LLM.
 """
 
-# Prompts pour la logique du premier ordre
-PROMPT_TEXT_TO_FOL = """
-Vous êtes un expert en logique du premier ordre. Votre tâche est de traduire un texte en un ensemble de croyances (belief set) en logique du premier ordre en utilisant la syntaxe de TweetyProject.
+# Prompts pour la logique du premier ordre (optimisés)
+PROMPT_TEXT_TO_FOL_DEFS = """Expert FOL : Extrayez sorts et prédicats du texte en format JSON strict.
 
-Syntaxe de la logique du premier ordre pour TweetyProject:
-- Prédicats: commencent par une lettre majuscule (ex: P(x), Human(john))
-- Variables: commencent par une lettre minuscule (ex: x, y, person)
-- Constantes: commencent par une lettre minuscule (ex: john, paris)
-- Connecteurs logiques: !, ||, &&, =>, <=>
-- Quantificateurs: forall x: (formule), exists x: (formule)
+Format : {"sorts": {"type": ["const1", "const2"]}, "predicates": [{"name": "PredName", "args": ["type1"]}]}
 
-Règles importantes:
-1. Chaque formule doit se terminer par un point-virgule (;)
-2. Les formules sont séparées par des sauts de ligne
-3. Utilisez des noms significatifs pour les prédicats, variables et constantes
-4. Évitez les espaces dans les noms des prédicats, variables et constantes
-5. Les commentaires commencent par // et s'étendent jusqu'à la fin de la ligne
+Règles : sorts/constantes en snake_case, prédicats commencent par majuscule.
 
-Exemple:
-```
-// Définitions de base
-Human(john);
-Human(mary);
-forall x: (Human(x) => Mortal(x));
-Loves(john, mary);
-exists x: (Human(x) && Loves(x, john));
-```
+Exemple : "Jean aime Paris" → {"sorts": {"person": ["jean"], "place": ["paris"]}, "predicates": [{"name": "Loves", "args": ["person", "place"]}]}
 
-Traduisez maintenant le texte suivant en un ensemble de croyances en logique du premier ordre:
-
-{{$input}}
-
-Répondez uniquement avec l'ensemble de croyances en logique du premier ordre, sans explications supplémentaires.
+Texte : {{$input}}
 """
 """
-Prompt pour convertir du texte en langage naturel en un ensemble de croyances FOL.
+Prompt pour extraire les sorts et prédicats d'un texte.
 Attend `$input` (le texte source).
 """
 
-PROMPT_GEN_FOL_QUERIES = """
-Vous êtes un expert en logique du premier ordre. Votre tâche est de générer des requêtes pertinentes en logique du premier ordre pour interroger un ensemble de croyances (belief set) donné.
+PROMPT_TEXT_TO_FOL_FORMULAS = """Expert FOL : Traduisez le texte en formules FOL en JSON strict.
 
-Voici le texte source:
-{{$input}}
+Format : {"formulas": ["Pred(const)", "forall X: (Pred1(X) => Pred2(X))"]}
 
-Voici l'ensemble de croyances en logique du premier ordre:
-{{$belief_set}}
+Règles : Utilisez UNIQUEMENT les sorts/prédicats fournis. Variables majuscules (X,Y). Connecteurs : !, &&, ||, =>, <=>
 
-Générez 3 à 5 requêtes pertinentes en logique du premier ordre qui permettraient de vérifier des implications importantes ou des conclusions intéressantes à partir de cet ensemble de croyances. Utilisez la même syntaxe que celle de l'ensemble de croyances.
-
-Règles importantes:
-1. Les requêtes doivent être des formules bien formées en logique du premier ordre
-2. Utilisez uniquement des prédicats, constantes et variables déjà définis dans l'ensemble de croyances
-3. Chaque requête doit être sur une ligne séparée
-4. N'incluez pas de point-virgule à la fin des requêtes
-5. Assurez-vous que les requêtes sont pertinentes par rapport au texte source
-
-Répondez uniquement avec les requêtes, sans explications supplémentaires.
+Texte : {{$input}}
+Définitions : {{$definitions}}
 """
 """
-Prompt pour générer des requêtes FOL pertinentes à partir d'un texte et d'un ensemble de croyances FOL.
+Prompt pour générer des formules FOL à partir d'un texte et de définitions.
+Attend `$input` (texte source) et `$definitions` (JSON des sorts et prédicats).
+"""
+
+PROMPT_GEN_FOL_QUERIES_IDEAS = """Expert FOL : Générez des requêtes pertinentes en JSON strict.
+
+Format : {"query_ideas": [{"predicate_name": "PredName", "constants": ["const1"]}]}
+
+Règles : Utilisez UNIQUEMENT les prédicats/constantes du belief set. Priorité aux requêtes vérifiables.
+
+Texte : {{$input}}
+Belief Set : {{$belief_set}}
+"""
+"""
+Prompt pour générer des idées de requêtes FOL au format JSON.
 Attend `$input` (texte source) et `$belief_set` (l'ensemble de croyances FOL).
 """
 
-PROMPT_INTERPRET_FOL = """
-Vous êtes un expert en logique du premier ordre. Votre tâche est d'interpréter les résultats de requêtes en logique du premier ordre et d'expliquer leur signification dans le contexte du texte source.
+PROMPT_INTERPRET_FOL = """Expert FOL : Interprétez les résultats de requêtes FOL en langage accessible.
 
-Voici le texte source:
-{{$input}}
+Texte : {{$input}}
+Belief Set : {{$belief_set}}
+Requêtes : {{$queries}}
+Résultats : {{$tweety_result}}
 
-Voici l'ensemble de croyances en logique du premier ordre:
-{{$belief_set}}
-
-Voici les requêtes qui ont été exécutées:
-{{$queries}}
-
-Voici les résultats de ces requêtes:
-{{$tweety_result}}
-
-Interprétez ces résultats et expliquez leur signification dans le contexte du texte source. Pour chaque requête:
-1. Expliquez ce que la requête cherchait à vérifier
-2. Indiquez si la requête a été acceptée (ACCEPTED) ou rejetée (REJECTED)
-3. Expliquez ce que cela signifie dans le contexte du texte source
-4. Si pertinent, mentionnez les implications logiques de ce résultat
-
-Fournissez ensuite une conclusion générale sur ce que ces résultats nous apprennent sur le texte source.
-
-Votre réponse doit être claire, précise et accessible à quelqu'un qui n'est pas expert en logique formelle.
+Pour chaque requête : objectif, statut (ACCEPTED/REJECTED), signification, implications.
+Conclusion générale concise.
 """
 """
 Prompt pour interpréter les résultats de requêtes FOL en langage naturel.
@@ -142,17 +114,29 @@ class FirstOrderLogicAgent(BaseLogicAgent):
         _tweety_bridge (TweetyBridge): Instance de `TweetyBridge` configurée pour la FOL.
     """
     
-    def __init__(self, kernel: Kernel):
+    # Attributs requis par Pydantic V2 pour la nouvelle classe de base Agent
+    # Ces attributs ne sont pas utilisés activement par cette classe, mais doivent être déclarés.
+    # Ils sont normalement gérés par la classe de base `Agent` mais Pydantic exige leur présence.
+    # Utilisation de `Field(default=..., exclude=True)` pour éviter qu'ils soient inclus
+    # dans la sérialisation ou la validation standard du modèle.
+    service: Optional[ChatCompletionClientBase] = Field(default=None, exclude=True)
+    settings: Optional[Any] = Field(default=None, exclude=True) # Remplace PromptExecutionSettings
+
+    def __init__(self, kernel: Kernel, agent_name: str = "FirstOrderLogicAgent", service_id: Optional[str] = None):
         """
         Initialise une instance de `FirstOrderLogicAgent`.
 
         :param kernel: Le kernel Semantic Kernel à utiliser pour les fonctions sémantiques.
-        :type kernel: Kernel
+        :param agent_name: Le nom de l'agent (par défaut "FirstOrderLogicAgent").
+        :param service_id: L'ID du service LLM à utiliser.
         """
-        super().__init__(kernel,
-                         agent_name="FirstOrderLogicAgent",
-                         logic_type_name="FOL",
-                         system_prompt=SYSTEM_PROMPT_FOL)
+        super().__init__(
+            kernel=kernel,
+            agent_name=agent_name,
+            logic_type_name="FOL",
+            system_prompt=SYSTEM_PROMPT_FOL
+        )
+        self._llm_service_id = service_id
 
     def get_agent_capabilities(self) -> Dict[str, Any]:
         """
@@ -191,7 +175,7 @@ class FirstOrderLogicAgent(BaseLogicAgent):
         super().setup_agent_components(llm_service_id)
         self.logger.info(f"Configuration des composants pour {self.name}...")
 
-        self._tweety_bridge = TweetyBridge(logic_type="fol") 
+        self._tweety_bridge = TweetyBridge()
 
         if not self.tweety_bridge.is_jvm_ready():
             self.logger.error("Tentative de setup FOL Kernel alors que la JVM n'est PAS démarrée.")
@@ -208,10 +192,12 @@ class FirstOrderLogicAgent(BaseLogicAgent):
                 self.logger.warning(f"Impossible de récupérer settings LLM pour {self.name}: {e}")
 
         semantic_functions = [
-            ("TextToFOLBeliefSet", PROMPT_TEXT_TO_FOL,
-             "Traduit texte en Belief Set FOL (syntaxe Tweety pour logique du premier ordre)."),
-            ("GenerateFOLQueries", PROMPT_GEN_FOL_QUERIES,
-             "Génère requêtes FOL pertinentes (syntaxe Tweety pour logique du premier ordre)."),
+            ("TextToFOLDefs", PROMPT_TEXT_TO_FOL_DEFS,
+             "Extrait les sorts et prédicats FOL d'un texte."),
+            ("TextToFOLFormulas", PROMPT_TEXT_TO_FOL_FORMULAS,
+             "Génère les formules FOL à partir d'un texte et de définitions."),
+            ("GenerateFOLQueryIdeas", PROMPT_GEN_FOL_QUERIES_IDEAS,
+             "Génère des idées de requêtes FOL au format JSON."),
             ("InterpretFOLResult", PROMPT_INTERPRET_FOL,
              "Interprète résultat requête FOL Tweety formaté.")
         ]
@@ -233,9 +219,9 @@ class FirstOrderLogicAgent(BaseLogicAgent):
                 self.logger.debug(f"Fonction sémantique {self.name}.{func_name} ajoutée/mise à jour.")
                 
                 if self.name in self.sk_kernel.plugins and func_name in self.sk_kernel.plugins[self.name]:
-                    self.logger.info(f"✅ Fonction {self.name}.{func_name} correctement enregistrée.")
+                    self.logger.info(f"(OK) Fonction {self.name}.{func_name} correctement enregistrée.")
                 else:
-                    self.logger.error(f"❌ ERREUR CRITIQUE: Fonction {self.name}.{func_name} non trouvée après ajout!")
+                    self.logger.error(f"(CRITICAL ERROR) Fonction {self.name}.{func_name} non trouvée après ajout!")
             except ValueError as ve:
                 self.logger.warning(f"Problème ajout/MàJ {self.name}.{func_name}: {ve}")
             except Exception as e:
@@ -243,89 +229,475 @@ class FirstOrderLogicAgent(BaseLogicAgent):
         
         self.logger.info(f"Composants de {self.name} configurés.")
 
+    def _construct_kb_from_json(self, kb_json: Dict[str, Any]) -> str:
+        """
+        Construit une base de connaissances FOL textuelle à partir d'un JSON structuré,
+        en respectant la syntaxe BNF de TweetyProject.
+        """
+        kb_parts = []
+
+        # 1. SORTSDEC
+        sorts = kb_json.get("sorts", {})
+        if sorts:
+            for sort_name, constants in sorts.items():
+                if constants:
+                    kb_parts.append(f"{sort_name} = {{ {', '.join(constants)} }}")
+
+        # 2. DECLAR (PREDDEC)
+        predicates = kb_json.get("predicates", [])
+        if predicates:
+            for pred in predicates:
+                pred_name = pred.get("name")
+                args = pred.get("args", [])
+                if pred_name:
+                    args_str = f"({', '.join(args)})" if args else ""
+                    kb_parts.append(f"type({pred_name}{args_str})")
+
+        # 3. FORMULAS
+        formulas = kb_json.get("formulas", [])
+        if formulas:
+            # Assurer que les formules sont bien séparées des déclarations
+            if kb_parts:
+                kb_parts.append("\n")
+            # Nettoyer les formules en enlevant le point-virgule final si présent
+            cleaned_formulas = [f.strip().removesuffix(';') for f in formulas]
+            kb_parts.extend(cleaned_formulas)
+
+        return "\n".join(kb_parts)
+
+    def _normalize_identifier(self, text: str) -> str:
+        """Normalise un identifiant en snake_case sans accents."""
+        import unidecode
+        text = unidecode.unidecode(text) # Translitère les accents (é -> e)
+        text = re.sub(r'\s+', '_', text) # Remplace les espaces par des underscores
+        text = re.sub(r'[^a-zA-Z0-9_]', '', text) # Supprime les caractères non alphanumériques
+        return text.lower()
+
+    def _validate_kb_json(self, kb_json: Dict[str, Any]) -> Tuple[bool, str]:
+        """Valide la cohérence interne du JSON généré par le LLM."""
+        if not all(k in kb_json for k in ["sorts", "predicates", "formulas"]):
+            return False, "Le JSON doit contenir les clés 'sorts', 'predicates', et 'formulas'."
+
+        declared_constants = set()
+        for constants_list in kb_json.get("sorts", {}).values():
+            if isinstance(constants_list, list):
+                declared_constants.update(constants_list)
+        
+        declared_predicates = {p["name"]: len(p.get("args", [])) for p in kb_json.get("predicates", []) if "name" in p}
+
+        for formula in kb_json.get("formulas", []):
+            quantified_vars = set(re.findall(r'(?:forall|exists)\s+([A-Z][a-zA-Z0-9_]*)\s*:', formula))
+            used_predicates = re.findall(r'([A-Z][a-zA-Z0-9]*)\((.*?)\)', formula)
+            for pred_name, args_str in used_predicates:
+                if pred_name not in declared_predicates:
+                    return False, f"Le prédicat '{pred_name}' utilisé dans la formule '{formula}' n'est pas déclaré."
+                
+                args_list = [arg.strip() for arg in args_str.split(',')] if args_str.strip() else []
+                used_arity = len(args_list)
+                if declared_predicates[pred_name] != used_arity:
+                    return False, f"Incohérence d'arité pour '{pred_name}'. Déclaré: {declared_predicates[pred_name]}, utilisé: {used_arity} dans '{formula}'."
+
+                for arg in args_list:
+                    if not arg: continue
+                    # Si l'argument commence par une minuscule, c'est une constante
+                    if arg[0].islower():
+                        if arg not in declared_constants:
+                            return False, f"La constante '{arg}' utilisée dans la formule '{formula}' n'est pas déclarée dans les 'sorts'."
+                    # Si l'argument commence par une majuscule, c'est une variable
+                    elif arg[0].isupper():
+                        if arg not in quantified_vars:
+                            return False, f"La variable '{arg}' utilisée dans la formule '{formula}' n'est pas liée par un quantificateur (forall/exists)."
+
+        return True, "Validation du JSON réussie."
+
     async def text_to_belief_set(self, text: str, context: Optional[Dict[str, Any]] = None) -> Tuple[Optional[BeliefSet], str]:
         """
-        Convertit un texte en langage naturel en un ensemble de croyances FOL.
-
-        Utilise la fonction sémantique "TextToFOLBeliefSet" pour la conversion,
-        puis valide l'ensemble de croyances généré avec `TweetyBridge`.
-
-        :param text: Le texte en langage naturel à convertir.
-        :type text: str
-        :param context: Un dictionnaire optionnel de contexte (non utilisé actuellement).
-        :type context: Optional[Dict[str, Any]]
-        :return: Un tuple contenant l'objet `FirstOrderBeliefSet` si la conversion
-                 et la validation réussissent, et un message de statut.
-                 Retourne (None, message_erreur) en cas d'échec.
-        :rtype: Tuple[Optional[BeliefSet], str]
+        Convertit un texte en langage naturel en un ensemble de croyances FOL en plusieurs étapes.
+        1. Génère les sorts et prédicats.
+        2. Corrige programmatiquement les types d'arguments des prédicats.
+        3. Génère les formules en se basant sur les définitions corrigées.
+        4. Assemble et valide le tout.
         """
-        self.logger.info(f"Conversion de texte en ensemble de croyances du premier ordre pour l'agent {self.name}...")
+        self.logger.info(f"Conversion de texte en ensemble de croyances FOL pour {self.name} (approche en plusieurs étapes)...")
         
+        max_retries = 3
+        last_error = ""
+        
+        # Variables pour stocker les parties de la base de connaissances
+        defs_json = None
+        formulas_json = None
+        
+        # --- Étape 1: Génération des Définitions (Sorts et Prédicats) ---
+        self.logger.info("Étape 1: Génération des sorts et prédicats...")
         try:
-            result = await self.sk_kernel.plugins[self.name]["TextToFOLBeliefSet"].invoke(self.sk_kernel, input=text)
-            belief_set_content = str(result)
+            defs_result = await self.sk_kernel.plugins[self.name]["TextToFOLDefs"].invoke(self.sk_kernel, input=text)
+            defs_json_str = self._extract_json_block(str(defs_result))
+            defs_json = json.loads(defs_json_str)
+            self.logger.info("Sorts et prédicats générés avec succès.")
+        except (json.JSONDecodeError, Exception) as e:
+            error_msg = f"Échec de la génération des définitions (sorts/prédicats): {e}"
+            self.logger.error(error_msg)
+            return None, error_msg
+
+        # --- Étape 1.5: Correction programmatique des types de prédicats ---
+        self.logger.info("Étape 1.5: Correction des arguments des prédicats...")
+        try:
+            # Créer une structure inversée mappant chaque constante à son sort.
+            sorts_map = {
+                constant: sort_name
+                for sort_name, constants in defs_json.get("sorts", {}).items()
+                for constant in constants
+            }
             
-            if not belief_set_content or len(belief_set_content.strip()) == 0:
-                self._logger.error("La conversion a produit un ensemble de croyances vide")
-                return None, "La conversion a produit un ensemble de croyances vide"
+            corrected_predicates = []
+            predicates_to_correct = defs_json.get("predicates", [])
+            self.logger.debug(f"Prédicats avant correction: {json.dumps(predicates_to_correct, indent=2)}")
+
+            for predicate in predicates_to_correct:
+                corrected_args = []
+                # Itérer sur les arguments de chaque prédicat.
+                for arg in predicate.get("args", []):
+                    # Si l'argument n'est pas un sort valide, il est considéré comme une constante.
+                    if arg not in defs_json.get("sorts", {}):
+                        # Trouver le sort correct pour cette constante.
+                        correct_sort = sorts_map.get(arg)
+                        if correct_sort:
+                            self.logger.debug(f"Correction: Remplacement de la constante '{arg}' par le sort '{correct_sort}' dans le prédicat '{predicate['name']}'.")
+                            corrected_args.append(correct_sort)
+                        else:
+                            # Si la constante n'est mappée à aucun sort, conserver l'original et logger un avertissement.
+                            self.logger.warning(f"Impossible de trouver un sort pour la constante '{arg}' dans le prédicat '{predicate['name']}'. Argument conservé.")
+                            corrected_args.append(arg)
+                    else:
+                        # L'argument est déjà un sort valide.
+                        corrected_args.append(arg)
+                
+                # Créer le prédicat corrigé.
+                corrected_predicate = {"name": predicate["name"], "args": corrected_args}
+                corrected_predicates.append(corrected_predicate)
             
-            belief_set_obj = FirstOrderBeliefSet(belief_set_content) 
-            
-            is_valid, validation_msg = self.tweety_bridge.validate_fol_belief_set(belief_set_content)
-            if not is_valid:
-                self.logger.error(f"Ensemble de croyances invalide: {validation_msg}")
-                return None, f"Ensemble de croyances invalide: {validation_msg}"
-            
-            self.logger.info("Conversion réussie")
-            return belief_set_obj, "Conversion réussie"
-        
+            # Mettre à jour le JSON des définitions avec la liste des prédicats corrigée.
+            defs_json["predicates"] = corrected_predicates
+            self.logger.debug(f"Prédicats après correction: {json.dumps(corrected_predicates, indent=2)}")
+            self.logger.info("Correction des prédicats terminée.")
+
         except Exception as e:
-            error_msg = f"Erreur lors de la conversion du texte en ensemble de croyances: {str(e)}"
+            error_msg = f"Échec de l'étape de correction des prédicats: {e}"
             self.logger.error(error_msg, exc_info=True)
             return None, error_msg
+
+        # --- Étape 2: Génération des Formules ---
+        self.logger.info("Étape 2: Génération des formules...")
+        try:
+            definitions_for_prompt = json.dumps(defs_json, indent=2)
+            self.logger.debug(f"Prompt complet pour TextToFOLFormulas (avec définitions corrigées):\nInput: {text}\nDefinitions:\n{definitions_for_prompt}")
+            formulas_result = await self.sk_kernel.plugins[self.name]["TextToFOLFormulas"].invoke(
+                self.sk_kernel, input=text, definitions=definitions_for_prompt
+            )
+            formulas_json_str = self._extract_json_block(str(formulas_result))
+            formulas_json = json.loads(formulas_json_str)
+            self.logger.info("Formules générées avec succès.")
+        except (json.JSONDecodeError, Exception) as e:
+            error_msg = f"Échec de la génération des formules: {e}"
+            self.logger.error(error_msg)
+            return None, error_msg
+
+        # --- Étape 3: Assemblage, Validation et Correction ---
+        self.logger.info("Étape 3: Assemblage, validation et correction...")
+        kb_json = {
+            "sorts": defs_json.get("sorts", {}),
+            "predicates": defs_json.get("predicates", []),
+            "formulas": formulas_json.get("formulas", [])
+        }
+        
+        # --- Étape 4: Filtrage impitoyable des formules ---
+        self.logger.info("Étape 4: Filtrage des formules basé sur les constantes déclarées...")
+        try:
+            # Créer un ensemble de toutes les constantes valides déclarées
+            valid_constants = set()
+            for sort_name, constants in kb_json.get("sorts", {}).items():
+                valid_constants.update(constants)
+            self.logger.debug(f"Constantes valides déclarées: {valid_constants}")
+
+            # Filtrer les formules
+            valid_formulas = []
+            original_formula_count = len(kb_json.get("formulas", []))
+            
+            for formula in kb_json.get("formulas", []):
+                # Extraire tous les termes potentiels (mots en minuscules, snake_case)
+                # Cette regex cible les identifiants qui ne sont pas des noms de prédicats (commençant par une majuscule)
+                # et qui ne sont pas des mots-clés logiques.
+                terms = re.findall(r'\b[a-z_][a-z0-9_]*\b', formula)
+                
+                # Vérifier si tous les termes extraits sont des constantes valides
+                is_formula_valid = True
+                for term in terms:
+                    if term not in valid_constants:
+                        self.logger.info(f"Formule rejetée: Terme invalide '{term}' trouvé dans '{formula}'.")
+                        is_formula_valid = False
+                        break
+                
+                if is_formula_valid:
+                    valid_formulas.append(formula)
+                
+            # Remplacer la liste de formules par la liste filtrée
+            kb_json["formulas"] = valid_formulas
+            filtered_formula_count = len(valid_formulas)
+            self.logger.info(f"Filtrage terminé. {filtered_formula_count}/{original_formula_count} formules conservées.")
+
+        except Exception as e:
+            error_msg = f"Échec de l'étape de filtrage des formules: {e}"
+            self.logger.error(error_msg, exc_info=True)
+            return None, error_msg
+
+        current_kb_json = kb_json
+        
+        for attempt in range(max_retries):
+            self.logger.info(f"Tentative de validation et correction {attempt + 1}/{max_retries}...")
+            
+            try:
+                # 1. Normaliser et valider la cohérence du JSON assemblé
+                normalized_kb_json = self._normalize_and_validate_json(current_kb_json)
+                
+                # 2. Construire la base de connaissances
+                full_belief_set_content = self._construct_kb_from_json(normalized_kb_json)
+                if not full_belief_set_content:
+                    raise ValueError("La conversion a produit une base de connaissances vide.")
+
+                # 3. Valider le belief set complet avec Tweety
+                is_valid, validation_msg = self.tweety_bridge.validate_fol_belief_set(full_belief_set_content)
+                if not is_valid:
+                    raise ValueError(f"Ensemble de croyances invalide selon Tweety: {validation_msg}\nContenu:\n{full_belief_set_content}")
+
+                belief_set_obj = FirstOrderBeliefSet(full_belief_set_content)
+                self.logger.info("Conversion et validation réussies.")
+                return belief_set_obj, "Conversion réussie"
+
+            except (ValueError, jpype.JException) as e:
+                last_error = f"Validation ou erreur de syntaxe FOL: {e}"
+                self.logger.warning(f"{last_error} à la tentative {attempt + 1}")
+                
+                # Pour l'instant, on ne tente pas de boucle de correction automatique complexe.
+                # On retourne l'erreur pour analyse.
+                # Dans une future itération, on pourrait appeler un prompt de correction ici.
+                return None, last_error
+
+            except Exception as e:
+                error_msg = f"Erreur inattendue lors de la validation: {str(e)}"
+                self.logger.error(error_msg, exc_info=True)
+                return None, error_msg
+
+        self.logger.error(f"Échec de la conversion après {max_retries} tentatives. Dernière erreur: {last_error}")
+        return None, f"Échec de la conversion après {max_retries} tentatives. Dernière erreur: {last_error}"
+
+    def _extract_json_block(self, text: str) -> str:
+        """Extrait le premier bloc JSON valide de la réponse du LLM avec gestion des troncatures."""
+        start_index = text.find('{')
+        if start_index == -1:
+            self.logger.warning("Aucun début de JSON trouvé.")
+            return text
+        
+        # Tentative d'extraction du JSON complet
+        end_index = text.rfind('}')
+        if start_index != -1 and end_index != -1 and end_index > start_index:
+            potential_json = text[start_index:end_index + 1]
+            
+            # Test si le JSON est valide
+            try:
+                json.loads(potential_json)
+                return potential_json
+            except json.JSONDecodeError:
+                self.logger.warning("JSON potentiellement tronqué détecté. Tentative de réparation...")
+                
+        # Tentative de réparation pour JSON tronqué
+        partial_json = text[start_index:]
+        
+        # Compter les accolades ouvertes non fermées
+        open_braces = 0
+        valid_end = len(partial_json)
+        
+        for i, char in enumerate(partial_json):
+            if char == '{':
+                open_braces += 1
+            elif char == '}':
+                open_braces -= 1
+                if open_braces == 0:
+                    valid_end = i + 1
+                    break
+        
+        # Si on a des accolades non fermées, essayer de fermer proprement
+        if open_braces > 0:
+            self.logger.warning(f"JSON tronqué détecté ({open_braces} accolades non fermées). Tentative de complétion...")
+            repaired_json = partial_json[:valid_end] + '}' * open_braces
+            
+            try:
+                json.loads(repaired_json)
+                self.logger.info("Réparation JSON réussie.")
+                return repaired_json
+            except json.JSONDecodeError:
+                self.logger.error("Échec de la réparation JSON.")
+        
+        self.logger.warning("Retour du JSON partiel original.")
+        return partial_json[:valid_end] if valid_end < len(partial_json) else partial_json
+
+    def _normalize_and_validate_json(self, kb_json: Dict[str, Any]) -> Dict[str, Any]:
+        """Normalise les identifiants et valide la cohérence interne du JSON."""
+        normalized_kb_json = {"predicates": kb_json.get("predicates", [])}
+        constant_map = {}
+        normalized_sorts = {}
+        for sort_name, constants in kb_json.get("sorts", {}).items():
+            norm_constants = []
+            for const in constants:
+                norm_const = self._normalize_identifier(const)
+                norm_constants.append(norm_const)
+                constant_map[const] = norm_const
+            normalized_sorts[sort_name] = norm_constants
+        normalized_kb_json["sorts"] = normalized_sorts
+
+        normalized_formulas = []
+        for formula in kb_json.get("formulas", []):
+            sorted_constants = sorted(constant_map.keys(), key=len, reverse=True)
+            norm_formula = formula
+            for const in sorted_constants:
+                norm_formula = re.sub(r'\b' + re.escape(const) + r'\b', constant_map[const], norm_formula)
+            normalized_formulas.append(norm_formula)
+        normalized_kb_json["formulas"] = normalized_formulas
+        
+        is_json_valid, json_validation_msg = self._validate_kb_json(normalized_kb_json)
+        if not is_json_valid:
+            raise ValueError(json_validation_msg)
+        
+        self.logger.info("Validation de la cohérence du JSON réussie.")
+        return normalized_kb_json
     
+
+    def _parse_belief_set_content(self, belief_set_content: str) -> Dict[str, Any]:
+        """
+        Analyse le contenu textuel d'un belief set pour en extraire les sorts,
+        constantes et prédicats avec leur arité.
+        """
+        knowledge_base = {
+            "sorts": {},
+            "constants": set(),
+            "predicates": {}
+        }
+
+        # Extraction des sorts et constantes
+        sort_matches = re.findall(r'(\w+)\s*=\s*\{\s*([^}]+)\s*\}', belief_set_content)
+        for sort_name, constants_str in sort_matches:
+            constants = {c.strip() for c in constants_str.split(',')}
+            knowledge_base["sorts"][sort_name] = constants
+            knowledge_base["constants"].update(constants)
+
+        # Extraction des prédicats et de leur arité
+        predicate_matches = re.findall(r'type\(([\w_]+)(?:\(([^)]*)\))?\)', belief_set_content)
+        for pred_name, args_str in predicate_matches:
+            if args_str:
+                args = [arg.strip() for arg in args_str.split(',')]
+                arity = len(args)
+            else:
+                arity = 0
+            knowledge_base["predicates"][pred_name] = arity
+            
+        return knowledge_base
+
     async def generate_queries(self, text: str, belief_set: BeliefSet, context: Optional[Dict[str, Any]] = None) -> List[str]:
         """
-        Génère des requêtes logiques du premier ordre (FOL) pertinentes à partir d'un texte et d'un ensemble de croyances.
-
-        Utilise la fonction sémantique "GenerateFOLQueries". Les requêtes générées
-        sont ensuite validées syntaxiquement.
-
-        :param text: Le texte en langage naturel source.
-        :type text: str
-        :param belief_set: L'ensemble de croyances FOL associé.
-        :type belief_set: BeliefSet
-        :param context: Un dictionnaire optionnel de contexte (non utilisé actuellement).
-        :type context: Optional[Dict[str, Any]]
-        :return: Une liste de chaînes de caractères, chacune étant une requête FOL valide.
-                 Retourne une liste vide en cas d'erreur.
-        :rtype: List[str]
+        Génère des requêtes FOL valides en utilisant une approche de "Modèle de Requête".
+        
+        1. Le LLM génère des "idées" de requêtes (prédicat + constantes).
+        2. Le code Python valide rigoureusement chaque idée par rapport à la base de connaissances.
+        3. Le code Python assemble les requêtes finales uniquement pour les idées valides.
+        
+        Cette approche garantit que 100% des requêtes générées sont syntaxiquement et
+        sémantiquement correctes.
         """
-        self.logger.info(f"Génération de requêtes du premier ordre pour l'agent {self.name}...")
-        
+        self.logger.info(f"Génération de requêtes FOL via le modèle de requête pour {self.name}...")
+        response_text = ""
         try:
-            result = await self.sk_kernel.plugins[self.name]["GenerateFOLQueries"].invoke(
-                self.sk_kernel,
-                input=text,
-                belief_set=belief_set.content # Utiliser .content
-            )
-            queries_text = str(result)
+            # Étape 1: Extraire les informations de la base de connaissances
+            kb_details = self._parse_belief_set_content(belief_set.content)
+            self.logger.debug(f"Détails de la KB extraits: {kb_details}")
+
+            # Étape 2: Générer les idées de requêtes avec le LLM
+            args = {
+                "input": text,
+                "belief_set": belief_set.content
+            }
             
-            queries = [q.strip() for q in queries_text.split('\n') if q.strip()]
+            result = await self.sk_kernel.plugins[self.name]["GenerateFOLQueryIdeas"].invoke(self.sk_kernel, **args)
+            response_text = str(result)
             
+            # Extraire le bloc JSON de la réponse
+            json_block = self._extract_json_block(response_text)
+            if not json_block:
+                self.logger.error("Aucun bloc JSON trouvé dans la réponse du LLM pour les idées de requêtes.")
+                return []
+                
+            query_ideas_data = json.loads(json_block)
+            query_ideas = query_ideas_data.get("query_ideas", [])
+
+            if not query_ideas:
+                self.logger.warning("Le LLM n'a généré aucune idée de requête.")
+                return []
+
+            self.logger.info(f"{len(query_ideas)} idées de requêtes reçues du LLM.")
+            self.logger.debug(f"Idées de requêtes brutes reçues: {json.dumps(query_ideas, indent=2)}")
+
+            # Étape 3: Assemblage et validation des requêtes
             valid_queries = []
-            for query_item in queries: 
-                is_valid, _ = self.tweety_bridge.validate_fol_formula(query_item)
+            for idea in query_ideas:
+                predicate_name = idea.get("predicate_name")
+                constants = idea.get("constants", [])
+
+                # Validation 1: Le nom du prédicat est-il une chaîne de caractères ?
+                if not isinstance(predicate_name, str):
+                    self.logger.info(f"Idée de requête rejetée: 'predicate_name' invalide (pas une chaîne) -> {predicate_name}")
+                    continue
+
+                # Validation 2: Le prédicat existe-t-il dans la KB ?
+                if predicate_name not in kb_details["predicates"]:
+                    self.logger.info(f"Idée de requête rejetée: Prédicat inconnu '{predicate_name}'.")
+                    continue
+
+                # Validation 3: Les constantes sont-elles une liste ?
+                if not isinstance(constants, list):
+                    self.logger.info(f"Idée de requête rejetée pour '{predicate_name}': 'constants' n'est pas une liste -> {constants}")
+                    continue
+
+                # Validation 4: Toutes les constantes existent-elles dans la KB ?
+                invalid_consts = [c for c in constants if c not in kb_details["constants"]]
+                if invalid_consts:
+                    self.logger.info(f"Idée de requête rejetée pour '{predicate_name}': Constantes inconnues: {invalid_consts}")
+                    continue
+
+                # Validation 5: L'arité du prédicat correspond-elle au nombre de constantes ?
+                expected_arity = kb_details["predicates"][predicate_name]
+                actual_arity = len(constants)
+                if expected_arity != actual_arity:
+                    self.logger.info(f"Idée de requête rejetée pour '{predicate_name}': Arity incorrecte. Attendu: {expected_arity}, Reçu: {actual_arity}")
+                    continue
+                
+                # Si toutes les validations passent, on assemble la requête
+                query_string = f"{predicate_name}({', '.join(constants)})"
+                
+                # Validation contextuelle avec Tweety
+                validation_result = self.tweety_bridge.validate_fol_query_with_context(belief_set.content, query_string)
+                is_valid, validation_msg = validation_result if isinstance(validation_result, tuple) else (validation_result, "")
                 if is_valid:
-                    valid_queries.append(query_item)
+                    self.logger.info(f"Idée validée et requête assemblée: {query_string}")
+                    valid_queries.append(query_string)
                 else:
-                    self.logger.warning(f"Requête invalide ignorée: {query_item}")
-            
-            self.logger.info(f"Génération de {len(valid_queries)} requêtes valides")
+                    self.logger.info(f"Idée rejetée: La requête assemblée '{query_string}' a échoué la validation de Tweety: {validation_msg}")
+
+            self.logger.info(f"Génération terminée. {len(valid_queries)}/{len(query_ideas)} requêtes valides assemblées.")
             return valid_queries
-        
+
+        except json.JSONDecodeError as e:
+            self.logger.error(f"Erreur de décodage JSON lors de la génération des requêtes: {e}\nRéponse du LLM: {response_text}")
+            return []
         except Exception as e:
-            self.logger.error(f"Erreur lors de la génération des requêtes: {str(e)}", exc_info=True)
+            self.logger.error(f"Erreur inattendue lors de la génération des requêtes: {e}", exc_info=True)
             return []
     
     def execute_query(self, belief_set: BeliefSet, query: str) -> Tuple[Optional[bool], str]:
@@ -438,6 +810,25 @@ class FirstOrderLogicAgent(BaseLogicAgent):
             self.logger.warning(f"Formule FOL invalide: {formula}. Message: {message}")
         return is_valid
 
+    def is_consistent(self, belief_set: BeliefSet) -> Tuple[bool, str]:
+        """
+        Vérifie si un ensemble de croyances FOL est cohérent.
+
+        :param belief_set: L'ensemble de croyances à vérifier.
+        :return: Un tuple (bool, str) indiquant la cohérence et un message.
+        """
+        self.logger.info(f"Vérification de la cohérence pour l'agent {self.name}")
+        try:
+            # La signature est extraite du belief_set.content par le handler
+            is_consistent, message = self.tweety_bridge.is_fol_kb_consistent(belief_set.content)
+            if not is_consistent:
+                self.logger.warning(f"Ensemble de croyances FOL jugé incohérent par Tweety: {message}")
+            return is_consistent, message
+        except Exception as e:
+            error_msg = f"Erreur inattendue lors de la vérification de la cohérence FOL: {e}"
+            self.logger.error(error_msg, exc_info=True)
+            return False, error_msg
+
     def _create_belief_set_from_data(self, belief_set_data: Dict[str, Any]) -> BeliefSet:
         """
         Crée un objet `FirstOrderBeliefSet` à partir d'un dictionnaire de données.
@@ -452,3 +843,41 @@ class FirstOrderLogicAgent(BaseLogicAgent):
         """
         content = belief_set_data.get("content", "")
         return FirstOrderBeliefSet(content)
+
+    async def get_response(
+        self,
+        chat_history: ChatHistory,
+        settings: Optional[Any] = None, # Remplace PromptExecutionSettings
+    ) -> AsyncGenerator[list[ChatMessageContent], None]:
+        """
+        Méthode abstraite de `Agent` pour obtenir une réponse.
+        Non implémentée car cet agent utilise des méthodes spécifiques.
+        """
+        logger.warning("La méthode 'get_response' n'est pas implémentée pour FirstOrderLogicAgent et ne devrait pas être appelée directement.")
+        yield []
+        return
+
+    async def invoke(
+        self,
+        chat_history: ChatHistory,
+        settings: Optional[Any] = None, # Remplace PromptExecutionSettings
+    ) -> list[ChatMessageContent]:
+        """
+        Méthode abstraite de `Agent` pour invoquer l'agent.
+        Non implémentée car cet agent utilise des méthodes spécifiques.
+        """
+        logger.warning("La méthode 'invoke' n'est pas implémentée pour FirstOrderLogicAgent et ne devrait pas être appelée directement.")
+        return []
+
+    async def invoke_stream(
+        self,
+        chat_history: ChatHistory,
+        settings: Optional[Any] = None, # Remplace PromptExecutionSettings
+    ) -> AsyncGenerator[list[ChatMessageContent], None]:
+        """
+        Méthode abstraite de `Agent` pour invoquer l'agent en streaming.
+        Non implémentée car cet agent utilise des méthodes spécifiques.
+        """
+        logger.warning("La méthode 'invoke_stream' n'est pas implémentée pour FirstOrderLogicAgent et ne devrait pas être appelée directement.")
+        yield []
+        return

@@ -23,10 +23,10 @@ import json
 import logging
 import asyncio
 from pathlib import Path
-from typing import List, Dict, Any, Tuple, Optional, Union, Callable
+from typing import List, Dict, Any, Tuple, Optional, Union, Callable, ClassVar
 
 import semantic_kernel as sk
-from semantic_kernel.contents import ChatMessageContent, AuthorRole # Potentiellement plus nécessaire directement
+from semantic_kernel.contents import ChatMessageContent # Potentiellement plus nécessaire directement
 from semantic_kernel.functions.kernel_arguments import KernelArguments
 from semantic_kernel.prompt_template.prompt_template_config import PromptTemplateConfig
 
@@ -69,13 +69,14 @@ def _lazy_imports() -> None:
 
     try:
         # Import relatif depuis le package agents/core
-        from ....ui.config import ENCRYPTION_KEY, CONFIG_FILE, CONFIG_FILE_JSON
-        from ....ui.utils import load_from_cache, reconstruct_url
-        from ....ui.extract_utils import (
+        # Corrigé de '....' à '...' car ui est un sous-répertoire de argumentation_analysis
+        from ...ui.config import ENCRYPTION_KEY, CONFIG_FILE, CONFIG_FILE_JSON
+        from ...ui.utils import load_from_cache, reconstruct_url
+        from ...ui.extract_utils import (
             load_source_text, extract_text_with_markers, find_similar_text,
             load_extract_definitions_safely, save_extract_definitions_safely
         )
-        # from ....core.llm_service import create_llm_service # Déplacé
+        # from ...core.llm_service import create_llm_service # Déplacé
     except ImportError:
         # Fallback pour les imports absolus
         from argumentation_analysis.ui.config import ENCRYPTION_KEY, CONFIG_FILE, CONFIG_FILE_JSON
@@ -117,9 +118,13 @@ class ExtractAgent(BaseAgent):
     """
     
     # Noms pour les fonctions sémantiques
-    EXTRACT_SEMANTIC_FUNCTION_NAME = "extract_from_name_semantic"
-    VALIDATE_SEMANTIC_FUNCTION_NAME = "validate_extract_semantic"
-    NATIVE_PLUGIN_NAME = "ExtractNativePlugin"
+    EXTRACT_SEMANTIC_FUNCTION_NAME: ClassVar[str] = "extract_from_name_semantic"
+    VALIDATE_SEMANTIC_FUNCTION_NAME: ClassVar[str] = "validate_extract_semantic"
+    NATIVE_PLUGIN_NAME: ClassVar[str] = "ExtractNativePlugin"
+
+    find_similar_text_func: Optional[Callable] = None
+    extract_text_func: Optional[Callable] = None
+    _native_extract_plugin: Optional[ExtractAgentPlugin] = None
 
     def __init__(
         self,
@@ -144,12 +149,12 @@ class ExtractAgent(BaseAgent):
         """
         super().__init__(kernel, agent_name, EXTRACT_AGENT_INSTRUCTIONS)
         
+        # Configuration du plugin name pour les tests et l'orchestration
+        self.plugin_name = "extract_plugin"
+        
         # Fonctions helper spécifiques à cet agent
         self.find_similar_text_func = find_similar_text_func or find_similar_text
         self.extract_text_func = extract_text_func or extract_text_with_markers
-        
-        # Le plugin natif sera initialisé dans setup_agent_components
-        self._native_extract_plugin: Optional[ExtractAgentPlugin] = None
 
     def get_agent_capabilities(self) -> Dict[str, Any]:
         """Décrit les capacités principales de l'agent d'extraction.
@@ -675,8 +680,49 @@ class ExtractAgent(BaseAgent):
         
         self.logger.info(f"Nouvel extrait '{extract_name}' ajouté à '{source_info.get('source_name', '')}' à l'index {new_extract_idx}.")
         return True, new_extract_idx
+
+    async def get_response(self, message: str, **kwargs) -> str:
+        """
+        Méthode implémentée pour satisfaire l'interface BaseAgent.
         
-        return False, -1
+        Retourne une réponse basée sur les capacités d'extraction de l'agent.
+        
+        :param message: Le message/texte à traiter
+        :param kwargs: Arguments supplémentaires
+        :return: Réponse de l'agent
+        """
+        # Pour un agent d'extraction, on peut retourner une description des capacités
+        # ou traiter le message selon le contexte
+        capabilities = self.get_agent_capabilities()
+        return f"ExtractAgent '{self.name}' prêt. Capacités: {', '.join(capabilities.keys())}"
+
+    async def invoke(self, action: str = "extract_from_name", **kwargs) -> Any:
+        """
+        Méthode d'invocation principale pour l'agent d'extraction.
+        
+        :param action: L'action à effectuer ('extract_from_name', 'repair_extract', etc.)
+        :param kwargs: Arguments spécifiques à l'action
+        :return: Résultat de l'action
+        """
+        if action == "extract_from_name":
+            source_info = kwargs.get("source_info")
+            extract_name = kwargs.get("extract_name")
+            if source_info and extract_name:
+                return await self.extract_from_name(source_info, extract_name)
+            else:
+                raise ValueError("extract_from_name requires 'source_info' and 'extract_name' parameters")
+        
+        elif action == "repair_extract":
+            extract_definitions = kwargs.get("extract_definitions")
+            source_idx = kwargs.get("source_idx")
+            extract_idx = kwargs.get("extract_idx")
+            if extract_definitions is not None and source_idx is not None and extract_idx is not None:
+                return await self.repair_extract(extract_definitions, source_idx, extract_idx)
+            else:
+                raise ValueError("repair_extract requires 'extract_definitions', 'source_idx', and 'extract_idx' parameters")
+        
+        else:
+            raise ValueError(f"Unknown action: {action}. Available actions: extract_from_name, repair_extract")
 
 # La fonction setup_extract_agent n'est plus nécessaire ici,
 # car l'initialisation du kernel et du service LLM se fait à l'extérieur

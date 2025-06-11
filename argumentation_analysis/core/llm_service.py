@@ -12,9 +12,10 @@ import json # Ajout de l'import manquant
 logger = logging.getLogger("Orchestration.LLM")
 if not logger.handlers and not logger.propagate:
     handler = logging.StreamHandler(); formatter = logging.Formatter('%(asctime)s [%(levelname)s] [%(name)s] %(message)s', datefmt='%H:%M:%S'); handler.setFormatter(formatter); logger.addHandler(handler); logger.setLevel(logging.INFO)
+logger.info("<<<<< MODULE llm_service.py LOADED >>>>>")
 
 
-def create_llm_service(service_id: str = "global_llm_service") -> Union[OpenAIChatCompletion, AzureChatCompletion]:
+def create_llm_service(service_id: str = "global_llm_service", force_mock: bool = False) -> Union[OpenAIChatCompletion, AzureChatCompletion]:
     """
     Charge la configuration depuis .env et crée une instance du service LLM
     (OpenAI ou Azure OpenAI).
@@ -29,17 +30,40 @@ def create_llm_service(service_id: str = "global_llm_service") -> Union[OpenAICh
         ValueError: Si la configuration .env est incomplète ou invalide.
         RuntimeError: Si la création de l'instance échoue pour une autre raison.
     """
+    logger.critical("<<<<< get_llm_service FUNCTION CALLED >>>>>")
     logger.info(f"--- Configuration du Service LLM ({service_id}) ---")
-    load_dotenv(override=True) # Recharger au cas où
+    cwd = os.getcwd()
+    logger.info(f"Current working directory for dotenv: {cwd}")
+    dotenv_path = os.path.join(cwd, '.env')
+    logger.info(f"Attempting to load .env from explicit path: {dotenv_path}")
+    success = load_dotenv(dotenv_path=dotenv_path, override=True, verbose=True) # Ajout de verbose=True
+    logger.info(f"load_dotenv success with explicit path '{dotenv_path}': {success}")
 
     api_key = os.getenv("OPENAI_API_KEY")
+    logger.info(f"Value of api_key directly from os.getenv: '{api_key}'")
+    # AJOUT POUR DEBUGGING
+    if api_key and len(api_key) > 10: # Vérifier que la clé existe et est assez longue
+        logger.info(f"OpenAI API Key (first 5, last 5): {api_key[:5]}...{api_key[-5:]}")
+    elif api_key:
+        logger.info(f"OpenAI API Key loaded (short key): {api_key}")
+    else:
+        logger.warning("OpenAI API Key is None or empty after os.getenv.")
+    # FIN AJOUT
     model_id = os.getenv("OPENAI_CHAT_MODEL_ID")
     endpoint = os.getenv("OPENAI_ENDPOINT")
+    base_url = os.getenv("OPENAI_BASE_URL")  # Support pour OpenRouter et autres providers
     org_id = os.getenv("OPENAI_ORG_ID")
+    
+    # Log de la configuration détectée
+    logger.info(f"Configuration détectée - base_url: {base_url}, endpoint: {endpoint}")
     use_azure_openai = bool(endpoint)
 
     llm_instance = None
     try:
+        if force_mock:
+            logger.warning("Mode mock demandé mais non supporté. Tentative de création d'un service LLM réel.")
+            # Le mode mock n'est plus supporté - on continue avec la logique réelle
+
         if use_azure_openai:
             logger.info("Configuration Service: AzureChatCompletion...")
             if not all([api_key, model_id, endpoint]):
@@ -73,11 +97,25 @@ def create_llm_service(service_id: str = "global_llm_service") -> Union[OpenAICh
             custom_httpx_client = httpx.AsyncClient(transport=logging_http_transport)
 
             # Création du client AsyncOpenAI avec le client httpx personnalisé
-            openai_custom_async_client = AsyncOpenAI(
-                api_key=api_key,
-                organization=org_id, # Peut être None
-                http_client=custom_httpx_client
-            )
+            # Création du client AsyncOpenAI avec le client httpx personnalisé
+            org_to_use = org_id if (org_id and "your_openai_org_id_here" not in org_id) else None
+            
+            # Configuration du client avec support pour OpenRouter et autres providers
+            client_kwargs = {
+                "api_key": api_key,
+                "http_client": custom_httpx_client
+            }
+            
+            # Ajouter base_url si configuré (pour OpenRouter, etc.)
+            if base_url:
+                client_kwargs["base_url"] = base_url
+                logger.info(f"Utilisation de base_url personnalisée: {base_url}")
+            
+            # Ajouter organization si configuré
+            if org_to_use:
+                client_kwargs["organization"] = org_to_use
+                
+            openai_custom_async_client = AsyncOpenAI(**client_kwargs)
             
             llm_instance = OpenAIChatCompletion(
                 service_id=service_id,

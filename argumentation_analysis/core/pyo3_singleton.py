@@ -46,7 +46,7 @@ def initialize_pyo3() -> bool:
         # Par exemple, configurer des chemins, des variables d'environnement, etc.
         
         _initialized = True
-        logger.info("✅ Environnement PyO3 initialisé avec succès.")
+        logger.info("[OK] Environnement PyO3 initialisé avec succès.")
         return True
     except Exception as e:
         logger.error(f"❌ Erreur lors de l'initialisation de l'environnement PyO3: {e}", exc_info=True)
@@ -91,7 +91,7 @@ def get_pyo3_module(module_name: str, init_func: Optional[Callable] = None) -> O
         
         # Stocker l'instance dans le dictionnaire
         _pyo3_modules[module_name] = module
-        logger.info(f"✅ Module PyO3 '{module_name}' chargé avec succès.")
+        logger.info(f"[OK] Module PyO3 '{module_name}' chargé avec succès.")
         return module
     except ImportError as e:
         logger.error(f"❌ Erreur lors du chargement du module PyO3 '{module_name}': {e}")
@@ -126,7 +126,7 @@ def unload_pyo3_module(module_name: str) -> bool:
         if module_name in sys.modules:
             del sys.modules[module_name]
         
-        logger.info(f"✅ Module PyO3 '{module_name}' déchargé avec succès.")
+        logger.info(f"[OK] Module PyO3 '{module_name}' déchargé avec succès.")
         return True
     except Exception as e:
         logger.error(f"❌ Erreur lors du déchargement du module PyO3 '{module_name}': {e}", exc_info=True)
@@ -153,7 +153,7 @@ def reset_pyo3_environment() -> bool:
         _pyo3_modules = {}
         _initialized = False
         
-        logger.info("✅ Environnement PyO3 réinitialisé avec succès.")
+        logger.info("[OK] Environnement PyO3 réinitialisé avec succès.")
         return True
     except Exception as e:
         logger.error(f"❌ Erreur lors de la réinitialisation de l'environnement PyO3: {e}", exc_info=True)
