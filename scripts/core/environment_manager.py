@@ -17,7 +17,7 @@ import sys
 import subprocess
 import argparse
 import json # Ajout de l'import json au niveau supérieur
-from typing import Dict, List, Optional, Tuple, Any
+from typing import Dict, List, Optional, Tuple, Any, Union
 from pathlib import Path
 import shutil # Ajout pour shutil.which
 import platform # Ajout pour la détection OS-spécifique des chemins communs
@@ -56,7 +56,7 @@ class EnvironmentManager:
             logger: Instance de logger à utiliser
         """
         self.logger = logger or Logger()
-        self.project_root = get_project_root()
+        self.project_root = Path(get_project_root())
         # Le chargement initial de .env (y compris la découverte/persistance de CONDA_PATH)
         # est maintenant géré au début de la méthode auto_activate_env.
         # L'appel à _load_dotenv_intelligent ici est donc redondant et supprimé.
@@ -64,42 +64,48 @@ class EnvironmentManager:
         # Le code pour rendre JAVA_HOME absolu est déplacé vers la méthode activate_project_environment
         # pour s'assurer qu'il s'exécute APRÈS le chargement du fichier .env.
         
-        self.default_conda_env = "projet-is"
+        self.default_conda_env = "projet-is-v2"
         self.required_python_version = (3, 8)
         
         # Variables d'environnement importantes
         self.env_vars = {
             'PYTHONIOENCODING': 'utf-8',
-            'PYTHONPATH': self.project_root,
-            'PROJECT_ROOT': self.project_root
+            'PYTHONPATH': str(self.project_root),
+            'PROJECT_ROOT': str(self.project_root)
         }
-    
-    def check_conda_available(self) -> bool:
-        """Vérifie si conda est disponible"""
-        try:
-            # Nouvelle tentative : utiliser shell=True pour que le shell résolve conda via le PATH mis à jour.
-            # C'est pour 'conda --version' uniquement, donc le risque de sécurité est minime.
-            self.logger.debug("Tentative de vérification de Conda avec shell=True...")
-            result = subprocess.run(
-                'conda --version', # Commande en chaîne de caractères pour shell=True
-                shell=True,
-                capture_output=True,
-                text=True,
-                timeout=10,
-                executable=shutil.which('powershell') if platform.system() == "Windows" else None # Spécifier le shell si Windows
-            )
-            if result.returncode == 0 and "conda" in result.stdout.lower():
-                self.logger.debug(f"Conda trouvé (via shell=True): {result.stdout.strip()}")
-                return True
-            else:
-                self.logger.warning(f"Commande 'conda --version' (shell=True) a échoué ou n'a pas retourné 'conda'. Code: {result.returncode}. Output: {result.stdout.strip()} Stderr: {result.stderr.strip()}")
+        self.conda_executable_path = None # Cache pour le chemin de l'exécutable conda
 
-        except (subprocess.SubprocessError, subprocess.TimeoutExpired) as e:
-            self.logger.warning(f"Erreur lors de la vérification de Conda (shell=True): {e}")
-            pass # L'échec est géré ci-dessous
+    def _find_conda_executable(self) -> Optional[str]:
+        """
+        Localise l'exécutable conda de manière robuste sur le système.
+        Utilise un cache pour éviter les recherches répétées.
+        """
+        if self.conda_executable_path:
+            return self.conda_executable_path
         
-        self.logger.warning("Conda non disponible (après tentative avec shell=True)")
-        return False
+        # S'assurer que les variables d'environnement (.env) et le PATH sont à jour
+        self._discover_and_persist_conda_path_in_env_file(self.project_root)
+        self._update_system_path_from_conda_env_var()
+        
+        # Chercher 'conda.exe' sur Windows, 'conda' sinon
+        conda_exe_name = "conda.exe" if platform.system() == "Windows" else "conda"
+        
+        # 1. Utiliser shutil.which qui est le moyen le plus fiable
+        self.logger.debug(f"Recherche de '{conda_exe_name}' avec shutil.which...")
+        conda_path = shutil.which(conda_exe_name)
+        
+        if conda_path:
+            self.logger.info(f"Exécutable Conda trouvé via shutil.which: {conda_path}")
+            self.conda_executable_path = conda_path
+            return self.conda_executable_path
+            
+        self.logger.warning(f"'{conda_exe_name}' non trouvé via shutil.which. Le PATH est peut-être incomplet.")
+        self.logger.debug(f"PATH actuel: {os.environ.get('PATH')}")
+        return None
+
+    def check_conda_available(self) -> bool:
+        """Vérifie si conda est disponible en trouvant son exécutable."""
+        return self._find_conda_executable() is not None
     
     def check_python_version(self, python_cmd: str = "python") -> bool:
         """Vérifie la version de Python"""
@@ -134,18 +140,20 @@ class EnvironmentManager:
     
     def list_conda_environments(self) -> List[str]:
         """Liste les environnements conda disponibles"""
-        if not self.check_conda_available():
+        conda_exe = self._find_conda_executable()
+        if not conda_exe:
+            self.logger.error("Impossible de lister les environnements car Conda n'est pas trouvable.")
             return []
         
         try:
-            # CORRECTION: Simplifier en utilisant PowerShell directement
-            conda_path = os.environ.get('CONDA_PATH', 'C:\\tools\\miniconda3\\condabin;C:\\tools\\miniconda3\\Scripts;C:\\tools\\miniconda3\\Library\\bin')
-            cmd_env_list = f'$env:PATH = "{conda_path};$env:PATH"; conda env list --json'
+            cmd = [conda_exe, 'env', 'list', '--json']
+            self.logger.debug(f"Exécution de la commande pour lister les environnements: {' '.join(cmd)}")
             result = subprocess.run(
-                ['powershell', '-c', cmd_env_list],
+                cmd,
                 capture_output=True,
                 text=True,
-                timeout=30
+                timeout=30,
+                encoding='utf-8'
             )
             
             if result.returncode == 0:
@@ -201,104 +209,110 @@ class EnvironmentManager:
         for key, value in env_vars.items():
             os.environ[key] = value
             self.logger.debug(f"Variable d'environnement définie: {key}={value}")
+        
+        # RUSTINE DE DERNIER RECOURS
+        # Ajouter manuellement le `site-packages` de l'environnement au PYTHONPATH.
+        conda_prefix = os.environ.get("CONDA_PREFIX")
+        if conda_prefix and "projet-is" in conda_prefix:
+            site_packages_path = os.path.join(conda_prefix, "lib", "site-packages")
+            python_path = os.environ.get("PYTHONPATH", "")
+            if site_packages_path not in python_path:
+                os.environ["PYTHONPATH"] = f"{site_packages_path}{os.pathsep}{python_path}"
+                self.logger.warning(f"RUSTINE: Ajout forcé de {site_packages_path} au PYTHONPATH.")
     
-    def run_in_conda_env(self, command: List[str], env_name: str = None,
+    def run_in_conda_env(self, command: Union[str, List[str]], env_name: str = None,
                          cwd: str = None, capture_output: bool = False) -> subprocess.CompletedProcess:
         """
-        Exécute une commande dans un environnement conda de manière robuste.
-        
-        Args:
-            command: Commande à exécuter (liste de strings ou chaîne)
-            env_name: Nom de l'environnement conda (défaut: projet-is)
-            cwd: Répertoire de travail (défaut: project_root)
-            capture_output: Capturer la sortie au lieu de l'afficher
-        
-        Returns:
-            Résultat de l'exécution
+        Exécute une commande dans un environnement conda de manière robuste en utilisant `conda run`.
+        Cette méthode délègue l'activation de l'environnement à Conda lui-même,
+        ce qui est plus fiable que la manipulation manuelle du PATH.
         """
         if env_name is None:
             env_name = self.default_conda_env
-        
         if cwd is None:
             cwd = self.project_root
         
+        conda_exe = self._find_conda_executable()
+        if not conda_exe:
+            self.logger.error("Exécutable Conda non trouvé.")
+            raise RuntimeError("Exécutable Conda non trouvé, impossible de continuer.")
+
         if not self.check_conda_env_exists(env_name):
-            self.logger.error(f"Environnement conda '{env_name}' non trouvé")
-            raise RuntimeError(f"Environnement conda '{env_name}' non disponible")
+            self.logger.error(f"Environnement conda '{env_name}' non trouvé.")
+            raise RuntimeError(f"Environnement conda '{env_name}' non disponible.")
 
-        if isinstance(command, list):
-            command_str_for_shell = ' '.join(command)
+        import shlex
+        if isinstance(command, str):
+            base_command = shlex.split(command, posix=(os.name != 'nt'))
         else:
-            command_str_for_shell = command
+            base_command = command
 
-        self.logger.debug(f"Commande brute à exécuter dans conda '{env_name}': {command_str_for_shell}")
-
-        exec_env = os.environ.copy()
-        command_prefix = ""
-
-        # Préparer un préfixe de commande pour forcer les variables d'environnement dans le shell distant
-        if os.name == 'nt':
-            if 'JAVA_HOME' in exec_env:
-                java_home_path = Path(exec_env['JAVA_HOME'])
-                command_prefix += f"set JAVA_HOME=\"{exec_env['JAVA_HOME']}\" && "
-                
-                java_bin_path = java_home_path / 'bin'
-                command_prefix += f'set PATH={java_bin_path};%PATH% && '
-
-                jvm_dll_path = java_home_path / 'bin' / 'server' / 'jvm.dll'
-                if jvm_dll_path.exists():
-                    self.logger.info(f"Préparation de PYJNIUS_JVM_PATH vers {jvm_dll_path}")
-                    exec_env['PYJNIUS_JVM_PATH'] = str(jvm_dll_path)
-                    command_prefix += f"set PYJNIUS_JVM_PATH=\"{str(jvm_dll_path)}\" && "
-                else:
-                    self.logger.warning(f"Fichier jvm.dll introuvable à {jvm_dll_path}.")
-        else: # Unix
-            if 'JAVA_HOME' in exec_env:
-                command_prefix += f"export JAVA_HOME='{exec_env['JAVA_HOME']}'; "
-                jvm_dll_path = Path(exec_env['JAVA_HOME']) / 'lib' / 'server' / 'libjvm.so' # .so for linux
-                if jvm_dll_path.exists():
-                     exec_env['PYJNIUS_JVM_PATH'] = str(jvm_dll_path)
-                     command_prefix += f"export PYJNIUS_JVM_PATH='{str(jvm_dll_path)}'; "
-
-        final_command_str = f"{command_prefix}{command_str_for_shell}"
-
-        if os.name == 'nt':
-            final_conda_cmd = ['conda', 'run', '-n', env_name, '--no-capture-output', 'cmd', '/c', final_command_str]
-        else:
-            final_conda_cmd = ['conda', 'run', '-n', env_name, '--no-capture-output', 'bash', '-c', final_command_str]
-
-        self.logger.info(f"Commande conda finale construite: {' '.join(final_conda_cmd)}")
+        # Construction de la commande avec 'conda run'
+        # --no-capture-output et --live-stream sont essentiels pour que les processus interactifs
+        # et les installations longues fonctionnent correctement et affichent leur sortie en direct.
+        final_command = [
+            conda_exe, 'run', '-n', env_name,
+            '--no-capture-output',
+            # '--live-stream', # Peut causer des pbs avec capture_output, géré manuellement
+        ] + base_command
+        
+        self.logger.info(f"Commande d'exécution via 'conda run': {' '.join(final_command)}")
 
         try:
-            if capture_output:
-                result = subprocess.run(
-                    final_conda_cmd,
-                    cwd=cwd,
-                    capture_output=True,
-                    text=True,
-                    env=exec_env,
-                    timeout=300
-                )
-            else:
-                result = subprocess.run(
-                    final_conda_cmd,
-                    cwd=cwd,
-                    env=exec_env,
-                    timeout=300
-                )
+            # Utiliser Popen pour un meilleur contrôle du streaming
+            process = subprocess.Popen(
+                final_command,
+                cwd=cwd,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+                encoding='utf-8',
+                errors='replace'
+            )
+
+            stdout_lines = []
+            stderr_lines = []
+
+            # Lire stdout et stderr en temps réel pour éviter les blocages
+            while True:
+                # Lire une ligne de stdout
+                stdout_line = process.stdout.readline()
+                if stdout_line:
+                    line = stdout_line.strip()
+                    self.logger.info(line) # Afficher en direct dans le log
+                    stdout_lines.append(line)
+                
+                # Lire une ligne de stderr
+                stderr_line = process.stderr.readline()
+                if stderr_line:
+                    line = stderr_line.strip()
+                    self.logger.error(line) # Afficher en direct dans le log
+                    stderr_lines.append(line)
+                
+                # Sortir si le processus est terminé et qu'il n'y a plus de sortie
+                if process.poll() is not None and not stdout_line and not stderr_line:
+                    break
             
+            # Récupérer le code de sortie final
+            returncode = process.wait()
+
+            # Créer un objet CompletedProcess pour la rétrocompatibilité
+            result = subprocess.CompletedProcess(
+                args=final_command,
+                returncode=returncode,
+                stdout='\n'.join(stdout_lines),
+                stderr='\n'.join(stderr_lines)
+            )
+
             if result.returncode == 0:
-                self.logger.debug("Commande exécutée avec succès")
+                self.logger.debug(f"'conda run' exécuté avec succès (code {result.returncode}).")
             else:
-                self.logger.warning(f"Commande terminée avec code: {result.returncode}")
+                self.logger.warning(f"'conda run' terminé avec le code: {result.returncode}")
             
             return result
-        
-        except subprocess.TimeoutExpired:
-            self.logger.error("Timeout lors de l'exécution de la commande")
-            raise
-        except subprocess.SubprocessError as e:
-            self.logger.error(f"Erreur lors de l'exécution: {e}")
+
+        except (subprocess.SubprocessError, FileNotFoundError) as e:
+            self.logger.error(f"Erreur lors de l'exécution de 'conda run': {e}")
             raise
     
     def check_python_dependencies(self, requirements: List[str], env_name: str = None) -> Dict[str, bool]:
@@ -389,14 +403,24 @@ class EnvironmentManager:
         
         self.logger.info(f"Activation de l'environnement '{env_name}'...")
 
-        # --- CHARGEMENT DU .env ---
-        # Essayer de trouver et charger un fichier .env à la racine du projet ou au-dessus
+        # --- BLOC D'ACTIVATION UNIFIÉ ---
+        self.logger.info("Début du bloc d'activation unifié...")
+
+        # 1. Charger le fichier .env de base
         dotenv_path = find_dotenv()
         if dotenv_path:
             self.logger.info(f"Fichier .env trouvé et chargé depuis : {dotenv_path}")
-            load_dotenv(dotenv_path)
+            load_dotenv(dotenv_path, override=True)
         else:
-            self.logger.info("Aucun fichier .env trouvé.")
+            self.logger.info("Aucun fichier .env trouvé, tentative de création/mise à jour.")
+
+        # 2. Découvrir et persister CONDA_PATH dans le .env si nécessaire
+        # Cette méthode met à jour le fichier .env et recharge les variables dans os.environ
+        self._discover_and_persist_conda_path_in_env_file(self.project_root, silent=False)
+
+        # 3. Mettre à jour le PATH du processus courant à partir de CONDA_PATH (maintenant dans os.environ)
+        # Ceci est crucial pour que les appels directs à `conda` ou `python` fonctionnent.
+        self._update_system_path_from_conda_env_var(silent=False)
 
         # Assurer que JAVA_HOME est un chemin absolu APRÈS avoir chargé .env
         if 'JAVA_HOME' in os.environ:
@@ -408,6 +432,15 @@ class EnvironmentManager:
                     self.logger.info(f"JAVA_HOME (de .env) converti en chemin absolu: {os.environ['JAVA_HOME']}")
                 else:
                     self.logger.warning(f"Le chemin JAVA_HOME (de .env) résolu vers {absolute_java_home} est invalide.")
+        
+        # **CORRECTION DE ROBUSTESSE POUR JPYPE**
+        # S'assurer que le répertoire bin de la JVM est dans le PATH
+        if 'JAVA_HOME' in os.environ:
+            java_bin_path = Path(os.environ['JAVA_HOME']) / 'bin'
+            if java_bin_path.is_dir():
+                if str(java_bin_path) not in os.environ['PATH']:
+                    os.environ['PATH'] = f"{java_bin_path}{os.pathsep}{os.environ['PATH']}"
+                    self.logger.info(f"Ajouté {java_bin_path} au PATH pour la JVM.")
         
         # Vérifications préalables
         if not self.check_conda_available():
@@ -665,154 +698,54 @@ class EnvironmentManager:
 
     # --- Fin des méthodes transférées ---
 
-def is_conda_env_active(env_name: str = "projet-is") -> bool:
+def is_conda_env_active(env_name: str = "projet-is-v2") -> bool:
     """Vérifie si l'environnement conda spécifié est actuellement actif"""
     current_env = os.environ.get('CONDA_DEFAULT_ENV', '')
     return current_env == env_name
 
 
-def check_conda_env(env_name: str = "projet-is", logger: Logger = None) -> bool:
+def check_conda_env(env_name: str = "projet-is-v2", logger: Logger = None) -> bool:
     """Fonction utilitaire pour vérifier un environnement conda"""
     manager = EnvironmentManager(logger)
     return manager.check_conda_env_exists(env_name)
 
 
-def auto_activate_env(env_name: str = "projet-is", silent: bool = True) -> bool:
+def auto_activate_env(env_name: str = "projet-is-v2", silent: bool = True) -> bool:
     """
-    One-liner auto-activateur d'environnement intelligent
-    
-    Active véritablement l'environnement conda en modifiant le PATH et les variables.
-    
-    Args:
-        env_name: Nom de l'environnement conda
-        silent: Mode silencieux (pas de logs verbeux)
-    
-    Returns:
-        True si environnement actif/activé, False sinon
+    One-liner auto-activateur d'environnement intelligent.
+    Cette fonction est maintenant une façade pour la logique d'activation centrale.
     """
     try:
-        # Logger minimal pour auto-activation
-        logger = Logger(verbose=not silent)
-        manager = EnvironmentManager(logger) 
+        # Si le script d'activation principal est déjà en cours, on ne fait rien.
+        if os.getenv('IS_ACTIVATION_SCRIPT_RUNNING') == 'true':
+            return True
 
-        manager._discover_and_persist_conda_path_in_env_file(Path(manager.project_root), silent)
-        manager._update_system_path_from_conda_env_var(silent)
+        logger = Logger(verbose=not silent)
+        manager = EnvironmentManager(logger)
         
-        if not manager.check_conda_available():
-            if not silent:
-                logger.error(f"[ERROR] Conda non disponible - impossible d'activer '{env_name}'")
-            return False
+        # On appelle la méthode centrale d'activation SANS commande à exécuter.
+        # Le code de sortie 0 indique le succès de l'ACTIVATION.
+        exit_code = manager.activate_project_environment(env_name=env_name)
         
-        if not manager.check_conda_env_exists(env_name):
-            if not silent:
-                logger.error(f"[ERROR] Environnement '{env_name}' non trouve")
-            return False
+        is_success = (exit_code == 0)
         
-        # Obtenir le chemin de l'environnement conda
-        try:
-            # Utiliser la même logique que list_conda_environments() corrigée
-            conda_path_env_var = os.environ.get('CONDA_PATH', 'C:\\tools\\miniconda3\\condabin;C:\\tools\\miniconda3\\Scripts;C:\\tools\\miniconda3\\Library\\bin')
-            cmd_env_path_info = f'$env:PATH = "{conda_path_env_var};$env:PATH"; conda info --envs --json'
-            if not silent:
-                logger.debug(f"[DEBUG] Exécution pour obtenir env_path: {cmd_env_path_info}")
-            
-            result = subprocess.run(
-                ['powershell', '-c', cmd_env_path_info],
-                capture_output=True,
-                text=True,
-                timeout=30
-            )
-            
-            if result.returncode == 0:
-                # Extraire seulement la partie JSON (même logique que list_conda_environments)
-                lines = result.stdout.strip().split('\n')
-                json_start = 0
-                for i, line in enumerate(lines):
-                    if line.strip().startswith('{'):
-                        json_start = i
-                        break
-                json_content = '\n'.join(lines[json_start:])
-                
-                env_data = json.loads(json_content)
-                env_path = None
-                
-                for env_dir in env_data.get('envs', []):
-                    if Path(env_dir).name == env_name:
-                        env_path = env_dir
-                        break
-                
-                if env_path:
-                    # Activer vraiment l'environnement en modifiant le PATH
-                    env_bin_path = os.path.join(env_path, 'Scripts')  # Windows
-                    if not os.path.exists(env_bin_path):
-                        env_bin_path = os.path.join(env_path, 'bin')  # Unix
-                    
-                    if os.path.exists(env_bin_path):
-                        # Mettre le chemin de l'environnement en premier dans le PATH
-                        current_path = os.environ.get('PATH', '')
-                        path_parts = current_path.split(os.pathsep)
-                        
-                        # Retirer les anciens chemins conda s'ils existent
-                        path_parts = [p for p in path_parts if not ('conda' in p.lower() and 'envs' in p.lower())]
-                        
-                        # Ajouter le nouveau chemin en premier
-                        path_parts.insert(0, env_bin_path)
-                        os.environ['PATH'] = os.pathsep.join(path_parts)
-                        
-                        # Configurer les variables d'environnement conda
-                        os.environ['CONDA_DEFAULT_ENV'] = env_name
-                        os.environ['CONDA_PREFIX'] = env_path
-                        
-                        if not silent:
-                            logger.info(f"[INFO] Auto-activation de l'environnement '{env_name}'...")
-                            logger.info(f"[CONDA] PATH mis à jour: {env_bin_path}")
-                        
-                        # Configurer les variables d'environnement du projet
-                        manager.setup_environment_variables()
-                        
-                        if not silent:
-                            logger.info(f"[OK] Environnement '{env_name}' auto-actif")
-                        
-                        return True
-                    else:
-                        if not silent:
-                            logger.error(f"[ERROR] Répertoire bin/Scripts non trouvé: {env_bin_path}")
-                        return False
-                else:
-                    if not silent:
-                        logger.error(f"[ERROR] Chemin de l'environnement '{env_name}' non trouvé (après parsing JSON)")
-                    return False
-            # Gestion des erreurs de la sous-commande (result.returncode != 0)
+        if not silent:
+            if is_success:
+                logger.success(f"Auto-activation de '{env_name}' réussie via le manager central.")
             else:
-                if not silent:
-                    logger.error(f"Commande pour obtenir les infos conda a échoué avec le code {result.returncode}.")
-                    logger.error(f"STDOUT: {result.stdout}")
-                    logger.error(f"STDERR: {result.stderr}")
-                return False
-                
-        except subprocess.TimeoutExpired as e_timeout:
-            logger.error(f"Timeout lors de l'exécution de la commande pour obtenir les infos conda: {e_timeout}")
-            if not silent:
-                logger.error(f"[ERROR] Timeout lors de l'obtention des infos conda: {e_timeout}")
-            return False
-        except json.JSONDecodeError as e_json: # Attraper l'erreur de décodage JSON ici
-            logger.error(f"Erreur de décodage JSON pour la sortie de la commande conda info: {e_json}")
-            if 'result' in locals() and result and hasattr(result, 'stdout'): # S'assurer que result et result.stdout existent
-                 logger.error(f"Sortie STDOUT qui a causé l'erreur: >>>\n{result.stdout}\n<<<")
-            return False
-        except Exception as e_general: # Autres exceptions
-            logger.error(f"Erreur inattendue lors de l'obtention du chemin conda: {e_general}", exc_info=True)
-            if not silent:
-                logger.error(f"[ERROR] Erreur générale lors de l'obtention du chemin conda: {e_general}")
-            return False
-        
+                logger.error(f"Échec de l'auto-activation de '{env_name}' via le manager central.")
+
+        return is_success
+
     except Exception as e:
         if not silent:
-            logger.error(f"❌ Erreur auto-activation: {e}", exc_info=True) # Ajout de exc_info
+            # Créer un logger temporaire si l'initialisation a échoué.
+            temp_logger = Logger(verbose=True)
+            temp_logger.error(f"❌ Erreur critique dans auto_activate_env: {e}", exc_info=True)
         return False
 
 
-def activate_project_env(command: str = None, env_name: str = "projet-is", logger: Logger = None) -> int:
+def activate_project_env(command: str = None, env_name: str = "projet-is-v2", logger: Logger = None) -> int:
     """Fonction utilitaire pour activer l'environnement projet"""
     manager = EnvironmentManager(logger)
     return manager.activate_project_environment(command, env_name)
@@ -828,17 +761,16 @@ def main():
     )
     
     parser.add_argument(
-        '--command', '-c', # Option nommée, attendue par activate_project_env.ps1 (version lue)
-        type=str,
-        default=None,
-        help='Commande à exécuter dans l\'environnement (optionnel)'
+        '--command', '-c',
+        nargs=argparse.REMAINDER,
+        help="Commande à exécuter. Doit être le dernier argument, tous les arguments suivants seront considérés comme faisant partie de la commande."
     )
     
     parser.add_argument(
         '--env-name', '-e',
         type=str,
-        default='projet-is',
-        help='Nom de l\'environnement conda (défaut: projet-is)'
+        default='projet-is-v2',
+        help='Nom de l\'environnement conda (défaut: projet-is-v2)'
     )
     
     parser.add_argument(
@@ -853,6 +785,12 @@ def main():
         help='Mode verbeux'
     )
     
+    parser.add_argument(
+        '--force-reinstall',
+        action='store_true',
+        help="Forcer la suppression et la recréation de l'environnement conda."
+    )
+    
     args = parser.parse_args() 
     
     logger = Logger(verbose=True) # FORCER VERBOSE POUR DEBUG (ou utiliser args.verbose)
@@ -861,9 +799,75 @@ def main():
     
     manager = EnvironmentManager(logger)
     
-    command_to_run_final = args.command 
+    command_to_run_final = ' '.join(args.command) if args.command else None
 
-    if args.check_only:
+    if args.force_reinstall:
+        logger.info("FORCER LA RÉINSTALLATION DE L'ENVIRONNEMENT")
+        env_name = args.env_name
+        
+        # 1. Trouver l'exécutable conda de manière robuste
+        conda_exe = manager._find_conda_executable()
+        if not conda_exe:
+            logger.critical("Impossible de trouver l'exécutable Conda. La réinstallation ne peut pas continuer.")
+            safe_exit(1, logger)
+        logger.info(f"Utilisation de l'exécutable Conda : {conda_exe}")
+        
+        # 2. Supprimer l'ancien environnement
+        if manager.check_conda_env_exists(env_name):
+            logger.info(f"Suppression de l'environnement existant '{env_name}'...")
+            subprocess.run([conda_exe, 'env', 'remove', '-n', env_name, '--y'], check=True)
+            logger.success(f"Environnement '{env_name}' supprimé.")
+        else:
+            logger.info(f"L'environnement '{env_name}' n'existe pas, pas besoin de le supprimer.")
+
+        # 3. Recréer l'environnement
+        logger.info(f"Création du nouvel environnement '{env_name}' avec Python 3.10...")
+        subprocess.run([conda_exe, 'create', '-n', env_name, 'python=3.10', '--y'], check=True)
+
+        # 4. Installer les dépendances de base
+        logger.info("Installation des dépendances depuis argumentation_analysis/requirements.txt...")
+        requirements_path = manager.project_root / 'argumentation_analysis' / 'requirements.txt'
+        if not requirements_path.exists():
+            logger.critical(f"Le fichier de dépendances n'a pas été trouvé: {requirements_path}")
+            safe_exit(1, logger)
+
+        # Utiliser la méthode run_in_conda_env pour garantir le bon contexte
+        pip_install_command = [
+            'pip', 'install',
+            '--no-cache-dir', # Ne pas utiliser de cache potentiellement corrompu
+            '--force-reinstall', # Forcer la réécriture des paquets
+            '-r', str(requirements_path)
+        ]
+        # On ne capture plus la sortie ici, on veut la voir en direct
+        result = manager.run_in_conda_env(pip_install_command, env_name=env_name)
+        
+        if result.returncode != 0:
+            logger.error(f"Échec de l'installation des dépendances depuis {requirements_path}. Voir logs ci-dessus.")
+            # Les sorties sont déjà logguées en temps réel par run_in_conda_env
+            safe_exit(1, logger)
+        
+        logger.success("Dépendances installées (selon pip).")
+        
+        # Pause de 2 secondes pour s'assurer que le système de fichiers est synchronisé
+        import time
+        logger.info("Pause de 2 secondes avant la vérification...")
+        time.sleep(2)
+        
+        logger.info("Vérification de l'import de JPype1 post-installation...")
+        verify_cmd = "import jpype1; print('JPype1 importé avec succès dans le manager')"
+        # On ne capture plus la sortie ici non plus
+        verify_result = manager.run_in_conda_env(['python', '-c', verify_cmd], env_name=env_name)
+
+        if verify_result.returncode != 0:
+            logger.critical("Échec de la vérification de l'import de JPype1. L'environnement est potentiellement corrompu.")
+            logger.error(f"Trace de la vérification (stderr):\n{verify_result.stderr}")
+            safe_exit(1, logger)
+        
+        logger.success(f"Vérification de l'import JPype1 réussie:\n{verify_result.stdout.strip()}")
+        logger.success(f"Environnement '{env_name}' recréé et initialisé avec succès.")
+        safe_exit(0, logger)
+
+    elif args.check_only:
         # Mode vérification uniquement
         logger.info("Vérification de l'environnement...")
         

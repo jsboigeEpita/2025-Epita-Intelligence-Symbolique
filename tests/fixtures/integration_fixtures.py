@@ -82,40 +82,46 @@ def integration_jvm():
                 pytest.skip("LIBS_DIR ou TWEETY_VERSION manquant pour initialize_jvm.")
                 return None
 
-            # Définir explicitement le chemin vers libs/tweety pour cette fixture
-            # pour s'assurer que le bon répertoire est utilisé, conformément à la demande de correction.
+            # Construction d'un classpath dynamique incluant Tweety et l'agent Dung
             current_file_path = pathlib.Path(__file__).resolve()
             project_root_for_fixture = current_file_path.parent.parent.parent
-            explicit_libs_tweety_path = project_root_for_fixture / "libs" / "tweety"
+
+            # Chemins vers les répertoires contenant les JARs
+            tweety_libs_path = project_root_for_fixture / "libs" / "tweety"
+            dung_libs_path = project_root_for_fixture / "abs_arg_dung" / "libs"
+
+            all_jar_paths = []
             
-            if not explicit_libs_tweety_path.is_dir():
-                logger.error(f"Le chemin explicite vers les JARs Tweety '{explicit_libs_tweety_path}' n'est pas un répertoire. Skip.")
-                pytest.skip(f"Chemin libs/tweety explicite non trouvé: {explicit_libs_tweety_path}")
-                return None
-
-            logger.info(f"Utilisation du chemin explicite pour les JARs Tweety: {explicit_libs_tweety_path}")
-
-            # Définir le chemin vers le JAR spécifique
-            specific_jar_file_name = "org.tweetyproject.tweety-full-1.28-with-dependencies.jar"
-            specific_jar_full_path = explicit_libs_tweety_path / specific_jar_file_name
-
-            if not specific_jar_full_path.is_file():
-                logger.error(f"Le JAR spécifique '{specific_jar_full_path}' n'a pas été trouvé. Skip.")
-                pytest.skip(f"JAR spécifique non trouvé: {specific_jar_full_path}")
-                return None
-            
-            logger.info(f"Tentative d'initialisation de la JVM avec le JAR spécifique: {specific_jar_full_path}")
-
-            success = initialize_jvm(
-                # lib_dir_path=str(explicit_libs_tweety_path), # Commenté car nous utilisons specific_jar_path
-                specific_jar_path=str(specific_jar_full_path)
-            )
-            if success:
-                logger.info("initialize_jvm a réussi avec le JAR spécifique.")
-                _initialize_jvm_called_successfully_session = True
+            if tweety_libs_path.is_dir():
+                all_jar_paths.extend(tweety_libs_path.glob('*.jar'))
+                logger.info(f"JARs de Tweety trouvés dans : {tweety_libs_path}")
             else:
-                logger.error("initialize_jvm a échoué.")
-                pytest.skip("Échec de initialize_jvm pour les tests d'intégration.")
+                 logger.warning(f"Répertoire des JARs de Tweety non trouvé: {tweety_libs_path}")
+
+            if dung_libs_path.is_dir():
+                all_jar_paths.extend(dung_libs_path.glob('*.jar'))
+                logger.info(f"JARs de Dung trouvés dans : {dung_libs_path}")
+            else:
+                logger.warning(f"Répertoire des JARs de Dung non trouvé: {dung_libs_path}")
+
+            if not all_jar_paths:
+                logger.error("Aucun fichier .jar trouvé. Impossible de démarrer la JVM.")
+                pytest.skip("Aucun JAR trouvé pour l'initialisation de la JVM.")
+                return None
+
+            jars_str_list = [str(jar) for jar in all_jar_paths]
+            
+            # Appel direct à jpype.startJVM en contournant initialize_jvm pour passer un classpath complet
+            try:
+                from argumentation_analysis.core.jvm_setup import get_jvm_options
+                jvm_options = get_jvm_options()
+                logger.info(f"Démarrage direct de la JVM avec {len(jars_str_list)} JARs et les options: {jvm_options}")
+                jpype_for_integration.startJVM(classpath=jars_str_list, *jvm_options, convertStrings=False)
+                _initialize_jvm_called_successfully_session = True
+                logger.info("JVM démarrée avec succès via la fixture d'intégration modifiée.")
+            except Exception as e:
+                logger.error(f"Échec du démarrage direct de la JVM: {e}", exc_info=True)
+                pytest.skip("Échec du démarrage direct de la JVM.")
                 return None
         else:
             logger.info("initialize_jvm a déjà été appelée avec succès dans cette session. Utilisation de la JVM existante.")
