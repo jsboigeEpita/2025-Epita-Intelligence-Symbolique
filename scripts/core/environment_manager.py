@@ -16,6 +16,7 @@ import os
 import sys
 import subprocess
 import argparse
+import json # Ajout de l'import json au niveau supérieur
 from typing import Dict, List, Optional, Tuple, Any
 from pathlib import Path
 import shutil # Ajout pour shutil.which
@@ -88,19 +89,28 @@ class EnvironmentManager:
     def check_conda_available(self) -> bool:
         """Vérifie si conda est disponible"""
         try:
+            # Nouvelle tentative : utiliser shell=True pour que le shell résolve conda via le PATH mis à jour.
+            # C'est pour 'conda --version' uniquement, donc le risque de sécurité est minime.
+            self.logger.debug("Tentative de vérification de Conda avec shell=True...")
             result = subprocess.run(
-                ['conda', '--version'],
+                'conda --version', # Commande en chaîne de caractères pour shell=True
+                shell=True,
                 capture_output=True,
                 text=True,
-                timeout=10
+                timeout=10,
+                executable=shutil.which('powershell') if platform.system() == "Windows" else None # Spécifier le shell si Windows
             )
-            if result.returncode == 0:
-                self.logger.debug(f"Conda trouvé: {result.stdout.strip()}")
+            if result.returncode == 0 and "conda" in result.stdout.lower():
+                self.logger.debug(f"Conda trouvé (via shell=True): {result.stdout.strip()}")
                 return True
-        except (subprocess.SubprocessError, FileNotFoundError, subprocess.TimeoutExpired):
-            pass
+            else:
+                self.logger.warning(f"Commande 'conda --version' (shell=True) a échoué ou n'a pas retourné 'conda'. Code: {result.returncode}. Output: {result.stdout.strip()} Stderr: {result.stderr.strip()}")
+
+        except (subprocess.SubprocessError, subprocess.TimeoutExpired) as e:
+            self.logger.warning(f"Erreur lors de la vérification de Conda (shell=True): {e}")
+            pass # L'échec est géré ci-dessous
         
-        self.logger.warning("Conda non disponible")
+        self.logger.warning("Conda non disponible (après tentative avec shell=True)")
         return False
     
     def check_python_version(self, python_cmd: str = "python") -> bool:
@@ -148,7 +158,7 @@ class EnvironmentManager:
             )
             
             if result.returncode == 0:
-                import json
+                # import json # Supprimé car importé au niveau supérieur
                 data = json.loads(result.stdout)
                 envs = []
                 for env_path in data.get('envs', []):
@@ -672,15 +682,22 @@ def auto_activate_env(env_name: str = "projet-is", silent: bool = True) -> bool:
         
         # Obtenir le chemin de l'environnement conda
         try:
+            # Simplification: shell=True devrait permettre au shell de trouver 'conda' si le PATH est correct.
+            cmd_to_run_info = 'conda info --envs --json'
+            self.logger.debug(f"Exécution de: {cmd_to_run_info} (avec shell=True)")
+
             result = subprocess.run(
-                ['conda', 'info', '--envs', '--json'],
+                cmd_to_run_info,
+                shell=True,
                 capture_output=True,
                 text=True,
-                timeout=30
+                timeout=30,
+                # Spécifier l'exécutable du shell peut aider PowerShell à hériter correctement du PATH.
+                executable=shutil.which('powershell') if platform.system() == "Windows" else (shutil.which('bash') or shutil.which('sh'))
             )
             
             if result.returncode == 0:
-                import json
+                # import json # Supprimé car importé au niveau supérieur
                 env_data = json.loads(result.stdout)
                 env_path = None
                 
