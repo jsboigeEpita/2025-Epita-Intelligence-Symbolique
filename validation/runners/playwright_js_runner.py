@@ -94,7 +94,7 @@ class PlaywrightJSRunner:
             return success
             
         except Exception as e:
-            self.logger.error(f"Erreur exécution tests Playwright JS: {e}")
+            self.logger.error(f"Erreur exécution tests Playwright JS: {e}", exc_info=True) # Ajout de exc_info
             return False
     
     def _merge_runtime_config(self, runtime_config: Dict[str, Any]) -> Dict[str, Any]:
@@ -159,13 +159,14 @@ class PlaywrightJSRunner:
         
         # Captures
         if config.get('screenshots', True):
-            cmd.append('--screenshot=only-on-failure')
-            
+            # cmd.append('--screenshot=only-on-failure') # Correction ici
+            pass
         if config.get('traces', True):
             cmd.append('--trace=on-first-retry')
             
         if config.get('videos', True):
-            cmd.append('--video=retain-on-failure')
+            # cmd.append('--video=retain-on-failure')
+            pass
         
         # Mode verbose
         cmd.append('--reporter=line')
@@ -185,51 +186,62 @@ class PlaywrightJSRunner:
         stderr_file = self.traces_dir / 'playwright_stderr.log'
         
         try:
-            # Processus asynchrone avec timeout
-            process = await asyncio.create_subprocess_exec(
-                *cmd,
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE,
-                cwd=cwd
-            )
+            # Utiliser asyncio.to_thread pour exécuter subprocess.run de manière non bloquante
+            def run_sync_process():
+                return subprocess.run(
+                    cmd,
+                    capture_output=True,
+                    text=True,
+                    encoding='utf-8',
+                    errors='replace',
+                    timeout=self.test_timeout, # subprocess.run a son propre timeout
+                    cwd=cwd,
+                    shell=False # Important pour la sécurité et la gestion des arguments
+                )
+
+            # Exécuter la fonction bloquante dans un thread séparé
+            completed_process = await asyncio.to_thread(run_sync_process)
             
-            # Attente avec timeout
-            stdout, stderr = await asyncio.wait_for(
-                process.communicate(),
-                timeout=self.test_timeout
-            )
-            
-            # Décodage des sorties
-            stdout_text = stdout.decode('utf-8', errors='replace')
-            stderr_text = stderr.decode('utf-8', errors='replace')
-            
+            stdout_text = completed_process.stdout
+            stderr_text = completed_process.stderr
+            return_code = completed_process.returncode
+
             # Sauvegarde logs
             with open(stdout_file, 'w', encoding='utf-8') as f:
                 f.write(stdout_text)
             with open(stderr_file, 'w', encoding='utf-8') as f:
                 f.write(stderr_text)
             
-            self.logger.info(f"Tests terminés - Code retour: {process.returncode}")
+            self.logger.info(f"Tests terminés - Code retour: {return_code}")
             
-            # Simulation CompletedProcess pour compatibilité
-            class AsyncResult:
-                def __init__(self, returncode, stdout, stderr):
-                    self.returncode = returncode
-                    self.stdout = stdout
-                    self.stderr = stderr
+            # Pas besoin de simuler AsyncResult, subprocess.run retourne un CompletedProcess
+            return completed_process
             
-            return AsyncResult(process.returncode, stdout_text, stderr_text)
-            
-        except asyncio.TimeoutError:
-            self.logger.error(f"Timeout tests après {self.test_timeout}s")
-            # Tuer le processus
-            if process:
-                process.terminate()
-                await process.wait()
-            raise
+        except subprocess.TimeoutExpired as e:
+            self.logger.error(f"Timeout tests après {self.test_timeout}s: {e}")
+            # Sauvegarder ce qui a été capturé avant le timeout
+            if e.stdout:
+                with open(stdout_file, 'w', encoding='utf-8') as f:
+                    f.write(e.stdout.decode('utf-8', errors='replace'))
+            if e.stderr:
+                with open(stderr_file, 'w', encoding='utf-8') as f:
+                    f.write(e.stderr.decode('utf-8', errors='replace'))
+            # Créer un objet résultat pour l'analyse, marquant l'échec dû au timeout
+            class TimeoutResult:
+                def __init__(self):
+                    self.returncode = -1 # Code spécifique pour timeout
+                    self.stdout = e.stdout.decode('utf-8', errors='replace') if e.stdout else ""
+                    self.stderr = e.stderr.decode('utf-8', errors='replace') if e.stderr else "TimeoutExpired"
+            return TimeoutResult()
         except Exception as e:
-            self.logger.error(f"Erreur exécution tests: {e}")
-            raise
+            self.logger.error(f"Erreur exécution tests: {e}", exc_info=True)
+            # Créer un objet résultat pour l'analyse en cas d'autre exception
+            class ErrorResult:
+                def __init__(self):
+                    self.returncode = -2 # Code spécifique pour autre erreur
+                    self.stdout = ""
+                    self.stderr = str(e)
+            return ErrorResult()
     
     async def _analyze_results(self, result) -> bool:
         """Analyse les résultats de test et génère rapport"""
