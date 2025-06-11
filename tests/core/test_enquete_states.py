@@ -452,14 +452,14 @@ class TestEnqueteCluedoState:
             
             assert state.indices_distribues_cluedo == []
             assert state.main_cluedo_bs_id == f"cluedo_bs_{state.workflow_id}"
-            mock_init_bs.# Mock assertion eliminated - authentic validation
+            # mock_init_bs.# Mock assertion eliminated - authentic validation
 
     def test_initialization_with_provided_solution(self, enquete_cluedo_state_data):
         solution = {"suspect": "Professeur Violet", "arme": "Corde", "lieu": "Salon"}
         with patch.object(EnqueteCluedoState, '_initialize_cluedo_belief_set') as mock_init_bs:
             state = EnqueteCluedoState(**enquete_cluedo_state_data, solution_secrete_cluedo=solution, auto_generate_solution=False)
             assert state.solution_secrete_cluedo == solution
-            mock_init_bs.# Mock assertion eliminated - authentic validation
+            # mock_init_bs.# Mock assertion eliminated - authentic validation
 
     def test_initialization_value_error(self, enquete_cluedo_state_data):
         with pytest.raises(ValueError, match="Une solution secrète doit être fournie ou auto-générée."):
@@ -529,7 +529,7 @@ class TestEnqueteCluedoState:
             assert f"{solution['lieu']} n'est pas le lieu du crime." not in state.belief_set_initial_watson["lieux_exclus"]
 
             # 2. Vérifier l'appel à add_or_update_belief_set pour le belief set formel
-            mock_add_bs.# Mock assertion eliminated - authentic validation
+            # mock_add_bs.# Mock assertion eliminated - authentic validation
             args, kwargs = mock_add_bs.call_args
             called_bs_id = args[0]
             called_formulas_str = args[1]

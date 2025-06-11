@@ -8,7 +8,7 @@ from semantic_kernel.kernel import Kernel
 # SequentialSelectionStrategy a été remplacée par CyclicSelectionStrategy depuis cluedo_extended_orchestrator
 # Agent et TerminationStrategy sont maintenant aussi importés depuis cluedo_extended_orchestrator.
 # AgentGroupChat est conservé depuis semantic_kernel.agents pour l'instant.
-from semantic_kernel.agents import AgentGroupChat
+from semantic_kernel.experimental.agents import AgentGroupChat
 from .cluedo_extended_orchestrator import Agent, TerminationStrategy, CyclicSelectionStrategy
 # Tentative d'import depuis semantic_kernel.filters pour SK 1.32.2+
 try:

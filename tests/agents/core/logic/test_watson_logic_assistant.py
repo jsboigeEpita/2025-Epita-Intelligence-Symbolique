@@ -1,18 +1,16 @@
-
 # Authentic gpt-4o-mini imports (replacing mocks)
 import openai
 from semantic_kernel.contents import ChatHistory
 from semantic_kernel.core_plugins import ConversationSummaryPlugin
 from config.unified_config import UnifiedConfig
 
-import pytest # type: ignore
+import pytest
+from unittest.mock import MagicMock, AsyncMock, patch
 
-
-from semantic_kernel import Kernel # type: ignore
+from semantic_kernel import Kernel
 
 from argumentation_analysis.agents.core.logic.watson_logic_assistant import WatsonLogicAssistant, WATSON_LOGIC_ASSISTANT_SYSTEM_PROMPT
 from argumentation_analysis.agents.core.logic.propositional_logic_agent import PropositionalLogicAgent
-# from argumentation_analysis.agents.core.pl.pl_definitions import PL_AGENT_INSTRUCTIONS # Plus utilisé directement ici
 
 # Définir un nom d'agent de test
 TEST_AGENT_NAME = "TestWatsonAssistant"
@@ -25,9 +23,9 @@ def mock_kernel() -> MagicMock:
 @pytest.fixture
 def mock_tweety_bridge() -> MagicMock:
     """Fixture pour créer un mock de TweetyBridge."""
-    mock_bridge = Magicawait self._create_authentic_gpt4o_mini_instance()
+    mock_bridge = MagicMock()
     # Simuler que la JVM est prête pour éviter les erreurs dans le constructeur de PropositionalLogicAgent
-    mock_bridge.is_jvm_ready# Mock eliminated - using authentic gpt-4o-mini True
+    mock_bridge.is_jvm_ready.return_value = True
     return mock_bridge
 
 def test_watson_logic_assistant_instanciation(mock_kernel: MagicMock, mock_tweety_bridge: MagicMock, mocker: MagicMock) -> None:
@@ -123,7 +121,7 @@ async def test_get_agent_belief_set_content(mock_kernel: MagicMock, mock_tweety_
     
     # Cas 1: invoke retourne un objet avec un attribut 'value'
     expected_content_value_attr = "Contenu de l'ensemble de croyances (via value)"
-    mock_invoke_result_value_attr = Magicawait self._create_authentic_gpt4o_mini_instance()
+    mock_invoke_result_value_attr = MagicMock()
     mock_invoke_result_value_attr.value = expected_content_value_attr
     mock_kernel.invoke = AsyncMock(return_value=mock_invoke_result_value_attr)
 
@@ -183,7 +181,7 @@ async def test_get_agent_belief_set_content(mock_kernel: MagicMock, mock_tweety_
             belief_set_id=belief_set_id
         )
         assert error_content is None # La méthode retourne None en cas d'erreur
-        mock_logger_error.# Mock assertion eliminated - authentic validation
+        mock_logger_error.assert_called_once()
         assert f"Erreur lors de la récupération du contenu de l'ensemble de croyances {belief_set_id}: Test error on get_belief_set_content" in mock_logger_error.call_args[0][0]
 
 # @pytest.mark.asyncio
@@ -196,12 +194,12 @@ async def test_get_agent_belief_set_content(mock_kernel: MagicMock, mock_tweety_
 #     """
 #     with patch('argumentation_analysis.agents.core.logic.propositional_logic_agent.TweetyBridge', return_value=mock_tweety_bridge):
 #         agent = WatsonLogicAssistant(kernel=mock_kernel, agent_name=TEST_AGENT_NAME)
-
+#
 #     query_id = "deduction_query_001"
 #     formal_result = "Conclusion: X -> Y"
 #     natural_language_interpretation = "Si X est vrai, alors Y est vrai."
 #     belief_set_id = "bs_alpha"
-    
+#
 #     expected_content_arg = {
 #         "reponse_formelle": formal_result,
 #         "interpretation_ln": natural_language_interpretation,
@@ -209,16 +207,16 @@ async def test_get_agent_belief_set_content(mock_kernel: MagicMock, mock_tweety_
 #         "status_deduction": "success"
 #     }
 #     expected_invoke_result = {"id": "res_456", "query_id": query_id, "content": expected_content_arg}
-
+#
 #     # Cas 1: invoke retourne un objet avec un attribut 'value'
-#     mock_invoke_result_value_attr = Magicawait self._create_authentic_gpt4o_mini_instance()
+#     mock_invoke_result_value_attr = MagicMock()
 #     mock_invoke_result_value_attr.value = expected_invoke_result
 #     mock_kernel.invoke = AsyncMock(return_value=mock_invoke_result_value_attr)
-
-#     # result = await agent.add_new_deduction_result(query_id, formal_result, natural_language_interpretation, belief_set_id)
+#
+#     # result = await agent.add_new_deduction_.result(query_id, formal_result, natural_language_interpretation, belief_set_id)
 #     # TODO: Réécrire ce test pour vérifier l'appel à kernel.invoke avec les bons paramètres
 #     # pour EnqueteStatePlugin.add_result
-
+#
 #     # mock_kernel.invoke.assert_called_once_with(
 #     #     plugin_name="EnqueteStatePlugin",
 #     #     function_name="add_result", # ou le nom correct de la fonction du plugin
@@ -227,16 +225,16 @@ async def test_get_agent_belief_set_content(mock_kernel: MagicMock, mock_tweety_
 #     #     content=expected_content_arg
 #     # )
 #     # assert result == expected_invoke_result
-
+#
 #     # Réinitialiser le mock pour le cas suivant
 #     mock_kernel.invoke.reset_mock()
-
+#
 #     # Cas 2: invoke retourne directement la valeur
 #     mock_kernel.invoke = AsyncMock(return_value=expected_invoke_result)
-
+#
 #     # result_direct = await agent.add_new_deduction_result(query_id, formal_result, natural_language_interpretation, belief_set_id)
 #     # TODO: Réécrire ce test
-
+#
 #     # mock_kernel.invoke.assert_called_once_with(
 #     #     plugin_name="EnqueteStatePlugin",
 #     #     function_name="add_result",
@@ -245,17 +243,17 @@ async def test_get_agent_belief_set_content(mock_kernel: MagicMock, mock_tweety_
 #     #     content=expected_content_arg
 #     # )
 #     # assert result_direct == expected_invoke_result
-    
+#
 #     # Réinitialiser le mock pour le cas d'erreur
 #     mock_kernel.invoke.reset_mock()
-
+#
 #     # Cas 3: Gestion d'erreur si invoke échoue
 #     mock_kernel.invoke = AsyncMock(side_effect=Exception("Test error adding deduction result"))
-    
+#
 #     # with patch.object(agent.logger, 'error') as mock_logger_error:
 #         # error_result = await agent.add_new_deduction_result(query_id, formal_result, natural_language_interpretation, belief_set_id)
 #         # TODO: Réécrire ce test
-        
+#
 #         # mock_kernel.invoke.assert_called_once_with(
 #         #     plugin_name="EnqueteStatePlugin",
 #         #     function_name="add_result",
@@ -264,5 +262,5 @@ async def test_get_agent_belief_set_content(mock_kernel: MagicMock, mock_tweety_
 #         #     content=expected_content_arg
 #         # )
 #         # assert error_result is None
-#         # mock_logger_error.# Mock assertion eliminated - authentic validation
+#         # mock_logger_error.assert_called_once()
 #         # assert f"Erreur lors de l'ajout du résultat de déduction pour la requête {query_id}: Test error adding deduction result" in mock_logger_error.call_args[0][0]

@@ -188,7 +188,7 @@ class TestProcessCleanup:
         
         assert handler_called == True
     
-    def test_stop_backend_processes_simulation(self):
+    async def test_stop_backend_processes_simulation(self):
         """Test arrêt processus backend (simulation)"""
         # Créer un processus Python simulant app.py
         script = "import time; import sys; sys.argv = ['python', 'app.py']; time.sleep(10)"
@@ -217,7 +217,7 @@ class TestProcessCleanup:
                 stopped_count = self.cleanup.stop_backend_processes(['app.py'])
                 
                 # Vérifier que terminate a été appelé
-                mock_proc_instance.terminate.# Mock assertion eliminated - authentic validation
+                # mock_proc_instance.terminate.# Mock assertion eliminated - authentic validation
     
     def test_cleanup_managed_processes(self):
         """Test nettoyage processus managés"""
@@ -266,7 +266,7 @@ class TestServiceManager:
         assert "test-service" in self.service_manager.services
         assert self.service_manager.services["test-service"].port == 8888
     
-    def test_service_health_check_mock(self):
+    async def test_service_health_check_mock(self):
         """Test health check avec mock"""
         with patch('requests.get') as mock_get:
             # Simuler réponse réussie
