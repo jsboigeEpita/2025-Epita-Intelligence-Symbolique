@@ -46,6 +46,7 @@ from argumentation_analysis.orchestration.plugins.enquete_state_manager_plugin i
 from argumentation_analysis.orchestration.group_chat import GroupChatOrchestration
 from argumentation_analysis.agents.core.pm.sherlock_enquete_agent import SherlockEnqueteAgent
 from argumentation_analysis.agents.core.logic.watson_logic_assistant import WatsonLogicAssistant
+from argumentation_analysis.agents.core.logic.tweety_bridge import TweetyBridge
 from argumentation_analysis.agents.core.oracle.moriarty_interrogator_agent import MoriartyInterrogatorAgent
 from argumentation_analysis.agents.core.oracle.cluedo_dataset import CluedoDataset
 
@@ -215,7 +216,7 @@ class OracleTerminationStrategy(TerminationStrategy):
         """
         # Comptage des tours et cycles
         self.turn_count += 1
-        if agent.name == "Sherlock":  # Début d'un nouveau cycle
+        if agent and agent.name == "Sherlock":  # Début d'un nouveau cycle
             self.cycle_count += 1
             self._logger.info(f"\n--- CYCLE {self.cycle_count}/{self.max_cycles} - TOUR {self.turn_count}/{self.max_turns} ---")
         
@@ -308,12 +309,13 @@ class CluedoExtendedOrchestrator:
     - Métriques de performance 3-agents
     """
     
-    def __init__(self, 
+    def __init__(self,
                  kernel: Kernel,
                  max_turns: int = 15,
                  max_cycles: int = 5,
                  oracle_strategy: str = "balanced",
-                 adaptive_selection: bool = False):
+                 adaptive_selection: bool = False,
+                 service_id: str = "chat_completion"):
         """
         Initialise l'orchestrateur étendu.
         
@@ -323,12 +325,14 @@ class CluedoExtendedOrchestrator:
             max_cycles: Nombre maximum de cycles (3 agents par cycle)
             oracle_strategy: Stratégie Oracle ("cooperative", "competitive", "balanced", "progressive")
             adaptive_selection: Active la sélection adaptative (Phase 2)
+            service_id: ID du service LLM à utiliser par les agents.
         """
         self.kernel = kernel
         self.max_turns = max_turns
         self.max_cycles = max_cycles
         self.oracle_strategy = oracle_strategy
         self.adaptive_selection = adaptive_selection
+        self.service_id = service_id
         
         # Mode Enhanced pour compatibilité avec les tests
         self._enhanced_mode = oracle_strategy == "enhanced_auto_reveal"
@@ -507,8 +511,10 @@ class CluedoExtendedOrchestrator:
         all_constants = [name.replace(" ", "") for category in elements_jeu.values() for name in category]
         
         # Création des agents
-        self.sherlock_agent = SherlockEnqueteAgent(kernel=self.kernel, agent_name="Sherlock")
-        self.watson_agent = WatsonLogicAssistant(kernel=self.kernel, agent_name="Watson", constants=all_constants)
+        tweety_bridge = TweetyBridge() # Instance unique
+
+        self.sherlock_agent = SherlockEnqueteAgent(kernel=self.kernel, agent_name="Sherlock", service_id=self.service_id)
+        self.watson_agent = WatsonLogicAssistant(kernel=self.kernel, agent_name="Watson", tweety_bridge=tweety_bridge, constants=all_constants, service_id=self.service_id)
         self.moriarty_agent = MoriartyInterrogatorAgent(
             kernel=self.kernel,
             cluedo_dataset=self.oracle_state.cluedo_dataset,
@@ -566,55 +572,58 @@ class CluedoExtendedOrchestrator:
         # Historique des messages
         history: List[ChatMessageContent] = []
         
-        # Boucle principale d'orchestration avec la nouvelle API
+        # Boucle principale d'orchestration restaurée
         self._logger.info("🔄 Début de la boucle d'orchestration 3-agents...")
         
-        try:
-            # Lancement de l'orchestration avec coordinate_analysis_async
-            orchestration_result = self.orchestration.coordinate_analysis_async(
-                text=initial_question,
-                target_agents=list(self.orchestration.active_agents.keys()),
-                timeout=120.0
-            )
-
-            # Récupération du résultat (coordinate_analysis_async retourne directement un dict)
-            result_value = orchestration_result
-            self._logger.info(f"🎯 Résultat de l'orchestration: {str(result_value)[:200]}...")
-            
-            # Pour maintenir la compatibilité, simulons l'historique avec le résultat
-            final_message = ChatMessageContent(
-                role="assistant",
-                content=str(result_value),
-                name="AgentGroupChat"
-            )
-            history.append(final_message)
-            
-            # PHASE C: Enregistrement du résultat pour mémoire contextuelle
-            self.oracle_state.add_conversation_message(
-                agent_name="AgentGroupChat",
-                content=str(result_value),
-                message_type="result"
-            )
-            
-            # Analyse des références contextuelles et réactions émotionnelles
-            self._analyze_contextual_elements("AgentGroupChat", str(result_value), history)
-            
-            # Enregistrement du tour dans l'état Oracle
-            self.oracle_state.record_agent_turn(
-                agent_name="AgentGroupChat",
-                action_type="orchestration_result",
-                action_details={"content": str(result_value)[:200]}  # Tronqué pour logging
-            )
-            
-            self._logger.info(f"📩 Orchestration complétée: {str(result_value)[:100]}...")
+        active_agent = None
+        last_agent = None
         
+        # Le message initial est ajouté pour le premier agent
+        history.append(ChatMessageContent(role="user", content=initial_question, name="Orchestrator"))
+        
+        try:
+            while not await self.termination_strategy.should_terminate(active_agent, history):
+                last_agent = active_agent
+                
+                # Sélection du prochain agent
+                active_agent = await self.selection_strategy.next(
+                    agents=list(self.orchestration.active_agents.values()),
+                    history=history
+                )
+                self._logger.info(f"==> Agent suivant: {active_agent.name}")
+
+                # Invocation de l'agent
+                # Note: Dans une implémentation SK moderne, on utiliserait agent.invoke(history)
+                # Ici, nous simulons l'appel via une méthode interne pour compatibilité
+                if hasattr(active_agent, 'invoke_custom'):
+                    agent_response = await active_agent.invoke_custom(history)
+                else:
+                    # Fallback si invoke_custom n'est pas défini
+                    agent_response_content = f"Je suis {active_agent.name}. Je réfléchis à la situation."
+                    agent_response = ChatMessageContent(role="assistant", content=agent_response_content, name=active_agent.name)
+                
+                if agent_response:
+                    history.append(agent_response)
+                    self._logger.info(f"[{active_agent.name}]: {agent_response.content}")
+                    
+                    # Logique de jeu: si Sherlock ou Watson suggère, forcer une révélation de Moriarty
+                    if active_agent.name in ["Sherlock", "Watson"]:
+                        suggestion = self._extract_cluedo_suggestion(str(agent_response.content))
+                        if suggestion:
+                            oracle_revelation = await self._force_moriarty_oracle_revelation(suggestion, active_agent.name)
+                            if oracle_revelation:
+                                revealed_msg = ChatMessageContent(role="assistant", content=str(oracle_revelation), name="Moriarty")
+                                history.append(revealed_msg)
+                                self._logger.info(f"[Moriarty - Oracle]: {revealed_msg.content}")
+
         except Exception as e:
-            self._logger.error(f"Erreur durant l'orchestration: {e}", exc_info=True)
-            raise
+            self._logger.error(f"Erreur durant la boucle d'orchestration: {e}", exc_info=True)
+            # Ajout d'un message d'erreur dans l'historique pour le contexte
+            history.append(ChatMessageContent(role="system", content=f"Erreur système: {e}"))
         
         finally:
             self.end_time = datetime.now()
-        
+
         # Collecte des métriques finales
         workflow_result = await self._collect_final_metrics(history)
         
@@ -627,8 +636,8 @@ class CluedoExtendedOrchestrator:
         
         # Statistiques de base
         conversation_history = [
-            {"sender": msg.name, "message": str(msg.content)} 
-            for msg in history if msg.name != "System"
+            {"sender": getattr(msg, 'author_name', msg.role), "message": str(msg.content)}
+            for msg in history if getattr(msg, 'author_name', msg.role) != "system"
         ]
         
         # Métriques Oracle
@@ -1083,7 +1092,7 @@ class CluedoExtendedOrchestrator:
         
         if len(history) > 1:
             last_message = history[-2]  # Message précédent (avant le message actuel)
-            trigger_agent = last_message.name
+            trigger_agent = getattr(last_message, 'author_name', last_message.role)
             trigger_content = str(last_message.content)
         
         if not trigger_agent or trigger_agent == "System":

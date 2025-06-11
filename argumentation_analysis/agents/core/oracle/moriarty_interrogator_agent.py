@@ -12,8 +12,12 @@ from datetime import datetime
 import random
 import uuid
 
+import re
 from semantic_kernel import Kernel
 from semantic_kernel.functions import kernel_function
+from semantic_kernel.contents import ChatMessageContent
+from semantic_kernel.contents.chat_history import ChatHistory
+
 
 from .oracle_base_agent import OracleBaseAgent, OracleTools
 from .dataset_access_manager import CluedoDatasetManager
@@ -408,9 +412,83 @@ Votre mission : Fasciner par votre mystère élégant."""
         
         return base_tools + moriarty_tools
     
+    def _extract_cluedo_suggestion(self, message_content: str) -> Optional[Dict[str, str]]:
+        """
+        Extrait une suggestion Cluedo d'un message (suspect, arme, lieu).
+        """
+        content_lower = message_content.lower()
+        
+        suggestion_keywords = ['suggère', 'propose', 'accuse', 'pense que', 'suspect', 'arme', 'lieu']
+        if not any(keyword in content_lower for keyword in suggestion_keywords):
+            return None
+
+        # Utilise les éléments du jeu
+        elements = self.dataset_manager.dataset.elements_jeu
+        suspects = [s.lower() for s in elements.get("suspects", [])]
+        armes = [a.lower() for a in elements.get("armes", [])]
+        lieux = [l.lower() for l in elements.get("lieux", [])]
+        
+        found_suspect = next((s.title() for s in suspects if s in content_lower), None)
+        found_arme = next((a.title() for a in armes if a in content_lower), None)
+        found_lieu = next((l.title() for l in lieux if l in content_lower), None)
+
+        if found_suspect or found_arme or found_lieu:
+            return {
+                "suspect": found_suspect,
+                "arme": found_arme,
+                "lieu": found_lieu
+            }
+        
+        return None
+
     def reset_game_state(self) -> None:
         """Remet à zéro l'état de jeu pour une nouvelle partie."""
         self.reset_oracle_state()
         self.cards_revealed_by_agent.clear()
         self.suggestion_history.clear()
         self._logger.info(f"État de jeu Moriarty remis à zéro")
+
+    async def invoke_custom(self, history: ChatHistory) -> ChatMessageContent:
+        """
+        Méthode Oracle pour répondre à une suggestion.
+        Moriarty ne génère pas de texte, il applique les règles du jeu.
+        """
+        self._logger.info(f"[{self.name}] Invocation Oracle avec {len(history)} messages.")
+        
+        last_user_message = None
+        # On cherche le dernier message qui n'est pas de Moriarty pour savoir à qui il répond.
+        for message in reversed(history):
+            # Utilise getattr pour éviter une erreur si l'attribut 'name' n'existe pas
+            author_name = getattr(message, 'name', None)
+            if author_name != self.name:
+                last_user_message = message
+                break
+        if not last_user_message or not last_user_message.content:
+            return ChatMessageContent(role="assistant", content="*Silence énigmatique*", name=self.name)
+            
+        self._logger.debug(f"Moriarty a trouvé le dernier message de l'interlocuteur: {last_user_message}")
+        if not last_user_message:
+            return ChatMessageContent(role="assistant", content="*Attend un interlocuteur pour commencer le jeu.*", name=self.name)
+
+        content_str = str(last_user_message.content)
+        suggesting_agent = getattr(last_user_message, 'name', "UnknownAgent")
+
+        suggestion = self._extract_cluedo_suggestion(content_str)
+
+        if suggestion:
+            response = self.validate_suggestion_cluedo(
+                suspect=suggestion.get('suspect'),
+                arme=suggestion.get('arme'),
+                lieu=suggestion.get('lieu'),
+                suggesting_agent=suggesting_agent
+            )
+            return ChatMessageContent(role="assistant", content=response.message, name=self.name)
+        else:
+            # Si pas de suggestion formelle, Moriarty reste mystérieux
+            responses = [
+                "*Un sourire en coin se dessine sur mon visage.*",
+                "Continuez, je vous écoute avec grande attention.",
+                "C'est un jeu fascinant, n'est-ce pas ?",
+                "Chaque parole est une pièce du puzzle. Choisissez-les bien."
+            ]
+            return ChatMessageContent(role="assistant", content=random.choice(responses), name=self.name)

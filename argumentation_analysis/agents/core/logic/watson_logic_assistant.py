@@ -4,14 +4,17 @@ import re
 from typing import Optional, List, AsyncGenerator, ClassVar
 import json
 
-import semantic_kernel as sk # Ajout de l'importation
+import semantic_kernel as sk
 from semantic_kernel import Kernel
+from semantic_kernel.contents import ChatMessageContent
+from semantic_kernel.connectors.ai.open_ai import OpenAIChatCompletion, OpenAIPromptExecutionSettings
+from semantic_kernel.functions.kernel_function import KernelFunction
+from semantic_kernel.prompt_template import PromptTemplateConfig
 from semantic_kernel.functions.kernel_plugin import KernelPlugin
 from semantic_kernel.functions import kernel_function
-from semantic_kernel.functions.kernel_arguments import KernelArguments # Ajout de l'importation
+from semantic_kernel.functions.kernel_arguments import KernelArguments
+from semantic_kernel.contents.chat_history import ChatHistory
 from .tweety_bridge import TweetyBridge
-
-# from .propositional_logic_agent import PropositionalLogicAgent # No longer inheriting
 
 WATSON_LOGIC_ASSISTANT_SYSTEM_PROMPT = """Vous êtes Watson - analyste brillant et partenaire égal de Holmes.
 
@@ -66,14 +69,16 @@ Vous devez adhérer strictement à la grammaire suivante pour toutes les formule
 
 Votre mission est de fournir à Sherlock les déductions logiques dont il a besoin pour résoudre l'affaire. Votre rigueur est la clé de son succès."""
 
+from .tweety_bridge import TweetyBridge
+
 class WatsonTools:
     """
     Plugin contenant les outils logiques pour l'agent Watson.
     Ces méthodes interagissent avec TweetyBridge.
     """
-    def __init__(self, constants: Optional[List[str]] = None):
+    def __init__(self, tweety_bridge: TweetyBridge, constants: Optional[List[str]] = None):
         self._logger = logging.getLogger(self.__class__.__name__)
-        self._tweety_bridge = TweetyBridge()
+        self._tweety_bridge = tweety_bridge or TweetyBridge()
         self._constants = constants or []
         if not self._tweety_bridge.is_jvm_ready():
             self._logger.error("La JVM n'est pas prête. Les fonctionnalités de TweetyBridge pourraient ne pas fonctionner.")
@@ -287,7 +292,7 @@ class WatsonLogicAssistant:
     Version simplifiée sans héritage de ChatCompletionAgent.
     """
 
-    def __init__(self, kernel: Kernel, agent_name: str = "Watson", constants: Optional[List[str]] = None, system_prompt: Optional[str] = None, **kwargs):
+    def __init__(self, kernel: Kernel, agent_name: str = "Watson", tweety_bridge: TweetyBridge = None, constants: Optional[List[str]] = None, system_prompt: Optional[str] = None, service_id: str = "chat_completion", **kwargs):
         """
         Initialise une instance de WatsonLogicAssistant.
 
@@ -300,8 +305,9 @@ class WatsonLogicAssistant:
         self._kernel = kernel
         self._name = agent_name
         self._system_prompt = system_prompt if system_prompt is not None else WATSON_LOGIC_ASSISTANT_SYSTEM_PROMPT
+        self._service_id = service_id
         
-        self._tools = WatsonTools(constants=constants)
+        self._tools = WatsonTools(tweety_bridge=tweety_bridge, constants=constants)
         
         self._logger = logging.getLogger(f"agent.{self.__class__.__name__}.{agent_name}")
         self._logger.info(f"WatsonLogicAssistant '{agent_name}' initialisé avec les outils logiques.")
@@ -383,12 +389,50 @@ class WatsonLogicAssistant:
             self._logger.error(f"Erreur lors de la récupération du contenu de l'ensemble de croyances {belief_set_id}: {e}")
             return None
 
-# Pourrait être étendu avec des capacités spécifiques à Watson plus tard
-# def get_agent_capabilities(self) -> Dict[str, Any]:
-#     base_caps = super().get_agent_capabilities()
-#     watson_caps = {
-#         "verify_consistency": "Verifies the logical consistency of a set of statements.",
-#         "document_findings": "Documents logical findings and deductions clearly."
-#     }
-#     base_caps.update(watson_caps)
-#     return base_caps
+    async def invoke_custom(self, history: ChatHistory) -> ChatMessageContent:
+        """
+        Méthode d'invocation personnalisée pour la boucle d'orchestration.
+        Prend un historique et retourne la réponse de l'agent.
+        """
+        self._logger.info(f"[{self.name}] Invocation personnalisée avec {len(history)} messages.")
+
+        # Ajout du prompt système au début de l'historique pour cette invocation
+        full_history = ChatHistory()
+        full_history.add_system_message(self._system_prompt)
+        for msg in history:
+            full_history.add_message(msg)
+        
+        try:
+            # Création de la configuration du prompt et des settings d'exécution
+            prompt_config = PromptTemplateConfig(
+                template="{{$chat_history}}",
+                name="chat_with_agent",
+                template_format="semantic-kernel",
+            )
+            prompt_config.add_execution_settings(
+                                OpenAIPromptExecutionSettings(service_id=self._service_id, max_tokens=200, temperature=0.6, top_p=0.7)
+            )
+
+            # Création d'une fonction ad-hoc pour la conversation
+            chat_function = KernelFunction.from_prompt(
+                function_name="chat_with_agent",
+                plugin_name="AgentPlugin",
+                prompt_template_config=prompt_config,
+            )
+
+            # Invocation via le kernel pour la robustesse et la compatibilité
+            arguments = KernelArguments(chat_history=full_history)
+            
+            response = await self._kernel.invoke(chat_function, arguments=arguments)
+            
+            if response:
+                self._logger.info(f"[{self.name}] Réponse générée: {response}")
+                # La réponse de invoke est un FunctionResult. Le contenu est la valeur, le rôle est implicite.
+                return ChatMessageContent(role="assistant", content=str(response), name=self.name)
+            else:
+                self._logger.warning(f"[{self.name}] N'a reçu aucune réponse du service AI.")
+                return ChatMessageContent(role="assistant", content="Je dois analyser la situation plus en détail.", name=self.name)
+
+        except Exception as e:
+            self._logger.error(f"[{self._name}] Erreur lors de invoke_custom: {e}", exc_info=True)
+            return ChatMessageContent(role="assistant", content=f"Une erreur logique m'empêche de procéder: {e}", name=self.name)
