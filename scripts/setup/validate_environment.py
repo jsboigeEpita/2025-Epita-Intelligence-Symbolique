@@ -40,8 +40,8 @@ def validate_environment():
     # Vérifier JPype ou mock
     jpype_ok = False
     try:
-        import jpype1
-        print("✅ JPype1: OK")
+        import jpype
+        print("✅ jpype: OK")
         jpype_ok = True
     except ImportError:
         try:
