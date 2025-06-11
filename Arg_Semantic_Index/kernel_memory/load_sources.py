@@ -4,7 +4,7 @@ from km_client import (
     ask_source, search_source, clean_snippet
 )
 
-CONFIG_PATH = "data/final_processed_config_unencrypted.json"
+CONFIG_PATH = "sources/final_processed_config_unencrypted.json"
 
 
 def main():
