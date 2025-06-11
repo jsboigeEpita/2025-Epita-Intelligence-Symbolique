@@ -39,4 +39,7 @@ def test_specific_imports() -> List[Tuple[bool, str]]:
     # Test du module de compatibilité
     try:
         from semantic_kernel.agents import Agent, ChatCompletionAgent, AgentGroupChat
-from argumentation_analysis.utils.semantic_kernel_compatibility import SelectionStrategy, TerminationStrategy
+        from argumentation_analysis.utils.semantic_kernel_compatibility import SelectionStrategy, TerminationStrategy
+        results.append((True, "[OK] Importations de compatibilité de base"))
+    except ImportError as e:
+        results.append((False, f"[ERREUR] Importations de compatibilité: {e}"))
