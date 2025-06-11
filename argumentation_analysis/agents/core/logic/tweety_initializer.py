@@ -40,8 +40,18 @@ class TweetyInitializer:
 
     def __init__(self, tweety_bridge_instance):
         self._tweety_bridge = tweety_bridge_instance
-        if not TweetyInitializer._jvm_started:
-            self._start_jvm()
+        # La JVM doit être démarrée par un processus de bootstrap de plus haut niveau,
+        # comme `argumentation_analysis.core.bootstrap`.
+        # Cet initialiseur s'assure seulement que les classes Java sont chargées
+        # et que les composants sont prêts, mais ne démarre plus la JVM lui-même.
+        if not jpype.isJVMStarted():
+            error_msg = "CRITICAL: TweetyInitializer expects the JVM to be started by the bootstrap process before it is initialized."
+            logger.critical(error_msg)
+            raise RuntimeError(error_msg)
+        
+        # Si la JVM est démarrée, on met le flag de classe à jour.
+        TweetyInitializer._jvm_started = True
+        logger.info("TweetyInitializer confirmed that JVM is already started.")
 
     def _get_jvm_path(self):
         """Détermine le chemin JVM correct en fonction de JAVA_HOME ou utilise le défaut."""

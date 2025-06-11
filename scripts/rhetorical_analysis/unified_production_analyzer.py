@@ -507,7 +507,7 @@ class DependencyValidator:
                          self.logger.warning(f"[PATCH] Ajout forcé construit de {sp_path} à sys.path")
             # === FIN PATCH ===
 
-            import jpype1 as jpype
+            import jpype
             # S'assurer que la JVM est démarrée avant de vérifier son état
             if not jpype.isJVMStarted():
                 try:
