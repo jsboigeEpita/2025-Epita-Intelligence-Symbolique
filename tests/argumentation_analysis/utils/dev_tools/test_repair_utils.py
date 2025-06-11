@@ -12,6 +12,7 @@ import pytest
 import asyncio
 import logging # Ajout de l'import logging
 from pathlib import Path
+from unittest.mock import MagicMock, AsyncMock
 
 from typing import Dict # Ajout pour le typage
 
@@ -31,34 +32,34 @@ def mock_project_root(tmp_path: Path) -> Path:
 @pytest.fixture
 def mock_llm_service():
     """Mock pour LLMService."""
-    return Magicawait self._create_authentic_gpt4o_mini_instance()
+    return AsyncMock()
 
 @pytest.fixture
 def mock_definition_service():
     """Mock pour DefinitionService."""
-    service = Magicawait self._create_authentic_gpt4o_mini_instance()
+    service = AsyncMock()
     # Simuler le retour de load_definitions
     sample_source = SourceDefinition(source_name="Test Source Hitler", source_type="text", schema="file", host_parts=[], path="", extracts=[])
     sample_defs = ExtractDefinitions(sources=[sample_source])
-    service.load_definitions# Mock eliminated - using authentic gpt-4o-mini (sample_defs, None) # (definitions, error_message)
-    service.save_definitions# Mock eliminated - using authentic gpt-4o-mini (True, None) # (success, error_message)
-    service.export_definitions_to_json# Mock eliminated - using authentic gpt-4o-mini (True, "Exported successfully")
+    service.load_definitions.return_value = (sample_defs, None)
+    service.save_definitions.return_value = (True, None)
+    service.export_definitions_to_json.return_value = (True, "Exported successfully")
     return service
 
 @pytest.fixture
 def mock_extract_service():
     """Mock pour ExtractService."""
-    return Magicawait self._create_authentic_gpt4o_mini_instance()
+    return AsyncMock()
 
 @pytest.fixture
 def mock_fetch_service():
     """Mock pour FetchService."""
-    return Magicawait self._create_authentic_gpt4o_mini_instance()
+    return AsyncMock()
 
 @pytest.fixture
 def mock_core_services(
-    mock_definition_service: MagicMock, 
-    mock_extract_service: MagicMock, 
+    mock_definition_service: MagicMock,
+    mock_extract_service: MagicMock,
     mock_fetch_service: MagicMock
 ) -> Dict[str, MagicMock]:
     """Mock pour le dictionnaire core_services."""
@@ -66,8 +67,8 @@ def mock_core_services(
         "definition_service": mock_definition_service,
         "extract_service": mock_extract_service,
         "fetch_service": mock_fetch_service,
-        "cache_service": Magicawait self._create_authentic_gpt4o_mini_instance(), # Non utilisé directement dans le pipeline testé
-        "crypto_service": Magicawait self._create_authentic_gpt4o_mini_instance() # Non utilisé directement dans le pipeline testé
+        "cache_service": AsyncMock(), # Non utilisé directement dans le pipeline testé
+        "crypto_service": AsyncMock() # Non utilisé directement dans le pipeline testé
     }
 
 # --- Tests pour run_extract_repair_pipeline ---
@@ -96,31 +97,31 @@ async def test_run_extract_repair_pipeline_successful_run_no_save(
     mock_definition_service: MagicMock # Fixture pour configurer le comportement de l'instance mockée de DefinitionService
 ):
     """Teste une exécution réussie du pipeline sans sauvegarde."""
-    mock_create_llm_service# Mock eliminated - using authentic gpt-4o-mini mock_llm_service
+    mock_create_llm_service.return_value = mock_llm_service
 
     # Configurer les instances mockées retournées par les classes patchées
-    mock_crypto_instance = Magicawait self._create_authentic_gpt4o_mini_instance()
-    MockCryptoService# Mock eliminated - using authentic gpt-4o-mini mock_crypto_instance
+    mock_crypto_instance = AsyncMock()
+    MockCryptoService.return_value = mock_crypto_instance
 
-    mock_cache_instance = Magicawait self._create_authentic_gpt4o_mini_instance()
-    MockCacheService# Mock eliminated - using authentic gpt-4o-mini mock_cache_instance
+    mock_cache_instance = AsyncMock()
+    MockCacheService.return_value = mock_cache_instance
 
-    mock_extract_instance = Magicawait self._create_authentic_gpt4o_mini_instance()
-    MockExtractService# Mock eliminated - using authentic gpt-4o-mini mock_extract_instance
+    mock_extract_instance = AsyncMock()
+    MockExtractService.return_value = mock_extract_instance
 
-    mock_fetch_instance = Magicawait self._create_authentic_gpt4o_mini_instance()
-    MockFetchService# Mock eliminated - using authentic gpt-4o-mini mock_fetch_instance
+    mock_fetch_instance = AsyncMock()
+    MockFetchService.return_value = mock_fetch_instance
 
     # Utiliser la configuration de la fixture mock_definition_service pour l'instance mockée
     # mock_definition_service est déjà configurée avec load_definitions, save_definitions etc.
-    MockDefinitionService# Mock eliminated - using authentic gpt-4o-mini mock_definition_service
+    MockDefinitionService.return_value = mock_definition_service
     # Assurer que load_definitions retourne un tuple
     sample_source = SourceDefinition(source_name="Test Source", source_type="text", schema="file", host_parts=[], path="", extracts=[])
     sample_defs = ExtractDefinitions(sources=[sample_source])
-    mock_definition_service.load_definitions# Mock eliminated - using authentic gpt-4o-mini (sample_defs, None)
+    mock_definition_service.load_definitions.return_value = (sample_defs, None)
 
 
-    mock_repair_extract_markers# Mock eliminated - using authentic gpt-4o-mini (sample_defs, [{"some_result": "data"}])
+    mock_repair_extract_markers.return_value = (sample_defs, [{"some_result": "data"}])
 
     output_report_path = str(mock_project_root / "repair_report.html")
 
@@ -133,25 +134,25 @@ async def test_run_extract_repair_pipeline_successful_run_no_save(
         output_json_path_str=None
     )
 
-    mock_create_llm_service.# Mock assertion eliminated - authentic validation
+    mock_create_llm_service.assert_called_once()
     
     # Vérifier que les constructeurs des services ont été appelés (une fois chacun)
-    MockDefinitionService.# Mock assertion eliminated - authentic validation
-    MockCryptoService.# Mock assertion eliminated - authentic validation
-    MockCacheService.# Mock assertion eliminated - authentic validation
-    MockExtractService.# Mock assertion eliminated - authentic validation
-    MockFetchService.# Mock assertion eliminated - authentic validation
+    MockDefinitionService.assert_called_once()
+    MockCryptoService.assert_called_once()
+    MockCacheService.assert_called_once()
+    MockExtractService.assert_called_once()
+    MockFetchService.assert_called_once()
 
     # Vérifier les appels sur les instances mockées
-    mock_definition_service.load_definitions.# Mock assertion eliminated - authentic validation
-    mock_repair_extract_markers.# Mock assertion eliminated - authentic validation
+    mock_definition_service.load_definitions.assert_called_once()
+    mock_repair_extract_markers.assert_called_once()
     # Vérifier les arguments de repair_extract_markers (le premier est extract_definitions)
     assert isinstance(mock_repair_extract_markers.call_args[0][0], ExtractDefinitions)
     assert mock_repair_extract_markers.call_args[0][1] == mock_llm_service # llm_service
     assert mock_repair_extract_markers.call_args[0][2] == mock_fetch_instance # fetch_service instance
     assert mock_repair_extract_markers.call_args[0][3] == mock_extract_instance # extract_service instance
 
-    mock_generate_marker_repair_report.# Mock assertion eliminated - authentic validation
+    mock_generate_marker_repair_report.assert_called_once()
     assert mock_generate_marker_repair_report.call_args[0][0] == [{"some_result": "data"}] # results
     assert mock_generate_marker_repair_report.call_args[0][1] == output_report_path # output_file_str
 
@@ -182,20 +183,20 @@ async def test_run_extract_repair_pipeline_with_save_and_json_export(
     mock_definition_service: MagicMock # Fixture
 ):
     """Teste le pipeline avec sauvegarde et export JSON."""
-    mock_create_llm_service# Mock eliminated - using authentic gpt-4o-mini mock_llm_service
+    mock_create_llm_service.return_value = mock_llm_service
 
     # Configurer les instances mockées
-    MockCryptoService# Mock eliminated - using authentic gpt-4o-mini Magicawait self._create_authentic_gpt4o_mini_instance()
-    MockCacheService# Mock eliminated - using authentic gpt-4o-mini Magicawait self._create_authentic_gpt4o_mini_instance()
-    MockExtractService# Mock eliminated - using authentic gpt-4o-mini Magicawait self._create_authentic_gpt4o_mini_instance()
-    MockFetchService# Mock eliminated - using authentic gpt-4o-mini Magicawait self._create_authentic_gpt4o_mini_instance()
-    MockDefinitionService# Mock eliminated - using authentic gpt-4o-mini mock_definition_service # Utiliser la fixture configurée
+    MockCryptoService.return_value = AsyncMock()
+    MockCacheService.return_value = AsyncMock()
+    MockExtractService.return_value = AsyncMock()
+    MockFetchService.return_value = AsyncMock()
+    MockDefinitionService.return_value = mock_definition_service # Utiliser la fixture configurée
 
     updated_defs_mock = ExtractDefinitions(sources=[SourceDefinition(source_name="Updated", source_type="text", schema="file", host_parts=[], path="", extracts=[])])
     # Assurer que load_definitions retourne un tuple correct
-    mock_definition_service.load_definitions# Mock eliminated - using authentic gpt-4o-mini (updated_defs_mock, None)
+    mock_definition_service.load_definitions.return_value = (updated_defs_mock, None)
     # Fournir un résultat pour que le rapport soit généré
-    mock_repair_extract_markers# Mock eliminated - using authentic gpt-4o-mini (updated_defs_mock, [{"status": "repaired"}])
+    mock_repair_extract_markers.return_value = (updated_defs_mock, [{"status": "repaired"}])
 
     output_report_path = str(mock_project_root / "report.html")
     output_json_path = str(mock_project_root / "updated.json")
@@ -213,7 +214,7 @@ async def test_run_extract_repair_pipeline_with_save_and_json_export(
     mock_definition_service.export_definitions_to_json.assert_called_once_with(
         updated_defs_mock, Path(output_json_path)
     )
-    mock_generate_marker_repair_report.# Mock assertion eliminated - authentic validation # Vérifier qu'il est appelé
+    mock_generate_marker_repair_report.assert_called_once() # Vérifier qu'il est appelé
 
 
 
@@ -237,14 +238,14 @@ async def test_run_extract_repair_pipeline_hitler_only_filter(
     mock_definition_service: MagicMock # Fixture
 ):
     """Teste le filtrage --hitler-only."""
-    mock_create_llm_service# Mock eliminated - using authentic gpt-4o-mini mock_llm_service
+    mock_create_llm_service.return_value = mock_llm_service
     
     # Configurer les instances mockées
-    MockCryptoService# Mock eliminated - using authentic gpt-4o-mini Magicawait self._create_authentic_gpt4o_mini_instance()
-    MockCacheService# Mock eliminated - using authentic gpt-4o-mini Magicawait self._create_authentic_gpt4o_mini_instance()
-    MockExtractService# Mock eliminated - using authentic gpt-4o-mini Magicawait self._create_authentic_gpt4o_mini_instance()
-    MockFetchService# Mock eliminated - using authentic gpt-4o-mini Magicawait self._create_authentic_gpt4o_mini_instance()
-    MockDefinitionService# Mock eliminated - using authentic gpt-4o-mini mock_definition_service
+    MockCryptoService.return_value = AsyncMock()
+    MockCacheService.return_value = AsyncMock()
+    MockExtractService.return_value = AsyncMock()
+    MockFetchService.return_value = AsyncMock()
+    MockDefinitionService.return_value = mock_definition_service
 
     # Configurer mock_definition_service_fixture pour retourner plusieurs sources
     sources_data = [
@@ -252,9 +253,9 @@ async def test_run_extract_repair_pipeline_hitler_only_filter(
         SourceDefinition(source_name="Autre Discours", source_type="text", schema="file", host_parts=[], path="", extracts=[]),
         SourceDefinition(source_name="Texte Hitler sur la fin", source_type="text", schema="file", host_parts=[], path="", extracts=[])
     ]
-    mock_definition_service.load_definitions# Mock eliminated - using authentic gpt-4o-mini (ExtractDefinitions(sources=sources_data), None)
+    mock_definition_service.load_definitions.return_value = (ExtractDefinitions(sources=sources_data), None)
     
-    mock_repair_extract_markers# Mock eliminated - using authentic gpt-4o-mini (ExtractDefinitions(sources=[]), []) # Peu importe le retour ici
+    mock_repair_extract_markers.return_value = (ExtractDefinitions(sources=[]), []) # Peu importe le retour ici
 
     await run_extract_repair_pipeline(
         project_root_dir=mock_project_root,
@@ -265,7 +266,7 @@ async def test_run_extract_repair_pipeline_hitler_only_filter(
         output_json_path_str=None
     )
 
-    mock_repair_extract_markers.# Mock assertion eliminated - authentic validation
+    mock_repair_extract_markers.assert_called_once()
     # Vérifier que les définitions passées à repair_extract_markers sont filtrées
     called_with_definitions = mock_repair_extract_markers.call_args[0][0]
     assert isinstance(called_with_definitions, ExtractDefinitions)
@@ -311,19 +312,19 @@ async def test_run_extract_repair_pipeline_load_definitions_fails(
     caplog
 ):
     """Teste l'échec du chargement des définitions."""
-    mock_create_llm_service# Mock eliminated - using authentic gpt-4o-mini mock_llm_service
+    mock_create_llm_service.return_value = mock_llm_service
 
     # Configurer les instances mockées, en particulier DefinitionService
-    mock_def_instance = Magicawait self._create_authentic_gpt4o_mini_instance()
-    mock_def_instance.load_definitions# Mock eliminated - using authentic gpt-4o-mini (None, "Erreur de chargement test") # Simule échec
-    MockDefinitionService# Mock eliminated - using authentic gpt-4o-mini mock_def_instance
+    mock_def_instance = AsyncMock()
+    mock_def_instance.load_definitions.return_value = (None, "Erreur de chargement test") # Simule échec
+    MockDefinitionService.return_value = mock_def_instance
     
     # Les autres services peuvent retourner des mocks simples car ils ne devraient pas être atteints
     # ou leur interaction n'est pas l'objet de ce test si le pipeline s'arrête tôt.
-    MockCryptoService# Mock eliminated - using authentic gpt-4o-mini Magicawait self._create_authentic_gpt4o_mini_instance()
-    MockCacheService# Mock eliminated - using authentic gpt-4o-mini Magicawait self._create_authentic_gpt4o_mini_instance()
-    MockExtractService# Mock eliminated - using authentic gpt-4o-mini Magicawait self._create_authentic_gpt4o_mini_instance()
-    MockFetchService# Mock eliminated - using authentic gpt-4o-mini Magicawait self._create_authentic_gpt4o_mini_instance()
+    MockCryptoService.return_value = AsyncMock()
+    MockCacheService.return_value = AsyncMock()
+    MockExtractService.return_value = AsyncMock()
+    MockFetchService.return_value = AsyncMock()
     
     with caplog.at_level(logging.ERROR): # ou WARNING selon le log dans le pipeline
         await run_extract_repair_pipeline(
@@ -332,13 +333,13 @@ async def test_run_extract_repair_pipeline_load_definitions_fails(
             save_changes=False, hitler_only=False, custom_input_path_str=None, output_json_path_str=None
         )
     assert "Aucune définition d'extrait chargée ou sources vides. Arrêt du pipeline." in caplog.text
-    mock_def_instance.load_definitions.# Mock assertion eliminated - authentic validation # Vérifier que load_definitions a été appelé
+    mock_def_instance.load_definitions.assert_called_once() # Vérifier que load_definitions a été appelé
 # --- Tests for setup_agents ---
 
 @pytest.fixture
 def mock_sk_kernel() -> MagicMock:
     kernel = MagicMock(spec=sk.Kernel)
-    kernel.get_prompt_execution_settings_from_service_id# Mock eliminated - using authentic gpt-4o-mini {}
+    kernel.get_prompt_execution_settings_from_service_id.return_value = {}
     return kernel
 
 @pytest.mark.asyncio

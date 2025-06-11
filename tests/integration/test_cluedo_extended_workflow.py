@@ -62,7 +62,7 @@ class TestWorkflowComparison:
     """Tests de comparaison entre workflows 2-agents et 3-agents."""
     
     @pytest.fixture
-    def mock_kernel(self):
+    async def mock_kernel(self):
         """Kernel mocké pour tests comparatifs."""
         kernel = Mock(spec=Kernel)
         kernel.add_plugin = await self._create_authentic_gpt4o_mini_instance()

@@ -5,7 +5,7 @@ from semantic_kernel.contents import ChatHistory
 from semantic_kernel.core_plugins import ConversationSummaryPlugin
 from config.unified_config import UnifiedConfig
 
-﻿#!/usr/bin/env python3
+#!/usr/bin/env python3
 """
 Tests d'intégration pour les composants authentiques
 =================================================
@@ -127,7 +127,7 @@ class TestRealTweetyIntegration:
     
     @pytest.mark.integration
     @pytest.mark.requires_tweety_jar
-    def test_real_tweety_modal_logic_analysis(self):
+    async def test_real_tweety_modal_logic_analysis(self):
         """Test d'analyse logique modale avec Tweety réel."""
         if not self._is_real_tweety_available():
             pytest.skip("Real Tweety not available")
@@ -156,7 +156,7 @@ class TestRealTweetyIntegration:
     
     @pytest.mark.integration
     @pytest.mark.requires_tweety_jar
-    def test_real_tweety_error_handling(self):
+    async def test_real_tweety_error_handling(self):
         """Test de gestion d'erreurs avec Tweety réel."""
         if not self._is_real_tweety_available():
             pytest.skip("Real Tweety not available")
@@ -239,7 +239,7 @@ class TestCompleteTaxonomyIntegration:
             pytest.skip("Taxonomy manager not available")
     
     @pytest.mark.integration
-    def test_fallacy_analysis_with_complete_taxonomy(self):
+    async def test_fallacy_analysis_with_complete_taxonomy(self):
         """Test d'analyse de sophismes avec taxonomie complète."""
         try:
             from argumentation_analysis.agents.informal_agent import InformalAnalysisAgent
