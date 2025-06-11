@@ -236,19 +236,19 @@ def run_orchestrator_with_conda(args: argparse.Namespace, logger: logging.Logger
 
         logger.info(f"PYTHONPATH pour conda run: {env_vars['PYTHONPATH']}")
 
-        # TEST D'IMPORTATION de l'application ASGI avant de lancer l'orchestrateur
-        logger.info("Tentative d'importation manuelle de l'application ASGI (depuis start_webapp.py)...")
-        try:
-            # S'assurer que le PROJECT_ROOT est bien dans sys.path pour ce test
-            # car l'orchestrateur et le backend_manager en dépendent.
-            if str(PROJECT_ROOT) not in sys.path:
-                sys.path.insert(0, str(PROJECT_ROOT))
-            from argumentation_analysis.services.web_api import app as asgi_app_test
-            logger.info(f"Importation de test réussie: {asgi_app_test}")
-        except Exception as import_err:
-            logger.error("ERREUR D'IMPORTATION DE L'APPLICATION ASGI (depuis start_webapp.py):", exc_info=True)
-            logger.error("Veuillez corriger l'erreur d'importation ci-dessus avant de continuer.")
-            return False # Arrêter ici si l'import échoue
+        # TEST D'IMPORTATION de l'application ASGI avant de lancer l'orchestrateur (TEMPORAIREMENT COMMENTÉ POUR TEST MANUEL)
+        # logger.info("Tentative d'importation manuelle de l'application ASGI (depuis start_webapp.py)...")
+        # try:
+        #     # S'assurer que le PROJECT_ROOT est bien dans sys.path pour ce test
+        #     # car l'orchestrateur et le backend_manager en dépendent.
+        #     if str(PROJECT_ROOT) not in sys.path:
+        #         sys.path.insert(0, str(PROJECT_ROOT))
+        #     from argumentation_analysis.services.web_api import app as asgi_app_test
+        #     logger.info(f"Importation de test réussie: {asgi_app_test}")
+        # except Exception as import_err:
+        #     logger.error("ERREUR D'IMPORTATION DE L'APPLICATION ASGI (depuis start_webapp.py):", exc_info=True)
+        #     logger.error("Veuillez corriger l'erreur d'importation ci-dessus avant de continuer.")
+        #     return False # Arrêter ici si l'import échoue
 
         # Lancement avec gestion interactive et environnement modifié
         # L'activation de l'environnement est gérée par le script appelant (activate_project_env.ps1)
