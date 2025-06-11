@@ -55,9 +55,8 @@ class TestTacticalOperationalInterface(unittest.TestCase):
         self.mock_operational_adapter = MagicMock(spec=OperationalAdapter)
         
         # Configurer le mock du middleware pour retourner les adaptateurs mockés
-        self.mock_middleware.get_adapter# Mock eliminated - using authentic gpt-4o-mini lambda agent_id, level: (
+        self.mock_middleware.get_adapter.side_effect = lambda agent_id, level: \
             self.mock_tactical_adapter if level == AgentLevel.TACTICAL else self.mock_operational_adapter
-        )
         
         # Configurer les mocks
         self.mock_tactical_state.tasks = {
@@ -425,16 +424,16 @@ class TestTacticalOperationalInterface(unittest.TestCase):
         mock_message = MagicMock(spec=Message)
         mock_message.content = {DATA_DIR: {}}
         mock_message.sender = "operational_agent"
-        self.mock_tactical_adapter.receive_task_result# Mock eliminated - using authentic gpt-4o-mini mock_message
+        self.mock_tactical_adapter.receive_task_result.return_value = mock_message
         
         # Appeler la méthode à tester
         result = self.interface.process_operational_result(operational_result)
         
         # Vérifier que la méthode receive_task_result a été appelée
-        self.mock_tactical_adapter.receive_task_result.# Mock assertion eliminated - authentic validation
+        self.mock_tactical_adapter.receive_task_result.assert_called()
         
         # Vérifier que la méthode send_report a été appelée pour l'accusé de réception
-        self.mock_tactical_adapter.send_report.# Mock assertion eliminated - authentic validation
+        self.mock_tactical_adapter.send_report.assert_called()
         
         # Vérifier le résultat
         self.assertIsInstance(result, dict)

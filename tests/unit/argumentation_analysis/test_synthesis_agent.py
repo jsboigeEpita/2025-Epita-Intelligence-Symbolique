@@ -1,20 +1,13 @@
 
-# Authentic gpt-4o-mini imports (replacing mocks)
-import openai
-from semantic_kernel.contents import ChatHistory
-from semantic_kernel.core_plugins import ConversationSummaryPlugin
-from config.unified_config import UnifiedConfig
-
 """
 Tests unitaires pour SynthesisAgent.
 
 Ce module teste toutes les fonctionnalités de l'agent de synthèse unifié,
-y compris l'orchestration d'analyses, l'unification des résultats et 
+y compris l'orchestration d'analyses, l'unification des résultats et
 la génération de rapports.
 """
-
+from unittest.mock import MagicMock, AsyncMock, patch
 import pytest
-import asyncio
 import time
 
 from typing import Dict, Any, Optional, Tuple, List
@@ -22,42 +15,51 @@ from typing import Dict, Any, Optional, Tuple, List
 # Import du module à tester
 from argumentation_analysis.agents.core.synthesis.synthesis_agent import (
     SynthesisAgent,
-    MockLogicAgent,
-    MockInformalAgent
 )
 from argumentation_analysis.agents.core.synthesis.data_models import (
     LogicAnalysisResult,
     InformalAnalysisResult,
-    UnifiedReport
+    UnifiedReport,
 )
 from semantic_kernel import Kernel
 
 
-class TestSynthesisAgent:
-    async def _create_authentic_gpt4o_mini_instance(self):
-        """Crée une instance authentique de gpt-4o-mini au lieu d'un mock."""
-        config = UnifiedConfig()
-        return config.get_kernel_with_gpt4o_mini()
-        
-    async def _make_authentic_llm_call(self, prompt: str) -> str:
-        """Fait un appel authentique à gpt-4o-mini."""
-        try:
-            kernel = await self._create_authentic_gpt4o_mini_instance()
-            result = await kernel.invoke("chat", input=prompt)
-            return str(result)
-        except Exception as e:
-            logger.warning(f"Appel LLM authentique échoué: {e}")
-            return "Authentic LLM call failed"
+class MockLogicAgent:
+    def __init__(self, logic_type: str):
+        self.logic_type = logic_type
 
+    async def analyze_text(self, text: str) -> str:
+        if self.logic_type == "first_order":
+            return f"Analyse FOL simulée: Prédicats et quantificateurs détectés dans '{text}'"
+        if self.logic_type == "modal":
+            return f"Analyse ML simulée: Modalités nécessité/possibilité détectées dans '{text}'"
+        return f"Analyse {self.logic_type} simulée pour le texte: '{text}'"
+
+class MockInformalAgent:
+    async def analyze_text(self, text: str) -> dict:
+        fallacies = []
+        devices = ["assertion"]
+        if "absolument" in text or "évidemment" in text:
+            fallacies.append({"type": "assertion_non_fondée", "confidence": 0.8})
+        if "tout le monde sait" in text:
+            fallacies.append({"type": "appel_au_sens_commun", "confidence": 0.7})
+        if len(text) > 50:
+            devices.append("argumentation")
+        return {"fallacies": fallacies, "structure": "Structure analysée (mock)", "devices": devices}
+
+
+class TestSynthesisAgent:
     """Classe de tests pour SynthesisAgent."""
-    
+
     @pytest.fixture
-    def mock_kernel(self):
+    def mock_kernel(self, mocker):
         """Fixture pour un kernel mocké."""
-        kernel = Mock(spec=Kernel)
+        kernel = mocker.MagicMock(spec=Kernel)
         kernel.plugins = {}
-        kernel.get_prompt_execution_settings_from_service_id = Mock(return_value=None)
-        kernel.add_function = await self._create_authentic_gpt4o_mini_instance()
+        kernel.get_prompt_execution_settings_from_service_id = mocker.MagicMock(
+            return_value=None
+        )
+        kernel.add_function = mocker.MagicMock()
         return kernel
     
     @pytest.fixture
@@ -74,8 +76,10 @@ class TestSynthesisAgent:
     
     def test_init_synthesis_agent_basic(self, mock_kernel):
         """Test l'initialisation du SynthesisAgent en mode basique."""
-        agent = SynthesisAgent(mock_kernel, "TestAgent", enable_advanced_features=False)
-        
+        agent = SynthesisAgent(
+            mock_kernel, "TestAgent", enable_advanced_features=False
+        )
+
         assert agent.name == "TestAgent"
         assert agent.enable_advanced_features == False
         assert agent.fusion_manager is None
@@ -87,8 +91,10 @@ class TestSynthesisAgent:
     
     def test_init_synthesis_agent_advanced(self, mock_kernel):
         """Test l'initialisation du SynthesisAgent en mode avancé."""
-        agent = SynthesisAgent(mock_kernel, "AdvancedAgent", enable_advanced_features=True)
-        
+        agent = SynthesisAgent(
+            mock_kernel, "AdvancedAgent", enable_advanced_features=True
+        )
+
         assert agent.name == "AdvancedAgent"
         assert agent.enable_advanced_features == True
         # Les modules avancés sont None en Phase 1, mais la configuration est prête
@@ -129,10 +135,10 @@ class TestSynthesisAgent:
         assert synthesis_agent._llm_service_id == "test_service"
     
     @pytest.mark.asyncio
-    async def test_synthesize_analysis_simple_mode(self, synthesis_agent):
+    async def test_synthesize_analysis_simple_mode(self, mocker, synthesis_agent):
         """Test la synthèse d'analyse en mode simple."""
         test_text = "Il est urgent d'agir sur le climat car les conséquences seront irréversibles."
-        
+
         # Mock des méthodes internes
         mock_logic_result = LogicAnalysisResult(
             propositional_result="Analyse PL réussie",
@@ -146,110 +152,116 @@ class TestSynthesisAgent:
             processing_time_ms=80.0
         )
         
-        with patch.object(synthesis_agent, 'orchestrate_analysis', new_callable=AsyncMock) as mock_orchestrate:
-            mock_orchestrate# Mock eliminated - using authentic gpt-4o-mini (mock_logic_result, mock_informal_result)
-            
-            with patch.object(synthesis_agent, 'unify_results', new_callable=AsyncMock) as mock_unify:
-                expected_report = UnifiedReport(
-                    original_text=test_text,
-                    logic_analysis=mock_logic_result,
-                    informal_analysis=mock_informal_result,
-                    executive_summary="Synthèse test",
-                    total_processing_time_ms=180.0  # Explicitly set processing time
-                )
-                mock_unify# Mock eliminated - using authentic gpt-4o-mini expected_report
-                
-                result = await synthesis_agent.synthesize_analysis(test_text)
-                
-                assert isinstance(result, UnifiedReport)
-                assert result.original_text == test_text
-                assert result.total_processing_time_ms is not None
-                assert result.total_processing_time_ms > 0
+        mock_orchestrate = mocker.patch.object(synthesis_agent, 'orchestrate_analysis', new_callable=AsyncMock)
+        mock_orchestrate.return_value = (mock_logic_result, mock_informal_result)
+
+        mock_unify = mocker.patch.object(synthesis_agent, 'unify_results', new_callable=AsyncMock)
+        expected_report = UnifiedReport(
+            original_text=test_text,
+            logic_analysis=mock_logic_result,
+            informal_analysis=mock_informal_result,
+            executive_summary="Synthèse test",
+            total_processing_time_ms=180.0,
+        )
+        mock_unify.return_value = expected_report
+
+        result = await synthesis_agent.synthesize_analysis(test_text)
+
+        assert isinstance(result, UnifiedReport)
+        assert result.original_text == test_text
+        assert result.total_processing_time_ms is not None
+        assert result.total_processing_time_ms > 0
     
     @pytest.mark.asyncio
-    async def test_synthesize_analysis_advanced_mode_not_implemented(self, advanced_synthesis_agent):
+    async def test_synthesize_analysis_advanced_mode_not_implemented(self, mocker, advanced_synthesis_agent):
         """Test que le mode avancé lève NotImplementedError."""
         # Activer artificiellement le fusion_manager pour déclencher le mode avancé
-        advanced_synthesis_agent.fusion_manager = await self._create_authentic_gpt4o_mini_instance()
-        
+        advanced_synthesis_agent.fusion_manager = mocker.MagicMock()
+
         test_text = "Texte de test"
-        
+
         with pytest.raises(NotImplementedError):
             await advanced_synthesis_agent.synthesize_analysis(test_text)
     
     @pytest.mark.asyncio
-    async def test_orchestrate_analysis_success(self, synthesis_agent):
+    async def test_orchestrate_analysis_success(self, mocker, synthesis_agent):
         """Test l'orchestration réussie des analyses."""
         test_text = "Argument politique complexe avec potentiels sophismes."
-        
+
         # Mock des agents
         mock_logic_result = LogicAnalysisResult(propositional_result="Test PL")
-        mock_informal_result = InformalAnalysisResult(arguments_structure="Test structure")
-        
-        with patch.object(synthesis_agent, '_run_formal_analysis', new_callable=AsyncMock) as mock_formal:
-            mock_formal# Mock eliminated - using authentic gpt-4o-mini mock_logic_result
-            
-            with patch.object(synthesis_agent, '_run_informal_analysis', new_callable=AsyncMock) as mock_informal:
-                mock_informal# Mock eliminated - using authentic gpt-4o-mini mock_informal_result
-                
-                logic_result, informal_result = await synthesis_agent.orchestrate_analysis(test_text)
-                
-                assert isinstance(logic_result, LogicAnalysisResult)
-                assert isinstance(informal_result, InformalAnalysisResult)
-                assert logic_result.propositional_result == "Test PL"
-                assert informal_result.arguments_structure == "Test structure"
+        mock_informal_result = InformalAnalysisResult(
+            arguments_structure="Test structure"
+        )
+
+        mock_formal = mocker.patch.object(synthesis_agent, '_run_formal_analysis', new_callable=AsyncMock)
+        mock_formal.return_value = mock_logic_result
+
+        mock_informal = mocker.patch.object(synthesis_agent, '_run_informal_analysis', new_callable=AsyncMock)
+        mock_informal.return_value = mock_informal_result
+
+        logic_result, informal_result = await synthesis_agent.orchestrate_analysis(
+            test_text
+        )
+
+        assert isinstance(logic_result, LogicAnalysisResult)
+        assert isinstance(informal_result, InformalAnalysisResult)
+        assert logic_result.propositional_result == "Test PL"
+        assert informal_result.arguments_structure == "Test structure"
     
     @pytest.mark.asyncio
-    async def test_orchestrate_analysis_with_exceptions(self, synthesis_agent):
+    async def test_orchestrate_analysis_with_exceptions(self, mocker, synthesis_agent):
         """Test l'orchestration avec gestion d'exceptions."""
         test_text = "Texte test"
-        
+
         # Mock avec exception pour l'analyse formelle
-        with patch.object(synthesis_agent, '_run_formal_analysis', new_callable=AsyncMock) as mock_formal:
-            mock_formal# Mock eliminated - using authentic gpt-4o-mini Exception("Erreur analyse formelle")
-            
-            with patch.object(synthesis_agent, '_run_informal_analysis', new_callable=AsyncMock) as mock_informal:
-                mock_informal# Mock eliminated - using authentic gpt-4o-mini InformalAnalysisResult()
-                
-                logic_result, informal_result = await synthesis_agent.orchestrate_analysis(test_text)
-                
-                # Doit retourner des résultats par défaut même en cas d'erreur
-                assert isinstance(logic_result, LogicAnalysisResult)
-                assert isinstance(informal_result, InformalAnalysisResult)
+        mock_formal = mocker.patch.object(synthesis_agent, '_run_formal_analysis', new_callable=AsyncMock)
+        mock_formal.side_effect = Exception("Erreur analyse formelle")
+
+        mock_informal = mocker.patch.object(synthesis_agent, '_run_informal_analysis', new_callable=AsyncMock)
+        mock_informal.return_value = InformalAnalysisResult()
+
+        logic_result, informal_result = await synthesis_agent.orchestrate_analysis(
+            test_text
+        )
+
+        # Doit retourner des résultats par défaut même en cas d'erreur
+        assert isinstance(logic_result, LogicAnalysisResult)
+        assert isinstance(informal_result, InformalAnalysisResult)
     
     @pytest.mark.asyncio
-    async def test_unify_results(self, synthesis_agent):
+    async def test_unify_results(self, mocker, synthesis_agent):
         """Test l'unification des résultats d'analyses."""
         original_text = "Texte original pour test"
-        
+
         logic_result = LogicAnalysisResult(
             propositional_result="Logique valide",
             logical_validity=True,
-            consistency_check=True
+            consistency_check=True,
         )
-        
+
         informal_result = InformalAnalysisResult(
             arguments_structure="Structure solide",
-            fallacies_detected=[
-                {"type": "ad_hominem", "confidence": 0.8}
-            ]
+            fallacies_detected=[{"type": "ad_hominem", "confidence": 0.8}],
         )
-        
+
         # Mock des méthodes de génération
-        with patch.object(synthesis_agent, '_generate_simple_summary', new_callable=AsyncMock) as mock_summary:
-            mock_summary# Mock eliminated - using authentic gpt-4o-mini "Résumé de test"
-            
-            report = await synthesis_agent.unify_results(logic_result, informal_result, original_text)
-            
-            assert isinstance(report, UnifiedReport)
-            assert report.original_text == original_text
-            assert report.logic_analysis == logic_result
-            assert report.informal_analysis == informal_result
-            assert report.executive_summary == "Résumé de test"
-            assert report.overall_validity is not None
-            assert report.confidence_level is not None
-            assert isinstance(report.contradictions_identified, list)
-            assert isinstance(report.recommendations, list)
+        mock_summary = mocker.patch.object(synthesis_agent, '_generate_simple_summary', new_callable=AsyncMock)
+        mock_summary.return_value = "Résumé de test"
+
+        report = await synthesis_agent.unify_results(
+            logic_result, informal_result, original_text
+        )
+
+        assert isinstance(report, UnifiedReport)
+        assert report.original_text == original_text
+        assert report.logic_analysis == logic_result
+        assert report.informal_analysis == informal_result
+        assert report.executive_summary == "Résumé de test"
+        assert report.overall_validity is not None
+        assert report.confidence_level is not None
+        assert isinstance(report.contradictions_identified, list)
+        assert isinstance(report.recommendations, list)
     
     @pytest.mark.asyncio
     async def test_generate_report(self, synthesis_agent):
@@ -349,25 +361,29 @@ class TestSynthesisAgent:
         assert agent_cached is agent
     
     @pytest.mark.asyncio
-    async def test_analyze_with_logic_agent_analyze_text(self, synthesis_agent):
+    async def test_analyze_with_logic_agent_analyze_text(self, mocker, synthesis_agent):
         """Test l'analyse avec un agent logique (méthode analyze_text)."""
-        mock_agent = await self._create_authentic_gpt4o_mini_instance()
+        mock_agent = mocker.MagicMock()
         mock_agent.analyze_text = AsyncMock(return_value="Résultat analyse")
-        
-        result = await synthesis_agent._analyze_with_logic_agent(mock_agent, "texte test", "propositional")
-        
+
+        result = await synthesis_agent._analyze_with_logic_agent(
+            mock_agent, "texte test", "propositional"
+        )
+
         assert result == "Résultat analyse"
         mock_agent.analyze_text.assert_called_once_with("texte test")
-    
+
     @pytest.mark.asyncio
-    async def test_analyze_with_logic_agent_process_text(self, synthesis_agent):
+    async def test_analyze_with_logic_agent_process_text(self, mocker, synthesis_agent):
         """Test l'analyse avec un agent logique (méthode process_text)."""
-        mock_agent = await self._create_authentic_gpt4o_mini_instance()
+        mock_agent = mocker.MagicMock()
         mock_agent.process_text = AsyncMock(return_value="Résultat process")
         # S'assurer que hasattr fonctionne correctement
         del mock_agent.analyze_text  # Pour que hasattr(mock_agent, "analyze_text") soit False
 
-        result = await synthesis_agent._analyze_with_logic_agent(mock_agent, "texte test", "modal")
+        result = await synthesis_agent._analyze_with_logic_agent(
+            mock_agent, "texte test", "modal"
+        )
 
         assert result == "Résultat process"
         mock_agent.process_text.assert_called_once_with("texte test")
@@ -375,47 +391,57 @@ class TestSynthesisAgent:
     @pytest.mark.asyncio
     async def test_analyze_with_logic_agent_no_interface(self, synthesis_agent):
         """Test l'analyse avec un agent sans interface reconnue."""
-        mock_agent = Mock(spec=[])  # Mock sans aucune méthode
+        mock_agent = mocker.MagicMock(spec=[])  # Mock sans aucune méthode
         # Explicitement supprimer les méthodes si elles existent
-        if hasattr(mock_agent, 'analyze_text'):
+        if hasattr(mock_agent, "analyze_text"):
             del mock_agent.analyze_text
-        if hasattr(mock_agent, 'process_text'):
+        if hasattr(mock_agent, "process_text"):
             del mock_agent.process_text
 
-        result = await synthesis_agent._analyze_with_logic_agent(mock_agent, "texte test", "unknown")
+        result = await synthesis_agent._analyze_with_logic_agent(
+            mock_agent, "texte test", "unknown"
+        )
 
         assert "interface non reconnue" in result
     
     @pytest.mark.asyncio
-    async def test_analyze_with_logic_agent_exception(self, synthesis_agent):
+    async def test_analyze_with_logic_agent_exception(self, mocker, synthesis_agent):
         """Test la gestion d'exception lors de l'analyse logique."""
-        mock_agent = await self._create_authentic_gpt4o_mini_instance()
+        mock_agent = mocker.MagicMock()
         mock_agent.analyze_text = AsyncMock(side_effect=Exception("Test error"))
-        
-        result = await synthesis_agent._analyze_with_logic_agent(mock_agent, "texte test", "propositional")
-        
+
+        result = await synthesis_agent._analyze_with_logic_agent(
+            mock_agent, "texte test", "propositional"
+        )
+
         assert "Erreur analyse propositional" in result
         assert "Test error" in result
     
     @pytest.mark.asyncio
-    async def test_analyze_with_informal_agent_success(self, synthesis_agent):
+    async def test_analyze_with_informal_agent_success(self, mocker, synthesis_agent):
         """Test l'analyse avec l'agent informel."""
-        mock_agent = await self._create_authentic_gpt4o_mini_instance()
-        mock_agent.analyze_text = AsyncMock(return_value={"fallacies": ["test"], "structure": "test"})
-        
-        result = await synthesis_agent._analyze_with_informal_agent(mock_agent, "texte test")
-        
+        mock_agent = mocker.MagicMock()
+        mock_agent.analyze_text = AsyncMock(
+            return_value={"fallacies": ["test"], "structure": "test"}
+        )
+
+        result = await synthesis_agent._analyze_with_informal_agent(
+            mock_agent, "texte test"
+        )
+
         assert result["fallacies"] == ["test"]
         assert result["structure"] == "test"
-    
+
     @pytest.mark.asyncio
-    async def test_analyze_with_informal_agent_exception(self, synthesis_agent):
+    async def test_analyze_with_informal_agent_exception(self, mocker, synthesis_agent):
         """Test la gestion d'exception lors de l'analyse informelle."""
-        mock_agent = await self._create_authentic_gpt4o_mini_instance()
+        mock_agent = mocker.MagicMock()
         mock_agent.analyze_text = AsyncMock(side_effect=Exception("Informal error"))
-        
-        result = await synthesis_agent._analyze_with_informal_agent(mock_agent, "texte test")
-        
+
+        result = await synthesis_agent._analyze_with_informal_agent(
+            mock_agent, "texte test"
+        )
+
         assert "Erreur analyse informelle" in result
         assert "Informal error" in result
     
@@ -564,22 +590,22 @@ class TestSynthesisAgent:
     async def test_get_response_with_text(self, synthesis_agent):
         """Test get_response avec un texte."""
         test_text = "Argument de test"
-        
-        with patch.object(synthesis_agent, 'synthesize_analysis', new_callable=AsyncMock) as mock_synthesize:
-            mock_report = UnifiedReport(
-                original_text=test_text,
-                logic_analysis=LogicAnalysisResult(),
-                informal_analysis=InformalAnalysisResult()
-            )
-            mock_synthesize# Mock eliminated - using authentic gpt-4o-mini mock_report
-            
-            with patch.object(synthesis_agent, 'generate_report', new_callable=AsyncMock) as mock_generate:
-                mock_generate# Mock eliminated - using authentic gpt-4o-mini "Rapport généré"
-                
-                response = await synthesis_agent.get_response(test_text)
-                
-                assert response == "Rapport généré"
-                mock_synthesize.assert_called_once_with(test_text)
+
+        mock_synthesize = mocker.patch.object(synthesis_agent, 'synthesize_analysis', new_callable=AsyncMock)
+        mock_report = UnifiedReport(
+            original_text=test_text,
+            logic_analysis=LogicAnalysisResult(),
+            informal_analysis=InformalAnalysisResult(),
+        )
+        mock_synthesize.return_value = mock_report
+
+        mock_generate = mocker.patch.object(synthesis_agent, 'generate_report', new_callable=AsyncMock)
+        mock_generate.return_value = "Rapport généré"
+
+        response = await synthesis_agent.get_response(test_text)
+
+        assert response == "Rapport généré"
+        mock_synthesize.assert_called_once_with(test_text)
     
     @pytest.mark.asyncio
     async def test_get_response_without_text(self, synthesis_agent):
@@ -589,29 +615,29 @@ class TestSynthesisAgent:
         assert "Usage: fournir un texte à analyser" in response
     
     @pytest.mark.asyncio
-    async def test_invoke(self, synthesis_agent):
+    async def test_invoke(self, mocker, synthesis_agent):
         """Test invoke (doit appeler get_response)."""
         test_text = "Test invoke"
-        
-        with patch.object(synthesis_agent, 'get_response', new_callable=AsyncMock) as mock_get_response:
-            mock_get_response# Mock eliminated - using authentic gpt-4o-mini "Réponse invoke"
-            
-            response = await synthesis_agent.invoke(test_text)
-            
-            assert response == "Réponse invoke"
-            mock_get_response.assert_called_once_with(test_text)
+
+        mock_get_response = mocker.patch.object(synthesis_agent, 'get_response', new_callable=AsyncMock)
+        mock_get_response.return_value = "Réponse invoke"
+
+        response = await synthesis_agent.invoke(test_text)
+
+        assert response == "Réponse invoke"
+        mock_get_response.assert_called_once_with(test_text)
     
     @pytest.mark.asyncio
     async def test_invoke_stream(self, synthesis_agent):
         """Test invoke_stream."""
         test_text = "Test stream"
         
-        with patch.object(synthesis_agent, 'invoke', new_callable=AsyncMock) as mock_invoke:
-            mock_invoke# Mock eliminated - using authentic gpt-4o-mini "Résultat stream"
-            
-            async for result in synthesis_agent.invoke_stream(test_text):
-                assert result == "Résultat stream"
-                break
+        mock_invoke = mocker.patch.object(synthesis_agent, 'invoke', new_callable=AsyncMock)
+        mock_invoke.return_value = "Résultat stream"
+
+        async for result in synthesis_agent.invoke_stream(test_text):
+            assert result == "Résultat stream"
+            break
 
 
 class TestMockAgents:
@@ -710,13 +736,15 @@ class TestSynthesisAgentIntegration:
     """Tests d'intégration pour SynthesisAgent."""
     
     @pytest.fixture
-    def integration_agent(self):
+    def integration_agent(self, mocker):
         """Agent configuré pour tests d'intégration."""
         # Créer un mock kernel simple
-        mock_kernel = await self._create_authentic_gpt4o_mini_instance()
+        mock_kernel = mocker.MagicMock(spec=Kernel)
         mock_kernel.plugins = {}
-        
-        agent = SynthesisAgent(mock_kernel, "IntegrationAgent", enable_advanced_features=False)
+
+        agent = SynthesisAgent(
+            mock_kernel, "IntegrationAgent", enable_advanced_features=False
+        )
         agent.setup_agent_components("test_service")
         return agent
     

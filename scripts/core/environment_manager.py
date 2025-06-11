@@ -17,21 +17,39 @@ import sys
 import subprocess
 import argparse
 import json # Ajout de l'import json au niveau supérieur
+from enum import Enum, auto
 from typing import Dict, List, Optional, Tuple, Any, Union
 from pathlib import Path
 import shutil # Ajout pour shutil.which
 import platform # Ajout pour la détection OS-spécifique des chemins communs
+import tempfile # Ajout pour le script de diagnostic
 from dotenv import load_dotenv, find_dotenv # Ajout pour la gestion .env
+
+class ReinstallComponent(Enum):
+    """Énumération des composants pouvant être réinstallés."""
+    # Utilise str pour que argparse puisse directement utiliser les noms
+    def _generate_next_value_(name, start, count, last_values):
+        return name.lower()
+
+    ALL = auto()
+    CONDA = auto()
+    PIP = auto()
+    JAVA = auto()
+    # OCTAVE = auto() # Placeholder pour le futur
+    # TWEETY = auto() # Placeholder pour le futur
+
+    def __str__(self):
+        return self.value
 
 # Import relatif corrigé - gestion des erreurs d'import
 try:
-    from .common_utils import Logger, LogLevel, safe_exit, get_project_root
+    from .common_utils import Logger, LogLevel, safe_exit, get_project_root, ColoredOutput
 except ImportError:
     # Fallback pour execution directe
     import sys
     import os
     sys.path.append(os.path.dirname(os.path.abspath(__file__)))
-    from common_utils import Logger, LogLevel, safe_exit, get_project_root
+    from common_utils import Logger, LogLevel, safe_exit, get_project_root, ColoredOutput
 
 
 # --- Début de l'insertion pour sys.path ---
@@ -259,60 +277,32 @@ class EnvironmentManager:
         self.logger.info(f"Commande d'exécution via 'conda run': {' '.join(final_command)}")
 
         try:
-            # Utiliser Popen pour un meilleur contrôle du streaming
-            process = subprocess.Popen(
+            # Utilisation de subprocess.run SANS capture_output.
+            # La sortie du sous-processus sera directement affichée sur la console
+            # parente, fournissant un retour en temps réel, ce qui est plus robuste.
+            result = subprocess.run(
                 final_command,
                 cwd=cwd,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
                 text=True,
                 encoding='utf-8',
-                errors='replace'
-            )
-
-            stdout_lines = []
-            stderr_lines = []
-
-            # Lire stdout et stderr en temps réel pour éviter les blocages
-            while True:
-                # Lire une ligne de stdout
-                stdout_line = process.stdout.readline()
-                if stdout_line:
-                    line = stdout_line.strip()
-                    self.logger.info(line) # Afficher en direct dans le log
-                    stdout_lines.append(line)
-                
-                # Lire une ligne de stderr
-                stderr_line = process.stderr.readline()
-                if stderr_line:
-                    line = stderr_line.strip()
-                    self.logger.error(line) # Afficher en direct dans le log
-                    stderr_lines.append(line)
-                
-                # Sortir si le processus est terminé et qu'il n'y a plus de sortie
-                if process.poll() is not None and not stdout_line and not stderr_line:
-                    break
-            
-            # Récupérer le code de sortie final
-            returncode = process.wait()
-
-            # Créer un objet CompletedProcess pour la rétrocompatibilité
-            result = subprocess.CompletedProcess(
-                args=final_command,
-                returncode=returncode,
-                stdout='\n'.join(stdout_lines),
-                stderr='\n'.join(stderr_lines)
+                errors='replace',
+                check=False,  # On gère le code de retour nous-mêmes
+                timeout=3600  # 1h de timeout pour les installations très longues.
             )
 
             if result.returncode == 0:
                 self.logger.debug(f"'conda run' exécuté avec succès (code {result.returncode}).")
             else:
-                self.logger.warning(f"'conda run' terminé avec le code: {result.returncode}")
+                self.logger.warning(f"'conda run' terminé avec le code: {result.returncode}, affichage de la sortie ci-dessus.")
             
             return result
 
+        except subprocess.TimeoutExpired as e:
+            self.logger.error(f"La commande a dépassé le timeout de 3600 secondes : {e}")
+            # En cas de timeout, result n'existe pas, on lève l'exception pour arrêter proprement.
+            raise
         except (subprocess.SubprocessError, FileNotFoundError) as e:
-            self.logger.error(f"Erreur lors de l'exécution de 'conda run': {e}")
+            self.logger.error(f"Erreur majeure lors de l'exécution de 'conda run': {e}")
             raise
     
     def check_python_dependencies(self, requirements: List[str], env_name: str = None) -> Dict[str, bool]:
@@ -751,9 +741,105 @@ def activate_project_env(command: str = None, env_name: str = "projet-is", logge
     return manager.activate_project_environment(command, env_name)
 
 
+def reinstall_pip_dependencies(manager: 'EnvironmentManager', env_name: str):
+    """Force la réinstallation des dépendances pip depuis le fichier requirements.txt."""
+    logger = manager.logger
+    ColoredOutput.print_section("Réinstallation forcée des paquets PIP")
+    
+    # ÉTAPE CRUCIALE : S'assurer que l'environnement Java est parfait AVANT l'installation de JPype1.
+    logger.info("Validation préalable de l'environnement Java avant l'installation des paquets pip...")
+    recheck_java_environment(manager)
+
+    if not manager.check_conda_env_exists(env_name):
+        logger.critical(f"L'environnement '{env_name}' n'existe pas. Impossible de réinstaller les dépendances.")
+        safe_exit(1, logger)
+        
+    requirements_path = manager.project_root / 'argumentation_analysis' / 'requirements.txt'
+    if not requirements_path.exists():
+        logger.critical(f"Le fichier de dépendances n'a pas été trouvé: {requirements_path}")
+        safe_exit(1, logger)
+
+    logger.info(f"Lancement de la réinstallation depuis {requirements_path}...")
+    pip_install_command = [
+        'pip', 'install',
+        '--no-cache-dir',
+        '--force-reinstall',
+        '-r', str(requirements_path)
+    ]
+    
+    result = manager.run_in_conda_env(pip_install_command, env_name=env_name)
+    
+    if result.returncode != 0:
+        logger.error(f"Échec de la réinstallation des dépendances PIP. Voir logs ci-dessus.")
+        safe_exit(1, logger)
+    
+    logger.success("Réinstallation des dépendances PIP terminée.")
+
+def reinstall_conda_environment(manager: 'EnvironmentManager', env_name: str):
+    """Supprime et recrée intégralement l'environnement conda."""
+    logger = manager.logger
+    ColoredOutput.print_section(f"Réinstallation complète de l'environnement Conda '{env_name}'")
+
+    conda_exe = manager._find_conda_executable()
+    if not conda_exe:
+        logger.critical("Impossible de trouver l'exécutable Conda. La réinstallation ne peut pas continuer.")
+        safe_exit(1, logger)
+    logger.info(f"Utilisation de l'exécutable Conda : {conda_exe}")
+
+    if manager.check_conda_env_exists(env_name):
+        logger.info(f"Suppression de l'environnement existant '{env_name}'...")
+        subprocess.run([conda_exe, 'env', 'remove', '-n', env_name, '--y'], check=True)
+        logger.success(f"Environnement '{env_name}' supprimé.")
+    else:
+        logger.info(f"L'environnement '{env_name}' n'existe pas, pas besoin de le supprimer.")
+
+    logger.info(f"Création du nouvel environnement '{env_name}' avec Python 3.10...")
+    subprocess.run([conda_exe, 'create', '-n', env_name, 'python=3.10', '--y'], check=True)
+    logger.success(f"Environnement '{env_name}' recréé.")
+    
+    # La recréation de l'environnement Conda implique forcément la réinstallation des dépendances pip.
+    reinstall_pip_dependencies(manager, env_name)
+
+def recheck_java_environment(manager: 'EnvironmentManager'):
+    """Revalide la configuration de l'environnement Java."""
+    logger = manager.logger
+    ColoredOutput.print_section("Validation de l'environnement JAVA")
+    
+    # Recharge .env pour être sûr d'avoir la dernière version
+    dotenv_path = find_dotenv()
+    if dotenv_path: load_dotenv(dotenv_path, override=True)
+
+    # Cette logique est tirée de `activate_project_environment`
+    if 'JAVA_HOME' in os.environ:
+        logger.info(f"JAVA_HOME trouvé dans l'environnement: {os.environ['JAVA_HOME']}")
+        java_home_value = os.environ['JAVA_HOME']
+        abs_java_home = Path(os.environ['JAVA_HOME'])
+        if not abs_java_home.is_absolute():
+            abs_java_home = (manager.project_root / java_home_value).resolve()
+        
+        if abs_java_home.exists() and abs_java_home.is_dir():
+            os.environ['JAVA_HOME'] = str(abs_java_home)
+            logger.success(f"JAVA_HOME est valide et absolu: {abs_java_home}")
+
+            java_bin_path = abs_java_home / 'bin'
+            if java_bin_path.is_dir():
+                logger.success(f"Répertoire bin de la JVM trouvé: {java_bin_path}")
+                if str(java_bin_path) not in os.environ['PATH']:
+                    os.environ['PATH'] = f"{java_bin_path}{os.pathsep}{os.environ['PATH']}"
+                    logger.info(f"Ajouté {java_bin_path} au PATH.")
+                else:
+                    logger.info("Le répertoire bin de la JVM est déjà dans le PATH.")
+            else:
+                logger.warning(f"Le répertoire bin '{java_bin_path}' n'a pas été trouvé.")
+        else:
+            logger.error(f"Le chemin JAVA_HOME '{abs_java_home}' est invalide.")
+    else:
+        logger.error("La variable d'environnement JAVA_HOME n'est pas définie.")
+
+
 def main():
     """Point d'entrée principal pour utilisation en ligne de commande"""
-    temp_logger = Logger(verbose=True) 
+    temp_logger = Logger(verbose=True)
     temp_logger.info(f"DEBUG: sys.argv au début de main(): {sys.argv}")
 
     parser = argparse.ArgumentParser(
@@ -786,12 +872,15 @@ def main():
     )
     
     parser.add_argument(
-        '--force-reinstall',
-        action='store_true',
-        help="Forcer la suppression et la recréation de l'environnement conda."
+        '--reinstall',
+        choices=[item.value for item in ReinstallComponent],
+        nargs='+', # Accepte un ou plusieurs arguments
+        help=f"Force la réinstallation de composants spécifiques. "
+             f"Options: {[item.value for item in ReinstallComponent]}. "
+             f"'all' réinstalle tout (équivaut à l'ancien --force-reinstall)."
     )
     
-    args = parser.parse_args() 
+    args = parser.parse_args()
     
     logger = Logger(verbose=True) # FORCER VERBOSE POUR DEBUG (ou utiliser args.verbose)
     logger.info("DEBUG: Début de main() dans environment_manager.py (après parsing)")
@@ -799,107 +888,108 @@ def main():
     
     manager = EnvironmentManager(logger)
     
-    command_to_run_final = ' '.join(args.command) if args.command else None
+    # --- NOUVELLE LOGIQUE D'EXÉCUTION ---
 
-    if args.force_reinstall:
-        logger.info("FORCER LA RÉINSTALLATION DE L'ENVIRONNEMENT")
+    # 1. Gérer la réinstallation si demandée.
+    if args.reinstall:
+        reinstall_choices = set(args.reinstall)
         env_name = args.env_name
         
-        # 1. Trouver l'exécutable conda de manière robuste
-        conda_exe = manager._find_conda_executable()
-        if not conda_exe:
-            logger.critical("Impossible de trouver l'exécutable Conda. La réinstallation ne peut pas continuer.")
-            safe_exit(1, logger)
-        logger.info(f"Utilisation de l'exécutable Conda : {conda_exe}")
+        if ReinstallComponent.ALL.value in reinstall_choices or ReinstallComponent.CONDA.value in reinstall_choices:
+            reinstall_conda_environment(manager, env_name)
+            if ReinstallComponent.PIP.value in reinstall_choices:
+                reinstall_choices.remove(ReinstallComponent.PIP.value)
         
-        # 2. Supprimer l'ancien environnement
-        if manager.check_conda_env_exists(env_name):
-            logger.info(f"Suppression de l'environnement existant '{env_name}'...")
-            subprocess.run([conda_exe, 'env', 'remove', '-n', env_name, '--y'], check=True)
-            logger.success(f"Environnement '{env_name}' supprimé.")
-        else:
-            logger.info(f"L'environnement '{env_name}' n'existe pas, pas besoin de le supprimer.")
+        for choice in reinstall_choices:
+            if choice == ReinstallComponent.PIP.value:
+                reinstall_pip_dependencies(manager, env_name)
+            elif choice == ReinstallComponent.JAVA.value:
+                recheck_java_environment(manager)
+                
+        ColoredOutput.print_section("Vérification finale post-réinstallation")
+        logger.info("Lancement du script de diagnostic complet via un fichier temporaire...")
 
-        # 3. Recréer l'environnement
-        logger.info(f"Création du nouvel environnement '{env_name}' avec Python 3.10...")
-        subprocess.run([conda_exe, 'create', '-n', env_name, 'python=3.10', '--y'], check=True)
-
-        # 4. Installer les dépendances de base
-        logger.info("Installation des dépendances depuis argumentation_analysis/requirements.txt...")
-        requirements_path = manager.project_root / 'argumentation_analysis' / 'requirements.txt'
-        if not requirements_path.exists():
-            logger.critical(f"Le fichier de dépendances n'a pas été trouvé: {requirements_path}")
-            safe_exit(1, logger)
-
-        # Utiliser la méthode run_in_conda_env pour garantir le bon contexte
-        pip_install_command = [
-            'pip', 'install',
-            '--no-cache-dir', # Ne pas utiliser de cache potentiellement corrompu
-            '--force-reinstall', # Forcer la réécriture des paquets
-            '-r', str(requirements_path)
-        ]
-        # On ne capture plus la sortie ici, on veut la voir en direct
-        result = manager.run_in_conda_env(pip_install_command, env_name=env_name)
-        
-        if result.returncode != 0:
-            logger.error(f"Échec de l'installation des dépendances depuis {requirements_path}. Voir logs ci-dessus.")
-            # Les sorties sont déjà logguées en temps réel par run_in_conda_env
-            safe_exit(1, logger)
-        
-        logger.success("Dépendances installées (selon pip).")
-        
-        # Pause de 2 secondes pour s'assurer que le système de fichiers est synchronisé
-        import time
-        logger.info("Pause de 2 secondes avant la vérification...")
-        time.sleep(2)
-        
-        logger.info("Vérification de l'import de JPype1 post-installation...")
-        verify_cmd = "import jpype1; print('JPype1 importé avec succès dans le manager')"
-        # On ne capture plus la sortie ici non plus
-        verify_result = manager.run_in_conda_env(['python', '-c', verify_cmd], env_name=env_name)
-
-        if verify_result.returncode != 0:
-            logger.critical("Échec de la vérification de l'import de JPype1. L'environnement est potentiellement corrompu.")
-            logger.error(f"Trace de la vérification (stderr):\n{verify_result.stderr}")
-            safe_exit(1, logger)
-        
-        logger.success(f"Vérification de l'import JPype1 réussie:\n{verify_result.stdout.strip()}")
-        logger.success(f"Environnement '{env_name}' recréé et initialisé avec succès.")
-        safe_exit(0, logger)
-
-    elif args.check_only:
-        # Mode vérification uniquement
-        logger.info("Vérification de l'environnement...")
-        
-        if manager.check_conda_available():
-            logger.success("Conda disponible")
-        else:
-            logger.error("Conda non disponible")
-            safe_exit(1, logger)
-        
-        if manager.check_conda_env_exists(args.env_name):
-            logger.success(f"Environnement '{args.env_name}' trouvé")
-        else:
-            logger.error(f"Environnement '{args.env_name}' non trouvé")
-            safe_exit(1, logger)
-        
-        if manager.check_python_version():
-            logger.success("Version Python valide")
-        else:
-            logger.error("Version Python invalide")
-            safe_exit(1, logger)
-        
-        logger.success("Environnement validé")
-        safe_exit(0, logger)
-    
-    else:
-        # Mode activation et exécution
-        logger.info(f"DEBUG: Valeur passée comme command_to_run: {command_to_run_final}")
-        exit_code = manager.activate_project_environment(
-            command_to_run=command_to_run_final,
-            env_name=args.env_name
+        diagnostic_script_content = (
+            "import sys, os, site, traceback\n"
+            "print('--- Diagnostic Info from Conda Env ---')\n"
+            "print(f'Python Executable: {sys.executable}')\n"
+            "print(f'sys.path: {sys.path}')\n"
+            "try:\n"
+            "    site_packages_paths = site.getsitepackages()\n"
+            "except AttributeError:\n"
+            "    site_packages_paths = [p for p in sys.path if 'site-packages' in p]\n"
+            "print(f'Site Packages Paths: {site_packages_paths}')\n"
+            "found_jpype = False\n"
+            "if site_packages_paths:\n"
+            "    for sp_path in site_packages_paths:\n"
+            "        jpype_dir = os.path.join(sp_path, 'jpype')\n"
+            "        if os.path.isdir(jpype_dir):\n"
+            "            print(f'  [SUCCESS] Found jpype directory: {jpype_dir}')\n"
+            "            found_jpype = True\n"
+            "            break\n"
+            "if not found_jpype:\n"
+            "    print('[FAILURE] jpype directory not found in any site-packages.')\n"
+            "print('--- Attempting import ---')\n"
+            "try:\n"
+            "    import jpype\n"
+            "    print('[SUCCESS] JPype1 (jpype) importé avec succès.')\n"
+            "    sys.exit(0)\n"
+            "except Exception as e:\n"
+            "    traceback.print_exc()\n"
+            "    print(f'[FAILURE] Échec de l\\'import JPype1 (jpype): {e}')\n"
+            "    sys.exit(1)\n"
         )
-        safe_exit(exit_code, logger)
+        
+        # Utiliser un fichier temporaire pour éviter les problèmes de ligne de commande et d'échappement
+        temp_diag_file = None
+        try:
+            with tempfile.NamedTemporaryFile(mode='w', delete=False, suffix='.py', encoding='utf-8') as fp:
+                temp_diag_file = fp.name
+                fp.write(diagnostic_script_content)
+            
+            logger.debug(f"Script de diagnostic écrit dans {temp_diag_file}")
+            verify_result = manager.run_in_conda_env(['python', temp_diag_file], env_name=env_name)
+
+            if verify_result.returncode != 0:
+                logger.critical("Échec du script de diagnostic. La sortie ci-dessus devrait indiquer la cause.")
+                safe_exit(1, logger)
+
+        finally:
+            if temp_diag_file and os.path.exists(temp_diag_file):
+                os.remove(temp_diag_file)
+                logger.debug(f"Fichier de diagnostic temporaire {temp_diag_file} supprimé.")
+        
+        logger.success("Toutes les opérations de réinstallation et de vérification se sont terminées avec succès.")
+        # Ne pas quitter ici pour permettre l'enchaînement avec --command.
+
+    # 2. Gérer --check-only, qui est une action terminale.
+    if args.check_only:
+        logger.info("Vérification de l'environnement (mode --check-only)...")
+        if not manager.check_conda_available():
+            logger.error("Conda non disponible"); safe_exit(1, logger)
+        logger.success("Conda disponible")
+        if not manager.check_conda_env_exists(args.env_name):
+            logger.error(f"Environnement '{args.env_name}' non trouvé"); safe_exit(1, logger)
+        logger.success(f"Environnement '{args.env_name}' trouvé")
+        logger.success("Environnement validé.")
+        safe_exit(0, logger)
+
+    # 3. Exécuter la commande (ou juste activer si aucune commande n'est fournie).
+    # Ce bloc s'exécute soit en mode normal, soit après une réinstallation réussie.
+    command_to_run_final = ' '.join(args.command) if args.command else None
+        
+    logger.info("Phase d'activation/exécution de commande...")
+    exit_code = manager.activate_project_environment(
+        command_to_run=command_to_run_final,
+        env_name=args.env_name
+    )
+    
+    if command_to_run_final:
+        logger.info(f"La commande a été exécutée avec le code de sortie: {exit_code}")
+    else:
+        logger.info("Activation de l'environnement terminée.")
+        
+    safe_exit(exit_code, logger)
 
 
 if __name__ == "__main__":

@@ -19,16 +19,16 @@ sys.path.insert(0, str(project_root))
 class TestJPypeDependencyValidator:
     """Tests pour diagnostiquer le problème JPype dans DependencyValidator"""
     
-    def test_jpype1_import_direct(self):
-        """Test 1: Vérifier que jpype1 peut être importé directement"""
+    def test_jpype_import_direct(self):
+        """Test 1: Vérifier que jpype peut être importé directement"""
         try:
-            import jpype1 as jpype
-            assert hasattr(jpype, '__version__'), "jpype1 n'a pas d'attribut __version__"
-            assert hasattr(jpype, 'isJVMStarted'), "jpype1 n'a pas de méthode isJVMStarted"
-            assert hasattr(jpype, 'getDefaultJVMPath'), "jpype1 n'a pas de méthode getDefaultJVMPath"
-            print(f"✅ JPype1 version: {jpype.__version__}")
+            import jpype
+            assert hasattr(jpype, '__version__'), "jpype n'a pas d'attribut __version__"
+            assert hasattr(jpype, 'isJVMStarted'), "jpype n'a pas de méthode isJVMStarted"
+            assert hasattr(jpype, 'getDefaultJVMPath'), "jpype n'a pas de méthode getDefaultJVMPath"
+            print(f"✅ JPype version: {jpype.__version__}")
         except ImportError as e:
-            pytest.fail(f"Impossible d'importer jpype1: {e}")
+            pytest.fail(f"Impossible d'importer jpype: {e}")
     
     def test_jpype_import_alternative(self):
         """Test 2: Vérifier l'import jpype alternatif"""
@@ -47,7 +47,7 @@ class TestJPypeDependencyValidator:
         
         try:
             # Code exact de la ligne 490 du unified_production_analyzer.py
-            import jpype1 as jpype
+            import jpype
             
             # Vérifications supplémentaires comme dans le validateur
             if not jpype.isJVMStarted():
@@ -58,11 +58,11 @@ class TestJPypeDependencyValidator:
                     errors.append(f"Impossible de démarrer la JVM pour TweetyProject: {e}")
             
         except ImportError:
-            errors.append("JPype1 non installé - requis pour TweetyProject")
+            errors.append("jpype non installé - requis pour TweetyProject")
         
         # Assertion: pas d'erreurs d'import
-        assert not any("JPype1 non installé" in err for err in errors), \
-            f"Erreur d'import JPype1 détectée: {errors}"
+        assert not any("jpype non installé" in err for err in errors), \
+            f"Erreur d'import jpype détectée: {errors}"
     
     def test_unified_production_analyzer_import(self):
         """Test 4: Vérifier que le module unified_production_analyzer peut être importé"""
@@ -72,8 +72,8 @@ class TestJPypeDependencyValidator:
         except ImportError as e:
             pytest.fail(f"Impossible d'importer DependencyValidator: {e}")
     
-    @patch('jpype1.isJVMStarted', return_value=False)
-    @patch('jpype1.startJVM')
+    @patch('jpype.isJVMStarted', return_value=False)
+    @patch('jpype.startJVM')
     def test_dependency_validator_instance(self, mock_start_jvm, mock_is_started):
         """Test 5: Tester une instance réelle de DependencyValidator avec mocks"""
         

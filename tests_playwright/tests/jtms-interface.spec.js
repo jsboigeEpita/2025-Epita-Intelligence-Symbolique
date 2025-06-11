@@ -247,7 +247,7 @@ test.describe('Interface Web JTMS - Tests d\'Intégration Complète', () => {
             await expect(page.locator('h1')).toContainText('Croyances et Justifications');
         });
 
-        test.skip('Démonstration interactive Tweety', async ({ page }) => {
+        test('Démonstration interactive Tweety', async ({ page }) => {
             await page.goto(`${BASE_URL}${JTMS_PREFIX}/tutorial`);
             
             // Tester la démo Tweety

@@ -1,15 +1,9 @@
 
-# Authentic gpt-4o-mini imports (replacing mocks)
-import openai
-from semantic_kernel.contents import ChatHistory
-from semantic_kernel.core_plugins import ConversationSummaryPlugin
-from config.unified_config import UnifiedConfig
-
 # -*- coding: utf-8 -*-
 """
 Tests pour l'interface entre les niveaux stratégique et tactique.
 """
-
+from unittest.mock import MagicMock
 import pytest # Ajout de pytest
 
 import json
@@ -25,35 +19,22 @@ from argumentation_analysis.core.communication import (
 
 
 class TestStrategicTacticalInterface:
-    async def _create_authentic_gpt4o_mini_instance(self):
-        """Crée une instance authentique de gpt-4o-mini au lieu d'un mock."""
-        config = UnifiedConfig()
-        return config.get_kernel_with_gpt4o_mini()
-        
-    async def _make_authentic_llm_call(self, prompt: str) -> str:
-        """Fait un appel authentique à gpt-4o-mini."""
-        try:
-            kernel = await self._create_authentic_gpt4o_mini_instance()
-            result = await kernel.invoke("chat", input=prompt)
-            return str(result)
-        except Exception as e:
-            logger.warning(f"Appel LLM authentique échoué: {e}")
-            return "Authentic LLM call failed"
-
     """Tests pour la classe StrategicTacticalInterface."""
 
     @pytest.fixture
-    def interface_components(self):
+    def interface_components(self, mocker):
         """Initialise les objets nécessaires pour les tests."""
-        mock_strategic_state = MagicMock(spec=StrategicState)
-        mock_tactical_state = MagicMock(spec=TacticalState)
-        mock_middleware = MagicMock(spec=MessageMiddleware)
-        mock_strategic_adapter = MagicMock(spec=StrategicAdapter)
-        mock_tactical_adapter = MagicMock(spec=TacticalAdapter)
+        mock_strategic_state = mocker.MagicMock(spec=StrategicState)
+        mock_tactical_state = mocker.MagicMock(spec=TacticalState)
+        mock_middleware = mocker.MagicMock(spec=MessageMiddleware)
+        mock_strategic_adapter = mocker.MagicMock(spec=StrategicAdapter)
+        mock_tactical_adapter = mocker.MagicMock(spec=TacticalAdapter)
 
-        mock_middleware.get_adapter# Mock eliminated - using authentic gpt-4o-mini lambda agent_id, level: (
-            mock_strategic_adapter if level == AgentLevel.STRATEGIC else mock_tactical_adapter
-        )
+        def get_adapter_side_effect(agent_id, level):
+            if level == AgentLevel.STRATEGIC:
+                return mock_strategic_adapter
+            return mock_tactical_adapter
+        mock_middleware.get_adapter.side_effect = get_adapter_side_effect
 
         mock_strategic_state.strategic_plan = {
             "phases": [
@@ -91,7 +72,7 @@ class TestStrategicTacticalInterface:
 
     def test_translate_objectives(self, interface_components):
         """Teste la traduction des objectifs stratégiques en directives tactiques."""
-        interface, _, _, _, mock_strategic_adapter, _ = interface_components
+        (interface, _, _, _, mock_strategic_adapter, _) = interface_components
         # Définir les objectifs à traduire
         objectives = [
             {
@@ -129,7 +110,7 @@ class TestStrategicTacticalInterface:
     
     def test_process_tactical_report(self, interface_components):
         """Teste le traitement d'un rapport tactique."""
-        interface, mock_strategic_state, _, _, mock_strategic_adapter, _ = interface_components
+        (interface, mock_strategic_state, _, _, mock_strategic_adapter, _) = interface_components
         # Définir un rapport tactique
         tactical_report = {
             "timestamp": datetime.now().isoformat(),
@@ -187,13 +168,13 @@ class TestStrategicTacticalInterface:
         }
         
         # Configurer le mock pour get_pending_reports
-        mock_strategic_adapter.get_pending_reports# Mock eliminated - using authentic gpt-4o-mini []
+        mock_strategic_adapter.get_pending_reports.return_value = []
         
         # Appeler la méthode à tester
         result = interface.process_tactical_report(tactical_report)
         
         # Vérifier que la méthode get_pending_reports a été appelée
-        mock_strategic_adapter.get_pending_reports.# Mock assertion eliminated - authentic validation
+        mock_strategic_adapter.get_pending_reports.assert_called_once()
         
         # Vérifier le résultat
         assert isinstance(result, dict)
@@ -217,11 +198,11 @@ class TestStrategicTacticalInterface:
         assert "objective_modifications" in result["adjustments"]
         
         # Vérifier que la méthode update_global_metrics a été appelée
-        mock_strategic_state.update_global_metrics.# Mock assertion eliminated - authentic validation
+        mock_strategic_state.update_global_metrics.assert_called_once()
     
     def test_determine_phase_for_objective(self, interface_components):
         """Teste la détermination de la phase pour un objectif."""
-        interface, _, _, _, _, _ = interface_components
+        (interface, _, _, _, _, _) = interface_components
         # Définir un objectif
         objective = {
             "id": "obj-1",
@@ -247,7 +228,7 @@ class TestStrategicTacticalInterface:
     
     def test_find_related_objectives(self, interface_components):
         """Teste la recherche d'objectifs liés."""
-        interface, _, _, _, _, _ = interface_components
+        (interface, _, _, _, _, _) = interface_components
         # Définir un objectif
         objective = {
             "id": "obj-1",
@@ -280,7 +261,7 @@ class TestStrategicTacticalInterface:
     
     def test_translate_priority(self, interface_components):
         """Teste la traduction de la priorité stratégique."""
-        interface, _, _, _, _, _ = interface_components
+        (interface, _, _, _, _, _) = interface_components
         # Tester avec différentes priorités
         high_result = interface._translate_priority("high")
         medium_result = interface._translate_priority("medium")
@@ -302,7 +283,7 @@ class TestStrategicTacticalInterface:
     
     def test_extract_success_criteria(self, interface_components):
         """Teste l'extraction des critères de succès."""
-        interface, _, _, _, _, _ = interface_components
+        (interface, _, _, _, _, _) = interface_components
         # Définir un objectif
         objective = {
             "id": "obj-1",
@@ -335,7 +316,7 @@ class TestStrategicTacticalInterface:
     
     def test_determine_current_phase(self, interface_components):
         """Teste la détermination de la phase actuelle."""
-        interface, mock_strategic_state, _, _, _, _ = interface_components
+        (interface, mock_strategic_state, _, _, _, _) = interface_components
         # Configurer le mock pour différentes valeurs de progression
         
         # Phase initiale (progress < 0.3)
@@ -355,7 +336,7 @@ class TestStrategicTacticalInterface:
     
     def test_determine_primary_focus(self, interface_components):
         """Teste la détermination du focus principal."""
-        interface, mock_strategic_state, _, _, _, _ = interface_components
+        (interface, mock_strategic_state, _, _, _, _) = interface_components
         # Le focus devrait être déterminé en fonction des objectifs
         result = interface._determine_primary_focus()
         
@@ -374,13 +355,13 @@ class TestStrategicTacticalInterface:
 
     def test_request_tactical_status(self, interface_components):
         """Teste la demande de statut tactique."""
-        interface, _, _, _, mock_strategic_adapter, _ = interface_components
+        (interface, _, _, _, mock_strategic_adapter, _) = interface_components
         # Configurer le mock pour request_tactical_info (corrigé)
         expected_response = {
             "status": "ok",
             "progress": 0.5
         }
-        mock_strategic_adapter.request_tactical_info# Mock eliminated - using authentic gpt-4o-mini expected_response # Corrigé ici
+        mock_strategic_adapter.request_tactical_info.return_value = expected_response # Corrigé ici
         
         # Appeler la méthode à tester
         result = interface.request_tactical_status(timeout=5.0)
@@ -398,7 +379,7 @@ class TestStrategicTacticalInterface:
     
     def test_send_strategic_adjustment(self, interface_components):
         """Teste l'envoi d'un ajustement stratégique."""
-        interface, _, _, _, mock_strategic_adapter, _ = interface_components
+        (interface, _, _, _, mock_strategic_adapter, _) = interface_components
         # Définir un ajustement
         adjustment = {
             "plan_updates": {
@@ -410,7 +391,7 @@ class TestStrategicTacticalInterface:
         }
         
         # Configurer le mock pour send_directive
-        mock_strategic_adapter.issue_directive# Mock eliminated - using authentic gpt-4o-mini "message-id-123" # Corrigé ici
+        mock_strategic_adapter.issue_directive.return_value = "message-id-123" # Corrigé ici
         
         # Appeler la méthode à tester
         result = interface.send_strategic_adjustment(adjustment)
@@ -428,7 +409,7 @@ class TestStrategicTacticalInterface:
     
     def test_map_priority_to_enum(self, interface_components):
         """Teste la conversion de priorité textuelle en énumération."""
-        interface, _, _, _, _, _ = interface_components
+        (interface, _, _, _, _, _) = interface_components
         # Tester avec différentes priorités
         assert interface._map_priority_to_enum("high") == MessagePriority.HIGH
         assert interface._map_priority_to_enum("medium") == MessagePriority.NORMAL

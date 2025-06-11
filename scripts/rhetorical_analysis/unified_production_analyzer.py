@@ -484,7 +484,7 @@ class DependencyValidator:
             # est maintenant entièrement gérée par `environment_manager.py`.
             # Le script n'a plus besoin d'essayer de réparer son propre `sys.path`.
 
-            import jpype1 as jpype
+            import jpype
             # S'assurer que la JVM est démarrée avant de vérifier son état
             if not jpype.isJVMStarted():
                 try:

@@ -2,7 +2,7 @@
 const { defineConfig, devices } = require('@playwright/test');
 
 module.exports = defineConfig({
-  testDir: './demos/playwright',
+  testDir: './tests_playwright/tests',
   fullyParallel: false,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
@@ -48,6 +48,14 @@ module.exports = defineConfig({
   ],
 
   webServer: [
+    {
+      command: 'powershell -c "conda run -n projet-is --no-capture-output python -m uvicorn argumentation_analysis.services.web_api.app:app --host 127.0.0.1 --port 5004"',
+      port: 5004,
+      reuseExistingServer: !process.env.CI,
+      timeout: 120000,
+      stdout: 'pipe',
+      stderr: 'pipe',
+    },
     {
       command: 'cd services/web_api/interface-web-argumentative && npm start',
       port: 3000,

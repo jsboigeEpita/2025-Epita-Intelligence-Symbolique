@@ -152,10 +152,10 @@ _conftest_setup_logger.info(f"conftest.py: USE_REAL_JPYPE={os.environ.get('USE_R
 #         _conftest_setup_logger.info("Mock pour NumPy (tests.mocks.numpy_mock) activé via sys.modules.")
 #     except ImportError:
 #         _conftest_setup_logger.error("Mock spécifique tests.mocks.numpy_mock non trouvé. Utilisation de MagicMock pour NumPy.")
-#         sys.modules['numpy'] = Magicawait self._create_authentic_gpt4o_mini_instance()
+#         sys.modules['numpy'] = MagicMock()
 #     except Exception as e_numpy_mock:
 #         _conftest_setup_logger.error(f"Erreur inattendue lors du chargement du mock NumPy: {e_numpy_mock}. Utilisation de MagicMock.")
-#         sys.modules['numpy'] = Magicawait self._create_authentic_gpt4o_mini_instance()
+#         sys.modules['numpy'] = MagicMock()
 
 #     # Mock pour Pandas
 #     try:
@@ -166,10 +166,10 @@ _conftest_setup_logger.info(f"conftest.py: USE_REAL_JPYPE={os.environ.get('USE_R
 #         _conftest_setup_logger.info("Mock pour Pandas (tests.mocks.pandas_mock) activé via sys.modules.")
 #     except ImportError:
 #         _conftest_setup_logger.error("Mock spécifique tests.mocks.pandas_mock non trouvé. Utilisation de MagicMock pour Pandas.")
-#         sys.modules['pandas'] = Magicawait self._create_authentic_gpt4o_mini_instance()
+#         sys.modules['pandas'] = MagicMock()
 #     except Exception as e_pandas_mock:
 #         _conftest_setup_logger.error(f"Erreur inattendue lors du chargement du mock Pandas: {e_pandas_mock}. Utilisation de MagicMock.")
-#         sys.modules['pandas'] = Magicawait self._create_authentic_gpt4o_mini_instance()
+#         sys.modules['pandas'] = MagicMock()
 # _conftest_setup_logger.info("Fin de la gestion des imports conditionnels pour NumPy et Pandas.")
 # # --- Fin Gestion des imports conditionnels ---
 # --- Fin Configuration globale du Logging ---
