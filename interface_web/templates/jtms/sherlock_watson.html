@@ -1,0 +1,1238 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Agents Sherlock/Watson JTMS - Intelligence Symbolique EPITA</title>
+    
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/jtms.css') }}">
+    
+    <style>
+        .agent-panel {
+            background: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            border: 1px solid #e9ecef;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .agent-panel::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+        }
+        
+        .sherlock-panel::before {
+            background: linear-gradient(90deg, #667eea, #764ba2);
+        }
+        
+        .watson-panel::before {
+            background: linear-gradient(90deg, #ffeaa7, #fdcb6e);
+        }
+        
+        .communication-panel::before {
+            background: linear-gradient(90deg, #a8e6cf, #74b9ff);
+        }
+        
+        .agent-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+        
+        .agent-avatar {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            color: white;
+            margin-right: 1rem;
+        }
+        
+        .sherlock-avatar {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+        }
+        
+        .watson-avatar {
+            background: linear-gradient(135deg, #ffeaa7, #fdcb6e);
+            color: #2d3436;
+        }
+        
+        .agent-info h4 {
+            margin-bottom: 0.25rem;
+            font-weight: 700;
+        }
+        
+        .agent-status {
+            font-size: 0.9rem;
+            color: #6c757d;
+        }
+        
+        .status-indicator {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            margin-right: 0.5rem;
+        }
+        
+        .status-active {
+            background-color: #28a745;
+            box-shadow: 0 0 8px rgba(40, 167, 69, 0.5);
+        }
+        
+        .status-inactive {
+            background-color: #dc3545;
+        }
+        
+        .status-thinking {
+            background-color: #ffc107;
+            animation: pulse 1.5s infinite;
+        }
+        
+        .conversation-area {
+            min-height: 400px;
+            max-height: 600px;
+            overflow-y: auto;
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            padding: 1rem;
+            background: #f8f9fa;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        .message {
+            margin-bottom: 1rem;
+            padding: 1rem;
+            border-radius: 12px;
+            position: relative;
+            animation: fadeInUp 0.3s ease-out;
+        }
+        
+        .message-sherlock {
+            background: linear-gradient(135deg, #e3f2fd, #bbdefb);
+            border-left: 4px solid #2196f3;
+            margin-right: 2rem;
+        }
+        
+        .message-watson {
+            background: linear-gradient(135deg, #fff8e1, #ffecb3);
+            border-left: 4px solid #ff9800;
+            margin-left: 2rem;
+        }
+        
+        .message-system {
+            background: linear-gradient(135deg, #e8f5e8, #c8e6c9);
+            border-left: 4px solid #4caf50;
+            text-align: center;
+            font-style: italic;
+        }
+        
+        .message-header {
+            display: flex;
+            justify-content: between;
+            align-items: center;
+            margin-bottom: 0.5rem;
+        }
+        
+        .message-sender {
+            font-weight: 700;
+            color: #2d3436;
+        }
+        
+        .message-time {
+            font-size: 0.8rem;
+            color: #636e72;
+            margin-left: auto;
+        }
+        
+        .message-content {
+            line-height: 1.6;
+            color: #2d3436;
+        }
+        
+        .message-jtms {
+            margin-top: 0.75rem;
+            padding: 0.75rem;
+            background: rgba(255,255,255,0.7);
+            border-radius: 8px;
+            border: 1px solid rgba(0,0,0,0.1);
+        }
+        
+        .jtms-belief {
+            display: inline-block;
+            background: #007bff;
+            color: white;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            margin: 0.25rem;
+        }
+        
+        .jtms-belief.valid {
+            background: #28a745;
+        }
+        
+        .jtms-belief.invalid {
+            background: #dc3545;
+        }
+        
+        .jtms-belief.unknown {
+            background: #ffc107;
+            color: #212529;
+        }
+        
+        .scenario-selector {
+            background: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        
+        .scenario-card {
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .scenario-card:hover {
+            border-color: #007bff;
+            background: #f8f9fa;
+            transform: translateY(-2px);
+        }
+        
+        .scenario-card.active {
+            border-color: #007bff;
+            background: #e3f2fd;
+        }
+        
+        .scenario-title {
+            font-weight: 600;
+            color: #2d3436;
+            margin-bottom: 0.5rem;
+        }
+        
+        .scenario-description {
+            color: #636e72;
+            font-size: 0.9rem;
+        }
+        
+        .scenario-difficulty {
+            display: inline-block;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            margin-top: 0.5rem;
+        }
+        
+        .difficulty-easy {
+            background: #d4edda;
+            color: #155724;
+        }
+        
+        .difficulty-medium {
+            background: #fff3cd;
+            color: #856404;
+        }
+        
+        .difficulty-hard {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        
+        .jtms-visualization {
+            background: white;
+            border-radius: 8px;
+            padding: 1rem;
+            margin-top: 1rem;
+            border: 1px solid #e9ecef;
+            min-height: 200px;
+        }
+        
+        .control-buttons {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+            margin-bottom: 1rem;
+        }
+        
+        .typing-indicator {
+            display: none;
+            padding: 1rem;
+            border-radius: 12px;
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            margin-bottom: 1rem;
+        }
+        
+        .typing-indicator.active {
+            display: block;
+            animation: fadeIn 0.3s ease-out;
+        }
+        
+        .typing-dots {
+            display: inline-flex;
+            gap: 0.25rem;
+        }
+        
+        .typing-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: #636e72;
+            animation: typing 1.5s infinite;
+        }
+        
+        .typing-dot:nth-child(2) {
+            animation-delay: 0.2s;
+        }
+        
+        .typing-dot:nth-child(3) {
+            animation-delay: 0.4s;
+        }
+        
+        @keyframes typing {
+            0%, 60%, 100% {
+                transform: scale(1);
+                opacity: 0.5;
+            }
+            30% {
+                transform: scale(1.2);
+                opacity: 1;
+            }
+        }
+        
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        
+        .progress-section {
+            background: white;
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            border: 1px solid #e9ecef;
+        }
+        
+        .investigation-progress {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 1rem;
+        }
+        
+        .progress-step {
+            text-align: center;
+            flex: 1;
+            position: relative;
+        }
+        
+        .progress-step::after {
+            content: '';
+            position: absolute;
+            top: 20px;
+            left: 60%;
+            width: 80%;
+            height: 2px;
+            background: #e9ecef;
+        }
+        
+        .progress-step:last-child::after {
+            display: none;
+        }
+        
+        .progress-step.active::after {
+            background: #007bff;
+        }
+        
+        .progress-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 0.5rem;
+            background: #e9ecef;
+            color: #6c757d;
+        }
+        
+        .progress-step.active .progress-icon {
+            background: #007bff;
+            color: white;
+        }
+        
+        .progress-step.completed .progress-icon {
+            background: #28a745;
+            color: white;
+        }
+        
+        @media (max-width: 768px) {
+            .agent-panel {
+                padding: 1rem;
+                margin-bottom: 1rem;
+            }
+            
+            .conversation-area {
+                min-height: 300px;
+            }
+            
+            .message-sherlock {
+                margin-right: 0;
+            }
+            
+            .message-watson {
+                margin-left: 0;
+            }
+            
+            .control-buttons {
+                justify-content: center;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-4">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="{{ url_for('index') }}">
+                <i class="fas fa-brain"></i> Intelligence Symbolique EPITA
+            </a>
+            
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('jtms.dashboard') }}">
+                            <i class="fas fa-tachometer-alt"></i> Dashboard JTMS
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('jtms.sessions_management') }}">
+                            <i class="fas fa-layer-group"></i> Sessions
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link active" href="{{ url_for('jtms.sherlock_watson_interface') }}">
+                            <i class="fas fa-user-secret"></i> Sherlock/Watson
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('jtms.tutorial') }}">
+                            <i class="fas fa-graduation-cap"></i> Tutoriel
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('jtms.playground') }}">
+                            <i class="fas fa-play"></i> Playground
+                        </a>
+                    </li>
+                </ul>
+                
+                <span class="navbar-text">
+                    <i class="fas fa-clock"></i> {{ timestamp[:19] if timestamp else '' }}
+                </span>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid">
+        <!-- En-tête -->
+        <div class="row mb-4">
+            <div class="col">
+                <h1 class="h2 mb-2">
+                    <i class="fas fa-user-secret text-primary"></i>
+                    Agents Sherlock & Watson JTMS
+                </h1>
+                <p class="text-muted mb-0">
+                    Enquêtes assistées par IA avec traçabilité JTMS complète
+                </p>
+            </div>
+        </div>
+        
+        <!-- Sélection de scénario -->
+        <div class="scenario-selector">
+            <h4><i class="fas fa-scroll"></i> Scénarios d'Enquête</h4>
+            <div class="row" id="scenarioSelection">
+                <div class="col-lg-3 col-md-6 mb-3">
+                    <div class="scenario-card" data-scenario="cluedo" onclick="selectScenario('cluedo')">
+                        <div class="scenario-title">
+                            <i class="fas fa-home"></i> Enquête Cluedo
+                        </div>
+                        <div class="scenario-description">
+                            Investigation classique dans un manoir anglais
+                        </div>
+                        <span class="scenario-difficulty difficulty-easy">Facile</span>
+                    </div>
+                </div>
+                
+                <div class="col-lg-3 col-md-6 mb-3">
+                    <div class="scenario-card" data-scenario="theft" onclick="selectScenario('theft')">
+                        <div class="scenario-title">
+                            <i class="fas fa-gem"></i> Vol de Bijoux
+                        </div>
+                        <div class="scenario-description">
+                            Enquête sur un cambriolage mystérieux
+                        </div>
+                        <span class="scenario-difficulty difficulty-medium">Moyen</span>
+                    </div>
+                </div>
+                
+                <div class="col-lg-3 col-md-6 mb-3">
+                    <div class="scenario-card" data-scenario="murder" onclick="selectScenario('murder')">
+                        <div class="scenario-title">
+                            <i class="fas fa-skull"></i> Meurtre Complexe
+                        </div>
+                        <div class="scenario-description">
+                            Résolution d'un crime avec multiples suspects
+                        </div>
+                        <span class="scenario-difficulty difficulty-hard">Difficile</span>
+                    </div>
+                </div>
+                
+                <div class="col-lg-3 col-md-6 mb-3">
+                    <div class="scenario-card" data-scenario="custom" onclick="selectScenario('custom')">
+                        <div class="scenario-title">
+                            <i class="fas fa-cog"></i> Scénario Personnalisé
+                        </div>
+                        <div class="scenario-description">
+                            Créez votre propre enquête
+                        </div>
+                        <span class="scenario-difficulty difficulty-medium">Variable</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Progression de l'enquête -->
+        <div class="progress-section" id="investigationProgress" style="display: none;">
+            <h5><i class="fas fa-tasks"></i> Progression de l'Enquête</h5>
+            <div class="investigation-progress">
+                <div class="progress-step" id="step-analysis">
+                    <div class="progress-icon">
+                        <i class="fas fa-search"></i>
+                    </div>
+                    <small>Analyse Initiale</small>
+                </div>
+                <div class="progress-step" id="step-hypotheses">
+                    <div class="progress-icon">
+                        <i class="fas fa-lightbulb"></i>
+                    </div>
+                    <small>Hypothèses</small>
+                </div>
+                <div class="progress-step" id="step-validation">
+                    <div class="progress-icon">
+                        <i class="fas fa-check-circle"></i>
+                    </div>
+                    <small>Validation</small>
+                </div>
+                <div class="progress-step" id="step-conclusion">
+                    <div class="progress-icon">
+                        <i class="fas fa-flag-checkered"></i>
+                    </div>
+                    <small>Conclusion</small>
+                </div>
+            </div>
+        </div>
+        
+        <div class="row">
+            <!-- Panneau Sherlock -->
+            <div class="col-lg-4">
+                <div class="agent-panel sherlock-panel">
+                    <div class="agent-header">
+                        <div class="agent-avatar sherlock-avatar">
+                            <i class="fas fa-user-secret"></i>
+                        </div>
+                        <div class="agent-info">
+                            <h4>Sherlock Holmes</h4>
+                            <div class="agent-status">
+                                <span class="status-indicator status-active"></span>
+                                Agent de Déduction
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <h6><i class="fas fa-cogs"></i> Capacités JTMS</h6>
+                        <ul class="list-unstyled">
+                            <li><i class="fas fa-check text-success"></i> Formulation d'hypothèses</li>
+                            <li><i class="fas fa-check text-success"></i> Traçabilité des déductions</li>
+                            <li><i class="fas fa-check text-success"></i> Gestion des évidences</li>
+                            <li><i class="fas fa-check text-success"></i> Révision de croyances</li>
+                        </ul>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <h6><i class="fas fa-chart-bar"></i> Statistiques Session</h6>
+                        <div class="row text-center">
+                            <div class="col-6">
+                                <div class="stat-value" id="sherlockHypotheses">0</div>
+                                <div class="stat-label">Hypothèses</div>
+                            </div>
+                            <div class="col-6">
+                                <div class="stat-value" id="sherlockDeductions">0</div>
+                                <div class="stat-label">Déductions</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="control-buttons">
+                        <button class="btn btn-primary btn-sm" onclick="startInvestigation()">
+                            <i class="fas fa-play"></i> Démarrer
+                        </button>
+                        <button class="btn btn-outline-secondary btn-sm" onclick="resetInvestigation()">
+                            <i class="fas fa-redo"></i> Reset
+                        </button>
+                        <button class="btn btn-outline-info btn-sm" onclick="exportSherlockJTMS()">
+                            <i class="fas fa-download"></i> Export
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Visualisation JTMS Sherlock -->
+                <div class="agent-panel">
+                    <h6><i class="fas fa-project-diagram"></i> Réseau JTMS Sherlock</h6>
+                    <div class="jtms-visualization" id="sherlockJTMS">
+                        <div class="text-center text-muted">
+                            <i class="fas fa-project-diagram fa-2x mb-2"></i>
+                            <p>Démarrez une enquête pour voir le réseau de croyances</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Conversation et Communication -->
+            <div class="col-lg-4">
+                <div class="agent-panel communication-panel">
+                    <div class="agent-header">
+                        <div style="width: 50px; height: 50px; border-radius: 50%; background: linear-gradient(135deg, #a8e6cf, #74b9ff); display: flex; align-items: center; justify-content: center; color: white; font-size: 1.5rem; margin-right: 1rem;">
+                            <i class="fas fa-comments"></i>
+                        </div>
+                        <div class="agent-info">
+                            <h4>Communication JTMS</h4>
+                            <div class="agent-status">
+                                <span class="status-indicator status-active"></span>
+                                Échange Temps Réel
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="control-buttons">
+                        <button class="btn btn-success btn-sm" onclick="sendSherlockQuery()" id="sherlockQueryBtn">
+                            <i class="fas fa-search"></i> Sherlock Analyse
+                        </button>
+                        <button class="btn btn-warning btn-sm" onclick="sendWatsonValidation()" id="watsonValidateBtn">
+                            <i class="fas fa-check-circle"></i> Watson Valide
+                        </button>
+                        <button class="btn btn-info btn-sm" onclick="requestExplanation()">
+                            <i class="fas fa-question-circle"></i> Explication
+                        </button>
+                        <button class="btn btn-secondary btn-sm" onclick="clearConversation()">
+                            <i class="fas fa-trash"></i> Effacer
+                        </button>
+                    </div>
+                    
+                    <!-- Indicateur de frappe -->
+                    <div class="typing-indicator" id="typingIndicator">
+                        <span id="typingAgent">Sherlock</span> est en train de réfléchir...
+                        <div class="typing-dots">
+                            <div class="typing-dot"></div>
+                            <div class="typing-dot"></div>
+                            <div class="typing-dot"></div>
+                        </div>
+                    </div>
+                    
+                    <!-- Zone de conversation -->
+                    <div class="conversation-area" id="conversationArea">
+                        <div class="message message-system">
+                            <div class="message-content">
+                                💬 Système JTMS initialisé. Sélectionnez un scénario pour commencer l'enquête.
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Zone de saisie -->
+                    <div class="mt-3">
+                        <div class="input-group">
+                            <input type="text" class="form-control" id="userInput" 
+                                   placeholder="Posez une question ou donnez une directive...">
+                            <button class="btn btn-primary" onclick="sendUserMessage()">
+                                <i class="fas fa-paper-plane"></i>
+                            </button>
+                        </div>
+                        <small class="text-muted">
+                            Interagissez avec les agents pour guider l'enquête
+                        </small>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Panneau Watson -->
+            <div class="col-lg-4">
+                <div class="agent-panel watson-panel">
+                    <div class="agent-header">
+                        <div class="agent-avatar watson-avatar">
+                            <i class="fas fa-user-md"></i>
+                        </div>
+                        <div class="agent-info">
+                            <h4>Dr. Watson</h4>
+                            <div class="agent-status">
+                                <span class="status-indicator status-active"></span>
+                                Agent de Validation
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <h6><i class="fas fa-shield-alt"></i> Capacités JTMS</h6>
+                        <ul class="list-unstyled">
+                            <li><i class="fas fa-check text-success"></i> Validation formelle</li>
+                            <li><i class="fas fa-check text-success"></i> Vérification cohérence</li>
+                            <li><i class="fas fa-check text-success"></i> Détection contradictions</li>
+                            <li><i class="fas fa-check text-success"></i> Suggestions d'amélioration</li>
+                        </ul>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <h6><i class="fas fa-chart-bar"></i> Statistiques Session</h6>
+                        <div class="row text-center">
+                            <div class="col-6">
+                                <div class="stat-value" id="watsonValidations">0</div>
+                                <div class="stat-label">Validations</div>
+                            </div>
+                            <div class="col-6">
+                                <div class="stat-value" id="watsonConflicts">0</div>
+                                <div class="stat-label">Conflits</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="control-buttons">
+                        <button class="btn btn-warning btn-sm" onclick="validateConsistency()">
+                            <i class="fas fa-check-double"></i> Vérifier
+                        </button>
+                        <button class="btn btn-outline-danger btn-sm" onclick="findContradictions()">
+                            <i class="fas fa-exclamation-triangle"></i> Conflits
+                        </button>
+                        <button class="btn btn-outline-info btn-sm" onclick="exportWatsonJTMS()">
+                            <i class="fas fa-download"></i> Export
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Visualisation JTMS Watson -->
+                <div class="agent-panel">
+                    <h6><i class="fas fa-project-diagram"></i> Réseau JTMS Watson</h6>
+                    <div class="jtms-visualization" id="watsonJTMS">
+                        <div class="text-center text-muted">
+                            <i class="fas fa-shield-alt fa-2x mb-2"></i>
+                            <p>Les validations de Watson apparaîtront ici</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Panneau de résultats consolidés -->
+        <div class="row mt-4">
+            <div class="col">
+                <div class="agent-panel">
+                    <h4><i class="fas fa-clipboard-check"></i> Résultats de l'Enquête</h4>
+                    <div class="row">
+                        <div class="col-lg-6">
+                            <h6>Conclusions Validées</h6>
+                            <div id="validatedConclusions" class="mb-3">
+                                <p class="text-muted">Aucune conclusion validée pour le moment</p>
+                            </div>
+                        </div>
+                        <div class="col-lg-6">
+                            <h6>Croyances Conflictuelles</h6>
+                            <div id="conflictingBeliefs" class="mb-3">
+                                <p class="text-muted">Aucun conflit détecté</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-3">
+                        <h6>Traçabilité Complète</h6>
+                        <div class="d-flex gap-2 flex-wrap">
+                            <button class="btn btn-outline-primary btn-sm" onclick="showFullTraceability()">
+                                <i class="fas fa-route"></i> Chemin de Raisonnement
+                            </button>
+                            <button class="btn btn-outline-success btn-sm" onclick="exportFullReport()">
+                                <i class="fas fa-file-pdf"></i> Rapport Complet
+                            </button>
+                            <button class="btn btn-outline-info btn-sm" onclick="shareInvestigation()">
+                                <i class="fas fa-share"></i> Partager
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://kit.fontawesome.com/your-fontawesome-kit.js" crossorigin="anonymous"></script>
+    
+    <script>
+        // État global de l'interface
+        let currentScenario = null;
+        let investigationActive = false;
+        let messageCounter = 0;
+        let sherlockSession = null;
+        let watsonSession = null;
+        
+        // Données de scénarios
+        const scenarios = {
+            cluedo: {
+                title: "Enquête Cluedo",
+                description: "Un meurtre a eu lieu dans le manoir. Qui est le coupable ?",
+                suspects: ["Colonel Mustard", "Miss Scarlet", "Professor Plum"],
+                weapons: ["Candlestick", "Knife", "Rope"],
+                rooms: ["Library", "Study", "Kitchen"],
+                initialEvidence: ["Body found in Library", "Candlestick missing"]
+            },
+            theft: {
+                title: "Vol de Bijoux",
+                description: "Des bijoux précieux ont disparu d'un musée.",
+                suspects: ["Guard", "Curator", "Visitor"],
+                evidence: ["Broken window", "Security footage", "Fingerprints"],
+                initialEvidence: ["Alarm triggered at 3AM", "No signs of forced entry"]
+            },
+            murder: {
+                title: "Meurtre Complexe",
+                description: "Un crime avec de multiples suspects et mobiles.",
+                suspects: ["Business Partner", "Ex-Wife", "Secretary", "Brother"],
+                motives: ["Money", "Revenge", "Jealousy", "Inheritance"],
+                initialEvidence: ["Victim found at home", "Multiple alibis to check"]
+            }
+        };
+        
+        // Sélection de scénario
+        function selectScenario(scenarioId) {
+            // Désélectionner tous les scénarios
+            document.querySelectorAll('.scenario-card').forEach(card => {
+                card.classList.remove('active');
+            });
+            
+            // Sélectionner le nouveau scénario
+            document.querySelector(`[data-scenario="${scenarioId}"]`).classList.add('active');
+            currentScenario = scenarioId;
+            
+            // Afficher les informations du scénario
+            if (scenarios[scenarioId]) {
+                addSystemMessage(`Scénario sélectionné: ${scenarios[scenarioId].title}`);
+                addSystemMessage(scenarios[scenarioId].description);
+            }
+            
+            console.log(`Scénario sélectionné: ${scenarioId}`);
+        }
+        
+        // Démarrage de l'enquête
+        async function startInvestigation() {
+            if (!currentScenario) {
+                alert('Veuillez d\'abord sélectionner un scénario');
+                return;
+            }
+            
+            investigationActive = true;
+            document.getElementById('investigationProgress').style.display = 'block';
+            setProgressStep('step-analysis', 'active');
+            
+            // Créer les sessions JTMS pour Sherlock et Watson
+            await createAgentSessions();
+            
+            // Message de démarrage
+            addSystemMessage(`🔍 Enquête démarrée: ${scenarios[currentScenario].title}`);
+            
+            // Sherlock commence l'analyse
+            setTimeout(() => {
+                showTyping('Sherlock');
+                setTimeout(() => {
+                    hideTyping();
+                    addSherlockMessage(
+                        "J'ai examiné la scène. Permettez-moi d'analyser les évidences disponibles...",
+                        scenarios[currentScenario].initialEvidence
+                    );
+                    setProgressStep('step-hypotheses', 'active');
+                }, 2000);
+            }, 1000);
+            
+            console.log('Enquête démarrée');
+        }
+        
+        // Création des sessions JTMS pour les agents
+        async function createAgentSessions() {
+            try {
+                // Session Sherlock
+                const sherlockResponse = await fetch('/jtms/api/sessions', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        session_id: `sherlock_${Date.now()}`,
+                        name: `Sherlock - ${scenarios[currentScenario].title}`,
+                        description: 'Session de déduction pour agent Sherlock'
+                    })
+                });
+                
+                if (sherlockResponse.ok) {
+                    const sherlockResult = await sherlockResponse.json();
+                    sherlockSession = sherlockResult.session_id;
+                }
+                
+                // Session Watson
+                const watsonResponse = await fetch('/jtms/api/sessions', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        session_id: `watson_${Date.now()}`,
+                        name: `Watson - ${scenarios[currentScenario].title}`,
+                        description: 'Session de validation pour agent Watson'
+                    })
+                });
+                
+                if (watsonResponse.ok) {
+                    const watsonResult = await watsonResponse.json();
+                    watsonSession = watsonResult.session_id;
+                }
+                
+                console.log('Sessions JTMS créées:', { sherlockSession, watsonSession });
+                
+            } catch (error) {
+                console.error('Erreur création sessions:', error);
+                addSystemMessage('❌ Erreur lors de la création des sessions JTMS');
+            }
+        }
+        
+        // Gestion des messages
+        function addMessage(sender, content, jtmsData = null) {
+            const conversationArea = document.getElementById('conversationArea');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message message-${sender.toLowerCase()}`;
+            
+            const time = new Date().toLocaleTimeString();
+            let jtmsHtml = '';
+            
+            if (jtmsData && jtmsData.length > 0) {
+                jtmsHtml = `
+                    <div class="message-jtms">
+                        <strong>Croyances JTMS:</strong><br>
+                        ${jtmsData.map(belief => 
+                            `<span class="jtms-belief ${belief.status || 'unknown'}">${belief.name}</span>`
+                        ).join('')}
+                    </div>
+                `;
+            }
+            
+            messageDiv.innerHTML = `
+                <div class="message-header">
+                    <span class="message-sender">${sender}</span>
+                    <span class="message-time">${time}</span>
+                </div>
+                <div class="message-content">${content}</div>
+                ${jtmsHtml}
+            `;
+            
+            conversationArea.appendChild(messageDiv);
+            conversationArea.scrollTop = conversationArea.scrollHeight;
+            messageCounter++;
+        }
+        
+        function addSherlockMessage(content, evidence = []) {
+            const jtmsData = evidence.map(ev => ({ name: ev, status: 'unknown' }));
+            addMessage('Sherlock', content, jtmsData);
+            updateSherlockStats();
+        }
+        
+        function addWatsonMessage(content, validations = []) {
+            const jtmsData = validations.map(val => ({ name: val, status: 'valid' }));
+            addMessage('Watson', content, jtmsData);
+            updateWatsonStats();
+        }
+        
+        function addSystemMessage(content) {
+            addMessage('System', content);
+        }
+        
+        // Indicateurs de frappe
+        function showTyping(agent) {
+            const indicator = document.getElementById('typingIndicator');
+            document.getElementById('typingAgent').textContent = agent;
+            indicator.classList.add('active');
+        }
+        
+        function hideTyping() {
+            document.getElementById('typingIndicator').classList.remove('active');
+        }
+        
+        // Gestion des étapes de progression
+        function setProgressStep(stepId, status) {
+            // Retirer tous les statuts
+            document.querySelectorAll('.progress-step').forEach(step => {
+                step.classList.remove('active', 'completed');
+            });
+            
+            // Marquer les étapes précédentes comme complétées
+            const steps = ['step-analysis', 'step-hypotheses', 'step-validation', 'step-conclusion'];
+            const currentIndex = steps.indexOf(stepId);
+            
+            for (let i = 0; i < currentIndex; i++) {
+                document.getElementById(steps[i]).classList.add('completed');
+            }
+            
+            // Marquer l'étape actuelle
+            document.getElementById(stepId).classList.add(status);
+        }
+        
+        // Actions des agents
+        async function sendSherlockQuery() {
+            if (!investigationActive) {
+                alert('Démarrez d\'abord une enquête');
+                return;
+            }
+            
+            showTyping('Sherlock');
+            
+            // Simuler l'analyse de Sherlock
+            setTimeout(() => {
+                hideTyping();
+                
+                const hypotheses = generateSherlockHypotheses();
+                addSherlockMessage(
+                    "Basé sur mon analyse, voici mes hypothèses principales:",
+                    hypotheses
+                );
+                
+                // Ajouter les croyances dans JTMS
+                hypotheses.forEach(hypothesis => {
+                    addBeliefToJTMS(sherlockSession, hypothesis);
+                });
+                
+            }, 3000);
+        }
+        
+        async function sendWatsonValidation() {
+            if (!investigationActive) {
+                alert('Démarrez d\'abord une enquête');
+                return;
+            }
+            
+            showTyping('Watson');
+            
+            // Simuler la validation de Watson
+            setTimeout(() => {
+                hideTyping();
+                
+                const validations = generateWatsonValidations();
+                addWatsonMessage(
+                    "J'ai vérifié la cohérence logique. Voici mon analyse:",
+                    validations
+                );
+                
+                setProgressStep('step-validation', 'active');
+                
+            }, 2500);
+        }
+        
+        // Génération de contenu simulé
+        function generateSherlockHypotheses() {
+            const scenario = scenarios[currentScenario];
+            if (!scenario) return [];
+            
+            if (currentScenario === 'cluedo') {
+                return [
+                    "Colonel Mustard suspect principal",
+                    "Arme: Chandelier probable",
+                    "Lieu: Bibliothèque confirmé",
+                    "Mobile: Héritage"
+                ];
+            }
+            
+            return [
+                "Suspect identifié",
+                "Mobile établi",
+                "Opportunité confirmée"
+            ];
+        }
+        
+        function generateWatsonValidations() {
+            return [
+                "Logique cohérente",
+                "Preuves suffisantes",
+                "Pas de contradictions",
+                "Conclusion valide"
+            ];
+        }
+        
+        // Ajout de croyances JTMS
+        async function addBeliefToJTMS(sessionId, beliefName) {
+            if (!sessionId) return;
+            
+            try {
+                await fetch('/jtms/api/belief', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        belief_name: beliefName,
+                        session_id: sessionId
+                    })
+                });
+            } catch (error) {
+                console.error('Erreur ajout croyance JTMS:', error);
+            }
+        }
+        
+        // Mise à jour des statistiques
+        function updateSherlockStats() {
+            const current = parseInt(document.getElementById('sherlockHypotheses').textContent);
+            document.getElementById('sherlockHypotheses').textContent = current + 1;
+        }
+        
+        function updateWatsonStats() {
+            const current = parseInt(document.getElementById('watsonValidations').textContent);
+            document.getElementById('watsonValidations').textContent = current + 1;
+        }
+        
+        // Message utilisateur
+        function sendUserMessage() {
+            const input = document.getElementById('userInput');
+            const message = input.value.trim();
+            
+            if (message) {
+                addMessage('Utilisateur', message);
+                input.value = '';
+                
+                // Réponse automatique simulée
+                setTimeout(() => {
+                    processUserMessage(message);
+                }, 1000);
+            }
+        }
+        
+        function processUserMessage(message) {
+            if (message.toLowerCase().includes('conclusion')) {
+                setProgressStep('step-conclusion', 'active');
+                addSystemMessage('🏁 Enquête terminée. Génération du rapport final...');
+            } else if (message.toLowerCase().includes('aide')) {
+                addSystemMessage('💡 Commandes disponibles: "conclusion", "reset", "export", "aide"');
+            }
+        }
+        
+        // Actions utilitaires
+        function resetInvestigation() {
+            if (confirm('Réinitialiser l\'enquête en cours ?')) {
+                investigationActive = false;
+                currentScenario = null;
+                messageCounter = 0;
+                sherlockSession = null;
+                watsonSession = null;
+                
+                document.getElementById('conversationArea').innerHTML = `
+                    <div class="message message-system">
+                        <div class="message-content">
+                            💬 Système JTMS réinitialisé. Sélectionnez un scénario pour commencer.
+                        </div>
+                    </div>
+                `;
+                
+                document.getElementById('investigationProgress').style.display = 'none';
+                document.querySelectorAll('.scenario-card').forEach(card => {
+                    card.classList.remove('active');
+                });
+                
+                // Reset statistiques
+                document.getElementById('sherlockHypotheses').textContent = '0';
+                document.getElementById('sherlockDeductions').textContent = '0';
+                document.getElementById('watsonValidations').textContent = '0';
+                document.getElementById('watsonConflicts').textContent = '0';
+            }
+        }
+        
+        function clearConversation() {
+            document.getElementById('conversationArea').innerHTML = `
+                <div class="message message-system">
+                    <div class="message-content">
+                        🧹 Conversation effacée.
+                    </div>
+                </div>
+            `;
+        }
+        
+        // Gestion des raccourcis clavier
+        document.getElementById('userInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                sendUserMessage();
+            }
+        });
+        
+        // Export et partage
+        function exportSherlockJTMS() {
+            if (sherlockSession) {
+                window.open(`/jtms/api/session/${sherlockSession}`, '_blank');
+            } else {
+                alert('Aucune session Sherlock active');
+            }
+        }
+        
+        function exportWatsonJTMS() {
+            if (watsonSession) {
+                window.open(`/jtms/api/session/${watsonSession}`, '_blank');
+            } else {
+                alert('Aucune session Watson active');
+            }
+        }
+        
+        function exportFullReport() {
+            alert('Fonctionnalité d\'export PDF en développement');
+        }
+        
+        function shareInvestigation() {
+            alert('Fonctionnalité de partage en développement');
+        }
+        
+        // Initialisation
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('🕵️ Interface Sherlock/Watson JTMS chargée');
+            addSystemMessage('🚀 Système d\'enquête Sherlock/Watson avec JTMS prêt');
+        });
+    </script>
+</body>
+</html>

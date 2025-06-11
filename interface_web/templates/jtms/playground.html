@@ -1,0 +1,1171 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Playground JTMS - Intelligence Symbolique EPITA</title>
+    
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/jtms.css') }}">
+    
+    <!-- Vis.js Network -->
+    <script type="text/javascript" src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
+    
+    <style>
+        .playground-container {
+            height: calc(100vh - 76px);
+            overflow: hidden;
+        }
+        
+        .code-editor {
+            background: #2d3748;
+            color: #e2e8f0;
+            border: none;
+            border-radius: 8px;
+            padding: 1rem;
+            font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+            font-size: 14px;
+            line-height: 1.4;
+            resize: none;
+            height: 100%;
+        }
+        
+        .code-editor:focus {
+            outline: none;
+            box-shadow: 0 0 0 2px #007bff;
+        }
+        
+        .playground-panel {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            height: 100%;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .panel-header {
+            background: #f8f9fa;
+            border-bottom: 1px solid #e9ecef;
+            padding: 1rem;
+            border-radius: 8px 8px 0 0;
+        }
+        
+        .panel-content {
+            flex: 1;
+            padding: 1rem;
+            overflow-y: auto;
+        }
+        
+        .visualization-container {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            height: 400px;
+            position: relative;
+        }
+        
+        .output-console {
+            background: #1a1a1a;
+            color: #00ff00;
+            font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+            padding: 1rem;
+            border-radius: 8px;
+            height: 200px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            font-size: 12px;
+            line-height: 1.3;
+        }
+        
+        .template-card {
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .template-card:hover {
+            border-color: #007bff;
+            box-shadow: 0 2px 8px rgba(0,123,255,0.2);
+            transform: translateY(-2px);
+        }
+        
+        .template-card.active {
+            border-color: #007bff;
+            background: #e3f2fd;
+        }
+        
+        .template-title {
+            font-weight: 600;
+            color: #2d3436;
+            margin-bottom: 0.5rem;
+        }
+        
+        .template-description {
+            color: #636e72;
+            font-size: 0.9rem;
+            margin-bottom: 0.75rem;
+        }
+        
+        .template-tags {
+            display: flex;
+            gap: 0.25rem;
+            flex-wrap: wrap;
+        }
+        
+        .template-tag {
+            background: #007bff;
+            color: white;
+            padding: 0.25rem 0.5rem;
+            border-radius: 12px;
+            font-size: 0.75rem;
+        }
+        
+        .quick-actions {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+            flex-wrap: wrap;
+        }
+        
+        .action-btn {
+            padding: 0.5rem 1rem;
+            border: none;
+            border-radius: 6px;
+            font-size: 0.875rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-run {
+            background: #28a745;
+            color: white;
+        }
+        
+        .btn-run:hover {
+            background: #218838;
+        }
+        
+        .btn-clear {
+            background: #6c757d;
+            color: white;
+        }
+        
+        .btn-clear:hover {
+            background: #5a6268;
+        }
+        
+        .btn-save {
+            background: #007bff;
+            color: white;
+        }
+        
+        .btn-save:hover {
+            background: #0056b3;
+        }
+        
+        .btn-export {
+            background: #17a2b8;
+            color: white;
+        }
+        
+        .btn-export:hover {
+            background: #138496;
+        }
+        
+        .status-indicator {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            margin-right: 0.5rem;
+        }
+        
+        .status-ready {
+            background: #28a745;
+        }
+        
+        .status-running {
+            background: #ffc107;
+            animation: pulse 1s infinite;
+        }
+        
+        .status-error {
+            background: #dc3545;
+        }
+        
+        .variable-inspector {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            padding: 1rem;
+            margin-top: 1rem;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        
+        .variable-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.5rem 0;
+            border-bottom: 1px solid #e9ecef;
+        }
+        
+        .variable-item:last-child {
+            border-bottom: none;
+        }
+        
+        .variable-name {
+            font-weight: 600;
+            color: #495057;
+            font-family: monospace;
+        }
+        
+        .variable-value {
+            color: #6c757d;
+            font-family: monospace;
+            background: white;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            border: 1px solid #e9ecef;
+        }
+        
+        .belief-status {
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+        
+        .belief-valid {
+            background: #d4edda;
+            color: #155724;
+        }
+        
+        .belief-invalid {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        
+        .belief-unknown {
+            background: #fff3cd;
+            color: #856404;
+        }
+        
+        .syntax-error {
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+            padding: 0.75rem;
+            border-radius: 4px;
+            margin: 0.5rem 0;
+            font-family: monospace;
+            font-size: 0.875rem;
+        }
+        
+        .success-message {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+            padding: 0.75rem;
+            border-radius: 4px;
+            margin: 0.5rem 0;
+            font-size: 0.875rem;
+        }
+        
+        .line-numbers {
+            background: #2a2a2a;
+            color: #666;
+            padding: 1rem 0.5rem;
+            border-radius: 8px 0 0 8px;
+            font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+            font-size: 14px;
+            line-height: 1.4;
+            text-align: right;
+            user-select: none;
+            min-width: 40px;
+        }
+        
+        .editor-container {
+            display: flex;
+            height: 100%;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        
+        @media (max-width: 768px) {
+            .playground-container {
+                height: auto;
+            }
+            
+            .quick-actions {
+                justify-content: center;
+            }
+            
+            .visualization-container {
+                height: 300px;
+            }
+            
+            .output-console {
+                height: 150px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-0">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="{{ url_for('index') }}">
+                <i class="fas fa-brain"></i> Intelligence Symbolique EPITA
+            </a>
+            
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('jtms.dashboard') }}">
+                            <i class="fas fa-tachometer-alt"></i> Dashboard JTMS
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('jtms.sessions_management') }}">
+                            <i class="fas fa-layer-group"></i> Sessions
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('jtms.sherlock_watson_interface') }}">
+                            <i class="fas fa-user-secret"></i> Sherlock/Watson
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('jtms.tutorial') }}">
+                            <i class="fas fa-graduation-cap"></i> Tutoriel
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link active" href="{{ url_for('jtms.playground') }}">
+                            <i class="fas fa-play"></i> Playground
+                        </a>
+                    </li>
+                </ul>
+                
+                <span class="navbar-text">
+                    <span class="status-indicator status-ready"></span>
+                    Environnement Prêt
+                </span>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid playground-container">
+        <div class="row h-100 g-3 p-3">
+            <!-- Templates et Controls -->
+            <div class="col-lg-3">
+                <div class="playground-panel">
+                    <div class="panel-header">
+                        <h5><i class="fas fa-code"></i> Templates & Exemples</h5>
+                    </div>
+                    <div class="panel-content">
+                        <!-- Templates rapides -->
+                        <div class="template-card" onclick="loadTemplate('basic')">
+                            <div class="template-title">
+                                <i class="fas fa-play-circle"></i> Base Simple
+                            </div>
+                            <div class="template-description">
+                                Exemple minimal avec quelques croyances
+                            </div>
+                            <div class="template-tags">
+                                <span class="template-tag">Débutant</span>
+                                <span class="template-tag">Concepts</span>
+                            </div>
+                        </div>
+                        
+                        <div class="template-card" onclick="loadTemplate('animals')">
+                            <div class="template-title">
+                                <i class="fas fa-dove"></i> Règles Animaux
+                            </div>
+                            <div class="template-description">
+                                Système de classification d'animaux volants
+                            </div>
+                            <div class="template-tags">
+                                <span class="template-tag">Logique</span>
+                                <span class="template-tag">Exceptions</span>
+                            </div>
+                        </div>
+                        
+                        <div class="template-card" onclick="loadTemplate('weather')">
+                            <div class="template-title">
+                                <i class="fas fa-cloud-sun"></i> Système Météo
+                            </div>
+                            <div class="template-description">
+                                Prédictions météo avec propagation
+                            </div>
+                            <div class="template-tags">
+                                <span class="template-tag">Propagation</span>
+                                <span class="template-tag">Complexe</span>
+                            </div>
+                        </div>
+                        
+                        <div class="template-card" onclick="loadTemplate('detective')">
+                            <div class="template-title">
+                                <i class="fas fa-search"></i> Enquête Policière
+                            </div>
+                            <div class="template-description">
+                                Déduction logique pour résoudre un crime
+                            </div>
+                            <div class="template-tags">
+                                <span class="template-tag">Déduction</span>
+                                <span class="template-tag">Avancé</span>
+                            </div>
+                        </div>
+                        
+                        <div class="template-card" onclick="loadTemplate('custom')">
+                            <div class="template-title">
+                                <i class="fas fa-edit"></i> Vide Personnalisé
+                            </div>
+                            <div class="template-description">
+                                Commencez avec un environnement vierge
+                            </div>
+                            <div class="template-tags">
+                                <span class="template-tag">Créatif</span>
+                            </div>
+                        </div>
+                        
+                        <!-- Variables et État -->
+                        <div class="variable-inspector">
+                            <h6><i class="fas fa-eye"></i> Variables Actives</h6>
+                            <div id="variablesList">
+                                <div class="text-muted text-center">
+                                    <small>Aucune variable définie</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Éditeur de Code -->
+            <div class="col-lg-6">
+                <div class="playground-panel">
+                    <div class="panel-header">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <h5><i class="fas fa-terminal"></i> Éditeur JTMS</h5>
+                            <div class="quick-actions">
+                                <button class="action-btn btn-run" onclick="executeCode()">
+                                    <i class="fas fa-play"></i> Exécuter
+                                </button>
+                                <button class="action-btn btn-clear" onclick="clearEditor()">
+                                    <i class="fas fa-trash"></i> Effacer
+                                </button>
+                                <button class="action-btn btn-save" onclick="saveSession()">
+                                    <i class="fas fa-save"></i> Sauvegarder
+                                </button>
+                                <button class="action-btn btn-export" onclick="exportCode()">
+                                    <i class="fas fa-download"></i> Export
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="panel-content p-0">
+                        <div class="editor-container">
+                            <div class="line-numbers" id="lineNumbers">1</div>
+                            <textarea 
+                                class="code-editor" 
+                                id="codeEditor" 
+                                placeholder="# Écrivez votre code JTMS ici...
+# Exemple:
+add_belief('tweety_est_oiseau')
+add_belief('oiseaux_volent')
+add_justification('tweety_vole', ['tweety_est_oiseau', 'oiseaux_volent'])
+
+# Utilisez Ctrl+Enter pour exécuter"
+                                spellcheck="false"
+                            ></textarea>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Console de Sortie -->
+                <div class="playground-panel mt-3">
+                    <div class="panel-header">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <h6><i class="fas fa-terminal"></i> Console de Sortie</h6>
+                            <button class="btn btn-sm btn-outline-secondary" onclick="clearConsole()">
+                                <i class="fas fa-broom"></i> Effacer
+                            </button>
+                        </div>
+                    </div>
+                    <div class="panel-content p-0">
+                        <div class="output-console" id="outputConsole">
+>>> Playground JTMS initialisé
+>>> Prêt pour l'exécution de code...
+</div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Visualisation et État -->
+            <div class="col-lg-3">
+                <div class="playground-panel">
+                    <div class="panel-header">
+                        <h5><i class="fas fa-project-diagram"></i> Visualisation</h5>
+                    </div>
+                    <div class="panel-content">
+                        <div class="visualization-container" id="networkContainer">
+                            <div class="d-flex align-items-center justify-content-center h-100 text-muted">
+                                <div class="text-center">
+                                    <i class="fas fa-play-circle fa-3x mb-3"></i>
+                                    <p>Exécutez du code pour voir le réseau JTMS</p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- État du Système -->
+                        <div class="mt-3">
+                            <h6><i class="fas fa-info-circle"></i> État du Système</h6>
+                            <div class="variable-inspector">
+                                <div class="variable-item">
+                                    <span class="variable-name">Croyances:</span>
+                                    <span class="variable-value" id="beliefCount">0</span>
+                                </div>
+                                <div class="variable-item">
+                                    <span class="variable-name">Justifications:</span>
+                                    <span class="variable-value" id="justificationCount">0</span>
+                                </div>
+                                <div class="variable-item">
+                                    <span class="variable-name">Validées:</span>
+                                    <span class="belief-status belief-valid" id="validCount">0</span>
+                                </div>
+                                <div class="variable-item">
+                                    <span class="variable-name">Invalidées:</span>
+                                    <span class="belief-status belief-invalid" id="invalidCount">0</span>
+                                </div>
+                                <div class="variable-item">
+                                    <span class="variable-name">Inconnues:</span>
+                                    <span class="belief-status belief-unknown" id="unknownCount">0</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Actions Rapides -->
+                        <div class="mt-3">
+                            <h6><i class="fas fa-lightning-bolt"></i> Actions Rapides</h6>
+                            <div class="d-grid gap-2">
+                                <button class="btn btn-outline-primary btn-sm" onclick="validateConsistency()">
+                                    <i class="fas fa-check-double"></i> Vérifier Cohérence
+                                </button>
+                                <button class="btn btn-outline-warning btn-sm" onclick="findContradictions()">
+                                    <i class="fas fa-exclamation-triangle"></i> Détecter Conflits
+                                </button>
+                                <button class="btn btn-outline-info btn-sm" onclick="explainBelief()">
+                                    <i class="fas fa-question-circle"></i> Expliquer Croyance
+                                </button>
+                                <button class="btn btn-outline-success btn-sm" onclick="autoComplete()">
+                                    <i class="fas fa-magic"></i> Complétion Auto
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://kit.fontawesome.com/your-fontawesome-kit.js" crossorigin="anonymous"></script>
+    
+    <script>
+        // État global du playground
+        let currentSession = null;
+        let jtmsNetwork = null;
+        let networkData = { nodes: [], edges: [] };
+        let beliefSystem = {
+            beliefs: new Map(),
+            justifications: new Map(),
+            dependencies: new Map()
+        };
+        
+        // Templates de code
+        const codeTemplates = {
+            basic: `# Template de base JTMS
+add_belief('fait_a')
+add_belief('fait_b')
+add_justification('conclusion_c', ['fait_a', 'fait_b'])
+execute()`,
+            
+            animals: `# Système de classification d'animaux
+add_belief('tweety_oiseau')
+add_belief('oiseaux_volent')
+add_belief('tweety_pingouin', status='unknown')
+
+# Règle générale
+add_justification('tweety_vole', ['tweety_oiseau', 'oiseaux_volent'])
+
+# Exception pour les pingouins
+add_negation('tweety_vole', ['tweety_pingouin'])
+
+execute()`,
+
+            weather: `# Système de prédiction météo
+add_belief('nuages_sombres')
+add_belief('vent_fort')
+add_belief('barometre_bas')
+
+# Prédictions
+add_justification('va_pleuvoir', ['nuages_sombres', 'barometre_bas'])
+add_justification('orage_possible', ['va_pleuvoir', 'vent_fort'])
+add_justification('annuler_pique_nique', ['orage_possible'])
+
+execute()`,
+
+            detective: `# Enquête policière - Qui est le coupable ?
+add_belief('empreintes_sur_arme')
+add_belief('suspect_a_acces')
+add_belief('suspect_a_mobile')
+add_belief('suspect_a_alibi', status='unknown')
+
+# Déductions
+add_justification('suspect_a_coupable', ['empreintes_sur_arme', 'suspect_a_acces', 'suspect_a_mobile'])
+add_negation('suspect_a_coupable', ['suspect_a_alibi'])
+
+execute()`,
+
+            custom: `# Votre code JTMS personnalisé
+# Utilisez les commandes suivantes:
+# - add_belief(name, status='unknown')
+# - add_justification(conclusion, premises)
+# - add_negation(conclusion, negations)
+# - execute()
+
+`
+        };
+        
+        // Initialisation
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeEditor();
+            initializeNetwork();
+            loadTemplate('basic');
+            console.log('🛝 Playground JTMS initialisé');
+        });
+        
+        // Initialisation de l'éditeur
+        function initializeEditor() {
+            const editor = document.getElementById('codeEditor');
+            const lineNumbers = document.getElementById('lineNumbers');
+            
+            // Mise à jour des numéros de ligne
+            editor.addEventListener('input', updateLineNumbers);
+            editor.addEventListener('scroll', syncScroll);
+            
+            // Raccourcis clavier
+            editor.addEventListener('keydown', function(e) {
+                if (e.ctrlKey && e.key === 'Enter') {
+                    e.preventDefault();
+                    executeCode();
+                } else if (e.key === 'Tab') {
+                    e.preventDefault();
+                    insertAtCursor(editor, '    '); // 4 espaces
+                }
+            });
+            
+            updateLineNumbers();
+        }
+        
+        function updateLineNumbers() {
+            const editor = document.getElementById('codeEditor');
+            const lineNumbers = document.getElementById('lineNumbers');
+            const lines = editor.value.split('\n').length;
+            
+            let numbersHTML = '';
+            for (let i = 1; i <= lines; i++) {
+                numbersHTML += i + '\n';
+            }
+            lineNumbers.textContent = numbersHTML;
+        }
+        
+        function syncScroll() {
+            const editor = document.getElementById('codeEditor');
+            const lineNumbers = document.getElementById('lineNumbers');
+            lineNumbers.scrollTop = editor.scrollTop;
+        }
+        
+        function insertAtCursor(textarea, text) {
+            const start = textarea.selectionStart;
+            const end = textarea.selectionEnd;
+            textarea.value = textarea.value.substring(0, start) + text + textarea.value.substring(end);
+            textarea.selectionStart = textarea.selectionEnd = start + text.length;
+            textarea.focus();
+        }
+        
+        // Initialisation du réseau Vis.js
+        function initializeNetwork() {
+            const container = document.getElementById('networkContainer');
+            
+            const options = {
+                nodes: {
+                    shape: 'box',
+                    font: { size: 12 },
+                    margin: 10,
+                    borderWidth: 2
+                },
+                edges: {
+                    arrows: { to: true },
+                    font: { size: 10 },
+                    smooth: { type: 'continuous' }
+                },
+                physics: {
+                    enabled: true,
+                    stabilization: { iterations: 100 }
+                },
+                interaction: {
+                    hover: true,
+                    selectConnectedEdges: false
+                }
+            };
+            
+            jtmsNetwork = new vis.Network(container, networkData, options);
+            
+            // Événements réseau
+            jtmsNetwork.on('click', function(params) {
+                if (params.nodes.length > 0) {
+                    const nodeId = params.nodes[0];
+                    showNodeDetails(nodeId);
+                }
+            });
+        }
+        
+        // Chargement des templates
+        function loadTemplate(templateName) {
+            // Désélectionner tous les templates
+            document.querySelectorAll('.template-card').forEach(card => {
+                card.classList.remove('active');
+            });
+            
+            // Sélectionner le nouveau template
+            document.querySelector(`[onclick="loadTemplate('${templateName}')"]`).classList.add('active');
+            
+            // Charger le code
+            if (codeTemplates[templateName]) {
+                document.getElementById('codeEditor').value = codeTemplates[templateName];
+                updateLineNumbers();
+                logToConsole(`Template "${templateName}" chargé`);
+            }
+        }
+        
+        // Exécution du code
+        async function executeCode() {
+            const code = document.getElementById('codeEditor').value.trim();
+            if (!code) {
+                logToConsole('❌ Aucun code à exécuter', 'error');
+                return;
+            }
+            
+            // Changer le statut
+            updateStatus('running');
+            logToConsole('🚀 Exécution du code JTMS...');
+            
+            try {
+                // Parser et exécuter le code
+                const result = await parseAndExecuteCode(code);
+                
+                if (result.success) {
+                    logToConsole('✅ Code exécuté avec succès');
+                    updateVisualization();
+                    updateSystemState();
+                    updateStatus('ready');
+                } else {
+                    logToConsole(`❌ Erreur d'exécution: ${result.error}`, 'error');
+                    updateStatus('error');
+                }
+                
+            } catch (error) {
+                logToConsole(`❌ Erreur: ${error.message}`, 'error');
+                updateStatus('error');
+            }
+        }
+        
+        // Parser simulé pour le code JTMS
+        async function parseAndExecuteCode(code) {
+            try {
+                // Reset du système
+                beliefSystem = {
+                    beliefs: new Map(),
+                    justifications: new Map(),
+                    dependencies: new Map()
+                };
+                
+                // Parser les lignes
+                const lines = code.split('\n');
+                for (const line of lines) {
+                    const trimmed = line.trim();
+                    if (trimmed && !trimmed.startsWith('#')) {
+                        await executeLine(trimmed);
+                    }
+                }
+                
+                return { success: true };
+                
+            } catch (error) {
+                return { success: false, error: error.message };
+            }
+        }
+        
+        async function executeLine(line) {
+            // add_belief
+            if (line.match(/add_belief\s*\(/)) {
+                const match = line.match(/add_belief\s*\(\s*['"]([^'"]+)['"]\s*(?:,\s*status\s*=\s*['"]([^'"]+)['"])?\s*\)/);
+                if (match) {
+                    const name = match[1];
+                    const status = match[2] || 'unknown';
+                    beliefSystem.beliefs.set(name, { name, status, justifications: [] });
+                    logToConsole(`➕ Croyance ajoutée: ${name} (${status})`);
+                }
+            }
+            
+            // add_justification
+            else if (line.match(/add_justification\s*\(/)) {
+                const match = line.match(/add_justification\s*\(\s*['"]([^'"]+)['"]\s*,\s*\[([^\]]+)\]\s*\)/);
+                if (match) {
+                    const conclusion = match[1];
+                    const premises = match[2].split(',').map(p => p.trim().replace(/['"]/g, ''));
+                    
+                    beliefSystem.justifications.set(`${conclusion}_support`, {
+                        type: 'support',
+                        conclusion,
+                        premises
+                    });
+                    
+                    // Créer la croyance si elle n'existe pas
+                    if (!beliefSystem.beliefs.has(conclusion)) {
+                        beliefSystem.beliefs.set(conclusion, { name: conclusion, status: 'unknown', justifications: [] });
+                    }
+                    
+                    logToConsole(`🔗 Justification ajoutée: ${conclusion} ← [${premises.join(', ')}]`);
+                }
+            }
+            
+            // add_negation
+            else if (line.match(/add_negation\s*\(/)) {
+                const match = line.match(/add_negation\s*\(\s*['"]([^'"]+)['"]\s*,\s*\[([^\]]+)\]\s*\)/);
+                if (match) {
+                    const conclusion = match[1];
+                    const negations = match[2].split(',').map(p => p.trim().replace(/['"]/g, ''));
+                    
+                    beliefSystem.justifications.set(`${conclusion}_negation`, {
+                        type: 'negation',
+                        conclusion,
+                        premises: negations
+                    });
+                    
+                    logToConsole(`⛔ Négation ajoutée: ${conclusion} ← ¬[${negations.join(', ')}]`);
+                }
+            }
+            
+            // execute
+            else if (line.match(/execute\s*\(\s*\)/)) {
+                propagateBeliefs();
+                logToConsole('⚡ Propagation des croyances effectuée');
+            }
+        }
+        
+        // Propagation des croyances (simplifié)
+        function propagateBeliefs() {
+            let changed = true;
+            let iterations = 0;
+            const maxIterations = 10;
+            
+            while (changed && iterations < maxIterations) {
+                changed = false;
+                iterations++;
+                
+                for (const [key, justification] of beliefSystem.justifications) {
+                    const conclusion = justification.conclusion;
+                    const belief = beliefSystem.beliefs.get(conclusion);
+                    
+                    if (justification.type === 'support') {
+                        // Vérifier si toutes les prémisses sont vraies
+                        const allTrue = justification.premises.every(premise => {
+                            const premiseBelief = beliefSystem.beliefs.get(premise);
+                            return premiseBelief && premiseBelief.status === 'valid';
+                        });
+                        
+                        if (allTrue && belief.status !== 'valid') {
+                            belief.status = 'valid';
+                            changed = true;
+                            logToConsole(`✅ ${conclusion} devient VRAI`);
+                        }
+                    } else if (justification.type === 'negation') {
+                        // Vérifier si une négation est vraie
+                        const hasNegation = justification.premises.some(premise => {
+                            const premiseBelief = beliefSystem.beliefs.get(premise);
+                            return premiseBelief && premiseBelief.status === 'valid';
+                        });
+                        
+                        if (hasNegation && belief.status !== 'invalid') {
+                            belief.status = 'invalid';
+                            changed = true;
+                            logToConsole(`❌ ${conclusion} devient FAUX`);
+                        }
+                    }
+                }
+            }
+        }
+        
+        // Mise à jour de la visualisation
+        function updateVisualization() {
+            const nodes = [];
+            const edges = [];
+            
+            // Créer les nœuds pour les croyances
+            for (const [name, belief] of beliefSystem.beliefs) {
+                let color = '#6c757d'; // unknown
+                if (belief.status === 'valid') color = '#28a745';
+                if (belief.status === 'invalid') color = '#dc3545';
+                
+                nodes.push({
+                    id: name,
+                    label: name.replace(/_/g, ' '),
+                    color: { background: color, border: '#ffffff' },
+                    font: { color: '#ffffff' }
+                });
+            }
+            
+            // Créer les arêtes pour les justifications
+            for (const [key, justification] of beliefSystem.justifications) {
+                for (const premise of justification.premises) {
+                    const edgeColor = justification.type === 'support' ? '#007bff' : '#dc3545';
+                    const edgeStyle = justification.type === 'support' ? 'solid' : 'dashed';
+                    
+                    edges.push({
+                        from: premise,
+                        to: justification.conclusion,
+                        color: edgeColor,
+                        dashes: justification.type === 'negation',
+                        label: justification.type === 'negation' ? '¬' : ''
+                    });
+                }
+            }
+            
+            // Mettre à jour le réseau
+            networkData.nodes.clear();
+            networkData.edges.clear();
+            networkData.nodes.add(nodes);
+            networkData.edges.add(edges);
+            
+            if (jtmsNetwork) {
+                jtmsNetwork.setData(networkData);
+            }
+        }
+        
+        // Mise à jour de l'état du système
+        function updateSystemState() {
+            let validCount = 0, invalidCount = 0, unknownCount = 0;
+            
+            for (const [name, belief] of beliefSystem.beliefs) {
+                switch (belief.status) {
+                    case 'valid': validCount++; break;
+                    case 'invalid': invalidCount++; break;
+                    default: unknownCount++; break;
+                }
+            }
+            
+            document.getElementById('beliefCount').textContent = beliefSystem.beliefs.size;
+            document.getElementById('justificationCount').textContent = beliefSystem.justifications.size;
+            document.getElementById('validCount').textContent = validCount;
+            document.getElementById('invalidCount').textContent = invalidCount;
+            document.getElementById('unknownCount').textContent = unknownCount;
+        }
+        
+        // Gestion des statuts
+        function updateStatus(status) {
+            const indicator = document.querySelector('.status-indicator');
+            const text = document.querySelector('.navbar-text');
+            
+            indicator.className = `status-indicator status-${status}`;
+            
+            switch (status) {
+                case 'ready':
+                    text.innerHTML = '<span class="status-indicator status-ready"></span> Environnement Prêt';
+                    break;
+                case 'running':
+                    text.innerHTML = '<span class="status-indicator status-running"></span> Exécution...';
+                    break;
+                case 'error':
+                    text.innerHTML = '<span class="status-indicator status-error"></span> Erreur';
+                    break;
+            }
+        }
+        
+        // Console de sortie
+        function logToConsole(message, type = 'info') {
+            const console = document.getElementById('outputConsole');
+            const timestamp = new Date().toLocaleTimeString();
+            
+            let prefix = '>>>';
+            if (type === 'error') prefix = 'ERR';
+            if (type === 'success') prefix = 'OK ';
+            
+            console.textContent += `\n[${timestamp}] ${prefix} ${message}`;
+            console.scrollTop = console.scrollHeight;
+        }
+        
+        function clearConsole() {
+            document.getElementById('outputConsole').textContent = '>>> Playground JTMS initialisé\n>>> Prêt pour l\'exécution de code...';
+        }
+        
+        // Actions utilitaires
+        function clearEditor() {
+            if (confirm('Effacer tout le code ?')) {
+                document.getElementById('codeEditor').value = '';
+                updateLineNumbers();
+                logToConsole('🧹 Éditeur effacé');
+            }
+        }
+        
+        function saveSession() {
+            const code = document.getElementById('codeEditor').value;
+            const sessionData = {
+                code: code,
+                timestamp: new Date().toISOString(),
+                beliefs: Object.fromEntries(beliefSystem.beliefs),
+                justifications: Object.fromEntries(beliefSystem.justifications)
+            };
+            
+            localStorage.setItem('jtms_playground_session', JSON.stringify(sessionData));
+            logToConsole('💾 Session sauvegardée localement');
+        }
+        
+        function exportCode() {
+            const code = document.getElementById('codeEditor').value;
+            const blob = new Blob([code], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `jtms_playground_${new Date().toISOString().slice(0,10)}.txt`;
+            a.click();
+            
+            URL.revokeObjectURL(url);
+            logToConsole('📥 Code exporté');
+        }
+        
+        // Actions rapides
+        function validateConsistency() {
+            logToConsole('🔍 Vérification de la cohérence...');
+            
+            let conflicts = 0;
+            for (const [name, belief] of beliefSystem.beliefs) {
+                // Vérifier les conflits simples
+                const supportJust = beliefSystem.justifications.get(`${name}_support`);
+                const negationJust = beliefSystem.justifications.get(`${name}_negation`);
+                
+                if (supportJust && negationJust) {
+                    conflicts++;
+                    logToConsole(`⚠️ Conflit potentiel détecté pour: ${name}`);
+                }
+            }
+            
+            if (conflicts === 0) {
+                logToConsole('✅ Aucun conflit détecté');
+            } else {
+                logToConsole(`❌ ${conflicts} conflit(s) détecté(s)`);
+            }
+        }
+        
+        function findContradictions() {
+            logToConsole('🔍 Recherche de contradictions...');
+            // Implémentation simplifiée
+            validateConsistency();
+        }
+        
+        function explainBelief() {
+            const beliefName = prompt('Nom de la croyance à expliquer:');
+            if (beliefName && beliefSystem.beliefs.has(beliefName)) {
+                const belief = beliefSystem.beliefs.get(beliefName);
+                logToConsole(`💡 Explication pour "${beliefName}":`);
+                logToConsole(`   Statut: ${belief.status}`);
+                
+                // Chercher les justifications
+                for (const [key, just] of beliefSystem.justifications) {
+                    if (just.conclusion === beliefName) {
+                        logToConsole(`   ${just.type}: [${just.premises.join(', ')}]`);
+                    }
+                }
+            } else {
+                logToConsole('❌ Croyance non trouvée');
+            }
+        }
+        
+        function autoComplete() {
+            const editor = document.getElementById('codeEditor');
+            const cursorPos = editor.selectionStart;
+            const textBeforeCursor = editor.value.substring(0, cursorPos);
+            const lastLine = textBeforeCursor.split('\n').pop();
+            
+            // Suggestions simples
+            const suggestions = [
+                'add_belief(\'',
+                'add_justification(\'',
+                'add_negation(\'',
+                'execute()'
+            ];
+            
+            // Trouver la meilleure suggestion
+            const suggestion = suggestions.find(s => s.startsWith(lastLine.trim()));
+            
+            if (suggestion) {
+                const completion = suggestion.substring(lastLine.trim().length);
+                insertAtCursor(editor, completion);
+                logToConsole(`🪄 Complétion: ${suggestion}`);
+            } else {
+                logToConsole('💡 Pas de complétion disponible');
+            }
+        }
+        
+        function showNodeDetails(nodeId) {
+            const belief = beliefSystem.beliefs.get(nodeId);
+            if (belief) {
+                logToConsole(`🔍 Détails pour "${nodeId}":`);
+                logToConsole(`   Statut: ${belief.status}`);
+                
+                // Afficher les justifications
+                for (const [key, just] of beliefSystem.justifications) {
+                    if (just.conclusion === nodeId) {
+                        logToConsole(`   ${just.type}: [${just.premises.join(', ')}]`);
+                    }
+                }
+            }
+        }
+        
+        // Chargement automatique de la dernière session
+        document.addEventListener('DOMContentLoaded', function() {
+            const saved = localStorage.getItem('jtms_playground_session');
+            if (saved) {
+                try {
+                    const sessionData = JSON.parse(saved);
+                    document.getElementById('codeEditor').value = sessionData.code || '';
+                    updateLineNumbers();
+                    logToConsole('🔄 Session précédente restaurée');
+                } catch (error) {
+                    console.error('Erreur chargement session:', error);
+                }
+            }
+        });
+    </script>
+</body>
+</html>

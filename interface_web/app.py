@@ -22,8 +22,34 @@ from pathlib import Path
 from typing import Dict, List, Any, Optional
 
 # Activation automatique de l'environnement
-from scripts.core.auto_env import ensure_env
-ensure_env()
+try:
+    from scripts.core.auto_env import ensure_env
+    ensure_env()
+except ImportError:
+    try:
+        # Fallback: Chemin alternatif pour auto_env
+        import sys
+        from pathlib import Path
+        project_root = Path(__file__).resolve().parent.parent
+        if str(project_root) not in sys.path:
+            sys.path.insert(0, str(project_root))
+        from scripts.core.auto_env import ensure_env
+        ensure_env()
+    except ImportError:
+        # Dernier fallback: continuer sans auto_env
+        print("[WARNING] Auto-env non disponible, environnement non activé automatiquement")
+
+# Import du blueprint JTMS avec gestion d'erreur
+JTMS_AVAILABLE = False
+jtms_blueprint = None
+try:
+    from interface_web.routes.jtms_routes import jtms_bp as jtms_blueprint
+    JTMS_AVAILABLE = True
+    logging.info("Blueprint JTMS importé avec succès")
+except ImportError as e:
+    logging.warning(f"Blueprint JTMS non disponible: {e}")
+except Exception as e:
+    logging.error(f"Erreur lors de l'import du blueprint JTMS: {e}")
 
 # Configuration des chemins
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
@@ -68,10 +94,15 @@ logger = logging.getLogger(__name__)
 # Instance globale du ServiceManager
 service_manager = None
 
+# Services JTMS globaux
+jtms_service = None
+jtms_session_manager = None
+JTMS_SERVICES_AVAILABLE = False
+
 
 def initialize_services():
     """Initialise les services au démarrage de l'application."""
-    global service_manager
+    global service_manager, jtms_service, jtms_session_manager, JTMS_SERVICES_AVAILABLE
     
     try:
         service_manager = ServiceManager(config={
@@ -88,16 +119,55 @@ def initialize_services():
             
         asyncio.run(init_service_manager())
         logger.info("ServiceManager configuré et initialisé")
+        
+        # Initialisation des services JTMS (optionnel)
+        try:
+            from argumentation_analysis.services.jtms_service import JTMSService
+            from argumentation_analysis.services.jtms_session_manager import JTMSSessionManager
+            
+            jtms_service = JTMSService()
+            jtms_session_manager = JTMSSessionManager()
+            JTMS_SERVICES_AVAILABLE = True
+            
+            logger.info("Services JTMS initialisés avec succès")
+            
+        except ImportError as e:
+            logger.warning(f"Services JTMS non disponibles: {e}")
+            JTMS_SERVICES_AVAILABLE = False
+        except Exception as e:
+            logger.error(f"Erreur lors de l'initialisation des services JTMS: {e}")
+            JTMS_SERVICES_AVAILABLE = False
             
     except Exception as e:
         logger.error(f"Erreur critique lors de l'initialisation des services: {e}")
         raise RuntimeError(f"Impossible d'initialiser le ServiceManager: {e}")
 
 
+def setup_app_context():
+    """Configure le contexte global de l'application pour les services JTMS."""
+    if JTMS_SERVICES_AVAILABLE and jtms_blueprint:
+        # Rendre les services disponibles dans le contexte Flask
+        app.config['JTMS_SERVICE'] = jtms_service
+        app.config['JTMS_SESSION_MANAGER'] = jtms_session_manager
+        app.config['JTMS_AVAILABLE'] = True
+        
+        # Enregistrer le blueprint JTMS
+        app.register_blueprint(jtms_blueprint, url_prefix='/jtms')
+        logger.info("Blueprint JTMS enregistré avec succès sur /jtms")
+    else:
+        app.config['JTMS_AVAILABLE'] = False
+        logger.warning("Services JTMS non disponibles - Blueprint non enregistré")
+
+
 @app.route('/')
 def index():
     """Page d'accueil de l'interface web."""
-    return render_template('index.html')
+    # Vérifier la disponibilité des services pour l'affichage
+    context = {
+        'jtms_available': JTMS_SERVICES_AVAILABLE,
+        'timestamp': datetime.now().isoformat()
+    }
+    return render_template('index.html', **context)
 
 
 @app.route('/analyze', methods=['POST'])
@@ -184,36 +254,29 @@ def status():
     Retourne l'état de santé des composants du système.
     """
     try:
+        status_info = {
+            'status': 'operational' if service_manager else 'degraded',
+            'timestamp': datetime.now().isoformat(),
+            'services': {
+                'service_manager': 'active' if service_manager else 'unavailable',
+                'jtms_service': 'active' if JTMS_SERVICES_AVAILABLE else 'unavailable',
+                'jtms_blueprint': 'registered' if JTMS_AVAILABLE else 'unavailable'
+            },
+            'webapp': {
+                'version': '1.0.0',
+                'mode': 'full' if service_manager and JTMS_SERVICES_AVAILABLE else 'partial'
+            }
+        }
+        
         if service_manager:
             # Simplification synchrone pour les tests
             health_status = {'status': 'healthy'}
             service_status = {'components': ['ServiceManager']}
             
-            return jsonify({
-                'status': 'operational',
-                'timestamp': datetime.now().isoformat(),
-                'services': {
-                    'service_manager': 'active',
-                    'health_check': health_status,
-                    'service_details': service_status
-                },
-                'webapp': {
-                    'version': '1.0.0',
-                    'mode': 'full'
-                }
-            })
-        else:
-            return jsonify({
-                'status': 'degraded',
-                'timestamp': datetime.now().isoformat(),
-                'services': {
-                    'service_manager': 'unavailable'
-                },
-                'webapp': {
-                    'version': '1.0.0',
-                    'mode': 'fallback'
-                }
-            })
+            status_info['services']['health_check'] = health_status
+            status_info['services']['service_details'] = service_status
+            
+        return jsonify(status_info)
             
     except Exception as e:
         logger.error(f"Erreur lors de la vérification du statut: {e}")
@@ -335,6 +398,13 @@ if __name__ == '__main__':
     
     # Initialisation des services
     initialize_services()
+    
+    # Configuration du contexte d'application
+    setup_app_context()
+    
+    logger.info(f"JTMS disponible: {JTMS_SERVICES_AVAILABLE}")
+    if JTMS_AVAILABLE:
+        logger.info("Routes JTMS disponibles sur: /jtms/dashboard, /jtms/sessions, /jtms/sherlock_watson, /jtms/tutorial, /jtms/playground")
     
     # Démarrage de l'application
     app.run(

@@ -147,6 +147,12 @@ examples/
 
 ### **🌐 Point 5 : Applications Web**
 ```bash
+# 🧪 VALIDATION JTMS WEB (RECOMMANDÉ)
+python validate_jtms.py
+
+# 🚀 Runner avancé (asynchrone non-bloquant)
+python validation/web_interface/validate_jtms_web_interface.py
+
 # Démarrage système complet
 python services/web_api/start_full_system.py
 
