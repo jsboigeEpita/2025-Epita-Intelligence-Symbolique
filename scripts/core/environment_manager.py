@@ -150,27 +150,45 @@ class EnvironmentManager:
             return []
         
         try:
-            # CORRECTION: Utiliser shell=True comme dans check_conda_available()
+            # CORRECTION: Simplifier en utilisant PowerShell directement
+            conda_path = os.environ.get('CONDA_PATH', 'C:\\tools\\miniconda3\\condabin;C:\\tools\\miniconda3\\Scripts;C:\\tools\\miniconda3\\Library\\bin')
+            cmd_env_list = f'$env:PATH = "{conda_path};$env:PATH"; conda env list --json'
             result = subprocess.run(
-                'conda env list --json',
-                shell=True,
+                ['powershell', '-c', cmd_env_list],
                 capture_output=True,
                 text=True,
-                timeout=30,
-                executable=shutil.which('powershell') if platform.system() == "Windows" else None
+                timeout=30
             )
             
             if result.returncode == 0:
-                # import json # Supprimé car importé au niveau supérieur
-                data = json.loads(result.stdout)
-                envs = []
-                for env_path in data.get('envs', []):
-                    env_name = Path(env_path).name
-                    envs.append(env_name)
-                return envs
+                self.logger.debug(f"conda env list stdout: {result.stdout[:200]}...")
+                self.logger.debug(f"conda env list stderr: {result.stderr[:200]}...")
+                try:
+                    # Extraire seulement la partie JSON (après la première ligne de config UTF-8)
+                    lines = result.stdout.strip().split('\n')
+                    json_start = 0
+                    for i, line in enumerate(lines):
+                        if line.strip().startswith('{'):
+                            json_start = i
+                            break
+                    json_content = '\n'.join(lines[json_start:])
+                    
+                    # import json # Supprimé car importé au niveau supérieur
+                    data = json.loads(json_content)
+                    envs = []
+                    for env_path in data.get('envs', []):
+                        env_name = Path(env_path).name
+                        envs.append(env_name)
+                    self.logger.debug(f"Environnements trouvés: {envs}")
+                    return envs
+                except json.JSONDecodeError as e:
+                    self.logger.warning(f"Erreur JSON decode: {e}")
+                    self.logger.debug(f"JSON problématique: {repr(result.stdout)}")
+            else:
+                self.logger.warning(f"conda env list échoué. Code: {result.returncode}, Stderr: {result.stderr}")
         
-        except (subprocess.SubprocessError, json.JSONDecodeError, subprocess.TimeoutExpired):
-            self.logger.debug("Erreur lors de la liste des environnements conda")
+        except (subprocess.SubprocessError, subprocess.TimeoutExpired) as e:
+            self.logger.debug(f"Erreur subprocess lors de la liste des environnements conda: {e}")
         
         return []
     
@@ -685,22 +703,31 @@ def auto_activate_env(env_name: str = "projet-is", silent: bool = True) -> bool:
         
         # Obtenir le chemin de l'environnement conda
         try:
-            # Utiliser la méthode corrigée avec shell=True + PowerShell comme dans list_conda_environments
-            cmd_env_path = f'$env:PATH = "{os.environ.get("CONDA_PATH", "")};$env:PATH"; conda info --envs --json'
+            # Utiliser la même logique que list_conda_environments() corrigée
+            conda_path = os.environ.get('CONDA_PATH', 'C:\\tools\\miniconda3\\condabin;C:\\tools\\miniconda3\\Scripts;C:\\tools\\miniconda3\\Library\\bin')
+            cmd_env_path = f'$env:PATH = "{conda_path};$env:PATH"; conda info --envs --json'
             if not silent:
                 print(f"[DEBUG] Exécution: {cmd_env_path}")
             
             result = subprocess.run(
-                f'powershell -c "{cmd_env_path}"',
-                shell=True,
+                ['powershell', '-c', cmd_env_path],
                 capture_output=True,
                 text=True,
                 timeout=30
             )
             
             if result.returncode == 0:
+                # Extraire seulement la partie JSON (même logique que list_conda_environments)
+                lines = result.stdout.strip().split('\n')
+                json_start = 0
+                for i, line in enumerate(lines):
+                    if line.strip().startswith('{'):
+                        json_start = i
+                        break
+                json_content = '\n'.join(lines[json_start:])
+                
                 # import json # Supprimé car importé au niveau supérieur
-                env_data = json.loads(result.stdout)
+                env_data = json.loads(json_content)
                 env_path = None
                 
                 for env_dir in env_data.get('envs', []):
