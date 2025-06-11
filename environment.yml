@@ -41,6 +41,7 @@ dependencies:
   - coverage # Peut être redondant avec pytest-cov mais ne nuit pas
   - unidecode # Ajouté pour corriger ModuleNotFoundError
   - markdown # Ajouté pour corriger ModuleNotFoundError
+  - pyvis # Ajouté pour la visualisation de réseaux (JTMS)
   - pip:
     - Flask-CORS # Spécifique, souvent via pip
     - semantic-kernel>=1.32.2 # Latest version from GitHub releases - Full modern API

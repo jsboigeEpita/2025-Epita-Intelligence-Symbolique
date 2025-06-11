@@ -170,7 +170,7 @@ class TestDatasetAccessManager:
         # Vérifications
         assert result.success is True
         assert result.data == {"card": "knife"}
-        mock_dataset.process_query.# Mock assertion eliminated - authentic validation
+        # mock_dataset.process_query.# Mock assertion eliminated - authentic validation
     
     def test_permission_denied_query(self, dataset_manager, mock_permission_manager):
         """Test requête refusée pour permissions insuffisantes."""

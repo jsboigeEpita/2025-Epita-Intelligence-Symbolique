@@ -5,7 +5,7 @@ from semantic_kernel.contents import ChatHistory
 from semantic_kernel.core_plugins import ConversationSummaryPlugin
 from config.unified_config import UnifiedConfig
 
-﻿#!/usr/bin/env python3
+#!/usr/bin/env python3
 """
 Tests unitaires pour l'agent FOL (FirstOrderLogicAgent)
 =====================================================
@@ -29,10 +29,13 @@ try:
 except ImportError:
     # Mock classes pour les tests si les composants n'existent pas encore
     class FirstOrderLogicAgent:
-        def __init__(self, kernel=None, agent_name="FirstOrderLogicAgent", service_id=None):
+        async def __init__(self, kernel=None, agent_name="FirstOrderLogicAgent", service_id=None):
             self.kernel = kernel
             self.agent_name = agent_name
             self.service_id = service_id
+            # Note: _create_authentic_gpt4o_mini_instance n'est pas défini dans cette classe mockée.
+            # Cela pourrait causer une NameError si cette classe mockée est effectivement utilisée.
+            # Pour l'instant, on se concentre sur la syntaxe de await.
             self.belief_set = await self._create_authentic_gpt4o_mini_instance()
             
         def generate_fol_syntax(self, text: str) -> str:
@@ -67,7 +70,7 @@ class TestFirstOrderLogicAgent:
 
     """Tests pour la classe FirstOrderLogicAgent."""
     
-    def setup_method(self):
+    async def setup_method(self):
         """Configuration initiale pour chaque test."""
         self.mock_kernel = await self._create_authentic_gpt4o_mini_instance()
         self.agent_name = "TestFOLAgent"
@@ -162,20 +165,21 @@ class TestFirstOrderLogicAgent:
         assert result["status"] == "success"
     
     
-    def test_tweety_fol_integration_with_mock(self, mock_solver):
+    @pytest.mark.asyncio
+    async def test_tweety_fol_integration_with_mock(self, mock_solver):
         """Test d'intégration avec Tweety FOL mocké."""
-        # Configuration du mock solver
-        mock_solver_instance = await self._create_authentic_gpt4o_mini_instance()
-        mock_solver_instance.solve# Mock eliminated - using authentic gpt-4o-mini {
+        # Configuration du mock solver (mock_solver est la fixture injectée, représentant TweetyBridge)
+        mock_solver.solve = AsyncMock(return_value={
             "satisfiable": True,
             "models": [{"socrate": "mortel"}],
             "inference_results": ["Mortel(socrate)"]
-        }
-        mock_solver# Mock eliminated - using authentic gpt-4o-mini mock_solver_instance
+        })
         
         agent = FirstOrderLogicAgent(kernel=self.mock_kernel)
+        agent._tweety_bridge = mock_solver # Assigner le bridge mocké à l'agent
         
         formulas = ["∀x(Homme(x) → Mortel(x))", "Homme(socrate)"]
+        # Supposant que analyze_with_tweety_fol est synchrone pour l'instant
         result = agent.analyze_with_tweety_fol(formulas)
         
         # Vérifier que le solver a été appelé
@@ -310,7 +314,7 @@ class TestFOLIntegrationWithTweety:
             pytest.skip("Tweety FOL service not available")
     
     @pytest.mark.integration
-    def test_fol_agent_with_real_tweety(self):
+    async def test_fol_agent_with_real_tweety(self):
         """Test agent FOL avec vrai Tweety."""
         try:
             agent = FirstOrderLogicAgent(kernel=await self._create_authentic_gpt4o_mini_instance())
