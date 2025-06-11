@@ -685,18 +685,17 @@ def auto_activate_env(env_name: str = "projet-is", silent: bool = True) -> bool:
         
         # Obtenir le chemin de l'environnement conda
         try:
-            # Simplification: shell=True devrait permettre au shell de trouver 'conda' si le PATH est correct.
-            cmd_to_run_info = 'conda info --envs --json'
-            self.logger.debug(f"Exécution de: {cmd_to_run_info} (avec shell=True)")
-
+            # Utiliser la méthode corrigée avec shell=True + PowerShell comme dans list_conda_environments
+            cmd_env_path = f'$env:PATH = "{os.environ.get("CONDA_PATH", "")};$env:PATH"; conda info --envs --json'
+            if not silent:
+                print(f"[DEBUG] Exécution: {cmd_env_path}")
+            
             result = subprocess.run(
-                cmd_to_run_info,
+                f'powershell -c "{cmd_env_path}"',
                 shell=True,
                 capture_output=True,
                 text=True,
-                timeout=30,
-                # Spécifier l'exécutable du shell peut aider PowerShell à hériter correctement du PATH.
-                executable=shutil.which('powershell') if platform.system() == "Windows" else (shutil.which('bash') or shutil.which('sh'))
+                timeout=30
             )
             
             if result.returncode == 0:
