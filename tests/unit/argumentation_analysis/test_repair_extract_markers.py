@@ -158,7 +158,7 @@ def mock_generate_report(results, output_file="repair_report.html"):
     # Dans un test, nous vérifions simplement que la fonction est appelée avec les bons paramètres
     pass
 
-async def mock_setup_agents(llm_service):
+async def OrchestrationServiceManagers(llm_service):
     # Simuler la configuration des agents
     kernel = Magicawait self._create_authentic_gpt4o_mini_instance()
     repair_agent = Magicawait self._create_authentic_gpt4o_mini_instance()
@@ -169,7 +169,7 @@ async def mock_setup_agents(llm_service):
 ExtractRepairPlugin = MockExtractRepairPlugin
 repair_extract_markers = mock_repair_extract_markers
 generate_report = mock_generate_report
-setup_agents = mock_setup_agents
+setup_agents = OrchestrationServiceManagers
 
 
 @pytest.fixture
@@ -442,9 +442,9 @@ class TestSetupAgents:
         mock_kernel = mock_kernel_class.return_value
         mock_kernel.get_prompt_execution_settings_from_service_id# Mock eliminated - using authentic gpt-4o-mini {"temperature": 0.7}
         
-        mock_repair_agent = Magicawait self._create_authentic_gpt4o_mini_instance()
-        mock_validation_agent = Magicawait self._create_authentic_gpt4o_mini_instance()
-        mock_agent_class# Mock eliminated - using authentic gpt-4o-mini [mock_repair_agent, mock_validation_agent]
+        OrchestrationServiceManager = Magicawait self._create_authentic_gpt4o_mini_instance()
+        OrchestrationServiceManager = Magicawait self._create_authentic_gpt4o_mini_instance()
+        mock_agent_class# Mock eliminated - using authentic gpt-4o-mini [OrchestrationServiceManager, OrchestrationServiceManager]
         
         # Configurer le service LLM mocké
         llm_service_mock = Magicawait self._create_authentic_gpt4o_mini_instance()
@@ -459,8 +459,8 @@ class TestSetupAgents:
         
         # Vérifier que les agents ont été créés correctement
         assert mock_agent_class.call_count == 2
-        assert repair_agent == mock_repair_agent
-        assert validation_agent == mock_validation_agent
+        assert repair_agent == OrchestrationServiceManager
+        assert validation_agent == OrchestrationServiceManager
 
     async def test_setup_agents_with_error(self, mock_kernel_class, mock_agent_class):
         """Test de configuration des agents avec erreur."""
@@ -468,9 +468,9 @@ class TestSetupAgents:
         mock_kernel = mock_kernel_class.return_value
         mock_kernel.get_prompt_execution_settings_from_service_id# Mock eliminated - using authentic gpt-4o-mini Exception("Erreur de configuration")
         
-        mock_repair_agent = Magicawait self._create_authentic_gpt4o_mini_instance()
-        mock_validation_agent = Magicawait self._create_authentic_gpt4o_mini_instance()
-        mock_agent_class# Mock eliminated - using authentic gpt-4o-mini [mock_repair_agent, mock_validation_agent]
+        OrchestrationServiceManager = Magicawait self._create_authentic_gpt4o_mini_instance()
+        OrchestrationServiceManager = Magicawait self._create_authentic_gpt4o_mini_instance()
+        mock_agent_class# Mock eliminated - using authentic gpt-4o-mini [OrchestrationServiceManager, OrchestrationServiceManager]
         
         # Configurer le service LLM mocké
         llm_service_mock = Magicawait self._create_authentic_gpt4o_mini_instance()
@@ -484,5 +484,5 @@ class TestSetupAgents:
         
         # Vérifier que les agents ont été créés avec des paramètres vides
         assert mock_agent_class.call_count == 2
-        assert repair_agent == mock_repair_agent
-        assert validation_agent == mock_validation_agent
+        assert repair_agent == OrchestrationServiceManager
+        assert validation_agent == OrchestrationServiceManager

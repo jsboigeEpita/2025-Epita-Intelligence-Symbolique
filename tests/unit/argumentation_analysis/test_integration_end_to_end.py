@@ -91,23 +91,23 @@ class TestEndToEndAnalysis:
         mock_setup_pm_kernel,
         mock_setup_informal_kernel,
         mock_setup_pl_kernel,
-        mock_setup_extract_agent,
-        mock_chat_completion_agent,
+        OrchestrationServiceManager,
+        OrchestrationServiceManager,
         mock_agent_group_chat,
         analysis_fixture
     ):
         """Teste le flux complet d'analyse argumentative de bout en bout."""
         state, llm_service, _, test_text = analysis_fixture
         
-        mock_pm_agent = MagicMock(spec=Agent); mock_pm_agent.name = "ProjectManagerAgent"
-        mock_informal_agent = MagicMock(spec=Agent); mock_informal_agent.name = "InformalAnalysisAgent"
-        mock_pl_agent = MagicMock(spec=Agent); mock_pl_agent.name = "PropositionalLogicAgent"
-        mock_extract_agent = MagicMock(spec=Agent); mock_extract_agent.name = "ExtractAgent"
+        OrchestrationServiceManager = MagicMock(spec=Agent); OrchestrationServiceManager.name = "ProjectManagerAgent"
+        OrchestrationServiceManager = MagicMock(spec=Agent); OrchestrationServiceManager.name = "InformalAnalysisAgent"
+        OrchestrationServiceManager = MagicMock(spec=Agent); OrchestrationServiceManager.name = "PropositionalLogicAgent"
+        OrchestrationServiceManager = MagicMock(spec=Agent); OrchestrationServiceManager.name = "ExtractAgent"
         
-        mock_chat_completion_agent# Mock eliminated - using authentic gpt-4o-mini [mock_pm_agent, mock_informal_agent, mock_pl_agent, mock_extract_agent]
+        OrchestrationServiceManager# Mock eliminated - using authentic gpt-4o-mini [OrchestrationServiceManager, OrchestrationServiceManager, OrchestrationServiceManager, OrchestrationServiceManager]
         
         mock_extract_kernel = MagicMock(spec=sk.Kernel)
-        mock_setup_extract_agent# Mock eliminated - using authentic gpt-4o-mini (mock_extract_kernel, mock_extract_agent)
+        OrchestrationServiceManager# Mock eliminated - using authentic gpt-4o-mini (mock_extract_kernel, OrchestrationServiceManager)
         
         mock_group_chat_instance = MagicMock(spec=AgentGroupChat)
         mock_agent_group_chat# Mock eliminated - using authentic gpt-4o-mini mock_group_chat_instance
@@ -175,7 +175,7 @@ class TestEndToEndAnalysis:
         assert state.final_conclusion is not None
         
         mock_agent_group_chat.# Mock assertion eliminated - authentic validation
-        assert mock_chat_completion_agent.call_count == 4
+        assert OrchestrationServiceManager.call_count == 4
 
     
     
@@ -189,20 +189,20 @@ class TestEndToEndAnalysis:
         mock_setup_pm_kernel,
         mock_setup_informal_kernel,
         mock_setup_pl_kernel,
-        mock_setup_extract_agent,
-        mock_chat_completion_agent,
+        OrchestrationServiceManager,
+        OrchestrationServiceManager,
         mock_agent_group_chat,
         analysis_fixture
     ):
         state, llm_service, _, test_text = analysis_fixture
-        mock_pm_agent = MagicMock(spec=Agent); mock_pm_agent.name = "ProjectManagerAgent"
-        mock_informal_agent = MagicMock(spec=Agent); mock_informal_agent.name = "InformalAnalysisAgent"
-        mock_pl_agent = MagicMock(spec=Agent); mock_pl_agent.name = "PropositionalLogicAgent"
-        mock_extract_agent = MagicMock(spec=Agent); mock_extract_agent.name = "ExtractAgent"
+        OrchestrationServiceManager = MagicMock(spec=Agent); OrchestrationServiceManager.name = "ProjectManagerAgent"
+        OrchestrationServiceManager = MagicMock(spec=Agent); OrchestrationServiceManager.name = "InformalAnalysisAgent"
+        OrchestrationServiceManager = MagicMock(spec=Agent); OrchestrationServiceManager.name = "PropositionalLogicAgent"
+        OrchestrationServiceManager = MagicMock(spec=Agent); OrchestrationServiceManager.name = "ExtractAgent"
         
-        mock_chat_completion_agent# Mock eliminated - using authentic gpt-4o-mini [mock_pm_agent, mock_informal_agent, mock_pl_agent, mock_extract_agent]
+        OrchestrationServiceManager# Mock eliminated - using authentic gpt-4o-mini [OrchestrationServiceManager, OrchestrationServiceManager, OrchestrationServiceManager, OrchestrationServiceManager]
         mock_extract_kernel = MagicMock(spec=sk.Kernel)
-        mock_setup_extract_agent# Mock eliminated - using authentic gpt-4o-mini (mock_extract_kernel, mock_extract_agent)
+        OrchestrationServiceManager# Mock eliminated - using authentic gpt-4o-mini (mock_extract_kernel, OrchestrationServiceManager)
         mock_group_chat_instance = MagicMock(spec=AgentGroupChat)
         mock_agent_group_chat# Mock eliminated - using authentic gpt-4o-mini mock_group_chat_instance
         
@@ -272,18 +272,18 @@ class TestPerformanceIntegration:
     
     async def test_performance_metrics(
         self, mock_setup_pm_kernel, mock_setup_informal_kernel, mock_setup_pl_kernel,
-        mock_setup_extract_agent, mock_chat_completion_agent, mock_agent_group_chat,
+        OrchestrationServiceManager, OrchestrationServiceManager, mock_agent_group_chat,
         performance_fixture
     ):
         test_text, llm_service = performance_fixture
-        mock_pm_agent = MagicMock(spec=Agent); mock_pm_agent.name = "ProjectManagerAgent"
-        mock_informal_agent = MagicMock(spec=Agent); mock_informal_agent.name = "InformalAnalysisAgent"
-        mock_pl_agent = MagicMock(spec=Agent); mock_pl_agent.name = "PropositionalLogicAgent"
-        mock_extract_agent = MagicMock(spec=Agent); mock_extract_agent.name = "ExtractAgent"
+        OrchestrationServiceManager = MagicMock(spec=Agent); OrchestrationServiceManager.name = "ProjectManagerAgent"
+        OrchestrationServiceManager = MagicMock(spec=Agent); OrchestrationServiceManager.name = "InformalAnalysisAgent"
+        OrchestrationServiceManager = MagicMock(spec=Agent); OrchestrationServiceManager.name = "PropositionalLogicAgent"
+        OrchestrationServiceManager = MagicMock(spec=Agent); OrchestrationServiceManager.name = "ExtractAgent"
         
-        mock_chat_completion_agent# Mock eliminated - using authentic gpt-4o-mini [mock_pm_agent, mock_informal_agent, mock_pl_agent, mock_extract_agent, mock_pm_agent]
+        OrchestrationServiceManager# Mock eliminated - using authentic gpt-4o-mini [OrchestrationServiceManager, OrchestrationServiceManager, OrchestrationServiceManager, OrchestrationServiceManager, OrchestrationServiceManager]
         mock_extract_kernel = MagicMock(spec=sk.Kernel)
-        mock_setup_extract_agent# Mock eliminated - using authentic gpt-4o-mini (mock_extract_kernel, mock_extract_agent)
+        OrchestrationServiceManager# Mock eliminated - using authentic gpt-4o-mini (mock_extract_kernel, OrchestrationServiceManager)
         mock_group_chat_instance = MagicMock(spec=AgentGroupChat)
         mock_agent_group_chat# Mock eliminated - using authentic gpt-4o-mini mock_group_chat_instance
         

@@ -74,10 +74,10 @@ class ChatMessageContent(OriginalChatMessageContent):
 # car nous les définissons ou les importons explicitement.
 # S'il y avait d'autres imports dans le try, ils devraient être gérés séparément.
     # Mocks pour compatibilité si SK non disponible
-    Kernel = None
-    ChatCompletionAgent = object
-    ChatMessageContent = object
-    Field = lambda **kwargs: None
+    # Kernel = None
+    # ChatCompletionAgent = object
+    # ChatMessageContent = object
+    # Field = lambda **kwargs: None
 
 from argumentation_analysis.agents.core.abc.agent_bases import BaseLogicAgent
 
