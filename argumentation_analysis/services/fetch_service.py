@@ -17,7 +17,7 @@ from argumentation_analysis.models.extract_definition import SourceDefinition
 from .cache_service import CacheService
 
 # Charger les variables d'environnement
-load_dotenv(find_dotenv(start=str(Path(__file__).parent.parent.parent)))
+load_dotenv(find_dotenv())
 
 # Configuration du logging
 logger = logging.getLogger("Services.FetchService")

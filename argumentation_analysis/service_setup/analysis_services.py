@@ -71,7 +71,7 @@ def initialize_analysis_services(config: Dict[str, Any]) -> Dict[str, Any]:
     # Les variables d'environnement (par exemple, clés API pour le LLM) sont
     # chargées depuis un fichier .env. Ceci est crucial pour la configuration
     # sécurisée et flexible des services.
-    loaded = load_dotenv(find_dotenv(start=str(Path(__file__).parent.parent.parent)), override=True)
+    loaded = load_dotenv(find_dotenv(), override=True)
     logging.info(f"Résultat du chargement de .env: {loaded}")
 
     # Section 2: Initialisation de la Machine Virtuelle Java (JVM)
