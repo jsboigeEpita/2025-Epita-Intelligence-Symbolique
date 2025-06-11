@@ -12,11 +12,24 @@ import os
 import subprocess
 from pathlib import Path
 import argparse
+import shutil
 
 # Configuration
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
+
+def _find_conda():
+    """Trouve l'exécutable conda de manière simple."""
+    conda_exe = os.environ.get('CONDA_EXE')
+    if conda_exe and Path(conda_exe).exists():
+        return conda_exe
+    
+    conda_exe = shutil.which('conda')
+    if conda_exe:
+        return conda_exe
+        
+    return None
 
 def print_banner():
     """Affiche la bannière du gestionnaire."""
@@ -115,29 +128,54 @@ def cmd_fix():
     print_banner()
     print("\n[CLE] RÉPARATION AUTOMATIQUE...")
     
-    # 1. Vérifier si l'environnement existe
+    # 1. Trouver l'exécutable conda
+    print("   [1/3] Recherche de l'exécutable Conda...")
+    conda_exe = _find_conda()
+    if not conda_exe:
+        print("[X] Conda non disponible, impossible de réparer.")
+        return 1
+    print(f"   [OK] Conda trouvé : {conda_exe}")
+
+    # 2. Vérifier si l'environnement existe
+    print("   [2/3] Vérification de l'existence de l'environnement 'projet-is'...")
     try:
-        result = subprocess.run(["conda", "env", "list"], capture_output=True, text=True)
+        result = subprocess.run([conda_exe, "env", "list"], capture_output=True, text=True, check=True)
         if "projet-is" not in result.stdout:
-            print("[ATTENTION]  Environnement 'projet-is' absent, création...")
+            print("[ATTENTION]  Environnement 'projet-is' absent. Lancement de la configuration initiale...")
             return cmd_setup()
-    except FileNotFoundError:
-        print("[X] Conda non disponible, impossible de réparer")
+        print("   [OK] L'environnement 'projet-is' existe.")
+    except (FileNotFoundError, subprocess.CalledProcessError) as e:
+        print(f"[X] Erreur lors de la vérification de l'environnement : {e}")
+        if isinstance(e, subprocess.CalledProcessError):
+            print(f"   [STDERR] {e.stderr}")
         return 1
     
-    # 2. Réinstaller les dépendances
-    print("[ROTATION] Mise à jour des dépendances...")
+    # 3. Réinstaller les dépendances
+    print("   [3/3] Mise à jour des dépendances depuis environment.yml...")
+    print("   [ATTENTION] Cette opération peut prendre plusieurs minutes. La progression s'affichera ci-dessous.")
     try:
-        result = subprocess.run(["conda", "env", "update", "-f", str(PROJECT_ROOT / "environment.yml")], 
-                              capture_output=False)
+        env_file = str(PROJECT_ROOT / "environment.yml")
+        command = [
+            conda_exe, "env", "update", "--name", "projet-is",
+            "--file", env_file, "--prune"
+        ]
+        print(f"   [CMD] Exécution de: {' '.join(command)}\n")
+        
+        # On utilise capture_output=False pour voir la sortie en temps réel
+        result = subprocess.run(command, capture_output=False)
+        
         if result.returncode == 0:
-            print("[OK] Dépendances mises à jour")
+            print("\n[OK] Les dépendances ont été mises à jour avec succès.")
         else:
-            print("[ATTENTION]  Mise à jour partielle")
+            print(f"\n[X] Échec de la mise à jour des dépendances (code de retour: {result.returncode}).")
+            print("[AMPOULE] Vérifiez les erreurs ci-dessus. Un conflit de paquets est possible.")
+            return 1
+            
     except Exception as e:
-        print(f"[X] Erreur mise à jour: {e}")
+        print(f"\n[X] Une erreur inattendue est survenue lors de la mise à jour: {e}")
         return 1
     
+    print("\n[ROBOT] Réparation terminée.")
     return 0
 
 def cmd_update_scripts():
