@@ -42,15 +42,11 @@ class TestSprint2Improvements(unittest.TestCase):
 
     """Tests pour valider les améliorations du Sprint 2."""
     
-    def setUp(self):
+    async def setUp(self):
         """Initialisation avant chaque test."""
-        self.mock_app = Magicawait self._create_authentic_gpt4o_mini_instance()
-        self.mock_app.route = Magicawait self._create_authentic_gpt4o_mini_instance()
-        
-        # Mock flask app attributes
-        self.mock_app.logic_service = None
-        self.mock_app.group_chat_orchestration = None
-        self.mock_app.service_integrator = None
+        # Les mocks pour l'application Flask ne sont plus nécessaires car les tests
+        # se concentrent sur des unités de service et non sur l'application web.
+        pass
         
     def test_harmonized_agent_interfaces(self):
         """Test que les interfaces d'agents sont harmonisées et compatibles."""
@@ -155,14 +151,16 @@ class TestSprint2Improvements(unittest.TestCase):
         results = async_manager.run_multiple_hybrid(tasks)
         self.assertEqual(results, [3, 7, 11])
     
-    def test_group_chat_orchestration_robustness(self):
+    async def test_group_chat_orchestration_robustness(self):
         """Test que l'orchestration de groupe chat est robuste."""
         orchestration = GroupChatOrchestration()
         
         # Test initialisation session
+        agent1 = await self._create_authentic_gpt4o_mini_instance()
+        agent2 = await self._create_authentic_gpt4o_mini_instance()
         success = orchestration.initialize_session("test_session", {
-            "agent1": Magicawait self._create_authentic_gpt4o_mini_instance(),
-            "agent2": Magicawait self._create_authentic_gpt4o_mini_instance()
+            "agent1": agent1,
+            "agent2": agent2
         })
         self.assertTrue(success)
         
@@ -320,16 +318,15 @@ class TestSprint2Improvements(unittest.TestCase):
         cleaned = async_manager.cleanup_completed_tasks(max_age_hours=0)
         self.assertGreaterEqual(cleaned, 0)
     
-    def test_concurrent_operations(self):
+    async def test_concurrent_operations(self):
         """Test que les opérations concurrentes fonctionnent correctement."""
         orchestration = GroupChatOrchestration()
         
-        # Initialiser avec plusieurs agents mockés
+        # Initialiser avec plusieurs agents authentiques
         agents = {}
         for i in range(3):
-            mock_agent = Magicawait self._create_authentic_gpt4o_mini_instance()
-            mock_agent.get_agent_capabilities# Mock eliminated - using authentic gpt-4o-mini {"type": f"agent_{i}"}
-            agents[f"agent_{i}"] = mock_agent
+            agent = await self._create_authentic_gpt4o_mini_instance()
+            agents[f"agent_{i}"] = agent
         
         orchestration.initialize_session("concurrent_test", agents)
         

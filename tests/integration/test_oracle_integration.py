@@ -61,11 +61,10 @@ class TestOracleWorkflowIntegration:
     """Tests d'intégration pour le workflow Oracle complet."""
     
     @pytest.fixture
-    def mock_kernel(self):
+    async def mock_kernel(self):
         """Kernel Semantic Kernel mocké pour les tests d'intégration."""
-        kernel = Mock(spec=Kernel)
-        kernel.add_plugin = await self._create_authentic_gpt4o_mini_instance()
-        kernel.add_filter = await self._create_authentic_gpt4o_mini_instance()
+        kernel = await self._create_authentic_gpt4o_mini_instance()
+        # Le kernel authentique est déjà configuré, pas besoin de .add_plugin ou .add_filter ici
         return kernel
     
     @pytest.fixture
@@ -245,11 +244,9 @@ class TestOraclePerformanceIntegration:
     """Tests de performance et métriques pour le système Oracle."""
     
     @pytest.fixture
-    def performance_kernel(self):
+    async def performance_kernel(self):
         """Kernel optimisé pour tests de performance."""
-        kernel = Mock(spec=Kernel)
-        kernel.add_plugin = await self._create_authentic_gpt4o_mini_instance()
-        kernel.add_filter = await self._create_authentic_gpt4o_mini_instance()
+        kernel = await self._create_authentic_gpt4o_mini_instance()
         return kernel
     
     @pytest.mark.asyncio
@@ -371,11 +368,9 @@ class TestOracleErrorHandlingIntegration:
     """Tests de gestion d'erreurs dans l'intégration Oracle."""
     
     @pytest.fixture
-    def error_test_kernel(self):
+    async def error_test_kernel(self):
         """Kernel pour tests d'erreurs."""
-        kernel = Mock(spec=Kernel)
-        kernel.add_plugin = await self._create_authentic_gpt4o_mini_instance()
-        kernel.add_filter = await self._create_authentic_gpt4o_mini_instance()
+        kernel = await self._create_authentic_gpt4o_mini_instance()
         return kernel
     
     @pytest.mark.asyncio

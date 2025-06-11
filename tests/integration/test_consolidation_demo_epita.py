@@ -20,9 +20,24 @@ from pathlib import Path
 from datetime import datetime
 from typing import Dict, List, Any, Optional, Tuple
 
-# Configuration du projet
-project_root = Path("d:/2025-Epita-Intelligence-Symbolique-4")
-os.chdir(project_root)
+# Configuration dynamique et robuste du projet
+def find_project_root(marker_file="pyproject.toml"):
+    """Trouve la racine du projet en cherchant un fichier marqueur."""
+    current_path = Path(__file__).resolve()
+    while current_path != current_path.parent:
+        if (current_path / marker_file).exists():
+            return current_path
+        current_path = current_path.parent
+    raise FileNotFoundError(f"Impossible de trouver la racine du projet (fichier marqueur '{marker_file}' non trouvé).")
+
+try:
+    project_root = find_project_root()
+    os.chdir(project_root)
+    print(f"INFO: Répertoire de travail changé pour la racine du projet: {project_root}")
+except FileNotFoundError as e:
+    print(f"ERREUR CRITIQUE: {e}")
+    project_root = Path.cwd() # Fallback pour le reste du script
+    # Dans un contexte de test pytest, on pourrait utiliser pytest.fail(str(e))
 
 class EpitaDemoConsolidator:
     """Consolidateur pour la démo EPITA - Identification des redondances et validation."""
