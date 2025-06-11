@@ -18,24 +18,35 @@ EXIGENCES STRICTES:
 ✅ Tests fonctionnels inclus
 """
 
-# ===== AUTO-ACTIVATION ENVIRONNEMENT =====
-import scripts.core.auto_env  # Auto-activation environnement intelligent
-# =========================================
-import asyncio
-import os
 import sys
+import os
+from pathlib import Path
+import asyncio
 import json
 import logging
 from datetime import datetime
-from pathlib import Path
+
+# --- DÉBUT CORRECTION PATH ---
+# Ajout de la racine du projet au sys.path pour les imports locaux.
+try:
+    PROJECT_ROOT = Path(__file__).resolve().parents[2]
+    if str(PROJECT_ROOT) not in sys.path:
+        sys.path.insert(0, str(PROJECT_ROOT))
+except IndexError:
+    # Fallback si la structure des dossiers changeait
+    PROJECT_ROOT = Path('.')
+# --- FIN CORRECTION PATH ---
+
+# ===== AUTO-ACTIVATION ENVIRONNEMENT =====
+import scripts.core.auto_env  # Auto-activation environnement intelligent
+# =========================================
 from typing import Dict, List, Any, Optional
 from dotenv import load_dotenv
 
 # Configuration UTF-8 et paths
+# PROJECT_ROOT est maintenant défini au début du script
 sys.stdout.reconfigure(encoding='utf-8')
 sys.stderr.reconfigure(encoding='utf-8')
-PROJECT_ROOT = Path(__file__).parent.absolute()
-sys.path.insert(0, str(PROJECT_ROOT))
 
 # Configuration logging
 logging.basicConfig(
