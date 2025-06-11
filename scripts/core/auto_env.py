@@ -56,17 +56,18 @@ def ensure_env(env_name: str = "projet-is", silent: bool = True) -> bool:
              sys.path.insert(0, str(project_root_path))
         # --- Fin de l'insertion pour sys.path ---
 
-        from scripts.core.environment_manager import EnvironmentManager
+        from scripts.core.environment_manager import EnvironmentManager, auto_activate_env as global_auto_activate_env
         from scripts.core.common_utils import Logger # Assumant que Logger est dans common_utils
 
         # Le logger peut être configuré ici ou EnvironmentManager peut en créer un par défaut.
         # Pour correspondre à l'ancienne verbosité contrôlée par 'silent':
-        logger_instance = Logger(verbose=not silent)
+        # logger_instance = Logger(verbose=not silent) # Plus nécessaire si on appelle la fonction globale
         
-        manager = EnvironmentManager(logger=logger_instance)
+        # manager = EnvironmentManager(logger=logger_instance) # Plus nécessaire si on appelle la fonction globale
         
         # L'appel principal qui encapsule toute la logique d'activation
-        activated = manager.auto_activate_env(env_name=env_name, silent=silent)
+        # Appel de la fonction globale auto_activate_env du module environment_manager
+        activated = global_auto_activate_env(env_name=env_name, silent=silent)
         
         if not silent:
             if activated:
