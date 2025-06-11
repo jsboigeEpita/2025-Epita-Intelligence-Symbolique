@@ -9,8 +9,8 @@ const { test, expect } = require('@playwright/test');
 test.describe('Interface Flask - Analyse Argumentative', () => {
   
   test.beforeEach(async ({ page }) => {
-    // Naviguer vers l'interface Flask
-    await page.goto('http://localhost:3000');
+    // Naviguer vers l'interface Flask en utilisant la baseURL configurée
+    await page.goto('/');
   });
 
   test('Chargement de la page principale', async ({ page }) => {
