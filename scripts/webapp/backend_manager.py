@@ -22,7 +22,8 @@ import psutil
 from typing import Dict, List, Optional, Any
 from pathlib import Path
 import aiohttp
-import shutil # Ajout pour shutil.which
+import shutil
+import shlex
 
 # Import pour l'activation de l'environnement et la recherche de Python
 # from scripts.core.environment_manager import auto_activate_env # auto_activate_env est appelé par le script parent start_webapp.py
@@ -152,97 +153,73 @@ class BackendManager:
 
     async def _start_on_port(self, port: int) -> Dict[str, Any]:
         """Démarre le backend sur un port spécifique"""
+        cmd: List[str] = []
         try:
-            conda_env_name = "projet-is" # Nom de l'environnement cible
-            
-            # Obtenir l'exécutable Python de l'environnement Conda cible
-            python_exe_path = await self._get_conda_env_python_executable(conda_env_name)
-            
-            if not python_exe_path:
-                self.logger.error(f"Impossible de démarrer le backend: exécutable Python pour '{conda_env_name}' non trouvé.")
-                return {
-                    'success': False,
-                    'error': f"Exécutable Python pour l'environnement '{conda_env_name}' introuvable.",
-                    'url': None, 'port': port, 'pid': None
-                }
-            
-            self.logger.info(f"Utilisation de l'interpréteur Python de l'environnement Conda '{conda_env_name}': {python_exe_path}")
-
-            # Commande de démarrage pour FastAPI avec Uvicorn
-            # S'assurer que l'attribut de l'application (généralement 'app') est spécifié
-            # Vérifier si self.module contient déjà l'attribut de l'application (ex: "module:app_instance")
-            if ':' in self.module:
-                app_module_with_attribute = self.module
+            if self.config.get('command_list'):
+                cmd = self.config['command_list'] + [str(port)]
+                self.logger.info(f"Démarrage via command_list: {cmd}")
+            elif self.config.get('command'):
+                command_str = self.config['command']
+                cmd = shlex.split(command_str) + [str(port)]
+                self.logger.info(f"Démarrage via commande directe: {cmd}")
             else:
-                app_module_with_attribute = f"{self.module}:app"
-            backend_host = self.config.get('host', '127.0.0.1')
-            
-            # Construction de la commande pour uvicorn.main()
-            # Cela permet d'insérer un log de test avant l'appel à uvicorn
-            uvicorn_args_list = [
-                app_module_with_attribute,
-                f"--host={backend_host}",
-                f"--port={str(port)}"
-                # Ajoutez d'autres options uvicorn ici si nécessaire (ex: --log-level)
-            ]
-            # Formatter les arguments pour la chaîne de commande Python
-            # Ex: "['module:app', '--host=127.0.0.1', '--port=5003']"
-            uvicorn_args_str_for_python = str(uvicorn_args_list)
+                if ':' in self.module:
+                    app_module_with_attribute = self.module
+                else:
+                    app_module_with_attribute = f"{self.module}:app"
+                backend_host = self.config.get('host', '127.0.0.1')
+                
+                uvicorn_args_list = [
+                    app_module_with_attribute,
+                    f"--host={backend_host}",
+                    f"--port={str(port)}"
+                ]
+                uvicorn_args_str_for_python = str(uvicorn_args_list)
 
-            python_command_str = (
-                f"import sys; sys.stderr.write('--- PYTHON EXEC TEST IN UVICORN LOG OK ---\\n'); "
-                f"sys.stderr.flush(); import uvicorn; "
-                f"uvicorn.main({uvicorn_args_str_for_python})"
-            )
+                python_command_str = (
+                    f"import uvicorn; "
+                    f"uvicorn.main({uvicorn_args_str_for_python})"
+                )
 
-            cmd = [
-                python_exe_path, '-c', python_command_str
-            ]
-            
-            self.logger.info(f"Démarrage backend FastAPI via uvicorn.main(): {python_exe_path} -c \"...uvicorn.main(...)\"")
-            self.logger.debug(f"Commande Python détaillée pour uvicorn.main(): {python_command_str}")
-            
-            # Créer le répertoire de logs s'il n'existe pas
-            log_dir = Path.cwd() / "logs"
-            log_dir.mkdir(parents=True, exist_ok=True)
-            stdout_log_file = log_dir / f"uvicorn_stdout_{port}.log"
-            stderr_log_file = log_dir / f"uvicorn_stderr_{port}.log"
+                conda_env_name = "projet-is"
+                python_exe_path = await self._get_conda_env_python_executable(conda_env_name)
+                if not python_exe_path:
+                    return {'success': False, 'error': "Python executable not found for conda env."}
+                
+                cmd = [python_exe_path, '-c', python_command_str]
+                self.logger.info(f"Démarrage FastAPI via uvicorn.main(): {python_exe_path} -c \"...\"")
 
-            self.logger.info(f"Logging stdout de Uvicorn dans: {stdout_log_file}")
-            self.logger.info(f"Logging stderr de Uvicorn dans: {stderr_log_file}")
-
-            # Démarrage processus en arrière-plan
-            env = os.environ.copy()
-            
-            # Définir PYTHONPATH pour inclure la racine du projet.
-            # Path.cwd() devrait être la racine du projet si start_webapp.py est à la racine.
             project_root = str(Path.cwd())
+            log_dir = Path(project_root) / "logs"
+            log_dir.mkdir(parents=True, exist_ok=True)
             
-            # Construire PYTHONPATH : s'assurer que project_root est le premier élément.
-            # Cela permet aux imports relatifs à la racine du projet de fonctionner.
-            existing_pythonpath = env.get('PYTHONPATH', '')
-            if existing_pythonpath:
-                env['PYTHONPATH'] = project_root + os.pathsep + existing_pythonpath
-            else:
-                env['PYTHONPATH'] = project_root
-            
-            self.logger.info(f"PYTHONPATH pour Uvicorn: {env['PYTHONPATH']}")
-            self.logger.info(f"CWD pour Uvicorn: {project_root}")
+            stdout_log_path = log_dir / f"backend_stdout_{port}.log"
+            stderr_log_path = log_dir / f"backend_stderr_{port}.log"
 
-            # Ouvrir les fichiers de log pour la redirection
-            with open(stdout_log_file, 'wb') as f_stdout, open(stderr_log_file, 'wb') as f_stderr:
+            self.logger.info(f"Redirection stdout -> {stdout_log_path}")
+            self.logger.info(f"Redirection stderr -> {stderr_log_path}")
+            
+            env = os.environ.copy()
+            existing_pythonpath = env.get('PYTHONPATH', '')
+            if project_root not in existing_pythonpath.split(os.pathsep):
+                env['PYTHONPATH'] = f"{project_root}{os.pathsep}{existing_pythonpath}" if existing_pythonpath else project_root
+
+            self.logger.debug(f"Commande Popen: {cmd}")
+            self.logger.debug(f"CWD: {project_root}")
+            self.logger.debug(f"PYTHONPATH: {env.get('PYTHONPATH')}")
+
+            with open(stdout_log_path, 'wb') as f_stdout, open(stderr_log_path, 'wb') as f_stderr:
                 self.process = subprocess.Popen(
                     cmd,
-                    stdout=f_stdout, # Rediriger stdout vers le fichier
-                    stderr=f_stderr, # Rediriger stderr vers le fichier
-                    cwd=project_root, # Exécuter depuis la racine du projet
+                    stdout=f_stdout,
+                    stderr=f_stderr,
+                    cwd=project_root,
                     env=env,
                     shell=False
                 )
-            
-            # Attente démarrage
+
             backend_ready = await self._wait_for_backend(port)
-            
+
             if backend_ready:
                 url = f"http://localhost:{port}"
                 return {
@@ -252,108 +229,94 @@ class BackendManager:
                     'pid': self.process.pid,
                     'error': None
                 }
-            else:
-                # Échec - cleanup processus
-                if self.process:
+            
+            # Si le backend n'est pas prêt, on logue et on nettoie
+            self.logger.error(f"Backend sur port {port} n'a pas démarré. Diagnostic des logs.")
+            
+            await asyncio.sleep(0.5)
+
+            for log_path in [stdout_log_path, stderr_log_path]:
+                try:
+                    with open(log_path, 'r', encoding='utf-8', errors='ignore') as f:
+                        log_content = f.read().strip()
+                        if log_content:
+                            self.logger.info(f"--- Contenu {log_path.name} ---\n{log_content}\n--------------------")
+                        else:
+                            self.logger.info(f"Log {log_path.name} est vide.")
+                except FileNotFoundError:
+                    self.logger.warning(f"Log {log_path.name} non trouvé.")
+
+            if self.process:
+                if self.process.poll() is None:
+                    self.logger.info(f"Processus {self.process.pid} encore actif, terminaison.")
                     self.process.terminate()
-                    self.process = None
-                    
-                return {
-                    'success': False,
-                    'error': f'Backend non accessible sur port {port} après {self.timeout_seconds}s',
-                    'url': None,
-                    'port': None,
-                    'pid': None
-                }
-                
+                    try:
+                        await asyncio.to_thread(self.process.wait, timeout=5)
+                    except subprocess.TimeoutExpired:
+                        self.process.kill()
+                else:
+                    self.logger.info(f"Processus terminé avec code: {self.process.returncode}")
+                self.process = None
+
+            return { 'success': False, 'error': f'Backend failed on port {port}', 'url': None, 'port': None, 'pid': None }
+
         except Exception as e:
-            self.logger.error(f"Erreur démarrage backend port {port}: {e}")
-            return {
-                'success': False,
-                'error': str(e),
-                'url': None,
-                'port': None,
-                'pid': None
-            }
+            self.logger.error(f"Erreur démarrage backend port {port}: {e}", exc_info=True)
+            return {'success': False, 'error': str(e), 'url': None, 'port': None, 'pid': None}
 
     async def _wait_for_backend(self, port: int) -> bool:
         """Attend que le backend soit accessible via health check"""
-        # S'assurer que l'URL de health check utilise aussi 127.0.0.1 si c'est l'hôte d'écoute
         backend_host_for_url = self.config.get('host', '127.0.0.1')
-        # Si backend_host_for_url est 0.0.0.0, le client doit utiliser localhost ou 127.0.0.1
-        if backend_host_for_url == "0.0.0.0":
-            connect_host = "127.0.0.1"
-        else:
-            connect_host = backend_host_for_url
+        connect_host = "127.0.0.1" if backend_host_for_url == "0.0.0.0" else backend_host_for_url
 
         url = f"http://{connect_host}:{port}{self.health_endpoint}"
         start_time = time.time()
         
         self.logger.info(f"Attente backend sur {url} (timeout: {self.timeout_seconds}s)")
         
-        self.logger.info("Pause initiale de 20 secondes avant de commencer les health checks...") # Augmentation de la pause
-        await asyncio.sleep(20) # Pause initiale plus longue
+        # Pause initiale pour laisser le temps au serveur de démarrer
+        initial_wait = 15
+        self.logger.info(f"Pause initiale de {initial_wait}s avant health checks...")
+        await asyncio.sleep(initial_wait)
 
         while time.time() - start_time < self.timeout_seconds:
+            if self.process and self.process.poll() is not None:
+                self.logger.error(f"Processus backend terminé prématurément (code: {self.process.returncode})")
+                return False
+            
             try:
-                # Vérifier d'abord si le processus est toujours vivant
-                if self.process and self.process.poll() is not None:
-                    return_code = self.process.returncode
-                    self.logger.error(f"Processus backend terminé prématurément (code: {return_code})")
-                    
-                    # Lire stdout et stderr du processus terminé
-                    # Note: la lecture directe des pipes après la fin du processus peut être délicate.
-                    # Les logs fichiers sont plus fiables.
-                    # stdout_output, stderr_output = self.process.communicate(timeout=1) # Ne peut être appelé qu'une fois
-                    # Pour l'instant, on se fie aux logs fichiers qui sont créés.
-                    return False # Processus mort, donc backend pas prêt
-                
                 async with aiohttp.ClientSession() as session:
-                    self.logger.info(f"Tentative de connexion GET à {url}...")
-                    sys.stdout.flush() # Forcer le flush pour voir ce log immédiatement
-                    # Augmentation du timeout pour chaque requête individuelle
                     async with session.get(url, timeout=aiohttp.ClientTimeout(total=10)) as response:
-                        self.logger.info(f"Réponse reçue de {url} avec statut: {response.status}")
                         if response.status == 200:
                             self.logger.info(f"Backend accessible sur {url}")
                             return True
-            except aiohttp.ClientConnectorError as e_conn:
+                        else:
+                            self.logger.warning(f"Health check a échoué avec status {response.status}")
+            except Exception as e:
                 elapsed = time.time() - start_time
-                self.logger.debug(f"Tentative health check (connexion) après {elapsed:.1f}s: {type(e_conn).__name__} - {e_conn}")
-            except asyncio.TimeoutError as e_timeout_req: # Spécifique pour le timeout de la requête aiohttp
-                elapsed = time.time() - start_time
-                self.logger.debug(f"Tentative health check (timeout requête) après {elapsed:.1f}s: {type(e_timeout_req).__name__}")
-            except Exception as e_other: # Autres exceptions aiohttp ou génériques
-                elapsed = time.time() - start_time
-                self.logger.debug(f"Tentative health check (autre erreur) après {elapsed:.1f}s: {type(e_other).__name__} - {e_other}")
+                self.logger.warning(f"Health check échoué ({elapsed:.1f}s): {type(e).__name__}")
                 
-            await asyncio.sleep(5) # Intervalle augmenté
+            await asyncio.sleep(5)
         
-        self.logger.error(f"Timeout - Backend non accessible sur {url}")
-        # Si timeout et le processus est toujours là mais ne répond pas, logguer sa sortie aussi
-        if self.process and self.process.poll() is None: # Processus encore en cours
-            self.logger.info("Le processus backend est toujours en cours mais ne répond pas au health check.")
-            # Tenter de lire la sortie non bloquante (peut être vide si rien n'a été écrit récemment)
-            # Note: Cela est délicat avec Popen en mode non bloquant sans threads séparés pour lire les pipes.
-            # Les modifications ci-dessus pour la terminaison prématurée sont plus fiables pour obtenir la sortie.
+        self.logger.error(f"Timeout dépassé - Backend inaccessible sur {url}")
         return False
     
     async def _is_port_occupied(self, port: int) -> bool:
         """Vérifie si un port est déjà occupé"""
         try:
-            for conn in psutil.net_connections():
+            for conn in psutil.net_connections(kind='inet'):
                 if conn.laddr.port == port and conn.status == psutil.CONN_LISTEN:
                     return True
-        except (psutil.AccessDenied, AttributeError):
-            # Fallback - tentative connexion
+        except (psutil.AccessDenied, psutil.NoSuchProcess, AttributeError):
+             # Fallback si psutil échoue
             try:
-                async with aiohttp.ClientSession() as session:
-                    async with session.get(f"http://localhost:{port}", 
-                                         timeout=aiohttp.ClientTimeout(total=1)) as response:
-                        return True  # Port répond
-            except:
-                pass
-                
+                reader, writer = await asyncio.wait_for(
+                    asyncio.open_connection('127.0.0.1', port), timeout=1.0)
+                writer.close()
+                await writer.wait_closed()
+                return True # Le port est ouvert
+            except (ConnectionRefusedError, asyncio.TimeoutError):
+                return False # Le port n'est pas ouvert
         return False
     
     async def health_check(self) -> bool:
@@ -380,16 +343,13 @@ class BackendManager:
             try:
                 self.logger.info(f"Arrêt backend PID {self.process.pid}")
                 
-                # Terminaison progressive
                 self.process.terminate()
-                
-                # Attente arrêt propre (5s max)
                 try:
-                    self.process.wait(timeout=5)
+                    await asyncio.to_thread(self.process.wait, timeout=5)
                 except subprocess.TimeoutExpired:
-                    # Force kill si nécessaire
+                    self.logger.warning("Timeout à l'arrêt, forçage...")
                     self.process.kill()
-                    self.process.wait()
+                    await asyncio.to_thread(self.process.wait, timeout=5)
                     
                 self.logger.info("Backend arrêté")
                 
@@ -408,7 +368,7 @@ class BackendManager:
             'port': result['port'],
             'url': result['url'],
             'pid': result['pid'],
-            'job_id': result['pid'],  # Compatibilité scripts PowerShell
+            'job_id': result['pid'],
             'health_endpoint': f"{result['url']}{self.health_endpoint}",
             'start_time': time.time()
         }
