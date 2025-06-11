@@ -48,26 +48,26 @@ try {
     $env:PYTHONIOENCODING = "utf-8"
     # Définir un drapeau pour que les scripts Python sachent qu'ils sont exécutés par ce script
     $env:IS_ACTIVATION_SCRIPT_RUNNING = "true"
+    
     # Recherche et activation de l'environnement conda/venv
     $CondaActivated = $false
     $VenvActivated = $false
-    
-    # Tentative d'activation conda
     $PythonExecutable = $null
+
+    # Tentative d'activation conda
     try {
-        # Approche robuste : trouver le chemin de l'environnement via `conda info`
         Write-Host "[INFO] Recherche de l'environnement Conda 'projet-is' via JSON..." -ForegroundColor Gray
         $conda_info_json = conda info --envs --json | ConvertFrom-Json
         $projet_is_path = $conda_info_json.envs | Where-Object { $_ -like '*\projet-is' } | Select-Object -First 1
 
         if ($projet_is_path) {
-            $CondaActivated = $true # Marqueur pour le logging
+            $CondaActivated = $true
             Write-Host "✅ [CONDA] Environnement 'projet-is' localisé: $projet_is_path" -ForegroundColor Green
             $PythonExecutable = Join-Path $projet_is_path "python.exe"
             
             if (-not (Test-Path $PythonExecutable)) {
                 Write-Host "❌ [PYTHON] Exécutable introuvable: $PythonExecutable. Utilisation de 'python' par défaut." -ForegroundColor Red
-                $PythonExecutable = $null # Annuler pour permettre fallback
+                $PythonExecutable = $null
             }
         } else {
             Write-Host "⚠️ [CONDA] Environnement 'projet-is' introuvable via `conda info --json`." -ForegroundColor Yellow
@@ -97,8 +97,6 @@ try {
     if (!$CondaActivated -and !$VenvActivated) {
         Write-Host "[ATTENTION] PYTHON SYSTEME UTILISE!" -ForegroundColor Red
         Write-Host "⚠️  Aucun environnement virtuel détecté." -ForegroundColor Yellow
-        Write-Host "⚠️  Recommandation: conda env create -f environment.yml" -ForegroundColor Yellow
-        Write-Host "⚠️  Puis: conda activate projet-is" -ForegroundColor Yellow
     }
     
     # Verification de Python
@@ -108,7 +106,6 @@ try {
         Write-Host "[PYTHON] Version: $PythonVersion" -ForegroundColor Green
         Write-Host "[PYTHON] Executable: $PythonPath" -ForegroundColor Cyan
         
-        # Diagnostic rapide environnement
         $EnvType = if ($CondaActivated) { "CONDA" } elseif ($VenvActivated) { "VENV" } else { "SYSTEME" }
         Write-Host "[ENVIRONNEMENT] Type: $EnvType" -ForegroundColor $(if ($EnvType -eq "SYSTEME") { "Yellow" } else { "Green" })
         
@@ -123,21 +120,17 @@ try {
     Write-Host "[COMMANDE] $CommandToRun" -ForegroundColor Cyan
     Write-Host ("=" * 80) -ForegroundColor Gray
     
-    # Déterminer la commande finale à exécuter
     $FinalCommand = $CommandToRun
     if ($PythonExecutable -and $CommandToRun.StartsWith("python ")) {
-        # Remplacer "python" par le chemin complet et absolu de l'exécutable
         $CommandArgs = $CommandToRun.Substring(7)
-        # Envelopper le chemin de l'exécutable dans des guillemets pour gérer les espaces
         $FinalCommand = "& `"$PythonExecutable`" $CommandArgs"
         Write-Host "[INFO] Exécution avec le Python de l'environnement: $PythonExecutable" -ForegroundColor Green
-    } else {
-        # Exécution standard si ce n'est pas une commande python ou si l'exécutable n'a pas été trouvé
-        $FinalCommand = $CommandToRun
     }
-    
-    # Exécuter la commande finale en utilisant Invoke-Expression pour une gestion robuste des arguments
-    Invoke-Expression $FinalCommand
+ 
+    if ($FinalCommand) {
+        Write-Host "▶️ [CMD] Exécution: $FinalCommand" -ForegroundColor Cyan
+        Invoke-Expression $FinalCommand
+    }
     
     $ExitCode = $LASTEXITCODE
     Write-Host ("=" * 80) -ForegroundColor Gray
@@ -146,8 +139,6 @@ try {
         Write-Host "[SUCCES] Commande executee avec succes (code: $ExitCode)" -ForegroundColor Green
     } else {
         Write-Host "[ECHEC] Echec de la commande (code: $ExitCode)" -ForegroundColor Red
-        Write-Host "[AIDE] Verifiez l'environnement avec:" -ForegroundColor Yellow
-        Write-Host "       .\setup_project_env.ps1 -CommandToRun 'python scripts/env/diagnose_environment.py'" -ForegroundColor Yellow
     }
     
     return $ExitCode

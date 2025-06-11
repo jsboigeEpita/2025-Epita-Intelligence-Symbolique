@@ -175,11 +175,11 @@ class UnifiedWebOrchestrator:
             except Exception as e:
                 print(f"[PORTS] Erreur gestionnaire centralisé: {e}, utilisation des valeurs par défaut")
                 backend_port = 5003
-                frontend_port = 3000
+                frontend_port = 8081
                 fallback_ports = [5004, 5005, 5006]
         else:
             backend_port = 5003
-            frontend_port = 3000
+            frontend_port = 8081
             fallback_ports = [5004, 5005, 5006]
         
         return {
