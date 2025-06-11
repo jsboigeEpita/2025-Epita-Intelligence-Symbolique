@@ -25,6 +25,11 @@ import sys
 from pathlib import Path
 from typing import Dict, List, Any
 
+# Ajout du répertoire racine au sys.path pour permettre l'import de scripts.core
+current_dir = Path(__file__).parent
+project_root = current_dir.parent
+sys.path.insert(0, str(project_root))
+
 # Activation automatique de l'environnement
 from scripts.core.auto_env import ensure_env
 ensure_env()

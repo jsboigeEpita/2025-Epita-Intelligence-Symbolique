@@ -43,6 +43,12 @@ def ensure_env(env_name: str = "projet-is", silent: bool = True) -> bool:
     Returns:
         True si l'environnement est (ou a été) activé avec succès, False sinon.
     """
+    # Logique de court-circuit si le script d'activation principal est déjà en cours d'exécution
+    if os.getenv('IS_ACTIVATION_SCRIPT_RUNNING') == 'true':
+        if not silent:
+            print("[auto_env] Court-circuit: Exécution via le script d'activation principal déjà en cours.")
+        return True # On considère que l'environnement est déjà correctement configuré
+
     try:
         # --- Début de l'insertion pour sys.path (si nécessaire pour trouver scripts.core) ---
         # Cette section assure que scripts.core est dans sys.path pour les imports suivants.
