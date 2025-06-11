@@ -41,26 +41,56 @@ function Write-Log {
 try {
     Write-Log "Activation environnement projet via Python..."
     
-    # Construction de la commande Python
+    # Chemin vers le script Python environment_manager.py
     $pythonScriptPath = Join-Path $ProjectRoot $PythonModule
-    $pythonArgs = @("python", $pythonScriptPath)
-    
+
+    # Commande 1: Activer l'environnement (sans exécuter de commande interne pour l'instant)
+    # $pythonActivateArgs = @("python", $pythonScriptPath)
+    # Write-Log "Activation initiale de l'environnement..."
+    # & $pythonActivateArgs[0] $pythonActivateArgs[1..($pythonActivateArgs.Length-1)]
+    # if ($LASTEXITCODE -ne 0) {
+    #     Write-Log "Échec de l'activation initiale de l'environnement." "ERROR"
+    #     exit 1
+    # }
+    # Write-Log "Activation initiale réussie." "SUCCESS"
+
+    # Si une commande est fournie, la décomposer et l'exécuter séquentiellement
+    # Chaque commande sera passée à environment_manager.py pour être exécutée DANS l'environnement activé.
     if ($CommandToRun) {
-        $pythonArgs += "--command", $CommandToRun
-        Write-Log "Commande à exécuter: $CommandToRun"
-    }
-    
-    # Exécution via le module Python
-    & $pythonArgs[0] $pythonArgs[1..($pythonArgs.Length-1)]
-    $exitCode = $LASTEXITCODE
-    
-    if ($exitCode -eq 0) {
-        Write-Log "Environnement activé avec succès" "SUCCESS"
+        Write-Log "Commandes à exécuter séquentiellement: $CommandToRun"
+        $commands = $CommandToRun.Split(';') | ForEach-Object {$_.Trim()}
+        
+        foreach ($cmd in $commands) {
+            if (-not [string]::IsNullOrWhiteSpace($cmd)) {
+                Write-Log "Exécution de la sous-commande: $cmd"
+                $pythonExecArgs = @("python", $pythonScriptPath, "--command", $cmd)
+                
+                # Exécution via le module Python
+                & $pythonExecArgs[0] $pythonExecArgs[1..($pythonExecArgs.Length-1)]
+                $exitCode = $LASTEXITCODE
+                
+                if ($exitCode -ne 0) {
+                    Write-Log "Échec de la sous-commande '$cmd' (Code: $exitCode)" "ERROR"
+                    exit $exitCode # Arrêter si une sous-commande échoue
+                }
+                Write-Log "Sous-commande '$cmd' exécutée avec succès." "SUCCESS"
+            }
+        }
+        Write-Log "Toutes les sous-commandes exécutées." "SUCCESS"
+        exit 0 # Succès global si toutes les sous-commandes ont réussi
     } else {
-        Write-Log "Échec activation (Code: $exitCode)" "ERROR"
+        # Si aucune commande n'est fournie, juste activer l'environnement
+        Write-Log "Activation simple de l'environnement (pas de commande à exécuter)."
+        $pythonActivateOnlyArgs = @("python", $pythonScriptPath)
+        & $pythonActivateOnlyArgs[0] $pythonActivateOnlyArgs[1..($pythonActivateOnlyArgs.Length-1)]
+        $exitCode = $LASTEXITCODE
+        if ($exitCode -eq 0) {
+            Write-Log "Environnement activé avec succès (sans commande)." "SUCCESS"
+        } else {
+            Write-Log "Échec de l'activation de l'environnement (sans commande) (Code: $exitCode)." "ERROR"
+        }
+        exit $exitCode
     }
-    
-    exit $exitCode
     
 } catch {
     Write-Log "Erreur critique: $($_.Exception.Message)" "ERROR"

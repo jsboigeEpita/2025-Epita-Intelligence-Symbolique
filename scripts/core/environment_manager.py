@@ -207,12 +207,39 @@ class EnvironmentManager:
         if not self.check_conda_env_exists(env_name):
             self.logger.error(f"Environnement conda '{env_name}' non trouvé")
             raise RuntimeError(f"Environnement conda '{env_name}' non disponible")
+
+        # Si 'command' est une liste, la joindre. Si c'est une chaîne, la garder.
+        # Cela est pour préparer l'exécution via un shell si nécessaire.
+        if isinstance(command, list):
+            command_str_for_shell = ' '.join(command)
+        else: # Devrait déjà être une chaîne si on passe par activate_project_environment avec une chaîne de commandes
+            command_str_for_shell = command
+
+        # Construire la commande conda run pour exécuter la chaîne de commandes via le shell par défaut de l'OS
+        # Sur Windows, cmd.exe est souvent le shell par défaut pour conda run, qui gère les ';'
+        # Pour forcer PowerShell (plus robuste pour les scripts complexes) :
+        # conda_cmd = ['conda', 'run', '-n', env_name, '--no-capture-output', 'powershell', '-Command', command_str_for_shell]
+        # Pour l'instant, on laisse conda run utiliser son shell par défaut, qui devrait gérer les ';' sur Windows.
+        # Si la commande est simple (une seule commande logique), on peut l'exécuter directement.
+        # Si elle contient ';', elle est probablement destinée à un shell.
+        if ';' in command_str_for_shell or '&' in command_str_for_shell or '|' in command_str_for_shell:
+             # Sur Windows, cmd.exe est souvent le shell par défaut pour conda run.
+             # Pour s'assurer que les commandes multiples fonctionnent, on peut les passer à 'cmd /c'
+             # ou 'powershell -Command'. 'cmd /c' est plus simple pour les points-virgules.
+            if os.name == 'nt':
+                conda_cmd = ['conda', 'run', '-n', env_name, '--no-capture-output', 'cmd', '/c', command_str_for_shell]
+                self.logger.info(f"DEBUG: Commande conda (via cmd /c) construite: {' '.join(conda_cmd)}")
+            else: # Pour Unix, bash est typique
+                conda_cmd = ['conda', 'run', '-n', env_name, '--no-capture-output', 'bash', '-c', command_str_for_shell]
+                self.logger.info(f"DEBUG: Commande conda (via bash -c) construite: {' '.join(conda_cmd)}")
+        else:
+            # Si c'est une commande simple (pas de ';', '&', '|'), on la passe comme avant (liste d'arguments)
+            # `command` doit être une liste ici. Si c'était une chaîne simple, elle devient une liste d'un élément.
+            final_command_parts = command_str_for_shell.split()
+            conda_cmd = ['conda', 'run', '-n', env_name, '--no-capture-output'] + final_command_parts
+            self.logger.info(f"DEBUG: Commande conda (directe) construite: {' '.join(conda_cmd)}")
         
-        # Construire la commande conda run
-        conda_cmd = ['conda', 'run', '-n', env_name, '--no-capture-output'] + command
-        self.logger.info(f"DEBUG: Commande conda construite: {' '.join(conda_cmd)}") 
-        
-        self.logger.debug(f"Exécution dans conda '{env_name}': {' '.join(command)}")
+        self.logger.debug(f"Exécution dans conda '{env_name}': {command_str_for_shell}")
         
         try:
             if capture_output:
@@ -348,15 +375,10 @@ class EnvironmentManager:
             self.logger.info(f"Exécution de: {command_to_run}")
             
             try:
-                # Parser la commande
-                # Si la commande est un .py, on la préfixe par python
-                if command_to_run.endswith(".py"):
-                    cmd_parts = ["python", command_to_run]
-                else:
-                    cmd_parts = command_to_run.split()
-                
-                self.logger.info(f"DEBUG: cmd_parts avant run_in_conda_env: {cmd_parts}") 
-                result = self.run_in_conda_env(cmd_parts, env_name=env_name)
+                # La commande est maintenant passée comme une chaîne unique à run_in_conda_env
+                # qui va la gérer pour l'exécution via un shell si nécessaire.
+                self.logger.info(f"DEBUG: command_to_run (chaîne) avant run_in_conda_env: {command_to_run}")
+                result = self.run_in_conda_env(command_to_run, env_name=env_name) # Passer la chaîne directement
                 return result.returncode
             
             except Exception as e:

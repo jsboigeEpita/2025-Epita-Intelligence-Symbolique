@@ -169,8 +169,10 @@ class BackendManager:
             self.logger.info(f"Utilisation de l'interpréteur Python de l'environnement Conda '{conda_env_name}': {python_exe_path}")
 
             # Commande de démarrage pour FastAPI avec Uvicorn
+            # S'assurer que l'attribut de l'application (généralement 'app') est spécifié
+            app_module_with_attribute = f"{self.module}:app"
             cmd = [
-                python_exe_path, '-m', 'uvicorn', self.module,
+                python_exe_path, '-m', 'uvicorn', app_module_with_attribute,
                 '--host', '0.0.0.0', '--port', str(port)
             ]
             

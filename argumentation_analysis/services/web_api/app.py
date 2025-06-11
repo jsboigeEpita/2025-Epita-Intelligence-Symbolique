@@ -19,7 +19,7 @@ from flask import Flask, request, jsonify, redirect, url_for
 from flask_cors import CORS
 from werkzeug.exceptions import HTTPException # Ajout pour la gestion des erreurs HTTP
 from typing import Dict, Any, Optional
-from a2wsgi import ASGIMiddleware # MODIF: Correction du nom de l'import pour a2wsgi
+from a2wsgi import WSGIMiddleware # MODIF: Utiliser WSGIMiddleware pour envelopper une app Flask (WSGI)
 
 # Ajouter le répertoire racine au chemin Python
 current_dir = Path(__file__).parent
@@ -118,8 +118,8 @@ except ImportError as e_abs:
 flask_app = Flask(__name__) # MODIF: Renommer en flask_app
 CORS(flask_app)  # Activer CORS pour les appels depuis React
 
-# Envelopper l'application Flask avec ASGIMiddleware pour Uvicorn
-app = ASGIMiddleware(flask_app) # MODIF: Créer l'objet app ASGI
+# Envelopper l'application Flask avec WSGIMiddleware pour Uvicorn
+app = WSGIMiddleware(flask_app) # MODIF: Utiliser WSGIMiddleware
 
 # Configuration
 flask_app.config['JSON_AS_ASCII'] = False  # Support des caractères UTF-8 # MODIF: Utiliser flask_app
