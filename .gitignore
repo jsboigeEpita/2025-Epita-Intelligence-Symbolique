@@ -225,3 +225,6 @@ venv_temp/
 "sessions/" 
 
 # Log files
+
+# Fichiers de log
+*.log
