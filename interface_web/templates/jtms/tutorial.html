@@ -1,0 +1,1114 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tutoriel JTMS - Intelligence Symbolique EPITA</title>
+    
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/jtms.css') }}">
+    
+    <style>
+        .tutorial-sidebar {
+            background: #f8f9fa;
+            border-right: 1px solid #e9ecef;
+            min-height: calc(100vh - 76px);
+            padding: 1.5rem;
+        }
+        
+        .tutorial-content {
+            padding: 2rem;
+            max-width: 800px;
+        }
+        
+        .lesson-item {
+            display: block;
+            padding: 0.75rem 1rem;
+            margin-bottom: 0.5rem;
+            border-radius: 8px;
+            text-decoration: none;
+            color: #495057;
+            border: 1px solid transparent;
+            transition: all 0.3s ease;
+        }
+        
+        .lesson-item:hover {
+            background: #e9ecef;
+            color: #007bff;
+            text-decoration: none;
+        }
+        
+        .lesson-item.active {
+            background: #007bff;
+            color: white;
+            border-color: #007bff;
+        }
+        
+        .lesson-item.completed {
+            background: #28a745;
+            color: white;
+            border-color: #28a745;
+        }
+        
+        .lesson-number {
+            display: inline-block;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: #6c757d;
+            color: white;
+            text-align: center;
+            line-height: 24px;
+            font-size: 0.8rem;
+            margin-right: 0.75rem;
+        }
+        
+        .lesson-item.active .lesson-number {
+            background: white;
+            color: #007bff;
+        }
+        
+        .lesson-item.completed .lesson-number {
+            background: white;
+            color: #28a745;
+        }
+        
+        .lesson-section {
+            display: none;
+            animation: fadeIn 0.5s ease-out;
+        }
+        
+        .lesson-section.active {
+            display: block;
+        }
+        
+        .concept-box {
+            background: linear-gradient(135deg, #e3f2fd, #bbdefb);
+            border-left: 4px solid #2196f3;
+            padding: 1.5rem;
+            margin: 1.5rem 0;
+            border-radius: 8px;
+        }
+        
+        .example-box {
+            background: linear-gradient(135deg, #f3e5f5, #e1bee7);
+            border-left: 4px solid #9c27b0;
+            padding: 1.5rem;
+            margin: 1.5rem 0;
+            border-radius: 8px;
+        }
+        
+        .exercise-box {
+            background: linear-gradient(135deg, #fff3e0, #ffcc80);
+            border-left: 4px solid #ff9800;
+            padding: 1.5rem;
+            margin: 1.5rem 0;
+            border-radius: 8px;
+        }
+        
+        .interactive-demo {
+            border: 2px solid #007bff;
+            border-radius: 12px;
+            padding: 2rem;
+            margin: 2rem 0;
+            background: white;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        
+        .belief-node {
+            display: inline-block;
+            background: #007bff;
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            margin: 0.25rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: 2px solid transparent;
+        }
+        
+        .belief-node:hover {
+            transform: scale(1.05);
+            border-color: #0056b3;
+        }
+        
+        .belief-node.valid {
+            background: #28a745;
+        }
+        
+        .belief-node.invalid {
+            background: #dc3545;
+        }
+        
+        .belief-node.unknown {
+            background: #6c757d;
+        }
+        
+        .justification-line {
+            margin: 1rem 0;
+            padding: 1rem;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border-left: 3px solid #007bff;
+        }
+        
+        .progress-indicator {
+            background: white;
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        
+        .progress-bar-custom {
+            height: 8px;
+            border-radius: 4px;
+            background: #e9ecef;
+            overflow: hidden;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #007bff, #28a745);
+            border-radius: 4px;
+            transition: width 0.8s ease;
+        }
+        
+        .quiz-container {
+            background: white;
+            border-radius: 12px;
+            padding: 2rem;
+            margin: 2rem 0;
+            border: 1px solid #e9ecef;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        
+        .quiz-question {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 1.5rem;
+            color: #2d3436;
+        }
+        
+        .quiz-option {
+            background: #f8f9fa;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 0.75rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .quiz-option:hover {
+            border-color: #007bff;
+            background: #e3f2fd;
+        }
+        
+        .quiz-option.selected {
+            border-color: #007bff;
+            background: #e3f2fd;
+        }
+        
+        .quiz-option.correct {
+            border-color: #28a745;
+            background: #d4edda;
+        }
+        
+        .quiz-option.incorrect {
+            border-color: #dc3545;
+            background: #f8d7da;
+        }
+        
+        .navigation-buttons {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 2rem;
+            padding-top: 2rem;
+            border-top: 1px solid #e9ecef;
+        }
+        
+        .code-example {
+            background: #2d3748;
+            color: #e2e8f0;
+            padding: 1.5rem;
+            border-radius: 8px;
+            margin: 1rem 0;
+            font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+            overflow-x: auto;
+        }
+        
+        .code-keyword {
+            color: #81c784;
+        }
+        
+        .code-string {
+            color: #ffb74d;
+        }
+        
+        .code-comment {
+            color: #9e9e9e;
+            font-style: italic;
+        }
+        
+        .achievement-badge {
+            display: inline-block;
+            background: #ffd700;
+            color: #8b6914;
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            font-weight: 600;
+            margin: 0.25rem;
+            animation: bounceIn 0.6s ease-out;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        @keyframes bounceIn {
+            0% { transform: scale(0); }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
+        
+        .mini-network {
+            width: 100%;
+            height: 200px;
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            background: #f8f9fa;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .network-node {
+            position: absolute;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: white;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .network-edge {
+            position: absolute;
+            height: 2px;
+            background: #6c757d;
+            transform-origin: left center;
+        }
+        
+        .tooltip-custom {
+            position: absolute;
+            background: #212529;
+            color: white;
+            padding: 0.5rem;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            z-index: 1000;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        
+        @media (max-width: 768px) {
+            .tutorial-sidebar {
+                min-height: auto;
+                border-right: none;
+                border-bottom: 1px solid #e9ecef;
+            }
+            
+            .tutorial-content {
+                padding: 1rem;
+            }
+            
+            .interactive-demo {
+                padding: 1rem;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-0">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="{{ url_for('index') }}">
+                <i class="fas fa-brain"></i> Intelligence Symbolique EPITA
+            </a>
+            
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('jtms.dashboard') }}">
+                            <i class="fas fa-tachometer-alt"></i> Dashboard JTMS
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('jtms.sessions_management') }}">
+                            <i class="fas fa-layer-group"></i> Sessions
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('jtms.sherlock_watson_interface') }}">
+                            <i class="fas fa-user-secret"></i> Sherlock/Watson
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link active" href="{{ url_for('jtms.tutorial') }}">
+                            <i class="fas fa-graduation-cap"></i> Tutoriel
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('jtms.playground') }}">
+                            <i class="fas fa-play"></i> Playground
+                        </a>
+                    </li>
+                </ul>
+                
+                <span class="navbar-text">
+                    <i class="fas fa-user-graduate"></i> Mode Apprentissage
+                </span>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid p-0">
+        <div class="row g-0">
+            <!-- Sidebar du tutoriel -->
+            <div class="col-lg-3 tutorial-sidebar">
+                <div class="progress-indicator">
+                    <h5><i class="fas fa-chart-line"></i> Progression</h5>
+                    <div class="progress-bar-custom">
+                        <div class="progress-fill" id="progressFill" style="width: 0%"></div>
+                    </div>
+                    <div class="mt-2">
+                        <small class="text-muted">
+                            <span id="currentLesson">0</span> / <span id="totalLessons">8</span> leçons complétées
+                        </small>
+                    </div>
+                </div>
+                
+                <h5><i class="fas fa-list"></i> Plan du Cours</h5>
+                
+                <div class="lessons-list">
+                    <a href="#" class="lesson-item active" data-lesson="1" onclick="showLesson(1)">
+                        <span class="lesson-number">1</span>
+                        Introduction au JTMS
+                    </a>
+                    
+                    <a href="#" class="lesson-item" data-lesson="2" onclick="showLesson(2)">
+                        <span class="lesson-number">2</span>
+                        Croyances et Justifications
+                    </a>
+                    
+                    <a href="#" class="lesson-item" data-lesson="3" onclick="showLesson(3)">
+                        <span class="lesson-number">3</span>
+                        Types de Justifications
+                    </a>
+                    
+                    <a href="#" class="lesson-item" data-lesson="4" onclick="showLesson(4)">
+                        <span class="lesson-number">4</span>
+                        Propagation des Croyances
+                    </a>
+                    
+                    <a href="#" class="lesson-item" data-lesson="5" onclick="showLesson(5)">
+                        <span class="lesson-number">5</span>
+                        Gestion des Contradictions
+                    </a>
+                    
+                    <a href="#" class="lesson-item" data-lesson="6" onclick="showLesson(6)">
+                        <span class="lesson-number">6</span>
+                        Révision de Croyances
+                    </a>
+                    
+                    <a href="#" class="lesson-item" data-lesson="7" onclick="showLesson(7)">
+                        <span class="lesson-number">7</span>
+                        Exemples Pratiques
+                    </a>
+                    
+                    <a href="#" class="lesson-item" data-lesson="8" onclick="showLesson(8)">
+                        <span class="lesson-number">8</span>
+                        Évaluation Finale
+                    </a>
+                </div>
+                
+                <div class="mt-4">
+                    <h6><i class="fas fa-trophy"></i> Récompenses</h6>
+                    <div id="achievements"></div>
+                </div>
+            </div>
+            
+            <!-- Contenu principal -->
+            <div class="col-lg-9 tutorial-content">
+                <!-- Leçon 1: Introduction -->
+                <div class="lesson-section active" id="lesson1">
+                    <h1>
+                        <i class="fas fa-rocket text-primary"></i>
+                        Introduction au JTMS
+                    </h1>
+                    
+                    <p class="lead">
+                        Bienvenue dans ce tutoriel interactif sur les <strong>Justification-based Truth Maintenance Systems</strong> !
+                    </p>
+                    
+                    <div class="concept-box">
+                        <h4><i class="fas fa-lightbulb"></i> Qu'est-ce qu'un JTMS ?</h4>
+                        <p>
+                            Un JTMS est un système qui maintient automatiquement la cohérence d'une base de connaissances en :
+                        </p>
+                        <ul>
+                            <li><strong>Gérant les croyances</strong> : ce que le système "croit" être vrai</li>
+                            <li><strong>Traçant les justifications</strong> : pourquoi il croit que c'est vrai</li>
+                            <li><strong>Propageant les changements</strong> : mise à jour automatique</li>
+                            <li><strong>Détectant les contradictions</strong> : résolution des conflits</li>
+                        </ul>
+                    </div>
+                    
+                    <div class="example-box">
+                        <h5><i class="fas fa-eye"></i> Exemple Concret</h5>
+                        <p>Imaginez un système qui doit déterminer si "Tweety peut voler" :</p>
+                        <div class="interactive-demo">
+                            <h6>Démonstration Interactive</h6>
+                            <div id="tweety-demo">
+                                <div class="belief-node" data-belief="tweety-oiseau">Tweety est un oiseau</div>
+                                <div class="belief-node" data-belief="oiseaux-volent">Les oiseaux volent</div>
+                                <div class="belief-node unknown" data-belief="tweety-vole">Tweety peut voler ?</div>
+                                
+                                <div class="mt-3">
+                                    <button class="btn btn-primary" onclick="applyRule()">
+                                        <i class="fas fa-magic"></i> Appliquer la règle
+                                    </button>
+                                    <button class="btn btn-warning" onclick="addException()">
+                                        <i class="fas fa-exclamation-triangle"></i> Ajouter exception (pingouin)
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="quiz-container">
+                        <h5><i class="fas fa-question-circle"></i> Quiz Rapide</h5>
+                        <div class="quiz-question">
+                            Quel est l'avantage principal d'un JTMS par rapport à une base de données classique ?
+                        </div>
+                        <div class="quiz-option" data-answer="a">
+                            A) Il stocke plus de données
+                        </div>
+                        <div class="quiz-option" data-answer="b">
+                            B) Il maintient automatiquement la cohérence logique
+                        </div>
+                        <div class="quiz-option" data-answer="c">
+                            C) Il est plus rapide
+                        </div>
+                        <div class="quiz-option" data-answer="d">
+                            D) Il coûte moins cher
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Leçon 2: Croyances et Justifications -->
+                <div class="lesson-section" id="lesson2">
+                    <h1>
+                        <i class="fas fa-puzzle-piece text-success"></i>
+                        Croyances et Justifications
+                    </h1>
+                    
+                    <div class="concept-box">
+                        <h4><i class="fas fa-brain"></i> Les Croyances (Beliefs)</h4>
+                        <p>
+                            Une croyance représente une proposition que le système considère comme vraie, fausse, ou inconnue.
+                        </p>
+                        <div class="row mt-3">
+                            <div class="col-md-4">
+                                <div class="text-center">
+                                    <div class="belief-node valid">VRAIE</div>
+                                    <p><small>Le système croit que c'est vrai</small></p>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="text-center">
+                                    <div class="belief-node invalid">FAUSSE</div>
+                                    <p><small>Le système croit que c'est faux</small></p>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="text-center">
+                                    <div class="belief-node unknown">INCONNUE</div>
+                                    <p><small>Le système ne sait pas</small></p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="example-box">
+                        <h4><i class="fas fa-link"></i> Les Justifications</h4>
+                        <p>
+                            Une justification explique <em>pourquoi</em> une croyance est vraie ou fausse.
+                        </p>
+                        
+                        <div class="interactive-demo">
+                            <h6>Construction d'une Justification</h6>
+                            <div id="justification-builder">
+                                <div class="justification-line">
+                                    <strong>REGLE:</strong> Si A et B alors C
+                                    <div class="mt-2">
+                                        <span class="belief-node valid">A est vrai</span>
+                                        <span class="mx-2">+</span>
+                                        <span class="belief-node valid">B est vrai</span>
+                                        <span class="mx-2">→</span>
+                                        <span class="belief-node valid">C est vrai</span>
+                                    </div>
+                                </div>
+                                
+                                <div class="mt-3">
+                                    <button class="btn btn-success" onclick="demonstrateJustification()">
+                                        <i class="fas fa-play"></i> Démonstrer
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="exercise-box">
+                        <h5><i class="fas fa-pencil-alt"></i> Exercice Pratique</h5>
+                        <p>Créez votre propre justification :</p>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <label class="form-label">Prémisse 1:</label>
+                                <input type="text" class="form-control" id="premise1" placeholder="Ex: Il pleut">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Prémisse 2:</label>
+                                <input type="text" class="form-control" id="premise2" placeholder="Ex: J'ai un parapluie">
+                            </div>
+                        </div>
+                        <div class="mt-3">
+                            <label class="form-label">Conclusion:</label>
+                            <input type="text" class="form-control" id="conclusion" placeholder="Ex: Je peux sortir sans me mouiller">
+                        </div>
+                        <div class="mt-3">
+                            <button class="btn btn-primary" onclick="createJustification()">
+                                <i class="fas fa-plus"></i> Créer la Justification
+                            </button>
+                        </div>
+                        <div id="user-justification" class="mt-3"></div>
+                    </div>
+                </div>
+                
+                <!-- Leçon 3: Types de Justifications -->
+                <div class="lesson-section" id="lesson3">
+                    <h1>
+                        <i class="fas fa-sitemap text-warning"></i>
+                        Types de Justifications
+                    </h1>
+                    
+                    <div class="concept-box">
+                        <h4><i class="fas fa-layer-group"></i> Classification des Justifications</h4>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <h6>1. Justifications de Support (SL)</h6>
+                                <p>Listent les croyances qui <strong>supportent</strong> la conclusion.</p>
+                                <div class="code-example">
+<span class="code-keyword">SL</span>(<span class="code-string">"Tweety vole"</span>) = [<span class="code-string">"Tweety oiseau"</span>, <span class="code-string">"Oiseaux volent"</span>]
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <h6>2. Justifications de Négation (NSL)</h6>
+                                <p>Listent les croyances qui <strong>contredisent</strong> la conclusion.</p>
+                                <div class="code-example">
+<span class="code-keyword">NSL</span>(<span class="code-string">"Tweety vole"</span>) = [<span class="code-string">"Tweety pingouin"</span>]
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="interactive-demo">
+                        <h5><i class="fas fa-cogs"></i> Simulateur de Justifications</h5>
+                        <div class="mini-network" id="justification-network">
+                            <!-- Réseau interactif sera créé par JavaScript -->
+                        </div>
+                        <div class="mt-3">
+                            <div class="btn-group" role="group">
+                                <button class="btn btn-outline-success" onclick="showSupportList()">
+                                    <i class="fas fa-arrow-up"></i> Liste Support
+                                </button>
+                                <button class="btn btn-outline-danger" onclick="showNegationList()">
+                                    <i class="fas fa-arrow-down"></i> Liste Négation
+                                </button>
+                                <button class="btn btn-outline-info" onclick="resetNetwork()">
+                                    <i class="fas fa-redo"></i> Reset
+                                </button>
+                            </div>
+                        </div>
+                        <div id="network-info" class="mt-3"></div>
+                    </div>
+                </div>
+                
+                <!-- Leçon 4: Propagation -->
+                <div class="lesson-section" id="lesson4">
+                    <h1>
+                        <i class="fas fa-broadcast-tower text-info"></i>
+                        Propagation des Croyances
+                    </h1>
+                    
+                    <div class="concept-box">
+                        <h4><i class="fas fa-wave-square"></i> Mécanisme de Propagation</h4>
+                        <p>
+                            Quand une croyance change, le JTMS met automatiquement à jour toutes les croyances dépendantes.
+                        </p>
+                        <ol>
+                            <li><strong>Détection du changement</strong> : Une croyance passe de vraie à fausse</li>
+                            <li><strong>Identification des dépendances</strong> : Quelles autres croyances en dépendent ?</li>
+                            <li><strong>Réévaluation</strong> : Recalcul des statuts des croyances dépendantes</li>
+                            <li><strong>Propagation récursive</strong> : Le processus continue en cascade</li>
+                        </ol>
+                    </div>
+                    
+                    <div class="interactive-demo">
+                        <h5><i class="fas fa-play-circle"></i> Démonstration de Propagation</h5>
+                        <p>Cliquez sur les croyances pour voir la propagation en action :</p>
+                        
+                        <div id="propagation-demo" class="text-center">
+                            <div class="row justify-content-center">
+                                <div class="col-auto">
+                                    <div class="belief-node valid" data-node="weather" onclick="toggleBelief('weather')">
+                                        Il fait beau
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="row justify-content-center mt-3">
+                                <div class="col-auto">
+                                    <div class="belief-node valid" data-node="picnic" onclick="toggleBelief('picnic')">
+                                        Pique-nique possible
+                                    </div>
+                                </div>
+                                <div class="col-auto">
+                                    <div class="belief-node valid" data-node="swimming" onclick="toggleBelief('swimming')">
+                                        Baignade possible
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="row justify-content-center mt-3">
+                                <div class="col-auto">
+                                    <div class="belief-node valid" data-node="happiness" onclick="toggleBelief('happiness')">
+                                        Bonne humeur
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="mt-3">
+                            <small class="text-muted">
+                                <i class="fas fa-info-circle"></i>
+                                Cliquez sur "Il fait beau" pour voir l'effet de propagation
+                            </small>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Navigation -->
+                <div class="navigation-buttons">
+                    <button class="btn btn-outline-secondary" onclick="previousLesson()">
+                        <i class="fas fa-arrow-left"></i> Précédent
+                    </button>
+                    
+                    <button class="btn btn-primary" onclick="nextLesson()">
+                        Suivant <i class="fas fa-arrow-right"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://kit.fontawesome.com/your-fontawesome-kit.js" crossorigin="anonymous"></script>
+    
+    <script>
+        // État global du tutoriel
+        let currentLessonNumber = 1;
+        let completedLessons = new Set();
+        let userProgress = {
+            lesson1: false,
+            lesson2: false,
+            lesson3: false,
+            lesson4: false,
+            lesson5: false,
+            lesson6: false,
+            lesson7: false,
+            lesson8: false
+        };
+        
+        // Initialisation
+        document.addEventListener('DOMContentLoaded', function() {
+            updateProgress();
+            initializeNetworks();
+            console.log('📚 Tutoriel JTMS chargé');
+        });
+        
+        // Navigation entre leçons
+        function showLesson(lessonNumber) {
+            // Cacher toutes les leçons
+            document.querySelectorAll('.lesson-section').forEach(section => {
+                section.classList.remove('active');
+            });
+            
+            // Afficher la leçon sélectionnée
+            document.getElementById(`lesson${lessonNumber}`).classList.add('active');
+            
+            // Mettre à jour la navigation
+            document.querySelectorAll('.lesson-item').forEach(item => {
+                item.classList.remove('active');
+            });
+            document.querySelector(`[data-lesson="${lessonNumber}"]`).classList.add('active');
+            
+            currentLessonNumber = lessonNumber;
+            console.log(`Leçon ${lessonNumber} affichée`);
+        }
+        
+        function nextLesson() {
+            markLessonCompleted(currentLessonNumber);
+            if (currentLessonNumber < 8) {
+                showLesson(currentLessonNumber + 1);
+            }
+        }
+        
+        function previousLesson() {
+            if (currentLessonNumber > 1) {
+                showLesson(currentLessonNumber - 1);
+            }
+        }
+        
+        // Gestion de la progression
+        function markLessonCompleted(lessonNumber) {
+            completedLessons.add(lessonNumber);
+            userProgress[`lesson${lessonNumber}`] = true;
+            
+            // Marquer visuellement comme complété
+            const lessonItem = document.querySelector(`[data-lesson="${lessonNumber}"]`);
+            lessonItem.classList.add('completed');
+            
+            updateProgress();
+            checkAchievements(lessonNumber);
+        }
+        
+        function updateProgress() {
+            const completedCount = completedLessons.size;
+            const progressPercent = (completedCount / 8) * 100;
+            
+            document.getElementById('progressFill').style.width = `${progressPercent}%`;
+            document.getElementById('currentLesson').textContent = completedCount;
+            document.getElementById('totalLessons').textContent = '8';
+        }
+        
+        // Système de récompenses
+        function checkAchievements(lessonNumber) {
+            const achievements = [];
+            
+            if (lessonNumber === 1) {
+                achievements.push('🚀 Premier pas');
+            }
+            if (completedLessons.size === 3) {
+                achievements.push('📚 Étudiant assidu');
+            }
+            if (completedLessons.size === 5) {
+                achievements.push('🧠 Expert en formation');
+            }
+            if (completedLessons.size === 8) {
+                achievements.push('🏆 Maître JTMS');
+            }
+            
+            achievements.forEach(achievement => {
+                addAchievement(achievement);
+            });
+        }
+        
+        function addAchievement(text) {
+            const achievementsDiv = document.getElementById('achievements');
+            const badge = document.createElement('div');
+            badge.className = 'achievement-badge';
+            badge.textContent = text;
+            achievementsDiv.appendChild(badge);
+        }
+        
+        // Démos interactives Leçon 1
+        function applyRule() {
+            const tweetyVole = document.querySelector('[data-belief="tweety-vole"]');
+            tweetyVole.classList.remove('unknown');
+            tweetyVole.classList.add('valid');
+            tweetyVole.textContent = 'Tweety peut voler ✓';
+            
+            setTimeout(() => {
+                alert('🎉 Règle appliquée avec succès ! Tweety peut voler car il est un oiseau.');
+            }, 500);
+        }
+        
+        function addException() {
+            const tweetyVole = document.querySelector('[data-belief="tweety-vole"]');
+            tweetyVole.classList.remove('valid');
+            tweetyVole.classList.add('invalid');
+            tweetyVole.textContent = 'Tweety ne peut pas voler ✗';
+            
+            // Ajouter nœud exception
+            const demo = document.getElementById('tweety-demo');
+            const exception = document.createElement('div');
+            exception.className = 'belief-node invalid';
+            exception.textContent = 'Tweety est un pingouin';
+            demo.appendChild(exception);
+            
+            setTimeout(() => {
+                alert('⚠️ Exception ajoutée ! Les pingouins sont des oiseaux qui ne volent pas.');
+            }, 500);
+        }
+        
+        // Quiz interactif
+        document.addEventListener('click', function(e) {
+            if (e.target.classList.contains('quiz-option')) {
+                // Désélectionner toutes les options
+                e.target.parentNode.querySelectorAll('.quiz-option').forEach(option => {
+                    option.classList.remove('selected');
+                });
+                
+                // Sélectionner l'option cliquée
+                e.target.classList.add('selected');
+                
+                // Vérifier la réponse après un délai
+                setTimeout(() => {
+                    checkQuizAnswer(e.target);
+                }, 300);
+            }
+        });
+        
+        function checkQuizAnswer(selectedOption) {
+            const allOptions = selectedOption.parentNode.querySelectorAll('.quiz-option');
+            
+            allOptions.forEach(option => {
+                if (option.dataset.answer === 'b') {
+                    option.classList.add('correct');
+                } else {
+                    option.classList.add('incorrect');
+                }
+            });
+            
+            if (selectedOption.dataset.answer === 'b') {
+                setTimeout(() => {
+                    alert('🎉 Correct ! Le JTMS maintient automatiquement la cohérence logique.');
+                    markLessonCompleted(1);
+                }, 500);
+            } else {
+                setTimeout(() => {
+                    alert('❌ Pas tout à fait. La bonne réponse est B : maintien automatique de la cohérence logique.');
+                }, 500);
+            }
+        }
+        
+        // Leçon 2: Exercice de création de justification
+        function createJustification() {
+            const premise1 = document.getElementById('premise1').value.trim();
+            const premise2 = document.getElementById('premise2').value.trim();
+            const conclusion = document.getElementById('conclusion').value.trim();
+            
+            if (!premise1 || !premise2 || !conclusion) {
+                alert('Veuillez remplir tous les champs');
+                return;
+            }
+            
+            const userJustificationDiv = document.getElementById('user-justification');
+            userJustificationDiv.innerHTML = `
+                <div class="justification-line">
+                    <strong>VOTRE JUSTIFICATION :</strong>
+                    <div class="mt-2">
+                        <span class="belief-node valid">${premise1}</span>
+                        <span class="mx-2">+</span>
+                        <span class="belief-node valid">${premise2}</span>
+                        <span class="mx-2">→</span>
+                        <span class="belief-node valid">${conclusion}</span>
+                    </div>
+                </div>
+            `;
+            
+            setTimeout(() => {
+                alert('✅ Excellente justification créée ! Vous comprenez le principe.');
+                markLessonCompleted(2);
+            }, 1000);
+        }
+        
+        function demonstrateJustification() {
+            alert('💡 Démonstration : Si A ET B sont vrais, alors C devient automatiquement vrai dans le JTMS !');
+        }
+        
+        // Leçon 3: Réseau de justifications
+        function initializeNetworks() {
+            const network = document.getElementById('justification-network');
+            if (!network) return;
+            
+            network.innerHTML = `
+                <div class="network-node" id="node-tweety" style="left: 100px; top: 150px; background: #007bff;">
+                    Tweety
+                </div>
+                <div class="network-node" id="node-bird" style="left: 50px; top: 50px; background: #28a745;">
+                    Oiseau
+                </div>
+                <div class="network-node" id="node-fly" style="left: 150px; top: 50px; background: #28a745;">
+                    Vole
+                </div>
+                <div class="network-node" id="node-penguin" style="left: 200px; top: 150px; background: #dc3545;">
+                    Pingouin
+                </div>
+                
+                <div class="network-edge" style="left: 75px; top: 90px; width: 50px; transform: rotate(45deg);"></div>
+                <div class="network-edge" style="left: 150px; top: 90px; width: 50px; transform: rotate(-45deg);"></div>
+                <div class="network-edge" style="left: 150px; top: 170px; width: 50px; background: #dc3545;"></div>
+            `;
+        }
+        
+        function showSupportList() {
+            document.getElementById('network-info').innerHTML = `
+                <div class="alert alert-success">
+                    <strong>Liste de Support (SL) :</strong><br>
+                    SL("Tweety vole") = ["Tweety oiseau", "Oiseaux volent"]
+                </div>
+            `;
+        }
+        
+        function showNegationList() {
+            document.getElementById('network-info').innerHTML = `
+                <div class="alert alert-danger">
+                    <strong>Liste de Négation (NSL) :</strong><br>
+                    NSL("Tweety vole") = ["Tweety pingouin"]
+                </div>
+            `;
+        }
+        
+        function resetNetwork() {
+            document.getElementById('network-info').innerHTML = '';
+        }
+        
+        // Leçon 4: Propagation
+        function toggleBelief(nodeId) {
+            const node = document.querySelector(`[data-node="${nodeId}"]`);
+            const isValid = node.classList.contains('valid');
+            
+            if (nodeId === 'weather') {
+                // Propagation depuis le nœud racine
+                const dependentNodes = ['picnic', 'swimming', 'happiness'];
+                
+                if (isValid) {
+                    // Passer en invalide
+                    node.classList.remove('valid');
+                    node.classList.add('invalid');
+                    node.textContent = 'Il pleut';
+                    
+                    // Propager aux nœuds dépendants
+                    dependentNodes.forEach(depNodeId => {
+                        setTimeout(() => {
+                            const depNode = document.querySelector(`[data-node="${depNodeId}"]`);
+                            depNode.classList.remove('valid');
+                            depNode.classList.add('invalid');
+                            
+                            switch(depNodeId) {
+                                case 'picnic':
+                                    depNode.textContent = 'Pique-nique annulé';
+                                    break;
+                                case 'swimming':
+                                    depNode.textContent = 'Baignade annulée';
+                                    break;
+                                case 'happiness':
+                                    depNode.textContent = 'Humeur morose';
+                                    break;
+                            }
+                        }, 500);
+                    });
+                } else {
+                    // Repasser en valide
+                    node.classList.remove('invalid');
+                    node.classList.add('valid');
+                    node.textContent = 'Il fait beau';
+                    
+                    // Propager aux nœuds dépendants
+                    dependentNodes.forEach(depNodeId => {
+                        setTimeout(() => {
+                            const depNode = document.querySelector(`[data-node="${depNodeId}"]`);
+                            depNode.classList.remove('invalid');
+                            depNode.classList.add('valid');
+                            
+                            switch(depNodeId) {
+                                case 'picnic':
+                                    depNode.textContent = 'Pique-nique possible';
+                                    break;
+                                case 'swimming':
+                                    depNode.textContent = 'Baignade possible';
+                                    break;
+                                case 'happiness':
+                                    depNode.textContent = 'Bonne humeur';
+                                    break;
+                            }
+                        }, 500);
+                    });
+                }
+                
+                setTimeout(() => {
+                    alert('🌊 Propagation terminée ! Observez comment un changement se propage dans tout le réseau.');
+                    markLessonCompleted(4);
+                }, 2000);
+            }
+        }
+        
+        // Raccourcis clavier
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'ArrowRight') {
+                nextLesson();
+            } else if (e.key === 'ArrowLeft') {
+                previousLesson();
+            }
+        });
+        
+        // Sauvegarde automatique de la progression
+        function saveProgress() {
+            localStorage.setItem('jtms_tutorial_progress', JSON.stringify({
+                completedLessons: Array.from(completedLessons),
+                currentLesson: currentLessonNumber,
+                userProgress: userProgress
+            }));
+        }
+        
+        function loadProgress() {
+            const saved = localStorage.getItem('jtms_tutorial_progress');
+            if (saved) {
+                const data = JSON.parse(saved);
+                completedLessons = new Set(data.completedLessons);
+                currentLessonNumber = data.currentLesson;
+                userProgress = data.userProgress || {};
+                
+                // Restaurer l'affichage
+                completedLessons.forEach(lessonNum => {
+                    document.querySelector(`[data-lesson="${lessonNum}"]`).classList.add('completed');
+                });
+                
+                updateProgress();
+            }
+        }
+        
+        // Charger la progression au démarrage
+        document.addEventListener('DOMContentLoaded', loadProgress);
+        
+        // Sauvegarder à chaque changement
+        setInterval(saveProgress, 5000);
+    </script>
+</body>
+</html>

@@ -114,7 +114,7 @@ class StrategicTacticalInterface:
         
         for i, objective in enumerate(enriched_objectives):
             # Envoyer chaque objectif comme une directive séparée
-            self.strategic_adapter.send_directive(
+            self.strategic_adapter.issue_directive(
                 directive_type="objective",
                 content={
                     "objective": objective,
@@ -869,7 +869,9 @@ class StrategicTacticalInterface:
             Le rapport de statut ou None si timeout
         """
         try:
-            response = self.strategic_adapter.request_tactical_status(
+            response = self.strategic_adapter.request_tactical_info(
+                request_type="tactical_status",
+                parameters={},
                 recipient_id="tactical_coordinator",
                 timeout=timeout
             )
@@ -900,7 +902,7 @@ class StrategicTacticalInterface:
             priority = MessagePriority.HIGH if adjustment.get("urgent", False) else MessagePriority.NORMAL
             
             # Envoyer l'ajustement via le système de communication
-            message_id = self.strategic_adapter.send_directive(
+            message_id = self.strategic_adapter.issue_directive(
                 directive_type="strategic_adjustment",
                 content=adjustment,
                 recipient_id="tactical_coordinator",

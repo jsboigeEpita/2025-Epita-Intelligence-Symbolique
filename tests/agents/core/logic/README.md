@@ -1,25 +1,37 @@
-# Tests des Composants Logiques des Agents
+# Tests des Agents Logiques
 
-Ce répertoire contient les tests unitaires pour les composants logiques fondamentaux des agents, tels que la représentation des croyances, les moteurs de raisonnement pour différentes logiques (propositionnelle, premier ordre, modale), et les usines de création d'objets logiques.
+Ce répertoire contient les tests unitaires pour les agents basés sur la logique formelle. Ces agents sont conçus pour traduire le langage naturel en représentations logiques formelles, effectuer des raisonnements sur ces représentations et interpréter les résultats.
 
-## Objectifs des Tests :
+## Objectif des Tests
 
-*   Valider la correction et la robustesse des structures de données logiques (ex: ensembles de croyances).
-*   Assurer le bon fonctionnement des opérations sur ces structures (ex: ajout, suppression, révision de croyances).
-*   Tester l'implémentation des différents agents logiques et leur capacité à effectuer des inférences.
-*   Vérifier la conformité des composants avec les formalismes logiques sous-jacents.
-*   Valider l'intégration avec des bibliothèques externes de raisonnement (ex: Tweety).
+L'objectif principal est de valider la chaîne de traitement complète des agents logiques, de la conversion du texte à l'interprétation des résultats de raisonnement. Les tests visent à garantir :
+- La conversion correcte du langage naturel en ensembles de croyances (`BeliefSet`) pour différentes logiques (propositionnelle, premier ordre, modale).
+- La génération de requêtes logiques valides et pertinentes.
+- L'interaction correcte avec le `TweetyBridge` pour l'exécution des requêtes.
+- La gestion des succès, des échecs et des erreurs tout au long du processus.
+- La validation de la syntaxe des formules et des ensembles de croyances.
 
-## Fichiers Inclus (liste non exhaustive) :
+## Modules Testés
 
-*   [`test_belief_set.py`](test_belief_set.py:1): Teste la classe `BeliefSet` qui est cruciale pour la gestion des connaissances et des croyances des agents logiques. Valide les opérations d'ajout, de suppression, de révision et de requête sur les ensembles de croyances.
-*   [`test_examples.py`](test_examples.py:1): Contient des tests basés sur des exemples concrets d'utilisation des agents et des systèmes logiques, illustrant des scénarios de raisonnement.
-*   [`test_first_order_logic_agent.py`](test_first_order_logic_agent.py:1): Tests spécifiques à l'agent basé sur la logique du premier ordre, incluant la gestion des quantificateurs et des prédicats.
-*   [`test_logic_factory.py`](test_logic_factory.py:1): Valide la `LogicFactory` responsable de la création des différents types d'agents logiques et de leurs composants.
-*   [`test_propositional_logic_agent.py`](test_propositional_logic_agent.py:1): Tests pour l'agent basé sur la logique propositionnelle, couvrant l'initialisation, l'interaction avec le Kernel sémantique, la conversion texte-croyances, la validation et l'exécution de requêtes via TweetyBridge (mocké).
-*   [`test_modal_logic_agent.py`](test_modal_logic_agent.py:1): Tests pour l'agent basé sur la logique modale, couvrant l'initialisation, l'interaction avec le Kernel sémantique, la conversion texte-croyances, la validation et l'exécution de requêtes via TweetyBridge (mocké).
-*   [`test_abstract_logic_agent.py`](test_abstract_logic_agent.py:1): Tests pour la classe de base abstraite des agents logiques.
-*   [`test_query_executor.py`](test_query_executor.py:1): Tests pour l'exécuteur de requêtes logiques (`QueryExecutor`), vérifiant son interaction avec `TweetyBridge` (mocké) pour la validation et l'exécution de requêtes propositionnelles, du premier ordre et modales.
-*   [`test_tweety_bridge.py`](test_tweety_bridge.py:1): Tests unitaires pour `TweetyBridge`. Valide l'initialisation, l'interaction mockée avec `jpype` pour les logiques PL, FOL, ML, incluant la validation de formules et l'exécution de requêtes PL.
+- **`PropositionalLogicAgent`**: Testé dans [`test_propositional_logic_agent.py`](test_propositional_logic_agent.py:1).
+- **`FirstOrderLogicAgent`**: Testé dans [`test_first_order_logic_agent.py`](test_first_order_logic_agent.py:1).
+- **`ModalLogicAgent`**: Testé dans [`test_modal_logic_agent.py`](test_modal_logic_agent.py:1).
+- **`LogicFactory`**: Testé dans [`test_logic_factory.py`](test_logic_factory.py:1), qui valide la création des bons types d'agents.
+- **`BeliefSet`**: Testé dans [`test_belief_set.py`](test_belief_set.py:1), qui vérifie la manipulation des ensembles de croyances.
+- **`TweetyBridge`**: Testé dans [`test_tweety_bridge.py`](test_tweety_bridge.py:1), qui assure la communication avec la bibliothèque de raisonnement Java Tweety.
 
-Ces tests sont fondamentaux pour garantir la fiabilité du raisonnement des agents au sein du système.
+## Structure des Tests
+
+Chaque fichier de test d'agent (propositionnel, premier ordre, modal) suit une structure similaire :
+1.  **Initialisation (`setup_method`)**: Met en place un `Kernel` sémantique mocké et un `TweetyBridge` mocké pour isoler l'agent.
+2.  **Tests de Conversion (`text_to_belief_set`)**: Vérifient que le texte est correctement converti en un `BeliefSet` syntaxiquement valide.
+3.  **Tests de Génération de Requêtes (`generate_queries`)**: S'assurent que des requêtes pertinentes et valides sont générées à partir d'un texte et d'un `BeliefSet`.
+4.  **Tests d'Exécution de Requêtes (`execute_query`)**: Valident que l'agent appelle correctement le `TweetyBridge` et gère les résultats (accepté, rejeté, erreur).
+5.  **Tests d'Interprétation (`interpret_results`)**: Vérifient que l'agent peut formuler une interprétation en langage naturel des résultats du raisonnement.
+
+## Dépendances
+
+- `pytest` et `pytest-asyncio`
+- `unittest.mock` pour le mocking intensif du `Kernel` et du `TweetyBridge`.
+- `semantic_kernel`
+- Les modules applicatifs de `argumentation_analysis/agents/core/logic/`.

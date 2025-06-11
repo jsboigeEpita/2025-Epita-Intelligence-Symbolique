@@ -62,7 +62,7 @@ def load_complete_encrypted_config():
         with open(CONFIG_FILE_ENC, 'rb') as f:
             encrypted_data = f.read()
         
-        print(f"✅ Fichier encrypté '{CONFIG_FILE_ENC}' chargé avec succès.")
+        print(f"[OK] Fichier encrypté '{CONFIG_FILE_ENC}' chargé avec succès.")
         print(f"   - Taille: {len(encrypted_data)} octets.")
         
         # Déchiffrer les données
@@ -73,7 +73,7 @@ def load_complete_encrypted_config():
         
         # Décompresser les données
         decompressed_data = gzip.decompress(decrypted_compressed_data)
-        print(f"✅ Données décompressées: {len(decrypted_compressed_data)} -> {len(decompressed_data)} octets.")
+        print(f"[OK] Données décompressées: {len(decrypted_compressed_data)} -> {len(decompressed_data)} octets.")
         
         # Charger le JSON
         complete_config = json.loads(decompressed_data.decode('utf-8'))
@@ -82,7 +82,7 @@ def load_complete_encrypted_config():
         sources = complete_config.get("sources", [])
         cache = complete_config.get("cache", {})
         
-        print(f"✅ Configuration chargée avec succès.")
+        print(f"[OK] Configuration chargée avec succès.")
         print(f"   - {len(sources)} sources trouvées.")
         print(f"   - {len(cache)} fichiers de cache trouvés.")
         
@@ -96,7 +96,7 @@ def load_complete_encrypted_config():
             # Écrire le contenu dans le fichier de cache
             try:
                 cache_filepath.write_text(content, encoding='utf-8')
-                print(f"✅ Fichier de cache '{cache_filepath.name}' restauré.")
+                print(f"[OK] Fichier de cache '{cache_filepath.name}' restauré.")
                 print(f"   - Longueur: {len(content)} caractères.")
             except Exception as e:
                 print(f"⚠️ Avertissement: Erreur lors de l'écriture du fichier de cache '{cache_filepath.name}': {e}")
@@ -121,7 +121,7 @@ def main():
     success = load_complete_encrypted_config()
     
     if success:
-        print("\n✅ Chargement du fichier encrypté complet réussi !")
+        print("\n[OK] Chargement du fichier encrypté complet réussi !")
     else:
         print("\n❌ Échec du chargement du fichier encrypté complet.")
     

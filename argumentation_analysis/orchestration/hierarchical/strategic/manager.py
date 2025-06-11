@@ -50,6 +50,17 @@ class StrategicManager:
             agent_id="strategic_manager",
             middleware=self.middleware
         )
+
+    def define_strategic_goal(self, goal: Dict[str, Any]):
+        """Définit un objectif stratégique et le publie pour le niveau tactique."""
+        self.logger.info(f"Définition du but stratégique: {goal.get('id')}")
+        self.state.add_global_objective(goal)
+        # Simuler la publication d'une directive pour le coordinateur tactique
+        self.adapter.issue_directive(
+            directive_type="new_strategic_goal",
+            parameters=goal,
+            recipient_id="tactical_coordinator"
+        )
     
     def initialize_analysis(self, text: str) -> Dict[str, Any]:
         """

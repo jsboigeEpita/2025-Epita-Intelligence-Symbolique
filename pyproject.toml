@@ -1,0 +1,38 @@
+[build-system]
+requires = ["setuptools>=64", "wheel", "pyyaml>=5.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "argumentation_analysis_project"
+version = "0.1.0"
+description = "A project for argumentation analysis."
+readme = "README.md"
+license = { file = "LICENSE" } # Référence au fichier LICENSE à la racine
+authors = [
+  { name = "EPITA IS Team", email = "contact@example.com" } # Mettez à jour avec les vraies infos
+]
+requires-python = ">=3.8"
+# Les dépendances sont chargées dynamiquement par setup.py à partir de environment.yml
+
+# Indiquer à setuptools que 'dependencies' est fourni dynamiquement
+dynamic = ["dependencies"]
+# Les autres métadonnées du projet peuvent être ajoutées ici si nécessaire.
+# Les dépendances d'exécution (install_requires) continueront d'être
+# déterminées dynamiquement par setup.py.
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = [
+    "-v",
+    "--tb=short",
+    "--disable-warnings"
+]
+filterwarnings = [
+    "ignore::DeprecationWarning",
+    "ignore::pytest.PytestDeprecationWarning"
+]

@@ -13,6 +13,7 @@ from pathlib import Path
 from typing import Optional, Tuple, List, Dict, Any, Union
 from dotenv import load_dotenv, find_dotenv
 
+from argumentation_analysis.models.extract_definition import SourceDefinition
 from .cache_service import CacheService
 
 # Charger les variables d'environnement
@@ -100,16 +101,16 @@ class FetchService:
     
     def fetch_text(
         self,
-        source_info: Dict[str, Any],
+        source_info: Union[Dict[str, Any], SourceDefinition],
         force_refresh: bool = False
     ) -> Tuple[Optional[str], str]:
         """
         Récupère le texte d'une source en utilisant la méthode de récupération appropriée
         (direct, Jina, Tika) et gère le cache.
 
-        :param source_info: Un dictionnaire contenant les informations de la source,
-                            incluant "schema", "host_parts", "path", et "source_type".
-        :type source_info: Dict[str, Any]
+        :param source_info: Un dictionnaire ou un objet SourceDefinition contenant les
+                            informations de la source.
+        :type source_info: Union[Dict[str, Any], SourceDefinition]
         :param force_refresh: Si True, ignore le cache et force une nouvelle récupération
                               du contenu. Par défaut à False.
         :type force_refresh: bool
@@ -118,17 +119,23 @@ class FetchService:
                  - Un message de statut ou l'URL traitée (str).
         :rtype: Tuple[Optional[str], str]
         """
-        # Reconstruire l'URL
-        schema = source_info.get("schema")
-        host_parts = source_info.get("host_parts", [])
-        path = source_info.get("path")
-        
-        url = self.reconstruct_url(schema, host_parts, path)
+        url = None
+        source_type = "direct_download"
+        path = ""
+
+        if isinstance(source_info, SourceDefinition):
+            url = source_info.get_url()
+            source_type = source_info.source_type
+            path = source_info.path
+        elif isinstance(source_info, dict):
+            schema = source_info.get("schema")
+            host_parts = source_info.get("host_parts", [])
+            path = source_info.get("path", "")
+            url = self.reconstruct_url(schema, host_parts, path)
+            source_type = source_info.get("source_type", "direct_download")
+
         if not url:
-            return None, "URL invalide"
-        
-        # Déterminer la méthode de récupération
-        source_type = source_info.get("source_type", "direct_download")
+            return None, "URL invalide ou informations de source incomplètes"
         
         # Vérifier le cache si force_refresh est False
         if not force_refresh:

@@ -14,8 +14,18 @@ import sys
 import json
 import logging
 import numpy as np
-import matplotlib.pyplot as plt
-import matplotlib.cm as cm
+# Import paresseux de matplotlib pour éviter les imports circulaires
+def _import_matplotlib():
+    """Import paresseux de matplotlib pour éviter les problèmes d'imports circulaires."""
+    try:
+        import matplotlib.pyplot as plt
+        import matplotlib.cm as cm
+        return plt, cm
+    except ImportError as e:
+        raise ImportError(f"matplotlib est requis pour la visualisation: {e}")
+
+plt = None
+cm = None
 import networkx as nx
 from typing import Dict, List, Any, Optional, Tuple, Union, Set
 from pathlib import Path
@@ -278,6 +288,9 @@ class ArgumentStructureVisualizer:
             }
         
         elif output_format in ["png", "html"]:
+            # Import paresseux de matplotlib
+            plt, cm = _import_matplotlib()
+            
             # Créer une figure matplotlib
             plt.figure(figsize=(10, 8))
             
@@ -406,6 +419,9 @@ class ArgumentStructureVisualizer:
             }
         
         elif output_format in ["png", "html"]:
+            # Import paresseux de matplotlib
+            plt, cm = _import_matplotlib()
+            
             # Créer une figure matplotlib
             plt.figure(figsize=(10, 6))
             

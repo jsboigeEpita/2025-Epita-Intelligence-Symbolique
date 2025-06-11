@@ -38,14 +38,14 @@ def update_encrypted_config():
         with open(json_file_path, 'r', encoding='utf-8') as f:
             definitions = json.load(f)
         
-        print(f"✅ Fichier JSON corrigé '{json_file_path}' chargé avec succès.")
+        print(f"[OK] Fichier JSON corrigé '{json_file_path}' chargé avec succès.")
         print(f"   - {len(definitions)} sources trouvées.")
         
         # Sauvegarder les définitions dans le fichier chiffré
         success = save_extract_definitions(definitions, ui_config.CONFIG_FILE_ENC, ui_config.ENCRYPTION_KEY)
         
         if success:
-            print(f"✅ Fichier chiffré '{ui_config.CONFIG_FILE_ENC}' mis à jour avec succès.")
+            print(f"[OK] Fichier chiffré '{ui_config.CONFIG_FILE_ENC}' mis à jour avec succès.")
             return True
         else:
             print(f"❌ Erreur: Échec de la mise à jour du fichier chiffré '{ui_config.CONFIG_FILE_ENC}'.")
@@ -73,9 +73,9 @@ if __name__ == "__main__":
         
         # Vérifier que le fichier chiffré existe
         if ui_config.CONFIG_FILE_ENC.exists():
-            print(f"✅ Le fichier chiffré '{ui_config.CONFIG_FILE_ENC}' existe.")
+            print(f"[OK] Le fichier chiffré '{ui_config.CONFIG_FILE_ENC}' existe.")
             print(f"   - Taille: {ui_config.CONFIG_FILE_ENC.stat().st_size} octets")
-            print("\n✅ Mise à jour réussie !")
+            print("\n[OK] Mise à jour réussie !")
         else:
             print(f"❌ Erreur: Le fichier chiffré '{ui_config.CONFIG_FILE_ENC}' n'existe pas.")
             print("\n❌ Échec de la mise à jour.")

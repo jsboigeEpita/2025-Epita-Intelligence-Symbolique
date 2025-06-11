@@ -99,7 +99,7 @@ def initialize_analysis_services(config: Dict[str, Any]) -> Dict[str, Any]:
         llm_service = create_llm_service()
         services["llm_service"] = llm_service
         if llm_service:
-            logging.info(f"✅ Service LLM créé avec succès (ID: {getattr(llm_service, 'service_id', 'N/A')}).")
+            logging.info(f"[OK] Service LLM créé avec succès (ID: {getattr(llm_service, 'service_id', 'N/A')}).")
         else:
             # Ce cas peut se produire si create_llm_service est conçu pour retourner None
             # en cas de configuration manquante mais non critique, sans lever d'exception.
@@ -119,7 +119,7 @@ def initialize_analysis_services(config: Dict[str, Any]) -> Dict[str, Any]:
 
 if __name__ == '__main__':
     # Exemple d'utilisation (pourrait nécessiter une configuration de logging)
-    from project_core.utils.logging_utils import setup_logging
+    from argumentation_analysis.utils.core_utils.logging_utils import setup_logging
     setup_logging() # Configuration de base du logging
 
     # Simuler un dictionnaire de configuration

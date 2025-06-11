@@ -65,10 +65,12 @@ def split_text_into_arguments(text: str, min_arg_length: int = 10) -> List[str]:
         if cleaned_arg and len(cleaned_arg) >= min_arg_length:
             arguments.append(cleaned_arg)
     
-    if not arguments and text.strip() and len(text.strip()) >= min_arg_length:
-        # Si aucun argument n'a été trouvé par les délimiteurs mais que le texte original est valide,
-        # considérer le texte entier comme un seul argument.
-        logger.debug(f"Aucun délimiteur standard n'a permis de scinder le texte. Texte original considéré comme un seul argument: '{text[:70]}...'")
+    if not arguments and len(raw_arguments) <= 1 and text.strip() and len(text.strip()) >= min_arg_length:
+        # Si aucun argument n'a été trouvé par les délimiteurs,
+        # ET que le texte n'a pas été réellement scindé par les délimiteurs (ou n'a produit qu'un seul segment initial),
+        # ET que le texte original lui-même est un argument valide,
+        # alors considérer le texte entier comme un seul argument.
+        logger.debug(f"Aucun délimiteur standard n'a permis de scinder le texte ou les segments étaient trop courts, et le texte original est un argument valide. Texte original considéré comme un seul argument: '{text[:70]}...'")
         arguments.append(text.strip())
         
     logger.debug(f"Texte divisé en {len(arguments)} arguments.")

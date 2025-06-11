@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Erreur JTMS - Intelligence Symbolique EPITA</title>
+    
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/jtms.css') }}">
+    
+    <style>
+        .error-container {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        
+        .error-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 16px;
+            padding: 3rem;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            text-align: center;
+            max-width: 500px;
+            width: 90%;
+        }
+        
+        .error-icon {
+            font-size: 4rem;
+            color: #dc3545;
+            margin-bottom: 1.5rem;
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
+        
+        .error-title {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: #343a40;
+            margin-bottom: 1rem;
+        }
+        
+        .error-message {
+            color: #6c757d;
+            font-size: 1.1rem;
+            margin-bottom: 2rem;
+            line-height: 1.6;
+        }
+        
+        .error-details {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 1rem;
+            margin: 1.5rem 0;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+            color: #dc3545;
+            text-align: left;
+            word-break: break-word;
+        }
+        
+        .action-buttons {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        
+        .btn-retry {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            border: none;
+            color: white;
+            padding: 0.75rem 2rem;
+            border-radius: 25px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-retry:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+            color: white;
+        }
+        
+        .btn-home {
+            background: transparent;
+            border: 2px solid #6c757d;
+            color: #6c757d;
+            padding: 0.75rem 2rem;
+            border-radius: 25px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-home:hover {
+            background: #6c757d;
+            color: white;
+            transform: translateY(-2px);
+        }
+        
+        .status-check {
+            margin-top: 2rem;
+            padding: 1rem;
+            background: #e3f2fd;
+            border-radius: 8px;
+            border-left: 4px solid #2196f3;
+        }
+        
+        .status-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.5rem 0;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        
+        .status-item:last-child {
+            border-bottom: none;
+        }
+        
+        .status-indicator {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            display: inline-block;
+        }
+        
+        .status-ok {
+            background-color: #4caf50;
+        }
+        
+        .status-error {
+            background-color: #f44336;
+        }
+        
+        .status-warning {
+            background-color: #ff9800;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="error-container">
+        <div class="error-card">
+            <div class="error-icon">
+                <i class="fas fa-exclamation-triangle"></i>
+            </div>
+            
+            <h1 class="error-title">Service JTMS Indisponible</h1>
+            
+            <div class="error-message">
+                Le système de maintenance de vérité justifiée (JTMS) n'est actuellement pas accessible.
+                Cela peut être dû à une erreur de configuration ou à un service non démarré.
+            </div>
+            
+            {% if error %}
+            <div class="error-details">
+                <strong>Détails de l'erreur :</strong><br>
+                {{ error }}
+            </div>
+            {% endif %}
+            
+            <!-- Vérification du statut des services -->
+            <div class="status-check">
+                <h6><i class="fas fa-heartbeat"></i> État des Services</h6>
+                <div class="status-item">
+                    <span>Service JTMS Core</span>
+                    <span class="status-indicator status-error" title="Service indisponible"></span>
+                </div>
+                <div class="status-item">
+                    <span>Gestionnaire de Sessions</span>
+                    <span class="status-indicator status-error" title="Service indisponible"></span>
+                </div>
+                <div class="status-item">
+                    <span>API REST</span>
+                    <span class="status-indicator status-warning" title="Accès limité"></span>
+                </div>
+                <div class="status-item">
+                    <span>Interface Web</span>
+                    <span class="status-indicator status-ok" title="Fonctionnel"></span>
+                </div>
+            </div>
+            
+            <!-- Solutions suggérées -->
+            <div class="mt-4">
+                <h6><i class="fas fa-tools"></i> Solutions Suggérées</h6>
+                <ul class="text-start text-muted">
+                    <li>Vérifiez que tous les services JTMS sont démarrés</li>
+                    <li>Contrôlez la configuration des imports Python</li>
+                    <li>Consultez les logs pour plus de détails</li>
+                    <li>Redémarrez l'application si nécessaire</li>
+                </ul>
+            </div>
+            
+            <div class="action-buttons">
+                <button class="btn btn-retry" onclick="location.reload()">
+                    <i class="fas fa-redo"></i> Réessayer
+                </button>
+                <a href="{{ url_for('index') }}" class="btn btn-home">
+                    <i class="fas fa-home"></i> Accueil
+                </a>
+                <a href="/status" class="btn btn-outline-info" target="_blank">
+                    <i class="fas fa-info-circle"></i> Statut Système
+                </a>
+            </div>
+            
+            <!-- Informations de dépannage -->
+            <div class="mt-4 text-muted">
+                <small>
+                    <i class="fas fa-info-circle"></i>
+                    Si le problème persiste, contactez l'administrateur système ou consultez la documentation technique.
+                </small>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://kit.fontawesome.com/your-fontawesome-kit.js" crossorigin="anonymous"></script>
+    
+    <script>
+        // Auto-refresh toutes les 30 secondes pour vérifier si les services sont revenus
+        let autoRefreshEnabled = true;
+        let refreshInterval;
+        
+        function startAutoRefresh() {
+            if (autoRefreshEnabled) {
+                refreshInterval = setInterval(() => {
+                    fetch('/jtms/api/sessions')
+                        .then(response => {
+                            if (response.ok) {
+                                // Services disponibles, rediriger vers le dashboard
+                                window.location.href = '/jtms/dashboard';
+                            }
+                        })
+                        .catch(() => {
+                            // Services toujours indisponibles, continuer l'attente
+                        });
+                }, 30000); // 30 secondes
+            }
+        }
+        
+        function stopAutoRefresh() {
+            autoRefreshEnabled = false;
+            if (refreshInterval) {
+                clearInterval(refreshInterval);
+            }
+        }
+        
+        // Démarrer l'auto-refresh au chargement
+        document.addEventListener('DOMContentLoaded', startAutoRefresh);
+        
+        // Arrêter l'auto-refresh si l'utilisateur quitte la page
+        window.addEventListener('beforeunload', stopAutoRefresh);
+        
+        // Indicateur visuel pour l'auto-refresh
+        let dots = 0;
+        setInterval(() => {
+            if (autoRefreshEnabled) {
+                dots = (dots + 1) % 4;
+                const refreshBtn = document.querySelector('.btn-retry');
+                if (refreshBtn) {
+                    refreshBtn.innerHTML = '<i class="fas fa-redo"></i> Vérification' + '.'.repeat(dots);
+                }
+            }
+        }, 1000);
+        
+        // Gestion des raccourcis clavier
+        document.addEventListener('keydown', (e) => {
+            switch(e.key) {
+                case 'r':
+                case 'R':
+                    if (e.ctrlKey || e.metaKey) {
+                        e.preventDefault();
+                        location.reload();
+                    }
+                    break;
+                case 'h':
+                case 'H':
+                    if (e.ctrlKey || e.metaKey) {
+                        e.preventDefault();
+                        window.location.href = '/';
+                    }
+                    break;
+                case 'Escape':
+                    window.location.href = '/';
+                    break;
+            }
+        });
+        
+        console.log('🔧 Page d\'erreur JTMS chargée');
+        console.log('📊 Auto-refresh activé - vérification toutes les 30s');
+        console.log('⌨️ Raccourcis: Ctrl+R (refresh), Ctrl+H (home), Escape (home)');
+    </script>
+</body>
+</html>

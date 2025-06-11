@@ -21,11 +21,11 @@ async def main():
     # Importer le module depuis son nouvel emplacement
     try:
         from argumentation_analysis.utils.extract_repair.repair_extract_markers import main as repair_main
-        print("✅ Module repair_extract_markers importé avec succès.")
+        print("[OK] Module repair_extract_markers importé avec succès.")
         
         # Lancer le script de réparation
         await repair_main()
-        print("\n✅ Script de réparation exécuté avec succès.")
+        print("\n[OK] Script de réparation exécuté avec succès.")
     except ImportError as e:
         print(f"❌ Erreur lors de l'importation du module repair_extract_markers: {e}")
         print("Vérifiez que le fichier repair_extract_markers.py est présent dans le répertoire utils/extract_repair/.")

@@ -17,7 +17,7 @@ La documentation est organisée selon une structure hiérarchique à trois nivea
 - **Niveau 2** : Sous-catégories ou thèmes spécifiques
 - **Niveau 3** : Documents individuels
 
-Pour plus de détails sur la structure, consultez le fichier [STRUCTURE.md](STRUCTURE.md).
+Pour plus de détails sur la structure, consultez le fichier [docs/STRUCTURE.md](docs/STRUCTURE.md).
 
 ## Conventions de Nommage
 

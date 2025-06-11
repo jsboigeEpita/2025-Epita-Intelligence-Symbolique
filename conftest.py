@@ -1,3 +1,4 @@
+# pytest_plugins = ["pytest_playwright"]  # Temporairement désactivé pour les tests
 print("INFO: conftest.py (RACINE): Fichier en cours de lecture par pytest.")
 
 import sys
@@ -5,6 +6,9 @@ import os
 import pytest # Importé plus haut pour être disponible globalement
 import jpype
 import jpype.imports # Assurer que jpype.imports est disponible
+
+# Auto-activation environnement intelligent (one-liner)
+import scripts.core.auto_env  # Auto-activation environnement intelligent
 
 # Charger .env le plus tôt possible, dès l'import de ce conftest.py racine
 # Ceci est fait avant que pytest ne charge les conftest.py des sous-répertoires ou les modules de test.
@@ -71,11 +75,17 @@ print(f"INFO: conftest.py (RACINE): os.environ['JPYPE_REAL_JVM_INITIALIZED'] dé
 
 print("INFO: conftest.py (RACINE): Initialisation minimale terminée.")
 
-if jpype.isJVMStarted():
-    print("INFO: conftest.py (RACINE): Vérification jpype.isJVMStarted() = True. L'enregistrement des domaines est géré par jvm_setup.py.")
-    pass 
-else:
-    print("INFO: conftest.py (RACINE): jpype.isJVMStarted() = False. L'enregistrement des domaines sera géré par jvm_setup.py lors du démarrage.")
+try:
+    import jpype
+    if jpype.isJVMStarted():
+        print("INFO: conftest.py (RACINE): Vérification jpype.isJVMStarted() = True. L'enregistrement des domaines est géré par jvm_setup.py.")
+        pass
+    else:
+        print("INFO: conftest.py (RACINE): jpype.isJVMStarted() = False. L'enregistrement des domaines sera géré par jvm_setup.py lors du démarrage.")
+except ImportError:
+    print("INFO: conftest.py (RACINE): jpype non disponible, vérification JVM sautée.")
+except Exception as e_jpype_check:
+    print(f"ERREUR: conftest.py (RACINE): Erreur lors de la vérification jpype: {e_jpype_check}")
 
 
 # @pytest.fixture(scope="module")
@@ -203,3 +213,93 @@ else:
 @pytest.fixture(autouse=True)
 def anyio_backend():
     return "asyncio"
+# Ajout de fixtures pour les nouveaux modules Oracle Enhanced
+
+import pytest
+# Temporairement commenté pour validation finale - dépendance semantic_kernel
+# from argumentation_analysis.agents.core.oracle.error_handling import OracleErrorHandler
+# from argumentation_analysis.agents.core.oracle.interfaces import StandardOracleResponse
+
+# @pytest.fixture
+# def oracle_error_handler():
+#     """Fixture pour OracleErrorHandler"""
+#     return OracleErrorHandler()
+
+# @pytest.fixture
+# def standard_oracle_response_success():
+#     """Fixture pour StandardOracleResponse de succès"""
+#     return StandardOracleResponse(
+#         success=True,
+#         data={"test": "data"},
+#         message="Test successful"
+#     )
+
+# @pytest.fixture
+# def standard_oracle_response_error():
+#     """Fixture pour StandardOracleResponse d'erreur"""
+#     return StandardOracleResponse(
+#         success=False,
+#         message="Test error",
+#         error_code="TEST_ERROR"
+#     )
+
+# Ajout de fixtures pour Oracle Enhanced v2.1.0
+
+import pytest
+# Ajout de fixtures pour les nouveaux modules Oracle Enhanced
+
+import pytest
+from argumentation_analysis.agents.core.oracle.error_handling import OracleErrorHandler
+from argumentation_analysis.agents.core.oracle.interfaces import StandardOracleResponse
+
+@pytest.fixture
+def oracle_error_handler():
+    """Fixture pour OracleErrorHandler"""
+    return OracleErrorHandler()
+
+@pytest.fixture
+def standard_oracle_response_success():
+    """Fixture pour StandardOracleResponse de succès"""
+    return StandardOracleResponse(
+        success=True,
+        data={"test": "data"},
+        message="Test successful"
+    )
+
+@pytest.fixture
+def standard_oracle_response_error():
+    """Fixture pour StandardOracleResponse d'erreur"""
+    return StandardOracleResponse(
+        success=False,
+        message="Test error",
+        error_code="TEST_ERROR"
+    )
+
+# Ajout de fixtures pour Oracle Enhanced v2.1.0
+
+import pytest
+from argumentation_analysis.agents.core.oracle.error_handling import OracleErrorHandler
+from argumentation_analysis.agents.core.oracle.interfaces import StandardOracleResponse
+
+@pytest.fixture
+def oracle_error_handler():
+    """Fixture pour OracleErrorHandler"""
+    return OracleErrorHandler()
+
+@pytest.fixture
+def standard_oracle_response_success():
+    """Fixture pour StandardOracleResponse de succès"""
+    return StandardOracleResponse(
+        success=True,
+        data={"test": "data"},
+        message="Test successful"
+    )
+
+@pytest.fixture
+def standard_oracle_response_error():
+    """Fixture pour StandardOracleResponse d'erreur"""
+    return StandardOracleResponse(
+        success=False,
+        message="Test error",
+        error_code="TEST_ERROR"
+    )

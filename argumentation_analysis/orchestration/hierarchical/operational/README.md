@@ -118,7 +118,7 @@ Un exemple complet d'utilisation des agents dans la nouvelle architecture est di
 
 ## Tests d'intégration
 
-Des tests d'intégration pour valider le fonctionnement des agents adaptés sont disponibles dans le fichier `argumentation_analysis/tests/test_operational_agents_integration.py`.
+Des tests d'intégration pour valider le fonctionnement des agents adaptés sont disponibles dans le fichier `../../../../tests/unit/argumentation_analysis/test_operational_agents_integration.py`.
 
 ## Capacités des agents
 

@@ -37,8 +37,8 @@ except NameError: # __file__ n'est pas défini si exécuté dans un interpréteu
          sys.path.insert(0, str(PROJECT_ROOT))
 
 
-from project_core.utils.logging_utils import setup_logging
-from project_core.utils.file_utils import load_json_file, sanitize_filename, load_document_content
+from argumentation_analysis.utils.core_utils.logging_utils import setup_logging
+from argumentation_analysis.utils.core_utils.file_utils import load_json_file, sanitize_filename, load_document_content
 from argumentation_analysis.ui.file_operations import load_extract_definitions, save_extract_definitions
 from argumentation_analysis.ui.utils import get_full_text_for_source
 from argumentation_analysis.ui.config import ENCRYPTION_KEY as CONFIG_UI_ENCRYPTION_KEY
@@ -275,7 +275,7 @@ def run_embedding_generation_pipeline(
         
         # Étape 3b & 3c: Génération et sauvegarde des embeddings
         # Condition: modèle spécifié ET texte complet disponible (soit préexistant, soit récupéré)
-        if generate_embeddings_model and source_info.get('full_text','').strip():
+        if generate_embeddings_model and (source_info.get('full_text') or '').strip():
             current_full_text_for_embedding = source_info['full_text']
             logger.info(f"  Tentative de génération d'embeddings pour la source {source_id} avec le modèle '{generate_embeddings_model}'...")
             try:

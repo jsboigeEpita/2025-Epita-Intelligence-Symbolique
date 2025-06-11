@@ -15,6 +15,7 @@ import asyncio
 import argparse
 import logging
 from pathlib import Path
+from typing import Any, Optional, List
 
 # Ajouter le répertoire parent au chemin de recherche des modules
 current_dir = Path(__file__).parent
@@ -47,7 +48,7 @@ def setup_logging(verbose: bool = False) -> None:
     
     # Garder INFO pour l'orchestration et les agents
     logging.getLogger("Orchestration").setLevel(level)
-    logging.getLogger("semantic_kernel.agents").setLevel(level)
+    # logging.getLogger("semantic_kernel.agents").setLevel(level) # Module inexistant
     
     logging.info("Logging configuré pour l'orchestration.")
 
@@ -78,7 +79,7 @@ async def setup_environment() -> Any:
     logging.info("Création du service LLM...")
     try:
         llm_service = create_llm_service()
-        logging.info(f"✅ Service LLM créé avec succès (ID: {llm_service.service_id}).")
+        logging.info(f"[OK] Service LLM créé avec succès (ID: {llm_service.service_id}).")
         return llm_service
     except Exception as e:
         logging.critical(f"❌ Échec de la création du service LLM: {e}", exc_info=True)
@@ -118,7 +119,7 @@ async def run_orchestration(text_content: str, llm_service: Any, agents: Optiona
             llm_service=llm_service
         )
         
-        logging.info("🏁 Orchestration terminée avec succès.")
+        logging.info("✅ Orchestration terminée avec succès.")
     except Exception as e:
         logging.error(f"❌ Erreur lors de l'orchestration: {e}", exc_info=True)
 

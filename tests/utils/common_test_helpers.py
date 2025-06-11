@@ -1,3 +1,10 @@
+
+# Authentic gpt-4o-mini imports (replacing mocks)
+import openai
+from semantic_kernel.contents import ChatHistory
+from semantic_kernel.core_plugins import ConversationSummaryPlugin
+from config.unified_config import UnifiedConfig
+
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
@@ -16,7 +23,7 @@ import tempfile
 import shutil
 from pathlib import Path
 from contextlib import contextmanager
-from unittest.mock import patch, MagicMock
+
 
 # Configurer le logging
 logging.basicConfig(

@@ -1,8 +1,9 @@
 import pytest
-from argumentation_analysis.services.web_api.app import app as flask_app # Importer l'instance de l'application
+# from argumentation_analysis.services.web_api.app import app as flask_app # Importer l'instance de l'application
 
 @pytest.fixture(scope='module')
 def app():
+    from argumentation_analysis.services.web_api.app import app as flask_app # Importer l'instance de l'application ICI
     """Instance of Main flask app"""
     # Configurer l'application pour les tests si nécessaire
     flask_app.config.update({

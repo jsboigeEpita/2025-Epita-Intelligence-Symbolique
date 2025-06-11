@@ -5,13 +5,14 @@ channels:
   - defaults
 dependencies:
   - python=3.10
+  - pip # Ajouté pour suivre la recommandation de Conda
   # Core ML/Data Science
-  - numpy<2.0 # Contrainte cruciale
+  - numpy==1.26.4 # Contrainte pour compatibilité avec la résolution de dépendances pip perçue
   - pandas
-  - scipy==1.15.3
+  - scipy==1.13.1
   - scikit-learn
   - nltk
-  - spacy
+  - spacy>=3.7
   - pytorch # Ou torch, selon la dispo sur les canaux
   - transformers
   # Web & API
@@ -22,10 +23,12 @@ dependencies:
   - python-dotenv # s'importe comme dotenv
   - cryptography
   - tqdm
+  - pyyaml # Pour parser environment.yml dans setup.py
   # Plotting & Graphing
   - matplotlib
   - seaborn
-  - networkx==3.4.2
+  - statsmodels
+  - networkx==3.2.1
   # Java Bridge
   - jpype1
   # Logic & Reasoning
@@ -38,6 +41,15 @@ dependencies:
   - coverage # Peut être redondant avec pytest-cov mais ne nuit pas
   - unidecode # Ajouté pour corriger ModuleNotFoundError
   - markdown # Ajouté pour corriger ModuleNotFoundError
+  - pyvis # Ajouté pour la visualisation de réseaux (JTMS)
   - pip:
     - Flask-CORS # Spécifique, souvent via pip
-    - semantic-kernel==1.29.0 # Version spécifique
+    - semantic-kernel==0.9.6b1 # Version compatible trouvée
+    - markdown
+    - playwright
+    - pytest-playwright
+    - fastapi
+    - "uvicorn[standard]"
+    - a2wsgi>=1.8.0 # Ajout pour servir Flask avec Uvicorn
+    # Note: semantic-kernel[agents] non disponible dans cette version
+    # Fallback implémenté dans project_core/semantic_kernel_agents_fallback.py
