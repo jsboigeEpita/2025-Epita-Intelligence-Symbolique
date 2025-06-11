@@ -1,5 +1,5 @@
 // Utilisation de la variable d'environnement avec fallback intelligent
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5003';
+const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 
 // Configuration par défaut pour les requêtes
 const defaultHeaders = {

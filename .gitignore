@@ -172,7 +172,7 @@ data/extract_sources.json # Configuration UI non chiffrée
 # Fichiers JAR (déjà couvert par libs/*.jar mais peut rester pour clarté)
 # *.jar
 
-*.txt
+#*.txt
 
 _temp/
 
@@ -225,4 +225,9 @@ venv_temp/
 "sessions/" 
 
 # Log files
+# Fichiers de log
+*.log
 orchestration_finale_reelle.log
+
+# Dung agent logs
+abs_arg_dung/*.log

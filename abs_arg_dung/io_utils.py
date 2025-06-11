@@ -6,9 +6,9 @@ class FrameworkIO:
     @staticmethod
     def export_to_json(agent: DungAgent, filename: str):
         """Exporte un framework vers un fichier JSON"""
-        nodes = [arg.getName() for arg in agent.af.getNodes()]
-        edges = [(a.getAttacker().getName(), a.getAttacked().getName()) 
-                for a in agent.af.getAttacks()]
+        nodes = [str(arg.getName()) for arg in agent.af.getNodes()]
+        edges = [(str(a.getAttacker().getName()), str(a.getAttacked().getName()))
+                 for a in agent.af.getAttacks()]
         
         data = {
             "arguments": nodes,
@@ -50,15 +50,15 @@ class FrameworkIO:
         with open(filename, 'w') as f:
             # Nodes
             for i, arg in enumerate(agent._arguments.keys()):
-                f.write(f"{i+1} {arg}\n")
+                f.write(f"{i+1} {str(arg)}\n")
             
             f.write("#\n")  # Separator
             
             # Edges
-            arg_to_id = {arg: i+1 for i, arg in enumerate(agent._arguments.keys())}
+            arg_to_id = {str(arg): i+1 for i, arg in enumerate(agent._arguments.keys())}
             for attack in agent.af.getAttacks():
-                source_id = arg_to_id[attack.getAttacker().getName()]
-                target_id = arg_to_id[attack.getAttacked().getName()]
+                source_id = arg_to_id[str(attack.getAttacker().getName())]
+                target_id = arg_to_id[str(attack.getAttacked().getName())]
                 f.write(f"{source_id} {target_id}\n")
         
         print(f"Framework exporté vers {filename} (format TGF)")
@@ -73,12 +73,12 @@ class FrameworkIO:
             
             # Nodes
             for arg in agent._arguments.keys():
-                f.write(f"  \"{arg}\";\n")
+                f.write(f"  \"{str(arg)}\";\n")
             
             # Edges
             for attack in agent.af.getAttacks():
-                source = attack.getAttacker().getName()
-                target = attack.getAttacked().getName()
+                source = str(attack.getAttacker().getName())
+                target = str(attack.getAttacked().getName())
                 f.write(f"  \"{source}\" -> \"{target}\";\n")
             
             f.write("}\n")

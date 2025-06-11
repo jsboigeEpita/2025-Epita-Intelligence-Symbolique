@@ -21,7 +21,7 @@ CRITICAL_PACKAGES = [
     "numpy", "pandas", "scipy", "scikit-learn", "nltk", "spacy",
     "flask", "requests", "pydantic", "cryptography", "tqdm",
     "matplotlib", "seaborn", "networkx", "clingo", "jpype1",
-    "torch", "transformers", "semantic-kernel", "pytest"
+    "torch", "transformers", "semantic-kernel", "pytest", "python-dotenv"
 ]
 
 class EnvironmentDiagnostic:
@@ -37,6 +37,9 @@ class EnvironmentDiagnostic:
         """Exécute le diagnostic complet."""
         print("[LOUPE] DIAGNOSTIC ENVIRONNEMENT - Oracle Enhanced v2.1.0")
         print("=" * 60)
+
+        # 0. Charger le fichier .env
+        self._load_dotenv()
         
         # 1. Détection environnement actuel
         self._detect_current_environment()
@@ -49,11 +52,14 @@ class EnvironmentDiagnostic:
         
         # 4. Vérification dépendances critiques
         self._check_critical_dependencies(verbose)
+
+        # 5. Vérification Java
+        self._check_java_environment()
         
-        # 5. Vérification environnements disponibles
+        # 6. Vérification environnements disponibles
         self._check_available_environments()
         
-        # 6. Vérification fallbacks
+        # 7. Vérification fallbacks
         self._check_fallbacks()
         
         # 7. Génération du rapport
@@ -61,6 +67,20 @@ class EnvironmentDiagnostic:
         
         return self.results
     
+    def _load_dotenv(self):
+        """Charge les variables d'environnement depuis le fichier .env."""
+        try:
+            from dotenv import load_dotenv
+            dotenv_path = PROJECT_ROOT / '.env'
+            if dotenv_path.exists():
+                load_dotenv(dotenv_path=dotenv_path)
+                print(f"[OK] Fichier .env chargé: {dotenv_path}")
+            else:
+                print("[ATTENTION] Fichier .env non trouvé à la racine du projet.")
+        except ImportError:
+            print("[ATTENTION] python-dotenv non installé. Impossible de charger .env.")
+            self.warnings.append("python-dotenv non installé.")
+
     def _detect_current_environment(self):
         """Détecte l'environnement Python actuel."""
         print("\n📍 DÉTECTION ENVIRONNEMENT ACTUEL")
@@ -186,8 +206,8 @@ class EnvironmentDiagnostic:
     def _check_semantic_kernel(self):
         """Vérification spéciale semantic-kernel."""
         try:
-            import semantic_kernel
-            sk_version = semantic_kernel.__version__
+            from importlib.metadata import version
+            sk_version = version('semantic-kernel')
             print(f"ℹ️  semantic-kernel: {sk_version}")
             
             # Vérifier fallback agents
@@ -200,6 +220,8 @@ class EnvironmentDiagnostic:
                 
         except ImportError:
             self.errors.append("semantic-kernel non installé")
+        except Exception:
+            print("[ATTENTION]  Impossible de vérifier la version de semantic-kernel")
     
     def _check_jpype(self):
         """Vérification spéciale JPype."""
@@ -218,7 +240,46 @@ class EnvironmentDiagnostic:
                 self.warnings.append("JPype non disponible (tests Java limités)")
         
         self.results['jpype'] = jpype_ok
-    
+
+    def _check_java_environment(self):
+        """Vérifie la configuration Java de manière robuste."""
+        print("\n☕️  ENVIRONNEMENT JAVA")
+
+        java_home_raw = os.environ.get('JAVA_HOME', 'N/A')
+        
+        if java_home_raw == 'N/A':
+            print("[X] La variable d'environnement JAVA_HOME n'est pas définie.")
+            self.errors.append("JAVA_HOME n'est pas défini, ce qui est critique pour JPype/pyjnius.")
+            self.results['java'] = {'version': 'N/A', 'home': 'N/A', 'error': 'JAVA_HOME not set'}
+            return
+
+        java_home_path = Path(java_home_raw)
+        if not java_home_path.is_absolute():
+            java_home_path = (PROJECT_ROOT / java_home_path).resolve()
+        
+        java_home = str(java_home_path)
+        os.environ['JAVA_HOME'] = java_home
+        print(f"JAVA_HOME (résolu): {java_home}")
+
+        java_exe = java_home_path / 'bin' / 'java.exe'
+        if not java_exe.is_file():
+            print(f"[X] java.exe introuvable dans le JAVA_HOME spécifié: {java_exe}")
+            self.errors.append(f"java.exe non trouvé dans JAVA_HOME. Vérifiez le chemin: {java_home}")
+            self.results['java'] = {'version': 'N/A', 'home': java_home, 'error': 'java.exe not found'}
+            return
+
+        try:
+            result = subprocess.run([str(java_exe), '-version'], capture_output=True, text=True, timeout=10, check=True, encoding='utf-8')
+            java_version_info = result.stderr.strip().splitlines()
+            java_version = java_version_info[0] if java_version_info else "Version inconnue"
+            print(f"[OK] Version Java trouvée: {java_version}")
+            self.results['java'] = {'version': java_version, 'home': java_home}
+        except (subprocess.TimeoutExpired, subprocess.CalledProcessError, FileNotFoundError) as e:
+            error_message = f"Erreur en exécutant java.exe: {e}"
+            print(f"[X] {error_message}")
+            self.errors.append("Java est peut-être mal installé ou corrompu.")
+            self.results['java'] = {'version': 'N/A', 'home': java_home, 'error': str(e)}
+
     def _check_available_environments(self):
         """Vérifie les environnements disponibles."""
         print("\n[MONDE] ENVIRONNEMENTS DISPONIBLES")

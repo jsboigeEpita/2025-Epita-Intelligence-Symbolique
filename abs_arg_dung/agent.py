@@ -2,11 +2,11 @@ import os
 import glob
 import random
 
-# --- CONFIGURATION DIRECTE ET ROBUSTE DE PYJNIUS ---
-# Cette section est maintenant correcte et doit être conservée.
+# --- CONFIGURATION AVEC JPYPE ---
+import jpype
+import jpype.imports
+
 try:
-    import jnius_config
-    
     script_dir = os.path.dirname(os.path.abspath(__file__))
     libs_dir = os.path.join(script_dir, 'libs')
     jar_files = glob.glob(os.path.join(libs_dir, '*.jar'))
@@ -15,42 +15,55 @@ try:
         raise FileNotFoundError(f"Aucun fichier .jar n'a été trouvé dans {libs_dir}")
 
     TWEETY_CLASSPATH = os.pathsep.join(jar_files)
-    jnius_config.set_classpath(TWEETY_CLASSPATH)
     
-    print("--- Configuration Pyjnius ---")
-    print(f"Classpath directement défini.")
-    print("----------------------------")
+    if not jpype.isJVMStarted():
+        print("--- Démarrage de la JVM avec JPype ---")
+        java_home = os.environ.get('JAVA_HOME', '').strip(' \t\r\n"')
+        if not java_home:
+            raise RuntimeError("La variable d'environnement JAVA_HOME n'est pas définie ou est vide.")
 
-except (ImportError, FileNotFoundError) as e:
-    print(f"ERREUR CRITIQUE lors de la configuration: {e}")
-    exit()
+        # Construire le chemin vers la dll/so de la JVM
+        jvm_path = os.path.join(java_home, 'bin', 'server', 'jvm.dll')
+        if not os.path.exists(jvm_path):
+             # Fallback pour Linux ou autres structures
+             jvm_path_so = os.path.join(java_home, 'lib', 'server', 'libjvm.so')
+             if not os.path.exists(jvm_path_so):
+                raise FileNotFoundError(f"jvm.dll ou libjvm.so introuvable dans JAVA_HOME: {java_home}")
+             jvm_path = jvm_path_so
+        
+        print(f"Utilisation de la JVM trouvée à: {jvm_path}")
+        jpype.startJVM(
+            jvm_path,
+            "-ea",
+            f"-Djava.class.path={TWEETY_CLASSPATH}"
+        )
+        print("JVM démarrée.")
 
-# --- Démarrage du pont et du reste du script ---
-import matplotlib.pyplot as plt
-import networkx as nx
-from jnius import autoclass
+    # --- Démarrage du pont et du reste du script ---
+    import matplotlib.pyplot as plt
+    import networkx as nx
+    from jpype import JClass
 
-try:
     # Classes pour la structure du graphe
-    DungTheory = autoclass('org.tweetyproject.arg.dung.syntax.DungTheory')
-    Argument = autoclass('org.tweetyproject.arg.dung.syntax.Argument')
-    Attack = autoclass('org.tweetyproject.arg.dung.syntax.Attack')
+    DungTheory = JClass('org.tweetyproject.arg.dung.syntax.DungTheory')
+    Argument = JClass('org.tweetyproject.arg.dung.syntax.Argument')
+    Attack = JClass('org.tweetyproject.arg.dung.syntax.Attack')
 
     # Classes pour le raisonnement (calcul des extensions)
-    SimpleGroundedReasoner = autoclass('org.tweetyproject.arg.dung.reasoner.SimpleGroundedReasoner')
-    SimplePreferredReasoner = autoclass('org.tweetyproject.arg.dung.reasoner.SimplePreferredReasoner')
-    SimpleStableReasoner = autoclass('org.tweetyproject.arg.dung.reasoner.SimpleStableReasoner')
-    SimpleCompleteReasoner = autoclass('org.tweetyproject.arg.dung.reasoner.SimpleCompleteReasoner')
-    SimpleAdmissibleReasoner = autoclass('org.tweetyproject.arg.dung.reasoner.SimpleAdmissibleReasoner')
-    SimpleIdealReasoner = autoclass('org.tweetyproject.arg.dung.reasoner.SimpleIdealReasoner')
-    SimpleSemiStableReasoner = autoclass('org.tweetyproject.arg.dung.reasoner.SimpleSemiStableReasoner')
+    SimpleGroundedReasoner = JClass('org.tweetyproject.arg.dung.reasoner.SimpleGroundedReasoner')
+    SimplePreferredReasoner = JClass('org.tweetyproject.arg.dung.reasoner.SimplePreferredReasoner')
+    SimpleStableReasoner = JClass('org.tweetyproject.arg.dung.reasoner.SimpleStableReasoner')
+    SimpleCompleteReasoner = JClass('org.tweetyproject.arg.dung.reasoner.SimpleCompleteReasoner')
+    SimpleAdmissibleReasoner = JClass('org.tweetyproject.arg.dung.reasoner.SimpleAdmissibleReasoner')
+    SimpleIdealReasoner = JClass('org.tweetyproject.arg.dung.reasoner.SimpleIdealReasoner')
+    SimpleSemiStableReasoner = JClass('org.tweetyproject.arg.dung.reasoner.SimpleSemiStableReasoner')
     # LA LIGNE SUIVANTE A ÉTÉ SUPPRIMÉE CAR LA CLASSE N'EXISTE PAS
     # Cf2Reasoner = autoclass('org.tweetyproject.arg.dung.reasoner.Cf2Reasoner')
 
-    print("Tweety-Python bridge initialisé avec succès.")
+    print("Tweety-Python bridge initialisé avec succès via JPype.")
 
 except Exception as e:
-    print(f"\nERREUR LORS DE L'INITIALISATION DU PONT TWEETY-PYTHON.\n{e}")
+    print(f"\nERREUR LORS DE L'INITIALISATION DU PONT TWEETY-PYTHON AVEC JPYPE.\n{e}")
     exit()
 
 
@@ -90,12 +103,12 @@ class DungAgent:
         if not self._cache_valid:
             print("(Calcul des extensions en cours...)")
             self._cached_extensions = {
-                'grounded': sorted([arg.getName() for arg in SimpleGroundedReasoner().getModel(self.af)]),
+                'grounded': sorted([str(arg.getName()) for arg in SimpleGroundedReasoner().getModel(self.af)]),
                 'preferred': self._format_extensions(SimplePreferredReasoner().getModels(self.af)),
                 'stable': self._format_extensions(SimpleStableReasoner().getModels(self.af)),
                 'complete': self._format_extensions(SimpleCompleteReasoner().getModels(self.af)),
                 'admissible': self._format_extensions(SimpleAdmissibleReasoner().getModels(self.af)),
-                'ideal': sorted([arg.getName() for arg in SimpleIdealReasoner().getModel(self.af)]),
+                'ideal': sorted([str(arg.getName()) for arg in SimpleIdealReasoner().getModel(self.af)]),
                 'semi_stable': self._format_extensions(SimpleSemiStableReasoner().getModels(self.af))
             }
             self._cache_valid = True
@@ -105,7 +118,7 @@ class DungAgent:
         self._invalidate_cache()
 
     def _format_extensions(self, java_collection) -> list:
-        return [sorted([arg.getName() for arg in extension]) for extension in java_collection]
+        return [sorted([str(arg.getName()) for arg in extension]) for extension in java_collection]
 
     def get_grounded_extension(self) -> list:
         self._compute_extensions_if_needed()
