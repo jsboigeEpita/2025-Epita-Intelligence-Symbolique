@@ -1,10 +1,12 @@
 from fastapi import Depends
 from argumentation_analysis.orchestration.service_manager import OrchestrationServiceManager
+from .services import DungAnalysisService
 import logging
 import time
 
-# Service global pour éviter la réinitialisation
+# Services globaux pour éviter la réinitialisation
 _global_service_manager = None
+_global_dung_service = None
 
 class AnalysisService:
     """Service d'analyse authentique utilisant GPT-4o-mini via OrchestrationServiceManager"""
@@ -99,10 +101,16 @@ async def get_analysis_service():
     
     return AnalysisService(_global_service_manager)
 
-# Example of how another service might be defined and injected
-class AnotherService:
-    def do_something(self):
-        return "AnotherService did something"
 
-def get_another_service():
-    return AnotherService()
+def get_dung_analysis_service() -> DungAnalysisService:
+    """
+    Injection de dépendance pour le service d'analyse de Dung.
+    Utilise un singleton global pour instancier le service (et la JVM) une seule fois.
+    """
+    global _global_dung_service
+    if _global_dung_service is None:
+        logging.info("[API] Initialisation du DungAnalysisService...")
+        # L'initialisation de la JVM est gérée au sein du constructeur du service.
+        _global_dung_service = DungAnalysisService()
+        logging.info("[API] DungAnalysisService initialisé avec succès.")
+    return _global_dung_service

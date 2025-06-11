@@ -1,11 +1,46 @@
 from fastapi import APIRouter, Depends
 from .models import AnalysisRequest, AnalysisResponse, Fallacy, StatusResponse, ExampleResponse, Example
-from .dependencies import get_analysis_service, AnalysisService # Import AnalysisService for type hinting
+from .dependencies import get_analysis_service, AnalysisService, get_dung_analysis_service # Import AnalysisService for type hinting
+from .models import FrameworkAnalysisRequest, FrameworkAnalysisResponse
+from .services import DungAnalysisService
+import asyncio
 import uuid
 from datetime import datetime
 
 router = APIRouter()
 
+# --- Nouveau routeur pour l'argumentation de Dung ---
+framework_router = APIRouter(prefix="/api/v1/framework", tags=["Dung's Argumentation Framework"])
+
+@framework_router.post("/analyze", response_model=FrameworkAnalysisResponse)
+async def analyze_framework_endpoint(
+    request: FrameworkAnalysisRequest,
+    dung_service: DungAnalysisService = Depends(get_dung_analysis_service)
+):
+    """
+    Analyse un framework d'argumentation de Dung.
+
+    - **arguments**: Une liste de chaînes représentant les noms des arguments.
+    - **attacks**: Une liste de paires (listes) représentant les attaques,
+      ex: `[["a", "b"]]` signifie que `a` attaque `b`.
+
+    Retourne une analyse sémantique complète, le statut de chaque argument, et les
+    propriétés structurelles du graphe.
+    """
+    # L'appel à la méthode `analyze_framework` est bloquant (I/O, calcul),
+    # il doit donc être exécuté dans un thread séparé pour ne pas bloquer
+    # la boucle d'événements de FastAPI.
+    analysis_result = await asyncio.to_thread(
+        dung_service.analyze_framework,
+        request.arguments,
+        [tuple(attack) for attack in request.attacks] # Convertit les listes en tuples
+    )
+    
+    # Pas besoin de convertir le résultat car le service retourne déjà un dictionnaire
+    # qui correspond à la structure du modèle Pydantic FrameworkAnalysisResponse.
+    return analysis_result
+
+# --- Ancien routeur (peut être conservé, modifié ou supprimé selon la stratégie) ---
 @router.post("/analyze", response_model=AnalysisResponse)
 async def analyze_text_endpoint(
     request: AnalysisRequest,

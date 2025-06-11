@@ -53,39 +53,10 @@ logging.basicConfig(
 )
 logger = logging.getLogger("UnifiedProductionAnalyzer_Global") # Nom différent pour éviter conflit potentiel
 
-# Auto-activation environnement au démarrage
-try:
-    _current_script_path_upa = Path(__file__).resolve()
-    _project_root_upa = _current_script_path_upa.parent.parent.parent # Remonter de scripts/rhetorical_analysis
-    if str(_project_root_upa) not in sys.path:
-        sys.path.insert(0, str(_project_root_upa))
-    
-    # Vérifier le drapeau avant de tenter l'activation
-    if os.getenv('IS_ACTIVATION_SCRIPT_RUNNING') == 'true':
-        logger.info("[UPA] Activation par script principal détectée, auto-activation UPA désactivée.")
-    else:
-        from scripts.core.environment_manager import auto_activate_env
-        
-        logger.info("[UPA] Tentative d'auto-activation de l'environnement conda 'projet-is'...")
-        if auto_activate_env("projet-is", silent=False):
-            logger.info("[UPA] Environnement 'projet-is' auto-activé pour UPA.")
-        else:
-            logger.warning("[UPA] Impossible d'auto-activer l'environnement 'projet-is' pour UPA.")
-    
-    # Recharger dotenv au cas où l'activation de l'env l'aurait affecté ou pour être sûr
-    from dotenv import load_dotenv
-    if load_dotenv(project_root / ".env"): # S'assurer de charger depuis la racine du projet
-         logger.info("[UPA] Fichier .env rechargé après tentative d'activation de l'environnement.")
-    else:
-         logger.warning("[UPA] Fichier .env non trouvé à la racine après tentative d'activation.")
-
-except Exception as e_env_act:
-    logger.error(f"[UPA_ENV_ERROR] Erreur lors de l'auto-activation de l'environnement pour UPA: {e_env_act}")
-    logger.warning("[UPA_ENV_WARN] Poursuite sans auto-activation explicite par UPA...")
-
-# L'import de dotenv et load_dotenv() était déjà là, je le déplace ici pour qu'il soit après l'activation de l'env.
-# from dotenv import load_dotenv # Déjà importé ci-dessus
-# load_dotenv() # Déjà appelé ci-dessus
+# Auto-activation de l'environnement CONDA/VENV via le one-liner
+# C'est maintenant la méthode standard recommandée pour s'assurer que l'environnement
+# est prêt, y compris le chargement de .env et la configuration de JAVA_HOME.
+# import scripts.core.auto_env # NEUTRALISÉ - L'environnement est maintenant activé en amont par environment_manager.py
 class LogicType(Enum):
     """Types de logique supportés avec fallback automatique"""
     FOL = "fol"
@@ -489,23 +460,29 @@ class DependencyValidator:
         errors = []
 
         try:
-            # === PATCH DE LA DERNIÈRE CHANCE ===
-            # Forcer l'ajout de site-packages au sys.path. C'est une mesure de diagnostic extrême.
-            import site
-            site_packages_path = next((p for p in sys.path if 'site-packages' in p and 'projet-is' in p), None)
-            if site_packages_path:
-                if site_packages_path not in sys.path:
-                    sys.path.insert(0, site_packages_path)
-                self.logger.warning(f"[PATCH] Ajout forcé de {site_packages_path} à sys.path")
+            # === DEBUT BLOC DE DEBUGGING JPYPE ===
+            self.logger.info("="*20 + " DEBUT DEBUG JPYPE " + "="*20)
+            
+            # 1. Vérifier JAVA_HOME
+            java_home = os.getenv('JAVA_HOME')
+            if java_home:
+                self.logger.info(f"[DEBUG_JPYPE] JAVA_HOME trouvé: {java_home}")
+                if not os.path.exists(java_home):
+                    self.logger.warning(f"[DEBUG_JPYPE] ATTENTION: Le chemin JAVA_HOME n'existe pas: {java_home}")
             else:
-                 # Si on ne trouve pas le chemin, on essaye de le construire
-                conda_prefix = os.environ.get("CONDA_PREFIX")
-                if conda_prefix and "projet-is" in conda_prefix:
-                    sp_path = os.path.join(conda_prefix, "lib", "site-packages")
-                    if os.path.exists(sp_path) and sp_path not in sys.path:
-                         sys.path.insert(0, sp_path)
-                         self.logger.warning(f"[PATCH] Ajout forcé construit de {sp_path} à sys.path")
-            # === FIN PATCH ===
+                self.logger.warning("[DEBUG_JPYPE] ATTENTION: La variable d'environnement JAVA_HOME n'est pas définie.")
+
+            # 2. Afficher les variables d'environnement liées à Java et Conda
+            self.logger.debug("[DEBUG_JPYPE] Variables d'environnement pertinentes:")
+            for var in ['JAVA_HOME', 'JDK_HOME', 'JRE_HOME', 'CONDA_PREFIX', 'PATH']:
+                self.logger.debug(f"[DEBUG_JPYPE]   - {var}: {os.getenv(var)}")
+
+            self.logger.info("="*20 + " FIN DEBUG JPYPE " + "="*20)
+            # === FIN BLOC DE DEBUGGING JPYPE ===
+            # === Le PATCH a été supprimé. On fait confiance à l'environnement d'exécution. ===
+            # La configuration correcte du PATH, y compris les chemins de la JVM,
+            # est maintenant entièrement gérée par `environment_manager.py`.
+            # Le script n'a plus besoin d'essayer de réparer son propre `sys.path`.
 
             import jpype
             # S'assurer que la JVM est démarrée avant de vérifier son état
@@ -517,9 +494,10 @@ class DependencyValidator:
                     errors.append(f"Impossible de démarrer la JVM pour TweetyProject: {e}")
             if not jpype.isJVMStarted() and not any("Impossible de démarrer la JVM" in err for err in errors): # Revérifier après tentative de démarrage
                 errors.append("JVM TweetyProject non démarrée (après tentative)")
-        except ImportError:
+        except ImportError as e:
             self.logger.error(f"Échec de l'import JPype1. sys.path: {sys.path}")
-            errors.append("JPype1 non installé - requis pour TweetyProject")
+            self.logger.error(f"Traceback de l'erreur d'importation JPype:\n{traceback.format_exc()}")
+            errors.append(f"JPype1 import failed: {e}")
             
         # Vérification des JARs TweetyProject
         libs_dir = project_root / "libs" / "tweety"

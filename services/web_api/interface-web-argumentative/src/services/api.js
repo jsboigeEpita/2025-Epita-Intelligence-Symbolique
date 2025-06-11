@@ -1,5 +1,5 @@
 // Utilisation de la variable d'environnement avec fallback intelligent
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000';
 
 // Configuration par défaut pour les requêtes
 const defaultHeaders = {
@@ -87,14 +87,15 @@ export const detectFallacies = async (text, options = {}) => {
   return handleResponse(response);
 };
 
-// Construction de framework de Dung
-export const buildFramework = async (argumentList, attacks = []) => {
+// Analyse de framework de Dung via le nouveau backend centralisé
+export const analyzeDungFramework = async (argumentList, attacks = []) => {
+  // Transformation des données pour correspondre au modèle Pydantic du backend
   const requestBody = {
-    arguments: argumentList,
-    attacks
+    arguments: argumentList.map(arg => arg.id), // Extrait les IDs : ['a', 'b', ...]
+    attacks: attacks.map(att => [att.from, att.to]) // Transforme en [["a", "b"], ...]
   };
 
-  const response = await fetchWithTimeout(`${API_BASE_URL}/api/framework`, {
+  const response = await fetchWithTimeout(`${API_BASE_URL}/api/v1/framework/analyze`, {
     method: 'POST',
     headers: defaultHeaders,
     body: JSON.stringify(requestBody)
@@ -226,13 +227,13 @@ export const getExampleFallacyDetection = () => {
 };
 
 export const getExampleFramework = () => {
-  return buildFramework([
+  return analyzeDungFramework([
     { id: 'A', text: 'Les voitures polluent' },
     { id: 'B', text: 'Les voitures électriques ne polluent pas' },
     { id: 'C', text: 'L\'électricité peut être produite proprement' }
   ], [
     { from: 'B', to: 'A', type: 'attack' },
-    { from: 'C', to: 'B', type: 'support' }
+    { from: 'C', to: 'B', type: 'attack' } // 'support' n'est pas un type d'attaque valide pour Dung. Corrigé.
   ]);
 };
 
@@ -259,7 +260,7 @@ export default {
   analyzeText,
   validateArgument,
   detectFallacies,
-  buildFramework,
+  analyzeDungFramework, // Remplacement de buildFramework
   createBeliefSet,
   executeLogicQuery,
   generateLogicQueries,
@@ -272,6 +273,6 @@ export default {
     getExampleAnalysis,
     getExampleValidation,
     getExampleFallacyDetection,
-    getExampleFramework
+    getExampleFramework // Cette fonction devra être adaptée pour utiliser analyzeDungFramework
   }
 };
