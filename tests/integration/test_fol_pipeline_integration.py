@@ -5,7 +5,7 @@ from semantic_kernel.contents import ChatHistory
 from semantic_kernel.core_plugins import ConversationSummaryPlugin
 from config.unified_config import UnifiedConfig
 
-﻿#!/usr/bin/env python3
+#!/usr/bin/env python3
 """
 Tests d'intégration pour le pipeline FOL complet
 ==============================================
@@ -54,7 +54,7 @@ except ImportError:
                 "formulas": ["∀x(Homme(x) → Mortel(x))"]
             }
     
-    def create_llm_service():
+    async def create_llm_service():
         return await self._create_authentic_gpt4o_mini_instance()
     
     class TweetyErrorAnalyzer:
@@ -93,7 +93,7 @@ class TestFOLPipelineIntegration:
         if Path(self.temp_dir).exists():
             os.rmdir(self.temp_dir)
     
-    def test_fol_pipeline_end_to_end(self):
+    async def test_fol_pipeline_end_to_end(self):
         """Test du pipeline FOL bout-en-bout."""
         # 1. Créer l'agent FOL
         mock_kernel = await self._create_authentic_gpt4o_mini_instance()
@@ -159,7 +159,7 @@ class TestFOLPipelineIntegration:
         assert "∀x(Homme(x) → Mortel(x))" in report_content
         assert "satisfiable" in report_content.lower()
     
-    def test_fol_pipeline_with_error_handling(self):
+    async def test_fol_pipeline_with_error_handling(self):
         """Test du pipeline FOL avec gestion d'erreurs."""
         # Texte problématique pour FOL
         problematic_text = "Cette phrase n'a pas de structure logique claire."
@@ -182,7 +182,7 @@ class TestFOLPipelineIntegration:
             # Si erreur, vérifier qu'elle est appropriée
             assert "fol" in str(e).lower() or "logic" in str(e).lower()
     
-    def test_fol_pipeline_performance(self):
+    async def test_fol_pipeline_performance(self):
         """Test de performance du pipeline FOL."""
         import time
         
@@ -214,7 +214,7 @@ class TestFOLPipelineIntegration:
         assert all(isinstance(r, dict) for r in results)
     
     @pytest.mark.integration
-    def test_fol_with_real_tweety_integration(self):
+    async def test_fol_with_real_tweety_integration(self):
         """Test d'intégration avec vrai Tweety FOL (si disponible)."""
         if not self._is_real_tweety_available():
             pytest.skip("Real Tweety FOL not available")
@@ -358,7 +358,7 @@ class TestFOLPowerShellIntegration:
 class TestFOLValidationIntegration:
     """Tests d'intégration pour la validation FOL."""
     
-    def test_fol_syntax_validation_integration(self):
+    async def test_fol_syntax_validation_integration(self):
         """Test d'intégration de validation syntaxe FOL."""
         # Formules FOL à valider
         test_formulas = [
@@ -394,7 +394,7 @@ class TestFOLValidationIntegration:
         valid_count = sum(1 for r in validation_results if r["valid"])
         assert valid_count >= 2  # Au moins 2 formules valides
     
-    def test_fol_semantic_validation_integration(self):
+    async def test_fol_semantic_validation_integration(self):
         """Test d'intégration de validation sémantique FOL."""
         # Test avec ensemble cohérent de formules
         coherent_formulas = [

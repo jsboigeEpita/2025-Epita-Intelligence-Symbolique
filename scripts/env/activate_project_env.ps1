@@ -64,7 +64,13 @@ try {
             $CondaActivated = $true
             Write-Host "✅ [CONDA] Environnement 'projet-is' localisé: $projet_is_path" -ForegroundColor Green
             $PythonExecutable = Join-Path $projet_is_path "python.exe"
+            $ScriptsPath = Join-Path $projet_is_path "Scripts"
             
+            if (Test-Path $ScriptsPath) {
+                $env:PATH = "$ScriptsPath;$env:PATH"
+                Write-Host "✅ [PATH] Ajout de $ScriptsPath au PATH" -ForegroundColor Green
+            }
+
             if (-not (Test-Path $PythonExecutable)) {
                 Write-Host "❌ [PYTHON] Exécutable introuvable: $PythonExecutable. Utilisation de 'python' par défaut." -ForegroundColor Red
                 $PythonExecutable = $null
