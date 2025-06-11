@@ -9,6 +9,57 @@ pour permettre aux étudiants de créer des interfaces web facilement.
 """
 import logging
 import sys
+import os # Assurez-vous qu'os est importé si ce n'est pas déjà le cas plus haut
+from pathlib import Path # Assurez-vous que Path est importé
+from typing import Optional, Dict, Any # AJOUTÉ ICI POUR CORRIGER NameError
+
+# --- Initialisation explicite de l'environnement du projet ---
+# Cela doit être fait AVANT toute autre logique d'application ou import de service spécifique au projet.
+try:
+    # Déterminer la racine du projet pour bootstrap.py
+    # argumentation_analysis/services/web_api/app.py -> services/web_api -> services -> argumentation_analysis -> project_root
+    _app_file_path = Path(__file__).resolve()
+    _project_root_for_bootstrap = _app_file_path.parent.parent.parent.parent
+    
+    # S'assurer que argumentation_analysis.core est accessible
+    # Normalement, si PROJECT_ROOT (d:/2025-Epita-Intelligence-Symbolique-4) est dans PYTHONPATH,
+    # argumentation_analysis.core.bootstrap devrait être importable.
+    # Si bootstrap.py gère lui-même l'ajout de la racine du projet à sys.path,
+    # cet ajout ici pourrait être redondant mais ne devrait pas nuire s'il est idempotent.
+    if str(_project_root_for_bootstrap) not in sys.path:
+         sys.path.insert(0, str(_project_root_for_bootstrap))
+
+    from argumentation_analysis.core.bootstrap import initialize_project_environment, ProjectContext
+    
+    # Utiliser le .env à la racine du projet global (d:/2025-Epita-Intelligence-Symbolique-4/.env)
+    # et la racine du projet global comme root_path_str.
+    _env_file_path_for_bootstrap = _project_root_for_bootstrap / ".env"
+
+    print(f"[BOOTSTRAP CALL from app.py] Initializing project environment with root: {_project_root_for_bootstrap}, env_file: {_env_file_path_for_bootstrap}")
+    sys.stdout.flush() # For Uvicorn logs
+
+    project_context: Optional[ProjectContext] = initialize_project_environment(
+        env_path_str=str(_env_file_path_for_bootstrap) if _env_file_path_for_bootstrap.exists() else None,
+        root_path_str=str(_project_root_for_bootstrap)
+    )
+    if project_context:
+        print(f"[BOOTSTRAP CALL from app.py] Project environment initialized. JVM: {project_context.jvm_initialized}, LLM: {'OK' if project_context.llm_service else 'FAIL'}")
+        sys.stdout.flush()
+    else:
+        print("[BOOTSTRAP CALL from app.py] FAILED to initialize project environment.")
+        sys.stdout.flush()
+        # Gérer l'échec de l'initialisation si nécessaire, par exemple en levant une exception
+        # raise RuntimeError("Échec critique de l'initialisation de l'environnement du projet via bootstrap.")
+except ImportError as e_bootstrap_import:
+    print(f"[BOOTSTRAP CALL from app.py] CRITICAL ERROR: Failed to import bootstrap components: {e_bootstrap_import}", file=sys.stderr)
+    sys.stderr.flush()
+    raise
+except Exception as e_bootstrap_init:
+    print(f"[BOOTSTRAP CALL from app.py] CRITICAL ERROR: Failed during bootstrap initialization: {e_bootstrap_init}", file=sys.stderr)
+    sys.stderr.flush()
+    raise
+# --- Fin de l'initialisation explicite de l'environnement ---
+
 
 # Configure logging immediately at the very top of the module execution.
 # This ensures that any subsequent logging calls, even before full app setup, are captured.
@@ -28,7 +79,9 @@ import argparse
 import asyncio
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, Any, Optional # Optional est déjà importé
+
+
+
 
 # Déclarer les variables avant le bloc try pour qu'elles aient un scope global dans le module
 flask_app = None # Sera assigné à flask_app_instance_for_init
