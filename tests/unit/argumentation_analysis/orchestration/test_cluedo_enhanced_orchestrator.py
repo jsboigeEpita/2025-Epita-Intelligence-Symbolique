@@ -19,6 +19,7 @@ import asyncio
 
 from typing import Dict, Any, List
 from datetime import datetime
+from unittest.mock import Mock
 
 from semantic_kernel.kernel import Kernel
 from semantic_kernel.contents.chat_message_content import ChatMessageContent
@@ -35,14 +36,14 @@ from argumentation_analysis.agents.core.oracle.cluedo_dataset import RevealPolic
 def mock_enhanced_kernel():
     """Kernel Semantic Kernel mocké pour Oracle Enhanced."""
     kernel = Mock(spec=Kernel)
-    kernel.add_plugin = await self._create_authentic_gpt4o_mini_instance()
-    kernel.add_filter = await self._create_authentic_gpt4o_mini_instance()
+    kernel.add_plugin = Mock()
+    kernel.add_filter = Mock()
     
     # Mock des services GPT-4o-mini
-    mock_service = await self._create_authentic_gpt4o_mini_instance()
+    mock_service = Mock()
     mock_service.service_id = "openai-gpt4o-mini"
     mock_service.ai_model_id = "gpt-4o-mini"
-    mock_service.get_chat_message_contents = Asyncawait self._create_authentic_gpt4o_mini_instance()
+    mock_service.get_chat_message_contents = Mock()
     kernel.get_service = Mock(return_value=mock_service)
     
     return kernel

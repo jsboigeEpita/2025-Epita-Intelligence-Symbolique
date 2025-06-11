@@ -122,7 +122,7 @@ class TestCluedoOracleState:
             )
             
             # Vérifications
-            mock_query.# Mock assertion eliminated - authentic validation
+            # mock_query. # Mock assertion eliminated - authentic validation
             assert result.authorized is True
             assert result.data["revealed_card"] == "Colonel Moutarde"
             

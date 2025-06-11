@@ -27,9 +27,9 @@ def mock_perform_analysis():
 def mock_save_json_file(): # Renommé pour refléter l'intention potentielle de sauvegarde
     # Ce mock ne sera pas utilisé si la sauvegarde n'est pas appelée directement par le pipeline
     # mais il est là au cas où. Si la sauvegarde est gérée par l'appelant, ce mock est inutile ici.
-    with patch("project_core.utils.file_utils.save_json_file", Magicawait self._create_authentic_gpt4o_mini_instance()) as mock:
+    with patch("project_core.utils.file_utils.save_json_file", MagicMock()) as mock:
         yield mock
-
+ 
 @pytest.mark.asyncio
 async def test_run_text_analysis_pipeline_success(
     mock_initialize_services, mock_perform_analysis
