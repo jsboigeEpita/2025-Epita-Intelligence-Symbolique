@@ -1,5 +1,6 @@
 import streamlit as st
 import requests
+from kernel_memory.km_client import clean_snippet
 
 # Configuration
 BASE_URL = "http://localhost:9001"
@@ -28,7 +29,7 @@ with tab1:
                 index = result.get("index", "")
                 for part in result.get("partitions", []):
                     excerpt = {
-                        "text": part.get("text", "").replace("\n", " ").strip(),
+                        "text": clean_snippet(part.get("text", "").replace("\n", " ").strip()),
                         "relevance": part.get("relevance", 0),
                         "documentId": doc_id,
                         "index": index
@@ -44,7 +45,7 @@ with tab1:
                 st.success(f"Top 5 extraits les plus pertinents :")
                 for i, ex in enumerate(top_excerpts, start=1):
                     st.markdown(f"### Extrait {i}")
-                    st.markdown(f"> *{ex['text'][:500]}{'...' if len(ex['text']) > 500 else ''}*")
+                    st.markdown(f"> *{clean_snippet(ex['text'][:500])}{'...' if len(ex['text']) > 500 else ''}*")
                     st.caption(f"📄 Source: `{ex['documentId']}` — Pertinence: **{ex['relevance']:.3f}**")
                     st.markdown("---")
 
@@ -67,6 +68,7 @@ with tab2:
             if ask_data.get("text"):
                 st.success("🧠 Réponse générée :")
                 st.write(ask_data["text"])
+                print(ask_data)
             elif ask_data.get("noResult"):
                 st.warning(f"Aucune réponse générée : {ask_data.get('noResultReason', 'pas de contexte trouvé.')}")
 
@@ -81,6 +83,7 @@ with tab2:
                     partitions = source.get("partitions", [])
                     for j, part in enumerate(partitions, start=1):
                         text = part.get("text", "").replace("\n", " ").strip()
+                        text = clean_snippet(text)
                         relevance = part.get("relevance", 0)
                         tags = part.get("tags", {})
 

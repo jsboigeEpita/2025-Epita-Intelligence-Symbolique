@@ -4,7 +4,7 @@ from km_client import (
     ask_source, search_source, clean_snippet
 )
 
-CONFIG_PATH = "data/final_processed_config_unencrypted.json"
+CONFIG_PATH = "sources/final_processed_config_unencrypted.json"
 ASK_QUESTION = "What is a key argument of the discourse in this source?"
 SEARCH_QUERY = "key argument"
 
