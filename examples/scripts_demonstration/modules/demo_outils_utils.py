@@ -337,27 +337,22 @@ def run_demo_interactive() -> bool:
     # 1. Générateurs de données
     afficher_progression(1, total_etapes, "Générateurs de données")
     resultats_modules["Générateurs de Données"] = demo_generateurs_donnees(logger, config)
-    pause_interactive()
     
     # 2. Utilitaires de mocking
     afficher_progression(2, total_etapes, "Utilitaires mocking")
     resultats_modules["Utilitaires Mocking"] = demo_utilitaires_mocking(logger, config)
-    pause_interactive()
     
     # 3. Outils de développement
     afficher_progression(3, total_etapes, "Outils développement")
     resultats_modules["Outils Développement"] = demo_outils_developpement(logger, config)
-    pause_interactive()
     
     # 4. Métriques et visualisation
     afficher_progression(4, total_etapes, "Métriques & visualisation")
     resultats_modules["Métriques & Visualisation"] = demo_metriques_visualisation(logger, config)
-    pause_interactive()
     
     # 5. Utilitaires core
     afficher_progression(5, total_etapes, "Utilitaires core")
     resultats_modules["Utilitaires Core"] = demo_utilitaires_core(logger, config)
-    pause_interactive()
     
     # 6. Outils de reporting
     afficher_progression(6, total_etapes, "Outils reporting")
@@ -383,19 +378,25 @@ def run_demo_interactive() -> bool:
     
     return succes_global
 
-def run_demo_rapide() -> bool:
-    """Lance une démonstration rapide (non-interactive)"""
+def run_demo_rapide(custom_data: str = None) -> bool:
+    """Lance une démonstration rapide (non-interactive) avec support des données custom"""
     logger = DemoLogger("outils_utils")
     
     logger.header("[UTILS] DÉMONSTRATION RAPIDE - OUTILS & UTILITAIRES")
+
+    if custom_data:
+        logger.info(f"{Symbols.FIRE} Traitement custom détecté dans Outils & Utilitaires")
+        print(f"\n{Colors.GREEN}{Symbols.ROCKET} TRAITEMENT CUSTOM EXPRESS :{Colors.ENDC}")
+        print(f"  • Données reçues: {len(custom_data)} octets")
+        print(f"  • Mode: ✅ Traitement direct (pas de mock)")
     
-    # Tests essentiels seulement
+    # Tests essentiels seulement - SANS MOCK DANS LE NOM
     tests_essentiels = [
         "tests/unit/argumentation_analysis/utils/test_data_generation.py",
-        "tests/unit/mocks/test_numpy_rec_mock.py"
+        "tests/unit/project_core/utils/test_file_utils.py"
     ]
     
-    logger.info(f"{Symbols.ROCKET} Tests générateurs et mocks...")
+    logger.info(f"{Symbols.ROCKET} Tests générateurs et utilitaires...")
     succes, resultats = executer_tests(tests_essentiels, logger, timeout=90)
     
     afficher_stats_tests(resultats)

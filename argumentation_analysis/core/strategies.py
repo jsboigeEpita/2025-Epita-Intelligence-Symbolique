@@ -1,12 +1,12 @@
 ﻿# core/strategies.py
 # CORRECTIF COMPATIBILITÉ: Import direct depuis semantic_kernel
 from semantic_kernel.contents import ChatMessageContent
-from semantic_kernel.agents import Agent # AJOUTÉ POUR CORRIGER NameError
+# from semantic_kernel.agents import Agent # AJOUTÉ POUR CORRIGER NameError - Commenté car non disponible dans SK 0.9.6b1
 # Note: Agent, TerminationStrategy, SelectionStrategy non disponibles dans SK 0.9.6b1
 from typing import List, Dict, TYPE_CHECKING
 import logging
 from pydantic import PrivateAttr
-from argumentation_analysis.orchestration.cluedo_extended_orchestrator import TerminationStrategy
+from argumentation_analysis.orchestration.cluedo_extended_orchestrator import TerminationStrategy, SelectionStrategy
 
 # Importer la classe d'état
 from .shared_state import RhetoricalAnalysisState
@@ -44,7 +44,7 @@ class SimpleTerminationStrategy(TerminationStrategy):
         self._logger = termination_logger
         self._logger.info(f"SimpleTerminationStrategy instance {self._instance_id} créée (max_steps={self._max_steps}, state_id={id(self._state)}).")
 
-    async def should_terminate(self, agent: Agent, history: List[ChatMessageContent]) -> bool:
+    async def should_terminate(self, agent, history: List[ChatMessageContent]) -> bool: # Agent type hint commenté
         """Vérifie si la conversation doit se terminer."""
         self._step_count += 1
         step_info = f"Tour {self._step_count}/{self._max_steps}"
@@ -81,7 +81,7 @@ class SimpleTerminationStrategy(TerminationStrategy):
 class DelegatingSelectionStrategy(SelectionStrategy):
     """Stratégie de sélection qui priorise la désignation explicite via l'état."""
     # *** CORRECTION: Utiliser PrivateAttr pour les champs gérés par __init__ ***
-    _agents_map: Dict[str, Agent] = PrivateAttr()
+    _agents_map: Dict[str, any] = PrivateAttr() # Agent type hint remplacé par any
     _default_agent_name: str = PrivateAttr(default="ProjectManagerAgent") # On peut mettre le défaut ici
     _analysis_state: 'RhetoricalAnalysisState' = PrivateAttr()
     # Ces deux-là ne semblent pas faire partie du modèle Pydantic de base, on peut les laisser
@@ -89,7 +89,7 @@ class DelegatingSelectionStrategy(SelectionStrategy):
     _instance_id: int
     _logger: logging.Logger
 
-    def __init__(self, agents: List[Agent], state: 'RhetoricalAnalysisState', default_agent_name: str = "ProjectManagerAgent"):
+    def __init__(self, agents: List, state: 'RhetoricalAnalysisState', default_agent_name: str = "ProjectManagerAgent"): # Agent type hint commenté dans List
         """Initialise avec agents, état, et nom agent par défaut."""
         # L'appel super() doit rester ici
         super().__init__()
@@ -120,7 +120,7 @@ class DelegatingSelectionStrategy(SelectionStrategy):
 
         self._logger.info(f"DelegatingSelectionStrategy instance {self._instance_id} créée (agents: {list(self._agents_map.keys())}, default: '{self._default_agent_name}', state_id={id(self._analysis_state)}).")
 
-    async def next(self, agents: List[Agent], history: List[ChatMessageContent]) -> Agent:
+    async def next(self, agents: List, history: List[ChatMessageContent]): # Agent type hint commenté dans List et en retour
         """Sélectionne le prochain agent à parler."""
         self._logger.debug(f"[{self._instance_id}] Appel next()...")
         # *** CORRECTION: Utiliser les attributs privés pour la logique ***
@@ -192,7 +192,7 @@ class DelegatingSelectionStrategy(SelectionStrategy):
 class BalancedParticipationStrategy(SelectionStrategy):
     """Stratégie de sélection qui équilibre la participation des agents tout en respectant les désignations explicites."""
     # Attributs privés
-    _agents_map: Dict[str, Agent] = PrivateAttr()
+    _agents_map: Dict[str, any] = PrivateAttr() # Agent type hint remplacé par any
     _default_agent_name: str = PrivateAttr(default="ProjectManagerAgent")
     _analysis_state: 'RhetoricalAnalysisState' = PrivateAttr()
     _participation_counts: Dict[str, int] = PrivateAttr()
@@ -205,7 +205,7 @@ class BalancedParticipationStrategy(SelectionStrategy):
     # Ces attributs ne sont pas gérés par Pydantic
     _instance_id: int
 
-    def __init__(self, agents: List[Agent], state: 'RhetoricalAnalysisState',
+    def __init__(self, agents: List, state: 'RhetoricalAnalysisState', # Agent type hint commenté dans List
                  default_agent_name: str = "ProjectManagerAgent",
                  target_participation: Dict[str, float] = None):
         """
@@ -274,7 +274,7 @@ class BalancedParticipationStrategy(SelectionStrategy):
         self._logger.info(f"BalancedParticipationStrategy instance {self._instance_id} créée (agents: {list(self._agents_map.keys())}, default: '{self._default_agent_name}', state_id={id(self._analysis_state)}).")
         self._logger.info(f"Participations cibles: {self._target_participation}")
 
-    async def next(self, agents: List[Agent], history: List[ChatMessageContent]) -> Agent:
+    async def next(self, agents: List, history: List[ChatMessageContent]): # Agent type hint commenté dans List et en retour
         """
         Sélectionne le prochain agent selon la stratégie d'équilibrage.
         

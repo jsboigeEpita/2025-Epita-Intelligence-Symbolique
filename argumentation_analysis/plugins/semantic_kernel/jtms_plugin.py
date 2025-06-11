@@ -26,9 +26,8 @@ except ImportError:
     SK_AVAILABLE = False
 
 # Import des services JTMS
-sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..'))
-from services.jtms_service import JTMSService
-from services.jtms_session_manager import JTMSSessionManager
+from argumentation_analysis.services.jtms_service import JTMSService
+from argumentation_analysis.services.jtms_session_manager import JTMSSessionManager
 
 class JTMSSemanticKernelPlugin:
     """

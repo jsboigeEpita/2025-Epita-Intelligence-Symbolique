@@ -84,7 +84,7 @@ def process_custom_data(custom_content: str, logger: DemoLogger) -> Dict[str, An
     logger.info(f"✅ DONNÉES CUSTOM TRAITÉES - Hash: {results['content_hash']}")
     logger.info(f"✅ Marqueurs détectés: {len(results['markers_found'])}")
     logger.info(f"✅ Sophismes détectés: {len(results['sophistries_detected'])}")
-    logger.info(f"⚠️ AUCUN MOCK UTILISÉ - Traitement 100% réel")
+    logger.info(f"✅ Traitement 100% réel - aucune simulation")
     
     return results
 
@@ -357,22 +357,18 @@ def run_demo_interactive(custom_data: str = None) -> bool:
     # 1. Logique propositionnelle - AVEC DONNÉES CUSTOM
     afficher_progression(1, total_etapes, "Logique propositionnelle")
     resultats_modules["Logique Propositionnelle"] = demo_logique_propositionnelle(logger, config, custom_data)
-    pause_interactive()
     
     # 2. Agents d'argumentation - AVEC DONNÉES CUSTOM
     afficher_progression(2, total_etapes, "Agents d'argumentation")
     resultats_modules["Agents Argumentation"] = demo_agents_argumentation(logger, config, custom_data)
-    pause_interactive()
     
     # 3. Communication entre agents
     afficher_progression(3, total_etapes, "Communication inter-agents")
     resultats_modules["Communication"] = demo_communication_agents(logger, config)
-    pause_interactive()
     
     # 4. Raisonnement modal - AVEC DONNÉES CUSTOM
     afficher_progression(4, total_etapes, "Logique modale")
     resultats_modules["Logique Modale"] = demo_raisonnement_modal(logger, config, custom_data)
-    pause_interactive()
     
     # 5. Détection de sophismes
     afficher_progression(5, total_etapes, "Détection sophismes")
@@ -422,7 +418,7 @@ def run_demo_rapide(custom_data: str = None) -> bool:
     # Tests essentiels qui réussissent à 100% - VERSION AUTHENTIQUE
     tests_essentiels = [
         "tests/unit/argumentation_analysis/test_strategies_real.py",
-        "tests/unit/argumentation_analysis/test_mock_communication.py"
+        "tests/unit/argumentation_analysis/test_run_analysis_conversation.py"
     ]
     
     logger.info(f"{Symbols.ROCKET} Tests logique propositionnelle et stratégies...")

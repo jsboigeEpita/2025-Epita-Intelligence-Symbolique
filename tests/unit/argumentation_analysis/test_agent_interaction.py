@@ -17,14 +17,14 @@ try:
 except ImportError:
     ChatMessageContent = None
 
-# Import AuthorRole depuis le module de compatibilité
-from semantic_kernel.contents import AuthorRole
+# Import AuthorRole (maintenant ChatRole) depuis le module de compatibilité
+from semantic_kernel.contents import ChatRole as AuthorRole # Renommé pour compatibilité
 
-try:
-    from semantic_kernel.agents import Agent, AgentGroupChat
-except ImportError:
-    Agent = None
-    AgentGroupChat = None
+# try:
+#     from semantic_kernel.agents import Agent, AgentGroupChat # Commenté car non disponible dans SK 0.9.6b1
+# except ImportError:
+#     Agent = None
+#     AgentGroupChat = None
 
 # Utiliser la fonction setup_import_paths pour résoudre les problèmes d'imports relatifs
 # from tests import setup_import_paths # Commenté pour investigation

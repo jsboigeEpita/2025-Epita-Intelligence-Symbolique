@@ -19,6 +19,7 @@ import threading
 import time
 import uuid
 import logging
+from unittest.mock import MagicMock
 
 import pytest
 
@@ -451,7 +452,7 @@ class TestCommunicationIntegration(unittest.TestCase):
     def test_publish_subscribe_communication(self):
         """Test de la communication par publication-abonnement."""
         # Créer un callback simulé
-        callback = Magicawait self._create_authentic_gpt4o_mini_instance()
+        callback = MagicMock()
         
         # S'abonner à un topic
         subscription_id = self.middleware.subscribe(
@@ -476,7 +477,7 @@ class TestCommunicationIntegration(unittest.TestCase):
         time.sleep(0.1)
         
         # Vérifier que le callback a été appelé
-        callback.# Mock assertion eliminated - authentic validation
+        callback.assert_called_once()
         self.assertEqual(callback.call_args[0][0].content["event_type"], "resource_update")
         self.assertEqual(callback.call_args[0][0].content["data"]["cpu_available"], 8)
     

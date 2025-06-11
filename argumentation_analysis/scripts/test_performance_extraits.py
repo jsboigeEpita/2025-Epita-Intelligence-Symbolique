@@ -21,6 +21,7 @@ import asyncio
 import logging
 from pathlib import Path
 from datetime import datetime
+from typing import Any, Dict, List, Optional, Tuple
 
 # Ajouter le répertoire racine au chemin de recherche des modules
 current_dir = Path(__file__).parent
@@ -598,19 +599,22 @@ async def generate_performance_report(results: List[Dict[str, Any]]) -> Path:
 - **Temps moyen d'analyse des sophismes:** {report['performances_moyennes']['temps_analyse_sophismes']:.2f} secondes
 
 ## Résultats par Extrait
+"""
+    
+    extraits_reports = []
+    for r in report['resultats_par_extrait']:
+        extraits_reports.append(
+            f"### {r['id']}\n"
+            f"- **Description:** {r['description']}\n"
+            f"- **Temps total:** {r['performances']['temps_total']:.2f} secondes\n"
+            f"- **Nombre d'arguments identifiés:** {r['performances']['nombre_arguments']}\n"
+            f"- **Nombre de sophismes identifiés:** {r['performances']['nombre_sophismes']}\n"
+            f"- **Temps d'identification des arguments:** {r['performances']['temps_identification_arguments']:.2f} secondes\n"
+            f"- **Temps d'analyse des sophismes:** {r['performances']['temps_analyse_sophismes']:.2f} secondes"
+        )
+    md_report += "\n\n".join(extraits_reports)
 
-{
-    chr(10).join([
-        f"### {r['id']}\n"
-        f"- **Description:** {r['description']}\n"
-        f"- **Temps total:** {r['performances']['temps_total']:.2f} secondes\n"
-        f"- **Nombre d'arguments identifiés:** {r['performances']['nombre_arguments']}\n"
-        f"- **Nombre de sophismes identifiés:** {r['performances']['nombre_sophismes']}\n"
-        f"- **Temps d'identification des arguments:** {r['performances']['temps_identification_arguments']:.2f} secondes\n"
-        f"- **Temps d'analyse des sophismes:** {r['performances']['temps_analyse_sophismes']:.2f} secondes"
-        for r in report['resultats_par_extrait']
-    ])
-}
+    md_report += """
 
 ## Conclusion
 Ce rapport a été généré automatiquement après l'exécution des tests de performance sur les extraits spécifiés. Une analyse manuelle plus approfondie est recommandée pour évaluer la qualité de l'analyse rhétorique produite.
