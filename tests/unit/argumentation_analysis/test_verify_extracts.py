@@ -27,8 +27,9 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 # Importer les modèles nécessaires pour les tests
 from models.extract_definition import ExtractDefinitions, SourceDefinition, Extract
-
-# Créer des mocks pour les fonctions que nous voulons tester
+from unittest.mock import MagicMock
+ 
+ # Créer des mocks pour les fonctions que nous voulons tester
 def mock_verify_extracts(extract_definitions, fetch_service, extract_service):
     """
     Mock de la fonction de vérification des extraits.
@@ -135,15 +136,13 @@ main = mock_main
 @pytest.fixture
 def mock_fetch_service():
     """Fixture pour un service de récupération mocké."""
-    mock_service = Magicawait self._create_authentic_gpt4o_mini_instance()
-    return mock_service
+    return MagicMock()
 
 
 @pytest.fixture
 def mock_extract_service():
     """Fixture pour un service d'extraction mocké."""
-    mock_service = Magicawait self._create_authentic_gpt4o_mini_instance()
-    return mock_service
+    return MagicMock()
 
 
 class TestVerifyExtracts:
@@ -167,10 +166,14 @@ class TestVerifyExtracts:
     def test_verify_extracts_all_valid(self, sample_definitions, mock_fetch_service, mock_extract_service):
         """Test de vérification avec tous les extraits valides."""
         # Configurer le mock du service de récupération
-        mock_fetch_service.fetch_text# Mock eliminated - using authentic gpt-4o-mini ("Texte source complet", "https://example.com/test")
+        # mock_fetch_service.fetch_text# Mock eliminated - using authentic gpt-4o-mini ("Texte source complet", "https://example.com/test")
+        mock_fetch_service.fetch_text.return_value = ("Texte source complet", "https://example.com/test")
         
         # Configurer le mock du service d'extraction pour simuler des extraits valides
-        mock_extract_service.extract_text_with_markers# Mock eliminated - using authentic gpt-4o-mini (
+        # mock_extract_service.extract_text_with_markers# Mock eliminated - using authentic gpt-4o-mini (
+        #     "Texte extrait", "✅ Extraction réussie", True, True
+        # )
+        mock_extract_service.extract_text_with_markers.return_value = (
             "Texte extrait", "✅ Extraction réussie", True, True
         )
         
@@ -185,7 +188,7 @@ class TestVerifyExtracts:
         assert results[0]["extract_name"] == "Test Extract"
         
         # Vérifier que les services ont été appelés correctement
-        mock_fetch_service.fetch_text.# Mock assertion eliminated - authentic validation
+        mock_fetch_service.fetch_text.assert_called_once()
         mock_extract_service.extract_text_with_markers.assert_called_once_with(
             "Texte source complet", "DEBUT_EXTRAIT", "FIN_EXTRAIT", "T{0}"
         )
@@ -193,10 +196,10 @@ class TestVerifyExtracts:
     def test_verify_extracts_invalid_start_marker(self, sample_definitions, mock_fetch_service, mock_extract_service):
         """Test de vérification avec un marqueur de début invalide."""
         # Configurer le mock du service de récupération
-        mock_fetch_service.fetch_text# Mock eliminated - using authentic gpt-4o-mini ("Texte source complet", "https://example.com/test")
+        mock_fetch_service.fetch_text.return_value = ("Texte source complet", "https://example.com/test")
         
         # Configurer le mock du service d'extraction pour simuler un marqueur de début invalide
-        mock_extract_service.extract_text_with_markers# Mock eliminated - using authentic gpt-4o-mini (
+        mock_extract_service.extract_text_with_markers.return_value = (
             None, "⚠️ Marqueur début non trouvé", False, True
         )
         
@@ -211,10 +214,10 @@ class TestVerifyExtracts:
     def test_verify_extracts_invalid_end_marker(self, sample_definitions, mock_fetch_service, mock_extract_service):
         """Test de vérification avec un marqueur de fin invalide."""
         # Configurer le mock du service de récupération
-        mock_fetch_service.fetch_text# Mock eliminated - using authentic gpt-4o-mini ("Texte source complet", "https://example.com/test")
+        mock_fetch_service.fetch_text.return_value = ("Texte source complet", "https://example.com/test")
         
         # Configurer le mock du service d'extraction pour simuler un marqueur de fin invalide
-        mock_extract_service.extract_text_with_markers# Mock eliminated - using authentic gpt-4o-mini (
+        mock_extract_service.extract_text_with_markers.return_value = (
             None, "⚠️ Marqueur fin non trouvé", True, False
         )
         
@@ -229,10 +232,10 @@ class TestVerifyExtracts:
     def test_verify_extracts_both_markers_invalid(self, sample_definitions, mock_fetch_service, mock_extract_service):
         """Test de vérification avec les deux marqueurs invalides."""
         # Configurer le mock du service de récupération
-        mock_fetch_service.fetch_text# Mock eliminated - using authentic gpt-4o-mini ("Texte source complet", "https://example.com/test")
+        mock_fetch_service.fetch_text.return_value = ("Texte source complet", "https://example.com/test")
         
         # Configurer le mock du service d'extraction pour simuler les deux marqueurs invalides
-        mock_extract_service.extract_text_with_markers# Mock eliminated - using authentic gpt-4o-mini (
+        mock_extract_service.extract_text_with_markers.return_value = (
             None, "⚠️ Marqueurs début et fin non trouvés", False, False
         )
         
@@ -247,7 +250,7 @@ class TestVerifyExtracts:
     def test_verify_extracts_source_error(self, sample_definitions, mock_fetch_service, mock_extract_service):
         """Test de vérification avec une erreur de chargement de la source."""
         # Configurer le mock du service de récupération pour simuler une erreur
-        mock_fetch_service.fetch_text# Mock eliminated - using authentic gpt-4o-mini (None, "https://example.com/test")
+        mock_fetch_service.fetch_text.return_value = (None, "https://example.com/test")
         
         # Appeler la fonction à tester
         results = verify_extracts(sample_definitions, mock_fetch_service, mock_extract_service)
@@ -300,12 +303,12 @@ class TestVerifyExtracts:
         definitions = ExtractDefinitions(sources=[source1, source2])
         
         # Configurer les mocks
-        mock_fetch_service.fetch_text# Mock eliminated - using authentic gpt-4o-mini [
+        mock_fetch_service.fetch_text.side_effect = [
             ("Texte source 1", "https://example.com/source1"),
             ("Texte source 2", "https://example.com/source2")
         ]
         
-        mock_extract_service.extract_text_with_markers# Mock eliminated - using authentic gpt-4o-mini [
+        mock_extract_service.extract_text_with_markers.side_effect = [
             ("Extrait 1", "✅ Extraction réussie", True, True),
             ("Extrait 2", "⚠️ Marqueur fin non trouvé", True, False),
             ("Extrait 3", "✅ Extraction réussie", True, True)
@@ -382,7 +385,7 @@ class TestMain:
     def test_main_success(self, mock_parse_args):
         """Test de la fonction principale avec succès."""
         # Configurer le mock
-        mock_parse_args# Mock eliminated - using authentic gpt-4o-mini MagicMock(
+        mock_parse_args.return_value = MagicMock(
             output="test_report.html",
             verbose=False,
             input=None
@@ -398,7 +401,7 @@ class TestMain:
     def test_main_with_error(self, mock_parse_args):
         """Test de la fonction principale avec une erreur."""
         # Configurer le mock
-        mock_parse_args# Mock eliminated - using authentic gpt-4o-mini MagicMock(
+        mock_parse_args.return_value = MagicMock(
             output="test_report.html",
             verbose=False,
             input=None
@@ -414,7 +417,7 @@ class TestMain:
     def test_main_exception(self, mock_parse_args):
         """Test de la fonction principale avec une exception."""
         # Configurer le mock
-        mock_parse_args# Mock eliminated - using authentic gpt-4o-mini MagicMock(
+        mock_parse_args.return_value = MagicMock(
             output="test_report.html",
             verbose=False,
             input=None

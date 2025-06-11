@@ -10,6 +10,7 @@ from config.unified_config import UnifiedConfig
 Tests unitaires pour les utilitaires réseau de project_core.
 """
 import pytest
+from unittest.mock import patch, mock_open, MagicMock
 from pathlib import Path
 
 import requests # Pour les exceptions
@@ -32,9 +33,9 @@ def mock_path_operations():
          patch('os.remove') as mock_os_remove:
         
         # Configurer le mock pour stat() afin qu'il retourne un objet avec un attribut st_size
-        mock_stat_result = Magicawait self._create_authentic_gpt4o_mini_instance()
+        mock_stat_result = MagicMock()
         mock_stat_result.st_size = 0 # Taille par défaut, peut être surchargée dans les tests
-        mock_stat# Mock eliminated - using authentic gpt-4o-mini mock_stat_result
+        mock_stat.return_value = mock_stat_result
         
         yield {
             "mkdir": mock_mkdir,
@@ -52,14 +53,14 @@ def test_download_file_success(mock_requests_get, mock_path_operations, tmp_path
     expected_file_size = len(file_content)
 
     # Configurer le mock de requests.get
-    mock_response = Magicawait self._create_authentic_gpt4o_mini_instance()
-    mock_response.raise_for_status# Mock eliminated - using authentic gpt-4o-mini None # Pas d'erreur HTTP
-    mock_response.iter_content# Mock eliminated - using authentic gpt-4o-mini [file_content] # Simule les chunks
-    mock_requests_get.return_value.__enter__# Mock eliminated - using authentic gpt-4o-mini mock_response # Pour le context manager
+    mock_response = MagicMock()
+    mock_response.raise_for_status.return_value = None # Pas d'erreur HTTP
+    mock_response.iter_content.return_value = [file_content] # Simule les chunks
+    mock_requests_get.return_value.__enter__.return_value = mock_response # Pour le context manager
 
     # Configurer le mock de stat pour retourner la bonne taille
     mock_path_operations["stat"].return_value.st_size = expected_file_size
-    mock_path_operations["exists"]# Mock eliminated - using authentic gpt-4o-mini True # Simuler que le fichier existe après écriture
+    mock_path_operations["exists"].return_value = True # Simuler que le fichier existe après écriture
 
     result = download_file(url, dest_path, expected_size=expected_file_size)
 
@@ -77,12 +78,12 @@ def test_download_file_http_error(mock_requests_get, mock_path_operations, tmp_p
     url = "http://example.com/notfound.txt"
     dest_path = tmp_path / "failed_download.txt"
 
-    mock_response = Magicawait self._create_authentic_gpt4o_mini_instance()
-    mock_response.raise_for_status# Mock eliminated - using authentic gpt-4o-mini requests.exceptions.HTTPError("404 Client Error")
-    mock_requests_get.return_value.__enter__# Mock eliminated - using authentic gpt-4o-mini mock_response
+    mock_response = MagicMock()
+    mock_response.raise_for_status.side_effect = requests.exceptions.HTTPError("404 Client Error")
+    mock_requests_get.return_value.__enter__.return_value = mock_response
     
     # Simuler que le fichier partiel pourrait exister avant suppression
-    mock_path_operations["exists"]# Mock eliminated - using authentic gpt-4o-mini True 
+    mock_path_operations["exists"].return_value = True
 
     result = download_file(url, dest_path)
 
@@ -99,13 +100,13 @@ def test_download_file_size_mismatch(mock_requests_get, mock_path_operations, tm
     actual_size = len(file_content)
     expected_size = actual_size + 10 # Taille attendue incorrecte
 
-    mock_response = Magicawait self._create_authentic_gpt4o_mini_instance()
-    mock_response.raise_for_status# Mock eliminated - using authentic gpt-4o-mini None
-    mock_response.iter_content# Mock eliminated - using authentic gpt-4o-mini [file_content]
-    mock_requests_get.return_value.__enter__# Mock eliminated - using authentic gpt-4o-mini mock_response
+    mock_response = MagicMock()
+    mock_response.raise_for_status.return_value = None
+    mock_response.iter_content.return_value = [file_content]
+    mock_requests_get.return_value.__enter__.return_value = mock_response
 
     mock_path_operations["stat"].return_value.st_size = actual_size
-    mock_path_operations["exists"]# Mock eliminated - using authentic gpt-4o-mini True # Le fichier existe après écriture
+    mock_path_operations["exists"].return_value = True # Le fichier existe après écriture
 
     result = download_file(url, dest_path, expected_size=expected_size)
 
@@ -120,13 +121,13 @@ def test_download_file_os_error_on_write(mock_requests_get, mock_path_operations
     dest_path = tmp_path / "file_os_error.txt"
     file_content = b"Contenu."
 
-    mock_response = Magicawait self._create_authentic_gpt4o_mini_instance()
-    mock_response.raise_for_status# Mock eliminated - using authentic gpt-4o-mini None
-    mock_response.iter_content# Mock eliminated - using authentic gpt-4o-mini [file_content]
-    mock_requests_get.return_value.__enter__# Mock eliminated - using authentic gpt-4o-mini mock_response
+    mock_response = MagicMock()
+    mock_response.raise_for_status.return_value = None
+    mock_response.iter_content.return_value = [file_content]
+    mock_requests_get.return_value.__enter__.return_value = mock_response
 
     # Simuler une OSError lors de l'appel à open() ou write()
-    mock_path_operations["open"]# Mock eliminated - using authentic gpt-4o-mini OSError("Simulated Disk Full")
+    mock_path_operations["open"].side_effect = OSError("Simulated Disk Full")
 
     result = download_file(url, dest_path)
 
@@ -144,13 +145,13 @@ def test_download_file_no_expected_size(mock_requests_get, mock_path_operations,
     file_content = b"Quelque contenu."
     actual_size = len(file_content)
 
-    mock_response = Magicawait self._create_authentic_gpt4o_mini_instance()
-    mock_response.raise_for_status# Mock eliminated - using authentic gpt-4o-mini None
-    mock_response.iter_content# Mock eliminated - using authentic gpt-4o-mini [file_content]
-    mock_requests_get.return_value.__enter__# Mock eliminated - using authentic gpt-4o-mini mock_response
+    mock_response = MagicMock()
+    mock_response.raise_for_status.return_value = None
+    mock_response.iter_content.return_value = [file_content]
+    mock_requests_get.return_value.__enter__.return_value = mock_response
 
     mock_path_operations["stat"].return_value.st_size = actual_size
-    mock_path_operations["exists"]# Mock eliminated - using authentic gpt-4o-mini True
+    mock_path_operations["exists"].return_value = True
 
     result = download_file(url, dest_path, expected_size=None) # Pas de taille attendue
 
@@ -162,16 +163,16 @@ def test_download_file_cleans_up_partial_on_request_exception(mock_requests_get,
     url = "http://example.com/network_error"
     dest_path = tmp_path / "partial_on_error.dat"
 
-    mock_requests_get# Mock eliminated - using authentic gpt-4o-mini requests.exceptions.ConnectionError("Simulated network error")
+    mock_requests_get.side_effect = requests.exceptions.ConnectionError("Simulated network error")
     
     # Simuler que le fichier existe lorsque la vérification de suppression est faite
-    mock_path_operations["exists"]# Mock eliminated - using authentic gpt-4o-mini True 
+    mock_path_operations["exists"].return_value = True
 
     result = download_file(url, dest_path)
 
     assert result is False
     assert "Erreur de téléchargement (RequestException)" in caplog.text
-    mock_path_operations["exists"].# Mock assertion eliminated - authentic validation # Vérifie si le fichier partiel existe
+    mock_path_operations["exists"].assert_called_once() # Vérifie si le fichier partiel existe
     mock_path_operations["remove"].assert_called_once_with(dest_path) # Tentative de suppression
 
 def test_download_file_cleans_up_partial_on_unexpected_exception(mock_requests_get, mock_path_operations, tmp_path, caplog):
@@ -180,18 +181,18 @@ def test_download_file_cleans_up_partial_on_unexpected_exception(mock_requests_g
     dest_path = tmp_path / "partial_on_unexpected.dat"
 
     # Simuler une exception inattendue pendant le traitement des chunks, par exemple
-    mock_response = Magicawait self._create_authentic_gpt4o_mini_instance()
-    mock_response.raise_for_status# Mock eliminated - using authentic gpt-4o-mini None
-    mock_response.iter_content# Mock eliminated - using authentic gpt-4o-mini Exception("Unexpected error during iteration")
-    mock_requests_get.return_value.__enter__# Mock eliminated - using authentic gpt-4o-mini mock_response
+    mock_response = MagicMock()
+    mock_response.raise_for_status.return_value = None
+    mock_response.iter_content.side_effect = Exception("Unexpected error during iteration")
+    mock_requests_get.return_value.__enter__.return_value = mock_response
     
-    mock_path_operations["exists"]# Mock eliminated - using authentic gpt-4o-mini True
+    mock_path_operations["exists"].return_value = True
 
     result = download_file(url, dest_path)
 
     assert result is False
     assert "Une erreur inattendue est survenue" in caplog.text
-    mock_path_operations["exists"].# Mock assertion eliminated - authentic validation
+    mock_path_operations["exists"].assert_called_once()
     mock_path_operations["remove"].assert_called_once_with(dest_path)
 
 def test_download_file_handles_os_error_on_remove_after_exception(mock_requests_get, mock_path_operations, tmp_path, caplog):
@@ -202,9 +203,9 @@ def test_download_file_handles_os_error_on_remove_after_exception(mock_requests_
     url = "http://example.com/fail_then_fail_remove"
     dest_path = tmp_path / "fail_remove.dat"
 
-    mock_requests_get# Mock eliminated - using authentic gpt-4o-mini requests.exceptions.Timeout("Simulated timeout")
-    mock_path_operations["exists"]# Mock eliminated - using authentic gpt-4o-mini True
-    mock_path_operations["remove"]# Mock eliminated - using authentic gpt-4o-mini OSError("Simulated permission error on remove")
+    mock_requests_get.side_effect = requests.exceptions.Timeout("Simulated timeout")
+    mock_path_operations["exists"].return_value = True
+    mock_path_operations["remove"].side_effect = OSError("Simulated permission error on remove")
 
     result = download_file(url, dest_path)
     assert result is False
