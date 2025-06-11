@@ -60,15 +60,17 @@ try:
     if str(_project_root_upa) not in sys.path:
         sys.path.insert(0, str(_project_root_upa))
     
-    from scripts.core.environment_manager import auto_activate_env
-    
-    logger.info("[UPA] Tentative d'auto-activation de l'environnement conda 'projet-is'...")
-    # Correction: suppression de project_root_path car non supporté par la signature de auto_activate_env
-    # La fonction auto_activate_env devrait utiliser son propre mécanisme pour déterminer la racine du projet si nécessaire.
-    if auto_activate_env("projet-is", silent=False):
-        logger.info("[UPA] Environnement 'projet-is' auto-activé pour UPA.")
+    # Vérifier le drapeau avant de tenter l'activation
+    if os.getenv('IS_ACTIVATION_SCRIPT_RUNNING') == 'true':
+        logger.info("[UPA] Activation par script principal détectée, auto-activation UPA désactivée.")
     else:
-        logger.warning("[UPA] Impossible d'auto-activer l'environnement 'projet-is' pour UPA.")
+        from scripts.core.environment_manager import auto_activate_env
+        
+        logger.info("[UPA] Tentative d'auto-activation de l'environnement conda 'projet-is'...")
+        if auto_activate_env("projet-is", silent=False):
+            logger.info("[UPA] Environnement 'projet-is' auto-activé pour UPA.")
+        else:
+            logger.warning("[UPA] Impossible d'auto-activer l'environnement 'projet-is' pour UPA.")
     
     # Recharger dotenv au cas où l'activation de l'env l'aurait affecté ou pour être sûr
     from dotenv import load_dotenv
@@ -485,8 +487,26 @@ class DependencyValidator:
     async def _validate_tweety_dependencies(self) -> List[str]:
         """Valide TweetyProject et JPype"""
         errors = []
-        
+
         try:
+            # === PATCH DE LA DERNIÈRE CHANCE ===
+            # Forcer l'ajout de site-packages au sys.path. C'est une mesure de diagnostic extrême.
+            import site
+            site_packages_path = next((p for p in sys.path if 'site-packages' in p and 'projet-is' in p), None)
+            if site_packages_path:
+                if site_packages_path not in sys.path:
+                    sys.path.insert(0, site_packages_path)
+                self.logger.warning(f"[PATCH] Ajout forcé de {site_packages_path} à sys.path")
+            else:
+                 # Si on ne trouve pas le chemin, on essaye de le construire
+                conda_prefix = os.environ.get("CONDA_PREFIX")
+                if conda_prefix and "projet-is" in conda_prefix:
+                    sp_path = os.path.join(conda_prefix, "lib", "site-packages")
+                    if os.path.exists(sp_path) and sp_path not in sys.path:
+                         sys.path.insert(0, sp_path)
+                         self.logger.warning(f"[PATCH] Ajout forcé construit de {sp_path} à sys.path")
+            # === FIN PATCH ===
+
             import jpype1 as jpype
             # S'assurer que la JVM est démarrée avant de vérifier son état
             if not jpype.isJVMStarted():
@@ -498,6 +518,7 @@ class DependencyValidator:
             if not jpype.isJVMStarted() and not any("Impossible de démarrer la JVM" in err for err in errors): # Revérifier après tentative de démarrage
                 errors.append("JVM TweetyProject non démarrée (après tentative)")
         except ImportError:
+            self.logger.error(f"Échec de l'import JPype1. sys.path: {sys.path}")
             errors.append("JPype1 non installé - requis pour TweetyProject")
             
         # Vérification des JARs TweetyProject

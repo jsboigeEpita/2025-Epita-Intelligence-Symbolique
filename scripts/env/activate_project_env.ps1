@@ -46,31 +46,34 @@ try {
     )
     $env:PYTHONPATH = ($paths -join ";") + ";$env:PYTHONPATH"
     $env:PYTHONIOENCODING = "utf-8"
-    
+    # Définir un drapeau pour que les scripts Python sachent qu'ils sont exécutés par ce script
+    $env:IS_ACTIVATION_SCRIPT_RUNNING = "true"
     # Recherche et activation de l'environnement conda/venv
     $CondaActivated = $false
     $VenvActivated = $false
     
     # Tentative d'activation conda
+    $PythonExecutable = $null
     try {
-        $CondaEnvs = & conda env list 2>$null | Where-Object { $_ -match "oracle|argum|intelligence|projet-is" }
-        if ($CondaEnvs) {
-            $EnvName = ($CondaEnvs[0] -split '\s+')[0]
-            Write-Host "✅ [CONDA] Activation environnement dédié: $EnvName" -ForegroundColor Green
-            & conda activate $EnvName 2>$null
-            $CondaActivated = $true
+        # Approche robuste : trouver le chemin de l'environnement via `conda info`
+        Write-Host "[INFO] Recherche de l'environnement Conda 'projet-is' via JSON..." -ForegroundColor Gray
+        $conda_info_json = conda info --envs --json | ConvertFrom-Json
+        $projet_is_path = $conda_info_json.envs | Where-Object { $_ -like '*\projet-is' } | Select-Object -First 1
+
+        if ($projet_is_path) {
+            $CondaActivated = $true # Marqueur pour le logging
+            Write-Host "✅ [CONDA] Environnement 'projet-is' localisé: $projet_is_path" -ForegroundColor Green
+            $PythonExecutable = Join-Path $projet_is_path "python.exe"
             
-            # Vérifier si c'est l'environnement recommandé
-            if ($EnvName -eq "projet-is") {
-                Write-Host "🎯 [OPTIMAL] Environnement recommandé 'projet-is' actif!" -ForegroundColor Green
-            } else {
-                Write-Host "⚠️  [ATTENTION] Environnement '$EnvName' (recommandé: 'projet-is')" -ForegroundColor Yellow
+            if (-not (Test-Path $PythonExecutable)) {
+                Write-Host "❌ [PYTHON] Exécutable introuvable: $PythonExecutable. Utilisation de 'python' par défaut." -ForegroundColor Red
+                $PythonExecutable = $null # Annuler pour permettre fallback
             }
         } else {
-            Write-Host "[CONDA] Aucun environnement projet trouve (oracle|argum|intelligence|projet-is)" -ForegroundColor Yellow
+            Write-Host "⚠️ [CONDA] Environnement 'projet-is' introuvable via `conda info --json`." -ForegroundColor Yellow
         }
     } catch {
-        Write-Host "[ATTENTION] Conda non disponible, tentative venv..." -ForegroundColor Yellow
+        Write-Host "⚠️ [ERREUR] Impossible de parser la sortie JSON de Conda. $($_.Exception.Message)" -ForegroundColor Yellow
     }
     
     # Tentative d'activation venv si conda echoue
@@ -120,18 +123,21 @@ try {
     Write-Host "[COMMANDE] $CommandToRun" -ForegroundColor Cyan
     Write-Host ("=" * 80) -ForegroundColor Gray
     
-    # Separer la commande et ses arguments
-    $CommandParts = $CommandToRun -split ' ', 2
-    $Command = $CommandParts[0]
-    $Arguments = if ($CommandParts.Length -gt 1) { $CommandParts[1] } else { "" }
-    
-    # Executer la commande
-    if ($Arguments) {
-        $ArgumentList = $Arguments -split ' '
-        & $Command $ArgumentList
+    # Déterminer la commande finale à exécuter
+    $FinalCommand = $CommandToRun
+    if ($PythonExecutable -and $CommandToRun.StartsWith("python ")) {
+        # Remplacer "python" par le chemin complet et absolu de l'exécutable
+        $CommandArgs = $CommandToRun.Substring(7)
+        # Envelopper le chemin de l'exécutable dans des guillemets pour gérer les espaces
+        $FinalCommand = "& `"$PythonExecutable`" $CommandArgs"
+        Write-Host "[INFO] Exécution avec le Python de l'environnement: $PythonExecutable" -ForegroundColor Green
     } else {
-        & $Command
+        # Exécution standard si ce n'est pas une commande python ou si l'exécutable n'a pas été trouvé
+        $FinalCommand = $CommandToRun
     }
+    
+    # Exécuter la commande finale en utilisant Invoke-Expression pour une gestion robuste des arguments
+    Invoke-Expression $FinalCommand
     
     $ExitCode = $LASTEXITCODE
     Write-Host ("=" * 80) -ForegroundColor Gray

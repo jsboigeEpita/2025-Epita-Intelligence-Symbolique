@@ -29,20 +29,24 @@ from pathlib import Path
 project_root = Path(__file__).parent.parent.absolute()
 
 try:
-    # Import direct par chemin absolu pour éviter les problèmes d'import
-    scripts_core_path = project_root / "scripts" / "core"
-    if str(scripts_core_path) not in sys.path:
-        sys.path.insert(0, str(scripts_core_path))
-    
-    from auto_env import ensure_env
-    success = ensure_env(silent=False)
-    
-    if success:
-        print("[OK AUTO_ENV] Environnement projet active avec succes (conftest.py principal)")
-        print(f"[INFO] Python: {sys.executable}")
-        print(f"[INFO] Environnement conda: {os.environ.get('CONDA_DEFAULT_ENV', 'Non defini')}")
+    # Si le script d'activation externe est en cours, ne pas lancer auto_env
+    if os.getenv('IS_ACTIVATION_SCRIPT_RUNNING') == 'true':
+        print("[INFO AUTO_ENV] Exécution via activate_project_env.ps1 détectée. auto_env est désactivé.")
     else:
-        print("[WARN AUTO_ENV] Activation en mode degrade - continuez dans l'environnement actuel")
+        # Import direct par chemin absolu pour éviter les problèmes d'import
+        scripts_core_path = project_root / "scripts" / "core"
+        if str(scripts_core_path) not in sys.path:
+            sys.path.insert(0, str(scripts_core_path))
+        
+        from auto_env import ensure_env
+        success = ensure_env(silent=False)
+        
+        if success:
+            print("[OK AUTO_ENV] Environnement projet active avec succes (conftest.py principal)")
+            print(f"[INFO] Python: {sys.executable}")
+            print(f"[INFO] Environnement conda: {os.environ.get('CONDA_DEFAULT_ENV', 'Non defini')}")
+        else:
+            print("[WARN AUTO_ENV] Activation en mode degrade - continuez dans l'environnement actuel")
         
 except ImportError as e:
     print(f"[ERROR AUTO_ENV] Module auto_env non disponible dans conftest principal: {e}")
