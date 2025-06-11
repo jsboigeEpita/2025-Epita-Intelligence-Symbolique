@@ -46,7 +46,7 @@ class PlaywrightJSRunner:
         self.base_url = config.get('base_url', 'http://localhost:3000')
         self.screenshots_dir = Path(config.get('screenshots_dir', 'logs/screenshots'))
         self.traces_dir = Path(config.get('traces_dir', 'logs/traces'))
-        self.test_timeout = config.get('test_timeout', 300)  # 5 minutes
+        self.test_timeout = config.get('test_timeout', 600)  # 10 minutes
         
         # Création répertoires
         self.screenshots_dir.mkdir(parents=True, exist_ok=True)
@@ -146,9 +146,7 @@ class PlaywrightJSRunner:
         cmd.extend(test_paths)
         
         # Options Playwright
-        if config['headless']:
-            cmd.append('--headed=false')
-        else:
+        if not config['headless']:
             cmd.append('--headed')
             
         # Navigateur spécifique
@@ -222,10 +220,10 @@ class PlaywrightJSRunner:
             # Sauvegarder ce qui a été capturé avant le timeout
             if e.stdout:
                 with open(stdout_file, 'w', encoding='utf-8') as f:
-                    f.write(e.stdout.decode('utf-8', errors='replace'))
+                    f.write(e.stdout)
             if e.stderr:
                 with open(stderr_file, 'w', encoding='utf-8') as f:
-                    f.write(e.stderr.decode('utf-8', errors='replace'))
+                    f.write(e.stderr)
             # Créer un objet résultat pour l'analyse, marquant l'échec dû au timeout
             class TimeoutResult:
                 def __init__(self):

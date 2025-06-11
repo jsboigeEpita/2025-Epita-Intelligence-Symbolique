@@ -15,6 +15,7 @@ import os
 import sys
 import asyncio
 import logging
+import argparse
 from pathlib import Path
 from typing import Dict, Any, List
 
@@ -48,9 +49,9 @@ class JTMSWebValidator:
     - API et communication
     """
     
-    def __init__(self):
+    def __init__(self, headless: bool = True):
         self.logger = self._setup_logging()
-        self.config = self._get_jtms_test_config()
+        self.config = self._get_jtms_test_config(headless)
         self.playwright_runner = PlaywrightJSRunner(self.config, self.logger)
         
     def _setup_logging(self) -> logging.Logger:
@@ -62,12 +63,12 @@ class JTMSWebValidator:
         )
         return logging.getLogger(__name__)
     
-    def _get_jtms_test_config(self) -> Dict[str, Any]:
+    def _get_jtms_test_config(self, headless: bool) -> Dict[str, Any]:
         """Configuration spécialisée pour tests JTMS"""
         return {
             'enabled': True,
             'browser': 'chromium',
-            'headless': False,  # Mode visible pour diagnostic
+            'headless': headless,
             'timeout_ms': 15000,
             'slow_timeout_ms': 30000,
             'test_paths': ['tests_playwright/tests/jtms-interface.spec.js'],
@@ -94,7 +95,7 @@ class JTMSWebValidator:
             'backend_url': 'http://localhost:3000',
             'jtms_prefix': '/jtms',
             'test_mode': 'jtms_complete',
-            'headless': False,
+            'headless': self.config.get('headless', True),
             'capture_screenshots': True,
             'capture_traces': True
         }
@@ -170,11 +171,16 @@ class JTMSWebValidator:
 
 async def main():
     """Point d'entrée principal"""
+    parser = argparse.ArgumentParser(description="Validation Web Interface JTMS")
+    parser.add_argument('--headed', action='store_true', help="Lancer les tests en mode visible (non-headless)")
+    args = parser.parse_args()
+
     print("🧪 Démarrage Validation Web Interface JTMS")
     print("Utilisation du PlaywrightRunner asynchrone de haut niveau")
+    print(f"Mode headless: {not args.headed}")
     print()
     
-    validator = JTMSWebValidator()
+    validator = JTMSWebValidator(headless=not args.headed)
     
     # Exécution de la validation
     results = await validator.validate_web_interface()
