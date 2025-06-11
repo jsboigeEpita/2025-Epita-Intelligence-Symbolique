@@ -1,0 +1,82 @@
+{
+  "framework_properties": {
+    "num_arguments": 3,
+    "num_attacks": 2,
+    "has_cycles": false,
+    "cycles": [],
+    "self_attacking": []
+  },
+  "semantics_analysis": {
+    "extensions": {
+      "grounded": [
+        "a",
+        "c"
+      ],
+      "ideal": [
+        "a",
+        "c"
+      ],
+      "preferred": [
+        [
+          "a",
+          "c"
+        ]
+      ],
+      "complete": [
+        [
+          "a",
+          "c"
+        ]
+      ],
+      "stable": [
+        [
+          "a",
+          "c"
+        ]
+      ],
+      "admissible": [
+        [
+          "a"
+        ],
+        [
+          "a",
+          "c"
+        ],
+        []
+      ]
+    },
+    "theoretical_checks": {
+      "grounded_in_complete": true,
+      "all_preferred_are_complete": true,
+      "all_stable_are_preferred": true
+    }
+  },
+  "arguments_status": {
+    "a": {
+      "credulously_accepted": true,
+      "skeptically_accepted": true,
+      "grounded_accepted": true,
+      "stable_accepted": true
+    },
+    "b": {
+      "credulously_accepted": false,
+      "skeptically_accepted": false,
+      "grounded_accepted": false,
+      "stable_accepted": false
+    },
+    "c": {
+      "credulously_accepted": true,
+      "skeptically_accepted": true,
+      "grounded_accepted": true,
+      "stable_accepted": true
+    }
+  },
+  "summary": {
+    "total_arguments": 3,
+    "total_attacks": 2,
+    "has_cycles": false,
+    "grounded_extension_size": 2,
+    "num_preferred_extensions": 1,
+    "num_stable_extensions": 1
+  }
+}
