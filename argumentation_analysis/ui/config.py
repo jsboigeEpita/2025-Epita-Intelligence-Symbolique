@@ -19,7 +19,7 @@ if not config_logger.handlers and not config_logger.propagate:
      handler = logging.StreamHandler(); formatter = logging.Formatter('%(asctime)s [%(levelname)s] [%(name)s] %(message)s', datefmt='%H:%M:%S'); handler.setFormatter(formatter); config_logger.addHandler(handler); config_logger.setLevel(logging.INFO)
 
 # --- Chargement .env et Dérivation Clé ---
-load_dotenv(find_dotenv()) # Gardé au cas où d'autres variables .env sont utilisées
+load_dotenv(find_dotenv(start=str(Path(__file__).parent.parent.parent))) # Gardé au cas où d'autres variables .env sont utilisées
 
 # MODIFICATION: Utiliser directement "Propaganda" comme passphrase
 TEXT_CONFIG_PASSPHRASE = "Propaganda"

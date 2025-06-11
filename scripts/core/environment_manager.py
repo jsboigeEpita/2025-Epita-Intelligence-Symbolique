@@ -396,8 +396,8 @@ class EnvironmentManager:
         # --- BLOC D'ACTIVATION UNIFIÉ ---
         self.logger.info("Début du bloc d'activation unifié...")
 
-        # 1. Charger le fichier .env de base
-        dotenv_path = find_dotenv()
+        # 1. Charger le fichier .env de base (depuis le bon répertoire de projet)
+        dotenv_path = find_dotenv(start=str(self.project_root))
         if dotenv_path:
             self.logger.info(f"Fichier .env trouvé et chargé depuis : {dotenv_path}")
             load_dotenv(dotenv_path, override=True)
@@ -668,7 +668,7 @@ class EnvironmentManager:
                     f_write_env.writelines(current_env_lines)
                 if not silent: self.logger.info(f"[.ENV] Fichier {env_file} sauvegardé avec CONDA_PATH='{conda_path_to_write}'")
                 
-                # Recharger .env pour que os.environ soit mis à jour
+                # Recharger .env pour que os.environ soit mis à jour (depuis le bon répertoire)
                 dotenv_path_for_reload_op = find_dotenv(str(env_file), usecwd=True, raise_error_if_not_found=False)
                 if dotenv_path_for_reload_op:
                      load_dotenv(dotenv_path_for_reload_op, override=True) # Override pour prendre la nouvelle valeur
@@ -805,8 +805,8 @@ def recheck_java_environment(manager: 'EnvironmentManager'):
     logger = manager.logger
     ColoredOutput.print_section("Validation de l'environnement JAVA")
     
-    # Recharge .env pour être sûr d'avoir la dernière version
-    dotenv_path = find_dotenv()
+    # Recharge .env pour être sûr d'avoir la dernière version (depuis le bon répertoire)
+    dotenv_path = find_dotenv(start=str(Path(__file__).resolve().parent.parent.parent))
     if dotenv_path: load_dotenv(dotenv_path, override=True)
 
     # Cette logique est tirée de `activate_project_environment`

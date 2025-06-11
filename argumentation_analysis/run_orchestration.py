@@ -62,7 +62,7 @@ async def setup_environment() -> Any:
     """
     # 1. Chargement de l'environnement (.env)
     from dotenv import load_dotenv, find_dotenv
-    loaded = load_dotenv(find_dotenv(), override=True)
+    loaded = load_dotenv(find_dotenv(start=str(Path(__file__).parent.parent)), override=True)
     logging.info(f".env chargé: {loaded}")
 
     # 2. Initialisation de la JVM
