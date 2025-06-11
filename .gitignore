@@ -236,3 +236,9 @@ abs_arg_dung/*.log
 test_orchestration_data.txt
 test_orchestration_data_extended.txt
 test_orchestration_data_simple.txt
+
+# Fichiers de logs et rapports divers
+console_logs.txt
+rapport_*.md
+*log.txt
+temp_*.txt
