@@ -130,7 +130,7 @@ class FrontendManager:
                 stdout=self.frontend_stdout_log_file,
                 stderr=self.frontend_stderr_log_file,
                 cwd=self.frontend_path,
-                env=env,
+                env=frontend_env,
                 shell=True,
                 creationflags=subprocess.CREATE_NEW_PROCESS_GROUP if sys.platform == "win32" else 0
             )
@@ -225,7 +225,8 @@ class FrontendManager:
             'BROWSER': 'none',  # Empêche ouverture automatique navigateur
             'PORT': str(self.port),
             'GENERATE_SOURCEMAP': 'false',  # Performance
-            'SKIP_PREFLIGHT_CHECK': 'true'  # Évite erreurs compatibilité
+            'SKIP_PREFLIGHT_CHECK': 'true',  # Évite erreurs compatibilité
+            'CI': 'true' # Force le mode non-interactif
         })
         
         # Ajout du chemin npm/node à l'environnement

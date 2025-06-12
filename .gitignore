@@ -274,3 +274,5 @@ traces/
 # Rapports d'analyse spécifiques
 docs/rhetorical_analysis_conversation.md
 docs/sherlock_watson_investigation.md
+
+debug_imports.py
