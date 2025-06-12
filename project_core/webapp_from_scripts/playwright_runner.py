@@ -87,7 +87,7 @@ class PlaywrightRunner:
         """Construit la chaîne de commande 'npx playwright test ...'."""
         parts = ['npx', 'playwright', 'test']
         parts.extend(test_paths)
-        parts.append(f"--browser={config['browser']}")
+        # parts.append(f"--browser={config['browser']}") # Option retirée car gérée par les projets dans playwright.config.js
         if not config.get('headless', True):
             parts.append('--headed')
         parts.append(f"--timeout={config['timeout_ms']}")
