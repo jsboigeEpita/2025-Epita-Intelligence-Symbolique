@@ -304,19 +304,28 @@ class EnvironmentManager:
             self.logger.error(f"Impossible de trouver le chemin pour l'environnement conda '{env_name}'.")
             raise RuntimeError(f"Environnement conda '{env_name}' non disponible ou chemin inaccessible.")
 
-        import shlex
-        if isinstance(command, str):
-            # On utilise shlex.split pour séparer correctement la commande et ses arguments
-            # C'est la méthode la plus fiable pour gérer les espaces et les guillemets.
-            base_command = shlex.split(command, posix=(os.name != 'nt'))
-        else:
-            base_command = command
+        # Si la commande est une chaîne et contient des opérateurs de shell,
+        # il est plus sûr de l'exécuter via un shell.
+        is_complex_string_command = isinstance(command, str) and (';' in command or '&&' in command or '|' in command)
 
-        # Construction de la commande avec 'conda run -p <path>'
-        final_command = [
-            conda_exe, 'run', '--prefix', env_path,
-            '--no-capture-output',
-        ] + base_command
+        if is_complex_string_command:
+             # Pour Windows, on utilise cmd.exe /c pour exécuter la chaîne de commande
+            if platform.system() == "Windows":
+                final_command = [conda_exe, 'run', '--prefix', env_path, '--no-capture-output', 'cmd.exe', '/c', command]
+            # Pour les autres OS (Linux, macOS), on utilise bash -c
+            else:
+                final_command = [conda_exe, 'run', '--prefix', env_path, '--no-capture-output', 'bash', '-c', command]
+        else:
+            import shlex
+            if isinstance(command, str):
+                base_command = shlex.split(command, posix=(os.name != 'nt'))
+            else:
+                base_command = command
+            
+            final_command = [
+                conda_exe, 'run', '--prefix', env_path,
+                '--no-capture-output'
+            ] + base_command
         
         self.logger.info(f"Commande d'exécution via 'conda run': {' '.join(final_command)}")
 
@@ -557,7 +566,7 @@ class EnvironmentManager:
                 # La commande est maintenant passée comme une chaîne unique à run_in_conda_env
                 # qui va la gérer pour l'exécution via un shell si nécessaire.
                 self.logger.info(f"DEBUG: command_to_run (chaîne) avant run_in_conda_env: {command_to_run}")
-                result = self.run_in_conda_env(command_to_run.split(), env_name=env_name)
+                result = self.run_in_conda_env(command_to_run, env_name=env_name)
                 return result.returncode
             
             except Exception as e:
