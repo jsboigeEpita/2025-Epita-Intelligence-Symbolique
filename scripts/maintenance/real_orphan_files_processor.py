@@ -4,6 +4,7 @@ Script pour traiter les vrais fichiers orphelins identifiés par Git
 dans le projet Sherlock Watson.
 """
 
+import project_core.core_from_scripts.auto_env
 import os
 import json
 import shutil

@@ -77,7 +77,7 @@ playwright:
   
   # Chemins des tests
   test_paths:
-    - "tests/functional/"
+    - "tests_playwright/tests/"
   
   # Répertoires d'artefacts
   screenshots_dir: "logs/screenshots"

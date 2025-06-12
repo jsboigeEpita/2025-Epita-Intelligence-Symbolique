@@ -4,6 +4,7 @@ Script de mise à jour de la documentation Oracle Enhanced
 Phase 4: Mise à jour documentation avec nouvelles références
 """
 
+import project_core.core_from_scripts.auto_env
 import os
 import re
 from pathlib import Path

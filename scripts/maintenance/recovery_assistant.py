@@ -3,6 +3,7 @@ Assistant de récupération après crash Git
 Oracle Enhanced v2.1.0 - Récupération documentation
 """
 
+import project_core.core_from_scripts.auto_env
 import os
 import shutil
 from pathlib import Path

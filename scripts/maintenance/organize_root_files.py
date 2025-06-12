@@ -4,6 +4,7 @@ Script d'organisation des fichiers éparpillés à la racine du projet
 Sherlock-Watson-Moriarty Oracle Enhanced System
 """
 
+import project_core.core_from_scripts.auto_env
 import os
 import shutil
 from pathlib import Path
