@@ -264,3 +264,6 @@ data/extract_sources.json
 
 # Fichiers de rapport de trace complexes
 complex_trace_report_*.json
+
+# Node.js portable auto-downloaded
+libs/node-v*

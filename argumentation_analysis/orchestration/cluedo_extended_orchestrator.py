@@ -23,8 +23,11 @@ from semantic_kernel.kernel import Kernel
 AGENTS_AVAILABLE = False  # Module agents non disponible dans SK 0.9.6b1
 from semantic_kernel.contents import ChatMessageContent
 from semantic_kernel.functions.kernel_arguments import KernelArguments
-from semantic_kernel.functions.kernel_hook_args import KernelHookArgs
-FILTERS_AVAILABLE = True  # On suppose que les handlers sont toujours dispo
+from semantic_kernel.filters import FunctionInvocationContext
+
+# Note: Les filtres sont gérés différemment dans les versions récentes,
+# nous utiliserons les handlers directement.
+FILTERS_AVAILABLE = True
 # from semantic_kernel.processes.runtime.in_process_runtime import InProcessRuntime  # Module non disponible
 from pydantic import Field
 
@@ -44,59 +47,42 @@ logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(name)s - %(leve
 logger = logging.getLogger(__name__)
 
 
-# Nouveaux hooks de logging pour compatibilité avec SK v1.x+
-def log_function_pre_hook(context: KernelHookArgs) -> None:
-    """Hook exécuté avant chaque invocation de fonction."""
-    function_name = f"{context.function.plugin_name}.{context.function.name}"
-    logger.debug(f"▶️  INVOKING KERNEL FUNCTION: {function_name}")
-    args_str = ", ".join(f"{k}='{str(v)[:100]}...'" for k, v in context.arguments.items())
-    logger.debug(f"  ▶️  ARGS: {args_str}")
+# Nouvelle implémentation du logging via un filtre, conforme aux standards SK modernes
+class ToolCallLoggingHandler:
+    """
+    Handler pour journaliser les appels de fonctions (outils) du kernel,
+    utilisant le système d'événements mis à jour de Semantic Kernel.
+    """
+    @staticmethod
+    def on_function_invoking(context: FunctionInvocationContext) -> None:
+        """Méthode exécutée avant chaque invocation de fonction."""
+        metadata = context.function
+        function_name = f"{metadata.plugin_name}.{metadata.name}"
+        logger.debug(f"▶️  INVOKING KERNEL FUNCTION: {function_name}")
 
-def log_function_post_hook(context: KernelHookArgs) -> None:
-    """Hook exécuté après chaque invocation de fonction."""
-    function_name = f"{context.function.plugin_name}.{context.function.name}"
-    result_content = "N/A"
-    
-    result_value = context.result
-    if result_value:
-        # Gérer les listes et autres types itérables
-        if isinstance(result_value, list):
-            result_content = f"List[{len(result_value)}] - " + ", ".join(map(str, result_value[:3]))
-        else:
-            result_content = str(result_value)
-            
-    logger.debug(f"  ◀️  RESULT: {result_content[:500]}...") # Tronqué
-    logger.debug(f"◀️  FINISHED KERNEL FUNCTION: {function_name}")
+        args_str = ", ".join(f"{k}='{str(v)[:100]}...'" for k, v in context.arguments.items())
+        logger.debug(f"  ▶️  ARGS: {args_str}")
 
-# Définitions minimales pour compatibilité SK 0.9.6b1 (module agents non disponible)
-class Agent:
-    def __init__(self, name: str, kernel: Kernel = None, **kwargs):
-        self.name = name
-        self.kernel = kernel
-        # Ajout d'un logger pour compatibilité avec les attentes de l'orchestrateur
-        self._logger = logging.getLogger(f"Agent.{self.name}")
-        self._logger.info(f"Agent {self.name} initialisé (compatibilité SK 0.9.6b1).")
+    @staticmethod
+    def on_function_invoked(context: FunctionInvocationContext) -> None:
+        """Méthode exécutée après chaque invocation de fonction."""
+        metadata = context.function
+        function_name = f"{metadata.plugin_name}.{metadata.name}"
+        result_content = "N/A"
+        if context.result:
+            result_value = context.result.value
+            # Gérer les listes et autres types itérables
+            if isinstance(result_value, list):
+                result_content = f"List[{len(result_value)}] - " + ", ".join(map(str, result_value[:3]))
+            else:
+                result_content = str(result_value)
 
-class SelectionStrategy:
-    def __init__(self, **kwargs): # Ajout pour Pydantic
-        self._logger = logging.getLogger(self.__class__.__name__)
-        self._logger.info(f"SelectionStrategy initialisée (compatibilité SK 0.9.6b1).")
+        logger.debug(f"  ◀️  RESULT: {result_content[:500]}...") # Tronqué
+        logger.debug(f"◀️  FINISHED KERNEL FUNCTION: {function_name}")
 
-    def select_next_agent(self, agents: List[Agent], last_agent: Agent = None) -> Agent:
-        self._logger.debug(f"Sélection du prochain agent depuis la liste: {agents}")
-        if not agents:
-            self._logger.warning("Aucun agent disponible pour la sélection.")
-            return None
-        return agents[0] # Comportement par défaut simple
-
-class TerminationStrategy:
-    def __init__(self, **kwargs): # Ajout pour Pydantic
-        self._logger = logging.getLogger(self.__class__.__name__)
-        self._logger.info(f"TerminationStrategy initialisée (compatibilité SK 0.9.6b1).")
-
-    def should_terminate(self, messages: List[Any]) -> bool:
-        self._logger.debug(f"Vérification des conditions de terminaison pour {len(messages)} messages.")
-        return False # Comportement par défaut simple
+# Les classes de base (Agent, Strategies) sont importées depuis le module `base`
+# pour éviter les dépendances circulaires.
+from .base import Agent, SelectionStrategy, TerminationStrategy
 
 class CyclicSelectionStrategy(SelectionStrategy):
     """
@@ -508,9 +494,9 @@ class CluedoExtendedOrchestrator:
             
             # Ajout du filtre de logging moderne
             if FILTERS_AVAILABLE:
-                self.kernel.add_pre_hook(log_function_pre_hook)
-                self.kernel.add_post_hook(log_function_post_hook)
-                self._logger.info("Hooks de journalisation (pre/post) des appels de fonctions activés.")
+                self.kernel.add_function_invoking_handler(ToolCallLoggingHandler.on_function_invoking)
+                self.kernel.add_function_invoked_handler(ToolCallLoggingHandler.on_function_invoked)
+                self._logger.info("Handlers de journalisation (invoking/invoked) des appels de fonctions activés.")
         
         # Préparation des constantes pour Watson
         all_constants = [name.replace(" ", "") for category in elements_jeu.values() for name in category]
