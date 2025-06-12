@@ -96,15 +96,15 @@ class UnifiedWebOrchestrator:
     """
     
     API_ENDPOINTS_TO_CHECK = [
-        "/api/health",
-        "/api/analyze",
-        "/api/load_text",
-        "/api/get_arguments",
-        "/api/get_graph",
-        "/api/download_results",
-        "/api/status",
-        "/api/config",
-        "/api/feedback"
+        "/flask/api/health",
+        "/flask/api/analyze",
+        "/flask/api/load_text",
+        "/flask/api/get_arguments",
+        "/flask/api/get_graph",
+        "/flask/api/download_results",
+        "/flask/api/status",
+        "/flask/api/config",
+        "/flask/api/feedback"
     ]
 
     def __init__(self, config_path: str = "scripts/webapp/config/webapp_config.yml"):
@@ -135,10 +135,19 @@ class UnifiedWebOrchestrator:
         self._setup_signal_handlers()
 
     def _setup_signal_handlers(self):
-        """Configure les gestionnaires de signaux pour un arrêt propre."""
-        loop = asyncio.get_event_loop()
-        for sig in (signal.SIGINT, signal.SIGTERM):
-            loop.add_signal_handler(sig, lambda s=sig: asyncio.create_task(self.shutdown(signal=s)))
+        """Configure les gestionnaires de signaux pour un arrêt propre, compatible Windows."""
+        if sys.platform != "win32":
+            loop = asyncio.get_running_loop()
+            for sig in (signal.SIGINT, signal.SIGTERM):
+                loop.add_signal_handler(sig, lambda s=sig: asyncio.create_task(self.shutdown(signal=s)))
+        else:
+            # Sur Windows, les signaux sont plus limités. On peut gérer SIGINT avec signal.signal
+            # mais cela peut ne pas s'intégrer aussi proprement avec la boucle asyncio.
+            # Pour l'instant, on log l'information et on passe.
+            # Une gestion plus complète pourrait utiliser un thread séparé.
+            self.logger.info("Gestionnaires de signaux non configurés pour Windows (SIGINT/SIGTERM).")
+            # Pour une gestion basique de Ctrl+C :
+            # signal.signal(signal.SIGINT, lambda s, f: asyncio.create_task(self.shutdown(signal.SIGINT)))
 
     async def shutdown(self, signal=None):
         """Point d'entrée pour l'arrêt."""
@@ -683,33 +692,8 @@ class UnifiedWebOrchestrator:
         
         return content
 
-def _bootstrap_environment():
-    """Active l'environnement Conda et configure le sys.path."""
-    try:
-        _current_script_path = Path(__file__).resolve()
-        _project_root = _current_script_path.parent.parent.parent
-        if str(_project_root) not in sys.path:
-            sys.path.insert(0, str(_project_root))
-        
-        from scripts.core.environment_manager import auto_activate_env
-        
-        print("[INFO] Auto-activation de l'environnement conda...")
-        if auto_activate_env("projet-is", silent=False):
-            print("[OK] Environnement 'projet-is' auto-activé.")
-            return True
-        else:
-            print("[WARN] Impossible d'auto-activer l'environnement.")
-            return False
-    except Exception as e:
-        print(f"[ERREUR] Échec critique lors du bootstrap de l'environnement: {e}")
-        return False
-
 def main():
     """Point d'entrée principal en ligne de commande"""
-    if not _bootstrap_environment():
-        print("Arrêt dû à un échec de l'initialisation de l'environnement.", file=sys.stderr)
-        sys.exit(1)
-
     parser = argparse.ArgumentParser(description="Orchestrateur Unifié d'Application Web")
     parser.add_argument('--config', default='scripts/webapp/config/webapp_config.yml',
                        help='Chemin du fichier de configuration')
@@ -781,4 +765,6 @@ def main():
     sys.exit(exit_code)
 
 if __name__ == "__main__":
+    from scripts.core import auto_env
+    auto_env.ensure_env()
     main()
