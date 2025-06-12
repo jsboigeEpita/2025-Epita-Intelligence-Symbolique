@@ -489,7 +489,7 @@ class UnifiedWebOrchestrator:
 
         if used_ports:
             self.add_trace("[CLEAN] PORTS OCCUPES", f"Ports {used_ports} utilisés. Nettoyage forcé.")
-            await self.process_cleaner.cleanup_by_port(ports=used_ports)
+            self.process_cleaner.cleanup_by_port(ports=used_ports)
         else:
             self.add_trace("[CLEAN] PORTS LIBRES", f"Aucun service détecté sur les ports cibles : {ports_to_check}")
 
