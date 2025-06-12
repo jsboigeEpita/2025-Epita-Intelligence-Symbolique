@@ -79,7 +79,6 @@ import argparse
 import asyncio
 from datetime import datetime
 from pathlib import Path
-from fastapi import FastAPI
 from flask import Flask, request, jsonify, redirect, url_for
 from flask_cors import CORS
 from werkzeug.exceptions import HTTPException
@@ -107,6 +106,7 @@ try:
     _top_module_logger.info("--- Mounting Flask app within a FastAPI instance ---")
     sys.stderr.flush()
 
+    from fastapi import FastAPI # Import déplacé ici
     # Créer une instance de FastAPI comme application principale
     fastapi_app = FastAPI()
 
