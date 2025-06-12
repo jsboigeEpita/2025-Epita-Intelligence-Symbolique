@@ -293,12 +293,10 @@ class UnifiedTextAnalysisPipeline:
             if contextual_analyzer:
                 # Analyse contextuelle des sophismes
                 context_text = text[:500] + "..." if len(text) > 500 else text
-                sample_context = {"text": context_text, "context_type": "sample_for_analysis"}
                 
-                contextual_fallacies = contextual_analyzer.detect_fallacies_with_context(
-                    text,
-                    sample_context,
-                    include_confidence=True
+                contextual_fallacies = contextual_analyzer.identify_contextual_fallacies(
+                    argument=text,
+                    context="sample_for_analysis"
                 )
                 
                 # Format des sophismes détectés
@@ -315,6 +313,7 @@ class UnifiedTextAnalysisPipeline:
                 
                 # Évaluation de la sévérité si disponible
                 if severity_evaluator:
+                    sample_context = {"text": text[:500], "context_type": "sample_for_analysis"}
                     evaluation = severity_evaluator.evaluate_fallacy_list(contextual_fallacies, sample_context)
                     informal_results["fallacies"] = evaluation.get("fallacy_evaluations", contextual_fallacies)
                 else:
@@ -424,20 +423,22 @@ class UnifiedTextAnalysisPipeline:
         try:
             # Analyse unifiée avec le SynthesisAgent
             synthesis_result = await synthesis_agent.synthesize_analysis(
-                text_input=text,
-                context={"source": "unified_pipeline", "timestamp": datetime.now().isoformat()}
+                text=text
             )
             
-            if synthesis_result and synthesis_result.get("status") == "success":
+            if synthesis_result:
                 unified_results.update({
                     "status": "Success",
-                    "synthesis_report": synthesis_result.get("synthesis", ""),
-                    "combined_insights": synthesis_result.get("insights", []),
-                    "meta_analysis": synthesis_result.get("meta_analysis", {})
+                    "synthesis_report": synthesis_result.executive_summary,
+                    "combined_insights": synthesis_result.recommendations,
+                    "meta_analysis": {
+                        "overall_validity": synthesis_result.overall_validity,
+                        "confidence_level": synthesis_result.confidence_level
+                    }
                 })
             else:
                 unified_results["status"] = "Failed"
-                unified_results["reason"] = synthesis_result.get("error", "Erreur inconnue")
+                unified_results["reason"] = "L'analyse de synthèse n'a retourné aucun résultat."
                 
         except Exception as e:
             logger.error(f"Erreur analyse unifiée: {e}")
