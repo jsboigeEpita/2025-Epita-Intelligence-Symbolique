@@ -6,6 +6,7 @@ Tâche 4/6 : Validation post-refactorisation des scripts Oracle/Sherlock
 Teste que les fichiers refactorisés fonctionnent avec Oracle Enhanced v2.1.0
 """
 
+import project_core.core_from_scripts.auto_env
 import os
 import sys
 import subprocess

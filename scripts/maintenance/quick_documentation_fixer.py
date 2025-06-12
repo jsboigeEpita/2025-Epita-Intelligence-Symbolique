@@ -7,6 +7,7 @@ Version optimisée pour éviter les répertoires volumineux
 Oracle Enhanced v2.1.0
 """
 
+import project_core.core_from_scripts.auto_env
 import os
 import re
 from pathlib import Path

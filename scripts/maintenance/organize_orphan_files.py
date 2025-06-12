@@ -4,6 +4,7 @@ Script d'organisation des fichiers orphelins Oracle/Sherlock/Watson/Moriarty
 Identifie, analyse et organise tous les fichiers contenant des références orphelines
 """
 
+import project_core.core_from_scripts.auto_env
 import os
 import re
 import shutil
