@@ -6,12 +6,14 @@ Il configure les mocks nécessaires pour les tests et utilise les vraies bibliot
 lorsqu'elles sont disponibles. Pour Python 3.12 et supérieur, le mock JPype1 est
 automatiquement utilisé en raison de problèmes de compatibilité.
 """
+import project_core.core_from_scripts.auto_env
 import sys
 import os
 import pytest
 from unittest.mock import patch, MagicMock
 import importlib.util
 import logging
+import project_core.core_from_scripts.auto_env
 import threading # Ajout de l'import pour l'inspection des threads
 # --- Configuration globale du Logging pour les tests ---
 # Le logger global pour conftest est déjà défini plus bas,

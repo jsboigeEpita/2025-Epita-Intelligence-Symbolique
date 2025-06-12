@@ -8,6 +8,7 @@ vers scripts/ et identifie les doublons, avec recommandations de nettoyage.
 
 Fonctionnalités :
 - Comparaison fichier par fichier (nom, taille, contenu, hash)
+import project_core.core_from_scripts.auto_env
 - Identification des doublons exacts vs. modifiés
 - Analyse des dépendances et références
 - Génération de rapport détaillé avec recommandations
