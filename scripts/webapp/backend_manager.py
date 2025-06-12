@@ -25,8 +25,7 @@ import aiohttp
 import shutil
 import shlex
 
-# Import pour l'activation de l'environnement et la recherche de Python
-# from scripts.core.environment_manager import auto_activate_env # auto_activate_env est appelé par le script parent start_webapp.py
+from dotenv import load_dotenv, find_dotenv
 
 class BackendManager:
     """
@@ -94,61 +93,70 @@ class BackendManager:
             'pid': None
         }
     
-    async def _get_conda_env_python_executable(self, env_name: str) -> Optional[str]:
-        """Tente de trouver l'exécutable Python pour un environnement Conda donné."""
-        try:
-            # Essayer de trouver conda d'abord
-            conda_exe = shutil.which("conda")
-            if not conda_exe:
-                self.logger.warning("Exécutable Conda non trouvé via shutil.which('conda').")
-                conda_exe = os.environ.get("CONDA_EXE")
-                if not conda_exe or not Path(conda_exe).exists():
-                    self.logger.error("CONDA_EXE non trouvé ou invalide dans l'environnement.")
-                    return None
+    async def _find_conda_python(self) -> Optional[str]:
+        """Trouve l'exécutable Python de l'environnement Conda spécifié dans .env."""
+        self.logger.info("Recherche de l'exécutable Python de l'environnement Conda...")
+        
+        env_file = find_dotenv()
+        if not env_file:
+            self.logger.warning("Fichier .env non trouvé.")
+            return None
+        load_dotenv(dotenv_path=env_file)
+        
+        env_name = os.getenv("CONDA_ENV_NAME")
+        if not env_name:
+            self.logger.error("CONDA_ENV_NAME non défini dans le .env.")
+            return None
+        self.logger.info(f"Nom de l'environnement Conda cible: {env_name}")
 
-            # Obtenir les informations sur les environnements Conda
-            # Utilisation de asyncio.to_thread pour exécuter la commande bloquante subprocess.run
+        conda_exe = shutil.which("conda")
+        if not conda_exe:
+            self.logger.warning("'conda.exe' non trouvé via shutil.which. Tentative via CONDA_PATH.")
+            conda_path_from_env = os.getenv("CONDA_PATH")
+            if conda_path_from_env:
+                self.logger.info(f"CONDA_PATH trouvé dans .env: {conda_path_from_env}")
+                # Diviser la variable CONDA_PATH en plusieurs chemins
+                for base_path_str in conda_path_from_env.split(os.pathsep):
+                    base_path = Path(base_path_str.strip())
+                    if not base_path.exists():
+                        self.logger.warning(f"Le chemin '{base_path}' de CONDA_PATH n'existe pas.")
+                        continue
+                    
+                    potential_paths = [
+                        base_path / "condabin" / "conda.exe",
+                        base_path / "Scripts" / "conda.exe",
+                    ]
+                    for path_to_check in potential_paths:
+                        self.logger.info(f"Vérification de: {path_to_check}")
+                        if path_to_check.exists():
+                            conda_exe = str(path_to_check)
+                            self.logger.info(f"Exécutable Conda trouvé: {conda_exe}")
+                            break
+                    if conda_exe:
+                        break
+            else:
+                self.logger.warning("Variable CONDA_PATH non trouvée.")
+
+        if not conda_exe:
+            self.logger.error("Impossible de localiser conda.exe.")
+            return None
+            
+        try:
             result = await asyncio.to_thread(
-                subprocess.run,
-                [conda_exe, "info", "--envs", "--json"],
-                capture_output=True,
-                text=True,
-                check=True, # Lève une exception si la commande échoue
-                timeout=30
+                subprocess.run, [conda_exe, "info", "--envs", "--json"],
+                capture_output=True, text=True, check=True, timeout=30
             )
             envs_info = json.loads(result.stdout)
-            
             for env_path_str in envs_info.get("envs", []):
-                env_path = Path(env_path_str)
-                if env_path.name == env_name:
-                    # Construire le chemin vers python.exe (Windows) ou python (Unix)
-                    python_exe = env_path / "python.exe" # Pour Windows
-                    if not python_exe.exists():
-                        python_exe = env_path / "bin" / "python" # Pour Unix-like
-                    
+                if Path(env_path_str).name == env_name:
+                    python_exe = Path(env_path_str) / "python.exe"
                     if python_exe.exists():
-                        self.logger.info(f"Exécutable Python trouvé pour l'env '{env_name}': {python_exe}")
+                        self.logger.info(f"Exécutable Python trouvé: {python_exe}")
                         return str(python_exe)
-                    else:
-                        self.logger.warning(f"Exécutable Python non trouvé dans le chemin de l'env '{env_name}': {env_path}")
-                        break
-            
-            self.logger.error(f"Impossible de trouver le chemin de l'exécutable Python pour l'environnement Conda '{env_name}'.")
-            return None
-        except FileNotFoundError:
-            self.logger.error("La commande 'conda' n'a pas été trouvée. Assurez-vous que Conda est installé et dans le PATH.")
-            return None
-        except subprocess.CalledProcessError as e:
-            self.logger.error(f"Erreur lors de l'exécution de 'conda info --envs --json': {e.stderr}")
-            return None
-        except subprocess.TimeoutExpired:
-            self.logger.error("Timeout lors de l'exécution de 'conda info --envs --json'.")
-            return None
-        except json.JSONDecodeError:
-            self.logger.error("Erreur lors du parsing de la sortie JSON de 'conda info --envs --json'.")
+            self.logger.error(f"Env '{env_name}' non trouvé.")
             return None
         except Exception as e:
-            self.logger.error(f"Erreur inattendue lors de la recherche de l'exécutable Python de Conda: {e}")
+            self.logger.error(f"Erreur lors de l'interrogation de Conda: {e}")
             return None
 
     async def _start_on_port(self, port: int) -> Dict[str, Any]:
@@ -181,13 +189,23 @@ class BackendManager:
                     f"uvicorn.main({uvicorn_args_str_for_python})"
                 )
 
-                conda_env_name = "projet-is"
-                python_exe_path = await self._get_conda_env_python_executable(conda_env_name)
+                # Utiliser la nouvelle méthode pour trouver le bon Python
+                python_exe_path = await self._find_conda_python()
                 if not python_exe_path:
-                    return {'success': False, 'error': "Python executable not found for conda env."}
+                    error_msg = "Impossible de trouver l'exécutable Python de l'environnement Conda."
+                    self.logger.error(error_msg)
+                    return {'success': False, 'error': error_msg, 'url': None, 'port': None, 'pid': None}
                 
-                cmd = [python_exe_path, '-c', python_command_str]
-                self.logger.info(f"Démarrage FastAPI via uvicorn.main(): {python_exe_path} -c \"...\"")
+                backend_host = self.config.get('host', '127.0.0.1')
+                
+                cmd = [
+                    python_exe_path, "-m", "uvicorn",
+                    app_module_with_attribute,
+                    "--host", backend_host,
+                    "--port", str(port),
+                    "--log-level", "info"
+                ]
+                self.logger.info(f"Commande de lancement du backend: {' '.join(cmd)}")
 
             project_root = str(Path.cwd())
             log_dir = Path(project_root) / "logs"
