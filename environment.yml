@@ -44,7 +44,8 @@ dependencies:
   - pyvis # Ajouté pour la visualisation de réseaux (JTMS)
   - pip:
     - Flask-CORS # Spécifique, souvent via pip
-    - semantic-kernel==0.9.6b1 # Version compatible trouvée
+    - flask_socketio>=5.3.6 # Pour le support des websockets dans le blueprint JTMS
+    - semantic-kernel>=1.0.0 # Mise à jour CRITIQUE vers la nouvelle API
     - markdown
     - playwright
     - pytest-playwright
