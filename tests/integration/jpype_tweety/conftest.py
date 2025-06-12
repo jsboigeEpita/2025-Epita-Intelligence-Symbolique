@@ -1,3 +1,4 @@
+import project_core.core_from_scripts.auto_env
 import pytest
 import os
 import sys

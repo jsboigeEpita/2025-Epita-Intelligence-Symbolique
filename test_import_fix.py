@@ -8,6 +8,7 @@ Ce script teste si l'ImportError de 'run_analysis_conversation' a été résolue
 grâce au wrapper de compatibilité pl_agent.py.
 """
 
+import project_core.core_from_scripts.auto_env
 import sys
 import warnings
 from pathlib import Path

@@ -8,6 +8,7 @@ Ce script effectue les opérations suivantes :
 3. Crée le répertoire `data` s'il n'existe pas
 4. Met à jour le fichier `.gitignore` pour ignorer les fichiers sensibles et temporaires
 5. Supprime les fichiers de rapports obsolètes
+import project_core.core_from_scripts.auto_env
 6. Vérifie que les fichiers sensibles ne sont pas suivis par Git
 """
 

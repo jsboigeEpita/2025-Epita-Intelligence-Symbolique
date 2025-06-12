@@ -2,6 +2,7 @@
 Script pour vérifier que toutes les importations fonctionnent correctement.
 """
 
+import project_core.core_from_scripts.auto_env
 import importlib
 import sys
 from pathlib import Path

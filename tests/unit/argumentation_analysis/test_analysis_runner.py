@@ -13,7 +13,7 @@ import unittest
 from unittest.mock import patch, MagicMock, AsyncMock
 import asyncio
 # from tests.async_test_case import AsyncTestCase # Suppression de l'import
-from argumentation_analysis.orchestration.analysis_runner import run_analysis_conversation as run_analysis
+from argumentation_analysis.orchestration.analysis_runner import run_analysis
 
 
 class TestAnalysisRunner(unittest.TestCase):
@@ -44,7 +44,7 @@ class TestAnalysisRunner(unittest.TestCase):
         self.mock_llm_service.service_id = "test_service_id"
  
     
-    @patch('argumentation_analysis.orchestration.analysis_runner.run_analysis_conversation', new_callable=AsyncMock)
+    @patch('argumentation_analysis.orchestration.analysis_runner.run_analysis', new_callable=AsyncMock)
     @patch('argumentation_analysis.orchestration.analysis_runner.create_llm_service')
     async def test_run_analysis_with_llm_service(self, mock_create_llm_service, mock_run_analysis_conversation):
         """Teste l'exécution de l'analyse avec un service LLM fourni."""
@@ -62,7 +62,7 @@ class TestAnalysisRunner(unittest.TestCase):
             llm_service=self.mock_llm_service
         )
 
-    @patch('argumentation_analysis.orchestration.analysis_runner.run_analysis_conversation', new_callable=AsyncMock)
+    @patch('argumentation_analysis.orchestration.analysis_runner.run_analysis', new_callable=AsyncMock)
     @patch('argumentation_analysis.orchestration.analysis_runner.create_llm_service')
     async def test_run_analysis_without_llm_service(self, mock_create_llm_service, mock_run_analysis_conversation):
         """Teste l'exécution de l'analyse sans service LLM fourni."""
