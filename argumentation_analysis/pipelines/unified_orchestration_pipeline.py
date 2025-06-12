@@ -355,8 +355,16 @@ class UnifiedOrchestrationPipeline:
         logger.info("[HIERARCHICAL] Initialisation de l'architecture hiérarchique...")
         
         # Middleware de communication pour les gestionnaires
-        if MessageMiddleware and self.config.enable_communication_middleware:
+        # CORRECTIF : On utilise l'instance du middleware créée par le service_manager
+        # pour assurer une communication unifiée.
+        if self.service_manager and self.service_manager.middleware:
+            self.middleware = self.service_manager.middleware
+            logger.info("[HIERARCHICAL] Middleware lié depuis le ServiceManager.")
+        elif MessageMiddleware and self.config.enable_communication_middleware:
+            # Fallback si le service manager n'est pas utilisé, mais cela
+            # peut mener à une communication non-synchronisée.
             self.middleware = MessageMiddleware()
+            logger.warning("[HIERARCHICAL] Création d'une instance de middleware isolée pour le pipeline.")
         
         # Gestionnaire stratégique
         if StrategicManager and self.config.hierarchical_coordination_level in ["full", "strategic"] and self.middleware:
@@ -421,14 +429,18 @@ class UnifiedOrchestrationPipeline:
             logger.info("[LOGIC_COMPLEX] Orchestrateur logique complexe initialisé")
     
     async def _initialize_communication_middleware(self):
-        """Initialise le middleware de communication."""
+        """Initialise ou lie le middleware de communication."""
         if self.middleware:
-            logger.info("[COMMUNICATION] Middleware de communication déjà initialisé")
+            logger.info("[COMMUNICATION] Middleware de communication déjà lié ou initialisé.")
             return
-        
-        if MessageMiddleware and self.config.enable_communication_middleware:
+
+        # CORRECTIF : Prioriser le middleware du ServiceManager
+        if self.service_manager and self.service_manager.middleware:
+            self.middleware = self.service_manager.middleware
+            logger.info("[COMMUNICATION] Middleware de communication lié depuis le ServiceManager.")
+        elif MessageMiddleware and self.config.enable_communication_middleware:
             self.middleware = MessageMiddleware()
-            logger.info("[COMMUNICATION] Middleware de communication initialisé")
+            logger.info("[COMMUNICATION] Nouvelle instance de middleware de communication créée.")
     
     async def _initialize_fallback_pipeline(self):
         """Initialise le pipeline de fallback pour compatibilité."""
