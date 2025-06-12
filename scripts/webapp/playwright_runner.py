@@ -158,7 +158,9 @@ class PlaywrightRunner:
         playwright_cmd.extend(test_paths)
 
         # Ajout des options Playwright
-        playwright_cmd.append(f"--browser={config['browser']}")
+        # Ne pas ajouter l'option --browser si des projets sont définis dans la config
+        # La configuration de Playwright gérera la sélection du navigateur.
+        # playwright_cmd.append(f"--browser={config['browser']}")
         if not config['headless']:
             playwright_cmd.append('--headed')
         
@@ -169,17 +171,10 @@ class PlaywrightRunner:
         
         # Commande complète avec activation de l'environnement
         if sys.platform == "win32":
-            # Le CWD pour l'exécution sera `tests_playwright` donc les paths sont relatifs
-            # La commande `npx` utilisera le node portable si `NODE_HOME` est dans le PATH
-            # ce qui est fait par `activate_project_env.ps1`
             command_to_run = ' '.join(playwright_cmd)
-            # Le script activate_project_env.ps1 doit être appelé depuis la racine du projet.
-            # Le CWD de _execute_tests est 'tests_playwright', donc on utilise un chemin relatif.
-            activate_script_path = (Path.cwd() / 'scripts/env/activate_project_env.ps1').resolve()
-            cmd = [
-                'powershell', '-File', str(activate_script_path),
-                '-CommandToRun', command_to_run
-            ]
+            # Simplification radicale: on exécute directement la commande dans le bon CWD.
+            # L'activation de l'environnement est gérée par le script parent.
+            cmd = ['powershell', '-Command', command_to_run]
         else:
             # Pour Linux/macOS
             command_to_run = ' '.join(playwright_cmd)
@@ -208,7 +203,8 @@ class PlaywrightRunner:
                 encoding='utf-8',
                 errors='replace',
                 timeout=config.get('test_timeout', 300),  # 5 min par défaut
-                cwd=cwd
+                cwd=str(cwd),
+                shell=True
             )
             
             # Sauvegarde logs
