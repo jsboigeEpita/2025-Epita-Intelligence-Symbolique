@@ -556,7 +556,7 @@ class EnvironmentManager:
                 # La commande est maintenant passée comme une chaîne unique à run_in_conda_env
                 # qui va la gérer pour l'exécution via un shell si nécessaire.
                 self.logger.info(f"DEBUG: command_to_run (chaîne) avant run_in_conda_env: {command_to_run}")
-                result = self.run_in_conda_env(command_to_run, env_name=env_name) # Passer la chaîne directement
+                result = self.run_in_conda_env(command_to_run.split(), env_name=env_name)
                 return result.returncode
             
             except Exception as e:
@@ -953,8 +953,8 @@ def main():
     
     parser.add_argument(
         '--command', '-c',
-        nargs=argparse.REMAINDER,
-        help="Commande à exécuter. Doit être le dernier argument, tous les arguments suivants seront considérés comme faisant partie de la commande."
+        type=str,
+        help="Commande à exécuter, passée comme une chaîne unique."
     )
     
     parser.add_argument(
@@ -1081,7 +1081,7 @@ def main():
 
     # 3. Exécuter la commande (ou juste activer si aucune commande n'est fournie).
     # Ce bloc s'exécute soit en mode normal, soit après une réinstallation réussie.
-    command_to_run_final = ' '.join(args.command) if args.command else None
+    command_to_run_final = args.command
         
     logger.info("Phase d'activation/exécution de commande...")
     exit_code = manager.activate_project_environment(
