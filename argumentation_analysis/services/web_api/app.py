@@ -110,7 +110,7 @@ try:
     # Créer une instance de FastAPI comme application principale
     fastapi_app = FastAPI()
 
-    # Monter l'application Flask (WSGI) sur un sous-chemin
+    # Monter l'application Flask (WSGI) sur un sous-chemin pour éviter les conflits de routes.
     fastapi_app.mount("/flask", WSGIMiddleware(flask_app_instance_for_init))
 
     _top_module_logger.info(f"--- Flask app mounted on FastAPI at /flask. Main app type: {type(fastapi_app)} ---")
@@ -153,7 +153,13 @@ if app: # S'assurer que 'app' (fastapi_app) a été initialisé
 
 # Importer les routes Flask pour les enregistrer auprès de l'application flask_app
     from . import flask_routes
-    _top_module_logger.info("Flask routes module imported and registered.")
+    _top_module_logger.info("Flask routes module imported.")
+    
+    # Enregistrer explicitement le blueprint (si flask_routes utilise un Blueprint)
+    # Assurez-vous que flask_routes.bp existe ou adaptez à votre structure.
+    # Exemple: app.register_blueprint(flask_routes.bp, url_prefix='/api')
+    
+    _top_module_logger.info("Flask routes registered.")
 # Vérification de sécurité: si l'initialisation a échoué, app et flask_app seront None.
 # Le serveur Uvicorn échouera au démarrage car il ne trouvera pas de callable 'app'.
 if flask_app is None or app is None:

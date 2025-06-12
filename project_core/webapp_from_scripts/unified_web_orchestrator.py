@@ -96,12 +96,16 @@ class UnifiedWebOrchestrator:
     """
     
     API_ENDPOINTS_TO_CHECK = [
+        # Routes FastAPI
         {"path": "/api/health", "method": "GET"},
         {"path": "/api/endpoints", "method": "GET"},
-        {"path": "/api/analyze", "method": "POST", "data": {"text": "test"}},
-        {"path": "/api/validate", "method": "POST", "data": {"premises": ["p"], "conclusion": "q"}},
-        {"path": "/api/fallacies", "method": "POST", "data": {"text": "test"}},
-        {"path": "/api/framework", "method": "POST", "data": {"arguments": [{"id": "a", "content": "a"}]}}
+        
+        # Routes Flask montées sur /flask
+        {"path": "/flask/api/health", "method": "GET"},
+        {"path": "/flask/api/analyze", "method": "POST", "data": {"text": "test"}},
+        {"path": "/flask/api/validate", "method": "POST", "data": {"premises": ["p"], "conclusion": "q"}},
+        {"path": "/flask/api/fallacies", "method": "POST", "data": {"text": "test"}},
+        {"path": "/flask/api/framework", "method": "POST", "data": {"arguments": [{"id": "a", "content": "a"}]}}
     ]
 
     def __init__(self, config_path: str = "scripts/webapp/config/webapp_config.yml"):
@@ -768,6 +772,6 @@ def main():
     sys.exit(exit_code)
 
 if __name__ == "__main__":
-    from scripts.core import auto_env
+    from project_core.core_from_scripts import auto_env
     auto_env.ensure_env()
     main()
