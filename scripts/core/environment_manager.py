@@ -524,7 +524,7 @@ class EnvironmentManager:
                     logger_instance=self.logger,
                     skip_jdk=True,
                     skip_octave=True,
-                    skip_node=False # On veut installer Node.js
+                    skip_node=False
                 )
 
                 if 'NODE_HOME' in installed_tools and Path(installed_tools['NODE_HOME']).exists():
