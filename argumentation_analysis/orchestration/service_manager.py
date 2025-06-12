@@ -244,27 +244,15 @@ class OrchestrationServiceManager:
                 self.logger.warning("OPENAI_API_KEY non trouvée. Le service LLM ne sera pas configuré dans le kernel.")
             
             # 2. Initialisation du middleware de communication
-            if self.config.get('enable_communication_middleware', True) and MessageMiddleware:
-                self.middleware = MessageMiddleware()
-                self.logger.info("Middleware de communication initialisé")
+            # 2. Initialisation du middleware de communication
+            if self.config.get('enable_communication_middleware', True):
+                await self.initialize_middleware()
 
-                # Enregistrer les canaux nécessaires
-                if HierarchicalChannel:
-                    try:
-                        hierarchical_channel_id = self.config.get('hierarchical_channel_id', 'hierarchical_main')
-                        hc = HierarchicalChannel(channel_id=hierarchical_channel_id)
-                        self.middleware.register_channel(hc)
-                        self.logger.info(f"Canal HIERARCHICAL '{hierarchical_channel_id}' enregistré dans le middleware.")
-                    except Exception as e_chan:
-                        self.logger.error(f"Échec de l'enregistrement du HierarchicalChannel: {e_chan}", exc_info=True)
-                else:
-                    self.logger.error("Classe HierarchicalChannel non disponible pour enregistrement.")
-                
-            # 3. Initialisation des gestionnaires hiérarchiques
+            # 3. Initialisation des gestionnaires hiérarchiques (après le middleware)
             if self.config.get('enable_hierarchical', True):
                 await self._initialize_hierarchical_managers()
-                
-            # Initialisation des orchestrateurs spécialisés
+
+            # 4. Initialisation des orchestrateurs spécialisés
             if self.config.get('enable_specialized_orchestrators', True):
                 await self._initialize_specialized_orchestrators()
                 
@@ -278,28 +266,58 @@ class OrchestrationServiceManager:
             self.logger.error(f"Erreur lors de l'initialisation: {e}")
             return False
             
+    async def initialize_middleware(self):
+        """Initialise le middleware de communication et ses canaux."""
+        if self.middleware:
+            self.logger.info("Middleware déjà initialisé.")
+            return
+
+        if self.config.get('enable_communication_middleware', True) and MessageMiddleware:
+            self.middleware = MessageMiddleware()
+            self.logger.info("Middleware de communication instancié.")
+
+            # Enregistrer les canaux nécessaires
+            if HierarchicalChannel:
+                try:
+                    hierarchical_channel_id = self.config.get('hierarchical_channel_id', 'hierarchical_main')
+                    hc = HierarchicalChannel(channel_id=hierarchical_channel_id)
+                    self.middleware.register_channel(hc)
+                    self.logger.info(f"Canal HIERARCHICAL '{hierarchical_channel_id}' enregistré dans le middleware.")
+                except Exception as e_chan:
+                    self.logger.error(f"Échec de l'enregistrement du HierarchicalChannel: {e_chan}", exc_info=True)
+            else:
+                self.logger.error("Classe HierarchicalChannel non disponible pour enregistrement.")
+        else:
+            self.logger.warning("Middleware de communication désactivé ou non disponible.")
+
     async def _initialize_hierarchical_managers(self):
-        """Initialise les gestionnaires hiérarchiques."""
+        """Initialise les gestionnaires hiérarchiques, s'assurant que le middleware est prêt."""
+        if not self.middleware:
+            self.logger.warning("Middleware non initialisé. Impossible d'initialiser les gestionnaires hiérarchiques.")
+            return
+
         try:
             if StrategicManager:
                 self.strategic_manager = StrategicManager(middleware=self.middleware)
-                self.logger.info("StrategicManager initialisé")
+                self.logger.info("StrategicManager initialisé et abonné au middleware.")
                 
             if TacticalManager:
                 self.tactical_manager = TacticalManager(middleware=self.middleware)
-                self.logger.info("TacticalManager initialisé")
-                if OperationalManager:
-                    self.operational_manager = OperationalManager(
-                        middleware=self.middleware,
-                        kernel=self.kernel,
-                        llm_service_id=self.llm_service_id
-                    )
-                    self.logger.info("OperationalManager initialisé")
-                    
+                self.logger.info("TacticalManager initialisé et abonné au middleware.")
                 
+            if OperationalManager:
+                self.operational_manager = OperationalManager(
+                    middleware=self.middleware,
+                    kernel=self.kernel,
+                    llm_service_id=self.llm_service_id
+                )
+                self.logger.info("OperationalManager initialisé et abonné au middleware.")
+                    
         except Exception as e:
-            self.logger.warning(f"Erreur lors de l'initialisation des gestionnaires hiérarchiques: {e}")
-            
+            self.logger.error(f"Erreur critique lors de l'initialisation des gestionnaires hiérarchiques: {e}", exc_info=True)
+            # Optionnellement, remettre les managers à None pour indiquer un état d'échec partiel
+            self.strategic_manager = self.tactical_manager = self.operational_manager = None
+
     async def _initialize_specialized_orchestrators(self):
         """Initialise les orchestrateurs spécialisés."""
         try:
