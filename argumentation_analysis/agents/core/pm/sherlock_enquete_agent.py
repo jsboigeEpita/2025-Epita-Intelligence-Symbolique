@@ -236,11 +236,16 @@ class SherlockEnqueteAgent:
         try:
             # Utiliser le kernel pour générer une réponse via le service OpenAI
             # Assurez-vous que le service "authentic_test" est bien ajouté au kernel
-            response = await self._kernel.invoke_prompt(
+            execution_settings = OpenAIPromptExecutionSettings(service_id="authentic_test")
+            arguments = KernelArguments(input=message, execution_settings=execution_settings)
+            
+            chat_function = KernelFunction.from_prompt(
+                function_name="chat_with_sherlock",
+                plugin_name="SherlockAgentPlugin",
                 prompt=prompt,
-                service_id="authentic_test", # Utiliser le service configuré dans le test
-                arguments=KernelArguments(input=message) # Utiliser KernelArguments directement
             )
+
+            response = await self._kernel.invoke(chat_function, arguments=arguments)
             
             ai_response = str(response)
             self._logger.info(f"[{self._name}] AI Response: {ai_response}")

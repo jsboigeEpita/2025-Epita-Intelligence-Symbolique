@@ -219,11 +219,13 @@ class UnifiedInvestigationEngine:
         from argumentation_analysis.agents.core.logic.watson_logic_assistant import WatsonLogicAssistant
         
         orchestrateur = LogiqueComplexeOrchestrator(self.kernel)
-        sherlock_agent = SherlockEnqueteAgent(kernel=self.kernel)
-        watson_agent = WatsonLogicAssistant(kernel=self.kernel, use_tweety_bridge=(not self.args.no_tweety))
+        # Les agents ne sont plus requis pour l'appel à la méthode renommée
+        # sherlock_agent = SherlockEnqueteAgent(kernel=self.kernel)
+        # watson_agent = WatsonLogicAssistant(kernel=self.kernel, use_tweety_bridge=(not self.args.no_tweety))
 
         logger.info("🧩 Démarrage de la résolution de l'énigme d'Einstein...")
-        resultats = await orchestrateur.resoudre_enigme_complexe(sherlock_agent, watson_agent)
+        # L'appel a été modifié suite à une refactorisation de LogiqueComplexeOrchestrator
+        resultats = await orchestrateur.run_einstein_puzzle({})
 
         return {
             "workflow": "einstein",
