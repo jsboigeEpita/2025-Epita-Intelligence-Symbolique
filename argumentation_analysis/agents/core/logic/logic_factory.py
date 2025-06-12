@@ -29,6 +29,7 @@ class LogicAgentFactory:
     _agent_classes: Dict[str, Type[BaseLogicAgent]] = {
         "propositional": PropositionalLogicAgent,
         "first_order": FirstOrderLogicAgent,
+        "fol": FirstOrderLogicAgent,
         "modal": ModalLogicAgent
     }
     

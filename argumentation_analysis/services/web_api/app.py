@@ -126,11 +126,34 @@ except Exception as e_init:
     # raise e_init
 
 
-@flask_app.route("/api/health", methods=['GET'])
-def health_check():
-   """Endpoint de health check pour l'application Flask."""
-   return jsonify({"status": "ok", "message": "Flask is running", "timestamp": datetime.now().isoformat()})
+# Ajout du endpoint de health check pour l'orchestrateur
+if app: # S'assurer que 'app' (fastapi_app) a été initialisé
+    @app.get("/api/health")
+    def health_check():
+        """
+        Simple health check endpoint for the orchestrator.
+        """
+        return {"status": "ok", "timestamp": datetime.utcnow().isoformat()}
 
+    @app.get("/api/endpoints")
+    def get_all_endpoints():
+        """
+        Renvoie la liste des endpoints disponibles.
+        NOTE: Pour l'instant, c'est une implémentation de base pour satisfaire l'orchestrateur.
+        """
+        # TODO: Rendre cette liste dynamique en inspectant à la fois FastAPI et Flask.
+        return {
+            "fastapi_endpoints": [{"path": route.path, "name": route.name} for route in app.routes if hasattr(route, 'path')],
+            "flask_endpoints_expected": [
+                "/flask/api/health", "/flask/api/analyze", "/flask/api/load_text",
+                "/flask/api/get_arguments", "/flask/api/get_graph", "/flask/api/download_results",
+                "/flask/api/status", "/flask/api/config", "/flask/api/feedback"
+            ]
+        }
+
+# Importer les routes Flask pour les enregistrer auprès de l'application flask_app
+    from . import flask_routes
+    _top_module_logger.info("Flask routes module imported and registered.")
 # Vérification de sécurité: si l'initialisation a échoué, app et flask_app seront None.
 # Le serveur Uvicorn échouera au démarrage car il ne trouvera pas de callable 'app'.
 if flask_app is None or app is None:

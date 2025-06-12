@@ -196,7 +196,7 @@ class CorpusManager:
                 # Chargement et déchiffrement
                 definitions = load_extract_definitions(
                     config_file=corpus_path,
-                    key=encryption_key
+                    b64_derived_key=encryption_key
                 )
                 
                 if definitions:
@@ -245,11 +245,15 @@ class PipelineEngine:
             from config.unified_config import UnifiedConfig, LogicType, MockLevel
             
             # Configuration pour l'analyse authentique
+            is_prod = self.config.environment == ProcessingEnvironment.PROD
             analysis_config = UnifiedConfig(
                 logic_type=LogicType.FOL,
-                mock_level=MockLevel.NONE if self.config.environment == ProcessingEnvironment.PROD else MockLevel.MINIMAL,
+                mock_level=MockLevel.NONE if is_prod else MockLevel.PARTIAL,
                 enable_jvm=True,
-                orchestration_type="comprehensive"
+                orchestration_type="comprehensive",
+                require_real_gpt=is_prod,
+                require_real_tweety=is_prod,
+                require_full_taxonomy=is_prod
             )
             
             # Traitement parallèle des données

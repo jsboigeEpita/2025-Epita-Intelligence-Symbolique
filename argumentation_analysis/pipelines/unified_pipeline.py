@@ -568,7 +568,7 @@ if __name__ == "__main__":
         print_feature_status()
     else:
         async def main():
-            results = await analyze_text(args.text, mode=args.mode, analysis_type=args.type)
+            results = await analyze_text(args.text, mode=args.mode, analysis_type=args.type, use_mocks=False)
             print(f"Statut: {results['status']}")
             print(f"Temps d'exécution: {results['execution_time']:.2f}s")
             print(f"Mode utilisé: {results['metadata']['pipeline_mode']}")
