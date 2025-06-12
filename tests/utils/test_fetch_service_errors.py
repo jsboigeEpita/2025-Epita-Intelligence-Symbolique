@@ -93,7 +93,7 @@ def fetch_service():
 def test_connection_timeout(fetch_service):
     url = "https://example.com/timeout"
     with patch('requests.get') as mock_get:
-        mock_get# Mock eliminated - using authentic gpt-4o-mini requests.exceptions.Timeout("Connection timed out after 30 seconds")
+        mock_get.side_effect = requests.exceptions.Timeout("Connection timed out after 30 seconds")
         content, error = fetch_service.fetch_url(url)
         assert content is None
         assert error == f"Timeout après {fetch_service.max_retries} tentatives pour '{url}'"
@@ -101,7 +101,7 @@ def test_connection_timeout(fetch_service):
 def test_dns_resolution_failure(fetch_service):
     url = "https://nonexistent-domain-12345.com"
     with patch('requests.get') as mock_get:
-        mock_get# Mock eliminated - using authentic gpt-4o-mini requests.exceptions.ConnectionError("Failed to resolve 'nonexistent-domain-12345.com'")
+        mock_get.side_effect = requests.exceptions.ConnectionError("Failed to resolve 'nonexistent-domain-12345.com'")
         content, error = fetch_service.fetch_url(url)
         assert content is None
         assert error == f"Erreur DNS: Impossible de résoudre le nom d'hôte '{url}'"
@@ -115,7 +115,7 @@ def test_ssl_certificate_error(fetch_service):
     expected_error_message_fragment = "Erreur de connexion lors de la récupération de"
     with patch('requests.get') as mock_get:
         ssl_error_instance = requests.exceptions.SSLError("SSL: CERTIFICATE_VERIFY_FAILED")
-        mock_get# Mock eliminated - using authentic gpt-4o-mini ssl_error_instance
+        mock_get.side_effect = ssl_error_instance
         content, error = fetch_service.fetch_url(url)
         assert content is None
         assert error is not None
@@ -127,11 +127,11 @@ def test_ssl_certificate_error(fetch_service):
 def test_http_404_error(fetch_service):
     url = "https://example.com/nonexistent"
     with patch('requests.get') as mock_get:
-        mock_response = Magicawait self._create_authentic_gpt4o_mini_instance()
+        mock_response = MagicMock()
         mock_response.status_code = 404
         http_error = requests.exceptions.HTTPError("404 Client Error: Not Found")
         http_error.response = mock_response
-        mock_get# Mock eliminated - using authentic gpt-4o-mini http_error
+        mock_get.side_effect = http_error
         content, error = fetch_service.fetch_url(url)
         assert content is None
         assert error == f"Erreur 404: Page non trouvée pour '{url}'"
@@ -139,11 +139,11 @@ def test_http_404_error(fetch_service):
 def test_http_403_error(fetch_service):
     url = "https://example.com/forbidden"
     with patch('requests.get') as mock_get:
-        mock_response = Magicawait self._create_authentic_gpt4o_mini_instance()
+        mock_response = MagicMock()
         mock_response.status_code = 403
         http_error = requests.exceptions.HTTPError("403 Client Error: Forbidden")
         http_error.response = mock_response
-        mock_get# Mock eliminated - using authentic gpt-4o-mini http_error
+        mock_get.side_effect = http_error
         content, error = fetch_service.fetch_url(url)
         assert content is None
         assert error == f"Erreur 403: Accès interdit pour '{url}'"
@@ -151,11 +151,11 @@ def test_http_403_error(fetch_service):
 def test_http_500_error(fetch_service):
     url = "https://example.com/server-error"
     with patch('requests.get') as mock_get:
-        mock_response = Magicawait self._create_authentic_gpt4o_mini_instance()
+        mock_response = MagicMock()
         mock_response.status_code = 500
         http_error = requests.exceptions.HTTPError("500 Server Error: Internal Server Error")
         http_error.response = mock_response
-        mock_get# Mock eliminated - using authentic gpt-4o-mini http_error
+        mock_get.side_effect = http_error
         content, error = fetch_service.fetch_url(url)
         assert content is None
         assert error == f"Erreur 500: Erreur serveur interne pour '{url}'"
@@ -163,7 +163,7 @@ def test_http_500_error(fetch_service):
 def test_connection_refused(fetch_service):
     url = "https://example.com/refused"
     with patch('requests.get') as mock_get:
-        mock_get# Mock eliminated - using authentic gpt-4o-mini requests.exceptions.ConnectionError("Connection refused")
+        mock_get.side_effect = requests.exceptions.ConnectionError("Connection refused")
         content, error = fetch_service.fetch_url(url)
         assert content is None
         assert error == f"Erreur de connexion: Connexion refusée à '{url}'"
@@ -171,7 +171,7 @@ def test_connection_refused(fetch_service):
 def test_too_many_redirects(fetch_service):
     url = "https://example.com/redirect-loop"
     with patch('requests.get') as mock_get:
-        mock_get# Mock eliminated - using authentic gpt-4o-mini requests.exceptions.TooManyRedirects("Too many redirects")
+        mock_get.side_effect = requests.exceptions.TooManyRedirects("Too many redirects")
         content, error = fetch_service.fetch_url(url)
         assert content is None
         assert error == f"Trop de redirections pour '{url}'"
@@ -180,24 +180,24 @@ def test_successful_fetch(fetch_service):
     url = "https://example.com/success"
     expected_text = "<html><body><h1>Success</h1></body></html>"
     with patch('requests.get') as mock_get:
-        mock_response = Magicawait self._create_authentic_gpt4o_mini_instance()
+        mock_response = MagicMock()
         mock_response.status_code = 200
         mock_response.text = expected_text
         # Simuler l'absence d'erreur HTTP en s'assurant que raise_for_status ne fait rien
-        mock_response.raise_for_status = Magicawait self._create_authentic_gpt4o_mini_instance() 
-        mock_get# Mock eliminated - using authentic gpt-4o-mini mock_response
+        mock_response.raise_for_status = MagicMock()
+        mock_get.return_value = mock_response
         
         content, error = fetch_service.fetch_url(url)
         assert error is None
         assert content == expected_text
         mock_get.assert_called_once_with(url, headers={"User-Agent": fetch_service.user_agent}, timeout=fetch_service.timeout)
-        mock_response.raise_for_status.# Mock assertion eliminated - authentic validation
+        mock_response.raise_for_status.assert_called_once()
 
 def test_unknown_connection_error(fetch_service):
     url = "https://example.com/unknown-connection-error"
     original_error_message = "Some other connection problem"
     with patch('requests.get') as mock_get:
-        mock_get# Mock eliminated - using authentic gpt-4o-mini requests.exceptions.ConnectionError(original_error_message)
+        mock_get.side_effect = requests.exceptions.ConnectionError(original_error_message)
         content, error = fetch_service.fetch_url(url)
         assert content is None
         assert error == f"Erreur de connexion lors de la récupération de '{url}': {original_error_message}"
@@ -207,11 +207,11 @@ def test_unknown_http_error(fetch_service):
     original_error_message = "418 I'm a teapot"
     status_code = 418
     with patch('requests.get') as mock_get:
-        mock_response = Magicawait self._create_authentic_gpt4o_mini_instance()
+        mock_response = MagicMock()
         mock_response.status_code = status_code
         http_error = requests.exceptions.HTTPError(original_error_message)
         http_error.response = mock_response
-        mock_get# Mock eliminated - using authentic gpt-4o-mini http_error
+        mock_get.side_effect = http_error
         content, error = fetch_service.fetch_url(url)
         assert content is None
         assert error == f"Erreur HTTP {status_code} pour '{url}': {http_error}"
@@ -220,7 +220,7 @@ def test_unexpected_generic_exception(fetch_service):
     url = "https://example.com/unexpected-generic"
     original_error_message = "A very generic error occurred"
     with patch('requests.get') as mock_get:
-        mock_get# Mock eliminated - using authentic gpt-4o-mini Exception(original_error_message)
+        mock_get.side_effect = Exception(original_error_message)
         content, error = fetch_service.fetch_url(url)
         assert content is None
         assert error == f"Erreur inattendue lors de la récupération de '{url}': {original_error_message}"

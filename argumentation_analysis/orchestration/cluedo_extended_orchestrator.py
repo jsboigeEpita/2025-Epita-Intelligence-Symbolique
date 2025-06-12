@@ -24,8 +24,7 @@ from semantic_kernel.kernel import Kernel
 AGENTS_AVAILABLE = False  # Module agents non disponible dans SK 0.9.6b1
 from semantic_kernel.contents import ChatMessageContent
 from semantic_kernel.functions.kernel_arguments import KernelArguments
-from semantic_kernel.events.function_invoking_event_args import FunctionInvokingEventArgs
-from semantic_kernel.events.function_invoked_event_args import FunctionInvokedEventArgs
+# from semantic_kernel.functions.kernel_function_context import KernelFunctionContext
 
 # Note: Les filtres sont gérés différemment dans les versions récentes,
 # nous utiliserons les handlers directement.
@@ -51,35 +50,35 @@ logger = logging.getLogger(__name__)
 
 # Nouvelle implémentation du logging via un filtre, conforme aux standards SK modernes
 # Nouvelle implémentation du logging via un filtre, conforme aux standards SK modernes
-class ToolCallLoggingHandler:
-    """
-    Filtre pour journaliser les appels de fonctions (outils) du kernel,
-    utilisant le nouveau système de filtres de Semantic Kernel.
-    """
-    async def logging_filter(self, context: FunctionInvocationContext, next: Callable[[FunctionInvocationContext], Awaitable[None]]) -> None:
-        """Filtre qui journalise avant et après l'invocation de la fonction."""
-        # Avant l'invocation
-        metadata = context.function.metadata
-        function_name = f"{metadata.plugin_name}.{metadata.name}"
-        logger.debug(f"▶️  INVOKING KERNEL FUNCTION: {function_name}")
+# class ToolCallLoggingHandler:
+#     """
+#     Filtre pour journaliser les appels de fonctions (outils) du kernel,
+#     utilisant le nouveau système de filtres de Semantic Kernel.
+#     """
+#     # async def logging_filter(self, context: KernelFunctionContext, next: Callable[[KernelFunctionContext], Awaitable[None]]) -> None:
+#         """Filtre qui journalise avant et après l'invocation de la fonction."""
+#         # Avant l'invocation
+#         metadata = context.function.metadata
+#         function_name = f"{metadata.plugin_name}.{metadata.name}"
+#         logger.debug(f"▶️  INVOKING KERNEL FUNCTION: {function_name}")
         
-        args_str = ", ".join(f"{k}='{str(v)[:100]}...'" for k, v in context.arguments.items())
-        logger.debug(f"  ▶️  ARGS: {args_str}")
+#         args_str = ", ".join(f"{k}='{str(v)[:100]}...'" for k, v in context.arguments.items())
+#         logger.debug(f"  ▶️  ARGS: {args_str}")
 
-        # Appel au prochain filtre dans la chaîne
-        await next(context)
+#         # Appel au prochain filtre dans la chaîne
+#         await next(context)
 
-        # Après l'invocation
-        result_content = "N/A"
-        if context.result:
-            result_value = context.result.value
-            if isinstance(result_value, list):
-                result_content = f"List[{len(result_value)}] - " + ", ".join(map(str, result_value[:3]))
-            else:
-                result_content = str(result_value)
+#         # Après l'invocation
+#         result_content = "N/A"
+#         if context.result:
+#             result_value = context.result.value
+#             if isinstance(result_value, list):
+#                 result_content = f"List[{len(result_value)}] - " + ", ".join(map(str, result_value[:3]))
+#             else:
+#                 result_content = str(result_value)
         
-        logger.debug(f"  ◀️  RESULT: {result_content[:500]}...") # Tronqué
-        logger.debug(f"◀️  FINISHED KERNEL FUNCTION: {function_name}")
+#         logger.debug(f"  ◀️  RESULT: {result_content[:500]}...") # Tronqué
+#         logger.debug(f"◀️  FINISHED KERNEL FUNCTION: {function_name}")
 
 # Les classes de base (Agent, Strategies) sont importées depuis le module `base`
 # pour éviter les dépendances circulaires.

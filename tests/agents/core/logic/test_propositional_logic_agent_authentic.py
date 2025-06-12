@@ -9,7 +9,7 @@ import pytest
 from typing import Optional, Tuple, List
 
 # Import auto-configuration environnement
-import scripts.core.auto_env
+import project_core.core_from_scripts.auto_env
 
 # Imports Semantic Kernel authentiques
 from semantic_kernel import Kernel

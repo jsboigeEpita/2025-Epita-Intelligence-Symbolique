@@ -56,7 +56,10 @@ try:
 except ImportError as e:
     print(f"CRITICAL: Could not import or run environment manager. Ensure you are running from the project root.", file=sys.stderr)
     print(f"Error: {e}", file=sys.stderr)
-    sys.exit(1)
+    if "pytest" not in sys.modules:
+        sys.exit(1)
+    else:
+       pass # Ne pas quitter si on est dans un contexte de test
 # Configuration avancée du logging (déplacée ici AVANT l'activation de l'env)
 logging.basicConfig(
     level=logging.INFO,

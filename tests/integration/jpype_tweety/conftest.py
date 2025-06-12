@@ -9,7 +9,7 @@ from argumentation_analysis.core.jvm_setup import LIBS_DIR as CORE_LIBS_DIR
 
 # ===== INTÉGRATION AUTO_ENV - CRITIQUE POUR ÉVITER LES ENVIRONNEMENTS GLOBAUX =====
 try:
-    from scripts.core.auto_env import ensure_env
+    from project_core.core_from_scripts.auto_env import ensure_env
     ensure_env()
     print("[OK] Environnement projet active via auto_env (jpype_tweety conftest)")
 except ImportError as e:
