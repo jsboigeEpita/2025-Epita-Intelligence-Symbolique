@@ -6,27 +6,27 @@ from unittest.mock import MagicMock, patch, AsyncMock, call
 import sys
 sys.path.insert(0, '.')
 
-from scripts.webapp.unified_web_orchestrator import UnifiedWebOrchestrator, WebAppStatus
+from project_core.webapp_from_scripts.unified_web_orchestrator import UnifiedWebOrchestrator, WebAppStatus
 
 # We need to mock the manager classes before they are imported by the orchestrator
-sys.modules['scripts.webapp.backend_manager'] = MagicMock()
-sys.modules['scripts.webapp.frontend_manager'] = MagicMock()
-sys.modules['scripts.webapp.playwright_runner'] = MagicMock()
-sys.modules['scripts.webapp.process_cleaner'] = MagicMock()
+sys.modules['project_core.webapp_from_scripts.backend_manager'] = MagicMock()
+sys.modules['project_core.webapp_from_scripts.frontend_manager'] = MagicMock()
+sys.modules['project_core.webapp_from_scripts.playwright_runner'] = MagicMock()
+sys.modules['project_core.webapp_from_scripts.process_cleaner'] = MagicMock()
 
 # This patch will apply to all tests in this module for signal handlers
 @pytest.fixture(autouse=True)
 def mock_signal_handlers():
-    with patch('scripts.webapp.unified_web_orchestrator.UnifiedWebOrchestrator._setup_signal_handlers') as mock_setup:
+    with patch('project_core.webapp_from_scripts.unified_web_orchestrator.UnifiedWebOrchestrator._setup_signal_handlers') as mock_setup:
         yield mock_setup
 
 @pytest.fixture
 def mock_managers():
     """Mocks all the specialized manager classes."""
-    with patch('scripts.webapp.unified_web_orchestrator.BackendManager') as MockBackend, \
-         patch('scripts.webapp.unified_web_orchestrator.FrontendManager') as MockFrontend, \
-         patch('scripts.webapp.unified_web_orchestrator.PlaywrightRunner') as MockPlaywright, \
-         patch('scripts.webapp.unified_web_orchestrator.ProcessCleaner') as MockCleaner:
+    with patch('project_core.webapp_from_scripts.unified_web_orchestrator.BackendManager') as MockBackend, \
+         patch('project_core.webapp_from_scripts.unified_web_orchestrator.FrontendManager') as MockFrontend, \
+         patch('project_core.webapp_from_scripts.unified_web_orchestrator.PlaywrightRunner') as MockPlaywright, \
+         patch('project_core.webapp_from_scripts.unified_web_orchestrator.ProcessCleaner') as MockCleaner:
         
         yield {
             "backend": MockBackend.return_value,
@@ -39,7 +39,7 @@ def mock_managers():
 def orchestrator(webapp_config, test_config_path, mock_managers):
     """Initializes the orchestrator with mocked managers."""
     # Prevent logging setup from failing
-    with patch('scripts.webapp.unified_web_orchestrator.UnifiedWebOrchestrator._setup_logging'):
+    with patch('project_core.webapp_from_scripts.unified_web_orchestrator.UnifiedWebOrchestrator._setup_logging'):
         orch = UnifiedWebOrchestrator(config_path=test_config_path)
         # Attach mocks for easy access in tests
         orch.backend_manager = mock_managers['backend']

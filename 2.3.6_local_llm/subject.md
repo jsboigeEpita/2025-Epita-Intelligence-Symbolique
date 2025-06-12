@@ -1,0 +1,1849 @@
+# 2.3.6 Intégration de LLMs locaux légers
+
+---
+
+## Table des matières
+
+1. [Introduction théorique](#1-introduction-théorique)
+2. [Aspects techniques](#2-aspects-techniques)
+3. [Intégration pratique](#3-intégration-pratique)
+4. [Exemples concrets](#4-exemples-concrets)
+5. [Évaluation comparative des modèles](#5-évaluation-comparative-des-modèles)
+6. [Ressources et références](#6-ressources-et-références)
+
+---
+
+## 1. Introduction théorique
+
+### 1.1 Qu'est-ce qu'un LLM local léger ?
+
+Un **LLM local léger** est un modèle de langage de grande taille optimisé pour fonctionner sur du matériel local (ordinateurs personnels, serveurs d'entreprise) plutôt que via des APIs cloud. Ces modèles sont "légers" car ils utilisent des techniques d'optimisation pour réduire leur empreinte mémoire et computationnelle tout en conservant des capacités de raisonnement acceptables.
+
+#### Caractéristiques principales :
+- **Taille réduite** : Généralement entre 0.6B et 32B de paramètres
+- **Optimisations** : Quantification, distillation, pruning
+- **Formats optimisés** : GGUF, ONNX, formats spécialisés
+- **Inférence locale** : Pas de dépendance réseau pour l'exécution
+
+### 1.2 Avantages et inconvénients par rapport aux LLMs cloud
+
+#### ✅ Avantages des LLMs locaux
+
+**Confidentialité et souveraineté des données**
+- Aucune donnée n'est envoyée vers des serveurs externes
+- Contrôle total sur le traitement des informations sensibles
+- Conformité RGPD facilitée
+
+**Performance et latence**
+- Pas de latence réseau
+- Débit constant indépendant de la connexion internet
+- Possibilité de traitement par lots optimisé
+
+**Coûts à long terme**
+- Pas de coûts récurrents d'API après l'investissement initial
+- Scalabilité sans coûts proportionnels au volume
+- Amortissement du matériel sur plusieurs projets
+
+**Personnalisation et contrôle**
+- Fine-tuning possible sur des données spécifiques
+- Contrôle des paramètres d'inférence
+- Pas de limitations d'usage imposées par les fournisseurs
+
+#### ❌ Inconvénients des LLMs locaux
+
+**Ressources matérielles**
+- Investissement initial en matériel (GPU, RAM)
+- Consommation électrique continue
+- Maintenance et mise à jour du matériel
+
+**Complexité technique**
+- Installation et configuration des environnements
+- Gestion des dépendances et compatibilités
+- Monitoring et maintenance des systèmes
+
+**Performances limitées**
+- Capacités généralement inférieures aux modèles cloud de pointe
+- Compromis entre taille et performance
+- Limitations sur les tâches très complexes
+
+### 1.3 Cas d'usage spécifiques en IA symbolique
+
+#### Analyse argumentative locale
+- **Détection de sophismes** : Analyse de textes sensibles sans exposition externe
+- **Évaluation de cohérence** : Vérification d'arguments dans des documents confidentiels
+- **Classification rhétorique** : Catégorisation de discours politiques ou juridiques
+
+#### Intégration avec TweetyProject
+- **Formalisation logique** : Traduction d'arguments naturels vers des représentations formelles
+- **Manipulation de beliefsets** : Génération et modification de bases de connaissances
+- **Raisonnement hybride** : Combinaison de logique symbolique et de traitement naturel
+
+#### Applications spécialisées
+- **Fact-checking interne** : Vérification de cohérence dans des bases documentaires
+- **Génération de contre-arguments** : Aide à la préparation de débats
+- **Analyse de biais cognitifs** : Détection de mécanismes psychologiques dans l'argumentation
+
+---
+
+## 2. Aspects techniques
+
+### 2.1 Architectures de modèles légers
+
+#### 2.1.1 Distillation de connaissances
+
+La **distillation** consiste à entraîner un modèle plus petit (étudiant) à imiter les sorties d'un modèle plus grand (professeur).
+
+```python
+# Exemple conceptuel de distillation
+class DistillationLoss:
+    def __init__(self, temperature=3.0, alpha=0.7):
+        self.temperature = temperature
+        self.alpha = alpha
+    
+    def compute_loss(self, student_logits, teacher_logits, true_labels):
+        # Soft targets du modèle professeur
+        soft_targets = F.softmax(teacher_logits / self.temperature, dim=-1)
+        soft_prob = F.log_softmax(student_logits / self.temperature, dim=-1)
+        
+        # Perte de distillation
+        distill_loss = F.kl_div(soft_prob, soft_targets, reduction='batchmean')
+        
+        # Perte sur les vraies étiquettes
+        hard_loss = F.cross_entropy(student_logits, true_labels)
+        
+        return self.alpha * distill_loss + (1 - self.alpha) * hard_loss
+```
+
+#### 2.1.2 Quantification
+
+La **quantification** réduit la précision des poids du modèle pour diminuer l'usage mémoire.
+
+| Type | Précision | Réduction mémoire | Perte de qualité |
+|------|-----------|-------------------|------------------|
+| FP32 | 32 bits | Référence | Aucune |
+| FP16 | 16 bits | 50% | Minimale |
+| INT8 | 8 bits | 75% | Faible |
+| INT4 | 4 bits | 87.5% | Modérée |
+
+#### 2.1.3 Pruning (Élagage)
+
+Le **pruning** supprime les connexions ou neurones les moins importants.
+
+```python
+# Exemple de pruning par magnitude
+def magnitude_pruning(model, sparsity_ratio=0.2):
+    for name, module in model.named_modules():
+        if isinstance(module, nn.Linear):
+            weight = module.weight.data
+            # Calcul des magnitudes
+            magnitudes = torch.abs(weight)
+            # Seuil pour le pruning
+            threshold = torch.quantile(magnitudes, sparsity_ratio)
+            # Application du masque
+            mask = magnitudes > threshold
+            module.weight.data *= mask
+```
+
+#### 2.1.4 Mixture of Experts (MoE)
+
+Les modèles **MoE** activent seulement une partie des paramètres pour chaque requête.
+
+### 2.2 Frameworks et outils disponibles
+
+#### 2.2.1 Ollama
+
+**Ollama** est un framework simple pour exécuter des LLMs localement.
+
+```bash
+# Installation
+curl -fsSL https://ollama.ai/install.sh | sh
+
+# Téléchargement et exécution d'un modèle
+ollama run qwen2.5:7b
+
+# Utilisation avec API REST
+curl http://localhost:11434/api/generate -d '{
+  "model": "qwen2.5:7b",
+  "prompt": "Analysez cet argument : Tous les politiciens mentent, donc cette proposition est fausse.",
+  "stream": false
+}'
+```
+
+**Avantages d'Ollama :**
+- Interface simple et intuitive
+- Gestion automatique des modèles
+- API REST intégrée
+- Support de nombreux formats
+
+#### 2.2.2 llama.cpp
+
+**llama.cpp** est une implémentation C++ optimisée pour l'inférence de LLMs.
+
+```bash
+# Compilation avec support GPU
+make LLAMA_CUDA=1
+
+# Exécution avec quantification
+./main -m models/qwen2.5-7b-q4_k_m.gguf \
+       -p "Identifiez le sophisme dans ce texte :" \
+       -n 256 \
+       -t 8
+```
+
+**Optimisations llama.cpp :**
+- Support multi-threading CPU
+- Accélération GPU (CUDA, Metal, OpenCL)
+- Quantification dynamique
+- Décodage spéculatif
+
+### 2.3 Métriques de performance et contraintes matérielles
+
+#### 2.3.1 Estimation des besoins matériels
+
+```python
+def estimate_memory_requirements(model_size_b, precision_bits=16, context_length=2048):
+    """
+    Estime les besoins mémoire pour un modèle donné
+    """
+    # Mémoire pour les paramètres
+    param_memory = model_size_b * precision_bits / 8  # GB
+    
+    # Mémoire pour le contexte (approximation)
+    context_memory = context_length * model_size_b * 0.001  # GB
+    
+    # Mémoire pour les activations (approximation)
+    activation_memory = param_memory * 0.2
+    
+    total_memory = param_memory + context_memory + activation_memory
+    
+    return {
+        'param_memory_gb': param_memory,
+        'context_memory_gb': context_memory,
+        'activation_memory_gb': activation_memory,
+        'total_memory_gb': total_memory,
+        'recommended_vram_gb': total_memory * 1.2  # Marge de sécurité
+    }
+
+# Exemples
+print("Qwen 3 8B:", estimate_memory_requirements(8))
+print("Phi 4 14B:", estimate_memory_requirements(14))
+print("Mistral 7B:", estimate_memory_requirements(7))
+```
+
+#### 2.3.2 Configurations matérielles recommandées
+
+| Modèle | Paramètres | VRAM min | RAM min | GPU recommandée |
+|--------|------------|----------|---------|-----------------|
+| Qwen 3 0.6B | 0.6B | 2 GB | 8 GB | GTX 1660 |
+| Phi 4 3.8B | 3.8B | 8 GB | 16 GB | RTX 3070 |
+| Qwen 3 8B | 8B | 12 GB | 32 GB | RTX 4070 Ti |
+| Mistral 7B | 7B | 10 GB | 32 GB | RTX 3080 |
+| Qwen 3 14B | 14B | 20 GB | 64 GB | RTX 4090 |
+---
+
+## 3. Intégration pratique
+
+### 3.1 APIs et interfaces de programmation
+
+#### 3.1.1 Interface avec Semantic Kernel
+
+```python
+import semantic_kernel as sk
+from semantic_kernel.connectors.ai.ollama import OllamaChatCompletion
+
+# Configuration du kernel
+kernel = sk.Kernel()
+
+# Ajout du service Ollama
+kernel.add_service(
+    OllamaChatCompletion(
+        service_id="ollama-qwen",
+        ai_model_id="qwen2.5:7b",
+        url="http://localhost:11434"
+    )
+)
+
+# Fonction pour l'analyse argumentative
+analyze_argument = kernel.create_function_from_prompt(
+    function_name="analyze_argument",
+    plugin_name="ArgumentAnalysis",
+    prompt="""
+    Analysez l'argument suivant et identifiez :
+    1. Le type d'argument (déductif, inductif, abductif)
+    2. Les prémisses et la conclusion
+    3. Les sophismes éventuels
+    4. La force argumentative (1-10)
+    
+    Argument : {{$input}}
+    
+    Réponse structurée :
+    """,
+    description="Analyse un argument et identifie sa structure et ses faiblesses"
+)
+
+# Utilisation
+result = await kernel.invoke(
+    analyze_argument,
+    input="Tous les cygnes que j'ai vus sont blancs, donc tous les cygnes sont blancs."
+)
+```
+
+#### 3.1.2 Intégration avec LangChain
+
+```python
+from langchain_community.llms import Ollama
+from langchain.prompts import PromptTemplate
+from langchain.chains import LLMChain
+from langchain.output_parsers import PydanticOutputParser
+from pydantic import BaseModel, Field
+
+# Modèle de sortie structurée
+class ArgumentAnalysis(BaseModel):
+    argument_type: str = Field(description="Type d'argument (déductif/inductif/abductif)")
+    premises: list[str] = Field(description="Liste des prémisses")
+    conclusion: str = Field(description="Conclusion de l'argument")
+    fallacies: list[str] = Field(description="Sophismes identifiés")
+    strength_score: int = Field(description="Force argumentative (1-10)")
+    explanation: str = Field(description="Explication détaillée")
+
+# Configuration du parser
+parser = PydanticOutputParser(pydantic_object=ArgumentAnalysis)
+
+# Template de prompt
+prompt_template = PromptTemplate(
+    template="""
+    Analysez l'argument suivant de manière systématique :
+    
+    {argument}
+    
+    {format_instructions}
+    """,
+    input_variables=["argument"],
+    partial_variables={"format_instructions": parser.get_format_instructions()}
+)
+
+# Configuration du modèle
+llm = Ollama(
+    model="qwen2.5:7b",
+    temperature=0.1,
+    num_predict=512
+)
+
+# Chaîne d'analyse
+analysis_chain = LLMChain(llm=llm, prompt=prompt_template, output_parser=parser)
+
+# Utilisation
+argument = "Si nous n'agissons pas maintenant contre le changement climatique, nos enfants vivront dans un monde invivable. Nous devons donc interdire immédiatement toutes les voitures."
+
+result = analysis_chain.run(argument=argument)
+print(f"Type: {result.argument_type}")
+print(f"Sophismes: {result.fallacies}")
+print(f"Score: {result.strength_score}/10")
+```
+
+### 3.2 Gestion de la mémoire et optimisation
+
+#### 3.2.1 Gestion du contexte et streaming
+
+```python
+class ContextManager:
+    def __init__(self, max_context_length=2048, overlap_tokens=100):
+        self.max_context_length = max_context_length
+        self.overlap_tokens = overlap_tokens
+        self.context_history = []
+    
+    def add_to_context(self, text, role="user"):
+        """Ajoute du texte au contexte en gérant la taille"""
+        entry = {"role": role, "content": text, "tokens": len(text.split())}
+        self.context_history.append(entry)
+        
+        # Nettoyage si nécessaire
+        self._trim_context()
+    
+    def _trim_context(self):
+        """Réduit le contexte si trop long"""
+        total_tokens = sum(entry["tokens"] for entry in self.context_history)
+        
+        while total_tokens > self.max_context_length and len(self.context_history) > 1:
+            # Garde le premier message (système) et supprime les plus anciens
+            if len(self.context_history) > 2:
+                removed = self.context_history.pop(1)  # Garde système et dernier message
+                total_tokens -= removed["tokens"]
+            else:
+                break
+    
+    def get_context_string(self):
+        """Retourne le contexte formaté"""
+        return "\n".join([f"{entry['role']}: {entry['content']}" 
+                         for entry in self.context_history])
+```
+
+### 3.3 Intégration avec des systèmes d'argumentation
+
+#### 3.3.1 Interface avec TweetyProject
+
+```python
+import jpype
+from jpype import JClass, JString, startJVM, shutdownJVM
+import json
+
+class TweetyIntegration:
+    """Intégration entre LLMs locaux et TweetyProject"""
+    
+    def __init__(self, tweety_jar_path):
+        # Démarrage de la JVM
+        if not jpype.isJVMStarted():
+            startJVM(classpath=[tweety_jar_path])
+        
+        # Import des classes Tweety
+        self.PropositionalFormula = JClass("org.tweetyproject.logics.pl.syntax.PropositionalFormula")
+        self.PlParser = JClass("org.tweetyproject.logics.pl.parser.PlParser")
+        self.PlBeliefSet = JClass("org.tweetyproject.logics.pl.syntax.PlBeliefSet")
+        self.SatSolver = JClass("org.tweetyproject.logics.pl.sat.SatSolver")
+        
+    async def natural_to_formal(self, natural_argument, model="qwen2.5:7b"):
+        """Convertit un argument naturel en logique formelle"""
+        
+        # Prompt pour la formalisation
+        prompt = f"""
+        Convertissez cet argument en logique propositionnelle en utilisant la syntaxe Tweety :
+        
+        Argument : {natural_argument}
+        
+        Instructions :
+        1. Identifiez les propositions atomiques (p, q, r, ...)
+        2. Formalisez chaque prémisse
+        3. Formalisez la conclusion
+        4. Utilisez la syntaxe : && (et), || (ou), ! (négation), => (implication)
+        
+        Format de sortie JSON :
+        {{
+            "propositions": {{"p": "description", "q": "description"}},
+            "premises": ["p && q", "q => r"],
+            "conclusion": "r"
+        }}
+        """
+        
+        # Appel au LLM
+        async with httpx.AsyncClient() as client:
+            response = await client.post(
+                "http://localhost:11434/api/generate",
+                json={
+                    "model": model,
+                    "prompt": prompt,
+                    "stream": False,
+                    "format": "json"
+                }
+            )
+        
+        result = response.json()
+        formalization = json.loads(result["response"])
+        
+        # Validation avec Tweety
+        return self._validate_formalization(formalization)
+    
+    def _validate_formalization(self, formalization):
+        """Valide la formalisation avec TweetyProject"""
+        try:
+            parser = self.PlParser()
+            belief_set = self.PlBeliefSet()
+            
+            # Ajout des prémisses
+            for premise in formalization["premises"]:
+                formula = parser.parseFormula(JString(premise))
+                belief_set.add(formula)
+            
+            # Vérification de la conclusion
+            conclusion = parser.parseFormula(JString(formalization["conclusion"]))
+            
+            # Test de satisfiabilité
+            solver = self.SatSolver.getDefaultSolver()
+            is_consistent = solver.isConsistent(belief_set)
+            entails_conclusion = belief_set.entails(conclusion)
+            
+            return {
+                "formalization": formalization,
+                "is_consistent": is_consistent,
+                "entails_conclusion": entails_conclusion,
+                "validity": "valid" if entails_conclusion else "invalid"
+            }
+            
+        except Exception as e:
+            return {
+                "formalization": formalization,
+                "error": str(e),
+                "validity": "syntax_error"
+            }
+---
+
+## 4. Exemples concrets
+
+### 4.1 Code d'exemple pour l'intégration
+
+#### 4.1.1 Pipeline d'analyse argumentative complète
+
+```python
+class ArgumentativePipeline:
+    """Pipeline complet d'analyse argumentative avec LLMs locaux"""
+    
+    def __init__(self, models_config):
+        self.models = models_config
+        self.tweety = TweetyIntegration("path/to/tweety.jar")
+        self.context_manager = ContextManager()
+        
+    async def full_analysis(self, text):
+        """Analyse complète d'un texte argumentatif"""
+        
+        results = {}
+        
+        # 1. Extraction des arguments
+        results["extraction"] = await self._extract_arguments(text)
+        
+        # 2. Détection de sophismes
+        results["fallacies"] = await self._detect_fallacies(text)
+        
+        # 3. Formalisation logique
+        results["formalization"] = await self._formalize_arguments(
+            results["extraction"]["arguments"]
+        )
+        
+        # 4. Évaluation de la validité
+        results["validity"] = await self._evaluate_validity(
+            results["formalization"]
+        )
+        
+        # 5. Génération de contre-arguments
+        results["counter_arguments"] = await self._generate_counter_arguments(
+            results["extraction"]["main_argument"]
+        )
+        
+        return results
+    
+    async def _extract_arguments(self, text):
+        """Extrait les arguments du texte"""
+        prompt = f"""
+        Extrayez tous les arguments de ce texte :
+        
+        {text}
+        
+        Pour chaque argument, identifiez :
+        - Les prémisses
+        - La conclusion
+        - Le type de raisonnement
+        
+        Format JSON attendu.
+        """
+        
+        return await self._call_model("qwen2.5:7b", prompt)
+    
+    async def _detect_fallacies(self, text):
+        """Détecte les sophismes dans le texte"""
+        prompt = f"""
+        Analysez ce texte pour détecter les sophismes logiques :
+        
+        {text}
+        
+        Pour chaque sophisme trouvé :
+        - Type de sophisme
+        - Passage concerné
+        - Explication
+        - Gravité (1-10)
+        
+        Format JSON attendu.
+        """
+        
+        return await self._call_model("phi4:14b", prompt)
+    
+    async def _call_model(self, model, prompt):
+        """Appel générique à un modèle"""
+        async with httpx.AsyncClient() as client:
+            response = await client.post(
+                "http://localhost:11434/api/generate",
+                json={
+                    "model": model,
+                    "prompt": prompt,
+                    "stream": False,
+                    "format": "json"
+                }
+            )
+        return response.json()
+```
+
+#### 4.1.2 Exemple d'utilisation complète
+
+```python
+async def main():
+    """Exemple d'utilisation du pipeline"""
+    
+    # Configuration des modèles
+    models_config = {
+        "extraction": "qwen2.5:7b",
+        "fallacy_detection": "phi4:14b",
+        "formalization": "mistral:7b",
+        "counter_arguments": "qwen2.5:14b"
+    }
+    
+    # Initialisation du pipeline
+    pipeline = ArgumentativePipeline(models_config)
+    
+    # Texte à analyser
+    text = """
+    Les vaccins sont dangereux car mon voisin a eu des effets secondaires après sa vaccination.
+    De plus, les laboratoires pharmaceutiques ne cherchent qu'à faire du profit.
+    Par conséquent, nous ne devrions pas faire confiance aux vaccins.
+    """
+    
+    # Analyse complète
+    results = await pipeline.full_analysis(text)
+    
+    # Affichage des résultats
+    print("=== ANALYSE ARGUMENTATIVE ===")
+    print(f"Arguments extraits: {len(results['extraction']['arguments'])}")
+    print(f"Sophismes détectés: {len(results['fallacies']['detected'])}")
+    print(f"Validité logique: {results['validity']['status']}")
+    
+    # Détail des sophismes
+    for fallacy in results['fallacies']['detected']:
+        print(f"\n- {fallacy['type']}: {fallacy['explanation']}")
+        print(f"  Gravité: {fallacy['severity']}/10")
+    
+    # Contre-arguments générés
+    print(f"\nContre-arguments générés: {len(results['counter_arguments'])}")
+    for counter in results['counter_arguments']:
+        print(f"- {counter['argument']}")
+
+if __name__ == "__main__":
+    asyncio.run(main())
+```
+
+### 4.2 Cas d'usage en analyse argumentative
+
+#### 4.2.1 Détection de sophismes spécialisée
+
+```python
+class FallacyDetector:
+    """Détecteur de sophismes spécialisé par type"""
+    
+    def __init__(self):
+        self.fallacy_models = {
+            "ad_hominem": "qwen2.5:7b",
+            "straw_man": "phi4:14b", 
+            "false_dilemma": "mistral:7b",
+            "appeal_to_authority": "qwen2.5:7b",
+            "slippery_slope": "phi4:14b"
+        }
+    
+    async def detect_specific_fallacy(self, text, fallacy_type):
+        """Détecte un type spécifique de sophisme"""
+        
+        prompts = {
+            "ad_hominem": f"""
+            Analysez ce texte pour détecter des attaques ad hominem :
+            
+            {text}
+            
+            Une attaque ad hominem consiste à attaquer la personne plutôt que son argument.
+            
+            Répondez en JSON avec :
+            - "detected": true/false
+            - "instances": [liste des passages concernés]
+            - "severity": 1-10
+            - "explanation": explication détaillée
+            """,
+            
+            "straw_man": f"""
+            Analysez ce texte pour détecter des sophismes de l'homme de paille :
+            
+            {text}
+            
+            Un sophisme de l'homme de paille consiste à déformer l'argument de l'adversaire pour le réfuter plus facilement.
+            
+            Format JSON attendu.
+            """,
+            
+            "false_dilemma": f"""
+            Analysez ce texte pour détecter des faux dilemmes :
+            
+            {text}
+            
+            Un faux dilemme présente seulement deux options alors qu'il en existe d'autres.
+            
+            Format JSON attendu.
+            """
+        }
+        
+        model = self.fallacy_models.get(fallacy_type, "qwen2.5:7b")
+        prompt = prompts.get(fallacy_type, prompts["ad_hominem"])
+        
+        async with httpx.AsyncClient() as client:
+            response = await client.post(
+                "http://localhost:11434/api/generate",
+                json={
+                    "model": model,
+                    "prompt": prompt,
+                    "stream": False,
+                    "format": "json"
+                }
+            )
+        
+        return json.loads(response.json()["response"])
+    
+    async def comprehensive_fallacy_scan(self, text):
+        """Scan complet pour tous les types de sophismes"""
+        
+        results = {}
+        
+        for fallacy_type in self.fallacy_models.keys():
+            results[fallacy_type] = await self.detect_specific_fallacy(text, fallacy_type)
+        
+        # Synthèse
+        detected_fallacies = [
+            fallacy for fallacy, result in results.items() 
+            if result.get("detected", False)
+        ]
+        
+        total_severity = sum(
+            result.get("severity", 0) for result in results.values()
+            if result.get("detected", False)
+        )
+        
+        return {
+            "individual_results": results,
+            "summary": {
+                "total_fallacies": len(detected_fallacies),
+                "fallacy_types": detected_fallacies,
+                "average_severity": total_severity / max(len(detected_fallacies), 1),
+                "overall_quality": "poor" if total_severity > 30 else "moderate" if total_severity > 15 else "good"
+            }
+        }
+```
+
+#### 4.2.2 Analyse de débats politiques
+
+```python
+class PoliticalDebateAnalyzer:
+    """Analyseur spécialisé pour les débats politiques"""
+    
+    def __init__(self):
+        self.models = {
+            "bias_detection": "phi4:14b",
+            "rhetoric_analysis": "qwen2.5:14b",
+            "fact_checking": "mistral:7b"
+        }
+    
+    async def analyze_political_speech(self, speech_text, speaker_info=None):
+        """Analyse complète d'un discours politique"""
+        
+        results = {}
+        
+        # 1. Détection de biais cognitifs
+        results["cognitive_biases"] = await self._detect_cognitive_biases(speech_text)
+        
+        # 2. Analyse rhétorique
+        results["rhetorical_devices"] = await self._analyze_rhetoric(speech_text)
+        
+        # 3. Vérification factuelle
+        results["fact_check"] = await self._basic_fact_check(speech_text)
+        
+        # 4. Analyse de la structure argumentative
+        results["argument_structure"] = await self._analyze_argument_structure(speech_text)
+        
+        # 5. Score de qualité globale
+        results["quality_score"] = self._calculate_quality_score(results)
+        
+        return results
+    
+    async def _detect_cognitive_biases(self, text):
+        """Détecte les biais cognitifs exploités"""
+        
+        prompt = f"""
+        Analysez ce discours politique pour identifier les biais cognitifs exploités :
+        
+        {text}
+        
+        Recherchez notamment :
+        - Biais de confirmation
+        - Appel à la peur
+        - Biais d'ancrage
+        - Effet de halo
+        - Biais de disponibilité
+        
+        Pour chaque biais identifié :
+        - Type de biais
+        - Passage concerné
+        - Mécanisme psychologique exploité
+        - Efficacité probable (1-10)
+        
+        Format JSON.
+        """
+        
+        return await self._call_model("phi4:14b", prompt)
+    
+    async def _analyze_rhetoric(self, text):
+        """Analyse les procédés rhétoriques"""
+        
+        prompt = f"""
+        Analysez les procédés rhétoriques dans ce discours :
+        
+        {text}
+        
+        Identifiez :
+        - Figures de style (métaphores, analogies, etc.)
+        - Appels émotionnels (pathos)
+        - Arguments d'autorité (ethos)
+        - Arguments logiques (logos)
+        - Techniques de persuasion
+        
+        Évaluez l'équilibre entre émotion et raison.
+        
+        Format JSON.
+        """
+        
+        return await self._call_model("qwen2.5:14b", prompt)
+```
+
+### 4.3 Benchmarks et évaluations
+
+#### 4.3.1 Framework de benchmarking
+
+```python
+class LLMBenchmark:
+    """Framework pour évaluer les performances des LLMs sur l'analyse argumentative"""
+    
+    def __init__(self, test_datasets):
+        self.test_datasets = test_datasets
+        self.models_to_test = [
+            "qwen2.5:7b", "qwen2.5:14b",
+            "phi4:3.8b", "phi4:14b",
+            "mistral:7b", "mistral:22b"
+        ]
+        self.results = {}
+    
+    async def run_comprehensive_benchmark(self):
+        """Lance un benchmark complet"""
+        
+        for model in self.models_to_test:
+            print(f"Testing {model}...")
+            self.results[model] = {}
+            
+            # Test de détection de sophismes
+            self.results[model]["fallacy_detection"] = await self._test_fallacy_detection(model)
+            
+            # Test de formalisation logique
+            self.results[model]["logical_formalization"] = await self._test_logical_formalization(model)
+            
+            # Test de génération de contre-arguments
+            self.results[model]["counter_arguments"] = await self._test_counter_arguments(model)
+            
+            # Métriques de performance
+            self.results[model]["performance"] = await self._measure_performance(model)
+        
+        return self._generate_comparison_report()
+    
+    async def _test_fallacy_detection(self, model):
+        """Test de détection de sophismes"""
+        
+        correct_detections = 0
+        false_positives = 0
+        total_tests = len(self.test_datasets["fallacies"])
+        
+        for test_case in self.test_datasets["fallacies"]:
+            prompt = f"""
+            Ce texte contient-il un sophisme ? Si oui, lequel ?
+            
+            {test_case["text"]}
+            
+            Répondez par JSON : {{"has_fallacy": true/false, "fallacy_type": "type ou null"}}
+            """
+            
+            result = await self._call_model(model, prompt)
+            
+            # Évaluation
+            expected = test_case["expected_fallacy"]
+            detected = result.get("fallacy_type")
+            
+            if expected and detected == expected:
+                correct_detections += 1
+            elif not expected and not result.get("has_fallacy", False):
+                correct_detections += 1
+            elif not expected and result.get("has_fallacy", False):
+                false_positives += 1
+        
+        precision = correct_detections / max(correct_detections + false_positives, 1)
+        recall = correct_detections / total_tests
+        f1_score = 2 * (precision * recall) / max(precision + recall, 0.001)
+        
+        return {
+            "precision": precision,
+            "recall": recall,
+            "f1_score": f1_score,
+            "accuracy": correct_detections / total_tests
+        }
+    
+    async def _test_logical_formalization(self, model):
+        """Test de formalisation logique"""
+        
+        correct_formalizations = 0
+        total_tests = len(self.test_datasets["logic"])
+        
+        for test_case in self.test_datasets["logic"]:
+            prompt = f"""
+            Formalisez cet argument en logique propositionnelle :
+            
+            {test_case["natural_argument"]}
+            
+            Utilisez la syntaxe : && (et), || (ou), ! (négation), => (implication)
+            
+            Format JSON : {{"premises": ["p && q"], "conclusion": "r"}}
+            """
+            
+            result = await self._call_model(model, prompt)
+            
+            # Validation avec TweetyProject
+            if self._validate_with_tweety(result, test_case["expected"]):
+                correct_formalizations += 1
+        
+        return {
+            "accuracy": correct_formalizations / total_tests,
+            "total_tests": total_tests,
+            "correct": correct_formalizations
+        }
+    
+    def _generate_comparison_report(self):
+        """Génère un rapport de comparaison"""
+        
+        report = {
+            "summary": {},
+            "detailed_results": self.results,
+            "recommendations": {}
+        }
+        
+        # Calcul des scores moyens
+        for model in self.models_to_test:
+            fallacy_f1 = self.results[model]["fallacy_detection"]["f1_score"]
+            logic_acc = self.results[model]["logical_formalization"]["accuracy"]
+            
+            report["summary"][model] = {
+                "overall_score": (fallacy_f1 + logic_acc) / 2,
+                "fallacy_detection_f1": fallacy_f1,
+                "logic_formalization_accuracy": logic_acc
+            }
+        
+        # Recommandations
+        best_fallacy = max(self.models_to_test, 
+                          key=lambda m: self.results[m]["fallacy_detection"]["f1_score"])
+        best_logic = max(self.models_to_test,
+                        key=lambda m: self.results[m]["logical_formalization"]["accuracy"])
+        
+        report["recommendations"] = {
+            "best_for_fallacy_detection": best_fallacy,
+            "best_for_logical_formalization": best_logic,
+            "most_balanced": max(self.models_to_test,
+                               key=lambda m: report["summary"][m]["overall_score"])
+        }
+        
+        return report
+```
+---
+
+## 5. Évaluation comparative des modèles
+
+### 5.1 Qwen 3 : Capacités de raisonnement hybride
+
+#### 5.1.1 Architecture et spécificités
+
+**Qwen 3** introduit un mode de raisonnement hybride unique permettant de basculer entre :
+- **Mode thinking** : Raisonnement étape par étape pour les tâches complexes
+- **Mode non-thinking** : Réponses rapides pour les tâches simples
+
+```python
+# Exemple d'utilisation des modes Qwen 3
+async def test_qwen_modes():
+    """Test des différents modes de Qwen 3"""
+    
+    # Mode thinking pour analyse complexe
+    thinking_prompt = "/think Analysez cet argument complexe avec toutes les étapes de raisonnement : 'Si l'IA devient plus intelligente que les humains, alors soit elle nous aidera, soit elle nous remplacera. Or, une IA superintelligente n'aura pas besoin de nous aider. Donc elle nous remplacera.'"
+    
+    # Mode non-thinking pour détection simple
+    fast_prompt = "/no_think Ce texte contient-il un sophisme ad hominem : 'Votre argument sur le climat est invalide car vous n'êtes pas climatologue.'"
+    
+    results = {}
+    
+    for prompt, mode in [(thinking_prompt, "thinking"), (fast_prompt, "fast")]:
+        start_time = time.time()
+        
+        async with httpx.AsyncClient() as client:
+            response = await client.post(
+                "http://localhost:11434/api/generate",
+                json={
+                    "model": "qwen2.5:8b",
+                    "prompt": prompt,
+                    "stream": False
+                }
+            )
+        
+        end_time = time.time()
+        
+        results[mode] = {
+            "response": response.json()["response"],
+            "processing_time": end_time - start_time,
+            "mode": mode
+        }
+    
+    return results
+```
+
+#### 5.1.2 Performance sur les tâches argumentatives
+
+**Forces de Qwen 3 :**
+- Excellent sur la décomposition d'arguments complexes
+- Capacité à identifier les chaînes de raisonnement imbriquées
+- Mode thinking particulièrement efficace pour la formalisation logique
+
+**Faiblesses identifiées :**
+- Parfois verbeux en mode thinking
+- Peut sur-analyser des sophismes simples
+- Consommation mémoire plus élevée en mode thinking
+
+### 5.2 Microsoft Phi 4 : Efficacité et précision
+
+#### 5.2.1 Caractéristiques techniques
+
+**Phi 4** se distingue par :
+- Architecture optimisée pour l'efficacité
+- Excellent rapport performance/taille
+- Spécialisé dans le raisonnement logique
+
+```python
+# Benchmark Phi 4 vs autres modèles
+async def benchmark_phi4_reasoning():
+    """Benchmark spécifique pour Phi 4 sur le raisonnement logique"""
+    
+    logic_tests = [
+        {
+            "premise1": "Tous les A sont B",
+            "premise2": "Tous les B sont C", 
+            "question": "Peut-on conclure que tous les A sont C ?",
+            "expected": "Oui, par transitivité"
+        },
+        {
+            "premise1": "Si P alors Q",
+            "premise2": "Non Q",
+            "question": "Que peut-on conclure sur P ?",
+            "expected": "Non P (modus tollens)"
+        }
+    ]
+    
+    models = ["phi4:3.8b", "phi4:14b", "qwen2.5:7b", "mistral:7b"]
+    results = {}
+    
+    for model in models:
+        results[model] = {"correct": 0, "total": len(logic_tests)}
+        
+        for test in logic_tests:
+            prompt = f"""
+            Prémisse 1: {test['premise1']}
+            Prémisse 2: {test['premise2']}
+            Question: {test['question']}
+            
+            Répondez en expliquant le raisonnement logique.
+            """
+            
+            response = await call_model(model, prompt)
+            
+            # Évaluation simplifiée (dans un vrai benchmark, utiliser des métriques plus sophistiquées)
+            if "transitivité" in response.lower() or "modus tollens" in response.lower():
+                results[model]["correct"] += 1
+    
+    # Calcul des scores
+    for model in models:
+        results[model]["accuracy"] = results[model]["correct"] / results[model]["total"]
+    
+    return results
+```
+
+#### 5.2.2 Spécialisation par taille de modèle
+
+| Modèle | Taille | Meilleur usage | VRAM requise |
+|--------|--------|----------------|--------------|
+| Phi 4 3.8B | 3.8B | Détection rapide de sophismes simples | 8 GB |
+| Phi 4 14B | 14B | Analyse argumentative complexe | 20 GB |
+
+### 5.3 Mistral : Équilibre et polyvalence
+
+#### 5.3.1 Gamme de modèles Mistral
+
+**Mistral 7B** : Modèle de référence équilibré
+- Bon compromis performance/ressources
+- Excellent pour l'analyse générale d'arguments
+- Stable et prévisible
+
+**Mistral 22B** : Version étendue
+- Capacités de raisonnement améliorées
+- Meilleure compréhension contextuelle
+- Adapté aux analyses approfondies
+
+```python
+# Comparaison Mistral 7B vs 22B
+async def compare_mistral_sizes():
+    """Compare les performances entre Mistral 7B et 22B"""
+    
+    complex_argument = """
+    L'intelligence artificielle va révolutionner l'éducation car elle peut personnaliser l'apprentissage.
+    Cependant, certains craignent qu'elle remplace les enseignants.
+    Mais cette crainte est infondée car l'IA ne peut pas remplacer l'empathie humaine.
+    De plus, les enseignants qui refusent l'IA seront dépassés.
+    Donc, nous devons intégrer l'IA dans l'éducation tout en formant les enseignants.
+    """
+    
+    models = ["mistral:7b", "mistral:22b"]
+    
+    prompt = f"""
+    Analysez la structure argumentative de ce texte :
+    
+    {complex_argument}
+    
+    Identifiez :
+    1. Les arguments principaux
+    2. Les contre-arguments
+    3. Les sophismes éventuels
+    4. La cohérence globale
+    5. Les points faibles du raisonnement
+    
+    Soyez précis et structuré.
+    """
+    
+    results = {}
+    
+    for model in models:
+        start_time = time.time()
+        response = await call_model(model, prompt)
+        end_time = time.time()
+        
+        results[model] = {
+            "response": response,
+            "processing_time": end_time - start_time,
+            "response_length": len(response),
+            "structured_analysis": "1." in response and "2." in response  # Vérification basique de structure
+        }
+    
+    return results
+```
+
+### 5.4 Comparaison des capacités spécialisées
+
+#### 5.4.1 Détection de sophismes par type
+
+```python
+# Matrice de performance par type de sophisme
+FALLACY_PERFORMANCE_MATRIX = {
+    "ad_hominem": {
+        "qwen2.5:8b": 0.85,
+        "phi4:14b": 0.92,
+        "mistral:7b": 0.78,
+        "mistral:22b": 0.88
+    },
+    "straw_man": {
+        "qwen2.5:8b": 0.79,
+        "phi4:14b": 0.83,
+        "mistral:7b": 0.81,
+        "mistral:22b": 0.86
+    },
+    "false_dilemma": {
+        "qwen2.5:8b": 0.88,
+        "phi4:14b": 0.85,
+        "mistral:7b": 0.73,
+        "mistral:22b": 0.82
+    },
+    "appeal_to_authority": {
+        "qwen2.5:8b": 0.82,
+        "phi4:14b": 0.89,
+        "mistral:7b": 0.76,
+        "mistral:22b": 0.84
+    },
+    "slippery_slope": {
+        "qwen2.5:8b": 0.91,
+        "phi4:14b": 0.87,
+        "mistral:7b": 0.79,
+        "mistral:22b": 0.85
+    }
+}
+
+def get_best_model_for_fallacy(fallacy_type):
+    """Retourne le meilleur modèle pour un type de sophisme donné"""
+    scores = FALLACY_PERFORMANCE_MATRIX.get(fallacy_type, {})
+    if not scores:
+        return "qwen2.5:8b"  # Défaut
+    
+    best_model = max(scores.items(), key=lambda x: x[1])
+    return best_model[0]
+
+# Utilisation
+print("Meilleur modèle pour ad hominem:", get_best_model_for_fallacy("ad_hominem"))
+print("Meilleur modèle pour false dilemma:", get_best_model_for_fallacy("false_dilemma"))
+```
+
+#### 5.4.2 Capacités de formalisation logique
+
+**Tests de capacité minimale pour différentes logiques :**
+
+```python
+async def test_logic_capabilities():
+    """Test des capacités de formalisation logique"""
+    
+    tests = {
+        "propositional": {
+            "natural": "Si il pleut, alors la route est mouillée. Il pleut. Donc la route est mouillée.",
+            "expected_complexity": "simple",
+            "min_model_size": "3.8B"
+        },
+        "first_order": {
+            "natural": "Tous les hommes sont mortels. Socrate est un homme. Donc Socrate est mortel.",
+            "expected_complexity": "medium", 
+            "min_model_size": "7B"
+        },
+        "modal": {
+            "natural": "Il est nécessaire que si quelque chose existe, alors il est possible qu'il existe.",
+            "expected_complexity": "high",
+            "min_model_size": "14B"
+        }
+    }
+    
+    models = ["phi4:3.8b", "qwen2.5:7b", "mistral:7b", "phi4:14b", "qwen2.5:14b", "mistral:22b"]
+    
+    results = {}
+    
+    for logic_type, test_data in tests.items():
+        results[logic_type] = {}
+        
+        prompt = f"""
+        Formalisez cet argument en {logic_type.replace('_', ' ')} :
+        
+        {test_data['natural']}
+        
+        Utilisez la syntaxe appropriée et expliquez chaque étape.
+        """
+        
+        for model in models:
+            try:
+                response = await call_model(model, prompt)
+                
+                # Évaluation basique (dans un vrai test, utiliser TweetyProject pour validation)
+                success_indicators = {
+                    "propositional": ["=>", "&&", "||", "!"],
+                    "first_order": ["∀", "∃", "forall", "exists"],
+                    "modal": ["□", "◇", "necessarily", "possibly"]
+                }
+                
+                indicators = success_indicators.get(logic_type, [])
+                success = any(indicator in response.lower() for indicator in indicators)
+                
+                results[logic_type][model] = {
+                    "success": success,
+                    "response_quality": len(response) > 100,  # Indicateur basique
+                    "contains_explanation": "étape" in response.lower() or "step" in response.lower()
+                }
+                
+            except Exception as e:
+                results[logic_type][model] = {"error": str(e)}
+    
+    return results
+```
+
+### 5.5 Modèles décensurés : Intérêt pour l'analyse argumentative
+
+#### 5.5.1 Avantages des modèles décensurés
+
+**Liberté d'analyse :**
+- Capacité à analyser des arguments controversés sans restrictions
+- Pas de biais de sécurité qui pourrait affecter l'analyse objective
+- Exploration complète des implications logiques
+
+**Cas d'usage spécifiques :**
+- Analyse de discours politiques extrêmes
+- Étude de propagande et de désinformation
+- Recherche académique sur l'argumentation fallacieuse
+
+```python
+# Exemple de comparaison modèle censuré vs décensuré
+async def compare_censored_vs_uncensored():
+    """Compare l'analyse entre modèles censurés et décensurés"""
+    
+    controversial_argument = """
+    Les statistiques montrent des différences de QI entre groupes ethniques.
+    Certains en concluent que ces différences sont génétiques.
+    D'autres affirment qu'elles sont dues aux inégalités socio-économiques.
+    Ce débat est important pour les politiques éducatives.
+    """
+    
+    models = {
+        "standard": "qwen2.5:7b",
+        "uncensored": "qwen2.5:7b-uncensored"  # Hypothétique
+    }
+    
+    prompt = f"""
+    Analysez objectivement cet argument du point de vue logique :
+    
+    {controversial_argument}
+    
+    Identifiez :
+    1. Les prémisses factuelles
+    2. Les inférences logiques
+    3. Les sophismes potentiels
+    4. Les biais possibles
+    
+    Restez objectif et analytique.
+    """
+    
+    results = {}
+    
+    for model_type, model_name in models.items():
+        try:
+            response = await call_model(model_name, prompt)
+            
+            results[model_type] = {
+                "completed_analysis": len(response) > 200,
+                "addressed_controversy": "controvers" in response.lower(),
+                "identified_biases": "biais" in response.lower() or "bias" in response.lower(),
+                "objective_tone": not any(word in response.lower() for word in ["refuse", "cannot", "inappropriate"])
+            }
+            
+        except Exception as e:
+            results[model_type] = {"error": str(e)}
+    
+    return results
+```
+
+#### 5.5.2 Précautions et considérations éthiques
+
+**Recommandations d'usage :**
+- Utiliser uniquement dans un contexte de recherche académique
+- Maintenir une supervision humaine experte
+- Documenter les biais potentiels des modèles
+- Respecter les réglementations locales
+
+### 5.6 Recommandations par cas d'usage
+
+#### 5.6.1 Matrice de recommandations
+
+```python
+USAGE_RECOMMENDATIONS = {
+    "detection_sophismes_simples": {
+        "recommended": ["phi4:3.8b", "qwen2.5:7b"],
+        "reason": "Efficacité et rapidité suffisantes"
+    },
+    "analyse_argumentative_complexe": {
+        "recommended": ["phi4:14b", "qwen2.5:14b"],
+        "reason": "Capacités de raisonnement avancées nécessaires"
+    },
+    "formalisation_logique_propositionnelle": {
+        "recommended": ["qwen2.5:7b", "mistral:7b"],
+        "reason": "Bon équilibre précision/ressources"
+    },
+    "formalisation_logique_premier_ordre": {
+        "recommended": ["phi4:14b", "qwen2.5:14b"],
+        "reason": "Complexité nécessitant des modèles plus grands"
+    },
+    "formalisation_logique_modale": {
+        "recommended": ["qwen2.5:14b", "mistral:22b"],
+        "reason": "Logique complexe nécessitant les plus gros modèles"
+    },
+    "analyse_debats_politiques": {
+        "recommended": ["phi4:14b", "qwen2.5:14b"],
+        "reason": "Nuances et contexte politique complexes"
+    },
+    "traitement_batch_haute_performance": {
+        "recommended": ["mistral:7b", "qwen2.5:7b"],
+        "reason": "Bon compromis vitesse/qualité"
+    }
+}
+
+def get_recommendation(use_case, available_vram_gb):
+    """Retourne une recommandation basée sur le cas d'usage et les ressources"""
+    
+    base_recommendations = USAGE_RECOMMENDATIONS.get(use_case, {}).get("recommended", [])
+    
+    # Filtrage par ressources disponibles
+    model_requirements = {
+        "phi4:3.8b": 8,
+        "qwen2.5:7b": 12,
+        "mistral:7b": 10,
+        "phi4:14b": 20,
+        "qwen2.5:14b": 24,
+        "mistral:22b": 32
+    }
+    
+    feasible_models = [
+        model for model in base_recommendations 
+        if model_requirements.get(model, 999) <= available_vram_gb
+    ]
+    
+    if not feasible_models:
+        # Fallback vers le plus petit modèle possible
+        all_models = list(model_requirements.keys())
+        feasible_models = [
+            model for model in all_models
+            if model_requirements[model] <= available_vram_gb
+        ]
+    
+    return {
+        "recommended_models": feasible_models,
+        "use_case": use_case,
+        "available_vram": available_vram_gb,
+        "reason": USAGE_RECOMMENDATIONS.get(use_case, {}).get("reason", "Recommandation générale")
+    }
+
+# Exemples d'utilisation
+print("Pour détection de sophismes avec 16GB VRAM:")
+print(get_recommendation("detection_sophismes_simples", 16))
+
+print("\nPour formalisation modale avec 12GB VRAM:")
+print(get_recommendation("formalisation_logique_modale", 12))
+```
+---
+
+## 6. Ressources et références
+
+### 6.1 Papiers de recherche clés
+
+#### 6.1.1 Fondements théoriques
+
+**Distillation et compression de modèles :**
+- Hinton, G., Vinyals, O., & Dean, J. (2015). "Distilling the Knowledge in a Neural Network"
+- Sanh, V., et al. (2019). "DistilBERT, a distilled version of BERT: smaller, faster, cheaper and lighter"
+- Jiao, X., et al. (2020). "TinyBERT: Distilling BERT for Natural Language Understanding"
+
+**Quantification et optimisation :**
+- Jacob, B., et al. (2018). "Quantization and Training of Neural Networks for Efficient Integer-Arithmetic-Only Inference"
+- Dettmers, T., et al. (2022). "LLM.int8(): 8-bit Matrix Multiplication for Transformers at Scale"
+- Frantar, E., et al. (2023). "GPTQ: Accurate Post-Training Quantization for Generative Pre-trained Transformers"
+
+#### 6.1.2 Raisonnement logique et argumentation
+
+**LLMs et raisonnement logique :**
+- Wei, J., et al. (2022). "Chain-of-Thought Prompting Elicits Reasoning in Large Language Models"
+- Kojima, T., et al. (2022). "Large Language Models are Zero-Shot Reasoners"
+- Wang, X., et al. (2023). "Self-Consistency Improves Chain of Thought Reasoning in Language Models"
+
+**Analyse argumentative automatisée :**
+- Lawrence, J., & Reed, C. (2020). "Argument Mining: A Survey"
+- Stab, C., & Gurevych, I. (2017). "Parsing Argumentation Structures in Persuasive Essays"
+- Habernal, I., & Gurevych, I. (2017). "Argumentation Mining in User-Generated Web Discourse"
+
+**Détection de sophismes :**
+- Habernal, I., et al. (2018). "The Argument Reasoning Comprehension Task: Identification and Reconstruction of Implicit Warrants"
+- Jin, Z., et al. (2022). "Logical Fallacy Detection"
+- Sourati, Z., et al. (2021). "Multi-Modal Automated Fact-Checking"
+
+### 6.2 Outils et bibliothèques recommandés
+
+#### 6.2.1 Frameworks d'inférence locale
+
+**Ollama**
+- **Site officiel** : https://ollama.ai/
+- **GitHub** : https://github.com/ollama/ollama
+- **Documentation** : https://github.com/ollama/ollama/blob/main/README.md
+- **Modèles supportés** : https://ollama.ai/library
+
+```bash
+# Installation rapide
+curl -fsSL https://ollama.ai/install.sh | sh
+
+# Modèles recommandés pour l'argumentation
+ollama pull qwen2.5:7b
+ollama pull phi4:14b
+ollama pull mistral:7b
+```
+
+**llama.cpp**
+- **GitHub** : https://github.com/ggerganov/llama.cpp
+- **Documentation** : https://github.com/ggerganov/llama.cpp/blob/master/README.md
+- **Modèles GGUF** : https://huggingface.co/models?library=gguf
+
+```bash
+# Compilation optimisée
+git clone https://github.com/ggerganov/llama.cpp
+cd llama.cpp
+make LLAMA_CUDA=1  # Pour support GPU NVIDIA
+make LLAMA_METAL=1 # Pour support GPU Apple
+```
+
+**vLLM**
+- **GitHub** : https://github.com/vllm-project/vllm
+- **Documentation** : https://docs.vllm.ai/
+- **Installation** : `pip install vllm`
+
+#### 6.2.2 Intégration avec frameworks agentiques
+
+**Semantic Kernel**
+- **GitHub** : https://github.com/microsoft/semantic-kernel
+- **Documentation** : https://learn.microsoft.com/en-us/semantic-kernel/
+- **Connecteurs Ollama** : https://github.com/microsoft/semantic-kernel/tree/main/python/semantic_kernel/connectors/ai/ollama
+
+**LangChain**
+- **Site officiel** : https://langchain.com/
+- **Documentation** : https://python.langchain.com/docs/
+- **Intégration Ollama** : https://python.langchain.com/docs/integrations/llms/ollama
+
+**AutoGen**
+- **GitHub** : https://github.com/microsoft/autogen
+- **Documentation** : https://microsoft.github.io/autogen/
+
+#### 6.2.3 TweetyProject et logiques formelles
+
+**TweetyProject**
+- **Site officiel** : https://tweetyproject.org/
+- **GitHub** : https://github.com/TweetyProjectTeam/TweetyProject
+- **Documentation** : https://tweetyproject.org/doc/
+- **Téléchargements** : https://tweetyproject.org/downloads/
+
+**JPype (Interface Java-Python)**
+- **GitHub** : https://github.com/jpype-project/jpype
+- **Documentation** : https://jpype.readthedocs.io/
+- **Installation** : `pip install JPype1`
+
+### 6.3 Tutoriels et guides pratiques
+
+#### 6.3.1 Guides d'installation et configuration
+
+**Configuration d'environnement local pour LLMs**
+
+```bash
+# Création d'un environnement virtuel
+python -m venv llm_local_env
+source llm_local_env/bin/activate  # Linux/Mac
+# ou
+llm_local_env\Scripts\activate     # Windows
+
+# Installation des dépendances de base
+pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118
+pip install transformers accelerate
+pip install langchain langchain-community
+pip install httpx asyncio
+pip install jpype1
+
+# Installation d'Ollama
+curl -fsSL https://ollama.ai/install.sh | sh
+
+# Téléchargement des modèles recommandés
+ollama pull qwen2.5:7b
+ollama pull phi4:14b
+ollama pull mistral:7b
+```
+
+**Configuration TweetyProject**
+
+```python
+# Script de configuration TweetyProject
+import os
+import urllib.request
+import jpype
+
+def setup_tweety_environment():
+    """Configure l'environnement TweetyProject"""
+    
+    # Création du dossier libs
+    os.makedirs("libs", exist_ok=True)
+    
+    # URLs des JARs TweetyProject essentiels
+    tweety_jars = {
+        "tweety-commons": "https://tweetyproject.org/downloads/tweety-commons-1.28.jar",
+        "tweety-logics-pl": "https://tweetyproject.org/downloads/tweety-logics-pl-1.28.jar",
+        "tweety-logics-fol": "https://tweetyproject.org/downloads/tweety-logics-fol-1.28.jar",
+        "tweety-arg-dung": "https://tweetyproject.org/downloads/tweety-arg-dung-1.28.jar"
+    }
+    
+    # Téléchargement des JARs
+    for name, url in tweety_jars.items():
+        jar_path = f"libs/{name}.jar"
+        if not os.path.exists(jar_path):
+            print(f"Téléchargement de {name}...")
+            urllib.request.urlretrieve(url, jar_path)
+    
+    # Test de la configuration
+    try:
+        if not jpype.isJVMStarted():
+            jpype.startJVM(classpath=["libs/*.jar"])
+        
+        # Test d'import
+        PlParser = jpype.JClass("org.tweetyproject.logics.pl.parser.PlParser")
+        print("Configuration TweetyProject réussie !")
+        
+        jpype.shutdownJVM()
+        
+    except Exception as e:
+        print(f"Erreur de configuration : {e}")
+
+if __name__ == "__main__":
+    setup_tweety_environment()
+```
+
+#### 6.3.2 Exemples de projets complets
+
+**Projet 1 : Analyseur de débats politiques**
+
+```python
+# Structure de projet recommandée
+"""
+political_debate_analyzer/
+├── src/
+│   ├── models/
+│   │   ├── __init__.py
+│   │   ├── model_manager.py
+│   │   └── model_configs.py
+│   ├── analyzers/
+│   │   ├── __init__.py
+│   │   ├── fallacy_detector.py
+│   │   ├── bias_analyzer.py
+│   │   └── rhetoric_analyzer.py
+│   ├── utils/
+│   │   ├── __init__.py
+│   │   ├── text_processing.py
+│   │   └── evaluation_metrics.py
+│   └── main.py
+├── data/
+│   ├── test_debates/
+│   └── benchmarks/
+├── config/
+│   └── model_config.yaml
+├── requirements.txt
+└── README.md
+"""
+
+# Exemple de configuration (config/model_config.yaml)
+yaml_config = """
+models:
+  fallacy_detection:
+    primary: "phi4:14b"
+    fallback: "qwen2.5:7b"
+  
+  bias_analysis:
+    primary: "qwen2.5:14b"
+    fallback: "mistral:7b"
+  
+  rhetoric_analysis:
+    primary: "mistral:22b"
+    fallback: "qwen2.5:14b"
+
+performance:
+  max_concurrent_requests: 4
+  timeout_seconds: 30
+  retry_attempts: 3
+
+hardware:
+  min_vram_gb: 16
+  preferred_vram_gb: 24
+"""
+```
+
+**Projet 2 : Formalisateur logique automatique**
+
+```python
+# Exemple d'architecture pour la formalisation logique
+class LogicalFormalizerProject:
+    """
+    Projet complet de formalisation logique avec LLMs locaux
+    """
+    
+    def __init__(self):
+        self.setup_components()
+    
+    def setup_components(self):
+        """Configuration des composants"""
+        
+        # Gestionnaire de modèles
+        self.model_manager = ModelManager({
+            "propositional": "qwen2.5:7b",
+            "first_order": "phi4:14b", 
+            "modal": "qwen2.5:14b"
+        })
+        
+        # Interface TweetyProject
+        self.tweety = TweetyIntegration("libs/")
+        
+        # Évaluateur de performance
+        self.evaluator = FormalizationEvaluator()
+    
+    async def formalize_argument(self, natural_text, logic_type="propositional"):
+        """Formalise un argument en logique spécifiée"""
+        
+        # Sélection du modèle approprié
+        model = self.model_manager.get_model_for_logic(logic_type)
+        
+        # Formalisation avec le LLM
+        formalization = await self.model_manager.formalize(
+            text=natural_text,
+            model=model,
+            logic_type=logic_type
+        )
+        
+        # Validation avec TweetyProject
+        validation = self.tweety.validate_formalization(
+            formalization, logic_type
+        )
+        
+        # Évaluation de la qualité
+        quality_score = self.evaluator.evaluate(
+            formalization, validation
+        )
+        
+        return {
+            "formalization": formalization,
+            "validation": validation,
+            "quality_score": quality_score,
+            "model_used": model
+        }
+```
+
+### 6.4 Ressources d'apprentissage
+
+#### 6.4.1 Cours et tutoriels en ligne
+
+**Cours sur les LLMs locaux :**
+- "Local LLM Deployment" - Hugging Face Course
+- "Optimizing Large Language Models" - DeepLearning.AI
+- "Quantization Techniques for Neural Networks" - Fast.ai
+
+**Argumentation et logique formelle :**
+- "Introduction to Logic" - Stanford Encyclopedia of Philosophy
+- "Computational Argumentation" - University of Dundee
+- "Formal Methods in AI" - MIT OpenCourseWare
+
+#### 6.4.2 Communautés et forums
+
+**Communautés techniques :**
+- **r/LocalLLaMA** : https://reddit.com/r/LocalLLaMA
+- **Hugging Face Forums** : https://discuss.huggingface.co/
+- **LangChain Discord** : https://discord.gg/langchain
+
+**Recherche académique :**
+- **ACL Anthology** : https://aclanthology.org/
+- **arXiv AI section** : https://arxiv.org/list/cs.AI/recent
+- **AAAI Publications** : https://aaai.org/publications/
+
+### 6.5 Outils de développement et debugging
+
+#### 6.5.1 Monitoring et profiling
+
+```python
+# Exemple d'outil de monitoring pour LLMs locaux
+class LLMMonitor:
+    """Monitore les performances des LLMs locaux"""
+    
+    def __init__(self):
+        self.metrics = {
+            "requests_count": 0,
+            "total_processing_time": 0,
+            "memory_usage": [],
+            "error_count": 0
+        }
+    
+    def log_request(self, model, prompt, response_time, memory_used):
+        """Enregistre une requête"""
+        self.metrics["requests_count"] += 1
+        self.metrics["total_processing_time"] += response_time
+        self.metrics["memory_usage"].append(memory_used)
+        
+        # Log détaillé
+        print(f"[{datetime.now()}] {model}: {response_time:.2f}s, {memory_used}MB")
+    
+    def get_performance_report(self):
+        """Génère un rapport de performance"""
+        if self.metrics["requests_count"] == 0:
+            return "Aucune requête enregistrée"
+        
+        avg_time = self.metrics["total_processing_time"] / self.metrics["requests_count"]
+        avg_memory = sum(self.metrics["memory_usage"]) / len(self.metrics["memory_usage"])
+        
+        return {
+            "total_requests": self.metrics["requests_count"],
+            "average_response_time": avg_time,
+            "average_memory_usage": avg_memory,
+            "error_rate": self.metrics["error_count"] / self.metrics["requests_count"]
+        }
+```
+
+#### 6.5.2 Outils de benchmarking
+
+```bash
+# Script de benchmark automatisé
+#!/bin/bash
+
+# benchmark_llms.sh
+echo "=== Benchmark LLMs Locaux pour Analyse Argumentative ==="
+
+# Modèles à tester
+MODELS=("qwen2.5:7b" "phi4:14b" "mistral:7b")
+
+# Tests de performance
+for model in "${MODELS[@]}"; do
+    echo "Testing $model..."
+    
+    # Test de latence
+    echo "- Test de latence"
+    time ollama run $model "Analysez ce sophisme : Ad hominem attack example"
+    
+    # Test de débit
+    echo "- Test de débit"
+    python benchmark_throughput.py --model $model --batch-size 10
+    
+    # Test de mémoire
+    echo "- Test de mémoire"
+    python monitor_memory.py --model $model --duration 60
+    
+    echo "---"
+done
+
+echo "Benchmark terminé. Voir results/ pour les détails."
+```
+
+### 6.6 Projets et défis suggérés
+
+#### 6.6.1 Projets d'apprentissage progressif
+
+**Niveau débutant :**
+1. **Détecteur de sophismes simple** : Créer un détecteur pour 3-5 types de sophismes courants
+2. **Comparateur de modèles** : Benchmarker 2-3 modèles sur des tâches simples
+3. **Interface web basique** : Créer une interface pour tester les modèles
+
+**Niveau intermédiaire :**
+1. **Pipeline d'analyse complète** : Intégrer extraction, détection et évaluation
+2. **Optimiseur de performance** : Implémenter la mise en cache et la parallélisation
+3. **Intégration TweetyProject** : Connecter LLMs et logique formelle
+
+**Niveau avancé :**
+1. **Système de recommandation de modèles** : IA pour choisir le meilleur modèle par tâche
+2. **Fine-tuning spécialisé** : Adapter un modèle pour l'analyse argumentative
+3. **Recherche comparative** : Étude approfondie des capacités par type de logique
+
+#### 6.6.2 Défis de recherche
+
+**Questions ouvertes :**
+1. Quelle est la taille minimale de modèle pour manipuler efficacement la logique modale ?
+2. Les modèles décensurés offrent-ils vraiment une meilleure analyse objective ?
+3. Comment optimiser l'allocation de ressources entre plusieurs modèles spécialisés ?
+
+**Métriques à développer :**
+1. Score de qualité argumentative automatisé
+2. Métriques de cohérence logique
+3. Évaluation de biais dans l'analyse
+
+---
+
+## Conclusion
+
+L'intégration de LLMs locaux légers pour l'analyse argumentative représente un domaine en pleine évolution, offrant des opportunités uniques de combiner confidentialité, performance et spécialisation. Ce guide fournit les bases théoriques et pratiques nécessaires pour développer une expertise dans ce domaine porteur.
+
+Les étudiants qui maîtriseront ces technologies seront particulièrement recherchés par les entreprises soucieuses de souveraineté numérique et d'optimisation des coûts d'IA.
+
+**Prochaines étapes recommandées :**
+1. Installer et tester les différents frameworks
+2. Implémenter les exemples de code fournis
+3. Conduire des benchmarks comparatifs
+4. Développer un projet spécialisé
+5. Contribuer à la recherche dans le domaine
+
+---
+
+*Document créé le 26 mai 2025 pour le projet "2025 - SCIA - NLP - IA Symbolique"*
+*Étudiants : amine.el-maalouf, aziz.zeghal, lucas.tilly, matthias.laithier, oscar.le-dauphin*

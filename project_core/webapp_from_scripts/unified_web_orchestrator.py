@@ -39,10 +39,10 @@ import aiohttp
 
 # Imports internes (sans activation d'environnement au niveau du module)
 # Le bootstrap se fera dans la fonction main()
-from scripts.webapp.backend_manager import BackendManager
-from scripts.webapp.frontend_manager import FrontendManager
-from scripts.webapp.playwright_runner import PlaywrightRunner
-from scripts.webapp.process_cleaner import ProcessCleaner
+from project_core.webapp_from_scripts.backend_manager import BackendManager
+from project_core.webapp_from_scripts.frontend_manager import FrontendManager
+from project_core.webapp_from_scripts.playwright_runner import PlaywrightRunner
+from project_core.webapp_from_scripts.process_cleaner import ProcessCleaner
 
 # Import du gestionnaire centralisé des ports
 try:

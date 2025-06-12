@@ -14,7 +14,7 @@ Ce module intègre :
 """
 
 # ===== AUTO-ACTIVATION ENVIRONNEMENT =====
-import scripts.core.auto_env  # Auto-activation environnement intelligent
+import project_core.core_from_scripts.auto_env  # Auto-activation environnement intelligent
 # =========================================
 import sys
 import os

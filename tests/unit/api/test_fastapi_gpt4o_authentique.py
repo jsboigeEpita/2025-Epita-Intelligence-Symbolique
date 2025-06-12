@@ -9,7 +9,7 @@ Tests pour Point d'Entrée 2 : Applications Web (API FastAPI + Interface React +
 
 # AUTO_ENV: Activation automatique environnement
 try:
-    import scripts.core.auto_env  # Auto-activation environnement intelligent
+    import project_core.core_from_scripts.auto_env  # Auto-activation environnement intelligent
 except ImportError:
     print("[WARNING] auto_env non disponible - environnement non activé")
 

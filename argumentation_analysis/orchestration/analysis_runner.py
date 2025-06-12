@@ -1,5 +1,5 @@
 ﻿# orchestration/analysis_runner.py
-import scripts.core.auto_env  # Auto-activation environnement intelligent
+import project_core.core_from_scripts.auto_env  # Auto-activation environnement intelligent
 import sys
 import os
 # Ajout pour résoudre les problèmes d'import de project_core
@@ -31,7 +31,7 @@ from semantic_kernel.kernel import Kernel as SKernel # Alias pour éviter confli
 import semantic_kernel as sk
 from semantic_kernel.contents import ChatMessageContent
 from semantic_kernel.connectors.ai.open_ai import OpenAIChatCompletion, AzureChatCompletion
-from semantic_kernel.contents.author_role import AuthorRole
+from semantic_kernel.contents.utils.author_role import AuthorRole
 
 # # Correct imports
 # from argumentation_analysis.core.shared_state import RhetoricalAnalysisState
