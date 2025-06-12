@@ -1,0 +1,18 @@
+[
+    {
+        "name": "Cluedo - Le meurtre du Dr. Lenoir",
+        "custom_data_test": {
+            "agent": "sherlock",
+            "data": "Le Dr. Lenoir a été retrouvé mort dans le manoir. Les suspects sont le Colonel Moutarde, Mme Pervenche et M. Olive. L'arme du crime pourrait être le poignard ou le chandelier. Si le Colonel Moutarde était dans la cuisine, alors il n'a pas pu utiliser le chandelier qui se trouvait dans le salon. Une tache de boue a été retrouvée près du corps, et seul M. Olive portait des bottes boueuses. Donc, M. Olive est probablement le coupable."
+        },
+        "dialogue_test": {
+            "sender": "sherlock",
+            "receiver": "watson",
+            "message": "Watson, l'argument de la boue semble concluant, n'est-ce pas ? Si seul M. Olive a de la boue sur ses bottes, et qu'il y a de la boue près du corps, cela l'implique fortement."
+        },
+        "debate_test": {
+            "topic": "La culpabilité de M. Olive dans l'affaire du Dr. Lenoir",
+            "agents": ["sherlock", "watson", "moriarty"]
+        }
+    }
+]
