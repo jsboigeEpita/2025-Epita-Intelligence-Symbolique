@@ -27,7 +27,7 @@ from semantic_kernel.contents import ChatMessageContent
 from argumentation_analysis.core.shared_state import RhetoricalAnalysisState
 from argumentation_analysis.core.state_manager_plugin import StateManagerPlugin
 from argumentation_analysis.core.strategies import BalancedParticipationStrategy
-from argumentation_analysis.orchestration.analysis_runner import run_analysis_conversation
+from argumentation_analysis.orchestration.analysis_runner import run_analysis
 from argumentation_analysis.models.extract_definition import ExtractDefinitions, SourceDefinition, Extract
 from argumentation_analysis.services.extract_service import ExtractService
 from argumentation_analysis.services.fetch_service import FetchService
@@ -162,7 +162,7 @@ class TestEndToEndAnalysis:
         mock_group_chat_instance.invoke = mock_invoke
         mock_group_chat_instance.history = MagicMock(); mock_group_chat_instance.history.add_user_message = MagicMock(); mock_group_chat_instance.history.messages = []
         
-        await run_analysis_conversation(test_text, llm_service)
+        await run_analysis(test_text, llm_service)
         
         assert len(state.analysis_tasks) == 2
         assert len(state.identified_arguments) == 3
@@ -242,7 +242,7 @@ class TestEndToEndAnalysis:
         mock_group_chat_instance.invoke = mock_invoke
         mock_group_chat_instance.history = MagicMock(); mock_group_chat_instance.history.add_user_message = MagicMock(); mock_group_chat_instance.history.messages = []
         
-        await run_analysis_conversation(test_text, llm_service)
+        await run_analysis(test_text, llm_service)
         
         assert len(state.analysis_tasks) == 2
         assert len(state.identified_arguments) == 1
@@ -303,7 +303,7 @@ class TestPerformanceIntegration:
         mock_group_chat_instance.history = MagicMock(); mock_group_chat_instance.history.add_user_message = MagicMock(); mock_group_chat_instance.history.messages = []
         
         start_time = time.time()
-        await run_analysis_conversation(test_text, llm_service)
+        await run_analysis(test_text, llm_service)
         execution_time = time.time() - start_time
         
         assert execution_time >= 1.2

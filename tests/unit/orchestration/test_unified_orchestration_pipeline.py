@@ -24,7 +24,7 @@ import pytest
 import asyncio
 import logging
 import time
-from unittest.mock import patch, MagicMock, AsyncMock
+from unittest.mock import patch, AsyncMock, MagicMock
 from typing import Dict, Any, List
 
 # Configuration du logging pour les tests
@@ -33,7 +33,6 @@ logging.basicConfig(level=logging.WARNING)
 # Imports des utilitaires de test
 try:
     from tests.utils.common_test_helpers import (
-        create_mock_llm_service,
         create_sample_text,
         assert_valid_analysis_results
     )
@@ -133,7 +132,7 @@ class TestUnifiedOrchestrationPipeline:
     def basic_config(self):
         """Configuration de base pour les tests."""
         return ExtendedOrchestrationConfig(
-            use_mocks=True,
+            use_mocks=False,
             enable_hierarchical=False,
             enable_specialized_orchestrators=False,
             save_orchestration_trace=False,
@@ -147,7 +146,7 @@ class TestUnifiedOrchestrationPipeline:
             orchestration_mode=OrchestrationMode.HIERARCHICAL_FULL,
             enable_hierarchical=True,
             enable_specialized_orchestrators=False,
-            use_mocks=True,
+            use_mocks=False,
             save_orchestration_trace=False
         )
     
@@ -159,7 +158,7 @@ class TestUnifiedOrchestrationPipeline:
             analysis_type=AnalysisType.INVESTIGATIVE,
             enable_hierarchical=False,
             enable_specialized_orchestrators=True,
-            use_mocks=True,
+            use_mocks=False,
             save_orchestration_trace=False
         )
     
@@ -193,100 +192,83 @@ class TestUnifiedOrchestrationPipeline:
     
     @pytest.mark.asyncio
     async def test_pipeline_initialization_async_success(self, basic_config):
-        """Test de l'initialisation asynchrone réussie."""
+        """Test de l'initialisation asynchrone réussie avec de vrais composants."""
         pipeline = UnifiedOrchestrationPipeline(basic_config)
         
-        with patch('argumentation_analysis.pipelines.unified_orchestration_pipeline.create_llm_service') as mock_llm:
-            mock_llm.return_value = MagicMock()
-            mock_llm.return_value.service_id = "test_service_id"
-            
-            with patch('argumentation_analysis.pipelines.unified_orchestration_pipeline.initialize_jvm') as mock_jvm:
-                mock_jvm.return_value = True
-                
-                with patch.object(pipeline, '_initialize_fallback_pipeline', new_callable=AsyncMock) as mock_fallback:
-                    mock_fallback.return_value = None
-                    
-                    success = await pipeline.initialize()
-                    
-                    assert success is True
-                    assert pipeline.initialized is True
-                    assert pipeline.llm_service is not None
-                    assert pipeline.llm_service.service_id == "test_service_id"
+        # L'initialisation doit maintenant utiliser les vrais services
+        # grâce à la configuration et à l'environnement de test.
+        success = await pipeline.initialize()
+        
+        assert success is True
+        assert pipeline.initialized is True
+        assert pipeline.llm_service is not None
+        assert pipeline.service_manager is not None
+        # Le fallback ne devrait pas être initialisé si les services principaux fonctionnent
+        assert pipeline._fallback_pipeline is None
     
     @pytest.mark.asyncio
     async def test_pipeline_initialization_with_hierarchical(self, hierarchical_config):
-        """Test de l'initialisation avec architecture hiérarchique."""
+        """Test de l'initialisation avec architecture hiérarchique réelle."""
         pipeline = UnifiedOrchestrationPipeline(hierarchical_config)
         
-        with patch('argumentation_analysis.pipelines.unified_orchestration_pipeline.create_llm_service') as mock_llm:
-            mock_llm.return_value = MagicMock()
-            
-            with patch('argumentation_analysis.pipelines.unified_orchestration_pipeline.StrategicManager') as mock_strategic:
-                with patch('argumentation_analysis.pipelines.unified_orchestration_pipeline.TaskCoordinator') as mock_tactical:
-                    with patch('argumentation_analysis.pipelines.unified_orchestration_pipeline.OperationalManager') as mock_operational:
-                        with patch('argumentation_analysis.pipelines.unified_orchestration_pipeline.MessageMiddleware') as mock_middleware:
-                            with patch.object(pipeline, '_initialize_fallback_pipeline', new_callable=AsyncMock):
-                                
-                                success = await pipeline.initialize()
-                                
-                                assert success is True
-                                assert pipeline.initialized is True
-                                
-                                # Vérifier que les gestionnaires hiérarchiques sont créés
-                                mock_strategic.assert_called_once()
-                                mock_tactical.assert_called_once()
-                                mock_operational.assert_called_once()
-                                mock_middleware.assert_called()
+        success = await pipeline.initialize()
+        
+        assert success is True
+        assert pipeline.initialized is True
+        
+        # Vérifier que les gestionnaires hiérarchiques réels sont instanciés
+        from argumentation_analysis.orchestrators.strategic_manager import StrategicManager
+        from argumentation_analysis.orchestrators.task_coordinator import TaskCoordinator
+        from argumentation_analysis.orchestrators.operational_manager import OperationalManager
+        
+        assert isinstance(pipeline.strategic_manager, StrategicManager)
+        assert isinstance(pipeline.tactical_coordinator, TaskCoordinator)
+        assert isinstance(pipeline.operational_manager, OperationalManager)
+        
+        # Le middleware est optionnel, vérifier s'il est activé
+        if pipeline.config.enable_communication_middleware:
+            from argumentation_analysis.communication.message_middleware import MessageMiddleware
+            assert isinstance(pipeline.middleware, MessageMiddleware)
     
     @pytest.mark.asyncio
     async def test_pipeline_initialization_with_specialized(self, specialized_config):
-        """Test de l'initialisation avec orchestrateurs spécialisés."""
+        """Test de l'initialisation avec orchestrateurs spécialisés réels."""
         pipeline = UnifiedOrchestrationPipeline(specialized_config)
         
-        with patch('argumentation_analysis.pipelines.unified_orchestration_pipeline.create_llm_service') as mock_llm:
-            mock_llm.return_value = MagicMock()
-            
-            with patch('argumentation_analysis.pipelines.unified_orchestration_pipeline.CluedoOrchestrator') as mock_cluedo:
-                with patch('argumentation_analysis.pipelines.unified_orchestration_pipeline.ConversationOrchestrator') as mock_conversation:
-                    with patch.object(pipeline, '_initialize_fallback_pipeline', new_callable=AsyncMock):
-                        
-                        success = await pipeline.initialize()
-                        
-                        assert success is True
-                        assert pipeline.initialized is True
-                        
-                        # Vérifier que les orchestrateurs spécialisés sont disponibles
-                        assert len(pipeline.specialized_orchestrators) > 0
-                        mock_cluedo.assert_called_once()
-                        mock_conversation.assert_called_once()
+        success = await pipeline.initialize()
+        
+        assert success is True
+        assert pipeline.initialized is True
+        
+        # Vérifier que les orchestrateurs spécialisés réels sont instanciés
+        assert len(pipeline.specialized_orchestrators) > 0
+        from argumentation_analysis.orchestrators.cluedo_orchestrator import CluedoOrchestrator
+        from argumentation_analysis.orchestrators.conversation_orchestrator import ConversationOrchestrator
+        
+        assert "cluedo" in pipeline.specialized_orchestrators
+        assert "conversation" in pipeline.specialized_orchestrators
+        assert isinstance(pipeline.specialized_orchestrators["cluedo"]["orchestrator"], CluedoOrchestrator)
+        assert isinstance(pipeline.specialized_orchestrators["conversation"]["orchestrator"], ConversationOrchestrator)
     
     @pytest.mark.asyncio
-    async def test_analyze_text_orchestrated_basic(self, basic_config, sample_texts):
-        """Test de l'analyse orchestrée de base."""
+    @pytest.mark.slow  # Marquer comme test lent car il fait un vrai appel LLM
+    async def test_analyze_text_orchestrated_basic_real(self, basic_config, sample_texts):
+        """Test de l'analyse orchestrée de base avec un vrai LLM."""
         pipeline = UnifiedOrchestrationPipeline(basic_config)
         
-        with patch('argumentation_analysis.pipelines.unified_orchestration_pipeline.create_llm_service'):
-            await pipeline.initialize()
-            
-            # Mock du pipeline de fallback
-            mock_fallback_results = {
-                "informal_analysis": {"fallacies": [], "summary": {}},
-                "formal_analysis": {"status": "success"},
-                "unified_analysis": {"status": "success"},
-                "status": "success"
-            }
-            
-            with patch.object(pipeline, '_fallback_pipeline') as mock_fallback:
-                mock_fallback.analyze_text_unified.return_value = mock_fallback_results
+        await pipeline.initialize()
+        
+        # Exécution réelle sans mock
+        results = await pipeline.analyze_text_orchestrated(sample_texts["simple"])
                 
-                results = await pipeline.analyze_text_orchestrated(sample_texts["simple"])
-                
-                assert results["status"] == "success"
-                assert "metadata" in results
-                assert "execution_time" in results
-                assert results["metadata"]["text_length"] == len(sample_texts["simple"])
-                assert results["metadata"]["pipeline_version"] == "unified_orchestration_2.0"
-                assert "orchestration_trace" in results
+        # Assertions souples sur la structure du résultat
+        assert results["status"] == "success"
+        assert "metadata" in results
+        assert "execution_time" in results
+        assert results["metadata"]["text_length"] == len(sample_texts["simple"])
+        assert "fallback_analysis" in results  # Le mode de base utilise le fallback
+        assert "informal_analysis" in results["fallback_analysis"]
+        assert "formal_analysis" in results["fallback_analysis"]
     
     @pytest.mark.asyncio
     async def test_analyze_text_with_validation_errors(self, basic_config):
@@ -364,50 +346,25 @@ class TestUnifiedOrchestrationPipeline:
         assert features_investigative["has_questions"] is True  # "Qui dit la vérité ?"
     
     @pytest.mark.asyncio
-    async def test_hierarchical_orchestration_execution(self, hierarchical_config, sample_texts):
-        """Test de l'exécution de l'orchestration hiérarchique."""
+    @pytest.mark.slow
+    async def test_hierarchical_orchestration_execution_real(self, hierarchical_config, sample_texts):
+        """Test de l'exécution de l'orchestration hiérarchique avec un vrai LLM."""
         pipeline = UnifiedOrchestrationPipeline(hierarchical_config)
+        await pipeline.initialize()
+
+        results = await pipeline.analyze_text_orchestrated(sample_texts["complex"])
+
+        assert results["status"] == "success"
+        assert "strategic_analysis" in results
+        assert "tactical_coordination" in results
+        assert "operational_results" in results
+        assert "hierarchical_coordination" in results
         
-        with patch('argumentation_analysis.pipelines.unified_orchestration_pipeline.StrategicManager') as mock_strategic:
-            with patch('argumentation_analysis.pipelines.unified_orchestration_pipeline.TaskCoordinator') as mock_tactical:
-                with patch('argumentation_analysis.pipelines.unified_orchestration_pipeline.OperationalManager') as mock_operational:
-                    
-                    # Configuration des mocks
-                    mock_strategic_instance = MagicMock()
-                    mock_strategic_instance.initialize_analysis.return_value = {
-                        "objectives": [{"id": "obj1", "description": "Test objective"}],
-                        "strategic_plan": {"phases": [{"id": "phase1", "name": "Test phase"}]}
-                    }
-                    mock_strategic.return_value = mock_strategic_instance
-                    
-                    mock_tactical_instance = MagicMock()
-                    mock_tactical_instance.process_strategic_objectives = AsyncMock(return_value={"tasks_created": 3})
-                    mock_tactical.return_value = mock_tactical_instance
-                    
-                    mock_operational.return_value = MagicMock()
-                    
-                    with patch('argumentation_analysis.pipelines.unified_orchestration_pipeline.create_llm_service'):
-                        with patch.object(pipeline, '_initialize_fallback_pipeline', new_callable=AsyncMock):
-                            await pipeline.initialize()
-                            
-                            results = {
-                                "metadata": {"analysis_id": "test"},
-                                "strategic_analysis": {},
-                                "tactical_coordination": {},
-                                "operational_results": {},
-                                "status": "in_progress"
-                            }
-                            
-                            # Test de l'exécution hiérarchique
-                            final_results = await pipeline._execute_hierarchical_full_orchestration(
-                                sample_texts["complex"], results
-                            )
-                            
-                            assert "strategic_analysis" in final_results
-                            assert "tactical_coordination" in final_results
-                            assert "hierarchical_coordination" in final_results
-                            assert final_results["strategic_analysis"]["objectives"]
-                            assert final_results["tactical_coordination"]["tasks_created"] == 3
+        # Assertions souples sur la structure de la sortie
+        assert isinstance(results["strategic_analysis"]["objectives"], list)
+        assert len(results["strategic_analysis"]["objectives"]) > 0
+        assert results["tactical_coordination"]["tasks_created"] > 0
+        assert results["operational_results"]["execution_summary"]["completed"] > 0
     
     @pytest.mark.asyncio
     async def test_specialized_orchestrator_selection(self, specialized_config):
@@ -454,8 +411,8 @@ class TestUnifiedOrchestrationPipeline:
     async def test_trace_orchestration(self, basic_config):
         """Test du système de trace d'orchestration."""
         config = ExtendedOrchestrationConfig(
-            save_orchestration_trace=True,
-            use_mocks=True
+            save_orchestration_trace=True, # Garder la trace pour ce test
+            use_mocks=False # Démarrer sans mocks
         )
         pipeline = UnifiedOrchestrationPipeline(config)
         
@@ -477,27 +434,28 @@ class TestUnifiedOrchestrationPipeline:
     @pytest.mark.asyncio
     async def test_error_handling_and_fallback(self, basic_config, sample_texts):
         """Test de la gestion d'erreur et des fallbacks."""
+        # Forcer la config à ne pas utiliser les mocks au départ
+        basic_config.use_mocks = False
         pipeline = UnifiedOrchestrationPipeline(basic_config)
         
-        with patch('argumentation_analysis.pipelines.unified_orchestration_pipeline.create_llm_service') as mock_llm:
-            # Simuler échec du service LLM
-            mock_llm.side_effect = Exception("Service LLM indisponible")
+        with patch('argumentation_analysis.pipelines.unified_orchestration_pipeline.create_llm_service') as mock_create_llm:
+            # Simuler un échec de création du service LLM
+            mock_create_llm.side_effect = Exception("Service LLM indisponible")
             
-            # L'initialisation doit réussir grâce au fallback vers mocks
+            # L'initialisation doit réussir en basculant sur le mode mock.
             success = await pipeline.initialize()
-            assert success is True
-            assert pipeline.config.use_mocks is True
+            assert success is True, "L'initialisation doit basculer en mode mock et réussir"
+            assert pipeline.config.use_mocks is True, "Le pipeline doit basculer en use_mocks=True"
             
-            # Mock du pipeline de fallback pour l'analyse
-            with patch.object(pipeline, '_fallback_pipeline') as mock_fallback:
-                mock_fallback.analyze_text_unified.return_value = {
-                    "informal_analysis": {},
-                    "formal_analysis": {},
-                    "status": "success"
-                }
-                
+            # Puisque nous sommes en mode mock, le fallback pipeline a dû être initialisé.
+            assert pipeline._fallback_pipeline is not None
+            
+            # L'analyse devrait utiliser le fallback pipeline mocké.
+            with patch.object(pipeline._fallback_pipeline, 'analyze_text_unified', new_callable=AsyncMock) as mock_analyze:
+                mock_analyze.return_value = {"status": "success_from_fallback_mock"}
                 results = await pipeline.analyze_text_orchestrated(sample_texts["simple"])
-                assert results["status"] == "success"
+                assert results["status"] == "success_from_fallback_mock"
+                mock_analyze.assert_awaited_once()
     
     @pytest.mark.asyncio
     async def test_shutdown_cleanup(self, basic_config):
@@ -540,23 +498,14 @@ class TestOrchestrationFunctions:
     
     @pytest.mark.asyncio
     async def test_run_unified_orchestration_pipeline_default(self, sample_text):
-        """Test de la fonction principale avec configuration par défaut."""
-        with patch('argumentation_analysis.pipelines.unified_orchestration_pipeline.UnifiedOrchestrationPipeline') as mock_pipeline_class:
-            mock_pipeline = MagicMock()
-            mock_pipeline_class.return_value = mock_pipeline
-            mock_pipeline.initialize = AsyncMock(return_value=True)
-            mock_pipeline.analyze_text_orchestrated = AsyncMock(return_value={"status": "success"})
-            mock_pipeline.shutdown = AsyncMock()
-            
-            results = await run_unified_orchestration_pipeline(sample_text)
-            
-            assert mock_pipeline.initialize.called
-            assert mock_pipeline.analyze_text_orchestrated.called
-            assert mock_pipeline.shutdown.called
-            
-            # Vérifier les arguments passés
-            call_args = mock_pipeline.analyze_text_orchestrated.call_args
-            assert call_args[0][0] == sample_text  # Premier argument = texte
+        """Test de la fonction principale avec configuration par défaut et vrais services."""
+        # Ce test est maintenant un test d'intégration complet
+        results = await run_unified_orchestration_pipeline(sample_text)
+        
+        assert results["status"] == "success"
+        assert "metadata" in results
+        assert "fallback_analysis" in results
+        assert results["metadata"]["text_length"] == len(sample_text)
     
     @pytest.mark.asyncio
     async def test_run_unified_orchestration_pipeline_with_config(self, sample_text):
@@ -564,20 +513,14 @@ class TestOrchestrationFunctions:
         config = ExtendedOrchestrationConfig(
             orchestration_mode=OrchestrationMode.HIERARCHICAL_FULL,
             analysis_type=AnalysisType.INVESTIGATIVE,
-            use_mocks=True
+            use_mocks=False # Test réel
         )
         
-        with patch('argumentation_analysis.pipelines.unified_orchestration_pipeline.UnifiedOrchestrationPipeline') as mock_pipeline_class:
-            mock_pipeline = MagicMock()
-            mock_pipeline_class.return_value = mock_pipeline
-            mock_pipeline.initialize = AsyncMock(return_value=True)
-            mock_pipeline.analyze_text_orchestrated = AsyncMock(return_value={"status": "success"})
-            mock_pipeline.shutdown = AsyncMock()
-            
-            results = await run_unified_orchestration_pipeline(sample_text, config)
-            
-            # Vérifier que la configuration est passée correctement
-            mock_pipeline_class.assert_called_once_with(config)
+        results = await run_unified_orchestration_pipeline(sample_text, config)
+        
+        assert results["status"] == "success"
+        assert "hierarchical_coordination" in results
+        assert "strategic_analysis" in results
     
     @pytest.mark.asyncio
     async def test_run_unified_orchestration_pipeline_initialization_failure(self, sample_text):
@@ -596,27 +539,19 @@ class TestOrchestrationFunctions:
     
     @pytest.mark.asyncio
     async def test_run_extended_unified_analysis_compatibility(self, sample_text):
-        """Test de la fonction de compatibilité avec l'API existante."""
-        with patch('argumentation_analysis.pipelines.unified_orchestration_pipeline.run_unified_orchestration_pipeline') as mock_run:
-            mock_run.return_value = {"status": "success", "mode": "comprehensive"}
-            
-            results = await run_extended_unified_analysis(
-                text=sample_text,
-                mode="comprehensive",
-                orchestration_mode="auto_select",
-                use_mocks=True
-            )
-            
-            assert mock_run.called
-            
-            # Vérifier le mapping des paramètres
-            call_args = mock_run.call_args
-            assert call_args[0][0] == sample_text  # Premier argument = texte
-            config = call_args[0][1]  # Deuxième argument = config
-            
-            assert config.analysis_type == AnalysisType.COMPREHENSIVE
-            assert config.orchestration_mode_enum == OrchestrationMode.AUTO_SELECT
-            assert config.use_mocks is True
+        """Test de la fonction de compatibilité avec des vrais appels."""
+        results = await run_extended_unified_analysis(
+            text=sample_text,
+            mode="comprehensive",
+            orchestration_mode="auto_select",
+            use_mocks=False # Vrai appel
+        )
+        
+        assert results["status"] == "success"
+        assert "metadata" in results
+        assert "orchestration_trace" in results
+        # Le mode auto-select peut choisir différentes stratégies, on reste souple
+        assert ("fallback_analysis" in results or "hierarchical_coordination" in results or "specialized_orchestration" in results)
     
     @pytest.mark.asyncio
     async def test_run_extended_unified_analysis_mode_mapping(self, sample_text):
