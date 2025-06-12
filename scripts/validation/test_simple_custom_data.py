@@ -5,6 +5,7 @@ Test simple de validation : Traitement des données custom
 Validation de l'élimination des mocks - ÉPITA Demo
 """
 
+import project_core.core_from_scripts.auto_env
 import sys
 from pathlib import Path
 

@@ -5,6 +5,7 @@
 Script pour exécuter uniquement les tests du mock JPype1.
 """
 
+import project_core.core_from_scripts.auto_env
 import os
 import sys
 import subprocess

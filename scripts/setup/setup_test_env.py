@@ -8,6 +8,7 @@ Ce script utilise le pipeline de setup défini dans project_core.pipelines.setup
 pour orchestrer les différentes étapes de configuration, y compris:
 - Le diagnostic de l'environnement (implicitement via les autres pipelines).
 - Le téléchargement de dépendances (ex: JARs).
+import project_core.core_from_scripts.auto_env
 - L'installation des paquets Python via un fichier requirements.
 - La configuration optionnelle d'un mock pour JPype.
 

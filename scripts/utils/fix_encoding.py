@@ -5,6 +5,7 @@
 Script pour corriger l'encodage d'un fichier.
 """
 
+import project_core.core_from_scripts.auto_env
 import os
 import sys
 import argparse

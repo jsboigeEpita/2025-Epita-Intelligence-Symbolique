@@ -6,6 +6,7 @@ VALIDATION FINALE LOT 2 - PURGE PHASE 3A
 Validation complète de la purge des 5 fichiers du Lot 2
 """
 
+import project_core.core_from_scripts.auto_env
 import os
 import re
 from pathlib import Path

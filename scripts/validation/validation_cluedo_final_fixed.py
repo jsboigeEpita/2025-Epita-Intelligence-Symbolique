@@ -8,6 +8,7 @@ les communications agentiques avec traces authentiques.
 
 Auteur: Intelligence Symbolique EPITA
 Date: 10/06/2025
+import project_core.core_from_scripts.auto_env
 """
 
 import sys

@@ -8,6 +8,7 @@ Script de validation avec appels REELS aux systemes existants
 et donnees fraiches pour validation approfondie.
 
 Auteur: Roo Debug Mode
+import project_core.core_from_scripts.auto_env
 Date: 10/06/2025 13:22
 """
 

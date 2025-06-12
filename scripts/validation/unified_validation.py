@@ -8,6 +8,7 @@ Consolide toutes les capacités de validation du système :
 - Authenticité des composants (LLM, Tweety, Taxonomie)
 - Écosystème complet (Sources, Orchestration, Verbosité, Formats)
 - Orchestrateurs unifiés (Conversation, RealLLM)
+import project_core.core_from_scripts.auto_env
 - Intégration et performance
 
 Fichiers sources consolidés :

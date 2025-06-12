@@ -1,3 +1,4 @@
+import project_core.core_from_scripts.auto_env
 import json
 
 input_config_path = "_temp/config_paths_corrected_v3.json"

@@ -5,6 +5,7 @@ Script de validation finale - Sprint 3
 Test complet du système après optimisations
 """
 
+import project_core.core_from_scripts.auto_env
 import sys
 import os
 import time

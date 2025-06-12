@@ -8,6 +8,7 @@ Ce script effectue une validation approfondie de TOUS les systèmes avec génér
 de traces d'exécution authentiques sur des données totalement inconnues.
 
 OBJECTIF: Validation complète avec données fraîches et traces authentiques
+import project_core.core_from_scripts.auto_env
 
 Auteur: Roo Debug Mode
 Date: 10/06/2025 13:15

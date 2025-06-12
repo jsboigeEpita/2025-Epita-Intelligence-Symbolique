@@ -7,6 +7,7 @@ Script amélioré pour vérifier que toutes les dépendances sont correctement i
 Ce script teste toutes les dépendances nécessaires pour le projet, y compris numpy, pandas, jpype,
 cryptography, pytest et leurs plugins.
 """
+import project_core.core_from_scripts.auto_env
 
 import sys
 import os

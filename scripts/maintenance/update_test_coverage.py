@@ -4,6 +4,7 @@ Script de mise à jour de la couverture de tests Oracle Enhanced
 Phase 3: Mise à jour complète de la couverture de tests
 """
 
+import project_core.core_from_scripts.auto_env
 import os
 import sys
 from pathlib import Path

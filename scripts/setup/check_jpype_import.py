@@ -1,3 +1,4 @@
+import project_core.core_from_scripts.auto_env
 import sys
 print(f"Python version: {sys.version}")
 print(f"sys.path: {sys.path}")

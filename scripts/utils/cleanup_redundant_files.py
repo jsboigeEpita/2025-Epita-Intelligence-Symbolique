@@ -8,6 +8,7 @@ Script de suppression sécurisée des fichiers redondants - Phase 2
 Ce script supprime intelligemment les fichiers sources redondants après 
 consolidation, conformément au PLAN_CONSOLIDATION_FINALE.md.
 
+import project_core.core_from_scripts.auto_env
 Fonctionnalités :
 - Vérification de l'existence des fichiers consolidés
 - Mode dry-run pour validation

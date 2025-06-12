@@ -6,7 +6,7 @@ Script de validation des démos Einstein avec génération de traces complètes.
 Ce script teste les énigmes logiques complexes forçant l'utilisation de TweetyProject.
 """
 
-import scripts.core.auto_env  # Activation automatique de l'environnement
+import project_core.core_from_scripts.auto_env # Activation automatique de l'environnement
 
 import asyncio
 import json

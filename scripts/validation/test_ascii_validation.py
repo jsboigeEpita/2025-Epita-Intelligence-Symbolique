@@ -5,6 +5,7 @@ Test ASCII de validation : Traitement des donnees custom
 Validation de l'elimination des mocks - EPITA Demo
 """
 
+import project_core.core_from_scripts.auto_env
 import sys
 from pathlib import Path
 

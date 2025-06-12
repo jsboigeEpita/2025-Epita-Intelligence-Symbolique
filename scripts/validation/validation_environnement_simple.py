@@ -8,6 +8,7 @@ Validation rapide de l'environnement Intelligence Symbolique :
 - Variables .env (OPENAI_API_KEY, etc.)
 - Configuration Java JDK17
 - Test gpt-4o-mini
+import project_core.core_from_scripts.auto_env
 
 Usage: python scripts/validation_environnement_simple.py
 """

@@ -7,6 +7,7 @@ Script pour résoudre les problèmes de dépendances pour les tests.
 Ce script installe les versions compatibles de numpy, pandas et autres dépendances
 nécessaires pour exécuter les tests.
 """
+import project_core.core_from_scripts.auto_env
 
 import sys
 import argparse

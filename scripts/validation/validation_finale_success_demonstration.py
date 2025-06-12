@@ -8,6 +8,7 @@ avec succès malgré les problèmes mineurs de dépendances.
 
 Auteur: Roo
 Date: 09/06/2025
+import project_core.core_from_scripts.auto_env
 """
 
 import os

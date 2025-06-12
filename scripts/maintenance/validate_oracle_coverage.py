@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Script de validation de la couverture Oracle Enhanced"""
 
+import project_core.core_from_scripts.auto_env
 import subprocess
 import sys
 from pathlib import Path
