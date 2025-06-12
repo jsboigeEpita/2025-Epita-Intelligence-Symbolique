@@ -332,6 +332,14 @@ async def main():
 
 
 if __name__ == "__main__":
+    # Activation explicite de l'environnement pour garantir la portabilité
+    from scripts.core.auto_env import ensure_env
+    print("Activation de l'environnement...")
+    if not ensure_env(silent=False):
+        print("ERREUR: Impossible d'activer l'environnement. Le script pourrait échouer.", file=sys.stderr)
+        # Optionnel: sortir si l'environnement est critique
+        # sys.exit(1)
+
     try:
         asyncio.run(main())
     except KeyboardInterrupt:
