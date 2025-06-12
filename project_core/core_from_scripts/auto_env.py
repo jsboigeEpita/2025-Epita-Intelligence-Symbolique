@@ -7,11 +7,11 @@ Ce module fournit l'auto-activation automatique de l'environnement conda 'projet
 Conçu pour être utilisé par les agents AI et développeurs sans se soucier de l'état d'activation.
 
 UTILISATION SIMPLE (one-liner) :
-from scripts.core.auto_env import ensure_env
+from project_core.core_from_scripts.auto_env import ensure_env
 ensure_env()
 
 OU ENCORE PLUS SIMPLE :
-import scripts.core.auto_env
+import project_core.core_from_scripts.auto_env
 
 Le module s'auto-exécute à l'import et active l'environnement si nécessaire.
 
@@ -50,8 +50,8 @@ def ensure_env(env_name: str = "projet-is", silent: bool = True) -> bool:
         return True # On considère que l'environnement est déjà correctement configuré
 
     try:
-        # --- Début de l'insertion pour sys.path (si nécessaire pour trouver scripts.core) ---
-        # Cette section assure que scripts.core est dans sys.path pour les imports suivants.
+        # --- Début de l'insertion pour sys.path (si nécessaire pour trouver project_core.core_from_scripts) ---
+        # Cette section assure que project_core.core_from_scripts est dans sys.path pour les imports suivants.
         # Elle est contextuelle à l'emplacement de ce fichier auto_env.py.
         # Racine du projet = parent de 'scripts' = parent.parent.parent de __file__
         project_root_path = Path(__file__).resolve().parent.parent.parent
@@ -62,8 +62,8 @@ def ensure_env(env_name: str = "projet-is", silent: bool = True) -> bool:
              sys.path.insert(0, str(project_root_path))
         # --- Fin de l'insertion pour sys.path ---
 
-        from scripts.core.environment_manager import EnvironmentManager, auto_activate_env as env_man_auto_activate_env
-        from scripts.core.common_utils import Logger # Assumant que Logger est dans common_utils
+        from project_core.core_from_scripts.environment_manager import EnvironmentManager, auto_activate_env as env_man_auto_activate_env
+        from project_core.core_from_scripts.common_utils import Logger # Assumant que Logger est dans common_utils
 
         # Le logger peut être configuré ici ou EnvironmentManager peut en créer un par défaut.
         # Pour correspondre à l'ancienne verbosité contrôlée par 'silent':
@@ -107,7 +107,7 @@ def get_one_liner() -> str:
 
 def get_simple_import() -> str:
     """Retourne l'import simple à utiliser"""
-    return "import scripts.core.auto_env  # Auto-activation environnement intelligent"
+    return "import project_core.core_from_scripts.auto_env  # Auto-activation environnement intelligent"
 
 
 # Auto-exécution à l'import pour usage ultra-simple
@@ -137,10 +137,10 @@ if __name__ == "__main__":
     
     print("\n[INFO] INTEGRATION DANS VOS SCRIPTS :")
     print("   # Methode 1 (ultra-simple) :")
-    print("   import scripts.core.auto_env")
+    print("   import project_core.core_from_scripts.auto_env")
     print("")
     print("   # Methode 2 (explicite) :")
-    print("   from scripts.core.auto_env import ensure_env")
+    print("   from project_core.core_from_scripts.auto_env import ensure_env")
     print("   ensure_env()")
     print("")
     print("   # Methode 3 (one-liner complet) :")

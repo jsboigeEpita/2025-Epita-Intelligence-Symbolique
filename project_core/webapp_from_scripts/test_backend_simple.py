@@ -20,7 +20,7 @@ logging.basicConfig(
 # Ajout du répertoire racine au path
 sys.path.append(str(Path(__file__).parent.parent.parent))
 
-from scripts.webapp.backend_manager import BackendManager
+from project_core.webapp_from_scripts.backend_manager import BackendManager
 
 async def test_backend_simple():
     """Test simple du backend manager"""

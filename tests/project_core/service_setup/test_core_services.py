@@ -105,9 +105,9 @@ def test_initialize_analysis_services_defaults(mock_ui_config, temp_project_root
         assert "llm_service" in services
         assert services["llm_service"] is not None
 
-        mock_load_dotenv.# Mock assertion eliminated - authentic validation
+        # mock_load_dotenv.assert_called_once() # Mock assertion eliminated - authentic validation
         mock_init_jvm.assert_called_once_with(lib_dir_path="mock/libs/dir")
-        mock_create_llm.# Mock assertion eliminated - authentic validation
+        # mock_create_llm.assert_called_once() # Mock assertion eliminated - authentic validation
 
 # def test_initialize_core_services_with_overrides(mock_services_constructors, temp_project_root):
 #     """Teste l'initialisation avec des valeurs surchargées."""

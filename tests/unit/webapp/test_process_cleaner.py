@@ -7,7 +7,7 @@ from unittest.mock import MagicMock, patch, AsyncMock, call
 import sys
 sys.path.insert(0, '.')
 
-from scripts.webapp.process_cleaner import ProcessCleaner
+from project_core.webapp_from_scripts.process_cleaner import ProcessCleaner
 
 @pytest.fixture
 def logger_mock():
@@ -114,7 +114,7 @@ async def test_cleanup_temp_files(cleaner, tmp_path):
     (tmp_path / 'some_other_file.txt').touch()
 
     # The cleaner works from the current directory, so we patch Path
-    with patch('scripts.webapp.process_cleaner.Path') as mock_path:
+    with patch('project_core.webapp_from_scripts.process_cleaner.Path') as mock_path:
         # Configure the mock to return paths within tmp_path
         def path_side_effect(p):
             return tmp_path / p

@@ -22,13 +22,13 @@ import argparse
 
 import subprocess
 # Placeholder pour les futurs modules
-import scripts.setup_core.manage_conda_env as manage_conda_env
-import scripts.setup_core.manage_portable_tools as manage_portable_tools
+import project_core.setup_core_from_scripts.manage_conda_env as manage_conda_env
+import project_core.setup_core_from_scripts.manage_portable_tools as manage_portable_tools
 # Ce print sera remplacé par un logger plus tard.
 # print(f"[DEBUG_ROO] Loaded manage_portable_tools from: {manage_portable_tools.__file__}")
-import scripts.setup_core.manage_project_files as manage_project_files
-import scripts.setup_core.run_pip_commands as run_pip_commands
-import scripts.setup_core.env_utils as env_utils # Ajout de l'importation
+import project_core.setup_core_from_scripts.manage_project_files as manage_project_files
+import project_core.setup_core_from_scripts.run_pip_commands as run_pip_commands
+import project_core.setup_core_from_scripts.env_utils as env_utils # Ajout de l'importation
 
 # Configuration initiale du logger (sera affinée dans main)
 logger = logging.getLogger(__name__)

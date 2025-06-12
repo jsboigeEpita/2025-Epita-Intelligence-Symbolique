@@ -9,7 +9,7 @@ import json # Ajout pour parser la sortie de conda info --json
 import logging # Ajout pour le logger
 
 # Importer les utilitaires nécessaires depuis env_utils
-import scripts.setup_core.env_utils as env_utils
+import project_core.setup_core_from_scripts.env_utils as env_utils
 
 # Logger par défaut pour ce module, si aucun n'est passé.
 # Cela permet au module d'être utilisable indépendamment pour des tests, par exemple.

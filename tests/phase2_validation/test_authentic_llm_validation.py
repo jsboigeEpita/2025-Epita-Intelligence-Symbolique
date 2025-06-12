@@ -30,9 +30,9 @@ logger = logging.getLogger("Phase2.AuthenticValidation")
 # Imports système
 from config.unified_config import UnifiedConfig, MockLevel, LogicType, AgentType
 from argumentation_analysis.core.llm_service import create_llm_service
-from argumentation_analysis.utils.semantic_kernel_compatibility import (
-    AuthorRole, FunctionChoiceBehavior, AgentChatException
-)
+from semantic_kernel.contents.utils.author_role import AuthorRole
+from semantic_kernel.functions.kernel_function_extension import FunctionChoiceBehavior
+from semantic_kernel.exceptions.agent_exceptions import AgentChatException
 
 # Imports agents core
 from argumentation_analysis.agents.core.informal.informal_agent import InformalAnalysisAgent

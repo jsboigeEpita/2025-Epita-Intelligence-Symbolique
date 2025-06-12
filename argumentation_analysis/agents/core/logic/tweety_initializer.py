@@ -1,6 +1,6 @@
 # ===== AUTO-ACTIVATION ENVIRONNEMENT =====
 try:
-    import scripts.core.auto_env  # Auto-activation environnement intelligent
+    import project_core.core_from_scripts.auto_env  # Auto-activation environnement intelligent
 except ImportError:
     # Dans le contexte des tests, auto_env peut déjà être activé
     pass

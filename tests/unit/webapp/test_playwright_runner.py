@@ -9,7 +9,7 @@ from pathlib import Path
 import sys
 sys.path.insert(0, '.')
 
-from scripts.webapp.playwright_runner import PlaywrightRunner
+from project_core.webapp_from_scripts.playwright_runner import PlaywrightRunner
 
 @pytest.fixture
 def playwright_config(webapp_config):

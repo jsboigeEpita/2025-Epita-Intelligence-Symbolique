@@ -10,7 +10,7 @@ import logging
 from typing import Optional
 
 # Import auto-configuration environnement
-import scripts.core.auto_env
+import project_core.core_from_scripts.auto_env
 
 # Imports Semantic Kernel authentiques
 from semantic_kernel import Kernel

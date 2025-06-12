@@ -7,12 +7,12 @@ from pathlib import Path
 import sys
 sys.path.insert(0, '.')
 
-from scripts.webapp.unified_web_orchestrator import UnifiedWebOrchestrator
+from project_core.webapp_from_scripts.unified_web_orchestrator import UnifiedWebOrchestrator
 
 # This patch will apply to all tests in this module
 @pytest.fixture(autouse=True)
 def mock_signal_handlers():
-    with patch('scripts.webapp.unified_web_orchestrator.UnifiedWebOrchestrator._setup_signal_handlers') as mock_setup:
+    with patch('project_core.webapp_from_scripts.unified_web_orchestrator.UnifiedWebOrchestrator._setup_signal_handlers') as mock_setup:
         yield mock_setup
 
 def test_load_valid_config(webapp_config, test_config_path):
@@ -25,7 +25,7 @@ def test_load_valid_config(webapp_config, test_config_path):
     assert orchestrator.config['frontend']['command'] == "npm start"
     assert orchestrator.config['playwright']['enabled'] is True
 
-@patch('scripts.webapp.unified_web_orchestrator.CENTRAL_PORT_MANAGER_AVAILABLE', False)
+@patch('project_core.webapp_from_scripts.unified_web_orchestrator.CENTRAL_PORT_MANAGER_AVAILABLE', False)
 def test_create_default_config_if_not_exists(tmp_path):
     """
     Tests that a default configuration is created if the file does not exist.
@@ -45,7 +45,7 @@ def test_create_default_config_if_not_exists(tmp_path):
     assert config['webapp']['name'] == 'Argumentation Analysis Web App'
     assert config['backend']['start_port'] == 5003  # Default port without manager
 
-@patch('scripts.webapp.unified_web_orchestrator.CENTRAL_PORT_MANAGER_AVAILABLE', True)
+@patch('project_core.webapp_from_scripts.unified_web_orchestrator.CENTRAL_PORT_MANAGER_AVAILABLE', True)
 def test_create_default_config_with_port_manager(tmp_path, mocker):
     """
     Tests default config creation when the central port manager is available.
@@ -55,8 +55,8 @@ def test_create_default_config_with_port_manager(tmp_path, mocker):
     mock_port_manager.get_port.side_effect = lambda x: 8100 if x == 'backend' else 3100
     mock_port_manager.config = {'ports': {'backend': {'fallback': [8101, 8102]}}}
 
-    mocker.patch('scripts.webapp.unified_web_orchestrator.get_port_manager', return_value=mock_port_manager)
-    mocker.patch('scripts.webapp.unified_web_orchestrator.set_environment_variables')
+    mocker.patch('project_core.webapp_from_scripts.unified_web_orchestrator.get_port_manager', return_value=mock_port_manager)
+    mocker.patch('project_core.webapp_from_scripts.unified_web_orchestrator.set_environment_variables')
 
     config_path = tmp_path / "default_config_with_pm.yml"
     orchestrator = UnifiedWebOrchestrator(config_path=str(config_path))

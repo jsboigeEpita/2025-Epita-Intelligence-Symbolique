@@ -7,7 +7,7 @@ from unittest.mock import MagicMock, patch, AsyncMock
 import sys
 sys.path.insert(0, '.')
 
-from scripts.webapp.backend_manager import BackendManager
+from project_core.webapp_from_scripts.backend_manager import BackendManager
 
 @pytest.fixture
 def backend_config(webapp_config):
@@ -87,7 +87,7 @@ async def test_start_with_failover_all_ports_fail(manager):
     manager._start_on_port.assert_not_called()
 
 @pytest.mark.asyncio
-@patch('scripts.webapp.backend_manager.BackendManager._get_conda_env_python_executable', new_callable=AsyncMock)
+@patch('project_core.webapp_from_scripts.backend_manager.BackendManager._get_conda_env_python_executable', new_callable=AsyncMock)
 async def test_start_on_port_success(mock_get_python_exe, manager, mock_popen):
     """
     Tests the "_start_on_port" method for a successful start.
@@ -105,7 +105,7 @@ async def test_start_on_port_success(mock_get_python_exe, manager, mock_popen):
     manager._wait_for_backend.assert_called_once_with(port)
 
 @pytest.mark.asyncio
-@patch('scripts.webapp.backend_manager.BackendManager._get_conda_env_python_executable', new_callable=AsyncMock)
+@patch('project_core.webapp_from_scripts.backend_manager.BackendManager._get_conda_env_python_executable', new_callable=AsyncMock)
 async def test_start_on_port_backend_wait_fails(mock_get_python_exe, manager, mock_popen):
     """
     Tests "_start_on_port" when waiting for the backend fails.

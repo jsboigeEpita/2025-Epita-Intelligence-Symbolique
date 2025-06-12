@@ -29,7 +29,7 @@ scripts_core = current_dir / "scripts" / "core"
 if str(scripts_core) not in sys.path:
     sys.path.insert(0, str(scripts_core))
 
-from scripts.core.auto_env import ensure_env, get_one_liner, get_simple_import
+from project_core.core_from_scripts.auto_env import ensure_env, get_one_liner, get_simple_import
 
 
 class TestAutoEnv(unittest.TestCase):
@@ -60,7 +60,7 @@ class TestAutoEnv(unittest.TestCase):
         os.environ.update(self.original_env)
     
     
-    @patch('scripts.core.environment_manager.auto_activate_env')
+    @patch('project_core.core_from_scripts.environment_manager.auto_activate_env')
     def test_ensure_env_success(self, mock_auto_activate):
         """Test ensure_env avec succès"""
         mock_auto_activate.return_value = True
@@ -71,7 +71,7 @@ class TestAutoEnv(unittest.TestCase):
         mock_auto_activate.assert_called_once_with("projet-is", True)
     
     
-    @patch('scripts.core.environment_manager.auto_activate_env')
+    @patch('project_core.core_from_scripts.environment_manager.auto_activate_env')
     def test_ensure_env_failure(self, mock_auto_activate):
         """Test ensure_env avec échec"""
         mock_auto_activate.return_value = False
@@ -82,7 +82,7 @@ class TestAutoEnv(unittest.TestCase):
         mock_auto_activate.assert_called_once_with("projet-is", True)
     
     
-    @patch('scripts.core.environment_manager.auto_activate_env')
+    @patch('project_core.core_from_scripts.environment_manager.auto_activate_env')
     def test_ensure_env_custom_params(self, mock_auto_activate):
         """Test ensure_env avec paramètres personnalisés"""
         mock_auto_activate.return_value = True
@@ -93,7 +93,7 @@ class TestAutoEnv(unittest.TestCase):
         mock_auto_activate.assert_called_once_with("custom-env", False)
     
     
-    @patch('scripts.core.environment_manager.auto_activate_env')
+    @patch('project_core.core_from_scripts.environment_manager.auto_activate_env')
     def test_ensure_env_exception_handling(self, mock_auto_activate):
         """Test gestion d'exception dans ensure_env"""
         mock_auto_activate.side_effect = Exception("Test error")
@@ -117,7 +117,7 @@ class TestAutoEnv(unittest.TestCase):
         mock_exists.return_value = True
         mock_sys_path.insert = MagicMock()
         
-        with patch('scripts.core.environment_manager.auto_activate_env', return_value=True):
+        with patch('project_core.core_from_scripts.environment_manager.auto_activate_env', return_value=True):
             ensure_env()
         
         # Vérifier que le chemin est ajouté
@@ -139,7 +139,7 @@ class TestAutoEnv(unittest.TestCase):
         simple_import = get_simple_import()
         
         self.assertIsInstance(simple_import, str)
-        self.assertIn("import scripts.core.auto_env", simple_import)
+        self.assertIn("import project_core.core_from_scripts.auto_env", simple_import)
         self.assertIn("Auto-activation", simple_import)
 
 
@@ -200,7 +200,7 @@ class TestAutoEnvIntegration(unittest.TestCase):
         # Simuler environnement déjà actif
         os.environ['CONDA_DEFAULT_ENV'] = 'projet-is'
         
-        with patch('scripts.core.environment_manager.is_conda_env_active', return_value=True):
+        with patch('project_core.core_from_scripts.environment_manager.is_conda_env_active', return_value=True):
             with patch('builtins.print') as mock_print:
                 result = ensure_env(silent=False)
                 
@@ -213,7 +213,7 @@ class TestAutoEnvStressTests(unittest.TestCase):
     
     def test_multiple_calls_idempotent(self):
         """Test que plusieurs appels sont idempotents"""
-        with patch('scripts.core.environment_manager.auto_activate_env', return_value=True) as mock_activate:
+        with patch('project_core.core_from_scripts.environment_manager.auto_activate_env', return_value=True) as mock_activate:
             # Plusieurs appels successifs
             results = [ensure_env() for _ in range(5)]
             
@@ -225,7 +225,7 @@ class TestAutoEnvStressTests(unittest.TestCase):
     
     def test_concurrent_imports_simulation(self):
         """Test simulation d'imports concurrents"""
-        with patch('scripts.core.environment_manager.auto_activate_env', return_value=True):
+        with patch('project_core.core_from_scripts.environment_manager.auto_activate_env', return_value=True):
             # Simuler plusieurs threads/processus important en même temps
             results = []
             for i in range(10):
@@ -241,7 +241,7 @@ class TestAutoEnvStressTests(unittest.TestCase):
     
     def test_memory_usage_stability(self):
         """Test stabilité de la mémoire"""
-        with patch('scripts.core.environment_manager.auto_activate_env', return_value=True):
+        with patch('project_core.core_from_scripts.environment_manager.auto_activate_env', return_value=True):
             # Multiples appels pour vérifier qu'il n'y a pas de fuite mémoire
             for _ in range(100):
                 ensure_env()
@@ -253,7 +253,7 @@ class TestAutoEnvStressTests(unittest.TestCase):
         """Test avec noms d'environnement invalides"""
         invalid_names = ["", " ", "invalid-env-name", "env with spaces", "env/with/slashes"]
         
-        with patch('scripts.core.environment_manager.auto_activate_env', return_value=False):
+        with patch('project_core.core_from_scripts.environment_manager.auto_activate_env', return_value=False):
             for invalid_name in invalid_names:
                 try:
                     result = ensure_env(env_name=invalid_name, silent=True)

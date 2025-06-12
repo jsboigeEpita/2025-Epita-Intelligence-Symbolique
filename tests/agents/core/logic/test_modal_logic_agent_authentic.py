@@ -14,7 +14,7 @@ from pathlib import Path
 
 # Import du système d'auto-activation d'environnement
 try:
-    import scripts.core.auto_env
+    import project_core.core_from_scripts.auto_env
 except ImportError:
     # Auto-activation en cas d'échec
     project_root = Path(__file__).parent.parent.parent.parent.parent

@@ -136,7 +136,7 @@ class TestVerificationUtils(unittest.TestCase):
     
     def test_verify_all_extracts(self, mock_verify_extract):
         """Teste verify_all_extracts."""
-        mock_verify_extract# Mock eliminated - using authentic gpt-4o-mini [
+        mock_verify_extract.return_value = [
             {"status": "valid", "source_name": "S1", "extract_name": "E1.1"},
             {"status": "invalid", "source_name": "S1", "extract_name": "E1.2"},
             {"status": "valid", "source_name": "S2", "extract_name": "E2.1"},

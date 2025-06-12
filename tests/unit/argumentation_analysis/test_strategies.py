@@ -6,13 +6,9 @@ Tests unitaires pour le module strategies.
 import unittest
 from unittest.mock import MagicMock, AsyncMock, patch
 import asyncio
-# try:
-#     from semantic_kernel.agents import Agent # Commenté car non disponible dans SK 0.9.6b1
-# except ImportError:
-#     # Fallback si les agents ne sont pas disponibles
-#     Agent = None
+from semantic_kernel.agents import Agent
 from semantic_kernel.contents import ChatMessageContent
-from semantic_kernel.contents.author_role import AuthorRole
+from semantic_kernel.contents.utils.author_role import AuthorRole
 from argumentation_analysis.core.strategies import SimpleTerminationStrategy, DelegatingSelectionStrategy, BalancedParticipationStrategy
 from argumentation_analysis.core.shared_state import RhetoricalAnalysisState
 # from tests.async_test_case import AsyncTestCase # Suppression de l'import
