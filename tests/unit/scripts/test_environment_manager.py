@@ -34,7 +34,7 @@ if str(scripts_core) not in sys.path:
     sys.path.insert(0, str(scripts_core))
 
 from project_core.core_from_scripts.environment_manager import (
-    is_conda_env_active, 
+    is_conda_env_active,
     auto_activate_env,
     EnvironmentManager
 )

@@ -48,7 +48,7 @@ if str(project_root) not in sys.path:
 # Import et activation de l'environnement
 # Ceci doit être fait avant toute autre importation ou configuration qui dépend des variables d'environnement
 try:
-    from scripts.core.environment_manager import auto_activate_env
+    from project_core.core_from_scripts.environment_manager import auto_activate_env
     # On active en mode non-silencieux pour voir les logs d'activation.
     if not auto_activate_env(silent=False):
         print("CRITICAL: Failed to activate project environment. Aborting.", file=sys.stderr)
