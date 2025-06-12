@@ -8,6 +8,7 @@ incluant la sélection cyclique, la terminaison Oracle, et l'intégration avec C
 
 import asyncio
 import logging
+import re
 import time
 from typing import List, Dict, Any, Optional
 from datetime import datetime
@@ -637,8 +638,87 @@ class CluedoExtendedOrchestrator:
                     history.append(agent_response)
                     self._logger.info(f"[{active_agent.name}]: {agent_response.content}")
                     
-                    # Logique de jeu: si Sherlock ou Watson suggère, forcer une révélation de Moriarty
-                    if active_agent.name in ["Sherlock", "Watson"]:
+                    # --- V2: LOGIQUE D'APPEL D'OUTIL MANUEL ---
+                    # --- V3: LOGIQUE D'APPEL D'OUTIL MANUEL AMÉLIORÉE ---
+                    tool_call_match = re.search(r'`(\w+)\(([^)]*)\)`', str(agent_response.content))
+                    if not tool_call_match:
+                        tool_call_match = re.search(r'`(\w+)`', str(agent_response.content))
+
+                    if tool_call_match:
+                        function_name = tool_call_match.group(1)
+                        
+                        # Vérifier si la fonction existe réellement dans le plugin principal
+                        if function_name in self.kernel.plugins["EnqueteStatePlugin"]:
+                            self._logger.info(f"Appel d'outil manuel VALIDE détecté pour : `{function_name}`")
+                            
+                            # Gestion basique des arguments
+                            arguments = KernelArguments()
+                            if function_name in ["faire_suggestion", "propose_final_solution"]:
+                                suggestion = None
+                                # --- CORRECTIF V4: Parsing direct des arguments de la regex ---
+                                if len(tool_call_match.groups()) > 1 and tool_call_match.group(2):
+                                    args_str = tool_call_match.group(2)
+                                    # Nettoyage simple des arguments et suppression des guillemets
+                                    args_list = [arg.strip().strip('"').strip("'") for arg in args_str.split(',')]
+                                    
+                                    # Création d'une map pour normaliser les noms (CamelCase -> Nom complet)
+                                    elements = self.oracle_state.cluedo_dataset.elements
+                                    all_items = elements.get('suspects', []) + elements.get('armes', []) + elements.get('lieux', [])
+                                    # Map pour les noms sans espace (CamelCase) et les noms originaux
+                                    item_map = {item.replace(" ", ""): item for item in all_items}
+                                    item_map.update({item: item for item in all_items}) # Ajoute les noms originaux pour être sûr
+
+                                    # Normalisation des arguments extraits
+                                    suspect_norm = item_map.get(args_list[0], args_list[0] if len(args_list) > 0 else "Indéterminé")
+                                    arme_norm = item_map.get(args_list[1], args_list[1] if len(args_list) > 1 else "Indéterminée")
+                                    lieu_norm = item_map.get(args_list[2], args_list[2] if len(args_list) > 2 else "Indéterminé")
+
+                                    suggestion = {
+                                        "suspect": suspect_norm,
+                                        "arme": arme_norm,
+                                        "lieu": lieu_norm
+                                    }
+                                else:
+                                    # Fallback à l'ancienne méthode si pas d'arguments entre parenthèses
+                                    suggestion = self._extract_cluedo_suggestion(str(agent_response.content))
+                                
+                                if suggestion:
+                                    self._logger.info(f"Arguments extraits pour {function_name}: {suggestion}")
+                                    if function_name == "propose_final_solution":
+                                         arguments["solution"] = suggestion
+                                    else:
+                                        arguments["suspect"] = suggestion.get("suspect")
+                                        arguments["arme"] = suggestion.get("arme")
+                                        arguments["lieu"] = suggestion.get("lieu")
+                            
+                            try:
+                                tool_result = await self.kernel.invoke(
+                                    plugin_name="EnqueteStatePlugin",
+                                    function_name=function_name,
+                                    arguments=arguments
+                                )
+                                result_str = str(tool_result)
+                                self._logger.info(f"Résultat de l'outil `{function_name}`: {result_str[:250]}...")
+                                
+                                tool_result_message = ChatMessageContent(
+                                    role="user",
+                                    content=f"Résultat de l'outil '{function_name}':\n{result_str}",
+                                    name="Orchestrator"
+                                )
+                                history.append(tool_result_message)
+                            except Exception as e:
+                                self._logger.error(f"Échec de l'appel manuel de l'outil `{function_name}`: {e}", exc_info=True)
+                                error_message = ChatMessageContent(
+                                    role="user",
+                                    content=f"Erreur critique lors de l'appel de l'outil '{function_name}': {e}",
+                                    name="Orchestrator"
+                                )
+                                history.append(error_message)
+                        else:
+                            self._logger.warning(f"Appel d'outil manuel ignoré: `{function_name}` n'est pas une fonction valide dans EnqueteStatePlugin.")
+                    
+                    # La logique existante de suggestion reste un elif pour éviter les traitements doubles
+                    elif active_agent.name in ["Sherlock", "Watson"]:
                         suggestion = self._extract_cluedo_suggestion(str(agent_response.content))
                         if suggestion:
                             oracle_revelation = await self._force_moriarty_oracle_revelation(suggestion, active_agent.name)
