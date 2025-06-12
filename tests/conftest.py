@@ -6,6 +6,7 @@ Il configure les mocks nécessaires pour les tests et utilise les vraies bibliot
 lorsqu'elles sont disponibles. Pour Python 3.12 et supérieur, le mock JPype1 est
 automatiquement utilisé en raison de problèmes de compatibilité.
 """
+import project_core.core_from_scripts.auto_env
 import sys
 import os
 import pytest

@@ -4,6 +4,7 @@ Script d'inventaire rapide des fichiers sous contrôle Git avec recommandations 
 Version accélérée sans tests de fonctionnalité
 """
 
+import project_core.core_from_scripts.auto_env
 import os
 import subprocess
 import json

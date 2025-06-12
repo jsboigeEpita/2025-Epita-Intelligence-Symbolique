@@ -23,7 +23,7 @@ import statistics
 from pathlib import Path
 
 # Importer les composants de l'ancienne architecture
-from argumentation_analysis.orchestration.analysis_runner import run_analysis_conversation as run_analysis
+from argumentation_analysis.orchestration.analysis_runner import run_analysis
 from argumentation_analysis.core.strategies import BalancedParticipationStrategy as BalancedStrategy
 
 # Mocker HierarchicalOrchestrator car le fichier d'origine n'existe pas/plus

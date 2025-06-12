@@ -77,18 +77,23 @@ class TestOracleErrorHandler:
     
     def setup_method(self):
         """Setup pour chaque test"""
-        self.mock_logger = Mock(spec=logging.Logger)
-        self.handler = OracleErrorHandler(logger=self.mock_logger)
+        # Utilise un logger réel au lieu d'un mock
+        self.real_logger = logging.getLogger("TestOracleErrorHandlerLogger")
+        self.real_logger.setLevel(logging.DEBUG) # Configurer le niveau pour capturer les logs si nécessaire
+        # Vous pouvez ajouter un handler si vous voulez vérifier les logs émis,
+        # par exemple un StreamHandler vers un StringIO. Pour l'instant, on s'assure juste que ça ne crashe pas.
+        self.handler = OracleErrorHandler(logger=self.real_logger)
         
     def test_init_default_logger(self):
         """Test initialisation avec logger par défaut"""
         handler = OracleErrorHandler()
         assert handler.logger is not None
+        assert isinstance(handler.logger, logging.Logger)
         assert handler.error_stats["total_errors"] == 0
         
     def test_init_custom_logger(self):
         """Test initialisation avec logger personnalisé"""
-        assert self.handler.logger == self.mock_logger
+        assert self.handler.logger == self.real_logger
         assert self.handler.error_stats["total_errors"] == 0
         
     def test_handle_oracle_permission_error(self):
@@ -103,7 +108,7 @@ class TestOracleErrorHandler:
         
         assert self.handler.error_stats["total_errors"] == 1
         assert self.handler.error_stats["permission_errors"] == 1
-        # self.mock_logger.warning.# Mock assertion eliminated - authentic validation
+        # Pas d'assertion de mock ici
         
     def test_handle_oracle_dataset_error(self):
         """Test gestion OracleDatasetError"""
@@ -112,7 +117,7 @@ class TestOracleErrorHandler:
         
         assert result["type"] == "OracleDatasetError"
         assert self.handler.error_stats["dataset_errors"] == 1
-        # self.mock_logger.error.# Mock assertion eliminated - authentic validation
+        # Pas d'assertion de mock ici
         
     def test_handle_oracle_validation_error(self):
         """Test gestion OracleValidationError"""
@@ -121,7 +126,7 @@ class TestOracleErrorHandler:
         
         assert result["type"] == "OracleValidationError"
         assert self.handler.error_stats["validation_errors"] == 1
-        # self.mock_logger.warning.# Mock assertion eliminated - authentic validation
+        # Pas d'assertion de mock ici
         
     def test_handle_cluedo_integrity_error(self):
         """Test gestion CluedoIntegrityError"""
@@ -130,7 +135,7 @@ class TestOracleErrorHandler:
         
         assert result["type"] == "CluedoIntegrityError"
         assert self.handler.error_stats["integrity_errors"] == 1
-        # self.mock_logger.critical.# Mock assertion eliminated - authentic validation
+        # Pas d'assertion de mock ici
         
     def test_handle_generic_error(self):
         """Test gestion erreur générique"""
@@ -141,7 +146,7 @@ class TestOracleErrorHandler:
         assert self.handler.error_stats["total_errors"] == 1
         # Autres compteurs restent à 0
         assert self.handler.error_stats["permission_errors"] == 0
-        # self.mock_logger.error.# Mock assertion eliminated - authentic validation
+        # Pas d'assertion de mock ici
         
     def test_get_error_statistics(self):
         """Test récupération statistiques d'erreurs"""
@@ -201,16 +206,18 @@ class TestOracleErrorDecorator:
 
     
     @pytest.mark.asyncio
-    async def test_decorator_logging(self, mock_get_logger):
+    async def test_decorator_logging(self): # mock_get_logger n'est plus nécessaire ici
         """Test que le décorateur log correctement les erreurs"""
-        mock_logger = await self._create_authentic_gpt4o_mini_instance()
-        mock_get_logger# Mock eliminated - using authentic gpt-4o-mini mock_logger
+        # Le décorateur utilise logging.getLogger(func.__module__)
+        # Pour ce test, on s'assure juste que l'appel ne crashe pas et que l'erreur est bien levée.
+        # Vérifier le contenu exact du log nécessiterait de patcher logging.getLogger
+        # ou d'inspecter les handlers du logger du module, ce qui est plus complexe.
         
         @oracle_error_handler("logging_context")
-        def test_function():
-            raise RuntimeError("Runtime error")
+        def test_function_for_logging(): # Renommer pour éviter conflit potentiel
+            raise RuntimeError("Runtime error for decorator logging")
             
-        with pytest.raises(RuntimeError):
-            test_function()
+        with pytest.raises(RuntimeError, match="Runtime error for decorator logging"):
+            test_function_for_logging()
             
-        # mock_logger.error.# Mock assertion eliminated - authentic validation
+        # Pas d'assertion de mock ici

@@ -4,6 +4,7 @@ Script de finalisation de la refactorisation Oracle Enhanced
 Phase 5: Validation finale et synchronisation Git
 """
 
+import project_core.core_from_scripts.auto_env
 import subprocess
 import sys
 import time

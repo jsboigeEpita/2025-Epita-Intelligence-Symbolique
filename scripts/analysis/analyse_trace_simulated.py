@@ -7,6 +7,7 @@ Cette simulation reproduit fidèlement les patterns conversationnels observés
 dans le système Oracle pour identifier les axes d'amélioration.
 """
 
+import project_core.core_from_scripts.auto_env
 import json
 import logging
 from datetime import datetime
@@ -617,32 +618,32 @@ def main():
     print("[RÉSUMÉ] ANALYSE TRACE SHERLOCK-WATSON-MORIARTY")
     print("="*80)
     
-    print(f"\n🎯 SCORE GLOBAL ACTUEL: {metrics.moyenne_globale():.1f}/10")
-    print(f"📈 OBJECTIF TRACE IDÉALE: 8.0/10")
+    print(f"\n[TARGET] SCORE GLOBAL ACTUEL: {metrics.moyenne_globale():.1f}/10")
+    print(f"[GRAPH_UP] OBJECTIF TRACE IDÉALE: 8.0/10")
     
-    print(f"\n📊 DÉTAIL DES SCORES:")
-    print(f"  • Naturalité dialogue: {metrics.naturalite_score:.1f}/10 {'❌ FAIBLE' if metrics.naturalite_score < 6 else '✅ OK'}")
-    print(f"  • Pertinence agents: {metrics.pertinence_score:.1f}/10 {'❌ FAIBLE' if metrics.pertinence_score < 6 else '✅ OK'}")
-    print(f"  • Progression logique: {metrics.progression_logique_score:.1f}/10 {'❌ FAIBLE' if metrics.progression_logique_score < 6 else '✅ OK'}")
-    print(f"  • Personnalités distinctes: {metrics.personnalite_distincte_score:.1f}/10 {'❌ CRITIQUE' if metrics.personnalite_distincte_score < 5 else '❌ FAIBLE' if metrics.personnalite_distincte_score < 6 else '✅ OK'}")
-    print(f"  • Fluidité transitions: {metrics.fluidite_transitions_score:.1f}/10 {'❌ FAIBLE' if metrics.fluidite_transitions_score < 6 else '✅ OK'}")
-    print(f"  • Dosage révélations: {metrics.dosage_revelations_score:.1f}/10 {'❌ FAIBLE' if metrics.dosage_revelations_score < 6 else '✅ OK'}")
-    print(f"  • Satisfaction résolution: {metrics.satisfaction_resolution_score:.1f}/10 {'❌ FAIBLE' if metrics.satisfaction_resolution_score < 6 else '✅ OK'}")
+    print(f"\n[BAR_CHART] DÉTAIL DES SCORES:")
+    print(f"  • Naturalité dialogue: {metrics.naturalite_score:.1f}/10 {'[X] FAIBLE' if metrics.naturalite_score < 6 else '[V] OK'}")
+    print(f"  • Pertinence agents: {metrics.pertinence_score:.1f}/10 {'[X] FAIBLE' if metrics.pertinence_score < 6 else '[V] OK'}")
+    print(f"  • Progression logique: {metrics.progression_logique_score:.1f}/10 {'[X] FAIBLE' if metrics.progression_logique_score < 6 else '[V] OK'}")
+    print(f"  • Personnalités distinctes: {metrics.personnalite_distincte_score:.1f}/10 {'[X] CRITIQUE' if metrics.personnalite_distincte_score < 5 else '[X] FAIBLE' if metrics.personnalite_distincte_score < 6 else '[V] OK'}")
+    print(f"  • Fluidité transitions: {metrics.fluidite_transitions_score:.1f}/10 {'[X] FAIBLE' if metrics.fluidite_transitions_score < 6 else '[V] OK'}")
+    print(f"  • Dosage révélations: {metrics.dosage_revelations_score:.1f}/10 {'[X] FAIBLE' if metrics.dosage_revelations_score < 6 else '[V] OK'}")
+    print(f"  • Satisfaction résolution: {metrics.satisfaction_resolution_score:.1f}/10 {'[X] FAIBLE' if metrics.satisfaction_resolution_score < 6 else '[V] OK'}")
     
-    print(f"\n🚨 PROBLÈMES CRITIQUES IDENTIFIÉS:")
+    print(f"\n[ALERT] PROBLÈMES CRITIQUES IDENTIFIÉS:")
     critical_issues = [imp for imp in improvements if imp.get("priorite") == "CRITIQUE"]
     for i, issue in enumerate(critical_issues, 1):
         print(f"  {i}. {issue['domaine']}: {issue['probleme_principal']}")
     
-    print(f"\n📋 PLAN D'OPTIMISATION (TOTAL: 10-12 JOURS):")
+    print(f"\n[CLIPBOARD] PLAN D'OPTIMISATION (TOTAL: 10-12 JOURS):")
     print(f"  Phase 1 (CRITIQUE): Personnalités distinctes - 3-4 jours")
     print(f"  Phase 2 (ÉLEVÉE): Naturalité dialogue - 2-3 jours") 
     print(f"  Phase 3 (MOYENNE): Fluidité transitions - 2 jours")
     print(f"  Phase 4 (FINAL): Polish et validation - 3 jours")
     
-    print(f"\n📈 IMPACT ATTENDU TOTAL: +6-7 points → Score cible 8.0+/10")
+    print(f"\n[GRAPH_UP] IMPACT ATTENDU TOTAL: +6-7 points -> Score cible 8.0+/10")
     
-    print(f"\n📄 Rapport complet sauvegardé: analyse_trace_complete_{timestamp}.json")
+    print(f"\n[PAGE] Rapport complet sauvegardé: analyse_trace_complete_{timestamp}.json")
     print("="*80)
     
     logger.info("✅ ANALYSE TERMINÉE - Prêt pour l'optimisation incrémentale")

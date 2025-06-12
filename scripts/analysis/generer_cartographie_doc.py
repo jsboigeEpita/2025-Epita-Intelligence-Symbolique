@@ -1,3 +1,4 @@
+import project_core.core_from_scripts.auto_env
 import json
 from datetime import datetime
 import os
