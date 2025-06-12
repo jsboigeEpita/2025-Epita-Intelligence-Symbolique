@@ -6,6 +6,7 @@ Configuration pytest locale pour les tests d'orchestration.
 Évite les dépendances JPype du conftest.py global.
 """
 
+import project_core.core_from_scripts.auto_env
 import pytest
 import sys
 import os

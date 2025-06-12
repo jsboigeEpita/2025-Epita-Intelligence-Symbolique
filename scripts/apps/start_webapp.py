@@ -8,6 +8,7 @@ OBJECTIF :
 - Remplace l'ancien start_web_application.ps1
 - Active automatiquement l'environnement conda 'projet-is'
 - Lance l'UnifiedWebOrchestrator avec des options par défaut intelligentes
+import project_core.core_from_scripts.auto_env
 - Interface CLI simple et intuitive
 
 USAGE :
@@ -48,7 +49,7 @@ def configure_utf8():
 configure_utf8()
 
 # Configuration du projet
-PROJECT_ROOT = Path(__file__).parent.absolute()
+PROJECT_ROOT = Path(__file__).parent.parent.parent.absolute()
 CONDA_ENV_NAME = "projet-is"
 ORCHESTRATOR_PATH = "scripts.webapp.unified_web_orchestrator"
 

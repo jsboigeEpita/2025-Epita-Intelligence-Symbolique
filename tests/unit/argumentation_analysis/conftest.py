@@ -1,3 +1,4 @@
+import project_core.core_from_scripts.auto_env
 
 # Authentic gpt-4o-mini imports (replacing mocks)
 import openai

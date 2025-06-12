@@ -8,6 +8,7 @@ Ce script effectue les opérations suivantes :
 3. Classe les résultats par type d'analyse et par corpus
 4. Crée une structure de dossiers claire et logique
 5. Génère un fichier README.md pour le dossier results/ qui documente la structure et le contenu
+import project_core.core_from_scripts.auto_env
 6. Produit un rapport de nettoyage indiquant les actions effectuées
 
 Options:
