@@ -30,6 +30,7 @@ if not logging.getLogger().handlers: # Si le root logger n'a pas de handlers, ba
 else:
     _conftest_setup_logger.info("Configuration globale du logging déjà présente ou appliquée par un autre module.")
 # --- Début Patching JPype Mock au niveau module si nécessaire ---
+os.environ['USE_REAL_JPYPE'] = 'true'
 _SHOULD_USE_REAL_JPYPE = os.environ.get('USE_REAL_JPYPE', 'false').lower() in ('true', '1')
 _conftest_setup_logger.info(f"conftest.py: USE_REAL_JPYPE={os.environ.get('USE_REAL_JPYPE', 'false')}, _SHOULD_USE_REAL_JPYPE={_SHOULD_USE_REAL_JPYPE}")
 

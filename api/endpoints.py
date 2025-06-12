@@ -1,4 +1,7 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Request
+from pydantic import BaseModel
+from typing import List, Dict, Optional
+
 from .models import AnalysisRequest, AnalysisResponse, Fallacy, StatusResponse, ExampleResponse, Example
 from .dependencies import get_analysis_service, AnalysisService, get_dung_analysis_service # Import AnalysisService for type hinting
 from .models import FrameworkAnalysisRequest, FrameworkAnalysisResponse
@@ -6,6 +9,15 @@ from .services import DungAnalysisService
 import asyncio
 import uuid
 from datetime import datetime
+
+# --- Pydantic Models for /endpoints route ---
+class EndpointDetail(BaseModel):
+    path: str
+    methods: List[str]
+    description: Optional[str] = None
+
+class EndpointsListResponse(BaseModel):
+    endpoints: List[EndpointDetail]
 
 router = APIRouter()
 
@@ -140,3 +152,42 @@ async def get_examples_endpoint():
     ]
     examples = [Example(**ex) for ex in examples_data]
     return ExampleResponse(examples=examples)
+
+@router.get("/health", response_model=StatusResponse)
+async def health_check_endpoint():
+    """
+    Simple health check endpoint.
+    Returns operational status.
+    """
+    # Reusing StatusResponse for consistency, but could be a simpler model
+    return StatusResponse(
+        status="operational",
+        service_status={"details": "API is healthy and running."}
+    )
+
+@router.get("/endpoints", response_model=EndpointsListResponse)
+async def list_endpoints_endpoint(request_fastapi: Request):
+    """
+    Lists available API endpoints.
+    Dynamically introspects routes from the FastAPI application.
+    """
+    url_list = []
+    for route in request_fastapi.app.routes:
+        if hasattr(route, "path") and route.path not in ['/openapi.json', '/docs', '/docs/oauth2-redirect', '/redoc']: # Exclude documentation routes
+            methods = []
+            if hasattr(route, "methods"):
+                methods = sorted(list(route.methods))
+            
+            description = None
+            if hasattr(route, "summary") and route.summary:
+                description = route.summary
+            elif hasattr(route, "name") and route.name:
+                description = route.name.replace("_", " ").title()
+
+
+            url_list.append(EndpointDetail(
+                path=route.path,
+                methods=methods,
+                description=description
+            ))
+    return EndpointsListResponse(endpoints=url_list)
