@@ -1,10 +1,3 @@
-
-# Authentic gpt-4o-mini imports (replacing mocks)
-import openai
-from semantic_kernel.contents import ChatHistory
-from semantic_kernel.core_plugins import ConversationSummaryPlugin
-from config.unified_config import UnifiedConfig
-
 #!/usr/bin/env python3
 """
 Tests d'intégration pour TestRunner
@@ -12,70 +5,56 @@ Validation des fonctionnalités de remplacement PowerShell
 """
 
 import unittest
+from unittest.mock import patch, Mock
 import sys
 import os
 import tempfile
 import shutil
 from pathlib import Path
-
+import logging
 
 # Ajouter project_core au path
+# Cette manipulation de path peut être fragile.
+# L'installation en mode éditable est préférable.
 sys.path.insert(0, str(Path(__file__).parent.parent.parent / "project_core"))
 
+# Imports depuis le code du projet
 from project_core.test_runner import TestRunner, TestConfig, EnvironmentManager
+
+# Configuration du logger pour éviter des erreurs si non configuré
+logger = logging.getLogger(__name__)
 
 
 class TestEnvironmentManager(unittest.TestCase):
-    async def _create_authentic_gpt4o_mini_instance(self):
-        """Crée une instance authentique de gpt-4o-mini au lieu d'un mock."""
-        config = UnifiedConfig()
-        return config.get_kernel_with_gpt4o_mini()
-        
-    async def _make_authentic_llm_call(self, prompt: str) -> str:
-        """Fait un appel authentique à gpt-4o-mini."""
-        try:
-            kernel = await self._create_authentic_gpt4o_mini_instance()
-            result = await kernel.invoke("chat", input=prompt)
-            return str(result)
-        except Exception as e:
-            logger.warning(f"Appel LLM authentique échoué: {e}")
-            return "Authentic LLM call failed"
-
     """Tests d'intégration pour EnvironmentManager"""
-    
+
     def setUp(self):
-        import logging
-        logger = logging.getLogger("test_env_manager")
         self.env_manager = EnvironmentManager(logger)
-    
+
     def test_detect_conda_environments(self):
         """Test détection environnements conda"""
-        # Test de base - ne devrait pas lever d'exception
         try:
             envs = self.env_manager.detect_conda_environments()
             self.assertIsInstance(envs, list)
         except Exception as e:
-            # Conda peut ne pas être installé - c'est OK
             self.assertIn("conda", str(e).lower())
-    
+
     def test_activate_conda_env_success(self):
         """Test activation environnement conda - succès ou échec selon installation"""
         result = self.env_manager.activate_conda_env("test-env")
-        # Accepter échec si conda n'est pas installé - c'est OK pour les tests
         self.assertIsInstance(result, bool)
-    
-    
-    def test_activate_conda_env_failure(self, mock_run):
+
+    @patch('project_core.test_runner.EnvironmentManager.run_command')
+    def test_activate_conda_env_failure(self, mock_run_command):
         """Test activation environnement conda - échec"""
-        mock_run# Mock eliminated - using authentic gpt-4o-mini Exception("Conda not found")
-        
+        mock_run_command.side_effect = Exception("Conda not found")
         result = self.env_manager.activate_conda_env("test-env")
         self.assertFalse(result)
 
 
 class TestTestConfig(unittest.TestCase):
     """Tests d'intégration pour TestConfig"""
-    
+
     def test_test_config_creation(self):
         """Test création configuration de test"""
         from project_core.test_runner import TestType
@@ -85,27 +64,26 @@ class TestTestConfig(unittest.TestCase):
             conda_env="test-env",
             timeout=300
         )
-        
         self.assertEqual(config.test_type, TestType.INTEGRATION)
         self.assertEqual(config.test_paths, ["./tests"])
         self.assertEqual(config.conda_env, "test-env")
         self.assertEqual(config.timeout, 300)
-        self.assertFalse(config.requires_backend)  # valeur par défaut
-        self.assertFalse(config.requires_frontend)  # valeur par défaut
+        self.assertFalse(config.requires_backend)
+        self.assertFalse(config.requires_frontend)
 
 
 class TestTestRunner(unittest.TestCase):
     """Tests d'intégration pour TestRunner"""
-    
+
     def setUp(self):
         self.test_runner = TestRunner()
-    
+
     def test_test_runner_initialization(self):
         """Test initialisation TestRunner"""
         self.assertIsNotNone(self.test_runner.service_manager)
         self.assertIsNotNone(self.test_runner.env_manager)
         self.assertIsInstance(self.test_runner.test_configs, dict)
-    
+
     def test_register_test_config(self):
         """Test enregistrement configuration de test"""
         from project_core.test_runner import TestType
@@ -113,73 +91,55 @@ class TestTestRunner(unittest.TestCase):
             test_type=TestType.UNIT,
             test_paths=["tests/unit"]
         )
-        
-        # TestRunner n'a pas de méthode register_config dans l'implémentation actuelle
-        # Mais il a des configurations prédéfinies
         self.assertIsNotNone(self.test_runner)
-    
-    
+
+    @patch('project_core.test_runner.TestRunner.run_command_in_env')
     def test_run_tests_simple_success(self, mock_run):
         """Test exécution tests simple - succès"""
-        mock_run# Mock eliminated - using authentic gpt-4o-mini Mock(returncode=0, stdout="Tests passed", stderr="")
-        
-        # Test avec type de test existant
+        mock_run.return_value = (0, "Tests passed", "")
         result = self.test_runner.run_tests("unit")
-        self.assertEqual(result, 0)  # 0 = succès
-    
-    
+        self.assertEqual(result, 0)
+
+    @patch('project_core.test_runner.TestRunner.run_command_in_env')
     def test_run_tests_simple_failure(self, mock_run):
         """Test exécution tests simple - échec"""
-        mock_run# Mock eliminated - using authentic gpt-4o-mini Mock(returncode=1, stdout="", stderr="Test failed")
-        
-        # Simuler échec d'exécution avec mock
+        mock_run.return_value = (1, "", "Test failed")
         result = self.test_runner.run_tests("unit")
-        self.assertEqual(result, 1)  # 1 = échec
-    
+        self.assertEqual(result, 1)
+
     def test_run_tests_nonexistent_config(self):
         """Test exécution tests avec configuration inexistante"""
         result = self.test_runner.run_tests("nonexistent-test")
-        # run_tests retourne 1 pour erreur, pas False
         self.assertEqual(result, 1)
-    
-    
+
+    @patch('project_core.test_runner.TestRunner.run_command_in_env')
     def test_run_tests_with_retries(self, mock_run):
         """Test exécution tests avec reprises"""
-        # Premier échec, puis succès
-        mock_run# Mock eliminated - using authentic gpt-4o-mini [
-            Mock(returncode=1, stdout="", stderr="Flaky test failed"),
-            Mock(returncode=0, stdout="Tests passed", stderr="")
+        mock_run.side_effect = [
+            (1, "", "Flaky test failed"),
+            (0, "Tests passed", "")
         ]
-        
-        # Les retries ne sont pas implémentées dans la version actuelle
         result = self.test_runner.run_tests("unit")
-        # Premier appel échoue avec mock_run configuré
-        self.assertEqual(result, 1)  # 1 = échec
+        self.assertEqual(result, 1)
 
 
 class TestTestRunnerServiceIntegration(unittest.TestCase):
     """Tests d'intégration TestRunner + ServiceManager"""
-    
+
     def setUp(self):
         self.test_runner = TestRunner()
-    
-    @patch.object(TestRunner, 'run_tests')
+
+    @patch('project_core.test_runner.TestRunner.run_tests')
     def test_start_web_application_simulation(self, mock_run_tests):
         """Test démarrage application web (simulation)"""
-        mock_run_tests# Mock eliminated - using authentic gpt-4o-mini True
-        
-        # Test que la méthode existe et peut être appelée
+        mock_run_tests.return_value = True
         if hasattr(self.test_runner, 'start_web_application'):
             result = self.test_runner.start_web_application()
-            # Le résultat est un dictionnaire avec les résultats de chaque service
             self.assertIsInstance(result, dict)
-    
+
     def test_integration_with_service_manager(self):
         """Test intégration avec ServiceManager"""
-        # Vérifier que TestRunner a accès au ServiceManager
         self.assertIsNotNone(self.test_runner.service_manager)
-        
-        # Vérifier que les méthodes essentielles existent
         self.assertTrue(hasattr(self.test_runner.service_manager, 'register_service'))
         self.assertTrue(hasattr(self.test_runner.service_manager, 'start_service_with_failover'))
         self.assertTrue(hasattr(self.test_runner.service_manager, 'stop_all_services'))
@@ -187,82 +147,55 @@ class TestTestRunnerServiceIntegration(unittest.TestCase):
 
 class TestMigrationValidation(unittest.TestCase):
     """Tests de validation des patterns migrés depuis PowerShell"""
-    
+
     def setUp(self):
         self.test_runner = TestRunner()
-    
+
     def test_powershell_pattern_equivalents(self):
         """Test équivalences patterns PowerShell"""
-        # Pattern start_web_application_simple.ps1
         self.assertTrue(hasattr(self.test_runner, 'service_manager'))
-        
-        # Pattern integration_tests_with_failover.ps1
         if hasattr(self.test_runner, 'run_integration_tests_with_failover'):
-            # Vérifier signature de base
             method = getattr(self.test_runner, 'run_integration_tests_with_failover')
             self.assertTrue(callable(method))
-        
-        # Pattern cleanup via ProcessCleanup
         cleanup = self.test_runner.service_manager.process_cleanup
         self.assertTrue(hasattr(cleanup, 'cleanup_all'))
         self.assertTrue(hasattr(cleanup, 'stop_backend_processes'))
         self.assertTrue(hasattr(cleanup, 'stop_frontend_processes'))
-    
-    
-    def test_conda_activation_pattern(self, mock_run):
+
+    @patch('project_core.test_runner.EnvironmentManager.run_command')
+    def test_conda_activation_pattern(self, mock_run_command):
         """Test pattern activation conda (remplace PowerShell conda activate)"""
-        mock_run# Mock eliminated - using authentic gpt-4o-mini Mock(returncode=0)
-        
+        mock_run_command.return_value = (0, "Success", "")
         result = self.test_runner.env_manager.activate_conda_env("test-env")
-        
-        # Vérifier que la commande conda a été tentée
         self.assertIsInstance(result, bool)
 
 
 class TestCrossPlatformCompatibility(unittest.TestCase):
     """Tests de compatibilité cross-platform"""
-    
+
     def setUp(self):
         self.test_runner = TestRunner()
-    
+
     def test_path_handling(self):
         """Test gestion des chemins cross-platform"""
         from project_core.test_runner import TestType
-        config = TestConfig(
-            test_type=TestType.UNIT,
-            test_paths=["."]
-        )
-        
-        # Les chemins doivent être gérés correctement
+        config = TestConfig(test_type=TestType.UNIT, test_paths=["."])
         self.assertIsInstance(config.test_paths[0], str)
-        
-        # Test avec Path
-        from pathlib import Path
         config_with_path = TestConfig(
             test_type=TestType.UNIT,
             test_paths=[str(Path(".").resolve())]
         )
         self.assertIsInstance(config_with_path.test_paths[0], str)
-    
-    def test_command_execution_cross_platform(self):
+
+    @patch('project_core.test_runner.TestRunner.run_command_in_env')
+    def test_command_execution_cross_platform(self, mock_run):
         """Test exécution commandes cross-platform"""
-        from project_core.test_runner import TestType
-        # Commande qui fonctionne sur Windows et Unix
-        config = TestConfig(
-            test_type=TestType.UNIT,
-            test_paths=["."]
-        )
-        
-        # Test exécution selon la plateforme
+        # La configuration interne de "unit" sera utilisée
+        mock_run.return_value = (0, "Success", "")
         result = self.test_runner.run_tests("unit")
-        # Le résultat dépend des mocks configurés
-        self.assertIsInstance(result, (bool, int))
+        self.assertIsInstance(result, int)
 
 
 if __name__ == '__main__':
-    # Configuration logging pour les tests
-    import logging
     logging.basicConfig(level=logging.WARNING)
-    
-    # Lancement des tests
     unittest.main(verbosity=2)

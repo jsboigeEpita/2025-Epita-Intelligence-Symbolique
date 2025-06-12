@@ -24,6 +24,7 @@ import sys
 from pathlib import Path
 from typing import Dict, Any, List
 
+from unittest.mock import Mock
 
 # Ajout du chemin pour les imports
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
@@ -66,9 +67,8 @@ class ComplexTraceAuthenticityTester:
         """Charge les données complexes générées."""
         try:
             # Chercher dans le répertoire courant (tests/) et le parent
-            data_files = list(Path(".").glob("complex_test_data_*.json"))
-            if not data_files:
-                data_files = list(Path("../tests").glob("complex_test_data_*.json"))
+            # Correct path to search for the data file inside the 'tests' directory
+            data_files = list(Path("tests").glob("complex_test_data_*.json"))
             if not data_files:
                 raise FileNotFoundError("Aucun fichier de données complexes trouvé")
             
@@ -94,7 +94,7 @@ class ComplexTraceAuthenticityTester:
             })
             raise
     
-    def test_component_1_fol_logic_with_modal_reasoning(self, complex_data: Dict[str, Any]) -> Dict[str, Any]:
+    async def test_component_1_fol_logic_with_modal_reasoning(self, complex_data: Dict[str, Any]) -> Dict[str, Any]:
         """
         Test du composant 1: Agent de logique FOL avec raisonnement modal.
         
@@ -179,7 +179,7 @@ class ComplexTraceAuthenticityTester:
             
             return error_result
     
-    def test_component_2_complex_fallacy_analyzer(self, complex_data: Dict[str, Any]) -> Dict[str, Any]:
+    async def test_component_2_complex_fallacy_analyzer(self, complex_data: Dict[str, Any]) -> Dict[str, Any]:
         """
         Test du composant 2: Analyseur de sophismes complexes.
         
@@ -475,7 +475,7 @@ class TestComplexTraceAuthentic:
 
     """Tests utilisant la trace complexe pour validation d'authenticité."""
     
-    def test_complex_multi_component_authentic_trace(self):
+    async def test_complex_multi_component_authentic_trace(self):
         """
         Test principal de trace complexe multi-composants.
         
@@ -494,13 +494,13 @@ class TestComplexTraceAuthentic:
         test_results = []
         
         # Composant 1: Agent de logique FOL
-        fol_result = tester.test_component_1_fol_logic_with_modal_reasoning(complex_data)
+        fol_result = await tester.test_component_1_fol_logic_with_modal_reasoning(complex_data)
         test_results.append(fol_result)
         assert fol_result["component"] == "FOL_Logic_Agent"
         assert fol_result["execution_time"] >= 0  # Permet temps très court
         
         # Composant 2: Analyseur de sophismes complexes
-        fallacy_result = tester.test_component_2_complex_fallacy_analyzer(complex_data)
+        fallacy_result = await tester.test_component_2_complex_fallacy_analyzer(complex_data)
         test_results.append(fallacy_result)
         assert fallacy_result["component"] == "Complex_Fallacy_Analyzer"
         assert fallacy_result["execution_time"] >= 0  # Permet temps très court
