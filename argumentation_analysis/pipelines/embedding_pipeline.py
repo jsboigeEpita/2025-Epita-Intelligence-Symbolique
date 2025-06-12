@@ -40,7 +40,7 @@ except NameError: # __file__ n'est pas défini si exécuté dans un interpréteu
 from argumentation_analysis.utils.core_utils.logging_utils import setup_logging
 from argumentation_analysis.utils.core_utils.file_utils import load_json_file, sanitize_filename, load_document_content
 from argumentation_analysis.ui.file_operations import load_extract_definitions, save_extract_definitions
-from argumentation_analysis.ui.utils import get_full_text_for_source
+from argumentation_analysis.ui.fetch_utils import get_full_text_for_source
 from argumentation_analysis.ui.config import ENCRYPTION_KEY as CONFIG_UI_ENCRYPTION_KEY
 from argumentation_analysis.nlp.embedding_utils import get_embeddings_for_chunks, save_embeddings_data
 
