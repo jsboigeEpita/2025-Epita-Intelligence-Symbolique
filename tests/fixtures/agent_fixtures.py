@@ -28,7 +28,7 @@ import sys
 from argumentation_analysis.agents.core.informal.informal_agent import InformalAnalysisAgent as InformalAgent
 from argumentation_analysis.agents.core.informal.informal_definitions import FallacyDefinition, FallacyCategory
 from argumentation_analysis.agents.tools.analysis.enhanced.complex_fallacy_analyzer import ComplexFallacyAnalyzer
-from argumentation_analysis.agents.tools.analysis.enhanced.contextual_fallacy_analyzer import ContextualFallacyAnalyzer
+from argumentation_analysis.agents.tools.analysis.enhanced.contextual_fallacy_analyzer import EnhancedContextualFallacyAnalyzer as ContextualFallacyAnalyzer
 from argumentation_analysis.agents.tools.analysis.enhanced.fallacy_severity_evaluator import FallacySeverityEvaluator
 from argumentation_analysis.agents.tools.analysis.fallacy_detector import FallacyDetector
 from argumentation_analysis.agents.tools.analysis.rhetorical_analyzer import RhetoricalAnalyzer
@@ -41,9 +41,9 @@ from argumentation_analysis.orchestration.message_middleware import MessageMiddl
 def mock_middleware():
     """Fixture fournissant un middleware mocké."""
     middleware = MagicMock(spec=MessageMiddleware)
-    middleware.send_message# Mock eliminated - using authentic gpt-4o-mini True
-    middleware.receive_message# Mock eliminated - using authentic gpt-4o-mini None
-    middleware.get_pending_messages# Mock eliminated - using authentic gpt-4o-mini []
+    middleware.send_message.return_value = True
+    middleware.receive_message.return_value = None
+    middleware.get_pending_messages.return_value = []
     return middleware
 
 
@@ -168,12 +168,12 @@ def mock_extract_agent_adapter():
     """Fixture fournissant un adaptateur d'agent d'extraction entièrement mocké."""
     adapter = MagicMock(spec=ExtractAgentAdapter)
     adapter.agent_id = "mock_extract_agent"
-    adapter.extract_text_from_file# Mock eliminated - using authentic gpt-4o-mini """
+    adapter.extract_text_from_file.return_value = """
     Le réchauffement climatique est un mythe car il a neigé cet hiver.
     Soit nous réduisons drastiquement les émissions de CO2, soit la planète sera inhabitable dans 10 ans.
     Les scientifiques qui soutiennent le réchauffement climatique sont payés pour dire cela, donc leurs recherches sont biaisées.
     """
-    adapter.send_task_result# Mock eliminated - using authentic gpt-4o-mini True
+    adapter.send_task_result.return_value = True
     return adapter
 
 
@@ -182,7 +182,7 @@ def mock_informal_agent_adapter():
     """Fixture fournissant un adaptateur d'agent informel entièrement mocké."""
     adapter = MagicMock(spec=InformalAgentAdapter)
     adapter.agent_id = "mock_informal_agent_adapter"
-    adapter.analyze_text# Mock eliminated - using authentic gpt-4o-mini {
+    adapter.analyze_text.return_value = {
         "fallacies": [
             {"type": "généralisation_hâtive", "text": "Le réchauffement climatique est un mythe car il a neigé cet hiver", "confidence": 0.92},
             {"type": "faux_dilemme", "text": "Soit nous réduisons drastiquement les émissions de CO2, soit la planète sera inhabitable dans 10 ans", "confidence": 0.85},
@@ -194,7 +194,7 @@ def mock_informal_agent_adapter():
             "version": "1.0"
         }
     }
-    adapter.send_task_result# Mock eliminated - using authentic gpt-4o-mini True
+    adapter.send_task_result.return_value = True
     return adapter
 
 
@@ -203,7 +203,7 @@ def mock_informal_agent():
     """Fixture fournissant un agent informel entièrement mocké."""
     agent = MagicMock(spec=InformalAgent)
     agent.agent_id = "mock_informal_agent"
-    agent.analyze_text# Mock eliminated - using authentic gpt-4o-mini {
+    agent.analyze_text.return_value = {
         "fallacies": [
             {"type": "généralisation_hâtive", "text": "Le réchauffement climatique est un mythe car il a neigé cet hiver", "confidence": 0.92},
             {"type": "faux_dilemme", "text": "Soit nous réduisons drastiquement les émissions de CO2, soit la planète sera inhabitable dans 10 ans", "confidence": 0.85},
@@ -215,7 +215,7 @@ def mock_informal_agent():
             "version": "1.0"
         }
     }
-    agent.perform_enhanced_analysis# Mock eliminated - using authentic gpt-4o-mini {
+    agent.perform_enhanced_analysis.return_value = {
         "fallacies": [
             {"type": "généralisation_hâtive", "text": "Le réchauffement climatique est un mythe car il a neigé cet hiver", "confidence": 0.92},
             {"type": "faux_dilemme", "text": "Soit nous réduisons drastiquement les émissions de CO2, soit la planète sera inhabitable dans 10 ans", "confidence": 0.85},
