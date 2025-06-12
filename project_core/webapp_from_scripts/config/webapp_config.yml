@@ -9,7 +9,7 @@ backend:
   max_attempts: 5
   module: services.web_api_from_libs.app:app
   start_port: 8000
-  timeout_seconds: 30
+  timeout_seconds: 120
 cleanup:
   auto_cleanup: true
   kill_processes:
