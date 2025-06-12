@@ -24,7 +24,7 @@ Date: 10/06/2025
 import pytest
 import asyncio
 import logging
-from unittest.mock import patch, MagicMock, AsyncMock
+from unittest.mock import patch, AsyncMock, MagicMock
 from typing import Dict, Any, List
 
 # Configuration du logging pour les tests
@@ -45,14 +45,6 @@ class TestStrategicManager:
     """Tests pour le gestionnaire stratégique."""
     
     @pytest.fixture
-    def mock_llm_service(self):
-        """Service LLM mocké pour les tests."""
-        mock_service = MagicMock()
-        mock_service.service_id = "test_strategic_llm"
-        mock_service.generate_text = AsyncMock(return_value="Response stratégique")
-        return mock_service
-    
-    @pytest.fixture
     def sample_config(self):
         """Configuration d'exemple pour les tests."""
         return {
@@ -64,16 +56,16 @@ class TestStrategicManager:
         }
     
     @pytest.fixture
-    def strategic_manager(self, mock_llm_service, sample_config):
+    def strategic_manager(self, llm_service, sample_config):
         """Instance de StrategicManager pour les tests."""
         return StrategicManager(
-            llm_service=mock_llm_service,
+            llm_service=llm_service,
             config=sample_config
         )
     
-    def test_strategic_manager_initialization(self, strategic_manager, mock_llm_service, sample_config):
+    def test_strategic_manager_initialization(self, strategic_manager, llm_service, sample_config):
         """Test de l'initialisation du gestionnaire stratégique."""
-        assert strategic_manager.llm_service == mock_llm_service
+        assert strategic_manager.llm_service == llm_service
         assert strategic_manager.config == sample_config
         assert strategic_manager.current_objectives == []
         assert strategic_manager.strategic_plan is None
@@ -120,79 +112,48 @@ class TestStrategicManager:
     
     @pytest.mark.asyncio
     async def test_analyze_strategic_context(self, strategic_manager):
-        """Test de l'analyse du contexte stratégique."""
+        """Test de l'analyse du contexte stratégique avec un vrai LLM."""
         text = "L'éducation est cruciale pour le développement économique. Cependant, elle coûte cher."
         
-        # Mock de la génération LLM
-        strategic_manager.llm_service.generate_text.return_value = """
-        {
-            "domain": "education_economics",
-            "complexity": "medium",
-            "argument_type": "cost_benefit",
-            "stakeholders": ["policymakers", "taxpayers", "students"],
-            "key_concepts": ["education investment", "economic development", "cost consideration"],
-            "potential_biases": ["economic determinism"],
-            "analysis_scope": "policy_analysis"
-        }
-        """
-        
+        # Pas de mock, l'appel LLM est réel
         context = await strategic_manager._analyze_strategic_context(text, "comprehensive")
         
-        assert context["domain"] == "education_economics"
-        assert context["complexity"] == "medium"
+        # Assertions souples pour une réponse non-déterministe
+        assert isinstance(context, dict)
+        assert "domain" in context
+        assert "complexity" in context
         assert "stakeholders" in context
-        assert len(context["stakeholders"]) == 3
-        assert "education investment" in context["key_concepts"]
+        assert "key_concepts" in context
+        assert isinstance(context["domain"], str)
+        assert isinstance(context["stakeholders"], list)
     
     @pytest.mark.asyncio
     async def test_generate_strategic_objectives_hierarchical(self, strategic_manager):
-        """Test de génération d'objectifs stratégiques hiérarchiques."""
+        """Test de génération d'objectifs stratégiques hiérarchiques avec un vrai LLM."""
         context = {
             "domain": "education",
             "complexity": "high",
             "argument_type": "policy_debate"
         }
         
-        strategic_manager.llm_service.generate_text.return_value = """
-        [
-            {
-                "id": "strategic_obj_1",
-                "description": "Identifier la structure argumentative principale",
-                "priority": "critical",
-                "type": "structural_analysis",
-                "estimated_effort": "high",
-                "dependencies": []
-            },
-            {
-                "id": "strategic_obj_2", 
-                "description": "Analyser les implications économiques",
-                "priority": "high",
-                "type": "domain_analysis",
-                "estimated_effort": "medium",
-                "dependencies": ["strategic_obj_1"]
-            },
-            {
-                "id": "strategic_obj_3",
-                "description": "Évaluer la cohérence logique",
-                "priority": "medium",
-                "type": "logical_analysis", 
-                "estimated_effort": "medium",
-                "dependencies": ["strategic_obj_1"]
-            }
-        ]
-        """
-        
+        # Pas de mock, appel LLM réel
         objectives = await strategic_manager._generate_strategic_objectives(context, "comprehensive")
         
-        assert len(objectives) == 3
-        assert objectives[0]["priority"] == "critical"
-        assert objectives[1]["dependencies"] == ["strategic_obj_1"]
-        assert objectives[2]["type"] == "logical_analysis"
-        
-        # Vérifier l'ordre de priorité
-        priorities = [obj["priority"] for obj in objectives]
-        expected_order = ["critical", "high", "medium"]
-        assert priorities == expected_order
+        # Assertions souples
+        assert isinstance(objectives, list)
+        assert len(objectives) > 0
+        for obj in objectives:
+            assert "id" in obj
+            assert "description" in obj
+            assert "priority" in obj
+            assert "type" in obj
+            assert "dependencies" in obj
+            assert isinstance(obj["dependencies"], list)
+
+        # Vérifier que les priorités sont dans un ordre logique (si possible)
+        priority_map = {"critical": 3, "high": 2, "medium": 1, "low": 0}
+        priority_scores = [priority_map.get(obj.get("priority", "low").lower(), 0) for obj in objectives]
+        assert priority_scores == sorted(priority_scores, reverse=True)
     
     @pytest.mark.asyncio
     async def test_create_strategic_plan_with_dependencies(self, strategic_manager):
@@ -270,15 +231,7 @@ class TestTaskCoordinator:
     """Tests pour le coordinateur de tâches (niveau tactique)."""
     
     @pytest.fixture
-    def mock_llm_service(self):
-        """Service LLM mocké pour les tests."""
-        mock_service = MagicMock()
-        mock_service.service_id = "test_tactical_llm"
-        mock_service.generate_text = AsyncMock(return_value="Response tactique")
-        return mock_service
-    
-    @pytest.fixture
-    def task_coordinator(self, mock_llm_service):
+    def task_coordinator(self, llm_service):
         """Instance de TaskCoordinator pour les tests."""
         config = {
             "coordination_strategy": "adaptive",
@@ -286,7 +239,7 @@ class TestTaskCoordinator:
             "communication_protocol": "message_passing"
         }
         return TaskCoordinator(
-            llm_service=mock_llm_service,
+            llm_service=llm_service,
             config=config
         )
     
@@ -308,9 +261,9 @@ class TestTaskCoordinator:
             }
         ]
     
-    def test_task_coordinator_initialization(self, task_coordinator, mock_llm_service):
+    def test_task_coordinator_initialization(self, task_coordinator, llm_service):
         """Test de l'initialisation du coordinateur de tâches."""
-        assert task_coordinator.llm_service == mock_llm_service
+        assert task_coordinator.llm_service == llm_service
         assert task_coordinator.active_tasks == {}
         assert task_coordinator.task_queue == []
         assert task_coordinator.resource_allocations == {}
@@ -352,49 +305,32 @@ class TestTaskCoordinator:
     
     @pytest.mark.asyncio
     async def test_decompose_objective_to_tasks_structural(self, task_coordinator):
-        """Test de décomposition d'objectif en tâches pour analyse structurelle."""
+        """Test de décomposition d'objectif en tâches pour analyse structurelle avec un vrai LLM."""
         objective = {
             "id": "struct_obj",
-            "description": "Analyser la structure argumentative",
+            "description": "Analyser la structure argumentative d'un texte sur la politique climatique.",
             "type": "structural_analysis",
             "priority": "critical"
         }
         
-        task_coordinator.llm_service.generate_text.return_value = """
-        [
-            {
-                "id": "parse_premises",
-                "description": "Identifier et extraire les prémisses",
-                "type": "premise_extraction",
-                "estimated_duration": 45,
-                "required_resources": ["nlp_service", "logical_parser"],
-                "dependencies": []
-            },
-            {
-                "id": "parse_conclusions", 
-                "description": "Identifier les conclusions",
-                "type": "conclusion_extraction",
-                "estimated_duration": 30,
-                "required_resources": ["nlp_service"],
-                "dependencies": []
-            },
-            {
-                "id": "analyze_structure",
-                "description": "Analyser les liens logiques",
-                "type": "logical_structure_analysis", 
-                "estimated_duration": 60,
-                "required_resources": ["logical_parser", "reasoning_engine"],
-                "dependencies": ["parse_premises", "parse_conclusions"]
-            }
-        ]
-        """
-        
+        # Pas de mock, appel LLM réel
         tasks = await task_coordinator._decompose_objective_to_tasks(objective)
         
-        assert len(tasks) == 3
-        assert tasks[0]["type"] == "premise_extraction"
-        assert tasks[2]["dependencies"] == ["parse_premises", "parse_conclusions"]
-        assert tasks[0]["estimated_duration"] == 45
+        # Assertions souples
+        assert isinstance(tasks, list)
+        assert len(tasks) > 0
+        for task in tasks:
+            assert "id" in task
+            assert "description" in task
+            assert "type" in task
+            assert "dependencies" in task
+            assert isinstance(task["dependencies"], list)
+
+        # Vérifier si les dépendances sont logiques (une tâche dépend d'une autre de la liste)
+        task_ids = {t["id"] for t in tasks}
+        for task in tasks:
+            for dep in task["dependencies"]:
+                assert dep in task_ids
     
     @pytest.mark.asyncio
     async def test_schedule_tasks_with_dependencies(self, task_coordinator):
@@ -486,15 +422,7 @@ class TestOperationalManager:
     """Tests pour le gestionnaire opérationnel."""
     
     @pytest.fixture
-    def mock_llm_service(self):
-        """Service LLM mocké pour les tests."""
-        mock_service = MagicMock()
-        mock_service.service_id = "test_operational_llm"
-        mock_service.generate_text = AsyncMock(return_value="Response opérationnelle")
-        return mock_service
-    
-    @pytest.fixture
-    def operational_manager(self, mock_llm_service):
+    def operational_manager(self, llm_service):
         """Instance d'OperationalManager pour les tests."""
         config = {
             "execution_strategy": "parallel_optimized",
@@ -502,7 +430,7 @@ class TestOperationalManager:
             "monitoring_level": "detailed"
         }
         return OperationalManager(
-            llm_service=mock_llm_service,
+            llm_service=llm_service,
             config=config
         )
     
@@ -528,9 +456,9 @@ class TestOperationalManager:
             }
         ]
     
-    def test_operational_manager_initialization(self, operational_manager, mock_llm_service):
+    def test_operational_manager_initialization(self, operational_manager, llm_service):
         """Test de l'initialisation du gestionnaire opérationnel."""
-        assert operational_manager.llm_service == mock_llm_service
+        assert operational_manager.llm_service == llm_service
         assert operational_manager.execution_queue == []
         assert operational_manager.running_operations == {}
         assert operational_manager.completed_operations == {}
@@ -567,93 +495,54 @@ class TestOperationalManager:
     
     @pytest.mark.asyncio
     async def test_execute_premise_extraction_nlp(self, operational_manager):
-        """Test d'extraction de prémisses par NLP."""
+        """Test d'extraction de prémisses par NLP avec un vrai LLM."""
         task = {
             "id": "premise_task",
             "text_segment": "Premièrement, l'éducation développe l'esprit critique. Deuxièmement, elle favorise l'innovation. Par conséquent, investir dans l'éducation est essentiel.",
             "parameters": {"extraction_method": "nlp_pattern"}
         }
         
-        # Mock du service LLM pour extraction
-        operational_manager.llm_service.generate_text.return_value = """
-        {
-            "premises": [
-                {
-                    "text": "l'éducation développe l'esprit critique",
-                    "type": "factual_claim",
-                    "position": {"start": 12, "end": 51},
-                    "confidence": 0.95
-                },
-                {
-                    "text": "elle favorise l'innovation", 
-                    "type": "causal_claim",
-                    "position": {"start": 66, "end": 92},
-                    "confidence": 0.88
-                }
-            ],
-            "conclusion": {
-                "text": "investir dans l'éducation est essentiel",
-                "position": {"start": 108, "end": 148},
-                "confidence": 0.92
-            },
-            "logical_structure": "syllogistic"
-        }
-        """
-        
+        # Pas de mock, appel LLM réel
         result = await operational_manager._execute_premise_extraction(task)
         
+        # Assertions souples
+        assert isinstance(result, dict)
         assert "premises" in result
         assert "conclusion" in result
         assert "logical_structure" in result
-        assert len(result["premises"]) == 2
-        assert result["premises"][0]["confidence"] == 0.95
-        assert result["conclusion"]["text"] == "investir dans l'éducation est essentiel"
+        assert isinstance(result["premises"], list)
+        assert len(result["premises"]) > 0
+        assert "text" in result["premises"][0]
+        assert "text" in result["conclusion"]
     
     @pytest.mark.asyncio
     async def test_execute_fallacy_detection_comprehensive(self, operational_manager):
-        """Test de détection de sophismes comprehensive."""
+        """Test de détection de sophismes comprehensive avec un vrai LLM."""
         task = {
             "id": "fallacy_task",
             "text_segment": "Tous les experts sont d'accord, donc c'est vrai. De plus, si on n'accepte pas cette position, on va vers le chaos total.",
             "parameters": {"fallacy_types": "all", "confidence_threshold": 0.7}
         }
         
-        operational_manager.llm_service.generate_text.return_value = """
-        {
-            "fallacies_detected": [
-                {
-                    "type": "appeal_to_authority",
-                    "description": "Appel à l'autorité sans justification de l'expertise",
-                    "text_span": "Tous les experts sont d'accord, donc c'est vrai",
-                    "position": {"start": 0, "end": 46},
-                    "confidence": 0.89,
-                    "severity": "medium"
-                },
-                {
-                    "type": "false_dilemma", 
-                    "description": "Faux dilemme présentant seulement deux options extrêmes",
-                    "text_span": "si on n'accepte pas cette position, on va vers le chaos total",
-                    "position": {"start": 58, "end": 120},
-                    "confidence": 0.82,
-                    "severity": "high"
-                }
-            ],
-            "scan_summary": {
-                "total_fallacies": 2,
-                "average_confidence": 0.855,
-                "text_coverage": 0.78
-            }
-        }
-        """
-        
+        # Pas de mock, appel LLM réel
         result = await operational_manager._execute_fallacy_detection(task)
         
+        # Assertions souples
+        assert isinstance(result, dict)
         assert "fallacies_detected" in result
         assert "scan_summary" in result
-        assert len(result["fallacies_detected"]) == 2
-        assert result["fallacies_detected"][0]["type"] == "appeal_to_authority"
-        assert result["fallacies_detected"][1]["severity"] == "high"
-        assert result["scan_summary"]["average_confidence"] == 0.855
+        assert isinstance(result["fallacies_detected"], list)
+
+        if result["fallacies_detected"]:
+            fallacy = result["fallacies_detected"][0]
+            assert "type" in fallacy
+            assert "description" in fallacy
+            assert "confidence" in fallacy
+            assert "severity" in fallacy
+            assert isinstance(fallacy["type"], str)
+        
+        assert isinstance(result["scan_summary"], dict)
+        assert "total_fallacies" in result["scan_summary"]
     
     @pytest.mark.asyncio
     async def test_parallel_task_execution(self, operational_manager):
@@ -728,19 +617,11 @@ class TestHierarchicalIntegration:
     """Tests d'intégration entre les niveaux hiérarchiques."""
     
     @pytest.fixture
-    def mock_llm_service(self):
-        """Service LLM mocké pour tous les gestionnaires."""
-        mock_service = MagicMock()
-        mock_service.service_id = "test_integration_llm"
-        mock_service.generate_text = AsyncMock(return_value="Response intégration")
-        return mock_service
-    
-    @pytest.fixture
-    def integrated_hierarchy(self, mock_llm_service):
+    def integrated_hierarchy(self, llm_service):
         """Hiérarchie complète pour tests d'intégration."""
-        strategic = StrategicManager(mock_llm_service, {"analysis_depth": "comprehensive"})
-        tactical = TaskCoordinator(mock_llm_service, {"coordination_strategy": "adaptive"})
-        operational = OperationalManager(mock_llm_service, {"execution_strategy": "parallel"})
+        strategic = StrategicManager(llm_service, {"analysis_depth": "comprehensive"})
+        tactical = TaskCoordinator(llm_service, {"coordination_strategy": "adaptive"})
+        operational = OperationalManager(llm_service, {"execution_strategy": "parallel"})
         
         return {
             "strategic": strategic,

@@ -31,7 +31,7 @@ from semantic_kernel.contents import ChatMessageContent
 from argumentation_analysis.core.shared_state import RhetoricalAnalysisState
 from argumentation_analysis.core.state_manager_plugin import StateManagerPlugin
 from argumentation_analysis.core.strategies import BalancedParticipationStrategy
-from argumentation_analysis.orchestration.analysis_runner import run_analysis_conversation
+from argumentation_analysis.orchestration.analysis_runner import run_analysis
 from argumentation_analysis.agents.core.extract.extract_agent import ExtractAgent
 from argumentation_analysis.agents.core.pl.pl_definitions import setup_pl_kernel
 from argumentation_analysis.agents.core.informal.informal_definitions import setup_informal_kernel
@@ -255,7 +255,7 @@ class TestBalancedStrategyEndToEnd: # Suppression de l'héritage AsyncTestCase
              patch('argumentation_analysis.orchestration.analysis_runner.ChatCompletionAgent'), \
              patch('argumentation_analysis.orchestration.analysis_runner.SimpleTerminationStrategy'):
             
-            await run_analysis_conversation("Texte de test", llm_service_mock)
+            await run_analysis("Texte de test", llm_service_mock)
         
         mock_balanced_strategy.assert_called_once()
         mock_agent_group_chat.assert_called_once()
