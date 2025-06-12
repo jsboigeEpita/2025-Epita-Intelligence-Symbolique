@@ -1,0 +1,4 @@
+- id: test_doc_1
+  content: "Ceci est le premier texte pour l'analyse rhétorique. Il contient une affirmation simple."
+- id: test_doc_2
+  content: "Le deuxième texte présente un contre-argument. Il est crucial de comprendre les deux côtés."
