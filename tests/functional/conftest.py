@@ -2,6 +2,7 @@
 Configuration Playwright compatible avec pytest-playwright.
 """
 
+import project_core.core_from_scripts.auto_env
 import pytest
 import time
 from typing import Dict, Any

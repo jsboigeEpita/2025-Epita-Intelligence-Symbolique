@@ -14,6 +14,7 @@ Categories:
 - Code précieux récupérable (extensions, modules utiles)
 """
 
+import project_core.core_from_scripts.auto_env
 import json
 import logging
 import re

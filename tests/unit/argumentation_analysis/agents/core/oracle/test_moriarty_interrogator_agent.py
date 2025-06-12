@@ -44,31 +44,26 @@ class TestMoriartyInterrogatorAgent:
     
     @pytest.fixture
     def mock_kernel(self):
-        """Kernel Semantic Kernel mocké."""
-        return Mock(spec=Kernel)
+        """Instance réelle du Kernel Semantic Kernel."""
+        # Crée une instance réelle de Kernel.
+        # Si une configuration spécifique est nécessaire (par exemple, ajout de services LLM),
+        # elle devrait être faite ici. Pour l'instant, une instance simple.
+        kernel = Kernel()
+        # Potentiellement, ajouter un service LLM factice ou réel si les tests en dépendent directement.
+        # Pour des tests unitaires de l'agent Moriarty se concentrant sur sa logique interne
+        # et son interaction avec CluedoDataset, un kernel simple peut suffire.
+        return kernel
     
     @pytest.fixture
     def mock_cluedo_dataset(self):
-        """CluedoDataset mocké pour les tests."""
-        dataset = Mock(spec=CluedoDataset)
-        dataset.get_moriarty_cards# Mock eliminated - using authentic gpt-4o-mini ["knife", "rope"]
-        dataset.get_solution# Mock eliminated - using authentic gpt-4o-mini {"suspect": "scarlet", "weapon": "candlestick", "room": "library"}
-        
-        # Mock ValidationResult pour validate_cluedo_suggestion
-        from argumentation_analysis.agents.core.oracle.permissions import ValidationResult
-        validation_result = ValidationResult(
-            can_refute=True,
-            revealed_cards=[],
-            suggestion_valid=True,
-            authorized=True,
-            reason="Test validation",
-            refuting_agent="Moriarty"
+        """Instance réelle de CluedoDataset pour les tests."""
+        # Utilise un CluedoDataset réel au lieu d'un mock
+        # Les cartes de Moriarty et la solution peuvent être adaptées pour les besoins des tests.
+        return CluedoDataset(
+            moriarty_cards=["Poignard", "Salon", "Moutarde"],
+            solution={"suspect": "Pervenche", "arme": "Revolver", "lieu": "Cuisine"},
+            reveal_policy=RevealPolicy.BALANCED # Politique par défaut
         )
-        dataset.validate_cluedo_suggestion = Mock(return_value=validation_result)
-        dataset.can_refute_suggestion = Mock(return_value=True)
-        dataset.reveal_card = Mock(return_value={"revealed_card": "knife", "revealing_agent": "Moriarty"})
-        dataset._generate_strategic_clue = Mock(return_value={"clue_type": "elimination", "content": "Test clue"})
-        return dataset
     
     @pytest.fixture
     def moriarty_agent(self, mock_kernel, mock_cluedo_dataset):

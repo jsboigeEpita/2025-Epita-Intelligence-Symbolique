@@ -1,3 +1,4 @@
+import project_core.core_from_scripts.auto_env
 import json
 
 input_file_path = "_temp/decrypted_sources_with_vildanden.json"
