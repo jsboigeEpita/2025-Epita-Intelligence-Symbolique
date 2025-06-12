@@ -1132,9 +1132,10 @@ class JTMSCommunicationHub:
 
 # === FONCTIONS UTILITAIRES ===
 
-async def create_sherlock_watson_communication(kernel: Kernel, 
+async def create_sherlock_watson_communication(kernel: Kernel,
                                              sherlock_config: Dict = None,
-                                             watson_config: Dict = None) -> Tuple[SherlockJTMSAgent, WatsonJTMSAgent, JTMSCommunicationHub]:
+                                             watson_config: Dict = None,
+                                             use_tweety: bool = True) -> Tuple[SherlockJTMSAgent, WatsonJTMSAgent, JTMSCommunicationHub]:
     """
     Fonction utilitaire pour créer et configurer un système complet Sherlock/Watson avec JTMS
     """
@@ -1143,7 +1144,7 @@ async def create_sherlock_watson_communication(kernel: Kernel,
     watson_config = watson_config or {}
     
     sherlock = SherlockJTMSAgent(
-        kernel, 
+        kernel,
         agent_name=sherlock_config.get("name", "Sherlock_JTMS"),
         system_prompt=sherlock_config.get("system_prompt")
     )
@@ -1152,15 +1153,16 @@ async def create_sherlock_watson_communication(kernel: Kernel,
         kernel,
         agent_name=watson_config.get("name", "Watson_JTMS"),
         constants=watson_config.get("constants"),
-        system_prompt=watson_config.get("system_prompt")
+        system_prompt=watson_config.get("system_prompt"),
+        use_tweety=use_tweety
     )
     
     # Créer le hub de communication
     hub = JTMSCommunicationHub(kernel)
     
     # Enregistrer les agents
-    hub.register_agent(sherlock)
-    hub.register_agent(watson)
+    await hub.register_agent(sherlock)
+    await hub.register_agent(watson)
     
     # Configuration initiale du hub
     hub_config = {
