@@ -35,6 +35,7 @@ import subprocess
 import concurrent.futures
 import requests
 import pytest
+import yaml
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Dict, List, Any, Optional, Tuple, Union
@@ -194,10 +195,14 @@ class CorpusManager:
                 self.logger.info(f"📂 Chargement: {corpus_path}")
                 
                 # Chargement et déchiffrement
-                definitions = load_extract_definitions(
-                    config_file=corpus_path,
-                    key=encryption_key
-                )
+                if corpus_path.suffix in ['.yml', '.yaml']:
+                    with open(corpus_path, 'r', encoding='utf-8') as f:
+                        definitions = yaml.safe_load(f)
+                else:
+                    definitions = load_extract_definitions(
+                        config_file=corpus_path,
+                        b64_derived_key=encryption_key
+                    )
                 
                 if definitions:
                     results["loaded_files"].append({
@@ -245,11 +250,15 @@ class PipelineEngine:
             from config.unified_config import UnifiedConfig, LogicType, MockLevel
             
             # Configuration pour l'analyse authentique
+            is_prod = self.config.environment == ProcessingEnvironment.PROD
             analysis_config = UnifiedConfig(
                 logic_type=LogicType.FOL,
-                mock_level=MockLevel.NONE if self.config.environment == ProcessingEnvironment.PROD else MockLevel.MINIMAL,
+                mock_level=MockLevel.NONE if is_prod else MockLevel.PARTIAL,
                 enable_jvm=True,
-                orchestration_type="comprehensive"
+                orchestration_type="comprehensive",
+                require_real_gpt=is_prod,
+                require_real_tweety=is_prod,
+                require_full_taxonomy=is_prod
             )
             
             # Traitement parallèle des données
@@ -980,7 +989,21 @@ class ComprehensiveWorkflowProcessor:
             # 2. Phase d'analyse (si demandée)
             if self.config.mode in [WorkflowMode.FULL, WorkflowMode.ANALYSIS_ONLY]:
                 self.logger.info("Phase 2: Pipeline d'analyse")
-                corpus_data = results.decryption_results or {"loaded_files": []}
+                if self.config.enable_decryption:
+                    corpus_data = results.decryption_results or {"loaded_files": []}
+                else:
+                    corpus_data = {"loaded_files": []}
+                    for corpus_file in self.config.corpus_files:
+                        corpus_path = Path(corpus_file)
+                        if corpus_path.suffix in ['.yml', '.yaml']:
+                            with open(corpus_path, 'r', encoding='utf-8') as f:
+                                definitions = yaml.safe_load(f)
+                                corpus_data["loaded_files"].append({
+                                    "file": str(corpus_path),
+                                    "definitions_count": len(definitions),
+                                    "definitions": definitions
+                                })
+
                 analysis_results = await self.pipeline_engine.run_analysis_pipeline(corpus_data)
                 results.analysis_results = analysis_results
                 
