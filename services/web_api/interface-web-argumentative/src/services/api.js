@@ -89,10 +89,10 @@ export const detectFallacies = async (text, options = {}) => {
 
 // Analyse de framework de Dung via le nouveau backend centralisé
 export const analyzeDungFramework = async (argumentList, attacks = []) => {
-  // Transformation des données pour correspondre au modèle Pydantic du backend
+  // Les données sont directement Pydantic-compatibles depuis le frontend
   const requestBody = {
     arguments: argumentList.map(arg => arg.id), // Extrait les IDs : ['a', 'b', ...]
-    attacks: attacks.map(att => [att.from, att.to]) // Transforme en [["a", "b"], ...]
+    attacks: attacks // Les attaques sont déjà au format [['source_id', 'target_id']]
   };
 
   const response = await fetchWithTimeout(`${API_BASE_URL}/api/v1/framework/analyze`, {

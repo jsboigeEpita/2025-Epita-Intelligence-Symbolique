@@ -86,8 +86,11 @@ class FrontendManager:
                     'pid': None
                 }
             
+            # Préparation de l'environnement qui sera utilisé pour toutes les commandes npm
+            frontend_env = self._get_frontend_env()
+
             # Installation dépendances si nécessaire
-            await self._ensure_dependencies()
+            await self._ensure_dependencies(frontend_env)
             
             # Démarrage serveur React
             self.logger.info(f"Démarrage frontend: {self.start_command}")
@@ -124,7 +127,7 @@ class FrontendManager:
                 stdout=self.frontend_stdout_log_file,
                 stderr=self.frontend_stderr_log_file,
                 cwd=self.frontend_path,
-                env=self._get_frontend_env()
+                env=frontend_env
             )
             
             # Attente démarrage
@@ -165,20 +168,34 @@ class FrontendManager:
                 'pid': None
             }
     
-    async def _ensure_dependencies(self):
+    async def _ensure_dependencies(self, env: Dict[str, str]):
         """S'assure que les dépendances npm sont installées"""
         node_modules = self.frontend_path / 'node_modules'
         
         if not node_modules.exists():
-            self.logger.info("Installation dépendances npm...")
+            self.logger.info("Le répertoire 'node_modules' est manquant. Lancement de 'npm install'...")
             
             try:
-                process = subprocess.Popen(
-                    ['npm', 'install'],
-                    stdout=subprocess.PIPE,
-                    stderr=subprocess.PIPE,
-                    cwd=self.frontend_path
-                )
+                # Utilisation de l'environnement préparé pour trouver npm
+                cmd = ['npm', 'install']
+                if sys.platform == "win32":
+                    # Sur windows, Popen a besoin de shell=True pour trouver npm.cmd via le PATH modifié
+                    process = subprocess.Popen(
+                        ' '.join(cmd),
+                        stdout=subprocess.PIPE,
+                        stderr=subprocess.PIPE,
+                        cwd=self.frontend_path,
+                        env=env,
+                        shell=True
+                    )
+                else:
+                    process = subprocess.Popen(
+                        cmd,
+                        stdout=subprocess.PIPE,
+                        stderr=subprocess.PIPE,
+                        cwd=self.frontend_path,
+                        env=env
+                    )
                 
                 stdout, stderr = process.communicate(timeout=120)  # 2 min max
                 
@@ -205,8 +222,45 @@ class FrontendManager:
             'SKIP_PREFLIGHT_CHECK': 'true'  # Évite erreurs compatibilité
         })
         
+        # Ajout du chemin npm/node à l'environnement
+        npm_path = self._find_npm_executable()
+        if npm_path:
+            self.logger.info(f"Utilisation de npm trouvé dans: {npm_path}")
+            # Ajout au PATH pour que Popen le trouve
+            env['PATH'] = f"{npm_path}{os.pathsep}{env.get('PATH', '')}"
+        else:
+            self.logger.warning("npm non trouvé via les méthodes de recherche. Utilisation du PATH système.")
+            
         return env
-    
+
+    def _find_npm_executable(self) -> Optional[str]:
+        """
+        Trouve l'exécutable npm en cherchant dans des emplacements connus.
+        - Variable d'environnement NPM_HOME ou NODE_HOME
+        - Chemins standards (non implémenté pour l'instant pour rester portable)
+        """
+        # 1. Vérifier les variables d'environnement
+        for var in ['NPM_HOME', 'NODE_HOME']:
+            home_path = os.environ.get(var)
+            if home_path and Path(home_path).exists():
+                npm_dir = Path(home_path)
+                # Sur Windows, npm.cmd est souvent directement dans le répertoire
+                # Sur Linux/macOS, dans le sous-répertoire 'bin'
+                if sys.platform == "win32":
+                    executable = npm_dir / 'npm.cmd'
+                    if executable.is_file():
+                        return str(npm_dir)
+                else:
+                    executable = npm_dir / 'bin' / 'npm'
+                    if executable.is_file():
+                        return str(npm_dir / 'bin')
+
+        # 2. (Optionnel) chercher dans des chemins hardcodés si nécessaire
+        # ...
+
+        self.logger.debug("NPM_HOME ou NODE_HOME non trouvées ou invalides.")
+        return None
+
     async def _wait_for_frontend(self) -> bool:
         """Attend que le frontend soit accessible"""
         url = f"http://localhost:{self.port}"

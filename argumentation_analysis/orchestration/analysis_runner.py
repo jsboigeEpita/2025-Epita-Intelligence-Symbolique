@@ -3,9 +3,7 @@ import scripts.core.auto_env  # Auto-activation environnement intelligent
 import sys
 import os
 # Ajout pour résoudre les problèmes d'import de project_core
-# Obtient le répertoire du script actuel (orchestration)
 current_script_dir = os.path.dirname(os.path.abspath(__file__))
-# Remonte de deux niveaux pour atteindre la racine du projet (depuis argumentation_analysis/orchestration)
 project_root = os.path.abspath(os.path.join(current_script_dir, "..", ".."))
 if project_root not in sys.path:
     sys.path.insert(0, project_root)
@@ -16,38 +14,32 @@ import asyncio
 import logging
 import json
 import random
-# import os # Déjà importé plus haut
-# Ajout des imports nécessaires pour initialize_jvm
-from argumentation_analysis.core.jvm_setup import initialize_jvm
-from argumentation_analysis.paths import LIBS_DIR # Nécessaire pour initialize_jvm
+from typing import List, Optional, Union, Any, Dict
+
+# from argumentation_analysis.core.jvm_setup import initialize_jvm
+# from argumentation_analysis.paths import LIBS_DIR # Nécessaire pour initialize_jvm
 
 import jpype # Pour la vérification finale de la JVM
-from typing import List, Optional, Union, Any, Dict # Ajout Any, Dict
-
 # Imports pour le hook LLM
 from semantic_kernel.connectors.ai.chat_completion_client_base import ChatCompletionClientBase
 from semantic_kernel.connectors.ai.open_ai import OpenAIChatCompletion
 from semantic_kernel.connectors.ai.open_ai import AzureChatCompletion
 from semantic_kernel.contents.chat_message_content import ChatMessageContent as SKChatMessageContent # Alias pour éviter conflit
 from semantic_kernel.kernel import Kernel as SKernel # Alias pour éviter conflit avec Kernel de SK
-# KernelArguments est déjà importé plus bas
+
 # Imports Semantic Kernel
 import semantic_kernel as sk
 from semantic_kernel.contents import ChatMessageContent
 from semantic_kernel.connectors.ai.open_ai import OpenAIChatCompletion, AzureChatCompletion
-# CORRECTIF COMPATIBILITÉ: Utilisation du module de compatibilité pour agents
-# from semantic_kernel.agents import AgentGroupChat, Agent, AgentChatException # Module non disponible dans SK 0.9.6b1
-from argumentation_analysis.orchestration.cluedo_extended_orchestrator import Agent # Fallback local
 from semantic_kernel.contents.author_role import AuthorRole
-# from semantic_kernel.functions import FunctionChoiceBehavior # Non disponible/utilisé dans SK 0.9.6b1
 
-# Correct imports
-from argumentation_analysis.core.shared_state import RhetoricalAnalysisState
-from argumentation_analysis.core.state_manager_plugin import StateManagerPlugin
-from argumentation_analysis.agents.core.pm.pm_agent import ProjectManagerAgent
-from argumentation_analysis.agents.core.informal.informal_agent import InformalAnalysisAgent
-from argumentation_analysis.agents.core.pl.pl_agent import PropositionalLogicAgent
-from argumentation_analysis.agents.core.extract.extract_agent import ExtractAgent
+# # Correct imports
+# from argumentation_analysis.core.shared_state import RhetoricalAnalysisState
+# from argumentation_analysis.core.state_manager_plugin import StateManagerPlugin
+# from argumentation_analysis.agents.core.pm.pm_agent import ProjectManagerAgent
+# from argumentation_analysis.agents.core.informal.informal_agent import InformalAnalysisAgent
+# from argumentation_analysis.agents.core.pl.pl_agent import PropositionalLogicAgent
+# from argumentation_analysis.agents.core.extract.extract_agent import ExtractAgent
 
 
 # --- Fonction Principale d'Exécution (Modifiée V10.7 - Accepte Service LLM) ---
@@ -87,7 +79,7 @@ async def run_analysis_conversation(
     local_group_chat: Optional[Any] = None # AgentGroupChat non disponible
     local_state_manager_plugin: Optional[StateManagerPlugin] = None
 
-    agent_list_local: List[Agent] = []
+    agent_list_local: List[Any] = []
 
     try:
         run_logger.info("1. Création instance état locale...")

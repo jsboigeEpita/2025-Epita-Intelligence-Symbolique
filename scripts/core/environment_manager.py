@@ -465,7 +465,38 @@ class EnvironmentManager:
                     os.environ['JAVA_HOME'] = str(absolute_java_home)
                     self.logger.info(f"JAVA_HOME (de .env) converti en chemin absolu: {os.environ['JAVA_HOME']}")
                 else:
-                    self.logger.warning(f"Le chemin JAVA_HOME (de .env) résolu vers {absolute_java_home} est invalide.")
+                    self.logger.warning(f"Le chemin JAVA_HOME '{absolute_java_home}' est invalide. Tentative d'auto-installation...")
+                    try:
+                        # On importe ici pour éviter dépendance circulaire si ce module est importé ailleurs
+                        from scripts.setup_core.manage_portable_tools import setup_tools
+                        
+                        # Le répertoire de base pour l'installation est le parent du chemin attendu pour JAVA_HOME
+                        # Ex: si JAVA_HOME est .../libs/portable_jdk/jdk-17..., le base_dir est .../libs/portable_jdk
+                        jdk_install_base_dir = absolute_java_home.parent
+                        self.logger.info(f"Le JDK sera installé dans : {jdk_install_base_dir}")
+                        
+                        installed_tools = setup_tools(
+                            tools_dir_base_path=str(jdk_install_base_dir),
+                            logger_instance=self.logger,
+                            skip_octave=True  # On ne veut que le JDK
+                        )
+
+                        # Vérifier si l'installation a retourné un chemin pour JAVA_HOME
+                        if 'JAVA_HOME' in installed_tools and Path(installed_tools['JAVA_HOME']).exists():
+                            self.logger.success(f"JDK auto-installé avec succès dans: {installed_tools['JAVA_HOME']}")
+                            os.environ['JAVA_HOME'] = installed_tools['JAVA_HOME']
+                            # On refait la vérification pour mettre à jour le PATH etc.
+                            if Path(os.environ['JAVA_HOME']).exists() and Path(os.environ['JAVA_HOME']).is_dir():
+                                self.logger.info(f"Le chemin JAVA_HOME après installation est maintenant valide.")
+                            else:
+                                self.logger.error("Échec critique : le chemin JAVA_HOME est toujours invalide après l'installation.")
+                        else:
+                            self.logger.error("L'auto-installation du JDK a échoué ou n'a retourné aucun chemin.")
+
+                    except ImportError as ie:
+                        self.logger.error(f"Échec de l'import de 'manage_portable_tools' pour l'auto-installation: {ie}")
+                    except Exception as e:
+                        self.logger.error(f"Une erreur est survenue durant l'auto-installation du JDK: {e}", exc_info=True)
         
         # **CORRECTION DE ROBUSTESSE POUR JPYPE**
         # S'assurer que le répertoire bin de la JVM est dans le PATH
@@ -475,35 +506,36 @@ class EnvironmentManager:
                 if str(java_bin_path) not in os.environ['PATH']:
                     os.environ['PATH'] = f"{java_bin_path}{os.pathsep}{os.environ['PATH']}"
                     self.logger.info(f"Ajouté {java_bin_path} au PATH pour la JVM.")
+        
+        # --- BLOC D'AUTO-INSTALLATION NODE.JS ---
+        if 'NODE_HOME' not in os.environ or not Path(os.environ['NODE_HOME']).is_dir():
+            self.logger.warning("NODE_HOME non défini ou invalide. Tentative d'auto-installation...")
+            try:
+                from scripts.setup_core.manage_portable_tools import setup_tools, NODE_CONFIG
 
-        # --- DÉMARRAGE DE LA JVM (Correctif pour JPype/Tweety) ---
-        try:
-            import jpype
-            import jpype.imports
-            if not jpype.isJVMStarted():
-                self.logger.info("Tentative de démarrage de la JVM pour JPype...")
+                node_install_base_dir = self.project_root / 'libs'
+                node_install_base_dir.mkdir(exist_ok=True)
                 
-                # Construction dynamique et robuste du classpath pour Tweety
-                libs_dir = self.project_root / 'libs'
-                jars = [str(f) for f in libs_dir.glob('*.jar')]
-                
-                if not jars:
-                    self.logger.warning("Aucun fichier .jar trouvé dans le répertoire libs. Le classpath pour la JVM sera vide.")
-                    class_path_string = ""
+                self.logger.info(f"Node.js sera installé dans : {node_install_base_dir}")
+
+                installed_tools = setup_tools(
+                    tools_dir_base_path=str(node_install_base_dir),
+                    logger_instance=self.logger,
+                    skip_jdk=True,
+                    skip_octave=True,
+                    skip_node=False # On veut installer Node.js
+                )
+
+                if 'NODE_HOME' in installed_tools and Path(installed_tools['NODE_HOME']).exists():
+                    self.logger.success(f"Node.js auto-installé avec succès dans: {installed_tools['NODE_HOME']}")
+                    os.environ['NODE_HOME'] = installed_tools['NODE_HOME']
                 else:
-                    class_path_string = os.pathsep.join(jars)
-                    self.logger.info(f"Classpath construit avec {len(jars)} JARs trouvés.")
+                    self.logger.error("L'auto-installation de Node.js a échoué.")
+            except ImportError as ie:
+                self.logger.error(f"Échec de l'import de 'manage_portable_tools' pour l'auto-installation de Node.js: {ie}")
+            except Exception as e:
+                self.logger.error(f"Une erreur est survenue durant l'auto-installation de Node.js: {e}", exc_info=True)
 
-                # Le classpath complet est passé comme argument à la JVM
-                jvm_classpath_arg = f"-Djava.class.path={class_path_string}"
-                self.logger.debug(f"Argument Classpath JVM: {jvm_classpath_arg[:200]}...") # Tronqué pour lisibilité
-
-                # Démarrage de la JVM
-                jpype.startJVM(jpype.getDefaultJVMPath(), jvm_classpath_arg, convertStrings=False)
-                self.logger.success("JVM démarrée avec succès et classpath Tweety inclus.")
-        except (ImportError, OSError) as e:
-            self.logger.error(f"Impossible de démarrer la JVM : {e}. Les fonctionnalités de logique formelle seront indisponibles.")
-        # --- Fin du correctif JVM ---
 
         # Vérifications préalables
         if not self.check_conda_available():

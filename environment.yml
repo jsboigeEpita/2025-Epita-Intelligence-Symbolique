@@ -7,9 +7,9 @@ dependencies:
   - python=3.10
   - pip # Ajouté pour suivre la recommandation de Conda
   # Core ML/Data Science
-  - numpy==1.26.4 # Contrainte pour compatibilité avec la résolution de dépendances pip perçue
+  - numpy>=2.0 # Contrainte pour compatibilité avec la résolution de dépendances pip perçue
   - pandas
-  - scipy==1.13.1
+  - scipy==1.15.3
   - scikit-learn
   - nltk
   - spacy>=3.7
@@ -28,7 +28,7 @@ dependencies:
   - matplotlib
   - seaborn
   - statsmodels
-  - networkx==3.2.1
+  - networkx==3.4.2
   # Java Bridge
   - jpype1
   # Logic & Reasoning
@@ -45,7 +45,7 @@ dependencies:
   - pip:
     - Flask-CORS # Spécifique, souvent via pip
     - flask_socketio>=5.3.6 # Pour le support des websockets dans le blueprint JTMS
-    - semantic-kernel>=1.0.0 # Mise à jour CRITIQUE vers la nouvelle API
+    - semantic-kernel>=1.33.0 # Mise à jour CRITIQUE vers la nouvelle API
     - markdown
     - playwright
     - pytest-playwright

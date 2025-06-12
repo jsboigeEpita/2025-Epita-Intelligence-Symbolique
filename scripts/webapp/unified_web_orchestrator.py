@@ -96,15 +96,18 @@ class UnifiedWebOrchestrator:
     """
     
     API_ENDPOINTS_TO_CHECK = [
-        "/flask/api/health",
-        "/flask/api/analyze",
-        "/flask/api/load_text",
-        "/flask/api/get_arguments",
-        "/flask/api/get_graph",
-        "/flask/api/download_results",
-        "/flask/api/status",
-        "/flask/api/config",
-        "/flask/api/feedback"
+        # Fusion des endpoints des deux branches
+        {"path": "/api/health", "method": "GET"},
+        {"path": "/api/endpoints", "method": "GET"},
+        {"path": "/flask/api/health", "method": "GET"},
+        {"path": "/flask/api/analyze", "method": "POST", "data": {"text": "test"}},
+        {"path": "/flask/api/load_text", "method": "POST", "data": {"text": "test"}},
+        {"path": "/flask/api/get_arguments", "method": "GET"},
+        {"path": "/flask/api/get_graph", "method": "GET"},
+        {"path": "/flask/api/download_results", "method": "GET"},
+        {"path": "/flask/api/status", "method": "GET"},
+        {"path": "/flask/api/config", "method": "GET"},
+        {"path": "/flask/api/feedback", "method": "POST", "data": {"feedback": "test"}}
     ]
 
     def __init__(self, config_path: str = "scripts/webapp/config/webapp_config.yml"):
@@ -137,17 +140,12 @@ class UnifiedWebOrchestrator:
     def _setup_signal_handlers(self):
         """Configure les gestionnaires de signaux pour un arrêt propre, compatible Windows."""
         if sys.platform != "win32":
+            # Utilisation de la version la plus a jour de la boucle asyncio
             loop = asyncio.get_running_loop()
             for sig in (signal.SIGINT, signal.SIGTERM):
                 loop.add_signal_handler(sig, lambda s=sig: asyncio.create_task(self.shutdown(signal=s)))
         else:
-            # Sur Windows, les signaux sont plus limités. On peut gérer SIGINT avec signal.signal
-            # mais cela peut ne pas s'intégrer aussi proprement avec la boucle asyncio.
-            # Pour l'instant, on log l'information et on passe.
-            # Une gestion plus complète pourrait utiliser un thread séparé.
             self.logger.info("Gestionnaires de signaux non configurés pour Windows (SIGINT/SIGTERM).")
-            # Pour une gestion basique de Ctrl+C :
-            # signal.signal(signal.SIGINT, lambda s, f: asyncio.create_task(self.shutdown(signal.SIGINT)))
 
     async def shutdown(self, signal=None):
         """Point d'entrée pour l'arrêt."""
@@ -238,7 +236,7 @@ class UnifiedWebOrchestrator:
                 'timeout_seconds': 90
             },
             'playwright': {
-                'enabled': True,
+                'enabled': False,
                 'browser': 'chromium',
                 'headless': True,
                 'timeout_ms': 10000,
@@ -491,7 +489,7 @@ class UnifiedWebOrchestrator:
 
         if used_ports:
             self.add_trace("[CLEAN] PORTS OCCUPES", f"Ports {used_ports} utilisés. Nettoyage forcé.")
-            await self.process_cleaner.cleanup_webapp_processes(ports=used_ports)
+            await self.process_cleaner.cleanup_by_port(ports=used_ports)
         else:
             self.add_trace("[CLEAN] PORTS LIBRES", f"Aucun service détecté sur les ports cibles : {ports_to_check}")
 
@@ -570,7 +568,10 @@ class UnifiedWebOrchestrator:
     
     async def _validate_services(self) -> bool:
         """Valide que les services backend et frontend répondent correctement."""
-        self.add_trace("[CHECK] VALIDATION SERVICES", "Vérification des endpoints critiques")
+        self.add_trace(
+            "[CHECK] VALIDATION SERVICES",
+            f"Vérification des endpoints critiques: {[ep['path'] for ep in self.API_ENDPOINTS_TO_CHECK]}"
+        )
 
         backend_ok = await self._check_all_api_endpoints()
         if not backend_ok:
@@ -594,34 +595,42 @@ class UnifiedWebOrchestrator:
         
         async with aiohttp.ClientSession() as session:
             tasks = []
-            for endpoint in self.API_ENDPOINTS_TO_CHECK:
-                url = f"{self.app_info.backend_url}{endpoint}"
-                tasks.append(session.get(url, timeout=10))
+            for endpoint_info in self.API_ENDPOINTS_TO_CHECK:
+                url = f"{self.app_info.backend_url}{endpoint_info['path']}"
+                method = endpoint_info.get("method", "GET").upper()
+                data = endpoint_info.get("data", None)
+                
+                if method == 'POST':
+                    tasks.append(session.post(url, json=data, timeout=10))
+                else: # GET par défaut
+                    tasks.append(session.get(url, timeout=10))
 
             results = await asyncio.gather(*tasks, return_exceptions=True)
 
         all_ok = True
         for i, res in enumerate(results):
-            endpoint = self.API_ENDPOINTS_TO_CHECK[i]
+            endpoint_info = self.API_ENDPOINTS_TO_CHECK[i]
+            endpoint_path = endpoint_info['path']
+            
             if isinstance(res, Exception):
-                details = f"Échec de la connexion à {endpoint}"
+                details = f"Échec de la connexion à {endpoint_path}"
                 result = str(res)
                 all_ok = False
                 status = "error"
             elif res.status >= 400:
-                details = f"Endpoint {endpoint} a retourné une erreur"
+                details = f"Endpoint {endpoint_path} a retourné une erreur"
                 result = f"Status: {res.status}"
                 all_ok = False
                 status = "error"
             else:
-                details = f"Endpoint {endpoint} est accessible"
+                details = f"Endpoint {endpoint_path} est accessible"
                 result = f"Status: {res.status}"
                 status = "success"
             
-            self.add_trace(f"[API CHECK] {endpoint}", details, result, status=status)
+            self.add_trace(f"[API CHECK] {endpoint_path}", details, result, status=status)
 
         if not all_ok:
-            self.add_trace("[ERROR] BACKEND INCOMPLET", "Un ou plusieurs endpoints API ne sont pas fonctionnels.", status="error")
+            self.add_trace("[ERROR] BACKEND INCOMPLET", "Un ou plusieurs endpoints API de base ne sont pas fonctionnels.", status="error")
 
         return all_ok
     

@@ -14,7 +14,10 @@ logger = logging.getLogger(__name__)
 # SequentialSelectionStrategy a été remplacée par CyclicSelectionStrategy depuis cluedo_extended_orchestrator
 # Agent et TerminationStrategy sont maintenant aussi importés depuis cluedo_extended_orchestrator.
 # AgentGroupChat est conservé depuis semantic_kernel.agents pour l'instant.
-from .cluedo_extended_orchestrator import Agent, TerminationStrategy, CyclicSelectionStrategy
+# Agent et TerminationStrategy sont maintenant dans le module `base` pour éviter les dépendances circulaires.
+# CyclicSelectionStrategy est bien défini dans cluedo_extended_orchestrator.
+from .base import Agent, TerminationStrategy
+from .cluedo_extended_orchestrator import CyclicSelectionStrategy
 
 # Tentative d'import depuis semantic_kernel.filters pour SK 1.32.2+
 # Note: La structure des filtres a changé dans les versions plus récentes de semantic-kernel.
