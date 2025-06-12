@@ -267,3 +267,10 @@ complex_trace_report_*.json
 
 # Node.js portable auto-downloaded
 libs/node-v*
+
+# Traces d'exécution d'analyse
+traces/
+
+# Rapports d'analyse spécifiques
+docs/rhetorical_analysis_conversation.md
+docs/sherlock_watson_investigation.md
