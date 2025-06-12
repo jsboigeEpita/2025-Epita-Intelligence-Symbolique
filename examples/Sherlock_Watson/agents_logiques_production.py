@@ -35,6 +35,7 @@ from pathlib import Path
 from typing import Dict, List, Any, Optional, Union, Tuple
 from dataclasses import dataclass, field
 from enum import Enum
+import argparse
 
 # Configuration UTF-8
 sys.stdout.reconfigure(encoding='utf-8')
@@ -531,75 +532,129 @@ class ProductionAgentOrchestrator:
         }
 
 
-async def run_production_agents_demo() -> bool:
+def load_scenarios(file_path: str) -> List[Dict[str, Any]]:
+    """Charge les scénarios depuis un fichier JSON."""
+    try:
+        with open(file_path, 'r', encoding='utf-8') as f:
+            scenarios = json.load(f)
+        logger.info(f"Scénarios chargés depuis {file_path}")
+        return scenarios
+    except FileNotFoundError:
+        logger.error(f"Fichier de scénario non trouvé: {file_path}")
+        return []
+    except json.JSONDecodeError:
+        logger.error(f"Erreur de décodage JSON dans {file_path}")
+        return []
+
+async def run_production_agents_demo(scenario_file: Optional[str] = None) -> bool:
     """Démonstration complète agents logiques production"""
     print("🧠 AGENTS LOGIQUES PRODUCTION - DÉMONSTRATION AUTHENTIQUE")
     print("="*70)
-    
+
     # Initialisation orchestrateur
     orchestrator = ProductionAgentOrchestrator()
-    
+
     # Création agents logiques
     sherlock = orchestrator.create_agent("sherlock", "deductive_reasoning")
-    watson = orchestrator.create_agent("watson", "inductive_reasoning") 
+    watson = orchestrator.create_agent("watson", "inductive_reasoning")
     moriarty = orchestrator.create_agent("moriarty", "adversarial_reasoning")
-    
+
     print(f"\n✅ {len(orchestrator.agents)} agents logiques créés")
-    
-    # Test traitement données custom authentique
-    custom_test_data = """
-    Intelligence Symbolique EPITA - Analyse production
-    Si tous les étudiants travaillent, alors ils réussissent.
-    Certains étudiants ne réussissent pas.
-    Donc, certains étudiants ne travaillent pas.
-    
-    Attention: Tu dis ça parce que tu es professeur ! (sophistique ad hominem)
-    Il faut absolument réussir ce projet.
-    """
-    
-    print(f"\n🔍 TEST TRAITEMENT DONNÉES CUSTOM:")
-    analysis = sherlock.process_argument(custom_test_data)
-    
-    print(f"   • Agent: {analysis['agent_id']}")
-    print(f"   • Qualité argument: {analysis['argument_quality']}")
-    print(f"   • Sophistiques détectés: {analysis['sophistries_flagged']}")
-    print(f"   • Cohérence logique: {analysis['logical_validity']}")
-    print(f"   • Mock utilisé: ❌ {analysis['mock_used']}")
-    
-    # Test communication inter-agents
-    print(f"\n💬 TEST COMMUNICATION INTER-AGENTS:")
-    dialogue = sherlock.communicate_with_agent(
-        watson,
-        "Watson, analysez cette déduction logique: Si P implique Q et non-Q, alors non-P"
-    )
-    
-    print(f"   • {dialogue['sender']} → {dialogue['receiver']}")
-    print(f"   • Analyse message: Hash {dialogue['message_analysis'].content_hash[:8]}")
-    print(f"   • Réponse qualité: {dialogue['response']['argument_quality']}")
-    
-    # Test orchestration débat logique
-    print(f"\n🎯 TEST ORCHESTRATION DÉBAT LOGIQUE:")
-    debate = orchestrator.orchestrate_logical_debate(
-        "L'intelligence artificielle peut-elle vraiment raisonner ?",
-        ["sherlock", "watson", "moriarty"]
-    )
-    
-    print(f"   • Débat ID: {debate['debate_id']}")
-    print(f"   • Participants: {len(debate['participating_agents'])}")
-    print(f"   • Arguments initiaux: {debate['summary']['total_arguments']}")
-    print(f"   • Échanges: {debate['summary']['total_exchanges']}")
-    print(f"   • Qualité moyenne: {debate['summary']['average_argument_quality']}")
-    
+
+    if scenario_file:
+        scenarios = load_scenarios(scenario_file)
+        if not scenarios:
+            return False
+        
+        for i, scenario in enumerate(scenarios):
+            print(f"\n\n--- SCENARIO {i+1}: {scenario.get('name', 'Sans nom')} ---")
+            
+            if "custom_data_test" in scenario:
+                print(f"\n🔍 TEST TRAITEMENT DONNÉES CUSTOM:")
+                analysis = orchestrator.agents[scenario["custom_data_test"]["agent"]].process_argument(scenario["custom_data_test"]["data"])
+                print(f"   • Agent: {analysis['agent_id']}")
+                print(f"   • Qualité argument: {analysis['argument_quality']}")
+                print(f"   • Sophistiques détectés: {analysis['sophistries_flagged']}")
+                print(f"   • Cohérence logique: {analysis['logical_validity']}")
+                print(f"   • Mock utilisé: ❌ {analysis['mock_used']}")
+
+            if "dialogue_test" in scenario:
+                 print(f"\n💬 TEST COMMUNICATION INTER-AGENTS:")
+                 dialogue = orchestrator.agents[scenario["dialogue_test"]["sender"]].communicate_with_agent(
+                     orchestrator.agents[scenario["dialogue_test"]["receiver"]],
+                     scenario["dialogue_test"]["message"]
+                 )
+                 print(f"   • {dialogue['sender']} → {dialogue['receiver']}")
+                 print(f"   • Analyse message: Hash {dialogue['message_analysis'].content_hash[:8]}")
+                 print(f"   • Réponse qualité: {dialogue['response']['argument_quality']}")
+            
+            if "debate_test" in scenario:
+                print(f"\n🎯 TEST ORCHESTRATION DÉBAT LOGIQUE:")
+                debate = orchestrator.orchestrate_logical_debate(
+                    scenario["debate_test"]["topic"],
+                    scenario["debate_test"]["agents"]
+                )
+                print(f"   • Débat ID: {debate['debate_id']}")
+                print(f"   • Participants: {len(debate['participating_agents'])}")
+                print(f"   • Arguments initiaux: {debate['summary']['total_arguments']}")
+                print(f"   • Échanges: {debate['summary']['total_exchanges']}")
+                print(f"   • Qualité moyenne: {debate['summary']['average_argument_quality']}")
+
+    else:
+        # Données de démo par défaut si aucun fichier de scénario n'est fourni
+        custom_test_data = """
+        Intelligence Symbolique EPITA - Analyse production
+        Si tous les étudiants travaillent, alors ils réussissent.
+        Certains étudiants ne réussissent pas.
+        Donc, certains étudiants ne travaillent pas.
+        
+        Attention: Tu dis ça parce que tu es professeur ! (sophistique ad hominem)
+        Il faut absolument réussir ce projet.
+        """
+        
+        print(f"\n🔍 TEST TRAITEMENT DONNÉES CUSTOM (DÉFAUT):")
+        analysis = sherlock.process_argument(custom_test_data)
+        
+        print(f"   • Agent: {analysis['agent_id']}")
+        print(f"   • Qualité argument: {analysis['argument_quality']}")
+        print(f"   • Sophistiques détectés: {analysis['sophistries_flagged']}")
+        print(f"   • Cohérence logique: {analysis['logical_validity']}")
+        print(f"   • Mock utilisé: ❌ {analysis['mock_used']}")
+        
+        # Test communication inter-agents
+        print(f"\n💬 TEST COMMUNICATION INTER-AGENTS (DÉFAUT):")
+        dialogue = sherlock.communicate_with_agent(
+            watson,
+            "Watson, analysez cette déduction logique: Si P implique Q et non-Q, alors non-P"
+        )
+        
+        print(f"   • {dialogue['sender']} → {dialogue['receiver']}")
+        print(f"   • Analyse message: Hash {dialogue['message_analysis'].content_hash[:8]}")
+        print(f"   • Réponse qualité: {dialogue['response']['argument_quality']}")
+        
+        # Test orchestration débat logique
+        print(f"\n🎯 TEST ORCHESTRATION DÉBAT LOGIQUE (DÉFAUT):")
+        debate = orchestrator.orchestrate_logical_debate(
+            "L'intelligence artificielle peut-elle vraiment raisonner ?",
+            ["sherlock", "watson", "moriarty"]
+        )
+        
+        print(f"   • Débat ID: {debate['debate_id']}")
+        print(f"   • Participants: {len(debate['participating_agents'])}")
+        print(f"   • Arguments initiaux: {debate['summary']['total_arguments']}")
+        print(f"   • Échanges: {debate['summary']['total_exchanges']}")
+        print(f"   • Qualité moyenne: {debate['summary']['average_argument_quality']}")
+
     # Statistiques finales
     stats = orchestrator.get_orchestration_statistics()
-    
+
     print(f"\n📊 STATISTIQUES PRODUCTION:")
     print(f"   • Agents créés: {stats['agents_count']}")
     print(f"   • Orchestrations: {stats['orchestrations_completed']}")
     print(f"   • Interactions totales: {stats['global_stats']['total_interactions']}")
     print(f"   • Production ready: ✅ {stats['production_ready']}")
     print(f"   • Mock utilisé: ❌ {stats['mock_used']}")
-    
+
     # Validation finale
     print(f"\n✅ VALIDATION PHASE 2 AGENTS LOGIQUES:")
     print(f"   • ZÉRO mock utilisé")
@@ -608,14 +663,22 @@ async def run_production_agents_demo() -> bool:
     print(f"   • Détection sophistiques réelle")
     print(f"   • Orchestration débats opérationnelle")
     print(f"   • Prêt pour production")
-    
+
     return True
 
 
 async def main():
     """Point d'entrée principal"""
+    parser = argparse.ArgumentParser(description="Démonstration d'agents logiques de production.")
+    parser.add_argument(
+        "--scenario",
+        type=str,
+        help="Chemin vers le fichier de scénario JSON."
+    )
+    args = parser.parse_args()
+
     try:
-        success = await run_production_agents_demo()
+        success = await run_production_agents_demo(scenario_file=args.scenario)
         
         if success:
             print("\n🎉 SUCCESS: Agents logiques production opérationnels !")
