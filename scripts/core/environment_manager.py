@@ -473,6 +473,35 @@ class EnvironmentManager:
                 if str(java_bin_path) not in os.environ['PATH']:
                     os.environ['PATH'] = f"{java_bin_path}{os.pathsep}{os.environ['PATH']}"
                     self.logger.info(f"Ajouté {java_bin_path} au PATH pour la JVM.")
+        
+        # --- BLOC D'AUTO-INSTALLATION NODE.JS ---
+        if 'NODE_HOME' not in os.environ or not Path(os.environ['NODE_HOME']).is_dir():
+            self.logger.warning("NODE_HOME non défini ou invalide. Tentative d'auto-installation...")
+            try:
+                from scripts.setup_core.manage_portable_tools import setup_tools, NODE_CONFIG
+
+                node_install_base_dir = self.project_root / 'libs'
+                node_install_base_dir.mkdir(exist_ok=True)
+                
+                self.logger.info(f"Node.js sera installé dans : {node_install_base_dir}")
+
+                installed_tools = setup_tools(
+                    tools_dir_base_path=str(node_install_base_dir),
+                    logger_instance=self.logger,
+                    skip_jdk=True,
+                    skip_octave=True,
+                    skip_node=False # On veut installer Node.js
+                )
+
+                if 'NODE_HOME' in installed_tools and Path(installed_tools['NODE_HOME']).exists():
+                    self.logger.success(f"Node.js auto-installé avec succès dans: {installed_tools['NODE_HOME']}")
+                    os.environ['NODE_HOME'] = installed_tools['NODE_HOME']
+                else:
+                    self.logger.error("L'auto-installation de Node.js a échoué.")
+            except ImportError as ie:
+                self.logger.error(f"Échec de l'import de 'manage_portable_tools' pour l'auto-installation de Node.js: {ie}")
+            except Exception as e:
+                self.logger.error(f"Une erreur est survenue durant l'auto-installation de Node.js: {e}", exc_info=True)
 
 
         # Vérifications préalables
