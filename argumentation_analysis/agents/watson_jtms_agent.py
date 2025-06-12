@@ -16,7 +16,7 @@ from semantic_kernel.functions import kernel_function
 from semantic_kernel.functions.kernel_arguments import KernelArguments
 
 from .jtms_agent_base import JTMSAgentBase, ExtendedBelief
-from .core.logic.watson_logic_assistant import WatsonLogicAssistant
+from .core.logic.watson_logic_assistant import WatsonLogicAssistant, TweetyBridge
 
 @dataclass
 class ValidationResult:
@@ -310,11 +310,12 @@ class WatsonJTMSAgent(JTMSAgentBase):
     
     def __init__(self, kernel: Kernel, agent_name: str = "Watson_JTMS",
                  constants: Optional[List[str]] = None, system_prompt: Optional[str] = None,
-                 **kwargs):
+                 use_tweety: bool = True, **kwargs):
         super().__init__(kernel, agent_name, strict_mode=True)  # Mode strict pour validation
         
         # Intégration avec l'agent Watson existant
-        self._base_watson = WatsonLogicAssistant(kernel, agent_name, constants, system_prompt)
+        tweety_bridge = TweetyBridge() if use_tweety else None
+        self._base_watson = WatsonLogicAssistant(kernel, agent_name=agent_name, constants=constants, system_prompt=system_prompt, tweety_bridge=tweety_bridge)
         
         # Gestionnaires spécialisés JTMS
         self._consistency_checker = ConsistencyChecker(self._jtms_session)

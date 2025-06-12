@@ -1,6 +1,7 @@
 # argumentation_analysis/orchestration/logique_complexe_orchestrator.py
 
 import logging
+import asyncio
 from typing import Optional, List, Dict, Any
 from semantic_kernel import Kernel
 # PURGE PHASE 3A: Utilisation des définitions minimales de cluedo_extended_orchestrator

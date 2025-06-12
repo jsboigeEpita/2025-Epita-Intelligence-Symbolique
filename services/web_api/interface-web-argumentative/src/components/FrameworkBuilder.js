@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { buildFramework } from '../services/api';
+import { analyzeDungFramework as buildFramework } from '../services/api';
 import './FrameworkBuilder.css';
 
 /**
