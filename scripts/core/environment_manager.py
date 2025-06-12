@@ -508,11 +508,12 @@ class EnvironmentManager:
                     self.logger.info(f"Ajouté {java_bin_path} au PATH pour la JVM.")
         
         # --- BLOC D'AUTO-INSTALLATION NODE.JS ---
-        if 'NODE_HOME' not in os.environ or not Path(os.environ['NODE_HOME']).is_dir():
+        if 'NODE_HOME' not in os.environ or not Path(os.environ.get('NODE_HOME', '')).is_dir():
             self.logger.warning("NODE_HOME non défini ou invalide. Tentative d'auto-installation...")
             try:
-                from scripts.setup_core.manage_portable_tools import setup_tools, NODE_CONFIG
+                from scripts.setup_core.manage_portable_tools import setup_tools
 
+                # Définir l'emplacement d'installation par défaut pour Node.js
                 node_install_base_dir = self.project_root / 'libs'
                 node_install_base_dir.mkdir(exist_ok=True)
                 
