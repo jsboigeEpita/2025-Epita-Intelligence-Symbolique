@@ -23,7 +23,7 @@ from semantic_kernel.kernel import Kernel
 AGENTS_AVAILABLE = False  # Module agents non disponible dans SK 0.9.6b1
 from semantic_kernel.contents import ChatMessageContent
 from semantic_kernel.functions.kernel_arguments import KernelArguments
-from semantic_kernel.events import FunctionInvokedEventArgs, FunctionInvokingEventArgs
+from semantic_kernel.functions.kernel_events_args import FunctionInvokedEventArgs, FunctionInvokingEventArgs
 FILTERS_AVAILABLE = True  # On suppose que les handlers sont toujours dispo
 # from semantic_kernel.processes.runtime.in_process_runtime import InProcessRuntime  # Module non disponible
 from pydantic import Field
