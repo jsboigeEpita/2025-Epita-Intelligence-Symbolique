@@ -96,7 +96,7 @@ def handle_error(error):
     ).dict()), 500
 
 
-@app.route('/api/health', methods=['GET'])
+@flask_app.route('/api/health', methods=['GET'])
 def health_check():
     """Vérification de l'état de l'API."""
     try:
@@ -121,7 +121,7 @@ def health_check():
         ).dict()), 500
 
 
-@app.route('/api/analyze', methods=['POST'])
+@flask_app.route('/api/analyze', methods=['POST'])
 async def analyze_text():
     """
     Analyse complète d'un texte argumentatif.
@@ -169,7 +169,7 @@ async def analyze_text():
         ).dict()), 500
 
 
-@app.route('/api/validate', methods=['POST'])
+@flask_app.route('/api/validate', methods=['POST'])
 def validate_argument():
     """
     Validation logique d'un argument.
@@ -214,7 +214,7 @@ def validate_argument():
         ).dict()), 500
 
 
-@app.route('/api/fallacies', methods=['POST'])
+@flask_app.route('/api/fallacies', methods=['POST'])
 def detect_fallacies():
     """
     Détection de sophismes dans un texte.
@@ -261,7 +261,7 @@ def detect_fallacies():
         ).dict()), 500
 
 
-@app.route('/api/framework', methods=['POST'])
+@flask_app.route('/api/framework', methods=['POST'])
 def build_framework():
     """
     Construction d'un framework de Dung.
@@ -313,7 +313,7 @@ def build_framework():
             status_code=500
         ).dict()), 500
     
-@app.route('/api/logic_graph', methods=['POST'])
+@flask_app.route('/api/logic_graph', methods=['POST'])
 async def logic_graph():
     """
     Analyse un texte et retourne une représentation de graphe logique.
@@ -351,7 +351,7 @@ async def logic_graph():
             status_code=500
         ).dict()), 500
     
-@app.route('/api/endpoints', methods=['GET'])
+@flask_app.route('/api/endpoints', methods=['GET'])
 def list_endpoints():
     """Liste tous les endpoints disponibles avec leur documentation."""
     endpoints = {

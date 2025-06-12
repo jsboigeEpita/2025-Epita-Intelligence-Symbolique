@@ -23,8 +23,8 @@ from semantic_kernel.kernel import Kernel
 AGENTS_AVAILABLE = False  # Module agents non disponible dans SK 0.9.6b1
 from semantic_kernel.contents import ChatMessageContent
 from semantic_kernel.functions.kernel_arguments import KernelArguments
-from semantic_kernel.events.kernel_events_args import FunctionInvokingEventArgs
-from semantic_kernel.events.kernel_events_args import FunctionInvokedEventArgs
+from semantic_kernel.events.function_invoking_event_args import FunctionInvokingEventArgs
+from semantic_kernel.events.function_invoked_event_args import FunctionInvokedEventArgs
 
 # Note: Les filtres sont gérés différemment dans les versions récentes,
 # nous utiliserons les handlers directement.
