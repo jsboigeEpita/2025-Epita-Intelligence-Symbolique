@@ -45,6 +45,18 @@ project_root = Path(__file__).resolve().parent.parent.parent
 if str(project_root) not in sys.path:
     sys.path.insert(0, str(project_root))
 
+# Import et activation de l'environnement
+# Ceci doit être fait avant toute autre importation ou configuration qui dépend des variables d'environnement
+try:
+    from scripts.core.environment_manager import auto_activate_env
+    # On active en mode non-silencieux pour voir les logs d'activation.
+    if not auto_activate_env(silent=False):
+        print("CRITICAL: Failed to activate project environment. Aborting.", file=sys.stderr)
+        sys.exit(1)
+except ImportError as e:
+    print(f"CRITICAL: Could not import or run environment manager. Ensure you are running from the project root.", file=sys.stderr)
+    print(f"Error: {e}", file=sys.stderr)
+    sys.exit(1)
 # Configuration avancée du logging (déplacée ici AVANT l'activation de l'env)
 logging.basicConfig(
     level=logging.INFO,

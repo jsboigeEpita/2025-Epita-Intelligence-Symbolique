@@ -122,12 +122,17 @@ class FrontendManager:
             self.logger.info(f"Redirection stdout du frontend vers: {log_dir / 'frontend_stdout.log'}")
             self.logger.info(f"Redirection stderr du frontend vers: {log_dir / 'frontend_stderr.log'}")
 
+            # Sur Windows, il est plus robuste d'utiliser shell=True avec la commande sous forme de chaîne
+            # pour que le PATH de l'environnement soit correctement interprété.
+            start_cmd_str = ' '.join(self.start_command.split())
             self.process = subprocess.Popen(
-                cmd,
+                start_cmd_str,
                 stdout=self.frontend_stdout_log_file,
                 stderr=self.frontend_stderr_log_file,
                 cwd=self.frontend_path,
-                env=frontend_env
+                env=env,
+                shell=True,
+                creationflags=subprocess.CREATE_NEW_PROCESS_GROUP if sys.platform == "win32" else 0
             )
             
             # Attente démarrage
@@ -189,6 +194,7 @@ class FrontendManager:
                         shell=True
                     )
                 else:
+                    # Sur les autres systèmes, la liste de commandes avec env fonctionne bien.
                     process = subprocess.Popen(
                         cmd,
                         stdout=subprocess.PIPE,
