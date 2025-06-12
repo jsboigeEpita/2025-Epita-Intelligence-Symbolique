@@ -171,6 +171,24 @@ class PermissionManager:
         self._permission_rules[rule.agent_name] = rule
         self._logger.info(f"Règle de permission ajoutée pour l'agent: {rule.agent_name}")
     
+    def add_permission(self, agent_name: str, query_type: QueryType):
+        """Ajoute dynamiquement une permission à une règle existante."""
+        if agent_name not in self._permission_rules:
+            # Si l'agent n'a pas de règle, on en crée une nouvelle.
+            # C'est un comportement de convenance, mais peut nécessiter une logique plus fine
+            # dans un cas réel (par ex. lever une erreur).
+            self._permission_rules[agent_name] = PermissionRule(
+                agent_name=agent_name,
+                allowed_query_types=[query_type]
+            )
+            self._logger.info(f"Nouvelle règle de permission créée pour l'agent {agent_name} avec la permission {query_type.value}.")
+        else:
+            # Ajoute la permission si elle n'existe pas déjà pour éviter les doublons
+            rule = self._permission_rules[agent_name]
+            if query_type not in rule.allowed_query_types:
+                rule.allowed_query_types.append(query_type)
+                self._logger.info(f"Permission {query_type.value} ajoutée à la règle existante pour l'agent {agent_name}.")
+
     def is_authorized(self, agent_name: str, query_type: QueryType) -> bool:
         """Vérifie si un agent est autorisé pour un type de requête."""
         if agent_name not in self._permission_rules:

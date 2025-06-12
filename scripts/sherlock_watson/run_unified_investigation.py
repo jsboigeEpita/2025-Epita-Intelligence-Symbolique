@@ -1,3 +1,6 @@
+# ===== AUTO-ACTIVATION ENVIRONNEMENT =====
+import scripts.core.auto_env
+# =========================================
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
@@ -46,20 +49,27 @@ if str(_PROJECT_ROOT) not in sys.path:
 import scripts.core.auto_env
 
 # --- Configuration du logging ---
-def setup_logging(session_id: str, workflow: str):
-    """Configure un logging détaillé pour la session."""
+def setup_logging(session_id: str, workflow: str, level=logging.DEBUG):
+    """Configure le logging racine pour la session."""
     log_dir = _PROJECT_ROOT / "logs" / "unified_investigation"
     log_dir.mkdir(parents=True, exist_ok=True)
     log_file = log_dir / f"{session_id}_{workflow}.log"
 
-    logging.basicConfig(
-        level=logging.INFO,
-        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-        handlers=[
-            logging.StreamHandler(sys.stdout),
-            logging.FileHandler(log_file, encoding='utf-8')
-        ]
-    )
+    # S'assure de ne configurer qu'une fois
+    if not logging.getLogger().handlers:
+        logging.basicConfig(
+            level=level,
+            format='%(asctime)s [%(levelname)s] [%(name)s] %(message)s',
+            handlers=[
+                logging.StreamHandler(sys.stdout),
+                logging.FileHandler(log_file, encoding='utf-8')
+            ]
+        )
+    logging.getLogger().setLevel(level)
+    # Appliquer le niveau à tous les handlers existants
+    for handler in logging.getLogger().handlers:
+        handler.setLevel(level)
+
     return logging.getLogger("UnifiedInvestigation")
 
 logger = logging.getLogger(__name__) # Logger temporaire jusqu'à la configuration
@@ -91,8 +101,10 @@ class UnifiedInvestigationEngine:
         self.results_dir = _PROJECT_ROOT / "results" / "unified_investigation" / self.session_id
         self.results_dir.mkdir(parents=True, exist_ok=True)
         
+        # La configuration du logging est maintenant globale
+        setup_logging(self.session_id, self.args.workflow, level=logging.DEBUG)
         global logger
-        logger = setup_logging(self.session_id, self.args.workflow)
+        logger = logging.getLogger("UnifiedInvestigation")
         
         logger.info(f"🚀 Initialisation du moteur d'investigation unifié (Session: {self.session_id})")
         logger.info(f"   - Workflow: {self.args.workflow}")
@@ -133,7 +145,7 @@ class UnifiedInvestigationEngine:
                 return False
             
             main_service = OpenAIChatCompletion(
-                service_id="main_chat",
+                service_id="chat_completion",
                 api_key=api_key,
                 ai_model_id=model_id,
             )
@@ -168,8 +180,16 @@ class UnifiedInvestigationEngine:
         
         try:
             result = await workflow_func()
-            await self.save_results(result)
+            result_file_path = await self.save_results(result)
             logger.info(f"✅ Workflow {self.args.workflow.upper()} terminé avec succès.")
+            # Affiche le contenu du JSON final dans les logs
+            if result_file_path:
+                try:
+                    with open(result_file_path, 'r', encoding='utf-8') as f:
+                        final_content = json.load(f)
+                    logger.info(f"CONTENU FINAL:\n{json.dumps(final_content, indent=2, ensure_ascii=False)}")
+                except Exception as json_error:
+                    logger.error(f"Erreur lors de la lecture du JSON final: {json_error}")
         except Exception as e:
             logger.error(f"❌ Erreur critique durant le workflow {self.args.workflow}: {e}", exc_info=True)
             if self.args.mode == 'robust':
@@ -238,8 +258,8 @@ class UnifiedInvestigationEngine:
             "full_results": session_results
         }
 
-    async def save_results(self, result_data: Dict[str, Any]):
-        """Sauvegarde les résultats de l'investigation dans un fichier JSON."""
+    async def save_results(self, result_data: Dict[str, Any]) -> Optional[Path]:
+        """Sauvegarde les résultats et retourne le chemin du fichier."""
         result_file = self.results_dir / f"result_{self.args.workflow}_{self.session_id}.json"
         logger.info(f"💾 Sauvegarde des résultats dans {result_file}")
         
@@ -258,8 +278,10 @@ class UnifiedInvestigationEngine:
             }
             with open(result_file, 'w', encoding='utf-8') as f:
                 json.dump(full_data, f, indent=2, ensure_ascii=False, default=str)
+            return result_file
         except Exception as e:
             logger.error(f"❌ Impossible de sauvegarder les résultats: {e}")
+            return None
 
 def parse_arguments():
     """Définit et parse les arguments de la ligne de commande."""
