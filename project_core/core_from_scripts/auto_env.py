@@ -43,9 +43,21 @@ def ensure_env(env_name: str = "projet-is", silent: bool = True) -> bool:
     Returns:
         True si l'environnement est (ou a été) activé avec succès, False sinon.
     """
+    # DEBUG: Imprimer l'état initial
+    print(f"[auto_env DEBUG] Début ensure_env. Python: {sys.executable}, CONDA_DEFAULT_ENV: {os.getenv('CONDA_DEFAULT_ENV')}, silent: {silent}", file=sys.stderr)
+
+    # Vérification immédiate de l'exécutable Python
+    if env_name not in sys.executable:
+        error_message_immediate = (
+            f"ERREUR CRITIQUE IMMÉDIATE : Le script est lancé avec un interpréteur Python incorrect.\n"
+            f"  Exécutable Python (sys.executable): '{sys.executable}' (Doit contenir: '{env_name}')"
+        )
+        print(f"[auto_env] {error_message_immediate}", file=sys.stderr)
+        raise RuntimeError(error_message_immediate)
+
     # Logique de court-circuit si le script d'activation principal est déjà en cours d'exécution
     if os.getenv('IS_ACTIVATION_SCRIPT_RUNNING') == 'true':
-        if not silent:
+        if not silent: # Cette condition respecte le 'silent' original pour ce message spécifique.
             print("[auto_env] Court-circuit: Exécution via le script d'activation principal déjà en cours.")
         return True # On considère que l'environnement est déjà correctement configuré
 
@@ -72,13 +84,45 @@ def ensure_env(env_name: str = "projet-is", silent: bool = True) -> bool:
         # manager = EnvironmentManager(logger=logger_instance) # Plus besoin de manager pour cet appel spécifique
         
         # L'appel principal qui encapsule toute la logique d'activation
-        activated = env_man_auto_activate_env(env_name=env_name, silent=silent)
+        activated = env_man_auto_activate_env(env_name=env_name, silent=silent) # Le 'silent' de ensure_env est propagé
         
-        if not silent:
+        # DEBUG: Imprimer le résultat de l'activation
+        print(f"[auto_env DEBUG] env_man_auto_activate_env a retourné: {activated}", file=sys.stderr)
+        
+        if not silent: # Ce bloc ne sera pas exécuté si silent=True au niveau de ensure_env
             if activated:
                 print(f"[auto_env] Activation de '{env_name}' via EnvironmentManager: SUCCÈS")
             else:
                 print(f"[auto_env] Activation de '{env_name}' via EnvironmentManager: ÉCHEC")
+        
+        # --- DEBUT DE LA VERIFICATION CRITIQUE DE L'ENVIRONNEMENT ---
+        current_conda_env = os.environ.get('CONDA_DEFAULT_ENV')
+        current_python_executable = sys.executable
+
+        # DEBUG: Imprimer l'état avant la vérification critique
+        print(f"[auto_env DEBUG] Avant vérif critique. Python: {current_python_executable}, CONDA_DEFAULT_ENV: {current_conda_env}", file=sys.stderr)
+
+        is_conda_env_correct = (current_conda_env == env_name)
+        # Vérification plus robuste pour le chemin de l'exécutable
+        # Il peut être dans 'envs/env_name/bin/python' ou 'env_name/bin/python' ou similaire
+        is_python_executable_correct = env_name in current_python_executable
+
+        if not (is_conda_env_correct and is_python_executable_correct):
+            error_message = (
+                f"ERREUR CRITIQUE : Le script ne s'exécute pas dans l'environnement Conda '{env_name}' attendu.\n"
+                f"  Environnement Conda actif (CONDA_DEFAULT_ENV): '{current_conda_env}' (Attendu: '{env_name}')\n"
+                f"  Exécutable Python (sys.executable): '{current_python_executable}' (Doit contenir: '{env_name}')"
+            )
+            # Logger l'erreur même si silent est True pour cette partie critique
+            logger_instance.error(error_message) # Utilise l'instance de logger existante
+            # Afficher également sur la console pour une visibilité maximale en cas d'échec critique
+            print(f"[auto_env] {error_message}", file=sys.stderr)
+            raise RuntimeError(error_message)
+        elif not silent: # Ce bloc ne sera pas exécuté si silent=True au niveau de ensure_env
+            logger_instance.info(
+                f"[auto_env] Vérification de l'environnement réussie: CONDA_DEFAULT_ENV='{current_conda_env}', sys.executable='{current_python_executable}'"
+            )
+        # --- FIN DE LA VERIFICATION CRITIQUE DE L'ENVIRONNEMENT ---
                 
         return activated
         
@@ -113,7 +157,7 @@ def get_simple_import() -> str:
 # Auto-exécution à l'import pour usage ultra-simple
 if __name__ != "__main__":
     # Le module est importé, auto-activation
-    ensure_env()
+    ensure_env(silent=False) # FORCER silent=False pour voir les logs de débogage
 
 
 if __name__ == "__main__":
