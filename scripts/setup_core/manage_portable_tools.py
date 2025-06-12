@@ -37,8 +37,14 @@ OCTAVE_CONFIG = {
     "dir_name_pattern": r"octave-8.4.0-w64.*", # Regex pour correspondre au répertoire extrait
     "home_env_var": "OCTAVE_HOME"
 }
+NODE_CONFIG = {
+   "name": "Node.js",
+   "url_windows": "https://nodejs.org/dist/v20.14.0/node-v20.14.0-win-x64.zip",
+   "dir_name_pattern": r"node-v20\.14\.0-win-x64",
+   "home_env_var": "NODE_HOME"
+}
 
-TOOLS_TO_MANAGE = [JDK_CONFIG, OCTAVE_CONFIG] # Peut être utilisé si on boucle sur les outils plus tard
+TOOLS_TO_MANAGE = [JDK_CONFIG, OCTAVE_CONFIG, NODE_CONFIG]
 
 def _download_file(url, dest_folder, file_name, logger_instance=None, log_interval_seconds=5, force_download=False):
     """
@@ -336,10 +342,10 @@ def setup_single_tool(tool_config, tools_base_dir, temp_download_dir, logger_ins
     return expected_tool_path
 
 
-def setup_tools(tools_dir_base_path, logger_instance=None, force_reinstall=False, interactive=False, skip_jdk=False, skip_octave=False):
-    """Configure les outils portables (JDK, Octave)."""
+def setup_tools(tools_dir_base_path, logger_instance=None, force_reinstall=False, interactive=False, skip_jdk=False, skip_octave=False, skip_node=False):
+    """Configure les outils portables (JDK, Octave, Node.js)."""
     logger = _get_logger_tools(logger_instance)
-    logger.debug(f"setup_tools called with: tools_dir_base_path={tools_dir_base_path}, force_reinstall={force_reinstall}, interactive={interactive}, skip_jdk={skip_jdk}, skip_octave={skip_octave}")
+    logger.debug(f"setup_tools called with: tools_dir_base_path={tools_dir_base_path}, force_reinstall={force_reinstall}, interactive={interactive}, skip_jdk={skip_jdk}, skip_octave={skip_octave}, skip_node={skip_node}")
     os.makedirs(tools_dir_base_path, exist_ok=True)
     temp_download_dir = os.path.join(tools_dir_base_path, "_temp_downloads")
 
@@ -358,6 +364,13 @@ def setup_tools(tools_dir_base_path, logger_instance=None, force_reinstall=False
             installed_tool_paths[OCTAVE_CONFIG["home_env_var"]] = octave_home
     else:
         logger.info("Skipping Octave setup as per request.")
+
+    if not skip_node:
+        node_home = setup_single_tool(NODE_CONFIG, tools_dir_base_path, temp_download_dir, logger_instance=logger, force_reinstall=force_reinstall, interactive=interactive)
+        if node_home:
+            installed_tool_paths[NODE_CONFIG["home_env_var"]] = node_home
+    else:
+        logger.info("Skipping Node.js setup as per request.")
         
     if os.path.isdir(temp_download_dir):
         logger.info(f"Temporary download directory {temp_download_dir} can be cleaned up manually for now.")
