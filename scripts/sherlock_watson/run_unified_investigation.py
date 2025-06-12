@@ -106,7 +106,7 @@ class UnifiedInvestigationEngine:
         global logger
         logger = logging.getLogger("UnifiedInvestigation")
         
-        logger.info(f"🚀 Initialisation du moteur d'investigation unifié (Session: {self.session_id})")
+        logger.info(f"Initialisation du moteur d'investigation unifié (Session: {self.session_id})")
         logger.info(f"   - Workflow: {self.args.workflow}")
         logger.info(f"   - Mode: {self.args.mode}")
         logger.info(f"   - Java (JPype): {'Activé' if not self.args.no_java else 'Désactivé'}")
@@ -114,7 +114,7 @@ class UnifiedInvestigationEngine:
 
     async def initialize_system(self):
         """Initialise le système, y compris Semantic Kernel et les ponts optionnels."""
-        logger.info("🔧 Initialisation du système...")
+        logger.info("Initialisation du système...")
 
         # --- Gestion des dépendances optionnelles ---
         if self.args.no_java:
@@ -150,7 +150,7 @@ class UnifiedInvestigationEngine:
                 ai_model_id=model_id,
             )
             self.kernel.add_service(main_service)
-            logger.info(f"✅ Semantic Kernel initialisé avec le modèle {model_id}.")
+            logger.info(f"Semantic Kernel initialisé avec le modèle {model_id}.")
             return True
 
         except ImportError:
@@ -176,12 +176,12 @@ class UnifiedInvestigationEngine:
             logger.error(f"❌ Workflow '{self.args.workflow}' non reconnu.")
             return
 
-        logger.info(f"🎬 Lancement du workflow: {self.args.workflow.upper()}")
+        logger.info(f"Lancement du workflow: {self.args.workflow.upper()}")
         
         try:
             result = await workflow_func()
             result_file_path = await self.save_results(result)
-            logger.info(f"✅ Workflow {self.args.workflow.upper()} terminé avec succès.")
+            logger.info(f"Workflow {self.args.workflow.upper()} terminé avec succès.")
             # Affiche le contenu du JSON final dans les logs
             if result_file_path:
                 try:

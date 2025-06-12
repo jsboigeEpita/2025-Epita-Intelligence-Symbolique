@@ -256,60 +256,62 @@ class ProcessCleaner:
         else:
             self.logger.info("Aucun fichier temporaire à nettoyer")
     
-    def cleanup_by_pid(self, pids: List[int]):
-        """Nettoie des processus spécifiques par PID"""
+    async def cleanup_by_pid(self, pids: List[int]):
+        """Nettoie des processus spécifiques par PID de manière asynchrone."""
         self.logger.info(f"Nettoyage processus spécifiques: {pids}")
-        
+
         for pid in pids:
             try:
                 proc = psutil.Process(pid)
-                
-                # Tentative arrêt propre
                 proc.terminate()
-                
-                # Attente
+                self.logger.info(f"TERM signal sent to PID {pid}")
+
                 try:
-                    proc.wait(timeout=5)
+                    # Utilisation de to_thread pour l'attente bloquante
+                    await asyncio.to_thread(proc.wait, timeout=5)
                     self.logger.info(f"Processus PID {pid} arrêté proprement")
                 except psutil.TimeoutExpired:
-                    # Force kill
+                    self.logger.warning(f"Timeout expired for PID {pid}, forcing kill.")
                     proc.kill()
-                    proc.wait()
+                    await asyncio.to_thread(proc.wait, timeout=5)
                     self.logger.warning(f"Processus PID {pid} tué de force")
-                    
+
             except psutil.NoSuchProcess:
                 self.logger.info(f"Processus PID {pid} déjà terminé")
-            except psutil.AccessDenied:
-                self.logger.error(f"Accès refusé pour PID {pid}")
+            except psutil.AccessDenied as e:
+                self.logger.error(f"Accès refusé pour PID {pid}: {e}")
             except Exception as e:
-                self.logger.error(f"Erreur nettoyage PID {pid}: {e}")
-    
-    def cleanup_by_port(self, ports: List[int]):
-        """Nettoie les processus utilisant des ports spécifiques"""
+                self.logger.error(f"Erreur nettoyage PID {pid}: {e}", exc_info=True)
+
+
+    async def cleanup_by_port(self, ports: List[int]):
+        """Nettoie les processus utilisant des ports spécifiques de manière asynchrone."""
         self.logger.info(f"Nettoyage processus sur ports: {ports}")
         
         processes_to_kill = []
         
         try:
-            for conn in psutil.net_connections():
-                if (hasattr(conn, 'laddr') and conn.laddr and 
+            # psutil.net_connections est bloquant, donc exécution dans un thread
+            connections = await asyncio.to_thread(psutil.net_connections)
+            for conn in connections:
+                if (hasattr(conn, 'laddr') and conn.laddr and
                     conn.laddr.port in ports and
-                    conn.status == psutil.CONN_LISTEN):
+                    conn.status == psutil.CONN_LISTEN and conn.pid):
                     
                     try:
                         proc = psutil.Process(conn.pid)
                         processes_to_kill.append(proc)
                         self.logger.info(f"Processus trouvé sur port {conn.laddr.port}: PID {conn.pid}")
                     except (psutil.NoSuchProcess, psutil.AccessDenied):
-                        pass
+                        pass # Le processus peut déjà être mort
                         
         except (psutil.AccessDenied, AttributeError):
             self.logger.warning("Impossible d'énumérer toutes les connexions")
         
         # Nettoyage des processus trouvés
-        if processes_to_kill:
-            pids = [proc.pid for proc in processes_to_kill]
-            self.cleanup_by_pid(pids)
+        unique_pids = list(set(proc.pid for proc in processes_to_kill))
+        if unique_pids:
+            await self.cleanup_by_pid(unique_pids)
         else:
             self.logger.info("Aucun processus trouvé sur les ports spécifiés")
     

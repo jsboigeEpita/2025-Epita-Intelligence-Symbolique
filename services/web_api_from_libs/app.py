@@ -12,6 +12,8 @@ import os
 import sys
 import logging
 from pathlib import Path
+from fastapi import FastAPI
+from fastapi.middleware.wsgi import WSGIMiddleware
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 from typing import Dict, Any, Optional
@@ -56,12 +58,13 @@ logging.basicConfig(
 logger = logging.getLogger("WebAPI")
 
 # Création de l'application Flask
-app = Flask(__name__)
-CORS(app)  # Activer CORS pour les appels depuis React
+# Création de l'application Flask
+flask_app = Flask(__name__)
+CORS(flask_app)  # Activer CORS pour les appels depuis React
 
 # Configuration
-app.config['JSON_AS_ASCII'] = False  # Support des caractères UTF-8
-app.config['JSONIFY_PRETTYPRINT_REGULAR'] = True
+flask_app.config['JSON_AS_ASCII'] = False  # Support des caractères UTF-8
+flask_app.config['JSONIFY_PRETTYPRINT_REGULAR'] = True
 
 # Initialisation des services
 analysis_service = AnalysisService()
@@ -72,10 +75,17 @@ logic_service = LogicService()
 
 # Initialiser et enregistrer les blueprints
 # initialize_logic_blueprint(logic_service) # N'est plus nécessaire
-app.register_blueprint(logic_bp)
+flask_app.register_blueprint(logic_bp)
+
+# Créer l'application FastAPI principale
+app = FastAPI()
+
+# Monter l'application Flask en tant que middleware
+# Cela permet à Uvicorn (serveur ASGI) de servir notre application Flask (WSGI)
+app.mount("/", WSGIMiddleware(flask_app))
 
 
-@app.errorhandler(Exception)
+@flask_app.errorhandler(Exception)
 def handle_error(error):
     """Gestionnaire d'erreurs global."""
     logger.error(f"Erreur non gérée: {str(error)}", exc_info=True)

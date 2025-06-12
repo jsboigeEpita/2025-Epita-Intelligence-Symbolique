@@ -126,6 +126,11 @@ except Exception as e_init:
     # raise e_init
 
 
+@flask_app.route("/api/health", methods=['GET'])
+def health_check():
+   """Endpoint de health check pour l'application Flask."""
+   return jsonify({"status": "ok", "message": "Flask is running", "timestamp": datetime.now().isoformat()})
+
 # Vérification de sécurité: si l'initialisation a échoué, app et flask_app seront None.
 # Le serveur Uvicorn échouera au démarrage car il ne trouvera pas de callable 'app'.
 if flask_app is None or app is None:

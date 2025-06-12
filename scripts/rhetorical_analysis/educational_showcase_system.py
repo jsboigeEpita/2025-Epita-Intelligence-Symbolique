@@ -51,33 +51,40 @@ project_root = Path(__file__).resolve().parent.parent.parent
 if str(project_root) not in sys.path:
     sys.path.insert(0, str(project_root))
 
+PROJECT_ROOT_DIR = project_root # Définition globale pour accès anticipé
+
 # Force l'exécution authentique (pas de mocks en mode pédagogique)
 os.environ["FORCE_AUTHENTIC_EXECUTION"] = "true"
 os.environ["DISABLE_MOCKS_EDUCATIONAL"] = "true"
 os.environ["ENABLE_EDUCATIONAL_MODE"] = "true"
 os.environ["EPITA_PEDAGOGICAL_SYSTEM"] = "true"
 
+# Importation critique sortie du bloc try-except pour éviter les NameError
+from argumentation_analysis.core.llm_service import create_llm_service
+from argumentation_analysis.core.jvm_setup import initialize_jvm
+from argumentation_analysis.agents.core.logic.logic_factory import LogicAgentFactory
+from argumentation_analysis.agents.core.logic.modal_logic_agent import ModalLogicAgent
+from argumentation_analysis.agents.core.synthesis.synthesis_agent import SynthesisAgent
+from argumentation_analysis.agents.tools.analysis.enhanced.contextual_fallacy_analyzer import EnhancedContextualFallacyAnalyzer
+from argumentation_analysis.paths import PROJECT_ROOT_DIR
+from argumentation_analysis.core.source_management import UnifiedSourceManager, UnifiedSourceType, UnifiedSourceConfig
+
+# Imports qui peuvent échouer sans bloquer l'exécution de base
 try:
     # Imports de l'écosystème refactorisé
     from argumentation_analysis.pipelines.unified_text_analysis import UnifiedTextAnalysisPipeline, UnifiedAnalysisConfig
     from argumentation_analysis.orchestration.real_llm_orchestrator import RealLLMOrchestrator, RealConversationLogger
+    # NOTE: L'import de source_management a été déplacé à l'extérieur du bloc try
     from argumentation_analysis.orchestration.conversation_orchestrator import ConversationOrchestrator
-    from argumentation_analysis.core.source_management import UnifiedSourceManager, UnifiedSourceType, UnifiedSourceConfig
     from argumentation_analysis.core.report_generation import UnifiedReportGenerator, ReportConfiguration, ReportMetadata
     from argumentation_analysis.core.shared_state import RhetoricalAnalysisState
-    from argumentation_analysis.core.llm_service import create_llm_service
-    from argumentation_analysis.core.jvm_setup import initialize_jvm
     from argumentation_analysis.utils.tweety_error_analyzer import TweetyErrorAnalyzer
     from argumentation_analysis.utils.core_utils.crypto_utils import load_encryption_key, decrypt_data_with_fernet
     from argumentation_analysis.models.extract_definition import ExtractDefinitions
-    from argumentation_analysis.paths import DATA_DIR, PROJECT_ROOT_DIR, LIBS_DIR
-    from argumentation_analysis.agents.core.logic.logic_factory import LogicAgentFactory
+    from argumentation_analysis.paths import DATA_DIR, LIBS_DIR
     from argumentation_analysis.agents.core.logic.propositional_logic_agent import PropositionalLogicAgent
     from argumentation_analysis.agents.core.logic.first_order_logic_agent import FirstOrderLogicAgent
-    from argumentation_analysis.agents.core.logic.modal_logic_agent import ModalLogicAgent
-    from argumentation_analysis.agents.core.synthesis.synthesis_agent import SynthesisAgent
     from argumentation_analysis.agents.tools.analysis.enhanced.complex_fallacy_analyzer import EnhancedComplexFallacyAnalyzer
-    from argumentation_analysis.agents.tools.analysis.enhanced.contextual_fallacy_analyzer import EnhancedContextualFallacyAnalyzer
     from argumentation_analysis.agents.tools.analysis.enhanced.fallacy_severity_evaluator import EnhancedFallacySeverityEvaluator
     from argumentation_analysis.reporting.real_time_trace_analyzer import (
         RealTimeTraceAnalyzer, global_trace_analyzer, start_conversation_capture,
@@ -86,6 +93,11 @@ try:
     EDUCATIONAL_COMPONENTS_AVAILABLE = True
 except ImportError as e:
     EDUCATIONAL_COMPONENTS_AVAILABLE = False
+    # Isole les composants optionnels pour permettre le fonctionnement même en cas d'erreur
+    PropositionalLogicAgent = None
+    FirstOrderLogicAgent = None
+    EnhancedComplexFallacyAnalyzer = None
+    EnhancedFallacySeverityEvaluator = None
     print(f"[WARNING] Certains composants éducatifs non disponibles: {e}")
 
 # Configuration des chemins pour le système éducatif
@@ -260,8 +272,8 @@ class EducationalConversationLogger:
     def _format_checkpoint(self, checkpoint: str, explanation: str) -> str:
         """Formate un checkpoint pédagogique."""
         if self.config.language == EducationalLanguage.FRANCAIS:
-            return f"✓ Point de contrôle atteint: {checkpoint}. {explanation}"
-        return f"✓ Checkpoint reached: {checkpoint}. {explanation}"
+            return f"[OK] Point de contrôle atteint: {checkpoint}. {explanation}"
+        return f"[OK] Checkpoint reached: {checkpoint}. {explanation}"
 
 class EducationalProjectManager:
     """Project Manager spécialisé pour l'orchestration pédagogique multi-agents."""
@@ -694,68 +706,78 @@ class EducationalShowcaseSystem:
     async def initialize_system(self) -> bool:
         """Initialise le système éducatif complet."""
         print("=" * 80)
-        print("🎓 SYSTÈME DE DÉMONSTRATION ÉDUCATIF EPITA")
-        print("   Intelligence Symbolique - Analyse Rhétorique Multi-agents")
+        print("SYSTEME DE DEMONSTRATION EDUCATIF EPITA")
+        print("   Intelligence Symbolique - Analyse Rhetorique Multi-agents")
         print("=" * 80)
         print()
         
         try:
             # 1. Initialisation JVM pour TweetyProject
-            print("🔧 Initialisation de l'environnement logique...")
+            print("Initialisation de l'environnement logique...")
             if EDUCATIONAL_COMPONENTS_AVAILABLE:
                 self.jvm_initialized = initialize_jvm()
                 if self.jvm_initialized:
-                    print("   ✓ TweetyProject initialisé avec succès")
+                    print("   [OK] TweetyProject initialise avec succes")
                 else:
-                    print("   ⚠ TweetyProject non disponible - mode dégradé")
+                    print("   [WARN] TweetyProject non disponible - mode degrade")
             
             # 2. Initialisation du service LLM
-            print("🤖 Initialisation des services d'intelligence artificielle...")
+            print("Initialisation des services d'intelligence artificielle...")
             if self.config.enable_real_llm:
-                self.llm_service = create_llm_service("auto", prefer_azure=True)
+                # Correction de la NameError: 'create_llm_service' is not defined
+                self.llm_service = create_llm_service()
                 if self.llm_service:
-                    print(f"   ✓ Service LLM configuré: {self.llm_service.service_id}")
+                    service_name = self.llm_service.service_id or "default"
+                    print(f"   [OK] Service LLM configure: {service_name}")
                 else:
-                    print("   ❌ Impossible d'initialiser le service LLM")
+                    print("   [FAIL] Impossible d'initialiser le service LLM")
                     return False
             
             # 3. Initialisation des agents pédagogiques
-            print("👥 Initialisation des agents pédagogiques...")
+            print("Initialisation des agents pedagogiques...")
             agents_ready = await self.project_manager.initialize_educational_agents(self.llm_service)
             if agents_ready:
                 agent_count = len(self.project_manager.agents)
-                print(f"   ✓ {agent_count} agents spécialisés prêts pour le niveau {self.config.student_level}")
+                print(f"   [OK] {agent_count} agents specialises prets pour le niveau {self.config.student_level}")
             else:
-                print("   ❌ Erreur lors de l'initialisation des agents")
+                print("   [FAIL] Erreur lors de l'initialisation des agents")
                 return False
             
             print()
-            print("🚀 Système éducatif prêt ! Commençons l'apprentissage...")
+            print("Systeme educatif pret ! Commencons l'apprentissage...")
             return True
             
         except Exception as e:
             logger.error(f"Erreur lors de l'initialisation: {e}")
-            print(f"   ❌ Erreur: {e}")
+            print(f"   [FAIL] Erreur: {e}")
             return False
     
-    async def run_educational_demo(self, text_content: str = None) -> Dict[str, Any]:
+    async def run_educational_demo(self, text_content: str = None, source_corpus: Optional[str] = None, output_file: Optional[str] = None) -> Dict[str, Any]:
         """Exécute une démonstration éducative complète."""
         start_time = time.time()
-        
+
         # Sélection du texte
-        if not text_content:
+        if source_corpus:
+            print(f"\n[INFO] Chargement du texte depuis le corpus chiffre: {source_corpus}")
+            text_content = await self._load_text_from_encrypted_corpus(source_corpus)
+            if not text_content:
+                print("   [WARN] Impossible de charger le texte depuis le corpus. Utilisation d'un texte de fallback.")
+                text_content = self._select_appropriate_text()
+        elif not text_content:
             text_content = self._select_appropriate_text()
-        
-        print(f"\n📚 Texte sélectionné pour analyse (niveau {self.config.student_level}):")
+
+        print(f"\n[INFO] Texte selectionne pour analyse (niveau {self.config.student_level}):")
         print("-" * 60)
         print(text_content[:200] + "..." if len(text_content) > 200 else text_content)
         print("-" * 60)
         
         # Exécution de l'analyse orchestrée
-        print(f"\n🔬 Début de l'analyse collaborative...")
+        print(f"\nDebut de l'analyse collaborative...")
         
         results = await self.project_manager.orchestrate_educational_analysis(text_content)
-        
+        if not results:
+            print("\n[FAIL] L'analyse a echoue. Arret de la session.")
+            return {}
         # Calcul des métriques finales
         total_duration = time.time() - start_time
         results["session_metrics"] = {
@@ -771,12 +793,62 @@ class EducationalShowcaseSystem:
         educational_report = self._generate_educational_report(text_content, results)
         results["educational_report"] = educational_report
         
-        print(f"\n✅ Analyse terminée en {total_duration:.1f} secondes!")
-        print(f"📊 {len(results.get('conversations', []))} interactions capturées")
-        print(f"🎯 Efficacité pédagogique: {results['session_metrics']['educational_effectiveness']:.0%}")
+        print(f"\n[OK] Analyse terminee en {total_duration:.1f} secondes!")
+        print(f"   - Interactions capturees: {len(results.get('conversations', []))}")
+        print(f"   - Efficacite pedagogique: {results['session_metrics']['educational_effectiveness']:.0%}")
         
         return results
     
+    async def _load_text_from_encrypted_corpus(self, corpus_name: str) -> Optional[str]:
+        """Charge un texte aléatoire depuis le corpus chiffré."""
+        try:
+            # Correction: Utiliser le bon type de source et le bon paramètre pour le chemin du fichier.
+            # Le type COMPLEX recherche un fichier codé en dur, alors que ENC_FILE permet de spécifier un chemin.
+            
+            # Construire le chemin complet vers le fichier de corpus
+            corpus_path = PROJECT_ROOT_DIR / corpus_name
+
+            if not corpus_path.exists():
+                logger.error(f"Fichier corpus non trouvé: {corpus_path}")
+                return None
+
+            source_config = UnifiedSourceConfig(
+                source_type=UnifiedSourceType.ENC_FILE,
+                enc_file_path=str(corpus_path),
+                passphrase=os.getenv("TEXT_CONFIG_PASSPHRASE", "default_passphrase"),
+                interactive_mode=False
+            )
+            
+            source_manager = UnifiedSourceManager(source_config)
+            
+            # Note: initialize() n'est pas une méthode de UnifiedSourceManager, on l'enlève.
+            extracts, status = source_manager.load_sources()
+
+            if not extracts or not extracts.sources:
+                logger.error(f"Impossible de charger les extraits du corpus: {status}")
+                return None
+
+            # Sélectionner un texte aléatoire depuis le corpus chargé
+            import random
+            source = random.choice(extracts.sources)
+            if not source.extracts:
+                 logger.error(f"La source '{source.source_name}' ne contient aucun extrait.")
+                 return None
+            
+            extract = random.choice(source.extracts)
+            text = getattr(extract, 'full_text', None)
+
+            if not text:
+                logger.error(f"L'extrait '{extract.extract_name}' ne contient pas de texte.")
+                return None
+
+            metadata = {"source_name": source.source_name, "extract_name": extract.extract_name}
+            logger.info(f"Texte sélectionné ({len(text)} cars) depuis la source: {metadata.get('source_name')}")
+            return text
+        except Exception as e:
+            logger.error(f"Erreur lors du chargement depuis le corpus chiffré: {e}", exc_info=True)
+            return None
+
     def _select_appropriate_text(self) -> str:
         """Sélectionne un texte approprié selon la configuration."""
         sample_texts = self.text_library.get_sample_texts()
@@ -784,7 +856,7 @@ class EducationalShowcaseSystem:
         # Sélection selon le niveau étudiant
         level_mapping = {
             "L1": "L1_sophismes_basiques",
-            "L2": "L2_logique_propositionnelle", 
+            "L2": "L2_logique_propositionnelle",
             "L3": "L3_logique_modale",
             "M1": "M1_orchestration_complexe",
             "M2": "M1_orchestration_complexe"
@@ -794,6 +866,9 @@ class EducationalShowcaseSystem:
         selected_text = sample_texts.get(text_key, sample_texts["L2_logique_propositionnelle"])
         
         return selected_text["content"].strip()
+
+    async def initialize_source_manager(self, corpus_name):
+        pass
     
     def _generate_educational_report(self, text_analyzed: str, results: Dict[str, Any]) -> str:
         """Génère un rapport markdown éducatif avec explications pédagogiques."""
@@ -801,10 +876,10 @@ class EducationalShowcaseSystem:
         
         # En-tête du rapport
         report_lines.extend([
-            "# 🎓 RAPPORT D'ANALYSE ÉDUCATIF EPITA",
+            "# RAPPORT D'ANALYSE EDUCATIF EPITA",
             "",
             f"**Mode d'apprentissage:** {self.config.mode.value.title()}",
-            f"**Niveau étudiant:** {self.config.student_level}",
+            f"**Niveau etudiant:** {self.config.student_level}",
             f"**Langue:** {self.config.language.value}",
             f"**Date:** {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",
             "",
@@ -814,7 +889,7 @@ class EducationalShowcaseSystem:
         
         # Texte analysé
         report_lines.extend([
-            "## 📚 Texte Analysé",
+            "## Texte Analyse",
             "",
             "```",
             text_analyzed,
@@ -825,12 +900,12 @@ class EducationalShowcaseSystem:
         # Métriques de session
         session_metrics = results.get("session_metrics", {})
         report_lines.extend([
-            "## 📊 Métriques Pédagogiques",
+            "## Metriques Pedagogiques",
             "",
-            f"- **Durée totale:** {session_metrics.get('total_duration_seconds', 0):.1f} secondes",
-            f"- **Agents utilisés:** {session_metrics.get('agents_used', 0)}",
-            f"- **Interactions capturées:** {session_metrics.get('conversations_captured', 0)}",
-            f"- **Efficacité pédagogique:** {session_metrics.get('educational_effectiveness', 0):.0%}",
+            f"- **Duree totale:** {session_metrics.get('total_duration_seconds', 0):.1f} secondes",
+            f"- **Agents utilises:** {session_metrics.get('agents_used', 0)}",
+            f"- **Interactions capturees:** {session_metrics.get('conversations_captured', 0)}",
+            f"- **Efficacite pedagogique:** {session_metrics.get('educational_effectiveness', 0):.0%}",
             ""
         ])
         
@@ -838,17 +913,17 @@ class EducationalShowcaseSystem:
         agents_results = results.get("agents_results", {})
         if agents_results:
             report_lines.extend([
-                "## 🤖 Analyses des Agents Spécialisés",
+                "## Analyses des Agents Specialises",
                 ""
             ])
             
             for agent_name, agent_result in agents_results.items():
                 agent_title = {
-                    "informal": "🎭 Agent d'Analyse Rhétorique",
-                    "propositional": "⚡ Agent de Logique Propositionnelle", 
-                    "modal": "🌀 Agent de Logique Modale",
-                    "synthesis": "🔮 Agent de Synthèse"
-                }.get(agent_name, f"🔧 Agent {agent_name.title()}")
+                    "informal": "Agent d'Analyse Rhetorique",
+                    "propositional": "Agent de Logique Propositionnelle",
+                    "modal": "Agent de Logique Modale",
+                    "synthesis": "Agent de Synthese"
+                }.get(agent_name, f"Agent {agent_name.title()}")
                 
                 report_lines.extend([
                     f"### {agent_title}",
@@ -857,7 +932,7 @@ class EducationalShowcaseSystem:
                 
                 if agent_result.get("error"):
                     report_lines.extend([
-                        f"❌ **Erreur:** {agent_result['error']}",
+                        f"[FAIL] **Erreur:** {agent_result['error']}",
                         ""
                     ])
                 else:
@@ -866,15 +941,15 @@ class EducationalShowcaseSystem:
                         fallacies_count = len(agent_result.get("fallacies", []))
                         report_lines.extend([
                             f"- **Sophismes détectés:** {fallacies_count}",
-                            f"- **Analyse contextuelle:** Réussie" if fallacies_count > 0 else "- **Analyse contextuelle:** Texte bien construit",
+                            f"- **Analyse contextuelle:** {'Réussie' if fallacies_count > 0 else 'Texte bien construit'}",
                             ""
                         ])
                     
                     elif agent_name in ["propositional", "modal"]:
-                        consistency = agent_result.get("consistency", False)
-                        queries_count = agent_result.get("queries_count", 0)
+                        consistency = agent_result.get("consistency", agent_result.get("modal_consistency", False))
+                        queries_count = agent_result.get("queries_count", agent_result.get("modal_queries", 0))
                         report_lines.extend([
-                            f"- **Cohérence logique:** {'✓ Cohérent' if consistency else '❌ Incohérent'}",
+                            f"- **Cohérence logique:** {'OK - Cohérent' if consistency else 'FAIL - Incohérent'}",
                             f"- **Requêtes générées:** {queries_count}",
                             ""
                         ])
@@ -894,9 +969,9 @@ class EducationalShowcaseSystem:
         conversations = results.get("conversations", [])
         if conversations and self.config.enable_conversation_capture:
             report_lines.extend([
-                "## 💬 Conversations Entre Agents",
+                "## Conversations Entre Agents",
                 "",
-                "*Les agents ont collaboré et échangé leurs analyses:*",
+                "*Les agents ont collabore et echange leurs analyses:*",
                 ""
             ])
             
@@ -920,33 +995,33 @@ class EducationalShowcaseSystem:
         
         # Recommandations pédagogiques
         report_lines.extend([
-            "## 🎯 Recommandations Pédagogiques",
+            "## Recommandations Pedagogiques",
             ""
         ])
         
         effectiveness = session_metrics.get("educational_effectiveness", 0)
         if effectiveness >= 0.8:
             report_lines.extend([
-                "✅ **Excellente session d'apprentissage !**",
-                "- Tous les agents ont collaboré efficacement",
-                "- Les concepts ont été bien assimilés",
-                "- Prêt pour le niveau suivant",
+                "[OK] **Excellente session d'apprentissage !**",
+                "- Tous les agents ont collaboré efficacement.",
+                "- Les concepts ont été bien assimilés.",
+                "- Prêt pour le niveau suivant.",
                 ""
             ])
         elif effectiveness >= 0.6:
             report_lines.extend([
-                "⚠️ **Bonne session avec quelques difficultés**",
-                "- La plupart des analyses ont réussi", 
-                "- Réviser les concepts d'agents en échec",
-                "- Refaire l'exercice pour consolider",
+                "[WARN] **Bonne session avec quelques difficultés**",
+                "- La plupart des analyses ont réussi.",
+                "- Réviser les concepts des agents en échec.",
+                "- Refaire l'exercice pour consolider.",
                 ""
             ])
         else:
             report_lines.extend([
-                "❌ **Session difficile - aide nécessaire**",
-                "- Plusieurs agents ont échoué",
-                "- Revoir les concepts fondamentaux",
-                "- Demander assistance au professeur",
+                "[FAIL] **Session difficile - aide nécessaire**",
+                "- Plusieurs agents ont échoué.",
+                "- Revoir les concepts fondamentaux.",
+                "- Demander assistance au professeur.",
                 ""
             ])
         
@@ -961,7 +1036,7 @@ class EducationalShowcaseSystem:
         
         next_level = next_level_mapping.get(self.config.student_level, "Niveau suivant")
         report_lines.extend([
-            "## 🚀 Prochaines Étapes",
+            "## Prochaines Etapes",
             "",
             f"- **Objectif suivant:** {next_level}",
             "- **Concepts à maîtriser:** Selon les résultats de cette session",
@@ -979,39 +1054,44 @@ class EducationalShowcaseSystem:
         
         return "\n".join(report_lines)
     
-    async def save_educational_session(self, results: Dict[str, Any]) -> str:
+    async def save_educational_session(self, results: Dict[str, Any], output_file: Optional[str] = None) -> str:
         """Sauvegarde la session éducative avec tous les éléments."""
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        
-        # Rapport markdown
-        report_file = REPORTS_DIR / f"educational_report_{self.config.student_level}_{timestamp}.md"
+
+        # Déterminer le fichier de sortie pour le rapport principal
+        if output_file:
+            report_file = Path(output_file)
+            report_file.parent.mkdir(parents=True, exist_ok=True)
+        else:
+            report_file = REPORTS_DIR / f"educational_report_{self.config.student_level}_{timestamp}.md"
+
+        # Sauvegarder le rapport markdown
         with open(report_file, 'w', encoding='utf-8') as f:
             f.write(results.get("educational_report", ""))
-        
-        # Données JSON complètes
+
+        # Fichiers de log et de données complètes (toujours dans /logs)
         data_file = LOGS_DIR / f"educational_session_{self.config.student_level}_{timestamp}.json"
         with open(data_file, 'w', encoding='utf-8') as f:
             json.dump(results, f, indent=2, ensure_ascii=False, default=str)
-        
-        # Conversations séparées pour analyse
+
         conversations_file = LOGS_DIR / f"conversations_{self.config.student_level}_{timestamp}.json"
         with open(conversations_file, 'w', encoding='utf-8') as f:
             json.dump(results.get("conversations", []), f, indent=2, ensure_ascii=False, default=str)
-        
+
         logger.info(f"Session éducative sauvegardée:")
-        logger.info(f"  - Rapport: {report_file}")
-        logger.info(f"  - Données: {data_file}") 
-        logger.info(f"  - Conversations: {conversations_file}")
-        
+        logger.info(f"  - Rapport Principal: {report_file}")
+        logger.info(f"  - Données JSON: {data_file}")
+        logger.info(f"  - Conversations JSON: {conversations_file}")
+
         return str(report_file)
 
 async def demonstrate_educational_modes():
     """Démonstration des différents modes éducatifs."""
-    print("🎓 DÉMONSTRATION DES MODES ÉDUCATIFS")
+    print("DEMONSTRATION DES MODES EDUCATIFS")
     print("=" * 50)
     
     # Démonstration mode débutant L1
-    print("\n1️⃣ MODE DÉBUTANT (L1) - Détection de sophismes basiques")
+    print("\n[1] MODE DEBUTANT (L1) - Détection de sophismes basiques")
     config_l1 = EducationalConfiguration(
         mode=EducationalMode.DEBUTANT,
         student_level="L1",
@@ -1022,13 +1102,14 @@ async def demonstrate_educational_modes():
     system_l1 = EducationalShowcaseSystem(config_l1)
     if await system_l1.initialize_system():
         results_l1 = await system_l1.run_educational_demo()
-        report_file_l1 = await system_l1.save_educational_session(results_l1)
-        print(f"✓ Rapport L1 généré: {report_file_l1}")
+        if results_l1:
+            report_file_l1 = await system_l1.save_educational_session(results_l1)
+            print(f"   [OK] Rapport L1 généré: {report_file_l1}")
     
-    print("\n" + "─" * 50)
+    print("\n" + "-" * 50)
     
     # Démonstration mode intermédiaire L3
-    print("\n2️⃣ MODE INTERMÉDIAIRE (L3) - Logique modale et orchestration")
+    print("\n[2] MODE INTERMEDIAIRE (L3) - Logique modale et orchestration")
     config_l3 = EducationalConfiguration(
         mode=EducationalMode.INTERMEDIAIRE,
         student_level="L3", 
@@ -1039,13 +1120,14 @@ async def demonstrate_educational_modes():
     system_l3 = EducationalShowcaseSystem(config_l3)
     if await system_l3.initialize_system():
         results_l3 = await system_l3.run_educational_demo()
-        report_file_l3 = await system_l3.save_educational_session(results_l3)
-        print(f"✓ Rapport L3 généré: {report_file_l3}")
+        if results_l3:
+            report_file_l3 = await system_l3.save_educational_session(results_l3)
+            print(f"   [OK] Rapport L3 généré: {report_file_l3}")
     
-    print("\n" + "─" * 50)
+    print("\n" + "-" * 50)
     
     # Démonstration mode expert M1
-    print("\n3️⃣ MODE EXPERT (M1) - Orchestration complète multi-agents")
+    print("\n[3] MODE EXPERT (M1) - Orchestration complète multi-agents")
     config_m1 = EducationalConfiguration(
         mode=EducationalMode.EXPERT,
         student_level="M1",
@@ -1057,11 +1139,12 @@ async def demonstrate_educational_modes():
     system_m1 = EducationalShowcaseSystem(config_m1)
     if await system_m1.initialize_system():
         results_m1 = await system_m1.run_educational_demo()
-        report_file_m1 = await system_m1.save_educational_session(results_m1)
-        print(f"✓ Rapport M1 généré: {report_file_m1}")
+        if results_m1:
+            report_file_m1 = await system_m1.save_educational_session(results_m1)
+            print(f"   [OK] Rapport M1 généré: {report_file_m1}")
     
-    print("\n🎯 DÉMONSTRATION TERMINÉE")
-    print("Tous les rapports éducatifs ont été générés avec succès !")
+    print("\n[FIN] DEMONSTRATION TERMINEE")
+    print("Tous les rapports educatifs ont ete generes avec succes !")
 
 def setup_demo_environment():
     """Configure l'environnement pour les démonstrations."""
@@ -1084,11 +1167,13 @@ def setup_demo_environment():
         env_path = find_dotenv(filename=".env", usecwd=True, raise_error_if_not_found=False)
         if env_path:
             load_dotenv(env_path, override=True)
-            print(f"✓ Configuration .env chargée depuis: {env_path}")
+            # Utiliser un caractère simple pour éviter les problèmes d'encodage
+            # Utiliser un caractère simple pour éviter les problèmes d'encodage
+            print(f"[OK] Configuration .env chargee depuis: {env_path}")
         else:
-            print("⚠ Fichier .env non trouvé - utilisation configuration par défaut")
+            print("[WARN] Fichier .env non trouve - utilisation configuration par defaut")
     except ImportError:
-        print("⚠ python-dotenv non disponible - utilisation variables d'environnement")
+        print("[WARN] python-dotenv non disponible - utilisation variables d'environnement")
 
 def main():
     """Point d'entrée principal du système éducatif."""
@@ -1104,19 +1189,21 @@ Exemples d'utilisation:
         """
     )
     
-    parser.add_argument("--level", choices=["L1", "L2", "L3", "M1", "M2"], 
-                       default="L3", help="Niveau étudiant (défaut: L3)")
+    parser.add_argument("--level", choices=["L1", "L2", "L3", "M1", "M2"],
+                       default="L3", help="Niveau etudiant (defaut: L3)")
     parser.add_argument("--mode", choices=[mode.value for mode in EducationalMode],
-                       default="intermediaire", help="Mode d'apprentissage (défaut: intermediaire)")
-    parser.add_argument("--lang", choices=["fr", "en", "es"], default="fr", 
-                       help="Langue de l'interface (défaut: fr)")
-    parser.add_argument("--text", type=str, help="Texte personnalisé à analyser")
-    parser.add_argument("--demo-modes", action="store_true", 
-                       help="Démonstration de tous les modes éducatifs")
+                       default="intermediaire", help="Mode d'apprentissage (defaut: intermediaire)")
+    parser.add_argument("--lang", choices=["fr", "en", "es"], default="fr",
+                       help="Langue de l'interface (defaut: fr)")
+    parser.add_argument("--text", type=str, help="Texte personnalise a analyser")
+    parser.add_argument("--source-corpus", type=str, help="Nom du fichier de corpus chiffre a utiliser (ex: extract_sources.json.gz.enc)")
+    parser.add_argument("--output-file", type=str, help="Chemin du fichier de sortie pour la trace/rapport markdown")
+    parser.add_argument("--demo-modes", action="store_true",
+                       help="Demonstration de tous les modes educatifs")
     parser.add_argument("--no-llm", action="store_true",
-                       help="Désactiver les services LLM (mode dégradé)")
+                       help="Desactiver les services LLM (mode degrade)")
     parser.add_argument("--verbose", action="store_true",
-                       help="Logging détaillé")
+                       help="Logging detaille")
     
     args = parser.parse_args()
     
@@ -1130,7 +1217,7 @@ Exemples d'utilisation:
     
     # Exécution selon les arguments
     if args.demo_modes:
-        print("🚀 Lancement de la démonstration complète des modes éducatifs...")
+        print("Lancement de la demonstration complete des modes educatifs...")
         asyncio.run(demonstrate_educational_modes())
     else:
         # Session éducative personnalisée
@@ -1149,18 +1236,27 @@ Exemples d'utilisation:
             system = EducationalShowcaseSystem(config)
             
             if await system.initialize_system():
-                results = await system.run_educational_demo(args.text)
-                report_file = await system.save_educational_session(results)
+                results = await system.run_educational_demo(
+                    text_content=args.text,
+                    source_corpus=args.source_corpus,
+                    output_file=args.output_file # Passer l'output_file ici
+                )
+                if not results:
+                    print("\n[FAIL] La session educative n'a pas pu etre terminee.")
+                    sys.exit(1)
                 
-                print(f"\n🎉 Session éducative terminée avec succès !")
-                print(f"📄 Rapport généré: {report_file}")
-                print(f"📊 Efficacité: {results['session_metrics']['educational_effectiveness']:.0%}")
-                print(f"⏱️ Durée: {results['session_metrics']['total_duration_seconds']:.1f}s")
+                # Passer le nom du fichier de sortie à la méthode de sauvegarde
+                report_file = await system.save_educational_session(results, args.output_file)
+                
+                print(f"\n[SUCCES] Session educative terminee avec succes !")
+                print(f"   [RAPPORT] Rapport genere: {report_file}")
+                print(f"   [METRIQUES] Efficacite: {results['session_metrics']['educational_effectiveness']:.0%}")
+                print(f"   [DUREE] Duree: {results['session_metrics']['total_duration_seconds']:.1f}s")
             else:
-                print("❌ Échec de l'initialisation du système éducatif")
+                print("[FAIL] Echec de l'initialisation du systeme educatif")
                 sys.exit(1)
         
-        print(f"🎓 Lancement session éducative {args.level} - Mode {args.mode}")
+        print(f"[INFO] Lancement session educative {args.level} - Mode {args.mode}")
         asyncio.run(run_custom_session())
 
 if __name__ == "__main__":

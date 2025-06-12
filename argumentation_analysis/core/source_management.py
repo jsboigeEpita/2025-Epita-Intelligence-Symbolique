@@ -204,7 +204,7 @@ class UnifiedSourceManager:
                 return None, "Impossible de dériver la clé de chiffrement"
             
             # Charger les définitions
-            definitions = load_extract_definitions(config_file=enc_path, key=encryption_key)
+            definitions = load_extract_definitions(config_file=enc_path, b64_derived_key=encryption_key)
             if not definitions:
                 return None, "Impossible de charger les définitions depuis le fichier .enc"
             
