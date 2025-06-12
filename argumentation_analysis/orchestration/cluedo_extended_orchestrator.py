@@ -23,7 +23,8 @@ from semantic_kernel.kernel import Kernel
 AGENTS_AVAILABLE = False  # Module agents non disponible dans SK 0.9.6b1
 from semantic_kernel.contents import ChatMessageContent
 from semantic_kernel.functions.kernel_arguments import KernelArguments
-from semantic_kernel.filters import FunctionInvocationContext
+from semantic_kernel.events.function_invoking_event_args import FunctionInvokingEventArgs
+from semantic_kernel.events.function_invoked_event_args import FunctionInvokedEventArgs
 
 # Note: Les filtres sont gérés différemment dans les versions récentes,
 # nous utiliserons les handlers directement.
@@ -54,9 +55,9 @@ class ToolCallLoggingHandler:
     utilisant le système d'événements mis à jour de Semantic Kernel.
     """
     @staticmethod
-    def on_function_invoking(context: FunctionInvocationContext) -> None:
+    def on_function_invoking(context: FunctionInvokingEventArgs) -> None:
         """Méthode exécutée avant chaque invocation de fonction."""
-        metadata = context.function
+        metadata = context.kernel_function_metadata
         function_name = f"{metadata.plugin_name}.{metadata.name}"
         logger.debug(f"▶️  INVOKING KERNEL FUNCTION: {function_name}")
 
@@ -64,9 +65,9 @@ class ToolCallLoggingHandler:
         logger.debug(f"  ▶️  ARGS: {args_str}")
 
     @staticmethod
-    def on_function_invoked(context: FunctionInvocationContext) -> None:
+    def on_function_invoked(context: FunctionInvokedEventArgs) -> None:
         """Méthode exécutée après chaque invocation de fonction."""
-        metadata = context.function
+        metadata = context.kernel_function_metadata
         function_name = f"{metadata.plugin_name}.{metadata.name}"
         result_content = "N/A"
         if context.result:

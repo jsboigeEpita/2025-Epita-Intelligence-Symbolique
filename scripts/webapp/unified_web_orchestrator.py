@@ -96,18 +96,12 @@ class UnifiedWebOrchestrator:
     """
     
     API_ENDPOINTS_TO_CHECK = [
-        # Fusion des endpoints des deux branches
         {"path": "/api/health", "method": "GET"},
         {"path": "/api/endpoints", "method": "GET"},
-        {"path": "/flask/api/health", "method": "GET"},
-        {"path": "/flask/api/analyze", "method": "POST", "data": {"text": "test"}},
-        {"path": "/flask/api/load_text", "method": "POST", "data": {"text": "test"}},
-        {"path": "/flask/api/get_arguments", "method": "GET"},
-        {"path": "/flask/api/get_graph", "method": "GET"},
-        {"path": "/flask/api/download_results", "method": "GET"},
-        {"path": "/flask/api/status", "method": "GET"},
-        {"path": "/flask/api/config", "method": "GET"},
-        {"path": "/flask/api/feedback", "method": "POST", "data": {"feedback": "test"}}
+        {"path": "/api/analyze", "method": "POST", "data": {"text": "test"}},
+        {"path": "/api/validate", "method": "POST", "data": {"premises": ["p"], "conclusion": "q"}},
+        {"path": "/api/fallacies", "method": "POST", "data": {"text": "test"}},
+        {"path": "/api/framework", "method": "POST", "data": {"arguments": [{"id": "a", "content": "a"}]}}
     ]
 
     def __init__(self, config_path: str = "scripts/webapp/config/webapp_config.yml"):

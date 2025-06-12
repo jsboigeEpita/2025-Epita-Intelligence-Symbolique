@@ -36,18 +36,18 @@ def load_extract_definitions(
             decrypted_compressed_data = decrypt_data_with_fernet(encrypted_data, b64_derived_key)
             
             if not decrypted_compressed_data: # decrypt_data_with_fernet retourne None en cas d'InvalidToken ou autre erreur de déchiffrement
-                file_ops_logger.warning(f"⚠️ Échec du déchiffrement pour '{config_file}' (decrypt_data_with_fernet a retourné None). Utilisation des définitions par défaut.")
+                file_ops_logger.warning(f"[WARN] Echec du dechiffrement pour '{config_file}' (decrypt_data_with_fernet a retourne None). Utilisation des definitions par defaut.")
                 return [item.copy() for item in fallback_definitions]
             
             decompressed_data = gzip.decompress(decrypted_compressed_data)
             definitions = json.loads(decompressed_data.decode('utf-8'))
-            file_ops_logger.info("[OK] Définitions chargées et déchiffrées.")
+            file_ops_logger.info("[OK] Definitions chargees et dechiffrees.")
 
-        except InvalidToken: 
-            file_ops_logger.error(f"❌ InvalidToken explicitement levée lors du déchiffrement de '{config_file}'. Utilisation définitions par défaut.", exc_info=True)
+        except InvalidToken:
+            file_ops_logger.error(f"[FAIL] InvalidToken explicitement levee lors du dechiffrement de '{config_file}'. Utilisation definitions par defaut.", exc_info=True)
             return [item.copy() for item in fallback_definitions]
         except Exception as e:
-            file_ops_logger.error(f"❌ Erreur chargement/déchiffrement '{config_file}': {e}. Utilisation définitions par défaut.", exc_info=True)
+            file_ops_logger.error(f"[FAIL] Erreur chargement/dechiffrement '{config_file}': {e}. Utilisation definitions par defaut.", exc_info=True)
             return [item.copy() for item in fallback_definitions]
     
     else: # Pas de clé, essayer de lire comme JSON simple
@@ -58,10 +58,10 @@ def load_extract_definitions(
             file_ops_logger.info(f"[OK] Définitions chargées comme JSON simple depuis '{config_file}'.")
         
         except json.JSONDecodeError as e_json:
-            file_ops_logger.error(f"❌ Erreur décodage JSON pour '{config_file}': {e_json}. L'exception sera relancée.", exc_info=False)
+            file_ops_logger.error(f"[FAIL] Erreur decodage JSON pour '{config_file}': {e_json}. L'exception sera relancee.", exc_info=False)
             raise
         except Exception as e:
-            file_ops_logger.error(f"❌ Erreur chargement JSON simple '{config_file}': {e}. Utilisation définitions par défaut.", exc_info=True)
+            file_ops_logger.error(f"[FAIL] Erreur chargement JSON simple '{config_file}': {e}. Utilisation definitions par defaut.", exc_info=True)
             return [item.copy() for item in fallback_definitions]
 
     # Validation du format (commun aux deux chemins)
@@ -71,7 +71,7 @@ def load_extract_definitions(
         "host_parts" in item and "path" in item and isinstance(item.get("extracts"), list)
         for item in definitions
     ):
-        file_ops_logger.warning(f"⚠️ Format définitions invalide après chargement de '{config_file}'. Utilisation définitions par défaut.")
+        file_ops_logger.warning(f"[WARN] Format definitions invalide apres chargement de '{config_file}'. Utilisation definitions par defaut.")
         return [item.copy() for item in fallback_definitions]
 
     file_ops_logger.info(f"-> {len(definitions)} définitions chargées depuis '{config_file}'.")
@@ -146,7 +146,7 @@ def save_extract_definitions(
         file_ops_logger.info(f"[OK] Définitions sauvegardées dans '{config_file}'.")
         return True
     except Exception as e:
-        file_ops_logger.error(f"❌ Erreur lors de la sauvegarde chiffrée vers '{config_file}': {e}", exc_info=True)
+        file_ops_logger.error(f"[FAIL] Erreur lors de la sauvegarde chiffree vers '{config_file}': {e}", exc_info=True)
         return False
 
 file_ops_logger.info("Fonctions d'opérations sur fichiers UI définies.")
