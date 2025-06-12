@@ -8,6 +8,7 @@ Traite les fichiers Oracle/Sherlock prioritaires avec erreurs de syntaxe :
 2. scripts/maintenance/recovered/test_oracle_behavior_simple.py  
 3. scripts/maintenance/recovered/update_test_coverage.py
 """
+import project_core.core_from_scripts.auto_env
 
 import os
 import sys

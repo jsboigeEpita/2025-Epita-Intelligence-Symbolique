@@ -8,6 +8,7 @@ Ce script organise les 51 tests orphelins selon leur valeur et destination :
 - À moderniser : Tests anciens mais adaptables
 - À supprimer : Tests obsolètes/doublons
 
+import project_core.core_from_scripts.auto_env
 Auteur: Assistant Roo
 Date: 2025-06-07
 """

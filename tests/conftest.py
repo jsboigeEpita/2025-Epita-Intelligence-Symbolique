@@ -13,7 +13,6 @@ import pytest
 from unittest.mock import patch, MagicMock
 import importlib.util
 import logging
-import project_core.core_from_scripts.auto_env
 import threading # Ajout de l'import pour l'inspection des threads
 # --- Configuration globale du Logging pour les tests ---
 # Le logger global pour conftest est déjà défini plus bas,
@@ -31,6 +30,7 @@ if not logging.getLogger().handlers: # Si le root logger n'a pas de handlers, ba
 else:
     _conftest_setup_logger.info("Configuration globale du logging déjà présente ou appliquée par un autre module.")
 # --- Début Patching JPype Mock au niveau module si nécessaire ---
+os.environ['USE_REAL_JPYPE'] = 'true'
 _SHOULD_USE_REAL_JPYPE = os.environ.get('USE_REAL_JPYPE', 'false').lower() in ('true', '1')
 _conftest_setup_logger.info(f"conftest.py: USE_REAL_JPYPE={os.environ.get('USE_REAL_JPYPE', 'false')}, _SHOULD_USE_REAL_JPYPE={_SHOULD_USE_REAL_JPYPE}")
 

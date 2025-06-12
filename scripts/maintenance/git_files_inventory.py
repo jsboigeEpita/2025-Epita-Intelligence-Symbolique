@@ -3,6 +3,7 @@
 Script d'inventaire des fichiers sous contrôle Git avec recommandations détaillées
 """
 
+import project_core.core_from_scripts.auto_env
 import os
 import subprocess
 import json
@@ -260,39 +261,39 @@ class GitFilesInventory:
         )
     
     def run_inventory(self) -> None:
-        print("🔍 Démarrage de l'inventaire des fichiers Git...")
+        print("[LOUPE] Démarrage de l'inventaire des fichiers Git...")
         
-        print("📋 Analyse des fichiers trackés...")
+        print("[PRESSE_PAPIER] Analyse des fichiers trackés...")
         tracked_files = self.get_tracked_files()
         for file_path in tracked_files:
             analysis = self.analyze_file(file_path, 'tracked')
             self.files_analysis.append(analysis)
         
-        print("📋 Analyse des fichiers non-trackés...")
+        print("[CLIPBOARD_ALT] Analyse des fichiers non-trackés...")
         untracked_files = self.get_untracked_files()
         for file_path in untracked_files:
             analysis = self.analyze_file(file_path, 'untracked')
             self.files_analysis.append(analysis)
         
-        print("📋 Analyse des fichiers supprimés...")
+        print("[CLIPBOARD_ALT] Analyse des fichiers supprimés...")
         git_status = self.get_git_status()
         for file_path in git_status['deleted']:
             analysis = self.analyze_file(file_path, 'deleted')
             self.files_analysis.append(analysis)
         
-        print("📋 Analyse des fichiers orphelins...")
+        print("[CLIPBOARD_ALT] Analyse des fichiers orphelins...")
         orphan_files = self.find_orphan_files()
         for file_path in orphan_files:
             analysis = self.analyze_file(file_path, 'orphan')
             self.files_analysis.append(analysis)
         
-        print(f"✅ Inventaire terminé - {len(self.files_analysis)} fichiers analysés")
+        print(f"[CHECK_MARK] Inventaire terminé - {len(self.files_analysis)} fichiers analysés")
     
     def generate_reports(self) -> None:
         self.generate_detailed_report()
         self.generate_decision_matrix()
         self.generate_action_plan()
-        print("📊 Tous les rapports ont été générés dans logs/")
+        print("[BAR_CHART] Tous les rapports ont été générés dans logs/")
     
     def generate_detailed_report(self) -> None:
         report_path = self.project_root / 'logs' / 'git_files_analysis_report.md'
@@ -337,7 +338,7 @@ class GitFilesInventory:
                 
                 f.write(f"\n")
         
-        print(f"📄 Rapport détaillé généré: {report_path}")
+        print(f"[PAGE] Rapport détaillé généré: {report_path}")
     
     def generate_decision_matrix(self) -> None:
         matrix_path = self.project_root / 'logs' / 'git_files_decision_matrix.json'
@@ -355,7 +356,7 @@ class GitFilesInventory:
         with open(matrix_path, 'w', encoding='utf-8') as f:
             json.dump(matrix, f, indent=2, ensure_ascii=False)
         
-        print(f"📊 Matrice de décision générée: {matrix_path}")
+        print(f"[BAR_CHART_ALT] Matrice de décision générée: {matrix_path}")
     
     def generate_action_plan(self) -> None:
         plan_path = self.project_root / 'logs' / 'git_cleanup_action_plan.md'
@@ -396,7 +397,7 @@ class GitFilesInventory:
                     
                     f.write(f"\n")
         
-        print(f"📋 Plan d'actions généré: {plan_path}")
+        print(f"[CLIPBOARD_ALT] Plan d'actions généré: {plan_path}")
     
     def calculate_statistics(self) -> Dict:
         stats = {
@@ -415,7 +416,7 @@ class GitFilesInventory:
         return {k: dict(v) for k, v in stats.items()}
 
 def main():
-    print("🚀 Script d'Inventaire des Fichiers Git - Sherlock Watson")
+    print("[ROCKET] Script d'Inventaire des Fichiers Git - Sherlock Watson")
     print("=" * 60)
     
     os.makedirs('logs', exist_ok=True)
@@ -424,8 +425,8 @@ def main():
     inventory.run_inventory()
     inventory.generate_reports()
     
-    print("\n✅ Inventaire terminé avec succès!")
-    print("\n📁 Fichiers générés:")
+    print("\n[CHECK_MARK_BUTTON] Inventaire terminé avec succès!")
+    print("\n[FOLDER] Fichiers générés:")
     print("- logs/git_files_analysis_report.md")
     print("- logs/git_files_decision_matrix.json") 
     print("- logs/git_cleanup_action_plan.md")

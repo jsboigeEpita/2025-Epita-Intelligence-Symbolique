@@ -4,6 +4,7 @@ Script de refactorisation du système Sherlock-Watson-Moriarty Oracle Enhanced
 Phase 2: Refactorisation et Structure du Code
 """
 
+import project_core.core_from_scripts.auto_env
 import os
 import re
 import ast
