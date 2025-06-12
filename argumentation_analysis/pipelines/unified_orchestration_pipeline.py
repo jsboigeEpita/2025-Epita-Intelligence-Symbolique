@@ -60,7 +60,8 @@ except ImportError as e:
 
 # Imports des orchestrateurs spécialisés
 try:
-    from argumentation_analysis.orchestration.cluedo_orchestrator import CluedoOrchestrator, run_cluedo_game
+    # CORRECTIF: Importe CluedoExtendedOrchestrator et l'aliase en CluedoOrchestrator pour compatibilité
+    from argumentation_analysis.orchestration.cluedo_extended_orchestrator import CluedoExtendedOrchestrator as CluedoOrchestrator, run_cluedo_oracle_game as run_cluedo_game
     from argumentation_analysis.orchestration.conversation_orchestrator import ConversationOrchestrator
     from argumentation_analysis.orchestration.real_llm_orchestrator import RealLLMOrchestrator
     from argumentation_analysis.orchestration.logique_complexe_orchestrator import LogiqueComplexeOrchestrator
@@ -385,7 +386,7 @@ class UnifiedOrchestrationPipeline:
         # Orchestrateur Cluedo pour les investigations
         if CluedoOrchestrator:
             self.specialized_orchestrators["cluedo"] = {
-                "orchestrator": CluedoOrchestrator(),
+                "orchestrator": CluedoOrchestrator(kernel=self.kernel),
                 "types": [AnalysisType.INVESTIGATIVE, AnalysisType.DEBATE_ANALYSIS],
                 "priority": 1
             }

@@ -23,8 +23,11 @@ from semantic_kernel.kernel import Kernel
 AGENTS_AVAILABLE = False  # Module agents non disponible dans SK 0.9.6b1
 from semantic_kernel.contents import ChatMessageContent
 from semantic_kernel.functions.kernel_arguments import KernelArguments
-from semantic_kernel.functions.kernel_events_args import FunctionInvokedEventArgs, FunctionInvokingEventArgs
-FILTERS_AVAILABLE = True  # On suppose que les handlers sont toujours dispo
+from semantic_kernel.filters import FunctionInvocationContext
+
+# Note: Les filtres sont gérés différemment dans les versions récentes,
+# nous utiliserons les handlers directement.
+FILTERS_AVAILABLE = True
 # from semantic_kernel.processes.runtime.in_process_runtime import InProcessRuntime  # Module non disponible
 from pydantic import Field
 
@@ -48,27 +51,26 @@ logger = logging.getLogger(__name__)
 class ToolCallLoggingHandler:
     """
     Handler pour journaliser les appels de fonctions (outils) du kernel,
-    utilisant le nouveau système d'événements de Semantic Kernel.
+    utilisant le système d'événements mis à jour de Semantic Kernel.
     """
     @staticmethod
-    def on_function_invoking(kernel: Kernel, context: FunctionInvokingEventArgs) -> FunctionInvokingEventArgs:
+    def on_function_invoking(context: FunctionInvocationContext) -> None:
         """Méthode exécutée avant chaque invocation de fonction."""
-        metadata = context.kernel_function_metadata
+        metadata = context.function
         function_name = f"{metadata.plugin_name}.{metadata.name}"
         logger.debug(f"▶️  INVOKING KERNEL FUNCTION: {function_name}")
-        
+
         args_str = ", ".join(f"{k}='{str(v)[:100]}...'" for k, v in context.arguments.items())
         logger.debug(f"  ▶️  ARGS: {args_str}")
-        return context
 
     @staticmethod
-    def on_function_invoked(kernel: Kernel, context: FunctionInvokedEventArgs) -> FunctionInvokedEventArgs:
+    def on_function_invoked(context: FunctionInvocationContext) -> None:
         """Méthode exécutée après chaque invocation de fonction."""
-        metadata = context.kernel_function_metadata
+        metadata = context.function
         function_name = f"{metadata.plugin_name}.{metadata.name}"
         result_content = "N/A"
-        if context.function_result:
-            result_value = context.function_result.value
+        if context.result:
+            result_value = context.result.value
             # Gérer les listes et autres types itérables
             if isinstance(result_value, list):
                 result_content = f"List[{len(result_value)}] - " + ", ".join(map(str, result_value[:3]))
@@ -77,37 +79,10 @@ class ToolCallLoggingHandler:
 
         logger.debug(f"  ◀️  RESULT: {result_content[:500]}...") # Tronqué
         logger.debug(f"◀️  FINISHED KERNEL FUNCTION: {function_name}")
-        return context
 
-# Définitions minimales pour compatibilité SK 0.9.6b1 (module agents non disponible)
-class Agent:
-    def __init__(self, name: str, kernel: Kernel = None, **kwargs):
-        self.name = name
-        self.kernel = kernel
-        # Ajout d'un logger pour compatibilité avec les attentes de l'orchestrateur
-        self._logger = logging.getLogger(f"Agent.{self.name}")
-        self._logger.info(f"Agent {self.name} initialisé (compatibilité SK 0.9.6b1).")
-
-class SelectionStrategy:
-    def __init__(self, **kwargs): # Ajout pour Pydantic
-        self._logger = logging.getLogger(self.__class__.__name__)
-        self._logger.info(f"SelectionStrategy initialisée (compatibilité SK 0.9.6b1).")
-
-    def select_next_agent(self, agents: List[Agent], last_agent: Agent = None) -> Agent:
-        self._logger.debug(f"Sélection du prochain agent depuis la liste: {agents}")
-        if not agents:
-            self._logger.warning("Aucun agent disponible pour la sélection.")
-            return None
-        return agents[0] # Comportement par défaut simple
-
-class TerminationStrategy:
-    def __init__(self, **kwargs): # Ajout pour Pydantic
-        self._logger = logging.getLogger(self.__class__.__name__)
-        self._logger.info(f"TerminationStrategy initialisée (compatibilité SK 0.9.6b1).")
-
-    def should_terminate(self, messages: List[Any]) -> bool:
-        self._logger.debug(f"Vérification des conditions de terminaison pour {len(messages)} messages.")
-        return False # Comportement par défaut simple
+# Les classes de base (Agent, Strategies) sont importées depuis le module `base`
+# pour éviter les dépendances circulaires.
+from .base import Agent, SelectionStrategy, TerminationStrategy
 
 class CyclicSelectionStrategy(SelectionStrategy):
     """
