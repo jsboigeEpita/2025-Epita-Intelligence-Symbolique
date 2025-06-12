@@ -79,8 +79,8 @@ class PlaywrightRunner:
             # Préparation environnement test
             await self._prepare_test_environment(effective_config)
             
-            # Construction commande pytest
-            cmd = self._build_pytest_command(test_paths, effective_config)
+            # Construction commande playwright
+            cmd = self._build_playwright_command(test_paths, effective_config)
             
             # Exécution tests
             result = await self._execute_tests(cmd, effective_config)
@@ -147,85 +147,69 @@ class PlaywrightRunner:
                     except Exception:
                         pass  # Ignore erreurs de suppression
     
-    def _build_pytest_command(self, test_paths: List[str], 
-                             config: Dict[str, Any]) -> List[str]:
-        """Construit la commande pytest avec options Playwright"""
+    def _build_playwright_command(self, test_paths: List[str],
+                                 config: Dict[str, Any]) -> List[str]:
+        """Construit la commande npx playwright test avec les bonnes options."""
         
-        # Base command avec activation environnement
+        # Commande de base
+        playwright_cmd = ['npx', 'playwright', 'test']
+        
+        # Ajout des chemins de tests
+        playwright_cmd.extend(test_paths)
+
+        # Ajout des options Playwright
+        playwright_cmd.append(f"--browser={config['browser']}")
+        if not config['headless']:
+            playwright_cmd.append('--headed')
+        
+        playwright_cmd.append(f"--timeout={config['timeout_ms']}")
+        
+        # La configuration pour les screenshots et les traces est dans playwright.config.js
+        # et est activée par défaut.
+        
+        # Commande complète avec activation de l'environnement
         if sys.platform == "win32":
+            # Le CWD pour l'exécution sera `tests_playwright` donc les paths sont relatifs
+            # La commande `npx` utilisera le node portable si `NODE_HOME` est dans le PATH
+            # ce qui est fait par `activate_project_env.ps1`
+            command_to_run = ' '.join(playwright_cmd)
+            # Le script activate_project_env.ps1 doit être appelé depuis la racine du projet.
+            # Le CWD de _execute_tests est 'tests_playwright', donc on utilise un chemin relatif.
+            activate_script_path = (Path.cwd() / 'scripts/env/activate_project_env.ps1').resolve()
             cmd = [
-                'powershell', '-File', 'scripts/env/activate_project_env.ps1',
-                '-CommandToRun', 'python -m pytest'
+                'powershell', '-File', str(activate_script_path),
+                '-CommandToRun', command_to_run
             ]
         else:
-            cmd = ['conda', 'run', '-n', 'projet-is', 'python', '-m', 'pytest']
-        
-        # Options pytest
-        pytest_args = [
-            '-v',  # Verbose
-            '-s',  # Pas de capture stdout
-            '--tb=short',  # Traceback court
-        ]
-        
-        # Options Playwright
-        if config['headless']:
-            pytest_args.append('--headless')
-        else:
-            pytest_args.append('--headed')
-            
-        pytest_args.extend([
-            f'--browser={config["browser"]}',
-            '--screenshot=on',
-            '--video=on' if config.get('traces', True) else '--video=off'
-        ])
-        
-        # Chemins de tests
-        pytest_args.extend(test_paths)
-        
-        # Marqueurs Playwright - temporairement désactivé pour débuggage
-        # pytest_args.extend(['-m', 'playwright'])
-        
-        # Intégration dans commande
-        if sys.platform == "win32":
-            # Pour PowerShell, joindre les arguments pytest
-            cmd[-1] += ' ' + ' '.join(pytest_args)
-        else:
-            cmd.extend(pytest_args)
-        
+            # Pour Linux/macOS
+            command_to_run = ' '.join(playwright_cmd)
+            cmd = ['conda', 'run', '-n', 'projet-is', 'bash', '-c', f'cd tests_playwright && {command_to_run}']
+
         return cmd
     
-    async def _execute_tests(self, cmd: List[str], 
+    async def _execute_tests(self, cmd: List[str],
                            config: Dict[str, Any]) -> subprocess.CompletedProcess:
         """Exécute les tests et capture la sortie"""
         self.logger.info(f"Commande test: {' '.join(cmd)}")
         
+        # Le répertoire de travail pour playwright est "tests_playwright"
+        cwd = Path.cwd() / 'tests_playwright'
+        
         # Fichiers de log
-        stdout_file = self.traces_dir / 'pytest_stdout.log'
-        stderr_file = self.traces_dir / 'pytest_stderr.log'
+        stdout_file = self.traces_dir / 'playwright_stdout.log'
+        stderr_file = self.traces_dir / 'playwright_stderr.log'
         
         try:
-            # Exécution avec capture
-            if sys.platform == "win32":
-                # PowerShell nécessite gestion spéciale
-                result = subprocess.run(
-                    cmd,
-                    capture_output=True,
-                    text=True,
-                    encoding='utf-8',
-                    errors='replace',
-                    timeout=config.get('test_timeout', 300),  # 5 min par défaut
-                    cwd=Path.cwd()
-                )
-            else:
-                result = subprocess.run(
-                    cmd,
-                    capture_output=True,
-                    text=True,
-                    encoding='utf-8',
-                    errors='replace',
-                    timeout=config.get('test_timeout', 300),
-                    cwd=Path.cwd()
-                )
+            # Exécution avec capture depuis le bon répertoire
+            result = subprocess.run(
+                cmd,
+                capture_output=True,
+                text=True,
+                encoding='utf-8',
+                errors='replace',
+                timeout=config.get('test_timeout', 300),  # 5 min par défaut
+                cwd=cwd
+            )
             
             # Sauvegarde logs
             with open(stdout_file, 'w', encoding='utf-8') as f:
@@ -252,7 +236,7 @@ class PlaywrightRunner:
         stderr_lines = result.stderr.split('\n') if result.stderr else []
         
         # Extraction statistiques
-        stats = self._extract_pytest_stats(stdout_lines)
+        stats = self._extract_playwright_stats(stdout_lines)
         
         # Sauvegarde résultats détaillés
         self.last_results = {
@@ -280,39 +264,45 @@ class PlaywrightRunner:
         
         return success
     
-    def _extract_pytest_stats(self, stdout_lines: List[str]) -> Dict[str, Any]:
-        """Extrait les statistiques de pytest"""
+    def _extract_playwright_stats(self, stdout_lines: List[str]) -> Dict[str, Any]:
+        """Extrait les statistiques de la sortie de Playwright."""
         stats = {
             'total': 0,
             'passed': 0,
             'failed': 0,
             'skipped': 0,
-            'errors': 0,
+            'timedOut': 0,
+            'interrupted': 0,
             'duration': 0.0
         }
+        import re
+
+        # Regex pour trouver la ligne de résumé
+        # Ex: "1 test passed (15.2s)" ou "2 tests failed (1 worker)"
+        summary_re = re.compile(r"(\d+)\s+test[s]?\s+(passed|failed|skipped|timed out|interrupted)")
+        duration_re = re.compile(r"\(([\d\.]+)s\)")
+
+        for line in reversed(stdout_lines):
+            duration_match = duration_re.search(line)
+            if duration_match:
+                try:
+                    stats['duration'] = float(duration_match.group(1))
+                except ValueError:
+                    pass
+
+            matches = summary_re.findall(line)
+            if matches:
+                for count, status in matches:
+                    status_key = status.replace(' ', '')
+                    if status_key == "timedout": status_key = "timedOut"
+                    if status_key in stats:
+                        stats[status_key] = int(count)
+                
+                stats['total'] = sum(v for k, v in stats.items() if k not in ['duration'])
+                # Une fois qu'on a trouvé le résumé, on peut arrêter
+                return stats
         
-        for line in stdout_lines:
-            # Ligne de résumé pytest
-            if ' passed' in line or ' failed' in line:
-                # Ex: "5 passed, 2 failed in 23.45s"
-                parts = line.split()
-                for i, part in enumerate(parts):
-                    if part == 'passed' and i > 0:
-                        stats['passed'] = int(parts[i-1])
-                    elif part == 'failed' and i > 0:
-                        stats['failed'] = int(parts[i-1])
-                    elif part == 'skipped' and i > 0:
-                        stats['skipped'] = int(parts[i-1])
-                    elif part == 'error' and i > 0:
-                        stats['errors'] = int(parts[i-1])
-                    elif 'in' in parts and i < len(parts) - 1:
-                        try:
-                            duration_str = parts[i+1].rstrip('s')
-                            stats['duration'] = float(duration_str)
-                        except (ValueError, IndexError):
-                            pass
-        
-        stats['total'] = stats['passed'] + stats['failed'] + stats['skipped'] + stats['errors']
+        # Fallback si le parsing ne trouve rien
         return stats
     
     def _collect_artifacts(self) -> Dict[str, List[str]]:
