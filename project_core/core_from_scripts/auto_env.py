@@ -50,7 +50,8 @@ def ensure_env(env_name: str = "projet-is", silent: bool = True) -> bool:
     if env_name not in sys.executable:
         error_message_immediate = (
             f"ERREUR CRITIQUE IMMÉDIATE : Le script est lancé avec un interpréteur Python incorrect.\n"
-            f"  Exécutable Python (sys.executable): '{sys.executable}' (Doit contenir: '{env_name}')"
+            f"  Exécutable Python (sys.executable): '{sys.executable}' (Doit contenir: '{env_name}')\n"
+            f"  POUR CORRIGER : Assurez-vous que l'environnement Conda '{env_name}' est activé, ou lancez ce script via le wrapper 'activate_project_env.ps1'."
         )
         print(f"[auto_env] {error_message_immediate}", file=sys.stderr)
         raise RuntimeError(error_message_immediate)
@@ -109,9 +110,10 @@ def ensure_env(env_name: str = "projet-is", silent: bool = True) -> bool:
 
         if not (is_conda_env_correct and is_python_executable_correct):
             error_message = (
-                f"ERREUR CRITIQUE : Le script ne s'exécute pas dans l'environnement Conda '{env_name}' attendu.\n"
+                f"ERREUR CRITIQUE : Le script ne s'exécute pas dans l'environnement Conda '{env_name}' attendu après tentative d'activation.\n"
                 f"  Environnement Conda actif (CONDA_DEFAULT_ENV): '{current_conda_env}' (Attendu: '{env_name}')\n"
-                f"  Exécutable Python (sys.executable): '{current_python_executable}' (Doit contenir: '{env_name}')"
+                f"  Exécutable Python (sys.executable): '{current_python_executable}' (Doit contenir: '{env_name}')\n"
+                f"  POUR CORRIGER : Assurez-vous que l'environnement Conda '{env_name}' est activé avant de lancer ce script, ou utilisez le wrapper 'activate_project_env.ps1'."
             )
             # Logger l'erreur même si silent est True pour cette partie critique
             logger_instance.error(error_message) # Utilise l'instance de logger existante
