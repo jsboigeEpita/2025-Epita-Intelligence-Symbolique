@@ -60,7 +60,8 @@ except ImportError as e:
 
 # Imports des orchestrateurs spécialisés
 try:
-    from argumentation_analysis.orchestration.cluedo_orchestrator import CluedoOrchestrator
+    # CORRECTIF: Importe CluedoExtendedOrchestrator et l'aliase en CluedoOrchestrator
+    from argumentation_analysis.orchestration.cluedo_extended_orchestrator import CluedoExtendedOrchestrator as CluedoOrchestrator
     from argumentation_analysis.orchestration.conversation_orchestrator import ConversationOrchestrator
     from argumentation_analysis.orchestration.real_llm_orchestrator import RealLLMOrchestrator
 except ImportError as e:

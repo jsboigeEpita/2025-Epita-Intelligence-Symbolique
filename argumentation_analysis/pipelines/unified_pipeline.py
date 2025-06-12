@@ -1,3 +1,15 @@
+# =====================================================================================
+# VÉRIFICATION DE LA VERSION DE SEMANTIC-KERNEL
+# Le projet requiert une version moderne et agentique. Cette importation précoce
+# garantit que le programme s'arrête immédiatement si la version est obsolète.
+# =====================================================================================
+try:
+    from argumentation_analysis.utils import version_validator
+except ImportError as e:
+    import sys
+    print(f"ERREUR CRITIQUE: {e}", file=sys.stderr)
+    sys.exit(1)
+# =====================================================================================
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
