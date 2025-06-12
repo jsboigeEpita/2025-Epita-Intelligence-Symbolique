@@ -18,7 +18,7 @@ Date: 10/06/2025
 import pytest
 import asyncio
 import logging
-from unittest.mock import patch, MagicMock, AsyncMock
+from unittest.mock import patch, AsyncMock
 from typing import Dict, Any, List
 
 # Configuration du logging pour les tests
@@ -40,22 +40,14 @@ class TestCluedoOrchestrator:
     """Tests pour l'orchestrateur Cluedo (investigations)."""
     
     @pytest.fixture
-    def mock_llm_service(self):
-        """Service LLM mocké pour les tests."""
-        mock_service = MagicMock()
-        mock_service.service_id = "test_cluedo_llm"
-        mock_service.generate_text = AsyncMock(return_value="Response investigation")
-        return mock_service
-    
-    @pytest.fixture
-    def cluedo_orchestrator(self, mock_llm_service):
+    def cluedo_orchestrator(self, llm_service):
         """Instance de CluedoOrchestrator pour les tests."""
         config = {
             "investigation_depth": "thorough",
             "evidence_analysis_mode": "systematic",
             "deduction_strategy": "sherlock_holmes"
         }
-        return CluedoOrchestrator(llm_service=mock_llm_service, config=config)
+        return CluedoOrchestrator(llm_service=llm_service, config=config)
     
     @pytest.fixture
     def investigation_text(self):
@@ -67,9 +59,9 @@ class TestCluedoOrchestrator:
             "Qui dit la vérité dans cette affaire ?"
         )
     
-    def test_cluedo_orchestrator_initialization(self, cluedo_orchestrator, mock_llm_service):
+    def test_cluedo_orchestrator_initialization(self, cluedo_orchestrator, llm_service):
         """Test de l'initialisation de l'orchestrateur Cluedo."""
-        assert cluedo_orchestrator.llm_service == mock_llm_service
+        assert cluedo_orchestrator.llm_service == llm_service
         assert cluedo_orchestrator.evidence_repository == {}
         assert cluedo_orchestrator.witness_statements == []
         assert cluedo_orchestrator.deduction_chain == []
@@ -114,88 +106,66 @@ class TestCluedoOrchestrator:
     
     @pytest.mark.asyncio
     async def test_identify_evidence_systematic(self, cluedo_orchestrator):
-        """Test d'identification systématique des preuves."""
+        """Test d'identification systématique des preuves avec un vrai LLM."""
         text = "Le couteau était sur la table. Marie a dit qu'elle a vu Jean partir. L'ADN confirme sa présence."
         
-        cluedo_orchestrator.llm_service.generate_text.return_value = """
-        {
-            "physical_evidence": [
-                {"item": "couteau", "location": "table", "relevance": "high", "type": "weapon"},
-                {"item": "ADN", "analysis": "confirme présence", "relevance": "critical", "type": "biological"}
-            ],
-            "witness_testimonies": [
-                {"witness": "Marie", "statement": "a vu Jean partir", "reliability": "medium"}
-            ],
-            "temporal_markers": ["moment du départ"],
-            "spatial_markers": ["table", "lieu de présence"]
-        }
-        """
-        
+        # Pas de mock, appel LLM réel
         evidence = await cluedo_orchestrator._identify_evidence(text)
         
+        # Assertions souples
+        assert isinstance(evidence, dict)
         assert "physical_evidence" in evidence
         assert "witness_testimonies" in evidence
-        assert len(evidence["physical_evidence"]) == 2
-        assert evidence["physical_evidence"][1]["type"] == "biological"
+        assert isinstance(evidence["physical_evidence"], list)
+        assert isinstance(evidence["witness_testimonies"], list)
+
+        if evidence["physical_evidence"]:
+            item = evidence["physical_evidence"][0]
+            assert "item" in item
+            assert "relevance" in item
+            assert "type" in item
+
+        if evidence["witness_testimonies"]:
+            testimony = evidence["witness_testimonies"][0]
+            assert "witness" in testimony
+            assert "statement" in testimony
     
     @pytest.mark.asyncio
     async def test_analyze_credibility_witnesses(self, cluedo_orchestrator):
-        """Test d'analyse de crédibilité des témoins."""
+        """Test d'analyse de crédibilité des témoins avec un vrai LLM."""
         witness_data = [
-            {"name": "témoin A", "statement": "J'ai vu clairement à 21h précises"},
-            {"name": "témoin B", "statement": "Je pense qu'il était vers 21h quelque part"}
+            {"name": "témoin A", "statement": "J'ai vu clairement le suspect à 21h précises, il portait un manteau rouge."},
+            {"name": "témoin B", "statement": "Je crois l'avoir vu vers 21h, mais je ne suis pas sûr de ce qu'il portait."}
         ]
         
-        cluedo_orchestrator.llm_service.generate_text.return_value = """
-        {
-            "credibility_scores": {
-                "témoin A": {
-                    "precision_score": 0.9,
-                    "consistency_score": 0.8,
-                    "detail_level": 0.85,
-                    "overall_credibility": 0.85
-                },
-                "témoin B": {
-                    "precision_score": 0.4,
-                    "consistency_score": 0.6,
-                    "detail_level": 0.3,
-                    "overall_credibility": 0.43
-                }
-            },
-            "credibility_factors": {
-                "precision_temporelle": "témoin A supérieur",
-                "niveau_détail": "témoin A bien plus précis"
-            }
-        }
-        """
-        
+        # Pas de mock, appel LLM réel
         credibility = await cluedo_orchestrator._analyze_credibility(witness_data)
         
+        # Assertions souples
+        assert isinstance(credibility, dict)
         assert "credibility_scores" in credibility
-        assert credibility["credibility_scores"]["témoin A"]["overall_credibility"] > 0.8
-        assert credibility["credibility_scores"]["témoin B"]["overall_credibility"] < 0.5
+        assert "credibility_factors" in credibility
+        scores = credibility["credibility_scores"]
+        assert "témoin A" in scores
+        assert "témoin B" in scores
+        assert "overall_credibility" in scores["témoin A"]
+        assert "overall_credibility" in scores["témoin B"]
+        # On s'attend à ce que le témoin A, plus précis, ait un meilleur score
+        assert scores["témoin A"]["overall_credibility"] >= scores["témoin B"]["overall_credibility"]
 
 
 class TestConversationOrchestrator:
     """Tests pour l'orchestrateur de conversation."""
     
     @pytest.fixture
-    def mock_llm_service(self):
-        """Service LLM mocké pour les tests."""
-        mock_service = MagicMock()
-        mock_service.service_id = "test_conversation_llm"
-        mock_service.generate_text = AsyncMock(return_value="Response conversation")
-        return mock_service
-    
-    @pytest.fixture
-    def conversation_orchestrator(self, mock_llm_service):
+    def conversation_orchestrator(self, llm_service):
         """Instance de ConversationOrchestrator pour les tests."""
         config = {
             "dialogue_analysis_depth": "comprehensive",
             "turn_taking_analysis": True,
             "rhetorical_strategy_detection": True
         }
-        return ConversationOrchestrator(llm_service=mock_llm_service, config=config)
+        return ConversationOrchestrator(llm_service=llm_service, config=config)
     
     @pytest.fixture
     def dialogue_text(self):
@@ -254,51 +224,43 @@ class TestConversationOrchestrator:
     
     @pytest.mark.asyncio
     async def test_parse_dialogue_structure(self, conversation_orchestrator):
-        """Test d'analyse de structure de dialogue."""
-        dialogue = "A: Argument 1\nB: Contre-argument\nA: Réfutation"
+        """Test d'analyse de structure de dialogue avec un vrai LLM."""
+        dialogue = "A: Je pense que nous devrions investir dans l'énergie solaire.\nB: Mais c'est trop cher et intermittent.\nA: Le coût a baissé et le stockage s'améliore."
         
-        conversation_orchestrator.llm_service.generate_text.return_value = """
-        {
-            "parsed_turns": [
-                {"speaker": "A", "content": "Argument 1", "speech_act": "assertion", "argument_type": "claim"},
-                {"speaker": "B", "content": "Contre-argument", "speech_act": "objection", "argument_type": "counter_claim"},
-                {"speaker": "A", "content": "Réfutation", "speech_act": "rebuttal", "argument_type": "defense"}
-            ],
-            "dialogue_statistics": {
-                "total_turns": 3,
-                "speakers": ["A", "B"],
-                "turn_distribution": {"A": 2, "B": 1}
-            }
-        }
-        """
-        
+        # Pas de mock, appel LLM réel
         structure = await conversation_orchestrator._parse_dialogue_structure(dialogue)
         
+        # Assertions souples
+        assert isinstance(structure, dict)
         assert "parsed_turns" in structure
         assert "dialogue_statistics" in structure
-        assert structure["dialogue_statistics"]["total_turns"] == 3
+        assert isinstance(structure["parsed_turns"], list)
+        assert len(structure["parsed_turns"]) == 3
+        
+        turn = structure["parsed_turns"][0]
+        assert "speaker" in turn
+        assert "content" in turn
+        assert "speech_act" in turn
+        assert turn["speaker"] == "A"
+        
+        stats = structure["dialogue_statistics"]
+        assert stats["total_turns"] == 3
+        assert "A" in stats["speakers"]
+        assert "B" in stats["speakers"]
 
 
 class TestRealLLMOrchestrator:
     """Tests pour l'orchestrateur LLM réel."""
     
     @pytest.fixture
-    def mock_llm_service(self):
-        """Service LLM mocké pour les tests."""
-        mock_service = MagicMock()
-        mock_service.service_id = "test_real_llm"
-        mock_service.generate_text = AsyncMock(return_value="Response LLM réel")
-        return mock_service
-    
-    @pytest.fixture
-    def real_llm_orchestrator(self, mock_llm_service):
+    def real_llm_orchestrator(self, llm_service):
         """Instance de RealLLMOrchestrator pour les tests."""
         config = {
             "llm_coordination_strategy": "multi_agent",
             "prompt_optimization": True,
             "response_validation": True
         }
-        return RealLLMOrchestrator(llm_service=mock_llm_service, config=config)
+        return RealLLMOrchestrator(llm_service=llm_service, config=config)
     
     def test_real_llm_orchestrator_initialization(self, real_llm_orchestrator):
         """Test de l'initialisation de l'orchestrateur LLM réel."""
@@ -350,22 +312,14 @@ class TestLogiqueComplexeOrchestrator:
     """Tests pour l'orchestrateur de logique complexe."""
     
     @pytest.fixture
-    def mock_llm_service(self):
-        """Service LLM mocké pour les tests."""
-        mock_service = MagicMock()
-        mock_service.service_id = "test_logic_complex_llm"
-        mock_service.generate_text = AsyncMock(return_value="Response logique complexe")
-        return mock_service
-    
-    @pytest.fixture
-    def logic_orchestrator(self, mock_llm_service):
+    def logic_orchestrator(self, llm_service):
         """Instance de LogiqueComplexeOrchestrator pour les tests."""
         config = {
             "logical_system": "multi_modal",
             "reasoning_depth": "deep",
             "formal_verification": True
         }
-        return LogiqueComplexeOrchestrator(llm_service=mock_llm_service, config=config)
+        return LogiqueComplexeOrchestrator(llm_service=llm_service, config=config)
     
     @pytest.fixture
     def complex_logical_text(self):
@@ -425,42 +379,31 @@ class TestLogiqueComplexeOrchestrator:
     
     @pytest.mark.asyncio
     async def test_extract_formal_structure(self, logic_orchestrator):
-        """Test d'extraction de structure formelle."""
+        """Test d'extraction de structure formelle avec un vrai LLM."""
         text = "Tous les hommes sont mortels. Socrate est un homme. Donc Socrate est mortel."
         
-        logic_orchestrator.llm_service.generate_text.return_value = """
-        {
-            "formal_propositions": [
-                "∀x(Human(x) → Mortal(x))",
-                "Human(Socrates)",
-                "Mortal(Socrates)"
-            ],
-            "logical_structure": "classical_syllogism",
-            "inference_pattern": "modus_ponens",
-            "quantification": "universal_particular"
-        }
-        """
-        
+        # Pas de mock, appel LLM réel
         structure = await logic_orchestrator._extract_formal_structure(text)
         
+        # Assertions souples
+        assert isinstance(structure, dict)
         assert "formal_propositions" in structure
         assert "logical_structure" in structure
-        assert structure["logical_structure"] == "classical_syllogism"
+        assert isinstance(structure["formal_propositions"], list)
+        assert len(structure["formal_propositions"]) >= 3
+        # Vérifier si la structure contient des éléments de logique formelle
+        assert "∀" in structure["formal_propositions"][0] or "forall" in structure["formal_propositions"][0].lower()
+        assert "→" in structure["formal_propositions"][0] or "implies" in structure["formal_propositions"][0].lower()
+        assert "Human(Socrates)" in structure["formal_propositions"] or "homme(socrate)" in str(structure["formal_propositions"]).lower()
 
 
 class TestSpecializedOrchestratorsIntegration:
     """Tests d'intégration entre orchestrateurs spécialisés."""
     
-    @pytest.fixture
-    def mock_llm_service(self):
-        """Service LLM mocké pour tous les orchestrateurs."""
-        mock_service = MagicMock()
-        mock_service.service_id = "test_integration_specialized_llm"
-        mock_service.generate_text = AsyncMock(return_value="Response intégration")
-        return mock_service
+    # Fixture mock_llm_service supprimée
     
     @pytest.mark.asyncio
-    async def test_orchestrator_selection_by_content(self, mock_llm_service):
+    async def test_orchestrator_selection_by_content(self, llm_service):
         """Test de sélection d'orchestrateur selon le contenu."""
         test_cases = [
             {
@@ -483,18 +426,18 @@ class TestSpecializedOrchestratorsIntegration:
         for case in test_cases:
             # Simuler la sélection automatique
             if "témoin" in case["text"] or "vérité" in case["text"]:
-                selected_orchestrator = case["orchestrator_class"](mock_llm_service, {})
+                selected_orchestrator = case["orchestrator_class"](llm_service, {})
                 assert isinstance(selected_orchestrator, case["orchestrator_class"])
             elif "Alice:" in case["text"] or "Bob:" in case["text"]:
-                selected_orchestrator = case["orchestrator_class"](mock_llm_service, {})
+                selected_orchestrator = case["orchestrator_class"](llm_service, {})
                 assert isinstance(selected_orchestrator, case["orchestrator_class"])
             elif "Tous les" in case["text"] and "Donc" in case["text"]:
-                selected_orchestrator = case["orchestrator_class"](mock_llm_service, {})
+                selected_orchestrator = case["orchestrator_class"](llm_service, {})
                 assert isinstance(selected_orchestrator, case["orchestrator_class"])
     
     @pytest.mark.asyncio
-    async def test_orchestrator_collaboration(self, mock_llm_service):
-        """Test de collaboration entre orchestrateurs."""
+    async def test_orchestrator_collaboration(self, llm_service):
+        """Test de collaboration entre orchestrateurs avec un vrai LLM."""
         # Texte complexe nécessitant plusieurs orchestrateurs
         complex_text = (
             "Dans cette enquête, le témoin A affirme : 'Si tous les suspects "
@@ -502,36 +445,28 @@ class TestSpecializedOrchestratorsIntegration:
             "'Mais Jean n'était pas là, donc votre logique est fausse.'"
         )
         
-        # Simuler une coordination entre orchestrateurs
-        cluedo_orchestrator = CluedoOrchestrator(mock_llm_service, {})
-        conversation_orchestrator = ConversationOrchestrator(mock_llm_service, {})
-        logic_orchestrator = LogiqueComplexeOrchestrator(mock_llm_service, {})
+        # Utilisation d'instances réelles avec le même service LLM
+        cluedo_orchestrator = CluedoOrchestrator(llm_service, {})
+        conversation_orchestrator = ConversationOrchestrator(llm_service, {})
+        logic_orchestrator = LogiqueComplexeOrchestrator(llm_service, {})
         
-        # Mock des analyses spécialisées
-        cluedo_orchestrator.orchestrate_investigation_analysis = AsyncMock(return_value={
-            "evidence": "Témoignages contradictoires",
-            "credibility": {"témoin A": 0.7, "témoin B": 0.8}
-        })
+        # Exécuter les vraies analyses
         
-        conversation_orchestrator.orchestrate_dialogue_analysis = AsyncMock(return_value={
-            "dialogue_pattern": "logical_disagreement",
-            "argumentation_structure": "claim_counter_claim"
-        })
+        # On ne peut pas mocker les méthodes internes, on appelle la méthode publique
+        # et on fait des assertions souples sur le résultat.
+        # C'est maintenant un test d'intégration.
         
-        logic_orchestrator.orchestrate_complex_logical_analysis = AsyncMock(return_value={
-            "logical_structure": "conditional_with_negation",
-            "validity": "depends_on_premises"
-        })
-        
-        # Exécuter les analyses
         investigation_result = await cluedo_orchestrator.orchestrate_investigation_analysis(complex_text)
         dialogue_result = await conversation_orchestrator.orchestrate_dialogue_analysis(complex_text)
         logic_result = await logic_orchestrator.orchestrate_complex_logical_analysis(complex_text)
         
-        # Vérifier la cohérence des résultats
-        assert investigation_result["credibility"]["témoin B"] > investigation_result["credibility"]["témoin A"]
-        assert dialogue_result["dialogue_pattern"] == "logical_disagreement"
-        assert logic_result["logical_structure"] == "conditional_with_negation"
+        # Assertions souples d'intégration
+        assert "investigation_conclusion" in investigation_result
+        assert "dialogue_structure" in dialogue_result
+        assert "logical_verification" in logic_result
+        assert "confidence" in investigation_result["investigation_conclusion"]
+        assert "total_turns" in dialogue_result["dialogue_structure"]["dialogue_statistics"]
+        assert "validity" in logic_result["reasoning_analysis"]
 
 
 if __name__ == "__main__":

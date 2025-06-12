@@ -7,17 +7,17 @@ from config.unified_config import UnifiedConfig
 
 # -*- coding: utf-8 -*-
 """
-Tests unitaires pour la fonction run_analysis_conversation du module analysis_runner.
+Tests unitaires pour la fonction run_analysis du module analysis_runner.
 """
 
 import pytest # Ajout de pytest
 
 import asyncio
 # from tests.async_test_case import AsyncTestCase # Suppression de l'import
-from argumentation_analysis.orchestration.analysis_runner import run_analysis_conversation
+from argumentation_analysis.orchestration.analysis_runner import run_analysis
 
 
-class TestRunAnalysisConversation:
+class TestRunAnalysis:
     async def _create_authentic_gpt4o_mini_instance(self):
         """Crée une instance authentique de gpt-4o-mini au lieu d'un mock."""
         config = UnifiedConfig()
@@ -33,7 +33,7 @@ class TestRunAnalysisConversation:
             logger.warning(f"Appel LLM authentique échoué: {e}")
             return "Authentic LLM call failed"
 
-    """Tests pour la fonction run_analysis_conversation."""
+    """Tests pour la fonction run_analysis."""
 
     @pytest.fixture
     def run_analysis_components(self):
@@ -67,7 +67,7 @@ class TestRunAnalysisConversation:
         mock_rhetorical_analysis_state,
         run_analysis_components # Ajout de la fixture
     ):
-        """Teste l'exécution réussie de la fonction run_analysis_conversation."""
+        """Teste l'exécution réussie de la fonction run_analysis."""
         test_text, mock_llm_service = run_analysis_components
         # Configurer les mocks
         mock_state = asyncio.run(self._create_authentic_gpt4o_mini_instance())
@@ -126,8 +126,8 @@ class TestRunAnalysisConversation:
         mock_group_chat.invoke = mock_invoke
         
         # Appeler la fonction à tester
-        await run_analysis_conversation(
-            texte_a_analyser=test_text,
+        await run_analysis(
+            text_content=test_text,
             llm_service=mock_llm_service
         )
         
@@ -158,8 +158,8 @@ class TestRunAnalysisConversation:
         
         # Appeler la fonction à tester et vérifier qu'elle lève une exception
         with pytest.raises(ValueError):
-            await run_analysis_conversation(
-                texte_a_analyser=test_text,
+            await run_analysis(
+                text_content=test_text,
                 llm_service=invalid_llm_service
             )
         
@@ -193,8 +193,8 @@ class TestRunAnalysisConversation:
         mock_kernel.add_service.side_effect = Exception("Chat is already complete")
         
         # Appeler la fonction à tester
-        await run_analysis_conversation(
-            texte_a_analyser=test_text,
+        await run_analysis(
+            text_content=test_text,
             llm_service=mock_llm_service
         )
         

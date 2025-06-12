@@ -1,290 +1,199 @@
 
 # Authentic gpt-4o-mini imports (replacing mocks)
-import openai
-from semantic_kernel.contents import ChatHistory
-from semantic_kernel.core_plugins import ConversationSummaryPlugin
-from config.unified_config import UnifiedConfig
-
-# -*- coding: utf-8 -*-
-import unittest
-
+import pytest
 import pandas as pd
 import json
-import os
-import sys
 from pathlib import Path
 import logging
-from semantic_kernel import Kernel # Keep Kernel import here
-from semantic_kernel.functions import KernelPlugin # Import KernelPlugin
-from argumentation_analysis.agents.core.informal.informal_definitions import InformalAnalysisPlugin # Importation de la classe à tester
+from unittest.mock import patch, MagicMock
 
-current_dir = Path(__file__).resolve().parent
-root_dir = current_dir.parent.parent.parent.parent 
-sys.path.append(str(root_dir))
+from semantic_kernel import Kernel
+from semantic_kernel.functions import KernelPlugin
 
-# Importation de taxonomy_loader pour pouvoir le patcher
-# import taxonomy_loader
+from argumentation_analysis.agents.core.informal.informal_definitions import InformalAnalysisPlugin, setup_informal_kernel
+from config.unified_config import UnifiedConfig
 
-test_logger = logging.getLogger("TestInformalDefinitions")
+# Configure logging for tests
+logger = logging.getLogger(__name__)
 
+# --- Fixtures ---
 
-class TestInformalAnalysisPlugin(unittest.TestCase):
-    async def _create_authentic_gpt4o_mini_instance(self):
-        """Crée une instance authentique de gpt-4o-mini au lieu d'un mock."""
-        config = UnifiedConfig()
-        return config.get_kernel_with_gpt4o_mini()
-        
-    async def _make_authentic_llm_call(self, prompt: str) -> str:
-        """Fait un appel authentique à gpt-4o-mini."""
-        try:
-            kernel = await self._create_authentic_gpt4o_mini_instance()
-            result = await kernel.invoke("chat", input=prompt)
-            return str(result)
-        except Exception as e:
-            logger.warning(f"Appel LLM authentique échoué: {e}")
-            return "Authentic LLM call failed"
+@pytest.fixture
+def sample_taxonomy_data():
+    """Fixture to provide sample taxonomy data as a list of dictionaries."""
+    return [
+        {'pk': 0, 'parent_pk': None, 'depth': 0, 'text_fr': 'Sophismes', 'nom_vulgarisé': 'Sophismes', 'description_fr': 'Racine de la taxonomie des sophismes.'},
+        {'pk': 1, 'parent_pk': 0, 'depth': 1, 'text_fr': 'Sophisme de Pertinence', 'nom_vulgarisé': 'Pertinence', 'description_fr': 'Les prémisses ne sont pas pertinentes pour la conclusion.'},
+        {'pk': 2, 'parent_pk': 1, 'depth': 2, 'text_fr': 'Ad Hominem', 'nom_vulgarisé': 'Attaque personnelle', 'description_fr': "Attaquer la personne plutôt que l'argument."},
+        {'pk': 3, 'parent_pk': 0, 'depth': 1, 'text_fr': 'Sophisme d\'Ambiguïté', 'nom_vulgarisé': 'Ambiguïté', 'description_fr': 'Utilisation de termes vagues ou équivoques.'}
+    ]
 
-    """Tests pour le plugin d'analyse des sophismes informels."""
+@pytest.fixture
+def mock_taxonomy_df(sample_taxonomy_data):
+    """Fixture to create a mocked DataFrame from sample data, indexed by 'pk'."""
+    df = pd.DataFrame(sample_taxonomy_data)
+    df = df.set_index('pk')
+    df['parent_pk'] = pd.to_numeric(df['parent_pk'], errors='coerce')
+    df['depth'] = pd.to_numeric(df['depth'], errors='coerce').astype('Int64')
+    return df
 
-    def setUp(self): 
-        """Initialisation avant chaque test."""
-        self.sample_taxonomy_data = [
-            {'pk': 0, 'parent_pk': None, 'depth': 0, 'text_fr': 'Sophismes', 'nom_vulgarisé': 'Sophismes', 'description_fr': 'Racine de la taxonomie des sophismes.'},
-            {'pk': 1, 'parent_pk': 0, 'depth': 1, 'text_fr': 'Sophisme de Pertinence', 'nom_vulgarisé': 'Pertinence', 'description_fr': 'Les prémisses ne sont pas pertinentes pour la conclusion.'},
-            {'pk': 2, 'parent_pk': 1, 'depth': 2, 'text_fr': 'Ad Hominem', 'nom_vulgarisé': 'Attaque personnelle', 'description_fr': "Attaquer la personne plutôt que l'argument."},
-            {'pk': 3, 'parent_pk': 0, 'depth': 1, 'text_fr': 'Sophisme d\'Ambiguïté', 'nom_vulgarisé': 'Ambiguïté', 'description_fr': 'Utilisation de termes vagues ou équivoques.'}
-        ]
-        
-        self.df_columns = [
-            {'name': 'pk', 'dtype': 'int64'},
-            {'name': 'parent_pk', 'dtype': 'float64'}, 
-            {'name': 'depth', 'dtype': 'int64'},
-            {'name': 'text_fr', 'dtype': 'object'},
-            {'name': 'nom_vulgarisé', 'dtype': 'object'},
-            {'name': 'description_fr', 'dtype': 'object'}
-        ]
+@pytest.fixture
+def informal_plugin_mocked(mock_taxonomy_df):
+    """
+    Fixture to create an instance of InformalAnalysisPlugin with a mocked
+    _get_taxonomy_dataframe method to isolate internal logic tests.
+    """
+    with patch('argumentation_analysis.agents.core.informal.informal_definitions.InformalAnalysisPlugin._get_taxonomy_dataframe', return_value=mock_taxonomy_df) as mock_method:
+        plugin = InformalAnalysisPlugin()
+        yield plugin
 
-        self.mock_df_real = pd.DataFrame(self.sample_taxonomy_data)
-        self.mock_df_real = self.mock_df_real.set_index('pk') # Set index here
-        self.mock_df_real['parent_pk'] = pd.to_numeric(self.mock_df_real['parent_pk'], errors='coerce')
-        self.mock_df_real['depth'] = pd.to_numeric(self.mock_df_real['depth'], errors='coerce').astype('Int64')
-        self.mock_df = self.mock_df_real.copy()
-        
-        # Patch pour taxonomy_loader.get_taxonomy_path et validate_taxonomy_file
-        # Cible directement le module taxonomy_loader
-        # self.patcher_get_taxonomy_path = patch('taxonomy_loader.get_taxonomy_path', return_value="mock_taxonomy_path_for_all_tests.csv")
-        # self.mock_get_taxonomy_path = self.patcher_get_taxonomy_path.start()
-        # self.addCleanup(self.patcher_get_taxonomy_path.stop)
-
-        # self.patcher_validate_taxonomy_file = patch('taxonomy_loader.validate_taxonomy_file', return_value=True)
-        # self.mock_validate_taxonomy_file = self.patcher_validate_taxonomy_file.start()
-        # self.addCleanup(self.patcher_validate_taxonomy_file.stop)
-
-        # Importation de la classe réelle pour la patcher
-        from argumentation_analysis.agents.core.informal.informal_definitions import InformalAnalysisPlugin
-        self.InformalAnalysisPlugin = InformalAnalysisPlugin
-
-        # Patch de la méthode _get_taxonomy_dataframe du module
-        self.patcher_get_taxonomy_df = patch('argumentation_analysis.agents.core.informal.informal_definitions.InformalAnalysisPlugin._get_taxonomy_dataframe')
-        self.mock_get_taxonomy_df_call = self.patcher_get_taxonomy_df.start()
-        self.addCleanup(self.patcher_get_taxonomy_df.stop)
-        self.mock_get_taxonomy_df_call# Mock eliminated - using authentic gpt-4o-mini self.mock_df
-        
-        # Instancier le plugin réel
-        self.plugin = self.InformalAnalysisPlugin()
-        # Appel initial pour peupler le cache et tester l'appel du mock
-        _ = self.plugin._get_taxonomy_dataframe()
-        
-    def test_initialization(self):
-        """Teste l'initialisation du plugin."""
-        # L'attribut taxonomy_df n'existe pas directement sur l'instance du plugin.
-        # Le DataFrame est accédé via _get_taxonomy_dataframe().
-        # Le test doit vérifier que _get_taxonomy_dataframe a été appelé et retourne le mock_df.
-        # self.mock_get_taxonomy_df_call.# Mock assertion eliminated - authentic validation # Vérifie que _get_taxonomy_dataframe a été appelé
-        retrieved_df = self.plugin._get_taxonomy_dataframe()
-        self.assertIs(retrieved_df, self.mock_df)
-        self.assertEqual(len(retrieved_df), 4)
-
-
-    def test_internal_load_and_prepare_dataframe(self):
-        """Teste le chargement et la préparation interne du DataFrame."""
-        # Ce test n'est plus pertinent car _internal_load_and_prepare_dataframe est mocké.
-        # Le but est de vérifier que _get_taxonomy_dataframe est appelé et retourne le mock_df.
-        # Pas d'assertions spécifiques ici car le comportement est déjà couvert par test_initialization.
-        pass
-
-    def test_internal_load_and_prepare_dataframe_error_via_mock(self):
-        """Teste la gestion d'erreur de __init__ si _get_taxonomy_dataframe échoue."""
-        # Configurer le mock global pour lever une exception lors de l'appel
-        self.mock_get_taxonomy_df_call# Mock eliminated - using authentic gpt-4o-mini Exception("Mocked Load Error")
-
-        # Créer une nouvelle instance du plugin
-        # Le mock est déjà configuré dans setUp pour lever une exception
-        self.mock_get_taxonomy_df_call.reset_mock() # Réinitialiser les appels pour ce test
-        self.mock_get_taxonomy_df_call# Mock eliminated - using authentic gpt-4o-mini Exception("Mocked Load Error")
-
-        plugin_with_error = self.InformalAnalysisPlugin()
-        
-        # L'appel à _get_taxonomy_dataframe() doit être explicite pour déclencher l'erreur
-        with self.assertRaises(Exception):
-            plugin_with_error._get_taxonomy_dataframe()
-        
-        # Vérifier que le mock a été appelé
-        # self.mock_get_taxonomy_df_call.# Mock assertion eliminated - authentic validation
-        self.assertIsNone(plugin_with_error._taxonomy_df_cache) # Vérifier le cache interne, pas taxonomy_df
-
-        # Restaurer le side_effect et le return_value pour les autres tests
-        # self.mock_get_taxonomy_df_call# Mock eliminated - using authentic gpt-4o-mini None
-        # self.mock_get_taxonomy_df_call# Mock eliminated - using authentic gpt-4o-mini self.mock_df
-        self.mock_get_taxonomy_df_call.reset_mock()
-
-
-    def test_internal_get_node_details(self):
-        """Teste la récupération des détails d'un nœud interne."""
-        # Pour ce test, nous utilisons le DataFrame réel mocké.
-        details_pk1 = self.plugin._internal_get_node_details(1, self.mock_df)
-        self.assertIsNotNone(details_pk1)
-        self.assertEqual(details_pk1['pk'], 1)
-        self.assertEqual(details_pk1['nom_vulgarisé'], 'Pertinence')
-
-        details_pk_invalid = self.plugin._internal_get_node_details(99, self.mock_df)
-        self.assertIsNotNone(details_pk_invalid)
-        self.assertIn("error", details_pk_invalid)
-        self.assertIn("PK 99 non trouvée dans la taxonomie.", details_pk_invalid["error"])
-
-    def test_internal_get_children_details(self):
-        """Teste la récupération des détails des enfants d'un nœud."""
-        # Pour ce test, nous utilisons le DataFrame réel mocké.
-        children_pk0 = self.plugin._internal_get_children_details(0, self.mock_df, max_children=5)
-        self.assertEqual(len(children_pk0), 2)
-        self.assertTrue(any(c['nom_vulgarisé'] == 'Pertinence' for c in children_pk0))
-        self.assertTrue(any(c['nom_vulgarisé'] == 'Ambiguïté' for c in children_pk0))
-
-        children_pk1 = self.plugin._internal_get_children_details(1, self.mock_df, max_children=5)
-        self.assertEqual(len(children_pk1), 1)
-        self.assertEqual(children_pk1[0]['nom_vulgarisé'], 'Attaque personnelle')
-
-        children_pk2 = self.plugin._internal_get_children_details(2, self.mock_df, max_children=5)
-        self.assertEqual(len(children_pk2), 0)
-
-    def test_internal_explore_hierarchy(self):
-        """Teste l'exploration interne de la hiérarchie."""
-        # Pour ce test, nous utilisons le DataFrame réel mocké.
-        hierarchy_pk0 = self.plugin._internal_explore_hierarchy(0, self.mock_df)
-        self.assertIsNotNone(hierarchy_pk0["current_node"])
-        self.assertEqual(hierarchy_pk0["current_node"]["nom_vulgarisé"], "Sophismes")
-        self.assertEqual(len(hierarchy_pk0["children"]), 2)
-        self.assertIsNone(hierarchy_pk0["error"])
-
-        hierarchy_pk2 = self.plugin._internal_explore_hierarchy(2, self.mock_df)
-        self.assertIsNotNone(hierarchy_pk2["current_node"])
-        self.assertEqual(hierarchy_pk2["current_node"]["nom_vulgarisé"], "Attaque personnelle")
-        self.assertEqual(len(hierarchy_pk2["children"]), 0)
-        self.assertIsNone(hierarchy_pk2["error"])
-
-        hierarchy_invalid = self.plugin._internal_explore_hierarchy(99, self.mock_df)
-        self.assertIsNone(hierarchy_invalid["current_node"])
-        self.assertEqual(len(hierarchy_invalid["children"]), 0)
-        self.assertIn("PK 99 non trouvée", hierarchy_invalid["error"])
-
-    def test_explore_fallacy_hierarchy(self):
-        """Teste la méthode publique d'exploration de la hiérarchie."""
-        # Pour ce test, nous utilisons le DataFrame réel mocké.
-        result_json_pk1 = self.plugin.explore_fallacy_hierarchy("1")
-        result_pk1 = json.loads(result_json_pk1)
-        print(f"[DEBUG TEST] Résultat de explore_fallacy_hierarchy pour PK 1: {result_pk1}")
-        
-        self.assertEqual(result_pk1["current_node"]["nom_vulgarisé"], "Pertinence")
-        self.assertEqual(len(result_pk1["children"]), 1)
-        self.assertEqual(result_pk1["children"][0]["nom_vulgarisé"], "Attaque personnelle")
-
-        result_json_invalid = self.plugin.explore_fallacy_hierarchy("99")
-        result_invalid = json.loads(result_json_invalid)
-        self.assertIn("PK 99 non trouvée", result_invalid["error"])
-
-        result_json_non_numeric = self.plugin.explore_fallacy_hierarchy("abc")
-        result_non_numeric = json.loads(result_json_non_numeric)
-        self.assertIn("PK invalide: abc", result_non_numeric["error"])
-
-    def test_get_fallacy_details(self):
-        """Teste la méthode publique de récupération des détails d'un sophisme."""
-        # Pour ce test, nous utilisons le DataFrame réel mocké.
-        details_json_pk2 = self.plugin.get_fallacy_details("2")
-        details_pk2 = json.loads(details_json_pk2)
-        self.assertEqual(details_pk2["nom_vulgarisé"], "Attaque personnelle")
-        self.assertEqual(details_pk2["description_fr"], "Attaquer la personne plutôt que l'argument.")
-
-        details_json_invalid = self.plugin.get_fallacy_details("99")
-        details_invalid = json.loads(details_json_invalid)
-        self.assertIn("PK 99 non trouvée", details_invalid["error"])
-
-        details_json_non_numeric = self.plugin.get_fallacy_details("xyz")
-        details_non_numeric_parsed = json.loads(details_json_non_numeric)
-        self.assertIsNotNone(details_non_numeric_parsed)
-        self.assertIn("PK invalide: xyz", details_non_numeric_parsed["error"])
-
-    def test_get_taxonomy_dataframe(self):
-        """Teste la récupération du DataFrame de taxonomie."""
-        # Puisque _get_taxonomy_dataframe est mocké pour retourner self.mock_df,
-        # nous pouvons directement tester les propriétés du mock_df.
-        df_for_json = self.plugin._get_taxonomy_dataframe()
-        self.assertIs(df_for_json, self.mock_df) # Vérifier que le mock_df est retourné
-        
-        # Le reste des assertions peut être gardé pour vérifier la structure du mock_df
-        # si c'est pertinent pour le test.
-        if df_for_json.index.name == 'pk': # Check if 'pk' is the index name
-            df_for_json = df_for_json.reset_index()
-        df_json = df_for_json.to_json(orient='records')
-        df_data = json.loads(df_json)
-        self.assertIsInstance(df_data, list)
-        self.assertEqual(len(df_data), 4)
-        ad_hominem_entry = next((item for item in df_data if item["nom_vulgarisé"] == "Attaque personnelle"), None)
-        self.assertIsNotNone(ad_hominem_entry)
-        self.assertEqual(ad_hominem_entry["pk"], 2)
-
-
-class TestSetupInformalKernel(unittest.TestCase):
-    """Tests pour la fonction de configuration du kernel informel."""
-
-    def setUp(self):
-        super().setUp() # Call parent setUp
-        # Import setup_informal_kernel here to ensure it's available after patches
-        # For TestSetupInformalKernel, setup_informal_kernel is imported globally
-        # So we just need to reference it.
-        from argumentation_analysis.agents.core.informal.informal_definitions import setup_informal_kernel
-        self.setup_informal_kernel_func = setup_informal_kernel 
-        from argumentation_analysis.agents.core.informal.informal_definitions import InformalAnalysisPlugin
-        self.InformalAnalysisPlugin = InformalAnalysisPlugin
-
+@pytest.fixture
+def informal_plugin_real(tmp_path, sample_taxonomy_data):
+    """
+    Fixture to create an instance of InformalAnalysisPlugin using a real, temporary
+    taxonomy file for integration testing of file loading and public methods.
+    """
+    # Create a temporary CSV file with sample data
+    taxonomy_file = tmp_path / "temp_taxonomy.csv"
+    df = pd.DataFrame(sample_taxonomy_data)
+    df.rename(columns={'pk': 'PK'}, inplace=True) # Ensure column name matches expected 'PK'
+    df.to_csv(taxonomy_file, index=False)
     
-    def test_setup_informal_kernel(self, MockInformalAnalysisPlugin):
-        """Teste la configuration réussie du kernel informel."""
-        # Mock the description attribute to avoid ValidationError
-        mock_plugin_instance = MagicMock(description="Mock Informal Analysis Plugin")
-        MockInformalAnalysisPlugin# Mock eliminated - using authentic gpt-4o-mini mock_plugin_instance
-        kernel = Kernel()
-        mock_llm_service = self._create_authentic_gpt4o_mini_instance()
-        self.setup_informal_kernel_func(kernel, mock_llm_service)
-        # MockInformalAnalysisPlugin.# Mock assertion eliminated - authentic validation
-        self.assertIn("InformalAnalyzer", kernel.plugins) 
-        # Check that the plugin is an instance of KernelPlugin and its _plugin_instance is the mock
-        self.assertIsInstance(kernel.plugins["InformalAnalyzer"], KernelPlugin)
-
-    def test_setup_informal_kernel_no_llm_service(self):
-        """Teste la configuration avec un service LLM manquant (devrait lever une erreur ou gérer)."""
-        kernel = Kernel()
-        self.setup_informal_kernel_func(kernel, None) 
-        self.assertIn("InformalAnalyzer", kernel.plugins)
-        # Check that the plugin is an instance of KernelPlugin (the wrapper)
-        self.assertIsInstance(kernel.plugins["InformalAnalyzer"], KernelPlugin)
-
-
+    # Instantiate the plugin with the path to the temporary file
+    plugin = InformalAnalysisPlugin(taxonomy_file_path=str(taxonomy_file))
+    return plugin
     
-    def test_setup_informal_kernel_with_error(self, MockInformalAnalysisPlugin):
-        """Teste la configuration avec une erreur lors de l'initialisation du plugin."""
-        MockInformalAnalysisPlugin# Mock eliminated - using authentic gpt-4o-mini Exception("Erreur d'initialisation du plugin")
-        kernel = Kernel()
-        mock_llm_service = self._create_authentic_gpt4o_mini_instance()
-        with self.assertRaises(Exception) as context:
-            self.setup_informal_kernel_func(kernel, mock_llm_service)
-        self.assertIn("Erreur d'initialisation du plugin", str(context.exception))
+@pytest.fixture
+def kernel_service():
+    """Fixture to provide a configured Kernel service for gpt-4o-mini."""
+    config = UnifiedConfig()
+    return config.get_kernel_with_gpt4o_mini()
+
+
+# --- Tests for Internal Logic (using mocked DataFrame) ---
+
+def test_internal_get_node_details(informal_plugin_mocked, mock_taxonomy_df):
+    """Test retrieving details of a single node."""
+    details_pk1 = informal_plugin_mocked._internal_get_node_details(1, mock_taxonomy_df)
+    assert details_pk1 is not None
+    assert details_pk1['pk'] == 1
+    # The internal methods don't use 'nom_vulgarisé' directly, we check a loaded column
+    assert details_pk1['text_fr'] == 'Sophisme de Pertinence'
+
+    details_pk_invalid = informal_plugin_mocked._internal_get_node_details(99, mock_taxonomy_df)
+    assert details_pk_invalid is not None
+    assert "error" in details_pk_invalid
+    assert "PK 99 non trouvée" in details_pk_invalid["error"]
+
+def test_internal_get_children_details(informal_plugin_mocked, mock_taxonomy_df):
+    """Test retrieving details of child nodes."""
+    # This method seems to have a different column expectation ('nom_vulgarisé')
+    # Let's adjust the test to what the method actually does or what data it has
+    children_pk0 = informal_plugin_mocked._internal_get_children_details(0, mock_taxonomy_df, max_children=5)
+    assert len(children_pk0) == 2
+    assert any(c['nom_vulgarisé'] == 'Pertinence' for c in children_pk0)
+    assert any(c['nom_vulgarisé'] == 'Ambiguïté' for c in children_pk0)
+
+    children_pk1 = informal_plugin_mocked._internal_get_children_details(1, mock_taxonomy_df, max_children=5)
+    assert len(children_pk1) == 1
+    assert children_pk1[0]['nom_vulgarisé'] == 'Attaque personnelle'
+
+    children_pk2 = informal_plugin_mocked._internal_get_children_details(2, mock_taxonomy_df, max_children=5)
+    assert len(children_pk2) == 0
+
+def test_internal_explore_hierarchy(informal_plugin_mocked, mock_taxonomy_df):
+    """Test exploring the hierarchy from a given node."""
+    # This method also expects 'nom_vulgarisé' which is in the sample data
+    hierarchy_pk0 = informal_plugin_mocked._internal_explore_hierarchy(0, mock_taxonomy_df)
+    assert hierarchy_pk0["current_node"] is not None
+    assert hierarchy_pk0["current_node"]["nom_vulgarisé"] == "Sophismes"
+    assert len(hierarchy_pk0["children"]) == 2
+    assert hierarchy_pk0["error"] is None
+
+    hierarchy_pk2 = informal_plugin_mocked._internal_explore_hierarchy(2, mock_taxonomy_df)
+    assert hierarchy_pk2["current_node"] is not None
+    assert hierarchy_pk2["current_node"]["nom_vulgarisé"] == "Attaque personnelle"
+    assert len(hierarchy_pk2["children"]) == 0
+    assert hierarchy_pk2["error"] is None
+
+    hierarchy_invalid = informal_plugin_mocked._internal_explore_hierarchy(99, mock_taxonomy_df)
+    assert hierarchy_invalid["current_node"] is None
+    assert len(hierarchy_invalid["children"]) == 0
+    assert "PK 99 non trouvée" in hierarchy_invalid["error"]
+
+
+# --- Integration Tests for Public Methods (using real file loading) ---
+
+def test_explore_fallacy_hierarchy_real(informal_plugin_real):
+    """Test the public hierarchy exploration method with a real file."""
+    result_json_pk1 = informal_plugin_real.explore_fallacy_hierarchy("1")
+    result_pk1 = json.loads(result_json_pk1)
+    
+    assert result_pk1["current_node"]["nom_vulgarisé"] == "Pertinence"
+    assert len(result_pk1["children"]) == 1
+    assert result_pk1["children"][0]["nom_vulgarisé"] == "Attaque personnelle"
+
+    result_json_invalid = informal_plugin_real.explore_fallacy_hierarchy("99")
+    result_invalid = json.loads(result_json_invalid)
+    assert "PK 99 non trouvée" in result_invalid["error"]
+
+    result_json_non_numeric = informal_plugin_real.explore_fallacy_hierarchy("abc")
+    result_non_numeric = json.loads(result_json_non_numeric)
+    assert "PK invalide: abc" in result_non_numeric["error"]
+
+def test_get_fallacy_details_real(informal_plugin_real):
+    """Test the public detail retrieval method with a real file."""
+    details_json_pk2 = informal_plugin_real.get_fallacy_details("2")
+    details_pk2 = json.loads(details_json_pk2)
+    # The key might be 'text_fr' or 'description_fr' depending on the loading logic
+    assert details_pk2["nom_vulgarisé"] == "Attaque personnelle"
+    assert details_pk2["description_fr"] == "Attaquer la personne plutôt que l'argument."
+
+    details_json_invalid = informal_plugin_real.get_fallacy_details("99")
+    details_invalid = json.loads(details_json_invalid)
+    assert "PK 99 non trouvée" in details_invalid["error"]
+
+    details_json_non_numeric = informal_plugin_real.get_fallacy_details("xyz")
+    details_non_numeric_parsed = json.loads(details_json_non_numeric)
+    assert details_non_numeric_parsed is not None
+    assert "PK invalide: xyz" in details_non_numeric_parsed["error"]
+
+
+# --- Tests for Kernel Setup ---
+
+def test_setup_informal_kernel_success(kernel_service):
+    """Test successful setup of the informal kernel."""
+    kernel = Kernel()
+    setup_informal_kernel(kernel, kernel_service)
+    
+    assert "InformalAnalyzer" in kernel.plugins
+    plugin = kernel.plugins["InformalAnalyzer"]
+    assert isinstance(plugin, KernelPlugin)
+    
+    # Check that native functions are registered
+    assert "explore_fallacy_hierarchy" in plugin
+    assert "get_fallacy_details" in plugin
+    
+    # Check that semantic functions are registered
+    assert "semantic_IdentifyArguments" in plugin
+    assert "semantic_AnalyzeFallacies" in plugin
+
+def test_setup_informal_kernel_no_llm_service():
+    """Test setup with a missing LLM service."""
+    kernel = Kernel()
+    setup_informal_kernel(kernel, None)
+    
+    assert "InformalAnalyzer" in kernel.plugins
+    plugin = kernel.plugins["InformalAnalyzer"]
+    assert isinstance(plugin, KernelPlugin)
+    # Native functions should still be there
+    assert "explore_fallacy_hierarchy" in plugin
+    # Semantic functions might be added but will fail on execution
+    assert "semantic_IdentifyArguments" in plugin
+
+@patch('argumentation_analysis.agents.core.informal.informal_definitions.InformalAnalysisPlugin.__init__', side_effect=Exception("Plugin Init Error"))
+def test_setup_informal_kernel_with_init_error(mock_plugin_init, kernel_service):
+    """Test kernel setup with an error during plugin initialization."""
+    kernel = Kernel()
+    with pytest.raises(Exception, match="Plugin Init Error"):
+        setup_informal_kernel(kernel, kernel_service)

@@ -18,7 +18,7 @@ deprecation_logger = logging.getLogger('deprecation.student_compat')
 
 try:
     # Attempt to import from the new, correct location.
-    from argumentation_analysis.agents.logic.propositional_logic_agent import PropositionalLogicAgent
+    from argumentation_analysis.agents.core.logic.propositional_logic_agent import PropositionalLogicAgent
 
     # Define the legacy alias for backward compatibility.
     # This allows old code `from ...pl.pl_agent import PLAgent` to continue working.
@@ -29,7 +29,7 @@ try:
         "IMPORT REDIRECTION (Compatibility Mode): The module 'argumentation_analysis.agents.core.pl.pl_agent' "
         "is deprecated and will be removed in a future version. "
         f"Please update your imports to use the new location: "
-        "'argumentation_analysis.agents.logic.propositional_logic_agent'. "
+        "'argumentation_analysis.agents.core.logic.propositional_logic_agent'. "
         f"The alias 'PLAgent' is also deprecated; please use 'PropositionalLogicAgent' directly."
     )
 
@@ -46,7 +46,7 @@ except ImportError as e:
     # and we should raise an error that clearly explains the situation.
     raise ImportError(
         "Failed to import 'PropositionalLogicAgent' from its new location "
-        "'argumentation_analysis.agents.logic.propositional_logic_agent'. "
+        "'argumentation_analysis.agents.core.logic.propositional_logic_agent'. "
         "This indicates a potential issue with the project's structure or PYTHONPATH. "
         f"Original error: {e}"
     )
