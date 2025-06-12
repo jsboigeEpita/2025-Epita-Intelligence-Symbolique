@@ -300,9 +300,9 @@ class UnifiedOrchestrationPipeline:
         
         # Service LLM
         try:
-            self.llm_service = create_llm_service()
-            if self.llm_service:
-                logger.info(f"[LLM] Service LLM créé (ID: {self.llm_service.service_id})")
+            self.kernel = create_llm_service()
+            if self.kernel:
+                logger.info(f"[LLM] Service LLM créé (ID: {self.kernel.service_id})")
         except Exception as e:
             logger.error(f"[LLM] Erreur initialisation LLM: {e}")
             if not self.config.use_mocks:
@@ -402,9 +402,9 @@ class UnifiedOrchestrationPipeline:
             logger.info("[CONVERSATION] Orchestrateur de conversation initialisé")
         
         # Orchestrateur LLM réel
-        if RealLLMOrchestrator and self.llm_service:
+        if RealLLMOrchestrator and self.kernel:
             self.specialized_orchestrators["real_llm"] = {
-                "orchestrator": RealLLMOrchestrator(mode="real", llm_service=self.llm_service),
+                "orchestrator": RealLLMOrchestrator(mode="real", llm_service=self.kernel),
                 "types": [AnalysisType.FALLACY_FOCUSED, AnalysisType.ARGUMENT_STRUCTURE],
                 "priority": 3
             }
