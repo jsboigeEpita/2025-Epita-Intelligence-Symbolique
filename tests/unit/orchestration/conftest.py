@@ -65,16 +65,20 @@ def setup_test_environment():
     pass
 
 @pytest.fixture
-def mock_llm_service():
-    """Service LLM mocké standard pour tous les tests."""
-    from unittest.mock import MagicMock, AsyncMock
+def llm_service():
+    """Crée une instance réelle du service LLM pour les tests d'intégration."""
+    from argumentation_analysis.core.llm_service import create_llm_service
     
-    mock_service = MagicMock()
-    mock_service.service_id = "test_llm_service"
-    mock_service.generate_text = AsyncMock(return_value="Test response")
-    mock_service.analyze_text = AsyncMock(return_value={"status": "success"})
-    
-    return mock_service
+    # Assurez-vous que votre fichier .env est correctement configuré
+    # avec OPENAI_API_KEY et OPENAI_CHAT_MODEL_ID
+    try:
+        service = create_llm_service(
+            service_id="real_test_llm_service",
+            force_mock=False
+        )
+        return service
+    except Exception as e:
+        pytest.skip(f"Impossible de créer le service LLM réel : {e}")
 
 @pytest.fixture
 def sample_text():

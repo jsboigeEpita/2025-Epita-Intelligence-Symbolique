@@ -33,8 +33,8 @@ scripts_core = current_dir / "scripts" / "core"
 if str(scripts_core) not in sys.path:
     sys.path.insert(0, str(scripts_core))
 
-from scripts.core.environment_manager import (
-    is_conda_env_active, 
+from project_core.core_from_scripts.environment_manager import (
+    is_conda_env_active,
     auto_activate_env,
     EnvironmentManager
 )
@@ -121,7 +121,7 @@ class TestAutoActivateEnv(unittest.TestCase):
         os.environ.update(self.original_env)
     
     
-    @patch('scripts.core.environment_manager.is_conda_env_active')
+    @patch('project_core.core_from_scripts.environment_manager.is_conda_env_active')
     def test_env_already_active_silent(self, mock_is_active):
         """Test environnement déjà actif en mode silencieux"""
         mock_is_active.return_value = True
@@ -131,7 +131,7 @@ class TestAutoActivateEnv(unittest.TestCase):
         self.assertTrue(result)
         mock_is_active.assert_called_once_with('projet-is')
 
-    @patch('scripts.core.environment_manager.is_conda_env_active')
+    @patch('project_core.core_from_scripts.environment_manager.is_conda_env_active')
     @patch('builtins.print')
     def test_env_already_active_verbose(self, mock_print, mock_is_active):
         """Test environnement déjà actif en mode verbeux"""
@@ -142,8 +142,8 @@ class TestAutoActivateEnv(unittest.TestCase):
         self.assertTrue(result)
         mock_print.assert_called_with("[OK] Environnement 'projet-is' deja actif")
 
-    @patch('scripts.core.environment_manager.is_conda_env_active')
-    @patch('scripts.core.environment_manager.EnvironmentManager')
+    @patch('project_core.core_from_scripts.environment_manager.is_conda_env_active')
+    @patch('project_core.core_from_scripts.environment_manager.EnvironmentManager')
     def test_conda_not_available(self, mock_env_manager_class, mock_is_active):
         """Test conda non disponible"""
         mock_is_active.return_value = False
@@ -156,8 +156,8 @@ class TestAutoActivateEnv(unittest.TestCase):
         self.assertFalse(result)
         mock_env_manager.check_conda_available.assert_called_once()
 
-    @patch('scripts.core.environment_manager.is_conda_env_active')
-    @patch('scripts.core.environment_manager.EnvironmentManager')
+    @patch('project_core.core_from_scripts.environment_manager.is_conda_env_active')
+    @patch('project_core.core_from_scripts.environment_manager.EnvironmentManager')
     @patch('builtins.print')
     def test_conda_not_available_verbose(self, mock_print, mock_env_manager_class, mock_is_active):
         """Test conda non disponible en mode verbeux"""
@@ -171,8 +171,8 @@ class TestAutoActivateEnv(unittest.TestCase):
         self.assertFalse(result)
         mock_print.assert_called_with("[ERROR] Conda non disponible - impossible d'activer 'test-env'")
 
-    @patch('scripts.core.environment_manager.is_conda_env_active')
-    @patch('scripts.core.environment_manager.EnvironmentManager')
+    @patch('project_core.core_from_scripts.environment_manager.is_conda_env_active')
+    @patch('project_core.core_from_scripts.environment_manager.EnvironmentManager')
     def test_env_not_exists(self, mock_env_manager_class, mock_is_active):
         """Test environnement n'existe pas"""
         mock_is_active.return_value = False
@@ -186,8 +186,8 @@ class TestAutoActivateEnv(unittest.TestCase):
         self.assertFalse(result)
         mock_env_manager.check_conda_env_exists.assert_called_once()
 
-    @patch('scripts.core.environment_manager.is_conda_env_active')
-    @patch('scripts.core.environment_manager.EnvironmentManager')
+    @patch('project_core.core_from_scripts.environment_manager.is_conda_env_active')
+    @patch('project_core.core_from_scripts.environment_manager.EnvironmentManager')
     @patch('builtins.print')
     def test_successful_activation(self, mock_print, mock_env_manager_class, mock_is_active):
         """Test activation réussie"""
@@ -213,7 +213,7 @@ class TestAutoActivateEnv(unittest.TestCase):
         # Vérifier que la variable d'environnement est définie
         self.assertEqual(os.environ.get('CONDA_DEFAULT_ENV'), 'projet-is')
 
-    @patch('scripts.core.environment_manager.is_conda_env_active')
+    @patch('project_core.core_from_scripts.environment_manager.is_conda_env_active')
     def test_exception_handling(self, mock_is_active):
         """Test gestion d'exception"""
         mock_is_active.side_effect = Exception("Test error")
@@ -222,7 +222,7 @@ class TestAutoActivateEnv(unittest.TestCase):
         
         self.assertFalse(result)
 
-    @patch('scripts.core.environment_manager.is_conda_env_active')
+    @patch('project_core.core_from_scripts.environment_manager.is_conda_env_active')
     @patch('builtins.print')
     def test_exception_handling_verbose(self, mock_print, mock_is_active):
         """Test gestion d'exception en mode verbeux"""

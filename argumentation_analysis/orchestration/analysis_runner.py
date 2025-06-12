@@ -31,19 +31,46 @@ from semantic_kernel.kernel import Kernel as SKernel # Alias pour éviter confli
 import semantic_kernel as sk
 from semantic_kernel.contents import ChatMessageContent
 from semantic_kernel.connectors.ai.open_ai import OpenAIChatCompletion, AzureChatCompletion
-from semantic_kernel.contents.utils.author_role import AuthorRole
+from semantic_kernel.contents import ChatRole as AuthorRole
 
-# # Correct imports
-# from argumentation_analysis.core.shared_state import RhetoricalAnalysisState
-# from argumentation_analysis.core.state_manager_plugin import StateManagerPlugin
-# from argumentation_analysis.agents.core.pm.pm_agent import ProjectManagerAgent
-# from argumentation_analysis.agents.core.informal.informal_agent import InformalAnalysisAgent
-# from argumentation_analysis.agents.core.pl.pl_agent import PropositionalLogicAgent
-# from argumentation_analysis.agents.core.extract.extract_agent import ExtractAgent
+# Correct imports
+from argumentation_analysis.core.shared_state import RhetoricalAnalysisState
+from argumentation_analysis.core.state_manager_plugin import StateManagerPlugin
+from argumentation_analysis.agents.core.pm.pm_agent import ProjectManagerAgent
+from argumentation_analysis.agents.core.informal.informal_agent import InformalAnalysisAgent
+from argumentation_analysis.agents.core.pl.pl_agent import PropositionalLogicAgent
+from argumentation_analysis.agents.core.extract.extract_agent import ExtractAgent
 
 
-# --- Fonction Principale d'Exécution (Modifiée V10.7 - Accepte Service LLM) ---
-async def run_analysis_conversation(
+class AnalysisRunner:
+    """
+    Orchestre l'analyse d'argumentation en utilisant une flotte d'agents spécialisés.
+    """
+    def __init__(self, llm_service: Optional[Union[OpenAIChatCompletion, AzureChatCompletion]] = None):
+        self._llm_service = llm_service
+
+    async def run_analysis_async(self, text_content: str, llm_service: Optional[Union[OpenAIChatCompletion, AzureChatCompletion]] = None):
+        """Exécute le pipeline d'analyse complet."""
+        # Utilise le service fourni en priorité, sinon celui de l'instance
+        active_llm_service = llm_service or self._llm_service
+        if not active_llm_service:
+            # Ici, ajouter la logique pour créer un service par défaut si aucun n'est fourni
+            # Pour l'instant, on lève une erreur comme dans le test.
+            raise ValueError("Un service LLM doit être fourni soit à l'initialisation, soit à l'appel de la méthode.")
+        
+        return await _run_analysis_conversation(
+            texte_a_analyser=text_content,
+            llm_service=active_llm_service
+        )
+
+
+async def run_analysis(text_content: str, llm_service: Optional[Union[OpenAIChatCompletion, AzureChatCompletion]] = None):
+    """Fonction wrapper pour une exécution simple."""
+    runner = AnalysisRunner()
+    return await runner.run_analysis_async(text_content=text_content, llm_service=llm_service)
+
+
+async def _run_analysis_conversation(
     texte_a_analyser: str,
     llm_service: Union[OpenAIChatCompletion, AzureChatCompletion] # Service LLM passé en argument
     ):
