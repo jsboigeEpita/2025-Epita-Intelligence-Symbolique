@@ -47,7 +47,8 @@ from services.web_api.models.response_models import (
 )
 
 # Import du Blueprint pour les routes logiques
-from .routes.logic_routes import logic_bp # initialize_logic_blueprint n'est plus nécessaire
+from .routes.logic_routes import logic_bp
+from .routes.main_routes import main_bp
 
 # Configuration du logging
 logging.basicConfig(
@@ -57,7 +58,6 @@ logging.basicConfig(
 )
 logger = logging.getLogger("WebAPI")
 
-# Création de l'application Flask
 # Création de l'application Flask
 flask_app = Flask(__name__)
 CORS(flask_app)  # Activer CORS pour les appels depuis React
@@ -73,9 +73,9 @@ fallacy_service = FallacyService()
 framework_service = FrameworkService()
 logic_service = LogicService()
 
-# Initialiser et enregistrer les blueprints
-# initialize_logic_blueprint(logic_service) # N'est plus nécessaire
-flask_app.register_blueprint(logic_bp)
+# Enregistrer les blueprints
+flask_app.register_blueprint(main_bp, url_prefix='/api')
+flask_app.register_blueprint(logic_bp) # a déjà le préfixe /api/logic
 
 # Créer l'application FastAPI principale
 app = FastAPI()
@@ -94,7 +94,6 @@ def handle_error(error):
         message=str(error),
         status_code=500
     ).dict()), 500
-
 
 @flask_app.route('/api/health', methods=['GET'])
 def health_check():
@@ -400,7 +399,6 @@ def list_endpoints():
         "version": "1.0.0",
         "endpoints": endpoints
     })
-
 if __name__ == '__main__':
     # Configuration pour le développement
     port = int(os.environ.get('PORT', 5000))

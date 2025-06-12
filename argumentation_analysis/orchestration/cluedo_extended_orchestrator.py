@@ -12,6 +12,7 @@ import re
 import time
 from typing import List, Dict, Any, Optional
 from datetime import datetime
+from typing import Callable, Awaitable
 
 from argumentation_analysis.agents.core.oracle.cluedo_dataset import RevelationRecord
 
@@ -49,35 +50,34 @@ logger = logging.getLogger(__name__)
 
 
 # Nouvelle implémentation du logging via un filtre, conforme aux standards SK modernes
+# Nouvelle implémentation du logging via un filtre, conforme aux standards SK modernes
 class ToolCallLoggingHandler:
     """
-    Handler pour journaliser les appels de fonctions (outils) du kernel,
-    utilisant le système d'événements mis à jour de Semantic Kernel.
+    Filtre pour journaliser les appels de fonctions (outils) du kernel,
+    utilisant le nouveau système de filtres de Semantic Kernel.
     """
-    @staticmethod
-    def on_function_invoking(context: FunctionInvokingEventArgs) -> None:
-        """Méthode exécutée avant chaque invocation de fonction."""
-        metadata = context.kernel_function_metadata
+    async def logging_filter(self, context: FunctionInvocationContext, next: Callable[[FunctionInvocationContext], Awaitable[None]]) -> None:
+        """Filtre qui journalise avant et après l'invocation de la fonction."""
+        # Avant l'invocation
+        metadata = context.function.metadata
         function_name = f"{metadata.plugin_name}.{metadata.name}"
         logger.debug(f"▶️  INVOKING KERNEL FUNCTION: {function_name}")
-
+        
         args_str = ", ".join(f"{k}='{str(v)[:100]}...'" for k, v in context.arguments.items())
         logger.debug(f"  ▶️  ARGS: {args_str}")
 
-    @staticmethod
-    def on_function_invoked(context: FunctionInvokedEventArgs) -> None:
-        """Méthode exécutée après chaque invocation de fonction."""
-        metadata = context.kernel_function_metadata
-        function_name = f"{metadata.plugin_name}.{metadata.name}"
+        # Appel au prochain filtre dans la chaîne
+        await next(context)
+
+        # Après l'invocation
         result_content = "N/A"
         if context.result:
             result_value = context.result.value
-            # Gérer les listes et autres types itérables
             if isinstance(result_value, list):
                 result_content = f"List[{len(result_value)}] - " + ", ".join(map(str, result_value[:3]))
             else:
                 result_content = str(result_value)
-
+        
         logger.debug(f"  ◀️  RESULT: {result_content[:500]}...") # Tronqué
         logger.debug(f"◀️  FINISHED KERNEL FUNCTION: {function_name}")
 
@@ -310,6 +310,8 @@ class CluedoExtendedOrchestrator:
         """
         self.kernel = kernel
         self.kernel_lock = asyncio.Lock()
+        self.logging_handler = ToolCallLoggingHandler()
+
 
         self.max_turns = max_turns
         self.max_cycles = max_cycles
@@ -495,9 +497,8 @@ class CluedoExtendedOrchestrator:
             
             # Ajout du filtre de logging moderne
             if FILTERS_AVAILABLE:
-                self.kernel.add_function_invoking_handler(ToolCallLoggingHandler.on_function_invoking)
-                self.kernel.add_function_invoked_handler(ToolCallLoggingHandler.on_function_invoked)
-                self._logger.info("Handlers de journalisation (invoking/invoked) des appels de fonctions activés.")
+                self.kernel.add_filter(FilterTypes.FUNCTION_INVOCATION, self.logging_handler.logging_filter)
+                self._logger.info("Filtre de journalisation des appels de fonctions activé.")
         
         # Préparation des constantes pour Watson
         all_constants = [name.replace(" ", "") for category in elements_jeu.values() for name in category]
