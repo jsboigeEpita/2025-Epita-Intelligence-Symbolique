@@ -62,7 +62,7 @@ except ImportError as e:
 
 try:
     # Correction du nom de la classe importée pour correspondre à la définition
-    from argumentation_analysis.agents.core.informal.informal_agent import InformalAnalysisAgent as InformalAgent_class
+    from argumentation_analysis.agents.core.informal.informal_agent import InformalAgent as InformalAgent_class
 except ImportError as e:
     logger.error(f"Failed to import InformalAnalysisAgent: {e}")
 
@@ -220,8 +220,14 @@ def initialize_project_environment(env_path_str: str = None, root_path_str: str 
                 context.crypto_service = CryptoService_class(encryption_key=key_to_use)
                 logger.info("CryptoService initialisé avec encryption_key.")
             elif passphrase_to_use:
-                 context.crypto_service = CryptoService_class(passphrase=passphrase_to_use)
-                 logger.info("CryptoService initialisé avec passphrase.")
+                 temp_crypto_for_derivation = CryptoService_class()
+                 derived_key = temp_crypto_for_derivation.derive_key_from_passphrase(passphrase_to_use)
+                 if derived_key:
+                     context.crypto_service = CryptoService_class(encryption_key=derived_key)
+                     logger.info("CryptoService initialisé avec une clé dérivée de la passphrase.")
+                 else:
+                     logger.error("Échec de la dérivation de la clé à partir de la passphrase. CryptoService non-initialisé avec clé.")
+                     context.crypto_service = CryptoService_class() # Initialisation sans clé
             else:
                 context.crypto_service = CryptoService_class()
                 logger.warning("CryptoService initialisé sans clé/passphrase explicite.")

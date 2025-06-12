@@ -20,12 +20,13 @@ Refactorisé - Utilise scripts/core/environment_manager.py
 
 param(
     [string]$CommandToRun = $null,
+    [string]$PythonScriptPath = $null,
     [switch]$Verbose = $false
 )
 
 # Configuration
 $ProjectRoot = $PSScriptRoot
-$PythonModule = "scripts/core/environment_manager.py"
+$PythonModule = "project_core/core_from_scripts/environment_manager.py"
 
 # Fonction de logging simple
 function Write-Log {
@@ -40,6 +41,19 @@ function Write-Log {
 }
 
 try {
+    # Si un chemin de script Python est fourni, on construit la commande à exécuter
+    # Cela offre un raccourci pratique par rapport à --CommandToRun "python ..."
+    if ($PythonScriptPath) {
+        $FullScriptPath = Join-Path $ProjectRoot $PythonScriptPath
+        if (-not (Test-Path $FullScriptPath)) {
+            Write-Log "Le fichier Python spécifié via -PythonScriptPath est introuvable: $FullScriptPath" "ERROR"
+            exit 1
+        }
+        # On met la commande entre guillemets pour gérer les espaces dans les chemins
+        $CommandToRun = "python `"$FullScriptPath`""
+        Write-Log "Commande à exécuter définie via -PythonScriptPath: $CommandToRun"
+    }
+
     Write-Log "Activation environnement projet via Python..."
     
     # Chemin vers le script Python environment_manager.py

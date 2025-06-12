@@ -50,7 +50,7 @@ configure_utf8()
 # Configuration du projet - CORRIGÉ pour racine du projet
 PROJECT_ROOT = Path(__file__).parent.absolute()  # Maintenant à la racine
 CONDA_ENV_NAME = "projet-is"
-ORCHESTRATOR_PATH = "scripts.webapp.unified_web_orchestrator"
+ORCHESTRATOR_PATH = "project_core.webapp_from_scripts.unified_web_orchestrator"
 
 class Colors:
     """Couleurs pour l'affichage terminal"""
@@ -254,7 +254,7 @@ def run_orchestrator_with_conda(args: argparse.Namespace, logger: logging.Logger
         # L'activation de l'environnement est gérée par le script appelant (activate_project_env.ps1)
         # On exécute donc directement la commande python.
         process = subprocess.run(
-            full_cmd, # La commande est maintenant juste ["python", "-m", "scripts.webapp.unified_web_orchestrator", ...]
+            full_cmd, # La commande est maintenant juste ["python", "-m", "project_core.webapp_from_scripts.unified_web_orchestrator", ...]
             cwd=PROJECT_ROOT,
             check=False, # Ne pas lever d'exception sur code de retour non-zéro
             env=env_vars # Passer les variables d'environnement modifiées (surtout PYTHONPATH)
@@ -284,7 +284,7 @@ def fallback_direct_launch(args: argparse.Namespace, logger: logging.Logger) -> 
         sys.path.insert(0, str(PROJECT_ROOT))
         
         # Import et lancement direct
-        from scripts.webapp.unified_web_orchestrator import main as orchestrator_main
+        from project_core.webapp_from_scripts.unified_web_orchestrator import main as orchestrator_main
         
         # Simulation des arguments sys.argv pour l'orchestrateur
         original_argv = sys.argv.copy()
