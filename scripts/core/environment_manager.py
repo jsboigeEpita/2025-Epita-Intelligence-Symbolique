@@ -408,7 +408,7 @@ class EnvironmentManager:
         self.logger.info("Début du bloc d'activation unifié...")
 
         # 1. Charger le fichier .env de base (depuis le bon répertoire de projet)
-        dotenv_path = find_dotenv(start=str(self.project_root))
+        dotenv_path = find_dotenv()
         if dotenv_path:
             self.logger.info(f"Fichier .env trouvé et chargé depuis : {dotenv_path}")
             load_dotenv(dotenv_path, override=True)
@@ -836,7 +836,7 @@ def recheck_java_environment(manager: 'EnvironmentManager'):
     ColoredOutput.print_section("Validation de l'environnement JAVA")
     
     # Recharge .env pour être sûr d'avoir la dernière version (depuis le bon répertoire)
-    dotenv_path = find_dotenv(start=str(Path(__file__).resolve().parent.parent.parent))
+    dotenv_path = find_dotenv()
     if dotenv_path: load_dotenv(dotenv_path, override=True)
 
     # Cette logique est tirée de `activate_project_environment`

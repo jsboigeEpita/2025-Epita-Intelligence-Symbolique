@@ -65,7 +65,7 @@ if not dynamic_install_requires:
 setup(
     name="argumentation_analysis_project",
     version="0.1.0",
-    packages=find_packages(exclude=["tests", "tests.*", "scripts", "scripts.*", "docs", "docs.*", "notebooks", "notebooks.*", "venv", ".venv", "dist", "build", "*.egg-info", "_archives", "_archives.*", "examples", "examples.*", "config", "config.*", "services", "services.*", "tutorials", "tutorials.*", "libs", "libs.*", "results", "results.*", "src", "src.*"]),
+    packages=find_packages(exclude=["tests", "tests.*", "docs", "docs.*", "notebooks", "notebooks.*", "venv", ".venv", "dist", "build", "*.egg-info", "_archives", "_archives.*", "examples", "examples.*", "config", "config.*", "services", "services.*", "tutorials", "tutorials.*", "libs", "libs.*", "results", "results.*", "src", "src.*"]),
     # package_dir={'': 'src'}, # Maintenu commenté comme dans HEAD
     install_requires=dynamic_install_requires,
     python_requires=">=3.8",
