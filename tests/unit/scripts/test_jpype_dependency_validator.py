@@ -67,7 +67,7 @@ class TestJPypeDependencyValidator:
     def test_unified_production_analyzer_import(self):
         """Test 4: Vérifier que le module unified_production_analyzer peut être importé"""
         try:
-            from scripts.rhetorical_analysis.unified_production_analyzer import DependencyValidator
+            from project_core.rhetorical_analysis_from_scripts.unified_production_analyzer import DependencyValidator
             print("✅ DependencyValidator importé avec succès")
         except ImportError as e:
             pytest.fail(f"Impossible d'importer DependencyValidator: {e}")
@@ -78,7 +78,7 @@ class TestJPypeDependencyValidator:
         """Test 5: Tester une instance réelle de DependencyValidator avec mocks"""
         
         # Configuration mock pour éviter les dépendances lourdes
-        from scripts.rhetorical_analysis.unified_production_analyzer import (
+        from project_core.rhetorical_analysis_from_scripts.unified_production_analyzer import (
             DependencyValidator, 
             UnifiedProductionConfig
         )
@@ -124,7 +124,7 @@ class TestJPypeDependencyValidator:
     def test_auto_env_activation(self):
         """Test 7: Vérifier que auto_env fonctionne correctement"""
         try:
-            from scripts.core.auto_env import ensure_env
+            from project_core.core_from_scripts.auto_env import ensure_env
             # Ne pas appeler ensure_env() dans les tests pour éviter les effets de bord
             print("✅ Module auto_env importé avec succès")
         except ImportError as e:

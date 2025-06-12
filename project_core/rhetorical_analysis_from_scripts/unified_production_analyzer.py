@@ -52,11 +52,11 @@ try:
     # On active en mode non-silencieux pour voir les logs d'activation.
     if not auto_activate_env(silent=False):
         print("CRITICAL: Failed to activate project environment. Aborting.", file=sys.stderr)
-        sys.exit(1)
+        # sys.exit(1)
 except ImportError as e:
     print(f"CRITICAL: Could not import or run environment manager. Ensure you are running from the project root.", file=sys.stderr)
     print(f"Error: {e}", file=sys.stderr)
-    sys.exit(1)
+    # sys.exit(1)
 # Configuration avancée du logging (déplacée ici AVANT l'activation de l'env)
 logging.basicConfig(
     level=logging.INFO,

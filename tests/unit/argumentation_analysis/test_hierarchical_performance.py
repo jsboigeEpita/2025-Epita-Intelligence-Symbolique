@@ -40,7 +40,7 @@ from argumentation_analysis.orchestration.hierarchical.tactical.coordinator impo
 from argumentation_analysis.orchestration.hierarchical.operational.manager import OperationalManager
 
 # Importer les composants de l'ancienne architecture
-from argumentation_analysis.orchestration.analysis_runner import AnalysisRunner
+from argumentation_analysis.orchestration.analysis_runner import run_analysis
 from argumentation_analysis.core.strategies import BalancedParticipationStrategy as BalancedStrategy
 
 # Importer l'exemple d'utilisation de la nouvelle architecture

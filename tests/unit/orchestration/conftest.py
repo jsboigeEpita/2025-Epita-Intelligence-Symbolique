@@ -16,19 +16,19 @@ from pathlib import Path
 logging.basicConfig(level=logging.WARNING)
 
 # Ajouter le répertoire racine au PYTHONPATH
-project_root = Path(__file__).parent.parent.parent.parent
-sys.path.insert(0, str(project_root))
+# project_root = Path(__file__).parent.parent.parent.parent
+# sys.path.insert(0, str(project_root))
 
 # INTÉGRATION AUTO_ENV - CRITIQUE POUR ÉVITER LES ENVIRONNEMENTS GLOBAUX
 # Assurer l'activation automatique de l'environnement projet avant tous les tests
 try:
     # Import direct par chemin absolu pour éviter les problèmes d'import
     import sys
-    scripts_core_path = project_root / "scripts" / "core"
-    if str(scripts_core_path) not in sys.path:
-        sys.path.insert(0, str(scripts_core_path))
-    
-    from auto_env import ensure_env
+    # scripts_core_path = project_root / "scripts" / "core"
+    # if str(scripts_core_path) not in sys.path:
+    #     sys.path.insert(0, str(scripts_core_path))
+
+    from project_core.core_from_scripts.auto_env import ensure_env
     success = ensure_env(silent=False)
     
     if success:

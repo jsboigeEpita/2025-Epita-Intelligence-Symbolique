@@ -62,7 +62,7 @@ except ImportError:
 # if str(_project_root_for_sys_path) not in sys.path:
 #     sys.path.insert(0, str(_project_root_for_sys_path))
 # --- Fin de l'insertion pour sys.path ---
-# from scripts.core.auto_env import _load_dotenv_intelligent # MODIFIÉ ICI - Sera supprimé
+# from project_core.core_from_scripts.auto_env import _load_dotenv_intelligent # MODIFIÉ ICI - Sera supprimé
 class EnvironmentManager:
     """Gestionnaire centralisé des environnements Python/conda"""
     
@@ -468,7 +468,7 @@ class EnvironmentManager:
                     self.logger.warning(f"Le chemin JAVA_HOME '{absolute_java_home}' est invalide. Tentative d'auto-installation...")
                     try:
                         # On importe ici pour éviter dépendance circulaire si ce module est importé ailleurs
-                        from scripts.setup_core.manage_portable_tools import setup_tools
+                        from project_core.setup_core_from_scripts.manage_portable_tools import setup_tools
                         
                         # Le répertoire de base pour l'installation est le parent du chemin attendu pour JAVA_HOME
                         # Ex: si JAVA_HOME est .../libs/portable_jdk/jdk-17..., le base_dir est .../libs/portable_jdk
@@ -511,7 +511,7 @@ class EnvironmentManager:
         if 'NODE_HOME' not in os.environ or not Path(os.environ.get('NODE_HOME', '')).is_dir():
             self.logger.warning("NODE_HOME non défini ou invalide. Tentative d'auto-installation...")
             try:
-                from scripts.setup_core.manage_portable_tools import setup_tools
+                from project_core.setup_core_from_scripts.manage_portable_tools import setup_tools
 
                 # Définir l'emplacement d'installation par défaut pour Node.js
                 node_install_base_dir = self.project_root / 'libs'

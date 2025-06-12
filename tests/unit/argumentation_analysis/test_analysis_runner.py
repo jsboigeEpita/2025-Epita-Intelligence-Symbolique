@@ -14,7 +14,7 @@ import unittest
 from unittest.mock import patch, MagicMock, AsyncMock
 import asyncio
 # from tests.async_test_case import AsyncTestCase # Suppression de l'import
-from argumentation_analysis.orchestration.analysis_runner import AnalysisRunner, run_analysis
+from argumentation_analysis.orchestration.analysis_runner import run_analysis
 
 
 class TestAnalysisRunner(unittest.TestCase):

@@ -32,7 +32,7 @@ project_root = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(project_root))
 
 try:
-    from scripts.webapp import UnifiedWebOrchestrator
+    from project_core.webapp_from_scripts import UnifiedWebOrchestrator
     ORCHESTRATOR_AVAILABLE = True
     print("[INFO] Orchestrateur unifié disponible")
 except ImportError:

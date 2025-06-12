@@ -10,7 +10,7 @@ import pytest
 from typing import Dict, Optional, Any
 
 # Import auto-configuration environnement
-import scripts.core.auto_env
+import project_core.core_from_scripts.auto_env
 
 # Imports authentiques des composants BeliefSet
 from argumentation_analysis.agents.core.logic.belief_set import (
