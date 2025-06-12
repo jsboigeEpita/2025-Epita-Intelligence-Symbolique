@@ -23,8 +23,13 @@ from . import config as ui_config
 from .. import utils as ui_utils
 
 # Importer spécifiquement les fonctions/classes nécessaires des utils
-from .utils import (
-    load_extract_definitions, save_extract_definitions, verify_extract_definitions,
+from .file_operations import (
+    load_extract_definitions, save_extract_definitions
+)
+from .verification_utils import (
+    verify_extract_definitions
+)
+from .fetch_utils import (
     fetch_with_jina, fetch_with_tika, fetch_direct_text, reconstruct_url, load_from_cache
 )
 # Importer les constantes nécessaires depuis config
