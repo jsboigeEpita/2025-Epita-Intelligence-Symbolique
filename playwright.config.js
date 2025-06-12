@@ -2,7 +2,7 @@
 const { defineConfig, devices } = require('@playwright/test');
 
 module.exports = defineConfig({
-  testDir: './tests_playwright/tests',
+  testDir: './', // Changed from './tests_playwright/tests' to allow explicit test paths from root
   fullyParallel: false,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
@@ -46,23 +46,23 @@ module.exports = defineConfig({
       use: { ...devices['iPhone 12'] },
     },
   ],
-
-  webServer: [
-    {
-      command: 'powershell -c "conda run -n projet-is --no-capture-output python -m uvicorn argumentation_analysis.services.web_api.app:app --host 127.0.0.1 --port 5004"',
-      port: 5004,
-      reuseExistingServer: !process.env.CI,
-      timeout: 120000,
-      stdout: 'pipe',
-      stderr: 'pipe',
-    },
-    {
-      command: 'cd services/web_api/interface-web-argumentative && npm start',
-      port: 3000,
-      reuseExistingServer: !process.env.CI,
-      timeout: 120000,
-      stdout: 'pipe',
-      stderr: 'pipe',
-    }
-  ],
+ 
+  // webServer: [
+  //   {
+  //     command: 'powershell -c "conda run -n projet-is --no-capture-output python -m uvicorn argumentation_analysis.services.web_api.app:app --host 127.0.0.1 --port 5004"',
+  //     port: 5004,
+  //     reuseExistingServer: !process.env.CI,
+  //     timeout: 120000,
+  //     stdout: 'pipe',
+  //     stderr: 'pipe',
+  //   },
+  //   {
+  //     command: 'cd services/web_api/interface-web-argumentative && npm start',
+  //     port: 3000,
+  //     reuseExistingServer: !process.env.CI,
+  //     timeout: 120000,
+  //     stdout: 'pipe',
+  //     stderr: 'pipe',
+  //   }
+  // ],
 });

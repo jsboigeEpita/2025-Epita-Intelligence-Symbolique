@@ -87,7 +87,7 @@ class PlaywrightRunner:
         """Construit la chaîne de commande 'npx playwright test ...'."""
         parts = ['npx', 'playwright', 'test']
         parts.extend(test_paths)
-        parts.append(f"--browser={config['browser']}")
+        # parts.append(f"--browser={config['browser']}") # Option retirée car cause conflit avec les projets Playwright
         if not config.get('headless', True):
             parts.append('--headed')
         parts.append(f"--timeout={config['timeout_ms']}")
@@ -98,8 +98,10 @@ class PlaywrightRunner:
         # La commande n'a plus besoin du 'cd', on passe le répertoire de travail directement.
         self.logger.info(f"Commande à exécuter via EnvironmentManager: {playwright_command_str}")
         
-        # Le répertoire de travail doit être celui où se trouve package.json
-        test_dir = 'tests_playwright'
+        # Le répertoire de travail doit être celui où se trouve package.json,
+        # ou la racine du projet si les chemins de test sont relatifs à la racine.
+        # Les chemins de test comme 'tests/functional/...' sont relatifs à la racine du projet.
+        test_dir = '.' # Changé de 'tests_playwright' à '.'
 
         try:
             # Utilisation de asyncio.to_thread pour ne pas bloquer la boucle

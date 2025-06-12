@@ -24,10 +24,9 @@ from semantic_kernel.kernel import Kernel
 AGENTS_AVAILABLE = False  # Module agents non disponible dans SK 0.9.6b1
 from semantic_kernel.contents import ChatMessageContent
 from semantic_kernel.functions.kernel_arguments import KernelArguments
-from semantic_kernel.events.function_invoking_event_args import FunctionInvokingEventArgs
-from semantic_kernel.events.function_invoked_event_args import FunctionInvokedEventArgs
-from semantic_kernel.events.function_invoking_event_args import FunctionInvokingEventArgs as FunctionInvocationContext
+from semantic_kernel.filters.functions.function_invocation_context import FunctionInvocationContext
 from semantic_kernel.prompt_template.prompt_template_config import PromptTemplateConfig
+from semantic_kernel.filters.filter_types import FilterTypes
 
 # Note: Les filtres sont gérés différemment dans les versions récentes,
 # nous utiliserons les handlers directement.
@@ -312,7 +311,7 @@ class CluedoExtendedOrchestrator:
         """
         self.kernel = kernel
         self.kernel_lock = asyncio.Lock()
-        self.logging_handler = ToolCallLoggingHandler()
+        # self.logging_handler = ToolCallLoggingHandler() # Définition de la classe commentée
 
 
         self.max_turns = max_turns
@@ -499,8 +498,9 @@ class CluedoExtendedOrchestrator:
             
             # Ajout du filtre de logging moderne
             if FILTERS_AVAILABLE:
-                self.kernel.add_filter(FilterTypes.FUNCTION_INVOCATION, self.logging_handler.logging_filter)
-                self._logger.info("Filtre de journalisation des appels de fonctions activé.")
+                # self.kernel.add_filter(FilterTypes.FUNCTION_INVOCATION, self.logging_handler.logging_filter) # Handler commenté
+                # self._logger.info("Filtre de journalisation des appels de fonctions activé.") # Handler commenté
+                pass # Le bloc if FILTERS_AVAILABLE reste, mais est vide pour l'instant
         
         # Préparation des constantes pour Watson
         all_constants = [name.replace(" ", "") for category in elements_jeu.values() for name in category]

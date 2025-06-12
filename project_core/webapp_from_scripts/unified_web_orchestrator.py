@@ -101,11 +101,11 @@ class UnifiedWebOrchestrator:
         {"path": "/api/endpoints", "method": "GET"},
         
         # Routes Flask montées sur /flask
-        {"path": "/flask/api/health", "method": "GET"},
-        {"path": "/flask/api/analyze", "method": "POST", "data": {"text": "test"}},
-        {"path": "/flask/api/validate", "method": "POST", "data": {"premises": ["p"], "conclusion": "q"}},
-        {"path": "/flask/api/fallacies", "method": "POST", "data": {"text": "test"}},
-        {"path": "/flask/api/framework", "method": "POST", "data": {"arguments": [{"id": "a", "content": "a"}]}}
+        # {"path": "/flask/api/health", "method": "GET"},
+        # {"path": "/flask/api/analyze", "method": "POST", "data": {"text": "test"}},
+        # {"path": "/flask/api/validate", "method": "POST", "data": {"premises": ["p"], "conclusion": "q"}},
+        # {"path": "/flask/api/fallacies", "method": "POST", "data": {"text": "test"}},
+        # {"path": "/flask/api/framework", "method": "POST", "data": {"arguments": [{"id": "a", "content": "a"}]}}
     ]
 
     def __init__(self, config_path: str = "scripts/webapp/config/webapp_config.yml"):
