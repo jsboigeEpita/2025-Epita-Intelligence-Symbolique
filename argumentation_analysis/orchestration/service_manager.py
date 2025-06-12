@@ -19,7 +19,7 @@ Date: 09/06/2025
 
 # ===== AUTO-ACTIVATION ENVIRONNEMENT =====
 try:
-    import scripts.core.auto_env  # Auto-activation environnement intelligent
+    import project_core.core_from_scripts.auto_env  # Auto-activation environnement intelligent
 except ImportError:
     # Fallback si l'import direct ne fonctionne pas
     import sys
@@ -28,7 +28,7 @@ except ImportError:
     if str(project_root) not in sys.path:
         sys.path.insert(0, str(project_root))
     try:
-        import scripts.core.auto_env
+        import project_core.core_from_scripts.auto_env
     except ImportError:
         # Si ça ne marche toujours pas, ignorer l'auto-env pour les tests
         pass

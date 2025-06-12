@@ -6,7 +6,7 @@ import sys
 import os
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(__file__)), '..'))
 try:
-    import scripts.core.auto_env  # Auto-activation environnement intelligent
+    import project_core.core_from_scripts.auto_env  # Auto-activation environnement intelligent
 except ImportError:
     print("[WARN] Auto-activation d'environnement non disponible - continuons sans")
 

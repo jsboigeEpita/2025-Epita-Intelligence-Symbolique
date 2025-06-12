@@ -28,7 +28,7 @@ if sys.platform == "win32":
 # Ajout du chemin parent pour les imports
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
-from scripts.webapp import UnifiedWebOrchestrator
+from project_core.webapp_from_scripts import UnifiedWebOrchestrator
 
 async def test_backend_only():
     """Test démarrage backend seul"""
@@ -93,7 +93,7 @@ def test_imports():
     print("[IMPORT] Test imports...")
     
     try:
-        from scripts.webapp import (
+        from project_core.webapp_from_scripts import (
             UnifiedWebOrchestrator, BackendManager, FrontendManager,
             PlaywrightRunner, ProcessCleaner
         )

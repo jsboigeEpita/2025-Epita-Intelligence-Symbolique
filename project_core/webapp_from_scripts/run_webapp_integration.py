@@ -23,7 +23,7 @@ from pathlib import Path
 # Ajout chemin pour imports
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from scripts.webapp import UnifiedWebOrchestrator
+from project_core.webapp_from_scripts import UnifiedWebOrchestrator
 
 async def main():
     """Point d'entrée principal simplifié"""
