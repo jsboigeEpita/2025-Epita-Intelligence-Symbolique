@@ -6,7 +6,7 @@ import subprocess
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from scripts.core.environment_manager import EnvironmentManager
+from project_core.core_from_scripts.environment_manager import EnvironmentManager
 
 
 class PlaywrightRunner:
