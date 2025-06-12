@@ -205,7 +205,7 @@ class EnhancedFallacySeverityEvaluator:
             Dictionnaire contenant l'analyse du contexte
         """
         # Déterminer le type de contexte
-        context_type = context.lower() if context.lower() in self.context_severity_modifiers else "général"
+        context_type = context['context_type'].lower() if isinstance(context, dict) and 'context_type' in context and context['context_type'].lower() in self.context_severity_modifiers else "général"
         
         # Déterminer le type de public cible en fonction du contexte
         audience_map = {
