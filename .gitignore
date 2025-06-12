@@ -261,3 +261,6 @@ data/extract_sources.json
 # Fichiers temporaires Jupyter Notebook
 # Fichiers de configuration IDE / Editeur
 # Fichiers spécifiques OS
+
+# Fichiers de rapport de trace complexes
+complex_trace_report_*.json
