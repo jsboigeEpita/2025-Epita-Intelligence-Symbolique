@@ -23,7 +23,7 @@ from semantic_kernel.kernel import Kernel
 AGENTS_AVAILABLE = False  # Module agents non disponible dans SK 0.9.6b1
 from semantic_kernel.contents import ChatMessageContent
 from semantic_kernel.functions.kernel_arguments import KernelArguments
-from semantic_kernel.events import FunctionInvokedEventArgs, FunctionInvokingEventArgs
+from semantic_kernel.functions.kernel_hook_args import KernelHookArgs
 FILTERS_AVAILABLE = True  # On suppose que les handlers sont toujours dispo
 # from semantic_kernel.processes.runtime.in_process_runtime import InProcessRuntime  # Module non disponible
 from pydantic import Field
@@ -44,40 +44,29 @@ logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(name)s - %(leve
 logger = logging.getLogger(__name__)
 
 
-# Nouvelle implémentation du logging via un filtre, conforme aux standards SK modernes
-class ToolCallLoggingHandler:
-    """
-    Handler pour journaliser les appels de fonctions (outils) du kernel,
-    utilisant le nouveau système d'événements de Semantic Kernel.
-    """
-    @staticmethod
-    def on_function_invoking(kernel: Kernel, context: FunctionInvokingEventArgs) -> FunctionInvokingEventArgs:
-        """Méthode exécutée avant chaque invocation de fonction."""
-        metadata = context.kernel_function_metadata
-        function_name = f"{metadata.plugin_name}.{metadata.name}"
-        logger.debug(f"▶️  INVOKING KERNEL FUNCTION: {function_name}")
-        
-        args_str = ", ".join(f"{k}='{str(v)[:100]}...'" for k, v in context.arguments.items())
-        logger.debug(f"  ▶️  ARGS: {args_str}")
-        return context
+# Nouveaux hooks de logging pour compatibilité avec SK v1.x+
+def log_function_pre_hook(context: KernelHookArgs) -> None:
+    """Hook exécuté avant chaque invocation de fonction."""
+    function_name = f"{context.function.plugin_name}.{context.function.name}"
+    logger.debug(f"▶️  INVOKING KERNEL FUNCTION: {function_name}")
+    args_str = ", ".join(f"{k}='{str(v)[:100]}...'" for k, v in context.arguments.items())
+    logger.debug(f"  ▶️  ARGS: {args_str}")
 
-    @staticmethod
-    def on_function_invoked(kernel: Kernel, context: FunctionInvokedEventArgs) -> FunctionInvokedEventArgs:
-        """Méthode exécutée après chaque invocation de fonction."""
-        metadata = context.kernel_function_metadata
-        function_name = f"{metadata.plugin_name}.{metadata.name}"
-        result_content = "N/A"
-        if context.function_result:
-            result_value = context.function_result.value
-            # Gérer les listes et autres types itérables
-            if isinstance(result_value, list):
-                result_content = f"List[{len(result_value)}] - " + ", ".join(map(str, result_value[:3]))
-            else:
-                result_content = str(result_value)
-
-        logger.debug(f"  ◀️  RESULT: {result_content[:500]}...") # Tronqué
-        logger.debug(f"◀️  FINISHED KERNEL FUNCTION: {function_name}")
-        return context
+def log_function_post_hook(context: KernelHookArgs) -> None:
+    """Hook exécuté après chaque invocation de fonction."""
+    function_name = f"{context.function.plugin_name}.{context.function.name}"
+    result_content = "N/A"
+    
+    result_value = context.result
+    if result_value:
+        # Gérer les listes et autres types itérables
+        if isinstance(result_value, list):
+            result_content = f"List[{len(result_value)}] - " + ", ".join(map(str, result_value[:3]))
+        else:
+            result_content = str(result_value)
+            
+    logger.debug(f"  ◀️  RESULT: {result_content[:500]}...") # Tronqué
+    logger.debug(f"◀️  FINISHED KERNEL FUNCTION: {function_name}")
 
 # Définitions minimales pour compatibilité SK 0.9.6b1 (module agents non disponible)
 class Agent:
@@ -333,6 +322,7 @@ class CluedoExtendedOrchestrator:
             service_id: ID du service LLM à utiliser par les agents.
         """
         self.kernel = kernel
+        self.kernel_lock = asyncio.Lock()
 
         self.max_turns = max_turns
         self.max_cycles = max_cycles
@@ -478,7 +468,7 @@ class CluedoExtendedOrchestrator:
     
     async def setup_workflow(self,
                            nom_enquete: str = "Le Mystère du Manoir Tudor",
-                           elements_jeu: Optional[Dict[str, List[str]]] = None) -> CluedoOracleState:
+                           elements_jeu: Optional[Dict[str, List[str]]] = None) -> Optional[CluedoOracleState]:
         """
         Configure le workflow 3-agents avec état Oracle.
         
@@ -487,8 +477,11 @@ class CluedoExtendedOrchestrator:
             elements_jeu: Éléments du jeu Cluedo (optionnel)
             
         Returns:
-            État Oracle configuré
+            État Oracle configuré, ou None si le kernel n'est pas disponible.
         """
+        if self.kernel is None:
+            self._logger.warning("Aborting setup_workflow: Kernel is not available (likely a dry run).")
+            return None
         self._logger.info(f"Configuration du workflow 3-agents - Stratégie: {self.oracle_strategy}")
         
         # Configuration des éléments par défaut
@@ -509,15 +502,15 @@ class CluedoExtendedOrchestrator:
         )
         
         # Configuration du plugin d'état étendu
-        state_plugin = EnqueteStateManagerPlugin(self.oracle_state)
-        self.kernel.add_plugin(state_plugin, "EnqueteStatePlugin")
-        
-        # Ajout du filtre de logging moderne
-        if FILTERS_AVAILABLE:
-            logging_handler = ToolCallLoggingHandler()
-            self.kernel.add_function_invoking_handler(logging_handler.on_function_invoking)
-            self.kernel.add_function_invoked_handler(logging_handler.on_function_invoked)
-            self._logger.info("Handlers de journalisation (invoking/invoked) des appels d'outils activés.")
+        async with self.kernel_lock:
+            state_plugin = EnqueteStateManagerPlugin(self.oracle_state)
+            self.kernel.add_plugin(state_plugin, "EnqueteStatePlugin")
+            
+            # Ajout du filtre de logging moderne
+            if FILTERS_AVAILABLE:
+                self.kernel.add_pre_hook(log_function_pre_hook)
+                self.kernel.add_post_hook(log_function_post_hook)
+                self._logger.info("Hooks de journalisation (pre/post) des appels de fonctions activés.")
         
         # Préparation des constantes pour Watson
         all_constants = [name.replace(" ", "") for category in elements_jeu.values() for name in category]

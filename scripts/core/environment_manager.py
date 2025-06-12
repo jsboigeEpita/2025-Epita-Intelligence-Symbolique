@@ -218,16 +218,14 @@ class EnvironmentManager:
         return []
     
     def check_conda_env_exists(self, env_name: str) -> bool:
-        """Vérifie si un environnement conda existe"""
-        environments = self.list_conda_environments()
-        exists = env_name in environments
-        
-        if exists:
-            self.logger.debug(f"Environnement conda '{env_name}' trouvé")
+        """Vérifie si un environnement conda existe en cherchant son chemin."""
+        env_path = self._get_conda_env_path(env_name)
+        if env_path:
+            self.logger.debug(f"Environnement conda '{env_name}' trouvé à l'emplacement : {env_path}")
+            return True
         else:
-            self.logger.warning(f"Environnement conda '{env_name}' non trouvé")
-        
-        return exists
+            self.logger.warning(f"Environnement conda '{env_name}' non trouvé parmi les environnements existants.")
+            return False
     
     def setup_environment_variables(self, additional_vars: Dict[str, str] = None):
         """Configure les variables d'environnement pour le projet"""
@@ -249,12 +247,47 @@ class EnvironmentManager:
         #         os.environ["PYTHONPATH"] = f"{site_packages_path}{os.pathsep}{python_path}"
         #         self.logger.warning(f"RUSTINE: Ajout forcé de {site_packages_path} au PYTHONPATH.")
     
+    def _get_conda_env_path(self, env_name: str) -> Optional[str]:
+        """Récupère le chemin complet d'un environnement conda par son nom."""
+        conda_exe = self._find_conda_executable()
+        if not conda_exe: return None
+        
+        try:
+            cmd = [conda_exe, 'env', 'list', '--json']
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=30, encoding='utf-8')
+            if result.returncode == 0:
+                # Nettoyage de la sortie pour ne garder que le JSON
+                lines = result.stdout.strip().split('\n')
+                json_start_index = -1
+                for i, line in enumerate(lines):
+                    if line.strip().startswith('{'):
+                        json_start_index = i
+                        break
+                
+                if json_start_index == -1:
+                    self.logger.warning("Impossible de trouver le début du JSON dans la sortie de 'conda env list'.")
+                    return None
+
+                json_content = '\n'.join(lines[json_start_index:])
+                data = json.loads(json_content)
+
+                for env_path in data.get('envs', []):
+                    if Path(env_path).name == env_name:
+                        self.logger.debug(f"Chemin trouvé pour '{env_name}': {env_path}")
+                        return env_path
+            else:
+                 self.logger.warning(f"La commande 'conda env list --json' a échoué. Stderr: {result.stderr}")
+
+            return None
+        except (subprocess.SubprocessError, json.JSONDecodeError, subprocess.TimeoutExpired) as e:
+            self.logger.error(f"Erreur lors de la recherche du chemin de l'environnement '{env_name}': {e}")
+            return None
+
     def run_in_conda_env(self, command: Union[str, List[str]], env_name: str = None,
                          cwd: str = None, capture_output: bool = False) -> subprocess.CompletedProcess:
         """
         Exécute une commande dans un environnement conda de manière robuste en utilisant `conda run`.
-        Cette méthode délègue l'activation de l'environnement à Conda lui-même,
-        ce qui est plus fiable que la manipulation manuelle du PATH.
+        Cette méthode utilise le chemin complet de l'environnement (`-p` ou `--prefix`) pour éviter les ambiguïtés.
         """
         if env_name is None:
             env_name = self.default_conda_env
@@ -266,23 +299,23 @@ class EnvironmentManager:
             self.logger.error("Exécutable Conda non trouvé.")
             raise RuntimeError("Exécutable Conda non trouvé, impossible de continuer.")
 
-        if not self.check_conda_env_exists(env_name):
-            self.logger.error(f"Environnement conda '{env_name}' non trouvé.")
-            raise RuntimeError(f"Environnement conda '{env_name}' non disponible.")
+        env_path = self._get_conda_env_path(env_name)
+        if not env_path:
+            self.logger.error(f"Impossible de trouver le chemin pour l'environnement conda '{env_name}'.")
+            raise RuntimeError(f"Environnement conda '{env_name}' non disponible ou chemin inaccessible.")
 
         import shlex
         if isinstance(command, str):
+            # On utilise shlex.split pour séparer correctement la commande et ses arguments
+            # C'est la méthode la plus fiable pour gérer les espaces et les guillemets.
             base_command = shlex.split(command, posix=(os.name != 'nt'))
         else:
             base_command = command
 
-        # Construction de la commande avec 'conda run'
-        # --no-capture-output et --live-stream sont essentiels pour que les processus interactifs
-        # et les installations longues fonctionnent correctement et affichent leur sortie en direct.
+        # Construction de la commande avec 'conda run -p <path>'
         final_command = [
-            conda_exe, 'run', '-n', env_name,
+            conda_exe, 'run', '--prefix', env_path,
             '--no-capture-output',
-            # '--live-stream', # Peut causer des pbs avec capture_output, géré manuellement
         ] + base_command
         
         self.logger.info(f"Commande d'exécution via 'conda run': {' '.join(final_command)}")

@@ -1,9 +1,9 @@
 {
   "metadata": {
-    "timestamp": "2025-06-10T11:48:58.260346",
-    "mode": "basic",
-    "complexity": "simple",
-    "synthetic_enabled": false,
+    "timestamp": "2025-06-12T02:58:59.738361",
+    "mode": "exhaustive",
+    "complexity": "complex",
+    "synthetic_enabled": true,
     "version": "2.0"
   },
   "components": {
@@ -12,128 +12,200 @@
         {
           "name": "demonstration_epita.py",
           "status": "SUCCESS",
-          "details": "2/2 modes valides",
-          "timestamp": "2025-06-10T11:49:23.157377",
-          "execution_time": 24.895991563796997,
-          "authenticity_score": 1.0
+          "details": "1/3 modes valides",
+          "timestamp": "2025-06-12T02:59:00.294419",
+          "execution_time": 0.5543320178985596,
+          "authenticity_score": 0.3333333333333333
         },
         {
           "name": "module_custom_data_processor",
           "status": "SUCCESS",
           "details": "Module importé avec succès",
-          "timestamp": "2025-06-10T11:49:23.196772",
-          "execution_time": 0.03939533233642578,
+          "timestamp": "2025-06-12T02:59:00.356602",
+          "execution_time": 0.06172657012939453,
           "authenticity_score": 0.8
         },
         {
           "name": "module_demo_agents_logiques",
           "status": "SUCCESS",
           "details": "Module importé avec succès",
-          "timestamp": "2025-06-10T11:49:23.260267",
-          "execution_time": 0.06349468231201172,
+          "timestamp": "2025-06-12T02:59:00.507012",
+          "execution_time": 0.15032625198364258,
           "authenticity_score": 0.8
+        },
+        {
+          "name": "module_demo_analyse_argumentation",
+          "status": "FAILED",
+          "details": "Erreur importation: Traceback (most recent call last):\n  File \"<string>\", line 1, in <module>\n    import sys; sys.path.i",
+          "timestamp": "2025-06-12T02:59:00.576747",
+          "execution_time": 0.06966519355773926,
+          "authenticity_score": 0.0
         },
         {
           "name": "module_demo_cas_usage",
           "status": "FAILED",
-          "details": "Erreur importation: Traceback (most recent call last):\n  File \"<string>\", line 1, in <module>\n  File \"D:\\2025-Epita-Inte",
-          "timestamp": "2025-06-10T11:49:23.296282",
-          "execution_time": 0.03601503372192383,
+          "details": "Erreur importation: Traceback (most recent call last):\n  File \"<string>\", line 1, in <module>\n    import sys; sys.path.i",
+          "timestamp": "2025-06-12T02:59:00.643009",
+          "execution_time": 0.06619453430175781,
           "authenticity_score": 0.0
         },
         {
           "name": "module_demo_integrations",
           "status": "FAILED",
-          "details": "Erreur importation: Traceback (most recent call last):\n  File \"<string>\", line 1, in <module>\n  File \"D:\\2025-Epita-Inte",
-          "timestamp": "2025-06-10T11:49:23.332790",
-          "execution_time": 0.03650808334350586,
+          "details": "Erreur importation: Traceback (most recent call last):\n  File \"<string>\", line 1, in <module>\n    import sys; sys.path.i",
+          "timestamp": "2025-06-12T02:59:00.712789",
+          "execution_time": 0.0697171688079834,
+          "authenticity_score": 0.0
+        },
+        {
+          "name": "module_demo_orchestration",
+          "status": "FAILED",
+          "details": "Erreur importation: Traceback (most recent call last):\n  File \"<string>\", line 1, in <module>\n    import sys; sys.path.i",
+          "timestamp": "2025-06-12T02:59:00.768747",
+          "execution_time": 0.05589890480041504,
           "authenticity_score": 0.0
         },
         {
           "name": "module_demo_outils_utils",
           "status": "FAILED",
-          "details": "Erreur importation: Traceback (most recent call last):\n  File \"<string>\", line 1, in <module>\n  File \"D:\\2025-Epita-Inte",
-          "timestamp": "2025-06-10T11:49:23.369300",
-          "execution_time": 0.03650999069213867,
+          "details": "Erreur importation: Traceback (most recent call last):\n  File \"<string>\", line 1, in <module>\n    import sys; sys.path.i",
+          "timestamp": "2025-06-12T02:59:00.837881",
+          "execution_time": 0.06907176971435547,
+          "authenticity_score": 0.0
+        },
+        {
+          "name": "module_demo_scenario_complet",
+          "status": "FAILED",
+          "details": "Erreur importation: Traceback (most recent call last):\n  File \"<string>\", line 1, in <module>\n    import sys; sys.path.i",
+          "timestamp": "2025-06-12T02:59:00.903371",
+          "execution_time": 0.06538176536560059,
           "authenticity_score": 0.0
         },
         {
           "name": "module_demo_services_core",
           "status": "FAILED",
-          "details": "Erreur importation: Traceback (most recent call last):\n  File \"<string>\", line 1, in <module>\n  File \"D:\\2025-Epita-Inte",
-          "timestamp": "2025-06-10T11:49:23.404346",
-          "execution_time": 0.03504657745361328,
+          "details": "Erreur importation: Traceback (most recent call last):\n  File \"<string>\", line 1, in <module>\n    import sys; sys.path.i",
+          "timestamp": "2025-06-12T02:59:00.977246",
+          "execution_time": 0.07381129264831543,
           "authenticity_score": 0.0
         },
         {
           "name": "module_demo_tests_validation",
           "status": "FAILED",
-          "details": "Erreur importation: Traceback (most recent call last):\n  File \"<string>\", line 1, in <module>\n  File \"D:\\2025-Epita-Inte",
-          "timestamp": "2025-06-10T11:49:23.442862",
-          "execution_time": 0.038515567779541016,
+          "details": "Erreur importation: Traceback (most recent call last):\n  File \"<string>\", line 1, in <module>\n    import sys; sys.path.i",
+          "timestamp": "2025-06-12T02:59:01.046733",
+          "execution_time": 0.06942439079284668,
           "authenticity_score": 0.0
         },
         {
           "name": "module_demo_utils",
           "status": "SUCCESS",
           "details": "Module importé avec succès",
-          "timestamp": "2025-06-10T11:49:23.504884",
-          "execution_time": 0.061022281646728516,
+          "timestamp": "2025-06-12T02:59:01.139701",
+          "execution_time": 0.09290504455566406,
           "authenticity_score": 0.8
         },
         {
           "name": "module_test_elimination_mocks_validation",
           "status": "SUCCESS",
           "details": "Module importé avec succès",
-          "timestamp": "2025-06-10T11:49:23.545477",
-          "execution_time": 0.04059267044067383,
+          "timestamp": "2025-06-12T02:59:01.197907",
+          "execution_time": 0.058141469955444336,
           "authenticity_score": 0.8
         },
         {
           "name": "module_test_final_validation_ascii",
           "status": "SUCCESS",
           "details": "Module importé avec succès",
-          "timestamp": "2025-06-10T11:49:23.583987",
-          "execution_time": 0.03851056098937988,
+          "timestamp": "2025-06-12T02:59:01.252499",
+          "execution_time": 0.05452847480773926,
           "authenticity_score": 0.8
         }
       ],
       "score": 150,
       "status": "PENDING",
-      "total_execution_time": 25.32160234451294,
-      "average_authenticity": 0.45454545454545453
+      "total_execution_time": 1.511124849319458,
+      "average_authenticity": 0.3095238095238096
+    },
+    "Tests Synthétiques": {
+      "tests": [
+        {
+          "name": "synthetic_test_1",
+          "status": "SUCCESS",
+          "details": "Analyse: Analyse: 37 mots, 2 phrases, score logique: 2",
+          "timestamp": "2025-06-12T02:59:01.252717",
+          "execution_time": 4.673004150390625e-05,
+          "authenticity_score": 1.0
+        },
+        {
+          "name": "synthetic_test_2",
+          "status": "SUCCESS",
+          "details": "Analyse: Analyse: 37 mots, 2 phrases, score logique: 2",
+          "timestamp": "2025-06-12T02:59:01.252763",
+          "execution_time": 2.765655517578125e-05,
+          "authenticity_score": 1.0
+        },
+        {
+          "name": "synthetic_test_3",
+          "status": "SUCCESS",
+          "details": "Analyse: Analyse: 24 mots, 2 phrases, score logique: 1",
+          "timestamp": "2025-06-12T02:59:01.252785",
+          "execution_time": 1.3828277587890625e-05,
+          "authenticity_score": 0.844
+        },
+        {
+          "name": "synthetic_test_4",
+          "status": "SUCCESS",
+          "details": "Analyse: Analyse: 24 mots, 2 phrases, score logique: 1",
+          "timestamp": "2025-06-12T02:59:01.252800",
+          "execution_time": 9.298324584960938e-06,
+          "authenticity_score": 0.844
+        },
+        {
+          "name": "synthetic_test_5",
+          "status": "SUCCESS",
+          "details": "Analyse: Analyse: 37 mots, 2 phrases, score logique: 2",
+          "timestamp": "2025-06-12T02:59:01.252819",
+          "execution_time": 1.3113021850585938e-05,
+          "authenticity_score": 1.0
+        }
+      ],
+      "score": 125,
+      "status": "PENDING",
+      "total_execution_time": 0.000110626220703125,
+      "average_authenticity": 0.9376
     },
     "ServiceManager": {
       "tests": [
         {
           "name": "import_test",
-          "status": "SUCCESS",
-          "details": "Import réussi",
-          "timestamp": "2025-06-10T11:49:25.343888",
-          "execution_time": 1.7599005699157715,
-          "authenticity_score": 0.9
+          "status": "WARNING",
+          "details": "Test désactivé temporairement",
+          "timestamp": "2025-06-12T02:59:01.252835",
+          "execution_time": 0.0,
+          "authenticity_score": 0.5
         }
       ],
-      "score": 25,
+      "score": 10,
       "status": "PENDING",
-      "total_execution_time": 1.7599005699157715,
-      "average_authenticity": 0.9
+      "total_execution_time": 0.0,
+      "average_authenticity": 0.5
     },
     "Interface Web": {
       "tests": [
         {
           "name": "app.py",
           "status": "SUCCESS",
-          "details": "Fichier trouvé: D:\\2025-Epita-Intelligence-Symbolique\\interface_web\\app.py",
-          "timestamp": "2025-06-10T11:49:25.343888",
+          "details": "Fichier trouvé: C:\\dev\\2025-Epita-Intelligence-Symbolique\\interface_web\\app.py",
+          "timestamp": "2025-06-12T02:59:01.252978",
           "execution_time": 0.01,
           "authenticity_score": 0.6
         },
         {
           "name": "index.html",
           "status": "SUCCESS",
-          "details": "Fichier trouvé: D:\\2025-Epita-Intelligence-Symbolique\\interface_web\\templates\\index.html",
-          "timestamp": "2025-06-10T11:49:25.343888",
+          "details": "Fichier trouvé: C:\\dev\\2025-Epita-Intelligence-Symbolique\\interface_web\\templates\\index.html",
+          "timestamp": "2025-06-12T02:59:01.253029",
           "execution_time": 0.01,
           "authenticity_score": 0.6
         }
@@ -149,128 +221,129 @@
           "name": "test_api_interactions.py",
           "status": "SUCCESS",
           "details": "Syntaxe valide",
-          "timestamp": "2025-06-10T11:49:25.388452",
-          "execution_time": 0.043569087982177734,
+          "timestamp": "2025-06-12T02:59:01.330629",
+          "execution_time": 0.07728910446166992,
           "authenticity_score": 0.7
         },
         {
           "name": "test_playwright_setup.py",
           "status": "SUCCESS",
           "details": "Syntaxe valide",
-          "timestamp": "2025-06-10T11:49:25.427519",
-          "execution_time": 0.03906750679016113,
+          "timestamp": "2025-06-12T02:59:01.450554",
+          "execution_time": 0.11986374855041504,
           "authenticity_score": 0.7
         },
         {
           "name": "test_playwright_setup_fixed.py",
           "status": "SUCCESS",
           "details": "Syntaxe valide",
-          "timestamp": "2025-06-10T11:49:25.468035",
-          "execution_time": 0.04051518440246582,
+          "timestamp": "2025-06-12T02:59:01.541528",
+          "execution_time": 0.09090900421142578,
           "authenticity_score": 0.7
         },
         {
           "name": "test_react_webapp_full.py",
           "status": "SUCCESS",
           "details": "Syntaxe valide",
-          "timestamp": "2025-06-10T11:49:25.512245",
-          "execution_time": 0.04421067237854004,
+          "timestamp": "2025-06-12T02:59:01.638903",
+          "execution_time": 0.09731078147888184,
           "authenticity_score": 0.7
         },
         {
           "name": "test_webapp_interface_demo.py",
           "status": "SUCCESS",
           "details": "Syntaxe valide",
-          "timestamp": "2025-06-10T11:49:25.556755",
-          "execution_time": 0.0445096492767334,
+          "timestamp": "2025-06-12T02:59:01.719852",
+          "execution_time": 0.08088016510009766,
           "authenticity_score": 0.7
         }
       ],
       "score": 125,
       "status": "PENDING",
-      "total_execution_time": 0.21187210083007812,
+      "total_execution_time": 0.46625280380249023,
       "average_authenticity": 0.7
     },
     "Système Unifié": {
       "tests": [
         {
           "name": "service_manager",
-          "status": "SUCCESS",
-          "details": "Module disponible",
-          "timestamp": "2025-06-10T11:49:27.298854",
-          "execution_time": 1.7420990467071533,
-          "authenticity_score": 0.8
+          "status": "WARNING",
+          "details": "Test désactivé temporairement",
+          "timestamp": "2025-06-12T02:59:01.719906",
+          "execution_time": 0.0,
+          "authenticity_score": 0.5
         },
         {
           "name": "first_order_logic_agent",
-          "status": "FAILED",
-          "details": "Import échoué: C:\\Users\\MYIA\\AppData\\Roaming\\Python\\Python39\\site-packages\\pydantic\\_internal\\_config.py:341: UserW",
-          "timestamp": "2025-06-10T11:49:28.859757",
-          "execution_time": 1.5609025955200195,
-          "authenticity_score": 0.0
+          "status": "WARNING",
+          "details": "Test désactivé temporairement",
+          "timestamp": "2025-06-12T02:59:01.719916",
+          "execution_time": 0.0,
+          "authenticity_score": 0.5
         },
         {
           "name": "fallacy_detection_agent",
-          "status": "FAILED",
-          "details": "Import échoué: C:\\Users\\MYIA\\AppData\\Roaming\\Python\\Python39\\site-packages\\pydantic\\_internal\\_config.py:341: UserW",
-          "timestamp": "2025-06-10T11:49:30.427880",
-          "execution_time": 1.5681235790252686,
-          "authenticity_score": 0.0
+          "status": "WARNING",
+          "details": "Test désactivé temporairement",
+          "timestamp": "2025-06-12T02:59:01.719923",
+          "execution_time": 0.0,
+          "authenticity_score": 0.5
         }
       ],
-      "score": 25,
+      "score": 30,
       "status": "PENDING",
-      "total_execution_time": 4.871125221252441,
-      "average_authenticity": 0.26666666666666666
+      "total_execution_time": 0.0,
+      "average_authenticity": 0.5
     },
     "Intégration Complète": {
       "tests": [
         {
           "name": "integration_test",
-          "status": "SUCCESS",
-          "details": "Test d'intégration réussi",
-          "timestamp": "2025-06-10T11:49:32.183845",
-          "execution_time": 1.7559645175933838,
-          "authenticity_score": 0.95
+          "status": "WARNING",
+          "details": "Test d'intégration désactivé temporairement",
+          "timestamp": "2025-06-12T02:59:01.719938",
+          "execution_time": 0.0,
+          "authenticity_score": 0.5
         }
       ],
-      "score": 25,
+      "score": 10,
       "status": "PENDING",
-      "total_execution_time": 1.7559645175933838,
-      "average_authenticity": 0.95
+      "total_execution_time": 0.0,
+      "average_authenticity": 0.5
     }
   },
-  "score": 400,
-  "max_score": 575,
+  "score": 500,
+  "max_score": 775,
   "certification": "VALIDATION_PARTIELLE",
   "performance_metrics": {
-    "total_execution_time": 33.94046475410461,
-    "total_tests": 23,
-    "avg_time_per_test": 1.475672380613244,
-    "components_count": 6
+    "total_execution_time": 1.9974882793426514,
+    "total_tests": 31,
+    "avg_time_per_test": 0.06443510578524682,
+    "components_count": 7
   },
   "authenticity_scores": {
-    "global_authenticity": 0.6452020202020202,
+    "global_authenticity": 0.5781605442176871,
     "by_component": {
-      "Scripts EPITA": 0.45454545454545453,
-      "ServiceManager": 0.9,
+      "Scripts EPITA": 0.3095238095238096,
+      "Tests Synthétiques": 0.9376,
+      "ServiceManager": 0.5,
       "Interface Web": 0.6,
       "Tests Playwright": 0.7,
-      "Système Unifié": 0.26666666666666666,
-      "Intégration Complète": 0.95
+      "Système Unifié": 0.5,
+      "Intégration Complète": 0.5
     }
   },
-  "score_percentage": 69.56521739130434,
+  "score_percentage": 64.51612903225806,
   "enhanced_metrics": {
     "execution_profile": {
-      "fastest_component": "Interface Web",
+      "fastest_component": "ServiceManager",
       "slowest_component": "Scripts EPITA",
-      "most_authentic_component": "Intégration Complète"
+      "most_authentic_component": "Tests Synthétiques"
     },
     "quality_indicators": {
-      "test_coverage": 6,
-      "authenticity_variance": 0.05708480002040608,
-      "performance_efficiency": 0.6776571908084577
+      "test_coverage": 7,
+      "authenticity_variance": 0.033573063490212406,
+      "performance_efficiency": 15.519490312204343
     }
   }
 }

@@ -119,7 +119,7 @@ class SourceDefinition(BaseModel):
     jina_url: Optional[str] = None # URL complète pour Jina (r.jina.ai/...)
 
     class Config:
-        allow_population_by_field_name = True
+        populate_by_name = True
 DEFAULT_EXTRACT_SOURCES = [
     {"source_name": "Exemple Vide (Config manquante)", "source_type": "jina",
      "schema": "https:", "host_parts": ["example", "com"], "path": "/",
