@@ -8,6 +8,7 @@ incluant la sélection cyclique, la terminaison Oracle, et l'intégration avec C
 
 import asyncio
 import logging
+import time
 from typing import List, Dict, Any, Optional
 from datetime import datetime
 
@@ -21,27 +22,14 @@ from semantic_kernel.kernel import Kernel
 AGENTS_AVAILABLE = False  # Module agents non disponible dans SK 0.9.6b1
 from semantic_kernel.contents import ChatMessageContent
 from semantic_kernel.functions.kernel_arguments import KernelArguments
-
-# Import conditionnel pour les modules filters qui peuvent ne pas exister
-try:
-    from semantic_kernel.filters.functions.function_invocation_context import FunctionInvocationContext
-    from semantic_kernel.filters.filter_types import FilterTypes
-    FILTERS_AVAILABLE = True
-except ImportError:
-    # Fallbacks pour compatibilité
-    class FunctionInvocationContext:
-        def __init__(self, **kwargs):
-            pass
-            
-    class FilterTypes:
-        pass
-        
-    FILTERS_AVAILABLE = False
+from semantic_kernel.events import FunctionInvokedEventArgs, FunctionInvokingEventArgs
+FILTERS_AVAILABLE = True  # On suppose que les handlers sont toujours dispo
 # from semantic_kernel.processes.runtime.in_process_runtime import InProcessRuntime  # Module non disponible
 from pydantic import Field
 
 # Imports locaux
 from argumentation_analysis.core.cluedo_oracle_state import CluedoOracleState
+from argumentation_analysis.agents.core.oracle.permissions import QueryType
 from argumentation_analysis.orchestration.plugins.enquete_state_manager_plugin import EnqueteStateManagerPlugin
 from argumentation_analysis.orchestration.group_chat import GroupChatOrchestration
 from argumentation_analysis.agents.core.pm.sherlock_enquete_agent import SherlockEnqueteAgent
@@ -51,8 +39,44 @@ from argumentation_analysis.agents.core.oracle.moriarty_interrogator_agent impor
 from argumentation_analysis.agents.core.oracle.cluedo_dataset import CluedoDataset
 
 # Configuration du logging
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
+
+
+# Nouvelle implémentation du logging via un filtre, conforme aux standards SK modernes
+class ToolCallLoggingHandler:
+    """
+    Handler pour journaliser les appels de fonctions (outils) du kernel,
+    utilisant le nouveau système d'événements de Semantic Kernel.
+    """
+    @staticmethod
+    def on_function_invoking(kernel: Kernel, context: FunctionInvokingEventArgs) -> FunctionInvokingEventArgs:
+        """Méthode exécutée avant chaque invocation de fonction."""
+        metadata = context.kernel_function_metadata
+        function_name = f"{metadata.plugin_name}.{metadata.name}"
+        logger.debug(f"▶️  INVOKING KERNEL FUNCTION: {function_name}")
+        
+        args_str = ", ".join(f"{k}='{str(v)[:100]}...'" for k, v in context.arguments.items())
+        logger.debug(f"  ▶️  ARGS: {args_str}")
+        return context
+
+    @staticmethod
+    def on_function_invoked(kernel: Kernel, context: FunctionInvokedEventArgs) -> FunctionInvokedEventArgs:
+        """Méthode exécutée après chaque invocation de fonction."""
+        metadata = context.kernel_function_metadata
+        function_name = f"{metadata.plugin_name}.{metadata.name}"
+        result_content = "N/A"
+        if context.function_result:
+            result_value = context.function_result.value
+            # Gérer les listes et autres types itérables
+            if isinstance(result_value, list):
+                result_content = f"List[{len(result_value)}] - " + ", ".join(map(str, result_value[:3]))
+            else:
+                result_content = str(result_value)
+
+        logger.debug(f"  ◀️  RESULT: {result_content[:500]}...") # Tronqué
+        logger.debug(f"◀️  FINISHED KERNEL FUNCTION: {function_name}")
+        return context
 
 # Définitions minimales pour compatibilité SK 0.9.6b1 (module agents non disponible)
 class Agent:
@@ -278,26 +302,6 @@ class OracleTerminationStrategy(TerminationStrategy):
         }
 
 
-async def oracle_logging_filter(context: FunctionInvocationContext, next):
-    """Filtre de logging spécialisé pour les interactions Oracle."""
-    agent_name = getattr(context, 'agent_name', 'Unknown')
-    
-    # Logging spécial pour les outils Oracle
-    if context.function.plugin_name and "oracle" in context.function.plugin_name.lower():
-        logger.info(f"🔮 [ORACLE] {agent_name} → {context.function.plugin_name}.{context.function.name}")
-        logger.info(f"🔮 [ORACLE] Arguments: {context.arguments}")
-    else:
-        logger.info(f"[{agent_name}] Appel: {context.function.plugin_name}.{context.function.name}")
-    
-    await next(context)
-    
-    # Logging des révélations Oracle
-    if context.result and "révèle" in str(context.result).lower():
-        logger.info(f"💎 [RÉVÉLATION] {context.result}")
-    elif context.function.plugin_name and "oracle" in context.function.plugin_name.lower():
-        logger.info(f"🔮 [ORACLE RESULT] {context.result}")
-
-
 class CluedoExtendedOrchestrator:
     """
     Orchestrateur pour workflow Cluedo étendu avec 3 agents.
@@ -328,6 +332,7 @@ class CluedoExtendedOrchestrator:
             service_id: ID du service LLM à utiliser par les agents.
         """
         self.kernel = kernel
+
         self.max_turns = max_turns
         self.max_cycles = max_cycles
         self.oracle_strategy = oracle_strategy
@@ -505,16 +510,34 @@ class CluedoExtendedOrchestrator:
         # Configuration du plugin d'état étendu
         state_plugin = EnqueteStateManagerPlugin(self.oracle_state)
         self.kernel.add_plugin(state_plugin, "EnqueteStatePlugin")
-        # CORRECTIF: add_filter() supprimé dans SK moderne - fonctionnalité de logging intégrée
+        
+        # Ajout du filtre de logging moderne
+        if FILTERS_AVAILABLE:
+            logging_handler = ToolCallLoggingHandler()
+            self.kernel.add_function_invoking_handler(logging_handler.on_function_invoking)
+            self.kernel.add_function_invoked_handler(logging_handler.on_function_invoked)
+            self._logger.info("Handlers de journalisation (invoking/invoked) des appels d'outils activés.")
         
         # Préparation des constantes pour Watson
         all_constants = [name.replace(" ", "") for category in elements_jeu.values() for name in category]
         
         # Création des agents
-        tweety_bridge = TweetyBridge() # Instance unique
+        try:
+            tweety_bridge = TweetyBridge() # Instance unique
+            watson_tweety_instance = tweety_bridge
+            self._logger.info("✅ TweetyBridge initialisé avec succès.")
+        except Exception as e:
+            self._logger.warning(f"⚠️ Échec initialisation TweetyBridge: {e}. Watson fonctionnera en mode dégradé.")
+            watson_tweety_instance = None
 
         self.sherlock_agent = SherlockEnqueteAgent(kernel=self.kernel, agent_name="Sherlock", service_id=self.service_id)
-        self.watson_agent = WatsonLogicAssistant(kernel=self.kernel, agent_name="Watson", tweety_bridge=tweety_bridge, constants=all_constants, service_id=self.service_id)
+        self.watson_agent = WatsonLogicAssistant(
+            kernel=self.kernel,
+            agent_name="Watson",
+            tweety_bridge=watson_tweety_instance,
+            constants=all_constants,
+            service_id=self.service_id
+        )
         self.moriarty_agent = MoriartyInterrogatorAgent(
             kernel=self.kernel,
             cluedo_dataset=self.oracle_state.cluedo_dataset,
@@ -522,6 +545,14 @@ class CluedoExtendedOrchestrator:
             agent_name="Moriarty"
         )
         
+        # --- Configuration des permissions Oracle ---
+        if self.oracle_state and self.oracle_state.cluedo_dataset:
+            dataset_manager = self.oracle_state.dataset_access_manager
+            # Autoriser Sherlock et Watson à valider des suggestions
+            dataset_manager.add_permission("Sherlock", QueryType.SUGGESTION_VALIDATION)
+            dataset_manager.add_permission("Watson", QueryType.SUGGESTION_VALIDATION)
+            self._logger.info("Permissions Oracle configurées pour Sherlock et Watson.")
+
         # Configuration des stratégies
         agents = [self.sherlock_agent, self.watson_agent, self.moriarty_agent]
         selection_strategy = CyclicSelectionStrategy(agents, self.adaptive_selection, self.oracle_state)  # PHASE C: Passer oracle_state

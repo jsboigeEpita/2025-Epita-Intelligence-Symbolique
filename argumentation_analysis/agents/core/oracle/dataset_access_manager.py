@@ -400,6 +400,11 @@ class DatasetAccessManager:
         """Ajoute une règle de permission."""
         self.permission_manager.add_permission_rule(rule)
     
+    def add_permission(self, agent_name: str, query_type: QueryType):
+        """Ajoute une permission pour un agent via le gestionnaire de permissions."""
+        self.permission_manager.add_permission(agent_name, query_type)
+        self._logger.info(f"Permission {query_type.value} ajoutée pour l'agent {agent_name}.")
+
     def check_permission(self, agent_name: str, query_type: QueryType) -> bool:
         """
         Vérifie si un agent a les permissions pour un type de requête.
