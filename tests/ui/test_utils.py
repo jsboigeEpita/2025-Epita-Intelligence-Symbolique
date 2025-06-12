@@ -35,7 +35,7 @@ import base64 # Ajouté pour la fixture test_key
 @pytest.fixture
 def mock_logger():
     # Crée un mock partagé
-    shared_mock_log = Magicawait self._create_authentic_gpt4o_mini_instance()
+    shared_mock_log = MagicMock()
     
     # Liste des patchers à appliquer
     patchers = [
@@ -229,7 +229,6 @@ def test_get_full_text_tika_pdf(
     )
     mock_save_cache.assert_called_once_with(url, "Tika PDF content")
 
-)
 
  # Ne devrait pas être appelé, mais le patch doit être correct
 def test_get_full_text_fetch_error(
@@ -383,7 +382,7 @@ def test_save_extract_definitions_no_encryption_key(sample_definitions, config_f
     success = save_extract_definitions(sample_definitions, config_file_path, None, embed_full_text=True) # Key est None, donc b64_derived_key sera None
     assert success is False
     # Le logger utilisé par save_extract_definitions est file_ops_logger (alias de utils_logger)
-    mock_logger.error.# Mock assertion eliminated - authentic validation"Clé chiffrement (b64_derived_key) absente ou vide. Sauvegarde annulée.") # Message mis à jour
+    mock_logger.error.assert_called_with("Clé chiffrement (b64_derived_key) absente ou vide. Sauvegarde annulée.")
 
  # Cible corrigée
 def test_save_extract_definitions_encryption_fails(
@@ -394,7 +393,7 @@ def test_save_extract_definitions_encryption_fails(
     success = save_extract_definitions(
         sample_definitions, config_file_path, test_key, embed_full_text=True, config=mock_app_config_for_save
     )
-    mock_encrypt_data_with_fernet_in_file_ops.# Mock assertion eliminated - authentic validation # Vérifier que le mock a été appelé
+    mock_encrypt_data_with_fernet_in_file_ops.assert_called_once()
     assert success is False # Car mock_encrypt_data_with_fernet retourne None
     # encrypt_data_with_fernet loggue déjà, mais save_extract_definitions loggue aussi l'erreur globale
     # Le message exact peut varier si encrypt_data_with_fernet retourne None sans exception spécifique attrapée par save_extract_definitions
@@ -412,7 +411,6 @@ def test_save_extract_definitions_encryption_fails(
     assert error_call_found, f"Le message d'erreur de sauvegarde attendu contenant '{expected_error_message_part}' avec exc_info=True n'a pas été loggué. Logs: {mock_logger.error.call_args_list}"
 
 
-)
 def test_save_extract_definitions_embed_true_fetch_fails(
     mock_get_full_text, sample_definitions, config_file_path, test_key, mock_logger, temp_cache_dir, temp_download_dir
 ):
@@ -468,7 +466,7 @@ def test_load_extract_definitions_file_not_found(tmp_path, test_key, mock_logger
     assert definitions == [{"default": True}]
     # Le logger utilisé par load_extract_definitions est file_ops_logger (alias de utils_logger)
     # Corrigé : le message de log ne contient plus "chiffré" dans ce cas.
-    mock_logger.info.# Mock assertion eliminated - authentic validationf"Fichier config '{non_existent_file}' non trouvé. Utilisation définitions par défaut.")
+    mock_logger.info.assert_called_with(f"Fichier config '{non_existent_file}' non trouvé. Utilisation définitions par défaut.")
 
 def test_load_extract_definitions_no_key(config_file_path, mock_logger): # config_file_path peut exister ou non
     with patch('argumentation_analysis.ui.file_operations.ui_config_module.EXTRACT_SOURCES', None), \
@@ -523,7 +521,6 @@ def test_load_extract_definitions_decryption_fails(mock_decrypt_data_with_fernet
             break
     assert error_logged, f"Le log d'erreur de déchiffrement attendu ('{expected_log_part}') n'a pas été trouvé dans les erreurs. Logs: {mock_logger.error.call_args_list}"
 
-)
  # Cible corrigée, valeur de retour modifiée pour être plus réaliste
 def test_load_extract_definitions_decompression_fails(mock_decrypt_data_with_fernet_in_file_ops, mock_decompress, config_file_path, test_key, mock_logger): # mock_decrypt_data_with_fernet renommé
     config_file_path.write_text("dummy encrypted data")
@@ -621,7 +618,6 @@ def test_load_from_cache_not_exists(temp_cache_dir, mock_logger):
     assert loaded_content is None
     mock_logger.debug.assert_any_call(f"Cache miss pour URL: {url}")
 
-)
 def test_load_from_cache_read_error(mock_read_text, temp_cache_dir, mock_logger):
     url = "http://example.com/cache_read_error.txt"
     # Créer un fichier cache pour qu'il existe
@@ -632,7 +628,6 @@ def test_load_from_cache_read_error(mock_read_text, temp_cache_dir, mock_logger)
     assert loaded_content is None
     mock_logger.warning.assert_any_call(f"   -> Erreur lecture cache {cache_file.name}: Read error")
 
-)
 def test_save_to_cache_write_error(mock_write_text, temp_cache_dir, mock_logger):
     url = "http://example.com/cache_write_error.txt"
     content = "Cannot write this."

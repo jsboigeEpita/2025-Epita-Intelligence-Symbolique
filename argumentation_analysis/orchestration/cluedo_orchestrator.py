@@ -24,12 +24,12 @@ from .cluedo_extended_orchestrator import CyclicSelectionStrategy
 # Pour la version 0.9.6b1, ces imports ne sont pas valides. Le code qui les utilise doit être adapté.
 # Pour le moment, nous commentons le bloc pour éviter le crash.
 # try:
-#     from semantic_kernel.filters.functions.function_invocation_context import FunctionInvocationContext
+#     from semantic_kernel.filters.functions.function_invocation_context import KernelFunctionContext
 #     from semantic_kernel.filters.filter_types import FilterTypes
 # except ImportError:
-#     logging.warning("Impossible d'importer FunctionInvocationContext ou FilterTypes depuis semantic_kernel.filters. "
+#     logging.warning("Impossible d'importer KernelFunctionContext ou FilterTypes depuis semantic_kernel.filters. "
 #                     "Les fonctionnalités dépendantes pourraient être affectées. Définition de placeholders.")
-#     class FunctionInvocationContext: pass
+#     class KernelFunctionContext: pass
 #     class FilterTypes: pass
 
 from semantic_kernel.contents.chat_message_content import ChatMessageContent

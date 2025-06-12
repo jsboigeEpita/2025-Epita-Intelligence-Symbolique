@@ -36,7 +36,7 @@ from config.unified_config import (
 )
 
 # Import des fonctions CLI à tester
-from scripts.rhetorical_analysis.unified_production_analyzer import (
+from project_core.rhetorical_analysis_from_scripts.unified_production_analyzer import (
     create_config_from_args as create_unified_config_from_args,
     # convert_unified_to_pipeline_config, # Cette fonction n'existe plus dans le nouveau script
     create_cli_parser as create_argument_parser
@@ -424,7 +424,7 @@ class TestCLIIntegration:
         mock_report_gen.return_value.generate_report.return_value = "Test report"
         
         # Import et test du main (simulation)
-        from scripts.rhetorical_analysis.unified_production_analyzer import create_config_from_args as create_unified_config_from_args
+        from project_core.rhetorical_analysis_from_scripts.unified_production_analyzer import create_config_from_args as create_unified_config_from_args
         
         args = MockArgs(
             source_type='simple',

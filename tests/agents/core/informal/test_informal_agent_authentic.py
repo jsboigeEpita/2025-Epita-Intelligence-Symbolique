@@ -11,7 +11,7 @@ import pytest
 from typing import Optional, List, Dict
 
 # Import auto-configuration environnement
-import scripts.core.auto_env
+import project_core.core_from_scripts.auto_env
 
 # Imports fixtures authentiques
 from .fixtures_authentic import (

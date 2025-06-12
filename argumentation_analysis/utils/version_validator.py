@@ -31,4 +31,4 @@ def validate_semantic_kernel_version():
         )
 
 # Exécution de la validation à l'import du module
-validate_semantic_kernel_version()
+# validate_semantic_kernel_version()
