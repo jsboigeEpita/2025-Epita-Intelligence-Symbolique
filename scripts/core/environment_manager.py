@@ -432,7 +432,38 @@ class EnvironmentManager:
                     os.environ['JAVA_HOME'] = str(absolute_java_home)
                     self.logger.info(f"JAVA_HOME (de .env) converti en chemin absolu: {os.environ['JAVA_HOME']}")
                 else:
-                    self.logger.warning(f"Le chemin JAVA_HOME (de .env) résolu vers {absolute_java_home} est invalide.")
+                    self.logger.warning(f"Le chemin JAVA_HOME '{absolute_java_home}' est invalide. Tentative d'auto-installation...")
+                    try:
+                        # On importe ici pour éviter dépendance circulaire si ce module est importé ailleurs
+                        from scripts.setup_core.manage_portable_tools import setup_tools
+                        
+                        # Le répertoire de base pour l'installation est le parent du chemin attendu pour JAVA_HOME
+                        # Ex: si JAVA_HOME est .../libs/portable_jdk/jdk-17..., le base_dir est .../libs/portable_jdk
+                        jdk_install_base_dir = absolute_java_home.parent
+                        self.logger.info(f"Le JDK sera installé dans : {jdk_install_base_dir}")
+                        
+                        installed_tools = setup_tools(
+                            tools_dir_base_path=str(jdk_install_base_dir),
+                            logger_instance=self.logger,
+                            skip_octave=True  # On ne veut que le JDK
+                        )
+
+                        # Vérifier si l'installation a retourné un chemin pour JAVA_HOME
+                        if 'JAVA_HOME' in installed_tools and Path(installed_tools['JAVA_HOME']).exists():
+                            self.logger.success(f"JDK auto-installé avec succès dans: {installed_tools['JAVA_HOME']}")
+                            os.environ['JAVA_HOME'] = installed_tools['JAVA_HOME']
+                            # On refait la vérification pour mettre à jour le PATH etc.
+                            if Path(os.environ['JAVA_HOME']).exists() and Path(os.environ['JAVA_HOME']).is_dir():
+                                self.logger.info(f"Le chemin JAVA_HOME après installation est maintenant valide.")
+                            else:
+                                self.logger.error("Échec critique : le chemin JAVA_HOME est toujours invalide après l'installation.")
+                        else:
+                            self.logger.error("L'auto-installation du JDK a échoué ou n'a retourné aucun chemin.")
+
+                    except ImportError as ie:
+                        self.logger.error(f"Échec de l'import de 'manage_portable_tools' pour l'auto-installation: {ie}")
+                    except Exception as e:
+                        self.logger.error(f"Une erreur est survenue durant l'auto-installation du JDK: {e}", exc_info=True)
         
         # **CORRECTION DE ROBUSTESSE POUR JPYPE**
         # S'assurer que le répertoire bin de la JVM est dans le PATH
