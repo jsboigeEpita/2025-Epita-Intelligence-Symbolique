@@ -443,24 +443,6 @@ class EnvironmentManager:
                     os.environ['PATH'] = f"{java_bin_path}{os.pathsep}{os.environ['PATH']}"
                     self.logger.info(f"Ajouté {java_bin_path} au PATH pour la JVM.")
 
-        # --- DÉMARRAGE DE LA JVM (Correctif pour JPype/Tweety) ---
-        try:
-            import jpype
-            import jpype.imports
-            if not jpype.isJVMStarted():
-                self.logger.info("Tentative de démarrage de la JVM pour JPype...")
-                
-                # Construction du classpath pour Tweety
-                libs_dir = self.project_root / 'libs'
-                classpath = f"-Djava.class.path={libs_dir}/*"
-                self.logger.info(f"Utilisation du classpath pour la JVM : {classpath}")
-
-                # Pas besoin de spécifier le chemin de la JVM si JAVA_HOME est bien configuré.
-                jpype.startJVM(classpath, convertStrings=False)
-                self.logger.success("JVM démarrée avec succès et classpath Tweety inclus.")
-        except (ImportError, OSError) as e:
-            self.logger.error(f"Impossible de démarrer la JVM : {e}. Les fonctionnalités de logique formelle seront indisponibles.")
-        # --- Fin du correctif JVM ---
 
         # Vérifications préalables
         if not self.check_conda_available():

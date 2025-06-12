@@ -13,6 +13,7 @@ spacy>=3.7
 # ===== WEB & API =====
 flask>=2.0.0
 Flask-CORS>=4.0.0
+flask_socketio>=5.3.6
 requests>=2.28.0
 uvicorn[standard]>=0.20.0 # Ajout pour le serveur ASGI
 a2wsgi>=1.8.0 # Ajout pour servir Flask avec Uvicorn
@@ -43,8 +44,8 @@ torch>=1.12.0
 transformers>=4.20.0
 
 # Semantic Kernel - CRITICAL DEPENDENCY
-semantic-kernel==0.9.6b1
-# NOTE: Using latest version (1.32.2) from GitHub releases - Full modern API
+semantic-kernel>=1.0.0
+# NOTE: Using latest version (>1.0.0) a modern API
 # CRITICAL UPDATE: Resolves Pydantic import errors and modernizes API
 # Provides: Core semantic kernel functionality
 
