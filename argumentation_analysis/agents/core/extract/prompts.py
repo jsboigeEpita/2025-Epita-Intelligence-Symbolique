@@ -86,15 +86,16 @@ dans le flux de `ExtractAgent`.
 # Prompt pour l'extraction à partir d'une dénomination
 EXTRACT_FROM_NAME_PROMPT = """
 Analysez ce texte source et proposez des bornes (marqueurs de début et de fin) pour un extrait
-correspondant à la dénomination suivante: "{extract_name}".
+correspondant à la dénomination suivante: "{{$extract_name}}".
 
-SOURCE: {source_name}
+SOURCE: {{$source_name}}
 
 TEXTE SOURCE:
-{extract_context}
+{{$extract_context}}
 
 Proposez des bornes précises qui délimitent un extrait pertinent correspondant à la dénomination.
 Les bornes doivent exister exactement dans le texte source.
+Les bornes (`start_marker`, `end_marker`) DOIVENT être des chaînes de caractères (string) extraites du TEXTE SOURCE, et non des positions numériques.
 
 Réponds au format JSON avec les champs:
 - start_marker: le marqueur de début proposé
@@ -113,20 +114,20 @@ Variables attendues :
 
 # Prompt pour la validation d'un extrait
 VALIDATE_EXTRACT_PROMPT = """
-Validez cet extrait proposé pour la dénomination "{extract_name}".
+Validez cet extrait proposé pour la dénomination "{{$extract_name}}".
 
-SOURCE: {source_name}
+SOURCE: {{$source_name}}
 
 BORNES PROPOSÉES:
-- Marqueur de début: "{start_marker}"
-- Marqueur de fin: "{end_marker}"
-- Template de début: "{template_start}"
+- Marqueur de début: "{{$start_marker}}"
+- Marqueur de fin: "{{$end_marker}}"
+- Template de début: "{{$template_start}}"
 
 TEXTE EXTRAIT:
-{extracted_text}
+{{$extracted_text}}
 
 EXPLICATION DE L'AGENT D'EXTRACTION:
-{explanation}
+{{$explanation}}
 
 Validez ou rejetez l'extrait proposé. Réponds au format JSON avec les champs:
 - valid: true/false

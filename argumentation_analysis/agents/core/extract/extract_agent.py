@@ -194,44 +194,27 @@ class ExtractAgent(BaseAgent):
 
         # 2. Enregistrer les fonctions sémantiques
         # Fonction sémantique pour l'extraction
-        extract_prompt_template_config = PromptTemplateConfig(
-            template=EXTRACT_FROM_NAME_PROMPT,
-            name=self.EXTRACT_SEMANTIC_FUNCTION_NAME,
-            description="Propose des bornes (marqueurs de début et de fin) pour un extrait.",
-            input_variables=[
-                {"name": "extract_name", "description": "Dénomination de l'extrait", "is_required": True},
-                {"name": "source_name", "description": "Nom de la source", "is_required": True},
-                {"name": "extract_context", "description": "Contexte d'extraction (texte source ou résumé)", "is_required": True},
-            ],
-            execution_settings=self.sk_kernel.get_prompt_execution_settings_from_service_id(llm_service_id)
-        )
+        # Nouvelle méthode, plus directe, pour enregistrer les fonctions sémantiques.
+        # Il semble que la substitution de variables ne fonctionnait pas
+        # correctement avec PromptTemplateConfig dans ce contexte.
+
+        # Fonction sémantique pour l'extraction
         self.sk_kernel.add_function(
-            function_name=self.EXTRACT_SEMANTIC_FUNCTION_NAME, # Ajout explicite
-            prompt_template_config=extract_prompt_template_config,
-            plugin_name=self.name
+            prompt=EXTRACT_FROM_NAME_PROMPT,
+            function_name=self.EXTRACT_SEMANTIC_FUNCTION_NAME,
+            plugin_name=self.name,
+            description="Propose des bornes (marqueurs de début et de fin) pour un extrait.",
+            execution_settings=self.sk_kernel.get_prompt_execution_settings_from_service_id(llm_service_id)
         )
         self.logger.info(f"Fonction sémantique '{self.EXTRACT_SEMANTIC_FUNCTION_NAME}' enregistrée dans le plugin '{self.name}'.")
 
         # Fonction sémantique pour la validation
-        validate_prompt_template_config = PromptTemplateConfig(
-            template=VALIDATE_EXTRACT_PROMPT,
-            name=self.VALIDATE_SEMANTIC_FUNCTION_NAME,
-            description="Valide un extrait proposé.",
-            input_variables=[
-                {"name": "extract_name", "description": "Dénomination de l'extrait", "is_required": True},
-                {"name": "source_name", "description": "Nom de la source", "is_required": True},
-                {"name": "start_marker", "description": "Marqueur de début proposé", "is_required": True},
-                {"name": "end_marker", "description": "Marqueur de fin proposé", "is_required": True},
-                {"name": "template_start", "description": "Template de début (optionnel)", "is_required": False, "default_value": ""},
-                {"name": "extracted_text", "description": "Texte extrait", "is_required": True},
-                {"name": "explanation", "description": "Explication de l'agent d'extraction", "is_required": True},
-            ],
-            execution_settings=self.sk_kernel.get_prompt_execution_settings_from_service_id(llm_service_id)
-        )
         self.sk_kernel.add_function(
-            function_name=self.VALIDATE_SEMANTIC_FUNCTION_NAME, # Ajout explicite
-            prompt_template_config=validate_prompt_template_config,
-            plugin_name=self.name
+            prompt=VALIDATE_EXTRACT_PROMPT,
+            function_name=self.VALIDATE_SEMANTIC_FUNCTION_NAME,
+            plugin_name=self.name,
+            description="Valide un extrait proposé.",
+            execution_settings=self.sk_kernel.get_prompt_execution_settings_from_service_id(llm_service_id)
         )
         self.logger.info(f"Fonction sémantique '{self.VALIDATE_SEMANTIC_FUNCTION_NAME}' enregistrée dans le plugin '{self.name}'.")
 
