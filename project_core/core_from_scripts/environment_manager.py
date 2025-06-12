@@ -25,6 +25,20 @@ import platform # Ajout pour la détection OS-spécifique des chemins communs
 import tempfile # Ajout pour le script de diagnostic
 from dotenv import load_dotenv, find_dotenv # Ajout pour la gestion .env
 
+# --- Correction dynamique du sys.path pour l'exécution directe ---
+# Permet au script de trouver le module 'project_core' même lorsqu'il est appelé directement.
+# Cela est crucial car le script s'auto-invoque depuis des contextes où la racine du projet n'est pas dans PYTHONPATH.
+try:
+    _project_root = Path(__file__).resolve().parent.parent.parent
+    if str(_project_root) not in sys.path:
+        sys.path.insert(0, str(_project_root))
+except NameError:
+    # __file__ n'est pas défini dans certains contextes (ex: interpréteur interactif), gestion simple.
+    _project_root = Path(os.getcwd())
+    if str(_project_root) not in sys.path:
+         sys.path.insert(0, str(_project_root))
+
+
 class ReinstallComponent(Enum):
     """Énumération des composants pouvant être réinstallés."""
     # Utilise str pour que argparse puisse directement utiliser les noms
