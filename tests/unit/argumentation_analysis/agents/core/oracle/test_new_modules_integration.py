@@ -21,21 +21,6 @@ from argumentation_analysis.agents.core.oracle.interfaces import (
 )
 
 class TestNewModulesIntegration:
-    async def _create_authentic_gpt4o_mini_instance(self):
-        """Crée une instance authentique de gpt-4o-mini au lieu d'un mock."""
-        config = UnifiedConfig()
-        return config.get_kernel_with_gpt4o_mini()
-        
-    async def _make_authentic_llm_call(self, prompt: str) -> str:
-        """Fait un appel authentique à gpt-4o-mini."""
-        try:
-            kernel = await self._create_authentic_gpt4o_mini_instance()
-            result = await kernel.invoke("chat", input=prompt)
-            return str(result)
-        except Exception as e:
-            logger.warning(f"Appel LLM authentique échoué: {e}")
-            return "Authentic LLM call failed"
-
     """Tests d'intégration entre les nouveaux modules"""
     
     def setup_method(self):
@@ -93,10 +78,8 @@ class TestNewModulesIntegration:
         
     
     @pytest.mark.asyncio
-    async def test_complete_integration_scenario(self, mock_get_logger):
+    async def test_complete_integration_scenario(self):
         """Test scenario d'intégration complet"""
-        mock_logger = await self._create_authentic_gpt4o_mini_instance()
-        mock_get_logger# Mock eliminated - using authentic gpt-4o-mini mock_logger
         
         class CompleteOracleAgent(OracleAgentInterface):
             def __init__(self):
